@@ -136,8 +136,8 @@ vi.mock('../../../../src/services/engine/subsystems/proceduralDiskSubsystem', ()
   PROCEDURAL_DISK_FADE_START_PX: 8,
   PROCEDURAL_DISK_FADE_END_PX: 14,
 }));
-vi.mock('../../../../src/services/engine/subsystems/texturedImpostorSubsystem', () => ({
-  createTexturedImpostorSubsystem: vi.fn(() => ({
+vi.mock('../../../../src/services/engine/subsystems/texturedDiskSubsystem', () => ({
+  createTexturedDiskSubsystem: vi.fn(() => ({
     runFrame: vi.fn(),
     lastOutput: { quads: [], disks: [] },
     hasInFlightWork: vi.fn(() => false),
@@ -291,7 +291,7 @@ function makeState(
       scheduler: { requestRender: vi.fn() } as never,
       galaxyAtlas: null,
       proceduralDisks: null,
-      texturedImpostors: null,
+      texturedDisks: null,
       loadProgress: null,
       // Post-Task-7 (2026-05-17): static cluster/supercluster/void
       // anchors are wired unconditionally — `wireSlots` now always

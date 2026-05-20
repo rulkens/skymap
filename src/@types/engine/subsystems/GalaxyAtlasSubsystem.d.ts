@@ -7,14 +7,14 @@
  * The 2048² LRU atlas texture, the LRU clock, the priority-queued bitmap
  * fetcher, failure memoisation, and an eviction notification hook.  It
  * has NO direct connection to per-frame catalog walking — that lives in
- * `texturedImpostorSubsystem`, which calls into this atlas to allocate
+ * `texturedDiskSubsystem`, which calls into this atlas to allocate
  * slots and schedule fetches.
  *
  * ### Why a separate subsystem
  *
  * Pre-split, this state lived inline in `thumbnailSubsystem` alongside
  * per-frame planning + render dispatch.  Splitting it out gives the LOD-2
- * planner (`texturedImpostorSubsystem`) one focused dependency to inject
+ * planner (`texturedDiskSubsystem`) one focused dependency to inject
  * — and gives future code that wants to read atlas state (debug HUD,
  * memory profilers) a typed surface to consume.
  *
@@ -79,7 +79,7 @@ export type GalaxyAtlasSubsystem = Destroyable & {
 
   /**
    * Optional handler called when LRU evicts a slot.  The
-   * `texturedImpostorSubsystem` subscribes to clear its bitmapReady /
+   * `texturedDiskSubsystem` subscribes to clear its bitmapReady /
    * bitmapFailed / bitmapReadyTime entries for the ousted key.
    */
   setEvictHandler(handler: ((key: string) => void) | undefined): void;

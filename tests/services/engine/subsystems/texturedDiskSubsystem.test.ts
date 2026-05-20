@@ -1,5 +1,5 @@
 /**
- * texturedImpostorSubsystem — unit tests for the LOD-2 per-frame planner.
+ * texturedDiskSubsystem — unit tests for the LOD-2 per-frame planner.
  *
  * Coverage focus:
  *   - allocates an atlas slot per visible-large-enough galaxy
@@ -14,7 +14,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/sources';
 import { createGalaxyAtlasSubsystem } from '../../../../src/services/engine/subsystems/galaxyAtlasSubsystem';
-import { createTexturedImpostorSubsystem } from '../../../../src/services/engine/subsystems/texturedImpostorSubsystem';
+import { createTexturedDiskSubsystem } from '../../../../src/services/engine/subsystems/texturedDiskSubsystem';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 
@@ -85,7 +85,7 @@ function makeInput(catalogs: Map<Source, GalaxyCatalog>, mask = 0xffffffff) {
   };
 }
 
-describe('createTexturedImpostorSubsystem', () => {
+describe('createTexturedDiskSubsystem', () => {
   let device: GPUDevice;
   beforeEach(() => {
     device = makeFakeDevice();
@@ -94,7 +94,7 @@ describe('createTexturedImpostorSubsystem', () => {
   it('emits a DiskInstance per finite-orientation galaxy once bitmap is ready', async () => {
     const fetcher = vi.fn(async () => makeFakeBitmap());
     const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
-    const sys = createTexturedImpostorSubsystem({
+    const sys = createTexturedDiskSubsystem({
       device,
       atlas,
       requestRender: () => {},
@@ -119,7 +119,7 @@ describe('createTexturedImpostorSubsystem', () => {
     // the disks-only branch.
     const fetcher = vi.fn(async () => makeFakeBitmap());
     const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
-    const sys = createTexturedImpostorSubsystem({
+    const sys = createTexturedDiskSubsystem({
       device,
       atlas,
       requestRender: () => {},
@@ -137,7 +137,7 @@ describe('createTexturedImpostorSubsystem', () => {
     const pending: Array<(b: ImageBitmap | null) => void> = [];
     const fetcher = vi.fn(() => new Promise<ImageBitmap | null>((res) => pending.push(res)));
     const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
-    const sys = createTexturedImpostorSubsystem({
+    const sys = createTexturedDiskSubsystem({
       device,
       atlas,
       requestRender: () => {},
@@ -155,7 +155,7 @@ describe('createTexturedImpostorSubsystem', () => {
   it('skips fetches for already-failed keys (retry-storm guard)', async () => {
     const fetcher = vi.fn(async () => null);
     const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
-    const sys = createTexturedImpostorSubsystem({
+    const sys = createTexturedDiskSubsystem({
       device,
       atlas,
       requestRender: () => {},

@@ -33,7 +33,7 @@
  *   - `state.sources.catalogs` — populated by the per-source slot commit
  *     subscribers (wired in `initGpu`).
  *   - `state.subsystems.loadProgress`, `state.subsystems.galaxyAtlas`,
- *     `state.subsystems.texturedImpostors`, `state.subsystems.proceduralDisks`.
+ *     `state.subsystems.texturedDisks`, `state.subsystems.proceduralDisks`.
  *   - `cb.onStatusChange({ kind: 'loading' })` synchronously; `kind:
  *     'ready'` fires from the per-arrival subscriber, not from this body.
  *
@@ -54,7 +54,7 @@ import { createSyntheticVolumeSlots } from '../../loading/slots/syntheticVolumeS
 import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';
 import { createGalaxyAtlasSubsystem } from '../subsystems/galaxyAtlasSubsystem';
 import { createProceduralDiskSubsystem } from '../subsystems/proceduralDiskSubsystem';
-import { createTexturedImpostorSubsystem } from '../subsystems/texturedImpostorSubsystem';
+import { createTexturedDiskSubsystem } from '../subsystems/texturedDiskSubsystem';
 // Cosmography POI anchors wired unconditionally into the POI subsystem
 // below — the user-facing toggle is the SettingsPanel per-category
 // checkbox, not a URL gate.  (Pre-2026-05-17 this was gated on
@@ -268,7 +268,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
     device,
     requestRender: () => state.subsystems.scheduler.requestRender(),
   });
-  const texturedImpostors = createTexturedImpostorSubsystem({
+  const texturedDisks = createTexturedDiskSubsystem({
     device,
     atlas: galaxyAtlas,
     requestRender: () => state.subsystems.scheduler.requestRender(),
@@ -283,7 +283,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   texturedDiskRenderer.bindAtlas(galaxyAtlas.getTextureView());
 
   state.subsystems.galaxyAtlas = galaxyAtlas;
-  state.subsystems.texturedImpostors = texturedImpostors;
+  state.subsystems.texturedDisks = texturedDisks;
   state.subsystems.proceduralDisks = proceduralDisks;
 
   // Register the always-on overlay fade handles at opacity 1.0. The
@@ -304,7 +304,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
     state.settings.milkyWay.enabled ? 1 : 0,
   );
   state.subsystems.fades.register({ kind: 'overlay', id: 'proceduralDisks' }, 1);
-  state.subsystems.fades.register({ kind: 'overlay', id: 'texturedImpostors' }, 1);
+  state.subsystems.fades.register({ kind: 'overlay', id: 'texturedDisks' }, 1);
 
   // Scalar-volume master gate. Registered at the current settings
   // value so a default-on session sees 1.0 from frame 1 (and the

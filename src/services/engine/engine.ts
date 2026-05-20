@@ -517,7 +517,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // All three null until `wireSlots` constructs them post-GPU init.
       galaxyAtlas: null,
       proceduralDisks: null,
-      texturedImpostors: null,
+      texturedDisks: null,
       // ── Tween manager ──────────────────────────────────────────
       // At most one camera tween at a time.  Sites that mutate it:
       //   - public handle's focusOn / focusOnHome / selectFamous
@@ -1318,11 +1318,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.labelDirector.destroy();
     state.subsystems.pois.destroy();
     // Teardown order across the three impostor subsystems matters:
-    // texturedImpostors subscribes to galaxyAtlas's eviction handler
+    // texturedDisks subscribes to galaxyAtlas's eviction handler
     // (so destroy it first), proceduralDisks is independent, and
     // galaxyAtlas releases its GPU texture last among the three.
-    state.subsystems.texturedImpostors?.destroy();
-    state.subsystems.texturedImpostors = null;
+    state.subsystems.texturedDisks?.destroy();
+    state.subsystems.texturedDisks = null;
     state.subsystems.proceduralDisks?.destroy();
     state.subsystems.proceduralDisks = null;
     state.subsystems.galaxyAtlas?.destroy();

@@ -2,7 +2,7 @@
  * Visual baseline — post-split galaxy-impostor draw-call sequence.
  *
  * Drives the three new subsystems (galaxyAtlas + proceduralDisk +
- * texturedImpostor) through one runFrame each, then asserts the
+ * texturedDisk) through one runFrame each, then asserts the
  * resulting `lastOutput` arrays hash to the same baseline the pre-split
  * snapshot recorded in Task 1.
  *
@@ -24,7 +24,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { Source } from '../../src/data/sources';
 import { createGalaxyAtlasSubsystem } from '../../src/services/engine/subsystems/galaxyAtlasSubsystem';
 import { createProceduralDiskSubsystem } from '../../src/services/engine/subsystems/proceduralDiskSubsystem';
-import { createTexturedImpostorSubsystem } from '../../src/services/engine/subsystems/texturedImpostorSubsystem';
+import { createTexturedDiskSubsystem } from '../../src/services/engine/subsystems/texturedDiskSubsystem';
 import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
 
@@ -110,7 +110,7 @@ describe('galaxy-impostor visual baseline (post-split)', () => {
       const device = makeFakeDevice();
       const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
       const procSys = createProceduralDiskSubsystem({ decimationFactor: 1 });
-      const texSys = createTexturedImpostorSubsystem({
+      const texSys = createTexturedDiskSubsystem({
         device,
         atlas,
         requestRender: () => {},

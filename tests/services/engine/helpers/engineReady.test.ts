@@ -12,7 +12,7 @@
  *      compiler treats `state.cam`, `state.gpu.renderer`,
  *      `state.gpu.postProcess`, `state.gpu.pickRenderer`,
  *      `state.gpu.volumeOffscreen`, and
- *      `state.subsystems.texturedImpostors` as non-null without `!` or
+ *      `state.subsystems.texturedDisks` as non-null without `!` or
  *      `?.`.  We assert this with `@ts-expect-error` over an
  *      access that is intentionally rejected pre-narrowing, plus
  *      a positive access post-narrowing that compiles cleanly.
@@ -54,7 +54,7 @@ function makeState(overrides: {
   postProcess?: unknown;
   pickRenderer?: unknown;
   volumeOffscreen?: unknown;
-  texturedImpostors?: unknown;
+  texturedDisks?: unknown;
 } = {}): EngineState {
   const cam = overrides.cam === undefined ? ({} as unknown as OrbitCamera) : overrides.cam;
   const renderer = overrides.renderer === undefined ? ({} as unknown) : overrides.renderer;
@@ -64,12 +64,12 @@ function makeState(overrides: {
     overrides.pickRenderer === undefined ? ({} as unknown) : overrides.pickRenderer;
   const volumeOffscreen =
     overrides.volumeOffscreen === undefined ? ({} as unknown) : overrides.volumeOffscreen;
-  const texturedImpostors =
-    overrides.texturedImpostors === undefined ? ({} as unknown) : overrides.texturedImpostors;
+  const texturedDisks =
+    overrides.texturedDisks === undefined ? ({} as unknown) : overrides.texturedDisks;
   return {
     cam,
     gpu: { renderer, postProcess, pickRenderer, volumeOffscreen },
-    subsystems: { texturedImpostors },
+    subsystems: { texturedDisks },
   } as unknown as EngineState;
 }
 
@@ -98,8 +98,8 @@ describe('isEngineReady — false branch', () => {
     expect(isEngineReady(makeState({ volumeOffscreen: null }))).toBe(false);
   });
 
-  it('returns false when state.subsystems.texturedImpostors is null', () => {
-    expect(isEngineReady(makeState({ texturedImpostors: null }))).toBe(false);
+  it('returns false when state.subsystems.texturedDisks is null', () => {
+    expect(isEngineReady(makeState({ texturedDisks: null }))).toBe(false);
   });
 });
 
@@ -122,7 +122,7 @@ describe('isEngineReady — true branch', () => {
 });
 
 describe('isEngineReady — type narrowing', () => {
-  it('narrows state.cam, gpu handles, and texturedImpostors to non-null', () => {
+  it('narrows state.cam, gpu handles, and texturedDisks to non-null', () => {
     const state = makeState();
 
     // Pre-narrowing, `state.cam` is `OrbitCamera | null`, so reading
@@ -143,7 +143,7 @@ describe('isEngineReady — type narrowing', () => {
       void state.gpu.postProcess.draw;
       void state.gpu.pickRenderer.pick;
       void state.gpu.volumeOffscreen.view;
-      void state.subsystems.texturedImpostors.runFrame;
+      void state.subsystems.texturedDisks.runFrame;
 
       // Sanity: the runtime value is the same object, only the type
       // narrowing changed.  This guards against a future

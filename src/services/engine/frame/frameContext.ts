@@ -135,7 +135,7 @@ export function deriveFrameContext(
   const renderer = state.gpu.renderer;
   const postProcess = state.gpu.postProcess;
   const volumeOffscreen = state.gpu.volumeOffscreen;
-  const texturedImpostors = state.subsystems.texturedImpostors;
+  const texturedDisks = state.subsystems.texturedDisks;
 
   // Snapshot-derive everything the caller would otherwise compute
   // locally.  `computeViewProj` was previously called in `runFrame`;
@@ -161,6 +161,6 @@ export function deriveFrameContext(
     renderer,
     postProcess,
     volumeOffscreen,
-    texturedImpostors,
+    texturedDisks,
   };
 }

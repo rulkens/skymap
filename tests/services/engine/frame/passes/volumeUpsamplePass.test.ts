@@ -46,7 +46,7 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
     renderer: {} as never,
     postProcess: { view: {} as GPUTextureView, resize: vi.fn(), draw: vi.fn(), destroy: vi.fn() } as never,
     volumeOffscreen: { view: offscreenView, resize: vi.fn(), destroy: vi.fn() },
-    texturedImpostors: {} as never,
+    texturedDisks: {} as never,
   };
 }
 

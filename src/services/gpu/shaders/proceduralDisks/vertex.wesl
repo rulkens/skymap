@@ -40,7 +40,7 @@ import package::lib::camera::worldToClip;
 // is intentionally NOT pulled into this lib.
 import package::lib::billboard::quadCorner;
 // Disk-plane axis math (PA + inclination → world-space major/minor basis)
-// is shared with 'disks.wesl' via 'lib/orientation.wesl'. The inline
+// is shared with 'texturedDisks/vertex.wesl' via 'lib/orientation.wesl'. The inline
 // derivation that used to live in this file's vs() body — the
 // los/north/east/major/minor chain plus the inclination tilt of the
 // minor axis out of the sky plane — is now the lib's 'diskAxes' fn,
@@ -82,11 +82,11 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   // toward the perpendicular-to-major-axis sky direction.  The minor
   // axis then lies in the plane perpendicular to (major × normal).
   //
-  // Implementation reuses the same algebra as disks.wesl — see that
+  // Implementation reuses the same algebra as texturedDisks/vertex.wesl — see that
   // file for the full step-by-step derivation including the sign
   // conventions for sky-east vs world-X.
   let pos = instance.posSize.xyz;
-  // Half the full-extent value in posSize.w to match disks.wesl line 104.
+  // Half the full-extent value in posSize.w to match texturedDisks/vertex.wesl line 104.
   // 'posSize.w' is the FULL quad extent in Mpc (set at the emission site
   // in thumbnailSubsystem.ts to '(diameterKpc/1000) * 4', the same
   // multiplier the points pass uses for GALAXY_RADIUS_MPC).  Each
@@ -96,7 +96,7 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   // points-pass billboard (which uses the same multiplier directly).
   let halfWorld = instance.posSize.w * 0.5;
   // Floor at 0.05 to avoid degenerate-edge-on disks collapsing the quad to a
-  // 1D line in the vertex stage; matches the disks.wesl convention.
+  // 1D line in the vertex stage; matches the texturedDisks/vertex.wesl convention.
   let axisRatio = max(instance.orientation.x, 0.05);
   let paRad = instance.orientation.y * 3.14159265 / 180.0;
 

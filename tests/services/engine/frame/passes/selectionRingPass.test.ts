@@ -20,7 +20,7 @@ function makeCtx(): ReadyFrameContext {
     renderer: {} as never,
     postProcess: {} as never,
     volumeOffscreen: {} as never,
-    texturedImpostors: {} as never,
+    texturedDisks: {} as never,
   };
 }
 

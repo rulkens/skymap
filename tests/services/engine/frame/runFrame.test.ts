@@ -96,7 +96,7 @@ function makeState(): EngineState {
       },
       galaxyAtlas: null,
       proceduralDisks: null,
-      texturedImpostors: null,
+      texturedDisks: null,
       clickResolver: null,
       inputBindings: null,
       loadProgress: null,

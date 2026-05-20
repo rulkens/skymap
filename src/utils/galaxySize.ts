@@ -5,7 +5,7 @@
  *
  * ## Why a shared helper
  *
- * The points bake, proceduralDiskSubsystem, and texturedImpostorSubsystem
+ * The points bake, proceduralDiskSubsystem, and texturedDiskSubsystem
  * each used to compute the same '(diameterKpc * 2) / 1000' algebra
  * inline — three sites, one constant 4× padding factor + one 30-kpc
  * synthetic-fallback floor. A change to either (e.g. tightening the

@@ -66,7 +66,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
   const renderer = { draw: vi.fn() } as any;
   const postProcess = { view: {} as GPUTextureView, draw: vi.fn(), resize: vi.fn(), destroy: vi.fn() } as any;
   const volumeOffscreen = { view: {} as GPUTextureView, resize: vi.fn(), destroy: vi.fn() } as any;
-  const texturedImpostors = { runFrame: vi.fn(), lastOutput: { quads: [], disks: [] }, hasInFlightWork: () => false } as any;
+  const texturedDisks = { runFrame: vi.fn(), lastOutput: { quads: [], disks: [] }, hasInFlightWork: () => false } as any;
   return {
     isReady: true,
     cam,
@@ -77,7 +77,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     renderer,
     postProcess,
     volumeOffscreen,
-    texturedImpostors,
+    texturedDisks,
     ...overrides,
   };
 }
