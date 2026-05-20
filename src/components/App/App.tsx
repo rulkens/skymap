@@ -1,56 +1,29 @@
 /**
  * App — the root React component for Skymap.
  *
- * ### Architecture overview
+ * Boundary between the imperative WebGPU engine and the React UI.  Its
+ * job is wiring: pull state out of focused hooks in `src/hooks/`, hand
+ * it to presentational children, and forward user input back into the
+ * engine.  Hook order is dictated by data flow — settings first so its
+ * `engineCallbacks` exist, engine next so other hooks can read
+ * `handleRef`, the rest follow in any order.
  *
- * This component is the boundary between the imperative WebGPU engine and the
- * React UI.  Its job is wiring: pull state out of focused hooks, hand it to
- * presentational children, and forward user input back into the engine.  All
- * substantive logic lives in five custom hooks under `src/hooks/`:
+ * ### Why `handleRef` is a ref, not state
  *
- *   1. `useEngineSettings` — owns the ~17 settings useStates (point size,
- *      brightness, tone curve, …) and the `EngineCallbacks` echo slice that
- *      keeps them in sync with engine truth.
- *   2. `useEngine` — owns `canvasRef`, `handleRef`, the one-shot
- *      `createEngine` startup `useEffect`, and the engine-driven session
- *      state (`status`, `hovered`, `selected`, `focused`, `scale`, `fps`,
- *      `sourceCounts`, `loadProgress`, `currentTier`).  Accepts the settings
- *      hook's callbacks as `extraCallbacks` so the two interlock cleanly.
- *   3. `useFamousMeta` — loads `famous_meta.json` + `famous_xrefs.json` once
- *      at mount; consumed by the CommandPalette and the deep-link drain.
- *   4. `useAliasIndex` — lazy two-phase pipeline that builds the PGC alias
- *      index on the first palette open, returning `{ aliasIndex, aliasMap }`.
- *   5. `useUrlSync` — owns the entire `window.location.hash` lifecycle for
- *      both `#focus=<galaxyId>` and `#poi=<poiId>` schemes in one place.
- *   6. `useKeyboardShortcuts` — global keydown listener for Cmd+K / Esc /
- *      f / h / l, plus the form-field guard.
+ * Multiple hooks call methods on the engine (`focusOn`, `clearSelection`,
+ * `selectByAlias`).  Putting the handle in state would force every
+ * consumer to re-render when the engine starts up.  A ref is a stable
+ * box: `useEngine` writes once, everyone else reads.
  *
- * The hook order at the call site is dictated by data flow: settings runs
- * first so its `engineCallbacks` exist; engine runs next so other hooks can
- * read `handleRef`; the rest follow in any order.
+ * ### Why no React.StrictMode
  *
- * ### Why useRef for the canvas (returned from useEngine)?
- *
- * `useRef` gives us a stable container whose `.current` property points to the
- * DOM node after the component mounts. Unlike `useState`, updating a ref does
- * NOT trigger a re-render — exactly what we want for the canvas, which the
- * engine takes over and React never touches again.
- *
- * ### Why no React.StrictMode?
- *
- * StrictMode in development double-mounts every component (mount → unmount →
- * mount again) to help detect effects that don't clean up properly. Our engine
- * creates GPU resources, starts a render loop, and attaches event listeners —
- * it's not designed for this double-mount pattern. Rather than paper over the
- * issue with guards, we simply don't wrap the app in StrictMode. The cleanup
- * function inside `useEngine` is still correct and runs on hot-reload unmounts.
- *
- * ### Why is `handleRef` a ref, not state?
- *
- * Multiple hooks need to call methods on the engine (`focusOn`, `clearSelection`,
- * `selectByAlias`).  Putting the handle in state would force every consumer
- * to re-render when the engine starts up.  A ref is a stable box: `useEngine`
- * writes the handle in once, every other hook reads it out, no re-renders.
+ * StrictMode double-mounts every component in dev to surface effects
+ * that don't clean up properly.  The engine creates GPU resources,
+ * starts a render loop, and attaches event listeners — it isn't
+ * designed for double-mount.  Skipping StrictMode is cheaper than
+ * guarding every resource against a synthetic re-mount; the cleanup
+ * inside `useEngine` still runs on real unmounts (hot-reload, route
+ * changes).
  */
 
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -77,45 +50,8 @@ import { useSpaceMouseDevicePresence } from '../../hooks/useSpaceMouseDevicePres
 import { buildStaticAnchorPois } from '../../data/buildStaticAnchorPois';
 import { DebugPanel } from '../DebugPanel/DebugPanel';
 import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
-import { hasUrlGate } from '../../utils/url/urlGate';
 import { isWebHIDSupported } from '../../services/input/spaceMouse';
 
-// ── Dev-panel availability gate ────────────────────────────────────────────
-//
-// Whether the `d` keyboard shortcut should be wired up at all.  In dev
-// builds we always wire it; in production it's only wired when
-// `?debug` is in the URL — same escape-hatch contract the panel had
-// before, just gated on actual key presses now (default-hidden) so it
-// doesn't clutter the UI for everyone running a dev server.  The bare-
-// flag form matches every other dev gate (`?volumes`, `?anchors`).
-//
-// `import.meta.env.DEV` is statically replaced by Vite at build time
-// (true in dev, false in prod).  Rollup CAN'T tree-shake the
-// DebugPanel because the second predicate (`hasUrlGate('debug')`)
-// is a runtime call — the DebugPanel module ships in the production
-// bundle, but the JSX simply never renders unless the user adds
-// `?debug` to the URL.  Runtime cost in production is one boolean
-// check per render and a single un-loaded React component reference,
-// which is acceptable for a debug-only feature with an explicit
-// activation gesture.
-//
-// SSR-safety lives inside `hasUrlGate` (see `utils/url/urlGate.ts`):
-// a `typeof window` guard plus a try/catch around `URLSearchParams`
-// so unit tests rendering `<App />` without a DOM don't blow up.
-function isDebugPanelAvailable(): boolean {
-  if (import.meta.env.DEV) return true;
-  return hasUrlGate('debug');
-}
-
-// ── App ────────────────────────────────────────────────────────────────────────
-
-/**
- * Root application component.
- *
- * Renders the WebGPU canvas plus the three UI overlays. The canvas itself has
- * no React state — it's handed off to the engine and never touched by React
- * again (no style recalculation, no re-renders caused by canvas changes).
- */
 export function App(): React.ReactElement {
   // ── Engine-driven settings (point size, brightness, filaments, tone map, …) ──
   //
@@ -358,11 +294,8 @@ export function App(): React.ReactElement {
 
   // ── Debug panel visibility (`d` keyboard shortcut) ─────────────────────────
   //
-  // Default false so the panel doesn't clutter the screen during normal
-  // dev work.  `d` toggles it on/off (see useKeyboardShortcuts).  The
-  // panel itself is gated on `isDebugPanelAvailable()` further down,
-  // so this state is harmless in production builds where the gate is
-  // false and the panel JSX never renders.
+  // Default-hidden so the panel doesn't clutter the screen; `d` toggles
+  // it on/off (see useKeyboardShortcuts).
   const [loadingDevPanelOpen, setLoadingDevPanelOpen] = useState(false);
 
   // ── Famous-galaxy sidecars (CommandPalette + deep-link drain) ────────────
@@ -852,21 +785,13 @@ export function App(): React.ReactElement {
           onSelectAlias={(target) => handleRef.current?.selection.selectByAlias(target)}
         />
         {/*
-        Debug panel.  Mounted only in dev builds or when `?debug` is
-        present in the URL.  Gated on `status.kind !== 'initializing'`
-        because the engine populates its asset-slot registry inside
-        the async GPU init IIFE — once the engine has transitioned
-        out of `initializing`, every slot exists on
-        `handleRef.current.assetSlots`, so the panel's first render
-        is guaranteed to see the full slot set and subscribe to each
-        one.  The `timingService` prop reads through the engine's
-        `debug` sub-handle getter so it reflects the live value
-        assigned by the async GPU init IIFE (initially `null`, then
-        the constructed service once `?gpuTimings` and the adapter
-        feature both line up).
+        Debug panel.  Toggled by `d`.  Gated on `status.kind !== 'initializing'`
+        so `handleRef.current.assetSlots` is populated before the panel
+        subscribes to each slot.  `timingService` reads through the
+        engine's `debug` sub-handle getter so the panel sees the live
+        value once `?gpuTimings` + the adapter feature line up.
       */}
-        {isDebugPanelAvailable() &&
-          loadingDevPanelOpen &&
+        {loadingDevPanelOpen &&
           status.kind !== 'initializing' &&
           handleRef.current?.assetSlots && (
             <DebugPanel
