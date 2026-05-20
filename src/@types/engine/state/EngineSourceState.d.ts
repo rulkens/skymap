@@ -57,6 +57,21 @@ export type EngineSourceState = {
   famousMeta: FamousMetaEntry[];
   famousXrefs: FamousXrefMap;
   /**
+   * Milliquas v8 display-name sidecar, parallel to the per-tier bin's
+   * records by `localIdx`.  Empty until `milliquasNames` slot resolves;
+   * `buildGalaxyInfo` null-checks `names[idx]` and falls back to the
+   * IAU coord designation when absent.  Reset to `[]` on tier change
+   * (the slot's subscriber overwrites it on the new tier's `ready`).
+   */
+  milliquasNames: readonly string[];
+  /**
+   * Per-row Milliquas classification letter (Q/A/B/K/N/S), parallel to
+   * `milliquasNames` by `localIdx`.  Plumbed alongside the names so a
+   * class-aware InfoCard sentence (v2) doesn't need a second sidecar
+   * fetch; v1 only consumes `milliquasNames`.
+   */
+  milliquasClasses: readonly string[];
+  /**
    * Currently-loaded data tier — drives subsequent `setTier` diffing.
    * Seeded at engine init from `opts.initialTier` (defaulting to 'medium')
    * and re-assigned synchronously from inside `setTier` before the per-source

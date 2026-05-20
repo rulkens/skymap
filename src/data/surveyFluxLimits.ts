@@ -38,6 +38,14 @@ const M_LIM: Record<SurveySource, number> = {
   [Source.Glade]: 18.0,
   [Source.Synthetic]: 17.77,
   [Source.Famous]: 17.77,
+  // Milliquas's quasar-completeness limit varies wildly by parent
+  // survey (SDSS DR16Q reaches r ~ 22, DESI EDR ~ 23, while bright
+  // optical/X-ray-selected subsamples cut at ~18). For the bias
+  // pipeline we use a permissive limit so vMaxWeight short-circuits
+  // rather than upweighting an unphysical volume — Milliquas's true
+  // selection function would need a per-parent-survey breakdown that
+  // belongs in its own pass.
+  [Source.Milliquas]: 22.0,
 };
 
 const SCHECHTER: Record<SurveySource, SchechterTriple> = {
@@ -46,6 +54,13 @@ const SCHECHTER: Record<SurveySource, SchechterTriple> = {
   [Source.Glade]: { mStar: -20.83, alpha: -1.08, phiStar: 0.0093 },
   [Source.Synthetic]: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
   [Source.Famous]: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
+  // Quasars don't follow the galaxy Schechter LF — they have their
+  // own QLF (Croom et al. 2009, Ross et al. 2013) with very different
+  // parameters. Using the SDSS galaxy values here is a placeholder
+  // for the shape; the renderer's vMaxWeight short-circuits to zero
+  // for NaN-photometry rows so this rarely fires in practice. A
+  // dedicated quasar LF is a separate plan.
+  [Source.Milliquas]: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
 };
 
 /** Per-survey apparent-magnitude flux limit (band varies — see SCHECHTER). */

@@ -48,6 +48,7 @@
     "fetch-2mass-xsc": "tsx tools/fetch/fetch2massXsc.ts",
     "fetch-famous-images": "tsx tools/famous/fetchFamousImages.ts",
     "fetch-hyperleda": "tsx tools/fetch/fetchHyperLeda.ts",
+    "fetch-milliquas": "tsx tools/fetch/fetchMilliquas.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "preview": "vite preview",

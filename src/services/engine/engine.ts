@@ -72,7 +72,7 @@
  * ```
  */
 
-import { Source, maskWith, maskWithout } from '../../data/sources';
+import { Source, maskWith, maskWithout, maskHas } from '../../data/sources';
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_AUTO_ROTATE,
@@ -142,6 +142,10 @@ import { getVolumeFieldDefaults } from '../../data/volumeFieldDefaults';
 // connect/disconnect/sensitivity setters forward straight through.
 import { createSpaceMouseSubsystem } from './subsystems/spaceMouseSubsystem';
 import { buildSettersFromTable } from './wiring/settingsTable';
+import {
+  GALAXY_CATALOG_SOURCE_REGISTRY,
+  loadCompanionAssets,
+} from './wiring/galaxyCatalogSourceRegistry';
 import type { SettingsTableKey } from '../../@types/settings/SettingsTableKey';
 import { runBootstrapPhases } from './phases/bootstrap';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
@@ -179,7 +183,7 @@ import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
 export async function setSourceVisibleImpl(
   state: Pick<
     import('../../@types/engine/state/EngineState').EngineState,
-    'sources' | 'subsystems'
+    'sources' | 'subsystems' | 'assetSlots'
   >,
   opts: { cb: Pick<EngineCallbacks, 'sources'> },
   source: Source,
@@ -200,6 +204,20 @@ export async function setSourceVisibleImpl(
   state.subsystems.scheduler.requestRender();
 
   if (visible) {
+    // Lazy-load: any survey that was hidden at boot (and therefore
+    // skipped by the wireSlots loop) gets its first fetch kicked off
+    // here.  `.load()` is idempotent — calling it again on an already
+    // ready slot is a no-op, so default-on sources pay nothing.  Same
+    // shape CF-4 / MCPM use for default-off volume fields.
+    state.assetSlots.points
+      .get(source)
+      ?.load({ source, tier: state.sources.tier });
+    // Companion assets fire alongside the main `.bin` so InfoCard /
+    // search / picking have their parallel data ready by the time the
+    // user interacts. Each registry row's `companions: [...]` array
+    // names which slots to fire; `loadCompanionAssets` dispatches.
+    const cfg = GALAXY_CATALOG_SOURCE_REGISTRY.find((c) => c.source === source);
+    if (cfg) loadCompanionAssets(state as EngineState, cfg, state.sources.tier);
     state.sources.drawMask = targetMask;
     await state.subsystems.fades.fadeTo(handle, 1, FADE_IN_DURATION_MS);
   } else {
@@ -432,6 +450,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // InfoCard layout.
       famousMeta: [],
       famousXrefs: {},
+      // Milliquas display-name sidecar — per-tier, populated by the
+      // milliquasNames slot's `ready` subscriber.  Empty default mirrors
+      // the famous-meta pattern: a hover firing before names land falls
+      // back to the auto-generated IAU "MQ J<RA><Dec>" headline.
+      milliquasNames: [],
+      milliquasClasses: [],
       // Currently-loaded data tier.  Seeded from `cb.initialTier` (Task 5
       // of the data-tiers plan); the default of 'medium' matches the
       // pre-tier ~600k-galaxy desktop budget.  `setTier` mutates this in
@@ -566,6 +590,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         getCloud: (s) => state.sources.catalogs.get(s),
         getFamousMeta: () => state.sources.famousMeta,
         getFamousXrefs: () => state.sources.famousXrefs,
+        getMilliquasNames: () => state.sources.milliquasNames,
       }),
 
       // ── Bias-correction subsystem (Spec E phase E.3 + E.4) ────────
@@ -678,6 +703,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // MCPM Cosmic Web slot — same null-then-set lifecycle as cf4Density.
       // Tier-aware: setTier reloads on tier change.  See loading/slots/mcpmSlot.ts.
       mcpm: null,
+      // Milliquas names sidecar — same null-then-set lifecycle as famousMeta.
+      // Tier-aware: setTier reloads on tier change so `state.sources.milliquasNames`
+      // stays in lockstep with the active milliquas-<tier>.bin's localIdx.
+      milliquasNames: null,
     },
     // ── Debug-only per-frame skip flags ─────────────────────────────────
     //
@@ -963,6 +992,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       Source.Famous,
       state.sources.famousMeta,
       state.sources.famousXrefs,
+      state.sources.milliquasNames,
     );
     if (!info) return;
 
@@ -998,6 +1028,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       source,
       famousMeta ?? state.sources.famousMeta,
       famousXrefs ?? state.sources.famousXrefs,
+      state.sources.milliquasNames,
     );
     if (!info) return;
 
@@ -1027,11 +1058,22 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // slot the new request and let it cancel any prior in-flight load,
     // re-fetch the new tier's `.bin`, and run its commit step.
     //
+    // Hidden sources skip the tier-change fetch too — there's no point
+    // downloading a new tier of a survey the user can't see.  When
+    // they later toggle it on, `setSourceVisible` fires a fresh
+    // `.load({ tier })` with the current tier.
+    //
     // Filaments are NOT swapped on tier change — see
     // `filamentFetcher.ts`'s docblock for the rationale.
-    for (const src of [Source.SDSS, Source.TwoMRS, Source.Glade, Source.Famous]) {
+    for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
+      const src = cfg.source;
+      if (cfg.category === 'synthetic') continue;
       if (TIER_TARGETS[prevTier][src] === TIER_TARGETS[tier][src]) continue;
+      if (!maskHas(state.sources.drawMask, src)) continue;
       state.assetSlots.points.get(src)?.load({ source: src, tier });
+      // Companion sidecars reload in lockstep with the bin so
+      // localIdx lookups stay valid after a tier flip.
+      loadCompanionAssets(state, cfg, tier);
     }
 
     // MCPM volume: tier-aware (unlike CF-4). Same per-tier reload semantics

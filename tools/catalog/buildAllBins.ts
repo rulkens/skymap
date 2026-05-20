@@ -28,7 +28,7 @@
  *   This module re-exports `crossMatch` so callers (and the test) can
  *   keep importing it from the `buildAllBins` path the plan specifies.
  */
-import { createReadStream, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { createReadStream, existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
@@ -38,6 +38,8 @@ import { parseTwoMrs, parseXscShapeCsv } from '../parsers/twoMrs.js';
 import type { XscShapeMap } from '../parsers/twoMrs.js';
 import { parseGladeLine, parseGlade2masxPgcLine, parseHyperLedaCsv } from '../parsers/glade.js';
 import type { HyperLedaShapeMap } from '../parsers/glade.js';
+import { parseMilliquas } from '../parsers/milliquas.js';
+import type { MilliquasParseResult } from '../parsers/milliquas.js';
 import type { ParsedRecord } from '../parsers/common.js';
 import { crossMatch } from './crossMatch.js';
 
@@ -49,7 +51,7 @@ import { Source, sourceLabel } from '../../src/data/sources.js';
 import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog.js';
 import { TIER_TARGETS, tierFilenameForSource } from '../../src/data/tierTargets.js';
 import type { Tier } from '../../src/@types/data/Tier.js';
-import { subsampleByAbsMag } from './subsampleByAbsMag.js';
+import { subsampleByAbsMag, subsampleIndicesByAbsMag } from './subsampleByAbsMag.js';
 
 // Re-export so `tests/crossMatch.test.ts` and any other consumer can keep
 // using the documented `tools/buildAllBins` import path.
@@ -66,7 +68,7 @@ export type { CrossMatchInputs } from './crossMatch.js';
  * the hot fill loop tight — no per-row push() overhead, no hidden
  * reallocations, and the resulting buffers are GPU-upload-ready.
  */
-function recordsToCloud(records: ParsedRecord[]): GalaxyCatalog {
+export function recordsToCloud(records: ParsedRecord[]): GalaxyCatalog {
   const count = records.length;
   const cloud: GalaxyCatalog = {
     count,
@@ -205,6 +207,54 @@ function loadOrEmpty(path: string | undefined, parser: ParserFn): ParsedRecord[]
 }
 
 /**
+ * Load + parse the Milliquas v8 fixed-width file, preserving the
+ * parser's parallel `names`/`classes` sidecars.
+ *
+ * Why a Milliquas-specific loader rather than another `loadOrEmpty`
+ * call? `loadOrEmpty` returns just `ParsedRecord[]` — fine for SDSS /
+ * 2MRS / GLADE where the parser's output is fully captured by the
+ * record shape, but lossy for Milliquas where the Name + Type[0]
+ * columns travel alongside in parallel arrays for the JSON sidecar
+ * the InfoCard reads at runtime.  Wrapping the parser here keeps the
+ * three sources in lockstep without forcing `ParserFn` to grow a
+ * sidecar return shape every parser would have to honour.
+ *
+ * Missing-file tolerance mirrors `loadOrEmpty`: the raw 194 MB
+ * upstream file is gitignored, so a fresh checkout won't have it.
+ * We return an empty result so `npm run build-tiers` still produces
+ * the SDSS/2MRS/GLADE bins for a contributor who hasn't run the
+ * `fetch-milliquas` step yet.
+ */
+function loadMilliquas(path: string | undefined): MilliquasParseResult {
+  const empty: MilliquasParseResult = {
+    records: [],
+    names: [],
+    classes: [],
+    skipped: { zMissing: 0, zZero: 0, photoZRounded: 0, qsocRounded: 0 },
+  };
+  if (!path) return empty;
+  const full = resolve(path);
+  if (!existsSync(full)) {
+    process.stderr.write(`  ${path} not present — Milliquas bin will be empty\n`);
+    return empty;
+  }
+  const text = readFileSync(full, 'utf8');
+  const result = parseMilliquas(text);
+  const { records, skipped } = result;
+  const skippedTotal =
+    skipped.zMissing + skipped.zZero + skipped.photoZRounded + skipped.qsocRounded;
+  process.stderr.write(
+    `  loaded ${records.length.toLocaleString()} records ` +
+      `(skipped ${skippedTotal.toLocaleString()}: ` +
+      `z=blank ${skipped.zMissing.toLocaleString()}, ` +
+      `z=0 ${skipped.zZero.toLocaleString()}, ` +
+      `photo-z ${skipped.photoZRounded.toLocaleString()}, ` +
+      `GAIA3 QSOC ${skipped.qsocRounded.toLocaleString()})\n`,
+  );
+  return result;
+}
+
+/**
  * Streaming variant of `loadOrEmpty` for the GLADE catalog.
  *
  * Why a separate code path for GLADE? The released v2.3 file is ~800 MB.
@@ -296,6 +346,7 @@ async function runCli(): Promise<void> {
   const sdssArg = args.sdss || findLatestSdssCsv(resolve('data')) || '';
   const twomrsArg = args.twomrs || 'data/raw/2mrs_table3.dat';
   const gladeArg = args.glade || 'data/raw/glade2.3.dat';
+  const milliquasArg = args.milliquas || 'data/raw/milliquas/milliquas.txt';
   const outDirArg = args['out-dir'] || 'public/data';
 
   if (sdssArg) {
@@ -313,6 +364,7 @@ async function runCli(): Promise<void> {
   args.sdss = sdssArg;
   args.twomrs = twomrsArg;
   args.glade = gladeArg;
+  args.milliquas = milliquasArg;
   args['out-dir'] = outDirArg;
 
   // `--glade-spec-only` is a value-less boolean flag; readArgs() consumed the
@@ -384,6 +436,9 @@ async function runCli(): Promise<void> {
     pgcByMassId,
   );
 
+  process.stderr.write('parsing Milliquas…\n');
+  const milliquasResult = loadMilliquas(args.milliquas);
+
   // ── Cross-pollinate PGCs from GLADE into 2MRS ──────────────────────────
   //
   // 2MRS's source file has no PGC column, so its records initially
@@ -450,6 +505,24 @@ async function runCli(): Promise<void> {
     arr.push(r);
   }
 
+  // Milliquas bypasses crossMatch on purpose.  Two reasons:
+  //
+  // 1. A Milliquas point and a GLADE host galaxy at the same sky
+  //    position are physically *different* objects: an AGN core vs the
+  //    integrated host emission.  `crossMatch` deduplicates by (RA,
+  //    Dec, redshift), so feeding Milliquas through it would discard
+  //    real data — exactly the science the catalogue is here to add.
+  //
+  // 2. Milliquas is pre-deduplicated upstream against every parent
+  //    survey it draws from (SDSS, Veron, NED, …), so a second dedup
+  //    pass would just spend CPU re-discovering the empty intersection.
+  //
+  // Add the records straight into the per-source bucket so the per-tier
+  // write loop below treats them like any other survey.
+  if (milliquasResult.records.length > 0) {
+    bySource.set(Source.Milliquas, milliquasResult.records);
+  }
+
   // Per-source dedup report. Subtracting kept from input gives the number
   // of records dropped as duplicates of a higher-priority survey's row.
   for (const source of [Source.SDSS, Source.TwoMRS, Source.Glade]) {
@@ -486,7 +559,25 @@ async function runCli(): Promise<void> {
         );
         continue;
       }
-      const slice = target === undefined ? records : subsampleByAbsMag(records, target);
+      // Milliquas owns parallel `names`/`classes` sidecars that must
+      // reorder/subset in lockstep with the encoded records so the
+      // runtime can look up `names[i]` by the same `localIdx` the
+      // renderer uses.  We thread the kept-indices through
+      // `subsampleIndicesByAbsMag` and re-zip; every other source
+      // skips this branch and uses the value-returning variant.
+      const isMilliquas = source === Source.Milliquas;
+      const keptIndices =
+        target === undefined
+          ? null
+          : isMilliquas
+            ? subsampleIndicesByAbsMag(records, target)
+            : null;
+      const slice =
+        target === undefined
+          ? records
+          : isMilliquas
+            ? keptIndices!.map((i) => records[i]!)
+            : subsampleByAbsMag(records, target);
 
       const cloud = recordsToCloud(slice);
       const buf = encodeGalaxyCatalog(cloud);
@@ -495,6 +586,27 @@ async function runCli(): Promise<void> {
       process.stderr.write(
         `wrote ${cloud.count.toLocaleString()} points to ${outPath} (${buf.byteLength.toLocaleString()} bytes)\n`,
       );
+
+      // Milliquas sidecar: parallel-arrayed Name + class letter per
+      // encoded record, written exactly once.  The sidecar is
+      // tier-agnostic in shape (just JSON) but tier-specific in
+      // content because each tier's subsample keeps a different
+      // brightest-N slice — so we keep the file independent per tier
+      // by suffixing it with the same tier the bin uses.  The
+      // runtime fetcher pairs them by `<source>-<tier>.bin` and
+      // `<source>-<tier>_names.json`.
+      if (isMilliquas) {
+        const indices =
+          keptIndices ?? milliquasResult.records.map((_, i) => i);
+        const names = indices.map((i) => milliquasResult.names[i]!);
+        const classes = indices.map((i) => milliquasResult.classes[i]!);
+        const sidecarName = filename.replace(/\.bin$/, '_names.json');
+        const sidecarPath = resolve(outDir, sidecarName);
+        writeFileSync(sidecarPath, JSON.stringify({ names, classes }));
+        process.stderr.write(
+          `wrote ${names.length.toLocaleString()} names+classes to ${sidecarPath}\n`,
+        );
+      }
     }
   }
 }

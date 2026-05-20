@@ -29,6 +29,7 @@ import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../../../@types/loading/FamousXrefMap';
 import type { FamousPayload } from '../../../@types/loading/FamousPayload';
+import type { CompanionAssetReq } from '../../../@types/loading/CompanionAssetReq';
 import { HttpError, dataUrl } from '../fetchWithProgress';
 
 /**
@@ -54,7 +55,14 @@ export function parseFamousXrefs(rawJson: string): FamousXrefMap {
   return parsed as FamousXrefMap;
 }
 
-export const famousMetaFetcher: Fetcher<FamousPayload, void> = async (_req, signal) => {
+// The `tier` field on the request is ignored — famous_meta.json +
+// famous_xrefs.json are tier-agnostic resources.  The uniform
+// `CompanionAssetReq` shape lets `loadCompanionAssets` dispatch
+// generically across every companion slot without a per-key switch.
+export const famousMetaFetcher: Fetcher<FamousPayload, CompanionAssetReq> = async (
+  _req,
+  signal,
+) => {
   const [metaRes, xrefsRes] = await Promise.all([
     fetch(dataUrl('famous_meta.json'), { signal }),
     fetch(dataUrl('famous_xrefs.json'), { signal }),

@@ -86,7 +86,14 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       return { source: sel.source, localIdx: sel.localIdx, cloud };
     },
     buildGalaxyInfo: (cloud, localIdx, src) =>
-      buildGalaxyInfo(cloud, localIdx, src, state.sources.famousMeta, state.sources.famousXrefs),
+      buildGalaxyInfo(
+        cloud,
+        localIdx,
+        src,
+        state.sources.famousMeta,
+        state.sources.famousXrefs,
+        state.sources.milliquasNames,
+      ),
     // POI pick hit `(category, poiIndex)` → `PointOfInterest`.  The full
     // contract (per-category-local indexing, why the array lookup is
     // safe, why the helper is shared) lives in the module header of

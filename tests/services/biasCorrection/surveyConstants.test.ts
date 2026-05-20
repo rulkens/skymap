@@ -27,6 +27,7 @@ const SOURCE_NAME: Record<SurveySource, string> = {
   [Source.TwoMRS]: 'TwoMRS',
   [Source.Glade]: 'Glade',
   [Source.Famous]: 'Famous',
+  [Source.Milliquas]: 'Milliquas',
 };
 
 describe('surveyConstants table', () => {

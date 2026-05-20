@@ -121,6 +121,7 @@ export function buildGalaxyInfo(
   source: Source,
   famousMeta?: readonly FamousMetaEntry[],
   famousXrefs?: FamousXrefMap,
+  milliquasNames?: readonly string[],
 ): GalaxyInfo {
   const px = cloud.positions[idx * 3 + 0]!;
   const py = cloud.positions[idx * 3 + 1]!;
@@ -372,22 +373,31 @@ export function buildGalaxyInfo(
     // Best human-readable headline for this row.  Treats the choice
     // as a priority-ordered list of candidates with a single "first
     // non-empty wins" selection rule (matching `famousDisplayName`'s
-    // strategy, just with two extra survey-row candidates appended):
+    // strategy, just with extra survey-row candidates appended):
     //
     //   1. Famous → curated `commonName` then `names[0]`.  Routed
     //      through the shared `famousDisplayName` helper so the
     //      InfoCard headline and the POI label can't drift.
-    //   2. Survey row with a real PGC in objID → `PGC <n>`.  Applies
+    //   2. Milliquas → curated literature name from the per-tier
+    //      `milliquas-<tier>_names.json` sidecar (e.g. "3C 273",
+    //      "PKS 0405-12").  When the sidecar hasn't loaded yet (or the
+    //      row's name is empty) we fall through to the IAU fallback
+    //      below, which produces "MQ J<RA><Dec>".
+    //   3. Survey row with a real PGC in objID → `PGC <n>`.  Applies
     //      to BOTH 2MRS (PGC populated by the build-time GLADE→2MRS
     //      cross-match) and GLADE (PGC inherited directly from the
     //      source line).  PGC is widely indexed by NED / SIMBAD,
     //      shorter than a coord-based name, and especially valuable
     //      for GLADE rows where the iauName ("GLADE J…") is a
     //      synthetic prefix we generate ourselves.
-    //   3. IAU coord-based name (`SDSS J…`, `2MASX J…`, `GLADE J…`).
+    //   4. IAU coord-based name (`SDSS J…`, `2MASX J…`, `GLADE J…`,
+    //      `MQ J…`).
     displayName:
       [
         famous ? famousDisplayName(famous) : undefined,
+        source === Source.Milliquas && milliquasNames && milliquasNames[idx]
+          ? milliquasNames[idx]
+          : undefined,
         (source === Source.TwoMRS || source === Source.Glade) && cloud.objIDs[idx]! > 0n
           ? `PGC ${cloud.objIDs[idx]!}`
           : undefined,

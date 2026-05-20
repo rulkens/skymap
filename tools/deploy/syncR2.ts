@@ -73,6 +73,13 @@ const CACHE_CONTROL = 'public, max-age=86400';
 
 const ALLOW = (name: string): boolean =>
   /^(sdss|glade)-(small|medium|large)\.bin$/.test(name) ||
+  // Milliquas v8 (Flesch 2023): same tier-suffixed pattern as SDSS/GLADE,
+  // with a per-tier `_names.json` sidecar that carries the Name + class
+  // strings InfoCard renders on a quasar pick.  `small` is currently a
+  // 0-target tier (no bin produced) but the regex stays permissive in
+  // case a future tier reshuffle revives it.
+  /^milliquas-(small|medium|large)\.bin$/.test(name) ||
+  /^milliquas-(small|medium|large)_names\.json$/.test(name) ||
   name === '2mrs.bin' ||
   name === 'famous.bin' ||
   name === 'filaments.bin' ||

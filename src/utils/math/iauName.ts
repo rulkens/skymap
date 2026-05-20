@@ -98,6 +98,12 @@ export function iauName(source: Source, raDeg: number, decDeg: number): string {
       // when no curated name is available (e.g. for a new entry pending
       // metadata enrichment).  "Famous" matches the Source label.
       return `Famous ${coords}`;
+    case Source.Milliquas:
+      // Milliquas entries each have a literature name in the sidecar
+      // (`3C 273`, `SDSS J100022.5+023521`, ...). The IAU coord fallback
+      // is what we emit when the sidecar isn't loaded; "MQ" matches the
+      // upstream catalogue's own short-name convention.
+      return `MQ ${coords}`;
     case Source.Cluster:
     case Source.Supercluster:
     case Source.Void:

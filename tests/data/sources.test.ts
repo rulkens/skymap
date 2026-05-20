@@ -66,10 +66,10 @@ describe('Source enum — POI codes (cluster/supercluster/void)', () => {
   });
 
   it('ALL_VISIBLE_MASK still covers only survey sources (no POI bits)', () => {
-    // Pre-POI mask = bits 0..4 set = 0b11111 = 31. POI codes (5/6/7)
-    // must remain unset so the survey draw loop doesn't accidentally
-    // gate on them.
-    expect(ALL_VISIBLE_MASK).toBe(0b11111);
+    // Survey-source bits: 0 (Synthetic), 1 (SDSS), 2 (2MRS), 3 (Glade),
+    // 4 (Famous), 8 (Milliquas).  POI codes 5/6/7 stay clear so the
+    // survey draw loop doesn't accidentally gate on them.
+    expect(ALL_VISIBLE_MASK).toBe(0b100011111);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Cluster)).toBe(false);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Supercluster)).toBe(false);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Void)).toBe(false);

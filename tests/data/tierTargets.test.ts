@@ -50,3 +50,35 @@ describe('tierFilenameForSource', () => {
     expect(tierFilenameForSource(Source.Famous, 'medium')).toBe('famous.bin');
   });
 });
+
+describe('tierFilenameForSource — Milliquas', () => {
+  it('returns tier-suffixed filenames for medium/large', () => {
+    // Milliquas is tiered like SDSS and GLADE — every tier produces a
+    // distinct on-disk file because the brightest-N subsample is
+    // different at each cap.  Suffixed names let the three variants
+    // coexist on the static host.
+    expect(tierFilenameForSource(Source.Milliquas, 'medium')).toBe(
+      'milliquas-medium.bin',
+    );
+    expect(tierFilenameForSource(Source.Milliquas, 'large')).toBe(
+      'milliquas-large.bin',
+    );
+  });
+});
+
+describe('TIER_TARGETS — Milliquas', () => {
+  it('excludes Milliquas from the small tier (mobile budget)', () => {
+    // Same shape as SDSS small: the mobile GPU budget can't accommodate
+    // another ~10^5 instanced points on top of the existing GLADE small
+    // sample, so the small tier ships without quasars.
+    expect(TIER_TARGETS.small[Source.Milliquas]).toBe(0);
+  });
+
+  it('caps Milliquas at 200k in the medium tier', () => {
+    expect(TIER_TARGETS.medium[Source.Milliquas]).toBe(200_000);
+  });
+
+  it('keeps Milliquas uncapped in the large tier (key absent)', () => {
+    expect(TIER_TARGETS.large).not.toHaveProperty(String(Source.Milliquas));
+  });
+});

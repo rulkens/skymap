@@ -46,11 +46,18 @@ export const TIER_TARGETS: Record<Tier, Partial<Record<Source, number>>> = {
   small: {
     [Source.SDSS]: 0, // mobile budget — drop SDSS entirely
     [Source.Glade]: 256_000, // brightest 256k
+    [Source.Milliquas]: 0, // mobile budget — drop Milliquas entirely
     // 2MRS + Famous: missing → use full source
   },
   medium: {
     [Source.SDSS]: 156_000, // brightest ~156k
     [Source.Glade]: 400_000, // brightest 400k
+    // 200k is a first guess — revisit after visualising the medium tier.
+    // Milliquas ships ~943k accepted records out of the box; trimming to
+    // the brightest 200k by absolute mag mirrors the GLADE-medium cap
+    // and keeps the medium-tier point budget within range of the SDSS
+    // and GLADE caps next to it.
+    [Source.Milliquas]: 200_000,
     // 2MRS + Famous: missing → use full source
   },
   large: {
@@ -62,7 +69,11 @@ export const TIER_TARGETS: Record<Tier, Partial<Record<Source, number>>> = {
  * The set of sources that get per-tier filename suffixes.  Everything not in
  * this set keeps a single file shared across tiers.
  */
-const TIERED_SOURCES: ReadonlySet<Source> = new Set([Source.SDSS, Source.Glade]);
+const TIERED_SOURCES: ReadonlySet<Source> = new Set([
+  Source.SDSS,
+  Source.Glade,
+  Source.Milliquas,
+]);
 
 /** Base (tier-agnostic) filename per source.  Used unchanged for non-tiered sources. */
 const BASE_FILENAMES: Partial<Record<Source, string>> = {
@@ -70,6 +81,7 @@ const BASE_FILENAMES: Partial<Record<Source, string>> = {
   [Source.TwoMRS]: '2mrs',
   [Source.Glade]: 'glade',
   [Source.Famous]: 'famous',
+  [Source.Milliquas]: 'milliquas',
 };
 
 /**
