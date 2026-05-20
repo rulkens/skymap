@@ -33,6 +33,7 @@ import type { LabelProducerOutput } from '../../../@types/engine/subsystems/Labe
 import type { YouAreHereSubsystem } from '../../../@types/engine/subsystems/YouAreHereSubsystem';
 import { youAreHereAlpha } from '../../gpu/labels/youAreHereVisibility';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
+import { getLabelStyleOverride } from '../labelStyleOverride';
 
 const LABEL_TEXT = 'You are here';
 const LABEL_ANCHOR_MPC = 0.05;
@@ -68,6 +69,22 @@ export function createYouAreHereSubsystem(): YouAreHereSubsystem {
       );
     }
 
+    // Live-tuning override: when the DebugPanel selects 'youAreHere'
+    // as the target category, substitute the override's outline + glow
+    // fields for the producer defaults (today simply "off").  The
+    // override is module-scoped + read fresh each frame so changes from
+    // the panel apply on the next render without a producer reseed.
+    const override = getLabelStyleOverride();
+    const effectFields =
+      override.targetCategory === 'youAreHere'
+        ? {
+            outlineColor: override.outlineColor,
+            outlineEmFrac: override.outlineEmFrac,
+            glowColor: override.glowColor,
+            glowEmFrac: override.glowEmFrac,
+          }
+        : {};
+
     const labels: readonly Label[] = [
       {
         id: 'you-are-here',
@@ -81,6 +98,7 @@ export function createYouAreHereSubsystem(): YouAreHereSubsystem {
         maxPixelSize: 150,
         fadeAlpha: alpha,
         alignX: 'center',
+        ...effectFields,
       },
     ];
     const lines: readonly MarkerLine[] = [

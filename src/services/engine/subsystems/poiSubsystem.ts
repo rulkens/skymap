@@ -102,6 +102,7 @@ import type { ClusterMarkerDescriptor } from '../../../@types/rendering/ClusterM
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { hexToGl } from '../../../utils/color/hexToGl';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
+import { getLabelStyleOverride } from '../labelStyleOverride';
 
 type CategoryStyle = {
   readonly labelColor: Vec4;
@@ -407,6 +408,12 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
     const halfH = ctx.canvasSize.height * 0.5;
     const fovYRad = 2 * Math.atan(halfH / ctx.drawPxPerRad);
     const [cx, cy, cz] = ctx.drawCamPos;
+    // Capture the live-tuning override once per frame — reads are
+    // cheap, but a consistent snapshot matters when the loop crosses
+    // many POIs.  The director will not call produceLabels again
+    // within the same frame.  See `labelStyleOverride.ts` for the
+    // module-scoped state's rationale.
+    const override = getLabelStyleOverride();
     for (const p of pois) {
       // Label-axis gate.  Markers consult their own `markerVisibility`
       // record in `produceMarkers` below — flipping a category's label
@@ -535,6 +542,20 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
         }
       }
 
+      // Per-POI override fields: only POIs whose own category matches
+      // the override's target adopt the outline + glow values.  All
+      // other categories keep their producer-default effect fields
+      // (today: unset → renderer's transparent-zero defaults).
+      const overrideFields =
+        override.targetCategory === p.category
+          ? {
+              outlineColor: override.outlineColor,
+              outlineEmFrac: override.outlineEmFrac,
+              glowColor: override.glowColor,
+              glowEmFrac: override.glowEmFrac,
+            }
+          : {};
+
       labels.push({
         id: p.id,
         worldPos: labelWorldPos,
@@ -548,6 +569,7 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
         fadeAlpha,
         alignX,
         alignY,
+        ...overrideFields,
       });
     }
     // One-shot layer fade-in: first frame that emits a non-empty
