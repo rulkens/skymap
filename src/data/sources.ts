@@ -22,8 +22,6 @@
  */
 
 import type { SourceEntry } from '../@types/data/SourceEntry';
-import type { SurveySource } from '../@types/data/SurveySource';
-import type { PoiSource } from '../@types/data/PoiSource';
 
 // ─── The enum itself ────────────────────────────────────────────────────────
 
@@ -105,8 +103,6 @@ export const Source = {
   Mcpm: 11,
 } as const;
 export type Source = (typeof Source)[keyof typeof Source];
-
-export type { SurveySource, PoiSource };
 
 // ─── Registry ───────────────────────────────────────────────────────────────
 
