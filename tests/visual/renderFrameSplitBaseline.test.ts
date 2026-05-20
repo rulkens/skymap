@@ -224,6 +224,8 @@ function makeCloud(count: number): GalaxyCatalog {
     axisRatio: fill(1),
     positionAngleDeg: fill(0),
     diameterKpc: fill(50),
+    classByte: new Uint8Array(count),
+    parentSurveyByte: new Uint8Array(count),
   };
 }
 

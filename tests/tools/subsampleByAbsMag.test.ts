@@ -36,6 +36,8 @@ function rec(overrides: Partial<ParsedRecord>): ParsedRecord {
     axisRatio: null,
     positionAngleDeg: null,
     diameterKpc: null,
+    classByte: 0,
+    parentSurveyByte: 0,
     ...overrides,
   };
 }

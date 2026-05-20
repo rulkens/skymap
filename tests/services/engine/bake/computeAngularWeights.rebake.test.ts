@@ -45,6 +45,8 @@ function syntheticCloud(count: number, seedOffset: number): GalaxyCatalog {
     axisRatio: new Float32Array(count),
     positionAngleDeg: new Float32Array(count),
     diameterKpc: new Float32Array(count),
+    classByte: new Uint8Array(count),
+    parentSurveyByte: new Uint8Array(count),
   };
 }
 
