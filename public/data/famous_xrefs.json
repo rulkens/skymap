@@ -49,7 +49,7 @@
   },
   "c35": {
     "source": "TwoMRS",
-    "localIdx": 642,
+    "localIdx": 640,
     "distanceArcsec": 0.19601203613602947
   },
   "c36": {
@@ -94,7 +94,7 @@
   },
   "c51": {
     "source": "Glade",
-    "localIdx": 752915,
+    "localIdx": 759005,
     "distanceArcsec": 10.89594840824113
   },
   "c52": {
@@ -109,17 +109,17 @@
   },
   "c57": {
     "source": "Glade",
-    "localIdx": 281,
+    "localIdx": 278,
     "distanceArcsec": 15.898095008988816
   },
   "c60": {
     "source": "Glade",
-    "localIdx": 228874,
+    "localIdx": 231291,
     "distanceArcsec": 0.8841628827143453
   },
   "c61": {
     "source": "Glade",
-    "localIdx": 228875,
+    "localIdx": 231292,
     "distanceArcsec": 1.4800435353057315
   },
   "c62": {
@@ -289,7 +289,7 @@
   },
   "m86": {
     "source": "Glade",
-    "localIdx": 228989,
+    "localIdx": 231403,
     "distanceArcsec": 6.774969582524341
   },
   "m87": {
