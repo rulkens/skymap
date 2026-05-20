@@ -44,10 +44,18 @@ function makeFixture(initialMask: number) {
     sources: {
       pickMask: initialMask,
       drawMask: initialMask,
+      tier: 'medium' as const,
     },
     subsystems: {
       fades,
       scheduler: { requestRender: vi.fn() },
+    },
+    // setSourceVisibleImpl reads `assetSlots.points.get(source)?.load(...)`
+    // to lazy-load surveys that were hidden at boot.  Empty Map is
+    // fine — the `?.` short-circuits when no slot is registered.
+    assetSlots: {
+      points: new Map(),
+      milliquasNames: null,
     },
   };
   return { state, fades, fadeCalls };

@@ -183,7 +183,19 @@ export const GALAXY_CATALOG_SOURCE_REGISTRY: readonly GalaxyCatalogSourceConfig[
   { source: Source.TwoMRS, fetcher: galaxyCatalogFetcher, initialTier: 'medium', category: 'survey' },
   { source: Source.Glade, fetcher: galaxyCatalogFetcher, initialTier: 'small', category: 'survey' },
   { source: Source.Famous, fetcher: galaxyCatalogFetcher, initialTier: 'medium', category: 'curated' },
-  { source: Source.Milliquas, fetcher: galaxyCatalogFetcher, initialTier: 'medium', category: 'survey' },
+  {
+    source: Source.Milliquas,
+    fetcher: galaxyCatalogFetcher,
+    initialTier: 'medium',
+    category: 'survey',
+    // Milliquas has a per-tier names+classes JSON sidecar that the
+    // InfoCard reads on a quasar pick.  It must stay in lockstep with
+    // the active milliquas-<tier>.bin's row order — the fetcher
+    // returns parallel arrays indexed by localIdx.
+    loadCompanions: (state, tier) => {
+      state.assetSlots.milliquasNames?.load({ tier });
+    },
+  },
   { source: Source.Synthetic, fetcher: syntheticPointFetcher, initialTier: 'small', category: 'synthetic' },
 ];
 

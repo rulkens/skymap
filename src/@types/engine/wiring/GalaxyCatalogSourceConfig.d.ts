@@ -3,6 +3,7 @@ import type { Tier } from '../../data/Tier';
 import type { Fetcher } from '../../loading/Fetcher';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { GalaxyCatalogReq } from '../../loading/GalaxyCatalogReq';
+import type { EngineState } from '../state/EngineState';
 
 /**
  * Categorisation of a registry row.  Drives behaviour in three places
@@ -57,4 +58,20 @@ export type GalaxyCatalogSourceConfig = {
    * See `GalaxyCatalogSourceCategory` for the per-value semantics.
    */
   category: GalaxyCatalogSourceCategory;
+  /**
+   * Optional hook fired whenever the survey's main `.bin` slot is
+   * (re)loaded — at boot, on visibility-toggle-on, and on tier change.
+   * Use this to kick parallel asset slots that must stay in lockstep
+   * with the bin (e.g. Milliquas's per-tier name sidecar).
+   *
+   * The hook is called with the engine state and the tier being loaded;
+   * it should fire `.load()` on whichever companion slots are
+   * appropriate and return synchronously.  Idempotency is the
+   * implementation's responsibility — the hook may fire multiple times
+   * during a session (boot + every toggle-on + every tier change).
+   *
+   * Omit for sources that have no companion assets (SDSS / 2MRS /
+   * GLADE / Famous today).
+   */
+  loadCompanions?: (state: EngineState, tier: Tier) => void;
 };

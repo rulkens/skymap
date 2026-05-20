@@ -42,9 +42,10 @@
  *   - Mutates `deps.allSlots` — populates with every minted slot.
  */
 
-import { Source } from '../../../data/sources';
+import { Source, maskHas } from '../../../data/sources';
 import { catalogSourceFor } from '../../../data/catalogSource';
 import {
+  GALAXY_CATALOG_SOURCE_REGISTRY,
   SURVEY_POINT_SOURCES,
   TIER_FETCHED_POINT_SOURCES,
 } from '../wiring/galaxyCatalogSourceRegistry';
@@ -380,7 +381,14 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   let anyRealReady = false;
   for (const source of TIER_FETCHED_POINT_SOURCES) {
     const slot = state.assetSlots.points.get(source);
-    if (!slot) {
+    // A hidden-at-boot survey won't auto-load, so its slot stays in
+    // `idle` forever — never transitions to ready/error.  Treat it as
+    // "settled" here so the synthetic-fallback gate doesn't wait
+    // indefinitely.  When the user later toggles it on, the load
+    // fires (via `setSourceVisible`) and the upload happens, but by
+    // then the fallback decision is long made.
+    const hiddenAtBoot = !maskHas(state.sources.drawMask, source);
+    if (!slot || hiddenAtBoot) {
       if (realSet.has(source)) {
         realSettled++;
         maybeFireSyntheticFallback();
@@ -425,8 +433,22 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
     synthSlot.load({ source: Source.Synthetic, tier: state.sources.tier });
   }
 
-  for (const source of TIER_FETCHED_POINT_SOURCES) {
+  // Boot load only for sources whose visibility bit is set in the
+  // default mask — same lazy-load discipline CF-4 / MCPM use for
+  // default-off volume fields.  Default-off surveys (Milliquas today)
+  // skip their multi-MB .bin fetch at startup; toggling them on later
+  // triggers `setSourceVisible`, which fires the slot's `.load()`
+  // idempotently.  Default-on surveys are unaffected.
+  //
+  // Companion sidecars (e.g. milliquas_names) ride alongside via the
+  // registry's `loadCompanions` hook — same generic pattern that the
+  // tier-change loop and `setSourceVisible` use.
+  for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
+    const source = cfg.source;
+    if (cfg.category === 'synthetic') continue;
+    if (!maskHas(state.sources.drawMask, source)) continue;
     state.assetSlots.points.get(source)?.load({ source, tier: state.sources.tier });
+    cfg.loadCompanions?.(state, state.sources.tier);
   }
   // Filaments load exactly once at boot — never on tier change.
   // See `filamentFetcher.ts` for the rationale.
@@ -441,8 +463,4 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // on tier change. Missing/404 .scfd silently omits the field from
   // the Volumes panel.
   state.assetSlots.mcpm?.load({ tier: state.sources.tier });
-  // Milliquas names sidecar loads at the boot tier; `engine.setTier`
-  // reloads on tier change.  Small tier short-circuits to an empty
-  // payload inside the fetcher (no bin → no names to fetch).
-  state.assetSlots.milliquasNames?.load({ tier: state.sources.tier });
 }

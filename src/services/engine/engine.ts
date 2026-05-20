@@ -72,7 +72,7 @@
  * ```
  */
 
-import { Source, maskWith, maskWithout } from '../../data/sources';
+import { Source, maskWith, maskWithout, maskHas } from '../../data/sources';
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_AUTO_ROTATE,
@@ -141,7 +141,7 @@ import { getVolumeFieldDefaults } from '../../data/volumeFieldDefaults';
 // connect/disconnect/sensitivity setters forward straight through.
 import { createSpaceMouseSubsystem } from './subsystems/spaceMouseSubsystem';
 import { buildSettersFromTable } from './wiring/settingsTable';
-import { TIER_FETCHED_POINT_SOURCES } from './wiring/galaxyCatalogSourceRegistry';
+import { GALAXY_CATALOG_SOURCE_REGISTRY } from './wiring/galaxyCatalogSourceRegistry';
 import type { SettingsTableKey } from '../../@types/settings/SettingsTableKey';
 import { runBootstrapPhases } from './phases/bootstrap';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
@@ -179,7 +179,7 @@ import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
 export async function setSourceVisibleImpl(
   state: Pick<
     import('../../@types/engine/state/EngineState').EngineState,
-    'sources' | 'subsystems'
+    'sources' | 'subsystems' | 'assetSlots'
   >,
   opts: { cb: Pick<EngineCallbacks, 'sources'> },
   source: Source,
@@ -200,6 +200,23 @@ export async function setSourceVisibleImpl(
   state.subsystems.scheduler.requestRender();
 
   if (visible) {
+    // Lazy-load: any survey that was hidden at boot (and therefore
+    // skipped by the wireSlots loop) gets its first fetch kicked off
+    // here.  `.load()` is idempotent — calling it again on an already
+    // ready slot is a no-op, so default-on sources pay nothing.  Same
+    // shape CF-4 / MCPM use for default-off volume fields.
+    state.assetSlots.points
+      .get(source)
+      ?.load({ source, tier: state.sources.tier });
+    // Companion assets (e.g. Milliquas's per-tier name sidecar) fire
+    // alongside the main `.bin` so InfoCard / search / picking have
+    // their parallel data ready by the time the user interacts.  The
+    // registry's `loadCompanions` hook is the single extension point;
+    // sources without companions simply omit it.
+    GALAXY_CATALOG_SOURCE_REGISTRY.find((c) => c.source === source)?.loadCompanions?.(
+      state as EngineState,
+      state.sources.tier,
+    );
     state.sources.drawMask = targetMask;
     await state.subsystems.fades.fadeTo(handle, 1, FADE_IN_DURATION_MS);
   } else {
@@ -1030,11 +1047,22 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // slot the new request and let it cancel any prior in-flight load,
     // re-fetch the new tier's `.bin`, and run its commit step.
     //
+    // Hidden sources skip the tier-change fetch too — there's no point
+    // downloading a new tier of a survey the user can't see.  When
+    // they later toggle it on, `setSourceVisible` fires a fresh
+    // `.load({ tier })` with the current tier.
+    //
     // Filaments are NOT swapped on tier change — see
     // `filamentFetcher.ts`'s docblock for the rationale.
-    for (const src of TIER_FETCHED_POINT_SOURCES) {
+    for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
+      const src = cfg.source;
+      if (cfg.category === 'synthetic') continue;
       if (TIER_TARGETS[prevTier][src] === TIER_TARGETS[tier][src]) continue;
+      if (!maskHas(state.sources.drawMask, src)) continue;
       state.assetSlots.points.get(src)?.load({ source: src, tier });
+      // Companion sidecars (e.g. milliquas_names) reload in lockstep
+      // with the bin so localIdx lookups stay valid after a tier flip.
+      cfg.loadCompanions?.(state, tier);
     }
 
     // MCPM volume: tier-aware (unlike CF-4). Same per-tier reload semantics
@@ -1042,13 +1070,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // handle, but the AssetSlot machinery handles cancellation of any
     // in-flight previous-tier load identically.
     state.assetSlots.mcpm?.load({ tier });
-
-    // Milliquas names sidecar: parallel-arrayed to the per-tier
-    // milliquas-<tier>.bin's records by localIdx.  Must reload in
-    // lockstep with the bin so a Milliquas hover after a tier flip
-    // looks up the right row's name.  Same AssetSlot cancellation
-    // semantics as the point-source loop and MCPM above.
-    state.assetSlots.milliquasNames?.load({ tier });
   }
 
   function getCloud(source: Source): GalaxyCatalog | undefined {
