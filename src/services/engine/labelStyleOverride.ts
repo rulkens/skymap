@@ -62,12 +62,24 @@ let current: LabelStyleOverride = {
   glowEmFrac: 0,
 };
 
+// Monotonic version counter — incremented on every set/clear.  The
+// label director includes this in its signature hash so an override
+// edit triggers a re-flush even when the merged label set is
+// id+fadeAlpha-stable.  Cheaper than a listener channel and impossible
+// to leak (no subscribers to forget to dispose).
+let version = 0;
+
 export function getLabelStyleOverride(): LabelStyleOverride {
   return current;
 }
 
+export function getLabelStyleOverrideVersion(): number {
+  return version;
+}
+
 export function setLabelStyleOverride(next: LabelStyleOverride): void {
   current = next;
+  version++;
 }
 
 export function clearLabelStyleOverride(): void {
@@ -78,4 +90,5 @@ export function clearLabelStyleOverride(): void {
     glowColor: [0, 0, 0, 0],
     glowEmFrac: 0,
   };
+  version++;
 }
