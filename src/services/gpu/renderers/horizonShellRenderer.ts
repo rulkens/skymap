@@ -25,13 +25,14 @@
  * per-vertex, and interpolated across the quad — so the vertex stage
  * never multiplies a large world coordinate either.
  *
- * ### Uniform buffer ABI (80 bytes)
+ * ### Uniform buffer ABI (64 bytes)
  *
  * See `shaders/horizonShell/io.wesl` for the authoritative layout:
  *
- *   offset 0  | vec3<f32> cameraPosGpc  — camera world pos / 1000
- *   offset 12 | f32       radiusGpc     — shell radius in Gpc
- *   offset 16 | vec4×4    rayCorners    — frustum-corner ray dirs (xyz)
+ *   offset 0  | vec3<f32> camForward + f32 tanHalfFovY
+ *   offset 16 | vec3<f32> camRight   + f32 aspect
+ *   offset 32 | vec3<f32> camUp      + f32 radiusGpc
+ *   offset 48 | vec3<f32> cameraPosGpc (world pos / 1000) + f32 fadeAlpha
  */
 
 import { vec3 } from 'gl-matrix';
@@ -127,7 +128,12 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
   const right = vec3.create();
   const up = vec3.create();
 
-  function draw(pass: GPURenderPassEncoder, cam: OrbitCamera, viewport: [number, number]): void {
+  function draw(
+    pass: GPURenderPassEncoder,
+    cam: OrbitCamera,
+    viewport: [number, number],
+    fadeAlpha: number,
+  ): void {
     // ── Camera basis (matches gl-matrix lookAt in computeViewProj) ────
     //
     //   forward = normalize(target - position)
@@ -162,11 +168,11 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
     f32[9] = up[1];
     f32[10] = up[2];
     f32[11] = HORIZON_RADIUS_GPC;
-    // cameraPosGpc (floats 12..14) + pad (float 15).
+    // cameraPosGpc (floats 12..14) + fadeAlpha (float 15).
     f32[12] = cam.position[0]! / MPC_PER_GPC;
     f32[13] = cam.position[1]! / MPC_PER_GPC;
     f32[14] = cam.position[2]! / MPC_PER_GPC;
-    f32[15] = 0;
+    f32[15] = fadeAlpha;
     device.queue.writeBuffer(uniformBuffer, 0, uniforms);
 
     pass.setPipeline(pipeline);

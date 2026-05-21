@@ -34,7 +34,12 @@
 //   offset 0  : camForward    (vec3<f32>) + tanHalfFovY (f32)
 //   offset 16 : camRight      (vec3<f32>) + aspect      (f32)
 //   offset 32 : camUp         (vec3<f32>) + radiusGpc   (f32)
-//   offset 48 : cameraPosGpc  (vec3<f32>) + _pad        (f32)
+//   offset 48 : cameraPosGpc  (vec3<f32>) + fadeAlpha   (f32)
+//
+// 'fadeAlpha' is the CPU-computed distance fade (see
+// utils/math/horizonShellFade): 0 when the camera is too close for the
+// shell to be relevant, smoothstepping to 1 at cosmological pull-back.
+// The fragment stage multiplies it into the emitted (additive) colour.
 
 struct Uniforms {
   camForward: vec3<f32>,
@@ -44,7 +49,7 @@ struct Uniforms {
   camUp: vec3<f32>,
   radiusGpc: f32,
   cameraPosGpc: vec3<f32>,
-  _pad: f32,
+  fadeAlpha: f32,
 };
 
 // ── Vertex-to-fragment interface ────────────────────────────────────

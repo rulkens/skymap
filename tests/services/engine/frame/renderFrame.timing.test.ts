@@ -295,20 +295,20 @@ describe('renderFrame — timing service hookup', () => {
 
     // descriptorFor fires once per enabled HDR pass PLUS once for the
     // tone-map pass PLUS once for the combined UI overlay.  In this
-    // fixture the HDR side is point-sprites + milky-way + horizon-shell
-    // (the others are gated off via null subsystems / null optional
-    // renderers; horizon-shell has no gate so it always runs); the
-    // tone-map slot is unconditional because postProcess.draw runs
-    // every frame; the ui-overlay slot fires even with no marker-lines
-    // / labels because the timing-enabled path always opens the UI
-    // overlay pass so its slot reports.
+    // fixture the HDR side is point-sprites + milky-way (the others are
+    // gated off via null subsystems / null optional renderers; the
+    // horizon shell is gated off too — its distance fade is 0 at this
+    // fixture's ~5-Mpc camera, the same close-volume framing that lights
+    // the Milky-Way impostor); the tone-map slot is unconditional because
+    // postProcess.draw runs every frame; the ui-overlay slot fires even
+    // with no marker-lines / labels because the timing-enabled path
+    // always opens the UI overlay pass so its slot reports.
     const slotsCalled = descriptorFor.mock.calls.map((c) => c[0]);
     expect(slotsCalled).toContain('point-sprites');
     expect(slotsCalled).toContain('milky-way');
-    expect(slotsCalled).toContain('horizon-shell');
     expect(slotsCalled).toContain('tone-map');
     expect(slotsCalled).toContain('ui-overlay');
-    expect(descriptorFor).toHaveBeenCalledTimes(5);
+    expect(descriptorFor).toHaveBeenCalledTimes(4);
 
     // The descriptors returned by the mock must land on the
     // beginRenderPass descriptors.  Each pass's beginRenderPass call
@@ -317,11 +317,11 @@ describe('renderFrame — timing service hookup', () => {
     //
     // The first beginRenderPass is the dedicated HDR clear pass (no
     // timestampWrites).  Subsequent visible passes here are:
-    // point-sprites, milky-way, horizon-shell (HDR sub-passes), then
-    // the ui-overlay pass.  Tone-map's beginRenderPass is hidden inside
-    // postProcess.draw (mocked away), so it doesn't appear in `beginCalls`.
+    // point-sprites, milky-way (HDR sub-passes), then the ui-overlay
+    // pass.  Tone-map's beginRenderPass is hidden inside postProcess.draw
+    // (mocked away), so it doesn't appear in `beginCalls`.
     const subPassBegins = beginCalls.slice(1);
-    expect(subPassBegins).toHaveLength(4);
+    expect(subPassBegins).toHaveLength(3);
     const stubSlotsOnDescriptors = subPassBegins.map((b) => {
       const tw = (
         b.desc as GPURenderPassDescriptor & {
@@ -334,7 +334,6 @@ describe('renderFrame — timing service hookup', () => {
     expect(stubSlotsOnDescriptors).toEqual([
       'point-sprites',
       'milky-way',
-      'horizon-shell',
       'ui-overlay',
     ]);
 

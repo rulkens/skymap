@@ -59,6 +59,8 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
 
   let cosTheta = abs(dot(normal, viewDir));
   let rim = pow(1.0 - cosTheta, RIM_POWER);
-  let value = rim * INTENSITY;
+  // Distance fade (CPU-side smoothstep) scales the whole additive
+  // contribution, so the shell ramps in as the camera pulls back.
+  let value = rim * INTENSITY * u.fadeAlpha;
   return vec4<f32>(SHELL_COLOR * value, value);
 }

@@ -31,6 +31,7 @@ import {
   proceduralDisksPass,
   filamentsPass,
   milkyWayPass,
+  horizonShellPass,
 } from '../../../../../src/services/engine/frame/passes';
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -341,6 +342,41 @@ describe('milkyWayPass.draw', () => {
     expect(args[3]).toBe(1.0);
     expect(args[4]).toBe(1.5);
     expect(args[5]).toEqual([0, 0, 5]);
+  });
+});
+
+describe('horizonShellPass.enabled', () => {
+  it('returns false near the origin — the inverse of the Milky-Way band', () => {
+    // Default makeCtx() camera at 5 Mpc is far below the shell's
+    // fade-in band (5% of 14.3 Gpc ≈ 0.7 Gpc), so the pass is skipped
+    // — no empty full-screen ray-march pass at galaxy-scale zoom.
+    expect(horizonShellPass.enabled(STATE_STUB, makeCtx(), makeSettings())).toBe(false);
+  });
+
+  it('returns true once the camera pulls back to cosmological scale', () => {
+    // 8 Gpc is past the 40%-of-radius full-strength point (~5.7 Gpc).
+    const ctx = makeCtx({
+      drawCamPos: [0, 0, 8000] as Readonly<[number, number, number]>,
+    });
+    expect(horizonShellPass.enabled(STATE_STUB, ctx, makeSettings())).toBe(true);
+  });
+});
+
+describe('horizonShellPass.draw', () => {
+  it('forwards the distance-fade alpha as the 4th draw arg', () => {
+    const drawSpy = vi.fn();
+    const deps = makeDeps({ horizonShellRenderer: { draw: drawSpy } as any });
+    const ctx = makeCtx({
+      drawCamPos: [0, 0, 8000] as Readonly<[number, number, number]>,
+    });
+    horizonShellPass.draw(PASS_STUB, ctx, STATE_STUB, makeSettings(), deps);
+    expect(drawSpy).toHaveBeenCalledTimes(1);
+    const args = drawSpy.mock.calls[0]!;
+    expect(args[0]).toBe(PASS_STUB);
+    expect(args[1]).toBe(ctx.cam);
+    expect(args[2]).toEqual([ctx.canvasSize.width, ctx.canvasSize.height]);
+    // 8 Gpc is past the full-strength point → alpha 1.0.
+    expect(args[3]).toBe(1.0);
   });
 });
 

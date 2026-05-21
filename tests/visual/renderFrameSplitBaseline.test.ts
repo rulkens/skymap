@@ -40,8 +40,14 @@
  * the HDR passes' `enabled` gates to return true (subsystems with
  * non-empty lastOutput, optional renderers non-null with positive
  * glyph/line counts, settings toggles on, camera inside the Milky-Way
- * fade band; horizon-shell has no gate).  Result: one renderer-draw
- * entry per enabled HDR pass + 1 postProcess.draw.
+ * fade band).  Result: one renderer-draw entry per enabled HDR pass +
+ * 1 postProcess.draw.
+ *
+ * The horizon shell is the lone exception: its distance fade is the
+ * mirror image of the Milky Way's, so a camera close enough to light
+ * the impostor is by construction outside the shell's fade band.  The
+ * two never co-exist in one frame; the shell's gating + dispatch is
+ * covered in `passes.test.ts` and `utils/math/horizonShellFade`.
  *
  * If the post-split renderFrame skips a pass, drops a draw, or
  * reorders the renderers, this snapshot fails.  That's the gate
@@ -430,10 +436,6 @@ describe('renderFrame visual baseline', () => {
         {
           "argShape": "pass,object",
           "renderer": "volume-upsample",
-        },
-        {
-          "argShape": "pass,object,Array[2]",
-          "renderer": "horizon-shell",
         },
         {
           "argShape": "object,object,number,number,undefined",
