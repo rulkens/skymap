@@ -11,6 +11,7 @@ import { describe, it, expect } from 'vitest';
 import { buildAliasIndex } from '../../src/hooks/buildAliasIndex';
 import { Source } from '../../src/data/sources';
 import type { EngineHandle } from '../../src/@types/engine/EngineHandle';
+import type { SourceType } from '../../src/@types/data/SourceType';
 
 /**
  * Build a minimal `EngineHandle` whose only live method is
@@ -18,11 +19,11 @@ import type { EngineHandle } from '../../src/@types/engine/EngineHandle';
  * handle has ~30 methods we don't care about for this test.
  */
 const fakeHandle = (
-  objIdsBySource: Partial<Record<Source, BigUint64Array>>,
+  objIdsBySource: Partial<Record<SourceType, BigUint64Array>>,
 ): EngineHandle =>
   ({
     sources: {
-      getCloudObjIds: (s: Source) => objIdsBySource[s],
+      getCloudObjIds: (s: SourceType) => objIdsBySource[s],
     },
   }) as unknown as EngineHandle;
 

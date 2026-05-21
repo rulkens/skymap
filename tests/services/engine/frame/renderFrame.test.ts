@@ -28,6 +28,7 @@ import { createDisabledGpuTimingService } from '../../../../src/services/gpu/tim
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { mat4 } from 'gl-matrix';
+import type { Selection } from '../../../../src/@types/engine/subsystems/Selection';
 
 // ── Test fixtures ───────────────────────────────────────────────────────────
 
@@ -251,7 +252,7 @@ function makeInput(
   const settings = {
     pointSizePx: 2.5,
     brightness: 1.0,
-    selected: null as { source: Source; localIdx: number } | null,
+    selected: null as Selection | null,
     visibleSourceMask: 0xffffffff,
     highlightFallback: true,
     realOnlyMode: false,
@@ -458,7 +459,7 @@ describe('renderFrame', () => {
 
   it('packs (source, localIdx) into the selectedPacked u32 sent to pointRenderer.draw', () => {
     // SDSS = 1, localIdx = 42 → (1 << 27) | 42 = 0x0800_002a = 134217770.
-    const fx2 = makeInput({ settings: { selected: { source: Source.SDSS, localIdx: 42 } } });
+    const fx2 = makeInput({ settings: { selected: { kind: 'galaxy', source: Source.SDSS, localIdx: 42 } } });
     renderFrame(fx2.input);
     const draw = fx2.pointRenderer.draw as ReturnType<typeof vi.fn>;
     const expected = ((Source.SDSS << 27) | 42) >>> 0;

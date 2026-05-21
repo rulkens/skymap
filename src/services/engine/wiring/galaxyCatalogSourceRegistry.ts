@@ -42,6 +42,7 @@ import { galaxyCatalogFetcher } from '../../loading/fetchers/galaxyCatalogFetche
 import { syntheticPointFetcher } from '../../loading/fetchers/syntheticPointFetcher';
 import type { FadeHandle } from '../../../@types/animation/FadeHandle';
 import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
+import type { SourceType } from '../../../@types/data/SourceType';
 
 /**
  * Registry rows, in Source enum order.  Order matters: the boot loop,
@@ -84,7 +85,7 @@ export const GALAXY_CATALOG_SOURCE_REGISTRY: readonly GalaxyCatalogSourceConfig[
  * Source → shortName lookup for log lines that iterate the renderer's
  * `loadedSources()` (where we don't have a registry row in hand).
  */
-const SHORT_NAME_BY_SOURCE: ReadonlyMap<Source, string> = new Map(
+const SHORT_NAME_BY_SOURCE: ReadonlyMap<SourceType, string> = new Map(
   GALAXY_CATALOG_SOURCE_REGISTRY.map((c) => [c.source, c.shortName]),
 );
 
@@ -93,7 +94,7 @@ const SHORT_NAME_BY_SOURCE: ReadonlyMap<Source, string> = new Map(
  * synthetic-fallback ready gate.  Hidden surveys count as already
  * settled (see `wireSlots`).
  */
-export const SURVEY_POINT_SOURCES: readonly Source[] = GALAXY_CATALOG_SOURCE_REGISTRY.filter(
+export const SURVEY_POINT_SOURCES: readonly SourceType[] = GALAXY_CATALOG_SOURCE_REGISTRY.filter(
   (c) => c.category === 'survey',
 ).map((c) => c.source);
 
@@ -101,7 +102,7 @@ export const SURVEY_POINT_SOURCES: readonly Source[] = GALAXY_CATALOG_SOURCE_REG
  * Every tier-fetched catalog source — surveys + curated.  Driven by
  * the boot loop and the tier-change reload loop.
  */
-export const TIER_FETCHED_POINT_SOURCES: readonly Source[] =
+export const TIER_FETCHED_POINT_SOURCES: readonly SourceType[] =
   GALAXY_CATALOG_SOURCE_REGISTRY.filter((c) => c.category !== 'synthetic').map((c) => c.source);
 
 /**

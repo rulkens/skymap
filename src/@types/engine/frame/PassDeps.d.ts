@@ -24,7 +24,7 @@ import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer'
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../../loading/FamousXrefMap';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
-import type { Source } from '../../../data/sources';
+import type { SourceType } from '../../data/SourceType';
 
 export type PassDeps = {
   /** Atlas-bound 3D-oriented disk renderer for large galaxy thumbnails. */
@@ -62,7 +62,7 @@ export type PassDeps = {
    * snapshot — it's a long-lived reference whose contents change
    * across frames.
    */
-  catalogs: Map<Source, GalaxyCatalog>;
+  catalogs: Map<SourceType, GalaxyCatalog>;
   /** Famous-galaxy metadata — also forwarded into thumbnails. */
   famousMeta: FamousMetaEntry[];
   /** PGC/SDSS-objID → famous-galaxy index lookup. */

@@ -115,7 +115,7 @@ export function createClickResolver(input: CreateClickResolverInput): ClickResol
       // select the (source, localIdx)" for parity with the pre-extraction
       // engine — the old code did `setSelected(idx)` regardless of
       // whether `galaxyInfoFromGlobal` would later resolve null.
-      const selection = { source: result.source, localIdx: result.localIdx };
+      const selection = { kind: 'galaxy' as const, source: result.source, localIdx: result.localIdx };
       const resolved = resolveSelection(selection);
       const info = resolved
         ? buildGalaxyInfo(resolved.cloud, resolved.localIdx, resolved.source)

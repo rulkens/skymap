@@ -45,6 +45,7 @@ import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
 import type { TimingSlotName } from '../../../../src/@types/gpu/timing/TimingSlotName';
+import type { SourceType } from '../../../../src/@types/data/SourceType';
 
 // ── Mock timing service ────────────────────────────────────────────────────
 //
@@ -214,7 +215,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const settings = {
     pointSizePx: 2.5,
     brightness: 1.0,
-    selected: null as { source: Source; localIdx: number } | null,
+    selected: null as { source: SourceType; localIdx: number } | null,
     visibleSourceMask: 0xffffffff,
     highlightFallback: true,
     realOnlyMode: false,

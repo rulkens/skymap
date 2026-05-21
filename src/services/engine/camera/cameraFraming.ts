@@ -16,7 +16,7 @@
  *     pick pass uses depth32float, which handles the 0.01 : 50 000
  *     ratio fine.
  *   - `near = 0.01` Mpc (10 kpc) — well inside the focus-on tween's
- *     end distance (0.12 Mpc, see `focusTween.ts:focusDistanceMpc`).
+ *     end distance (0.12 Mpc, see `galaxyFocusDistance.ts`).
  *   - `yaw ≈ 3.00`, `pitch ≈ 0.06` — nearly looking down the −Z axis
  *     with a near-flat pitch, framing the Local Group at first paint.
  */

@@ -30,6 +30,7 @@
  */
 
 import { Source } from './sources';
+import type { SourceType } from '../@types/data/SourceType';
 
 /**
  * Milliquas AGN class enum.  Letters Q/A/B/K/N/S come from the
@@ -92,7 +93,7 @@ const PARENT_SURVEY_LABEL: Record<number, string> = {
  * source doesn't define one.  Used by the InfoCard's "AGN class"
  * row; non-Milliquas sources never display the row at all.
  */
-export function sourceClassLabel(source: Source, classByte: number): string | null {
+export function sourceClassLabel(source: SourceType, classByte: number): string | null {
   if (source !== Source.Milliquas) return null;
   return MILLIQUAS_CLASS_LABEL[classByte] ?? null;
 }

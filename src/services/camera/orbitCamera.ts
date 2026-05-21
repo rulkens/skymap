@@ -46,7 +46,7 @@ import type { Vec3 } from '../../@types/math/Vec3';
  * Minimum allowed `cam.distance` in Mpc.
  *
  * 0.05 Mpc = 50 kpc — below the focus-on tween's end distance (0.12 Mpc,
- * see focusTween.ts `focusDistanceMpc()`) so that focus snaps the camera
+ * see `galaxyFocusDistance.ts`) so that focus snaps the camera
  * to its target framing without `clampDistance` ratcheting it back out
  * the next time the user wheel-zooms.  At this distance the camera is
  * sitting inside the Local-Group footprint of a typical galaxy — close

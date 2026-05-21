@@ -1,10 +1,10 @@
 /**
- * poiFocusTween — per-category framing-distance helper for POI focus
- * camera tweens.
+ * poiFocusDistance — per-category framing-distance helper for POI
+ * focus camera tweens.  Companion to `galaxyFocusDistance.ts`.
  *
- * ### Why a separate helper from focusTween.ts
+ * ### Why a separate helper from galaxyFocusDistance.ts
  *
- * The galaxy `focusDistanceMpc(diameterKpc)` uses a flat 8× multiplier
+ * The galaxy `galaxyFocusDistance(diameterKpc)` uses a flat 8× multiplier
  * on the galaxy diameter — appropriate for objects whose physical size
  * is measured in kpc.  Applying the same 8× to a supercluster with a
  * 50 Mpc radius (100 Mpc diameter) would frame the camera 800 Mpc out
@@ -25,10 +25,10 @@
  *
  * Famous galaxies are NOT a category here.  They route through the
  * galaxy `focusOn` / `selectFamous` chain, which uses
- * `focusDistanceMpc(diameterKpc)` directly — see `selectFamous` in
+ * `galaxyFocusDistance(diameterKpc)` directly — see `selectFamous` in
  * engine.ts.
  *
- * ### Why we didn't extend `focusDistanceMpc` with an optional multiplier
+ * ### Why we didn't extend `galaxyFocusDistance` with an optional multiplier
  *
  * Considered briefly (spec §5.3 Option A): widen the galaxy helper to
  * accept a multiplier override.  Rejected because it would give a
@@ -53,7 +53,7 @@ import type { PoiCategory } from '../subsystems/poiSubsystem';
 
 // Per-category framing multipliers.  See module header for rationale.
 // Famous galaxies are not in this table — they take the galaxy path
-// via focusDistanceMpc(diameterKpc).
+// via galaxyFocusDistance(diameterKpc).
 const CATEGORY_MULTIPLIER: Readonly<Record<Exclude<PoiCategory, 'famousGalaxy'>, number>> = {
   cluster: 8,
   supercluster: 2.5,
@@ -73,17 +73,17 @@ const MAX_FRAMING_DISTANCE_MPC = 800;
  * `void`.  Positive infinity clamps to the maximum.
  *
  * Throws `TypeError` for `'famousGalaxy'` — that category routes
- * through the galaxy `focusDistanceMpc` path, not this helper.  Throwing
+ * through the galaxy `galaxyFocusDistance` path, not this helper.  Throwing
  * (rather than silently returning a fallback) makes a wrong-path call
  * surface immediately instead of producing a confusing framing.
  */
-export function poiFocusDistanceMpc(
+export function poiFocusDistance(
   category: PoiCategory,
   physicalRadiusMpc: number,
 ): number {
   if (category === 'famousGalaxy') {
     throw new TypeError(
-      'poiFocusDistanceMpc: famousGalaxy POIs use the galaxy focusDistanceMpc path',
+      'poiFocusDistance: famousGalaxy POIs use the galaxyFocusDistance path',
     );
   }
   const multiplier = CATEGORY_MULTIPLIER[category];

@@ -15,16 +15,15 @@
  *     bootstrapping pre-`startLoop`) `state.cam` is null — the helper
  *     must short-circuit silently rather than dereference null.
  *
- * We intentionally do NOT re-test `focusDistanceMpc` here — its own test
- * suite in `focusTween.test.ts` covers the diameter-to-distance math.
- * This test only verifies the *plumbing* between the helper and the
- * tween manager.
+ * We intentionally do NOT re-test `galaxyFocusDistance` here — its own
+ * test suite covers the diameter-to-distance math.  This test only
+ * verifies the *plumbing* between the helper and the tween manager.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 
 import { tweenToGalaxy } from '../../../../src/services/engine/camera/tweenToGalaxy';
-import { focusDistanceMpc } from '../../../../src/services/engine/camera/focusTween';
+import { galaxyFocusDistance } from '../../../../src/services/engine/camera/galaxyFocusDistance';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
 /**
@@ -50,7 +49,7 @@ function makeState(opts: {
 }
 
 describe('tweenToGalaxy', () => {
-  it('starts a CameraTween toward (info.x, info.y, info.z) with focusDistanceMpc(diameterKpc) and requests a render', () => {
+  it('starts a CameraTween toward (info.x, info.y, info.z) with galaxyFocusDistance(diameterKpc) and requests a render', () => {
     const start = vi.fn();
     const requestRender = vi.fn();
     const cam = {
@@ -68,7 +67,7 @@ describe('tweenToGalaxy', () => {
     // toTarget is whatever vec3.fromValues produced — a 3-element array-like
     // whose contents must equal (100, 200, 300).
     expect(Array.from(tween.toTarget as ArrayLike<number>)).toEqual([100, 200, 300]);
-    expect(tween.toDistance).toBe(focusDistanceMpc(25));
+    expect(tween.toDistance).toBe(galaxyFocusDistance(25));
     // from-* snapshots come straight off the live camera.
     expect(tween.fromDistance).toBe(50);
     expect(tween.fromYaw).toBe(0.25);
@@ -77,7 +76,7 @@ describe('tweenToGalaxy', () => {
     expect(tween.toYaw).toBe(cam.yaw);
     expect(tween.toPitch).toBe(cam.pitch);
     // Duration is the project-wide focus tween length (sourced from
-    // focusTween.ts so this assertion stays honest if the constant moves).
+    // focusTweenDuration.ts so this assertion stays honest if the constant moves).
     expect(typeof tween.durationMs).toBe('number');
     expect(tween.durationMs).toBeGreaterThan(0);
     // startMs is `performance.now()`-shaped — finite, non-negative.

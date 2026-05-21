@@ -7,11 +7,14 @@ import type { PointOfInterest } from '../../../../src/@types/engine/subsystems/P
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
-function makeState(): EngineState {
+function makeState(selectedPoiId: string | null = null): EngineState {
   return {
     subsystems: {
       scheduler: { requestRender: () => {} },
       fades: { fadeTo: () => Promise.resolve() },
+      selection: {
+        selected: () => (selectedPoiId !== null ? { kind: 'poi', id: selectedPoiId } : null),
+      },
     },
   } as unknown as EngineState;
 }

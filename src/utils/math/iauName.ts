@@ -9,15 +9,8 @@
  * truncation rules) while still telling the user which catalog the row
  * actually came from.
  *
- * Designations by source:
- *   - SDSS:      "SDSS J<RA><Dec>"      e.g. "SDSS J123456.75+012345.5"
- *   - 2MRS:      "2MASX J<RA><Dec>"     (2MRS rows carry 2MASS XSC IDs)
- *   - GLADE:     "GLADE J<RA><Dec>"     (GLADE is a compilation; the prefix
- *                                         marks it as such even though the
- *                                         underlying provenance varies)
- *   - Synthetic: "Synth J<RA><Dec>"     (no real-world catalog; obvious tag)
- *   - Famous:    "Famous J<RA><Dec>"    (fallback when no curated name)
- *   - Milliquas: "MQ J<RA><Dec>"        (catalog's own short name)
+ * Per-survey prefixes live on `SOURCE_REGISTRY[source].iauPrefix`
+ * (e.g. SDSS → "SDSS J…", 2MRS → "2MASX J…", Milliquas → "MQ J…").
  *
  * The coordinate part itself is identical across surveys and lives in
  * `iauRaDecSuffix.ts` so any consumer that needs to glue a non-survey
@@ -29,40 +22,22 @@
  */
 
 import { iauRaDecSuffix } from './iauRaDecSuffix';
-import { Source } from '../../data/sources';
+import { SOURCE_REGISTRY } from '../../data/sources';
+import type { SourceType } from '../../@types/data/SourceType';
 
 /**
  * Survey-aware IAU designation.  Returns "<prefix> J<RA><Dec>" where the
  * prefix matches the source's canonical short name.
+ *
+ * Throws for POI sources (Cluster/Supercluster/Void) — those markers
+ * carry curated names (e.g. "Virgo Cluster") and have no IAU coordinate
+ * designation. Reaching the throw means a POI pick is being formatted by
+ * galaxy-headline code; route POI picks through their dedicated info path.
  */
-export function iauName(source: Source, raDeg: number, decDeg: number): string {
-  const coords = iauRaDecSuffix(raDeg, decDeg);
-  switch (source) {
-    case Source.SDSS:
-      return `SDSS ${coords}`;
-    case Source.TwoMRS:
-      return `2MASX ${coords}`;
-    case Source.Glade:
-      return `GLADE ${coords}`;
-    case Source.Synthetic:
-      return `Synth ${coords}`;
-    case Source.Famous:
-      // Famous entries have proper catalogue names (e.g. "M31") stored in
-      // the metadata sidecar.  The IAU designation is used as a fallback
-      // when no curated name is available (e.g. for a new entry pending
-      // metadata enrichment).  "Famous" matches the Source label.
-      return `Famous ${coords}`;
-    case Source.Milliquas:
-      // Milliquas's own short-name convention, matching the catalogue's
-      // upstream usage (Flesch 2023).
-      return `MQ ${coords}`;
-    case Source.Cluster:
-    case Source.Supercluster:
-    case Source.Void:
-      // POI markers carry curated names (e.g. "Virgo Cluster") and are
-      // not assigned IAU coordinate designations. Reaching here means
-      // a POI pick result is being formatted by galaxy-headline code;
-      // route POI picks through their dedicated info path instead.
-      throw new Error(`iauName: POI source ${source} has no IAU designation`);
+export function iauName(source: SourceType, raDeg: number, decDeg: number): string {
+  const entry = SOURCE_REGISTRY[source];
+  if (entry.type !== 'survey') {
+    throw new Error(`iauName: POI source ${source} has no IAU designation`);
   }
+  return `${entry.iauPrefix} ${iauRaDecSuffix(raDeg, decDeg)}`;
 }

@@ -53,9 +53,10 @@
  */
 
 import { Source } from '../../src/data/sources.js';
+import type { SourceType } from '../../src/@types/data/SourceType';
 
 export type ParsedRecord = {
-  source: Source;
+  source: SourceType;
   /**
    * Numeric SDSS objID when known (SDSS rows always have one; some 2MPZ
    * rows include an `SDSS_OBJID` cross-ID column). 0n means "no SDSS

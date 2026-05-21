@@ -1,24 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import {
-  Source,
-  ALL_SOURCES,
-  ALL_VISIBLE_MASK,
-  sourceLabel,
-  sourceIsAllSky,
-  sourceMaxDistanceMpc,
-  bandLabels,
-  maskHas,
-  maskWith,
-  maskWithout,
-} from '../../src/data/sources';
+import { Source, SOURCE_REGISTRY, SURVEY_SOURCES } from '../../src/data/sources';
+import { ALL_VISIBLE_MASK, maskHas, maskWith, maskWithout } from '../../src/utils/sourceMask';
 
 describe('Source.Famous', () => {
   it('has integer value 4 (next free slot after Glade=3)', () => {
     expect(Source.Famous).toBe(4);
   });
 
-  it('appears in ALL_SOURCES', () => {
-    expect(ALL_SOURCES).toContain(Source.Famous);
+  it('appears in SURVEY_SOURCES', () => {
+    expect(SURVEY_SOURCES).toContain(Source.Famous);
   });
 
   it('is included in ALL_VISIBLE_MASK', () => {
@@ -26,25 +16,26 @@ describe('Source.Famous', () => {
   });
 
   it('has a non-empty display label', () => {
-    expect(sourceLabel(Source.Famous).length).toBeGreaterThan(0);
+    expect(SOURCE_REGISTRY[Source.Famous].label.length).toBeGreaterThan(0);
   });
 
   it('is treated as all-sky (cherry-picked entries from anywhere)', () => {
-    expect(sourceIsAllSky(Source.Famous)).toBe(true);
+    expect(SOURCE_REGISTRY[Source.Famous].allSky).toBe(true);
   });
 
   it('has a sensible default max-distance for camera framing', () => {
     // Famous nearby galaxies span M31 (0.78 Mpc) to NGC 4889 (~94 Mpc);
     // pad to 200 Mpc so the camera frames the whole catalog comfortably.
-    expect(sourceMaxDistanceMpc(Source.Famous)).toBeGreaterThanOrEqual(200);
+    expect(SOURCE_REGISTRY[Source.Famous].maxDistMpc).toBeGreaterThanOrEqual(200);
   });
 
   it('exposes the SDSS-like band layout (curated metadata uses optical bands)', () => {
     // Curated entries don't carry photometry; the band layout is cosmetic
     // — InfoCard uses it to label colour rows. We mirror SDSS so the
     // existing FullCard markup renders cleanly without a new branch.
-    const bands = bandLabels(Source.Famous);
-    expect(bands.g).toBeTruthy();
+    const entry = SOURCE_REGISTRY[Source.Famous];
+    expect(entry.type).toBe('survey');
+    if (entry.type === 'survey') expect(entry.bandLabels.g).toBeTruthy();
   });
 });
 
@@ -55,21 +46,24 @@ describe('Source enum — POI codes (cluster/supercluster/void)', () => {
     expect(Source.Void).toBe(7);
   });
 
-  it('keeps POI codes OUT of ALL_SOURCES (POIs are not survey sources)', () => {
-    // The points-pipeline visibility bitmask iterates ALL_SOURCES. POIs
+  it('keeps POI codes OUT of SURVEY_SOURCES (POIs are not survey sources)', () => {
+    // The points-pipeline visibility bitmask iterates SURVEY_SOURCES. POIs
     // render through their own renderer (future clusterMarkerRenderer)
     // with its own per-category visibility logic, so listing them here
     // would muddy the meaning of "this bitmask filters survey galaxies."
-    expect(ALL_SOURCES).not.toContain(Source.Cluster);
-    expect(ALL_SOURCES).not.toContain(Source.Supercluster);
-    expect(ALL_SOURCES).not.toContain(Source.Void);
+    expect(SURVEY_SOURCES).not.toContain(Source.Cluster);
+    expect(SURVEY_SOURCES).not.toContain(Source.Supercluster);
+    expect(SURVEY_SOURCES).not.toContain(Source.Void);
   });
 
-  it('ALL_VISIBLE_MASK still covers only survey sources (no POI bits)', () => {
-    // Survey-source bits: 0 (Synthetic), 1 (SDSS), 2 (2MRS), 3 (Glade),
-    // 4 (Famous), 8 (Milliquas).  POI codes 5/6/7 stay clear so the
-    // survey draw loop doesn't accidentally gate on them.
-    expect(ALL_VISIBLE_MASK).toBe(0b100011111);
+  it('ALL_VISIBLE_MASK covers default-visible survey sources only (no POI bits)', () => {
+    // Default-visible survey bits: 0 (Synthetic), 1 (SDSS), 2 (2MRS),
+    // 3 (Glade), 4 (Famous) = 0b11111.  Milliquas (bit 8) is in the
+    // registry but its `visible` flag is false, so its bit stays clear.
+    // POI codes 5/6/7 also stay clear so the survey draw loop doesn't
+    // accidentally gate on them.
+    expect(ALL_VISIBLE_MASK).toBe(0b11111);
+    expect(maskHas(ALL_VISIBLE_MASK, Source.Milliquas)).toBe(false);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Cluster)).toBe(false);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Supercluster)).toBe(false);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Void)).toBe(false);

@@ -1,8 +1,8 @@
 import type { RefObject } from 'react';
-import type { Source } from '../../data/sources';
+import type { SourceType } from '../data/SourceType';
 import type { EngineHandle } from './EngineHandle';
 import type { EngineStatus } from './EngineStatus';
-import type { GalaxyInfo } from './GalaxyInfo';
+import type { FocusableTarget } from './FocusableTarget';
 import type { FamousMetaEntry } from '../loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../loading/FamousXrefMap';
 import type { PointOfInterest } from './subsystems/PointOfInterest';
@@ -19,17 +19,14 @@ import type { PointOfInterest } from './subsystems/PointOfInterest';
  * not retrigger this hook on assignment.
  */
 export type UseUrlSyncInput = {
-  // Galaxy side
-  focused: GalaxyInfo | null;
+  /** Camera-focus target — galaxy or POI; drives the URL hash. */
+  focused: FocusableTarget | null;
   status: EngineStatus;
-  sourceCounts: Partial<Record<Source, number>>;
+  sourceCounts: Partial<Record<SourceType, number>>;
   famousMeta: readonly FamousMetaEntry[];
   famousXrefs: FamousXrefMap;
   aliasMap: ReadonlyMap<bigint, readonly string[]>;
-  // POI side
-  focusedPoiId: string | null;
   ready: boolean;
   pois: readonly PointOfInterest[];
-  // Shared
   engineHandleRef: RefObject<EngineHandle | null>;
 };

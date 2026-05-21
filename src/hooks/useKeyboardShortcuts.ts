@@ -34,7 +34,7 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
     engineHandleRef,
     setPaletteOpen,
     setUiHidden,
-    setLoadingDevPanelOpen,
+    setDebugPanelOpen,
   } = input;
 
   useEffect(() => {
@@ -112,14 +112,14 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
       // tuck it away.  Bare key (no modifier) so it doesn't collide
       // with browser dev-tool shortcuts (Cmd+Opt+D etc.).
       if (e.key === 'd' || e.key === 'D') {
-        setLoadingDevPanelOpen((prev) => !prev);
+        setDebugPanelOpen((prev) => !prev);
         return;
       }
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selected, paletteOpen, engineHandleRef, setPaletteOpen, setUiHidden, setLoadingDevPanelOpen]);
+  }, [selected, paletteOpen, engineHandleRef, setPaletteOpen, setUiHidden, setDebugPanelOpen]);
   // engineHandleRef (ref object), setPaletteOpen and setUiHidden (React setters)
   // are stable references — listed for exhaustive-deps; never trigger re-binds.
 }

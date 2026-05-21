@@ -12,11 +12,11 @@
 import { createAssetSlot } from '../AssetSlot';
 import { mcpmFetcher } from '../fetchers/mcpmFetcher';
 import type { MCPMReq } from '../../../@types/loading/MCPMReq';
-import { DEFAULT_MCPM_ENABLED, DEFAULT_VOLUME_FIELD_INTENSITY } from '../../../data/defaults';
+import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
-import { getVolumeFieldDefaults } from '../../../data/volumeFieldDefaults';
 import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
+import { buildVolumeFieldsSnapshot } from '../../engine/helpers/buildVolumeFieldsSnapshot';
 
 export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, cb) => {
   const slot = createAssetSlot({
@@ -25,8 +25,8 @@ export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, cb) => {
     commit: async (cube) => {
       const renderer = state.gpu.scalarVolumeRenderer;
       if (!renderer) return;
-      const handle = 'mcpm';
-      const defaults = getVolumeFieldDefaults(handle);
+      const defaults = SOURCE_REGISTRY[Source.Mcpm];
+      const handle = defaults.handle;
       renderer.addField(handle, cube);
       // Seed-and-forward shape lifted from cf4DensitySlot (verbatim
       // duplication is intentional — H3 in the 2026-05-11 audit deferred
@@ -34,9 +34,9 @@ export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, cb) => {
       if (!state.settings.volumes.fields[handle]) {
         state.settings.volumes.fields[handle] = {
           // Default-on — MCPM is the headline cosmic-web overlay for the
-          // volumes gate (CF-4 is now default-off; see defaults.ts).
-          enabled: DEFAULT_MCPM_ENABLED,
-          intensity: defaults.intensity ?? DEFAULT_VOLUME_FIELD_INTENSITY,
+          // volumes gate (CF-4 is default-off; see its registry entry).
+          enabled: defaults.visible,
+          intensity: defaults.intensity,
           contrast: defaults.contrast,
           densityScale: defaults.densityScale,
           paletteId: defaults.paletteId,
@@ -65,7 +65,7 @@ export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, cb) => {
           FADE_IN_DURATION_MS,
         );
       }
-      cb.volumes?.onFieldsChanged?.();
+      cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
       state.subsystems.scheduler.requestRender();
     },
   });

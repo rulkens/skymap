@@ -8,7 +8,7 @@
  * affecting setting is a one-line addition here.
  */
 
-import type { Source } from '../../../data/sources';
+import type { Selection } from '../subsystems/Selection';
 import type { BiasMode } from '../../data/BiasMode';
 import type { ToneMapCurve } from '../../data/ToneMapCurve';
 
@@ -16,13 +16,13 @@ export type RenderFrameSettings = {
   pointSizePx: number;
   brightness: number;
   /**
-   * Selected galaxy's `(source, localIdx)` pair, or `null` when nothing
-   * is selected.  Translated inside `pointSpritesPass` to the packed u32
-   * `(source << 27) | localIdx` (or the `0xFFFFFFFF` "no selection"
-   * sentinel) the shader's halo path expects, so the caller doesn't
-   * have to remember the encoding.
+   * Selected entity, or `null` when nothing is selected.  Galaxy
+   * variants are translated inside `pointSpritesPass` to the packed
+   * u32 `(source << 27) | localIdx` (or the `0xFFFFFFFF` "no selection"
+   * sentinel) the shader's halo path expects.  POI variants don't
+   * drive the halo and are treated as "no galaxy selected" by the pass.
    */
-  selected: { source: Source; localIdx: number } | null;
+  selected: Selection | null;
   visibleSourceMask: number;
   highlightFallback: boolean;
   realOnlyMode: boolean;

@@ -55,7 +55,6 @@ import { BiasMode } from './biasMode';
 import type { BiasMode as BiasModeT } from '../@types/data/BiasMode';
 import { ToneMapCurve } from './toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
-import { ALL_VISIBLE_MASK, Source, maskWithout } from './sources';
 
 // ── Rendering knobs ─────────────────────────────────────────────────────────
 
@@ -112,39 +111,6 @@ export const DEFAULT_DEPTH_FADE_ENABLED = true;
  * for the rendering rationale and the distance-fade band.
  */
 export const DEFAULT_MILKY_WAY_ENABLED = true;
-
-/**
- * Cosmic-web filament-skeleton overlay defaults OFF during the
- * cluster-viz work-in-progress.  The halos + rings introduced for
- * clusters / superclusters / voids visually compete with the
- * filament skeleton at the same scale, and we want a clean baseline
- * for the new layer's smoke tests.  Flip back to `true` once the
- * cluster-viz feature settles and the two layers are tuned to
- * coexist (likely a per-source intensity rebalance + revisit).
- *
- * Historical note: this defaulted to `true` because filaments are one
- * of the most striking visual features of the explorer and the
- * "discover this toggle to see the cosmic web" UX was costing
- * first-time visitors the wow factor.  That argument still holds —
- * the OFF default is a temporary clarity choice for cluster-viz
- * iteration, not a permanent reassessment.
- *
- * For local-dev clones without the offline DisPerSE pipeline run, the
- * file is missing → `loadFilaments` returns null silently → the
- * renderer skips the overlay regardless of this default.  No regression
- * for that path.  See `services/gpu/renderers/filamentRenderer.ts`.
- */
-export const DEFAULT_FILAMENTS_ENABLED = false;
-
-/**
- * Default filament-overlay intensity scale, in [0, 1].  1.0 = full strength
- * (the per-frame fragment alpha is unchanged from the shader's intrinsic
- * density-modulated value).  Sliding lower dims the cosmic-web skeleton —
- * useful when high-σ datasets (longer, denser ridges) saturate to flat
- * white under the tone-map pass.  Defaulting to 1.0 means new visitors
- * see the overlay at the brightness the shader was originally tuned for.
- */
-export const DEFAULT_FILAMENT_INTENSITY = 1.0;
 
 // ── HDR tone-mapping ────────────────────────────────────────────────────────
 
@@ -207,24 +173,6 @@ export const DEFAULT_BIAS_MODE: BiasModeT = BiasMode.AngularReweight;
  */
 export const DEFAULT_ABS_MAG_LIMIT = -19;
 
-// ── Survey visibility / LOD ──────────────────────────────────────────────────
-
-/**
- * Default visible-source bitmask on startup.
- *
- * Every survey is on except Milliquas, which is hidden by default until
- * the quasar-specific render path lands.  Milliquas's `.bin` is still
- * fetched (it lives in `ALL_SOURCES` so the cloudLoader requests it),
- * but its bit stays clear in the visibility mask so the existing
- * galaxy-style billboards don't represent unresolved AGN until the
- * dedicated quasar visuals exist.  See `data/sources.ts` for the bit
- * layout.
- */
-export const DEFAULT_VISIBLE_SOURCE_MASK = maskWithout(
-  ALL_VISIBLE_MASK,
-  Source.Milliquas,
-);
-
 // ── Scalar-volume overlay ────────────────────────────────────────────────────
 
 /**
@@ -268,17 +216,13 @@ export const DEFAULT_VOLUME_FIELD_TRIM = 0.0;
 export const DEFAULT_VOLUME_FIELD_CONTRAST = 1.0;
 
 /**
- * Neutral-no-tuning default for per-field densityScale — the
- * fallback used when a field's handle isn't registered in the SCFD-v2
- * `VOLUME_FIELD_DEFAULTS` table (`src/data/volumeFieldDefaults.ts`).
+ * Neutral-no-tuning default for per-field densityScale.  Every volume
+ * carries its own value on its SOURCE_REGISTRY entry; this constant is
+ * the safe fallback when something queries before registration.
  *
  * 1.0 corresponds to the shader's identity case: each voxel-step
  * contributes `1 - exp(-sample * step)` to the alpha integral, so the
- * raw cube data drives the overlay's opacity directly.  Fields like
- * CF-4 with a wide-but-low dynamic range want a larger value (5.0)
- * baked into the registry to lift them off the cosmic mean; new or
- * external fields default to 1.0 so they at least render visibly
- * before per-handle tuning lands.
+ * raw cube data drives the overlay's opacity directly.
  */
 export const DEFAULT_VOLUME_FIELD_DENSITY_SCALE = 1.0;
 
@@ -290,27 +234,6 @@ export const DEFAULT_VOLUME_FIELD_DENSITY_SCALE = 1.0;
  * to localStorage by the App shell so reloads keep the user's choice.
  */
 export const DEFAULT_VOLUME_PALETTE_ID = 'viridis' as const;
-
-/**
- * Per-field default for the CF-4 DM density volume.  Default-OFF now
- * that MCPM is the headline cosmic-web overlay shipped by the
- * volumes gate.  Both can be toggled on simultaneously from the
- * Volumes panel; the divergent coolwarm palette layers fine over
- * MCPM's sequential inferno, but defaulting both to ON would
- * double-fog new users on first boot.  MCPM wins the default slot
- * because its log-normalised trace density reads as filament
- * structure immediately at densityScale=4, whereas CF-4 needs more
- * coaxing past its cosmic-mean midpoint to show interesting voxels.
- */
-export const DEFAULT_CF4_DENSITY_ENABLED = false;
-
-/**
- * Per-field default for the MCPM Cosmic Web volume.  Enabled by
- * default — it's the headline scientific overlay for the volume
- * pipeline.  See DEFAULT_CF4_DENSITY_ENABLED for the CF-4-side
- * rationale.
- */
-export const DEFAULT_MCPM_ENABLED = true;
 
 // ── SpaceMouse ─────────────────────────────────────────────────────────────
 

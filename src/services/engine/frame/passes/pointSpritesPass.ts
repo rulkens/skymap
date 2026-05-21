@@ -65,11 +65,12 @@ export const pointSpritesPass: Pass = {
     const { renderer, vp, canvasSize, drawCamPos, drawPxPerRad } = ctx;
     const { width, height } = canvasSize;
 
-    // Pack the `(source, localIdx)` selection into the u32 the shader
-    // compares against per-vertex `(sourceCode << 27u) | instance_index`.
-    // See module header for the sentinel rationale.
+    // Pack the galaxy selection into the u32 the shader compares
+    // against per-vertex `(sourceCode << 27u) | instance_index`.  POI
+    // selections don't light up galaxy halos, so they map to the
+    // "nothing selected" sentinel.  See module header for sentinel rationale.
     const selectedPacked =
-      settings.selected !== null
+      settings.selected !== null && settings.selected.kind === 'galaxy'
         ? packSelection(settings.selected.source, settings.selected.localIdx)
         : SELECTION_NONE_SENTINEL;
 

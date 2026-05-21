@@ -383,7 +383,7 @@ describe('horizonShellPass.draw', () => {
 describe('pointSpritesPass.draw', () => {
   it('packs (source, localIdx) into the selectedPacked u32', () => {
     const ctx = makeCtx();
-    const settings = makeSettings({ selected: { source: Source.SDSS, localIdx: 42 } });
+    const settings = makeSettings({ selected: { kind: 'galaxy', source: Source.SDSS, localIdx: 42 } });
     const deps = makeDeps();
     pointSpritesPass.draw(PASS_STUB, ctx, STATE_STUB, settings, deps);
     const drawSpy = ctx.renderer.draw as ReturnType<typeof vi.fn>;

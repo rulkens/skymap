@@ -37,7 +37,7 @@ import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
 import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import { decodeGalaxyCatalog, emptyGalaxyCatalog } from '../../../data/galaxyCatalogFormat';
-import { TIER_TARGETS, tierFilenameForSource } from '../../../data/tierTargets';
+import { tierTarget, tierFilenameForSource } from '../../../data/tierTargets';
 import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
 
 export const galaxyCatalogFetcher: Fetcher<GalaxyCatalog, GalaxyCatalogReq> = async (
@@ -48,7 +48,7 @@ export const galaxyCatalogFetcher: Fetcher<GalaxyCatalog, GalaxyCatalogReq> = as
   // Excluded-tier short-circuit: target=0 means "this source is
   // intentionally absent at this tier" (e.g. SDSS at `small`).  No URL
   // exists for the missing file, so we MUST not call fetchWithProgress.
-  if (TIER_TARGETS[req.tier][req.source] === 0) {
+  if (tierTarget(req.source, req.tier) === 0) {
     return emptyGalaxyCatalog();
   }
   const url = dataUrl(tierFilenameForSource(req.source, req.tier));

@@ -42,8 +42,8 @@
  *   - Mutates `deps.allSlots` — populates with every minted slot.
  */
 
-import { Source, maskHas } from '../../../data/sources';
-import { catalogSourceFor } from '../../../data/catalogSource';
+import { Source } from '../../../data/sources';
+import { maskHas } from '../../../utils/sourceMask';
 import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
   SURVEY_POINT_SOURCES,
@@ -70,7 +70,7 @@ import { createTexturedDiskSubsystem } from '../subsystems/texturedDiskSubsystem
 // syntheticVolumeFetcher) were moved into `syntheticVolumeSlots.ts`
 // by H4 and intentionally stay out.
 import { buildStaticAnchorPois } from '../../../data/buildStaticAnchorPois';
-import { DEFAULT_CF4_DENSITY_ENABLED } from '../../../data/defaults';
+import { SOURCE_REGISTRY } from '../../../data/sources';
 import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfInterest';
 
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
@@ -134,7 +134,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
 
   // ── CF-4 DM density volume slot ──────────────────────────────────
   // Slot minted unconditionally; the boot-time `.load()` below is
-  // gated on `DEFAULT_CF4_DENSITY_ENABLED` so a default-off CF-4
+  // gated on `SOURCE_REGISTRY[Source.Cf4Density].visible` so a default-off CF-4
   // doesn't waste bandwidth.  Toggling on later lazy-loads via
   // `engine.setVolumeFieldEnabled`.  Factory owns mint + commit + state
   // write — see `loading/slots/cf4DensitySlot.ts`.
@@ -386,7 +386,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         cb.lifecycle?.onStatusChange?.({
           kind: 'ready',
           count: state.gpu.renderer?.totalCount() ?? 0,
-          source: catalogSourceFor(source),
+          source,
         });
         if (realSet.has(source)) anyRealReady = true;
       }
@@ -411,7 +411,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         cb.lifecycle?.onStatusChange?.({
           kind: 'ready',
           count: state.gpu.renderer?.totalCount() ?? 0,
-          source: catalogSourceFor(Source.Synthetic),
+          source: Source.Synthetic,
         });
       }
     });
@@ -437,7 +437,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // CF-4 DM density loads at boot only when its default is ON;
   // otherwise the slot stays idle and `engine.setVolumeFieldEnabled`
   // triggers a lazy load on toggle. No tier dependency.
-  if (DEFAULT_CF4_DENSITY_ENABLED) {
+  if (SOURCE_REGISTRY[Source.Cf4Density].visible) {
     state.assetSlots.cf4Density?.load();
   }
   // MCPM Cosmic Web loads at the boot tier; `engine.setTier` reloads
