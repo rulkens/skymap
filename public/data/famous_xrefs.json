@@ -2,205 +2,205 @@
   "c101": {
     "source": "TwoMRS",
     "localIdx": 35,
-    "distanceArcsec": 0.4038231479977217
+    "distanceArcsec": 0.4051310806466062
   },
   "c12": {
     "source": "TwoMRS",
     "localIdx": 13,
-    "distanceArcsec": 2.0832284366574627
+    "distanceArcsec": 2.083017559593164
   },
   "c17": null,
   "c18": null,
   "c21": {
     "source": "TwoMRS",
     "localIdx": 189,
-    "distanceArcsec": 0.3017130183194289
+    "distanceArcsec": 0.3043783381318359
   },
   "c23": {
     "source": "TwoMRS",
     "localIdx": 28,
-    "distanceArcsec": 6.847892705460666
+    "distanceArcsec": 6.84775337048283
   },
   "c24": {
     "source": "TwoMRS",
     "localIdx": 511,
-    "distanceArcsec": 0.5634566733406136
+    "distanceArcsec": 0.5697838648819513
   },
   "c26": {
     "source": "TwoMRS",
     "localIdx": 386,
-    "distanceArcsec": 3.3192103741455194
+    "distanceArcsec": 3.322926777800076
   },
   "c29": {
     "source": "TwoMRS",
     "localIdx": 54,
-    "distanceArcsec": 0.4993516474525813
+    "distanceArcsec": 0.49902046531068156
   },
   "c3": null,
   "c30": {
     "source": "TwoMRS",
     "localIdx": 30,
-    "distanceArcsec": 1.216597421077683
+    "distanceArcsec": 1.2195484446331766
   },
   "c32": {
     "source": "TwoMRS",
     "localIdx": 63,
-    "distanceArcsec": 4.213114533471817
+    "distanceArcsec": 4.210113306306459
   },
   "c35": {
     "source": "TwoMRS",
     "localIdx": 640,
-    "distanceArcsec": 0.19601203613602947
+    "distanceArcsec": 0.19615657004000148
   },
   "c36": {
     "source": "TwoMRS",
     "localIdx": 333,
-    "distanceArcsec": 0.2884918894459274
+    "distanceArcsec": 0.2895215496341734
   },
   "c38": {
     "source": "TwoMRS",
     "localIdx": 33,
-    "distanceArcsec": 0.5578710418537455
+    "distanceArcsec": 0.5558097625289722
   },
   "c40": {
     "source": "TwoMRS",
     "localIdx": 449,
-    "distanceArcsec": 0.036754766884085736
+    "distanceArcsec": 0.03826586217551156
   },
   "c43": {
     "source": "TwoMRS",
     "localIdx": 132,
-    "distanceArcsec": 1.700263773707525
+    "distanceArcsec": 1.7018798492166851
   },
   "c44": {
     "source": "TwoMRS",
     "localIdx": 493,
-    "distanceArcsec": 0.343967320554257
+    "distanceArcsec": 0.3441869676523465
   },
   "c45": {
     "source": "TwoMRS",
     "localIdx": 168,
-    "distanceArcsec": 0.8299029139610495
+    "distanceArcsec": 0.8251653674752555
   },
   "c48": {
     "source": "TwoMRS",
     "localIdx": 122,
-    "distanceArcsec": 0.8539763932366842
+    "distanceArcsec": 0.8523098909897481
   },
   "c5": {
     "source": "TwoMRS",
     "localIdx": 7,
-    "distanceArcsec": 0.06403103452622573
+    "distanceArcsec": 0.0604645933456044
   },
   "c51": {
     "source": "Glade",
     "localIdx": 759005,
-    "distanceArcsec": 10.89594840824113
+    "distanceArcsec": 10.89664026370195
   },
   "c52": {
     "source": "TwoMRS",
     "localIdx": 53,
-    "distanceArcsec": 0.41388576014840806
+    "distanceArcsec": 0.4137373710350759
   },
   "c53": {
     "source": "TwoMRS",
     "localIdx": 25,
-    "distanceArcsec": 0.4861712875179184
+    "distanceArcsec": 0.48620043360394427
   },
   "c57": {
     "source": "Glade",
     "localIdx": 278,
-    "distanceArcsec": 15.898095008988816
+    "distanceArcsec": 15.901192071621615
   },
   "c60": {
     "source": "Glade",
     "localIdx": 231291,
-    "distanceArcsec": 0.8841628827143453
+    "distanceArcsec": 0.8877988615024892
   },
   "c61": {
     "source": "Glade",
     "localIdx": 231292,
-    "distanceArcsec": 1.4800435353057315
+    "distanceArcsec": 1.4800977888085671
   },
   "c62": {
     "source": "TwoMRS",
     "localIdx": 411,
-    "distanceArcsec": 0.3172353806510087
+    "distanceArcsec": 0.31580275518452333
   },
   "c65": {
     "source": "TwoMRS",
     "localIdx": 1,
-    "distanceArcsec": 1.324563102175213
+    "distanceArcsec": 1.3260315050082485
   },
   "c67": {
     "source": "TwoMRS",
     "localIdx": 50,
-    "distanceArcsec": 0.7541698176922157
+    "distanceArcsec": 0.7598541170802889
   },
   "c7": {
     "source": "TwoMRS",
     "localIdx": 52,
-    "distanceArcsec": 0.4849650501225848
+    "distanceArcsec": 0.4857533347758832
   },
   "c70": {
     "source": "TwoMRS",
     "localIdx": 106,
-    "distanceArcsec": 0.6540606847879734
+    "distanceArcsec": 0.6554457967632593
   },
   "c72": {
     "source": "TwoMRS",
     "localIdx": 57,
-    "distanceArcsec": 0.18188786479125257
+    "distanceArcsec": 0.18859411825489786
   },
   "c77": {
     "source": "TwoMRS",
     "localIdx": 3,
-    "distanceArcsec": 4.564755254244188
+    "distanceArcsec": 4.567481059258872
   },
   "c83": {
     "source": "TwoMRS",
     "localIdx": 4,
-    "distanceArcsec": 0.24023192228167836
+    "distanceArcsec": 0.23875270833506096
   },
   "m100": {
     "source": "TwoMRS",
     "localIdx": 73,
-    "distanceArcsec": 0.5333184491497984
+    "distanceArcsec": 0.5381676198047013
   },
   "m101": {
     "source": "TwoMRS",
     "localIdx": 27,
-    "distanceArcsec": 0.9920930799426416
+    "distanceArcsec": 0.9920168991391397
   },
   "m102": {
     "source": "TwoMRS",
     "localIdx": 93,
-    "distanceArcsec": 0.49691468421777346
+    "distanceArcsec": 0.49804456591884483
   },
   "m104": {
     "source": "TwoMRS",
     "localIdx": 9,
-    "distanceArcsec": 0.7012227874235017
+    "distanceArcsec": 0.7017816568520666
   },
   "m105": {
     "source": "TwoMRS",
     "localIdx": 45,
-    "distanceArcsec": 0.06712817548122045
+    "distanceArcsec": 0.06439882063273322
   },
   "m106": {
     "source": "TwoMRS",
     "localIdx": 16,
-    "distanceArcsec": 0.677633803685285
+    "distanceArcsec": 0.6824749748976288
   },
   "m108": {
     "source": "TwoMRS",
     "localIdx": 124,
-    "distanceArcsec": 0.5913283000830041
+    "distanceArcsec": 0.5949437542550664
   },
   "m109": {
     "source": "TwoMRS",
     "localIdx": 120,
-    "distanceArcsec": 0.028001719448003178
+    "distanceArcsec": 0.02608025912429869
   },
   "m110": null,
   "m31": null,
@@ -209,129 +209,129 @@
   "m49": {
     "source": "TwoMRS",
     "localIdx": 14,
-    "distanceArcsec": 2.9531023398627165
+    "distanceArcsec": 2.9539067761477287
   },
   "m51": {
     "source": "TwoMRS",
     "localIdx": 15,
-    "distanceArcsec": 0.3916865568653447
+    "distanceArcsec": 0.39582515617355474
   },
   "m58": {
     "source": "TwoMRS",
     "localIdx": 61,
-    "distanceArcsec": 1.0046402205976495
+    "distanceArcsec": 1.0027954781896662
   },
   "m59": {
     "source": "TwoMRS",
     "localIdx": 80,
-    "distanceArcsec": 1.7126671168121876
+    "distanceArcsec": 1.7157642662248123
   },
   "m60": {
     "source": "TwoMRS",
     "localIdx": 20,
-    "distanceArcsec": 0.7757933418612876
+    "distanceArcsec": 0.7757141864202917
   },
   "m61": {
     "source": "TwoMRS",
     "localIdx": 98,
-    "distanceArcsec": 2.071928910751428
+    "distanceArcsec": 2.0711627744497187
   },
   "m63": {
     "source": "TwoMRS",
     "localIdx": 18,
-    "distanceArcsec": 0.38606272041143247
+    "distanceArcsec": 0.3846040013331053
   },
   "m64": {
     "source": "TwoMRS",
     "localIdx": 12,
-    "distanceArcsec": 2.015245040748842
+    "distanceArcsec": 2.0098046073548708
   },
   "m65": {
     "source": "TwoMRS",
     "localIdx": 32,
-    "distanceArcsec": 0.7551837648737505
+    "distanceArcsec": 0.7553463703852105
   },
   "m66": {
     "source": "TwoMRS",
     "localIdx": 26,
-    "distanceArcsec": 1.1623406122861173
+    "distanceArcsec": 1.1627956641718133
   },
   "m74": {
     "source": "TwoMRS",
     "localIdx": 126,
-    "distanceArcsec": 0.4040570179125007
+    "distanceArcsec": 0.40478115594424274
   },
   "m77": {
     "source": "TwoMRS",
     "localIdx": 19,
-    "distanceArcsec": 0.5481251107723268
+    "distanceArcsec": 0.5422945179819836
   },
   "m81": null,
   "m82": {
     "source": "TwoMRS",
     "localIdx": 6,
-    "distanceArcsec": 0.6168347326884107
+    "distanceArcsec": 0.615838440522096
   },
   "m83": {
     "source": "TwoMRS",
     "localIdx": 8,
-    "distanceArcsec": 0.5310462792680745
+    "distanceArcsec": 0.5305746533059698
   },
   "m84": {
     "source": "TwoMRS",
     "localIdx": 43,
-    "distanceArcsec": 1.2129696149923848
+    "distanceArcsec": 1.2129968736553767
   },
   "m85": {
     "source": "TwoMRS",
     "localIdx": 37,
-    "distanceArcsec": 3.3288987318789114
+    "distanceArcsec": 3.330969724313175
   },
   "m86": {
     "source": "Glade",
     "localIdx": 231403,
-    "distanceArcsec": 6.774969582524341
+    "distanceArcsec": 6.775300741825985
   },
   "m87": {
     "source": "TwoMRS",
     "localIdx": 24,
-    "distanceArcsec": 2.5887877779544386
+    "distanceArcsec": 2.585751707456681
   },
   "m88": {
     "source": "TwoMRS",
     "localIdx": 41,
-    "distanceArcsec": 1.7794110367081173
+    "distanceArcsec": 1.7841112824008856
   },
   "m89": {
     "source": "TwoMRS",
     "localIdx": 78,
-    "distanceArcsec": 0.8761559015377626
+    "distanceArcsec": 0.8788204598903571
   },
   "m90": null,
   "m91": {
     "source": "TwoMRS",
     "localIdx": 161,
-    "distanceArcsec": 1.2301150488422228
+    "distanceArcsec": 1.230003687812785
   },
   "m94": {
     "source": "TwoMRS",
     "localIdx": 11,
-    "distanceArcsec": 0.7770465749178131
+    "distanceArcsec": 0.777714949934774
   },
   "m95": {
     "source": "TwoMRS",
     "localIdx": 75,
-    "distanceArcsec": 0.5348926285778942
+    "distanceArcsec": 0.5375353077615146
   },
   "m96": {
     "source": "TwoMRS",
     "localIdx": 49,
-    "distanceArcsec": 0.6826618187873231
+    "distanceArcsec": 0.683857792247081
   },
   "m98": null,
   "m99": {
     "source": "TwoMRS",
     "localIdx": 111,
-    "distanceArcsec": 1.0969135688392173
+    "distanceArcsec": 1.0995629561615134
   }
 }

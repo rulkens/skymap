@@ -14,14 +14,7 @@
 
 import { Source, type SurveySource } from './sources';
 import type { ColourIndexSpec } from '../@types/data/ColourIndexSpec';
-
-/**
- * Hubble distance in Mpc — c / H₀ for H₀ = 70 km/s/Mpc. Converts
- * Cartesian distance from origin to cosmological redshift via
- * z = d / HUBBLE_DISTANCE_MPC, matching the small-z Hubble approximation
- * the project's raDecZToCartesian uses to produce these positions.
- */
-const HUBBLE_DISTANCE_MPC = 4282.749;
+import { distanceMpcToRedshift } from '../utils/math/distanceMpcToRedshift';
 
 /**
  * Ramp-position fallback for rows whose colour cannot be computed (one
@@ -98,7 +91,7 @@ export function pickColourIndex(
   // normalised ramp-position units, so the subtraction happens directly
   // on the ramp coordinate. Re-clamp because the correction can push
   // the value outside [0, 2].
-  const z = dMpcFromOrigin / HUBBLE_DISTANCE_MPC;
+  const z = distanceMpcToRedshift(dMpcFromOrigin);
   const restCI = observedCI - spec.kPerZ * z;
   return Math.max(0, Math.min(2, restCI));
 }

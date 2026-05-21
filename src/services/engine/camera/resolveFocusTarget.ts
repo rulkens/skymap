@@ -54,7 +54,7 @@
 import type { ResolverInput } from '../../../@types/camera/ResolverInput';
 import type { ResolverOutput } from '../../../@types/camera/ResolverOutput';
 import { Source } from '../../../data/sources';
-import { cartesianToRaDecZ } from '../../../utils/math/cartesianToRaDecZ';
+import { cartesianToRaDec } from '../../../utils/math/cartesianToRaDec';
 
 /**
  * The 30-arcsec threshold pulled from `tools/buildFamous.ts` —
@@ -165,7 +165,7 @@ function resolveSdss(objID: bigint, input: ResolverInput): ResolverOutput {
  * Position branch — nearest-neighbour search across ALL loaded clouds
  * within `MATCH_THRESHOLD_ARCSEC`.  The cloud rows store xyz Cartesian
  * positions in Mpc, not RA/Dec, so we round-trip through
- * `cartesianToRaDecZ` per row.  At ~1.5M points worst case this is
+ * `cartesianToRaDec` per row.  At ~1.5M points worst case this is
  * still a single-digit-millisecond pass — fine for a one-shot resolve.
  *
  * The angular metric is the great-circle small-angle approximation:
@@ -203,7 +203,7 @@ function resolvePos(
       const x = positions[i * 3 + 0]!;
       const y = positions[i * 3 + 1]!;
       const z = positions[i * 3 + 2]!;
-      const [raDeg, decDeg] = cartesianToRaDecZ(x, y, z);
+      const [raDeg, decDeg] = cartesianToRaDec(x, y, z);
 
       const ddec = decDeg - decDegT;
       // Wrap Δra into [-180, +180].  The +540 shift is `+360 + 180`

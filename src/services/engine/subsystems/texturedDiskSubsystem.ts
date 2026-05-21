@@ -42,7 +42,7 @@ import type {
 } from '../../../@types/engine/subsystems/TexturedDiskSubsystem';
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import { fetchGalaxyBitmap } from '../../../utils/network/galaxyImageFetcher';
-import { cartesianToRaDecZ } from '../../../utils/math';
+import { cartesianToRaDec } from '../../../utils/math';
 
 /** See thumbnailSubsystem.ts:87. */
 const APPARENT_SIZE_THRESHOLD_PX = 24;
@@ -168,7 +168,7 @@ export function createTexturedDiskSubsystem(
         const ar = cloud.axisRatio[i]!;
         const pa = cloud.positionAngleDeg[i]!;
 
-        const [ra, dec] = cartesianToRaDecZ(x, y, z);
+        const [ra, dec] = cartesianToRaDec(x, y, z);
         const key = galaxyCacheKey(ra, dec);
 
         const slot = atlas.allocate(key, frameCounter);

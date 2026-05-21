@@ -12,7 +12,7 @@
 import { describe, it, expect } from 'vitest';
 import { raDecZToCartesian } from '../../../src/utils/math/raDecZToCartesian';
 import { cartesianToRaDecZ } from '../../../src/utils/math/cartesianToRaDecZ';
-import { HUBBLE_DISTANCE_MPC } from '../../../src/utils/math/constants';
+import { redshiftToDistanceMpc } from '../../../src/utils/math/redshiftToDistanceMpc';
 
 describe('raDecZToCartesian / cartesianToRaDecZ', () => {
   it('round-trips an SDSS-ish coordinate within 1e-4 tolerance', () => {
@@ -42,7 +42,7 @@ describe('raDecZToCartesian / cartesianToRaDecZ', () => {
   });
 
   it('produces the origin for z = 0', () => {
-    // Hubble's law gives d = 0 at z = 0, so the cartesian point is the origin
+    // d(0) = 0 under any cosmology, so the cartesian point is the origin
     // regardless of (RA, Dec) — they multiply out to zero.
     const [x, y, z] = raDecZToCartesian(123, 45, 0);
     expect(x).toBeCloseTo(0, 10);
@@ -56,7 +56,7 @@ describe('raDecZToCartesian / cartesianToRaDecZ', () => {
     expect(y).toBeCloseTo(0, 6);
     expect(z).toBeCloseTo(0, 6);
     // x should equal the Hubble distance × 0.1.
-    expect(x).toBeCloseTo(HUBBLE_DISTANCE_MPC * 0.1, 6);
+    expect(x).toBeCloseTo(redshiftToDistanceMpc(0.1), 6);
   });
 
   it('places (RA=90, Dec=0) on the +y axis', () => {
@@ -64,7 +64,7 @@ describe('raDecZToCartesian / cartesianToRaDecZ', () => {
     const [x, y, z] = raDecZToCartesian(90, 0, 0.1);
     expect(x).toBeCloseTo(0, 6);
     expect(z).toBeCloseTo(0, 6);
-    expect(y).toBeCloseTo(HUBBLE_DISTANCE_MPC * 0.1, 6);
+    expect(y).toBeCloseTo(redshiftToDistanceMpc(0.1), 6);
   });
 
   it('places (Dec=+90) on the +z axis (celestial north pole)', () => {
@@ -72,7 +72,7 @@ describe('raDecZToCartesian / cartesianToRaDecZ', () => {
     const [x, y, z] = raDecZToCartesian(0, 90, 0.1);
     expect(x).toBeCloseTo(0, 6);
     expect(y).toBeCloseTo(0, 6);
-    expect(z).toBeCloseTo(HUBBLE_DISTANCE_MPC * 0.1, 6);
+    expect(z).toBeCloseTo(redshiftToDistanceMpc(0.1), 6);
   });
 });
 
