@@ -515,6 +515,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
       milkyWayRenderer: null,
+      horizonShellRenderer: null,
       // Constructed during initGpu, null until then.  Excluded from the
       // isEngineReady predicate — the volumeUpsamplePass null-checks
       // both handles before calling hasActiveFields(), so a null state
@@ -1400,6 +1401,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.proceduralDiskRenderer = null;
     state.gpu.milkyWayRenderer?.destroy();
     state.gpu.milkyWayRenderer = null;
+    state.gpu.horizonShellRenderer?.destroy();
+    state.gpu.horizonShellRenderer = null;
     state.gpu.scalarVolumeRenderer?.destroy();
     state.gpu.scalarVolumeRenderer = null;
     state.gpu.volumeUpsample?.destroy();

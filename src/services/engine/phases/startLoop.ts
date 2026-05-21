@@ -77,15 +77,17 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   // here turn that assumption into a typed runtime error if `initGpu`
   // is ever skipped/reordered.
   const milkyWayRenderer = state.gpu.milkyWayRenderer;
+  const horizonShellRenderer = state.gpu.horizonShellRenderer;
   const texturedDiskRenderer = state.gpu.texturedDiskRenderer;
   const proceduralDiskRenderer = state.gpu.proceduralDiskRenderer;
   if (
     milkyWayRenderer === null ||
+    horizonShellRenderer === null ||
     texturedDiskRenderer === null ||
     proceduralDiskRenderer === null
   ) {
     throw new Error(
-      'startLoop: milkyWay/texturedDisk/proceduralDisk renderers must be initialised by initGpu before this phase runs',
+      'startLoop: milkyWay/horizonShell/texturedDisk/proceduralDisk renderers must be initialised by initGpu before this phase runs',
     );
   }
 
@@ -118,6 +120,7 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
     device: phaseLocals.device,
     context: phaseLocals.context,
     milkyWayRenderer,
+    horizonShellRenderer,
     filamentRenderer: state.gpu.filamentRenderer!,
     texturedDiskRenderer,
     proceduralDiskRenderer,

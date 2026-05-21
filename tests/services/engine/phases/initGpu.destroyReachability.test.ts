@@ -117,6 +117,10 @@ vi.mock('../../../../src/services/gpu/renderers/milkyWayRenderer', () => ({
   createMilkyWayRenderer: vi.fn(() => makeStub('milkyWayRenderer')),
 }));
 
+vi.mock('../../../../src/services/gpu/renderers/horizonShellRenderer', () => ({
+  createHorizonShellRenderer: vi.fn(() => makeStub('horizonShellRenderer')),
+}));
+
 vi.mock('../../../../src/services/gpu/renderers/filamentRenderer', () => ({
   createFilamentRenderer: vi.fn(() => makeStub('filamentRenderer')),
 }));
@@ -185,6 +189,7 @@ function makeState(): EngineState {
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
       milkyWayRenderer: null,
+      horizonShellRenderer: null,
       scalarVolumeRenderer: null,
       volumeUpsample: null,
     },
@@ -254,6 +259,7 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     expect(state.gpu.texturedDiskRenderer).toBe(stubs.texturedDiskRenderer);
     expect(state.gpu.proceduralDiskRenderer).toBe(stubs.proceduralDiskRenderer);
     expect(state.gpu.milkyWayRenderer).toBe(stubs.milkyWayRenderer);
+    expect(state.gpu.horizonShellRenderer).toBe(stubs.horizonShellRenderer);
   });
 
   it('phaseLocals no longer carries the thumbnail/milky-way renderers — they live solely on state.gpu.*', async () => {
@@ -298,16 +304,20 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     state.gpu.proceduralDiskRenderer = null;
     state.gpu.milkyWayRenderer?.destroy();
     state.gpu.milkyWayRenderer = null;
+    state.gpu.horizonShellRenderer?.destroy();
+    state.gpu.horizonShellRenderer = null;
 
     expect(stubs.texturedDiskRenderer!.destroy).toHaveBeenCalledTimes(1);
     expect(stubs.proceduralDiskRenderer!.destroy).toHaveBeenCalledTimes(1);
     expect(stubs.milkyWayRenderer!.destroy).toHaveBeenCalledTimes(1);
+    expect(stubs.horizonShellRenderer!.destroy).toHaveBeenCalledTimes(1);
 
     // Symmetric null-out matches the rest of the bag — see
     // `EngineGpuHandles.d.ts`'s lifecycle docstring.
     expect(state.gpu.texturedDiskRenderer).toBeNull();
     expect(state.gpu.proceduralDiskRenderer).toBeNull();
     expect(state.gpu.milkyWayRenderer).toBeNull();
+    expect(state.gpu.horizonShellRenderer).toBeNull();
   });
 
   it('destroy is safe when initGpu never ran — every state.gpu.* renderer is null and ?.destroy() no-ops', () => {

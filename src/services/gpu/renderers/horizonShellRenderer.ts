@@ -1,0 +1,188 @@
+/**
+ * horizonShellRenderer — translucent observable-universe horizon shell,
+ * drawn as an analytic ray-marched sphere.
+ *
+ * Sibling to `milkyWayRenderer` (both single-instance world-anchored
+ * impostors).  Rather than rasterising a UV-sphere mesh — which suffers
+ * fp32 precision dropouts at the 14-Gpc shell radius / 30-Gpc camera
+ * distances — this renderer draws ONE fullscreen quad and intersects a
+ * per-pixel view ray with the sphere analytically in the fragment
+ * shader.  The result is a pixel-perfect silhouette with no
+ * tessellation and no per-triangle artefacts.
+ *
+ * ### Why Gpc units
+ *
+ * The ray-sphere quadratic's `dot(center, center)` term reaches ~9e8 in
+ * Mpc — past fp32's exact-integer range (~1.67e7) — so the intersection
+ * loses precision.  Working in GIGAPARSECS keeps that term at ~900,
+ * comfortably precise.  Ray directions are unitless (normalised), so
+ * only the camera position and radius carry the unit choice.
+ *
+ * ### Frustum-corner rays
+ *
+ * The four NDC-corner view-ray directions are unprojected on the CPU
+ * (fp64 via gl-matrix), uploaded in the uniform block, selected
+ * per-vertex, and interpolated across the quad — so the vertex stage
+ * never multiplies a large world coordinate either.
+ *
+ * ### Uniform buffer ABI (80 bytes)
+ *
+ * See `shaders/horizonShell/io.wesl` for the authoritative layout:
+ *
+ *   offset 0  | vec3<f32> cameraPosGpc  — camera world pos / 1000
+ *   offset 12 | f32       radiusGpc     — shell radius in Gpc
+ *   offset 16 | vec4×4    rayCorners    — frustum-corner ray dirs (xyz)
+ */
+
+import { vec3 } from 'gl-matrix';
+import vsCode from '../shaders/horizonShell/vertex.wesl?static';
+import fsCode from '../shaders/horizonShell/fragment.wesl?static';
+import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import type { Renderer } from '../../../@types/rendering/Renderer';
+import type { HorizonShellRenderer } from '../../../@types/rendering/HorizonShellRenderer';
+import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+
+type Init = {
+  device: GPUDevice;
+  format: GPUTextureFormat;
+};
+
+/** On-the-wire uniform-buffer size; must match the WESL `Uniforms` struct. */
+export const HORIZON_SHELL_UNIFORM_BUFFER_SIZE = 64;
+
+/**
+ * Comoving radius to the cosmic particle horizon, in GIGAPARSECS.
+ *
+ * Standard flat-ΛCDM Planck-2018 cosmology gives ~14.3 Gpc for the
+ * limit of light propagation since the Big Bang — also roughly where
+ * the CMB last-scattering surface sits (z ≈ 1100, ~14.0 Gpc).
+ */
+export const HORIZON_RADIUS_GPC = 14.3;
+
+/** Mpc → Gpc scale. */
+const MPC_PER_GPC = 1000;
+
+/** World up axis used for the camera basis (matches `computeViewProj`). */
+const WORLD_UP: vec3 = [0, 1, 0];
+
+export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
+  const { device, format } = init;
+
+  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'horizonShell.vertex');
+  const fsModule = createShaderModuleWithDevLog(device, fsCode, 'horizonShell.fragment');
+
+  const uniformBuffer = device.createBuffer({
+    label: 'horizonShell-uniform-buffer',
+    size: HORIZON_SHELL_UNIFORM_BUFFER_SIZE,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+
+  const bindGroupLayout = device.createBindGroupLayout({
+    label: 'horizonShell-bgl-uniforms',
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        buffer: { type: 'uniform' },
+      },
+    ],
+  });
+
+  const bindGroup = device.createBindGroup({
+    label: 'horizonShell-bg-uniforms',
+    layout: bindGroupLayout,
+    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+  });
+
+  const pipeline = device.createRenderPipeline({
+    label: 'horizonShell-pipeline',
+    layout: device.createPipelineLayout({
+      label: 'horizonShell-pipeline-layout',
+      bindGroupLayouts: [bindGroupLayout],
+    }),
+    vertex: { module: vsModule, entryPoint: 'vs' },
+    fragment: {
+      module: fsModule,
+      entryPoint: 'fs',
+      targets: [
+        {
+          format,
+          // Pure additive — the shell is emissive, contributing light
+          // where the Fresnel rim is bright and nothing where it isn't.
+          // Same reasoning as `milkyWayRenderer`'s blend choice.
+          blend: {
+            color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+            alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+          },
+        },
+      ],
+    },
+    primitive: { topology: 'triangle-list' },
+  });
+
+  // Per-frame scratch, allocated once to avoid GC churn.
+  const uniforms = new ArrayBuffer(HORIZON_SHELL_UNIFORM_BUFFER_SIZE);
+  const f32 = new Float32Array(uniforms);
+  const fwd = vec3.create();
+  const right = vec3.create();
+  const up = vec3.create();
+
+  function draw(pass: GPURenderPassEncoder, cam: OrbitCamera, viewport: [number, number]): void {
+    // ── Camera basis (matches gl-matrix lookAt in computeViewProj) ────
+    //
+    //   forward = normalize(target - position)
+    //   right   = normalize(cross(forward, worldUp))
+    //   up      = cross(right, forward)
+    //
+    // Built from the camera directly rather than by inverting the
+    // view-projection (which is numerically unstable at the shell's
+    // huge near:far ratio).  Roll is not applied — the shell predates
+    // any roll usage and the default up is world +Y.
+    vec3.subtract(fwd, cam.target as vec3, cam.position);
+    vec3.normalize(fwd, fwd);
+    vec3.cross(right, fwd, WORLD_UP);
+    vec3.normalize(right, right);
+    vec3.cross(up, right, fwd);
+
+    const aspect = viewport[1] > 0 ? viewport[0] / viewport[1] : cam.aspect;
+    const tanHalfFovY = Math.tan(cam.fovYRad / 2);
+
+    // camForward (floats 0..2) + tanHalfFovY (float 3).
+    f32[0] = fwd[0];
+    f32[1] = fwd[1];
+    f32[2] = fwd[2];
+    f32[3] = tanHalfFovY;
+    // camRight (floats 4..6) + aspect (float 7).
+    f32[4] = right[0];
+    f32[5] = right[1];
+    f32[6] = right[2];
+    f32[7] = aspect;
+    // camUp (floats 8..10) + radiusGpc (float 11).
+    f32[8] = up[0];
+    f32[9] = up[1];
+    f32[10] = up[2];
+    f32[11] = HORIZON_RADIUS_GPC;
+    // cameraPosGpc (floats 12..14) + pad (float 15).
+    f32[12] = cam.position[0]! / MPC_PER_GPC;
+    f32[13] = cam.position[1]! / MPC_PER_GPC;
+    f32[14] = cam.position[2]! / MPC_PER_GPC;
+    f32[15] = 0;
+    device.queue.writeBuffer(uniformBuffer, 0, uniforms);
+
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(0, bindGroup);
+    pass.draw(6, 1);
+  }
+
+  function destroy(): void {
+    uniformBuffer.destroy();
+  }
+
+  const renderer: HorizonShellRenderer = {
+    label: 'horizonShellRenderer',
+    draw,
+    destroy,
+  };
+  renderer satisfies Renderer;
+  return renderer;
+}

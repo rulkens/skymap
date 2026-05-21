@@ -58,6 +58,7 @@ import type { VolumeUpsample } from '../../rendering/VolumeUpsample';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
+import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
@@ -179,6 +180,13 @@ export type EngineGpuHandles = {
    * exclusion as `texturedDiskRenderer` above.
    */
   milkyWayRenderer: MilkyWayRenderer | null;
+  /**
+   * Cosmic-horizon shell renderer — translucent sphere at the
+   * comoving particle-horizon radius.  Same lifecycle as the other
+   * optional renderers (null until `initGpu` constructs it; nulled
+   * back out during teardown).
+   */
+  horizonShellRenderer: HorizonShellRenderer | null;
   /**
    * Multi-field 3D scalar-field volume renderer.  Null until `initGpu`
    * constructs it (same phase as the other optional renderers).

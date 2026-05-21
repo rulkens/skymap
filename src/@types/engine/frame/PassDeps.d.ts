@@ -18,6 +18,7 @@
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
+import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
@@ -52,6 +53,8 @@ export type PassDeps = {
   scalarVolumeRenderer: ScalarVolumeRenderer | null;
   /** Procedural Milky Way impostor renderer. */
   milkyWayRenderer: MilkyWayRenderer;
+  /** Observable-universe horizon shell renderer. */
+  horizonShellRenderer: HorizonShellRenderer;
   /**
    * Live source-catalog map.  Forwarded into `thumbnails.runFrame`
    * which iterates it back-to-front for the painter's-algorithm

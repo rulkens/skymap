@@ -37,10 +37,11 @@
  * ### Why this fixture lights up every HDR pass
  *
  * To keep the snapshot a meaningful regression target we wire each of
- * the six HDR passes' `enabled` gates to return true (subsystems with
+ * the HDR passes' `enabled` gates to return true (subsystems with
  * non-empty lastOutput, optional renderers non-null with positive
  * glyph/line counts, settings toggles on, camera inside the Milky-Way
- * fade band).  Result: 8 renderer-draw entries + 1 postProcess.draw.
+ * fade band; horizon-shell has no gate).  Result: one renderer-draw
+ * entry per enabled HDR pass + 1 postProcess.draw.
  *
  * If the post-split renderFrame skips a pass, drops a draw, or
  * reorders the renderers, this snapshot fails.  That's the gate
@@ -242,6 +243,7 @@ describe('renderFrame visual baseline', () => {
     // Renderer mocks — each draw lands on the same `records` array.
     const pointRenderer = makeLoggingRenderer(records, 'point-sprites');
     const milkyWayRenderer = makeLoggingRenderer(records, 'milky-way');
+    const horizonShellRenderer = makeLoggingRenderer(records, 'horizon-shell');
     const proceduralDiskRenderer = makeLoggingRenderer(records, 'procedural-disks');
     const texturedDiskRenderer = makeLoggingRenderer(records, 'textured-disks');
     const filamentRenderer = makeLoggingRenderer(records, 'filaments');
@@ -375,6 +377,7 @@ describe('renderFrame visual baseline', () => {
       device,
       context,
       milkyWayRenderer: milkyWayRenderer as never,
+      horizonShellRenderer: horizonShellRenderer as never,
       filamentRenderer: filamentRenderer as never,
       scalarVolumeRenderer: scalarVolumeRenderer as never,
       texturedDiskRenderer: texturedDiskRenderer as never,
@@ -427,6 +430,10 @@ describe('renderFrame visual baseline', () => {
         {
           "argShape": "pass,object",
           "renderer": "volume-upsample",
+        },
+        {
+          "argShape": "pass,object,Array[2]",
+          "renderer": "horizon-shell",
         },
         {
           "argShape": "object,object,number,number,undefined",

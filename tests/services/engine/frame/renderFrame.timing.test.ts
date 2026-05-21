@@ -184,6 +184,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const context = makeFakeContext();
   const pointRenderer = makeLoggingRenderer();
   const milkyWayRenderer = makeLoggingRenderer();
+  const horizonShellRenderer = makeLoggingRenderer();
   const proceduralDiskRenderer = makeLoggingRenderer();
   const texturedDiskRenderer = makeLoggingRenderer();
   const postProcess = makePostProcess();
@@ -261,6 +262,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     device,
     context,
     milkyWayRenderer: milkyWayRenderer as never,
+    horizonShellRenderer: horizonShellRenderer as never,
     filamentRenderer: null,
     scalarVolumeRenderer: null,
     texturedDiskRenderer: texturedDiskRenderer as never,
@@ -293,18 +295,20 @@ describe('renderFrame — timing service hookup', () => {
 
     // descriptorFor fires once per enabled HDR pass PLUS once for the
     // tone-map pass PLUS once for the combined UI overlay.  In this
-    // fixture the HDR side is point-sprites + milky-way (the other
-    // four are gated off via null subsystems / null optional
-    // renderers); the tone-map slot is unconditional because
-    // postProcess.draw runs every frame; the ui-overlay slot fires
-    // even with no marker-lines / labels because the timing-enabled
-    // path always opens the UI overlay pass so its slot reports.
+    // fixture the HDR side is point-sprites + milky-way + horizon-shell
+    // (the others are gated off via null subsystems / null optional
+    // renderers; horizon-shell has no gate so it always runs); the
+    // tone-map slot is unconditional because postProcess.draw runs
+    // every frame; the ui-overlay slot fires even with no marker-lines
+    // / labels because the timing-enabled path always opens the UI
+    // overlay pass so its slot reports.
     const slotsCalled = descriptorFor.mock.calls.map((c) => c[0]);
     expect(slotsCalled).toContain('point-sprites');
     expect(slotsCalled).toContain('milky-way');
+    expect(slotsCalled).toContain('horizon-shell');
     expect(slotsCalled).toContain('tone-map');
     expect(slotsCalled).toContain('ui-overlay');
-    expect(descriptorFor).toHaveBeenCalledTimes(4);
+    expect(descriptorFor).toHaveBeenCalledTimes(5);
 
     // The descriptors returned by the mock must land on the
     // beginRenderPass descriptors.  Each pass's beginRenderPass call
@@ -313,11 +317,11 @@ describe('renderFrame — timing service hookup', () => {
     //
     // The first beginRenderPass is the dedicated HDR clear pass (no
     // timestampWrites).  Subsequent visible passes here are:
-    // point-sprites, milky-way (HDR sub-passes), then the ui-overlay
-    // pass.  Tone-map's beginRenderPass is hidden inside postProcess.draw
-    // (mocked away), so it doesn't appear in `beginCalls`.
+    // point-sprites, milky-way, horizon-shell (HDR sub-passes), then
+    // the ui-overlay pass.  Tone-map's beginRenderPass is hidden inside
+    // postProcess.draw (mocked away), so it doesn't appear in `beginCalls`.
     const subPassBegins = beginCalls.slice(1);
-    expect(subPassBegins).toHaveLength(3);
+    expect(subPassBegins).toHaveLength(4);
     const stubSlotsOnDescriptors = subPassBegins.map((b) => {
       const tw = (
         b.desc as GPURenderPassDescriptor & {
@@ -327,7 +331,12 @@ describe('renderFrame — timing service hookup', () => {
       expect(tw).toBeDefined();
       return (tw!.querySet as unknown as { _stub: TimingSlotName })._stub;
     });
-    expect(stubSlotsOnDescriptors).toEqual(['point-sprites', 'milky-way', 'ui-overlay']);
+    expect(stubSlotsOnDescriptors).toEqual([
+      'point-sprites',
+      'milky-way',
+      'horizon-shell',
+      'ui-overlay',
+    ]);
 
     // The clear pass at index 0 must have NO timestampWrites field.
     const clearDesc = beginCalls[0]!.desc as GPURenderPassDescriptor & {
