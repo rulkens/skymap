@@ -24,18 +24,24 @@
  *   8. Default mount is OPEN (Panel's defaultOpen=true is in effect)
  */
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import StatsPanel from '../../../src/components/StatsPanel/StatsPanel';
 import { Source } from '../../../src/data/sources';
 import { ALL_VISIBLE_MASK } from '../../../src/utils/sourceMask';
+import { engineTelemetryStore } from '../../../src/state/engineTelemetryStore';
+
+// fps now lives in the shared telemetry store (read via `useEngineFps`),
+// not a prop.  These helpers seed the store before a static render and
+// reset it afterwards so cases don't leak fps into each other.
+const setFps = (fps: number) => engineTelemetryStore.getState().setFps(fps);
+afterEach(() => setFps(0));
 
 describe('StatsPanel', () => {
   it('renders the STATS header', () => {
     const html = renderToStaticMarkup(
       createElement(StatsPanel, {
-        fps: 0,
         sourceCounts: {},
         visibleSourceMask: ALL_VISIBLE_MASK,
         filamentsEnabled: false,
@@ -48,7 +54,6 @@ describe('StatsPanel', () => {
   it('renders an em-dash for FPS when fps is 0', () => {
     const html = renderToStaticMarkup(
       createElement(StatsPanel, {
-        fps: 0,
         sourceCounts: {},
         visibleSourceMask: ALL_VISIBLE_MASK,
         filamentsEnabled: false,
@@ -63,9 +68,9 @@ describe('StatsPanel', () => {
   });
 
   it('renders the integer FPS reading when non-zero', () => {
+    setFps(60);
     const html = renderToStaticMarkup(
       createElement(StatsPanel, {
-        fps: 60,
         sourceCounts: {},
         visibleSourceMask: ALL_VISIBLE_MASK,
         filamentsEnabled: false,
@@ -78,7 +83,6 @@ describe('StatsPanel', () => {
   it('rolls source counts into a single Galaxies total when all bits are visible', () => {
     const html = renderToStaticMarkup(
       createElement(StatsPanel, {
-        fps: 0,
         sourceCounts: {
           [Source.SDSS]: 220_453,
           [Source.TwoMRS]: 44_000,
@@ -103,7 +107,6 @@ describe('StatsPanel', () => {
     const sdssBit = 1 << Source.SDSS;
     const html = renderToStaticMarkup(
       createElement(StatsPanel, {
-        fps: 0,
         sourceCounts: {
           [Source.SDSS]: 220_453,
           [Source.TwoMRS]: 44_000,
@@ -122,7 +125,6 @@ describe('StatsPanel', () => {
   it('excludes Source.Synthetic from the Galaxies total even when its bit is set', () => {
     const html = renderToStaticMarkup(
       createElement(StatsPanel, {
-        fps: 0,
         sourceCounts: {
           [Source.Synthetic]: 100_000,
           [Source.SDSS]: 50,
@@ -142,7 +144,6 @@ describe('StatsPanel', () => {
   it('renders a Galaxies total of 0 when all surveys are toggled off', () => {
     const html = renderToStaticMarkup(
       createElement(StatsPanel, {
-        fps: 0,
         sourceCounts: { [Source.SDSS]: 220_453 },
         visibleSourceMask: 0,
         filamentsEnabled: false,
@@ -156,7 +157,6 @@ describe('StatsPanel', () => {
   it('hides the filament row when filamentsEnabled is false even if counts are non-null', () => {
     const html = renderToStaticMarkup(
       createElement(StatsPanel, {
-        fps: 0,
         sourceCounts: {},
         visibleSourceMask: ALL_VISIBLE_MASK,
         filamentsEnabled: false,
@@ -170,7 +170,6 @@ describe('StatsPanel', () => {
   it('hides the filament row when counts are null even if enabled', () => {
     const html = renderToStaticMarkup(
       createElement(StatsPanel, {
-        fps: 0,
         sourceCounts: {},
         visibleSourceMask: ALL_VISIBLE_MASK,
         filamentsEnabled: true,
@@ -184,7 +183,6 @@ describe('StatsPanel', () => {
   it('renders the filament row with formatted strips and verts when enabled and counts present', () => {
     const html = renderToStaticMarkup(
       createElement(StatsPanel, {
-        fps: 0,
         sourceCounts: {},
         visibleSourceMask: ALL_VISIBLE_MASK,
         filamentsEnabled: true,
@@ -199,9 +197,9 @@ describe('StatsPanel', () => {
   });
 
   it('mounts open by default (aria-expanded="true" + body visible)', () => {
+    setFps(60);
     const html = renderToStaticMarkup(
       createElement(StatsPanel, {
-        fps: 60,
         sourceCounts: { [Source.SDSS]: 220_453 },
         visibleSourceMask: ALL_VISIBLE_MASK,
         filamentsEnabled: false,

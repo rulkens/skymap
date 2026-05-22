@@ -45,18 +45,12 @@ import { memo, type ReactNode } from 'react';
 import { SURVEY_SOURCES, Source } from '../../data/sources';
 import { maskHas } from '../../utils/sourceMask';
 import { Panel } from '../common/Panel/Panel';
+import { useEngineFps } from '../../state/engineTelemetryStore';
 import styles from './StatsPanel.module.css';
 import type { SourceType } from '../../@types/data/SourceType';
 
 /** Props for StatsPanel.  See module header for design rationale. */
 export type StatsPanelProps = {
-  /**
-   * Rolling-window FPS estimate (integer Hz), driven by the engine's
-   * `onFpsChange` callback.  `0` is interpreted as "not yet reported"
-   * and rendered as an em-dash; the engine never emits 0 in practice
-   * (its window requires ≥ 2 samples).
-   */
-  fps: number;
   /**
    * Per-survey loaded point counts, indexed by `Source` enum value.
    * Populated as each `.bin` finishes uploading.  Used here only as the
@@ -98,13 +92,16 @@ export type StatsPanelProps = {
 };
 
 function StatsPanel({
-  fps,
   sourceCounts,
   visibleSourceMask,
   filamentsEnabled,
   filamentCounts,
   defaultOpen,
 }: StatsPanelProps): ReactNode {
+  // fps is read directly from the shared telemetry store via a selector,
+  // so this panel re-renders on an fps change without App.tsx (or any
+  // intermediate) having to prop-drill it.  See `engineTelemetryStore`.
+  const fps = useEngineFps();
   // The em-dash placeholder is centralised here so the logic is obvious
   // in one place rather than scattered through the JSX.
   const fpsText = fps > 0 ? String(fps) : '—';

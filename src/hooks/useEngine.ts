@@ -13,13 +13,19 @@
  *     useKeyboardShortcuts) can call methods on it without dependency
  *     gymnastics.
  *   - Engine-driven state: status, hovered, selected, focused, scale,
- *     fps, sourceCounts, loadProgress, currentTier.  All but `scale`
- *     are fed by engine callbacks that fire only when the value
- *     changes, so direct `setX` wiring is safe (no spurious re-renders).
- *     `scale` is derived locally from `onCameraChange` snapshots via
- *     the pure `computeScaleInfo` helper — the engine emits the
- *     camera scalars; this hook computes the legend.  React's
- *     `setState` equality filters unchanged frames.
+ *     sourceCounts, currentTier.  These are fed by engine callbacks that
+ *     fire only when the value changes, so direct `setX` wiring is safe
+ *     (no spurious re-renders).  `scale` is derived locally from
+ *     `onCameraChange` snapshots via the pure `computeScaleInfo` helper —
+ *     the engine emits the camera scalars; this hook computes the legend.
+ *     React's `setState` equality filters unchanged frames.
+ *
+ *     `fps` and `loadProgress` used to live here too, but they're now
+ *     written straight into `engineTelemetryStore` (a vanilla Zustand
+ *     store) by the engine callbacks below; the leaf components that
+ *     render them (StatsPanel / LoadingBar) subscribe via selectors, so
+ *     this hook no longer threads them through its return value and
+ *     App.tsx no longer prop-drills them.
  *
  * ──────────────────────────────────────────────────────────────────────
  * What this hook does NOT own
@@ -44,12 +50,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { createEngine } from '../services/engine';
 import { computeScaleInfo } from '../services/engine/helpers/scaleBar';
+import { engineTelemetryStore } from '../state/engineTelemetryStore';
 import type { EngineHandle } from '../@types/engine/EngineHandle';
 import type { EngineStatus } from '../@types/engine/EngineStatus';
 import type { FocusableTarget } from '../@types/engine/FocusableTarget';
 import type { ScaleInfo } from '../@types/engine/ScaleInfo';
 import type { EngineCallbacks } from '../@types/engine/EngineCallbacks';
-import type { LoadProgressState } from '../@types/loading/LoadProgressState';
 import type { Tier } from '../@types/data/Tier';
 import type { UseEngineInput } from '../@types/engine/UseEngineInput';
 import type { UseEngineReturn } from '../@types/engine/UseEngineReturn';
@@ -83,9 +89,11 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
   const [selected, setSelected] = useState<FocusableTarget | null>(null);
   const [focused, setFocused] = useState<FocusableTarget | null>(null);
   const [scale, setScale] = useState<ScaleInfo>(INITIAL_SCALE);
-  const [fps, setFps] = useState<number>(0);
   const [sourceCounts, setSourceCounts] = useState<Partial<Record<SourceType, number>>>({});
-  const [loadProgress, setLoadProgress] = useState<LoadProgressState | null>(null);
+  // fps + loadProgress now live in `engineTelemetryStore`; the engine
+  // callbacks below write to it directly and the leaf components
+  // (StatsPanel / LoadingBar) subscribe via selectors.  See the store's
+  // module header for why this hook no longer owns those two slices.
   // Lazy-init from viewport — `window` is guarded for SSR / unit-test
   // hosts.  Echoed by the engine via `onTierChange`, so this state
   // mirrors engine truth after the first user-driven swap too.
@@ -152,7 +160,7 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
       initialTier: currentTier,
       lifecycle: {
         onStatusChange: setStatus,
-        onFpsChange: setFps,
+        onFpsChange: engineTelemetryStore.getState().setFps,
         ...extraLifecycle,
       },
       selection: {
@@ -177,7 +185,7 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
       sources: {
         onCatalogReady: onCatalogReadyImpl,
         onTierChange: setCurrentTier,
-        onLoadProgress: setLoadProgress,
+        onLoadProgress: engineTelemetryStore.getState().setLoadProgress,
         ...extraSources,
       },
       // The remaining bags have no session-level subscription here —
@@ -221,9 +229,7 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
     selected,
     focused,
     scale,
-    fps,
     sourceCounts,
-    loadProgress,
     currentTier,
   };
 }

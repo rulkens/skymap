@@ -45,19 +45,15 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import cx from 'classnames';
-import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
+import { useEngineLoadProgress } from '../../state/engineTelemetryStore';
 import styles from './LoadingBar.module.css';
 
-/** Props for LoadingBar.  Matches the engine's `onLoadProgress` shape. */
-export type LoadingBarProps = {
-  /**
-   * Aggregated download-progress snapshot from the engine's aggregator.
-   * `null` when no fetches are in flight — triggers the fade-out.
-   */
-  progress: LoadProgressState | null;
-};
-
-export function LoadingBar({ progress }: LoadingBarProps): ReactNode {
+export function LoadingBar(): ReactNode {
+  // Aggregated download-progress snapshot read directly from the shared
+  // telemetry store via a selector — `null` when no fetch is in flight.
+  // No prop-drilling from App: this leaf subscribes to just the slice it
+  // renders.  See `engineTelemetryStore`.
+  const progress = useEngineLoadProgress();
   // Internal "visible" state lags behind `progress === null` by the CSS
   // fade-out duration so the opacity transition has time to play.  Without
   // this lag, removing the element from the DOM the moment progress becomes

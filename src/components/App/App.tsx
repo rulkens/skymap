@@ -88,9 +88,7 @@ export function App(): React.ReactElement {
     selected,
     focused,
     scale,
-    fps,
     sourceCounts,
-    loadProgress,
     currentTier,
   } = useEngine({ extraCallbacks: settingsCallbacks });
 
@@ -173,10 +171,10 @@ export function App(): React.ReactElement {
           `<div>` so `Tab` can fade the whole stack via one CSS
           opacity transition (see `.uiStack` / `.uiStackHidden`). */}
       <div className={cx(appStyles.uiStack, uiHidden && appStyles.uiStackHidden)}>
-        {/* Mounted unconditionally; fades itself out when `loadProgress`
-            goes null.  Keeps tier-swap first paints from flashing a
-            visible mount frame. */}
-        <LoadingBar progress={loadProgress} />
+        {/* Mounted unconditionally; reads load progress from the shared
+            telemetry store and fades itself out when it goes null.  Keeps
+            tier-swap first paints from flashing a visible mount frame. */}
+        <LoadingBar />
 
         <StatusBar status={status} />
         <InfoCard
@@ -294,7 +292,6 @@ export function App(): React.ReactElement {
           />
           <StatsPanel
             defaultOpen={false}
-            fps={fps}
             sourceCounts={sourceCounts}
             visibleSourceMask={visibleSourceMask}
             filamentsEnabled={filamentsEnabled}

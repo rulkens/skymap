@@ -3,7 +3,6 @@ import type { EngineHandle } from './EngineHandle';
 import type { EngineStatus } from './EngineStatus';
 import type { FocusableTarget } from './FocusableTarget';
 import type { ScaleInfo } from './ScaleInfo';
-import type { LoadProgressState } from '../loading/LoadProgressState';
 import type { Tier } from '../data/Tier';
 
 export type UseEngineReturn = {
@@ -14,8 +13,6 @@ export type UseEngineReturn = {
   selected: FocusableTarget | null;
   focused: FocusableTarget | null;
   scale: ScaleInfo;
-  fps: number;
   sourceCounts: Partial<Record<SourceType, number>>;
-  loadProgress: LoadProgressState | null;
   currentTier: Tier;
 };
