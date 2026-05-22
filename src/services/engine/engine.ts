@@ -78,7 +78,6 @@ import type { SourceType } from '../../@types/data/SourceType';
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_AUTO_ROTATE,
-  DEFAULT_BIAS_MODE,
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
@@ -109,6 +108,7 @@ import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../animation/fadeCont
 import type { FadeHandle } from '../../@types/animation/FadeHandle';
 import { createSelectionSubsystem } from './subsystems/selectionSubsystem';
 import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
+import { engineSettingsStore } from '../../state/engineSettingsStore';
 import { createYouAreHereSubsystem } from './subsystems/youAreHereSubsystem';
 import { createLabelDirectorSubsystem } from './subsystems/labelDirectorSubsystem';
 import { registerLabelStyleOverrideWake } from './labelStyleOverride';
@@ -376,7 +376,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // that almost every catalog galaxy meeting it has a measured
       // spectrum, dim enough that we still see plenty of structure.
       bias: {
-        mode: DEFAULT_BIAS_MODE,
+        // `mode` now lives in `engineSettingsStore` (the bidirectional
+        // settings-seam spike); only the user-tunable absMagLimit remains
+        // on the engine's settings bag.
         absMagLimit: DEFAULT_ABS_MAG_LIMIT,
       },
       thumbnails: {
@@ -614,7 +616,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // subsystem module) take over in production; tests inject
       // synchronous stubs at the test factory call site.
       biasCorrection: createBiasCorrectionSubsystem({
-        getMode: () => state.settings.bias.mode,
+        getMode: () => engineSettingsStore.getState().biasMode,
         getLoadedClouds: () => state.sources.catalogs,
         requestRender: () => state.subsystems.scheduler.requestRender(),
       }),
@@ -902,8 +904,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // per-source splice completes, so visuals update progressively as
     // bakes resolve (same observable behaviour as the pre-E.4 chained
     // `.then`).
-    state.settings.bias.mode = mode;
-    cb.bias?.onModeChange?.(mode);
+    // Single source of truth: write the store (the engine's hot loop and
+    // the biasCorrection subsystem both read `biasMode` back from it).
+    // Replaces the old `state.settings.bias.mode = mode` bag write AND the
+    // `cb.bias.onModeChange` echo — React now reads via the `useBiasMode`
+    // selector, so no echo callback is needed.
+    engineSettingsStore.getState().setBiasMode(mode);
     void state.subsystems.biasCorrection.setMode(mode);
     state.subsystems.scheduler.requestRender();
   }

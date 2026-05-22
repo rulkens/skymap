@@ -11,7 +11,6 @@
  * test in `tests/services/engine/seedSettingsCallbacks.test.ts`.
  */
 
-import type { BiasMode } from '../../data/BiasMode';
 import type { ToneMapCurve } from '../../data/ToneMapCurve';
 import type { PoiCategory } from '../../../services/engine/subsystems/poiSubsystem';
 
@@ -23,7 +22,6 @@ export type SettingsCallbackSeed = {
   highlightFallback: boolean;
   realOnlyMode: boolean;
   depthFadeEnabled: boolean;
-  biasMode: BiasMode;
   absMagLimit: number;
   toneMapCurve: ToneMapCurve;
   exposure: number;

@@ -26,7 +26,6 @@
  * canonical name unchanged.
  */
 
-import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { VolumeFieldRowData } from './VolumeFieldRowData';
 import type { PoiCategory } from '../../services/engine/subsystems/poiSubsystem';
@@ -44,7 +43,6 @@ export type UseEngineSettingsState = {
   realOnlyMode: boolean;
   depthFadeEnabled: boolean;
   visibleSourceMask: number;
-  biasMode: BiasMode;
   absMagLimit: number;
   toneMapCurve: ToneMapCurve;
   exposure: number;

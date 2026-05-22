@@ -34,7 +34,6 @@ import {
 } from '../../../../src/services/engine/wiring/settingsTable';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import { BiasMode } from '../../../../src/data/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 
 /**
@@ -55,7 +54,7 @@ function makeState(): Pick<EngineState, 'settings' | 'bias'> {
       },
       tonemap: { exposure: 1.0, curve: ToneMapCurve.Reinhard },
       camera: { autoRotate: false },
-      bias: { mode: BiasMode.None, absMagLimit: -19 },
+      bias: { absMagLimit: -19 },
       thumbnails: { enabled: true },
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 0.5 },

@@ -50,7 +50,6 @@
  * `EngineSettingsState` value by pulling those constants into each field.
  */
 
-import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
 import type { VolumeFieldId } from '../data/VolumeFieldId';
@@ -94,7 +93,9 @@ export type EngineSettingsState = {
    * the SettingsPanel's mental model.
    */
   bias: {
-    mode: BiasMode;
+    // `mode` moved to `engineSettingsStore` (bidirectional settings-seam
+    // spike) — it's read from there by the engine hot loop and the
+    // biasCorrection subsystem, and written by `handle.bias.setMode`.
     absMagLimit: number;
   };
 

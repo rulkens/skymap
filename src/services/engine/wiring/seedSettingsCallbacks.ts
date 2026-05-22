@@ -55,7 +55,9 @@ export function seedSettingsCallbacks(cb: EngineCallbacks, snapshot: SettingsCal
   cb.points?.onHighlightFallbackChange?.(snapshot.highlightFallback);
   cb.points?.onRealOnlyChange?.(snapshot.realOnlyMode);
   cb.points?.onDepthFadeChange?.(snapshot.depthFadeEnabled);
-  cb.bias?.onModeChange?.(snapshot.biasMode);
+  // biasMode is no longer seeded here — React reads it from
+  // `engineSettingsStore` directly (settings-seam spike), so there's no
+  // init echo to fan out.  absMagLimit still echoes the old way.
   cb.bias?.onAbsMagLimitChange?.(snapshot.absMagLimit);
   cb.tonemap?.onCurveChange?.(snapshot.toneMapCurve);
   cb.tonemap?.onExposureChange?.(snapshot.exposure);

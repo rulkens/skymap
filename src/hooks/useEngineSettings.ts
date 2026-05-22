@@ -39,13 +39,11 @@
  */
 
 import { useState } from 'react';
-import type { BiasMode as BiasModeT } from '../@types/data/BiasMode';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
 import type { PoiCategory } from '../services/engine/subsystems/poiSubsystem';
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_AUTO_ROTATE,
-  DEFAULT_BIAS_MODE,
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
@@ -72,6 +70,9 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   const [pointSize, setPointSize] = useState<number>(DEFAULT_POINT_SIZE_PX);
   const [brightness, setBrightness] = useState<number>(DEFAULT_BRIGHTNESS);
   const [autoRotate, setAutoRotate] = useState<boolean>(DEFAULT_AUTO_ROTATE);
+  // biasMode moved to `engineSettingsStore`; the SettingsPanel reads it
+  // via the `useBiasMode` selector (settings-seam spike).  No useState
+  // mirror and no `onModeChange` echo subscription here any more.
   const [galaxyTexturesEnabled, setGalaxyTexturesEnabled] = useState<boolean>(
     DEFAULT_GALAXY_TEXTURES_ENABLED,
   );
@@ -83,7 +84,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   // from source n". Seeded with ALL_VISIBLE_MASK so the first paint matches
   // the engine's startup default.
   const [visibleSourceMask, setVisibleSourceMask] = useState<number>(ALL_VISIBLE_MASK);
-  const [biasMode, setBiasMode] = useState<BiasModeT>(DEFAULT_BIAS_MODE);
   const [absMagLimit, setAbsMagLimit] = useState<number>(DEFAULT_ABS_MAG_LIMIT);
   const [toneMapCurve, setToneMapCurve] = useState<ToneMapCurveT>(DEFAULT_TONE_MAP_CURVE);
   const [exposure, setExposure] = useState<number>(DEFAULT_EXPOSURE);
@@ -181,7 +181,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       realOnlyMode,
       depthFadeEnabled,
       visibleSourceMask,
-      biasMode,
       absMagLimit,
       toneMapCurve,
       exposure,
@@ -216,7 +215,7 @@ export function useEngineSettings(): UseEngineSettingsReturn {
         onMaskChange: setVisibleSourceMask,
       },
       bias: {
-        onModeChange: setBiasMode,
+        // onModeChange echo removed — biasMode lives in the store now.
         onAbsMagLimitChange: setAbsMagLimit,
       },
       thumbnails: {

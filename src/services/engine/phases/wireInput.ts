@@ -402,7 +402,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     highlightFallback: state.settings.points.highlightFallback,
     realOnlyMode: state.settings.points.realOnly,
     depthFadeEnabled: state.settings.points.depthFade,
-    biasMode: state.settings.bias.mode,
     absMagLimit: state.settings.bias.absMagLimit,
     toneMapCurve: state.settings.tonemap.curve,
     exposure: state.settings.tonemap.exposure,

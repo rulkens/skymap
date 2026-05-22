@@ -18,7 +18,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { seedSettingsCallbacks } from '../../../../src/services/engine/wiring/seedSettingsCallbacks';
 import type { SettingsCallbackSeed } from '../../../../src/@types/engine/wiring/SettingsCallbackSeed';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
-import { BiasMode } from '../../../../src/data/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 
 function makeSnapshot(): SettingsCallbackSeed {
@@ -30,7 +29,6 @@ function makeSnapshot(): SettingsCallbackSeed {
     highlightFallback: true,
     realOnlyMode: false,
     depthFadeEnabled: true,
-    biasMode: BiasMode.None,
     absMagLimit: -19.5,
     toneMapCurve: ToneMapCurve.Reinhard,
     exposure: 1.2,
@@ -117,7 +115,6 @@ describe('seedSettingsCallbacks', () => {
     );
     expect(points.onRealOnlyChange).toHaveBeenCalledExactlyOnceWith(snap.realOnlyMode);
     expect(points.onDepthFadeChange).toHaveBeenCalledExactlyOnceWith(snap.depthFadeEnabled);
-    expect(bias.onModeChange).toHaveBeenCalledExactlyOnceWith(snap.biasMode);
     expect(bias.onAbsMagLimitChange).toHaveBeenCalledExactlyOnceWith(snap.absMagLimit);
     expect(tonemap.onCurveChange).toHaveBeenCalledExactlyOnceWith(snap.toneMapCurve);
     expect(tonemap.onExposureChange).toHaveBeenCalledExactlyOnceWith(snap.exposure);

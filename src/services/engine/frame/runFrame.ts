@@ -72,6 +72,7 @@ import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 
 import { updatePosition } from '../../camera/orbitCamera';
 import { resizeCanvasToDisplay } from '../../gpu/device';
+import { engineSettingsStore } from '../../../state/engineSettingsStore';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { isEngineReady } from '../helpers/engineReady';
 import { resolvePoiFromPick } from '../helpers/resolvePoiFromPick';
@@ -314,7 +315,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       visibleSourceMask: state.sources.drawMask,
       highlightFallback: state.settings.points.highlightFallback,
       realOnlyMode: state.settings.points.realOnly,
-      biasMode: state.settings.bias.mode,
+      biasMode: engineSettingsStore.getState().biasMode,
       absMagLimit: state.settings.bias.absMagLimit,
       apparentMagLimit: state.bias.apparentMagLimit,
       schechterMStar: state.bias.schechterMStar,
