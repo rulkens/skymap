@@ -1,6 +1,9 @@
 /**
  * engineSettingsStore — the single source of truth for the engine's
- * user-facing render settings (the `EngineState.settings.*` bag).
+ * user-facing render settings (the `EngineState.settings.*` bag), kept in
+ * the SAME layered/clustered shape as `EngineSettingsState` rather than
+ * flattened, so the store reads as a relocation of that tree, not a
+ * re-modelling of it.
  *
  * ### The seam this owns
  *
@@ -10,38 +13,44 @@
  *     never directly into this store.  The engine setter clamps / triggers
  *     side effects and THEN writes the store.
  *   - The engine reads its own settings back from this store, both in the
- *     per-frame hot loop (`runFrame` → `RenderFrameSettings`) and from
- *     subsystems (e.g. `biasCorrectionSubsystem.getMode`).
- *   - React reads via the per-field `useX` selector hooks.
+ *     per-frame hot loop (`runFrame`) and from subsystems
+ *     (e.g. `biasCorrectionSubsystem.getMode`).
+ *   - React reads via the generic `useEngineSetting` selector hook.
  *
- * Making this the single source of truth means the field leaves
+ * Making this the single source of truth means each field leaves
  * `EngineState.settings` entirely (no mirror copy) and the old echo
- * machinery — the `settingsTable` callback half, the `useEngineSettings`
- * mirror `useState`s, the `seedSettingsCallbacks` fan-out, and the echo
- * half of `EngineCallbacks` — is deleted as each field migrates.  See
+ * machinery is deleted as the field migrates.  See
  * `docs/superpowers/plans/2026-05-22-settings-store-migration.md`.
  *
- * ### Why vanilla zustand, and why `useSyncExternalStore` not `useStore`
+ * ### One generic interface, not 15 setters/selectors
+ *
+ * Rather than a `setX`/`useX` pair per field, the store exposes:
+ *
+ *   - `update(cluster, key, value)` — one type-safe generic setter.  The
+ *     `<C, K>` signature keeps `value` pinned to the leaf's type, so
+ *     `update('bias', 'mode', BiasMode.None)` is checked and
+ *     `update('bias', 'mode', 3)` is a compile error.  It maps 1:1 onto
+ *     `settingsTable`'s existing `['settings', cluster, leaf]` path
+ *     tuples, which is what lets the table route a row to the store with
+ *     a single `storePath` field.
+ *   - `useEngineSetting(selector)` — one generic React selector hook.
+ *     `const mode = useEngineSetting((s) => s.bias.mode)` re-renders the
+ *     caller only when that leaf changes.  Select primitives (leaves),
+ *     not whole clusters, so the `Object.is` bail-out is meaningful.
+ *
+ * ### Why vanilla zustand + `useSyncExternalStore` (not `useStore`)
  *
  * Vanilla zustand has no React dependency, so the engine importing this
- * is lateral to the `EngineCallbacks` coupling it already carries — a
- * pub/sub cell, not a UI framework.  The selector hooks bind with React's
- * own `useSyncExternalStore` using `getState` for BOTH snapshots: skymap
- * is a client-only SPA (no SSR hydration), and zustand's own `useStore`
- * passes `getInitialState` as the server snapshot, which would report the
- * initial value under the project's `renderToStaticMarkup` test
- * convention.  Same rationale as `engineTelemetryStore.ts`.
- *
- * ### Flat shape
- *
- * Fields are flat (not clustered like `state.settings.points.*`) to match
- * `RenderFrameSettings`, which the hot loop already builds flat — the
- * per-frame read is one `getState()` deref then plain field reads.
+ * is lateral to the `EngineCallbacks` coupling it already carries.  The
+ * selector hook binds with React's own `useSyncExternalStore` using
+ * `getState` for BOTH snapshots — skymap is a client-only SPA (no SSR
+ * hydration), and zustand's own `useStore` would report the initial
+ * value under the project's `renderToStaticMarkup` test convention.
+ * Same rationale as `engineTelemetryStore.ts`.
  */
 
 import { useSyncExternalStore } from 'react';
 import { createStore } from 'zustand/vanilla';
-import { BiasMode } from '../data/biasMode';
 import { Source, SOURCE_REGISTRY } from '../data/sources';
 import {
   DEFAULT_ABS_MAG_LIMIT,
@@ -61,116 +70,100 @@ import {
 import type { BiasMode as BiasModeT } from '../@types/data/BiasMode';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
 
-type EngineSettingsState = {
-  // points cluster
-  pointSize: number;
-  brightness: number;
-  highlightFallback: boolean;
-  realOnly: boolean;
-  depthFade: boolean;
-  // tonemap cluster
-  exposure: number;
-  toneMapCurve: ToneMapCurveT;
-  // camera cluster
-  autoRotate: boolean;
-  // bias cluster (mode migrated by the spike; absMagLimit follows)
-  biasMode: BiasModeT;
-  absMagLimit: number;
-  // single-leaf clusters
-  galaxyTexturesEnabled: boolean;
-  milkyWayEnabled: boolean;
-  filamentsEnabled: boolean;
-  filamentIntensity: number;
-  volumesMasterEnabled: boolean;
-
-  setPointSize: (v: number) => void;
-  setBrightness: (v: number) => void;
-  setHighlightFallback: (v: boolean) => void;
-  setRealOnly: (v: boolean) => void;
-  setDepthFade: (v: boolean) => void;
-  setExposure: (v: number) => void;
-  setToneMapCurve: (v: ToneMapCurveT) => void;
-  setAutoRotate: (v: boolean) => void;
-  setBiasMode: (v: BiasModeT) => void;
-  setAbsMagLimit: (v: number) => void;
-  setGalaxyTexturesEnabled: (v: boolean) => void;
-  setMilkyWayEnabled: (v: boolean) => void;
-  setFilamentsEnabled: (v: boolean) => void;
-  setFilamentIntensity: (v: number) => void;
-  setVolumesMasterEnabled: (v: boolean) => void;
+/**
+ * The layered settings tree — mirrors `EngineSettingsState`'s clusters.
+ * Fields land here as they migrate; until then a cluster's value is the
+ * dormant default (never read, because the live read still goes through
+ * `EngineState.settings`).
+ */
+export type SettingsValues = {
+  points: {
+    sizePx: number;
+    brightness: number;
+    highlightFallback: boolean;
+    realOnly: boolean;
+    depthFade: boolean;
+  };
+  tonemap: { exposure: number; curve: ToneMapCurveT };
+  camera: { autoRotate: boolean };
+  bias: { mode: BiasModeT; absMagLimit: number };
+  thumbnails: { enabled: boolean };
+  milkyWay: { enabled: boolean };
+  filaments: { enabled: boolean; intensity: number };
+  volumes: { masterEnabled: boolean };
 };
 
-const initialState = () => ({
-  pointSize: DEFAULT_POINT_SIZE_PX,
-  brightness: DEFAULT_BRIGHTNESS,
-  highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
-  realOnly: DEFAULT_REAL_ONLY_MODE,
-  depthFade: DEFAULT_DEPTH_FADE_ENABLED,
-  exposure: DEFAULT_EXPOSURE,
-  toneMapCurve: DEFAULT_TONE_MAP_CURVE,
-  autoRotate: DEFAULT_AUTO_ROTATE,
-  biasMode: DEFAULT_BIAS_MODE as BiasModeT,
-  absMagLimit: DEFAULT_ABS_MAG_LIMIT,
-  galaxyTexturesEnabled: DEFAULT_GALAXY_TEXTURES_ENABLED,
-  milkyWayEnabled: DEFAULT_MILKY_WAY_ENABLED,
-  filamentsEnabled: SOURCE_REGISTRY[Source.Filaments].visible,
-  filamentIntensity: SOURCE_REGISTRY[Source.Filaments].intensity,
-  volumesMasterEnabled: DEFAULT_VOLUMES_ENABLED,
+/**
+ * A `[cluster, key]` address into the settings tree — the type-safe
+ * argument pair `update` accepts and the shape `settingsTable` rows use
+ * via `storePath`.  Distributed over the union of clusters so each
+ * `cluster` only admits its own `key`s.
+ */
+export type SettingsStorePath = {
+  [C in keyof SettingsValues]: readonly [C, keyof SettingsValues[C]];
+}[keyof SettingsValues];
+
+type EngineSettingsStore = SettingsValues & {
+  /**
+   * Generic setter: write one leaf, preserving the cluster's siblings.
+   * Authoritative writers only (engine handle setters / the settings
+   * table); React reads via `useEngineSetting`.
+   */
+  update: <C extends keyof SettingsValues, K extends keyof SettingsValues[C]>(
+    cluster: C,
+    key: K,
+    value: SettingsValues[C][K],
+  ) => void;
+};
+
+const initialValues = (): SettingsValues => ({
+  points: {
+    sizePx: DEFAULT_POINT_SIZE_PX,
+    brightness: DEFAULT_BRIGHTNESS,
+    highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
+    realOnly: DEFAULT_REAL_ONLY_MODE,
+    depthFade: DEFAULT_DEPTH_FADE_ENABLED,
+  },
+  tonemap: { exposure: DEFAULT_EXPOSURE, curve: DEFAULT_TONE_MAP_CURVE },
+  camera: { autoRotate: DEFAULT_AUTO_ROTATE },
+  bias: { mode: DEFAULT_BIAS_MODE as BiasModeT, absMagLimit: DEFAULT_ABS_MAG_LIMIT },
+  thumbnails: { enabled: DEFAULT_GALAXY_TEXTURES_ENABLED },
+  milkyWay: { enabled: DEFAULT_MILKY_WAY_ENABLED },
+  filaments: {
+    enabled: SOURCE_REGISTRY[Source.Filaments].visible,
+    intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
+  },
+  volumes: { masterEnabled: DEFAULT_VOLUMES_ENABLED },
 });
 
-export const engineSettingsStore = createStore<EngineSettingsState>((set) => ({
-  ...initialState(),
-  setPointSize: (pointSize) => set({ pointSize }),
-  setBrightness: (brightness) => set({ brightness }),
-  setHighlightFallback: (highlightFallback) => set({ highlightFallback }),
-  setRealOnly: (realOnly) => set({ realOnly }),
-  setDepthFade: (depthFade) => set({ depthFade }),
-  setExposure: (exposure) => set({ exposure }),
-  setToneMapCurve: (toneMapCurve) => set({ toneMapCurve }),
-  setAutoRotate: (autoRotate) => set({ autoRotate }),
-  setBiasMode: (biasMode) => set({ biasMode }),
-  setAbsMagLimit: (absMagLimit) => set({ absMagLimit }),
-  setGalaxyTexturesEnabled: (galaxyTexturesEnabled) => set({ galaxyTexturesEnabled }),
-  setMilkyWayEnabled: (milkyWayEnabled) => set({ milkyWayEnabled }),
-  setFilamentsEnabled: (filamentsEnabled) => set({ filamentsEnabled }),
-  setFilamentIntensity: (filamentIntensity) => set({ filamentIntensity }),
-  setVolumesMasterEnabled: (volumesMasterEnabled) => set({ volumesMasterEnabled }),
+export const engineSettingsStore = createStore<EngineSettingsStore>((set) => ({
+  ...initialValues(),
+  update: (cluster, key, value) =>
+    // The computed-key partial isn't statically provable against the
+    // store type (the same bounded cast the old `setByPath` carried);
+    // the `<C, K>` signature guarantees it at every call site.
+    set((s) => ({ [cluster]: { ...s[cluster], [key]: value } }) as Partial<EngineSettingsStore>),
 }));
 
 /**
  * Test-only reset.  The store is a module singleton shared by every test
- * in a file (vitest isolates module registries per file, so this is not a
- * cross-file concern); call from `afterEach` so cases don't leak settings
- * into one another.
+ * in a file (vitest isolates module registries per file); call from
+ * `afterEach` so cases don't leak settings into one another.
  */
 export const resetEngineSettingsStore = (): void => {
-  engineSettingsStore.setState(initialState());
+  engineSettingsStore.setState(initialValues());
 };
 
-export { BiasMode };
-
-// ── Selector hooks ─────────────────────────────────────────────────────────
-// Each re-renders its caller only when its own slice changes.  Bound with
-// useSyncExternalStore (getState for both snapshots) — see module header.
-const makeHook = <T>(select: (s: EngineSettingsState) => T) => (): T =>
+/**
+ * Generic React selector hook.  Re-renders the caller only when the
+ * selected value changes (`Object.is`).  Bound with `useSyncExternalStore`
+ * using `getState` for both snapshots — see module header.
+ *
+ *   const brightness = useEngineSetting((s) => s.points.brightness);
+ */
+export const useEngineSetting = <T>(selector: (s: SettingsValues) => T): T =>
   useSyncExternalStore(
     engineSettingsStore.subscribe,
-    () => select(engineSettingsStore.getState()),
-    () => select(engineSettingsStore.getState()),
+    () => selector(engineSettingsStore.getState()),
+    () => selector(engineSettingsStore.getState()),
   );
-
-export const usePointSize = makeHook((s) => s.pointSize);
-export const useBrightness = makeHook((s) => s.brightness);
-export const useHighlightFallback = makeHook((s) => s.highlightFallback);
-export const useRealOnly = makeHook((s) => s.realOnly);
-export const useDepthFade = makeHook((s) => s.depthFade);
-export const useExposure = makeHook((s) => s.exposure);
-export const useToneMapCurve = makeHook((s) => s.toneMapCurve);
-export const useAutoRotate = makeHook((s) => s.autoRotate);
-export const useBiasMode = makeHook((s) => s.biasMode);
-export const useAbsMagLimit = makeHook((s) => s.absMagLimit);
-export const useGalaxyTexturesEnabled = makeHook((s) => s.galaxyTexturesEnabled);
-export const useMilkyWayEnabled = makeHook((s) => s.milkyWayEnabled);
-export const useFilamentsEnabled = makeHook((s) => s.filamentsEnabled);
-export const useFilamentIntensity = makeHook((s) => s.filamentIntensity);
-export const useVolumesMasterEnabled = makeHook((s) => s.volumesMasterEnabled);

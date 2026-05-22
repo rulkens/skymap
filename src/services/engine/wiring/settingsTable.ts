@@ -72,6 +72,7 @@
  */
 
 import { engineSettingsStore } from '../../../state/engineSettingsStore';
+import type { SettingsStorePath } from '../../../state/engineSettingsStore';
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { SettingsTableKey } from '../../../@types/settings/SettingsTableKey';
@@ -138,16 +139,16 @@ type SettingsDescriptor = {
   name: SettingsTableKey;
   /**
    * Legacy path into `state.settings.<cluster>.<leaf>`.  Mutually
-   * exclusive with `storeKey`: a row carries EITHER a `path` (writes the
-   * engine settings bag + fires `callback`) OR a `storeKey` (writes
-   * `engineSettingsStore` and fires no echo).  Rows migrate from the
-   * former to the latter one at a time during the settings-store
-   * migration (see the 2026-05-22 plan); Phase 5 flips the remainder and
-   * deletes the path machinery.
+   * exclusive with `storePath`: a row carries EITHER a `path` (writes the
+   * engine settings bag + fires `callback`) OR a `storePath` (writes
+   * `engineSettingsStore` via `update(cluster, key, value)` and fires no
+   * echo).  Rows migrate from the former to the latter one at a time
+   * during the settings-store migration (see the 2026-05-22 plan); Phase
+   * 5 flips the remainder and deletes the path machinery.
    */
   path?: SettingsPath;
-  /** Store action name — present on migrated rows instead of `path`. */
-  storeKey?: keyof ReturnType<typeof engineSettingsStore.getState>;
+  /** `[cluster, key]` into the store — present on migrated rows. */
+  storePath?: SettingsStorePath;
   clamp?: (value: number) => number;
   callback?: NestedCallbackKey;
 };
@@ -171,7 +172,7 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
   {
     // Migrated to engineSettingsStore (settings-store migration, Phase 2).
     name: 'setAutoRotate',
-    storeKey: 'setAutoRotate',
+    storePath: ['camera', 'autoRotate'],
   },
   {
     name: 'setGalaxyTexturesEnabled',
@@ -292,13 +293,20 @@ export function buildSettersFromTable(
       // here mirrors the runtime guarantee.
       const next = clamp !== undefined ? clamp(value as number) : value;
 
-      if (descriptor.storeKey !== undefined) {
-        // Migrated row: write the store action directly (no echo — React
-        // reads the store via a selector).  Single source of truth.
-        const action = engineSettingsStore.getState()[descriptor.storeKey] as (
+      if (descriptor.storePath !== undefined) {
+        // Migrated row: write the store via the generic `update` (no echo
+        // — React reads the store via a selector).  Single source of
+        // truth.  The descriptor's `storePath` is type-checked; the cast
+        // here only relaxes `update`'s cross-field `<C, K>` generic for
+        // the table's union-typed dispatch (same bounded cast as the
+        // legacy `setByPath` path).
+        const [cluster, key] = descriptor.storePath;
+        const update = engineSettingsStore.getState().update as (
+          c: string,
+          k: string,
           v: unknown,
         ) => void;
-        action(next);
+        update(cluster, key, next);
       } else {
         // Legacy row: write the engine settings bag + fire the echo.
         setByPath(state, path!, next);

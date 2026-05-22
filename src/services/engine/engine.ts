@@ -612,7 +612,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // subsystem module) take over in production; tests inject
       // synchronous stubs at the test factory call site.
       biasCorrection: createBiasCorrectionSubsystem({
-        getMode: () => engineSettingsStore.getState().biasMode,
+        getMode: () => engineSettingsStore.getState().bias.mode,
         getLoadedClouds: () => state.sources.catalogs,
         requestRender: () => state.subsystems.scheduler.requestRender(),
       }),
@@ -905,7 +905,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // Replaces the old `state.settings.bias.mode = mode` bag write AND the
     // `cb.bias.onModeChange` echo — React now reads via the `useBiasMode`
     // selector, so no echo callback is needed.
-    engineSettingsStore.getState().setBiasMode(mode);
+    engineSettingsStore.getState().update('bias', 'mode', mode);
     void state.subsystems.biasCorrection.setMode(mode);
     state.subsystems.scheduler.requestRender();
   }

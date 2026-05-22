@@ -28,28 +28,31 @@ React control ──onChange──▶ handle.<cluster>.setX(v)
                    runFrame / wireInput        SettingsPanel / App
 ```
 
-### Target store shape (flat)
+### Target store shape (layered + one generic interface)
 
-`engineSettingsStore` holds every settings-bag leaf as a **flat** field (matching `RenderFrameSettings`, which the hot loop already builds flat), plus one action per field and one selector hook per field:
+`engineSettingsStore` keeps the **same layered/clustered shape** as `EngineSettingsState` (it's a relocation of that tree, not a re-modelling), and exposes **one generic setter + one generic selector hook** rather than a `setX`/`useX` pair per field:
 
 ```ts
-type EngineSettingsState = {
-  pointSize: number; brightness: number; highlightFallback: boolean;
-  realOnly: boolean; depthFade: boolean;
-  exposure: number; toneMapCurve: ToneMapCurve;
-  autoRotate: boolean;
-  biasMode: BiasMode;          // already migrated (the spike)
-  absMagLimit: number;
-  galaxyTexturesEnabled: boolean; milkyWayEnabled: boolean;
-  filamentsEnabled: boolean; filamentIntensity: number;
-  volumesMasterEnabled: boolean;
-  // setX action per field …
+export type SettingsValues = {
+  points: { sizePx; brightness; highlightFallback; realOnly; depthFade };
+  tonemap: { exposure; curve };
+  camera: { autoRotate };
+  bias: { mode; absMagLimit };
+  thumbnails: { enabled };
+  milkyWay: { enabled };
+  filaments: { enabled; intensity };
+  volumes: { masterEnabled };
 };
+// generic setter (type-safe via <C, K>): update('bias', 'mode', v)
+// generic selector hook:                 useEngineSetting((s) => s.bias.mode)
+export type SettingsStorePath = { [C in keyof SettingsValues]: readonly [C, keyof SettingsValues[C]] }[keyof SettingsValues];
 ```
+
+`update<C, K>(cluster, key, value)` pins `value` to the leaf type, so `update('bias','mode', 3)` is a compile error. `useEngineSetting(selector)` re-renders only when the selected leaf changes — select primitives, not whole clusters.
 
 ### The `settingsTable` becomes store-driven
 
-Each row's `path: ['settings', cluster, leaf]` + `callback: [cluster, method]` is replaced by a single `storeKey` (the store action). The builder writes the store action + `requestRender()`; the echo step is deleted. `clamp` is preserved.
+Each migrated row's `path: ['settings', cluster, leaf]` + `callback: [cluster, method]` is replaced by a single `storePath: [cluster, key]` (typed `SettingsStorePath`). The builder calls `engineSettingsStore.getState().update(cluster, key, next)` + `requestRender()`; the echo step is deleted. `clamp` is preserved. Rows migrate one at a time (legacy `path` rows coexist with `storePath` rows); Phase 5 flips the remainder and deletes `setByPath`/`SettingsPath`/`NestedCallbackKey`.
 
 ### The cluster-removal gotcha
 
@@ -65,13 +68,13 @@ Many engine test fixtures build state as `… as unknown as EngineState`. `tsc` 
 
 For each settings field `F` in cluster `C` with leaf `L` (`state.settings.C.L`):
 
-1. **Store** (`src/state/engineSettingsStore.ts`): add field + action + `useX` selector hook.
-2. **settingsTable** (`src/services/engine/wiring/settingsTable.ts`): change `F`'s row from `path`/`callback` to `storeKey` (or move bespoke setters' store write inline).
-3. **Hot-loop / engine readers**: replace every `state.settings.C.L` read with `engineSettingsStore.getState().X`. Find them: `grep -rn "settings.C.L" src`. Known sites: `runFrame.ts`, `wireInput.ts`, and occasionally a pass `enabled()` predicate.
+1. **Store** (`src/state/engineSettingsStore.ts`): the leaf already exists in its cluster (added in Phase 1). No per-field action/hook — writes go through the generic `update(cluster, key, v)`, reads through `useEngineSetting`.
+2. **settingsTable** (`src/services/engine/wiring/settingsTable.ts`): change `F`'s row from `path`/`callback` to `storePath: [cluster, key]` (or move bespoke setters' `update(...)` call inline).
+3. **Hot-loop / engine readers**: replace every `state.settings.C.L` read with `engineSettingsStore.getState().C.L`. Find them: `grep -rn "settings.C.L" src`. Known sites: `runFrame.ts`, `wireInput.ts`, and occasionally a pass `enabled()` predicate.
 4. **EngineCallbacks** (`src/@types/engine/EngineCallbacks.d.ts`): delete `C.onLChange`. If the cluster bag becomes empty, delete the bag.
 5. **seedSettingsCallbacks** (`.ts` + `SettingsCallbackSeed.d.ts`): delete the `cb.C?.onLChange?.(snapshot.X)` fire and the seed field.
 6. **EngineState construction + type**: remove `L` from `EngineSettingsState.C` and from the literal in `engine.ts`. Remove the empty cluster if `L` was the last leaf.
-7. **React**: delete `useEngineSettings` mirror `useState` + echo subscription + return field + the type field in `UseEngineSettingsState`. Have the consumer read `useX()`; thread it where it's rendered.
+7. **React**: delete `useEngineSettings` mirror `useState` + echo subscription + return field + the type field in `UseEngineSettingsState`. Have the consumer read `useEngineSetting((s) => s.C.L)`; thread it where it's rendered.
 8. **Tests**: `grep` the test tree for `L` / the React field name; fix every fixture and assertion; run the full suite.
 
 ---
@@ -82,7 +85,7 @@ For each settings field `F` in cluster `C` with leaf `L` (`state.settings.C.L`):
 
 **Files:** Modify `src/state/engineSettingsStore.ts`
 
-- [ ] **Step 1:** Add every settings-bag field (listed in "Target store shape") as a flat field with a default sourced from `data/defaults.ts`, an action `setX`, and a `useX` selector hook bound via `useSyncExternalStore` (mirror the existing `biasMode` / `useBiasMode` pattern exactly). Keep the existing `biasMode` field/action/hook untouched.
+- [ ] **Step 1:** Define the layered `SettingsValues` tree (clusters mirroring `EngineSettingsState`) with defaults from `data/defaults.ts`, the generic `update(cluster, key, value)` action, the `SettingsStorePath` type, and the generic `useEngineSetting(selector)` hook bound via `useSyncExternalStore`.
 - [ ] **Step 2:** Add a test-only reset helper exported from the module: `resetEngineSettingsStore()` that re-applies all defaults. (Used by `afterEach` in tests so the module-singleton store doesn't leak between cases within a file.)
 - [ ] **Step 3:** `npm run typecheck` — expect PASS (nothing reads the new fields yet).
 - [ ] **Step 4:** Commit: `feat(settings-store): expand store to full settings shape + reset helper`.

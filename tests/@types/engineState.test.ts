@@ -185,7 +185,7 @@ describe('EngineState type', () => {
           getPoi: () => null,
         }),
         biasCorrection: createBiasCorrectionSubsystem({
-          getMode: () => engineSettingsStore.getState().biasMode,
+          getMode: () => engineSettingsStore.getState().bias.mode,
           getLoadedClouds: () => stateRef.current!.sources.catalogs,
           requestRender: () => stateRef.current!.subsystems.scheduler.requestRender(),
         }),
@@ -213,7 +213,7 @@ describe('EngineState type', () => {
     stateRef.current = state;
 
     expect(state.settings.points.sizePx).toBe(2.5);
-    expect(engineSettingsStore.getState().biasMode).toBe(DEFAULT_BIAS_MODE);
+    expect(engineSettingsStore.getState().bias.mode).toBe(DEFAULT_BIAS_MODE);
     expect(state.sources.pickMask).toBe(ALL_VISIBLE_MASK);
     expect(state.sources.drawMask).toBe(ALL_VISIBLE_MASK);
     // hover/selection moved off `state.picking` and onto
@@ -369,7 +369,7 @@ describe('EngineState type', () => {
           getPoi: () => null,
         }),
         biasCorrection: createBiasCorrectionSubsystem({
-          getMode: () => engineSettingsStore.getState().biasMode,
+          getMode: () => engineSettingsStore.getState().bias.mode,
           getLoadedClouds: () => stateRef.current!.sources.catalogs,
           requestRender: () => stateRef.current!.subsystems.scheduler.requestRender(),
         }),
