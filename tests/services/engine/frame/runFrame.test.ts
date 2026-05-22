@@ -46,7 +46,6 @@ function makeState(): EngineState {
         realOnly: false,
       },
       tonemap: { exposure: 1, curve: 'linear' },
-      camera: { autoRotate: false },
       bias: { absMagLimit: -19 },
       thumbnails: { enabled: false },
       milkyWay: { enabled: false },

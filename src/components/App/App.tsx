@@ -37,7 +37,7 @@ import { useFamousMeta } from '../../hooks/useFamousMeta';
 import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useEngineSettings } from '../../hooks/useEngineSettings';
-import { useBiasMode } from '../../state/engineSettingsStore';
+import { useBiasMode, useAutoRotate } from '../../state/engineSettingsStore';
 import { useSpaceMouseDevicePresence } from '../../hooks/useSpaceMouseDevicePresence';
 import { buildStaticAnchorPois } from '../../data/buildStaticAnchorPois';
 import { DebugPanel } from '../DebugPanel/DebugPanel';
@@ -53,13 +53,14 @@ export function App(): React.ReactElement {
     setSpaceMouseSensitivity,
   } = useEngineSettings();
 
-  // biasMode is read straight from the shared settings store via a
-  // selector (settings-seam spike), not threaded through useEngineSettings.
+  // biasMode + autoRotate are read straight from the shared settings store
+  // via selectors (settings-store migration), not threaded through
+  // useEngineSettings.
   const biasMode = useBiasMode();
+  const autoRotate = useAutoRotate();
 
   const {
     pointSize,
-    autoRotate,
     labelCategoryVisibility,
     markerCategoryVisibility,
     filamentsEnabled,

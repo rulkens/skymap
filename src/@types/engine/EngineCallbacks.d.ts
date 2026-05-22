@@ -99,11 +99,6 @@ export type EngineCallbacks = {
    */
   camera?: {
     /**
-     * Fired when auto-rotate is toggled (either from `setAutoRotate`
-     * or at engine init so React knows the initial off state).
-     */
-    onAutoRotateChange?: (enabled: boolean) => void;
-    /**
      * Fired when the camera-focus target changes — i.e. the engine has
      * started a tween toward (or away from) a specific galaxy or POI.
      *

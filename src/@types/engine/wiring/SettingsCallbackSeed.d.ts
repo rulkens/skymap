@@ -17,7 +17,6 @@ import type { PoiCategory } from '../../../services/engine/subsystems/poiSubsyst
 export type SettingsCallbackSeed = {
   pointSize: number;
   brightness: number;
-  autoRotate: boolean;
   galaxyTexturesEnabled: boolean;
   highlightFallback: boolean;
   realOnlyMode: boolean;

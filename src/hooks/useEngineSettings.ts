@@ -43,7 +43,6 @@ import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve'
 import type { PoiCategory } from '../services/engine/subsystems/poiSubsystem';
 import {
   DEFAULT_ABS_MAG_LIMIT,
-  DEFAULT_AUTO_ROTATE,
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
@@ -69,7 +68,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   // and on every setter call, so these values always reflect engine truth.
   const [pointSize, setPointSize] = useState<number>(DEFAULT_POINT_SIZE_PX);
   const [brightness, setBrightness] = useState<number>(DEFAULT_BRIGHTNESS);
-  const [autoRotate, setAutoRotate] = useState<boolean>(DEFAULT_AUTO_ROTATE);
   // biasMode moved to `engineSettingsStore`; the SettingsPanel reads it
   // via the `useBiasMode` selector (settings-seam spike).  No useState
   // mirror and no `onModeChange` echo subscription here any more.
@@ -171,7 +169,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
     settings: {
       pointSize,
       brightness,
-      autoRotate,
       galaxyTexturesEnabled,
       milkyWayEnabled,
       filamentsEnabled,
@@ -207,9 +204,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       tonemap: {
         onExposureChange: setExposure,
         onCurveChange: setToneMapCurve,
-      },
-      camera: {
-        onAutoRotateChange: setAutoRotate,
       },
       sources: {
         onMaskChange: setVisibleSourceMask,

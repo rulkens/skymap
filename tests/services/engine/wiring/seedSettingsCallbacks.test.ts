@@ -24,7 +24,6 @@ function makeSnapshot(): SettingsCallbackSeed {
   return {
     pointSize: 2.5,
     brightness: 1.0,
-    autoRotate: false,
     galaxyTexturesEnabled: true,
     highlightFallback: true,
     realOnlyMode: false,
@@ -75,9 +74,6 @@ describe('seedSettingsCallbacks', () => {
       onExposureChange: vi.fn(),
       onCurveChange: vi.fn(),
     };
-    const camera = {
-      onAutoRotateChange: vi.fn(),
-    };
     const thumbnails = { onEnabledChange: vi.fn() };
     const bias = {
       onModeChange: vi.fn(),
@@ -95,7 +91,6 @@ describe('seedSettingsCallbacks', () => {
       ...makeRequiredCallbacks(),
       points,
       tonemap,
-      camera,
       thumbnails,
       bias,
       sources,
@@ -106,7 +101,6 @@ describe('seedSettingsCallbacks', () => {
 
     expect(points.onSizeChange).toHaveBeenCalledExactlyOnceWith(snap.pointSize);
     expect(points.onBrightnessChange).toHaveBeenCalledExactlyOnceWith(snap.brightness);
-    expect(camera.onAutoRotateChange).toHaveBeenCalledExactlyOnceWith(snap.autoRotate);
     expect(thumbnails.onEnabledChange).toHaveBeenCalledExactlyOnceWith(
       snap.galaxyTexturesEnabled,
     );

@@ -53,7 +53,6 @@ function makeState(): Pick<EngineState, 'settings' | 'bias'> {
         realOnly: false,
       },
       tonemap: { exposure: 1.0, curve: ToneMapCurve.Reinhard },
-      camera: { autoRotate: false },
       bias: { absMagLimit: -19 },
       thumbnails: { enabled: true },
       milkyWay: { enabled: true },

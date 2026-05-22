@@ -50,7 +50,6 @@ export function seedSettingsCallbacks(cb: EngineCallbacks, snapshot: SettingsCal
   // keeps every fire safe when a consumer doesn't subscribe to that bag.
   cb.points?.onSizeChange?.(snapshot.pointSize);
   cb.points?.onBrightnessChange?.(snapshot.brightness);
-  cb.camera?.onAutoRotateChange?.(snapshot.autoRotate);
   cb.thumbnails?.onEnabledChange?.(snapshot.galaxyTexturesEnabled);
   cb.points?.onHighlightFallbackChange?.(snapshot.highlightFallback);
   cb.points?.onRealOnlyChange?.(snapshot.realOnlyMode);

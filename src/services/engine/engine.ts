@@ -77,7 +77,6 @@ import { ALL_VISIBLE_MASK, maskHas, maskWith, maskWithout } from '../../utils/so
 import type { SourceType } from '../../@types/data/SourceType';
 import {
   DEFAULT_ABS_MAG_LIMIT,
-  DEFAULT_AUTO_ROTATE,
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
@@ -363,9 +362,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       tonemap: {
         exposure: DEFAULT_EXPOSURE,
         curve: DEFAULT_TONE_MAP_CURVE,
-      },
-      camera: {
-        autoRotate: DEFAULT_AUTO_ROTATE,
       },
       // Bias's user-tunable subset.  The bake-derived fields
       // (apparentMagLimit / schechterMStar / schechterAlpha) stay on

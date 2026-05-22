@@ -78,14 +78,6 @@ export type EngineSettingsState = {
   };
 
   /**
-   * Camera-orbit behaviour controls.  Currently just `autoRotate`;
-   * future tween / damping knobs would also live here.
-   */
-  camera: {
-    autoRotate: boolean;
-  };
-
-  /**
    * Luminosity-bias correction inputs — the user-tunable subset.  The
    * bake-derived fields (`apparentMagLimit`, `schechterMStar`,
    * `schechterAlpha`) stay on `state.bias` — they're outputs of the

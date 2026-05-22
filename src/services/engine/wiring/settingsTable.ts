@@ -71,6 +71,7 @@
  * invisible at the API edge.
  */
 
+import { engineSettingsStore } from '../../../state/engineSettingsStore';
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { SettingsTableKey } from '../../../@types/settings/SettingsTableKey';
@@ -85,7 +86,6 @@ import type { SettingsTableKey } from '../../../@types/settings/SettingsTableKey
 type SettingsPath =
   | readonly ['settings', 'points', keyof EngineState['settings']['points']]
   | readonly ['settings', 'tonemap', keyof EngineState['settings']['tonemap']]
-  | readonly ['settings', 'camera', keyof EngineState['settings']['camera']]
   | readonly ['settings', 'bias', keyof EngineState['settings']['bias']]
   | readonly [
       'settings',
@@ -136,7 +136,18 @@ type NestedCallbackKey =
  */
 type SettingsDescriptor = {
   name: SettingsTableKey;
-  path: SettingsPath;
+  /**
+   * Legacy path into `state.settings.<cluster>.<leaf>`.  Mutually
+   * exclusive with `storeKey`: a row carries EITHER a `path` (writes the
+   * engine settings bag + fires `callback`) OR a `storeKey` (writes
+   * `engineSettingsStore` and fires no echo).  Rows migrate from the
+   * former to the latter one at a time during the settings-store
+   * migration (see the 2026-05-22 plan); Phase 5 flips the remainder and
+   * deletes the path machinery.
+   */
+  path?: SettingsPath;
+  /** Store action name — present on migrated rows instead of `path`. */
+  storeKey?: keyof ReturnType<typeof engineSettingsStore.getState>;
   clamp?: (value: number) => number;
   callback?: NestedCallbackKey;
 };
@@ -158,9 +169,9 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     callback: ['points', 'onBrightnessChange'],
   },
   {
+    // Migrated to engineSettingsStore (settings-store migration, Phase 2).
     name: 'setAutoRotate',
-    path: ['settings', 'camera', 'autoRotate'],
-    callback: ['camera', 'onAutoRotateChange'],
+    storeKey: 'setAutoRotate',
   },
   {
     name: 'setGalaxyTexturesEnabled',
@@ -281,17 +292,24 @@ export function buildSettersFromTable(
       // here mirrors the runtime guarantee.
       const next = clamp !== undefined ? clamp(value as number) : value;
 
-      setByPath(state, path, next);
-
-      // Nested-only callback fire.  Optional-chain shape so a missing
-      // cluster or missing method is silently skipped.
-      if (callback !== undefined) {
-        const [cluster, method] = callback;
-        const sub = (
-          cb as unknown as Record<string, Record<string, unknown> | undefined>
-        )[cluster];
-        const fn = sub?.[method] as ((v: unknown) => void) | undefined;
-        fn?.(next);
+      if (descriptor.storeKey !== undefined) {
+        // Migrated row: write the store action directly (no echo — React
+        // reads the store via a selector).  Single source of truth.
+        const action = engineSettingsStore.getState()[descriptor.storeKey] as (
+          v: unknown,
+        ) => void;
+        action(next);
+      } else {
+        // Legacy row: write the engine settings bag + fire the echo.
+        setByPath(state, path!, next);
+        if (callback !== undefined) {
+          const [cluster, method] = callback;
+          const sub = (
+            cb as unknown as Record<string, Record<string, unknown> | undefined>
+          )[cluster];
+          const fn = sub?.[method] as ((v: unknown) => void) | undefined;
+          fn?.(next);
+        }
       }
 
       requestRender();

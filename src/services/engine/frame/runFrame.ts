@@ -211,7 +211,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // auto-rotate on `!tweens.isActive()` lets the home tween land
   // exactly on the target yaw; auto-rotate resumes from that
   // landing point on the next frame.
-  if (state.settings.camera.autoRotate && state.cam && !state.subsystems.tweens.isActive()) {
+  if (engineSettingsStore.getState().autoRotate && state.cam && !state.subsystems.tweens.isActive()) {
     state.cam.yaw += 0.000873;
     updatePosition(state.cam);
   }
@@ -511,7 +511,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // term below) closes the loop.
   state.subsystems.fades.tick(nowMs);
   const stillAnimating =
-    state.settings.camera.autoRotate ||
+    engineSettingsStore.getState().autoRotate ||
     state.subsystems.tweens.isActive() ||
     state.subsystems.spaceMouse.hasAxes() ||
     (ready && state.subsystems.texturedDisks.hasInFlightWork()) ||

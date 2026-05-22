@@ -39,7 +39,6 @@ import type { EnginePickingState } from '../../src/@types/engine/state/EnginePic
 
 import {
   DEFAULT_ABS_MAG_LIMIT,
-  DEFAULT_AUTO_ROTATE,
   DEFAULT_BIAS_MODE,
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
@@ -97,7 +96,6 @@ describe('EngineState type', () => {
         realOnly: false,
       },
       tonemap: { exposure: 3.0, curve: DEFAULT_TONE_MAP_CURVE },
-      camera: { autoRotate: false },
       bias: { absMagLimit: -19 },
       thumbnails: { enabled: true },
       milkyWay: { enabled: true },
@@ -239,7 +237,6 @@ describe('EngineState type', () => {
         realOnly: DEFAULT_REAL_ONLY_MODE,
       },
       tonemap: { exposure: DEFAULT_EXPOSURE, curve: DEFAULT_TONE_MAP_CURVE },
-      camera: { autoRotate: DEFAULT_AUTO_ROTATE },
       bias: { absMagLimit: DEFAULT_ABS_MAG_LIMIT },
       thumbnails: { enabled: DEFAULT_GALAXY_TEXTURES_ENABLED },
       milkyWay: { enabled: DEFAULT_MILKY_WAY_ENABLED },
@@ -294,7 +291,6 @@ describe('EngineState type', () => {
           realOnly: false,
         },
         tonemap: { exposure: 1, curve: DEFAULT_TONE_MAP_CURVE },
-        camera: { autoRotate: false },
         bias: { absMagLimit: 0 },
         thumbnails: { enabled: true },
         milkyWay: { enabled: true },

@@ -33,7 +33,6 @@ import type { PoiCategory } from '../../services/engine/subsystems/poiSubsystem'
 export type UseEngineSettingsState = {
   pointSize: number;
   brightness: number;
-  autoRotate: boolean;
   galaxyTexturesEnabled: boolean;
   milkyWayEnabled: boolean;
   filamentsEnabled: boolean;

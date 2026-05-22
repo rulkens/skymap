@@ -397,7 +397,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   seedSettingsCallbacks(cb, {
     pointSize: state.settings.points.sizePx,
     brightness: state.settings.points.brightness,
-    autoRotate: state.settings.camera.autoRotate,
     galaxyTexturesEnabled: state.settings.thumbnails.enabled,
     highlightFallback: state.settings.points.highlightFallback,
     realOnlyMode: state.settings.points.realOnly,
