@@ -75,6 +75,7 @@ import { createVolumeOffscreen } from '../../gpu/passes/volumeOffscreen';
 import { createTexturedDiskRenderer } from '../../gpu/renderers/texturedDiskRenderer';
 import { createProceduralDiskRenderer } from '../../gpu/renderers/proceduralDiskRenderer';
 import { createMilkyWayRenderer } from '../../gpu/renderers/milkyWayRenderer';
+import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShellRenderer';
 import { createFilamentRenderer } from '../../gpu/renderers/filamentRenderer';
 import { createLabelRenderer } from '../../gpu/renderers/labelRenderer';
 import { createMarkerLineRenderer } from '../../gpu/renderers/markerLineRenderer';
@@ -383,6 +384,13 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     device,
     format: 'rgba16float',
   });
+  // Observable-universe horizon shell — translucent sphere at the
+  // comoving particle-horizon radius (~14.3 Gpc).  Single uniform
+  // buffer + baked UV-sphere VBO/IBO, no lifecycle dependencies.
+  const horizonShellRenderer = createHorizonShellRenderer({
+    device,
+    format: 'rgba16float',
+  });
   // ── Cosmic-web filament-skeleton renderer ─────────────────────────
   //
   // Built unconditionally (the pipeline / quad VBO / uniform buffer
@@ -419,6 +427,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   state.gpu.texturedDiskRenderer = texturedDiskRenderer;
   state.gpu.proceduralDiskRenderer = proceduralDiskRenderer;
   state.gpu.milkyWayRenderer = milkyWayRenderer;
+  state.gpu.horizonShellRenderer = horizonShellRenderer;
 
   // ── 3D scalar-field volume renderer ──────────────────────────────────
   //

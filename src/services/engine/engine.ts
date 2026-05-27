@@ -451,12 +451,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // InfoCard layout.
       famousMeta: [],
       famousXrefs: {},
-      // Milliquas display-name sidecar — per-tier, populated by the
-      // milliquasNames slot's `ready` subscriber.  Empty default mirrors
-      // the famous-meta pattern: a hover firing before names land falls
-      // back to the auto-generated IAU "MQ J<RA><Dec>" headline.
-      milliquasNames: [],
-      milliquasClasses: [],
       // Currently-loaded data tier.  Seeded from `cb.initialTier` (Task 5
       // of the data-tiers plan); the default of 'medium' matches the
       // pre-tier ~600k-galaxy desktop budget.  `setTier` mutates this in
@@ -522,6 +516,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
       milkyWayRenderer: null,
+      horizonShellRenderer: null,
       // Constructed during initGpu, null until then.  Excluded from the
       // isEngineReady predicate — the volumeUpsamplePass null-checks
       // both handles before calling hasActiveFields(), so a null state
@@ -591,7 +586,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         getCloud: (s) => state.sources.catalogs.get(s),
         getFamousMeta: () => state.sources.famousMeta,
         getFamousXrefs: () => state.sources.famousXrefs,
-        getMilliquasNames: () => state.sources.milliquasNames,
         // Forward-reference: `state.subsystems.pois` is bound later in
         // this same literal but the closure resolves at call time,
         // long after the literal completes.  Mirrors the cloud/famous
@@ -709,10 +703,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // MCPM Cosmic Web slot — same null-then-set lifecycle as cf4Density.
       // Tier-aware: setTier reloads on tier change.  See loading/slots/mcpmSlot.ts.
       mcpm: null,
-      // Milliquas names sidecar — same null-then-set lifecycle as famousMeta.
-      // Tier-aware: setTier reloads on tier change so `state.sources.milliquasNames`
-      // stays in lockstep with the active milliquas-<tier>.bin's localIdx.
-      milliquasNames: null,
     },
     // ── Debug-only per-frame skip flags ─────────────────────────────────
     //
@@ -998,7 +988,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       Source.Famous,
       state.sources.famousMeta,
       state.sources.famousXrefs,
-      state.sources.milliquasNames,
     );
     if (!info) return;
 
@@ -1033,7 +1022,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       source,
       famousMeta ?? state.sources.famousMeta,
       famousXrefs ?? state.sources.famousXrefs,
-      state.sources.milliquasNames,
     );
     if (!info) return;
 
@@ -1400,6 +1388,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.proceduralDiskRenderer = null;
     state.gpu.milkyWayRenderer?.destroy();
     state.gpu.milkyWayRenderer = null;
+    state.gpu.horizonShellRenderer?.destroy();
+    state.gpu.horizonShellRenderer = null;
     state.gpu.scalarVolumeRenderer?.destroy();
     state.gpu.scalarVolumeRenderer = null;
     state.gpu.volumeUpsample?.destroy();

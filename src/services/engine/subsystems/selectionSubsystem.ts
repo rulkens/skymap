@@ -11,8 +11,8 @@
  *
  * ### Deps are closures, not snapshots
  *
- * `getCloud` / `getFamousMeta` / `getFamousXrefs` / `getMilliquasNames`
- * / `getPoi` are accessor functions so the subsystem reads the LIVE
+ * `getCloud` / `getFamousMeta` / `getFamousXrefs` / `getPoi` are
+ * accessor functions so the subsystem reads the LIVE
  * source maps at call time.  Catalogs arrive after engine
  * construction (async GPU init), sidecars even later, and tier swaps
  * replace whole sources mid-session — a value snapshot taken at
@@ -60,7 +60,7 @@ function selectionEq(a: Selection | null, b: Selection | null): boolean {
 export function createSelectionSubsystem(
   input: CreateSelectionSubsystemInput,
 ): SelectionSubsystem {
-  const { cb, getCloud, getFamousMeta, getFamousXrefs, getMilliquasNames, getPoi } = input;
+  const { cb, getCloud, getFamousMeta, getFamousXrefs, getPoi } = input;
 
   // Closure-captured `let`s — genuinely inaccessible from outside.
   // Both start null; populated by the first hover pick / click resolve.
@@ -90,7 +90,6 @@ export function createSelectionSubsystem(
       sel.source,
       getFamousMeta(),
       getFamousXrefs(),
-      getMilliquasNames(),
     );
   }
 

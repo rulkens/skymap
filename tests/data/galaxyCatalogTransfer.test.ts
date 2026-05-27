@@ -46,6 +46,8 @@ function makeCloud(count: number): GalaxyCatalog {
     axisRatio: new Float32Array(count).fill(0.7),
     positionAngleDeg: new Float32Array(count).fill(45),
     diameterKpc: new Float32Array(count).fill(30),
+    classByte: new Uint8Array(count).fill(7),
+    parentSurveyByte: new Uint8Array(count).fill(8),
   };
 }
 
@@ -95,16 +97,18 @@ describe('cloneGalaxyCatalogForTransfer', () => {
       copy.axisRatio.buffer,
       copy.positionAngleDeg.buffer,
       copy.diameterKpc.buffer,
+      copy.classByte.buffer,
+      copy.parentSurveyByte.buffer,
     ]);
     for (const t of transfer) {
       expect(copyBuffers.has(t as ArrayBufferLike)).toBe(true);
     }
   });
 
-  it('transfer list has one entry per typed-array field (10 total)', () => {
+  it('transfer list has one entry per typed-array field (12 total)', () => {
     const cloud = makeCloud(4);
     const { transfer } = cloneGalaxyCatalogForTransfer(cloud);
-    expect(transfer.length).toBe(10);
+    expect(transfer.length).toBe(12);
   });
 
   it('handles count = 0 (empty catalog)', () => {
@@ -113,6 +117,6 @@ describe('cloneGalaxyCatalogForTransfer', () => {
     expect(copy.count).toBe(0);
     expect(copy.objIDs.length).toBe(0);
     expect(copy.positions.length).toBe(0);
-    expect(transfer.length).toBe(10);
+    expect(transfer.length).toBe(12);
   });
 });

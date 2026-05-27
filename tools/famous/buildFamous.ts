@@ -4,7 +4,7 @@
  *
  * Reads:
  *   - `data/famous_galaxies.seed.json`           (curated entries)
- *   - `public/data/2mrs.bin`, `public/data/glade.bin`  (for cross-match)
+ *   - `public/data/2mrs.bin`, `public/data/glade-large.bin`  (for cross-match)
  *
  * Writes:
  *   - `public/data/famous.bin`         (v4 GalaxyCatalog, normal renderer input)
@@ -124,10 +124,13 @@ async function main(): Promise<void> {
   const seedPath = resolve('data/famous_galaxies.seed.json');
   const outDir = resolve('public/data');
   const twomrsPath = resolve(outDir, '2mrs.bin');
-  const gladePath = resolve(outDir, 'glade.bin');
+  // GLADE was tiered into glade-{small,medium,large}.bin; use the largest
+  // tier here for the densest cross-match candidate pool. The catalog's
+  // shape is identical across tiers, only the row count differs.
+  const gladePath = resolve(outDir, 'glade-large.bin');
   if (!existsSync(twomrsPath) || !existsSync(gladePath)) {
     process.stderr.write(
-      'error: 2mrs.bin and/or glade.bin missing.  Run `npm run build-all` first.\n',
+      'error: 2mrs.bin and/or glade-large.bin missing.  Run `npm run build-tiers` first.\n',
     );
     process.exit(1);
   }
@@ -155,6 +158,10 @@ async function main(): Promise<void> {
     axisRatio: new Float32Array(count).fill(NaN),
     positionAngleDeg: new Float32Array(count).fill(NaN),
     diameterKpc: new Float32Array(count),
+    // Famous entries have no AGN class signal and no Milliquas
+    // parent-survey prefix; both bytes stay 0.
+    classByte: new Uint8Array(count),
+    parentSurveyByte: new Uint8Array(count),
   };
   const xrefs: Record<string, Xref | null> = {};
   const metaByIdx: Array<{

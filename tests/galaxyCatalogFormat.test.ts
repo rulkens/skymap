@@ -22,6 +22,8 @@ function makeCloud(): GalaxyCatalog {
     axisRatio: new Float32Array([0.42, 0.91]),
     positionAngleDeg: new Float32Array([13.5, 142.25]),
     diameterKpc: new Float32Array([30, 30]),
+    classByte: new Uint8Array(2),
+    parentSurveyByte: new Uint8Array(2),
   };
 }
 
@@ -65,10 +67,10 @@ describe('galaxy catalog binary format', () => {
     // Overwrite the version field (offset 4) with an arbitrary bad value.
     new DataView(buf).setUint32(4, 99, true);
     expect(() => decodeGalaxyCatalog(buf)).toThrow(/version/);
-    // The message must point users at the modern build pipeline so they know
-    // exactly which command will produce a v3-compatible bin.
+    // The message must point users at the modern build pipeline so they
+    // know exactly which command will produce a compatible bin.
     expect(() => decodeGalaxyCatalog(buf)).toThrow(/regenerate/);
-    expect(() => decodeGalaxyCatalog(buf)).toThrow(/build-all/);
+    expect(() => decodeGalaxyCatalog(buf)).toThrow(/build-tiers/);
   });
 
   it('encoded byte length matches 16 + count * 64', () => {
@@ -79,9 +81,9 @@ describe('galaxy catalog binary format', () => {
 });
 
 /**
- * v3-specific tests: orientation round-trip (finite + NaN sentinel) and
- * cross-version rejection. Kept in a separate `describe` so the original
- * round-trip suite stays focused on the existing fields.
+ * Orientation round-trip coverage (finite + NaN sentinel) and
+ * cross-version rejection.  Kept in a separate `describe` so the
+ * primary round-trip suite stays focused on the scalar fields.
  */
 function makeOrientCloud(count: number, fillNaN = false): GalaxyCatalog {
   const ar = new Float32Array(count);
@@ -105,10 +107,12 @@ function makeOrientCloud(count: number, fillNaN = false): GalaxyCatalog {
     positionAngleDeg: pa,
     // diameterKpc zero-filled: these tests check axisRatio/PA round-trip only.
     diameterKpc: new Float32Array(count),
+    classByte: new Uint8Array(count),
+    parentSurveyByte: new Uint8Array(count),
   };
 }
 
-describe('galaxyCatalogFormat v4 (orientation round-trip)', () => {
+describe('galaxyCatalogFormat — orientation round-trip', () => {
   it('round-trips finite axisRatio and positionAngleDeg', () => {
     const cloud = makeOrientCloud(4, false);
     const decoded = decodeGalaxyCatalog(encodeGalaxyCatalog(cloud));
@@ -151,11 +155,11 @@ describe('galaxyCatalogFormat v4 (orientation round-trip)', () => {
 });
 
 /**
- * v4-specific tests: diameterKpc field — finite values, NaN sentinel,
- * byte-length verification, cross-version rejection (v1/v2/v3 all rejected),
- * and length-mismatch guard on encode.
+ * diameterKpc field coverage — finite values, NaN sentinel, byte-length
+ * verification, cross-version rejection, and length-mismatch guard on
+ * encode.
  */
-describe('galaxyCatalogFormat v4', () => {
+describe('galaxyCatalogFormat — diameterKpc + stride + rejection', () => {
   it('round-trips diameterKpc finite values', () => {
     const cloud: GalaxyCatalog = {
       count: 2,
@@ -169,6 +173,8 @@ describe('galaxyCatalogFormat v4', () => {
       axisRatio: new Float32Array([0.5, 0.8]),
       positionAngleDeg: new Float32Array([45, 90]),
       diameterKpc: new Float32Array([30, 12.5]),
+      classByte: new Uint8Array(2),
+      parentSurveyByte: new Uint8Array(2),
     };
     const decoded = decodeGalaxyCatalog(encodeGalaxyCatalog(cloud));
     expect(Array.from(decoded.diameterKpc)).toEqual([30, 12.5]);
@@ -187,6 +193,8 @@ describe('galaxyCatalogFormat v4', () => {
       axisRatio: new Float32Array([0.5]),
       positionAngleDeg: new Float32Array([45]),
       diameterKpc: new Float32Array([NaN]),
+      classByte: new Uint8Array(1),
+      parentSurveyByte: new Uint8Array(1),
     };
     const decoded = decodeGalaxyCatalog(encodeGalaxyCatalog(cloud));
     expect(Number.isNaN(decoded.diameterKpc[0])).toBe(true);
@@ -205,12 +213,14 @@ describe('galaxyCatalogFormat v4', () => {
       axisRatio: new Float32Array([0.5]),
       positionAngleDeg: new Float32Array([45]),
       diameterKpc: new Float32Array([30]),
+      classByte: new Uint8Array(1),
+      parentSurveyByte: new Uint8Array(1),
     };
     expect(encodeGalaxyCatalog(cloud).byteLength).toBe(80);
   });
 
-  it('rejects v1, v2, AND v3 with the same regenerate message', () => {
-    for (const version of [1, 2, 3]) {
+  it('rejects v1, v2, v3, AND v4 with the same regenerate message', () => {
+    for (const version of [1, 2, 3, 4]) {
       const buf = new ArrayBuffer(16);
       const dv = new DataView(buf);
       dv.setUint32(0, 0x504d4b53, true);
@@ -234,6 +244,8 @@ describe('galaxyCatalogFormat v4', () => {
       axisRatio: new Float32Array([0.5, 0.8]),
       positionAngleDeg: new Float32Array([45, 90]),
       diameterKpc: new Float32Array([30]),
+      classByte: new Uint8Array(2),
+      parentSurveyByte: new Uint8Array(2),
     };
     expect(() => encodeGalaxyCatalog(cloud)).toThrow(/diameterKpc length mismatch/);
   });

@@ -3,9 +3,9 @@
  * build time.
  *
  * Selection rule: M_abs = m_app − 5·log10(d_Mpc) − 25 where d_Mpc is derived
- * from the parser's redshift via Hubble's law (HUBBLE_DISTANCE_MPC × z).
- * Smaller / more-negative M_abs = brighter; we keep the brightest `target`
- * records.
+ * from the parser's redshift via `redshiftToDistanceMpc` (flat-ΛCDM integral
+ * when `USE_LCDM_DISTANCES` is on, linear Hubble otherwise).  Smaller /
+ * more-negative M_abs = brighter; we keep the brightest `target` records.
  *
  * Edge cases tested:
  *   - target ≥ N         → returns all records, original order preserved
@@ -36,6 +36,8 @@ function rec(overrides: Partial<ParsedRecord>): ParsedRecord {
     axisRatio: null,
     positionAngleDeg: null,
     diameterKpc: null,
+    classByte: 0,
+    parentSurveyByte: 0,
     ...overrides,
   };
 }
@@ -53,10 +55,10 @@ describe('subsampleByAbsMag', () => {
   });
 
   it('keeps the brightest target by absolute magnitude', () => {
-    // At z=0.05, distance ≈ 214.4 Mpc, mu ≈ 36.66.
-    // brightest: magG=14 → M ≈ -22.66
-    // mid:       magG=18 → M ≈ -18.66
-    // dim:       magG=22 → M ≈ -14.66
+    // At z=0.05 the ΛCDM and linear-Hubble distances agree to within ~1%,
+    // so the absolute-magnitude ordering is the same regardless of which
+    // cosmology mode is active.  brightest magG=14 → mid magG=18 → dim
+    // magG=22, monotone in M_abs.
     const bright = rec({ magG: 14, z: 0.05 });
     const mid = rec({ magG: 18, z: 0.05 });
     const dim = rec({ magG: 22, z: 0.05 });

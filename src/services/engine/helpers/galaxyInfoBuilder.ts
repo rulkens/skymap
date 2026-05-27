@@ -20,6 +20,7 @@
 import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
 import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import { Source, SOURCE_REGISTRY } from '../../../data/sources';
+import { sourceClassLabel, milliquasParentSurveyPrefix } from '../../../data/sourceClass';
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../../../@types/loading/FamousXrefMap';
 import { famousDisplayName } from './famousDisplayName';
@@ -30,6 +31,7 @@ import {
   formatRaSexagesimal,
   formatDecSexagesimal,
   iauName,
+  iauRaDecSuffix,
   lookbackTimeGyr,
   hubbleVelocityKmS,
   absoluteMagnitude,
@@ -122,7 +124,6 @@ export function buildGalaxyInfo(
   source: SourceType,
   famousMeta?: readonly FamousMetaEntry[],
   famousXrefs?: FamousXrefMap,
-  milliquasNames?: readonly string[],
 ): GalaxyInfo {
   const px = cloud.positions[idx * 3 + 0]!;
   const py = cloud.positions[idx * 3 + 1]!;
@@ -318,6 +319,32 @@ export function buildGalaxyInfo(
     diameterProvenance = 'fallback (30 kpc)';
   }
 
+  // ── Per-record metadata bytes (v5 format) ──────────────────────────────────
+  //
+  // Both bytes are zero-default across every non-Milliquas source;
+  // sourceClassLabel + milliquasParentSurveyPrefix gate on `source`
+  // internally so it's safe to read them unconditionally here.
+  const classByte = cloud.classByte[idx]!;
+  const parentSurveyByte = cloud.parentSurveyByte[idx]!;
+  const agnClass = sourceClassLabel(source, classByte) ?? undefined;
+  const parentSurveyPrefix = milliquasParentSurveyPrefix(parentSurveyByte);
+
+  // Milliquas "<PARENT> J<RA><Dec>" reconstruction.  When the bin
+  // carries a recognised parent-survey byte (the vast majority of
+  // Milliquas rows), produce the historical display name without a
+  // JSON sidecar; otherwise leave the field undefined and let the
+  // displayName ladder fall through to the IAU "MQ J…" fallback.
+  //
+  // The J-suffix here is recomputed from the row's stored RA/Dec
+  // floats via the shared `iauRaDecSuffix` emitter, so it may differ
+  // in the least-significant digits from the upstream catalogue's
+  // original Name column (different rounding/truncation of slightly
+  // different coord measurements).  The prefix half always matches.
+  const milliquasDisplayName =
+    source === Source.Milliquas && parentSurveyPrefix !== null
+      ? `${parentSurveyPrefix} ${iauRaDecSuffix(ra, dec)}`
+      : undefined;
+
   // ── Famous-galaxy enrichment ───────────────────────────────────────────────
   //
   // Look up the curated sidecar metadata only for Famous rows.  For every other
@@ -386,11 +413,12 @@ export function buildGalaxyInfo(
     //   1. Famous → curated `commonName` then `names[0]`.  Routed
     //      through the shared `famousDisplayName` helper so the
     //      InfoCard headline and the POI label can't drift.
-    //   2. Milliquas → curated literature name from the per-tier
-    //      `milliquas-<tier>_names.json` sidecar (e.g. "3C 273",
-    //      "PKS 0405-12").  When the sidecar hasn't loaded yet (or the
-    //      row's name is empty) we fall through to the IAU fallback
-    //      below, which produces "MQ J<RA><Dec>".
+    //   2. Milliquas → "<PARENT> J<RA><Dec>" reconstructed from the
+    //      per-record `parentSurveyByte` slot in the .bin (e.g.
+    //      "SDSS J012345.67+891234.5", "2MASX J…").  When the byte is
+    //      0 (literature designation) or otherwise unrecognised the
+    //      candidate is undefined and we fall through to the IAU
+    //      fallback below, which produces "MQ J<RA><Dec>".
     //   3. Survey row with a real PGC in objID → `PGC <n>`.  Applies
     //      to BOTH 2MRS (PGC populated by the build-time GLADE→2MRS
     //      cross-match) and GLADE (PGC inherited directly from the
@@ -403,9 +431,7 @@ export function buildGalaxyInfo(
     displayName:
       [
         famous ? famousDisplayName(famous) : undefined,
-        source === Source.Milliquas && milliquasNames && milliquasNames[idx]
-          ? milliquasNames[idx]
-          : undefined,
+        milliquasDisplayName,
         (source === Source.TwoMRS || source === Source.Glade) && cloud.objIDs[idx]! > 0n
           ? `PGC ${cloud.objIDs[idx]!}`
           : undefined,
@@ -419,6 +445,10 @@ export function buildGalaxyInfo(
     // Source attribution — fed through to the InfoCard's badge + link logic.
     source,
     sourceLabel: SOURCE_REGISTRY[source].label,
+
+    // Per-record AGN class string, or undefined when the source
+    // doesn't define one (every non-Milliquas row today).
+    agnClass,
 
     // External URLs — chosen above based on `source` (and PGC for GLADE).
     catalogUrl,

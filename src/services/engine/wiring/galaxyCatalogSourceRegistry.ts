@@ -68,10 +68,10 @@ export const GALAXY_CATALOG_SOURCE_REGISTRY: readonly GalaxyCatalogSourceConfig[
     shortName: 'milliquas',
     fetcher: galaxyCatalogFetcher,
     category: 'survey',
-    // milliquas-<tier>_names.json carries the verbatim Name + class
-    // column, parallel-indexed by localIdx to the per-tier bin.
-    // Tier-aware — reloads in lockstep with the bin on tier change.
-    companions: ['milliquasNames'],
+    // No companion sidecars: the v5 .bin format carries the AGN
+    // class byte + parent-survey prefix byte per record, so the
+    // InfoCard reconstructs the display name without an auxiliary
+    // JSON fetch.
   },
   {
     source: Source.Synthetic,

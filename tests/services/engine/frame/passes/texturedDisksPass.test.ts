@@ -57,6 +57,7 @@ function makeDeps(): PassDeps {
     filamentRenderer: null,
     scalarVolumeRenderer: null,
     milkyWayRenderer: { draw: vi.fn() } as any,
+    horizonShellRenderer: { draw: vi.fn() } as any,
     catalogs: new Map(),
     famousMeta: [],
     famousXrefs: {},

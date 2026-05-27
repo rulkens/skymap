@@ -7,10 +7,14 @@
  *
  *   - `INITIAL_DISTANCE_MPC` — wheel-zoom start point, clamped to the
  *     global zoom envelope.
- *   - `FAR_CLIP_MPC = 6000` — far-clip plane, covers GLADE's deepest
- *     ~1.5 Gpc with headroom. Visual pass uses additive blending with
- *     no depth test, so depth precision is not a concern; the pick
- *     pass uses depth32float, easily handling the 0.01 : 6000 ratio.
+ *   - `FAR_CLIP_MPC = 50000` — far-clip plane.  Sized so the entire
+ *     observable-universe horizon shell (radius 14 300 Mpc, drawn by
+ *     `horizonShellRenderer`) stays inside the frustum at every
+ *     reachable camera distance: max_cam 30 000 + shell 14 300 =
+ *     44 300 Mpc, plus headroom.  Visual pass uses additive blending
+ *     with no depth test, so depth precision is not a concern; the
+ *     pick pass uses depth32float, which handles the 0.01 : 50 000
+ *     ratio fine.
  *   - `near = 0.01` Mpc (10 kpc) — well inside the focus-on tween's
  *     end distance (0.12 Mpc, see `galaxyFocusDistance.ts`).
  *   - `yaw ≈ 3.00`, `pitch ≈ 0.06` — nearly looking down the −Z axis
@@ -23,8 +27,8 @@ import type { InitialCam } from '../../../@types/camera/InitialCam';
 /** Initial camera distance in Mpc — sits the viewer inside the Local Group. */
 export const INITIAL_DISTANCE_MPC = 0.43;
 
-/** Far-clip plane in Mpc — covers GLADE's deepest ~1.5 Gpc with headroom. */
-export const FAR_CLIP_MPC = 6000;
+/** Far-clip plane in Mpc — keeps the horizon shell in-frustum at max camera distance. */
+export const FAR_CLIP_MPC = 50000;
 
 /**
  * Compute the initial camera snapshot. Pure constants — no dependency on

@@ -48,6 +48,8 @@ function makeCloud(count: number): GalaxyCatalog {
     axisRatio: new Float32Array(count).fill(0.7),
     positionAngleDeg: new Float32Array(count).fill(45),
     diameterKpc: new Float32Array(count).fill(30),
+    classByte: new Uint8Array(count),
+    parentSurveyByte: new Uint8Array(count),
   };
 }
 
@@ -481,37 +483,75 @@ describe('buildGalaxyInfo — diameter provenance', () => {
 // ─── buildGalaxyInfo — Milliquas branch ──────────────────────────────────────
 
 describe('buildGalaxyInfo — Milliquas source', () => {
-  it('uses the per-tier names sidecar for displayName when present', () => {
-    // The milliquas-<tier>_names.json sidecar lines up with the bin by
-    // localIdx; passing it through here mirrors the production wiring
-    // (state.sources.milliquasNames threaded through buildGalaxyInfo).
-    const cloud = makeCloud(2);
-    setPosition(cloud, 0, 100, 0, 0);
-    setPosition(cloud, 1, 0, 100, 0);
-    const names = ['3C 273', 'PKS 0405-12'];
-    const info = buildGalaxyInfo(cloud, 0, Source.Milliquas, undefined, undefined, names);
-    expect(info.displayName).toBe('3C 273');
-    // iauName remains the coord-based fallback ("MQ J..."), available
-    // for any consumer that wants the IAU form.
-    expect(info.iauName.startsWith('MQ J')).toBe(true);
-  });
-
-  it('falls back to the IAU "MQ J<RA><Dec>" headline when the sidecar is empty', () => {
-    // Loading window: sidecar hasn't resolved yet (or this is the small
-    // tier with no names file).  Headline must still be useful.
+  it('reconstructs "<PARENT> J<RA><Dec>" when parentSurveyByte is set', () => {
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);
-    const info = buildGalaxyInfo(cloud, 0, Source.Milliquas, undefined, undefined, []);
+    // 1 = SDSS — see MILLIQUAS_PARENT_SURVEY_BYTE.SDSS.
+    cloud.parentSurveyByte[0] = 1;
+    // 1 = Quasar — see MILLIQUAS_CLASS_BYTE.Q.
+    cloud.classByte[0] = 1;
+    const info = buildGalaxyInfo(cloud, 0, Source.Milliquas);
+    expect(info.displayName.startsWith('SDSS J')).toBe(true);
+    // The suffix portion must be byte-identical to iauName's
+    // (`MQ J…`) suffix — the whole point of iauRaDecSuffix is that
+    // the two strings only differ by the prefix.
+    expect(info.displayName.slice(5)).toBe(info.iauName.slice(3));
+    expect(info.agnClass).toBe('Quasar');
+  });
+
+  it('falls back to the IAU "MQ J<RA><Dec>" headline when parentSurveyByte is 0', () => {
+    // Literature designation row (3C 273, M 87, …) — both bytes
+    // stay at the zero-fill default.
+    const cloud = makeCloud(1);
+    setPosition(cloud, 0, 100, 0, 0);
+    const info = buildGalaxyInfo(cloud, 0, Source.Milliquas);
     expect(info.displayName).toBe(info.iauName);
     expect(info.displayName.startsWith('MQ J')).toBe(true);
+    expect(info.agnClass).toBeUndefined();
   });
 
-  it('falls back to IAU when names[idx] is an empty string', () => {
-    // Defensive: a sidecar row with no literature name (rare upstream)
-    // shouldn't render an empty headline.
+  it('emits each parent-survey prefix correctly', () => {
+    const cases: Array<[number, string]> = [
+      [1, 'SDSS'],
+      [2, '2MASX'],
+      [3, 'GAIA'],
+      [4, 'WISEA'],
+      [5, 'NVSS'],
+      [6, 'FIRST'],
+      [7, '6dFGS'],
+    ];
+    for (const [byte, prefix] of cases) {
+      const cloud = makeCloud(1);
+      setPosition(cloud, 0, 100, 0, 0);
+      cloud.parentSurveyByte[0] = byte;
+      const info = buildGalaxyInfo(cloud, 0, Source.Milliquas);
+      expect(info.displayName.startsWith(`${prefix} J`)).toBe(true);
+    }
+  });
+
+  it('exposes the human AGN class label for each Milliquas class byte', () => {
+    const cases: Array<[number, string]> = [
+      [1, 'Quasar'],
+      [2, 'AGN type-1'],
+      [3, 'BL Lac'],
+      [4, 'Seyfert-1 narrow'],
+      [5, 'Seyfert-1 broad'],
+      [6, 'Candidate'],
+    ];
+    for (const [byte, expected] of cases) {
+      const cloud = makeCloud(1);
+      setPosition(cloud, 0, 100, 0, 0);
+      cloud.classByte[0] = byte;
+      const info = buildGalaxyInfo(cloud, 0, Source.Milliquas);
+      expect(info.agnClass).toBe(expected);
+    }
+  });
+
+  it('leaves agnClass undefined for non-Milliquas sources even with classByte set', () => {
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);
-    const info = buildGalaxyInfo(cloud, 0, Source.Milliquas, undefined, undefined, ['']);
-    expect(info.displayName).toBe(info.iauName);
+    cloud.classByte[0] = 1; // Would mean "Quasar" if source were Milliquas.
+    const info = buildGalaxyInfo(cloud, 0, Source.SDSS);
+    expect(info.agnClass).toBeUndefined();
   });
 });

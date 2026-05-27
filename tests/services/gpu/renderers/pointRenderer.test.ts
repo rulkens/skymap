@@ -80,6 +80,10 @@ function makeCloud(count: number): GalaxyCatalog {
     // v4 diameter field — fill with 30 kpc (the project-wide default) so
     // any future test that reads apparent-size logic won't divide by zero.
     diameterKpc: new Float32Array(count).fill(30),
+    // v5 per-record metadata bytes; zero-filled for non-Milliquas test
+    // fixtures (the renderer's bookkeeping path doesn't read them).
+    classByte: new Uint8Array(count),
+    parentSurveyByte: new Uint8Array(count),
   };
 }
 

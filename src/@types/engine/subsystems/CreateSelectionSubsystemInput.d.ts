@@ -21,14 +21,6 @@ export type CreateSelectionSubsystemInput = {
   /** Live read of the famous-galaxy xref sidecar (cross-survey ID joins). */
   getFamousXrefs: () => FamousXrefMap;
   /**
-   * Live read of the Milliquas per-tier names sidecar.  Closure (not
-   * snapshot) so tier-change reloads land in subsequent picks without
-   * the subsystem having to re-subscribe.  Empty array when the
-   * sidecar hasn't resolved yet — `buildGalaxyInfo` falls back to the
-   * IAU "MQ J<RA><Dec>" headline in that window.
-   */
-  getMilliquasNames: () => readonly string[];
-  /**
    * Live read of the POI table.  Closure (not snapshot) so a tier
    * swap that replaces the POI list lands in subsequent lookups
    * without re-binding.  Returns null for unknown ids — the

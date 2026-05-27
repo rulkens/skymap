@@ -138,6 +138,7 @@ function makeDeps(opts: {
     device: {} as unknown as GPUDevice,
     context: {} as unknown as GPUCanvasContext,
     milkyWayRenderer: {} as unknown as RunFrameDeps['milkyWayRenderer'],
+    horizonShellRenderer: {} as unknown as RunFrameDeps['horizonShellRenderer'],
     filamentRenderer: {} as unknown as RunFrameDeps['filamentRenderer'],
     texturedDiskRenderer: {} as unknown as RunFrameDeps['texturedDiskRenderer'],
     proceduralDiskRenderer: {} as unknown as RunFrameDeps['proceduralDiskRenderer'],

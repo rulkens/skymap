@@ -55,7 +55,6 @@ import { createFilamentSlot } from '../../loading/slots/filamentSlot';
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
 import { createFamousMetaSlot } from '../../loading/slots/famousMetaSlot';
-import { createMilliquasNamesSlot } from '../../loading/slots/milliquasNamesSlot';
 import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
 import { createSyntheticVolumeSlots } from '../../loading/slots/syntheticVolumeSlots';
 import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';
@@ -194,14 +193,6 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
     });
   }
 
-  // ── Milliquas names sidecar slot ─────────────────────────────────
-  // Per-tier, lazy-by-tier: loaded at boot with the active tier, and
-  // reloaded by `engine.setTier` when the user flips tiers.  Tiny JSON
-  // (~10 MB at medium tier with 200k names + classes), so paying it
-  // at boot keeps the first Milliquas hover already showing the
-  // human-readable headline rather than the auto-generated IAU name.
-  const milliquasNamesSlot = createMilliquasNamesSlot(state, cb);
-
   // ── PGC-alias slot (Task 10) ─────────────────────────────────────
   // Lazy: only `load()`-ed on first Cmd+K palette open via the public
   // handle's `loadPgcAliases()` shim.  Factory owns the mint + state
@@ -245,10 +236,6 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   }
   allSlots.set(filamentSlot.name, filamentSlot as unknown as AssetSlot<unknown, unknown>);
   allSlots.set(famousMetaSlot.name, famousMetaSlot as unknown as AssetSlot<unknown, unknown>);
-  allSlots.set(
-    milliquasNamesSlot.name,
-    milliquasNamesSlot as unknown as AssetSlot<unknown, unknown>,
-  );
   allSlots.set(pgcAliasSlot.name, pgcAliasSlot as unknown as AssetSlot<unknown, unknown>);
   if (state.assetSlots.cf4Density) {
     allSlots.set(

@@ -126,8 +126,6 @@ describe('EngineState type', () => {
       catalogs: new Map(),
       famousMeta: [],
       famousXrefs: {},
-      milliquasNames: [],
-      milliquasClasses: [],
       tier: 'medium',
     };
     const picking: EnginePickingState = {
@@ -162,6 +160,7 @@ describe('EngineState type', () => {
         texturedDiskRenderer: null,
         proceduralDiskRenderer: null,
         milkyWayRenderer: null,
+        horizonShellRenderer: null,
         scalarVolumeRenderer: null,
         volumeUpsample: null,
         timingService: createDisabledGpuTimingService(),
@@ -182,7 +181,6 @@ describe('EngineState type', () => {
           getCloud: () => undefined,
           getFamousMeta: () => [],
           getFamousXrefs: () => ({}),
-          getMilliquasNames: () => [],
           getPoi: () => null,
         }),
         biasCorrection: createBiasCorrectionSubsystem({
@@ -207,7 +205,6 @@ describe('EngineState type', () => {
         pgcAlias: null,
         cf4Density: null,
         mcpm: null,
-        milliquasNames: null,
       },
       debug: { disabledPasses: new Set<string>() },
     };
@@ -323,8 +320,6 @@ describe('EngineState type', () => {
         catalogs: new Map(),
         famousMeta: [],
         famousXrefs: {},
-        milliquasNames: [],
-        milliquasClasses: [],
         tier: 'medium',
       },
       picking: {
@@ -348,6 +343,7 @@ describe('EngineState type', () => {
         texturedDiskRenderer: null,
         proceduralDiskRenderer: null,
         milkyWayRenderer: null,
+        horizonShellRenderer: null,
         scalarVolumeRenderer: null,
         volumeUpsample: null,
         timingService: createDisabledGpuTimingService(),
@@ -368,7 +364,6 @@ describe('EngineState type', () => {
           getCloud: () => undefined,
           getFamousMeta: () => [],
           getFamousXrefs: () => ({}),
-          getMilliquasNames: () => [],
           getPoi: () => null,
         }),
         biasCorrection: createBiasCorrectionSubsystem({
@@ -393,7 +388,6 @@ describe('EngineState type', () => {
         pgcAlias: null,
         cf4Density: null,
         mcpm: null,
-        milliquasNames: null,
       },
       debug: { disabledPasses: new Set<string>() },
     };

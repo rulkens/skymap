@@ -51,6 +51,8 @@ function makeCloud(count: number): GalaxyCatalog {
     diameterKpc: f32(count),
     axisRatio: f32(count),
     positionAngleDeg: f32(count),
+    classByte: new Uint8Array(count),
+    parentSurveyByte: new Uint8Array(count),
     sourceCode: 0,
   } as unknown as GalaxyCatalog;
 }
@@ -78,7 +80,6 @@ function makeSub(cb: Callbacks, opts: { cloud?: GalaxyCatalog; pois?: readonly P
     getCloud: () => opts.cloud,
     getFamousMeta: () => [],
     getFamousXrefs: () => ({}),
-    getMilliquasNames: () => [],
     getPoi: (id) => pois.find((p) => p.id === id) ?? null,
   });
 }

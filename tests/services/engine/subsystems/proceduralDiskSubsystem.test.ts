@@ -43,6 +43,8 @@ function makeDenseCloud(count: number, ar = 0.7, pa = 45): GalaxyCatalog {
     axisRatio: fill(ar),
     positionAngleDeg: fill(pa),
     diameterKpc: fill(50),
+    classByte: new Uint8Array(count),
+    parentSurveyByte: new Uint8Array(count),
   };
 }
 

@@ -9,7 +9,7 @@
  *
  * Inversion steps:
  *   1. d = √(x² + y² + z²)         — recover the distance in Mpc
- *   2. z_redshift = d / (c/H₀)     — invert Hubble's law
+ *   2. z_redshift = distanceMpcToRedshift(d)  — bisect the ΛCDM integral
  *   3. dec = asin(z_cart / d)       — recover declination, range [-90, +90]
  *   4. ra  = atan2(y, x)            — recover RA, then wrap to [0, 360)
  *
@@ -21,7 +21,7 @@
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
-import { HUBBLE_DISTANCE_MPC } from './constants';
+import { distanceMpcToRedshift } from './distanceMpcToRedshift';
 
 /**
  * Convert Cartesian (x, y, z) in Mpc → (RA in degrees, Dec in degrees, redshift).
@@ -62,8 +62,10 @@ export function cartesianToRaDecZ(x: number, y: number, z: number): Vec3 {
   // would give NaN for the redshift. Return the agreed sentinel instead.
   if (d === 0) return [0, 0, 0];
 
-  // Hubble's law inverted: d = c·z/H₀  →  z = d·H₀/c = d / (c/H₀)
-  const zRedshift = d / HUBBLE_DISTANCE_MPC;
+  // Invert the forward distance relation.  `distanceMpcToRedshift` reads
+  // the `USE_LCDM_DISTANCES` flag in constants.ts and bisects the ΛCDM
+  // Simpson integral when set; otherwise it returns `d · H₀ / c`.
+  const zRedshift = distanceMpcToRedshift(d);
 
   // Recover Dec: z_cart = d · sin(dec)  →  dec = asin(z_cart / d)
   // We clamp z/d to [-1, +1] before passing to asin because floating-point

@@ -37,10 +37,17 @@
  * ### Why this fixture lights up every HDR pass
  *
  * To keep the snapshot a meaningful regression target we wire each of
- * the six HDR passes' `enabled` gates to return true (subsystems with
+ * the HDR passes' `enabled` gates to return true (subsystems with
  * non-empty lastOutput, optional renderers non-null with positive
  * glyph/line counts, settings toggles on, camera inside the Milky-Way
- * fade band).  Result: 8 renderer-draw entries + 1 postProcess.draw.
+ * fade band).  Result: one renderer-draw entry per enabled HDR pass +
+ * 1 postProcess.draw.
+ *
+ * The horizon shell is the lone exception: its distance fade is the
+ * mirror image of the Milky Way's, so a camera close enough to light
+ * the impostor is by construction outside the shell's fade band.  The
+ * two never co-exist in one frame; the shell's gating + dispatch is
+ * covered in `passes.test.ts` and `utils/math/horizonShellFade`.
  *
  * If the post-split renderFrame skips a pass, drops a draw, or
  * reorders the renderers, this snapshot fails.  That's the gate
@@ -225,6 +232,8 @@ function makeCloud(count: number): GalaxyCatalog {
     axisRatio: fill(1),
     positionAngleDeg: fill(0),
     diameterKpc: fill(50),
+    classByte: new Uint8Array(count),
+    parentSurveyByte: new Uint8Array(count),
   };
 }
 
@@ -241,6 +250,7 @@ describe('renderFrame visual baseline', () => {
     // Renderer mocks — each draw lands on the same `records` array.
     const pointRenderer = makeLoggingRenderer(records, 'point-sprites');
     const milkyWayRenderer = makeLoggingRenderer(records, 'milky-way');
+    const horizonShellRenderer = makeLoggingRenderer(records, 'horizon-shell');
     const proceduralDiskRenderer = makeLoggingRenderer(records, 'procedural-disks');
     const texturedDiskRenderer = makeLoggingRenderer(records, 'textured-disks');
     const filamentRenderer = makeLoggingRenderer(records, 'filaments');
@@ -374,6 +384,7 @@ describe('renderFrame visual baseline', () => {
       device,
       context,
       milkyWayRenderer: milkyWayRenderer as never,
+      horizonShellRenderer: horizonShellRenderer as never,
       filamentRenderer: filamentRenderer as never,
       scalarVolumeRenderer: scalarVolumeRenderer as never,
       texturedDiskRenderer: texturedDiskRenderer as never,

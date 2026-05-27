@@ -137,18 +137,41 @@ export type GalaxyInfo = {
   iauName: string;
 
   /**
+   * Human-readable AGN classification for the row, or `undefined`
+   * when the source doesn't define one.
+   *
+   * Today only `Source.Milliquas` populates this — values come from
+   * `sourceClassLabel(source, classByte)` (e.g. `"Quasar"`,
+   * `"BL Lac"`, `"Seyfert-1 broad"`).  For SDSS / 2MRS / GLADE /
+   * Famous / Synthetic rows the field is `undefined` and InfoCard
+   * consumers are expected to hide the row entirely.
+   *
+   * The field is optional rather than `string | null` to match the
+   * React-idiomatic absent-row pattern used elsewhere in the type
+   * (e.g. `famous?`): consumers gate with `info.agnClass && (…)`
+   * and an explicit `undefined` keeps the absent-row markup
+   * identical to every other "this row doesn't apply" field.
+   */
+  agnClass?: string;
+
+  /**
    * The single best human-readable name for this row, suitable as a
    * headline in the InfoCard / hover preview.  Derived from a small
    * priority ladder:
    *
    *   1. Famous rows → primary curated name from the seed JSON
    *      (e.g. "M31", "NGC 5128").
-   *   2. 2MRS or GLADE rows with a real PGC (objID > 0n) → `PGC <n>`.
+   *   2. Milliquas rows with a known parent-survey prefix → the
+   *      reconstructed "<PARENT> J<RA><Dec>" (e.g.
+   *      "SDSS J012345.67+891234.5", "2MASX J…").  Built from the
+   *      per-record `parentSurveyByte` slot in the .bin and the
+   *      shared `iauRaDecSuffix(ra, dec)` emitter.
+   *   3. 2MRS or GLADE rows with a real PGC (objID > 0n) → `PGC <n>`.
    *      PGC numbers are widely indexed by NED / SIMBAD and are
    *      shorter and more memorable than a coord-based name.  For
    *      GLADE the PGC comes directly from the source row; for 2MRS
    *      it's populated by the build-time GLADE→2MRS cross-match.
-   *   3. Everything else → `iauName` (the coord-based fallback).
+   *   4. Everything else → `iauName` (the coord-based fallback).
    *
    * Pre-computed in the builder rather than left to each surface
    * (FullCard, CompactCard, command palette) so the headline stays

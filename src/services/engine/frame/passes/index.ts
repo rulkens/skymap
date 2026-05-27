@@ -101,6 +101,7 @@ import { texturedDisksPass } from './texturedDisksPass';
 import { filamentsPass } from './filamentsPass';
 import { volumeUpsamplePass } from './volumeUpsamplePass';
 import { milkyWayPass } from './milkyWayPass';
+import { horizonShellPass } from './horizonShellPass';
 import { markerLinesPass } from './markerLinesPass';
 import { labelsPass } from './labelsPass';
 import { clusterMarkersPass } from './clusterMarkersPass';
@@ -114,6 +115,7 @@ export const HDR_PASSES: readonly Pass[] = [
   milkyWayPass,
   filamentsPass,
   volumeUpsamplePass,
+  horizonShellPass,
   clusterMarkersPass,
 ];
 
@@ -132,6 +134,7 @@ export { texturedDisksPass } from './texturedDisksPass';
 export { filamentsPass } from './filamentsPass';
 export { volumeUpsamplePass } from './volumeUpsamplePass';
 export { milkyWayPass } from './milkyWayPass';
+export { horizonShellPass } from './horizonShellPass';
 export { markerLinesPass } from './markerLinesPass';
 export { labelsPass } from './labelsPass';
 export { clusterMarkersPass } from './clusterMarkersPass';

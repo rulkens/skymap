@@ -13,6 +13,7 @@ import type { EngineCallbacks } from '../EngineCallbacks';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
+import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { FpsCounter } from '../subsystems/FpsCounter';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
@@ -37,6 +38,8 @@ export type RunFrameDeps = {
   context: GPUCanvasContext;
   /** Milky-Way impostor renderer; instantiated inside the IIFE. */
   milkyWayRenderer: MilkyWayRenderer;
+  /** Observable-universe horizon shell renderer; instantiated inside the IIFE. */
+  horizonShellRenderer: HorizonShellRenderer;
   /** Filament renderer; instantiated inside the IIFE. */
   filamentRenderer: FilamentRenderer;
   /** Atlas-bound 3D-oriented disk renderer for large galaxy thumbnails. */

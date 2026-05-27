@@ -54,7 +54,7 @@ import { surveyFluxLimit, surveySchechter } from '../../../data/surveyFluxLimits
 import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';
 import {
   absoluteFromApparent,
-  cartesianToRaDecZ,
+  cartesianToRaDec,
   expectedNumberDensity,
   vMaxWeight,
 } from '../../../utils/math';
@@ -217,7 +217,7 @@ export function buildPointInterleavedBuffer(
     const x = cloud.positions[i * 3 + 0]!;
     const y = cloud.positions[i * 3 + 1]!;
     const z = cloud.positions[i * 3 + 2]!;
-    const [ra, dec] = cartesianToRaDecZ(x, y, z);
+    const [ra, dec] = cartesianToRaDec(x, y, z);
     const fb = fallbackOrientation(cloud.objIDs[i]!, ra, dec);
     const fbAr = new Float32Array([fb.axisRatio])[0]!;
     const fbPa = new Float32Array([fb.positionAngleDeg])[0]!;

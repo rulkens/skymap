@@ -294,6 +294,11 @@ export function parseSdssCsv(rawText: string): SdssCsvResult {
       axisRatio: shape ? shape.axisRatio : null,
       positionAngleDeg: shape ? shape.positionAngleDeg : null,
       diameterKpc,
+      // SDSS rows have no AGN class signal yet and never a Milliquas
+      // parent-survey prefix; both bytes stay 0 here (see
+      // `src/data/sourceClass.ts` for the lookup contract).
+      classByte: 0,
+      parentSurveyByte: 0,
     });
   }
 

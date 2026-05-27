@@ -40,11 +40,12 @@ describe('pickColourIndex', () => {
   });
 
   it('applies K-correction at non-zero distance', () => {
-    // SDSS kPerZ = 3.0, Hubble distance ~4282.749 Mpc.
-    // At d = 428.2749 Mpc, z ≈ 0.1 → shift = 0.3 ramp-units.
-    // u−g = 1.0 → observed ramp = 0.667; rest-frame = 0.667 − 0.3 = 0.367.
+    // SDSS kPerZ = 3.0.  d = 428.275 Mpc corresponds to z ≈ 0.1027 under
+    // the ΛCDM inverse (slightly higher than the linear-Hubble z = 0.1
+    // because ΛCDM puts the same redshift at a closer distance).  Shift
+    // = 0.1027 · 3.0 ≈ 0.308 ramp-units, so 0.667 − 0.308 ≈ 0.359.
     const result = pickColourIndex(Source.SDSS, 18.5, 17.5, NaN, NaN, NaN, 428.2749);
-    expect(result).toBeCloseTo(0.367, 2);
+    expect(result).toBeCloseTo(0.359, 2);
   });
 
   it('exports UNKNOWN_COLOUR_RAMP_POSITION as the shared fallback', () => {

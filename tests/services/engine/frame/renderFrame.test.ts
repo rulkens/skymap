@@ -149,6 +149,15 @@ function makeMockMilkyWayRenderer(callLog: CallLog) {
   } as any;
 }
 
+function makeMockHorizonShellRenderer(callLog: CallLog) {
+  return {
+    draw: vi.fn(() => {
+      callLog.push('horizonShellRenderer.draw');
+    }),
+    destroy: vi.fn(),
+  } as any;
+}
+
 function makeMockThumbnails(callLog: CallLog) {
   return {
     runFrame: vi.fn(() => {
@@ -210,6 +219,8 @@ function makeCloud(count = 1): GalaxyCatalog {
     axisRatio: fill(1),
     positionAngleDeg: fill(0),
     diameterKpc: fill(50),
+    classByte: new Uint8Array(count),
+    parentSurveyByte: new Uint8Array(count),
   };
 }
 
@@ -225,6 +236,7 @@ function makeInput(
   const hdrTargetView = makeFakeHdrView();
   const pointRenderer = makeMockPointRenderer(callLog);
   const milkyWayRenderer = makeMockMilkyWayRenderer(callLog);
+  const horizonShellRenderer = makeMockHorizonShellRenderer(callLog);
   const postProcess = makeMockPostProcess(callLog, hdrTargetView);
   // Minimal VolumeOffscreen stub — renderFrame's existing tests don't
   // exercise the volume pass (volumesEnabled is false by default in
@@ -298,6 +310,7 @@ function makeInput(
     postProcess,
     pointRenderer,
     milkyWayRenderer,
+    horizonShellRenderer,
     thumbnails,
     texturedQuadRenderer,
     texturedDiskRenderer,
@@ -344,6 +357,7 @@ function makeInput(
       device,
       context,
       milkyWayRenderer,
+      horizonShellRenderer,
       filamentRenderer: null,
       scalarVolumeRenderer: null,
       texturedQuadRenderer,

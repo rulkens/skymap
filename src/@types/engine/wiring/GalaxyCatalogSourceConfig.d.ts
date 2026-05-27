@@ -10,13 +10,10 @@ import type { GalaxyCatalogReq } from '../../loading/GalaxyCatalogReq';
  * bin — at boot (if the source is visible), on visibility toggle-on,
  * and on tier change.
  *
- *   - `famousMeta`     — Famous-galaxy meta + xrefs JSON sidecar
- *                        (tier-agnostic; one load per session).
- *   - `milliquasNames` — Milliquas Name + class JSON sidecar, parallel
- *                        to the per-tier bin's records (tier-aware;
- *                        reloads when the tier changes).
+ *   - `famousMeta` — Famous-galaxy meta + xrefs JSON sidecar
+ *                    (tier-agnostic; one load per session).
  */
-export type GalaxyCatalogCompanionRef = 'famousMeta' | 'milliquasNames';
+export type GalaxyCatalogCompanionRef = 'famousMeta';
 
 /**
  * Categorisation of a registry row.  Drives behaviour in two places

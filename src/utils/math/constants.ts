@@ -29,6 +29,24 @@ export const H0_KM_S_MPC = 70;
 export const HUBBLE_DISTANCE_MPC = C_KM_S / H0_KM_S_MPC;
 
 /**
+ * Cosmology toggle for the redshift ↔ distance conversion.
+ *
+ * - `true`  → flat-ΛCDM Simpson integral (Ω_m = 0.315, Ω_Λ = 0.685).
+ *             Physically correct out to z ≈ 7; required for Milliquas
+ *             and the deep BOSS/SDSS-LRG tail.
+ * - `false` → linear Hubble `d = c · z / H₀`. Fast, closed-form, off
+ *             by tens of percent past z ≈ 0.3, but useful for A/B
+ *             comparisons and for reproducing pre-ΛCDM .bin layouts.
+ *
+ * Flipping this is a build-time decision — positions are baked into
+ * `public/data/*.bin`, so changes require `npm run build-tiers` +
+ * `npm run build-famous` to take effect.  Both `redshiftToDistanceMpc`
+ * and `distanceMpcToRedshift` read this flag so the forward and
+ * inverse stay self-consistent regardless of the choice.
+ */
+export const USE_LCDM_DISTANCES = true;
+
+/**
  * Hubble time t_H = 1/H₀, expressed in gigayears.
  *
  *   t_H = 1 / H₀  ×  (Mpc in km)  ÷  (seconds per Gyr)

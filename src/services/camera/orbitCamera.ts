@@ -62,13 +62,14 @@ export const MIN_DISTANCE_MPC = 0.05;
 /**
  * Maximum allowed `cam.distance` in Mpc.
  *
- * 5 Gpc is well past the deepest BOSS spectroscopic galaxy (z ≈ 0.7
- * → ~3 Gpc under Hubble's law) and roughly the entire observable universe
- * along any single line of sight.  Beyond this the cloud is a single dot
- * and the user has lost all spatial intuition, so we stop the wheel here
- * rather than letting the camera drift into the lonely abyss.
+ * 30 Gpc keeps the wheel zoom in sync with `FAR_CLIP_MPC` so the user
+ * can pull the camera out far enough to see the full Milliquas tail
+ * (linear-Hubble distance `4282.75 · z`, z ≈ 7 → ~30 Gpc).  Beyond
+ * this the cloud is a single dot and the user has lost all spatial
+ * intuition, so we stop the wheel here rather than letting the camera
+ * drift into the lonely abyss.
  */
-export const MAX_DISTANCE_MPC = 5000;
+export const MAX_DISTANCE_MPC = 30000;
 
 /**
  * Clamp a candidate distance to `[MIN_DISTANCE_MPC, MAX_DISTANCE_MPC]`.

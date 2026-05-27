@@ -48,6 +48,10 @@ function rec(source: SourceType, ra: number, dec: number, z: number, objID = 0n)
     // The cross-match logic doesn't read this field, so null exercises the
     // merger with realistic input.
     diameterKpc: null,
+    // classByte / parentSurveyByte are zero for every non-Milliquas
+    // source; the cross-match logic doesn't read them either.
+    classByte: 0,
+    parentSurveyByte: 0,
   };
 }
 
