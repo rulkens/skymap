@@ -125,9 +125,9 @@ describe('parseGlade', () => {
     // produce axisRatio > 1 (impossible for a real galaxy) and the renderer
     // would draw absurdly elongated disks pointing the wrong way.
     const csv = [
-      'pgc,pa,logr25',
-      '12345,30.5,0.3', // axisRatio = 10^-0.3 ≈ 0.501
-      '67890,,', // queried but no match — must be absent from the map
+      'pgc,pa,logr25,logd25,e_logd25,mod0,e_mod0',
+      '12345,30.5,0.3,1.2,0.05,,', // axisRatio = 10^-0.3 ≈ 0.501; mod0 missing
+      '67890,,,,,,', // queried but no match — must be absent from the map
     ].join('\n');
     const map = parseHyperLedaCsv(csv);
     expect(map.size).toBe(1);
@@ -140,7 +140,9 @@ describe('parseGlade', () => {
     // The first SAMPLE row has PGC 2789 (NGC 253). Build a HyperLEDA cache
     // keyed by that PGC and verify the parsed record carries the looked-up
     // pa + axisRatio rather than null. logr25 = 0.2 → axisRatio ≈ 0.631.
-    const hyperLeda = parseHyperLedaCsv(['pgc,pa,logr25', '2789,55.0,0.2'].join('\n'));
+    const hyperLeda = parseHyperLedaCsv(
+      ['pgc,pa,logr25,logd25,e_logd25,mod0,e_mod0', '2789,55.0,0.2,1.1,0.04,,'].join('\n'),
+    );
     const { records } = parseGlade(NGC253, {}, hyperLeda);
     expect(records).toHaveLength(1);
     expect(records[0]!.positionAngleDeg).toBe(55.0);
@@ -152,7 +154,9 @@ describe('parseGlade', () => {
     // Even with a non-empty HyperLEDA cache, that row should not pick up an
     // orientation — the sentinel branch in parseGladeLine prevents the lookup.
     const dashRow = SAMPLE.split('\n')[2]!;
-    const hyperLeda = parseHyperLedaCsv(['pgc,pa,logr25', '2789,55.0,0.2'].join('\n'));
+    const hyperLeda = parseHyperLedaCsv(
+      ['pgc,pa,logr25,logd25,e_logd25,mod0,e_mod0', '2789,55.0,0.2,1.1,0.04,,'].join('\n'),
+    );
     const { records } = parseGlade(dashRow, {}, hyperLeda);
     expect(records).toHaveLength(1);
     expect(records[0]!.positionAngleDeg).toBeNull();
