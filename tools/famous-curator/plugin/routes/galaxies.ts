@@ -8,6 +8,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseFamousSeed } from '../../../parsers/famousSeed.js';
+import { RAW_DATA } from '../../../utils/io/rawDataRegistry.js';
 import { loadOverrideIndex } from '../overrideIndex.js';
 import { overrideIndexPath } from '../paths.js';
 
@@ -30,7 +31,7 @@ export type GalaxiesResult = {
 export async function handleGalaxies(opts: {
   repoRoot: string;
 }): Promise<GalaxiesResult> {
-  const seedPath = resolve(opts.repoRoot, 'data/famous_galaxies.seed.json');
+  const seedPath = resolve(opts.repoRoot, RAW_DATA['famous.seed'].path);
   const entries = parseFamousSeed(readFileSync(seedPath, 'utf8'));
   const idx = loadOverrideIndex(overrideIndexPath(opts.repoRoot));
   const galaxies: GalaxyListEntry[] = entries.map((e) => ({

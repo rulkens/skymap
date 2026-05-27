@@ -59,6 +59,8 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { createInterface } from 'node:readline';
 
+import { rawDataPath } from '../utils/io/rawDataRegistry';
+
 const ZIP_URL = 'https://quasars.org/milliquas.zip';
 
 // Pinned hashes from the v8 release downloaded on 2026-05-20.  If
@@ -76,7 +78,7 @@ const EXPECTED_TXT_SHA256 = '4c70119381f5fb1de1c2125bd5f8f7f37b646a4c35dfa9f30e6
 const EXPECTED_TXT_BYTES = 194142000;
 const SIZE_TOLERANCE = 0.01;
 
-const OUT_DIR = resolve('data/raw/milliquas');
+const OUT_DIR = rawDataPath('milliquas.dir');
 const ZIP_PATH = resolve(OUT_DIR, 'milliquas.zip');
 const TXT_PATH = resolve(OUT_DIR, 'milliquas.txt');
 

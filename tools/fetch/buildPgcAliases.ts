@@ -69,6 +69,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
 
 // ─── Pure helpers ──────────────────────────────────────────────────────────
 
@@ -223,7 +224,7 @@ export function parseDesignationsCsv(text: string): DesignationRow[] {
 // ─── Network + chunk-cache layer ───────────────────────────────────────────
 
 const CHUNK_WIDTH = 100_000;
-const RAW_DIR = resolve('data/raw');
+const RAW_DIR = rawDataPath('hyperleda.designations-dir');
 const OUT_PATH = resolve('public/data/pgc_aliases.json');
 
 function chunkCachePath(chunkStart: number): string {

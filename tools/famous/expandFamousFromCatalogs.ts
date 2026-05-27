@@ -86,6 +86,7 @@
 import { readFileSync, writeFileSync, existsSync, renameSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { rawDataPath } from '../utils/io/rawDataRegistry.js';
 
 import { parseFamousSeed, validateFamousEntry, type FamousEntry } from '../parsers/famousSeed.js';
 import {
@@ -669,9 +670,9 @@ async function main(): Promise<void> {
     '--dry-run': 'bool',
   });
   const flags = { noCache: _flags['--no-cache'], dryRun: _flags['--dry-run'] };
-  const seedPath = resolve('data/famous_galaxies.seed.json');
-  const hyperledaCachePath = resolve('data/raw/hyperleda_famous_cache.tsv');
-  const wikipediaCachePath = resolve('data/raw/wikipedia_famous_cache.json');
+  const seedPath = rawDataPath('famous.seed');
+  const hyperledaCachePath = rawDataPath('hyperleda.famous-cache');
+  const wikipediaCachePath = rawDataPath('famous.wikipedia-cache');
 
   // ── Load existing seed (preserve curated descriptions on merge) ───
   const existingEntries: FamousEntry[] = existsSync(seedPath)

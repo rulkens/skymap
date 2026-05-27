@@ -37,6 +37,7 @@ import { encodeGalaxyCatalog, decodeGalaxyCatalog } from '../../src/data/galaxyC
 import { Source } from '../../src/data/sources.js';
 import { fallbackOrientation } from '../../src/utils/random/fallbackOrientation.js';
 import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog.js';
+import { rawDataPath } from '../utils/io/rawDataRegistry.js';
 
 /** Threshold (arcsec) within which a 2MRS/GLADE point is treated as the same galaxy. */
 const MATCH_THRESHOLD_ARCSEC = 30;
@@ -121,7 +122,7 @@ function entryToXyz(e: FamousEntry): [number, number, number] {
 type Xref = { source: 'TwoMRS' | 'Glade'; localIdx: number; distanceArcsec: number };
 
 async function main(): Promise<void> {
-  const seedPath = resolve('data/famous_galaxies.seed.json');
+  const seedPath = rawDataPath('famous.seed');
   const outDir = resolve('public/data');
   const twomrsPath = resolve(outDir, '2mrs.bin');
   // GLADE was tiered into glade-{small,medium,large}.bin; use the largest

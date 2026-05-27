@@ -52,6 +52,7 @@ import { resolve, dirname } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import { readIdSet } from '../utils/io/readIdSet';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
 
 const CONCURRENCY = 4;
 
@@ -127,8 +128,8 @@ async function readGladePgcs(path: string): Promise<string[]> {
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
-  const inputArg = argv.find((a) => !a.startsWith('--')) ?? 'data/raw/glade2.3.dat';
-  const outPath = resolve('data/raw/hyperleda_pa.csv');
+  const inputArg = argv.find((a) => !a.startsWith('--')) ?? rawDataPath('glade.v23');
+  const outPath = rawDataPath('hyperleda.pa');
 
   process.stderr.write(`reading PGCs from ${inputArg}…\n`);
   const allPgcs = await readGladePgcs(resolve(inputArg));

@@ -36,6 +36,7 @@ import {
   appendFileSync,
 } from 'node:fs';
 import { readIdSet } from '../utils/io/readIdSet';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { resolve, dirname } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
@@ -100,8 +101,8 @@ async function readTwoMrsIds(path: string): Promise<string[]> {
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
-  const inputArg = argv.find((a) => !a.startsWith('--')) ?? 'data/raw/2mrs_table3.dat';
-  const outPath = resolve('data/raw/2mass_xsc_pa.csv');
+  const inputArg = argv.find((a) => !a.startsWith('--')) ?? rawDataPath('2mrs.table3');
+  const outPath = rawDataPath('2mrs.xsc-pa');
 
   process.stderr.write(`reading 2MRS IDs from ${inputArg}…\n`);
   const allIds = await readTwoMrsIds(resolve(inputArg));
