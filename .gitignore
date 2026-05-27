@@ -102,6 +102,12 @@ pnpm-debug.log*
 # though everything around it is ignored.
 !/data/raw/cf4/README.md
 
+# Exception: CF-4 distance-table checksum sidecar.  The 100 MB table2.dat
+# itself stays gitignored, but the .sha256 lets the parser detect a
+# truncated or stale download — pinning it in git makes that check
+# tamper-evident and lets contributors verify their fetch matches.
+!/data/raw/cf4/table2.dat.sha256
+
 # Exception: MCPM Cosmic Web raw-data README — same rationale as the
 # CF-4 README above.  Intermediates (`.npy`, `.bin.bz2`) are gitignored
 # but the README must be checked in so contributors know how to fetch

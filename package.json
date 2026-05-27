@@ -46,6 +46,7 @@
     "expand-famous": "tsx tools/famous/expandFamousFromCatalogs.ts",
     "dev": "vite",
     "fetch-2mass-xsc": "tsx tools/fetch/fetch2massXsc.ts",
+    "fetch-cf4": "tsx tools/fetch/fetchCosmicflows4.ts",
     "fetch-famous-images": "tsx tools/famous/fetchFamousImages.ts",
     "fetch-hyperleda": "tsx tools/fetch/fetchHyperLeda.ts",
     "fetch-milliquas": "tsx tools/fetch/fetchMilliquas.ts",

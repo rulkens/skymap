@@ -1,15 +1,29 @@
 #!/usr/bin/env node
 /**
  * fetchHyperLeda — pull `pa` (deg), `logr25` (log10 of major/minor axis
- * ratio), `logd25` (log10 of D25 isophotal diameter in 0.1 arcmin), and
- * `e_logd25` (uncertainty) from HyperLEDA for every PGC referenced in
- * GLADE v2.3.
+ * ratio), `logd25` (log10 of D25 isophotal diameter in 0.1 arcmin),
+ * `e_logd25` (uncertainty), `mod0` (redshift-independent distance
+ * modulus), and `e_mod0` (its uncertainty) from HyperLEDA for every PGC
+ * referenced in GLADE v2.3.
  *
  * We grab logd25/e_logd25 alongside the orientation columns even though
  * the current build pipeline doesn't read them yet — it's the same
  * upstream request, the same multi-hour fetch, and a future Phase-2 plan
  * (real GLADE diameters from HyperLEDA, not Tully size-luminosity) would
  * otherwise force a full re-fetch. Caching them now is essentially free.
+ *
+ * Adds `mod0`/`e_mod0` (HyperLEDA's redshift-independent distance
+ * modulus + uncertainty) so the local-volume distance override (see
+ * docs/superpowers/specs/2026-05-27-local-volume-distances.md) can use
+ * HyperLEDA as a fallback for galaxies that CF4 doesn't list.
+ *
+ * The mod0 column is sparsely populated — most rows have NaN — but
+ * fetching it now is essentially free (same HTTP request, same parse)
+ * and avoids a second sweep of the ~52k cached PGCs later. Per the
+ * project memory `project_hyperleda_partial_cache`, the cache is
+ * intentionally partial and must NOT be auto-refetched; the schema
+ * bump from 5 → 7 columns forces operators to deliberately delete +
+ * regenerate when they want the new field for cached PGCs.
  *
  * HyperLEDA's modern API:
  *
@@ -65,6 +79,22 @@ type HyperLedaRow = {
   // the cache file as an empty cell so the consumer can detect it.
   logd25: number;
   e_logd25: number;
+  /**
+   * mod0: distance modulus from redshift-independent measurements
+   * (mean of TRGB / TF / Cepheid / SNIa / SBF where available),
+   * weighted-mean per HyperLEDA's compilation. NaN when HyperLEDA
+   * has no redshift-independent distance for this PGC.
+   *
+   * d_Mpc = 10^((mod0 - 25) / 5). See catalogDistanceFor in
+   * sub-plan 02 of the local-volume-distances plan for the conversion.
+   */
+  mod0: number;
+  /**
+   * e_mod0: 1-σ uncertainty on mod0 in magnitudes. Carried so a
+   * future InfoCard surfaces ± values; today we just keep it in the
+   * cache so we don't need a re-fetch later.
+   */
+  e_mod0: number;
 };
 
 async function fetchOne(pgc: string): Promise<HyperLedaRow | null> {
@@ -87,8 +117,11 @@ async function fetchOne(pgc: string): Promise<HyperLedaRow | null> {
   const lrIdx = headerTokens.indexOf('logr25');
   const ldIdx = headerTokens.indexOf('logd25');
   const eldIdx = headerTokens.indexOf('e_logd25');
+  const m0Idx = headerTokens.indexOf('mod0');
+  const em0Idx = headerTokens.indexOf('e_mod0');
   // pa + logr25 are required (the row is useless without orientation);
-  // logd25 / e_logd25 are nice-to-have, NaN if missing in the response.
+  // logd25 / e_logd25 / mod0 / e_mod0 are nice-to-have, NaN if missing
+  // in the response.
   if (paIdx === -1 || lrIdx === -1) return null;
 
   // Data line: tab-separated, no leading `#`, contains the actual values.
@@ -103,8 +136,10 @@ async function fetchOne(pgc: string): Promise<HyperLedaRow | null> {
     const lr = parseFloat(cells[lrIdx] ?? '');
     const ld = ldIdx === -1 ? NaN : parseFloat(cells[ldIdx] ?? '');
     const eld = eldIdx === -1 ? NaN : parseFloat(cells[eldIdx] ?? '');
+    const m0 = m0Idx === -1 ? NaN : parseFloat(cells[m0Idx] ?? '');
+    const em0 = em0Idx === -1 ? NaN : parseFloat(cells[em0Idx] ?? '');
     if (Number.isFinite(pa) && Number.isFinite(lr)) {
-      return { pa, logr25: lr, logd25: ld, e_logd25: eld };
+      return { pa, logr25: lr, logd25: ld, e_logd25: eld, mod0: m0, e_mod0: em0 };
     }
     // If a data row exists but PA/logr25 are blank, that's a real "queried,
     // but no shape measurement" outcome — return null so the caller writes
@@ -145,7 +180,7 @@ async function main(): Promise<void> {
   // 5-col rows, which the consumer can't disambiguate. Refuse to mix
   // and tell the user to delete the file. (On a fresh run there's no
   // file at all, so the check is skipped.)
-  const expectedHeader = 'pgc,pa,logr25,logd25,e_logd25';
+  const expectedHeader = 'pgc,pa,logr25,logd25,e_logd25,mod0,e_mod0';
   if (existsSync(outPath)) {
     const firstLine = readFileSync(outPath, 'utf8').split(/\r?\n/, 1)[0] ?? '';
     if (firstLine.trim() !== expectedHeader && firstLine.trim() !== '') {
@@ -180,17 +215,18 @@ async function main(): Promise<void> {
       try {
         const r = await fetchOne(pgc);
         // Always write a row — matched or not — so the next resume sees the
-        // PGC in the cache and skips it. Unmatched rows look like `pgc,,,,`
-        // (empty pa, logr25, logd25, e_logd25). Per-cell NaN→"" so the
-        // consumer can use parseFloat("") → NaN as the missing-value signal.
+        // PGC in the cache and skips it. Unmatched rows look like `pgc,,,,,,`
+        // (six trailing empties for pa, logr25, logd25, e_logd25, mod0, e_mod0).
+        // Per-cell NaN→"" so the consumer can use parseFloat("") → NaN as
+        // the missing-value signal.
         const cell = (n: number): string => (Number.isFinite(n) ? String(n) : '');
         if (r) {
           appendFileSync(
             outPath,
-            `${pgc},${r.pa},${r.logr25},${cell(r.logd25)},${cell(r.e_logd25)}\n`,
+            `${pgc},${r.pa},${r.logr25},${cell(r.logd25)},${cell(r.e_logd25)},${cell(r.mod0)},${cell(r.e_mod0)}\n`,
           );
         } else {
-          appendFileSync(outPath, `${pgc},,,,\n`);
+          appendFileSync(outPath, `${pgc},,,,,,\n`);
         }
       } catch (e) {
         // Network blip / TLS failure — DO NOT write a cache row; resume will
