@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { parseCf4Line } from '../../tools/parsers/cosmicflows4';
+import {
+  buildCf4CatalogIndex,
+  parseCf4Line,
+} from '../../tools/parsers/cosmicflows4';
 
 /**
  * Build a fixed-width CF4 line by overlaying field values at the byte
@@ -74,5 +77,39 @@ describe('parseCf4Line', () => {
     expect(rec).not.toBeNull();
     expect(rec!.pgc).toBe(39600);
     expect(rec!.distMpc).toBeCloseTo(7.41, 1);
+  });
+});
+
+describe('buildCf4CatalogIndex', () => {
+  it('keys rows by PGC and returns each Cf4Record exactly once', () => {
+    const text =
+      buildCf4Row({ pgc: '2557', dm: '24.470', eDm: '0.120' }) +
+      '\n' +
+      buildCf4Row({ pgc: '5818', dm: '24.610', eDm: '0.120' }) +
+      '\n';
+    const idx = buildCf4CatalogIndex(text);
+    expect(idx.byPgc.size).toBe(2);
+    expect(idx.byPgc.get(2557)?.distMpc).toBeCloseTo(0.785, 2);
+    expect(idx.byPgc.get(5818)?.distMpc).toBeGreaterThan(0);
+  });
+
+  it('skips rows with no PGC (zero or blank) — they are unindexable', () => {
+    const text =
+      buildCf4Row({ pgc: '0', dm: '30.0', eDm: '0.2' }) +
+      '\n' +
+      buildCf4Row({ pgc: '2557', dm: '24.470', eDm: '0.120' }) +
+      '\n';
+    const idx = buildCf4CatalogIndex(text);
+    expect(idx.byPgc.size).toBe(1);
+    expect(idx.byPgc.get(2557)).toBeDefined();
+  });
+
+  it('skips comment lines and blank lines', () => {
+    const text =
+      '# header comment\n\n' +
+      buildCf4Row({ pgc: '2557', dm: '24.470', eDm: '0.120' }) +
+      '\n';
+    const idx = buildCf4CatalogIndex(text);
+    expect(idx.byPgc.size).toBe(1);
   });
 });

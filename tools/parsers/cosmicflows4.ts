@@ -101,3 +101,32 @@ export function parseCf4Line(line: string): Cf4Record | null {
   const { distMpc, eDistMpc } = dmToMpc(dm, Number.isFinite(eDm) ? eDm : 0);
   return { pgc, distMpc, eDistMpc, raDeg, deDeg };
 }
+
+export type Cf4CatalogIndex = {
+  byPgc: ReadonlyMap<number, Cf4Record>;
+};
+
+/**
+ * Walk the raw table2.dat text and build a PGC-keyed index. Rows are
+ * skipped if:
+ *   - the line is blank or starts with `#` (CDS uses # for comments)
+ *   - `parseCf4Line` returns null (no usable distance modulus)
+ *   - the row has no PGC (CF4 always has one in practice — 100% PGC
+ *     coverage on the 2026-05-27 release — but the guard keeps the
+ *     map clean if a future release ships rows without)
+ *
+ * The index is PGC-only because CF4 table2.dat publishes PGC as its
+ * sole cross-match identifier. 2MASS XSC matching, cone matching, and
+ * 1PGC (group dominant) keying are all deferred — see the module
+ * docstring above.
+ */
+export function buildCf4CatalogIndex(rawText: string): Cf4CatalogIndex {
+  const byPgc = new Map<number, Cf4Record>();
+  for (const line of rawText.split(/\r?\n/)) {
+    if (line.length === 0 || line.startsWith('#')) continue;
+    const rec = parseCf4Line(line);
+    if (rec === null || rec.pgc === null) continue;
+    byPgc.set(rec.pgc, rec);
+  }
+  return { byPgc };
+}
