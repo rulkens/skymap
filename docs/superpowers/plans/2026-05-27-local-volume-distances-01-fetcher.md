@@ -393,13 +393,16 @@ Append to `tools/fetch/fetchCosmicflows4.ts`:
 
 ```typescript
 import { writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const CF4_DIR = resolve('data/raw/cf4');
-const TABLE_PATH = resolve(CF4_DIR, 'table2.dat');
-const README_PATH = resolve(CF4_DIR, 'ReadMe');
-const SHA256_PATH = resolve(CF4_DIR, 'table2.dat.sha256');
+import { rawDataPath } from '../utils/io/rawDataRegistry';
+
+// All paths come from RAW_DATA in tools/utils/io/rawDataRegistry.ts.
+// Add `cf4.table2`, `cf4.readme`, `cf4.sha256` entries there BEFORE
+// touching this file — see the plan index's "Prerequisite" section.
+const TABLE_PATH = rawDataPath('cf4.table2');
+const README_PATH = rawDataPath('cf4.readme');
+const SHA256_PATH = rawDataPath('cf4.sha256');
 
 async function main(): Promise<void> {
   process.stderr.write(`fetchCosmicflows4: target ${TABLE_PATH}\n`);

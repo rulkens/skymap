@@ -10,6 +10,38 @@
 
 ---
 
+## Prerequisite: raw-data registry (PR #190 landed 2026-05-27)
+
+After this plan was written, the codebase grew a typed raw-data registry at
+`tools/utils/io/rawDataRegistry.ts` (PR #190).  Every consumer that used to
+hand-write `resolve('data/raw/...')` now calls `rawDataPath('<key>')` against
+that registry, and every catalog raw file lives under a per-source subdir
+(`data/raw/cf4/`, `data/raw/hyperleda/`, etc.).
+
+The implementer MUST:
+
+1. Before writing any fetcher / parser code, **add new CF4 entries to `RAW_DATA`**
+   in `tools/utils/io/rawDataRegistry.ts`:
+   - `'cf4.table2'` → `data/raw/cf4/table2.dat` (gitignored, fetcher output)
+   - `'cf4.readme'` → `data/raw/cf4/ReadMe` (gitignored, fetcher output)
+   - `'cf4.sha256'` → `data/raw/cf4/table2.dat.sha256` (committed sidecar)
+
+   The existing `'cf4.dir'` and `'cf4.density-mean'` entries stay.
+
+2. Use `rawDataPath('cf4.table2')` (etc.) **everywhere** a CF4 path is needed in
+   tools/. Do NOT hand-code `'data/raw/cf4/table2.dat'` even where the
+   pre-registry code samples below show the literal — the samples are
+   pre-PR-#190 and need adapting.
+
+3. The HyperLEDA `mod0` column extension in sub-plan 01 should reuse
+   `rawDataPath('hyperleda.pa')` rather than recomputing the path.
+
+This is a load-bearing convention: a future raw-file move becomes a one-line
+edit in the registry rather than a hunt across `tools/`.  See PR #190 for the
+full context, or `tools/utils/io/rawDataRegistry.ts`'s module header.
+
+---
+
 ## Plan structure
 
 This plan is split across four files in this directory; execute them in order:
