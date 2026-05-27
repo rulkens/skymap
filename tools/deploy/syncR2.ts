@@ -24,6 +24,16 @@
  * cap is the right balance between caching and the ability to push a fresh
  * catalogue without waiting a year for browsers to expire.
  *
+ * ### CDN cache purge
+ *
+ * R2 PUTs are immediate but the Cloudflare edge holds the previous bytes
+ * for the full `max-age` window.  After the upload sweep the script hits
+ * `POST /zones/{id}/purge_cache` with every key it touched (chunked at 30,
+ * CF's per-request cap).  Configured via `CLOUDFLARE_API_TOKEN` +
+ * `CLOUDFLARE_ZONE_ID`; missing either skips the purge and prints a
+ * dashboard-purge fallback message — upload is the source of truth, purge
+ * is just a CDN-eviction hint.
+ *
  * ### Idempotency
  *
  * Re-running re-uploads everything.  R2 PUT replaces the object atomically;
