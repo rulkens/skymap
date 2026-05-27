@@ -98,7 +98,7 @@ A full data-refreshing deploy is therefore:
 
 1. `npm run build-tiers` — regenerates all `public/data/*.bin`.
 2. `npm run build-filaments` (only if filaments need rebuilding — rare).
-3. `npm run sync-r2` — uploads regenerated `.bin` files (and `famous_*.json` sidecars) to R2. Idempotent; full bucket replacement on every run.
+3. `npm run sync-r2-secure` — uploads regenerated `.bin` files (and `famous_*.json` sidecars) to R2, then purges the matching URLs from the Cloudflare CDN edge cache. Idempotent; full bucket replacement on every run. The `-secure` wrapper loads `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ZONE_ID` from the OS secrets store (macOS Keychain, Linux libsecret) so the credentials never live in a dotfile; the bare `npm run sync-r2` is a fallback for environments without bash where the env vars are already injected (CI, Windows-without-WSL). Without the credentials the purge step is skipped and the CDN keeps serving stale bytes until the per-object TTL expires — use the secure wrapper.
 4. `npm run deploy` — pushes `main`. The Cloudflare GitHub integration takes over and rebuilds the shell.
 
 If you only changed code and not catalog bytes, **step 4 alone is enough**. The most common loop is "edit, push, watch the Workers build", which finishes in ~30 s.

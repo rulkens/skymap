@@ -24,6 +24,16 @@
  * cap is the right balance between caching and the ability to push a fresh
  * catalogue without waiting a year for browsers to expire.
  *
+ * ### CDN cache purge
+ *
+ * R2 PUTs are immediate but the Cloudflare edge holds the previous bytes
+ * for the full `max-age` window.  After the upload sweep the script hits
+ * `POST /zones/{id}/purge_cache` with every key it touched (chunked at 30,
+ * CF's per-request cap).  Configured via `CLOUDFLARE_API_TOKEN` +
+ * `CLOUDFLARE_ZONE_ID`; missing either skips the purge and prints a
+ * dashboard-purge fallback message — upload is the source of truth, purge
+ * is just a CDN-eviction hint.
+ *
  * ### Idempotency
  *
  * Re-running re-uploads everything.  R2 PUT replaces the object atomically;
@@ -66,10 +76,14 @@
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { execSync } from 'node:child_process';
+import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
 
 const DATA_DIR = 'public/data';
 const BUCKET = 'skymap-data';
 const CACHE_CONTROL = 'public, max-age=86400';
+
+/** Public URL the Cloudflare CDN serves R2 from — single source of truth in `.env.production`. */
+const R2_PUBLIC_URL = readEnvProductionValue('VITE_DATA_BASE_URL');
 
 const ALLOW = (name: string): boolean =>
   /^(sdss|glade)-(small|medium|large)\.bin$/.test(name) ||
@@ -183,38 +197,67 @@ function uploadFile(localPath: string, key: string): void {
 }
 
 /**
- * Remove leftover Milliquas names-JSON sidecar keys from R2.
+ * Purge the Cloudflare CDN's edge cache for every R2 key we touched.
  *
- * The v5 .bin format folds Milliquas class + parent-survey metadata
- * into the binary, so `milliquas-{small,medium,large}_names.json`
- * are no longer produced or fetched.  Wrangler's `r2 object delete`
- * is idempotent (no error on a missing key), so this runs cleanly
- * on every sync — including the first sync after a fresh bucket
- * provision, where no leftover keys exist.
+ * R2 uploads are atomic, but the CDN in front of R2 caches GETs by URL
+ * for the full `max-age=86400` window — so without an explicit purge,
+ * users continue to receive the OLD bytes for up to 24 hours after a
+ * sync.  That bit us once already (the v5 .bin rollout: R2 had v5
+ * immediately, but `cf-cache-status: HIT` kept serving v4 to clients
+ * for the next hour).  Auto-purging here closes the gap.
  *
- * Why delete rather than just stop uploading?  R2 keeps every object
- * that was ever PUT, so without explicit deletion the stale 34 MB of
- * `_names.json` would sit there indefinitely, paid for and served
- * for any old client that hard-coded the URL.
+ * Configuration via env (matching wrangler's own conventions so a
+ * single CF token can be reused):
+ *
+ *   - `CLOUDFLARE_API_TOKEN` — token with `Zone:Cache Purge` scope
+ *     on the rulkens.com zone.
+ *   - `CLOUDFLARE_ZONE_ID` — the rulkens.com zone id (Cloudflare
+ *     dashboard → Overview → "Zone ID" on the right).
+ *
+ * If either is missing the script logs a clear instruction and skips
+ * the purge rather than failing the whole sync — the upload itself
+ * succeeded, and a manual dashboard purge is always available as a
+ * fallback.  Treating purge as best-effort matches its conceptual
+ * status: a CDN-eviction hint, not the source of truth.
+ *
+ * Cloudflare's per-request file cap is 30, so we chunk longer lists.
  */
-function deleteOrphanedMilliquasNamesSidecars(): void {
-  const orphans = [
-    'data/milliquas-small_names.json',
-    'data/milliquas-medium_names.json',
-    'data/milliquas-large_names.json',
-  ];
-  for (const key of orphans) {
-    console.log(`▶ delete r2://${BUCKET}/${key} (orphaned v4 sidecar)`);
-    // `--remote` forces the deletion against the actual Cloudflare-
-    // hosted bucket (not the local-dev simulator).  Missing keys are
-    // a no-op in wrangler, so we don't even need a 404 swallow here.
-    execSync(`npx wrangler r2 object delete ${BUCKET}/${key} --remote`, {
-      stdio: 'inherit',
+async function purgeCloudflareCache(keys: ReadonlyArray<string>): Promise<void> {
+  const token = process.env.CLOUDFLARE_API_TOKEN;
+  const zoneId = process.env.CLOUDFLARE_ZONE_ID;
+  if (!token || !zoneId) {
+    console.log(
+      '\n⚠ CDN cache NOT purged: set CLOUDFLARE_API_TOKEN + CLOUDFLARE_ZONE_ID to auto-purge.',
+    );
+    console.log(
+      `  Manual purge: Cloudflare dashboard → Caching → Purge Cache → "Custom" → paste the ${keys.length} URL(s) under ${R2_PUBLIC_URL}/.`,
+    );
+    return;
+  }
+
+  const urls = keys.map((k) => `${R2_PUBLIC_URL}/${k}`);
+  const endpoint = `https://api.cloudflare.com/client/v4/zones/${zoneId}/purge_cache`;
+
+  for (let i = 0; i < urls.length; i += 30) {
+    const batch = urls.slice(i, i + 30);
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ files: batch }),
     });
+    const body = (await res.json()) as { success?: boolean; errors?: { message: string }[] };
+    if (!res.ok || !body.success) {
+      const msg = body.errors?.map((e) => e.message).join('; ') ?? `HTTP ${res.status}`;
+      throw new Error(`Cloudflare purge failed: ${msg}`);
+    }
+    console.log(`  purged ${batch.length} URL(s)`);
   }
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const files = readdirSync(DATA_DIR).filter(ALLOW);
   if (files.length === 0) {
     console.error(`No matching files in ${DATA_DIR}.  Run npm run build-tiers first.`);
@@ -232,14 +275,23 @@ function main(): void {
       ` to r2://${BUCKET}/data/\n`,
   );
 
+  // Track every R2 key we touch so the CDN purge below knows which URLs
+  // to invalidate.  Collecting in lock-step with the upload calls keeps
+  // the two from drifting if a future ALLOW filter / EXTRA_FILES change
+  // adds a new asset.
+  const touchedKeys: string[] = [];
+
   for (const name of files) {
-    uploadFile(join(DATA_DIR, name), `data/${name}`);
+    const key = `data/${name}`;
+    uploadFile(join(DATA_DIR, name), key);
+    touchedKeys.push(key);
   }
 
   if (presentExtras.length > 0) {
     console.log('\n--- Extra files ---\n');
     for (const { localPath, r2Key } of presentExtras) {
       uploadFile(localPath, r2Key);
+      touchedKeys.push(r2Key);
     }
   }
 
@@ -257,8 +309,11 @@ function main(): void {
   const total = files.length + presentExtras.length;
   console.log(`\n✓ Synced ${total} file(s) to r2://${BUCKET}/data/`);
 
-  console.log('\n--- Orphaned sidecar cleanup ---\n');
-  deleteOrphanedMilliquasNamesSidecars();
+  console.log('\n--- Cloudflare CDN cache purge ---\n');
+  await purgeCloudflareCache(touchedKeys);
 }
 
-main();
+main().catch((err) => {
+  console.error(err instanceof Error ? err.message : err);
+  process.exit(1);
+});
