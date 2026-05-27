@@ -13,7 +13,10 @@
  *
  * See data/raw/cf4/README.md for the in-repo provenance header.
  */
-import { existsSync, statSync } from 'node:fs';
+import { createWriteStream, existsSync, mkdirSync, statSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 
 export const CF4_TABLE_URL =
   'https://cdsarc.cds.unistra.fr/ftp/J/ApJ/944/94/table2.dat';
@@ -32,4 +35,59 @@ export const CF4_README_URL =
 export function resumeOffsetForPath(path: string): number {
   if (!existsSync(path)) return 0;
   return statSync(path).size;
+}
+
+/**
+ * Download `url` to `destPath`, resuming from the current on-disk byte
+ * count via `Range: bytes=N-`.
+ *
+ * Behaviour:
+ *  - First run / empty file: requests the whole body, writes from byte 0.
+ *  - Partial file: requests `Range: bytes=N-`, server returns 206 +
+ *    remaining bytes, we append.
+ *  - Complete file: `Range:` past EOF yields 416; we treat that as
+ *    "already done" and return without touching the file.
+ *
+ * We use the `node:stream/promises` pipeline so a connection drop
+ * surfaces as a rejected promise (rather than a silent truncation),
+ * and the partial file stays on disk for the next resume attempt.
+ */
+export async function downloadWithResume(
+  url: string,
+  destPath: string,
+): Promise<{ bytesAdded: number; totalBytes: number }> {
+  mkdirSync(dirname(destPath), { recursive: true });
+  const startOffset = resumeOffsetForPath(destPath);
+
+  const headers: Record<string, string> = {};
+  if (startOffset > 0) headers['Range'] = `bytes=${startOffset}-`;
+
+  const res = await fetch(url, { headers });
+
+  // 416 = Range Not Satisfiable — usually means we've already downloaded
+  // the whole file. Treat as success rather than failure.
+  if (res.status === 416) {
+    return { bytesAdded: 0, totalBytes: startOffset };
+  }
+  if (!res.ok && res.status !== 206 && res.status !== 200) {
+    throw new Error(`CF4 download failed: HTTP ${res.status} ${res.statusText}`);
+  }
+  if (!res.body) {
+    throw new Error('CF4 download failed: empty body');
+  }
+
+  const stream = createWriteStream(destPath, {
+    flags: startOffset > 0 ? 'a' : 'w',
+  });
+
+  // `res.body` is a WHATWG ReadableStream; the cast bridges the TS gap
+  // between lib.dom's `ReadableStream<Uint8Array<ArrayBufferLike>>` and
+  // Node's stricter `ReadableStream<any>` expectation for `fromWeb`.
+  // At runtime they're the same object.
+  await pipeline(Readable.fromWeb(res.body as never), stream);
+
+  // Re-stat the file rather than threading a byte counter through the
+  // pipeline: cheaper and side-steps the TransformStream typing.
+  const totalBytes = statSync(destPath).size;
+  return { bytesAdded: totalBytes - startOffset, totalBytes };
 }
