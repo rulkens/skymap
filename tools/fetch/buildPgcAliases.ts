@@ -51,7 +51,7 @@
  * a sparse tail above PGC ~2,000,000.  We stop after two consecutive
  * empty windows (the dataset peters out around PGC ~5,000,000).
  *
- * Every chunk is cached to `data/raw/hyperleda_designations_chunk_<N>.csv`
+ * Every chunk is cached to `data/raw/hyperleda/hyperleda_designations_chunk_<N>.csv`
  * so re-runs only re-hit the network for chunks that aren't already on
  * disk.  `--force` bypasses the cache.
  *

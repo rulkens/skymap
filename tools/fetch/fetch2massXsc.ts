@@ -2,7 +2,7 @@
 /**
  * fetch2massXsc — pull `sup_phi` (PA) + `sup_ba` (b/a) from the 2MASS XSC
  * (VizieR table II/246/out) for every 2MASS ID listed in the local 2MRS
- * catalogue, and write the result to `data/raw/2mass_xsc_pa.csv`.
+ * catalogue, and write the result to `data/raw/2mrs/2mass_xsc_pa.csv`.
  *
  * Why a separate script (not part of buildAllBins): the fetch hits a
  * remote service, takes minutes, and produces a stable artefact. Build

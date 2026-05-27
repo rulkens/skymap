@@ -37,7 +37,7 @@
  * ~1.5M unique PGCs (the rest are zeros = not in HyperLEDA), so the actual
  * fetch volume is manageable in batches.
  *
- * Cached output: `data/raw/hyperleda_pa.csv` keyed by PGC. Re-run rarely.
+ * Cached output: `data/raw/hyperleda/hyperleda_pa.csv` keyed by PGC. Re-run rarely.
  */
 
 import {

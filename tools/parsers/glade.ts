@@ -481,7 +481,7 @@ export function parseGlade2masxPgcLine(line: string): { massId: string; pgc: big
 }
 
 /**
- * Parse a GLADE v2.3 catalog blob (`data/raw/glade2.3.dat`) into canonical
+ * Parse a GLADE v2.3 catalog blob (`data/raw/glade/glade2.3.dat`) into canonical
  * records. See the module docstring for byte layout, mapping rationale,
  * and skip rules.
  *

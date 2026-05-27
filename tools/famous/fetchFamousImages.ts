@@ -36,7 +36,7 @@
  * PD-NASA, PD-self, and ESO-attribution licences.  Skymap is a personal
  * project so this is fine, but a hypothetical commercial fork would need
  * to audit per-image attribution.  The cache JSON we write at
- * `data/raw/wikipedia_famous_cache.json` carries the source URL for each
+ * `data/raw/famous/wikipedia_famous_cache.json` carries the source URL for each
  * image, which is enough to reconstruct attribution.
  *
  * ── Title-chain fallback (broadened from the expansion agent) ──────────

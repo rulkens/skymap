@@ -43,7 +43,11 @@ tools/
                       one file per function, deep imports
   vendor-types/       ambient .d.ts shims for msdf-bmfont-xml and pngjs
 data/
-  raw/                Catalog source files + their VizieR ReadMes (read these for byte layouts!)
+  raw/                Catalog source files, one subdir per source: 2mrs/, glade/,
+                      hyperleda/, sdss/, cf4/, mcpm/, milliquas/, filaments/, famous/,
+                      fonts/. VizieR ReadMes live next to the file they describe
+                      (read for byte layouts!). Path lookups go through
+                      `tools/utils/io/rawDataRegistry.ts`.
 docs/superpowers/plans/   Active and historical implementation plans (TDD task lists)
 tests/                Vitest suite — mirrors src/ tree
 ```
@@ -139,7 +143,7 @@ Workers Assets has per-file and per-deploy size caps that the larger tiers (`gla
 - **2MRS** has `b/a` but no PA. The 2MASS XSC (the underlying source) has `sup_phi` — cross-match by 2MASS ID.
 - **SDSS** CSV column set is whatever was in the SkyServer SQL query — check the CSV header before assuming a column exists.
 
-ReadMes for the upstream catalogs live in `data/raw/` (`J_ApJS_199_26_ReadMe`, `VII_281_ReadMe`). Always consult them for byte offsets when extending parsers.
+ReadMes for the upstream catalogs live alongside each catalog (`data/raw/2mrs/J_ApJS_199_26_ReadMe`, `data/raw/glade/VII_281_ReadMe`). Always consult them for byte offsets when extending parsers. The canonical source-of-truth for every raw-data path is `tools/utils/io/rawDataRegistry.ts` — consumers call `rawDataPath('<key>')` rather than hard-coding paths.
 
 ## Renderer quick map
 

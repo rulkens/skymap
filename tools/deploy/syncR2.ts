@@ -145,11 +145,11 @@ const EXTRA_FILES: ExtraFile[] = [
   {
     // HyperLEDA position-angle + isophotal-diameter cache.
     // Built once by `npm run fetch-hyperleda` (~1 hour), then gzipped:
-    //   gzip -k -9 data/raw/hyperleda_pa.csv
+    //   gzip -k -9 data/raw/hyperleda/hyperleda_pa.csv
     // Contributors download it instead of re-fetching:
-    //   curl -L -o data/raw/hyperleda_pa.csv.gz \
+    //   curl -L -o data/raw/hyperleda/hyperleda_pa.csv.gz \
     //     https://skymap-data.rulkens.com/data/hyperleda_pa.csv.gz
-    //   gunzip data/raw/hyperleda_pa.csv.gz
+    //   gunzip data/raw/hyperleda/hyperleda_pa.csv.gz
     localPath: RAW_DATA['hyperleda.pa-gz'].path,
     r2Key: 'data/hyperleda_pa.csv.gz',
   },
@@ -303,7 +303,7 @@ async function main(): Promise<void> {
       console.log(`  ${localPath}`);
     }
     console.log(
-      '  To include, run `npm run fetch-hyperleda` then `gzip -k -9 data/raw/hyperleda_pa.csv`.',
+      '  To include, run `npm run fetch-hyperleda` then `gzip -k -9 data/raw/hyperleda/hyperleda_pa.csv`.',
     );
   }
 
