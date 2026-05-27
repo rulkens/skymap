@@ -1,3 +1,7 @@
+import { existsSync, readFileSync } from 'node:fs';
+
+import { rawDataPath } from '../utils/io/rawDataRegistry';
+
 /**
  * Cosmicflows-4 parser.
  *
@@ -129,4 +133,32 @@ export function buildCf4CatalogIndex(rawText: string): Cf4CatalogIndex {
     byPgc.set(rec.pgc, rec);
   }
   return { byPgc };
+}
+
+/**
+ * Load and parse the CF4 catalog from disk, returning an empty index
+ * if the file is absent (so a fresh checkout without the raw CF4
+ * data still produces .bin outputs — they just won't have the
+ * local-volume override applied to any row).
+ *
+ * Missing-file tolerance mirrors the parallel `loadOrEmpty`-style
+ * helpers in `buildAllBins`: raw catalogs are gitignored, so a
+ * contributor doing UI work shouldn't be blocked by a 2.5 MB
+ * download. A stderr note surfaces the skip so it isn't silent.
+ */
+export function loadCf4CatalogIndex(
+  path: string = rawDataPath('cf4.table2'),
+): Cf4CatalogIndex {
+  if (!existsSync(path)) {
+    process.stderr.write(
+      `  ${path} not present — CF4 local-volume override will be skipped\n`,
+    );
+    return { byPgc: new Map() };
+  }
+  const text = readFileSync(path, 'utf8');
+  const index = buildCf4CatalogIndex(text);
+  process.stderr.write(
+    `  CF4: ${index.byPgc.size.toLocaleString()} PGCs indexed\n`,
+  );
+  return index;
 }
