@@ -1,12 +1,12 @@
 /**
- * Format-level tests for the v5 galaxy-catalog binary.
+ * Format-level tests for the v6 galaxy-catalog binary.
  *
  * Two contracts under test:
  *
  *   1. encode → decode is a faithful round trip for every field,
- *      including the two new uint8 slots (`classByte`,
- *      `parentSurveyByte`).
- *   2. A v4 buffer (the previous on-disk shape) is rejected with the
+ *      including the v6 `spectroscopicZ` float, the v5 uint8 slots
+ *      (`classByte`, `parentSurveyByte`), and the v4 baseline fields.
+ *   2. A v5 buffer (the previous on-disk shape) is rejected with the
  *      documented "regenerate" error — the on-disk format-version
  *      gate is the single source of truth for "do I understand this
  *      file?".
@@ -33,10 +33,11 @@ function makeCatalog(count: number): GalaxyCatalog {
     diameterKpc: new Float32Array(count),
     classByte: new Uint8Array(count),
     parentSurveyByte: new Uint8Array(count),
+    spectroscopicZ: new Float32Array(count),
   };
 }
 
-describe('encode/decode galaxy catalog v5', () => {
+describe('encode/decode galaxy catalog v6', () => {
   it('round-trips classByte and parentSurveyByte for every record', () => {
     const cat = makeCatalog(3);
     cat.classByte[0] = 0;
@@ -72,6 +73,22 @@ describe('encode/decode galaxy catalog v5', () => {
     expect(out.objIDs[0]).toBe(123456789012345n);
   });
 
+  it('round-trips spectroscopicZ for every record including negatives and NaN', () => {
+    const cat = makeCatalog(4);
+    cat.spectroscopicZ[0] = 0.0234; // typical SDSS row
+    cat.spectroscopicZ[1] = -0.00094; // M31 (real blueshift)
+    cat.spectroscopicZ[2] = 0; // intentional zero (e.g. local fixture)
+    cat.spectroscopicZ[3] = NaN; // no spec-z available
+
+    const buf = encodeGalaxyCatalog(cat);
+    const out = decodeGalaxyCatalog(buf);
+
+    expect(out.spectroscopicZ[0]).toBeCloseTo(0.0234, 5);
+    expect(out.spectroscopicZ[1]).toBeCloseTo(-0.00094, 5);
+    expect(out.spectroscopicZ[2]).toBe(0);
+    expect(Number.isNaN(out.spectroscopicZ[3])).toBe(true);
+  });
+
   it('rejects a v4 header with the documented regenerate error', () => {
     // Construct a minimally-valid v4-shaped header (16 bytes): magic
     // "SKMP", version 4, count 0, reserved 0.  The body length is 0
@@ -83,6 +100,18 @@ describe('encode/decode galaxy catalog v5', () => {
     dv.setUint32(8, 0, true);
     dv.setUint32(12, 0, true);
 
+    expect(() => decodeGalaxyCatalog(buf)).toThrow(/regenerate/);
+  });
+
+  it('rejects a v5 header with the documented regenerate error', () => {
+    const buf = new ArrayBuffer(16);
+    const dv = new DataView(buf);
+    dv.setUint32(0, 0x504d4b53, true); // "SKMP"
+    dv.setUint32(4, 5, true); // v5
+    dv.setUint32(8, 0, true);
+    dv.setUint32(12, 0, true);
+
+    expect(() => decodeGalaxyCatalog(buf)).toThrow(/unsupported version: 5/);
     expect(() => decodeGalaxyCatalog(buf)).toThrow(/regenerate/);
   });
 

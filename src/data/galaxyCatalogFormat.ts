@@ -1,40 +1,39 @@
 /**
- * Binary on-disk format for a `GalaxyCatalog` — version 5.
+ * Binary on-disk format for a `GalaxyCatalog` — version 6.
  *
- * v5 reuses the v4 64-byte record stride but consumes two of the
- * trailing-padding bytes for new per-record metadata:
+ * v6 consumes 4 of v5's 10 trailing padding bytes for a new per-record
+ * float field:
  *
- *   - `classByte` (offset 52, uint8): source-interpreted
- *     classification.  For `Source.Milliquas` rows it carries the
- *     AGN class letter via a per-source enum
- *     (1=Q, 2=A, 3=B, 4=K, 5=N, 6=S; 0 = unknown).  For every other
- *     source the build pipeline writes 0 and the lookup helper
- *     `sourceClassLabel(source, byte)` returns null.  Future
- *     morphology work on SDSS / GLADE can reuse the same slot with
- *     a different lookup table — the byte is opaque to the format.
+ *   - `spectroscopicZ` (offset 54, float32): the *catalogued*
+ *     spectroscopic redshift, stored independently of the cartesian
+ *     position so the InfoCard can display the real catalog value
+ *     instead of the value implied by |position| / Hubble-distance.
  *
- *   - `parentSurveyByte` (offset 53, uint8): Milliquas-only enum
- *     that records which parent survey the row's Milliquas Name
- *     came from (1=SDSS, 2=2MASX, 3=GAIA, 4=WISEA, 5=NVSS, 6=FIRST,
- *     7=6dFGS).  The InfoCard uses it to reconstruct the historical
- *     "<PARENT> J<RA><Dec>" display name at hover time without the
- *     dedicated names sidecar that v4 required.  0 = literature
- *     designation or unrecognised prefix, in which case the IAU
- *     fallback `MQ J<RA><Dec>` is used.
+ *     Needed because v5's `positions` field is computed at build time
+ *     from either cz (the default) or a redshift-independent catalog
+ *     distance (CF4 / HyperLEDA for galaxies inside ~30 Mpc).
+ *     Inverting the cartesian distance back to a z works for the
+ *     cz-derived rows but produces nonsense for the catalog-overridden
+ *     rows (e.g. M31 at |pos|=0.78 Mpc inverts to z=+0.00018, not the
+ *     published −0.001).
  *
- * Other than the two new bytes, the per-record layout is identical
- * to v4.  The remaining 10 bytes of tail padding stay reserved for
- * future per-record metadata that fits in the existing stride.
+ *     NaN is the "no spectroscopic z available" sentinel. Consumers
+ *     that need a fallback fall back to the position-derived value.
  *
- * v4 files are rejected with the documented "regenerate via
- * `npm run build-tiers`" error — the magic + version header is the
- * single source of truth for "do I understand this file?".
+ * Other than the new field, the per-record layout is identical to v5
+ * (which itself reuses the v4 64-byte stride). The remaining 6 bytes
+ * of tail padding stay reserved for future per-record metadata that
+ * fits in the existing stride.
+ *
+ * v5 (and earlier) files are rejected with the documented "regenerate
+ * via `npm run build-tiers`" error — the magic + version header is
+ * the single source of truth for "do I understand this file?".
  *
  * Layout (little-endian):
  *
  *     ── HEADER (16 bytes) ──────────────────────────────────────────────────
  *     0       4     magic    = "SKMP" (0x504d4b53)
- *     4       4     version  = 5 (uint32)
+ *     4       4     version  = 6 (uint32)
  *     8       4     count    = number of galaxies (uint32)
  *     12      4     reserved = 0
  *
@@ -51,9 +50,10 @@
  *     40      4     axisRatio        (float32) — b/a in [0,1] or NaN
  *     44      4     positionAngleDeg (float32) — PA in [0,180) or NaN
  *     48      4     diameterKpc      (float32) — physical diameter in kpc
- *     52      1     classByte        (uint8)  — per-source enum (NEW in v5)
- *     53      1     parentSurveyByte (uint8)  — Milliquas-only (NEW in v5)
- *     54      10    padding          (zeroed)
+ *     52      1     classByte        (uint8)  — per-source enum
+ *     53      1     parentSurveyByte (uint8)  — Milliquas-only
+ *     54      4     spectroscopicZ   (float32) — NEW in v6
+ *     58      6     padding          (zeroed)
  *
  * Total file size: 16 + count × 64.
  */
@@ -61,7 +61,7 @@
 import type { GalaxyCatalog } from '../@types/data/GalaxyCatalog';
 
 const MAGIC = 0x504d4b53;
-const VERSION = 5;
+const VERSION = 6;
 const HEADER_BYTES = 16;
 const BYTES_PER_GALAXY = 64;
 
@@ -80,6 +80,7 @@ export function encodeGalaxyCatalog(catalog: GalaxyCatalog): ArrayBuffer {
     diameterKpc,
     classByte,
     parentSurveyByte,
+    spectroscopicZ,
   } = catalog;
   if (objIDs.length !== count) throw new Error('objIDs length mismatch');
   if (positions.length !== count * 3) throw new Error('positions length mismatch');
@@ -93,6 +94,7 @@ export function encodeGalaxyCatalog(catalog: GalaxyCatalog): ArrayBuffer {
   if (diameterKpc.length !== count) throw new Error('diameterKpc length mismatch');
   if (classByte.length !== count) throw new Error('classByte length mismatch');
   if (parentSurveyByte.length !== count) throw new Error('parentSurveyByte length mismatch');
+  if (spectroscopicZ.length !== count) throw new Error('spectroscopicZ length mismatch');
 
   const buf = new ArrayBuffer(HEADER_BYTES + count * BYTES_PER_GALAXY);
   const dv = new DataView(buf);
@@ -128,7 +130,11 @@ export function encodeGalaxyCatalog(catalog: GalaxyCatalog): ArrayBuffer {
     // is trivially 1.
     byteView[byteBase + 52] = classByte[i]!;
     byteView[byteBase + 53] = parentSurveyByte[i]!;
-    // Tail padding (byteBase+54 … byteBase+63) stays zero because
+    // spectroscopicZ sits at offset 54, which is NOT 4-aligned within
+    // the 8-byte-aligned `f` shortcut (54 = 13*4 + 2), so we take the
+    // DataView setFloat32 path instead. It has no alignment requirement.
+    dv.setFloat32(byteBase + 54, spectroscopicZ[i]!, true);
+    // Tail padding (byteBase+58 … byteBase+63) stays zero because
     // `new ArrayBuffer` zero-inits.  No write needed.
   }
   return buf;
@@ -138,6 +144,10 @@ export function decodeGalaxyCatalog(buf: ArrayBuffer): GalaxyCatalog {
   const dv = new DataView(buf);
   if (dv.getUint32(0, true) !== MAGIC) throw new Error('bad magic — not a SKMP file');
 
+  // Mismatch surfaces as the documented "regenerate" error. Stale .bin
+  // files (last built before this format version landed) trigger this on
+  // every reload until `npm run build-tiers` is re-run. The error
+  // message itself is the cure — keep it instructive.
   const version = dv.getUint32(4, true);
   if (version !== VERSION) {
     throw new Error(
@@ -159,6 +169,7 @@ export function decodeGalaxyCatalog(buf: ArrayBuffer): GalaxyCatalog {
   const diameterKpc = new Float32Array(count);
   const classByte = new Uint8Array(count);
   const parentSurveyByte = new Uint8Array(count);
+  const spectroscopicZ = new Float32Array(count);
 
   const floatView = new Float32Array(buf);
   const byteView = new Uint8Array(buf);
@@ -183,7 +194,8 @@ export function decodeGalaxyCatalog(buf: ArrayBuffer): GalaxyCatalog {
 
     classByte[i] = byteView[byteBase + 52]!;
     parentSurveyByte[i] = byteView[byteBase + 53]!;
-    // The remaining 10 padding bytes are ignored on decode.
+    spectroscopicZ[i] = dv.getFloat32(byteBase + 54, true);
+    // The remaining 6 padding bytes are ignored on decode.
   }
 
   return {
@@ -200,6 +212,7 @@ export function decodeGalaxyCatalog(buf: ArrayBuffer): GalaxyCatalog {
     diameterKpc,
     classByte,
     parentSurveyByte,
+    spectroscopicZ,
   };
 }
 
@@ -218,5 +231,6 @@ export function emptyGalaxyCatalog(): GalaxyCatalog {
     diameterKpc: new Float32Array(0),
     classByte: new Uint8Array(0),
     parentSurveyByte: new Uint8Array(0),
+    spectroscopicZ: new Float32Array(0),
   };
 }

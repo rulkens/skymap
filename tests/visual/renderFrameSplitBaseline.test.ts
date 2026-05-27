@@ -234,6 +234,7 @@ function makeCloud(count: number): GalaxyCatalog {
     diameterKpc: fill(50),
     classByte: new Uint8Array(count),
     parentSurveyByte: new Uint8Array(count),
+    spectroscopicZ: new Float32Array(count),
   };
 }
 

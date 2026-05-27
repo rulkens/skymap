@@ -84,6 +84,7 @@ function makeCloud(count: number): GalaxyCatalog {
     // fixtures (the renderer's bookkeeping path doesn't read them).
     classByte: new Uint8Array(count),
     parentSurveyByte: new Uint8Array(count),
+    spectroscopicZ: new Float32Array(count),
   };
 }
 

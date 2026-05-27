@@ -48,6 +48,7 @@ function makeCloud(count: number): GalaxyCatalog {
     diameterKpc: new Float32Array(count).fill(30),
     classByte: new Uint8Array(count).fill(7),
     parentSurveyByte: new Uint8Array(count).fill(8),
+    spectroscopicZ: new Float32Array(count).fill(0.0234),
   };
 }
 
@@ -99,16 +100,17 @@ describe('cloneGalaxyCatalogForTransfer', () => {
       copy.diameterKpc.buffer,
       copy.classByte.buffer,
       copy.parentSurveyByte.buffer,
+      copy.spectroscopicZ.buffer,
     ]);
     for (const t of transfer) {
       expect(copyBuffers.has(t as ArrayBufferLike)).toBe(true);
     }
   });
 
-  it('transfer list has one entry per typed-array field (12 total)', () => {
+  it('transfer list has one entry per typed-array field (13 total)', () => {
     const cloud = makeCloud(4);
     const { transfer } = cloneGalaxyCatalogForTransfer(cloud);
-    expect(transfer.length).toBe(12);
+    expect(transfer.length).toBe(13);
   });
 
   it('handles count = 0 (empty catalog)', () => {
@@ -117,6 +119,6 @@ describe('cloneGalaxyCatalogForTransfer', () => {
     expect(copy.count).toBe(0);
     expect(copy.objIDs.length).toBe(0);
     expect(copy.positions.length).toBe(0);
-    expect(transfer.length).toBe(12);
+    expect(transfer.length).toBe(13);
   });
 });

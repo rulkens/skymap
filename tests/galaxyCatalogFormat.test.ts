@@ -24,6 +24,7 @@ function makeCloud(): GalaxyCatalog {
     diameterKpc: new Float32Array([30, 30]),
     classByte: new Uint8Array(2),
     parentSurveyByte: new Uint8Array(2),
+    spectroscopicZ: new Float32Array(2),
   };
 }
 
@@ -109,6 +110,7 @@ function makeOrientCloud(count: number, fillNaN = false): GalaxyCatalog {
     diameterKpc: new Float32Array(count),
     classByte: new Uint8Array(count),
     parentSurveyByte: new Uint8Array(count),
+    spectroscopicZ: new Float32Array(count),
   };
 }
 
@@ -175,6 +177,7 @@ describe('galaxyCatalogFormat — diameterKpc + stride + rejection', () => {
       diameterKpc: new Float32Array([30, 12.5]),
       classByte: new Uint8Array(2),
       parentSurveyByte: new Uint8Array(2),
+      spectroscopicZ: new Float32Array(2),
     };
     const decoded = decodeGalaxyCatalog(encodeGalaxyCatalog(cloud));
     expect(Array.from(decoded.diameterKpc)).toEqual([30, 12.5]);
@@ -195,6 +198,7 @@ describe('galaxyCatalogFormat — diameterKpc + stride + rejection', () => {
       diameterKpc: new Float32Array([NaN]),
       classByte: new Uint8Array(1),
       parentSurveyByte: new Uint8Array(1),
+      spectroscopicZ: new Float32Array(1),
     };
     const decoded = decodeGalaxyCatalog(encodeGalaxyCatalog(cloud));
     expect(Number.isNaN(decoded.diameterKpc[0])).toBe(true);
@@ -215,6 +219,7 @@ describe('galaxyCatalogFormat — diameterKpc + stride + rejection', () => {
       diameterKpc: new Float32Array([30]),
       classByte: new Uint8Array(1),
       parentSurveyByte: new Uint8Array(1),
+      spectroscopicZ: new Float32Array(1),
     };
     expect(encodeGalaxyCatalog(cloud).byteLength).toBe(80);
   });
@@ -246,6 +251,7 @@ describe('galaxyCatalogFormat — diameterKpc + stride + rejection', () => {
       diameterKpc: new Float32Array([30]),
       classByte: new Uint8Array(2),
       parentSurveyByte: new Uint8Array(2),
+      spectroscopicZ: new Float32Array(2),
     };
     expect(() => encodeGalaxyCatalog(cloud)).toThrow(/diameterKpc length mismatch/);
   });

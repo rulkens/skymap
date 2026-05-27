@@ -86,6 +86,7 @@ export function recordsToCloud(records: ParsedRecord[]): GalaxyCatalog {
     diameterKpc: new Float32Array(count),
     classByte: new Uint8Array(count),
     parentSurveyByte: new Uint8Array(count),
+    spectroscopicZ: new Float32Array(count),
   };
   for (let i = 0; i < count; i++) {
     // `records[i]` is `ParsedRecord | undefined` under noUncheckedIndexedAccess.
@@ -138,6 +139,13 @@ export function recordsToCloud(records: ParsedRecord[]): GalaxyCatalog {
     // Zero for every non-Milliquas parser.  See sourceClass.ts for
     // the full enum.
     cloud.parentSurveyByte[i] = r.parentSurveyByte;
+    // Catalogued spectroscopic redshift, stored separately from
+    // position so the InfoCard can show the real catalog value even
+    // when sub-plan 04 wires a CF4 / HyperLEDA distance override (the
+    // override changes |position| but NOT the published z). Today, no
+    // override is applied yet, so spectroscopicZ equals the z used
+    // for the cartesian conversion above.
+    cloud.spectroscopicZ[i] = r.z;
   }
   return cloud;
 }

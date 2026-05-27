@@ -155,6 +155,33 @@ export type GalaxyCatalog = {
   classByte: Uint8Array;
 
   /**
+   * Per-galaxy spectroscopic redshift z — length === count.
+   *
+   * Carries the *catalogued* redshift, NOT the value implied by the
+   * stored 3-D position. The two diverge for galaxies inside ~30 Mpc
+   * where the build pipeline overrides the cz-derived position with a
+   * Cosmicflows-4 (or HyperLEDA `mod0`) measured distance — see
+   * docs/superpowers/specs/2026-05-27-local-volume-distances.md.
+   *
+   * For rows that DON'T get the local-volume override, `spectroscopicZ`
+   * equals the redshift used to derive the position (modulo float32
+   * precision), so the InfoCard's "Redshift z" line and the rendered
+   * point's distance remain self-consistent.
+   *
+   * Negative values are legal and preserved: the ~25 nearby galaxies
+   * with peculiar-velocity-dominated blueshifts (M31, M86, etc.) really
+   * do have z < 0 in their original catalogs, and the InfoCard shows
+   * the catalog value rather than the linear-sign-mirrored
+   * position-derived approximation.
+   *
+   * NaN is the "no spectroscopic measurement" sentinel — used for
+   * Famous Galaxy records that have a measured distance but no
+   * published spectroscopic redshift (rare; mostly Local Group dwarfs).
+   * Consumers fall back to the cartesian-derived value in that case.
+   */
+  spectroscopicZ: Float32Array;
+
+  /**
    * Per-record parent-survey enum byte — length === count.
    *
    * Only meaningful for `Source.Milliquas` rows: Milliquas Names are

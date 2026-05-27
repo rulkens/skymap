@@ -53,6 +53,7 @@ function makeCloud(count: number): GalaxyCatalog {
     positionAngleDeg: f32(count),
     classByte: new Uint8Array(count),
     parentSurveyByte: new Uint8Array(count),
+    spectroscopicZ: new Float32Array(count),
     sourceCode: 0,
   } as unknown as GalaxyCatalog;
 }
