@@ -97,7 +97,18 @@ data/raw/*.dat,*.csv  ──parsers──▶  ParsedRecord[]  ──crossMatch�
                                           GPU vertex/index buffers  ──pointRenderer──▶  WGSL  ──▶  canvas
 ```
 
-Binary format is in `src/data/galaxyCatalogFormat.ts` — currently v4, 64 bytes/galaxy. Bumping the version means regenerating bins via `npm run build-all`. The format header stores `magic + version + count`, so old bins fail loudly with a clear regenerate message. (The 2026-05-17 PointCloud → GalaxyCatalog code rename did NOT bump the on-disk format.)
+Binary format is in `src/data/galaxyCatalogFormat.ts` — currently v6, 64 bytes/galaxy. Bumping the version means regenerating bins via `npm run build-all`. The format header stores `magic + version + count`, so old bins fail loudly with a clear regenerate message. (The 2026-05-17 PointCloud → GalaxyCatalog code rename did NOT bump the on-disk format; v6 added `spectroscopicZ` at byte 54 for the local-volume distance override.)
+
+### Local-volume distance override
+
+For galaxies inside `CUTOFF_MPC = 30` the build pipeline replaces the cz-derived position with a Cosmicflows-4 (or HyperLEDA `mod0`) measured distance. The catalogued spectroscopic z is stored separately on the .bin (v6 format, byte offset 54) so the InfoCard shows the published value, not the value implied by `|position|`. See `docs/superpowers/specs/2026-05-27-local-volume-distances.md`.
+
+Coverage: ~2,030 of CF4's 2,159 local-volume PGCs are reachable via the direct GLADE-by-PGC path; 2MRS rows pick up CF4 distances via the existing `2MASX → PGC` patching step in `buildAllBins`. Famous-galaxy and SDSS rows without PGCs fall through to the cz path.
+
+Re-run order when CF4 raw data changes:
+1. `npm run fetch-cf4` — refreshes `data/raw/cf4/table2.dat`.
+2. `npm run build-tiers` — re-bakes `2mrs.bin` and `glade-*.bin` with the new distances.
+3. `npm run sync-r2-secure` — from the main worktree only (see project memory `project_worktree_data_isolation`).
 
 ### Deploy workflow (Cloudflare Workers Assets + R2)
 
