@@ -76,6 +76,15 @@ npm run format      # prettier
 
 Currently 590+ tests passing across 76 files. Keep it green.
 
+### Tmux workflow helpers
+
+Two bash helpers live in `tools/dev/` for managing parallel Claude sessions across worktrees:
+
+- **`tools/dev/skymap-tmux.sh`** — starts (or reattaches) a `skymap` tmux session with one window per existing `.claude/worktrees/*` plus a `main` and `shell` window. Does not auto-start `claude` — pick per window. Re-run to reattach.
+- **`tools/dev/skymap-wt-clean.sh`** — interactive cleanup of worktrees whose branches have merged into `origin/main`. Skips dirty worktrees. Closing a tmux window does **not** remove its worktree; this is the hygiene pass.
+
+The intended workflow is one tmux window per worktree, each rooted at the worktree path so the shell and any `claude` started inside it share CWD — no `EnterWorktree` call needed. Use `EnterWorktree`/`ExitWorktree` only in single-window flows where you want the harness to handle creation and cleanup.
+
 ## Data pipeline (mental model)
 
 ```
