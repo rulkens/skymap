@@ -1,32 +1,132 @@
-# Cosmicflows-4 raw data
+# CF-4 raw data
+
+This directory holds two largely independent CF-4 products:
+
+- **DM density cube** — Courtois 2025 *CF4++* ensemble, used by Skymap's
+  scalar-volume renderer to draw the cosmic web.
+- **Local-volume distance table** — Tully 2023 *Cosmicflows-4* compilation
+  (`table2.dat`), used to override galaxy positions inside 30 Mpc where
+  peculiar velocities dominate the cz signal.
+
+Both come from the same Cosmicflows-4 program but live as separate files,
+ship through separate pipelines, and are gitignored except for this
+README and the `table2.dat.sha256` sidecar.
+
+---
+
+## DM density cube (CF4++)
+
+Stores the intermediate `.npy` slice of the Courtois 2025 **CF4++**
+release that feeds Skymap's CF-4 DM density volume. Nothing in this part
+of the directory is committed to git; the runtime artefact lives on R2
+and is pulled by `curl`, the intermediate is regenerable from the
+upstream `.npz`.
+
+### Why CF4++ (and not Valade 2024 HAMLET 256³)?
+
+The original 2026-05-10 spec assumed the Valade 2024 256³ HAMLET cube as
+the data source, but that exact file is not publicly distributed.  The
+nearest equivalent on the public IP2I page is the Courtois 2025 CF4++
+ensemble — a 128³, 1000 Mpc box reconstruction in supergalactic Cartesian
+that ships the mean and standard deviation across 10 000 HMC posterior
+steps for density, Cartesian velocity, and radial velocity (six arrays
+total).
+
+We consume only the `d_mean_CF4pp` mean-density array.  The std cube is
+the natural future input for an uncertainty-aware overlay; that's a
+separate plan.
+
+### Density-cube files
+
+| File | Size | Purpose | How to obtain |
+|------|------|---------|---------------|
+| `CF4pp_mean_std_grids.npz` | ~167 MB | Upstream Courtois 2025 ensemble (maintainer only) | Download from <https://projets.ip2i.in2p3.fr/cosmicflows/> |
+| `d_mean_CF4pp.npy` | ~8 MB | Flat f32 128³ mean-density slice | `curl` from R2 (see below) — or extract from `.npz` |
+
+The runtime artefact is `public/data/cf4_density.scfd` (~4 MB f16),
+produced from the `.npy` via `npm run build-cf4-density`.  That `.scfd`
+is also synced to R2 and is what the browser fetches at runtime.
+
+License: CF-4 data is free for research and visualisation use; cite
+Courtois et al. 2025 (A&A, arXiv:2502.01308) and Tully et al. 2023 (CF-4
+catalog) in any derived work.  If you swap in the Valade 2024 HAMLET cube
+later (e.g. by personal request to the IP2I group), also cite Valade et
+al. 2024 (Nature Astronomy, arXiv:2409.17261).
+
+### Contributor path (no Python, no unzip required)
+
+Pull the pre-extracted slice from R2:
+
+```
+curl -L -o data/raw/cf4/d_mean_CF4pp.npy \
+  https://skymap-data.rulkens.com/data/raw/cf4/d_mean_CF4pp.npy
+```
+
+Then build the runtime `.scfd`:
+
+```
+npm run build-cf4-density
+```
+
+This reads the `.npy`, converts f32 → f16, builds the SG→equatorial
+rotation, and writes `public/data/cf4_density.scfd` (~4 MB) — pure
+Node/TS, no Python.
+
+If you don't even need to rebuild the `.scfd` (because you're not
+modifying the format or the build pipeline), just curl the `.scfd`:
+
+```
+curl -L -o public/data/cf4_density.scfd \
+  https://skymap-data.rulkens.com/data/cf4_density.scfd
+```
+
+### Maintainer path (run once per upstream release)
+
+1. Download the upstream archive:
+   ```
+   curl -L -o data/raw/cf4/CF4pp_mean_std_grids.npz \
+     https://projets.ip2i.in2p3.fr/cosmicflows/CF4pp_mean_std_grids.npz
+   ```
+2. Extract just the mean-density array (no Python required — `.npz` is
+   a plain ZIP archive of `.npy` files):
+   ```
+   unzip -j data/raw/cf4/CF4pp_mean_std_grids.npz d_mean_CF4pp.npy \
+     -d data/raw/cf4/
+   ```
+3. Sync both the intermediate and any rebuilt `.scfd` to R2:
+   ```
+   npm run build-cf4-density   # produces public/data/cf4_density.scfd
+   npm run sync-r2             # uploads .npy (EXTRA_FILES) + .scfd (ALLOW)
+   ```
+
+The upstream `.npz` itself is **not** synced to R2 — contributors should
+never need to handle the 167 MB ensemble.  Only the ~8 MB `d_mean_CF4pp.npy`
+slice goes up.
+
+---
+
+## Local-volume distance table (Tully 2023)
 
 Source: CDS Vizier table [J/ApJ/944/94](https://cdsarc.cds.unistra.fr/viz-bin/cat/J/ApJ/944/94),
 Tully et al. 2023, *Cosmicflows-4*.
 
-## Files
+### Distance-table files
 
-- `table2.dat` — fixed-width ASCII, 55,877 rows (~10.6 MB). Each row is one
-  galaxy with a homogenised redshift-independent distance modulus +
-  uncertainty, cross-IDed against PGC and 2MASS XSC. Produced by
-  decompressing `table2.dat.gz` (CDS only serves the gzipped form);
-  the parser in `tools/parsers/cosmicflows4.ts` (sub-plan 02) reads
-  byte ranges according to the `ReadMe` byte-offset spec.
-- `table2.dat.gz` — the as-shipped gzipped artefact from CDS (~2.5 MB).
-  Kept on disk so a re-run of `npm run fetch-cf4` hits the Range: 416
-  fast-path instead of pulling the bytes again. Downloaded via
-  `npx tsx tools/fetch/fetchCosmicflows4.ts`.
-- `ReadMe` — the CDS column-offset spec. The parser cross-checks byte
-  positions against this file; if CDS ever re-issues the table with a
-  different layout, re-download both files together.
-- `table2.dat.sha256` — checksum of the decompressed `table2.dat`,
-  written by the fetcher. The parser cross-checks before parsing; a
-  mismatch aborts with a clear error.
+| File | Size | Purpose | How to obtain |
+|------|------|---------|---------------|
+| `table2.dat.gz` | ~2.5 MB | Gzipped fixed-width ASCII as shipped by CDS | `npm run fetch-cf4` |
+| `table2.dat` | ~10.6 MB | Decompressed table; byte layout matches `ReadMe` | Auto-produced by fetcher |
+| `ReadMe` | ~20 KB | CDS column-offset spec — source of truth for byte ranges | `npm run fetch-cf4` |
+| `table2.dat.sha256` | 1 line | Checksum of decompressed table (committed) | Auto-produced by fetcher |
 
-The CF-4 *density* cube intermediates (`d_mean_CF4pp.npy`, related `.sav`,
-`.meta.json`) are produced separately for the volume-rendering pipeline
-and live in this same directory; see `tools/volumes/buildCf4Density.ts`.
+Each row of `table2.dat` is one galaxy (55,877 total) with a homogenised
+redshift-independent distance modulus + uncertainty, cross-IDed against
+PGC and 2MASS XSC. The parser in `tools/parsers/cosmicflows4.ts` (sub-plan
+02) reads byte ranges according to the `ReadMe` byte-offset spec; if CDS
+ever re-issues the table with a different layout, re-download both files
+together — the ReadMe is the source of truth.
 
-## How CF4 is used
+### How the distance table is used
 
 CF4 supplies redshift-independent distance moduli for ~55k local-volume
 galaxies. The build pipeline applies them as a position override for
@@ -35,7 +135,7 @@ See `docs/superpowers/specs/2026-05-27-local-volume-distances.md` and
 `docs/superpowers/plans/2026-05-27-local-volume-distances.md` for the
 full design.
 
-## Citation
+### Citation
 
 Tully, R. B., Kourkchi, E., Courtois, H. M., et al. 2023, ApJ, 944, 94.
 DOI: [10.3847/1538-4357/ac94d8](https://doi.org/10.3847/1538-4357/ac94d8).
