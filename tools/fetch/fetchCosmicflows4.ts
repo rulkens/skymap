@@ -13,7 +13,14 @@
  *
  * See data/raw/cf4/README.md for the in-repo provenance header.
  */
-import { createWriteStream, existsSync, mkdirSync, statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import {
+  createReadStream,
+  createWriteStream,
+  existsSync,
+  mkdirSync,
+  statSync,
+} from 'node:fs';
 import { dirname } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -90,4 +97,17 @@ export async function downloadWithResume(
   // pipeline: cheaper and side-steps the TransformStream typing.
   const totalBytes = statSync(destPath).size;
   return { bytesAdded: totalBytes - startOffset, totalBytes };
+}
+
+/**
+ * SHA-256 hex digest of a file's contents, streamed so we don't materialise
+ * a ~100 MB string in memory just to hash it.
+ *
+ * Stored alongside the downloaded `.dat` as `.sha256` so the parser can
+ * abort with a clear error if the file is truncated or stale.
+ */
+export async function sha256OfFile(path: string): Promise<string> {
+  const hash = createHash('sha256');
+  await pipeline(createReadStream(path), hash);
+  return hash.digest('hex');
 }

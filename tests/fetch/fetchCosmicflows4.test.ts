@@ -6,6 +6,7 @@ import {
   CF4_TABLE_URL,
   CF4_README_URL,
   resumeOffsetForPath,
+  sha256OfFile,
 } from '../../tools/fetch/fetchCosmicflows4';
 
 describe('Cosmicflows-4 fetcher URLs', () => {
@@ -38,6 +39,23 @@ describe('resumeOffsetForPath', () => {
       const path = join(dir, 'partial.dat');
       writeFileSync(path, 'x'.repeat(1024));
       expect(resumeOffsetForPath(path)).toBe(1024);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('sha256OfFile', () => {
+  it('returns the hex digest of the file contents', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'cf4-'));
+    try {
+      const path = join(dir, 'sample.txt');
+      writeFileSync(path, 'hello, world');
+      // Pre-computed: sha256("hello, world") =
+      // 09ca7e4eaa6e8ae9c7d261167129184883644d07dfba7cbfbc4c8a2e08360d5b
+      expect(await sha256OfFile(path)).toBe(
+        '09ca7e4eaa6e8ae9c7d261167129184883644d07dfba7cbfbc4c8a2e08360d5b',
+      );
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
