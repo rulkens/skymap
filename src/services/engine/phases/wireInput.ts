@@ -91,7 +91,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
         localIdx,
         src,
         state.sources.famousMeta,
-        state.sources.famousXrefs,
       ),
     // POI pick hit `(category, poiIndex)` → `PointOfInterest`.  The full
     // contract (per-category-local indexing, why the array lookup is

@@ -253,14 +253,9 @@ export type GalaxyInfo = {
   /**
    * Famous-galaxy enrichment block, present only when `source === Source.Famous`.
    *
-   * Populated by `galaxyInfoBuilder` from the `famous_meta.json` and
-   * `famous_xrefs.json` sidecars loaded at engine startup.  Absent (`undefined`)
-   * for SDSS / 2MRS / GLADE / Synthetic rows — those never have curated metadata.
-   *
-   * `xref` is the nearest cross-matched survey row (2MRS or GLADE) within
-   * MATCH_THRESHOLD_ARCSEC, or `null` when no match was found.  Even a `null`
-   * xref is useful in the UI — it tells the InfoCard "we checked and found nothing"
-   * rather than "we haven't checked".
+   * Populated by `galaxyInfoBuilder` from the `famous_meta.json` sidecar loaded
+   * at engine startup.  Absent (`undefined`) for SDSS / 2MRS / GLADE / Synthetic
+   * rows — those never have curated metadata.
    */
   famous?: {
     /** Stable machine-readable id, e.g. `"m31"`. Matches the WebP filename. */
@@ -280,12 +275,6 @@ export type GalaxyInfo = {
     description: string;
     /** Morphological / physical type, e.g. `"SBb"`. */
     type: string;
-    /** Cross-match to the nearest 2MRS or GLADE row, or null if unmatched. */
-    xref: {
-      source: 'TwoMRS' | 'Glade';
-      localIdx: number;
-      distanceArcsec: number;
-    } | null;
   };
 
   /** @group Orientation */

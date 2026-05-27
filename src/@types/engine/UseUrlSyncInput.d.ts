@@ -4,7 +4,6 @@ import type { EngineHandle } from './EngineHandle';
 import type { EngineStatus } from './EngineStatus';
 import type { FocusableTarget } from './FocusableTarget';
 import type { FamousMetaEntry } from '../loading/FamousMetaEntry';
-import type { FamousXrefMap } from '../loading/FamousXrefMap';
 import type { PointOfInterest } from './subsystems/PointOfInterest';
 
 /**
@@ -24,7 +23,6 @@ export type UseUrlSyncInput = {
   status: EngineStatus;
   sourceCounts: Partial<Record<SourceType, number>>;
   famousMeta: readonly FamousMetaEntry[];
-  famousXrefs: FamousXrefMap;
   aliasMap: ReadonlyMap<bigint, readonly string[]>;
   ready: boolean;
   pois: readonly PointOfInterest[];

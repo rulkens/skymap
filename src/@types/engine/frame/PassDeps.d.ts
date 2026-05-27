@@ -22,7 +22,6 @@ import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer'
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
-import type { FamousXrefMap } from '../../loading/FamousXrefMap';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { SourceType } from '../../data/SourceType';
 
@@ -65,8 +64,6 @@ export type PassDeps = {
   catalogs: Map<SourceType, GalaxyCatalog>;
   /** Famous-galaxy metadata — also forwarded into thumbnails. */
   famousMeta: FamousMetaEntry[];
-  /** PGC/SDSS-objID → famous-galaxy index lookup. */
-  famousXrefs: FamousXrefMap;
   /**
    * Animation time in seconds for the Milky Way impostor's
    * shader-clock uniform.  Already scaled by the engine's chosen

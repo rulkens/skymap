@@ -94,7 +94,6 @@ function makeState(): EngineState {
       pickMask: 0xff,
       drawMask: 0xff,
       famousMeta: [],
-      famousXrefs: {},
       tier: 'medium',
     },
     picking: { latestMouseCss: null, pointerDown: false } as never,

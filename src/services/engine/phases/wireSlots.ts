@@ -28,8 +28,7 @@
  *   - `state.assetSlots.filaments`, `state.assetSlots.famousMeta`,
  *     `state.assetSlots.pgcAlias`, `state.assetSlots.cf4Density`,
  *     `state.assetSlots.mcpm`, `state.assetSlots.syntheticVolumes`.
- *   - `state.sources.famousMeta`, `state.sources.famousXrefs` — via
- *     famous-meta subscriber (on `ready`).
+ *   - `state.sources.famousMeta` — via famous-meta subscriber (on `ready`).
  *   - `state.sources.catalogs` — populated by the per-source slot commit
  *     subscribers (wired in `initGpu`).
  *   - `state.subsystems.loadProgress`, `state.subsystems.galaxyAtlas`,
@@ -259,10 +258,10 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   for (const [, slot] of allSlots) progressEmitter.attachSlot(slot);
   state.subsystems.loadProgress = progressEmitter;
 
-  // famous-meta + xrefs are declared as Famous's `companions` in the
-  // registry; they fire from the boot loop below alongside the
-  // Famous bin. PGC-aliases stay lazy; see `loadPgcAliases()` on the
-  // handle for the on-demand trigger.
+  // famous-meta is declared as Famous's `companion` in the registry;
+  // it fires from the boot loop below alongside the Famous bin.
+  // PGC-aliases stay lazy; see `loadPgcAliases()` on the handle for
+  // the on-demand trigger.
 
   // Construct the three impostor subsystems in dependency order.  The
   // textured-disk planner depends on the atlas (slot allocation +

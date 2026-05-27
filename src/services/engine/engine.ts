@@ -100,7 +100,6 @@ import type { ScalarCube } from '../../@types/data/ScalarCube';
 import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
 import type { Tier } from '../../@types/data/Tier';
 import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
-import type { FamousXrefMap } from '../../@types/loading/FamousXrefMap';
 
 import { createTweenManager } from './camera/tweenManager';
 import { createRenderScheduler } from './subsystems/renderScheduler';
@@ -446,11 +445,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // without a GPU readback for every hover.  Empty until the
       // first parallel fetch resolves.
       catalogs: new Map<SourceType, GalaxyCatalog>(),
-      // Optional sidecars — `galaxyInfoBuilder` null-checks both, so a
-      // hover firing before they land just renders the generic
-      // InfoCard layout.
+      // Optional sidecar — `galaxyInfoBuilder` null-checks, so a hover
+      // firing before it lands just renders the generic InfoCard layout.
       famousMeta: [],
-      famousXrefs: {},
       // Currently-loaded data tier.  Seeded from `cb.initialTier` (Task 5
       // of the data-tiers plan); the default of 'medium' matches the
       // pre-tier ~600k-galaxy desktop budget.  `setTier` mutates this in
@@ -585,7 +582,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         cb,
         getCloud: (s) => state.sources.catalogs.get(s),
         getFamousMeta: () => state.sources.famousMeta,
-        getFamousXrefs: () => state.sources.famousXrefs,
         // Forward-reference: `state.subsystems.pois` is bound later in
         // this same literal but the closure resolves at call time,
         // long after the literal completes.  Mirrors the cloud/famous
@@ -987,7 +983,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       localIdx,
       Source.Famous,
       state.sources.famousMeta,
-      state.sources.famousXrefs,
     );
     if (!info) return;
 
@@ -1000,10 +995,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     source: SourceType;
     localIdx: number;
     famousMeta?: readonly FamousMetaEntry[];
-    famousXrefs?: FamousXrefMap;
   };
 
-  function selectByAlias({ source, localIdx, famousMeta, famousXrefs }: SelectByAliasTarget): void {
+  function selectByAlias({ source, localIdx, famousMeta }: SelectByAliasTarget): void {
     // Guard: source cloud may not be loaded yet (e.g. user opened
     // the palette before GLADE finished arriving), or the localIdx
     // could be stale across a tier swap.  Both are safe early-return
@@ -1013,15 +1007,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     if (localIdx < 0 || localIdx >= cloud.count) return;
 
     // Build a GalaxyInfo so the InfoCard populates correctly.
-    // Caller-supplied `famousMeta`/`famousXrefs` win over the
-    // engine's internal copies — see the EngineHandle JSDoc for the
-    // race this defends against.
+    // Caller-supplied `famousMeta` wins over the engine's internal
+    // copy — see the EngineHandle JSDoc for the race this defends
+    // against.
     const info = buildGalaxyInfo(
       cloud,
       localIdx,
       source,
       famousMeta ?? state.sources.famousMeta,
-      famousXrefs ?? state.sources.famousXrefs,
     );
     if (!info) return;
 

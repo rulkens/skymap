@@ -271,7 +271,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     proceduralDiskRenderer: proceduralDiskRenderer as never,
     settings: settings as never,
     famousMeta: [],
-    famousXrefs: {},
     catalogs,
     timingService,
   };

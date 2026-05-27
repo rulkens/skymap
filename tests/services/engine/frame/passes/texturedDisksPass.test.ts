@@ -60,7 +60,6 @@ function makeDeps(): PassDeps {
     horizonShellRenderer: { draw: vi.fn() } as any,
     catalogs: new Map(),
     famousMeta: [],
-    famousXrefs: {},
     milkyWayITimeSec: 0,
   } as PassDeps;
 }

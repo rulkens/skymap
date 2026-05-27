@@ -101,7 +101,6 @@ const ALLOW = (name: string): boolean =>
   // cloudLoader.filamentFilenameForTier().
   name === 'filaments-small.bin' ||
   name === 'famous_meta.json' ||
-  name === 'famous_xrefs.json' ||
   // Valade 2024 CF-4 HAMLET 256³ DM density cube, written as SCFD by
   // `npm run build-cf4-density` from the maintainer-produced .npy.
   // See data/raw/cf4/README.md for the maintainer + contributor paths.

@@ -27,7 +27,6 @@ import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer'
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
-import type { FamousXrefMap } from '../../loading/FamousXrefMap';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { ReadyFrameContext } from './ReadyFrameContext';
 import type { RenderFrameSettings } from './RenderFrameSettings';
@@ -97,7 +96,6 @@ export type RenderFrameInput = {
 
   // ── Forwarded to the thumbnail subsystem ──────────────────────────────
   famousMeta: FamousMetaEntry[];
-  famousXrefs: FamousXrefMap;
   catalogs: Map<SourceType, GalaxyCatalog>;
 
   /**

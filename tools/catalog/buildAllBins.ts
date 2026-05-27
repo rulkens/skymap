@@ -583,9 +583,9 @@ async function runCli(): Promise<void> {
   // apart); the CF4 override moves them ~0.03 Mpc apart, making the
   // duplication visible.
   //
-  // Threshold: 30 arcsec matches the famous-galaxy cross-match radius in
-  // buildFamous.ts so a famous entry that matched a catalog row via the
-  // xref will also be dropped here.
+  // Threshold: 30 arcsec — same scale used by the rest of the build for
+  // catalog cross-matches; close enough to catch the local-volume
+  // duplication M31/NGC 147/NGC 185 exhibited post-CF4 override.
   let famousPositions: ReadonlyArray<FamousSkyPosition> = [];
   try {
     const seedRaw = readFileSync(rawDataPath('famous.seed'), 'utf8');

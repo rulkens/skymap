@@ -366,7 +366,6 @@ function makeInput(
       proceduralDiskRenderer,
       settings,
       famousMeta: [],
-      famousXrefs: {},
       catalogs,
       // Disabled stub mirrors the production path (no `?gpuTimings`
       // URL gate) — `service.enabled === false` so renderFrame takes

@@ -119,7 +119,7 @@ export function App(): React.ReactElement {
   // `d` toggles the debug panel.
   const [debugPanelOpen, setDebugPanelOpen] = useState(false);
 
-  const { famousMeta, famousXrefs } = useFamousMeta();
+  const { famousMeta } = useFamousMeta();
 
   // Milky Way isn't in any catalog .bin (procedural backdrop), but users
   // expect to find it in the palette.  Sentinel-id entry prepended so the
@@ -146,7 +146,6 @@ export function App(): React.ReactElement {
     status,
     sourceCounts,
     famousMeta,
-    famousXrefs,
     aliasMap,
     ready: status.kind === 'ready',
     pois: staticPois,
