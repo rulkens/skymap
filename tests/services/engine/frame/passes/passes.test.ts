@@ -120,7 +120,6 @@ function makeDeps(overrides: Partial<PassDeps> = {}): PassDeps {
     horizonShellRenderer: { draw: vi.fn() } as any,
     catalogs: new Map(),
     famousMeta: [],
-    famousXrefs: {} as any,
     milkyWayITimeSec: 0,
     ...overrides,
   };

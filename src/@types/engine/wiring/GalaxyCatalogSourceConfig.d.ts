@@ -10,7 +10,7 @@ import type { GalaxyCatalogReq } from '../../loading/GalaxyCatalogReq';
  * bin — at boot (if the source is visible), on visibility toggle-on,
  * and on tier change.
  *
- *   - `famousMeta` — Famous-galaxy meta + xrefs JSON sidecar
+ *   - `famousMeta` — Famous-galaxy meta JSON sidecar
  *                    (tier-agnostic; one load per session).
  */
 export type GalaxyCatalogCompanionRef = 'famousMeta';

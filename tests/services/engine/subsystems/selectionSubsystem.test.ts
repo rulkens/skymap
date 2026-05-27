@@ -80,7 +80,6 @@ function makeSub(cb: Callbacks, opts: { cloud?: GalaxyCatalog; pois?: readonly P
     cb,
     getCloud: () => opts.cloud,
     getFamousMeta: () => [],
-    getFamousXrefs: () => ({}),
     getPoi: (id) => pois.find((p) => p.id === id) ?? null,
   });
 }

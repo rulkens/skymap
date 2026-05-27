@@ -99,7 +99,7 @@ vi.mock('../../../../src/services/loading/fetchers/filamentFetcher', () => ({
 }));
 
 vi.mock('../../../../src/services/loading/fetchers/famousMetaFetcher', () => ({
-  famousMetaFetcher: vi.fn(async () => ({ meta: [], xrefs: {} })),
+  famousMetaFetcher: vi.fn(async () => ({ meta: [] })),
 }));
 
 vi.mock('../../../../src/services/loading/fetchers/pgcAliasFetcher', () => ({
@@ -257,7 +257,6 @@ function makeState(
       pickMask: 0xff,
       drawMask: 0xff,
       famousMeta: [],
-      famousXrefs: {},
       tier: 'medium',
     },
     picking: {} as never,

@@ -215,7 +215,6 @@ function makeState(): EngineState {
       pickMask: 0,
       drawMask: 0,
       famousMeta: [],
-      famousXrefs: {},
       tier: 'medium',
     },
     assetSlots: {

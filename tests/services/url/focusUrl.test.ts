@@ -69,7 +69,6 @@ describe('selectionToFocusId', () => {
         names: ['M31', 'Andromeda Galaxy'],
         description: '',
         type: 'SBb',
-        xref: null,
       },
     });
     expect(selectionToFocusId(info)).toBe('m31');

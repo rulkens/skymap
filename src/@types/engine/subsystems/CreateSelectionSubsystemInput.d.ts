@@ -2,7 +2,6 @@ import type { EngineCallbacks } from '../EngineCallbacks';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { SourceType } from '../../data/SourceType';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
-import type { FamousXrefMap } from '../../loading/FamousXrefMap';
 import type { PointOfInterest } from './PointOfInterest';
 
 /**
@@ -18,8 +17,6 @@ export type CreateSelectionSubsystemInput = {
   getCloud: (source: SourceType) => GalaxyCatalog | undefined;
   /** Live read of the famous-galaxy meta sidecar (curated names + thumbnail IDs). */
   getFamousMeta: () => readonly FamousMetaEntry[];
-  /** Live read of the famous-galaxy xref sidecar (cross-survey ID joins). */
-  getFamousXrefs: () => FamousXrefMap;
   /**
    * Live read of the POI table.  Closure (not snapshot) so a tier
    * swap that replaces the POI list lands in subsequent lookups

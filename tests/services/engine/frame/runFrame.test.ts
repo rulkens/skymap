@@ -63,7 +63,6 @@ function makeState(): EngineState {
       drawMask: 0,
       catalogs: new Map(),
       famousMeta: [],
-      famousXrefs: {},
       tier: 'medium',
     },
     picking: {

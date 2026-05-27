@@ -22,7 +22,6 @@ import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import { sourceClassLabel, milliquasParentSurveyPrefix } from '../../../data/sourceClass';
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
-import type { FamousXrefMap } from '../../../@types/loading/FamousXrefMap';
 import { famousDisplayName } from './famousDisplayName';
 import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';
 import type { SourceType } from '../../../@types/data/SourceType';
@@ -110,20 +109,19 @@ export function niceRound(x: number): number {
  * can decide which thumbnail service to use and whether an SDSS Explorer
  * link makes sense.
  *
- * The optional `famousMeta` / `famousXrefs` arguments are the sidecars loaded
- * at engine startup by the `famousMeta` AssetSlot (`famousMetaFetcher`).  They are
- * only consulted when `source === Source.Famous`, so passing them for SDSS /
- * 2MRS / GLADE rows is harmless.  If the sidecars haven't arrived yet (fetch
- * still in flight when the user first hovers a famous galaxy), both args will
- * be empty / undefined and we silently omit the `famous` block — the InfoCard
- * falls back to its generic layout until the next hover triggers a rebuild.
+ * The optional `famousMeta` argument is the sidecar loaded at engine startup
+ * by the `famousMeta` AssetSlot (`famousMetaFetcher`).  It is only consulted
+ * when `source === Source.Famous`, so passing it for SDSS / 2MRS / GLADE rows
+ * is harmless.  If the sidecar hasn't arrived yet (fetch still in flight when
+ * the user first hovers a famous galaxy), the arg will be empty / undefined
+ * and we silently omit the `famous` block — the InfoCard falls back to its
+ * generic layout until the next hover triggers a rebuild.
  */
 export function buildGalaxyInfo(
   cloud: GalaxyCatalog,
   idx: number,
   source: SourceType,
   famousMeta?: readonly FamousMetaEntry[],
-  famousXrefs?: FamousXrefMap,
 ): GalaxyInfo {
   const px = cloud.positions[idx * 3 + 0]!;
   const py = cloud.positions[idx * 3 + 1]!;
@@ -371,14 +369,12 @@ export function buildGalaxyInfo(
   let famous: GalaxyInfo['famous'];
   if (source === Source.Famous && famousMeta && famousMeta[idx]) {
     const meta = famousMeta[idx]!;
-    const xref = (famousXrefs && famousXrefs[meta.id]) ?? null;
     famous = {
       id: meta.id,
       ...(meta.commonName !== undefined ? { commonName: meta.commonName } : {}),
       names: meta.names,
       description: meta.description,
       type: meta.type,
-      xref,
     };
   }
 

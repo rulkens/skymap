@@ -336,7 +336,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       volumesEnabled: state.settings.volumes.masterEnabled,
     },
     famousMeta: state.sources.famousMeta,
-    famousXrefs: state.sources.famousXrefs,
     catalogs: state.sources.catalogs,
     timingService: deps.timingService,
   });

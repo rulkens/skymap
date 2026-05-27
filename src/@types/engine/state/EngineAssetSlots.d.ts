@@ -43,13 +43,12 @@ export type EngineAssetSlots = {
    */
   filaments: AssetSlot<FilamentCloud, FilamentReq> | null;
   /**
-   * Famous-galaxy sidecar pair (`famous_meta.json` + `famous_xrefs.json`)
-   * routed through a slot for parity with point loads.  Loaded eagerly at
-   * engine boot — the JSON is tiny (well under 100 KB combined) so the
-   * cost is negligible, and the InfoCard depends on `meta`/`xrefs` being
-   * present whenever a famous galaxy is hovered.  The fetcher returns
-   * both files combined; the subscriber writes them straight into
-   * `state.sources.famousMeta` / `state.sources.famousXrefs`.
+   * Famous-galaxy `famous_meta.json` sidecar routed through a slot for
+   * parity with point loads.  Loaded eagerly at engine boot — the JSON
+   * is tiny so the cost is negligible, and the InfoCard depends on
+   * `meta` being present whenever a famous galaxy is hovered.  The
+   * subscriber writes the parsed array straight into
+   * `state.sources.famousMeta`.
    *
    * No `commit` step — there is nothing GPU-side to upload, just CPU
    * state mutation done by the subscriber.  Null until the IIFE mints it

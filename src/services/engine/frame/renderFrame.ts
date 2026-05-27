@@ -104,7 +104,6 @@ export function renderFrame(input: RenderFrameInput): void {
     proceduralDiskRenderer,
     settings,
     famousMeta,
-    famousXrefs,
     catalogs,
     timingService,
   } = input;
@@ -123,7 +122,6 @@ export function renderFrame(input: RenderFrameInput): void {
     horizonShellRenderer,
     catalogs,
     famousMeta,
-    famousXrefs,
     milkyWayITimeSec,
   };
 

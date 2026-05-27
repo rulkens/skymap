@@ -58,9 +58,9 @@ export const GALAXY_CATALOG_SOURCE_REGISTRY: readonly GalaxyCatalogSourceConfig[
     shortName: 'famous',
     fetcher: galaxyCatalogFetcher,
     category: 'curated',
-    // famous_meta.json + famous_xrefs.json carry the InfoCard text,
-    // CommandPalette entries, and URL-focus resolution for hand-picked
-    // entries.  Tier-agnostic — one load per session.
+    // famous_meta.json carries the InfoCard text, CommandPalette entries,
+    // and URL-focus resolution for hand-picked entries.
+    // Tier-agnostic — one load per session.
     companions: ['famousMeta'],
   },
   {

@@ -392,7 +392,6 @@ describe('renderFrame visual baseline', () => {
       proceduralDiskRenderer: proceduralDiskRenderer as never,
       settings: settings as never,
       famousMeta: [],
-      famousXrefs: {},
       catalogs,
       // Disabled stub forces the single-pass path.  The split-pass
       // (timing-on) shape is exercised in `renderFrame.timing.test.ts`.

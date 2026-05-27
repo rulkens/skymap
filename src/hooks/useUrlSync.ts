@@ -153,7 +153,6 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
     status,
     sourceCounts,
     famousMeta,
-    famousXrefs,
     aliasMap,
     ready,
     pois,
@@ -277,7 +276,7 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
     });
 
     if (result.resolved) {
-      // Pass App's own famousMeta + xrefs so `buildGalaxyInfo` inside
+      // Pass App's own famousMeta so `buildGalaxyInfo` inside
       // `selectByAlias` doesn't read the engine's still-loading copy.
       // See the EngineHandle JSDoc on `selectByAlias` for the race
       // this avoids.
@@ -285,12 +284,11 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
         source: result.source,
         localIdx: result.localIdx,
         famousMeta,
-        famousXrefs,
       });
     }
     // tier and unknown: leave pendingTarget set.  `tier` is read by the
     // eventual banner; `unknown` simply waits for more data.
-  }, [pendingTarget, status, sourceCounts, famousMeta, famousXrefs, aliasMap, engineHandleRef]);
+  }, [pendingTarget, status, sourceCounts, famousMeta, aliasMap, engineHandleRef]);
 
   // ── Effect 4: POI drain ───────────────────────────────────────────────
   // Resolve `pendingPoiId` against the POI table once the engine is

@@ -397,10 +397,10 @@ describe('buildGalaxyInfo — Synthetic source', () => {
 // ─── buildGalaxyInfo — Famous branch ─────────────────────────────────────────
 
 describe('buildGalaxyInfo — Famous source', () => {
-  it('attaches the famous metadata block when sidecars supply an entry', () => {
+  it('attaches the famous metadata block when the sidecar supplies an entry', () => {
     // Famous rows come from a curated catalogue.  When the sidecar has
     // matching metadata for the local index, the returned GalaxyInfo carries
-    // a `famous` block with id/names/description/xref pulled from the sidecar.
+    // a `famous` block with id/names/description pulled from the sidecar.
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 1, 0, 0); // M31-like nearby position
     const meta: FamousMetaEntry[] = [
@@ -411,11 +411,8 @@ describe('buildGalaxyInfo — Famous source', () => {
         type: 'SBb',
       },
     ];
-    const xrefs = {
-      m31: { source: 'TwoMRS' as const, localIdx: 42, distanceArcsec: 3.1 },
-    };
 
-    const info = buildGalaxyInfo(cloud, 0, Source.Famous, meta, xrefs);
+    const info = buildGalaxyInfo(cloud, 0, Source.Famous, meta);
 
     expect(info.source).toBe(Source.Famous);
     expect(info.iauName.startsWith('Famous J')).toBe(true);
@@ -426,34 +423,15 @@ describe('buildGalaxyInfo — Famous source', () => {
     expect(info.famous!.id).toBe('m31');
     expect(info.famous!.names).toEqual(['M31', 'Andromeda Galaxy']);
     expect(info.famous!.description).toBe('Nearest large spiral.');
-    expect(info.famous!.xref).toEqual({
-      source: 'TwoMRS',
-      localIdx: 42,
-      distanceArcsec: 3.1,
-    });
   });
 
-  it('omits the famous block when sidecars are undefined (graceful degradation)', () => {
+  it('omits the famous block when the sidecar is undefined (graceful degradation)', () => {
     // If the sidecar fetch hasn't resolved yet (or 404'd), buildGalaxyInfo must
     // not crash — the InfoCard simply renders the generic layout for that hover.
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 1, 0, 0);
     const info = buildGalaxyInfo(cloud, 0, Source.Famous);
     expect(info.famous).toBeUndefined();
-  });
-
-  it('sets famous.xref to null when the id has no entry in the xref map', () => {
-    // The xref map can contain a `null` or simply omit a key (e.g. when no
-    // 2MRS/GLADE row was within the match threshold).  In both cases the
-    // GalaxyInfo must surface `xref: null` so the InfoCard can show "no match".
-    const cloud = makeCloud(1);
-    setPosition(cloud, 0, 1, 0, 0);
-    const meta: FamousMetaEntry[] = [
-      { id: 'mystery', names: ['Mystery'], description: '?', type: '?' },
-    ];
-    // xrefs map omits 'mystery' entirely.
-    const info = buildGalaxyInfo(cloud, 0, Source.Famous, meta, {});
-    expect(info.famous!.xref).toBeNull();
   });
 });
 

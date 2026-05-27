@@ -125,7 +125,6 @@ describe('EngineState type', () => {
       drawMask: ALL_VISIBLE_MASK,
       catalogs: new Map(),
       famousMeta: [],
-      famousXrefs: {},
       tier: 'medium',
     };
     const picking: EnginePickingState = {
@@ -180,7 +179,6 @@ describe('EngineState type', () => {
           cb: noopCb,
           getCloud: () => undefined,
           getFamousMeta: () => [],
-          getFamousXrefs: () => ({}),
           getPoi: () => null,
         }),
         biasCorrection: createBiasCorrectionSubsystem({
@@ -319,7 +317,6 @@ describe('EngineState type', () => {
         drawMask: 0,
         catalogs: new Map(),
         famousMeta: [],
-        famousXrefs: {},
         tier: 'medium',
       },
       picking: {
@@ -363,7 +360,6 @@ describe('EngineState type', () => {
           cb: noopCb,
           getCloud: () => undefined,
           getFamousMeta: () => [],
-          getFamousXrefs: () => ({}),
           getPoi: () => null,
         }),
         biasCorrection: createBiasCorrectionSubsystem({
