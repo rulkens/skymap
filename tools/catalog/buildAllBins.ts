@@ -46,7 +46,12 @@ import { crossMatch } from './crossMatch.js';
 
 import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalogFormat.js';
 import { raDecZToCartesian } from '../../src/utils/math/index.js';
+import { raDecDistToCartesian } from '../../src/utils/math/raDecDistToCartesian.js';
 import { fallbackOrientation } from '../../src/utils/random/fallbackOrientation.js';
+import { catalogDistanceFor } from './catalogDistanceFor.js';
+import { CUTOFF_MPC } from './localVolumeCutoff.js';
+import type { Cf4CatalogIndex } from '../parsers/cosmicflows4.js';
+import { loadCf4CatalogIndex } from '../parsers/cosmicflows4.js';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/galaxyDiameterKpc.js';
 import { Source, SOURCE_REGISTRY } from '../../src/data/sources.js';
 import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog.js';
@@ -63,14 +68,39 @@ export type { CrossMatchInputs } from './crossMatch.js';
 // ─── GalaxyCatalog assembly + write ──────────────────────────────────────────
 
 /**
+ * Pre-built catalog indices for the local-volume distance override.
+ *
+ * Both maps are pre-computed (per call to runCli, once for the whole
+ * build) so the per-record lookup in `recordsToCloud` is O(1) — see the
+ * `catalogDistanceFor` docstring for the precedence rules.
+ */
+export type LocalVolumeOverrides = {
+  cf4: Cf4CatalogIndex;
+  hyperLeda: HyperLedaShapeMap;
+};
+
+/**
  * Materialise a survey-specific subset of merged records into the SoA
  * `GalaxyCatalog` shape the binary encoder expects.
  *
  * Allocating each typed array exactly once at the known final size keeps
  * the hot fill loop tight — no per-row push() overhead, no hidden
  * reallocations, and the resulting buffers are GPU-upload-ready.
+ *
+ * `overrides`: when provided, every record's position is replaced with
+ * the CF4 / HyperLEDA measured distance if (a) the catalog match returns
+ * a distance and (b) the matched distance is below `CUTOFF_MPC`. The
+ * catalogued spectroscopic z stays on `cloud.spectroscopicZ` regardless,
+ * so the InfoCard displays the published value even when the override
+ * fires (e.g. M31's z = −0.001 stays visible while the position sits at
+ * 0.78 Mpc). When `overrides` is null the legacy cz-only path runs for
+ * every record — used by unit tests that exercise the SoA fill loop in
+ * isolation.
  */
-export function recordsToCloud(records: ParsedRecord[]): GalaxyCatalog {
+export function recordsToCloud(
+  records: ParsedRecord[],
+  overrides: LocalVolumeOverrides | null = null,
+): GalaxyCatalog {
   const count = records.length;
   const cloud: GalaxyCatalog = {
     count,
@@ -88,11 +118,29 @@ export function recordsToCloud(records: ParsedRecord[]): GalaxyCatalog {
     parentSurveyByte: new Uint8Array(count),
     spectroscopicZ: new Float32Array(count),
   };
+  let overridesApplied = 0;
   for (let i = 0; i < count; i++) {
     // `records[i]` is `ParsedRecord | undefined` under noUncheckedIndexedAccess.
     // We loop with i < count === records.length, so the `!` is safe.
     const r = records[i]!;
-    const [x, y, z] = raDecZToCartesian(r.ra, r.dec, r.z);
+    let x: number;
+    let y: number;
+    let z: number;
+    const overrideHit =
+      overrides !== null ? catalogDistanceFor(r, overrides.cf4, overrides.hyperLeda) : null;
+    if (overrideHit !== null && overrideHit.distMpc < CUTOFF_MPC) {
+      // Inside-cutoff catalog match: use the measured distance for the
+      // cartesian position. The catalogued z still lands on
+      // cloud.spectroscopicZ[i] below, so the InfoCard's "Redshift z"
+      // line keeps showing the published value.
+      [x, y, z] = raDecDistToCartesian(r.ra, r.dec, overrideHit.distMpc);
+      overridesApplied++;
+    } else {
+      // No catalog match, or the match is past the cutoff (in which case
+      // the Hubble-flow distance is good enough that the extra dependency
+      // isn't worth it — see CUTOFF_MPC docstring).
+      [x, y, z] = raDecZToCartesian(r.ra, r.dec, r.z);
+    }
     cloud.objIDs[i] = r.objID;
     cloud.positions[i * 3 + 0] = x;
     cloud.positions[i * 3 + 1] = y;
@@ -140,12 +188,18 @@ export function recordsToCloud(records: ParsedRecord[]): GalaxyCatalog {
     // the full enum.
     cloud.parentSurveyByte[i] = r.parentSurveyByte;
     // Catalogued spectroscopic redshift, stored separately from
-    // position so the InfoCard can show the real catalog value even
-    // when sub-plan 04 wires a CF4 / HyperLEDA distance override (the
-    // override changes |position| but NOT the published z). Today, no
-    // override is applied yet, so spectroscopicZ equals the z used
-    // for the cartesian conversion above.
-    cloud.spectroscopicZ[i] = r.z;
+    // position so the InfoCard shows the published catalog value even
+    // when the CF4 / HyperLEDA override above replaces position with a
+    // measured distance. We read from r.spectroscopicZ (not r.z) so a
+    // future override that wants to *change* r.z (e.g. a
+    // peculiar-velocity correction) doesn't accidentally leak into the
+    // InfoCard's display channel.
+    cloud.spectroscopicZ[i] = r.spectroscopicZ;
+  }
+  if (overrides !== null && overridesApplied > 0) {
+    process.stderr.write(
+      `  local-volume override: ${overridesApplied.toLocaleString()} of ${count.toLocaleString()} positions replaced (CF4 / HyperLEDA)\n`,
+    );
   }
   return cloud;
 }
@@ -434,6 +488,13 @@ async function runCli(): Promise<void> {
     process.stderr.write(`warning: ${ledaPath} not present — GLADE orientation = fallback only\n`);
   }
 
+  // CF4 + HyperLEDA-mod0 indices for the local-volume distance override
+  // (galaxies inside CUTOFF_MPC). loadCf4CatalogIndex is missing-file
+  // tolerant — a fresh checkout without the raw CF4 download still
+  // produces .bin outputs, just without the override fired.
+  const cf4Index = loadCf4CatalogIndex();
+  const overrides: LocalVolumeOverrides = { cf4: cf4Index, hyperLeda: leda };
+
   process.stderr.write('parsing SDSS…\n');
   const sdss = loadOrEmpty(args.sdss, parseSdssCsv);
   process.stderr.write('parsing 2MRS…\n');
@@ -583,7 +644,7 @@ async function runCli(): Promise<void> {
       const slice =
         target === undefined ? records : subsampleByAbsMag(records, target);
 
-      const cloud = recordsToCloud(slice);
+      const cloud = recordsToCloud(slice, overrides);
       const buf = encodeGalaxyCatalog(cloud);
       const outPath = resolve(outDir, filename);
       writeFileSync(outPath, Buffer.from(buf));
