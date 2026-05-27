@@ -205,6 +205,33 @@ export const RAW_DATA = {
     description:
       'Cosmicflows-4 raw-data directory. Holds the density .npy + future per-galaxy distance table.',
   },
+  'cf4.table2': {
+    path: 'data/raw/cf4/table2.dat',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'CF-4 homogenised distance table (Tully+ 2023, ~55,877 rows). Fixed-width ASCII. Downloaded by fetchCosmicflows4.',
+    upstream: 'https://cdsarc.cds.unistra.fr/ftp/J/ApJ/944/94/table2.dat',
+    fetcher: 'tools/fetch/fetchCosmicflows4.ts',
+    readme: 'cf4.readme',
+  },
+  'cf4.readme': {
+    path: 'data/raw/cf4/ReadMe',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'CDS Vizier ReadMe for J/ApJ/944/94 — column-offset spec for table2.dat. Downloaded alongside the table.',
+    upstream: 'https://cdsarc.cds.unistra.fr/ftp/J/ApJ/944/94/ReadMe',
+    fetcher: 'tools/fetch/fetchCosmicflows4.ts',
+  },
+  'cf4.sha256': {
+    path: 'data/raw/cf4/table2.dat.sha256',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'SHA-256 sidecar for table2.dat — committed so the parser can detect truncated or stale downloads.',
+    fetcher: 'tools/fetch/fetchCosmicflows4.ts',
+  },
 
   // ─── MCPM Cosmic Web (SDSS DR17 Cosmic Slime VAC) ─────────────────────
 

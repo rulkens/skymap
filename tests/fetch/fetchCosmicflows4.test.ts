@@ -10,9 +10,9 @@ import {
 } from '../../tools/fetch/fetchCosmicflows4';
 
 describe('Cosmicflows-4 fetcher URLs', () => {
-  it('points at the CDS Vizier table for J/ApJ/944/94', () => {
+  it('points at the gzipped CDS Vizier table for J/ApJ/944/94 (CDS serves only .gz)', () => {
     expect(CF4_TABLE_URL).toBe(
-      'https://cdsarc.cds.unistra.fr/ftp/J/ApJ/944/94/table2.dat',
+      'https://cdsarc.cds.unistra.fr/ftp/J/ApJ/944/94/table2.dat.gz',
     );
   });
 
