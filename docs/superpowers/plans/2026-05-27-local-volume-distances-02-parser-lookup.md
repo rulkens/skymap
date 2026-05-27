@@ -735,9 +735,13 @@ Append to `tools/parsers/cosmicflows4.ts`:
 
 ```typescript
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 
-const DEFAULT_CF4_PATH = 'data/raw/cf4/table2.dat';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
+
+// Resolved through the raw-data registry — see plan index's "Prerequisite"
+// section. The registry key `cf4.table2` must already exist by the time
+// this file is added.
+const DEFAULT_CF4_PATH = rawDataPath('cf4.table2');
 
 /**
  * Load and parse the CF4 catalog from disk, returning an empty index

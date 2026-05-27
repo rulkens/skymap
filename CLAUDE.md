@@ -145,6 +145,18 @@ Workers Assets has per-file and per-deploy size caps that the larger tiers (`gla
 
 ReadMes for the upstream catalogs live alongside each catalog (`data/raw/2mrs/J_ApJS_199_26_ReadMe`, `data/raw/glade/VII_281_ReadMe`). Always consult them for byte offsets when extending parsers. The canonical source-of-truth for every raw-data path is `tools/utils/io/rawDataRegistry.ts` — consumers call `rawDataPath('<key>')` rather than hard-coding paths.
 
+## Adding a new raw data source
+
+When a new catalog or dataset gets added to the build pipeline, follow this checklist so it slots into the existing conventions instead of inventing a parallel path-handling style.
+
+1. **Pick a per-catalog subdir** under `data/raw/<catalog>/` (lowercase, single word — e.g. `data/raw/cf4/`, `data/raw/hyperleda/`). Every loose file at `data/raw/` root is wrong — they all live in subdirs now.
+2. **Register every file** in `tools/utils/io/rawDataRegistry.ts`. Keys are dotted-lowercase `<catalog>.<artifact>` (e.g. `'cf4.table2'`, `'cf4.readme'`, `'cf4.sha256'`). For dynamically-named outputs (chunks, tier variants), register the directory as `<catalog>.dir` and let consumers `join(rawDataPath(...), <dynamic>)`. Fill in `source: 'committed' | 'gitignored'`, a one-line `description`, and optional `upstream` URL + `fetcher` script.
+3. **Consume via the registry.** Fetchers / parsers / build scripts call `rawDataPath('<catalog>.<artifact>')` — never `resolve('data/raw/<catalog>/<file>')`. If the consumer needs the path relative (e.g. for `wrangler --file`), use `RAW_DATA['<key>'].path`.
+4. **`.gitignore` exception** if the file is committed (small, hand-curated, or required-to-clone). The repo's `/data/` is gitignored wholesale; add `!/data/raw/<catalog>/<file>` near the existing exceptions and explain in a comment.
+5. **Provenance README** at `data/raw/<catalog>/README.md` documenting the upstream URL, the columns / byte layout, the fetch date, and the checksum (if any). Whitelist it via `!/data/raw/<catalog>/README.md` in `.gitignore`.
+
+A new fetcher script that mirrors `tools/fetch/fetchHyperLeda.ts` or `tools/fetch/fetch2massXsc.ts` is the easiest reference for "where does the new file get written, and how does the consumer find it." Both of those have already been migrated to the registry.
+
 ## Renderer quick map
 
 - **`pointRenderer.ts` + `shaders/points.wesl`**: instanced billboards. Vertex stride is 48 bytes / 12 slots (xyz, magnitude, colorIndex, kPerZ, axisRatio + sign-bit fallback flag, positionAngleDeg, diameterKpc, vMaxWeight, schechterRatio, angularDensityWeight). Identity is composed on the GPU from a per-draw `SourceUniforms.sourceCode` + `@builtin(instance_index)`, NOT baked per-vertex.
