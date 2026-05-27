@@ -45,8 +45,9 @@ import * as path from 'node:path';
 import { PNG } from 'pngjs';
 import { ATLAS_PX, ATLAS_FONT_SIZE, DISTANCE_RANGE_PX, FONTS, FONT_IDS } from '../../src/data/fonts';
 import type { FontId } from '../../src/data/fonts';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
 
-const RAW_FONTS_DIR = 'data/raw/fonts';
+const RAW_FONTS_DIR = rawDataPath('fonts.dir');
 const OUTPUT_DIR = 'public/fonts';
 
 /**

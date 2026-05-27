@@ -38,6 +38,7 @@ import { readNpy } from '../parsers/npyReader';
 import { f32ToF16Bits } from '../utils/math/floatHalf';
 import { encodeScalarField } from '../../src/data/scalarFieldFormat';
 import type { ScalarCube } from '../../src/@types/data/ScalarCube';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
 
 /**
  * Physical voxel edge length in Mpc.  CF4++ ships a 1000 Mpc box on a
@@ -227,7 +228,7 @@ export async function buildCf4Density(args: {
 // public/data/ for serving via Vite dev or R2 in production.
 async function main(): Promise<void> {
   await buildCf4Density({
-    npyPath: 'data/raw/cf4/d_mean_CF4pp.npy',
+    npyPath: rawDataPath('cf4.density-mean'),
     outPath: 'public/data/cf4_density.scfd',
   });
 }

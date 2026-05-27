@@ -77,6 +77,7 @@ import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { execSync } from 'node:child_process';
 import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
+import { RAW_DATA } from '../utils/io/rawDataRegistry';
 
 const DATA_DIR = 'public/data';
 const BUCKET = 'skymap-data';
@@ -144,12 +145,12 @@ const EXTRA_FILES: ExtraFile[] = [
   {
     // HyperLEDA position-angle + isophotal-diameter cache.
     // Built once by `npm run fetch-hyperleda` (~1 hour), then gzipped:
-    //   gzip -k -9 data/raw/hyperleda_pa.csv
+    //   gzip -k -9 data/raw/hyperleda/hyperleda_pa.csv
     // Contributors download it instead of re-fetching:
-    //   curl -L -o data/raw/hyperleda_pa.csv.gz \
+    //   curl -L -o data/raw/hyperleda/hyperleda_pa.csv.gz \
     //     https://skymap-data.rulkens.com/data/hyperleda_pa.csv.gz
-    //   gunzip data/raw/hyperleda_pa.csv.gz
-    localPath: 'data/raw/hyperleda_pa.csv.gz',
+    //   gunzip data/raw/hyperleda/hyperleda_pa.csv.gz
+    localPath: RAW_DATA['hyperleda.pa-gz'].path,
     r2Key: 'data/hyperleda_pa.csv.gz',
   },
   {
@@ -167,16 +168,16 @@ const EXTRA_FILES: ExtraFile[] = [
     // need).  Same EXTRA_FILES pattern as hyperleda_pa.csv.gz: a
     // slow-external-fetch artefact in data/raw/, not public/data/, so
     // the ALLOW filter doesn't see it.
-    localPath: 'data/raw/cf4/d_mean_CF4pp.npy',
-    r2Key: 'data/raw/cf4/d_mean_CF4pp.npy',
+    localPath: RAW_DATA['cf4.density-mean'].path,
+    r2Key: RAW_DATA['cf4.density-mean'].path,
   },
   ...([8, 4, 2] as const).map((factor) => ({
     // MCPM Cosmic Web .npy tier — block-averaged downsample of the SDSS
     // DR17 Cosmic Slime VAC trace.bin.bz2, produced by
     // `python tools/extractMcpmCube.py`. Contributors curl these instead
     // of installing pyslime + the 345 MB upstream blob.
-    localPath: `data/raw/mcpm/mcpm_sdss_d${factor}.npy`,
-    r2Key: `data/raw/mcpm/mcpm_sdss_d${factor}.npy`,
+    localPath: join(RAW_DATA['mcpm.dir'].path, `mcpm_sdss_d${factor}.npy`),
+    r2Key: join(RAW_DATA['mcpm.dir'].path, `mcpm_sdss_d${factor}.npy`),
   })),
 ];
 
@@ -302,7 +303,7 @@ async function main(): Promise<void> {
       console.log(`  ${localPath}`);
     }
     console.log(
-      '  To include, run `npm run fetch-hyperleda` then `gzip -k -9 data/raw/hyperleda_pa.csv`.',
+      '  To include, run `npm run fetch-hyperleda` then `gzip -k -9 data/raw/hyperleda/hyperleda_pa.csv`.',
     );
   }
 

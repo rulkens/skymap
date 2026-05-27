@@ -18,6 +18,8 @@
  */
 import { resolve } from 'node:path';
 
+import { RAW_DATA } from '../../utils/io/rawDataRegistry.js';
+
 export function curatedDir(repoRoot: string): string {
   return resolve(repoRoot, 'public/images/famous-curated');
 }
@@ -31,7 +33,7 @@ export function curatedTmpDir(repoRoot: string, id: string): string {
 }
 
 export function overrideIndexPath(repoRoot: string): string {
-  return resolve(repoRoot, 'data/famous_curated_overrides.json');
+  return resolve(repoRoot, RAW_DATA['famous.curated'].path);
 }
 
 export function atlasOutputPath(repoRoot: string, id: string): string {

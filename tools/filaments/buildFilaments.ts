@@ -66,9 +66,10 @@
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { resolve, dirname, basename } from 'node:path';
+import { resolve, dirname, basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { SourceType } from '../../src/@types/data/SourceType';
+import { rawDataPath } from '../utils/io/rawDataRegistry.js';
 
 import { decodeGalaxyCatalog } from '../../src/data/galaxyCatalogFormat.js';
 import { parseNDskl, skeletonToFilamentCloud } from '../parsers/ndskl.js';
@@ -1083,7 +1084,7 @@ async function main(): Promise<void> {
   // overwriting each other's ~1 GB Delaunay tessellations.  Re-running
   // the SAME source set with a different `--cut` reuses the cached
   // NDnet (delaunay_3D output is cut-independent).
-  const tsvPath = resolve(`data/raw/galaxies_${cachePrefix}.tsv`);
+  const tsvPath = join(rawDataPath('filaments.cache-dir'), `galaxies_${cachePrefix}.tsv`);
   writeTsvInput(tsvPath, weightedPositions, weightedCount);
   process.stderr.write(`  wrote ${tsvPath}\n`);
 

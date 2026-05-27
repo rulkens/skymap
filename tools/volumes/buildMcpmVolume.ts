@@ -19,10 +19,12 @@
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { readNpy } from '../parsers/npyReader';
 import { f32ToF16Bits } from '../utils/math/floatHalf';
 import { encodeScalarField } from '../../src/data/scalarFieldFormat';
 import type { ScalarCube } from '../../src/@types/data/ScalarCube';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
 
 /** Native MCPM cube dims per export_metadata.txt (X, Y, Z). */
 export const MCPM_BASE_DIMS: readonly [number, number, number] = [712, 1200, 728];
@@ -191,7 +193,7 @@ export async function buildMcpmVolume(args: {
 export async function buildMcpmTier(factor: 8 | 4 | 2): Promise<void> {
   const a = mcpmTierAnchors(factor);
   await buildMcpmVolume({
-    npyPath: `data/raw/mcpm/mcpm_sdss_d${factor}.npy`,
+    npyPath: join(rawDataPath('mcpm.dir'), `mcpm_sdss_d${factor}.npy`),
     outPath: `public/data/${MCPM_TIER_FILENAME[factor]}`,
     origin: a.origin,
     voxelSizeMpc: a.voxelSize,

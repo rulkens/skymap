@@ -124,7 +124,7 @@ export type TwoMrsResult = {
  *
  * The 2MRS catalog itself ships with neither a position angle nor a true
  * axis ratio; both have to come from the underlying 2MASS XSC, which we
- * pre-fetch into `data/raw/2mass_xsc_pa.csv` (see `tools/fetch2massXsc.ts`).
+ * pre-fetch into `data/raw/2mrs/2mass_xsc_pa.csv` (see `tools/fetch2massXsc.ts`).
  * Using a `Map` rather than, say, an `Object`/`Record<string, ...>` keeps
  * lookup O(1) for ~44k 2MRS rows × tens of thousands of XSC entries, and
  * sidesteps the prototype-pollution traps you get with key strings that
@@ -175,7 +175,7 @@ export function parseXscShapeCsv(rawText: string): XscShapeMap {
 }
 
 /**
- * Parse a 2MRS table-3 blob (`data/raw/2mrs_table3.dat`) into canonical
+ * Parse a 2MRS table-3 blob (`data/raw/2mrs/2mrs_table3.dat`) into canonical
  * records. See the module docstring for the byte layout, mapping rationale,
  * and skip rules.
  *

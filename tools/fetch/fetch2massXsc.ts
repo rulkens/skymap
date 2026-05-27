@@ -2,7 +2,7 @@
 /**
  * fetch2massXsc — pull `sup_phi` (PA) + `sup_ba` (b/a) from the 2MASS XSC
  * (VizieR table II/246/out) for every 2MASS ID listed in the local 2MRS
- * catalogue, and write the result to `data/raw/2mass_xsc_pa.csv`.
+ * catalogue, and write the result to `data/raw/2mrs/2mass_xsc_pa.csv`.
  *
  * Why a separate script (not part of buildAllBins): the fetch hits a
  * remote service, takes minutes, and produces a stable artefact. Build
@@ -36,6 +36,7 @@ import {
   appendFileSync,
 } from 'node:fs';
 import { readIdSet } from '../utils/io/readIdSet';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { resolve, dirname } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
@@ -100,8 +101,8 @@ async function readTwoMrsIds(path: string): Promise<string[]> {
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
-  const inputArg = argv.find((a) => !a.startsWith('--')) ?? 'data/raw/2mrs_table3.dat';
-  const outPath = resolve('data/raw/2mass_xsc_pa.csv');
+  const inputArg = argv.find((a) => !a.startsWith('--')) ?? rawDataPath('2mrs.table3');
+  const outPath = rawDataPath('2mrs.xsc-pa');
 
   process.stderr.write(`reading 2MRS IDs from ${inputArg}…\n`);
   const allIds = await readTwoMrsIds(resolve(inputArg));

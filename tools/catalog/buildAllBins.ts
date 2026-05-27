@@ -53,6 +53,7 @@ import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog.js';
 import { tierTarget, tierFilenameForSource } from '../../src/data/tierTargets.js';
 import type { Tier } from '../../src/@types/data/Tier.js';
 import { subsampleByAbsMag } from './subsampleByAbsMag.js';
+import { rawDataPath } from '../utils/io/rawDataRegistry.js';
 
 // Re-export so `tests/crossMatch.test.ts` and any other consumer can keep
 // using the documented `tools/buildAllBins` import path.
@@ -346,15 +347,15 @@ async function runCli(): Promise<void> {
 
   // Reasonable defaults so `npm run build-all` works with no flags after
   // the user drops fresh catalog files into the canonical paths:
-  //   - SDSS: newest `data/Skyserver_*.csv` by mtime (auto-picked)
-  //   - 2MRS: `data/raw/2mrs_table3.dat` (filename is stable on Vizier)
-  //   - GLADE: `data/raw/glade2.3.dat` (likewise)
+  //   - SDSS: newest `data/raw/sdss/Skyserver_*.csv` by mtime (auto-picked)
+  //   - 2MRS: `data/raw/2mrs/2mrs_table3.dat` (filename is stable on Vizier)
+  //   - GLADE: `data/raw/glade/glade2.3.dat` (likewise)
   //   - out-dir: `public/data` (Vite serves this at /data/* in the browser)
   // Each can be overridden with the matching --key flag.
-  const sdssArg = args.sdss || findLatestSdssCsv(resolve('data')) || '';
-  const twomrsArg = args.twomrs || 'data/raw/2mrs_table3.dat';
-  const gladeArg = args.glade || 'data/raw/glade2.3.dat';
-  const milliquasArg = args.milliquas || 'data/raw/milliquas/milliquas.txt';
+  const sdssArg = args.sdss || findLatestSdssCsv(rawDataPath('sdss.dir')) || '';
+  const twomrsArg = args.twomrs || rawDataPath('2mrs.table3');
+  const gladeArg = args.glade || rawDataPath('glade.v23');
+  const milliquasArg = args.milliquas || rawDataPath('milliquas.txt');
   const outDirArg = args['out-dir'] || 'public/data';
 
   if (sdssArg) {
@@ -363,7 +364,7 @@ async function runCli(): Promise<void> {
     );
   } else {
     process.stderr.write(
-      'warning: no SDSS CSV supplied AND no Skyserver_*.csv found in data/ — SDSS bin will be empty\n',
+      'warning: no SDSS CSV supplied AND no Skyserver_*.csv found in data/raw/sdss/ — SDSS bin will be empty\n',
     );
   }
 
@@ -407,7 +408,7 @@ async function runCli(): Promise<void> {
   // pipeline keeps working, just with hash-derived disk tilts instead of
   // measured ones. We log loud warnings rather than silently substituting,
   // so the operator sees exactly what they're getting.
-  const xscPath = resolve('data/raw/2mass_xsc_pa.csv');
+  const xscPath = rawDataPath('2mrs.xsc-pa');
   let xsc: XscShapeMap = new Map();
   try {
     xsc = parseXscShapeCsv(readFileSync(xscPath, 'utf8'));
@@ -416,7 +417,7 @@ async function runCli(): Promise<void> {
     process.stderr.write(`warning: ${xscPath} not present — 2MRS orientation = fallback only\n`);
   }
 
-  const ledaPath = resolve('data/raw/hyperleda_pa.csv');
+  const ledaPath = rawDataPath('hyperleda.pa');
   let leda: HyperLedaShapeMap = new Map();
   try {
     leda = parseHyperLedaCsv(readFileSync(ledaPath, 'utf8'));
