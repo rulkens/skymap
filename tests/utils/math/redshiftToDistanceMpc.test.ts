@@ -23,6 +23,17 @@ describe('redshiftToDistanceMpc', () => {
     expect(redshiftToDistanceMpc(0)).toBe(0);
   });
 
+  it('maps negative z to a negative (mirrored) distance, not the origin', () => {
+    // Regression: 2MRS keeps ~25 blueshifted nearby galaxies (M31 at
+    // cz ≈ -300 km/s → z ≈ -0.001, etc.). A `z <= 0 → 0` clause collapsed
+    // every one onto (0,0,0), stacking max-size sprites on the Milky Way.
+    // Negative z must fall back to the linear Hubble law with the sign
+    // preserved so the row mirrors through the origin instead.
+    const z = -0.001;
+    expect(redshiftToDistanceMpc(z)).toBeCloseTo(HUBBLE_DISTANCE_MPC * z, 6);
+    expect(redshiftToDistanceMpc(z)).toBeLessThan(0);
+  });
+
   it('approaches linear Hubble at small z', () => {
     // At z = 0.001 the leading-order ΛCDM correction is ~0.02% — well
     // within 1% of the linear-Hubble value.  Asserting in relative terms

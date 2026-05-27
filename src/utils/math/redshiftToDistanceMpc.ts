@@ -43,15 +43,26 @@ function eOfZ(z: number): number {
 }
 
 /**
- * Line-of-sight comoving distance in Mpc for redshift z ≥ 0.
+ * Line-of-sight comoving distance in Mpc for redshift z.
  *
- * Returns 0 at z = 0 exactly. Negative z (peculiar-velocity blueshift in
- * the Local Group) is treated as 0 — callers that need true blueshift
- * handling (2MRS Local Group rows) bake the position from `cz / H₀`
- * upstream and never reach this function.
+ * Returns 0 at z = 0 exactly.
+ *
+ * Negative z is a real, kept value: 2MRS preserves the peculiar-velocity
+ * blueshift of ~25 nearby galaxies (Local Group members like M31/M33 plus
+ * several Virgo galaxies whose infall velocity exceeds the Hubble flow).
+ * The ΛCDM comoving integral is only defined for z ≥ 0, but |z| there is
+ * tiny (< 0.002), so we fall back to the linear Hubble law — identical to
+ * ΛCDM at that scale — and KEEP THE SIGN. That yields a negative radius,
+ * mirroring the row through the origin exactly as the linear-distance
+ * pipeline did before the ΛCDM swap. Crucially it does NOT collapse the
+ * row onto the origin (which `return 0` would, stacking 25 max-size
+ * sprites on the Milky Way). Astrophysically-correct redshift-independent
+ * distances for the whole local volume are a separate effort — see
+ * `docs/superpowers/specs/2026-05-21-local-volume-distances.md`.
  */
 export function redshiftToDistanceMpc(z: number): number {
-  if (z <= 0) return 0;
+  if (z === 0) return 0;
+  if (z < 0) return HUBBLE_DISTANCE_MPC * z;
   if (!USE_LCDM_DISTANCES) return HUBBLE_DISTANCE_MPC * z;
 
   // Composite Simpson over [0, z] with SIMPSON_PANELS sub-intervals.
