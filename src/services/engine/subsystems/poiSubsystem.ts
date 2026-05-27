@@ -167,6 +167,25 @@ type CategoryStyle = {
   readonly markerMaxApparentRadiusPx: number;
   /** Smoothstep band width for the marker fade-out. */
   readonly markerMaxApparentFadeBandPx: number;
+  /**
+   * Apparent on-screen radius (pixels) below which the marker fades
+   * OUT.  Symmetric counterpart to `markerMaxApparentRadiusPx`: when
+   * the projected ring shrinks to a handful of pixels at far zoom the
+   * ring stops being a legible anchor and starts cluttering the view
+   * with sub-readable rings + floating labels.  Below this floor:
+   * alpha 0 (descriptor skipped).  In the band `[min, min +
+   * markerMinApparentFadeBandPx]`: smoothstep ramp from 0 → 1.  Above
+   * the band: full alpha (subject to the close-approach fade-out).
+   *
+   * Famous galaxies don't use this gate — their visibility is governed
+   * by the per-POI `minApparentSizePx` + `fadeBandPx` measured against
+   * the galaxy's own `apparentDiameterKpc`.  The field is still
+   * required on this type for shape uniformity; set famousGalaxy to a
+   * sentinel that never trips (e.g. 0 / 1).
+   */
+  readonly markerMinApparentRadiusPx: number;
+  /** Smoothstep band width for the marker fade-out at the far side. */
+  readonly markerMinApparentFadeBandPx: number;
   /** Drop-shadow outline (straight RGBA — renderer premultiplies). */
   readonly outlineColor: Vec4;
   /** Outline width as em-fraction. Capped at ~0.28 by atlas padding. */
@@ -206,6 +225,11 @@ export const POI_STYLES = {
     ringColor: hexToGl('#B39947'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
+    // Clusters span ~1–5 Mpc cores; at far zoom they're the first
+    // category to drop from legibility, so the floor sits higher than
+    // for superclusters / voids.
+    markerMinApparentRadiusPx: 12,
+    markerMinApparentFadeBandPx: 12,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
   },
@@ -223,6 +247,14 @@ export const POI_STYLES = {
     ringColor: hexToGl('#996B3666'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
+    // Superclusters span ~20–100 Mpc; their projected ring is huge
+    // even at far zoom, and a small-but-visible SC ring tends to wrap
+    // most of the viewport with sub-readable chrome.  Higher floor
+    // than clusters so they drop from the view a bit earlier — the
+    // proportionally larger structure earns a bigger pixel budget
+    // before it's worth drawing.
+    markerMinApparentRadiusPx: 28,
+    markerMinApparentFadeBandPx: 20,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
   },
@@ -241,6 +273,12 @@ export const POI_STYLES = {
     ringColor: hexToGl('#000000'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
+    // Famous galaxies skip produceMarkers (haloColor === null) and use
+    // their own per-POI minApparentSizePx + fadeBandPx gate in
+    // produceLabels.  These values are sentinels — a 0 / 1 ramp at the
+    // far end never visibly trips.
+    markerMinApparentRadiusPx: 0,
+    markerMinApparentFadeBandPx: 1,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
   },
@@ -260,6 +298,12 @@ export const POI_STYLES = {
     ringColor: hexToGl('#73B3D9'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
+    // Voids are the largest structure anchors (~30–100+ Mpc).  Same
+    // reasoning as superclusters: their projected ring wraps a huge
+    // chunk of the viewport at far zoom, so a higher floor avoids
+    // sub-readable chrome.  Matches the SC tuning.
+    markerMinApparentRadiusPx: 28,
+    markerMinApparentFadeBandPx: 20,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
   },
@@ -436,6 +480,25 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
           // happens to be mid-fade.
           fadeAlpha = Math.min(fadeAlpha, markerFadeOut);
         }
+        // Far-distance fade-out — mirrors the min-radius branch in
+        // produceMarkers so the label disappears together with its
+        // ring at far zoom.  Without this the ring fades but the text
+        // label keeps drawing at full alpha, leaving orphaned chrome
+        // when the camera pulls back from a structure.  Famous galaxies
+        // skip this block entirely (no markerRadiusMpc) — their own
+        // per-POI minApparentSizePx gate above handles the far-end fade.
+        if (apRadPx < style.markerMinApparentRadiusPx + style.markerMinApparentFadeBandPx) {
+          let minFadeOut: number;
+          if (apRadPx < style.markerMinApparentRadiusPx) {
+            minFadeOut = 0;
+          } else {
+            const t =
+              (apRadPx - style.markerMinApparentRadiusPx) / style.markerMinApparentFadeBandPx;
+            minFadeOut = t * t * (3 - 2 * t);
+          }
+          if (minFadeOut <= 0) continue;
+          fadeAlpha = Math.min(fadeAlpha, minFadeOut);
+        }
       }
 
       // Anchor-offset positioning + vertical marker line.  When the POI
@@ -579,13 +642,27 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
       }
       if (maxFadeAlpha <= 0) continue; // fully faded
 
-      // Apparent-size fade-IN band reuses produceLabels' logic — only
-      // applies when both minApparentSizePx AND apparentDiameterKpc are
-      // set.  For cluster / SC / void anchors neither is set, so the
-      // fade-in alpha defaults to 1 (always visible above 0 distance).
-      // Implementer note: if a future POI wants a min-size fade-in for
-      // markers, mirror the produceLabels logic here.
-      const minFadeAlpha = 1;
+      // Far-distance fade-out: symmetric counterpart to the close-
+      // approach maxFadeAlpha above.  When the projected ring shrinks
+      // past `markerMinApparentRadiusPx` the anchor stops being a
+      // legible structure marker — clusters become illegible chrome,
+      // labels float without a visible ring underneath them.  Smoothstep
+      // from 0 → 1 across the band so rings don't pop as the camera
+      // pulls back.  Same render-on-demand rationale as the max-radius
+      // fade: no `awake` signal — camera motion already wakes the loop.
+      let minFadeAlpha: number;
+      if (apparentRadiusPx < style.markerMinApparentRadiusPx) {
+        minFadeAlpha = 0;
+      } else if (
+        apparentRadiusPx < style.markerMinApparentRadiusPx + style.markerMinApparentFadeBandPx
+      ) {
+        const t =
+          (apparentRadiusPx - style.markerMinApparentRadiusPx) / style.markerMinApparentFadeBandPx;
+        minFadeAlpha = t * t * (3 - 2 * t);
+      } else {
+        minFadeAlpha = 1;
+      }
+      if (minFadeAlpha <= 0) continue;
 
       const fadeAlpha = Math.min(maxFadeAlpha, minFadeAlpha);
 
