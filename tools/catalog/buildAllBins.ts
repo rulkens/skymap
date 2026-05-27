@@ -43,6 +43,9 @@ import { parseMilliquas } from '../parsers/milliquas.js';
 import type { MilliquasParseResult } from '../parsers/milliquas.js';
 import type { ParsedRecord } from '../parsers/common.js';
 import { crossMatch } from './crossMatch.js';
+import { dropFamousMatches } from './dropFamousMatches.js';
+import type { FamousSkyPosition } from './dropFamousMatches.js';
+import { parseFamousSeed } from '../parsers/famousSeed.js';
 
 import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalogFormat.js';
 import { raDecZToCartesian } from '../../src/utils/math/index.js';
@@ -567,8 +570,42 @@ async function runCli(): Promise<void> {
   };
 
   process.stderr.write('cross-matching…\n');
-  const merged = crossMatch({ sdss, twoMrs, glade });
-  process.stderr.write(`  ${merged.length.toLocaleString()} records survived dedup\n`);
+  const mergedRaw = crossMatch({ sdss, twoMrs, glade });
+  process.stderr.write(`  ${mergedRaw.length.toLocaleString()} records survived dedup\n`);
+
+  // Drop catalog rows that match a famous-galaxy seed position. The famous
+  // layer (famous.bin, built later by buildFamous.ts) carries hand-curated
+  // entries for ~75 well-known galaxies with their own positions,
+  // thumbnails, and metadata. Without this dedup each famous galaxy
+  // renders twice — once from the catalog layer, once from the famous
+  // layer. Pre-local-volume-override the duplication was visually hidden
+  // (cz-mirrored catalog position vs curated famous position were Mpc
+  // apart); the CF4 override moves them ~0.03 Mpc apart, making the
+  // duplication visible.
+  //
+  // Threshold: 30 arcsec matches the famous-galaxy cross-match radius in
+  // buildFamous.ts so a famous entry that matched a catalog row via the
+  // xref will also be dropped here.
+  let famousPositions: ReadonlyArray<FamousSkyPosition> = [];
+  try {
+    const seedRaw = readFileSync(rawDataPath('famous.seed'), 'utf8');
+    famousPositions = parseFamousSeed(seedRaw).map((e) => ({ ra: e.ra, dec: e.dec }));
+    process.stderr.write(`  famous-seed dedup: ${famousPositions.length} reference positions loaded\n`);
+  } catch (err) {
+    process.stderr.write(
+      `  warning: famous seed not loadable (${(err as Error).message}) — skipping famous-vs-catalog dedup\n`,
+    );
+  }
+  const { kept: merged, dropped: famousDropped } = dropFamousMatches(
+    mergedRaw,
+    famousPositions,
+    30,
+  );
+  if (famousDropped > 0) {
+    process.stderr.write(
+      `  famous-seed dedup: dropped ${famousDropped.toLocaleString()} catalog rows that match a famous-seed position\n`,
+    );
+  }
 
   // Bucket the merged stream back out per source so we can write one
   // file per survey. Using a Map preserves insertion order, which keeps
