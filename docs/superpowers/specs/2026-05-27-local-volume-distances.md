@@ -175,41 +175,52 @@ Three identifiers do the heavy lifting:
 
 ## File-format impact
 
-None at the catalog layer — positions are already `Float32Array` xyz
-in Mpc; we're changing how they're computed, not how they're stored.
-A build pipeline change re-bakes `2mrs.bin` and `glade-{small,medium,
-large}.bin`; the format header version stays at v5.
+Positions stay `Float32Array` xyz in Mpc — we're changing how they're
+computed, not the position layout. But the catalogued redshift is no
+longer recoverable from `|position|` for local-volume rows (M31 at
+0.78 Mpc has |pos|=0.78 → z=+0.00018, not the published −0.001), so
+the bin needs to carry the spectroscopic z separately for InfoCard
+display. The plan must decide whether to spend a field (v6 format
+bump) or reuse spare bits on existing fields; this is a real
+design call, not a pure pipeline change.
+
+Build pipeline re-bakes `2mrs.bin` and `glade-{small,medium,large}.bin`
+in either case.
 
 The CF4 + HyperLEDA distance lookup table itself is a build-time
 artifact, not a runtime asset — it doesn't ship to R2.
 
-## Open questions to resolve before writing the plan
+## Resolved decisions
 
-1. **Exact `CUTOFF_MPC` value.** Proposed 30 Mpc gives ~15 % Hubble
-   error at the boundary. Trade-off: lower cutoff = fewer catalog
-   lookups but more peculiar-velocity error near the boundary; higher
-   cutoff = more lookups, more rows depending on CF4 coverage which
-   thins out past z ≈ 0.03.
-2. **GLADE coverage.** GLADE itself drops `z ≤ 0` rows in the parser
-   (so it doesn't carry the Local Group at all). Do we want to *add*
-   missing local-volume galaxies from CF4 directly, or only correct
-   existing rows? Probably the former for completeness, but
-   that bleeds into "becoming a curator" rather than a renderer.
-3. **2MRS rows with no CF4 / HyperLEDA distance.** These are likely
-   faint nearby satellites. Stay-as-cz (current behaviour after #186's
-   linear-sign restore) or drop them? Probably keep — the linear
-   approximation in mirrored space is at least *somewhere*, and
-   dropping hides real galaxies.
-4. **Where the CF4 fetcher lives.** Mirrors `tools/fetch/fetchHyperLeda.ts`?
-   Or a one-shot CDS download checked into `data/raw/`? The HyperLEDA
-   pattern is a long-running resume-able fetcher; CF4 is a single
-   ~100 MB file that's simpler as a manual fetch + parse.
-5. **Round-trip behaviour.** `cartesianToRaDecZ` decodes Cartesian
-   back to a redshift for the InfoCard's "z =" row. If we place
-   M31 at its true 0.78 Mpc, the displayed z will be ~+0.00018 (from
-   `d/H_distance`) — not the published −0.001. Probably OK (the
-   InfoCard would clearly be displaying the catalogued *position*'s
-   implied redshift, not the spectroscopic z), but worth a callout.
+These were the open questions on the 2026-05-27 draft; resolved in a
+grill session with the maintainer the same day.
+
+1. **`CUTOFF_MPC = 30 Mpc.`** Hubble-flow error drops to ~15 % at the
+   boundary (peculiar velocities of ±300 km/s vs. Hubble cz of
+   ~2100 km/s) — the regime where the catalog finally stops winning
+   by a clear margin. Covers Local Group, Virgo, M81 group, all of
+   CF4's dense inner shell.
+2. **CF4 overrides existing rows only — no new galaxies.** Skymap
+   stays a renderer, not a curator. 2MRS already carries the Local
+   Group (including the negative-cz rows since #186), and CF4 supplies
+   better distances for cross-matched rows. Adding CF4-only galaxies
+   would raise source-of-truth questions for fields CF4 doesn't
+   publish (g/r/i mags) and bleed into curation.
+3. **Unmatched local-volume rows stay on cz-derived distance.** The
+   linear-sign-restored fallback from #186 is at least *somewhere*
+   plausible; dropping rows hides real galaxies. The error is honest
+   (mirrored or peculiar-velocity-perturbed) rather than collapsed.
+4. **CF4 fetcher is a simple long-running script.** Single ~100 MB
+   file behind one URL, but written as a resumable fetcher (chunked
+   download with on-disk progress) so a partial download survives a
+   network blip. Pattern follows `tools/fetch/fetchHyperLeda.ts` but
+   simpler — no pagination, just resume-on-restart.
+5. **Store original cz/z on the row; InfoCard displays the catalogued
+   value, not the position-derived one.** Spectroscopic z is what
+   astronomers expect to see (matches NED/SIMBAD); position is for
+   rendering. These are different concepts and must be stored
+   independently — see the *File-format impact* section above for the
+   design choice the plan needs to make.
 
 ## Estimated lift
 
