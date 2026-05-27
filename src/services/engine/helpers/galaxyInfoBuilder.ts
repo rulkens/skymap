@@ -131,7 +131,19 @@ export function buildGalaxyInfo(
 
   // Recover sky coordinates from the Cartesian position stored in the cloud.
   // cartesianToRaDecZ inverts the Hubble-law conversion used at import time.
-  const [ra, dec, redshift] = cartesianToRaDecZ(px, py, pz);
+  // We deliberately discard its `z` channel: for local-volume galaxies the
+  // build pipeline replaced position with a CF4 / HyperLEDA measured distance,
+  // and inverting that distance back to a Hubble z gives a wrong-signed
+  // nonsense value (e.g. M31 at 0.78 Mpc would read +0.00018, not the
+  // catalogued −0.001). The catalogued spec-z lives on `cloud.spectroscopicZ`.
+  const [ra, dec, fallbackRedshift] = cartesianToRaDecZ(px, py, pz);
+  const storedZ = cloud.spectroscopicZ[idx]!;
+  // NaN is the documented "no published spec-z" sentinel (Famous-galaxy
+  // distance-only rows) — fall back to the cartesian-derived value so the
+  // InfoCard never shows NaN to the user. For every other row the stored
+  // and fallback values agree modulo float32 precision; the local-volume
+  // override is the only place they diverge meaningfully.
+  const redshift = Number.isFinite(storedZ) ? storedZ : fallbackRedshift;
 
   // Euclidean distance in Mpc — same as the comoving distance under Hubble's law.
   const distanceMpc = Math.sqrt(px * px + py * py + pz * pz);
