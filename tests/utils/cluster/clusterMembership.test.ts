@@ -28,6 +28,7 @@ function makeCatalog(positions: ReadonlyArray<readonly [number, number, number]>
     magU: z, magG: z, magR: z, magI: z, magZ: z,
     axisRatio: z, positionAngleDeg: z, diameterKpc: z,
     classByte: zb, parentSurveyByte: zb,
+    spectroscopicZ: z,
   };
 }
 

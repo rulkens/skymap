@@ -163,6 +163,7 @@ async function main(): Promise<void> {
     // parent-survey prefix; both bytes stay 0.
     classByte: new Uint8Array(count),
     parentSurveyByte: new Uint8Array(count),
+    spectroscopicZ: new Float32Array(count),
   };
   const xrefs: Record<string, Xref | null> = {};
   const metaByIdx: Array<{
