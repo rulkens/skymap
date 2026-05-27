@@ -29,6 +29,7 @@ function rec(source: SourceType, ra: number, dec: number, z: number, objID = 0n)
     ra,
     dec,
     z,
+    spectroscopicZ: z,
     magU: NaN,
     magG: 18,
     magR: NaN,

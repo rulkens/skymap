@@ -28,6 +28,7 @@ function rec(overrides: Partial<ParsedRecord>): ParsedRecord {
     ra: 0,
     dec: 0,
     z: 0.05,
+    spectroscopicZ: 0.05,
     magU: NaN,
     magG: 18,
     magR: NaN,

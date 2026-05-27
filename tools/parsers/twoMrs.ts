@@ -316,6 +316,7 @@ export function parseTwoMrs(rawText: string, xsc: XscShapeMap = new Map()): TwoM
       ra,
       dec,
       z: cz / C_KM_S,
+      spectroscopicZ: cz / C_KM_S,
       magU: NaN,
       magG: jc,
       magR: hc,

@@ -181,6 +181,7 @@ export function parseMilliquas(rawText: string): MilliquasParseResult {
       ra,
       dec,
       z,
+      spectroscopicZ: z,
       magU: NaN,
       magG,
       magR,

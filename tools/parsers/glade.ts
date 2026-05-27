@@ -428,6 +428,7 @@ export function parseGladeLine(
     ra,
     dec,
     z,
+    spectroscopicZ: z,
     // Heterogeneous-photometry mapping — see module docstring.
     magU: NaN,
     magG: bmag,
