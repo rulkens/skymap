@@ -71,7 +71,7 @@ export const RAW_DATA = {
   // ─── 2MRS — Huchra+ 2012 ───────────────────────────────────────────────
 
   '2mrs.table3': {
-    path: 'data/raw/2mrs_table3.dat',
+    path: 'data/raw/2mrs/2mrs_table3.dat',
     kind: 'file',
     source: 'committed',
     description:
@@ -80,14 +80,14 @@ export const RAW_DATA = {
     readme: '2mrs.readme',
   },
   '2mrs.readme': {
-    path: 'data/raw/J_ApJS_199_26_ReadMe',
+    path: 'data/raw/2mrs/J_ApJS_199_26_ReadMe',
     kind: 'file',
     source: 'committed',
     description:
       'VizieR ReadMe for 2MRS — byte-offset specs the table-3 parser relies on.',
   },
   '2mrs.xsc-pa': {
-    path: 'data/raw/2mass_xsc_pa.csv',
+    path: 'data/raw/2mrs/2mass_xsc_pa.csv',
     kind: 'file',
     source: 'committed',
     description:
@@ -98,7 +98,7 @@ export const RAW_DATA = {
   // ─── GLADE v2.3 — Dálya+ 2018 ──────────────────────────────────────────
 
   'glade.v23': {
-    path: 'data/raw/glade2.3.dat',
+    path: 'data/raw/glade/glade2.3.dat',
     kind: 'file',
     source: 'committed',
     description:
@@ -107,7 +107,7 @@ export const RAW_DATA = {
     readme: 'glade.readme',
   },
   'glade.readme': {
-    path: 'data/raw/VII_281_ReadMe',
+    path: 'data/raw/glade/VII_281_ReadMe',
     kind: 'file',
     source: 'committed',
     description: 'VizieR ReadMe for GLADE v2.3 — byte-offset specs for the parser.',
@@ -116,7 +116,7 @@ export const RAW_DATA = {
   // ─── HyperLEDA — orientation + designation cross-walk ─────────────────
 
   'hyperleda.pa': {
-    path: 'data/raw/hyperleda_pa.csv',
+    path: 'data/raw/hyperleda/hyperleda_pa.csv',
     kind: 'file',
     source: 'gitignored',
     description:
@@ -124,21 +124,21 @@ export const RAW_DATA = {
     fetcher: 'tools/fetch/fetchHyperLeda.ts',
   },
   'hyperleda.pa-gz': {
-    path: 'data/raw/hyperleda_pa.csv.gz',
+    path: 'data/raw/hyperleda/hyperleda_pa.csv.gz',
     kind: 'file',
     source: 'committed',
     description:
       'Gzipped copy of `hyperleda.pa`, shipped to R2 so contributors without the full fetcher cache can still run the GLADE orientation step.',
   },
   'hyperleda.famous-cache': {
-    path: 'data/raw/hyperleda_famous_cache.tsv',
+    path: 'data/raw/hyperleda/hyperleda_famous_cache.tsv',
     kind: 'file',
     source: 'committed',
     description:
       'HyperLEDA per-galaxy pull for the curated Famous list — names, alt designations, distance modulus.',
   },
   'hyperleda.designations-dir': {
-    path: 'data/raw',
+    path: 'data/raw/hyperleda',
     kind: 'directory',
     source: 'gitignored',
     description:
@@ -149,11 +149,18 @@ export const RAW_DATA = {
   // ─── SDSS — manual SkyServer SQL export ────────────────────────────────
 
   'sdss.skyserver': {
-    path: 'data/Skyserver_SQL5_3_2026 6_09_20 PM.csv',
+    path: 'data/raw/sdss/Skyserver_SQL5_3_2026 6_09_20 PM.csv',
     kind: 'file',
     source: 'committed',
     description:
-      'Active SDSS SkyServer CSV export. Auto-picked by mtime from data/Skyserver_*.csv at build time; this entry pins the current file.',
+      'Active SDSS SkyServer CSV export. Auto-picked by mtime from data/raw/sdss/Skyserver_*.csv at build time; this entry pins the current file.',
+  },
+  'sdss.dir': {
+    path: 'data/raw/sdss',
+    kind: 'directory',
+    source: 'committed',
+    description:
+      'SDSS SkyServer CSV exports. The build pipeline auto-picks the newest matching `Skyserver_*.csv` from here.',
   },
 
   // ─── Famous (curated catalog) ──────────────────────────────────────────
@@ -173,7 +180,7 @@ export const RAW_DATA = {
       'Hand-curated override index produced by the famous-galaxy curator UI — per-galaxy crop/orientation tweaks.',
   },
   'famous.wikipedia-cache': {
-    path: 'data/raw/wikipedia_famous_cache.json',
+    path: 'data/raw/famous/wikipedia_famous_cache.json',
     kind: 'file',
     source: 'committed',
     description:
@@ -229,7 +236,7 @@ export const RAW_DATA = {
   // ─── DisPerSE filament input caches ───────────────────────────────────
 
   'filaments.cache-dir': {
-    path: 'data/raw',
+    path: 'data/raw/filaments',
     kind: 'directory',
     source: 'gitignored',
     description:
