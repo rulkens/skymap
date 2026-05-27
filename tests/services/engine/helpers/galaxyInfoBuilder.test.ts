@@ -152,6 +152,13 @@ describe('buildGalaxyInfo — SDSS source', () => {
     cloud.magR[0] = 17.0;
     cloud.magI[0] = 16.7;
     cloud.magZ[0] = 16.5;
+    // Spectroscopic z — same value the cartesian inversion would produce for
+    // this position. The build pipeline writes it into the .bin from the
+    // parser-supplied catalog value (see local-volume-distances spec); the
+    // InfoCard reads from here rather than re-inverting position, so the
+    // fixture has to set it explicitly.
+    const [, , czForPosition] = cartesianToRaDecZ(100, 0, 0);
+    cloud.spectroscopicZ[0] = czForPosition;
     // axisRatio / pa default to (0.7, 45) which is *not* the deterministic
     // fallback for objID=1, so provenance should resolve to "SDSS exp+deV blend".
 

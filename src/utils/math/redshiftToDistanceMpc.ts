@@ -56,9 +56,16 @@ function eOfZ(z: number): number {
  * mirroring the row through the origin exactly as the linear-distance
  * pipeline did before the ΛCDM swap. Crucially it does NOT collapse the
  * row onto the origin (which `return 0` would, stacking 25 max-size
- * sprites on the Milky Way). Astrophysically-correct redshift-independent
- * distances for the whole local volume are a separate effort — see
- * `docs/superpowers/specs/2026-05-21-local-volume-distances.md`.
+ * sprites on the Milky Way).
+ *
+ * Astrophysically-correct redshift-independent distances inside ~30 Mpc
+ * are now applied at build time via the CF4 / HyperLEDA override in
+ * `tools/catalog/buildAllBins.ts` (see
+ * `docs/superpowers/specs/2026-05-27-local-volume-distances.md`). This
+ * function still runs for every row past `CUTOFF_MPC` and for
+ * unmatched-inside-cutoff rows (Resolved decision #3); the linear-sign
+ * fallback for z < 0 stays in place as the safety net for rows the
+ * override didn't catch.
  */
 export function redshiftToDistanceMpc(z: number): number {
   if (z === 0) return 0;

@@ -16,6 +16,7 @@ function rec(partial: Partial<ParsedRecord>): ParsedRecord {
     ra: 0,
     dec: 0,
     z: 0,
+    spectroscopicZ: 0,
     magU: NaN,
     magG: NaN,
     magR: NaN,

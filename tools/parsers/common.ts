@@ -68,6 +68,26 @@ export type ParsedRecord = {
   dec: number; // degrees, J2000
   z: number; // redshift (spectroscopic or photometric depending on survey)
   /**
+   * Catalogued spectroscopic redshift, preserved verbatim from the
+   * source row. Today this duplicates `z` for every parser — they're
+   * the same number.
+   *
+   * The two fields diverge only inside the build pipeline's
+   * local-volume override (see
+   * docs/superpowers/specs/2026-05-27-local-volume-distances.md):
+   * `z` continues to be the "use this for position when no override
+   * fires" channel, while `spectroscopicZ` is the "always-show-this
+   * in the InfoCard" channel. Keeping them separated at the parser
+   * boundary means a future override that needs to *change* z (e.g.
+   * a peculiar-velocity-corrected value) doesn't have to wrestle with
+   * "but which z does the InfoCard show?".
+   *
+   * NaN is the legal "no published spec-z" sentinel — relevant for a
+   * handful of Famous-galaxy fixture rows that have a measured
+   * distance but no published spectroscopic redshift.
+   */
+  spectroscopicZ: number;
+  /**
    * Five-band apparent magnitudes in the SDSS *ugriz* photometric system.
    * NaN means the survey does not provide that band (e.g. 2MRS only has
    * near-IR JHK photometry, so all five SDSS bands are NaN for 2MRS rows).

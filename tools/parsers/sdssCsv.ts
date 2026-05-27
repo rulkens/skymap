@@ -286,6 +286,7 @@ export function parseSdssCsv(rawText: string): SdssCsvResult {
       ra,
       dec,
       z,
+      spectroscopicZ: z,
       magU,
       magG,
       magR,
