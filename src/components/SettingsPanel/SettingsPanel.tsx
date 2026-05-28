@@ -93,6 +93,7 @@ import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowDat
 import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
 import { VolumeFieldRow } from './VolumeFieldRow';
 import { Panel } from '../common/Panel/Panel';
+import Button from '../common/Button/Button';
 import { CollapsibleSection } from './CollapsibleSection';
 import { TierChip } from './TierChip';
 import styles from './SettingsPanel.module.css';
@@ -882,9 +883,9 @@ export function SettingsPanel({
           </div>
           {!spaceMouseConnected && onConnectSpaceMouse && (
             <div className={styles.panelRow}>
-              <button type="button" className={styles.button} onClick={onConnectSpaceMouse}>
+              <Button className={styles.resetButton} onClick={onConnectSpaceMouse}>
                 Connect SpaceMouse
-              </button>
+              </Button>
             </div>
           )}
           {spaceMouseConnected &&
@@ -922,9 +923,9 @@ export function SettingsPanel({
         panel's primary "I'm lost, take me home" affordance.
       */}
       <div className={styles.panelDivider} role="separator" />
-      <button type="button" className={styles.button} onClick={onResetCamera}>
+      <Button className={styles.resetButton} onClick={onResetCamera}>
         Reset camera
-      </button>
+      </Button>
     </Panel>
   );
 }

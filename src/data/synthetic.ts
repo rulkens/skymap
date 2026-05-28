@@ -169,20 +169,23 @@ export function generateSyntheticCloud(count: number, seed = 42): GalaxyCatalog 
     magZ[i] = iMag - rand() * 0.4;
   }
 
-  // Orientation: synthetic clouds ship NaN for both fields. NaN is the
-  // honest "no measurement" sentinel — synthetic galaxies aren't built
-  // through the offline pipeline (which is where fallbackOrientation
-  // would normally fill in deterministic values), so anything else would
-  // be a lie. The renderer treats NaN as "draw as a round point" via
-  // the same code path that handles missing-photometry NaNs; downstream
-  // consumers can detect the absence with Number.isNaN.
+  // Orientation: synthetic clouds ship constant b/a=1 (perfect circle)
+  // and PA=0.  The shader's elliptical-mask path is NOT NaN-safe for
+  // positionAngleDeg — `cos(NaN)` / `sin(NaN)` propagate through the
+  // fragment's rotation + r² test, the `r2 > 1.0` discard silently
+  // skips (all NaN comparisons return false in IEEE 754), and the
+  // billboard rasterises as a black square instead of a soft disk.
+  // Real catalogs avoid this because the offline pipeline fills
+  // missing PA via `fallbackOrientation`; synthetic is the only source
+  // generated at runtime and so must emit finite sentinels itself.
   //
-  // (A future enhancement could plumb the seeded RNG through here to
-  // synthesise plausible b/a and PA distributions for visual testing of
-  // the disk-rendering path, but that's a separate decision from the
-  // catalog-pipeline work in the galaxy-orientation-disks plan.)
-  const axisRatio = new Float32Array(count).fill(NaN);
-  const positionAngleDeg = new Float32Array(count).fill(NaN);
+  // Choosing 1.0 / 0 (rather than `fallbackOrientation(objID, ra, dec)`)
+  // matches the original intent — "no measurement, render as a round
+  // point" — without introducing variable orientations that would
+  // change every frame's pixel layout and undermine the deterministic-
+  // PRNG promise above.
+  const axisRatio = new Float32Array(count).fill(1.0);
+  const positionAngleDeg = new Float32Array(count).fill(0);
 
   // Diameter: synthetic galaxies have no real photometric measurement, so
   // we fill with the project-wide DEFAULT_GALAXY_DIAMETER_KPC = 30. We do

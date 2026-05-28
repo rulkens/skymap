@@ -299,28 +299,10 @@
    `VolumeFieldRow.module.css` alongside the component. */
 
 /*
- * Action buttons rendered inside the panel body — currently "Reset camera"
- * (footer) and the SpaceMouse connect button.  Both share the legacy
- * `.settingsPanel button` look from before the Panel chrome refactor;
- * we apply this class explicitly now rather than via a structural selector.
+ * Action buttons inside the panel body (Reset camera, SpaceMouse connect)
+ * use the shared Button primitive.  This class is the per-panel override
+ * for full-width layout — Button itself ships content-width.
  */
-.button {
+.resetButton {
   width: 100%;
-  padding: var(--space-3) var(--space-5);
-  border: 1px solid var(--border-control);
-  border-radius: var(--radius-md);
-  background: var(--surface-control);
-  color: var(--color-fg);
-  font: inherit;
-  cursor: pointer;
-  letter-spacing: var(--letter-spacing-mid);
-}
-
-.button:hover {
-  background: var(--surface-control-hover);
-  border-color: var(--border-hover);
-}
-
-.button:active {
-  background: var(--surface-control-active);
 }

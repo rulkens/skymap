@@ -2,21 +2,24 @@
  * `useFamousMeta` — load the famous-galaxy `famous_meta.json` sidecar once
  * at mount.  The engine *also* loads it internally (via its `famousMeta`
  * AssetSlot), but exposing a parallel copy here lets the React layer
- * (CommandPalette, deep-link drain) read it without reaching into engine
- * private state.  Double-loading is cheap because the browser caches the
- * JSON fetch — both readers hit the same response.
+ * (CommandPalette, deep-link drain, splash gating) read it without
+ * reaching into engine private state.  Double-loading is cheap because
+ * the browser caches the JSON fetch — both readers hit the same response.
  *
- * Why a hook rather than a top-level await or a context provider?
- * `famousMetaFetcher` is async; we need the React render cycle to pick
- * up the result, which means state.  And every call site is a single
- * React tree, so a hook is lighter than a Context.
+ * ### Why we expose a `ready` flag
+ *
+ * The splash gating (`useSplash`) needs to know when the famous-meta
+ * fetch has settled so it can activate the Tour CTA (which depends on
+ * famous-meta lookups to anchor the tour beats).  `ready` flips true
+ * on both success AND swallowed-error paths so a deployment without a
+ * famous_meta.json doesn't deadlock the splash — same fail-soft
+ * contract as the empty-state defaults below.
  *
  * ### Why catch on error rather than throw?
  *
  * The fetcher throws on HTTP failure so retry policy can branch on status.
- * We replicate the "absent file = feature off" UX here at the React seam
- * by catching and falling through to an empty array, matching the engine's
- * own subscriber-side error handler in `engine.ts`.
+ * We catch here and fall through to empty state + `ready=true`, matching
+ * the engine's own subscriber-side error handler in `engine.ts`.
  */
 
 import { useEffect, useState } from 'react';
@@ -26,6 +29,7 @@ import type { UseFamousMetaReturn } from '../@types/engine/UseFamousMetaReturn';
 
 export function useFamousMeta(): UseFamousMetaReturn {
   const [famousMeta, setFamousMeta] = useState<readonly FamousMetaEntry[]>([]);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -36,15 +40,16 @@ export function useFamousMeta(): UseFamousMetaReturn {
     famousMetaFetcher({ tier: 'medium' }, ac.signal, () => {})
       .then((sc) => {
         setFamousMeta(sc.meta);
+        setReady(true);
       })
       .catch(() => {
-        // Absent / failed sidecar leaves the empty default in place so
-        // the CommandPalette and deep-link drain operate without enriched
-        // text rather than crashing.  Same fail-soft contract the engine's
-        // own slot subscriber implements (see engine.ts).
+        // Absent / failed sidecar leaves the empty default in place AND
+        // still flips `ready` to true so the splash gate doesn't deadlock.
+        // Same fail-soft contract the engine's own slot subscriber implements.
+        setReady(true);
       });
     return () => ac.abort();
   }, []);
 
-  return { famousMeta };
+  return { famousMeta, ready };
 }

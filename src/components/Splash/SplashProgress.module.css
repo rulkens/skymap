@@ -1,0 +1,61 @@
+/* src/components/Splash/SplashProgress.module.css */
+
+.root {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 101;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: var(--space-3);
+}
+
+.text {
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--color-fg-muted);
+  text-align: center;
+}
+
+.line {
+  position: relative;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--color-accent);
+  width: 0;
+  transition: width 0.2s ease-out;
+}
+
+.indeterminate {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 30%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-accent),
+    transparent
+  );
+  animation: splashProgressSweep 1.4s ease-in-out infinite;
+}
+
+@keyframes splashProgressSweep {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .indeterminate { animation: none; }
+}

@@ -20,6 +20,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import cx from 'classnames';
 import { useEngine } from '../../hooks/useEngine';
+import { useSplash } from '../../hooks/useSplash';
 import { StatusBar } from '../StatusBar/StatusBar';
 import { LoadingBar } from '../LoadingBar/LoadingBar';
 import { InfoCard } from '../InfoCard/InfoCard';
@@ -30,6 +31,8 @@ import StatsPanel from '../StatsPanel/StatsPanel';
 import { CommandPalette } from '../CommandPalette/CommandPalette';
 import SearchTrigger from '../SearchTrigger/SearchTrigger';
 import AutoRotateToggle from '../AutoRotateToggle/AutoRotateToggle';
+import Splash from '../Splash/Splash';
+import AboutPill from '../Splash/AboutPill';
 import { MILKY_WAY_ENTRY, MILKY_WAY_ID } from '../../data/milkyWayEntry';
 import appStyles from './App.module.css';
 import { useUrlSync } from '../../hooks/useUrlSync';
@@ -120,7 +123,12 @@ export function App(): React.ReactElement {
   // `d` toggles the debug panel.
   const [debugPanelOpen, setDebugPanelOpen] = useState(false);
 
-  const { famousMeta } = useFamousMeta();
+  const { famousMeta, ready: famousMetaReady } = useFamousMeta();
+
+  // Splash hook owns visibility, readiness gate (engine + famous-meta),
+  // localStorage versioning, deep-link bypass, 8 s Continue-anyway timer,
+  // and dismiss/reopen.  See `useSplash.ts` for rationale.
+  const splash = useSplash({ status, loadProgress, famousMetaReady });
 
   // Milky Way isn't in any catalog .bin (procedural backdrop), but users
   // expect to find it in the palette.  Sentinel-id entry prepended so the
@@ -167,12 +175,12 @@ export function App(): React.ReactElement {
       {/* The engine takes over this canvas's GPU context; React never
           writes to it after the initial render.  `id="c"` matches the
           fullscreen CSS rule in index.html. */}
-      <canvas ref={canvasRef} id="c" />
+      <canvas ref={canvasRef} id="c" aria-hidden={splash.splashVisible || undefined} />
 
       {/* HUD wrapper.  All overlay chrome lives inside this single
           `<div>` so `Tab` can fade the whole stack via one CSS
-          opacity transition (see `.uiStack` / `.uiStackHidden`). */}
-      <div className={cx(appStyles.uiStack, uiHidden && appStyles.uiStackHidden)}>
+          opacity transition.  Splash also forces the HUD hidden. */}
+      <div className={cx(appStyles.uiStack, (uiHidden || splash.splashVisible) && appStyles.uiStackHidden)}>
         {/* Mounted unconditionally; fades itself out when `loadProgress`
             goes null.  Keeps tier-swap first paints from flashing a
             visible mount frame. */}
@@ -304,12 +312,13 @@ export function App(): React.ReactElement {
         {/* Top-center pill row.  SearchTrigger + AutoRotateToggle share
             a flex wrapper so they fade together when the palette opens. */}
         <div className={appStyles.topBar}>
-          <SearchTrigger onClick={openPalette} hidden={paletteOpen} />
+          <SearchTrigger onClick={openPalette} hidden={paletteOpen || splash.splashVisible} />
           <AutoRotateToggle
             playing={autoRotate}
             onToggle={() => handleRef.current?.camera.setAutoRotate(!autoRotate)}
-            hidden={paletteOpen}
+            hidden={paletteOpen || splash.splashVisible}
           />
+          <AboutPill onClick={splash.reopen} hidden={paletteOpen || splash.splashVisible} />
         </div>
         <CommandPalette
           entries={paletteEntries}
@@ -354,6 +363,21 @@ export function App(): React.ReactElement {
             />
           )}
       </div>
+      {splash.splashVisible && (
+        <Splash
+          blocked={splash.blocked}
+          canContinueAnyway={splash.canContinueAnyway}
+          loadProgress={loadProgress}
+          error={splash.error}
+          onExplore={splash.dismissExplore}
+          // Plan 2 (stub tour) replaces this with the real tour wiring.
+          // For now Tour just dismisses like Explore — the splash work
+          // ships independently of the tour itinerary.
+          onTour={splash.dismissTour}
+          onContinueAnyway={splash.dismissExplore}
+          onReload={() => window.location.reload()}
+        />
+      )}
     </>
   );
 }

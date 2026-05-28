@@ -1,47 +1,55 @@
 /**
- * Application entry point — mounts the React tree.
+ * Application entry point — synchronous WebGPU support gate, then mount React.
  *
- * This file is intentionally minimal: it finds the root DOM node and hands
- * control to `<App />`. All the interesting work happens in `App.tsx`
- * (engine lifecycle, state management) and the component tree beneath it.
+ * ### Why the synchronous gate runs before createRoot
+ *
+ * On a browser without `navigator.gpu` (older Safari, Firefox stable, most
+ * mobile browsers as of 2026), every downstream module in our React tree
+ * either fails immediately (createEngine throws) or runs a no-op render
+ * loop and shows the user a black canvas with no explanation.  We want a
+ * deliberate "your browser can't do this, here's why" surface, and we want
+ * it WITHOUT the cost of instantiating React + useEngine + useFamousMeta
+ * just to render one error.  A synchronous `typeof navigator.gpu` check at
+ * the top of main.tsx accomplishes that: on unsupported browsers we swap
+ * the body's innerHTML to the static page (`renderUnsupportedPageHtml()`)
+ * and bail before `createRoot` is ever called.
+ *
+ * The check is intentionally permissive — it fires only on "definitely no
+ * WebGPU" (the property is `undefined`).  If `navigator.gpu` exists but
+ * `requestAdapter()` returns `null` (the GPU is present but the driver
+ * refuses), that's a runtime failure surfaced via the splash's error state
+ * (handled inside `useSplash`).  Two different failure modes, two different
+ * surfaces — the gate here covers only the synchronously-detectable one.
  *
  * ### React 19 createRoot
  *
- * `createRoot` is the React 18+ API for rendering. It enables concurrent
- * features (automatic batching, transitions, Suspense for data fetching) and
- * replaces the legacy `ReactDOM.render`. The call:
- *
- *   createRoot(container).render(<App />)
- *
- * mounts the React tree into `container` and starts the first render. After
- * this point, React owns the DOM subtree inside `container` — do not modify
- * it imperatively.
- *
- * ### No React.StrictMode
- *
- * We deliberately do NOT wrap `<App />` in `<React.StrictMode>`. StrictMode
- * double-mounts components in development to surface cleanup bugs, but our
- * WebGPU engine is not designed for double-mounting (it creates GPU resources
- * and starts a render loop on mount). See the note in `App.tsx` for the full
- * reasoning. The cleanup in `App.tsx`'s `useEffect` is still correct — it just
- * runs on hot-reload, not on every development mount.
- *
- * ### The `!` non-null assertion
- *
- * `document.getElementById('root')` returns `HTMLElement | null`. We use `!`
- * to assert it is non-null. This is safe because `index.html` always contains
- * `<div id="root"></div>` — if that element is missing, the app is broken by
- * a build/deployment error, not a runtime condition we can gracefully handle.
- * In that scenario, throwing immediately (rather than silently rendering into
- * `null`) is the correct behaviour.
+ * Standard React 18+ entry pattern.  Concurrent features, automatic batching,
+ * Suspense — see the legacy header comment for the full rationale.  We do
+ * NOT wrap `<App />` in `<React.StrictMode>` because StrictMode double-mounts
+ * components and our WebGPU engine is not designed for that pattern (it
+ * creates GPU resources and starts a render loop on mount).
  */
 
 import { createRoot } from 'react-dom/client';
 import { App } from './components/App/App';
-// Side-effect import — defines the design-token custom properties on
-// `:root` and the page-level reset.  Loaded once at app boot so every
-// CSS module can reference the variables via `var(--token-name)`.
+import { renderUnsupportedPageHtml } from './unsupportedPage';
+// Side-effect import — defines design-token custom properties on `:root`
+// and the page-level reset.  Loaded once at app boot so every CSS module
+// can reference `var(--token-name)`.
 import './styles/global.css';
 
-// Mount the React app into the `#root` div declared in index.html.
-createRoot(document.getElementById('root')!).render(<App />);
+const root = document.getElementById('root');
+if (!root) {
+  // index.html always contains `<div id="root"></div>`.  If it's missing
+  // we're catastrophically broken — throw rather than silently render
+  // into nothing.
+  throw new Error('main.tsx: #root element not found in index.html');
+}
+
+if (typeof navigator === 'undefined' || typeof navigator.gpu === 'undefined') {
+  // No WebGPU — swap the entire document body for the static unsupported
+  // page and bail.  React never mounts; no engine objects are constructed.
+  document.body.innerHTML = renderUnsupportedPageHtml();
+} else {
+  createRoot(root).render(<App />);
+}

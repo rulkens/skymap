@@ -23,6 +23,18 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
     <!--
+      Cormorant Garamond SemiBold matches the in-scene label font baked
+      into the MSDF atlas (see src/data/fonts.ts).  Loaded via Google
+      Fonts so the splash title reads in the same typeface as the
+      labels rendered in the canvas behind it.  display=swap keeps
+      first paint immediate; the fallback stack in --font-family-display
+      mirrors the mono UI until the webfont arrives.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&display=swap" />
+
+    <!--
       ── Discovery & indexing metadata ──────────────────────────────────────
       Three audiences read what's below:
         • search engines (Google, Bing, DuckDuckGo) → snippet + sitelinks

@@ -1,0 +1,266 @@
+/* src/components/Splash/Splash.module.css */
+/*
+ * Splash — film-title-style transparent overlay pinned bottom-left.
+ *
+ * No card, no glass — only text and a localized vignette. Centre
+ * stays clear so the Milky Way + "You are here" marker remain
+ * visible behind the splash. Mobile reflows to a full-width column
+ * with a bottom-half linear vignette.
+ */
+
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+}
+
+/* Radial vignette anchored at the bottom-left corner — protects
+ * legibility without dimming the right half of the canvas. The
+ * Milky Way at the centre sits in the gradient's mid-zone where
+ * the dim is light enough to keep the marker label readable. */
+.vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at 20% 90%,
+    rgba(0, 0, 0, 0.85) 0%,
+    rgba(0, 0, 0, 0.6) 25%,
+    rgba(0, 0, 0, 0.2) 50%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+.column {
+  position: absolute;
+  left: 80px;
+  bottom: 80px;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Staggered fade-up reveal. Film-title sequence: ~600 ms total.
+ * Optional elements (errorBox, continueAnyway) inherit their slot's
+ * delay by virtue of nth-child position — the order remains the
+ * right reveal sequence. */
+.column > * {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: splashReveal 0.4s ease-out forwards;
+}
+.column > *:nth-child(1) { animation-delay: 0ms; }
+.column > *:nth-child(2) { animation-delay: 80ms; }
+.column > *:nth-child(3) { animation-delay: 160ms; }
+.column > *:nth-child(4) { animation-delay: 320ms; }
+.column > *:nth-child(5) { animation-delay: 480ms; }
+.column > *:nth-child(6) { animation-delay: 600ms; }
+.column > *:nth-child(7) { animation-delay: 700ms; }
+
+@keyframes splashReveal {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-fg-muted);
+}
+.label::before {
+  content: '';
+  display: block;
+  width: 32px;
+  height: 1px;
+  background: var(--color-accent);
+}
+
+.title {
+  font-family: var(--font-family-display);
+  font-weight: 600;
+  font-size: 48px;
+  line-height: 1.04;
+  letter-spacing: 0.005em;
+  margin: 0;
+  color: #ffffff;
+  position: relative;
+  padding-bottom: 8px;
+}
+/* Draw-underline beat — accent line slides out from the title's
+ * baseline 800 ms after mount, reads as the "camera focusing". */
+.title::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--color-accent);
+  width: 0;
+  animation: splashDraw 1.2s 800ms ease-out forwards;
+}
+@keyframes splashDraw {
+  to { width: 80px; }
+}
+
+.body {
+  font-family: var(--font-family-mono);
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--color-fg);
+  margin: 0;
+  max-width: 440px;
+}
+.body a {
+  color: var(--color-accent);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--color-accent);
+}
+.body a:hover,
+.body a:focus-visible {
+  text-decoration: none;
+  border-bottom-style: solid;
+}
+
+.errorBox {
+  background: rgba(255, 80, 80, 0.08);
+  border: 1px solid rgba(255, 120, 120, 0.4);
+  border-radius: 0;
+  padding: 12px 16px;
+  color: #ffb3b3;
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ctas {
+  display: flex;
+  gap: 48px;
+  margin-top: 8px;
+}
+
+/* Text-link CTAs with hairline underline + accent arrow. Hand-rolled
+ * inside Splash rather than promoted to the shared Button — this is
+ * the only place in the HUD that needs this register. If a second
+ * surface picks up the same pattern, lift to common/Button as a
+ * "link" variant. */
+.cta {
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ffffff;
+  background: none;
+  border: none;
+  padding: 8px 0;
+  cursor: pointer;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.cta::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  /* Underline stops short of the arrow so it doesn't pass behind
+   * the glyph and read as a strike-through. */
+  right: 36px;
+  bottom: 0;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.4);
+  transition: height 0.18s ease-out, background 0.18s ease-out;
+}
+.cta .arrow {
+  color: var(--color-accent);
+  transition: transform 0.18s ease-out;
+}
+.cta:hover:not(:disabled)::after,
+.cta:focus-visible:not(:disabled)::after {
+  height: 2px;
+  background: var(--color-accent);
+}
+.cta:hover:not(:disabled) .arrow,
+.cta:focus-visible:not(:disabled) .arrow {
+  transform: translateX(4px);
+}
+.cta:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.cta:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+}
+
+/* "Continue anyway" — the same .cta chrome but no arrow, smaller,
+ * pinned by margin rather than ctas-row flex. */
+.continueAnyway {
+  margin-top: 4px;
+  align-self: flex-start;
+  font-size: 11px;
+  color: var(--color-fg-muted);
+}
+.continueAnyway::after {
+  right: 0;
+}
+
+.footer {
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+  color: var(--color-fg-muted);
+  line-height: 1.6;
+  margin: 16px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.footer::before {
+  content: '';
+  display: block;
+  width: 32px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+  margin-bottom: 4px;
+}
+.footer a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.credits,
+.attribution {
+  margin: 0;
+}
+
+/* ── Mobile ─────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .vignette {
+    background: linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0.85) 0%,
+      rgba(0, 0, 0, 0.5) 50%,
+      rgba(0, 0, 0, 0.15) 100%
+    );
+  }
+  .column {
+    left: 24px;
+    right: 24px;
+    bottom: 56px;
+    max-width: none;
+    gap: 20px;
+  }
+  .title { font-size: 32px; }
+  .body  { font-size: 13px; max-width: none; }
+  .ctas  { gap: 48px; }
+  .cta   { min-height: 44px; padding: 12px 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .column > * { animation: none; opacity: 1; transform: none; }
+  .title::after { animation: none; width: 80px; }
+}
