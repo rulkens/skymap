@@ -191,6 +191,25 @@ describe('HiResFamousTexture', () => {
     expect(() => h.getTextureView()).toThrow();
   });
 
+  it('mutators + accessors throw after destroy (contract: handle is unusable)', () => {
+    // Stale references to a destroyed handle must fail loudly rather
+    // than silently returning sentinel values.  Pre-fix, allocate()
+    // would fall through to `victim === undefined` and return -1,
+    // letting the caller crash a frame later on the bogus index.
+    const { device } = makeFakeDevice();
+    const h = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
+    h.initTexture();
+    h.allocate('g-1', 100);
+    h.destroy();
+    const expected = /handle is destroyed/;
+    expect(() => h.allocate('g-2', 100)).toThrow(expected);
+    expect(() => h.touch('g-1', 100)).toThrow(expected);
+    expect(() => h.release('g-1')).toThrow(expected);
+    expect(() => h.markFailed('g-1')).toThrow(expected);
+    expect(() => h.uploadBitmap(0, { __bitmap: true } as unknown as ImageBitmap)).toThrow(expected);
+    expect(() => h.getTextureView()).toThrow(expected);
+  });
+
   it('setEvictHandler(undefined) clears the handler', () => {
     const { device } = makeFakeDevice();
     const h = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });

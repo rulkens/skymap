@@ -100,6 +100,7 @@ export function createHiResFamousTexture(
   }
 
   function uploadBitmap(layerIdx: number, bitmap: ImageBitmap): void {
+    if (destroyed) throw new Error('HiResFamousTexture: handle is destroyed.');
     if (!texture) throw new Error('HiResFamousTexture: call initTexture() first.');
     device.queue.copyExternalImageToTexture(
       { source: bitmap, flipY: false },
@@ -118,6 +119,7 @@ export function createHiResFamousTexture(
   }
 
   function getTextureView(): GPUTextureView {
+    if (destroyed) throw new Error('HiResFamousTexture: handle is destroyed.');
     if (!texture) throw new Error('HiResFamousTexture: call initTexture() first.');
     // `dimension: '2d-array'` on the VIEW is what makes the WGSL
     // `texture_2d_array<f32>` binding resolve.  Without it WebGPU
@@ -133,6 +135,7 @@ export function createHiResFamousTexture(
   // ── Slot bookkeeping ────────────────────────────────────────────
 
   function allocate(key: string, recentApparentDiameterPx: number): number {
+    if (destroyed) throw new Error('HiResFamousTexture: handle is destroyed.');
     const existing = entries.get(key);
     if (existing !== undefined) {
       existing.recentPx = recentApparentDiameterPx;
@@ -157,13 +160,14 @@ export function createHiResFamousTexture(
     // smallest resident is already larger, the caller is less
     // deserving and we refuse with -1.  This is the "cannot evict"
     // half of the contract's "-1 if full + cannot evict" clause.
+    // O(N) scan, N = layerCount (8).  A heap would be appropriate above ~64.
     let victim: LayerEntry | undefined;
     for (const entry of entries.values()) {
       if (victim === undefined || entry.recentPx < victim.recentPx) {
         victim = entry;
       }
     }
-    if (victim === undefined) return -1; // shouldn't happen — defensive
+    if (victim === undefined) return -1; // unreachable: freeList empty ⇒ entries non-empty
     if (victim.recentPx >= recentApparentDiameterPx) return -1;
 
     // Fire the handler BEFORE we mutate any state.  Matches the
@@ -193,11 +197,13 @@ export function createHiResFamousTexture(
   }
 
   function touch(key: string, recentApparentDiameterPx: number): void {
+    if (destroyed) throw new Error('HiResFamousTexture: handle is destroyed.');
     const entry = entries.get(key);
     if (entry !== undefined) entry.recentPx = recentApparentDiameterPx;
   }
 
   function release(key: string): void {
+    if (destroyed) throw new Error('HiResFamousTexture: handle is destroyed.');
     const entry = entries.get(key);
     if (entry === undefined) return;
     entries.delete(key);
@@ -217,6 +223,7 @@ export function createHiResFamousTexture(
   }
 
   function markFailed(key: string): void {
+    if (destroyed) throw new Error('HiResFamousTexture: handle is destroyed.');
     const entry = entries.get(key);
     if (entry !== undefined) entry.failed = true;
   }
