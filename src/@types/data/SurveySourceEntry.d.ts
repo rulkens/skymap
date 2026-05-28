@@ -68,4 +68,24 @@ export type SurveySourceEntry = SourceEntryBase & {
    * anywhere, one file shared across tiers.
    */
   readonly tierTargets: Partial<Record<Tier, number>>;
+  /**
+   * Per-source floor of the points intensity formula
+   * `clamp((22 − magnitude) / 8, intensityFloor, 1)`. Plumbed through
+   * `SourceUniforms` to `points/vertex.wesl`. Replaces a prior hardcoded
+   * 0.05 floor; per-source tuning lets sparse far-field catalogs
+   * (Milliquas, where most rows sit past mag 22) carry a higher floor
+   * to stay visible, while bulk galaxy surveys take a lower floor to
+   * reduce per-galaxy contribution to the additive HDR target in dense
+   * regions (and thus tame center saturation under the Reinhard tonemap).
+   */
+  readonly intensityFloor: number;
+  /**
+   * Per-source half-distance (Mpc) of the depth-fade curve
+   * `1 / (1 + (d / falloffHalfMpc)²)`. Plumbed through `SourceUniforms`
+   * to `points/vertex.wesl`. Replaces a prior hardcoded 1000 Mpc.
+   * Sparse far-field catalogs (Milliquas reaches d ~ 8000 Mpc) set a
+   * very large value to effectively disable the fade; bulk galaxy
+   * surveys keep the original ~1000 Mpc tuning.
+   */
+  readonly falloffHalfMpc: number;
 };
