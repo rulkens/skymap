@@ -25,12 +25,38 @@
 
 import { sdssThumbnailUrl, dssThumbnailUrl } from '../math';
 import { SLOT_SIDE } from '../../services/gpu/resources/textureAtlas';
+import { dataUrl } from '../../services/loading/fetchWithProgress';
 import type { FetchGalaxyBitmapInput } from '../../@types/loading/FetchGalaxyBitmapInput';
 
 export async function fetchGalaxyBitmap(
   input: FetchGalaxyBitmapInput,
 ): Promise<ImageBitmap | null> {
-  const { ra, dec, signal, famousId } = input;
+  const { ra, dec, signal, famousId, fetchHiRes, hiResTargetDim } = input;
+
+  // ── Hi-res famous branch ────────────────────────────────────────────────
+  //
+  // The high-resolution famous-galaxy LOD ships large WebPs to R2 (not the
+  // committed repo) so we route them through dataUrl(), which prepends the
+  // VITE_DATA_BASE_URL + '/data/' the R2 sync uploads under. A missing
+  // file here is EXPECTED — ~23/75 famous galaxies have no `full.webp`
+  // upstream — so we return null instead of falling through to SDSS/DSS;
+  // the caller drops back to the curated 128 px atlas tile in that case.
+  // Falling through would pollute the hi-res texture array with a DSS plate
+  // at the wrong angular scale.
+  if (fetchHiRes && famousId) {
+    const url = dataUrl(`images/famous-hires/${famousId}.webp`);
+    const blob = await tryFetch(url, signal);
+    if (!blob) return null;
+    const dim = hiResTargetDim ?? SLOT_SIDE;
+    try {
+      return await createImageBitmap(blob, {
+        resizeWidth: dim,
+        resizeHeight: dim,
+      });
+    } catch {
+      return null;
+    }
+  }
 
   // ── Famous shortcut ──────────────────────────────────────────────────────
   //
