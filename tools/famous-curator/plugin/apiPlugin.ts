@@ -7,6 +7,7 @@
  *   GET  /galaxies                     — seed + curated flags
  *   GET  /recipe/:id                   — load recipe.json for a curated galaxy (resume)
  *   POST /fetch                        — URL or multipart source upload
+ *   POST /resolve                      — paste-a-page-URL → ResolvedMedia
  *   POST /process                      — crop + StarNet + alpha
  *   POST /process/alpha-only           — alpha pass only (cached starless)
  *   POST /export                       — write the trio + recipe.json
@@ -35,6 +36,14 @@ import { handleExport } from './routes/export';
 import { handleGalaxies } from './routes/galaxies';
 import { handleRecipe } from './routes/recipe';
 import { handleBuildFamous } from './routes/buildFamous';
+import {
+  handleResolve,
+  UnknownHostError,
+  UnscrapeableError,
+  UpstreamError,
+  type ResolverFn,
+} from './routes/resolve';
+import { parseNoirLabPage } from './noirlabResolver';
 import { sessionPath, createSession } from './tmpSession';
 import { curatedGalaxyDir } from './paths';
 import { resolveStarnetConfig, type StarnetConfig } from './starnet';
@@ -121,6 +130,16 @@ export function apiPlugin(): Plugin {
     starnetConfig = { mock: true };
   }
   const repoRoot = resolveRepoRoot();
+
+  // Host → resolver dispatch.  Built once at plugin boot so the map
+  // identity is stable across requests (HMR re-runs the plugin factory,
+  // which is what we want — a new factory means a new map, freeing the
+  // old one).  Both `noirlab.edu` and `www.noirlab.edu` map to the same
+  // parser because the public site serves identical markup on both.
+  const hostDispatch = new Map<string, ResolverFn>([
+    ['noirlab.edu', parseNoirLabPage],
+    ['www.noirlab.edu', parseNoirLabPage],
+  ]);
 
   return {
     name: 'famous-curator-api',
@@ -246,6 +265,34 @@ export function apiPlugin(): Plugin {
             return;
           }
 
+          if (method === 'POST' && path === '/api/resolve') {
+            // Paste-a-page-URL → ResolvedMedia.  The htmlFetcher closure
+            // here is intentionally a near-copy of /api/fetch's
+            // imageFetcher: same UA header (NOIRLab and other origins
+            // both reject Node's default UA), same non-OK throw shape.
+            // The only divergence is body-as-text vs body-as-bytes and
+            // the missing content-type guard (we want HTML, not images).
+            // Folding these into one helper would force a branch on
+            // "what shape of body do you want?", which buys nothing.
+            const body = await readJsonBody(req) as { url: string };
+            const out = await handleResolve({
+              body,
+              hostDispatch,
+              htmlFetcher: async (u) => {
+                const r = await fetch(u, {
+                  headers: {
+                    'User-Agent':
+                      'skymap-curator/0.3 (https://github.com/rulkens/skymap; rulkens@gmail.com)',
+                  },
+                });
+                if (!r.ok) throw new Error(`HTTP ${r.status} for ${u}`);
+                return await r.text();
+              },
+            });
+            sendJson(res, 200, out);
+            return;
+          }
+
           if (method === 'POST' && path === '/api/process') {
             const body = await readJsonBody(req) as Parameters<typeof handleProcess>[0]['body'];
             const out = await handleProcess({ body, starnetConfig });
@@ -292,6 +339,25 @@ export function apiPlugin(): Plugin {
           // explicit than letting Vite's HTML-fallback middleware try.
           sendJson(res, 404, { error: 'not found', path });
         } catch (err) {
+          // Typed errors from /api/resolve take precedence over the
+          // string-match cascade below.  We dispatch on class identity
+          // (`instanceof`) rather than the message because the message
+          // is human-debugging copy — locking the contract on it would
+          // make every wording tweak in resolve.ts a silent HTTP-status
+          // bug.  The class identity is the dispatch contract; messages
+          // are free to evolve.
+          if (err instanceof UnknownHostError) {
+            sendJson(res, 404, { error: 'unknown host' });
+            return;
+          }
+          if (err instanceof UnscrapeableError) {
+            sendJson(res, 422, { error: 'page unscrapeable' });
+            return;
+          }
+          if (err instanceof UpstreamError) {
+            sendJson(res, 502, { error: 'upstream fetch failed' });
+            return;
+          }
           const msg = (err as Error).message;
           // 413 for the size-cap error, 400 for other validation errors,
           // 500 for everything else.  The handlers throw plain Error,

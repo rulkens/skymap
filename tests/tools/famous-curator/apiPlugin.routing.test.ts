@@ -6,10 +6,17 @@
  * Body parsing + payload handling is the route handler's problem; this
  * test just confirms the URL → handler dispatch table is wired.
  */
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { apiPlugin } from '../../../tools/famous-curator/plugin/apiPlugin';
 
-type FakeReq = { url?: string; method?: string };
+type FakeReq = {
+  url?: string;
+  method?: string;
+  headers?: Record<string, string>;
+  on?: (ev: string, cb: (chunk?: Buffer) => void) => void;
+};
 type FakeRes = {
   statusCode: number;
   headers: Record<string, string>;
@@ -72,5 +79,48 @@ describe('apiPlugin routing', () => {
     const res = await dispatch({ url: '/api/preview/missing/source.webp', method: 'GET' });
     expect(res.statusCode).not.toBe(404 + 1000); // any HTTP status is fine
     expect(res.ended).toBe(true);
+  });
+
+  describe('POST /api/resolve', () => {
+    // Stub `global.fetch` so the resolver gets the committed M94 page
+    // bytes without touching the network.  The route's htmlFetcher
+    // closure calls fetch() directly — same shape as imageFetcher in
+    // /api/fetch — so swapping the global is the smallest seam.
+    beforeEach(() => {
+      const html = readFileSync(
+        join(__dirname, 'fixtures', 'noirlab-noao-m94.html'),
+        'utf-8',
+      );
+      vi.stubGlobal('fetch', async () => ({
+        ok: true,
+        status: 200,
+        headers: { get: () => 'text/html' },
+        text: async () => html,
+      }));
+    });
+    afterEach(() => { vi.unstubAllGlobals(); });
+
+    it('returns 200 for a NOIRLab URL with stub fetcher', async () => {
+      // Build a request with a JSON body the plugin's readJsonBody helper
+      // can consume: it listens for 'data' + 'end' on the IncomingMessage.
+      // We synthesise just enough of that surface to drive the route.
+      const body = JSON.stringify({ url: 'https://noirlab.edu/public/images/noao-m94/' });
+      const req: FakeReq = {
+        url: '/api/resolve',
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        on(ev, cb) {
+          if (ev === 'data') cb(Buffer.from(body));
+          if (ev === 'end') cb();
+        },
+      };
+      const res = await dispatch(req);
+      expect(res.statusCode).toBe(200);
+      const json = JSON.parse(res.body) as Record<string, unknown>;
+      expect(json.directUrl).toBeTypeOf('string');
+      expect(json.author).toBeTypeOf('string');
+      expect(json.license).toBe('CC BY 4.0');
+      expect(json.sourceUrl).toBe('https://noirlab.edu/public/images/noao-m94/');
+    });
   });
 });

@@ -135,14 +135,16 @@ function AppInner() {
   async function onFetch(url: string): Promise<void> {
     setFetchBusy(true);
     try {
-      // If the pasted URL is a Wikipedia / Wikimedia Commons URL (typically
-      // a mediaviewer link like `…/wiki/NGC_6744#/media/File:foo.jpg`),
-      // resolve it to the direct file URL first AND pull the author +
-      // license out of the Commons extmetadata so the maintainer doesn't
-      // have to retype that data manually.  On any failure we silently
-      // fall back to using the URL verbatim.
+      // Resolver fallthrough: Wikipedia → /api/resolve (NOIRLab et al.) → raw URL.
+      // Order is deliberate.  Wikipedia covers the broadest catalogue and is
+      // the most common paste, so we try it first and keep the existing
+      // silent-fallback-on-failure behaviour.  /api/resolve is the next
+      // discrete source (currently NOIRLab gallery pages, extensible
+      // server-side without UI changes).  Raw /api/fetch is the
+      // always-available last resort when no resolver recognises the host.
       const wiki = await resolveWikipediaMedia(url).catch(() => null);
-      const fetchUrl = wiki?.directUrl ?? url;
+      const resolved = wiki ?? (await api.resolveMedia(url));
+      const fetchUrl = resolved?.directUrl ?? url;
       const r = await api.postFetchUrl(fetchUrl);
       dispatch({ type: 'setSource', tmpId: r.tmpId, width: r.width, height: r.height, previewUrl: r.previewUrl });
       // Keep the human-friendly URL the user typed (Wikipedia article
@@ -153,8 +155,8 @@ function AppInner() {
         metadata: {
           ...state.metadata,
           sourceUrl: url,
-          author: wiki?.author || state.metadata.author,
-          license: wiki?.license || state.metadata.license,
+          author: resolved?.author || state.metadata.author,
+          license: resolved?.license || state.metadata.license,
         },
       });
     } catch (err) {
@@ -258,8 +260,13 @@ function AppInner() {
               dispatch({ type: 'setStarnet', starnet: r.recipe.starnet });
               dispatch({ type: 'setAlpha', alpha: r.recipe.alpha });
               dispatch({ type: 'setMetadata', metadata: r.recipe.metadata });
+              // Same resolver fallthrough as onFetch — recipes from older
+              // curator sessions may store a Wikipedia article URL or a
+              // NOIRLab gallery page; either way we want the direct image
+              // URL to re-fetch the source bytes.
               const wiki = await resolveWikipediaMedia(r.recipe.metadata.sourceUrl).catch(() => null);
-              const fetchUrl = wiki?.directUrl ?? r.recipe.metadata.sourceUrl;
+              const resolved = wiki ?? (await api.resolveMedia(r.recipe.metadata.sourceUrl));
+              const fetchUrl = resolved?.directUrl ?? r.recipe.metadata.sourceUrl;
               const fetched = await api.postFetchUrl(fetchUrl);
               dispatch({ type: 'setSource', tmpId: fetched.tmpId, width: fetched.width, height: fetched.height, previewUrl: fetched.previewUrl });
               // setSource reset crop + previews; re-apply the recipe crop

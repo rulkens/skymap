@@ -32,6 +32,7 @@ describe('App resumable', () => {
         tmpId: 't1', width: 1000, height: 800, previewUrl: '/p.webp', mediaType: 'image/jpeg',
       }),
       postFetchBytes: vi.fn(),
+      resolveMedia: vi.fn(),
       postProcess: vi.fn(),
       postAlphaOnly: vi.fn(),
       postExport: vi.fn(),
