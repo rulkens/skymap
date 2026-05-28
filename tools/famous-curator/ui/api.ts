@@ -62,6 +62,22 @@ export type ExportResult = {
   };
 };
 
+/**
+ * ResolvedMedia — structural shape returned by /api/resolve.
+ *
+ * Deliberately re-declared here rather than imported from
+ * `../plugin/noirlabResolver`: the UI bundle stays independent of
+ * plugin internals (matching `FetchResult`, `ProcessResult`, etc.).
+ * The route contract enforces the shape on the wire — these two
+ * declarations are the contract on each side of it.
+ */
+export type ResolvedMedia = {
+  directUrl: string;
+  author: string;
+  license: string;
+  sourceUrl: string;
+};
+
 export type BuildFamousResult = {
   ok: boolean;
   exitCode: number;
@@ -79,6 +95,14 @@ export type Api = {
    */
   getRecipe: (id: string) => Promise<{ recipe: import('../plugin/recipe').Recipe }>;
   postFetchUrl: (url: string) => Promise<FetchResult>;
+  /**
+   * Resolve a paste-a-page URL → ResolvedMedia via /api/resolve.
+   * Returns null on 404 (unknown host) so the App-level fallthrough is
+   * a simple null check; throws on 422 / 5xx so the user sees the
+   * error.  The 404-as-null branch is the only divergence from the
+   * standard POST helper.
+   */
+  resolveMedia: (url: string) => Promise<ResolvedMedia | null>;
   postFetchBytes: (bytes: BodyInit, mediaType: string) => Promise<FetchResult>;
   postProcess: (params: ProcessParams) => Promise<ProcessResult>;
   postAlphaOnly: (params: AlphaOnlyParams) => Promise<AlphaOnlyResult>;
@@ -121,6 +145,15 @@ export function makeApi(deps: { fetch: typeof fetch }): Api {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
       }));
+    },
+    async resolveMedia(url) {
+      const res = await f('/api/resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      if (res.status === 404) return null;
+      return readOrThrow<ResolvedMedia>(res);
     },
     async postFetchBytes(bytes, mediaType) {
       return readOrThrow(await f('/api/fetch', {

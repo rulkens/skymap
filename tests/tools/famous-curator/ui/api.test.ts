@@ -49,4 +49,41 @@ describe('makeApi', () => {
     const api = makeApi({ fetch: fetchFn as never });
     await expect(api.postFetchUrl('https://e.com/big.png')).rejects.toThrow(/too big/);
   });
+
+  it('resolveMedia returns ResolvedMedia on 200', async () => {
+    const body = {
+      directUrl: 'https://x/large.jpg',
+      author: 'A',
+      license: 'CC BY 4.0',
+      sourceUrl: 'https://noirlab.edu/public/images/x/',
+    };
+    const fetchFn = vi.fn().mockResolvedValue(jsonResponse(body, 200));
+    const api = makeApi({ fetch: fetchFn as never });
+    const result = await api.resolveMedia('https://noirlab.edu/public/images/x/');
+    expect(result).toEqual(body);
+    const call = fetchFn.mock.calls[0]!;
+    expect(call[0]).toBe('/api/resolve');
+    expect(call[1].method).toBe('POST');
+    expect(call[1].headers['Content-Type']).toBe('application/json');
+    expect(JSON.parse(call[1].body)).toEqual({ url: 'https://noirlab.edu/public/images/x/' });
+  });
+
+  it('resolveMedia returns null on 404', async () => {
+    const fetchFn = vi.fn().mockResolvedValue(jsonResponse({ error: 'unknown host' }, 404));
+    const api = makeApi({ fetch: fetchFn as never });
+    const result = await api.resolveMedia('https://example.com/');
+    expect(result).toBeNull();
+  });
+
+  it('resolveMedia throws on 422', async () => {
+    const fetchFn = vi.fn().mockResolvedValue(jsonResponse({ error: 'unscrapeable' }, 422));
+    const api = makeApi({ fetch: fetchFn as never });
+    await expect(api.resolveMedia('https://noirlab.edu/public/images/x/')).rejects.toThrow();
+  });
+
+  it('resolveMedia throws on 502', async () => {
+    const fetchFn = vi.fn().mockResolvedValue(jsonResponse({ error: 'upstream' }, 502));
+    const api = makeApi({ fetch: fetchFn as never });
+    await expect(api.resolveMedia('https://noirlab.edu/public/images/x/')).rejects.toThrow();
+  });
 });

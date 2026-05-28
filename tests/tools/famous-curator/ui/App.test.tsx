@@ -26,6 +26,8 @@ function makeFakeApi(): Api {
       tmpId: 't1', width: 1000, height: 800, previewUrl: '/preview.webp', mediaType: 'image/jpeg',
     }),
     postFetchBytes: vi.fn(),
+    // Not called in this test — happy-path flow uses postFetchUrl directly.
+    resolveMedia: vi.fn(),
     postProcess: vi.fn().mockResolvedValue({ starlessPreviewUrl: '/s.webp', alphaPreviewUrl: '/a.webp' }),
     postAlphaOnly: vi.fn().mockResolvedValue({ alphaPreviewUrl: '/a2.webp' }),
     postExport: vi.fn().mockResolvedValue({
