@@ -45,10 +45,22 @@ import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import { fetchGalaxyBitmap } from '../../../utils/network/galaxyImageFetcher';
 import { cartesianToRaDec } from '../../../utils/math';
 
-/** See thumbnailSubsystem.ts:87. */
-const APPARENT_SIZE_THRESHOLD_PX = 24;
-/** See thumbnailSubsystem.ts:129. */
-const FADE_BAND_PX = 8;
+/**
+ * See thumbnailSubsystem.ts:87. Exported so the procedural-disk
+ * subsystem can compute its fade-OUT against the textured-disk fade-IN
+ * band in lockstep (the famous-WebP crossfade); see
+ * `proceduralDiskSubsystem.ts`.
+ */
+export const APPARENT_SIZE_THRESHOLD_PX = 24;
+/**
+ * See thumbnailSubsystem.ts:129. Exported alongside
+ * `APPARENT_SIZE_THRESHOLD_PX` for the procedural-disk fade-OUT band.
+ * Widened from 8 to 16 px on 2026-05-28 for a more graceful crossfade
+ * — at typical fly-in speeds the previous 8 px band passed in a
+ * fraction of a second; 16 px gives the eye time to register the
+ * handoff between the procedural pattern and the curated WebP.
+ */
+export const FADE_BAND_PX = 16;
 /** See thumbnailSubsystem.ts:138. */
 const LOAD_FADE_MS = 400;
 /** See thumbnailSubsystem.ts:146. */

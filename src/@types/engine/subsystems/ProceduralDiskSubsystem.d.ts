@@ -7,10 +7,17 @@
  * helper, updates sticky-instance state to absorb decimation, sorts
  * back-to-front, and stashes the result on `lastOutput`.
  *
- * No GPU work, no atlas dependency, no fetches — pure CPU.  The pass
- * file (`proceduralDisksPass.ts`) reads `lastOutput.instances` and
- * forwards them to `proceduralDiskRenderer.draw()` inside the existing
- * HDR render pass.
+ * No GPU work, no fetches — pure CPU.  An optional atlas dependency
+ * (injected via `ProceduralDiskDeps.atlas`) is consulted per-frame to
+ * decide which Famous-source galaxies have their curated WebP loaded;
+ * those instances get a ramped `procFadeOut` so the procedural pattern
+ * crossfades out under the textured-disk pass instead of bleeding
+ * through the photo.  When the atlas is omitted (tests that don't care
+ * about the crossfade), every instance keeps the default 1.0
+ * `procFadeOut` and the subsystem stays purely-CPU with no external
+ * dependency.  The pass file (`proceduralDisksPass.ts`) reads
+ * `lastOutput.instances` and forwards them to
+ * `proceduralDiskRenderer.draw()` inside the existing HDR render pass.
  */
 
 import type { Destroyable } from '../../rendering/Destroyable';

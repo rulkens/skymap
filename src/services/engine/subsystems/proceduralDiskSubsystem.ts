@@ -33,9 +33,14 @@
 import { Source } from '../../../data/sources';
 import { pickColourIndex } from '../../../data/colourIndex';
 import { paddedRadiusMpc } from '../../../utils/galaxySize';
-import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import { cartesianToRaDec } from '../../../utils/math';
+import {
+  APPARENT_SIZE_THRESHOLD_PX,
+  FADE_BAND_PX,
+  galaxyCacheKey,
+} from './texturedDiskSubsystem';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
+import type { GalaxyAtlasSubsystem } from '../../../@types/engine/subsystems/GalaxyAtlasSubsystem';
 import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type {
@@ -56,6 +61,11 @@ const MAX_PLAUSIBLE_DIAMETER_KPC = 200;
  * Lifted verbatim from `thumbnailSubsystem.ts:207-243`.  See that
  * docstring for the smoothstep-shape rationale and why this is a pure
  * helper rather than inline branching.
+ *
+ * `procFadeOut` defaults to 1.0 (no fade-out against the textured-disk
+ * pass). The caller in `runFrame` overrides it for famous galaxies
+ * whose curated WebP is loaded into the atlas — see the famous-WebP
+ * crossfade comment at the override site.
  */
 export function maybeEmitProceduralDisk(
   px: number,
@@ -82,18 +92,30 @@ export function maybeEmitProceduralDisk(
     positionAngleDeg: pa,
     colourIndex,
     crossfadeAlpha,
+    procFadeOut: 1.0,
   };
 }
 
 export type ProceduralDiskDeps = {
   /** Defaults to 8.  Tests pass 1 to disable decimation. */
   readonly decimationFactor?: number;
+  /**
+   * Optional. When provided, the subsystem queries the atlas every frame
+   * to decide which Famous-source galaxies have their curated WebP
+   * loaded; those instances get a ramped `procFadeOut` so the procedural
+   * pattern crossfades out under the textured-disk pass.  When omitted
+   * (e.g. tests that don't care about the famous-WebP crossfade),
+   * `procFadeOut` stays at its 1.0 default for every emitted instance
+   * — preserving the pre-2026-05-28 behavior exactly.
+   */
+  readonly atlas?: GalaxyAtlasSubsystem;
 };
 
 export function createProceduralDiskSubsystem(
   deps: ProceduralDiskDeps = {},
 ): ProceduralDiskSubsystem {
   const decimationFactor = Math.max(1, Math.floor(deps.decimationFactor ?? 8));
+  const atlas = deps.atlas;
 
   const stickyProcDisksBySource = new Map<SourceType, Map<number, ProceduralDiskInstance>>();
   const strideStartBySource = new Map<SourceType, number>();
@@ -196,7 +218,35 @@ export function createProceduralDiskSubsystem(
           PROCEDURAL_DISK_FADE_START_PX,
           PROCEDURAL_DISK_FADE_END_PX,
         );
-        if (emitted) stickyProcDisks.set(i, emitted);
+        if (emitted) {
+          // Famous-WebP crossfade-OUT.  For Famous-source galaxies
+          // whose curated WebP has loaded into the atlas, ramp the
+          // procedural pattern's alpha down across the textured-disk
+          // fade-IN band so the two passes crossfade in lockstep —
+          // the curated photo replaces the procedural cleanly without
+          // the procedural pattern bleeding through the WebP's dark
+          // pixels (the texturedDisks luminance-gate is intentionally
+          // permissive to let SDSS / DSS cutouts keep filling the
+          // ellipse around their small-galaxy-in-wide-cutout subjects;
+          // famous WebPs are full-frame and don't want that fill).
+          //
+          // Non-famous galaxies and famous galaxies without a loaded
+          // bitmap keep the default 1.0 — no behaviour change.
+          let final = emitted;
+          if (atlas && cloudSource === Source.Famous) {
+            const [ra, dec] = cartesianToRaDec(x, y, z);
+            const key = galaxyCacheKey(ra, dec);
+            if (atlas.isLoaded(key)) {
+              const t = Math.min(
+                1,
+                Math.max(0, (px - APPARENT_SIZE_THRESHOLD_PX) / FADE_BAND_PX),
+              );
+              const fadeIn = t * t * (3 - 2 * t);
+              final = { ...emitted, procFadeOut: 1 - fadeIn };
+            }
+          }
+          stickyProcDisks.set(i, final);
+        }
       }
 
       strideStartBySource.set(cloudSource, end >= count ? 0 : end);

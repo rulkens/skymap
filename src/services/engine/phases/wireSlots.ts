@@ -275,7 +275,12 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
     atlas: galaxyAtlas,
     requestRender: () => state.subsystems.scheduler.requestRender(),
   });
-  const proceduralDisks = createProceduralDiskSubsystem();
+  // Passing the atlas here is what enables the famous-WebP fade-out:
+  // for Famous-source galaxies whose curated WebP has loaded into the
+  // atlas, the procedural pattern crossfades out across the textured-
+  // disk fade-IN band so it doesn't bleed through the photo. Non-famous
+  // galaxies and tests that omit the atlas keep procFadeOut at 1.0.
+  const proceduralDisks = createProceduralDiskSubsystem({ atlas: galaxyAtlas });
 
   // Bind the atlas's texture view into the LOD-2 disk renderer.  The
   // pre-split code did this through thumbnailSubsystem.bindToRenderers;

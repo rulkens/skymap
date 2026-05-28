@@ -87,7 +87,13 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   // gate, and fading it to 0 at r = 1.0 is what removes the hard edge.
   let edgeFade = circularMask(r, 0.6, 1.0);
   let edgeFadeLinear = edgeFade * edgeFade;
-  let alpha = intensity * in.crossfadeAlpha * edgeFadeLinear;
+  // 'procFadeOut' is the famous-WebP crossfade against the textured-disk
+  // pass. 1.0 (the default for ~every galaxy) is a no-op; ramped toward
+  // 0.0 only for Famous-source galaxies with a loaded curated WebP, so
+  // the procedural pattern stops competing with the photo. See the
+  // override site in 'proceduralDiskSubsystem.ts' and the io.wesl
+  // VsOut.procFadeOut field comment.
+  let alpha = intensity * in.crossfadeAlpha * edgeFadeLinear * in.procFadeOut;
   // Premultiplied alpha — matches the project's blend mode (see
   // device.ts 'alphaMode: 'premultiplied'').
   return vec4<f32>(tinted * alpha, alpha);
