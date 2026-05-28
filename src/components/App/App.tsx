@@ -63,6 +63,7 @@ export function App(): React.ReactElement {
     highlightFallback,
     realOnlyMode,
     depthFadeEnabled,
+    showPickBuffer,
     visibleSourceMask,
     biasMode,
     absMagLimit,
@@ -345,6 +346,10 @@ export function App(): React.ReactElement {
               }}
               onRealOnlyModeChange={(enabled) => {
                 handleRef.current?.points.setRealOnly(enabled);
+              }}
+              showPickBuffer={showPickBuffer}
+              onShowPickBufferChange={(enabled) => {
+                handleRef.current?.debug.setShowPickBuffer(enabled);
               }}
             />
           )}

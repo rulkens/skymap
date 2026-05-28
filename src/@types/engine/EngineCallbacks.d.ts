@@ -205,6 +205,9 @@ export type EngineCallbacks = {
   /** Milky Way impostor on/off echo. */
   milkyWay?: { onEnabledChange?: (enabled: boolean) => void };
 
+  /** Debug-overlay echoes.  See `EngineSettingsState.debug` for the cluster's role. */
+  debug?: { onShowPickBufferChange?: (enabled: boolean) => void };
+
   /**
    * Fired exactly once, after the optional cosmic-web `filaments.bin`
    * lands and is uploaded to the renderer.  Reports strip + vertex

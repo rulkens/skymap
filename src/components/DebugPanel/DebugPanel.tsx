@@ -41,6 +41,13 @@ export type DebugPanelProps = {
   realOnlyMode: boolean;
   onHighlightFallbackChange: (enabled: boolean) => void;
   onRealOnlyModeChange: (enabled: boolean) => void;
+  /**
+   * Pick-buffer debug overlay toggle.  When on, the renderer paints a
+   * colour-mapped RGBA layer over the tone-mapped frame so the
+   * developer can see which billboards the picker actually claims.
+   */
+  showPickBuffer: boolean;
+  onShowPickBufferChange: (enabled: boolean) => void;
 };
 
 export function DebugPanel({
@@ -51,6 +58,8 @@ export function DebugPanel({
   realOnlyMode,
   onHighlightFallbackChange,
   onRealOnlyModeChange,
+  showPickBuffer,
+  onShowPickBufferChange,
 }: DebugPanelProps) {
   return (
     <div
@@ -74,6 +83,15 @@ export function DebugPanel({
       <GpuTimingsSection service={timingService} />
       <div style={{ marginTop: 6 }} />
       <RenderTogglesSection passOverrides={passOverrides} />
+      <div style={{ marginTop: 6 }} />
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+        <input
+          type="checkbox"
+          checked={showPickBuffer}
+          onChange={(e) => onShowPickBufferChange(e.target.checked)}
+        />
+        <span>Show pick buffer</span>
+      </label>
       <div style={{ marginTop: 6 }} />
       <DataQualitySection
         highlightFallback={highlightFallback}

@@ -81,6 +81,7 @@ import {
   DEFAULT_BIAS_MODE,
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
+  DEFAULT_SHOW_PICK_BUFFER,
   DEFAULT_EXPOSURE,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
@@ -411,6 +412,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         famousGalaxy: true,
         void: true,
       },
+      debug: {
+        showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
+      },
       markerCategoryVisibility: {
         cluster: true,
         supercluster: true,
@@ -523,6 +527,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // then.  Excluded from the isEngineReady predicate — the
       // volumeUpsamplePass null-checks this field at point of use.
       volumeUpsample: null,
+      // Pick-buffer debug overlay.  Constructed in initGpu; null until
+      // then.  Excluded from the isEngineReady predicate — the per-
+      // frame consumer null-checks the handle together with the
+      // 'settings.debug.showPickBuffer' toggle.
+      pickDebugOverlay: null,
       // Per-pass GPU timing service.  Always non-null — initialized
       // here with a no-op stub (no GPU resources), then replaced by
       // initGpu with the device-aware service after the device is
@@ -1387,6 +1396,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.scalarVolumeRenderer = null;
     state.gpu.volumeUpsample?.destroy();
     state.gpu.volumeUpsample = null;
+    state.gpu.pickDebugOverlay?.destroy();
+    state.gpu.pickDebugOverlay = null;
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
     state.gpu.renderer?.destroy();
@@ -1559,6 +1570,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           state.subsystems.scheduler.requestRender();
         },
       },
+      setShowPickBuffer: (enabled: boolean) => boringSetters.setShowPickBuffer(enabled),
     },
 
     destroy,

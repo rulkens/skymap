@@ -43,6 +43,8 @@ export type UseEngineSettingsState = {
   highlightFallback: boolean;
   realOnlyMode: boolean;
   depthFadeEnabled: boolean;
+  /** Mirrors `EngineSettingsState.debug.showPickBuffer`. */
+  showPickBuffer: boolean;
   visibleSourceMask: number;
   biasMode: BiasMode;
   absMagLimit: number;

@@ -55,6 +55,7 @@ export function seedSettingsCallbacks(cb: EngineCallbacks, snapshot: SettingsCal
   cb.points?.onHighlightFallbackChange?.(snapshot.highlightFallback);
   cb.points?.onRealOnlyChange?.(snapshot.realOnlyMode);
   cb.points?.onDepthFadeChange?.(snapshot.depthFadeEnabled);
+  cb.debug?.onShowPickBufferChange?.(snapshot.showPickBuffer);
   cb.bias?.onModeChange?.(snapshot.biasMode);
   cb.bias?.onAbsMagLimitChange?.(snapshot.absMagLimit);
   cb.tonemap?.onCurveChange?.(snapshot.toneMapCurve);

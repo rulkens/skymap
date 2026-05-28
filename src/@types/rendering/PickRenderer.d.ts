@@ -8,6 +8,7 @@
 
 import type { PickSourceDraw } from './PickSourceDraw';
 import type { PickResult } from '../../data/selectionEncoding';
+import type { Vec2 } from '../math/Vec2';
 
 export type PickRenderer = {
   /**
@@ -76,7 +77,7 @@ export type PickRenderer = {
    *          category source-code allocation (5/6/7 for the POI rings).
    */
   pick(
-    viewportPx: [number, number],
+    viewportPx: Vec2,
     pickXPx: number,
     pickYPx: number,
     sources: Iterable<PickSourceDraw>,
@@ -114,6 +115,34 @@ export type PickRenderer = {
      */
     timingDescriptor?: GPURenderPassTimestampWrites,
   ): Promise<PickResult | null>;
+
+  /**
+   * Render the pick pass into the internal pick texture and return the
+   * texture handle for a downstream debug overlay to sample.  Skips
+   * the single-pixel readback `pick()` performs.
+   *
+   * Synchronous (unlike `pick()`) so it can run inside the per-frame
+   * loop without an `await` per frame.  Independent of `pick()`'s
+   * `inFlight` guard — sharing it would make the overlay flicker
+   * whenever a hover-pick was mid-flight.
+   *
+   * Side-effects on the shared uniform buffer match `pick()`:
+   * SELECTION_NONE sentinel into `selectedPacked`, optional
+   * `pointSizePx + PICK_PADDING_PX` boost, `pickPass = 1`.  The next
+   * visual frame's full-buffer rewrite resets all three.  Same
+   * overrides as the real pick pass — the overlay shows what hits.
+   *
+   * Returns null when the source list is empty.
+   *
+   * @param viewportPx   Physical canvas size in backing-store pixels.
+   * @param sources      Per-source draw records — same shape `pick()` accepts.
+   * @param pointSizePx  Optional point-size floor for the `PICK_PADDING_PX` boost.
+   */
+  renderForDebug(
+    viewportPx: Vec2,
+    sources: Iterable<PickSourceDraw>,
+    pointSizePx?: number,
+  ): GPUTexture | null;
 
   /**
    * Release all GPU resources owned by this renderer.

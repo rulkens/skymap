@@ -138,6 +138,23 @@ export type EngineSettingsState = {
   };
 
   /**
+   * Developer-oriented debug overlays.  Diagnostic lenses on top of
+   * the rendered scene rather than knobs on the scene itself — kept
+   * in their own cluster so the per-cluster mental model (one cluster
+   * = one chunk of the renderer) stays clean.
+   *
+   *   - `showPickBuffer` — colour-maps the r32uint pick texture and
+   *     composites it over the tone-mapped frame.  Lets a developer
+   *     see which billboard the hover/click resolver actually claims
+   *     at each pixel (including the +PICK_PADDING_PX boost and the
+   *     1.5× forgiveness ellipse/circle baked into pickFragment.wesl).
+   *     Gated behind the DebugPanel.
+   */
+  debug: {
+    showPickBuffer: boolean;
+  };
+
+  /**
    * Per-category visibility for the POI TEXT LABEL overlay.  Keyed by
    * the canonical `PoiCategory` union from `poiSubsystem`.  Defaults
    * to every category visible.

@@ -60,6 +60,7 @@ function makeState(): Pick<EngineState, 'settings' | 'bias'> {
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 0.5 },
       volumes: { masterEnabled: false, fields: {} },
+      debug: { showPickBuffer: false },
       labelCategoryVisibility: {
         cluster: true,
         supercluster: true,
@@ -83,13 +84,12 @@ function makeState(): Pick<EngineState, 'settings' | 'bias'> {
 
 describe('settingsTable', () => {
   describe('SETTINGS_TABLE', () => {
-    it('declares the 13 table-candidate setters', () => {
-      // The plan freezes this list at 13 — bespoke setters
-      // (`setBiasMode`, `setTier`, `setSourceVisible`,
-      // `setSpaceMouseSensitivity`) MUST stay inline in engine.ts.
-      // If this number drifts, either a new boring setter snuck in
-      // (good — extend the table) or a bespoke one was accidentally
-      // tabled (bad — bespoke logic gets dropped silently).
+    it('declares the 14 table-candidate setters', () => {
+      // Bespoke setters (`setBiasMode`, `setTier`, `setSourceVisible`,
+      // `setSpaceMouseSensitivity`) MUST stay inline in engine.ts.  If
+      // this list drifts, either a new boring setter snuck in (good —
+      // extend the table) or a bespoke one was accidentally tabled
+      // (bad — bespoke logic gets dropped silently).
       const names = SETTINGS_TABLE.map((d) => d.name).sort();
       expect(names).toEqual(
         [
@@ -105,6 +105,7 @@ describe('settingsTable', () => {
           'setMilkyWayEnabled',
           'setPointSize',
           'setRealOnlyMode',
+          'setShowPickBuffer',
           'setToneMapCurve',
         ].sort(),
       );

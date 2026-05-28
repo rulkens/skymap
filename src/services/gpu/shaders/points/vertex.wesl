@@ -39,6 +39,7 @@ import package::lib::sourceUniforms::SourceUniforms;
 import package::lib::colorIndex::ramp;
 import package::lib::astro::distanceModulus;
 import package::lib::selectionEncoding::packSelection;
+import package::lib::orientation::diskAxes;
 
 // ── @group(0) — per-frame uniforms ──────────────────────────────────
 //
@@ -190,9 +191,16 @@ fn vs(
   // Crossfade-out against the procedural-disk pass. ThumbnailRenderer
   // fades IN across [pxFadeStart, pxFadeEnd] (apparent-pixel diameter);
   // we fade OUT with the complementary smoothstep so the additive HDR
-  // contribution stays constant per galaxy through the band.
+  // contribution stays constant per galaxy through the band.  The pick
+  // pass skips this fade so disk-sized galaxies still write into the
+  // pick texture (the procedural-disk renderer has no pick pipeline).
   let apparentDiameterPx = sizePx * 0.5;
-  let crossfadeOut = 1.0 - smoothstep(u.pxFadeStart, u.pxFadeEnd, apparentDiameterPx);
+  let inPickPass = u.pickPass == 1u;
+  let crossfadeOut = select(
+    1.0 - smoothstep(u.pxFadeStart, u.pxFadeEnd, apparentDiameterPx),
+    1.0,
+    inPickPass,
+  );
 
   let intensity = clamp((22.0 - p.magnitude) / 8.0, 0.05, 1.0)
     * u.brightness
@@ -217,12 +225,11 @@ fn vs(
   // threshold contribute imperceptibly to the additive HDR target, so
   // we emit a degenerate clip position (outside the [-1, 1] NDC cube)
   // and let the rasteriser drop the primitive before any fragment work.
-  // Pick fragment shares this vertex stage, so culled galaxies also
-  // become non-pickable — acceptable since they were never visible. A
-  // selected-but-culled galaxy still gets its UI ring from the dedicated
-  // selectionRingPass, which runs independently of this pipeline.
+  // Pick fragment shares this vertex stage; the cull is suppressed
+  // in the pick pass so the user can still click galaxies the visual
+  // pass has dimmed below the additive-HDR contribution threshold.
   let INVISIBILITY_THRESHOLD = 0.005;
-  if (intensity < INVISIBILITY_THRESHOLD) {
+  if (intensity < INVISIBILITY_THRESHOLD && !inPickPass) {
     out.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
   }
 
@@ -237,6 +244,51 @@ fn vs(
   // rotating the UV is the inverse of rotating the ellipse.
   let paRad = -p.positionAngleDeg * 3.14159265 / 180.0;
   out.paRotation = vec2<f32>(cos(paRad), sin(paRad));
+
+  // Tell fsPick which mask shape to use.  See io.wesl::VSOut for what
+  // each value means.
+  let isDiskHandoff = apparentDiameterPx >= u.pxFadeStart;
+  out.isDiskHandoff = select(0u, 1u, isDiskHandoff);
+
+  // Projected disk basis for the pick-mode ellipse mask.  Only emit
+  // the projection work when we're actually in the pick pass AND in
+  // the disk-handoff regime; both gates avoid wasted clip-space
+  // projections on the millions of far-field point sprites the visual
+  // pass draws every frame.  See io.wesl::VSOut for the math the
+  // fragment side performs on these two vectors.
+  if (inPickPass && isDiskHandoff) {
+    // Clamp cosI at 0.05 (matches procedural-disk renderer) so an
+    // edge-on disk's minor axis doesn't collapse to a degenerate line
+    // and the fragment's matrix inverse stays well-conditioned.
+    let cosI = max(safeAB, 0.05);
+    let sinI = sqrt(max(0.0, 1.0 - cosI * cosI));
+    // Positive paRad (east-of-north on the celestial sky) — opposite
+    // sign from the point sprite's screen-aligned 'paRotation', which
+    // negates because it rotates UV in the inverse direction.  Here
+    // we want the actual world-space axis.
+    let paRadWS = p.positionAngleDeg * 3.14159265 / 180.0;
+    let axes = diskAxes(p.position, paRadWS, cosI, sinI);
+    let majorWS = axes.major;
+    let minorWS = axes.minor;
+
+    // Project the disk's outer-edge tips (centre ± radiusMpc · axis)
+    // and take the NDC delta from the projected centre.  Multiply by
+    // viewportPx · 0.5 to convert NDC → pixels, then divide by the
+    // billboard's half-extent in pixels so the fragment can test
+    // against unit UV.
+    let majorTipClip = worldToClip(u.cam, p.position + p.radiusMpc * majorWS);
+    let minorTipClip = worldToClip(u.cam, p.position + p.radiusMpc * minorWS);
+    let baseNDC = vec2<f32>(center.x, center.y) / center.w;
+    let majorNDC = vec2<f32>(majorTipClip.x, majorTipClip.y) / majorTipClip.w;
+    let minorNDC = vec2<f32>(minorTipClip.x, minorTipClip.y) / minorTipClip.w;
+    let halfViewport = u.cam.viewportPx * 0.5;
+    let billboardHalfPx = max(sizePx * 0.5, 1.0);
+    out.pickMajorBillboard = ((majorNDC - baseNDC) * halfViewport) / billboardHalfPx;
+    out.pickMinorBillboard = ((minorNDC - baseNDC) * halfViewport) / billboardHalfPx;
+  } else {
+    out.pickMajorBillboard = vec2<f32>(0.0, 0.0);
+    out.pickMinorBillboard = vec2<f32>(0.0, 0.0);
+  }
 
   return out;
 }

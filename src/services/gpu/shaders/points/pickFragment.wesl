@@ -39,19 +39,37 @@ import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
 // the pipeline because integer formats can't be blended; depth test
 // resolves overlapping points instead.
 //
-// WHY A LARGER RADIUS (2.25 vs 1.0)?
-// A forgiveness radius of 1.5× lets the user pick a point without
-// needing to land exactly on its visual disk. The visual fragment
-// discards fragments where r² > 1.0 (unit disk); 'fsPick' discards
-// where r² > 2.25 (= 1.5²), effectively making each pick billboard
-// 1.5× larger than the visible one.
+// Mask choice is set by 'in.isDiskHandoff' (see io.wesl::VSOut):
+//   - 0u: circular mask in raw UV (far-field dot regime).
+//   - 1u: projected ellipse from the vertex stage's world-space disk
+//     basis ('pickMajorBillboard' / 'pickMinorBillboard'), matching
+//     the procedural-disk renderer's shape on screen for any camera
+//     pose.  An earlier screen-aligned PA rotation gave the wrong
+//     orientation whenever the camera wasn't on the Earth-origin axis.
+// Both masks discard at r² > 2.25 — a 1.5× forgiveness margin on the
+// visual fs's r² > 1.0 cutoff.
 
 @fragment
 fn fsPick(in: VSOut) -> @location(0) vec4<u32> {
-  // r2 = squared distance from the billboard centre in [-1, +1]² UV space.
-  // The visual fs discards at r2 > 1.0 (unit disk, radius 1.0).
-  // We discard at r2 > 2.25 (= 1.5²), giving a 1.5× bigger pick target.
-  let r2 = dot(in.uv, in.uv);
+  var r2 = dot(in.uv, in.uv);
+
+  if (in.isDiskHandoff == 1u) {
+    // M = [major | minor] maps disk-local coords (a, b) — where the
+    // visible ellipse is the unit circle a² + b² ≤ 1 — into the
+    // billboard's UV space.  Inverting and applying to 'uv' recovers
+    // (a, b); we test that against the 1.5× forgiveness margin.
+    // safeAB clamps cosI at 0.05 so the basis isn't singular.
+    let major = in.pickMajorBillboard;
+    let minor = in.pickMinorBillboard;
+    let det = major.x * minor.y - major.y * minor.x;
+    let invDet = 1.0 / det;
+    let local = vec2<f32>(
+      ( minor.y * in.uv.x - minor.x * in.uv.y) * invDet,
+      (-major.y * in.uv.x + major.x * in.uv.y) * invDet,
+    );
+    r2 = dot(local, local);
+  }
+
   if (r2 > 2.25) { discard; }
 
   // Write '(sourceCode << 27 | instance_index) + 1' so background

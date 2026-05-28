@@ -23,6 +23,7 @@ export type SettingsCallbackSeed = {
   highlightFallback: boolean;
   realOnlyMode: boolean;
   depthFadeEnabled: boolean;
+  showPickBuffer: boolean;
   biasMode: BiasMode;
   absMagLimit: number;
   toneMapCurve: ToneMapCurve;

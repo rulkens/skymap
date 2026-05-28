@@ -235,6 +235,11 @@ export const DEFAULT_VOLUME_FIELD_DENSITY_SCALE = 1.0;
  */
 export const DEFAULT_VOLUME_PALETTE_ID = 'viridis' as const;
 
+// ── Debug overlays ─────────────────────────────────────────────────────────
+
+/** Pick-buffer debug overlay starts off.  See `EngineSettingsState.debug.showPickBuffer`. */
+export const DEFAULT_SHOW_PICK_BUFFER = false;
+
 // ── SpaceMouse ─────────────────────────────────────────────────────────────
 
 /**
