@@ -120,5 +120,14 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   out.atlasUv = mix(instance.uvRect.xy, instance.uvRect.zw, uvLocal);
   out.cornerUv = cornerUv;
   out.fadeAlpha = instance.orient.z;
+  // Hi-res LOD pass-through (Task R3). The renderer packs the layer
+  // index as a float in 'instance.hiRes.x'; cast to i32 here so the
+  // fragment-stage 'textureSample(hiResTex, ..., layerIdx)' call gets
+  // the integer type the WGSL texture_2d_array overload requires.
+  // 'instance.hiRes.x == -1' means 'no hi-res slot bound for this
+  // instance' — the fragment shader branches on '>= 0' to decide
+  // whether to crossfade.
+  out.hiResLayerIdx = i32(instance.hiRes.x);
+  out.hiResCrossfadeAlpha = instance.hiRes.y;
   return out;
 }

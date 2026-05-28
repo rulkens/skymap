@@ -56,9 +56,11 @@ struct Uniforms {
 
 // ── per-instance attributes ────────────────────────────────────────
 //
-// 48 bytes / 12 floats per instance (matches BYTES_PER_INSTANCE in
-// 'diskRenderer.ts'). Three vec4 slots: position+size, uvRect, and
-// the orientation pack (axisRatio, PA, fadeAlpha, reserved).
+// 64 bytes / 16 floats per instance (matches BYTES_PER_INSTANCE in
+// 'texturedDiskRenderer.ts' after Task R1 grew the stride). Four vec4
+// slots: position+size, uvRect, the orientation pack
+// (axisRatio, PA, fadeAlpha, reserved), and the hi-res LOD pack
+// (layer index, crossfade alpha, reserved, reserved).
 
 struct InstanceIn {
   @location(0) posSize: vec4<f32>,
@@ -66,14 +68,26 @@ struct InstanceIn {
   // x: axisRatio, y: positionAngleDeg, z: fadeAlpha (per-frame distance ×
   // load fade multiplier from the engine), w: reserved padding.
   @location(2) orient:  vec4<f32>,
+  // x: hiResLayerIdx (cast to i32 in the vertex stage; -1 means 'no
+  // hi-res slot bound, sample atlas only'). y: hiResCrossfadeAlpha in
+  // [0, 1] — fragment 'mix(atlas, hiRes, alpha)' weight. z, w:
+  // reserved padding for future hi-res controls.
+  @location(3) hiRes:   vec4<f32>,
 };
 
 // ── vertex-to-fragment interface ────────────────────────────────────
+//
+// The hi-res layer index MUST be '@interpolate(flat)' — it's an
+// integer discriminant, not a continuous value. Linear interpolation
+// of a layer index across a triangle would address random nonsense
+// layers per-pixel. Flat = take the provoking vertex's value verbatim.
 
 struct VsOut {
-  @builtin(position) clipPos:   vec4<f32>,
-  @location(0)       atlasUv:   vec2<f32>,
-  @location(1)       cornerUv:  vec2<f32>,
+  @builtin(position) clipPos:                              vec4<f32>,
+  @location(0)       atlasUv:                              vec2<f32>,
+  @location(1)       cornerUv:                             vec2<f32>,
   // Per-instance fade multiplier in [0, 1].
-  @location(2)       fadeAlpha: f32,
+  @location(2)       fadeAlpha:                            f32,
+  @location(3) @interpolate(flat) hiResLayerIdx:           i32,
+  @location(4)                    hiResCrossfadeAlpha:     f32,
 };
