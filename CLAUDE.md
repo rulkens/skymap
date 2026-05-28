@@ -58,7 +58,7 @@ tests/                Vitest suite — mirrors src/ tree
 - **`type` aliases, never `interface`**: `export type X = { ... }` for all TS shapes.
 - **No barrel exports for components**: import React components directly from their `.tsx`. No `index.ts` re-export files in component folders.
 - **Dev server stays running**: `npm run dev` is left running in the background for HMR visual checks. Don't kill it. To verify a UI change, ask the user to look (or describe what they should see).
-- **TDD via plans**: substantial features get a plan in `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` with bite-sized TDD tasks. Plans are executed via the `subagent-driven-development` workflow (fresh subagent per task + spec + quality reviews).
+- **TDD via plans**: substantial features get a plan in `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` with bite-sized TDD tasks. Plans are executed via the `subagent-driven-development` workflow (fresh subagent per task + spec + quality reviews). Plans follow [`docs/superpowers/conventions/plan-style.md`](docs/superpowers/conventions/plan-style.md) — **contract code yes, implementation code no** (overrides the upstream `writing-plans` skill's "complete code in every step" default).
 - **Plans coexist**: multiple in-flight plans is normal. Check the file list before starting new work to avoid stomping on something else.
 
 ## Commands
