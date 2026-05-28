@@ -226,11 +226,10 @@ describe('createInstancedQuadRenderer (Spec G)', () => {
   });
 
   describe('hi-res array binding (texturedDisk consumer)', () => {
-    // The hi-res LOD work (Task R2, 2026-05-28) adds an optional
-    // `texture_2d_array` + sampler pair at bindings 3 + 4, gated on
-    // `atlas.hiResArray === true`. This keeps the texturedQuad and
-    // proceduralDisk consumers — which don't sample the array — at
-    // their current 1- and 3-entry BGL shapes.
+    // When `atlas.hiResArray === true` the BGL exposes an optional
+    // `texture_2d_array` + sampler pair at bindings 3 + 4. The
+    // texturedQuad and proceduralDisk consumers don't sample the
+    // array and keep their 1- and 3-entry BGL shapes unchanged.
 
     it('extends the BGL from 3 → 5 entries when atlas.hiResArray is true', () => {
       const { ctx, calls } = makeStubContext();

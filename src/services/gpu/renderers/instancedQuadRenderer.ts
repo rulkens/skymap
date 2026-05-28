@@ -181,12 +181,13 @@ export function createInstancedQuadRenderer(
   // pipeline-specific identities — incompatible with sharing buffers
   // or rebuilding bind groups across pipelines (see the WebGPU
   // layout-auto trap memory note).
-  // The hi-res array extension (Task R2, 2026-05-28) appends a
-  // `texture_2d_array` + linear sampler at bindings 3 + 4 ONLY when
-  // the texturedDisk consumer asks for it. The append-only ordering
-  // matters: the bindings must line up with the WGSL @group/@binding
-  // decorations in the shader; growing slots 1/2's meaning would
-  // break the existing texturedQuad consumer that shares this factory.
+  // When `atlas.hiResArray` is set, the layout appends a
+  // `texture_2d_array` + linear sampler at bindings 3 + 4 so the
+  // texturedDisk consumer can sample full-resolution famous-galaxy
+  // tiles. The append-only ordering matters: the bindings must line
+  // up with the WGSL @group/@binding decorations in the shader, and
+  // growing slots 1/2's meaning would break the texturedQuad consumer
+  // that shares this factory.
   const atlasEntries: GPUBindGroupLayoutEntry[] = atlas
     ? [
         { binding: 0, visibility: uniformVisibility, buffer: { type: 'uniform' } },
@@ -385,7 +386,8 @@ export function createInstancedQuadRenderer(
 
   function bindHiResArray(arrayView: GPUTextureView, samplerOverride?: GPUSampler): void {
     lastHiResView = arrayView;
-    if (samplerOverride !== undefined) lastHiResSampler = samplerOverride;
+    // Unconditional assign: passing `undefined` resets to the default sampler at compose time.
+    lastHiResSampler = samplerOverride;
     composeAtlasBindGroup();
   }
 
