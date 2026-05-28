@@ -24,7 +24,7 @@ import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { PointDrawSettings } from '../../../@types/rendering/PointDrawSettings';
 import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
 import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
-import { SURVEY_SOURCES } from '../../../data/sources';
+import { SURVEY_SOURCES, Source } from '../../../data/sources';
 import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
 import type { SourceType } from '../../../@types/data/SourceType';
@@ -485,15 +485,35 @@ export function createPointRenderer(
       entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
     });
 
-    // SourceUniforms: 5-bit sourceCode (constant per source) + 12 B
-    // pad.  Written once here; per-frame writes would be wasted bytes.
+    // SourceUniforms: 5-bit sourceCode + per-source intensityFloor +
+    // per-source falloffHalfMpc + 4 B pad.  Written once here; the
+    // values are constant per source so per-frame writes would be
+    // wasted bytes.  See lib/sourceUniforms.wesl for the struct layout
+    // and the rationale behind these per-source values (spike
+    // hardcoded inline for now; promote to sources.ts config if the
+    // visual result is good).
     const sourceBuffer = device.createBuffer({
       label: `points-source-uniform-${source}`,
       size: 16,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     const sourceScratch = new ArrayBuffer(16);
-    new Uint32Array(sourceScratch)[0] = source >>> 0;
+    const sourceU32 = new Uint32Array(sourceScratch);
+    const sourceF32 = new Float32Array(sourceScratch);
+    sourceU32[0] = source >>> 0;
+    // Milliquas: keep faint quasars visible (mag ≳ 22 → would otherwise
+    // pin at the same floor as faint galaxies) and effectively disable
+    // distance fade (the catalog reaches d ~ 8000 Mpc where a 1000-Mpc
+    // half-distance kills everything).  Galaxy surveys: lower the floor
+    // from the prior 0.05 to tame additive HDR saturation in dense
+    // central regions; keep the falloff at 1000 Mpc unchanged.
+    if (source === Source.Milliquas) {
+      sourceF32[1] = 0.15;
+      sourceF32[2] = 1e30;
+    } else {
+      sourceF32[1] = 0.02;
+      sourceF32[2] = 1000;
+    }
     device.queue.writeBuffer(sourceBuffer, 0, sourceScratch);
     const sourceBindGroup = device.createBindGroup({
       label: `points-source-bg-${source}`,
