@@ -882,16 +882,16 @@ export type TexturedDiskDeps = {
 
 **Steps:**
 
-- [ ] Test (find the existing tier-change test surface; likely in
+- [x] Test (find the existing tier-change test surface; likely in
   `tests/services/engine/`) `tier change destroys + recreates the hi-res
   famous texture at the new layerSide`.
-- [ ] Implement against the existing tier-change call graph. Match
+- [x] Implement against the existing tier-change call graph. Match
   whatever pattern the cf4 / mcpm volumes use — they have analogous
   per-tier resources (`mcpm-<tier>.scfd`). See
   `src/services/loading/fetchers/mcpmFetcher.ts:21-30` and its consumers
   for the precedent.
-- [ ] `npm test` → green.
-- [ ] Commit.
+- [x] `npm test` → green.
+- [x] Commit.
 
 ### Task R8: Visual smoke attestation (manual)
 

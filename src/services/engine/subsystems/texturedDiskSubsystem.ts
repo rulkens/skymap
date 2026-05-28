@@ -103,7 +103,11 @@ export function createTexturedDiskSubsystem(
   const { atlas, requestRender } = deps;
   const fetcher = deps.fetcher ?? fetchGalaxyBitmap;
   const decimationFactor = Math.max(1, Math.floor(deps.decimationFactor ?? 8));
-  const hiResFamous = deps.hiResFamous;
+  // Mutable binding rather than `const` so `setHiResFamous(...)` can
+  // swap the planner reference on tier change.  See the `setHiResFamous`
+  // docstring on `TexturedDiskSubsystem` for the architectural rationale
+  // (planner swap vs full-subsystem rebuild).
+  let hiResFamous = deps.hiResFamous;
 
   // Load-fade timing — separate from the atlas's `bitmapReady`/`bitmapFailed`
   // set membership.  Cleared via the atlas's eviction handler so we don't
@@ -321,12 +325,17 @@ export function createTexturedDiskSubsystem(
     lastOutput = { disks: [] };
   }
 
+  function setHiResFamous(next: HiResFamousSubsystem | undefined): void {
+    hiResFamous = next;
+  }
+
   const subsystem: TexturedDiskSubsystemWithTestSeam = {
     runFrame,
     get lastOutput() {
       return lastOutput;
     },
     hasInFlightWork,
+    setHiResFamous,
     destroy,
     __testGetState() {
       return { bitmapReadyTime };

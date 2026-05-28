@@ -142,6 +142,7 @@ vi.mock('../../../../src/services/engine/subsystems/texturedDiskSubsystem', () =
     runFrame: vi.fn(),
     lastOutput: { quads: [], disks: [] },
     hasInFlightWork: vi.fn(() => false),
+    setHiResFamous: vi.fn(),
     destroy: vi.fn(),
   })),
 }));

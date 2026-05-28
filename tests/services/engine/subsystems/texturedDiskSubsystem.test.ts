@@ -268,6 +268,54 @@ describe('createTexturedDiskSubsystem', () => {
     }
   });
 
+  it('setHiResFamous swaps the planner reference used by the next frame', async () => {
+    // Tier-change contract (R7): on tier flip the engine destroys the
+    // old hi-res texture + planner pair and recreates them at the new
+    // layerSide.  Rather than rebuilding the entire texturedDiskSubsystem
+    // (which would invalidate sticky disk state and load-fade timing for
+    // ALL galaxies, not just famous ones), the subsystem exposes a setter
+    // for the planner reference.  After `setHiResFamous(next)`, the next
+    // `runFrame` reads `next.lastOutput.byFamousIdx` instead of the
+    // original construction-time planner's.
+    const fetcher = vi.fn(async () => makeFakeBitmap());
+    const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+    const initial = makeStubHiResFamous(
+      new Map([[0, { hiResLayerIdx: 1, hiResCrossfadeAlpha: 0.25 }]]),
+    );
+    const sys = createTexturedDiskSubsystem({
+      device,
+      atlas,
+      requestRender: () => {},
+      fetcher,
+      decimationFactor: 1,
+      hiResFamous: initial,
+    });
+    const clouds = new Map([[Source.Famous, makeDenseCloud(1)]]);
+    sys.runFrame(makeInput(clouds));
+    await new Promise((r) => setTimeout(r, 0));
+
+    // Pre-swap: row 0 reflects the initial planner's state.
+    const before = sys.runFrame(makeInput(clouds)).disks;
+    expect(before[0]?.hiResLayerIdx).toBe(1);
+    expect(before[0]?.hiResCrossfadeAlpha).toBeCloseTo(0.25);
+
+    // Swap the planner reference (simulates the tier-change rebuild).
+    const next = makeStubHiResFamous(
+      new Map([[0, { hiResLayerIdx: 6, hiResCrossfadeAlpha: 0.9 }]]),
+    );
+    sys.setHiResFamous(next);
+
+    const after = sys.runFrame(makeInput(clouds)).disks;
+    expect(after[0]?.hiResLayerIdx).toBe(6);
+    expect(after[0]?.hiResCrossfadeAlpha).toBeCloseTo(0.9);
+
+    // setHiResFamous(undefined) detaches — emits the -1 / 0 sentinel.
+    sys.setHiResFamous(undefined);
+    const detached = sys.runFrame(makeInput(clouds)).disks;
+    expect(detached[0]?.hiResLayerIdx).toBe(-1);
+    expect(detached[0]?.hiResCrossfadeAlpha).toBe(0);
+  });
+
   it('skips fetches for already-failed keys (retry-storm guard)', async () => {
     const fetcher = vi.fn(async () => null);
     const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });

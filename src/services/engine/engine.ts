@@ -149,6 +149,7 @@ import {
 } from './wiring/galaxyCatalogSourceRegistry';
 import type { SettingsTableKey } from '../../@types/settings/SettingsTableKey';
 import { runBootstrapPhases } from './phases/bootstrap';
+import { rebuildHiResFamousForTier } from './helpers/rebuildHiResFamousForTier';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
 import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
 
@@ -1081,6 +1082,33 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // handle, but the AssetSlot machinery handles cancellation of any
     // in-flight previous-tier load identically.
     state.assetSlots.mcpm?.load({ tier });
+
+    // Hi-res LOD-3 famous-galaxy texture is tier-aware on its layerSide
+    // (512 px on small / mobile, 1024 px on medium + large; see
+    // HI_RES_LAYER_SIDE_BY_TIER).  WebGPU textures are immutable in
+    // shape, so a tier flip forces a destroy + recreate of the
+    // texture + planner pair AND a re-bind of the renderer's hi-res
+    // view.  See `helpers/rebuildHiResFamousForTier.ts` for the full
+    // teardown-order rationale.
+    //
+    // The device + texturedDiskRenderer reach: phaseLocals.device was
+    // set during initGpu and stays valid for the engine's lifetime
+    // (bootstrapDeps is captured in this closure).  The renderer is
+    // on state.gpu after initGpu.  Both null at boot — the early
+    // return below skips the rebuild if either is missing (which
+    // only happens if setTier somehow fires before bootstrap
+    // completes, e.g. a unit test driving the handle directly).
+    const device = bootstrapDeps.phaseLocals?.device;
+    const texturedDiskRenderer = state.gpu.texturedDiskRenderer;
+    if (device && texturedDiskRenderer) {
+      rebuildHiResFamousForTier({
+        state,
+        device,
+        tier,
+        texturedDiskRenderer,
+        requestRender: () => state.subsystems.scheduler.requestRender(),
+      });
+    }
   }
 
   function getCloud(source: SourceType): GalaxyCatalog | undefined {
