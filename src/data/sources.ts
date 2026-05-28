@@ -157,6 +157,10 @@ export const SOURCE_REGISTRY = {
     schechter: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
     iauPrefix: 'Synth',
     tierTargets: {}, // no caps anywhere — synthetic is procedurally sized
+    // Bulk-survey defaults; synthetic mags are low so the floor never
+    // bites in practice, but pick a consistent value for clarity.
+    intensityFloor: 0.02,
+    falloffHalfMpc: 1000,
   },
   [Source.SDSS]: {
     type: 'survey',
@@ -178,6 +182,8 @@ export const SOURCE_REGISTRY = {
     // small drops SDSS entirely to keep the mobile GPU budget;
     // medium caps at ~156k brightest; large is uncapped (key absent).
     tierTargets: { small: 0, medium: 156_000 },
+    intensityFloor: 0.02,
+    falloffHalfMpc: 1000,
   },
   [Source.TwoMRS]: {
     type: 'survey',
@@ -201,6 +207,8 @@ export const SOURCE_REGISTRY = {
     iauPrefix: '2MASX',
     // ~44k rows total — small enough to ship intact at every tier; no caps.
     tierTargets: {},
+    intensityFloor: 0.02,
+    falloffHalfMpc: 1000,
   },
   [Source.Glade]: {
     type: 'survey',
@@ -224,6 +232,8 @@ export const SOURCE_REGISTRY = {
     iauPrefix: 'GLADE',
     // small keeps the brightest 256k; medium ~400k; large uncapped.
     tierTargets: { small: 256_000, medium: 400_000 },
+    intensityFloor: 0.02,
+    falloffHalfMpc: 1000,
   },
   [Source.Famous]: {
     type: 'survey',
@@ -249,6 +259,8 @@ export const SOURCE_REGISTRY = {
     iauPrefix: 'Famous',
     // ~150 rows total — never subsampled; one file shared across tiers.
     tierTargets: {},
+    intensityFloor: 0.02,
+    falloffHalfMpc: 1000,
   },
   [Source.Cluster]: {
     type: 'poi',
@@ -309,6 +321,15 @@ export const SOURCE_REGISTRY = {
     // small drops Milliquas entirely (mobile GPU budget); medium caps at
     // ~200k brightest; large is uncapped.
     tierTargets: { small: 0, medium: 200_000 },
+    // Quasars sit at apparent mag 18–22+; with the bulk-survey floor of
+    // 0.02 most rows would pin to it and look identical. A higher floor
+    // (0.15) keeps the faint tail distinguishable. The 1000-Mpc fade
+    // half-distance attenuates the catalog to ~0.04 at d=5 Gpc — kills
+    // the high-z quasars the whole catalog exists to show — so we set
+    // an effectively-infinite half-distance to disable distance fade
+    // for this source while keeping the toggle architecture intact.
+    intensityFloor: 0.15,
+    falloffHalfMpc: 1e30,
   },
   [Source.Filaments]: {
     type: 'filament',
