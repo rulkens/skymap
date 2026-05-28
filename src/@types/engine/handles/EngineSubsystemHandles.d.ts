@@ -40,6 +40,8 @@
 import type { GalaxyAtlasSubsystem } from '../subsystems/GalaxyAtlasSubsystem';
 import type { ProceduralDiskSubsystem } from '../subsystems/ProceduralDiskSubsystem';
 import type { TexturedDiskSubsystem } from '../subsystems/TexturedDiskSubsystem';
+import type { HiResFamousSubsystem } from '../subsystems/HiResFamousSubsystem';
+import type { HiResFamousTexture } from '../../rendering/HiResFamousTexture';
 import type { SpaceMouseSubsystem } from '../subsystems/SpaceMouseSubsystem';
 import type { SelectionSubsystem } from '../subsystems/SelectionSubsystem';
 import type { BiasCorrectionSubsystem } from '../subsystems/BiasCorrectionSubsystem';
@@ -58,6 +60,26 @@ export type EngineSubsystemHandles = {
   galaxyAtlas: GalaxyAtlasSubsystem | null;
   proceduralDisks: ProceduralDiskSubsystem | null;
   texturedDisks: TexturedDiskSubsystem | null;
+  /**
+   * LOD-3 hi-res Famous-galaxy planner (Task R6).  Wired in `wireSlots`
+   * alongside `texturedDisks` — the textured-disk subsystem reads
+   * `lastOutput.byFamousIdx` to fold `hiResLayerIdx` +
+   * `hiResCrossfadeAlpha` into the disk instance buffer.  Null until
+   * `wireSlots` runs (same shape as the other GPU-dependent subsystems
+   * in this bag); on tier change (R7) the pair is destroyed and rebuilt
+   * at the new `layerSide` so the underlying `texture_2d_array` is
+   * always sized to match the active tier.
+   */
+  hiResFamous: HiResFamousSubsystem | null;
+  /**
+   * GPU resource handle for the LOD-3 hi-res Famous-galaxy
+   * `texture_2d_array`.  Owned at the engine level (rather than nested
+   * inside `hiResFamous`) so the tier-change teardown can destroy the
+   * GPUTexture symmetrically with the other per-tier resources, and so
+   * the renderer's `bindHiResArray(...)` re-bind site has a single
+   * obvious source for the new view.  Null until `wireSlots` runs.
+   */
+  hiResFamousTexture: HiResFamousTexture | null;
   spaceMouse: SpaceMouseSubsystem;
   tweens: TweenManager;
   clickResolver: ClickResolver | null;

@@ -850,16 +850,19 @@ export type TexturedDiskDeps = {
 
 **Steps:**
 
-- [ ] Extend the `EngineState.subsystems` type with the two new handles.
-- [ ] Add the construction block.
-- [ ] Add a fade-handle registration if the renderer's master gate uses
+- [x] Extend the `EngineState.subsystems` type with the two new handles.
+- [x] Add the construction block.
+- [x] Add a fade-handle registration if the renderer's master gate uses
   one — check whether `texturedDisks` has one already; if so, the hi-res
   array follows along under it (no separate gate needed per the ADR's
-  single-bind-group + single-draw stance).
-- [ ] `npm run build` → green.
-- [ ] `npm test` → green (no test should fail at this seam if Tasks R1-R5
+  single-bind-group + single-draw stance). _Confirmed: texturedDisks
+  uses the `{ kind: 'overlay', id: 'texturedDisks' }` handle registered
+  in wireSlots; hi-res sampling rides under that single fade gate, so no
+  separate hi-res fade handle is needed._
+- [x] `npm run build` → green.
+- [x] `npm test` → green (no test should fail at this seam if Tasks R1-R5
   are clean).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task R7: Tier-change teardown + recreate
 

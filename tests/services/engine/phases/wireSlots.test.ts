@@ -145,6 +145,35 @@ vi.mock('../../../../src/services/engine/subsystems/texturedDiskSubsystem', () =
     destroy: vi.fn(),
   })),
 }));
+// LOD-3 hi-res pair (R6).  The texture factory would call into
+// `device.createTexture` if not mocked — we don't have a real GPU here,
+// so stub out both the resource handle and its consumer subsystem.
+vi.mock('../../../../src/services/gpu/resources/hiResFamousTexture', () => ({
+  createHiResFamousTexture: vi.fn(() => ({
+    initTexture: vi.fn(),
+    getTextureView: vi.fn(() => ({}) as unknown as GPUTextureView),
+    getLayerSide: vi.fn(() => 1024),
+    allocate: vi.fn(() => -1),
+    touch: vi.fn(),
+    release: vi.fn(),
+    isLoaded: vi.fn(() => false),
+    isFailed: vi.fn(() => false),
+    markFailed: vi.fn(),
+    layerForKey: vi.fn(() => undefined),
+    uploadBitmap: vi.fn(),
+    setEvictHandler: vi.fn(),
+    destroy: vi.fn(),
+  })),
+}));
+vi.mock('../../../../src/services/engine/subsystems/hiResFamousSubsystem', () => ({
+  createHiResFamousSubsystem: vi.fn(() => ({
+    runFrame: vi.fn(),
+    lastOutput: { byFamousIdx: new Map() },
+    destroy: vi.fn(),
+  })),
+  HI_RES_TRIGGER_PX: 200,
+  HI_RES_FADE_BAND_PX: 60,
+}));
 
 // Load-progress emitter: keep the real factory (so the slot registry
 // gets walked) but spy on it so we can assert the Map size at the
@@ -274,7 +303,7 @@ function makeState(
       labelRenderer: null,
       markerLineRenderer: null,
       texturedQuadRenderer: { bindAtlas: vi.fn() } as never,
-      texturedDiskRenderer: { bindAtlas: vi.fn() } as never,
+      texturedDiskRenderer: { bindAtlas: vi.fn(), bindHiResArray: vi.fn() } as never,
       proceduralDiskRenderer: {} as never,
       milkyWayRenderer: null,
       scalarVolumeRenderer: {
@@ -292,6 +321,8 @@ function makeState(
       galaxyAtlas: null,
       proceduralDisks: null,
       texturedDisks: null,
+      hiResFamous: null,
+      hiResFamousTexture: null,
       loadProgress: null,
       // Post-Task-7 (2026-05-17): static cluster/supercluster/void
       // anchors are wired unconditionally — `wireSlots` now always

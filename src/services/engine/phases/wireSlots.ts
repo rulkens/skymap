@@ -60,6 +60,9 @@ import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator'
 import { createGalaxyAtlasSubsystem } from '../subsystems/galaxyAtlasSubsystem';
 import { createProceduralDiskSubsystem } from '../subsystems/proceduralDiskSubsystem';
 import { createTexturedDiskSubsystem } from '../subsystems/texturedDiskSubsystem';
+import { createHiResFamousSubsystem } from '../subsystems/hiResFamousSubsystem';
+import { createHiResFamousTexture } from '../../gpu/resources/hiResFamousTexture';
+import { HI_RES_LAYER_COUNT, HI_RES_LAYER_SIDE_BY_TIER } from '../../../data/sources';
 // Cosmography POI anchors wired unconditionally into the POI subsystem
 // below — the user-facing toggle is the SettingsPanel per-category
 // checkbox, not a URL gate.  (Pre-2026-05-17 this was gated on
@@ -263,17 +266,47 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // PGC-aliases stay lazy; see `loadPgcAliases()` on the handle for
   // the on-demand trigger.
 
-  // Construct the three impostor subsystems in dependency order.  The
+  // Construct the impostor subsystems in dependency order. The
   // textured-disk planner depends on the atlas (slot allocation +
-  // eviction subscription); the procedural-disk planner is independent.
+  // eviction subscription) AND on the LOD-3 hi-res planner (per-frame
+  // crossfade alpha lookup), so both must exist first. The
+  // procedural-disk planner is independent of the other two.
   const galaxyAtlas = createGalaxyAtlasSubsystem({
     device,
     requestRender: () => state.subsystems.scheduler.requestRender(),
   });
+
+  // LOD-3 hi-res Famous-galaxy resources.  The texture's per-layer
+  // edge length depends on the current tier — mobile / "small" gets
+  // 512 px to stay under the GPU memory budget, desktop tiers get
+  // 1024 px.  Sized once here at boot; tier change (R7) destroys this
+  // pair and re-creates it at the new layerSide.  `initTexture()` is
+  // mandatory before `getTextureView()` — the texture handle throws
+  // otherwise.
+  const layerSide = HI_RES_LAYER_SIDE_BY_TIER[state.sources.tier];
+  const hiResFamousTexture = createHiResFamousTexture({
+    device,
+    layerSide,
+    layerCount: HI_RES_LAYER_COUNT,
+  });
+  hiResFamousTexture.initTexture();
+  const hiResFamous = createHiResFamousSubsystem({
+    texture: hiResFamousTexture,
+    requestRender: () => state.subsystems.scheduler.requestRender(),
+  });
+
   const texturedDisks = createTexturedDiskSubsystem({
     device,
     atlas: galaxyAtlas,
     requestRender: () => state.subsystems.scheduler.requestRender(),
+    // Passing the planner here is what enables the LOD-3 path: for
+    // Famous-source galaxies past ~200 px apparent diameter, the
+    // textured-disk subsystem folds the planner's per-galaxy
+    // `hiResLayerIdx` + `hiResCrossfadeAlpha` into the disk instance
+    // buffer.  Omitting it (tests, future non-Famous configurations)
+    // keeps the LOD-3 sentinel at -1 / 0 so the fragment shader takes
+    // the atlas-tile-only path with no extra branching.
+    hiResFamous,
   });
   // Passing the atlas here is what enables the famous-WebP fade-out:
   // for Famous-source galaxies whose curated WebP has loaded into the
@@ -288,10 +321,18 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // call.  proceduralDiskRenderer doesn't sample the atlas, so it
   // doesn't get a bindAtlas call.
   texturedDiskRenderer.bindAtlas(galaxyAtlas.getTextureView());
+  // Bind the hi-res texture_2d_array view too — the inner
+  // instancedQuadRenderer's `composeAtlasBindGroup()` gate waits for
+  // BOTH `bindAtlas` and `bindHiResArray` before becoming draw-ready
+  // (see R2 + R3).  This is the first caller; until this fires the
+  // textured-disk pipeline has no bind group and skips every draw.
+  texturedDiskRenderer.bindHiResArray(hiResFamousTexture.getTextureView());
 
   state.subsystems.galaxyAtlas = galaxyAtlas;
   state.subsystems.texturedDisks = texturedDisks;
   state.subsystems.proceduralDisks = proceduralDisks;
+  state.subsystems.hiResFamous = hiResFamous;
+  state.subsystems.hiResFamousTexture = hiResFamousTexture;
 
   // Register the always-on overlay fade handles at opacity 1.0. The
   // registry surfaces these to a future tour subsystem (which can

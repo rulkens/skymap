@@ -540,11 +540,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       timingService: createDisabledGpuTimingService(),
     },
     subsystems: {
-      // ── LOD-1 / LOD-2 impostor planners + atlas ─────────────────
-      // All three null until `wireSlots` constructs them post-GPU init.
+      // ── LOD-1 / LOD-2 / LOD-3 impostor planners + atlas ─────────
+      // All null until `wireSlots` constructs them post-GPU init.
+      // The hi-res pair (LOD-3) is rebuilt per-tier (see R7) so the
+      // underlying `texture_2d_array`'s `layerSide` always matches the
+      // active tier; the others persist across tier changes.
       galaxyAtlas: null,
       proceduralDisks: null,
       texturedDisks: null,
+      hiResFamous: null,
+      hiResFamousTexture: null,
       // ── Tween manager ──────────────────────────────────────────
       // At most one camera tween at a time.  Sites that mutate it:
       //   - public handle's focusOn / focusOnHome / selectFamous
@@ -1347,12 +1352,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.youAreHere.destroy();
     state.subsystems.labelDirector.destroy();
     state.subsystems.pois.destroy();
-    // Teardown order across the three impostor subsystems matters:
-    // texturedDisks subscribes to galaxyAtlas's eviction handler
-    // (so destroy it first), proceduralDisks is independent, and
-    // galaxyAtlas releases its GPU texture last among the three.
+    // Teardown order across the impostor subsystems matters:
+    // texturedDisks reads `hiResFamous.lastOutput` per frame and
+    // subscribes to galaxyAtlas's eviction handler, so destroy it
+    // first. hiResFamous subscribes to its underlying texture's evict
+    // handler — destroy the subsystem before the texture so the
+    // handler isn't invoked against a torn-down planner. proceduralDisks
+    // is independent; galaxyAtlas releases its GPU texture last among
+    // the LOD-1/2 trio.
     state.subsystems.texturedDisks?.destroy();
     state.subsystems.texturedDisks = null;
+    state.subsystems.hiResFamous?.destroy();
+    state.subsystems.hiResFamous = null;
+    state.subsystems.hiResFamousTexture?.destroy();
+    state.subsystems.hiResFamousTexture = null;
     state.subsystems.proceduralDisks?.destroy();
     state.subsystems.proceduralDisks = null;
     state.subsystems.galaxyAtlas?.destroy();
