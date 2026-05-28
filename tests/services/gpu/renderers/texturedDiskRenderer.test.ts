@@ -90,10 +90,14 @@ describe('texturedDiskRenderer pack loop (Task R1)', () => {
     const { ctx, writeBufferCalls } = makeStubCtx();
     const renderer = createTexturedDiskRenderer(ctx);
 
-    // The textured disk renderer is atlas-capable — until bindAtlas is
-    // called, the inner factory's `draw` no-ops on the GPU side. Bind
-    // a stub view to unblock the writeBuffer path.
+    // The textured disk renderer is atlas-capable AND hi-res-array-
+    // capable (Task R3 flipped 'atlas.hiResArray: true' on the inner
+    // factory so the BGL matches the fragment shader's hi-res sample
+    // bindings). The inner factory withholds the bind group until BOTH
+    // views are bound, so both stubs are required to unblock the
+    // writeBuffer path.
     renderer.bindAtlas({} as GPUTextureView);
+    renderer.bindHiResArray({} as GPUTextureView);
 
     const pass = {
       setPipeline: vi.fn(),

@@ -50,18 +50,23 @@ import package::lib::masks::lumAlpha;
 @fragment
 fn fs(in: VsOut) -> @location(0) vec4<f32> {
   let rgba = textureSample(atlasTex, atlasSmp, in.atlasUv);
-  // Conditional hi-res crossfade (Task R3). When the instance has a
-  // bound hi-res layer ('hiResLayerIdx >= 0'), sample the array layer
-  // at the same per-corner UV used for the circular mask and blend
-  // toward it by 'hiResCrossfadeAlpha'. When the instance has no
-  // bound layer (the steady state for the vast majority of frames
-  // until R4/R6 wire data in), 'c' falls through as the unmodified
-  // atlas sample so this commit is behaviour-preserving.
-  var c = rgba;
-  if (in.hiResLayerIdx >= 0) {
-    let hi = textureSample(hiResTex, hiResSmp, in.cornerUv, in.hiResLayerIdx);
-    c = mix(c, hi, in.hiResCrossfadeAlpha);
-  }
+  // Hi-res crossfade (Task R3). WGSL requires 'textureSample' to be
+  // called from uniform control flow — it computes implicit derivatives
+  // across the 2x2 quad — so we cannot gate it inside an 'if' that
+  // branches on a per-instance varying. Instead, sample unconditionally
+  // with 'textureSampleLevel' (explicit LOD, no derivatives required)
+  // using a clamped layer index, and gate the BLEND FACTOR rather than
+  // the sample call. When the instance has no bound layer
+  // ('hiResLayerIdx < 0'), 'mixAmt' collapses to 0 so 'mix' returns
+  // 'rgba' unchanged — atlas-tile-only rendering preserved.
+  //
+  // 'textureSampleLevel' with explicit LOD 0 is correct here because
+  // the hi-res array texture is created without mip levels (see
+  // 'hiResFamousTexture.ts'), so there is no mip chain to select from.
+  let safeLayer = max(in.hiResLayerIdx, 0);
+  let hiSample = textureSampleLevel(hiResTex, hiResSmp, in.cornerUv, safeLayer, 0.0);
+  let mixAmt = select(0.0, in.hiResCrossfadeAlpha, in.hiResLayerIdx >= 0);
+  let c = mix(rgba, hiSample, mixAmt);
   // Soft circular mask — the disk geometry is already tilted in world
   // space, so the on-screen shape is a true ellipse from projection;
   // the mask just rounds the four corners of the (square) UV space.

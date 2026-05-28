@@ -61,7 +61,13 @@ export function createTexturedDiskRenderer(ctx: GpuContext, maxInstances = 256):
     label: 'disk',
     vertexSource: vsCode,
     fragmentSource: fsCode,
-    atlas: {},
+    // 'hiResArray: true' makes the shared factory append @binding(3,4)
+    // (texture_2d_array + sampler) to the BGL so the fragment shader's
+    // hi-res sample (Task R3) matches the pipeline layout. The bind
+    // group will only compose once R6 calls 'bindHiResArray' with a
+    // real view — until then no draw call fires for textured disks,
+    // which is the expected interim state.
+    atlas: { hiResArray: true },
     capacity: { kind: 'fixed', max: maxInstances },
     // Galaxy disks are EMISSIVE — see texturedQuadRenderer.ts for the
     // fade-to-black bug history that motivates additive over
@@ -72,6 +78,17 @@ export function createTexturedDiskRenderer(ctx: GpuContext, maxInstances = 256):
 
   function bindAtlas(atlasView: GPUTextureView): void {
     inner.bindAtlas?.(atlasView);
+  }
+
+  // Forwarding wrapper for the hi-res array binding (Task R3 plumbing).
+  // The inner factory exposes 'bindHiResArray' only when the renderer
+  // was built with 'atlas.hiResArray: true' (which it is, above), so the
+  // optional chain is belt-and-braces. R6 will call this with the real
+  // hi-res texture array view; until then the bind group withholds
+  // composition and no draw fires — see the inner factory's
+  // composeAtlasBindGroup() for the gating logic.
+  function bindHiResArray(arrayView: GPUTextureView, sampler?: GPUSampler): void {
+    inner.bindHiResArray?.(arrayView, sampler);
   }
 
   function draw(
@@ -129,6 +146,7 @@ export function createTexturedDiskRenderer(ctx: GpuContext, maxInstances = 256):
   const renderer: TexturedDiskRenderer = {
     label: 'texturedDiskRenderer',
     bindAtlas,
+    bindHiResArray,
     draw,
     destroy: inner.destroy,
   };
