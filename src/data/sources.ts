@@ -68,9 +68,7 @@ export const Source = {
    * Galaxy-cluster anchors (Virgo, Coma, Norma, ...). Picks against a
    * cluster's marker ring return source code 5 in the upper 5 bits of
    * the packed identity; the 27-bit `localIdx` carries the POI's index
-   * into the cluster table. See `selectionEncoding.ts` for the layout
-   * and `docs/superpowers/specs/2026-05-18-cluster-supercluster-viz-design.md`
-   * §6.2 for the per-category allocation rationale.
+   * into the cluster table. See `selectionEncoding.ts` for the layout.
    */
   Cluster: 5,
   /** Supercluster anchors (Hydra Wall, Hercules SC, ...). Same encoding as Cluster. */

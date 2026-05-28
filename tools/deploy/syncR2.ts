@@ -17,12 +17,11 @@
  *
  * ### Cache-Control
  *
- * `public, max-age=86400` — one-day cache, matching the firebase.json rule
- * that ran before the migration.  The .bin files are content-stable for as
- * long as the catalog generation pipeline stays deterministic, but they're
- * not hash-fingerprinted (the URL is hard-coded in the runtime), so a 24h
- * cap is the right balance between caching and the ability to push a fresh
- * catalogue without waiting a year for browsers to expire.
+ * `public, max-age=86400` — one-day cache.  The .bin files are content-
+ * stable while the catalog generation pipeline stays deterministic, but
+ * they're not hash-fingerprinted (the URL is hard-coded in the runtime),
+ * so a 24h cap is the right balance between caching and the ability to
+ * push a fresh catalogue without waiting a year for browsers to expire.
  *
  * ### CDN cache purge
  *
@@ -106,7 +105,7 @@ const ALLOW = (name: string): boolean =>
   /^(sdss|glade)-(small|medium|large)\.bin$/.test(name) ||
   // Milliquas v8 (Flesch 2023): same tier-suffixed pattern as
   // SDSS/GLADE.  Class + parent-survey metadata rides on the bin
-  // itself in v5 — no JSON sidecar to upload.
+  // itself — no JSON sidecar to upload.
   /^milliquas-(small|medium|large)\.bin$/.test(name) ||
   name === '2mrs.bin' ||
   name === 'famous.bin' ||
@@ -218,9 +217,7 @@ function uploadFile(localPath: string, key: string): void {
  * R2 uploads are atomic, but the CDN in front of R2 caches GETs by URL
  * for the full `max-age=86400` window — so without an explicit purge,
  * users continue to receive the OLD bytes for up to 24 hours after a
- * sync.  That bit us once already (the v5 .bin rollout: R2 had v5
- * immediately, but `cf-cache-status: HIT` kept serving v4 to clients
- * for the next hour).  Auto-purging here closes the gap.
+ * sync.  Auto-purging here closes the gap.
  *
  * Configuration via env (matching wrangler's own conventions so a
  * single CF token can be reused):

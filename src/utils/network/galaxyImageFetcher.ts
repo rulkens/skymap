@@ -38,7 +38,7 @@ export async function fetchGalaxyBitmap(
   // The high-resolution famous-galaxy LOD ships large WebPs to R2 (not the
   // committed repo) so we route them through dataUrl(), which prepends the
   // VITE_DATA_BASE_URL + '/data/' the R2 sync uploads under. A missing
-  // file here is EXPECTED — ~23/75 famous galaxies have no `full.webp`
+  // file here is EXPECTED — many famous galaxies have no `full.webp`
   // upstream — so we return null instead of falling through to SDSS/DSS;
   // the caller drops back to the curated 128 px atlas tile in that case.
   // Falling through would pollute the hi-res texture array with a DSS plate

@@ -15,20 +15,19 @@
  *
  * ## Teardown order matters
  *
- * The same invariant `engine.destroy()` documents at lines 1355-1362:
- * the planner subscribes to the texture's `setEvictHandler`, so tearing
- * down the subsystem FIRST prevents the texture's destroy-time
- * cleanup from firing into a torn-down planner.  Order here mirrors
- * destroy(): subsystem first, texture second.
+ * The planner subscribes to the texture's `setEvictHandler`, so tearing
+ * down the subsystem FIRST prevents the texture's destroy-time cleanup
+ * from firing into a torn-down planner.  Same invariant `engine.destroy()`
+ * enforces: subsystem first, texture second.
  *
  * ## Re-binding the renderer view
  *
  * `texturedDiskRenderer.bindHiResArray(view)` caches the view on the
- * inner instancedQuadRenderer's BGL composition gate (see R2 + R3).
- * The OLD view points at the now-destroyed texture; calling
- * `bindHiResArray` with the NEW view rewires the BGL so subsequent
- * draws sample the new texture.  Order matters: re-bind AFTER
- * recreating the texture (the new view doesn't exist before then).
+ * inner instancedQuadRenderer's BGL composition gate.  The OLD view
+ * points at the now-destroyed texture; calling `bindHiResArray` with
+ * the NEW view rewires the BGL so subsequent draws sample the new
+ * texture.  Order matters: re-bind AFTER recreating the texture (the
+ * new view doesn't exist before then).
  *
  * ## Why the textured-disk subsystem swaps its planner ref, not rebuilds
  *
@@ -90,11 +89,11 @@ export function rebuildHiResFamousForTier(deps: RebuildHiResFamousForTierDeps): 
   state.subsystems.hiResFamous = null;
 
   // 2. Tear down the texture.  After this the cached `GPUTextureView`
-  //    on the renderer's BGL is also stale — step 4 below replaces it.
+  //    on the renderer's BGL is also stale — step 6 below replaces it.
   state.subsystems.hiResFamousTexture?.destroy();
   state.subsystems.hiResFamousTexture = null;
 
-  // 3. Drop the renderer's stale planner reference. Until step 6 hands
+  // 3. Drop the renderer's stale planner reference. Until step 7 hands
   //    over the new one, every Famous-source disk emits the -1 / 0
   //    sentinel — atlas-tile-only rendering, no hi-res sample.
   state.subsystems.texturedDisks?.setHiResFamous(undefined);

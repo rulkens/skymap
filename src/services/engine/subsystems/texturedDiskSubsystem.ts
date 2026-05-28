@@ -1,23 +1,19 @@
 /**
  * texturedDiskSubsystem — LOD-2 per-frame planner.
  *
- * Extracted from `thumbnailSubsystem.ts` lines 487-993 as part of the
- * 2026-05-12 impostor-subsystem split.  Walks the catalog, applies the
- * px ≥ 24 gate, allocates atlas slots via the injected atlas subsystem,
- * schedules fetches, computes load-fade + distance-fade, sorts back-to-
- * front, emits the sorted disk array.
+ * Walks the catalog, applies the px ≥ 24 gate, allocates atlas slots
+ * via the injected atlas subsystem, schedules fetches, computes
+ * load-fade + distance-fade, sorts back-to-front, emits the sorted
+ * disk array.
  *
  * ### Why disks-only (no screen-aligned quad fallback)
  *
- * The pre-2026-05-18 design also emitted a `quads` array for galaxies
- * whose orientation was missing (`Number.isFinite(ar) && Number.isFinite(pa)`
- * returned false).  In practice every encoded galaxy has finite
- * orientation — `tools/catalog/buildAllBins.ts` applies a deterministic
- * hash-based fallback when the parser emits null — so the quad branch
- * never fired for non-Famous galaxies and only fired for famous ones at
- * <4 px apparent size, where the point sprite was already at full
- * strength.  Dropping the quad path simplified the renderer (one fewer
- * pipeline, BGL, atlas bind, timing slot) with no visual change.
+ * Every encoded galaxy has finite orientation — `tools/catalog/buildAllBins.ts`
+ * applies a deterministic hash-based fallback when the parser emits
+ * null — so a quad-fallback branch would only fire for famous galaxies
+ * at <4 px apparent size, where the point sprite is already at full
+ * strength.  The `Number.isFinite` checks below stay as a defensive
+ * guard against corrupted .bin files.
  *
  * ### What this owns (vs. galaxyAtlasSubsystem)
  *
@@ -47,29 +43,26 @@ import { fetchGalaxyBitmap } from '../../../utils/network/galaxyImageFetcher';
 import { cartesianToRaDec } from '../../../utils/math';
 
 /**
- * See thumbnailSubsystem.ts:87. Exported so the procedural-disk
- * subsystem can compute its fade-OUT against the textured-disk fade-IN
- * band in lockstep (the famous-WebP crossfade); see
- * `proceduralDiskSubsystem.ts`.
+ * Apparent-size gate (px).  Exported so the procedural-disk subsystem
+ * can compute its fade-OUT against the textured-disk fade-IN band in
+ * lockstep (the famous-WebP crossfade); see `proceduralDiskSubsystem.ts`.
  */
 export const APPARENT_SIZE_THRESHOLD_PX = 24;
 /**
- * See thumbnailSubsystem.ts:129. Exported alongside
- * `APPARENT_SIZE_THRESHOLD_PX` for the procedural-disk fade-OUT band.
- * Widened from 8 to 16 px on 2026-05-28 for a more graceful crossfade
- * — at typical fly-in speeds the previous 8 px band passed in a
- * fraction of a second; 16 px gives the eye time to register the
- * handoff between the procedural pattern and the curated WebP.
+ * Width of the procedural → textured disk crossfade band (px).  16 px
+ * gives the eye time to register the handoff between the procedural
+ * pattern and the curated WebP at typical fly-in speeds; narrower
+ * bands flash by in a fraction of a second.
  */
 export const FADE_BAND_PX = 16;
-/** See thumbnailSubsystem.ts:138. */
+/** Load-fade duration once a bitmap lands (ms). */
 const LOAD_FADE_MS = 400;
-/** See thumbnailSubsystem.ts:146. */
+/** Squared-distance early-out bound based on max plausible galaxy diameter. */
 const MAX_PLAUSIBLE_DIAMETER_KPC = 200;
-/** See thumbnailSubsystem.ts:154. */
+/** Disks render above this apparent size; below it the point sprite carries. */
 const DISK_THRESHOLD_PX = 4;
 
-/** See thumbnailSubsystem.ts:164. */
+/** Cache key for atlas + load-fade maps — RA/Dec rounded to 5 dp. */
 export function galaxyCacheKey(ra: number, dec: number): string {
   return `${ra.toFixed(5)}_${dec.toFixed(5)}`;
 }
@@ -104,9 +97,10 @@ export function createTexturedDiskSubsystem(
   const fetcher = deps.fetcher ?? fetchGalaxyBitmap;
   const decimationFactor = Math.max(1, Math.floor(deps.decimationFactor ?? 8));
   // Mutable binding rather than `const` so `setHiResFamous(...)` can
-  // swap the planner reference on tier change.  See the `setHiResFamous`
-  // docstring on `TexturedDiskSubsystem` for the architectural rationale
-  // (planner swap vs full-subsystem rebuild).
+  // swap the planner reference on tier change without rebuilding the
+  // whole subsystem (which would discard per-key load-fade timestamps
+  // for unrelated SDSS / 2MRS / GLADE galaxies).  See the
+  // `setHiResFamous` docstring on `TexturedDiskSubsystem`.
   let hiResFamous = deps.hiResFamous;
 
   // Load-fade timing — separate from the atlas's `bitmapReady`/`bitmapFailed`
@@ -241,12 +235,9 @@ export function createTexturedDiskSubsystem(
         const loadFade = tReady === undefined ? 0 : Math.min(1, (nowMs - tReady) / LOAD_FADE_MS);
         const fadeAlpha = distFade * loadFade;
 
-        // Disks-only post-2026-05-18.  See module header: every encoded
-        // galaxy has finite orientation (build-pipeline fallback), so
-        // the legacy `else → quads` branch never fired in practice.
-        // The `Number.isFinite` checks remain as a defensive guard
-        // against corrupted .bin files — same role they played in the
-        // pre-split code.
+        // Disks-only.  The `Number.isFinite` checks are a defensive
+        // guard against corrupted .bin files — every encoded galaxy
+        // has finite orientation via the build-pipeline fallback.
         if (px > DISK_THRESHOLD_PX && Number.isFinite(ar) && Number.isFinite(pa)) {
           // Hi-res LOD-3 fold-in: only Famous-source rows can possibly
           // be assigned a hi-res layer (the curated WebP atlas covers

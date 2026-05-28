@@ -97,10 +97,10 @@ const DEFAULT_DEST = 'public/data/images/famous-hires';
  * `<id>/full.webp` to `<destDir>/<id>.webp`, and return a summary.
  *
  * The function is async to match the build-script contract (every other
- * `tools/famous/*` entry point is async, even when the body is sync),
- * but the body is intentionally sync — Node's `fs.copyFileSync` is
- * faster than the promise variant for the file sizes we're moving and
- * removes any ordering ambiguity in the missing/copied/skipped counts.
+ * `tools/famous/*` entry point is async), but the body is intentionally
+ * sync — `fs.copyFileSync` is faster than the promise variant at these
+ * file sizes and removes any ordering ambiguity in the
+ * missing/copied/skipped counts.
  */
 export async function copyHiResToPublic(opts: CopyHiResOptions = {}): Promise<CopyHiResResult> {
   const sourceDir = resolve(opts.sourceDir ?? DEFAULT_SOURCE);

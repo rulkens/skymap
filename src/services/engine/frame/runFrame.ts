@@ -1,21 +1,9 @@
 /**
- * runFrame — the per-frame body of the render loop, lifted out of
- * `engine.ts` into its own module.
+ * runFrame — the per-frame body of the render loop, kept in its own
+ * module so `engine.ts` stays focused on bootstrap + the public handle.
  *
- * ### Why the frame body lives in its own file
- *
- * `engine.ts` was a 2300-line single-file orchestrator before Spec B's
- * internal restructure carved it up.  The per-frame body — ~310 lines
- * spanning FPS sampling, camera advance, auto-LOD, GPU dispatch, and the
- * throttled hover-pick — was a third of that line count.  Wholesale
- * inlining made the file's *one* easy-to-grep landmark ("where does the
- * loop tick?") hard to find under the mass of bootstrap, slot wiring,
- * and public-handle setters.
- *
- * Moving the body to a sibling file gives every reader a 1:1 mapping
- * from "what runs every frame" to "this module".  Engine.ts stays
- * responsible for *constructing* the dependencies; runFrame.ts is
- * responsible for *consuming* them.  The two concerns now sit behind a
+ * Engine.ts is responsible for *constructing* dependencies; runFrame.ts
+ * is responsible for *consuming* them.  The two concerns sit behind a
  * single seam — `RunFrameDeps` — which makes the inputs the body relies
  * on legible at a glance.
  *
@@ -24,11 +12,9 @@
  * Everything from the FPS sample at the top to the `renderFrame()` GPU
  * dispatch and the throttled hover pick that follows.  The
  * still-animating "keep ticking ONLY if motion or async work is in
- * flight" predicate also lives in here today — it's just a single
- * condition that fires `state.subsystems.scheduler.requestRender()` if
- * any of the busy-flags are still set, with no separate scheduler-tail
- * helper to factor out.  If a future phase wants to extract that tail
- * into its own helper, do it then; YAGNI for now.
+ * flight" predicate lives in here too — a single condition that fires
+ * `state.subsystems.scheduler.requestRender()` if any of the busy-flags
+ * are still set.
  *
  * The bootstrap IIFE that *assigns* `frame = () => { runFrame(...) }`
  * stays in engine.ts because it captures the GPU device/context and the
@@ -39,32 +25,27 @@
  *
  * ### Why deps are passed explicitly instead of lifted to EngineState
  *
- * Two reasons.  First, the IIFE-local renderers (`device`, `context`,
- * `milkyWayRenderer`, `filamentRenderer`, `texturedDiskRenderer`)
- * are *only* read by the frame body — promoting them to `state.gpu.*`
- * would widen `EngineState`'s contract for one consumer's convenience,
- * and every other reader of `EngineState` would have to null-check
- * fields it never touches.  (The pure `cssToTexPx` helper captures
- * nothing, so it's imported directly at the top of this module instead
- * of being threaded.)  (Hover writes used to live here too,
- * threaded as `setHovered`; Spec D.3 moved them to
- * `state.subsystems.selection.setHovered` so the frame body now reads
- * directly off `state` instead of carrying its own selection callback.)
+ * The IIFE-local renderers (`device`, `context`, `milkyWayRenderer`,
+ * `filamentRenderer`, `texturedDiskRenderer`) are *only* read by the
+ * frame body — promoting them to `state.gpu.*` would widen
+ * `EngineState`'s contract for one consumer's convenience, and every
+ * other reader of `EngineState` would have to null-check fields it
+ * never touches.  The pure `cssToTexPx` helper captures nothing, so
+ * it's imported directly at the top of this module instead of being
+ * threaded.
  *
  * ### The `{current}` ref pattern for mutable closure values
  *
- * The frame body reads-and-writes `lastReportedFps` (a closure-captured
- * `let` in createEngine).  After the relocation the body lives in a
- * different module, so the `let` no longer round-trips through closure.
- * The fix is to wrap the value as `{ current: T }` — a one-field box —
- * which `RunFrameDeps` carries by reference.  The body reads
- * `deps.lastReportedFps.current` and writes
- * `deps.lastReportedFps.current = newValue`; engine.ts sees the same
- * object and observes the writes.
+ * The frame body reads-and-writes `lastReportedFps`, which is owned by
+ * `createEngine`'s closure but mutated from this module.  Wrapping the
+ * value as `{ current: T }` — a one-field box — lets `RunFrameDeps`
+ * carry it by reference.  The body reads `deps.lastReportedFps.current`
+ * and writes `deps.lastReportedFps.current = newValue`; engine.ts sees
+ * the same object and observes the writes.
  *
- * `fpsCounter` (a `const` whose `.sample()` method is called once at the
- * top of the body) needs no ref-ification — we pass the counter object
- * itself.
+ * `fpsCounter` (a `const` whose `.sample()` method is called once at
+ * the top of the body) needs no ref-ification — we pass the counter
+ * object itself.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -90,11 +71,6 @@ import {
  * `nowMs` is `performance.now()`-shaped; engine.ts passes that exact
  * value at the call site.  We accept it as a parameter rather than
  * reading the global so tests can drive deterministic timing.
- *
- * The body is lifted *verbatim* from engine.ts — no behavioural changes,
- * no renames, no refactors.  The only edits relative to the original
- * are: (a) closure references rewritten as `deps.*`, (b) the mutable
- * `lastReportedFps` rewritten as `deps.lastReportedFps.current`.
  */
 export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number): void {
   // ── FPS measurement ───────────────────────────────────────────────
@@ -281,9 +257,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // safe even before the atlas load completes (the brief window between
   // engine start and initGpu finishing).
   //
-  // Post-Task-6: the director polls every registered `LabelProducer`
-  // (youAreHere, pois, ...), merges their outputs, change-detects via
-  // signature hash, and flushes once.
+  // The director polls every registered `LabelProducer` (youAreHere,
+  // pois, ...), merges their outputs, change-detects via signature
+  // hash, and flushes once.
   state.subsystems.labelDirector.runFrame(state, ctx);
 
   // ── Per-frame marker upload ───────────────────────────────────────
@@ -480,8 +456,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         state.gpu.timingService.descriptorFor('pick'),
       )
       .then((pick) => {
-        // Post-Plan-5 the picker's discriminated `PickResult` union is
-        // dispatched to the right hover sink:
+        // Dispatch the picker's discriminated `PickResult` union to the
+        // right hover sink:
         //   - null               → clear BOTH galaxy and POI hovers.
         //   - kind:'galaxy'      → galaxy hover (selection subsystem);
         //                          POI hover cleared.
@@ -561,28 +537,23 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   //     all controllers settle.
   // The bootstrap-bag fields (thumbnails, point-renderer) might still
   // be null on the very first few frames after engine construction —
-  // before initGpu / wireSlots have written their handles.  Pre-D.4
-  // the predicate carried bespoke `=== null` guards inline.  Post-D.4,
-  // `isEngineReady` consolidates them: when the engine is ready, all
-  // four bootstrap-bag fields are simultaneously non-null, so we
-  // dereference them without bespoke checks.
+  // before initGpu / wireSlots have written their handles.  `isEngineReady`
+  // consolidates the guard: when the engine is ready, all bootstrap-bag
+  // fields are simultaneously non-null, so we dereference them without
+  // bespoke checks.
   const ready = isEngineReady(state);
   // Tick the FadeRegistry BEFORE consulting isAnyAnimating: tick is
   // the single resolution site for fadeTo promises, so without this
   // call the awaited fade-out in setSourceVisible / tier-swap commit
-  // would hang forever in production. Sub-plan 04 of the unified-fade
-  // migration removed the per-renderer isFading() probes; the
-  // registry-driven equivalent (this tick + the isAnyAnimating OR
-  // term below) closes the loop.
+  // would hang forever in production.
   state.subsystems.fades.tick(nowMs);
   const stillAnimating =
     state.settings.camera.autoRotate ||
     state.subsystems.tweens.isActive() ||
     state.subsystems.spaceMouse.hasAxes() ||
     (ready && state.subsystems.texturedDisks.hasInFlightWork()) ||
-    // Survey + filament fade-in / fade-out: consult the FadeRegistry
-    // — the registry owns every handle's animation clock after the
-    // unified-fade migration (plan-03 for surveys, plan-04 for filaments).
+    // Survey + filament fade-in / fade-out: the FadeRegistry owns every
+    // handle's animation clock.
     state.subsystems.fades.isAnyAnimating(nowMs);
   if (stillAnimating) state.subsystems.scheduler.requestRender();
 }

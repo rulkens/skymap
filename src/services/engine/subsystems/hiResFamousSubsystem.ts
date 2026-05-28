@@ -63,14 +63,13 @@ export const HI_RES_TRIGGER_PX = 200;
 export const HI_RES_FADE_BAND_PX = 60;
 
 /**
- * Upper-bound clamp for the squared-distance early-out, same shape as
- * `texturedDiskSubsystem.ts:67` but tuned higher for famous galaxies.
- * Famous-catalog rows include several genuinely huge subjects (e.g.
- * NGC 6872 at ~250 kpc, Malin 1 at ~200 kpc disc) so the 200 kpc
- * default the other planners use would prematurely cull them at the
- * camera distances where the hi-res LOD actually fires.  500 kpc is
- * still well below the absurd-data regime while admitting every real
- * famous-galaxy diameter we ship.
+ * Upper-bound clamp for the squared-distance early-out, tuned higher
+ * than the textured-disk planner's 200 kpc.  Famous-catalog rows
+ * include several genuinely huge subjects (e.g. NGC 6872 at ~250 kpc,
+ * Malin 1 at ~200 kpc disc); 200 kpc would prematurely cull them at
+ * the camera distances where the hi-res LOD actually fires.  500 kpc
+ * admits every real famous-galaxy diameter we ship while staying well
+ * below the absurd-data regime.
  */
 const MAX_PLAUSIBLE_DIAMETER_KPC = 500;
 

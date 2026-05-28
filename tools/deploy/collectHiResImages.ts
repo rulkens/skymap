@@ -3,27 +3,25 @@
  *
  * The build pipeline writes one `<id>.webp` per curated galaxy into
  * `public/data/images/famous-hires/` (see `tools/famous/copyHiResToPublic.ts`).
- * That directory is a sibling of the flat `*.bin` listing that the existing
- * `syncR2` sweep handles, but it sits one level deeper — so `readdirSync` on
- * the top of `public/data/` doesn't see them.  Rather than make the main
- * sweep recursive (which would also pick up unrelated files Vite drops into
- * `public/data/` during development), we list this one well-known subdir
- * explicitly here.
+ * That directory is one level below the flat `*.bin` listing the main
+ * `syncR2` sweep handles, so `readdirSync` on top of `public/data/`
+ * doesn't see it.  Listing this one well-known subdir explicitly is
+ * safer than a recursive walk, which would risk picking up unrelated
+ * files Vite drops into `public/data/` during development.
  *
- * Returning an `Array<{ localPath, r2Key }>` mirrors the shape of the
- * existing `EXTRA_FILES` table in `syncR2.ts`, which keeps the uploader's
- * inner loop a single shape: `for ({ localPath, r2Key } of …) uploadFile(…)`.
+ * Returns `Array<{ localPath, r2Key }>` — same shape as `EXTRA_FILES`
+ * in `syncR2.ts`, so the uploader's inner loop stays uniform:
+ * `for ({ localPath, r2Key } of …) uploadFile(…)`.
  *
  * The R2 key is `data/images/famous-hires/<file>` — the `data/` prefix
- * matches the prefix used for the .bin files, so `dataUrl()` (in
+ * matches the .bin files, so `dataUrl()` (in
  * `src/services/loading/fetchWithProgress.ts`) resolves
  * `'images/famous-hires/<id>.webp'` cleanly under the same base URL.
  *
- * Pure / side-effect-free apart from the directory read: returns an empty
- * array when the directory is absent (a fresh checkout that hasn't run
- * `npm run build-famous-hires` yet should not fail the sync).  Only files
- * ending in `.webp` are returned — sidecars or stray files don't get
- * uploaded.
+ * Pure apart from the directory read: returns an empty array when the
+ * directory is absent (a fresh checkout that hasn't run
+ * `npm run build-famous-hires` should not fail the sync).  Only files
+ * ending in `.webp` are returned.
  */
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
