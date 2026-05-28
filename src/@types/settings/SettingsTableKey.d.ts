@@ -27,4 +27,5 @@ export type SettingsTableKey =
   | 'setDepthFadeEnabled'
   | 'setAbsMagLimit'
   | 'setExposure'
-  | 'setToneMapCurve';
+  | 'setToneMapCurve'
+  | 'setShowPickBuffer';

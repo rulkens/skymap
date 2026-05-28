@@ -55,6 +55,7 @@ import type { SelectionRingRenderer } from '../../rendering/SelectionRingRendere
 import type { ClusterMarkerRenderer } from '../../rendering/ClusterMarkerRenderer';
 import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
 import type { VolumeUpsample } from '../../rendering/VolumeUpsample';
+import type { PickDebugOverlay } from '../../rendering/PickDebugOverlay';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
@@ -208,6 +209,17 @@ export type EngineGpuHandles = {
    * sampler + bind-group-layout.
    */
   volumeUpsample: VolumeUpsample | null;
+  /**
+   * Pick-buffer debug overlay — fullscreen colour-map of the r32uint
+   * pick texture over the tone-mapped frame.  Null until `initGpu`
+   * constructs it.  Excluded from `isEngineReady`: it's a debug-only
+   * pass, and the per-frame consumer null-checks the field along with
+   * the `state.settings.debug.showPickBuffer` toggle.  Stored here so
+   * `destroy()` can release the pipeline + bind-group-layout via the
+   * pass's no-op destroy method (symmetry with the other GPU-resource
+   * owners).
+   */
+  pickDebugOverlay: PickDebugOverlay | null;
   /**
    * Per-pass GPU timing service.  Always non-null — the engine state
    * is initialized with a no-op stub (see `createDisabledGpuTimingService`)

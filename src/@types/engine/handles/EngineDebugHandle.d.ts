@@ -72,4 +72,10 @@ export type EngineDebugHandle = {
    * semantics.
    */
   readonly passOverrides: PassOverridesHandle;
+  /**
+   * Toggle the pick-buffer debug overlay (see
+   * `EngineSettingsState.debug.showPickBuffer`).  Echoes through
+   * `EngineCallbacks.debug.onShowPickBufferChange`.
+   */
+  setShowPickBuffer(enabled: boolean): void;
 };

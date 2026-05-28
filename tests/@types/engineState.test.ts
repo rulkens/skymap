@@ -102,6 +102,7 @@ describe('EngineState type', () => {
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 1 },
       volumes: { masterEnabled: false, fields: {} },
+      debug: { showPickBuffer: false },
       labelCategoryVisibility: {
         cluster: true,
         supercluster: true,
@@ -162,6 +163,7 @@ describe('EngineState type', () => {
         horizonShellRenderer: null,
         scalarVolumeRenderer: null,
         volumeUpsample: null,
+        pickDebugOverlay: null,
         timingService: createDisabledGpuTimingService(),
       },
       subsystems: {
@@ -242,6 +244,7 @@ describe('EngineState type', () => {
         intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
       },
       volumes: { masterEnabled: DEFAULT_VOLUMES_ENABLED, fields: {} },
+      debug: { showPickBuffer: false },
       labelCategoryVisibility: {
         cluster: true,
         supercluster: true,
@@ -294,6 +297,7 @@ describe('EngineState type', () => {
         milkyWay: { enabled: true },
         filaments: { enabled: false, intensity: 1 },
         volumes: { masterEnabled: false, fields: {} },
+        debug: { showPickBuffer: false },
         labelCategoryVisibility: {
           cluster: true,
           supercluster: true,
@@ -343,6 +347,7 @@ describe('EngineState type', () => {
         horizonShellRenderer: null,
         scalarVolumeRenderer: null,
         volumeUpsample: null,
+        pickDebugOverlay: null,
         timingService: createDisabledGpuTimingService(),
       },
       subsystems: {

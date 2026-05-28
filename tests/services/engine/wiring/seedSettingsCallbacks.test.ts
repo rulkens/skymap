@@ -30,6 +30,7 @@ function makeSnapshot(): SettingsCallbackSeed {
     highlightFallback: true,
     realOnlyMode: false,
     depthFadeEnabled: true,
+    showPickBuffer: false,
     biasMode: BiasMode.None,
     absMagLimit: -19.5,
     toneMapCurve: ToneMapCurve.Reinhard,

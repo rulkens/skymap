@@ -340,6 +340,58 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     timingService: deps.timingService,
   });
 
+  // ── Pick-buffer debug overlay ─────────────────────────────────────
+  //
+  // Populate the pick texture (no readback) and composite a colour-
+  // mapped overlay over the swap chain.  Sequencing matters:
+  //   - AFTER renderFrame's submit so the shared uniform buffer
+  //     reflects this frame's visual state (queue.writeBuffer is
+  //     ordered per submit).
+  //   - BEFORE the hover pick so both writers see the pick texture in
+  //     a known state.
+  //   - In its own encoder/submit with `loadOp: 'load'` so the
+  //     pre-multiplied OVER blend composites cleanly on top of the
+  //     tone-mapped frame without re-plumbing renderFrame.
+  if (
+    state.settings.debug.showPickBuffer &&
+    state.gpu.pickRenderer !== null &&
+    state.gpu.pickDebugOverlay !== null &&
+    state.sources.catalogs.size > 0 &&
+    ctx.isReady
+  ) {
+    const overlaySources = Array.from(ctx.renderer.loadedSources()).filter(
+      (s) => ((state.sources.pickMask >> s.source) & 1) !== 0,
+    );
+    if (overlaySources.length > 0) {
+      const pickTex = state.gpu.pickRenderer.renderForDebug(
+        [deps.canvas.width, deps.canvas.height],
+        overlaySources,
+        state.settings.points.sizePx,
+      );
+      if (pickTex !== null) {
+        const overlayEncoder = deps.device.createCommandEncoder({
+          label: 'pick-debug-overlay-encoder',
+        });
+        const swapView = deps.context.getCurrentTexture().createView();
+        const overlayPass = overlayEncoder.beginRenderPass({
+          label: 'pick-debug-overlay-pass',
+          colorAttachments: [
+            {
+              view: swapView,
+              // `load` — preserve the tone-mapped frame underneath; the
+              // overlay's pre-multiplied OVER blend composites on top.
+              loadOp: 'load',
+              storeOp: 'store',
+            },
+          ],
+        });
+        state.gpu.pickDebugOverlay.draw(overlayPass, pickTex.createView());
+        overlayPass.end();
+        deps.device.queue.submit([overlayEncoder.finish()]);
+      }
+    }
+  }
+
   // ── Throttled hover pick ──────────────────────────────────────────
   //
   // Strategy: pointermove updates `state.picking.latestMouseCss`; here

@@ -175,7 +175,13 @@ struct Uniforms {
   // the crossfade.
   pxFadeStart: f32,
   pxFadeEnd: f32,
-  _padFade0: f32,
+  // 0 = visual pass, 1 = pick pass.  Set in-place by pickRenderer
+  // before each pick draw and reset by the next visual frame's full
+  // buffer rewrite.  When 1, the vertex stage skips the procedural-
+  // disk crossfade-OUT and the intensity-floor degenerate-clip cull;
+  // without those gates, galaxies handed off to a procedural disk
+  // would not be pickable (the disk renderer has no pick pipeline).
+  pickPass: u32,
   _padFade1: f32,
 };
 
@@ -285,4 +291,13 @@ struct VSOut {
   // of trig calls per frame. Packed into a vec2 at one location.
   @location(3) @interpolate(flat) paRotation: vec2<f32>,
 
+  // 1u once `apparentDiameterPx >= u.pxFadeStart` — the sprite has
+  // entered the procedural-disk handoff band and the visual disk has
+  // started rendering on top.  pickFragment branches on this: 0u →
+  // generous circular mask for faint far-field dots; 1u → rotated
+  // ellipse matching the visual disk, so the pick area follows the
+  // disk shape and doesn't swallow clicks for galaxies behind it.
+  // Consumed only by pickFragment; visual fs declares no input here
+  // and the WGSL linker drops the unused varying.
+  @location(4) @interpolate(flat) isDiskHandoff: u32,
 };

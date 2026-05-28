@@ -39,19 +39,31 @@ import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
 // the pipeline because integer formats can't be blended; depth test
 // resolves overlapping points instead.
 //
-// WHY A LARGER RADIUS (2.25 vs 1.0)?
-// A forgiveness radius of 1.5× lets the user pick a point without
-// needing to land exactly on its visual disk. The visual fragment
-// discards fragments where r² > 1.0 (unit disk); 'fsPick' discards
-// where r² > 2.25 (= 1.5²), effectively making each pick billboard
-// 1.5× larger than the visible one.
+// Mask choice is set by 'in.isDiskHandoff' (see io.wesl::VSOut):
+//   - 0u: circular mask in raw UV (far-field dot regime).
+//   - 1u: rotated ellipse matching the visual disk (procedural-disk
+//     handoff regime), so the pick area follows the visible disk and
+//     doesn't swallow clicks meant for galaxies behind thin disks.
+// Both masks discard at r² > 2.25 — a 1.5× forgiveness margin on the
+// visual fs's r² > 1.0 cutoff.
 
 @fragment
 fn fsPick(in: VSOut) -> @location(0) vec4<u32> {
-  // r2 = squared distance from the billboard centre in [-1, +1]² UV space.
-  // The visual fs discards at r2 > 1.0 (unit disk, radius 1.0).
-  // We discard at r2 > 2.25 (= 1.5²), giving a 1.5× bigger pick target.
-  let r2 = dot(in.uv, in.uv);
+  // Compute both r² values unconditionally — cheap, and keeps the
+  // branches structurally symmetric.  Same rotated-frame transform
+  // the visual fs uses (rotate UV by -PA, squash y by safeAB).
+  let cs = in.paRotation.x;
+  let sn = in.paRotation.y;
+  let rotated = vec2<f32>(
+    cs * in.uv.x - sn * in.uv.y,
+    sn * in.uv.x + cs * in.uv.y,
+  );
+  let elliptic = vec2<f32>(rotated.x, rotated.y / in.shaded.w);
+  let r2 = select(
+    dot(in.uv, in.uv),
+    dot(elliptic, elliptic),
+    in.isDiskHandoff == 1u,
+  );
   if (r2 > 2.25) { discard; }
 
   // Write '(sourceCode << 27 | instance_index) + 1' so background

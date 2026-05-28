@@ -149,6 +149,10 @@ vi.mock('../../../../src/services/gpu/passes/volumeUpsample', () => ({
   createVolumeUpsample: vi.fn(() => makeStub('volumeUpsample')),
 }));
 
+vi.mock('../../../../src/services/gpu/passes/pickDebugOverlay', () => ({
+  createPickDebugOverlay: vi.fn(() => makeStub('pickDebugOverlay')),
+}));
+
 vi.mock('../../../../src/services/gpu/labels/loadFontAtlases', () => ({
   loadFontAtlases: vi.fn(async () => ({
     metricsByFont: { cormorant: { __mockMetrics: true } },
@@ -192,6 +196,7 @@ function makeState(): EngineState {
       horizonShellRenderer: null,
       scalarVolumeRenderer: null,
       volumeUpsample: null,
+      pickDebugOverlay: null,
     },
     subsystems: {
       biasCorrection: {

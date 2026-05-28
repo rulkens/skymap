@@ -190,9 +190,16 @@ fn vs(
   // Crossfade-out against the procedural-disk pass. ThumbnailRenderer
   // fades IN across [pxFadeStart, pxFadeEnd] (apparent-pixel diameter);
   // we fade OUT with the complementary smoothstep so the additive HDR
-  // contribution stays constant per galaxy through the band.
+  // contribution stays constant per galaxy through the band.  The pick
+  // pass skips this fade so disk-sized galaxies still write into the
+  // pick texture (the procedural-disk renderer has no pick pipeline).
   let apparentDiameterPx = sizePx * 0.5;
-  let crossfadeOut = 1.0 - smoothstep(u.pxFadeStart, u.pxFadeEnd, apparentDiameterPx);
+  let inPickPass = u.pickPass == 1u;
+  let crossfadeOut = select(
+    1.0 - smoothstep(u.pxFadeStart, u.pxFadeEnd, apparentDiameterPx),
+    1.0,
+    inPickPass,
+  );
 
   let intensity = clamp((22.0 - p.magnitude) / 8.0, 0.05, 1.0)
     * u.brightness
@@ -217,12 +224,11 @@ fn vs(
   // threshold contribute imperceptibly to the additive HDR target, so
   // we emit a degenerate clip position (outside the [-1, 1] NDC cube)
   // and let the rasteriser drop the primitive before any fragment work.
-  // Pick fragment shares this vertex stage, so culled galaxies also
-  // become non-pickable — acceptable since they were never visible. A
-  // selected-but-culled galaxy still gets its UI ring from the dedicated
-  // selectionRingPass, which runs independently of this pipeline.
+  // Pick fragment shares this vertex stage; the cull is suppressed
+  // in the pick pass so the user can still click galaxies the visual
+  // pass has dimmed below the additive-HDR contribution threshold.
   let INVISIBILITY_THRESHOLD = 0.005;
-  if (intensity < INVISIBILITY_THRESHOLD) {
+  if (intensity < INVISIBILITY_THRESHOLD && !inPickPass) {
     out.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
   }
 
@@ -237,6 +243,10 @@ fn vs(
   // rotating the UV is the inverse of rotating the ellipse.
   let paRad = -p.positionAngleDeg * 3.14159265 / 180.0;
   out.paRotation = vec2<f32>(cos(paRad), sin(paRad));
+
+  // Tell fsPick which mask shape to use.  See io.wesl::VSOut for what
+  // each value means.
+  out.isDiskHandoff = select(0u, 1u, apparentDiameterPx >= u.pxFadeStart);
 
   return out;
 }
