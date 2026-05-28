@@ -39,6 +39,7 @@ import package::lib::sourceUniforms::SourceUniforms;
 import package::lib::colorIndex::ramp;
 import package::lib::astro::distanceModulus;
 import package::lib::selectionEncoding::packSelection;
+import package::lib::orientation::diskAxes;
 
 // ── @group(0) — per-frame uniforms ──────────────────────────────────
 //
@@ -246,7 +247,48 @@ fn vs(
 
   // Tell fsPick which mask shape to use.  See io.wesl::VSOut for what
   // each value means.
-  out.isDiskHandoff = select(0u, 1u, apparentDiameterPx >= u.pxFadeStart);
+  let isDiskHandoff = apparentDiameterPx >= u.pxFadeStart;
+  out.isDiskHandoff = select(0u, 1u, isDiskHandoff);
+
+  // Projected disk basis for the pick-mode ellipse mask.  Only emit
+  // the projection work when we're actually in the pick pass AND in
+  // the disk-handoff regime; both gates avoid wasted clip-space
+  // projections on the millions of far-field point sprites the visual
+  // pass draws every frame.  See io.wesl::VSOut for the math the
+  // fragment side performs on these two vectors.
+  if (inPickPass && isDiskHandoff) {
+    // Clamp cosI at 0.05 (matches procedural-disk renderer) so an
+    // edge-on disk's minor axis doesn't collapse to a degenerate line
+    // and the fragment's matrix inverse stays well-conditioned.
+    let cosI = max(safeAB, 0.05);
+    let sinI = sqrt(max(0.0, 1.0 - cosI * cosI));
+    // Positive paRad (east-of-north on the celestial sky) — opposite
+    // sign from the point sprite's screen-aligned 'paRotation', which
+    // negates because it rotates UV in the inverse direction.  Here
+    // we want the actual world-space axis.
+    let paRadWS = p.positionAngleDeg * 3.14159265 / 180.0;
+    let axes = diskAxes(p.position, paRadWS, cosI, sinI);
+    let majorWS = axes.major;
+    let minorWS = axes.minor;
+
+    // Project the disk's outer-edge tips (centre ± radiusMpc · axis)
+    // and take the NDC delta from the projected centre.  Multiply by
+    // viewportPx · 0.5 to convert NDC → pixels, then divide by the
+    // billboard's half-extent in pixels so the fragment can test
+    // against unit UV.
+    let majorTipClip = worldToClip(u.cam, p.position + p.radiusMpc * majorWS);
+    let minorTipClip = worldToClip(u.cam, p.position + p.radiusMpc * minorWS);
+    let baseNDC = vec2<f32>(center.x, center.y) / center.w;
+    let majorNDC = vec2<f32>(majorTipClip.x, majorTipClip.y) / majorTipClip.w;
+    let minorNDC = vec2<f32>(minorTipClip.x, minorTipClip.y) / minorTipClip.w;
+    let halfViewport = u.cam.viewportPx * 0.5;
+    let billboardHalfPx = max(sizePx * 0.5, 1.0);
+    out.pickMajorBillboard = ((majorNDC - baseNDC) * halfViewport) / billboardHalfPx;
+    out.pickMinorBillboard = ((minorNDC - baseNDC) * halfViewport) / billboardHalfPx;
+  } else {
+    out.pickMajorBillboard = vec2<f32>(0.0, 0.0);
+    out.pickMinorBillboard = vec2<f32>(0.0, 0.0);
+  }
 
   return out;
 }

@@ -291,13 +291,26 @@ struct VSOut {
   // of trig calls per frame. Packed into a vec2 at one location.
   @location(3) @interpolate(flat) paRotation: vec2<f32>,
 
-  // 1u once `apparentDiameterPx >= u.pxFadeStart` — the sprite has
+  // 1u once 'apparentDiameterPx >= u.pxFadeStart' — the sprite has
   // entered the procedural-disk handoff band and the visual disk has
   // started rendering on top.  pickFragment branches on this: 0u →
-  // generous circular mask for faint far-field dots; 1u → rotated
+  // generous circular mask for faint far-field dots; 1u → projected
   // ellipse matching the visual disk, so the pick area follows the
   // disk shape and doesn't swallow clicks for galaxies behind it.
   // Consumed only by pickFragment; visual fs declares no input here
   // and the WGSL linker drops the unused varying.
   @location(4) @interpolate(flat) isDiskHandoff: u32,
+
+  // Projected disk basis in billboard-relative coordinates, written
+  // by the vertex stage when 'inPickPass && isDiskHandoff'.  Each is
+  // the screen-space delta from the billboard centre to the outer
+  // edge along the world-space major / minor axis (built via
+  // 'lib/orientation::diskAxes'), divided by the billboard's
+  // half-extent in pixels.  pickFragment builds M = [major|minor],
+  // inverts it, and applies to 'uv' to test the ellipse — matches
+  // the procedural-disk shape on screen for any camera pose.
+  // Zero-filled when the regime doesn't apply (visual pass, or
+  // far-field dot pick); the fragment doesn't read them in that case.
+  @location(5) @interpolate(flat) pickMajorBillboard: vec2<f32>,
+  @location(6) @interpolate(flat) pickMinorBillboard: vec2<f32>,
 };

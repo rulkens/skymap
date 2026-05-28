@@ -41,29 +41,35 @@ import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
 //
 // Mask choice is set by 'in.isDiskHandoff' (see io.wesl::VSOut):
 //   - 0u: circular mask in raw UV (far-field dot regime).
-//   - 1u: rotated ellipse matching the visual disk (procedural-disk
-//     handoff regime), so the pick area follows the visible disk and
-//     doesn't swallow clicks meant for galaxies behind thin disks.
+//   - 1u: projected ellipse from the vertex stage's world-space disk
+//     basis ('pickMajorBillboard' / 'pickMinorBillboard'), matching
+//     the procedural-disk renderer's shape on screen for any camera
+//     pose.  An earlier screen-aligned PA rotation gave the wrong
+//     orientation whenever the camera wasn't on the Earth-origin axis.
 // Both masks discard at r² > 2.25 — a 1.5× forgiveness margin on the
 // visual fs's r² > 1.0 cutoff.
 
 @fragment
 fn fsPick(in: VSOut) -> @location(0) vec4<u32> {
-  // Compute both r² values unconditionally — cheap, and keeps the
-  // branches structurally symmetric.  Same rotated-frame transform
-  // the visual fs uses (rotate UV by -PA, squash y by safeAB).
-  let cs = in.paRotation.x;
-  let sn = in.paRotation.y;
-  let rotated = vec2<f32>(
-    cs * in.uv.x - sn * in.uv.y,
-    sn * in.uv.x + cs * in.uv.y,
-  );
-  let elliptic = vec2<f32>(rotated.x, rotated.y / in.shaded.w);
-  let r2 = select(
-    dot(in.uv, in.uv),
-    dot(elliptic, elliptic),
-    in.isDiskHandoff == 1u,
-  );
+  var r2 = dot(in.uv, in.uv);
+
+  if (in.isDiskHandoff == 1u) {
+    // M = [major | minor] maps disk-local coords (a, b) — where the
+    // visible ellipse is the unit circle a² + b² ≤ 1 — into the
+    // billboard's UV space.  Inverting and applying to 'uv' recovers
+    // (a, b); we test that against the 1.5× forgiveness margin.
+    // safeAB clamps cosI at 0.05 so the basis isn't singular.
+    let major = in.pickMajorBillboard;
+    let minor = in.pickMinorBillboard;
+    let det = major.x * minor.y - major.y * minor.x;
+    let invDet = 1.0 / det;
+    let local = vec2<f32>(
+      ( minor.y * in.uv.x - minor.x * in.uv.y) * invDet,
+      (-major.y * in.uv.x + major.x * in.uv.y) * invDet,
+    );
+    r2 = dot(local, local);
+  }
+
   if (r2 > 2.25) { discard; }
 
   // Write '(sourceCode << 27 | instance_index) + 1' so background
