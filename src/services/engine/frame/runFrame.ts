@@ -248,6 +248,20 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       pxPerRad: ctx.drawPxPerRad,
     });
   }
+  // hiResFamous must run BEFORE texturedDisks: the textured-disk planner
+  // reads hiResFamous.lastOutput.byFamousIdx and folds layer indices +
+  // crossfade alphas into the DiskInstance literals it emits. Running it
+  // after would lag by a frame and produce a visible flicker on close
+  // approach to a famous galaxy.
+  if (state.subsystems.hiResFamous !== null) {
+    state.subsystems.hiResFamous.runFrame({
+      cam: ctx.cam,
+      catalogs: state.sources.catalogs,
+      visibleSourceMask: state.sources.drawMask,
+      pxPerRad: ctx.drawPxPerRad,
+      famousMeta: state.sources.famousMeta,
+    });
+  }
   if (state.subsystems.texturedDisks !== null) {
     state.subsystems.texturedDisks.runFrame({
       cam: ctx.cam,
