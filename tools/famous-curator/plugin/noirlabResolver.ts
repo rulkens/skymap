@@ -46,6 +46,16 @@ function stripHtml(s: string): string {
 }
 
 /**
+ * Anchored on the visible "Large JPEG" link text plus the `/large/` URL
+ * path segment — both are the actual djangoplicity template contract,
+ * not the surrounding sibling order which has historically churned.
+ */
+const LARGE_JPEG_RE = /<a[^>]*href="([^"]+\/large\/[^"]+\.jpg)"[^>]*>\s*Large JPEG\s*<\/a>/i;
+
+/** The single `<div class="credit">` on every NOIRLab image page. */
+const CREDIT_DIV_RE = /<div class="credit">([\s\S]*?)<\/div>/;
+
+/**
  * Parse a NOIRLab image page.  Pure: no I/O, no globals, `pageUrl`
  * echoed into the result verbatim so the caller controls canonicalisation.
  *
@@ -56,18 +66,12 @@ export function parseNoirLabPage(
   html: string,
   pageUrl: string,
 ): ResolvedMedia | null {
-  // The Large JPEG anchor sits inside a download row whose icon is
-  // `<img ... alt="Large JPEG" />`.  We anchor the match on that alt
-  // text to disambiguate it from the Screensize / Wallpaper rows that
-  // share the surrounding markup.
-  const largeJpeg = /<img[^>]*alt="Large JPEG"[^>]*\/?>\s*<\/span>\s*<span[^>]*class="archive_dl_text"[^>]*>\s*<a[^>]*href="([^"]+)"/.exec(
-    html,
-  );
+  const largeJpeg = LARGE_JPEG_RE.exec(html);
   if (!largeJpeg) return null;
+  // regex match guarantees the capture group is present
   const directUrl = largeJpeg[1]!;
 
-  // Credit is the single `<div class="credit">` on the page.
-  const credit = /<div class="credit">([\s\S]*?)<\/div>/.exec(html);
+  const credit = CREDIT_DIV_RE.exec(html);
   if (!credit) return null;
   const author = stripHtml(credit[1]!);
 
