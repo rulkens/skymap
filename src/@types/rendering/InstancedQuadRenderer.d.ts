@@ -22,14 +22,13 @@ export type InstancedQuadRenderer = {
   /**
    * Bind the hi-res `texture_2d_array` view (and optionally its
    * sampler). Only defined when `config.atlas.hiResArray === true`.
-   * When this consumer shape is in play the composed bind group
-   * waits for BOTH `bindAtlas` and `bindHiResArray` before becoming
-   * available — drawing before then no-ops, same shape as the
-   * atlas-only deferred-binding contract.
+   * The composed bind group waits for BOTH `bindAtlas` and
+   * `bindHiResArray` before becoming available — drawing before then
+   * no-ops, mirroring the atlas-only deferred-binding contract.
    *
-   * Passing a `sampler` override is for tests / atypical filtering
-   * needs; the factory creates a default linear-clamp sampler when
-   * the config is built, which is what production callers want.
+   * The `sampler` override is for tests / atypical filtering; the
+   * factory creates a default linear-clamp sampler that production
+   * callers want.
    */
   bindHiResArray?: (arrayView: GPUTextureView, sampler?: GPUSampler) => void;
   /**

@@ -25,22 +25,19 @@ export type TexturedDiskRenderer = {
    */
   bindAtlas(atlasView: GPUTextureView): void;
   /**
-   * Bind the hi-res texture-array view (Task R3 plumbing; R6 wires the
-   * real array in).  Must be called before any textured-disk draw call
-   * fires — the inner factory withholds the bind group until BOTH the
+   * Bind the hi-res `texture_2d_array` view. Must be called before any
+   * draw — the inner factory withholds the bind group until both the
    * atlas view and the hi-res array view are present, so calling only
    * `bindAtlas` results in a silent no-op draw.
    *
    * Optional sampler override: pass a sampler tuned for the hi-res
-   * array (e.g. a higher-anisotropy variant); defaults to a linear
-   * sampler created by the inner factory.
+   * array (e.g. higher-anisotropy); defaults to a linear sampler
+   * created by the inner factory.
    */
   bindHiResArray(arrayView: GPUTextureView, sampler?: GPUSampler): void;
   /**
    * Issue the draw call. `instances.length` must be ≤ `maxInstances`.
-   * The engine is responsible for filtering down to the disk-eligible
-   * subset (real orientation data + apparent size large enough to warrant
-   * a 3D plane vs the screen-aligned quad fallback).
+   * The engine filters down to the disk-eligible subset before calling.
    */
   draw(
     pass: GPURenderPassEncoder,

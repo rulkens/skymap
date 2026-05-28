@@ -1,40 +1,21 @@
 /**
- * EngineSubsystemHandles — the long-lived owned-helpers sub-bag of the
- * canonical `EngineState`.
+ * EngineSubsystemHandles — long-lived owned-helpers sub-bag of `EngineState`.
  *
- * ### What's a subsystem here?
- *
- * "Subsystem" is the project's term for a self-contained facade that
- * owns its own internal mutable state and exposes a small imperative
- * API (`runFrame`, `apply`, `connect`, etc.) that the engine drives
- * once per relevant event.  The thumbnail pipeline, SpaceMouse input,
- * camera tweens, click resolution, input bindings, and render
- * scheduling are each one — each one was originally a 100+ line block
- * inside `engine.ts` that got extracted during Phases 1–3 of the
- * refactor.
+ * A "subsystem" is a self-contained facade owning its own mutable state
+ * and exposing a small imperative API (`runFrame`, `apply`, `connect`,
+ * etc.) that the engine drives once per relevant event.
  *
  * ### Why some fields are null at construction
  *
- * Two construction phases:
+ *   - Eager (no GPU dep): `spaceMouse`, `tweens`, `scheduler` — callbacks
+ *     queue work the scheduler picks up once the GPU IIFE finishes.
+ *   - Lazy (inside the GPU init IIFE): `galaxyAtlas`, `proceduralDisks`,
+ *     `texturedDisks`, `clickResolver`, `inputBindings`.
  *
- *   - Up-front (before the async GPU IIFE runs): `spaceMouse`, `tweens`,
- *     `scheduler`.  None of these need a GPU device — their callbacks
- *     queue work that the scheduler will pick up once the IIFE finishes.
- *   - Lazy (inside the IIFE): `galaxyAtlas` / `proceduralDisks` /
- *     `texturedDisks` (need the GPU device + the
- *     TexturedQuadRenderer / TexturedDiskRenderer pair), `clickResolver`
- *     (needs the pick renderer), `inputBindings` (needs the scheduler so
- *     it can wake the loop on input).  These start as null.
- *
- * The mixed nullability here matches the GPU handles bag — see
- * `EngineGpuHandles.d.ts` for the same rationale (consumer null-checks
- * stay honest, destroy() can null them back out symmetrically).
- *
- * ### Why a separate type
- *
- * Same as the other state sub-bags: lets per-frame helpers (`renderFrame`,
- * the click handler) accept exactly the subsystem slice they touch
- * rather than the whole engine state.
+ * The mixed nullability matches `EngineGpuHandles.d.ts` so consumer
+ * null-checks stay honest and `destroy()` can null fields back out
+ * symmetrically. Splitting subsystems into their own bag lets per-frame
+ * helpers accept just the slice they touch rather than the whole state.
  */
 
 import type { GalaxyAtlasSubsystem } from '../subsystems/GalaxyAtlasSubsystem';
@@ -61,23 +42,21 @@ export type EngineSubsystemHandles = {
   proceduralDisks: ProceduralDiskSubsystem | null;
   texturedDisks: TexturedDiskSubsystem | null;
   /**
-   * LOD-3 hi-res Famous-galaxy planner (Task R6).  Wired in `wireSlots`
-   * alongside `texturedDisks` — the textured-disk subsystem reads
-   * `lastOutput.byFamousIdx` to fold `hiResLayerIdx` +
-   * `hiResCrossfadeAlpha` into the disk instance buffer.  Null until
-   * `wireSlots` runs (same shape as the other GPU-dependent subsystems
-   * in this bag); on tier change (R7) the pair is destroyed and rebuilt
-   * at the new `layerSide` so the underlying `texture_2d_array` is
-   * always sized to match the active tier.
+   * LOD-3 hi-res Famous-galaxy planner. Wired in `wireSlots` alongside
+   * `texturedDisks`, which reads `lastOutput.byFamousIdx` to fold
+   * `hiResLayerIdx` + `hiResCrossfadeAlpha` into the disk instance
+   * buffer. Null until `wireSlots` runs. Destroyed + rebuilt on tier
+   * change so the underlying `texture_2d_array` always matches the
+   * active tier's `layerSide`.
    */
   hiResFamous: HiResFamousSubsystem | null;
   /**
-   * GPU resource handle for the LOD-3 hi-res Famous-galaxy
-   * `texture_2d_array`.  Owned at the engine level (rather than nested
-   * inside `hiResFamous`) so the tier-change teardown can destroy the
-   * GPUTexture symmetrically with the other per-tier resources, and so
-   * the renderer's `bindHiResArray(...)` re-bind site has a single
-   * obvious source for the new view.  Null until `wireSlots` runs.
+   * GPU resource handle for the hi-res Famous-galaxy `texture_2d_array`.
+   * Owned at the engine level (not nested inside `hiResFamous`) so
+   * tier-change teardown destroys the GPUTexture symmetrically with the
+   * other per-tier resources, and so the renderer's `bindHiResArray(...)`
+   * has a single obvious source for the new view. Null until `wireSlots`
+   * runs.
    */
   hiResFamousTexture: HiResFamousTexture | null;
   spaceMouse: SpaceMouseSubsystem;
@@ -87,108 +66,80 @@ export type EngineSubsystemHandles = {
   scheduler: RenderScheduler;
   /**
    * Unified fade registry — owns one FadeController per registered
-   * FadeHandle. Constructed eagerly in the engine state literal
-   * BEFORE any renderer, so renderer construction (in `initGpu`) can
-   * call `state.subsystems.fades.register(...)` without a null-check.
-   * Drives the render-on-demand predicate (replacing per-renderer
-   * isFading() checks) and the slot orchestration's fade-out → upload
-   * → fade-in sequence. See `src/services/animation/fadeRegistry.ts`.
+   * FadeHandle. Constructed eagerly BEFORE any renderer so renderer
+   * construction can call `register(...)` without a null-check. Drives
+   * the render-on-demand predicate and the slot orchestration's
+   * fade-out → upload → fade-in sequence. See
+   * `src/services/animation/fadeRegistry.ts`.
    */
   fades: FadeRegistry;
   /**
    * Hover/select state façade — owns the user-facing `(source, localIdx)`
-   * selection pair and fans out `cb.onHoverChange` /
-   * `cb.onSelectChange` only on actual change.  Constructed eagerly in
-   * the state literal alongside `tweens` and `scheduler` (no GPU
-   * dependency), so it's non-null from t=0.  See
-   * `selectionSubsystem.ts`'s module header for why state moved off
-   * `EnginePickingState` and onto this subsystem (single source of
-   * truth, callback fan-out lives in one place).
+   * selection pair and fans out `cb.onHoverChange` / `cb.onSelectChange`
+   * only on actual change. Constructed eagerly (no GPU dep) so it's
+   * non-null from t=0. Single source of truth for selection state; the
+   * callback fan-out lives in one place.
    */
   selection: SelectionSubsystem;
   /**
-   * Malmquist-bias correction subsystem (Spec E phase E.3).
-   *
-   * Owns the bias-mode flags, cached per-source ratios/weights, and the
-   * async bake state machine — extracted from `PointRenderer` so the
-   * renderer can shrink to a clean instanced-billboard drawer.
-   * Constructed eagerly in the engine state literal alongside `selection`
-   * / `tweens` / `scheduler` (no GPU dependency); the renderer is wired
-   * in during `phases/initGpu.ts` via `attachRenderer(...)`.
-   *
-   * Phase E.3 wired the subsystem (idle); phase E.4 cut
-   * `handle.setBiasMode` over to call `setMode` on this subsystem and
-   * deleted the renderer's old bias-mode methods.  Production now
-   * routes the user's mode toggles through here.
+   * Malmquist-bias correction subsystem. Owns the bias-mode flags,
+   * cached per-source ratios/weights, and the async bake state machine.
+   * Constructed eagerly (no GPU dep); the renderer is wired in during
+   * `phases/initGpu.ts` via `attachRenderer(...)`. `handle.setBiasMode`
+   * routes through here.
    */
   biasCorrection: BiasCorrectionSubsystem;
   /**
-   * "YOU ARE HERE" Milky Way marker subsystem (Task R4).
-   *
-   * Owns the camera-distance → fade-alpha transition state and drives
-   * `labelRenderer.setLabels` / `markerLineRenderer.setLines` only when
-   * alpha changes.  Constructed eagerly in the engine state literal (no
-   * GPU dep); the two renderers are wired during `phases/initGpu.ts` via
-   * `attachRenderers(...)` after the `loadFontAtlas()` fetch completes.
-   *
-   * Non-null from t=0 — the subsystem's `runFrame` internally null-checks
-   * the renderers, so calling it before `attachRenderers` is safe.
-   *
-   * Post-Task-6: youAreHere is now a `LabelProducer`; renderer ownership
-   * (and the per-frame setLabels/setLines flush) has moved to
-   * `labelDirector`, which polls every registered producer.
+   * "YOU ARE HERE" Milky Way marker subsystem. Implements
+   * `LabelProducer`; renderer ownership lives in `labelDirector`, which
+   * polls every registered producer per frame. Constructed eagerly (no
+   * GPU dep), non-null from t=0.
    */
   youAreHere: YouAreHereSubsystem;
   /**
-   * Label director — owns `labelRenderer.setLabels` / `markerLineRenderer
-   * .setLines`, polls every registered `LabelProducer` each frame, merges
-   * outputs, and flushes once.  Replaces the previous direct-call pattern
-   * (youAreHere called the renderers itself) so multiple overlays
+   * Label director — owns `labelRenderer.setLabels` /
+   * `markerLineRenderer.setLines`, polls every registered `LabelProducer`
+   * each frame, merges outputs, and flushes once. Lets multiple overlays
    * (you-are-here pin, cluster POIs, future galaxy/void labels) coexist
    * without stomping each other's full-set replacements.
    *
-   * Constructed eagerly in the engine state literal; the two renderers
-   * are wired in during `phases/initGpu.ts` via `attachRenderers(...)`
-   * once the font-atlas fetch completes.  Producers are registered right
-   * after the state literal so they're in place before the first frame.
+   * Constructed eagerly; the two renderers are wired during
+   * `phases/initGpu.ts` via `attachRenderers(...)` once the font-atlas
+   * fetch completes. Producers register right after the state literal so
+   * they're in place before the first frame.
    */
   labelDirector: LabelDirectorSubsystem;
   /**
    * Points-of-interest subsystem — typed list of named anchors (clusters,
    * famous galaxies, voids) rendered as text labels with optional
-   * crosshairs.  Implements `LabelProducer`; registered with
-   * `labelDirector`.  Populated by various sources: the `?anchors=1` URL
-   * flag pushes the six cluster anchors at startup; future code may add
-   * runtime entries from user clicks or palette searches.
+   * crosshairs. Implements `LabelProducer`; registered with
+   * `labelDirector`. The `?anchors=1` URL flag pushes the six cluster
+   * anchors at startup; other code may add runtime entries from clicks
+   * or palette searches.
    *
-   * Constructed eagerly; no GPU dependency.  Empty until something calls
-   * `setPois`.
+   * Constructed eagerly; no GPU dep. Empty until something calls `setPois`.
    */
   pois: PoiSubsystem;
   /**
-   * Per-engine download-progress emitter — instantiated inside the
-   * GPU init IIFE (so `cb.onLoadProgress` and the slot registry are in
-   * scope at construction time).  Subscribes to every slot's state
-   * transitions and recomputes the aggregate snapshot from
-   * `aggregateRegistry` on every change, so the loading-bar UI sees
-   * the same view of "what's still loading" as the dev panel.  Null
-   * until the GPU init runs.
+   * Per-engine download-progress emitter — instantiated inside the GPU
+   * init IIFE so `cb.onLoadProgress` and the slot registry are in scope.
+   * Subscribes to every slot's state transitions and recomputes the
+   * aggregate snapshot from `aggregateRegistry` on every change, so the
+   * loading-bar UI sees the same view of "what's still loading" as the
+   * dev panel. Null until the GPU init runs.
    */
   loadProgress: LoadProgressEmitter | null;
 };
 
 /**
- * Compile-time guard: every subsystem field MUST satisfy `Destroyable`.
+ * Compile-time guard: every subsystem field must satisfy `Destroyable`.
  *
- * This is an unused type alias — its only job is to fail tsc if a future
- * subsystem is added to `EngineSubsystemHandles` without a `destroy()`
- * method.  The mapped type strips `| null` from each field via
- * `NonNullable<...>` (nullable fields are fine — the engine null-checks
- * before calling destroy), then requires every non-null field to be
- * assignable to `Destroyable`.  If any field is missing `destroy()`,
- * the conditional resolves to `never` for that key, surfacing as a
- * compile error here rather than as a silent leak at runtime when
- * `engine.destroy()` walks the bag uniformly.
+ * The mapped type strips `| null` via `NonNullable<...>` (nullable fields
+ * are fine — the engine null-checks before calling destroy) and requires
+ * the rest to be assignable to `Destroyable`. A missing `destroy()`
+ * resolves to `never` for that key, surfacing as a compile error here
+ * rather than as a silent leak at runtime when `engine.destroy()` walks
+ * the bag uniformly.
  */
 type _EnforceDestroyable = {
   [K in keyof EngineSubsystemHandles]:

@@ -4,18 +4,14 @@
  * Walks the catalog, applies the px ≥ 24 fetch gate, allocates atlas
  * slots through the injected `GalaxyAtlasSubsystem`, schedules fetches,
  * computes load-fade + distance-fade multipliers, sorts back-to-front,
- * emits the disk array.
+ * emits the disk array. Every encoded galaxy has finite (axisRatio, PA)
+ * — `tools/catalog/buildAllBins.ts` supplies a deterministic hash-based
+ * fallback for sources without measured orientation — so there is no
+ * screen-aligned quad branch here.
  *
- * The legacy screen-aligned quad fallback (for galaxies with missing
- * orientation) was removed on 2026-05-18 — `tools/catalog/buildAllBins.ts`
- * applies a deterministic hash-based orientation fallback so every
- * encoded galaxy has finite (axisRatio, PA), meaning the quad branch
- * never fired for non-Famous galaxies and only fired for famous ones at
- * <4 px apparent size (where the point sprite handled them already).
- *
- * Owns the per-key `bitmapReadyTime` map (the load-fade window state).
- * Subscribes to the atlas's eviction handler to clear that map when
- * a slot is recycled.
+ * Owns the per-key `bitmapReadyTime` map (load-fade window state) and
+ * subscribes to the atlas's eviction handler to clear entries when a
+ * slot is recycled.
  */
 
 import type { Destroyable } from '../../rendering/Destroyable';
@@ -52,34 +48,28 @@ export type TexturedDiskSubsystem = Destroyable & {
   hasInFlightWork(): boolean;
 
   /**
-   * Swap the hi-res LOD-3 planner the subsystem reads per frame.  Used
-   * by the tier-change handler in `engine.setTier`: the hi-res texture
-   * is sized to `HI_RES_LAYER_SIDE_BY_TIER[tier]`, so a tier flip
-   * destroys + recreates the texture + planner pair, and the
-   * texturedDiskSubsystem has to retarget its closure-captured planner
-   * reference at the new instance (otherwise it would keep dereferencing
-   * a torn-down planner's `lastOutput.byFamousIdx`).
+   * Swap the hi-res LOD-3 planner read per frame. Called by
+   * `engine.setTier`: the hi-res texture is sized to
+   * `HI_RES_LAYER_SIDE_BY_TIER[tier]`, so a tier flip destroys + rebuilds
+   * the texture + planner pair, and this subsystem must retarget its
+   * closure-captured planner reference at the new instance (otherwise it
+   * dereferences a torn-down planner's `lastOutput.byFamousIdx`).
    *
-   * The alternative — tearing down + recreating the entire
-   * texturedDiskSubsystem on every tier change — would blow away the
-   * per-key load-fade timestamps AND the sticky disk maps for ALL
-   * galaxies, not just famous ones.  The planner swap is a smaller
-   * blast radius: only the famous hi-res state is invalidated; the
-   * unrelated atlas-tile fade-ins for SDSS / 2MRS / GLADE galaxies
-   * keep their timing.
+   * Swapping just the planner — rather than rebuilding the whole
+   * texturedDiskSubsystem — keeps the per-key load-fade timestamps and
+   * sticky disk maps for SDSS / 2MRS / GLADE galaxies intact; only the
+   * famous hi-res state is invalidated.
    *
-   * Pass `undefined` to detach (e.g. teardown).  The same sentinel /
-   * defaults the construction-time `hiResFamous: undefined` path uses
-   * apply: every Famous-source disk emits `hiResLayerIdx: -1,
-   * hiResCrossfadeAlpha: 0` until a new planner is installed.
+   * Pass `undefined` to detach. Every Famous-source disk then emits
+   * `hiResLayerIdx: -1, hiResCrossfadeAlpha: 0` until a new planner is
+   * installed.
    */
   setHiResFamous(hiResFamous: HiResFamousSubsystem | undefined): void;
 };
 
 /**
- * Test/inspection seam — the LOD-2 planner exposes the same `__testGetState`
- * shape the legacy thumbnailSubsystem did, so the split-out tests can
- * inspect the post-extraction subsystem's bookkeeping the same way.
+ * Test/inspection seam — `__testGetState` lets the planner's
+ * bookkeeping be asserted from tests.
  */
 export type TexturedDiskTestState = {
   readonly bitmapReadyTime: ReadonlyMap<string, number>;

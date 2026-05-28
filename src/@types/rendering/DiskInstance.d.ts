@@ -30,18 +30,15 @@ export type DiskInstance = {
   fadeAlpha: number;
   /**
    * Index into the per-tier hi-res layered atlas (one of HI_RES_LAYER_COUNT
-   * slots). The sentinel value −1 means "no hi-res slot assigned" — pick a
-   * negative sentinel rather than `null` / `undefined` so the field stays a
-   * plain `number` and can be packed into a Float32Array without branching.
-   * See the hi-res LOD spec for slot lifecycle + eviction rules.
+   * slots). Sentinel −1 means "no hi-res slot assigned" — a negative
+   * sentinel keeps the field a plain `number` that packs into a
+   * Float32Array without branching.
    */
   hiResLayerIdx: number;
   /**
-   * Crossfade ramp in [0, 1] from the low-res atlas thumbnail to the hi-res
-   * layered slot. 0 = fully low-res, 1 = fully hi-res; intermediate values
-   * blend the two in the fragment shader to hide the swap. Bounded to [0, 1]
-   * so the shader can multiply / mix without clamping. See the hi-res LOD
-   * spec for the ramp duration + trigger conditions.
+   * Crossfade ramp in [0, 1] from atlas thumbnail to hi-res layer slot.
+   * 0 = fully low-res, 1 = fully hi-res. Bounded so the shader can `mix`
+   * without clamping.
    */
   hiResCrossfadeAlpha: number;
 };

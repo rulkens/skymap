@@ -1,29 +1,25 @@
 /**
  * HiResFamousSubsystem — LOD-3 per-frame planner for Famous-source galaxies.
  *
- * Sits one rung above the LOD-2 textured disk: when a famous galaxy
- * grows past ~200 px of apparent diameter, the 128 px atlas tile starts
- * to look soft and pixel-doubled.  This subsystem gates each Famous-
- * source galaxy on `apparentSizePx ≥ 200`, allocates one of N=8
- * `texture_2d_array` layers (LRU-evicting the least-recently-large
- * layer when full), enqueues a `dataUrl('images/famous-hires/<id>.webp')`
- * fetch through the shared image queue, and emits per-galaxy state
- * (`hiResLayerIdx`, `hiResCrossfadeAlpha`) for `texturedDiskSubsystem`
- * to fold into the instance buffer it ships to the textured-disk
- * renderer.
+ * One rung above the LOD-2 textured disk: when a famous galaxy grows
+ * past ~200 px of apparent diameter, the 128 px atlas tile starts to
+ * look soft. This subsystem gates each Famous galaxy on
+ * `apparentSizePx ≥ 200`, allocates one of N=8 `texture_2d_array` layers
+ * (LRU-evicting the least-recently-large layer when full), enqueues a
+ * `dataUrl('images/famous-hires/<id>.webp')` fetch through the shared
+ * image queue, and emits per-galaxy `(hiResLayerIdx, hiResCrossfadeAlpha)`
+ * for `texturedDiskSubsystem` to fold into the instance buffer.
  *
- * No GPU draw work happens here — the actual sampling + crossfade is
- * the textured-disk fragment shader's job.  This subsystem only owns
- * the planner state (which layer holds which galaxy, when each layer
- * was last "large", and the smoothstep alpha for the 200 → 260 px
- * crossfade band).  Output keyed by Famous-source local index so the
- * consumer can look up state without re-walking the catalog; missing
- * keys default to `{ hiResLayerIdx: -1, hiResCrossfadeAlpha: 0 }` at
- * the consumer (i.e. atlas-tile-only rendering, unchanged).
+ * No GPU draw work happens here — sampling + crossfade is the
+ * textured-disk fragment shader's job. The planner owns only the
+ * bookkeeping (layer ↔ galaxy assignment, recent-large signal per layer,
+ * smoothstep alpha across the 200 → 260 px crossfade band). Output is
+ * keyed by Famous-source local index; missing keys default to
+ * `{ hiResLayerIdx: -1, hiResCrossfadeAlpha: 0 }` (atlas-tile-only).
  *
- * See `docs/superpowers/specs/2026-05-28-famous-galaxy-high-res-lod-design.md`
- * for the full data flow + edge cases (LRU mid-crossfade, in-out fly-by,
- * missing `full.webp`, tier change rebuilds, …).
+ * See `docs/superpowers/specs/completed/2026-05-28-famous-galaxy-high-res-lod-design.md`
+ * for data flow + edge cases (LRU mid-crossfade, in-out fly-by, missing
+ * `full.webp`, tier-change rebuilds).
  */
 
 import type { Destroyable } from '../../rendering/Destroyable';
@@ -59,17 +55,16 @@ export type HiResFamousFrameOutput = {
 
 export type HiResFamousSubsystem = Destroyable & {
   /**
-   * Pure CPU step.  See the module docstring for what it does.
-   * Returns the output AND stashes it on `lastOutput` so consumers
-   * (texturedDiskSubsystem) can read it without re-running.
+   * Pure CPU step. Returns the output and stashes it on `lastOutput` so
+   * `texturedDiskSubsystem` can read it without re-running.
    */
   runFrame(input: HiResFamousFrameInput): HiResFamousFrameOutput;
 
   /**
    * Latest output — read by `texturedDiskSubsystem.runFrame` to fold
-   * per-galaxy `hiResLayerIdx` + `hiResCrossfadeAlpha` into the disk
-   * instance buffer.  Initialised to an empty map so the consumer
-   * reads valid (empty) data before the first frame.
+   * `hiResLayerIdx` + `hiResCrossfadeAlpha` into the disk instance
+   * buffer. Initialised to an empty map so the consumer reads valid
+   * (empty) data before the first frame.
    */
   readonly lastOutput: HiResFamousFrameOutput;
 };
