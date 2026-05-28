@@ -61,7 +61,9 @@ From [ADR 0001 §"explicitly not deciding"](adrs/0001-fade-ownership.md):
 
 Diagnosed but unplanned. Captured here so they don't get lost; promote to a spec or plan when prioritised. Most have richer notes in agent memory (`~/.claude/projects/-Users-rulkens-Development-js-skymap/memory/`).
 
-- **Thumbnail quality** — five ranked fix options (mask, sky-sub, per-galaxy size, DESI source, brightness norm). See memory `project_thumbnail_quality`.
+- **Thumbnail quality** — five ranked fix options (mask, sky-sub, per-galaxy size, DESI source, brightness norm). See memory `project_thumbnail_quality`. Partially addressed for famous galaxies via [procedural-disk fade-out](superpowers/specs/completed/2026-05-28-procedural-disk-fade-out-design.md) (2026-05-28); SDSS/DSS branches still open.
+- **Famous-galaxy high-res LOD** — curated WebPs are 128 px; soft when zoomed close. Needs LOD pyramid vs single-high-res decision; atlas-vs-bespoke-texture trade-off. Identified in the 2026-05-28 famous-galaxy thumbnail brainstorm (Issue #2 of three).
+- **Famous-galaxy in-app calibration** — curated WebPs aren't always centred/scaled/rotated correctly on the disk. Proposed UX: draw a line from disk centre to edge in-app to pin scale + rotation. Storage in `famous_calibration.json` sidecar JSON. Warrants an ADR for the storage choice. Identified in the 2026-05-28 famous-galaxy thumbnail brainstorm (Issue #3 of three).
 - **GLADE shell artifact at ~400 Mpc** — hard depth boundary created by Task 7 abs-mag filter; 3 fix options deferred 2026-05-04. See memory `project_glade_shell_artifact`.
 - **Per-frame thumbnail-priority loop CPU cost** — RoD + stride decimation (PR #79) addressed panning case; BVH or compute-shader pass needed if scaling to larger tiers. See memory `project_thumbnail_loop_perf`.
 - **Cosmic zoom plan** — 60-doc "Powers of Ten" walkthrough plan drafted in worktree `cosmic-zoom-plan` (2026-05-08), awaiting user review. See memory `project_cosmic_zoom_plan`.

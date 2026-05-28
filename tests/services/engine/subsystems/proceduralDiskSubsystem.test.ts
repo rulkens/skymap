@@ -14,7 +14,10 @@
 
 import { describe, it, expect } from 'vitest';
 import { Source } from '../../../../src/data/sources';
-import { createProceduralDiskSubsystem } from '../../../../src/services/engine/subsystems/proceduralDiskSubsystem';
+import {
+  createProceduralDiskSubsystem,
+  type ProceduralDiskDeps,
+} from '../../../../src/services/engine/subsystems/proceduralDiskSubsystem';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
@@ -112,5 +115,71 @@ describe('createProceduralDiskSubsystem', () => {
     const clouds = new Map([[Source.SDSS, makeDenseCloud(2)]]);
     sys.runFrame(makeInput(clouds));
     expect(sys.lastOutput.instances.length).toBe(2);
+  });
+
+  describe('famous-WebP crossfade (procFadeOut override)', () => {
+    /**
+     * Minimal atlas stub. The subsystem only ever calls `isLoaded(key)` on
+     * the famous path — everything else can throw to prove the negative.
+     */
+    function makeStubAtlas(loadedKeys: ReadonlySet<string>) {
+      return {
+        isLoaded: (key: string) => loadedKeys.has(key),
+        // Surface that the subsystem doesn't touch the rest of the atlas
+        // API.  If a future change starts calling these, the test will
+        // tell us — and we can decide whether the new call site is
+        // appropriate.
+        allocate: () => { throw new Error('atlas.allocate not expected'); },
+        slotUv: () => { throw new Error('atlas.slotUv not expected'); },
+        lastSeenFrame: () => { throw new Error('atlas.lastSeenFrame not expected'); },
+        uploadBitmap: () => { throw new Error('atlas.uploadBitmap not expected'); },
+        enqueueFetch: () => { throw new Error('atlas.enqueueFetch not expected'); },
+        isFailed: () => { throw new Error('atlas.isFailed not expected'); },
+        inFlightCount: () => { throw new Error('atlas.inFlightCount not expected'); },
+        getTextureView: () => { throw new Error('atlas.getTextureView not expected'); },
+        setEvictHandler: () => { throw new Error('atlas.setEvictHandler not expected'); },
+        destroy: () => {},
+      } as unknown as ProceduralDiskDeps['atlas'];
+    }
+
+    it('keeps procFadeOut at 1.0 when no atlas is injected', () => {
+      // Same fixture as the SDSS path above — explicitly asserts that
+      // the new code path doesn't disturb instances when the dep is
+      // absent (tests + back-compat).
+      const sys = createProceduralDiskSubsystem({ decimationFactor: 1 });
+      const clouds = new Map([[Source.Famous, makeDenseCloud(2)]]);
+      const out = sys.runFrame(makeInput(clouds));
+      expect(out.instances.length).toBe(2);
+      for (const ins of out.instances) expect(ins.procFadeOut).toBe(1.0);
+    });
+
+    it('keeps procFadeOut at 1.0 for non-Famous sources even when the atlas reports loaded', () => {
+      // SDSS / DSS thumbnails intentionally keep the procedural pattern
+      // underneath — their lumGate transparency expects the procedural
+      // fill.  See spec scope section.
+      const sys = createProceduralDiskSubsystem({
+        decimationFactor: 1,
+        atlas: makeStubAtlas(new Set(['anything'])),
+      });
+      const clouds = new Map([[Source.SDSS, makeDenseCloud(2)]]);
+      const out = sys.runFrame(makeInput(clouds));
+      expect(out.instances.length).toBe(2);
+      for (const ins of out.instances) expect(ins.procFadeOut).toBe(1.0);
+    });
+
+    it('keeps procFadeOut at 1.0 for Famous galaxies whose WebP is NOT loaded', () => {
+      // Famous-source, atlas dep present, but the specific galaxy's key
+      // isn't in the loaded set.  The default 1.0 must be preserved so
+      // the procedural pattern still draws while the user waits for the
+      // fetch to complete.
+      const sys = createProceduralDiskSubsystem({
+        decimationFactor: 1,
+        atlas: makeStubAtlas(new Set()), // empty set → nothing loaded
+      });
+      const clouds = new Map([[Source.Famous, makeDenseCloud(2)]]);
+      const out = sys.runFrame(makeInput(clouds));
+      expect(out.instances.length).toBe(2);
+      for (const ins of out.instances) expect(ins.procFadeOut).toBe(1.0);
+    });
   });
 });

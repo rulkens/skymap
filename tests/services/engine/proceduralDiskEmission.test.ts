@@ -212,4 +212,25 @@ describe('maybeEmitProceduralDisk', () => {
     expect(r!.positionAngleDeg).toBe(137);
     expect(r!.colourIndex).toBe(1.7);
   });
+
+  it('defaults procFadeOut to 1.0 — no fade-out against the textured-disk pass', () => {
+    // The helper has no notion of "which galaxy is famous" or "which
+    // bitmap is loaded"; that decision lives at the caller in
+    // proceduralDiskSubsystem.runFrame.  The default 1.0 here preserves
+    // the pre-2026-05-28 behavior for every galaxy that doesn't get
+    // explicitly overridden by the caller.
+    const r = maybeEmitProceduralDisk(
+      20,
+      0.7,
+      30,
+      base.x,
+      base.y,
+      base.z,
+      base.sizeWorldMpc,
+      base.colourIndex,
+      base.fadeStartPx,
+      base.fadeEndPx,
+    );
+    expect(r!.procFadeOut).toBe(1.0);
+  });
 });

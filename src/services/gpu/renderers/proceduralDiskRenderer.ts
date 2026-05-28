@@ -14,10 +14,12 @@
  *
  *   posSize       vec4   xyz, sizeWorldMpc
  *   orientation   vec4   axisRatio, positionAngleDeg, _, _
- *   extras        vec4   colourIndex, crossfadeAlpha, _, _
+ *   extras        vec4   colourIndex, crossfadeAlpha, procFadeOut, _
  *
  * Same memory layout as texturedDiskRenderer (3 vec4<f32>), minus the UV rect
- * — those four floats become (colourIndex, crossfadeAlpha, _, _) instead.
+ * — those four floats become (colourIndex, crossfadeAlpha, procFadeOut, _)
+ * instead. `procFadeOut` is the famous-WebP crossfade against the textured-
+ * disk pass; see `ProceduralDiskInstance.d.ts` for the full semantic.
  *
  * ## Why grow-on-demand instance buffer
  *
@@ -113,7 +115,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
       packed[o + 7] = 0;
       packed[o + 8] = ins.colourIndex;
       packed[o + 9] = ins.crossfadeAlpha;
-      packed[o + 10] = 0;
+      packed[o + 10] = ins.procFadeOut;
       packed[o + 11] = 0;
     }
 

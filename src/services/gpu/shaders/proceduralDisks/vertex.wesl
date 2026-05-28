@@ -127,5 +127,11 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   out.uv = corner;
   out.colourIndex = instance.extras.x;
   out.crossfadeAlpha = instance.extras.y;
+  // Famous-WebP crossfade-OUT against the textured-disk pass. Default
+  // 1.0 for ~every galaxy; the proceduralDiskSubsystem only writes a
+  // ramped value (toward 0.0) for Famous-source galaxies whose curated
+  // WebP is loaded into the atlas. See the override site in
+  // 'proceduralDiskSubsystem.ts'.
+  out.procFadeOut = instance.extras.z;
   return out;
 }

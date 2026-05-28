@@ -30,13 +30,23 @@
  *     above 14 px, smoothstep in between.  The fragment shader
  *     multiplies the final RGBA by this so the disk fades in as the
  *     point fades out.
+ *   - `procFadeOut` is the [0, 1] fade-OUT coefficient against the
+ *     textured-disk pass for galaxies with a curated famous WebP
+ *     loaded.  1.0 = procedural at full alpha (default for galaxies
+ *     with no famous bitmap, or with a famous bitmap but apparent
+ *     size below the textured-disk fade-in band).  Ramps to 0.0
+ *     across the textured-disk's fade-in band so the procedural
+ *     disk crossfades out in lockstep with the WebP fading in.
+ *     SDSS / DSS thumbnails leave this at 1.0 — their lumGate
+ *     transparency relies on the procedural pattern filling the
+ *     ellipse around a small galaxy in a wide-field cutout.
  *
  * Layout: 12 floats = 48 bytes per instance; the orientation / extras
  * vec4 each have 2 trailing padding f32 to keep WGSL's 16-byte alignment
  * for instance attributes.  WGSL `@location` attributes step in vec4
  * quanta even when the underlying record uses fewer fields, so packing
- * the eight semantic floats above into three `float32x4` slots costs
- * four padding floats but lets us declare the vertex layout cleanly as
+ * the nine semantic floats above into three `float32x4` slots costs
+ * three padding floats but lets us declare the vertex layout cleanly as
  * `[float32x4, float32x4, float32x4]`.  Vertex buffer stride is
  * therefore 48 bytes; the renderer's pipeline descriptor declares
  * `stepMode: 'instance'` so each draw-call vertex sees the same record
@@ -51,4 +61,9 @@ export type ProceduralDiskInstance = {
   positionAngleDeg: number;
   colourIndex: number;
   crossfadeAlpha: number;
+  /**
+   * Fade-out multiplier against the textured-disk pass; see the type
+   * docblock above. Default 1.0 (no fade-out).
+   */
+  procFadeOut: number;
 };

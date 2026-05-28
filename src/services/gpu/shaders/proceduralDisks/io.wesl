@@ -76,7 +76,7 @@ struct Uniforms {
 struct InstanceIn {
   @location(0) posSize: vec4<f32>,         // x, y, z, sizeWorldMpc
   @location(1) orientation: vec4<f32>,     // axisRatio, positionAngleDeg, _, _
-  @location(2) extras: vec4<f32>,          // colourIndex, crossfadeAlpha, _, _
+  @location(2) extras: vec4<f32>,          // colourIndex, crossfadeAlpha, procFadeOut, _
 };
 
 // ── vertex-to-fragment interface ────────────────────────────────────
@@ -96,6 +96,10 @@ struct VsOut {
   @location(0) uv: vec2<f32>,
   // Per-instance colour-index value (forwarded for the colour ramp).
   @location(1) @interpolate(flat) colourIndex: f32,
-  // Per-instance crossfade alpha (0..1).
+  // Per-instance fade-IN alpha against the points pass (0..1).
   @location(2) @interpolate(flat) crossfadeAlpha: f32,
+  // Per-instance fade-OUT multiplier against the textured-disk pass for
+  // galaxies with a curated famous WebP loaded; 1.0 means no fade-out.
+  // See 'ProceduralDiskInstance.d.ts' for the full semantic.
+  @location(3) @interpolate(flat) procFadeOut: f32,
 };
