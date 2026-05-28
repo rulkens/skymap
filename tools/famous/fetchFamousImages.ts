@@ -36,7 +36,7 @@
  * PD-NASA, PD-self, and ESO-attribution licences.  Skymap is a personal
  * project so this is fine, but a hypothetical commercial fork would need
  * to audit per-image attribution.  The cache JSON we write at
- * `data/raw/wikipedia_famous_cache.json` carries the source URL for each
+ * `data/raw/famous/wikipedia_famous_cache.json` carries the source URL for each
  * image, which is enough to reconstruct attribution.
  *
  * ── Title-chain fallback (broadened from the expansion agent) ──────────
@@ -106,6 +106,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileS
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadCuratedOverrides, type CuratedOverrideIndex } from './famousCuratedOverrides.js';
+import { rawDataPath } from '../utils/io/rawDataRegistry.js';
 import sharp from 'sharp';
 import { parseFlags } from '../utils/cli/args.js';
 import { loadJsonCache, saveJsonCache } from '../utils/io/jsonCache.js';
@@ -536,8 +537,8 @@ function parseCliArgs(argv: readonly string[]): CliFlags {
 
 async function main(): Promise<void> {
   const flags = parseCliArgs(process.argv.slice(2));
-  const seedPath = resolve('data/famous_galaxies.seed.json');
-  const wikipediaCachePath = resolve('data/raw/wikipedia_famous_cache.json');
+  const seedPath = rawDataPath('famous.seed');
+  const wikipediaCachePath = rawDataPath('famous.wikipedia-cache');
   const outDir = resolve('public/images/famous');
   if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
 
@@ -547,7 +548,7 @@ async function main(): Promise<void> {
       `(source preference: ${flags.sourcePreference})…\n`,
   );
 
-  const curatedPath = resolve('data/famous_curated_overrides.json');
+  const curatedPath = rawDataPath('famous.curated');
   const curated: CuratedOverrideIndex = loadCuratedOverrides(curatedPath);
   process.stderr.write(`curator overrides: ${Object.keys(curated.entries).length} entries\n`);
 

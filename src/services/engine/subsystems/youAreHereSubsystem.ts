@@ -33,6 +33,7 @@ import type { LabelProducerOutput } from '../../../@types/engine/subsystems/Labe
 import type { YouAreHereSubsystem } from '../../../@types/engine/subsystems/YouAreHereSubsystem';
 import { youAreHereAlpha } from '../../gpu/labels/youAreHereVisibility';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
+import { getLabelStyleOverride } from '../labelStyleOverride';
 
 const LABEL_TEXT = 'You are here';
 const LABEL_ANCHOR_MPC = 0.05;
@@ -44,6 +45,10 @@ const LINE_TOP_MPC = LABEL_ANCHOR_MPC * 0.75;
 // `[1, 1, 1, 1]` is display white at any tone-map setting.
 const LABEL_COLOR: Vec4 = [1, 1, 1, 1];
 const LINE_COLOR: Vec4 = [1, 1, 1, 1];
+// Soft black drop-shadow for legibility against the starfield.
+// Re-tune via DebugPanel `LabelEffectsSection`.
+const OUTLINE_COLOR: Vec4 = [0, 0, 0, 0.1];
+const OUTLINE_EM_FRAC = 0.16;
 
 export function createYouAreHereSubsystem(): YouAreHereSubsystem {
   // One-shot fade-in: the first frame where this producer emits a
@@ -68,6 +73,19 @@ export function createYouAreHereSubsystem(): YouAreHereSubsystem {
       );
     }
 
+    // Live-tuning override: when the DebugPanel selects 'youAreHere'
+    // as the target category, substitute the override's outline fields
+    // for the producer defaults.  Read fresh each frame so panel
+    // changes apply on the next render.
+    const override = getLabelStyleOverride();
+    const effectFields =
+      override.targetCategory === 'youAreHere'
+        ? {
+            outlineColor: override.outlineColor,
+            outlineEmFrac: override.outlineEmFrac,
+          }
+        : {};
+
     const labels: readonly Label[] = [
       {
         id: 'you-are-here',
@@ -81,6 +99,9 @@ export function createYouAreHereSubsystem(): YouAreHereSubsystem {
         maxPixelSize: 150,
         fadeAlpha: alpha,
         alignX: 'center',
+        outlineColor: [...OUTLINE_COLOR],
+        outlineEmFrac: OUTLINE_EM_FRAC,
+        ...effectFields,
       },
     ];
     const lines: readonly MarkerLine[] = [

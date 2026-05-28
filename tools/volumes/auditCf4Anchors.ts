@@ -29,6 +29,7 @@ import type { ClusterAnchor } from '../../src/@types/data/ClusterAnchor';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import { eqToSg, sgToVoxelIndex } from '../utils/math/coordinates';
 import { percentileOf } from '../utils/math/percentile';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
 
 // CF-4 cube dimension — 128³ voxels covering ±500 Mpc.  Used only by
 // sampleVariant for bounds-checking and linear-index arithmetic.
@@ -64,7 +65,7 @@ function sampleVariant(
 }
 
 function main(): void {
-  const npyBuf = readFileSync('data/raw/cf4/d_mean_CF4pp.npy');
+  const npyBuf = readFileSync(rawDataPath('cf4.density-mean'));
   const npy = readNpy(
     npyBuf.buffer.slice(npyBuf.byteOffset, npyBuf.byteOffset + npyBuf.byteLength),
   );

@@ -24,6 +24,16 @@
  * cap is the right balance between caching and the ability to push a fresh
  * catalogue without waiting a year for browsers to expire.
  *
+ * ### CDN cache purge
+ *
+ * R2 PUTs are immediate but the Cloudflare edge holds the previous bytes
+ * for the full `max-age` window.  After the upload sweep the script hits
+ * `POST /zones/{id}/purge_cache` with every key it touched (chunked at 30,
+ * CF's per-request cap).  Configured via `CLOUDFLARE_API_TOKEN` +
+ * `CLOUDFLARE_ZONE_ID`; missing either skips the purge and prints a
+ * dashboard-purge fallback message — upload is the source of truth, purge
+ * is just a CDN-eviction hint.
+ *
  * ### Idempotency
  *
  * Re-running re-uploads everything.  R2 PUT replaces the object atomically;
@@ -66,13 +76,22 @@
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { execSync } from 'node:child_process';
+import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
+import { RAW_DATA } from '../utils/io/rawDataRegistry';
 
 const DATA_DIR = 'public/data';
 const BUCKET = 'skymap-data';
 const CACHE_CONTROL = 'public, max-age=86400';
 
+/** Public URL the Cloudflare CDN serves R2 from — single source of truth in `.env.production`. */
+const R2_PUBLIC_URL = readEnvProductionValue('VITE_DATA_BASE_URL');
+
 const ALLOW = (name: string): boolean =>
   /^(sdss|glade)-(small|medium|large)\.bin$/.test(name) ||
+  // Milliquas v8 (Flesch 2023): same tier-suffixed pattern as
+  // SDSS/GLADE.  Class + parent-survey metadata rides on the bin
+  // itself in v5 — no JSON sidecar to upload.
+  /^milliquas-(small|medium|large)\.bin$/.test(name) ||
   name === '2mrs.bin' ||
   name === 'famous.bin' ||
   name === 'filaments.bin' ||
@@ -82,7 +101,6 @@ const ALLOW = (name: string): boolean =>
   // cloudLoader.filamentFilenameForTier().
   name === 'filaments-small.bin' ||
   name === 'famous_meta.json' ||
-  name === 'famous_xrefs.json' ||
   // Valade 2024 CF-4 HAMLET 256³ DM density cube, written as SCFD by
   // `npm run build-cf4-density` from the maintainer-produced .npy.
   // See data/raw/cf4/README.md for the maintainer + contributor paths.
@@ -126,12 +144,12 @@ const EXTRA_FILES: ExtraFile[] = [
   {
     // HyperLEDA position-angle + isophotal-diameter cache.
     // Built once by `npm run fetch-hyperleda` (~1 hour), then gzipped:
-    //   gzip -k -9 data/raw/hyperleda_pa.csv
+    //   gzip -k -9 data/raw/hyperleda/hyperleda_pa.csv
     // Contributors download it instead of re-fetching:
-    //   curl -L -o data/raw/hyperleda_pa.csv.gz \
+    //   curl -L -o data/raw/hyperleda/hyperleda_pa.csv.gz \
     //     https://skymap-data.rulkens.com/data/hyperleda_pa.csv.gz
-    //   gunzip data/raw/hyperleda_pa.csv.gz
-    localPath: 'data/raw/hyperleda_pa.csv.gz',
+    //   gunzip data/raw/hyperleda/hyperleda_pa.csv.gz
+    localPath: RAW_DATA['hyperleda.pa-gz'].path,
     r2Key: 'data/hyperleda_pa.csv.gz',
   },
   {
@@ -149,16 +167,16 @@ const EXTRA_FILES: ExtraFile[] = [
     // need).  Same EXTRA_FILES pattern as hyperleda_pa.csv.gz: a
     // slow-external-fetch artefact in data/raw/, not public/data/, so
     // the ALLOW filter doesn't see it.
-    localPath: 'data/raw/cf4/d_mean_CF4pp.npy',
-    r2Key: 'data/raw/cf4/d_mean_CF4pp.npy',
+    localPath: RAW_DATA['cf4.density-mean'].path,
+    r2Key: RAW_DATA['cf4.density-mean'].path,
   },
   ...([8, 4, 2] as const).map((factor) => ({
     // MCPM Cosmic Web .npy tier — block-averaged downsample of the SDSS
     // DR17 Cosmic Slime VAC trace.bin.bz2, produced by
     // `python tools/extractMcpmCube.py`. Contributors curl these instead
     // of installing pyslime + the 345 MB upstream blob.
-    localPath: `data/raw/mcpm/mcpm_sdss_d${factor}.npy`,
-    r2Key: `data/raw/mcpm/mcpm_sdss_d${factor}.npy`,
+    localPath: join(RAW_DATA['mcpm.dir'].path, `mcpm_sdss_d${factor}.npy`),
+    r2Key: join(RAW_DATA['mcpm.dir'].path, `mcpm_sdss_d${factor}.npy`),
   })),
 ];
 
@@ -178,7 +196,68 @@ function uploadFile(localPath: string, key: string): void {
   );
 }
 
-function main(): void {
+/**
+ * Purge the Cloudflare CDN's edge cache for every R2 key we touched.
+ *
+ * R2 uploads are atomic, but the CDN in front of R2 caches GETs by URL
+ * for the full `max-age=86400` window — so without an explicit purge,
+ * users continue to receive the OLD bytes for up to 24 hours after a
+ * sync.  That bit us once already (the v5 .bin rollout: R2 had v5
+ * immediately, but `cf-cache-status: HIT` kept serving v4 to clients
+ * for the next hour).  Auto-purging here closes the gap.
+ *
+ * Configuration via env (matching wrangler's own conventions so a
+ * single CF token can be reused):
+ *
+ *   - `CLOUDFLARE_API_TOKEN` — token with `Zone:Cache Purge` scope
+ *     on the rulkens.com zone.
+ *   - `CLOUDFLARE_ZONE_ID` — the rulkens.com zone id (Cloudflare
+ *     dashboard → Overview → "Zone ID" on the right).
+ *
+ * If either is missing the script logs a clear instruction and skips
+ * the purge rather than failing the whole sync — the upload itself
+ * succeeded, and a manual dashboard purge is always available as a
+ * fallback.  Treating purge as best-effort matches its conceptual
+ * status: a CDN-eviction hint, not the source of truth.
+ *
+ * Cloudflare's per-request file cap is 30, so we chunk longer lists.
+ */
+async function purgeCloudflareCache(keys: ReadonlyArray<string>): Promise<void> {
+  const token = process.env.CLOUDFLARE_API_TOKEN;
+  const zoneId = process.env.CLOUDFLARE_ZONE_ID;
+  if (!token || !zoneId) {
+    console.log(
+      '\n⚠ CDN cache NOT purged: set CLOUDFLARE_API_TOKEN + CLOUDFLARE_ZONE_ID to auto-purge.',
+    );
+    console.log(
+      `  Manual purge: Cloudflare dashboard → Caching → Purge Cache → "Custom" → paste the ${keys.length} URL(s) under ${R2_PUBLIC_URL}/.`,
+    );
+    return;
+  }
+
+  const urls = keys.map((k) => `${R2_PUBLIC_URL}/${k}`);
+  const endpoint = `https://api.cloudflare.com/client/v4/zones/${zoneId}/purge_cache`;
+
+  for (let i = 0; i < urls.length; i += 30) {
+    const batch = urls.slice(i, i + 30);
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ files: batch }),
+    });
+    const body = (await res.json()) as { success?: boolean; errors?: { message: string }[] };
+    if (!res.ok || !body.success) {
+      const msg = body.errors?.map((e) => e.message).join('; ') ?? `HTTP ${res.status}`;
+      throw new Error(`Cloudflare purge failed: ${msg}`);
+    }
+    console.log(`  purged ${batch.length} URL(s)`);
+  }
+}
+
+async function main(): Promise<void> {
   const files = readdirSync(DATA_DIR).filter(ALLOW);
   if (files.length === 0) {
     console.error(`No matching files in ${DATA_DIR}.  Run npm run build-tiers first.`);
@@ -196,14 +275,23 @@ function main(): void {
       ` to r2://${BUCKET}/data/\n`,
   );
 
+  // Track every R2 key we touch so the CDN purge below knows which URLs
+  // to invalidate.  Collecting in lock-step with the upload calls keeps
+  // the two from drifting if a future ALLOW filter / EXTRA_FILES change
+  // adds a new asset.
+  const touchedKeys: string[] = [];
+
   for (const name of files) {
-    uploadFile(join(DATA_DIR, name), `data/${name}`);
+    const key = `data/${name}`;
+    uploadFile(join(DATA_DIR, name), key);
+    touchedKeys.push(key);
   }
 
   if (presentExtras.length > 0) {
     console.log('\n--- Extra files ---\n');
     for (const { localPath, r2Key } of presentExtras) {
       uploadFile(localPath, r2Key);
+      touchedKeys.push(r2Key);
     }
   }
 
@@ -214,12 +302,18 @@ function main(): void {
       console.log(`  ${localPath}`);
     }
     console.log(
-      '  To include, run `npm run fetch-hyperleda` then `gzip -k -9 data/raw/hyperleda_pa.csv`.',
+      '  To include, run `npm run fetch-hyperleda` then `gzip -k -9 data/raw/hyperleda/hyperleda_pa.csv`.',
     );
   }
 
   const total = files.length + presentExtras.length;
   console.log(`\n✓ Synced ${total} file(s) to r2://${BUCKET}/data/`);
+
+  console.log('\n--- Cloudflare CDN cache purge ---\n');
+  await purgeCloudflareCache(touchedKeys);
 }
 
-main();
+main().catch((err) => {
+  console.error(err instanceof Error ? err.message : err);
+  process.exit(1);
+});

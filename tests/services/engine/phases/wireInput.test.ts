@@ -87,6 +87,7 @@ function makeState(): EngineState {
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 1.0 },
       volumes: { masterEnabled: true, fields: {} },
+      debug: { showPickBuffer: false },
     },
     bias: {} as never,
     sources: {
@@ -94,7 +95,6 @@ function makeState(): EngineState {
       pickMask: 0xff,
       drawMask: 0xff,
       famousMeta: [],
-      famousXrefs: {},
       tier: 'medium',
     },
     picking: { latestMouseCss: null, pointerDown: false } as never,

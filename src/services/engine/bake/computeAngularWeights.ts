@@ -52,7 +52,7 @@
  */
 
 import type { ComputeAngularWeightsInput } from '../../../@types/engine/ComputeAngularWeightsInput';
-import { cartesianToRaDecZ } from '../../../utils/math';
+import { cartesianToRaDec } from '../../../utils/math';
 import { healpixNest } from '../../../utils/math/healpix';
 
 /** HEALPix resolution.  See module docstring for choice rationale. */
@@ -119,7 +119,7 @@ export function computeAngularWeights(input: ComputeAngularWeightsInput): Float3
   //
   // We allocate two small typed arrays per galaxy — cellIdx (Int32Array) and
   // distance (Float32Array) — so passes 2/3 don't need to recompute the
-  // expensive `cartesianToRaDecZ + healpixNest` call.  Together that's
+  // expensive `cartesianToRaDec + healpixNest` call.  Together that's
   // 8 bytes per galaxy = ~20 MB at full GLADE; fine.
   const cellIdxArr = new Int32Array(N);
   const distArr = new Float32Array(N);
@@ -136,9 +136,9 @@ export function computeAngularWeights(input: ComputeAngularWeightsInput): Float3
       if (d < dMin) dMin = d;
       if (d > dMax) dMax = d;
     }
-    // cartesianToRaDecZ guards d=0 and clamps before asin/atan2 — safe to
+    // cartesianToRaDec guards d=0 and clamps before asin/atan2 — safe to
     // call unconditionally.  Returns RA in [0, 360) and Dec in [-90, +90].
-    const [raDeg, decDeg] = cartesianToRaDecZ(x, y, z);
+    const [raDeg, decDeg] = cartesianToRaDec(x, y, z);
     cellIdxArr[i] = healpixNest(raDeg, decDeg, NSIDE);
   }
 

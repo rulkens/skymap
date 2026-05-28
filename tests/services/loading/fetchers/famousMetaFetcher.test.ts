@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   famousMetaFetcher,
   parseFamousMeta,
-  parseFamousXrefs,
 } from '../../../../src/services/loading/fetchers/famousMetaFetcher';
 import { useFetchMock } from '../../../setup/fetchMock';
 
@@ -17,43 +16,30 @@ describe('parseFamousMeta', () => {
   });
 });
 
-describe('parseFamousXrefs', () => {
-  it('parses object', () => {
-    expect(parseFamousXrefs('{"x":null}')).toEqual({ x: null });
-  });
-  it('throws on array root', () => {
-    expect(() => parseFamousXrefs('[]')).toThrow();
-  });
-});
-
 describe('famousMetaFetcher', () => {
   const fetch = useFetchMock();
 
-  it('fetches both files and returns combined payload', async () => {
-    fetch.mock
-      .mockResolvedValueOnce(new Response('[]', { status: 200 }))
-      .mockResolvedValueOnce(new Response('{}', { status: 200 }));
+  it('fetches famous_meta.json and returns the parsed payload', async () => {
+    fetch.mock.mockResolvedValueOnce(new Response('[]', { status: 200 }));
     const payload = await famousMetaFetcher(
-      undefined as void,
+      { tier: 'medium' },
       new AbortController().signal,
       () => {},
     );
-    expect(payload).toEqual({ meta: [], xrefs: {} });
+    expect(payload).toEqual({ meta: [] });
   });
 
   it('rejects on a non-2xx HTTP status', async () => {
     fetch.mock.mockResolvedValue(new Response('boom', { status: 500 }));
     await expect(
-      famousMetaFetcher(undefined as void, new AbortController().signal, () => {}),
+      famousMetaFetcher({ tier: 'medium' }, new AbortController().signal, () => {}),
     ).rejects.toThrow();
   });
 
-  it('rejects when an inner JSON body is malformed', async () => {
-    fetch.mock
-      .mockResolvedValueOnce(new Response('not-json', { status: 200 }))
-      .mockResolvedValueOnce(new Response('{}', { status: 200 }));
+  it('rejects when the JSON body is malformed', async () => {
+    fetch.mock.mockResolvedValueOnce(new Response('not-json', { status: 200 }));
     await expect(
-      famousMetaFetcher(undefined as void, new AbortController().signal, () => {}),
+      famousMetaFetcher({ tier: 'medium' }, new AbortController().signal, () => {}),
     ).rejects.toThrow();
   });
 
@@ -63,9 +49,7 @@ describe('famousMetaFetcher', () => {
     // Real fetch (and undici/jsdom's fetch) reject synchronously when
     // handed an already-aborted signal; emulate that here so the test
     // catches a regression where the fetcher swallows the abort and
-    // still resolves.  Plain `vi.fn().mockResolvedValue(Response)`
-    // would ignore the signal entirely and the test would pass for
-    // unrelated reasons (e.g. parser rejection of an empty body).
+    // still resolves.
     fetch.mock.mockImplementation((_url, init) => {
       const sig = (init as RequestInit | undefined)?.signal;
       if (sig?.aborted) {
@@ -76,7 +60,7 @@ describe('famousMetaFetcher', () => {
       return Promise.resolve(new Response('[]', { status: 200 }));
     });
     await expect(
-      famousMetaFetcher(undefined as void, controller.signal, () => {}),
+      famousMetaFetcher({ tier: 'medium' }, controller.signal, () => {}),
     ).rejects.toThrow();
   });
 });

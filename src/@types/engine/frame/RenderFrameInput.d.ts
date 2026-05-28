@@ -19,14 +19,14 @@
 
 import type { EngineState } from '../state/EngineState';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
-import type { Source } from '../../../data/sources';
+import type { SourceType } from '../../data/SourceType';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
+import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
-import type { FamousXrefMap } from '../../loading/FamousXrefMap';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { ReadyFrameContext } from './ReadyFrameContext';
 import type { RenderFrameSettings } from './RenderFrameSettings';
@@ -57,6 +57,8 @@ export type RenderFrameInput = {
   device: GPUDevice;
   context: GPUCanvasContext;
   milkyWayRenderer: MilkyWayRenderer;
+  /** Observable-universe horizon shell renderer. */
+  horizonShellRenderer: HorizonShellRenderer;
   /**
    * Optional cosmic-web filament-skeleton renderer.  Null when the
    * GPU init flow hasn't created it yet, or — by design — when the
@@ -94,8 +96,7 @@ export type RenderFrameInput = {
 
   // ── Forwarded to the thumbnail subsystem ──────────────────────────────
   famousMeta: FamousMetaEntry[];
-  famousXrefs: FamousXrefMap;
-  catalogs: Map<Source, GalaxyCatalog>;
+  catalogs: Map<SourceType, GalaxyCatalog>;
 
   /**
    * Per-pass GPU timing service (always non-null; check `.enabled`

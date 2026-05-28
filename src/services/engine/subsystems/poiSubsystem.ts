@@ -102,6 +102,7 @@ import type { ClusterMarkerDescriptor } from '../../../@types/rendering/ClusterM
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { hexToGl } from '../../../utils/color/hexToGl';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
+import { getLabelStyleOverride } from '../labelStyleOverride';
 
 type CategoryStyle = {
   readonly labelColor: Vec4;
@@ -166,6 +167,29 @@ type CategoryStyle = {
   readonly markerMaxApparentRadiusPx: number;
   /** Smoothstep band width for the marker fade-out. */
   readonly markerMaxApparentFadeBandPx: number;
+  /**
+   * Apparent on-screen radius (pixels) below which the marker fades
+   * OUT.  Symmetric counterpart to `markerMaxApparentRadiusPx`: when
+   * the projected ring shrinks to a handful of pixels at far zoom the
+   * ring stops being a legible anchor and starts cluttering the view
+   * with sub-readable rings + floating labels.  Below this floor:
+   * alpha 0 (descriptor skipped).  In the band `[min, min +
+   * markerMinApparentFadeBandPx]`: smoothstep ramp from 0 → 1.  Above
+   * the band: full alpha (subject to the close-approach fade-out).
+   *
+   * Famous galaxies don't use this gate — their visibility is governed
+   * by the per-POI `minApparentSizePx` + `fadeBandPx` measured against
+   * the galaxy's own `apparentDiameterKpc`.  The field is still
+   * required on this type for shape uniformity; set famousGalaxy to a
+   * sentinel that never trips (e.g. 0 / 1).
+   */
+  readonly markerMinApparentRadiusPx: number;
+  /** Smoothstep band width for the marker fade-out at the far side. */
+  readonly markerMinApparentFadeBandPx: number;
+  /** Drop-shadow outline (straight RGBA — renderer premultiplies). */
+  readonly outlineColor: Vec4;
+  /** Outline width as em-fraction. Capped at ~0.28 by atlas padding. */
+  readonly outlineEmFrac: number;
 };
 
 /**
@@ -201,6 +225,13 @@ export const POI_STYLES = {
     ringColor: hexToGl('#B39947'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
+    // Clusters span ~1–5 Mpc cores; at far zoom they're the first
+    // category to drop from legibility, so the floor sits higher than
+    // for superclusters / voids.
+    markerMinApparentRadiusPx: 12,
+    markerMinApparentFadeBandPx: 12,
+    outlineColor: [0, 0, 0, 0.1],
+    outlineEmFrac: 0.16,
   },
   supercluster: {
     labelColor: hexToGl('#FFCC80'),
@@ -216,6 +247,16 @@ export const POI_STYLES = {
     ringColor: hexToGl('#996B3666'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
+    // Superclusters span ~20–100 Mpc; their projected ring is huge
+    // even at far zoom, and a small-but-visible SC ring tends to wrap
+    // most of the viewport with sub-readable chrome.  Higher floor
+    // than clusters so they drop from the view a bit earlier — the
+    // proportionally larger structure earns a bigger pixel budget
+    // before it's worth drawing.
+    markerMinApparentRadiusPx: 28,
+    markerMinApparentFadeBandPx: 20,
+    outlineColor: [0, 0, 0, 0.1],
+    outlineEmFrac: 0.16,
   },
   famousGalaxy: {
     labelColor: hexToGl('#FFF2CC'),
@@ -232,6 +273,14 @@ export const POI_STYLES = {
     ringColor: hexToGl('#000000'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
+    // Famous galaxies skip produceMarkers (haloColor === null) and use
+    // their own per-POI minApparentSizePx + fadeBandPx gate in
+    // produceLabels.  These values are sentinels — a 0 / 1 ramp at the
+    // far end never visibly trips.
+    markerMinApparentRadiusPx: 0,
+    markerMinApparentFadeBandPx: 1,
+    outlineColor: [0, 0, 0, 0.1],
+    outlineEmFrac: 0.16,
   },
   void: {
     labelColor: hexToGl('#99D9F2'),
@@ -249,6 +298,14 @@ export const POI_STYLES = {
     ringColor: hexToGl('#73B3D9'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
+    // Voids are the largest structure anchors (~30–100+ Mpc).  Same
+    // reasoning as superclusters: their projected ring wraps a huge
+    // chunk of the viewport at far zoom, so a higher floor avoids
+    // sub-readable chrome.  Matches the SC tuning.
+    markerMinApparentRadiusPx: 28,
+    markerMinApparentFadeBandPx: 20,
+    outlineColor: [0, 0, 0, 0.1],
+    outlineEmFrac: 0.16,
   },
 } as const satisfies Readonly<Record<string, CategoryStyle>>;
 
@@ -265,43 +322,18 @@ const ALL_CATEGORIES_VISIBLE: Readonly<Record<PoiCategory, boolean>> = {
   void: true,
 };
 
-export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubsystem {
-  // Construction-time callback bag.  Optional so the existing test
-  // suite (which only exercises the marker / selection / produceLabels
-  // paths) can keep constructing the subsystem with zero args.  The
-  // runtime engine always passes `cb`; see `engine.ts` createPoiSubsystem
-  // call site for the production wire-up.  Only `selection.onPoiHoverChange`
-  // is read today — mirrors the selectionSubsystem pattern of "subsystem
-  // owns its own callback fires from the same site that does the dedupe".
-  const { cb } = input;
+export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSubsystem {
   // One-shot fade-in flag for the 'poi' label layer. Flips true on
   // the first frame that emits a non-empty label set.
   let didFireFadeIn = false;
   let pois: readonly PointOfInterest[] = [];
-  // Two independent visibility axes — see the module header for the
-  // history.  `markerVisibility` gates the ring + halo descriptors in
-  // `produceMarkers`; `labelVisibility` gates the text labels in
-  // `produceLabels`.  Both default to "every category on" so the
-  // pre-split behaviour (everything visible) is preserved; the
-  // SettingsPanel can now flip one without affecting the other.
+  // Two independent visibility axes.  `markerVisibility` gates the
+  // ring + halo descriptors in `produceMarkers`; `labelVisibility`
+  // gates the text labels in `produceLabels`.  Both default to "every
+  // category on"; the SettingsPanel flips one without affecting the
+  // other.
   let markerVisibility: Readonly<Record<PoiCategory, boolean>> = ALL_CATEGORIES_VISIBLE;
   let labelVisibility: Readonly<Record<PoiCategory, boolean>> = ALL_CATEGORIES_VISIBLE;
-  // The currently-focused POI id, or null when nothing is selected.
-  // Kept as module-scoped factory state alongside `pois` / `visibility`
-  // so produceMarkers can read it without an extra arg — same idiom
-  // the rest of the subsystem already uses.  Selection is a pure
-  // marker-side concern (it only affects ringAlpha), so it does NOT
-  // need to live in EngineState.
-  let selectedPoiId: string | null = null;
-  // Mirror of `selectedPoiId` for the hover path.  Kept as a SEPARATE
-  // field (rather than collapsed into a `{ hovered, selected }` tuple)
-  // because that separation is structurally what enforces the plan-5
-  // hard constraint: produceMarkers reads `selectedPoiId` only, and
-  // never references `hoveredPoiId` — so a hover can't accidentally
-  // bump ringAlpha.  Collapsing the two would invite a future edit
-  // that reads the tuple in produceMarkers and silently breaks the
-  // visual contract.
-  let hoveredPoiId: string | null = null;
 
   function setPois(next: readonly PointOfInterest[]): void {
     // Defensive copy — caller can mutate their array freely without
@@ -329,61 +361,11 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
     labelVisibility = { ...labelVisibility, [category]: visible };
   }
 
-  function setSelectedPoi(poiId: string | null): void {
-    if (poiId === null) {
-      selectedPoiId = null;
-      return;
-    }
-    // Defensive: only accept ids that actually appear in the current
-    // POI table.  A deep-link drain firing before the POI table is
-    // populated, or after a tier swap that replaced the table, would
-    // otherwise leave a stale id stranded on this subsystem with no
-    // matching POI to highlight.  Silently ignoring the unknown id
-    // (rather than throwing) keeps URL handlers simple: they can
-    // forward whatever the user pasted without pre-validating.
-    const exists = pois.some((p) => p.id === poiId);
-    if (!exists) return;
-    selectedPoiId = poiId;
-  }
-
-  function getSelectedPoiId(): string | null {
-    return selectedPoiId;
-  }
-
-  function setHoveredPoi(poiId: string | null): void {
-    // Resolve the *effective* next id first so the equality short-
-    // circuit and the callback fan-out both run against the same value.
-    //   - null  → clear, no defensive existence check needed.
-    //   - non-null but unknown id → defensively ignored.  The field
-    //     stays at its prior value AND the callback does NOT fire
-    //     (matching the pre-callback contract that an unknown id
-    //     produces no observable change).  Same rationale as
-    //     setSelectedPoi: a hover pick from the previous frame can
-    //     resolve against a now-replaced POI table after a tier swap;
-    //     silently dropping rather than retaining a stale id avoids
-    //     leaking a phantom hover through to the React preview card.
-    if (poiId !== null) {
-      const exists = pois.some((p) => p.id === poiId);
-      if (!exists) return;
-    }
-    // Equality short-circuit on the prior id — mirror of
-    // selectionSubsystem.setHovered's selectionEq guard.  React
-    // consumers rely on this dedupe so they don't re-render every
-    // throttled pick that resolves to the same POI the cursor was
-    // already over.
-    if (poiId === hoveredPoiId) return;
-    hoveredPoiId = poiId;
-    // Callback fires AFTER the field update so any synchronous reader
-    // (e.g. a getHoveredPoiId call from inside the callback itself)
-    // sees the freshly-committed value.  The callback chain reads as
-    // selection.onPoiHoverChange — sits next to onHoverChange (galaxy)
-    // because hover is a selection-class concept (see
-    // EngineCallbacks.d.ts).
-    cb?.selection?.onPoiHoverChange?.(poiId);
-  }
-
-  function getHoveredPoiId(): string | null {
-    return hoveredPoiId;
+  function findPoi(id: string): PointOfInterest | null {
+    // O(n) walk; n ≤ ~50 (clusters + SCs + voids + famous galaxies),
+    // so this is invisible at the budget level even when the
+    // selectionSubsystem looks up POI hovers per pick frame.
+    return pois.find((p) => p.id === id) ?? null;
   }
 
   function getPoisForCategory(category: PoiCategory): readonly PointOfInterest[] {
@@ -407,6 +389,12 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
     const halfH = ctx.canvasSize.height * 0.5;
     const fovYRad = 2 * Math.atan(halfH / ctx.drawPxPerRad);
     const [cx, cy, cz] = ctx.drawCamPos;
+    // Capture the live-tuning override once per frame — reads are
+    // cheap, but a consistent snapshot matters when the loop crosses
+    // many POIs.  The director will not call produceLabels again
+    // within the same frame.  See `labelStyleOverride.ts` for the
+    // module-scoped state's rationale.
+    const override = getLabelStyleOverride();
     for (const p of pois) {
       // Label-axis gate.  Markers consult their own `markerVisibility`
       // record in `produceMarkers` below — flipping a category's label
@@ -492,6 +480,25 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
           // happens to be mid-fade.
           fadeAlpha = Math.min(fadeAlpha, markerFadeOut);
         }
+        // Far-distance fade-out — mirrors the min-radius branch in
+        // produceMarkers so the label disappears together with its
+        // ring at far zoom.  Without this the ring fades but the text
+        // label keeps drawing at full alpha, leaving orphaned chrome
+        // when the camera pulls back from a structure.  Famous galaxies
+        // skip this block entirely (no markerRadiusMpc) — their own
+        // per-POI minApparentSizePx gate above handles the far-end fade.
+        if (apRadPx < style.markerMinApparentRadiusPx + style.markerMinApparentFadeBandPx) {
+          let minFadeOut: number;
+          if (apRadPx < style.markerMinApparentRadiusPx) {
+            minFadeOut = 0;
+          } else {
+            const t =
+              (apRadPx - style.markerMinApparentRadiusPx) / style.markerMinApparentFadeBandPx;
+            minFadeOut = t * t * (3 - 2 * t);
+          }
+          if (minFadeOut <= 0) continue;
+          fadeAlpha = Math.min(fadeAlpha, minFadeOut);
+        }
       }
 
       // Anchor-offset positioning + vertical marker line.  When the POI
@@ -535,6 +542,17 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
         }
       }
 
+      // Per-POI override fields: only POIs whose own category matches
+      // the override's target adopt the outline values; other
+      // categories keep their category-default outline.
+      const overrideFields =
+        override.targetCategory === p.category
+          ? {
+              outlineColor: override.outlineColor,
+              outlineEmFrac: override.outlineEmFrac,
+            }
+          : {};
+
       labels.push({
         id: p.id,
         worldPos: labelWorldPos,
@@ -548,6 +566,9 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
         fadeAlpha,
         alignX,
         alignY,
+        outlineColor: [...style.outlineColor],
+        outlineEmFrac: style.outlineEmFrac,
+        ...overrideFields,
       });
     }
     // One-shot layer fade-in: first frame that emits a non-empty
@@ -566,16 +587,18 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
     return { labels, lines, awake: false };
   }
 
-  function produceMarkers(_state: EngineState, ctx: ReadyFrameContext): readonly ClusterMarkerDescriptor[] {
+  function produceMarkers(state: EngineState, ctx: ReadyFrameContext): readonly ClusterMarkerDescriptor[] {
     const out: ClusterMarkerDescriptor[] = [];
-    // The same vertical-fov recovery produceLabels does — kept local
-    // so the two producers don't share mutable state.
     const halfH = ctx.canvasSize.height * 0.5;
     const fovYRad = 2 * Math.atan(halfH / ctx.drawPxPerRad);
-    // pxPerRad along the screen-Y axis at the current canvas size.
-    // (Same form youAreHereSubsystem and the labels use.)
     const pxPerRad = ctx.canvasSize.height * 0.5 / Math.tan(fovYRad * 0.5);
     const [cx, cy, cz] = ctx.drawCamPos;
+    // Selected POI id (if any) — read straight off the selection
+    // subsystem each frame so produceMarkers stays a pure function of
+    // engine state.  Galaxy selections leave this null, which means
+    // no ring gets the selection-bump alpha.
+    const sel = state.subsystems.selection.selected();
+    const selectedPoiId = sel !== null && sel.kind === 'poi' ? sel.id : null;
 
     for (const p of pois) {
       // Marker-axis gate only.  See the symmetric comment in
@@ -619,13 +642,27 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
       }
       if (maxFadeAlpha <= 0) continue; // fully faded
 
-      // Apparent-size fade-IN band reuses produceLabels' logic — only
-      // applies when both minApparentSizePx AND apparentDiameterKpc are
-      // set.  For cluster / SC / void anchors neither is set, so the
-      // fade-in alpha defaults to 1 (always visible above 0 distance).
-      // Implementer note: if a future POI wants a min-size fade-in for
-      // markers, mirror the produceLabels logic here.
-      const minFadeAlpha = 1;
+      // Far-distance fade-out: symmetric counterpart to the close-
+      // approach maxFadeAlpha above.  When the projected ring shrinks
+      // past `markerMinApparentRadiusPx` the anchor stops being a
+      // legible structure marker — clusters become illegible chrome,
+      // labels float without a visible ring underneath them.  Smoothstep
+      // from 0 → 1 across the band so rings don't pop as the camera
+      // pulls back.  Same render-on-demand rationale as the max-radius
+      // fade: no `awake` signal — camera motion already wakes the loop.
+      let minFadeAlpha: number;
+      if (apparentRadiusPx < style.markerMinApparentRadiusPx) {
+        minFadeAlpha = 0;
+      } else if (
+        apparentRadiusPx < style.markerMinApparentRadiusPx + style.markerMinApparentFadeBandPx
+      ) {
+        const t =
+          (apparentRadiusPx - style.markerMinApparentRadiusPx) / style.markerMinApparentFadeBandPx;
+        minFadeAlpha = t * t * (3 - 2 * t);
+      } else {
+        minFadeAlpha = 1;
+      }
+      if (minFadeAlpha <= 0) continue;
 
       const fadeAlpha = Math.min(maxFadeAlpha, minFadeAlpha);
 
@@ -685,10 +722,7 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
     clearPois,
     setCategoryMarkerVisible,
     setCategoryLabelVisible,
-    setSelectedPoi,
-    getSelectedPoiId,
-    setHoveredPoi,
-    getHoveredPoiId,
+    findPoi,
     getPoisForCategory,
     destroy(): void {
       // Intentionally empty — see the type-level docstring for why.

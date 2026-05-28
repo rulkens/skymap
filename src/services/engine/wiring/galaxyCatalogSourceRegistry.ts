@@ -1,117 +1,33 @@
 /**
- * galaxyCatalogSourceRegistry — declarative wiring for the engine's
- * per-source galaxy-catalog asset slots.
+ * galaxyCatalogSourceRegistry — declarative wiring for per-source
+ * galaxy-catalog asset slots.
  *
- * ### Why a registry?
+ * ## What lives here
  *
- * Pre-Phase-4 the bootstrap IIFE in `engine.ts` had a single ~60-line
- * loop that iterated `[Source.SDSS, Source.TwoMRS, Source.Glade,
- * Source.Famous, Source.Synthetic]`, branching on
- * `source === Source.Synthetic` to pick the fetcher and otherwise
- * building each slot identically.  That loop was already a dedupe of
- * five copy-pasted blocks from earlier in the project's history — a
- * mid-Spec-A cleanup — but it still mixed three concerns:
+ *   - `GALAXY_CATALOG_SOURCE_REGISTRY` — one row per source: short
+ *     name, fetcher, category (`survey` | `curated` | `synthetic`),
+ *     optional companion sidecars.  Pure data.
+ *   - `SURVEY_POINT_SOURCES` / `TIER_FETCHED_POINT_SOURCES` — derived
+ *     iteration lists for the boot loop, the tier-change loop, and
+ *     the synthetic-fallback gate.
+ *   - `wireGalaxyCatalogSourceSlot` — uniform slot-construction
+ *     helper that turns a row into an AssetSlot in
+ *     `state.assetSlots.points`.
+ *   - `loadCompanionAssets` — fires `.load()` on the companion slots
+ *     a row declares, dispatching a uniform `CompanionAssetReq`.
  *
- *   1. *Per-source variance* (which fetcher, which initial tier, which
- *      retry policy) — declarative data;
- *   2. *Slot construction* (build the AssetSlot, attach the commit
- *      body, register subscribers) — uniform plumbing;
- *   3. *Engine-state side effects* (mutate `state.sources.catalogs`,
- *      fire `cb.onCatalogReady`, wake the scheduler) — shared lifecycle.
+ * ## What does NOT live here
  *
- * Pulling (1) into a `GALAXY_CATALOG_SOURCE_REGISTRY` table and
- * (2)+(3) into a `wireGalaxyCatalogSourceSlot` helper makes "what
- * differs across sources" legible at a glance — anyone adding a new
- * survey edits one row of the registry rather than tracing through a
- * multi-arm conditional in the middle of a 1100-line bootstrap IIFE.
- * And the engine.ts side collapses to:
+ * Sidecars whose lifecycle isn't tied to a galaxy `.bin` stay inline
+ * in `wireSlots`:
  *
- *   for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) wireGalaxyCatalogSourceSlot(state, cfg, deps);
+ *   - `filaments` — different payload, different renderer target,
+ *     one-shot at boot.
+ *   - `pgc-aliases` — lazy load via the public handle.
  *
- * ### What the previous shape looked like (so the diff is auditable)
- *
- * The pre-registry loop fused the per-source switch into the slot's
- * `fetch` field via a ternary:
- *
- *   const fetch = source === Source.Synthetic ? syntheticPointFetcher
- *                                              : galaxyCatalogFetcher;
- *   const slot = createAssetSlot({ name, fetch, commit: ... });
- *   slot.subscribe((s) => { if (s.kind === 'ready') { cb.onCatalogReady?.(...); requestRender(); } });
- *   state.assetSlots.points.set(source, slot);
- *
- * The registry rephrases that ternary as data ("each row names its own
- * fetcher") and the helper inlines the rest unchanged.  Behaviour is
- * byte-for-byte identical — the relocation is the win, not a rewrite.
- *
- * ### Why sidecar slots stay bespoke
- *
- * The bootstrap also constructs three *sidecar* slots that are NOT in
- * this registry:
- *
- *   - `filaments` — different fetcher (`filamentFetcher`), different
- *     payload shape (`FilamentCloud` not `GalaxyCatalog`), different
- *     renderer target (`FilamentRenderer.upload`), one-shot lifecycle
- *     (never reloaded on tier change).  Forcing it through a
- *     "GalaxyCatalogSourceConfig" would require parameterising the payload
- *     type, the commit target, AND the lifecycle hook on every row of
- *     the registry — a generic abstraction whose only consumer is the
- *     odd-one-out, paid for by the four normal rows.
- *   - `famous-meta` — pure metadata, no `commit` step, custom error
- *     handling that maps `kind: 'error'` to "feature off" by writing
- *     empty meta/xrefs (graceful degradation that the point-source
- *     subscriber doesn't have).
- *   - `pgc-aliases` — lazy load triggered by the public handle's
- *     `loadPgcAliases()` shim, not at boot.  Wrong lifecycle for a
- *     boot-time registry loop.
- *
- * Each sidecar has materially divergent shape and a single inline
- * construction site.  Absorbing them into the registry would expand the
- * config type to cover their differences and turn
- * `wireGalaxyCatalogSourceSlot` into a coordinator that branches on slot
- * kind — exactly the smell the registry is meant to remove from
- * engine.ts.  They stay inline.
- *
- * ### Why `initialTier` lives on the config but isn't read by the
- *     helper
- *
- * The bootstrap separates *slot construction* (this helper) from *first
- * load* (a later block in engine.ts that calls
- * `state.assetSlots.points.get(source)?.load({ source, tier: state.sources.tier })`
- * for each real source).  Initial tier therefore comes from
- * `state.sources.tier`, seeded at engine init from `opts.initialTier`,
- * not from per-source config.
- *
- * The `initialTier` field nevertheless lives on `GalaxyCatalogSourceConfig` for
- * two reasons:
- *
- *   1. The spec (`docs/superpowers/specs/2026-05-08-engine-internal-restructure-design.md#3`)
- *      lists per-source initial tiers as part of the registry's
- *      declarative shape — making the future direction (per-source
- *      tier overrides) discoverable from the type without a re-spec.
- *   2. Synthetic ignores tier altogether; documenting that with a
- *      placeholder value on the row keeps the type uniform across all
- *      five entries rather than introducing an `initialTier?: Tier`
- *      partial-shape mismatch.
- *
- * If a future caller needs per-source initial tiers, the helper grows
- * one line; today it's correct to leave `state.sources.tier` as the
- * single source of truth.
- *
- * ### Consumer pattern (in `engine.ts`)
- *
- * ```ts
- * for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
- *   wireGalaxyCatalogSourceSlot(state, cfg, { cb });
- * }
- * // ... sidecar slots constructed inline below ...
- * // ... the post-loop allSlots aggregation runs unchanged ...
- * ```
- *
- * `state.assetSlots.points.set(source, slot)` happens inside the
- * helper, so by the time the loop ends every `state.assetSlots.points`
- * lookup the rest of the bootstrap relies on (the
- * `allArrivalsPromise`, the synthetic-fallback gate, the post-loop
- * `allSlots` registry population) sees the same Map it always did.
+ * A new survey adds one row.  A new companion type adds one entry to
+ * `GalaxyCatalogCompanionRef` and one slot minted on `state.assetSlots`
+ * with the same key.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -119,157 +35,139 @@ import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import { Source } from '../../../data/sources';
 import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
 import type { GalaxyCatalogSourceConfig } from '../../../@types/engine/wiring/GalaxyCatalogSourceConfig';
+import type { Tier } from '../../../@types/data/Tier';
 import type { WirePointSourceDeps } from '../../../@types/engine/wiring/WirePointSourceDeps';
 import { createAssetSlot } from '../../loading/AssetSlot';
 import { galaxyCatalogFetcher } from '../../loading/fetchers/galaxyCatalogFetcher';
 import { syntheticPointFetcher } from '../../loading/fetchers/syntheticPointFetcher';
 import type { FadeHandle } from '../../../@types/animation/FadeHandle';
 import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
+import type { SourceType } from '../../../@types/data/SourceType';
 
 /**
- * Lowercase short name for a Source — `sdss`, `2mrs`, `glade`,
- * `famous`, `synthetic`.  Used as the stable prefix for the slot's
- * name (e.g. `sdss-points`, `glade-points`) and inside the upload-log
- * line below.
- *
- * Lives here rather than next to `LABELS` in `data/sources.ts` because
- * the only consumers today are this file's slot-name + log-line
- * strings.  Promote to `data/sources.ts` if a third unrelated caller
- * appears.  (Phase 4 moved this function out of `engine.ts` — there
- * is no longer a duplicate to keep in sync.)
- */
-function sourceName(source: Source): string {
-  switch (source) {
-    case Source.SDSS:
-      return 'sdss';
-    case Source.TwoMRS:
-      return '2mrs';
-    case Source.Glade:
-      return 'glade';
-    case Source.Famous:
-      return 'famous';
-    case Source.Synthetic:
-      return 'synthetic';
-    case Source.Cluster:
-    case Source.Supercluster:
-    case Source.Void:
-      // POI sources don't have `.bin` slots and aren't part of the
-      // galaxy-catalog registry — the slot-name lookup should never
-      // be called with one. Fail loudly if it is.
-      throw new Error(`sourceName: POI source ${source} has no galaxy-catalog slot`);
-  }
-}
-
-// GalaxyCatalogSourceConfig type moved to @types/engine/wiring/GalaxyCatalogSourceConfig.d.ts.
-
-/**
- * The full registry, in Source enum order so the boot-time arrival
- * promise's `ALL_POINT_SOURCES` array (declared in engine.ts) keeps
- * iterating in the same order it always did.
- *
- * Initial tiers per the spec sketch:
- *   - SDSS / TwoMRS / Famous → 'medium'
- *   - GLADE → 'small'  (large catalog; medium is desktop-only)
- *   - Synthetic → 'small'  (fetcher ignores tier; placeholder)
- *
- * Today these values are not consumed by `wirePointSourceSlot`; they
- * are documentation that travels with the registry.  See the module
- * header for why.
+ * Registry rows, in Source enum order.  Order matters: the boot loop,
+ * the tier-change loop, and the synthetic-fallback gate iterate this
+ * list and rely on a stable ordering for their per-source logs.
  */
 export const GALAXY_CATALOG_SOURCE_REGISTRY: readonly GalaxyCatalogSourceConfig[] = [
-  { source: Source.SDSS, fetcher: galaxyCatalogFetcher, initialTier: 'medium' },
-  { source: Source.TwoMRS, fetcher: galaxyCatalogFetcher, initialTier: 'medium' },
-  { source: Source.Glade, fetcher: galaxyCatalogFetcher, initialTier: 'small' },
-  { source: Source.Famous, fetcher: galaxyCatalogFetcher, initialTier: 'medium' },
-  { source: Source.Synthetic, fetcher: syntheticPointFetcher, initialTier: 'small' },
+  { source: Source.SDSS, shortName: 'sdss', fetcher: galaxyCatalogFetcher, category: 'survey' },
+  { source: Source.TwoMRS, shortName: '2mrs', fetcher: galaxyCatalogFetcher, category: 'survey' },
+  { source: Source.Glade, shortName: 'glade', fetcher: galaxyCatalogFetcher, category: 'survey' },
+  {
+    source: Source.Famous,
+    shortName: 'famous',
+    fetcher: galaxyCatalogFetcher,
+    category: 'curated',
+    // famous_meta.json carries the InfoCard text, CommandPalette entries,
+    // and URL-focus resolution for hand-picked entries.
+    // Tier-agnostic — one load per session.
+    companions: ['famousMeta'],
+  },
+  {
+    source: Source.Milliquas,
+    shortName: 'milliquas',
+    fetcher: galaxyCatalogFetcher,
+    category: 'survey',
+    // No companion sidecars: the v5 .bin format carries the AGN
+    // class byte + parent-survey prefix byte per record, so the
+    // InfoCard reconstructs the display name without an auxiliary
+    // JSON fetch.
+  },
+  {
+    source: Source.Synthetic,
+    shortName: 'synthetic',
+    fetcher: syntheticPointFetcher,
+    category: 'synthetic',
+  },
 ];
 
 /**
- * Shared dependencies the helper needs that aren't on `EngineState`.
- *
- * `cb` is the engine's callback bag — used for the `onCatalogReady` echo
- * that runs on the slot's `ready` transition.  Passing it as one
- * named field (rather than threading individual callbacks through)
- * keeps the call site at a single line and matches how the rest of
- * the engine treats the `EngineCallbacks` value.
+ * Source → shortName lookup for log lines that iterate the renderer's
+ * `loadedSources()` (where we don't have a registry row in hand).
  */
-// WirePointSourceDeps type moved to @types/engine/wiring/WirePointSourceDeps.d.ts.
+const SHORT_NAME_BY_SOURCE: ReadonlyMap<SourceType, string> = new Map(
+  GALAXY_CATALOG_SOURCE_REGISTRY.map((c) => [c.source, c.shortName]),
+);
 
 /**
- * Build the asset slot for one galaxy-catalog source survey, attach its
+ * Sources in the `survey` category — counted toward the
+ * synthetic-fallback ready gate.  Hidden surveys count as already
+ * settled (see `wireSlots`).
+ */
+export const SURVEY_POINT_SOURCES: readonly SourceType[] = GALAXY_CATALOG_SOURCE_REGISTRY.filter(
+  (c) => c.category === 'survey',
+).map((c) => c.source);
+
+/**
+ * Every tier-fetched catalog source — surveys + curated.  Driven by
+ * the boot loop and the tier-change reload loop.
+ */
+export const TIER_FETCHED_POINT_SOURCES: readonly SourceType[] =
+  GALAXY_CATALOG_SOURCE_REGISTRY.filter((c) => c.category !== 'synthetic').map((c) => c.source);
+
+/**
+ * Fire every companion declared on the given registry row.  Called
+ * from the boot loop, `setSourceVisible`, and the tier-change loop.
+ *
+ * Every companion slot accepts the same `CompanionAssetReq` (`{ tier }`)
+ * — tier-aware fetchers use it, tier-agnostic ones ignore it — so
+ * dispatch is a plain index into `state.assetSlots` with no per-key
+ * switch.  Idempotent at the AssetSlot layer.
+ */
+export function loadCompanionAssets(
+  state: EngineState,
+  cfg: GalaxyCatalogSourceConfig,
+  tier: Tier,
+): void {
+  if (!cfg.companions) return;
+  for (const ref of cfg.companions) state.assetSlots[ref]?.load({ tier });
+}
+
+/**
+ * Build the asset slot for one galaxy-catalog source, attach its
  * commit body and ready-state subscriber, and register it in
  * `state.assetSlots.points`.
  *
- * Idempotency / re-wire: not supported.  Calling this twice for the
- * same source overwrites the previous slot in `state.assetSlots.points`
- * but leaves the old slot's subscribers attached (the slot itself has
- * no destroy method); the caller is expected to wire each source
- * exactly once during bootstrap.  This matches the pre-registry loop's
- * contract.
- *
- * Lifecycle ordering: this MUST run AFTER `state.gpu.renderer` is
- * assigned — the commit step uploads to it.  In engine.ts's bootstrap
- * IIFE that ordering is preserved by calling the registry loop after
- * `state.gpu.renderer = renderer`.  See the bootstrap's "Why construct
- * here, after the renderer exists?" note for the why.
+ * Must run AFTER `state.gpu.renderer` is assigned — the commit step
+ * uploads to it.  Not safe to call twice for the same source.
  */
 export function wireGalaxyCatalogSourceSlot(
   state: EngineState,
   cfg: GalaxyCatalogSourceConfig,
   deps: WirePointSourceDeps,
 ): void {
-  const { source, fetcher } = cfg;
+  const { source, shortName, fetcher } = cfg;
   const { cb } = deps;
-  const slotName = `${sourceName(source)}-points`;
+  const slotName = `${shortName}-points`;
 
-  // Register the survey's fade handle at opacity 0 — the slot commit
-  // (Task 4.1) drives the fadeTo lifecycle from there. Registering at
-  // wiring time (before any data has loaded) means the points draw
-  // loop's `fadeOpacityOf` lookup always finds the handle, even on
-  // the first frame before the first upload lands.
+  // Register the fade handle at opacity 0 so the draw loop's
+  // `fadeOpacityOf` lookup always finds it, even on the first frame
+  // before any upload lands.  The commit drives the fadeTo lifecycle
+  // from there.
   state.subsystems.fades.register({ kind: 'survey', source }, 0);
 
   const slot = createAssetSlot<GalaxyCatalog, GalaxyCatalogReq>({
     name: slotName,
     fetch: fetcher,
     commit: async (cloud) => {
-      // Renderer might be missing for two reasons:
-      //   (a) the GPU init phase hasn't run yet (very first frame
-      //       window — possible with synchronous fetch fixtures in
-      //       tests, but rare in production)
-      //   (b) the renderer was destroyed mid-load (StrictMode unmount,
-      //       hot-reload).
+      // The renderer can be null mid-bootstrap (commit fires during
+      // wireSlots, which runs before wireInput) or after teardown
+      // (StrictMode unmount, hot-reload).  Drop the upload silently
+      // — the slot still transitions to `ready`.
       //
-      // Either way, drop the upload silently; the slot still transitions
-      // to `ready` but no GPU buffer exists to consume it.
-      //
-      // ### Why a bespoke `state.gpu.renderer` check, NOT `isEngineReady`
-      //
-      // D.4 originally consolidated this site onto `isEngineReady` on
-      // the reasoning that "destroy() nulls all five bootstrap-bag
-      // fields together, so any one being null implies the others".
-      // That holds for *teardown* — but NOT for *bootstrap progression*.
-      // The slot's commit fires during the `wireSlots` phase, which
-      // runs BEFORE `wireInput` creates `pickRenderer` and `cam`.  At
-      // that lifecycle point, only `renderer`, `postProcess`, and
-      // `thumbnails` are set — `isEngineReady` returns false, the
-      // commit skips, and the cloud never reaches the GPU.  Visible
-      // symptom: black screen with no console errors.
-      //
-      // The renderer-only check captures the actual invariant the
-      // commit cares about (does the destination exist?) without
-      // entangling it with handles populated later in the bootstrap
-      // chain.
+      // We check `state.gpu.renderer` directly rather than going
+      // through `isEngineReady`: the latter also waits for handles
+      // populated later in bootstrap (pickRenderer, cam), and would
+      // reject this upload during the legitimate wireSlots window.
       if (state.gpu.renderer === null) return;
       const handle: FadeHandle = { kind: 'survey', source };
       const fades = state.subsystems.fades;
 
-      // First load reuses the wire-time register(handle, 0); the
-      // fade-in below ramps it up. Subsequent loads (tier swap) fade
-      // OUT the old buffer first so the user sees the previous tier
-      // dissolve before the new one starts drawing. The renderer keeps
-      // drawing the OLD buffer with falling alpha until fade-out
-      // completes — only then does `upload()` destroy + recreate it.
+      // Tier swap: fade the old buffer out before the new one lands so
+      // the user sees the previous tier dissolve.  First load skips
+      // straight to fade-in.  The renderer keeps drawing the OLD
+      // buffer with falling alpha until fade-out completes — only
+      // then does `upload()` destroy + recreate it.
       const isFirstLoad = !state.sources.catalogs.has(source);
       if (!isFirstLoad) {
         await fades.fadeTo(handle, 0, FADE_OUT_DURATION_MS);
@@ -277,41 +175,30 @@ export function wireGalaxyCatalogSourceSlot(
 
       const t0 = performance.now();
       // eslint-disable-next-line no-console
-      console.log(
-        `[engine] upload start ${sourceName(source)} count=${cloud.count}`,
-      );
+      console.log(`[engine] upload start ${shortName} count=${cloud.count}`);
       await state.gpu.renderer.upload(source, cloud);
       state.sources.catalogs.set(source, cloud);
 
-      // Fire-and-forget: don't `await` the fade-in. The slot's `ready`
-      // transition fires immediately, subscribers wake, the camera
-      // doesn't have to wait for the 600 ms smoothstep to saturate
-      // before the next user interaction can proceed.
+      // Fire-and-forget fade-in so the slot's `ready` transition
+      // fires immediately; user interaction doesn't wait for the
+      // smoothstep to saturate.
       void fades.fadeTo(handle, 1, FADE_IN_DURATION_MS);
 
       const dtMs = Math.round(performance.now() - t0);
-      // After upload, dump what the GPU actually has — the source of
-      // truth the draw loop reads from.  If this disagrees with the
-      // slot's reported `cloud.count`, the upload landed on the
-      // renderer but something else (e.g. a parallel rebake or a
-      // concurrent upload for the same source) overwrote it.
+      // Dump what the GPU actually holds after upload.  If this
+      // disagrees with `cloud.count`, a concurrent upload overwrote.
       const onGpu = Array.from(state.gpu.renderer.loadedSources())
-        .map((e) => `${sourceName(e.source)}=${e.count}`)
+        .map((e) => `${SHORT_NAME_BY_SOURCE.get(e.source) ?? e.source}=${e.count}`)
         .join(', ');
       const total = state.gpu.renderer.totalCount();
       // eslint-disable-next-line no-console
       console.log(
-        `[engine] upload done  ${sourceName(source)} count=${cloud.count} (${dtMs} ms) | on-GPU: ${onGpu} | total=${total}`,
+        `[engine] upload done  ${shortName} count=${cloud.count} (${dtMs} ms) | on-GPU: ${onGpu} | total=${total}`,
       );
     },
   });
 
   slot.subscribe((s) => {
-    // Per-slot byte-count plumbing into the loading-bar aggregator is
-    // gone post-Task-12 — the new `createLoadProgressEmitter`
-    // recomputes from `aggregateRegistry(slots)` on every state
-    // change, so this subscriber only needs to fire the app-visible
-    // side effects (cb echo + render wake) on the `ready` transition.
     if (s.kind === 'ready') {
       cb.sources?.onCatalogReady?.(source, s.value.count);
       state.subsystems.scheduler.requestRender();

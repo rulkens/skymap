@@ -75,6 +75,7 @@ function makeState({ cloudCount = 1 } = {}): EngineState {
     sources: { catalogs },
     gpu: {
       milkyWayRenderer: { label: 'milkyWay' } as never,
+      horizonShellRenderer: { label: 'horizonShell' } as never,
       texturedDiskRenderer: { label: 'disk' } as never,
       proceduralDiskRenderer: { label: 'proc' } as never,
       filamentRenderer: { label: 'filament' } as never,
@@ -175,7 +176,7 @@ describe('startLoop', () => {
     const deps = makeDeps();
 
     await expect(startLoop(state, deps)).rejects.toThrow(
-      /milkyWay\/texturedDisk\/proceduralDisk renderers must be initialised/,
+      /milkyWay\/horizonShell\/texturedDisk\/proceduralDisk renderers must be initialised/,
     );
   });
 });

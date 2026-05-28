@@ -50,16 +50,20 @@ struct Uniforms {
 };
 
 struct LabelData {
-  // worldPos.xyz = anchor in Mpc; worldPos.w = worldEmMpc (PRIMARY size driver —
-  // em height in world-space Mpc, projected to pixels by the vertex stage).
+  // worldPos.xyz = anchor in Mpc; worldPos.w = worldEmMpc (PRIMARY size
+  // driver — em height in world-space Mpc, projected to pixels by the
+  // vertex stage).
   worldPos: vec4<f32>,
-  // color.rgb premultiplied; color.a = base alpha (multiplied by fadeAlpha).
+  // Fill colour — premultiplied rgba.  The renderer pack loop multiplies
+  // r/g/b by a before upload, so the shader can treat (rgb, a) as the
+  // OVER-composite input directly.
   color: vec4<f32>,
-  // x = pixelSize (LEGACY — ignored by shader; kept for layout stability)
-  // y = minPixelSize  (floor clamp on projected em height, in screen px)
-  // z = maxPixelSize  (ceiling clamp on projected em height, in screen px)
-  // w = fadeAlpha
+  // x = outlineEmFrac (repurposed legacy pixelSize slot)
+  // y = minPixelSize, z = maxPixelSize, w = fadeAlpha
   sizing: vec4<f32>,
+  // Outside-stroke outline colour — premultiplied rgba.  Zero alpha
+  // collapses the outline band regardless of outlineEmFrac.
+  outlineColor: vec4<f32>,
 };
 
 struct VsIn {
@@ -86,9 +90,18 @@ struct VsIn {
 struct VsOut {
   @builtin(position) pos: vec4<f32>,
   @location(0) uv: vec2<f32>,
+  // Fill colour pre-multiplied by fadeAlpha so the fragment stage can
+  // alpha-blend without re-reading fadeAlpha.
   @location(1) color: vec4<f32>,
   // Flat-interpolated so the fragment shader sees the same integer
   // layer index for every fragment of one glyph quad.  Non-flat
   // interpolation of an integer is a WGSL validation error.
   @location(2) @interpolate(flat) fontIndex: u32,
+  // Outline colour pre-multiplied by fadeAlpha (same pre-fade bake as
+  // the fill colour — keeps the fragment stage simple).
+  @location(3) outlineColor: vec4<f32>,
+  // Outline width in SDF units (atlas px / DISTANCE_RANGE_PX).
+  // Converted CPU-side at the vertex stage so the fragment shader has
+  // the value ready without re-deriving from per-label data.
+  @location(4) outlineSdf: f32,
 };

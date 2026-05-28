@@ -34,6 +34,7 @@
  */
 
 import { Source } from './sources';
+import type { SourceType } from '../@types/data/SourceType';
 
 /** Bit shift for the source code in the packed identity. */
 export const SELECTION_SOURCE_SHIFT = 27;
@@ -86,7 +87,7 @@ export function packSelection(sourceCode: number, localIdx: number): number {
  * rationale and §7.2 for the call-site impact (`wireInput.ts`).
  */
 export type PickResult =
-  | { readonly kind: 'galaxy'; readonly source: Source; readonly localIdx: number }
+  | { readonly kind: 'galaxy'; readonly source: SourceType; readonly localIdx: number }
   | { readonly kind: 'cluster'; readonly poiIndex: number }
   | { readonly kind: 'supercluster'; readonly poiIndex: number }
   | { readonly kind: 'void'; readonly poiIndex: number };
@@ -105,10 +106,11 @@ export type PickResult =
  *   - 5     → cluster POI
  *   - 6     → supercluster POI
  *   - 7     → void POI
- *   - 8..30 → unallocated; log a defensive warning and return null
+ *   - 8     → Milliquas galaxy hit (point-source AGN)
+ *   - 9..30 → unallocated; log a defensive warning and return null
  *   - 31    → reserved (all-ones sentinel); return null
  *
- * The 8..30 branch should never fire at runtime (we don't render any
+ * The 9..30 branch should never fire at runtime (we don't render any
  * pickable surface with those codes), but a stray frame from an old
  * shader or a misconfigured renderer would otherwise propagate a
  * "ghost" pick result into the focus subsystem. Logging + null keeps
@@ -120,10 +122,12 @@ export function unpackPick(rawPickValue: number): PickResult | null {
   // Reserved sentinel band — never a real hit.
   if (sourceCode === 31) return null;
   const localIdx = (rawPickValue & SELECTION_LOCAL_IDX_MASK) - PICK_SENTINEL_OFFSET;
-  if (sourceCode <= 4) {
-    // Survey-galaxy hit. The numeric source code matches the Source
-    // enum value 1:1 (Synthetic=0, SDSS=1, TwoMRS=2, Glade=3, Famous=4).
-    return { kind: 'galaxy', source: sourceCode as Source, localIdx };
+  if (sourceCode <= 4 || sourceCode === Source.Milliquas) {
+    // Survey-galaxy hit. The contiguous 0..4 band carries the original
+    // surveys (Synthetic, SDSS, TwoMRS, Glade, Famous); code 8 was
+    // appended for Milliquas after the POI codes (5/6/7) were already
+    // allocated, so the test is "low band OR exact match".
+    return { kind: 'galaxy', source: sourceCode as SourceType, localIdx };
   }
   if (sourceCode === 5) return { kind: 'cluster', poiIndex: localIdx };
   if (sourceCode === 6) return { kind: 'supercluster', poiIndex: localIdx };

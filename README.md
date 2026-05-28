@@ -88,6 +88,7 @@ The renderer can ingest up to three galaxy catalogs in parallel. Each is just a 
 - **SDSS** (Sloan Digital Sky Survey) — a deep photographic + spectroscopic survey from a single 2.5 m telescope in New Mexico, covering roughly the northern third of the sky. Best dense coverage in its footprint; we use a slice of ~500 k galaxies.
 - **2MRS** (2MASS Redshift Survey) — a smaller (~45 k), all-sky redshift survey concentrated on the local volume around the Milky Way. Useful for nearby galaxies in any direction.
 - **GLADE** — a million-galaxy all-sky mega-catalog cross-matched from several surveys. Reaches roughly the same radial depth as SDSS, but covers the full sky — so its main contribution is filling in the celestial regions outside SDSS's northern footprint, while also extending well beyond 2MRS's local volume.
+- **Milliquas v8** ([Flesch 2023, OJAp 6, 49](https://doi.org/10.21105/astro.2308.01505)) — the Million Quasars compilation: ~940 k spec-z type-I QSOs, BL Lacs, type-II AGN, and radio/X-ray candidates from the literature, deduplicated across source catalogs. Renders as point-source AGN alongside the galaxy surveys; hidden by default — toggle on in the SettingsPanel.
 
 You can run with any one, any two, or all three. The renderer falls back to synthetic data if no `.bin` files are present.
 
@@ -99,9 +100,10 @@ The renderer fetches `/data/sdss.bin`, `/data/2mrs.bin`, and `/data/glade.bin` a
 
 | Survey | Source                                                                                     | File / Notes                                                                                   |
 | ------ | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
-| SDSS   | [SkyServer SQL](https://skyserver.sdss.org/dr18/SearchTools/sql)                           | Run the query below; export as CSV.                                                            |
-| 2MRS   | [VizieR J/ApJS/199/26](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/ApJS/199/26) | `table3.dat`, 233-byte fixed-width, 44,599 rows, ~10 MB. Drop into `data/raw/2mrs_table3.dat`. |
-| GLADE  | [VizieR VII/281](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=VII/281)             | `glade2.3.dat`, 256-byte fixed-width, 3.26 M rows, ~838 MB. Drop into `data/raw/glade2.3.dat`. |
+| SDSS      | [SkyServer SQL](https://skyserver.sdss.org/dr18/SearchTools/sql)                           | Run the query below; export as CSV.                                                            |
+| 2MRS      | [VizieR J/ApJS/199/26](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/ApJS/199/26) | `table3.dat`, 233-byte fixed-width, 44,599 rows, ~10 MB. Drop into `data/raw/2mrs/2mrs_table3.dat`. |
+| GLADE     | [VizieR VII/281](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=VII/281)             | `glade2.3.dat`, 256-byte fixed-width, 3.26 M rows, ~838 MB. Drop into `data/raw/glade/glade2.3.dat`. |
+| Milliquas | [quasars.org](https://quasars.org/milliquas.htm)                                           | Run `npm run fetch-milliquas` — pulls the 31 MB zip, verifies SHA-256, unpacks to `data/raw/milliquas/milliquas.txt`. |
 
 GLADE alone subsumes 2MPZ and 6dFGS — the GLADE team has already cross-matched and deduplicated 2MPZ + 2MASS XSC + HyperLEDA + GWGC + SDSS-DR12Q, so a single download replaces what would otherwise be three.
 
@@ -135,9 +137,9 @@ Choose **CSV** as the output format. The columns break down into three groups:
 
 ```bash
 npm run build-all -- \
-  --sdss    "data/Skyserver_SQL.csv" \
-  --twomrs  data/raw/2mrs_table3.dat \
-  --glade   data/raw/glade2.3.dat \
+  --sdss    "data/raw/sdss/Skyserver_SQL.csv" \
+  --twomrs  data/raw/2mrs/2mrs_table3.dat \
+  --glade   data/raw/glade/glade2.3.dat \
   --out-dir public/data
 ```
 
@@ -154,21 +156,21 @@ npm run fetch-2mass-xsc    # ~5 minutes; adds PA + axis-ratio for 2MRS galaxies
 npm run fetch-hyperleda    # ~1 hour; adds PA + axis-ratio for GLADE galaxies
 ```
 
-- `fetch-2mass-xsc` queries the 2MASS Extended Source Catalog and writes `data/raw/2mass_xsc_pa.csv`. Quick — runs in roughly five minutes.
-- `fetch-hyperleda` queries HyperLEDA at 4 concurrent requests across ~1.5 M PGCs and writes `data/raw/hyperleda_pa.csv`. Takes roughly **1 hour** end-to-end. The script is resumable — interrupt and restart safely.
+- `fetch-2mass-xsc` queries the 2MASS Extended Source Catalog and writes `data/raw/2mrs/2mass_xsc_pa.csv`. Quick — runs in roughly five minutes.
+- `fetch-hyperleda` queries HyperLEDA at 4 concurrent requests across ~1.5 M PGCs and writes `data/raw/hyperleda/hyperleda_pa.csv`. Takes roughly **1 hour** end-to-end. The script is resumable — interrupt and restart safely.
 
 #### HyperLEDA orientation cache: download instead of fetching
 
 Running the full HyperLEDA fetch yourself takes an hour and hammers HyperLEDA's servers with ~1.5 M requests. A pre-computed cache is available from the same R2 bucket that serves the `.bin` catalog files — download it instead:
 
 ```bash
-mkdir -p data/raw
-curl -L -o data/raw/hyperleda_pa.csv.gz \
+mkdir -p data/raw/hyperleda
+curl -L -o data/raw/hyperleda/hyperleda_pa.csv.gz \
   https://skymap-data.rulkens.com/data/hyperleda_pa.csv.gz
-gunzip data/raw/hyperleda_pa.csv.gz
+gunzip data/raw/hyperleda/hyperleda_pa.csv.gz
 ```
 
-The cache is the output of a completed `npm run fetch-hyperleda` run, gzipped with `-9` for transport. It's updated manually whenever a catalog refresh is synced to R2. If you need the absolute latest HyperLEDA values (e.g. after a new GLADE release), the `npm run fetch-hyperleda` path above still works — run it, then `gzip -k -9 data/raw/hyperleda_pa.csv` and follow the `npm run sync-r2` steps in CLAUDE.md to push a fresh copy.
+The cache is the output of a completed `npm run fetch-hyperleda` run, gzipped with `-9` for transport. It's updated manually whenever a catalog refresh is synced to R2. If you need the absolute latest HyperLEDA values (e.g. after a new GLADE release), the `npm run fetch-hyperleda` path above still works — run it, then `gzip -k -9 data/raw/hyperleda/hyperleda_pa.csv` and follow the `npm run sync-r2` steps in CLAUDE.md to push a fresh copy.
 
 Both files are picked up automatically by the next `npm run build-all`. Both commands are entirely optional; the renderer works without them.
 

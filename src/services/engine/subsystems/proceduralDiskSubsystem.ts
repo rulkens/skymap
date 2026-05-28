@@ -32,10 +32,12 @@
 
 import { Source } from '../../../data/sources';
 import { pickColourIndex } from '../../../data/colourIndex';
+import { paddedRadiusMpc } from '../../../utils/galaxySize';
 import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
+import type { SourceType } from '../../../@types/data/SourceType';
 import type {
   ProceduralDiskFrameInput,
   ProceduralDiskFrameOutput,
@@ -93,8 +95,8 @@ export function createProceduralDiskSubsystem(
 ): ProceduralDiskSubsystem {
   const decimationFactor = Math.max(1, Math.floor(deps.decimationFactor ?? 8));
 
-  const stickyProcDisksBySource = new Map<Source, Map<number, ProceduralDiskInstance>>();
-  const strideStartBySource = new Map<Source, number>();
+  const stickyProcDisksBySource = new Map<SourceType, Map<number, ProceduralDiskInstance>>();
+  const strideStartBySource = new Map<SourceType, number>();
 
   // Initialised to a frozen empty output so consumers that read
   // `lastOutput` before the first runFrame see valid data.
@@ -162,19 +164,25 @@ export function createProceduralDiskSubsystem(
 
         if (px <= PROCEDURAL_DISK_FADE_START_PX) continue;
 
-        const sizeWorldMpc = (dKpcRow / 1000) * 4;
+        // posSize.w stores the FULL quad extent (vertex stage halves it
+        // at corner expansion), so double the shared radius helper.
+        const sizeWorldMpc = paddedRadiusMpc(dKpcRow) * 2;
         const ar = cloud.axisRatio[i]!;
         const pa = cloud.positionAngleDeg[i]!;
 
-        const ci = pickColourIndex(
+        // Distance from origin (NOT from camera) — K-correction uses
+        // cosmological redshift z = d / Hubble distance, which is a
+        // function of the row's position, not the viewer's location.
+        const dMpcFromOrigin = Math.hypot(x, y, z);
+        const colourIndex = pickColourIndex(
           cloudSource,
-          cloud.magU[i] ?? NaN,
-          cloud.magG[i] ?? NaN,
-          cloud.magR[i] ?? NaN,
-          cloud.magI[i] ?? NaN,
-          cloud.magZ[i] ?? NaN,
+          cloud.magU[i]!,
+          cloud.magG[i]!,
+          cloud.magR[i]!,
+          cloud.magI[i]!,
+          cloud.magZ[i]!,
+          dMpcFromOrigin,
         );
-        const colourIndex = ci !== null ? ci.colourIndex : 1.0;
 
         const emitted = maybeEmitProceduralDisk(
           px,

@@ -7,6 +7,7 @@
 import type { GalaxyTypeInfo } from '../data/GalaxyTypeInfo';
 import { Source } from '../../data/sources';
 import type { BandLabels } from '../data/BandLabels';
+import type { SourceType } from '../data/SourceType';
 
 /**
  * Display data for a single galaxy point, computed on-demand from the raw
@@ -136,18 +137,41 @@ export type GalaxyInfo = {
   iauName: string;
 
   /**
+   * Human-readable AGN classification for the row, or `undefined`
+   * when the source doesn't define one.
+   *
+   * Today only `Source.Milliquas` populates this — values come from
+   * `sourceClassLabel(source, classByte)` (e.g. `"Quasar"`,
+   * `"BL Lac"`, `"Seyfert-1 broad"`).  For SDSS / 2MRS / GLADE /
+   * Famous / Synthetic rows the field is `undefined` and InfoCard
+   * consumers are expected to hide the row entirely.
+   *
+   * The field is optional rather than `string | null` to match the
+   * React-idiomatic absent-row pattern used elsewhere in the type
+   * (e.g. `famous?`): consumers gate with `info.agnClass && (…)`
+   * and an explicit `undefined` keeps the absent-row markup
+   * identical to every other "this row doesn't apply" field.
+   */
+  agnClass?: string;
+
+  /**
    * The single best human-readable name for this row, suitable as a
    * headline in the InfoCard / hover preview.  Derived from a small
    * priority ladder:
    *
    *   1. Famous rows → primary curated name from the seed JSON
    *      (e.g. "M31", "NGC 5128").
-   *   2. 2MRS or GLADE rows with a real PGC (objID > 0n) → `PGC <n>`.
+   *   2. Milliquas rows with a known parent-survey prefix → the
+   *      reconstructed "<PARENT> J<RA><Dec>" (e.g.
+   *      "SDSS J012345.67+891234.5", "2MASX J…").  Built from the
+   *      per-record `parentSurveyByte` slot in the .bin and the
+   *      shared `iauRaDecSuffix(ra, dec)` emitter.
+   *   3. 2MRS or GLADE rows with a real PGC (objID > 0n) → `PGC <n>`.
    *      PGC numbers are widely indexed by NED / SIMBAD and are
    *      shorter and more memorable than a coord-based name.  For
    *      GLADE the PGC comes directly from the source row; for 2MRS
    *      it's populated by the build-time GLADE→2MRS cross-match.
-   *   3. Everything else → `iauName` (the coord-based fallback).
+   *   4. Everything else → `iauName` (the coord-based fallback).
    *
    * Pre-computed in the builder rather than left to each surface
    * (FullCard, CompactCard, command palette) so the headline stays
@@ -163,7 +187,7 @@ export type GalaxyInfo = {
    * decides whether SDSS-specific affordances (Explorer link, SDSS image
    * cutout) are shown for this point.
    */
-  source: Source;
+  source: SourceType;
 
   /**
    * Display label for the source (e.g. "SDSS", "2MRS", "GLADE").  Pre-resolved
@@ -229,14 +253,9 @@ export type GalaxyInfo = {
   /**
    * Famous-galaxy enrichment block, present only when `source === Source.Famous`.
    *
-   * Populated by `galaxyInfoBuilder` from the `famous_meta.json` and
-   * `famous_xrefs.json` sidecars loaded at engine startup.  Absent (`undefined`)
-   * for SDSS / 2MRS / GLADE / Synthetic rows — those never have curated metadata.
-   *
-   * `xref` is the nearest cross-matched survey row (2MRS or GLADE) within
-   * MATCH_THRESHOLD_ARCSEC, or `null` when no match was found.  Even a `null`
-   * xref is useful in the UI — it tells the InfoCard "we checked and found nothing"
-   * rather than "we haven't checked".
+   * Populated by `galaxyInfoBuilder` from the `famous_meta.json` sidecar loaded
+   * at engine startup.  Absent (`undefined`) for SDSS / 2MRS / GLADE / Synthetic
+   * rows — those never have curated metadata.
    */
   famous?: {
     /** Stable machine-readable id, e.g. `"m31"`. Matches the WebP filename. */
@@ -256,12 +275,6 @@ export type GalaxyInfo = {
     description: string;
     /** Morphological / physical type, e.g. `"SBb"`. */
     type: string;
-    /** Cross-match to the nearest 2MRS or GLADE row, or null if unmatched. */
-    xref: {
-      source: 'TwoMRS' | 'Glade';
-      localIdx: number;
-      distanceArcsec: number;
-    } | null;
   };
 
   /** @group Orientation */

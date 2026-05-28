@@ -14,7 +14,8 @@ import { describe, it, expect } from 'vitest';
 import { surveyConstants } from '../../../src/services/biasCorrection/surveyConstants';
 import { surveyFluxLimit, surveySchechter } from '../../../src/data/surveyFluxLimits';
 import { expectedNumberDensity } from '../../../src/utils/math/schechterDensity';
-import { Source, type SurveySource } from '../../../src/data/sources';
+import { Source } from '../../../src/data/sources';
+import type { SurveySource } from '../../../src/@types/data/SurveySource';
 
 // Reverse-lookup name from a Source value.  TS's old numeric enum
 // auto-generated this map; the `as const` replacement does not, so we
@@ -27,6 +28,7 @@ const SOURCE_NAME: Record<SurveySource, string> = {
   [Source.TwoMRS]: 'TwoMRS',
   [Source.Glade]: 'Glade',
   [Source.Famous]: 'Famous',
+  [Source.Milliquas]: 'Milliquas',
 };
 
 describe('surveyConstants table', () => {

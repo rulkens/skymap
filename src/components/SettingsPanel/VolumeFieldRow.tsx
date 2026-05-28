@@ -49,6 +49,7 @@
  */
 import type { ReactNode } from 'react';
 import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
+import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
 import { PaletteSelect } from '../common/PaletteSelect/PaletteSelect';
 import styles from './VolumeFieldRow.module.css';
 
@@ -101,9 +102,9 @@ const DENSITY_MAX = 60;
 const DENSITY_STEP = 0.1;
 
 export type VolumeFieldRowProps = {
-  /** Stable handle (not displayed; passed back to change callbacks). */
-  handle: string;
-  /** Display label; defaults to the handle when none was provided at registration. */
+  /** Stable id (not displayed; passed back to change callbacks). */
+  handle: VolumeFieldId;
+  /** Display label; defaults to the id when none was provided at registration. */
   label: string;
   enabled: boolean;
   intensity: number;
@@ -112,11 +113,11 @@ export type VolumeFieldRowProps = {
   trim: number;
   exposure: number;
   paletteId: ScalarFieldPaletteId;
-  onEnabledChange: (handle: string, enabled: boolean) => void;
-  onIntensityChange: (handle: string, intensity: number) => void;
-  onContrastChange: (handle: string, contrast: number) => void;
-  onTrimChange?: (handle: string, trim: number) => void;
-  onExposureChange?: (handle: string, exposure: number) => void;
+  onEnabledChange: (id: VolumeFieldId, enabled: boolean) => void;
+  onIntensityChange: (id: VolumeFieldId, intensity: number) => void;
+  onContrastChange: (id: VolumeFieldId, contrast: number) => void;
+  onTrimChange?: (id: VolumeFieldId, trim: number) => void;
+  onExposureChange?: (id: VolumeFieldId, exposure: number) => void;
   /**
    * Optional — when omitted, the Density slider still renders but its
    * onChange becomes a no-op.  Letting the slider render even without
@@ -124,9 +125,9 @@ export type VolumeFieldRowProps = {
    * configurations; future callers that DO want the knob just pass
    * the handler.
    */
-  onDensityScaleChange?: (handle: string, value: number) => void;
+  onDensityScaleChange?: (id: VolumeFieldId, value: number) => void;
   /** Optional — when omitted, the palette dropdown is hidden. */
-  onPaletteChange?: (handle: string, id: ScalarFieldPaletteId) => void;
+  onPaletteChange?: (id: VolumeFieldId, paletteId: ScalarFieldPaletteId) => void;
 };
 
 /**

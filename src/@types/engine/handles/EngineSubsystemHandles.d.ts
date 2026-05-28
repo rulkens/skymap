@@ -21,7 +21,7 @@
  *     `scheduler`.  None of these need a GPU device — their callbacks
  *     queue work that the scheduler will pick up once the IIFE finishes.
  *   - Lazy (inside the IIFE): `galaxyAtlas` / `proceduralDisks` /
- *     `texturedImpostors` (need the GPU device + the
+ *     `texturedDisks` (need the GPU device + the
  *     TexturedQuadRenderer / TexturedDiskRenderer pair), `clickResolver`
  *     (needs the pick renderer), `inputBindings` (needs the scheduler so
  *     it can wake the loop on input).  These start as null.
@@ -39,7 +39,7 @@
 
 import type { GalaxyAtlasSubsystem } from '../subsystems/GalaxyAtlasSubsystem';
 import type { ProceduralDiskSubsystem } from '../subsystems/ProceduralDiskSubsystem';
-import type { TexturedImpostorSubsystem } from '../subsystems/TexturedImpostorSubsystem';
+import type { TexturedDiskSubsystem } from '../subsystems/TexturedDiskSubsystem';
 import type { SpaceMouseSubsystem } from '../subsystems/SpaceMouseSubsystem';
 import type { SelectionSubsystem } from '../subsystems/SelectionSubsystem';
 import type { BiasCorrectionSubsystem } from '../subsystems/BiasCorrectionSubsystem';
@@ -57,7 +57,7 @@ import type { Destroyable } from '../../rendering/Destroyable';
 export type EngineSubsystemHandles = {
   galaxyAtlas: GalaxyAtlasSubsystem | null;
   proceduralDisks: ProceduralDiskSubsystem | null;
-  texturedImpostors: TexturedImpostorSubsystem | null;
+  texturedDisks: TexturedDiskSubsystem | null;
   spaceMouse: SpaceMouseSubsystem;
   tweens: TweenManager;
   clickResolver: ClickResolver | null;

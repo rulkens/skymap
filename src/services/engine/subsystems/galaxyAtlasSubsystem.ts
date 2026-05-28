@@ -5,7 +5,7 @@
  * impostor-subsystem split.  Owns the 2048² GPU texture atlas, the LRU
  * clock, the priority-queued bitmap fetcher, the failure-memoisation
  * pair (handled here for "did the fetch land at all?" — separate from
- * the load-fade bookkeeping which lives in `texturedImpostorSubsystem`),
+ * the load-fade bookkeeping which lives in `texturedDiskSubsystem`),
  * and the eviction notification hook.
  *
  * No catalog awareness; no per-frame planning; no GPU dispatch.  This
@@ -21,7 +21,7 @@
  *
  * The first two are pure "did the fetch succeed?" state — exactly the
  * shape that lives here.  The third is load-fade state and belongs in
- * `texturedImpostorSubsystem`, which owns the fade-window decisions.
+ * `texturedDiskSubsystem`, which owns the fade-window decisions.
  * The eviction handler (`setEvictHandler`) is what lets the LOD-2 planner
  * keep its parallel `bitmapReadyTime` map in sync without re-implementing
  * the LRU clock.

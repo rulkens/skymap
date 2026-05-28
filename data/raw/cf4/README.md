@@ -1,12 +1,28 @@
-# CF-4 raw data — DM density cube
+# CF-4 raw data
 
-This directory stores the intermediate `.npy` slice of the Courtois 2025
-**CF4++** release that feeds Skymap's CF-4 DM density volume.  Nothing in
-this directory is committed to git (see `.gitignore`); the runtime
-artefact lives on R2 and is pulled by `curl`, the intermediate is
-regenerable from the upstream `.npz`.
+This directory holds two largely independent CF-4 products:
 
-## Why CF4++ (and not Valade 2024 HAMLET 256³)?
+- **DM density cube** — Courtois 2025 *CF4++* ensemble, used by Skymap's
+  scalar-volume renderer to draw the cosmic web.
+- **Local-volume distance table** — Tully 2023 *Cosmicflows-4* compilation
+  (`table2.dat`), used to override galaxy positions inside 30 Mpc where
+  peculiar velocities dominate the cz signal.
+
+Both come from the same Cosmicflows-4 program but live as separate files,
+ship through separate pipelines, and are gitignored except for this
+README and the `table2.dat.sha256` sidecar.
+
+---
+
+## DM density cube (CF4++)
+
+Stores the intermediate `.npy` slice of the Courtois 2025 **CF4++**
+release that feeds Skymap's CF-4 DM density volume. Nothing in this part
+of the directory is committed to git; the runtime artefact lives on R2
+and is pulled by `curl`, the intermediate is regenerable from the
+upstream `.npz`.
+
+### Why CF4++ (and not Valade 2024 HAMLET 256³)?
 
 The original 2026-05-10 spec assumed the Valade 2024 256³ HAMLET cube as
 the data source, but that exact file is not publicly distributed.  The
@@ -20,7 +36,7 @@ We consume only the `d_mean_CF4pp` mean-density array.  The std cube is
 the natural future input for an uncertainty-aware overlay; that's a
 separate plan.
 
-## Files
+### Density-cube files
 
 | File | Size | Purpose | How to obtain |
 |------|------|---------|---------------|
@@ -37,7 +53,7 @@ catalog) in any derived work.  If you swap in the Valade 2024 HAMLET cube
 later (e.g. by personal request to the IP2I group), also cite Valade et
 al. 2024 (Nature Astronomy, arXiv:2409.17261).
 
-## Contributor path (no Python, no unzip required)
+### Contributor path (no Python, no unzip required)
 
 Pull the pre-extracted slice from R2:
 
@@ -64,7 +80,7 @@ curl -L -o public/data/cf4_density.scfd \
   https://skymap-data.rulkens.com/data/cf4_density.scfd
 ```
 
-## Maintainer path (run once per upstream release)
+### Maintainer path (run once per upstream release)
 
 1. Download the upstream archive:
    ```
@@ -86,3 +102,40 @@ curl -L -o public/data/cf4_density.scfd \
 The upstream `.npz` itself is **not** synced to R2 — contributors should
 never need to handle the 167 MB ensemble.  Only the ~8 MB `d_mean_CF4pp.npy`
 slice goes up.
+
+---
+
+## Local-volume distance table (Tully 2023)
+
+Source: CDS Vizier table [J/ApJ/944/94](https://cdsarc.cds.unistra.fr/viz-bin/cat/J/ApJ/944/94),
+Tully et al. 2023, *Cosmicflows-4*.
+
+### Distance-table files
+
+| File | Size | Purpose | How to obtain |
+|------|------|---------|---------------|
+| `table2.dat.gz` | ~2.5 MB | Gzipped fixed-width ASCII as shipped by CDS | `npm run fetch-cf4` |
+| `table2.dat` | ~10.6 MB | Decompressed table; byte layout matches `ReadMe` | Auto-produced by fetcher |
+| `ReadMe` | ~20 KB | CDS column-offset spec — source of truth for byte ranges | `npm run fetch-cf4` |
+| `table2.dat.sha256` | 1 line | Checksum of decompressed table (committed) | Auto-produced by fetcher |
+
+Each row of `table2.dat` is one galaxy (55,877 total) with a homogenised
+redshift-independent distance modulus + uncertainty, cross-IDed against
+PGC and 2MASS XSC. The parser in `tools/parsers/cosmicflows4.ts` (sub-plan
+02) reads byte ranges according to the `ReadMe` byte-offset spec; if CDS
+ever re-issues the table with a different layout, re-download both files
+together — the ReadMe is the source of truth.
+
+### How the distance table is used
+
+CF4 supplies redshift-independent distance moduli for ~55k local-volume
+galaxies. The build pipeline applies them as a position override for
+galaxies inside 30 Mpc (where peculiar velocities dominate the cz signal).
+See `docs/superpowers/specs/2026-05-27-local-volume-distances.md` and
+`docs/superpowers/plans/2026-05-27-local-volume-distances.md` for the
+full design.
+
+### Citation
+
+Tully, R. B., Kourkchi, E., Courtois, H. M., et al. 2023, ApJ, 944, 94.
+DOI: [10.3847/1538-4357/ac94d8](https://doi.org/10.3847/1538-4357/ac94d8).

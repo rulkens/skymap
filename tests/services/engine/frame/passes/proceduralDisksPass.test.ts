@@ -34,7 +34,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     renderer: { draw: vi.fn() } as any,
     postProcess: { view: {} as GPUTextureView, draw: vi.fn(), resize: vi.fn(), destroy: vi.fn() } as any,
     volumeOffscreen: { view: {} as GPUTextureView, resize: vi.fn(), destroy: vi.fn() } as any,
-    texturedImpostors: { runFrame: vi.fn(), lastOutput: { quads: [], disks: [] }, hasInFlightWork: () => false } as any,
+    texturedDisks: { runFrame: vi.fn(), lastOutput: { quads: [], disks: [] }, hasInFlightWork: () => false } as any,
     ...overrides,
   };
 }
@@ -51,9 +51,9 @@ function makeDeps(): PassDeps {
     filamentRenderer: null,
     scalarVolumeRenderer: null,
     milkyWayRenderer: { draw: vi.fn() } as any,
+    horizonShellRenderer: { draw: vi.fn() } as any,
     catalogs: new Map(),
     famousMeta: [],
-    famousXrefs: {},
     milkyWayITimeSec: 0,
   } as PassDeps;
 }

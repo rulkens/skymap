@@ -45,6 +45,7 @@ import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
 import type { TimingSlotName } from '../../../../src/@types/gpu/timing/TimingSlotName';
+import type { SourceType } from '../../../../src/@types/data/SourceType';
 
 // ── Mock timing service ────────────────────────────────────────────────────
 //
@@ -162,6 +163,9 @@ function makeCloud(count: number): GalaxyCatalog {
     axisRatio: fill(1),
     positionAngleDeg: fill(0),
     diameterKpc: fill(50),
+    classByte: new Uint8Array(count),
+    parentSurveyByte: new Uint8Array(count),
+    spectroscopicZ: new Float32Array(count),
   };
 }
 
@@ -182,6 +186,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const context = makeFakeContext();
   const pointRenderer = makeLoggingRenderer();
   const milkyWayRenderer = makeLoggingRenderer();
+  const horizonShellRenderer = makeLoggingRenderer();
   const proceduralDiskRenderer = makeLoggingRenderer();
   const texturedDiskRenderer = makeLoggingRenderer();
   const postProcess = makePostProcess();
@@ -203,15 +208,15 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
     renderer: pointRenderer,
     postProcess,
-    // texturedImpostors slot is referenced from frameContext shape;
+    // texturedDisks slot is referenced from frameContext shape;
     // we'll null the matching subsystem on `state` so the pass skips.
-    texturedImpostors: null,
+    texturedDisks: null,
   } as never;
 
   const settings = {
     pointSizePx: 2.5,
     brightness: 1.0,
-    selected: null as { source: Source; localIdx: number } | null,
+    selected: null as { source: SourceType; localIdx: number } | null,
     visibleSourceMask: 0xffffffff,
     highlightFallback: true,
     realOnlyMode: false,
@@ -244,7 +249,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       },
       subsystems: {
         proceduralDisks: null,
-        texturedImpostors: null,
+        texturedDisks: null,
         // filamentsPass.enabled consults the FadeRegistry to keep the
         // pass alive through fade-out tails. This fixture wants the
         // pass GATED OFF (the test asserts only point-sprites +
@@ -259,13 +264,13 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     device,
     context,
     milkyWayRenderer: milkyWayRenderer as never,
+    horizonShellRenderer: horizonShellRenderer as never,
     filamentRenderer: null,
     scalarVolumeRenderer: null,
     texturedDiskRenderer: texturedDiskRenderer as never,
     proceduralDiskRenderer: proceduralDiskRenderer as never,
     settings: settings as never,
     famousMeta: [],
-    famousXrefs: {},
     catalogs,
     timingService,
   };
@@ -291,12 +296,14 @@ describe('renderFrame — timing service hookup', () => {
 
     // descriptorFor fires once per enabled HDR pass PLUS once for the
     // tone-map pass PLUS once for the combined UI overlay.  In this
-    // fixture the HDR side is point-sprites + milky-way (the other
-    // four are gated off via null subsystems / null optional
-    // renderers); the tone-map slot is unconditional because
-    // postProcess.draw runs every frame; the ui-overlay slot fires
-    // even with no marker-lines / labels because the timing-enabled
-    // path always opens the UI overlay pass so its slot reports.
+    // fixture the HDR side is point-sprites + milky-way (the others are
+    // gated off via null subsystems / null optional renderers; the
+    // horizon shell is gated off too — its distance fade is 0 at this
+    // fixture's ~5-Mpc camera, the same close-volume framing that lights
+    // the Milky-Way impostor); the tone-map slot is unconditional because
+    // postProcess.draw runs every frame; the ui-overlay slot fires even
+    // with no marker-lines / labels because the timing-enabled path
+    // always opens the UI overlay pass so its slot reports.
     const slotsCalled = descriptorFor.mock.calls.map((c) => c[0]);
     expect(slotsCalled).toContain('point-sprites');
     expect(slotsCalled).toContain('milky-way');
@@ -325,7 +332,11 @@ describe('renderFrame — timing service hookup', () => {
       expect(tw).toBeDefined();
       return (tw!.querySet as unknown as { _stub: TimingSlotName })._stub;
     });
-    expect(stubSlotsOnDescriptors).toEqual(['point-sprites', 'milky-way', 'ui-overlay']);
+    expect(stubSlotsOnDescriptors).toEqual([
+      'point-sprites',
+      'milky-way',
+      'ui-overlay',
+    ]);
 
     // The clear pass at index 0 must have NO timestampWrites field.
     const clearDesc = beginCalls[0]!.desc as GPURenderPassDescriptor & {

@@ -57,6 +57,9 @@ export function cloneGalaxyCatalogForTransfer(catalog: GalaxyCatalog): ClonedGal
     axisRatio: new Float32Array(catalog.axisRatio.buffer.slice(0)),
     positionAngleDeg: new Float32Array(catalog.positionAngleDeg.buffer.slice(0)),
     diameterKpc: new Float32Array(catalog.diameterKpc.buffer.slice(0)),
+    classByte: new Uint8Array(catalog.classByte.buffer.slice(0)),
+    parentSurveyByte: new Uint8Array(catalog.parentSurveyByte.buffer.slice(0)),
+    spectroscopicZ: new Float32Array(catalog.spectroscopicZ.buffer.slice(0)),
   };
   const transfer: Transferable[] = [
     copy.objIDs.buffer,
@@ -69,6 +72,9 @@ export function cloneGalaxyCatalogForTransfer(catalog: GalaxyCatalog): ClonedGal
     copy.axisRatio.buffer,
     copy.positionAngleDeg.buffer,
     copy.diameterKpc.buffer,
+    copy.classByte.buffer,
+    copy.parentSurveyByte.buffer,
+    copy.spectroscopicZ.buffer,
   ];
   return { copy, transfer };
 }

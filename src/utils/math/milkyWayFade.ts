@@ -22,7 +22,9 @@
  *     impostor would just be visual noise.
  *
  * A smoothstep gives a perceptually-soft fade — a hard cut would
- * pop visibly on a slow fly-out.
+ * pop visibly on a slow fly-out.  Sibling regime to `horizonShellFade`,
+ * which fades in over the opposite (far) distance band; both share the
+ * `smoothstep` primitive.
  *
  * Returns a number in `[0, 1]`:
  *   - `1.0` at distance ≤ 10 Mpc (full impostor visibility).
@@ -33,16 +35,11 @@
  * distance which is `length(camPos) ≥ 0`) clamps to `1.0`.
  */
 
+import { smoothstep } from './smoothstep';
+
 const FADE_INNER_MPC = 10.0;
 const FADE_OUTER_MPC = 50.0;
 
 export function milkyWayFadeAlpha(camDistMpc: number): number {
-  if (camDistMpc <= FADE_INNER_MPC) return 1.0;
-  if (camDistMpc >= FADE_OUTER_MPC) return 0.0;
-  const t = (camDistMpc - FADE_INNER_MPC) / (FADE_OUTER_MPC - FADE_INNER_MPC);
-  // Standard smoothstep: 3t² - 2t³.  Maps [0,1] → [0,1] with zero
-  // derivative at both endpoints, so the fade has no visible kink at
-  // the band edges.
-  const s = t * t * (3.0 - 2.0 * t);
-  return 1.0 - s;
+  return 1 - smoothstep(FADE_INNER_MPC, FADE_OUTER_MPC, camDistMpc);
 }

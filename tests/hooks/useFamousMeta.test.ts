@@ -22,7 +22,7 @@ describe('useFamousMeta `ready` flag', () => {
   });
 
   it('flips ready=true once the fetch resolves', async () => {
-    vi.mocked(famousMetaFetcher).mockResolvedValue({ meta: [], xrefs: {} });
+    vi.mocked(famousMetaFetcher).mockResolvedValue({ meta: [] });
     const { result } = renderHook(() => useFamousMeta());
     await waitFor(() => expect(result.current.ready).toBe(true));
   });

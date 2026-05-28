@@ -28,7 +28,8 @@ import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import StatsPanel from '../../../src/components/StatsPanel/StatsPanel';
-import { ALL_VISIBLE_MASK, Source } from '../../../src/data/sources';
+import { Source } from '../../../src/data/sources';
+import { ALL_VISIBLE_MASK } from '../../../src/utils/sourceMask';
 
 describe('StatsPanel', () => {
   it('renders the STATS header', () => {

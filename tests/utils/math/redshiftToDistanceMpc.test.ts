@@ -1,12 +1,17 @@
 /**
  * Unit tests for `redshiftToDistanceMpc`.
  *
- * The function is Hubble's-law in its simplest form: d = c·z/H₀.  We verify
- * the boundary case (z=0) and a representative SDSS-scale value, plus
+ * The function evaluates the flat-ΛCDM line-of-sight comoving-distance
+ * integral by Simpson's rule (see the source for the formula).  We pin
+ * the boundary case (z = 0), a small-z value where ΛCDM and linear
+ * Hubble nearly agree, a high-z value where they diverge sharply, and
  * monotonicity across the operative redshift range.
  *
- * Reference value (with H₀ = 70 km/s/Mpc, c ≈ 299792.458 km/s):
- *   z = 0.1 → d = 0.1 · 4282.75 ≈ 428.3 Mpc
+ * Reference values are computed against an independent Python integration
+ * with (Ω_m, Ω_Λ) = (0.315, 0.685), H₀ = 70 km/s/Mpc.  Tolerances are
+ * generous enough that small tweaks to `SIMPSON_PANELS` don't churn the
+ * tests — the load-bearing assertion is "agrees with the analytic limit
+ * at low z and diverges from linear Hubble at high z".
  */
 
 import { describe, it, expect } from 'vitest';
@@ -18,25 +23,60 @@ describe('redshiftToDistanceMpc', () => {
     expect(redshiftToDistanceMpc(0)).toBe(0);
   });
 
-  it('returns ~428 Mpc for z = 0.1 (Hubble-law approximation)', () => {
-    // c/H₀ ≈ 4282.75 Mpc; multiplied by z=0.1 gives ~428.3 Mpc.
-    // This is the textbook Hubble flow distance for a typical SDSS galaxy.
-    expect(redshiftToDistanceMpc(0.1)).toBeCloseTo(HUBBLE_DISTANCE_MPC * 0.1, 4);
-    expect(redshiftToDistanceMpc(0.1)).toBeGreaterThan(420);
-    expect(redshiftToDistanceMpc(0.1)).toBeLessThan(435);
+  it('maps negative z to a negative (mirrored) distance, not the origin', () => {
+    // Regression: 2MRS keeps ~25 blueshifted nearby galaxies (M31 at
+    // cz ≈ -300 km/s → z ≈ -0.001, etc.). A `z <= 0 → 0` clause collapsed
+    // every one onto (0,0,0), stacking max-size sprites on the Milky Way.
+    // Negative z must fall back to the linear Hubble law with the sign
+    // preserved so the row mirrors through the origin instead.
+    const z = -0.001;
+    expect(redshiftToDistanceMpc(z)).toBeCloseTo(HUBBLE_DISTANCE_MPC * z, 6);
+    expect(redshiftToDistanceMpc(z)).toBeLessThan(0);
   });
 
-  it('is linear in z (Hubble approximation, by definition)', () => {
-    // Doubling z must exactly double the distance — the linearity is the
-    // whole point of using this approximation rather than the full ΛCDM integral.
-    expect(redshiftToDistanceMpc(0.2)).toBeCloseTo(redshiftToDistanceMpc(0.1) * 2, 6);
+  it('approaches linear Hubble at small z', () => {
+    // At z = 0.001 the leading-order ΛCDM correction is ~0.02% — well
+    // within 1% of the linear-Hubble value.  Asserting in relative terms
+    // because the absolute Mpc gap (~0.001 Mpc) is below toBeCloseTo's
+    // absolute-diff resolution.
+    const z = 0.001;
+    const linear = HUBBLE_DISTANCE_MPC * z;
+    const lcdm = redshiftToDistanceMpc(z);
+    expect(Math.abs(lcdm - linear) / linear).toBeLessThan(0.001);
   });
 
-  it('is monotonic across z in [0, 1]', () => {
-    // Higher redshifts must always map to larger distances.  Stepping in
-    // increments of 0.05 covers the full SDSS spec-z range.
+  it('returns ~413 Mpc for z = 0.1 (ΛCDM Planck 2018)', () => {
+    // Reference: flat ΛCDM with (Ω_m, Ω_Λ) = (0.315, 0.685), H₀ = 70.
+    // d_C(0.1) ≈ 413 Mpc — about 15 Mpc closer than the linear-Hubble
+    // value of 428 Mpc, the discrepancy that motivated the swap.
+    const d = redshiftToDistanceMpc(0.1);
+    expect(d).toBeGreaterThan(410);
+    expect(d).toBeLessThan(420);
+  });
+
+  it('returns ~5100 Mpc for z = 2 (well into the divergent regime)', () => {
+    // At z = 2 the linear approximation gives 8566 Mpc — a 67% overestimate.
+    // ΛCDM with (Ω_m, Ω_Λ) = (0.315, 0.685) gives ~5114 Mpc.  Range covers
+    // the small variation expected from tweaking SIMPSON_PANELS.
+    const d = redshiftToDistanceMpc(2);
+    expect(d).toBeGreaterThan(5050);
+    expect(d).toBeLessThan(5200);
+  });
+
+  it('is strictly less than linear Hubble for z > 0', () => {
+    // ΛCDM E(z) > 1 for all z > 0 (matter density boosts the expansion
+    // rate at early times), so the integrand 1/E(z') < 1, and the
+    // comoving distance is strictly below the linear value c·z/H₀.
+    for (const z of [0.05, 0.5, 1.0, 3.0, 5.0]) {
+      expect(redshiftToDistanceMpc(z)).toBeLessThan(HUBBLE_DISTANCE_MPC * z);
+    }
+  });
+
+  it('is monotonic across z in [0, 7]', () => {
+    // Higher redshifts must always map to larger distances.  Covers the
+    // full Milliquas tail.
     let prev = -1;
-    for (let z = 0; z <= 1; z += 0.05) {
+    for (let z = 0; z <= 7; z += 0.25) {
       const d = redshiftToDistanceMpc(z);
       expect(d).toBeGreaterThanOrEqual(prev);
       prev = d;

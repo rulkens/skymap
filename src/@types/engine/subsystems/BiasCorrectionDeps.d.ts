@@ -1,6 +1,6 @@
 import type { BiasMode } from '../../data/BiasMode';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
-import type { Source } from '../../../data/sources';
+import type { SourceType } from '../../data/SourceType';
 import type { SchechterRunner } from './SchechterRunner';
 import type { AngularRunner } from './AngularRunner';
 
@@ -18,7 +18,7 @@ export type BiasCorrectionDeps = {
    * swaps and per-source uploads. Replaces the old
    * `getState().sources.catalogs` read.
    */
-  getLoadedClouds: () => Map<Source, GalaxyCatalog>;
+  getLoadedClouds: () => Map<SourceType, GalaxyCatalog>;
 
   /**
    * Wake the render loop. Called after every bake completes (the

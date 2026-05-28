@@ -1,7 +1,7 @@
 // proceduralDisks/io.wesl — shared structs for the procedural galaxy
 // impostor pipeline.
 //
-// Sibling pipeline to 'disks' (texture-based) and 'points' (screen-
+// Sibling pipeline to 'texturedDisks' (atlas-textured impostor) and 'points' (screen-
 // aligned billboards). Renders every galaxy whose apparent size
 // exceeds 8 px (with a crossfade up to 14 px) as a 3D-oriented quad
 // shaded with a two-component brightness profile (Gaussian bulge +
@@ -66,7 +66,7 @@ struct Uniforms {
   // 'normalize(pos)' (Earth → galaxy), not the camera, and the
   // procedural shader has no apparent-size scaling that would consult
   // 'pxPerRad'.  Same intentional ABI-preservation pattern as
-  // disks.wesl.
+  // texturedDisks.
   camPosWorld: vec3<f32>,
   pxPerRad: f32,
 };

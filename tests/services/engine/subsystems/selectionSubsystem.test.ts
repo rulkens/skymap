@@ -1,21 +1,20 @@
 /**
- * selectionSubsystem — unit tests for the hover/select state façade.
+ * selectionSubsystem — unit tests for the hover/select façade.
  *
- * The subsystem is intentionally pure JS — no GPU, no DOM, no async —
- * so the tests can drive its behaviour with synthetic clouds and
- * vi-mocked callbacks without spinning up an engine.
+ * Pure JS — no GPU, no DOM, no async.  Drives the subsystem with
+ * synthetic clouds + a POI lookup stub and vi-mocked callbacks.
  *
- * Coverage focus:
- *
- *   1. `setHovered(null)` twice fires `onHoverChange` exactly once
- *      (deduplication via the internal `selectionEq` helper).
- *   2. `setHovered(s1)` followed by `setHovered(s2)` fires twice.
- *   3. `setSelected(sel, prebuiltInfo)` uses the prebuilt info and
- *      bypasses the cloud lookup (the `selectByAlias` race-window
- *      contract).
- *   4. `galaxyInfoFor` returns null when the source's cloud isn't loaded.
- *   5. `destroy()` clears the internal state — subsequent reads return
- *      null even if `setHovered`/`setSelected` had been called before.
+ * Coverage:
+ *   - Dedup: redundant setHovered / setSelected calls fan out only on
+ *     real change (selectionEq covers both galaxy and POI variants).
+ *   - Galaxy variant: setHovered / setSelected resolve through the
+ *     cloud + sidecars and fire the callback with a GalaxyInfo.
+ *   - POI variant: setHovered / setSelected resolve through getPoi
+ *     and fire the callback with the PointOfInterest.
+ *   - Cross-kind transitions clear the previous slot correctly.
+ *   - prebuiltInfo escape hatch on setSelected (selectByAlias race).
+ *   - Cloud-missing / out-of-range galaxy lookups fire onChange(null).
+ *   - destroy() clears state.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -24,39 +23,20 @@ import { createSelectionSubsystem } from '../../../../src/services/engine/subsys
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { GalaxyInfo } from '../../../../src/@types/engine/GalaxyInfo';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
+import type { PointOfInterest } from '../../../../src/@types/engine/subsystems/PointOfInterest';
 import { Source } from '../../../../src/data/sources';
 
-/**
- * Build a no-op `EngineCallbacks` bag with vi-spied hover/select hooks.
- * Other callback fields are typed-required-only — the subsystem only
- * reads the two we care about, both under the nested `selection`
- * cluster after H5 task 11.
- */
-function makeCallbacks(): EngineCallbacks & {
+type Callbacks = EngineCallbacks & {
   selection: { onHoverChange: ReturnType<typeof vi.fn>; onSelectChange: ReturnType<typeof vi.fn> };
-} {
+};
+
+function makeCallbacks(): Callbacks {
   return {
     lifecycle: { onStatusChange: vi.fn() },
-    selection: {
-      onHoverChange: vi.fn(),
-      onSelectChange: vi.fn(),
-    },
-  } as unknown as EngineCallbacks & {
-    selection: {
-      onHoverChange: ReturnType<typeof vi.fn>;
-      onSelectChange: ReturnType<typeof vi.fn>;
-    };
-  };
+    selection: { onHoverChange: vi.fn(), onSelectChange: vi.fn() },
+  } as unknown as Callbacks;
 }
 
-/**
- * Minimum-viable `GalaxyCatalog` for the subsystem's bounds-check + the
- * `buildGalaxyInfo` call inside `galaxyInfoFor`.  We supply just enough
- * typed-array slots that buildGalaxyInfo doesn't crash on undefined
- * reads; the resulting `GalaxyInfo` is opaque to these tests — we
- * assert on identity (the prebuilt-info short-circuit) and existence
- * (non-null), not on field values.
- */
 function makeCloud(count: number): GalaxyCatalog {
   const f32 = (n: number) => new Float32Array(n);
   return {
@@ -71,113 +51,155 @@ function makeCloud(count: number): GalaxyCatalog {
     diameterKpc: f32(count),
     axisRatio: f32(count),
     positionAngleDeg: f32(count),
+    classByte: new Uint8Array(count),
+    parentSurveyByte: new Uint8Array(count),
+    spectroscopicZ: new Float32Array(count),
     sourceCode: 0,
   } as unknown as GalaxyCatalog;
 }
 
-describe('createSelectionSubsystem', () => {
-  it('deduplicates setHovered(null) — fires onHoverChange only once across two no-op calls', () => {
+const VIRGO: PointOfInterest = {
+  id: 'virgo',
+  name: 'Virgo Cluster',
+  category: 'cluster',
+  worldPos: [10, 0, 0],
+  physicalRadiusMpc: 2,
+};
+
+const FORNAX: PointOfInterest = {
+  id: 'fornax',
+  name: 'Fornax Cluster',
+  category: 'cluster',
+  worldPos: [0, 10, 0],
+  physicalRadiusMpc: 1.5,
+};
+
+function makeSub(cb: Callbacks, opts: { cloud?: GalaxyCatalog; pois?: readonly PointOfInterest[] } = {}) {
+  const pois = opts.pois ?? [];
+  return createSelectionSubsystem({
+    cb,
+    getCloud: () => opts.cloud,
+    getFamousMeta: () => [],
+    getPoi: (id) => pois.find((p) => p.id === id) ?? null,
+  });
+}
+
+describe('createSelectionSubsystem — galaxy variant', () => {
+  it('dedupes setHovered — fires onHoverChange only on real transitions', () => {
     const cb = makeCallbacks();
-    const sub = createSelectionSubsystem({
-      cb,
-      getCloud: () => undefined,
-      getFamousMeta: () => [],
-      getFamousXrefs: () => ({}),
-    });
+    const sub = makeSub(cb, { cloud: makeCloud(10) });
 
-    // First call from null → null is itself a no-op (selectionEq treats
-    // both-null as equal), so the callback never fires at all.  Drive
-    // a real change first to bring `hovered` to non-null, then back to
-    // null twice — the second null is the dedup target.
-    sub.setHovered({ source: Source.SDSS, localIdx: 1 });
-    expect(cb.selection.onHoverChange).toHaveBeenCalledTimes(1);
+    // null → null is itself a no-op (selectionEq).
+    sub.setHovered(null);
+    expect(cb.selection.onHoverChange).toHaveBeenCalledTimes(0);
 
-    sub.setHovered(null);
-    sub.setHovered(null);
-    // Total calls: one for the first transition (→ {SDSS, 1}), one for
-    // (→ null), then the second null is deduped.
+    sub.setHovered({ kind: 'galaxy', source: Source.SDSS, localIdx: 1 });
+    sub.setHovered({ kind: 'galaxy', source: Source.SDSS, localIdx: 1 }); // dup
+    sub.setHovered({ kind: 'galaxy', source: Source.SDSS, localIdx: 2 });
     expect(cb.selection.onHoverChange).toHaveBeenCalledTimes(2);
   });
 
-  it('fires onHoverChange twice for two distinct selections', () => {
+  it('uses prebuiltInfo on setSelected and bypasses the cloud lookup', () => {
     const cb = makeCallbacks();
-    const cloud = makeCloud(10);
-    const sub = createSelectionSubsystem({
-      cb,
-      // Same cloud for any source — the subsystem only cares about
-      // count + the buildGalaxyInfo call signature.
-      getCloud: () => cloud,
-      getFamousMeta: () => [],
-      getFamousXrefs: () => ({}),
-    });
-
-    sub.setHovered({ source: Source.SDSS, localIdx: 1 });
-    sub.setHovered({ source: Source.SDSS, localIdx: 2 });
-
-    expect(cb.selection.onHoverChange).toHaveBeenCalledTimes(2);
-  });
-
-  it('uses prebuiltInfo on setSelected and bypasses galaxyInfoFor', () => {
-    const cb = makeCallbacks();
-    // No cloud loaded — galaxyInfoFor would return null.  But the
-    // prebuilt info should still surface to onSelectChange.
-    const sub = createSelectionSubsystem({
-      cb,
-      getCloud: () => undefined,
-      getFamousMeta: () => [],
-      getFamousXrefs: () => ({}),
-    });
-
-    // Sentinel object — we don't care what's inside, only that the
-    // exact reference reaches the callback.
+    // No cloud — would resolve to null without the hint.
+    const sub = makeSub(cb);
     const prebuilt = { sentinel: true } as unknown as GalaxyInfo;
 
-    sub.setSelected({ source: Source.SDSS, localIdx: 5 }, prebuilt);
+    sub.setSelected({ kind: 'galaxy', source: Source.SDSS, localIdx: 5 }, prebuilt);
 
-    expect(cb.selection.onSelectChange).toHaveBeenCalledTimes(1);
     expect(cb.selection.onSelectChange).toHaveBeenCalledWith(prebuilt);
   });
 
-  it('galaxyInfoFor returns null when the cloud is missing for the source', () => {
+  it('fires onHoverChange(null) for an out-of-range galaxy localIdx', () => {
     const cb = makeCallbacks();
-    const sub = createSelectionSubsystem({
-      cb,
-      getCloud: () => undefined,
-      getFamousMeta: () => [],
-      getFamousXrefs: () => ({}),
-    });
+    const sub = makeSub(cb, { cloud: makeCloud(3) });
 
-    expect(sub.galaxyInfoFor({ source: Source.SDSS, localIdx: 0 })).toBeNull();
+    sub.setHovered({ kind: 'galaxy', source: Source.SDSS, localIdx: 99 });
+    // The callback still fires (the slot changed null → non-null), but
+    // the resolved target is null because the cloud lookup rejects.
+    expect(cb.selection.onHoverChange).toHaveBeenCalledWith(null);
+  });
+});
+
+describe('createSelectionSubsystem — POI variant', () => {
+  it('resolves POI hover through getPoi and fires onHoverChange(PointOfInterest)', () => {
+    const cb = makeCallbacks();
+    const sub = makeSub(cb, { pois: [VIRGO] });
+
+    sub.setHovered({ kind: 'poi', id: 'virgo' });
+
+    expect(cb.selection.onHoverChange).toHaveBeenCalledWith(VIRGO);
   });
 
-  it('galaxyInfoFor returns null when localIdx is out of range', () => {
+  it('fires onSelectChange(PointOfInterest) when a POI is selected', () => {
     const cb = makeCallbacks();
-    const cloud = makeCloud(3);
-    const sub = createSelectionSubsystem({
-      cb,
-      getCloud: () => cloud,
-      getFamousMeta: () => [],
-      getFamousXrefs: () => ({}),
-    });
+    const sub = makeSub(cb, { pois: [VIRGO] });
 
-    // Negative — invalid.
-    expect(sub.galaxyInfoFor({ source: Source.SDSS, localIdx: -1 })).toBeNull();
-    // >= count — out of range.
-    expect(sub.galaxyInfoFor({ source: Source.SDSS, localIdx: 3 })).toBeNull();
+    sub.setSelected({ kind: 'poi', id: 'virgo' });
+
+    expect(cb.selection.onSelectChange).toHaveBeenCalledWith(VIRGO);
   });
 
-  it('destroy() clears internal state — subsequent reads return null', () => {
+  it('fires onChange(null) for an unknown POI id (deep-link race defense)', () => {
+    const cb = makeCallbacks();
+    const sub = makeSub(cb, { pois: [VIRGO] });
+
+    sub.setSelected({ kind: 'poi', id: 'ghost-cluster' });
+
+    expect(cb.selection.onSelectChange).toHaveBeenCalledWith(null);
+  });
+
+  it('dedupes same-POI sets — fires only on real transitions', () => {
+    const cb = makeCallbacks();
+    const sub = makeSub(cb, { pois: [VIRGO, FORNAX] });
+
+    sub.setSelected({ kind: 'poi', id: 'virgo' });
+    sub.setSelected({ kind: 'poi', id: 'virgo' }); // dup
+    sub.setSelected({ kind: 'poi', id: 'fornax' });
+
+    expect(cb.selection.onSelectChange).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('createSelectionSubsystem — cross-kind transitions', () => {
+  it('galaxy → POI selection fires onSelectChange once with the POI', () => {
+    const cb = makeCallbacks();
+    const sub = makeSub(cb, { cloud: makeCloud(10), pois: [VIRGO] });
+
+    sub.setSelected(
+      { kind: 'galaxy', source: Source.SDSS, localIdx: 1 },
+      { sentinel: 'galaxy' } as unknown as GalaxyInfo,
+    );
+    sub.setSelected({ kind: 'poi', id: 'virgo' });
+
+    expect(cb.selection.onSelectChange).toHaveBeenLastCalledWith(VIRGO);
+  });
+
+  it('POI → galaxy hover fires onHoverChange with the GalaxyInfo path', () => {
     const cb = makeCallbacks();
     const cloud = makeCloud(10);
-    const sub = createSelectionSubsystem({
-      cb,
-      getCloud: () => cloud,
-      getFamousMeta: () => [],
-      getFamousXrefs: () => ({}),
-    });
+    const sub = makeSub(cb, { cloud, pois: [VIRGO] });
 
-    sub.setHovered({ source: Source.SDSS, localIdx: 1 });
-    sub.setSelected({ source: Source.SDSS, localIdx: 2 });
+    sub.setHovered({ kind: 'poi', id: 'virgo' });
+    expect(cb.selection.onHoverChange).toHaveBeenLastCalledWith(VIRGO);
+
+    sub.setHovered({ kind: 'galaxy', source: Source.SDSS, localIdx: 1 });
+    // Galaxy variant resolves through the cloud → non-null GalaxyInfo
+    // (we don't assert on its fields here — buildGalaxyInfo has its
+    // own coverage).
+    const lastCall = cb.selection.onHoverChange.mock.calls.at(-1)![0];
+    expect(lastCall).not.toBeNull();
+    expect(lastCall).not.toBe(VIRGO);
+  });
+});
+
+describe('createSelectionSubsystem — lifecycle', () => {
+  it('destroy() clears internal state', () => {
+    const cb = makeCallbacks();
+    const sub = makeSub(cb, { cloud: makeCloud(10), pois: [VIRGO] });
+
+    sub.setHovered({ kind: 'galaxy', source: Source.SDSS, localIdx: 1 });
+    sub.setSelected({ kind: 'poi', id: 'virgo' });
     expect(sub.hovered()).not.toBeNull();
     expect(sub.selected()).not.toBeNull();
 

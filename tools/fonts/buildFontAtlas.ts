@@ -45,8 +45,9 @@ import * as path from 'node:path';
 import { PNG } from 'pngjs';
 import { ATLAS_PX, ATLAS_FONT_SIZE, DISTANCE_RANGE_PX, FONTS, FONT_IDS } from '../../src/data/fonts';
 import type { FontId } from '../../src/data/fonts';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
 
-const RAW_FONTS_DIR = 'data/raw/fonts';
+const RAW_FONTS_DIR = rawDataPath('fonts.dir');
 const OUTPUT_DIR = 'public/fonts';
 
 /**
@@ -61,7 +62,14 @@ const OUTPUT_DIR = 'public/fonts';
 const SHARED_OPTIONS = {
   outputType: 'json',
   textureSize: [ATLAS_PX, ATLAS_PX],
-  texturePadding: 2,
+  // Inter-glyph spacing in the atlas, in pixels.  Must be large enough
+  // that a fragment sampling a UV offset outward from a glyph for the
+  // outline+glow falloff never lands in a NEIGHBOURING glyph's pixels.
+  // Worst case at runtime is `glowEmFrac_max * ATLAS_FONT_SIZE`
+  // atlas pixels (LabelEffectsSection caps glowEmFrac at 0.5; with
+  // ATLAS_FONT_SIZE = 42 the worst-case extent is 21 px).  22 leaves
+  // a 1-px safety margin without inflating glyph cells excessively.
+  texturePadding: 12,
   distanceRange: DISTANCE_RANGE_PX,
   fieldType: 'msdf',
   fontSize: ATLAS_FONT_SIZE,

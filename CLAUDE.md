@@ -43,7 +43,11 @@ tools/
                       one file per function, deep imports
   vendor-types/       ambient .d.ts shims for msdf-bmfont-xml and pngjs
 data/
-  raw/                Catalog source files + their VizieR ReadMes (read these for byte layouts!)
+  raw/                Catalog source files, one subdir per source: 2mrs/, glade/,
+                      hyperleda/, sdss/, cf4/, mcpm/, milliquas/, filaments/, famous/,
+                      fonts/. VizieR ReadMes live next to the file they describe
+                      (read for byte layouts!). Path lookups go through
+                      `tools/utils/io/rawDataRegistry.ts`.
 docs/superpowers/plans/   Active and historical implementation plans (TDD task lists)
 tests/                Vitest suite — mirrors src/ tree
 ```
@@ -72,6 +76,15 @@ npm run format      # prettier
 
 Currently 590+ tests passing across 76 files. Keep it green.
 
+### Tmux workflow helpers
+
+Two bash helpers live in `tools/dev/` for managing parallel Claude sessions across worktrees:
+
+- **`tools/dev/skymap-tmux.sh`** — starts (or reattaches) a `skymap` tmux session with one window per existing `.claude/worktrees/*` plus a `main` and `shell` window. Does not auto-start `claude` — pick per window. Re-run to reattach.
+- **`tools/dev/skymap-wt-clean.sh`** — interactive cleanup of worktrees whose branches have merged into `origin/main`. Skips dirty worktrees. Closing a tmux window does **not** remove its worktree; this is the hygiene pass.
+
+The intended workflow is one tmux window per worktree, each rooted at the worktree path so the shell and any `claude` started inside it share CWD — no `EnterWorktree` call needed. Use `EnterWorktree`/`ExitWorktree` only in single-window flows where you want the harness to handle creation and cleanup.
+
 ## Data pipeline (mental model)
 
 ```
@@ -84,7 +97,18 @@ data/raw/*.dat,*.csv  ──parsers──▶  ParsedRecord[]  ──crossMatch�
                                           GPU vertex/index buffers  ──pointRenderer──▶  WGSL  ──▶  canvas
 ```
 
-Binary format is in `src/data/galaxyCatalogFormat.ts` — currently v4, 64 bytes/galaxy. Bumping the version means regenerating bins via `npm run build-all`. The format header stores `magic + version + count`, so old bins fail loudly with a clear regenerate message. (The 2026-05-17 PointCloud → GalaxyCatalog code rename did NOT bump the on-disk format.)
+Binary format is in `src/data/galaxyCatalogFormat.ts` — currently v6, 64 bytes/galaxy. Bumping the version means regenerating bins via `npm run build-all`. The format header stores `magic + version + count`, so old bins fail loudly with a clear regenerate message. (The 2026-05-17 PointCloud → GalaxyCatalog code rename did NOT bump the on-disk format; v6 added `spectroscopicZ` at byte 54 for the local-volume distance override.)
+
+### Local-volume distance override
+
+For galaxies inside `CUTOFF_MPC = 30` the build pipeline replaces the cz-derived position with a Cosmicflows-4 (or HyperLEDA `mod0`) measured distance. The catalogued spectroscopic z is stored separately on the .bin (v6 format, byte offset 54) so the InfoCard shows the published value, not the value implied by `|position|`. See `docs/superpowers/specs/2026-05-27-local-volume-distances.md`.
+
+Coverage: ~2,030 of CF4's 2,159 local-volume PGCs are reachable via the direct GLADE-by-PGC path; 2MRS rows pick up CF4 distances via the existing `2MASX → PGC` patching step in `buildAllBins`. Famous-galaxy and SDSS rows without PGCs fall through to the cz path.
+
+Re-run order when CF4 raw data changes:
+1. `npm run fetch-cf4` — refreshes `data/raw/cf4/table2.dat`.
+2. `npm run build-tiers` — re-bakes `2mrs.bin` and `glade-*.bin` with the new distances.
+3. `npm run sync-r2-secure` — from the main worktree only (see project memory `project_worktree_data_isolation`).
 
 ### Deploy workflow (Cloudflare Workers Assets + R2)
 
@@ -98,7 +122,7 @@ A full data-refreshing deploy is therefore:
 
 1. `npm run build-tiers` — regenerates all `public/data/*.bin`.
 2. `npm run build-filaments` (only if filaments need rebuilding — rare).
-3. `npm run sync-r2` — uploads regenerated `.bin` files (and `famous_*.json` sidecars) to R2. Idempotent; full bucket replacement on every run.
+3. `npm run sync-r2-secure` — uploads regenerated `.bin` files (and `famous_*.json` sidecars) to R2, then purges the matching URLs from the Cloudflare CDN edge cache. Idempotent; full bucket replacement on every run. The `-secure` wrapper loads `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ZONE_ID` from the OS secrets store (macOS Keychain, Linux libsecret) so the credentials never live in a dotfile; the bare `npm run sync-r2` is a fallback for environments without bash where the env vars are already injected (CI, Windows-without-WSL). Without the credentials the purge step is skipped and the CDN keeps serving stale bytes until the per-object TTL expires — use the secure wrapper.
 4. `npm run deploy` — pushes `main`. The Cloudflare GitHub integration takes over and rebuilds the shell.
 
 If you only changed code and not catalog bytes, **step 4 alone is enough**. The most common loop is "edit, push, watch the Workers build", which finishes in ~30 s.
@@ -139,7 +163,19 @@ Workers Assets has per-file and per-deploy size caps that the larger tiers (`gla
 - **2MRS** has `b/a` but no PA. The 2MASS XSC (the underlying source) has `sup_phi` — cross-match by 2MASS ID.
 - **SDSS** CSV column set is whatever was in the SkyServer SQL query — check the CSV header before assuming a column exists.
 
-ReadMes for the upstream catalogs live in `data/raw/` (`J_ApJS_199_26_ReadMe`, `VII_281_ReadMe`). Always consult them for byte offsets when extending parsers.
+ReadMes for the upstream catalogs live alongside each catalog (`data/raw/2mrs/J_ApJS_199_26_ReadMe`, `data/raw/glade/VII_281_ReadMe`). Always consult them for byte offsets when extending parsers. The canonical source-of-truth for every raw-data path is `tools/utils/io/rawDataRegistry.ts` — consumers call `rawDataPath('<key>')` rather than hard-coding paths.
+
+## Adding a new raw data source
+
+When a new catalog or dataset gets added to the build pipeline, follow this checklist so it slots into the existing conventions instead of inventing a parallel path-handling style.
+
+1. **Pick a per-catalog subdir** under `data/raw/<catalog>/` (lowercase, single word — e.g. `data/raw/cf4/`, `data/raw/hyperleda/`). Every loose file at `data/raw/` root is wrong — they all live in subdirs now.
+2. **Register every file** in `tools/utils/io/rawDataRegistry.ts`. Keys are dotted-lowercase `<catalog>.<artifact>` (e.g. `'cf4.table2'`, `'cf4.readme'`, `'cf4.sha256'`). For dynamically-named outputs (chunks, tier variants), register the directory as `<catalog>.dir` and let consumers `join(rawDataPath(...), <dynamic>)`. Fill in `source: 'committed' | 'gitignored'`, a one-line `description`, and optional `upstream` URL + `fetcher` script.
+3. **Consume via the registry.** Fetchers / parsers / build scripts call `rawDataPath('<catalog>.<artifact>')` — never `resolve('data/raw/<catalog>/<file>')`. If the consumer needs the path relative (e.g. for `wrangler --file`), use `RAW_DATA['<key>'].path`.
+4. **`.gitignore` exception** if the file is committed (small, hand-curated, or required-to-clone). The repo's `/data/` is gitignored wholesale; add `!/data/raw/<catalog>/<file>` near the existing exceptions and explain in a comment.
+5. **Provenance README** at `data/raw/<catalog>/README.md` documenting the upstream URL, the columns / byte layout, the fetch date, and the checksum (if any). Whitelist it via `!/data/raw/<catalog>/README.md` in `.gitignore`.
+
+A new fetcher script that mirrors `tools/fetch/fetchHyperLeda.ts` or `tools/fetch/fetch2massXsc.ts` is the easiest reference for "where does the new file get written, and how does the consumer find it." Both of those have already been migrated to the registry.
 
 ## Renderer quick map
 

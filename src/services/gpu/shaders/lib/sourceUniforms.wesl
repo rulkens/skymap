@@ -36,13 +36,24 @@ struct SourceUniforms {
   // anyway.
   sourceCode: u32,
 
-  // Pad to 16-byte WebGPU-minimum uniform-buffer alignment. Never
-  // written from the CPU side; never read here. Named individually
-  // (rather than `_pad: vec3<u32>`) so a future field can repurpose
-  // any one slot without alignment churn — each pad is a free 4-byte
-  // u32 slot. (Wider types like vec2<u32> or vec4 need 8 / 16-byte
-  // alignment respectively and would require resizing the struct.)
-  _pad0: u32,
-  _pad1: u32,
+  // Per-source floor of the points intensity formula
+  // 'clamp((22 - mag) / 8, intensityFloor, 1)'. Replaces the prior
+  // hardcoded 0.05. A lower floor (e.g. 0.02 for GLADE) reduces the
+  // per-galaxy contribution that floored-faint galaxies make to the
+  // additive HDR target, which tames center saturation in dense
+  // regions. A higher floor (e.g. 0.15 for Milliquas) keeps faint
+  // quasars visible since quasar apparent mags often sit past 22 and
+  // would otherwise pin to the same floor as faint galaxies.
+  intensityFloor: f32,
+
+  // Per-source half-distance of the depth-fade curve
+  // '1 / (1 + (d / falloffHalfMpc)^2)'. Replaces the prior hardcoded
+  // FALLOFF_HALF_MPC = 1000. Set very large (effectively disables fade)
+  // for sparse far-field catalogs like Milliquas; keep at 1000 for the
+  // bulk galaxy surveys where the curve was originally tuned.
+  falloffHalfMpc: f32,
+
+  // Remaining pad slot — kept named so a future field can repurpose
+  // it without alignment churn.
   _pad2: u32,
 };

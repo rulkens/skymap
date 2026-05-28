@@ -66,8 +66,10 @@
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { resolve, dirname, basename } from 'node:path';
+import { resolve, dirname, basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { SourceType } from '../../src/@types/data/SourceType';
+import { rawDataPath } from '../utils/io/rawDataRegistry.js';
 
 import { decodeGalaxyCatalog } from '../../src/data/galaxyCatalogFormat.js';
 import { parseNDskl, skeletonToFilamentCloud } from '../parsers/ndskl.js';
@@ -516,7 +518,7 @@ function readMergedPositions(activeSources: ReadonlySet<SourceKey>): TaggedPosit
   // and render-time Malmquist treatments consistent.
   const sourceFiles = ALL_SOURCE_FILES.filter((s) => activeSources.has(s.key));
 
-  type LoadedCloud = { cloud: GalaxyCatalog; source: Source; angular: Float32Array };
+  type LoadedCloud = { cloud: GalaxyCatalog; source: SourceType; angular: Float32Array };
   const loaded: LoadedCloud[] = [];
   for (const { name, source } of sourceFiles) {
     const path = resolve('public/data', name);
@@ -693,7 +695,7 @@ function applyMalmquistDuplication(input: TaggedPositions): Float32Array {
     const z = input.positions[i * 3 + 2]!;
     const D = Math.sqrt(x * x + y * y + z * z);
     const magG = input.magG[i]!;
-    const mLim = surveyFluxLimit(input.sources[i]! as Source);
+    const mLim = surveyFluxLimit(input.sources[i]! as SourceType);
 
     // Compute the uncapped V_max raw weight first.  Bail safely to
     // raw = 1 if any input is NaN/inf (e.g. a galaxy with missing
@@ -1082,7 +1084,7 @@ async function main(): Promise<void> {
   // overwriting each other's ~1 GB Delaunay tessellations.  Re-running
   // the SAME source set with a different `--cut` reuses the cached
   // NDnet (delaunay_3D output is cut-independent).
-  const tsvPath = resolve(`data/raw/galaxies_${cachePrefix}.tsv`);
+  const tsvPath = join(rawDataPath('filaments.cache-dir'), `galaxies_${cachePrefix}.tsv`);
   writeTsvInput(tsvPath, weightedPositions, weightedCount);
   process.stderr.write(`  wrote ${tsvPath}\n`);
 

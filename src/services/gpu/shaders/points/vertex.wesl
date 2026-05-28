@@ -39,6 +39,7 @@ import package::lib::sourceUniforms::SourceUniforms;
 import package::lib::colorIndex::ramp;
 import package::lib::astro::distanceModulus;
 import package::lib::selectionEncoding::packSelection;
+import package::lib::orientation::diskAxes;
 
 // ── @group(0) — per-frame uniforms ──────────────────────────────────
 //
@@ -61,7 +62,8 @@ import package::lib::selectionEncoding::packSelection;
 // ── @group(2) — per-source SourceUniforms ──────────────────────────
 //
 // Each loaded survey has its OWN @group(2) bind group whose buffer
-// carries SourceUniforms's 16-byte struct (sourceCode + 12 bytes pad).
+// carries SourceUniforms's 16-byte struct (sourceCode + intensityFloor
+// + falloffHalfMpc + 4 bytes pad — see lib/sourceUniforms.wesl).
 // Per-source bind groups dodge the 'queue.writeBuffer' race entirely
 // (different uniform buffers per source means writes to one don't
 // race against draws against another). The vertex stage reads
@@ -108,44 +110,39 @@ fn vs(
   // '@builtin(instance_index)' (local 0..count-1).
   let myPacked = packSelection(source.sourceCode, ii);
 
-  if (u.biasMode == 1u && absMag > u.absMagLimit) {
+  let isFallbackFlag = select(0u, 1u, p.axisRatio < 0.0);
+
+  // Vertex-side cull: galaxies gated out by Malmquist mode 1 (volume-
+  // limited) or by realOnlyMode (hide fallback orientations) emit a
+  // degenerate clip position so all 6 vertices of the quad land outside
+  // the NDC cube and the rasteriser drops the primitive — no fragment
+  // work, no pick-texture write.
+  let malmquistGated = u.biasMode == 1u && absMag > u.absMagLimit;
+  let realOnlyGated = u.realOnlyMode == 1u && isFallbackFlag == 1u;
+  if (malmquistGated || realOnlyGated) {
     var earlyOut: VSOut;
     earlyOut.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
     earlyOut.uv = corner;
-    earlyOut.tint = vec3<f32>(0.0);
-    earlyOut.intensity = 0.0;
+    earlyOut.shaded = vec4<f32>(0.0, 0.0, 0.0, 1.0);
     earlyOut.instanceIdx = myPacked;
-    earlyOut.axisRatio = 1.0;
-    earlyOut.paCs = 1.0;
-    earlyOut.paSn = 0.0;
-    earlyOut.isFallback = 0u;
-    earlyOut.sizePx = 0.0;
+    earlyOut.paRotation = vec2<f32>(1.0, 0.0);
     return earlyOut;
   }
 
-  let isFallbackFlag = select(0u, 1u, p.axisRatio < 0.0);
-
   // ── APPARENT-SIZE BILLBOARD RADIUS ───────────────────────────────────────
   //
-  // We want each galaxy's billboard to occupy its real angular footprint on
-  // screen but never to vanish below 'u.pointSizePx' (the far-field 'still
-  // detectable as a glowing dot' floor).
-  //
-  //   radius_Mpc = (diameterKpc / 2) * 4 / 1000 = diameterKpc * 2 / 1000
-  //
-  // The 4× padding factor matches ThumbnailRenderer's
-  // 'sizeWorld = (diameterKpc / 1000) * 4', so the soft glowing dot and
-  // the textured thumbnail occupy the same world-space footprint and
-  // the load-fade transition is seamless. The 'select' clamps zero/NaN
-  // diameters back to the project-wide 30-kpc default.
-  let safeDiameterKpc = select(30.0, p.diameterKpc, p.diameterKpc > 0.0);
-  let GALAXY_RADIUS_MPC = safeDiameterKpc * 2.0 / 1000.0;
+  // Each galaxy's billboard occupies its real angular footprint on
+  // screen but never vanishes below 'u.pointSizePx' (the far-field
+  // 'still detectable as a glowing dot' floor). The per-instance
+  // 'p.radiusMpc' carries the already-padded world-space half-extent —
+  // bake site applied the 4× thumbnail-footprint padding and the
+  // synthetic-fallback floor, so the shader reads it directly.
   let toGalaxy = p.position - u.camPosWorld;
   let distanceMpc = length(toGalaxy);
   // Guard distanceMpc against 0 so we don't divide-by-zero when the camera
   // is parked exactly on a galaxy (test fixture path; not a real scenario).
   let safeDist = max(distanceMpc, 0.001);
-  let apparentPxRadius = (GALAXY_RADIUS_MPC / safeDist) * u.pxPerRad;
+  let apparentPxRadius = (p.radiusMpc / safeDist) * u.pxPerRad;
   let sizePx = max(u.pointSizePx, apparentPxRadius);
 
   // ── PIXEL-SIZE-IN-CLIP-SPACE CONVERSION ──────────────────────────────────
@@ -165,68 +162,81 @@ fn vs(
   // compute distance from the billboard centre.
   out.uv = corner;
 
-  // ── K-CORRECTION (observed → rest-frame colour) ──────────────────────────
-  //
-  //   colour_rest ≈ colour_obs − k · z
-  //
-  // 'k' is the per-row 'p.kPerZ' attribute (baked at upload time per
-  // source). We derive z from the position vector via Hubble's law:
-  // |xyz| = c·z/H₀, so z = |xyz| / HUBBLE_DISTANCE_MPC. This matches
-  // how the CPU-side raDecZToCartesian generated these positions.
-  let HUBBLE_DISTANCE_MPC = 4282.749;  // c / H₀ for H₀ = 70 km/s/Mpc
-  let zRedshift = length(p.position) / HUBBLE_DISTANCE_MPC;
-
-  // Sentinel detection: colorIndex >= 100 marks 'no observed colour for
-  // this survey's preferred band pair'. We skip K-correction for those
-  // and substitute a fixed mid-ramp colour (1.05 ≈ pale orange-white)
-  // so sentinel galaxies have a stable visually-neutral tint.
-  let isUnknownColour = p.colorIndex > 100.0;
-  let restColorIndex = select(p.colorIndex - p.kPerZ * zRedshift, 1.05, isUnknownColour);
-
-  // Look up the colour for this point's *rest-frame* colour index.
-  out.tint = ramp(restColorIndex);
+  // p.colorIndex is the rest-frame, sentinel-substituted ramp position
+  // — K-correction and the unknown-colour fallback already happened
+  // CPU-side in pickColourIndex. The shader just looks the value up.
 
   // ── MAGNITUDE → INTENSITY, with every per-instance modulator folded in ──
   //
   //   intensity = clamp((22 - magnitude) / 8, 0.05, 1.0)   // mag 14 → 1.0,
   //                                                          mag 22 → 0.05
   //               × u.brightness                            // global slider
-  //               × vMaxWeight   (mode 2: 1/V_max)
-  //               × schechterRatio  (mode 3: Schechter LF)
+  //               × vMaxWeight     (mode 2: 1/V_max)
+  //               × schechterRatio (mode 3: Schechter LF)
   //               × angularReweight (mode 4: HEALPix)
-  //               × depthFade   (camera-distance falloff)
+  //               × depthFade      (camera-distance falloff)
+  //               × crossfadeOut   (procedural-disk handoff band)
   //
-  // Folding the four mode/distance multipliers in here means the fragment
-  // multiplies only per-pixel terms (Gaussian + crossfade + source fade).
-  // Mathematically identical to applying them per-pixel because all five
-  // factors are per-instance constants.
+  // All six factors are per-instance constants, so the fragment reads
+  // out.shaded.rgb directly — no per-pixel multiply.
   let vMaxAlpha = select(1.0, p.vMaxWeight, u.biasMode == 2u);
   let schechterMult = select(1.0, p.schechterRatio, u.biasMode == 3u);
   let angularMult = select(1.0, p.angularDensityWeight, u.biasMode == 4u);
 
   // Depth-fade: 1 / (1 + (camDist/FALLOFF_HALF)²), gated by depthFadeEnabled.
-  let FALLOFF_HALF_MPC = 1000.0;
-  let camDistRel = distanceMpc / FALLOFF_HALF_MPC;
+  // Half-distance is per-source ('source.falloffHalfMpc') so sparse far-field
+  // catalogs (Milliquas) can effectively disable the fade by carrying a very
+  // large value while bulk galaxy catalogs keep the original ~1000 Mpc tuning.
+  let camDistRel = distanceMpc / source.falloffHalfMpc;
   let depthFadeRaw = 1.0 / (1.0 + camDistRel * camDistRel);
   let depthFadeMult = select(1.0, depthFadeRaw, u.depthFadeEnabled == 1u);
 
-  out.intensity = clamp((22.0 - p.magnitude) / 8.0, 0.05, 1.0)
+  // Crossfade-out against the procedural-disk pass. ThumbnailRenderer
+  // fades IN across [pxFadeStart, pxFadeEnd] (apparent-pixel diameter);
+  // we fade OUT with the complementary smoothstep so the additive HDR
+  // contribution stays constant per galaxy through the band.  The pick
+  // pass skips this fade so disk-sized galaxies still write into the
+  // pick texture (the procedural-disk renderer has no pick pipeline).
+  let apparentDiameterPx = sizePx * 0.5;
+  let inPickPass = u.pickPass == 1u;
+  let crossfadeOut = select(
+    1.0 - smoothstep(u.pxFadeStart, u.pxFadeEnd, apparentDiameterPx),
+    1.0,
+    inPickPass,
+  );
+
+  // Per-source intensity floor ('source.intensityFloor') replaces the prior
+  // hardcoded 0.05. Lower floors reduce per-galaxy contribution to the
+  // additive HDR target in dense regions (tames center saturation); higher
+  // floors keep faint objects visible (Milliquas at high z).
+  let intensity = clamp((22.0 - p.magnitude) / 8.0, source.intensityFloor, 1.0)
     * u.brightness
     * vMaxAlpha
     * schechterMult
     * angularMult
-    * depthFadeMult;
+    * depthFadeMult
+    * crossfadeOut;
+
+  // Bake the K-corrected ramp colour, the magenta highlight, and the
+  // intensity scalar straight into out.shaded.rgb. .w carries safeAB —
+  // pre-computed ellipse-mask coefficient, defaulted to 1.0 (circle)
+  // for invalid/NaN axisRatio (synthetic-fallback rows). 'abs(NaN) >
+  // 0.0' is false, so the select branch is the correct gate.
+  let highlightActive = u.highlightFallback == 1u && isFallbackFlag == 1u;
+  let highlightTint = select(vec3<f32>(1.0), vec3<f32>(1.0, 0.3, 1.0), highlightActive);
+  let absAR = abs(p.axisRatio);
+  let safeAB = select(1.0, max(absAR, 0.05), absAR > 0.0);
+  out.shaded = vec4<f32>(ramp(p.colorIndex) * highlightTint * intensity, safeAB);
 
   // Invisibility cull: galaxies whose folded intensity falls below this
   // threshold contribute imperceptibly to the additive HDR target, so
   // we emit a degenerate clip position (outside the [-1, 1] NDC cube)
   // and let the rasteriser drop the primitive before any fragment work.
-  // Pick fragment shares this vertex stage, so culled galaxies also
-  // become non-pickable — acceptable since they were never visible. A
-  // selected-but-culled galaxy still gets its UI ring from the dedicated
-  // selectionRingPass, which runs independently of this pipeline.
+  // Pick fragment shares this vertex stage; the cull is suppressed
+  // in the pick pass so the user can still click galaxies the visual
+  // pass has dimmed below the additive-HDR contribution threshold.
   let INVISIBILITY_THRESHOLD = 0.005;
-  if (out.intensity < INVISIBILITY_THRESHOLD) {
+  if (intensity < INVISIBILITY_THRESHOLD && !inPickPass) {
     out.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
   }
 
@@ -234,28 +244,58 @@ fn vs(
   // The visual 'fs' ignores this field.
   out.instanceIdx = myPacked;
 
-  // Forward the fallback flag for the highlight + hide toggles in 'fs'.
-  out.isFallback = isFallbackFlag;
-
-  // Forward 'abs(axisRatio)' so the fragment stage's elliptical mask
-  // uses the unsigned magnitude. Negative values would make the
-  // existing 'axisRatio > 0.0' validity check trip on every fallback
-  // row and collapse the ellipse mask to a circle.
-  out.axisRatio = abs(p.axisRatio);
-
   // Pre-compute cos/sin of the position-angle rotation so the fragment
   // stage skips the trig and just reads these flat-interpolated values.
   // We negate the rotation here because astronomical PA is east-of-north
   // (CCW on sky) but our UV-y points down on screen, AND because
   // rotating the UV is the inverse of rotating the ellipse.
   let paRad = -p.positionAngleDeg * 3.14159265 / 180.0;
-  out.paCs = cos(paRad);
-  out.paSn = sin(paRad);
+  out.paRotation = vec2<f32>(cos(paRad), sin(paRad));
 
-  // Forward the per-instance billboard radius in screen-pixels so the
-  // fragment stage can fade points-pass alpha across the procedural-
-  // disk crossfade band.
-  out.sizePx = sizePx;
+  // Tell fsPick which mask shape to use.  See io.wesl::VSOut for what
+  // each value means.
+  let isDiskHandoff = apparentDiameterPx >= u.pxFadeStart;
+  out.isDiskHandoff = select(0u, 1u, isDiskHandoff);
+
+  // Projected disk basis for the pick-mode ellipse mask.  Only emit
+  // the projection work when we're actually in the pick pass AND in
+  // the disk-handoff regime; both gates avoid wasted clip-space
+  // projections on the millions of far-field point sprites the visual
+  // pass draws every frame.  See io.wesl::VSOut for the math the
+  // fragment side performs on these two vectors.
+  if (inPickPass && isDiskHandoff) {
+    // Clamp cosI at 0.05 (matches procedural-disk renderer) so an
+    // edge-on disk's minor axis doesn't collapse to a degenerate line
+    // and the fragment's matrix inverse stays well-conditioned.
+    let cosI = max(safeAB, 0.05);
+    let sinI = sqrt(max(0.0, 1.0 - cosI * cosI));
+    // Positive paRad (east-of-north on the celestial sky) — opposite
+    // sign from the point sprite's screen-aligned 'paRotation', which
+    // negates because it rotates UV in the inverse direction.  Here
+    // we want the actual world-space axis.
+    let paRadWS = p.positionAngleDeg * 3.14159265 / 180.0;
+    let axes = diskAxes(p.position, paRadWS, cosI, sinI);
+    let majorWS = axes.major;
+    let minorWS = axes.minor;
+
+    // Project the disk's outer-edge tips (centre ± radiusMpc · axis)
+    // and take the NDC delta from the projected centre.  Multiply by
+    // viewportPx · 0.5 to convert NDC → pixels, then divide by the
+    // billboard's half-extent in pixels so the fragment can test
+    // against unit UV.
+    let majorTipClip = worldToClip(u.cam, p.position + p.radiusMpc * majorWS);
+    let minorTipClip = worldToClip(u.cam, p.position + p.radiusMpc * minorWS);
+    let baseNDC = vec2<f32>(center.x, center.y) / center.w;
+    let majorNDC = vec2<f32>(majorTipClip.x, majorTipClip.y) / majorTipClip.w;
+    let minorNDC = vec2<f32>(minorTipClip.x, minorTipClip.y) / minorTipClip.w;
+    let halfViewport = u.cam.viewportPx * 0.5;
+    let billboardHalfPx = max(sizePx * 0.5, 1.0);
+    out.pickMajorBillboard = ((majorNDC - baseNDC) * halfViewport) / billboardHalfPx;
+    out.pickMinorBillboard = ((minorNDC - baseNDC) * halfViewport) / billboardHalfPx;
+  } else {
+    out.pickMajorBillboard = vec2<f32>(0.0, 0.0);
+    out.pickMinorBillboard = vec2<f32>(0.0, 0.0);
+  }
 
   return out;
 }

@@ -4,7 +4,7 @@
  * ### Why this file exists
  *
  * The angular re-weight bake walks the cloud three times (geometry derive,
- * count, median) and runs ~3.5 M `cartesianToRaDecZ + healpixNest` calls at
+ * count, median) and runs ~3.5 M `cartesianToRaDec + healpixNest` calls at
  * full deck.  That's ~200-500 ms of pure-JS work — short enough to barely
  * notice but long enough to drop a frame, especially on lower-end laptops.
  * Mirroring the lazy-Schechter pattern, we ship the work to a worker so the

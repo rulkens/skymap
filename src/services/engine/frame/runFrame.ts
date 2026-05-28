@@ -235,10 +235,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   //
   // CPU-side step that populates the two LOD-aligned subsystems'
   // `lastOutput` arrays.  The HDR_PASSES loop reads those arrays via
-  // the new proceduralDisksPass / texturedImpostorsPass entries; this
-  // call site is the one place both walks happen each frame.  The
-  // atlas subsystem is mutated transitively by the textured-impostor
-  // run (slot allocations + fetch enqueues); we don't call into it
+  // the proceduralDisksPass / texturedDisksPass entries; this call
+  // site is the one place both walks happen each frame.  The atlas
+  // subsystem is mutated transitively by the textured-disk run
+  // (slot allocations + fetch enqueues); we don't call into it
   // directly here.
   if (state.subsystems.proceduralDisks !== null) {
     state.subsystems.proceduralDisks.runFrame({
@@ -248,8 +248,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       pxPerRad: ctx.drawPxPerRad,
     });
   }
-  if (state.subsystems.texturedImpostors !== null) {
-    state.subsystems.texturedImpostors.runFrame({
+  if (state.subsystems.texturedDisks !== null) {
+    state.subsystems.texturedDisks.runFrame({
       cam: ctx.cam,
       catalogs: state.sources.catalogs,
       visibleSourceMask: state.sources.drawMask,
@@ -302,6 +302,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     device: deps.device,
     context: deps.context,
     milkyWayRenderer: deps.milkyWayRenderer,
+    horizonShellRenderer: deps.horizonShellRenderer,
     filamentRenderer: deps.filamentRenderer,
     scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
     texturedDiskRenderer: deps.texturedDiskRenderer,
@@ -320,11 +321,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       schechterMStar: state.bias.schechterMStar,
       schechterAlpha: state.bias.schechterAlpha,
       depthFadeEnabled: state.settings.points.depthFade,
-      // Task 8 of procedural-disk-impostor: feed the points-pass
-      // fragment shader the same crossfade band the procedural-
-      // disk pass fades IN over, so the two passes blend cleanly
-      // without a double-bright donut.  Constants live in
-      // `thumbnailSubsystem.ts` as a single source of truth.
+      // Feed the points-pass vertex shader the same crossfade band
+      // the procedural-disk pass fades IN over, so the two passes
+      // blend cleanly without a double-bright donut.  Constants live
+      // in `proceduralDiskSubsystem.ts` as a single source of truth.
       pxFadeStartPoints: PROCEDURAL_DISK_FADE_START_PX,
       pxFadeEndPoints: PROCEDURAL_DISK_FADE_END_PX,
       exposure: state.settings.tonemap.exposure,
@@ -336,10 +336,61 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       volumesEnabled: state.settings.volumes.masterEnabled,
     },
     famousMeta: state.sources.famousMeta,
-    famousXrefs: state.sources.famousXrefs,
     catalogs: state.sources.catalogs,
     timingService: deps.timingService,
   });
+
+  // ── Pick-buffer debug overlay ─────────────────────────────────────
+  //
+  // Populate the pick texture (no readback) and composite a colour-
+  // mapped overlay over the swap chain.  Sequencing matters:
+  //   - AFTER renderFrame's submit so the shared uniform buffer
+  //     reflects this frame's visual state (queue.writeBuffer is
+  //     ordered per submit).
+  //   - BEFORE the hover pick so both writers see the pick texture in
+  //     a known state.
+  //   - In its own encoder/submit with `loadOp: 'load'` so the
+  //     pre-multiplied OVER blend composites cleanly on top of the
+  //     tone-mapped frame without re-plumbing renderFrame.
+  if (
+    state.settings.debug.showPickBuffer &&
+    state.gpu.pickRenderer !== null &&
+    state.gpu.pickDebugOverlay !== null &&
+    state.sources.catalogs.size > 0 &&
+    ctx.isReady
+  ) {
+    const overlaySources = Array.from(ctx.renderer.loadedSources()).filter(
+      (s) => ((state.sources.pickMask >> s.source) & 1) !== 0,
+    );
+    if (overlaySources.length > 0) {
+      const pickTex = state.gpu.pickRenderer.renderForDebug(
+        [deps.canvas.width, deps.canvas.height],
+        overlaySources,
+        state.settings.points.sizePx,
+      );
+      if (pickTex !== null) {
+        const overlayEncoder = deps.device.createCommandEncoder({
+          label: 'pick-debug-overlay-encoder',
+        });
+        const swapView = deps.context.getCurrentTexture().createView();
+        const overlayPass = overlayEncoder.beginRenderPass({
+          label: 'pick-debug-overlay-pass',
+          colorAttachments: [
+            {
+              view: swapView,
+              // `load` — preserve the tone-mapped frame underneath; the
+              // overlay's pre-multiplied OVER blend composites on top.
+              loadOp: 'load',
+              storeOp: 'store',
+            },
+          ],
+        });
+        state.gpu.pickDebugOverlay.draw(overlayPass, pickTex.createView());
+        overlayPass.end();
+        deps.device.queue.submit([overlayEncoder.finish()]);
+      }
+    }
+  }
 
   // ── Throttled hover pick ──────────────────────────────────────────
   //
@@ -435,25 +486,24 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         // on consecutive same-kind picks are O(1) no-ops.
         if (pick === null) {
           state.subsystems.selection.setHovered(null);
-          state.subsystems.pois.setHoveredPoi(null);
         } else if (pick.kind === 'galaxy') {
           state.subsystems.selection.setHovered({
+            kind: 'galaxy',
             source: pick.source,
             localIdx: pick.localIdx,
           });
-          state.subsystems.pois.setHoveredPoi(null);
         } else {
           // POI variants (cluster / supercluster / void) — resolve via
-          // the shared helper introduced in plan-5 task 3 so the click
-          // and hover paths agree byte-for-byte on the lookup.  An
-          // out-of-bounds index or a missing POI table produces null;
-          // treat the same as "no POI hovered".
+          // the shared helper so the click and hover paths agree
+          // byte-for-byte on the lookup.  An out-of-bounds index or
+          // missing POI produces null; same as "no hover".
           const poi = resolvePoiFromPick(state.subsystems.pois, {
             category: pick.kind,
             poiIndex: pick.poiIndex,
           });
-          state.subsystems.selection.setHovered(null);
-          state.subsystems.pois.setHoveredPoi(poi?.id ?? null);
+          state.subsystems.selection.setHovered(
+            poi !== null ? { kind: 'poi', id: poi.id } : null,
+          );
         }
         // No scheduler.requestRender() here intentionally.
         // The hover state only feeds the React InfoCard text —
@@ -515,7 +565,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.settings.camera.autoRotate ||
     state.subsystems.tweens.isActive() ||
     state.subsystems.spaceMouse.hasAxes() ||
-    (ready && state.subsystems.texturedImpostors.hasInFlightWork()) ||
+    (ready && state.subsystems.texturedDisks.hasInFlightWork()) ||
     // Survey + filament fade-in / fade-out: consult the FadeRegistry
     // — the registry owns every handle's animation clock after the
     // unified-fade migration (plan-03 for surveys, plan-04 for filaments).

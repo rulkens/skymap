@@ -10,7 +10,7 @@
  *
  * Decode-correctness is exercised exhaustively in
  * `tests/galaxyCatalogFormat.test.ts`; here we only assert that fetch is
- * actually invoked and that a header-only v4 .bin round-trips to a
+ * actually invoked and that a header-only v6 .bin round-trips to a
  * count=0 catalog.
  */
 import { describe, expect, it } from 'vitest';
@@ -41,16 +41,16 @@ describe('galaxyCatalogFetcher', () => {
   });
 
   it('fetches and decodes when target is non-zero', async () => {
-    // Build a minimal valid v4 .bin: header only, count=0.
+    // Build a minimal valid v6 .bin: header only, count=0.
     // Header layout (see src/data/galaxyCatalogFormat.ts):
     //   0..3  magic    = "SKMP" little-endian uint32 (0x504d4b53)
-    //   4..7  version  = 4
+    //   4..7  version  = 6
     //   8..11 count    = 0
     //   12..15 reserved
     const header = new ArrayBuffer(16);
     const dv = new DataView(header);
     dv.setUint32(0, 0x504d4b53, true);
-    dv.setUint32(4, 4, true);
+    dv.setUint32(4, 6, true);
     dv.setUint32(8, 0, true);
 
     fetch.mock.mockResolvedValue(

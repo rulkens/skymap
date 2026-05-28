@@ -97,13 +97,13 @@ export function renderFrame(input: RenderFrameInput): void {
     device,
     context,
     milkyWayRenderer,
+    horizonShellRenderer,
     filamentRenderer,
     scalarVolumeRenderer,
     texturedDiskRenderer,
     proceduralDiskRenderer,
     settings,
     famousMeta,
-    famousXrefs,
     catalogs,
     timingService,
   } = input;
@@ -119,9 +119,9 @@ export function renderFrame(input: RenderFrameInput): void {
     filamentRenderer,
     scalarVolumeRenderer,
     milkyWayRenderer,
+    horizonShellRenderer,
     catalogs,
     famousMeta,
-    famousXrefs,
     milkyWayITimeSec,
   };
 

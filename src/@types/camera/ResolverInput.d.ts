@@ -11,12 +11,12 @@
 
 import type { FocusTarget } from './FocusTarget';
 import type { GalaxyCatalog } from '../data/GalaxyCatalog';
-import type { Source } from '../../data/sources';
+import type { SourceType } from '../data/SourceType';
 import type { FamousMetaEntry } from '../loading/FamousMetaEntry';
 
 export type ResolverInput = {
   target: FocusTarget;
-  catalogs: { source: Source; catalog: GalaxyCatalog }[];
+  catalogs: { source: SourceType; catalog: GalaxyCatalog }[];
   famousMeta: readonly FamousMetaEntry[];
   aliasMap: ReadonlyMap<bigint, readonly string[]>;
 };

@@ -1,6 +1,5 @@
-import type { Source } from '../../../data/sources';
+import type { SourceType } from '../../data/SourceType';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
-import type { FamousXrefMap } from '../../loading/FamousXrefMap';
 import type { PgcAliasMap } from '../../loading/PgcAliasMap';
 
 /**
@@ -36,10 +35,9 @@ export type EngineSelectionHandle = {
   selectFamous: (id: string) => void;
   /** Select a non-famous galaxy by (source, localIdx) and focus-tween. */
   selectByAlias: (target: {
-    source: Source;
+    source: SourceType;
     localIdx: number;
     famousMeta?: readonly FamousMetaEntry[];
-    famousXrefs?: FamousXrefMap;
   }) => void;
   /** Lazy-load the PGC → human-name alias map (1.7 MB JSON). */
   loadAliases: () => Promise<PgcAliasMap>;

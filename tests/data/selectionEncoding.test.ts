@@ -7,6 +7,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import type { SourceType } from '../../src/@types/data/SourceType';
 import {
   SELECTION_SOURCE_SHIFT,
   SELECTION_LOCAL_IDX_MASK,
@@ -71,7 +72,7 @@ describe('selectionEncoding', () => {
       const rawPick = (packed + PICK_SENTINEL_OFFSET) >>> 0;
       expect(unpackPick(rawPick)).toEqual({
         kind: 'galaxy',
-        source: source as Source,
+        source: source as SourceType,
         localIdx,
       });
     }
@@ -168,7 +169,7 @@ describe('unpackPick — discriminated union for POI categories', () => {
   }
 
   it('returns kind:galaxy for codes 0..4 (survey sources)', () => {
-    const cases: Array<[number, Source]> = [
+    const cases: Array<[number, SourceType]> = [
       [0, Source.Synthetic],
       [1, Source.SDSS],
       [2, Source.TwoMRS],
@@ -208,10 +209,19 @@ describe('unpackPick — discriminated union for POI categories', () => {
     expect(unpackPick(0xffffffff)).toBeNull();
   });
 
-  it('logs a warning and returns null for unallocated codes 8..30', () => {
+  it('returns kind:galaxy for code 8 (Milliquas — appended after POI band)', () => {
+    const result = unpackPick(rawFor(Source.Milliquas, 99));
+    expect(result).toEqual<PickResult>({
+      kind: 'galaxy',
+      source: Source.Milliquas,
+      localIdx: 99,
+    });
+  });
+
+  it('logs a warning and returns null for unallocated codes 9..30', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
-      for (const code of [8, 15, 30]) {
+      for (const code of [9, 15, 30]) {
         const result = unpackPick(rawFor(code, 0));
         expect(result).toBeNull();
       }

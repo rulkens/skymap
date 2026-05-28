@@ -82,20 +82,6 @@ export function GalaxyDetailCard({
               </button>
             </div>
           )}
-          {info.famous.xref && (
-            <CardRow
-              label="Also catalogued as"
-              value={
-                <>
-                  {info.famous.xref.source} row #{info.famous.xref.localIdx}
-                  {' · '}
-                  <span style={{ opacity: 0.7, fontSize: '0.85em' }}>
-                    {info.famous.xref.distanceArcsec.toFixed(1)}″ from curated position
-                  </span>
-                </>
-              }
-            />
-          )}
           {/*
             Wikipedia link prefers names[1] (NGC/IC slug) over names[0] (Messier
             short id).  Short ids like "M51" / "M109" almost always resolve to a

@@ -21,7 +21,7 @@
  *                    galaxy names, scale bar). Discriminator:
  *                    `layer: LabelLayerId`.
  *   - overlay      — always-on GPU overlay (Milky Way, procedural
- *                    disks, textured impostors). Registered at
+ *                    disks, textured disks). Registered at
  *                    opacity 1.0 via setImmediate. Discriminator:
  *                    `id: OverlayId`.
  *   - volumesMaster — the master enable gate for the whole scalar-
@@ -40,13 +40,13 @@
  * and must not be mutated after construction.
  */
 
-import type { Source } from '../../data/sources';
+import type { SourceType } from '../data/SourceType';
 import type { ScalarFieldHandle } from '../rendering/ScalarFieldHandle';
 import type { LabelLayerId } from './LabelLayerId';
 import type { OverlayId } from './OverlayId';
 
 export type FadeHandle =
-  | { readonly kind: 'survey'; readonly source: Source }
+  | { readonly kind: 'survey'; readonly source: SourceType }
   | { readonly kind: 'filaments' }
   | { readonly kind: 'scalarField'; readonly field: ScalarFieldHandle }
   | { readonly kind: 'labelLayer'; readonly layer: LabelLayerId }

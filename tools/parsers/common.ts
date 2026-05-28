@@ -53,9 +53,10 @@
  */
 
 import { Source } from '../../src/data/sources.js';
+import type { SourceType } from '../../src/@types/data/SourceType';
 
 export type ParsedRecord = {
-  source: Source;
+  source: SourceType;
   /**
    * Numeric SDSS objID when known (SDSS rows always have one; some 2MPZ
    * rows include an `SDSS_OBJID` cross-ID column). 0n means "no SDSS
@@ -66,6 +67,26 @@ export type ParsedRecord = {
   ra: number; // degrees, J2000
   dec: number; // degrees, J2000
   z: number; // redshift (spectroscopic or photometric depending on survey)
+  /**
+   * Catalogued spectroscopic redshift, preserved verbatim from the
+   * source row. Today this duplicates `z` for every parser — they're
+   * the same number.
+   *
+   * The two fields diverge only inside the build pipeline's
+   * local-volume override (see
+   * docs/superpowers/specs/2026-05-27-local-volume-distances.md):
+   * `z` continues to be the "use this for position when no override
+   * fires" channel, while `spectroscopicZ` is the "always-show-this
+   * in the InfoCard" channel. Keeping them separated at the parser
+   * boundary means a future override that needs to *change* z (e.g.
+   * a peculiar-velocity-corrected value) doesn't have to wrestle with
+   * "but which z does the InfoCard show?".
+   *
+   * NaN is the legal "no published spec-z" sentinel — relevant for a
+   * handful of Famous-galaxy fixture rows that have a measured
+   * distance but no published spectroscopic redshift.
+   */
+  spectroscopicZ: number;
   /**
    * Five-band apparent magnitudes in the SDSS *ugriz* photometric system.
    * NaN means the survey does not provide that band (e.g. 2MRS only has
@@ -123,6 +144,44 @@ export type ParsedRecord = {
    * fields handle the same kind of "real or fallback" distinction.
    */
   diameterKpc: number | null;
+  /**
+   * Per-source classification byte (see `src/data/sourceClass.ts`
+   * for the per-source lookup tables).
+   *
+   * Defaults to `0` ("unknown / unclassified") for every parser
+   * that doesn't carry a class signal — the build encoder writes
+   * the byte straight through to the .bin's per-record `classByte`
+   * slot.  Today only the Milliquas parser populates this field
+   * (AGN class letter Q/A/B/K/N/S → enum 1..6); SDSS / 2MRS /
+   * GLADE / Famous all leave it at 0.
+   *
+   * Why a flat byte rather than a tagged union per source?  The
+   * on-disk format already commits to one byte per record (see
+   * `src/data/galaxyCatalogFormat.ts` v5).  The build pipeline
+   * never inspects the value — it just copies — so the parser is
+   * the one place that knows how to translate its survey's class
+   * signal into the byte, and a flat numeric field keeps the
+   * pipeline blissfully ignorant of per-source semantics.
+   */
+  classByte: number;
+
+  /**
+   * Milliquas-only parent-survey enum byte (see
+   * `milliquasParentSurveyPrefix` in `src/data/sourceClass.ts`).
+   *
+   * Every parser other than Milliquas leaves this at `0` (the
+   * "no parent-survey prefix" sentinel).  The Milliquas parser
+   * matches the Name column against the small fixed prefix set
+   * (`SDSS`, `2MASX`, `GAIA`, `WISEA`, `NVSS`, `FIRST`, `6dFGS`)
+   * and writes the matching enum value here so the runtime can
+   * reconstruct `"<PARENT> J<RA><Dec>"` at hover time without a
+   * companion JSON sidecar.
+   *
+   * Same plain-number-rather-than-tagged-union rationale as
+   * `classByte`: the field is one byte at the binary boundary, and
+   * the pipeline carries it through opaque.
+   */
+  parentSurveyByte: number;
   /**
    * 2MASS XSC designation, e.g. `00473313-2517196` (16 chars, no `2MASX J`
    * prefix — both 2MRS and GLADE spell it the same way at this layer).

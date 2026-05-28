@@ -7,24 +7,18 @@
 // texture. The selection ring is drawn by a dedicated pass and is not
 // this file's concern.
 //
-// ## Why bindings appear here even though io.wesl already declared them
+// ## Bindings
 //
-// They didn't — io.wesl declares only the STRUCT layouts. WESL has
-// no global state, so '@group/@binding' declarations are module-local.
-// This file re-declares 'u' (at @group(0), same as vertex.wesl) and
-// 'fade' (at @group(1), declared only here — the vertex stage doesn't
-// read opacity). The struct layouts come from io.wesl and
-// fadeUniforms.wesl respectively, so drift is structurally impossible.
-// WGSL accepts the same '@group/@binding' pair appearing in multiple
-// compiled modules so long as the layouts agree.
+// Only 'fade' at @group(1) is bound here — every per-instance and
+// per-frame value the fragment needs is already folded into the VSOut
+// varyings by the vertex stage (see 'shaded' in io.wesl). The vertex
+// stage still binds @group(0) Uniforms for its own use; the pipeline
+// layout's @group(0) entry stays VERTEX-visibility-only.
 
-import package::points::io::Uniforms;
 import package::points::io::VSOut;
-import package::lib::math::saturate;
 import package::lib::fadeUniforms::FadeUniforms;
 import package::lib::fadeUniforms::applyFade;
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
 @group(1) @binding(0) var<uniform> fade: FadeUniforms;
 
 // ─── visual fragment stage ─────────────────────────────────────────────
@@ -47,58 +41,31 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // cutoff.
   //
   // The cs/sn pair is pre-computed in the vertex stage and flat-
-  // interpolated, saving millions of trig calls per frame.
-  let cs = in.paCs;
-  let sn = in.paSn;
+  // interpolated, saving millions of trig calls per frame. safeAB
+  // (the validated ellipse minor-axis ratio) rides in the alpha channel
+  // of in.shaded, so the fragment does zero per-pixel axis-ratio work.
+  let cs = in.paRotation.x;
+  let sn = in.paRotation.y;
   let rotated = vec2<f32>(
     cs * in.uv.x - sn * in.uv.y,
     sn * in.uv.x + cs * in.uv.y,
   );
-  // axisRatio is guaranteed > 0 by the build pipeline, BUT the synthetic-
-  // fallback source (loaded when every real .bin file fails to decode)
-  // ships its axisRatio array filled with NaN. 'NaN > 0.0' is false in
-  // WGSL, so this single comparison catches both NaN and zero/negative
-  // — invalid → safeAB = 1.0 → circular r2 = original dot(uv, uv).
-  let abIsValid = in.axisRatio > 0.0;
-  let safeAB = select(1.0, max(in.axisRatio, 0.05), abIsValid);
-  let elliptic = vec2<f32>(rotated.x, rotated.y / safeAB);
+  let elliptic = vec2<f32>(rotated.x, rotated.y / in.shaded.w);
   let r2 = dot(elliptic, elliptic);
   // ────────────────────────────────────────────────────────────────────────
-
-  // Real-only mode: discard fallback fragments entirely. The user
-  // enabled this to see ONLY galaxies for which we have measured
-  // photometric orientation.
-  if (u.realOnlyMode == 1u && in.isFallback == 1u) { discard; }
-
-  // ── Procedural-disk crossfade-OUT ────────────────────────────────────────
-  //
-  // The thumbnail subsystem's procedural-disk pass fades IN across
-  // [u.pxFadeStart, u.pxFadeEnd]; we fade the points-pass OUT with the
-  // complementary curve. Sum of the two curves is 1.0 across the band,
-  // so the additive HDR contribution stays constant per galaxy through
-  // the transition.
-  let apparentDiameterPx = in.sizePx * 0.5;
-  let fadeT = saturate(
-    (apparentDiameterPx - u.pxFadeStart) / (u.pxFadeEnd - u.pxFadeStart),
-  );
-  let pointAlphaMult = 1.0 - fadeT * fadeT * (3.0 - 2.0 * fadeT);
 
   // Discard fragments outside the oriented ellipse.
   if (r2 > 1.0) { discard; }
 
   // Gaussian-like falloff: bright at centre (r²=0 → e⁰=1), fading to
-  // e⁻⁴ ≈ 0.018 at the edge (r²=1). The per-instance modulators
-  // (Schechter, angular reweight, depth fade) are folded into
-  // 'in.intensity' by the vertex stage — see vertex.wesl.
-  var alpha = exp(-r2 * 4.0) * pointAlphaMult;
-
-  // Highlight fallback rows in magenta when the toggle is on. The 0.3
-  // green keeps fallback galaxies recognisable as 'data-y' rather than
-  // turning them into pure UI accents.
-  let highlightActive = (u.highlightFallback == 1u) && (in.isFallback == 1u);
-  let tintFinal = select(in.tint, in.tint * vec3<f32>(1.0, 0.3, 1.0), highlightActive);
-  // Scale the colour by the per-point intensity.
-  let rgb = tintFinal * in.intensity;
+  // e⁻⁴ ≈ 0.018 at the edge (r²=1). All per-instance modulators
+  // (intensity scalar, Schechter, angular reweight, depth fade,
+  // procedural-disk crossfade-out, magenta highlight) are folded into
+  // 'in.shaded.rgb' by the vertex stage — see vertex.wesl. Galaxies
+  // gated by realOnlyMode are culled at the vertex stage too, so this
+  // fragment never sees them.
+  var alpha = exp(-r2 * 4.0);
+  let rgb = in.shaded.rgb;
 
   // ── Source fade-in ─────────────────────────────────────────────────────────
   //

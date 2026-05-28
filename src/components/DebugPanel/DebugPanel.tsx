@@ -1,17 +1,15 @@
 /**
- * DebugPanel — the umbrella for the renamed dev panel.
+ * DebugPanel — the umbrella for the dev panel.
  *
- * Replaces the legacy `LoadingDevPanel` with a four-section panel:
- * `AssetLoadingSection` (the legacy slot-progress rows),
+ * Four sections: `AssetLoadingSection` (slot-progress rows),
  * `GpuTimingsSection` (per-pass GPU timing live readout),
  * `RenderTogglesSection` (per-pass on/off checkboxes for visual
  * debugging), and `DataQualitySection` (catalog-audit diagnostics
- * such as the orientation-fallback toggles — see Q16g of the
- * 2026-05-19 SettingsPanel UX audit for why these graduated out
- * of the user-facing Settings panel).  The mount predicate is owned
- * by `App.tsx` (DEV || `hasUrlGate('debug')`); when this component
- * renders, all sections always render — section-level visibility
- * (e.g. "GPU timings unavailable") is each section's own concern.
+ * such as the orientation-fallback toggles).  Mount is owned by
+ * `App.tsx` (toggled by the `d` keyboard shortcut); when this
+ * component renders, all sections always render — section-level
+ * visibility (e.g. "GPU timings unavailable") is each section's
+ * own concern.
  *
  * ### Why collapsible sections
  *
@@ -33,6 +31,7 @@ import { AssetLoadingSection } from './AssetLoadingSection';
 import { GpuTimingsSection } from './GpuTimingsSection';
 import { RenderTogglesSection } from './RenderTogglesSection';
 import { DataQualitySection } from './DataQualitySection';
+import { LabelEffectsSection } from './LabelEffectsSection';
 
 export type DebugPanelProps = {
   slots: ReadonlyMap<string, AssetSlot<unknown, unknown>>;
@@ -42,6 +41,13 @@ export type DebugPanelProps = {
   realOnlyMode: boolean;
   onHighlightFallbackChange: (enabled: boolean) => void;
   onRealOnlyModeChange: (enabled: boolean) => void;
+  /**
+   * Pick-buffer debug overlay toggle.  When on, the renderer paints a
+   * colour-mapped RGBA layer over the tone-mapped frame so the
+   * developer can see which billboards the picker actually claims.
+   */
+  showPickBuffer: boolean;
+  onShowPickBufferChange: (enabled: boolean) => void;
 };
 
 export function DebugPanel({
@@ -52,6 +58,8 @@ export function DebugPanel({
   realOnlyMode,
   onHighlightFallbackChange,
   onRealOnlyModeChange,
+  showPickBuffer,
+  onShowPickBufferChange,
 }: DebugPanelProps) {
   return (
     <div
@@ -76,12 +84,23 @@ export function DebugPanel({
       <div style={{ marginTop: 6 }} />
       <RenderTogglesSection passOverrides={passOverrides} />
       <div style={{ marginTop: 6 }} />
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+        <input
+          type="checkbox"
+          checked={showPickBuffer}
+          onChange={(e) => onShowPickBufferChange(e.target.checked)}
+        />
+        <span>Show pick buffer</span>
+      </label>
+      <div style={{ marginTop: 6 }} />
       <DataQualitySection
         highlightFallback={highlightFallback}
         realOnlyMode={realOnlyMode}
         onHighlightFallbackChange={onHighlightFallbackChange}
         onRealOnlyModeChange={onRealOnlyModeChange}
       />
+      <div style={{ marginTop: 6 }} />
+      <LabelEffectsSection />
     </div>
   );
 }

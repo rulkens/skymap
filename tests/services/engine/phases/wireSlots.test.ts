@@ -67,6 +67,7 @@ import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps'
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { PointOfInterest } from '../../../../src/@types/engine/subsystems/PointOfInterest';
+import type { SourceType } from '../../../../src/@types/data/SourceType';
 
 // ── Module mocks ──────────────────────────────────────────────────────
 //
@@ -98,7 +99,7 @@ vi.mock('../../../../src/services/loading/fetchers/filamentFetcher', () => ({
 }));
 
 vi.mock('../../../../src/services/loading/fetchers/famousMetaFetcher', () => ({
-  famousMetaFetcher: vi.fn(async () => ({ meta: [], xrefs: {} })),
+  famousMetaFetcher: vi.fn(async () => ({ meta: [] })),
 }));
 
 vi.mock('../../../../src/services/loading/fetchers/pgcAliasFetcher', () => ({
@@ -136,8 +137,8 @@ vi.mock('../../../../src/services/engine/subsystems/proceduralDiskSubsystem', ()
   PROCEDURAL_DISK_FADE_START_PX: 8,
   PROCEDURAL_DISK_FADE_END_PX: 14,
 }));
-vi.mock('../../../../src/services/engine/subsystems/texturedImpostorSubsystem', () => ({
-  createTexturedImpostorSubsystem: vi.fn(() => ({
+vi.mock('../../../../src/services/engine/subsystems/texturedDiskSubsystem', () => ({
+  createTexturedDiskSubsystem: vi.fn(() => ({
     runFrame: vi.fn(),
     lastOutput: { quads: [], disks: [] },
     hasInFlightWork: vi.fn(() => false),
@@ -229,7 +230,7 @@ const errorValue = (msg: string): LoadState<unknown> => ({
  */
 function makeState(
   overrides: Partial<{
-    points: Map<Source, ReturnType<typeof makeFakeSlot>>;
+    points: Map<SourceType, ReturnType<typeof makeFakeSlot>>;
   }> = {},
 ): EngineState {
   const points = overrides.points ?? new Map();
@@ -256,7 +257,6 @@ function makeState(
       pickMask: 0xff,
       drawMask: 0xff,
       famousMeta: [],
-      famousXrefs: {},
       tier: 'medium',
     },
     picking: {} as never,
@@ -291,7 +291,7 @@ function makeState(
       scheduler: { requestRender: vi.fn() } as never,
       galaxyAtlas: null,
       proceduralDisks: null,
-      texturedImpostors: null,
+      texturedDisks: null,
       loadProgress: null,
       // Post-Task-7 (2026-05-17): static cluster/supercluster/void
       // anchors are wired unconditionally — `wireSlots` now always
@@ -317,7 +317,7 @@ function makeState(
     cam: null,
     initialCamSnapshot: null,
     assetSlots: {
-      points: points as Map<Source, never>,
+      points: points as Map<SourceType, never>,
       filaments: null,
       famousMeta: null,
       pgcAlias: null,
@@ -369,7 +369,7 @@ describe('wireSlots', () => {
     const twoMrsSlot = makeFakeSlot('2mrs-points');
     const gladeSlot = makeFakeSlot('glade-points');
     const famousSlot = makeFakeSlot('famous-points');
-    const points = new Map<Source, ReturnType<typeof makeFakeSlot>>([
+    const points = new Map<SourceType, ReturnType<typeof makeFakeSlot>>([
       [Source.SDSS, sdssSlot],
       [Source.TwoMRS, twoMrsSlot],
       [Source.Glade, gladeSlot],
@@ -395,7 +395,7 @@ describe('wireSlots', () => {
     // is done" — so emissions repeat.
     const sdssSlot = makeFakeSlot('sdss-points');
     const gladeSlot = makeFakeSlot('glade-points');
-    const points = new Map<Source, ReturnType<typeof makeFakeSlot>>([
+    const points = new Map<SourceType, ReturnType<typeof makeFakeSlot>>([
       [Source.SDSS, sdssSlot],
       [Source.Glade, gladeSlot],
     ]);
@@ -433,7 +433,7 @@ describe('wireSlots', () => {
     const gladeSlot = makeFakeSlot('glade-points');
     const famousSlot = makeFakeSlot('famous-points');
     const synthSlot = makeFakeSlot('synthetic-points');
-    const points = new Map<Source, ReturnType<typeof makeFakeSlot>>([
+    const points = new Map<SourceType, ReturnType<typeof makeFakeSlot>>([
       [Source.SDSS, sdssSlot],
       [Source.TwoMRS, twoMrsSlot],
       [Source.Glade, gladeSlot],
@@ -468,7 +468,7 @@ describe('wireSlots', () => {
     const twoMrsSlot = makeFakeSlot('2mrs-points');
     const gladeSlot = makeFakeSlot('glade-points');
     const famousSlot = makeFakeSlot('famous-points');
-    const points = new Map<Source, ReturnType<typeof makeFakeSlot>>([
+    const points = new Map<SourceType, ReturnType<typeof makeFakeSlot>>([
       [Source.SDSS, sdssSlot],
       [Source.TwoMRS, twoMrsSlot],
       [Source.Glade, gladeSlot],

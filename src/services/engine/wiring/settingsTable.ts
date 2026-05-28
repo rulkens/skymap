@@ -98,7 +98,8 @@ type SettingsPath =
       'filaments',
       keyof EngineState['settings']['filaments'],
     ]
-  | readonly ['settings', 'volumes', 'masterEnabled'];
+  | readonly ['settings', 'volumes', 'masterEnabled']
+  | readonly ['settings', 'debug', keyof EngineState['settings']['debug']];
 
 /**
  * Nested callback address: `[cluster, method]`.  The cluster names
@@ -118,7 +119,8 @@ type NestedCallbackKey =
   | readonly ['milkyWay', string]
   | readonly ['filaments', string]
   | readonly ['volumes', string]
-  | readonly ['sources', string];
+  | readonly ['sources', string]
+  | readonly ['debug', string];
 
 /**
  * One row of the descriptor table.
@@ -222,6 +224,15 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     name: 'setToneMapCurve',
     path: ['settings', 'tonemap', 'curve'],
     callback: ['tonemap', 'onCurveChange'],
+  },
+  {
+    // Pick-buffer debug overlay master toggle.  Off by default; gated
+    // behind the SettingsPanel's Debug section.  Echoes through the
+    // 'debug' callback cluster so deep-links or keyboard shortcuts can
+    // flip the bit without going through React.
+    name: 'setShowPickBuffer',
+    path: ['settings', 'debug', 'showPickBuffer'],
+    callback: ['debug', 'onShowPickBufferChange'],
   },
 ];
 

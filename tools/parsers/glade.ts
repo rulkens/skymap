@@ -104,13 +104,24 @@ import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMp
 
 /**
  * Map from PGC string (no padding, no leading zeros stripped) to HyperLEDA's
- * `pa` (PA in degrees) and derived `axisRatio = 10^(-logr25)`.
+ * `pa` (PA in degrees), derived `axisRatio = 10^(-logr25)`, and the
+ * redshift-independent distance modulus + uncertainty.
  *
  * The GLADE ReadMe says PGC sits in bytes 1-7 (0-based: 0-7). HyperLEDA
  * stores the same identifier as a plain integer; we trim the GLADE field
  * to its non-space content to match.
+ *
+ * `mod0` / `e_mod0` are NaN when HyperLEDA has no redshift-independent
+ * distance for the PGC (most rows). The CF4 → HyperLEDA distance fallback
+ * (`tools/parsers/cosmicflows4.ts`, see local-volume-distances spec) uses
+ * these to convert via `d_Mpc = 10^((mod0 - 25) / 5)` when CF4 misses.
  */
-export type HyperLedaShapeMap = Map<string, { pa: number; axisRatio: number }>;
+export type HyperLedaShapeMap = Map<
+  string,
+  { pa: number; axisRatio: number; mod0: number; e_mod0: number }
+>;
+
+const HYPERLEDA_CSV_HEADER_V2 = 'pgc,pa,logr25,logd25,e_logd25,mod0,e_mod0';
 
 /**
  * Parse the cached HyperLEDA CSV produced by `tools/fetchHyperLeda.ts`.
@@ -118,19 +129,37 @@ export type HyperLedaShapeMap = Map<string, { pa: number; axisRatio: number }>;
  * Cache rows with empty `pa` / `logr25` mean "we asked HyperLEDA, no match"
  * — those rows are intentionally absent from the returned map (the build
  * pipeline falls through to the deterministic fallback for them).
+ *
+ * A v1 cache (`pgc,pa,logr25,logd25,e_logd25`, no mod0 columns) is
+ * rejected loudly rather than silently producing NaN distances — the
+ * caller must delete the cache and re-run `npm run fetch-hyperleda`.
  */
 export function parseHyperLedaCsv(rawText: string): HyperLedaShapeMap {
   const out: HyperLedaShapeMap = new Map();
   const lines = rawText.split(/\r?\n/).filter((l) => l.length > 0);
-  // Start at index 1 to skip the header row (`pgc,pa,logr25`).
+  if (lines.length === 0) return out;
+  const header = lines[0]!.trim();
+  if (header !== HYPERLEDA_CSV_HEADER_V2) {
+    throw new Error(
+      `hyperleda CSV missing mod0/e_mod0 columns — delete data/raw/hyperleda_pa.csv and re-run fetchHyperLeda to upgrade the schema (expected '${HYPERLEDA_CSV_HEADER_V2}', got '${header}')`,
+    );
+  }
   for (let i = 1; i < lines.length; i++) {
-    const [pgc, pa, logr25] = lines[i]!.split(',');
+    const cells = lines[i]!.split(',');
+    const pgc = cells[0];
     if (!pgc) continue;
-    const paN = parseFloat(pa ?? '');
-    const lr = parseFloat(logr25 ?? '');
+    const paN = parseFloat(cells[1] ?? '');
+    const lr = parseFloat(cells[2] ?? '');
     if (Number.isFinite(paN) && Number.isFinite(lr)) {
       // logr25 = log10(major/minor); axisRatio = minor/major = 10^(-logr25)
-      out.set(pgc.trim(), { pa: paN, axisRatio: Math.pow(10, -lr) });
+      const mod0 = parseFloat(cells[5] ?? '');
+      const e_mod0 = parseFloat(cells[6] ?? '');
+      out.set(pgc.trim(), {
+        pa: paN,
+        axisRatio: Math.pow(10, -lr),
+        mod0,
+        e_mod0,
+      });
     }
   }
   return out;
@@ -399,6 +428,7 @@ export function parseGladeLine(
     ra,
     dec,
     z,
+    spectroscopicZ: z,
     // Heterogeneous-photometry mapping — see module docstring.
     magU: NaN,
     magG: bmag,
@@ -412,6 +442,10 @@ export function parseGladeLine(
     axisRatio: ledaEntry ? ledaEntry.axisRatio : null,
     positionAngleDeg: ledaEntry ? ledaEntry.pa : null,
     diameterKpc,
+    // GLADE rows have no AGN class signal and no Milliquas
+    // parent-survey prefix; both bytes stay 0.
+    classByte: 0,
+    parentSurveyByte: 0,
   };
 }
 
@@ -477,7 +511,7 @@ export function parseGlade2masxPgcLine(line: string): { massId: string; pgc: big
 }
 
 /**
- * Parse a GLADE v2.3 catalog blob (`data/raw/glade2.3.dat`) into canonical
+ * Parse a GLADE v2.3 catalog blob (`data/raw/glade/glade2.3.dat`) into canonical
  * records. See the module docstring for byte layout, mapping rationale,
  * and skip rules.
  *

@@ -6,6 +6,7 @@ import type { RenderFrameSettings } from '../../../../../src/@types/engine/frame
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
 import type { mat4 } from 'gl-matrix';
 import { Source } from '../../../../../src/data/sources';
+import type { GalaxySelection } from '../../../../../src/@types/engine/subsystems/Selection';
 
 // ── fixtures ──────────────────────────────────────────────────────
 
@@ -20,7 +21,7 @@ function makeCtx(): ReadyFrameContext {
     renderer: {} as never,
     postProcess: {} as never,
     volumeOffscreen: {} as never,
-    texturedImpostors: {} as never,
+    texturedDisks: {} as never,
   };
 }
 
@@ -49,7 +50,7 @@ function makeRendererSpy() {
 
 // A catalog stub with one galaxy at known world position + diameter.
 // Position is the flat Float32Array `positions[localIdx*3 .. +3]`.
-function makeStateWithSelection(selection: { source: Source; localIdx: number } | null): EngineState {
+function makeStateWithSelection(selection: GalaxySelection | null): EngineState {
   const positions = new Float32Array([0, 0, 100]); // 100 Mpc away on +z
   const diameterKpc = new Float32Array([60]);       // 60 kpc galaxy
   const catalog = { positions, diameterKpc } as unknown as Parameters<EngineState['sources']['catalogs']['set']>[1];
@@ -85,7 +86,7 @@ describe('selectionRingPass.enabled', () => {
   });
 
   it('returns true when renderer is non-null and a selection exists', () => {
-    const state = makeStateWithSelection({ source: Source.Glade, localIdx: 0 });
+    const state = makeStateWithSelection({ kind: 'galaxy', source: Source.Glade, localIdx: 0 });
     expect(selectionRingPass.enabled(state, makeCtx(), makeSettings())).toBe(true);
   });
 });
@@ -94,7 +95,7 @@ describe('selectionRingPass.enabled', () => {
 
 describe('selectionRingPass.draw', () => {
   it('computes ringRadiusPx from catalog data and forwards to renderer', () => {
-    const state = makeStateWithSelection({ source: Source.Glade, localIdx: 0 });
+    const state = makeStateWithSelection({ kind: 'galaxy', source: Source.Glade, localIdx: 0 });
     selectionRingPass.draw(PASS_STUB, makeCtx(), state, makeSettings({ pointSizePx: 4 }), DEPS_STUB);
 
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<typeof makeRendererSpy>;
@@ -111,7 +112,7 @@ describe('selectionRingPass.draw', () => {
   });
 
   it('uses apparentPxRadius when galaxy is closer and larger on screen', () => {
-    const state = makeStateWithSelection({ source: Source.Glade, localIdx: 0 });
+    const state = makeStateWithSelection({ kind: 'galaxy', source: Source.Glade, localIdx: 0 });
     // Override the catalog position to put galaxy at 10 Mpc so the
     // apparent radius dominates.
     const cat = state.sources.catalogs.get(Source.Glade)!;
@@ -126,7 +127,7 @@ describe('selectionRingPass.draw', () => {
   });
 
   it('calls renderer.render() exactly once with viewProj + viewport', () => {
-    const state = makeStateWithSelection({ source: Source.Glade, localIdx: 0 });
+    const state = makeStateWithSelection({ kind: 'galaxy', source: Source.Glade, localIdx: 0 });
     selectionRingPass.draw(PASS_STUB, makeCtx(), state, makeSettings(), DEPS_STUB);
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<typeof makeRendererSpy>;
     expect(rendererSpy.render).toHaveBeenCalledOnce();

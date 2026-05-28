@@ -18,10 +18,9 @@
  *                 `Source`.  Required for picking / hover (resolving a
  *                 GPU instance index back into GalaxyInfo) and for the
  *                 cross-catalog framing snapshot.
- *   - `famousMeta` / `famousXrefs` — optional sidecars that enrich the
- *                                     InfoCard text for the Famous catalog.
- *                                     Empty until the fetch resolves;
- *                                     consumers null-check before reading.
+ *   - `famousMeta` — optional sidecar that enriches the InfoCard text
+ *                    for the Famous catalog. Empty until the fetch
+ *                    resolves; consumers null-check before reading.
  *
  * ### Why a separate type
  *
@@ -34,9 +33,8 @@
 
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { Tier } from '../../data/Tier';
-import type { Source } from '../../../data/sources';
+import type { SourceType } from '../../data/SourceType';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
-import type { FamousXrefMap } from '../../loading/FamousXrefMap';
 
 export type EngineSourceState = {
   /**
@@ -53,9 +51,8 @@ export type EngineSourceState = {
    * the draw entirely — saves a writeBuffer + draw call.
    */
   drawMask: number;
-  catalogs: Map<Source, GalaxyCatalog>;
+  catalogs: Map<SourceType, GalaxyCatalog>;
   famousMeta: FamousMetaEntry[];
-  famousXrefs: FamousXrefMap;
   /**
    * Currently-loaded data tier — drives subsequent `setTier` diffing.
    * Seeded at engine init from `opts.initialTier` (defaulting to 'medium')

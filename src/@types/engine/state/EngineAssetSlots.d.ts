@@ -30,10 +30,11 @@ import type { PgcAliasMap } from '../../loading/PgcAliasMap';
 import type { ScalarCube } from '../../data/ScalarCube';
 import type { SyntheticVolumeReq } from '../../loading/SyntheticVolumeReq';
 import type { MCPMReq } from '../../loading/MCPMReq';
-import type { Source } from '../../../data/sources';
+import type { CompanionAssetReq } from '../../loading/CompanionAssetReq';
+import type { SourceType } from '../../data/SourceType';
 
 export type EngineAssetSlots = {
-  points: Map<Source, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>;
+  points: Map<SourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>;
   /**
    * Null until the GPU init IIFE constructs the filament renderer and
    * mints this slot — same lifecycle pattern as `state.gpu.renderer`.
@@ -42,19 +43,18 @@ export type EngineAssetSlots = {
    */
   filaments: AssetSlot<FilamentCloud, FilamentReq> | null;
   /**
-   * Famous-galaxy sidecar pair (`famous_meta.json` + `famous_xrefs.json`)
-   * routed through a slot for parity with point loads.  Loaded eagerly at
-   * engine boot — the JSON is tiny (well under 100 KB combined) so the
-   * cost is negligible, and the InfoCard depends on `meta`/`xrefs` being
-   * present whenever a famous galaxy is hovered.  The fetcher returns
-   * both files combined; the subscriber writes them straight into
-   * `state.sources.famousMeta` / `state.sources.famousXrefs`.
+   * Famous-galaxy `famous_meta.json` sidecar routed through a slot for
+   * parity with point loads.  Loaded eagerly at engine boot — the JSON
+   * is tiny so the cost is negligible, and the InfoCard depends on
+   * `meta` being present whenever a famous galaxy is hovered.  The
+   * subscriber writes the parsed array straight into
+   * `state.sources.famousMeta`.
    *
    * No `commit` step — there is nothing GPU-side to upload, just CPU
    * state mutation done by the subscriber.  Null until the IIFE mints it
    * (matches `filaments` for the same lifecycle reason).
    */
-  famousMeta: AssetSlot<FamousPayload, void> | null;
+  famousMeta: AssetSlot<FamousPayload, CompanionAssetReq> | null;
   /**
    * PGC → human-name alias map (`pgc_aliases.json`, ~1.7 MB).  Lazy:
    * the engine never auto-loads it; the public-handle's

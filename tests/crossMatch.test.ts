@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import type { SourceType } from '../src/@types/data/SourceType';
 
 // Note: we import from `tools/catalog/crossMatch` rather than the documented
 // `tools/catalog/buildAllBins` path because the latter pulls in `node:fs`/`node:url`,
@@ -21,13 +22,14 @@ import type { ParsedRecord } from '../tools/parsers/common';
  * the same sentinel the real parsers emit when a survey lacks that band
  * (see common.ts), so the merger is exercised with realistic input.
  */
-function rec(source: Source, ra: number, dec: number, z: number, objID = 0n): ParsedRecord {
+function rec(source: SourceType, ra: number, dec: number, z: number, objID = 0n): ParsedRecord {
   return {
     source,
     objID,
     ra,
     dec,
     z,
+    spectroscopicZ: z,
     magU: NaN,
     magG: 18,
     magR: NaN,
@@ -47,6 +49,10 @@ function rec(source: Source, ra: number, dec: number, z: number, objID = 0n): Pa
     // The cross-match logic doesn't read this field, so null exercises the
     // merger with realistic input.
     diameterKpc: null,
+    // classByte / parentSurveyByte are zero for every non-Milliquas
+    // source; the cross-match logic doesn't read them either.
+    classByte: 0,
+    parentSurveyByte: 0,
   };
 }
 

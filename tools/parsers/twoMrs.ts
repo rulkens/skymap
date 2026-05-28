@@ -124,7 +124,7 @@ export type TwoMrsResult = {
  *
  * The 2MRS catalog itself ships with neither a position angle nor a true
  * axis ratio; both have to come from the underlying 2MASS XSC, which we
- * pre-fetch into `data/raw/2mass_xsc_pa.csv` (see `tools/fetch2massXsc.ts`).
+ * pre-fetch into `data/raw/2mrs/2mass_xsc_pa.csv` (see `tools/fetch2massXsc.ts`).
  * Using a `Map` rather than, say, an `Object`/`Record<string, ...>` keeps
  * lookup O(1) for ~44k 2MRS rows × tens of thousands of XSC entries, and
  * sidesteps the prototype-pollution traps you get with key strings that
@@ -175,7 +175,7 @@ export function parseXscShapeCsv(rawText: string): XscShapeMap {
 }
 
 /**
- * Parse a 2MRS table-3 blob (`data/raw/2mrs_table3.dat`) into canonical
+ * Parse a 2MRS table-3 blob (`data/raw/2mrs/2mrs_table3.dat`) into canonical
  * records. See the module docstring for the byte layout, mapping rationale,
  * and skip rules.
  *
@@ -316,6 +316,7 @@ export function parseTwoMrs(rawText: string, xsc: XscShapeMap = new Map()): TwoM
       ra,
       dec,
       z: cz / C_KM_S,
+      spectroscopicZ: cz / C_KM_S,
       magU: NaN,
       magG: jc,
       magR: hc,
@@ -330,6 +331,10 @@ export function parseTwoMrs(rawText: string, xsc: XscShapeMap = new Map()): TwoM
       axisRatio: xscEntry ? xscEntry.sup_ba : null,
       positionAngleDeg: xscEntry ? xscEntry.sup_phi : null,
       diameterKpc,
+      // 2MRS rows have no AGN class signal and no Milliquas
+      // parent-survey prefix; both bytes stay 0.
+      classByte: 0,
+      parentSurveyByte: 0,
     });
   }
 

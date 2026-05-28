@@ -15,9 +15,6 @@ describe('TIMING_SLOT_NAMES', () => {
   it('maps every spec-defined slot to the correct begin/end indices', () => {
     expect(TIMING_SLOT_NAMES.get('point-sprites')).toEqual([0, 1]);
     expect(TIMING_SLOT_NAMES.get('procedural-disks')).toEqual([2, 3]);
-    // `textured-disks` inherits the legacy `textured-impostors` indices
-    // (4, 5) so historical samples stay comparable across the
-    // 2026-05-18 quad-removal rename.
     expect(TIMING_SLOT_NAMES.get('textured-disks')).toEqual([4, 5]);
     expect(TIMING_SLOT_NAMES.get('filaments')).toEqual([6, 7]);
     expect(TIMING_SLOT_NAMES.get('scalar-volume')).toEqual([8, 9]);
@@ -26,11 +23,12 @@ describe('TIMING_SLOT_NAMES', () => {
     expect(TIMING_SLOT_NAMES.get('ui-overlay')).toEqual([14, 15]);
     expect(TIMING_SLOT_NAMES.get('pick')).toEqual([16, 17]);
     expect(TIMING_SLOT_NAMES.get('volume-upsample')).toEqual([18, 19]);
+    expect(TIMING_SLOT_NAMES.get('horizon-shell')).toEqual([20, 21]);
   });
 
-  it('reserves slots 20-31 (query set sized 32, 10 in use)', () => {
+  it('reserves slots 22-31 (query set sized 32, 11 in use)', () => {
     expect(TIMING_QUERY_SET_SIZE).toBe(32);
-    expect(TIMING_SLOT_NAMES.size).toBe(10);
+    expect(TIMING_SLOT_NAMES.size).toBe(11);
   });
 
   it('never assigns the same index to two slots', () => {

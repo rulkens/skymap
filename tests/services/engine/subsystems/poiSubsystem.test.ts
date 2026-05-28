@@ -1,14 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { createPoiSubsystem } from '../../../../src/services/engine/subsystems/poiSubsystem';
+import {
+  createPoiSubsystem,
+  POI_STYLES,
+} from '../../../../src/services/engine/subsystems/poiSubsystem';
 import type { PointOfInterest } from '../../../../src/@types/engine/subsystems/PointOfInterest';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
-function makeState(): EngineState {
+function makeState(selectedPoiId: string | null = null): EngineState {
   return {
     subsystems: {
       scheduler: { requestRender: () => {} },
       fades: { fadeTo: () => Promise.resolve() },
+      selection: {
+        selected: () => (selectedPoiId !== null ? { kind: 'poi', id: selectedPoiId } : null),
+      },
     },
   } as unknown as EngineState;
 }
@@ -382,6 +388,112 @@ describe('poiSubsystem — produceMarkers', () => {
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────
+// Far-distance fade-out (the symmetric counterpart to the existing
+// markerMaxApparentRadiusPx close-approach fade).  Below
+// markerMinApparentRadiusPx the descriptor is dropped; inside the
+// band it smoothsteps 0 → 1.  Labels mirror the same math so they
+// fade together with their rings rather than orphaning floating text.
+//
+// pxPerRad ≈ 935.307 at the test ctx (60° fovY, 1080 px height), so
+// apparentRadiusPx ≈ (radiusMpc / distanceMpc) * 935.307.
+// ─────────────────────────────────────────────────────────────────────
+describe('poiSubsystem — far-distance marker fade-out', () => {
+  it('cluster: skips descriptor below the apparent-radius floor', () => {
+    // radiusMpc=1, distance=150 Mpc → apRadPx ≈ 6.2 < cluster floor (12).
+    const sub = createPoiSubsystem();
+    sub.setPois([
+      { id: 'tiny', name: 'Tiny', category: 'cluster',
+        worldPos: [150, 0, 0], physicalRadiusMpc: 1 },
+    ]);
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+    expect(markers).toHaveLength(0);
+  });
+
+  it('cluster: smoothsteps fadeAlpha at the band midpoint', () => {
+    // Want apRadPx = floor + band/2 = 12 + 6 = 18.
+    // radiusMpc=1, distance = 935.307 / 18 ≈ 51.96 Mpc.
+    const sub = createPoiSubsystem();
+    sub.setPois([
+      { id: 'midband', name: 'Mid', category: 'cluster',
+        worldPos: [51.96, 0, 0], physicalRadiusMpc: 1 },
+    ]);
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+    expect(markers).toHaveLength(1);
+    // smoothstep(0.5) === 0.5; ringColor's at-rest alpha is 1 in hexToGl('#B39947').
+    // ringAlpha = atRest * fadeAlpha = 1 * 0.5.
+    expect(markers[0]!.ringColor[3]).toBeCloseTo(0.5, 2);
+  });
+
+  it('cluster: full alpha above the band', () => {
+    // worldPos=[10,0,0], radius=2 → apRadPx ≈ 187, well above 24.
+    const sub = createPoiSubsystem();
+    sub.setPois([
+      { id: 'big', name: 'Big', category: 'cluster',
+        worldPos: [10, 0, 0], physicalRadiusMpc: 2 },
+    ]);
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+    expect(markers).toHaveLength(1);
+    expect(markers[0]!.ringColor[3]).toBeCloseTo(1, 5);
+  });
+
+  it('supercluster: skips below its (higher) floor of 28 px', () => {
+    // radiusMpc=1, distance=200 → apRadPx ≈ 4.7 < 28.
+    const sub = createPoiSubsystem();
+    sub.setPois([
+      { id: 'sc-far', name: 'Far SC', category: 'supercluster',
+        worldPos: [200, 0, 0], physicalRadiusMpc: 1 },
+    ]);
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+    expect(markers).toHaveLength(0);
+  });
+
+  it('void: skips below its floor of 28 px', () => {
+    // radiusMpc=1, distance=500 → apRadPx ≈ 1.87 < 28.
+    const sub = createPoiSubsystem();
+    sub.setPois([
+      { id: 'void-far', name: 'Far Void', category: 'void',
+        worldPos: [500, 0, 0], physicalRadiusMpc: 1 },
+    ]);
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+    expect(markers).toHaveLength(0);
+  });
+
+  it('label fadeAlpha matches marker alpha at the band midpoint', () => {
+    // Same mid-band cluster scenario as the smoothstep test above —
+    // the label produced by produceLabels should fade in lockstep with
+    // the ring rather than lingering at full alpha.
+    const sub = createPoiSubsystem();
+    sub.setPois([
+      { id: 'midband', name: 'Mid', category: 'cluster',
+        worldPos: [51.96, 0, 0], physicalRadiusMpc: 1 },
+    ]);
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+    const labels = sub.produceLabels(makeState(), makeCtx()).labels;
+    expect(markers).toHaveLength(1);
+    expect(labels).toHaveLength(1);
+    // ringAlpha already includes the at-rest style alpha (1.0 for
+    // cluster) × fadeAlpha; label.fadeAlpha is the bare fade factor.
+    expect(labels[0]!.fadeAlpha).toBeCloseTo(markers[0]!.ringColor[3], 5);
+  });
+
+  it('famous galaxies are unaffected by the new ring-radius floor', () => {
+    // Famous galaxies skip produceMarkers (haloColor === null) and don't
+    // set physicalRadiusMpc → the apRadPx branch in produceLabels is
+    // also skipped.  The label should still emit at the camera distance
+    // the existing min-apparent-size tests use.
+    const sub = createPoiSubsystem();
+    sub.setPois([{
+      id: 'm31', name: 'Andromeda', category: 'famousGalaxy',
+      worldPos: [0.78, 0, 0],
+      minApparentSizePx: 4,
+      apparentDiameterKpc: 50,
+    }]);
+    const labels = sub.produceLabels(makeState(), makeCtx()).labels;
+    expect(labels).toHaveLength(1);
+  });
+});
+
 // Note: a former "produceLabels awake propagation" block asserted that
 // the marker close-approach fade-out set awake=true while mid-band.
 // That contract was reversed by main's #146 ("drop spurious 'awake'
@@ -510,5 +622,20 @@ describe('poiSubsystem · marker/label visibility', () => {
 
     expect(labels).toHaveLength(0);
     expect(markers).toHaveLength(1);
+  });
+});
+
+describe('POI_STYLES labelColor alpha', () => {
+  it('every labelColor has alpha=1 so the straight->premultiplied migration is a no-op', () => {
+    // Migration safety: the label pack loop now multiplies rgb * a on
+    // write (straight RGBA -> premultiplied at the GPU boundary).  If a
+    // future POI_STYLES edit lowers a labelColor's alpha below 1, the
+    // new pack-loop premultiplication will silently dim its RGB
+    // channels relative to the pre-migration behaviour.  This test
+    // fails loudly so the implementer can either re-balance the RGB
+    // intent or confirm the dimming was deliberate.
+    for (const [category, style] of Object.entries(POI_STYLES)) {
+      expect(style.labelColor[3], `${category}.labelColor alpha`).toBe(1);
+    }
   });
 });

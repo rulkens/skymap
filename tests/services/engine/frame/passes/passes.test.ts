@@ -31,6 +31,7 @@ import {
   proceduralDisksPass,
   filamentsPass,
   milkyWayPass,
+  horizonShellPass,
 } from '../../../../../src/services/engine/frame/passes';
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -66,7 +67,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
   const renderer = { draw: vi.fn() } as any;
   const postProcess = { view: {} as GPUTextureView, draw: vi.fn(), resize: vi.fn(), destroy: vi.fn() } as any;
   const volumeOffscreen = { view: {} as GPUTextureView, resize: vi.fn(), destroy: vi.fn() } as any;
-  const texturedImpostors = { runFrame: vi.fn(), lastOutput: { quads: [], disks: [] }, hasInFlightWork: () => false } as any;
+  const texturedDisks = { runFrame: vi.fn(), lastOutput: { quads: [], disks: [] }, hasInFlightWork: () => false } as any;
   return {
     isReady: true,
     cam,
@@ -77,7 +78,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     renderer,
     postProcess,
     volumeOffscreen,
-    texturedImpostors,
+    texturedDisks,
     ...overrides,
   };
 }
@@ -116,9 +117,9 @@ function makeDeps(overrides: Partial<PassDeps> = {}): PassDeps {
     filamentRenderer: null,
     scalarVolumeRenderer: null,
     milkyWayRenderer: { draw: vi.fn() } as any,
+    horizonShellRenderer: { draw: vi.fn() } as any,
     catalogs: new Map(),
     famousMeta: [],
-    famousXrefs: {} as any,
     milkyWayITimeSec: 0,
     ...overrides,
   };
@@ -143,20 +144,16 @@ const PASS_STUB = { setPipeline: vi.fn(), setVertexBuffer: vi.fn(), setBindGroup
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 describe('HDR_PASSES registry', () => {
-  it('contains the seven HDR passes in canonical draw order', () => {
+  it('contains the eight HDR passes in canonical draw order', () => {
     // Order is load-bearing for HMR-stability of the encoder record;
     // see passes/index.ts module header.  Marker-lines and labels
-    // moved out of HDR_PASSES to UI_PASSES (post-tone-map overlay) so
-    // they could escape the tone-map curve compression and avoid the
-    // OVER-blend coherency issue on tile-based GPUs.  The former
-    // `textured-impostors` slot was briefly split into
-    // (`textured-quads`, `textured-disks`) on 2026-05-18 — the quad
-    // half was deleted the same day along with its renderer because
-    // the build-pipeline orientation fallback meant the quad branch
-    // never fired in practice.  Cluster-markers (cluster-viz sub-plan
-    // 2 task 14) is the seventh additive entry, drawn last so the
-    // halo/ring overlay composites over the cosmic-web volume.
-    expect(HDR_PASSES).toHaveLength(7);
+    // live in UI_PASSES (post-tone-map overlay), not HDR_PASSES, so
+    // they escape the tone-map curve compression and dodge the
+    // OVER-blend coherency issue on tile-based GPUs.  The horizon shell
+    // draws after the volume upsample (so cosmic-web densities
+    // composite over it) and before cluster-markers (so marker rings
+    // pop on top).
+    expect(HDR_PASSES).toHaveLength(8);
     expect(HDR_PASSES.map((p) => p.name)).toEqual([
       'point-sprites',
       'procedural-disks',
@@ -164,6 +161,7 @@ describe('HDR_PASSES registry', () => {
       'milky-way',
       'filaments',
       'volume-upsample',
+      'horizon-shell',
       'cluster-markers',
     ]);
   });
@@ -220,11 +218,10 @@ describe('proceduralDisksPass.enabled', () => {
   });
 });
 
-// Coverage for the split halves of the former `textured-impostors`
-// pass lives in `texturedQuadsPass.test.ts` and
+// Coverage for the `textured-disks` pass lives in
 // `texturedDisksPass.test.ts` (one test file per Pass module, matching
 // the convention used by every other entry in `passes/`).  The
-// HDR_PASSES registry check above pins both names in canonical order.
+// HDR_PASSES registry check above pins the name in canonical order.
 
 describe('filamentsPass.enabled', () => {
   it('returns true when filamentsEnabled is true (renderer presence checked in draw)', () => {
@@ -347,10 +344,45 @@ describe('milkyWayPass.draw', () => {
   });
 });
 
+describe('horizonShellPass.enabled', () => {
+  it('returns false near the origin — the inverse of the Milky-Way band', () => {
+    // Default makeCtx() camera at 5 Mpc is far below the shell's
+    // fade-in band (5% of 14.3 Gpc ≈ 0.7 Gpc), so the pass is skipped
+    // — no empty full-screen ray-march pass at galaxy-scale zoom.
+    expect(horizonShellPass.enabled(STATE_STUB, makeCtx(), makeSettings())).toBe(false);
+  });
+
+  it('returns true once the camera pulls back to cosmological scale', () => {
+    // 8 Gpc is past the 40%-of-radius full-strength point (~5.7 Gpc).
+    const ctx = makeCtx({
+      drawCamPos: [0, 0, 8000] as Readonly<[number, number, number]>,
+    });
+    expect(horizonShellPass.enabled(STATE_STUB, ctx, makeSettings())).toBe(true);
+  });
+});
+
+describe('horizonShellPass.draw', () => {
+  it('forwards the distance-fade alpha as the 4th draw arg', () => {
+    const drawSpy = vi.fn();
+    const deps = makeDeps({ horizonShellRenderer: { draw: drawSpy } as any });
+    const ctx = makeCtx({
+      drawCamPos: [0, 0, 8000] as Readonly<[number, number, number]>,
+    });
+    horizonShellPass.draw(PASS_STUB, ctx, STATE_STUB, makeSettings(), deps);
+    expect(drawSpy).toHaveBeenCalledTimes(1);
+    const args = drawSpy.mock.calls[0]!;
+    expect(args[0]).toBe(PASS_STUB);
+    expect(args[1]).toBe(ctx.cam);
+    expect(args[2]).toEqual([ctx.canvasSize.width, ctx.canvasSize.height]);
+    // 8 Gpc is past the full-strength point → alpha 1.0.
+    expect(args[3]).toBe(1.0);
+  });
+});
+
 describe('pointSpritesPass.draw', () => {
   it('packs (source, localIdx) into the selectedPacked u32', () => {
     const ctx = makeCtx();
-    const settings = makeSettings({ selected: { source: Source.SDSS, localIdx: 42 } });
+    const settings = makeSettings({ selected: { kind: 'galaxy', source: Source.SDSS, localIdx: 42 } });
     const deps = makeDeps();
     pointSpritesPass.draw(PASS_STUB, ctx, STATE_STUB, settings, deps);
     const drawSpy = ctx.renderer.draw as ReturnType<typeof vi.fn>;

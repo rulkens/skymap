@@ -20,12 +20,15 @@ function makeCatalog(positions: ReadonlyArray<readonly [number, number, number]>
     flat[i * 3 + 2] = positions[i]![2];
   }
   const z = new Float32Array(count);
+  const zb = new Uint8Array(count);
   return {
     count,
     objIDs: new BigUint64Array(count),
     positions: flat,
     magU: z, magG: z, magR: z, magI: z, magZ: z,
     axisRatio: z, positionAngleDeg: z, diameterKpc: z,
+    classByte: zb, parentSurveyByte: zb,
+    spectroscopicZ: z,
   };
 }
 

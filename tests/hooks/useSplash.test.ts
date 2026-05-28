@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useSplash, CURRENT_SPLASH_VERSION, SPLASH_STORAGE_KEY } from '../../src/hooks/useSplash';
 import type { UseSplashInput } from '../../src/@types/splash/UseSplashInput';
+import { Source } from '../../src/data/sources';
 
 function makeInput(overrides: Partial<UseSplashInput> = {}): UseSplashInput {
   return {
@@ -60,7 +61,7 @@ describe('useSplash', () => {
     expect(result.current.blocked).toBe(true);
     rerender({
       input: makeInput({
-        status: { kind: 'ready', count: 100, source: 'sdss.bin' },
+        status: { kind: 'ready', count: 100, source: Source.SDSS },
         loadProgress: null,
         famousMetaReady: true,
       }),
@@ -72,7 +73,7 @@ describe('useSplash', () => {
     const { result } = renderHook(() =>
       useSplash(
         makeInput({
-          status: { kind: 'ready', count: 100, source: 'sdss.bin' },
+          status: { kind: 'ready', count: 100, source: Source.SDSS },
           loadProgress: { loadedBytes: 1, totalBytes: 2, inFlightCount: 1 },
           famousMetaReady: true,
         }),
@@ -161,7 +162,7 @@ describe('useSplash error mapping', () => {
     const { result } = renderHook(() =>
       useSplash(
         makeInput({
-          status: { kind: 'ready', count: 100, source: 'sdss.bin' },
+          status: { kind: 'ready', count: 100, source: Source.SDSS },
           loadProgress: null,
           famousMetaReady: true,
           famousMetaFailed: true,
@@ -187,7 +188,7 @@ describe('useSplash error mapping', () => {
     const { result } = renderHook(() =>
       useSplash(
         makeInput({
-          status: { kind: 'ready', count: 100, source: 'sdss.bin' },
+          status: { kind: 'ready', count: 100, source: Source.SDSS },
           loadProgress: null,
           famousMetaReady: true,
         }),

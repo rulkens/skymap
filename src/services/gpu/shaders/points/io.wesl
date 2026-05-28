@@ -169,12 +169,19 @@ struct Uniforms {
   // The thumbnail subsystem's procedural-disk pass fades IN across an
   // apparent-pixel-size band [pxFadeStart, pxFadeEnd]. Without a
   // complementary fade-OUT on the points pass, both passes would be
-  // fully present inside the band — a 'double-bright donut'. We feed
-  // the same two thresholds in here and multiply the per-fragment alpha
-  // by '1 - smoothstep(start, end, sizePx)' before output.
+  // fully present inside the band — a 'double-bright donut'. The
+  // vertex stage folds '1 - smoothstep(start, end, apparentDiameterPx)'
+  // into 'out.shaded.rgb', so the fragment reads no per-pixel state for
+  // the crossfade.
   pxFadeStart: f32,
   pxFadeEnd: f32,
-  _padFade0: f32,
+  // 0 = visual pass, 1 = pick pass.  Set in-place by pickRenderer
+  // before each pick draw and reset by the next visual frame's full
+  // buffer rewrite.  When 1, the vertex stage skips the procedural-
+  // disk crossfade-OUT and the intensity-floor degenerate-clip cull;
+  // without those gates, galaxies handed off to a procedural disk
+  // would not be pickable (the disk renderer has no pick pipeline).
+  pickPass: u32,
   _padFade1: f32,
 };
 
@@ -194,18 +201,10 @@ struct PerVertex {
   // scale runs backwards).
   @location(1) magnitude: f32,
 
-  // Survey-specific colour index (e.g. SDSS g−r, GLADE B−J, 2MRS J−K).
-  // Negative → blue, positive → red. Sentinel value '>= 100' marks
-  // 'no observed colour for this survey'.
+  // Rest-frame colour-ramp position in [0, 2]. K-correction and the
+  // unknown-colour fallback (1.05 substitution) are already applied at
+  // bake time by 'pickColourIndex'; the shader just calls 'ramp(...)'.
   @location(2) colorIndex: f32,
-
-  // Per-row K-correction coefficient (units: per unit redshift z).
-  // Each survey has a different colour pair with different sensitivity
-  // to bandpass shift, so 'k' lives per-instance:
-  //   - SDSS u−g    →  k ≈ 3.0
-  //   - GLADE B−J   →  k ≈ 1.0
-  //   - 2MRS  J−K   →  k ≈ 0.0
-  @location(3) kPerZ: f32,
 
   // Galaxy minor/major axis ratio b/a in (0, 1] — with the SIGN BIT
   // carrying the fallback-orientation flag. Real measurements are
@@ -219,34 +218,36 @@ struct PerVertex {
   // The synthetic-fallback source ships its axisRatio array filled with
   // NaN. WGSL's 'abs(NaN)' returns NaN and 'NaN < 0.0' is false, so
   // the vertex stage routes synthetic rows through the existing
-  // 'axisRatio > 0 is false' round-mask path with 'isFallback = 0u'.
-  @location(4) axisRatio: f32,
+  // 'axisRatio > 0 is false' round-mask path with the fallback flag clear.
+  @location(3) axisRatio: f32,
 
   // Position angle in degrees, [0, 180). East-of-north convention; we
   // negate before applying because UV-space y points down on screen.
-  @location(5) positionAngleDeg: f32,
+  @location(4) positionAngleDeg: f32,
 
-  // Per-galaxy physical diameter in kiloparsecs. Drives the apparent-
-  // size billboard radius. v4 binary format guarantees a finite
-  // positive value (real measurement or 30-kpc fallback).
-  @location(6) diameterKpc: f32,
+  // Per-galaxy padded billboard radius in Mpc — equals
+  // 'max(diameterKpc, 30) * 2 / 1000' baked at upload time. The 4×
+  // thumbnail-footprint padding and the synthetic-fallback floor are
+  // already applied; the shader reads the value directly as the
+  // half-extent of the world-space quad.
+  @location(5) radiusMpc: f32,
 
   // Per-galaxy 1/V_max weight for Malmquist-bias correction. Baked at
   // upload time as 'clamp((dRef / dMax(M, m_lim))³, 0, 1)'. Read by the
   // vertex shader's intensity computation, but ONLY when
   // 'u.biasMode == 2u'.
-  @location(7) vMaxWeight: f32,
+  @location(6) vMaxWeight: f32,
 
   // Per-galaxy Schechter density-correction ratio. Baked at upload time
   // as 'clamp(N_ref / n(d), 0, 10)' (originally a 200-step trapezoidal
   // integral evaluated per-fragment; now a single multiply). Read in
   // 'fs' only when 'u.biasMode == 3u'.
-  @location(8) schechterRatio: f32,
+  @location(7) schechterRatio: f32,
 
   // Per-galaxy HEALPix angular re-weight. Baked at mode-toggle time as
   // 'clamp(medianCount / localCount, 0.1, 10)' (default 1.0). Read in
   // 'fs' only when 'u.biasMode == 4u'.
-  @location(9) angularDensityWeight: f32,
+  @location(8) angularDensityWeight: f32,
 };
 
 // ─── vertex-to-fragment interface ───────────────────────────────────
@@ -268,41 +269,48 @@ struct VSOut {
   // circle/ellipse falloff.
   @location(0) uv: vec2<f32>,
 
-  // Pre-computed colour for this point (from the colourIndex ramp).
-  // Flat-interpolated — all 6 vertices of an instance share the value,
-  // so smooth interpolation would do work for an identical result.
-  @location(1) @interpolate(flat) tint: vec3<f32>,
-
-  // Per-instance brightness with every per-instance modulator folded in:
-  // magnitude-based intensity × brightness slider × vMax (mode 2) ×
-  // Schechter (mode 3) × angular reweight (mode 4) × depth-fade
-  // (camera-distance falloff). Fragment multiplies in only per-pixel
-  // terms (Gaussian falloff, procedural-disk fade, source fade).
-  @location(2) @interpolate(flat) intensity: f32,
+  // Fully-shaded per-instance appearance packed into one vec4.
+  // .rgb = ramp(restColorIndex) × magenta highlight × intensity, where
+  //        intensity already folds in the magnitude clamp, brightness
+  //        slider, Malmquist mode-2/3/4 weights, depth fade, and the
+  //        procedural-disk crossfade-out. Fragment writes
+  //        '(rgb * alpha, alpha)' directly with no further scaling.
+  // .w   = pre-computed safeAB (axis ratio clamped to [0.05, 1.0],
+  //        defaulted to 1.0 for invalid/NaN inputs). Fragment uses .w
+  //        directly to squash the elliptical mask.
+  // Flat-interpolated — all 6 vertices of an instance share the value.
+  @location(1) @interpolate(flat) shaded: vec4<f32>,
 
   // Packed (source, localIdx) identity used by 'fsPick' to write the
   // pick texture. Flat-interpolated because integers can't be linearly
   // interpolated, and all 6 vertices of one instance share the same value.
-  @location(3) @interpolate(flat) instanceIdx: u32,
+  @location(2) @interpolate(flat) instanceIdx: u32,
 
-  // Forwarded 'abs(axisRatio)' so the fragment stage's elliptical mask
-  // uses the unsigned magnitude. Sign bit was the fallback flag (now
-  // extracted into 'isFallback'). Per-instance constant.
-  @location(5) @interpolate(flat) axisRatio: f32,
+  // Pre-computed (cos, sin) of the position-angle rotation. Computed
+  // once per primitive in 'vs' instead of per fragment, saving millions
+  // of trig calls per frame. Packed into a vec2 at one location.
+  @location(3) @interpolate(flat) paRotation: vec2<f32>,
 
-  // Pre-computed cos/sin of the position-angle rotation. Computed once
-  // per primitive in 'vs' instead of per fragment, saving millions of
-  // trig calls per frame.
-  @location(6) @interpolate(flat) paCs: f32,
-  @location(15) @interpolate(flat) paSn: f32,
+  // 1u once 'apparentDiameterPx >= u.pxFadeStart' — the sprite has
+  // entered the procedural-disk handoff band and the visual disk has
+  // started rendering on top.  pickFragment branches on this: 0u →
+  // generous circular mask for faint far-field dots; 1u → projected
+  // ellipse matching the visual disk, so the pick area follows the
+  // disk shape and doesn't swallow clicks for galaxies behind it.
+  // Consumed only by pickFragment; visual fs declares no input here
+  // and the WGSL linker drops the unused varying.
+  @location(4) @interpolate(flat) isDiskHandoff: u32,
 
-  // 1u when this row's orientation came from the deterministic fallback
-  // (sign bit of axisRatio was set at upload time); 0u for real
-  // measurements.
-  @location(7) @interpolate(flat) isFallback: u32,
-
-  // Per-instance billboard radius in screen-space pixels. Used by the
-  // fragment stage to fade points-pass alpha across the procedural-
-  // disk crossfade band. All 6 vertices share the same value.
-  @location(13) @interpolate(flat) sizePx: f32,
+  // Projected disk basis in billboard-relative coordinates, written
+  // by the vertex stage when 'inPickPass && isDiskHandoff'.  Each is
+  // the screen-space delta from the billboard centre to the outer
+  // edge along the world-space major / minor axis (built via
+  // 'lib/orientation::diskAxes'), divided by the billboard's
+  // half-extent in pixels.  pickFragment builds M = [major|minor],
+  // inverts it, and applies to 'uv' to test the ellipse — matches
+  // the procedural-disk shape on screen for any camera pose.
+  // Zero-filled when the regime doesn't apply (visual pass, or
+  // far-field dot pick); the fragment doesn't read them in that case.
+  @location(5) @interpolate(flat) pickMajorBillboard: vec2<f32>,
+  @location(6) @interpolate(flat) pickMinorBillboard: vec2<f32>,
 };

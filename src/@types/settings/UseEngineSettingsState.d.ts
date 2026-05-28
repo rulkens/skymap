@@ -43,6 +43,8 @@ export type UseEngineSettingsState = {
   highlightFallback: boolean;
   realOnlyMode: boolean;
   depthFadeEnabled: boolean;
+  /** Mirrors `EngineSettingsState.debug.showPickBuffer`. */
+  showPickBuffer: boolean;
   visibleSourceMask: number;
   biasMode: BiasMode;
   absMagLimit: number;
@@ -55,11 +57,11 @@ export type UseEngineSettingsState = {
    */
   volumesEnabled: boolean;
   /**
-   * Snapshot of every registered field's UI state — rebuilt on each
-   * `onVolumeFieldsChanged` callback via `handle.getVolumeFieldsState()`.
-   * Starts empty (no cubes are registered at startup).  Each row carries
-   * its own `paletteId` (per-field palette), so the dropdown lives
-   * inside each field's row in the SettingsPanel.
+   * Snapshot of every registered field's UI state — mirrored from the
+   * engine via the `volumes.onFieldsChanged(fields)` callback after
+   * every mutation.  Synthetic-fixture handles (`debug-*`) are filtered
+   * inside the hook so consumers only see real science volumes.  Starts
+   * empty (no cubes are registered at startup).
    */
   volumeFields: ReadonlyArray<VolumeFieldRowData>;
   /**

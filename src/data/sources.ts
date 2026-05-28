@@ -1,71 +1,44 @@
 /**
- * Source enum + per-survey metadata + bitmask helpers.
+ * `Source` enum + `SOURCE_REGISTRY`.
  *
- * This module is the single source of truth for "which astronomical survey
- * does this point come from?" The renderer, the binary loader, and the UI
- * controls all import from here, so changing a value in this file ripples
- * through every layer of the pipeline. That's deliberate — by funnelling
- * survey identity through one tiny module, we get a compile-time check that
- * everyone agrees on the integer codes used on disk.
+ * The single registry of every data source skymap loads. Four kinds,
+ * discriminated by `type`:
  *
- * ---
- * ### Why a numeric enum (not a string union)?
+ *   'survey'   — per-point galaxy catalogs (SDSS, GLADE, 2MRS, Famous,
+ *                Milliquas, Synthetic).  Codes are baked into the `.bin`
+ *                point-cloud format and packed into the pick texture.
+ *   'poi'      — galaxy-cluster / supercluster / void marker rings.
+ *                Codes are also packed into the pick texture (upper 5 bits).
+ *   'filament' — derived line-strip geometry (DisPerSE skeleton).
+ *                Single global asset; no per-record identity.
+ *   'volume'   — scalar-field cubes (CF-4 DM density, MCPM cosmic web).
+ *                Each volume carries its own presentation defaults
+ *                (palette, contrast, exposure, …).
  *
- * Each point in our binary `.bin` catalog format carries a 1-byte `source`
- * tag (see `galaxyCatalogFormat.ts`). A string like `'SDSS'` would cost 4
- * bytes per point — for 10 million points that's 40 MB of redundant text.
- * A `u8` is one byte and lets the GPU compute shader test
- * `sourceMask & (1u << src)` to filter visibility per-frame at zero cost.
- *
- * The numeric values below are therefore part of the *on-disk file format*.
- * Renaming a member is fine; *renumbering* it would silently break every
- * `.bin` file ever written. If you ever need to deprecate a source, mark
- * it as obsolete and append a new one — never recycle the integer.
- *
- * ---
- * ### Why a bitmask (not a `Set<Source>`)?
- *
- * The renderer needs to ask "is source X currently visible?" for *every
- * point, every frame*. With ~10 million points at 60 fps that's 600 million
- * lookups per second. A 32-bit integer mask answers that question in one
- * `AND` and one compare; a JS `Set` would allocate and dereference, which
- * is unthinkable inside a render loop and isn't even possible inside a
- * WGSL shader.
- *
- * 32 bits gives us 32 possible sources — vastly more than the four we
- * currently track, with comfortable headroom for future catalogs (DESI,
- * Euclid, LSST...).
- *
- * ---
- * ### rev-2 transition note (2026-05-03)
- *
- * Earlier drafts of this module enumerated **2MPZ** (slot 3) and **6dFGS**
- * (slot 4) as separate sources. Both were dropped in favour of **GLADE**
- * (Galaxy List for the Advanced Detector Era, v2.3) because GLADE already
- * pre-merges them along with HyperLEDA, GWGC, 2MASS XSC, and SDSS-DR12Q,
- * with cross-match deduplication done by the GLADE team. Loading those
- * catalogs separately would mean re-doing the dedup work ourselves and
- * carrying double-counted galaxies until we did. Collapsing to a single
- * all-sky GLADE source keeps the rendering architecture simpler and the
- * data more correct out of the box.
- *
- * Note that we did **not** recycle integer codes 3 and 4 from the dropped
- * surveys: GLADE took slot 3, and slot 4 is reserved for the next survey.
- * No production `.bin` files were ever shipped with the old codes, so the
- * renumber is safe — but the rule "never recycle a code" still applies
- * for any future change.
+ * Only `'survey'` and `'poi'` codes are persisted to disk / packed into
+ * GPU buffers; `'filament'` and `'volume'` codes exist solely so every
+ * data source has one place to look. The visibility-bitmask helpers in
+ * `utils/sourceMask` operate on survey codes only.
  */
 
-import type { BandLabels } from '../@types/data/BandLabels';
+import type { SourceEntry } from '../@types/data/SourceEntry';
+import type { SourceType } from '../@types/data/SourceType';
 
 // ─── The enum itself ────────────────────────────────────────────────────────
 
 /**
- * Stable numeric tag identifying which survey a galaxy was observed by.
+ * Stable numeric tag for every data source. Used as a `.bin` byte for
+ * survey rows, packed into the pick texture for survey + POI hits, and
+ * as a registry key for filament + volume assets.
  *
- * IMPORTANT: these integer values are persisted in the `.bin` point-cloud
- * file format. Treat them like API version numbers — append, never
- * renumber. See module docstring for the full rationale.
+ * IMPORTANT: integer values 0..8 are persisted in the `.bin` point-cloud
+ * file format AND packed into the pick texture's upper 5 bits. Treat
+ * them like API version numbers — append, never renumber. Recycling a
+ * code silently breaks every `.bin` ever written and every saved
+ * selection URL.
+ *
+ * Codes ≥ 9 (filaments, volumes) are not persisted anywhere, but the
+ * same "append, never renumber" discipline applies for consistency.
  */
 export const Source = {
   /** Procedurally-generated stand-in cloud (no real photometry). */
@@ -77,23 +50,20 @@ export const Source = {
   /**
    * Galaxy List for the Advanced Detector Era (GLADE v2.3) — an all-sky
    * compilation that pre-merges HyperLEDA, GWGC, 2MASS XSC, 2MPZ, 6dFGS,
-   * and SDSS-DR12Q with cross-match dedup. Acts as our "deep all-sky"
-   * baseline so we don't have to re-merge those parent catalogs ourselves.
+   * and SDSS-DR12Q with cross-match dedup. Acts as the "deep all-sky"
+   * baseline so the merger doesn't have to re-dedup those parent catalogs.
    */
   Glade: 3,
   /**
    * Curated atlas of well-known galaxies (Messier + NGC greatest-hits).
-   * Distinct from the survey-derived sources because entries are
-   * hand-picked + carry curated descriptions and high-quality processed
-   * thumbnails.  Many entries (M31, M33, M81, NGC 253) sit too close to
-   * us to survive 2MRS/GLADE's small-z filtering, so they need their own
+   * Distinct from survey-derived sources because entries are hand-picked,
+   * carry curated descriptions, and ship with high-quality processed
+   * thumbnails. Many entries (M31, M33, M81, NGC 253) sit too close to
+   * survive 2MRS/GLADE's small-z filtering, so they need their own
    * positions rather than just tagging existing rows.
    */
   Famous: 4,
   /**
-   * POI-only — used for pick encoding, no .bin file representation,
-   * deliberately excluded from `ALL_SOURCES`.
-   *
    * Galaxy-cluster anchors (Virgo, Coma, Norma, ...). Picks against a
    * cluster's marker ring return source code 5 in the upper 5 bits of
    * the packed identity; the 27-bit `localIdx` carries the POI's index
@@ -102,275 +72,389 @@ export const Source = {
    * §6.2 for the per-category allocation rationale.
    */
   Cluster: 5,
-  /**
-   * POI-only — used for pick encoding, no .bin file representation,
-   * deliberately excluded from `ALL_SOURCES`.
-   *
-   * Supercluster anchors (Hydra Wall, Hercules SC, ...). Same encoding
-   * scheme as Cluster, distinct source code so the pick result is
-   * self-describing without an extra category lookup.
-   */
+  /** Supercluster anchors (Hydra Wall, Hercules SC, ...). Same encoding as Cluster. */
   Supercluster: 6,
-  /**
-   * POI-only — used for pick encoding, no .bin file representation,
-   * deliberately excluded from `ALL_SOURCES`.
-   *
-   * Void anchors (Sculptor Void, Local Void, Boötes Void). Same
-   * encoding scheme as Cluster / Supercluster.
-   */
+  /** Void anchors (Sculptor Void, Local Void, Boötes Void). Same encoding as Cluster. */
   Void: 7,
+  /**
+   * Milliquas v8 (Flesch 2023) — the Million Quasars compilation. AGN
+   * point sources (QSOs, BL Lacs, type-1 Seyferts, Seyfert-1 cores,
+   * candidate quasars) rendered alongside the galaxy surveys for the
+   * optically-bright AGN sky. Slot 8 — slots 5/6/7 belong to the POI
+   * codes above, so the next survey integer is 8.
+   */
+  Milliquas: 8,
+  /**
+   * Cosmic-web filament skeleton (DisPerSE on a 2MRS + GLADE density
+   * field). Single global asset, not per-record; the registry entry
+   * carries the default-enabled flag + intensity multiplier.
+   */
+  Filaments: 9,
+  /**
+   * Cosmicflows-4 dark-matter density volume (Valade 2024 HAMLET cube,
+   * 256³). Default-off scalar field; the registry entry carries its
+   * presentation defaults (palette, contrast, exposure, …).
+   */
+  Cf4Density: 10,
+  /**
+   * MCPM ("Cosmic Slime" / rhizome) cosmic-web density volume — SDSS DR17
+   * VAC, tier-aware. Default-on scalar field; the registry entry carries
+   * its presentation defaults.
+   */
+  Mcpm: 11,
+  /**
+   * DEV-only synthetic Gaussian-blob volume — verifies "is anything
+   * visible at the cube origin?". Procedurally generated; no on-disk
+   * payload. Bundled out of production builds via `import.meta.env.DEV`
+   * gating at the slot-registration site.
+   */
+  DebugGaussian: 12,
+  /** DEV-only Cartesian-grid volume for axis-alignment verification. */
+  DebugCartesian: 13,
+  /** DEV-only spherical-shell-and-spoke volume for radial-symmetry verification. */
+  DebugSpherical: 14,
 } as const;
-export type Source = (typeof Source)[keyof typeof Source];
+
+// ─── Registry ───────────────────────────────────────────────────────────────
 
 /**
- * Narrowed source type covering only the *survey* sources — the ones
- * that have `.bin` file representations and participate in the points
- * pipeline. Excludes the POI codes (`Cluster`, `Supercluster`, `Void`)
- * which are pick-encoding-only and have no per-survey metadata
- * (label, all-sky flag, max distance, band layout) to look up.
+ * Per-source metadata, keyed by every `Source`. Discriminated by `type`;
+ * see the `SurveyEntry` / `PoiEntry` definitions for the field shapes.
  *
- * Used as the key type for `Record<SurveySource, T>` tables below so
- * those records remain exhaustive over the survey sources without
- * forcing semantically-empty entries for the POI codes.
+ * `as const satisfies Readonly<Record<Source, SourceEntry>>` preserves each
+ * entry's literal `type`, so `SOURCE_REGISTRY[Source.SDSS]` narrows to
+ * `SurveyEntry` at use sites without manual casts.
+ *
+ * Convention notes that aren't expressed by the types:
+ *
+ * - **`label`** follows survey-team capitalisation (`'2MRS'` no space,
+ *   `'GLADE'` uppercase). Match these in any new UI strings.
+ * - **`binBaseName`** is `null` only for runtime-generated sources
+ *   (currently just Synthetic). Tier-aware filenames are assembled in
+ *   `tierFilenameForSource`.
+ * - **`maxDistMpc`** is a *display* limit (camera framing), not a strict
+ *   cut. Conversion uses `H₀ ≈ 70 km/s/Mpc`; outliers may sit beyond.
+ * - **`bandLabels`** records the actual band each `magU/G/R/I/Z` slot
+ *   carries. Catalog parsers shoehorn non-SDSS bands into the 5-slot
+ *   layout, so labelling rows "(g)" for a 2MRS galaxy would be misleading.
+ *   `'—'` (em-dash) marks an empty slot.
  */
-export type SurveySource = Exclude<
-  Source,
-  typeof Source.Cluster | typeof Source.Supercluster | typeof Source.Void
->;
+export const SOURCE_REGISTRY = {
+  [Source.Synthetic]: {
+    type: 'survey',
+    code: Source.Synthetic,
+    label: 'Synthetic',
+    binBaseName: null, // generated at runtime; no file
+    allSky: true, // uniform-in-sphere by construction
+    visible: true,
+    maxDistMpc: 1000, // matches the radius in synthetic.ts
+    bandLabels: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
+    colourSpec: { slotA: 'u', slotB: 'g', rangeMin: 0.5, rangeMax: 2.0, kPerZ: 3.0 },
+    // Synthetic has no real survey selection function; fall back to the
+    // SDSS calibration so the bias-correction pathway has a total
+    // `Record<Source, ...>` shape without inventing values.
+    mLim: 17.77,
+    schechter: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
+    iauPrefix: 'Synth',
+    tierTargets: {}, // no caps anywhere — synthetic is procedurally sized
+  },
+  [Source.SDSS]: {
+    type: 'survey',
+    code: Source.SDSS,
+    label: 'SDSS',
+    binBaseName: 'sdss',
+    allSky: false,
+    visible: true,
+    // Main galaxy sample reaches z ~ 0.7+ for luminous red galaxies;
+    // rounded up generously.
+    maxDistMpc: 3000,
+    bandLabels: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
+    colourSpec: { slotA: 'u', slotB: 'g', rangeMin: 0.5, rangeMax: 2.0, kPerZ: 3.0 },
+    // r-band spec completeness limit (SDSS DR1+).
+    mLim: 17.77,
+    // Blanton et al. 2003, r-band LF for the spec sample.
+    schechter: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
+    iauPrefix: 'SDSS',
+    // small drops SDSS entirely to keep the mobile GPU budget;
+    // medium caps at ~156k brightest; large is uncapped (key absent).
+    tierTargets: { small: 0, medium: 156_000 },
+  },
+  [Source.TwoMRS]: {
+    type: 'survey',
+    code: Source.TwoMRS,
+    label: '2MRS',
+    binBaseName: '2mrs',
+    allSky: true,
+    visible: true,
+    // Flux-limited at K_s ≈ 11.75; effective z ≲ 0.06.
+    maxDistMpc: 250,
+    bandLabels: { u: '—', g: 'J', r: 'H', i: 'K', z: '—' },
+    // 2MRS has no u/z slots — fall back to J−K (the widest NIR colour
+    // pair) for galaxy-type information. K-correction is negligible at
+    // the survey's effective z ≲ 0.06.
+    colourSpec: { slotA: 'g', slotB: 'i', rangeMin: 0.7, rangeMax: 1.1, kPerZ: 0.0 },
+    // Huchra et al. 2012 — K_s ≤ 11.75.
+    mLim: 11.75,
+    // Kochanek et al. 2001, K-band Schechter from 2MASS.
+    schechter: { mStar: -24.13, alpha: -1.1, phiStar: 0.0116 },
+    // 2MRS rows carry 2MASS XSC IDs — use the XSC short-name convention.
+    iauPrefix: '2MASX',
+    // ~44k rows total — small enough to ship intact at every tier; no caps.
+    tierTargets: {},
+  },
+  [Source.Glade]: {
+    type: 'survey',
+    code: Source.Glade,
+    label: 'GLADE',
+    binBaseName: 'glade',
+    allSky: true,
+    visible: true,
+    // Covers most of the GLADE distance distribution. GLADE has a long
+    // sparse tail past 1 Gpc that the default framing deliberately clips.
+    maxDistMpc: 1500,
+    bandLabels: { u: '—', g: 'B', r: 'J', i: 'H', z: 'K' },
+    // GLADE's g/r slots hold B and J: B−J is a long optical-to-NIR
+    // baseline that separates early- from late-type galaxies cleanly.
+    colourSpec: { slotA: 'g', slotB: 'r', rangeMin: 0.5, rangeMax: 3.5, kPerZ: 1.0 },
+    // B-band parent samples (HyperLEDA, GWGC) — effective limit ≈ 18.
+    mLim: 18.0,
+    // Norberg et al. 2002 b_J Schechter as a stand-in for B (close
+    // enough for visualisation purposes).
+    schechter: { mStar: -20.83, alpha: -1.08, phiStar: 0.0093 },
+    iauPrefix: 'GLADE',
+    // small keeps the brightest 256k; medium ~400k; large uncapped.
+    tierTargets: { small: 256_000, medium: 400_000 },
+  },
+  [Source.Famous]: {
+    type: 'survey',
+    code: Source.Famous,
+    label: 'Famous',
+    binBaseName: 'famous',
+    allSky: true, // hand-picked entries from across the sky
+    visible: true,
+    maxDistMpc: 200, // covers the curated set: M31 → NGC 4889
+    // Famous entries don't carry per-row photometry — the source survey
+    // already measured it. The SDSS-mirroring labels are cosmetic so the
+    // InfoCard renders generic "(g)" tags without a new branch; the
+    // stored mag values are NaN, which FullCard renders as "N/A".
+    bandLabels: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
+    // Mirror SDSS so the colour ramp maps g−r cleanly; kPerZ = 0 since
+    // these entries are all very nearby (z < 0.05).
+    colourSpec: { slotA: 'u', slotB: 'g', rangeMin: 0.5, rangeMax: 2.0, kPerZ: 0.0 },
+    // Famous entries have NaN photometry (vMaxWeight short-circuits to 0
+    // for those rows), so the bias-pipeline never actually consumes
+    // these. Mirror the SDSS calibration to keep the registry total.
+    mLim: 17.77,
+    schechter: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
+    iauPrefix: 'Famous',
+    // ~150 rows total — never subsampled; one file shared across tiers.
+    tierTargets: {},
+  },
+  [Source.Cluster]: {
+    type: 'poi',
+    code: Source.Cluster,
+    label: 'Cluster',
+    allSky: true,
+    visible: true,
+  },
+  [Source.Supercluster]: {
+    type: 'poi',
+    code: Source.Supercluster,
+    label: 'Supercluster',
+    allSky: true,
+    visible: true,
+  },
+  [Source.Void]: { type: 'poi', code: Source.Void, label: 'Void', allSky: true, visible: true },
+  [Source.Milliquas]: {
+    type: 'survey',
+    code: Source.Milliquas,
+    label: 'Milliquas',
+    binBaseName: 'milliquas',
+    allSky: true,
+    // Hidden by default until the quasar-specific render path lands.
+    // The `.bin` is still fetched (Milliquas is in SURVEY_SOURCES so
+    // cloudLoader requests it); the bit just stays clear in the visible
+    // mask so the existing galaxy billboards don't represent unresolved
+    // AGN until dedicated quasar visuals exist.
+    visible: false,
+    // Milliquas reaches z ~ 7 (quasars at the edge of the observable
+    // universe). Hubble's law with z = 7 ⇒ ~25 Gpc, but the bulk of
+    // Milliquas is at z < 3 (~12 Gpc). While the renderer uses the
+    // linear-Hubble approximation, this is a *display* limit generous
+    // enough to keep the bright low-z tail framed comfortably.
+    maxDistMpc: 4000,
+    // Milliquas carries two optical-band magnitudes only: Rmag (red, ~R)
+    // and Bmag (blue, ~B). Bmag goes into the magG slot (closest
+    // wavelength to SDSS g among the empty slots) and Rmag into magR.
+    bandLabels: { u: '—', g: 'B', r: 'R', i: '—', z: '—' },
+    // B−R is the natural quasar colour: blue quasars sit near 0; red /
+    // dust-obscured AGN extend to ≳ 2. kPerZ is non-zero because the
+    // observed-frame band sweeps through the Lyα forest at high z, but
+    // kept modest until the bias-correction subsystem wires Milliquas in.
+    colourSpec: { slotA: 'g', slotB: 'r', rangeMin: 0.0, rangeMax: 2.0, kPerZ: 0.5 },
+    // Milliquas's quasar-completeness limit varies wildly by parent
+    // survey (SDSS DR16Q reaches r ~ 22, DESI EDR ~ 23, bright optical/
+    // X-ray-selected subsamples cut at ~18). We use a permissive limit
+    // so vMaxWeight short-circuits rather than upweighting an unphysical
+    // volume — a per-parent-survey breakdown would belong in its own pass.
+    mLim: 22.0,
+    // Quasars don't follow the galaxy Schechter LF — they have their
+    // own QLF (Croom et al. 2009, Ross et al. 2013) with very different
+    // parameters. The SDSS galaxy values are a placeholder for the
+    // shape; vMaxWeight short-circuits to zero for NaN-photometry rows
+    // so this rarely fires in practice.
+    schechter: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
+    // Matches the upstream catalogue's own short-name convention.
+    iauPrefix: 'MQ',
+    // small drops Milliquas entirely (mobile GPU budget); medium caps at
+    // ~200k brightest; large is uncapped.
+    tierTargets: { small: 0, medium: 200_000 },
+  },
+  [Source.Filaments]: {
+    type: 'filament',
+    code: Source.Filaments,
+    label: 'Filaments',
+    allSky: true, // full-sky DisPerSE skeleton
+    // Off by default — the line geometry overlays the cosmic-web wedge
+    // and most users want the points-only view first. They can flip it
+    // on in the SettingsPanel.
+    visible: false,
+    binBaseName: 'filaments',
+    // 1.0 is the unit baseline; user scales it down for a subtler overlay
+    // or up for emphasis via the (future) Filaments slider.
+    intensity: 1.0,
+  },
+  [Source.Cf4Density]: {
+    type: 'volume',
+    code: Source.Cf4Density,
+    label: 'CF-4 DM density',
+    allSky: true, // Valade 2024 reconstruction covers the full 256³ box
+    // Default-off: ~32 MB voxel payload fetched eagerly at boot so the
+    // toggle in the Volumes panel feels instant, but the field doesn't
+    // render until the user opts in.
+    visible: false,
+    handle: 'cf4-density',
+    // Underscore in the filename for legacy reasons; `handle` mirrors it
+    // in kebab-case for UI / settings keys.
+    binBaseName: 'cf4_density',
+    tiered: false, // single 256³ cube; no per-tier variants
+    // Presentation defaults — see VolumeFieldDefaults docstrings for the
+    // semantics of each knob, and the prior `volumeFieldDefaults.ts`
+    // module header for the rationale behind these specific numbers.
+    paletteId: 'coolwarm',
+    contrast: 1.2,
+    contrastCenter: 0.5,
+    densityScale: 20.0,
+    envelope: { inner: 0.9, outer: 1.0 },
+    exposure: 1.0,
+    trim: 0.0,
+    // CF-4's calibrated coolwarm sits comfortably at the global default
+    // — kept explicit so every volume entry carries the field.
+    intensity: 0.5,
+  },
+  [Source.Mcpm]: {
+    type: 'volume',
+    code: Source.Mcpm,
+    label: 'MCPM Cosmic Web',
+    allSky: true, // SDSS DR17 VAC, full SDSS volume
+    // Default-on: this is the headline cosmic-web overlay; the global
+    // intensity of 1.0 (set on this entry) gives it presence on first paint.
+    visible: true,
+    handle: 'mcpm',
+    binBaseName: 'mcpm',
+    tiered: true, // small / medium / large `.scfd` variants
+    paletteId: 'inferno',
+    contrast: 1.7,
+    contrastCenter: 0.0,
+    densityScale: 18.0,
+    envelope: { inner: 0.85, outer: 1.05 },
+    exposure: 18.0,
+    trim: 0.3,
+    intensity: 1.0,
+  },
+  // ── DEV-only synthetic volume fixtures ────────────────────────────
+  // Procedural cubes used to verify axis alignment, scale, and origin.
+  // `binBaseName: null` because they have no on-disk payload; the slot
+  // factory generates them in `import.meta.env.DEV` builds.
+  // `envelope: { inner: 2.0, outer: 2.0 }` (both >= √3) keeps the cube
+  // corners visible — the whole point of these fixtures.
+  [Source.DebugGaussian]: {
+    type: 'volume',
+    code: Source.DebugGaussian,
+    label: 'Gaussian (debug)',
+    allSky: true,
+    visible: false,
+    handle: 'debug-gaussian',
+    binBaseName: null,
+    tiered: false,
+    paletteId: 'blue-purple',
+    contrast: 1.0,
+    contrastCenter: 0.5,
+    // A single Gaussian peak integrates to roughly √(2π)·σ along its
+    // central axis; 10× lifts the peak into saturation while leaving
+    // the intensity slider plenty of low-end headroom.
+    densityScale: 10.0,
+    envelope: { inner: 2.0, outer: 2.0 },
+    exposure: 1.0,
+    trim: 0.0,
+  },
+  [Source.DebugCartesian]: {
+    type: 'volume',
+    code: Source.DebugCartesian,
+    label: 'Cartesian grid (debug)',
+    allSky: true,
+    visible: false,
+    handle: 'debug-cartesian',
+    binBaseName: null,
+    tiered: false,
+    paletteId: 'viridis',
+    contrast: 1.0,
+    contrastCenter: 0.5,
+    // A ray crosses ~8 grid planes per axis at default settings, so
+    // integrated density is much higher than the Gaussian — 4× is
+    // enough to saturate near intensity=1.0.
+    densityScale: 4.0,
+    envelope: { inner: 2.0, outer: 2.0 },
+    exposure: 1.0,
+    trim: 0.0,
+  },
+  [Source.DebugSpherical]: {
+    type: 'volume',
+    code: Source.DebugSpherical,
+    label: 'Spherical grid (debug)',
+    allSky: true,
+    visible: false,
+    handle: 'debug-spherical',
+    binBaseName: null,
+    tiered: false,
+    paletteId: 'magma',
+    contrast: 1.0,
+    contrastCenter: 0.5,
+    // A ray typically crosses one or two shells plus a spoke — sits
+    // between Gaussian (sparse) and Cartesian (dense) integrated density.
+    densityScale: 6.0,
+    envelope: { inner: 2.0, outer: 2.0 },
+    exposure: 1.0,
+    trim: 0.0,
+  },
+} as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 
-// ─── Per-survey metadata tables ─────────────────────────────────────────────
-//
-// We keep the metadata in plain object literals keyed by enum value rather
-// than scattering it across a class hierarchy. The lookup functions below
-// give the public API; the tables themselves stay private to this module.
-//
-// Why three flat tables instead of one `SourceInfo` record? Each access
-// pattern is independent — the loader cares about disk codes, the camera
-// cares about distances, the UI cares about labels — so colocating them
-// would just create false coupling. Splitting them also keeps tree-shaking
-// happy if a downstream module only needs one slice.
+// ─── Iteration order ────────────────────────────────────────────────────────
 
 /**
- * Human-readable display name for each survey.
+ * Survey sources in UI presentation order — smallest catalogue → largest
+ * (Famous → 2MRS → SDSS → GLADE, ~20 → 38 k → 500 k → 2 M rows). Synthetic
+ * leads as the procedural-fallback cloud, hidden from user-facing lists.
  *
- * These strings appear in the UI legend and tooltips. They follow the
- * conventions used by the survey teams themselves: `2MRS` (no space),
- * `GLADE` (uppercase, matching the published catalog name), etc. — match
- * these conventions in any new UI strings.
+ * Listed explicitly rather than `Object.values(Source)` so adding a source
+ * to the file-format enum doesn't silently promote it into the UI and the
+ * visibility bitmask.
  */
-const LABELS: Record<SurveySource, string> = {
-  [Source.Synthetic]: 'Synthetic',
-  [Source.SDSS]: 'SDSS',
-  [Source.TwoMRS]: '2MRS',
-  [Source.Glade]: 'GLADE',
-  [Source.Famous]: 'Famous',
-};
-
-/**
- * Whether a survey covers (approximately) the *entire* celestial sphere,
- * versus only a wedge or hemisphere of it.
- *
- * - **2MRS** is deliberately all-sky: its parent 2MASS imaging survey
- *   scanned the whole sky from two telescopes (one per hemisphere).
- * - **GLADE** is full-sky by construction — it merges several all-sky
- *   parent catalogs (HyperLEDA, 2MASS XSC, GWGC, 2MPZ, 6dFGS, SDSS-DR12Q),
- *   so any gaps in one are filled by another.
- * - **SDSS** focuses on the northern Galactic cap plus three southern
- *   stripes — about a third of the sky. Rendering it as "all-sky" would
- *   misrepresent the data.
- *
- * The renderer uses this flag to decide whether to draw a coverage mask
- * overlay or skip it.
- */
-const ALL_SKY: Record<SurveySource, boolean> = {
-  [Source.Synthetic]: true, // synthetic cloud is uniform-in-sphere by construction
-  [Source.SDSS]: false,
-  [Source.TwoMRS]: true,
-  [Source.Glade]: true,
-  [Source.Famous]: true, // hand-picked entries from across the sky
-};
-
-/**
- * Approximate effective maximum distance per survey, in megaparsecs.
- *
- * These are *display* limits — they tell the camera how far to zoom out so
- * the user sees the whole catalog without leaving most of the volume empty.
- * They are not strict cuts (a few outliers may sit beyond), and they are
- * intentionally a little generous (rounded up) to keep the edge of the
- * cloud comfortably inside the view frustum.
- *
- * Sources for the numbers (rough, redshift → distance via Hubble's law,
- * H₀ ≈ 70 km/s/Mpc):
- * - **2MRS** ≈ 250 Mpc — flux-limited at K_s ≈ 11.75; effective z ≲ 0.06.
- * - **GLADE** ≈ 1500 Mpc — covers most of the GLADE distance distribution;
- *                          GLADE has a long sparse tail past 1 Gpc that we
- *                          deliberately clip out of the default framing.
- * - **SDSS**  ≈ 3000 Mpc — main galaxy sample reaches z ~ 0.7+ for
- *                          luminous red galaxies; we round up generously.
- * - **Synthetic** = 1000 Mpc — matches the radius hard-coded in
- *                              `synthetic.ts`.
- */
-const MAX_DIST_MPC: Record<SurveySource, number> = {
-  [Source.Synthetic]: 1000,
-  [Source.SDSS]: 3000,
-  [Source.TwoMRS]: 250,
-  [Source.Glade]: 1500,
-  [Source.Famous]: 200, // covers the curated set: M31 → NGC 4889
-};
-
-/**
- * The actual photometric bands stored in each per-cloud `magU/G/R/I/Z` slot,
- * keyed by the slot name.  Catalog parsers shoehorn whichever bands the source
- * provides into the SDSS-style 5-slot layout, but the data is *not* always
- * SDSS u/g/r/i/z — labelling rows "(g)" in the InfoCard would be misleading
- * for non-SDSS sources.
- *
- * Slot ↔ band mapping per source (see parsers/twoMrs.ts and parsers/glade.ts):
- *
- *   SDSS:       u → u, g → g,  r → r, i → i, z → z          (real SDSS bands)
- *   2MRS:       u → —, g → J,  r → H, i → K, z → —          (2MASS NIR triplet)
- *   GLADE:      u → —, g → B,  r → J, i → H, z → K          (B + 2MASS JHK)
- *   Synthetic:  u → u, g → g,  r → r, i → i, z → z          (modelled on SDSS)
- *
- * `'—'` (em-dash) is used for empty slots so the InfoCard can detect absent
- * bands without resorting to special string values like 'N/A' or empty
- * strings — and so the display falls back gracefully if accidentally rendered.
- */
-const BAND_LABELS: Record<SurveySource, BandLabels> = {
-  [Source.Synthetic]: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
-  [Source.SDSS]: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
-  [Source.TwoMRS]: { u: '—', g: 'J', r: 'H', i: 'K', z: '—' },
-  [Source.Glade]: { u: '—', g: 'B', r: 'J', i: 'H', z: 'K' },
-  // Famous entries don't carry per-row photometry (we don't repeat what
-  // the source survey already measured).  Mirror the SDSS labels purely
-  // so the InfoCard markup renders generic "(g)" tags without a new
-  // branch — the actual mag values stored on the cloud are NaN, which
-  // FullCard already gracefully renders as "N/A".
-  [Source.Famous]: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
-};
-
-// ─── Public lookup functions ────────────────────────────────────────────────
-//
-// These thin wrappers exist so that callers depend on a *function signature*
-// rather than the shape of an internal table. If we ever want to load
-// metadata from a config file or compute it dynamically, we can change the
-// implementation without breaking imports.
-
-// ── POI fallthroughs ────────────────────────────────────────────────────────
-//
-// The per-survey metadata tables above are keyed by `SurveySource` (exclude
-// POI codes) because labels like "all-sky" or a max-distance number don't
-// have a meaningful value for a cluster anchor. Each accessor still accepts
-// the wider `Source` type — callers pass whatever the pick decoder hands
-// them — so we handle the POI codes explicitly here. A short readable
-// fallback for `sourceLabel` (the only one a POI is likely to legitimately
-// hit), and a hard throw for the rest where reaching the call with a POI
-// indicates a logic bug in the survey-galaxy pipeline.
-
-function poiLabel(source: Source): string | null {
-  if (source === Source.Cluster) return 'Cluster';
-  if (source === Source.Supercluster) return 'Supercluster';
-  if (source === Source.Void) return 'Void';
-  return null;
-}
-
-/** Display name (e.g. `'2MRS'`, `'GLADE'`, `'Cluster'`) for a given source. */
-export function sourceLabel(source: Source): string {
-  const poi = poiLabel(source);
-  if (poi !== null) return poi;
-  return LABELS[source as SurveySource];
-}
-
-/** True if the survey covers (approximately) the full celestial sphere. */
-export function sourceIsAllSky(source: Source): boolean {
-  // POI anchors are full-sky in the trivial sense (they're individual
-  // points, not survey footprints). Returning `true` here keeps any
-  // coverage-mask code path well-behaved if a POI somehow reaches it.
-  if (poiLabel(source) !== null) return true;
-  return ALL_SKY[source as SurveySource];
-}
-
-/** Approximate effective max distance in megaparsecs. See `MAX_DIST_MPC`. */
-export function sourceMaxDistanceMpc(source: Source): number {
-  // POIs are not surveys and don't define an effective sample depth.
-  // If this is being called with a POI, the camera-framing code is
-  // routing the wrong thing — fail loudly instead of inventing a value.
-  if (poiLabel(source) !== null) {
-    throw new Error(`sourceMaxDistanceMpc: POI source ${source} has no survey depth`);
-  }
-  return MAX_DIST_MPC[source as SurveySource];
-}
-
-/**
- * Photometric band labels for the five `magU/G/R/I/Z` slots on this source's
- * `GalaxyCatalog`.  Returns the actual band name carried in each slot (e.g.
- * `'B'` for GLADE's g-slot) so the InfoCard can label rows accurately
- * instead of always saying "(g)".  Slots without a measurement carry `'—'`.
- *
- * See the `BAND_LABELS` table above for the per-source mapping rationale.
- */
-export function bandLabels(source: Source): BandLabels {
-  // POI markers have no photometry. Reaching here with a POI means the
-  // InfoCard is rendering a galaxy row for a non-galaxy entity.
-  if (poiLabel(source) !== null) {
-    throw new Error(`bandLabels: POI source ${source} has no photometric bands`);
-  }
-  return BAND_LABELS[source as SurveySource];
-}
-
-// ─── Visibility bitmask ─────────────────────────────────────────────────────
-
-/**
- * The list of all currently-defined sources, used to build `ALL_VISIBLE_MASK`
- * and to iterate over surveys when rendering UI controls.
- *
- * We list them explicitly (rather than `Object.values(Source)`) to control
- * the iteration order — see the note below about UI ordering. Hard-coding
- * the list also makes any file-format-affecting change visible in code
- * review.
- */
-// Ordering: real surveys are listed smallest catalogue → largest, so the
-// UI presents them in an intuitive "tip-of-the-iceberg first" order
-// (Famous → 2MRS → SDSS → GLADE, roughly 20 → 38 k → 500 k → 2 M rows).
-// Synthetic stays first as a special case — it's the procedural-fallback
-// cloud, not a real survey, and is hidden from user-facing lists anyway.
-export const ALL_SOURCES: readonly Source[] = [
+export const SURVEY_SOURCES: readonly SourceType[] = [
   Source.Synthetic,
   Source.Famous,
   Source.TwoMRS,
   Source.SDSS,
   Source.Glade,
+  Source.Milliquas,
 ];
-
-/**
- * Bitmask with a `1` in every defined source's bit position — i.e. "show
- * everything". This is the renderer's default visibility mask on startup.
- *
- * Computed as `(1<<0) | (1<<1) | (1<<2) | (1<<3) | (1<<4) = 0b11111 = 31`.
- *
- * Note we use `<<` (not `**`) because it's an integer operation and runs
- * the same way in JS, WGSL, and TS. JS bitwise ops coerce to 32-bit
- * signed ints, which is fine — we have 32 bits to spare.
- */
-export const ALL_VISIBLE_MASK: number = ALL_SOURCES.reduce<number>(
-  (mask, src) => mask | (1 << src),
-  0,
-);
-
-/** True if `mask` has the bit for `source` set. */
-export function maskHas(mask: number, source: Source): boolean {
-  // `& (1 << source)` isolates the bit; coerce non-zero to true.
-  return (mask & (1 << source)) !== 0;
-}
-
-/** Returns a new mask with the bit for `source` set (idempotent). */
-export function maskWith(mask: number, source: Source): number {
-  return mask | (1 << source);
-}
-
-/** Returns a new mask with the bit for `source` cleared (idempotent). */
-export function maskWithout(mask: number, source: Source): number {
-  // `~(1 << source)` flips every bit *except* the one we want to clear,
-  // so AND-ing leaves all other bits untouched while zeroing this one.
-  return mask & ~(1 << source);
-}

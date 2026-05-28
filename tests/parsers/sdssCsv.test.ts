@@ -89,7 +89,10 @@ describe('parseSdssCsv diameterKpc', () => {
     ].join('\n');
     const { records } = parseSdssCsv(csv);
     expect(records).toHaveLength(1);
-    expect(records[0]!.diameterKpc).toBeCloseTo(31.18, 1);
+    // At z = 0.05 the ΛCDM comoving distance is ~211.5 Mpc (slightly less
+    // than the linear-Hubble 214.1 Mpc); diameter scales linearly with
+    // distance, so the expected value drops from 31.18 to ~30.77.
+    expect(records[0]!.diameterKpc).toBeCloseTo(30.77, 1);
   });
 
   it('returns null diameterKpc when petroR50_r column is absent', () => {

@@ -19,16 +19,18 @@
 
 import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
 import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
-import { Source, sourceLabel, bandLabels } from '../../../data/sources';
+import { Source, SOURCE_REGISTRY } from '../../../data/sources';
+import { sourceClassLabel, milliquasParentSurveyPrefix } from '../../../data/sourceClass';
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
-import type { FamousXrefMap } from '../../../@types/loading/FamousXrefMap';
 import { famousDisplayName } from './famousDisplayName';
 import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';
+import type { SourceType } from '../../../@types/data/SourceType';
 import {
   cartesianToRaDecZ,
   formatRaSexagesimal,
   formatDecSexagesimal,
   iauName,
+  iauRaDecSuffix,
   lookbackTimeGyr,
   hubbleVelocityKmS,
   absoluteMagnitude,
@@ -107,20 +109,19 @@ export function niceRound(x: number): number {
  * can decide which thumbnail service to use and whether an SDSS Explorer
  * link makes sense.
  *
- * The optional `famousMeta` / `famousXrefs` arguments are the sidecars loaded
- * at engine startup by the `famousMeta` AssetSlot (`famousMetaFetcher`).  They are
- * only consulted when `source === Source.Famous`, so passing them for SDSS /
- * 2MRS / GLADE rows is harmless.  If the sidecars haven't arrived yet (fetch
- * still in flight when the user first hovers a famous galaxy), both args will
- * be empty / undefined and we silently omit the `famous` block — the InfoCard
- * falls back to its generic layout until the next hover triggers a rebuild.
+ * The optional `famousMeta` argument is the sidecar loaded at engine startup
+ * by the `famousMeta` AssetSlot (`famousMetaFetcher`).  It is only consulted
+ * when `source === Source.Famous`, so passing it for SDSS / 2MRS / GLADE rows
+ * is harmless.  If the sidecar hasn't arrived yet (fetch still in flight when
+ * the user first hovers a famous galaxy), the arg will be empty / undefined
+ * and we silently omit the `famous` block — the InfoCard falls back to its
+ * generic layout until the next hover triggers a rebuild.
  */
 export function buildGalaxyInfo(
   cloud: GalaxyCatalog,
   idx: number,
-  source: Source,
+  source: SourceType,
   famousMeta?: readonly FamousMetaEntry[],
-  famousXrefs?: FamousXrefMap,
 ): GalaxyInfo {
   const px = cloud.positions[idx * 3 + 0]!;
   const py = cloud.positions[idx * 3 + 1]!;
@@ -128,7 +129,19 @@ export function buildGalaxyInfo(
 
   // Recover sky coordinates from the Cartesian position stored in the cloud.
   // cartesianToRaDecZ inverts the Hubble-law conversion used at import time.
-  const [ra, dec, redshift] = cartesianToRaDecZ(px, py, pz);
+  // We deliberately discard its `z` channel: for local-volume galaxies the
+  // build pipeline replaced position with a CF4 / HyperLEDA measured distance,
+  // and inverting that distance back to a Hubble z gives a wrong-signed
+  // nonsense value (e.g. M31 at 0.78 Mpc would read +0.00018, not the
+  // catalogued −0.001). The catalogued spec-z lives on `cloud.spectroscopicZ`.
+  const [ra, dec, fallbackRedshift] = cartesianToRaDecZ(px, py, pz);
+  const storedZ = cloud.spectroscopicZ[idx]!;
+  // NaN is the documented "no published spec-z" sentinel (Famous-galaxy
+  // distance-only rows) — fall back to the cartesian-derived value so the
+  // InfoCard never shows NaN to the user. For every other row the stored
+  // and fallback values agree modulo float32 precision; the local-volume
+  // override is the only place they diverge meaningfully.
+  const redshift = Number.isFinite(storedZ) ? storedZ : fallbackRedshift;
 
   // Euclidean distance in Mpc — same as the comoving distance under Hubble's law.
   const distanceMpc = Math.sqrt(px * px + py * py + pz * pz);
@@ -160,7 +173,14 @@ export function buildGalaxyInfo(
   // The `colours` array is what the InfoCard renders in its "Colour" row;
   // pre-computing it here keeps the React layer presentational and avoids
   // sprinkling per-source band-pair logic throughout the components.
-  const bands = bandLabels(source);
+  // Only survey rows carry photometry. The picker only routes survey
+  // sources into the points pipeline, so any other kind (POI, filament,
+  // volume) reaching here is a bug upstream.
+  const entry = SOURCE_REGISTRY[source];
+  if (entry.type !== 'survey') {
+    throw new Error(`buildGalaxyInfo: non-survey source ${source} has no photometric bands`);
+  }
+  const bands = entry.bandLabels;
 
   // Available pairs in adjacent-slot order: each entry pairs the label and
   // value only if BOTH constituent bands are real (not '—') AND the
@@ -309,6 +329,32 @@ export function buildGalaxyInfo(
     diameterProvenance = 'fallback (30 kpc)';
   }
 
+  // ── Per-record metadata bytes (v5 format) ──────────────────────────────────
+  //
+  // Both bytes are zero-default across every non-Milliquas source;
+  // sourceClassLabel + milliquasParentSurveyPrefix gate on `source`
+  // internally so it's safe to read them unconditionally here.
+  const classByte = cloud.classByte[idx]!;
+  const parentSurveyByte = cloud.parentSurveyByte[idx]!;
+  const agnClass = sourceClassLabel(source, classByte) ?? undefined;
+  const parentSurveyPrefix = milliquasParentSurveyPrefix(parentSurveyByte);
+
+  // Milliquas "<PARENT> J<RA><Dec>" reconstruction.  When the bin
+  // carries a recognised parent-survey byte (the vast majority of
+  // Milliquas rows), produce the historical display name without a
+  // JSON sidecar; otherwise leave the field undefined and let the
+  // displayName ladder fall through to the IAU "MQ J…" fallback.
+  //
+  // The J-suffix here is recomputed from the row's stored RA/Dec
+  // floats via the shared `iauRaDecSuffix` emitter, so it may differ
+  // in the least-significant digits from the upstream catalogue's
+  // original Name column (different rounding/truncation of slightly
+  // different coord measurements).  The prefix half always matches.
+  const milliquasDisplayName =
+    source === Source.Milliquas && parentSurveyPrefix !== null
+      ? `${parentSurveyPrefix} ${iauRaDecSuffix(ra, dec)}`
+      : undefined;
+
   // ── Famous-galaxy enrichment ───────────────────────────────────────────────
   //
   // Look up the curated sidecar metadata only for Famous rows.  For every other
@@ -323,14 +369,12 @@ export function buildGalaxyInfo(
   let famous: GalaxyInfo['famous'];
   if (source === Source.Famous && famousMeta && famousMeta[idx]) {
     const meta = famousMeta[idx]!;
-    const xref = (famousXrefs && famousXrefs[meta.id]) ?? null;
     famous = {
       id: meta.id,
       ...(meta.commonName !== undefined ? { commonName: meta.commonName } : {}),
       names: meta.names,
       description: meta.description,
       type: meta.type,
-      xref,
     };
   }
 
@@ -372,22 +416,30 @@ export function buildGalaxyInfo(
     // Best human-readable headline for this row.  Treats the choice
     // as a priority-ordered list of candidates with a single "first
     // non-empty wins" selection rule (matching `famousDisplayName`'s
-    // strategy, just with two extra survey-row candidates appended):
+    // strategy, just with extra survey-row candidates appended):
     //
     //   1. Famous → curated `commonName` then `names[0]`.  Routed
     //      through the shared `famousDisplayName` helper so the
     //      InfoCard headline and the POI label can't drift.
-    //   2. Survey row with a real PGC in objID → `PGC <n>`.  Applies
+    //   2. Milliquas → "<PARENT> J<RA><Dec>" reconstructed from the
+    //      per-record `parentSurveyByte` slot in the .bin (e.g.
+    //      "SDSS J012345.67+891234.5", "2MASX J…").  When the byte is
+    //      0 (literature designation) or otherwise unrecognised the
+    //      candidate is undefined and we fall through to the IAU
+    //      fallback below, which produces "MQ J<RA><Dec>".
+    //   3. Survey row with a real PGC in objID → `PGC <n>`.  Applies
     //      to BOTH 2MRS (PGC populated by the build-time GLADE→2MRS
     //      cross-match) and GLADE (PGC inherited directly from the
     //      source line).  PGC is widely indexed by NED / SIMBAD,
     //      shorter than a coord-based name, and especially valuable
     //      for GLADE rows where the iauName ("GLADE J…") is a
     //      synthetic prefix we generate ourselves.
-    //   3. IAU coord-based name (`SDSS J…`, `2MASX J…`, `GLADE J…`).
+    //   4. IAU coord-based name (`SDSS J…`, `2MASX J…`, `GLADE J…`,
+    //      `MQ J…`).
     displayName:
       [
         famous ? famousDisplayName(famous) : undefined,
+        milliquasDisplayName,
         (source === Source.TwoMRS || source === Source.Glade) && cloud.objIDs[idx]! > 0n
           ? `PGC ${cloud.objIDs[idx]!}`
           : undefined,
@@ -400,7 +452,11 @@ export function buildGalaxyInfo(
 
     // Source attribution — fed through to the InfoCard's badge + link logic.
     source,
-    sourceLabel: sourceLabel(source),
+    sourceLabel: SOURCE_REGISTRY[source].label,
+
+    // Per-record AGN class string, or undefined when the source
+    // doesn't define one (every non-Milliquas row today).
+    agnClass,
 
     // External URLs — chosen above based on `source` (and PGC for GLADE).
     catalogUrl,

@@ -1,10 +1,10 @@
 import type { Dispatch, RefObject, SetStateAction } from 'react';
 import type { EngineHandle } from './EngineHandle';
-import type { GalaxyInfo } from './GalaxyInfo';
+import type { FocusableTarget } from './FocusableTarget';
 
 export type UseKeyboardShortcutsInput = {
-  /** The currently-pinned galaxy.  `f` is a no-op when null. */
-  selected: GalaxyInfo | null;
+  /** The currently-pinned target (galaxy or POI).  `f` is a no-op when null. */
+  selected: FocusableTarget | null;
   /** Used to gate the `/` shortcut so the palette doesn't reopen on top of itself. */
   paletteOpen: boolean;
   /** Engine driver for selection.clear, camera.focusOn, camera.focusOnHome, camera.logState. */
@@ -29,9 +29,8 @@ export type UseKeyboardShortcutsInput = {
    */
   setUiHidden: Dispatch<SetStateAction<boolean>>;
   /**
-   * The React setter for the asset-loading dev panel's visibility (`d`
-   * shortcut).  Same stable-reference rationale as the others — the
-   * dev panel defaults to hidden and `d` toggles it.
+   * The React setter for the debug panel's visibility (`d` shortcut).
+   * Same stable-reference rationale as the others.
    */
-  setLoadingDevPanelOpen: Dispatch<SetStateAction<boolean>>;
+  setDebugPanelOpen: Dispatch<SetStateAction<boolean>>;
 };

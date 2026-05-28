@@ -75,6 +75,7 @@ import { createVolumeOffscreen } from '../../gpu/passes/volumeOffscreen';
 import { createTexturedDiskRenderer } from '../../gpu/renderers/texturedDiskRenderer';
 import { createProceduralDiskRenderer } from '../../gpu/renderers/proceduralDiskRenderer';
 import { createMilkyWayRenderer } from '../../gpu/renderers/milkyWayRenderer';
+import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShellRenderer';
 import { createFilamentRenderer } from '../../gpu/renderers/filamentRenderer';
 import { createLabelRenderer } from '../../gpu/renderers/labelRenderer';
 import { createMarkerLineRenderer } from '../../gpu/renderers/markerLineRenderer';
@@ -82,6 +83,7 @@ import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRingRe
 import { createClusterMarkerRenderer } from '../../gpu/renderers/clusterMarkerRenderer';
 import { createScalarVolumeRenderer } from '../../gpu/renderers/scalarVolumeRenderer';
 import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
+import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { loadFontAtlases } from '../../gpu/labels/loadFontAtlases';
 import { hasUrlGate } from '../../../utils/url/urlGate';
@@ -383,6 +385,13 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     device,
     format: 'rgba16float',
   });
+  // Observable-universe horizon shell — translucent sphere at the
+  // comoving particle-horizon radius (~14.3 Gpc).  Single uniform
+  // buffer + baked UV-sphere VBO/IBO, no lifecycle dependencies.
+  const horizonShellRenderer = createHorizonShellRenderer({
+    device,
+    format: 'rgba16float',
+  });
   // ── Cosmic-web filament-skeleton renderer ─────────────────────────
   //
   // Built unconditionally (the pipeline / quad VBO / uniform buffer
@@ -419,6 +428,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   state.gpu.texturedDiskRenderer = texturedDiskRenderer;
   state.gpu.proceduralDiskRenderer = proceduralDiskRenderer;
   state.gpu.milkyWayRenderer = milkyWayRenderer;
+  state.gpu.horizonShellRenderer = horizonShellRenderer;
 
   // ── 3D scalar-field volume renderer ──────────────────────────────────
   //
@@ -475,6 +485,19 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // `state.gpu` so `destroy()` can release the pipeline and so the new
   // `volumeUpsamplePass` can read it via `state.gpu.volumeUpsample`.
   state.gpu.volumeUpsample = createVolumeUpsample(device, 'rgba16float');
+
+  // ── Pick-buffer debug overlay ────────────────────────────────────
+  //
+  // Fullscreen pass that samples the r32uint pick texture and writes
+  // a colour-mapped RGBA image over the tone-mapped swap chain.
+  // Always constructed (pipeline + bind-group-layout are cheap, no
+  // GPU buffers allocated until first draw); the per-frame consumer
+  // gates on `state.settings.debug.showPickBuffer` so a default-off
+  // build pays zero per-frame cost beyond a single boolean check.
+  // Targets the swap-chain `format`, not 'rgba16float' — the overlay
+  // draws AFTER tone-map onto the same target marker-lines / labels
+  // composite onto.
+  state.gpu.pickDebugOverlay = createPickDebugOverlay(device, format);
 
   // ── GPU timing service ────────────────────────────────────────────
   //

@@ -81,7 +81,8 @@
 
 import { type ReactNode } from 'react';
 import type { Tier } from '../../@types/data/Tier';
-import { Source, sourceLabel, maskHas } from '../../data/sources';
+import { Source, SOURCE_REGISTRY } from '../../data/sources';
+import { maskHas } from '../../utils/sourceMask';
 import { BiasMode } from '../../data/biasMode';
 import type { BiasMode as BiasModeT } from '../../@types/data/BiasMode';
 import { ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
@@ -89,11 +90,13 @@ import type { ToneMapCurve as ToneMapCurveT } from '../../@types/data/ToneMapCur
 import type { PoiCategory } from '../../services/engine/subsystems/poiSubsystem';
 import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
+import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
 import { VolumeFieldRow } from './VolumeFieldRow';
 import { Panel } from '../common/Panel/Panel';
 import { CollapsibleSection } from './CollapsibleSection';
 import { TierChip } from './TierChip';
 import styles from './SettingsPanel.module.css';
+import type { SourceType } from '../../@types/data/SourceType';
 
 // ── Module-level constants ─────────────────────────────────────────────────────
 
@@ -109,11 +112,12 @@ import styles from './SettingsPanel.module.css';
  * ~500 k → GLADE ~2 M) so the user sees the "iceberg tip" first and can
  * reason about what each toggle adds in size.
  */
-const TOGGLEABLE_SOURCES: readonly Source[] = [
+const TOGGLEABLE_SOURCES: readonly SourceType[] = [
   Source.Famous,
   Source.TwoMRS,
   Source.SDSS,
   Source.Glade,
+  Source.Milliquas,
 ];
 
 /**
@@ -170,13 +174,13 @@ type Props = {
   /** Bitmask of currently-visible sources.  See `data/sources.ts`. */
   visibleSourceMask?: number;
   /** Called when the user toggles a single survey on/off in Advanced. */
-  onToggleSource?: (source: Source, visible: boolean) => void;
+  onToggleSource?: (source: SourceType, visible: boolean) => void;
   /**
    * Per-source point counts indexed by Source enum value.  Surveys whose
    * .bin hasn't loaded yet are absent from the map — the row in the UI
    * then renders the toggle without a count rather than a misleading "0".
    */
-  sourceCounts?: Partial<Record<Source, number>>;
+  sourceCounts?: Partial<Record<SourceType, number>>;
 
   /** Current point size in pixels.  Lives under Galaxies → Advanced. */
   pointSize: number;
@@ -214,13 +218,13 @@ type Props = {
    * Drives the per-cube rows inside Cosmic web → Advanced.
    */
   volumeFields?: ReadonlyArray<VolumeFieldRowData>;
-  onVolumeFieldEnabledChange?: (handle: string, enabled: boolean) => void;
-  onVolumeFieldIntensityChange?: (handle: string, intensity: number) => void;
-  onVolumeFieldContrastChange?: (handle: string, contrast: number) => void;
-  onVolumeFieldDensityScaleChange?: (handle: string, value: number) => void;
-  onVolumeFieldTrimChange?: (handle: string, trim: number) => void;
-  onVolumeFieldExposureChange?: (handle: string, exposure: number) => void;
-  onVolumeFieldPaletteChange?: (handle: string, id: ScalarFieldPaletteId) => void;
+  onVolumeFieldEnabledChange?: (id: VolumeFieldId, enabled: boolean) => void;
+  onVolumeFieldIntensityChange?: (id: VolumeFieldId, intensity: number) => void;
+  onVolumeFieldContrastChange?: (id: VolumeFieldId, contrast: number) => void;
+  onVolumeFieldDensityScaleChange?: (id: VolumeFieldId, value: number) => void;
+  onVolumeFieldTrimChange?: (id: VolumeFieldId, trim: number) => void;
+  onVolumeFieldExposureChange?: (id: VolumeFieldId, exposure: number) => void;
+  onVolumeFieldPaletteChange?: (id: VolumeFieldId, paletteId: ScalarFieldPaletteId) => void;
 
   // ── Structures group (cluster / supercluster / void MARKER rings) ──────
   /**
@@ -538,7 +542,7 @@ export function SettingsPanel({
               return (
                 <div className={styles.panelRow} key={s}>
                   <label htmlFor={`toggle-source-${s}`}>
-                    {sourceLabel(s)}
+                    {SOURCE_REGISTRY[s].label}
                     {count !== undefined && (
                       <span className={styles.sourceCount}>
                         {count.toLocaleString()}

@@ -40,14 +40,16 @@ export const selectionRingPass: Pass = {
 
   enabled(state, _ctx, _settings) {
     if (state.gpu.selectionRingRenderer === null) return false;
-    return state.subsystems.selection.selected() !== null;
+    const sel = state.subsystems.selection.selected();
+    // Galaxy selections drive the halo; POI selections render through
+    // the cluster marker pass instead.
+    return sel !== null && sel.kind === 'galaxy';
   },
 
   draw(pass, ctx, state, settings, _deps) {
-    // `enabled()` proved both fields are non-null.  The `!` assertions
-    // are safe: the pass framework only calls `draw` when `enabled`
-    // returned true.
-    const sel = state.subsystems.selection.selected()!;
+    const sel = state.subsystems.selection.selected();
+    // `enabled()` proved sel is a galaxy selection — narrow accordingly.
+    if (sel === null || sel.kind !== 'galaxy') return;
     const catalog = state.sources.catalogs.get(sel.source);
     // Defensive: catalog could be evicted between `enabled()` and
     // `draw()` if a tier swap completes mid-frame.  A no-op is the

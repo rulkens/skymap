@@ -30,7 +30,7 @@
 //     'cameraPosWorld', 'camPos') lives at WILDLY different byte
 //     offsets across renderers — points puts six other f32/u32
 //     fields between 'viewport' and 'camPosWorld'; milkyWayImpostor
-//     has 'fadeAlpha' + 'iTime' in those same slots; quads/disks
+//     has 'fadeAlpha' + 'iTime' in those same slots; quads/texturedDisks
 //     pad those slots out with explicit '_pad0/_pad1'. Forcing all
 //     of them onto the same prefix would mean rewriting the
 //     points/milkyWayImpostor uniform layouts purely to satisfy a

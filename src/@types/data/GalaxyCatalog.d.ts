@@ -134,4 +134,70 @@ export type GalaxyCatalog = {
    * of the input catalog), but the pipeline never produces a NaN entry.
    */
   diameterKpc: Float32Array;
+
+  /**
+   * Per-record source-interpreted classification byte — length === count.
+   *
+   * The byte's meaning depends on which `Source` this catalog belongs
+   * to: for `Source.Milliquas` it encodes the AGN class letter
+   * (1=Q, 2=A, 3=B, 4=K, 5=N, 6=S), for every other source it is
+   * always 0 ("unclassified") today.  Future morphology work on
+   * SDSS or GLADE can re-use the same slot with a different lookup
+   * table — the lookup helper `sourceClassLabel(source, byte)` in
+   * `src/data/sourceClass.ts` is the single dispatch site.
+   *
+   * Stored as `Uint8Array` because the on-disk format gives each
+   * record exactly one byte for this field (see
+   * `galaxyCatalogFormat.ts` v5 layout).  Zero is a legal "no class
+   * known" value for every source, so the typed array's default
+   * zero-fill is the correct empty state.
+   */
+  classByte: Uint8Array;
+
+  /**
+   * Per-galaxy spectroscopic redshift z — length === count.
+   *
+   * Carries the *catalogued* redshift, NOT the value implied by the
+   * stored 3-D position. The two diverge for galaxies inside ~30 Mpc
+   * where the build pipeline overrides the cz-derived position with a
+   * Cosmicflows-4 (or HyperLEDA `mod0`) measured distance — see
+   * docs/superpowers/specs/2026-05-27-local-volume-distances.md.
+   *
+   * For rows that DON'T get the local-volume override, `spectroscopicZ`
+   * equals the redshift used to derive the position (modulo float32
+   * precision), so the InfoCard's "Redshift z" line and the rendered
+   * point's distance remain self-consistent.
+   *
+   * Negative values are legal and preserved: the ~25 nearby galaxies
+   * with peculiar-velocity-dominated blueshifts (M31, M86, etc.) really
+   * do have z < 0 in their original catalogs, and the InfoCard shows
+   * the catalog value rather than the linear-sign-mirrored
+   * position-derived approximation.
+   *
+   * NaN is the "no spectroscopic measurement" sentinel — used for
+   * Famous Galaxy records that have a measured distance but no
+   * published spectroscopic redshift (rare; mostly Local Group dwarfs).
+   * Consumers fall back to the cartesian-derived value in that case.
+   */
+  spectroscopicZ: Float32Array;
+
+  /**
+   * Per-record parent-survey enum byte — length === count.
+   *
+   * Only meaningful for `Source.Milliquas` rows: Milliquas Names are
+   * almost always shaped `"<PARENT_SURVEY> J<RA><Dec>"`, where
+   * PARENT_SURVEY is one of a small fixed set (SDSS, 2MASX, GAIA,
+   * WISEA, NVSS, FIRST, 6dFGS).  At parse time we detect the prefix
+   * and write the matching enum value here so the InfoCard can
+   * reconstruct the historical display name at hover time by
+   * combining the prefix lookup with `iauRaDecSuffix(ra, dec)`.
+   *
+   * `0` means "no recognised parent-survey prefix" (literature
+   * designation like `3C 273` or `M 87`); the InfoCard falls back to
+   * the generic `MQ J<RA><Dec>` IAU name in that case.
+   *
+   * For every non-Milliquas source the build pipeline writes `0` and
+   * `milliquasParentSurveyPrefix(byte)` returns `null`.
+   */
+  parentSurveyByte: Uint8Array;
 };

@@ -17,6 +17,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import type { SourceType } from '../../../../src/@types/data/SourceType';
 
 import { createClickResolver } from '../../../../src/services/engine/interaction/clickHandler';
 import type { ClickResolveInput } from '../../../../src/@types/engine/ClickResolveInput';
@@ -32,7 +33,7 @@ type PickRenderer = ReturnType<typeof createPickRenderer>;
 // union (galaxy | cluster | supercluster | void) post-Plan-3 Task 10.
 // Helper accepts a galaxy-shaped selection for ergonomic test setup
 // and wraps it into the canonical `{ kind: 'galaxy', ... }` shape.
-function makePicker(result: { source: Source; localIdx: number } | null): PickRenderer {
+function makePicker(result: { source: SourceType; localIdx: number } | null): PickRenderer {
   const wrapped: PickResult | null =
     result === null ? null : { kind: 'galaxy', source: result.source, localIdx: result.localIdx };
   return {
@@ -70,7 +71,7 @@ describe('createClickResolver', () => {
       buildGalaxyInfo: () => dummyInfo,
     });
     const result = await r.resolveClick(dummyArgs);
-    expect(result).toEqual({ kind: 'select', selection: sel, info: dummyInfo });
+    expect(result).toEqual({ kind: 'select', selection: { kind: 'galaxy', ...sel }, info: dummyInfo });
   });
 
   it('returns kind="select" with info=null when resolveSelection returns null', async () => {
@@ -81,7 +82,7 @@ describe('createClickResolver', () => {
       buildGalaxyInfo: () => dummyInfo,
     });
     const result = await r.resolveClick(dummyArgs);
-    expect(result).toEqual({ kind: 'select', selection: sel, info: null });
+    expect(result).toEqual({ kind: 'select', selection: { kind: 'galaxy', ...sel }, info: null });
   });
 
   it('returns kind="select" with info=null when buildGalaxyInfo returns null', async () => {
@@ -92,7 +93,7 @@ describe('createClickResolver', () => {
       buildGalaxyInfo: () => null,
     });
     const result = await r.resolveClick(dummyArgs);
-    expect(result).toEqual({ kind: 'select', selection: sel, info: null });
+    expect(result).toEqual({ kind: 'select', selection: { kind: 'galaxy', ...sel }, info: null });
   });
 
   it('forwards the click args to pickRenderer.pick verbatim', async () => {

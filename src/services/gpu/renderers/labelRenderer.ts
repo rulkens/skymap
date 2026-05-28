@@ -88,12 +88,18 @@ const UNIFORM_BYTES = 80;
 
 /**
  * Per-label storage buffer stride, matching `struct LabelData` in io.wesl:
- *   worldPos  vec4<f32>  — xyz = world Mpc, w = worldEmMpc
- *   color     vec4<f32>  — premultiplied rgb, a
- *   sizing    vec4<f32>  — pixelSize, minPixelSize, maxPixelSize, fadeAlpha
- * 3 × 16 bytes = 48 bytes/label.
+ *
+ *   bytes  0..15  worldPos      vec4<f32>  — xyz = world Mpc, w = worldEmMpc
+ *   bytes 16..31  color         vec4<f32>  — premultiplied rgba (fill)
+ *   bytes 32..47  sizing        vec4<f32>  — outlineEmFrac, minPx, maxPx, fadeAlpha
+ *   bytes 48..63  outlineColor  vec4<f32>  — premultiplied rgba (outline stroke)
+ *
+ * 4 × 16 bytes = 64 bytes/label.  `sizing.x` repurposes the legacy
+ * `pixelSize` slot (ignored by the shader since the worldEmMpc
+ * migration) to carry `outlineEmFrac`, sparing a fresh vec4 for one
+ * scalar.
  */
-const LABEL_DATA_BYTES = 48;
+const LABEL_DATA_BYTES = 64;
 
 /**
  * Per-glyph instance buffer stride, matching `VsIn` attributes 1–5 in io.wesl:
@@ -414,7 +420,7 @@ export function createLabelRenderer(
         label.alignY ?? 'baseline',
       );
 
-      // Write per-label storage record (48 bytes, 12 floats) unconditionally
+      // Write per-label storage record (96 bytes, 24 floats) unconditionally
       // — even when `quads` is empty.  Keeping the per-label index stable
       // across the outer loop matters because each glyph carries its
       // labelIndex by position; if we skipped a label whose text produced
@@ -422,23 +428,40 @@ export function createLabelRenderer(
       // label entry.  An unused storage slot is harmless (no glyph
       // references it, the GPU never reads it).
       //
-      //   [0..3]  worldPos (x,y,z, worldEmMpc)
-      //   [4..7]  color    (r,g,b,a premultiplied)
-      //   [8..11] sizing   (pixelSize, minPx, maxPx, fadeAlpha)
+      //   [0..3]   worldPos     (x, y, z, worldEmMpc)
+      //   [4..7]   color        (r*a, g*a, b*a, a — premultiplied)
+      //   [8..11]  sizing       (outlineEmFrac, minPx, maxPx, fadeAlpha)
+      //   [12..15] outlineColor (r*a, g*a, b*a, a)
       const labelBase = li * (LABEL_DATA_BYTES / 4);
       labelBuf[labelBase + 0] = label.worldPos[0];
       labelBuf[labelBase + 1] = label.worldPos[1];
       labelBuf[labelBase + 2] = label.worldPos[2];
       labelBuf[labelBase + 3] = label.worldEmMpc ?? 0.01;
+
+      // Public colour API is STRAIGHT RGBA — producers write the natural
+      // form (`[1, 0, 0, 0.5]` is "half-transparent red"); the fragment
+      // shader composites in premultiplied space, so we multiply r/g/b
+      // by a here on the write boundary.
       const color = label.color ?? [1, 1, 1, 1];
-      labelBuf[labelBase + 4] = color[0]!;
-      labelBuf[labelBase + 5] = color[1]!;
-      labelBuf[labelBase + 6] = color[2]!;
-      labelBuf[labelBase + 7] = color[3]!;
-      labelBuf[labelBase + 8] = label.pixelSize;
+      const ca = color[3]!;
+      labelBuf[labelBase + 4] = color[0]! * ca;
+      labelBuf[labelBase + 5] = color[1]! * ca;
+      labelBuf[labelBase + 6] = color[2]! * ca;
+      labelBuf[labelBase + 7] = ca;
+
+      labelBuf[labelBase + 8] = label.outlineEmFrac ?? 0;
       labelBuf[labelBase + 9] = label.minPixelSize ?? 8;
       labelBuf[labelBase + 10] = label.maxPixelSize ?? 64;
       labelBuf[labelBase + 11] = label.fadeAlpha ?? 1;
+
+      // outline colour — same straight → premultiplied conversion as fill.
+      // Default [0,0,0,0] makes outlineEmFrac irrelevant (band alpha is 0).
+      const outlineColor = label.outlineColor ?? [0, 0, 0, 0];
+      const oa = outlineColor[3]!;
+      labelBuf[labelBase + 12] = outlineColor[0]! * oa;
+      labelBuf[labelBase + 13] = outlineColor[1]! * oa;
+      labelBuf[labelBase + 14] = outlineColor[2]! * oa;
+      labelBuf[labelBase + 15] = oa;
 
       // Resolve the label's font to its GPU texture-array layer index
       // ONCE per label, outside the inner glyph loop — every glyph in
@@ -556,5 +579,10 @@ export function createLabelRenderer(
   // `satisfies Renderer` confirms the shared label+destroy contract at
   // compile time without widening the static type seen by consumers.
   renderer satisfies Renderer;
+  // Expose the CPU-side label storage scratch buffer for unit tests
+  // that need to assert pack-loop output.  The accessor is prefixed
+  // with `__debug` to flag it as test-only — production code should
+  // never read this; the GPU has the authoritative copy.
+  (renderer as unknown as { __debugLabelBuf: () => Float32Array }).__debugLabelBuf = () => labelBuf;
   return renderer;
 }

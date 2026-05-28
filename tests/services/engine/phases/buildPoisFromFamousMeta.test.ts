@@ -17,6 +17,9 @@ function makeCatalog(positions: number[], diameters: number[]): GalaxyCatalog {
     axisRatio: new Float32Array(count).fill(NaN),
     positionAngleDeg: new Float32Array(count).fill(NaN),
     diameterKpc: new Float32Array(diameters),
+    classByte: new Uint8Array(count),
+    parentSurveyByte: new Uint8Array(count),
+    spectroscopicZ: new Float32Array(count),
   };
 }
 

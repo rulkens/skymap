@@ -1,4 +1,4 @@
-import type { Source } from '../../data/sources';
+import type { SourceType } from '../data/SourceType';
 import type { Tier } from '../data/Tier';
 
 /**
@@ -7,4 +7,4 @@ import type { Tier } from '../data/Tier';
  * one fetcher instance serve every survey — the slot just hands it a
  * different request when the user toggles a survey on.
  */
-export type GalaxyCatalogReq = { source: Source; tier: Tier };
+export type GalaxyCatalogReq = { source: SourceType; tier: Tier };

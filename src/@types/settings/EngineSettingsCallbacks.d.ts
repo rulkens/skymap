@@ -23,7 +23,9 @@ export type EngineSettingsCallbacks = Pick<
   | 'bias'
   | 'thumbnails'
   | 'milkyWay'
+  | 'debug'
   | 'filaments'
+  | 'volumes'
   | 'labels'
   | 'input'
 >;

@@ -28,28 +28,40 @@
  *   This module re-exports `crossMatch` so callers (and the test) can
  *   keep importing it from the `buildAllBins` path the plan specifies.
  */
-import { createReadStream, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { createReadStream, existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
+import type { SourceType } from '../../src/@types/data/SourceType';
 
 import { parseSdssCsv } from '../parsers/sdssCsv.js';
 import { parseTwoMrs, parseXscShapeCsv } from '../parsers/twoMrs.js';
 import type { XscShapeMap } from '../parsers/twoMrs.js';
 import { parseGladeLine, parseGlade2masxPgcLine, parseHyperLedaCsv } from '../parsers/glade.js';
 import type { HyperLedaShapeMap } from '../parsers/glade.js';
+import { parseMilliquas } from '../parsers/milliquas.js';
+import type { MilliquasParseResult } from '../parsers/milliquas.js';
 import type { ParsedRecord } from '../parsers/common.js';
 import { crossMatch } from './crossMatch.js';
+import { dropFamousMatches } from './dropFamousMatches.js';
+import type { FamousSkyPosition } from './dropFamousMatches.js';
+import { parseFamousSeed } from '../parsers/famousSeed.js';
 
 import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalogFormat.js';
 import { raDecZToCartesian } from '../../src/utils/math/index.js';
+import { raDecDistToCartesian } from '../../src/utils/math/raDecDistToCartesian.js';
 import { fallbackOrientation } from '../../src/utils/random/fallbackOrientation.js';
+import { catalogDistanceFor } from './catalogDistanceFor.js';
+import { CUTOFF_MPC } from './localVolumeCutoff.js';
+import type { Cf4CatalogIndex } from '../parsers/cosmicflows4.js';
+import { loadCf4CatalogIndex } from '../parsers/cosmicflows4.js';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/galaxyDiameterKpc.js';
-import { Source, sourceLabel } from '../../src/data/sources.js';
+import { Source, SOURCE_REGISTRY } from '../../src/data/sources.js';
 import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog.js';
-import { TIER_TARGETS, tierFilenameForSource } from '../../src/data/tierTargets.js';
+import { tierTarget, tierFilenameForSource } from '../../src/data/tierTargets.js';
 import type { Tier } from '../../src/@types/data/Tier.js';
 import { subsampleByAbsMag } from './subsampleByAbsMag.js';
+import { rawDataPath } from '../utils/io/rawDataRegistry.js';
 
 // Re-export so `tests/crossMatch.test.ts` and any other consumer can keep
 // using the documented `tools/buildAllBins` import path.
@@ -59,14 +71,39 @@ export type { CrossMatchInputs } from './crossMatch.js';
 // ─── GalaxyCatalog assembly + write ──────────────────────────────────────────
 
 /**
+ * Pre-built catalog indices for the local-volume distance override.
+ *
+ * Both maps are pre-computed (per call to runCli, once for the whole
+ * build) so the per-record lookup in `recordsToCloud` is O(1) — see the
+ * `catalogDistanceFor` docstring for the precedence rules.
+ */
+export type LocalVolumeOverrides = {
+  cf4: Cf4CatalogIndex;
+  hyperLeda: HyperLedaShapeMap;
+};
+
+/**
  * Materialise a survey-specific subset of merged records into the SoA
  * `GalaxyCatalog` shape the binary encoder expects.
  *
  * Allocating each typed array exactly once at the known final size keeps
  * the hot fill loop tight — no per-row push() overhead, no hidden
  * reallocations, and the resulting buffers are GPU-upload-ready.
+ *
+ * `overrides`: when provided, every record's position is replaced with
+ * the CF4 / HyperLEDA measured distance if (a) the catalog match returns
+ * a distance and (b) the matched distance is below `CUTOFF_MPC`. The
+ * catalogued spectroscopic z stays on `cloud.spectroscopicZ` regardless,
+ * so the InfoCard displays the published value even when the override
+ * fires (e.g. M31's z = −0.001 stays visible while the position sits at
+ * 0.78 Mpc). When `overrides` is null the legacy cz-only path runs for
+ * every record — used by unit tests that exercise the SoA fill loop in
+ * isolation.
  */
-function recordsToCloud(records: ParsedRecord[]): GalaxyCatalog {
+export function recordsToCloud(
+  records: ParsedRecord[],
+  overrides: LocalVolumeOverrides | null = null,
+): GalaxyCatalog {
   const count = records.length;
   const cloud: GalaxyCatalog = {
     count,
@@ -80,12 +117,33 @@ function recordsToCloud(records: ParsedRecord[]): GalaxyCatalog {
     axisRatio: new Float32Array(count),
     positionAngleDeg: new Float32Array(count),
     diameterKpc: new Float32Array(count),
+    classByte: new Uint8Array(count),
+    parentSurveyByte: new Uint8Array(count),
+    spectroscopicZ: new Float32Array(count),
   };
+  let overridesApplied = 0;
   for (let i = 0; i < count; i++) {
     // `records[i]` is `ParsedRecord | undefined` under noUncheckedIndexedAccess.
     // We loop with i < count === records.length, so the `!` is safe.
     const r = records[i]!;
-    const [x, y, z] = raDecZToCartesian(r.ra, r.dec, r.z);
+    let x: number;
+    let y: number;
+    let z: number;
+    const overrideHit =
+      overrides !== null ? catalogDistanceFor(r, overrides.cf4, overrides.hyperLeda) : null;
+    if (overrideHit !== null && overrideHit.distMpc < CUTOFF_MPC) {
+      // Inside-cutoff catalog match: use the measured distance for the
+      // cartesian position. The catalogued z still lands on
+      // cloud.spectroscopicZ[i] below, so the InfoCard's "Redshift z"
+      // line keeps showing the published value.
+      [x, y, z] = raDecDistToCartesian(r.ra, r.dec, overrideHit.distMpc);
+      overridesApplied++;
+    } else {
+      // No catalog match, or the match is past the cutoff (in which case
+      // the Hubble-flow distance is good enough that the extra dependency
+      // isn't worth it — see CUTOFF_MPC docstring).
+      [x, y, z] = raDecZToCartesian(r.ra, r.dec, r.z);
+    }
     cloud.objIDs[i] = r.objID;
     cloud.positions[i * 3 + 0] = x;
     cloud.positions[i * 3 + 1] = y;
@@ -124,6 +182,27 @@ function recordsToCloud(records: ParsedRecord[]): GalaxyCatalog {
     // chip in Task 14.
     cloud.diameterKpc[i] =
       r.diameterKpc !== null && r.diameterKpc > 0 ? r.diameterKpc : DEFAULT_GALAXY_DIAMETER_KPC;
+    // Per-source classification byte (e.g. Milliquas AGN class
+    // letter → 1..6).  Every parser that doesn't carry a class
+    // signal leaves r.classByte at 0, so we copy unconditionally.
+    cloud.classByte[i] = r.classByte;
+    // Milliquas-only parent-survey enum (1=SDSS, 2=2MASX, …).
+    // Zero for every non-Milliquas parser.  See sourceClass.ts for
+    // the full enum.
+    cloud.parentSurveyByte[i] = r.parentSurveyByte;
+    // Catalogued spectroscopic redshift, stored separately from
+    // position so the InfoCard shows the published catalog value even
+    // when the CF4 / HyperLEDA override above replaces position with a
+    // measured distance. We read from r.spectroscopicZ (not r.z) so a
+    // future override that wants to *change* r.z (e.g. a
+    // peculiar-velocity correction) doesn't accidentally leak into the
+    // InfoCard's display channel.
+    cloud.spectroscopicZ[i] = r.spectroscopicZ;
+  }
+  if (overrides !== null && overridesApplied > 0) {
+    process.stderr.write(
+      `  local-volume override: ${overridesApplied.toLocaleString()} of ${count.toLocaleString()} positions replaced (CF4 / HyperLEDA)\n`,
+    );
   }
   return cloud;
 }
@@ -202,6 +281,51 @@ function loadOrEmpty(path: string | undefined, parser: ParserFn): ParsedRecord[]
     `  loaded ${records.length.toLocaleString()} records (skipped ${skipped.toLocaleString()})\n`,
   );
   return records;
+}
+
+/**
+ * Load + parse the Milliquas v8 fixed-width file.
+ *
+ * Why a Milliquas-specific loader rather than another `loadOrEmpty`
+ * call? `loadOrEmpty` returns just `ParsedRecord[]` and reports a flat
+ * `skipped` count, but the Milliquas parser surfaces a structured
+ * skip breakdown (z=blank vs z=0 vs photo-z vs GAIA3 QSOC) that's
+ * worth printing as the operator's eyes-on signal during a build.
+ * Wrapping the parser here keeps that reporting close to the load
+ * site without forcing `ParserFn` to grow a richer return shape every
+ * parser would have to honour.
+ *
+ * Missing-file tolerance mirrors `loadOrEmpty`: the raw 194 MB
+ * upstream file is gitignored, so a fresh checkout won't have it.
+ * We return an empty result so `npm run build-tiers` still produces
+ * the SDSS/2MRS/GLADE bins for a contributor who hasn't run the
+ * `fetch-milliquas` step yet.
+ */
+function loadMilliquas(path: string | undefined): MilliquasParseResult {
+  const empty: MilliquasParseResult = {
+    records: [],
+    skipped: { zMissing: 0, zZero: 0, photoZRounded: 0, qsocRounded: 0 },
+  };
+  if (!path) return empty;
+  const full = resolve(path);
+  if (!existsSync(full)) {
+    process.stderr.write(`  ${path} not present — Milliquas bin will be empty\n`);
+    return empty;
+  }
+  const text = readFileSync(full, 'utf8');
+  const result = parseMilliquas(text);
+  const { records, skipped } = result;
+  const skippedTotal =
+    skipped.zMissing + skipped.zZero + skipped.photoZRounded + skipped.qsocRounded;
+  process.stderr.write(
+    `  loaded ${records.length.toLocaleString()} records ` +
+      `(skipped ${skippedTotal.toLocaleString()}: ` +
+      `z=blank ${skipped.zMissing.toLocaleString()}, ` +
+      `z=0 ${skipped.zZero.toLocaleString()}, ` +
+      `photo-z ${skipped.photoZRounded.toLocaleString()}, ` +
+      `GAIA3 QSOC ${skipped.qsocRounded.toLocaleString()})\n`,
+  );
+  return result;
 }
 
 /**
@@ -288,14 +412,15 @@ async function runCli(): Promise<void> {
 
   // Reasonable defaults so `npm run build-all` works with no flags after
   // the user drops fresh catalog files into the canonical paths:
-  //   - SDSS: newest `data/Skyserver_*.csv` by mtime (auto-picked)
-  //   - 2MRS: `data/raw/2mrs_table3.dat` (filename is stable on Vizier)
-  //   - GLADE: `data/raw/glade2.3.dat` (likewise)
+  //   - SDSS: newest `data/raw/sdss/Skyserver_*.csv` by mtime (auto-picked)
+  //   - 2MRS: `data/raw/2mrs/2mrs_table3.dat` (filename is stable on Vizier)
+  //   - GLADE: `data/raw/glade/glade2.3.dat` (likewise)
   //   - out-dir: `public/data` (Vite serves this at /data/* in the browser)
   // Each can be overridden with the matching --key flag.
-  const sdssArg = args.sdss || findLatestSdssCsv(resolve('data')) || '';
-  const twomrsArg = args.twomrs || 'data/raw/2mrs_table3.dat';
-  const gladeArg = args.glade || 'data/raw/glade2.3.dat';
+  const sdssArg = args.sdss || findLatestSdssCsv(rawDataPath('sdss.dir')) || '';
+  const twomrsArg = args.twomrs || rawDataPath('2mrs.table3');
+  const gladeArg = args.glade || rawDataPath('glade.v23');
+  const milliquasArg = args.milliquas || rawDataPath('milliquas.txt');
   const outDirArg = args['out-dir'] || 'public/data';
 
   if (sdssArg) {
@@ -304,7 +429,7 @@ async function runCli(): Promise<void> {
     );
   } else {
     process.stderr.write(
-      'warning: no SDSS CSV supplied AND no Skyserver_*.csv found in data/ — SDSS bin will be empty\n',
+      'warning: no SDSS CSV supplied AND no Skyserver_*.csv found in data/raw/sdss/ — SDSS bin will be empty\n',
     );
   }
 
@@ -313,6 +438,7 @@ async function runCli(): Promise<void> {
   args.sdss = sdssArg;
   args.twomrs = twomrsArg;
   args.glade = gladeArg;
+  args.milliquas = milliquasArg;
   args['out-dir'] = outDirArg;
 
   // `--glade-spec-only` is a value-less boolean flag; readArgs() consumed the
@@ -347,7 +473,7 @@ async function runCli(): Promise<void> {
   // pipeline keeps working, just with hash-derived disk tilts instead of
   // measured ones. We log loud warnings rather than silently substituting,
   // so the operator sees exactly what they're getting.
-  const xscPath = resolve('data/raw/2mass_xsc_pa.csv');
+  const xscPath = rawDataPath('2mrs.xsc-pa');
   let xsc: XscShapeMap = new Map();
   try {
     xsc = parseXscShapeCsv(readFileSync(xscPath, 'utf8'));
@@ -356,7 +482,7 @@ async function runCli(): Promise<void> {
     process.stderr.write(`warning: ${xscPath} not present — 2MRS orientation = fallback only\n`);
   }
 
-  const ledaPath = resolve('data/raw/hyperleda_pa.csv');
+  const ledaPath = rawDataPath('hyperleda.pa');
   let leda: HyperLedaShapeMap = new Map();
   try {
     leda = parseHyperLedaCsv(readFileSync(ledaPath, 'utf8'));
@@ -364,6 +490,13 @@ async function runCli(): Promise<void> {
   } catch {
     process.stderr.write(`warning: ${ledaPath} not present — GLADE orientation = fallback only\n`);
   }
+
+  // CF4 + HyperLEDA-mod0 indices for the local-volume distance override
+  // (galaxies inside CUTOFF_MPC). loadCf4CatalogIndex is missing-file
+  // tolerant — a fresh checkout without the raw CF4 download still
+  // produces .bin outputs, just without the override fired.
+  const cf4Index = loadCf4CatalogIndex();
+  const overrides: LocalVolumeOverrides = { cf4: cf4Index, hyperLeda: leda };
 
   process.stderr.write('parsing SDSS…\n');
   const sdss = loadOrEmpty(args.sdss, parseSdssCsv);
@@ -383,6 +516,9 @@ async function runCli(): Promise<void> {
     leda,
     pgcByMassId,
   );
+
+  process.stderr.write('parsing Milliquas…\n');
+  const milliquasResult = loadMilliquas(args.milliquas);
 
   // ── Cross-pollinate PGCs from GLADE into 2MRS ──────────────────────────
   //
@@ -434,13 +570,47 @@ async function runCli(): Promise<void> {
   };
 
   process.stderr.write('cross-matching…\n');
-  const merged = crossMatch({ sdss, twoMrs, glade });
-  process.stderr.write(`  ${merged.length.toLocaleString()} records survived dedup\n`);
+  const mergedRaw = crossMatch({ sdss, twoMrs, glade });
+  process.stderr.write(`  ${mergedRaw.length.toLocaleString()} records survived dedup\n`);
+
+  // Drop catalog rows that match a famous-galaxy seed position. The famous
+  // layer (famous.bin, built later by buildFamous.ts) carries hand-curated
+  // entries for ~75 well-known galaxies with their own positions,
+  // thumbnails, and metadata. Without this dedup each famous galaxy
+  // renders twice — once from the catalog layer, once from the famous
+  // layer. Pre-local-volume-override the duplication was visually hidden
+  // (cz-mirrored catalog position vs curated famous position were Mpc
+  // apart); the CF4 override moves them ~0.03 Mpc apart, making the
+  // duplication visible.
+  //
+  // Threshold: 30 arcsec — same scale used by the rest of the build for
+  // catalog cross-matches; close enough to catch the local-volume
+  // duplication M31/NGC 147/NGC 185 exhibited post-CF4 override.
+  let famousPositions: ReadonlyArray<FamousSkyPosition> = [];
+  try {
+    const seedRaw = readFileSync(rawDataPath('famous.seed'), 'utf8');
+    famousPositions = parseFamousSeed(seedRaw).map((e) => ({ ra: e.ra, dec: e.dec }));
+    process.stderr.write(`  famous-seed dedup: ${famousPositions.length} reference positions loaded\n`);
+  } catch (err) {
+    process.stderr.write(
+      `  warning: famous seed not loadable (${(err as Error).message}) — skipping famous-vs-catalog dedup\n`,
+    );
+  }
+  const { kept: merged, dropped: famousDropped } = dropFamousMatches(
+    mergedRaw,
+    famousPositions,
+    30,
+  );
+  if (famousDropped > 0) {
+    process.stderr.write(
+      `  famous-seed dedup: dropped ${famousDropped.toLocaleString()} catalog rows that match a famous-seed position\n`,
+    );
+  }
 
   // Bucket the merged stream back out per source so we can write one
   // file per survey. Using a Map preserves insertion order, which keeps
   // the log output tidy.
-  const bySource = new Map<Source, ParsedRecord[]>();
+  const bySource = new Map<SourceType, ParsedRecord[]>();
   for (const r of merged) {
     let arr = bySource.get(r.source);
     if (!arr) {
@@ -450,6 +620,24 @@ async function runCli(): Promise<void> {
     arr.push(r);
   }
 
+  // Milliquas bypasses crossMatch on purpose.  Two reasons:
+  //
+  // 1. A Milliquas point and a GLADE host galaxy at the same sky
+  //    position are physically *different* objects: an AGN core vs the
+  //    integrated host emission.  `crossMatch` deduplicates by (RA,
+  //    Dec, redshift), so feeding Milliquas through it would discard
+  //    real data — exactly the science the catalogue is here to add.
+  //
+  // 2. Milliquas is pre-deduplicated upstream against every parent
+  //    survey it draws from (SDSS, Veron, NED, …), so a second dedup
+  //    pass would just spend CPU re-discovering the empty intersection.
+  //
+  // Add the records straight into the per-source bucket so the per-tier
+  // write loop below treats them like any other survey.
+  if (milliquasResult.records.length > 0) {
+    bySource.set(Source.Milliquas, milliquasResult.records);
+  }
+
   // Per-source dedup report. Subtracting kept from input gives the number
   // of records dropped as duplicates of a higher-priority survey's row.
   for (const source of [Source.SDSS, Source.TwoMRS, Source.Glade]) {
@@ -457,7 +645,7 @@ async function runCli(): Promise<void> {
     const input = inputCounts[source] ?? 0;
     const dropped = input - kept;
     process.stderr.write(
-      `  ${sourceLabel(source)}: ${input.toLocaleString()} in → ${kept.toLocaleString()} kept, ${dropped.toLocaleString()} dropped as duplicate\n`,
+      `  ${SOURCE_REGISTRY[source].label}: ${input.toLocaleString()} in → ${kept.toLocaleString()} kept, ${dropped.toLocaleString()} dropped as duplicate\n`,
     );
   }
 
@@ -479,16 +667,21 @@ async function runCli(): Promise<void> {
       // Apply the tier's per-source target, if any.  Missing key = no cap.
       // 0 = exclude (skip writing this file entirely so the runtime can
       // detect "no data for this tier" via 404 rather than an empty cloud).
-      const target = TIER_TARGETS[tier][source];
+      const target = tierTarget(source, tier);
       if (target === 0) {
         process.stderr.write(
-          `tier ${tier}: ${sourceLabel(source)} excluded — skipping ${filename}\n`,
+          `tier ${tier}: ${SOURCE_REGISTRY[source].label} excluded — skipping ${filename}\n`,
         );
         continue;
       }
-      const slice = target === undefined ? records : subsampleByAbsMag(records, target);
+      // Milliquas needs no special-cased subsample path now that the
+      // class + parent-survey bytes ride on the records themselves —
+      // `subsampleByAbsMag` already preserves per-record fields when
+      // it picks the brightest-N slice.
+      const slice =
+        target === undefined ? records : subsampleByAbsMag(records, target);
 
-      const cloud = recordsToCloud(slice);
+      const cloud = recordsToCloud(slice, overrides);
       const buf = encodeGalaxyCatalog(cloud);
       const outPath = resolve(outDir, filename);
       writeFileSync(outPath, Buffer.from(buf));

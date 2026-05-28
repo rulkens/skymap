@@ -53,6 +53,7 @@
 import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
+import type { VolumeFieldId } from '../data/VolumeFieldId';
 import type { PoiCategory } from '../../services/engine/subsystems/poiSubsystem';
 
 export type EngineSettingsState = {
@@ -133,7 +134,24 @@ export type EngineSettingsState = {
    */
   volumes: {
     masterEnabled: boolean;
-    fields: Record<string, VolumeFieldSettings>;
+    fields: Partial<Record<VolumeFieldId, VolumeFieldSettings>>;
+  };
+
+  /**
+   * Developer-oriented debug overlays.  Diagnostic lenses on top of
+   * the rendered scene rather than knobs on the scene itself — kept
+   * in their own cluster so the per-cluster mental model (one cluster
+   * = one chunk of the renderer) stays clean.
+   *
+   *   - `showPickBuffer` — colour-maps the r32uint pick texture and
+   *     composites it over the tone-mapped frame.  Lets a developer
+   *     see which billboard the hover/click resolver actually claims
+   *     at each pixel (including the +PICK_PADDING_PX boost and the
+   *     1.5× forgiveness ellipse/circle baked into pickFragment.wesl).
+   *     Gated behind the DebugPanel.
+   */
+  debug: {
+    showPickBuffer: boolean;
   };
 
   /**

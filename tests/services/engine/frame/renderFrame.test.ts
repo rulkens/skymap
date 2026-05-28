@@ -28,6 +28,7 @@ import { createDisabledGpuTimingService } from '../../../../src/services/gpu/tim
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { mat4 } from 'gl-matrix';
+import type { Selection } from '../../../../src/@types/engine/subsystems/Selection';
 
 // ── Test fixtures ───────────────────────────────────────────────────────────
 
@@ -148,6 +149,15 @@ function makeMockMilkyWayRenderer(callLog: CallLog) {
   } as any;
 }
 
+function makeMockHorizonShellRenderer(callLog: CallLog) {
+  return {
+    draw: vi.fn(() => {
+      callLog.push('horizonShellRenderer.draw');
+    }),
+    destroy: vi.fn(),
+  } as any;
+}
+
 function makeMockThumbnails(callLog: CallLog) {
   return {
     runFrame: vi.fn(() => {
@@ -209,6 +219,9 @@ function makeCloud(count = 1): GalaxyCatalog {
     axisRatio: fill(1),
     positionAngleDeg: fill(0),
     diameterKpc: fill(50),
+    classByte: new Uint8Array(count),
+    parentSurveyByte: new Uint8Array(count),
+    spectroscopicZ: new Float32Array(count),
   };
 }
 
@@ -224,6 +237,7 @@ function makeInput(
   const hdrTargetView = makeFakeHdrView();
   const pointRenderer = makeMockPointRenderer(callLog);
   const milkyWayRenderer = makeMockMilkyWayRenderer(callLog);
+  const horizonShellRenderer = makeMockHorizonShellRenderer(callLog);
   const postProcess = makeMockPostProcess(callLog, hdrTargetView);
   // Minimal VolumeOffscreen stub — renderFrame's existing tests don't
   // exercise the volume pass (volumesEnabled is false by default in
@@ -239,7 +253,7 @@ function makeInput(
   const settings = {
     pointSizePx: 2.5,
     brightness: 1.0,
-    selected: null as { source: Source; localIdx: number } | null,
+    selected: null as Selection | null,
     visibleSourceMask: 0xffffffff,
     highlightFallback: true,
     realOnlyMode: false,
@@ -284,7 +298,7 @@ function makeInput(
     renderer: pointRenderer,
     postProcess,
     volumeOffscreen,
-    texturedImpostors: thumbnails,
+    texturedDisks: thumbnails,
   };
 
   return {
@@ -297,6 +311,7 @@ function makeInput(
     postProcess,
     pointRenderer,
     milkyWayRenderer,
+    horizonShellRenderer,
     thumbnails,
     texturedQuadRenderer,
     texturedDiskRenderer,
@@ -327,7 +342,7 @@ function makeInput(
         // assertions continue to focus on point + milky-way ordering.
         subsystems: {
           proceduralDisks: null,
-          texturedImpostors: null,
+          texturedDisks: null,
           // filamentsPass.enabled now consults the FadeRegistry to
           // keep the pass alive through fade-out tails. Provide a
           // minimal opacityOf stub so the gate doesn't crash.
@@ -343,6 +358,7 @@ function makeInput(
       device,
       context,
       milkyWayRenderer,
+      horizonShellRenderer,
       filamentRenderer: null,
       scalarVolumeRenderer: null,
       texturedQuadRenderer,
@@ -350,7 +366,6 @@ function makeInput(
       proceduralDiskRenderer,
       settings,
       famousMeta: [],
-      famousXrefs: {},
       catalogs,
       // Disabled stub mirrors the production path (no `?gpuTimings`
       // URL gate) — `service.enabled === false` so renderFrame takes
@@ -444,7 +459,7 @@ describe('renderFrame', () => {
 
   it('packs (source, localIdx) into the selectedPacked u32 sent to pointRenderer.draw', () => {
     // SDSS = 1, localIdx = 42 → (1 << 27) | 42 = 0x0800_002a = 134217770.
-    const fx2 = makeInput({ settings: { selected: { source: Source.SDSS, localIdx: 42 } } });
+    const fx2 = makeInput({ settings: { selected: { kind: 'galaxy', source: Source.SDSS, localIdx: 42 } } });
     renderFrame(fx2.input);
     const draw = fx2.pointRenderer.draw as ReturnType<typeof vi.fn>;
     const expected = ((Source.SDSS << 27) | 42) >>> 0;
@@ -456,11 +471,11 @@ describe('renderFrame', () => {
   // impostor-subsystem-split (Tasks 11/12).  The combined `runFrame` call
   // that lived inside the legacy galaxyThumbnailsPass is gone — the LOD-1
   // and LOD-2 plans are now produced by `proceduralDiskSubsystem.runFrame`
-  // and `texturedImpostorSubsystem.runFrame` upstream in `runFrame.ts`,
+  // and `texturedDiskSubsystem.runFrame` upstream in `runFrame.ts`,
   // and the three downstream passes (`proceduralDisksPass`,
   // `texturedQuadsPass`, `texturedDisksPass`) just issue the renderer
   // draws.  The textured halves were split out of the former
-  // `texturedImpostorsPass` on 2026-05-18 so the debug panel can
+  // `texturedDisksPass` on 2026-05-18 so the debug panel can
   // toggle them independently.  Per-pass coverage lives in the
   // matching `passes/<name>Pass.test.ts` files.
 

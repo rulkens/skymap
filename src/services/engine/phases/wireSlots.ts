@@ -10,7 +10,7 @@
  *   - Famous-meta + PGC-alias sidecar slots.
  *   - Synthetic-volume DEV fixtures.
  *   - The `allSlots` registry + load-progress emitter.
- *   - The galaxy-atlas / textured-impostor / procedural-disk subsystems.
+ *   - The galaxy-atlas / textured-disk / procedural-disk subsystems.
  *
  * After mint, this phase fires `cb.onStatusChange({ kind: 'loading' })`
  * and kicks off the parallel survey loads. It does NOT block on arrivals
@@ -28,12 +28,11 @@
  *   - `state.assetSlots.filaments`, `state.assetSlots.famousMeta`,
  *     `state.assetSlots.pgcAlias`, `state.assetSlots.cf4Density`,
  *     `state.assetSlots.mcpm`, `state.assetSlots.syntheticVolumes`.
- *   - `state.sources.famousMeta`, `state.sources.famousXrefs` — via
- *     famous-meta subscriber (on `ready`).
+ *   - `state.sources.famousMeta` — via famous-meta subscriber (on `ready`).
  *   - `state.sources.catalogs` — populated by the per-source slot commit
  *     subscribers (wired in `initGpu`).
  *   - `state.subsystems.loadProgress`, `state.subsystems.galaxyAtlas`,
- *     `state.subsystems.texturedImpostors`, `state.subsystems.proceduralDisks`.
+ *     `state.subsystems.texturedDisks`, `state.subsystems.proceduralDisks`.
  *   - `cb.onStatusChange({ kind: 'loading' })` synchronously; `kind:
  *     'ready'` fires from the per-arrival subscriber, not from this body.
  *
@@ -43,7 +42,13 @@
  */
 
 import { Source } from '../../../data/sources';
-import { catalogSourceFor } from '../../../data/catalogSource';
+import { maskHas } from '../../../utils/sourceMask';
+import {
+  GALAXY_CATALOG_SOURCE_REGISTRY,
+  SURVEY_POINT_SOURCES,
+  TIER_FETCHED_POINT_SOURCES,
+  loadCompanionAssets,
+} from '../wiring/galaxyCatalogSourceRegistry';
 import { buildPoisFromFamousMeta } from './buildPoisFromFamousMeta';
 import { createFilamentSlot } from '../../loading/slots/filamentSlot';
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
@@ -54,7 +59,7 @@ import { createSyntheticVolumeSlots } from '../../loading/slots/syntheticVolumeS
 import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';
 import { createGalaxyAtlasSubsystem } from '../subsystems/galaxyAtlasSubsystem';
 import { createProceduralDiskSubsystem } from '../subsystems/proceduralDiskSubsystem';
-import { createTexturedImpostorSubsystem } from '../subsystems/texturedImpostorSubsystem';
+import { createTexturedDiskSubsystem } from '../subsystems/texturedDiskSubsystem';
 // Cosmography POI anchors wired unconditionally into the POI subsystem
 // below — the user-facing toggle is the SettingsPanel per-category
 // checkbox, not a URL gate.  (Pre-2026-05-17 this was gated on
@@ -64,7 +69,7 @@ import { createTexturedImpostorSubsystem } from '../subsystems/texturedImpostorS
 // syntheticVolumeFetcher) were moved into `syntheticVolumeSlots.ts`
 // by H4 and intentionally stay out.
 import { buildStaticAnchorPois } from '../../../data/buildStaticAnchorPois';
-import { DEFAULT_CF4_DENSITY_ENABLED } from '../../../data/defaults';
+import { SOURCE_REGISTRY } from '../../../data/sources';
 import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfInterest';
 
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
@@ -128,7 +133,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
 
   // ── CF-4 DM density volume slot ──────────────────────────────────
   // Slot minted unconditionally; the boot-time `.load()` below is
-  // gated on `DEFAULT_CF4_DENSITY_ENABLED` so a default-off CF-4
+  // gated on `SOURCE_REGISTRY[Source.Cf4Density].visible` so a default-off CF-4
   // doesn't waste bandwidth.  Toggling on later lazy-loads via
   // `engine.setVolumeFieldEnabled`.  Factory owns mint + commit + state
   // write — see `loading/slots/cf4DensitySlot.ts`.
@@ -253,22 +258,19 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   for (const [, slot] of allSlots) progressEmitter.attachSlot(slot);
   state.subsystems.loadProgress = progressEmitter;
 
-  // Trigger the famous-meta load as soon as the slot is wired —
-  // sidecars are tiny and only feed InfoCard text, so kicking them
-  // off here (rather than awaiting the much larger point fetches)
-  // means the very first hover already has enriched text on a typical
-  // connection.  PGC-aliases stay lazy; see `loadPgcAliases()` on the
-  // handle for the on-demand trigger.
-  famousMetaSlot.load();
+  // famous-meta is declared as Famous's `companion` in the registry;
+  // it fires from the boot loop below alongside the Famous bin.
+  // PGC-aliases stay lazy; see `loadPgcAliases()` on the handle for
+  // the on-demand trigger.
 
   // Construct the three impostor subsystems in dependency order.  The
-  // textured-impostor planner depends on the atlas (slot allocation +
+  // textured-disk planner depends on the atlas (slot allocation +
   // eviction subscription); the procedural-disk planner is independent.
   const galaxyAtlas = createGalaxyAtlasSubsystem({
     device,
     requestRender: () => state.subsystems.scheduler.requestRender(),
   });
-  const texturedImpostors = createTexturedImpostorSubsystem({
+  const texturedDisks = createTexturedDiskSubsystem({
     device,
     atlas: galaxyAtlas,
     requestRender: () => state.subsystems.scheduler.requestRender(),
@@ -283,7 +285,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   texturedDiskRenderer.bindAtlas(galaxyAtlas.getTextureView());
 
   state.subsystems.galaxyAtlas = galaxyAtlas;
-  state.subsystems.texturedImpostors = texturedImpostors;
+  state.subsystems.texturedDisks = texturedDisks;
   state.subsystems.proceduralDisks = proceduralDisks;
 
   // Register the always-on overlay fade handles at opacity 1.0. The
@@ -304,7 +306,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
     state.settings.milkyWay.enabled ? 1 : 0,
   );
   state.subsystems.fades.register({ kind: 'overlay', id: 'proceduralDisks' }, 1);
-  state.subsystems.fades.register({ kind: 'overlay', id: 'texturedImpostors' }, 1);
+  state.subsystems.fades.register({ kind: 'overlay', id: 'texturedDisks' }, 1);
 
   // Scalar-volume master gate. Registered at the current settings
   // value so a default-on session sees 1.0 from frame 1 (and the
@@ -348,20 +350,30 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   //      with `count > 0`, fire `cb.onStatusChange({ kind: 'ready',
   //      count: <running total>, source })` so the status bar reflects
   //      progressive disclosure as surveys land.
-  //   2. Synthetic fallback: when every real survey (SDSS, 2MRS, GLADE)
-  //      has settled with no successful ready+count>0, fire the
-  //      synthetic slot's load. Famous is curated (~150 entries) and
-  //      doesn't count: a Famous-only success shouldn't suppress
-  //      synthetic, a Famous-only failure shouldn't trigger it.
-  const REAL_POINT_SOURCES: Source[] = [Source.SDSS, Source.TwoMRS, Source.Glade];
-  const ALL_POINT_SOURCES: Source[] = [...REAL_POINT_SOURCES, Source.Famous];
+  //   2. Synthetic fallback: when every `survey`-category source has
+  //      settled with no successful ready+count>0, fire the synthetic
+  //      slot's load.  `curated` sources (Famous) are excluded — a
+  //      Famous-only success shouldn't suppress synthetic, a
+  //      Famous-only failure shouldn't trigger it.
+  //
+  // Both lists are derived from `GALAXY_CATALOG_SOURCE_REGISTRY` so
+  // adding a new tier-fetched survey is one registry-row edit, not
+  // three scattered enum literals.
+  const realSet = new Set(SURVEY_POINT_SOURCES);
 
   let realSettled = 0;
   let anyRealReady = false;
-  for (const source of ALL_POINT_SOURCES) {
+  for (const source of TIER_FETCHED_POINT_SOURCES) {
     const slot = state.assetSlots.points.get(source);
-    if (!slot) {
-      if (REAL_POINT_SOURCES.includes(source)) {
+    // A hidden-at-boot survey won't auto-load, so its slot stays in
+    // `idle` forever — never transitions to ready/error.  Treat it as
+    // "settled" here so the synthetic-fallback gate doesn't wait
+    // indefinitely.  When the user later toggles it on, the load
+    // fires (via `setSourceVisible`) and the upload happens, but by
+    // then the fallback decision is long made.
+    const hiddenAtBoot = !maskHas(state.sources.drawMask, source);
+    if (!slot || hiddenAtBoot) {
+      if (realSet.has(source)) {
         realSettled++;
         maybeFireSyntheticFallback();
       }
@@ -373,15 +385,15 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         cb.lifecycle?.onStatusChange?.({
           kind: 'ready',
           count: state.gpu.renderer?.totalCount() ?? 0,
-          source: catalogSourceFor(source),
+          source,
         });
-        if (REAL_POINT_SOURCES.includes(source)) anyRealReady = true;
+        if (realSet.has(source)) anyRealReady = true;
       }
       if (counted) return;
       if (s.kind === 'ready' || s.kind === 'error') {
         counted = true;
         unsub();
-        if (REAL_POINT_SOURCES.includes(source)) {
+        if (realSet.has(source)) {
           realSettled++;
           maybeFireSyntheticFallback();
         }
@@ -390,7 +402,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   }
 
   function maybeFireSyntheticFallback(): void {
-    if (realSettled < REAL_POINT_SOURCES.length || anyRealReady) return;
+    if (realSettled < realSet.size || anyRealReady) return;
     const synthSlot = state.assetSlots.points.get(Source.Synthetic);
     if (!synthSlot) return;
     synthSlot.subscribe((s) => {
@@ -398,15 +410,25 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         cb.lifecycle?.onStatusChange?.({
           kind: 'ready',
           count: state.gpu.renderer?.totalCount() ?? 0,
-          source: catalogSourceFor(Source.Synthetic),
+          source: Source.Synthetic,
         });
       }
     });
     synthSlot.load({ source: Source.Synthetic, tier: state.sources.tier });
   }
 
-  for (const source of ALL_POINT_SOURCES) {
-    state.assetSlots.points.get(source)?.load({ source, tier: state.sources.tier });
+  // Boot-load only visible sources. Off-by-default surveys skip their
+  // multi-MB fetch until the user toggles them on (where
+  // `setSourceVisible` fires the slot's idempotent `.load()`).
+  // Companion sidecars ride alongside via the registry's `companions`
+  // list — see `loadCompanionAssets`.
+  for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
+    if (cfg.category === 'synthetic') continue;
+    if (!maskHas(state.sources.drawMask, cfg.source)) continue;
+    state.assetSlots.points
+      .get(cfg.source)
+      ?.load({ source: cfg.source, tier: state.sources.tier });
+    loadCompanionAssets(state, cfg, state.sources.tier);
   }
   // Filaments load exactly once at boot — never on tier change.
   // See `filamentFetcher.ts` for the rationale.
@@ -414,7 +436,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // CF-4 DM density loads at boot only when its default is ON;
   // otherwise the slot stays idle and `engine.setVolumeFieldEnabled`
   // triggers a lazy load on toggle. No tier dependency.
-  if (DEFAULT_CF4_DENSITY_ENABLED) {
+  if (SOURCE_REGISTRY[Source.Cf4Density].visible) {
     state.assetSlots.cf4Density?.load();
   }
   // MCPM Cosmic Web loads at the boot tier; `engine.setTier` reloads
