@@ -28,8 +28,7 @@ Curated list of pickup-able work and surfaced issues. Living document — update
 Plans live in `docs/superpowers/plans/`. All have TDD task lists with checkboxes; pick one and run it via `superpowers:subagent-driven-development` or `superpowers:executing-plans`.
 
 - **[2026-05-27 Renderer interface extraction](superpowers/plans/2026-05-27-renderer-interface-extraction.md)** — executes ADR 0001 + closes the "Option C" outlier in the renderer conventions doc. 14 tasks. `FieldEntry` 12 → 5 props; per-slot setter cascade collapses to one `applySettings`; fade GPU resources move to `FadeRegistry`.
-- **[2026-05-20 Splash screen — Part 1 (core)](superpowers/plans/2026-05-20-splash-screen-01-core.md)** — loading curtain + AboutPill + `useSplash` hook + WebGPU gate. Part 2 stubbed during this plan.
-- **[2026-05-20 Splash screen — Part 2 (stub tour)](superpowers/plans/2026-05-20-splash-screen-02-stub-tour.md)** — replaces Part 1's no-op Tour button with a stub camera tour. **Depends on Part 1 landing first.**
+- **[2026-05-20 Splash screen — Part 2 (stub tour)](superpowers/plans/2026-05-20-splash-screen-02-stub-tour.md)** — replaces Part 1's no-op Tour button with a stub camera tour. Part 1 shipped (PR #178); Tour CTA currently dismisses without running.
 
 ---
 
