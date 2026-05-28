@@ -62,7 +62,8 @@ import package::lib::orientation::diskAxes;
 // ── @group(2) — per-source SourceUniforms ──────────────────────────
 //
 // Each loaded survey has its OWN @group(2) bind group whose buffer
-// carries SourceUniforms's 16-byte struct (sourceCode + 12 bytes pad).
+// carries SourceUniforms's 16-byte struct (sourceCode + intensityFloor
+// + falloffHalfMpc + 4 bytes pad — see lib/sourceUniforms.wesl).
 // Per-source bind groups dodge the 'queue.writeBuffer' race entirely
 // (different uniform buffers per source means writes to one don't
 // race against draws against another). The vertex stage reads
@@ -183,8 +184,10 @@ fn vs(
   let angularMult = select(1.0, p.angularDensityWeight, u.biasMode == 4u);
 
   // Depth-fade: 1 / (1 + (camDist/FALLOFF_HALF)²), gated by depthFadeEnabled.
-  let FALLOFF_HALF_MPC = 1000.0;
-  let camDistRel = distanceMpc / FALLOFF_HALF_MPC;
+  // Half-distance is per-source ('source.falloffHalfMpc') so sparse far-field
+  // catalogs (Milliquas) can effectively disable the fade by carrying a very
+  // large value while bulk galaxy catalogs keep the original ~1000 Mpc tuning.
+  let camDistRel = distanceMpc / source.falloffHalfMpc;
   let depthFadeRaw = 1.0 / (1.0 + camDistRel * camDistRel);
   let depthFadeMult = select(1.0, depthFadeRaw, u.depthFadeEnabled == 1u);
 
@@ -202,7 +205,11 @@ fn vs(
     inPickPass,
   );
 
-  let intensity = clamp((22.0 - p.magnitude) / 8.0, 0.05, 1.0)
+  // Per-source intensity floor ('source.intensityFloor') replaces the prior
+  // hardcoded 0.05. Lower floors reduce per-galaxy contribution to the
+  // additive HDR target in dense regions (tames center saturation); higher
+  // floors keep faint objects visible (Milliquas at high z).
+  let intensity = clamp((22.0 - p.magnitude) / 8.0, source.intensityFloor, 1.0)
     * u.brightness
     * vMaxAlpha
     * schechterMult
