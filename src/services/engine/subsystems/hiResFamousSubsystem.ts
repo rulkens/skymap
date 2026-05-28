@@ -96,6 +96,17 @@ export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSu
   // `uploadBitmap`), so the bookkeeping lives here.
   const inFlight = new Set<string>();
 
+  // Sticky-across-eviction permanent-failure set, keyed by famousId
+  // (the curated asset identity) rather than the texture's localIdx
+  // string.  The texture's own `failed` flag lives on a LayerEntry and
+  // is lost the moment LRU evicts the layer — so without this planner-
+  // side set, a 404 famous galaxy that gets evicted and then re-enters
+  // the gate would dispatch a fresh 404 on every subsequent frame.
+  // famousId is the right identity here because the failure is a
+  // property of the asset (no curated `full.webp` on the CDN), not the
+  // transient GPU slot it briefly occupied.
+  const failedFamousIds = new Set<string>();
+
   // Clear the planner's in-flight tracking when the texture evicts a
   // layer mid-flight.  Without this, a galaxy that re-enters the gate
   // after eviction would never re-enqueue because its key would still
@@ -170,6 +181,18 @@ export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSu
 
       const key = String(i);
 
+      // Sticky-failure gate.  If we've already seen this famous galaxy
+      // 404 once, don't allocate a slot or dispatch a fetch — fall
+      // through to the atlas-tile sentinel so the renderer still draws
+      // the curated 128 px tile.  Without this gate, LRU eviction would
+      // wipe the texture-side `failed` flag and we'd re-fetch on every
+      // subsequent frame the galaxy spent above the trigger band.
+      const famousId = famousMeta[i]?.id;
+      if (famousId && failedFamousIds.has(famousId)) {
+        byFamousIdx.set(i, { hiResLayerIdx: -1, hiResCrossfadeAlpha: 0 });
+        continue;
+      }
+
       // LRU bookkeeping: allocate on first sighting, touch on repeat.
       // `allocate` returns -1 if the array is full AND the caller is
       // less deserving than every resident; in that case we don't emit
@@ -197,7 +220,6 @@ export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSu
       // permanent failures don't get retried every frame.
       if (!loaded && !failed && !inFlight.has(key)) {
         const raDec = cartesianToRaDec(x, y, z);
-        const famousId = famousMeta[i]?.id;
         // Defensive: if the meta is missing or the entry has no id, we
         // can't construct a hi-res fetch URL.  Skip without marking
         // failed — the meta may simply not be loaded yet.
@@ -215,15 +237,23 @@ export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSu
             bitmap?.close?.();
             return;
           }
+          if (bitmap === null) {
+            // Record the failure on the planner-side set BEFORE the
+            // layer-existence check.  The texture-side `markFailed`
+            // call only matters while the slot is still resident; the
+            // sticky-across-eviction policy lives on `failedFamousIds`.
+            failedFamousIds.add(famousId);
+            // The layer might have been evicted while the fetch was in
+            // flight.  `layerForKey` reflects the current bookkeeping.
+            const layerForFailed = texture.layerForKey(key);
+            if (layerForFailed !== undefined) texture.markFailed(key);
+            return;
+          }
           // The layer might have been evicted while the fetch was in
           // flight.  `layerForKey` reflects the current bookkeeping.
           const currentLayer = texture.layerForKey(key);
           if (currentLayer === undefined) {
             bitmap?.close?.();
-            return;
-          }
-          if (bitmap === null) {
-            texture.markFailed(key);
             return;
           }
           // Upload into whatever layer the texture currently maps the
@@ -262,6 +292,7 @@ export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSu
     // mutate `inFlight` after we're gone.
     texture.setEvictHandler(undefined);
     inFlight.clear();
+    failedFamousIds.clear();
     byFamousIdx.clear();
     lastOutput = { byFamousIdx };
   }

@@ -7,7 +7,8 @@
  *   - texture LRU allocation + LRU eviction by recent diameter (9 distinct
  *     famous galaxies push the smallest out)
  *   - fetch enqueue: idempotent, null → markFailed + no retry
- *   - fetcher is always called with `famousId` set (carry-forward from B4)
+ *   - fetcher is always called with `famousId` set (a missing famousId
+ *     would silently fall through to SDSS/DSS and pollute the texture array)
  *   - destroy clears the texture's evict handler subscription
  *   - lastOutput mirrors runFrame return
  *
@@ -323,11 +324,49 @@ describe('createHiResFamousSubsystem', () => {
     sys.destroy();
   });
 
+  it('does not re-fetch after a missing-full.webp failure followed by eviction', async () => {
+    // Regression for the 404-retry-storm bug: the texture's `failed`
+    // flag lives on a LayerEntry and is dropped on eviction.  The
+    // planner now owns a sticky `failedFamousIds` set keyed by the
+    // curated asset id, so a galaxy whose `full.webp` is missing does
+    // not re-dispatch a fetch every frame after its slot is evicted.
+    const device = makeFakeDevice();
+    const texture = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
+    texture.initTexture();
+    const fetcher = vi.fn(async () => null);
+    const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
+    const clouds = new Map([[Source.Famous, makeFamousCloud(1)]]);
+    const meta = makeFamousMeta(1);
+    const input = makeInput(clouds, camDistFor(230), meta);
+
+    // Frame 1: enters the gate, fetcher dispatched, returns null.
+    sys.runFrame(input);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // Simulate eviction by releasing the layer — this drops the
+    // texture-side `failed` flag, the exact condition the bug
+    // exploited.  Without the planner-side sticky set, frame 2 would
+    // re-allocate and re-dispatch the 404.
+    texture.release('0');
+
+    // Frame 2: same galaxy still in the gate.  The planner must
+    // recognise the famousId as permanently-failed and skip the fetch.
+    sys.runFrame(input);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+
+    // Frame 3 for good measure — still no retry.
+    sys.runFrame(input);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+
+    sys.destroy();
+  });
+
   it('only calls fetcher with famousId set for galaxies that have one', async () => {
-    // Carry-forward from B4 quality review: pin the contract that the
-    // hi-res planner never invokes the fetcher without `famousId` (the
-    // fetcher's hi-res branch is gated on it; a missing famousId would
-    // silently fall through to SDSS/DSS and pollute the texture array).
+    // The fetcher's hi-res branch is gated on `famousId` — a missing
+    // famousId would silently fall through to SDSS/DSS and pollute the
+    // texture array with mis-scaled tiles.
     const device = makeFakeDevice();
     const texture = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
     texture.initTexture();
