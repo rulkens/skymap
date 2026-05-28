@@ -51,6 +51,14 @@
  * Likewise the diagnostic filaments-sdss.bin (the SDSS-only DisPerSE build
  * for the wedge-pollution sanity check) is not part of the runtime.
  *
+ * A second sweep walks `public/data/images/famous-hires/` and uploads each
+ * `<id>.webp` to `data/images/famous-hires/<id>.webp` in R2.  These are the
+ * hi-res WebPs the close-approach LOD requests via `dataUrl()`.  Kept as
+ * a separate sweep (rather than folded into ALLOW) because the existing
+ * sweep is flat — `readdirSync(DATA_DIR)` doesn't descend into the `images/`
+ * subdir — and because a recursive walk would risk picking up unrelated
+ * files Vite drops into `public/data/`.
+ *
  * ### Extra files: data/raw/
  *
  * Some files live outside `public/data/` and don't fit the runtime-fetch
@@ -78,8 +86,16 @@ import { join } from 'node:path';
 import { execSync } from 'node:child_process';
 import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
 import { RAW_DATA } from '../utils/io/rawDataRegistry';
+import { collectHiResImages } from './collectHiResImages';
 
 const DATA_DIR = 'public/data';
+/**
+ * The flat hi-res WebP directory written by `tools/famous/copyHiResToPublic.ts`.
+ * Listed explicitly (rather than via a recursive walk of public/data/) so we
+ * don't accidentally sweep up other files Vite or future build steps drop into
+ * public/data/.  See `collectHiResImages.ts` for the inventory contract.
+ */
+const HIRES_DIR = 'public/data/images/famous-hires';
 const BUCKET = 'skymap-data';
 const CACHE_CONTROL = 'public, max-age=86400';
 
@@ -269,8 +285,16 @@ async function main(): Promise<void> {
   // the user runs `npm run fetch-hyperleda` + gzip).
   const presentExtras = EXTRA_FILES.filter((f) => existsSync(f.localPath));
 
+  // Hi-res famous-galaxy WebPs from `public/data/images/famous-hires/`.
+  // Built by `npm run build-famous-hires`; missing on a fresh checkout that
+  // hasn't run the curator yet, which is fine — the inventory helper returns
+  // [] in that case.  Each upload becomes `data/images/famous-hires/<id>.webp`
+  // so `dataUrl('images/famous-hires/<id>.webp')` resolves at runtime.
+  const hiResImages = collectHiResImages(HIRES_DIR);
+
   console.log(
     `Syncing ${files.length} public/data files` +
+      (hiResImages.length > 0 ? ` + ${hiResImages.length} hi-res image(s)` : '') +
       (presentExtras.length > 0 ? ` + ${presentExtras.length} extra file(s)` : '') +
       ` to r2://${BUCKET}/data/\n`,
   );
@@ -285,6 +309,14 @@ async function main(): Promise<void> {
     const key = `data/${name}`;
     uploadFile(join(DATA_DIR, name), key);
     touchedKeys.push(key);
+  }
+
+  if (hiResImages.length > 0) {
+    console.log('\n--- Hi-res famous-galaxy images ---\n');
+    for (const { localPath, r2Key } of hiResImages) {
+      uploadFile(localPath, r2Key);
+      touchedKeys.push(r2Key);
+    }
   }
 
   if (presentExtras.length > 0) {
@@ -306,7 +338,7 @@ async function main(): Promise<void> {
     );
   }
 
-  const total = files.length + presentExtras.length;
+  const total = files.length + hiResImages.length + presentExtras.length;
   console.log(`\n✓ Synced ${total} file(s) to r2://${BUCKET}/data/`);
 
   console.log('\n--- Cloudflare CDN cache purge ---\n');
