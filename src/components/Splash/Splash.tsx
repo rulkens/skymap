@@ -1,96 +1,58 @@
 // src/components/Splash/Splash.tsx
 /**
- * Splash — first-paint loading curtain + onboarding dialog.
+ * Splash — first-paint onboarding overlay, film-title style.
  *
- * Renders a translucent card centered over a full-viewport dim overlay.
- * Two CTAs (Explore primary, Tour secondary), a progress indicator while
- * loading, a "Continue anyway" escape after 8 s of waiting, and per-error
- * rendering for the three runtime failure modes.
+ * Transparent typographic overlay pinned to the viewport's bottom-left
+ * with a localized vignette protecting legibility. No card, no glass,
+ * no centred dialog — the galaxy field behind is the hero, the splash
+ * frames it. Centre stays clear so the Milky Way + "You are here"
+ * marker remain visible.
  *
- * ### Why presentational
+ * Presentational. All state lives in `useSplash`; this component takes
+ * rendered state + handlers as props.
  *
- * All state lives in `useSplash` (the hook).  This component takes only
- * the rendered state + handlers as props.  That split keeps the dialog
- * trivially testable (just feed it prop combinations) and lets the
- * hook be tested independently with renderHook.
+ * A11y: role="dialog", aria-modal, focus trap, Esc dismiss.
  *
- * ### Accessibility
+ * Failure modes:
+ *   - webgpu-init-failed   → error box + Reload (no CTAs)
+ *   - catalog-fetch-failed → error box + Reload (no CTAs)
+ *   - famous-meta-failed   → CTAs stay; Tour disabled with tooltip
  *
- * `role="dialog"`, `aria-modal="true"`, `aria-labelledby` to the title,
- * `aria-describedby` to the body.  The background canvas is marked
- * `aria-hidden="true"` from App.tsx while the splash is up.  Focus trap
- * and Esc handling are added in Task 9 (this file keeps the markup +
- * presentation contract separate from the trap logic).
- *
- * ### Failure rendering
- *
- * - `webgpu-init-failed`  → swap CTAs for an error box explaining the
- *                            requestAdapter failure.  Reload button only.
- * - `catalog-fetch-failed` → CTAs hidden; error box + Reload.
- * - `famous-meta-failed`  → CTAs stay; Tour is disabled with a `title`
- *                            tooltip; Explore is unaffected.
- *
- * The synchronous "no navigator.gpu" path is handled in main.tsx before
- * React mounts; the splash never sees that case.
+ * The synchronous "no navigator.gpu" path is handled in main.tsx
+ * before React mounts; the splash never sees it.
  */
 
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, type MouseEvent, type ReactNode } from 'react';
 import cx from 'classnames';
+import SplashProgress from './SplashProgress';
 import type { SplashError } from '../../@types/splash/SplashError';
 import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
 import styles from './Splash.module.css';
 
 export type SplashProps = {
-  /** True while loading is incomplete; disables CTAs. */
-  blocked: boolean;
-  /** True after the 8 s "Continue anyway" timer has fired. */
-  canContinueAnyway: boolean;
-  /** Optional load progress to render below the body (null hides the row). */
-  loadProgress?: LoadProgressState | null;
-  /** Current error state; null on the happy path. */
-  error: SplashError | null;
-  /** Called when the user clicks Explore (or Esc — wired in Task 9). */
-  onExplore: () => void;
-  /** Called when the user clicks Tour. */
-  onTour: () => void;
-  /** Called when the user clicks the Continue anyway escape link. */
-  onContinueAnyway: () => void;
-  /** Called when the user clicks Reload (catalog-fetch-failed / webgpu-init-failed). */
-  onReload: () => void;
+  readonly blocked: boolean;
+  readonly canContinueAnyway: boolean;
+  readonly loadProgress?: LoadProgressState | null;
+  readonly error: SplashError | null;
+  readonly onExplore: () => void;
+  readonly onTour: () => void;
+  readonly onContinueAnyway: () => void;
+  readonly onReload: () => void;
 };
 
 const TITLE_ID = 'splash-title';
 const BODY_ID = 'splash-body';
 
-function ProgressRow({ progress }: { progress: LoadProgressState | null | undefined }): ReactNode {
-  if (!progress) return null;
-  const indeterminate = progress.totalBytes === 0;
-  const fraction =
-    progress.totalBytes > 0 ? Math.min(1, progress.loadedBytes / progress.totalBytes) : 0;
-  return (
-    <div
-      className={styles.progressRow}
-      role="progressbar"
-      aria-label="Loading galaxy data"
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={indeterminate ? undefined : Math.round(fraction * 100)}
-    >
-      <div className={styles.progressTrack}>
-        {indeterminate ? (
-          <div className={styles.progressIndeterminate} />
-        ) : (
-          <div className={styles.progressFill} style={{ width: `${fraction * 100}%` }} />
-        )}
-      </div>
-      <span>{indeterminate ? 'Loading…' : `${Math.round(fraction * 100)}%`}</span>
-    </div>
-  );
-}
-
-export function Splash(props: SplashProps): ReactNode {
-  const { blocked, canContinueAnyway, loadProgress, error, onExplore, onTour, onContinueAnyway, onReload } = props;
-
+function Splash({
+  blocked,
+  canContinueAnyway,
+  loadProgress,
+  error,
+  onExplore,
+  onTour,
+  onContinueAnyway,
+  onReload,
+}: SplashProps): ReactNode {
   const hardError = error?.kind === 'webgpu-init-failed' || error?.kind === 'catalog-fetch-failed';
   const tourDisabled = blocked || error?.kind === 'famous-meta-failed';
   const tourTooltip =
@@ -98,35 +60,23 @@ export function Splash(props: SplashProps): ReactNode {
       ? 'Tour is unavailable — failed to load the famous-galaxy index.'
       : undefined;
 
-  // ── Focus trap + initial focus + Esc dismiss ─────────────────────────────
-  //
-  // Rationale: standard a11y-dialog pattern.  Modal dialogs must:
-  //   1. Move focus into themselves on mount.
-  //   2. Trap focus inside while open (Tab from last → first, Shift+Tab from
-  //      first → last).
-  //   3. Dismiss on Esc, restoring focus on the way out (handled implicitly
-  //      because the splash unmounts; the next interactive element receives
-  //      focus naturally).
-  //
-  // We implement focus trap with a Tab keydown listener that queries the
-  // dialog's focusable descendants and bounces the focused element back when
-  // it would otherwise escape.  Smaller than pulling in `focus-trap-react`
-  // and the splash has a tiny number of focusables (≤5).
+  // Focus trap: move focus inside on mount, cycle on Tab boundaries,
+  // dismiss on Esc. Smaller than pulling in focus-trap-react for ≤5
+  // focusables. Initial focus targets [data-splash-primary] so Explore
+  // (or Reload, in the error branch) is the landing element.
   const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const root = dialogRef.current;
     if (!root) return;
 
-    // Initial focus — find the autofocused Explore button (or the first
-    // focusable if Explore is disabled / replaced by Reload).
     const FOCUSABLE_SELECTOR =
       'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
     const focusables = () =>
       Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
 
     const initial =
-      root.querySelector<HTMLElement>(`.${styles.ctaPrimary}:not([disabled])`) ??
+      root.querySelector<HTMLElement>('[data-splash-primary]:not([disabled])') ??
       focusables()[0] ??
       null;
     initial?.focus();
@@ -134,7 +84,6 @@ export function Splash(props: SplashProps): ReactNode {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        // Esc is treated identically to Explore (per the 2026-05-20 grill, Q13b).
         onExplore();
         return;
       }
@@ -157,33 +106,37 @@ export function Splash(props: SplashProps): ReactNode {
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [onExplore]);
 
+  // Click-outside dismiss — backdrop clicks fire onExplore, matching
+  // Esc behaviour. The vignette has pointer-events:none so its clicks
+  // bubble through to .root and pass the target===currentTarget test;
+  // clicks on the .column or its descendants do not.
+  const onBackdropClick = (e: MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) onExplore();
+  };
+
   return (
     <div
       ref={dialogRef}
-      className={styles.backdrop}
+      className={styles.root}
       role="dialog"
       aria-modal="true"
       aria-labelledby={TITLE_ID}
       aria-describedby={BODY_ID}
+      onClick={onBackdropClick}
     >
-      <section className={styles.card}>
+      <div className={styles.vignette} aria-hidden="true" />
+
+      <section className={styles.column}>
+        <div className={styles.label}>SKYMAP · INTRO</div>
         <h1 id={TITLE_ID} className={styles.title}>
-          Explore millions of galaxies in 3D
+          Have a look at
+          <br />
+          the neighbours
         </h1>
         <p id={BODY_ID} className={styles.body}>
-          Drawn in your browser with WebGPU. Built from real cosmic data — the{' '}
-          <a href="https://www.sdss.org/" target="_blank" rel="noopener noreferrer">
-            SDSS
-          </a>
-          ,{' '}
-          <a href="https://glade.elte.hu/" target="_blank" rel="noopener noreferrer">
-            GLADE
-          </a>
-          , and{' '}
-          <a href="https://lambda.gsfc.nasa.gov/product/2mass/" target="_blank" rel="noopener noreferrer">
-            2MRS
-          </a>{' '}
-          galaxy surveys.
+          About 2.5 million of them, give or take, mapped from four catalogues that took decades to
+          put together. The cosmic web runs through the middle; quasars sit much further out, well
+          past the galaxies. The bright glow near the centre is home (our Milky Way).
         </p>
 
         {hardError ? (
@@ -192,38 +145,47 @@ export function Splash(props: SplashProps): ReactNode {
               ? 'WebGPU failed to initialize on this device. Try reloading, or use a recent version of Chrome or Edge.'
               : 'Failed to load the galaxy data. Check your connection and try reloading.'}
           </div>
-        ) : (
-          <ProgressRow progress={loadProgress} />
-        )}
+        ) : null}
 
         {hardError ? (
           <div className={styles.ctas}>
             <button
               type="button"
-              className={cx(styles.cta, styles.ctaPrimary)}
+              className={styles.cta}
               onClick={onReload}
+              data-splash-primary
             >
               Reload
+              <span className={styles.arrow} aria-hidden="true">
+                →
+              </span>
             </button>
           </div>
         ) : (
           <div className={styles.ctas}>
             <button
               type="button"
-              className={cx(styles.cta, styles.ctaPrimary)}
+              className={styles.cta}
               onClick={onExplore}
               disabled={blocked}
+              data-splash-primary
             >
               Explore
+              <span className={styles.arrow} aria-hidden="true">
+                →
+              </span>
             </button>
             <button
               type="button"
-              className={cx(styles.cta, styles.ctaSecondary)}
+              className={styles.cta}
               onClick={onTour}
               disabled={tourDisabled}
               title={tourTooltip}
             >
               Tour
+              <span className={styles.arrow} aria-hidden="true">
+                →
+              </span>
             </button>
           </div>
         )}
@@ -231,7 +193,7 @@ export function Splash(props: SplashProps): ReactNode {
         {blocked && canContinueAnyway && !hardError ? (
           <button
             type="button"
-            className={styles.continueAnyway}
+            className={cx(styles.cta, styles.continueAnyway)}
             onClick={onContinueAnyway}
             aria-live="polite"
           >
@@ -239,13 +201,43 @@ export function Splash(props: SplashProps): ReactNode {
           </button>
         ) : null}
 
-        <p className={styles.footer}>
-          by Alexander Rulkens &middot;{' '}
-          <a href="https://github.com/rulkens/skymap" target="_blank" rel="noopener noreferrer">
-            github.com/rulkens/skymap
-          </a>
-        </p>
+        <div className={styles.footer}>
+          <p className={styles.credits}>
+            Drawn from the{' '}
+            <a href="https://www.sdss.org/" target="_blank" rel="noopener noreferrer">
+              SDSS
+            </a>
+            ,{' '}
+            <a href="https://glade.elte.hu/" target="_blank" rel="noopener noreferrer">
+              GLADE
+            </a>
+            ,{' '}
+            <a href="https://lambda.gsfc.nasa.gov/product/2mass/" target="_blank" rel="noopener noreferrer">
+              2MRS
+            </a>{' '}
+            and{' '}
+            <a
+              href="https://heasarc.gsfc.nasa.gov/W3Browse/all/milliquas.html"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Milliquas
+            </a>{' '}
+            catalogues.
+          </p>
+          <p className={styles.attribution}>
+            by Alexander Rulkens
+            <br />
+            <a href="https://github.com/rulkens/skymap" target="_blank" rel="noopener noreferrer">
+              github.com/rulkens/skymap
+            </a>
+          </p>
+        </div>
       </section>
+
+      {!hardError ? <SplashProgress progress={loadProgress} /> : null}
     </div>
   );
 }
+
+export default Splash;

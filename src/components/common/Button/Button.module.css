@@ -1,0 +1,70 @@
+/* src/components/common/Button/Button.module.css */
+
+/*
+ * Base = secondary variant.  `font: inherit` is deliberate — it lets
+ * the button absorb its parent's font-family / size / weight so
+ * Buttons inside the mono HUD speak mono and Buttons inside the
+ * splash card (whose .card sets mono explicitly) also speak mono,
+ * without per-consumer wiring.
+ */
+.root {
+  font: inherit;
+  letter-spacing: var(--letter-spacing-mid);
+  padding: var(--space-3) var(--space-5);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-md);
+  background: var(--surface-control);
+  color: var(--color-fg);
+  cursor: pointer;
+  transition: background 0.15s ease-out, border-color 0.15s ease-out, opacity 0.15s;
+}
+
+.root:hover:not(:disabled) {
+  background: var(--surface-control-hover);
+  border-color: var(--border-hover);
+}
+
+.root:active:not(:disabled) {
+  background: var(--surface-control-active);
+}
+
+.root:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.root:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ── primary — accent fill ──────────────────────────────────────────── */
+.primary {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #05070d;
+}
+
+.primary:hover:not(:disabled),
+.primary:focus-visible:not(:disabled) {
+  background: var(--color-accent-bright);
+  border-color: var(--color-accent-bright);
+}
+
+/* ── ghost — text + underline, no chrome ────────────────────────────── */
+.ghost {
+  padding: var(--space-2) var(--space-3);
+  background: none;
+  border: none;
+  color: var(--color-fg-muted);
+  text-decoration: underline;
+  font-size: 12px;
+  letter-spacing: 0;
+}
+
+.ghost:hover:not(:disabled),
+.ghost:focus-visible:not(:disabled) {
+  color: var(--color-fg);
+  background: none;
+  border-color: transparent;
+}

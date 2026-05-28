@@ -31,7 +31,7 @@ import StatsPanel from '../StatsPanel/StatsPanel';
 import { CommandPalette } from '../CommandPalette/CommandPalette';
 import SearchTrigger from '../SearchTrigger/SearchTrigger';
 import AutoRotateToggle from '../AutoRotateToggle/AutoRotateToggle';
-import { Splash } from '../Splash/Splash';
+import Splash from '../Splash/Splash';
 import AboutPill from '../Splash/AboutPill';
 import { MILKY_WAY_ENTRY, MILKY_WAY_ID } from '../../data/milkyWayEntry';
 import appStyles from './App.module.css';

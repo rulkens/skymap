@@ -207,6 +207,16 @@
    */
   --font-family-mono: ui-monospace, 'SF Mono', Menlo, monospace;
 
+  /*
+   * Display serif — Cormorant Garamond SemiBold, the same face baked
+   * into the MSDF label atlas (see src/data/fonts.ts).  Reserved for
+   * marquee text that should echo the in-scene labels (splash title,
+   * onboarding headlines).  Falls back to the mono stack while the
+   * Google-hosted webfont is in flight so first paint never shows a
+   * generic browser serif.
+   */
+  --font-family-display: 'Cormorant Garamond', ui-serif, Georgia, serif;
+
   /* Discrete font-size scale.  The names are t-shirt-style so future
    * additions don't require renaming everything; the values are the
    * concrete pixel sizes already in use across the codebase. */
