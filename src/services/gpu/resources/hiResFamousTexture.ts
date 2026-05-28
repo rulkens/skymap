@@ -88,14 +88,18 @@ export function createHiResFamousTexture(
       dimension: '2d',
       size: [layerSide, layerSide, layerCount],
       format: 'rgba8unorm-srgb',
-      // TEXTURE_BINDING — the textured-disk pass samples this in the
-      //                   fragment shader as `texture_2d_array<f32>`.
-      // COPY_DST       — uploadBitmap writes layers in.
-      // (No RENDER_ATTACHMENT here: unlike the atlas we never render
-      //  into hi-res layers, only sample them.  Keeping the usage
-      //  mask minimal lets the driver pick a more efficient memory
-      //  type.)
-      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+      // TEXTURE_BINDING   — fragment shader samples as `texture_2d_array<f32>`.
+      // COPY_DST          — uploadBitmap writes layers in.
+      // RENDER_ATTACHMENT — required by `copyExternalImageToTexture` even when
+      //                     we never draw into the texture; the implementation
+      //                     may use an internal render pass for sRGB encoding
+      //                     and unpremul-to-premul conversion when copying
+      //                     from an ImageBitmap source.  Omitting this flag
+      //                     trips a WebGPU validation error at upload time.
+      usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_DST |
+        GPUTextureUsage.RENDER_ATTACHMENT,
     });
   }
 

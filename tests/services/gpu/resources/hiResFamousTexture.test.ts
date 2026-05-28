@@ -147,8 +147,15 @@ describe('HiResFamousTexture', () => {
     const desc = createTexture.mock.calls[0]![0] as GPUTextureDescriptor;
     expect(desc.size).toEqual([LAYER_SIDE, LAYER_SIDE, LAYER_COUNT]);
     expect(desc.format).toBe('rgba8unorm-srgb');
-    // Must include TEXTURE_BINDING | COPY_DST.
-    const wantBits = GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST;
+    // Must include TEXTURE_BINDING | COPY_DST | RENDER_ATTACHMENT.
+    // RENDER_ATTACHMENT is required by `copyExternalImageToTexture` even
+    // though we never draw into the texture — the implementation may
+    // use an internal render pass for sRGB / unpremul conversion. Without
+    // it, uploadBitmap trips a WebGPU validation error at runtime.
+    const wantBits =
+      GPUTextureUsage.TEXTURE_BINDING |
+      GPUTextureUsage.COPY_DST |
+      GPUTextureUsage.RENDER_ATTACHMENT;
     expect((desc.usage & wantBits) === wantBits).toBe(true);
   });
 
