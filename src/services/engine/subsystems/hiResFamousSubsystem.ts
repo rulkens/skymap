@@ -196,7 +196,7 @@ export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSu
       // before the network call resolves).  Failed-flag-sticky so
       // permanent failures don't get retried every frame.
       if (!loaded && !failed && !inFlight.has(key)) {
-        const ra_dec_for_fetch = cartesianToRaDec(x, y, z);
+        const raDec = cartesianToRaDec(x, y, z);
         const famousId = famousMeta[i]?.id;
         // Defensive: if the meta is missing or the entry has no id, we
         // can't construct a hi-res fetch URL.  Skip without marking
@@ -204,8 +204,8 @@ export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSu
         if (!famousId) continue;
         inFlight.add(key);
         fetcher({
-          ra: ra_dec_for_fetch[0],
-          dec: ra_dec_for_fetch[1],
+          ra: raDec[0],
+          dec: raDec[1],
           famousId,
           fetchHiRes: true,
           hiResTargetDim: layerSide,

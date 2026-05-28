@@ -259,16 +259,12 @@ describe('createHiResFamousSubsystem', () => {
       positions[i * 3 + 0] = 10;
       positions[i * 3 + 1] = 0.001 * i;
       positions[i * 3 + 2] = 0;
-      // 300, 290, 280, ..., 220 — first 8 fill the array, the 9th
-      // triggers eviction of the smallest (i=8 → diameter 220 ... wait,
-      // the 9th to allocate is i=8 with diameter 220, which is the
-      // smallest; allocate should refuse because no resident is smaller).
-      // Re-read: the test expects "layer 8 (diameter 220) ... drops the
-      // diameter-220 layer".  That can only happen if i=8 is the *largest*
-      // of the resident set the planner has seen.  So feed them in
-      // INCREASING-px order: i=0 is the smallest (diameter 220), i=8 is
-      // the largest (diameter 300).  When i=8 arrives the resident i=0
-      // (smallest) gets evicted.
+      // Diameters ascend with i: 220, 230, ..., 300.  Iteration order
+      // is also ascending, so i=0..7 fill the 8 layers (smallest first)
+      // and i=8 (the largest, 300 kpc) arrives last.  Allocate evicts
+      // when the caller is LARGER than the smallest resident, so i=8
+      // displaces i=0 (the smallest, 220 kpc) — exactly the LRU
+      // invariant under test.
       diameters[i] = 220 + i * 10;
     }
     const cloud: GalaxyCatalog = {
@@ -296,15 +292,6 @@ describe('createHiResFamousSubsystem', () => {
     const camDist = camDistFor(210, 220);
     sys.runFrame(makeInput(clouds, camDist, meta));
 
-    // Before any awaits: 8 distinct keys allocated → layerForKey for
-    // '0'..'7' all defined, key '8' tried to allocate but got refused
-    // -1 because all residents are smaller (no eviction).  That's the
-    // wrong ordering for the test's intent.  Re-walk: actually, when
-    // i=8 arrives (diameter 300, largest) we WANT it to evict i=0
-    // (diameter 220, smallest).  HiResFamousTexture.allocate evicts when
-    // the caller's diameter is LARGER than the smallest resident's.  So
-    // we need the iteration order to be 0,1,2,...,8 with diameter
-    // ascending — which is exactly what we set up.  Good.
     expect(texture.layerForKey('0')).toBeUndefined(); // evicted
     expect(texture.layerForKey('8')).toBeDefined();   // new resident
     for (let i = 1; i <= 7; i++) {
