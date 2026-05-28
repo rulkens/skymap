@@ -11,21 +11,17 @@
 //
 // ### Why this approach instead of 'always face the camera'
 //
-// The first cut of this shader built a basis from 'camPos - center'
-// and squashed it by axisRatio. That made the disk plane track the
-// camera, so axisRatio became a 2D screen-space squash — visually
-// identical to the points-shader's elliptical billboard mask, with
-// no real 3D foreshortening. Worse, near the celestial poles the
-// seed vector (used to break the up/right ambiguity) flipped
-// abruptly when the camera-relative normal crossed a threshold,
-// snapping the basis.
+// A camera-aligned basis would make axisRatio a 2D screen-space squash
+// (visually identical to the points-shader's elliptical mask) with no
+// real 3D foreshortening, and would flip abruptly near the celestial
+// poles when the camera-relative normal crossed the seed-fallback
+// threshold.
 //
-// Building in world space fixes both: the disk has ONE orientation
-// in 3D regardless of camera, so orbiting reveals the true ellipse
-// foreshortening; and the only singularity is now galaxies
-// physically at the celestial poles (Dec ≈ ±90°), which is
-// independent of camera motion and easily handled with a fallback
-// seed.
+// Building in world space fixes both: the disk has ONE orientation in
+// 3D regardless of camera, so orbiting reveals true ellipse
+// foreshortening; the only singularity is now galaxies physically at
+// the celestial poles (Dec ≈ ±90°), camera-independent and handled
+// with a fallback seed.
 //
 // ### Frame construction
 //
@@ -38,33 +34,25 @@
 //
 // ## Why bindings are declared here, not in io.wesl
 //
-// Same WESL no-global-state argument as elsewhere: 'Uniforms' is
-// imported from io.wesl, the @group/@binding declaration lives in
-// the consuming file, and the layout matches fragment.wesl's
-// identical uniform declaration. Atlas-texture / sampler bindings
-// are fragment-only and stay in fragment.wesl.
+// WESL has no global state — 'Uniforms' is imported from io.wesl, but
+// the @group/@binding declaration lives in the consuming file. Atlas
+// texture / sampler bindings are fragment-only and stay in fragment.wesl.
 
 import package::texturedDisks::io::Uniforms;
 import package::texturedDisks::io::InstanceIn;
 import package::texturedDisks::io::VsOut;
 import package::lib::camera::worldToClip;
-// Shared unit-quad helpers from 'lib/billboard.wesl' — replace the
-// inline 'CORNERS' const + '(corner + 1) * 0.5' UV remap that used to
-// live in this file. The orientation-aligned disk-plane basis (PA +
-// inclination → 'major' / 'minor_3d' in 3D world space) stays
-// renderer-specific; only the vertex-index → corner / UV lookups are
-// shared. See the docblock at the top of 'lib/billboard.wesl' for why
-// the orientation math is intentionally NOT pulled into this lib.
+// Shared unit-quad helpers from 'lib/billboard.wesl' — the orientation-
+// aligned disk-plane basis (PA + inclination → 'major' / 'minor_3d' in
+// 3D world space) stays renderer-specific; only the vertex-index →
+// corner / UV lookups are shared. See 'lib/billboard.wesl' for why the
+// orientation math is intentionally NOT pulled into this lib.
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::quadUv;
 // Disk-plane axis math (PA + inclination → world-space major/minor basis)
-// is shared with 'proceduralDisks.wesl' via 'lib/orientation.wesl'. The
-// inline derivation that used to live in this file's vs() body — the
-// los/north/east/major/minor chain — is now the lib's 'diskAxes' fn,
-// byte-equivalent for disks since the lib standardised on the wider
-// '|dot(north, los)| > 0.99' (~8°) pole-fallback threshold that disks
-// already used. See 'lib/orientation.wesl' for the camera-independence
-// invariant + the pole-degeneracy discussion.
+// is shared with 'proceduralDisks.wesl' via 'lib/orientation.wesl'. See
+// that lib for the camera-independence invariant and the pole-degeneracy
+// fallback (|dot(north, los)| > 0.99, ~8° from pole).
 import package::lib::orientation::DiskAxes;
 import package::lib::orientation::diskAxes;
 
@@ -73,11 +61,10 @@ import package::lib::orientation::diskAxes;
 @vertex
 fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   // Unit-square corner offset in [-1, +1]² for this triangle-list
-  // vertex. Pulled from 'lib/billboard::quadCorner' so the (BL, BR,
-  // TR, BL, TR, TL) ordering is shared across all four billboard
-  // renderers — see the lib's docblock for the corner-ordering
-  // discussion. The corner here is in the disk's LOCAL 2D frame; the
-  // 3D placement happens via the (major, minor_3d) basis below.
+  // vertex. The (BL, BR, TR, BL, TR, TL) ordering is shared across all
+  // four billboard renderers via 'lib/billboard::quadCorner'. The corner
+  // here is in the disk's LOCAL 2D frame; the 3D placement happens via
+  // the (major, minor_3d) basis below.
   let corner = quadCorner(vid);
   let center = instance.posSize.xyz;
   let halfSize = instance.posSize.w * 0.5;
@@ -88,15 +75,10 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   let paDeg = instance.orient.y;
   let paRad = paDeg * 3.14159265 / 180.0;
 
-  // ── Disk-plane basis (PA + inclination → world-space major / minor) ─
-  //
-  // The full derivation — line-of-sight from Earth-at-origin, sky-tangent
-  // (north, east) frame with pole fallback, PA-east-of-north rotation,
-  // and inclination tilt of the minor axis out of the sky plane — lives
-  // in 'lib/orientation.wesl'. See its docblock for the camera-
-  // independence invariant and the ~8°-from-pole degeneracy fallback.
-  // 'axisRatio' is clamped at the call site (above) BEFORE we feed it
-  // through as cosI, because the lib intentionally doesn't re-clamp.
+  // Disk-plane basis (PA + inclination → world-space major / minor).
+  // Full derivation lives in 'lib/orientation::diskAxes'. 'axisRatio'
+  // is clamped at the call site above BEFORE we feed it through as
+  // cosI — the lib intentionally doesn't re-clamp.
   let cosI = axisRatio;
   let sinI = sqrt(max(0.0, 1.0 - cosI * cosI));
   let axes = diskAxes(center, paRad, cosI, sinI);
@@ -104,29 +86,26 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   let minor_3d = axes.minor;
 
   // Place the corner in world space using (major, minor_3d) as the
-  // disk's basis.  No squash needed — the basis vectors are already
-  // unit length, and the inclination foreshortening will appear
-  // automatically when the camera projects them.
+  // disk's basis. No squash needed — the basis vectors are unit length;
+  // inclination foreshortening falls out of the projection.
   let world = center + (major * corner.x + minor_3d * corner.y) * halfSize;
   var out: VsOut;
   out.clipPos = worldToClip(u.cam, world);
 
   // 'quadUv' returns the unit-square corner remapped to [0, 1]² (same
-  // vertex-index ordering as 'quadCorner' above). We then flip V so
-  // the texture isn't upside down — matches the atlas's top-down
-  // 'flipY: false' upload convention used by 'quads.wesl'.
+  // vertex-index ordering as 'quadCorner'). Matches the atlas's
+  // top-down 'flipY: false' upload convention used by 'quads.wesl'.
   let cornerUv = quadUv(vid);
   let uvLocal = vec2<f32>(cornerUv.x, cornerUv.y);
   out.atlasUv = mix(instance.uvRect.xy, instance.uvRect.zw, uvLocal);
   out.cornerUv = cornerUv;
   out.fadeAlpha = instance.orient.z;
-  // Hi-res LOD pass-through (Task R3). The renderer packs the layer
-  // index as a float in 'instance.hiRes.x'; cast to i32 here so the
-  // fragment-stage 'textureSample(hiResTex, ..., layerIdx)' call gets
-  // the integer type the WGSL texture_2d_array overload requires.
-  // 'instance.hiRes.x == -1' means 'no hi-res slot bound for this
-  // instance' — the fragment shader branches on '>= 0' to decide
-  // whether to crossfade.
+  // Hi-res LOD pass-through. The renderer packs the layer index as a
+  // float in 'instance.hiRes.x'; cast to i32 so the fragment-stage
+  // 'textureSampleLevel(hiResTex, ..., layerIdx)' gets the integer
+  // type the texture_2d_array overload requires. A value of -1 means
+  // 'no hi-res slot bound'; the fragment branches on '>= 0' for the
+  // crossfade.
   out.hiResLayerIdx = i32(instance.hiRes.x);
   out.hiResCrossfadeAlpha = instance.hiRes.y;
   return out;

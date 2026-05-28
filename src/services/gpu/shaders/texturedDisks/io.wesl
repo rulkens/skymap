@@ -32,24 +32,18 @@ import package::lib::camera::CameraUniforms;
 // ── Uniforms layout (CameraUniforms-prefixed) ──────────────────────
 //
 // 96-byte uniform buffer matching the CPU-side UNIFORM_BYTES in
-// 'diskRenderer.ts'.  The first 80 bytes are the shared
+// 'instancedQuadRenderer.ts'. First 80 bytes are the shared
 // 'CameraUniforms' prefix (viewProj + viewportPx + 8B reserved pad);
-// the renderer's own 'camPos' vec3 sits at offset 80 followed by an
-// f32 tail pad to round up to a 16-byte boundary.
+// 'camPos' sits at offset 80 followed by an f32 tail pad to round up
+// to 16 bytes.
 //
-// 'camPos' is preserved in the layout for ABI continuity with the JS
-// upload path, but the world-fixed disk math doesn't read it: the
-// disk's orientation is an intrinsic galaxy property, independent of
-// where the camera sits. The camera contributes only via
-// 'cam.viewProj' (consumed by 'worldToClip').
+// 'camPos' is preserved for ABI continuity with the JS upload path,
+// but the world-fixed disk math doesn't read it: a disk's orientation
+// is an intrinsic galaxy property, independent of camera position. The
+// camera contributes only via 'cam.viewProj' (consumed by 'worldToClip').
 
 struct Uniforms {
   cam: CameraUniforms,
-  // camPos is preserved in the layout for ABI continuity with the JS
-  // upload path, but the world-fixed disk math doesn't read it: the
-  // disk's orientation is an intrinsic galaxy property, independent of
-  // where the camera sits.  The camera contributes only via
-  // 'cam.viewProj' (consumed by 'worldToClip').
   camPos: vec3<f32>,
   _pad2: f32,
 };
@@ -57,10 +51,9 @@ struct Uniforms {
 // ── per-instance attributes ────────────────────────────────────────
 //
 // 64 bytes / 16 floats per instance (matches BYTES_PER_INSTANCE in
-// 'texturedDiskRenderer.ts' after Task R1 grew the stride). Four vec4
-// slots: position+size, uvRect, the orientation pack
-// (axisRatio, PA, fadeAlpha, reserved), and the hi-res LOD pack
-// (layer index, crossfade alpha, reserved, reserved).
+// 'instancedQuadRenderer.ts'). Four vec4 slots: position+size, uvRect,
+// the orientation pack (axisRatio, PA, fadeAlpha, reserved), and the
+// hi-res LOD pack (layer index, crossfade alpha, reserved, reserved).
 
 struct InstanceIn {
   @location(0) posSize: vec4<f32>,

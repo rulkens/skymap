@@ -1,61 +1,38 @@
 /**
  * proceduralDiskRenderer — 3D-oriented procedural galaxy impostors.
  *
- * Sibling to texturedDiskRenderer (texture-based) and texturedQuadRenderer (screen-
- * aligned + texture-based). Activates for galaxies in the apparent-
- * size band 8..∞ px, with a crossfade against the points pass across
- * 8..14 px. See `docs/superpowers/plans/2026-05-04-procedural-disk-
- * impostor.md` for the full design rationale.
- *
- * The shader (`shaders/proceduralDisks/`) is documented in detail; this
- * file is the JS-side glue.
+ * Sibling to texturedDiskRenderer (texture-based) and texturedQuadRenderer
+ * (screen-aligned + texture-based). Activates for galaxies in the
+ * apparent-size band 8..∞ px, with a crossfade against the points pass
+ * across 8..14 px. The shader ('shaders/proceduralDisks/') is documented
+ * in detail; this file is the JS-side glue.
  *
  * ## Per-instance attributes (64 bytes / 16 floats)
  *
  *   posSize       vec4   xyz, sizeWorldMpc
  *   orientation   vec4   axisRatio, positionAngleDeg, _, _
  *   extras        vec4   colourIndex, crossfadeAlpha, procFadeOut, _
- *   hiResSlot     vec4   _, _, _, _   (zero pad — hi-res LOD belongs to
- *                                       texturedDiskRenderer; the shared
- *                                       64-byte stride forces us to fill
- *                                       slots 12..15, the procedural
- *                                       shader ignores them)
+ *   hiResSlot     vec4   _, _, _, _   (shared 64-byte stride; the procedural
+ *                                       shader ignores slots 12..15 — they
+ *                                       belong to texturedDiskRenderer)
  *
- * Same memory layout as texturedDiskRenderer (4 vec4<f32>), minus the UV rect
- * — those four floats become (colourIndex, crossfadeAlpha, procFadeOut, _)
- * instead. `procFadeOut` is the famous-WebP crossfade against the textured-
- * disk pass; see `ProceduralDiskInstance.d.ts` for the full semantic.
+ * 'procFadeOut' is the famous-WebP crossfade against the textured-disk
+ * pass; see 'ProceduralDiskInstance.d.ts' for the full semantic.
  *
  * ## Why grow-on-demand instance buffer
  *
- * TexturedQuadRenderer + TexturedDiskRenderer cap their per-frame count at the atlas
- * slot count (256), so a fixed-size preallocated buffer fits. The
- * procedural renderer activates for every galaxy in the 8 px+
- * apparent-size band, with no atlas dependency — that count grows
- * unboundedly as the camera approaches a dense field. A fixed cap
- * would visually clip impostors mid-flythrough. The shared factory's
- * `capacity: { kind: 'grow' }` strategy lazily allocates on first
- * non-empty draw and reallocates (destroy + recreate) when the
- * requested count exceeds the current capacity.
+ * Textured renderers cap at the atlas slot count (256), so fixed preallocation
+ * fits. Procedural activates for every galaxy in the 8 px+ apparent-size
+ * band with no atlas dependency — that count grows unboundedly as the
+ * camera approaches a dense field, and a fixed cap would visually clip
+ * impostors mid-flythrough.
  *
  * ## Why uniform binding visibility is VERTEX | FRAGMENT
  *
- * Historical: pre-WESL the BGL declared the uniform binding as visible
- * to both stages even though only the vertex stage reads it. The WESL
- * conversion preserved the flag so the pipeline-layout introspection
- * signature didn't silently change. We pass `uniformVisibility`
- * through the shared factory to keep that exact byte-for-byte BGL.
- *
- * ## Why this is a thin wrapper post-Spec G
- *
- * Pipeline / BGL / uniform buffer / instance buffer plumbing now lives
- * in `instancedQuadRenderer.ts`, shared with texturedQuadRenderer +
- * texturedDiskRenderer. This file owns: the consumer-facing
- * `createProceduralDiskRenderer` factory signature (preserved
- * unchanged from Spec F), the `ProceduralDiskInstance → packed
- * Float32Array` serialization, and the wrapper `draw(...)` translating
- * the engine's call convention into the shared factory's `draw(args)`
- * shape.
+ * The BGL declares the uniform binding as visible to both stages even
+ * though only the vertex stage reads it. Pipeline-layout introspection
+ * uses BGL identity, so widening or narrowing the visibility flag would
+ * silently change the layout signature across the three sibling renderers.
  */
 
 import vsCode from '../shaders/proceduralDisks/vertex.wesl?static';
@@ -84,10 +61,9 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     // Procedural disks are EMISSIVE; same rationale as quad/disk.
     blend: 'additive',
     format: init.format,
-    // Match the pre-Spec-G BGL exactly: the uniform binding is
-    // tagged VERTEX | FRAGMENT even though the fragment doesn't
-    // currently read 'u'. Preserving the flag keeps the
-    // pipeline-layout introspection signature stable.
+    // Tagged VERTEX | FRAGMENT even though the fragment doesn't read
+    // 'u' — keeps the pipeline-layout introspection signature stable
+    // across the sibling renderers. See module header.
     uniformVisibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
   });
 
@@ -101,11 +77,9 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
   ): void {
     if (instances.length === 0) return;
 
-    // Pre-Spec-G this allocated fresh per frame — preserve that
-    // behavior exactly so the refactor is mechanical. A reusable
-    // scratch buffer can be added later if profiling flags it; the
-    // typical-frame size for the procedural pass is small enough
-    // (a few KB) that the GC churn isn't load-bearing today.
+    // Fresh allocation per frame. The typical-frame size for the
+    // procedural pass is a few KB; GC churn isn't load-bearing today.
+    // A reusable scratch buffer can be added if profiling flags it.
     const packed = new Float32Array(instances.length * FLOATS_PER_INSTANCE);
     for (let i = 0; i < instances.length; i++) {
       const o = i * FLOATS_PER_INSTANCE;
@@ -122,11 +96,11 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
       packed[o + 9] = ins.crossfadeAlpha;
       packed[o + 10] = ins.procFadeOut;
       packed[o + 11] = 0;
-      // Slots 12..15 are the shared-factory's hi-res-LOD vec4 (Task R1).
-      // Explicitly zero them so a recycled scratch buffer can never leak
-      // stale bytes into the GPU upload — even though `new Float32Array`
-      // zero-inits, a future `scratch.fill` migration would silently
-      // skip these without the explicit writes.
+      // Slots 12..15 are the shared-factory's hi-res-LOD vec4 (owned by
+      // texturedDiskRenderer). Explicit zeros so a future migration to
+      // a reused scratch buffer can't leak stale bytes into the GPU
+      // upload — 'new Float32Array' zero-inits today, but 'scratch.fill'
+      // would silently skip these.
       packed[o + 12] = 0;
       packed[o + 13] = 0;
       packed[o + 14] = 0;
@@ -149,8 +123,8 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     draw,
     destroy: inner.destroy,
   };
-  // `satisfies Renderer` confirms the shared label+destroy contract at
-  // compile time without widening the static type seen by consumers.
+  // 'satisfies Renderer' confirms the shared label+destroy contract
+  // without widening the static type seen by consumers.
   renderer satisfies Renderer;
   return renderer;
 }

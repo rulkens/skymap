@@ -3,22 +3,21 @@
  *
  * Differs from TexturedQuadRenderer in two ways:
  *   1. Each instance is tilted in 3D world space: the disk's normal points
- *      toward the camera by default (face-on), and is rotated around the
- *      line-of-sight axis by PA, then tilted by inclination angle
- *      cos(i) = axisRatio. So an axisRatio = 1 disk is face-on; axisRatio
- *      ≈ 0 is edge-on.
+ *      toward the camera by default (face-on), then rotated around the
+ *      line-of-sight axis by PA and tilted by inclination angle
+ *      cos(i) = axisRatio. axisRatio = 1 is face-on; axisRatio ≈ 0 is edge-on.
  *   2. The fragment shader applies only a soft round-the-corners mask
  *      (the disk silhouette IS the geometry, so the on-screen ellipse
  *      falls out of the projection naturally).
  *
- * Why a separate renderer instead of extending TexturedQuadRenderer? TexturedQuadRenderer
- * bakes screen-aligned billboarding into the vertex shader — corner offsets
- * are applied in CLIP space after viewProj. Tilting in 3D requires the
- * corners to be transformed in WORLD space and then projected, which is a
- * fundamentally different pipeline. Keeping TexturedQuadRenderer alive lets the
- * engine pick the screen-aligned thumbnail path for fallback orientations
- * (where tilting would be cosmetically misleading) and for galaxies still
- * loading their textures.
+ * Why a separate renderer? TexturedQuadRenderer bakes screen-aligned
+ * billboarding into the vertex shader — corner offsets are applied in
+ * CLIP space after viewProj. Tilting in 3D requires the corners to be
+ * transformed in WORLD space and then projected, a fundamentally
+ * different pipeline. Keeping TexturedQuadRenderer alive lets the engine
+ * pick the screen-aligned thumbnail path for fallback orientations
+ * (where tilting would be cosmetically misleading) and for galaxies
+ * still loading their textures.
  *
  * ## Per-instance attributes (64 bytes / 16 floats)
  *
@@ -27,23 +26,11 @@
  *   orientation   vec4   axisRatio, positionAngleDeg, fadeAlpha, _
  *   hiResSlot     vec4   hiResLayerIdx, hiResCrossfadeAlpha, _, _
  *
- * Note: `fadeAlpha` lives in the third slot of the orientation vec4, NOT
- * in a fourth `extras` vec4 like ThumbnailInstance. The fourth vec4 was
- * added in Task R1 (2026-05-28) for the hi-res LOD work — it carries the
- * `hiResLayerIdx` array-layer index (negative sentinel = no slot) and
- * the `hiResCrossfadeAlpha` low-to-hi-res ramp. The procedural sibling
- * uses the same 64-byte stride but zero-pads the fourth vec4; the
- * shared instancedQuadRenderer factory requires uniform stride.
- *
- * ## Why this is a thin wrapper post-Spec G
- *
- * Pipeline / BGL / uniform buffer / instance buffer plumbing now lives
- * in `instancedQuadRenderer.ts`, shared with the thumbnail + procedural disk
- * renderers. This file owns: the consumer-facing `createTexturedDiskRenderer`
- * factory signature (preserved unchanged from Spec F), the
- * `DiskInstance → packed Float32Array` serialization, and the wrapper
- * `draw(...)` translating the engine's call convention into the
- * shared factory's `draw(args)` shape.
+ * 'fadeAlpha' lives in the orientation vec4's third slot rather than a
+ * separate vec4. The fourth vec4 ('hiResSlot') carries the hi-res LOD
+ * array-layer index (negative sentinel = no slot) and the low-to-hi-res
+ * crossfade ramp. The procedural sibling zero-pads this fourth vec4;
+ * the shared instancedQuadRenderer factory requires uniform stride.
  */
 
 import type { mat4 } from 'gl-matrix';
@@ -63,15 +50,14 @@ export function createTexturedDiskRenderer(ctx: GpuContext, maxInstances = 256):
     fragmentSource: fsCode,
     // 'hiResArray: true' makes the shared factory append @binding(3,4)
     // (texture_2d_array + sampler) to the BGL so the fragment shader's
-    // hi-res sample (Task R3) matches the pipeline layout. The bind
-    // group will only compose once R6 calls 'bindHiResArray' with a
-    // real view — until then no draw call fires for textured disks,
-    // which is the expected interim state.
+    // hi-res sample matches the pipeline layout. The bind group only
+    // composes once the engine calls 'bindHiResArray' with a real view;
+    // until then no draw call fires for textured disks.
     atlas: { hiResArray: true },
     capacity: { kind: 'fixed', max: maxInstances },
-    // Galaxy disks are EMISSIVE — see texturedQuadRenderer.ts for the
-    // fade-to-black bug history that motivates additive over
-    // premultiplied-OVER.
+    // Galaxy disks are EMISSIVE. Premultiplied OVER would treat the
+    // cutout's dark sky as black rather than alpha 0, producing a
+    // fade-to-black at thumbnail edges.
     blend: 'additive',
     format: ctx.format,
   });
@@ -80,13 +66,11 @@ export function createTexturedDiskRenderer(ctx: GpuContext, maxInstances = 256):
     inner.bindAtlas?.(atlasView);
   }
 
-  // Forwarding wrapper for the hi-res array binding (Task R3 plumbing).
   // The inner factory exposes 'bindHiResArray' only when the renderer
-  // was built with 'atlas.hiResArray: true' (which it is, above), so the
-  // optional chain is belt-and-braces. R6 will call this with the real
-  // hi-res texture array view; until then the bind group withholds
-  // composition and no draw fires — see the inner factory's
-  // composeAtlasBindGroup() for the gating logic.
+  // was built with 'atlas.hiResArray: true' (it is, above) — the
+  // optional chain is belt-and-braces. Until the engine calls this
+  // with a real view, the bind group withholds composition and no
+  // draw fires; see the inner factory's 'composeAtlasBindGroup()'.
   function bindHiResArray(arrayView: GPUTextureView, sampler?: GPUSampler): void {
     inner.bindHiResArray?.(arrayView, sampler);
   }
@@ -100,9 +84,8 @@ export function createTexturedDiskRenderer(ctx: GpuContext, maxInstances = 256):
   ): void {
     if (instances.length === 0) return;
 
-    // Pre-Spec-G this was a fresh-per-frame allocation; preserve
-    // that to keep the refactor mechanical. ~12 KB at the v1 cap
-    // of 256 instances.
+    // Fresh allocation per frame. ~16 KB at the cap of 256 instances —
+    // GC churn isn't load-bearing today.
     const data = new Float32Array(instances.length * FLOATS_PER_INSTANCE);
     for (let i = 0; i < instances.length; i++) {
       const ins = instances[i]!;
@@ -119,11 +102,9 @@ export function createTexturedDiskRenderer(ctx: GpuContext, maxInstances = 256):
       data[base + 9] = ins.positionAngleDeg;
       data[base + 10] = ins.fadeAlpha;
       data[base + 11] = 0;
-      // Hi-res LOD attributes (Task R1). Slots 14, 15 are reserved
-      // future shelf — kept zero for forward compatibility. The
-      // fragment shader doesn't read slot 3 yet (that lands in R3); at
-      // R1 these floats are purely pinning the pack-loop slot layout
-      // so R5's subsystem populates the right indices.
+      // Hi-res LOD: layer index (negative = no slot bound, atlas only)
+      // and the low-to-hi-res crossfade alpha. Slots 14, 15 are a free
+      // shelf for future hi-res controls.
       data[base + 12] = ins.hiResLayerIdx;
       data[base + 13] = ins.hiResCrossfadeAlpha;
       data[base + 14] = 0;
@@ -137,9 +118,8 @@ export function createTexturedDiskRenderer(ctx: GpuContext, maxInstances = 256):
       instanceBytes: data,
       instanceCount: instances.length,
       camPosWorld: camPos,
-      // TexturedDiskRenderer's shader doesn't need pxPerRad — the disk
-      // geometry sizes itself in world space — so the trailing
-      // uniform slot is left as zero padding (default).
+      // pxPerRad omitted — the disk geometry sizes itself in world
+      // space, so the trailing uniform slot stays zero-padded.
     });
   }
 
@@ -150,8 +130,8 @@ export function createTexturedDiskRenderer(ctx: GpuContext, maxInstances = 256):
     draw,
     destroy: inner.destroy,
   };
-  // `satisfies Renderer` confirms the shared label+destroy contract at
-  // compile time without widening the static type seen by consumers.
+  // 'satisfies Renderer' confirms the shared label+destroy contract
+  // without widening the static type seen by consumers.
   renderer satisfies Renderer;
   return renderer;
 }
