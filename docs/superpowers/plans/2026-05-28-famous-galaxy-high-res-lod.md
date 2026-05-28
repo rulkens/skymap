@@ -800,17 +800,17 @@ export type TexturedDiskDeps = {
 
 **Steps:**
 
-- [ ] Test `texturedDiskSubsystem emits hiResLayerIdx -1 by default` — no
+- [x] Test `texturedDiskSubsystem emits hiResLayerIdx -1 by default` — no
   hi-res dep, no changes from current behaviour.
-- [ ] Test `with hiResFamous dep, Famous-source DiskInstance gets the
+- [x] Test `with hiResFamous dep, Famous-source DiskInstance gets the
   per-galaxy hi-res state` — stub a `HiResFamousSubsystem` whose
   `lastOutput.byFamousIdx` has `{0: {hiResLayerIdx: 2, hiResCrossfadeAlpha: 0.7}}`;
   assert the emitted DiskInstance for index 0 carries those values.
-- [ ] Test `with hiResFamous dep, non-Famous source DiskInstance still
+- [x] Test `with hiResFamous dep, non-Famous source DiskInstance still
   defaults to -1 / 0` — sanity guard.
-- [ ] Implement the dep extension + the per-emission lookup.
-- [ ] `npm test -- texturedDiskSubsystem` → green.
-- [ ] Commit.
+- [x] Implement the dep extension + the per-emission lookup.
+- [x] `npm test -- texturedDiskSubsystem` → green.
+- [x] Commit.
 
 ### Task R6: wireSlots — bootstrap the texture + subsystem
 

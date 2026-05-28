@@ -35,6 +35,7 @@ import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
 import type { GalaxyAtlasSubsystem } from '../../../@types/engine/subsystems/GalaxyAtlasSubsystem';
+import type { HiResFamousSubsystem } from '../../../@types/engine/subsystems/HiResFamousSubsystem';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type {
   TexturedDiskFrameInput,
@@ -84,6 +85,16 @@ export type TexturedDiskDeps = {
     famousId?: string;
   }) => Promise<ImageBitmap | null>;
   readonly decimationFactor?: number;
+  /**
+   * Optional. When provided, the planner reads hi-res state per
+   * Famous-source galaxy (keyed by per-cloud local index) and folds
+   * `hiResLayerIdx` + `hiResCrossfadeAlpha` into the emitted
+   * `DiskInstance`. When omitted, both default to -1 / 0 for every
+   * instance — preserving pre-hi-res behaviour exactly. The shader
+   * already gates the hi-res sample on `hiResLayerIdx >= 0`, so the
+   * sentinel reliably disables the LOD-3 path with no extra branching.
+   */
+  readonly hiResFamous?: HiResFamousSubsystem;
 };
 
 export function createTexturedDiskSubsystem(
@@ -92,6 +103,7 @@ export function createTexturedDiskSubsystem(
   const { atlas, requestRender } = deps;
   const fetcher = deps.fetcher ?? fetchGalaxyBitmap;
   const decimationFactor = Math.max(1, Math.floor(deps.decimationFactor ?? 8));
+  const hiResFamous = deps.hiResFamous;
 
   // Load-fade timing — separate from the atlas's `bitmapReady`/`bitmapFailed`
   // set membership.  Cleared via the atlas's eviction handler so we don't
@@ -232,6 +244,23 @@ export function createTexturedDiskSubsystem(
         // against corrupted .bin files — same role they played in the
         // pre-split code.
         if (px > DISK_THRESHOLD_PX && Number.isFinite(ar) && Number.isFinite(pa)) {
+          // Hi-res LOD-3 fold-in: only Famous-source rows can possibly
+          // be assigned a hi-res layer (the curated WebP atlas covers
+          // Famous galaxies only). Non-Famous sources emit the sentinel
+          // -1 / 0 unconditionally — the shader's `hiResLayerIdx >= 0`
+          // gate makes those rows skip the hi-res sample entirely.
+          // `i` is the per-cloud local index, which for `Source.Famous`
+          // matches the Famous-source-local key contract on
+          // `HiResFamousFrameOutput.byFamousIdx` (a numeric map).
+          let hiResLayerIdx = -1;
+          let hiResCrossfadeAlpha = 0;
+          if (cloudSource === Source.Famous && hiResFamous !== undefined) {
+            const s = hiResFamous.lastOutput.byFamousIdx.get(i);
+            if (s !== undefined) {
+              hiResLayerIdx = s.hiResLayerIdx;
+              hiResCrossfadeAlpha = s.hiResCrossfadeAlpha;
+            }
+          }
           stickyDisks.set(i, {
             x,
             y,
@@ -244,6 +273,8 @@ export function createTexturedDiskSubsystem(
             axisRatio: ar,
             positionAngleDeg: pa,
             fadeAlpha,
+            hiResLayerIdx,
+            hiResCrossfadeAlpha,
           });
         }
       }
