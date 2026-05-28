@@ -36,6 +36,13 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
   color: var(--color-fg);
+  /*
+   * Match the rest of the HUD's monospace aesthetic (InfoCard, StatusBar,
+   * SettingsPanel all use `--font-family-mono`).  Without this the splash
+   * inherits the browser sans-serif default and visibly clashes with every
+   * other overlay.  Cascades to title / body / CTAs / footer via inheritance.
+   */
+  font-family: var(--font-family-mono);
   max-width: 520px;
   width: 100%;
   padding: 32px;
