@@ -48,6 +48,8 @@ data/
                       fonts/. VizieR ReadMes live next to the file they describe
                       (read for byte layouts!). Path lookups go through
                       `tools/utils/io/rawDataRegistry.ts`.
+docs/BACKLOG.md           Ground-truth list of what's next — pickup-able plans,
+                      specs awaiting plans, deferred items, surfaced issues
 docs/superpowers/plans/   Active and historical implementation plans (TDD task lists)
 tests/                Vitest suite — mirrors src/ tree
 ```
@@ -189,7 +191,7 @@ A new fetcher script that mirrors `tools/fetch/fetchHyperLeda.ts` or `tools/fetc
 
 ## When the user asks you to…
 
-- **"add a feature"** → look in `docs/superpowers/plans/` for an existing plan. If it's substantial, write a new plan via the `writing-plans` skill rather than coding inline.
+- **"add a feature"** → check `docs/BACKLOG.md` and `docs/superpowers/plans/` for an existing plan or captured issue. If it's substantial, write a new plan via the `writing-plans` skill rather than coding inline.
 - **"fix this bug"** → check tests first; the project favours reproducing bugs as failing tests, then fixing.
 - **"why is this slow?"** → profile mental model first: per-frame work scales with on-screen galaxies (~2.5M total). Inner-loop trig and `Math.sqrt` are real costs. Hoist constants, gate with squared distances, avoid per-galaxy `Math.tan`.
 - **"refactor X"** → keep the services/ layout. Cross-cutting helpers go in `utils/`; rendering subsystems in `services/gpu/`. Tests mirror the src tree.
