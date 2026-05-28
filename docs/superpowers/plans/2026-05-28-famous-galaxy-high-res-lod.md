@@ -153,19 +153,19 @@ export async function copyHiResToPublic(opts?: {
 
 **Steps:**
 
-- [ ] Write the failing test `copyHiResToPublic copies full.webp into a flat layout`
+- [x] Write the failing test `copyHiResToPublic copies full.webp into a flat layout`
   using a tmpdir-backed source tree with two galaxy subdirs each holding a
   `full.webp` and asserting both files appear at `<dest>/<id>.webp`.
-- [ ] Write the failing test `copyHiResToPublic records IDs missing full.webp`
+- [x] Write the failing test `copyHiResToPublic records IDs missing full.webp`
   asserting the `missing` array contains the ID whose subdir holds only
   `recipe.json`.
-- [ ] Write the failing test `copyHiResToPublic is idempotent on re-run`
+- [x] Write the failing test `copyHiResToPublic is idempotent on re-run`
   asserting that a second call with the same input copies zero files.
-- [ ] Implement against the existing `tools/famous/buildFamous.ts` patterns
+- [x] Implement against the existing `tools/famous/buildFamous.ts` patterns
   for path resolution + sync filesystem use (`node:fs/promises` is fine,
   pick what `fetchFamousImages.ts` already does).
-- [ ] `npm test -- copyHiResToPublic` → green.
-- [ ] Commit (specific file paths only; never `git add -A`).
+- [x] `npm test -- copyHiResToPublic` → green.
+- [x] Commit (specific file paths only; never `git add -A`).
 
 ### Task A2: Wire the npm script
 
@@ -174,14 +174,14 @@ export async function copyHiResToPublic(opts?: {
 
 **Steps:**
 
-- [ ] Add `"build-famous-hires": "tsx tools/famous/copyHiResToPublic.ts"`
+- [x] Add `"build-famous-hires": "tsx tools/famous/copyHiResToPublic.ts"`
   alongside `build-famous` at `package.json:37`.
-- [ ] Add a thin `if (require.main === module)` style top-level invocation to
+- [x] Add a thin `if (require.main === module)` style top-level invocation to
   `copyHiResToPublic.ts` so the npm script runs it (mirror the bottom of
   `tools/famous/buildFamous.ts`).
-- [ ] `npm run build-famous-hires` from a worktree with the curator
+- [x] `npm run build-famous-hires` from a worktree with the curator
   output present → reports `copied: <n>`.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task A3: Extend syncR2 ALLOW + uploader for hi-res images
 
@@ -200,18 +200,18 @@ export async function copyHiResToPublic(opts?: {
 
 **Steps:**
 
-- [ ] Write the failing test `syncR2 ALLOW accepts famous-hires images`
+- [x] Write the failing test `syncR2 ALLOW accepts famous-hires images`
   asserting a function-level filter / inventory helper includes
   `c101.webp` from a fake `public/images/famous-hires/` listing.
   (Probably needs a small refactor exposing the inventory step as a
   pure function for testability — implementer decides whether to extract.)
-- [ ] Write the failing test `hi-res images upload with the data/images/
+- [x] Write the failing test `hi-res images upload with the data/images/
   famous-hires R2 key prefix` asserting the computed key for `c101.webp`
   is `data/images/famous-hires/c101.webp`.
-- [ ] Implement. Keep the loop body close in shape to the existing
+- [x] Implement. Keep the loop body close in shape to the existing
   `for (const name of files)` block at `syncR2.ts:284-288`.
-- [ ] `npm test -- syncR2` → green.
-- [ ] Commit.
+- [x] `npm test -- syncR2` → green.
+- [x] Commit.
 
 ### Task A4: gitignore + repo state
 
@@ -220,12 +220,12 @@ export async function copyHiResToPublic(opts?: {
 
 **Steps:**
 
-- [ ] Add `/public/images/famous-hires/` next to the existing
+- [x] Add `/public/images/famous-hires/` next to the existing
   `/public/data/` line at `.gitignore:125` with a one-line comment
   explaining it's a build artefact of `npm run build-famous-hires`.
-- [ ] `git status` after running `npm run build-famous-hires` →
+- [x] `git status` after running `npm run build-famous-hires` →
   no `public/images/famous-hires/*` paths appear under "untracked".
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -255,13 +255,13 @@ export const HI_RES_LAYER_SIDE_BY_TIER: Readonly<Record<Tier, number>> = {
 
 **Steps:**
 
-- [ ] Add test `HI_RES_LAYER_SIDE_BY_TIER pegs small to 512 and medium/large to 1024`
+- [x] Add test `HI_RES_LAYER_SIDE_BY_TIER pegs small to 512 and medium/large to 1024`
   with three direct lookups.
-- [ ] Add test `HI_RES_LAYER_COUNT is 8` (one assertion — the constant is
+- [x] Add test `HI_RES_LAYER_COUNT is 8` (one assertion — the constant is
   load-bearing for the texture allocation).
-- [ ] Implement the two exports near the other tier-scoped registry exports.
-- [ ] `npm test -- sources` → green.
-- [ ] Commit.
+- [x] Implement the two exports near the other tier-scoped registry exports.
+- [x] `npm test -- sources` → green.
+- [x] Commit.
 
 ### Task B2: Extend DiskInstance type
 
@@ -281,14 +281,14 @@ fields — only append.
 
 **Steps:**
 
-- [ ] Edit the type with both fields + a 3-line docblock for each (see
+- [x] Edit the type with both fields + a 3-line docblock for each (see
   spec §"Approach" for the meanings).
-- [ ] `npm run typecheck` — expect failures at the renderer pack loop
+- [x] `npm run typecheck` — expect failures at the renderer pack loop
   (`texturedDiskRenderer.ts:84-100`) and at `texturedDiskSubsystem.ts:235-247`
   which constructs `DiskInstance` literals. **Do not fix these here** —
   they are pinned in Tasks R1 + R4 with their own tests; leaving them red
   keeps the TDD signal clean.
-- [ ] Commit only the type change.
+- [x] Commit only the type change.
 
 ### Task B3: Extend FetchGalaxyBitmapInput
 
@@ -310,8 +310,8 @@ hiResTargetDim?: number; // pair with `fetchHiRes` — caller passes layerSide.
 
 **Steps:**
 
-- [ ] Add both fields with the docblock above.
-- [ ] Commit.
+- [x] Add both fields with the docblock above.
+- [x] Commit.
 
 ### Task B4: Hi-res fetch branch in galaxyImageFetcher
 
@@ -331,18 +331,18 @@ hiResTargetDim?: number; // pair with `fetchHiRes` — caller passes layerSide.
 
 **Steps:**
 
-- [ ] Write the failing test `fetchHiRes loads from dataUrl + resizes to
+- [x] Write the failing test `fetchHiRes loads from dataUrl + resizes to
   hiResTargetDim` using a `vi.spyOn(globalThis, 'fetch')` stub returning a
   fake `image/webp` Blob. Assert the call URL begins with the dataUrl
   prefix and that the resulting bitmap is `hiResTargetDim` square. Mock
   `createImageBitmap` if jsdom doesn't provide it (check what the existing
   test suite does for atlas tests).
-- [ ] Write the failing test `fetchHiRes returns null on 404` asserting
+- [x] Write the failing test `fetchHiRes returns null on 404` asserting
   no DSS / SDSS fallback fires.
-- [ ] Implement against the existing `tryFetch` + `createImageBitmap`
+- [x] Implement against the existing `tryFetch` + `createImageBitmap`
   pattern at `galaxyImageFetcher.ts:60-85`.
-- [ ] `npm test -- galaxyImageFetcher` → green.
-- [ ] Commit.
+- [x] `npm test -- galaxyImageFetcher` → green.
+- [x] Commit.
 
 ### Task B5: hiResFamousTexture — GPU resource class
 
@@ -406,24 +406,24 @@ export function createHiResFamousTexture(args: CreateHiResFamousTextureArgs): Hi
 `tests/services/gpu/resources/textureAtlas.test.ts` uses; do NOT exercise
 real WebGPU — just verify slot bookkeeping and the device-call shape):
 
-- [ ] Test `allocate returns sequential layers under capacity` — allocate 3
+- [x] Test `allocate returns sequential layers under capacity` — allocate 3
   distinct keys, expect indices 0, 1, 2.
-- [ ] Test `allocate returns the existing layer for a repeat key` —
+- [x] Test `allocate returns the existing layer for a repeat key` —
   duplicate-key allocate hits the same layer.
-- [ ] Test `allocate evicts the LRU-by-recent-apparent-diameter layer when full` —
+- [x] Test `allocate evicts the LRU-by-recent-apparent-diameter layer when full` —
   fill 8 layers with diameters 250, 240, 230, 220, 210, 290, 280, 270; a
   9th allocate evicts the layer holding diameter 210.
-- [ ] Test `release frees the layer for re-allocation`.
-- [ ] Test `markFailed + isFailed survive multiple ticks`.
-- [ ] Test `setEvictHandler is fired BEFORE the slot is overwritten`
+- [x] Test `release frees the layer for re-allocation`.
+- [x] Test `markFailed + isFailed survive multiple ticks`.
+- [x] Test `setEvictHandler is fired BEFORE the slot is overwritten`
   (same invariant as `TextureAtlas`; see `textureAtlas.ts:184-194`).
-- [ ] Test `uploadBitmap on a real (mocked) device dispatches
+- [x] Test `uploadBitmap on a real (mocked) device dispatches
   copyExternalImageToTexture with [0,0,layerIdx] origin`.
-- [ ] Test `getTextureView is built with dimension '2d-array'` —
+- [x] Test `getTextureView is built with dimension '2d-array'` —
   assert the spied `createView` call's first arg.
-- [ ] Implement.
-- [ ] `npm test -- hiResFamousTexture` → green.
-- [ ] Commit.
+- [x] Implement.
+- [x] `npm test -- hiResFamousTexture` → green.
+- [x] Commit.
 
 ### Task B6: HiResFamousSubsystem public type
 
@@ -463,11 +463,11 @@ Never raw tuples.)
 
 **Steps:**
 
-- [ ] Create the file with the four types + a docblock summarising the
+- [x] Create the file with the four types + a docblock summarising the
   subsystem's job (mirror the docblock at the top of
   `src/@types/engine/subsystems/ProceduralDiskSubsystem.d.ts` — find via
   grep, the file already exists).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task B7: hiResFamousSubsystem — planner
 
@@ -517,36 +517,36 @@ export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSu
 for the `makeDenseCloud` / `makeCam` / `makeInput` helper shape — keep
 the catalog stubbed, gate the apparent size via cam.distance):
 
-- [ ] Test `runFrame emits hiResLayerIdx -1 for famous galaxies below the trigger band`
+- [x] Test `runFrame emits hiResLayerIdx -1 for famous galaxies below the trigger band`
   (camera far enough that apparent diameter < 200 px) — assert
   `byFamousIdx.get(0)?.hiResLayerIdx ?? -1 === -1`.
-- [ ] Test `runFrame allocates a layer and emits the smoothstep alpha mid-band`
+- [x] Test `runFrame allocates a layer and emits the smoothstep alpha mid-band`
   — apparent diameter pinned to 230 px (camera distance tuned via the
   helper); after a stub-resolved fetch that fires the upload, the next
   frame's output has `hiResLayerIdx = 0` and `hiResCrossfadeAlpha ≈ 0.5`
   (smoothstep at midpoint). Allow ±1e-5 tolerance.
-- [ ] Test `crossfade alpha pinpoints` — three sub-tests at 200 / 230 /
+- [x] Test `crossfade alpha pinpoints` — three sub-tests at 200 / 230 /
   260 px asserting 0 / 0.5 / 1 (within tolerance).
-- [ ] Test `runFrame ignores non-Famous sources` — populate SDSS-source cloud,
+- [x] Test `runFrame ignores non-Famous sources` — populate SDSS-source cloud,
   expect empty `byFamousIdx`.
-- [ ] Test `N=9 distinct famous galaxies in the band evict the smallest-recent layer`
+- [x] Test `N=9 distinct famous galaxies in the band evict the smallest-recent layer`
   — feed 9 galaxies with descending diameters (300, 290, 280, ..., 220);
   after layer 8 (diameter 220), expect the LRU eviction to drop the
   diameter-220 layer (NOT a random one). Note: this targets the
   hiResFamousTexture's LRU policy from Task B5 — the subsystem just
   feeds it.
-- [ ] Test `fetcher null result calls markFailed and skips re-enqueue` —
+- [x] Test `fetcher null result calls markFailed and skips re-enqueue` —
   spy on `texture.markFailed`.
-- [ ] Test `destroy clears subscriptions` — texture's evict handler is
+- [x] Test `destroy clears subscriptions` — texture's evict handler is
   reset.
-- [ ] Test `lastOutput mirrors the most recent runFrame return`.
-- [ ] Implement against the patterns in
+- [x] Test `lastOutput mirrors the most recent runFrame return`.
+- [x] Implement against the patterns in
   `src/services/engine/subsystems/texturedDiskSubsystem.ts` (camera-walk
   shape; squared-distance early-out; sticky-map handling). Famous source
   count is small (~75) so no decimation is needed — walk every row
   every frame.
-- [ ] `npm test -- hiResFamousSubsystem` → green.
-- [ ] Commit.
+- [x] `npm test -- hiResFamousSubsystem` → green.
+- [x] Commit.
 
 ### Task B8: Integration sanity tests for the Section B seam
 
@@ -557,8 +557,8 @@ run the full suite and confirm no test outside the new files turned red.
 If any did, fix in the same commit chain — Section B has no behavioural
 fan-out beyond its own files, so any regression is a real bug.
 
-- [ ] `npm test` (full suite) → green.
-- [ ] Commit any fixes.
+- [x] `npm test` (full suite) → green.
+- [x] Commit any fixes.
 
 ---
 
@@ -588,22 +588,22 @@ The riskiest seam. WESL changes are the meticulous task — re-read
 
 **Steps:**
 
-- [ ] Test (new or extended at the proceduralDiskRenderer + texturedQuadRenderer test
+- [x] Test (new or extended at the proceduralDiskRenderer + texturedQuadRenderer test
   sites) `pack writes 16 floats per instance — last 4 are zero for
   quads + procedural`. If those renderers don't yet have a pack-loop
   unit test, this is a no-op for them; the change is mechanical and the
   shader still reads the first 12 floats only, so visual behaviour is
   unchanged.
-- [ ] Update `FLOATS_PER_INSTANCE` + add the @location(3) attribute to
+- [x] Update `FLOATS_PER_INSTANCE` + add the @location(3) attribute to
   the shared pipeline layout in `instancedQuadRenderer.ts`.
-- [ ] Update the three consumers' pack loops to write 16 floats (the new
+- [x] Update the three consumers' pack loops to write 16 floats (the new
   trailing 4 default to zero; texturedDisk writes its two hi-res floats
   per Task R4).
-- [ ] `npm run typecheck` + `npm test` → green.
-- [ ] Visual smoke (optional at this task): start the dev server, confirm
+- [x] `npm run typecheck` + `npm test` → green.
+- [x] Visual smoke (optional at this task): start the dev server, confirm
   rendering is unchanged — no shader yet reads the new attribute, so
   this should be a no-op visually.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task R2: Extend the shared bind-group layout for the array binding
 
@@ -626,16 +626,16 @@ Pick Path A unless the diff feels worse on inspection. The
 
 **Steps:**
 
-- [ ] Test (new) `instancedQuadRenderer BGL includes hi-res array bindings when atlas.hiResArray is true`
+- [x] Test (new) `instancedQuadRenderer BGL includes hi-res array bindings when atlas.hiResArray is true`
   — assert via a `vi.spyOn(device, 'createBindGroupLayout')` that the
   `entries` array length grows from 3 to 5 when the flag is set.
-- [ ] Test `bindHiResArray` factory method only exists when the flag is set
+- [x] Test `bindHiResArray` factory method only exists when the flag is set
   (same `if (atlas) {…}` discipline as the existing `bindAtlas`).
-- [ ] Implement extending the BGL builder + add a `bindHiResArray(view,
+- [x] Implement extending the BGL builder + add a `bindHiResArray(view,
   sampler)` method on the returned `InstancedQuadRenderer`. The
   bindGroup recomposition happens at bind time, same shape as `bindAtlas`.
-- [ ] `npm test -- instancedQuadRenderer` → green.
-- [ ] Commit.
+- [x] `npm test -- instancedQuadRenderer` → green.
+- [x] Commit.
 
 ### Task R3: WESL shader updates (the meticulous task)
 
