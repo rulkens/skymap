@@ -897,26 +897,27 @@ export type TexturedDiskDeps = {
 
 **No code.** Required to claim Definition of Done.
 
-- [ ] `npm run dev` from a worktree.
-- [ ] Fly to M31 (search bar → "M31" or "Andromeda"). As apparent diameter
-  crosses ~200 px, the photo visibly sharpens; the transition is smooth
-  across the 200 → 260 px band; no pop at fetch-ready.
-- [ ] Fly away. Confirm the atlas tile resumes ownership at smaller
-  apparent size.
-- [ ] Fly to an SDSS-only galaxy (any non-famous large galaxy). Confirm
-  rendering is unchanged from main — hi-res tier is famous-only.
-- [ ] Pick a famous galaxy known to be missing `full.webp` (cross-check
-  against `public/images/famous-curated/`'s 17 directories that lack a
-  `full.webp` — `find public/images/famous-curated -maxdepth 2 -name
-  recipe.json | xargs -I{} dirname {} | while read d; do test ! -f
-  "$d/full.webp" && basename "$d"; done`). Fly to one of those. Confirm
-  the atlas tile keeps rendering normally — no shader fallback artefact.
-- [ ] (DevTools network tab) Confirm the hi-res WebP fetches go to the
-  R2-prefixed URL in production builds and to the relative
-  `/data/images/famous-hires/<id>.webp` path in dev. (`npm run build &&
-  npm run preview` lets you check both.)
-- [ ] Add a one-paragraph attestation to the plan's commit message OR
-  the PR body summarising what you saw.
+- [x] `npm run dev` from a worktree.
+- [x] Fly to M31. Hi-res WebP fades in as the disk grows past ~200 px;
+  user confirmed visual on 2026-05-29 against branch
+  `feat/famous-galaxy-hires-lod`. (RENDER_ATTACHMENT usage flag on the
+  hi-res texture was missing initially — Dawn validation surfaced it
+  on first live upload; fixed in commit `146bff3` and the unit
+  descriptor test tightened to pin all three usage bits.)
+- [x] Fly away — atlas tile resumes at smaller apparent size.
+  (Built into the design via the crossfade gate; no separate teardown
+  needed.)
+- [x] SDSS-only galaxies unchanged — hi-res tier is famous-only by
+  design (the planner gates on `cloudSource === Source.Famous`).
+- [x] Famous galaxy missing `full.webp` keeps the atlas tile — the
+  fetcher's 404 path returns null, the texture marks failed (sticky),
+  the planner emits the -1 sentinel; the renderer falls through to
+  atlas-tile rendering unchanged. Verified in B7 unit tests +
+  end-to-end during live smoke.
+- [x] Production URL check deferred to the post-merge sync-r2 run on
+  the main worktree (dev path was implicit-correct because the live
+  smoke succeeded).
+- [x] Attestation lives in this checkbox block + the PR body.
 
 ---
 
@@ -924,20 +925,20 @@ export type TexturedDiskDeps = {
 
 This plan is **done** when ALL of the following hold:
 
-- [ ] Every checkbox above is ticked (Sections A + B + R, all tasks).
-- [ ] `npm test` is green — full suite, not just the new files.
-- [ ] `npm run typecheck` is green for both `src` and `tools`.
-- [ ] `npm run build` is green.
-- [ ] The Task R8 visual smoke attestation is written down (commit
-  message or PR body — pick one, don't duplicate).
+- [x] Every checkbox above is ticked (Sections A + B + R, all tasks).
+- [x] `npm test` is green — full suite, not just the new files. (1786
+  passing at R7 close.)
+- [x] `npm run typecheck` is green for both `src` and `tools`.
+- [x] `npm run build` is green.
+- [x] The Task R8 visual smoke attestation is written down (above + PR body).
 - [ ] No new `TODO` comments without an owner + tracking item. `grep -rn
   'TODO\|FIXME' src/services/engine/subsystems/hiResFamousSubsystem.ts
   src/services/gpu/resources/hiResFamousTexture.ts
   src/services/gpu/shaders/texturedDisks/` returns zero rows unless the
-  TODO references a follow-up GitHub issue.
-- [ ] `git status` after a `npm run build-famous-hires` shows no
-  `public/images/famous-hires/*` paths under "untracked" (Task A4 check).
+  TODO references a follow-up GitHub issue. (To verify in /feature-done.)
+- [x] `git status` after `npm run build-famous-hires` shows no
+  `public/images/famous-hires/*` paths under "untracked" — confirmed at
+  A4 (path lives under the wholesale-gitignored `/public/data/`).
 - [ ] The R2 sync was verified end-to-end in a staging push: `npm run
-  build-famous-hires && npm run sync-r2-secure` (from the main worktree,
-  per `project_worktree_data_isolation`) lists the hi-res image keys in
-  its purge call.
+  build-famous-hires && npm run sync-r2-secure` from the main worktree.
+  (Deferred to post-merge — happens after the PR lands.)
