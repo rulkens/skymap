@@ -138,16 +138,38 @@ DoD audit — <plan filename>
 OVERALL: <READY / NOT READY: <reason>>
 ```
 
-If `READY`, say so and stop. Don't move files, don't update CLAUDE.md,
-don't commit. Those are separate user decisions.
+If `READY`, **execute the housekeeping moves immediately** as part of
+the same response — no separate confirmation step. The audit *is* the
+gate; reaching READY is the user's signal to move the files. State
+what's being moved in one line, then do it:
+
+- `git mv` the plan file from `docs/superpowers/plans/<file>.md` to
+  `docs/superpowers/plans/completed/<file>.md`.
+- If a matching spec exists at `docs/superpowers/specs/<same-date>-<same-slug>*.md`
+  (or one the plan links to in its header), `git mv` it to
+  `docs/superpowers/specs/completed/` the same way.
+- Remove the plan's line from `docs/BACKLOG.md` (if present) via Edit.
+  If the plan referenced a deferred item that's still open, leave
+  that item — it stays in the backlog until separately picked up.
+
+Don't update CLAUDE.md, don't commit, don't push. The moves are
+staged; the user commits them alongside the implementation PR (so the
+"this plan shipped" diff lives next to the code that shipped it).
+
+If the user explicitly says "audit only" / "don't move" / similar
+before invoking, skip the moves and just report. Otherwise default to
+moving on READY.
 
 If `NOT READY`, the report's findings are the to-do list — the user
-either addresses them or explicitly accepts and overrides.
+either addresses them or explicitly accepts and overrides. Don't
+move anything until READY.
 
 ## Anti-patterns
 
-- **Don't** mark the plan complete from inside the skill. The skill
-  audits; the user (or a separate explicit step) marks complete.
+- **Don't** ask the user to confirm the move on every READY result.
+  The audit's READY verdict is the confirmation; the moves are part
+  of the same response. The only exception is when the user
+  explicitly opted into "audit only" before invoking.
 - **Don't** auto-fix findings. A new TODO without ownership might be
   legitimate ("the owner is you, today's date"); blindly stamping it
   hides the conversation that should happen.
