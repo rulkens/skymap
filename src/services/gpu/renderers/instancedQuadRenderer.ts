@@ -181,19 +181,33 @@ export function createInstancedQuadRenderer(
   // pipeline-specific identities — incompatible with sharing buffers
   // or rebuilding bind groups across pipelines (see the WebGPU
   // layout-auto trap memory note).
-  const bindGroupLayout = atlas
-    ? device.createBindGroupLayout({
-        label: `${label}-bgl`,
-        entries: [
-          { binding: 0, visibility: uniformVisibility, buffer: { type: 'uniform' } },
-          { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
-          { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
-        ],
-      })
-    : device.createBindGroupLayout({
-        label: `${label}-bgl`,
-        entries: [{ binding: 0, visibility: uniformVisibility, buffer: { type: 'uniform' } }],
-      });
+  // The hi-res array extension (Task R2, 2026-05-28) appends a
+  // `texture_2d_array` + linear sampler at bindings 3 + 4 ONLY when
+  // the texturedDisk consumer asks for it. The append-only ordering
+  // matters: the bindings must line up with the WGSL @group/@binding
+  // decorations in the shader; growing slots 1/2's meaning would
+  // break the existing texturedQuad consumer that shares this factory.
+  const atlasEntries: GPUBindGroupLayoutEntry[] = atlas
+    ? [
+        { binding: 0, visibility: uniformVisibility, buffer: { type: 'uniform' } },
+        { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+        { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+      ]
+    : [{ binding: 0, visibility: uniformVisibility, buffer: { type: 'uniform' } }];
+  if (atlas?.hiResArray) {
+    atlasEntries.push(
+      {
+        binding: 3,
+        visibility: GPUShaderStage.FRAGMENT,
+        texture: { sampleType: 'float', viewDimension: '2d-array' },
+      },
+      { binding: 4, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+    );
+  }
+  const bindGroupLayout = device.createBindGroupLayout({
+    label: `${label}-bgl`,
+    entries: atlasEntries,
+  });
 
   const vsModule = createShaderModuleWithDevLog(device, vertexSource, `${label}.vertex`);
   const fsModule = createShaderModuleWithDevLog(device, fragmentSource, `${label}.fragment`);
@@ -272,6 +286,22 @@ export function createInstancedQuadRenderer(
         )
       : undefined;
 
+  // Default sampler for the hi-res `texture_2d_array` slot when the
+  // consumer doesn't pass one to `bindHiResArray`. Identical filter
+  // characteristics to the atlas sampler — bilinear, clamp — because
+  // a hi-res tile is rendered at the same magnification regime as
+  // the low-res atlas one and we want a clean crossfade between the
+  // two without one side artifacting harder.
+  const defaultHiResSampler = atlas?.hiResArray
+    ? device.createSampler({
+        label: `${label}-hires-sampler`,
+        magFilter: 'linear',
+        minFilter: 'linear',
+        addressModeU: 'clamp-to-edge',
+        addressModeV: 'clamp-to-edge',
+      })
+    : undefined;
+
   // ── Bind group ─────────────────────────────────────────────────────
   //
   // Without atlas: build the 1-binding bind group right now (no
@@ -313,16 +343,50 @@ export function createInstancedQuadRenderer(
   // Float32Array's lazy-init guarantee surviving reuse.
   const uniformScratch = new Float32Array(UNIFORM_BYTES / 4);
 
-  function bindAtlas(atlasView: GPUTextureView): void {
+  // ── Late-bound resource handles ────────────────────────────────────
+  //
+  // The bind group is composed once we have all the resources the BGL
+  // declares. With `atlas` alone that's just the atlas view; with
+  // `atlas.hiResArray` it's atlas view AND hi-res array view. The
+  // engine wires these up at different points in startup (the atlas
+  // is created on first frame, the hi-res array on first famous-galaxy
+  // approach), so we cache each in a closure variable and recompose
+  // whenever a new one arrives.
+  let lastAtlasView: GPUTextureView | undefined;
+  let lastHiResView: GPUTextureView | undefined;
+  let lastHiResSampler: GPUSampler | undefined;
+
+  function composeAtlasBindGroup(): void {
+    if (!lastAtlasView) return; // atlas not bound yet — keep no-op
+    if (atlas?.hiResArray && !lastHiResView) return; // hi-res not bound yet
+
+    const entries: GPUBindGroupEntry[] = [
+      { binding: 0, resource: { buffer: uniformBuffer } },
+      { binding: 1, resource: lastAtlasView },
+      { binding: 2, resource: sampler! },
+    ];
+    if (atlas?.hiResArray) {
+      entries.push(
+        { binding: 3, resource: lastHiResView! },
+        { binding: 4, resource: lastHiResSampler ?? defaultHiResSampler! },
+      );
+    }
     bindGroup = device.createBindGroup({
       label: `${label}-bg`,
       layout: bindGroupLayout,
-      entries: [
-        { binding: 0, resource: { buffer: uniformBuffer } },
-        { binding: 1, resource: atlasView },
-        { binding: 2, resource: sampler! },
-      ],
+      entries,
     });
+  }
+
+  function bindAtlas(atlasView: GPUTextureView): void {
+    lastAtlasView = atlasView;
+    composeAtlasBindGroup();
+  }
+
+  function bindHiResArray(arrayView: GPUTextureView, samplerOverride?: GPUSampler): void {
+    lastHiResView = arrayView;
+    if (samplerOverride !== undefined) lastHiResSampler = samplerOverride;
+    composeAtlasBindGroup();
   }
 
   function draw(args: {
@@ -396,12 +460,15 @@ export function createInstancedQuadRenderer(
     instanceBuffer = null;
   }
 
-  // Only expose `bindAtlas` when atlas was configured. Consumers that
-  // don't need it never see the method, which is both clearer at the
-  // wrapper site and prevents accidental late-binding of a sampler-
-  // less BGL.
+  // Only expose `bindAtlas` when atlas was configured, and only
+  // expose `bindHiResArray` when the hi-res-array opt-in is set.
+  // Consumers that don't need a method never see it, which is both
+  // clearer at the wrapper site and prevents accidental late-binding
+  // of a binding the BGL doesn't declare.
   const renderer: InstancedQuadRenderer = atlas
-    ? { label: 'instancedQuadRenderer', bindAtlas, draw, destroy }
+    ? atlas.hiResArray
+      ? { label: 'instancedQuadRenderer', bindAtlas, bindHiResArray, draw, destroy }
+      : { label: 'instancedQuadRenderer', bindAtlas, draw, destroy }
     : { label: 'instancedQuadRenderer', draw, destroy };
   // `satisfies Renderer` confirms the shared label+destroy contract at
   // compile time without widening the static type seen by consumers.
