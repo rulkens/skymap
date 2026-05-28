@@ -1,62 +1,36 @@
 /**
  * wireSlots — focused tests for the highest-leverage invariants of the
- * second bootstrap phase (originally ~600 lines lifted verbatim from
- * the pre-Phase-5 IIFE).
+ * second bootstrap phase.
  *
- * ### Why this file exists
+ * `bootstrap.test.ts` mocks this phase at module scope, so the per-slot
+ * mint sites, the all-arrivals gate, the synthetic-fallback path, and
+ * the loadProgress emitter wiring otherwise have no direct asserts —
+ * yet those four lines of logic gate "loading screen ⇒ stars on
+ * canvas". Three invariants targeted here:
  *
- * Pre-M7 the only coverage `wireSlots.ts` had was `bootstrap.test.ts`,
- * which mocks the phase at module scope and therefore exercises nothing
- * of its body.  That's a reasonable choice for the orchestrator
- * contract but it leaves the per-slot mint sites, the all-arrivals
- * gate, the synthetic-fallback path, and the loadProgress emitter
- * wiring with zero direct asserts — even though those four lines of
- * logic were the source of the 2026-05-08 black-screen incident.
- *
- * This file targets three invariants whose violation would be very
- * hard to catch from a manual run:
- *
- *   1. The all-arrivals gate eventually fires the lifecycle callbacks
- *      that take the engine out of `loading` (today: `cb.lifecycle.
- *      onStatusChange({ kind: 'loading' })` synchronously, with the
- *      `kind: 'ready'` follow-up coming from `wireInput`).  We assert
- *      the wireSlots side of that contract: the all-arrivals
- *      `Promise<void>` actually resolves once every per-source slot
- *      reports `ready`, AND wireSlots completes (rather than hanging).
+ *   1. The all-arrivals gate's Promise<void> resolves once every
+ *      per-source slot reports `ready`, AND wireSlots completes (rather
+ *      than hanging). The lifecycle callbacks that take the engine out
+ *      of `loading` depend on this.
  *
  *   2. The synthetic-fallback path mints + loads a synthetic-source
- *      slot when every real survey errored out.  This is a DEV-only
- *      safety net that is invisible in production.  Without a test,
- *      anyone refactoring the all-arrivals gate could silently drop
- *      the fallback and ship a "all-real-surveys-down ⇒ black screen"
- *      regression.
+ *      slot when every real survey errored out — a DEV-only safety net
+ *      invisible in production. A refactor that drops the fallback
+ *      would silently ship "all-real-surveys-down ⇒ black screen".
  *
  *   3. The loadProgress emitter is wired against EVERY minted slot.
- *      The `allSlots` Map (carried in `BootstrapDeps`) is the single
- *      registry both the loading bar AND the `LoadingDevPanel` read
- *      from, so a missed slot here makes the dev panel quietly lie.
- *      We assert the Map ends up containing entries for every expected
- *      slot name.
+ *      `deps.allSlots` is the single registry both the loading bar AND
+ *      the dev panel read from, so a missed slot makes the dev panel
+ *      quietly lie.
  *
- * ### Mocking strategy
- *
- * `wireSlots` constructs real `AssetSlot` instances internally (for
- * filaments, famous-meta, pgc-aliases, optionally cf4-density and
- * synthetic-volume).  Those are fine to leave real — the slots are
- * pure CPU state machines and their fetchers are easy to stub.
- *
- * The pieces we DO mock:
- *
- *   - the fetcher modules, so `slot.load()` doesn't network;
- *   - the thumbnail-subsystem factory, so we don't need a real GPU device;
- *   - the load-progress emitter factory, so we can intercept the
- *     `allSlots` Map at the moment wireSlots hands it off.
- *
- * The per-source point slots are injected from the test via a
- * fake-slot helper — `wireSlots` reads them off `state.assetSlots.points`
- * rather than minting them itself (that happens in `initGpu`).  This
- * is the seam that makes the all-arrivals gate practically testable
- * without bringing a real WebGPU device into the test.
+ * Mocking strategy: real `AssetSlot` instances are kept (pure CPU
+ * state machines, easy to drive); fetchers are mocked so loads don't
+ * network; thumbnail-subsystem factory is mocked so no real GPU
+ * device is needed; load-progress emitter factory is spied so we can
+ * intercept the `allSlots` Map. Per-source point slots are injected
+ * via a fake-slot helper — wireSlots reads them off
+ * `state.assetSlots.points` (initGpu mints them in production), which
+ * is the seam that makes the all-arrivals gate testable.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -117,11 +91,10 @@ vi.mock('../../../../src/services/loading/fetchers/syntheticVolumeFetcher', () =
   })),
 }));
 
-// Post-Task-11 split: wireSlots constructs three subsystems where the
-// legacy `thumbnailSubsystem` used to live.  Each carries the same
-// GPU-device dependency the legacy mock was guarding against, so we
-// mock all three the same way: hollow factories that satisfy the call
-// sites without touching the (stubbed) device.
+// wireSlots constructs three impostor subsystems (galaxyAtlas,
+// proceduralDisk, texturedDisk), each carrying a GPU-device dependency.
+// Hollow factories that satisfy the call sites without touching the
+// stubbed device.
 vi.mock('../../../../src/services/engine/subsystems/galaxyAtlasSubsystem', () => ({
   createGalaxyAtlasSubsystem: vi.fn(() => ({
     getTextureView: vi.fn(() => ({}) as unknown as GPUTextureView),
@@ -146,9 +119,9 @@ vi.mock('../../../../src/services/engine/subsystems/texturedDiskSubsystem', () =
     destroy: vi.fn(),
   })),
 }));
-// LOD-3 hi-res pair (R6).  The texture factory would call into
-// `device.createTexture` if not mocked — we don't have a real GPU here,
-// so stub out both the resource handle and its consumer subsystem.
+// LOD-3 hi-res pair: the texture factory would call into
+// `device.createTexture` without a real GPU — stub the resource handle
+// and its consumer subsystem.
 vi.mock('../../../../src/services/gpu/resources/hiResFamousTexture', () => ({
   createHiResFamousTexture: vi.fn(() => ({
     initTexture: vi.fn(),
@@ -325,15 +298,12 @@ function makeState(
       hiResFamous: null,
       hiResFamousTexture: null,
       loadProgress: null,
-      // Post-Task-7 (2026-05-17): static cluster/supercluster/void
-      // anchors are wired unconditionally — `wireSlots` now always
-      // invokes `state.subsystems.pois.setPois(...)`, so the mock has
-      // to provide a callable `setPois` even when the test isn't
-      // asserting on POI behaviour.
+      // wireSlots unconditionally wires static cluster/supercluster/void
+      // anchors via `state.subsystems.pois.setPois(...)`, so this mock
+      // must be callable even when the test isn't asserting on POIs.
       pois: { setPois: vi.fn() } as never,
-      // wireSlots now calls state.subsystems.fades.register on the
-      // filament + overlay + label-layer handles after the slot mints.
-      // Provide a stub registry so the calls don't crash.
+      // wireSlots calls fades.register on filament + overlay +
+      // label-layer handles after the slot mints — stub so it doesn't crash.
       fades: {
         register: vi.fn(),
         unregister: vi.fn(),
@@ -511,20 +481,18 @@ describe('wireSlots', () => {
 
     await wireSlots(state, deps);
 
-    // The emitter was constructed exactly once and the registry it
-    // received is the same Map instance as `deps.allSlots`.  This is
-    // the contract `wireSlots.ts`'s docblock calls out explicitly —
-    // the loading bar and the dev panel MUST share a registry.
+    // The emitter is constructed once and the registry it receives is
+    // the same Map instance as `deps.allSlots` — the loading bar and
+    // the dev panel MUST share a registry.
     expect(emitterSpy).toHaveBeenCalledTimes(1);
     const capturedRegistry = emitterSpy.mock.calls[0]![0] as Map<string, unknown>;
     expect(capturedRegistry).toBe(deps.allSlots);
 
-    // The registry includes the per-source point slots (by their
-    // `.name`) plus the sidecar slots wireSlots itself mints
-    // (filaments, famous-meta, pgc-aliases, CF-4, MCPM) plus the
-    // synthetic fixtures (DEV-only — vitest runs as DEV).  Asserted
-    // as a superset so an additive change doesn't break the test for
-    // the wrong reason.
+    // Registry includes the per-source point slots (by `.name`) plus
+    // the sidecar slots wireSlots itself mints (filaments, famous-meta,
+    // pgc-aliases, CF-4, MCPM) plus synthetic fixtures (DEV-only —
+    // vitest runs as DEV). Asserted as a superset so additive changes
+    // don't break the test for the wrong reason.
     const names = new Set(capturedRegistry.keys());
     expect(names.has('sdss-points')).toBe(true);
     expect(names.has('2mrs-points')).toBe(true);
@@ -536,9 +504,8 @@ describe('wireSlots', () => {
   });
 
   it('wires static cluster/supercluster/void anchors unconditionally (no URL gate)', async () => {
-    // No `?anchors=1` query param.  After wireSlots runs, the POI
-    // subsystem should still receive the static anchor list — the
-    // production default since the `?anchors=1` gate is removed.
+    // No `?anchors=1` gate: the POI subsystem always receives the
+    // static anchor list.
     delete (globalThis as { location?: unknown }).location;
     (globalThis as { location: { search: string } }).location = { search: '' };
 

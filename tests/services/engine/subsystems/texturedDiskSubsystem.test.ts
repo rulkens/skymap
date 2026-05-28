@@ -118,14 +118,10 @@ describe('createTexturedDiskSubsystem', () => {
     expect(out.disks.length).toBe(2);
   });
 
-  it('emits no disks for NaN-orientation galaxies (post-2026-05-18 quad removal)', async () => {
-    // Pre-2026-05-18 the subsystem branched on `Number.isFinite(ar) &&
-    // Number.isFinite(pa)` to emit a screen-aligned quad fallback for
-    // galaxies with missing orientation.  The quad pipeline was removed
-    // because the build pipeline's deterministic orientation fallback
-    // means production bins never have NaN orientation, and the
-    // synthetic NaN here exercises only the defensive guard left in
-    // the disks-only branch.
+  it('emits no disks for NaN-orientation galaxies', async () => {
+    // Production bins always carry finite orientation (the build
+    // pipeline fills in a deterministic fallback). Synthetic NaN here
+    // exercises the disks-only defensive guard.
     const fetcher = vi.fn(async () => makeFakeBitmap());
     const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
     const sys = createTexturedDiskSubsystem({
@@ -161,14 +157,14 @@ describe('createTexturedDiskSubsystem', () => {
     expect(sys.hasInFlightWork()).toBe(false);
   });
 
-  // ── Hi-res LOD fold-in (Task R5) ──────────────────────────────────
-  // The textured-disk planner emits two extra fields per DiskInstance —
+  // ── Hi-res LOD fold-in ──────────────────────────────────────────────
+  // The planner emits two extra fields per DiskInstance:
   // `hiResLayerIdx` (sentinel -1 = no hi-res layer assigned) and
-  // `hiResCrossfadeAlpha` (smoothstep ramp 0 → 1). For non-Famous
-  // sources these are unconditionally -1 / 0 (defensive — the shader
-  // gates the hi-res sample on `hiResLayerIdx >= 0` anyway). For
-  // Famous-source rows the planner reads per-galaxy state from the
-  // optional `hiResFamous` dep keyed by the catalog-local index `i`.
+  // `hiResCrossfadeAlpha` (smoothstep ramp 0 → 1). Non-Famous sources
+  // get -1 / 0 unconditionally (defensive — the shader gates the hi-res
+  // sample on `hiResLayerIdx >= 0` anyway). For Famous-source rows the
+  // planner reads per-galaxy state from the optional `hiResFamous` dep
+  // keyed by catalog-local index `i`.
 
   function makeStubHiResFamous(
     byFamousIdx: ReadonlyMap<number, HiResFamousPerGalaxyState>,
@@ -225,12 +221,11 @@ describe('createTexturedDiskSubsystem', () => {
     await new Promise((r) => setTimeout(r, 0));
     const out = sys.runFrame(makeInput(clouds));
 
-    // The Famous-source row at local-index 0 should carry the stubbed
-    // hi-res state; the row at local-index 1 (missing from the map)
-    // should fall back to the default -1 / 0 sentinel.
+    // Row 0 carries the stubbed hi-res state; row 1 (missing from the
+    // map) falls back to the -1 / 0 sentinel.
     expect(out.disks.length).toBe(2);
-    // The planner sorts back-to-front; find each emitted instance by
-    // matching the y-coordinate baked into makeDenseCloud (y = 0.001*i).
+    // Planner sorts back-to-front; recover each instance via the
+    // y-coordinate baked into makeDenseCloud (y = 0.001*i).
     const byIdx = new Map(out.disks.map((d) => [Math.round(d.y / 0.001), d]));
     expect(byIdx.get(0)?.hiResLayerIdx).toBe(2);
     expect(byIdx.get(0)?.hiResCrossfadeAlpha).toBeCloseTo(0.7);
@@ -239,10 +234,9 @@ describe('createTexturedDiskSubsystem', () => {
   });
 
   it('with hiResFamous dep, non-Famous-source DiskInstance still defaults to -1 / 0', async () => {
-    // Defensive: even if the hi-res map happens to have an entry under
-    // an index that overlaps a non-Famous catalog's local index, the
-    // planner must NOT fold it in (the byFamousIdx contract is keyed
-    // by Famous-source local index only).
+    // Defensive: byFamousIdx is keyed by Famous-source local index
+    // only — even when an index happens to overlap a non-Famous
+    // catalog's row, the planner must not fold it in.
     const fetcher = vi.fn(async () => makeFakeBitmap());
     const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
     const hiResFamous = makeStubHiResFamous(
@@ -269,14 +263,13 @@ describe('createTexturedDiskSubsystem', () => {
   });
 
   it('setHiResFamous swaps the planner reference used by the next frame', async () => {
-    // Tier-change contract (R7): on tier flip the engine destroys the
-    // old hi-res texture + planner pair and recreates them at the new
-    // layerSide.  Rather than rebuilding the entire texturedDiskSubsystem
-    // (which would invalidate sticky disk state and load-fade timing for
-    // ALL galaxies, not just famous ones), the subsystem exposes a setter
-    // for the planner reference.  After `setHiResFamous(next)`, the next
-    // `runFrame` reads `next.lastOutput.byFamousIdx` instead of the
-    // original construction-time planner's.
+    // Tier-change contract: on tier flip the engine destroys the old
+    // hi-res texture + planner pair and recreates them at the new
+    // layerSide. Rebuilding the entire texturedDiskSubsystem would
+    // invalidate sticky disk state and load-fade timing for ALL
+    // galaxies, not just famous ones — instead the subsystem exposes a
+    // setter that swaps just the planner reference, so the next
+    // runFrame reads the new planner's byFamousIdx.
     const fetcher = vi.fn(async () => makeFakeBitmap());
     const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
     const initial = makeStubHiResFamous(

@@ -1,14 +1,12 @@
 /**
  * Tests for the hi-res branch of galaxyImageFetcher.
  *
- * The standard SDSS → DSS fallthrough and the legacy famous-atlas branch are
- * already exercised in production; what's new (and what these tests guard) is
- * the `fetchHiRes` path added for the famous-galaxy hi-res LOD: it must hit
- * the dataUrl-prefixed `/data/images/famous-hires/<id>.webp`, resize to the
- * caller-supplied `hiResTargetDim`, and return `null` (NOT fall through to
- * SDSS / DSS) on 404. The 23/75 famous galaxies without a `full.webp` rely
- * on that null return; falling through would silently pollute the hi-res
- * texture array with a DSS plate at the wrong scale.
+ * The `fetchHiRes` path must hit the dataUrl-prefixed
+ * `/data/images/famous-hires/<id>.webp`, resize to the caller-supplied
+ * `hiResTargetDim`, and return `null` (NOT fall through to SDSS / DSS)
+ * on 404 or non-image content type. Famous galaxies without a
+ * `full.webp` rely on that null return; falling through would silently
+ * pollute the hi-res texture array with a DSS plate at the wrong scale.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -70,9 +68,9 @@ describe('fetchGalaxyBitmap — fetchHiRes branch', () => {
     expect(bitmap!.width).toBe(1024);
     expect(bitmap!.height).toBe(1024);
 
-    // The URL must include the `/data/` prefix dataUrl bakes in — losing
-    // that prefix would mean a regression to /images/... which is NOT what
-    // the R2 sync ships under (see spec § Components touched).
+    // URL must include the `/data/` prefix dataUrl bakes in — that's
+    // what R2 sync ships under; dropping the prefix would regress to
+    // `/images/...` which doesn't exist on R2.
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     const calledUrl = String((fetchSpy.mock.calls[0] as unknown[])[0]);
     expect(calledUrl).toBe('/data/images/famous-hires/ngc224.webp');

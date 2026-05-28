@@ -11,9 +11,9 @@
  *      do NOT throw — they show up in the `missing[]` return so the CLI
  *      caller can log graceful coverage.
  *   3. Re-running the copy after the source is unchanged is essentially
- *      free — no bytes re-written.  This is load-bearing because the
- *      step runs every `build-tiers` / `build-all`; an O(n) re-encode
- *      per dev iteration would be a tax for no signal change.
+ *      free — no bytes re-written. Load-bearing: the step runs every
+ *      `build-tiers` / `build-all`, and an O(n) re-encode per dev
+ *      iteration would tax every catalog rebuild for no signal change.
  */
 import { describe, expect, it } from 'vitest';
 import {

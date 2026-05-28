@@ -76,7 +76,7 @@ function makeStubContext() {
   return { ctx, calls };
 }
 
-describe('createInstancedQuadRenderer (Spec G)', () => {
+describe('createInstancedQuadRenderer', () => {
   describe('bind-group layout shape', () => {
     it('builds a 3-binding BGL when atlas is configured', () => {
       const { ctx, calls } = makeStubContext();
@@ -227,9 +227,9 @@ describe('createInstancedQuadRenderer (Spec G)', () => {
 
   describe('hi-res array binding (texturedDisk consumer)', () => {
     // When `atlas.hiResArray === true` the BGL exposes an optional
-    // `texture_2d_array` + sampler pair at bindings 3 + 4. The
-    // texturedQuad and proceduralDisk consumers don't sample the
-    // array and keep their 1- and 3-entry BGL shapes unchanged.
+    // `texture_2d_array` + sampler pair at bindings 3 + 4. Consumers
+    // that don't sample the array (texturedQuad, proceduralDisk) keep
+    // their 1- and 3-entry BGL shapes unchanged.
 
     it('extends the BGL from 3 → 5 entries when atlas.hiResArray is true', () => {
       const { ctx, calls } = makeStubContext();
@@ -249,10 +249,9 @@ describe('createInstancedQuadRenderer (Spec G)', () => {
       expect(entries).toHaveLength(5);
       expect(entries[3]!.binding).toBe(3);
       expect(entries[4]!.binding).toBe(4);
-      // Binding 3 is the hi-res array texture: FRAGMENT-only, float
-      // sample type, '2d-array' view dimension. The viewDimension
-      // literal is what makes WGSL's `texture_2d_array<f32>`
-      // declaration resolve at pipeline-link time.
+      // Hi-res array texture: FRAGMENT-only, float sample type,
+      // '2d-array' view dimension. The viewDimension literal is what
+      // makes WGSL's `texture_2d_array<f32>` resolve at pipeline-link time.
       expect(entries[3]!.visibility).toBe(GPUShaderStage.FRAGMENT);
       expect(entries[3]!.texture).toBeDefined();
       expect(entries[3]!.texture!.sampleType).toBe('float');
@@ -327,19 +326,17 @@ describe('createInstancedQuadRenderer (Spec G)', () => {
         blend: 'additive',
         format: 'rgba16float',
       });
-      // Nothing bound yet.
       expect(calls.createBindGroup).toHaveLength(0);
 
-      // bindAtlas alone is insufficient — the BGL has 5 entries.
+      // bindAtlas alone is insufficient — all 5 resources are required
+      // before composing against a 5-entry BGL.
       const fakeAtlasView = {} as GPUTextureView;
       r.bindAtlas!(fakeAtlasView);
-      // After bindAtlas alone: still no bind group (we need all 5
-      // resources before we can compose against a 5-entry BGL).
       expect(calls.createBindGroup).toHaveLength(0);
 
       const fakeArrayView = {} as GPUTextureView;
       r.bindHiResArray!(fakeArrayView);
-      // Now both halves are present — bind group composed.
+      // Both halves present — bind group composes.
       expect(calls.createBindGroup).toHaveLength(1);
       const desc = calls.createBindGroup[0]!;
       const entries = desc.entries as ReadonlyArray<GPUBindGroupEntry>;

@@ -1,22 +1,20 @@
 /**
  * Contract tests for the hi-res famous-galaxy R2 inventory helper.
  *
- * The deploy sweep itself is hard to unit-test (it shells out to wrangler
- * and Cloudflare's purge API), so we test the pure inventory step that
- * decides WHICH local files map to WHICH R2 keys.  If those two contracts
- * are right, the upload loop in `syncR2.ts` — `for ({ localPath, r2Key }
- * of …) uploadFile(localPath, r2Key)` — is mechanical.
+ * The deploy sweep itself shells out to wrangler and the Cloudflare
+ * purge API, so the pure inventory step (which local file maps to
+ * which R2 key) is the testable seam — given a correct inventory the
+ * `syncR2.ts` upload loop is mechanical.
  *
- * Two contracts pinned here:
+ * Two contracts pinned:
  *
- *   1. The ALLOW shape: `.webp` files are included; non-webp sidecars
- *      (e.g. recipe.json the curator drops next to images during
- *      development) are not.
- *   2. The R2 key shape: `data/images/famous-hires/<id>.webp`.  The
- *      `data/` prefix is load-bearing — it's what `dataUrl()` in
- *      `src/services/loading/fetchWithProgress.ts` expects so that the
- *      runtime can request `images/famous-hires/<id>.webp` against the
- *      same base URL it uses for `.bin` files.
+ *   1. ALLOW shape: `.webp` files are included; sidecar files
+ *      (e.g. recipe.json the curator drops next to images) are not.
+ *   2. R2 key shape: `data/images/famous-hires/<id>.webp`. The
+ *      `data/` prefix is load-bearing — `dataUrl()` in
+ *      `src/services/loading/fetchWithProgress.ts` requests
+ *      `images/famous-hires/<id>.webp` against the same base URL it
+ *      uses for `.bin` files.
  */
 import { describe, expect, it } from 'vitest';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';

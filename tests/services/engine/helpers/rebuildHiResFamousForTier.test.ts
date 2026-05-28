@@ -1,15 +1,14 @@
 /**
  * rebuildHiResFamousForTier — tier-change destroy + recreate orchestrator.
  *
- * Verifies the contract spelled out in the design spec's "Tier change at
- * runtime" edge case: on tier flip, the old hi-res texture + planner pair
- * is torn down (subsystem first, then texture — matching the destroy()
- * order invariant), a new pair is created at the tier-derived layerSide,
- * the renderer's hi-res view is re-bound to the new texture, and the
+ * On tier flip: the old hi-res texture + planner pair is torn down
+ * (subsystem first, then texture — matching the destroy() ordering
+ * invariant), a new pair is created at the tier-derived layerSide, the
+ * renderer's hi-res view is re-bound to the new texture, and the
  * textured-disk subsystem's planner reference is swapped.
  *
  * The helper is the testable seam — `engine.setTier` is a thin wrapper
- * over this call.  Mocking the factories lets us pin the construction +
+ * over this call. Mocking the factories pins the construction +
  * teardown sequence without standing up a real GPU device.
  */
 
@@ -104,8 +103,8 @@ function makeMinimalState(opts: {
 
 describe('rebuildHiResFamousForTier', () => {
   it('tier change destroys + recreates the hi-res famous texture at the new layerSide', () => {
-    // Initial state mirrors the post-bootstrap shape: a 1024 px texture
-    // (medium tier default) + matching planner are already in place.
+    // Post-bootstrap shape: a 1024 px texture (medium tier default) +
+    // matching planner are already in place.
     const oldTexture = makeFakeTexture(1024);
     const oldSubsystem = makeFakeSubsystem();
     const texturedDisks = makeFakeTexturedDisks();
@@ -115,11 +114,10 @@ describe('rebuildHiResFamousForTier', () => {
       texturedDisks,
     });
 
-    // Capture the call ORDER across the two factories + the two
-    // destroys.  We assert below that old.destroy precedes new factory
-    // invocation — same invariant `engine.destroy()` documents (the
-    // planner subscribes to the texture's evict handler, so the
-    // subsystem must go first).
+    // Capture call ORDER across the two factories + the two destroys.
+    // The planner subscribes to the texture's evict handler, so the
+    // subsystem must be torn down before the texture (same invariant
+    // `engine.destroy()` enforces).
     const events: string[] = [];
 
     const newSubsystem = makeFakeSubsystem();
@@ -154,8 +152,8 @@ describe('rebuildHiResFamousForTier', () => {
       createSubsystemFn,
     });
 
-    // (a) Old subsystem destroyed BEFORE the new factories ran.  This
-    //     is the load-bearing teardown invariant.
+    // (a) Old subsystem destroyed BEFORE the new factories ran — the
+    //     load-bearing teardown invariant.
     const oldSubDestroyIdx = events.indexOf('oldSubsystem.destroy');
     const oldTexDestroyIdx = events.indexOf('oldTexture.destroy');
     const createTextureIdx = events.findIndex((e) => e.startsWith('createTexture('));
@@ -171,8 +169,8 @@ describe('rebuildHiResFamousForTier', () => {
     expect(oldTexDestroyIdx).toBeLessThan(createTextureIdx);
     expect(oldSubDestroyIdx).toBeLessThan(createSubsystemIdx);
 
-    // (b) New texture factory was invoked at the new tier's layerSide.
-    //     The initial state was 1024 px (medium); 'small' resolves to 512 px.
+    // (b) New texture factory invoked at the new tier's layerSide
+    //     ('small' resolves to 512 px).
     expect(createTextureFn).toHaveBeenCalledTimes(1);
     expect(createTextureFn).toHaveBeenCalledWith({
       device: expect.any(Object),
@@ -186,9 +184,8 @@ describe('rebuildHiResFamousForTier', () => {
       expect.objectContaining({ texture: newTexture }),
     );
 
-    // (d) `initTexture()` was called on the new texture before
-    //     `getTextureView()` would have been (the helper internally
-    //     calls both).  Easiest assertion: initTexture was called.
+    // (d) initTexture() ran on the new texture before getTextureView()
+    //     (the helper calls both internally).
     expect(newTexture.initTexture).toHaveBeenCalled();
 
     // (e) Renderer's hi-res view was re-bound to the NEW texture's view.

@@ -170,11 +170,9 @@ describe('HiResFamousTexture', () => {
   });
 
   it('allocate when array is full returns -1 if no existing entry has smaller diameter', () => {
-    // Edge case clarified in the contract: "-1 if full + cannot evict."
-    // Our policy says the smallest-diameter entry wins eviction, so
-    // "cannot evict" means: every existing entry has diameter <= the
-    // incoming one.  In that case the incoming caller is not "more
-    // deserving" than anyone present and we refuse.
+    // Eviction policy: smallest-diameter resident wins; if every
+    // resident has diameter ≥ the incoming caller's, the caller isn't
+    // "more deserving" than anyone present and allocation is refused.
     const { device } = makeFakeDevice();
     const h = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
     // Fill with diameters 100..170 (all small).
@@ -200,9 +198,8 @@ describe('HiResFamousTexture', () => {
 
   it('mutators + accessors throw after destroy (contract: handle is unusable)', () => {
     // Stale references to a destroyed handle must fail loudly rather
-    // than silently returning sentinel values.  Pre-fix, allocate()
-    // would fall through to `victim === undefined` and return -1,
-    // letting the caller crash a frame later on the bogus index.
+    // than silently returning sentinel values — a silent -1 from
+    // allocate() would crash the caller a frame later on the bogus index.
     const { device } = makeFakeDevice();
     const h = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
     h.initTexture();
