@@ -92,7 +92,6 @@ The outreach push has its own per-task plan tree under [`superpowers/plans/2026-
 
 Living context docs; cite them from plans rather than turning them into work.
 
-- [2026-05-11 Renderer state audit](superpowers/audits/2026-05-11-renderer-state-audit.md)
-- [2026-05-03 Code review](code-review-2026-05-03.md)
+- [`audits/`](audits/) — backward-looking codebase critiques (code reviews, renderer audits)
+- [`research/`](research/) — forward-looking surveys (cluster/void viz, cosmic web)
 - [`superpowers/conventions/`](superpowers/conventions/) — renderer + plan conventions
-- [`superpowers/research/`](superpowers/research/) — exploratory notes
