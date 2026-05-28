@@ -10,13 +10,18 @@
  * The shader (`shaders/proceduralDisks/`) is documented in detail; this
  * file is the JS-side glue.
  *
- * ## Per-instance attributes (48 bytes / 12 floats)
+ * ## Per-instance attributes (64 bytes / 16 floats)
  *
  *   posSize       vec4   xyz, sizeWorldMpc
  *   orientation   vec4   axisRatio, positionAngleDeg, _, _
  *   extras        vec4   colourIndex, crossfadeAlpha, procFadeOut, _
+ *   hiResSlot     vec4   _, _, _, _   (zero pad — hi-res LOD belongs to
+ *                                       texturedDiskRenderer; the shared
+ *                                       64-byte stride forces us to fill
+ *                                       slots 12..15, the procedural
+ *                                       shader ignores them)
  *
- * Same memory layout as texturedDiskRenderer (3 vec4<f32>), minus the UV rect
+ * Same memory layout as texturedDiskRenderer (4 vec4<f32>), minus the UV rect
  * — those four floats become (colourIndex, crossfadeAlpha, procFadeOut, _)
  * instead. `procFadeOut` is the famous-WebP crossfade against the textured-
  * disk pass; see `ProceduralDiskInstance.d.ts` for the full semantic.
@@ -117,6 +122,15 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
       packed[o + 9] = ins.crossfadeAlpha;
       packed[o + 10] = ins.procFadeOut;
       packed[o + 11] = 0;
+      // Slots 12..15 are the shared-factory's hi-res-LOD vec4 (Task R1).
+      // Explicitly zero them so a recycled scratch buffer can never leak
+      // stale bytes into the GPU upload — even though `new Float32Array`
+      // zero-inits, a future `scratch.fill` migration would silently
+      // skip these without the explicit writes.
+      packed[o + 12] = 0;
+      packed[o + 13] = 0;
+      packed[o + 14] = 0;
+      packed[o + 15] = 0;
     }
 
     inner.draw({

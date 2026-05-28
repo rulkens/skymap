@@ -20,15 +20,20 @@
  * (where tilting would be cosmetically misleading) and for galaxies still
  * loading their textures.
  *
- * ## Per-instance attributes (48 bytes / 12 floats)
+ * ## Per-instance attributes (64 bytes / 16 floats)
  *
  *   posSize       vec4   xyz, sizeWorld
  *   uvRect        vec4   u0, v0, u1, v1
  *   orientation   vec4   axisRatio, positionAngleDeg, fadeAlpha, _
+ *   hiResSlot     vec4   hiResLayerIdx, hiResCrossfadeAlpha, _, _
  *
  * Note: `fadeAlpha` lives in the third slot of the orientation vec4, NOT
- * in a fourth `extras` vec4 like ThumbnailInstance. Keeping the layout to
- * three vec4s (48 bytes total) matches ThumbnailInstance + ProceduralDiskInstance.
+ * in a fourth `extras` vec4 like ThumbnailInstance. The fourth vec4 was
+ * added in Task R1 (2026-05-28) for the hi-res LOD work — it carries the
+ * `hiResLayerIdx` array-layer index (negative sentinel = no slot) and
+ * the `hiResCrossfadeAlpha` low-to-hi-res ramp. The procedural sibling
+ * uses the same 64-byte stride but zero-pads the fourth vec4; the
+ * shared instancedQuadRenderer factory requires uniform stride.
  *
  * ## Why this is a thin wrapper post-Spec G
  *
@@ -97,6 +102,15 @@ export function createTexturedDiskRenderer(ctx: GpuContext, maxInstances = 256):
       data[base + 9] = ins.positionAngleDeg;
       data[base + 10] = ins.fadeAlpha;
       data[base + 11] = 0;
+      // Hi-res LOD attributes (Task R1). Slots 14, 15 are reserved
+      // future shelf — kept zero for forward compatibility. The
+      // fragment shader doesn't read slot 3 yet (that lands in R3); at
+      // R1 these floats are purely pinning the pack-loop slot layout
+      // so R5's subsystem populates the right indices.
+      data[base + 12] = ins.hiResLayerIdx;
+      data[base + 13] = ins.hiResCrossfadeAlpha;
+      data[base + 14] = 0;
+      data[base + 15] = 0;
     }
 
     inner.draw({

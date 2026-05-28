@@ -107,12 +107,36 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 /**
- * Per-instance vertex layout shared by all three consumers: three
- * `float32x4` attributes at locations 0/1/2, totalling 48 bytes.
+ * Per-instance vertex layout shared by all three consumers: four
+ * `float32x4` attributes at locations 0/1/2/3, totalling 64 bytes.
  * Exported so consumers can size their packed `Float32Array` against
  * the same constant rather than rederiving it.
+ *
+ * ## Why 64 (and not 48 still)
+ *
+ * The hi-res LOD work (Task R1, 2026-05-28) needed two extra per-
+ * instance floats — `hiResLayerIdx` and `hiResCrossfadeAlpha` — to
+ * tell the textured-disk fragment shader which slot of the hi-res
+ * texture-array layer to sample from, and how strongly to mix it
+ * against the low-res atlas thumbnail.
+ *
+ * Two floats won't pack into a `float32x2` slot here: WebGPU's vertex
+ * attribute formats span the whole stride starting at `offset`, and
+ * adding a non-`float32x4` attribute would force consumers that don't
+ * use those slots (procedural, future quad) into an awkward
+ * "vec4 of (hiResLayerIdx, hiResCrossfadeAlpha, _, _)" shape anyway.
+ * Promoting the stride from three vec4s to FOUR vec4s keeps the
+ * layout uniform across all consumers, gives the textured-disk shader
+ * the natural `vec4<f32>` it wants, and leaves two zero-padded floats
+ * (slots 14, 15) as a free shelf for the next per-instance attribute
+ * we need. The texturedDisk consumer fills slots 12+13; quad +
+ * procedural consumers zero-pad all four trailing slots.
+ *
+ * The fixed-capacity instance buffer grows from `256 × 48 = 12 KiB` to
+ * `256 × 64 = 16 KiB` — irrelevant. The grow-on-demand procedural
+ * buffer grows proportionally; same conclusion.
  */
-export const FLOATS_PER_INSTANCE = 12;
+export const FLOATS_PER_INSTANCE = 16;
 export const BYTES_PER_INSTANCE = FLOATS_PER_INSTANCE * 4;
 
 /**
@@ -207,6 +231,12 @@ export function createInstancedQuadRenderer(
             { shaderLocation: 0, offset: 0, format: 'float32x4' },
             { shaderLocation: 1, offset: 16, format: 'float32x4' },
             { shaderLocation: 2, offset: 32, format: 'float32x4' },
+            // Slot 3 added in Task R1 (hi-res LOD): carries the
+            // textured-disk consumer's (hiResLayerIdx,
+            // hiResCrossfadeAlpha, 0, 0) tuple. Quad + procedural
+            // consumers zero-fill it; the vertex layout still matches
+            // because all three pack to the same 16-float stride.
+            { shaderLocation: 3, offset: 48, format: 'float32x4' },
           ],
         },
       ],
@@ -341,10 +371,11 @@ export function createInstancedQuadRenderer(
 
     // ── Upload instance data ────────────────────────────────────────
     //
-    // The consumer has already packed `args.instanceCount * 12` floats
-    // into `args.instanceBytes`. We forward the byte count exactly,
-    // not `instanceBytes.byteLength`, so an oversized scratch buffer
-    // doesn't write past the end of the GPU buffer.
+    // The consumer has already packed `args.instanceCount *
+    // FLOATS_PER_INSTANCE` floats into `args.instanceBytes`. We forward
+    // the byte count exactly, not `instanceBytes.byteLength`, so an
+    // oversized scratch buffer doesn't write past the end of the GPU
+    // buffer.
     device.queue.writeBuffer(
       instanceBuffer!,
       0,
