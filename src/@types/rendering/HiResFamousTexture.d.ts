@@ -86,6 +86,12 @@ export type HiResFamousTexture = {
    *  not have to track lifetime. */
   getTextureView(): GPUTextureView;
 
+  /** Per-layer edge length in pixels (the value passed to the factory).
+   *  Exposed so the planner subsystem can pass it as `hiResTargetDim`
+   *  on its fetch calls without having to thread the constant
+   *  separately — single source of truth, the texture handle. */
+  getLayerSide(): number;
+
   /** Register a callback fired immediately BEFORE LRU eviction
    *  overwrites a layer's bookkeeping.  Same invariant as
    *  `TextureAtlas.setEvictHandler`: the handler can safely clear

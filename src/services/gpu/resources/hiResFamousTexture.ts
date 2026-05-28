@@ -118,6 +118,10 @@ export function createHiResFamousTexture(
     }
   }
 
+  function getLayerSide(): number {
+    return layerSide;
+  }
+
   function getTextureView(): GPUTextureView {
     if (destroyed) throw new Error('HiResFamousTexture: handle is destroyed.');
     if (!texture) throw new Error('HiResFamousTexture: call initTexture() first.');
@@ -259,6 +263,7 @@ export function createHiResFamousTexture(
     layerForKey,
     uploadBitmap,
     getTextureView,
+    getLayerSide,
     setEvictHandler,
     destroy,
   };
