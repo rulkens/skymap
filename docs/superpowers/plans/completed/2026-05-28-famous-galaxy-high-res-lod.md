@@ -931,11 +931,9 @@ This plan is **done** when ALL of the following hold:
 - [x] `npm run typecheck` is green for both `src` and `tools`.
 - [x] `npm run build` is green.
 - [x] The Task R8 visual smoke attestation is written down (above + PR body).
-- [ ] No new `TODO` comments without an owner + tracking item. `grep -rn
-  'TODO\|FIXME' src/services/engine/subsystems/hiResFamousSubsystem.ts
-  src/services/gpu/resources/hiResFamousTexture.ts
-  src/services/gpu/shaders/texturedDisks/` returns zero rows unless the
-  TODO references a follow-up GitHub issue. (To verify in /feature-done.)
+- [x] No new `TODO` comments without an owner + tracking item.
+  /feature-done audit verified zero TODO/FIXME/HACK/XXX markers in any
+  modified .ts/.tsx/.wesl file.
 - [x] `git status` after `npm run build-famous-hires` shows no
   `public/images/famous-hires/*` paths under "untracked" — confirmed at
   A4 (path lives under the wholesale-gitignored `/public/data/`).
