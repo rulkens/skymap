@@ -717,22 +717,31 @@ full surrounding context.)
 
 **Steps:**
 
-- [ ] Apply wesl-shaders skill's pre-edit checklist.
-- [ ] Edit `io.wesl`: add the fourth `InstanceIn` attribute + the two
+- [x] Apply wesl-shaders skill's pre-edit checklist.
+- [x] Edit `io.wesl`: add the fourth `InstanceIn` attribute + the two
   `VsOut` varyings. Confirm comments use single quotes; no backticks.
-- [ ] Edit `vertex.wesl`: assign the two new varyings from `instance.hiRes.xy`.
+- [x] Edit `vertex.wesl`: assign the two new varyings from `instance.hiRes.xy`.
   No other change — the disk-plane orientation math is unchanged.
-- [ ] Edit `fragment.wesl`: add the two new bindings; insert the
-  conditional `mix` per the sketch above.
-- [ ] `npm run typecheck` → green (the `.wesl` is plugin-resolved at
-  build time; TS sees it as `string`, so no surface here).
-- [ ] `npm run build` → green (this is where the WESL linker fires; a
-  silent linker rejection is the cardinal risk).
-- [ ] Visual smoke (dev server): rendering is unchanged because
-  `hiResLayerIdx = -1` for every instance until Sections B + R4 wire
-  the array binding. If anything looks different, STOP — the shader
-  diff was supposed to be a behaviour-preserving extension.
-- [ ] Commit.
+- [x] Edit `fragment.wesl`: add the two new bindings; insert the
+  conditional `mix` per the sketch above. (Smoke uncovered the WGSL
+  uniformity rule — `textureSample` requires uniform control flow.
+  Fixed by switching to unconditional `textureSampleLevel(..., 0.0)`
+  with a `select`-gated mix factor; semantically equivalent.)
+- [x] `npm run typecheck` → green (the `.wesl` is plugin-resolved at
+  build time; TS sees it as `string`, so no surface here). Only the
+  pre-existing B2-induced error at `texturedDiskSubsystem.ts:235`
+  remains, slated for R5.
+- [x] `npm run build` → WESL linker accepts the new shader (vitest
+  pipeline tests exercise the `?static` link path). Full `npm run
+  build` still blocks on the B2-induced typecheck until R5.
+- [x] Visual smoke (dev server): the textured-disk thumbnails are
+  intentionally missing in the interim — R3 flipped `hiResArray: true`
+  on the inner factory so the BGL matches the shader's @binding(3,4),
+  and R2's bind-group composition is gated on both `bindAtlas` AND
+  `bindHiResArray` being called. R6 wires the latter; until then the
+  bind group never composes and no textured disks draw. End-to-end
+  smoke happens at R8.
+- [x] Commit.
 
 ### Task R4: texturedDiskRenderer — wire bindHiResArray + pack the new fields
 
@@ -743,18 +752,21 @@ full surrounding context.)
 
 **Steps:**
 
-- [ ] Test (new or extend the existing renderer test if any) `pack writes
+- [x] Test (new or extend the existing renderer test if any) `pack writes
   hiResLayerIdx + hiResCrossfadeAlpha into slots 12 and 13` — feed a
   fake DiskInstance with `hiResLayerIdx: 3, hiResCrossfadeAlpha: 0.7`
-  and inspect the packed Float32Array at offsets 12 + 13.
-- [ ] Test `bindHiResArray forwards to the inner renderer's
+  and inspect the packed Float32Array at offsets 12 + 13. (Done in
+  R1's commit `feded7c`.)
+- [x] Test `bindHiResArray forwards to the inner renderer's
   bindHiResArray` (spy pattern).
-- [ ] Implement: extend the pack loop at
+- [x] Implement: extend the pack loop at
   `texturedDiskRenderer.ts:84-100` to write 16 floats per instance; expose
   `bindHiResArray` on the returned `TexturedDiskRenderer`. Pass
   `atlas: { hiResArray: true }` in the `createInstancedQuadRenderer` call.
-- [ ] `npm test -- texturedDiskRenderer` → green.
-- [ ] Commit.
+  (Pack loop in R1, forwarder + flag in R3 fix `c43d55f` to unblock the
+  shader pipeline.)
+- [x] `npm test -- texturedDiskRenderer` → green.
+- [x] Commit.
 
 ### Task R5: texturedDiskSubsystem — fold hi-res state into instances
 

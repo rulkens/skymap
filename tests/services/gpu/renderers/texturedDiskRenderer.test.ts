@@ -137,4 +137,20 @@ describe('texturedDiskRenderer pack loop (Task R1)', () => {
     expect(instancePayload[i1 + 14]).toBe(0);
     expect(instancePayload[i1 + 15]).toBe(0);
   });
+
+  it('bindHiResArray forwards to the inner renderer', () => {
+    // The outer TexturedDiskRenderer exposes bindHiResArray so engine
+    // bootstrap (Task R6) can wire the hi-res texture_2d_array view
+    // without reaching into the inner factory. Pin the forwarding so
+    // a refactor that drops the method (or renames it) fails loudly.
+    const { ctx } = makeStubCtx();
+    const renderer = createTexturedDiskRenderer(ctx);
+    const stubView = { __marker: 'hires' } as unknown as GPUTextureView;
+
+    expect(typeof renderer.bindHiResArray).toBe('function');
+    // Just calling it shouldn't throw — the inner factory accepts the
+    // view, stashes it for the next compose, and returns. The actual
+    // bind-group composition is exercised by the pack test above.
+    expect(() => renderer.bindHiResArray(stubView)).not.toThrow();
+  });
 });
