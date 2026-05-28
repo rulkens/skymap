@@ -107,8 +107,12 @@ pattern as the proc-disk fade-out spec we just shipped.
   its instance buffer.
 - **`src/@types/rendering/DiskInstance.d.ts`** — add `hiResLayerIdx: number`
   (default −1) and `hiResCrossfadeAlpha: number` (default 0). The
-  current instance layout has padding; these consume two of those
-  slots without stride change.
+  current per-instance pack has only one unused float (`orient.w`),
+  so the stride grows 12 → 16 floats (48 → 64 bytes) and a new
+  `@location(3)` vertex attribute carries the 4-float trailer. The
+  shared `instancedQuadRenderer` factory feeds all three consumers
+  (quads, textured disks, procedural disks) — only the textured-disk
+  shader reads the trailer; the other two ignore it.
 - **`src/services/gpu/renderers/texturedDiskRenderer.ts`** — declare
   the new vertex attributes; add a second `@group(0) @binding(_)`
   for the `texture_2d_array` and matching sampler; encode the new
@@ -134,19 +138,21 @@ pattern as the proc-disk fade-out spec we just shipped.
   `HI_RES_LAYER_COUNT = 8`.
 - **New build step** in `tools/famous/` (or as a post-process on the
   curator) that copies each `public/images/famous-curated/<id>/full.webp`
-  → `public/images/famous-hires/<id>.webp`. Flat layout so R2 path
-  rewriting isn't needed; `public/images/famous-hires/` joins
+  → `public/data/images/famous-hires/<id>.webp`. Flat layout so R2 path
+  rewriting isn't needed; `public/data/images/famous-hires/` joins
   `public/data/` in `.gitignore` as a build artifact. Idempotent.
 - **`tools/deploy/syncR2.ts`** — extend the ALLOW filter to include
   `images/famous-hires/*.webp`. Same Cache-Control + CORS treatment
   as the `.bin` files (no changes needed; R2 CORS already permits
   the production / dev origins for any path).
 - **`src/utils/network/dataUrl.ts`** (or the equivalent helper) —
-  no API change; the existing `dataUrl('images/famous-hires/<id>.webp')`
-  call prefixes `VITE_DATA_BASE_URL` automatically (production →
-  `https://skymap-data.rulkens.com/...`; dev → relative `/images/...`
-  served from the local `public/` directory). The fetcher just uses
-  the helper.
+  no API change; the helper always prepends `/data/`, so the call
+  is `dataUrl('images/famous-hires/<id>.webp')` and the R2 key has
+  to be `data/images/famous-hires/<id>.webp` (production →
+  `https://skymap-data.rulkens.com/data/images/famous-hires/<id>.webp`;
+  dev → relative `/data/images/famous-hires/<id>.webp` served from
+  the local `public/data/` directory). The build step + syncR2 ALLOW
+  filter both target the `data/images/famous-hires/` prefix.
 - **No changes** to the curator (`tools/famous-curator/`) itself,
   the `.bin` format, or the catalog pipeline.
 
@@ -261,15 +267,15 @@ not bandwidth — the bandwidth is fixed by the 1024 px source.)
 - **Unit:** `hiResFamousTexture` round-trips layer allocation /
   release / LRU eviction. Fake GPUDevice mock as elsewhere.
 - **Unit:** `hiResFamousSubsystem` emits `hiResLayerIdx = -1` for
-  apparent diameter < 100, and a non-negative index in the 100 →
-  160 band when the layer is ready. Stub fetch for determinism.
+  apparent diameter < 200, and a non-negative index in the 200 →
+  260 band when the layer is ready. Stub fetch for determinism.
 - **Unit:** crossfade alpha matches the smoothstep at boundary +
-  midpoint pins (100 px → 0, 130 px → 0.5, 160 px → 1).
+  midpoint pins (200 px → 0, 230 px → 0.5, 260 px → 1).
 - **Unit:** N=9 distinct famous galaxies in the trigger band over
   consecutive frames → LRU evicts the smallest-recent-apparent
   layer, not a random one.
 - **Visual smoke (manual):** fly to M31; confirm sharper detail
-  resolves as apparent diameter crosses ~130 px, no pop at fetch
+  resolves as apparent diameter crosses ~230 px, no pop at fetch
   ready, fly away and confirm the atlas tile resumes ownership at
   smaller apparent size.
 - **Visual regression (manual):** fly to an SDSS-only galaxy; confirm
@@ -284,8 +290,8 @@ not bandwidth — the bandwidth is fixed by the 1024 px source.)
 - `src/utils/network/galaxyImageFetcher.ts:42-54` — current famous
   branch (extend for `full.webp` URL).
 - `public/images/famous-curated/<id>/full.webp` — curator's source of
-  truth; build step copies to `public/images/famous-hires/<id>.webp`
-  which `syncR2.ts` ships to the bucket.
+  truth; build step copies to `public/data/images/famous-hires/<id>.webp`
+  which `syncR2.ts` ships to the bucket as `data/images/famous-hires/<id>.webp`.
 - `tools/deploy/syncR2.ts` — extend ALLOW filter for the new path.
 - `CLAUDE.md` § "Deploy workflow" — the Workers-Assets-vs-R2 split
   this spec extends.
