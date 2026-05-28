@@ -157,10 +157,13 @@ export const SOURCE_REGISTRY = {
     schechter: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
     iauPrefix: 'Synth',
     tierTargets: {}, // no caps anywhere — synthetic is procedurally sized
-    // Bulk-survey defaults; synthetic mags are low so the floor never
-    // bites in practice, but pick a consistent value for clarity.
-    intensityFloor: 0.02,
-    falloffHalfMpc: 1000,
+    // Synthetic is the "no real data, show *something*" fallback — must be
+    // aggressively visible.  Match Milliquas: higher floor + no depth fade.
+    // Bulk-survey defaults (floor=0.02 / falloff=1000) at radius 1000 Mpc
+    // attenuate the cloud to a near-black haze against the additive HDR
+    // target — the symptom the fallback exists to prevent in the first place.
+    intensityFloor: 0.15,
+    falloffHalfMpc: 1e30,
   },
   [Source.SDSS]: {
     type: 'survey',
