@@ -23,6 +23,7 @@
 
 import type { SourceEntry } from '../@types/data/SourceEntry';
 import type { SourceType } from '../@types/data/SourceType';
+import type { Tier } from '../@types/data/Tier';
 
 // ─── The enum itself ────────────────────────────────────────────────────────
 
@@ -459,6 +460,38 @@ export const SOURCE_REGISTRY = {
     trim: 0.0,
   },
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
+
+// ─── Famous-galaxy high-res LOD ─────────────────────────────────────────────
+
+/**
+ * Sizing for the `texture_2d_array` that holds the curated Famous-galaxy
+ * thumbnails at full curator resolution (the close-approach LOD that
+ * supersedes the shared 128 px atlas tile when a galaxy fills enough
+ * pixels on screen).
+ *
+ * Why a fixed N and per-tier `layerSide`:
+ *
+ *   - Eight layers is the LRU working set we sized to "the handful of
+ *     famous galaxies the camera is likely to be near at once" — enough
+ *     for cluster fly-throughs (Virgo, Coma) without thrashing, small
+ *     enough that the GPU footprint stays inside the per-tier budget.
+ *   - `layerSide` is tier-aware because the dominant cost is
+ *     `N * layerSide² * 4 bytes`. With N=8: 1024² → 32 MB (desktop /
+ *     "medium"+"large"), 512² → 8 MB (mobile / "small"). The curator
+ *     emits 1024 px sources; the mobile path downsamples at decode time
+ *     via `createImageBitmap`'s `resizeWidth`/`resizeHeight`.
+ *
+ * Treat both as load-bearing: the memory bound documented in
+ * `docs/adrs/0002-tiered-thumbnail-textures.md` and the fade-band math
+ * in the design spec assume these exact values.
+ */
+export const HI_RES_LAYER_COUNT = 8 as const;
+
+export const HI_RES_LAYER_SIDE_BY_TIER: Readonly<Record<Tier, number>> = {
+  small: 512,
+  medium: 1024,
+  large: 1024,
+} as const;
 
 // ─── Iteration order ────────────────────────────────────────────────────────
 
