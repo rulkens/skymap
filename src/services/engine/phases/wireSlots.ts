@@ -60,14 +60,12 @@ import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator'
 import { createGalaxyAtlasSubsystem } from '../subsystems/galaxyAtlasSubsystem';
 import { createProceduralDiskSubsystem } from '../subsystems/proceduralDiskSubsystem';
 import { createTexturedDiskSubsystem } from '../subsystems/texturedDiskSubsystem';
+import { createHiResFamousSubsystem } from '../subsystems/hiResFamousSubsystem';
+import { createHiResFamousTexture } from '../../gpu/resources/hiResFamousTexture';
+import { HI_RES_LAYER_COUNT, HI_RES_LAYER_SIDE_BY_TIER } from '../../../data/sources';
 // Cosmography POI anchors wired unconditionally into the POI subsystem
 // below — the user-facing toggle is the SettingsPanel per-category
-// checkbox, not a URL gate.  (Pre-2026-05-17 this was gated on
-// `?anchors=1`; see the inline rationale at the wire site.)
-// Synthetic-volume imports that previously sat here
-// (DEFAULT_VOLUME_FIELD_INTENSITY, getVolumeFieldDefaults,
-// syntheticVolumeFetcher) were moved into `syntheticVolumeSlots.ts`
-// by H4 and intentionally stay out.
+// checkbox, not a URL gate.
 import { buildStaticAnchorPois } from '../../../data/buildStaticAnchorPois';
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfInterest';
@@ -88,11 +86,9 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // need updating in lockstep.
   const phaseLocals = deps.phaseLocals!;
   const { device } = phaseLocals;
-  // Renderers are owned by `state.gpu.*` (written by `initGpu`).  Pre-M1
-  // (2026-05-11 audit) we also kept them on `phaseLocals` and read
-  // through there with a `!` bang — the bang was folklore that assumed
-  // phase ordering.  The explicit null-checks below turn that assumption
-  // into a typed runtime error if `initGpu` is ever skipped/reordered.
+  // Renderers are owned by `state.gpu.*` (written by `initGpu`).  The
+  // explicit null-checks below turn the phase-ordering assumption into
+  // a typed runtime error if `initGpu` is ever skipped/reordered.
   const { texturedDiskRenderer, proceduralDiskRenderer } = state.gpu;
   if (texturedDiskRenderer === null || proceduralDiskRenderer === null) {
     throw new Error(
@@ -100,24 +96,20 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
     );
   }
 
-  // ── Filament asset slot (Task 9) ─────────────────────────────────
+  // ── Filament asset slot ──────────────────────────────────────────
   // Factory owns the mint + subscribe + state write.  See
   // `loading/slots/filamentSlot.ts` for the lifecycle rationale.
   const filamentSlot = createFilamentSlot(state, cb);
 
   // ── Cosmography anchor POIs (always wired) ───────────────────────
   //
-  // Pre-2026-05-17 this block was gated behind `?anchors=1`, intended
-  // as a dev overlay for visually cross-referencing the CF-4 DM cube
-  // alignment.  The cluster + void labels turned out to be useful as
-  // a first-class production overlay (they help users orient against
-  // known large-scale structure), so the gate is now removed.  The
-  // SettingsPanel's per-category checkboxes (Overlays → Labels) are
-  // the user-facing knob; this wire just makes the POIs available.
+  // The SettingsPanel's per-category checkboxes (Overlays → Labels)
+  // are the user-facing knob; this wire just makes the POIs available.
   //
-  // The three lists stay separate (rather than one merged export) so
-  // the audit script in `tools/` can consume CLUSTER_ANCHORS without
-  // pulling in interpretive supercluster/void POIs.
+  // The three lists (cluster / supercluster / void) stay separate
+  // (rather than one merged export) so the audit script in `tools/`
+  // can consume CLUSTER_ANCHORS without pulling in interpretive
+  // supercluster / void POIs.
   //
   // physicalRadiusMpc per anchor comes from clusterAnchors.ts —
   // literature-grounded values (R_200 / virial radii for clusters,
@@ -147,7 +139,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // central `.load()` below picks it up and triggers the actual fetch.
   createMcpmSlot(state, cb);
 
-  // ── Famous-galaxy sidecar slot (Task 10) ─────────────────────────
+  // ── Famous-galaxy sidecar slot ───────────────────────────────────
   // Factory owns the mint + subscribe + state write.  See
   // `loading/slots/famousMetaSlot.ts` for the dual-sidecar rationale and
   // the graceful-degradation policy on fetch error.
@@ -192,7 +184,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
     });
   }
 
-  // ── PGC-alias slot (Task 10) ─────────────────────────────────────
+  // ── PGC-alias slot ───────────────────────────────────────────────
   // Lazy: only `load()`-ed on first Cmd+K palette open via the public
   // handle's `loadPgcAliases()` shim.  Factory owns the mint + state
   // write; see `loading/slots/pgcAliasSlot.ts`.
@@ -208,18 +200,15 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
 
   // ── Loading-bar emitter ──────────────────────────────────────────
   //
-  // Post-Task-12 the per-engine loading-bar aggregator is a thin
-  // subscriber over `aggregateRegistry`.  Build the slot registry
-  // here (now that every slot exists) and hand it to the emitter;
-  // `attachSlot` then wires each slot's `subscribe` so that any
-  // state transition recomputes the projection and forwards the
-  // snapshot to `cb.onLoadProgress`.
+  // The per-engine loading-bar aggregator is a thin subscriber over
+  // `aggregateRegistry`.  Build the slot registry here (now that every
+  // slot exists) and hand it to the emitter; `attachSlot` then wires
+  // each slot's `subscribe` so that any state transition recomputes
+  // the projection and forwards the snapshot to `cb.onLoadProgress`.
   //
-  // Why a single shared Map rather than four separate `attachSlot`
-  // calls each owning their own subset?  The same registry also
-  // feeds the dev panel's per-slot view (Task 13); building it
-  // once here keeps both consumers in lock-step on what counts as
-  // "in flight".
+  // A single shared Map (rather than per-subset `attachSlot` calls)
+  // also feeds the dev panel's per-slot view; building it once here
+  // keeps both consumers in lockstep on what counts as "in flight".
   //
   // The `unknown` type-erasure below is benign — `aggregateRegistry`
   // only reads `slot.state()` discriminator fields, never the
@@ -263,17 +252,47 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // PGC-aliases stay lazy; see `loadPgcAliases()` on the handle for
   // the on-demand trigger.
 
-  // Construct the three impostor subsystems in dependency order.  The
+  // Construct the impostor subsystems in dependency order. The
   // textured-disk planner depends on the atlas (slot allocation +
-  // eviction subscription); the procedural-disk planner is independent.
+  // eviction subscription) AND on the LOD-3 hi-res planner (per-frame
+  // crossfade alpha lookup), so both must exist first. The
+  // procedural-disk planner is independent of the other two.
   const galaxyAtlas = createGalaxyAtlasSubsystem({
     device,
     requestRender: () => state.subsystems.scheduler.requestRender(),
   });
+
+  // LOD-3 hi-res Famous-galaxy resources.  The texture's per-layer
+  // edge length depends on the current tier — mobile / "small" gets
+  // 512 px to stay under the GPU memory budget, desktop tiers get
+  // 1024 px.  Sized once here at boot; tier change destroys this pair
+  // and re-creates it at the new layerSide.  `initTexture()` is
+  // mandatory before `getTextureView()` — the texture handle throws
+  // otherwise.
+  const layerSide = HI_RES_LAYER_SIDE_BY_TIER[state.sources.tier];
+  const hiResFamousTexture = createHiResFamousTexture({
+    device,
+    layerSide,
+    layerCount: HI_RES_LAYER_COUNT,
+  });
+  hiResFamousTexture.initTexture();
+  const hiResFamous = createHiResFamousSubsystem({
+    texture: hiResFamousTexture,
+    requestRender: () => state.subsystems.scheduler.requestRender(),
+  });
+
   const texturedDisks = createTexturedDiskSubsystem({
     device,
     atlas: galaxyAtlas,
     requestRender: () => state.subsystems.scheduler.requestRender(),
+    // Passing the planner here is what enables the LOD-3 path: for
+    // Famous-source galaxies past ~200 px apparent diameter, the
+    // textured-disk subsystem folds the planner's per-galaxy
+    // `hiResLayerIdx` + `hiResCrossfadeAlpha` into the disk instance
+    // buffer.  Omitting it (tests, future non-Famous configurations)
+    // keeps the LOD-3 sentinel at -1 / 0 so the fragment shader takes
+    // the atlas-tile-only path with no extra branching.
+    hiResFamous,
   });
   // Passing the atlas here is what enables the famous-WebP fade-out:
   // for Famous-source galaxies whose curated WebP has loaded into the
@@ -283,15 +302,20 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   const proceduralDisks = createProceduralDiskSubsystem({ atlas: galaxyAtlas });
 
   // Bind the atlas's texture view into the LOD-2 disk renderer.  The
-  // pre-split code did this through thumbnailSubsystem.bindToRenderers;
-  // post-split the atlas owns the view and the binding is one direct
-  // call.  proceduralDiskRenderer doesn't sample the atlas, so it
-  // doesn't get a bindAtlas call.
+  // atlas owns the view; proceduralDiskRenderer doesn't sample it.
   texturedDiskRenderer.bindAtlas(galaxyAtlas.getTextureView());
+  // Bind the hi-res texture_2d_array view too — the inner
+  // instancedQuadRenderer's `composeAtlasBindGroup()` gate waits for
+  // BOTH `bindAtlas` and `bindHiResArray` before becoming draw-ready.
+  // Until this fires the textured-disk pipeline has no bind group and
+  // skips every draw.
+  texturedDiskRenderer.bindHiResArray(hiResFamousTexture.getTextureView());
 
   state.subsystems.galaxyAtlas = galaxyAtlas;
   state.subsystems.texturedDisks = texturedDisks;
   state.subsystems.proceduralDisks = proceduralDisks;
+  state.subsystems.hiResFamous = hiResFamous;
+  state.subsystems.hiResFamousTexture = hiResFamousTexture;
 
   // Register the always-on overlay fade handles at opacity 1.0. The
   // registry surfaces these to a future tour subsystem (which can

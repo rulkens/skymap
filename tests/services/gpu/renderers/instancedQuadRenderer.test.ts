@@ -76,7 +76,7 @@ function makeStubContext() {
   return { ctx, calls };
 }
 
-describe('createInstancedQuadRenderer (Spec G)', () => {
+describe('createInstancedQuadRenderer', () => {
   describe('bind-group layout shape', () => {
     it('builds a 3-binding BGL when atlas is configured', () => {
       const { ctx, calls } = makeStubContext();
@@ -222,6 +222,127 @@ describe('createInstancedQuadRenderer (Spec G)', () => {
       const entries = desc.entries as ReadonlyArray<GPUBindGroupEntry>;
       expect(entries).toHaveLength(3);
       expect(entries[1]!.resource).toBe(fakeView);
+    });
+  });
+
+  describe('hi-res array binding (texturedDisk consumer)', () => {
+    // When `atlas.hiResArray === true` the BGL exposes an optional
+    // `texture_2d_array` + sampler pair at bindings 3 + 4. Consumers
+    // that don't sample the array (texturedQuad, proceduralDisk) keep
+    // their 1- and 3-entry BGL shapes unchanged.
+
+    it('extends the BGL from 3 → 5 entries when atlas.hiResArray is true', () => {
+      const { ctx, calls } = makeStubContext();
+      createInstancedQuadRenderer(ctx, {
+        label: 'test',
+        vertexSource: '@vertex fn vs() {}',
+        fragmentSource: '@fragment fn fs() {}',
+        atlas: { hiResArray: true },
+        capacity: { kind: 'fixed', max: 256 },
+        blend: 'additive',
+        format: 'rgba16float',
+      });
+
+      expect(calls.createBindGroupLayout).toHaveLength(1);
+      const entries = calls.createBindGroupLayout[0]!
+        .entries as ReadonlyArray<GPUBindGroupLayoutEntry>;
+      expect(entries).toHaveLength(5);
+      expect(entries[3]!.binding).toBe(3);
+      expect(entries[4]!.binding).toBe(4);
+      // Hi-res array texture: FRAGMENT-only, float sample type,
+      // '2d-array' view dimension. The viewDimension literal is what
+      // makes WGSL's `texture_2d_array<f32>` resolve at pipeline-link time.
+      expect(entries[3]!.visibility).toBe(GPUShaderStage.FRAGMENT);
+      expect(entries[3]!.texture).toBeDefined();
+      expect(entries[3]!.texture!.sampleType).toBe('float');
+      expect(entries[3]!.texture!.viewDimension).toBe('2d-array');
+      // Binding 4 is the linear sampler for the hi-res array.
+      expect(entries[4]!.visibility).toBe(GPUShaderStage.FRAGMENT);
+      expect(entries[4]!.sampler).toBeDefined();
+      expect(entries[4]!.sampler!.type).toBe('filtering');
+    });
+
+    it('keeps the BGL at 3 entries when atlas is configured without hiResArray', () => {
+      const { ctx, calls } = makeStubContext();
+      createInstancedQuadRenderer(ctx, {
+        label: 'test',
+        vertexSource: '@vertex fn vs() {}',
+        fragmentSource: '@fragment fn fs() {}',
+        atlas: {},
+        capacity: { kind: 'fixed', max: 256 },
+        blend: 'additive',
+        format: 'rgba16float',
+      });
+      const entries = calls.createBindGroupLayout[0]!
+        .entries as ReadonlyArray<GPUBindGroupLayoutEntry>;
+      expect(entries).toHaveLength(3);
+    });
+
+    it('exposes bindHiResArray only when atlas.hiResArray is true', () => {
+      const { ctx } = makeStubContext();
+      const withHiRes = createInstancedQuadRenderer(ctx, {
+        label: 'test',
+        vertexSource: '@vertex fn vs() {}',
+        fragmentSource: '@fragment fn fs() {}',
+        atlas: { hiResArray: true },
+        capacity: { kind: 'fixed', max: 16 },
+        blend: 'additive',
+        format: 'rgba16float',
+      });
+      expect(typeof withHiRes.bindHiResArray).toBe('function');
+
+      const { ctx: ctx2 } = makeStubContext();
+      const atlasOnly = createInstancedQuadRenderer(ctx2, {
+        label: 'test',
+        vertexSource: '@vertex fn vs() {}',
+        fragmentSource: '@fragment fn fs() {}',
+        atlas: {},
+        capacity: { kind: 'fixed', max: 16 },
+        blend: 'additive',
+        format: 'rgba16float',
+      });
+      expect(atlasOnly.bindHiResArray).toBeUndefined();
+
+      const { ctx: ctx3 } = makeStubContext();
+      const noAtlas = createInstancedQuadRenderer(ctx3, {
+        label: 'test',
+        vertexSource: '@vertex fn vs() {}',
+        fragmentSource: '@fragment fn fs() {}',
+        capacity: { kind: 'grow' },
+        blend: 'additive',
+        format: 'rgba16float',
+      });
+      expect(noAtlas.bindHiResArray).toBeUndefined();
+    });
+
+    it('defers bind-group composition until both bindAtlas + bindHiResArray are called', () => {
+      const { ctx, calls } = makeStubContext();
+      const r = createInstancedQuadRenderer(ctx, {
+        label: 'test',
+        vertexSource: '@vertex fn vs() {}',
+        fragmentSource: '@fragment fn fs() {}',
+        atlas: { hiResArray: true },
+        capacity: { kind: 'fixed', max: 16 },
+        blend: 'additive',
+        format: 'rgba16float',
+      });
+      expect(calls.createBindGroup).toHaveLength(0);
+
+      // bindAtlas alone is insufficient — all 5 resources are required
+      // before composing against a 5-entry BGL.
+      const fakeAtlasView = {} as GPUTextureView;
+      r.bindAtlas!(fakeAtlasView);
+      expect(calls.createBindGroup).toHaveLength(0);
+
+      const fakeArrayView = {} as GPUTextureView;
+      r.bindHiResArray!(fakeArrayView);
+      // Both halves present — bind group composes.
+      expect(calls.createBindGroup).toHaveLength(1);
+      const desc = calls.createBindGroup[0]!;
+      const entries = desc.entries as ReadonlyArray<GPUBindGroupEntry>;
+      expect(entries).toHaveLength(5);
+      expect(entries[1]!.resource).toBe(fakeAtlasView);
+      expect(entries[3]!.resource).toBe(fakeArrayView);
     });
   });
 

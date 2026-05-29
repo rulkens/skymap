@@ -18,6 +18,11 @@ import { createTexturedDiskSubsystem } from '../../../../src/services/engine/sub
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type {
+  HiResFamousFrameOutput,
+  HiResFamousPerGalaxyState,
+  HiResFamousSubsystem,
+} from '../../../../src/@types/engine/subsystems/HiResFamousSubsystem';
 
 function makeFakeDevice(): GPUDevice {
   const fakeTexture = { createView: () => ({}) as GPUTextureView };
@@ -113,14 +118,10 @@ describe('createTexturedDiskSubsystem', () => {
     expect(out.disks.length).toBe(2);
   });
 
-  it('emits no disks for NaN-orientation galaxies (post-2026-05-18 quad removal)', async () => {
-    // Pre-2026-05-18 the subsystem branched on `Number.isFinite(ar) &&
-    // Number.isFinite(pa)` to emit a screen-aligned quad fallback for
-    // galaxies with missing orientation.  The quad pipeline was removed
-    // because the build pipeline's deterministic orientation fallback
-    // means production bins never have NaN orientation, and the
-    // synthetic NaN here exercises only the defensive guard left in
-    // the disks-only branch.
+  it('emits no disks for NaN-orientation galaxies', async () => {
+    // Production bins always carry finite orientation (the build
+    // pipeline fills in a deterministic fallback). Synthetic NaN here
+    // exercises the disks-only defensive guard.
     const fetcher = vi.fn(async () => makeFakeBitmap());
     const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
     const sys = createTexturedDiskSubsystem({
@@ -154,6 +155,158 @@ describe('createTexturedDiskSubsystem', () => {
     pending[0]!(null);
     await new Promise((r) => setTimeout(r, 0));
     expect(sys.hasInFlightWork()).toBe(false);
+  });
+
+  // ── Hi-res LOD fold-in ──────────────────────────────────────────────
+  // The planner emits two extra fields per DiskInstance:
+  // `hiResLayerIdx` (sentinel -1 = no hi-res layer assigned) and
+  // `hiResCrossfadeAlpha` (smoothstep ramp 0 → 1). Non-Famous sources
+  // get -1 / 0 unconditionally (defensive — the shader gates the hi-res
+  // sample on `hiResLayerIdx >= 0` anyway). For Famous-source rows the
+  // planner reads per-galaxy state from the optional `hiResFamous` dep
+  // keyed by catalog-local index `i`.
+
+  function makeStubHiResFamous(
+    byFamousIdx: ReadonlyMap<number, HiResFamousPerGalaxyState>,
+  ): HiResFamousSubsystem {
+    const lastOutput: HiResFamousFrameOutput = { byFamousIdx };
+    return {
+      runFrame: () => lastOutput,
+      get lastOutput() {
+        return lastOutput;
+      },
+      destroy: () => {},
+    };
+  }
+
+  it('emits hiResLayerIdx -1 and hiResCrossfadeAlpha 0 by default (no hi-res dep)', async () => {
+    const fetcher = vi.fn(async () => makeFakeBitmap());
+    const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+    const sys = createTexturedDiskSubsystem({
+      device,
+      atlas,
+      requestRender: () => {},
+      fetcher,
+      decimationFactor: 1,
+    });
+    const clouds = new Map([[Source.SDSS, makeDenseCloud(2)]]);
+
+    sys.runFrame(makeInput(clouds));
+    await new Promise((r) => setTimeout(r, 0));
+    const out = sys.runFrame(makeInput(clouds));
+    expect(out.disks.length).toBe(2);
+    for (const d of out.disks) {
+      expect(d.hiResLayerIdx).toBe(-1);
+      expect(d.hiResCrossfadeAlpha).toBe(0);
+    }
+  });
+
+  it('with hiResFamous dep, Famous-source DiskInstance gets per-galaxy hi-res state', async () => {
+    const fetcher = vi.fn(async () => makeFakeBitmap());
+    const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+    const hiResFamous = makeStubHiResFamous(
+      new Map([[0, { hiResLayerIdx: 2, hiResCrossfadeAlpha: 0.7 }]]),
+    );
+    const sys = createTexturedDiskSubsystem({
+      device,
+      atlas,
+      requestRender: () => {},
+      fetcher,
+      decimationFactor: 1,
+      hiResFamous,
+    });
+    const clouds = new Map([[Source.Famous, makeDenseCloud(2)]]);
+
+    sys.runFrame(makeInput(clouds));
+    await new Promise((r) => setTimeout(r, 0));
+    const out = sys.runFrame(makeInput(clouds));
+
+    // Row 0 carries the stubbed hi-res state; row 1 (missing from the
+    // map) falls back to the -1 / 0 sentinel.
+    expect(out.disks.length).toBe(2);
+    // Planner sorts back-to-front; recover each instance via the
+    // y-coordinate baked into makeDenseCloud (y = 0.001*i).
+    const byIdx = new Map(out.disks.map((d) => [Math.round(d.y / 0.001), d]));
+    expect(byIdx.get(0)?.hiResLayerIdx).toBe(2);
+    expect(byIdx.get(0)?.hiResCrossfadeAlpha).toBeCloseTo(0.7);
+    expect(byIdx.get(1)?.hiResLayerIdx).toBe(-1);
+    expect(byIdx.get(1)?.hiResCrossfadeAlpha).toBe(0);
+  });
+
+  it('with hiResFamous dep, non-Famous-source DiskInstance still defaults to -1 / 0', async () => {
+    // Defensive: byFamousIdx is keyed by Famous-source local index
+    // only — even when an index happens to overlap a non-Famous
+    // catalog's row, the planner must not fold it in.
+    const fetcher = vi.fn(async () => makeFakeBitmap());
+    const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+    const hiResFamous = makeStubHiResFamous(
+      new Map([[0, { hiResLayerIdx: 5, hiResCrossfadeAlpha: 1 }]]),
+    );
+    const sys = createTexturedDiskSubsystem({
+      device,
+      atlas,
+      requestRender: () => {},
+      fetcher,
+      decimationFactor: 1,
+      hiResFamous,
+    });
+    const clouds = new Map([[Source.SDSS, makeDenseCloud(2)]]);
+
+    sys.runFrame(makeInput(clouds));
+    await new Promise((r) => setTimeout(r, 0));
+    const out = sys.runFrame(makeInput(clouds));
+    expect(out.disks.length).toBe(2);
+    for (const d of out.disks) {
+      expect(d.hiResLayerIdx).toBe(-1);
+      expect(d.hiResCrossfadeAlpha).toBe(0);
+    }
+  });
+
+  it('setHiResFamous swaps the planner reference used by the next frame', async () => {
+    // Tier-change contract: on tier flip the engine destroys the old
+    // hi-res texture + planner pair and recreates them at the new
+    // layerSide. Rebuilding the entire texturedDiskSubsystem would
+    // invalidate sticky disk state and load-fade timing for ALL
+    // galaxies, not just famous ones — instead the subsystem exposes a
+    // setter that swaps just the planner reference, so the next
+    // runFrame reads the new planner's byFamousIdx.
+    const fetcher = vi.fn(async () => makeFakeBitmap());
+    const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+    const initial = makeStubHiResFamous(
+      new Map([[0, { hiResLayerIdx: 1, hiResCrossfadeAlpha: 0.25 }]]),
+    );
+    const sys = createTexturedDiskSubsystem({
+      device,
+      atlas,
+      requestRender: () => {},
+      fetcher,
+      decimationFactor: 1,
+      hiResFamous: initial,
+    });
+    const clouds = new Map([[Source.Famous, makeDenseCloud(1)]]);
+    sys.runFrame(makeInput(clouds));
+    await new Promise((r) => setTimeout(r, 0));
+
+    // Pre-swap: row 0 reflects the initial planner's state.
+    const before = sys.runFrame(makeInput(clouds)).disks;
+    expect(before[0]?.hiResLayerIdx).toBe(1);
+    expect(before[0]?.hiResCrossfadeAlpha).toBeCloseTo(0.25);
+
+    // Swap the planner reference (simulates the tier-change rebuild).
+    const next = makeStubHiResFamous(
+      new Map([[0, { hiResLayerIdx: 6, hiResCrossfadeAlpha: 0.9 }]]),
+    );
+    sys.setHiResFamous(next);
+
+    const after = sys.runFrame(makeInput(clouds)).disks;
+    expect(after[0]?.hiResLayerIdx).toBe(6);
+    expect(after[0]?.hiResCrossfadeAlpha).toBeCloseTo(0.9);
+
+    // setHiResFamous(undefined) detaches — emits the -1 / 0 sentinel.
+    sys.setHiResFamous(undefined);
+    const detached = sys.runFrame(makeInput(clouds)).disks;
+    expect(detached[0]?.hiResLayerIdx).toBe(-1);
+    expect(detached[0]?.hiResCrossfadeAlpha).toBe(0);
   });
 
   it('skips fetches for already-failed keys (retry-storm guard)', async () => {

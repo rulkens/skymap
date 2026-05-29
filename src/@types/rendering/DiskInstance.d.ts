@@ -28,4 +28,17 @@ export type DiskInstance = {
    * alpha output. See ThumbnailInstance.d.ts for the underlying logic.
    */
   fadeAlpha: number;
+  /**
+   * Index into the per-tier hi-res layered atlas (one of HI_RES_LAYER_COUNT
+   * slots). Sentinel −1 means "no hi-res slot assigned" — a negative
+   * sentinel keeps the field a plain `number` that packs into a
+   * Float32Array without branching.
+   */
+  hiResLayerIdx: number;
+  /**
+   * Crossfade ramp in [0, 1] from atlas thumbnail to hi-res layer slot.
+   * 0 = fully low-res, 1 = fully hi-res. Bounded so the shader can `mix`
+   * without clamping.
+   */
+  hiResCrossfadeAlpha: number;
 };

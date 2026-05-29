@@ -2,30 +2,19 @@
  * EngineState — type-shape smoke tests.
  *
  * The module is pure types, so most verification is "does the project
- * still typecheck after the engine.ts refactor?" — answered by
- * `npx tsc --noEmit` and the rest of the test suite continuing to
- * pass.  These tests pin down the subset of behaviour that *can* be
- * asserted at runtime:
+ * still typecheck?" — answered by `tsc --noEmit`. These runtime tests
+ * pin the subset that's actually assertable:
  *
- *   1. A literal of the type compiles when populated with realistic
- *      values.
- *   2. Building the same shape using only `data/defaults.ts` constants
- *      typechecks (catches accidental drift in the defaults' types).
- *   3. The sub-bag fields stay accessible after assignment — i.e. the
- *      type isn't accidentally `Readonly<>` anywhere we want mutation.
+ *   1. A literal of the type compiles when populated with realistic values.
+ *   2. Building the same shape from `data/defaults.ts` typechecks
+ *      (catches drift in the defaults' types).
+ *   3. Sub-bag fields are mutable — i.e. the type isn't accidentally
+ *      `Readonly<>` anywhere the engine wants to assign.
  *
- * If these three pass and `tsc --noEmit` is clean, the type is wired
- * correctly.  Anything subtler shows up in the engine's own behaviour
- * tests (which exercise it transitively).
- *
- * ### Post-H5 (2026-05-11) shape
- *
- * `EngineSettingsState` is a flat list of eight cluster sub-bags
- * (`points`, `tonemap`, `camera`, `bias`, `thumbnails`, `milkyWay`,
- * `filaments`, `volumes`).  `EngineBiasState` holds only the
- * bake-output sentinels (`apparentMagLimit`, `schechterMStar`,
- * `schechterAlpha`); the user-facing `mode` and `absMagLimit` live
- * inside `settings.bias`.
+ * `EngineSettingsState` is a flat list of cluster sub-bags; the
+ * user-facing `mode` and `absMagLimit` live inside `settings.bias`,
+ * while `EngineBiasState` holds only the bake-output sentinels
+ * (`apparentMagLimit`, `schechterMStar`, `schechterAlpha`).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -170,6 +159,8 @@ describe('EngineState type', () => {
         galaxyAtlas: null,
         proceduralDisks: null,
         texturedDisks: null,
+        hiResFamous: null,
+        hiResFamousTexture: null,
         loadProgress: null,
         spaceMouse: createSpaceMouseSubsystem({
           cancelTween: () => {},
@@ -214,8 +205,7 @@ describe('EngineState type', () => {
     expect(state.settings.bias.mode).toBe(DEFAULT_BIAS_MODE);
     expect(state.sources.pickMask).toBe(ALL_VISIBLE_MASK);
     expect(state.sources.drawMask).toBe(ALL_VISIBLE_MASK);
-    // hover/selection moved off `state.picking` and onto
-    // `state.subsystems.selection` in Spec D.3.
+    // Hover/selection live on `state.subsystems.selection`, not `state.picking`.
     expect(state.subsystems.selection.hovered()).toBeNull();
     expect(state.gpu.renderer).toBeNull();
     expect(state.subsystems.tweens.isActive()).toBe(false);
@@ -354,6 +344,8 @@ describe('EngineState type', () => {
         galaxyAtlas: null,
         proceduralDisks: null,
         texturedDisks: null,
+        hiResFamous: null,
+        hiResFamousTexture: null,
         loadProgress: null,
         spaceMouse: createSpaceMouseSubsystem({
           cancelTween: () => {},
@@ -398,8 +390,7 @@ describe('EngineState type', () => {
     state.settings.bias.absMagLimit = -20;
     state.sources.pickMask = 0xff;
     state.sources.drawMask = 0xff;
-    // hovered/selected aren't on `state.picking` anymore — exercise the
-    // subsystem's setter instead.
+    // Hovered/selected live on the selection subsystem, not `state.picking`.
     state.subsystems.selection.setHovered({ kind: 'galaxy', source: 1 as SourceType, localIdx: 42 });
     state.picking.pickInFlight = true;
 

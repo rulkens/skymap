@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { Source, SOURCE_REGISTRY, SURVEY_SOURCES } from '../../src/data/sources';
+import {
+  Source,
+  SOURCE_REGISTRY,
+  SURVEY_SOURCES,
+  HI_RES_LAYER_COUNT,
+  HI_RES_LAYER_SIDE_BY_TIER,
+} from '../../src/data/sources';
 import { ALL_VISIBLE_MASK, maskHas, maskWith, maskWithout } from '../../src/utils/sourceMask';
 
 describe('Source.Famous', () => {
@@ -74,5 +80,23 @@ describe('Source enum — POI codes (cluster/supercluster/void)', () => {
     // new enum members that don't participate in the mask.
     expect(maskHas(maskWith(0, Source.SDSS), Source.SDSS)).toBe(true);
     expect(maskHas(maskWithout(ALL_VISIBLE_MASK, Source.Glade), Source.Glade)).toBe(false);
+  });
+});
+
+describe('Famous-galaxy hi-res LOD constants', () => {
+  it('HI_RES_LAYER_SIDE_BY_TIER pegs small to 512 and medium/large to 1024', () => {
+    // Mobile (small) halves the layer dim to keep the GPU footprint at
+    // 8 MB instead of 32 MB; desktop tiers share the 1024 px source
+    // resolution the curator emits.
+    expect(HI_RES_LAYER_SIDE_BY_TIER.small).toBe(512);
+    expect(HI_RES_LAYER_SIDE_BY_TIER.medium).toBe(1024);
+    expect(HI_RES_LAYER_SIDE_BY_TIER.large).toBe(1024);
+  });
+
+  it('HI_RES_LAYER_COUNT is 8', () => {
+    // Load-bearing: texture_2d_array is sized
+    // `HI_RES_LAYER_COUNT * HI_RES_LAYER_SIDE_BY_TIER[tier]^2 * 4 bytes`,
+    // and the 32 MB desktop / 8 MB mobile budget assumes N=8.
+    expect(HI_RES_LAYER_COUNT).toBe(8);
   });
 });

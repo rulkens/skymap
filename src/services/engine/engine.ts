@@ -149,6 +149,7 @@ import {
 } from './wiring/galaxyCatalogSourceRegistry';
 import type { SettingsTableKey } from '../../@types/settings/SettingsTableKey';
 import { runBootstrapPhases } from './phases/bootstrap';
+import { rebuildHiResFamousForTier } from './helpers/rebuildHiResFamousForTier';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
 import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
 
@@ -346,11 +347,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   const state: EngineState = {
     // ── Settings — the user-facing SettingsPanel sub-bags ──────────
     //
-    // After H5 (2026-05-11) every settings field lives under a named
-    // cluster.  The defaults flow through unchanged from
-    // `data/defaults.ts`; what changed is the shape — each cluster
-    // groups what conceptually goes together (point billboard knobs
-    // under `points`, HDR controls under `tonemap`, etc.).  See
+    // Every settings field lives under a named cluster (point billboard
+    // knobs under `points`, HDR controls under `tonemap`, etc.).
+    // Defaults flow from `data/defaults.ts`; see
     // `EngineSettingsState.d.ts` for the type-level map.
     settings: {
       points: {
@@ -397,15 +396,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // handle.
         fields: {},
       },
-      // Per-category POI visibility — TWO independent axes since the
-      // 2026-05-19 settings-panel audit (Q11) split label-text from
-      // marker-glyph.  Both default to every category visible so the
-      // labelDirector emits every cluster / supercluster / famous
-      // galaxy / void on first paint AND `clusterMarkerRenderer` draws
-      // every ring + halo.  Each literal record is the single source
-      // of truth for its axis — adding a fifth POI category means
-      // widening `POI_STYLES` in `poiSubsystem` AND adding the row to
-      // BOTH records here.
+      // Per-category POI visibility — two independent axes (label-text vs
+      // marker-glyph).  Both default to every category visible so the
+      // labelDirector emits every cluster / supercluster / famous galaxy /
+      // void on first paint AND `clusterMarkerRenderer` draws every ring +
+      // halo.  Each record is the single source of truth for its axis —
+      // adding a fifth POI category means widening `POI_STYLES` in
+      // `poiSubsystem` AND adding the row to BOTH records here.
       labelCategoryVisibility: {
         cluster: true,
         supercluster: true,
@@ -459,10 +456,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       tier: cb.initialTier ?? 'medium',
     },
     picking: {
-      // hovered/selected used to live here — they moved to
-      // `state.subsystems.selection` in Spec D.3.  This bag now
-      // exclusively holds the per-frame pick-throttle state (see
-      // `EnginePickingState.d.ts` for the narrowed responsibility).
+      // Per-frame pick-throttle state. Hover / select live on
+      // `state.subsystems.selection`; see `EnginePickingState.d.ts`.
       latestMouseCss: null,
       lastPickedMouseCss: null,
       pickInFlight: false,
@@ -500,20 +495,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // isEngineReady — null-checked at point of use by the
       // cluster-marker frame pass (task 14).
       clusterMarkerRenderer: null,
-      // texturedQuadRenderer / texturedDiskRenderer / proceduralDiskRenderer /
-      // milkyWayRenderer: null until initGpu constructs them.  These
-      // four don't gate any frame-loop logic via state.gpu — the frame
-      // body reads them through RunFrameDeps (assembled in
-      // `phases/startLoop.ts`).  They live here so `destroy()` below
-      // has a reachable reference to release each renderer's GPU
-      // buffers, AND so the later bootstrap phases (`wireSlots`,
-      // `startLoop`) consume the same identities by reading
-      // `state.gpu.X` directly.  Pre-2026-05-08 they lived only on
-      // the bootstrap-local `phaseLocals` carrier (which goes away
-      // once `startLoop` finishes), leaving destroy() unable to
-      // clean them up; M1 of the 2026-05-11 audit then collapsed
-      // the redundant `phaseLocals` mirror.  See
-      // `EngineGpuHandles.d.ts` for the full reachability story.
+      // texturedDiskRenderer / proceduralDiskRenderer / milkyWayRenderer:
+      // null until initGpu constructs them.  These don't gate any
+      // frame-loop logic via state.gpu — the frame body reads them through
+      // RunFrameDeps (assembled in `phases/startLoop.ts`).  They live
+      // here so `destroy()` below has a reachable reference to release
+      // each renderer's GPU buffers, AND so later bootstrap phases
+      // (`wireSlots`, `startLoop`) consume the same identities by
+      // reading `state.gpu.X` directly.  See `EngineGpuHandles.d.ts`
+      // for the full reachability story.
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
       milkyWayRenderer: null,
@@ -540,11 +530,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       timingService: createDisabledGpuTimingService(),
     },
     subsystems: {
-      // ── LOD-1 / LOD-2 impostor planners + atlas ─────────────────
-      // All three null until `wireSlots` constructs them post-GPU init.
+      // ── LOD-1 / LOD-2 / LOD-3 impostor planners + atlas ─────────
+      // All null until `wireSlots` constructs them post-GPU init.
+      // The hi-res pair (LOD-3) is rebuilt per-tier so the underlying
+      // `texture_2d_array`'s `layerSide` always matches the active tier;
+      // the others persist across tier changes.
       galaxyAtlas: null,
       proceduralDisks: null,
       texturedDisks: null,
+      hiResFamous: null,
+      hiResFamousTexture: null,
       // ── Tween manager ──────────────────────────────────────────
       // At most one camera tween at a time.  Sites that mutate it:
       //   - public handle's focusOn / focusOnHome / selectFamous
@@ -563,11 +558,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       spaceMouse: createSpaceMouseSubsystem({
         cancelTween: () => state.subsystems.tweens.cancel(),
         onConnectionChange: (connected) => {
-          // Nested fire only (H5 task 11).  The SpaceMouse subsystem is the
-          // single site that fires the connected-change echo for both
-          // `connectSpaceMouse` and `disconnectSpaceMouse` (the handle
-          // methods don't echo directly — the subsystem's lifecycle
-          // owns the truth and pushes it back out via this callback).
+          // The subsystem is the single site that fires the connected-change
+          // echo for both connect + disconnect; the handle methods don't
+          // echo directly — the subsystem's lifecycle owns the truth and
+          // pushes it back out via this callback.
           cb.input?.spaceMouse?.onConnectedChange?.(connected);
           // Wake one frame so the still-animating predicate sees
           // the freshly-zeroed axes (the subsystem clears them on
@@ -598,15 +592,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         getPoi: (id) => state.subsystems.pois.findPoi(id),
       }),
 
-      // ── Bias-correction subsystem (Spec E phase E.3 + E.4) ────────
-      // Owns Malmquist-bias mode flags, cached per-source ratios/
-      // weights, and the async bake state machine — extracted from
-      // PointRenderer.  Constructed eagerly here (no GPU dep); the
-      // renderer is wired during `phases/initGpu` via
-      // `attachRenderer(...)`.  Phase E.4 cut `handle.setBiasMode`
-      // over to call `setMode` on this subsystem (see the handle
-      // method below) and deleted the renderer's legacy bias-mode
-      // methods — production routes mode toggles through here now.
+      // ── Bias-correction subsystem ─────────────────────────────────
+      // Owns Malmquist-bias mode flags, cached per-source ratios /
+      // weights, and the async bake state machine.  Constructed eagerly
+      // here (no GPU dep); the renderer is wired during `phases/initGpu`
+      // via `attachRenderer(...)`.  `handle.setBiasMode` calls into
+      // `setMode` on this subsystem.
       //
       // No `schechterRunner` / `angularRunner` overrides — the
       // module-level defaults (Vite `?worker` runners on this same
@@ -618,7 +609,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         requestRender: () => state.subsystems.scheduler.requestRender(),
       }),
 
-      // ── You-are-here subsystem (Task R4) ─────────────────────────
+      // ── You-are-here subsystem ───────────────────────────────────
       // Owns the "YOU ARE HERE" marker fade-alpha state and drives
       // labelRenderer + markerLineRenderer per frame.  Constructed
       // eagerly here (no GPU dep); the two renderers are wired in
@@ -626,7 +617,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // the `loadFontAtlas()` fetch completes.
       youAreHere: createYouAreHereSubsystem(),
 
-      // ── Label director + POI subsystem (Task 6) ──────────────────
+      // ── Label director + POI subsystem ───────────────────────────
       //
       // The director owns the actual `labelRenderer.setLabels` /
       // `markerLineRenderer.setLines` calls — youAreHere and pois are
@@ -648,9 +639,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       //
       // Anyone who captures `state.subsystems.scheduler` from this
       // moment onward gets the live scheduler — no shim, no proxy,
-      // no post-init reassignment.  This is the architectural fix to
-      // the Phase 2b "captured the shim by reference" regression that
-      // broke hover-pick for one refactor cycle.
+      // no post-init reassignment.  Capturing a deferred shim by
+      // reference would break hover-pick on first frames.
       scheduler: createRenderScheduler({ onFrame: () => frameRef.current() }),
 
       // ── Fade registry ──────────────────────────────────────────
@@ -673,20 +663,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     initialCamSnapshot: null,
     // ── Asset-loading slot bag ───────────────────────────────────────────
     //
-    // The slot machinery (see `services/loading/AssetSlot.ts`) replaces the
-    // imperative `cloudLoader.reloadSource` call sites with a race-checked
-    // fetch→commit pipeline.  We declare the Map up-front so consumers can
-    // call `state.assetSlots.points.get(source)?.load(...)` without a null
-    // check, but the actual slots are constructed inside the GPU init IIFE
-    // — they close over `state.gpu.renderer` for their commit step, and
-    // that handle is null until `initGpu` resolves.
+    // The slot machinery (see `services/loading/AssetSlot.ts`) is a
+    // race-checked fetch→commit pipeline.  We declare the Map up-front so
+    // consumers can call `state.assetSlots.points.get(source)?.load(...)`
+    // without a null check, but the actual slots are constructed inside
+    // the GPU init IIFE — they close over `state.gpu.renderer` for their
+    // commit step, and that handle is null until `initGpu` resolves.
     //
-    // Task 8 populates only the SDSS entry; Task 9 fills in the rest.  An
-    // alternative would be to lazily construct slots on first `load()`,
-    // but that splits the wiring across two files (engine + setTier helper)
-    // and obscures the lifecycle.  Eager construction inside the IIFE
-    // keeps every slot's birth and its renderer-handle in the same lexical
-    // scope.
+    // Eager construction inside the IIFE keeps every slot's birth and
+    // its renderer-handle in the same lexical scope; a lazy-on-first-load
+    // alternative would split wiring across engine + setTier helper.
     assetSlots: {
       points: new Map(),
       // Filament slot is minted inside the GPU init IIFE — it commits to
@@ -719,14 +705,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     debug: { disabledPasses: new Set<string>() },
   };
 
-  // ── Register label producers with the director (Task 6) ───────────────
+  // ── Register label producers with the director ───────────────────────
   //
   // Order of registration = order in the merged label list (youAreHere
   // first, POIs after).  Both producers are constructed eagerly in the
   // state literal above, so this runs synchronously before any frame can
   // fire.  We deliberately register both even when the POI subsystem is
-  // empty — the director treats an empty contribution as a no-op and
-  // there's nothing async to gate on.
+  // empty — the director treats an empty contribution as a no-op.
   //
   // Structural typing carries the assignment: `YouAreHereSubsystem` is
   // an alias for `LabelProducer`, and `PoiSubsystem` extends it.
@@ -774,14 +759,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //
   // The four bootstrap phases (`initGpu`, `wireSlots`, `wireInput`,
   // `startLoop`) live in `phases/*.ts` and consume a shared
-  // `BootstrapDeps` object built here.  Anything the pre-Phase-5 IIFE
-  // captured from createEngine's outer scope flows through this bag —
-  // the canvas + cb args, the `{current}` ref boxes for forward-declared
-  // bindings (frameRef, detachControlsRef, handleRef), and the values
-  // needed for `RunFrameDeps` assembly in `startLoop`
-  // (fpsCounter, lastReportedFps, allSlots).  The pure `cssToTexPx`
-  // helper is imported directly in `runFrame.ts` / `wireInput.ts`;
-  // scale-bar derivation moved to React-side via `cb.onCameraChange`.
+  // `BootstrapDeps` object built here.  It carries the canvas + cb args,
+  // `{current}` ref boxes for forward-declared bindings (frameRef,
+  // detachControlsRef, handleRef), and the values needed for
+  // `RunFrameDeps` assembly in `startLoop` (fpsCounter, lastReportedFps,
+  // allSlots).
   //
   // `handleRef.current` is null at this point — the public handle is
   // declared AFTER the bootstrap IIFE below.  `wireInput`'s onDoubleClick
@@ -800,8 +782,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     lastReportedFps,
   };
   // The main async IIFE runs the bootstrap phases.  All errors are
-  // caught here and reported via `onStatusChange` — same single
-  // try/catch contract the pre-Phase-5 IIFE had.  See
+  // caught here and reported via `onStatusChange`.  See
   // `phases/bootstrap.ts`'s `runBootstrapPhases` header for what the
   // four-await chain covers.
   (async () => {
@@ -876,27 +857,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   function setBiasMode(mode: BiasMode): void {
     // Forwarded into the per-frame uniform on the next draw.  The
     // shader branches on the integer value (0 = none, 1 = volume-
-    // limited, …) so flipping this from devtools or the SettingsPanel
-    // takes effect on the next rendered frame without any pipeline
-    // rebuild.
+    // limited, …) so flipping this takes effect on the next rendered
+    // frame without any pipeline rebuild.
     //
     // We always fire the echo callback — even when the mode is
     // unchanged — so the UI seeds correctly on first call.
     //
-    // ### Spec E phase E.4 — cut over to biasCorrectionSubsystem
-    //
-    // Pre-E.4 this delegated to `state.gpu.renderer.setBiasMode(mode)`
-    // and chained a `.then(requestRender)`.  Spec E.4 routes through
-    // the subsystem instead — the subsystem owns the mode-flag mirror,
-    // the cached per-source ratios/weights, and the worker-runner
-    // registry; the renderer keeps only the layout-aware splice
-    // surface (`spliceSchechterRatios` / `spliceAngularWeights` /
-    // `clearBiasOverlays`).  The `void` discards the returned Promise
-    // — engine.ts doesn't await.  The subsystem's `setMode` calls
+    // Routes through `biasCorrectionSubsystem`, which owns the mode-flag
+    // mirror, cached per-source ratios/weights, and the worker-runner
+    // registry; the renderer keeps only the layout-aware splice surface
+    // (`spliceSchechterRatios` / `spliceAngularWeights` /
+    // `clearBiasOverlays`).  The `void` discards the returned Promise —
+    // engine.ts doesn't await.  The subsystem's `setMode` calls
     // `state.subsystems.scheduler.requestRender()` itself when each
     // per-source splice completes, so visuals update progressively as
-    // bakes resolve (same observable behaviour as the pre-E.4 chained
-    // `.then`).
+    // bakes resolve.
     state.settings.bias.mode = mode;
     cb.bias?.onModeChange?.(mode);
     void state.subsystems.biasCorrection.setMode(mode);
@@ -1076,6 +1051,30 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // handle, but the AssetSlot machinery handles cancellation of any
     // in-flight previous-tier load identically.
     state.assetSlots.mcpm?.load({ tier });
+
+    // Hi-res LOD-3 famous-galaxy texture is tier-aware on its layerSide
+    // (512 px on small / mobile, 1024 px on medium + large; see
+    // HI_RES_LAYER_SIDE_BY_TIER).  WebGPU textures are immutable in
+    // shape, so a tier flip forces a destroy + recreate of the
+    // texture + planner pair AND a re-bind of the renderer's hi-res
+    // view.  See `helpers/rebuildHiResFamousForTier.ts` for the full
+    // teardown-order rationale.
+    //
+    // device + texturedDiskRenderer are both null until initGpu finishes;
+    // the early return below skips the rebuild if either is missing
+    // (only happens if setTier somehow fires before bootstrap completes,
+    // e.g. a unit test driving the handle directly).
+    const device = bootstrapDeps.phaseLocals?.device;
+    const texturedDiskRenderer = state.gpu.texturedDiskRenderer;
+    if (device && texturedDiskRenderer) {
+      rebuildHiResFamousForTier({
+        state,
+        device,
+        tier,
+        texturedDiskRenderer,
+        requestRender: () => state.subsystems.scheduler.requestRender(),
+      });
+    }
   }
 
   function getCloud(source: SourceType): GalaxyCatalog | undefined {
@@ -1195,9 +1194,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       case 'debug-spherical': {
         const slot = state.assetSlots.syntheticVolumes?.[fieldId];
         if (!slot || slot.state().kind !== 'idle') return;
-        // Same dims + box-size triple all three fixtures used in the
-        // pre-2026-05-19 boot-load block, so they still overlay
-        // coherently when more than one is enabled at once.
+        // Same dims + box-size triple across all three fixtures so they
+        // overlay coherently when more than one is enabled at once.
         const shape =
           fieldId === 'debug-gaussian'
             ? 'gaussian'
@@ -1347,12 +1345,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.youAreHere.destroy();
     state.subsystems.labelDirector.destroy();
     state.subsystems.pois.destroy();
-    // Teardown order across the three impostor subsystems matters:
-    // texturedDisks subscribes to galaxyAtlas's eviction handler
-    // (so destroy it first), proceduralDisks is independent, and
-    // galaxyAtlas releases its GPU texture last among the three.
+    // Teardown order across the impostor subsystems matters:
+    // texturedDisks reads `hiResFamous.lastOutput` per frame and
+    // subscribes to galaxyAtlas's eviction handler, so destroy it
+    // first. hiResFamous subscribes to its underlying texture's evict
+    // handler — destroy the subsystem before the texture so the
+    // handler isn't invoked against a torn-down planner. proceduralDisks
+    // is independent; galaxyAtlas releases its GPU texture last among
+    // the LOD-1/2 trio.
     state.subsystems.texturedDisks?.destroy();
     state.subsystems.texturedDisks = null;
+    state.subsystems.hiResFamous?.destroy();
+    state.subsystems.hiResFamous = null;
+    state.subsystems.hiResFamousTexture?.destroy();
+    state.subsystems.hiResFamousTexture = null;
     state.subsystems.proceduralDisks?.destroy();
     state.subsystems.proceduralDisks = null;
     state.subsystems.galaxyAtlas?.destroy();
@@ -1486,17 +1492,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setIntensity: (value) => boringSetters.setFilamentIntensity(value),
     },
     labels: {
-      // Two parallel setters — one per axis — since the 2026-05-19
-      // settings-panel audit (Q11) split label-text from marker-glyph.
-      // Both follow the same shape: forward into the POI subsystem
-      // (which owns the canonical record consulted by its respective
-      // producer), mirror the change into `state.settings` so the
-      // engine-side bag stays source-of-truth, then echo a fresh copy
-      // of the affected record so subscribers can treat each emission
-      // as an immutable snapshot.  Crucially the OTHER axis is never
-      // touched — flipping label visibility off does NOT hide the
-      // marker, and vice versa.  That orthogonality is the whole point
-      // of the split (see `poiSubsystem.ts` module docblock).
+      // Two parallel setters — one per axis — since label-text is
+      // independent of marker-glyph.  Both follow the same shape:
+      // forward into the POI subsystem (which owns the canonical record
+      // consulted by its respective producer), mirror the change into
+      // `state.settings` so the engine-side bag stays source-of-truth,
+      // then echo a fresh copy of the affected record so subscribers
+      // can treat each emission as an immutable snapshot.  The OTHER
+      // axis is never touched — flipping label visibility off does NOT
+      // hide the marker, and vice versa.  See `poiSubsystem.ts`'s
+      // module docblock for the orthogonality rationale.
       setCategoryLabelVisible: (category, visible) => {
         state.subsystems.pois.setCategoryLabelVisible(category, visible);
         state.settings.labelCategoryVisibility = {
@@ -1548,8 +1553,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // `state.gpu.timingService` is assigned by the async `initGpu` IIFE
     // AFTER this handle literal is constructed.  A copied value would
     // be `null` forever; the getter reads the live slot whenever the
-    // React shell asks for it.  See `EngineDebugHandle.d.ts` for the
-    // H5-sub-handle rationale.
+    // React shell asks for it.
     //
     // `passOverrides`: DebugPanel hook that mutates
     // `state.debug.disabledPasses`.  `allNames` is materialised once
