@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "id": "m51",
+  "crop": {
+    "x": 157.26089477539062,
+    "y": 149.63150024414062,
+    "width": 1963.4628295898438,
+    "height": 1963.4628295898438,
+    "rotationDeg": 0
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 4,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://noirlab.edu/public/images/noao0124a/",
+    "license": "unknown",
+    "author": "T.A.Rector and Monica Ramirez/NOIRLab/NSF/AURA/"
+  },
+  "processedAt": "2026-05-28T21:08:44.023Z"
+}

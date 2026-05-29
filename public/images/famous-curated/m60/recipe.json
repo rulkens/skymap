@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "id": "m60",
+  "crop": {
+    "x": -43.890380859375,
+    "y": 380.2093505859375,
+    "width": 2740.155029296875,
+    "height": 2740.155029296875,
+    "rotationDeg": 17.79423033848491
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4649#/media/File:Messier_60_-_Hubble_(2013-9-24).jpg",
+    "license": "Public domain",
+    "author": "NASA, ESA, CXC, and J. Strader (Michigan State University)"
+  },
+  "processedAt": "2026-05-28T21:09:20.077Z"
+}

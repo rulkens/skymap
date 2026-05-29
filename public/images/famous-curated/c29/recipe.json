@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "id": "c29",
+  "crop": {
+    "x": 158.70196930473378,
+    "y": 427.5940618415532,
+    "width": 797.2999760436628,
+    "height": 797.2999760436628,
+    "rotationDeg": -32.79741522727704
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://noirlab.edu/public/images/noao-n5005magnani/",
+    "license": "unknown",
+    "author": "KPNO/NOIRLab/NSF/AURA/Ray and Emily Magnani/Adam Block"
+  },
+  "processedAt": "2026-05-28T21:05:43.308Z"
+}

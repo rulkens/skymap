@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "id": "m88",
+  "crop": {
+    "x": 503.91387939453114,
+    "y": 24.84393310546875,
+    "width": 1167.2925172380185,
+    "height": 1167.2925172380185,
+    "rotationDeg": -50.35074638413374
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://noirlab.edu/public/images/noao-m88quinn/",
+    "license": "Public domain",
+    "author": "KPNO/NOIRLab/NSF/AURA/Jim Quinn/Adam Block"
+  },
+  "processedAt": "2026-05-28T21:18:04.912Z"
+}

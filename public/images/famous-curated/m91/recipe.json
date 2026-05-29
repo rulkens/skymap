@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "id": "m91",
+  "crop": {
+    "x": 441.515625,
+    "y": 394.5,
+    "width": 1181.984375,
+    "height": 1181.984375,
+    "rotationDeg": 0
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://noirlab.edu/public/images/noao-m91/",
+    "license": "Public Domain",
+    "author": "NOIRLab/NSF/AURA"
+  },
+  "processedAt": "2026-05-28T21:21:57.149Z"
+}

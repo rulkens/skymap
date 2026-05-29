@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "id": "m74",
+  "crop": {
+    "x": 217,
+    "y": 0,
+    "width": 1366,
+    "height": 1366,
+    "rotationDeg": 0
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://noirlab.edu/public/images/noao-m74/",
+    "license": "Public domain",
+    "author": "Todd Boroson/NOIRLab/NSF/AURA/"
+  },
+  "processedAt": "2026-05-28T21:15:31.782Z"
+}
