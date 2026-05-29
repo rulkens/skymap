@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "id": "m94",
+  "crop": {
+    "x": 0,
+    "y": 0,
+    "width": 3000,
+    "height": 3000,
+    "rotationDeg": 0
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://noirlab.edu/public/images/noao-m94/",
+    "license": "CC 4.0",
+    "author": "Hillary Mathis, N.A.Sharp/NOIRLab/NSF/AURA/"
+  },
+  "processedAt": "2026-05-28T21:23:24.066Z"
+}

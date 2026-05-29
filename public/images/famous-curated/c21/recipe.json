@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "id": "c21",
+  "crop": {
+    "x": 453.96575927734375,
+    "y": 606.5667724609375,
+    "width": 531.2860717773438,
+    "height": 531.2860717773438,
+    "rotationDeg": -23.885811226014653
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4449#/media/File:NGC_4449_Box_Galaxy.png",
+    "license": "CC0",
+    "author": "Chuck Ayoub"
+  },
+  "processedAt": "2026-05-28T20:58:09.977Z"
+}

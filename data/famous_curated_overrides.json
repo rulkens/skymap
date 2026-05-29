@@ -364,6 +364,62 @@
       "license": "Public domain",
       "author": "Image: NASA, ESA, CSA, STScI",
       "processedAt": "2026-05-19T09:47:25.245Z"
+    },
+    "c21": {
+      "dir": "famous-curated/c21",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4449#/media/File:NGC_4449_Box_Galaxy.png",
+      "license": "CC0",
+      "author": "Chuck Ayoub",
+      "processedAt": "2026-05-28T20:58:09.977Z"
+    },
+    "c29": {
+      "dir": "famous-curated/c29",
+      "sourceUrl": "https://noirlab.edu/public/images/noao-n5005magnani/",
+      "license": "unknown",
+      "author": "KPNO/NOIRLab/NSF/AURA/Ray and Emily Magnani/Adam Block",
+      "processedAt": "2026-05-28T21:05:43.308Z"
+    },
+    "m51": {
+      "dir": "famous-curated/m51",
+      "sourceUrl": "https://noirlab.edu/public/images/noao0124a/",
+      "license": "unknown",
+      "author": "T.A.Rector and Monica Ramirez/NOIRLab/NSF/AURA/",
+      "processedAt": "2026-05-28T21:08:44.023Z"
+    },
+    "m60": {
+      "dir": "famous-curated/m60",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4649#/media/File:Messier_60_-_Hubble_(2013-9-24).jpg",
+      "license": "Public domain",
+      "author": "NASA, ESA, CXC, and J. Strader (Michigan State University)",
+      "processedAt": "2026-05-28T21:09:20.077Z"
+    },
+    "m74": {
+      "dir": "famous-curated/m74",
+      "sourceUrl": "https://noirlab.edu/public/images/noao-m74/",
+      "license": "Public domain",
+      "author": "Todd Boroson/NOIRLab/NSF/AURA/",
+      "processedAt": "2026-05-28T21:15:31.782Z"
+    },
+    "m88": {
+      "dir": "famous-curated/m88",
+      "sourceUrl": "https://noirlab.edu/public/images/noao-m88quinn/",
+      "license": "Public domain",
+      "author": "KPNO/NOIRLab/NSF/AURA/Jim Quinn/Adam Block",
+      "processedAt": "2026-05-28T21:18:04.912Z"
+    },
+    "m91": {
+      "dir": "famous-curated/m91",
+      "sourceUrl": "https://noirlab.edu/public/images/noao-m91/",
+      "license": "Public Domain",
+      "author": "NOIRLab/NSF/AURA",
+      "processedAt": "2026-05-28T21:21:57.149Z"
+    },
+    "m94": {
+      "dir": "famous-curated/m94",
+      "sourceUrl": "https://noirlab.edu/public/images/noao-m94/",
+      "license": "CC 4.0",
+      "author": "Hillary Mathis, N.A.Sharp/NOIRLab/NSF/AURA/",
+      "processedAt": "2026-05-28T21:23:24.066Z"
     }
   }
 }
