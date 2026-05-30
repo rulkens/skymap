@@ -466,17 +466,17 @@ generated description). The helper does NOT impose a schema beyond
 `id`/`names`/`description` being present — keep the per-domain seed schemas
 out of it (spec §8 "what stays per-domain").
 
-- [ ] Test `writeMetaSidecar writes pretty-printed JSON array indexed by order`
+- [x] Test `writeMetaSidecar writes pretty-printed JSON array indexed by order`
   (write to a tmp path, read back, assert parsed array equals input incl.
   extra fields).
-- [ ] Test `writeMetaSidecar preserves domain-specific extra fields`
+- [x] Test `writeMetaSidecar preserves domain-specific extra fields`
   (entry with a `type` key round-trips).
-- [ ] Implement helper.
-- [ ] Refactor `buildFamous.ts` to build its `metaByIdx` array (unchanged
+- [x] Implement helper.
+- [x] Refactor `buildFamous.ts` to build its `metaByIdx` array (unchanged
   shape) and call `writeMetaSidecar(metaByIdx, resolve(outDir,'famous_meta.json'))`
   instead of the inline `writeFileSync(... JSON.stringify ...)` at
   `buildFamous.ts:137`.
-- [ ] `npm test -- writeMetaSidecar` passes; re-run `buildFamous` is not
+- [x] `npm test -- writeMetaSidecar` passes; re-run `buildFamous` is not
   required for tests but `npm run typecheck` must be clean. Commit.
 
 ---
