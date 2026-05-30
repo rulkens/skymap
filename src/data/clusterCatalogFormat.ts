@@ -50,15 +50,9 @@ const VERSION = 1;
 const HEADER_BYTES = 16;
 const BYTES_PER_RECORD = 28;
 
-// Per-record field offsets relative to the start of each record block.
-// All floats sit in the first 24 bytes (6 × 4), 4-aligned throughout.
-// The category byte lands at offset 24; offsets 25–27 are zeroed padding.
-const OFF_POS_X = 0;
-const OFF_POS_Y = 4;
-const OFF_POS_Z = 8;
-const OFF_PHYS_R = 12;
-const OFF_APP_R = 16;
-const OFF_SIG = 20;
+// Per-record byte offset for the category field.  The six float fields
+// (posX, posY, posZ, physR, appR, sig) occupy float-slots 0..5 at the
+// record start — indexed as f+0 … f+5 in the loop bodies below.
 const OFF_CAT = 24;
 
 export function encodeClusterCatalog(catalog: ClusterCatalog): ArrayBuffer {
@@ -92,15 +86,15 @@ export function encodeClusterCatalog(catalog: ClusterCatalog): ArrayBuffer {
   for (let i = 0; i < count; i++) {
     const byteBase = HEADER_BYTES + i * BYTES_PER_RECORD;
 
-    // The header is 16 bytes = 4 float-slots, so byteBase is always
-    // 4-aligned and (byteBase / 4) is an integer.
+    // Header is 16 bytes = 4 float-slots, so byteBase / 4 is always an integer.
+    // The 6 floats occupy record-relative float-slots 0..5.
     const f = byteBase / 4;
-    floatView[f + OFF_POS_X / 4] = positions[i * 3 + 0]!;
-    floatView[f + OFF_POS_Y / 4] = positions[i * 3 + 1]!;
-    floatView[f + OFF_POS_Z / 4] = positions[i * 3 + 2]!;
-    floatView[f + OFF_PHYS_R / 4] = physicalRadiusMpc[i]!;
-    floatView[f + OFF_APP_R / 4] = apparentRadiusMpc[i]!;
-    floatView[f + OFF_SIG / 4] = significance[i]!;
+    floatView[f + 0] = positions[i * 3 + 0]!;
+    floatView[f + 1] = positions[i * 3 + 1]!;
+    floatView[f + 2] = positions[i * 3 + 2]!;
+    floatView[f + 3] = physicalRadiusMpc[i]!;
+    floatView[f + 4] = apparentRadiusMpc[i]!;
+    floatView[f + 5] = significance[i]!;
 
     // Category byte at record offset 24.  The three padding bytes
     // (25–27) remain zero courtesy of ArrayBuffer zero-init — no
@@ -129,6 +123,13 @@ export function decodeClusterCatalog(buf: ArrayBuffer): ClusterCatalog {
 
   const count = dv.getUint32(8, true);
 
+  // Guard against a truncated download: fail loud rather than silently
+  // decoding zeros from beyond the end of the buffer.
+  const expected = HEADER_BYTES + count * BYTES_PER_RECORD;
+  if (buf.byteLength < expected) {
+    throw new Error(`truncated CCAT file: expected ${expected} bytes, got ${buf.byteLength}`);
+  }
+
   const positions = new Float32Array(count * 3);
   const physicalRadiusMpc = new Float32Array(count);
   const apparentRadiusMpc = new Float32Array(count);
@@ -142,12 +143,12 @@ export function decodeClusterCatalog(buf: ArrayBuffer): ClusterCatalog {
     const byteBase = HEADER_BYTES + i * BYTES_PER_RECORD;
     const f = byteBase / 4;
 
-    positions[i * 3 + 0] = floatView[f + OFF_POS_X / 4]!;
-    positions[i * 3 + 1] = floatView[f + OFF_POS_Y / 4]!;
-    positions[i * 3 + 2] = floatView[f + OFF_POS_Z / 4]!;
-    physicalRadiusMpc[i] = floatView[f + OFF_PHYS_R / 4]!;
-    apparentRadiusMpc[i] = floatView[f + OFF_APP_R / 4]!;
-    significance[i] = floatView[f + OFF_SIG / 4]!;
+    positions[i * 3 + 0] = floatView[f + 0]!;
+    positions[i * 3 + 1] = floatView[f + 1]!;
+    positions[i * 3 + 2] = floatView[f + 2]!;
+    physicalRadiusMpc[i] = floatView[f + 3]!;
+    apparentRadiusMpc[i] = floatView[f + 4]!;
+    significance[i] = floatView[f + 5]!;
 
     category[i] = byteView[byteBase + OFF_CAT]!;
     // Padding bytes 25–27 are ignored on decode.

@@ -1,7 +1,7 @@
 /**
  * Format-level tests for the v1 cluster-catalog binary (CCAT).
  *
- * Four contracts under test:
+ * Five contracts under test:
  *
  *   1. encode → decode is a faithful round trip for all fields: positions
  *      (count*3 floats), two radius arrays, significance, and the category
@@ -122,6 +122,19 @@ describe('encode/decode cluster catalog v1 (CCAT)', () => {
     new DataView(buf).setUint32(4, 2, true);
 
     expect(() => decodeClusterCatalog(buf)).toThrow(/build-clusters/);
+  });
+
+  it('encodeClusterCatalog rejects mismatched array lengths', () => {
+    // count=2 but physicalRadiusMpc has only 1 element — encoder must throw.
+    const bad: ClusterCatalog = {
+      count: 2,
+      positions: new Float32Array([1, 2, 3, 4, 5, 6]),
+      physicalRadiusMpc: new Float32Array([1]), // wrong: should be length 2
+      apparentRadiusMpc: new Float32Array([4, 16]),
+      significance: new Float32Array([5e14, 64]),
+      category: new Uint8Array([0, 1]),
+    };
+    expect(() => encodeClusterCatalog(bad)).toThrow('physicalRadiusMpc length mismatch');
   });
 
   it('emptyClusterCatalog has count 0 and zero-length typed arrays', () => {
