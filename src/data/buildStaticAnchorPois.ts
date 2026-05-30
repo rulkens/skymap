@@ -76,29 +76,47 @@ type SeedEntry = {
 };
 
 /**
+ * Build one POI from a seed entry.  The seed's `category` is the union
+ * `'cluster' | 'supercluster' | 'void'`; a single object literal whose
+ * `category` is that union does NOT narrow to one arm of the discriminated
+ * `PointOfInterest`, so we switch on it and let each branch produce a
+ * literal whose `category` is a single string — which the arm types accept.
+ * The three structure arms share `ExtendedStructurePoi`'s body, so the only
+ * difference between branches is the discriminant.
+ */
+function buildAnchorPoi(a: SeedEntry): PointOfInterest {
+  const common = {
+    // `${category}-${seed.id}` is the canonical POI id — the seed's
+    // curated `id` field is the single source of truth, so deep-link
+    // hashes never diverge from the stored POI ids regardless of
+    // punctuation or non-ASCII characters in the display name.
+    id: `${a.category}-${a.id}`,
+    name: a.names[0]!,
+    worldPos: raDecDistToEqCart(a),
+    // Curated anchors are always featured: they get labels and are
+    // resolvable as deep-link targets.  Significance is full weight —
+    // each seed entry was chosen for being worth showing.
+    featured: true,
+    significance: 1,
+    physicalRadiusMpc: a.physicalRadiusMpc,
+    apparentRadiusMpc: a.apparentRadiusMpc,
+  } as const;
+  switch (a.category) {
+    case 'cluster':
+      return { ...common, category: 'cluster' };
+    case 'supercluster':
+      return { ...common, category: 'supercluster' };
+    case 'void':
+      return { ...common, category: 'void' };
+  }
+}
+
+/**
  * Build the static cluster + supercluster + void POI list.  Synchronous,
  * deterministic, and reference-stable per call (returns a fresh array
  * each call — callers should memoize at the React boundary so reference
  * identity is preserved across renders).
  */
 export function buildStaticAnchorPois(): PointOfInterest[] {
-  return (clusterSeedJson as SeedEntry[]).map(
-    (a): PointOfInterest => ({
-      // `${category}-${seed.id}` is the canonical POI id — the seed's
-      // curated `id` field is the single source of truth, so deep-link
-      // hashes never diverge from the stored POI ids regardless of
-      // punctuation or non-ASCII characters in the display name.
-      id: `${a.category}-${a.id}`,
-      name: a.names[0]!,
-      category: a.category,
-      worldPos: raDecDistToEqCart(a),
-      // Curated anchors are always featured: they get labels and are
-      // resolvable as deep-link targets.  Significance is full weight —
-      // each seed entry was chosen for being worth showing.
-      featured: true,
-      significance: 1,
-      physicalRadiusMpc: a.physicalRadiusMpc,
-      apparentRadiusMpc: a.apparentRadiusMpc,
-    }),
-  );
+  return (clusterSeedJson as SeedEntry[]).map(buildAnchorPoi);
 }

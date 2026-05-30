@@ -21,12 +21,19 @@ describe('isPoi', () => {
       category: 'cluster',
       worldPos: [0, 0, 0],
       featured: true,
+      physicalRadiusMpc: 2,
     };
     expect(isPoi(poi)).toBe(true);
   });
 
   it('returns false for a GalaxyInfo-shaped object (no top-level category)', () => {
-    const fakeGalaxy = { index: 0, x: 1, y: 2, z: 3, galaxyType: { category: 'spiral' } } as unknown as GalaxyInfo;
+    const fakeGalaxy = {
+      index: 0,
+      x: 1,
+      y: 2,
+      z: 3,
+      galaxyType: { category: 'spiral' },
+    } as unknown as GalaxyInfo;
     expect(isPoi(fakeGalaxy)).toBe(false);
   });
 });

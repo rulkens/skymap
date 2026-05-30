@@ -37,6 +37,7 @@ function makeFixtures() {
     category: 'cluster',
     worldPos: [0, 0, 0],
     featured: true,
+    physicalRadiusMpc: 2,
   };
   return { state, cb, galaxy, poi };
 }

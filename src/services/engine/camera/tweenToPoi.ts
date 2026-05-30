@@ -22,11 +22,11 @@ export function tweenToPoi(state: EngineState, poi: PointOfInterest): void {
   const cam = state.cam;
   if (!cam) return;
 
-  // POIs without a physicalRadiusMpc are treated as zero radius by
-  // poiFocusDistance, which clamps to the 1 Mpc minimum.  Every
-  // cluster / SC / void POI sets the field in practice; the fallback
-  // is belt-and-braces for synthetic / future categories.
-  const radius = poi.physicalRadiusMpc ?? 0;
+  // Only the extended-structure arms carry a physical radius.  Famous
+  // galaxies never reach this distance path (poiFocusDistance throws on
+  // 'famousGalaxy'), so they fall to zero radius — which poiFocusDistance
+  // would clamp to the 1 Mpc minimum anyway.
+  const radius = poi.category === 'famousGalaxy' ? 0 : poi.physicalRadiusMpc;
   state.subsystems.tweens.start({
     startMs: performance.now(),
     durationMs: FOCUS_TWEEN_MS,

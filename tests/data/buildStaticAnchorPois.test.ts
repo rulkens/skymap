@@ -46,7 +46,10 @@ describe('buildStaticAnchorPois', () => {
   it('carries physicalRadiusMpc through from the seed', () => {
     const pois = buildStaticAnchorPois();
     const virgo = pois.find((p) => p.id === 'cluster-virgo-m87');
-    expect(virgo?.physicalRadiusMpc).toBe(2.2);
+    // Narrow off the famousGalaxy arm so the radius field is in scope —
+    // static anchors are always extended structures.
+    const radius = virgo && virgo.category !== 'famousGalaxy' ? virgo.physicalRadiusMpc : undefined;
+    expect(radius).toBe(2.2);
   });
 
   it('marks every static anchor POI as featured', () => {

@@ -557,6 +557,9 @@ describe('wireSlots', () => {
     const m31 = final.find((p) => p.id === 'famous-m31');
     expect(m31?.name).toBe('Andromeda Galaxy');
     expect(m31?.category).toBe('famousGalaxy');
-    expect(m31?.minApparentSizePx).toBe(6);
+    // minApparentSizePx lives on the famousGalaxy arm — narrow before
+    // reading it.
+    const minPx = m31 && m31.category === 'famousGalaxy' ? m31.minApparentSizePx : undefined;
+    expect(minPx).toBe(6);
   });
 });

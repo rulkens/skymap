@@ -424,11 +424,16 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
       const distanceMpc = Math.hypot(dx, dy, dz);
 
       // Apparent-size gate (binary skip below threshold, optional
-      // smoothstep fade in the band above it).  Only runs when both
-      // threshold AND diameter are set — see the type doc on
-      // `apparentDiameterKpc` for the permissive-default rationale.
+      // smoothstep fade in the band above it).  Only the famousGalaxy arm
+      // carries the threshold + diameter; structure arms never gate on
+      // apparent size.  Runs only when both fields are set — see the type
+      // doc on `apparentDiameterKpc` for the permissive-default rationale.
       let fadeAlpha = 1;
-      if (p.minApparentSizePx !== undefined && p.apparentDiameterKpc !== undefined) {
+      if (
+        p.category === 'famousGalaxy' &&
+        p.minApparentSizePx !== undefined &&
+        p.apparentDiameterKpc !== undefined
+      ) {
         const sizePx = apparentSizePx({
           diameterKpc: p.apparentDiameterKpc,
           distanceMpc,
@@ -461,8 +466,12 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
       //
       // Uses the apparent (wider) radius because that's what drives the
       // ring's actual on-screen size; the core radius is irrelevant to
-      // when the user "fills the viewport" with the cluster.
-      const markerRadiusMpc = p.apparentRadiusMpc ?? p.physicalRadiusMpc;
+      // when the user "fills the viewport" with the cluster.  Only the
+      // structure arms have a radius — famous galaxies skip this block
+      // (their per-POI minApparentSizePx gate above handles the far-end
+      // fade).
+      const markerRadiusMpc =
+        p.category === 'famousGalaxy' ? undefined : (p.apparentRadiusMpc ?? p.physicalRadiusMpc);
       if (markerRadiusMpc !== undefined && distanceMpc > 0.001) {
         const apRadPx = (markerRadiusMpc / distanceMpc) * (halfH / Math.tan(fovYRad * 0.5));
         if (apRadPx > style.markerMaxApparentRadiusPx) {
@@ -519,7 +528,7 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
       // up in world-Y and use horizontal centring around the line.
       let alignX: 'left' | 'center' | 'right' = 'center';
       let alignY: 'baseline' | 'center' | 'top' | 'bottom' = 'center';
-      if (p.labelAnchorOffsetMpc !== undefined) {
+      if (p.category === 'famousGalaxy' && p.labelAnchorOffsetMpc !== undefined) {
         const offset = p.labelAnchorOffsetMpc;
         labelWorldPos = [p.worldPos[0], p.worldPos[1] + offset, p.worldPos[2]];
         alignX = 'center';
@@ -560,7 +569,8 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
         font: 'cormorant',
         pixelSize: 0, // legacy field — ignored by the new worldEm sizing model
         color: [...style.labelColor],
-        worldEmMpc: p.labelWorldEmMpc ?? style.worldEmMpc,
+        worldEmMpc:
+          (p.category === 'famousGalaxy' ? p.labelWorldEmMpc : undefined) ?? style.worldEmMpc,
         minPixelSize: style.minPixelSize,
         maxPixelSize: style.maxPixelSize,
         fadeAlpha,
@@ -587,11 +597,14 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
     return { labels, lines, awake: false };
   }
 
-  function produceMarkers(state: EngineState, ctx: ReadyFrameContext): readonly ClusterMarkerDescriptor[] {
+  function produceMarkers(
+    state: EngineState,
+    ctx: ReadyFrameContext,
+  ): readonly ClusterMarkerDescriptor[] {
     const out: ClusterMarkerDescriptor[] = [];
     const halfH = ctx.canvasSize.height * 0.5;
     const fovYRad = 2 * Math.atan(halfH / ctx.drawPxPerRad);
-    const pxPerRad = ctx.canvasSize.height * 0.5 / Math.tan(fovYRad * 0.5);
+    const pxPerRad = (ctx.canvasSize.height * 0.5) / Math.tan(fovYRad * 0.5);
     const [cx, cy, cz] = ctx.drawCamPos;
     // Selected POI id (if any) — read straight off the selection
     // subsystem each frame so produceMarkers stays a pure function of
@@ -606,18 +619,16 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
       // independent so the SettingsPanel can offer separate "show
       // markers" vs "show labels" master toggles.
       if (!markerVisibility[p.category]) continue;
+      // Famous galaxies opt out of the marker pass entirely — they have
+      // no radius and render curated thumbnails on close approach instead.
+      // Skipping early narrows `p` to the structure arms so the radius
+      // read below is type-safe.
+      if (p.category === 'famousGalaxy') continue;
       // The marker pass renders at the WIDER apparent extent (named
-      // cluster extent, not the virial core).  Fall back to the core
-      // for POIs that only set physicalRadiusMpc — none today, but
-      // matches the optional-shape of both fields on PointOfInterest.
-      // No radius at all → no ring → skip (famous galaxies).
+      // cluster extent, not the virial core).  Fall back to the core for
+      // structures that only set physicalRadiusMpc.
       const radiusMpc = p.apparentRadiusMpc ?? p.physicalRadiusMpc;
-      if (radiusMpc === undefined) continue;
       const style: CategoryStyle = POI_STYLES[p.category];
-      // ringColor === null guards a never-happens path; we use
-      // haloColor === null to mean "label-only category".  Famous
-      // galaxies always hit this branch.
-      if (style.haloColor === null && p.category === 'famousGalaxy') continue;
 
       const dx = p.worldPos[0] - cx;
       const dy = p.worldPos[1] - cy;
@@ -654,7 +665,8 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
       if (apparentRadiusPx < style.markerMinApparentRadiusPx) {
         minFadeAlpha = 0;
       } else if (
-        apparentRadiusPx < style.markerMinApparentRadiusPx + style.markerMinApparentFadeBandPx
+        apparentRadiusPx <
+        style.markerMinApparentRadiusPx + style.markerMinApparentFadeBandPx
       ) {
         const t =
           (apparentRadiusPx - style.markerMinApparentRadiusPx) / style.markerMinApparentFadeBandPx;
@@ -670,14 +682,15 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
       // descriptor's alpha channel.  Voids opt out via null haloColor
       // and emit a fully-transparent [0,0,0,0] (the renderer's halo
       // pass skips alpha==0 instances entirely).
-      const haloColor: Vec4 = style.haloColor !== null
-        ? [
-            style.haloColor[0],
-            style.haloColor[1],
-            style.haloColor[2],
-            style.haloColor[3] * fadeAlpha,
-          ]
-        : [0, 0, 0, 0];
+      const haloColor: Vec4 =
+        style.haloColor !== null
+          ? [
+              style.haloColor[0],
+              style.haloColor[1],
+              style.haloColor[2],
+              style.haloColor[3] * fadeAlpha,
+            ]
+          : [0, 0, 0, 0];
 
       // Ring Vec4: same fade bake as halo, plus the selection bump.
       // The focused POI's ring alpha is multiplied by 1.5 (capped at

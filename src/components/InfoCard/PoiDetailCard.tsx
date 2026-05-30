@@ -41,7 +41,7 @@ export function PoiDetailCard({
 
       <div className={styles.cardSection}>
         <CardRow label="Distance" value={formatDistance(distanceMpc)} />
-        {poi.physicalRadiusMpc !== undefined && (
+        {poi.category !== 'famousGalaxy' && (
           <CardRow label="Radius" value={formatDistance(poi.physicalRadiusMpc)} />
         )}
       </div>

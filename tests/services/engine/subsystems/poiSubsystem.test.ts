@@ -237,14 +237,15 @@ describe('poiSubsystem', () => {
     expect(out.lines).toEqual([]);
   });
 
-  it('emits a POI without minApparentSizePx unconditionally', () => {
+  it('emits a famous-galaxy POI without minApparentSizePx unconditionally', () => {
     const sub = createPoiSubsystem();
-    // 500 Mpc away — would be suppressed if a threshold were set,
-    // but the field is absent so the producer skips the gate.
+    // 500 Mpc away — would be suppressed if a threshold were set, but the
+    // field is absent so the producer skips the gate.  famousGalaxy is the
+    // arm that legitimately omits both the size gate and any radius.
     const noGate: PointOfInterest = {
       id: 'no-gate',
       name: 'NoGate',
-      category: 'cluster',
+      category: 'famousGalaxy',
       worldPos: [500, 0, 0],
       featured: true,
     };
@@ -341,12 +342,30 @@ describe('poiSubsystem — produceMarkers', () => {
   it('returns one descriptor per visible cluster + supercluster + void POI', () => {
     const sub = createPoiSubsystem();
     sub.setPois([
-      { id: 'virgo', name: 'Virgo', category: 'cluster', featured: true,
-        worldPos: [10, 0, 0], physicalRadiusMpc: 2 },
-      { id: 'hercules', name: 'Hercules SC', category: 'supercluster', featured: true,
-        worldPos: [0, 100, 0], physicalRadiusMpc: 50 },
-      { id: 'bootes', name: 'Boötes Void', category: 'void', featured: true,
-        worldPos: [0, 0, 200], physicalRadiusMpc: 50 },
+      {
+        id: 'virgo',
+        name: 'Virgo',
+        category: 'cluster',
+        featured: true,
+        worldPos: [10, 0, 0],
+        physicalRadiusMpc: 2,
+      },
+      {
+        id: 'hercules',
+        name: 'Hercules SC',
+        category: 'supercluster',
+        featured: true,
+        worldPos: [0, 100, 0],
+        physicalRadiusMpc: 50,
+      },
+      {
+        id: 'bootes',
+        name: 'Boötes Void',
+        category: 'void',
+        featured: true,
+        worldPos: [0, 0, 200],
+        physicalRadiusMpc: 50,
+      },
     ]);
     const markers = sub.produceMarkers(makeState(), makeCtx());
     expect(markers).toHaveLength(3);
@@ -355,8 +374,7 @@ describe('poiSubsystem — produceMarkers', () => {
   it('excludes famous-galaxy POIs from markers', () => {
     const sub = createPoiSubsystem();
     sub.setPois([
-      { id: 'm31', name: 'M31', category: 'famousGalaxy', featured: true,
-        worldPos: [0.78, 0, 0], physicalRadiusMpc: 0.05 },
+      { id: 'm31', name: 'M31', category: 'famousGalaxy', featured: true, worldPos: [0.78, 0, 0] },
     ]);
     const markers = sub.produceMarkers(makeState(), makeCtx());
     expect(markers).toHaveLength(0);
@@ -365,8 +383,14 @@ describe('poiSubsystem — produceMarkers', () => {
   it('voids emit both halo and ring (halo at the dimmer at-rest alpha from the style)', () => {
     const sub = createPoiSubsystem();
     sub.setPois([
-      { id: 'bootes', name: 'Boötes Void', category: 'void', featured: true,
-        worldPos: [0, 0, 200], physicalRadiusMpc: 50 },
+      {
+        id: 'bootes',
+        name: 'Boötes Void',
+        category: 'void',
+        featured: true,
+        worldPos: [0, 0, 200],
+        physicalRadiusMpc: 50,
+      },
     ]);
     const markers = sub.produceMarkers(makeState(), makeCtx());
     expect(markers[0]?.haloColor[3]).toBeGreaterThan(0);
@@ -379,27 +403,27 @@ describe('poiSubsystem — produceMarkers', () => {
   it('respects setCategoryMarkerVisible', () => {
     const sub = createPoiSubsystem();
     sub.setPois([
-      { id: 'virgo', name: 'Virgo', category: 'cluster', featured: true,
-        worldPos: [10, 0, 0], physicalRadiusMpc: 2 },
-      { id: 'bootes', name: 'Boötes Void', category: 'void', featured: true,
-        worldPos: [0, 0, 200], physicalRadiusMpc: 50 },
+      {
+        id: 'virgo',
+        name: 'Virgo',
+        category: 'cluster',
+        featured: true,
+        worldPos: [10, 0, 0],
+        physicalRadiusMpc: 2,
+      },
+      {
+        id: 'bootes',
+        name: 'Boötes Void',
+        category: 'void',
+        featured: true,
+        worldPos: [0, 0, 200],
+        physicalRadiusMpc: 50,
+      },
     ]);
     sub.setCategoryMarkerVisible('void', false);
     const markers = sub.produceMarkers(makeState(), makeCtx());
     expect(markers).toHaveLength(1);
     expect(markers[0]?.category).toBe('cluster');
-  });
-
-  it('skips POIs without physicalRadiusMpc', () => {
-    const sub = createPoiSubsystem();
-    sub.setPois([
-      // No physicalRadiusMpc — should not appear in markers (no
-      // radius to draw to).
-      { id: 'unsized', name: 'Unsized', category: 'cluster', featured: true,
-        worldPos: [10, 0, 0] },
-    ]);
-    const markers = sub.produceMarkers(makeState(), makeCtx());
-    expect(markers).toHaveLength(0);
   });
 });
 
@@ -418,8 +442,14 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
     // radiusMpc=1, distance=150 Mpc → apRadPx ≈ 6.2 < cluster floor (12).
     const sub = createPoiSubsystem();
     sub.setPois([
-      { id: 'tiny', name: 'Tiny', category: 'cluster', featured: true,
-        worldPos: [150, 0, 0], physicalRadiusMpc: 1 },
+      {
+        id: 'tiny',
+        name: 'Tiny',
+        category: 'cluster',
+        featured: true,
+        worldPos: [150, 0, 0],
+        physicalRadiusMpc: 1,
+      },
     ]);
     const markers = sub.produceMarkers(makeState(), makeCtx());
     expect(markers).toHaveLength(0);
@@ -430,8 +460,14 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
     // radiusMpc=1, distance = 935.307 / 18 ≈ 51.96 Mpc.
     const sub = createPoiSubsystem();
     sub.setPois([
-      { id: 'midband', name: 'Mid', category: 'cluster', featured: true,
-        worldPos: [51.96, 0, 0], physicalRadiusMpc: 1 },
+      {
+        id: 'midband',
+        name: 'Mid',
+        category: 'cluster',
+        featured: true,
+        worldPos: [51.96, 0, 0],
+        physicalRadiusMpc: 1,
+      },
     ]);
     const markers = sub.produceMarkers(makeState(), makeCtx());
     expect(markers).toHaveLength(1);
@@ -444,8 +480,14 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
     // worldPos=[10,0,0], radius=2 → apRadPx ≈ 187, well above 24.
     const sub = createPoiSubsystem();
     sub.setPois([
-      { id: 'big', name: 'Big', category: 'cluster', featured: true,
-        worldPos: [10, 0, 0], physicalRadiusMpc: 2 },
+      {
+        id: 'big',
+        name: 'Big',
+        category: 'cluster',
+        featured: true,
+        worldPos: [10, 0, 0],
+        physicalRadiusMpc: 2,
+      },
     ]);
     const markers = sub.produceMarkers(makeState(), makeCtx());
     expect(markers).toHaveLength(1);
@@ -456,8 +498,14 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
     // radiusMpc=1, distance=200 → apRadPx ≈ 4.7 < 28.
     const sub = createPoiSubsystem();
     sub.setPois([
-      { id: 'sc-far', name: 'Far SC', category: 'supercluster', featured: true,
-        worldPos: [200, 0, 0], physicalRadiusMpc: 1 },
+      {
+        id: 'sc-far',
+        name: 'Far SC',
+        category: 'supercluster',
+        featured: true,
+        worldPos: [200, 0, 0],
+        physicalRadiusMpc: 1,
+      },
     ]);
     const markers = sub.produceMarkers(makeState(), makeCtx());
     expect(markers).toHaveLength(0);
@@ -467,8 +515,14 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
     // radiusMpc=1, distance=500 → apRadPx ≈ 1.87 < 28.
     const sub = createPoiSubsystem();
     sub.setPois([
-      { id: 'void-far', name: 'Far Void', category: 'void', featured: true,
-        worldPos: [500, 0, 0], physicalRadiusMpc: 1 },
+      {
+        id: 'void-far',
+        name: 'Far Void',
+        category: 'void',
+        featured: true,
+        worldPos: [500, 0, 0],
+        physicalRadiusMpc: 1,
+      },
     ]);
     const markers = sub.produceMarkers(makeState(), makeCtx());
     expect(markers).toHaveLength(0);
@@ -480,8 +534,14 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
     // the ring rather than lingering at full alpha.
     const sub = createPoiSubsystem();
     sub.setPois([
-      { id: 'midband', name: 'Mid', category: 'cluster', featured: true,
-        worldPos: [51.96, 0, 0], physicalRadiusMpc: 1 },
+      {
+        id: 'midband',
+        name: 'Mid',
+        category: 'cluster',
+        featured: true,
+        worldPos: [51.96, 0, 0],
+        physicalRadiusMpc: 1,
+      },
     ]);
     const markers = sub.produceMarkers(makeState(), makeCtx());
     const labels = sub.produceLabels(makeState(), makeCtx()).labels;
@@ -498,12 +558,17 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
     // also skipped.  The label should still emit at the camera distance
     // the existing min-apparent-size tests use.
     const sub = createPoiSubsystem();
-    sub.setPois([{
-      id: 'm31', name: 'Andromeda', category: 'famousGalaxy', featured: true,
-      worldPos: [0.78, 0, 0],
-      minApparentSizePx: 4,
-      apparentDiameterKpc: 50,
-    }]);
+    sub.setPois([
+      {
+        id: 'm31',
+        name: 'Andromeda',
+        category: 'famousGalaxy',
+        featured: true,
+        worldPos: [0.78, 0, 0],
+        minApparentSizePx: 4,
+        apparentDiameterKpc: 50,
+      },
+    ]);
     const labels = sub.produceLabels(makeState(), makeCtx()).labels;
     expect(labels).toHaveLength(1);
   });
