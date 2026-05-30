@@ -157,19 +157,19 @@ export function parseMcxc(raw: string): McxcRow[];
 parsed directly as decimal degrees (no sexagesimal conversion); blank
 `OName`/`AName` → `''` (trim); skip comment/blank lines.
 
-- [ ] Build a small hand-crafted fixture (3–4 rows copied verbatim from the
+- [x] Build a small hand-crafted fixture (3–4 rows copied verbatim from the
   real `mcxc.dat`, exact column alignment) as a test constant. Include one
   row with a populated `AName` (e.g. row 0 `UGC 12890`) and one with blank
   `AName` (e.g. row 1).
-- [ ] Test `parseMcxc reads decimal RAdeg/DEdeg, z, M500, R500` asserting
+- [x] Test `parseMcxc reads decimal RAdeg/DEdeg, z, M500, R500` asserting
   row 0 ≈ `{raDeg: 0.030, decDeg: 8.274, z: 0.0396, m500: 0.7373, r500Mpc: 0.6296}`
   (~1e-3 tol).
-- [ ] Test `parseMcxc reads a signed southern declination` asserting a
+- [x] Test `parseMcxc reads a signed southern declination` asserting a
   negative `decDeg` row (e.g. row 1 `-2.625`).
-- [ ] Test `parseMcxc returns blank AName as empty string` on a row whose
+- [x] Test `parseMcxc returns blank AName as empty string` on a row whose
   `AName` column is all spaces.
-- [ ] Test `parseMcxc skips comment and blank lines`.
-- [ ] Implement against the verified offsets. `npm test -- parseMcxc` → passes.
+- [x] Test `parseMcxc skips comment and blank lines`.
+- [x] Implement against the verified offsets. `npm test -- parseMcxc` → passes.
   Commit.
 
 ---
