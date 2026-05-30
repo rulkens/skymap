@@ -66,7 +66,7 @@ export function effectiveTilt(
 ```
 
 **Behaviour:**
-- `calibratedDiskSizeWorld`: `catalogSizeWorld / diskRadiusFrac`. Guard `diskRadiusFrac > 0` (return `catalogSizeWorld` or throw on 0 — document the choice; `deriveCalibration` never produces 0, but the guard documents intent).
+- `calibratedDiskSizeWorld`: `catalogSizeWorld / diskRadiusFrac`. Guard `diskRadiusFrac > 0` (return `catalogSizeWorld` or throw on 0 — document the choice; `deriveFamousCalibration` never produces 0, but the guard documents intent).
 - `nucleusOffsetWorld`: the normalized centre delta `(center - [0.5,0.5])` scaled by `diskSizeWorld` (the disk spans `±diskSizeWorld/2`, so a full half-frame delta of 0.5 maps to `diskSizeWorld/2`), projected onto `right`/`up`, **negated** so the nucleus moves onto the catalog point. `[0.5,0.5]` → `[0,0,0]`. Confirm sign against the shader's UV→corner convention.
 - `effectiveTilt`: `deprojected` → `{ positionAngleDeg: calibration.paDeg, axisRatio: calibration.axisRatio ?? catalogAxisRatio }`; `!deprojected` → `{ positionAngleDeg: 0, axisRatio: 1 }`.
 

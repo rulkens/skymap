@@ -60,7 +60,7 @@ export function axisRatioFromMinorDrag(disk: RecipeDisk, pointPx: Vec2): number;
 
 - [ ] **Step 1: Write the failing tests** — `diskFromDrag computes radius and PA from a horizontal drag` (PA ~90 or 0 per convention; assert the documented one); `diskFromDrag PA is in [0,180)`; `minorAxisHandle is perpendicular to the major axis`; `axisRatioFromMinorDrag inverts minorAxisHandle` (round-trip within tolerance).
 - [ ] **Step 2:** `npm test -- diskOverlay` → FAIL.
-- [ ] **Step 3:** Implement with `Vec2` math. PA convention: document it in the file header and match what `deriveCalibration` (Plan 1 Task 5) expects — east-of-north [0,180). Keep these pure (no DOM).
+- [ ] **Step 3:** Implement with `Vec2` math. PA convention: document it in the file header and match what `deriveFamousCalibration` (Plan 1 Task 5) expects — east-of-north [0,180). Keep these pure (no DOM).
 - [ ] **Step 4:** `npm test -- diskOverlay` → PASS.
 - [ ] **Step 5: Commit**
 
