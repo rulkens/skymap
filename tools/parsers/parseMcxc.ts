@@ -38,7 +38,7 @@
  * The sexagesimal columns span bytes 88–107, which is a 20-byte stretch split
  * across six fields (RAh, RAm, RAs, DE-, DEd, DEm, DEs).  Converting them
  * requires parsing the sign byte (byte 99) separately from the degree/arcmin/
- * arcsec fields and then doing h*15 + m*0.25 + s*0.00417 arithmetic.  The
+ * arcsec fields and then doing h*15 + m*0.25 + s*(1/240) arithmetic.  The
  * ReadMe explicitly provides pre-computed decimal equivalents at bytes 109–123;
  * using those is strictly less error-prone and produces the same bit-identical
  * result, because the MCXC team computed them from the same underlying angles.
@@ -53,6 +53,8 @@
  * against short lines (< 204 bytes) to avoid silent NaN from slicing past the
  * string end, but we do NOT require the full 323-byte width.
  */
+
+import { nonCommentLines, slot } from './common.js';
 
 /** Minimum useful line length — R500 column ends at byte 204. */
 const MIN_LINE_LEN = 204;
@@ -103,14 +105,11 @@ export type McxcRow = {
 export function parseMcxc(raw: string): McxcRow[] {
   const rows: McxcRow[] = [];
 
-  // Normalise CRLF before splitting so Windows-format downloads work too.
-  const lines = raw.replace(/\r\n/g, '\n').split('\n');
-
-  for (const line of lines) {
-    // Skip blank lines and VizieR comment lines (start with '#').
-    const trimmed = line.trim();
-    if (trimmed === '' || trimmed.startsWith('#')) continue;
-
+  // `nonCommentLines` handles CRLF normalisation, blank lines, and `#`/`--`
+  // comment lines — all three filters we need here.  MCXC ids look like
+  // `J0000.1+0816` (never start with `--`), so the SQL-comment filter is a
+  // no-op but harmless.
+  for (const line of nonCommentLines(raw)) {
     // Guard against rows that end before the R500 column (byte 204).
     // `slice` past the string end silently returns `''`, which `parseFloat`
     // turns into NaN — bailing out here makes short-line skips explicit and
