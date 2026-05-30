@@ -44,7 +44,8 @@
  *
  * The ALLOW filter mirrors the runtime fetch surface: tier-suffixed
  * SDSS/GLADE bins, the unsuffixed 2mrs.bin / famous.bin / filaments.bin,
- * plus the famous JSON sidecars.  The legacy un-tiered glade.bin / sdss.bin
+ * the famous JSON sidecar, and the pgc_aliases.json palette-search sidecar.
+ * The legacy un-tiered glade.bin / sdss.bin
  * are deliberately skipped — they're pre-tier-system build artefacts only
  * used by the offline DisPerSE pipeline, never fetched from the browser.
  * Likewise the diagnostic filaments-sdss.bin (the SDSS-only DisPerSE build
@@ -116,6 +117,11 @@ const ALLOW = (name: string): boolean =>
   // cloudLoader.filamentFilenameForTier().
   name === 'filaments-small.bin' ||
   name === 'famous_meta.json' ||
+  // PGC→names sidecar for the Cmd+K palette's alias search. Lazily
+  // fetched via dataUrl('pgc_aliases.json') on first palette open, so a
+  // missing R2 object only surfaces as a console error when the user
+  // opens search — not at boot. Built by `npm run build-pgc-aliases`.
+  name === 'pgc_aliases.json' ||
   // Valade 2024 CF-4 HAMLET 256³ DM density cube, written as SCFD by
   // `npm run build-cf4-density` from the maintainer-produced .npy.
   // See data/raw/cf4/README.md for the maintainer + contributor paths.
