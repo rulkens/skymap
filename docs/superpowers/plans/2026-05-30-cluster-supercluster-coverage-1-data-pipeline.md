@@ -297,16 +297,16 @@ export function emptyClusterCatalog(): ClusterCatalog;
 `` `unsupported cluster-catalog version: ${v} — please regenerate the .ccat via "npm run build-clusters"` `` on version mismatch (mirror
 `galaxyCatalogFormat.ts:145-156`, but with the build-clusters message).
 
-- [ ] Test `encode→decode round-trips positions, radii, significance, category`
+- [x] Test `encode→decode round-trips positions, radii, significance, category`
   for a 2-record catalog (one cluster, one supercluster), asserting exact
   float-array equality and category bytes.
-- [ ] Test `encoded file size is 16 + count*28`.
-- [ ] Test `decode rejects bad magic` (write `'SKMP'` magic, expect throw
+- [x] Test `encoded file size is 16 + count*28`.
+- [x] Test `decode rejects bad magic` (write `'SKMP'` magic, expect throw
   containing `'CCAT'`).
-- [ ] Test `decode rejects wrong version` asserting the message contains
+- [x] Test `decode rejects wrong version` asserting the message contains
   `build-clusters`.
-- [ ] Test `emptyClusterCatalog has count 0 and zero-length arrays`.
-- [ ] Implement. `npm test -- clusterCatalogFormat` → passes. Commit.
+- [x] Test `emptyClusterCatalog has count 0 and zero-length arrays`.
+- [x] Implement. `npm test -- clusterCatalogFormat` → passes. Commit.
 
 ---
 
