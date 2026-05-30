@@ -200,15 +200,17 @@ export function createScalarVolumeRenderer(
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'scalarVolume.fragment');
 
   // @group(0) layout — pipeline-specific (uniform + 3D texture + sampler
-  // + 1D texture + sampler). Built from a manual BindGroupLayout descriptor
-  // so the pipeline layout below can list it alongside the canonical fadeBgl.
+  // + palette LUT 2D texture + sampler). Built from a manual BindGroupLayout
+  // descriptor so the pipeline layout below can list it alongside the
+  // canonical fadeBgl. The palette is an N x 1 2D texture rather than a
+  // texture_1d — see createPaletteTexture and the shader binding for why.
   const group0Bgl = device.createBindGroupLayout({
     label: 'scalarVolume-bgl-group0',
     entries: [
       { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
       { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '3d' } },
       { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
-      { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '1d' } },
+      { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },
       { binding: 4, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
     ],
   });
@@ -288,14 +290,22 @@ export function createScalarVolumeRenderer(
 
   // Per-field palette texture — created in `addField`, mutated in
   // `setFieldPalette` via the shared `writePaletteLut` helper.  A single
-  // 1D r=PALETTE_LUT_SIZE texture per field is the natural cost since
+  // PALETTE_LUT_SIZE x 1 2D texture per field is the natural cost since
   // each field uses its own colour ramp; bind groups reference the
   // texture's view, which stays valid across `writeTexture` calls.
+  //
+  // Stored as an N x 1 2D texture rather than a texture_1d: WGSL has no
+  // textureSampleLevel overload for 1D textures, so the shader's
+  // explicit-LOD palette lookup only compiles portably (iOS WebKit
+  // included) against a 2D sampler. See the fragment shader's palette
+  // binding for the full rationale.
   function createPaletteTexture(): GPUTexture {
     return device.createTexture({
       size: { width: PALETTE_LUT_SIZE, height: 1, depthOrArrayLayers: 1 },
       format: 'rgba8unorm',
-      dimension: '1d',
+      // dimension defaults to '2d'; named explicitly for symmetry with the
+      // '3d' volume texture above and to document the LUT-as-2D choice.
+      dimension: '2d',
       usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
     });
   }

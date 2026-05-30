@@ -100,7 +100,15 @@ struct VolumeUniforms {
 @group(0) @binding(0) var<uniform> u: VolumeUniforms;
 @group(0) @binding(1) var volume: texture_3d<f32>;
 @group(0) @binding(2) var volumeSampler: sampler;
-@group(0) @binding(3) var palette: texture_1d<f32>;
+// The palette LUT is stored as an N x 1 2D texture, NOT a texture_1d.
+// WGSL defines no textureSampleLevel overload for texture_1d (only 2d /
+// 2d_array / 3d / cube / depth), so sampling a 1D LUT with an explicit
+// LOD is non-portable: Chrome's Tint accepts it leniently, iOS WebKit
+// rejects it at compile time, which invalidates this whole pipeline and
+// drops every frame's command buffer. An N x 1 2D texture is the
+// standard portable idiom for a 1D LUT and keeps hardware linear
+// filtering via the sampler.
+@group(0) @binding(3) var palette: texture_2d<f32>;
 @group(0) @binding(4) var paletteSampler: sampler;
 
 @group(1) @binding(0) var<uniform> fade: FadeUniforms;
@@ -293,9 +301,12 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
     let window = applyContrastWindow(sampleValue, u.contrast, u.contrastCenter, u.trim);
     let signedT = window.x;
     let visibility = window.y;
-    // Look up colour through the 1D palette LUT.  Same uniformity
-    // constraint as the volume sample above.
-    let lut = textureSampleLevel(palette, paletteSampler, signedT, 0.0);
+    // Look up colour through the palette LUT (an N x 1 2D texture; see
+    // the binding declaration). Same uniformity constraint as the volume
+    // sample above, so explicit LOD 0.  The v-coordinate is fixed at 0.5
+    // -- the centre of the single texel row -- so clamp-to-edge sampling
+    // never bleeds in a neighbouring row.
+    let lut = textureSampleLevel(palette, paletteSampler, vec2<f32>(signedT, 0.5), 0.0);
     // Per-step alpha = density * stepLength.  This is the discrete form
     // of the optical-depth integral: total opacity along the ray =
     // sum(density * dx) which is path-length-correct (a longer ray
