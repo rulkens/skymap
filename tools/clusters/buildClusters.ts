@@ -54,9 +54,8 @@ import type { Vec3 } from '../../src/@types/math/Vec3.js';
 // ── Tunable threshold constants ───────────────────────────────────────────────
 //
 // These constants control which catalog rows are included in the build output.
-// Tuned from the actual distributions found in the MCXC and MSCC catalogs
-// (see the analysis in tests/tools/clusters/_dist_analysis.test.ts for counts
-// at each threshold level).
+// Tuned from the actual M500 / Nm distributions in the MCXC and MSCC catalogs
+// (the per-constant docs below record the surviving counts at each threshold).
 
 /**
  * Minimum M500 mass (× 10^14 M☉) for an MCXC cluster to be included.
