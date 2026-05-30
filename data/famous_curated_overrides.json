@@ -375,14 +375,14 @@
     "c29": {
       "dir": "famous-curated/c29",
       "sourceUrl": "https://noirlab.edu/public/images/noao-n5005magnani/",
-      "license": "unknown",
+      "license": "CC BY 4.0",
       "author": "KPNO/NOIRLab/NSF/AURA/Ray and Emily Magnani/Adam Block",
       "processedAt": "2026-05-28T21:05:43.308Z"
     },
     "m51": {
       "dir": "famous-curated/m51",
       "sourceUrl": "https://noirlab.edu/public/images/noao0124a/",
-      "license": "unknown",
+      "license": "CC BY 4.0",
       "author": "T.A.Rector and Monica Ramirez/NOIRLab/NSF/AURA/",
       "processedAt": "2026-05-28T21:08:44.023Z"
     },
@@ -396,28 +396,28 @@
     "m74": {
       "dir": "famous-curated/m74",
       "sourceUrl": "https://noirlab.edu/public/images/noao-m74/",
-      "license": "Public domain",
+      "license": "CC BY 4.0",
       "author": "Todd Boroson/NOIRLab/NSF/AURA/",
       "processedAt": "2026-05-28T21:15:31.782Z"
     },
     "m88": {
       "dir": "famous-curated/m88",
       "sourceUrl": "https://noirlab.edu/public/images/noao-m88quinn/",
-      "license": "Public domain",
+      "license": "CC BY 4.0",
       "author": "KPNO/NOIRLab/NSF/AURA/Jim Quinn/Adam Block",
       "processedAt": "2026-05-28T21:18:04.912Z"
     },
     "m91": {
       "dir": "famous-curated/m91",
       "sourceUrl": "https://noirlab.edu/public/images/noao-m91/",
-      "license": "Public Domain",
+      "license": "CC BY 4.0",
       "author": "NOIRLab/NSF/AURA",
       "processedAt": "2026-05-28T21:21:57.149Z"
     },
     "m94": {
       "dir": "famous-curated/m94",
       "sourceUrl": "https://noirlab.edu/public/images/noao-m94/",
-      "license": "CC 4.0",
+      "license": "CC BY 4.0",
       "author": "Hillary Mathis, N.A.Sharp/NOIRLab/NSF/AURA/",
       "processedAt": "2026-05-28T21:23:24.066Z"
     }

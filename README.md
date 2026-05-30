@@ -205,18 +205,22 @@ poisoning the ramp with NaN.
 A separate small catalog of well-known galaxies (Messier + NGC greatest-hits)
 ships alongside the survey data. Entries appear with their curated names
 in the InfoCard and are searchable via the **Cmd+K / Ctrl+K** command
-palette. Their thumbnails are pre-processed transparent WebPs hand-fetched
-from the DESI Legacy Imaging service, so famous galaxies always render at
-high quality — even for nearby objects (M31, M33) that survey catalogs
-filter out as too close.
+palette. Their thumbnails are pre-processed transparent WebPs — most are
+hand-curated from press and amateur-astrophotography sources (NOIRLab, ESO,
+ESA/Hubble, Wikimedia Commons) via the famous-galaxy curator, with a Wikipedia
+→ DESI Legacy auto-fetch fallback for the rest — so famous galaxies always
+render at high quality, even for nearby objects (M31, M33) that survey catalogs
+filter out as too close. Per-image credits and licences are recorded in
+`data/famous_curated_overrides.json` and summarised in
+[ATTRIBUTIONS.md](ATTRIBUTIONS.md).
 
 Run order (only if you want the famous-galaxies atlas):
 
 1. `npm run build-all` — produces `2mrs.bin` + `glade.bin`,
    which the famous build needs for cross-match.
-2. `npm run fetch-famous-images` — downloads + processes 20 thumbnails (~30 s).
-   Idempotent; pass `--force` to re-fetch.
-3. `npm run build-famous` — produces `famous.bin` + `famous_meta.json` + `famous_xrefs.json`.
+2. `npm run fetch-famous-images` — downloads + processes thumbnails for any
+   entries without a curated override (~30 s). Idempotent; pass `--force` to re-fetch.
+3. `npm run build-famous` — produces `famous.bin` + `famous_meta.json`.
 
 ### Adding more galaxies
 

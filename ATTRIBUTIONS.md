@@ -119,42 +119,69 @@ reconstructions that carry their own citation requirements.
 
 ### Curated galaxy thumbnails (`public/images/famous/*.webp`)
 
-Per-galaxy 256×256 WebP thumbnails fetched at build time from one of two
-sources, with the source recorded per-entry in
+Per-galaxy famous-galaxy thumbnails come from two pipelines. Most entries are
+now **hand-curated** via the famous-galaxy curator; a minority fall back to the
+older auto-fetch path.
+
+#### Curated overrides (primary source)
+
+- **Use:** Hand-picked press and amateur-astrophotography images, one per
+  famous-galaxy entry, selected through the curator tool
+  (`tools/famous-curator`) and processed into a star-masked, radial-faded
+  WebP trio under `public/images/famous-curated/<id>/`. The override index is
+  `data/famous_curated_overrides.json`, which records the **`sourceUrl`,
+  `license`, and `author`/credit line for every curated image** — that file is
+  the authoritative per-entry attribution record.
+- **Source institutions** present in the current override set:
+  - **NOIRLab / NOAO** (KPNO, CTIO, and legacy NOAO press images,
+    <https://noirlab.edu/public/images/>) — credit lines of the form
+    "KPNO/NOIRLab/NSF/AURA/…".
+  - **ESO — European Southern Observatory** (<https://www.eso.org/public/images/>),
+    used with ESO's required attribution.
+  - **Vera C. Rubin Observatory** ("RubinObs/NOIRLab/SLAC/NSF/DOE/AURA").
+  - **ESA / Hubble & NASA** public-domain press releases.
+  - **Sloan Digital Sky Survey** image cutouts.
+  - **Wikimedia Commons** uploads (most curated entries link an
+    `en.wikipedia.org/.../media/File:` page), authored by individual
+    astrophotographers — e.g. Adam Block / Mount Lemmon SkyCenter /
+    University of Arizona, Chuck Ayoub, and others named in the override file.
+  - **Digitized Sky Survey 2 (DSS2)** frames for a few low-surface-brightness
+    dwarfs.
+- **Licences:** recorded per entry; the current set spans CC0, CC BY (2.0–4.0),
+  CC BY-SA (3.0–4.0), and public domain.
+- **Unresolved licences:** two entries currently carry `"license": "unknown"`
+  in the override file (at the time of writing: `c17` and `c18`, both DSS2 /
+  amateur frames via theskylive.com). These must be resolved to a concrete
+  licence — or the image replaced — before `public/images/famous*/` is
+  redistributed as a standalone published artefact. (All `noirlab.edu`-sourced
+  entries are CC BY 4.0 per NOIRLab's image licence.)
+
+#### Auto-fetch fallback (Wikipedia → DESI Legacy)
+
+For entries without a curated override, `tools/famous/fetchFamousImages.ts`
+fetches a thumbnail automatically, recording the source per-entry in
 `data/raw/wikipedia_famous_cache.json`:
 
-#### Wikipedia / Wikimedia Commons (primary source)
+- **Wikipedia / Wikimedia Commons** — the Wikipedia REST
+  `/page/summary/<title>` endpoint's `originalimage.source`, resized +
+  radial-faded. Licences are a mix of CC-BY-SA 4.0, CC-BY 4.0, public-domain
+  (NASA / ESA / Hubble), and ESO with required attribution; the cache JSON
+  retains the full API response so the attribution chain back to the
+  Commons upload page is reconstructible.
+- **DESI Legacy Imaging Surveys** — sky cutouts from
+  <https://www.legacysurvey.org/viewer/cutout.jpg> (fallback chain
+  `ls-dr10` → `sdss` → `unwise-neo7`) for entries Wikipedia failed to provide.
+  Reference: Dey et al. 2019, AJ 157, 168. The Legacy Surveys data combines
+  imaging from DECaLS (Dey, Schlegel, Lang et al.), MzLS (Silva, Lang et al.),
+  BASS (Zou, Zhou et al.), and unWISE (Lang, Hogg, Schlegel); acknowledgements
+  per <https://www.legacysurvey.org/acknowledgment/>.
 
-- **Use:** Article hero images for ~25 of the 75 famous-galaxy entries.
-  Each comes from the Wikipedia REST `/page/summary/<title>` endpoint's
-  `originalimage.source` URL, then resized + radial-faded by
-  `tools/fetchFamousImages.ts`.
-- **Licences:** Mix of CC-BY-SA 4.0, CC-BY 4.0, public-domain
-  (NASA / ESA / Hubble), and ESO with required attribution. Each image's
-  per-file licence is what governs its redistribution; the cache JSON
-  retains the full Wikipedia API response, which is enough to mechanically
-  reconstruct the attribution chain back to the upload page on
-  Wikimedia Commons.
-- **Caution for redistribution:** if this repository's `public/images/famous/`
-  is ever redistributed (e.g. as part of a published binary), each
-  individual image's attribution string + licence should be enumerated
-  in a per-file table or sidecar. The CC-BY-SA portion in particular
-  forces share-alike on derivative atlases.
-
-#### DESI Legacy Imaging Surveys (fallback source)
-
-- **Use:** Sky cutouts from
-  <https://www.legacysurvey.org/viewer/cutout.jpg> for entries Wikipedia
-  failed to provide (Wikimedia Commons HTTP 429 rate-limit during the
-  initial fetch run). Layer fallback chain: `ls-dr10` → `sdss` →
-  `unwise-neo7`.
-- **Reference:** Dey et al. 2019, AJ 157, 168.
-- **Licence:** DESI Legacy data products are publicly released for
-  scientific and educational use. The Legacy Surveys data is composed
-  of imaging from the DECaLS (Dey, Schlegel, Lang et al.), MzLS (Silva,
-  Lang et al.), BASS (Zou, Zhou et al.), and unWISE (Lang, Hogg, Schlegel)
-  surveys. Acknowledgements per
-  <https://www.legacysurvey.org/acknowledgment/>.
+**Caution for redistribution:** if `public/images/famous*/` is ever
+redistributed as a published binary, each individual image's attribution
+string + licence should be enumerated in a per-file table or sidecar (the
+override file already holds this for curated entries). The CC-BY-SA portion in
+particular forces share-alike on derivative atlases, and the `unknown`-licence
+entries above must be resolved first.
 
 ### Galaxy descriptions
 
