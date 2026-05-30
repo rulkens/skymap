@@ -11,7 +11,7 @@ describe('slot', () => {
     expect(slot(LINE, 1, 5)).toBe('ABCDE');
   });
 
-  it('extracts a numeric field and trims leading spaces (bytes 7–11)', () => {
+  it('extracts a numeric field and trims leading spaces (bytes 7–12)', () => {
     // The value '  42.5' lives at bytes 7–12; trimming yields '42.5'.
     expect(slot(LINE, 7, 12)).toBe('42.5');
   });
