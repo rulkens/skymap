@@ -202,3 +202,4 @@ data/raw/cf4/*.meta.json
 data/raw/mcpm/*.npy
 data/raw/mcpm/*.bin.bz2
 public/data/mcpm-*.scfd
+.superpowers/

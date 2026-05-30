@@ -34,16 +34,23 @@ there before a sync-r2). So the cheapest path is to symlink the worktree's
 3. **Inspect worktree's `public/data`** — branch on the four possible states:
    - **Missing** → just create the symlink.
    - **Directory with stale / unique bins** → check whether anything inside
-     is newer than main's corresponding file or doesn't exist on main. If
-     the worktree has unique content, **ask the user** before clobbering
-     (could be a deliberate per-worktree rebuild for testing a format change).
-     Otherwise rename to `public/data.stale.<timestamp>/` as a one-step-back
-     safety, then symlink.
+     is newer than main's corresponding file or doesn't exist on main. The
+     three files committed before the gitignore rule (`famous.bin`,
+     `famous_meta.json`, `pgc_aliases.json`) are known-stale and safe to
+     drop; anything else is unique. If the worktree has unique content,
+     **ask the user** before clobbering (could be a deliberate per-worktree
+     rebuild for testing a format change). Otherwise rename to
+     `public/data.stale.<timestamp>/` as a one-step-back safety, then symlink.
    - **Symlink to main's `public/data`** → no-op, report "already linked".
    - **Symlink to elsewhere** → ask the user before replacing.
-4. **Create the symlink** — `ln -s <absolute main path> public/data`. Use
-   the absolute path (rather than a relative `../../../../public/data`) so
-   the symlink survives moving the worktree directory.
+4. **Remove-then-link, atomically** — the detect and swap MUST happen in a
+   single script run. `ln -s <target> public/data` descends *into*
+   `public/data` when it already exists as a directory, creating a nested
+   `public/data/data` link instead of replacing it — so always remove or
+   rename the existing path first, in the same pass, then
+   `ln -sn <absolute main path> public/data` and verify `readlink` points at
+   main. Use the absolute path (rather than a relative `../../../../public/data`)
+   so the symlink survives moving the worktree directory.
 5. **Report** — one line: `Linked public/data → <main>/public/data (N files
    visible)`.
 
@@ -117,24 +124,51 @@ if ! ls "$MAIN_ROOT/public/data"/*.bin >/dev/null 2>&1; then
   exit 1
 fi
 
-# Step 4 — inspect worktree's current state, branch accordingly
+# Step 4 — inspect worktree's current state AND swap, in ONE atomic pass.
+#
+# CRITICAL: do detection and the swap in a single script run. Splitting
+# them across two Bash calls is what caused the nested-symlink bug — the
+# second call ran `ln -s` while `public/data` still existed as a real
+# directory, so `ln` created `public/data/data` *inside* it instead of
+# replacing it. `ln -s TARGET NAME` silently descends into NAME when NAME
+# is an existing directory. Never call `ln -s` against a path that might
+# already exist; always remove/rename it first, in the same script.
 if [ -L public/data ]; then
   TARGET=$(readlink public/data)
   if [ "$TARGET" = "$MAIN_ROOT/public/data" ]; then
     echo "Already linked: public/data → $MAIN_ROOT/public/data"
     exit 0
   fi
-  # symlink points elsewhere — ask user before replacing
-  # (controller decides; the skill stops here)
+  # symlink points elsewhere — ASK the user before replacing, then:
+  rm -f public/data
 elif [ -d public/data ]; then
-  # check for unique content via mtime / missing-on-main
-  # if anything unique, ask user; else rename to .stale.<ts>
-  :
+  # A real directory. Decide unique-vs-stale:
+  #   - The three files committed BEFORE the gitignore rule
+  #     (famous.bin, famous_meta.json, pgc_aliases.json) are NOT unique —
+  #     they exist on main and are safe to drop.
+  #   - Anything else (a freshly built *.bin / *.scfd that is newer than
+  #     or absent from main) is UNIQUE — ASK the user before clobbering.
+  UNIQUE=$(find public/data -maxdepth 1 -type f \
+    ! -name famous.bin ! -name famous_meta.json ! -name pgc_aliases.json \
+    -print -quit 2>/dev/null)
+  if [ -n "$UNIQUE" ]; then
+    echo "ERROR: public/data has unique content (e.g. $UNIQUE). Ask the user before replacing."
+    exit 1
+  fi
+  # only known-stale committed files — rename as a one-step-back safety
+  mv public/data "public/data.stale.$(date +%s)"
 fi
 
-# Step 5 — swap
-rm -rf public/data           # or `mv public/data public/data.stale.$(date +%s)` if safer
-ln -s "$MAIN_ROOT/public/data" public/data
+# Step 5 — create the link. `-n` is belt-and-suspenders: it stops `ln`
+# from descending if `public/data` somehow still resolves to a directory.
+# By here the path is guaranteed gone, so a plain symlink is created.
+ln -sn "$MAIN_ROOT/public/data" public/data
+# Verify we got a symlink to main, NOT a nested public/data/data.
+if [ "$(readlink public/data)" != "$MAIN_ROOT/public/data" ]; then
+  echo "ERROR: link verification failed — public/data is not a symlink to main."
+  rm -f public/data/data 2>/dev/null
+  exit 1
+fi
 
 # Step 6 — silence git-status noise (see "Git noise housekeeping" below)
 TRACKED=$(git ls-files public/data/ 2>/dev/null)
