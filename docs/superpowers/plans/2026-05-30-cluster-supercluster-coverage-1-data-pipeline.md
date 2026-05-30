@@ -58,15 +58,19 @@ four keys to `RAW_DATA` (dotted-lowercase, `kind`/`source`/`description`,
 
 | key | path | kind | source |
 |---|---|---|---|
-| `mcxc.table` | `data/raw/mcxc/<vizier-file>.dat` | file | committed |
+| `mcxc.table` | `data/raw/mcxc/mcxc.dat` | file | committed |
 | `mcxc.readme` | `data/raw/mcxc/ReadMe` | file | committed |
 | `mscc.table` | `data/raw/mscc/mscc.dat` | file | committed |
 | `mscc.readme` | `data/raw/mscc/ReadMe` | file | committed |
 
-- [ ] Download MCXC `J/A+A/534/A109` + MSCC `J/MNRAS/445/4073/mscc` table
-  files + their VizieR ReadMes into `data/raw/mcxc/` and `data/raw/mscc/`.
-  Pin the exact on-disk filenames in the registry `path` values. (These are
-  small all-sky tables — committed, not gitignored.)
+The four files are **already fetched** into `data/raw/mcxc/` and
+`data/raw/mscc/` (downloaded 2026-05-30 from the CDS FTP archive
+`https://cdsarc.cds.unistra.fr/ftp/J/A+A/534/A109/` and `…/J/MNRAS/445/4073/`):
+`mcxc.dat` (1743 rows), `mcxc/ReadMe`, `mscc.dat` (601 rows), `mscc/ReadMe`.
+They're small all-sky tables — committed, not gitignored.
+
+- [ ] Confirm the four files are present (re-fetch from the URLs above if a
+  fresh clone lacks them); they are committed source.
 - [ ] Add the four registry entries with `upstream` URLs and `readme`
   cross-links (mirror the `cf4.table2` entry shape at
   `rawDataRegistry.ts:208-226`).
@@ -88,38 +92,60 @@ four keys to `RAW_DATA` (dotted-lowercase, `kind`/`source`/`description`,
 **Files:** `tools/parsers/parseMcxc.ts` (new),
 `tests/tools/parsers/parseMcxc.test.ts` (new).
 
-Consult `data/raw/mcxc/ReadMe` for exact byte offsets — do NOT guess.
+Byte offsets below are VERIFIED against the committed `data/raw/mcxc/ReadMe`
+and confirmed against real rows of `mcxc.dat` (2026-05-30). Use the decimal
+`RAdeg`/`DEdeg` columns — do NOT parse the sexagesimal h:m:s/d:m:s columns.
+
+**Verified byte layout (1-indexed inclusive, per ReadMe):**
+
+| field | bytes | format | notes |
+|---|---|---|---|
+| MCXC id | 1–12 | A12 | `JHHMM.m+DDMM` |
+| OName | 14–31 | A18 | usually the RXC/REFLEX designation (`RXC J…`) |
+| AName | 33–86 | A54 | Abell (`ANNNN`/`SNNNN`) / UGC / popular name; often blank |
+| RAdeg | 109–115 | F7.3 deg | **decimal degrees** |
+| DEdeg | 117–123 | F7.3 deg | **decimal degrees**, signed |
+| z | 141–146 | F6.4 | |
+| M500 | 190–196 | F7.4 | 10¹⁴ M☉ |
+| R500 | 198–204 | F7.4 | Mpc (ready-made) |
+
+Lines are right-trimmed and **variable length** (rows without Notes/overlap
+columns are ~204 chars; richer rows ~305). All fields above end by byte 204,
+so they're present on every row — but slice by offset and tolerate short
+lines (don't assume a fixed 323 width).
 
 **Signature:**
 ```ts
 export type McxcRow = {
   id: string;            // MCXC primary id, e.g. 'J1259.7+2756'
-  raDeg: number;         // RAJ2000 → degrees [0,360)
-  decDeg: number;        // DEJ2000 → degrees [-90,90]
+  raDeg: number;         // RAdeg column — already decimal degrees [0,360)
+  decDeg: number;        // DEdeg column — already decimal degrees [-90,90]
   z: number;             // redshift
   m500: number;          // total mass, 10^14 Msun
   r500Mpc: number;       // characteristic radius, Mpc (ready-made)
-  oName: string;         // popular/Abell name ('' if blank)
-  aName: string;         // alternative name ('' if blank)
+  oName: string;         // 'Other name' — usually RXC designation ('' if blank)
+  aName: string;         // 'Alternative name' — Abell/UGC/popular ('' if blank)
 };
 export function parseMcxc(raw: string): McxcRow[];
 ```
 
-**Behaviour:** fixed-width parse per the ReadMe; `RAJ2000`/`DEJ2000` are
-sexagesimal (h:m:s / d:m:s) → convert to decimal degrees; blank `OName`/
-`AName` → `''`; skip comment/blank lines.
+**Behaviour:** fixed-offset slice per the table above; `RAdeg`/`DEdeg` are
+parsed directly as decimal degrees (no sexagesimal conversion); blank
+`OName`/`AName` → `''` (trim); skip comment/blank lines.
 
-- [ ] Build a small hand-crafted fixture (3–4 rows pasted from the real
-  `.dat`, exact column alignment) as a test constant.
-- [ ] Test `parseMcxc reads position, z, M500, R500 from fixed-width columns`
-  asserting one row's `raDeg`/`decDeg` (decimal-deg, ~1e-3 tol), `z`, `m500`,
-  `r500Mpc`.
-- [ ] Test `parseMcxc converts sexagesimal RA/Dec to degrees` asserting a
-  southern-dec row's sign + a >180° RA row.
-- [ ] Test `parseMcxc returns empty names as empty strings` on a row whose
-  `OName`/`AName` columns are blank.
+- [ ] Build a small hand-crafted fixture (3–4 rows copied verbatim from the
+  real `mcxc.dat`, exact column alignment) as a test constant. Include one
+  row with a populated `AName` (e.g. row 0 `UGC 12890`) and one with blank
+  `AName` (e.g. row 1).
+- [ ] Test `parseMcxc reads decimal RAdeg/DEdeg, z, M500, R500` asserting
+  row 0 ≈ `{raDeg: 0.030, decDeg: 8.274, z: 0.0396, m500: 0.7373, r500Mpc: 0.6296}`
+  (~1e-3 tol).
+- [ ] Test `parseMcxc reads a signed southern declination` asserting a
+  negative `decDeg` row (e.g. row 1 `-2.625`).
+- [ ] Test `parseMcxc returns blank AName as empty string` on a row whose
+  `AName` column is all spaces.
 - [ ] Test `parseMcxc skips comment and blank lines`.
-- [ ] Implement against the ReadMe offsets. `npm test -- parseMcxc` → passes.
+- [ ] Implement against the verified offsets. `npm test -- parseMcxc` → passes.
   Commit.
 
 ---
@@ -129,31 +155,48 @@ sexagesimal (h:m:s / d:m:s) → convert to decimal degrees; blank `OName`/
 **Files:** `tools/parsers/parseMscc.ts` (new),
 `tests/tools/parsers/parseMscc.test.ts` (new).
 
-Consult `data/raw/mscc/ReadMe` for offsets.
+Byte offsets VERIFIED against `data/raw/mscc/ReadMe` + real `mscc.dat` rows
+(2026-05-30). The `mscc.dat` and `sscc.dat` share this layout; we use
+`mscc.dat` only (601 all-sky superclusters).
+
+**Verified byte layout (1-indexed inclusive):**
+
+| field | bytes | format | notes |
+|---|---|---|---|
+| Seq | 1–3 | I3 | id number 1–601 → render as `MSCC NNN` |
+| SCLs | 6–21 | A16 | Einasto 2001 cross-ref (unused) |
+| Nm | 24–25 | I2 | member-cluster count, range [2/42] |
+| RAdeg | 27–32 | F6.2 deg | **decimal degrees** |
+| DEdeg | 34–39 | F6.2 deg | **decimal degrees**, signed |
+| z | 41–45 | F5.3 | [0.01/0.15] |
+| dmax | 47–51 | F5.1 | h₇₀⁻¹ Mpc (raw units) |
+
+Lines are variable length (trailing `memCl` member list, bytes 53+, varies);
+all fields above end by byte 51.
 
 **Signature:**
 ```ts
 export type MsccRow = {
-  id: string;       // MSCC id
-  raDeg: number;    // RAdeg (already decimal degrees)
-  decDeg: number;   // DEdeg
+  id: string;       // 'MSCC ' + Seq (e.g. 'MSCC 1')
+  raDeg: number;    // RAdeg — already decimal degrees
+  decDeg: number;   // DEdeg — already decimal degrees, signed
   z: number;        // mean redshift
-  nm: number;       // member-cluster count
+  nm: number;       // member-cluster count [2,42]
   dmaxMpc: number;  // max member-pair separation, h70^-1 Mpc (raw units)
 };
 export function parseMscc(raw: string): MsccRow[];
 ```
 
-**Behaviour:** `RAdeg`/`DEdeg` are already decimal degrees (no sexagesimal
-conversion). `dmaxMpc` is stored in the catalog's `h70^-1 Mpc` units —
-parser returns the raw value; the `h70 → Mpc` conversion + halving lives in
-`buildClusters` (Task 8), so the parser stays a faithful column reader.
+**Behaviour:** fixed-offset slice; `RAdeg`/`DEdeg` parsed directly as decimal
+degrees. `dmaxMpc` returned in raw `h70^-1 Mpc` units — the `h70 → Mpc`
+conversion + halving lives in `buildClusters` (Task 10), so the parser stays
+a faithful column reader.
 
-- [ ] Hand-built fixture (3–4 rows, exact alignment).
-- [ ] Test `parseMscc reads RAdeg/DEdeg as decimal degrees` (no h:m:s
-  conversion) asserting a known row.
-- [ ] Test `parseMscc reads Nm and dmax` asserting integer `nm` and float
-  `dmaxMpc` for a row.
+- [ ] Hand-built fixture (3–4 rows copied verbatim from `mscc.dat`).
+- [ ] Test `parseMscc reads decimal RAdeg/DEdeg, z, Nm, dmax` asserting
+  row 0 ≈ `{id: 'MSCC 1', raDeg: 0.77, decDeg: -26.72, z: 0.064, nm: 9, dmaxMpc: 50.6}`.
+- [ ] Test `parseMscc reads a signed positive declination` (e.g. row 1
+  `+09.77` → `9.77`).
 - [ ] Test `parseMscc skips comment and blank lines`.
 - [ ] Implement. `npm test -- parseMscc` → passes. Commit.
 
@@ -460,7 +503,7 @@ factored into exported functions so it's testable without disk I/O.
 **Tunable threshold constants** (top of file, with didactic comments):
 ```ts
 const MCXC_M500_MIN = /* tuned → ~top 300 clusters by mass */;
-const MSCC_NM_MIN   = /* tuned → ~top 75 superclusters by member count */;
+const MSCC_NM_MIN   = /* tuned → ~top 75 SCs; Nm ∈ [2,42], so ≈6 lands ~75 */;
 const Z_MAX = 0.15;                 // distance cut on both catalogs
 const APPARENT_MULTIPLE = /* ≈1.5–2 */; // R500 → apparentRadiusMpc for clusters
 const DEDUPE_FLOOR_MPC = /* small floor */;
@@ -492,8 +535,11 @@ export function buildClusterEntries(
    `redshiftToDistanceMpc(z)` (convert deg→the frame; reuse the famous
    `entryToXyz` math but RA already in degrees). `physicalRadiusMpc = r500Mpc`;
    `apparentRadiusMpc = APPARENT_MULTIPLE * r500Mpc`; `significance = m500`;
-   `category = 0`. `names` from `oName`/`aName` (non-empty first, else MCXC
-   `id`); `id` = url-safe slug of the primary name. `description` generated.
+   `category = 0`. **Name priority `aName` → `oName` → MCXC `id`**: `aName`
+   carries the recognizable name (Abell `ANNNN` / UGC / popular), `oName` is
+   usually just the RXC/REFLEX designation, so prefer `aName` when non-empty,
+   then `oName`, then the MCXC `id`. `id` = url-safe slug of the chosen name.
+   `description` generated.
 2. **MSCC → supercluster entries**: keep `z <= Z_MAX` and `nm >= MSCC_NM_MIN`.
    `worldPos` from `(raDeg,decDeg)` + `redshiftToDistanceMpc(z)`.
    `physicalRadiusMpc == apparentRadiusMpc = (dmaxMpc / h70 → Mpc) / 2`
@@ -524,8 +570,9 @@ where `toMeta` maps `{ id, names, description }` (local-idx parallel to the
 - [ ] Test `buildClusterEntries drops a bulk entry near a featured seed anchor`
   (place an MCXC row at Coma's seed position → suppressed; one far away →
   kept). This is the "Coma doesn't draw twice" guarantee.
-- [ ] Test `buildClusterEntries names a cluster from OName, falling back to MCXC id`
-  (row with blank `oName`/`aName` → `id` derived from the MCXC primary id).
+- [ ] Test `buildClusterEntries names a cluster aName → oName → id`
+  (row with `aName` set → uses it; row with blank `aName` but set `oName` →
+  uses `oName`; row with both blank → MCXC primary `id`).
 - [ ] Test `buildClusterEntries tags category 0 for MCXC, 1 for MSCC`.
 - [ ] Implement `buildClusterEntries` + `main`. `npm test -- buildClusters`
   → passes.
