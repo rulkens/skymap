@@ -33,6 +33,7 @@
     "build": "tsc --noEmit && vite build && rm -rf dist/data",
     "build-all": "tsx tools/catalog/buildAllBins.ts",
     "build-cf4-density": "tsx tools/volumes/buildCf4Density.ts",
+    "build-clusters": "tsx tools/clusters/buildClusters.ts",
     "build-mcpm": "tsx tools/volumes/buildMcpmVolume.ts --all",
     "build-famous": "tsx tools/famous/buildFamous.ts",
     "build-famous-hires": "tsx tools/famous/copyHiResToPublic.ts",

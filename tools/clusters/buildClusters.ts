@@ -1,0 +1,411 @@
+#!/usr/bin/env node
+/**
+ * buildClusters — assemble the cluster/supercluster coverage layer.
+ *
+ * Reads:
+ *   - `data/raw/mcxc/mcxc.dat`             (MCXC X-ray cluster catalog)
+ *   - `data/raw/mscc/mscc.dat`             (MSCC supercluster catalog)
+ *   - `data/cluster_anchors.seed.json`     (featured curated anchors)
+ *
+ * Writes:
+ *   - `public/data/clusters.ccat`          (ClusterCatalog binary, renderer input)
+ *   - `public/data/clusters_meta.json`     (per-localIdx id/names/abell/description)
+ *
+ * The two artefacts are index-parallel: record i in the .ccat corresponds
+ * to entry i in the meta JSON, allowing the runtime to look up human-readable
+ * metadata by the localIdx the pick-renderer returns.
+ *
+ * Run order: after `npm run build-tiers` (the cluster build is independent of
+ * the galaxy .bin files but shares the same `public/data/` output directory).
+ * The npm script is `build-clusters`.
+ *
+ * ## Filtering strategy
+ *
+ * Both MCXC and MSCC are filtered to a manageable display set before encoding:
+ *
+ *   MCXC: z ≤ Z_MAX AND M500 ≥ MCXC_M500_MIN
+ *     → keeps the most massive X-ray clusters within the local universe volume
+ *
+ *   MSCC: z ≤ Z_MAX AND Nm ≥ MSCC_NM_MIN
+ *     → keeps the richest superclusters by member-cluster count
+ *
+ * Featured anchors (from the seed JSON) win over catalog bulk entries: any
+ * bulk entry within a featured anchor's exclusion sphere is dropped so the
+ * same structure never appears twice (curated-wins rule).
+ */
+import { readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { parseMcxc, type McxcRow } from '../parsers/parseMcxc.js';
+import { parseMscc, type MsccRow } from '../parsers/parseMscc.js';
+import { parseClusterSeed, type ClusterSeedEntry } from '../parsers/parseClusterSeed.js';
+import { encodeClusterCatalog } from '../../src/data/clusterCatalogFormat.js';
+import { rawDataPath } from '../utils/io/rawDataRegistry.js';
+import { writeMetaSidecar } from '../curation/writeMetaSidecar.js';
+import { dedupeByProximity } from '../curation/dedupeByProximity.js';
+import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart.js';
+import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc.js';
+import { H0_KM_S_MPC } from '../../src/utils/math/constants.js';
+import type { ClusterCatalog } from '../../src/@types/data/ClusterCatalog.js';
+import type { ClusterCategoryByte } from '../../src/@types/data/ClusterCatalog.js';
+import type { Vec3 } from '../../src/@types/math/Vec3.js';
+
+// ── Tunable threshold constants ───────────────────────────────────────────────
+//
+// These constants control which catalog rows are included in the build output.
+// Tuned from the actual distributions found in the MCXC and MSCC catalogs
+// (see the analysis in tests/tools/clusters/_dist_analysis.test.ts for counts
+// at each threshold level).
+
+/**
+ * Minimum M500 mass (× 10^14 M☉) for an MCXC cluster to be included.
+ *
+ * Tuning: with z ≤ 0.15, MCXC has 944 rows total. At 2.0 × 10^14 M☉,
+ * 282 clusters survive — close to the target ~300, covering the most
+ * massive X-ray clusters (Perseus, Coma, Virgo, Abell 2029, …).
+ * The M500 tail spans ~0.3–15 × 10^14 M☉; the 300th-ranked cluster
+ * has M500 ≈ 1.95, so 2.0 lands a clean ~top-300.
+ */
+const MCXC_M500_MIN = 2.0;
+
+/**
+ * Minimum member-cluster count (Nm) for an MSCC supercluster to be included.
+ *
+ * Tuning: all 601 MSCC rows fall within z ≤ 0.15. Nm spans [2, 42].
+ * Nm ≥ 6 gives 91 superclusters (≈ top-75 target; the plan confirms ≈6
+ * was expected to land ~75 — actual count is 91 due to the discrete
+ * distribution). This covers the rich superclusters: Shapley, Perseus–Pisces,
+ * Horologium–Reticulum, Corona Borealis, etc.
+ */
+const MSCC_NM_MIN = 6;
+
+/**
+ * Maximum redshift for structures in both catalogs.
+ * Corresponds to ~600 Mpc — the local-universe volume where cluster and
+ * supercluster structures are well-resolved in the renderer.
+ */
+const Z_MAX = 0.15;
+
+/**
+ * Factor that converts a cluster's physical R500 radius into its apparent
+ * (named, visual) radius on screen.  1.5 enlarges the ring by 50%, enclosing
+ * the wider Abell membership region that readers associate with cluster names.
+ */
+const APPARENT_MULTIPLE = 1.5;
+
+/**
+ * Minimum proximity floor for the curated-vs-bulk dedup step (Mpc).
+ *
+ * Anchors with a tiny apparentRadiusMpc (e.g. very compact featured POIs)
+ * still suppress bulk duplicates within this floor distance, preventing
+ * a catalog entry 1 Mpc away from a curated anchor from sneaking through
+ * just because the anchor's radius is small.
+ */
+const DEDUPE_FLOOR_MPC = 3;
+
+// ── h70 unit-conversion factor ────────────────────────────────────────────────
+//
+// MSCC `dmaxMpc` is published in h70^-1 Mpc (h70 = H0 / 70).  Multiplying by
+// h70 (or dividing by h70^-1) converts to physical Mpc.
+//
+// With H0 = 70 km/s/Mpc, h70 = 1.0, so the conversion is a no-op numerically.
+// We compute it from the shared H0 constant anyway so the code stays correct
+// if H0 is ever revised in constants.ts.
+const H70 = H0_KM_S_MPC / 70;
+
+// ── Public types ──────────────────────────────────────────────────────────────
+
+/**
+ * Intermediate build representation for a single cluster or supercluster
+ * before it is encoded into the .ccat binary.  Carries human-readable
+ * metadata alongside the numeric fields so callers can build the meta JSON
+ * from the same objects, guaranteeing index alignment.
+ */
+export type ClusterBuildEntry = {
+  /** URL-safe slug of names[0] — becomes the localIdx lookup key at runtime. */
+  id: string;
+  /** Equatorial-Cartesian world position in Mpc. */
+  worldPos: Vec3;
+  /** Core radius (R500 for clusters; dmax/2 for superclusters). */
+  physicalRadiusMpc: number;
+  /** Visual / named extent radius (APPARENT_MULTIPLE × R500 for clusters). */
+  apparentRadiusMpc: number;
+  /** Raw mass proxy: M500 (10^14 M☉) for clusters, Nm for superclusters. */
+  significance: number;
+  /** 0 = cluster (MCXC), 1 = supercluster (MSCC). */
+  category: ClusterCategoryByte;
+  /** Display names; names[0] is the primary label shown in the UI. */
+  names: string[];
+  /** Normalized Abell/ACO designation, e.g. 'A2670' or 'S0805', or null. */
+  abell: string | null;
+  /** Generated one-liner description shown in the POI info panel. */
+  description: string;
+};
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * Derive an equatorial-Cartesian world position from RA in DEGREES and Dec
+ * in degrees, at the comoving distance corresponding to redshift z.
+ *
+ * MCXC and MSCC publish RA in decimal degrees (unlike the raHours convention
+ * in SkyCoord).  We apply the conversion manually rather than calling
+ * raDecDistToEqCart (which expects raHours) to be explicit about the frame.
+ *
+ * Standard spherical → Cartesian (right-handed, J2000 equatorial frame):
+ *   x = d · cos(RA_rad) · cos(Dec_rad)
+ *   y = d · sin(RA_rad) · cos(Dec_rad)
+ *   z = d · sin(Dec_rad)
+ */
+function raDegDecToWorldPos(raDeg: number, decDeg: number, z: number): Vec3 {
+  const d = redshiftToDistanceMpc(z);
+  const RAD = Math.PI / 180;
+  const ra = raDeg * RAD;
+  const dec = decDeg * RAD;
+  const cosDec = Math.cos(dec);
+  return [d * Math.cos(ra) * cosDec, d * Math.sin(ra) * cosDec, d * Math.sin(dec)];
+}
+
+/**
+ * Convert a display name to a URL-safe slug: lowercase, spaces and
+ * non-alphanumeric ASCII replaced with hyphens, duplicate hyphens collapsed,
+ * leading/trailing hyphens stripped.
+ *
+ * Examples: 'A2670' → 'a2670', 'MSCC 42' → 'mscc-42',
+ *           'RXC J0000.1+0816' → 'rxc-j0000-1-0816'.
+ */
+function toSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Return unique non-empty strings from `candidates` in input order,
+ * skipping any that are blank after trimming.
+ */
+function uniqueNonEmpty(...candidates: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const s of candidates) {
+    const t = s.trim();
+    if (t && !seen.has(t)) {
+      seen.add(t);
+      out.push(t);
+    }
+  }
+  return out;
+}
+
+// ── Exported pure functions ───────────────────────────────────────────────────
+
+/**
+ * Scan `aName` then `oName` for an Abell/ACO cluster designation and return
+ * the normalized token (e.g. 'A2670', 'S0805') or null.
+ *
+ * MCXC homogenises Abell designations in the AName column as 'ANNNN'
+ * (rich northern Abell catalog) or 'SNNNN' (ACO southern supplement);
+ * the OName column occasionally carries them too.
+ *
+ * Matching: find the first token of the form `[AS]` followed by optional
+ * spaces and 1–4 digits in `aName`, else in `oName`.  Normalise by removing
+ * internal spaces ('A 2670' → 'A2670') but preserving the digit string
+ * as-is ('S0805' stays 'S0805' — southern ACO designations use four-digit
+ * form with leading zeros by convention).
+ *
+ * Preference: aName before oName — the AName column is the MCXC-curated
+ * alternate name and more reliable as the primary designation.
+ */
+export function extractAbell(oName: string, aName: string): string | null {
+  // Match [AS] optionally followed by whitespace then 1–4 digits.
+  // Word boundary before [AS] prevents matching inside e.g. 'GAS1234'.
+  // We preserve the digit string verbatim (no leading-zero stripping) so
+  // that ACO southern designations like S0805 round-trip intact.
+  const RE = /\b([AS])\s*(\d{1,4})\b/;
+  const fromAName = aName.match(RE);
+  if (fromAName) return `${fromAName[1]}${fromAName[2]}`;
+  const fromOName = oName.match(RE);
+  if (fromOName) return `${fromOName[1]}${fromOName[2]}`;
+  return null;
+}
+
+/**
+ * Build the intermediate `ClusterBuildEntry[]` from raw MCXC rows, raw MSCC
+ * rows, and a curated featured-anchor seed.
+ *
+ * Steps:
+ *   1. Filter and map MCXC → cluster entries (category 0).
+ *   2. Filter and map MSCC → supercluster entries (category 1).
+ *   3. Build featured anchor list from the seed (worldPos + apparentRadiusMpc).
+ *   4. Dedup bulk entries against featured anchors (curated-wins rule).
+ *   5. Return surviving entries in [clusters…, superclusters…] order.
+ */
+export function buildClusterEntries(
+  mcxc: readonly McxcRow[],
+  mscc: readonly MsccRow[],
+  featuredSeed: readonly ClusterSeedEntry[],
+): ClusterBuildEntry[] {
+  // ── Step 1: MCXC → cluster entries ────────────────────────────────────────
+  const clusterEntries: ClusterBuildEntry[] = [];
+  for (const row of mcxc) {
+    if (row.z > Z_MAX || row.m500 < MCXC_M500_MIN) continue;
+
+    const worldPos = raDegDecToWorldPos(row.raDeg, row.decDeg, row.z);
+    const physicalRadiusMpc = row.r500Mpc;
+    const apparentRadiusMpc = APPARENT_MULTIPLE * row.r500Mpc;
+    const abell = extractAbell(row.oName, row.aName);
+
+    // Name priority: Abell → aName → oName → MCXC id.
+    // When an Abell designation is found it becomes names[0] (the displayed
+    // label); the other non-empty names are appended as alternatives.
+    let names: string[];
+    if (abell) {
+      names = [abell, ...uniqueNonEmpty(row.aName, row.oName).filter((n) => n !== abell)];
+    } else {
+      const best = uniqueNonEmpty(row.aName, row.oName)[0] ?? row.id;
+      names = [best];
+    }
+
+    const id = toSlug(names[0]!);
+    const description = `X-ray cluster · M500 = ${row.m500.toFixed(1)}×10¹⁴ M☉ · z = ${row.z.toFixed(3)}`;
+
+    clusterEntries.push({
+      id,
+      worldPos,
+      physicalRadiusMpc,
+      apparentRadiusMpc,
+      significance: row.m500,
+      category: 0,
+      names,
+      abell,
+      description,
+    });
+  }
+
+  // ── Step 2: MSCC → supercluster entries ───────────────────────────────────
+  const scEntries: ClusterBuildEntry[] = [];
+  for (const row of mscc) {
+    if (row.z > Z_MAX || row.nm < MSCC_NM_MIN) continue;
+
+    const worldPos = raDegDecToWorldPos(row.raDeg, row.decDeg, row.z);
+
+    // dmax is in raw h70^-1 Mpc.  Convert to physical Mpc (÷ h70^-1 = × h70)
+    // then halve to get a centroid radius (dmax is a diameter: max pair separation).
+    const radiusMpc = (row.dmaxMpc * H70) / 2;
+
+    const id = toSlug(row.id);
+    const description = `Supercluster · ${row.nm} member clusters · z = ${row.z.toFixed(3)}`;
+
+    scEntries.push({
+      id,
+      worldPos,
+      physicalRadiusMpc: radiusMpc,
+      apparentRadiusMpc: radiusMpc,
+      significance: row.nm,
+      category: 1,
+      names: [row.id],
+      abell: null,
+      description,
+    });
+  }
+
+  // ── Step 3: featured anchor list from seed ────────────────────────────────
+  const featuredAnchors = featuredSeed.map((e) => ({
+    worldPos: raDecDistToEqCart(e),
+    radiusMpc: e.apparentRadiusMpc,
+  }));
+
+  // ── Step 4: dedup bulk entries against featured anchors ───────────────────
+  const allBulk = [...clusterEntries, ...scEntries];
+  return dedupeByProximity(featuredAnchors, allBulk, DEDUPE_FLOOR_MPC);
+}
+
+// ── Meta sidecar type ─────────────────────────────────────────────────────────
+
+type ClusterMetaEntry = {
+  id: string;
+  names: string[];
+  abell: string | null;
+  description: string;
+};
+
+function toMeta(e: ClusterBuildEntry): ClusterMetaEntry {
+  return { id: e.id, names: e.names, abell: e.abell, description: e.description };
+}
+
+// ── main ──────────────────────────────────────────────────────────────────────
+
+async function main(): Promise<void> {
+  const outDir = resolve('public/data');
+
+  // ── Parse raw catalogs ─────────────────────────────────────────────────────
+  process.stderr.write('parsing MCXC…\n');
+  const mcxcRaw = readFileSync(rawDataPath('mcxc.table'), 'utf8');
+  const mcxcRows = parseMcxc(mcxcRaw);
+  process.stderr.write(`  parsed ${mcxcRows.length} MCXC rows\n`);
+
+  process.stderr.write('parsing MSCC…\n');
+  const msccRaw = readFileSync(rawDataPath('mscc.table'), 'utf8');
+  const msccRows = parseMscc(msccRaw);
+  process.stderr.write(`  parsed ${msccRows.length} MSCC rows\n`);
+
+  process.stderr.write('parsing cluster seed…\n');
+  const seedRaw = readFileSync(rawDataPath('clusters.seed'), 'utf8');
+  const seed = parseClusterSeed(seedRaw);
+  process.stderr.write(`  loaded ${seed.length} featured seed entries\n`);
+
+  // ── Build entries ──────────────────────────────────────────────────────────
+  process.stderr.write('building cluster entries…\n');
+  const entries = buildClusterEntries(mcxcRows, msccRows, seed);
+  const nClusters = entries.filter((e) => e.category === 0).length;
+  const nSC = entries.filter((e) => e.category === 1).length;
+  process.stderr.write(
+    `  ${entries.length} total (${nClusters} clusters, ${nSC} superclusters) after dedup\n`,
+  );
+
+  // ── Encode .ccat binary ────────────────────────────────────────────────────
+  const count = entries.length;
+  const positions = new Float32Array(count * 3);
+  const physicalRadiusMpc = new Float32Array(count);
+  const apparentRadiusMpc = new Float32Array(count);
+  const significance = new Float32Array(count);
+  const category = new Uint8Array(count);
+
+  for (let i = 0; i < count; i++) {
+    const e = entries[i]!;
+    positions[i * 3 + 0] = e.worldPos[0];
+    positions[i * 3 + 1] = e.worldPos[1];
+    positions[i * 3 + 2] = e.worldPos[2];
+    physicalRadiusMpc[i] = e.physicalRadiusMpc;
+    apparentRadiusMpc[i] = e.apparentRadiusMpc;
+    significance[i] = e.significance;
+    category[i] = e.category;
+  }
+
+  const catalog: ClusterCatalog = {
+    count,
+    positions,
+    physicalRadiusMpc,
+    apparentRadiusMpc,
+    significance,
+    category,
+  };
+
+  const buf = encodeClusterCatalog(catalog);
+  writeFileSync(resolve(outDir, 'clusters.ccat'), Buffer.from(buf));
+  process.stderr.write(`wrote clusters.ccat (${buf.byteLength} bytes, ${count} records)\n`);
+
+  // ── Write meta sidecar ─────────────────────────────────────────────────────
+  writeMetaSidecar(entries.map(toMeta), resolve(outDir, 'clusters_meta.json'));
+  process.stderr.write('wrote clusters_meta.json\n');
+}
+
+// Allow the script to be both executed (CLI) and imported (tests).
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((err: unknown) => {
+    process.stderr.write(`error: ${err instanceof Error ? err.message : String(err)}\n`);
+    process.exit(1);
+  });
+}
