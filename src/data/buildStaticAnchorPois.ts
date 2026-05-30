@@ -31,6 +31,11 @@
  *   - The `physicalRadiusMpc` carry-through, which downstream consumers
  *     (cone-search, ring sizing) rely on.
  *
+ *   - The cluster-only `abell` carry-through: the seed's Abell/ACO
+ *     designation lands on the cluster arm alone (the `PointOfInterest`
+ *     union has no `abell` field on the supercluster/void/galaxy arms),
+ *     so the field never leaks onto a non-cluster anchor.
+ *
  * ### Why not expose the engine's POI list directly?
  *
  * The engine's POI table is dynamic — `wireSlots` merges static anchors
@@ -55,7 +60,10 @@ import { raDecDistToEqCart } from '../utils/math/raDecDistToEqCart';
 import type { PointOfInterest } from '../@types/engine/subsystems/PointOfInterest';
 // Vite resolves JSON imports at build time; TypeScript narrows the type
 // via `resolveJsonModule: true`.  We cast to the fields we consume so
-// new seed columns don't require a type update here.
+// new seed columns don't require a type update here.  The JSON's shape is
+// validated at build time by `tools/parsers/parseClusterSeed.ts` (run via
+// `buildClusters.ts`), so this module trusts the cast and skips a runtime
+// re-validator.
 import clusterSeedJson from '../../data/cluster_anchors.seed.json';
 
 /**
@@ -73,6 +81,7 @@ type SeedEntry = {
   readonly distMpc: number;
   readonly physicalRadiusMpc: number;
   readonly apparentRadiusMpc: number;
+  readonly abell?: string;
 };
 
 /**
@@ -103,7 +112,14 @@ function buildAnchorPoi(a: SeedEntry): PointOfInterest {
   } as const;
   switch (a.category) {
     case 'cluster':
-      return { ...common, category: 'cluster' };
+      // `abell` lives on the cluster arm alone.  Spread it in only when the
+      // seed carries one so the key is absent (not `abell: undefined`) for
+      // clusters with no Abell number, e.g. Virgo.
+      return {
+        ...common,
+        category: 'cluster',
+        ...(a.abell !== undefined ? { abell: a.abell } : {}),
+      };
     case 'supercluster':
       return { ...common, category: 'supercluster' };
     case 'void':

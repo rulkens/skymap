@@ -52,6 +52,40 @@ describe('buildStaticAnchorPois', () => {
     expect(radius).toBe(2.2);
   });
 
+  it('carries apparentRadiusMpc through from the seed', () => {
+    const pois = buildStaticAnchorPois();
+    const virgo = pois.find((p) => p.id === 'cluster-virgo-m87');
+    // Same narrow as the physical-radius test: static anchors are always
+    // extended structures, so the apparent-radius field is in scope.
+    const radius =
+      virgo && virgo.category !== 'famousGalaxy' ? virgo.apparentRadiusMpc : undefined;
+    expect(radius).toBe(6);
+  });
+
+  it('is synchronous and returns a fresh array per call', () => {
+    const a = buildStaticAnchorPois();
+    const b = buildStaticAnchorPois();
+    // Fresh array each call (so a mutating caller can't corrupt a shared
+    // instance) but structurally identical — the build is deterministic.
+    expect(a).not.toBe(b);
+    expect(a).toEqual(b);
+  });
+
+  it('surfaces the abell designation on a featured cluster', () => {
+    const pois = buildStaticAnchorPois();
+    const coma = pois.find((p) => p.id === 'cluster-coma-a1656');
+    // Narrow to the cluster arm — `abell` lives there alone.
+    const abell = coma && coma.category === 'cluster' ? coma.abell : undefined;
+    expect(abell).toBe('A1656');
+    // Virgo has no seed `abell`, so the field is absent (not undefined-keyed)
+    // even on the cluster arm.
+    const virgo = pois.find((p) => p.id === 'cluster-virgo-m87');
+    expect(virgo && 'abell' in virgo).toBe(false);
+    // The non-cluster arms structurally cannot carry an `abell` field.
+    const aVoid = pois.find((p) => p.id === 'void-bootes-void');
+    expect(aVoid && 'abell' in aVoid).toBe(false);
+  });
+
   it('marks every static anchor POI as featured', () => {
     const pois = buildStaticAnchorPois();
     expect(pois.length).toBeGreaterThan(0);
