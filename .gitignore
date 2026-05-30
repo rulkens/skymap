@@ -1,3 +1,10 @@
+# ── Local TLS certs for on-device HTTPS dev (SKYMAP_HTTPS=1) ──────────────────
+# mkcert-generated leaf cert + private key for serving the dev server over
+# HTTPS to a phone/tablet on the LAN (see vite.config.ts). Machine-local and
+# secret — the key must never be committed. Regenerate via:
+#   mkdir -p .certs && cd .certs && mkcert <lan-ip> localhost
+.certs/
+
 # ── Dependencies ──────────────────────────────────────────────────────────────
 node_modules/
 
