@@ -107,6 +107,14 @@ export function attachEngineInputs(options: AttachEngineInputsOptions): InputBin
 
   addCanvasListener('pointermove', (e) => {
     const pe = e as PointerEvent;
+    // Touch and pen have no hover state — a finger tap emits a synthetic
+    // pointermove that would otherwise drive the hover-pick and pop the
+    // InfoCard on tap.  Gating on the moving pointer being a mouse is
+    // per-event, so a hybrid device (touchscreen laptop, iPad + trackpad)
+    // still gets hover from its mouse and never from a finger.  We skip the
+    // requestRender too: this listener exists only to feed the hover-pick,
+    // so a touch move has nothing here to wake the loop for.
+    if (pe.pointerType !== 'mouse') return;
     onPointerMove({ x: pe.clientX, y: pe.clientY });
     scheduler.requestRender();
   });
