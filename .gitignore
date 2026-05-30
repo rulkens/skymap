@@ -150,6 +150,12 @@ data/starnet/
 # permissions; the shared `settings.json` (when it exists) stays tracked.
 .claude/settings.local.json
 
+# `.claude/worktrees/` holds the actual git worktree checkouts spawned by
+# EnterWorktree / `git worktree add` — each is a full working copy of the
+# repo, not shared state.  They must never be committed (a stray `git add
+# .claude/` would otherwise try to vacuum entire checkouts into the tree).
+.claude/worktrees/
+
 # ── Source video recordings under docs/screenshots/ ─────────────────────────
 # QuickTime / CleanShot drops a .mov per recording.  We commit the encoded
 # `.gif` and `.png` artefacts (referenced from README.md) but never the raw
