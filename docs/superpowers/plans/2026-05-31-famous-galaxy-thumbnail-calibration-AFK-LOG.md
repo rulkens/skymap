@@ -10,7 +10,7 @@ and project conventions; anything genuinely contestable is flagged **REVIEW**.
 
 | Plan | Task | Status | Commit |
 |------|------|--------|--------|
-| 1 | 1 RecipeDisk type + disk? on Recipe | ✅ done | `a3c7c9f7` |
+| 1 | 1 RecipeDisk type + disk? on Recipe | ✅ done | `e5afcb4a` |
 | 1 | 2 FamousCalibration + calibration? | ⏳ | |
 | 1 | 3 DEPROJECT_MIN_AXIS_RATIO | ⏳ | |
 | 1 | 4 deprojectDisk | ⏳ | |
