@@ -414,26 +414,26 @@ minimal interim change is to read the seed JSON. **However** — Plan 2 owns
 the full `buildStaticAnchorPois` rewrite (sync seed read + `featured` flag).
 To keep plans cleanly separable, in THIS task:
 
-- [ ] Re-point `auditCf4Anchors.ts`: replace the
+- [x] Re-point `auditCf4Anchors.ts`: replace the
   `import { CLUSTER_ANCHORS, raDecDistToEqCart } from '../../src/data/clusterAnchors'`
   (`auditCf4Anchors.ts:27`) with `parseClusterSeed` (read
   `rawDataPath('clusters.seed')`) filtered to `category === 'cluster'`, mapped
   through the new `raDecDistToEqCart` util. The audit maps each seed entry's
   `{ raHours, decDeg, distMpc }` into the util — `ClusterSeedEntry` is a
   superset of `SkyCoord`, so it passes directly.
-- [ ] Update `buildStaticAnchorPois.ts` to import `raDecDistToEqCart` from
+- [x] Update `buildStaticAnchorPois.ts` to import `raDecDistToEqCart` from
   the new util path and drop the `clusterAnchors` re-export crutch from
   Task 5. (Leave its seed-vs-constant data source for Plan 2 — but it can no
   longer import the deleted constants, so for the interim have it read +
   parse the seed JSON synchronously via a Vite JSON import. This is exactly
   Plan 2's target shape, so doing it here is fine and avoids a broken
   intermediate; Plan 2 then only ADDS the `featured`/`significance` fields.)
-- [ ] Delete `src/data/clusterAnchors.ts`. Keep `ClusterAnchor.d.ts` only if
+- [x] Delete `src/data/clusterAnchors.ts`. Keep `ClusterAnchor.d.ts` only if
   still referenced (the audit now uses `ClusterSeedEntry`); if nothing imports
   it, delete it and `SkyCoord.d.ts` stays (still used by the util).
-- [ ] Update/replace `tests/data/buildStaticAnchorPois.test.ts` expectations
+- [x] Update/replace `tests/data/buildStaticAnchorPois.test.ts` expectations
   if the slug set changed (it should NOT — same ids).
-- [ ] `npm run typecheck` clean (no dangling `clusterAnchors` imports);
+- [x] `npm run typecheck` clean (no dangling `clusterAnchors` imports);
   `npm test` green. Commit.
 
 ---
