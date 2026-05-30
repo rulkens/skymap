@@ -1,26 +1,17 @@
 #!/usr/bin/env node
 /**
- * fetchClusterCatalogs — download the MCXC X-ray cluster catalogue and the
- * MSCC supercluster catalogue from the CDS VizieR FTP archive to
+ * fetchClusterCatalogs — download MCXC and MSCC from CDS VizieR FTP to
  * data/raw/{mcxc,mscc}/.
  *
- * Both catalogs are plain uncompressed fixed-width ASCII (no .gz step
- * needed — unlike CF-4's table2.dat.gz), so the fetch is a straight
- * streaming write to disk with Range-resume support.
+ * Both catalogs are plain uncompressed fixed-width ASCII; the fetch is a
+ * straight streaming write with Range-resume support. After each .dat is
+ * written, the digest is verified against the committed .sha256 sidecar —
+ * mismatch exits 1 rather than letting a parser silently read truncated rows.
  *
- * After each .dat is written, the file is hashed and the result is
- * compared against the committed .sha256 sidecar.  A mismatch means the
- * download is corrupt or the upstream file changed; the script exits 1
- * with a clear message rather than silently letting a future parser mis-
- * interpret truncated rows.
- *
- * Source layout:
  *   data/raw/mcxc/mcxc.dat  — 1743 rows × 323 bytes (J/A+A/534/A109)
- *   data/raw/mcxc/ReadMe    — VizieR column-offset spec (gitignored)
+ *   data/raw/mcxc/ReadMe    — VizieR column-offset spec
  *   data/raw/mscc/mscc.dat  — 601 rows × 324 bytes (J/MNRAS/445/4073)
- *   data/raw/mscc/ReadMe    — VizieR column-offset spec (gitignored)
- *
- * See data/raw/mcxc/README.md and data/raw/mscc/README.md for provenance.
+ *   data/raw/mscc/ReadMe    — VizieR column-offset spec
  */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -87,8 +78,7 @@ async function fetchCatalog(opts: {
 
   process.stderr.write(`\nfetchClusterCatalogs: ${label}\n`);
 
-  // ReadMe first — tiny (~5 KB) and the parser needs it; fast failure beats a
-  // silent missing-column-spec issue discovered only when building bins.
+  // ReadMe first — tiny (~5 KB) and the parser needs it for column-offset verification.
   const readmeResult = await downloadWithResume(readmeUrl, readmePath);
   process.stderr.write(
     `  ReadMe: ${readmeResult.totalBytes.toLocaleString()} bytes` +
@@ -106,8 +96,7 @@ async function fetchCatalog(opts: {
         : ' (already complete)\n'),
   );
 
-  // Verify against the committed sidecar — fail loud so a fresh-clone user
-  // knows immediately if the upstream file changed or the download was cut.
+  // Verify against the committed sidecar — upstream changes or truncated downloads fail loud.
   const actualDigest = await sha256OfFile(tablePath);
   const expectedDigest = readExpectedDigest(sha256Path);
 

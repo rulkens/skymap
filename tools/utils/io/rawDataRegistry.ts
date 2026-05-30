@@ -1,59 +1,24 @@
 /**
- * `RAW_DATA` — single source of truth for every catalog raw-data file
- * (and a few directories) the build pipeline consumes.
- *
- * Modeled on `src/data/sources.ts`'s `SOURCE_REGISTRY`: a typed lookup
- * table keyed by a dotted-lowercase string ID (`'2mrs.table3'`,
- * `'glade.v23'`, …) with one entry per file or directory.  Consumers
- * call `rawDataPath('2mrs.table3')` instead of hand-writing
- * `resolve('data/raw/2mrs_table3.dat')` — so a file move becomes a
- * one-line edit here rather than a hunt through the 15-odd
- * tools/ scripts that touch the data tree.
- *
- * ## Why a registry
- *
- * Before this file existed, ~20 path strings were sprinkled across
- * `tools/parsers/`, `tools/fetch/`, `tools/famous/`, `tools/volumes/`,
- * and `tools/deploy/syncR2.ts`.  A reorg (or even a casual rename of
- * an upstream-named file when a new VizieR version drops) meant
- * editing every reference.  Centralizing the paths here also opens
- * the door to ergonomics that scattered strings can't support: a
- * compile-time check that every consumer references a known file
- * (via the `RawDataKey` union type), a documented `description` +
- * `upstream` URL per entry, and a future `npm run check-raw-data`
- * that walks the registry to report what's missing on disk.
+ * `RAW_DATA` — single source of truth for every catalog raw-data file the
+ * build pipeline consumes. Keyed by dotted-lowercase `<catalog>.<artifact>`
+ * (`'2mrs.table3'`, `'cf4.table2'`, …); consumers call `rawDataPath(key)`
+ * rather than hand-writing `data/raw/...` strings, so a file move is a
+ * one-line edit here. `RawDataKey` gives compile-time key checking.
  *
  * ## Conventions
  *
- * - **Keys**: `<catalog>.<artifact>`, dotted-lowercase.  The first
- *   segment is the catalog or producer (`2mrs`, `glade`, `hyperleda`,
- *   `sdss`, `famous`, `cf4`, `mcpm`, `milliquas`, `mcxc`, `mscc`,
- *   `fonts`, `starnet`, `filaments`).  The second segment names the
- *   specific file or
- *   directory (`table3`, `pa`, `readme`, `dir`).
- * - **Paths**: relative to the repo root, forward-slash, no leading
- *   `./`.  The `rawDataPath` helper resolves to absolute on demand.
- * - **`source`**: `'committed'` if the file is in git, `'gitignored'`
- *   otherwise.  Useful for the future check-raw-data script: a
- *   missing gitignored file means "run the fetcher"; a missing
- *   committed file means "you broke the repo".
- * - **`kind`**: `'file'` or `'directory'`.  Directories appear for
- *   fetcher outputs where the filename is dynamic (HyperLEDA chunk
- *   files, MCPM tier files, DisPerSE filament caches); consumers
- *   `join()` the dynamic component themselves.
- * - **`upstream`/`fetcher`/`readme`**: optional self-documentation.
- *   `upstream` is the URL the file ultimately came from.  `fetcher`
- *   is the `tools/` script that produces it, if any.  `readme` is
- *   the registry key of a related ReadMe entry (for the upstream-
- *   provided VizieR ReadMes that document byte layouts).
+ * - **Keys**: `<catalog>.<artifact>`. First segment = catalog/producer
+ *   (`2mrs`, `glade`, `hyperleda`, `sdss`, `famous`, `cf4`, `mcpm`,
+ *   `milliquas`, `mcxc`, `mscc`, `fonts`, `starnet`, `filaments`).
+ * - **`source`**: `'committed'` = in git; `'gitignored'` = fetcher output.
+ *   A missing gitignored file → run the fetcher; a missing committed file
+ *   → the repo is broken.
+ * - **`kind`**: `'file'` or `'directory'`. Directories appear when the
+ *   filename is dynamic (chunk files, tier variants); consumers `join()`.
+ * - **`upstream`/`fetcher`/`readme`**: optional provenance documentation.
  *
- * ## What's NOT here
- *
- * - Build artefacts under `public/data/*.bin`.  Those are outputs,
- *   not inputs — they're produced by `tools/catalog/buildAllBins.ts`
- *   and shipped to R2 via `tools/deploy/syncR2.ts`.
- * - Source code, tests, fixtures — anything under `src/`, `tests/`,
- *   or `tools/utils/`.  The registry is for the `data/` tree.
+ * Build artefacts (`public/data/*.bin`) are outputs, not inputs — they are
+ * not registered here.
  */
 
 import { resolve } from 'node:path';

@@ -4,41 +4,24 @@ import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { slot } from './common';
 
 /**
- * Cosmicflows-4 parser.
+ * Cosmicflows-4 parser — CDS VizieR table J/ApJ/944/94 (Tully+ 2023).
  *
- * Reads CDS Vizier table J/ApJ/944/94 (Tully+ 2023). The on-disk
- * format is fixed-width ASCII; column byte offsets come from the
- * CF4 ReadMe shipped alongside table2.dat in data/raw/cf4/ReadMe.
+ * Fixed-width ASCII; byte offsets from `data/raw/cf4/ReadMe`.  PGC is the
+ * sole cross-match key in table2.dat (no 2MASS XSC column). 2MRS rows whose
+ * `objID` is a 2MASS XSC integer get patched to a PGC by `buildAllBins`'s
+ * GLADE cross-pollination pass; unmatched rows fall through to the cz path.
+ * RA/Dec are carried so a future cone-match fallback can be added without
+ * re-parsing; `catalogDistanceFor` currently consults only the PGC map.
  *
- * The parser yields one `Cf4Record` per data row, dropping rows
- * without a usable distance modulus. PGC is the *only* cross-match
- * identifier in CF4 table2.dat — the original spec assumed a 2MASS
- * XSC column also existed, but the actual ReadMe (verified on
- * 2026-05-27 against data/raw/cf4/ReadMe) lists only PGC and a
- * companion 1PGC (group dominant) ID. For 2MRS rows whose `objID`
- * is the 2MASS XSC integer rather than a PGC, the GLADE
- * cross-pollination pass in `buildAllBins` patches `objID` to the
- * matched PGC; unmatched 2MRS rows fall through to the cz path.
+ * ## Column offsets (1-based inclusive, from ReadMe)
  *
- * RA/Dec are exposed in the parsed record so a future cone-match
- * fallback can be added without re-parsing the file. The lookup in
- * `catalogDistanceFor` only consults the PGC map today.
+ *   PGC    bytes  1.. 7   I7    integer
+ *   DM     bytes 29..34   F6.3  distance modulus (mag)
+ *   e_DM   bytes 36..40   F5.3  1-σ uncertainty on DM (mag)
+ *   RAdeg  bytes 138..145 F8.4  J2000 RA (decimal degrees)
+ *   DEdeg  bytes 147..154 F8.4  J2000 Dec (decimal degrees)
  *
- * ## Column offsets (1-based, inclusive — verified against ReadMe 2026-05-27)
- *
- *   PGC    bytes  1.. 7   I7,     integer
- *   DM     bytes 29..34   F6.3,   distance modulus in mag
- *   e_DM   bytes 36..40   F5.3,   1-σ uncertainty on DM in mag
- *   RAdeg  bytes 138..145 F8.4,   J2000 RA in decimal degrees
- *   DEdeg  bytes 147..154 F8.4,   J2000 Dec in decimal degrees
- *
- * Distance is computed from DM via the standard relation:
- *
- *     d_Mpc = 10 ^ ((DM - 25) / 5)
- *
- * with the uncertainty propagated via the derivative:
- *
- *     ed_Mpc = d_Mpc * (ln 10 / 5) * eDM
+ *   d_Mpc = 10^((DM − 25) / 5)    ed_Mpc = d_Mpc · (ln10 / 5) · eDM
  */
 
 export type Cf4Record = {
@@ -104,18 +87,9 @@ export type Cf4CatalogIndex = {
 };
 
 /**
- * Walk the raw table2.dat text and build a PGC-keyed index. Rows are
- * skipped if:
- *   - the line is blank or starts with `#` (CDS uses # for comments)
- *   - `parseCf4Line` returns null (no usable distance modulus)
- *   - the row has no PGC (CF4 always has one in practice — 100% PGC
- *     coverage on the 2026-05-27 release — but the guard keeps the
- *     map clean if a future release ships rows without)
- *
- * The index is PGC-only because CF4 table2.dat publishes PGC as its
- * sole cross-match identifier. 2MASS XSC matching, cone matching, and
- * 1PGC (group dominant) keying are all deferred — see the module
- * docstring above.
+ * Walk table2.dat text and build a PGC-keyed index. Skips blank/comment
+ * lines, rows without a usable DM, and rows without a PGC. PGC-only keying
+ * reflects CF4's schema; 2MASS XSC, cone, and 1PGC lookups are deferred.
  */
 export function buildCf4CatalogIndex(rawText: string): Cf4CatalogIndex {
   const byPgc = new Map<number, Cf4Record>();
@@ -129,15 +103,9 @@ export function buildCf4CatalogIndex(rawText: string): Cf4CatalogIndex {
 }
 
 /**
- * Load and parse the CF4 catalog from disk, returning an empty index
- * if the file is absent (so a fresh checkout without the raw CF4
- * data still produces .bin outputs — they just won't have the
- * local-volume override applied to any row).
- *
- * Missing-file tolerance mirrors the parallel `loadOrEmpty`-style
- * helpers in `buildAllBins`: raw catalogs are gitignored, so a
- * contributor doing UI work shouldn't be blocked by a 2.5 MB
- * download. A stderr note surfaces the skip so it isn't silent.
+ * Load and parse CF4 from disk. Returns an empty index when the file is
+ * absent so builds succeed without it (the local-volume override is simply
+ * skipped). Logs a stderr note so the skip isn't silent.
  */
 export function loadCf4CatalogIndex(
   path: string = rawDataPath('cf4.table2'),

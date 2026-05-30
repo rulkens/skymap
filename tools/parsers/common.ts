@@ -1,55 +1,23 @@
 /**
  * Shared types for catalog parsers.
  *
- * Each survey we ingest (SDSS, 2MRS, 2MPZ, 6dFGS, …) ships its data in a
- * subtly different CSV/TSV/FITS layout, with different column names and
- * different sets of available photometric bands. Rather than letting every
- * parser bake out its own bespoke object shape, they all converge on a
- * single canonical pre-merge representation: `ParsedRecord`.
+ * All survey parsers (SDSS, 2MRS, 2MPZ, 6dFGS, …) converge on `ParsedRecord`
+ * as their output shape, decoupling each parser from the merge step:
  *
- * The pipeline is therefore:
+ *   raw bytes  →  parser  →  ParsedRecord[]  →  merge/dedup  →  .bin
  *
- *   raw bytes  →  parser(survey-specific)  →  ParsedRecord[]  →  merge/dedup  →  .bin
+ * This separation enables cross-survey deduplication (e.g. "is this 2MPZ row
+ * also in SDSS via SDSS_OBJID?") and source-priority ordering, both of which
+ * require the full record arrays from all parsers before any comparison.
  *
- * Keeping a flat `ParsedRecord[]` between "parse" and "merge" buys us two
- * things that streaming straight to the binary writer would not:
+ * ### NaN / 0n sentinels instead of `undefined` or `null`
  *
- *  1. Cross-survey deduplication. The merger (in the future
- *     `tools/buildAllBins.ts`) needs to compare *every record from every
- *     survey* — e.g. "is this 2MPZ row also in SDSS via its SDSS_OBJID
- *     cross-ID?". That comparison only makes sense once all parsers have
- *     produced their full record arrays.
- *
- *  2. Source-priority ordering. Different surveys win for different
- *     regions of sky; the merger applies that priority on top of the
- *     deduped union. Doing it post-parse keeps each parser dumb and
- *     focused on one job (decode bytes → records).
- *
- * SDSS catalogs are ~500k rows; 2MPZ is ~1M; 6dFGS is ~125k; 2MRS is
- * ~45k. Holding them all in memory as flat objects costs only tens of MB,
- * which is trivial for an offline build tool — well worth it for the
- * algorithmic clarity.
- *
- * ---
- * ### Why NaN / 0n sentinels instead of `undefined` or `null`?
- *
- * Every consumer downstream of the parsers is numeric: the merger compares
- * magnitudes, the encoder packs them into typed arrays, the renderer
- * uploads them to the GPU as `f32`s. If a field were `undefined` we'd have
- * to litter the rest of the pipeline with `?? NaN` fallbacks, *and* every
- * field access would force TS to narrow `number | undefined` → `number`.
- *
- * `NaN` is the natural "missing-value" sentinel for IEEE-754 floats:
- *  - `NaN !== NaN`, so accidental equality bugs are loud, not silent.
- *  - It propagates through arithmetic — any computation that touches an
- *    unknown magnitude produces NaN, which the renderer can detect.
- *  - It survives the typed-array round-trip (Float32Array of NaN ≡ NaN).
- *
- * For `objID` we use `0n` because SDSS itself reserves objID 0 as the
- * "no object" sentinel, so it can never collide with a real ID. Using
- * `bigint | undefined` would force every consumer to handle the absent
- * case, even though "missing objID" is identical in meaning to
- * "this record came from a survey that doesn't carry SDSS IDs".
+ * Downstream consumers are numeric (merger comparisons, typed-array encoding,
+ * GPU f32 uploads). NaN is the natural missing-value sentinel for IEEE-754:
+ * it propagates through arithmetic, survives Float32Array round-trips, and
+ * `NaN !== NaN` makes accidental equality bugs loud. For `objID`, `0n` mirrors
+ * SDSS's own "no object" sentinel — missing objID means "no SDSS cross-ID",
+ * not a distinct absent state requiring extra narrowing.
  */
 
 import { Source } from '../../src/data/sources.js';
@@ -68,31 +36,16 @@ export type ParsedRecord = {
   dec: number; // degrees, J2000
   z: number; // redshift (spectroscopic or photometric depending on survey)
   /**
-   * Catalogued spectroscopic redshift, preserved verbatim from the
-   * source row. Today this duplicates `z` for every parser — they're
-   * the same number.
-   *
-   * The two fields diverge only inside the build pipeline's
-   * local-volume override (see
-   * docs/superpowers/specs/2026-05-27-local-volume-distances.md):
-   * `z` continues to be the "use this for position when no override
-   * fires" channel, while `spectroscopicZ` is the "always-show-this
-   * in the InfoCard" channel. Keeping them separated at the parser
-   * boundary means a future override that needs to *change* z (e.g.
-   * a peculiar-velocity-corrected value) doesn't have to wrestle with
-   * "but which z does the InfoCard show?".
-   *
-   * NaN is the legal "no published spec-z" sentinel — relevant for a
-   * handful of Famous-galaxy fixture rows that have a measured
-   * distance but no published spectroscopic redshift.
+   * Catalogued spectroscopic redshift, preserved verbatim from the source row.
+   * Diverges from `z` when the local-volume override fires: `z` drives position,
+   * `spectroscopicZ` is what the InfoCard always shows. NaN is the legal
+   * "no published spec-z" sentinel for Famous-galaxy rows with a measured
+   * distance but no published redshift.
    */
   spectroscopicZ: number;
   /**
-   * Five-band apparent magnitudes in the SDSS *ugriz* photometric system.
-   * NaN means the survey does not provide that band (e.g. 2MRS only has
-   * near-IR JHK photometry, so all five SDSS bands are NaN for 2MRS rows).
-   * The merger may later fill some of these in by cross-matching, but the
-   * parser's job is just to honestly report what its own catalog carries.
+   * Apparent magnitudes in the SDSS *ugriz* system. NaN when the survey
+   * doesn't cover that band (e.g. all five are NaN for 2MRS rows).
    */
   magU: number;
   magG: number;
@@ -100,150 +53,69 @@ export type ParsedRecord = {
   magI: number;
   magZ: number;
   /**
-   * Galaxy minor/major axis ratio b/a, in (0, 1]. `null` means the parser
-   * couldn't extract a real measurement from this row — the build pipeline
-   * will fill in a deterministic fallback (see fallbackOrientation.ts) before
-   * encoding the cloud, and stamp the provenance flag accordingly.
-   *
-   * Why `number | null` rather than `number` with a NaN sentinel? Unlike the
-   * five-band magnitudes — which fan out into many "missing band" code paths
-   * across surveys and benefit from NaN-arithmetic propagation — orientation
-   * has exactly two states: "real measurement" or "needs fallback". An
-   * explicit `null` makes the build pipeline's branch (`if (r.axisRatio !==
-   * null)`) read as a true binary decision instead of a NaN-sniffing test,
-   * and TypeScript's narrowing forces every call site to handle the absent
-   * case before assigning to the renderer's Float32Array slot.
+   * Minor/major axis ratio b/a ∈ (0, 1]. `null` means no real measurement —
+   * the pipeline applies a deterministic fallback before encoding. `null`
+   * rather than NaN because orientation is a binary "measured vs. fallback"
+   * decision; TypeScript narrowing forces every caller to handle it explicitly.
    */
   axisRatio: number | null;
   /**
-   * Galaxy position angle in degrees, [0, 180). PA is measured east of north
-   * (standard astronomical convention). `null` follows the same "no real
-   * measurement" semantics as axisRatio above.
-   *
-   * The two fields always travel together: a record either has both or
-   * neither. They're typed independently rather than as a single
-   * `orientation: { axisRatio; pa } | null` because the per-survey parsers
-   * occasionally have to re-merge them from different upstream tables (e.g.
-   * GLADE's HyperLEDA join supplies PA and logr25 separately), and keeping
-   * them as flat fields lets each parser fill them in whichever order its
-   * source data permits.
+   * Position angle in degrees east of north, [0, 180). `null` = no measurement
+   * (same semantics as `axisRatio`). Flat field rather than a paired struct
+   * because some parsers source PA and axis ratio from different upstream tables
+   * and need to fill them independently.
    */
   positionAngleDeg: number | null;
   /**
-   * Physical diameter in kiloparsecs derived from this row's catalog.
+   * Physical diameter in kiloparsecs, survey-specific derivation:
+   *   - 2MRS  → 2 · 10^Riso · arcsecToKpc(1, distance_Mpc)
+   *   - GLADE → Tully(1988) from absolute B mag
+   *   - SDSS  → 3 · petroR50_r · arcsecToKpc(1, distance_Mpc)
    *
-   *   - 2MRS  → 2 · 10^Riso · arcsecToKpc(1, distance_Mpc)  (real isophotal)
-   *   - GLADE → Tully(1988) on absolute B mag derived from Bmag + distance
-   *   - SDSS  → 3 · petroR50_r · arcsecToKpc(1, distance_Mpc)  (Petrosian)
-   *
-   * `null` means the parser couldn't extract a real measurement — the
-   * build pipeline applies `DEFAULT_GALAXY_DIAMETER_KPC = 30` before
-   * encoding, so the renderer always sees a finite value.  `null` over
-   * NaN keeps the "we have a measurement vs we don't" decision a true
-   * binary at the parser→pipeline boundary, mirroring how the orientation
-   * fields handle the same kind of "real or fallback" distinction.
+   * `null` = no measurement; pipeline applies DEFAULT_GALAXY_DIAMETER_KPC = 30.
+   * Same `null`-over-NaN rationale as `axisRatio`.
    */
   diameterKpc: number | null;
   /**
-   * Per-source classification byte (see `src/data/sourceClass.ts`
-   * for the per-source lookup tables).
-   *
-   * Defaults to `0` ("unknown / unclassified") for every parser
-   * that doesn't carry a class signal — the build encoder writes
-   * the byte straight through to the .bin's per-record `classByte`
-   * slot.  Today only the Milliquas parser populates this field
-   * (AGN class letter Q/A/B/K/N/S → enum 1..6); SDSS / 2MRS /
-   * GLADE / Famous all leave it at 0.
-   *
-   * Why a flat byte rather than a tagged union per source?  The
-   * on-disk format already commits to one byte per record (see
-   * `src/data/galaxyCatalogFormat.ts` v5).  The build pipeline
-   * never inspects the value — it just copies — so the parser is
-   * the one place that knows how to translate its survey's class
-   * signal into the byte, and a flat numeric field keeps the
-   * pipeline blissfully ignorant of per-source semantics.
+   * Per-source classification byte (see `src/data/sourceClass.ts`). Defaults
+   * to `0` (unknown); only Milliquas populates it (AGN letter Q/A/B/K/N/S →
+   * enum 1..6). Flat byte mirrors the .bin format (v5, one byte per record);
+   * the pipeline copies it opaque, so each parser handles its own translation.
    */
   classByte: number;
 
   /**
-   * Milliquas-only parent-survey enum byte (see
-   * `milliquasParentSurveyPrefix` in `src/data/sourceClass.ts`).
-   *
-   * Every parser other than Milliquas leaves this at `0` (the
-   * "no parent-survey prefix" sentinel).  The Milliquas parser
-   * matches the Name column against the small fixed prefix set
-   * (`SDSS`, `2MASX`, `GAIA`, `WISEA`, `NVSS`, `FIRST`, `6dFGS`)
-   * and writes the matching enum value here so the runtime can
-   * reconstruct `"<PARENT> J<RA><Dec>"` at hover time without a
-   * companion JSON sidecar.
-   *
-   * Same plain-number-rather-than-tagged-union rationale as
-   * `classByte`: the field is one byte at the binary boundary, and
-   * the pipeline carries it through opaque.
+   * Milliquas-only parent-survey enum byte (see `milliquasParentSurveyPrefix`
+   * in `src/data/sourceClass.ts`). Other parsers leave it `0`. Milliquas
+   * matches the Name column prefix (`SDSS`, `2MASX`, `GAIA`, …) so the runtime
+   * can reconstruct `"<PARENT> J<RA><Dec>"` at hover time. Same
+   * flat-byte rationale as `classByte`.
    */
   parentSurveyByte: number;
   /**
-   * 2MASS XSC designation, e.g. `00473313-2517196` (16 chars, no `2MASX J`
-   * prefix — both 2MRS and GLADE spell it the same way at this layer).
-   *
-   * Populated only by the 2MRS parser today.  The build pipeline uses it
-   * to join against a `2MASX → PGC` map harvested from GLADE's source
-   * rows, so 2MRS records that lack a native PGC can still be routed
-   * through NED's `?objname=PGC+<n>` direct-hit URL instead of a fuzzy
-   * near-position search.
-   *
-   * Marked optional + transient: it's not part of the runtime
-   * `GalaxyCatalog` binary format, and parsers that have no use for it
-   * (SDSS, GLADE) simply don't set the field.  The build pipeline reads
-   * it once during the 2MRS post-processing pass, then drops it on the
-   * floor when it materialises records into the SoA cloud.
+   * 2MASS XSC designation, e.g. `00473313-2517196` (no `2MASX J` prefix).
+   * Populated by the 2MRS parser; used in `buildAllBins` to join against a
+   * `2MASX → PGC` map so 2MRS rows without a native PGC can still reach CF4
+   * distances. Not part of the .bin format — consumed once during the 2MRS
+   * post-processing pass, then discarded.
    */
   massId?: string;
 };
 
 /**
- * Extract a fixed-width field from a ReadMe-format line using 1-based
- * inclusive byte offsets and trim surrounding whitespace.
- *
- * Fixed-width catalogs (CDS VizieR, 2MRS, CF4, MCXC, MSCC, …) publish their
- * column layout as `bytes START–END` where both endpoints are *1-based and
- * inclusive*, matching the column description in the distributed ReadMe.  JS's
- * `String.prototype.slice` is *0-based and half-open*: `.slice(start, end+1)`.
- *
- * Centralising the arithmetic here means every fixed-width parser writes the
- * ReadMe's literal byte numbers — `slot(line, 109, 115)` for a field at
- * bytes 109–115 — with no per-call off-by-one to re-derive.  A reader can
- * verify a field offset by opening the ReadMe, reading the byte range
- * directly, and comparing it to the `slot` call, without needing to hold
- * "remember to subtract 1 from start" in mind.
- *
- * Returns `''` for slices that lie past the line end — `String.prototype.slice`
- * already silently returns the available prefix; trimming that prefix to `''`
- * makes the short-line case a clean empty string rather than stray spaces.
+ * Extract a fixed-width field using 1-based inclusive byte offsets (as
+ * published in CDS VizieR ReadMes), then trim whitespace. Centralising the
+ * 1-based→0-based conversion lets every parser write the ReadMe's literal byte
+ * numbers directly. Returns `''` for slices past the line end.
  */
 export function slot(line: string, start: number, end: number): string {
   return line.slice(start - 1, end).trim();
 }
 
 /**
- * Strip blank lines and comment lines from a raw CSV blob, returning the
- * non-empty trimmed rows in order.
- *
- * We treat three kinds of lines as comments:
- *  - Blank / whitespace-only lines — usually trailing newlines or stray
- *    blanks between header and body.
- *  - Lines starting with `#` — SDSS SkyServer's CSV exports begin with a
- *    `#Table1` banner above the column header.
- *  - Lines starting with `--` — when the SQL query itself has a leading
- *    SQL comment, some export paths preserve it on the first line.
- *
- * The returned array still includes the header row as element 0; callers
- * are responsible for splitting header from body.
- *
- * Why is this in `common.ts`? All five surveys we plan to ingest deliver
- * line-oriented text with similar comment conventions, so deduplicating
- * the comment-stripping logic here means each individual parser focuses
- * on its own column quirks, not on input plumbing.
+ * Strip blank lines, `#`-prefixed lines (SDSS SkyServer banners / VizieR
+ * provenance comments), and `--`-prefixed lines (SQL comments) from a raw
+ * text blob. Returns the surviving rows in order; element 0 is the header.
  */
 export function nonCommentLines(rawText: string): string[] {
   return rawText
