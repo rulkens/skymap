@@ -23,7 +23,7 @@ const VALID_CATEGORIES = ['cluster', 'supercluster', 'void'] as const;
 /**
  * One featured structure from `cluster_anchors.seed.json`.
  *
- * Coordinates follow `clusterAnchors.ts` convention: RA in hours [0, 24),
+ * Coordinates follow the `SkyCoord` convention: RA in hours [0, 24),
  * Dec in degrees [-90, 90], distances in Mpc.
  *
  * `physicalRadiusMpc` is the gravitationally-bound virial/R_200 radius for

@@ -1,7 +1,7 @@
 /**
  * buildStaticAnchorPois — assemble the static `PointOfInterest[]` list
- * from the curated CLUSTER / SUPERCLUSTER / VOID anchor tables in
- * `clusterAnchors.ts`.
+ * from the curated cluster/supercluster/void seed in
+ * `data/cluster_anchors.seed.json`.
  *
  * ### Why a separate module?
  *
@@ -18,7 +18,7 @@
  *
  * Keeping a single helper here means both call sites agree on:
  *
- *   - The slug rule (`name → lower-kebab-case`), so `Virgo (M87)` →
+ *   - The slug rule (`names[0] → lower-kebab-case`), so `Virgo (M87)` →
  *     `virgo-m87`, prefixed by the category.  A drift between the two
  *     would silently break deep-link resolution for, e.g., the apostrophe
  *     in some future anchor name.
@@ -46,16 +46,32 @@
  * ### Pure
  *
  * No I/O, no engine coupling — safe to import from React, the engine,
- * and tests alike.
+ * and tests alike.  The seed JSON is bundled at build time via the Vite
+ * JSON import below, so this remains synchronous.
  */
 
-import {
-  CLUSTER_ANCHORS,
-  SUPERCLUSTER_ANCHORS,
-  VOID_ANCHORS,
-  raDecDistToEqCart,
-} from './clusterAnchors';
+import { raDecDistToEqCart } from '../utils/math/raDecDistToEqCart';
 import type { PointOfInterest } from '../@types/engine/subsystems/PointOfInterest';
+// Vite resolves JSON imports at build time; TypeScript narrows the type
+// via `resolveJsonModule: true`.  We cast to the fields we consume so
+// new seed columns don't require a type update here.
+import clusterSeedJson from '../../data/cluster_anchors.seed.json';
+
+/**
+ * Minimal shape we need from each seed entry — a strict subset of
+ * ClusterSeedEntry from `tools/parsers/parseClusterSeed.ts`.  Defined
+ * locally so the src/ tsconfig (which excludes tools/) doesn't need to
+ * reach across the boundary for a runtime-erased type.
+ */
+type SeedEntry = {
+  readonly names: readonly string[];
+  readonly category: 'cluster' | 'supercluster' | 'void';
+  readonly raHours: number;
+  readonly decDeg: number;
+  readonly distMpc: number;
+  readonly physicalRadiusMpc: number;
+  readonly apparentRadiusMpc: number;
+};
 
 /**
  * Lower-kebab the anchor name into a URL-safe slug.  Matches the rule
@@ -77,36 +93,20 @@ function slug(name: string): string {
  * identity is preserved across renders).
  */
 export function buildStaticAnchorPois(): PointOfInterest[] {
-  return [
-    ...CLUSTER_ANCHORS.map(
-      (a): PointOfInterest => ({
-        id: `cluster-${slug(a.name)}`,
-        name: a.name,
-        category: 'cluster',
+  return (clusterSeedJson as SeedEntry[]).map(
+    (a): PointOfInterest => {
+      // Every seed entry is guaranteed to have at least one name (validated
+      // at build time by parseClusterSeed).  The non-null assertion is safe
+      // because an empty names array would have been caught at seed authoring.
+      const primaryName = a.names[0]!;
+      return {
+        id: `${a.category}-${slug(primaryName)}`,
+        name: primaryName,
+        category: a.category,
         worldPos: raDecDistToEqCart(a),
         physicalRadiusMpc: a.physicalRadiusMpc,
         apparentRadiusMpc: a.apparentRadiusMpc,
-      }),
-    ),
-    ...SUPERCLUSTER_ANCHORS.map(
-      (a): PointOfInterest => ({
-        id: `supercluster-${slug(a.name)}`,
-        name: a.name,
-        category: 'supercluster',
-        worldPos: raDecDistToEqCart(a),
-        physicalRadiusMpc: a.physicalRadiusMpc,
-        apparentRadiusMpc: a.apparentRadiusMpc,
-      }),
-    ),
-    ...VOID_ANCHORS.map(
-      (a): PointOfInterest => ({
-        id: `void-${slug(a.name)}`,
-        name: a.name,
-        category: 'void',
-        worldPos: raDecDistToEqCart(a),
-        physicalRadiusMpc: a.physicalRadiusMpc,
-        apparentRadiusMpc: a.apparentRadiusMpc,
-      }),
-    ),
-  ];
+      };
+    },
+  );
 }

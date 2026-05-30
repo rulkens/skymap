@@ -1,11 +1,31 @@
-import { describe, expect, it } from 'vitest';
-import {
-  CLUSTER_ANCHORS,
-  SUPERCLUSTER_ANCHORS,
-  VOID_ANCHORS,
-  raDecDistToEqCart,
-} from '../../src/data/clusterAnchors';
-import type { ClusterAnchor } from '../../src/@types/data/ClusterAnchor';
+/**
+ * Tests for `raDecDistToEqCart` and the cluster seed content.
+ *
+ * Previously this file imported CLUSTER_ANCHORS / SUPERCLUSTER_ANCHORS /
+ * VOID_ANCHORS constants from `src/data/clusterAnchors.ts`.  That module
+ * has been deleted; the seed data now lives in
+ * `data/cluster_anchors.seed.json` and is parsed by
+ * `tools/parsers/parseClusterSeed.ts`.  The coordinate helper lives at
+ * `src/utils/math/raDecDistToEqCart.ts`.
+ *
+ * The id invariants that matter for deep-link stability are covered in
+ * `buildStaticAnchorPois.test.ts`.  Tests here focus on the coordinate
+ * maths and the seed content.
+ */
+
+import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
+import { parseClusterSeed } from '../../tools/parsers/parseClusterSeed';
+import type { ClusterSeedEntry } from '../../tools/parsers/parseClusterSeed';
+
+const SEED_PATH = resolve(__dirname, '../../data/cluster_anchors.seed.json');
+const allEntries = parseClusterSeed(readFileSync(SEED_PATH, 'utf-8'));
+
+const CLUSTER_ENTRIES = allEntries.filter((e) => e.category === 'cluster');
+const SUPERCLUSTER_ENTRIES = allEntries.filter((e) => e.category === 'supercluster');
+const VOID_ENTRIES = allEntries.filter((e) => e.category === 'void');
 
 describe('raDecDistToEqCart', () => {
   it('places Virgo at the expected equatorial Cartesian position', () => {
@@ -32,80 +52,84 @@ describe('raDecDistToEqCart', () => {
   });
 });
 
-describe('CLUSTER_ANCHORS', () => {
+describe('cluster seed — cluster entries', () => {
   it('includes the well-known clusters', () => {
     // Length is asserted as a lower bound rather than exact so future
     // additions don't require a test edit — but the named-membership
-    // asserts below still catch accidental removal of any canonical
-    // entry.
-    expect(CLUSTER_ANCHORS.length).toBeGreaterThanOrEqual(10);
-    const names = CLUSTER_ANCHORS.map((a) => a.name);
-    expect(names).toContain('Virgo (M87)');
-    expect(names).toContain('Fornax (NGC 1399)');
-    expect(names).toContain('Hydra I (A1060)');
-    expect(names).toContain('Centaurus (A3526)');
-    expect(names).toContain('Coma (A1656)');
-    expect(names).toContain('Perseus (A426)');
-    expect(names).toContain('A2199 (NGC 6166)');
-    expect(names).toContain('Ophiuchus');
-    expect(names).toContain('Norma / Great Attractor');
-    expect(names).toContain('Hercules (A2151)');
-    expect(names).toContain('Shapley (A3558)');
+    // asserts below still catch accidental removal of any canonical entry.
+    expect(CLUSTER_ENTRIES.length).toBeGreaterThanOrEqual(10);
+    const primaryNames = CLUSTER_ENTRIES.map((a) => a.names[0]);
+    expect(primaryNames).toContain('Virgo (M87)');
+    expect(primaryNames).toContain('Fornax (NGC 1399)');
+    expect(primaryNames).toContain('Hydra I (A1060)');
+    expect(primaryNames).toContain('Centaurus (A3526)');
+    expect(primaryNames).toContain('Coma (A1656)');
+    expect(primaryNames).toContain('Perseus (A426)');
+    expect(primaryNames).toContain('A2199 (NGC 6166)');
+    expect(primaryNames).toContain('Ophiuchus');
+    expect(primaryNames).toContain('Norma / Great Attractor');
+    expect(primaryNames).toContain('Hercules (A2151)');
+    expect(primaryNames).toContain('Shapley (A3558)');
   });
 
-  it('every anchor has a positive distance', () => {
-    for (const a of CLUSTER_ANCHORS) {
+  it('every entry has a positive distance', () => {
+    for (const a of CLUSTER_ENTRIES) {
       expect(a.distMpc).toBeGreaterThan(0);
     }
   });
 
-  it('is a readonly tuple at the type level', () => {
-    // This compiles only if CLUSTER_ANCHORS is `readonly ClusterAnchor[]`.
-    const _check: readonly ClusterAnchor[] = CLUSTER_ANCHORS;
-    expect(_check).toBe(CLUSTER_ANCHORS);
+  it('every entry has a finite, positive physicalRadiusMpc', () => {
+    for (const a of CLUSTER_ENTRIES) {
+      expect(a.physicalRadiusMpc).toBeGreaterThan(0);
+      expect(Number.isFinite(a.physicalRadiusMpc)).toBe(true);
+    }
   });
 });
 
-describe('SUPERCLUSTER_ANCHORS', () => {
+describe('cluster seed — supercluster entries', () => {
   it('exposes the canonical local-volume superclusters', () => {
-    const names = SUPERCLUSTER_ANCHORS.map((a) => a.name);
-    expect(names).toContain('Laniakea SC');
-    expect(names).toContain('Perseus-Pisces SC');
-    expect(names).toContain('Coma SC');
-    expect(names).toContain('Hydra Wall');
-    expect(names).toContain('Hercules SC');
-    expect(names).toContain('Shapley SC');
+    const primaryNames = SUPERCLUSTER_ENTRIES.map((a) => a.names[0]);
+    expect(primaryNames).toContain('Laniakea SC');
+    expect(primaryNames).toContain('Perseus-Pisces SC');
+    expect(primaryNames).toContain('Coma SC');
+    expect(primaryNames).toContain('Hydra Wall');
+    expect(primaryNames).toContain('Hercules SC');
+    expect(primaryNames).toContain('Shapley SC');
   });
 
-  it('every supercluster has a positive distance', () => {
-    for (const a of SUPERCLUSTER_ANCHORS) {
+  it('every entry has a positive distance', () => {
+    for (const a of SUPERCLUSTER_ENTRIES) {
       expect(a.distMpc).toBeGreaterThan(0);
     }
   });
 
-  it('is a readonly tuple at the type level', () => {
-    const _check: readonly ClusterAnchor[] = SUPERCLUSTER_ANCHORS;
-    expect(_check).toBe(SUPERCLUSTER_ANCHORS);
+  it('every entry has a finite, positive physicalRadiusMpc', () => {
+    for (const a of SUPERCLUSTER_ENTRIES) {
+      expect(a.physicalRadiusMpc).toBeGreaterThan(0);
+      expect(Number.isFinite(a.physicalRadiusMpc)).toBe(true);
+    }
   });
 });
 
-describe('VOID_ANCHORS', () => {
+describe('cluster seed — void entries', () => {
   it('exposes the three local voids (Sculptor / Local / Boötes)', () => {
-    const names = VOID_ANCHORS.map((a) => a.name);
-    expect(names).toContain('Sculptor Void');
-    expect(names).toContain('Local Void');
-    expect(names).toContain('Boötes Void');
+    const primaryNames = VOID_ENTRIES.map((a) => a.names[0]);
+    expect(primaryNames).toContain('Sculptor Void');
+    expect(primaryNames).toContain('Local Void');
+    expect(primaryNames).toContain('Boötes Void');
   });
 
-  it('every void has a positive distance', () => {
-    for (const a of VOID_ANCHORS) {
+  it('every entry has a positive distance', () => {
+    for (const a of VOID_ENTRIES) {
       expect(a.distMpc).toBeGreaterThan(0);
     }
   });
 
-  it('is a readonly tuple at the type level', () => {
-    const _check: readonly ClusterAnchor[] = VOID_ANCHORS;
-    expect(_check).toBe(VOID_ANCHORS);
+  it('every entry has a finite, positive physicalRadiusMpc', () => {
+    for (const a of VOID_ENTRIES) {
+      expect(a.physicalRadiusMpc).toBeGreaterThan(0);
+      expect(Number.isFinite(a.physicalRadiusMpc)).toBe(true);
+    }
   });
 
   it('Boötes Void sits inside the 500 Mpc CF-4 box', () => {
@@ -113,41 +137,20 @@ describe('VOID_ANCHORS', () => {
     // Boötes is at the edge of reliable reconstruction.  This test pins
     // the value at 245 Mpc so a casual revision can't accidentally place
     // it outside the box.
-    const bootes = VOID_ANCHORS.find((a) => a.name === 'Boötes Void');
+    const bootes = VOID_ENTRIES.find((a) => a.names[0] === 'Boötes Void');
     expect(bootes).toBeDefined();
     expect(bootes!.distMpc).toBeLessThan(500);
   });
 });
 
-describe('clusterAnchors — physicalRadiusMpc population', () => {
-  it('every cluster anchor has a finite, positive physicalRadiusMpc', () => {
-    for (const a of CLUSTER_ANCHORS) {
-      expect(a.physicalRadiusMpc).toBeGreaterThan(0);
-      expect(Number.isFinite(a.physicalRadiusMpc)).toBe(true);
-    }
-  });
-
-  it('every supercluster anchor has a finite, positive physicalRadiusMpc', () => {
-    for (const a of SUPERCLUSTER_ANCHORS) {
-      expect(a.physicalRadiusMpc).toBeGreaterThan(0);
-      expect(Number.isFinite(a.physicalRadiusMpc)).toBe(true);
-    }
-  });
-
-  it('every void anchor has a finite, positive physicalRadiusMpc', () => {
-    for (const a of VOID_ANCHORS) {
-      expect(a.physicalRadiusMpc).toBeGreaterThan(0);
-      expect(Number.isFinite(a.physicalRadiusMpc)).toBe(true);
-    }
-  });
-
+describe('cluster seed — physicalRadiusMpc population', () => {
   it('uses the literature-grounded radii from the spec', () => {
-    const byName = (list: readonly { name: string; physicalRadiusMpc: number }[], n: string) =>
-      list.find((a) => a.name.startsWith(n));
+    const byPrimaryName = (list: readonly ClusterSeedEntry[], n: string) =>
+      list.find((a) => a.names[0]?.startsWith(n));
 
-    expect(byName(CLUSTER_ANCHORS, 'Virgo')?.physicalRadiusMpc).toBe(2.2);
-    expect(byName(CLUSTER_ANCHORS, 'Coma')?.physicalRadiusMpc).toBe(3.0);
-    expect(byName(SUPERCLUSTER_ANCHORS, 'Hercules SC')?.physicalRadiusMpc).toBe(60);
-    expect(byName(VOID_ANCHORS, 'Boötes')?.physicalRadiusMpc).toBe(50);
+    expect(byPrimaryName(CLUSTER_ENTRIES, 'Virgo')?.physicalRadiusMpc).toBe(2.2);
+    expect(byPrimaryName(CLUSTER_ENTRIES, 'Coma')?.physicalRadiusMpc).toBe(3.0);
+    expect(byPrimaryName(SUPERCLUSTER_ENTRIES, 'Hercules SC')?.physicalRadiusMpc).toBe(60);
+    expect(byPrimaryName(VOID_ENTRIES, 'Boötes')?.physicalRadiusMpc).toBe(50);
   });
 });

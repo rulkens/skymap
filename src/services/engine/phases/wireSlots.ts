@@ -106,15 +106,14 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // The SettingsPanel's per-category checkboxes (Overlays → Labels)
   // are the user-facing knob; this wire just makes the POIs available.
   //
-  // The three lists (cluster / supercluster / void) stay separate
-  // (rather than one merged export) so the audit script in `tools/`
-  // can consume CLUSTER_ANCHORS without pulling in interpretive
-  // supercluster / void POIs.
+  // The seed JSON holds all three categories (cluster / supercluster /
+  // void); the audit script in `tools/` filters by category directly
+  // from the parsed seed.
   //
-  // physicalRadiusMpc per anchor comes from clusterAnchors.ts —
+  // physicalRadiusMpc per anchor comes from `data/cluster_anchors.seed.json` —
   // literature-grounded values (R_200 / virial radii for clusters,
   // characteristic structural extent for superclusters and voids).
-  // See the per-anchor citation comments in clusterAnchors.ts.
+  // See the per-entry description fields in the seed JSON.
   //
   // The id-slug + worldPos build is factored into
   // `data/buildStaticAnchorPois.ts` so the React-side `usePoiUrlSync`

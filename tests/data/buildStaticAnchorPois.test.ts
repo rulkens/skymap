@@ -17,18 +17,12 @@
 
 import { describe, it, expect } from 'vitest';
 import { buildStaticAnchorPois } from '../../src/data/buildStaticAnchorPois';
-import {
-  CLUSTER_ANCHORS,
-  SUPERCLUSTER_ANCHORS,
-  VOID_ANCHORS,
-} from '../../src/data/clusterAnchors';
+import clusterSeedJson from '../../data/cluster_anchors.seed.json';
 
 describe('buildStaticAnchorPois', () => {
-  it('emits one POI per anchor across all three categories', () => {
+  it('emits one POI per seed entry across all three categories', () => {
     const pois = buildStaticAnchorPois();
-    expect(pois.length).toBe(
-      CLUSTER_ANCHORS.length + SUPERCLUSTER_ANCHORS.length + VOID_ANCHORS.length,
-    );
+    expect(pois.length).toBe(clusterSeedJson.length);
   });
 
   it('produces URL-safe ids that lower-kebab the anchor name and prefix the category', () => {
@@ -47,7 +41,7 @@ describe('buildStaticAnchorPois', () => {
     expect(byName.get('Boötes Void')).toBe('void-bo-tes-void');
   });
 
-  it('carries physicalRadiusMpc through from the source anchor table', () => {
+  it('carries physicalRadiusMpc through from the seed', () => {
     const pois = buildStaticAnchorPois();
     const virgo = pois.find((p) => p.id === 'cluster-virgo-m87');
     expect(virgo?.physicalRadiusMpc).toBe(2.2);
