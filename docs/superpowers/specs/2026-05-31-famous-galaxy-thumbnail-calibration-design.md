@@ -56,6 +56,8 @@ In scope:
 - A deprojected-output preview in the export/commit step.
 - Build-time deprojection of the hi-res source (pure affine resample).
 - Runtime placement in `TexturedDiskSubsystem` driven by derived calibration.
+- A debug overlay drawing the procedural-disk radius ring for the selected
+  galaxy (developer verification aid, behind the debug panel).
 - A short ADR recording the storage choice.
 
 Out of scope:
@@ -246,6 +248,33 @@ quad billboard on the GPU (existing pointer)
   catalog 3-D position; `diskRadiusFrac` → quad size matching `diameterKpc`.
 - **Backward-compat**: an entry without `calibration` renders identically to
   the pre-feature path.
+
+## Debug ring overlay
+
+To visually verify that a calibrated textured disk covers the same area as the
+catalog's procedural disk, add a debug overlay that draws a **ring at the
+procedural-disk radius** of the **currently selected** famous galaxy, in 3-D
+world space (the ring tracks the galaxy as the camera moves). It sits next to
+the existing pick-buffer debug view:
+
+- **Toggle:** a new `debug.showDiskRadiusRing` setting + a "Show disk radius
+  ring" checkbox in `DebugPanel`, mirroring the existing `showPickBuffer`
+  plumbing (`PickDebugOverlay`, `DebugPanel.tsx:87-94`, the `debug.*` settings
+  table and `EngineDebugHandle`).
+- **Radius:** the procedural-disk footprint — `paddedRadiusMpc(diameterKpc)`
+  (the same value the textured quad's `sizeWorldMpc` derives from). Drawing the
+  ring at the *procedural* radius and comparing it against the *textured* quad's
+  visible extent is the verification: if calibration scale is right, the disk
+  fills the ring.
+- **Scope:** selected galaxy only — reuses the existing selection plumbing
+  (`getFamousMeta` / selection subsystem), so the view stays uncluttered while
+  calibrating one galaxy at a time.
+- **Implementation:** a small world-space line-loop overlay pass under
+  `services/gpu/passes/`, following the `markerLines` / `pickDebugOverlay`
+  factory shape (premultiplied-OVER blend, shares `CameraUniforms`). Off by
+  default.
+
+This is a developer aid, not a user feature; it ships behind the debug panel.
 
 ## ADR
 
