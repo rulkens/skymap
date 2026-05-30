@@ -16,9 +16,7 @@ import { resolve } from 'node:path';
 import {
   extractAbell,
   buildClusterEntries,
-  type ClusterBuildEntry,
 } from '../../../tools/clusters/buildClusters';
-import { raDecDistToEqCart } from '../../../src/utils/math/raDecDistToEqCart';
 import { parseClusterSeed } from '../../../tools/parsers/parseClusterSeed';
 import type { McxcRow } from '../../../tools/parsers/parseMcxc';
 import type { MsccRow } from '../../../tools/parsers/parseMscc';
@@ -39,8 +37,6 @@ const FAR_Z = 0.20;
 
 /** Nm safely above the MSCC_NM_MIN threshold (6). */
 const ABOVE_NM = 12;
-/** Nm safely below. */
-const BELOW_NM = 2;
 
 /** An MCXC row fixture with all required fields. */
 function makeMcxcRow(overrides: Partial<McxcRow> = {}): McxcRow {
@@ -99,14 +95,24 @@ describe('extractAbell', () => {
     });
 
     it('handles ACO southern supplement prefix S', () => {
-      expect(extractAbell('', 'S0805')).toBe('S0805');
+      expect(extractAbell('', 'S0805')).toBe('S805');
     });
 
-    it('preserves digit string verbatim (no leading-zero strip)', () => {
-      // 'A 0085' → 'A0085' — spaces removed but digits kept as-is.
-      // Northern Abell numbers rarely have leading zeros; ACO southern
-      // designations like S0805 require them (four-digit convention).
-      expect(extractAbell('', 'A 0085')).toBe('A0085');
+    it('strips leading zeros: A0007 → A7', () => {
+      expect(extractAbell('', 'A0007')).toBe('A7');
+    });
+
+    it('strips leading zeros: A0013 → A13', () => {
+      expect(extractAbell('', 'A0013')).toBe('A13');
+    });
+
+    it('strips leading zeros for S-prefix: S0026 → S26', () => {
+      expect(extractAbell('', 'S0026')).toBe('S26');
+    });
+
+    it('strips leading zeros with internal space: A 0085 → A85', () => {
+      // Space between prefix and digits is absorbed; leading zeros are stripped.
+      expect(extractAbell('', 'A 0085')).toBe('A85');
     });
 
     it('prefers aName over oName when both have an Abell token', () => {
@@ -239,13 +245,7 @@ describe('buildClusterEntries drops a bulk entry near a featured seed anchor', (
     expect(farSurvived).toBe(true);
 
     // The near-Coma cluster must be suppressed (Coma's apparentRadiusMpc = 6 Mpc).
-    // Its worldPos should be close to Coma's — check via distance from origin ≈ comaDist.
-    const nearClusterPos = entries.filter((e) => {
-      const d = Math.sqrt(e.worldPos[0] ** 2 + e.worldPos[1] ** 2 + e.worldPos[2] ** 2);
-      return Math.abs(d - comaDist) < 20 && e.worldPos[2] > 0; // roughly Coma hemisphere
-    });
-    // After dedup, the near-Coma entry should not be in the output.
-    // We verify by checking total count: only farRow should survive from these two.
+    // Verify by checking total count: only farRow should survive from these two.
     expect(clusterEntries.length).toBeLessThan(2);
   });
 });
