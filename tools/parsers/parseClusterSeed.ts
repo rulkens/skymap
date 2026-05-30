@@ -97,8 +97,14 @@ export function validateClusterSeedEntry(e: ClusterSeedEntry): ClusterSeedEntry 
       `cluster seed: ${e.id} has non-positive apparentRadiusMpc ${e.apparentRadiusMpc}`,
     );
   }
-  if (typeof e.description !== 'string') {
+  if (typeof e.description !== 'string' || e.description.trim().length === 0) {
     throw new Error(`cluster seed: ${e.id} missing description`);
+  }
+  if (e.commonName !== undefined && (typeof e.commonName !== 'string' || e.commonName.length === 0)) {
+    throw new Error(`cluster seed: ${e.id} has invalid commonName (must be a non-empty string)`);
+  }
+  if (e.abell !== undefined && (typeof e.abell !== 'string' || e.abell.length === 0)) {
+    throw new Error(`cluster seed: ${e.id} has invalid abell (must be a non-empty string)`);
   }
   return e;
 }
@@ -115,13 +121,12 @@ export function parseClusterSeed(rawJson: string): ClusterSeedEntry[] {
   const seen = new Set<string>();
   const out: ClusterSeedEntry[] = [];
   for (const e of parsed) {
-    validateClusterSeedEntry(e as ClusterSeedEntry);
-    const id = (e as ClusterSeedEntry).id;
-    if (seen.has(id)) {
-      throw new Error(`cluster seed: duplicate id "${id}"`);
+    const validated = validateClusterSeedEntry(e as ClusterSeedEntry);
+    if (seen.has(validated.id)) {
+      throw new Error(`cluster seed: duplicate id "${validated.id}"`);
     }
-    seen.add(id);
-    out.push(e as ClusterSeedEntry);
+    seen.add(validated.id);
+    out.push(validated);
   }
   return out;
 }

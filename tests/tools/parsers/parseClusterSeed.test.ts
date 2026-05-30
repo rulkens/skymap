@@ -17,7 +17,7 @@ function baseEntry(overrides: Partial<ClusterSeedEntry> = {}): ClusterSeedEntry 
     distMpc: 100,
     physicalRadiusMpc: 3.0,
     apparentRadiusMpc: 6.0,
-    description: 'Nearest rich galaxy cluster.',
+    description: 'Test cluster fixture.',
     ...overrides,
   };
 }
@@ -95,5 +95,25 @@ describe('parseClusterSeed', () => {
 
   it('rejects root that is not an array', () => {
     expect(() => parseClusterSeed('{}')).toThrow(/array/i);
+  });
+
+  it('rejects an empty description', () => {
+    const e = baseEntry({ id: 'bad-desc', description: '   ' });
+    expect(() => validateClusterSeedEntry(e)).toThrow(/bad-desc.*description|description.*bad-desc/i);
+  });
+
+  it('rejects a non-string abell', () => {
+    const e = baseEntry({ id: 'bad-abell', abell: 99 as unknown as string });
+    expect(() => validateClusterSeedEntry(e)).toThrow(/bad-abell.*abell|abell.*bad-abell/i);
+  });
+
+  it('rejects a non-string commonName', () => {
+    const e = baseEntry({ id: 'bad-cn', commonName: null as unknown as string });
+    expect(() => validateClusterSeedEntry(e)).toThrow(/bad-cn.*commonName|commonName.*bad-cn/i);
+  });
+
+  it('rejects an empty commonName', () => {
+    const e = baseEntry({ id: 'bad-cn2', commonName: '' });
+    expect(() => validateClusterSeedEntry(e)).toThrow(/bad-cn2.*commonName|commonName.*bad-cn2/i);
   });
 });
