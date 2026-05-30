@@ -654,13 +654,13 @@ type ClusterMetaEntry = {
 **Files:** `CLAUDE.md` (modify), `data/raw/mcxc/README.md` (modify),
 `data/raw/mscc/README.md` (modify).
 
-- [ ] Add the run order to `CLAUDE.md`: `npm run fetch-clusters` (downloads
+- [x] Add the run order to `CLAUDE.md`: `npm run fetch-clusters` (downloads
   the gitignored MCXC/MSCC tables, like `fetch-cf4`) → `npm run build-clusters`
   ("after `npm run build-tiers`", consistent with `build-famous`). Note the
   `.ccat` + `clusters_meta.json` artefacts are gitignored under `public/data/`,
   and that the raw `.dat`/`ReadMe` are gitignored (only README + sha256 committed).
-- [ ] Cross-reference the spec in both READMEs.
-- [ ] No test; `npm run typecheck` + `npm test` still green (sanity). Commit.
+- [x] Cross-reference the spec in both READMEs.
+- [x] No test; `npm run typecheck` + `npm test` still green (sanity). Commit.
 
 ---
 
