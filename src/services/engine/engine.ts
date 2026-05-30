@@ -449,6 +449,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Optional sidecar — `galaxyInfoBuilder` null-checks, so a hover
       // firing before it lands just renders the generic InfoCard layout.
       famousMeta: [],
+      // Bulk cluster/supercluster coverage — null until the cluster-catalog
+      // slot resolves (and stays null on fetch failure). The POI merge
+      // null-checks, so a boot before it lands shows only the featured anchors.
+      clusterBulk: null,
       // Currently-loaded data tier.  Seeded from `cb.initialTier` (Task 5
       // of the data-tiers plan); the default of 'medium' matches the
       // pre-tier ~600k-galaxy desktop budget.  `setTier` mutates this in
@@ -685,6 +689,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // site.  Keeps the lifecycle story uniform: "all slots are minted
       // in one place, by one IIFE pass".
       famousMeta: null,
+      // Cluster/supercluster coverage slot — same null-then-set lifecycle as
+      // famousMeta. Minted inside the GPU init IIFE alongside the other slots.
+      clusterCatalog: null,
       pgcAlias: null,
       // CF-4 DM density slot — minted inside the GPU init IIFE alongside
       // the filament slot.  Same null-then-set lifecycle: the slot's
