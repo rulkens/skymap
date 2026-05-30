@@ -51,7 +51,23 @@ Wait for green CI, then `gh pr merge <n> --squash --delete-branch`, and
 `git switch main && git pull`. The bump must be on `main` **before** the release is
 cut so the tag points at the bumped commit.
 
-### 3. Compose curated release notes
+### 3. Review docs for new sources (README + ATTRIBUTIONS.md)
+Before cutting the release, make sure every data, imagery, dependency, or
+external-service source added since `PREV` is credited. Uncredited third-party
+imagery is a real licensing problem, not a nicety.
+- Read `git log PREV..main` and skim the diff for: new catalogs, new imagery
+  sources, new external services/APIs, new runtime dependencies.
+- **Imagery especially** — inspect `data/famous_curated_overrides.json` for
+  `author` / `license` / `sourceUrl` institutions not yet covered in
+  `ATTRIBUTIONS.md` → Imagery (e.g. a new press source like NOIRLab or ESO).
+- If anything new is uncredited, update `ATTRIBUTIONS.md` (and any user-facing
+  source description in `README.md` that's now stale) and land it as its own
+  docs PR merged to `main` **before** cutting the release — so the tagged
+  release includes correct attribution.
+- Flag any `"license": "unknown"` entries to the maintainer as a redistribution
+  risk; resolve them or document them as unresolved.
+
+### 4. Compose curated release notes
 ```bash
 git log PREV..main --oneline        # the raw material — read every line
 git log PREV..main --oneline | wc -l # the "N commits since vPREV" count
@@ -75,7 +91,7 @@ DOI: https://doi.org/10.5281/zenodo.20037028 (concept DOI — always resolves to
 A versioned DOI for vX.Y.Z specifically will be minted by Zenodo within minutes of this release going live.
 ```
 
-### 4. Create the DRAFT release
+### 5. Create the DRAFT release
 ```bash
 gh release create vX.Y.Z --draft --target main \
   --title "skymap vX.Y.Z" --notes-file <notes-file>
@@ -84,7 +100,7 @@ A **draft** release with a new tag name does **not** create the tag in the repo
 until it is published — this is what makes every step above reversible (delete the
 draft → no tag, no DOI).
 
-### 5. Hand off — stop here
+### 6. Hand off — stop here
 Print the draft URL and:
 > "Draft release ready at `<url>`. Review the rendered notes, then click **Publish**.
 > Publishing creates the `vX.Y.Z` tag from `main` and triggers Zenodo's permanent
