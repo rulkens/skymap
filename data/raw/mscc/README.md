@@ -38,3 +38,7 @@ Key columns (byte offsets from the VizieR ReadMe):
 Built from Abell/ACO A-clusters only (z ≤ 0.15) using a Friends-of-Friends
 algorithm tuned for the declining cluster density with redshift. See the
 VizieR ReadMe for the full byte layout.
+
+## Feature design
+
+See `docs/superpowers/specs/2026-05-30-cluster-supercluster-coverage-design.md` for how MSCC is parsed, filtered, and rendered in skymap, and `docs/superpowers/plans/2026-05-30-cluster-coverage-plan-1-data-pipeline.md` for the build-pipeline implementation plan.

@@ -43,3 +43,7 @@ Key columns (byte offsets from the VizieR ReadMe):
 
 All quantities are homogenised to overdensity δ = 500 relative to the
 critical density. See the VizieR ReadMe for the full byte layout.
+
+## Feature design
+
+See `docs/superpowers/specs/2026-05-30-cluster-supercluster-coverage-design.md` for how MCXC is parsed, filtered, and rendered in skymap, and `docs/superpowers/plans/2026-05-30-cluster-coverage-plan-1-data-pipeline.md` for the build-pipeline implementation plan.

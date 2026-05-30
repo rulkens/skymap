@@ -45,7 +45,7 @@ tools/
 data/
   raw/                Catalog source files, one subdir per source: 2mrs/, glade/,
                       hyperleda/, sdss/, cf4/, mcpm/, milliquas/, filaments/, famous/,
-                      fonts/. VizieR ReadMes live next to the file they describe
+                      fonts/, mcxc/, mscc/. VizieR ReadMes live next to the file they describe
                       (read for byte layouts!). Path lookups go through
                       `tools/utils/io/rawDataRegistry.ts`.
 docs/BACKLOG.md           Ground-truth list of what's next — pickup-able plans,
@@ -111,6 +111,13 @@ Re-run order when CF4 raw data changes:
 1. `npm run fetch-cf4` — refreshes `data/raw/cf4/table2.dat`.
 2. `npm run build-tiers` — re-bakes `2mrs.bin` and `glade-*.bin` with the new distances.
 3. `npm run sync-r2-secure` — from the main worktree only (see project memory `project_worktree_data_isolation`).
+
+Re-run order when cluster/supercluster data changes:
+1. `npm run fetch-clusters` — downloads `data/raw/{mcxc,mscc}/{*.dat,ReadMe}` from CDS VizieR and verifies against the committed `.sha256` sidecars. Same pattern as `npm run fetch-cf4`.
+2. `npm run build-clusters` — parses the raw tables + the featured seed, emits `public/data/clusters.ccat` + `public/data/clusters_meta.json`. Run after `npm run build-tiers`.
+3. `npm run sync-r2-secure` — uploads the new artefacts to R2.
+
+The `.ccat` + `clusters_meta.json` artefacts are gitignored (build outputs, like the `.bin` files). The raw `.dat`/`ReadMe` files are also gitignored; only the provenance `README.md` + `.dat.sha256` sidecars are committed.
 
 ### Deploy workflow (Cloudflare Workers Assets + R2)
 
