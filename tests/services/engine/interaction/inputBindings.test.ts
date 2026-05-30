@@ -98,9 +98,31 @@ describe('attachEngineInputs', () => {
       onEscape: () => {},
       onResize: () => {},
     });
-    canvas.fire('pointermove', { clientX: 42, clientY: 99 });
+    canvas.fire('pointermove', { pointerType: 'mouse', clientX: 42, clientY: 99 });
     expect(onPointerMove).toHaveBeenCalledWith({ x: 42, y: 99 });
     expect(scheduler.requestRender).toHaveBeenCalledTimes(1);
+  });
+
+  // Touch/pen have no hover state — a finger tap emits a synthetic
+  // pointermove that would otherwise drive the hover-pick.  The handler
+  // gates on `pointerType === 'mouse'`, so non-mouse moves are dropped
+  // before they reach onPointerMove (and without waking the render loop,
+  // since this listener exists only to feed the hover-pick).
+  it.each(['touch', 'pen'])('ignores pointermove from pointerType=%s', (pointerType) => {
+    const onPointerMove = vi.fn();
+    attachEngineInputs({
+      canvas: canvas.target as unknown as HTMLCanvasElement,
+      scheduler,
+      onPointerMove,
+      onPointerLeave: () => {},
+      onPointerDown: () => {},
+      onPointerUp: () => {},
+      onEscape: () => {},
+      onResize: () => {},
+    });
+    canvas.fire('pointermove', { pointerType, clientX: 42, clientY: 99 });
+    expect(onPointerMove).not.toHaveBeenCalled();
+    expect(scheduler.requestRender).not.toHaveBeenCalled();
   });
 
   it('forwards pointerleave to onPointerLeave', () => {
@@ -205,7 +227,7 @@ describe('attachEngineInputs', () => {
       onResize,
     });
     // Sanity check: events fire before destroy.
-    canvas.fire('pointermove', { clientX: 1, clientY: 2 });
+    canvas.fire('pointermove', { pointerType: 'mouse', clientX: 1, clientY: 2 });
     expect(onPointerMove).toHaveBeenCalledTimes(1);
 
     bindings.destroy();
@@ -214,7 +236,7 @@ describe('attachEngineInputs', () => {
     expect(windowRecorder.listeners).toHaveLength(0);
 
     // Synthetic events post-detach must not trigger callbacks.
-    canvas.fire('pointermove', { clientX: 3, clientY: 4 });
+    canvas.fire('pointermove', { pointerType: 'mouse', clientX: 3, clientY: 4 });
     windowRecorder.fire('resize', {});
     expect(onPointerMove).toHaveBeenCalledTimes(1);
     expect(onResize).not.toHaveBeenCalled();
