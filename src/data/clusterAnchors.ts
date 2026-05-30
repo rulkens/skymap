@@ -1,6 +1,5 @@
 /**
- * clusterAnchors — fixed table of well-known galaxy-cluster centres,
- * with a pure RA/Dec/distance → equatorial-Cartesian helper.
+ * clusterAnchors — fixed table of well-known galaxy-cluster centres.
  *
  * ### Why a separate module?
  *
@@ -22,40 +21,22 @@
  * ### Coordinate convention
  *
  * RA in HOURS (not degrees), Dec in DEGREES, distance in Mpc.  The
- * helper converts to equatorial Cartesian Mpc with the standard
- * right-handed convention: +X toward RA=0/Dec=0 (vernal equinox),
- * +Y toward RA=6h/Dec=0, +Z toward Dec=+90° (north celestial pole).
- * This matches the frame used by every GalaxyCatalog and the filament
- * binary, so anchor positions drop directly into world-space.
+ * `raDecDistToEqCart` helper (re-exported from
+ * `src/utils/math/raDecDistToEqCart`) converts to equatorial Cartesian
+ * Mpc with the standard right-handed convention: +X toward RA=0/Dec=0
+ * (vernal equinox), +Y toward RA=6h/Dec=0, +Z toward Dec=+90° (north
+ * celestial pole).  This matches the frame used by every GalaxyCatalog
+ * and the filament binary, so anchor positions drop directly into
+ * world-space.
  *
  * Distances are best-effort consensus values from NED + simbad; small
  * (±10%) discrepancies are common in the literature and don't affect
  * the audit's pass/fail percentile.
  */
 
-import type { Vec3 } from '../@types/math/Vec3';
-import type { SkyCoord } from '../@types/data/SkyCoord';
 import type { ClusterAnchor } from '../@types/data/ClusterAnchor';
 
-/**
- * Convert (RA hours, Dec degrees, distance Mpc) → equatorial-Cartesian
- * Mpc.  Pure; no dependencies on any other module.
- *
- * Standard astronomical right-handed convention:
- *
- *     x = d · cos(RA) · cos(Dec)
- *     y = d · sin(RA) · cos(Dec)
- *     z = d · sin(Dec)
- *
- * where RA is converted from hours to radians via × 15° × π/180.
- */
-export function raDecDistToEqCart(c: SkyCoord): Vec3 {
-  const RAD = Math.PI / 180;
-  const ra = c.raHours * 15 * RAD;
-  const dec = c.decDeg * RAD;
-  const cd = Math.cos(dec);
-  return [c.distMpc * Math.cos(ra) * cd, c.distMpc * Math.sin(ra) * cd, c.distMpc * Math.sin(dec)];
-}
+export { raDecDistToEqCart } from '../utils/math/raDecDistToEqCart';
 
 /**
  * Well-known clusters spanning the CF-4 reliable-reconstruction
