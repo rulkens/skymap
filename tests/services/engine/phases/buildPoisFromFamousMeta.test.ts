@@ -111,6 +111,16 @@ describe('buildPoisFromFamousMeta', () => {
     expect(pois.map((p) => p.name)).toEqual(['Curated A', 'B1', 'C1', 'd']);
   });
 
+  it('marks famous POIs as featured with significance left unset', () => {
+    const meta: FamousMetaEntry[] = [
+      { id: 'm31', names: ['M31'], description: '', type: '' },
+    ];
+    const catalog = makeCatalog([0.78, 0.1, 0.2], [67]);
+    const pois = buildPoisFromFamousMeta(meta, catalog);
+    expect(pois[0]!.featured).toBe(true);
+    expect(pois[0]!.significance).toBeUndefined();
+  });
+
   it('returns empty array when meta is empty', () => {
     const catalog = makeCatalog([], []);
     expect(buildPoisFromFamousMeta([], catalog)).toEqual([]);

@@ -92,6 +92,11 @@ export function buildStaticAnchorPois(): PointOfInterest[] {
       name: a.names[0]!,
       category: a.category,
       worldPos: raDecDistToEqCart(a),
+      // Curated anchors are always featured: they get labels and are
+      // resolvable as deep-link targets.  Significance is full weight —
+      // each seed entry was chosen for being worth showing.
+      featured: true,
+      significance: 1,
       physicalRadiusMpc: a.physicalRadiusMpc,
       apparentRadiusMpc: a.apparentRadiusMpc,
     }),

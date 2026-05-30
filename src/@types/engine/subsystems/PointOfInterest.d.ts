@@ -7,6 +7,29 @@ export type PointOfInterest = {
   readonly category: PoiCategory;
   readonly worldPos: Vec3;
   /**
+   * Whether this POI is a hand-curated "featured" structure. Gates label
+   * rendering (only featured POIs get labels — drawing ~375 labels is noise)
+   * and deep-link eligibility (the sync drain can only resolve featured ids).
+   * Bulk catalog POIs set false; cluster/SC/void anchors + famous galaxies
+   * set true.
+   */
+  readonly featured: boolean;
+  /**
+   * Normalized significance in [0,1] driving ring brightness / size weight.
+   * For clusters this is a normalized M500; superclusters a normalized Nm;
+   * featured anchors + famous galaxies default to 1 (always full weight).
+   * Optional so producers that don't compute it (today: none, once migrated)
+   * fall back to full weight at the render site.
+   */
+  readonly significance?: number;
+  /**
+   * Abell/ACO catalog designation where known (e.g. 'A1656' for Coma),
+   * surfaced directly so the InfoCard can show it. Set from the seed's
+   * `abell` (featured) or the meta sidecar's `abell` (bulk); omitted when
+   * the structure has no Abell number (Virgo, superclusters, voids).
+   */
+  readonly abell?: string;
+  /**
    * Physical CORE radius of the structure in Mpc — virial / R_200 for
    * clusters, characteristic scale for superclusters and voids.
    *
@@ -15,13 +38,8 @@ export type PointOfInterest = {
    *   - InfoCard's "r {value}" line (citable literature number)
    *
    * Omit on POIs that have no extent (e.g. famous-galaxy entries that
-   * route through the existing thumbnail/label path instead).
-   *
-   * Renamed from `crosshairSizeMpc` on 2026-05-18; split from a single-
-   * field design into core+apparent shortly after (see
-   * `apparentRadiusMpc` below for the wider visual/membership extent).
-   * See docs/superpowers/specs/2026-05-18-cluster-supercluster-viz-design.md
-   * §7.2 for the original rename rationale.
+   * route through the existing thumbnail/label path instead).  See
+   * `apparentRadiusMpc` below for the wider visual/membership extent.
    */
   readonly physicalRadiusMpc?: number;
   /**

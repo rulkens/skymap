@@ -122,6 +122,9 @@ export function buildPoisFromFamousMeta(
       name: famousDisplayName(e),
       category: 'famousGalaxy',
       worldPos: [x, y, z],
+      // Famous galaxies are curated → featured (labelled + deep-linkable).
+      // Significance is omitted so the render site applies full weight.
+      featured: true,
       minApparentSizePx: FAMOUS_MIN_APPARENT_PX,
       apparentDiameterKpc: diameterKpc,
       labelAnchorOffsetMpc,

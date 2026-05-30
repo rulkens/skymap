@@ -36,6 +36,7 @@ function makeFixtures() {
     name: 'Virgo Cluster',
     category: 'cluster',
     worldPos: [0, 0, 0],
+    featured: true,
   };
   return { state, cb, galaxy, poi };
 }

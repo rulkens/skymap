@@ -20,6 +20,7 @@ describe('isPoi', () => {
       name: 'Virgo Cluster',
       category: 'cluster',
       worldPos: [0, 0, 0],
+      featured: true,
     };
     expect(isPoi(poi)).toBe(true);
   });

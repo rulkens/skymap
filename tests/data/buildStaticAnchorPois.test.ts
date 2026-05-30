@@ -49,6 +49,12 @@ describe('buildStaticAnchorPois', () => {
     expect(virgo?.physicalRadiusMpc).toBe(2.2);
   });
 
+  it('marks every static anchor POI as featured', () => {
+    const pois = buildStaticAnchorPois();
+    expect(pois.length).toBeGreaterThan(0);
+    expect(pois.every((p) => p.featured === true)).toBe(true);
+  });
+
   it('assigns the correct category per anchor list', () => {
     const pois = buildStaticAnchorPois();
     const cats = new Set(pois.map((p) => p.category));

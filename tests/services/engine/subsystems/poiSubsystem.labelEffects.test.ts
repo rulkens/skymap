@@ -45,6 +45,7 @@ const VIRGO: PointOfInterest = {
   name: 'Virgo',
   category: 'cluster',
   worldPos: [10, 0, 0],
+  featured: true,
   physicalRadiusMpc: 2,
 };
 

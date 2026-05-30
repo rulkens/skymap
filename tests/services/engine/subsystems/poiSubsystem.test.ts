@@ -31,6 +31,7 @@ const VIRGO: PointOfInterest = {
   name: 'Virgo',
   category: 'cluster',
   worldPos: [-15.98, -2.13, 3.54],
+  featured: true,
   physicalRadiusMpc: 5,
 };
 const M31: PointOfInterest = {
@@ -38,6 +39,7 @@ const M31: PointOfInterest = {
   name: 'Andromeda Galaxy',
   category: 'famousGalaxy',
   worldPos: [0.5, 0.1, 0.0],
+  featured: true,
   labelAnchorOffsetMpc: 0.05,
 };
 const BOOTES_VOID: PointOfInterest = {
@@ -45,6 +47,7 @@ const BOOTES_VOID: PointOfInterest = {
   name: 'Boötes Void',
   category: 'void',
   worldPos: [200, 100, 50],
+  featured: true,
   physicalRadiusMpc: 20,
 };
 const LANIAKEA: PointOfInterest = {
@@ -52,6 +55,7 @@ const LANIAKEA: PointOfInterest = {
   name: 'Laniakea',
   category: 'supercluster',
   worldPos: [-50, -20, 10],
+  featured: true,
   physicalRadiusMpc: 25,
 };
 
@@ -79,6 +83,7 @@ describe('poiSubsystem', () => {
       name: 'Andromeda Galaxy',
       category: 'famousGalaxy',
       worldPos: [0.5, 0.1, 0.0],
+      featured: true,
       labelAnchorOffsetMpc: 0.1,
     };
     sub.setPois([m31]);
@@ -101,6 +106,7 @@ describe('poiSubsystem', () => {
       name: 'Andromeda Galaxy',
       category: 'famousGalaxy',
       worldPos: [0.5, 0.1, 0.0],
+      featured: true,
       labelAnchorOffsetMpc: 0.05,
     };
     sub.setPois([m31]);
@@ -119,6 +125,7 @@ describe('poiSubsystem', () => {
       name: 'NoAnchor',
       category: 'famousGalaxy',
       worldPos: [0.5, 0.1, 0.0],
+      featured: true,
       // labelAnchorOffsetMpc deliberately omitted
     };
     sub.setPois([galaxy]);
@@ -138,6 +145,7 @@ describe('poiSubsystem', () => {
       name: 'Virgo',
       category: 'cluster',
       worldPos: [-15.98, -2.13, 3.54],
+      featured: true,
       physicalRadiusMpc: 5,
     };
     sub.setPois([virgo]);
@@ -200,6 +208,7 @@ describe('poiSubsystem', () => {
       name: 'Close',
       category: 'famousGalaxy',
       worldPos: [1, 0, 0],
+      featured: true,
       minApparentSizePx: 6,
       apparentDiameterKpc: 50,
     };
@@ -218,6 +227,7 @@ describe('poiSubsystem', () => {
       name: 'Far',
       category: 'famousGalaxy',
       worldPos: [500, 0, 0],
+      featured: true,
       minApparentSizePx: 6,
       apparentDiameterKpc: 30,
     };
@@ -236,6 +246,7 @@ describe('poiSubsystem', () => {
       name: 'NoGate',
       category: 'cluster',
       worldPos: [500, 0, 0],
+      featured: true,
     };
     sub.setPois([noGate]);
     const out = sub.produceLabels(makeState(), makeCtx());
@@ -252,6 +263,7 @@ describe('poiSubsystem', () => {
       name: 'Partial',
       category: 'famousGalaxy',
       worldPos: [500, 0, 0],
+      featured: true,
       minApparentSizePx: 6,
     };
     sub.setPois([partial]);
@@ -270,6 +282,7 @@ describe('poiSubsystem', () => {
       name: 'MidFade',
       category: 'famousGalaxy',
       worldPos: [4, 0, 0],
+      featured: true,
       minApparentSizePx: 6,
       apparentDiameterKpc: 30,
     };
@@ -291,6 +304,7 @@ describe('poiSubsystem', () => {
       name: 'Big',
       category: 'famousGalaxy',
       worldPos: [1, 0, 0],
+      featured: true,
       minApparentSizePx: 6,
       apparentDiameterKpc: 50, // ~47 px — far above the fade band
     };
@@ -309,6 +323,7 @@ describe('poiSubsystem — crosshair removal', () => {
       name: 'Virgo',
       category: 'cluster',
       worldPos: [10, 0, 0],
+      featured: true,
       physicalRadiusMpc: 2,
     };
     sub.setPois([poi]);
@@ -326,11 +341,11 @@ describe('poiSubsystem — produceMarkers', () => {
   it('returns one descriptor per visible cluster + supercluster + void POI', () => {
     const sub = createPoiSubsystem();
     sub.setPois([
-      { id: 'virgo', name: 'Virgo', category: 'cluster',
+      { id: 'virgo', name: 'Virgo', category: 'cluster', featured: true,
         worldPos: [10, 0, 0], physicalRadiusMpc: 2 },
-      { id: 'hercules', name: 'Hercules SC', category: 'supercluster',
+      { id: 'hercules', name: 'Hercules SC', category: 'supercluster', featured: true,
         worldPos: [0, 100, 0], physicalRadiusMpc: 50 },
-      { id: 'bootes', name: 'Boötes Void', category: 'void',
+      { id: 'bootes', name: 'Boötes Void', category: 'void', featured: true,
         worldPos: [0, 0, 200], physicalRadiusMpc: 50 },
     ]);
     const markers = sub.produceMarkers(makeState(), makeCtx());
@@ -340,7 +355,7 @@ describe('poiSubsystem — produceMarkers', () => {
   it('excludes famous-galaxy POIs from markers', () => {
     const sub = createPoiSubsystem();
     sub.setPois([
-      { id: 'm31', name: 'M31', category: 'famousGalaxy',
+      { id: 'm31', name: 'M31', category: 'famousGalaxy', featured: true,
         worldPos: [0.78, 0, 0], physicalRadiusMpc: 0.05 },
     ]);
     const markers = sub.produceMarkers(makeState(), makeCtx());
@@ -350,7 +365,7 @@ describe('poiSubsystem — produceMarkers', () => {
   it('voids emit both halo and ring (halo at the dimmer at-rest alpha from the style)', () => {
     const sub = createPoiSubsystem();
     sub.setPois([
-      { id: 'bootes', name: 'Boötes Void', category: 'void',
+      { id: 'bootes', name: 'Boötes Void', category: 'void', featured: true,
         worldPos: [0, 0, 200], physicalRadiusMpc: 50 },
     ]);
     const markers = sub.produceMarkers(makeState(), makeCtx());
@@ -364,9 +379,9 @@ describe('poiSubsystem — produceMarkers', () => {
   it('respects setCategoryMarkerVisible', () => {
     const sub = createPoiSubsystem();
     sub.setPois([
-      { id: 'virgo', name: 'Virgo', category: 'cluster',
+      { id: 'virgo', name: 'Virgo', category: 'cluster', featured: true,
         worldPos: [10, 0, 0], physicalRadiusMpc: 2 },
-      { id: 'bootes', name: 'Boötes Void', category: 'void',
+      { id: 'bootes', name: 'Boötes Void', category: 'void', featured: true,
         worldPos: [0, 0, 200], physicalRadiusMpc: 50 },
     ]);
     sub.setCategoryMarkerVisible('void', false);
@@ -380,7 +395,7 @@ describe('poiSubsystem — produceMarkers', () => {
     sub.setPois([
       // No physicalRadiusMpc — should not appear in markers (no
       // radius to draw to).
-      { id: 'unsized', name: 'Unsized', category: 'cluster',
+      { id: 'unsized', name: 'Unsized', category: 'cluster', featured: true,
         worldPos: [10, 0, 0] },
     ]);
     const markers = sub.produceMarkers(makeState(), makeCtx());
@@ -403,7 +418,7 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
     // radiusMpc=1, distance=150 Mpc → apRadPx ≈ 6.2 < cluster floor (12).
     const sub = createPoiSubsystem();
     sub.setPois([
-      { id: 'tiny', name: 'Tiny', category: 'cluster',
+      { id: 'tiny', name: 'Tiny', category: 'cluster', featured: true,
         worldPos: [150, 0, 0], physicalRadiusMpc: 1 },
     ]);
     const markers = sub.produceMarkers(makeState(), makeCtx());
@@ -415,7 +430,7 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
     // radiusMpc=1, distance = 935.307 / 18 ≈ 51.96 Mpc.
     const sub = createPoiSubsystem();
     sub.setPois([
-      { id: 'midband', name: 'Mid', category: 'cluster',
+      { id: 'midband', name: 'Mid', category: 'cluster', featured: true,
         worldPos: [51.96, 0, 0], physicalRadiusMpc: 1 },
     ]);
     const markers = sub.produceMarkers(makeState(), makeCtx());
@@ -429,7 +444,7 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
     // worldPos=[10,0,0], radius=2 → apRadPx ≈ 187, well above 24.
     const sub = createPoiSubsystem();
     sub.setPois([
-      { id: 'big', name: 'Big', category: 'cluster',
+      { id: 'big', name: 'Big', category: 'cluster', featured: true,
         worldPos: [10, 0, 0], physicalRadiusMpc: 2 },
     ]);
     const markers = sub.produceMarkers(makeState(), makeCtx());
@@ -441,7 +456,7 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
     // radiusMpc=1, distance=200 → apRadPx ≈ 4.7 < 28.
     const sub = createPoiSubsystem();
     sub.setPois([
-      { id: 'sc-far', name: 'Far SC', category: 'supercluster',
+      { id: 'sc-far', name: 'Far SC', category: 'supercluster', featured: true,
         worldPos: [200, 0, 0], physicalRadiusMpc: 1 },
     ]);
     const markers = sub.produceMarkers(makeState(), makeCtx());
@@ -452,7 +467,7 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
     // radiusMpc=1, distance=500 → apRadPx ≈ 1.87 < 28.
     const sub = createPoiSubsystem();
     sub.setPois([
-      { id: 'void-far', name: 'Far Void', category: 'void',
+      { id: 'void-far', name: 'Far Void', category: 'void', featured: true,
         worldPos: [500, 0, 0], physicalRadiusMpc: 1 },
     ]);
     const markers = sub.produceMarkers(makeState(), makeCtx());
@@ -465,7 +480,7 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
     // the ring rather than lingering at full alpha.
     const sub = createPoiSubsystem();
     sub.setPois([
-      { id: 'midband', name: 'Mid', category: 'cluster',
+      { id: 'midband', name: 'Mid', category: 'cluster', featured: true,
         worldPos: [51.96, 0, 0], physicalRadiusMpc: 1 },
     ]);
     const markers = sub.produceMarkers(makeState(), makeCtx());
@@ -484,7 +499,7 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
     // the existing min-apparent-size tests use.
     const sub = createPoiSubsystem();
     sub.setPois([{
-      id: 'm31', name: 'Andromeda', category: 'famousGalaxy',
+      id: 'm31', name: 'Andromeda', category: 'famousGalaxy', featured: true,
       worldPos: [0.78, 0, 0],
       minApparentSizePx: 4,
       apparentDiameterKpc: 50,
@@ -522,6 +537,7 @@ describe('poiSubsystem · marker/label visibility', () => {
     name: 'Virgo',
     category: 'cluster',
     worldPos: [10, 0, 0],
+    featured: true,
     physicalRadiusMpc: 2,
   };
 
@@ -546,6 +562,7 @@ describe('poiSubsystem · marker/label visibility', () => {
       name: 'Andromeda Galaxy',
       category: 'famousGalaxy',
       worldPos: [0, 0, 5],
+      featured: true,
     };
     sub.setPois([m31]);
     sub.setCategoryMarkerVisible('famousGalaxy', false);
@@ -590,6 +607,7 @@ describe('poiSubsystem · marker/label visibility', () => {
       name: 'Laniakea',
       category: 'supercluster',
       worldPos: [-50, -20, 10],
+      featured: true,
       physicalRadiusMpc: 25,
     };
     sub.setPois([VIRGO_WITH_RING, laniakea]);
