@@ -24,6 +24,27 @@
  * orbit controls work identically on a laptop trackpad, a Wacom tablet, and
  * a touch screen without any extra branching.
  *
+ * ### Why move/up/cancel listen on `window`, not the canvas
+ *
+ * `pointerdown` is bound to the canvas (a gesture must *start* on the
+ * drawing surface), but `pointermove` / `pointerup` / `pointercancel` are
+ * bound to `window`. Two reasons, one of them load-bearing on iOS:
+ *
+ *   - **Drag-outside continuation.** A drag that leaves the canvas (over a
+ *     UI panel, or past the viewport edge) must keep orbiting. `window`
+ *     sees those moves regardless of what is under the pointer.
+ *   - **iOS Safari capture bug.** Touch pointers get *implicit* pointer
+ *     capture on `pointerdown`. WebKit mishandles an *explicit*
+ *     `setPointerCapture()` layered on top of that implicit capture — it
+ *     stops delivering `pointermove` / `pointerup`, so single-finger orbit
+ *     and two-finger pinch both die on iPhone/iPad while desktop mouse
+ *     (no implicit capture) is unaffected. The fix, used by every major
+ *     touch-gesture library, is to NOT call `setPointerCapture` and bind
+ *     the continuation events to `window` instead. (`touch-action: none`
+ *     on the canvas — see global.css — still suppresses native scroll/zoom
+ *     because that is keyed off the touch's *target* element, the canvas.)
+ *     See https://github.com/openseadragon/openseadragon/issues/1962.
+ *
  * ### Coordinate conventions
  *
  *   drag right (+dx) → yaw decreases → camera sweeps left past the scene
@@ -166,6 +187,22 @@ export function attachOrbitControls(
   // ── Pointer down — begin drag ──────────────────────────────────────────────
 
   const onDown = (e: PointerEvent) => {
+    // A mouse is strictly single-pointer, so a fresh mouse-down always
+    // begins a new gesture — it can never be the second finger of a
+    // pinch.  Clearing here heals state stranded by a `pointerup` we
+    // never saw: without pointer capture (removed for the iOS fix), a
+    // button released *outside* the viewport fires no `window`
+    // pointerup, which would otherwise leave a stale entry that promotes
+    // the next click to a bogus two-pointer 'pinch'.  Touch pointers are
+    // left untouched — their up/cancel reliably reach the window
+    // listeners via implicit capture.
+    if (e.pointerType === 'mouse') {
+      activePointers.clear();
+      dragMode = null;
+      dragPointerId = null;
+      lastPinchDist = 0;
+    }
+
     activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
     if (activePointers.size === 1) {
@@ -186,12 +223,10 @@ export function attachOrbitControls(
       downX = e.clientX;
       downY = e.clientY;
 
-      // `setPointerCapture` tells the browser to route all future pointer events
-      // for this pointer ID to `canvas`, even when the cursor strays outside its
-      // bounding box or leaves the browser window entirely.  Without capture,
-      // `pointermove` events stop arriving the moment the user drags outside
-      // the canvas — the orbit snaps to a halt mid-drag.
-      canvas.setPointerCapture(e.pointerId);
+      // No `setPointerCapture` here — see the module header. The move /
+      // up / cancel listeners live on `window`, so a drag keeps tracking
+      // outside the canvas without capture, and we sidestep the WebKit
+      // explicit-capture bug that silently kills touch gestures on iOS.
     } else if (activePointers.size === 2) {
       // Second contact — promote the gesture to pinch and record the
       // baseline distance.  Subsequent moves on either pointer will
@@ -218,12 +253,8 @@ export function attachOrbitControls(
     if (!activePointers.has(e.pointerId)) return;
     activePointers.delete(e.pointerId);
 
-    // Release capture if the canvas was holding it for this pointer.
-    // `hasPointerCapture` guard avoids a benign warning when the same id
-    // already auto-released (some browsers do that on touchcancel).
-    if (canvas.hasPointerCapture(e.pointerId)) {
-      canvas.releasePointerCapture(e.pointerId);
-    }
+    // No capture to release — we never call setPointerCapture (see the
+    // module header). Implicit touch capture auto-releases on pointerup.
 
     if (activePointers.size === 0) {
       // All contacts lifted — close out the gesture.
@@ -454,16 +485,20 @@ export function attachOrbitControls(
 
   // ── Register listeners ─────────────────────────────────────────────────────
 
+  // `pointerdown` on the canvas — a drag only starts when the gesture
+  // begins on the drawing surface. The continuation events go on `window`
+  // (see the module header: drag-outside continuation + the iOS WebKit
+  // explicit-capture bug).
   canvas.addEventListener('pointerdown', onDown);
-  canvas.addEventListener('pointerup', onUp);
-  canvas.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup', onUp);
+  window.addEventListener('pointermove', onMove);
   // `pointercancel` fires when the system pre-empts the gesture (notification
   // shade, phone call, OS gesture-shelf swipe, low-memory pause).  It carries
   // no end coordinate worth using for click detection, so we route it through
   // the same teardown path as `pointerup` — the click branch will simply not
   // fire because the cancelled pointer's recorded down/up positions don't
   // reflect a real tap intent.
-  canvas.addEventListener('pointercancel', onUp);
+  window.addEventListener('pointercancel', onUp);
 
   // ── Double-click — delegate to the browser's `dblclick` event ────────────
   //
@@ -510,9 +545,9 @@ export function attachOrbitControls(
   // a different function object (even with identical body) would not match.
   return () => {
     canvas.removeEventListener('pointerdown', onDown);
-    canvas.removeEventListener('pointerup', onUp);
-    canvas.removeEventListener('pointermove', onMove);
-    canvas.removeEventListener('pointercancel', onUp);
+    window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointercancel', onUp);
     canvas.removeEventListener('dblclick', onDblClick);
     canvas.removeEventListener('contextmenu', onContextMenu);
     canvas.removeEventListener('wheel', onWheel);
