@@ -17,10 +17,18 @@ describe('rawDataPath resolves mcxc + mscc keys to absolute paths', () => {
     expect(p.endsWith(RAW_DATA['mcxc.table'].path.replace(/\//g, sep))).toBe(true);
   });
 
+  it('mcxc.table is gitignored (fetcher-produced)', () => {
+    expect(RAW_DATA['mcxc.table'].source).toBe('gitignored');
+  });
+
   it('mscc.table resolves to an absolute path ending with the registered relative path', () => {
     const p = rawDataPath('mscc.table');
     expect(isAbsolute(p)).toBe(true);
     expect(p.endsWith(RAW_DATA['mscc.table'].path.replace(/\//g, sep))).toBe(true);
+  });
+
+  it('mscc.table is gitignored (fetcher-produced)', () => {
+    expect(RAW_DATA['mscc.table'].source).toBe('gitignored');
   });
 
   it('mcxc.readme is gitignored (fetcher-produced)', () => {
