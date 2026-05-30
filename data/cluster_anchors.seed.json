@@ -302,7 +302,7 @@
     "description": "Adjacent to the Local Group, extending mostly above the galactic plane; Tully et al. 2008 (ApJ 676, 184) place the centre near (l=37°, b=15°) at ~25 Mpc, with an effective radius of ~30 Mpc."
   },
   {
-    "id": "bo-tes-void",
+    "id": "bootes-void",
     "names": ["Boötes Void", "Great Void"],
     "commonName": "Boötes Void",
     "category": "void",

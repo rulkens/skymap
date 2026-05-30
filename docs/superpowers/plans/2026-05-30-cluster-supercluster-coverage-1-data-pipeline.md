@@ -384,19 +384,19 @@ structures (e.g. Leo / A1367, Corona Borealis SC) — pick from textbook
 clusters/SCs, fill RA/Dec/dist/radii from NED/literature, write a 1-sentence
 description each. Voids ride along here (featured-only).
 
-- [ ] Add `clusters.seed` registry entry → `data/cluster_anchors.seed.json`,
+- [x] Add `clusters.seed` registry entry → `data/cluster_anchors.seed.json`,
   `kind: 'file'`, `source: 'committed'`; `.gitignore` whitelist line near
   `!/data/famous_galaxies.seed.json` (`.gitignore:83`).
-- [ ] Author `data/cluster_anchors.seed.json` (migrated + extended entries).
-- [ ] Test `parseClusterSeed accepts the bundled seed file` (read the real
+- [x] Author `data/cluster_anchors.seed.json` (migrated + extended entries).
+- [x] Test `parseClusterSeed accepts the bundled seed file` (read the real
   file via `rawDataPath('clusters.seed')`, assert length ≥ 25 and every
   entry has a category in the union).
-- [ ] Test `parseClusterSeed rejects out-of-range raHours` (>= 24 throws,
+- [x] Test `parseClusterSeed rejects out-of-range raHours` (>= 24 throws,
   message names the id).
-- [ ] Test `parseClusterSeed rejects duplicate ids`.
-- [ ] Test `parseClusterSeed rejects non-positive distMpc`.
-- [ ] Test `validateClusterSeedEntry rejects unknown category`.
-- [ ] Implement parser. `npm test -- parseClusterSeed` → passes. Commit.
+- [x] Test `parseClusterSeed rejects duplicate ids`.
+- [x] Test `parseClusterSeed rejects non-positive distMpc`.
+- [x] Test `validateClusterSeedEntry rejects unknown category`.
+- [x] Implement parser. `npm test -- parseClusterSeed` → passes. Commit.
 
 ---
 
