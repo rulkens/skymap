@@ -326,6 +326,7 @@ export type ClusterSeedEntry = {
   id: string;                 // url-safe, unique (e.g. 'virgo-m87')
   names: string[];            // ordered, primary first
   commonName?: string;        // display label
+  abell?: string;             // Abell/ACO designation where known, e.g. 'A1656' (Coma)
   category: 'cluster' | 'supercluster' | 'void';
   raHours: number;            // [0,24)
   decDeg: number;             // [-90,90]
@@ -348,7 +349,11 @@ hard error.
 `SUPERCLUSTER_ANCHORS` (6), `VOID_ANCHORS` (3) in `clusterAnchors.ts:86-250`
 — preserving each anchor's `physicalRadiusMpc`/`apparentRadiusMpc`/`distMpc`
 and the per-anchor citation as the `description`. Set `category` per source
-table. Derive `id` from the existing slug rule (`buildStaticAnchorPois.ts:66`
+table. **Fill `abell` for cluster entries whose Abell number is known**
+(Coma→`A1656`, Hercules→`A2151`, Perseus→`A426`, Centaurus→`A3526`,
+Hydra I→`A1060`, A2199→`A2199`, Norma→`A3627`; omit for non-Abell clusters
+like Virgo/Fornax/Ophiuchus and for all SCs/voids). Derive `id` from the
+existing slug rule (`buildStaticAnchorPois.ts:66`
 `slug()`), WITHOUT the category prefix (the prefix is re-added by the
 consumer in Plan 2). Grow to ~25–30 entries by adding recognizable
 structures (e.g. Leo / A1367, Corona Borealis SC) — pick from textbook
@@ -512,14 +517,15 @@ const DEDUPE_FLOOR_MPC = /* small floor */;
 **Exported pure transform (testable):**
 ```ts
 export type ClusterBuildEntry = {
-  id: string;
+  id: string;                      // url-safe slug of names[0]
   worldPos: Vec3;
   physicalRadiusMpc: number;
   apparentRadiusMpc: number;
   significance: number;            // raw M500 / Nm
   category: ClusterCategoryByte;   // 0 cluster, 1 supercluster
-  names: string[];
-  description: string;             // generated, e.g. 'X-ray cluster · M500 = … · z = …'
+  names: string[];                 // display names; names[0] is the label
+  abell: string | null;            // Abell/ACO designation if detected, e.g. 'A2670' / 'S0805'
+  description: string;             // generated (templates below)
 };
 
 export function buildClusterEntries(
@@ -529,23 +535,44 @@ export function buildClusterEntries(
 ): ClusterBuildEntry[];
 ```
 
+**Abell-designation extraction (exported helper, testable in isolation):**
+```ts
+// Scans OName + AName for an Abell/ACO designation. MCXC homogenizes these
+// as 'ANNNN' (rich Abell) or 'SNNNN' (ACO southern supplement) — see the
+// mcxc ReadMe history note. Returns the normalized token (e.g. 'A2670',
+// 'S0805') or null. Prefer AName; fall back to OName.
+export function extractAbell(oName: string, aName: string): string | null;
+```
+**Behaviour:** match the first token of the form `/\b([AS])0*(\d{1,4})\b/` in
+`aName`, else in `oName`; normalize to `${prefix}${number}` with leading
+zeros stripped (so `A 2670`, ` A2670`, `ACO 2670` → `A2670`). No match → null.
+Superclusters have no Abell designation (`abell = null` for all MSCC entries).
+
+**Description templates (exact):**
+- cluster: `` `X-ray cluster · M500 = ${m500.toFixed(1)}×10¹⁴ M☉ · z = ${z.toFixed(3)}` ``
+- supercluster: `` `Supercluster · ${nm} member clusters · z = ${z.toFixed(3)}` ``
+
 **`buildClusterEntries` behaviour:**
 1. **MCXC → cluster entries**: keep rows with `z <= Z_MAX` and
    `m500 >= MCXC_M500_MIN`. `worldPos` from `(raDeg,decDeg)` +
    `redshiftToDistanceMpc(z)` (convert deg→the frame; reuse the famous
    `entryToXyz` math but RA already in degrees). `physicalRadiusMpc = r500Mpc`;
    `apparentRadiusMpc = APPARENT_MULTIPLE * r500Mpc`; `significance = m500`;
-   `category = 0`. **Name priority `aName` → `oName` → MCXC `id`**: `aName`
-   carries the recognizable name (Abell `ANNNN` / UGC / popular), `oName` is
-   usually just the RXC/REFLEX designation, so prefer `aName` when non-empty,
-   then `oName`, then the MCXC `id`. `id` = url-safe slug of the chosen name.
-   `description` generated.
+   `category = 0`. `abell = extractAbell(oName, aName)`. **Name priority
+   Abell → `aName` → `oName` → MCXC `id`**: prefer the Abell designation when
+   present (most recognizable), else the non-empty `aName` (UGC/popular), else
+   `oName` (RXC/REFLEX designation), else the MCXC `id`. `names = abell ?
+   [abell, ...uniqueNonEmpty(aName, oName)] : [bestName]` (Abell first so the
+   label shows it; keep other catalog names as alternates). `id` = url-safe
+   slug of `names[0]`. `description` = the cluster template above.
 2. **MSCC → supercluster entries**: keep `z <= Z_MAX` and `nm >= MSCC_NM_MIN`.
    `worldPos` from `(raDeg,decDeg)` + `redshiftToDistanceMpc(z)`.
    `physicalRadiusMpc == apparentRadiusMpc = (dmaxMpc / h70 → Mpc) / 2`
    (pin the `h70` constant from existing `constants.ts`/`HUBBLE_*` — read
    `redshiftToDistanceMpc.ts` imports; use the same `H0` basis). `significance
-   = nm`; `category = 1`. `id` = slug of MSCC id; `description` generated.
+   = nm`; `category = 1`; `abell = null` (superclusters have no Abell id).
+   `names = [msccRow.id]` (e.g. `'MSCC 1'`); `id` = slug of it; `description`
+   = the supercluster template above.
 3. **Dedup against featured**: build the featured anchor list from
    `featuredSeed` (worldPos via `raDecDistToEqCart`, radius =
    `apparentRadiusMpc`); run `dedupeByProximity(anchors, allEntries,
@@ -557,8 +584,17 @@ export function buildClusterEntries(
 call `buildClusterEntries`, build a `ClusterCatalog` from the entries,
 `encodeClusterCatalog` → `public/data/clusters.ccat`, and
 `writeMetaSidecar(entries.map(toMeta), 'public/data/clusters_meta.json')`
-where `toMeta` maps `{ id, names, description }` (local-idx parallel to the
-`.ccat`).
+where `toMeta` maps each entry to the sidecar shape (local-idx parallel to
+the `.ccat`):
+```ts
+type ClusterMetaEntry = {
+  id: string;            // base slug (runtime prefixes 'cluster-bulk-' etc.)
+  names: string[];       // display names; names[0] is the label
+  abell: string | null;  // Abell/ACO designation if any, e.g. 'A2670'
+  description: string;   // generated one-liner
+};
+// toMeta = ({ id, names, abell, description }) => ({ id, names, abell, description })
+```
 
 - [ ] Test `buildClusterEntries excludes clusters below the M500 threshold`
   (fixture row under `MCXC_M500_MIN` → not present).
@@ -570,9 +606,14 @@ where `toMeta` maps `{ id, names, description }` (local-idx parallel to the
 - [ ] Test `buildClusterEntries drops a bulk entry near a featured seed anchor`
   (place an MCXC row at Coma's seed position → suppressed; one far away →
   kept). This is the "Coma doesn't draw twice" guarantee.
-- [ ] Test `buildClusterEntries names a cluster aName → oName → id`
-  (row with `aName` set → uses it; row with blank `aName` but set `oName` →
-  uses `oName`; row with both blank → MCXC primary `id`).
+- [ ] Test `extractAbell finds Abell/ACO tokens in AName or OName`
+  (`'A2670'`→`'A2670'`; `' A 2670'`→`'A2670'`; aName blank + oName `'A1656'`
+  →`'A1656'`; `'UGC 12890'`→`null`; ACO southern `'S0805'`→`'S0805'`).
+- [ ] Test `buildClusterEntries prefers the Abell designation for the name`
+  (row with Abell in `aName` → `names[0]` is the Abell token and `abell` is
+  set; row with only `oName` RXC + no Abell → `names[0]` is the RXC name and
+  `abell` is null; row with all blank → `names[0]` is the MCXC `id`).
+- [ ] Test `buildClusterEntries sets abell null for superclusters`.
 - [ ] Test `buildClusterEntries tags category 0 for MCXC, 1 for MSCC`.
 - [ ] Implement `buildClusterEntries` + `main`. `npm test -- buildClusters`
   → passes.

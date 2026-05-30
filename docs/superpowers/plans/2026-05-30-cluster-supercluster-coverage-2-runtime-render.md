@@ -59,6 +59,13 @@ readonly featured: boolean;
  * fall back to full weight at the render site.
  */
 readonly significance?: number;
+/**
+ * Abell/ACO catalog designation where known (e.g. 'A1656' for Coma),
+ * surfaced directly so the InfoCard can show it. Set from the seed's
+ * `abell` (featured) or the meta sidecar's `abell` (bulk); omitted when
+ * the structure has no Abell number (Virgo, superclusters, voids).
+ */
+readonly abell?: string;
 ```
 
 - [ ] Set `featured: true` on every POI built by `buildStaticAnchorPois`
@@ -98,7 +105,8 @@ build-time-validated JSON.)
 **Id rule (unchanged):** `${category}-${slug(commonName ?? names[0] ?? id)}`
 so `Virgo (M87)` → `cluster-virgo-m87` still resolves the existing
 `#poi=cluster-virgo-m87` deep-links. Carry `physicalRadiusMpc` +
-`apparentRadiusMpc` from the seed; `featured: true`; `significance: 1`.
+`apparentRadiusMpc` from the seed; `featured: true`; `significance: 1`; and
+`abell` from the seed entry when present (omit otherwise).
 
 - [ ] Test `buildStaticAnchorPois produces cluster-virgo-m87 from the seed`
   asserting the id is present (deep-link regression guard).
@@ -129,7 +137,7 @@ the string sidecar so the merge (Task 5) has names + descriptions.
 **Payload type:**
 ```ts
 import type { ClusterCatalog } from '../data/ClusterCatalog';
-export type ClusterMetaEntry = { id: string; names: string[]; description: string };
+export type ClusterMetaEntry = { id: string; names: string[]; abell: string | null; description: string };
 export type ClusterCatalogPayload = {
   catalog: ClusterCatalog;
   meta: readonly ClusterMetaEntry[];
@@ -212,7 +220,8 @@ export function buildPoisFromClusterCatalog(
 `ClusterCategoryByte`; `physicalRadiusMpc`/`apparentRadiusMpc` from the
 arrays; `id = ${category}-bulk-${meta[i].id}` (the `-bulk-` infix keeps bulk
 ids from ever colliding with a featured slug — and signals non-deep-linkable
-in the id itself); `name = meta[i].names[0]`; `featured: false`;
+in the id itself); `name = meta[i].names[0]`; `featured: false`; `abell = meta[i].abell ??
+undefined` (carry the Abell designation through to the POI for the InfoCard);
 `significance` = the **normalized** value in [0,1]. **Normalize
 per-category, not across the whole catalog** — clusters carry `M500`
 (solar masses) and superclusters carry `Nm` (member count); a single
@@ -239,6 +248,9 @@ arrival clobbering the other's contribution — today `rewireFamousPois` sets
   all values within [0,1]; a mixed fixture proves the two categories don't
   share one scale).
 - [ ] Test `buildPoisFromClusterCatalog ids are prefixed bulk and never collide with featured slugs`.
+- [ ] Test `buildPoisFromClusterCatalog carries the abell designation from meta`
+  (meta entry with `abell: 'A2670'` → `POI.abell === 'A2670'`; `abell: null`
+  → `POI.abell` undefined).
 - [ ] Implement the producer.
 - [ ] Refactor `wireSlots` to a single `rebuildAllPois()` merge; mint +
   `load()` the cluster slot (boot-time, tier-agnostic, like famous-meta);
@@ -378,6 +390,10 @@ intended.)
   faded by camera distance.
 - Only the ~25–30 featured structures show labels; overlapping featured
   labels declutter by significance.
+- A selected cluster carrying an Abell designation shows it in the POI
+  InfoCard (`poi.abell`, e.g. "Abell 1656") — the field is plumbed from both
+  the seed and the bulk meta; surface it where the InfoCard renders the POI
+  name/category.
 - `#poi=cluster-virgo-m87` / `#poi=supercluster-coma-sc` /
   `#poi=void-bootes-void` deep-links still resolve synchronously (regression
   test in Task 2).
