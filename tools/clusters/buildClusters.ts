@@ -204,27 +204,27 @@ function uniqueNonEmpty(...candidates: string[]): string[] {
 
 /**
  * Scan `aName` then `oName` for an Abell/ACO cluster designation and return
- * the normalized token (e.g. 'A2670', 'S0805') or null.
+ * the normalized token (e.g. 'A2670', 'S805') or null.
  *
  * MCXC homogenises Abell designations in the AName column as 'ANNNN'
  * (rich northern Abell catalog) or 'SNNNN' (ACO southern supplement);
- * the OName column occasionally carries them too.
+ * the OName column occasionally carries them too.  163 of 710 A/S rows
+ * use zero-padded four-digit form ('A0007', 'S0026'); we strip the leading
+ * zeros so the output matches the conventional astronomical form ('A7', 'S26')
+ * and the non-zero-padded ids used in the featured seed ('A426', 'A1656').
  *
  * Matching: find the first token of the form `[AS]` followed by optional
- * spaces and 1–4 digits in `aName`, else in `oName`.  Normalise by removing
- * internal spaces ('A 2670' → 'A2670') but preserving the digit string
- * as-is ('S0805' stays 'S0805' — southern ACO designations use four-digit
- * form with leading zeros by convention).
+ * spaces and 1–4 digits in `aName`, else in `oName`.  The `0*` quantifier
+ * before `\d{1,4}` absorbs any leading zeros; spaces are removed.
  *
  * Preference: aName before oName — the AName column is the MCXC-curated
  * alternate name and more reliable as the primary designation.
  */
 export function extractAbell(oName: string, aName: string): string | null {
-  // Match [AS] optionally followed by whitespace then 1–4 digits.
-  // Word boundary before [AS] prevents matching inside e.g. 'GAS1234'.
-  // We preserve the digit string verbatim (no leading-zero stripping) so
-  // that ACO southern designations like S0805 round-trip intact.
-  const RE = /\b([AS])\s*(\d{1,4})\b/;
+  // Match [AS] optionally followed by whitespace, optional leading zeros,
+  // then 1–4 significant digits.  Word boundary prevents matching 'GAS1234'.
+  // Leading zeros are consumed by 0* so A0007 → 'A7', A2670 → 'A2670'.
+  const RE = /\b([AS])\s*0*(\d{1,4})\b/;
   const fromAName = aName.match(RE);
   if (fromAName) return `${fromAName[1]}${fromAName[2]}`;
   const fromOName = oName.match(RE);
