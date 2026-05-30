@@ -204,6 +204,7 @@ A new fetcher script that mirrors `tools/fetch/fetchHyperLeda.ts` or `tools/fetc
 - **CORS on DSS thumbnails**: ESO's DSS endpoint blocks browsers. Use CDS hips2fits (`https://alasky.cds.unistra.fr/hips-image-services/hips2fits`).
 - **Retry storms on failed thumbnails**: the engine has BOTH a `bitmapReady` and `bitmapFailed` Set — the per-frame gate must check both. The image queue's `enqueue` is idempotent for in-flight keys.
 - **`<details>` element collapsing on hover**: keep the InfoCard's outer wrapper element identical across renders so React doesn't remount and reset the `open` state.
+- **iOS WebGPU is stricter than Chrome's Tint — a bad shader freezes the *whole* canvas**: `texture_1d` sampling (`textureSampleLevel` has no 1D overload) is one example WebKit rejects but Chrome accepts. Because all HDR passes share one command encoder, an invalid pipeline makes `encoder.finish()` produce an invalid command buffer and `queue.submit()` silently drops the *entire* frame — the loop ticks and the camera moves, but nothing ever presents. Symptom: navigation/toggles do nothing on iOS while the React UI updates fine, no thrown errors. Diagnosis: `createShaderModuleWithDevLog` (in `shaderCompileLogger.ts`) prints the real `getCompilationInfo()` error + offending line. Store 1D LUTs as N×1 `texture_2d`.
 
 ## Memory
 

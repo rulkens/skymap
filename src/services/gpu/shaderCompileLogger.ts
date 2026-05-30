@@ -30,7 +30,21 @@ export function createShaderModuleWithDevLog(
   const module = device.createShaderModule({ code, label });
   if (import.meta.env.DEV) {
     void module.getCompilationInfo().then((info) => {
-      if (info.messages.some((m) => m.type === 'error')) {
+      const errors = info.messages.filter((m) => m.type === 'error');
+      if (errors.length > 0) {
+        const lines = code.split('\n');
+        // Print the actual compiler messages FIRST and uncollapsed —
+        // these are what map the failure to a fix. Some backends (notably
+        // iOS WebKit) reject WGSL that Chrome accepts; the message text
+        // and the offending source line are the only way to see why.
+        for (const m of errors) {
+          const ln = Number(m.lineNum) || 0;
+          const src = ln > 0 ? lines[ln - 1] : '(unknown line)';
+          // eslint-disable-next-line no-console
+          console.error(
+            `[${label}] WGSL COMPILE ERROR @ line ${m.lineNum}:${m.linePos}: ${m.message}\n  > ${src}`,
+          );
+        }
         // eslint-disable-next-line no-console
         console.groupCollapsed(`[${label}] linked WGSL (for error line lookup)`);
         // eslint-disable-next-line no-console
