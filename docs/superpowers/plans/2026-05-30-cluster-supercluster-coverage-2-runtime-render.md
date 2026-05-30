@@ -22,6 +22,8 @@ merges them into `poiSubsystem` via the same `rewire`-on-arrival path
 (`createAssetSlot`, `Fetcher`, `dataUrl`). No new GPU pipelines. Deploy via
 `tools/deploy/syncR2.ts` + `public/_headers`.
 
+**Decision record:** [ADR 0003 — Cluster catalog loading](../../adrs/0003-cluster-catalog-loading.md) (Accepted) — the featured-sync/bulk-async POI load-timing pattern this plan implements.
+
 > **For agentic workers:** Plan 2 depends on Plan 1 being complete
 > (`clusterCatalogFormat`, the seed JSON, `parseClusterSeed`). Read the spec
 > §6–§10 and `docs/superpowers/conventions/plan-style.md`. Conventions

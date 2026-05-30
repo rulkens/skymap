@@ -1,6 +1,7 @@
 # Cluster / Supercluster Coverage — Plan Index
 
 **Spec:** [`docs/superpowers/specs/2026-05-30-cluster-supercluster-coverage-design.md`](../specs/2026-05-30-cluster-supercluster-coverage-design.md)
+**ADR:** [0003 — Cluster catalog loading](../../adrs/0003-cluster-catalog-loading.md) (Accepted) — the `.ccat` format + featured-sync/bulk-async load-timing decision these plans implement.
 **Date:** 2026-05-30
 
 The cluster/supercluster-coverage feature is split into two

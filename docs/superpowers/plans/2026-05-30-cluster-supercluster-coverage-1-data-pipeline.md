@@ -20,6 +20,8 @@ binary-format idiom as `galaxyCatalogFormat.ts` (DataView header + Float32
 record view). Raw paths through `tools/utils/io/rawDataRegistry.ts`. No new
 deps.
 
+**Decision record:** [ADR 0003 — Cluster catalog loading](../../adrs/0003-cluster-catalog-loading.md) (Accepted) — why the `.ccat` format exists and the featured-sync/bulk-async split.
+
 > **For agentic workers:** read the spec
 > (`docs/superpowers/specs/2026-05-30-cluster-supercluster-coverage-design.md`)
 > and `docs/superpowers/conventions/plan-style.md` before starting. Project
@@ -48,42 +50,64 @@ deps.
 ## Task 1 — Register MCXC + MSCC raw data
 
 **Files:** `tools/utils/io/rawDataRegistry.ts` (modify),
-`data/raw/mcxc/README.md` (new), `data/raw/mscc/README.md` (new),
-`.gitignore` (modify), `tests/tools/utils/io/rawDataRegistry.test.ts`
-(modify or create).
+`tools/fetch/fetchClusterCatalogs.ts` (new),
+`data/raw/mcxc/README.md` (new, committed),
+`data/raw/mscc/README.md` (new, committed),
+`data/raw/mcxc/mcxc.dat.sha256` (new, committed),
+`data/raw/mscc/mscc.dat.sha256` (new, committed),
+`package.json` (modify — add `fetch-clusters`), `.gitignore` (modify),
+`tests/tools/utils/io/rawDataRegistry.test.ts` (modify).
 
-Follow the CLAUDE.md "Adding a new raw data source" 5-step checklist. Add
-four keys to `RAW_DATA` (dotted-lowercase, `kind`/`source`/`description`,
-`upstream` + `readme` where applicable):
+**Raw catalog data is NOT committed.** Mirror the CF-4 pattern exactly: the
+`.dat` tables AND their VizieR `ReadMe`s are **gitignored** and fetched on
+demand; only a provenance `README.md` + a `.sha256` checksum per table are
+committed. (See `cf4.table2`/`cf4.readme` = gitignored, `cf4.sha256` =
+committed, fetched via `npm run fetch-cf4` — `rawDataRegistry.ts:208-231`,
+`.gitignore:103,109`.)
 
-| key | path | kind | source |
-|---|---|---|---|
-| `mcxc.table` | `data/raw/mcxc/mcxc.dat` | file | committed |
-| `mcxc.readme` | `data/raw/mcxc/ReadMe` | file | committed |
-| `mscc.table` | `data/raw/mscc/mscc.dat` | file | committed |
-| `mscc.readme` | `data/raw/mscc/ReadMe` | file | committed |
+Registry keys:
 
-The four files are **already fetched** into `data/raw/mcxc/` and
-`data/raw/mscc/` (downloaded 2026-05-30 from the CDS FTP archive
-`https://cdsarc.cds.unistra.fr/ftp/J/A+A/534/A109/` and `…/J/MNRAS/445/4073/`):
-`mcxc.dat` (1743 rows), `mcxc/ReadMe`, `mscc.dat` (601 rows), `mscc/ReadMe`.
-They're small all-sky tables — committed, not gitignored.
+| key | path | source |
+|---|---|---|
+| `mcxc.table` | `data/raw/mcxc/mcxc.dat` | gitignored |
+| `mcxc.readme` | `data/raw/mcxc/ReadMe` | gitignored |
+| `mcxc.sha256` | `data/raw/mcxc/mcxc.dat.sha256` | committed |
+| `mscc.table` | `data/raw/mscc/mscc.dat` | gitignored |
+| `mscc.readme` | `data/raw/mscc/ReadMe` | gitignored |
+| `mscc.sha256` | `data/raw/mscc/mscc.dat.sha256` | committed |
 
-- [ ] Confirm the four files are present (re-fetch from the URLs above if a
-  fresh clone lacks them); they are committed source.
-- [ ] Add the four registry entries with `upstream` URLs and `readme`
-  cross-links (mirror the `cf4.table2` entry shape at
-  `rawDataRegistry.ts:208-226`).
-- [ ] Write `data/raw/mcxc/README.md` + `data/raw/mscc/README.md` with
-  upstream URL, column/byte layout summary, fetch date, row counts (MCXC
-  1,743 / MSCC 601).
-- [ ] Add `.gitignore` whitelist exceptions for the four committed files +
-  the two READMEs (near the existing `!/data/raw/cf4/README.md` block at
-  `.gitignore:103`).
+The `.dat` + `ReadMe` files are **already present** in this worktree (fetched
+2026-05-30), so the downstream build tasks run immediately; the fetcher
+exists for fresh clones + reproducibility.
+
+**Fetcher** (`tools/fetch/fetchClusterCatalogs.ts`, model on
+`tools/fetch/fetchCosmicflows4.ts`): download into `data/raw/{mcxc,mscc}/`
+from the CDS FTP archive —
+- MCXC: `https://cdsarc.cds.unistra.fr/ftp/J/A+A/534/A109/{mcxc.dat,ReadMe}`
+- MSCC: `https://cdsarc.cds.unistra.fr/ftp/J/MNRAS/445/4073/{mscc.dat,ReadMe}`
+
+then verify each `.dat` against its committed `.sha256` (fail loud on
+mismatch — mirror `fetchCosmicflows4`'s checksum handling).
+
+- [ ] Add the six registry entries (paths above), with `upstream` URLs +
+  `readme` cross-links, mirroring the `cf4.*` shapes.
+- [ ] Write the fetcher; add `"fetch-clusters": "tsx tools/fetch/fetchClusterCatalogs.ts"`
+  to `package.json` (next to `fetch-cf4`).
+- [ ] Compute + commit `mcxc.dat.sha256` + `mscc.dat.sha256`.
+- [ ] Write `data/raw/mcxc/README.md` + `data/raw/mscc/README.md` (provenance:
+  upstream URL + VizieR id, the verified byte-layout summary from Tasks 2–3,
+  fetch date, row counts 1743/601, sha256).
+- [ ] `.gitignore`: whitelist ONLY the committed files (near
+  `!/data/raw/cf4/README.md` `.gitignore:103` + `!/data/raw/cf4/table2.dat.sha256`
+  `.gitignore:109`): `!/data/raw/mcxc/README.md`, `!/data/raw/mscc/README.md`,
+  `!/data/raw/mcxc/mcxc.dat.sha256`, `!/data/raw/mscc/mscc.dat.sha256`. The
+  `.dat` + `ReadMe` stay gitignored under the wholesale `/data/` ignore.
 - [ ] Test `rawDataPath resolves mcxc + mscc keys to absolute paths`
-  asserting `rawDataPath('mcxc.table')` and `rawDataPath('mscc.table')`
-  end with the registered relative paths and are absolute.
-- [ ] `npm test -- rawDataRegistry` → passes. Commit.
+  asserting `rawDataPath('mcxc.table')`/`rawDataPath('mscc.table')` end with
+  the registered relative paths and are absolute.
+- [ ] `npm test -- rawDataRegistry` passes; `npm run fetch-clusters` re-fetches
+  cleanly + checksums verify. Commit (fetcher, registry, READMEs, sha256s —
+  **never** the `.dat`/`ReadMe`).
 
 ---
 
@@ -630,10 +654,11 @@ type ClusterMetaEntry = {
 **Files:** `CLAUDE.md` (modify), `data/raw/mcxc/README.md` (modify),
 `data/raw/mscc/README.md` (modify).
 
-- [ ] Add `build-clusters` to the data-pipeline run order in `CLAUDE.md`
+- [ ] Add the run order to `CLAUDE.md`: `npm run fetch-clusters` (downloads
+  the gitignored MCXC/MSCC tables, like `fetch-cf4`) → `npm run build-clusters`
   ("after `npm run build-tiers`", consistent with `build-famous`). Note the
-  `.ccat` + `clusters_meta.json` artefacts and that they are gitignored under
-  `public/data/`.
+  `.ccat` + `clusters_meta.json` artefacts are gitignored under `public/data/`,
+  and that the raw `.dat`/`ReadMe` are gitignored (only README + sha256 committed).
 - [ ] Cross-reference the spec in both READMEs.
 - [ ] No test; `npm run typecheck` + `npm test` still green (sanity). Commit.
 
