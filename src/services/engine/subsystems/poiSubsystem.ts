@@ -1,49 +1,44 @@
 /**
  * poiSubsystem — typed list of named points of interest (clusters,
  * superclusters, famous galaxies, voids) rendered as text labels +
- * optional crosshairs.
+ * optional ring/halo markers.
  *
  * ### Why one subsystem for four kinds?
  *
  * Clusters, superclusters, individual famous galaxies, and voids all
  * share the same physical surface: anchor a label at a world position,
- * optionally draw a small visual marker so the user can see the
- * precise centre.  The differences (label colour, default pixel size,
- * crosshair size) are data — `category` + a per-category default
- * table.  Splitting into four subsystems would quadruplicate the
- * producer plumbing without adding any clarity.
+ * optionally draw a visual marker so the user can see the precise
+ * centre.  The differences (label colour, default pixel size, marker
+ * tint) are data — `category` + a per-category default table.
+ * Splitting into four subsystems would quadruplicate the producer
+ * plumbing without adding any clarity.
  *
  * ### Why `POI_STYLES` and `PoiCategory` live together
  *
  * The category union is derived from the const registry via
  * `keyof typeof POI_STYLES`.  This mirrors the FONTS / FontId pattern
- * (PR #132) — co-locating the value and its type union means they
- * cannot drift.  Adding a fifth category is a single edit (add a row
- * to POI_STYLES) that automatically widens `PoiCategory`.
+ * — co-locating the value and its type union means they cannot drift.
+ * Adding a fifth category is a single edit (add a row to POI_STYLES)
+ * that automatically widens `PoiCategory`.
  *
  * ### Marker pass (clusters / superclusters / voids)
  *
- * Cluster, supercluster, and void POIs now render through the
- * separate `clusterMarkerRenderer` as soft additive halos + screen-AA
- * rings at their `physicalRadiusMpc` — see `produceMarkers` below.
- * The previous three-perpendicular-line crosshair gizmo was removed
- * in 2026-05-18 (cluster-viz plan 2/4); see the spec
- * `docs/superpowers/specs/2026-05-18-cluster-supercluster-viz-design.md`
- * §2 for the rationale.  POIs without `physicalRadiusMpc` get a
- * label only.
+ * Cluster, supercluster, and void POIs render through the separate
+ * `clusterMarkerRenderer` as soft additive halos + screen-AA rings at
+ * their `physicalRadiusMpc` — see `produceMarkers` below.  POIs
+ * without a radius get a label only.
  *
  * ### Anchor-offset labels
  *
- * Famous galaxies (and any future category that sets `anchorOffsetPx`
- * on its style) borrow the `youAreHereSubsystem` idiom: the label
- * sits a fixed *pixel* distance above the dot, connected by a short
- * vertical marker line.  The pixel offset is converted to world space
- * per-frame using `(offsetPx / drawPxPerRad) * distanceMpc`, so the
- * gap on screen stays constant regardless of how far the galaxy is
- * from the camera.  These labels use `alignX: 'center'` so the text
- * straddles the line.  Categories that omit `anchorOffsetPx`
- * (cluster, supercluster, void) anchor at the dot with `alignX: 'left'`
- * and rely on the 3-line crosshair for centre indication.
+ * Famous galaxies (and any future category whose POIs set
+ * `labelAnchorOffsetMpc`) lift the label a fixed *world-space* distance
+ * above the dot, connected by a short vertical marker line.  The offset
+ * is stored statically in world space rather than derived per-frame
+ * from a pixel target — see the field's docstring and the inline note
+ * in `produceLabels` for why.  These labels use `alignX: 'center'` so
+ * the text straddles the line.  Categories whose POIs never set the
+ * offset (cluster, supercluster, void) anchor at the ring centre and
+ * rely on the ring marker for centre indication.
  *
  * ### Fade band
  *
@@ -68,23 +63,19 @@
  *
  * ### Why marker vs label visibility are separate axes
  *
- * Prior to the 2026-05-19 settings-panel audit (Q11) a single
- * `visibility` record was consulted by BOTH `produceLabels` and
- * `produceMarkers`.  That conflation meant a UI toggle labelled "show
- * cluster labels" secretly also suppressed the cluster ring/halo
- * marker — the kind of "the checkbox does two things" bug the audit
- * was looking for.  The fix splits the record into two independent
- * axes:
+ * Marker and label visibility are two independent records so a UI
+ * toggle that hides cluster labels leaves the cluster ring/halo marker
+ * intact (and vice versa) — a single shared record would make one
+ * checkbox secretly do two things:
  *
  *   - `markerVisibility[category]` — gates the cluster/SC/void ring +
  *     halo (the visible dot/glyph) drawn by `produceMarkers`.
  *   - `labelVisibility[category]`  — gates the text label drawn by
  *     `produceLabels`.
  *
- * Each loop now reads ONLY its own record.  The two are seeded from
- * the same `ALL_CATEGORIES_VISIBLE` default so day-one behaviour is
- * unchanged (everything visible); the SettingsPanel restructure
- * (Task #6 of the audit) wires them to different master toggles.
+ * Each loop reads ONLY its own record.  Both seed from the same
+ * `ALL_CATEGORIES_VISIBLE` default (everything visible); the
+ * SettingsPanel wires them to different master toggles.
  */
 
 import type { Label } from '../../../@types/rendering/Label';
@@ -123,14 +114,12 @@ type CategoryStyle = {
   readonly pixelWidth: number;
   /**
    * Smoothstep fade-band width in pixels above `minApparentSizePx`.
-   * (Unchanged from the pre-cluster-viz revision; see the existing
-   *  docblock — kept verbatim above this comment block.)
    *
    * When set, POIs whose apparent size lands inside the band
    * `[minApparentSizePx, minApparentSizePx + fadeBandPx]` fade in via
    * smoothstep instead of popping.  Below the lower bound: still
    * skipped.  Above the upper bound: full alpha.  Undefined → binary
-   * gate (the current behaviour).
+   * gate.
    *
    * The pixel-offset lift + vertical marker-line, by contrast, is
    * driven per-POI via `PointOfInterest.labelAnchorOffsetMpc` rather
@@ -198,17 +187,17 @@ type CategoryStyle = {
  * keys so the type and the data cannot drift.
  *
  * Style choices:
- *   - cluster      — warm yellow, sub-Mpc world-em; min 14 px / max 60 px clamps
+ *   - cluster      — warm yellow, ~1 Mpc world-em; min 35 px / max 150 px clamps
  *   - supercluster — slightly dimmer yellow, larger world-em (tens of Mpc extent);
- *                    min 14 px / max 60 px clamps
- *   - famousGalaxy — warm off-white, 0.005 Mpc world-em (set so M31 at ~0.78 Mpc
- *                    renders at roughly legible size); min 12 px / max 60 px clamps;
+ *                    min 35 px / max 150 px clamps
+ *   - famousGalaxy — warm off-white, sub-kpc world-em (set so M31 at ~0.78 Mpc
+ *                    renders at roughly legible size); min 30 px / max 150 px clamps;
  *                    fadeBandPx: 4 smooths the apparent-size threshold.  Per-POI
  *                    `worldEmMpc` (set via `labelWorldEmMpc` from
  *                    `buildPoisFromFamousMeta`) overrides this default so larger
  *                    galaxies are naturally bigger labels.
  *   - void         — soft cyan, largest world-em (voids span 30–50+ Mpc radii);
- *                    min 14 px / max 60 px clamps
+ *                    min 35 px / max 150 px clamps
  */
 export const POI_STYLES = {
   cluster: {
@@ -355,9 +344,7 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
   function setCategoryLabelVisible(category: PoiCategory, visible: boolean): void {
     // Symmetric counterpart to `setCategoryMarkerVisible`.  Only the
     // label pass (`produceLabels`) reads this axis — the marker pass
-    // is unaffected, which is the bug-fix the 2026-05-19 settings-panel
-    // audit (Q11) called out: hiding labels for clusters used to also
-    // hide their rings.
+    // is unaffected, so hiding cluster labels leaves their rings intact.
     labelVisibility = { ...labelVisibility, [category]: visible };
   }
 
@@ -405,19 +392,19 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
       // needs its ring marker as a visual anchor — a floating label
       // with no ring reads as orphaned text in space.  `famousGalaxy`
       // is exempt because its anchor is the galaxy point itself, not a
-      // ring marker (and famous galaxies don't appear in
-      // `markerVisibility`'s STRUCTURE_CATEGORIES batch at all).
+      // ring marker, so its label survives regardless of marker
+      // visibility.
       if (p.category !== 'famousGalaxy' && !markerVisibility[p.category]) continue;
       // Widen the `as const`-narrowed POI_STYLES entry back to the
-      // declared shape so the optional `anchorOffsetPx` / `fadeBandPx`
+      // declared shape so the optional `lineColor` / `fadeBandPx`
       // fields are visible regardless of which category we're on.
       // Without this cast the literal-narrowed inferred type omits
       // any optional field that the specific category doesn't set.
       const style: CategoryStyle = POI_STYLES[p.category];
 
-      // Camera distance to this POI — needed both for apparent-size
-      // gating and for converting `anchorOffsetPx` to world space.
-      // Computed once and reused.
+      // Camera distance to this POI — needed for apparent-size gating
+      // and the marker close-approach / far-distance fade.  Computed
+      // once and reused.
       const dx = p.worldPos[0] - cx;
       const dy = p.worldPos[1] - cy;
       const dz = p.worldPos[2] - cz;
