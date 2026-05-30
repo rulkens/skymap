@@ -42,16 +42,16 @@ Add `disk?: RecipeDisk;` to the `Recipe` type. Do **not** bump
 unchanged (same backward-compat rationale as `crop.rotationDeg` at
 `recipe.ts:87-93`).
 
-- [ ] Add test `parseRecipe round-trips a recipe with no disk block (disk stays undefined)` — `parseRecipe(serialiseRecipe(r)).disk === undefined` for a recipe built without `disk`.
-- [ ] Add test `parseRecipe parses a valid disk block` — JSON with `disk: { centerPx: [120, 80], radiusPx: 64, paDeg: 30, deproject: true }`; assert every field round-trips and `centerPx` is a fresh array (not aliased to input).
-- [ ] Add test `parseRecipe parses disk.axisRatio when present and leaves it undefined when absent`.
-- [ ] Add test `parseRecipe throws when disk.centerPx is not a 2-number tuple` (e.g. `centerPx: [1]` or `centerPx: 5`).
-- [ ] Add test `parseRecipe throws when disk.radiusPx or disk.paDeg is non-finite`.
-- [ ] Add test `parseRecipe throws when disk.deproject is not a boolean`.
-- [ ] Run `npm test -- recipe` → new tests FAIL.
-- [ ] Implement: extend `parseRecipe` (validate `disk` only when present — mirror the `crop.rotationDeg` optional-when-absent guard at `recipe.ts:89-93`); `serialiseRecipe` already carries `disk` through via `JSON.stringify`. Validate `centerPx` is a finite-number tuple of length 2; `radiusPx`/`paDeg` finite; `axisRatio` finite when present; `deproject` boolean. Return a fresh `disk` with a fresh `centerPx` tuple (no aliasing — matches the `parseRecipe` docstring contract at `recipe.ts:66-71`).
-- [ ] Run `npm test -- recipe` → PASS. `npm run typecheck` → clean.
-- [ ] Commit.
+- [x] Add test `parseRecipe round-trips a recipe with no disk block (disk stays undefined)` — `parseRecipe(serialiseRecipe(r)).disk === undefined` for a recipe built without `disk`.
+- [x] Add test `parseRecipe parses a valid disk block` — JSON with `disk: { centerPx: [120, 80], radiusPx: 64, paDeg: 30, deproject: true }`; assert every field round-trips and `centerPx` is a fresh array (not aliased to input).
+- [x] Add test `parseRecipe parses disk.axisRatio when present and leaves it undefined when absent`.
+- [x] Add test `parseRecipe throws when disk.centerPx is not a 2-number tuple` (e.g. `centerPx: [1]` or `centerPx: 5`).
+- [x] Add test `parseRecipe throws when disk.radiusPx or disk.paDeg is non-finite`.
+- [x] Add test `parseRecipe throws when disk.deproject is not a boolean`.
+- [x] Run `npm test -- recipe` → new tests FAIL.
+- [x] Implement: extend `parseRecipe` (validate `disk` only when present — mirror the `crop.rotationDeg` optional-when-absent guard at `recipe.ts:89-93`); `serialiseRecipe` already carries `disk` through via `JSON.stringify`. Validate `centerPx` is a finite-number tuple of length 2; `radiusPx`/`paDeg` finite; `axisRatio` finite when present; `deproject` boolean. Return a fresh `disk` with a fresh `centerPx` tuple (no aliasing — matches the `parseRecipe` docstring contract at `recipe.ts:66-71`).
+- [x] Run `npm test -- recipe` → PASS. `npm run typecheck` → clean.
+- [x] Commit.
 
 ## Task 2: `FamousCalibration` type + `calibration?` on `FamousMetaEntry`
 
