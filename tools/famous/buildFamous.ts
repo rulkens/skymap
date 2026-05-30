@@ -29,6 +29,7 @@ import { Source } from '../../src/data/sources.js';
 import { fallbackOrientation } from '../../src/utils/random/fallbackOrientation.js';
 import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog.js';
 import { rawDataPath } from '../utils/io/rawDataRegistry.js';
+import { writeMetaSidecar, type MetaSidecarEntry } from '../curation/writeMetaSidecar.js';
 
 /**
  * Convert a curated entry's (RA, Dec, distanceMpc) to Cartesian (x, y, z).
@@ -70,13 +71,7 @@ async function main(): Promise<void> {
     parentSurveyByte: new Uint8Array(count),
     spectroscopicZ: new Float32Array(count),
   };
-  const metaByIdx: Array<{
-    id: string;
-    names: string[];
-    commonName?: string;
-    description: string;
-    type: string;
-  }> = [];
+  const metaByIdx: MetaSidecarEntry[] = [];
 
   for (let i = 0; i < count; i++) {
     const e = entries[i]!;
@@ -134,7 +129,7 @@ async function main(): Promise<void> {
   const binBuf = encodeGalaxyCatalog(cloud);
   writeFileSync(resolve(outDir, 'famous.bin'), Buffer.from(binBuf));
   process.stderr.write(`wrote ${count} points to famous.bin (${binBuf.byteLength} bytes)\n`);
-  writeFileSync(resolve(outDir, 'famous_meta.json'), JSON.stringify(metaByIdx, null, 2));
+  writeMetaSidecar(metaByIdx, resolve(outDir, 'famous_meta.json'));
   process.stderr.write(`wrote famous_meta.json\n`);
 
   // Quick sanity reference: log the Source enum value baked into the
