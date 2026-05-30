@@ -216,13 +216,13 @@ degrees. `dmaxMpc` returned in raw `h70^-1 Mpc` units — the `h70 → Mpc`
 conversion + halving lives in `buildClusters` (Task 10), so the parser stays
 a faithful column reader.
 
-- [ ] Hand-built fixture (3–4 rows copied verbatim from `mscc.dat`).
-- [ ] Test `parseMscc reads decimal RAdeg/DEdeg, z, Nm, dmax` asserting
+- [x] Hand-built fixture (3–4 rows copied verbatim from `mscc.dat`).
+- [x] Test `parseMscc reads decimal RAdeg/DEdeg, z, Nm, dmax` asserting
   row 0 ≈ `{id: 'MSCC 1', raDeg: 0.77, decDeg: -26.72, z: 0.064, nm: 9, dmaxMpc: 50.6}`.
-- [ ] Test `parseMscc reads a signed positive declination` (e.g. row 1
+- [x] Test `parseMscc reads a signed positive declination` (e.g. row 1
   `+09.77` → `9.77`).
-- [ ] Test `parseMscc skips comment and blank lines`.
-- [ ] Implement. `npm test -- parseMscc` → passes. Commit.
+- [x] Test `parseMscc skips comment and blank lines`.
+- [x] Implement. `npm test -- parseMscc` → passes. Commit.
 
 ---
 
