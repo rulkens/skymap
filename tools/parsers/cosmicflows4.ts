@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 
 import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { slot } from './common';
 
 /**
  * Cosmicflows-4 parser.
@@ -58,14 +59,6 @@ function dmToMpc(dm: number, eDm: number): { distMpc: number; eDistMpc: number }
   // d/dDM of d_Mpc = d_Mpc * ln(10) / 5
   const eDistMpc = distMpc * (Math.LN10 / 5) * eDm;
   return { distMpc, eDistMpc };
-}
-
-/**
- * Slice a fixed-width line in 1-based-inclusive (start, end) coordinates
- * and trim whitespace. Returns '' for slices that lie past the line end.
- */
-function slot(line: string, start: number, end: number): string {
-  return line.slice(start - 1, end).trim();
 }
 
 /**

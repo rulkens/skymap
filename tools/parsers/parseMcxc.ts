@@ -119,35 +119,36 @@ export function parseMcxc(raw: string): McxcRow[] {
     // ── Field extraction ────────────────────────────────────────────────────
     //
     // All byte ranges are 1-based inclusive per the ReadMe.
-    // JS slice(a-1, b) is the equivalent 0-based half-open form.
+    // `slot(line, start, end)` handles the 1-based → 0-based translation
+    // so the numbers here match the ReadMe verbatim.
 
     // MCXC primary id: bytes 1–12
-    const id = line.slice(0, 12).trim();
+    const id = slot(line, 1, 12);
 
     // OName: bytes 14–31 (A18)
-    const oName = line.slice(13, 31).trim();
+    const oName = slot(line, 14, 31);
 
     // AName: bytes 33–86 (A54) — often all spaces for clusters without
-    // a common Abell/UGC name.  `.trim()` converts all-space to `''`.
-    const aName = line.slice(32, 86).trim();
+    // a common Abell/UGC name.  `slot` trims, so all-space becomes `''`.
+    const aName = slot(line, 33, 86);
 
     // RAdeg: bytes 109–115 (F7.3 deg) — pre-computed decimal degrees.
     // We use this instead of the sexagesimal columns (bytes 88–107) because
     // the decimal form requires no sign-byte assembly and no
     // h→° conversion arithmetic; see the module docstring for rationale.
-    const raDeg = parseFloat(line.slice(108, 115).trim());
+    const raDeg = parseFloat(slot(line, 109, 115));
 
     // DEdeg: bytes 117–123 (F7.3 deg) — signed; negative for southern sky.
-    const decDeg = parseFloat(line.slice(116, 123).trim());
+    const decDeg = parseFloat(slot(line, 117, 123));
 
     // z: bytes 141–146 (F6.4)
-    const z = parseFloat(line.slice(140, 146).trim());
+    const z = parseFloat(slot(line, 141, 146));
 
     // M500: bytes 190–196 (F7.4, units: 10^14 M☉)
-    const m500 = parseFloat(line.slice(189, 196).trim());
+    const m500 = parseFloat(slot(line, 190, 196));
 
     // R500: bytes 198–204 (F7.4, units: Mpc)
-    const r500Mpc = parseFloat(line.slice(197, 204).trim());
+    const r500Mpc = parseFloat(slot(line, 198, 204));
 
     // Skip rows where any required numeric field failed to parse.  The MCXC
     // has no documented sentinel for missing values in these columns; a NaN

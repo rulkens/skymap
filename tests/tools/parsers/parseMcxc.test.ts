@@ -11,11 +11,11 @@ import { parseMcxc, type McxcRow } from '../../../tools/parsers/parseMcxc';
  * real file means the tests exercise the same byte layout the production parser
  * will face on every `npm run build-all` invocation.
  *
- * Row coverage:
- *   ROW_WITH_ANAME  — row 1 in the file; AName = 'UGC 12890'; positive dec.
- *   ROW_NO_ANAME    — row 2; AName all spaces; negative dec (-2.625°).
- *   ROW_DEEP_SOUTH  — row 3; AName all spaces; strongly negative dec (-15.681°).
- *   ROW_ABELL       — row 4; AName = 'A2692' (Abell cluster designation).
+ * Row coverage (0-based array indices when all four are passed together):
+ *   ROW_WITH_ANAME  — index 0; AName = 'UGC 12890'; positive dec.
+ *   ROW_NO_ANAME    — index 1; AName all spaces; negative dec (-2.625°).
+ *   ROW_DEEP_SOUTH  — index 2; AName all spaces; strongly negative dec (-15.681°).
+ *   ROW_ABELL       — index 3; AName = 'A2692' (Abell cluster designation).
  */
 const ROW_WITH_ANAME =
   'J0000.1+0816 RXC J0000.1+0816   UGC 12890                                               0  0  7.1   8 16 28   0.030   8.274 101.783 -52.477 0.0396 NORAS/REFLEX NORAS        0.784  0.196280  0.7373  0.6296                                            BCS                                                 1.084';
@@ -28,7 +28,7 @@ const ROW_ABELL =
 
 describe('parseMcxc', () => {
   describe('reads decimal RAdeg/DEdeg, z, M500, R500', () => {
-    it('parses row 0 (J0000.1+0816) with correct numeric fields', () => {
+    it('parses index 0 (J0000.1+0816) with correct numeric fields', () => {
       const rows = parseMcxc(ROW_WITH_ANAME);
       expect(rows).toHaveLength(1);
       const row = rows[0] as McxcRow;

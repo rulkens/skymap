@@ -221,6 +221,50 @@ export type ParsedRecord = {
  * the comment-stripping logic here means each individual parser focuses
  * on its own column quirks, not on input plumbing.
  */
+/**
+ * Extract a fixed-width field from a ReadMe-format line using 1-based
+ * inclusive byte offsets and trim surrounding whitespace.
+ *
+ * Fixed-width catalogs (CDS VizieR, 2MRS, CF4, MCXC, MSCC, …) publish their
+ * column layout as `bytes START–END` where both endpoints are *1-based and
+ * inclusive*, matching the column description in the distributed ReadMe.  JS's
+ * `String.prototype.slice` is *0-based and half-open*: `.slice(start, end+1)`.
+ *
+ * Centralising the arithmetic here means every fixed-width parser writes the
+ * ReadMe's literal byte numbers — `slot(line, 109, 115)` for a field at
+ * bytes 109–115 — with no per-call off-by-one to re-derive.  A reader can
+ * verify a field offset by opening the ReadMe, reading the byte range
+ * directly, and comparing it to the `slot` call, without needing to hold
+ * "remember to subtract 1 from start" in mind.
+ *
+ * Returns `''` for slices that lie past the line end — `String.prototype.slice`
+ * already silently returns the available prefix; trimming that prefix to `''`
+ * makes the short-line case a clean empty string rather than stray spaces.
+ */
+export function slot(line: string, start: number, end: number): string {
+  return line.slice(start - 1, end).trim();
+}
+
+/**
+ * Strip blank lines and comment lines from a raw CSV blob, returning the
+ * non-empty trimmed rows in order.
+ *
+ * We treat three kinds of lines as comments:
+ *  - Blank / whitespace-only lines — usually trailing newlines or stray
+ *    blanks between header and body.
+ *  - Lines starting with `#` — SDSS SkyServer's CSV exports begin with a
+ *    `#Table1` banner above the column header.
+ *  - Lines starting with `--` — when the SQL query itself has a leading
+ *    SQL comment, some export paths preserve it on the first line.
+ *
+ * The returned array still includes the header row as element 0; callers
+ * are responsible for splitting header from body.
+ *
+ * Why is this in `common.ts`? All five surveys we plan to ingest deliver
+ * line-oriented text with similar comment conventions, so deduplicating
+ * the comment-stripping logic here means each individual parser focuses
+ * on its own column quirks, not on input plumbing.
+ */
 export function nonCommentLines(rawText: string): string[] {
   return rawText
     .replace(/\r\n/g, '\n')
