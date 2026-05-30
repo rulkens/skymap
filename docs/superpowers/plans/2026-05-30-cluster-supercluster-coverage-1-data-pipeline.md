@@ -508,14 +508,14 @@ hand-tuned version wins — prevents Coma drawing twice). Distance in
 equatorial-Cartesian Mpc (positions already in that frame). Pure; preserves
 candidate order.
 
-- [ ] Test `dedupeByProximity drops a candidate inside a featured anchor's radius`
+- [x] Test `dedupeByProximity drops a candidate inside a featured anchor's radius`
   (anchor radius 6, candidate 2 Mpc away → dropped).
-- [ ] Test `dedupeByProximity keeps a candidate beyond all anchors`
+- [x] Test `dedupeByProximity keeps a candidate beyond all anchors`
   (candidate 50 Mpc from the only anchor → kept).
-- [ ] Test `dedupeByProximity applies the floor when an anchor radius is tiny`
+- [x] Test `dedupeByProximity applies the floor when an anchor radius is tiny`
   (anchor radius 0.5, floor 3, candidate 1 Mpc away → dropped by floor).
-- [ ] Test `dedupeByProximity preserves input order of kept candidates`.
-- [ ] Implement. `npm test -- dedupeByProximity` → passes. Commit.
+- [x] Test `dedupeByProximity preserves input order of kept candidates`.
+- [x] Implement. `npm test -- dedupeByProximity` → passes. Commit.
 
 ---
 
