@@ -620,30 +620,30 @@ type ClusterMetaEntry = {
 // toMeta = ({ id, names, abell, description }) => ({ id, names, abell, description })
 ```
 
-- [ ] Test `buildClusterEntries excludes clusters below the M500 threshold`
+- [x] Test `buildClusterEntries excludes clusters below the M500 threshold`
   (fixture row under `MCXC_M500_MIN` → not present).
-- [ ] Test `buildClusterEntries excludes structures beyond Z_MAX`.
-- [ ] Test `buildClusterEntries sets apparentRadiusMpc = APPARENT_MULTIPLE × R500`
+- [x] Test `buildClusterEntries excludes structures beyond Z_MAX`.
+- [x] Test `buildClusterEntries sets apparentRadiusMpc = APPARENT_MULTIPLE × R500`
   for a surviving cluster.
-- [ ] Test `buildClusterEntries collapses supercluster physical == apparent radius`
+- [x] Test `buildClusterEntries collapses supercluster physical == apparent radius`
   asserting `physicalRadiusMpc === apparentRadiusMpc` and `= dmax/2` (converted).
-- [ ] Test `buildClusterEntries drops a bulk entry near a featured seed anchor`
+- [x] Test `buildClusterEntries drops a bulk entry near a featured seed anchor`
   (place an MCXC row at Coma's seed position → suppressed; one far away →
   kept). This is the "Coma doesn't draw twice" guarantee.
-- [ ] Test `extractAbell finds Abell/ACO tokens in AName or OName`
+- [x] Test `extractAbell finds Abell/ACO tokens in AName or OName`
   (`'A2670'`→`'A2670'`; `' A 2670'`→`'A2670'`; aName blank + oName `'A1656'`
   →`'A1656'`; `'UGC 12890'`→`null`; ACO southern `'S0805'`→`'S0805'`).
-- [ ] Test `buildClusterEntries prefers the Abell designation for the name`
+- [x] Test `buildClusterEntries prefers the Abell designation for the name`
   (row with Abell in `aName` → `names[0]` is the Abell token and `abell` is
   set; row with only `oName` RXC + no Abell → `names[0]` is the RXC name and
   `abell` is null; row with all blank → `names[0]` is the MCXC `id`).
-- [ ] Test `buildClusterEntries sets abell null for superclusters`.
-- [ ] Test `buildClusterEntries tags category 0 for MCXC, 1 for MSCC`.
-- [ ] Implement `buildClusterEntries` + `main`. `npm test -- buildClusters`
+- [x] Test `buildClusterEntries sets abell null for superclusters`.
+- [x] Test `buildClusterEntries tags category 0 for MCXC, 1 for MSCC`.
+- [x] Implement `buildClusterEntries` + `main`. `npm test -- buildClusters`
   → passes.
-- [ ] Add `"build-clusters": "tsx tools/clusters/buildClusters.ts"` to
+- [x] Add `"build-clusters": "tsx tools/clusters/buildClusters.ts"` to
   `package.json` scripts (alphabetical, next to `build-cf4-density`).
-- [ ] Run `npm run build-clusters` once manually; confirm
+- [x] Run `npm run build-clusters` once manually; confirm
   `public/data/clusters.ccat` + `public/data/clusters_meta.json` exist and
   the `.ccat` decodes (the round-trip test already covers decode). Commit.
 
