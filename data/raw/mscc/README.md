@@ -7,7 +7,7 @@
 | Upstream URL  | https://cdsarc.cds.unistra.fr/ftp/J/MNRAS/445/4073/ |
 | Fetch date    | 2026-05-30 |
 | Row count     | 601 superclusters |
-| Record length | 324 bytes/row (fixed-width ASCII) |
+| Record length | max 324 bytes/row (variable-length ASCII; the trailing member-cluster list varies) |
 | SHA-256       | `c87871dfbe30e8b00acbe377bab4098108f8d5dec62f26b9cdc3fbe2cebd0729` |
 
 ## How to obtain

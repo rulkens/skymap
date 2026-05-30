@@ -86,7 +86,6 @@ async function fetchCatalog(opts: {
   const { label, tableUrl, readmeUrl, tablePath, readmePath, sha256Path } = opts;
 
   process.stderr.write(`\nfetchClusterCatalogs: ${label}\n`);
-  process.stderr.write(`  target: ${tablePath}\n`);
 
   // ReadMe first — tiny (~5 KB) and the parser needs it; fast failure beats a
   // silent missing-column-spec issue discovered only when building bins.
@@ -98,6 +97,7 @@ async function fetchCatalog(opts: {
         : ' (already complete)\n'),
   );
 
+  process.stderr.write(`  target: ${tablePath}\n`);
   const tableResult = await downloadWithResume(tableUrl, tablePath);
   process.stderr.write(
     `  ${label}.dat: ${tableResult.totalBytes.toLocaleString()} bytes` +

@@ -27,6 +27,7 @@ Key columns (byte offsets from the VizieR ReadMe):
 |---------|----------|-------------|
 | 1–12    | MCXC     | MCXC name (JHHMM.m+DDMM) |
 | 14–31   | OName    | Other name |
+| 33–86   | AName    | Alternative name (Abell/ACO/UGC/popular; often blank) |
 | 88–89   | RAh      | RA hours (J2000) |
 | 91–92   | RAm      | RA minutes |
 | 94–97   | RAs      | RA seconds |
