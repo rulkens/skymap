@@ -18,10 +18,11 @@
  *
  * Keeping a single helper here means both call sites agree on:
  *
- *   - The slug rule (`names[0] → lower-kebab-case`), so `Virgo (M87)` →
- *     `virgo-m87`, prefixed by the category.  A drift between the two
- *     would silently break deep-link resolution for, e.g., the apostrophe
- *     in some future anchor name.
+ *   - The id rule: `${category}-${seed.id}`, where `seed.id` is the
+ *     curated identifier in `cluster_anchors.seed.json`.  Using the seed
+ *     field directly means the deep-link hash is the single canonical
+ *     identity — no slug-function drift for names that contain non-ASCII
+ *     characters or punctuation.
  *
  *   - The worldPos conversion (RA hours / Dec deg / Mpc → equatorial
  *     Cartesian Mpc via `raDecDistToEqCart`), so the POI the drain hands
@@ -64,6 +65,7 @@ import clusterSeedJson from '../../data/cluster_anchors.seed.json';
  * reach across the boundary for a runtime-erased type.
  */
 type SeedEntry = {
+  readonly id: string;
   readonly names: readonly string[];
   readonly category: 'cluster' | 'supercluster' | 'void';
   readonly raHours: number;
@@ -74,19 +76,6 @@ type SeedEntry = {
 };
 
 /**
- * Lower-kebab the anchor name into a URL-safe slug.  Matches the rule
- * the engine's wireSlots phase uses inline, factored here so the two
- * stay in lock-step.  Trailing/leading dashes are stripped so an
- * anchor named `(Foo)` doesn't become `-foo-`.
- */
-function slug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
-
-/**
  * Build the static cluster + supercluster + void POI list.  Synchronous,
  * deterministic, and reference-stable per call (returns a fresh array
  * each call — callers should memoize at the React boundary so reference
@@ -94,19 +83,17 @@ function slug(name: string): string {
  */
 export function buildStaticAnchorPois(): PointOfInterest[] {
   return (clusterSeedJson as SeedEntry[]).map(
-    (a): PointOfInterest => {
-      // Every seed entry is guaranteed to have at least one name (validated
-      // at build time by parseClusterSeed).  The non-null assertion is safe
-      // because an empty names array would have been caught at seed authoring.
-      const primaryName = a.names[0]!;
-      return {
-        id: `${a.category}-${slug(primaryName)}`,
-        name: primaryName,
-        category: a.category,
-        worldPos: raDecDistToEqCart(a),
-        physicalRadiusMpc: a.physicalRadiusMpc,
-        apparentRadiusMpc: a.apparentRadiusMpc,
-      };
-    },
+    (a): PointOfInterest => ({
+      // `${category}-${seed.id}` is the canonical POI id — the seed's
+      // curated `id` field is the single source of truth, so deep-link
+      // hashes never diverge from the stored POI ids regardless of
+      // punctuation or non-ASCII characters in the display name.
+      id: `${a.category}-${a.id}`,
+      name: a.names[0]!,
+      category: a.category,
+      worldPos: raDecDistToEqCart(a),
+      physicalRadiusMpc: a.physicalRadiusMpc,
+      apparentRadiusMpc: a.apparentRadiusMpc,
+    }),
   );
 }
