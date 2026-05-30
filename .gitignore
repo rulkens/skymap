@@ -88,6 +88,7 @@ pnpm-debug.log*
 
 # Exception: hand-curated catalog seed files (small, hand-authored, tracked).
 !/data/famous_galaxies.seed.json
+!/data/cluster_anchors.seed.json
 
 # Exception: hand-curated override index produced by the famous-galaxy
 # curator (tools/famous-curator).  Small JSON (~75 entries × ~150 B) that

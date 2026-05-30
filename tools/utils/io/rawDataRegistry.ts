@@ -129,6 +129,16 @@ export const RAW_DATA = {
       'SDSS SkyServer CSV exports. The build pipeline auto-picks the newest matching `Skyserver_*.csv` from here.',
   },
 
+  // ─── Clusters (curated featured structures) ───────────────────────────
+
+  'clusters.seed': {
+    path: 'data/cluster_anchors.seed.json',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Hand-authored seed list of featured galaxy clusters, superclusters, and voids. Drives the cluster-coverage POI build.',
+  },
+
   // ─── Famous (curated catalog) ──────────────────────────────────────────
 
   'famous.seed': {
