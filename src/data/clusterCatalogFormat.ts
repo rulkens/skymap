@@ -125,9 +125,11 @@ export function decodeClusterCatalog(buf: ArrayBuffer): ClusterCatalog {
 
   // Guard against a truncated download: fail loud rather than silently
   // decoding zeros from beyond the end of the buffer.
-  const expected = HEADER_BYTES + count * BYTES_PER_RECORD;
-  if (buf.byteLength < expected) {
-    throw new Error(`truncated CCAT file: expected ${expected} bytes, got ${buf.byteLength}`);
+  const expectedBytes = HEADER_BYTES + count * BYTES_PER_RECORD;
+  if (buf.byteLength < expectedBytes) {
+    throw new Error(
+      `truncated CCAT buffer: expected ${expectedBytes} bytes, got ${buf.byteLength} — the .ccat download may be incomplete`,
+    );
   }
 
   const positions = new Float32Array(count * 3);

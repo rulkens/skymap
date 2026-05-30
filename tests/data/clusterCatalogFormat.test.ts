@@ -1,7 +1,7 @@
 /**
  * Format-level tests for the v1 cluster-catalog binary (CCAT).
  *
- * Five contracts under test:
+ * Six contracts under test:
  *
  *   1. encode → decode is a faithful round trip for all fields: positions
  *      (count*3 floats), two radius arrays, significance, and the category
@@ -11,7 +11,9 @@
  *      'CCAT' so the caller knows which format was expected.
  *   4. A buffer with an unsupported version is rejected with a message that
  *      contains 'build-clusters' so the caller knows how to regenerate.
- *   5. emptyClusterCatalog() returns a count-0 catalog with zero-length arrays.
+ *   5. A truncated buffer (byteLength < header + count*28) is rejected with
+ *      a message containing 'truncated' rather than silently decoding zeros.
+ *   6. emptyClusterCatalog() returns a count-0 catalog with zero-length arrays.
  *
  * Float values in round-trip tests use exactly representable f32 literals
  * (integers, powers of two, half-integers) so the Float32 truncation in
@@ -122,6 +124,15 @@ describe('encode/decode cluster catalog v1 (CCAT)', () => {
     new DataView(buf).setUint32(4, 2, true);
 
     expect(() => decodeClusterCatalog(buf)).toThrow(/build-clusters/);
+  });
+
+  it('decode rejects a truncated buffer', () => {
+    // Encode a valid 2-record catalog, then lop off the last 4 bytes so the
+    // second record is incomplete.  Decode must throw rather than silently
+    // reading zeros from beyond the buffer end.
+    const buf = encodeClusterCatalog(makeCatalog());
+    const truncated = buf.slice(0, buf.byteLength - 4);
+    expect(() => decodeClusterCatalog(truncated)).toThrow(/truncated/);
   });
 
   it('encodeClusterCatalog rejects mismatched array lengths', () => {
