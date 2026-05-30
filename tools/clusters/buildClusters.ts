@@ -106,8 +106,9 @@ const DEDUPE_FLOOR_MPC = 3;
 
 // ── h70 unit-conversion factor ────────────────────────────────────────────────
 //
-// MSCC `dmaxMpc` is published in h70^-1 Mpc (h70 = H0 / 70).  Multiplying by
-// h70 (or dividing by h70^-1) converts to physical Mpc.
+// MSCC `dmaxMpc` is published in h70^-1 Mpc (h70 = H0 / 70).  A value in
+// h70^-1 Mpc is physical Mpc divided by h70, so converting back to physical
+// Mpc means dividing the catalogue number by h70.
 //
 // With H0 = 70 km/s/Mpc, h70 = 1.0, so the conversion is a no-op numerically.
 // We compute it from the shared H0 constant anyway so the code stays correct
@@ -291,9 +292,9 @@ export function buildClusterEntries(
 
     const worldPos = raDegDecToWorldPos(row.raDeg, row.decDeg, row.z);
 
-    // dmax is in raw h70^-1 Mpc.  Convert to physical Mpc (÷ h70^-1 = × h70)
-    // then halve to get a centroid radius (dmax is a diameter: max pair separation).
-    const radiusMpc = (row.dmaxMpc * H70) / 2;
+    // dmax is in raw h70^-1 Mpc.  Convert to physical Mpc (÷ h70), then halve
+    // to get a centroid radius (dmax is a diameter: max pair separation).
+    const radiusMpc = row.dmaxMpc / H70 / 2;
 
     const id = toSlug(row.id);
     const description = `Supercluster · ${row.nm} member clusters · z = ${row.z.toFixed(3)}`;
