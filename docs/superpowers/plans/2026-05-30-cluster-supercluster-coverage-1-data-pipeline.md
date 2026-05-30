@@ -89,23 +89,23 @@ from the CDS FTP archive —
 then verify each `.dat` against its committed `.sha256` (fail loud on
 mismatch — mirror `fetchCosmicflows4`'s checksum handling).
 
-- [ ] Add the six registry entries (paths above), with `upstream` URLs +
+- [x] Add the six registry entries (paths above), with `upstream` URLs +
   `readme` cross-links, mirroring the `cf4.*` shapes.
-- [ ] Write the fetcher; add `"fetch-clusters": "tsx tools/fetch/fetchClusterCatalogs.ts"`
+- [x] Write the fetcher; add `"fetch-clusters": "tsx tools/fetch/fetchClusterCatalogs.ts"`
   to `package.json` (next to `fetch-cf4`).
-- [ ] Compute + commit `mcxc.dat.sha256` + `mscc.dat.sha256`.
-- [ ] Write `data/raw/mcxc/README.md` + `data/raw/mscc/README.md` (provenance:
+- [x] Compute + commit `mcxc.dat.sha256` + `mscc.dat.sha256`.
+- [x] Write `data/raw/mcxc/README.md` + `data/raw/mscc/README.md` (provenance:
   upstream URL + VizieR id, the verified byte-layout summary from Tasks 2–3,
   fetch date, row counts 1743/601, sha256).
-- [ ] `.gitignore`: whitelist ONLY the committed files (near
+- [x] `.gitignore`: whitelist ONLY the committed files (near
   `!/data/raw/cf4/README.md` `.gitignore:103` + `!/data/raw/cf4/table2.dat.sha256`
   `.gitignore:109`): `!/data/raw/mcxc/README.md`, `!/data/raw/mscc/README.md`,
   `!/data/raw/mcxc/mcxc.dat.sha256`, `!/data/raw/mscc/mscc.dat.sha256`. The
   `.dat` + `ReadMe` stay gitignored under the wholesale `/data/` ignore.
-- [ ] Test `rawDataPath resolves mcxc + mscc keys to absolute paths`
+- [x] Test `rawDataPath resolves mcxc + mscc keys to absolute paths`
   asserting `rawDataPath('mcxc.table')`/`rawDataPath('mscc.table')` end with
   the registered relative paths and are absolute.
-- [ ] `npm test -- rawDataRegistry` passes; `npm run fetch-clusters` re-fetches
+- [x] `npm test -- rawDataRegistry` passes; `npm run fetch-clusters` re-fetches
   cleanly + checksums verify. Commit (fetcher, registry, READMEs, sha256s —
   **never** the `.dat`/`ReadMe`).
 
