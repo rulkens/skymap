@@ -321,15 +321,15 @@ file, filename = export name). Keep the `SkyCoord → Vec3` signature.
 
 **Signature:** `export function raDecDistToEqCart(c: SkyCoord): Vec3;`
 
-- [ ] Test `raDecDistToEqCart places RA 0h Dec 0 on +X` (assert `[d,0,0]`
+- [x] Test `raDecDistToEqCart places RA 0h Dec 0 on +X` (assert `[d,0,0]`
   within 1e-9 for `distMpc=10`).
-- [ ] Test `raDecDistToEqCart places RA 6h Dec 0 on +Y`.
-- [ ] Test `raDecDistToEqCart places Dec +90 on +Z`.
-- [ ] Create the util file; re-export it from `clusterAnchors.ts` temporarily
+- [x] Test `raDecDistToEqCart places RA 6h Dec 0 on +Y`.
+- [x] Test `raDecDistToEqCart places Dec +90 on +Z`.
+- [x] Create the util file; re-export it from `clusterAnchors.ts` temporarily
   (so existing imports keep compiling until Task 7) OR update the two
   importers (`buildStaticAnchorPois.ts`, `auditCf4Anchors.ts`) — choose the
   re-export to keep this task small; Task 7 finishes the cutover.
-- [ ] `npm test -- raDecDistToEqCart` + `npm run typecheck` → green. Commit.
+- [x] `npm test -- raDecDistToEqCart` + `npm run typecheck` → green. Commit.
 
 ---
 
