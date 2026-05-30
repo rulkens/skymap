@@ -202,26 +202,6 @@ export type ParsedRecord = {
 };
 
 /**
- * Strip blank lines and comment lines from a raw CSV blob, returning the
- * non-empty trimmed rows in order.
- *
- * We treat three kinds of lines as comments:
- *  - Blank / whitespace-only lines — usually trailing newlines or stray
- *    blanks between header and body.
- *  - Lines starting with `#` — SDSS SkyServer's CSV exports begin with a
- *    `#Table1` banner above the column header.
- *  - Lines starting with `--` — when the SQL query itself has a leading
- *    SQL comment, some export paths preserve it on the first line.
- *
- * The returned array still includes the header row as element 0; callers
- * are responsible for splitting header from body.
- *
- * Why is this in `common.ts`? All five surveys we plan to ingest deliver
- * line-oriented text with similar comment conventions, so deduplicating
- * the comment-stripping logic here means each individual parser focuses
- * on its own column quirks, not on input plumbing.
- */
-/**
  * Extract a fixed-width field from a ReadMe-format line using 1-based
  * inclusive byte offsets and trim surrounding whitespace.
  *
