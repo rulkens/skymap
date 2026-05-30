@@ -27,8 +27,9 @@
  *
  * - **Keys**: `<catalog>.<artifact>`, dotted-lowercase.  The first
  *   segment is the catalog or producer (`2mrs`, `glade`, `hyperleda`,
- *   `sdss`, `famous`, `cf4`, `mcpm`, `milliquas`, `fonts`, `starnet`,
- *   `filaments`).  The second segment names the specific file or
+ *   `sdss`, `famous`, `cf4`, `mcpm`, `milliquas`, `mcxc`, `mscc`,
+ *   `fonts`, `starnet`, `filaments`).  The second segment names the
+ *   specific file or
  *   directory (`table3`, `pa`, `readme`, `dir`).
  * - **Paths**: relative to the repo root, forward-slash, no leading
  *   `./`.  The `rawDataPath` helper resolves to absolute on demand.
@@ -278,6 +279,66 @@ export const RAW_DATA = {
     kind: 'directory',
     source: 'committed',
     description: 'TTF sources for the MSDF label atlas; consumed by build-fonts.',
+  },
+
+  // ─── MCXC — Meta-Catalogue of X-ray clusters (Piffaretti+ 2011) ──────
+
+  'mcxc.table': {
+    path: 'data/raw/mcxc/mcxc.dat',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'MCXC Meta-Catalogue X-ray galaxy Clusters — 1743 clusters with RA/Dec, z, L500, M500, R500. Fixed-width ASCII, 323 bytes/row.',
+    upstream: 'https://cdsarc.cds.unistra.fr/ftp/J/A+A/534/A109/mcxc.dat',
+    fetcher: 'tools/fetch/fetchClusterCatalogs.ts',
+    readme: 'mcxc.readme',
+  },
+  'mcxc.readme': {
+    path: 'data/raw/mcxc/ReadMe',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'VizieR ReadMe for J/A+A/534/A109 — byte-offset spec for mcxc.dat. Downloaded alongside the table.',
+    upstream: 'https://cdsarc.cds.unistra.fr/ftp/J/A+A/534/A109/ReadMe',
+    fetcher: 'tools/fetch/fetchClusterCatalogs.ts',
+  },
+  'mcxc.sha256': {
+    path: 'data/raw/mcxc/mcxc.dat.sha256',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'SHA-256 sidecar for mcxc.dat — committed so the parser can detect truncated or stale downloads.',
+    fetcher: 'tools/fetch/fetchClusterCatalogs.ts',
+  },
+
+  // ─── MSCC — Main SuperCluster Catalogue (Chow-Martinez+ 2014) ─────────
+
+  'mscc.table': {
+    path: 'data/raw/mscc/mscc.dat',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'MSCC Main SuperCluster Catalogue — 601 superclusters with RA/Dec, z, max separation, member cluster list. Fixed-width ASCII, 324 bytes/row.',
+    upstream: 'https://cdsarc.cds.unistra.fr/ftp/J/MNRAS/445/4073/mscc.dat',
+    fetcher: 'tools/fetch/fetchClusterCatalogs.ts',
+    readme: 'mscc.readme',
+  },
+  'mscc.readme': {
+    path: 'data/raw/mscc/ReadMe',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'VizieR ReadMe for J/MNRAS/445/4073 — byte-offset spec for mscc.dat. Downloaded alongside the table.',
+    upstream: 'https://cdsarc.cds.unistra.fr/ftp/J/MNRAS/445/4073/ReadMe',
+    fetcher: 'tools/fetch/fetchClusterCatalogs.ts',
+  },
+  'mscc.sha256': {
+    path: 'data/raw/mscc/mscc.dat.sha256',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'SHA-256 sidecar for mscc.dat — committed so the parser can detect truncated or stale downloads.',
+    fetcher: 'tools/fetch/fetchClusterCatalogs.ts',
   },
 
   // ─── StarNet++ weights (famous-galaxy curator) ────────────────────────

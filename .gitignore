@@ -115,6 +115,16 @@ pnpm-debug.log*
 # tamper-evident and lets contributors verify their fetch matches.
 !/data/raw/cf4/table2.dat.sha256
 
+# Exception: MCXC + MSCC cluster/supercluster raw-data READMEs + sha256
+# sidecars.  The .dat tables and VizieR ReadMes stay gitignored (fetched
+# on demand via `npm run fetch-clusters`), but the READMEs document
+# provenance and the .sha256 files let the parser detect truncated
+# downloads — both must be in git.
+!/data/raw/mcxc/README.md
+!/data/raw/mcxc/mcxc.dat.sha256
+!/data/raw/mscc/README.md
+!/data/raw/mscc/mscc.dat.sha256
+
 # Exception: MCPM Cosmic Web raw-data README — same rationale as the
 # CF-4 README above.  Intermediates (`.npy`, `.bin.bz2`) are gitignored
 # but the README must be checked in so contributors know how to fetch
