@@ -77,9 +77,9 @@ export type FamousCalibration = {
 Add `calibration?: FamousCalibration;` to `FamousMetaEntry`. Didactic
 comment: absent → today's render path unchanged (the dominant case).
 
-- [ ] Add `FamousCalibration` + the optional field with house-style doc comments.
-- [ ] Run `npm run typecheck` → clean (`.d.ts`-only; confirm no consumer breaks).
-- [ ] Commit.
+- [x] Add `FamousCalibration` + the optional field with house-style doc comments.
+- [x] Run `npm run typecheck` → clean (`.d.ts`-only; confirm no consumer breaks).
+- [x] Commit.
 
 ## Task 3: `DEPROJECT_MIN_AXIS_RATIO` constant
 
@@ -99,11 +99,11 @@ the build (per project memory `feedback_single_source_of_truth`).
 export const DEPROJECT_MIN_AXIS_RATIO = 0.3;
 ```
 
-- [ ] Add test `DEPROJECT_MIN_AXIS_RATIO is 0.3`.
-- [ ] Run `npm test -- famousCalibration` → FAIL.
-- [ ] Implement the constant module.
-- [ ] Run `npm test -- famousCalibration` → PASS.
-- [ ] Commit.
+- [x] Add test `DEPROJECT_MIN_AXIS_RATIO is 0.3`.
+- [x] Run `npm test -- famousCalibration` → FAIL.
+- [x] Implement the constant module.
+- [x] Run `npm test -- famousCalibration` → PASS.
+- [x] Commit. _(co-located test at `src/data/famousCalibration.test.ts`, matching the `src/data` neighbour convention rather than the plan's `tests/data/` path)_
 
 ## Task 4: Pure deprojection resample — `deprojectDisk`
 
