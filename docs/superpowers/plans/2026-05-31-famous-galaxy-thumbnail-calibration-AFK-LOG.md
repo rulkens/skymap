@@ -20,8 +20,8 @@ and project conventions; anything genuinely contestable is flagged **REVIEW**.
 | 1 | 4 deprojectDisk | ✅ done (spec+geometry ✅ quality ✅) |
 | 1 | 5 deriveFamousCalibration | ✅ done (spec+geometry ✅ quality ✅) |
 | 2 | 1 export persists disk | ✅ done (`9ff2eaec` + cleanup `050ea871`) |
-| 2 | 2 deproject hi-res crop | ⏳ impl |
-| 2 | 3 derive + return calibration | ⏳ |
+| 2 | 2 deproject hi-res crop | ✅ done (impl `66496db6`, quality nits `e1b8da61`) |
+| 2 | 3 derive + return calibration | ⏳ impl (agent a3c719e1) |
 | 2 | 4 thread calibration into buildFamous | ⏳ |
 | 2 | 5 round-trip fixture | ⏳ |
 | 3 | curator UI | ⏳ |
@@ -29,8 +29,8 @@ and project conventions; anything genuinely contestable is flagged **REVIEW**.
 | 5 | debug ring | ⏳ |
 | 6 | ADR | ⏳ |
 
-**Plan 1 COMPLETE.** **Plan 2 Task 1 done.** Full repo suite green
-(**1854 tests / 292 files**), typecheck clean at HEAD `050ea871`.
+**Plan 1 COMPLETE.** **Plan 2 Tasks 1–2 done.** Full repo suite green,
+typecheck clean at HEAD `e1b8da61`.
 
 ## Decisions made AFK
 
@@ -54,6 +54,22 @@ and project conventions; anything genuinely contestable is flagged **REVIEW**.
 - **Dropped redundant curatedDirOverride (Plan 2 Task 1 cleanup):** an implementer added
   a second output-redirection test hook; `repoRoot` already isolates all output
   (galaxy dir, atlas copy, override index). Removed it; tests use a tmp `repoRoot`.
+- **Starless frame verified, not assumed (Plan 2 Task 2):** the deproject step needs the
+  PA in the post-crop frame. Confirmed against `process.ts` that `starless.png` is written
+  by `handleProcess` via `rotatedExtract → StarNet`, so it is already in the CROP frame —
+  same `effectivePaDeg = disk.paDeg − crop.rotationDeg` as the source pipeline. Both
+  deproject with identical params; a single shared `starlessFullBuf` keeps source/starless/
+  alpha pixel-registered.
+- **`willDeproject` single-sources the stretch band (Plan 2 Task 2 quality):** the
+  `[DEPROJECT_MIN_AXIS_RATIO, 1)` band was duplicated between `deprojectDisk`'s guard and the
+  export predicate. Extracted `willDeproject(axisRatio)` in `deprojectDisk.ts`, used by both.
+  Too-edge-on test now asserts the `console.warn` skip fires (and does not fire when the
+  toggle is off) so the threshold path is observable, not just inferred from output equality.
+- **catalogAxisRatio resolution at the export call site (Plan 2 Task 3):** `deriveFamousCalibration`
+  requires a numeric `catalogAxisRatio` but `ExportBody.catalogAxisRatio` is optional. Resolve
+  via `body.catalogAxisRatio ?? disk?.axisRatio`; derive only when that is defined. When
+  `disk.axisRatio` is set it determines the result regardless, and the curator always threads
+  `catalogAxisRatio`. (Front-loaded to the Task 3 implementer.)
 
 ## Resume pointer (survives a compaction)
 
@@ -65,8 +81,8 @@ and project conventions; anything genuinely contestable is flagged **REVIEW**.
 - Standing constraints: one-type-per-file in `src/@types/`; comment-tidy every touched
   file; component-split per the component skill for Plan 3 UI; branch+PR, never
   direct-push; do NOT merge to main without the user (visual-verification gate).
-- **NEXT:** Plan 2 Task 2 (deproject wiring) in flight → Tasks 3,4,5 → Plan 3 (UI),
-  4 (runtime), 5 (debug ring), 6 (ADR).
+- **NEXT:** Plan 2 Task 3 (derive+return calibration) in flight (agent a3c719e1) →
+  Tasks 4,5 → Plan 3 (UI), 4 (runtime), 5 (debug ring), 6 (ADR).
 
 ## Needs your eyes (visual verification deferred)
 

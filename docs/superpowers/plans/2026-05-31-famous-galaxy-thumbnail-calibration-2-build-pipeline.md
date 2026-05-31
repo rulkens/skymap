@@ -54,13 +54,13 @@ recipe.json carries `disk`                         (NEW — so re-load restores 
 
 **Behaviour:** When the effective calibration is `deprojected` (`disk.deproject && effectiveAxisRatio >= DEPROJECT_MIN_AXIS_RATIO`, where `effectiveAxisRatio = disk.axisRatio ?? body.catalogAxisRatio`), insert `deprojectDisk` between `rotatedExtract` (export.ts:95) and the `.resize` downsize (export.ts:96-99). When `disk` is absent or `deproject` is false, the produced webps are byte-identical to today. When **forced on but too edge-on**, ship as-shot and **log a skip** (spec edge case — "no silent 6× smear").
 
-- [ ] Write failing test `handleExport deprojects a clean tilted disk` — a fixture `source.png` with a known tilted feature, `disk.deproject = true`, effective `axisRatio = 0.5`; assert the output `source.webp`'s decoded aspect reflects the face-on stretch (decode with sharp in the test). Prefer asserting observable output over spying on internals.
-- [ ] Write failing test `handleExport ships as-shot and logs a skip when forced on but too edge-on` — `disk.deproject = true`, effective `axisRatio = 0.2`; assert the output equals the non-deprojected pipeline output AND a skip is surfaced (capture console or assert the derived calibration `deprojected === false`).
-- [ ] Write failing test `handleExport is unchanged when deproject is off` — `disk.deproject = false` → output equals today's pipeline.
-- [ ] `npm test -- export.deproject` → FAIL.
-- [ ] Wire `deprojectDisk` (Plan 1) into the pipeline guarded by the same `deprojected` predicate. Import `DEPROJECT_MIN_AXIS_RATIO`. Apply identically to `source` (and `starless` per the frame note above).
-- [ ] `npm test -- export.deproject` → PASS.
-- [ ] `npm run typecheck` → clean. Commit.
+- [x] Write failing test `handleExport deprojects a clean tilted disk` — a fixture `source.png` with a known tilted feature, `disk.deproject = true`, effective `axisRatio = 0.5`; assert the output `source.webp`'s decoded aspect reflects the face-on stretch (decode with sharp in the test). Prefer asserting observable output over spying on internals.
+- [x] Write failing test `handleExport ships as-shot and logs a skip when forced on but too edge-on` — `disk.deproject = true`, effective `axisRatio = 0.2`; assert the output equals the non-deprojected pipeline output AND a skip is surfaced (capture console or assert the derived calibration `deprojected === false`). _(asserts the `console.warn` threshold skip fires, and does NOT fire when the toggle is off)_
+- [x] Write failing test `handleExport is unchanged when deproject is off` — `disk.deproject = false` → output equals today's pipeline.
+- [x] `npm test -- export.deproject` → FAIL.
+- [x] Wire `deprojectDisk` (Plan 1) into the pipeline guarded by the same `deprojected` predicate. Import `DEPROJECT_MIN_AXIS_RATIO`. Apply identically to `source` (and `starless` per the frame note above). _(starless verified in-crop-frame via process.ts; both share `effectivePaDeg`. Band single-sourced via `willDeproject`.)_
+- [x] `npm test -- export.deproject` → PASS.
+- [x] `npm run typecheck` → clean. Commit.
 
 ## Task 3: derive + return `FamousCalibration` from the export route
 
