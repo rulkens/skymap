@@ -85,13 +85,13 @@ recipe.json carries `disk`                         (NEW — so re-load restores 
 
 > A missing recipe file is the common case (most famous galaxies are uncalibrated) and must not throw. Guard the read; an unreadable/legacy recipe → no calibration, not a crash. For the `axisRatio` fallback use the value already computed for the row (`cloud.axisRatio[i]`, baked at buildFamous.ts:108-115).
 
-- [ ] Write failing test `buildFamous attaches calibration when a recipe has a disk` — fixture: one entry whose recipe (written to a tmp famous-curated dir) carries a `disk`; run the meta-assembly path; assert the meta object has `calibration` deep-equal to the derived value. (Extract the meta-assembly into a pure helper, e.g. `assembleFamousMeta(entries, axisRatios, readRecipe)`, if `main()` is awkward to drive — document the extraction.)
-- [ ] Write failing test `buildFamous omits calibration when no recipe disk` — entry with no recipe / no `disk` → `calibration === undefined`.
-- [ ] Write failing test `buildFamous does not throw on a missing recipe file` — entry whose recipe path doesn't exist → no calibration, no throw.
-- [ ] `npm test -- buildFamous.calibration` → FAIL.
-- [ ] Implement: locate each recipe via the curated path helper, parse with `parseRecipe`, derive with `deriveFamousCalibration`, attach. Use existing path helpers; do not hard-code `data/raw/...` or `public/...` strings where a helper exists (registry/path-helper rule).
-- [ ] `npm test -- buildFamous.calibration` → PASS.
-- [ ] `npm run typecheck` → clean. Commit.
+- [x] Write failing test `buildFamous attaches calibration when a recipe has a disk` — fixture: one entry whose recipe (written to a tmp famous-curated dir) carries a `disk`; run the meta-assembly path; assert the meta object has `calibration` deep-equal to the derived value. (Extract the meta-assembly into a pure helper, e.g. `assembleFamousMeta(entries, axisRatios, readRecipe)`, if `main()` is awkward to drive — document the extraction.) _(extracted exported `assembleFamousMeta` + crash-proof `readCuratedRecipe`; meta typed as canonical `FamousMetaEntry[]`)_
+- [x] Write failing test `buildFamous omits calibration when no recipe disk` — entry with no recipe / no `disk` → `calibration === undefined`.
+- [x] Write failing test `buildFamous does not throw on a missing recipe file` — entry whose recipe path doesn't exist → no calibration, no throw. _(plus a corrupt-JSON case → undefined + console.warn)_
+- [x] `npm test -- buildFamous.calibration` → FAIL.
+- [x] Implement: locate each recipe via the curated path helper, parse with `parseRecipe`, derive with `deriveFamousCalibration`, attach. Use existing path helpers; do not hard-code `data/raw/...` or `public/...` strings where a helper exists (registry/path-helper rule). _(re-derives `deprojected` via the shared `willDeproject` band so the meta flag matches the shipped webp)_
+- [x] `npm test -- buildFamous.calibration` → PASS.
+- [x] `npm run typecheck` → clean. Commit.
 
 ## Task 5: end-to-end round-trip fixture test
 
