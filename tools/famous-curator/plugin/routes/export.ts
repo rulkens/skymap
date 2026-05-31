@@ -41,6 +41,8 @@ import { serialiseRecipe, validateRecipeDisk, type Recipe, type RecipeDisk } fro
 import { upsertOverrideEntry, type OverrideIndex } from '../overrideIndex.js';
 import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlpha.js';
 import { rotatedExtract } from '../cropExtract.js';
+import { deprojectDisk } from '../../../famous/deprojectDisk.js';
+import { DEPROJECT_MIN_AXIS_RATIO } from '../../../../src/data/famousCalibration.js';
 
 const FULL_PX = 1024;
 const ATLAS_PX = 256;
@@ -100,18 +102,64 @@ export async function handleExport(opts: {
   //    Resize to at most FULL_PX on the longest edge (`fit: 'inside'`)
   //    so non-square crops aren't distorted.  rotatedExtract handles
   //    rotation + out-of-image padding (transparent fill).
+  //
+  //    Frame reasoning: rotatedExtract rotates the source by -crop.rotationDeg,
+  //    so the returned pipeline is in the CROP's local frame.  disk.paDeg is in
+  //    the SOURCE frame, so we subtract rotationDeg to get the effective PA
+  //    inside the crop.  sin²/cos² are 180-periodic, so normalization is
+  //    optional, but we skip it to keep the value directly interpretable.
+  //
+  //    Starless frame: starless.png was produced by handleProcess, which runs
+  //    rotatedExtract → StarNet → starless.png.  It is therefore already in the
+  //    CROP frame — the same frame as the source pipeline here.  Both use the
+  //    same effectivePaDeg.
+  const disk = body.disk !== undefined ? validateRecipeDisk(body.disk) : undefined;
+  const effectiveAxisRatio = disk?.axisRatio ?? body.catalogAxisRatio;
+  const effectivePaDeg = disk !== undefined ? disk.paDeg - body.crop.rotationDeg : 0;
+  // A webp is deprojected when deproject=true AND an axis ratio is available AND
+  // the ratio meets the minimum threshold.  When too edge-on we log a skip and
+  // ship as-shot — never a silent extreme smear.
+  const shouldDeproject =
+    disk?.deproject === true &&
+    effectiveAxisRatio !== undefined &&
+    effectiveAxisRatio >= DEPROJECT_MIN_AXIS_RATIO;
+  if (disk?.deproject === true && !shouldDeproject) {
+    console.warn(
+      `[export] skip deproject for ${body.id}: axisRatio=${effectiveAxisRatio} < threshold ${DEPROJECT_MIN_AXIS_RATIO}`,
+    );
+  }
+  // deprojected = the webp was ACTUALLY stretched (ratio in (0,1) and above threshold).
+  // axisRatio >= 1 is face-on — nothing to stretch even if requested.
+  const deprojected = shouldDeproject && effectiveAxisRatio !== undefined && effectiveAxisRatio < 1;
+
   const sourcePipeline = await rotatedExtract(sourcePath, body.crop);
-  const sourceCropped = await sourcePipeline
+  // Deproject the hi-res crop to face-on before downsize so the extra resolution
+  // along the stretch direction is preserved in the final thumbnail.
+  const maybeDeprojectedSource = deprojected
+    ? deprojectDisk(sourcePipeline, { paDeg: effectivePaDeg, axisRatio: effectiveAxisRatio! })
+    : sourcePipeline;
+  const sourceCropped = await maybeDeprojectedSource
     .resize(FULL_PX, FULL_PX, { fit: 'inside' })
     .webp({ lossless: true })
     .toBuffer();
   writeFileSync(resolve(tmpDir, 'source.webp'), sourceCropped);
 
   // 3. starless.webp — post-StarNet at full resolution, lossless.
-  const starlessOut = await sharp(starlessPath)
+  //    Starless is in the CROP frame (see frame reasoning above) — same
+  //    effectivePaDeg applies.  We deproject once to a buffer and reuse
+  //    it for both starless.webp and the alpha derivation so all three
+  //    outputs remain pixel-registered.
+  const starlessPipeline = deprojected
+    ? deprojectDisk(sharp(starlessPath), { paDeg: effectivePaDeg, axisRatio: effectiveAxisRatio! })
+    : sharp(starlessPath);
+  // Materialise the (possibly deprojected) starless pixels once.  All three
+  // downstream consumers — starless.webp, full.webp, atlas.webp — read from
+  // this buffer, so source/starless/alpha stay exactly registered.
+  const starlessFullBuf = await starlessPipeline
     .resize(FULL_PX, FULL_PX, { fit: 'inside' })
-    .webp({ lossless: true })
+    .png()
     .toBuffer();
+  const starlessOut = await sharp(starlessFullBuf).webp({ lossless: true }).toBuffer();
   writeFileSync(resolve(tmpDir, 'starless.webp'), starlessOut);
 
   // 4. Derive the alpha channel from the starless luminance at full
@@ -120,8 +168,9 @@ export async function handleExport(opts: {
   //    lossy — the alpha mask would be both downsampled and artifacted.
   //    Re-running applyLuminanceAsAlpha at full resolution gives a
   //    sharper mask at no cost beyond the decode/encode.
-  const { data, info } = await sharp(starlessPath)
-    .resize(FULL_PX, FULL_PX, { fit: 'inside' })
+  //    We reuse the already-resized starlessFullBuf so no re-decode occurs
+  //    and deproject/no-deproject paths stay consistent.
+  const { data, info } = await sharp(starlessFullBuf)
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
@@ -150,9 +199,8 @@ export async function handleExport(opts: {
   writeFileSync(resolve(tmpDir, 'atlas.webp'), atlasOut);
 
   // 7. recipe.json — provenance record for re-runs and auditing.
-  //    Validate body.disk via the shared helper (throws on bad shape) so
-  //    the route rejects malformed input before any filesystem writes.
-  const validatedDisk = body.disk !== undefined ? validateRecipeDisk(body.disk) : undefined;
+  //    `disk` was already validated above (throws on bad shape), so we
+  //    reuse it directly rather than calling validateRecipeDisk again.
   const recipe: Recipe = {
     version: 1,
     id: body.id,
@@ -161,7 +209,7 @@ export async function handleExport(opts: {
     alpha: body.alpha,
     metadata: body.metadata,
     processedAt: new Date().toISOString(),
-    ...(validatedDisk !== undefined ? { disk: validatedDisk } : {}),
+    ...(disk !== undefined ? { disk } : {}),
   };
   writeFileSync(resolve(tmpDir, 'recipe.json'), serialiseRecipe(recipe));
 
