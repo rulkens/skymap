@@ -73,7 +73,7 @@ typecheck clean at HEAD `e1b8da61`.
 
 ## Resume pointer (survives a compaction)
 
-- Branch `impl-famous-thumbnail-calibration`, HEAD `050ea871`, worktree clean.
+- Branch `impl-famous-thumbnail-calibration`, HEAD `02ac00e2` (Plan 2 Tasks 1–2 in, Task 3 in flight).
 - Plan files: `docs/superpowers/plans/2026-05-31-famous-galaxy-thumbnail-calibration-{INDEX,1..6}.md`.
   Spec: `docs/superpowers/specs/2026-05-31-…-design.md`.
 - Workflow: subagent-driven — implementer (background, bash sequential, no sed/awk/grep)
