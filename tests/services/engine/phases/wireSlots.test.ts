@@ -321,7 +321,20 @@ function makeState(
       // wireSlots unconditionally wires static cluster/supercluster/void
       // anchors via `state.subsystems.pois.setPois(...)`, so this mock
       // must be callable even when the test isn't asserting on POIs.
-      pois: { setPois: vi.fn() } as never,
+      // `getPoisForCategory` filters the last-published list so the
+      // `onStructureCountsChange` echo in `rebuildAllPois` resolves real
+      // per-category counts (only exercised when a test wires that
+      // callback; otherwise the optional call short-circuits).
+      pois: (() => {
+        let current: readonly PointOfInterest[] = [];
+        return {
+          setPois: vi.fn((pois: readonly PointOfInterest[]) => {
+            current = pois;
+          }),
+          getPoisForCategory: (category: string) =>
+            current.filter((p) => p.category === category),
+        };
+      })() as never,
       // wireSlots calls fades.register on filament + overlay +
       // label-layer handles after the slot mints — stub so it doesn't crash.
       fades: {
@@ -646,5 +659,49 @@ describe('wireSlots', () => {
     expect(ids).toContain('famous-m31');
     expect(ids).toContain('cluster-bulk-coma');
     expect(ids).toContain('supercluster-bulk-shapley');
+  });
+
+  it('emits per-category structure counts that grow when the bulk catalog lands', async () => {
+    // The Structures panel reads these counts to annotate its toggles.
+    // rebuildAllPois fires onStructureCountsChange on every merge: once at
+    // boot (static anchors only) and again when the bulk .ccat resolves.
+    // Asserting the DELTA (one extra cluster + one extra SC, voids
+    // unchanged) keeps the test robust to seed-anchor count changes.
+    delete (globalThis as { location?: unknown }).location;
+    (globalThis as { location: { search: string } }).location = { search: '' };
+
+    vi.mocked(clusterCatalogFetcher).mockResolvedValueOnce({
+      catalog: {
+        count: 2,
+        positions: new Float32Array([1, 2, 3, 4, 5, 6]),
+        physicalRadiusMpc: new Float32Array([1.5, 30]),
+        apparentRadiusMpc: new Float32Array([3, 30]),
+        significance: new Float32Array([10, 25]),
+        category: new Uint8Array([0, 1]),
+      },
+      meta: [
+        { id: 'coma', names: ['Coma'], abell: 'A1656', description: '' },
+        { id: 'shapley', names: ['Shapley'], abell: null, description: '' },
+      ],
+    } as never);
+
+    const state = makeState();
+    const deps = makeDeps();
+    const counts: Array<Partial<Record<string, number>>> = [];
+    (deps.cb.sources as { onStructureCountsChange?: (c: Record<string, number>) => void })
+      .onStructureCountsChange = (c) => {
+      counts.push(c);
+    };
+    await wireSlots(state, deps);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(counts.length).toBeGreaterThanOrEqual(2);
+    const first = counts[0]!;
+    const last = counts[counts.length - 1]!;
+    // Bulk adds one cluster (Coma) + one supercluster (Shapley); voids
+    // come only from the static seed, so that count is unchanged.
+    expect(last.cluster!).toBe(first.cluster! + 1);
+    expect(last.supercluster!).toBe(first.supercluster! + 1);
+    expect(last.void!).toBe(first.void!);
   });
 });

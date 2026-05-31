@@ -183,6 +183,15 @@ type Props = {
    */
   sourceCounts?: Partial<Record<SourceType, number>>;
 
+  /**
+   * Per-marker-category POI counts (cluster / supercluster / void) for
+   * the Structures section, shown beside each toggle the same way
+   * `sourceCounts` annotates the Surveys rows.  A category absent from
+   * the map (or the whole prop undefined, before the bulk `.ccat`
+   * lands) renders the toggle without a count rather than "0".
+   */
+  structureCounts?: Partial<Record<PoiCategory, number>>;
+
   /** Current point size in pixels.  Lives under Galaxies → Advanced. */
   pointSize: number;
   /** Called when the user changes the point-size slider. */
@@ -296,6 +305,7 @@ export function SettingsPanel({
   visibleSourceMask,
   onToggleSource,
   sourceCounts,
+  structureCounts,
   pointSize,
   onPointSizeChange,
   depthFadeEnabled,
@@ -778,23 +788,29 @@ export function SettingsPanel({
               block: `structuresMaster` truthiness already guarantees
               both props are defined, TS can't trace that through the
               IIFE. */}
-          {STRUCTURE_CATEGORIES.map((cat) => (
-            <div className={styles.panelRow} key={`marker-${cat}`}>
-              <label htmlFor={`toggle-marker-${cat}`}>
-                {cat === 'supercluster'
-                  ? 'Superclusters'
-                  : cat === 'void'
-                    ? 'Voids'
-                    : 'Clusters'}
-              </label>
-              <input
-                id={`toggle-marker-${cat}`}
-                type="checkbox"
-                checked={markerCategoryVisibility![cat]}
-                onChange={(e) => onSetMarkerCategoryVisibility!(cat, e.target.checked)}
-              />
-            </div>
-          ))}
+          {STRUCTURE_CATEGORIES.map((cat) => {
+            const count = structureCounts?.[cat];
+            return (
+              <div className={styles.panelRow} key={`marker-${cat}`}>
+                <label htmlFor={`toggle-marker-${cat}`}>
+                  {cat === 'supercluster'
+                    ? 'Superclusters'
+                    : cat === 'void'
+                      ? 'Voids'
+                      : 'Clusters'}
+                  {count !== undefined && (
+                    <span className={styles.sourceCount}>{count.toLocaleString()}</span>
+                  )}
+                </label>
+                <input
+                  id={`toggle-marker-${cat}`}
+                  type="checkbox"
+                  checked={markerCategoryVisibility![cat]}
+                  onChange={(e) => onSetMarkerCategoryVisibility!(cat, e.target.checked)}
+                />
+              </div>
+            );
+          })}
         </CollapsibleSection>
       )}
 

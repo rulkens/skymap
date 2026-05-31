@@ -193,6 +193,17 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
       ? buildPoisFromClusterCatalog(state.sources.clusterBulk)
       : [];
     state.subsystems.pois.setPois([...staticAnchorPois, ...famousPois, ...clusterBulkPois]);
+    // Echo the per-category structure counts so the Structures panel can
+    // show "Clusters 573" alongside its toggles — the marker-category
+    // analogue of the per-survey onCatalogReady count.  Counted off the
+    // freshly-merged subsystem list (featured anchors + bulk) so the
+    // number matches exactly what renders.  Famous galaxies are a label-
+    // only category, not a Structures row, so they're omitted.
+    cb.sources?.onStructureCountsChange?.({
+      cluster: state.subsystems.pois.getPoisForCategory('cluster').length,
+      supercluster: state.subsystems.pois.getPoisForCategory('supercluster').length,
+      void: state.subsystems.pois.getPoisForCategory('void').length,
+    });
   }
   // Publish immediately (static anchors only at boot; both async groups
   // are still empty unless wireSlots is replayed in tests / after a hot

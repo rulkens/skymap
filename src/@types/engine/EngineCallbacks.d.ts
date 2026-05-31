@@ -177,12 +177,21 @@ export type EngineCallbacks = {
    *
    * `onLoadProgress` aggregates byte counts across in-flight slots;
    * `null` means "no fetches in flight" (the UI fades the bar out).
+   *
+   * `onStructureCountsChange` reports the number of POIs published per
+   * marker category (cluster / supercluster / void) after each
+   * `rebuildAllPois` merge — the structure analogue of the per-survey
+   * `onCatalogReady` count, so the Structures panel can show "Clusters
+   * 573" the way the Surveys panel shows "SDSS 1,234,567".  Fired with
+   * the full snapshot (not a delta) because the three groups settle
+   * together when the bulk `.ccat` lands.
    */
   sources?: {
     onMaskChange?: (mask: number) => void;
     onTierChange?: (tier: Tier) => void;
     onCatalogReady?: (source: SourceType, count: number) => void;
     onLoadProgress?: (progress: LoadProgressState | null) => void;
+    onStructureCountsChange?: (counts: Partial<Record<PoiCategory, number>>) => void;
   };
 
   /**
