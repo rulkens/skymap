@@ -8,12 +8,12 @@
  * adding a new pass means editing the union AND the table in one
  * commit — the type checker enforces both edits.
  *
- * The 11 inhabitants below cover the HDR sub-passes (`HDR_PASSES`),
+ * The 12 inhabitants below cover the HDR sub-passes (`HDR_PASSES`),
  * the tone-map post-process, the combined UI-overlay pass (marker-
  * lines + labels merged into one swap-chain render pass for blend
  * coherency), the pick render pass, and the volume-upsample pass that
  * composites the half-resolution scalar-volume render target back to
- * full resolution.  Slots 22–31 of the GPUQuerySet are reserved for
+ * full resolution.  Slots 24–31 of the GPUQuerySet are reserved for
  * future inhabitants without forcing a query-set resize.
  *
  * The strings match the `name` fields on `Pass` objects (e.g.
@@ -32,4 +32,5 @@ export type TimingSlotName =
   | 'tone-map'
   | 'ui-overlay'
   | 'pick'
-  | 'volume-upsample';
+  | 'volume-upsample'
+  | 'cluster-markers';

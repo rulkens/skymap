@@ -24,11 +24,12 @@ describe('TIMING_SLOT_NAMES', () => {
     expect(TIMING_SLOT_NAMES.get('pick')).toEqual([16, 17]);
     expect(TIMING_SLOT_NAMES.get('volume-upsample')).toEqual([18, 19]);
     expect(TIMING_SLOT_NAMES.get('horizon-shell')).toEqual([20, 21]);
+    expect(TIMING_SLOT_NAMES.get('cluster-markers')).toEqual([22, 23]);
   });
 
-  it('reserves slots 22-31 (query set sized 32, 11 in use)', () => {
+  it('reserves slots 24-31 (query set sized 32, 12 in use)', () => {
     expect(TIMING_QUERY_SET_SIZE).toBe(32);
-    expect(TIMING_SLOT_NAMES.size).toBe(11);
+    expect(TIMING_SLOT_NAMES.size).toBe(12);
   });
 
   it('never assigns the same index to two slots', () => {

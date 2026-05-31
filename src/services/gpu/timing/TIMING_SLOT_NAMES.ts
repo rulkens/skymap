@@ -17,9 +17,10 @@
  *   | pick                  | 16        | 17      |
  *   | volume-upsample       | 18        | 19      |
  *   | horizon-shell         | 20        | 21      |
- *   | _reserved_            | 22–31     |         |
+ *   | cluster-markers       | 22        | 23      |
+ *   | _reserved_            | 24–31     |         |
  *
- * 11 slots × 2 indices = 22.  The query set is sized 32 (see
+ * 12 slots × 2 indices = 24.  The query set is sized 32 (see
  * `TIMING_QUERY_SET_SIZE` below) for headroom.  `ui-overlay` is the
  * combined marker-lines + labels pass — they share one swap-chain
  * `beginRenderPass` for OVER-blend coherency, so they bill against a
@@ -45,8 +46,8 @@
 import type { TimingSlotName } from '../../../@types/gpu/timing/TimingSlotName';
 
 /**
- * Size of the underlying `GPUQuerySet`.  22 indices in use (11 named
- * slots × 2 begin/end) + 10 reserved for future inhabitants.  Sizing
+ * Size of the underlying `GPUQuerySet`.  24 indices in use (12 named
+ * slots × 2 begin/end) + 8 reserved for future inhabitants.  Sizing
  * the query set once at construction (rather than growing later)
  * keeps the resolve buffer + staging buffers right-sized from frame 1
  * — they're allocated `count * 8` bytes since each timestamp is a
@@ -70,4 +71,5 @@ export const TIMING_SLOT_NAMES: ReadonlyMap<TimingSlotName, readonly [number, nu
   ['pick', [16, 17]],
   ['volume-upsample', [18, 19]],
   ['horizon-shell', [20, 21]],
+  ['cluster-markers', [22, 23]],
 ]);
