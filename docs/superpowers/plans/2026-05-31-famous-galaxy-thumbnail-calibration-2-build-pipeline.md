@@ -99,13 +99,13 @@ recipe.json carries `disk`                         (NEW — so re-load restores 
 
 **Behaviour (spec "Testing — Round-trip"):** A recipe with a `disk` → `buildFamous` meta assembly → a meta entry carrying `calibration` whose values match `deriveFamousCalibration` of the original disk + crop. The integration test the per-stage unit tests don't cover end-to-end.
 
-- [ ] Write failing test `a disk recipe round-trips into famous_meta calibration` — construct a recipe with a `disk`, serialise it (Plan 1 `serialiseRecipe`) to a tmp curated dir, run the Task 4 meta-assembly helper, assert the resulting entry's `calibration` equals `deriveFamousCalibration(disk, crop, axisRatio)`.
-- [ ] `npm test -- calibration.roundtrip` → FAIL then PASS once Tasks 1-4 are in.
-- [ ] `npm run typecheck` → clean. Full `npm test` green. Commit.
+- [x] Write failing test `a disk recipe round-trips into famous_meta calibration` — construct a recipe with a `disk`, serialise it (Plan 1 `serialiseRecipe`) to a tmp curated dir, run the Task 4 meta-assembly helper, assert the resulting entry's `calibration` equals `deriveFamousCalibration(disk, crop, axisRatio)`. _(plus an absent-disk round-trip → calibration undefined; exercises the REAL `readCuratedRecipe`, not an injected fake)_
+- [x] `npm test -- calibration.roundtrip` → FAIL then PASS once Tasks 1-4 are in.
+- [x] `npm run typecheck` → clean. Full `npm test` green. Commit.
 
 ## Definition of done for Plan 2
 
-- [ ] Export route accepts + persists `disk`, deprojects when (and only when) appropriate, logs a skip for forced-but-too-edge-on, and returns derived `calibration`.
-- [ ] `buildFamous` attaches `calibration` to meta entries from recipe disks; no `famous.bin` format change; resilient to missing recipes.
-- [ ] Round-trip fixture green.
-- [ ] `npm run typecheck` clean; full `npm test` green.
+- [x] Export route accepts + persists `disk`, deprojects when (and only when) appropriate, logs a skip for forced-but-too-edge-on, and returns derived `calibration`.
+- [x] `buildFamous` attaches `calibration` to meta entries from recipe disks; no `famous.bin` format change; resilient to missing recipes.
+- [x] Round-trip fixture green.
+- [x] `npm run typecheck` clean; full `npm test` green (1872 tests / 293 files).

@@ -21,16 +21,17 @@ and project conventions; anything genuinely contestable is flagged **REVIEW**.
 | 1 | 5 deriveFamousCalibration | ✅ done (spec+geometry ✅ quality ✅) |
 | 2 | 1 export persists disk | ✅ done (`9ff2eaec` + cleanup `050ea871`) |
 | 2 | 2 deproject hi-res crop | ✅ done (impl `66496db6`, quality nits `e1b8da61`) |
-| 2 | 3 derive + return calibration | ⏳ impl (agent a3c719e1) |
-| 2 | 4 thread calibration into buildFamous | ⏳ |
-| 2 | 5 round-trip fixture | ⏳ |
+| 2 | 3 derive + return calibration | ✅ done (`75e58651`) |
+| 2 | 4 thread calibration into buildFamous | ✅ done (`db962555`, prettier-amended) |
+| 2 | 5 round-trip fixture | ✅ done (`25e34dd8`) |
 | 3 | curator UI | ⏳ |
 | 4 | runtime placement | ⏳ |
 | 5 | debug ring | ⏳ |
 | 6 | ADR | ⏳ |
 
-**Plan 1 COMPLETE.** **Plan 2 Tasks 1–2 done.** Full repo suite green,
-typecheck clean at HEAD `e1b8da61`.
+**Plan 1 COMPLETE. Plan 2 COMPLETE.** Full repo suite green (**1872 tests /
+293 files**), typecheck clean. **PAUSED at user request for Plan-2 smoke testing
+before starting Plan 3 (curator UI — visual work).**
 
 ## Decisions made AFK
 
@@ -73,7 +74,7 @@ typecheck clean at HEAD `e1b8da61`.
 
 ## Resume pointer (survives a compaction)
 
-- Branch `impl-famous-thumbnail-calibration`, HEAD `02ac00e2` (Plan 2 Tasks 1–2 in, Task 3 in flight).
+- Branch `impl-famous-thumbnail-calibration`, HEAD at the Plan-2-complete docs commit (Plans 1–2 fully landed).
 - Plan files: `docs/superpowers/plans/2026-05-31-famous-galaxy-thumbnail-calibration-{INDEX,1..6}.md`.
   Spec: `docs/superpowers/specs/2026-05-31-…-design.md`.
 - Workflow: subagent-driven — implementer (background, bash sequential, no sed/awk/grep)
@@ -81,8 +82,9 @@ typecheck clean at HEAD `e1b8da61`.
 - Standing constraints: one-type-per-file in `src/@types/`; comment-tidy every touched
   file; component-split per the component skill for Plan 3 UI; branch+PR, never
   direct-push; do NOT merge to main without the user (visual-verification gate).
-- **NEXT:** Plan 2 Task 3 (derive+return calibration) in flight (agent a3c719e1) →
-  Tasks 4,5 → Plan 3 (UI), 4 (runtime), 5 (debug ring), 6 (ADR).
+- **NEXT:** Plan 3 (curator UI — disk overlay + handles + deproject toggle). PAUSED pending
+  user smoke test of Plan 2. After Plan 3 → Plan 4 (runtime), 5 (debug ring), 6 (ADR).
+  Plan 3 dispatches MUST require component-split per the component skill + one-type-per-file.
 
 ## Needs your eyes (visual verification deferred)
 
