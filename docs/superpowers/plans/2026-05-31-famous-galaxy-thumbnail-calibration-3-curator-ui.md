@@ -118,11 +118,11 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 **Behaviour:** a "Deproject to face-on" checkbox bound to `disk.deproject`, seeded from b/a but user-overridable. The preview pane shows the deprojected result (when on) so the maintainer compares against as-shot before commit — including at the export/commit step (spec scope). Toggling re-requests the preview with the current `disk`.
 
-- [ ] **Step 1:** Add the toggle (dispatches `setDisk` with flipped `deproject`). Disable/annotate it when `axisRatio < DEPROJECT_MIN_AXIS_RATIO` (too edge-on — show "as-shot only").
-- [ ] **Step 2:** Thread `disk` into the preview request so the server-rendered preview reflects deprojection. Show the deprojected image in `PreviewPane`.
-- [ ] **Step 3:** `npm run typecheck` → PASS.
-- [ ] **Step 4:** Manual check: toggling shows as-shot vs deprojected; edge-on galaxies lock to as-shot.
-- [ ] **Step 5: Commit**
+- [x] **Step 1:** Add the toggle (dispatches `setDisk` with flipped `deproject`). Disable/annotate it when `axisRatio < DEPROJECT_MIN_AXIS_RATIO` (too edge-on — show "as-shot only"). _(own `components/DiskControls.tsx`)_
+- [x] **Step 2:** Thread `disk` into the preview request so the server-rendered preview reflects deprojection. Show the deprojected image in `PreviewPane`. _(process.ts deprojects `cropped.png` mirroring export.ts; `disk`/`catalogAxisRatio` on `ProcessParams`; `needsProcess` includes `dirty.disk`)_
+- [x] **Step 3:** `npm run typecheck` → PASS (rc=0).
+- [ ] **Step 4:** Manual check: toggling shows as-shot vs deprojected; edge-on galaxies lock to as-shot. _(VISUAL — pending user)_
+- [x] **Step 5: Commit** `5f9a1a31`
 
 ```bash
 git add tools/famous-curator/ui/components/PreviewPane.tsx tools/famous-curator/ui/api.ts tools/famous-curator/ui/components/MetadataForm.tsx
