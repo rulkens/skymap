@@ -41,12 +41,12 @@ recipe.json carries `disk`                         (NEW — so re-load restores 
 
 **Contract:** `ExportBody` (export.ts:48-55) gains `disk?: RecipeDisk` and `catalogAxisRatio?: number` (the latter for derivation in Task 3). The recipe built at export.ts:145-153 carries `disk` so a re-load restores the overlay. Validate `disk` when present (delegate to the same field checks `parseRecipe` uses — Plan 1 Task 2).
 
-- [ ] Write failing test `handleExport persists disk onto the recipe` — call `handleExport` with a `sessionDirOverride` (the route's existing test hook, export.ts:71-72) + a body carrying a `disk`; parse the written `recipe.json` via `parseRecipe` and assert its `disk` matches. (Mirror any existing export route test for the fixture/session setup; the route already supports a tmp session dir.)
-- [ ] Write failing test `handleExport omits disk from the recipe when absent` — body without `disk` → recipe `disk === undefined`.
-- [ ] `npm test -- export.disk` → FAIL.
-- [ ] Add `disk?: RecipeDisk` + `catalogAxisRatio?: number` to `ExportBody`; include `disk` in the `Recipe` object built at export.ts:145-153.
-- [ ] `npm test -- export.disk` → PASS.
-- [ ] `npm run typecheck` → clean. Commit.
+- [x] Write failing test `handleExport persists disk onto the recipe` — call `handleExport` with a `sessionDirOverride` (the route's existing test hook, export.ts:71-72) + a body carrying a `disk`; parse the written `recipe.json` via `parseRecipe` and assert its `disk` matches. (Mirror any existing export route test for the fixture/session setup; the route already supports a tmp session dir.)
+- [x] Write failing test `handleExport omits disk from the recipe when absent` — body without `disk` → recipe `disk === undefined`.
+- [x] `npm test -- export.disk` → FAIL.
+- [x] Add `disk?: RecipeDisk` + `catalogAxisRatio?: number` to `ExportBody`; include `disk` in the `Recipe` object built at export.ts:145-153. _(validation extracted to shared `validateRecipeDisk`; test isolation via tmp `repoRoot`, not a new override)_
+- [x] `npm test -- export.disk` → PASS.
+- [x] `npm run typecheck` → clean. Commit.
 
 ## Task 2: deproject the hi-res crop when requested
 
