@@ -82,6 +82,7 @@ type SeedEntry = {
   readonly physicalRadiusMpc: number;
   readonly apparentRadiusMpc: number;
   readonly abell?: string;
+  readonly description?: string;
 };
 
 /**
@@ -106,6 +107,7 @@ function buildAnchorPoi(a: SeedEntry): PointOfInterest {
     // resolvable as deep-link targets.  Significance is full weight —
     // each seed entry was chosen for being worth showing.
     featured: true,
+    description: a.description,
     significance: 1,
     physicalRadiusMpc: a.physicalRadiusMpc,
     apparentRadiusMpc: a.apparentRadiusMpc,

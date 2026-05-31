@@ -63,11 +63,15 @@ function makePayload(
   };
 }
 
-const meta = (id: string, abell: string | null = null): ClusterMetaEntry => ({
+const meta = (
+  id: string,
+  abell: string | null = null,
+  description = '',
+): ClusterMetaEntry => ({
   id,
   names: [id.toUpperCase()],
   abell,
-  description: '',
+  description,
 });
 
 // A mixed fixture: two clusters (byte 0) of differing M500, two
@@ -174,6 +178,21 @@ describe('buildPoisFromClusterCatalog', () => {
     // Superclusters never carry abell.
     const sc = pois.find((p) => p.id.includes('rich-sc'))!;
     expect('abell' in sc).toBe(false);
+  });
+
+  it('carries the meta description through onto every bulk POI', () => {
+    const payload = makePayload([
+      {
+        pos: [0, 0, 0],
+        physicalRadiusMpc: 1,
+        apparentRadiusMpc: 2,
+        significance: 5,
+        category: 0,
+        meta: meta('described-cluster', 'A1', 'X-ray cluster · M500 = 5.0×10¹⁴ M☉ · z = 0.040'),
+      },
+    ]);
+    const poi = buildPoisFromClusterCatalog(payload)[0]!;
+    expect(poi.description).toBe('X-ray cluster · M500 = 5.0×10¹⁴ M☉ · z = 0.040');
   });
 
   it('omits abell when the meta entry has null (key absent, not undefined)', () => {

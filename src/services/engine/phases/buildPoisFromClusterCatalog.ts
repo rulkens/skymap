@@ -142,6 +142,7 @@ export function buildPoisFromClusterCatalog(payload: ClusterCatalogPayload): Poi
       name: m.names[0]!,
       worldPos,
       featured: false,
+      description: m.description,
       significance,
       physicalRadiusMpc: catalog.physicalRadiusMpc[i]!,
       apparentRadiusMpc: catalog.apparentRadiusMpc[i]!,

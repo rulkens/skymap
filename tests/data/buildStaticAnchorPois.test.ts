@@ -62,6 +62,19 @@ describe('buildStaticAnchorPois', () => {
     expect(radius).toBe(6);
   });
 
+  it('carries the curated description through from the seed', () => {
+    const pois = buildStaticAnchorPois();
+    // Assert against the seed's own value (not a hardcoded string) so the
+    // test stays green when the curated blurbs are rewritten — it verifies
+    // the carry-through wiring, not the prose.
+    const seedVirgo = (
+      clusterSeedJson as readonly { id: string; description?: string }[]
+    ).find((e) => e.id === 'virgo-m87')!;
+    const virgo = pois.find((p) => p.id === 'cluster-virgo-m87')!;
+    expect(virgo.description).toBe(seedVirgo.description);
+    expect(virgo.description).toBeTruthy();
+  });
+
   it('is synchronous and returns a fresh array per call', () => {
     const a = buildStaticAnchorPois();
     const b = buildStaticAnchorPois();

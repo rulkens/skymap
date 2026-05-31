@@ -43,6 +43,15 @@ type PoiCommon = {
    * set true.
    */
   readonly featured: boolean;
+  /**
+   * Human-readable blurb shown in the expanded info card. For featured
+   * structures this is a curated Wikipedia-lead paragraph (matching the
+   * famous-galaxy treatment); for bulk catalog entries it's the build's
+   * auto-generated one-liner (`X-ray cluster · M500 = … · z = …`). Optional
+   * so a producer with no text can omit it — the card renders no
+   * description rather than empty chrome.
+   */
+  readonly description?: string;
 };
 
 /**
