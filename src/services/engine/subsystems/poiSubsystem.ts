@@ -1,49 +1,44 @@
 /**
  * poiSubsystem — typed list of named points of interest (clusters,
  * superclusters, famous galaxies, voids) rendered as text labels +
- * optional crosshairs.
+ * optional ring/halo markers.
  *
  * ### Why one subsystem for four kinds?
  *
  * Clusters, superclusters, individual famous galaxies, and voids all
  * share the same physical surface: anchor a label at a world position,
- * optionally draw a small visual marker so the user can see the
- * precise centre.  The differences (label colour, default pixel size,
- * crosshair size) are data — `category` + a per-category default
- * table.  Splitting into four subsystems would quadruplicate the
- * producer plumbing without adding any clarity.
+ * optionally draw a visual marker so the user can see the precise
+ * centre.  The differences (label colour, default pixel size, marker
+ * tint) are data — `category` + a per-category default table.
+ * Splitting into four subsystems would quadruplicate the producer
+ * plumbing without adding any clarity.
  *
  * ### Why `POI_STYLES` and `PoiCategory` live together
  *
  * The category union is derived from the const registry via
  * `keyof typeof POI_STYLES`.  This mirrors the FONTS / FontId pattern
- * (PR #132) — co-locating the value and its type union means they
- * cannot drift.  Adding a fifth category is a single edit (add a row
- * to POI_STYLES) that automatically widens `PoiCategory`.
+ * — co-locating the value and its type union means they cannot drift.
+ * Adding a fifth category is a single edit (add a row to POI_STYLES)
+ * that automatically widens `PoiCategory`.
  *
  * ### Marker pass (clusters / superclusters / voids)
  *
- * Cluster, supercluster, and void POIs now render through the
- * separate `clusterMarkerRenderer` as soft additive halos + screen-AA
- * rings at their `physicalRadiusMpc` — see `produceMarkers` below.
- * The previous three-perpendicular-line crosshair gizmo was removed
- * in 2026-05-18 (cluster-viz plan 2/4); see the spec
- * `docs/superpowers/specs/2026-05-18-cluster-supercluster-viz-design.md`
- * §2 for the rationale.  POIs without `physicalRadiusMpc` get a
- * label only.
+ * Cluster, supercluster, and void POIs render through the separate
+ * `clusterMarkerRenderer` as soft additive halos + screen-AA rings at
+ * their `physicalRadiusMpc` — see `produceMarkers` below.  POIs
+ * without a radius get a label only.
  *
  * ### Anchor-offset labels
  *
- * Famous galaxies (and any future category that sets `anchorOffsetPx`
- * on its style) borrow the `youAreHereSubsystem` idiom: the label
- * sits a fixed *pixel* distance above the dot, connected by a short
- * vertical marker line.  The pixel offset is converted to world space
- * per-frame using `(offsetPx / drawPxPerRad) * distanceMpc`, so the
- * gap on screen stays constant regardless of how far the galaxy is
- * from the camera.  These labels use `alignX: 'center'` so the text
- * straddles the line.  Categories that omit `anchorOffsetPx`
- * (cluster, supercluster, void) anchor at the dot with `alignX: 'left'`
- * and rely on the 3-line crosshair for centre indication.
+ * Famous galaxies (and any future category whose POIs set
+ * `labelAnchorOffsetMpc`) lift the label a fixed *world-space* distance
+ * above the dot, connected by a short vertical marker line.  The offset
+ * is stored statically in world space rather than derived per-frame
+ * from a pixel target — see the field's docstring and the inline note
+ * in `produceLabels` for why.  These labels use `alignX: 'center'` so
+ * the text straddles the line.  Categories whose POIs never set the
+ * offset (cluster, supercluster, void) anchor at the ring centre and
+ * rely on the ring marker for centre indication.
  *
  * ### Fade band
  *
@@ -68,23 +63,19 @@
  *
  * ### Why marker vs label visibility are separate axes
  *
- * Prior to the 2026-05-19 settings-panel audit (Q11) a single
- * `visibility` record was consulted by BOTH `produceLabels` and
- * `produceMarkers`.  That conflation meant a UI toggle labelled "show
- * cluster labels" secretly also suppressed the cluster ring/halo
- * marker — the kind of "the checkbox does two things" bug the audit
- * was looking for.  The fix splits the record into two independent
- * axes:
+ * Marker and label visibility are two independent records so a UI
+ * toggle that hides cluster labels leaves the cluster ring/halo marker
+ * intact (and vice versa) — a single shared record would make one
+ * checkbox secretly do two things:
  *
  *   - `markerVisibility[category]` — gates the cluster/SC/void ring +
  *     halo (the visible dot/glyph) drawn by `produceMarkers`.
  *   - `labelVisibility[category]`  — gates the text label drawn by
  *     `produceLabels`.
  *
- * Each loop now reads ONLY its own record.  The two are seeded from
- * the same `ALL_CATEGORIES_VISIBLE` default so day-one behaviour is
- * unchanged (everything visible); the SettingsPanel restructure
- * (Task #6 of the audit) wires them to different master toggles.
+ * Each loop reads ONLY its own record.  Both seed from the same
+ * `ALL_CATEGORIES_VISIBLE` default (everything visible); the
+ * SettingsPanel wires them to different master toggles.
  */
 
 import type { Label } from '../../../@types/rendering/Label';
@@ -123,14 +114,12 @@ type CategoryStyle = {
   readonly pixelWidth: number;
   /**
    * Smoothstep fade-band width in pixels above `minApparentSizePx`.
-   * (Unchanged from the pre-cluster-viz revision; see the existing
-   *  docblock — kept verbatim above this comment block.)
    *
    * When set, POIs whose apparent size lands inside the band
    * `[minApparentSizePx, minApparentSizePx + fadeBandPx]` fade in via
    * smoothstep instead of popping.  Below the lower bound: still
    * skipped.  Above the upper bound: full alpha.  Undefined → binary
-   * gate (the current behaviour).
+   * gate.
    *
    * The pixel-offset lift + vertical marker-line, by contrast, is
    * driven per-POI via `PointOfInterest.labelAnchorOffsetMpc` rather
@@ -198,17 +187,17 @@ type CategoryStyle = {
  * keys so the type and the data cannot drift.
  *
  * Style choices:
- *   - cluster      — warm yellow, sub-Mpc world-em; min 14 px / max 60 px clamps
+ *   - cluster      — warm yellow, ~1 Mpc world-em; min 35 px / max 150 px clamps
  *   - supercluster — slightly dimmer yellow, larger world-em (tens of Mpc extent);
- *                    min 14 px / max 60 px clamps
- *   - famousGalaxy — warm off-white, 0.005 Mpc world-em (set so M31 at ~0.78 Mpc
- *                    renders at roughly legible size); min 12 px / max 60 px clamps;
+ *                    min 35 px / max 150 px clamps
+ *   - famousGalaxy — warm off-white, sub-kpc world-em (set so M31 at ~0.78 Mpc
+ *                    renders at roughly legible size); min 30 px / max 150 px clamps;
  *                    fadeBandPx: 4 smooths the apparent-size threshold.  Per-POI
  *                    `worldEmMpc` (set via `labelWorldEmMpc` from
  *                    `buildPoisFromFamousMeta`) overrides this default so larger
  *                    galaxies are naturally bigger labels.
  *   - void         — soft cyan, largest world-em (voids span 30–50+ Mpc radii);
- *                    min 14 px / max 60 px clamps
+ *                    min 35 px / max 150 px clamps
  */
 export const POI_STYLES = {
   cluster: {
@@ -225,11 +214,16 @@ export const POI_STYLES = {
     ringColor: hexToGl('#B39947'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
-    // Clusters span ~1–5 Mpc cores; at far zoom they're the first
-    // category to drop from legibility, so the floor sits higher than
-    // for superclusters / voids.
-    markerMinApparentRadiusPx: 12,
-    markerMinApparentFadeBandPx: 12,
+    // The bulk MCXC catalog projects to a median ~5 px ring at its
+    // 98–619 Mpc distances (apparentRadiusMpc ≈ 2.5 × R500 ≈ 2.5–4
+    // Mpc).  This floor keeps the field to the "prominent" clusters —
+    // rings below ~5 px fade out, full alpha by 9 px — so the nearer /
+    // larger structures read clearly without papering the sky with
+    // sub-readable specks.  The fixed-pixel-width ring shader keeps the
+    // surviving small rings crisp.  Featured anchors (Virgo, Coma) have
+    // large radii and sit far above this floor.
+    markerMinApparentRadiusPx: 5,
+    markerMinApparentFadeBandPx: 4,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
   },
@@ -315,6 +309,30 @@ export const POI_STYLES = {
  */
 export type PoiCategory = keyof typeof POI_STYLES;
 
+/**
+ * Alpha floor for significance weighting in `produceMarkers`.  The
+ * faintest structure (significance ≈ 0) renders its halo + ring at
+ * `SIG_MIN_ALPHA × distanceFade`; the most significant (significance =
+ * 1) at the full `distanceFade`.  Linear interpolation between the two.
+ * The floor keeps low-significance bulk clusters dim but not invisible
+ * — "structure, not fog" — so the field still reads as populated rather
+ * than collapsing distant clusters to nothing.  Featured anchors omit
+ * significance (or set it to 1) and so render unweighted.
+ */
+const SIG_MIN_ALPHA = 0.25;
+
+/**
+ * Minimum screen-pixel gap between two featured labels before the
+ * lower-significance one is suppressed.  produceLabels gates labels on
+ * `featured` (only the ~25-30 curated anchors + famous galaxies get
+ * text), then runs a greedy screen-space declutter over that tiny set:
+ * two labels whose projected anchors land within this many pixels in
+ * BOTH x and y collide, and the lower-significance label is dropped.
+ * Tuned to keep dense regions (Shapley) readable without over-culling
+ * neighbours that are merely close.
+ */
+const DECLUTTER_MARGIN_PX = 48;
+
 const ALL_CATEGORIES_VISIBLE: Readonly<Record<PoiCategory, boolean>> = {
   cluster: true,
   supercluster: true,
@@ -355,9 +373,7 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
   function setCategoryLabelVisible(category: PoiCategory, visible: boolean): void {
     // Symmetric counterpart to `setCategoryMarkerVisible`.  Only the
     // label pass (`produceLabels`) reads this axis — the marker pass
-    // is unaffected, which is the bug-fix the 2026-05-19 settings-panel
-    // audit (Q11) called out: hiding labels for clusters used to also
-    // hide their rings.
+    // is unaffected, so hiding cluster labels leaves their rings intact.
     labelVisibility = { ...labelVisibility, [category]: visible };
   }
 
@@ -378,8 +394,32 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
   }
 
   function produceLabels(state: EngineState, ctx: ReadyFrameContext): LabelProducerOutput {
-    const labels: Label[] = [];
-    const lines: MarkerLine[] = [];
+    // A surviving-the-gates candidate: the built label, its optional
+    // anchor line, the candidate's on-screen PROMINENCE (declutter sort
+    // key — see below), and the projected screen position used for
+    // overlap rejection.  `onScreen` is false for behind-camera /
+    // out-of-viewport candidates — those are accepted unconditionally
+    // and never block anyone.
+    //
+    // `prominencePx` is the label's apparent on-screen size in pixels:
+    // the ring's apparent radius for cluster / SC / void, the galaxy's
+    // apparent diameter for a famous galaxy.  The declutter resolves
+    // collisions in favour of the MORE prominent label.  Earlier this
+    // was a flat `significance` that every featured anchor set to 1, so
+    // collisions broke by array order (clusters first) — orbiting a big
+    // supercluster, a small cluster label sweeping across would outrank
+    // and cull it, then release it, making the structure you're actually
+    // inspecting flicker.  Ranking by on-screen size keeps the large
+    // structure under the camera and lets the small distant label yield.
+    type LabelCandidate = {
+      readonly label: Label;
+      readonly line: MarkerLine | null;
+      readonly prominencePx: number;
+      readonly screenX: number;
+      readonly screenY: number;
+      readonly onScreen: boolean;
+    };
+    const candidates: LabelCandidate[] = [];
     // Recover the vertical fov from the per-frame `drawPxPerRad`:
     //   drawPxPerRad = canvasSize.height / (2 * tan(fovY/2))
     // ⇒ fovY = 2 * atan(canvasSize.height / (2 * drawPxPerRad))
@@ -401,34 +441,51 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
       // visibility off here leaves its ring + halo marker intact, and
       // vice versa.
       if (!labelVisibility[p.category]) continue;
+      // Featured gate.  After the bulk cluster/SC catalog landed in the
+      // POI list (all `featured: false`), labelling every one of the
+      // ~375 structures is noise — they still render rings/halos via
+      // produceMarkers, just no text.  Only the ~25-30 curated anchors
+      // + famous galaxies (all `featured: true`) earn a label.
+      if (!p.featured) continue;
       // Anchor gate.  A structure label (cluster / supercluster / void)
       // needs its ring marker as a visual anchor — a floating label
       // with no ring reads as orphaned text in space.  `famousGalaxy`
       // is exempt because its anchor is the galaxy point itself, not a
-      // ring marker (and famous galaxies don't appear in
-      // `markerVisibility`'s STRUCTURE_CATEGORIES batch at all).
+      // ring marker, so its label survives regardless of marker
+      // visibility.
       if (p.category !== 'famousGalaxy' && !markerVisibility[p.category]) continue;
       // Widen the `as const`-narrowed POI_STYLES entry back to the
-      // declared shape so the optional `anchorOffsetPx` / `fadeBandPx`
+      // declared shape so the optional `lineColor` / `fadeBandPx`
       // fields are visible regardless of which category we're on.
       // Without this cast the literal-narrowed inferred type omits
       // any optional field that the specific category doesn't set.
       const style: CategoryStyle = POI_STYLES[p.category];
 
-      // Camera distance to this POI — needed both for apparent-size
-      // gating and for converting `anchorOffsetPx` to world space.
-      // Computed once and reused.
+      // Camera distance to this POI — needed for apparent-size gating
+      // and the marker close-approach / far-distance fade.  Computed
+      // once and reused.
       const dx = p.worldPos[0] - cx;
       const dy = p.worldPos[1] - cy;
       const dz = p.worldPos[2] - cz;
       const distanceMpc = Math.hypot(dx, dy, dz);
 
       // Apparent-size gate (binary skip below threshold, optional
-      // smoothstep fade in the band above it).  Only runs when both
-      // threshold AND diameter are set — see the type doc on
-      // `apparentDiameterKpc` for the permissive-default rationale.
+      // smoothstep fade in the band above it).  Only the famousGalaxy arm
+      // carries the threshold + diameter; structure arms never gate on
+      // apparent size.  Runs only when both fields are set — see the type
+      // doc on `apparentDiameterKpc` for the permissive-default rationale.
       let fadeAlpha = 1;
-      if (p.minApparentSizePx !== undefined && p.apparentDiameterKpc !== undefined) {
+      // On-screen prominence (px) — the declutter sort key.  Set from the
+      // galaxy's apparent diameter (famous galaxies) or the ring's
+      // apparent radius (structures, below); the larger label wins a
+      // collision.  Defaults to 0 so a label that somehow sets neither
+      // sinks to lowest priority rather than silently beating real ones.
+      let prominencePx = 0;
+      if (
+        p.category === 'famousGalaxy' &&
+        p.minApparentSizePx !== undefined &&
+        p.apparentDiameterKpc !== undefined
+      ) {
         const sizePx = apparentSizePx({
           diameterKpc: p.apparentDiameterKpc,
           distanceMpc,
@@ -436,6 +493,7 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
           fovYRad,
         });
         if (sizePx < p.minApparentSizePx) continue;
+        prominencePx = sizePx;
         if (style.fadeBandPx !== undefined) {
           const t = Math.min(1, (sizePx - p.minApparentSizePx) / style.fadeBandPx);
           // smoothstep — same shape as youAreHereAlpha's transition.
@@ -461,10 +519,15 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
       //
       // Uses the apparent (wider) radius because that's what drives the
       // ring's actual on-screen size; the core radius is irrelevant to
-      // when the user "fills the viewport" with the cluster.
-      const markerRadiusMpc = p.apparentRadiusMpc ?? p.physicalRadiusMpc;
+      // when the user "fills the viewport" with the cluster.  Only the
+      // structure arms have a radius — famous galaxies skip this block
+      // (their per-POI minApparentSizePx gate above handles the far-end
+      // fade).
+      const markerRadiusMpc =
+        p.category === 'famousGalaxy' ? undefined : (p.apparentRadiusMpc ?? p.physicalRadiusMpc);
       if (markerRadiusMpc !== undefined && distanceMpc > 0.001) {
         const apRadPx = (markerRadiusMpc / distanceMpc) * (halfH / Math.tan(fovYRad * 0.5));
+        prominencePx = apRadPx;
         if (apRadPx > style.markerMaxApparentRadiusPx) {
           const t = Math.min(
             1,
@@ -519,7 +582,11 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
       // up in world-Y and use horizontal centring around the line.
       let alignX: 'left' | 'center' | 'right' = 'center';
       let alignY: 'baseline' | 'center' | 'top' | 'bottom' = 'center';
-      if (p.labelAnchorOffsetMpc !== undefined) {
+      // Collected per-candidate rather than pushed straight into `lines`
+      // so the declutter pass can drop a label together with its anchor
+      // line when it loses an overlap.
+      let candidateLine: MarkerLine | null = null;
+      if (p.category === 'famousGalaxy' && p.labelAnchorOffsetMpc !== undefined) {
         const offset = p.labelAnchorOffsetMpc;
         labelWorldPos = [p.worldPos[0], p.worldPos[1] + offset, p.worldPos[2]];
         alignX = 'center';
@@ -531,14 +598,14 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
         // rather than crashing — the label still renders at the lifted
         // position; just without the visual anchor.
         if (style.lineColor !== undefined) {
-          lines.push({
+          candidateLine = {
             id: `${p.id}-anchor`,
             fromWorld: [p.worldPos[0], p.worldPos[1], p.worldPos[2]],
             toWorld: [p.worldPos[0], p.worldPos[1] + offset * 0.75, p.worldPos[2]],
             pixelWidth: style.pixelWidth,
             color: [...style.lineColor],
             fadeAlpha,
-          });
+          };
         }
       }
 
@@ -553,14 +620,15 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
             }
           : {};
 
-      labels.push({
+      const label: Label = {
         id: p.id,
         worldPos: labelWorldPos,
         text: p.name,
         font: 'cormorant',
         pixelSize: 0, // legacy field — ignored by the new worldEm sizing model
         color: [...style.labelColor],
-        worldEmMpc: p.labelWorldEmMpc ?? style.worldEmMpc,
+        worldEmMpc:
+          (p.category === 'famousGalaxy' ? p.labelWorldEmMpc : undefined) ?? style.worldEmMpc,
         minPixelSize: style.minPixelSize,
         maxPixelSize: style.maxPixelSize,
         fadeAlpha,
@@ -569,8 +637,94 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
         outlineColor: [...style.outlineColor],
         outlineEmFrac: style.outlineEmFrac,
         ...overrideFields,
+      };
+
+      // Project the label's ACTUAL (lifted) world position to screen
+      // pixels for the declutter overlap test.  Column-major mat4·vec4
+      // by hand — the lib's vec4.transformMat4 allocates a vec4 per
+      // call, and this runs once per featured candidate per frame.
+      const m = ctx.vp;
+      const wx = labelWorldPos[0];
+      const wy = labelWorldPos[1];
+      const wz = labelWorldPos[2];
+      const clipX = m[0] * wx + m[4] * wy + m[8] * wz + m[12];
+      const clipY = m[1] * wx + m[5] * wy + m[9] * wz + m[13];
+      const clipW = m[3] * wx + m[7] * wy + m[11] * wz + m[15];
+      // Behind-camera (clipW <= 0): the label is off-screen.  Accept it
+      // as-is (the label renderer clips offscreen labels) and exclude it
+      // from overlap tests so it neither blocks nor is blocked.
+      let screenX = 0;
+      let screenY = 0;
+      let onScreen = false;
+      if (clipW > 0) {
+        const ndcX = clipX / clipW;
+        const ndcY = clipY / clipW;
+        screenX = (ndcX * 0.5 + 0.5) * ctx.canvasSize.width;
+        // Flip Y: NDC +Y is up, screen +Y is down.
+        screenY = (1 - (ndcY * 0.5 + 0.5)) * ctx.canvasSize.height;
+        // Only candidates inside (a slightly padded) viewport participate
+        // in overlap rejection; ones projecting outside can't visually
+        // collide with on-screen labels.
+        onScreen = ndcX >= -1 && ndcX <= 1 && ndcY >= -1 && ndcY <= 1;
+      }
+
+      candidates.push({
+        label,
+        line: candidateLine,
+        prominencePx,
+        screenX,
+        screenY,
+        onScreen,
       });
     }
+
+    // Screen-space declutter.  The featured candidate set is tiny
+    // (≤~30), so an O(n²) greedy is comfortably within budget and far
+    // simpler than a top-N spatial structure.  Sort by on-screen
+    // PROMINENCE DESC (stable via an index tiebreaker so equal-prominence
+    // ties keep input order); walk the sorted list accepting a candidate
+    // when its anchor sits ≥ DECLUTTER_MARGIN_PX (in x OR y) from every
+    // already-accepted ON-SCREEN anchor.  Off-screen / behind-camera
+    // candidates are accepted unconditionally and never block.  Sorting
+    // by prominence (not a flat significance) is what keeps the large
+    // structure under the camera from being culled by a small distant
+    // label sweeping across it during an orbit.
+    const order = candidates.map((_, i) => i);
+    order.sort((a, b) => {
+      const d = candidates[b]!.prominencePx - candidates[a]!.prominencePx;
+      return d !== 0 ? d : a - b;
+    });
+    const accepted: LabelCandidate[] = [];
+    for (const i of order) {
+      const c = candidates[i]!;
+      if (c.onScreen) {
+        let collides = false;
+        for (const a of accepted) {
+          if (!a.onScreen) continue;
+          if (
+            Math.abs(c.screenX - a.screenX) < DECLUTTER_MARGIN_PX &&
+            Math.abs(c.screenY - a.screenY) < DECLUTTER_MARGIN_PX
+          ) {
+            collides = true;
+            break;
+          }
+        }
+        if (collides) continue;
+      }
+      accepted.push(c);
+    }
+
+    // Emit accepted candidates.  Re-walk in original input order so the
+    // output is deterministic and independent of the significance sort.
+    const acceptedSet = new Set(accepted);
+    const labels: Label[] = [];
+    const lines: MarkerLine[] = [];
+    for (const c of candidates) {
+      if (!acceptedSet.has(c)) continue;
+      labels.push(c.label);
+      if (c.line !== null) lines.push(c.line);
+    }
+
     // One-shot layer fade-in: first frame that emits a non-empty
     // label set fires fadeTo(1) on the POI layer's FadeHandle. See
     // youAreHereSubsystem for the symmetric pattern; the label
@@ -587,11 +741,14 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
     return { labels, lines, awake: false };
   }
 
-  function produceMarkers(state: EngineState, ctx: ReadyFrameContext): readonly ClusterMarkerDescriptor[] {
+  function produceMarkers(
+    state: EngineState,
+    ctx: ReadyFrameContext,
+  ): readonly ClusterMarkerDescriptor[] {
     const out: ClusterMarkerDescriptor[] = [];
     const halfH = ctx.canvasSize.height * 0.5;
     const fovYRad = 2 * Math.atan(halfH / ctx.drawPxPerRad);
-    const pxPerRad = ctx.canvasSize.height * 0.5 / Math.tan(fovYRad * 0.5);
+    const pxPerRad = (ctx.canvasSize.height * 0.5) / Math.tan(fovYRad * 0.5);
     const [cx, cy, cz] = ctx.drawCamPos;
     // Selected POI id (if any) — read straight off the selection
     // subsystem each frame so produceMarkers stays a pure function of
@@ -600,84 +757,125 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
     const sel = state.subsystems.selection.selected();
     const selectedPoiId = sel !== null && sel.kind === 'poi' ? sel.id : null;
 
+    // Emit-all-then-discard contract.  Every marker-bearing POI of a
+    // VISIBLE category emits EXACTLY ONE descriptor here, in `pois`
+    // array order — including ones faded fully out (those emit alpha-0
+    // halo + ring colours, which the visible fragments and the ring
+    // pick fragment discard).  This keeps each category's descriptor run
+    // index-aligned with `getPoisForCategory(category)`: the ring pick
+    // path packs `@builtin(instance_index)` as the per-category-local
+    // POI index, and `resolvePoiFromPick` resolves it through
+    // `getPoisForCategory(cat)[poiIndex]`.  Omitting faded POIs (the
+    // pre-fix behaviour) index-shifted that lookup and selected the
+    // wrong structure on click/hover.  The only legitimate `continue`s
+    // are all-or-nothing-per-category (visibility) or a different,
+    // non-marker category (famousGalaxy) — neither perturbs the
+    // within-category alignment.
     for (const p of pois) {
       // Marker-axis gate only.  See the symmetric comment in
       // `produceLabels` — these two records are deliberately
       // independent so the SettingsPanel can offer separate "show
-      // markers" vs "show labels" master toggles.
+      // markers" vs "show labels" master toggles.  A hidden category
+      // draws nothing, so alignment only matters WITHIN a drawn
+      // category — this all-or-nothing skip is safe.
       if (!markerVisibility[p.category]) continue;
+      // Famous galaxies opt out of the marker pass entirely — they have
+      // no radius and render curated thumbnails on close approach instead.
+      // They're picked via the point path, not the ring path, so this
+      // different-category skip doesn't perturb cluster/SC/void alignment.
+      // Skipping early also narrows `p` to the structure arms so the
+      // radius read below is type-safe.
+      if (p.category === 'famousGalaxy') continue;
       // The marker pass renders at the WIDER apparent extent (named
-      // cluster extent, not the virial core).  Fall back to the core
-      // for POIs that only set physicalRadiusMpc — none today, but
-      // matches the optional-shape of both fields on PointOfInterest.
-      // No radius at all → no ring → skip (famous galaxies).
+      // cluster extent, not the virial core).  Fall back to the core for
+      // structures that only set physicalRadiusMpc.
       const radiusMpc = p.apparentRadiusMpc ?? p.physicalRadiusMpc;
-      if (radiusMpc === undefined) continue;
       const style: CategoryStyle = POI_STYLES[p.category];
-      // ringColor === null guards a never-happens path; we use
-      // haloColor === null to mean "label-only category".  Famous
-      // galaxies always hit this branch.
-      if (style.haloColor === null && p.category === 'famousGalaxy') continue;
 
       const dx = p.worldPos[0] - cx;
       const dy = p.worldPos[1] - cy;
       const dz = p.worldPos[2] - cz;
       const distanceMpc = Math.hypot(dx, dy, dz);
-      if (distanceMpc < 0.001) continue; // camera on top of POI — skip rather than NaN
 
-      // Apparent on-screen radius in pixels.
-      const apparentRadiusPx = (radiusMpc / distanceMpc) * pxPerRad;
-
-      // Max-apparent-radius fade-out: smoothstep alpha from 1 → 0 as
-      // the projected ring grows past markerMaxApparentRadiusPx into
-      // the fade band.  Above the band: alpha = 0 (skip).
-      let maxFadeAlpha = 1;
-      if (apparentRadiusPx > style.markerMaxApparentRadiusPx) {
-        const t = Math.min(
-          1,
-          (apparentRadiusPx - style.markerMaxApparentRadiusPx) / style.markerMaxApparentFadeBandPx,
-        );
-        // Smoothstep, then invert so we fade 1 → 0.
-        maxFadeAlpha = 1 - t * t * (3 - 2 * t);
-      }
-      if (maxFadeAlpha <= 0) continue; // fully faded
-
-      // Far-distance fade-out: symmetric counterpart to the close-
-      // approach maxFadeAlpha above.  When the projected ring shrinks
-      // past `markerMinApparentRadiusPx` the anchor stops being a
-      // legible structure marker — clusters become illegible chrome,
-      // labels float without a visible ring underneath them.  Smoothstep
-      // from 0 → 1 across the band so rings don't pop as the camera
-      // pulls back.  Same render-on-demand rationale as the max-radius
-      // fade: no `awake` signal — camera motion already wakes the loop.
-      let minFadeAlpha: number;
-      if (apparentRadiusPx < style.markerMinApparentRadiusPx) {
-        minFadeAlpha = 0;
-      } else if (
-        apparentRadiusPx < style.markerMinApparentRadiusPx + style.markerMinApparentFadeBandPx
-      ) {
-        const t =
-          (apparentRadiusPx - style.markerMinApparentRadiusPx) / style.markerMinApparentFadeBandPx;
-        minFadeAlpha = t * t * (3 - 2 * t);
+      // Camera sitting on top of the POI: the apparent-radius
+      // projection divides by distance, so skip the math and treat the
+      // marker as fully faded (fadeAlpha 0).  We still emit a descriptor
+      // (below) rather than `continue`-ing — every marker-bearing POI of
+      // a visible category emits exactly one instance so the ring pick
+      // path's instance_index stays aligned with getPoisForCategory (see
+      // the loop header).  The alpha-0 instance is discarded in-fragment.
+      let fadeAlpha: number;
+      if (distanceMpc < 0.001) {
+        fadeAlpha = 0;
       } else {
-        minFadeAlpha = 1;
-      }
-      if (minFadeAlpha <= 0) continue;
+        // Apparent on-screen radius in pixels.
+        const apparentRadiusPx = (radiusMpc / distanceMpc) * pxPerRad;
 
-      const fadeAlpha = Math.min(maxFadeAlpha, minFadeAlpha);
+        // Max-apparent-radius fade-out: smoothstep alpha from 1 → 0 as
+        // the projected ring grows past markerMaxApparentRadiusPx into
+        // the fade band.  Above the band: alpha 0 (invisible, not omitted).
+        let maxFadeAlpha = 1;
+        if (apparentRadiusPx > style.markerMaxApparentRadiusPx) {
+          const t = Math.min(
+            1,
+            (apparentRadiusPx - style.markerMaxApparentRadiusPx) /
+              style.markerMaxApparentFadeBandPx,
+          );
+          // Smoothstep, then invert so we fade 1 → 0.
+          maxFadeAlpha = 1 - t * t * (3 - 2 * t);
+        }
+
+        // Far-distance fade-out: symmetric counterpart to the close-
+        // approach maxFadeAlpha above.  When the projected ring shrinks
+        // past `markerMinApparentRadiusPx` the anchor stops being a
+        // legible structure marker — clusters become illegible chrome,
+        // labels float without a visible ring underneath them.  Smoothstep
+        // from 0 → 1 across the band so rings don't pop as the camera
+        // pulls back.  Same render-on-demand rationale as the max-radius
+        // fade: no `awake` signal — camera motion already wakes the loop.
+        let minFadeAlpha: number;
+        if (apparentRadiusPx < style.markerMinApparentRadiusPx) {
+          minFadeAlpha = 0;
+        } else if (
+          apparentRadiusPx <
+          style.markerMinApparentRadiusPx + style.markerMinApparentFadeBandPx
+        ) {
+          const t =
+            (apparentRadiusPx - style.markerMinApparentRadiusPx) /
+            style.markerMinApparentFadeBandPx;
+          minFadeAlpha = t * t * (3 - 2 * t);
+        } else {
+          minFadeAlpha = 1;
+        }
+
+        // A fully faded marker (either end of the band) becomes an
+        // alpha-0 descriptor rather than an omission — see the loop
+        // header on the pick-index alignment contract.
+        fadeAlpha = Math.min(maxFadeAlpha, minFadeAlpha);
+      }
+
+      // Significance weighting (additional to the distance fade above).
+      // Low-significance distant structures stay faint; the SIG_MIN_ALPHA
+      // floor keeps them dim-but-visible rather than collapsing to
+      // nothing.  Linear lerp from SIG_MIN_ALPHA (significance 0) to 1
+      // (significance 1).  Featured anchors omit `significance`, so the
+      // `?? 1` fallback gives sigWeight === 1 → unchanged at-rest alpha.
+      const sigWeight = SIG_MIN_ALPHA + (1 - SIG_MIN_ALPHA) * (p.significance ?? 1);
+      const weightedFade = fadeAlpha * sigWeight;
 
       // Halo Vec4: bake style at-rest alpha × per-frame fade into the
       // descriptor's alpha channel.  Voids opt out via null haloColor
       // and emit a fully-transparent [0,0,0,0] (the renderer's halo
       // pass skips alpha==0 instances entirely).
-      const haloColor: Vec4 = style.haloColor !== null
-        ? [
-            style.haloColor[0],
-            style.haloColor[1],
-            style.haloColor[2],
-            style.haloColor[3] * fadeAlpha,
-          ]
-        : [0, 0, 0, 0];
+      const haloColor: Vec4 =
+        style.haloColor !== null
+          ? [
+              style.haloColor[0],
+              style.haloColor[1],
+              style.haloColor[2],
+              style.haloColor[3] * weightedFade,
+            ]
+          : [0, 0, 0, 0];
 
       // Ring Vec4: same fade bake as halo, plus the selection bump.
       // The focused POI's ring alpha is multiplied by 1.5 (capped at
@@ -689,7 +887,7 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
       // transform on the per-frame output, no shared references
       // between frames.
       const isSelected = p.id === selectedPoiId;
-      const ringAlphaBase = style.ringColor[3] * fadeAlpha;
+      const ringAlphaBase = style.ringColor[3] * weightedFade;
       const ringAlpha = isSelected ? Math.min(1, ringAlphaBase * 1.5) : ringAlphaBase;
       const ringColor: Vec4 = [
         style.ringColor[0],

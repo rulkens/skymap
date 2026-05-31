@@ -1,7 +1,7 @@
 /**
  * buildStaticAnchorPois — assemble the static `PointOfInterest[]` list
- * from the curated CLUSTER / SUPERCLUSTER / VOID anchor tables in
- * `clusterAnchors.ts`.
+ * from the curated cluster/supercluster/void seed in
+ * `data/cluster_anchors.seed.json`.
  *
  * ### Why a separate module?
  *
@@ -18,10 +18,11 @@
  *
  * Keeping a single helper here means both call sites agree on:
  *
- *   - The slug rule (`name → lower-kebab-case`), so `Virgo (M87)` →
- *     `virgo-m87`, prefixed by the category.  A drift between the two
- *     would silently break deep-link resolution for, e.g., the apostrophe
- *     in some future anchor name.
+ *   - The id rule: `${category}-${seed.id}`, where `seed.id` is the
+ *     curated identifier in `cluster_anchors.seed.json`.  Using the seed
+ *     field directly means the deep-link hash is the single canonical
+ *     identity — no slug-function drift for names that contain non-ASCII
+ *     characters or punctuation.
  *
  *   - The worldPos conversion (RA hours / Dec deg / Mpc → equatorial
  *     Cartesian Mpc via `raDecDistToEqCart`), so the POI the drain hands
@@ -29,6 +30,11 @@
  *
  *   - The `physicalRadiusMpc` carry-through, which downstream consumers
  *     (cone-search, ring sizing) rely on.
+ *
+ *   - The cluster-only `abell` carry-through: the seed's Abell/ACO
+ *     designation lands on the cluster arm alone (the `PointOfInterest`
+ *     union has no `abell` field on the supercluster/void/galaxy arms),
+ *     so the field never leaks onto a non-cluster anchor.
  *
  * ### Why not expose the engine's POI list directly?
  *
@@ -46,28 +52,81 @@
  * ### Pure
  *
  * No I/O, no engine coupling — safe to import from React, the engine,
- * and tests alike.
+ * and tests alike.  The seed JSON is bundled at build time via the Vite
+ * JSON import below, so this remains synchronous.
  */
 
-import {
-  CLUSTER_ANCHORS,
-  SUPERCLUSTER_ANCHORS,
-  VOID_ANCHORS,
-  raDecDistToEqCart,
-} from './clusterAnchors';
+import { raDecDistToEqCart } from '../utils/math/raDecDistToEqCart';
 import type { PointOfInterest } from '../@types/engine/subsystems/PointOfInterest';
+// Vite resolves JSON imports at build time; TypeScript narrows the type
+// via `resolveJsonModule: true`.  We cast to the fields we consume so
+// new seed columns don't require a type update here.  The JSON's shape is
+// validated at build time by `tools/parsers/parseClusterSeed.ts` (run via
+// `buildClusters.ts`), so this module trusts the cast and skips a runtime
+// re-validator.
+import clusterSeedJson from '../../data/cluster_anchors.seed.json';
 
 /**
- * Lower-kebab the anchor name into a URL-safe slug.  Matches the rule
- * the engine's wireSlots phase uses inline, factored here so the two
- * stay in lock-step.  Trailing/leading dashes are stripped so an
- * anchor named `(Foo)` doesn't become `-foo-`.
+ * Minimal shape we need from each seed entry — a strict subset of
+ * ClusterSeedEntry from `tools/parsers/parseClusterSeed.ts`.  Defined
+ * locally so the src/ tsconfig (which excludes tools/) doesn't need to
+ * reach across the boundary for a runtime-erased type.
  */
-function slug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+type SeedEntry = {
+  readonly id: string;
+  readonly names: readonly string[];
+  readonly category: 'cluster' | 'supercluster' | 'void';
+  readonly raHours: number;
+  readonly decDeg: number;
+  readonly distMpc: number;
+  readonly physicalRadiusMpc: number;
+  readonly apparentRadiusMpc: number;
+  readonly abell?: string;
+  readonly description?: string;
+};
+
+/**
+ * Build one POI from a seed entry.  The seed's `category` is the union
+ * `'cluster' | 'supercluster' | 'void'`; a single object literal whose
+ * `category` is that union does NOT narrow to one arm of the discriminated
+ * `PointOfInterest`, so we switch on it and let each branch produce a
+ * literal whose `category` is a single string — which the arm types accept.
+ * The three structure arms share `ExtendedStructurePoi`'s body, so the only
+ * difference between branches is the discriminant.
+ */
+function buildAnchorPoi(a: SeedEntry): PointOfInterest {
+  const common = {
+    // `${category}-${seed.id}` is the canonical POI id — the seed's
+    // curated `id` field is the single source of truth, so deep-link
+    // hashes never diverge from the stored POI ids regardless of
+    // punctuation or non-ASCII characters in the display name.
+    id: `${a.category}-${a.id}`,
+    name: a.names[0]!,
+    worldPos: raDecDistToEqCart(a),
+    // Curated anchors are always featured: they get labels and are
+    // resolvable as deep-link targets.  Significance is full weight —
+    // each seed entry was chosen for being worth showing.
+    featured: true,
+    description: a.description,
+    significance: 1,
+    physicalRadiusMpc: a.physicalRadiusMpc,
+    apparentRadiusMpc: a.apparentRadiusMpc,
+  } as const;
+  switch (a.category) {
+    case 'cluster':
+      // `abell` lives on the cluster arm alone.  Spread it in only when the
+      // seed carries one so the key is absent (not `abell: undefined`) for
+      // clusters with no Abell number, e.g. Virgo.
+      return {
+        ...common,
+        category: 'cluster',
+        ...(a.abell !== undefined ? { abell: a.abell } : {}),
+      };
+    case 'supercluster':
+      return { ...common, category: 'supercluster' };
+    case 'void':
+      return { ...common, category: 'void' };
+  }
 }
 
 /**
@@ -77,36 +136,5 @@ function slug(name: string): string {
  * identity is preserved across renders).
  */
 export function buildStaticAnchorPois(): PointOfInterest[] {
-  return [
-    ...CLUSTER_ANCHORS.map(
-      (a): PointOfInterest => ({
-        id: `cluster-${slug(a.name)}`,
-        name: a.name,
-        category: 'cluster',
-        worldPos: raDecDistToEqCart(a),
-        physicalRadiusMpc: a.physicalRadiusMpc,
-        apparentRadiusMpc: a.apparentRadiusMpc,
-      }),
-    ),
-    ...SUPERCLUSTER_ANCHORS.map(
-      (a): PointOfInterest => ({
-        id: `supercluster-${slug(a.name)}`,
-        name: a.name,
-        category: 'supercluster',
-        worldPos: raDecDistToEqCart(a),
-        physicalRadiusMpc: a.physicalRadiusMpc,
-        apparentRadiusMpc: a.apparentRadiusMpc,
-      }),
-    ),
-    ...VOID_ANCHORS.map(
-      (a): PointOfInterest => ({
-        id: `void-${slug(a.name)}`,
-        name: a.name,
-        category: 'void',
-        worldPos: raDecDistToEqCart(a),
-        physicalRadiusMpc: a.physicalRadiusMpc,
-        apparentRadiusMpc: a.apparentRadiusMpc,
-      }),
-    ),
-  ];
+  return (clusterSeedJson as SeedEntry[]).map(buildAnchorPoi);
 }

@@ -94,6 +94,7 @@ export function App(): React.ReactElement {
     scale,
     fps,
     sourceCounts,
+    structureCounts,
     loadProgress,
     currentTier,
   } = useEngine({ extraCallbacks: settingsCallbacks });
@@ -238,6 +239,7 @@ export function App(): React.ReactElement {
             // flips after the fade), hence fire-and-forget.
             visibleSourceMask={visibleSourceMask}
             sourceCounts={sourceCounts}
+            structureCounts={structureCounts}
             onToggleSource={(source, visible) => {
               void handleRef.current?.sources.setVisible(source, visible);
             }}

@@ -89,23 +89,23 @@ from the CDS FTP archive —
 then verify each `.dat` against its committed `.sha256` (fail loud on
 mismatch — mirror `fetchCosmicflows4`'s checksum handling).
 
-- [ ] Add the six registry entries (paths above), with `upstream` URLs +
+- [x] Add the six registry entries (paths above), with `upstream` URLs +
   `readme` cross-links, mirroring the `cf4.*` shapes.
-- [ ] Write the fetcher; add `"fetch-clusters": "tsx tools/fetch/fetchClusterCatalogs.ts"`
+- [x] Write the fetcher; add `"fetch-clusters": "tsx tools/fetch/fetchClusterCatalogs.ts"`
   to `package.json` (next to `fetch-cf4`).
-- [ ] Compute + commit `mcxc.dat.sha256` + `mscc.dat.sha256`.
-- [ ] Write `data/raw/mcxc/README.md` + `data/raw/mscc/README.md` (provenance:
+- [x] Compute + commit `mcxc.dat.sha256` + `mscc.dat.sha256`.
+- [x] Write `data/raw/mcxc/README.md` + `data/raw/mscc/README.md` (provenance:
   upstream URL + VizieR id, the verified byte-layout summary from Tasks 2–3,
   fetch date, row counts 1743/601, sha256).
-- [ ] `.gitignore`: whitelist ONLY the committed files (near
+- [x] `.gitignore`: whitelist ONLY the committed files (near
   `!/data/raw/cf4/README.md` `.gitignore:103` + `!/data/raw/cf4/table2.dat.sha256`
   `.gitignore:109`): `!/data/raw/mcxc/README.md`, `!/data/raw/mscc/README.md`,
   `!/data/raw/mcxc/mcxc.dat.sha256`, `!/data/raw/mscc/mscc.dat.sha256`. The
   `.dat` + `ReadMe` stay gitignored under the wholesale `/data/` ignore.
-- [ ] Test `rawDataPath resolves mcxc + mscc keys to absolute paths`
+- [x] Test `rawDataPath resolves mcxc + mscc keys to absolute paths`
   asserting `rawDataPath('mcxc.table')`/`rawDataPath('mscc.table')` end with
   the registered relative paths and are absolute.
-- [ ] `npm test -- rawDataRegistry` passes; `npm run fetch-clusters` re-fetches
+- [x] `npm test -- rawDataRegistry` passes; `npm run fetch-clusters` re-fetches
   cleanly + checksums verify. Commit (fetcher, registry, READMEs, sha256s —
   **never** the `.dat`/`ReadMe`).
 
@@ -157,19 +157,19 @@ export function parseMcxc(raw: string): McxcRow[];
 parsed directly as decimal degrees (no sexagesimal conversion); blank
 `OName`/`AName` → `''` (trim); skip comment/blank lines.
 
-- [ ] Build a small hand-crafted fixture (3–4 rows copied verbatim from the
+- [x] Build a small hand-crafted fixture (3–4 rows copied verbatim from the
   real `mcxc.dat`, exact column alignment) as a test constant. Include one
   row with a populated `AName` (e.g. row 0 `UGC 12890`) and one with blank
   `AName` (e.g. row 1).
-- [ ] Test `parseMcxc reads decimal RAdeg/DEdeg, z, M500, R500` asserting
+- [x] Test `parseMcxc reads decimal RAdeg/DEdeg, z, M500, R500` asserting
   row 0 ≈ `{raDeg: 0.030, decDeg: 8.274, z: 0.0396, m500: 0.7373, r500Mpc: 0.6296}`
   (~1e-3 tol).
-- [ ] Test `parseMcxc reads a signed southern declination` asserting a
+- [x] Test `parseMcxc reads a signed southern declination` asserting a
   negative `decDeg` row (e.g. row 1 `-2.625`).
-- [ ] Test `parseMcxc returns blank AName as empty string` on a row whose
+- [x] Test `parseMcxc returns blank AName as empty string` on a row whose
   `AName` column is all spaces.
-- [ ] Test `parseMcxc skips comment and blank lines`.
-- [ ] Implement against the verified offsets. `npm test -- parseMcxc` → passes.
+- [x] Test `parseMcxc skips comment and blank lines`.
+- [x] Implement against the verified offsets. `npm test -- parseMcxc` → passes.
   Commit.
 
 ---
@@ -216,13 +216,13 @@ degrees. `dmaxMpc` returned in raw `h70^-1 Mpc` units — the `h70 → Mpc`
 conversion + halving lives in `buildClusters` (Task 10), so the parser stays
 a faithful column reader.
 
-- [ ] Hand-built fixture (3–4 rows copied verbatim from `mscc.dat`).
-- [ ] Test `parseMscc reads decimal RAdeg/DEdeg, z, Nm, dmax` asserting
+- [x] Hand-built fixture (3–4 rows copied verbatim from `mscc.dat`).
+- [x] Test `parseMscc reads decimal RAdeg/DEdeg, z, Nm, dmax` asserting
   row 0 ≈ `{id: 'MSCC 1', raDeg: 0.77, decDeg: -26.72, z: 0.064, nm: 9, dmaxMpc: 50.6}`.
-- [ ] Test `parseMscc reads a signed positive declination` (e.g. row 1
+- [x] Test `parseMscc reads a signed positive declination` (e.g. row 1
   `+09.77` → `9.77`).
-- [ ] Test `parseMscc skips comment and blank lines`.
-- [ ] Implement. `npm test -- parseMscc` → passes. Commit.
+- [x] Test `parseMscc skips comment and blank lines`.
+- [x] Implement. `npm test -- parseMscc` → passes. Commit.
 
 ---
 
@@ -297,16 +297,16 @@ export function emptyClusterCatalog(): ClusterCatalog;
 `` `unsupported cluster-catalog version: ${v} — please regenerate the .ccat via "npm run build-clusters"` `` on version mismatch (mirror
 `galaxyCatalogFormat.ts:145-156`, but with the build-clusters message).
 
-- [ ] Test `encode→decode round-trips positions, radii, significance, category`
+- [x] Test `encode→decode round-trips positions, radii, significance, category`
   for a 2-record catalog (one cluster, one supercluster), asserting exact
   float-array equality and category bytes.
-- [ ] Test `encoded file size is 16 + count*28`.
-- [ ] Test `decode rejects bad magic` (write `'SKMP'` magic, expect throw
+- [x] Test `encoded file size is 16 + count*28`.
+- [x] Test `decode rejects bad magic` (write `'SKMP'` magic, expect throw
   containing `'CCAT'`).
-- [ ] Test `decode rejects wrong version` asserting the message contains
+- [x] Test `decode rejects wrong version` asserting the message contains
   `build-clusters`.
-- [ ] Test `emptyClusterCatalog has count 0 and zero-length arrays`.
-- [ ] Implement. `npm test -- clusterCatalogFormat` → passes. Commit.
+- [x] Test `emptyClusterCatalog has count 0 and zero-length arrays`.
+- [x] Implement. `npm test -- clusterCatalogFormat` → passes. Commit.
 
 ---
 
@@ -321,15 +321,15 @@ file, filename = export name). Keep the `SkyCoord → Vec3` signature.
 
 **Signature:** `export function raDecDistToEqCart(c: SkyCoord): Vec3;`
 
-- [ ] Test `raDecDistToEqCart places RA 0h Dec 0 on +X` (assert `[d,0,0]`
+- [x] Test `raDecDistToEqCart places RA 0h Dec 0 on +X` (assert `[d,0,0]`
   within 1e-9 for `distMpc=10`).
-- [ ] Test `raDecDistToEqCart places RA 6h Dec 0 on +Y`.
-- [ ] Test `raDecDistToEqCart places Dec +90 on +Z`.
-- [ ] Create the util file; re-export it from `clusterAnchors.ts` temporarily
+- [x] Test `raDecDistToEqCart places RA 6h Dec 0 on +Y`.
+- [x] Test `raDecDistToEqCart places Dec +90 on +Z`.
+- [x] Create the util file; re-export it from `clusterAnchors.ts` temporarily
   (so existing imports keep compiling until Task 7) OR update the two
   importers (`buildStaticAnchorPois.ts`, `auditCf4Anchors.ts`) — choose the
   re-export to keep this task small; Task 7 finishes the cutover.
-- [ ] `npm test -- raDecDistToEqCart` + `npm run typecheck` → green. Commit.
+- [x] `npm test -- raDecDistToEqCart` + `npm run typecheck` → green. Commit.
 
 ---
 
@@ -384,19 +384,19 @@ structures (e.g. Leo / A1367, Corona Borealis SC) — pick from textbook
 clusters/SCs, fill RA/Dec/dist/radii from NED/literature, write a 1-sentence
 description each. Voids ride along here (featured-only).
 
-- [ ] Add `clusters.seed` registry entry → `data/cluster_anchors.seed.json`,
+- [x] Add `clusters.seed` registry entry → `data/cluster_anchors.seed.json`,
   `kind: 'file'`, `source: 'committed'`; `.gitignore` whitelist line near
   `!/data/famous_galaxies.seed.json` (`.gitignore:83`).
-- [ ] Author `data/cluster_anchors.seed.json` (migrated + extended entries).
-- [ ] Test `parseClusterSeed accepts the bundled seed file` (read the real
+- [x] Author `data/cluster_anchors.seed.json` (migrated + extended entries).
+- [x] Test `parseClusterSeed accepts the bundled seed file` (read the real
   file via `rawDataPath('clusters.seed')`, assert length ≥ 25 and every
   entry has a category in the union).
-- [ ] Test `parseClusterSeed rejects out-of-range raHours` (>= 24 throws,
+- [x] Test `parseClusterSeed rejects out-of-range raHours` (>= 24 throws,
   message names the id).
-- [ ] Test `parseClusterSeed rejects duplicate ids`.
-- [ ] Test `parseClusterSeed rejects non-positive distMpc`.
-- [ ] Test `validateClusterSeedEntry rejects unknown category`.
-- [ ] Implement parser. `npm test -- parseClusterSeed` → passes. Commit.
+- [x] Test `parseClusterSeed rejects duplicate ids`.
+- [x] Test `parseClusterSeed rejects non-positive distMpc`.
+- [x] Test `validateClusterSeedEntry rejects unknown category`.
+- [x] Implement parser. `npm test -- parseClusterSeed` → passes. Commit.
 
 ---
 
@@ -414,26 +414,26 @@ minimal interim change is to read the seed JSON. **However** — Plan 2 owns
 the full `buildStaticAnchorPois` rewrite (sync seed read + `featured` flag).
 To keep plans cleanly separable, in THIS task:
 
-- [ ] Re-point `auditCf4Anchors.ts`: replace the
+- [x] Re-point `auditCf4Anchors.ts`: replace the
   `import { CLUSTER_ANCHORS, raDecDistToEqCart } from '../../src/data/clusterAnchors'`
   (`auditCf4Anchors.ts:27`) with `parseClusterSeed` (read
   `rawDataPath('clusters.seed')`) filtered to `category === 'cluster'`, mapped
   through the new `raDecDistToEqCart` util. The audit maps each seed entry's
   `{ raHours, decDeg, distMpc }` into the util — `ClusterSeedEntry` is a
   superset of `SkyCoord`, so it passes directly.
-- [ ] Update `buildStaticAnchorPois.ts` to import `raDecDistToEqCart` from
+- [x] Update `buildStaticAnchorPois.ts` to import `raDecDistToEqCart` from
   the new util path and drop the `clusterAnchors` re-export crutch from
   Task 5. (Leave its seed-vs-constant data source for Plan 2 — but it can no
   longer import the deleted constants, so for the interim have it read +
   parse the seed JSON synchronously via a Vite JSON import. This is exactly
   Plan 2's target shape, so doing it here is fine and avoids a broken
   intermediate; Plan 2 then only ADDS the `featured`/`significance` fields.)
-- [ ] Delete `src/data/clusterAnchors.ts`. Keep `ClusterAnchor.d.ts` only if
+- [x] Delete `src/data/clusterAnchors.ts`. Keep `ClusterAnchor.d.ts` only if
   still referenced (the audit now uses `ClusterSeedEntry`); if nothing imports
   it, delete it and `SkyCoord.d.ts` stays (still used by the util).
-- [ ] Update/replace `tests/data/buildStaticAnchorPois.test.ts` expectations
+- [x] Update/replace `tests/data/buildStaticAnchorPois.test.ts` expectations
   if the slug set changed (it should NOT — same ids).
-- [ ] `npm run typecheck` clean (no dangling `clusterAnchors` imports);
+- [x] `npm run typecheck` clean (no dangling `clusterAnchors` imports);
   `npm test` green. Commit.
 
 ---
@@ -466,17 +466,17 @@ generated description). The helper does NOT impose a schema beyond
 `id`/`names`/`description` being present — keep the per-domain seed schemas
 out of it (spec §8 "what stays per-domain").
 
-- [ ] Test `writeMetaSidecar writes pretty-printed JSON array indexed by order`
+- [x] Test `writeMetaSidecar writes pretty-printed JSON array indexed by order`
   (write to a tmp path, read back, assert parsed array equals input incl.
   extra fields).
-- [ ] Test `writeMetaSidecar preserves domain-specific extra fields`
+- [x] Test `writeMetaSidecar preserves domain-specific extra fields`
   (entry with a `type` key round-trips).
-- [ ] Implement helper.
-- [ ] Refactor `buildFamous.ts` to build its `metaByIdx` array (unchanged
+- [x] Implement helper.
+- [x] Refactor `buildFamous.ts` to build its `metaByIdx` array (unchanged
   shape) and call `writeMetaSidecar(metaByIdx, resolve(outDir,'famous_meta.json'))`
   instead of the inline `writeFileSync(... JSON.stringify ...)` at
   `buildFamous.ts:137`.
-- [ ] `npm test -- writeMetaSidecar` passes; re-run `buildFamous` is not
+- [x] `npm test -- writeMetaSidecar` passes; re-run `buildFamous` is not
   required for tests but `npm run typecheck` must be clean. Commit.
 
 ---
@@ -508,14 +508,14 @@ hand-tuned version wins — prevents Coma drawing twice). Distance in
 equatorial-Cartesian Mpc (positions already in that frame). Pure; preserves
 candidate order.
 
-- [ ] Test `dedupeByProximity drops a candidate inside a featured anchor's radius`
+- [x] Test `dedupeByProximity drops a candidate inside a featured anchor's radius`
   (anchor radius 6, candidate 2 Mpc away → dropped).
-- [ ] Test `dedupeByProximity keeps a candidate beyond all anchors`
+- [x] Test `dedupeByProximity keeps a candidate beyond all anchors`
   (candidate 50 Mpc from the only anchor → kept).
-- [ ] Test `dedupeByProximity applies the floor when an anchor radius is tiny`
+- [x] Test `dedupeByProximity applies the floor when an anchor radius is tiny`
   (anchor radius 0.5, floor 3, candidate 1 Mpc away → dropped by floor).
-- [ ] Test `dedupeByProximity preserves input order of kept candidates`.
-- [ ] Implement. `npm test -- dedupeByProximity` → passes. Commit.
+- [x] Test `dedupeByProximity preserves input order of kept candidates`.
+- [x] Implement. `npm test -- dedupeByProximity` → passes. Commit.
 
 ---
 
@@ -620,30 +620,30 @@ type ClusterMetaEntry = {
 // toMeta = ({ id, names, abell, description }) => ({ id, names, abell, description })
 ```
 
-- [ ] Test `buildClusterEntries excludes clusters below the M500 threshold`
+- [x] Test `buildClusterEntries excludes clusters below the M500 threshold`
   (fixture row under `MCXC_M500_MIN` → not present).
-- [ ] Test `buildClusterEntries excludes structures beyond Z_MAX`.
-- [ ] Test `buildClusterEntries sets apparentRadiusMpc = APPARENT_MULTIPLE × R500`
+- [x] Test `buildClusterEntries excludes structures beyond Z_MAX`.
+- [x] Test `buildClusterEntries sets apparentRadiusMpc = APPARENT_MULTIPLE × R500`
   for a surviving cluster.
-- [ ] Test `buildClusterEntries collapses supercluster physical == apparent radius`
+- [x] Test `buildClusterEntries collapses supercluster physical == apparent radius`
   asserting `physicalRadiusMpc === apparentRadiusMpc` and `= dmax/2` (converted).
-- [ ] Test `buildClusterEntries drops a bulk entry near a featured seed anchor`
+- [x] Test `buildClusterEntries drops a bulk entry near a featured seed anchor`
   (place an MCXC row at Coma's seed position → suppressed; one far away →
   kept). This is the "Coma doesn't draw twice" guarantee.
-- [ ] Test `extractAbell finds Abell/ACO tokens in AName or OName`
+- [x] Test `extractAbell finds Abell/ACO tokens in AName or OName`
   (`'A2670'`→`'A2670'`; `' A 2670'`→`'A2670'`; aName blank + oName `'A1656'`
   →`'A1656'`; `'UGC 12890'`→`null`; ACO southern `'S0805'`→`'S0805'`).
-- [ ] Test `buildClusterEntries prefers the Abell designation for the name`
+- [x] Test `buildClusterEntries prefers the Abell designation for the name`
   (row with Abell in `aName` → `names[0]` is the Abell token and `abell` is
   set; row with only `oName` RXC + no Abell → `names[0]` is the RXC name and
   `abell` is null; row with all blank → `names[0]` is the MCXC `id`).
-- [ ] Test `buildClusterEntries sets abell null for superclusters`.
-- [ ] Test `buildClusterEntries tags category 0 for MCXC, 1 for MSCC`.
-- [ ] Implement `buildClusterEntries` + `main`. `npm test -- buildClusters`
+- [x] Test `buildClusterEntries sets abell null for superclusters`.
+- [x] Test `buildClusterEntries tags category 0 for MCXC, 1 for MSCC`.
+- [x] Implement `buildClusterEntries` + `main`. `npm test -- buildClusters`
   → passes.
-- [ ] Add `"build-clusters": "tsx tools/clusters/buildClusters.ts"` to
+- [x] Add `"build-clusters": "tsx tools/clusters/buildClusters.ts"` to
   `package.json` scripts (alphabetical, next to `build-cf4-density`).
-- [ ] Run `npm run build-clusters` once manually; confirm
+- [x] Run `npm run build-clusters` once manually; confirm
   `public/data/clusters.ccat` + `public/data/clusters_meta.json` exist and
   the `.ccat` decodes (the round-trip test already covers decode). Commit.
 
@@ -654,13 +654,13 @@ type ClusterMetaEntry = {
 **Files:** `CLAUDE.md` (modify), `data/raw/mcxc/README.md` (modify),
 `data/raw/mscc/README.md` (modify).
 
-- [ ] Add the run order to `CLAUDE.md`: `npm run fetch-clusters` (downloads
+- [x] Add the run order to `CLAUDE.md`: `npm run fetch-clusters` (downloads
   the gitignored MCXC/MSCC tables, like `fetch-cf4`) → `npm run build-clusters`
   ("after `npm run build-tiers`", consistent with `build-famous`). Note the
   `.ccat` + `clusters_meta.json` artefacts are gitignored under `public/data/`,
   and that the raw `.dat`/`ReadMe` are gitignored (only README + sha256 committed).
-- [ ] Cross-reference the spec in both READMEs.
-- [ ] No test; `npm run typecheck` + `npm test` still green (sanity). Commit.
+- [x] Cross-reference the spec in both READMEs.
+- [x] No test; `npm run typecheck` + `npm test` still green (sanity). Commit.
 
 ---
 

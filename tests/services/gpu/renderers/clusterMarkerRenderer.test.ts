@@ -4,14 +4,19 @@ import type { ClusterMarkerDescriptor } from '../../../../src/@types/rendering/C
 import type { FadeUniformsBgl } from '../../../../src/@types/rendering/FadeUniformsBgl';
 
 // Null-device pattern, mirrors markerLineRenderer.test.ts.
-const newRenderer = (maxMarkers?: number) => {
+const newRenderer = (initialCapacity?: number) => {
   const ctx = {
     device: null as unknown as GPUDevice,
     context: null as unknown as GPUCanvasContext,
     format: 'rgba16float' as GPUTextureFormat,
     canvas: null as unknown as HTMLCanvasElement,
   };
-  return createClusterMarkerRenderer(ctx, 'rgba16float', null as unknown as FadeUniformsBgl, maxMarkers);
+  return createClusterMarkerRenderer(
+    ctx,
+    'rgba16float',
+    null as unknown as FadeUniformsBgl,
+    initialCapacity,
+  );
 };
 
 const cluster = (id: number): ClusterMarkerDescriptor => ({
@@ -45,10 +50,14 @@ describe('ClusterMarkerRenderer (CPU state)', () => {
     expect(r.markerCount()).toBe(2);
   });
 
-  it('caps at maxMarkers', () => {
+  it('grows past the initial capacity instead of truncating', () => {
+    // Regression: a fixed cap dropped descriptors in `pois` order, so
+    // clusters saturated the buffer and superclusters/voids never packed
+    // (visible only when clusters were toggled off).  The buffer must
+    // grow to hold the full set.
     const r = newRenderer(2);
-    r.setMarkers([cluster(1), cluster(2), cluster(3)]);
-    expect(r.markerCount()).toBe(2);
+    r.setMarkers([cluster(1), cluster(2), cluster(3), cluster(4), cluster(5)]);
+    expect(r.markerCount()).toBe(5);
   });
 
   it('label is stable', () => {

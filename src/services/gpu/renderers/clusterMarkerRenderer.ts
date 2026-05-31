@@ -139,13 +139,28 @@ export function createClusterMarkerRenderer(
    * on `createFilamentRenderer`.
    */
   fadeBgl: FadeUniformsBgl,
-  maxMarkers = 64,
+  initialCapacity = 64,
 ): ClusterMarkerRenderer {
   const device = ctx.device as GPUDevice | null;
   const format = hdrFormat;
 
-  // CPU scratch buffer — always allocated.
-  const instanceBuf = new Float32Array(maxMarkers * MARKER_INSTANCE_FLOATS);
+  // Per-instance capacity.  This is an INITIAL hint, not a hard cap:
+  // `setMarkers` grows both the CPU scratch buffer and the GPU vertex
+  // buffer (see growTo) to fit whatever descriptor count it's handed.
+  //
+  // Why grow rather than cap: produceMarkers emits one descriptor per
+  // marker-bearing POI of a visible category EVERY frame — including
+  // fully-faded ones (the emit-all-then-discard contract that keeps the
+  // ring-pick instance_index aligned with getPoisForCategory).  So the
+  // count is data-driven (~660 with the M500 ≥ 1.0 cluster cut, more if
+  // the catalog grows).  A fixed cap silently truncated the tail in
+  // `pois` order, which both dropped whole categories off-screen
+  // (clusters saturated the buffer, so superclusters and voids never got
+  // packed — visible only when clusters were toggled off) AND desynced
+  // the per-category pick index.  Growing keeps the renderer correct for
+  // any catalog size; the buffer is tiny (660 × 48 B ≈ 31 KB).
+  let capacity = initialCapacity;
+  let instanceBuf = new Float32Array(capacity * MARKER_INSTANCE_FLOATS);
   let currentMarkerCount = 0;
 
   // Per-category bucket bookkeeping: where each category's run begins
@@ -366,7 +381,7 @@ export function createClusterMarkerRenderer(
 
     instanceBuffer = device.createBuffer({
       label: 'cluster-marker-instances',
-      size: maxMarkers * MARKER_INSTANCE_BYTES,
+      size: capacity * MARKER_INSTANCE_BYTES,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
 
@@ -410,6 +425,32 @@ export function createClusterMarkerRenderer(
     }
   }
 
+  /**
+   * Ensure the CPU scratch + GPU vertex buffers can hold at least `n`
+   * instances, doubling capacity until they do.  No-op when the current
+   * capacity already fits, so the steady state (after the catalog lands)
+   * pays nothing.  Reallocating the GPU buffer is safe here: setMarkers
+   * runs at frame start before this frame's submit; render reads the
+   * `instanceBuffer` closure variable freshly each call, so it always
+   * binds the current buffer.  destroy() on the old buffer is safe after
+   * the prior frame's submit — WebGPU keeps the backing memory alive
+   * until in-flight GPU reads complete.  Growth happens at most a handful
+   * of times ever (64 → 128 → … until it fits ~660) then never again.
+   */
+  function growTo(n: number): void {
+    if (n <= capacity) return;
+    while (capacity < n) capacity *= 2;
+    instanceBuf = new Float32Array(capacity * MARKER_INSTANCE_FLOATS);
+    if (device) {
+      instanceBuffer?.destroy();
+      instanceBuffer = device.createBuffer({
+        label: 'cluster-marker-instances',
+        size: capacity * MARKER_INSTANCE_BYTES,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      });
+    }
+  }
+
   function setMarkers(descriptors: readonly ClusterMarkerDescriptor[]): void {
     // Partition descriptors by category — preserves order within each
     // category and keeps the instance buffer cache-friendly.  Three
@@ -419,8 +460,14 @@ export function createClusterMarkerRenderer(
     bucketCounts.supercluster = 0;
     bucketCounts.void = 0;
 
+    // Grow to fit the full descriptor set — no truncation.  See growTo
+    // and the `capacity` docstring for why a cap here was a correctness
+    // bug (dropped categories + desynced pick index), not just a visual
+    // budget knob.
+    growTo(descriptors.length);
+
     // First pass: count per category to compute offsets.
-    const count = Math.min(descriptors.length, maxMarkers);
+    const count = descriptors.length;
     for (let i = 0; i < count; i++) {
       const d = descriptors[i]!;
       if (d.category === 'cluster') bucketCounts.cluster++;

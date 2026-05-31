@@ -24,8 +24,8 @@
  */
 import { readFileSync } from 'node:fs';
 import { readNpy } from '../parsers/npyReader';
-import { CLUSTER_ANCHORS, raDecDistToEqCart } from '../../src/data/clusterAnchors';
-import type { ClusterAnchor } from '../../src/@types/data/ClusterAnchor';
+import { parseClusterSeed } from '../parsers/parseClusterSeed';
+import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import { eqToSg, sgToVoxelIndex } from '../utils/math/coordinates';
 import { percentileOf } from '../utils/math/percentile';
@@ -92,14 +92,22 @@ function main(): void {
   );
   console.log('');
 
+  // Load the seed and filter to clusters — the audit checks overdensities
+  // at well-known cluster positions, not at supercluster or void centres.
+  const clusterEntries = parseClusterSeed(
+    readFileSync(rawDataPath('clusters.seed'), 'utf-8'),
+  ).filter((e) => e.category === 'cluster');
+
   // Pre-compute each anchor's continuous voxel index from RA/Dec/distance.
   // The numpy axis order is what we vary below — the SG coords are fixed.
-  const anchorSgIdx: { name: string; sgIdx: [number, number, number] }[] = CLUSTER_ANCHORS.map(
-    (a: ClusterAnchor) => {
+  // ClusterSeedEntry has raHours/decDeg/distMpc (a superset of SkyCoord),
+  // so each entry passes straight into raDecDistToEqCart.
+  const anchorSgIdx: { name: string; sgIdx: [number, number, number] }[] = clusterEntries.map(
+    (a) => {
       const eq = raDecDistToEqCart(a);
       const sg = eqToSg(eq);
       const sgIdx = sgToVoxelIndex(sg);
-      return { name: a.name, sgIdx };
+      return { name: a.names[0]!, sgIdx };
     },
   );
 

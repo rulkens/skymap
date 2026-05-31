@@ -63,6 +63,7 @@ const VIRGO: PointOfInterest = {
   name: 'Virgo Cluster',
   category: 'cluster',
   worldPos: [10, 0, 0],
+  featured: true,
   physicalRadiusMpc: 2,
 };
 
@@ -71,6 +72,7 @@ const FORNAX: PointOfInterest = {
   name: 'Fornax Cluster',
   category: 'cluster',
   worldPos: [0, 10, 0],
+  featured: true,
   physicalRadiusMpc: 1.5,
 };
 

@@ -48,11 +48,8 @@ import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingServi
 import type { GpuTimingFrame } from '../../../@types/gpu/timing/GpuTimingFrame';
 import type { TimingFrameContext } from '../../../@types/gpu/timing/TimingFrameContext';
 import type { TimingSlotName } from '../../../@types/gpu/timing/TimingSlotName';
-import { TIMING_SLOT_NAMES, TIMING_QUERY_SET_SIZE } from './TIMING_SLOT_NAMES';
+import { buildTimingSlotMap } from './buildTimingSlotMap';
 import { decodeTimestampBuffer } from './decodeTimestampBuffer';
-
-/** 32 × u64 = 256 bytes. */
-const BUFFER_BYTES = TIMING_QUERY_SET_SIZE * 8;
 
 /**
  * Build a no-op timing service that allocates no GPU resources.
@@ -93,7 +90,11 @@ export function createDisabledGpuTimingService(): GpuTimingService {
   };
 }
 
-export function createGpuTimingService(device: GPUDevice, wanted: boolean): GpuTimingService {
+export function createGpuTimingService(
+  device: GPUDevice,
+  wanted: boolean,
+  slotNames: readonly string[],
+): GpuTimingService {
   // Disabled iff the caller didn't opt in OR the adapter lacks the
   // feature.  Returning the disabled stub collapses availability
   // branching to one site — consumers gate with a single
@@ -104,27 +105,36 @@ export function createGpuTimingService(device: GPUDevice, wanted: boolean): GpuT
   }
   const listeners = new Set<(frame: GpuTimingFrame) => void>();
 
+  // Slot→(begin, end) index map, derived from the injected name list
+  // (the render-pass registry's `TIMED_SLOT_NAMES`).  The query set is
+  // sized to exactly fit it — two timestamp indices per slot.  Deriving
+  // both from one list means a renderer that joins `HDR_PASSES` grows
+  // the query set and acquires a slot with no edit here.
+  const slotIndices = buildTimingSlotMap(slotNames);
+  const querySetSize = slotNames.length * 2;
+  const bufferBytes = querySetSize * 8;
+
   // ── Active mode: allocate GPU resources once ─────────────────────
   const querySet = device.createQuerySet({
     type: 'timestamp',
-    count: TIMING_QUERY_SET_SIZE,
+    count: querySetSize,
     label: 'gpuTimingService.querySet',
   });
 
   const resolveBuffer = device.createBuffer({
-    size: BUFFER_BYTES,
+    size: bufferBytes,
     usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC | GPUBufferUsage.QUERY_RESOLVE,
     label: 'gpuTimingService.resolve',
   });
 
   const stagingBuffers: [GPUBuffer, GPUBuffer] = [
     device.createBuffer({
-      size: BUFFER_BYTES,
+      size: bufferBytes,
       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
       label: 'gpuTimingService.staging[0]',
     }),
     device.createBuffer({
-      size: BUFFER_BYTES,
+      size: bufferBytes,
       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
       label: 'gpuTimingService.staging[1]',
     }),
@@ -134,7 +144,7 @@ export function createGpuTimingService(device: GPUDevice, wanted: boolean): GpuT
   // Pre-built per-slot descriptors.  The slot mapping is static, so
   // each descriptor object is constructed once and reused per frame.
   const slotDescriptors = new Map<TimingSlotName, GPURenderPassTimestampWrites>();
-  for (const [slot, [begin, end]] of TIMING_SLOT_NAMES) {
+  for (const [slot, [begin, end]] of slotIndices) {
     slotDescriptors.set(slot, {
       querySet,
       beginningOfPassWriteIndex: begin,
@@ -198,8 +208,8 @@ export function createGpuTimingService(device: GPUDevice, wanted: boolean): GpuT
     // frame (mapAsync hasn't resolved yet), skip this frame's resolve.
     if (inFlight[ctx.stagingSlot]) return;
 
-    encoder.resolveQuerySet(querySet, 0, TIMING_QUERY_SET_SIZE, resolveBuffer, 0);
-    encoder.copyBufferToBuffer(resolveBuffer, 0, stagingBuffers[ctx.stagingSlot], 0, BUFFER_BYTES);
+    encoder.resolveQuerySet(querySet, 0, querySetSize, resolveBuffer, 0);
+    encoder.copyBufferToBuffer(resolveBuffer, 0, stagingBuffers[ctx.stagingSlot], 0, bufferBytes);
 
     inFlight[ctx.stagingSlot] = true;
     const slot = ctx.stagingSlot;
@@ -239,7 +249,7 @@ export function createGpuTimingService(device: GPUDevice, wanted: boolean): GpuT
         // values from previous frames where the pass was still active),
         // then filter to the slots this frame actually consumed via
         // `descriptorFor`.  See `consumedSlots` declaration for why.
-        const decoded = decodeTimestampBuffer(copy, timestampPeriod);
+        const decoded = decodeTimestampBuffer(copy, timestampPeriod, slotIndices);
         const perPassMs = new Map<TimingSlotName, number>();
         for (const [s, ms] of decoded) {
           if (frameConsumed.has(s)) perPassMs.set(s, ms);

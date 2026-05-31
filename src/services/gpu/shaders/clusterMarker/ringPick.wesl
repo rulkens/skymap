@@ -77,13 +77,21 @@ fn fsRingPick(in: VsOut) -> @location(0) vec4<u32> {
   // click anywhere on the ring's circular silhouette — including the
   // padded apron — without needing to land on the thin visible band.
   //
-  // History: an earlier draft of this comment claimed r2 > 1.0 was
-  // the cutoff.  That would discard the apron and shrink the hit
-  // target to the bare visible ring, defeating the point of the
-  // padded margin.  The actual cutoff is MARGIN^2 = 1.21 (see
-  // RING_QUAD_MARGIN in ring.wesl).
+  // The cutoff is MARGIN^2 == 1.21 (see RING_QUAD_MARGIN in ring.wesl),
+  // not 1.0: a 1.0 cutoff would discard the padded apron and shrink the
+  // hit target to the bare visible ring, defeating the padding.
   let r2 = dot(in.uv, in.uv);
   if (r2 > 1.21) { discard; }
+
+  // Faded / invisible rings must not be pickable.  'in.alpha' carries
+  // ringAlpha (the vertex stage in ring.wesl selects ringColorAndAlpha.w
+  // into VsOut.alpha).  produceMarkers emits one instance per marker-
+  // bearing POI regardless of fade — faded ones at alpha 0 — so the
+  // CPU descriptor list stays index-aligned with getPoisForCategory and
+  // the @builtin(instance_index) packed below resolves to the right POI.
+  // We discard the alpha-0 instances here so those invisible rings don't
+  // become pick targets while still occupying their instance slot.
+  if (in.alpha <= 0.0) { discard; }
 
   // 'in.poiIndex' was assembled in the vertex stage as
   // 'u32(@builtin(instance_index))'.  The shared VsOut carries it so

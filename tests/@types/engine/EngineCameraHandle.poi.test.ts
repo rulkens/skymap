@@ -13,6 +13,8 @@ describe('EngineCameraHandle.focusOn (POI)', () => {
       name: 'Virgo Cluster',
       category: 'cluster',
       worldPos: [0, 0, 0],
+      featured: true,
+      physicalRadiusMpc: 2.2,
     };
     const _stub: Pick<EngineCameraHandle, 'focusOn'> = {
       focusOn: (target): void => void target,

@@ -128,6 +128,34 @@ export const HDR_PASSES: readonly Pass[] = [
  */
 export const UI_PASSES: readonly Pass[] = [selectionRingPass, markerLinesPass, labelsPass];
 
+/**
+ * The ordered list of GPU-timing slots — the single source of truth for
+ * both slot allocation (`gpuTimingService` builds its query-set index
+ * map from this) and display order (the DebugPanel iterates it).
+ *
+ * It is every `HDR_PASSES` entry's name, bracketed by the four framework
+ * slots that aren't members of either registry:
+ *
+ *   - `scalar-volume` — the half-resolution volume pre-pass, encoded in
+ *     `encodeVolumes` before the HDR loop.
+ *   - `tone-map`      — the post-process tonemap (`renderFrame`).
+ *   - `ui-overlay`    — the combined `UI_PASSES` slot; all UI overlays
+ *     share one swap-chain render pass, so they bill one slot.
+ *   - `pick`          — the r32uint pick pass (`runFrame` / `wireInput`).
+ *
+ * The order is encoder draw order, so the timing panel reads top-to-
+ * bottom as the frame executes.  Adding a renderer to `HDR_PASSES` is
+ * the ONLY edit needed: it auto-acquires a query-set slot here and a
+ * DebugPanel row, with no timing-layer change.
+ */
+export const TIMED_SLOT_NAMES: readonly string[] = [
+  'scalar-volume',
+  ...HDR_PASSES.map((p) => p.name),
+  'tone-map',
+  'ui-overlay',
+  'pick',
+];
+
 export { pointSpritesPass } from './pointSpritesPass';
 export { proceduralDisksPass } from './proceduralDisksPass';
 export { texturedDisksPass } from './texturedDisksPass';

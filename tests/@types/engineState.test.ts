@@ -115,6 +115,7 @@ describe('EngineState type', () => {
       drawMask: ALL_VISIBLE_MASK,
       catalogs: new Map(),
       famousMeta: [],
+      clusterBulk: null,
       tier: 'medium',
     };
     const picking: EnginePickingState = {
@@ -193,6 +194,7 @@ describe('EngineState type', () => {
         points: new Map(),
         filaments: null,
         famousMeta: null,
+        clusterCatalog: null,
         pgcAlias: null,
         cf4Density: null,
         mcpm: null,
@@ -311,6 +313,7 @@ describe('EngineState type', () => {
         drawMask: 0,
         catalogs: new Map(),
         famousMeta: [],
+        clusterBulk: null,
         tier: 'medium',
       },
       picking: {
@@ -378,6 +381,7 @@ describe('EngineState type', () => {
         points: new Map(),
         filaments: null,
         famousMeta: null,
+        clusterCatalog: null,
         pgcAlias: null,
         cf4Density: null,
         mcpm: null,
