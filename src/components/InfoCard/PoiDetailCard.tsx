@@ -1,11 +1,13 @@
 /**
  * PoiDetailCard — rich panel for a focused cluster / supercluster / void.
- * Shows name, category, distance from observer, and physical radius.
+ * Shows name, category, distance from observer, physical radius, and — for
+ * clusters carrying one — the Abell/ACO designation.
  */
 
 import type { ReactNode } from 'react';
 import type { PointOfInterest } from '../../@types/engine/subsystems/PointOfInterest';
 import { formatDistance } from '../../utils/format/distance';
+import { formatAbellDesignation } from '../../utils/format/formatAbellDesignation';
 import { POI_CATEGORY_INFO } from '../../data/poiCategoryInfo';
 import { CardHeader } from './CardHeader';
 import { CardRow } from './CardRow';
@@ -43,6 +45,9 @@ export function PoiDetailCard({
         <CardRow label="Distance" value={formatDistance(distanceMpc)} />
         {poi.category !== 'famousGalaxy' && (
           <CardRow label="Radius" value={formatDistance(poi.physicalRadiusMpc)} />
+        )}
+        {poi.category === 'cluster' && poi.abell !== undefined && (
+          <CardRow label="Abell" value={formatAbellDesignation(poi.abell)} />
         )}
       </div>
     </div>
