@@ -634,6 +634,69 @@ body,
 }
 
 /* ─────────────────────────────────────────────
+   Disk controls — deproject toggle + b/a readout
+   ───────────────────────────────────────────── */
+
+/* Shares the fieldset style with ParamSliders' StarNet / Alpha groups so
+   it visually slots into the right panel without extra rules. */
+.curator-disk-controls {
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  padding: var(--space-3) var(--space-4);
+  background: var(--c-surface2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-4) var(--space-4) 0;
+  flex-shrink: 0;
+}
+
+.curator-disk-controls legend {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-muted);
+  padding: 0 var(--space-2);
+}
+
+.curator-disk-controls label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+  color: var(--c-muted);
+  cursor: default;
+}
+
+.curator-disk-controls input[type='checkbox'] {
+  accent-color: var(--c-accent);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.curator-disk-controls input[type='checkbox']:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Lockout note — shown when axisRatio < DEPROJECT_MIN_AXIS_RATIO */
+.curator-disk-controls__note {
+  font-size: 11px;
+  color: var(--c-warning);
+  font-style: italic;
+}
+
+/* b/a readout — monospace so the digits don't jitter on interaction */
+.curator-disk-controls__ratio {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--c-muted);
+}
+
+/* ─────────────────────────────────────────────
    Metadata + Wikipedia picker row
    ───────────────────────────────────────────── */
 .curator-meta-row {

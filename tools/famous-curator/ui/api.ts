@@ -5,6 +5,7 @@
  * stubbed `fetch`.  Production callers use `defaultApi`, which closes
  * over the real `window.fetch`.
  */
+import type { RecipeDisk } from '../plugin/recipe';
 
 export type GalaxyListEntry = {
   id: string;
@@ -34,6 +35,11 @@ export type ProcessParams = {
   crop: { x: number; y: number; width: number; height: number; rotationDeg: number };
   starnet: { stride: number; upsample: boolean };
   alpha: { blackPoint: number; whitePoint: number; gamma: number };
+  /** Disk-overlay geometry — when present the preview applies the same deproject
+   *  logic as the export route so the starless preview matches committed geometry. */
+  disk?: RecipeDisk;
+  /** Catalog-derived b/a fallback; mirrors the export route's field. */
+  catalogAxisRatio?: number;
 };
 
 export type ProcessResult = {

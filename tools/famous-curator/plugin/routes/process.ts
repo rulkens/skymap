@@ -21,6 +21,8 @@ import { sessionPath } from '../tmpSession.js';
 import { runStarnet, type StarnetConfig } from '../starnet.js';
 import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlpha.js';
 import { rotatedExtract } from '../cropExtract.js';
+import { deprojectDisk, willDeproject } from '../../../famous/deprojectDisk.js';
+import { validateRecipeDisk, type RecipeDisk } from '../recipe.js';
 
 const PREVIEW_PX = 512;
 
@@ -29,6 +31,18 @@ export type ProcessBody = {
   crop: { x: number; y: number; width: number; height: number; rotationDeg: number };
   starnet: { stride: number; upsample: boolean };
   alpha: { blackPoint: number; whitePoint: number; gamma: number };
+  /**
+   * Disk-overlay geometry annotation drawn in the curator UI.  When present
+   * the preview pipeline applies the same deproject logic as the export route,
+   * so the starless preview reflects the geometry the maintainer will commit.
+   * Mirrors the export route so preview == committed geometry.
+   */
+  disk?: RecipeDisk;
+  /**
+   * Catalog-derived axis ratio (b/a) for this galaxy — falls back to
+   * disk.axisRatio when absent (same fallback chain as export.ts).
+   */
+  catalogAxisRatio?: number;
 };
 
 export type ProcessResult = {
@@ -57,8 +71,31 @@ export async function handleProcess(opts: {
   // 1. Crop the full-resolution source.  `rotatedExtract` handles the
   //    happy path (rotation=0, in-bounds rect) and the relaxed cases:
   //    rotated rect, out-of-image rect (transparent fill).
+  //
+  //    Deproject logic mirrors export.ts exactly so the starless preview
+  //    reflects the same geometry the maintainer will commit.
+  //    effectivePaDeg: disk.paDeg is in the SOURCE frame; rotatedExtract
+  //    rotates the image by -rotationDeg, so the crop frame PA is
+  //    disk.paDeg - rotationDeg (same derivation as export.ts).
+  //
+  //    Too-edge-on skip is intentionally not logged here — the export
+  //    route owns the user-facing skip warning.  A per-preview-keystroke
+  //    console.warn would be noise for the operator.
   const pipeline = await rotatedExtract(sourcePath, body.crop);
-  const cropped = await pipeline.png().toBuffer();
+  const disk = body.disk !== undefined ? validateRecipeDisk(body.disk) : undefined;
+  const effectiveAxisRatio = disk?.axisRatio ?? body.catalogAxisRatio;
+  const effectivePaDeg = disk !== undefined ? disk.paDeg - body.crop.rotationDeg : 0;
+  const wantsDeproject = disk?.deproject === true;
+  const deprojected =
+    wantsDeproject && effectiveAxisRatio !== undefined && willDeproject(effectiveAxisRatio);
+  // The too-edge-on guard is implicit in willDeproject: axisRatio below
+  // DEPROJECT_MIN_AXIS_RATIO returns false, so deproject is silently skipped.
+  // No console.warn here — export.ts owns the user-facing skip warning;
+  // a per-preview console.warn would flood the terminal on every slider drag.
+  const deprojectedPipeline = deprojected
+    ? deprojectDisk(pipeline, { paDeg: effectivePaDeg, axisRatio: effectiveAxisRatio! })
+    : pipeline;
+  const cropped = await deprojectedPipeline.png().toBuffer();
   writeFileSync(croppedPath, cropped);
 
   // 2. StarNet (or mock copy).  The mock copies input → output verbatim,

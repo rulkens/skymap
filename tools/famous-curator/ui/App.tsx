@@ -27,6 +27,7 @@ import { ParamSliders } from './components/ParamSliders';
 import { PreviewPane } from './components/PreviewPane';
 import { MetadataForm } from './components/MetadataForm';
 import { WikipediaImagePicker } from './components/WikipediaImagePicker';
+import { DiskControls } from './components/DiskControls';
 import { resolveWikipediaMedia } from './wikipediaMedia';
 import type { CommitPhase } from './components/ParamSliders';
 
@@ -198,6 +199,12 @@ function AppInner() {
       console.error('file drop failed', err);
     }
   }
+  // Derived for the active galaxy — used in both the JSX tree (DiskControls,
+  // CropCanvas) and onCommit (postProcess body).  A single derivation keeps
+  // both consumers consistent without threading a prop.
+  const activeGalaxy = state.galaxies.find((g) => g.id === state.activeId);
+  const catalogAxisRatio = activeGalaxy?.axisRatio;
+
   /**
    * Unified commit: re-process if needed, export, then rebuild famous.bin.
    *
@@ -210,7 +217,12 @@ function AppInner() {
    */
   async function onCommit(): Promise<void> {
     if (!state.activeId || !state.tmpId || !state.crop) return;
-    const needsProcess = state.dirty.crop || state.dirty.starnet || !state.processedOnce;
+    // disk dirty joins crop and starnet as a re-process trigger: toggling
+    // deproject changes the geometry StarNet ingests, so the cached
+    // starless.png is stale.  The reducer already sets dirty.disk on
+    // setDisk / clearDisk.
+    const needsProcess =
+      state.dirty.crop || state.dirty.starnet || state.dirty.disk || !state.processedOnce;
     try {
       if (needsProcess) {
         setCommitPhase('processing');
@@ -219,6 +231,8 @@ function AppInner() {
           crop: state.crop,
           starnet: state.starnet,
           alpha: state.alpha,
+          disk: state.disk,
+          catalogAxisRatio,
         });
         dispatch({ type: 'setPreviews', starless: r.starlessPreviewUrl, alpha: r.alphaPreviewUrl });
         dispatch({ type: 'markProcessed' });
@@ -332,26 +346,16 @@ function AppInner() {
           busy={fetchBusy}
           onFetch={onFetch}
         />
-        {/* Derive catalog b/a for the active galaxy so DiskOverlay can
-            pre-fill the minor axis on first creation. */}
-        {(() => {
-          const activeGalaxy = state.galaxies.find((g) => g.id === state.activeId);
-          const catalogAxisRatio = activeGalaxy?.axisRatio;
-          return (
-            <CropCanvas
-              source={state.source}
-              crop={state.crop}
-              onCropChange={(c) => dispatch({ type: 'setCrop', crop: c })}
-              onFileDrop={onFileDrop}
-              disk={state.disk}
-              catalogAxisRatio={catalogAxisRatio}
-              onDiskChange={(d) => dispatch({ type: 'setDisk', disk: d })}
-              downloadOriginalUrl={
-                state.tmpId ? `/api/preview/${state.tmpId}/source.png` : undefined
-              }
-            />
-          );
-        })()}
+        <CropCanvas
+          source={state.source}
+          crop={state.crop}
+          onCropChange={(c) => dispatch({ type: 'setCrop', crop: c })}
+          onFileDrop={onFileDrop}
+          disk={state.disk}
+          catalogAxisRatio={catalogAxisRatio}
+          onDiskChange={(d) => dispatch({ type: 'setDisk', disk: d })}
+          downloadOriginalUrl={state.tmpId ? `/api/preview/${state.tmpId}/source.png` : undefined}
+        />
         <div className="curator-meta-row">
           <MetadataForm
             metadata={state.metadata}
@@ -370,6 +374,14 @@ function AppInner() {
       </main>
       <Splitter ariaLabel="Resize right panel" onDrag={(dx) => setRightW((w) => w - dx)} />
       <aside>
+        {/* DiskControls renders only when a disk ellipse has been drawn;
+            placing it above ParamSliders groups disk geometry with the
+            other pipeline controls. */}
+        <DiskControls
+          disk={state.disk}
+          catalogAxisRatio={catalogAxisRatio}
+          onDiskChange={(d) => dispatch({ type: 'setDisk', disk: d })}
+        />
         <ParamSliders
           starnet={state.starnet}
           alpha={state.alpha}
