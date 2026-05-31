@@ -12,6 +12,19 @@
 
 ---
 
+## Reality reconciliation (the plan's file map was partly stale — corrections below override the task bodies)
+
+The curator UI was mapped before execution. Corrections, applied across all tasks:
+
+- **Pure-geometry precedent is `tools/famous-curator/ui/cropMath.ts`** (not the nonexistent `cropGeometry.ts`). The new pure module is `tools/famous-curator/ui/diskOverlay.ts`, mirroring `cropMath.ts` (no React/DOM imports).
+- **No curator reducer test exists yet.** Task 1 **creates** `tests/tools/famous-curator/ui/state.test.ts` (curator UI tests live under `tests/tools/famous-curator/ui/`), it does not "extend" one. The `diskOverlay` test is `tests/tools/famous-curator/ui/diskOverlay.test.ts`.
+- **Component split (honours the component skill — overrides "modify CropCanvas"):** the overlay is a NEW `components/DiskOverlay.tsx` rendered by `CropCanvas.tsx` as a sibling layer inside its positioned container (CropCanvas grows by ~3 lines; all disk rendering + pointer handling lives in DiskOverlay). The deproject toggle is a NEW `components/DiskControls.tsx` fieldset, NOT added to `ParamSliders.tsx`. Crop and disk stay independent via separate hit-target DOM elements (each handle `stopPropagation`s its own pointerdown).
+- **Coordinate transform to reuse:** `CropCanvas.tsx` renders an `<img>` with the crop as a CSS-positioned `<div>`; the screen→source transform is `canvasScale = imgRect.width / source.width` (see CropCanvas `startDrag`). DiskOverlay reuses exactly this.
+- **State gains a `disk` dirty flag** (`DirtyFlags.disk`), set on `setDisk`/`clearDisk`, cleared on `markProcessed`/`selectGalaxy`/`setSource`, and included in `App.tsx` `onCommit`'s `needsProcess`. Without it a disk/deproject change after a Process wouldn't re-bake the webp before export → stale output. (Intentional extension beyond Task 1's literal contract.)
+- **Deproject-preview gap (Task 4):** Plan 2 added deprojection to the EXPORT route only (`routes/export.ts`), NOT the process route. So a server-rendered deprojected PREVIEW requires `routes/process.ts` to also deproject when `disk.deproject` (reusing `willDeproject` + `deprojectDisk`, same frame logic as export), plus `disk` threaded onto `ProcessParams` (`api.ts`) and the process body. Task 4 owns this.
+
+---
+
 ## Task 1: Disk slice in the reducer
 
 **Files:**
