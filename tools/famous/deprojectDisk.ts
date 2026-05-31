@@ -38,24 +38,31 @@ export type DeprojectInput = {
 };
 
 /**
+ * True when a disk at this axis ratio should actually be stretched to face-on:
+ * the band [DEPROJECT_MIN_AXIS_RATIO, 1).  Outside it deprojection is a no-op —
+ * axisRatio >= 1 is already face-on (nothing to recover), and below the minimum
+ * the disk is too inclined to recover (a >3.3× stretch smears more than it
+ * fixes).  Exported so callers gate their encode path on the same band without
+ * re-deriving the bounds.
+ */
+export function willDeproject(axisRatio: number): boolean {
+  return axisRatio >= DEPROJECT_MIN_AXIS_RATIO && axisRatio < 1;
+}
+
+/**
  * Returns a sharp pipeline affine-stretched to face-on, or the input
  * unchanged when no stretch applies.  Pure w.r.t. the geometry; the caller
  * chains `.resize()` / `.webp()`.
  *
  * Stretch factor = 1 / axisRatio along the MINOR axis (perpendicular to
- * paDeg).  At axisRatio >= 1 returns the input untouched.  At
- * axisRatio < DEPROJECT_MIN_AXIS_RATIO returns the input untouched
+ * paDeg).  Outside the willDeproject band the input is returned untouched
  * (pass-through; caller logs the skip) — never a silent extreme smear.
  */
 export function deprojectDisk(src: Sharp, input: DeprojectInput): Sharp {
   const { paDeg, axisRatio } = input;
 
-  // Identity: already face-on.
-  if (axisRatio >= 1) return src;
-
-  // Too inclined: stretching > 1/DEPROJECT_MIN_AXIS_RATIO ≈ 3.3× smears more
-  // than it recovers (dust lane dominates, sky background bleeds in).
-  if (axisRatio < DEPROJECT_MIN_AXIS_RATIO) return src;
+  // Only the [DEPROJECT_MIN_AXIS_RATIO, 1) band is stretched (see willDeproject).
+  if (!willDeproject(axisRatio)) return src;
 
   const s = 1 / axisRatio;
   const rad = (paDeg * Math.PI) / 180;

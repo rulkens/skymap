@@ -13,7 +13,7 @@
  *   effectivePaDeg = disk.paDeg - crop.rotationDeg.
  * For the tests below, rotationDeg=0 so effectivePaDeg = disk.paDeg.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -125,7 +125,7 @@ describe('handleExport — deprojection', () => {
     expect(deprojH).toBeGreaterThan(controlH);
   });
 
-  it('ships as-shot when forced on but too edge-on', async () => {
+  it('ships as-shot and logs a threshold skip when forced on but too edge-on', async () => {
     // axisRatio=0.2 < DEPROJECT_MIN_AXIS_RATIO (0.3) → skip deproject.
     const sess = await seedSession('edgeon');
     const repo = fakeRepoRoot();
@@ -138,11 +138,17 @@ describe('handleExport — deprojection', () => {
       deproject: true,
     };
 
+    // Spy so we can prove the skip was THRESHOLD-driven, not merely that the
+    // output happened to be unchanged.  Without this, a too-edge-on skip is
+    // indistinguishable from a deproject-off skip.
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     await handleExport({
       body: { ...baseBody(sess.tmpId), disk },
       repoRoot: repo,
       sessionDirOverride: sess.sessionDir,
     });
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('skip deproject'));
+    warnSpy.mockRestore();
 
     const { height: edgeonH } = await sourceWebpDims(curatedGalaxyDir(repo, 'ngc-deproject'));
 
@@ -171,7 +177,8 @@ describe('handleExport — deprojection', () => {
     });
     const noDiskDims = await sourceWebpDims(curatedGalaxyDir(repoNoDisk, 'ngc-deproject'));
 
-    // With disk but deproject=false — must match the no-disk baseline.
+    // With disk but deproject=false — must match the no-disk baseline AND emit
+    // no skip warning (a disabled toggle is not a threshold skip).
     const sessOff = await seedSession('deproject-off');
     const repoOff = fakeRepoRoot();
     const disk: RecipeDisk = {
@@ -181,11 +188,14 @@ describe('handleExport — deprojection', () => {
       axisRatio: 0.5,
       deproject: false,
     };
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     await handleExport({
       body: { ...baseBody(sessOff.tmpId), disk },
       repoRoot: repoOff,
       sessionDirOverride: sessOff.sessionDir,
     });
+    expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('skip deproject'));
+    warnSpy.mockRestore();
     const offDims = await sourceWebpDims(curatedGalaxyDir(repoOff, 'ngc-deproject'));
 
     expect(offDims.width).toBe(noDiskDims.width);

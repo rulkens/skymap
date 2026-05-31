@@ -41,7 +41,7 @@ import { serialiseRecipe, validateRecipeDisk, type Recipe, type RecipeDisk } fro
 import { upsertOverrideEntry, type OverrideIndex } from '../overrideIndex.js';
 import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlpha.js';
 import { rotatedExtract } from '../cropExtract.js';
-import { deprojectDisk } from '../../../famous/deprojectDisk.js';
+import { deprojectDisk, willDeproject } from '../../../famous/deprojectDisk.js';
 import { DEPROJECT_MIN_AXIS_RATIO } from '../../../../src/data/famousCalibration.js';
 
 const FULL_PX = 1024;
@@ -116,21 +116,23 @@ export async function handleExport(opts: {
   const disk = body.disk !== undefined ? validateRecipeDisk(body.disk) : undefined;
   const effectiveAxisRatio = disk?.axisRatio ?? body.catalogAxisRatio;
   const effectivePaDeg = disk !== undefined ? disk.paDeg - body.crop.rotationDeg : 0;
-  // A webp is deprojected when deproject=true AND an axis ratio is available AND
-  // the ratio meets the minimum threshold.  When too edge-on we log a skip and
-  // ship as-shot — never a silent extreme smear.
-  const shouldDeproject =
-    disk?.deproject === true &&
-    effectiveAxisRatio !== undefined &&
-    effectiveAxisRatio >= DEPROJECT_MIN_AXIS_RATIO;
-  if (disk?.deproject === true && !shouldDeproject) {
+  const wantsDeproject = disk?.deproject === true;
+  // The webp is deprojected only when the maintainer asked AND the effective
+  // axis ratio falls in the stretchable band [DEPROJECT_MIN_AXIS_RATIO, 1) —
+  // single-sourced with deprojectDisk's own guard via willDeproject.
+  const deprojected =
+    wantsDeproject && effectiveAxisRatio !== undefined && willDeproject(effectiveAxisRatio);
+  // Forced on but too edge-on (or no axis ratio at all) → ship as-shot and log a
+  // skip rather than apply a silent extreme smear.  Face-on (ratio >= 1) is not a
+  // skip: there is simply nothing to stretch.
+  if (
+    wantsDeproject &&
+    (effectiveAxisRatio === undefined || effectiveAxisRatio < DEPROJECT_MIN_AXIS_RATIO)
+  ) {
     console.warn(
-      `[export] skip deproject for ${body.id}: axisRatio=${effectiveAxisRatio} < threshold ${DEPROJECT_MIN_AXIS_RATIO}`,
+      `[export] skip deproject for ${body.id}: axisRatio=${effectiveAxisRatio} below threshold ${DEPROJECT_MIN_AXIS_RATIO}`,
     );
   }
-  // deprojected = the webp was ACTUALLY stretched (ratio in (0,1) and above threshold).
-  // axisRatio >= 1 is face-on — nothing to stretch even if requested.
-  const deprojected = shouldDeproject && effectiveAxisRatio !== undefined && effectiveAxisRatio < 1;
 
   const sourcePipeline = await rotatedExtract(sourcePath, body.crop);
   // Deproject the hi-res crop to face-on before downsize so the extra resolution
