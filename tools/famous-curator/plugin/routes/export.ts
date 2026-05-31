@@ -42,7 +42,6 @@ import { upsertOverrideEntry, type OverrideIndex } from '../overrideIndex.js';
 import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlpha.js';
 import { rotatedExtract } from '../cropExtract.js';
 import { deprojectDisk, willDeproject } from '../../../famous/deprojectDisk.js';
-import { DEPROJECT_MIN_AXIS_RATIO } from '../../../../src/data/famousCalibration.js';
 import { deriveFamousCalibration } from '../../../famous/deriveFamousCalibration.js';
 import type { FamousCalibration } from '../../../../src/@types/loading/FamousCalibration';
 
@@ -121,22 +120,13 @@ export async function handleExport(opts: {
   const effectiveAxisRatio = disk?.axisRatio ?? body.catalogAxisRatio;
   const effectivePaDeg = disk !== undefined ? disk.paDeg - body.crop.rotationDeg : 0;
   const wantsDeproject = disk?.deproject === true;
-  // The webp is deprojected only when the maintainer asked AND the effective
-  // axis ratio falls in the stretchable band [DEPROJECT_MIN_AXIS_RATIO, 1) —
-  // single-sourced with deprojectDisk's own guard via willDeproject.
+  // The webp is deprojected whenever the maintainer asked AND the effective
+  // axis ratio is a tilted, valid disk (0 < b/a < 1) — single-sourced with
+  // deprojectDisk's own guard via willDeproject.  A forced toggle on a very
+  // edge-on disk still deprojects; the only skip is when there is nothing to
+  // stretch (b/a >= 1) or no axis ratio at all.
   const deprojected =
     wantsDeproject && effectiveAxisRatio !== undefined && willDeproject(effectiveAxisRatio);
-  // Forced on but too edge-on (or no axis ratio at all) → ship as-shot and log a
-  // skip rather than apply a silent extreme smear.  Face-on (ratio >= 1) is not a
-  // skip: there is simply nothing to stretch.
-  if (
-    wantsDeproject &&
-    (effectiveAxisRatio === undefined || effectiveAxisRatio < DEPROJECT_MIN_AXIS_RATIO)
-  ) {
-    console.warn(
-      `[export] skip deproject for ${body.id}: axisRatio=${effectiveAxisRatio} below threshold ${DEPROJECT_MIN_AXIS_RATIO}`,
-    );
-  }
 
   // Derive calibration whenever a disk and an axis ratio are both available.
   // catalogAxisRatio falls back to disk.axisRatio so callers that omit it but

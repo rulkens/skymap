@@ -29,12 +29,26 @@ describe('DiskControls', () => {
     expect(onDiskChange).toHaveBeenCalledWith({ ...baseDisk, deproject: true });
   });
 
-  it('disables the toggle when too edge-on and shows the note', () => {
+  it('keeps the toggle enabled and warns when very edge-on (forceable)', () => {
+    const onDiskChange = vi.fn();
     const edgeOnDisk: RecipeDisk = { ...baseDisk, axisRatio: 0.2 };
-    render(<DiskControls disk={edgeOnDisk} catalogAxisRatio={undefined} onDiskChange={vi.fn()} />);
+    render(
+      <DiskControls disk={edgeOnDisk} catalogAxisRatio={undefined} onDiskChange={onDiskChange} />,
+    );
     const checkbox = screen.getByLabelText(/deproject to face-on/i);
-    expect(checkbox).toBeDisabled();
-    // The note includes "as-shot only" and the threshold explanation.
-    expect(screen.getByText(/as-shot only/i)).toBeInTheDocument();
+    // The advisory threshold no longer disables the control — it can be forced.
+    expect(checkbox).not.toBeDisabled();
+    fireEvent.click(checkbox);
+    expect(onDiskChange).toHaveBeenCalledWith({ ...edgeOnDisk, deproject: true });
+    // A non-blocking warning shows the aggressive-stretch advisory.
+    const warning = screen.getByTestId('deproject-warning');
+    expect(warning).toBeInTheDocument();
+    expect(warning).toHaveTextContent(/very edge-on/i);
+    expect(warning).toHaveTextContent('0.20');
+  });
+
+  it('shows no edge-on warning at or above the advisory threshold', () => {
+    render(<DiskControls disk={baseDisk} catalogAxisRatio={0.6} onDiskChange={vi.fn()} />);
+    expect(screen.queryByTestId('deproject-warning')).toBeNull();
   });
 });

@@ -77,10 +77,6 @@ export async function handleProcess(opts: {
   //    effectivePaDeg: disk.paDeg is in the SOURCE frame; rotatedExtract
   //    rotates the image by -rotationDeg, so the crop frame PA is
   //    disk.paDeg - rotationDeg (same derivation as export.ts).
-  //
-  //    Too-edge-on skip is intentionally not logged here — the export
-  //    route owns the user-facing skip warning.  A per-preview-keystroke
-  //    console.warn would be noise for the operator.
   const pipeline = await rotatedExtract(sourcePath, body.crop);
   const disk = body.disk !== undefined ? validateRecipeDisk(body.disk) : undefined;
   const effectiveAxisRatio = disk?.axisRatio ?? body.catalogAxisRatio;
@@ -88,10 +84,10 @@ export async function handleProcess(opts: {
   const wantsDeproject = disk?.deproject === true;
   const deprojected =
     wantsDeproject && effectiveAxisRatio !== undefined && willDeproject(effectiveAxisRatio);
-  // The too-edge-on guard is implicit in willDeproject: axisRatio below
-  // DEPROJECT_MIN_AXIS_RATIO returns false, so deproject is silently skipped.
-  // No console.warn here — export.ts owns the user-facing skip warning;
-  // a per-preview console.warn would flood the terminal on every slider drag.
+  // willDeproject gates the stretch to a tilted, valid disk (0 < b/a < 1), so a
+  // forced toggle on a very edge-on disk is honored here too — preview matches
+  // the committed geometry.  No console.warn here: export.ts owns user-facing
+  // warnings, and a per-preview log would flood the terminal on every drag.
   const deprojectedPipeline = deprojected
     ? deprojectDisk(pipeline, { paDeg: effectivePaDeg, axisRatio: effectiveAxisRatio! })
     : pipeline;

@@ -71,7 +71,7 @@ describe('assembleFamousMeta', () => {
     const result = assembleFamousMeta([entry], axisRatios, () => recipe);
 
     // deprojected = disk.deproject && willDeproject(disk.axisRatio ?? axisRatios[0])
-    // = true && willDeproject(0.5) = true (0.5 is in [DEPROJECT_MIN_AXIS_RATIO, 1))
+    // = true && willDeproject(0.5) = true (0.5 is a tilted, valid disk in (0, 1))
     const expected = deriveFamousCalibration({
       disk,
       crop: recipe.crop,

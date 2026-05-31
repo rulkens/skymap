@@ -23,12 +23,11 @@
  *   θ=0  → M = [[1,0],[0,s]] — scales image-Y (the minor axis when paDeg=0).
  *   θ=90 → M = [[s,0],[0,1]] — scales image-X (the minor axis when paDeg=90).
  *
- * Guards: axisRatio ≥ 1 (face-on, nothing to do) and axisRatio < DEPROJECT_MIN_AXIS_RATIO
- * (too inclined — the stretch smears rather than recovers) both return src untouched.
- * The caller is responsible for logging the skip when it matters.
+ * Guard: only a tilted, valid disk is stretched — axisRatio in (0, 1).  At
+ * axisRatio >= 1 there is nothing to recover (already face-on/round) and at
+ * axisRatio <= 0 the data is invalid; both return src untouched.
  */
 import type { Sharp } from 'sharp';
-import { DEPROJECT_MIN_AXIS_RATIO } from '../../src/data/famousCalibration';
 
 export type DeprojectInput = {
   /** Major-axis PA of the disk in the IMAGE frame, degrees. */
@@ -38,15 +37,16 @@ export type DeprojectInput = {
 };
 
 /**
- * True when a disk at this axis ratio should actually be stretched to face-on:
- * the band [DEPROJECT_MIN_AXIS_RATIO, 1).  Outside it deprojection is a no-op —
- * axisRatio >= 1 is already face-on (nothing to recover), and below the minimum
- * the disk is too inclined to recover (a >3.3× stretch smears more than it
- * fixes).  Exported so callers gate their encode path on the same band without
- * re-deriving the bounds.
+ * True when this axis ratio is tilted enough to deproject and not invalid:
+ * the open range (0, 1).  axisRatio >= 1 is already face-on/round (nothing to
+ * recover); axisRatio <= 0 is invalid data.  The single source of truth for
+ * the deproject gate — export, process, deprojectDisk's own guard, and
+ * buildFamous all route through it, so an explicitly-enabled toggle is honored
+ * uniformly.  DEPROJECT_MIN_AXIS_RATIO is advisory (UI seed + warning) and is
+ * deliberately not consulted here.
  */
 export function willDeproject(axisRatio: number): boolean {
-  return axisRatio >= DEPROJECT_MIN_AXIS_RATIO && axisRatio < 1;
+  return axisRatio > 0 && axisRatio < 1;
 }
 
 /**
@@ -55,13 +55,13 @@ export function willDeproject(axisRatio: number): boolean {
  * chains `.resize()` / `.webp()`.
  *
  * Stretch factor = 1 / axisRatio along the MINOR axis (perpendicular to
- * paDeg).  Outside the willDeproject band the input is returned untouched
- * (pass-through; caller logs the skip) — never a silent extreme smear.
+ * paDeg).  When willDeproject is false (axisRatio >= 1 or <= 0) the input is
+ * returned untouched (pass-through).
  */
 export function deprojectDisk(src: Sharp, input: DeprojectInput): Sharp {
   const { paDeg, axisRatio } = input;
 
-  // Only the [DEPROJECT_MIN_AXIS_RATIO, 1) band is stretched (see willDeproject).
+  // Only a tilted, valid disk — axisRatio in (0, 1) — is stretched (see willDeproject).
   if (!willDeproject(axisRatio)) return src;
 
   const s = 1 / axisRatio;

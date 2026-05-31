@@ -2,9 +2,9 @@
  * handleExport — deprojection pipeline tests.
  *
  * Verifies that a tilted-disk export is geometrically stretched to
- * face-on before downsize, that the too-edge-on guard ships as-shot,
- * and that the deproject=off path is byte-identical to the no-disk
- * baseline.
+ * face-on before downsize, that a forced toggle deprojects even a very
+ * edge-on disk, and that the deproject=off path is byte-identical to the
+ * no-disk baseline.
  *
  * Frame note: `starless.png` in the session dir is produced by
  * `handleProcess`, which runs `rotatedExtract` → StarNet → starless.png.
@@ -125,8 +125,10 @@ describe('handleExport — deprojection', () => {
     expect(deprojH).toBeGreaterThan(controlH);
   });
 
-  it('ships as-shot and logs a threshold skip when forced on but too edge-on', async () => {
-    // axisRatio=0.2 < DEPROJECT_MIN_AXIS_RATIO (0.3) → skip deproject.
+  it('still deprojects a very edge-on disk when the toggle is forced on', async () => {
+    // axisRatio=0.2 is below the advisory DEPROJECT_MIN_AXIS_RATIO (0.3) but
+    // the floor is no longer a hard-stop — a forced toggle must deproject, and
+    // it must do so without logging a skip warning.
     const sess = await seedSession('edgeon');
     const repo = fakeRepoRoot();
 
@@ -134,25 +136,23 @@ describe('handleExport — deprojection', () => {
       centerPx: [64, 64],
       radiusPx: 24,
       paDeg: 0,
-      axisRatio: 0.2, // below threshold — must not deproject
+      axisRatio: 0.2, // very edge-on — but forced on, so it deprojects
       deproject: true,
     };
 
-    // Spy so we can prove the skip was THRESHOLD-driven, not merely that the
-    // output happened to be unchanged.  Without this, a too-edge-on skip is
-    // indistinguishable from a deproject-off skip.
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     await handleExport({
       body: { ...baseBody(sess.tmpId), disk },
       repoRoot: repo,
       sessionDirOverride: sess.sessionDir,
     });
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('skip deproject'));
+    // No skip warning fires for a forced edge-on deproject.
+    expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('skip deproject'));
     warnSpy.mockRestore();
 
     const { height: edgeonH } = await sourceWebpDims(curatedGalaxyDir(repo, 'ngc-deproject'));
 
-    // Control: deproject=off — produces the same as-shot output.
+    // Control: same geometry, deproject=off — no stretch.
     const sessOff = await seedSession('edgeon-off');
     const repoOff = fakeRepoRoot();
     const diskOff: RecipeDisk = { ...disk, deproject: false };
@@ -163,7 +163,8 @@ describe('handleExport — deprojection', () => {
     });
     const { height: controlH } = await sourceWebpDims(curatedGalaxyDir(repoOff, 'ngc-deproject'));
 
-    expect(edgeonH).toBe(controlH);
+    // The deproject actually ran: the stretched bounding box is taller.
+    expect(edgeonH).toBeGreaterThan(controlH);
   });
 
   it('is unchanged when deproject is off', async () => {

@@ -63,6 +63,7 @@ describe('state reducer', () => {
           type: '',
           description: '',
           curated: false,
+          hasDisk: false,
         },
       ],
     });

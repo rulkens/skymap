@@ -4,17 +4,16 @@
  * Renders nothing when no disk has been drawn — there is no geometry to
  * configure, so showing the fieldset would be misleading.
  *
- * Edge-on lockout: when the effective b/a falls below
- * DEPROJECT_MIN_AXIS_RATIO the checkbox is disabled and a note explains
- * why.  The stored deproject value is NOT coerced to false here — the
- * export/process pipeline guards already handle the as-shot fallthrough,
- * and auto-flipping state on render would cause a render loop (each flip
- * triggers a re-render which triggers the effect again).  The disabled
- * control plus the pipeline guard is the correct boundary of
- * responsibility: the UI says "you can't", the pipeline enforces it.
+ * Edge-on advisory: DEPROJECT_MIN_AXIS_RATIO is advisory, not a lockout.
+ * The checkbox is always interactive — a curator may force deprojection
+ * even on a very edge-on disk.  When the effective b/a falls below the
+ * advisory threshold a non-blocking warning notes that the minor-axis
+ * stretch will be aggressive.  The stored deproject value is NOT coerced
+ * from render — auto-flipping state on render would cause a render loop
+ * (each flip re-renders, re-triggering the flip).
  *
  * Effective axis ratio resolution: disk.axisRatio > catalogAxisRatio > 1
- * (same chain as DiskOverlay and the export route), so the lockout reads
+ * (same chain as DiskOverlay and the export route), so the warning reads
  * from the same value the pipeline will use.
  */
 import type { RecipeDisk } from '../../plugin/recipe';
@@ -35,7 +34,7 @@ export function DiskControls(props: DiskControlsProps) {
 
   // Resolved b/a: user override > catalog > assume round (1).
   const effectiveAxisRatio = disk.axisRatio ?? catalogAxisRatio ?? 1;
-  const tooEdgeOn = effectiveAxisRatio < DEPROJECT_MIN_AXIS_RATIO;
+  const veryEdgeOn = effectiveAxisRatio < DEPROJECT_MIN_AXIS_RATIO;
 
   return (
     <fieldset className="curator-disk-controls">
@@ -45,15 +44,14 @@ export function DiskControls(props: DiskControlsProps) {
           id="disk-deproject"
           type="checkbox"
           checked={disk.deproject}
-          disabled={tooEdgeOn}
           onChange={(e) => onDiskChange({ ...disk, deproject: e.target.checked })}
         />
         Deproject to face-on
       </label>
-      {tooEdgeOn && (
-        <p className="curator-disk-controls__note">
-          as-shot only (too edge-on: b/a {effectiveAxisRatio.toFixed(2)} &lt;{' '}
-          {DEPROJECT_MIN_AXIS_RATIO})
+      {veryEdgeOn && (
+        <p className="curator-disk-controls__note" data-testid="deproject-warning">
+          Very edge-on (b/a {effectiveAxisRatio.toFixed(2)}) — deprojection will stretch the minor
+          axis heavily.
         </p>
       )}
       {/* Resolved b/a readout — shows the maintainer exactly which value the

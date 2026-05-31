@@ -6,8 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import sharp from 'sharp';
-import { DEPROJECT_MIN_AXIS_RATIO } from '../../../src/data/famousCalibration';
-import { deprojectDisk } from '../../../tools/famous/deprojectDisk';
+import { deprojectDisk, willDeproject } from '../../../tools/famous/deprojectDisk';
 
 const W = 100;
 const H = 100;
@@ -58,14 +57,39 @@ describe('deprojectDisk', () => {
     expect(info.height).toBeLessThanOrEqual(H + 2);
   });
 
-  it('passes through (identity dimensions) when axisRatio < DEPROJECT_MIN_AXIS_RATIO', async () => {
-    // Too inclined — stretching would smear texture beyond recovery.
-    const axisRatio = DEPROJECT_MIN_AXIS_RATIO - 0.1;
+  it('still deprojects a very edge-on disk (axisRatio=0.2) when forced', async () => {
+    // The old hard floor (DEPROJECT_MIN_AXIS_RATIO=0.3) is now advisory: a
+    // tilted, valid disk (0 < b/a < 1) always stretches.  paDeg=0, axisRatio=0.2
+    // → s = 1/0.2 = 5, so M = [[1,0],[0,5]] — height grows ~5×, width unchanged.
     const src = makeSrc();
-    const result = deprojectDisk(src, { paDeg: 0, axisRatio });
+    const result = deprojectDisk(src, { paDeg: 0, axisRatio: 0.2 });
     const { info } = await result.png().toBuffer({ resolveWithObject: true });
 
-    expect(info.width).toBe(W);
-    expect(info.height).toBe(H);
+    expect(info.width).toBeGreaterThanOrEqual(W - 2);
+    expect(info.width).toBeLessThanOrEqual(W + 2);
+    expect(info.height).toBeGreaterThanOrEqual(H * 5 - 5);
+    expect(info.height).toBeLessThanOrEqual(H * 5 + 5);
+  });
+});
+
+describe('willDeproject', () => {
+  it('is true for a very edge-on but valid disk (now advisory, not a floor)', () => {
+    expect(willDeproject(0.2)).toBe(true);
+  });
+
+  it('is true for a mid-range tilted disk', () => {
+    expect(willDeproject(0.5)).toBe(true);
+  });
+
+  it('is false at face-on (axisRatio = 1)', () => {
+    expect(willDeproject(1)).toBe(false);
+  });
+
+  it('is false for an over-round axis ratio (> 1)', () => {
+    expect(willDeproject(1.2)).toBe(false);
+  });
+
+  it('is false for invalid data (axisRatio = 0)', () => {
+    expect(willDeproject(0)).toBe(false);
   });
 });
