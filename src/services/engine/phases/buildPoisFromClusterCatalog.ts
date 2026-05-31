@@ -64,6 +64,21 @@ function categoryFromByte(byte: number): KnownCategory | null {
 }
 
 /**
+ * Spread-free minimum over a numeric subset, returning `fallback` for an
+ * empty input.  Avoids `Math.min(...values)`, whose argument-spread trips
+ * the engine's call-argument limit on large arrays — the same reason
+ * `makeNormaliser` walks its min/max by hand.
+ */
+function minOf(values: readonly number[], fallback: number): number {
+  let min = fallback;
+  for (let i = 0; i < values.length; i++) {
+    const v = values[i]!;
+    if (i === 0 || v < min) min = v;
+  }
+  return min;
+}
+
+/**
  * Per-category significance normaliser.  Returns a function mapping a raw
  * value to [0,1].  `transform` lets clusters normalise in log space while
  * superclusters stay linear; both share the min-max + degenerate-subset
@@ -102,7 +117,7 @@ export function buildPoisFromClusterCatalog(payload: ClusterCatalogPayload): Poi
     else if (category === 'supercluster') superclusterRaw.push(catalog.significance[i]!);
   }
   // Guard M500 ≤ 0 before log10 (defensive — the build filters M500 ≥ 2.0).
-  const clusterMinRaw = clusterRaw.length > 0 ? Math.min(...clusterRaw) : 1;
+  const clusterMinRaw = minOf(clusterRaw, 1);
   const safeLog = (raw: number) => Math.log10(raw > 0 ? raw : clusterMinRaw);
   const normaliseCluster = makeNormaliser(clusterRaw, safeLog);
   const normaliseSupercluster = makeNormaliser(superclusterRaw, (raw) => raw);
