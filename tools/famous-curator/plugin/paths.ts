@@ -32,6 +32,10 @@ export function curatedTmpDir(repoRoot: string, id: string): string {
   return resolve(curatedGalaxyDir(repoRoot, id), '.tmp');
 }
 
+export function recipePath(repoRoot: string, id: string): string {
+  return resolve(curatedGalaxyDir(repoRoot, id), 'recipe.json');
+}
+
 export function overrideIndexPath(repoRoot: string): string {
   return resolve(repoRoot, RAW_DATA['famous.curated'].path);
 }

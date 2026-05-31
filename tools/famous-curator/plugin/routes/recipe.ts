@@ -10,15 +10,14 @@
  * every page load when only one galaxy is being resumed.
  */
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { curatedGalaxyDir } from '../paths';
+import { recipePath } from '../paths';
 import { parseRecipe, type Recipe } from '../recipe';
 
 export async function handleRecipe(opts: {
   repoRoot: string;
   id: string;
 }): Promise<{ recipe: Recipe }> {
-  const path = resolve(curatedGalaxyDir(opts.repoRoot, opts.id), 'recipe.json');
+  const path = recipePath(opts.repoRoot, opts.id);
   if (!existsSync(path)) {
     throw new Error(`recipe not found for id=${opts.id}`);
   }

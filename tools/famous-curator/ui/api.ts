@@ -20,6 +20,13 @@ export type GalaxyListEntry = {
   /** Disk axis ratio b/a from the seed (HyperLEDA logr25).  Absent when the
    *  seed has no photometric measurement for this galaxy. */
   axisRatio?: number;
+  /** True when the galaxy's committed recipe carries a calibrated disk block.
+   *  Lets the list flag which galaxies have had their disk geometry set. */
+  hasDisk: boolean;
+  /** Deproject flag of the committed disk; undefined when the galaxy has no
+   *  disk.  Lets the list distinguish deprojected (face-on corrected) disks
+   *  from flat ones. */
+  diskDeproject?: boolean;
 };
 
 export type FetchResult = {
