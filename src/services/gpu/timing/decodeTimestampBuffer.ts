@@ -1,11 +1,13 @@
 /**
  * decodeTimestampBuffer — pure ArrayBuffer → Map<slot, ms> transform.
  *
- * The mapped staging buffer is a 32 × u64 view: 32 timestamp ticks in
- * raw GPU clock units.  We iterate the `TIMING_SLOT_NAMES` table and,
- * for each slot, read its (begin, end) tick pair, compute the delta,
- * scale by `timestampPeriod` (nanoseconds per tick), and convert to
- * milliseconds.
+ * The mapped staging buffer is an N × u64 view of timestamp ticks in
+ * raw GPU clock units.  We iterate the caller-supplied `slotIndices`
+ * table and, for each slot, read its (begin, end) tick pair, compute the
+ * delta, scale by `timestampPeriod` (nanoseconds per tick), and convert
+ * to milliseconds.  The map is passed in (not imported) so this stays a
+ * pure function with no dependency on the dynamically-derived slot
+ * registry — the `gpuTimingService` owns the one map and hands it here.
  *
  * ### Sentinel: begin === 0n AND end === 0n means "the pass didn't run"
  *
@@ -40,16 +42,16 @@
  */
 
 import type { TimingSlotName } from '../../../@types/gpu/timing/TimingSlotName';
-import { TIMING_SLOT_NAMES } from './TIMING_SLOT_NAMES';
 
 export function decodeTimestampBuffer(
   buffer: ArrayBuffer,
   timestampPeriodNs: number,
+  slotIndices: ReadonlyMap<TimingSlotName, readonly [number, number]>,
 ): Map<TimingSlotName, number> {
   const u64 = new BigUint64Array(buffer);
   const out = new Map<TimingSlotName, number>();
 
-  for (const [slot, [beginIdx, endIdx]] of TIMING_SLOT_NAMES) {
+  for (const [slot, [beginIdx, endIdx]] of slotIndices) {
     const begin = u64[beginIdx]!;
     const end = u64[endIdx]!;
 

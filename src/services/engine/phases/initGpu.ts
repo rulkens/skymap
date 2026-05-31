@@ -85,9 +85,13 @@ import { createScalarVolumeRenderer } from '../../gpu/renderers/scalarVolumeRend
 import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
+import { TIMED_SLOT_NAMES } from '../frame/passes';
 import { loadFontAtlases } from '../../gpu/labels/loadFontAtlases';
 import { hasUrlGate } from '../../../utils/url/urlGate';
-import { GALAXY_CATALOG_SOURCE_REGISTRY, wireGalaxyCatalogSourceSlot } from '../wiring/galaxyCatalogSourceRegistry';
+import {
+  GALAXY_CATALOG_SOURCE_REGISTRY,
+  wireGalaxyCatalogSourceSlot,
+} from '../wiring/galaxyCatalogSourceRegistry';
 import { createFadeUniformsBgl } from '../../gpu/bindGroupLayouts/fadeUniforms';
 import { createSourceUniformsBgl } from '../../gpu/bindGroupLayouts/sourceUniforms';
 
@@ -193,7 +197,12 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // the HDR rgba16float texture instead of the swap-chain `format`.
   // Their pipelines bake this into a fixed colour-target descriptor at
   // construction time, so the format choice has to land here.
-  const renderer = createPointRenderer(device, 'rgba16float', state.gpu.fadeBgl!, state.gpu.sourceBgl!);
+  const renderer = createPointRenderer(
+    device,
+    'rgba16float',
+    state.gpu.fadeBgl!,
+    state.gpu.sourceBgl!,
+  );
   state.gpu.renderer = renderer;
 
   // ── Wire the bias-correction subsystem to the freshly-built renderer ──
@@ -255,7 +264,11 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // placeholder at @group(1) must match what the other HDR passes
   // (filaments) bind at the same slot on the shared RenderPassEncoder;
   // see the renderer's pipeline-layout comment for why.
-  state.gpu.clusterMarkerRenderer = createClusterMarkerRenderer(uiCtx, 'rgba16float', state.gpu.fadeBgl!);
+  state.gpu.clusterMarkerRenderer = createClusterMarkerRenderer(
+    uiCtx,
+    'rgba16float',
+    state.gpu.fadeBgl!,
+  );
 
   // Wire the freshly-constructed renderers into the label director.
   // The director was built eagerly in the engine state literal (alongside
@@ -507,7 +520,11 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // (`if (state.gpu.timingService.enabled)`) instead of juggling
   // null + flag combinations.  The no-op path allocates no GPU
   // resources, so always-constructing is free.
-  state.gpu.timingService = createGpuTimingService(device, hasUrlGate('gpuTimings'));
+  state.gpu.timingService = createGpuTimingService(
+    device,
+    hasUrlGate('gpuTimings'),
+    TIMED_SLOT_NAMES,
+  );
 
   // Stash phase-locals so subsequent phases (`wireSlots`, `wireInput`,
   // `startLoop`) can read the IIFE-scoped device/context handles.  The

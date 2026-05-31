@@ -40,7 +40,7 @@
  * swap chain would re-introduce the M1 OVER-blend coherency problem
  * we just fixed at the HDR target, this time at the swap chain.
  * Combining them costs us per-pass timing granularity, which is why
- * `TIMING_SLOT_NAMES` merges them into one `ui-overlay` slot.  The
+ * `TIMED_SLOT_NAMES` carries a single `ui-overlay` slot for them.  The
  * "two of them add up to a handful of microseconds" reality of UI
  * overlay cost makes separate timing not worth the coherency risk.
  *

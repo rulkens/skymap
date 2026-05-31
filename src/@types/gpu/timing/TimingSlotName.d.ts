@@ -1,36 +1,23 @@
 /**
  * TimingSlotName — the kebab-case identifier of one timed render pass.
  *
- * Each value pairs with a fixed begin/end slot pair in the
- * `TIMING_SLOT_NAMES` table (`src/services/gpu/timing/TIMING_SLOT_NAMES.ts`).
- * The union is closed at the type level because the slot table is
- * compile-time-fixed (the spec's "Static slot assignment" section);
- * adding a new pass means editing the union AND the table in one
- * commit — the type checker enforces both edits.
+ * The set of timing slots is DERIVED at runtime from the render-pass
+ * registry (`TIMED_SLOT_NAMES` in
+ * `services/engine/frame/passes/index.ts`): every `HDR_PASSES` entry's
+ * `name`, plus the four framework slots `scalar-volume`, `tone-map`,
+ * `ui-overlay`, and `pick`.  Because `Pass.name` is typed `string`, the
+ * slot set cannot be a closed literal union — so this is a `string`
+ * alias rather than an enumerated type.  It keeps the *intent* legible
+ * at every signature (`descriptorFor(slot: TimingSlotName)`,
+ * `Map<TimingSlotName, number>`) while letting a new renderer register a
+ * slot purely by joining `HDR_PASSES`.
  *
- * The 12 inhabitants below cover the HDR sub-passes (`HDR_PASSES`),
- * the tone-map post-process, the combined UI-overlay pass (marker-
- * lines + labels merged into one swap-chain render pass for blend
- * coherency), the pick render pass, and the volume-upsample pass that
- * composites the half-resolution scalar-volume render target back to
- * full resolution.  Slots 24–31 of the GPUQuerySet are reserved for
- * future inhabitants without forcing a query-set resize.
+ * Unknown slots degrade gracefully: `gpuTimingService.descriptorFor`
+ * returns `undefined` for a name with no allocated index pair, so the
+ * pass simply isn't measured and still draws.
  *
  * The strings match the `name` fields on `Pass` objects (e.g.
- * `pointSpritesPass.name === 'point-sprites'`).  Tests lean on that
- * equality to assert each pass plumbs its timing descriptor.
+ * `pointSpritesPass.name === 'point-sprites'`).
  */
 
-export type TimingSlotName =
-  | 'point-sprites'
-  | 'procedural-disks'
-  | 'textured-disks'
-  | 'filaments'
-  | 'scalar-volume'
-  | 'milky-way'
-  | 'horizon-shell'
-  | 'tone-map'
-  | 'ui-overlay'
-  | 'pick'
-  | 'volume-upsample'
-  | 'cluster-markers';
+export type TimingSlotName = string;
