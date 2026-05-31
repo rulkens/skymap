@@ -2,6 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { buildPoisFromFamousMeta } from '../../../../src/services/engine/phases/buildPoisFromFamousMeta';
 import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
+import type { PointOfInterest } from '../../../../src/@types/engine/subsystems/PointOfInterest';
+
+/**
+ * Narrow a produced POI to the famousGalaxy arm so the label/size fields
+ * are in scope.  `buildPoisFromFamousMeta` only ever emits famousGalaxy
+ * POIs; a throw here means the producer regressed its discriminant.
+ */
+function famous(p: PointOfInterest): Extract<PointOfInterest, { category: 'famousGalaxy' }> {
+  if (p.category !== 'famousGalaxy') throw new Error(`expected famousGalaxy, got ${p.category}`);
+  return p;
+}
 
 function makeCatalog(positions: number[], diameters: number[]): GalaxyCatalog {
   const count = diameters.length;
@@ -44,24 +55,25 @@ describe('buildPoisFromFamousMeta', () => {
       catalog.positions[1],
       catalog.positions[2],
     ]);
-    expect(pois[0]!.minApparentSizePx).toBe(6);
-    expect(pois[0]!.apparentDiameterKpc).toBe(67);
-    expect(pois[0]!.physicalRadiusMpc).toBeUndefined();
+    expect(famous(pois[0]!).minApparentSizePx).toBe(6);
+    expect(famous(pois[0]!).apparentDiameterKpc).toBe(67);
+    // Famous galaxies are the arm without a radius — the field is absent.
+    expect('physicalRadiusMpc' in pois[0]!).toBe(false);
     // labelAnchorOffsetMpc = max(0.05, 1.5 * 67 / 1000) = max(0.05, 0.1005) = 0.1005
-    expect(pois[0]!.labelAnchorOffsetMpc).toBeCloseTo(0.1005, 6);
+    expect(famous(pois[0]!).labelAnchorOffsetMpc).toBeCloseTo(0.1005, 6);
     // labelWorldEmMpc = 0.0125 * 10^(0.3 * log10(67 / 40))
     //                 = 0.0125 * 10^(0.3 * log10(1.675))
     //                 ≈ 0.0125 * 1.1674 ≈ 0.014593
     // Use 4 decimal-place precision (±5e-5) to avoid floating-point drift.
-    expect(pois[0]!.labelWorldEmMpc).toBeCloseTo(0.014593, 4);
+    expect(famous(pois[0]!).labelWorldEmMpc).toBeCloseTo(0.014593, 4);
     expect(pois[1]!.id).toBe('famous-m33');
     expect(pois[1]!.name).toBe('M33'); // no commonName → falls back to names[0]
     // M33 diameter 30 kpc → 1.5 * 30/1000 = 0.045, below floor 0.05 → uses floor.
-    expect(pois[1]!.labelAnchorOffsetMpc).toBeCloseTo(0.05, 6);
+    expect(famous(pois[1]!).labelAnchorOffsetMpc).toBeCloseTo(0.05, 6);
     // labelWorldEmMpc = 0.0125 * 10^(0.3 * log10(30 / 40))
     //                 = 0.0125 * 10^(0.3 * log10(0.75))
     //                 ≈ 0.0125 * 0.9175 ≈ 0.011469
-    expect(pois[1]!.labelWorldEmMpc).toBeCloseTo(0.011469, 4);
+    expect(famous(pois[1]!).labelWorldEmMpc).toBeCloseTo(0.011469, 4);
   });
 
   it('labelWorldEmMpc scales monotonically with diameter (1 kpc < 100 kpc < 5000 kpc)', () => {
@@ -74,9 +86,9 @@ describe('buildPoisFromFamousMeta', () => {
     ];
     const catalog = makeCatalog([1, 0, 0, 2, 0, 0, 3, 0, 0], [1, 100, 5000]);
     const pois = buildPoisFromFamousMeta(meta, catalog);
-    const em1 = pois[0]!.labelWorldEmMpc!;
-    const em100 = pois[1]!.labelWorldEmMpc!;
-    const em5000 = pois[2]!.labelWorldEmMpc!;
+    const em1 = famous(pois[0]!).labelWorldEmMpc!;
+    const em100 = famous(pois[1]!).labelWorldEmMpc!;
+    const em5000 = famous(pois[2]!).labelWorldEmMpc!;
     expect(em1).toBeGreaterThan(0);
     expect(em100).toBeGreaterThan(em1);
     expect(em5000).toBeGreaterThan(em100);
@@ -109,6 +121,16 @@ describe('buildPoisFromFamousMeta', () => {
     const catalog = makeCatalog([1, 0, 0, 2, 0, 0, 3, 0, 0, 4, 0, 0], [10, 10, 10, 10]);
     const pois = buildPoisFromFamousMeta(meta, catalog);
     expect(pois.map((p) => p.name)).toEqual(['Curated A', 'B1', 'C1', 'd']);
+  });
+
+  it('marks famous POIs as featured with no significance field (galaxy arm)', () => {
+    const meta: FamousMetaEntry[] = [{ id: 'm31', names: ['M31'], description: '', type: '' }];
+    const catalog = makeCatalog([0.78, 0.1, 0.2], [67]);
+    const pois = buildPoisFromFamousMeta(meta, catalog);
+    expect(pois[0]!.featured).toBe(true);
+    // significance lives on the structure arms only — the famous arm
+    // never carries it, so the field is absent rather than undefined.
+    expect('significance' in pois[0]!).toBe(false);
   });
 
   it('returns empty array when meta is empty', () => {

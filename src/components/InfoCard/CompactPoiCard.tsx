@@ -26,11 +26,8 @@ export function CompactPoiCard({ poi }: CompactPoiCardProps): ReactNode {
       <div className={styles.sourceBadge}>{POI_CATEGORY_INFO[poi.category].shortLabel}</div>
       <div className={styles.cardDistLine}>
         {formatDistance(distanceMpc)}
-        {poi.physicalRadiusMpc !== undefined && (
-          <>
-            {' '}
-            &middot; r {formatDistance(poi.physicalRadiusMpc)}
-          </>
+        {poi.category !== 'famousGalaxy' && (
+          <> &middot; r {formatDistance(poi.physicalRadiusMpc)}</>
         )}
       </div>
     </div>

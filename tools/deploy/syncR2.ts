@@ -83,6 +83,7 @@
  */
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
 import { RAW_DATA } from '../utils/io/rawDataRegistry';
@@ -102,7 +103,7 @@ const CACHE_CONTROL = 'public, max-age=86400';
 /** Public URL the Cloudflare CDN serves R2 from — single source of truth in `.env.production`. */
 const R2_PUBLIC_URL = readEnvProductionValue('VITE_DATA_BASE_URL');
 
-const ALLOW = (name: string): boolean =>
+export const ALLOW = (name: string): boolean =>
   /^(sdss|glade)-(small|medium|large)\.bin$/.test(name) ||
   // Milliquas v8 (Flesch 2023): same tier-suffixed pattern as
   // SDSS/GLADE.  Class + parent-survey metadata rides on the bin
@@ -129,7 +130,12 @@ const ALLOW = (name: string): boolean =>
   // MCPM Cosmic Web density cubes — SDSS DR17 Cosmic Slime VAC
   // (Wilde et al. 2023), tiered downsamples emitted by
   // `npm run build-mcpm` from the .npy tiers in data/raw/mcpm/.
-  /^mcpm-(small|medium|large)\.scfd$/.test(name);
+  /^mcpm-(small|medium|large)\.scfd$/.test(name) ||
+  // Cluster/supercluster coverage artefacts (MCXC + MSCC + featured seed)
+  // emitted by `npm run build-clusters`: the packed point catalog and its
+  // per-structure metadata sidecar.  Tier-agnostic, like famous.bin.
+  name === 'clusters.ccat' ||
+  name === 'clusters_meta.json';
 
 /**
  * Extra files outside public/data/ that should also land in R2.
@@ -348,7 +354,10 @@ async function main(): Promise<void> {
   await purgeCloudflareCache(touchedKeys);
 }
 
-main().catch((err) => {
-  console.error(err instanceof Error ? err.message : err);
-  process.exit(1);
-});
+// Allow the script to be both executed (CLI) and imported (tests for ALLOW).
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((err) => {
+    console.error(err instanceof Error ? err.message : err);
+    process.exit(1);
+  });
+}

@@ -21,6 +21,7 @@ const virgo: PointOfInterest = {
   name: 'Virgo Cluster',
   category: 'cluster',
   worldPos: [10, 0, 0],
+  featured: true,
   physicalRadiusMpc: 2.2,
 };
 
@@ -52,12 +53,19 @@ describe('CompactPoiCard', () => {
     expect(screen.getByText(/2\.2/)).toBeInTheDocument();
   });
 
-  it('omits the radius row when physicalRadiusMpc is undefined', () => {
-    const noRadius: PointOfInterest = { ...virgo, physicalRadiusMpc: undefined };
-    const { container } = render(createElement(CompactPoiCard, { poi: noRadius }));
-    // Smoke check: no '2.2' anywhere in the rendered DOM.  Catches the
-    // regression where a future refactor unconditionally renders the
-    // radius row with `?? 0`.
+  it('omits the radius row for a famous-galaxy POI (no radius arm)', () => {
+    // Famous galaxies are the arm with no radius — the card must not
+    // render a radius row for them.  Catches the regression where a
+    // future refactor unconditionally renders the row with `?? 0`.
+    const galaxy: PointOfInterest = {
+      id: 'famous-m87',
+      name: 'M87',
+      category: 'famousGalaxy',
+      worldPos: [10, 0, 0],
+      featured: true,
+    };
+    const { container } = render(createElement(CompactPoiCard, { poi: galaxy }));
     expect(container.textContent).not.toMatch(/2\.2/);
+    expect(container.textContent).not.toMatch(/ r /);
   });
 });

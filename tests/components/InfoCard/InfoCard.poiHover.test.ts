@@ -31,6 +31,7 @@ const virgo: PointOfInterest = {
   name: 'Virgo Cluster',
   category: 'cluster',
   worldPos: [10, 0, 0],
+  featured: true,
   physicalRadiusMpc: 2.2,
 };
 const coma: PointOfInterest = {
@@ -38,6 +39,7 @@ const coma: PointOfInterest = {
   name: 'Coma Cluster',
   category: 'cluster',
   worldPos: [0, 100, 0],
+  featured: true,
   physicalRadiusMpc: 6,
 };
 

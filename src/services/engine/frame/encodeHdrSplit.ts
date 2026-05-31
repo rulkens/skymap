@@ -34,7 +34,6 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { PassDeps } from '../../../@types/engine/frame/PassDeps';
 import type { RenderFrameSettings } from '../../../@types/engine/frame/RenderFrameSettings';
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
-import type { TimingSlotName } from '../../../@types/gpu/timing/TimingSlotName';
 import { HDR_PASSES } from './passes';
 import { encodeVolumes } from './encodeVolumes';
 
@@ -91,15 +90,13 @@ export function encodeHdrSplit(
 
   // ── HDR sub-passes — one beginRenderPass per enabled pass ─────────
   //
-  // The pass-name → slot mapping is statically defined by
-  // TIMING_SLOT_NAMES.  `pass.name` is typed `string`, but the
-  // HDR_PASSES inhabitants' names are all keys of that table by
-  // construction — the cast is safe and documented.  If a future
-  // pass file forgets to add a slot, `descriptorFor` returns
-  // `undefined` (active-mode lookup miss) — the pass simply isn't
-  // measured and still draws.  The optional-spread merge keeps the
-  // descriptor byte-identical to the no-timing shape when the
-  // result is `undefined`.
+  // Each pass's `name` IS its timing-slot name: the service's slot map
+  // is built from `TIMED_SLOT_NAMES`, which splices in every HDR pass
+  // name, so `descriptorFor(pass.name)` resolves by construction.  No
+  // cast is needed (both are `string`).  Were a pass somehow absent from
+  // the registry, `descriptorFor` would return `undefined` and the pass
+  // would simply draw untimed; the optional-spread merge keeps the
+  // descriptor byte-identical to the no-timing shape in that case.
   for (const pass of HDR_PASSES) {
     if (!pass.enabled(state, ctx, settings)) continue;
     // DebugPanel renderer-toggle override — same one-way semantics as
@@ -109,7 +106,7 @@ export function encodeHdrSplit(
     // timestamp slot written).
     if (state.debug.disabledPasses.has(pass.name)) continue;
 
-    const timestampWrites = timingService.descriptorFor(pass.name as TimingSlotName);
+    const timestampWrites = timingService.descriptorFor(pass.name);
 
     const passEncoder = encoder.beginRenderPass({
       label: `hdr-${pass.name}`,

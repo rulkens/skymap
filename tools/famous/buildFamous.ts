@@ -34,6 +34,7 @@ import { parseRecipe, type Recipe } from '../famous-curator/plugin/recipe.js';
 import { curatedGalaxyDir } from '../famous-curator/plugin/paths.js';
 import { deriveFamousCalibration } from './deriveFamousCalibration.js';
 import { willDeproject } from './deprojectDisk.js';
+import { writeMetaSidecar } from '../curation/writeMetaSidecar.js';
 
 /**
  * Convert a curated entry's (RA, Dec, distanceMpc) to Cartesian (x, y, z).
@@ -200,7 +201,7 @@ async function main(): Promise<void> {
   const binBuf = encodeGalaxyCatalog(cloud);
   writeFileSync(resolve(outDir, 'famous.bin'), Buffer.from(binBuf));
   process.stderr.write(`wrote ${count} points to famous.bin (${binBuf.byteLength} bytes)\n`);
-  writeFileSync(resolve(outDir, 'famous_meta.json'), JSON.stringify(metaByIdx, null, 2));
+  writeMetaSidecar(metaByIdx, resolve(outDir, 'famous_meta.json'));
   process.stderr.write(`wrote famous_meta.json\n`);
 
   // Quick sanity reference: log the Source enum value baked into the

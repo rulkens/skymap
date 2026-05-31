@@ -32,6 +32,7 @@ import { buildGalaxyInfo } from '../helpers/galaxyInfoBuilder';
 import { seedSettingsCallbacks } from '../wiring/seedSettingsCallbacks';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { resolvePoiFromPick } from '../helpers/resolvePoiFromPick';
+import { collectPickTargets } from '../helpers/collectPickTargets';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
@@ -257,15 +258,17 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     const cr = state.subsystems.clickResolver;
     if (!r || state.sources.catalogs.size === 0 || !cr) return null;
 
-    // Snapshot the renderer's per-source draw records and filter
-    // by the pick mask — fading-out layers have their pickMask bit
-    // cleared immediately so they don't claim click events even
-    // while still visually fading.  We materialise to an array so
-    // the iterator survives the async pick promise.
-    const visibleSources = Array.from(r.loadedSources()).filter(
-      (s) => ((state.sources.pickMask >> s.source) & 1) !== 0,
+    // Snapshot what's pickable — visible galaxy surveys (filtered by the
+    // pick mask; a fading-out layer clears its bit immediately so it
+    // can't claim a click while still visually fading) plus whether any
+    // cluster ring is on screen.  Shared with the hover + pick-debug
+    // gates via collectPickTargets so all three agree.
+    const { visibleSources, hasAny } = collectPickTargets(
+      r,
+      state.sources.pickMask,
+      state.gpu.clusterMarkerRenderer,
     );
-    if (visibleSources.length === 0) return null;
+    if (!hasAny) return null;
 
     return cr.resolveClick({
       pickXPx: cssToTexPx(xCss),

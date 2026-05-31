@@ -70,14 +70,14 @@ readonly significance?: number;
 readonly abell?: string;
 ```
 
-- [ ] Set `featured: true` on every POI built by `buildStaticAnchorPois`
+- [x] Set `featured: true` on every POI built by `buildStaticAnchorPois`
   (Task 2 sources them from the seed) and `buildPoisFromFamousMeta`
   (`buildPoisFromFamousMeta.ts:120`). Famous POIs: `significance` omitted
   (→ full weight).
-- [ ] Test (extend `tests/data/buildStaticAnchorPois.test.ts`) `every static
+- [x] Test (extend `tests/data/buildStaticAnchorPois.test.ts`) `every static
   anchor POI is featured` asserting `.every(p => p.featured === true)`.
-- [ ] Test (extend the famous-POI test) `famous POIs are featured`.
-- [ ] `npm run typecheck` green; `npm test` green. Commit.
+- [x] Test (extend the famous-POI test) `famous POIs are featured`.
+- [x] `npm run typecheck` green; `npm test` green. Commit.
 
 ---
 
@@ -110,18 +110,18 @@ so `Virgo (M87)` → `cluster-virgo-m87` still resolves the existing
 `apparentRadiusMpc` from the seed; `featured: true`; `significance: 1`; and
 `abell` from the seed entry when present (omit otherwise).
 
-- [ ] Test `buildStaticAnchorPois produces cluster-virgo-m87 from the seed`
+- [x] Test `buildStaticAnchorPois produces cluster-virgo-m87 from the seed`
   asserting the id is present (deep-link regression guard).
-- [ ] Test `buildStaticAnchorPois carries physical + apparent radius from the seed`.
-- [ ] Test `buildStaticAnchorPois categorizes seed entries by their category field`
+- [x] Test `buildStaticAnchorPois carries physical + apparent radius from the seed`.
+- [x] Test `buildStaticAnchorPois categorizes seed entries by their category field`
   (one cluster, one supercluster, one void present).
-- [ ] Test `buildStaticAnchorPois is synchronous and returns a fresh array per call`.
-- [ ] Implement. The `src/` JSON import works under the existing
+- [x] Test `buildStaticAnchorPois is synchronous and returns a fresh array per call`.
+- [x] Implement. The `src/` JSON import works under the existing
   `tsconfig.json` (`resolveJsonModule: true` is already set,
   `tsconfig.json:12`) and Vite resolves JSON imports natively — no config
   change needed. (Note: this is the FIRST `src/`-side JSON import; the famous
   seed is read at tool time only, so there's no prior precedent in `src/`.)
-- [ ] `npm run typecheck` + `npm test` green; dev server still draws the
+- [x] `npm run typecheck` + `npm test` green; dev server still draws the
   featured anchors. Commit.
 
 ---
@@ -164,14 +164,14 @@ ArrayBuffer via `decodeClusterCatalog`; parse the meta; assert
 `catalog.count === meta.length` (fail loud — the two are built in lock-step,
 a mismatch means a stale artefact).
 
-- [ ] Test `parseClusterMeta rejects a non-array root`.
-- [ ] Test `clusterCatalogFetcher decodes the ccat and pairs it with meta`
+- [x] Test `parseClusterMeta rejects a non-array root`.
+- [x] Test `clusterCatalogFetcher decodes the ccat and pairs it with meta`
   (mock both `fetch` responses with a small encoded `.ccat` from
   `encodeClusterCatalog` + matching meta; assert payload `catalog.count` and
   `meta` length).
-- [ ] Test `clusterCatalogFetcher throws HttpError on 404`.
-- [ ] Test `clusterCatalogFetcher throws on count/meta length mismatch`.
-- [ ] Implement. `npm test -- clusterCatalogFetcher` → passes. Commit.
+- [x] Test `clusterCatalogFetcher throws HttpError on 404`.
+- [x] Test `clusterCatalogFetcher throws on count/meta length mismatch`.
+- [x] Implement. `npm test -- clusterCatalogFetcher` → passes. Commit.
 
 ---
 
@@ -195,9 +195,9 @@ function (Task 5) can read it. Add `state.sources.clusterBulk: ClusterCatalogPay
 (default `null`) following the `state.sources.famousMeta` precedent
 (`famousMetaSlot.ts:31`).
 
-- [ ] Test `createClusterCatalogSlot writes the payload to state on ready`.
-- [ ] Test `createClusterCatalogSlot writes null/empty on error and warns`.
-- [ ] Implement slot + state field. `npm test -- clusterCatalogSlot` →
+- [x] Test `createClusterCatalogSlot writes the payload to state on ready`.
+- [x] Test `createClusterCatalogSlot writes null/empty on error and warns`.
+- [x] Implement slot + state field. `npm test -- clusterCatalogSlot` →
   passes. Commit.
 
 ---
@@ -243,25 +243,25 @@ famous-arrival and cluster-arrival both call the same merge (avoids one
 arrival clobbering the other's contribution — today `rewireFamousPois` sets
 `[...staticAnchorPois, ...famousPois]`, which would drop bulk clusters).
 
-- [ ] Test `buildPoisFromClusterCatalog maps category bytes to cluster/supercluster`.
-- [ ] Test `buildPoisFromClusterCatalog marks every POI not featured`.
-- [ ] Test `buildPoisFromClusterCatalog normalizes significance per-category into [0,1]`
+- [x] Test `buildPoisFromClusterCatalog maps category bytes to cluster/supercluster`.
+- [x] Test `buildPoisFromClusterCatalog marks every POI not featured`.
+- [x] Test `buildPoisFromClusterCatalog normalizes significance per-category into [0,1]`
   (the max-M500 cluster → 1 and the max-Nm supercluster → 1 independently;
   all values within [0,1]; a mixed fixture proves the two categories don't
   share one scale).
-- [ ] Test `buildPoisFromClusterCatalog ids are prefixed bulk and never collide with featured slugs`.
-- [ ] Test `buildPoisFromClusterCatalog carries the abell designation from meta`
+- [x] Test `buildPoisFromClusterCatalog ids are prefixed bulk and never collide with featured slugs`.
+- [x] Test `buildPoisFromClusterCatalog carries the abell designation from meta`
   (meta entry with `abell: 'A2670'` → `POI.abell === 'A2670'`; `abell: null`
   → `POI.abell` undefined).
-- [ ] Implement the producer.
-- [ ] Refactor `wireSlots` to a single `rebuildAllPois()` merge; mint +
+- [x] Implement the producer.
+- [x] Refactor `wireSlots` to a single `rebuildAllPois()` merge; mint +
   `load()` the cluster slot (boot-time, tier-agnostic, like famous-meta);
   subscribe to its `ready` to call `rebuildAllPois()`. Register the slot in
   `allSlots` for the loading-bar aggregator (mirror `famousMetaSlot`
   registration at `wireSlots.ts:237`).
-- [ ] Test (wireSlots-level, if a harness exists) or a focused merge test
+- [x] Test (wireSlots-level, if a harness exists) or a focused merge test
   `merging famous then bulk clusters keeps both groups present`.
-- [ ] `npm test` + `npm run typecheck` green. Commit.
+- [x] `npm test` + `npm run typecheck` green. Commit.
 
 ---
 
@@ -287,14 +287,14 @@ with `SIG_MIN_ALPHA` a tunable floor (e.g. 0.25) so the faintest bulk
 cluster is dim but not invisible. Featured anchors (`significance` omitted →
 1) and famous galaxies are unaffected.
 
-- [ ] Test `produceMarkers dims a low-significance POI relative to a high one`
+- [x] Test `produceMarkers dims a low-significance POI relative to a high one`
   (two POIs identical except `significance` 0.1 vs 1.0 at the same distance →
   the low one's ringColor alpha is strictly smaller).
-- [ ] Test `produceMarkers leaves featured anchors (no significance) at full weight`
+- [x] Test `produceMarkers leaves featured anchors (no significance) at full weight`
   (a POI with `significance` undefined matches the pre-change alpha — guard
   with the existing snapshot/assertion style).
-- [ ] Implement the weight. Add `SIG_MIN_ALPHA` constant with a comment.
-- [ ] `npm test -- poiSubsystem` → passes. Verify in dev: bulk rings appear
+- [x] Implement the weight. Add `SIG_MIN_ALPHA` constant with a comment.
+- [x] `npm test -- poiSubsystem` → passes. Verify in dev: bulk rings appear
   as a graded field, featured rings unchanged. Commit.
 
 ---
@@ -328,19 +328,19 @@ screen-space declutter among the (≤~30) featured labels.
    top-N. Famous galaxies, which already self-gate via `minApparentSizePx`,
    participate but rarely collide.
 
-- [ ] Test `produceLabels emits no label for a non-featured POI`
+- [x] Test `produceLabels emits no label for a non-featured POI`
   (bulk cluster POI with a radius → present in `produceMarkers` output but
   absent from `produceLabels` labels).
-- [ ] Test `produceLabels still labels a featured POI`.
-- [ ] Test `produceLabels declutters overlapping featured labels keeping the higher significance`
+- [x] Test `produceLabels still labels a featured POI`.
+- [x] Test `produceLabels declutters overlapping featured labels keeping the higher significance`
   (two featured POIs projecting to overlapping screen boxes → only the
   higher-significance label survives; place them at known world positions +
   a known camera so projection is deterministic).
-- [ ] Test `produceLabels keeps non-overlapping featured labels both` (sanity
+- [x] Test `produceLabels keeps non-overlapping featured labels both` (sanity
   that declutter doesn't over-cull).
-- [ ] Implement gate + declutter. Add `DECLUTTER_MARGIN_PX` constant with a
+- [x] Implement gate + declutter. Add `DECLUTTER_MARGIN_PX` constant with a
   comment. `npm test -- poiSubsystem` → passes.
-- [ ] Verify in dev: ~30 featured labels, no bulk labels, no overlap pile-ups
+- [x] Verify in dev: ~30 featured labels, no bulk labels, no overlap pile-ups
   in Shapley. Commit.
 
 ---
@@ -361,14 +361,14 @@ extension is the whole deploy task. (`public/data/` is already wholesale-
 gitignored at `.gitignore:125`, so the artefacts stay out of git as
 intended.)
 
-- [ ] Extend the `ALLOW` filter (`syncR2.ts:89-111`) to accept
+- [x] Extend the `ALLOW` filter (`syncR2.ts:89-111`) to accept
   `clusters.ccat` and `clusters_meta.json` (two explicit `name === …`
   clauses, mirroring the `famous.bin` / `famous_meta.json` clauses).
-- [ ] Test `syncR2 ALLOW accepts clusters.ccat and clusters_meta.json`
+- [x] Test `syncR2 ALLOW accepts clusters.ccat and clusters_meta.json`
   (assert the `ALLOW` predicate returns true for both names) and `ALLOW
   still rejects glade.bin / sdss.bin` (regression — those untiered legacy
   names must stay excluded).
-- [ ] Implement. `npm test -- syncR2` → passes. Commit.
+- [x] Implement. `npm test -- syncR2` → passes. Commit.
 
 ---
 
@@ -376,12 +376,12 @@ intended.)
 
 **Files:** `CLAUDE.md` (modify).
 
-- [ ] Note in the deploy section that a full cluster refresh is
+- [x] Note in the deploy section that a full cluster refresh is
   `build-clusters` → `sync-r2-secure` (the `.ccat` + `clusters_meta.json` ride
   the same R2 sync as the `.bin` files). Add `clusters.ccat` +
   `clusters_meta.json` to the "complete R2 sync must include" list near the
   `famous.bin` mention.
-- [ ] No test; `npm test` + `npm run typecheck` green. Commit.
+- [x] No test; `npm test` + `npm run typecheck` green. Commit.
 
 ---
 

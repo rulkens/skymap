@@ -5,6 +5,7 @@ import type { FocusableTarget } from './FocusableTarget';
 import type { ScaleInfo } from './ScaleInfo';
 import type { LoadProgressState } from '../loading/LoadProgressState';
 import type { Tier } from '../data/Tier';
+import type { PoiCategory } from '../../services/engine/subsystems/poiSubsystem';
 
 export type UseEngineReturn = {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
@@ -16,6 +17,8 @@ export type UseEngineReturn = {
   scale: ScaleInfo;
   fps: number;
   sourceCounts: Partial<Record<SourceType, number>>;
+  /** Per-marker-category POI counts (cluster / supercluster / void) for the Structures panel. */
+  structureCounts: Partial<Record<PoiCategory, number>>;
   loadProgress: LoadProgressState | null;
   currentTier: Tier;
 };

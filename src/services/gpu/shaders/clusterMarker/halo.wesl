@@ -72,6 +72,14 @@ fn vs(
 
 @fragment
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
+  // Faded-out instances arrive at alpha 0.  produceMarkers now emits one
+  // instance per marker-bearing POI regardless of fade (to keep the ring
+  // pick instance_index aligned with the CPU getPoisForCategory list), so
+  // most of the ~hundreds of per-frame instances may be alpha 0.  An
+  // alpha-0 halo already adds nothing under the additive (one, one) blend;
+  // discarding early skips the gradient math for those fragments.
+  if (input.alpha <= 0.0) { discard; }
+
   // Radial gradient: centre alpha full, edge zero.
   // length(input.uv) is 0 at centre, ~1.414 at corner; we clamp to 1.0
   // so the diagonal corner of the quad still gets faded to zero

@@ -14,6 +14,23 @@
 
 import { describe, it, expect } from 'vitest';
 import { decodeTimestampBuffer } from '../../../../src/services/gpu/timing/decodeTimestampBuffer';
+import { buildTimingSlotMap } from '../../../../src/services/gpu/timing/buildTimingSlotMap';
+
+// A representative slot ordering — the decoder is agnostic to the actual
+// registry, it iterates whatever map it's handed.  Index pairs follow
+// `buildTimingSlotMap`'s [2i, 2i+1] rule, so pairIdx N == this list's
+// element N.
+const SLOTS = buildTimingSlotMap([
+  'point-sprites', //   pairIdx 0 → u64 0/1
+  'procedural-disks', // pairIdx 1 → u64 2/3
+  'textured-disks', //  pairIdx 2 → u64 4/5
+  'filaments', //       pairIdx 3 → u64 6/7
+  'scalar-volume', //   pairIdx 4 → u64 8/9
+  'milky-way', //       pairIdx 5 → u64 10/11
+  'tone-map', //        pairIdx 6 → u64 12/13
+  'ui-overlay', //      pairIdx 7 → u64 14/15
+  'pick', //            pairIdx 8 → u64 16/17
+]);
 
 /** Build a 32-slot u64 buffer with the listed slot pairs filled in. */
 function buildBuffer(pairs: ReadonlyArray<readonly [number, bigint, bigint]>): ArrayBuffer {
@@ -29,7 +46,7 @@ function buildBuffer(pairs: ReadonlyArray<readonly [number, bigint, bigint]>): A
 describe('decodeTimestampBuffer', () => {
   it('decodes one filled slot to (end-begin) * period / 1e6 ms', () => {
     const buf = buildBuffer([[0, 0n, 2_000_000n]]);
-    const out = decodeTimestampBuffer(buf, 1);
+    const out = decodeTimestampBuffer(buf, 1, SLOTS);
 
     expect(out.size).toBe(1);
     expect(out.get('point-sprites')).toBeCloseTo(2.0, 6);
@@ -37,7 +54,7 @@ describe('decodeTimestampBuffer', () => {
 
   it('skips slots whose (begin, end) are both 0 (pass-did-not-run sentinel)', () => {
     const buf = buildBuffer([[0, 100n, 1_000_100n]]);
-    const out = decodeTimestampBuffer(buf, 1);
+    const out = decodeTimestampBuffer(buf, 1, SLOTS);
 
     expect(out.has('point-sprites')).toBe(true);
     expect(out.has('pick')).toBe(false);
@@ -46,7 +63,7 @@ describe('decodeTimestampBuffer', () => {
   it('clamps negative deltas (end < begin) to 0', () => {
     // Pair index 2 = textured-disks (u64 slots 4/5).
     const buf = buildBuffer([[2, 5_000_000n, 1_000_000n]]);
-    const out = decodeTimestampBuffer(buf, 1);
+    const out = decodeTimestampBuffer(buf, 1, SLOTS);
 
     expect(out.get('textured-disks')).toBe(0);
   });
@@ -54,7 +71,7 @@ describe('decodeTimestampBuffer', () => {
   it('applies a non-unit timestampPeriod correctly', () => {
     // Pair index 3 = filaments (u64 slots 6/7).
     const buf = buildBuffer([[3, 0n, 100_000n]]);
-    const out = decodeTimestampBuffer(buf, 38.5);
+    const out = decodeTimestampBuffer(buf, 38.5, SLOTS);
 
     expect(out.get('filaments')).toBeCloseTo(3.85, 6);
   });
@@ -71,7 +88,7 @@ describe('decodeTimestampBuffer', () => {
       [7, 0n, 100_000n], //   ui-overlay
       [8, 0n, 200_000n], //   pick
     ]);
-    const out = decodeTimestampBuffer(buf, 1);
+    const out = decodeTimestampBuffer(buf, 1, SLOTS);
 
     expect(out.get('point-sprites')).toBeCloseTo(1.0, 6);
     expect(out.get('procedural-disks')).toBeCloseTo(2.0, 6);

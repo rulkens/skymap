@@ -28,10 +28,14 @@ export type PoiSubsystem = LabelProducer & {
   setCategoryLabelVisible(category: PoiCategory, visible: boolean): void;
   /**
    * Per-frame producer for the at-rest cluster / supercluster / void
-   * markers (halo + ring).  Returns one descriptor per visible POI
-   * after applying the apparent-size fade-in band AND the
-   * max-apparent-radius fade-out.  Famous-galaxy POIs always return
-   * empty (they render through the textured-disk + label paths).
+   * markers (halo + ring).  Returns one descriptor per marker-bearing
+   * POI of a visible category — including ones faded fully out, which
+   * emit at alpha 0 (discarded in-fragment) so the descriptor list stays
+   * index-aligned with `getPoisForCategory` for the ring pick path.  The
+   * apparent-size fade-in band and the close-approach / far-distance
+   * fade-outs modulate the baked alpha rather than dropping descriptors.
+   * Famous-galaxy POIs always return empty (they render through the
+   * textured-disk + label paths).
    *
    * The producer never mutates engine state directly — the returned
    * array is fed to `state.gpu.clusterMarkerRenderer.setMarkers(...)`
@@ -50,22 +54,25 @@ export type PoiSubsystem = LabelProducer & {
    * iteration order — i.e. the same order `produceMarkers` walks them
    * when it builds the per-frame descriptor list.
    *
-   * Why this accessor exists: the pick fragment writes a per-instance
-   * `poiIndex` that decodes (via `selectionEncoding.unpackPick`) to
-   * the GLOBAL slot in the per-frame instance buffer.  But once a
-   * single category's bucket is isolated, that slot becomes a 0-based
-   * index into "the Nth POI of this category that produceMarkers
-   * uploaded".  Because `produceMarkers` iterates `pois` in array
-   * order and packs descriptors in that order (then `setMarkers`
-   * groups by category preserving within-group order), the array
-   * `pois.filter(p => p.category === cat)` is the correct lookup
-   * provided every POI of that category has a marker (current truth:
-   * all clusters / superclusters / voids set physicalRadiusMpc).
+   * Why this accessor exists: the ring pick fragment writes a per-
+   * instance `poiIndex` that, once a single category's bucket is
+   * isolated, is a 0-based index into "the Nth POI of this category
+   * that produceMarkers emitted".  `produceMarkers` emits EXACTLY ONE
+   * descriptor per marker-bearing POI of a visible category, in `pois`
+   * array order — including faded-out POIs, which emit at alpha 0 and
+   * are discarded in-fragment rather than omitted.  `setMarkers` groups
+   * by category preserving within-group order.  Because no faded POI is
+   * dropped, `pois.filter(p => p.category === cat)[poiIndex]` resolves
+   * the same structure the GPU picked — regardless of fade.  The
+   * contract holds as long as every POI of a marker-bearing category
+   * sets a radius (current truth: all clusters / superclusters / voids
+   * set physicalRadiusMpc); a marker category POI without a radius would
+   * emit no marker and break the alignment.
    *
-   * The contract is verified by the indexing comment in
-   * `wireInput.ts`'s `resolvePoi` and is structurally guarded by the
-   * fact that the renderer's per-category dispatch reads the same
-   * bucket-ordered instance buffer the producer wrote.
+   * The contract is exercised by the pick-index-alignment test in
+   * `poiSubsystem.test.ts` and is structurally guarded by the fact that
+   * the renderer's per-category dispatch reads the same bucket-ordered
+   * instance buffer the producer wrote.
    */
   getPoisForCategory(category: PoiCategory): readonly PointOfInterest[];
   /**

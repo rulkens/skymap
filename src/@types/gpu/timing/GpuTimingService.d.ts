@@ -63,9 +63,10 @@ export type GpuTimingService = {
    * Build the `RenderPassTimestampWrites` descriptor for the named
    * slot.  Returns `undefined` in no-op mode.
    *
-   * The slot-to-index mapping is static (see
-   * `src/services/gpu/timing/TIMING_SLOT_NAMES.ts`), so this method
-   * doesn't need the frame context.
+   * The slot-to-index mapping is fixed at service construction (derived
+   * from the injected slot-name list via `buildTimingSlotMap`), so this
+   * method doesn't need the frame context.  A name with no allocated
+   * slot returns `undefined` — the pass draws untimed.
    */
   descriptorFor(slot: TimingSlotName): GPURenderPassTimestampWrites | undefined;
   /**

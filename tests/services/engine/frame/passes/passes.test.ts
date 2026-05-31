@@ -27,6 +27,7 @@ import { BiasMode } from '../../../../../src/data/biasMode';
 import { ToneMapCurve } from '../../../../../src/data/toneMapCurve';
 import {
   HDR_PASSES,
+  TIMED_SLOT_NAMES,
   pointSpritesPass,
   proceduralDisksPass,
   filamentsPass,
@@ -65,9 +66,18 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
   const cam = makeCam();
   const vp = new Float32Array(16) as unknown as mat4;
   const renderer = { draw: vi.fn() } as any;
-  const postProcess = { view: {} as GPUTextureView, draw: vi.fn(), resize: vi.fn(), destroy: vi.fn() } as any;
+  const postProcess = {
+    view: {} as GPUTextureView,
+    draw: vi.fn(),
+    resize: vi.fn(),
+    destroy: vi.fn(),
+  } as any;
   const volumeOffscreen = { view: {} as GPUTextureView, resize: vi.fn(), destroy: vi.fn() } as any;
-  const texturedDisks = { runFrame: vi.fn(), lastOutput: { quads: [], disks: [] }, hasInFlightWork: () => false } as any;
+  const texturedDisks = {
+    runFrame: vi.fn(),
+    lastOutput: { quads: [], disks: [] },
+    hasInFlightWork: () => false,
+  } as any;
   return {
     isReady: true,
     cam,
@@ -139,7 +149,12 @@ const STATE_STUB = {
   },
 } as unknown as EngineState;
 
-const PASS_STUB = { setPipeline: vi.fn(), setVertexBuffer: vi.fn(), setBindGroup: vi.fn(), draw: vi.fn() } as unknown as GPURenderPassEncoder;
+const PASS_STUB = {
+  setPipeline: vi.fn(),
+  setVertexBuffer: vi.fn(),
+  setBindGroup: vi.fn(),
+  draw: vi.fn(),
+} as unknown as GPURenderPassEncoder;
 
 // ── Tests ───────────────────────────────────────────────────────────────────
 
@@ -164,6 +179,28 @@ describe('HDR_PASSES registry', () => {
       'horizon-shell',
       'cluster-markers',
     ]);
+  });
+});
+
+describe('TIMED_SLOT_NAMES registry', () => {
+  it('auto-includes every HDR pass name, bracketed by the framework slots', () => {
+    // This is the auto-registration guarantee: a renderer that joins
+    // HDR_PASSES acquires a GPU-timing slot + a DebugPanel row with no
+    // timing-layer edit, because both derive from this list.
+    expect(TIMED_SLOT_NAMES).toEqual([
+      'scalar-volume',
+      ...HDR_PASSES.map((p) => p.name),
+      'tone-map',
+      'ui-overlay',
+      'pick',
+    ]);
+    // cluster-markers — the most recently added renderer — is present
+    // purely by virtue of being in HDR_PASSES.
+    expect(TIMED_SLOT_NAMES).toContain('cluster-markers');
+  });
+
+  it('has unique slot names (no index-pair collisions downstream)', () => {
+    expect(new Set(TIMED_SLOT_NAMES).size).toBe(TIMED_SLOT_NAMES.length);
   });
 });
 
@@ -260,7 +297,13 @@ describe('filamentsPass.draw', () => {
     // No throw, no call — and there's nothing to spy on since the
     // renderer is null.  We just assert no exception escapes.
     expect(() =>
-      filamentsPass.draw(PASS_STUB, makeCtx(), STATE_STUB, makeSettings({ filamentsEnabled: true }), deps),
+      filamentsPass.draw(
+        PASS_STUB,
+        makeCtx(),
+        STATE_STUB,
+        makeSettings({ filamentsEnabled: true }),
+        deps,
+      ),
     ).not.toThrow();
   });
 
@@ -382,7 +425,9 @@ describe('horizonShellPass.draw', () => {
 describe('pointSpritesPass.draw', () => {
   it('packs (source, localIdx) into the selectedPacked u32', () => {
     const ctx = makeCtx();
-    const settings = makeSettings({ selected: { kind: 'galaxy', source: Source.SDSS, localIdx: 42 } });
+    const settings = makeSettings({
+      selected: { kind: 'galaxy', source: Source.SDSS, localIdx: 42 },
+    });
     const deps = makeDeps();
     pointSpritesPass.draw(PASS_STUB, ctx, STATE_STUB, settings, deps);
     const drawSpy = ctx.renderer.draw as ReturnType<typeof vi.fn>;

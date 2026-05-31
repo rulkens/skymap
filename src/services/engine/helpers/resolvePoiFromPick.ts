@@ -16,15 +16,17 @@
  *
  * ### Why the array lookup is safe
  *
- * `produceMarkers` iterates `pois` in stored array order and packs
- * descriptors in that order, then `setMarkers` re-groups by category
- * preserving within-group order.  As long as every POI of a marker-
- * bearing category sets `physicalRadiusMpc` (current truth for cluster
- * / supercluster / void), `pois.filter(p => p.category === cat)[i]` is
- * byte-identical to the renderer's i-th uploaded instance of that
- * category.  If a future POI of a marker category omits the radius,
- * the indexing contract breaks — see `getPoisForCategory`'s docstring
- * in `PoiSubsystem.d.ts`.
+ * `produceMarkers` iterates `pois` in stored array order and emits
+ * EXACTLY ONE descriptor per marker-bearing POI of a visible category
+ * — including ones faded fully out, which emit at alpha 0 and are
+ * discarded in-fragment (visible passes + ring pick) rather than being
+ * omitted.  `setMarkers` then re-groups by category preserving within-
+ * group order.  Because no faded POI is dropped, the i-th descriptor of
+ * a category is the i-th `getPoisForCategory(cat)` entry regardless of
+ * fade, so `getPoisForCategory(cat)[poiIndex]` resolves the pick hit's
+ * structure correctly.  The contract holds as long as every POI of a
+ * marker-bearing category sets a radius (so it emits a marker at all) —
+ * see `getPoisForCategory`'s docstring in `PoiSubsystem.d.ts`.
  *
  * ### Why this lives in a shared helper now
  *

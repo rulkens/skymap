@@ -7,7 +7,7 @@
  * after the renderer that they commit into). This phase covers the rest:
  *
  *   - Filament, CF-4 DM density, MCPM Cosmic Web volume slots.
- *   - Famous-meta + PGC-alias sidecar slots.
+ *   - Famous-meta + cluster-catalog + PGC-alias sidecar slots.
  *   - Synthetic-volume DEV fixtures.
  *   - The `allSlots` registry + load-progress emitter.
  *   - The galaxy-atlas / textured-disk / procedural-disk subsystems.
@@ -29,6 +29,7 @@
  *     `state.assetSlots.pgcAlias`, `state.assetSlots.cf4Density`,
  *     `state.assetSlots.mcpm`, `state.assetSlots.syntheticVolumes`.
  *   - `state.sources.famousMeta` — via famous-meta subscriber (on `ready`).
+ *   - `state.sources.clusterBulk` — via cluster-catalog subscriber (on `ready`).
  *   - `state.sources.catalogs` — populated by the per-source slot commit
  *     subscribers (wired in `initGpu`).
  *   - `state.subsystems.loadProgress`, `state.subsystems.galaxyAtlas`,
@@ -50,7 +51,9 @@ import {
   loadCompanionAssets,
 } from '../wiring/galaxyCatalogSourceRegistry';
 import { buildPoisFromFamousMeta } from './buildPoisFromFamousMeta';
+import { buildPoisFromClusterCatalog } from './buildPoisFromClusterCatalog';
 import { createFilamentSlot } from '../../loading/slots/filamentSlot';
+import { createClusterCatalogSlot } from '../../loading/slots/clusterCatalogSlot';
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
 import { createFamousMetaSlot } from '../../loading/slots/famousMetaSlot';
@@ -106,22 +109,23 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // The SettingsPanel's per-category checkboxes (Overlays → Labels)
   // are the user-facing knob; this wire just makes the POIs available.
   //
-  // The three lists (cluster / supercluster / void) stay separate
-  // (rather than one merged export) so the audit script in `tools/`
-  // can consume CLUSTER_ANCHORS without pulling in interpretive
-  // supercluster / void POIs.
+  // The seed JSON holds all three categories (cluster / supercluster /
+  // void); the audit script in `tools/` filters by category directly
+  // from the parsed seed.
   //
-  // physicalRadiusMpc per anchor comes from clusterAnchors.ts —
+  // physicalRadiusMpc per anchor comes from `data/cluster_anchors.seed.json` —
   // literature-grounded values (R_200 / virial radii for clusters,
   // characteristic structural extent for superclusters and voids).
-  // See the per-anchor citation comments in clusterAnchors.ts.
+  // See the per-entry description fields in the seed JSON.
   //
   // The id-slug + worldPos build is factored into
   // `data/buildStaticAnchorPois.ts` so the React-side `usePoiUrlSync`
   // deep-link drain can construct the same `PointOfInterest` records
   // by id without drifting on slug-rule changes.
   const staticAnchorPois: PointOfInterest[] = buildStaticAnchorPois();
-  state.subsystems.pois.setPois(staticAnchorPois);
+  // Initial publish is just the static anchors — the famous-galaxy and
+  // bulk-cluster groups merge in later via `rebuildAllPois` once their
+  // async assets land (defined below, after the slots are minted).
 
   // ── CF-4 DM density volume slot ──────────────────────────────────
   // Slot minted unconditionally; the boot-time `.load()` below is
@@ -145,44 +149,83 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // the graceful-degradation policy on fetch error.
   const famousMetaSlot = createFamousMetaSlot(state, cb);
 
-  // ── Famous-galaxy label wire (deferred merge) ────────────────────
+  // ── Cluster/supercluster bulk-coverage slot ──────────────────────
+  // Boot-time, tier-agnostic asset (like filaments + famous-meta): the
+  // numeric `.ccat` + meta sidecar that the bulk POI producer turns into
+  // the ~375 non-featured ring/halo structures.  Factory owns the mint +
+  // subscribe + state write (`state.sources.clusterBulk`).  Unlike
+  // famous-meta this is NOT a registry companion, so its `.load({})`
+  // fires explicitly from the boot-load section below alongside filaments.
+  const clusterCatalogSlot = createClusterCatalogSlot(state, cb);
+
+  // ── POI merge wire (deferred, three groups) ──────────────────────
   //
-  // Famous POIs need two ingredients: the meta sidecar (for names +
-  // diameter) and the Famous galaxy catalog (for worldPos).  Both arrive
-  // asynchronously — `famousMetaSlot.load()` fires later in this phase;
-  // the catalog arrives via the per-source slot commit that `initGpu`
-  // already wired.  We re-run the merge whenever either ingredient
-  // lands so the user sees labels appear as soon as the data is on
-  // hand.
+  // The POI subsystem's published list is the union of THREE groups,
+  // each arriving on its own schedule:
   //
-  // Re-merging static anchors + Famous POIs every time isn't a
-  // performance concern: setPois is O(N) over the merged list (~125
-  // POIs at most), and produceLabels only forwards changes downstream
-  // when the label set actually changes.  Simpler to recompute the
-  // merged list than to track partial state.
-  function rewireFamousPois(): void {
+  //   1. Static anchors — synchronous, present from this phase's start.
+  //   2. Famous galaxies — need the meta sidecar (names + diameter) AND
+  //      the Famous galaxy catalog (worldPos), both async.
+  //   3. Bulk clusters/superclusters — present once the cluster-catalog
+  //      slot lands (writes `state.sources.clusterBulk`).
+  //
+  // A single `rebuildAllPois` always re-merges whichever groups are
+  // currently available and republishes the full list.  Routing all
+  // three subscribers through one rebuild (rather than three independent
+  // `setPois([...static, ...thisGroup])` calls) is essential: an
+  // independent famous subscriber would clobber the bulk POIs, and vice
+  // versa.
+  //
+  // Re-merging on every arrival isn't a performance concern: setPois is
+  // O(N) over the merged list (~500 POIs at most), and produceLabels only
+  // forwards downstream when the label set actually changes.  Simpler to
+  // recompute the merged list than to track partial state.
+  function rebuildAllPois(): void {
+    // Famous: needs both the meta sidecar and the Famous catalog (worldPos).
     const meta = state.sources.famousMeta;
-    const catalog = state.sources.catalogs.get(Source.Famous);
-    if (meta.length === 0 || catalog === undefined || catalog.count === 0) return;
-    const famousPois = buildPoisFromFamousMeta(meta, catalog);
-    state.subsystems.pois.setPois([...staticAnchorPois, ...famousPois]);
+    const famousCatalog = state.sources.catalogs.get(Source.Famous);
+    const famousPois =
+      meta.length === 0 || famousCatalog === undefined || famousCatalog.count === 0
+        ? []
+        : buildPoisFromFamousMeta(meta, famousCatalog);
+    // Bulk clusters: present once the cluster-catalog slot has loaded.
+    const clusterBulkPois = state.sources.clusterBulk
+      ? buildPoisFromClusterCatalog(state.sources.clusterBulk)
+      : [];
+    state.subsystems.pois.setPois([...staticAnchorPois, ...famousPois, ...clusterBulkPois]);
+    // Echo the per-category structure counts so the Structures panel can
+    // show "Clusters 573" alongside its toggles — the marker-category
+    // analogue of the per-survey onCatalogReady count.  Counted off the
+    // freshly-merged subsystem list (featured anchors + bulk) so the
+    // number matches exactly what renders.  Famous galaxies are a label-
+    // only category, not a Structures row, so they're omitted.
+    cb.sources?.onStructureCountsChange?.({
+      cluster: state.subsystems.pois.getPoisForCategory('cluster').length,
+      supercluster: state.subsystems.pois.getPoisForCategory('supercluster').length,
+      void: state.subsystems.pois.getPoisForCategory('void').length,
+    });
   }
-  // Try immediately (in case both ingredients are already present —
-  // possible when wireSlots is replayed in tests or after a hot reload).
-  rewireFamousPois();
-  // Subscribe to the famous-meta slot's transitions; the subscriber
-  // also fires once with the current state, so a slot already in
-  // `ready` state re-triggers the merge here.
+  // Publish immediately (static anchors only at boot; both async groups
+  // are still empty unless wireSlots is replayed in tests / after a hot
+  // reload, in which case any already-present group merges in too).
+  rebuildAllPois();
+  // Subscribe to each async group's `ready`.  Each subscriber also fires
+  // once with the slot's current state, so a slot already in `ready`
+  // re-triggers the merge here.
   famousMetaSlot.subscribe((s) => {
-    if (s.kind === 'ready') rewireFamousPois();
+    if (s.kind === 'ready') rebuildAllPois();
   });
-  // Subscribe to the Famous catalog's slot for the symmetric trigger.
+  // Famous catalog's slot — the symmetric trigger for the worldPos half.
   const famousCatalogSlot = state.assetSlots.points.get(Source.Famous);
   if (famousCatalogSlot !== undefined) {
     famousCatalogSlot.subscribe((s) => {
-      if (s.kind === 'ready') rewireFamousPois();
+      if (s.kind === 'ready') rebuildAllPois();
     });
   }
+  // Cluster-catalog slot — the bulk-structure trigger.
+  clusterCatalogSlot.subscribe((s) => {
+    if (s.kind === 'ready') rebuildAllPois();
+  });
 
   // ── PGC-alias slot ───────────────────────────────────────────────
   // Lazy: only `load()`-ed on first Cmd+K palette open via the public
@@ -224,6 +267,10 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   }
   allSlots.set(filamentSlot.name, filamentSlot as unknown as AssetSlot<unknown, unknown>);
   allSlots.set(famousMetaSlot.name, famousMetaSlot as unknown as AssetSlot<unknown, unknown>);
+  allSlots.set(
+    clusterCatalogSlot.name,
+    clusterCatalogSlot as unknown as AssetSlot<unknown, unknown>,
+  );
   allSlots.set(pgcAliasSlot.name, pgcAliasSlot as unknown as AssetSlot<unknown, unknown>);
   if (state.assetSlots.cf4Density) {
     allSlots.set(
@@ -454,14 +501,18 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
     if (cfg.category === 'synthetic') continue;
     if (!maskHas(state.sources.drawMask, cfg.source)) continue;
-    state.assetSlots.points
-      .get(cfg.source)
-      ?.load({ source: cfg.source, tier: state.sources.tier });
+    state.assetSlots.points.get(cfg.source)?.load({ source: cfg.source, tier: state.sources.tier });
     loadCompanionAssets(state, cfg, state.sources.tier);
   }
   // Filaments load exactly once at boot — never on tier change.
   // See `filamentFetcher.ts` for the rationale.
   state.assetSlots.filaments?.load({ tier: state.sources.tier });
+  // Cluster/supercluster bulk coverage loads exactly once at boot — it's
+  // tier-agnostic and not a registry companion, so it needs its own
+  // explicit `.load({})` here (empty `ClusterCatalogReq`).  The slot
+  // subscriber writes `state.sources.clusterBulk` and `rebuildAllPois`
+  // (above) merges the bulk POIs in on the `ready` transition.
+  clusterCatalogSlot.load({});
   // CF-4 DM density loads at boot only when its default is ON;
   // otherwise the slot stays idle and `engine.setVolumeFieldEnabled`
   // triggers a lazy load on toggle. No tier dependency.

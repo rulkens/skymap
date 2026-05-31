@@ -47,20 +47,14 @@ import { useEffect, useState, useRef, type ReactElement } from 'react';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { GpuTimingFrame } from '../../@types/gpu/timing/GpuTimingFrame';
 import type { TimingSlotName } from '../../@types/gpu/timing/TimingSlotName';
-import { HDR_PASSES } from '../../services/engine/frame/passes';
+import { TIMED_SLOT_NAMES } from '../../services/engine/frame/passes';
 import { Sparkline } from './Sparkline';
 
-// Row order matches encoder draw order. `scalar-volume` runs in
-// `encodeVolumes` before the HDR loop, so it's listed explicitly; the
-// HDR_PASSES spread covers the loop interior. Reorders in
-// `passes/index.ts` propagate here automatically.
-const DISPLAY_SLOT_ORDER: readonly TimingSlotName[] = [
-  'scalar-volume',
-  ...HDR_PASSES.map((p) => p.name as TimingSlotName),
-  'tone-map',
-  'ui-overlay',
-  'pick',
-];
+// Row order = the timing registry's order, which is encoder draw order
+// (scalar-volume pre-pass, the HDR loop, tone-map, ui-overlay, pick).
+// This is the same list the service allocates query-set slots from, so a
+// renderer that joins `HDR_PASSES` gets a row here automatically.
+const DISPLAY_SLOT_ORDER: readonly TimingSlotName[] = TIMED_SLOT_NAMES;
 
 const AVG_WINDOW = 60;
 const SPARKLINE_WINDOW = 8;

@@ -119,6 +119,10 @@ vi.mock('../../../../src/services/gpu/renderers/milkyWayRenderer', () => ({
 
 vi.mock('../../../../src/services/gpu/renderers/horizonShellRenderer', () => ({
   createHorizonShellRenderer: vi.fn(() => makeStub('horizonShellRenderer')),
+  // initGpu now imports the pass registry (for TIMED_SLOT_NAMES), which
+  // transitively loads horizonShellPass — that module reads this const,
+  // so the mock must provide it.
+  HORIZON_RADIUS_GPC: 14.3,
 }));
 
 vi.mock('../../../../src/services/gpu/renderers/filamentRenderer', () => ({
@@ -340,4 +344,3 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     }).not.toThrow();
   });
 });
-

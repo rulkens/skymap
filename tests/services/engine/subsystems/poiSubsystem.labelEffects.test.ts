@@ -14,6 +14,7 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
+import { mat4 } from 'gl-matrix';
 import { createPoiSubsystem } from '../../../../src/services/engine/subsystems/poiSubsystem';
 import {
   clearLabelStyleOverride,
@@ -37,6 +38,7 @@ function makeCtx(): ReadyFrameContext {
     drawCamPos: [0, 0, 0],
     canvasSize: { width: 1920, height: 1080 },
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
+    vp: mat4.create(),
   } as unknown as ReadyFrameContext;
 }
 
@@ -45,6 +47,7 @@ const VIRGO: PointOfInterest = {
   name: 'Virgo',
   category: 'cluster',
   worldPos: [10, 0, 0],
+  featured: true,
   physicalRadiusMpc: 2,
 };
 

@@ -19,13 +19,8 @@
  */
 import { readFileSync } from 'node:fs';
 import { decodeScalarField } from '../../src/data/scalarFieldFormat';
-import {
-  CLUSTER_ANCHORS,
-  SUPERCLUSTER_ANCHORS,
-  VOID_ANCHORS,
-  raDecDistToEqCart,
-} from '../../src/data/clusterAnchors';
-import type { ClusterAnchor } from '../../src/@types/data/ClusterAnchor';
+import { parseClusterSeed } from '../parsers/parseClusterSeed';
+import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import {
   eqToSg,
@@ -34,9 +29,19 @@ import {
 } from '../utils/math/coordinates';
 import { f16BitsToFloat } from '../utils/math/floatHalf';
 import { percentileOf } from '../utils/math/percentile';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
 
-/** Local alias for read-clarity in the per-list loops below. */
-type NamedAnchor = ClusterAnchor;
+/**
+ * Minimal shape needed by `sampleAtAnchor` — raHours/decDeg/distMpc for the
+ * position conversion + names[0] for the display label.  Matches the fields
+ * present on ClusterSeedEntry.
+ */
+type NamedAnchor = {
+  names: string[];
+  raHours: number;
+  decDeg: number;
+  distMpc: number;
+};
 
 function sampleAtAnchor(
   decoded: Float64Array,
@@ -82,48 +87,54 @@ function main(): void {
   const sorted = new Float64Array(decoded);
   sorted.sort();
 
+  // Load seed once; split by category for the three verification passes.
+  const allSeed = parseClusterSeed(readFileSync(rawDataPath('clusters.seed'), 'utf-8'));
+  const CLUSTER_ENTRIES = allSeed.filter((e) => e.category === 'cluster');
+  const SUPERCLUSTER_ENTRIES = allSeed.filter((e) => e.category === 'supercluster');
+  const VOID_ENTRIES = allSeed.filter((e) => e.category === 'void');
+
   // ── 1. Cluster anchors should be HIGH percentile ─────────────────────
   console.log('');
   console.log('── CLUSTERS — expect high percentile (overdense) ──');
-  for (const a of CLUSTER_ANCHORS) {
+  for (const a of CLUSTER_ENTRIES) {
     const r = sampleAtAnchor(decoded, sorted, a, dims, voxelSize);
     if (!r) {
-      console.log(`  ${a.name.padEnd(28)} OUT OF BOUNDS`);
+      console.log(`  ${a.names[0]!.padEnd(28)} OUT OF BOUNDS`);
       continue;
     }
     const sign = r.value >= 0 ? '+' : '-';
     console.log(
-      `  ${a.name.padEnd(28)} → vox(${r.vox.join(',')}) → ${sign}${Math.abs(r.value).toFixed(3)} (${r.pct.toFixed(1)}th)`,
+      `  ${a.names[0]!.padEnd(28)} → vox(${r.vox.join(',')}) → ${sign}${Math.abs(r.value).toFixed(3)} (${r.pct.toFixed(1)}th)`,
     );
   }
 
   // ── 1b. Superclusters — expect very high percentile ──────────────────
   console.log('');
   console.log('── SUPERCLUSTERS — expect very high percentile (extended overdensity) ──');
-  for (const a of SUPERCLUSTER_ANCHORS) {
+  for (const a of SUPERCLUSTER_ENTRIES) {
     const r = sampleAtAnchor(decoded, sorted, a, dims, voxelSize);
     if (!r) {
-      console.log(`  ${a.name.padEnd(28)} OUT OF BOUNDS`);
+      console.log(`  ${a.names[0]!.padEnd(28)} OUT OF BOUNDS`);
       continue;
     }
     const sign = r.value >= 0 ? '+' : '-';
     console.log(
-      `  ${a.name.padEnd(28)} → vox(${r.vox.join(',')}) → ${sign}${Math.abs(r.value).toFixed(3)} (${r.pct.toFixed(1)}th)`,
+      `  ${a.names[0]!.padEnd(28)} → vox(${r.vox.join(',')}) → ${sign}${Math.abs(r.value).toFixed(3)} (${r.pct.toFixed(1)}th)`,
     );
   }
 
   // ── 2. Voids should be LOW percentile ────────────────────────────────
   console.log('');
   console.log('── VOIDS — expect low percentile (underdense) ──');
-  for (const v of VOID_ANCHORS) {
+  for (const v of VOID_ENTRIES) {
     const r = sampleAtAnchor(decoded, sorted, v, dims, voxelSize);
     if (!r) {
-      console.log(`  ${v.name.padEnd(28)} OUT OF BOUNDS`);
+      console.log(`  ${v.names[0]!.padEnd(28)} OUT OF BOUNDS`);
       continue;
     }
     const sign = r.value >= 0 ? '+' : '-';
     console.log(
-      `  ${v.name.padEnd(28)} → vox(${r.vox.join(',')}) → ${sign}${Math.abs(r.value).toFixed(3)} (${r.pct.toFixed(1)}th)`,
+      `  ${v.names[0]!.padEnd(28)} → vox(${r.vox.join(',')}) → ${sign}${Math.abs(r.value).toFixed(3)} (${r.pct.toFixed(1)}th)`,
     );
   }
 

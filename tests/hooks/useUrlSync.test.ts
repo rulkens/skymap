@@ -23,7 +23,14 @@ function makeGalaxy(): GalaxyInfo {
 }
 
 function makePoi(id: string): PointOfInterest {
-  return { id, name: id, category: 'cluster', worldPos: [0, 0, 0] };
+  return {
+    id,
+    name: id,
+    category: 'cluster',
+    worldPos: [0, 0, 0],
+    featured: true,
+    physicalRadiusMpc: 2,
+  };
 }
 
 describe('computeDesiredHash (unified)', () => {
