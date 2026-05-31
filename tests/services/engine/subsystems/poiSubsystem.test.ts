@@ -371,32 +371,39 @@ describe('poiSubsystem · featured gate + declutter', () => {
     expect(out.labels.map((l) => l.text)).toEqual(['Coma']);
   });
 
-  it('declutters overlapping featured labels keeping the higher significance', () => {
+  it('declutters overlapping featured labels keeping the more prominent (larger on-screen) one', () => {
     const sub = createPoiSubsystem();
     // Both project to ~screen centre (960, 540) under identity vp — well
-    // within DECLUTTER_MARGIN_PX of each other in both x and y.
-    const faint: PointOfInterest = {
-      id: 'faint',
-      name: 'Faint',
+    // within DECLUTTER_MARGIN_PX of each other in both x and y.  Priority
+    // is on-screen prominence (apparent ring radius), NOT a flat
+    // significance: `small` is listed FIRST so a plain array-order
+    // tiebreak would wrongly keep it — the prominence sort must override
+    // that and keep `big`.  This is the orbit-flicker fix: the larger
+    // structure under the camera wins, the small one yields.
+    const small: PointOfInterest = {
+      id: 'small',
+      name: 'Small',
       category: 'cluster',
       worldPos: [0, 0, 5],
       featured: true,
-      physicalRadiusMpc: 2,
-      significance: 0.2,
+      physicalRadiusMpc: 1,
     };
-    const bright: PointOfInterest = {
-      id: 'bright',
-      name: 'Bright',
+    // radius 3 at distance ~5 → apRadPx ≈ 561 px: larger than `small`'s
+    // ≈187 px but still under markerMaxApparentRadiusPx (700) so it
+    // doesn't trip the close-approach fade-out and drop its own label.
+    const big: PointOfInterest = {
+      id: 'big',
+      name: 'Big',
       category: 'cluster',
       worldPos: [0.01, 0, 5],
       featured: true,
-      physicalRadiusMpc: 2,
-      significance: 0.9,
+      physicalRadiusMpc: 3,
     };
-    sub.setPois([faint, bright]);
+    sub.setPois([small, big]);
     const out = sub.produceLabels(makeState(), makeCtx());
-    // Only the higher-significance label survives the overlap.
-    expect(out.labels.map((l) => l.id)).toEqual(['bright']);
+    // The larger on-screen ring survives the overlap despite being later
+    // in the array.
+    expect(out.labels.map((l) => l.id)).toEqual(['big']);
   });
 
   it('keeps non-overlapping featured labels both', () => {

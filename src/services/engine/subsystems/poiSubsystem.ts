@@ -395,14 +395,26 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
 
   function produceLabels(state: EngineState, ctx: ReadyFrameContext): LabelProducerOutput {
     // A surviving-the-gates candidate: the built label, its optional
-    // anchor line, the POI's significance (declutter sort key), and the
-    // projected screen position used for overlap rejection.  `onScreen`
-    // is false for behind-camera / out-of-viewport candidates — those
-    // are accepted unconditionally and never block anyone.
+    // anchor line, the candidate's on-screen PROMINENCE (declutter sort
+    // key — see below), and the projected screen position used for
+    // overlap rejection.  `onScreen` is false for behind-camera /
+    // out-of-viewport candidates — those are accepted unconditionally
+    // and never block anyone.
+    //
+    // `prominencePx` is the label's apparent on-screen size in pixels:
+    // the ring's apparent radius for cluster / SC / void, the galaxy's
+    // apparent diameter for a famous galaxy.  The declutter resolves
+    // collisions in favour of the MORE prominent label.  Earlier this
+    // was a flat `significance` that every featured anchor set to 1, so
+    // collisions broke by array order (clusters first) — orbiting a big
+    // supercluster, a small cluster label sweeping across would outrank
+    // and cull it, then release it, making the structure you're actually
+    // inspecting flicker.  Ranking by on-screen size keeps the large
+    // structure under the camera and lets the small distant label yield.
     type LabelCandidate = {
       readonly label: Label;
       readonly line: MarkerLine | null;
-      readonly significance: number;
+      readonly prominencePx: number;
       readonly screenX: number;
       readonly screenY: number;
       readonly onScreen: boolean;
@@ -463,6 +475,12 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
       // apparent size.  Runs only when both fields are set — see the type
       // doc on `apparentDiameterKpc` for the permissive-default rationale.
       let fadeAlpha = 1;
+      // On-screen prominence (px) — the declutter sort key.  Set from the
+      // galaxy's apparent diameter (famous galaxies) or the ring's
+      // apparent radius (structures, below); the larger label wins a
+      // collision.  Defaults to 0 so a label that somehow sets neither
+      // sinks to lowest priority rather than silently beating real ones.
+      let prominencePx = 0;
       if (
         p.category === 'famousGalaxy' &&
         p.minApparentSizePx !== undefined &&
@@ -475,6 +493,7 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
           fovYRad,
         });
         if (sizePx < p.minApparentSizePx) continue;
+        prominencePx = sizePx;
         if (style.fadeBandPx !== undefined) {
           const t = Math.min(1, (sizePx - p.minApparentSizePx) / style.fadeBandPx);
           // smoothstep — same shape as youAreHereAlpha's transition.
@@ -508,6 +527,7 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
         p.category === 'famousGalaxy' ? undefined : (p.apparentRadiusMpc ?? p.physicalRadiusMpc);
       if (markerRadiusMpc !== undefined && distanceMpc > 0.001) {
         const apRadPx = (markerRadiusMpc / distanceMpc) * (halfH / Math.tan(fovYRad * 0.5));
+        prominencePx = apRadPx;
         if (apRadPx > style.markerMaxApparentRadiusPx) {
           const t = Math.min(
             1,
@@ -648,14 +668,10 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
         onScreen = ndcX >= -1 && ndcX <= 1 && ndcY >= -1 && ndcY <= 1;
       }
 
-      // Significance drives the declutter sort.  Only the extended-
-      // structure arms carry it; famous galaxies (and any structure
-      // anchor that omits it) default to full weight 1.
-      const significance = p.category === 'famousGalaxy' ? 1 : (p.significance ?? 1);
       candidates.push({
         label,
         line: candidateLine,
-        significance,
+        prominencePx,
         screenX,
         screenY,
         onScreen,
@@ -664,15 +680,18 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
 
     // Screen-space declutter.  The featured candidate set is tiny
     // (≤~30), so an O(n²) greedy is comfortably within budget and far
-    // simpler than a top-N spatial structure.  Sort by significance
-    // DESC (stable via an index tiebreaker so equal-significance ties
-    // keep input order); walk the sorted list accepting a candidate
+    // simpler than a top-N spatial structure.  Sort by on-screen
+    // PROMINENCE DESC (stable via an index tiebreaker so equal-prominence
+    // ties keep input order); walk the sorted list accepting a candidate
     // when its anchor sits ≥ DECLUTTER_MARGIN_PX (in x OR y) from every
     // already-accepted ON-SCREEN anchor.  Off-screen / behind-camera
-    // candidates are accepted unconditionally and never block.
+    // candidates are accepted unconditionally and never block.  Sorting
+    // by prominence (not a flat significance) is what keeps the large
+    // structure under the camera from being culled by a small distant
+    // label sweeping across it during an orbit.
     const order = candidates.map((_, i) => i);
     order.sort((a, b) => {
-      const d = candidates[b]!.significance - candidates[a]!.significance;
+      const d = candidates[b]!.prominencePx - candidates[a]!.prominencePx;
       return d !== 0 ? d : a - b;
     });
     const accepted: LabelCandidate[] = [];
