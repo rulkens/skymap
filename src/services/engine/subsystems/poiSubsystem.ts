@@ -733,16 +733,34 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
     const sel = state.subsystems.selection.selected();
     const selectedPoiId = sel !== null && sel.kind === 'poi' ? sel.id : null;
 
+    // Emit-all-then-discard contract.  Every marker-bearing POI of a
+    // VISIBLE category emits EXACTLY ONE descriptor here, in `pois`
+    // array order — including ones faded fully out (those emit alpha-0
+    // halo + ring colours, which the visible fragments and the ring
+    // pick fragment discard).  This keeps each category's descriptor run
+    // index-aligned with `getPoisForCategory(category)`: the ring pick
+    // path packs `@builtin(instance_index)` as the per-category-local
+    // POI index, and `resolvePoiFromPick` resolves it through
+    // `getPoisForCategory(cat)[poiIndex]`.  Omitting faded POIs (the
+    // pre-fix behaviour) index-shifted that lookup and selected the
+    // wrong structure on click/hover.  The only legitimate `continue`s
+    // are all-or-nothing-per-category (visibility) or a different,
+    // non-marker category (famousGalaxy) — neither perturbs the
+    // within-category alignment.
     for (const p of pois) {
       // Marker-axis gate only.  See the symmetric comment in
       // `produceLabels` — these two records are deliberately
       // independent so the SettingsPanel can offer separate "show
-      // markers" vs "show labels" master toggles.
+      // markers" vs "show labels" master toggles.  A hidden category
+      // draws nothing, so alignment only matters WITHIN a drawn
+      // category — this all-or-nothing skip is safe.
       if (!markerVisibility[p.category]) continue;
       // Famous galaxies opt out of the marker pass entirely — they have
       // no radius and render curated thumbnails on close approach instead.
-      // Skipping early narrows `p` to the structure arms so the radius
-      // read below is type-safe.
+      // They're picked via the point path, not the ring path, so this
+      // different-category skip doesn't perturb cluster/SC/void alignment.
+      // Skipping early also narrows `p` to the structure arms so the
+      // radius read below is type-safe.
       if (p.category === 'famousGalaxy') continue;
       // The marker pass renders at the WIDER apparent extent (named
       // cluster extent, not the virial core).  Fall back to the core for
@@ -754,49 +772,63 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
       const dy = p.worldPos[1] - cy;
       const dz = p.worldPos[2] - cz;
       const distanceMpc = Math.hypot(dx, dy, dz);
-      if (distanceMpc < 0.001) continue; // camera on top of POI — skip rather than NaN
 
-      // Apparent on-screen radius in pixels.
-      const apparentRadiusPx = (radiusMpc / distanceMpc) * pxPerRad;
-
-      // Max-apparent-radius fade-out: smoothstep alpha from 1 → 0 as
-      // the projected ring grows past markerMaxApparentRadiusPx into
-      // the fade band.  Above the band: alpha = 0 (skip).
-      let maxFadeAlpha = 1;
-      if (apparentRadiusPx > style.markerMaxApparentRadiusPx) {
-        const t = Math.min(
-          1,
-          (apparentRadiusPx - style.markerMaxApparentRadiusPx) / style.markerMaxApparentFadeBandPx,
-        );
-        // Smoothstep, then invert so we fade 1 → 0.
-        maxFadeAlpha = 1 - t * t * (3 - 2 * t);
-      }
-      if (maxFadeAlpha <= 0) continue; // fully faded
-
-      // Far-distance fade-out: symmetric counterpart to the close-
-      // approach maxFadeAlpha above.  When the projected ring shrinks
-      // past `markerMinApparentRadiusPx` the anchor stops being a
-      // legible structure marker — clusters become illegible chrome,
-      // labels float without a visible ring underneath them.  Smoothstep
-      // from 0 → 1 across the band so rings don't pop as the camera
-      // pulls back.  Same render-on-demand rationale as the max-radius
-      // fade: no `awake` signal — camera motion already wakes the loop.
-      let minFadeAlpha: number;
-      if (apparentRadiusPx < style.markerMinApparentRadiusPx) {
-        minFadeAlpha = 0;
-      } else if (
-        apparentRadiusPx <
-        style.markerMinApparentRadiusPx + style.markerMinApparentFadeBandPx
-      ) {
-        const t =
-          (apparentRadiusPx - style.markerMinApparentRadiusPx) / style.markerMinApparentFadeBandPx;
-        minFadeAlpha = t * t * (3 - 2 * t);
+      // Camera sitting on top of the POI: the apparent-radius
+      // projection divides by distance, so skip the math and treat the
+      // marker as fully faded (fadeAlpha 0).  We still emit a descriptor
+      // (below) rather than `continue`-ing — every marker-bearing POI of
+      // a visible category emits exactly one instance so the ring pick
+      // path's instance_index stays aligned with getPoisForCategory (see
+      // the loop header).  The alpha-0 instance is discarded in-fragment.
+      let fadeAlpha: number;
+      if (distanceMpc < 0.001) {
+        fadeAlpha = 0;
       } else {
-        minFadeAlpha = 1;
-      }
-      if (minFadeAlpha <= 0) continue;
+        // Apparent on-screen radius in pixels.
+        const apparentRadiusPx = (radiusMpc / distanceMpc) * pxPerRad;
 
-      const fadeAlpha = Math.min(maxFadeAlpha, minFadeAlpha);
+        // Max-apparent-radius fade-out: smoothstep alpha from 1 → 0 as
+        // the projected ring grows past markerMaxApparentRadiusPx into
+        // the fade band.  Above the band: alpha 0 (invisible, not omitted).
+        let maxFadeAlpha = 1;
+        if (apparentRadiusPx > style.markerMaxApparentRadiusPx) {
+          const t = Math.min(
+            1,
+            (apparentRadiusPx - style.markerMaxApparentRadiusPx) /
+              style.markerMaxApparentFadeBandPx,
+          );
+          // Smoothstep, then invert so we fade 1 → 0.
+          maxFadeAlpha = 1 - t * t * (3 - 2 * t);
+        }
+
+        // Far-distance fade-out: symmetric counterpart to the close-
+        // approach maxFadeAlpha above.  When the projected ring shrinks
+        // past `markerMinApparentRadiusPx` the anchor stops being a
+        // legible structure marker — clusters become illegible chrome,
+        // labels float without a visible ring underneath them.  Smoothstep
+        // from 0 → 1 across the band so rings don't pop as the camera
+        // pulls back.  Same render-on-demand rationale as the max-radius
+        // fade: no `awake` signal — camera motion already wakes the loop.
+        let minFadeAlpha: number;
+        if (apparentRadiusPx < style.markerMinApparentRadiusPx) {
+          minFadeAlpha = 0;
+        } else if (
+          apparentRadiusPx <
+          style.markerMinApparentRadiusPx + style.markerMinApparentFadeBandPx
+        ) {
+          const t =
+            (apparentRadiusPx - style.markerMinApparentRadiusPx) /
+            style.markerMinApparentFadeBandPx;
+          minFadeAlpha = t * t * (3 - 2 * t);
+        } else {
+          minFadeAlpha = 1;
+        }
+
+        // A fully faded marker (either end of the band) becomes an
+        // alpha-0 descriptor rather than an omission — see the loop
+        // header on the pick-index alignment contract.
+        fadeAlpha = Math.min(maxFadeAlpha, minFadeAlpha);
+      }
 
       // Significance weighting (additional to the distance fade above).
       // Low-significance distant structures stay faint; the SIG_MIN_ALPHA

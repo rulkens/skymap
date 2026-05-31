@@ -583,6 +583,62 @@ describe('poiSubsystem — produceMarkers', () => {
     expect(omittedM.ringColor[3]).toBeCloseTo(1, 5);
   });
 
+  // ── Pick-index alignment under fade (emit-all, discard-in-fragment) ──
+  //
+  // The ring pick path packs `@builtin(instance_index)` as the per-
+  // category-local POI index, which `resolvePoiFromPick` resolves via
+  // `getPoisForCategory(cat)[poiIndex]`.  For that lookup to land on the
+  // right structure, `produceMarkers` MUST emit exactly one descriptor
+  // per marker-bearing POI of a visible category — even ones faded fully
+  // out — so the descriptor's position in its category run equals the
+  // POI's position in `getPoisForCategory`.  A faded POI emits an
+  // alpha-0 descriptor (invisible, discarded in-fragment) rather than
+  // being omitted; omitting it would index-shift every later POI and
+  // select the wrong structure on click/hover.
+  it('keeps a faded-out POI in its descriptor slot at alpha 0 (pick-index alignment)', () => {
+    const sub = createPoiSubsystem();
+    // First cluster fades fully OUT: tiny radius far away → apRadPx well
+    // below the cluster floor (12 px).  radius=1, distance=500 → apRadPx
+    // ≈ 1.87 px.  Second cluster is comfortably visible (apRadPx ≈ 187).
+    const fadedOut: PointOfInterest = {
+      id: 'faded-out',
+      name: 'FadedOut',
+      category: 'cluster',
+      featured: true,
+      worldPos: [500, 0, 0],
+      physicalRadiusMpc: 1,
+    };
+    const visible: PointOfInterest = {
+      id: 'visible',
+      name: 'Visible',
+      category: 'cluster',
+      featured: true,
+      worldPos: [10, 0, 0],
+      physicalRadiusMpc: 2,
+    };
+    sub.setPois([fadedOut, visible]);
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+
+    // Per-category descriptor order, mapped to id, EQUALS
+    // getPoisForCategory order — independent of fade.  This is the
+    // invariant the ring-pick instance_index relies on.
+    const clusterDescriptorIds = markers
+      .filter((m) => m.category === 'cluster')
+      .map((m) => m.id);
+    const expected = sub.getPoisForCategory('cluster').map((p) => p.id);
+    expect(clusterDescriptorIds).toEqual(expected);
+    expect(clusterDescriptorIds).toEqual(['faded-out', 'visible']);
+
+    // The faded-out POI still occupies slot 0, at alpha 0 (so the ring +
+    // halo fragments discard it and the pick fragment skips it).
+    const fadedM = markers.find((m) => m.id === 'faded-out')!;
+    expect(fadedM.ringColor[3]).toBe(0);
+    expect(fadedM.haloColor[3]).toBe(0);
+    // The visible POI keeps full alpha.
+    const visibleM = markers.find((m) => m.id === 'visible')!;
+    expect(visibleM.ringColor[3]).toBeGreaterThan(0);
+  });
+
   it('respects setCategoryMarkerVisible', () => {
     const sub = createPoiSubsystem();
     sub.setPois([
@@ -621,8 +677,11 @@ describe('poiSubsystem — produceMarkers', () => {
 // apparentRadiusPx ≈ (radiusMpc / distanceMpc) * 935.307.
 // ─────────────────────────────────────────────────────────────────────
 describe('poiSubsystem — far-distance marker fade-out', () => {
-  it('cluster: skips descriptor below the apparent-radius floor', () => {
+  it('cluster: emits an invisible (alpha-0) descriptor below the apparent-radius floor', () => {
     // radiusMpc=1, distance=150 Mpc → apRadPx ≈ 6.2 < cluster floor (12).
+    // The marker is invisible, but the descriptor is retained at alpha 0
+    // so the ring-pick instance_index stays aligned with
+    // getPoisForCategory (see the produceMarkers loop header).
     const sub = createPoiSubsystem();
     sub.setPois([
       {
@@ -635,7 +694,9 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
       },
     ]);
     const markers = sub.produceMarkers(makeState(), makeCtx());
-    expect(markers).toHaveLength(0);
+    expect(markers).toHaveLength(1);
+    expect(markers[0]!.ringColor[3]).toBe(0);
+    expect(markers[0]!.haloColor[3]).toBe(0);
   });
 
   it('cluster: smoothsteps fadeAlpha at the band midpoint', () => {
@@ -677,8 +738,9 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
     expect(markers[0]!.ringColor[3]).toBeCloseTo(1, 5);
   });
 
-  it('supercluster: skips below its (higher) floor of 28 px', () => {
-    // radiusMpc=1, distance=200 → apRadPx ≈ 4.7 < 28.
+  it('supercluster: emits an invisible (alpha-0) descriptor below its (higher) floor of 28 px', () => {
+    // radiusMpc=1, distance=200 → apRadPx ≈ 4.7 < 28.  Invisible, but the
+    // descriptor is retained at alpha 0 for pick-index alignment.
     const sub = createPoiSubsystem();
     sub.setPois([
       {
@@ -691,11 +753,14 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
       },
     ]);
     const markers = sub.produceMarkers(makeState(), makeCtx());
-    expect(markers).toHaveLength(0);
+    expect(markers).toHaveLength(1);
+    expect(markers[0]!.ringColor[3]).toBe(0);
+    expect(markers[0]!.haloColor[3]).toBe(0);
   });
 
-  it('void: skips below its floor of 28 px', () => {
-    // radiusMpc=1, distance=500 → apRadPx ≈ 1.87 < 28.
+  it('void: emits an invisible (alpha-0) descriptor below its floor of 28 px', () => {
+    // radiusMpc=1, distance=500 → apRadPx ≈ 1.87 < 28.  Invisible, but the
+    // descriptor is retained at alpha 0 for pick-index alignment.
     const sub = createPoiSubsystem();
     sub.setPois([
       {
@@ -708,7 +773,9 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
       },
     ]);
     const markers = sub.produceMarkers(makeState(), makeCtx());
-    expect(markers).toHaveLength(0);
+    expect(markers).toHaveLength(1);
+    expect(markers[0]!.ringColor[3]).toBe(0);
+    expect(markers[0]!.haloColor[3]).toBe(0);
   });
 
   it('label fadeAlpha matches marker alpha at the band midpoint', () => {
