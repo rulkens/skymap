@@ -214,11 +214,16 @@ export const POI_STYLES = {
     ringColor: hexToGl('#B39947'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
-    // Clusters span ~1–5 Mpc cores; at far zoom they're the first
-    // category to drop from legibility, so the floor sits higher than
-    // for superclusters / voids.
-    markerMinApparentRadiusPx: 12,
-    markerMinApparentFadeBandPx: 12,
+    // The bulk MCXC catalog projects to a median ~5 px ring at its
+    // 98–619 Mpc distances (apparentRadiusMpc ≈ 2.5 × R500 ≈ 2.5–4
+    // Mpc).  This floor keeps the field to the "prominent" clusters —
+    // rings below ~5 px fade out, full alpha by 9 px — so the nearer /
+    // larger structures read clearly without papering the sky with
+    // sub-readable specks.  The fixed-pixel-width ring shader keeps the
+    // surviving small rings crisp.  Featured anchors (Virgo, Coma) have
+    // large radii and sit far above this floor.
+    markerMinApparentRadiusPx: 5,
+    markerMinApparentFadeBandPx: 4,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
   },

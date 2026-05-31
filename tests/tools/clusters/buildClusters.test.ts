@@ -170,9 +170,9 @@ describe('buildClusterEntries sets apparentRadiusMpc = APPARENT_MULTIPLE × R500
     expect(e.physicalRadiusMpc).toBeCloseTo(r500, 5);
     // apparentRadiusMpc = APPARENT_MULTIPLE * r500Mpc — we don't import the
     // constant directly, but we know apparent > physical and apparent / physical
-    // should equal APPARENT_MULTIPLE (1.5).
+    // should equal APPARENT_MULTIPLE (2.5 — the R200→Abell visual extent).
     expect(e.apparentRadiusMpc).toBeGreaterThan(e.physicalRadiusMpc);
-    expect(e.apparentRadiusMpc / e.physicalRadiusMpc).toBeCloseTo(1.5, 5);
+    expect(e.apparentRadiusMpc / e.physicalRadiusMpc).toBeCloseTo(2.5, 5);
   });
 });
 

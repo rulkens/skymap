@@ -678,7 +678,7 @@ describe('poiSubsystem — produceMarkers', () => {
 // ─────────────────────────────────────────────────────────────────────
 describe('poiSubsystem — far-distance marker fade-out', () => {
   it('cluster: emits an invisible (alpha-0) descriptor below the apparent-radius floor', () => {
-    // radiusMpc=1, distance=150 Mpc → apRadPx ≈ 6.2 < cluster floor (12).
+    // radiusMpc=1, distance=250 Mpc → apRadPx ≈ 3.7 < cluster floor (5).
     // The marker is invisible, but the descriptor is retained at alpha 0
     // so the ring-pick instance_index stays aligned with
     // getPoisForCategory (see the produceMarkers loop header).
@@ -689,7 +689,7 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
         name: 'Tiny',
         category: 'cluster',
         featured: true,
-        worldPos: [150, 0, 0],
+        worldPos: [250, 0, 0],
         physicalRadiusMpc: 1,
       },
     ]);
@@ -700,8 +700,8 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
   });
 
   it('cluster: smoothsteps fadeAlpha at the band midpoint', () => {
-    // Want apRadPx = floor + band/2 = 12 + 6 = 18.
-    // radiusMpc=1, distance = 935.307 / 18 ≈ 51.96 Mpc.
+    // Want apRadPx = floor + band/2 = 5 + 2 = 7.
+    // radiusMpc=1, distance = 935.307 / 7 ≈ 133.62 Mpc.
     const sub = createPoiSubsystem();
     sub.setPois([
       {
@@ -709,7 +709,7 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
         name: 'Mid',
         category: 'cluster',
         featured: true,
-        worldPos: [51.96, 0, 0],
+        worldPos: [133.62, 0, 0],
         physicalRadiusMpc: 1,
       },
     ]);
@@ -721,7 +721,7 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
   });
 
   it('cluster: full alpha above the band', () => {
-    // worldPos=[10,0,0], radius=2 → apRadPx ≈ 187, well above 24.
+    // worldPos=[10,0,0], radius=2 → apRadPx ≈ 187, well above 9 (floor+band).
     const sub = createPoiSubsystem();
     sub.setPois([
       {
@@ -789,7 +789,7 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
         name: 'Mid',
         category: 'cluster',
         featured: true,
-        worldPos: [51.96, 0, 0],
+        worldPos: [133.62, 0, 0],
         physicalRadiusMpc: 1,
       },
     ]);

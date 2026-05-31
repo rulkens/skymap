@@ -88,10 +88,17 @@ const Z_MAX = 0.15;
 
 /**
  * Factor that converts a cluster's physical R500 radius into its apparent
- * (named, visual) radius on screen.  1.5 enlarges the ring by 50%, enclosing
- * the wider Abell membership region that readers associate with cluster names.
+ * (named, visual) radius on screen.  R500 is the dense X-ray core (~1 Mpc for
+ * our M500 ≥ 2e14 cut), but the structure a reader pictures when they see a
+ * cluster name is the galaxy-membership cloud — roughly the R200 virial radius
+ * (~1.5 × R500) out to the Abell / infall extent (~2–3 × R500).  2.5 puts the
+ * ring in that R200→Abell band so it traces the visible cluster rather than
+ * the core, and lands the catalog at a legible on-screen size (median ~5 px at
+ * the 98–619 Mpc distances these clusters sit at) instead of a sub-readable
+ * ~3 px.  `physicalRadiusMpc` stays at R500 for the membership/proximity math
+ * — only the visual ring grows.
  */
-const APPARENT_MULTIPLE = 1.5;
+const APPARENT_MULTIPLE = 2.5;
 
 /**
  * Minimum proximity floor for the curated-vs-bulk dedup step (Mpc).
