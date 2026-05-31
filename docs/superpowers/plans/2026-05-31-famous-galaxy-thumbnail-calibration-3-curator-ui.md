@@ -141,11 +141,11 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 **Behaviour:** the Commit/export handler includes `state.disk` in `ExportParams` (Plan 2 Task 1 accepts it). The resume flow (re-clicking a curated galaxy) reads `recipe.disk` via `getRecipe` and dispatches `setDisk` so the overlay reconstructs.
 
-- [ ] **Step 1:** Include `disk` in the export params object.
-- [ ] **Step 2:** In the resume path (where crop/sliders are restored from the recipe), dispatch `setDisk(recipe.disk)` when present.
-- [ ] **Step 3:** `npm run typecheck` → PASS.
-- [ ] **Step 4:** Manual round-trip: curate a galaxy with a disk → commit → re-select it → overlay reappears.
-- [ ] **Step 5: Commit**
+- [x] **Step 1:** Include `disk` in the export params object. _(plus `catalogAxisRatio`; api.ts unchanged — ExportParams inherits both from ProcessParams)_
+- [x] **Step 2:** In the resume path (where crop/sliders are restored from the recipe), dispatch `setDisk(recipe.disk)` when present. _(accepts spurious dirty.disk on resume — resume already re-Processes via setCrop; documented)_
+- [x] **Step 3:** `npm run typecheck` → PASS (rc=0).
+- [ ] **Step 4:** Manual round-trip: curate a galaxy with a disk → commit → re-select it → overlay reappears. _(VISUAL — pending user)_
+- [x] **Step 5: Commit** `7448423d`
 
 ```bash
 git add tools/famous-curator/ui/App.tsx

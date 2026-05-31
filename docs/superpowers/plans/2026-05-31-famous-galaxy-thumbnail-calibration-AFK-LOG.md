@@ -28,15 +28,18 @@ and project conventions; anything genuinely contestable is flagged **REVIEW**.
 | 3 | 2 pure diskOverlay geometry | ✅ done (`b295aa96`; PA convention matches deprojectDisk) |
 | 3 | 3 DiskOverlay component | ✅ done (`047c9675`; catalog-b/a pre-fill; VISUAL pending) |
 | 3 | 4 deproject toggle + preview | ✅ done (`5f9a1a31`; process.ts deproject mirrors export; VISUAL pending) |
-| 3 | 5 export + re-hydrate disk | ⏳ impl |
+| 3 | 5 export + re-hydrate disk | ✅ done (`7448423d`; api.ts needed no change) |
 | 4 | runtime placement | ⏳ |
 | 5 | debug ring | ⏳ |
 | 6 | ADR | ⏳ |
 
-**Plan 1 COMPLETE. Plan 2 COMPLETE.** Plan 3 Tasks 1–2 done; Task 3 in flight.
-Branch green at each commit (use the `npm run typecheck > log; echo ${PIPESTATUS[0]}`
-form — a piped `$?` reports tail's exit, not tsc's; this masked a real typecheck
-regression once already).
+**Plan 1 COMPLETE. Plan 2 COMPLETE. Plan 3 COMPLETE (code).** Typecheck rc=0;
+full suite 1892/1893 (the one failure is `pointRenderer.test.ts > concurrent
+upload during rebake` — a 5s TIMEOUT under full-suite parallel load, FLAKY and
+unrelated to Plan 3; passes 26/26 in isolation). **Plans 3/4/5 still need user
+VISUAL verification before the PR.** Typecheck check form: `npm run typecheck >
+log 2>&1; rc=$?` — a piped `$?`/`&& tail` guard reports the wrong exit and once
+masked a real regression AND once cascade-cancelled a whole bash batch.
 
 ## Decisions made AFK
 
@@ -116,9 +119,15 @@ regression once already).
 - Standing constraints: one-type-per-file in `src/@types/`; comment-tidy every touched
   file; component-split per the component skill for Plan 3 UI; branch+PR, never
   direct-push; do NOT merge to main without the user (visual-verification gate).
-- **NEXT:** Plan 3 Task 3 (DiskOverlay component) in flight → Task 4 (deproject toggle +
-  process-route deproject for the preview) → Task 5 (export params + resume hydration). Then
-  Plan 4 (runtime), 5 (debug ring), 6 (ADR). Plans 3/4/5 need user VISUAL verification.
+- **NEXT:** Plan 4 (runtime placement — `texturedDiskSubsystem` consumes `calibration`;
+  fixes the latent double-foreshortening bug). Then Plan 5 (debug ring), Plan 6 (ADR).
+  Plans 3/4/5 need user VISUAL verification before the PR.
+- **Curator visual-check checklist (Plan 3):** mode toggle switches Crop⇄Disk; in Disk mode
+  press-at-nucleus→drag→release draws an ellipse and the crop can't move; minor handle squashes
+  it; "Disk" fieldset + deproject toggle appear only with a disk; toggling deproject re-Processes
+  and the starless preview de-squashes a tilted galaxy; edge-on (b/a<0.3) locks the toggle off
+  with a note; draw→Commit→switch away→re-select restores the ellipse + toggle; overlay lines up
+  with the crop rect under a non-square source (the one DONE_WITH_CONCERNS item from Task 3).
 
 ## Needs your eyes (visual verification deferred)
 
