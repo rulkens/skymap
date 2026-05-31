@@ -400,6 +400,78 @@ describe('poiSubsystem — produceMarkers', () => {
     expect(markers[0]?.haloColor[3]).toBeLessThan(markers[0]!.ringColor[3]);
   });
 
+  // ── Significance weighting (Plan 2 / Task 6) ──────────────────────
+  //
+  // produceMarkers folds a per-POI significance factor into the baked
+  // halo + ring alpha so low-significance distant structures stay faint
+  // ("structure, not fog").  The distance-fade math is unchanged; this
+  // multiplies an ADDITIONAL factor in.  Both POIs below sit at the same
+  // distance/radius so their distance fades are equal — radius 2 Mpc at
+  // 10 Mpc → apRadPx ≈ 187 px, squarely inside the flat full-alpha zone
+  // (above the 24 px floor band, below the 700 px ceiling), so the only
+  // difference between the two descriptors is the significance weight.
+  it('dims a low-significance POI relative to a high one', () => {
+    const sub = createPoiSubsystem();
+    const faint: PointOfInterest = {
+      id: 'faint',
+      name: 'Faint',
+      category: 'cluster',
+      featured: true,
+      worldPos: [10, 0, 0],
+      physicalRadiusMpc: 2,
+      significance: 0.1,
+    };
+    const bright: PointOfInterest = {
+      id: 'bright',
+      name: 'Bright',
+      category: 'cluster',
+      featured: true,
+      worldPos: [-10, 0, 0],
+      physicalRadiusMpc: 2,
+      significance: 1.0,
+    };
+    sub.setPois([faint, bright]);
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+    expect(markers).toHaveLength(2);
+    const faintM = markers.find((m) => m.id === 'faint')!;
+    const brightM = markers.find((m) => m.id === 'bright')!;
+    expect(faintM.ringColor[3]).toBeLessThan(brightM.ringColor[3]);
+    expect(faintM.haloColor[3]).toBeLessThan(brightM.haloColor[3]);
+  });
+
+  it('leaves featured anchors (significance undefined) at full weight', () => {
+    const sub = createPoiSubsystem();
+    // significance omitted → sigWeight falls back to 1 (?? 1), identical
+    // to an explicit significance: 1.  This guards the `?? 1` fallback so
+    // pre-existing fixtures without significance keep full-weight alpha.
+    const omitted: PointOfInterest = {
+      id: 'omitted',
+      name: 'Omitted',
+      category: 'cluster',
+      featured: true,
+      worldPos: [10, 0, 0],
+      physicalRadiusMpc: 2,
+    };
+    const explicitOne: PointOfInterest = {
+      id: 'explicit',
+      name: 'Explicit',
+      category: 'cluster',
+      featured: true,
+      worldPos: [-10, 0, 0],
+      physicalRadiusMpc: 2,
+      significance: 1,
+    };
+    sub.setPois([omitted, explicitOne]);
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+    const omittedM = markers.find((m) => m.id === 'omitted')!;
+    const explicitM = markers.find((m) => m.id === 'explicit')!;
+    expect(omittedM.ringColor[3]).toBeCloseTo(explicitM.ringColor[3], 10);
+    expect(omittedM.haloColor[3]).toBeCloseTo(explicitM.haloColor[3], 10);
+    // Both at full weight: ringColor at-rest alpha (1.0) × full distance
+    // fade (1.0) × sigWeight (1.0) = 1.0.
+    expect(omittedM.ringColor[3]).toBeCloseTo(1, 5);
+  });
+
   it('respects setCategoryMarkerVisible', () => {
     const sub = createPoiSubsystem();
     sub.setPois([

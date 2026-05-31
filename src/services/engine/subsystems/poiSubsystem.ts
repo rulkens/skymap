@@ -304,6 +304,18 @@ export const POI_STYLES = {
  */
 export type PoiCategory = keyof typeof POI_STYLES;
 
+/**
+ * Alpha floor for significance weighting in `produceMarkers`.  The
+ * faintest structure (significance ≈ 0) renders its halo + ring at
+ * `SIG_MIN_ALPHA × distanceFade`; the most significant (significance =
+ * 1) at the full `distanceFade`.  Linear interpolation between the two.
+ * The floor keeps low-significance bulk clusters dim but not invisible
+ * — "structure, not fog" — so the field still reads as populated rather
+ * than collapsing distant clusters to nothing.  Featured anchors omit
+ * significance (or set it to 1) and so render unweighted.
+ */
+const SIG_MIN_ALPHA = 0.25;
+
 const ALL_CATEGORIES_VISIBLE: Readonly<Record<PoiCategory, boolean>> = {
   cluster: true,
   supercluster: true,
@@ -665,6 +677,15 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
 
       const fadeAlpha = Math.min(maxFadeAlpha, minFadeAlpha);
 
+      // Significance weighting (additional to the distance fade above).
+      // Low-significance distant structures stay faint; the SIG_MIN_ALPHA
+      // floor keeps them dim-but-visible rather than collapsing to
+      // nothing.  Linear lerp from SIG_MIN_ALPHA (significance 0) to 1
+      // (significance 1).  Featured anchors omit `significance`, so the
+      // `?? 1` fallback gives sigWeight === 1 → unchanged at-rest alpha.
+      const sigWeight = SIG_MIN_ALPHA + (1 - SIG_MIN_ALPHA) * (p.significance ?? 1);
+      const weightedFade = fadeAlpha * sigWeight;
+
       // Halo Vec4: bake style at-rest alpha × per-frame fade into the
       // descriptor's alpha channel.  Voids opt out via null haloColor
       // and emit a fully-transparent [0,0,0,0] (the renderer's halo
@@ -675,7 +696,7 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
               style.haloColor[0],
               style.haloColor[1],
               style.haloColor[2],
-              style.haloColor[3] * fadeAlpha,
+              style.haloColor[3] * weightedFade,
             ]
           : [0, 0, 0, 0];
 
@@ -689,7 +710,7 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
       // transform on the per-frame output, no shared references
       // between frames.
       const isSelected = p.id === selectedPoiId;
-      const ringAlphaBase = style.ringColor[3] * fadeAlpha;
+      const ringAlphaBase = style.ringColor[3] * weightedFade;
       const ringAlpha = isSelected ? Math.min(1, ringAlphaBase * 1.5) : ringAlphaBase;
       const ringColor: Vec4 = [
         style.ringColor[0],
