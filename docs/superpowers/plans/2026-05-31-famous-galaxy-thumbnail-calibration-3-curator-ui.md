@@ -71,11 +71,11 @@ export function minorAxisHandle(disk: RecipeDisk, axisRatio: number): Vec2;
 export function axisRatioFromMinorDrag(disk: RecipeDisk, pointPx: Vec2): number;
 ```
 
-- [ ] **Step 1: Write the failing tests** — `diskFromDrag computes radius and PA from a horizontal drag` (PA ~90 or 0 per convention; assert the documented one); `diskFromDrag PA is in [0,180)`; `minorAxisHandle is perpendicular to the major axis`; `axisRatioFromMinorDrag inverts minorAxisHandle` (round-trip within tolerance).
-- [ ] **Step 2:** `npm test -- diskOverlay` → FAIL.
-- [ ] **Step 3:** Implement with `Vec2` math. PA convention: document it in the file header and match what `deriveFamousCalibration` (Plan 1 Task 5) expects — east-of-north [0,180). Keep these pure (no DOM).
-- [ ] **Step 4:** `npm test -- diskOverlay` → PASS.
-- [ ] **Step 5: Commit**
+- [x] **Step 1: Write the failing tests** — `diskFromDrag computes radius and PA from a horizontal drag` (PA = 0 in this convention); `diskFromDrag PA is in [0,180)`; `minorAxisHandle is perpendicular to the major axis`; `axisRatioFromMinorDrag inverts minorAxisHandle` (round-trip within tolerance). _(5 tests)_
+- [x] **Step 2:** `npm test -- diskOverlay` → FAIL.
+- [x] **Step 3:** Implement with `Vec2` math. PA convention documented in the file header + spot-checked against `deprojectDisk` (the load-bearing anchor): `paDeg` = major-axis angle from +X toward +Y, [0,180); `majorUnit=[cos,sin]`, `minorUnit=[-sin,cos]`. Pure (no DOM).
+- [x] **Step 4:** `npm test -- diskOverlay` → PASS.
+- [x] **Step 5: Commit** `b295aa96`
 
 ```bash
 git add tools/famous-curator/ui/diskOverlay.ts tests/tools/famous-curator/diskOverlay.test.ts
