@@ -207,17 +207,17 @@ square (see invariant note), so half-width == half-height.
 > footprint stays square). Derivation may assume it; do not add a separate
 > half-height term.
 
-- [ ] Add test `deriveFamousCalibration: centred nucleus, unrotated crop → center [0.5,0.5]`.
-- [ ] Add test `deriveFamousCalibration: off-centre nucleus → expected normalized center` — a crop + a `centerPx` half-way to an edge; assert exact `[u,v]`.
-- [ ] Add test `deriveFamousCalibration: diskRadiusFrac = radiusPx / (width/2)` — radiusPx 64 on a 256-wide crop → 0.5.
-- [ ] Add test `deriveFamousCalibration: paDeg rotated into final frame` — `disk.paDeg = 40`, `crop.rotationDeg = 10` → 30; plus a wraparound (`disk.paDeg = 10`, `crop.rotationDeg = 30` → 160) to pin `[0,180)` normalization.
-- [ ] Add test `deriveFamousCalibration: rotated crop maps the nucleus through R(-rotationDeg)` — non-zero `rotationDeg` + off-centre nucleus; assert the exact normalized center (compute the expected value by hand from `cropExtract.ts:77-84`).
-- [ ] Add test `deriveFamousCalibration: axisRatio falls back to catalogAxisRatio when disk.axisRatio absent`.
-- [ ] Add test `deriveFamousCalibration: deprojected flag passes through`.
-- [ ] Run `npm test -- deriveFamousCalibration` → FAIL.
-- [ ] Implement. Reuse the rotation math from `cropExtract.ts:77-84` (extract a tiny shared `rotateSourcePointIntoCrop` helper if the duplication is clean — otherwise inline with a citing comment; do not copy-paste the whole block). Add a local `normalizePa(deg)` that wraps into `[0,180)`.
-- [ ] Run `npm test -- deriveFamousCalibration` → PASS. `npm run typecheck` → clean.
-- [ ] Commit.
+- [x] Add test `deriveFamousCalibration: centred nucleus, unrotated crop → center [0.5,0.5]`.
+- [x] Add test `deriveFamousCalibration: off-centre nucleus → expected normalized center` — a crop + a `centerPx` half-way to an edge; assert exact `[u,v]`.
+- [x] Add test `deriveFamousCalibration: diskRadiusFrac = radiusPx / (width/2)` — radiusPx 64 on a 256-wide crop → 0.5.
+- [x] Add test `deriveFamousCalibration: paDeg rotated into final frame` — `disk.paDeg = 40`, `crop.rotationDeg = 10` → 30; plus a wraparound (`disk.paDeg = 10`, `crop.rotationDeg = 30` → 160) to pin `[0,180)` normalization.
+- [x] Add test `deriveFamousCalibration: rotated crop maps the nucleus through R(-rotationDeg)` — non-zero `rotationDeg` + off-centre nucleus; assert the exact normalized center (compute the expected value by hand from `cropExtract.ts:77-84`).
+- [x] Add test `deriveFamousCalibration: axisRatio falls back to catalogAxisRatio when disk.axisRatio absent`.
+- [x] Add test `deriveFamousCalibration: deprojected flag passes through`.
+- [x] Run `npm test -- deriveFamousCalibration` → FAIL.
+- [x] Implement. Reuse the rotation math from `cropExtract.ts:77-84` (inlined with a citing comment; added a local `normalizePa(deg)` that wraps into `[0,180)`).
+- [x] Run `npm test -- deriveFamousCalibration` → PASS. `npm run typecheck` → clean.
+- [x] Commit.
 
 ## Done-when
 

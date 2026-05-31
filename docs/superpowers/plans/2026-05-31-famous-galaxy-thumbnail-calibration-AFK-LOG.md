@@ -14,7 +14,9 @@ and project conventions; anything genuinely contestable is flagged **REVIEW**.
 | 1 | 2 FamousCalibration + calibration? | ✅ done | `4250a12e` |
 | 1 | 3 DEPROJECT_MIN_AXIS_RATIO | ✅ done | `360692bb` |
 | 1 | 4 deprojectDisk | ✅ done (review ✅, polish `7062f9fd`) | `d0b13e27` |
-| 1 | 5 deriveFamousCalibration | ⏳ review | `db8a8272` |
+| 1 | 5 deriveFamousCalibration | ✅ done (review ✅, polish `8d3f9c2a`) | `db8a8272` |
+
+**Plan 1 COMPLETE** — all 5 tasks landed, spec + quality reviewed, 25 unit tests green, typecheck clean.
 
 > SHAs are best-effort; the authoritative record is `git log --grep="feat(famous)"`
 > / `--grep="feat(curator)"` on this branch. (Terminal echo occasionally garbles a

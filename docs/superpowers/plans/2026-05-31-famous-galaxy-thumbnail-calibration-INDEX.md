@@ -105,7 +105,7 @@ Fixed by the spec; must match across all plans:
 
 ## Status
 
-- [ ] Plan 1 — data & deprojection
+- [x] Plan 1 — data & deprojection
 - [ ] Plan 2 — build pipeline
 - [ ] Plan 3 — curator UI
 - [ ] Plan 4 — runtime placement
