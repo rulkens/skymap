@@ -35,4 +35,16 @@ if (typeof window !== 'undefined') {
   afterEach(() => {
     cleanup();
   });
+
+  // jsdom omits ResizeObserver, but DiskOverlay observes its SVG to keep
+  // grab-handle sizes screen-constant.  A no-op stub lets the overlay (and
+  // anything mounting it, e.g. CropCanvas) render without throwing.
+  if (typeof globalThis.ResizeObserver === 'undefined') {
+    class ResizeObserverStub {
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    }
+    globalThis.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver;
+  }
 }
