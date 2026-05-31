@@ -98,6 +98,51 @@ export function serialiseRecipe(r: Recipe): string {
 }
 
 /**
+ * Validate and coerce a raw unknown value as a RecipeDisk.  Throws a
+ * descriptive error on any invalid shape or non-finite number.  Returns
+ * a freshly-constructed RecipeDisk (no aliasing to the input object) so
+ * callers can mutate the result freely.
+ *
+ * Called from parseRecipe (schema validation on load) and from the
+ * /api/export route (validation of client-supplied body.disk).  Single
+ * source of truth for disk field constraints.
+ */
+export function validateRecipeDisk(raw: unknown): RecipeDisk {
+  const d = raw as Record<string, unknown>;
+  if (
+    !Array.isArray(d.centerPx) ||
+    d.centerPx.length !== 2 ||
+    typeof d.centerPx[0] !== 'number' ||
+    !Number.isFinite(d.centerPx[0]) ||
+    typeof d.centerPx[1] !== 'number' ||
+    !Number.isFinite(d.centerPx[1])
+  ) {
+    throw new Error('recipe: disk.centerPx must be a finite-number tuple [x, y]');
+  }
+  if (typeof d.radiusPx !== 'number' || !Number.isFinite(d.radiusPx)) {
+    throw new Error('recipe: disk.radiusPx must be a finite number');
+  }
+  if (typeof d.paDeg !== 'number' || !Number.isFinite(d.paDeg)) {
+    throw new Error('recipe: disk.paDeg must be a finite number');
+  }
+  if (d.axisRatio !== undefined) {
+    if (typeof d.axisRatio !== 'number' || !Number.isFinite(d.axisRatio)) {
+      throw new Error('recipe: disk.axisRatio must be a finite number when set');
+    }
+  }
+  if (typeof d.deproject !== 'boolean') {
+    throw new Error('recipe: disk.deproject must be a boolean');
+  }
+  return {
+    centerPx: [d.centerPx[0], d.centerPx[1]],
+    radiusPx: d.radiusPx,
+    paDeg: d.paDeg,
+    ...(d.axisRatio !== undefined ? { axisRatio: d.axisRatio as number } : {}),
+    deproject: d.deproject,
+  };
+}
+
+/**
  * Parse + validate a recipe JSON string.  Throws on malformed JSON,
  * missing required fields, unknown versions, or non-finite numbers in
  * numeric fields.  Returns a fresh `Recipe` value (no aliasing to the
@@ -149,43 +194,8 @@ export function parseRecipe(json: string): Recipe {
   if (typeof raw.processedAt !== 'string' || raw.processedAt.length === 0) {
     throw new Error('recipe: processedAt must be a non-empty string');
   }
-  // Optional — validate only when present.  Build a fresh RecipeDisk with
-  // a fresh centerPx tuple so callers can mutate freely (no aliasing).
-  let parsedDisk: RecipeDisk | undefined;
-  if (raw.disk !== undefined) {
-    const d = raw.disk as Record<string, unknown>;
-    if (
-      !Array.isArray(d.centerPx) ||
-      d.centerPx.length !== 2 ||
-      typeof d.centerPx[0] !== 'number' ||
-      !Number.isFinite(d.centerPx[0]) ||
-      typeof d.centerPx[1] !== 'number' ||
-      !Number.isFinite(d.centerPx[1])
-    ) {
-      throw new Error('recipe: disk.centerPx must be a finite-number tuple [x, y]');
-    }
-    if (typeof d.radiusPx !== 'number' || !Number.isFinite(d.radiusPx)) {
-      throw new Error('recipe: disk.radiusPx must be a finite number');
-    }
-    if (typeof d.paDeg !== 'number' || !Number.isFinite(d.paDeg)) {
-      throw new Error('recipe: disk.paDeg must be a finite number');
-    }
-    if (d.axisRatio !== undefined) {
-      if (typeof d.axisRatio !== 'number' || !Number.isFinite(d.axisRatio)) {
-        throw new Error('recipe: disk.axisRatio must be a finite number when set');
-      }
-    }
-    if (typeof d.deproject !== 'boolean') {
-      throw new Error('recipe: disk.deproject must be a boolean');
-    }
-    parsedDisk = {
-      centerPx: [d.centerPx[0], d.centerPx[1]],
-      radiusPx: d.radiusPx,
-      paDeg: d.paDeg,
-      ...(d.axisRatio !== undefined ? { axisRatio: d.axisRatio as number } : {}),
-      deproject: d.deproject,
-    };
-  }
+  // Optional — delegate to the shared validator which returns a fresh RecipeDisk.
+  const parsedDisk = raw.disk !== undefined ? validateRecipeDisk(raw.disk) : undefined;
   return {
     version: KNOWN_VERSION,
     id: raw.id,

@@ -33,11 +33,10 @@ import { copyFileSync, existsSync, mkdirSync, rmSync, renameSync, writeFileSync 
 import { resolve } from 'node:path';
 import {
   curatedGalaxyDir,
-  curatedTmpDir,
   overrideIndexPath,
 } from '../paths.js';
 import { sessionPath } from '../tmpSession.js';
-import { serialiseRecipe, type Recipe } from '../recipe.js';
+import { serialiseRecipe, validateRecipeDisk, type Recipe, type RecipeDisk } from '../recipe.js';
 import { upsertOverrideEntry, type OverrideIndex } from '../overrideIndex.js';
 import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlpha.js';
 import { rotatedExtract } from '../cropExtract.js';
@@ -52,6 +51,14 @@ export type ExportBody = {
   starnet: { stride: number; upsample: boolean };
   alpha: { blackPoint: number; whitePoint: number; gamma: number };
   metadata: { sourceUrl: string; license: string; author: string };
+  /** Disk-overlay geometry annotation drawn in the curator UI. */
+  disk?: RecipeDisk;
+  /**
+   * Catalog-derived axis ratio (b/a) for this galaxy — consumed by the
+   * calibration-derivation step (later task) to compute a face-on
+   * correction factor.  Has no effect on the written recipe.
+   */
+  catalogAxisRatio?: number;
 };
 
 export type ExportResult = {
@@ -70,14 +77,23 @@ export async function handleExport(opts: {
   repoRoot: string;
   /** Test hook — defaults to sessionPath(body.tmpId). */
   sessionDirOverride?: string;
+  /**
+   * Test hook — defaults to curatedGalaxyDir(repoRoot, body.id).
+   * Lets tests redirect all output (WebPs + recipe.json) to an isolated
+   * tmpdir so the real public/ tree is never touched.  Same role as
+   * sessionDirOverride but for the output side.
+   */
+  curatedDirOverride?: string;
 }): Promise<ExportResult> {
   const { body, repoRoot } = opts;
   // `sessDir` holds source.png + starless.png written by /api/process.
   // `sessionDirOverride` lets tests inject an arbitrary tmpdir without
   // needing the OS's $TMPDIR/famous-curator/ tree to exist.
   const sessDir = opts.sessionDirOverride ?? sessionPath(body.tmpId);
-  const outDir = curatedGalaxyDir(repoRoot, body.id);
-  const tmpDir = curatedTmpDir(repoRoot, body.id);
+  const outDir = opts.curatedDirOverride ?? curatedGalaxyDir(repoRoot, body.id);
+  // tmpDir is always a child of outDir so the atomic-rename dance (step 8)
+  // works correctly: sibling-stage then replace.
+  const tmpDir = resolve(outDir, '.tmp');
 
   // 1. Prepare the staging directory.  Clean any leftover .tmp/ from a
   //    previously interrupted export — these are safe to discard because
@@ -142,6 +158,9 @@ export async function handleExport(opts: {
   writeFileSync(resolve(tmpDir, 'atlas.webp'), atlasOut);
 
   // 7. recipe.json — provenance record for re-runs and auditing.
+  //    Validate body.disk via the shared helper (throws on bad shape) so
+  //    the route rejects malformed input before any filesystem writes.
+  const validatedDisk = body.disk !== undefined ? validateRecipeDisk(body.disk) : undefined;
   const recipe: Recipe = {
     version: 1,
     id: body.id,
@@ -150,6 +169,7 @@ export async function handleExport(opts: {
     alpha: body.alpha,
     metadata: body.metadata,
     processedAt: new Date().toISOString(),
+    ...(validatedDisk !== undefined ? { disk: validatedDisk } : {}),
   };
   writeFileSync(resolve(tmpDir, 'recipe.json'), serialiseRecipe(recipe));
 
