@@ -43,6 +43,8 @@ import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlph
 import { rotatedExtract } from '../cropExtract.js';
 import { deprojectDisk, willDeproject } from '../../../famous/deprojectDisk.js';
 import { DEPROJECT_MIN_AXIS_RATIO } from '../../../../src/data/famousCalibration.js';
+import { deriveFamousCalibration } from '../../../famous/deriveFamousCalibration.js';
+import type { FamousCalibration } from '../../../../src/@types/loading/FamousCalibration';
 
 const FULL_PX = 1024;
 const ATLAS_PX = 256;
@@ -73,6 +75,8 @@ export type ExportResult = {
     recipe: string;
   };
   overrideIndex: OverrideIndex;
+  /** Present when a disk annotation was supplied; absent otherwise. */
+  calibration?: FamousCalibration;
 };
 
 export async function handleExport(opts: {
@@ -133,6 +137,16 @@ export async function handleExport(opts: {
       `[export] skip deproject for ${body.id}: axisRatio=${effectiveAxisRatio} below threshold ${DEPROJECT_MIN_AXIS_RATIO}`,
     );
   }
+
+  // Derive calibration whenever a disk and an axis ratio are both available.
+  // catalogAxisRatio falls back to disk.axisRatio so callers that omit it but
+  // set disk.axisRatio still get a valid calibration — the curator always threads
+  // catalogAxisRatio, but the fallback keeps the function total.
+  const catalogAxisRatio = body.catalogAxisRatio ?? disk?.axisRatio;
+  const calibration: FamousCalibration | undefined =
+    disk !== undefined && catalogAxisRatio !== undefined
+      ? deriveFamousCalibration({ disk, crop: body.crop, catalogAxisRatio, deprojected })
+      : undefined;
 
   const sourcePipeline = await rotatedExtract(sourcePath, body.crop);
   // Deproject the hi-res crop to face-on before downsize so the extra resolution
@@ -262,5 +276,6 @@ export async function handleExport(opts: {
       recipe: resolve(outDir, 'recipe.json'),
     },
     overrideIndex: idx,
+    ...(calibration !== undefined ? { calibration } : {}),
   };
 }
