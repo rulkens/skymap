@@ -316,6 +316,18 @@ export type PoiCategory = keyof typeof POI_STYLES;
  */
 const SIG_MIN_ALPHA = 0.25;
 
+/**
+ * Minimum screen-pixel gap between two featured labels before the
+ * lower-significance one is suppressed.  produceLabels gates labels on
+ * `featured` (only the ~25-30 curated anchors + famous galaxies get
+ * text), then runs a greedy screen-space declutter over that tiny set:
+ * two labels whose projected anchors land within this many pixels in
+ * BOTH x and y collide, and the lower-significance label is dropped.
+ * Tuned to keep dense regions (Shapley) readable without over-culling
+ * neighbours that are merely close.
+ */
+const DECLUTTER_MARGIN_PX = 48;
+
 const ALL_CATEGORIES_VISIBLE: Readonly<Record<PoiCategory, boolean>> = {
   cluster: true,
   supercluster: true,
@@ -377,8 +389,20 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
   }
 
   function produceLabels(state: EngineState, ctx: ReadyFrameContext): LabelProducerOutput {
-    const labels: Label[] = [];
-    const lines: MarkerLine[] = [];
+    // A surviving-the-gates candidate: the built label, its optional
+    // anchor line, the POI's significance (declutter sort key), and the
+    // projected screen position used for overlap rejection.  `onScreen`
+    // is false for behind-camera / out-of-viewport candidates — those
+    // are accepted unconditionally and never block anyone.
+    type LabelCandidate = {
+      readonly label: Label;
+      readonly line: MarkerLine | null;
+      readonly significance: number;
+      readonly screenX: number;
+      readonly screenY: number;
+      readonly onScreen: boolean;
+    };
+    const candidates: LabelCandidate[] = [];
     // Recover the vertical fov from the per-frame `drawPxPerRad`:
     //   drawPxPerRad = canvasSize.height / (2 * tan(fovY/2))
     // ⇒ fovY = 2 * atan(canvasSize.height / (2 * drawPxPerRad))
@@ -400,6 +424,12 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
       // visibility off here leaves its ring + halo marker intact, and
       // vice versa.
       if (!labelVisibility[p.category]) continue;
+      // Featured gate.  After the bulk cluster/SC catalog landed in the
+      // POI list (all `featured: false`), labelling every one of the
+      // ~375 structures is noise — they still render rings/halos via
+      // produceMarkers, just no text.  Only the ~25-30 curated anchors
+      // + famous galaxies (all `featured: true`) earn a label.
+      if (!p.featured) continue;
       // Anchor gate.  A structure label (cluster / supercluster / void)
       // needs its ring marker as a visual anchor — a floating label
       // with no ring reads as orphaned text in space.  `famousGalaxy`
@@ -527,6 +557,10 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
       // up in world-Y and use horizontal centring around the line.
       let alignX: 'left' | 'center' | 'right' = 'center';
       let alignY: 'baseline' | 'center' | 'top' | 'bottom' = 'center';
+      // Collected per-candidate rather than pushed straight into `lines`
+      // so the declutter pass can drop a label together with its anchor
+      // line when it loses an overlap.
+      let candidateLine: MarkerLine | null = null;
       if (p.category === 'famousGalaxy' && p.labelAnchorOffsetMpc !== undefined) {
         const offset = p.labelAnchorOffsetMpc;
         labelWorldPos = [p.worldPos[0], p.worldPos[1] + offset, p.worldPos[2]];
@@ -539,14 +573,14 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
         // rather than crashing — the label still renders at the lifted
         // position; just without the visual anchor.
         if (style.lineColor !== undefined) {
-          lines.push({
+          candidateLine = {
             id: `${p.id}-anchor`,
             fromWorld: [p.worldPos[0], p.worldPos[1], p.worldPos[2]],
             toWorld: [p.worldPos[0], p.worldPos[1] + offset * 0.75, p.worldPos[2]],
             pixelWidth: style.pixelWidth,
             color: [...style.lineColor],
             fadeAlpha,
-          });
+          };
         }
       }
 
@@ -561,7 +595,7 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
             }
           : {};
 
-      labels.push({
+      const label: Label = {
         id: p.id,
         worldPos: labelWorldPos,
         text: p.name,
@@ -578,8 +612,95 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
         outlineColor: [...style.outlineColor],
         outlineEmFrac: style.outlineEmFrac,
         ...overrideFields,
+      };
+
+      // Project the label's ACTUAL (lifted) world position to screen
+      // pixels for the declutter overlap test.  Column-major mat4·vec4
+      // by hand — the lib's vec4.transformMat4 allocates a vec4 per
+      // call, and this runs once per featured candidate per frame.
+      const m = ctx.vp;
+      const wx = labelWorldPos[0];
+      const wy = labelWorldPos[1];
+      const wz = labelWorldPos[2];
+      const clipX = m[0] * wx + m[4] * wy + m[8] * wz + m[12];
+      const clipY = m[1] * wx + m[5] * wy + m[9] * wz + m[13];
+      const clipW = m[3] * wx + m[7] * wy + m[11] * wz + m[15];
+      // Behind-camera (clipW <= 0): the label is off-screen.  Accept it
+      // as-is (the label renderer clips offscreen labels) and exclude it
+      // from overlap tests so it neither blocks nor is blocked.
+      let screenX = 0;
+      let screenY = 0;
+      let onScreen = false;
+      if (clipW > 0) {
+        const ndcX = clipX / clipW;
+        const ndcY = clipY / clipW;
+        screenX = (ndcX * 0.5 + 0.5) * ctx.canvasSize.width;
+        // Flip Y: NDC +Y is up, screen +Y is down.
+        screenY = (1 - (ndcY * 0.5 + 0.5)) * ctx.canvasSize.height;
+        // Only candidates inside (a slightly padded) viewport participate
+        // in overlap rejection; ones projecting outside can't visually
+        // collide with on-screen labels.
+        onScreen = ndcX >= -1 && ndcX <= 1 && ndcY >= -1 && ndcY <= 1;
+      }
+
+      // Significance drives the declutter sort.  Only the extended-
+      // structure arms carry it; famous galaxies (and any structure
+      // anchor that omits it) default to full weight 1.
+      const significance = p.category === 'famousGalaxy' ? 1 : (p.significance ?? 1);
+      candidates.push({
+        label,
+        line: candidateLine,
+        significance,
+        screenX,
+        screenY,
+        onScreen,
       });
     }
+
+    // Screen-space declutter.  The featured candidate set is tiny
+    // (≤~30), so an O(n²) greedy is comfortably within budget and far
+    // simpler than a top-N spatial structure.  Sort by significance
+    // DESC (stable via an index tiebreaker so equal-significance ties
+    // keep input order); walk the sorted list accepting a candidate
+    // when its anchor sits ≥ DECLUTTER_MARGIN_PX (in x OR y) from every
+    // already-accepted ON-SCREEN anchor.  Off-screen / behind-camera
+    // candidates are accepted unconditionally and never block.
+    const order = candidates.map((_, i) => i);
+    order.sort((a, b) => {
+      const d = candidates[b]!.significance - candidates[a]!.significance;
+      return d !== 0 ? d : a - b;
+    });
+    const accepted: LabelCandidate[] = [];
+    for (const i of order) {
+      const c = candidates[i]!;
+      if (c.onScreen) {
+        let collides = false;
+        for (const a of accepted) {
+          if (!a.onScreen) continue;
+          if (
+            Math.abs(c.screenX - a.screenX) < DECLUTTER_MARGIN_PX &&
+            Math.abs(c.screenY - a.screenY) < DECLUTTER_MARGIN_PX
+          ) {
+            collides = true;
+            break;
+          }
+        }
+        if (collides) continue;
+      }
+      accepted.push(c);
+    }
+
+    // Emit accepted candidates.  Re-walk in original input order so the
+    // output is deterministic and independent of the significance sort.
+    const acceptedSet = new Set(accepted);
+    const labels: Label[] = [];
+    const lines: MarkerLine[] = [];
+    for (const c of candidates) {
+      if (!acceptedSet.has(c)) continue;
+      labels.push(c.label);
+      if (c.line !== null) lines.push(c.line);
+    }
+
     // One-shot layer fade-in: first frame that emits a non-empty
     // label set fires fadeTo(1) on the POI layer's FadeHandle. See
     // youAreHereSubsystem for the symmetric pattern; the label

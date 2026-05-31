@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { mat4 } from 'gl-matrix';
 import {
   createPoiSubsystem,
   POI_STYLES,
@@ -18,11 +19,12 @@ function makeState(selectedPoiId: string | null = null): EngineState {
     },
   } as unknown as EngineState;
 }
-function makeCtx(): ReadyFrameContext {
+function makeCtx(vp: mat4 = mat4.create()): ReadyFrameContext {
   return {
     drawCamPos: [0, 0, 0],
     canvasSize: { width: 1920, height: 1080 },
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
+    vp,
   } as unknown as ReadyFrameContext;
 }
 
@@ -313,6 +315,115 @@ describe('poiSubsystem', () => {
     const out = sub.produceLabels(makeState(), makeCtx());
     expect(out.awake).toBe(false);
     expect(out.labels[0]!.fadeAlpha).toBe(1);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────
+// Featured gate + screen-space declutter (Plan 2 / Task 7)
+//
+// After Task 5 the ~375 bulk cluster/SC POIs sit in the POI list with
+// `featured: false`; labelling them all is noise.  produceLabels now
+// (1) gates on `featured` so only the ~25-30 curated anchors + famous
+// galaxies get labels, and (2) runs an O(n²) greedy declutter over the
+// surviving candidates keeping the higher-significance label when two
+// project to overlapping screen boxes.
+//
+// Projection uses an identity `vp` here: clip.w == 1, so a worldPos
+// [wx, wy, wz] projects to NDC == [wx, wy, wz] and then to screen px
+// via the producer's (ndc*0.5+0.5)*size mapping (Y flipped).  Clusters
+// sit at distance ~5 Mpc with radius 2 Mpc → apRadPx ≈ 374, squarely
+// in the flat marker zone, so the only thing that decides survival is
+// the declutter overlap test.
+// ─────────────────────────────────────────────────────────────────────
+describe('poiSubsystem · featured gate + declutter', () => {
+  it('emits no label for a non-featured POI (markers still emit)', () => {
+    const sub = createPoiSubsystem();
+    const bulk: PointOfInterest = {
+      id: 'bulk-cluster',
+      name: 'Bulk Cluster',
+      category: 'cluster',
+      worldPos: [0, 0, 5],
+      featured: false,
+      physicalRadiusMpc: 2,
+      significance: 0.5,
+    };
+    sub.setPois([bulk]);
+    const out = sub.produceLabels(makeState(), makeCtx());
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+    // Bulk POIs render as markers (rings/halos) but get NO label.
+    expect(out.labels).toEqual([]);
+    expect(markers).toHaveLength(1);
+    expect(markers[0]!.id).toBe('bulk-cluster');
+  });
+
+  it('still labels a featured POI', () => {
+    const sub = createPoiSubsystem();
+    const featured: PointOfInterest = {
+      id: 'coma',
+      name: 'Coma',
+      category: 'cluster',
+      worldPos: [0, 0, 5],
+      featured: true,
+      physicalRadiusMpc: 2,
+    };
+    sub.setPois([featured]);
+    const out = sub.produceLabels(makeState(), makeCtx());
+    expect(out.labels.map((l) => l.text)).toEqual(['Coma']);
+  });
+
+  it('declutters overlapping featured labels keeping the higher significance', () => {
+    const sub = createPoiSubsystem();
+    // Both project to ~screen centre (960, 540) under identity vp — well
+    // within DECLUTTER_MARGIN_PX of each other in both x and y.
+    const faint: PointOfInterest = {
+      id: 'faint',
+      name: 'Faint',
+      category: 'cluster',
+      worldPos: [0, 0, 5],
+      featured: true,
+      physicalRadiusMpc: 2,
+      significance: 0.2,
+    };
+    const bright: PointOfInterest = {
+      id: 'bright',
+      name: 'Bright',
+      category: 'cluster',
+      worldPos: [0.01, 0, 5],
+      featured: true,
+      physicalRadiusMpc: 2,
+      significance: 0.9,
+    };
+    sub.setPois([faint, bright]);
+    const out = sub.produceLabels(makeState(), makeCtx());
+    // Only the higher-significance label survives the overlap.
+    expect(out.labels.map((l) => l.id)).toEqual(['bright']);
+  });
+
+  it('keeps non-overlapping featured labels both', () => {
+    const sub = createPoiSubsystem();
+    // Project far apart in screen X: [-0.5] → 480 px, [0.5] → 1440 px,
+    // ~960 px apart, well beyond DECLUTTER_MARGIN_PX.
+    const left: PointOfInterest = {
+      id: 'left',
+      name: 'Left',
+      category: 'cluster',
+      worldPos: [-0.5, 0, 5],
+      featured: true,
+      physicalRadiusMpc: 2,
+      significance: 0.9,
+    };
+    const right: PointOfInterest = {
+      id: 'right',
+      name: 'Right',
+      category: 'cluster',
+      worldPos: [0.5, 0, 5],
+      featured: true,
+      physicalRadiusMpc: 2,
+      significance: 0.2,
+    };
+    sub.setPois([left, right]);
+    const out = sub.produceLabels(makeState(), makeCtx());
+    expect(out.labels.map((l) => l.id).sort()).toEqual(['left', 'right']);
   });
 });
 
