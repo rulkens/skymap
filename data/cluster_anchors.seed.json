@@ -9,7 +9,7 @@
     "distMpc": 16.5,
     "physicalRadiusMpc": 2.2,
     "apparentRadiusMpc": 6,
-    "description": "Nearest rich galaxy cluster; R_200 ~2.2 Mpc (Mei et al. 2007 SBF distance, Strauss & Willick 1995 extent). The named Virgo Cluster includes the M84/M86 Markarian Chain and M49 subgroups, spanning ~12° on the sky with ~7 Mpc line-of-sight extent."
+    "description": "The nearest large galaxy cluster, about 16.5 Mpc (54 million light-years) away in the constellation Virgo. It contains between 1,000 and 2,000 galaxies — including the giant elliptical M87 and the M84/M86 Markarian's Chain — and forms the heart of the Virgo Supercluster, of which the Local Group is an outlying member."
   },
   {
     "id": "fornax-ngc-1399",
@@ -21,7 +21,7 @@
     "distMpc": 20,
     "physicalRadiusMpc": 1.4,
     "apparentRadiusMpc": 3,
-    "description": "Second-nearest rich cluster; R_200 ~1.4 Mpc. The Fornax Cluster region of Drinkwater et al. 2000 (PASA 17, 227) maps the outer cluster and Fornax II group to ~3 Mpc."
+    "description": "A small but nearby galaxy cluster about 19 Mpc away in the southern constellation Fornax — the second-richest cluster within ~60 million light-years after Virgo. Centred on the giant elliptical NGC 1399, it is a benchmark for studying how galaxies evolve in dense environments."
   },
   {
     "id": "hydra-i-a1060",
@@ -34,7 +34,7 @@
     "distMpc": 50,
     "physicalRadiusMpc": 1.5,
     "apparentRadiusMpc": 3,
-    "description": "Moderately rich cluster; R_200 ~1.5 Mpc (Richter 1989). Named extent ~3 Mpc covers the outer A1060 membership; the cluster sits in the wider Hydra Wall filament."
+    "description": "A moderately rich cluster of around 150 bright galaxies roughly 50 Mpc away in the constellation Hydra. Dominated by the central ellipticals NGC 3309 and NGC 3311, it is unusually relaxed and symmetric, and lies within the larger Hydra–Centaurus Supercluster."
   },
   {
     "id": "centaurus-a3526",
@@ -47,7 +47,7 @@
     "distMpc": 52,
     "physicalRadiusMpc": 1.6,
     "apparentRadiusMpc": 4,
-    "description": "X-ray luminous cluster; R_200 ~1.6 Mpc (Lucey et al. 1986). Named extent ~4 Mpc spans the Cen30 (NGC 4696) and Cen45 (NGC 4709) subgroups (Stein 1996, A&AS 116, 203)."
+    "description": "An X-ray-bright cluster of several hundred galaxies about 52 Mpc away in Centaurus, centred on the giant elliptical NGC 4696. It is made of two merging components — the main Cen 30 body and the infalling Cen 45 group — and belongs to the Hydra–Centaurus Supercluster."
   },
   {
     "id": "norma-great-attractor",
@@ -60,7 +60,7 @@
     "distMpc": 70,
     "physicalRadiusMpc": 1.5,
     "apparentRadiusMpc": 3,
-    "description": "Massive cluster at the Great Attractor; R_200 ~1.5 Mpc. Kraan-Korteweg et al. 1996 reconstruction places the outer membership at ~2–3 Mpc through the Zone of Avoidance."
+    "description": "A massive cluster about 70 Mpc away in the constellation Norma, lying close to the Galactic plane in the heavily obscured Zone of Avoidance. It sits near the centre of the Great Attractor, the gravitational anomaly drawing the Milky Way and thousands of nearby galaxies toward it at hundreds of kilometres per second."
   },
   {
     "id": "perseus-a426",
@@ -73,7 +73,7 @@
     "distMpc": 75,
     "physicalRadiusMpc": 2.0,
     "apparentRadiusMpc": 5,
-    "description": "One of the X-ray brightest clusters; R_200 ~2.0 Mpc (Simionescu 2011). Walker et al. 2012 (ApJ 745, L21) map X-ray emission to ~2 R_200; the named Perseus Cluster region includes the chain through NGC 1275."
+    "description": "One of the most massive objects in the known universe and among the brightest X-ray sources in the sky, about 75 Mpc away in Perseus. Its hot intracluster gas, centred on the active galaxy NGC 1275, carries the deepest 'note' ever detected — a B-flat some 57 octaves below middle C, set ringing by the central black hole."
   },
   {
     "id": "coma-a1656",
@@ -86,7 +86,7 @@
     "distMpc": 100,
     "physicalRadiusMpc": 3.0,
     "apparentRadiusMpc": 6,
-    "description": "Archetype rich cluster; R_200 ~3.0 Mpc weak-lensing (Kubo et al. 2007). Named extent ~6 Mpc includes the NGC 4839 infalling southwest group (Neumann et al. 2003, A&A 400, 811)."
+    "description": "A very rich cluster of over 1,000 galaxies about 100 Mpc away in Coma Berenices. Fritz Zwicky's 1933 study of its galaxies' motions gave the first evidence for dark matter — they move far too fast to be held together by their visible mass alone."
   },
   {
     "id": "a2199-ngc-6166",
@@ -98,7 +98,7 @@
     "distMpc": 120,
     "physicalRadiusMpc": 2.0,
     "apparentRadiusMpc": 4,
-    "description": "Relaxed cool-core cluster with BCG NGC 6166; R_200 ~2.0 Mpc. Part of the A2197/A2199 interacting pair whose combined infall pattern extends to ~4 Mpc (Rines et al. 2001, ApJ 561, L41)."
+    "description": "A relaxed, cool-core cluster about 120 Mpc away in Hercules, dominated by the giant elliptical NGC 6166 — one of the most massive galaxies known, with a multiple-nucleus core. It forms an interacting pair with the neighbouring cluster Abell 2197."
   },
   {
     "id": "ophiuchus",
@@ -109,7 +109,7 @@
     "distMpc": 120,
     "physicalRadiusMpc": 2.0,
     "apparentRadiusMpc": 4,
-    "description": "Hot, X-ray luminous cluster adjacent to the Zone of Avoidance; R_200 ~2.0 Mpc (Watanabe 2001). X-ray envelope extends well past R_200 per Million et al. 2010 (MNRAS 407, 2046)."
+    "description": "A hot, X-ray-luminous cluster about 120 Mpc away near the Galactic plane in Ophiuchus, partly hidden by intervening dust. In 2020 it was found to host the largest known explosion in the universe — a vast cavity blown in its gas by an outburst from the central supermassive black hole."
   },
   {
     "id": "hercules-a2151",
@@ -122,7 +122,7 @@
     "distMpc": 158,
     "physicalRadiusMpc": 1.8,
     "apparentRadiusMpc": 4,
-    "description": "Unrelaxed, substructured cluster; R_200 ~1.8 Mpc (Bird, Davis & Beers 1995). Sánchez-Janssen et al. 2005 (A&A 434, 521) map the irregular membership envelope to ~3–4 Mpc; forms a triplet with A2147 and A2152."
+    "description": "An irregular, gas-rich cluster about 158 Mpc away in Hercules, notable for its high fraction of spiral and interacting galaxies — a sign that it is still assembling rather than settled. It anchors the Hercules Supercluster together with Abell 2147 and Abell 2152."
   },
   {
     "id": "shapley-a3558",
@@ -134,7 +134,7 @@
     "distMpc": 200,
     "physicalRadiusMpc": 2.5,
     "apparentRadiusMpc": 5,
-    "description": "Brightest cluster at the core of the Shapley Concentration; R_200 ~2.5 Mpc (Reiprich & Böhringer 2002). Named extent ~5 Mpc covers the wider A3558 outer-membership envelope."
+    "description": "The dominant cluster at the core of the Shapley Concentration, about 200 Mpc away in Centaurus. A3558 is itself a merging system and the most massive node of the densest large-scale structure in the nearby universe."
   },
   {
     "id": "leo-a1367",
@@ -147,7 +147,7 @@
     "distMpc": 95,
     "physicalRadiusMpc": 1.8,
     "apparentRadiusMpc": 4,
-    "description": "Irregular, actively merging cluster that forms the Leo–Coma double with A1656 at ~100 Mpc; Gregory & Thompson 1978 (ApJ 222, 784) identified the Coma/A1367 supercluster around this pair."
+    "description": "A young, irregular cluster about 95 Mpc away in Leo that is still actively forming, with several galaxies trailing long tails of gas stripped by their fall into the cluster. Together with the Coma Cluster it anchors the Coma Supercluster."
   },
   {
     "id": "a2029",
@@ -159,7 +159,7 @@
     "distMpc": 320,
     "physicalRadiusMpc": 2.2,
     "apparentRadiusMpc": 5,
-    "description": "Massive, relaxed cool-core cluster at z~0.077 with BCG IC 1101; among the most X-ray luminous clusters within 400 Mpc and a standard calibrator for the cluster mass–luminosity relation."
+    "description": "A massive, highly relaxed cool-core cluster about 320 Mpc away in Serpens. Its central galaxy, IC 1101, is one of the largest galaxies ever found, and the cluster serves as a standard calibrator for the relation between cluster mass and X-ray luminosity."
   },
   {
     "id": "a3571",
@@ -171,7 +171,7 @@
     "distMpc": 155,
     "physicalRadiusMpc": 2.0,
     "apparentRadiusMpc": 4,
-    "description": "Massive X-ray luminous cluster in the outer Shapley Concentration; one of the brightest clusters in the ROSAT All-Sky Survey (Markevitch et al. 1998)."
+    "description": "A massive, X-ray-luminous cluster about 155 Mpc away in Hydra and one of the brightest clusters in the ROSAT All-Sky Survey. It lies in the outskirts of the Shapley Concentration."
   },
   {
     "id": "a2065",
@@ -183,7 +183,7 @@
     "distMpc": 305,
     "physicalRadiusMpc": 1.5,
     "apparentRadiusMpc": 3,
-    "description": "A double-cluster merger system at z~0.073 near the core of the Corona Borealis Supercluster; Chandra imaging reveals ongoing infall of the two subclusters."
+    "description": "A rich double cluster about 305 Mpc away in Corona Borealis, caught in the act of merging — X-ray imaging reveals two distinct subclusters falling together. It is one of the principal members of the Corona Borealis Supercluster."
   },
   {
     "id": "laniakea-sc",
@@ -195,7 +195,7 @@
     "distMpc": 80,
     "physicalRadiusMpc": 80,
     "apparentRadiusMpc": 80,
-    "description": "Our home supercluster; the gravitational basin-of-attraction centre lies near the Norma/Great-Attractor direction at ~80 Mpc, spanning ~160 Mpc end-to-end (Tully et al. 2014, Nature 513, 71)."
+    "description": "The supercluster of galaxies that contains the Milky Way, defined in 2014 from the flow lines of galaxy motions. Spanning some 160 Mpc (520 million light-years) and around 100,000 galaxies, all its members stream toward a common gravitational focus near the Great Attractor. Its name is Hawaiian for 'immense heaven'."
   },
   {
     "id": "perseus-pisces-sc",
@@ -207,7 +207,7 @@
     "distMpc": 70,
     "physicalRadiusMpc": 50,
     "apparentRadiusMpc": 50,
-    "description": "A prominent ~70 Mpc-long filament spanning Perseus, Pisces, A262, and A347; a textbook example of large-scale structure since Haynes & Giovanelli 1986 (ApJ 306, 466)."
+    "description": "One of the largest structures in the nearby universe — a dense chain of galaxies stretching some 70 Mpc (250 million light-years) across the sky through Perseus and Pisces. It is a textbook example of the filamentary 'cosmic web'."
   },
   {
     "id": "coma-sc",
@@ -219,7 +219,7 @@
     "distMpc": 100,
     "physicalRadiusMpc": 30,
     "apparentRadiusMpc": 30,
-    "description": "~30 Mpc-scale concentration around the Coma (A1656) and Leo (A1367) clusters; identified as the Coma/A1367 supercluster by Gregory & Thompson 1978 (ApJ 222, 784)."
+    "description": "A large concentration of galaxies about 100 Mpc away, built around the Coma and Leo clusters. It sits at the centre of the CfA2 'Great Wall', the vast sheet of galaxies revealed by the first large redshift surveys in the 1980s."
   },
   {
     "id": "hydra-wall",
@@ -230,7 +230,7 @@
     "distMpc": 152,
     "physicalRadiusMpc": 50,
     "apparentRadiusMpc": 50,
-    "description": "A mid-distance overdensity in the Hydra–Centaurus direction; CF-4 shows a sustained 99.5th+ percentile density peak at this location, consistent with a ~50 Mpc-wide wall."
+    "description": "A wall-like overdensity of galaxies in the Hydra–Centaurus direction, roughly 150 Mpc away, forming part of the network of filaments that link the local superclusters across the cosmic web."
   },
   {
     "id": "hercules-sc",
@@ -242,7 +242,7 @@
     "distMpc": 120,
     "physicalRadiusMpc": 60,
     "apparentRadiusMpc": 60,
-    "description": "A 50–70 Mpc-scale supercluster spanning A2147, A2151, and A2152; Einasto et al. 2001 (AJ 122, 2222) place the characteristic scale at 50–70 Mpc."
+    "description": "A large supercluster about 120 Mpc away spanning the clusters Abell 2147, 2151, and 2152. It forms one end of the CfA2 Great Wall and is among the more massive structures within 200 Mpc."
   },
   {
     "id": "shapley-sc",
@@ -254,7 +254,7 @@
     "distMpc": 195,
     "physicalRadiusMpc": 40,
     "apparentRadiusMpc": 40,
-    "description": "The densest cluster concentration in the local universe; ~25 Abell cluster members spanning ~40 Mpc at ~195 Mpc (Quintana et al. 2000, AJ 120, 511)."
+    "description": "The largest concentration of galaxies in the nearby universe, about 200 Mpc away in Centaurus. Containing dozens of rich Abell clusters, it is massive enough to tug on the motion of the Local Group and may be a major contributor to the pull of the Great Attractor."
   },
   {
     "id": "corona-borealis-sc",
@@ -266,7 +266,7 @@
     "distMpc": 290,
     "physicalRadiusMpc": 35,
     "apparentRadiusMpc": 35,
-    "description": "A prominent supercluster at ~290 Mpc anchored by the merging clusters A2061, A2065, A2067, and A2089; well-studied at intermediate redshift (Small et al. 1998, ApJ 505, 506)."
+    "description": "A strikingly dense and compact supercluster about 290 Mpc away in Corona Borealis, anchored by the merging clusters Abell 2061, 2065, 2067, and 2089. It is one of the most massive bound structures known at its distance."
   },
   {
     "id": "pisces-cetus-sc",
@@ -277,7 +277,7 @@
     "distMpc": 260,
     "physicalRadiusMpc": 45,
     "apparentRadiusMpc": 45,
-    "description": "One of the most extended structures within 300 Mpc, stretching ~150 Mpc from Pisces through Cetus; identified by Tully 1987 as a major supercluster complex."
+    "description": "An enormous filament of galaxies stretching roughly 300 Mpc (about a billion light-years) from Pisces through Cetus, identified by R. Brent Tully in 1987. The Laniakea Supercluster forms one branch of this larger complex."
   },
   {
     "id": "sculptor-void",
@@ -288,7 +288,7 @@
     "distMpc": 35,
     "physicalRadiusMpc": 25,
     "apparentRadiusMpc": 25,
-    "description": "A nearby void just south of the celestial equator; ~25 Mpc characteristic radius. Sharp 1986 (MNRAS 221, 137); size approximate due to void-finding method sensitivity."
+    "description": "A nearby empty region of space about 35 Mpc away toward the constellation Sculptor, roughly 25 Mpc across. Like all cosmic voids it is not perfectly empty, but holds far fewer galaxies than the surrounding filaments and walls."
   },
   {
     "id": "local-void",
@@ -299,7 +299,7 @@
     "distMpc": 25,
     "physicalRadiusMpc": 30,
     "apparentRadiusMpc": 30,
-    "description": "Adjacent to the Local Group, extending mostly above the galactic plane; Tully et al. 2008 (ApJ 676, 184) place the centre near (l=37°, b=15°) at ~25 Mpc, with an effective radius of ~30 Mpc."
+    "description": "A vast, largely empty region bordering the Local Group, beginning just beyond our own neighbourhood and extending mostly above the plane of the Milky Way. Mapped by Tully and collaborators, it is some 60 Mpc across, and its emptiness is thought to push the Local Group along at over 200 km/s."
   },
   {
     "id": "bootes-void",
@@ -311,6 +311,6 @@
     "distMpc": 245,
     "physicalRadiusMpc": 50,
     "apparentRadiusMpc": 50,
-    "description": "The 'Great Void' of Kirshner et al. (1981, 1987); ~50 Mpc radius centred at ~245 Mpc, subtending ~12° on the sky. Near the edge of the CF-4 reliable reconstruction volume."
+    "description": "One of the largest known voids, nicknamed 'the Great Nothing' — a near-empty sphere about 100 Mpc (330 million light-years) across, centred roughly 245 Mpc away in Boötes. Discovered in 1981, it contains only a few dozen galaxies where thousands would be expected."
   }
 ]
