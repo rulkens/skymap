@@ -20,6 +20,7 @@ describe('CropCanvas', () => {
         crop={{ x: 100, y: 100, width: 400, height: 400, rotationDeg: 0 }}
         onCropChange={vi.fn()}
         onFileDrop={vi.fn()}
+        onDiskChange={vi.fn()}
       />,
     );
     const img = screen.getByAltText('source') as HTMLImageElement;
@@ -33,6 +34,7 @@ describe('CropCanvas', () => {
         crop={{ x: 100, y: 100, width: 400, height: 400, rotationDeg: 0 }}
         onCropChange={vi.fn()}
         onFileDrop={vi.fn()}
+        onDiskChange={vi.fn()}
       />,
     );
     expect(screen.getByText(/400 × 400 of 1000 × 800/)).toBeInTheDocument();
@@ -46,12 +48,17 @@ describe('CropCanvas', () => {
         crop={{ x: 0, y: 0, width: 100, height: 100, rotationDeg: 0 }}
         onCropChange={onCropChange}
         onFileDrop={vi.fn()}
+        onDiskChange={vi.fn()}
       />,
     );
     fireEvent.click(screen.getByText('Reset crop'));
     // 800 = min(1000, 800); centred at x=100, y=0.
     expect(onCropChange).toHaveBeenCalledWith({
-      x: 100, y: 0, width: 800, height: 800, rotationDeg: 0,
+      x: 100,
+      y: 0,
+      width: 800,
+      height: 800,
+      rotationDeg: 0,
     });
   });
 
@@ -63,6 +70,7 @@ describe('CropCanvas', () => {
         crop={undefined}
         onCropChange={vi.fn()}
         onFileDrop={onFileDrop}
+        onDiskChange={vi.fn()}
       />,
     );
     const dz = screen.getByTestId('curator-crop-dropzone');

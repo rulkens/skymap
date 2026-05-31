@@ -23,6 +23,7 @@
  */
 import { useCallback, useRef, useState } from 'react';
 import type { PointerEvent, DragEvent } from 'react';
+import { DiskOverlay } from './DiskOverlay';
 import {
   resetCrop,
   translateCrop,
@@ -38,17 +39,27 @@ import {
   setRotation,
 } from '../cropMath';
 import type { Crop, Bounds } from '../cropMath';
+import type { RecipeDisk } from '../../plugin/recipe';
 
-type Handle =
-  | 'body'
-  | 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w'
-  | 'rotate';
+type Handle = 'body' | 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'rotate';
 
 export type CropCanvasProps = {
   source: { width: number; height: number; previewUrl: string } | undefined;
   crop: Crop | undefined;
   onCropChange: (c: Crop) => void;
   onFileDrop: (file: File) => void;
+  /**
+   * Current disk-overlay annotation.  Passed through to DiskOverlay; the
+   * parent owns the canonical value (state.disk in the reducer).
+   */
+  disk?: RecipeDisk;
+  /**
+   * Catalog-derived axis ratio (b/a) from the seed.  Threaded into
+   * DiskOverlay so the first creation gesture pre-fills the minor axis.
+   */
+  catalogAxisRatio?: number;
+  /** Called whenever the disk geometry changes; mirrors onCropChange. */
+  onDiskChange: (d: RecipeDisk) => void;
   /**
    * When set, enables the "Download original" button.  The URL is
    * expected to serve the full-resolution source bytes (PNG); we hint
@@ -78,6 +89,11 @@ type DragState = {
 
 export function CropCanvas(props: CropCanvasProps) {
   const [zoom, setZoom] = useState(1);
+  // mode: 'crop' — crop rect is interactive, DiskOverlay is visual-only.
+  //       'disk' — DiskOverlay is interactive, crop rect is non-interactive.
+  // Switching modes doesn't reset either the crop or the disk — they're
+  // independent annotations on the same source image.
+  const [mode, setMode] = useState<'crop' | 'disk'>('crop');
   const containerRef = useRef<HTMLDivElement>(null);
   // Mutable drag state — not React state because we don't want to re-render
   // on every pointermove (~60 re-renders/s for no visual gain; parent
@@ -131,10 +147,7 @@ export function CropCanvas(props: CropCanvasProps) {
       const b: Bounds = { width: props.source.width, height: props.source.height };
 
       if (d.handle === 'rotate') {
-        const angleRad = Math.atan2(
-          e.clientY - d.centerScreenY!,
-          e.clientX - d.centerScreenX!,
-        );
+        const angleRad = Math.atan2(e.clientY - d.centerScreenY!, e.clientX - d.centerScreenX!);
         const deltaDeg = ((angleRad - d.startAngleRad!) * 180) / Math.PI;
         props.onCropChange(setRotation(d.startCrop, d.startCrop.rotationDeg + deltaDeg));
         return;
@@ -159,16 +172,33 @@ export function CropCanvas(props: CropCanvasProps) {
 
       let next: Crop;
       switch (d.handle) {
-        case 'nw': next = resizeCornerNW(d.startCrop, dx, dy, b); break;
-        case 'n':  next = resizeEdgeN(d.startCrop, dy, b); break;
-        case 'ne': next = resizeCornerNE(d.startCrop, dx, dy, b); break;
-        case 'e':  next = resizeEdgeE(d.startCrop, dx, b); break;
-        case 'se': next = resizeCornerSE(d.startCrop, dx, dy, b); break;
-        case 's':  next = resizeEdgeS(d.startCrop, dy, b); break;
-        case 'sw': next = resizeCornerSW(d.startCrop, dx, dy, b); break;
-        case 'w':  next = resizeEdgeW(d.startCrop, dx, b); break;
+        case 'nw':
+          next = resizeCornerNW(d.startCrop, dx, dy, b);
+          break;
+        case 'n':
+          next = resizeEdgeN(d.startCrop, dy, b);
+          break;
+        case 'ne':
+          next = resizeCornerNE(d.startCrop, dx, dy, b);
+          break;
+        case 'e':
+          next = resizeEdgeE(d.startCrop, dx, b);
+          break;
+        case 'se':
+          next = resizeCornerSE(d.startCrop, dx, dy, b);
+          break;
+        case 's':
+          next = resizeEdgeS(d.startCrop, dy, b);
+          break;
+        case 'sw':
+          next = resizeCornerSW(d.startCrop, dx, dy, b);
+          break;
+        case 'w':
+          next = resizeEdgeW(d.startCrop, dx, b);
+          break;
         // Exhaustive — `rotate` and `body` returned above.
-        default: return;
+        default:
+          return;
       }
       props.onCropChange(next);
     },
@@ -252,6 +282,27 @@ export function CropCanvas(props: CropCanvasProps) {
         >
           Reset rotation
         </button>
+        {/* Mode toggle: switches between crop-rect interaction and disk-overlay interaction.
+            The two modes are mutually exclusive — only one can receive pointer events
+            at a time — but both annotations persist independently. */}
+        <span className="curator-mode-toggle" role="group" aria-label="Annotation mode">
+          <button
+            className="curator-mode-toggle__btn"
+            data-active={mode === 'crop'}
+            onClick={() => setMode('crop')}
+            title="Crop mode: drag handles to set the crop region"
+          >
+            Crop
+          </button>
+          <button
+            className="curator-mode-toggle__btn"
+            data-active={mode === 'disk'}
+            onClick={() => setMode('disk')}
+            title="Disk mode: press and drag to mark galaxy disk extent"
+          >
+            Disk
+          </button>
+        </span>
         {props.downloadOriginalUrl && (
           <a
             className="curator-crop-download"
@@ -279,21 +330,19 @@ export function CropCanvas(props: CropCanvasProps) {
         )}
         <span className="curator-crop-readout">
           crop {Math.round(props.crop.width)} × {Math.round(props.crop.height)} of{' '}
-          {props.source.width} × {props.source.height} source ·{' '}
-          {props.crop.rotationDeg.toFixed(1)}°
+          {props.source.width} × {props.source.height} source · {props.crop.rotationDeg.toFixed(1)}°
         </span>
       </div>
 
       <div className="curator-crop-stage">
-        <div
-          className="curator-crop-frame"
-          style={{ transform: `scale(${zoom})` }}
-        >
+        <div className="curator-crop-frame" style={{ transform: `scale(${zoom})` }}>
           <img className="curator-crop-source" src={props.source.previewUrl} alt="source" />
 
           {/* Crop overlay — rotated around its center.  Percentages of
               the frame === percentages of the image, so geometry stays
-              honest under non-square aspect ratios. */}
+              honest under non-square aspect ratios.
+              In disk mode, pointer-events:none prevents the crop rect from
+              intercepting events meant for the DiskOverlay beneath. */}
           <div
             className="curator-crop-rect"
             style={{
@@ -304,6 +353,7 @@ export function CropCanvas(props: CropCanvasProps) {
               height: `${cropPctH}%`,
               transform: `rotate(${props.crop.rotationDeg}deg)`,
               transformOrigin: 'center',
+              pointerEvents: mode === 'disk' ? 'none' : 'auto',
             }}
             onPointerDown={startDrag('body')}
             onPointerMove={moveDrag}
@@ -337,6 +387,18 @@ export function CropCanvas(props: CropCanvasProps) {
               onPointerUp={endDrag as (e: React.PointerEvent<HTMLSpanElement>) => void}
             />
           </div>
+
+          {/* DiskOverlay sits above the image and crop rect.  Interactive only
+              in disk mode; in crop mode pointer-events:none lets the crop
+              handles beneath receive events.  Shares the frame's zoom
+              transform so handles track the image at all zoom levels. */}
+          <DiskOverlay
+            source={props.source}
+            disk={props.disk}
+            catalogAxisRatio={props.catalogAxisRatio}
+            interactive={mode === 'disk'}
+            onDiskChange={props.onDiskChange}
+          />
         </div>
       </div>
     </div>

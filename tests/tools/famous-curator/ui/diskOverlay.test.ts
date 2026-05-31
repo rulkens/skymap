@@ -11,6 +11,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   diskFromDrag,
+  majorAxisHandle,
   minorAxisHandle,
   axisRatioFromMinorDrag,
 } from '../../../../tools/famous-curator/ui/diskOverlay';
@@ -39,6 +40,24 @@ describe('diskFromDrag', () => {
     expect(result.paDeg).toBeGreaterThanOrEqual(0);
     expect(result.paDeg).toBeLessThan(180);
     expect(result.paDeg).toBeCloseTo(45);
+  });
+});
+
+describe('majorAxisHandle', () => {
+  it('round-trips through diskFromDrag: recovers radiusPx and paDeg', () => {
+    const cases: Array<{ paDeg: number; radiusPx: number }> = [
+      { paDeg: 0, radiusPx: 40 },
+      { paDeg: 45, radiusPx: 80 },
+      { paDeg: 90, radiusPx: 60 },
+      { paDeg: 135, radiusPx: 30 },
+    ];
+    for (const { paDeg, radiusPx } of cases) {
+      const disk: RecipeDisk = { centerPx: [100, 100], radiusPx, paDeg, deproject: false };
+      const edge = majorAxisHandle(disk);
+      const recovered = diskFromDrag(disk.centerPx, edge);
+      expect(recovered.radiusPx).toBeCloseTo(radiusPx, 9);
+      expect(recovered.paDeg).toBeCloseTo(paDeg, 9);
+    }
   });
 });
 

@@ -25,29 +25,29 @@
    ───────────────────────────────────────────── */
 :root {
   /* Palette */
-  --c-bg:       #0c0e14;   /* page background */
-  --c-surface:  #11141d;   /* panel / card surface */
-  --c-surface2: #161a26;   /* slightly lifted surface (fieldsets, inputs) */
-  --c-border:   #252c3d;   /* subtle border */
-  --c-text:     #d8dde8;   /* body text */
-  --c-muted:    #7c8597;   /* secondary / placeholder text */
-  --c-accent:   #5eb1ff;   /* interactive accent (blue) */
-  --c-accent-bg:#0f2240;   /* accent at very low opacity for fills */
-  --c-success:  #4ade80;   /* curated / done state (green) */
-  --c-success-bg:#0d2a1a;  /* success fill */
-  --c-warning:  #fb923c;   /* dirty / needs-action state (orange) */
+  --c-bg: #0c0e14; /* page background */
+  --c-surface: #11141d; /* panel / card surface */
+  --c-surface2: #161a26; /* slightly lifted surface (fieldsets, inputs) */
+  --c-border: #252c3d; /* subtle border */
+  --c-text: #d8dde8; /* body text */
+  --c-muted: #7c8597; /* secondary / placeholder text */
+  --c-accent: #5eb1ff; /* interactive accent (blue) */
+  --c-accent-bg: #0f2240; /* accent at very low opacity for fills */
+  --c-success: #4ade80; /* curated / done state (green) */
+  --c-success-bg: #0d2a1a; /* success fill */
+  --c-warning: #fb923c; /* dirty / needs-action state (orange) */
 
   /* Spacing scale */
-  --space-1:  4px;
-  --space-2:  8px;
+  --space-1: 4px;
+  --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 24px;
   --space-6: 32px;
 
   /* Typography */
-  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, "Cascadia Code", "Fira Code", "Consolas", monospace;
+  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
 
   /* Crop handles */
   --handle-size: 12px;
@@ -56,13 +56,17 @@
 /* ─────────────────────────────────────────────
    Reset + base
    ───────────────────────────────────────────── */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   background: var(--c-bg);
   color: var(--c-text);
@@ -173,7 +177,9 @@ html, body, #root {
   padding: var(--space-2) var(--space-4);
   cursor: pointer;
   border-left: 3px solid transparent;
-  transition: background 80ms ease, border-color 80ms ease;
+  transition:
+    background 80ms ease,
+    border-color 80ms ease;
   user-select: none;
   color: var(--c-text);
 }
@@ -183,18 +189,18 @@ html, body, #root {
 }
 
 /* Active galaxy — accent highlight */
-.curator-galaxy-list > li[aria-current="true"] {
+.curator-galaxy-list > li[aria-current='true'] {
   background: #1e2433;
   border-left-color: var(--c-accent);
   color: var(--c-text);
 }
 
 /* Curated galaxy — green tick accent */
-.curator-galaxy-list > li[data-curated="true"] {
+.curator-galaxy-list > li[data-curated='true'] {
   border-left-color: var(--c-success);
 }
 
-.curator-galaxy-list > li[data-curated="true"]:not([aria-current="true"]) {
+.curator-galaxy-list > li[data-curated='true']:not([aria-current='true']) {
   background: var(--c-success-bg);
 }
 
@@ -242,7 +248,7 @@ html, body, #root {
   color: var(--c-muted);
 }
 
-.curator-source-bar input[type="url"] {
+.curator-source-bar input[type='url'] {
   flex: 1;
   background: var(--c-surface2);
   border: 1px solid var(--c-border);
@@ -255,11 +261,11 @@ html, body, #root {
   transition: border-color 120ms ease;
 }
 
-.curator-source-bar input[type="url"]:focus {
+.curator-source-bar input[type='url']:focus {
   border-color: var(--c-accent);
 }
 
-.curator-source-bar input[type="url"]:disabled {
+.curator-source-bar input[type='url']:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
@@ -276,7 +282,9 @@ html, body, #root {
   border: 1px solid var(--c-border);
   background: var(--c-surface2);
   color: var(--c-text);
-  transition: background 100ms ease, opacity 100ms ease;
+  transition:
+    background 100ms ease,
+    opacity 100ms ease;
 }
 .curator-source-bar button:hover:not(:disabled) {
   background: #1f2840;
@@ -339,7 +347,7 @@ html, body, #root {
   gap: var(--space-2);
 }
 
-.curator-crop-controls input[type="range"] {
+.curator-crop-controls input[type='range'] {
   accent-color: var(--c-accent);
   width: 80px;
 }
@@ -465,7 +473,7 @@ html, body, #root {
 /* All handles: 12px squares, absolute, centred on their edge/corner */
 .curator-crop-handle {
   position: absolute;
-  width:  var(--handle-size);
+  width: var(--handle-size);
   height: var(--handle-size);
   background: var(--c-accent);
   border: 1px solid var(--c-bg);
@@ -477,44 +485,52 @@ html, body, #root {
 
 /* Corner handles — position at the literal corners */
 .curator-crop-handle--nw {
-  top: 0; left: 0;
+  top: 0;
+  left: 0;
   transform: translate(-50%, -50%);
   cursor: nwse-resize;
 }
 .curator-crop-handle--ne {
-  top: 0; right: 0;
+  top: 0;
+  right: 0;
   transform: translate(50%, -50%);
   cursor: nesw-resize;
 }
 .curator-crop-handle--se {
-  bottom: 0; right: 0;
+  bottom: 0;
+  right: 0;
   transform: translate(50%, 50%);
   cursor: nwse-resize;
 }
 .curator-crop-handle--sw {
-  bottom: 0; left: 0;
+  bottom: 0;
+  left: 0;
   transform: translate(-50%, 50%);
   cursor: nesw-resize;
 }
 
 /* Edge midpoint handles */
 .curator-crop-handle--n {
-  top: 0; left: 50%;
+  top: 0;
+  left: 50%;
   transform: translate(-50%, -50%);
   cursor: ns-resize;
 }
 .curator-crop-handle--s {
-  bottom: 0; left: 50%;
+  bottom: 0;
+  left: 50%;
   transform: translate(-50%, 50%);
   cursor: ns-resize;
 }
 .curator-crop-handle--e {
-  right: 0; top: 50%;
+  right: 0;
+  top: 50%;
   transform: translate(50%, -50%);
   cursor: ew-resize;
 }
 .curator-crop-handle--w {
-  left: 0; top: 50%;
+  left: 0;
+  top: 50%;
   transform: translate(-50%, -50%);
   cursor: ew-resize;
 }
@@ -544,6 +560,77 @@ html, body, #root {
 }
 .curator-crop-handle--rotate:active {
   cursor: grabbing;
+}
+
+/* ─────────────────────────────────────────────
+   Mode toggle — Crop / Disk segmented control
+   ───────────────────────────────────────────── */
+
+/* Segmented control container — tight border around the pair so they
+   read as a single unit rather than two independent buttons. */
+.curator-mode-toggle {
+  display: inline-flex;
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.curator-mode-toggle__btn {
+  padding: 2px var(--space-3);
+  font-size: 12px;
+  font-family: var(--font-body);
+  border: none;
+  border-radius: 0;
+  background: var(--c-surface2);
+  color: var(--c-muted);
+  cursor: pointer;
+  transition:
+    background 80ms ease,
+    color 80ms ease;
+}
+
+/* Thin divider between the two segments */
+.curator-mode-toggle__btn + .curator-mode-toggle__btn {
+  border-left: 1px solid var(--c-border);
+}
+
+.curator-mode-toggle__btn:hover:not([data-active='true']) {
+  background: #1a2236;
+  color: var(--c-text);
+}
+
+/* Active segment gets the accent treatment */
+.curator-mode-toggle__btn[data-active='true'] {
+  background: var(--c-accent-bg);
+  color: var(--c-accent);
+  cursor: default;
+}
+
+/* ─────────────────────────────────────────────
+   Disk overlay — SVG ellipse + handles
+   ───────────────────────────────────────────── */
+
+/* The svg element itself is sized/positioned by inline style in DiskOverlay.
+   These rules style the visual elements inside it. */
+.curator-disk-ellipse {
+  fill: none;
+  stroke: #f5a623; /* amber — distinct from the blue crop accent */
+  stroke-width: 2;
+  stroke-dasharray: 6 3; /* dashed so it reads as an annotation, not a UI chrome */
+}
+
+.curator-disk-axis {
+  stroke: rgba(245, 166, 35, 0.5);
+  stroke-width: 1;
+  stroke-dasharray: none;
+}
+
+/* Circular grab targets for center / edge / minor-axis handles */
+.curator-disk-handle {
+  fill: #f5a623;
+  stroke: var(--c-bg);
+  stroke-width: 1.5;
 }
 
 /* ─────────────────────────────────────────────
@@ -618,7 +705,9 @@ html, body, #root {
   padding: 0;
   cursor: pointer;
   overflow: hidden;
-  transition: border-color 100ms ease, transform 100ms ease;
+  transition:
+    border-color 100ms ease,
+    transform 100ms ease;
 }
 .curator-wiki-picker__card:hover {
   border-color: var(--c-accent);
@@ -717,7 +806,7 @@ html, body, #root {
 }
 
 /* Checkbox labels differ — use flex-row naturally */
-.curator-param-sliders label:has(input[type="checkbox"]) {
+.curator-param-sliders label:has(input[type='checkbox']) {
   flex-direction: row;
   gap: var(--space-2);
   align-items: center;
@@ -728,20 +817,20 @@ html, body, #root {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--c-text);
-  min-width: 3.5ch;        /* wide enough for "2.00" without overflow */
+  min-width: 3.5ch; /* wide enough for "2.00" without overflow */
   display: inline-block;
   text-align: right;
 }
 
 /* Range inputs */
-.curator-param-sliders input[type="range"] {
+.curator-param-sliders input[type='range'] {
   flex: 1;
   accent-color: var(--c-accent);
   cursor: pointer;
 }
 
 /* Checkbox */
-.curator-param-sliders input[type="checkbox"] {
+.curator-param-sliders input[type='checkbox'] {
   accent-color: var(--c-accent);
   width: 14px;
   height: 14px;
@@ -753,7 +842,9 @@ html, body, #root {
    Spinner — inline busy indicator inside buttons
    ───────────────────────────────────────────── */
 @keyframes curator-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 .curator-spinner {
   display: inline-block;
@@ -799,8 +890,10 @@ html, body, #root {
   border: 1px solid var(--c-border);
   background: var(--c-surface2);
   color: var(--c-text);
-  transition: background 100ms ease, opacity 100ms ease;
-  position: relative;   /* needed for the ::before orange-dot pseudo-element */
+  transition:
+    background 100ms ease,
+    opacity 100ms ease;
+  position: relative; /* needed for the ::before orange-dot pseudo-element */
 }
 
 .curator-param-actions button:hover:not(:disabled) {
@@ -838,12 +931,12 @@ html, body, #root {
  * We use a ::before pseudo rather than a real DOM node to keep the
  * component markup clean.
  */
-.curator-param-actions button[data-dirty="true"]::before {
+.curator-param-actions button[data-dirty='true']::before {
   content: '';
   position: absolute;
-  top:   6px;
+  top: 6px;
   right: 6px;
-  width:  8px;
+  width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--c-warning);
@@ -888,8 +981,7 @@ html, body, #root {
      entirely — but using the same background on both keeps the two
      previews visually comparable at the frame level. */
   background-color: #0f131c;
-  background-image:
-    conic-gradient(#1a2030 0 25%, #0f131c 0 50%, #1a2030 0 75%, #0f131c 0);
+  background-image: conic-gradient(#1a2030 0 25%, #0f131c 0 50%, #1a2030 0 75%, #0f131c 0);
   background-size: 16px 16px;
 }
 

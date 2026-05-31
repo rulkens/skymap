@@ -22,15 +22,16 @@ export type GalaxyListEntry = {
   type: string;
   description: string;
   curated: boolean;
+  /** Disk axis ratio b/a from the seed (HyperLEDA logr25).  Absent when the
+   *  seed has no photometric measurement for this galaxy. */
+  axisRatio?: number;
 };
 
 export type GalaxiesResult = {
   galaxies: GalaxyListEntry[];
 };
 
-export async function handleGalaxies(opts: {
-  repoRoot: string;
-}): Promise<GalaxiesResult> {
+export async function handleGalaxies(opts: { repoRoot: string }): Promise<GalaxiesResult> {
   const seedPath = resolve(opts.repoRoot, RAW_DATA['famous.seed'].path);
   const entries = parseFamousSeed(readFileSync(seedPath, 'utf8'));
   const idx = loadOverrideIndex(overrideIndexPath(opts.repoRoot));
@@ -44,6 +45,10 @@ export async function handleGalaxies(opts: {
     type: e.type,
     description: e.description,
     curated: idx.entries[e.id] !== undefined,
+    // Spread-in only when defined so the wire JSON omits the key entirely
+    // for galaxies without a measured b/a — consistent with optional-field
+    // conventions used elsewhere in the API.
+    ...(e.axisRatio !== undefined ? { axisRatio: e.axisRatio } : {}),
   }));
   return { galaxies };
 }

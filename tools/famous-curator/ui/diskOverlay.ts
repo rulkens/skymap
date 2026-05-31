@@ -58,6 +58,24 @@ export function diskFromDrag(
 }
 
 /**
+ * Major-axis handle endpoint (source px) — the point at the far end of the
+ * major axis where the edge-drag handle lives.
+ *
+ *   handle = centre + radiusPx * majorUnit
+ *   majorUnit = [cos(paDeg), sin(paDeg)]
+ *
+ * Symmetric round-trip: diskFromDrag(disk.centerPx, majorAxisHandle(disk))
+ * recovers disk.radiusPx and disk.paDeg (modulo floating-point precision).
+ */
+export function majorAxisHandle(disk: RecipeDisk): Vec2 {
+  const rad = (disk.paDeg * Math.PI) / 180;
+  return [
+    disk.centerPx[0] + disk.radiusPx * Math.cos(rad),
+    disk.centerPx[1] + disk.radiusPx * Math.sin(rad),
+  ];
+}
+
+/**
  * Minor-axis handle endpoint (source px) for rendering the perpendicular
  * handle in the overlay UI.
  *

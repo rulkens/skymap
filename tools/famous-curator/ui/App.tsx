@@ -40,11 +40,17 @@ function useColumnWidth(key: string, initial: number, min: number, max: number) 
     try {
       const stored = Number(localStorage.getItem(key));
       if (Number.isFinite(stored) && stored >= min && stored <= max) return stored;
-    } catch { /* localStorage may be unavailable (private mode) — fall through */ }
+    } catch {
+      /* localStorage may be unavailable (private mode) — fall through */
+    }
     return initial;
   });
   useEffect(() => {
-    try { localStorage.setItem(key, String(w)); } catch { /* ignore */ }
+    try {
+      localStorage.setItem(key, String(w));
+    } catch {
+      /* ignore */
+    }
   }, [key, w]);
   const clampedSet = (next: number | ((prev: number) => number)) => {
     setW((prev) => {
@@ -109,13 +115,18 @@ function AppInner() {
 
   useEffect(() => {
     let cancelled = false;
-    api.getGalaxies().then((r) => {
-      if (!cancelled) dispatch({ type: 'setGalaxies', galaxies: r.galaxies });
-    }).catch((err) => {
-      // Surface to the user via a toast in Plan D; log for now.
-      console.error('getGalaxies failed', err);
-    });
-    return () => { cancelled = true; };
+    api
+      .getGalaxies()
+      .then((r) => {
+        if (!cancelled) dispatch({ type: 'setGalaxies', galaxies: r.galaxies });
+      })
+      .catch((err) => {
+        // Surface to the user via a toast in Plan D; log for now.
+        console.error('getGalaxies failed', err);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [api]);
 
   // Auto-trigger alpha-only re-render when alpha dirty + we've processed
@@ -125,7 +136,8 @@ function AppInner() {
     const tmpId = state.tmpId;
     const alpha = state.alpha;
     const handle = setTimeout(() => {
-      api.postAlphaOnly({ tmpId, alpha })
+      api
+        .postAlphaOnly({ tmpId, alpha })
         .then((r) => dispatch({ type: 'setPreviews', alpha: r.alphaPreviewUrl }))
         .catch((err) => console.error('alpha-only failed', err));
     }, 150);
@@ -146,7 +158,13 @@ function AppInner() {
       const resolved = wiki ?? (await api.resolveMedia(url));
       const fetchUrl = resolved?.directUrl ?? url;
       const r = await api.postFetchUrl(fetchUrl);
-      dispatch({ type: 'setSource', tmpId: r.tmpId, width: r.width, height: r.height, previewUrl: r.previewUrl });
+      dispatch({
+        type: 'setSource',
+        tmpId: r.tmpId,
+        width: r.width,
+        height: r.height,
+        previewUrl: r.previewUrl,
+      });
       // Keep the human-friendly URL the user typed (Wikipedia article
       // page, not the raw upload URL) as the attribution source; it links
       // back to the credits page that lists the author + license.
@@ -169,7 +187,13 @@ function AppInner() {
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
       const r = await api.postFetchBytes(bytes, file.type || 'application/octet-stream');
-      dispatch({ type: 'setSource', tmpId: r.tmpId, width: r.width, height: r.height, previewUrl: r.previewUrl });
+      dispatch({
+        type: 'setSource',
+        tmpId: r.tmpId,
+        width: r.width,
+        height: r.height,
+        previewUrl: r.previewUrl,
+      });
     } catch (err) {
       console.error('file drop failed', err);
     }
@@ -264,11 +288,19 @@ function AppInner() {
               // curator sessions may store a Wikipedia article URL or a
               // NOIRLab gallery page; either way we want the direct image
               // URL to re-fetch the source bytes.
-              const wiki = await resolveWikipediaMedia(r.recipe.metadata.sourceUrl).catch(() => null);
+              const wiki = await resolveWikipediaMedia(r.recipe.metadata.sourceUrl).catch(
+                () => null,
+              );
               const resolved = wiki ?? (await api.resolveMedia(r.recipe.metadata.sourceUrl));
               const fetchUrl = resolved?.directUrl ?? r.recipe.metadata.sourceUrl;
               const fetched = await api.postFetchUrl(fetchUrl);
-              dispatch({ type: 'setSource', tmpId: fetched.tmpId, width: fetched.width, height: fetched.height, previewUrl: fetched.previewUrl });
+              dispatch({
+                type: 'setSource',
+                tmpId: fetched.tmpId,
+                width: fetched.width,
+                height: fetched.height,
+                previewUrl: fetched.previewUrl,
+              });
               // setSource reset crop + previews; re-apply the recipe crop
               // and point previews at the prior export's on-disk files.
               // The ?v=<processedAt> query is a cache-buster: when the
@@ -288,10 +320,7 @@ function AppInner() {
           }}
         />
       </aside>
-      <Splitter
-        ariaLabel="Resize left panel"
-        onDrag={(dx) => setLeftW((w) => w + dx)}
-      />
+      <Splitter ariaLabel="Resize left panel" onDrag={(dx) => setLeftW((w) => w + dx)} />
       <main>
         <SourceBar
           // key=activeId remounts the SourceBar when the user picks a
@@ -303,13 +332,26 @@ function AppInner() {
           busy={fetchBusy}
           onFetch={onFetch}
         />
-        <CropCanvas
-          source={state.source}
-          crop={state.crop}
-          onCropChange={(c) => dispatch({ type: 'setCrop', crop: c })}
-          onFileDrop={onFileDrop}
-          downloadOriginalUrl={state.tmpId ? `/api/preview/${state.tmpId}/source.png` : undefined}
-        />
+        {/* Derive catalog b/a for the active galaxy so DiskOverlay can
+            pre-fill the minor axis on first creation. */}
+        {(() => {
+          const activeGalaxy = state.galaxies.find((g) => g.id === state.activeId);
+          const catalogAxisRatio = activeGalaxy?.axisRatio;
+          return (
+            <CropCanvas
+              source={state.source}
+              crop={state.crop}
+              onCropChange={(c) => dispatch({ type: 'setCrop', crop: c })}
+              onFileDrop={onFileDrop}
+              disk={state.disk}
+              catalogAxisRatio={catalogAxisRatio}
+              onDiskChange={(d) => dispatch({ type: 'setDisk', disk: d })}
+              downloadOriginalUrl={
+                state.tmpId ? `/api/preview/${state.tmpId}/source.png` : undefined
+              }
+            />
+          );
+        })()}
         <div className="curator-meta-row">
           <MetadataForm
             metadata={state.metadata}
@@ -326,10 +368,7 @@ function AppInner() {
           />
         </div>
       </main>
-      <Splitter
-        ariaLabel="Resize right panel"
-        onDrag={(dx) => setRightW((w) => w - dx)}
-      />
+      <Splitter ariaLabel="Resize right panel" onDrag={(dx) => setRightW((w) => w - dx)} />
       <aside>
         <ParamSliders
           starnet={state.starnet}

@@ -16,6 +16,9 @@ export type GalaxyListEntry = {
   type: string;
   description: string;
   curated: boolean;
+  /** Disk axis ratio b/a from the seed (HyperLEDA logr25).  Absent when the
+   *  seed has no photometric measurement for this galaxy. */
+  axisRatio?: number;
 };
 
 export type FetchResult = {
@@ -120,7 +123,7 @@ async function readOrThrow<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
     try {
-      const body = await res.json() as { error?: string };
+      const body = (await res.json()) as { error?: string };
       if (typeof body.error === 'string') msg = body.error;
     } catch {
       // ignore — keep generic message
@@ -140,11 +143,13 @@ export function makeApi(deps: { fetch: typeof fetch }): Api {
       return readOrThrow(await f(`/api/recipe/${id}`));
     },
     async postFetchUrl(url) {
-      return readOrThrow(await f('/api/fetch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      }));
+      return readOrThrow(
+        await f('/api/fetch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        }),
+      );
     },
     async resolveMedia(url) {
       const res = await f('/api/resolve', {
@@ -156,32 +161,40 @@ export function makeApi(deps: { fetch: typeof fetch }): Api {
       return readOrThrow<ResolvedMedia>(res);
     },
     async postFetchBytes(bytes, mediaType) {
-      return readOrThrow(await f('/api/fetch', {
-        method: 'POST',
-        headers: { 'Content-Type': mediaType },
-        body: bytes,
-      }));
+      return readOrThrow(
+        await f('/api/fetch', {
+          method: 'POST',
+          headers: { 'Content-Type': mediaType },
+          body: bytes,
+        }),
+      );
     },
     async postProcess(params) {
-      return readOrThrow(await f('/api/process', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      }));
+      return readOrThrow(
+        await f('/api/process', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(params),
+        }),
+      );
     },
     async postAlphaOnly(params) {
-      return readOrThrow(await f('/api/process/alpha-only', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      }));
+      return readOrThrow(
+        await f('/api/process/alpha-only', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(params),
+        }),
+      );
     },
     async postExport(params) {
-      return readOrThrow(await f('/api/export', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      }));
+      return readOrThrow(
+        await f('/api/export', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(params),
+        }),
+      );
     },
     async postBuildFamous() {
       // The /api/build-famous route returns 200 on success and 500 on
