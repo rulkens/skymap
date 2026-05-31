@@ -70,12 +70,12 @@ recipe.json carries `disk`                         (NEW — so re-load restores 
 
 > `deriveFamousCalibration` needs `catalogAxisRatio` for the fallback. The route doesn't otherwise read the catalog row, so `catalogAxisRatio` comes in via the request body (Task 1). The curator already has the catalog b/a (Plan 3 threads it). Document this.
 
-- [ ] Write failing test `handleExport returns derived calibration for a disk` — body with `disk` + `crop` + `catalogAxisRatio`; assert `result.calibration` deep-equals `deriveFamousCalibration({ disk, crop, catalogAxisRatio, deprojected })` (the object-arg signature from Plan 1; centre normalized, `diskRadiusFrac`, PA rotated, `deprojected`).
-- [ ] Write failing test `handleExport returns no calibration without a disk` → `result.calibration === undefined`.
-- [ ] `npm test -- export.calibration` → FAIL.
-- [ ] Add `calibration?: FamousCalibration` to `ExportResult`; call `deriveFamousCalibration` and populate it. (Decision: the build re-derives from the recipe `disk` rather than reading a persisted calibration, so the recipe stays the single source of truth — see Task 4.)
-- [ ] `npm test -- export.calibration` → PASS.
-- [ ] `npm run typecheck` → clean. Commit.
+- [x] Write failing test `handleExport returns derived calibration for a disk` — body with `disk` + `crop` + `catalogAxisRatio`; assert `result.calibration` deep-equals `deriveFamousCalibration({ disk, crop, catalogAxisRatio, deprojected })` (the object-arg signature from Plan 1; centre normalized, `diskRadiusFrac`, PA rotated, `deprojected`).
+- [x] Write failing test `handleExport returns no calibration without a disk` → `result.calibration === undefined`.
+- [x] `npm test -- export.calibration` → FAIL.
+- [x] Add `calibration?: FamousCalibration` to `ExportResult`; call `deriveFamousCalibration` and populate it. (Decision: the build re-derives from the recipe `disk` rather than reading a persisted calibration, so the recipe stays the single source of truth — see Task 4.) _(catalogAxisRatio = `body.catalogAxisRatio ?? disk.axisRatio`; derives only when defined.)_
+- [x] `npm test -- export.calibration` → PASS.
+- [x] `npm run typecheck` → clean. Commit.
 
 ## Task 4: thread `calibration` onto `famous_meta.json` in `buildFamous`
 
