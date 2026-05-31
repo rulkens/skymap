@@ -92,9 +92,13 @@ regression once already).
      the crop is locked (`pointer-events:none`) and the overlay is interactive; create by
      press-at-nucleus → drag → release-at-edge (the user's original gesture). Crop/disk
      never co-move.
-  2. **Axis ratio is user-drawn** via the minor handle; disk starts round; **deproject
-     defaults OFF**; the UI sends NO catalogAxisRatio (export's `?? disk.axisRatio` covers
-     it). No server/`/api/galaxies` changes needed.
+  2. **Axis ratio PRE-FILLS from the catalog b/a** (user's final call — overrides the
+     earlier draft). `/api/galaxies` + the UI `GalaxyListEntry` (both copies) gain
+     `axisRatio?`; App derives the active galaxy's b/a and passes it as `catalogAxisRatio`.
+     On disk creation: `disk.axisRatio = catalogAxisRatio` and `disk.deproject =
+     (catalogAxisRatio ?? 1) >= DEPROJECT_MIN_AXIS_RATIO` (only round-ish auto-on). The
+     minor handle still lets the user override `disk.axisRatio`. The drag owns
+     center/radius/paDeg; the catalog only pre-fills axisRatio + seeds deproject.
 - **DiskOverlay is its own component** (`components/DiskOverlay.tsx`), rendered by CropCanvas
   inside `.curator-crop-frame`; the deproject toggle will be its own `components/DiskControls.tsx`
   (Task 4), NOT bolted onto ParamSliders.
