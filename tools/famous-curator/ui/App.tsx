@@ -238,12 +238,17 @@ function AppInner() {
         dispatch({ type: 'markProcessed' });
       }
       setCommitPhase('exporting');
+      // disk + catalogAxisRatio are threaded to the export route so it can
+      // persist disk geometry in recipe.json and derive calibration (Plan 2).
+      // ExportParams inherits ProcessParams which already declares both fields.
       await api.postExport({
         id: state.activeId,
         tmpId: state.tmpId,
         crop: state.crop,
         starnet: state.starnet,
         alpha: state.alpha,
+        disk: state.disk,
+        catalogAxisRatio,
         metadata: state.metadata,
       });
       dispatch({ type: 'markCuratedById', id: state.activeId });
@@ -298,6 +303,11 @@ function AppInner() {
               dispatch({ type: 'setStarnet', starnet: r.recipe.starnet });
               dispatch({ type: 'setAlpha', alpha: r.recipe.alpha });
               dispatch({ type: 'setMetadata', metadata: r.recipe.metadata });
+              // Re-hydrate disk geometry when the prior session drew one.
+              // setDisk sets dirty.disk=true, so the resumed session will
+              // re-Process on next Commit — this is acceptable: setCrop below
+              // also dirties crop, so a re-Process on Commit is unavoidable.
+              if (r.recipe.disk) dispatch({ type: 'setDisk', disk: r.recipe.disk });
               // Same resolver fallthrough as onFetch — recipes from older
               // curator sessions may store a Wikipedia article URL or a
               // NOIRLab gallery page; either way we want the direct image
