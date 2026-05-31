@@ -41,6 +41,29 @@ VISUAL verification before the PR.** Typecheck check form: `npm run typecheck >
 log 2>&1; rc=$?` — a piped `$?`/`&& tail` guard reports the wrong exit and once
 masked a real regression AND once cascade-cancelled a whole bash batch.
 
+## Post-Plan-3 refinements (user feedback, 2026-05-31)
+
+Smoke-testing the live curator surfaced three asks, each landed on the branch:
+
+- **Disk indicator in the galaxy list** (`a7c41e2`). `/api/galaxies` now reports
+  `hasDisk` per entry, computed from the SAME recipe read already done for
+  `curated` (zero extra I/O, via `readRecipeForGalaxy`). `GalaxyList` renders a
+  small inline-SVG ellipse beside the curated check when `hasDisk`.
+- **Deproject toggle always overridable** (`c4f8a1d`). `DEPROJECT_MIN_AXIS_RATIO`
+  (0.3) is no longer a pipeline hard-floor — it's now advisory: it seeds the
+  toggle off and triggers a non-blocking "very edge-on" warning, but the curator
+  may force deprojection at any tilt. `willDeproject` relaxed to `r > 0 && r < 1`
+  (the single shared gate, so export/process/buildFamous all honour the override
+  consistently). Export skip-warn removed; the only no-op case is r≥1 / r≤0.
+- **Resolution-independent overlay** (`1b09f4c`). Disk strokes/handles were sized
+  in SVG user units → hairline + sub-pixel on a high-res source in a small frame.
+  Moved `vector-effect:non-scaling-stroke` onto elements as an *attribute* (WebKit
+  ignores the CSS property) and derived handle radius from a screen-constant size
+  via a ResizeObserver-tracked display scale.
+
+All three: typecheck rc=0; `tests/tools/famous` + `tests/tools/famous-curator`
+green (17 files). Still pending user VISUAL re-check of the overlay sizing.
+
 ## Decisions made AFK
 
 - **Task 3 test location:** plan said `tests/data/`, but `src/data/` co-locates tests
