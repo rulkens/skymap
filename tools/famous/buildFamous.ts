@@ -19,7 +19,7 @@
  * outputs are needed by buildAllBins's famous-dedup pass), so always run
  * after `npm run build-tiers`. The npm script lives at `build-famous`.
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -28,8 +28,13 @@ import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalogFormat.js';
 import { Source } from '../../src/data/sources.js';
 import { fallbackOrientation } from '../../src/utils/random/fallbackOrientation.js';
 import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog.js';
+import type { FamousMetaEntry } from '../../src/@types/loading/FamousMetaEntry.js';
 import { rawDataPath } from '../utils/io/rawDataRegistry.js';
-import { writeMetaSidecar, type MetaSidecarEntry } from '../curation/writeMetaSidecar.js';
+import { parseRecipe, type Recipe } from '../famous-curator/plugin/recipe.js';
+import { curatedGalaxyDir } from '../famous-curator/plugin/paths.js';
+import { deriveFamousCalibration } from './deriveFamousCalibration.js';
+import { willDeproject } from './deprojectDisk.js';
+import { writeMetaSidecar } from '../curation/writeMetaSidecar.js';
 
 /**
  * Convert a curated entry's (RA, Dec, distanceMpc) to Cartesian (x, y, z).
@@ -42,6 +47,76 @@ function entryToXyz(e: FamousEntry): [number, number, number] {
   const cosDec = Math.cos(dec);
   const d = e.distanceMpc;
   return [d * cosDec * Math.cos(ra), d * cosDec * Math.sin(ra), d * Math.sin(dec)];
+}
+
+/**
+ * Read and parse the recipe.json for `id` under the curated galaxy directory.
+ *
+ * Returns undefined when the recipe file doesn't exist (the common case —
+ * most galaxies are uncalibrated) or when parsing fails (legacy/corrupt JSON
+ * must not crash the whole build).  Corrupt files emit a console.warn so the
+ * operator knows something needs attention without halting the pipeline.
+ */
+export function readCuratedRecipe(repoRoot: string, id: string): Recipe | undefined {
+  const path = resolve(curatedGalaxyDir(repoRoot, id), 'recipe.json');
+  if (!existsSync(path)) return undefined;
+  try {
+    return parseRecipe(readFileSync(path, 'utf8'));
+  } catch (err) {
+    console.warn(
+      `buildFamous: skipping corrupt recipe for ${id}: ${err instanceof Error ? err.message : String(err)}`,
+    );
+    return undefined;
+  }
+}
+
+/**
+ * Build the `FamousMetaEntry[]` sidecar from the seed entries + resolved
+ * axis-ratio array + an injected recipe reader.
+ *
+ * Injecting `readRecipe` decouples this pure assembler from filesystem I/O,
+ * making it testable without touching disk.  The build's `main()` passes
+ * `readCuratedRecipe` bound to `process.cwd()`.
+ *
+ * For each entry, if the recipe has a `disk` annotation, `deriveFamousCalibration`
+ * is called with the same deproject logic the export pipeline used, so the
+ * calibration in the JSON exactly matches what the shipped WebP looks like.
+ */
+export function assembleFamousMeta(
+  entries: readonly FamousEntry[],
+  axisRatios: ArrayLike<number>,
+  readRecipe: (id: string) => Recipe | undefined,
+): FamousMetaEntry[] {
+  return entries.map((e, i) => {
+    const recipe = readRecipe(e.id);
+    const disk = recipe?.disk;
+
+    const calibration =
+      disk !== undefined
+        ? (() => {
+            // effectiveAxisRatio mirrors the export pipeline's precedence:
+            // the curator-drawn disk.axisRatio takes priority over the catalog
+            // value, falling back to axisRatios[i] when absent.
+            const effectiveAxisRatio = disk.axisRatio ?? axisRatios[i]!;
+            const deprojected = disk.deproject && willDeproject(effectiveAxisRatio);
+            return deriveFamousCalibration({
+              disk,
+              crop: recipe!.crop,
+              catalogAxisRatio: axisRatios[i]!,
+              deprojected,
+            });
+          })()
+        : undefined;
+
+    return {
+      id: e.id,
+      names: e.names,
+      description: e.description,
+      type: e.type,
+      ...(e.commonName !== undefined ? { commonName: e.commonName } : {}),
+      ...(calibration !== undefined ? { calibration } : {}),
+    };
+  });
 }
 
 async function main(): Promise<void> {
@@ -71,7 +146,6 @@ async function main(): Promise<void> {
     parentSurveyByte: new Uint8Array(count),
     spectroscopicZ: new Float32Array(count),
   };
-  const metaByIdx: MetaSidecarEntry[] = [];
 
   for (let i = 0; i < count; i++) {
     const e = entries[i]!;
@@ -115,15 +189,13 @@ async function main(): Promise<void> {
     if (e.magB != null) cloud.magG[i] = e.magB;
     if (e.magV != null) cloud.magR[i] = e.magV;
     if (e.magK != null) cloud.magI[i] = e.magK;
-
-    metaByIdx.push({
-      id: e.id,
-      names: e.names,
-      description: e.description,
-      type: e.type,
-      ...(e.commonName !== undefined ? { commonName: e.commonName } : {}),
-    });
   }
+
+  // Build the meta sidecar after the cloud loop so cloud.axisRatio is fully
+  // populated (including fallback values) before calibration derivation reads it.
+  const metaByIdx: FamousMetaEntry[] = assembleFamousMeta(entries, cloud.axisRatio, (id) =>
+    readCuratedRecipe(process.cwd(), id),
+  );
 
   // ── Write the artefacts ──────────────────────────────────────────────
   const binBuf = encodeGalaxyCatalog(cloud);

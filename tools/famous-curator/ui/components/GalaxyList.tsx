@@ -32,9 +32,7 @@ export function GalaxyList(props: GalaxyListProps) {
     // Match against any of the galaxy's names (common, NGC, Messier, etc).
     // Substring + case-insensitive — no fancy fuzzy match needed for a
     // 75-entry list.
-    return props.galaxies.filter((g) =>
-      g.names.some((n) => n.toLowerCase().includes(q)),
-    );
+    return props.galaxies.filter((g) => g.names.some((n) => n.toLowerCase().includes(q)));
   }, [props.galaxies, query]);
   return (
     <div className="curator-galaxy-list-wrap">
@@ -48,38 +46,72 @@ export function GalaxyList(props: GalaxyListProps) {
       />
       <ul className="curator-galaxy-list" role="list">
         {filtered.map((g) => {
-        // Fall back to raw id if names array is empty — should never happen
-        // with valid API data, but guards against malformed seeds.
-        const allNames = g.names.length > 0 ? g.names : [g.id];
-        const [primary, ...aliases] = allNames;
-        const isActive = g.id === props.activeId;
-        return (
-          <li
-            key={g.id}
-            data-galaxy-id={g.id}
-            data-curated={String(g.curated)}
-            aria-current={isActive ? 'true' : undefined}
-            onClick={() => props.onSelect(g.id)}
-          >
-            <span className="curator-galaxy-list__name">
-              {primary}
-              {aliases.map((n) => (
-                // Middle dot (·) separator — same glyph used elsewhere for
-                // attribution chips.  Render each alias in its own muted
-                // span so CSS can style the divider + text uniformly.
-                <span key={n} className="curator-galaxy-list__alias">
-                  {' · '}{n}
-                </span>
-              ))}
-            </span>
-            {g.curated && (
-              <span className="curator-galaxy-list__check" aria-label="curated">
-                ✓
+          // Fall back to raw id if names array is empty — should never happen
+          // with valid API data, but guards against malformed seeds.
+          const allNames = g.names.length > 0 ? g.names : [g.id];
+          const [primary, ...aliases] = allNames;
+          const isActive = g.id === props.activeId;
+          return (
+            <li
+              key={g.id}
+              data-galaxy-id={g.id}
+              data-curated={String(g.curated)}
+              aria-current={isActive ? 'true' : undefined}
+              onClick={() => props.onSelect(g.id)}
+            >
+              <span className="curator-galaxy-list__name">
+                {primary}
+                {aliases.map((n) => (
+                  // Middle dot (·) separator — same glyph used elsewhere for
+                  // attribution chips.  Render each alias in its own muted
+                  // span so CSS can style the divider + text uniformly.
+                  <span key={n} className="curator-galaxy-list__alias">
+                    {' · '}
+                    {n}
+                  </span>
+                ))}
               </span>
-            )}
-          </li>
-        );
-      })}
+              {g.hasDisk &&
+                // Tilted ellipse glyph standing in for a disk seen at an angle —
+                // a quick at-a-glance marker that this galaxy's disk geometry is
+                // calibrated.  Sits before the curated check so the two badges
+                // read left-to-right in pipeline order (disk set, then exported).
+                // Title distinguishes a deprojected (face-on corrected) disk from
+                // a flat one so the curator can tell the two states apart on hover.
+                (() => {
+                  const label = g.diskDeproject
+                    ? 'Has calibrated disk (deprojected)'
+                    : 'Has calibrated disk (flat)';
+                  return (
+                    <span
+                      className="curator-galaxy-list__disk"
+                      title={label}
+                      aria-label={label}
+                      data-testid="disk-indicator"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                        <ellipse
+                          cx="6"
+                          cy="6"
+                          rx="5"
+                          ry="2.5"
+                          transform="rotate(-30 6 6)"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.2"
+                        />
+                      </svg>
+                    </span>
+                  );
+                })()}
+              {g.curated && (
+                <span className="curator-galaxy-list__check" aria-label="curated">
+                  ✓
+                </span>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

@@ -27,6 +27,7 @@ import { ParamSliders } from './components/ParamSliders';
 import { PreviewPane } from './components/PreviewPane';
 import { MetadataForm } from './components/MetadataForm';
 import { WikipediaImagePicker } from './components/WikipediaImagePicker';
+import { DiskControls } from './components/DiskControls';
 import { resolveWikipediaMedia } from './wikipediaMedia';
 import type { CommitPhase } from './components/ParamSliders';
 
@@ -40,11 +41,17 @@ function useColumnWidth(key: string, initial: number, min: number, max: number) 
     try {
       const stored = Number(localStorage.getItem(key));
       if (Number.isFinite(stored) && stored >= min && stored <= max) return stored;
-    } catch { /* localStorage may be unavailable (private mode) — fall through */ }
+    } catch {
+      /* localStorage may be unavailable (private mode) — fall through */
+    }
     return initial;
   });
   useEffect(() => {
-    try { localStorage.setItem(key, String(w)); } catch { /* ignore */ }
+    try {
+      localStorage.setItem(key, String(w));
+    } catch {
+      /* ignore */
+    }
   }, [key, w]);
   const clampedSet = (next: number | ((prev: number) => number)) => {
     setW((prev) => {
@@ -109,13 +116,18 @@ function AppInner() {
 
   useEffect(() => {
     let cancelled = false;
-    api.getGalaxies().then((r) => {
-      if (!cancelled) dispatch({ type: 'setGalaxies', galaxies: r.galaxies });
-    }).catch((err) => {
-      // Surface to the user via a toast in Plan D; log for now.
-      console.error('getGalaxies failed', err);
-    });
-    return () => { cancelled = true; };
+    api
+      .getGalaxies()
+      .then((r) => {
+        if (!cancelled) dispatch({ type: 'setGalaxies', galaxies: r.galaxies });
+      })
+      .catch((err) => {
+        // Surface to the user via a toast in Plan D; log for now.
+        console.error('getGalaxies failed', err);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [api]);
 
   // Auto-trigger alpha-only re-render when alpha dirty + we've processed
@@ -125,7 +137,8 @@ function AppInner() {
     const tmpId = state.tmpId;
     const alpha = state.alpha;
     const handle = setTimeout(() => {
-      api.postAlphaOnly({ tmpId, alpha })
+      api
+        .postAlphaOnly({ tmpId, alpha })
         .then((r) => dispatch({ type: 'setPreviews', alpha: r.alphaPreviewUrl }))
         .catch((err) => console.error('alpha-only failed', err));
     }, 150);
@@ -146,7 +159,13 @@ function AppInner() {
       const resolved = wiki ?? (await api.resolveMedia(url));
       const fetchUrl = resolved?.directUrl ?? url;
       const r = await api.postFetchUrl(fetchUrl);
-      dispatch({ type: 'setSource', tmpId: r.tmpId, width: r.width, height: r.height, previewUrl: r.previewUrl });
+      dispatch({
+        type: 'setSource',
+        tmpId: r.tmpId,
+        width: r.width,
+        height: r.height,
+        previewUrl: r.previewUrl,
+      });
       // Keep the human-friendly URL the user typed (Wikipedia article
       // page, not the raw upload URL) as the attribution source; it links
       // back to the credits page that lists the author + license.
@@ -169,11 +188,23 @@ function AppInner() {
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
       const r = await api.postFetchBytes(bytes, file.type || 'application/octet-stream');
-      dispatch({ type: 'setSource', tmpId: r.tmpId, width: r.width, height: r.height, previewUrl: r.previewUrl });
+      dispatch({
+        type: 'setSource',
+        tmpId: r.tmpId,
+        width: r.width,
+        height: r.height,
+        previewUrl: r.previewUrl,
+      });
     } catch (err) {
       console.error('file drop failed', err);
     }
   }
+  // Derived for the active galaxy — used in both the JSX tree (DiskControls,
+  // CropCanvas) and onCommit (postProcess body).  A single derivation keeps
+  // both consumers consistent without threading a prop.
+  const activeGalaxy = state.galaxies.find((g) => g.id === state.activeId);
+  const catalogAxisRatio = activeGalaxy?.axisRatio;
+
   /**
    * Unified commit: re-process if needed, export, then rebuild famous.bin.
    *
@@ -186,7 +217,12 @@ function AppInner() {
    */
   async function onCommit(): Promise<void> {
     if (!state.activeId || !state.tmpId || !state.crop) return;
-    const needsProcess = state.dirty.crop || state.dirty.starnet || !state.processedOnce;
+    // disk dirty joins crop and starnet as a re-process trigger: toggling
+    // deproject changes the geometry StarNet ingests, so the cached
+    // starless.png is stale.  The reducer already sets dirty.disk on
+    // setDisk / clearDisk.
+    const needsProcess =
+      state.dirty.crop || state.dirty.starnet || state.dirty.disk || !state.processedOnce;
     try {
       if (needsProcess) {
         setCommitPhase('processing');
@@ -195,17 +231,24 @@ function AppInner() {
           crop: state.crop,
           starnet: state.starnet,
           alpha: state.alpha,
+          disk: state.disk,
+          catalogAxisRatio,
         });
         dispatch({ type: 'setPreviews', starless: r.starlessPreviewUrl, alpha: r.alphaPreviewUrl });
         dispatch({ type: 'markProcessed' });
       }
       setCommitPhase('exporting');
+      // disk + catalogAxisRatio are threaded to the export route so it can
+      // persist disk geometry in recipe.json and derive calibration (Plan 2).
+      // ExportParams inherits ProcessParams which already declares both fields.
       await api.postExport({
         id: state.activeId,
         tmpId: state.tmpId,
         crop: state.crop,
         starnet: state.starnet,
         alpha: state.alpha,
+        disk: state.disk,
+        catalogAxisRatio,
         metadata: state.metadata,
       });
       dispatch({ type: 'markCuratedById', id: state.activeId });
@@ -260,15 +303,28 @@ function AppInner() {
               dispatch({ type: 'setStarnet', starnet: r.recipe.starnet });
               dispatch({ type: 'setAlpha', alpha: r.recipe.alpha });
               dispatch({ type: 'setMetadata', metadata: r.recipe.metadata });
+              // Re-hydrate disk geometry when the prior session drew one.
+              // setDisk sets dirty.disk=true, so the resumed session will
+              // re-Process on next Commit — this is acceptable: setCrop below
+              // also dirties crop, so a re-Process on Commit is unavoidable.
+              if (r.recipe.disk) dispatch({ type: 'setDisk', disk: r.recipe.disk });
               // Same resolver fallthrough as onFetch — recipes from older
               // curator sessions may store a Wikipedia article URL or a
               // NOIRLab gallery page; either way we want the direct image
               // URL to re-fetch the source bytes.
-              const wiki = await resolveWikipediaMedia(r.recipe.metadata.sourceUrl).catch(() => null);
+              const wiki = await resolveWikipediaMedia(r.recipe.metadata.sourceUrl).catch(
+                () => null,
+              );
               const resolved = wiki ?? (await api.resolveMedia(r.recipe.metadata.sourceUrl));
               const fetchUrl = resolved?.directUrl ?? r.recipe.metadata.sourceUrl;
               const fetched = await api.postFetchUrl(fetchUrl);
-              dispatch({ type: 'setSource', tmpId: fetched.tmpId, width: fetched.width, height: fetched.height, previewUrl: fetched.previewUrl });
+              dispatch({
+                type: 'setSource',
+                tmpId: fetched.tmpId,
+                width: fetched.width,
+                height: fetched.height,
+                previewUrl: fetched.previewUrl,
+              });
               // setSource reset crop + previews; re-apply the recipe crop
               // and point previews at the prior export's on-disk files.
               // The ?v=<processedAt> query is a cache-buster: when the
@@ -288,10 +344,7 @@ function AppInner() {
           }}
         />
       </aside>
-      <Splitter
-        ariaLabel="Resize left panel"
-        onDrag={(dx) => setLeftW((w) => w + dx)}
-      />
+      <Splitter ariaLabel="Resize left panel" onDrag={(dx) => setLeftW((w) => w + dx)} />
       <main>
         <SourceBar
           // key=activeId remounts the SourceBar when the user picks a
@@ -308,6 +361,9 @@ function AppInner() {
           crop={state.crop}
           onCropChange={(c) => dispatch({ type: 'setCrop', crop: c })}
           onFileDrop={onFileDrop}
+          disk={state.disk}
+          catalogAxisRatio={catalogAxisRatio}
+          onDiskChange={(d) => dispatch({ type: 'setDisk', disk: d })}
           downloadOriginalUrl={state.tmpId ? `/api/preview/${state.tmpId}/source.png` : undefined}
         />
         <div className="curator-meta-row">
@@ -326,11 +382,16 @@ function AppInner() {
           />
         </div>
       </main>
-      <Splitter
-        ariaLabel="Resize right panel"
-        onDrag={(dx) => setRightW((w) => w - dx)}
-      />
+      <Splitter ariaLabel="Resize right panel" onDrag={(dx) => setRightW((w) => w - dx)} />
       <aside>
+        {/* DiskControls renders only when a disk ellipse has been drawn;
+            placing it above ParamSliders groups disk geometry with the
+            other pipeline controls. */}
+        <DiskControls
+          disk={state.disk}
+          catalogAxisRatio={catalogAxisRatio}
+          onDiskChange={(d) => dispatch({ type: 'setDisk', disk: d })}
+        />
         <ParamSliders
           starnet={state.starnet}
           alpha={state.alpha}

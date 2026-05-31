@@ -8,9 +8,23 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { GalaxyList } from '../../../../../tools/famous-curator/ui/components/GalaxyList';
 
-const ENTRY = (id: string, curated = false) => ({
-  id, names: [id.toUpperCase()], ra: 0, dec: 0, distanceMpc: 0, diameterKpc: 0,
-  type: '', description: '', curated,
+const ENTRY = (
+  id: string,
+  curated = false,
+  hasDisk = false,
+  diskDeproject: boolean | undefined = undefined,
+) => ({
+  id,
+  names: [id.toUpperCase()],
+  ra: 0,
+  dec: 0,
+  distanceMpc: 0,
+  diameterKpc: 0,
+  type: '',
+  description: '',
+  curated,
+  hasDisk,
+  ...(diskDeproject !== undefined ? { diskDeproject } : {}),
 });
 
 describe('GalaxyList', () => {
@@ -51,10 +65,40 @@ describe('GalaxyList', () => {
 
   it('calls onSelect(id) on click', () => {
     const onSelect = vi.fn();
-    render(
-      <GalaxyList galaxies={[ENTRY('m31')]} activeId={undefined} onSelect={onSelect} />,
-    );
+    render(<GalaxyList galaxies={[ENTRY('m31')]} activeId={undefined} onSelect={onSelect} />);
     fireEvent.click(screen.getByText('M31'));
     expect(onSelect).toHaveBeenCalledWith('m31');
+  });
+
+  it('shows a disk indicator only for entries with a committed disk', () => {
+    render(
+      <GalaxyList
+        galaxies={[ENTRY('m31', true, true), ENTRY('m33', true, false)]}
+        activeId={undefined}
+        onSelect={vi.fn()}
+      />,
+    );
+    const m31 = screen.getByText('M31').closest('[data-galaxy-id]')!;
+    const m33 = screen.getByText('M33').closest('[data-galaxy-id]')!;
+    expect(m31.querySelector('[data-testid="disk-indicator"]')).not.toBeNull();
+    expect(m33.querySelector('[data-testid="disk-indicator"]')).toBeNull();
+  });
+
+  it('varies the disk indicator label by deproject state', () => {
+    render(
+      <GalaxyList
+        galaxies={[ENTRY('m31', true, true, true), ENTRY('m33', true, true, false)]}
+        activeId={undefined}
+        onSelect={vi.fn()}
+      />,
+    );
+    const m31 = screen.getByText('M31').closest('[data-galaxy-id]')!;
+    const m33 = screen.getByText('M33').closest('[data-galaxy-id]')!;
+    expect(m31.querySelector('[data-testid="disk-indicator"]')?.getAttribute('aria-label')).toBe(
+      'Has calibrated disk (deprojected)',
+    );
+    expect(m33.querySelector('[data-testid="disk-indicator"]')?.getAttribute('aria-label')).toBe(
+      'Has calibrated disk (flat)',
+    );
   });
 });

@@ -11,6 +11,7 @@ import {
   serialiseRecipe,
   parseRecipe,
   type Recipe,
+  type RecipeDisk,
 } from '../../../tools/famous-curator/plugin/recipe';
 
 function sample(): Recipe {
@@ -63,5 +64,75 @@ describe('recipe', () => {
 
   it('rejects malformed JSON', () => {
     expect(() => parseRecipe('not json {')).toThrow();
+  });
+
+  // --- RecipeDisk ---
+  // The disk block is optional: recipes without it must round-trip unchanged;
+  // recipes with it must round-trip every field, validate types, and return
+  // a freshly-constructed value with no aliasing to the caller's input.
+
+  it('parseRecipe round-trips a recipe with no disk block (disk stays undefined)', () => {
+    const r = sample();
+    // Confirm sample() has no disk field, then check the parsed result too.
+    expect(r.disk).toBeUndefined();
+    expect(parseRecipe(serialiseRecipe(r)).disk).toBeUndefined();
+  });
+
+  it('parseRecipe parses a valid disk block', () => {
+    const r = sample();
+    const disk: RecipeDisk = {
+      centerPx: [120, 80],
+      radiusPx: 64,
+      paDeg: 30,
+      deproject: true,
+    };
+    r.disk = disk;
+    const parsed = parseRecipe(serialiseRecipe(r));
+    expect(parsed.disk).toBeDefined();
+    expect(parsed.disk!.centerPx).toEqual([120, 80]);
+    expect(parsed.disk!.radiusPx).toBe(64);
+    expect(parsed.disk!.paDeg).toBe(30);
+    expect(parsed.disk!.deproject).toBe(true);
+    // centerPx must be a fresh tuple — no aliasing to the original input.
+    expect(parsed.disk!.centerPx).not.toBe(disk.centerPx);
+  });
+
+  it('parseRecipe parses disk.axisRatio when present and leaves it undefined when absent', () => {
+    const r = sample();
+    // Absent: axisRatio not set.
+    r.disk = { centerPx: [100, 100], radiusPx: 50, paDeg: 0, deproject: false };
+    const withoutRatio = parseRecipe(serialiseRecipe(r));
+    expect(withoutRatio.disk!.axisRatio).toBeUndefined();
+
+    // Present: axisRatio set to 0.6.
+    r.disk = { centerPx: [100, 100], radiusPx: 50, paDeg: 0, deproject: false, axisRatio: 0.6 };
+    const withRatio = parseRecipe(serialiseRecipe(r));
+    expect(withRatio.disk!.axisRatio).toBe(0.6);
+  });
+
+  it('parseRecipe throws when disk.centerPx is not a 2-number tuple', () => {
+    const r = sample();
+    // Length-1 array.
+    r.disk = { centerPx: [1] as unknown as [number, number], radiusPx: 50, paDeg: 0, deproject: false };
+    expect(() => parseRecipe(serialiseRecipe(r))).toThrow(/centerPx/);
+
+    // Not an array at all.
+    r.disk = { centerPx: 5 as unknown as [number, number], radiusPx: 50, paDeg: 0, deproject: false };
+    expect(() => parseRecipe(serialiseRecipe(r))).toThrow(/centerPx/);
+  });
+
+  it('parseRecipe throws when disk.radiusPx or disk.paDeg is non-finite', () => {
+    const r = sample();
+    r.disk = { centerPx: [100, 100], radiusPx: Infinity, paDeg: 0, deproject: false };
+    expect(() => parseRecipe(serialiseRecipe(r))).toThrow(/radiusPx/);
+
+    r.disk = { centerPx: [100, 100], radiusPx: 50, paDeg: NaN, deproject: false };
+    expect(() => parseRecipe(serialiseRecipe(r))).toThrow(/paDeg/);
+  });
+
+  it('parseRecipe throws when disk.deproject is not a boolean', () => {
+    const r = sample();
+    r.disk = { centerPx: [100, 100], radiusPx: 50, paDeg: 0, deproject: 1 as unknown as boolean };
+    expect(() => parseRecipe(serialiseRecipe(r))).toThrow(/deproject/);
   });
 });

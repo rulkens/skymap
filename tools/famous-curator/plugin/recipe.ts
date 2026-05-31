@@ -11,6 +11,34 @@
  * `version` and add a migration in `parseRecipe` when the schema changes.
  */
 
+import type { Vec2 } from '../../../src/@types/math/Vec2';
+
+/**
+ * Disk-overlay geometry annotation, drawn by the curator UI to let the
+ * maintainer mark a galaxy's disk extent and orientation before export.
+ *
+ * All coordinates are in SOURCE-image pixels so the annotation is
+ * invariant to crop/scale operations applied downstream.  axisRatio is
+ * optional — when absent the render layer falls back to the catalog
+ * value (b/a from the galaxy record).  deproject controls whether the
+ * pipeline applies a b/a -> face-on correction at render time; seeded
+ * from b/a >= DEPROJECT_MIN_AXIS_RATIO so only round-ish galaxies are
+ * deprojected by default, avoiding introducing a spurious axis on
+ * highly-inclined disks.
+ */
+export type RecipeDisk = {
+  /** Nucleus position in SOURCE-image pixels. */
+  centerPx: Vec2;
+  /** Disk radius in SOURCE pixels (major-axis edge drag length). */
+  radiusPx: number;
+  /** Major-axis position angle in the SOURCE image, degrees [0,180). */
+  paDeg: number;
+  /** Minor-axis handle b/a; falls back to catalog axisRatio when absent. */
+  axisRatio?: number;
+  /** Deproject toggle, seeded from b/a >= DEPROJECT_MIN_AXIS_RATIO. */
+  deproject: boolean;
+};
+
 export type RecipeCrop = {
   x: number;
   y: number;
@@ -18,8 +46,7 @@ export type RecipeCrop = {
   height: number;
   /**
    * Rotation in degrees (clockwise in y-down screen coords, matching CSS
-   * `transform: rotate(...)`).  Added after v1 launched, parsed as
-   * optional with default 0 so pre-rotation recipes round-trip unchanged.
+   * `transform: rotate(...)`).  Optional in the JSON — absent means 0.
    */
   rotationDeg: number;
 };
@@ -50,6 +77,13 @@ export type Recipe = {
   metadata: RecipeMetadata;
   /** ISO 8601 timestamp.  Filled in by the export route at write time. */
   processedAt: string;
+  /**
+   * Optional disk-overlay geometry annotation.  Absence is a valid state —
+   * recipes without a disk block round-trip unchanged.  Version is NOT
+   * bumped: the field is optional, and a strict bump would reject every
+   * existing recipe.json on disk.
+   */
+  disk?: RecipeDisk;
 };
 
 const KNOWN_VERSION = 1;
@@ -61,6 +95,51 @@ const KNOWN_VERSION = 1;
  */
 export function serialiseRecipe(r: Recipe): string {
   return JSON.stringify(r, null, 2) + '\n';
+}
+
+/**
+ * Validate and coerce a raw unknown value as a RecipeDisk.  Throws a
+ * descriptive error on any invalid shape or non-finite number.  Returns
+ * a freshly-constructed RecipeDisk (no aliasing to the input object) so
+ * callers can mutate the result freely.
+ *
+ * Called from parseRecipe (schema validation on load) and from the
+ * /api/export route (validation of client-supplied body.disk).  Single
+ * source of truth for disk field constraints.
+ */
+export function validateRecipeDisk(raw: unknown): RecipeDisk {
+  const d = raw as Record<string, unknown>;
+  if (
+    !Array.isArray(d.centerPx) ||
+    d.centerPx.length !== 2 ||
+    typeof d.centerPx[0] !== 'number' ||
+    !Number.isFinite(d.centerPx[0]) ||
+    typeof d.centerPx[1] !== 'number' ||
+    !Number.isFinite(d.centerPx[1])
+  ) {
+    throw new Error('recipe: disk.centerPx must be a finite-number tuple [x, y]');
+  }
+  if (typeof d.radiusPx !== 'number' || !Number.isFinite(d.radiusPx)) {
+    throw new Error('recipe: disk.radiusPx must be a finite number');
+  }
+  if (typeof d.paDeg !== 'number' || !Number.isFinite(d.paDeg)) {
+    throw new Error('recipe: disk.paDeg must be a finite number');
+  }
+  if (d.axisRatio !== undefined) {
+    if (typeof d.axisRatio !== 'number' || !Number.isFinite(d.axisRatio)) {
+      throw new Error('recipe: disk.axisRatio must be a finite number when set');
+    }
+  }
+  if (typeof d.deproject !== 'boolean') {
+    throw new Error('recipe: disk.deproject must be a boolean');
+  }
+  return {
+    centerPx: [d.centerPx[0], d.centerPx[1]],
+    radiusPx: d.radiusPx,
+    paDeg: d.paDeg,
+    ...(d.axisRatio !== undefined ? { axisRatio: d.axisRatio as number } : {}),
+    deproject: d.deproject,
+  };
 }
 
 /**
@@ -84,8 +163,7 @@ export function parseRecipe(json: string): Recipe {
       throw new Error(`recipe: crop.${k} must be a finite number`);
     }
   }
-  // rotationDeg is optional — older recipes (pre-rotation) omit it.
-  // Validate when present; default to 0 when absent.
+  // rotationDeg is optional in the JSON — validate when present, default to 0.
   if (crop.rotationDeg !== undefined) {
     if (typeof crop.rotationDeg !== 'number' || !Number.isFinite(crop.rotationDeg)) {
       throw new Error('recipe: crop.rotationDeg must be a finite number when set');
@@ -116,6 +194,8 @@ export function parseRecipe(json: string): Recipe {
   if (typeof raw.processedAt !== 'string' || raw.processedAt.length === 0) {
     throw new Error('recipe: processedAt must be a non-empty string');
   }
+  // Optional — delegate to the shared validator which returns a fresh RecipeDisk.
+  const parsedDisk = raw.disk !== undefined ? validateRecipeDisk(raw.disk) : undefined;
   return {
     version: KNOWN_VERSION,
     id: raw.id,
@@ -141,5 +221,6 @@ export function parseRecipe(json: string): Recipe {
       author: meta.author as string,
     },
     processedAt: raw.processedAt,
+    ...(parsedDisk !== undefined ? { disk: parsedDisk } : {}),
   };
 }

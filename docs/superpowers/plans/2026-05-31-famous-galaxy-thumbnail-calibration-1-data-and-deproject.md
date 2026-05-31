@@ -42,16 +42,16 @@ Add `disk?: RecipeDisk;` to the `Recipe` type. Do **not** bump
 unchanged (same backward-compat rationale as `crop.rotationDeg` at
 `recipe.ts:87-93`).
 
-- [ ] Add test `parseRecipe round-trips a recipe with no disk block (disk stays undefined)` — `parseRecipe(serialiseRecipe(r)).disk === undefined` for a recipe built without `disk`.
-- [ ] Add test `parseRecipe parses a valid disk block` — JSON with `disk: { centerPx: [120, 80], radiusPx: 64, paDeg: 30, deproject: true }`; assert every field round-trips and `centerPx` is a fresh array (not aliased to input).
-- [ ] Add test `parseRecipe parses disk.axisRatio when present and leaves it undefined when absent`.
-- [ ] Add test `parseRecipe throws when disk.centerPx is not a 2-number tuple` (e.g. `centerPx: [1]` or `centerPx: 5`).
-- [ ] Add test `parseRecipe throws when disk.radiusPx or disk.paDeg is non-finite`.
-- [ ] Add test `parseRecipe throws when disk.deproject is not a boolean`.
-- [ ] Run `npm test -- recipe` → new tests FAIL.
-- [ ] Implement: extend `parseRecipe` (validate `disk` only when present — mirror the `crop.rotationDeg` optional-when-absent guard at `recipe.ts:89-93`); `serialiseRecipe` already carries `disk` through via `JSON.stringify`. Validate `centerPx` is a finite-number tuple of length 2; `radiusPx`/`paDeg` finite; `axisRatio` finite when present; `deproject` boolean. Return a fresh `disk` with a fresh `centerPx` tuple (no aliasing — matches the `parseRecipe` docstring contract at `recipe.ts:66-71`).
-- [ ] Run `npm test -- recipe` → PASS. `npm run typecheck` → clean.
-- [ ] Commit.
+- [x] Add test `parseRecipe round-trips a recipe with no disk block (disk stays undefined)` — `parseRecipe(serialiseRecipe(r)).disk === undefined` for a recipe built without `disk`.
+- [x] Add test `parseRecipe parses a valid disk block` — JSON with `disk: { centerPx: [120, 80], radiusPx: 64, paDeg: 30, deproject: true }`; assert every field round-trips and `centerPx` is a fresh array (not aliased to input).
+- [x] Add test `parseRecipe parses disk.axisRatio when present and leaves it undefined when absent`.
+- [x] Add test `parseRecipe throws when disk.centerPx is not a 2-number tuple` (e.g. `centerPx: [1]` or `centerPx: 5`).
+- [x] Add test `parseRecipe throws when disk.radiusPx or disk.paDeg is non-finite`.
+- [x] Add test `parseRecipe throws when disk.deproject is not a boolean`.
+- [x] Run `npm test -- recipe` → new tests FAIL.
+- [x] Implement: extend `parseRecipe` (validate `disk` only when present — mirror the `crop.rotationDeg` optional-when-absent guard at `recipe.ts:89-93`); `serialiseRecipe` already carries `disk` through via `JSON.stringify`. Validate `centerPx` is a finite-number tuple of length 2; `radiusPx`/`paDeg` finite; `axisRatio` finite when present; `deproject` boolean. Return a fresh `disk` with a fresh `centerPx` tuple (no aliasing — matches the `parseRecipe` docstring contract at `recipe.ts:66-71`).
+- [x] Run `npm test -- recipe` → PASS. `npm run typecheck` → clean.
+- [x] Commit.
 
 ## Task 2: `FamousCalibration` type + `calibration?` on `FamousMetaEntry`
 
@@ -77,9 +77,9 @@ export type FamousCalibration = {
 Add `calibration?: FamousCalibration;` to `FamousMetaEntry`. Didactic
 comment: absent → today's render path unchanged (the dominant case).
 
-- [ ] Add `FamousCalibration` + the optional field with house-style doc comments.
-- [ ] Run `npm run typecheck` → clean (`.d.ts`-only; confirm no consumer breaks).
-- [ ] Commit.
+- [x] Add `FamousCalibration` + the optional field with house-style doc comments.
+- [x] Run `npm run typecheck` → clean (`.d.ts`-only; confirm no consumer breaks).
+- [x] Commit.
 
 ## Task 3: `DEPROJECT_MIN_AXIS_RATIO` constant
 
@@ -99,11 +99,11 @@ the build (per project memory `feedback_single_source_of_truth`).
 export const DEPROJECT_MIN_AXIS_RATIO = 0.3;
 ```
 
-- [ ] Add test `DEPROJECT_MIN_AXIS_RATIO is 0.3`.
-- [ ] Run `npm test -- famousCalibration` → FAIL.
-- [ ] Implement the constant module.
-- [ ] Run `npm test -- famousCalibration` → PASS.
-- [ ] Commit.
+- [x] Add test `DEPROJECT_MIN_AXIS_RATIO is 0.3`.
+- [x] Run `npm test -- famousCalibration` → FAIL.
+- [x] Implement the constant module.
+- [x] Run `npm test -- famousCalibration` → PASS.
+- [x] Commit. _(co-located test at `src/data/famousCalibration.test.ts`, matching the `src/data` neighbour convention rather than the plan's `tests/data/` path)_
 
 ## Task 4: Pure deprojection resample — `deprojectDisk`
 
@@ -147,14 +147,14 @@ scaled by `1/axisRatio`. Threshold guard uses `DEPROJECT_MIN_AXIS_RATIO`
 from `src/data/famousCalibration.ts`. Keep it pure: no file I/O — tests
 build the input `Sharp` from an in-memory RGBA buffer.
 
-- [ ] Add test `deprojectDisk is identity at axisRatio = 1` — output buffer byte-length + a sampled pixel equal the input for a small fixture (`.raw().toBuffer()` both sides).
-- [ ] Add test `deprojectDisk stretches the minor axis for a known b/a` — 100×100 source, axisRatio = 0.5, paDeg = 0 (major = image X, minor = image Y): output height ≈ 2× input, width unchanged (within rounding).
-- [ ] Add test `deprojectDisk stretches along the rotated minor axis for paDeg = 90` — minor = image X: output width ≈ 2× input.
-- [ ] Add test `deprojectDisk passes through (identity dimensions) when axisRatio < DEPROJECT_MIN_AXIS_RATIO` — axisRatio = 0.2: output dimensions == input dimensions.
-- [ ] Run `npm test -- deprojectDisk` → FAIL.
-- [ ] Implement against `sharp().affine(...)`.
-- [ ] Run `npm test -- deprojectDisk` → PASS. `npm run typecheck` → clean.
-- [ ] Commit.
+- [x] Add test `deprojectDisk is identity at axisRatio = 1` — output buffer byte-length + a sampled pixel equal the input for a small fixture (`.raw().toBuffer()` both sides).
+- [x] Add test `deprojectDisk stretches the minor axis for a known b/a` — 100×100 source, axisRatio = 0.5, paDeg = 0 (major = image X, minor = image Y): output height ≈ 2× input, width unchanged (within rounding).
+- [x] Add test `deprojectDisk stretches along the rotated minor axis for paDeg = 90` — minor = image X: output width ≈ 2× input.
+- [x] Add test `deprojectDisk passes through (identity dimensions) when axisRatio < DEPROJECT_MIN_AXIS_RATIO` — axisRatio = 0.2: output dimensions == input dimensions.
+- [x] Run `npm test -- deprojectDisk` → FAIL.
+- [x] Implement against `sharp().affine(...)`.
+- [x] Run `npm test -- deprojectDisk` → PASS. `npm run typecheck` → clean.
+- [x] Commit.
 
 ## Task 5: Pure calibration derivation — `deriveFamousCalibration`
 
@@ -207,17 +207,17 @@ square (see invariant note), so half-width == half-height.
 > footprint stays square). Derivation may assume it; do not add a separate
 > half-height term.
 
-- [ ] Add test `deriveFamousCalibration: centred nucleus, unrotated crop → center [0.5,0.5]`.
-- [ ] Add test `deriveFamousCalibration: off-centre nucleus → expected normalized center` — a crop + a `centerPx` half-way to an edge; assert exact `[u,v]`.
-- [ ] Add test `deriveFamousCalibration: diskRadiusFrac = radiusPx / (width/2)` — radiusPx 64 on a 256-wide crop → 0.5.
-- [ ] Add test `deriveFamousCalibration: paDeg rotated into final frame` — `disk.paDeg = 40`, `crop.rotationDeg = 10` → 30; plus a wraparound (`disk.paDeg = 10`, `crop.rotationDeg = 30` → 160) to pin `[0,180)` normalization.
-- [ ] Add test `deriveFamousCalibration: rotated crop maps the nucleus through R(-rotationDeg)` — non-zero `rotationDeg` + off-centre nucleus; assert the exact normalized center (compute the expected value by hand from `cropExtract.ts:77-84`).
-- [ ] Add test `deriveFamousCalibration: axisRatio falls back to catalogAxisRatio when disk.axisRatio absent`.
-- [ ] Add test `deriveFamousCalibration: deprojected flag passes through`.
-- [ ] Run `npm test -- deriveFamousCalibration` → FAIL.
-- [ ] Implement. Reuse the rotation math from `cropExtract.ts:77-84` (extract a tiny shared `rotateSourcePointIntoCrop` helper if the duplication is clean — otherwise inline with a citing comment; do not copy-paste the whole block). Add a local `normalizePa(deg)` that wraps into `[0,180)`.
-- [ ] Run `npm test -- deriveFamousCalibration` → PASS. `npm run typecheck` → clean.
-- [ ] Commit.
+- [x] Add test `deriveFamousCalibration: centred nucleus, unrotated crop → center [0.5,0.5]`.
+- [x] Add test `deriveFamousCalibration: off-centre nucleus → expected normalized center` — a crop + a `centerPx` half-way to an edge; assert exact `[u,v]`.
+- [x] Add test `deriveFamousCalibration: diskRadiusFrac = radiusPx / (width/2)` — radiusPx 64 on a 256-wide crop → 0.5.
+- [x] Add test `deriveFamousCalibration: paDeg rotated into final frame` — `disk.paDeg = 40`, `crop.rotationDeg = 10` → 30; plus a wraparound (`disk.paDeg = 10`, `crop.rotationDeg = 30` → 160) to pin `[0,180)` normalization.
+- [x] Add test `deriveFamousCalibration: rotated crop maps the nucleus through R(-rotationDeg)` — non-zero `rotationDeg` + off-centre nucleus; assert the exact normalized center (compute the expected value by hand from `cropExtract.ts:77-84`).
+- [x] Add test `deriveFamousCalibration: axisRatio falls back to catalogAxisRatio when disk.axisRatio absent`.
+- [x] Add test `deriveFamousCalibration: deprojected flag passes through`.
+- [x] Run `npm test -- deriveFamousCalibration` → FAIL.
+- [x] Implement. Reuse the rotation math from `cropExtract.ts:77-84` (inlined with a citing comment; added a local `normalizePa(deg)` that wraps into `[0,180)`).
+- [x] Run `npm test -- deriveFamousCalibration` → PASS. `npm run typecheck` → clean.
+- [x] Commit.
 
 ## Done-when
 

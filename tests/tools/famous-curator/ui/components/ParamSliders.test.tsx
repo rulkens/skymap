@@ -7,7 +7,7 @@ describe('ParamSliders', () => {
   const defaults = {
     starnet: { stride: 256, upsample: false },
     alpha: { blackPoint: 8, whitePoint: 255, gamma: 0.7 },
-    dirty: { crop: false, starnet: false, alpha: false },
+    dirty: { crop: false, starnet: false, alpha: false, disk: false },
     canCommit: false,
     commitPhase: 'idle' as const,
   };
@@ -33,7 +33,7 @@ describe('ParamSliders', () => {
     render(
       <ParamSliders
         {...defaults}
-        dirty={{ crop: true, starnet: false, alpha: false }}
+        dirty={{ crop: true, starnet: false, alpha: false, disk: false }}
         onStarnet={vi.fn()} onAlpha={vi.fn()} onCommit={vi.fn()}
       />,
     );

@@ -14,6 +14,7 @@
  */
 import { resetCrop, type Crop } from './cropMath';
 import type { GalaxyListEntry } from './api';
+import type { RecipeDisk } from '../plugin/recipe';
 
 export type StarnetParams = { stride: number; upsample: boolean };
 export type AlphaParams = { blackPoint: number; whitePoint: number; gamma: number };
@@ -23,6 +24,10 @@ export type DirtyFlags = {
   crop: boolean;
   starnet: boolean;
   alpha: boolean;
+  // A disk change (notably toggling deproject) changes the exported webp, so it
+  // gates re-Process exactly like crop does — otherwise a disk edit after a
+  // Process would ship a stale, un-deprojected image on the next Export.
+  disk: boolean;
 };
 
 export type State = {
@@ -31,6 +36,8 @@ export type State = {
   tmpId: string | undefined;
   source: { width: number; height: number; previewUrl: string } | undefined;
   crop: Crop | undefined;
+  // Source-px disk geometry annotation; undefined = not drawn for this galaxy.
+  disk: RecipeDisk | undefined;
   starnet: StarnetParams;
   alpha: AlphaParams;
   metadata: MetadataParams;
@@ -45,6 +52,7 @@ export const initialState: State = {
   tmpId: undefined,
   source: undefined,
   crop: undefined,
+  disk: undefined,
   starnet: { stride: 256, upsample: false },
   // Default alpha parameters tuned for typical astrophotography: a modest
   // black-point lift (8) to suppress sky background noise, full white
@@ -53,7 +61,7 @@ export const initialState: State = {
   alpha: { blackPoint: 8, whitePoint: 255, gamma: 0.7 },
   metadata: { sourceUrl: '', license: '', author: '' },
   previews: {},
-  dirty: { crop: false, starnet: false, alpha: false },
+  dirty: { crop: false, starnet: false, alpha: false, disk: false },
   processedOnce: false,
 };
 
@@ -62,6 +70,8 @@ export type Action =
   | { type: 'selectGalaxy'; id: string }
   | { type: 'setSource'; tmpId: string; width: number; height: number; previewUrl: string }
   | { type: 'setCrop'; crop: Crop }
+  | { type: 'setDisk'; disk: RecipeDisk }
+  | { type: 'clearDisk' }
   | { type: 'setStarnet'; starnet: StarnetParams }
   | { type: 'setAlpha'; alpha: AlphaParams }
   | { type: 'setMetadata'; metadata: MetadataParams }
@@ -86,9 +96,10 @@ export function reducer(s: State, a: Action): State {
         tmpId: undefined,
         source: undefined,
         crop: undefined,
+        disk: undefined,
         previews: {},
         processedOnce: false,
-        dirty: { crop: false, starnet: false, alpha: false },
+        dirty: { crop: false, starnet: false, alpha: false, disk: false },
         starnet: initialState.starnet,
         alpha: initialState.alpha,
         metadata: initialState.metadata,
@@ -106,7 +117,7 @@ export function reducer(s: State, a: Action): State {
         tmpId: a.tmpId,
         source: { width: a.width, height: a.height, previewUrl: a.previewUrl },
         crop,
-        dirty: { crop: true, starnet: false, alpha: false },
+        dirty: { crop: true, starnet: false, alpha: false, disk: false },
         previews: {},
         processedOnce: false,
       };
@@ -119,6 +130,16 @@ export function reducer(s: State, a: Action): State {
       // explicitly clicks Process, so they can see the old previews while
       // they refine the crop.
       return { ...s, crop: a.crop, dirty: { ...s.dirty, crop: true } };
+
+    case 'setDisk':
+      // Disk geometry feeds the derived calibration and, when deproject is on,
+      // the baked webp.  Mark disk dirty so a subsequent Commit re-Processes.
+      return { ...s, disk: a.disk, dirty: { ...s.dirty, disk: true } };
+
+    case 'clearDisk':
+      // Removing the disk also changes the eventual output (no deproject, no
+      // calibration), so it dirties just like setting one.
+      return { ...s, disk: undefined, dirty: { ...s.dirty, disk: true } };
 
     case 'setStarnet':
       // New stride or upsample flag → need full re-Process.
@@ -156,7 +177,7 @@ export function reducer(s: State, a: Action): State {
       return {
         ...s,
         processedOnce: true,
-        dirty: { crop: false, starnet: false, alpha: s.dirty.alpha },
+        dirty: { crop: false, starnet: false, alpha: s.dirty.alpha, disk: false },
       };
 
     case 'markCuratedById':
