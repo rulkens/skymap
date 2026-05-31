@@ -32,7 +32,7 @@
  *   re-renders/s.  setPointerCapture on pointerdown + releasePointerCapture
  *   on pointerup keeps events locked to the initiating element.
  */
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import type { RecipeDisk } from '../../plugin/recipe';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
@@ -89,13 +89,38 @@ function toSourcePx(
   ];
 }
 
-/** Handle size in source-image px — scaled so it's 8 CSS px at native size. */
-const HANDLE_RADIUS_SRC = 8;
+/**
+ * Grab-handle and stroke sizes are authored in SCREEN px and converted into
+ * the SVG's source-px user units at render time.  Anything left in user units
+ * shrinks as the source grows: a 4000px source shown in a 400px frame renders
+ * an 8-unit handle as a sub-pixel dot.  Stroke widths have the same problem in
+ * WebKit, which ignores the CSS `vector-effect` property — so the strokes also
+ * carry `vector-effect="non-scaling-stroke"` as an element attribute (honoured
+ * everywhere) rather than relying on the stylesheet alone.
+ */
+const HANDLE_RADIUS_SCREEN = 7;
 
 export function DiskOverlay(props: DiskOverlayProps) {
   const { source, disk, catalogAxisRatio, interactive, onDiskChange } = props;
   const svgRef = useRef<SVGSVGElement>(null);
   const dragRef = useRef<DragState | null>(null);
+
+  // Live display scale (rendered px per source px).  Tracked so screen-constant
+  // handle radii can be expressed in the SVG's source-px user units; a
+  // ResizeObserver keeps it correct across window resizes and layout shifts.
+  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el) return;
+    const measure = () => {
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0) setScale(rect.width / source.width);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [source.width]);
 
   // ── Pointer handlers ────────────────────────────────────────────────────
 
@@ -190,6 +215,8 @@ export function DiskOverlay(props: DiskOverlayProps) {
   const ellipseTransform = disk
     ? `rotate(${disk.paDeg}, ${disk.centerPx[0]}, ${disk.centerPx[1]})`
     : undefined;
+  // Screen-constant handle radius expressed in source-px user units.
+  const handleRadiusSrc = HANDLE_RADIUS_SCREEN / scale;
 
   return (
     <svg
@@ -213,6 +240,7 @@ export function DiskOverlay(props: DiskOverlayProps) {
           {/* Major-axis line: centre → edge handle */}
           <line
             className="curator-disk-axis"
+            vectorEffect="non-scaling-stroke"
             x1={disk.centerPx[0]}
             y1={disk.centerPx[1]}
             x2={edgePt[0]}
@@ -221,6 +249,7 @@ export function DiskOverlay(props: DiskOverlayProps) {
           {/* Ellipse outline: rx = major, ry = minor, rotated by paDeg */}
           <ellipse
             className="curator-disk-ellipse"
+            vectorEffect="non-scaling-stroke"
             cx={disk.centerPx[0]}
             cy={disk.centerPx[1]}
             rx={disk.radiusPx}
@@ -241,7 +270,8 @@ export function DiskOverlay(props: DiskOverlayProps) {
             data-testid="disk-handle-center"
             cx={disk.centerPx[0]}
             cy={disk.centerPx[1]}
-            r={HANDLE_RADIUS_SRC}
+            r={handleRadiusSrc}
+            vectorEffect="non-scaling-stroke"
             style={{ pointerEvents: interactive ? 'all' : 'none', cursor: 'move' }}
             onPointerDown={startHandleDrag('center')}
             onPointerMove={onHandlePointerMove}
@@ -255,7 +285,8 @@ export function DiskOverlay(props: DiskOverlayProps) {
               data-testid="disk-handle-edge"
               cx={edgePt[0]}
               cy={edgePt[1]}
-              r={HANDLE_RADIUS_SRC}
+              r={handleRadiusSrc}
+            vectorEffect="non-scaling-stroke"
               style={{ pointerEvents: interactive ? 'all' : 'none', cursor: 'crosshair' }}
               onPointerDown={startHandleDrag('edge')}
               onPointerMove={onHandlePointerMove}
@@ -270,7 +301,8 @@ export function DiskOverlay(props: DiskOverlayProps) {
               data-testid="disk-handle-minor"
               cx={minorPt[0]}
               cy={minorPt[1]}
-              r={HANDLE_RADIUS_SRC}
+              r={handleRadiusSrc}
+            vectorEffect="non-scaling-stroke"
               style={{ pointerEvents: interactive ? 'all' : 'none', cursor: 'ns-resize' }}
               onPointerDown={startHandleDrag('minor')}
               onPointerMove={onHandlePointerMove}
