@@ -25,7 +25,7 @@ import { H0_KM_S_MPC } from '../../../src/utils/math/constants';
 
 // ── Shared fixtures ──────────────────────────────────────────────────────────
 
-/** M500 safely above the MCXC_M500_MIN threshold (1.0 × 10^14 M☉). */
+/** M500 safely above the MCXC_M500_MIN threshold (2.0 × 10^14 M☉). */
 const ABOVE_THRESHOLD_M500 = 5.0;
 /** M500 safely below the MCXC_M500_MIN threshold. */
 const BELOW_THRESHOLD_M500 = 0.5;

@@ -60,20 +60,16 @@ import type { Vec3 } from '../../src/@types/math/Vec3.js';
 /**
  * Minimum M500 mass (× 10^14 M☉) for an MCXC cluster to be included.
  *
- * 1.0 × 10^14 M☉ is roughly the astrophysical cluster/group dividing
- * line — below it the systems are galaxy groups rather than clusters.
- * With z ≤ 0.15 this keeps ~603 MCXC clusters (vs 282 at 2.0).  The
- * higher 2.0 cut kept only the most massive handful, which left rich
- * supercluster regions (Coma / Hercules / Corona Borealis) looking
- * under-populated against the visible galaxy + MCPM density: those
- * superclusters are full of moderate-mass (0.5–2 × 10^14) Abell
- * clusters that a top-300 cut discards.  1.0 pulls those members in
- * (A1367, the Hercules and CrB families) so the cluster layer tracks
- * the structure the user actually sees.  The full-sky count stays
- * trivial for the marker renderer (hundreds of instanced quads, orders
- * of magnitude below the galaxy path).
+ * 2.0 × 10^14 M☉ keeps the genuinely massive X-ray clusters within the
+ * local-universe volume — ~282 clusters at z ≤ 0.15.  This is the rich-
+ * cluster regime (Coma, Perseus, the Shapley / Hercules / Corona Borealis
+ * members); the cluster/group dividing line sits lower (~1.0 × 10^14), and
+ * cutting there pulls in group-scale systems that crowd the marker layer
+ * without adding recognisable structure.  The full-sky count stays trivial
+ * for the marker renderer (hundreds of instanced quads, orders of magnitude
+ * below the galaxy path).
  */
-const MCXC_M500_MIN = 1.0;
+const MCXC_M500_MIN = 2.0;
 
 /**
  * Minimum member-cluster count (Nm) for an MSCC supercluster to be included.
