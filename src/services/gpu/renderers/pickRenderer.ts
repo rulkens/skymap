@@ -328,6 +328,21 @@ export function createPickRenderer(
     return pt;
   }
 
+  // Whether this pick pass has anything to draw — galaxy sources OR
+  // cluster / SC / void ring markers (drawn by `clusterMarkerRenderer.
+  // pickRing` inside `recordPickPass`).  A single predicate so `pick`
+  // and `renderForDebug` share one gate instead of each growing a `&&`
+  // clause: bailing on empty galaxy sources alone made clusters
+  // unpickable and the pick-debug texture black whenever every galaxy
+  // survey was toggled off.  `markerCount() > 0` mirrors
+  // `clusterMarkersPass`'s enable gate (0 when the category is hidden or
+  // every ring has faded out).  The state-level callers gate on the same
+  // notion via `collectPickTargets`; this is the renderer-layer echo for
+  // the inputs it actually has.
+  const hasAnyPickTarget = (sourceList: readonly PickSourceDraw[]): boolean =>
+    sourceList.length > 0 ||
+    (clusterMarkerRenderer !== undefined && clusterMarkerRenderer.markerCount() > 0);
+
   async function pick(
     viewportPx: Vec2,
     pickXPx: number,
@@ -341,7 +356,7 @@ export function createPickRenderer(
     // Materialise once so we can check emptiness and iterate without
     // re-walking a one-shot generator.
     const sourceList = Array.from(sources);
-    if (sourceList.length === 0) return null;
+    if (!hasAnyPickTarget(sourceList)) return null;
 
     const [vpW, vpH] = viewportPx;
     ensureTextures(vpW, vpH);
@@ -399,7 +414,7 @@ export function createPickRenderer(
     pointSizePx?: number,
   ): GPUTexture | null {
     const sourceList = Array.from(sources);
-    if (sourceList.length === 0) return null;
+    if (!hasAnyPickTarget(sourceList)) return null;
     const [vpW, vpH] = viewportPx;
     ensureTextures(vpW, vpH);
 

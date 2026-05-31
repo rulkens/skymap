@@ -56,6 +56,7 @@ import { resizeCanvasToDisplay } from '../../gpu/device';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { isEngineReady } from '../helpers/engineReady';
 import { resolvePoiFromPick } from '../helpers/resolvePoiFromPick';
+import { collectPickTargets } from '../helpers/collectPickTargets';
 import { deriveFrameContext } from './frameContext';
 import { renderFrame } from './renderFrame';
 import {
@@ -349,10 +350,12 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.sources.catalogs.size > 0 &&
     ctx.isReady
   ) {
-    const overlaySources = Array.from(ctx.renderer.loadedSources()).filter(
-      (s) => ((state.sources.pickMask >> s.source) & 1) !== 0,
+    const { visibleSources: overlaySources, hasAny } = collectPickTargets(
+      ctx.renderer,
+      state.sources.pickMask,
+      state.gpu.clusterMarkerRenderer,
     );
-    if (overlaySources.length > 0) {
+    if (hasAny) {
       const pickTex = state.gpu.pickRenderer.renderForDebug(
         [deps.canvas.width, deps.canvas.height],
         overlaySources,
@@ -415,23 +418,27 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     // bootstrap, nulled together in destroy).
     isEngineReady(state)
   ) {
-    // Snapshot the renderer's currently-visible per-source draw
-    // records.  Same filter rule as the click handler — only sources
-    // whose visibility bit is set are eligible to claim hover.
-    const visibleSources = Array.from(ctx.renderer.loadedSources()).filter(
-      (s) => ((state.sources.pickMask >> s.source) & 1) !== 0,
+    // Snapshot what's pickable this frame — visible galaxy surveys
+    // (filtered by the pick mask, same rule as the click handler) plus
+    // whether any cluster ring is on screen.  Single source of truth so
+    // the hover gate, the pick-debug overlay, and the click resolver all
+    // agree on "is there anything to pick".
+    const { visibleSources, hasAny } = collectPickTargets(
+      ctx.renderer,
+      state.sources.pickMask,
+      state.gpu.clusterMarkerRenderer,
     );
-    if (visibleSources.length === 0) {
-      // No surveys are visible right now (user toggled them all
-      // off).  Let the loop sleep — the next setSourceVisible
-      // call will wake it.
+    if (!hasAny) {
+      // Nothing pickable right now (every galaxy survey toggled off AND
+      // no cluster ring visible).  Let the loop sleep — the next
+      // setSourceVisible / cluster-marker change will wake it.
       //
       // By design: this `return` skips the keep-rendering predicate
-      // at the end of runFrame.  That's correct — with zero visible
-      // surveys there's nothing to animate, and the predicate would
-      // only ever return false in this state anyway.  Acknowledged
-      // here because the early-out is now far enough from the
-      // predicate that the asymmetry isn't visually obvious.
+      // at the end of runFrame.  That's correct — with nothing pickable
+      // there's nothing to animate, and the predicate would only ever
+      // return false in this state anyway.  Acknowledged here because
+      // the early-out is now far enough from the predicate that the
+      // asymmetry isn't visually obvious.
       return;
     }
 
