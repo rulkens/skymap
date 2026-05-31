@@ -24,14 +24,19 @@ and project conventions; anything genuinely contestable is flagged **REVIEW**.
 | 2 | 3 derive + return calibration | ✅ done (`75e58651`) |
 | 2 | 4 thread calibration into buildFamous | ✅ done (`db962555`, prettier-amended) |
 | 2 | 5 round-trip fixture | ✅ done (`25e34dd8`) |
-| 3 | curator UI | ⏳ |
+| 3 | 1 disk reducer slice | ✅ done (`58cb381b`; +DirtyFlags.disk; ParamSliders test fixed `569b63a4`) |
+| 3 | 2 pure diskOverlay geometry | ✅ done (`b295aa96`; PA convention matches deprojectDisk) |
+| 3 | 3 DiskOverlay component | ⏳ impl |
+| 3 | 4 deproject toggle + preview | ⏳ |
+| 3 | 5 export + re-hydrate disk | ⏳ |
 | 4 | runtime placement | ⏳ |
 | 5 | debug ring | ⏳ |
 | 6 | ADR | ⏳ |
 
-**Plan 1 COMPLETE. Plan 2 COMPLETE.** Full repo suite green (**1872 tests /
-293 files**), typecheck clean. **PAUSED at user request for Plan-2 smoke testing
-before starting Plan 3 (curator UI — visual work).**
+**Plan 1 COMPLETE. Plan 2 COMPLETE.** Plan 3 Tasks 1–2 done; Task 3 in flight.
+Branch green at each commit (use the `npm run typecheck > log; echo ${PIPESTATUS[0]}`
+form — a piped `$?` reports tail's exit, not tsc's; this masked a real typecheck
+regression once already).
 
 ## Decisions made AFK
 
@@ -72,6 +77,31 @@ before starting Plan 3 (curator UI — visual work).**
   `disk.axisRatio` is set it determines the result regardless, and the curator always threads
   `catalogAxisRatio`. (Front-loaded to the Task 3 implementer.)
 
+## Plan 3 — reconciliation + locked UX decisions
+
+- **Plan 3 file map was stale** — corrected in a `## Reality reconciliation` block at the
+  top of the Plan 3 doc. Real curator UI: flat `tools/famous-curator/ui/` + `components/`;
+  pure-geometry precedent is `cropMath.ts` (not `cropGeometry.ts`); curator tests live in
+  `tests/tools/famous-curator/ui/`; `CropCanvas.tsx`/`PreviewPane.tsx`/`MetadataForm.tsx`/
+  `ParamSliders.tsx` exist; no `DiskControls.tsx` (greenfield).
+- **DirtyFlags gained `disk`** so a disk/deproject change re-Processes before Export
+  (else a disk edit after Process ships a stale webp). Touching DirtyFlags rippled to
+  `ParamSliders.test.tsx` (hand-built dirty literals) — fixed.
+- **Locked UX decisions (asked the user 2026-05-31):**
+  1. **Mode toggle + center-out drag.** CropCanvas gets `mode: 'crop'|'disk'`; in disk mode
+     the crop is locked (`pointer-events:none`) and the overlay is interactive; create by
+     press-at-nucleus → drag → release-at-edge (the user's original gesture). Crop/disk
+     never co-move.
+  2. **Axis ratio is user-drawn** via the minor handle; disk starts round; **deproject
+     defaults OFF**; the UI sends NO catalogAxisRatio (export's `?? disk.axisRatio` covers
+     it). No server/`/api/galaxies` changes needed.
+- **DiskOverlay is its own component** (`components/DiskOverlay.tsx`), rendered by CropCanvas
+  inside `.curator-crop-frame`; the deproject toggle will be its own `components/DiskControls.tsx`
+  (Task 4), NOT bolted onto ParamSliders.
+- **Task 4 preview gap:** deproject lives only in the export route; a face-on PREVIEW needs
+  `routes/process.ts` to deproject too (reuse `willDeproject`/`deprojectDisk`) + `disk` on
+  `ProcessParams`. Task 4 owns this.
+
 ## Resume pointer (survives a compaction)
 
 - Branch `impl-famous-thumbnail-calibration`, HEAD at the Plan-2-complete docs commit (Plans 1–2 fully landed).
@@ -82,9 +112,9 @@ before starting Plan 3 (curator UI — visual work).**
 - Standing constraints: one-type-per-file in `src/@types/`; comment-tidy every touched
   file; component-split per the component skill for Plan 3 UI; branch+PR, never
   direct-push; do NOT merge to main without the user (visual-verification gate).
-- **NEXT:** Plan 3 (curator UI — disk overlay + handles + deproject toggle). PAUSED pending
-  user smoke test of Plan 2. After Plan 3 → Plan 4 (runtime), 5 (debug ring), 6 (ADR).
-  Plan 3 dispatches MUST require component-split per the component skill + one-type-per-file.
+- **NEXT:** Plan 3 Task 3 (DiskOverlay component) in flight → Task 4 (deproject toggle +
+  process-route deproject for the preview) → Task 5 (export params + resume hydration). Then
+  Plan 4 (runtime), 5 (debug ring), 6 (ADR). Plans 3/4/5 need user VISUAL verification.
 
 ## Needs your eyes (visual verification deferred)
 
