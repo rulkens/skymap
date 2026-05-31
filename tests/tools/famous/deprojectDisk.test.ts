@@ -27,8 +27,9 @@ describe('deprojectDisk', () => {
 
     expect(info.width).toBe(W);
     expect(info.height).toBe(H);
-    // All pixels should still be 200
+    // Fill value is preserved (sample first and last pixel).
     expect(data[0]).toBe(200);
+    expect(data[data.length - CHANNELS]).toBe(200);
   });
 
   it('stretches the minor axis (image-Y) for paDeg=0, axisRatio=0.5 — height ≈ 2×', async () => {
@@ -59,7 +60,7 @@ describe('deprojectDisk', () => {
 
   it('passes through (identity dimensions) when axisRatio < DEPROJECT_MIN_AXIS_RATIO', async () => {
     // Too inclined — stretching would smear texture beyond recovery.
-    const axisRatio = DEPROJECT_MIN_AXIS_RATIO - 0.1; // 0.2
+    const axisRatio = DEPROJECT_MIN_AXIS_RATIO - 0.1;
     const src = makeSrc();
     const result = deprojectDisk(src, { paDeg: 0, axisRatio });
     const { info } = await result.png().toBuffer({ resolveWithObject: true });

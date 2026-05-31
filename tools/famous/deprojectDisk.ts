@@ -11,11 +11,13 @@
  *
  *   M = R(paDeg) · diag(1, s) · R(paDeg)⁻¹,   s = 1 / axisRatio
  *
- * where R(θ) is the y-down clockwise rotation matrix [[cos θ, -sin θ],[sin θ, cos θ]].
- * Expanding the product:
+ * where R(θ) is the y-down clockwise rotation matrix [[cos θ, -sin θ],[sin θ, cos θ]]
+ * and R(θ)⁻¹ = R(-θ) since rotations are orthogonal.  Expanding the product:
  *
  *   M = [[ cos²θ + s·sin²θ,   (1-s)·cos θ·sin θ ],
- *        [ (1-s)·sin θ·cos θ,  sin²θ + s·cos²θ  ]]
+ *        [ (1-s)·cos θ·sin θ,  sin²θ + s·cos²θ  ]]
+ *
+ * The off-diagonal terms are equal — M is symmetric — because cos·sin commutes.
  *
  * Spot-checks:
  *   θ=0  → M = [[1,0],[0,s]] — scales image-Y (the minor axis when paDeg=0).
@@ -60,14 +62,14 @@ export function deprojectDisk(src: Sharp, input: DeprojectInput): Sharp {
   const cos = Math.cos(rad);
   const sin = Math.sin(rad);
 
-  // M = R(θ) · diag(1, s) · R(-θ)  (derived in module header above)
-  const a = cos * cos + s * sin * sin;       // M[0][0]
-  const b = (1 - s) * cos * sin;            // M[0][1]
-  const c = (1 - s) * sin * cos;            // M[1][0]
-  const d = sin * sin + s * cos * cos;      // M[1][1]
+  // M = R(θ) · diag(1, s) · R(θ)⁻¹ (derived in module header).  Symmetric, so
+  // the off-diagonal is a single shared term: M[0][1] === M[1][0].
+  const a = cos * cos + s * sin * sin; // M[0][0]
+  const offDiag = (1 - s) * cos * sin; // M[0][1] = M[1][0]
+  const d = sin * sin + s * cos * cos; // M[1][1]
 
-  // sharp().affine([a, b, c, d]) applies the 2×2 matrix and auto-grows the
-  // output canvas to fit the transformed bounding box.  Background fills any
-  // uncovered region (transparent by default).
-  return src.affine([a, b, c, d], { background: { r: 0, g: 0, b: 0, alpha: 0 } });
+  // sharp().affine(...) applies the 2×2 matrix and auto-grows the output canvas
+  // to fit the transformed bounding box.  Background fills any uncovered region
+  // (transparent by default).
+  return src.affine([a, offDiag, offDiag, d], { background: { r: 0, g: 0, b: 0, alpha: 0 } });
 }
