@@ -76,6 +76,24 @@ vi.mock('../../../../src/services/loading/fetchers/famousMetaFetcher', () => ({
   famousMetaFetcher: vi.fn(async () => ({ meta: [] })),
 }));
 
+// The cluster-catalog slot fires `.load({})` at boot; mock its fetcher so
+// the test doesn't network.  An empty catalog is enough — the merge test
+// pre-seeds `state.sources.clusterBulk` directly, so the slot's own value
+// is irrelevant here.
+vi.mock('../../../../src/services/loading/fetchers/clusterCatalogFetcher', () => ({
+  clusterCatalogFetcher: vi.fn(async () => ({
+    catalog: {
+      count: 0,
+      positions: new Float32Array(0),
+      physicalRadiusMpc: new Float32Array(0),
+      apparentRadiusMpc: new Float32Array(0),
+      significance: new Float32Array(0),
+      category: new Uint8Array(0),
+    },
+    meta: [],
+  })),
+}));
+
 vi.mock('../../../../src/services/loading/fetchers/pgcAliasFetcher', () => ({
   pgcAliasFetcher: vi.fn(async () => new Map()),
 }));
@@ -165,6 +183,8 @@ vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () 
 
 // Imported AFTER the mocks so wireSlots picks them up.
 import { wireSlots } from '../../../../src/services/engine/phases/wireSlots';
+import { famousMetaFetcher } from '../../../../src/services/loading/fetchers/famousMetaFetcher';
+import { clusterCatalogFetcher } from '../../../../src/services/loading/fetchers/clusterCatalogFetcher';
 
 // ── Test helpers ─────────────────────────────────────────────────────
 
@@ -322,6 +342,7 @@ function makeState(
       points: points as Map<SourceType, never>,
       filaments: null,
       famousMeta: null,
+      clusterCatalog: null,
       pgcAlias: null,
       cf4Density: null,
     },
@@ -500,6 +521,7 @@ describe('wireSlots', () => {
     expect(names.has('famous-points')).toBe(true);
     expect(names.has('filaments')).toBe(true);
     expect(names.has('famous-meta')).toBe(true);
+    expect(names.has('cluster-catalog')).toBe(true);
     expect(names.has('pgc-aliases')).toBe(true);
   });
 
@@ -523,17 +545,22 @@ describe('wireSlots', () => {
   });
 
   it('wires famous POIs alongside static anchors once meta + catalog arrive', async () => {
-    // Pre-populate the famous-meta sidecar and the famous catalog so
-    // the synchronous initial-merge call inside wireSlots picks them
-    // up immediately — we don't have to wait for slot transitions.
+    // Pre-populate the famous catalog (worldPos) and have the famous-meta
+    // companion fetcher resolve with the meta sidecar — the realistic
+    // arrival path.  wireSlots fires the companion `.load()` from its boot
+    // loop, the slot writes `state.sources.famousMeta`, and the merge
+    // republishes with famous folded in.
     delete (globalThis as { location?: unknown }).location;
     (globalThis as { location: { search: string } }).location = { search: '' };
 
+    vi.mocked(famousMetaFetcher).mockResolvedValueOnce({
+      meta: [
+        { id: 'm31', names: ['M31'], commonName: 'Andromeda Galaxy', description: '', type: '' },
+        { id: 'm33', names: ['M33'], description: '', type: '' },
+      ],
+    } as never);
+
     const state = makeState();
-    state.sources.famousMeta = [
-      { id: 'm31', names: ['M31'], commonName: 'Andromeda Galaxy', description: '', type: '' },
-      { id: 'm33', names: ['M33'], description: '', type: '' },
-    ];
     state.sources.catalogs.set(Source.Famous, {
       count: 2,
       positions: new Float32Array([0.78, 0.1, 0.2, 0.85, 0.05, 0.15]),
@@ -545,10 +572,11 @@ describe('wireSlots', () => {
       received.push(pois);
     };
     await wireSlots(state, deps);
-    // The wire calls setPois twice: once for static anchors only (the
-    // pre-Famous-merge call), then again with the merged list once
-    // rewireFamousPois sees both ingredients present.  Assert against
-    // the LAST call's payload.
+    // Let the famous-meta companion's async fetch + subscriber settle so
+    // the republish lands before we assert on the final list.
+    await new Promise((r) => setTimeout(r, 0));
+    // The merge republishes whenever a group arrives; the LAST call holds
+    // the fully-merged list once the famous-meta companion has resolved.
     const final = received[received.length - 1] ?? [];
     const ids = final.map((p) => p.id);
     expect(ids).toContain('famous-m31');
@@ -561,5 +589,62 @@ describe('wireSlots', () => {
     // reading it.
     const minPx = m31 && m31.category === 'famousGalaxy' ? m31.minApparentSizePx : undefined;
     expect(minPx).toBe(6);
+  });
+
+  it('merging famous then bulk clusters keeps both groups present', async () => {
+    // The three-group merge must never let the famous wire clobber the
+    // bulk-cluster wire (or vice versa): the final published list has to
+    // carry static anchors + famous + bulk simultaneously.  Both async
+    // groups arrive via their own slot — the famous-meta companion and
+    // the cluster-catalog boot load — so we drive them through the
+    // (mocked) fetchers rather than pre-seeding `state.sources`.
+    delete (globalThis as { location?: unknown }).location;
+    (globalThis as { location: { search: string } }).location = { search: '' };
+
+    vi.mocked(famousMetaFetcher).mockResolvedValueOnce({
+      meta: [
+        { id: 'm31', names: ['M31'], commonName: 'Andromeda Galaxy', description: '', type: '' },
+      ],
+    } as never);
+    // The cluster-catalog slot's boot load resolves with one cluster + one
+    // supercluster; the slot subscriber writes `state.sources.clusterBulk`.
+    vi.mocked(clusterCatalogFetcher).mockResolvedValueOnce({
+      catalog: {
+        count: 2,
+        positions: new Float32Array([1, 2, 3, 4, 5, 6]),
+        physicalRadiusMpc: new Float32Array([1.5, 30]),
+        apparentRadiusMpc: new Float32Array([3, 30]),
+        significance: new Float32Array([10, 25]),
+        category: new Uint8Array([0, 1]),
+      },
+      meta: [
+        { id: 'coma', names: ['Coma'], abell: 'A1656', description: '' },
+        { id: 'shapley', names: ['Shapley'], abell: null, description: '' },
+      ],
+    } as never);
+
+    const state = makeState();
+    state.sources.catalogs.set(Source.Famous, {
+      count: 1,
+      positions: new Float32Array([0.78, 0.1, 0.2]),
+      diameterKpc: new Float32Array([67]),
+    } as never);
+
+    const deps = makeDeps();
+    const received: Array<readonly PointOfInterest[]> = [];
+    state.subsystems.pois.setPois = (pois) => {
+      received.push(pois);
+    };
+    await wireSlots(state, deps);
+    // Let both async slot fetches + their subscribers settle.
+    await new Promise((r) => setTimeout(r, 0));
+
+    const final = received[received.length - 1] ?? [];
+    const ids = final.map((p) => p.id);
+    // All three groups present in the final published list.
+    expect(ids.some((id) => id.startsWith('cluster-') && !id.includes('-bulk-'))).toBe(true);
+    expect(ids).toContain('famous-m31');
+    expect(ids).toContain('cluster-bulk-coma');
+    expect(ids).toContain('supercluster-bulk-shapley');
   });
 });
