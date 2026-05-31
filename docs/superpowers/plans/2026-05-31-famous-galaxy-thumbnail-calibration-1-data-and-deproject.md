@@ -147,14 +147,14 @@ scaled by `1/axisRatio`. Threshold guard uses `DEPROJECT_MIN_AXIS_RATIO`
 from `src/data/famousCalibration.ts`. Keep it pure: no file I/O — tests
 build the input `Sharp` from an in-memory RGBA buffer.
 
-- [ ] Add test `deprojectDisk is identity at axisRatio = 1` — output buffer byte-length + a sampled pixel equal the input for a small fixture (`.raw().toBuffer()` both sides).
-- [ ] Add test `deprojectDisk stretches the minor axis for a known b/a` — 100×100 source, axisRatio = 0.5, paDeg = 0 (major = image X, minor = image Y): output height ≈ 2× input, width unchanged (within rounding).
-- [ ] Add test `deprojectDisk stretches along the rotated minor axis for paDeg = 90` — minor = image X: output width ≈ 2× input.
-- [ ] Add test `deprojectDisk passes through (identity dimensions) when axisRatio < DEPROJECT_MIN_AXIS_RATIO` — axisRatio = 0.2: output dimensions == input dimensions.
-- [ ] Run `npm test -- deprojectDisk` → FAIL.
-- [ ] Implement against `sharp().affine(...)`.
-- [ ] Run `npm test -- deprojectDisk` → PASS. `npm run typecheck` → clean.
-- [ ] Commit.
+- [x] Add test `deprojectDisk is identity at axisRatio = 1` — output buffer byte-length + a sampled pixel equal the input for a small fixture (`.raw().toBuffer()` both sides).
+- [x] Add test `deprojectDisk stretches the minor axis for a known b/a` — 100×100 source, axisRatio = 0.5, paDeg = 0 (major = image X, minor = image Y): output height ≈ 2× input, width unchanged (within rounding).
+- [x] Add test `deprojectDisk stretches along the rotated minor axis for paDeg = 90` — minor = image X: output width ≈ 2× input.
+- [x] Add test `deprojectDisk passes through (identity dimensions) when axisRatio < DEPROJECT_MIN_AXIS_RATIO` — axisRatio = 0.2: output dimensions == input dimensions.
+- [x] Run `npm test -- deprojectDisk` → FAIL.
+- [x] Implement against `sharp().affine(...)`.
+- [x] Run `npm test -- deprojectDisk` → PASS. `npm run typecheck` → clean.
+- [x] Commit.
 
 ## Task 5: Pure calibration derivation — `deriveFamousCalibration`
 
