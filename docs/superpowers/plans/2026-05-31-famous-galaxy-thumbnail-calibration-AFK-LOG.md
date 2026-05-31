@@ -12,9 +12,15 @@ and project conventions; anything genuinely contestable is flagged **REVIEW**.
 |------|------|--------|--------|
 | 1 | 1 RecipeDisk type + disk? on Recipe | ✅ done | `e5afcb4a` |
 | 1 | 2 FamousCalibration + calibration? | ✅ done | `4250a12e` |
-| 1 | 3 DEPROJECT_MIN_AXIS_RATIO | ✅ done | `1f8f2d34` |
-| 1 | 4 deprojectDisk | ✅ done (review ✅, polish `7afdf84a`) | `d0b13e27` |
+| 1 | 3 DEPROJECT_MIN_AXIS_RATIO | ✅ done | `360692bb` |
+| 1 | 4 deprojectDisk | ✅ done (review ✅, polish `7062f9fd`) | `d0b13e27` |
 | 1 | 5 deriveFamousCalibration | ⏳ review | `db8a8272` |
+
+> SHAs are best-effort; the authoritative record is `git log --grep="feat(famous)"`
+> / `--grep="feat(curator)"` on this branch. (Terminal echo occasionally garbles a
+> single-line rev-parse, so trust `git log` over any hand-copied SHA here.)
+>
+> FamousCalibration one-type-per-file split: `2528616a`.
 | 2 | build pipeline | ⏳ | |
 | 3 | curator UI | ⏳ | |
 | 4 | runtime placement | ⏳ | |
