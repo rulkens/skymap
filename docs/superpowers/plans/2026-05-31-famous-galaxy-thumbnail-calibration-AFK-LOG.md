@@ -26,8 +26,8 @@ and project conventions; anything genuinely contestable is flagged **REVIEW**.
 | 2 | 5 round-trip fixture | ✅ done (`25e34dd8`) |
 | 3 | 1 disk reducer slice | ✅ done (`58cb381b`; +DirtyFlags.disk; ParamSliders test fixed `569b63a4`) |
 | 3 | 2 pure diskOverlay geometry | ✅ done (`b295aa96`; PA convention matches deprojectDisk) |
-| 3 | 3 DiskOverlay component | ⏳ impl |
-| 3 | 4 deproject toggle + preview | ⏳ |
+| 3 | 3 DiskOverlay component | ✅ done (`047c9675`; catalog-b/a pre-fill; VISUAL pending) |
+| 3 | 4 deproject toggle + preview | ⏳ impl |
 | 3 | 5 export + re-hydrate disk | ⏳ |
 | 4 | runtime placement | ⏳ |
 | 5 | debug ring | ⏳ |

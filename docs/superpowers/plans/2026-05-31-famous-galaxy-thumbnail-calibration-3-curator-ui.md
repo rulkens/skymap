@@ -94,10 +94,10 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 **Behaviour:** draw the disk overlay (centre dot, major-axis line to the edge handle, perpendicular minor-axis handle pre-filled from catalog b/a) on top of the existing crop rect, using the source→canvas transform the crop already uses. Dragging the centre moves `centerPx`; dragging the edge updates radius+PA via `diskFromDrag`; dragging the minor handle updates `axisRatio` via `axisRatioFromMinorDrag`. Each drag dispatches `setDisk`. The crop handles remain fully independent — editing one must not move the other (spec decision 1).
 
-- [ ] **Step 1:** Add the overlay rendering + pointer handlers, reusing `CropCanvas.tsx`'s existing pointer-capture drag pattern and source↔canvas coordinate transform. Dispatch `setDisk` on change.
-- [ ] **Step 2:** `npm run typecheck` → PASS.
-- [ ] **Step 3:** Manual check (curator dev server): drawing/adjusting the disk does not move the crop, and vice versa.
-- [ ] **Step 4: Commit**
+- [x] **Step 1:** Add the overlay rendering + pointer handlers, reusing `CropCanvas.tsx`'s existing pointer-capture drag pattern and source↔canvas coordinate transform. Dispatch `setDisk` on change. _(own `components/DiskOverlay.tsx`; mode toggle locks crop in disk mode; catalog b/a pre-fill threaded through `/api/galaxies`)_
+- [x] **Step 2:** `npm run typecheck` → PASS (rc=0).
+- [ ] **Step 3:** Manual check (curator dev server): drawing/adjusting the disk does not move the crop, and vice versa. _(VISUAL — pending user)_
+- [x] **Step 4: Commit** `047c9675`
 
 ```bash
 git add tools/famous-curator/ui/components/CropCanvas.tsx
