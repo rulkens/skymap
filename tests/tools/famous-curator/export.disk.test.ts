@@ -8,10 +8,10 @@
  *   2. When `disk` is absent the written recipe.json must not contain
  *      a disk key at all (no null, no empty object — just absent).
  *
- * Both tests use the `sessionDirOverride` and `curatedDirOverride` test
- * hooks to avoid touching the real public/ tree.  `curatedDirOverride`
- * mirrors the `sessionDirOverride` pattern: the route writes its output
- * files into the supplied tmpdir instead of the repo-relative default.
+ * Both tests use `sessionDirOverride` and a tmp `repoRoot` to avoid
+ * touching the real public/ tree.  `repoRoot` isolates output fully:
+ * `curatedGalaxyDir(repoRoot, id)`, the atlas copy, and the override
+ * index all derive from it, so no real-repo paths are ever written.
  */
 import { describe, expect, it } from 'vitest';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -20,6 +20,7 @@ import { join, resolve } from 'node:path';
 import sharp from 'sharp';
 import { handleExport } from '../../../tools/famous-curator/plugin/routes/export';
 import { parseRecipe, type RecipeDisk } from '../../../tools/famous-curator/plugin/recipe';
+import { curatedGalaxyDir } from '../../../tools/famous-curator/plugin/paths';
 
 /** Create a tiny 64×64 RGBA PNG and write it as both source.png + starless.png. */
 async function seedSession(): Promise<{ tmpId: string; sessionDir: string }> {
@@ -64,8 +65,6 @@ describe('handleExport — disk field', () => {
   it('persists disk onto the recipe', async () => {
     const sess = await seedSession();
     const repo = fakeRepoRoot();
-    // curatedDirOverride redirects output away from the real public/ tree.
-    const curatedDirOverride = mkdtempSync(join(tmpdir(), 'curator-disk-out-'));
 
     const disk: RecipeDisk = {
       centerPx: [32, 32],
@@ -79,10 +78,9 @@ describe('handleExport — disk field', () => {
       body: { ...baseBody(sess.tmpId), disk },
       repoRoot: repo,
       sessionDirOverride: sess.sessionDir,
-      curatedDirOverride,
     });
 
-    const json = readFileSync(resolve(curatedDirOverride, 'recipe.json'), 'utf8');
+    const json = readFileSync(resolve(curatedGalaxyDir(repo, 'ngc1234'), 'recipe.json'), 'utf8');
     const parsed = parseRecipe(json);
 
     expect(parsed.disk).toBeDefined();
@@ -96,16 +94,14 @@ describe('handleExport — disk field', () => {
   it('omits disk from the recipe when absent', async () => {
     const sess = await seedSession();
     const repo = fakeRepoRoot();
-    const curatedDirOverride = mkdtempSync(join(tmpdir(), 'curator-disk-out-'));
 
     await handleExport({
       body: baseBody(sess.tmpId),
       repoRoot: repo,
       sessionDirOverride: sess.sessionDir,
-      curatedDirOverride,
     });
 
-    const json = readFileSync(resolve(curatedDirOverride, 'recipe.json'), 'utf8');
+    const json = readFileSync(resolve(curatedGalaxyDir(repo, 'ngc1234'), 'recipe.json'), 'utf8');
     const parsed = parseRecipe(json);
 
     expect(parsed.disk).toBeUndefined();

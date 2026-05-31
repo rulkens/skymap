@@ -33,6 +33,7 @@ import { copyFileSync, existsSync, mkdirSync, rmSync, renameSync, writeFileSync 
 import { resolve } from 'node:path';
 import {
   curatedGalaxyDir,
+  curatedTmpDir,
   overrideIndexPath,
 } from '../paths.js';
 import { sessionPath } from '../tmpSession.js';
@@ -77,23 +78,14 @@ export async function handleExport(opts: {
   repoRoot: string;
   /** Test hook — defaults to sessionPath(body.tmpId). */
   sessionDirOverride?: string;
-  /**
-   * Test hook — defaults to curatedGalaxyDir(repoRoot, body.id).
-   * Lets tests redirect all output (WebPs + recipe.json) to an isolated
-   * tmpdir so the real public/ tree is never touched.  Same role as
-   * sessionDirOverride but for the output side.
-   */
-  curatedDirOverride?: string;
 }): Promise<ExportResult> {
   const { body, repoRoot } = opts;
   // `sessDir` holds source.png + starless.png written by /api/process.
   // `sessionDirOverride` lets tests inject an arbitrary tmpdir without
   // needing the OS's $TMPDIR/famous-curator/ tree to exist.
   const sessDir = opts.sessionDirOverride ?? sessionPath(body.tmpId);
-  const outDir = opts.curatedDirOverride ?? curatedGalaxyDir(repoRoot, body.id);
-  // tmpDir is always a child of outDir so the atomic-rename dance (step 8)
-  // works correctly: sibling-stage then replace.
-  const tmpDir = resolve(outDir, '.tmp');
+  const outDir = curatedGalaxyDir(repoRoot, body.id);
+  const tmpDir = curatedTmpDir(repoRoot, body.id);
 
   // 1. Prepare the staging directory.  Clean any leftover .tmp/ from a
   //    previously interrupted export — these are safe to discard because
