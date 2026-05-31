@@ -7,19 +7,34 @@
  *   - tmpId: string | undefined    (current /api/fetch session)
  *   - source: { width, height, previewUrl } | undefined
  *   - crop: Crop | undefined       (resetCrop'd when source loads)
+ *   - disk: RecipeDisk | undefined (source-px disk geometry annotation)
  *   - starnet: { stride, upsample }
  *   - alpha: { blackPoint, whitePoint, gamma }
  *   - metadata: { sourceUrl, license, author }
  *   - previews: { starless?, alpha? }
- *   - dirty: { crop, starnet, alpha }  (which subsystem needs re-Process /
- *                                       alpha-only re-render)
+ *   - dirty: { crop, starnet, alpha, disk }  (which subsystem needs
+ *                                       re-Process / alpha-only re-render)
  *   - processedOnce: boolean       (Export gate)
  *
  * The reducer enforces the dirty-state transitions documented in the
  * spec's "Process flow + preview behaviour" section.
  */
 import { describe, expect, it } from 'vitest';
-import { reducer, initialState, canCommit, type Action } from '../../../../tools/famous-curator/ui/state';
+import {
+  reducer,
+  initialState,
+  canCommit,
+  type Action,
+} from '../../../../tools/famous-curator/ui/state';
+import type { RecipeDisk } from '../../../../tools/famous-curator/plugin/recipe';
+
+const diskFixture: RecipeDisk = {
+  centerPx: [10, 20],
+  radiusPx: 30,
+  paDeg: 45,
+  axisRatio: 0.6,
+  deproject: true,
+};
 
 function apply(actions: Action[]) {
   return actions.reduce(reducer, initialState);
@@ -35,9 +50,22 @@ describe('state reducer', () => {
   });
 
   it('setGalaxies populates the list', () => {
-    const s = reducer(initialState, { type: 'setGalaxies', galaxies: [
-      { id: 'm31', names: ['M31'], ra: 0, dec: 0, distanceMpc: 0, diameterKpc: 0, type: '', description: '', curated: false },
-    ]});
+    const s = reducer(initialState, {
+      type: 'setGalaxies',
+      galaxies: [
+        {
+          id: 'm31',
+          names: ['M31'],
+          ra: 0,
+          dec: 0,
+          distanceMpc: 0,
+          diameterKpc: 0,
+          type: '',
+          description: '',
+          curated: false,
+        },
+      ],
+    });
     expect(s.galaxies).toHaveLength(1);
   });
 
@@ -57,7 +85,13 @@ describe('state reducer', () => {
   });
 
   it('setSource initialises crop via resetCrop and marks crop dirty', () => {
-    const s = reducer(initialState, { type: 'setSource', tmpId: 't', width: 1000, height: 800, previewUrl: '/p' });
+    const s = reducer(initialState, {
+      type: 'setSource',
+      tmpId: 't',
+      width: 1000,
+      height: 800,
+      previewUrl: '/p',
+    });
     // resetCrop returns the largest centred square = min(width, height).
     expect(s.crop?.width).toBe(800);
     expect(s.dirty.crop).toBe(true);
@@ -124,5 +158,36 @@ describe('state reducer', () => {
       { type: 'setCrop', crop: { x: 0, y: 0, width: 50, height: 50, rotationDeg: 0 } },
     ]);
     expect(canCommit(cropDirty)).toBe(true);
+  });
+});
+
+describe('state reducer — disk slice', () => {
+  it('setDisk stores the disk geometry and marks disk dirty', () => {
+    const s = reducer(initialState, { type: 'setDisk', disk: diskFixture });
+    expect(s.disk).toEqual(diskFixture);
+    expect(s.dirty.disk).toBe(true);
+  });
+
+  it('clearDisk resets disk to undefined', () => {
+    const s = apply([{ type: 'setDisk', disk: diskFixture }, { type: 'clearDisk' }]);
+    expect(s.disk).toBeUndefined();
+  });
+
+  it('selectGalaxy clears disk and disk dirty', () => {
+    const s = apply([
+      { type: 'setDisk', disk: diskFixture },
+      { type: 'selectGalaxy', id: 'm31' },
+    ]);
+    expect(s.disk).toBeUndefined();
+    expect(s.dirty.disk).toBe(false);
+  });
+
+  it('markProcessed clears disk dirty', () => {
+    const s = apply([
+      { type: 'setSource', tmpId: 't', width: 100, height: 100, previewUrl: '/p' },
+      { type: 'setDisk', disk: diskFixture },
+      { type: 'markProcessed' },
+    ]);
+    expect(s.dirty.disk).toBe(false);
   });
 });
