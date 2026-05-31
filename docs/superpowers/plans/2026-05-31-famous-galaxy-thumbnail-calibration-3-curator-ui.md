@@ -39,11 +39,11 @@ disk: RecipeDisk | undefined;   // source-px disk geometry; undefined = not draw
 
 New actions: `{ type: 'setDisk'; disk: RecipeDisk }` and `{ type: 'clearDisk' }`. `selectGalaxy` resets `disk` to `undefined` (mirrors how it wipes crop at `state.ts:83-95`). A curated galaxy's `disk` is re-hydrated from its recipe in App.tsx's resume flow (same place crop is restored). Seed `deproject` from the catalog b/a vs `DEPROJECT_MIN_AXIS_RATIO` when a disk is first created.
 
-- [ ] **Step 1: Write the failing tests** — `setDisk stores the disk geometry`; `clearDisk resets disk to undefined`; `selectGalaxy clears disk`.
-- [ ] **Step 2:** `npm test -- state` → FAIL.
-- [ ] **Step 3:** Add the field (default `undefined` in `initialState`), the two action variants, and the reducer cases. Follow the existing crop-action shape at `state.ts:115-121`.
-- [ ] **Step 4:** `npm test -- state` → PASS.
-- [ ] **Step 5: Commit**
+- [x] **Step 1: Write the failing tests** — `setDisk stores the disk geometry`; `clearDisk resets disk to undefined`; `selectGalaxy clears disk`. _(extended existing `tests/tools/famous-curator/ui/state.test.ts`; added `markProcessed clears disk dirty`)_
+- [x] **Step 2:** `npm test -- state` → FAIL.
+- [x] **Step 3:** Add the field (default `undefined` in `initialState`), the two action variants, and the reducer cases. Follow the existing crop-action shape at `state.ts:115-121`. _(also added `DirtyFlags.disk` so a disk change re-Processes before export)_
+- [x] **Step 4:** `npm test -- state` → PASS (12 tests).
+- [x] **Step 5: Commit** `4814e9c8`
 
 ```bash
 git add tools/famous-curator/ui/state.ts tests/tools/famous-curator/state.test.ts
