@@ -7,7 +7,8 @@
  *   - Per-source point slots live in a `Map<SourceType, AssetSlot>`
  *     (`state.assetSlots.points`), keyed by the numeric `Source` code.
  *   - The auxiliary assets named by `AssetKey` (the cluster catalog,
- *     famous-meta, the PGC-alias map) are named fields on `state.assetSlots`.
+ *     famous-meta, the PGC-alias map, filaments, and the cf4Density / mcpm
+ *     scalar-volume cubes) are named fields on `state.assetSlots`.
  *
  * `AssetKey` is the union of both key spaces — a numeric `SourceType` OR one
  * of the string keys. A single `slotFor(state, key)` lets demand predicates

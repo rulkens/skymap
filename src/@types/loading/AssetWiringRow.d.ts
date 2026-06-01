@@ -9,6 +9,24 @@
  *   - `factory` — how to build the slot (construction-purity contract, see below).
  *   - `req`     — how to derive the current request from the active tier.
  *   - `demand`  — whether the slot should be loading right now.
+ *   - `built`   — `'external'` marks a slot the registry does NOT build (see below).
+ *
+ * ### Externally-built slots (built)
+ *
+ * Per-source point slots are minted in `initGpu` (via
+ * `wireGalaxyCatalogSourceSlot`, right after the renderer they commit into),
+ * NOT by the wiring registry. They still need a row here so the demand loop
+ * can trigger their already-minted slots with the right `req(tier)`, but the
+ * slot-construction pass must skip them — building twice would register a
+ * second fade handle and a duplicate commit subscriber. `built: 'external'`
+ * is that skip marker. Such rows' `factory` is a guard that throws if the
+ * builder ever calls it, since the row exists for demand+req only.
+ *
+ * The alternative — omitting point rows from the registry and keeping their
+ * load policy inline in `initGpu` — would re-scatter the very load logic this
+ * table consolidates, and the synthetic-fallback gate (which reads survey
+ * slot states) would have no single place to express its demand. One table,
+ * one marker, wins.
  *
  * ### Construction-purity contract (factory)
  *
@@ -54,4 +72,10 @@ export type AssetWiringRow<T = unknown, R = unknown> = {
   /** Build the request from the current tier (void/empty for tier-agnostic). */
   req: (tier: Tier) => R;
   demand: (ctx: DemandCtx) => boolean;
+  /**
+   * `'external'` when the slot is minted outside the registry (point sources,
+   * built in `initGpu`). The slot-construction pass skips these; the demand
+   * loop still evaluates their `demand`/`req`. Absent ⇒ registry builds it.
+   */
+  built?: 'external';
 };

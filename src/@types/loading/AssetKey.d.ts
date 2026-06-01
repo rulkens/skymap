@@ -4,8 +4,8 @@ import type { SourceType } from '../data/SourceType';
  * Registry key for every fetchable asset in the engine's asset-wiring layer.
  *
  * `AssetKey` is a superset of `SourceType` (every numeric `Source` value), plus
- * three auxiliary string keys for assets that don't map one-to-one to a single
- * `Source`:
+ * a set of auxiliary string keys for assets that don't map one-to-one to a
+ * single `Source`:
  *
  *   - `'clusterCatalog'` — the `.ccat` seed shared by Cluster, Supercluster,
  *     and Void POIs. All three `Source` codes pull their geometry from one file,
@@ -20,12 +20,31 @@ import type { SourceType } from '../data/SourceType';
  *   - `'pgcAlias'` — the PGC-alias lookup JSON. It is consumed across survey
  *     sources (primarily 2MRS and GLADE) and has no unique `Source` code.
  *
+ *   - `'filaments'` — the cosmic-web skeleton (`filaments.bin`). A derived
+ *     global asset with its own renderer target; no per-survey `Source`.
+ *
+ *   - `'cf4Density'`, `'mcpm'` — the two production scalar-volume cubes. These
+ *     DO have `Source` codes (`Source.Cf4Density`, `Source.Mcpm`) for identity,
+ *     but their slots live as named fields on `state.assetSlots` (not in the
+ *     numeric `points` map), so they need string asset keys to route through
+ *     `slotFor`. The DEV-only `debug-*` synthetic volumes are deliberately
+ *     absent: they live in `assetSlots.syntheticVolumes` (a record of slots,
+ *     minted only under `import.meta.env.DEV`) and are not part of the
+ *     demand-driven asset set.
+ *
  * The asymmetry cuts both ways: some `Source`s are NOT fetched individually
  * (Cluster / Supercluster / Void all arrive via `'clusterCatalog'`), and the
- * three string keys are NOT `Source`s. "Source" (stable identity code, persisted
+ * string keys are NOT all `Source`s. "Source" (stable identity code, persisted
  * to `.bin` + GPU buffers) and "Asset" (fetchable network resource) are
  * different sets; this type is the asset set.
  *
  * See ADR 0005 §2 ("Identity vs wiring layers; AssetKey") for the rationale.
  */
-export type AssetKey = SourceType | 'clusterCatalog' | 'famousMeta' | 'pgcAlias';
+export type AssetKey =
+  | SourceType
+  | 'clusterCatalog'
+  | 'famousMeta'
+  | 'pgcAlias'
+  | 'filaments'
+  | 'cf4Density'
+  | 'mcpm';

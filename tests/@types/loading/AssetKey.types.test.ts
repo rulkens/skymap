@@ -2,8 +2,9 @@
  * AssetKey — compile-time assignability check.
  *
  * Confirms that every variant of `AssetKey` is accepted: a concrete numeric
- * `Source` value (covering `SourceType`), and each of the three auxiliary
- * string keys (`'clusterCatalog'`, `'famousMeta'`, `'pgcAlias'`).
+ * `Source` value (covering `SourceType`), and each of the auxiliary string
+ * keys (`'clusterCatalog'`, `'famousMeta'`, `'pgcAlias'`, `'filaments'`,
+ * `'cf4Density'`, `'mcpm'`).
  *
  * These are purely compile-time assertions. If `AssetKey` drifts from its
  * spec (e.g. a string key is dropped, or `SourceType` stops widening to it),
@@ -33,5 +34,20 @@ describe('AssetKey assignability', () => {
   it("accepts 'pgcAlias'", () => {
     const k: AssetKey = 'pgcAlias';
     expect(k).toBe('pgcAlias');
+  });
+
+  it("accepts 'filaments'", () => {
+    const k: AssetKey = 'filaments';
+    expect(k).toBe('filaments');
+  });
+
+  it("accepts 'cf4Density'", () => {
+    const k: AssetKey = 'cf4Density';
+    expect(k).toBe('cf4Density');
+  });
+
+  it("accepts 'mcpm'", () => {
+    const k: AssetKey = 'mcpm';
+    expect(k).toBe('mcpm');
   });
 });
