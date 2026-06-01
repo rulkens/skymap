@@ -124,6 +124,7 @@ import { isPoi } from './isPoi';
 import { logCameraState } from './helpers/logCameraState';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
+import type { RequestKey } from '../../@types/loading/RequestKey';
 import { awaitSlotReady } from '../loading/awaitSlotReady';
 import { tierTarget } from '../../data/tierTargets';
 import { snapToCameraSnapshot, tweenToCameraSnapshot } from './camera/cameraSnapshot';
@@ -702,6 +703,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Tier-aware: setTier reloads on tier change.  See loading/slots/mcpmSlot.ts.
       mcpm: null,
     },
+    // ── One-shot transient request flags ────────────────────────────────
+    //
+    // Edge-triggered UI events that drive demand predicates (palette
+    // opened, lazy alias requested) but have no persistent settings or
+    // loaded-data home.  Empty at boot; the wiring layer sets a key in
+    // response to a discrete event and clears it once the triggered slot
+    // reaches `ready`.  See `@types/loading/RequestKey.d.ts`.
+    requests: new Set<RequestKey>(),
     // ── Debug-only per-frame skip flags ─────────────────────────────────
     //
     // The DebugPanel's `RenderTogglesSection` mutates this set via the
