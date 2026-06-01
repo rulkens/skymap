@@ -90,7 +90,6 @@ import {
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
-  DEFAULT_VOLUME_FIELD_INTENSITY,
 } from '../../data/defaults';
 import type { GalaxyCatalog } from '../../@types/data/GalaxyCatalog';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
@@ -129,7 +128,7 @@ import { awaitSlotReady } from '../loading/awaitSlotReady';
 import { tierTarget } from '../../data/tierTargets';
 import { snapToCameraSnapshot, tweenToCameraSnapshot } from './camera/cameraSnapshot';
 import { MILKY_WAY_CENTER_WORLD, MILKY_WAY_VIEW_DISTANCE_MPC } from '../../data/galacticCenter';
-import { getVolumeFieldDefaults } from '../../data/volumeFieldDefaults';
+import { buildVolumeFieldSettings, seedVolumeFields } from '../../data/volumeFieldDefaults';
 import { buildVolumeFieldsSnapshot } from './helpers/buildVolumeFieldsSnapshot';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
@@ -391,11 +390,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       },
       volumes: {
         masterEnabled: DEFAULT_VOLUMES_ENABLED,
-        // Starts empty; populated by addVolumeField / cleared by
-        // removeVolumeField.  SettingsPanel reads this map to render
-        // per-field intensity sliders without going through the GPU
-        // handle.
-        fields: {},
+        // Seeded from the shippable volume registry entries so each
+        // field's on/off bit + tunables EXIST before any cube loads —
+        // the demand predicate reads `fields[id]?.enabled` as pure
+        // state, fully symmetric with how `drawMask` seeds survey
+        // visibility.  Without this, a default-on volume (MCPM) never
+        // triggers its initial demand-driven load.  DEV-only debug
+        // fixtures are excluded (no on-disk payload).  SettingsPanel
+        // rows still come from the GPU handle list (loaded fields only),
+        // so seeding here adds no premature row.
+        fields: seedVolumeFields(),
       },
       // Per-category POI visibility — two independent axes (label-text vs
       // marker-glyph).  Both default to every category visible so the
@@ -1128,22 +1132,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // yet, the call is a silent no-op — the field can be re-added
     // once the engine boots.
     state.gpu.scalarVolumeRenderer?.addField(fieldId, cube);
-    // Seed the per-field settings entry with defaults if not already
-    // present — re-registering the same handle preserves any
-    // previously-tuned values.  Presentation defaults (palette +
-    // densityScale) come from the per-handle registry in
-    // `src/data/volumeFieldDefaults.ts`.
+    // Seed the per-field settings entry from the registry defaults if
+    // not already present — re-registering the same handle preserves
+    // any previously-tuned values.  For the shippable volumes the
+    // construction seed already created this entry; the guard then only
+    // matters for a dynamically-added handle with no construction seed.
     if (!state.settings.volumes.fields[fieldId]) {
-      const defaults = getVolumeFieldDefaults(fieldId);
-      state.settings.volumes.fields[fieldId] = {
-        enabled: true,
-        intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
-        contrast: defaults.contrast,
-        densityScale: defaults.densityScale,
-        paletteId: defaults.paletteId,
-        trim: defaults.trim,
-        exposure: defaults.exposure,
-      };
+      state.settings.volumes.fields[fieldId] = buildVolumeFieldSettings(fieldId);
     }
     // Forward the current per-field tunables into the renderer so the
     // new upload inherits whatever the user set before re-registering.

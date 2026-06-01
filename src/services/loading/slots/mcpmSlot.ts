@@ -3,16 +3,20 @@
  *
  * Tier-aware (unlike cf4DensitySlot's void request). On commit, hands
  * the decoded ScalarCube to scalarVolumeRenderer.addField under the
- * handle 'mcpm', then seeds per-field settings if not already present
- * (preserving any user-tuned intensity/palette across tier reloads).
+ * handle 'mcpm', preserving any user-tuned intensity/palette across
+ * tier reloads (the construction seed already created the entry).
  *
- * Default-on cosmic-web baseline — `wireSlots` `.load()`s it
- * unconditionally at boot.
+ * Default-on cosmic-web baseline (registry visible:true). Its on/off
+ * bit is seeded at engine construction, so the demand predicate
+ * `fields['mcpm'].enabled` reads true at boot — symmetric with how a
+ * default-on survey reads visible from `drawMask`, with no field-state
+ * dependency on the cube having loaded first.
  */
 import { createAssetSlot } from '../AssetSlot';
 import { mcpmFetcher } from '../fetchers/mcpmFetcher';
 import type { MCPMReq } from '../../../@types/loading/MCPMReq';
 import { Source, SOURCE_REGISTRY } from '../../../data/sources';
+import { buildVolumeFieldSettings } from '../../../data/volumeFieldDefaults';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
@@ -28,21 +32,13 @@ export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, cb) => {
       const defaults = SOURCE_REGISTRY[Source.Mcpm];
       const handle = defaults.handle;
       renderer.addField(handle, cube);
-      // Seed-and-forward shape lifted from cf4DensitySlot (verbatim
-      // duplication is intentional — H3 in the 2026-05-11 audit deferred
-      // dedup of this pattern to a follow-up PR).
+      // Preserve any previously-tuned settings; otherwise seed from the
+      // registry.  The engine's construction seed already created this
+      // entry (MCPM is a shippable volume), so the guard normally takes
+      // the preserve branch — it stays only to cover a handle with no
+      // construction seed.
       if (!state.settings.volumes.fields[handle]) {
-        state.settings.volumes.fields[handle] = {
-          // Default-on — MCPM is the headline cosmic-web overlay for the
-          // volumes gate (CF-4 is default-off; see its registry entry).
-          enabled: defaults.visible,
-          intensity: defaults.intensity,
-          contrast: defaults.contrast,
-          densityScale: defaults.densityScale,
-          paletteId: defaults.paletteId,
-          trim: defaults.trim,
-          exposure: defaults.exposure,
-        };
+        state.settings.volumes.fields[handle] = buildVolumeFieldSettings(handle);
       }
       const persisted = state.settings.volumes.fields[handle]!;
       renderer.setIntensity(handle, persisted.intensity);

@@ -36,11 +36,15 @@
  *
  * ### MCPM at boot
  *
- * Although `SOURCE_REGISTRY[Source.Mcpm].visible` is `true`, the demand
- * predicate for `mcpm` reads `settings.volumes.fields[MCPM_FIELD]?.enabled`.
- * The `fields` record is empty (`{}`) at engine startup — no field is
- * registered until the GPU IIFE fires `addVolumeField`. So MCPM is NOT in
- * the boot demand set even though the source is "visible" in the registry.
+ * The demand predicate for `mcpm` reads
+ * `settings.volumes.fields['mcpm']?.enabled`. The engine seeds
+ * `volumes.fields` at construction from the shippable volume registry
+ * entries (`seedVolumeFields`), so `fields['mcpm'].enabled` is `true`
+ * (registry visible:true) at boot, symmetric with how `drawMask` seeds
+ * survey visibility. MCPM therefore IS in the boot demand set —
+ * `cf4-density` is NOT (registry visible:false → seeded enabled:false).
+ * The boot settings stub uses the same `seedVolumeFields` helper so the
+ * test exercises the real defaults rather than a hand-rolled record.
  *
  * ### SURVEY_POINT_SOURCES (Synthetic fallback gate)
  *
@@ -53,7 +57,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { Source } from '../../../../src/data/sources';
-import { ALL_VISIBLE_MASK, maskWithout } from '../../../../src/utils/sourceMask';
+import { ALL_VISIBLE_MASK } from '../../../../src/utils/sourceMask';
+import { seedVolumeFields } from '../../../../src/data/volumeFieldDefaults';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
@@ -98,14 +103,16 @@ type SettingsLeaves = {
 
 /**
  * Default-at-boot settings: all structure categories visible, filaments off,
- * volumes fields empty (no registered cube yet), Synthetic fallback visible.
+ * Synthetic fallback visible, and `volumes.fields` seeded from the shippable
+ * volume registry via the same `seedVolumeFields` the engine runs at
+ * construction (mcpm enabled, cf4-density disabled).
  *
  * These match the engine's real initial state as documented in
  * `data/defaults.ts` and `EngineSettingsState`.
  */
 const BOOT_SETTINGS: SettingsLeaves = {
   filaments: { enabled: false },
-  volumes: { fields: {} },
+  volumes: { fields: seedVolumeFields() },
   markerCategoryVisibility: { cluster: true, supercluster: true, void: true, famousGalaxy: true },
   labelCategoryVisibility: { cluster: true, supercluster: true, void: true, famousGalaxy: true },
 };
@@ -185,11 +192,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
  * The mapping from spy to key is built from the same stub objects inserted
  * into `state.assetSlots` — we inspect `load.mock.calls.length > 0` for each.
  */
-function firedKeys(
-  state: EngineState,
-  pointSlots: PointSlotOverrides,
-  namedSlots: NamedSlotOverrides,
-): Set<AssetKey> {
+function firedKeys(state: EngineState): Set<AssetKey> {
   reevaluateDemand(state);
 
   const fired = new Set<AssetKey>();
@@ -222,13 +225,12 @@ describe('reevaluateDemand demand-table regression', () => {
    * in SOURCE_REGISTRY). Famous slot is modelled as 'loading' (it was just
    * triggered by its own demand row before famousMeta's row evaluates), so
    * famousMeta is also demanded. clusterCatalog loads because every structure
-   * category is visible by default. mcpm is NOT demanded despite
-   * SOURCE_REGISTRY[Mcpm].visible being true: the predicate checks
-   * settings.volumes.fields[MCPM_FIELD]?.enabled, and fields is empty at boot.
-   * filaments: off. cf4Density: off. pgcAlias: no request. Synthetic: surveys
-   * not errored.
+   * category is visible by default. mcpm IS demanded: the predicate checks
+   * settings.volumes.fields['mcpm']?.enabled, which the construction seed lands
+   * as true (registry visible:true). cf4Density is NOT (seeded enabled:false).
+   * filaments: off. pgcAlias: no request. Synthetic: surveys not errored.
    */
-  it('boot defaults: SDSS + 2MRS + GLADE + Famous + famousMeta + clusterCatalog', () => {
+  it('boot defaults: SDSS + 2MRS + GLADE + Famous + famousMeta + clusterCatalog + mcpm', () => {
     // Famous slot is 'loading' — its point-row demand was already true (Famous
     // is in the drawMask), so its slot fired first and is now loading.
     const famousSlot = stubSlot('loading');
@@ -236,7 +238,7 @@ describe('reevaluateDemand demand-table regression', () => {
     const namedSlots: NamedSlotOverrides = {};
     const state = makeState({ pointSlots, namedSlots });
 
-    const fired = firedKeys(state, pointSlots, namedSlots);
+    const fired = firedKeys(state);
 
     expect(fired).toEqual(new Set<AssetKey>([
       Source.SDSS,
@@ -245,6 +247,7 @@ describe('reevaluateDemand demand-table regression', () => {
       Source.Famous,
       'famousMeta',
       'clusterCatalog',
+      'mcpm',
     ]));
   });
 
@@ -262,7 +265,7 @@ describe('reevaluateDemand demand-table regression', () => {
     const namedSlots: NamedSlotOverrides = {};
     const state = makeState({ settings, pointSlots, namedSlots });
 
-    const fired = firedKeys(state, pointSlots, namedSlots);
+    const fired = firedKeys(state);
 
     expect(fired).toEqual(new Set<AssetKey>([
       Source.SDSS,
@@ -271,6 +274,7 @@ describe('reevaluateDemand demand-table regression', () => {
       Source.Famous,
       'famousMeta',
       'clusterCatalog',
+      'mcpm',
       'filaments',
     ]));
   });
@@ -293,7 +297,7 @@ describe('reevaluateDemand demand-table regression', () => {
     // Famous slot stays idle — tests only the cluster predicate.
     const state = makeState({ settings });
 
-    const fired = firedKeys(state, {}, {});
+    const fired = firedKeys(state);
 
     // clusterCatalog must be absent.
     expect(fired.has('clusterCatalog')).toBe(false);
@@ -320,7 +324,7 @@ describe('reevaluateDemand demand-table regression', () => {
       namedSlots,
     });
 
-    const fired = firedKeys(state, pointSlots, namedSlots);
+    const fired = firedKeys(state);
 
     expect(fired).toEqual(new Set<AssetKey>([
       Source.SDSS,
@@ -329,6 +333,7 @@ describe('reevaluateDemand demand-table regression', () => {
       Source.Famous,
       'famousMeta',
       'clusterCatalog',
+      'mcpm',
       'pgcAlias',
     ]));
   });
@@ -359,7 +364,7 @@ describe('reevaluateDemand demand-table regression', () => {
     const namedSlots: NamedSlotOverrides = {};
     const state = makeState({ pointSlots, namedSlots });
 
-    const fired = firedKeys(state, pointSlots, namedSlots);
+    const fired = firedKeys(state);
 
     // Synthetic fallback is now demanded.
     expect(fired.has(Source.Synthetic)).toBe(true);
@@ -380,14 +385,16 @@ describe('reevaluateDemand demand-table regression', () => {
   });
 
   /**
-   * cf4Density field enabled: adds cf4Density to the boot set.
-   * Famous slot 'loading' for famousMeta.
+   * cf4Density field enabled: user toggled cf4-density on, so it joins the
+   * boot set (which already includes mcpm). Spreads the seeded fields and
+   * flips cf4-density's enabled bit rather than replacing the record, so
+   * mcpm's default-on bit survives. Famous slot 'loading' for famousMeta.
    */
   it('cf4Density field enabled: boot set + cf4Density', () => {
     const settings: SettingsLeaves = {
       ...BOOT_SETTINGS,
       volumes: {
-        fields: { 'cf4-density': { enabled: true } },
+        fields: { ...seedVolumeFields(), 'cf4-density': { enabled: true } },
       },
     };
     const famousSlot = stubSlot('loading');
@@ -395,7 +402,7 @@ describe('reevaluateDemand demand-table regression', () => {
     const namedSlots: NamedSlotOverrides = {};
     const state = makeState({ settings, pointSlots, namedSlots });
 
-    const fired = firedKeys(state, pointSlots, namedSlots);
+    const fired = firedKeys(state);
 
     expect(fired).toEqual(new Set<AssetKey>([
       Source.SDSS,
@@ -404,6 +411,7 @@ describe('reevaluateDemand demand-table regression', () => {
       Source.Famous,
       'famousMeta',
       'clusterCatalog',
+      'mcpm',
       'cf4Density',
     ]));
   });
