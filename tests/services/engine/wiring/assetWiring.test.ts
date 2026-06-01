@@ -97,6 +97,15 @@ describe('ASSET_WIRING membership', () => {
     expect(rowFor('filaments').built).toBeUndefined();
     expect(rowFor('famousMeta').built).toBeUndefined();
   });
+
+  it("external point rows carry a factory that throws if the builder calls it", () => {
+    // The throw is the runtime enforcement of the build-skip contract: the
+    // slot builder must skip `built: 'external'` rows. If it ever calls the
+    // factory anyway, this surfaces the wiring bug loudly rather than minting
+    // a duplicate point slot.
+    const sdss = rowFor(Source.SDSS);
+    expect(() => sdss.factory({} as never)).toThrow(/initGpu/);
+  });
 });
 
 describe('ASSET_WIRING demand predicates', () => {

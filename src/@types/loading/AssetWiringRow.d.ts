@@ -76,6 +76,12 @@ export type AssetWiringRow<T = unknown, R = unknown> = {
    * `'external'` when the slot is minted outside the registry (point sources,
    * built in `initGpu`). The slot-construction pass skips these; the demand
    * loop still evaluates their `demand`/`req`. Absent ⇒ registry builds it.
+   *
+   * This is an optional flag rather than a discriminated union over
+   * buildable-vs-external rows: the union would let the compiler force external
+   * rows to omit a real `factory`, but it splits every consumer's row handling
+   * in two. The single registry file enforces the invariant by construction
+   * (external rows use a throwing `factory`), so the flag stays a flag.
    */
   built?: 'external';
 };

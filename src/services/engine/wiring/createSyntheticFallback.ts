@@ -1,5 +1,9 @@
 /**
- * createSyntheticFallback — the synthetic-survey fallback demand helper.
+ * createSyntheticFallback — the synthetic-survey fallback module.
+ *
+ * Named for its eventual primary export, the `createSyntheticFallback(state)`
+ * subscription wirer. Today it exports only the `allSurveysSettledWithoutSuccess`
+ * demand helper that the Synthetic row in `ASSET_WIRING` references.
  *
  * The synthetic point cloud is the "no real data, show *something*" backstop:
  * it must load only when every real survey has been tried and none produced
