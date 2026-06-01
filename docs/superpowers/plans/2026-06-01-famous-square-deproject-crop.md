@@ -271,11 +271,11 @@ describe('cropMath aspect-locked helpers', () => {
 });
 ```
 
-- [ ] Add the imports + tests above; `npm test -- cropMath > /tmp/t.log 2>&1; rc=$?` → FAIL.
-- [ ] Implement the helpers (reuse `clampCenter`; add a file-header paragraph documenting the aspect convention `aspect = height/width = b/a`).
-- [ ] `npm test -- cropMath > /tmp/t.log 2>&1; rc=$?` → PASS (new + all existing square tests still green).
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
-- [ ] Commit `tools/famous-curator/ui/cropMath.ts tests/tools/famous-curator/cropMath.test.ts`.
+- [x] Add the imports + tests above; `npm test -- cropMath > /tmp/t.log 2>&1; rc=$?` → FAIL.
+- [x] Implement the helpers (reuse `clampCenter`; add a file-header paragraph documenting the aspect convention `aspect = height/width = b/a`).
+- [x] `npm test -- cropMath > /tmp/t.log 2>&1; rc=$?` → PASS (new + all existing square tests still green).
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
+- [x] Commit `tools/famous-curator/ui/cropMath.ts tests/tools/famous-curator/cropMath.test.ts`.
 
 ---
 

@@ -27,9 +27,13 @@ import {
   resizeEdgeW,
   rotateDelta,
   setRotation,
+  resizeCornerAspectSE,
+  resizeEdgeAspectE,
+  seedDeprojectCrop,
   type Crop,
   type Bounds,
 } from '../../../../tools/famous-curator/ui/cropMath';
+import type { Vec2 } from '../../../../src/@types/math/Vec2';
 
 const bounds: Bounds = { width: 1000, height: 800 };
 
@@ -204,5 +208,38 @@ describe('setRotation', () => {
     expect(out.y).toBe(100);
     expect(out.width).toBe(200);
     expect(out.height).toBe(200);
+  });
+});
+
+const B = { width: 1000, height: 1000 };
+
+describe('cropMath aspect-locked helpers', () => {
+  it('resizeCornerAspectSE keeps height = width * aspect', () => {
+    const c = { x: 100, y: 100, width: 200, height: 100, rotationDeg: 30 };
+    const out = resizeCornerAspectSE(c, 50, 50, 0.5, B);
+    expect(out.height).toBeCloseTo(out.width * 0.5, 0);
+    expect(out.rotationDeg).toBe(30); // rotation carried through, not modified
+  });
+
+  it('resizeEdgeAspectE grows width and recomputes height from aspect', () => {
+    const c = { x: 100, y: 100, width: 200, height: 80, rotationDeg: 0 };
+    const out = resizeEdgeAspectE(c, 100, 0.4, B);
+    expect(out.width).toBeGreaterThan(200);
+    expect(out.height).toBeCloseTo(out.width * 0.4, 0);
+  });
+
+  it('seedDeprojectCrop frames the disk at the requested margin', () => {
+    const center: Vec2 = [500, 500];
+    const out = seedDeprojectCrop(center, 40, 30, 0.5, 0.25, B);
+    expect(out.width).toBeCloseTo(2 * 40 * 1.25, 6); // 100
+    expect(out.height).toBeCloseTo(out.width * 0.5, 0); // 50
+    expect(out.rotationDeg).toBe(30);
+    expect(out.x + out.width / 2).toBeCloseTo(center[0], 6);
+    expect(out.y + out.height / 2).toBeCloseTo(center[1], 6);
+  });
+
+  it('seedDeprojectCrop at aspect 1 is a square framing', () => {
+    const out = seedDeprojectCrop([500, 500], 50, 0, 1, 0, B);
+    expect(out.width).toBe(out.height);
   });
 });
