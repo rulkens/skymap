@@ -22,6 +22,13 @@
  *      `deps.allSlots` is the single registry both the loading bar AND the dev
  *      panel read from, so a missed slot makes the dev panel quietly lie.
  *
+ *   4. The composition wires are all present after boot: every impostor
+ *      subsystem is assigned onto `state.subsystems.*`, every overlay /
+ *      volume-master / label-layer fade handle is registered at its frame-1
+ *      opacity, and the structures-visibility predicate threads through to the
+ *      demand loop (clusterCatalog loads at the visible default, skips when all
+ *      structure categories are hidden).
+ *
  * Mocking strategy: real `AssetSlot` instances are kept (pure CPU state
  * machines, easy to drive); fetchers are mocked so loads don't network;
  * thumbnail-subsystem factory is mocked so no real GPU device is needed;
@@ -288,9 +295,12 @@ const errorValue = (msg: string): LoadState<unknown> => ({
 function makeState(
   overrides: Partial<{
     points: Map<SourceType, ReturnType<typeof makeFakeSlot>>;
+    markerCategoryVisibility: Record<string, boolean>;
+    labelCategoryVisibility: Record<string, boolean>;
   }> = {},
 ): EngineState {
   const points = overrides.points ?? new Map();
+  const allVisible = { cluster: true, supercluster: true, void: true, famousGalaxy: true };
   return {
     settings: {
       points: {
@@ -311,18 +321,10 @@ function makeState(
       // the old imperative boot loop that loaded MCPM unconditionally.
       volumes: { masterEnabled: true, fields: seedVolumeFields() },
       // Structure categories all visible by default ⇒ clusterCatalog demanded.
-      markerCategoryVisibility: {
-        cluster: true,
-        supercluster: true,
-        void: true,
-        famousGalaxy: true,
-      },
-      labelCategoryVisibility: {
-        cluster: true,
-        supercluster: true,
-        void: true,
-        famousGalaxy: true,
-      },
+      // Overridable so a test can hide every category and pin the bug-fix
+      // (clusterCatalog must NOT load when nothing structural is visible).
+      markerCategoryVisibility: overrides.markerCategoryVisibility ?? allVisible,
+      labelCategoryVisibility: overrides.labelCategoryVisibility ?? allVisible,
     },
     bias: {} as never,
     // The synthetic-fallback gate writes `state.requests.add('syntheticFallback')`
@@ -469,6 +471,70 @@ describe('wireSlots', () => {
     expect(twoMrsSlot.load).toHaveBeenCalled();
     expect(gladeSlot.load).toHaveBeenCalled();
     expect(famousSlot.load).toHaveBeenCalled();
+
+    // The `loading` status is fired exactly once — it's the one-shot
+    // "show the loading screen" signal, not a per-arrival echo (those are
+    // the `ready` emissions asserted elsewhere).
+    const statusCalls = (deps.cb.lifecycle?.onStatusChange as ReturnType<typeof vi.fn>).mock.calls;
+    const loadingCalls = statusCalls.filter((c) => (c[0] as { kind: string }).kind === 'loading');
+    expect(loadingCalls.length).toBe(1);
+  });
+
+  it('assigns all five impostor subsystems onto state.subsystems', async () => {
+    // wireImpostorSubsystems builds the LOD-1/2/3 GPU subsystems and writes
+    // each onto `state.subsystems.*`.  The downstream frame loop reads these
+    // five by name; a missed assignment is a silent "thumbnails never draw"
+    // bug.  The factories are mocked at module scope to hollow objects, so
+    // each assignment is merely truthy here — the contract under test is
+    // "all five slots are populated", not their internals.
+    const state = makeState({ points: bootPointSlots() });
+    const deps = makeDeps();
+
+    await wireSlots(state, deps);
+
+    expect(state.subsystems.galaxyAtlas).not.toBeNull();
+    expect(state.subsystems.proceduralDisks).not.toBeNull();
+    expect(state.subsystems.texturedDisks).not.toBeNull();
+    expect(state.subsystems.hiResFamous).not.toBeNull();
+    expect(state.subsystems.hiResFamousTexture).not.toBeNull();
+  });
+
+  it('registers the overlay, volume-master, and label-layer fade handles', async () => {
+    // registerOverlayFades pins each layer's frame-1 opacity in the fade
+    // registry.  A missed handle means that layer's toggle has nothing to
+    // multiply against (or flashes at the wrong opacity on frame 1).  We
+    // assert the handle shapes as a SUBSET — wireSlots also registers a
+    // filament overlay/label handle when it mints the filaments slot, so an
+    // exact-length check would break for the wrong reason.
+    const state = makeState({ points: bootPointSlots() });
+    const deps = makeDeps();
+
+    await wireSlots(state, deps);
+
+    const register = state.subsystems.fades.register as ReturnType<typeof vi.fn>;
+    const handles = register.mock.calls.map((c) => c[0]);
+    const hasHandle = (h: unknown): boolean =>
+      handles.some((got) => JSON.stringify(got) === JSON.stringify(h));
+
+    expect(hasHandle({ kind: 'overlay', id: 'milkyWay' })).toBe(true);
+    expect(hasHandle({ kind: 'overlay', id: 'proceduralDisks' })).toBe(true);
+    expect(hasHandle({ kind: 'overlay', id: 'texturedDisks' })).toBe(true);
+    expect(hasHandle({ kind: 'volumesMaster' })).toBe(true);
+    expect(hasHandle({ kind: 'labelLayer', layer: 'youAreHere' })).toBe(true);
+    expect(hasHandle({ kind: 'labelLayer', layer: 'poi' })).toBe(true);
+    expect(hasHandle({ kind: 'labelLayer', layer: 'galaxyNames' })).toBe(true);
+    expect(hasHandle({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(true);
+
+    // Opacities are deterministic under the default fixture (milkyWay enabled,
+    // volumes master enabled) — both gate to 1.
+    const opacityFor = (h: unknown): number | undefined => {
+      const call = register.mock.calls.find((c) => JSON.stringify(c[0]) === JSON.stringify(h));
+      return call?.[1] as number | undefined;
+    };
+    expect(opacityFor({ kind: 'overlay', id: 'milkyWay' })).toBe(1);
+    expect(opacityFor({ kind: 'volumesMaster' })).toBe(1);
+    expect(opacityFor({ kind: 'labelLayer', layer: 'youAreHere' })).toBe(0);
+    expect(opacityFor({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(1);
   });
 
   it('demand loop loads the default boot sidecar set (mcpm + clusterCatalog + famousMeta) and not the off-by-default ones', async () => {
@@ -499,6 +565,28 @@ describe('wireSlots', () => {
     expect(filamentFetcher).not.toHaveBeenCalled();
     expect(cf4DensityFetcher).not.toHaveBeenCalled();
     expect(pgcAliasFetcher).not.toHaveBeenCalled();
+  });
+
+  it('does not load clusterCatalog when every structure category is hidden (bug-fix integration pin)', async () => {
+    // demandTable.test.ts pins the cluster predicate in isolation; this pins
+    // that wireSlots actually threads the visibility records THROUGH to the
+    // demand loop end-to-end.  Old code loaded the .ccat unconditionally; the
+    // fix gates it on any structure category being visible.  With both marker
+    // and label visibility all-false the predicate is false, so the boot
+    // demand pass must skip clusterCatalog entirely.
+    vi.mocked(clusterCatalogFetcher).mockClear();
+
+    const allHidden = { cluster: false, supercluster: false, void: false, famousGalaxy: false };
+    const state = makeState({
+      points: bootPointSlots(),
+      markerCategoryVisibility: allHidden,
+      labelCategoryVisibility: allHidden,
+    });
+    const deps = makeDeps();
+
+    await wireSlots(state, deps);
+
+    expect(clusterCatalogFetcher).not.toHaveBeenCalled();
   });
 
   it('fires `ready` status with a running total each time a survey arrives', async () => {
