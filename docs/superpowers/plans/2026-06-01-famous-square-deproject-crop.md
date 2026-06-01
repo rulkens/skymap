@@ -74,10 +74,10 @@ export const DEFAULT_DISK_MARGIN = 0.25;
 
 **Behaviour:** the default fractional padding around a disk when seeding the deproject crop — `width = 2·radiusPx·(1 + DEFAULT_DISK_MARGIN)`. Single source of truth for curator-seed, pipeline, and UI.
 
-- [ ] Add the constant with a didactic docblock (WHY 0.25: leaves a quarter-radius of sky around the disk so the deprojected square isn't cropped tight to the edge; tunable against real images).
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → Read log, `rc == 0`.
-- [ ] Comment-tidy the file (it's tiny — confirm both constants read cleanly).
-- [ ] Commit `src/data/famousCalibration.ts`.
+- [x] Add the constant with a didactic docblock (WHY 0.25: leaves a quarter-radius of sky around the disk so the deprojected square isn't cropped tight to the edge; tunable against real images).
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → Read log, `rc == 0`.
+- [x] Comment-tidy the file (it's tiny — confirm both constants read cleanly).
+- [x] Commit `src/data/famousCalibration.ts`.
 
 ---
 
