@@ -61,6 +61,7 @@ import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRende
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
 import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
+import type { DiskRadiusRing } from '../../rendering/DiskRadiusRing';
 import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
 
@@ -220,6 +221,16 @@ export type EngineGpuHandles = {
    * owners).
    */
   pickDebugOverlay: PickDebugOverlay | null;
+  /**
+   * Disk-radius debug ring — a world-space line-strip drawn in the disk
+   * plane around the selected galaxy at its catalog disk radius.  Null
+   * until `initGpu` constructs it.  Excluded from `isEngineReady`: a
+   * debug-only overlay, null-checked together with the
+   * `state.settings.debug.showDiskRadiusRing` toggle.  Unlike
+   * `pickDebugOverlay` (which owns no GPU buffers), this pass owns two
+   * uniform buffers, so the `destroy()` chain must release it.
+   */
+  diskRadiusRing: DiskRadiusRing | null;
   /**
    * Per-pass GPU timing service.  Always non-null — the engine state
    * is initialized with a no-op stub (see `createDisabledGpuTimingService`)

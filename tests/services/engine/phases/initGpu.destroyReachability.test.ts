@@ -157,6 +157,10 @@ vi.mock('../../../../src/services/gpu/passes/pickDebugOverlay', () => ({
   createPickDebugOverlay: vi.fn(() => makeStub('pickDebugOverlay')),
 }));
 
+vi.mock('../../../../src/services/gpu/passes/diskRadiusRing', () => ({
+  createDiskRadiusRing: vi.fn(() => makeStub('diskRadiusRing')),
+}));
+
 vi.mock('../../../../src/services/gpu/labels/loadFontAtlases', () => ({
   loadFontAtlases: vi.fn(async () => ({
     metricsByFont: { cormorant: { __mockMetrics: true } },
@@ -201,6 +205,7 @@ function makeState(): EngineState {
       scalarVolumeRenderer: null,
       volumeUpsample: null,
       pickDebugOverlay: null,
+      diskRadiusRing: null,
     },
     subsystems: {
       biasCorrection: {

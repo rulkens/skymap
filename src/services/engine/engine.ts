@@ -528,6 +528,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // frame consumer null-checks the handle together with the
       // 'settings.debug.showPickBuffer' toggle.
       pickDebugOverlay: null,
+      // Disk-radius debug ring.  Constructed in initGpu; null until
+      // then.  Excluded from isEngineReady — the per-frame pass
+      // null-checks the handle together with the
+      // 'settings.debug.showDiskRadiusRing' toggle.
+      diskRadiusRing: null,
       // Per-pass GPU timing service.  Always non-null — initialized
       // here with a no-op stub (no GPU resources), then replaced by
       // initGpu with the device-aware service after the device is
@@ -1413,6 +1418,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.volumeUpsample = null;
     state.gpu.pickDebugOverlay?.destroy();
     state.gpu.pickDebugOverlay = null;
+    state.gpu.diskRadiusRing?.destroy();
+    state.gpu.diskRadiusRing = null;
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
     state.gpu.renderer?.destroy();

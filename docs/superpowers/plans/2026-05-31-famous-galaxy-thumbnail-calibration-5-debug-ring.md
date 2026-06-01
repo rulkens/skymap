@@ -83,10 +83,10 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 **Behaviour:** when the toggle is on and a famous galaxy is selected, draw the ring at `paddedRadiusMpc(selected.diameterKpc)` centred on the selected galaxy's world position, with its catalog/calibration `paDeg` + `axisRatio` so the ring sits in the disk plane. Selection comes from the existing selection plumbing (`getFamousMeta` / selection subsystem). Off or nothing selected → no draw.
 
-- [ ] **Step 1:** Construct the pass in `initGpu` and invoke it in `runFrame` behind the toggle, reading the selected galaxy's diameter/position/orientation.
-- [ ] **Step 2:** `npm run typecheck` → PASS.
+- [x] **Step 1:** Construct the pass in `initGpu` and invoke it in `runFrame` behind the toggle, reading the selected galaxy's diameter/position/orientation. _(invoked as a `diskRadiusRingPass` in `UI_PASSES` rather than an inline `runFrame` call — same gate, cleaner than a bespoke encoder; mirrors `selectionRingPass`.)_
+- [x] **Step 2:** `npm run typecheck` → PASS. _(also `npm run build` — wesl-plugin compiles the ring shaders clean.)_
 - [ ] **Step 3:** Manual: select a famous galaxy, toggle the ring on, confirm it draws at the procedural-disk radius and tracks the galaxy as the camera moves; compare against the textured disk (Plan 4).
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/services/engine/frame/runFrame.ts src/services/engine/phases/initGpu.ts

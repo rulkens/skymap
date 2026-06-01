@@ -154,6 +154,7 @@ describe('EngineState type', () => {
         scalarVolumeRenderer: null,
         volumeUpsample: null,
         pickDebugOverlay: null,
+        diskRadiusRing: null,
         timingService: createDisabledGpuTimingService(),
       },
       subsystems: {
@@ -341,6 +342,7 @@ describe('EngineState type', () => {
         scalarVolumeRenderer: null,
         volumeUpsample: null,
         pickDebugOverlay: null,
+        diskRadiusRing: null,
         timingService: createDisabledGpuTimingService(),
       },
       subsystems: {
