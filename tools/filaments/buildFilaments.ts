@@ -69,18 +69,18 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname, basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { SourceType } from '../../src/@types/data/SourceType';
-import { rawDataPath } from '../utils/io/rawDataRegistry.js';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
 
-import { decodeGalaxyCatalog } from '../../src/data/galaxyCatalogFormat.js';
-import { parseNDskl, skeletonToFilamentCloud } from '../parsers/ndskl.js';
-import { encodeFilaments } from '../../src/data/filamentBinaryFormat.js';
-import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog.js';
-import { Source } from '../../src/data/sources.js';
-import { surveyFluxLimit } from '../../src/data/surveyFluxLimits.js';
-import { absoluteFromApparent, dMaxFromAbsolute } from '../../src/utils/math/distanceModulus.js';
-import { mulberry32 } from '../../src/utils/random/mulberry32.js';
-import { computeAngularWeights } from '../../src/services/engine/bake/computeAngularWeights.js';
-import { gaussian } from '../utils/random/gaussian.js';
+import { decodeGalaxyCatalog } from '../../src/data/galaxyCatalogFormat';
+import { parseNDskl, skeletonToFilamentCloud } from '../parsers/ndskl';
+import { encodeFilaments } from '../../src/data/filamentBinaryFormat';
+import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog';
+import { Source } from '../../src/data/sources';
+import { surveyFluxLimit } from '../../src/data/surveyFluxLimits';
+import { absoluteFromApparent, dMaxFromAbsolute } from '../../src/utils/math/distanceModulus';
+import { mulberry32 } from '../../src/utils/random/mulberry32';
+import { computeAngularWeights } from '../../src/services/engine/bake/computeAngularWeights';
+import { gaussian } from '../utils/random/gaussian';
 
 /**
  * Default persistence cut in σ.  Lower = more filaments accepted as

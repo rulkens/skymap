@@ -30,7 +30,7 @@
  * producing NaN.
  */
 
-import { nonCommentLines, slot } from './common.js';
+import { nonCommentLines, slot } from './common';
 
 /** Minimum useful line length — R500 column ends at byte 204. */
 const MIN_LINE_LEN = 204;

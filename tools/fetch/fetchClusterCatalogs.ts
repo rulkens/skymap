@@ -16,8 +16,8 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { downloadWithResume, sha256OfFile } from './fetchCosmicflows4.js';
-import { rawDataPath } from '../utils/io/rawDataRegistry.js';
+import { downloadWithResume, sha256OfFile } from './fetchCosmicflows4';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
 
 // ── CDS FTP URLs ────────────────────────────────────────────────────────────
 

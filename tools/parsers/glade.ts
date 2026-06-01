@@ -93,14 +93,14 @@
  * objID is always `0n` — see the cross-match note above.
  */
 
-import { Source } from '../../src/data/sources.js';
-import { type ParsedRecord } from './common.js';
+import { Source } from '../../src/data/sources';
+import { type ParsedRecord } from './common';
 import {
   galaxyDiameterKpc,
   DEFAULT_GALAXY_DIAMETER_KPC,
-} from '../../src/utils/math/galaxyDiameterKpc.js';
-import { absoluteMagnitude } from '../../src/utils/math/absoluteMagnitude.js';
-import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc.js';
+} from '../../src/utils/math/galaxyDiameterKpc';
+import { absoluteMagnitude } from '../../src/utils/math/absoluteMagnitude';
+import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
 
 /**
  * Map from PGC string (no padding, no leading zeros stripped) to HyperLEDA's

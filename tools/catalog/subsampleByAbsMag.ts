@@ -38,9 +38,9 @@
  *                non-positive z are dropped regardless of target.
  */
 
-import { absoluteMagnitude } from '../../src/utils/math/absoluteMagnitude.js';
-import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc.js';
-import type { ParsedRecord } from '../parsers/common.js';
+import { absoluteMagnitude } from '../../src/utils/math/absoluteMagnitude';
+import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
+import type { ParsedRecord } from '../parsers/common';
 
 export function subsampleByAbsMag(records: ParsedRecord[], target: number): ParsedRecord[] {
   const kept = subsampleIndicesByAbsMag(records, target);

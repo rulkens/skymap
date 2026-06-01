@@ -37,19 +37,19 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { parseMcxc, type McxcRow } from '../parsers/parseMcxc.js';
-import { parseMscc, type MsccRow } from '../parsers/parseMscc.js';
-import { parseClusterSeed, type ClusterSeedEntry } from '../parsers/parseClusterSeed.js';
-import { encodeClusterCatalog } from '../../src/data/clusterCatalogFormat.js';
-import { rawDataPath } from '../utils/io/rawDataRegistry.js';
-import { writeMetaSidecar } from '../curation/writeMetaSidecar.js';
-import { dedupeByProximity } from '../curation/dedupeByProximity.js';
-import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart.js';
-import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc.js';
-import { H0_KM_S_MPC } from '../../src/utils/math/constants.js';
-import type { ClusterCatalog } from '../../src/@types/data/ClusterCatalog.js';
-import type { ClusterCategoryByte } from '../../src/@types/data/ClusterCatalog.js';
-import type { Vec3 } from '../../src/@types/math/Vec3.js';
+import { parseMcxc, type McxcRow } from '../parsers/parseMcxc';
+import { parseMscc, type MsccRow } from '../parsers/parseMscc';
+import { parseClusterSeed, type ClusterSeedEntry } from '../parsers/parseClusterSeed';
+import { encodeClusterCatalog } from '../../src/data/clusterCatalogFormat';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { writeMetaSidecar } from '../curation/writeMetaSidecar';
+import { dedupeByProximity } from '../curation/dedupeByProximity';
+import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
+import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
+import { H0_KM_S_MPC } from '../../src/utils/math/constants';
+import type { ClusterCatalog } from '../../src/@types/data/ClusterCatalog';
+import type { ClusterCategoryByte } from '../../src/@types/data/ClusterCatalog';
+import type { Vec3 } from '../../src/@types/math/Vec3';
 
 // ── Tunable threshold constants ───────────────────────────────────────────────
 //

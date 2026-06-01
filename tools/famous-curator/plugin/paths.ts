@@ -18,7 +18,7 @@
  */
 import { resolve } from 'node:path';
 
-import { RAW_DATA } from '../../utils/io/rawDataRegistry.js';
+import { RAW_DATA } from '../../utils/io/rawDataRegistry';
 
 export function curatedDir(repoRoot: string): string {
   return resolve(repoRoot, 'public/images/famous-curated');

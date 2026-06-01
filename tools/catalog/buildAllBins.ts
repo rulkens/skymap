@@ -34,39 +34,39 @@ import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import type { SourceType } from '../../src/@types/data/SourceType';
 
-import { parseSdssCsv } from '../parsers/sdssCsv.js';
-import { parseTwoMrs, parseXscShapeCsv } from '../parsers/twoMrs.js';
-import type { XscShapeMap } from '../parsers/twoMrs.js';
-import { parseGladeLine, parseGlade2masxPgcLine, parseHyperLedaCsv } from '../parsers/glade.js';
-import type { HyperLedaShapeMap } from '../parsers/glade.js';
-import { parseMilliquas } from '../parsers/milliquas.js';
-import type { MilliquasParseResult } from '../parsers/milliquas.js';
-import type { ParsedRecord } from '../parsers/common.js';
-import { crossMatch } from './crossMatch.js';
-import { dropFamousMatches } from './dropFamousMatches.js';
-import type { FamousSkyPosition } from './dropFamousMatches.js';
-import { parseFamousSeed } from '../parsers/famousSeed.js';
+import { parseSdssCsv } from '../parsers/sdssCsv';
+import { parseTwoMrs, parseXscShapeCsv } from '../parsers/twoMrs';
+import type { XscShapeMap } from '../parsers/twoMrs';
+import { parseGladeLine, parseGlade2masxPgcLine, parseHyperLedaCsv } from '../parsers/glade';
+import type { HyperLedaShapeMap } from '../parsers/glade';
+import { parseMilliquas } from '../parsers/milliquas';
+import type { MilliquasParseResult } from '../parsers/milliquas';
+import type { ParsedRecord } from '../parsers/common';
+import { crossMatch } from './crossMatch';
+import { dropFamousMatches } from './dropFamousMatches';
+import type { FamousSkyPosition } from './dropFamousMatches';
+import { parseFamousSeed } from '../parsers/famousSeed';
 
-import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalogFormat.js';
-import { raDecZToCartesian } from '../../src/utils/math/index.js';
-import { raDecDistToCartesian } from '../../src/utils/math/raDecDistToCartesian.js';
-import { fallbackOrientation } from '../../src/utils/random/fallbackOrientation.js';
-import { catalogDistanceFor } from './catalogDistanceFor.js';
-import { CUTOFF_MPC } from './localVolumeCutoff.js';
-import type { Cf4CatalogIndex } from '../parsers/cosmicflows4.js';
-import { loadCf4CatalogIndex } from '../parsers/cosmicflows4.js';
-import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/galaxyDiameterKpc.js';
-import { Source, SOURCE_REGISTRY } from '../../src/data/sources.js';
-import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog.js';
-import { tierTarget, tierFilenameForSource } from '../../src/data/tierTargets.js';
-import type { Tier } from '../../src/@types/data/Tier.js';
-import { subsampleByAbsMag } from './subsampleByAbsMag.js';
-import { rawDataPath } from '../utils/io/rawDataRegistry.js';
+import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalogFormat';
+import { raDecZToCartesian } from '../../src/utils/math/index';
+import { raDecDistToCartesian } from '../../src/utils/math/raDecDistToCartesian';
+import { fallbackOrientation } from '../../src/utils/random/fallbackOrientation';
+import { catalogDistanceFor } from './catalogDistanceFor';
+import { CUTOFF_MPC } from './localVolumeCutoff';
+import type { Cf4CatalogIndex } from '../parsers/cosmicflows4';
+import { loadCf4CatalogIndex } from '../parsers/cosmicflows4';
+import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/galaxyDiameterKpc';
+import { Source, SOURCE_REGISTRY } from '../../src/data/sources';
+import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog';
+import { tierTarget, tierFilenameForSource } from '../../src/data/tierTargets';
+import type { Tier } from '../../src/@types/data/Tier';
+import { subsampleByAbsMag } from './subsampleByAbsMag';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
 
 // Re-export so `tests/crossMatch.test.ts` and any other consumer can keep
 // using the documented `tools/buildAllBins` import path.
-export { crossMatch } from './crossMatch.js';
-export type { CrossMatchInputs } from './crossMatch.js';
+export { crossMatch } from './crossMatch';
+export type { CrossMatchInputs } from './crossMatch';
 
 // ─── GalaxyCatalog assembly + write ──────────────────────────────────────────
 
