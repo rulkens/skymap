@@ -20,6 +20,10 @@ import { useEffect, useReducer, useRef, useState } from 'react';
 import type { PointerEvent } from 'react';
 import { useApi } from './apiContext';
 import { reducer, initialState, canCommit } from './state';
+import { seedDeprojectCrop } from './cropMath';
+import { willDeproject } from '../../famous/deprojectDisk';
+import { DEFAULT_DISK_MARGIN } from '../../../src/data/famousCalibration';
+import type { RecipeDisk } from '../plugin/recipe';
 import { GalaxyList } from './components/GalaxyList';
 import { SourceBar } from './components/SourceBar';
 import { CropCanvas } from './components/CropCanvas';
@@ -205,6 +209,74 @@ function AppInner() {
   const activeGalaxy = state.galaxies.find((g) => g.id === state.activeId);
   const catalogAxisRatio = activeGalaxy?.axisRatio;
 
+  // Effective b/a for the active disk: user override > catalog > round (1).
+  // The same resolution chain DiskOverlay, DiskControls, and the export route
+  // use, so the crop framing tracks the value the pipeline will deproject by.
+  const effectiveAxisRatio = state.disk?.axisRatio ?? catalogAxisRatio ?? 1;
+
+  // Aspect lock for the deproject crop, passed to CropCanvas (and forwarded
+  // to DiskOverlay).  It is defined ONLY when the disk's deproject toggle is on
+  // AND the resolved b/a is in the (0,1) tilt range that willDeproject gates —
+  // otherwise the crop stays square / as-shot.  willDeproject is the single
+  // deproject gate; do not re-implement the 0<b/a<1 test here.
+  const deprojectAspect =
+    state.disk?.deproject && willDeproject(effectiveAxisRatio) ? effectiveAxisRatio : undefined;
+
+  /**
+   * onDiskChange — owns the deproject-crop coupling.
+   *
+   * This is the one place that knows the disk geometry AND the crop, so it is
+   * where "deproject turned on/off/retuned" gets translated into a crop action.
+   * The coupling is non-obvious: the crop's shape (square vs. b/a-locked) and
+   * its rotation (0 vs. disk PA) are DERIVED from the disk, not edited directly
+   * by the user when deproject is on.  We compare the incoming disk against the
+   * current one through the SAME willDeproject gate the render path uses, then
+   * dispatch setDisk plus exactly one of three crop actions:
+   *
+   *   - transition ON (or a retune while on): seed a fresh deproject crop from
+   *     the disk geometry, so the framing tracks centre/PA/axisRatio/margin.
+   *   - transition OFF: restore the stashed as-shot square.
+   *   - neither deproject before nor after: leave the crop untouched.
+   *
+   * Reseeding on EVERY deprojected onDiskChange (even a pure centre nudge) is
+   * deliberate and simplest — seedDeprojectCrop re-frames on the disk, so a
+   * redundant reseed is a no-op-shaped re-centre, not a correctness risk.  The
+   * seeded crop's rotationDeg is always the disk PA; the App never lets the
+   * user rotate a deproject crop (CropCanvas hides the rotate knob).
+   */
+  function onDiskChange(nextDisk: RecipeDisk): void {
+    const prevDisk = state.disk;
+    const wasDeproj =
+      prevDisk?.deproject === true &&
+      willDeproject(prevDisk.axisRatio ?? catalogAxisRatio ?? 1);
+    const nextEffectiveAxisRatio = nextDisk.axisRatio ?? catalogAxisRatio ?? 1;
+    const nowDeproj = nextDisk.deproject === true && willDeproject(nextEffectiveAxisRatio);
+
+    dispatch({ type: 'setDisk', disk: nextDisk });
+
+    if (nowDeproj && state.source !== undefined) {
+      // ON or retune-while-on: (re)seed the deproject crop from the new disk.
+      // Guard on source: seedDeprojectCrop needs the image bounds, and there is
+      // no crop to derive before a source is loaded.
+      dispatch({
+        type: 'setDeprojectCrop',
+        crop: seedDeprojectCrop(
+          nextDisk.centerPx,
+          nextDisk.radiusPx,
+          nextDisk.paDeg,
+          nextEffectiveAxisRatio,
+          nextDisk.margin ?? DEFAULT_DISK_MARGIN,
+          { width: state.source.width, height: state.source.height },
+        ),
+      });
+    } else if (wasDeproj && !nowDeproj) {
+      // OFF: restore the as-shot square stashed when deproject first turned on.
+      dispatch({ type: 'restoreSquareCrop' });
+    }
+    // else: not deprojected before or after — the crop is the user's square,
+    // edited through CropCanvas directly; nothing to derive here.
+  }
+
   /**
    * Unified commit: re-process if needed, export, then rebuild famous.bin.
    *
@@ -363,7 +435,9 @@ function AppInner() {
           onFileDrop={onFileDrop}
           disk={state.disk}
           catalogAxisRatio={catalogAxisRatio}
-          onDiskChange={(d) => dispatch({ type: 'setDisk', disk: d })}
+          onDiskChange={onDiskChange}
+          deprojectAspect={deprojectAspect}
+          margin={state.disk?.margin}
           downloadOriginalUrl={state.tmpId ? `/api/preview/${state.tmpId}/source.png` : undefined}
         />
         <div className="curator-meta-row">
@@ -390,7 +464,7 @@ function AppInner() {
         <DiskControls
           disk={state.disk}
           catalogAxisRatio={catalogAxisRatio}
-          onDiskChange={(d) => dispatch({ type: 'setDisk', disk: d })}
+          onDiskChange={onDiskChange}
         />
         <ParamSliders
           starnet={state.starnet}

@@ -84,6 +84,12 @@ export type CropCanvasProps = {
    * it to the disk's position angle.
    */
   deprojectAspect?: number | undefined;
+  /**
+   * Seed margin (fractional sky padding) for the disk-overlay's deproject
+   * crop preview.  Forwarded verbatim to DiskOverlay alongside
+   * `deprojectAspect` so the preview rect matches the crop the App seeds.
+   */
+  margin?: number | undefined;
 };
 
 type DragState = {
@@ -456,6 +462,11 @@ export function CropCanvas(props: CropCanvasProps) {
             catalogAxisRatio={props.catalogAxisRatio}
             interactive={mode === 'disk'}
             onDiskChange={props.onDiskChange}
+            // Forward the deproject framing so the overlay's crop-preview rect
+            // matches the App-seeded deproject crop; both are undefined in
+            // as-shot mode, which leaves the preview unrendered.
+            deprojectAspect={props.deprojectAspect}
+            margin={props.margin}
           />
         </div>
       </div>

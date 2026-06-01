@@ -739,11 +739,11 @@ it('selectGalaxy clears savedSquareCrop', () => {
 
 > **Where to hook the transition:** the cleanest spot is App's `onDiskChange` handler (it already dispatches `setDisk`). Compare the incoming `deproject`/`margin`/`paDeg`/`axisRatio` against `state.disk` to decide seed-vs-restore-vs-reseed, then dispatch `setDisk` plus the appropriate crop action. Use `willDeproject` (single deproject gate) — do NOT re-implement the `0<b/a<1` test. Comment this coupling clearly (it's the non-obvious part).
 
-- [ ] Implement the coupling in App (`willDeproject` from `tools/famous/deprojectDisk`; `seedDeprojectCrop` from cropMath; `DEFAULT_DISK_MARGIN` from `src/data/famousCalibration`). Thread `deprojectAspect` + `margin` to CropCanvas → DiskOverlay. Comment-tidy.
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
-- [ ] `npm test > /tmp/t.log 2>&1; rc=$?` → Read log, full suite green.
+- [x] Implement the coupling in App (`willDeproject` from `tools/famous/deprojectDisk`; `seedDeprojectCrop` from cropMath; `DEFAULT_DISK_MARGIN` from `src/data/famousCalibration`). Thread `deprojectAspect` + `margin` to CropCanvas → DiskOverlay. Comment-tidy. (CropCanvas→DiskOverlay forwarding was missing; added.)
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
+- [x] `npm test > /tmp/t.log 2>&1; rc=$?` → Read log, full suite green. (Surfaced a 3rd deproject consumer — `assembleFamousMeta` in buildFamous — fixed to normalise its crop too.)
 - [ ] Manual check (curator dev server): toggle deproject ON → crop snaps to a PA-rotated b/a rect framing the disk; rotate knob gone; margin slider re-frames; toggle OFF → prior square crop returns. _(VISUAL — pending user)_
-- [ ] Commit `tools/famous-curator/ui/App.tsx`.
+- [x] Commit `tools/famous-curator/ui/App.tsx`.
 
 ---
 
