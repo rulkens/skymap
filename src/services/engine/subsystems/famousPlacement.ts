@@ -14,14 +14,13 @@
  * can be unit-tested exactly and reused from the textured-disk subsystem
  * without dragging in renderer plumbing.
  *
- * Why split size / offset / tilt into three functions rather than one
- * "place" call: each answers an independent question (how big, where,
- * how squashed), each has its own degenerate-input guard, and the disk
- * subsystem composes them with the camera basis it already has on hand.
+ * Why split size / nucleus / tilt into three functions rather than one
+ * "place" call: each answers an independent question (how big, where the
+ * nucleus sits, how squashed), each has its own degenerate-input guard,
+ * and the disk subsystem composes them per row.
  */
 
 import type { Vec2 } from '../../../@types/math/Vec2';
-import type { Vec3 } from '../../../@types/math/Vec3';
 import type { FamousCalibration } from '../../../@types/loading/FamousCalibration';
 
 /**
@@ -50,53 +49,31 @@ export function calibratedDiskSizeWorld(
 }
 
 /**
- * World offset that slides the disk so its nucleus lands on the catalog
- * 3-D point.
+ * Nucleus position mapped from normalised WebP coordinates into the
+ * disk's LOCAL corner frame ([-1, +1]²).
  *
- * The disk quad is positioned by its *centre*: its render position is the
- * geometric centre of the WebP frame, and the quad spans `±diskSizeWorld/2`
- * along the screen-aligned `right`/`up` basis.  The nucleus, however, sits
- * at the normalised `center` within the frame.  To make the *nucleus* (not
- * the frame centre) coincide with the catalog point, we shift the whole
- * quad by the negated nucleus-delta:
+ * The disk quad's corners run [-1, +1]² in the disk plane; the vertex
+ * shader places each corner via the (major, minor) basis it derives on
+ * the GPU.  The nucleus sits at the normalised `center` within the WebP
+ * (y-down, [0.5, 0.5] = frame centre).  Mapping it into the same corner
+ * frame lets the shader subtract it from every corner (`corner - nucleus`),
+ * which slides the quad so the *nucleus* — not the frame centre — lands on
+ * the catalog 3-D point.  Doing the subtraction in the shader's own basis
+ * means there is no CPU-side world basis to reconstruct (and no chance of
+ * it diverging from the GPU's).
  *
- *   delta   = center - [0.5, 0.5]           // nucleus offset from frame centre, in [-0.5, 0.5]
- *   scaled  = delta * diskSizeWorld          // half-frame delta 0.5 -> diskSizeWorld/2
- *   world   = scaled.x * right + scaled.y * up
- *   offset  = -world                          // move the quad so the nucleus reaches the point
+ *   corner = center * 2 - 1
  *
- * The negation is the crux: if the nucleus is LEFT of frame centre
- * (`center.x < 0.5`, delta.x < 0), keeping the quad centred would leave
- * the nucleus left of the catalog point; we must push the quad RIGHT by
- * the same amount so the nucleus arrives on the point.  Negating the
- * delta does exactly that.  A centred nucleus (`[0.5, 0.5]`) yields a
- * zero delta and therefore a zero offset.
+ * A centred nucleus (`[0.5, 0.5]`) maps to `[0, 0]` — the uncalibrated
+ * default that leaves the quad unshifted.
  *
- * `right`/`up` are taken `Readonly` — this function never mutates the
- * camera basis it's handed.
+ * No v-flip is applied: the atlas uploads top-down (`flipY: false`) and
+ * the shader remaps `corner.y = webp-v * 2 - 1` in the SAME direction, so
+ * webp-top (v = 0) and corner.y = -1 already coincide.  Flipping here
+ * would un-pair them.
  */
-export function nucleusOffsetWorld(
-  center: Vec2,
-  diskSizeWorld: number,
-  right: Readonly<Vec3>,
-  up: Readonly<Vec3>,
-): Vec3 {
-  const dx = center[0] - 0.5;
-  const dy = center[1] - 0.5;
-
-  const sx = dx * diskSizeWorld;
-  const sy = dy * diskSizeWorld;
-
-  // Negated projection onto the screen-aligned basis: slide the quad so
-  // its nucleus (not its frame centre) reaches the catalog point.  The
-  // trailing `+ 0` normalises IEEE-754 negative zero (a zero component
-  // emerges from the unary negation as `-0`, which is numerically a no-op
-  // but compares unequal to `0` under Object.is — `-0 + 0` is `+0`).
-  return [
-    -(sx * right[0] + sy * up[0]) + 0,
-    -(sx * right[1] + sy * up[1]) + 0,
-    -(sx * right[2] + sy * up[2]) + 0,
-  ];
+export function nucleusCorner(center: Vec2): Vec2 {
+  return [center[0] * 2 - 1, center[1] * 2 - 1];
 }
 
 /**

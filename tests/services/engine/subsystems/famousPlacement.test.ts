@@ -5,22 +5,21 @@
  * The three helpers each answer one independent question:
  *   - calibratedDiskSizeWorld: how large must the quad be so the disk
  *     inside it spans the catalog size?
- *   - nucleusOffsetWorld: how far do we slide the quad so its nucleus
- *     lands on the catalog point?
+ *   - nucleusCorner: where does the nucleus sit in the disk's local
+ *     corner frame so the shader can slide it onto the catalog point?
  *   - effectiveTilt: what PA / axis ratio does the disk render with?
  *
- * The off-centre offset test pins the SIGN of the slide by hand: a
- * nucleus left of frame centre must produce a +right world offset so the
- * nucleus moves onto the catalog point.
+ * The webp-corner mapping tests pin the no-flip convention by hand: a
+ * top-left nucleus must map to corner [-1, -1] (NOT [-1, +1]), matching
+ * the atlas's top-down upload.
  */
 
 import { describe, it, expect } from 'vitest';
 
-import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { FamousCalibration } from '../../../../src/@types/loading/FamousCalibration';
 import {
   calibratedDiskSizeWorld,
-  nucleusOffsetWorld,
+  nucleusCorner,
   effectiveTilt,
 } from '../../../../src/services/engine/subsystems/famousPlacement';
 
@@ -45,24 +44,26 @@ describe('calibratedDiskSizeWorld', () => {
   });
 });
 
-describe('nucleusOffsetWorld', () => {
-  const right: Readonly<Vec3> = [1, 0, 0];
-  const up: Readonly<Vec3> = [0, 1, 0];
-
-  it('is zero for a centred nucleus', () => {
-    // center [0.5, 0.5] → delta zero → no slide.
-    expect(nucleusOffsetWorld([0.5, 0.5], 100, right, up)).toEqual([0, 0, 0]);
+describe('nucleusCorner', () => {
+  it('is [0,0] for a centred nucleus', () => {
+    // center [0.5, 0.5] → [0, 0] — the uncalibrated default that leaves
+    // the quad unshifted.
+    expect(nucleusCorner([0.5, 0.5])).toEqual([0, 0]);
   });
 
-  it('moves an off-centre nucleus along the basis with the catalog-point sign', () => {
-    // Nucleus at x=0.25 is LEFT of frame centre by 0.25.
-    //   delta   = [0.25 - 0.5, 0.5 - 0.5] = [-0.25, 0]
-    //   scaled  = delta * 100              = [-25, 0]
-    //   world   = -(scaled.x * right + scaled.y * up) = -([-25,0,0]) = [25,0,0]
-    // Positive +right: the quad slides right so the left-of-centre
-    // nucleus reaches the catalog point.
-    const offset = nucleusOffsetWorld([0.25, 0.5], 100, right, up);
-    expect(offset).toEqual([25, 0, 0]);
+  it('maps an off-centre nucleus to corner space', () => {
+    // center.x = 0.25 → 0.25 * 2 - 1 = -0.5; center.y = 0.5 → 0.
+    expect(nucleusCorner([0.25, 0.5])).toEqual([-0.5, 0]);
+  });
+
+  it('maps webp top-left to corner [-1,-1]', () => {
+    // Pins the no-flip convention: webp-top (v = 0) maps to corner.y = -1,
+    // matching the atlas's top-down upload. A v-flip would give [-1, +1].
+    expect(nucleusCorner([0, 0])).toEqual([-1, -1]);
+  });
+
+  it('maps webp bottom-right to corner [1,1]', () => {
+    expect(nucleusCorner([1, 1])).toEqual([1, 1]);
   });
 });
 

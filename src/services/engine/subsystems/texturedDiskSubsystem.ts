@@ -41,6 +41,12 @@ import type {
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import { fetchGalaxyBitmap } from '../../../utils/network/galaxyImageFetcher';
 import { cartesianToRaDec } from '../../../utils/math';
+import {
+  calibratedDiskSizeWorld,
+  effectiveTilt,
+  nucleusCorner,
+} from './famousPlacement';
+import type { Vec2 } from '../../../@types/math/Vec2';
 
 /**
  * Apparent-size gate (px).  Exported so the procedural-disk subsystem
@@ -191,6 +197,27 @@ export function createTexturedDiskSubsystem(
         const ar = cloud.axisRatio[i]!;
         const pa = cloud.positionAngleDeg[i]!;
 
+        // Famous-galaxy thumbnails ship with a hand-authored placement
+        // calibration that overrides catalog geometry for the EMITTED
+        // instance (size, tilt, nucleus offset).  The catalog `ar`/`pa`
+        // above stay untouched — the finite-orientation gate below reads
+        // them as the corrupted-bin guard, not the render values.  An
+        // absent calibration (the common case) leaves every emitted value
+        // bit-identical to the catalog path.
+        const cal =
+          cloudSource === Source.Famous ? famousMeta[i]?.calibration : undefined;
+        let sizeForInstance = sizeWorldMpc;
+        let axisRatioForInstance = ar;
+        let paForInstance = pa;
+        let nucleus: Vec2 = [0, 0];
+        if (cal !== undefined) {
+          sizeForInstance = calibratedDiskSizeWorld(sizeWorldMpc, cal.diskRadiusFrac);
+          const tilt = effectiveTilt(cal, ar);
+          axisRatioForInstance = tilt.axisRatio;
+          paForInstance = tilt.positionAngleDeg;
+          nucleus = nucleusCorner(cal.center);
+        }
+
         const [ra, dec] = cartesianToRaDec(x, y, z);
         const key = galaxyCacheKey(ra, dec);
 
@@ -260,16 +287,17 @@ export function createTexturedDiskSubsystem(
             x,
             y,
             z,
-            sizeWorld: sizeWorldMpc,
+            sizeWorld: sizeForInstance,
             u0,
             v0,
             u1,
             v1,
-            axisRatio: ar,
-            positionAngleDeg: pa,
+            axisRatio: axisRatioForInstance,
+            positionAngleDeg: paForInstance,
             fadeAlpha,
             hiResLayerIdx,
             hiResCrossfadeAlpha,
+            nucleusOffset: nucleus,
           });
         }
       }

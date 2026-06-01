@@ -2,12 +2,11 @@
  * texturedDiskRenderer pack-loop tests.
  *
  * Pins the per-instance Float32Array layout for the textured-disk
- * renderer. Hi-res LOD Task R1 grew the stride to 16 floats; slots 12
- * and 13 carry the `hiResLayerIdx` + `hiResCrossfadeAlpha` fields from
- * the DiskInstance shape, slots 14 + 15 stay zero pad. The fragment
- * shader will start sampling them in Task R3 — pinning the slot layout
- * here guarantees the wiring stays right while the renderer is still
- * a silent passthrough.
+ * renderer. The 16-float stride packs `hiResLayerIdx` +
+ * `hiResCrossfadeAlpha` into slots 12 and 13, and the calibrated
+ * `nucleusOffset` (local corner frame) into slots 14 and 15. Pinning the
+ * slot layout here guarantees the serializer stays in lockstep with the
+ * vertex shader's `instance.hiRes` reads.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -81,12 +80,13 @@ function fakeDiskInstance(overrides: Partial<DiskInstance> = {}): DiskInstance {
     fadeAlpha: 1,
     hiResLayerIdx: -1,
     hiResCrossfadeAlpha: 0,
+    nucleusOffset: [0, 0],
     ...overrides,
   };
 }
 
 describe('texturedDiskRenderer pack loop (Task R1)', () => {
-  it('pack writes hiResLayerIdx + hiResCrossfadeAlpha into slots 12 and 13; slots 14, 15 stay zero', () => {
+  it('pack writes hiResLayerIdx + hiResCrossfadeAlpha into slots 12, 13 and nucleusOffset into slots 14, 15', () => {
     const { ctx, writeBufferCalls } = makeStubCtx();
     const renderer = createTexturedDiskRenderer(ctx);
 
@@ -107,7 +107,11 @@ describe('texturedDiskRenderer pack loop (Task R1)', () => {
     } as unknown as GPURenderPassEncoder;
 
     const instances: DiskInstance[] = [
-      fakeDiskInstance({ hiResLayerIdx: 3, hiResCrossfadeAlpha: 0.7 }),
+      fakeDiskInstance({
+        hiResLayerIdx: 3,
+        hiResCrossfadeAlpha: 0.7,
+        nucleusOffset: [-0.5, 0.25],
+      }),
       fakeDiskInstance({ hiResLayerIdx: 0, hiResCrossfadeAlpha: 0 }),
     ];
 
@@ -121,16 +125,17 @@ describe('texturedDiskRenderer pack loop (Task R1)', () => {
     expect(instancePayload.length).toBe(2 * FLOATS_PER_INSTANCE);
 
     // Instance 0: hiResLayerIdx=3 at slot 12, hiResCrossfadeAlpha=0.7
-    // at slot 13. 0.7 has no exact float32 representation, so allow a
-    // small tolerance — `toBeCloseTo` defaults to 2 decimal places,
-    // which is far inside the round-trip error.
+    // at slot 13, nucleusOffset [-0.5, 0.25] at slots 14, 15. 0.7 has no
+    // exact float32 representation, so allow a small tolerance —
+    // `toBeCloseTo` defaults to 2 decimal places, which is far inside the
+    // round-trip error.
     expect(instancePayload[12]).toBe(3);
     expect(instancePayload[13]).toBeCloseTo(0.7);
-    expect(instancePayload[14]).toBe(0);
-    expect(instancePayload[15]).toBe(0);
+    expect(instancePayload[14]).toBe(-0.5);
+    expect(instancePayload[15]).toBe(0.25);
 
     // Instance 1: hiResLayerIdx=0 at slot 12, hiResCrossfadeAlpha=0
-    // at slot 13.
+    // at slot 13, default centred nucleus [0, 0] at slots 14, 15.
     const i1 = FLOATS_PER_INSTANCE;
     expect(instancePayload[i1 + 12]).toBe(0);
     expect(instancePayload[i1 + 13]).toBe(0);

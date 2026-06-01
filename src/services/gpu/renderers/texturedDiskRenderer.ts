@@ -24,13 +24,15 @@
  *   posSize       vec4   xyz, sizeWorld
  *   uvRect        vec4   u0, v0, u1, v1
  *   orientation   vec4   axisRatio, positionAngleDeg, fadeAlpha, _
- *   hiResSlot     vec4   hiResLayerIdx, hiResCrossfadeAlpha, _, _
+ *   hiResSlot     vec4   hiResLayerIdx, hiResCrossfadeAlpha, nucleusOffset.x, nucleusOffset.y
  *
  * 'fadeAlpha' lives in the orientation vec4's third slot rather than a
  * separate vec4. The fourth vec4 ('hiResSlot') carries the hi-res LOD
  * array-layer index (negative sentinel = no slot) and the low-to-hi-res
- * crossfade ramp. The procedural sibling zero-pads this fourth vec4;
- * the shared instancedQuadRenderer factory requires uniform stride.
+ * crossfade ramp in .x/.y; its .z/.w carry the calibrated nucleus offset
+ * (local corner frame, [0, 0] = centred) the vertex stage subtracts from
+ * each corner. The procedural sibling zero-pads this fourth vec4; the
+ * shared instancedQuadRenderer factory requires uniform stride.
  */
 
 import type { mat4 } from 'gl-matrix';
@@ -103,12 +105,13 @@ export function createTexturedDiskRenderer(ctx: GpuContext, maxInstances = 256):
       data[base + 10] = ins.fadeAlpha;
       data[base + 11] = 0;
       // Hi-res LOD: layer index (negative = no slot bound, atlas only)
-      // and the low-to-hi-res crossfade alpha. Slots 14, 15 are a free
-      // shelf for future hi-res controls.
+      // and the low-to-hi-res crossfade alpha. Slots 14, 15 carry the
+      // calibrated nucleus offset (local corner frame, [0, 0] = centred);
+      // the vertex stage subtracts it from each corner.
       data[base + 12] = ins.hiResLayerIdx;
       data[base + 13] = ins.hiResCrossfadeAlpha;
-      data[base + 14] = 0;
-      data[base + 15] = 0;
+      data[base + 14] = ins.nucleusOffset[0];
+      data[base + 15] = ins.nucleusOffset[1];
     }
 
     inner.draw({
