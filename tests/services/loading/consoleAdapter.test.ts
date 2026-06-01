@@ -40,16 +40,15 @@ describe('consoleAdapterFor', () => {
     expect(console.warn).toHaveBeenCalled();
   });
 
-  it('does not log every byte event', () => {
+  it('does not log byte-progress events at all', () => {
     const log = consoleAdapterFor('test');
     log(loading(0, 100), loading(10, 100));
     log(loading(10, 100), loading(20, 100));
     log(loading(20, 100), loading(30, 100));
-    // Throttle invariant: at most one bytes-progress log per consecutive
-    // run, regardless of how many byte updates arrive.  '<= 1' would also
-    // pass at zero, which silently broke when the throttle was disabled
-    // in an earlier refactor — pinning '=== 1' catches that.
-    expect((console.log as any).mock.calls.length).toBe(1);
+    // Per-chunk progress drives the loading-bar UI via slot state, not the
+    // console — logging it floods the console on every page load.  None of
+    // these byte updates should produce a console line.
+    expect((console.log as any).mock.calls.length).toBe(0);
   });
 
   it('logs ready transition', () => {

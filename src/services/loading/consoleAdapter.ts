@@ -1,8 +1,9 @@
 /**
  * consoleAdapterFor(name) — returns a `(prev, next) => void` subscriber that
  * logs structured `[loading] <name> <transition>` lines on meaningful state
- * changes.  Bytes-progress events are throttled (1 per 250ms) so a fast
- * 100 MB fetch doesn't flood the console.
+ * changes.  Per-chunk bytes progress is intentionally not logged — it drives
+ * the loading-bar UI via the slot's state, and logging it floods the console
+ * on every page load with no operator value.
  *
  * The adapter is "pure" in the I/O sense — same inputs always produce the
  * same console call (modulo the throttle's elapsed-ms argument, which is
@@ -12,7 +13,6 @@
  *
  * Verbosity:
  *   - load-started, ready, retry-scheduled  → console.log (info)
- *   - throttled bytes                       → console.log (info)
  *   - error                                 → console.warn (always)
  *
  * In production builds, `import.meta.env.DEV === false` silences the info
@@ -26,34 +26,16 @@
  */
 import type { LoadState } from '../../@types/loading/LoadState';
 
-const BYTES_LOG_INTERVAL_MS = 250;
-
 export function consoleAdapterFor(name: string): (
   prev: LoadState<unknown>,
   next: LoadState<unknown>,
 ) => void {
-  let lastBytesLogMs = 0;
   const dev = !!import.meta.env.DEV;
 
   return (prev, next) => {
     // Transition into loading from a non-loading state.
     if (prev.kind !== 'loading' && next.kind === 'loading') {
       if (dev) console.log(`[loading] ${name} load-started`, { req: next.req });
-      return;
-    }
-    // Bytes progress within loading — throttled.
-    if (prev.kind === 'loading' && next.kind === 'loading' && prev.loaded !== next.loaded) {
-      const now = Date.now();
-      if (now - lastBytesLogMs >= BYTES_LOG_INTERVAL_MS) {
-        lastBytesLogMs = now;
-        if (dev) {
-          const pct = next.total > 0 ? Math.round((next.loaded / next.total) * 100) : 0;
-          console.log(
-            `[loading] ${name} bytes ${pct}% (${next.loaded}/${next.total})`,
-            { attempt: next.attempt },
-          );
-        }
-      }
       return;
     }
     // Retry scheduled.
