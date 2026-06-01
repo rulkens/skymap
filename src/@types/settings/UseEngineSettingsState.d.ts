@@ -45,6 +45,8 @@ export type UseEngineSettingsState = {
   depthFadeEnabled: boolean;
   /** Mirrors `EngineSettingsState.debug.showPickBuffer`. */
   showPickBuffer: boolean;
+  /** Mirrors `EngineSettingsState.debug.showDiskRadiusRing`. */
+  showDiskRadiusRing: boolean;
   visibleSourceMask: number;
   biasMode: BiasMode;
   absMagLimit: number;

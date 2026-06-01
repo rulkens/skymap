@@ -24,6 +24,7 @@ export type SettingsCallbackSeed = {
   realOnlyMode: boolean;
   depthFadeEnabled: boolean;
   showPickBuffer: boolean;
+  showDiskRadiusRing: boolean;
   biasMode: BiasMode;
   absMagLimit: number;
   toneMapCurve: ToneMapCurve;

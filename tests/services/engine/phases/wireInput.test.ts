@@ -87,7 +87,7 @@ function makeState(): EngineState {
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 1.0 },
       volumes: { masterEnabled: true, fields: {} },
-      debug: { showPickBuffer: false },
+      debug: { showPickBuffer: false, showDiskRadiusRing: false },
     },
     bias: {} as never,
     sources: {

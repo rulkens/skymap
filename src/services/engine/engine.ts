@@ -82,6 +82,7 @@ import {
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_SHOW_PICK_BUFFER,
+  DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_EXPOSURE,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
@@ -411,6 +412,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       },
       debug: {
         showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
+        showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
       },
       markerCategoryVisibility: {
         cluster: true,
@@ -1582,6 +1584,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         },
       },
       setShowPickBuffer: (enabled: boolean) => boringSetters.setShowPickBuffer(enabled),
+      setShowDiskRadiusRing: (enabled: boolean) =>
+        boringSetters.setShowDiskRadiusRing(enabled),
     },
 
     destroy,

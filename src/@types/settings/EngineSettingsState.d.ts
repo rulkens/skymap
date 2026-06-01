@@ -149,9 +149,14 @@ export type EngineSettingsState = {
    *     at each pixel (including the +PICK_PADDING_PX boost and the
    *     1.5× forgiveness ellipse/circle baked into pickFragment.wesl).
    *     Gated behind the DebugPanel.
+   *   - `showDiskRadiusRing` — outlines each famous-galaxy thumbnail's
+   *     disk-radius footprint so the developer can calibrate the
+   *     placement against the underlying billboard.  Gated behind the
+   *     DebugPanel.
    */
   debug: {
     showPickBuffer: boolean;
+    showDiskRadiusRing: boolean;
   };
 
   /**

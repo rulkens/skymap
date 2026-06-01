@@ -240,6 +240,9 @@ export const DEFAULT_VOLUME_PALETTE_ID = 'viridis' as const;
 /** Pick-buffer debug overlay starts off.  See `EngineSettingsState.debug.showPickBuffer`. */
 export const DEFAULT_SHOW_PICK_BUFFER = false;
 
+/** Disk-radius debug ring starts off.  See `EngineSettingsState.debug.showDiskRadiusRing`. */
+export const DEFAULT_SHOW_DISK_RADIUS_RING = false;
+
 // ── SpaceMouse ─────────────────────────────────────────────────────────────
 
 /**

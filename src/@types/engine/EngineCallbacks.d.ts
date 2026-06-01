@@ -215,7 +215,10 @@ export type EngineCallbacks = {
   milkyWay?: { onEnabledChange?: (enabled: boolean) => void };
 
   /** Debug-overlay echoes.  See `EngineSettingsState.debug` for the cluster's role. */
-  debug?: { onShowPickBufferChange?: (enabled: boolean) => void };
+  debug?: {
+    onShowPickBufferChange?: (enabled: boolean) => void;
+    onShowDiskRadiusRingChange?: (enabled: boolean) => void;
+  };
 
   /**
    * Fired exactly once, after the optional cosmic-web `filaments.bin`
