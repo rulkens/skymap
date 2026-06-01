@@ -8,6 +8,16 @@
 **ADR:** docs/adrs/0005-engine-data-layer-and-asset-loading.md
 **Index:** docs/superpowers/plans/2026-06-01-wireslots-refactor-INDEX.md
 
+> **STATUS: ✅ COMPLETE** (Tasks 6–14, incl. the combined 12+15 boundary). The
+> `ASSET_WIRING` registry + `reevaluateDemand` + construction purity + single
+> install all landed; `wireSlots` is now the thin demand-driven orchestrator
+> (326 → 120 lines). Two bug fixes confirmed (filaments + clusterCatalog
+> load-when-disabled). Boot parity verified by tests AND a live dev-server boot.
+> 2064 tests green. **Carried into Part 3:** `AssetSlot.load()` is non-idempotent,
+> so `reevaluateDemand` needs an `idle`-guard in `evaluateRows` BEFORE the toggle
+> setters (Tasks 16–18) wire repeated re-evaluation — else a single toggle
+> re-fetches every loaded asset. That guard is Part 3's first task.
+
 ---
 
 ## Conventions (see INDEX — do not re-summarise)
