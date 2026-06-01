@@ -73,6 +73,5 @@ export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, cb) => {
       );
     }
   });
-  state.assetSlots.mcpm = slot;
   return slot;
 };

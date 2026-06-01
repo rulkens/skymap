@@ -18,8 +18,10 @@
  * wiring-registry context: all factories already touch both `state` and `cb`,
  * so the bag has no obscuring effect — it just names the pair.
  *
- * NOTE: Task 12 will migrate the actual factory signatures from `(state, cb)`
- * to `(deps: SlotDeps)`. This file only defines the shape.
+ * The slot factories themselves keep the narrow `(state, cb)` signature; each
+ * `AssetWiringRow.factory` adapts the bag with `(deps) => createX(deps.state,
+ * deps.cb)`, so `buildSlotsFromRegistry` can call every row uniformly as
+ * `row.factory(deps)`.
  */
 
 import type { EngineState } from '../engine/state/EngineState';

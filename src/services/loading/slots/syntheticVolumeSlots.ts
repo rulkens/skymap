@@ -28,10 +28,6 @@
  * settings-bag seed and renderer calls are intentionally the same
  * lines as `addVolumeField` so both paths stay in sync when the
  * engine's volume-field logic changes.
- *
- * Pre-H4 (2026-05-11) the mint helper + three instantiations lived
- * inline in `wireSlots.ts`; extracted here as part of the slot-factory
- * split.
  */
 
 import { createAssetSlot } from '../AssetSlot';
@@ -53,9 +49,12 @@ type SyntheticVolumeSlotRecord = Record<
 >;
 
 /**
- * createSyntheticVolumeSlots — mint all three DEV fixtures, write to
- * `state.assetSlots.syntheticVolumes`, and return the slot record so
- * the caller can register each one on `allSlots`.
+ * createSyntheticVolumeSlots — mint all three DEV fixtures and return
+ * the slot record. The caller installs it onto
+ * `state.assetSlots.syntheticVolumes` and registers each slot on
+ * `allSlots`. Construction-pure like the registry factories: it builds +
+ * subscribes but does NOT write `state.assetSlots` (the orchestrator owns
+ * install).
  *
  * Diverges from the `SlotFactory<TPayload, TRequest>` shape because
  * this factory returns a record of three slots, not a single one.
@@ -139,6 +138,5 @@ export function createSyntheticVolumeSlots(
     'debug-cartesian': mintSyntheticVolumeSlot('debug-cartesian'),
     'debug-spherical': mintSyntheticVolumeSlot('debug-spherical'),
   };
-  state.assetSlots.syntheticVolumes = slots;
   return slots;
 }

@@ -65,7 +65,10 @@ describe('createClusterCatalogSlot', () => {
     // the bulk POI builder needs both halves.
     expect(state.sources.clusterBulk).toBe(payload);
     expect(requestRender).toHaveBeenCalled();
-    expect(state.assetSlots.clusterCatalog).toBe(slot);
+    // Construction purity: the factory RETURNS the slot and does NOT
+    // self-install it — `installSlots` (the orchestrator) owns the write.
+    expect(slot.name).toBe('cluster-catalog');
+    expect(state.assetSlots.clusterCatalog).toBeUndefined();
   });
 
   it('writes null on error and warns', async () => {

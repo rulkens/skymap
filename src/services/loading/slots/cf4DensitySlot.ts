@@ -83,6 +83,5 @@ export const createCf4DensitySlot: SlotFactory<ScalarCube, void> = (state, cb) =
       );
     }
   });
-  state.assetSlots.cf4Density = slot;
   return slot;
 };

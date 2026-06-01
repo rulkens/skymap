@@ -1,40 +1,39 @@
 /**
  * wireSlots — focused tests for the highest-leverage invariants of the
- * second bootstrap phase.
+ * second bootstrap phase, the demand-driven asset orchestrator.
  *
- * `bootstrap.test.ts` mocks this phase at module scope, so the per-slot
- * mint sites, the all-arrivals gate, the synthetic-fallback path, and
- * the loadProgress emitter wiring otherwise have no direct asserts —
- * yet those four lines of logic gate "loading screen ⇒ stars on
- * canvas". Three invariants targeted here:
+ * `bootstrap.test.ts` mocks this phase at module scope, so the orchestrator's
+ * observable effects otherwise have no direct asserts — yet they gate "loading
+ * screen ⇒ stars on canvas". The phase's internals (the synthetic-fallback
+ * gate, the POI projection, the demand loop) each have their own unit tests
+ * (`createSyntheticFallback.test.ts`, `wirePoiProjection.test.ts`,
+ * `reevaluateDemand.test.ts` / `demandTable.test.ts`); this file pins that
+ * wireSlots composes them into the right boot behaviour:
  *
- *   1. The all-arrivals gate's Promise<void> resolves once every
- *      per-source slot reports `ready`, AND wireSlots completes (rather
- *      than hanging). The lifecycle callbacks that take the engine out
- *      of `loading` depend on this.
+ *   1. wireSlots returns synchronously (no await on survey arrivals) and fires
+ *      `onStatusChange({ kind: 'loading' })` once.
  *
- *   2. The synthetic-fallback path mints + loads a synthetic-source
- *      slot when every real survey errored out — a DEV-only safety net
- *      invisible in production. A refactor that drops the fallback
- *      would silently ship "all-real-surveys-down ⇒ black screen".
+ *   2. The demand loop loads the default boot set — the visible surveys load
+ *      via their point rows; per-arrival `ready` echoes still fire (via the
+ *      synthetic-fallback gate's status subscriber), and the synthetic backstop
+ *      still loads when every real survey errors.
  *
- *   3. The loadProgress emitter is wired against EVERY minted slot.
- *      `deps.allSlots` is the single registry both the loading bar AND
- *      the dev panel read from, so a missed slot makes the dev panel
- *      quietly lie.
+ *   3. The loadProgress emitter is wired against EVERY installed slot.
+ *      `deps.allSlots` is the single registry both the loading bar AND the dev
+ *      panel read from, so a missed slot makes the dev panel quietly lie.
  *
- * Mocking strategy: real `AssetSlot` instances are kept (pure CPU
- * state machines, easy to drive); fetchers are mocked so loads don't
- * network; thumbnail-subsystem factory is mocked so no real GPU
- * device is needed; load-progress emitter factory is spied so we can
- * intercept the `allSlots` Map. Per-source point slots are injected
- * via a fake-slot helper — wireSlots reads them off
- * `state.assetSlots.points` (initGpu mints them in production), which
- * is the seam that makes the all-arrivals gate testable.
+ * Mocking strategy: real `AssetSlot` instances are kept (pure CPU state
+ * machines, easy to drive); fetchers are mocked so loads don't network;
+ * thumbnail-subsystem factory is mocked so no real GPU device is needed;
+ * load-progress emitter factory is spied so we can intercept the `allSlots`
+ * Map. Per-source point slots are injected via a fake-slot helper — wireSlots
+ * reads them off `state.assetSlots.points` (initGpu mints them in production),
+ * which is the seam that makes the demand loop's loads observable.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/sources';
+import { seedVolumeFields } from '../../../../src/data/volumeFieldDefaults';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
@@ -95,6 +94,19 @@ vi.mock('../../../../src/services/loading/fetchers/clusterCatalogFetcher', () =>
 
 vi.mock('../../../../src/services/loading/fetchers/pgcAliasFetcher', () => ({
   pgcAliasFetcher: vi.fn(async () => new Map()),
+}));
+
+// MCPM is default-on, so the demand loop fires its load at boot.  Mock the
+// fetcher so the slot resolves without networking.
+vi.mock('../../../../src/services/loading/fetchers/mcpmFetcher', () => ({
+  mcpmFetcher: vi.fn(async () => ({
+    dims: [4, 4, 4],
+    voxels: new Float32Array(64),
+    valueMin: 0,
+    valueMax: 1,
+    frame: 'supergalactic',
+    boundsKpc: { min: [0, 0, 0], max: [1, 1, 1] },
+  })),
 }));
 
 vi.mock('../../../../src/services/loading/fetchers/syntheticVolumeFetcher', () => ({
@@ -184,6 +196,10 @@ vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () 
 import { wireSlots } from '../../../../src/services/engine/phases/wireSlots';
 import { famousMetaFetcher } from '../../../../src/services/loading/fetchers/famousMetaFetcher';
 import { clusterCatalogFetcher } from '../../../../src/services/loading/fetchers/clusterCatalogFetcher';
+import { mcpmFetcher } from '../../../../src/services/loading/fetchers/mcpmFetcher';
+import { filamentFetcher } from '../../../../src/services/loading/fetchers/filamentFetcher';
+import { cf4DensityFetcher } from '../../../../src/services/loading/fetchers/cf4DensityFetcher';
+import { pgcAliasFetcher } from '../../../../src/services/loading/fetchers/pgcAliasFetcher';
 import { createPoiSubsystem } from '../../../../src/services/engine/subsystems/poiSubsystem';
 
 // ── Test helpers ─────────────────────────────────────────────────────
@@ -229,6 +245,24 @@ function makeFakeSlot(name: string): FakeSlot {
   return slot;
 }
 
+/**
+ * Build a boot-shaped points map: SDSS/2MRS/GLADE survey fakes left idle
+ * (still "loading" — they never fire), plus a Famous fake pre-fired to
+ * `loading` so the famous-meta demand predicate (`slotState(Famous) !== 'idle'`)
+ * reads true.  Idle survey fakes keep the synthetic-fallback gate waiting
+ * rather than arming + re-running demand — the live-boot shape.
+ */
+function bootPointSlots(): Map<SourceType, ReturnType<typeof makeFakeSlot>> {
+  const famous = makeFakeSlot('famous-points');
+  famous.fire({ kind: 'loading', req: {}, attempt: 1 } as never);
+  return new Map<SourceType, ReturnType<typeof makeFakeSlot>>([
+    [Source.SDSS, makeFakeSlot('sdss-points')],
+    [Source.TwoMRS, makeFakeSlot('2mrs-points')],
+    [Source.Glade, makeFakeSlot('glade-points')],
+    [Source.Famous, famous],
+  ]);
+}
+
 /** A `ready` payload shaped enough for the all-arrivals gate's `count > 0` check. */
 const readyValue = (count: number): LoadState<unknown> => ({
   kind: 'ready',
@@ -272,9 +306,28 @@ function makeState(
       thumbnails: { enabled: true },
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 1.0 },
-      volumes: { masterEnabled: true, fields: {} },
+      // Seed volume fields the same way the engine does at construction, so the
+      // demand predicate for MCPM (default-on) reads true at boot — parity with
+      // the old imperative boot loop that loaded MCPM unconditionally.
+      volumes: { masterEnabled: true, fields: seedVolumeFields() },
+      // Structure categories all visible by default ⇒ clusterCatalog demanded.
+      markerCategoryVisibility: {
+        cluster: true,
+        supercluster: true,
+        void: true,
+        famousGalaxy: true,
+      },
+      labelCategoryVisibility: {
+        cluster: true,
+        supercluster: true,
+        void: true,
+        famousGalaxy: true,
+      },
     },
     bias: {} as never,
+    // The synthetic-fallback gate writes `state.requests.add('syntheticFallback')`
+    // and the demand loop reads request flags — both need a live Set.
+    requests: new Set(),
     sources: {
       catalogs: new Map(),
       pickMask: 0xff,
@@ -308,6 +361,9 @@ function makeState(
         setFieldPalette: vi.fn(),
         setDensityScale: vi.fn(),
         setEnvelope: vi.fn(),
+        setContrastCenter: vi.fn(),
+        setExposure: vi.fn(),
+        setTrim: vi.fn(),
       } as never,
     },
     subsystems: {
@@ -348,6 +404,7 @@ function makeState(
       clusterCatalog: null,
       pgcAlias: null,
       cf4Density: null,
+      mcpm: null,
     },
   } as unknown as EngineState;
 }
@@ -412,6 +469,36 @@ describe('wireSlots', () => {
     expect(twoMrsSlot.load).toHaveBeenCalled();
     expect(gladeSlot.load).toHaveBeenCalled();
     expect(famousSlot.load).toHaveBeenCalled();
+  });
+
+  it('demand loop loads the default boot sidecar set (mcpm + clusterCatalog + famousMeta) and not the off-by-default ones', async () => {
+    // Boot parity: the old imperative boot loop loaded MCPM (default-on volume)
+    // + the cluster catalog (structures visible) + famous-meta but left
+    // filaments (off), CF-4 density (off) and the lazy PGC alias idle.  After
+    // the refactor those loads come from reevaluateDemand reading the
+    // construction-seeded state — same outcome.  Each sidecar's load is
+    // observable through its (mocked) fetcher; clear them first since the
+    // module-scoped mocks persist across tests.
+    vi.mocked(mcpmFetcher).mockClear();
+    vi.mocked(clusterCatalogFetcher).mockClear();
+    vi.mocked(famousMetaFetcher).mockClear();
+    vi.mocked(filamentFetcher).mockClear();
+    vi.mocked(cf4DensityFetcher).mockClear();
+    vi.mocked(pgcAliasFetcher).mockClear();
+
+    const state = makeState({ points: bootPointSlots() });
+    const deps = makeDeps();
+
+    await wireSlots(state, deps);
+
+    // Default-on / structures-visible / famous-loading ⇒ fetched.
+    expect(mcpmFetcher).toHaveBeenCalled();
+    expect(clusterCatalogFetcher).toHaveBeenCalled();
+    expect(famousMetaFetcher).toHaveBeenCalled();
+    // Default-off / lazy ⇒ never fetched at boot.
+    expect(filamentFetcher).not.toHaveBeenCalled();
+    expect(cf4DensityFetcher).not.toHaveBeenCalled();
+    expect(pgcAliasFetcher).not.toHaveBeenCalled();
   });
 
   it('fires `ready` status with a running total each time a survey arrives', async () => {
@@ -563,7 +650,17 @@ describe('wireSlots', () => {
       ],
     } as never);
 
-    const state = makeState();
+    // famousMeta demands on the Famous point slot leaving `idle`.  Inject a
+    // Famous point fake pre-fired to `loading` so the demand loop fires the
+    // famous-meta load — mirrors the real boot order (Famous point row loads
+    // first, then famousMeta's row sees a non-idle slot state).  The survey
+    // fakes stay idle (never fire) so the synthetic-fallback gate waits on
+    // them rather than arming early — modelling a live boot where the surveys
+    // are still loading.  An armed gate re-runs reevaluateDemand, which would
+    // re-trigger the (non-idempotent) famous-meta load and race the mock's
+    // once-value against its default.
+    const famousSlot = bootPointSlots();
+    const state = makeState({ points: famousSlot });
     state.sources.catalogs.set(Source.Famous, {
       count: 2,
       positions: new Float32Array([0.78, 0.1, 0.2, 0.85, 0.05, 0.15]),
@@ -621,7 +718,9 @@ describe('wireSlots', () => {
       ],
     } as never);
 
-    const state = makeState();
+    // See the famous-POI test: famousMeta demands on the Famous point slot
+    // leaving `idle`, and idle survey fakes keep the synthetic gate waiting.
+    const state = makeState({ points: bootPointSlots() });
     state.sources.catalogs.set(Source.Famous, {
       count: 1,
       positions: new Float32Array([0.78, 0.1, 0.2]),
@@ -666,7 +765,10 @@ describe('wireSlots', () => {
       ],
     } as never);
 
-    const state = makeState();
+    // Idle survey fakes keep the synthetic gate waiting so demand runs once —
+    // a double-run would re-trigger the (non-idempotent) cluster-catalog load
+    // and race the mock once-value against its empty default.
+    const state = makeState({ points: bootPointSlots() });
     const deps = makeDeps();
     const counts: Array<Partial<Record<string, number>>> = [];
     (deps.cb.sources as { onStructureCountsChange?: (c: Record<string, number>) => void })
