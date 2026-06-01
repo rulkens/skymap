@@ -29,7 +29,7 @@
  *   atlas.webp    lossy WebP q82, 256² with soft alpha
  */
 import sharp from 'sharp';
-import { copyFileSync, existsSync, mkdirSync, rmSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, renameSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { curatedGalaxyDir, curatedTmpDir, overrideIndexPath } from '../paths.js';
 import { sessionPath } from '../tmpSession.js';
@@ -39,6 +39,7 @@ import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlph
 import { willDeproject } from '../../../famous/deprojectDisk.js';
 import { squareDeprojectCrop } from '../../../famous/squareDeprojectCrop.js';
 import { deriveFamousCalibration } from '../../../famous/deriveFamousCalibration.js';
+import { publishFamousRuntimeImages } from '../../../famous/publishFamousRuntimeImages.js';
 import type { FamousCalibration } from '../../../../src/@types/loading/FamousCalibration';
 
 const FULL_PX = 1024;
@@ -236,19 +237,15 @@ export async function handleExport(opts: {
   if (existsSync(outDir)) rmSync(outDir, { recursive: true, force: true });
   renameSync(siblingStaging, outDir);
 
-  // 9. Copy atlas.webp into the runtime atlas slot so the main app
-  //    picks up the new thumbnail without an extra fetch-famous-images
-  //    run.  The runtime fetcher loads `/images/famous/<id>.webp`
-  //    directly (see src/utils/network/galaxyImageFetcher.ts); leaving
-  //    this step out means a Commit "succeeds" but the main app still
-  //    shows the previous thumbnail until a manual copy.
-  const atlasSrc = resolve(outDir, 'atlas.webp');
-  const atlasRuntimeDir = resolve(repoRoot, 'public/images/famous');
-  // mkdir -p in case the runtime slot dir doesn't exist yet (fresh
-  // clones + test fixtures both hit this — production checkouts already
-  // have it populated by fetch-famous-images).
-  mkdirSync(atlasRuntimeDir, { recursive: true });
-  copyFileSync(atlasSrc, resolve(atlasRuntimeDir, `${body.id}.webp`));
+  // 9. Publish BOTH runtime tiers so the app reflects this Commit completely:
+  //    the 256² atlas → public/images/famous/<id>.webp (low-res slot) and the
+  //    1024² full → public/data/images/famous-hires/<id>.webp (hi-res slot).
+  //    publishFamousRuntimeImages is the single source of truth for that layout
+  //    (the bulk copyHiResToPublic step uses the same primitive).  Skipping the
+  //    hi-res half here is the bug this consolidates away: a Commit used to
+  //    refresh only the low-res tile, so close-up views kept the stale render
+  //    until a manual `build-famous-hires`.
+  publishFamousRuntimeImages({ repoRoot, id: body.id });
 
   // 10. Update the override index so the build pipeline picks this
   //     galaxy up without a manual JSON edit.
