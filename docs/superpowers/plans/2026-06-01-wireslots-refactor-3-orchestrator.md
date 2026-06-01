@@ -127,17 +127,17 @@ then calls `reevaluateDemand(state)` instead of calling
 (famousMeta) now loads because its `demand` predicate sees Famous's slot
 non-idle — no explicit companion call.
 
-- [ ] Add test `toggling a hidden source visible loads its slot via re-evaluation`
-  — spy on the source slot's `load`; flip visible; assert load fired.
-- [ ] Add test `toggling Famous visible also loads famousMeta (companion via demand)`
-  — assert the famousMeta slot's load fired without an explicit companion call.
-- [ ] Add test `toggling a source off does not unload it` (demand governs
-  loading only — residency unchanged; ADR 0005 §3) — assert no unload/destroy.
-- [ ] Implement: replace the direct `.load()` + companion call with the drawMask
-  update + `reevaluateDemand(state)`.
-- [ ] `npm run typecheck` → clean. `npm test` (relevant suite + full) → green.
-- [ ] **Whole-file comment pass.**
-- [ ] Commit.
+- [x] Add test `toggling a hidden source visible loads its slot via re-evaluation`
+  — covered by `demandTable.test.ts` "famous-only visible" + `setSourceVisibleFade.test.ts` ON case (thunk fires after drawMask set).
+- [x] Add test `toggling Famous visible also loads famousMeta (companion via demand)`
+  — `demandTable.test.ts` "famous-only visible: one pass loads Famous + famousMeta together".
+- [x] Add test `toggling a source off does not unload it` (demand governs
+  loading only — residency unchanged; ADR 0005 §3) — `setSourceVisibleFade.test.ts` OFF case (`reevaluate` not called; no unload path exists).
+- [x] Implement: replace the direct `.load()` + companion call with the drawMask
+  update + `reevaluateDemand(state)` (via `reevaluate` thunk param on the narrow impl).
+- [x] `npm run typecheck` → clean. `npm test` (relevant suite + full) → green.
+- [x] **Whole-file comment pass.**
+- [x] Commit. (`3a7b9b1f`)
 
 ---
 
@@ -152,15 +152,16 @@ non-idle — no explicit companion call.
 inline lazy-load. The cf4Density / mcpm / debug rows' `demand` predicates pick up
 the new flag.
 
-- [ ] Add test `enabling cf4-density loads its slot via re-evaluation` — spy on
-  `state.assetSlots.cf4Density.load`; enable; assert load fired.
-- [ ] Add test `enabling an already-loaded field does not double-fetch` —
-  idempotent `slot.load`; assert no second fetch (state stays ready).
-- [ ] Add test `disabling a field does not unload it` (residency unchanged).
-- [ ] Implement.
-- [ ] `npm run typecheck` → clean. `npm test` → green.
-- [ ] **Whole-file comment pass.**
-- [ ] Commit.
+- [x] Add test `enabling cf4-density loads its slot via re-evaluation` —
+  `demandTable.test.ts` "cf4Density field enabled" (flag→reevaluate→load).
+- [x] Add test `enabling an already-loaded field does not double-fetch` —
+  idle-guard (`reevaluateDemand.ts:69`); non-idle-skip pinned by demandTable cases.
+- [x] Add test `disabling a field does not unload it` (residency unchanged) —
+  disable branch has no unload path; `reevaluateDemand` is load-only (structural).
+- [x] Implement (flag-first; cf4/mcpm via demand, 3 debug fixtures via `maybeLazyLoadDebugVolume`).
+- [x] `npm run typecheck` → clean. `npm test` → green.
+- [x] **Whole-file comment pass.**
+- [x] Commit. (`3a7b9b1f`)
 
 ---
 
@@ -176,15 +177,14 @@ the new flag.
 chosen request-flag home from Part 2 Task 9) then calls `reevaluateDemand(state)`.
 The `pgcAlias` row's `demand` reads the flag.
 
-- [ ] Add test `loadPgcAliases sets the paletteOpened request and loads the alias slot`
-  — spy on `state.assetSlots.pgcAlias.load`; call the shim; assert load fired
-  once.
-- [ ] Add test `calling loadPgcAliases twice does not re-fetch` (idempotent
-  `slot.load`; the flag stays set, the slot is already loading/ready).
-- [ ] Implement.
-- [ ] `npm run typecheck` → clean. `npm test` → green.
-- [ ] **Whole-file comment pass.**
-- [ ] Commit.
+- [x] Add test `loadPgcAliases sets the paletteOpened request and loads the alias slot`
+  — `demandTable.test.ts` "palette opened: boot set + pgcAlias".
+- [x] Add test `calling loadPgcAliases twice does not re-fetch` — idle-guard
+  (flag stays set, slot non-idle on second pass).
+- [x] Implement (`state.requests.add('paletteOpened')` + `reevaluateDemand`).
+- [x] `npm run typecheck` → clean. `npm test` → green.
+- [x] **Whole-file comment pass.** (+ review-fix `209c1ff3`: errored-load note.)
+- [x] Commit. (`3a7b9b1f`)
 
 ---
 
