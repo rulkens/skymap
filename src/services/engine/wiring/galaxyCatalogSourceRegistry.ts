@@ -8,26 +8,28 @@
  *     name, fetcher, category (`survey` | `curated` | `synthetic`),
  *     optional companion sidecars.  Pure data.
  *   - `SURVEY_POINT_SOURCES` / `TIER_FETCHED_POINT_SOURCES` — derived
- *     iteration lists for the boot loop, the tier-change loop, and
- *     the synthetic-fallback gate.
+ *     iteration lists for the synthetic-fallback gate: which sources
+ *     count toward "real data arrived", and which slots it watches.
  *   - `wireGalaxyCatalogSourceSlot` — uniform slot-construction
  *     helper that turns a row into an AssetSlot in
  *     `state.assetSlots.points`.
  *   - `loadCompanionAssets` — fires `.load()` on the companion slots
  *     a row declares, dispatching a uniform `CompanionAssetReq`.
  *
- * ## What does NOT live here
+ * ## Relationship to `ASSET_WIRING`
  *
- * Sidecars whose lifecycle isn't tied to a galaxy `.bin` stay inline
- * in `wireSlots`:
+ * This registry is the point-source CONSTRUCTION + tier-reload source:
+ * `initGpu` mints one slot per row, `setTier` reloads them with a
+ * new-tier request, and the synthetic-fallback gate reads the derived
+ * source lists.  WHEN each asset loads (boot, visibility toggle,
+ * settings flip) is the `ASSET_WIRING` demand table's job — including
+ * the point sources, which appear there as `built: 'external'` rows.
+ * Non-point sidecars (filaments, pgc-aliases, cf4/mcpm volumes, the
+ * cluster catalog) live only in `ASSET_WIRING`.
  *
- *   - `filaments` — different payload, different renderer target,
- *     one-shot at boot.
- *   - `pgc-aliases` — lazy load via the public handle.
- *
- * A new survey adds one row.  A new companion type adds one entry to
- * `GalaxyCatalogCompanionRef` and one slot minted on `state.assetSlots`
- * with the same key.
+ * A new survey adds one row here AND one point row in `ASSET_WIRING`.
+ * A new companion type adds one `GalaxyCatalogCompanionRef` member plus
+ * one slot minted on `state.assetSlots` with a matching key.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -45,9 +47,10 @@ import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeC
 import type { SourceType } from '../../../@types/data/SourceType';
 
 /**
- * Registry rows, in Source enum order.  Order matters: the boot loop,
- * the tier-change loop, and the synthetic-fallback gate iterate this
- * list and rely on a stable ordering for their per-source logs.
+ * Registry rows, in Source enum order.  Order matters: `initGpu`'s
+ * slot-mint loop, `setTier`'s tier-change reload loop, and the
+ * synthetic-fallback gate iterate this list and rely on a stable
+ * ordering for their per-source logs.
  */
 export const GALAXY_CATALOG_SOURCE_REGISTRY: readonly GalaxyCatalogSourceConfig[] = [
   { source: Source.SDSS, shortName: 'sdss', fetcher: galaxyCatalogFetcher, category: 'survey' },
@@ -92,27 +95,31 @@ const SHORT_NAME_BY_SOURCE: ReadonlyMap<SourceType, string> = new Map(
 /**
  * Sources in the `survey` category — counted toward the
  * synthetic-fallback ready gate.  Hidden surveys count as already
- * settled (see `wireSlots`).
+ * settled (see `createSyntheticFallback`).
  */
 export const SURVEY_POINT_SOURCES: readonly SourceType[] = GALAXY_CATALOG_SOURCE_REGISTRY.filter(
   (c) => c.category === 'survey',
 ).map((c) => c.source);
 
 /**
- * Every tier-fetched catalog source — surveys + curated.  Driven by
- * the boot loop and the tier-change reload loop.
+ * Every tier-fetched catalog source — surveys + curated.  Iterated by
+ * the synthetic-fallback gate, which subscribes to each to learn when
+ * every real survey has settled.
  */
 export const TIER_FETCHED_POINT_SOURCES: readonly SourceType[] =
   GALAXY_CATALOG_SOURCE_REGISTRY.filter((c) => c.category !== 'synthetic').map((c) => c.source);
 
 /**
- * Fire every companion declared on the given registry row.  Called
- * from the boot loop, `setSourceVisible`, and the tier-change loop.
+ * Fire every companion declared on the given registry row.  Called from
+ * `setTier`'s reload loop to pull companions back in lockstep with a
+ * new-tier `.bin`.  At boot and on visibility toggle, companions load
+ * through their own `ASSET_WIRING` rows (demand), not this function.
  *
  * Every companion slot accepts the same `CompanionAssetReq` (`{ tier }`)
  * — tier-aware fetchers use it, tier-agnostic ones ignore it — so
  * dispatch is a plain index into `state.assetSlots` with no per-key
- * switch.  Idempotent at the AssetSlot layer.
+ * switch.  `.load()` re-fetches unconditionally, which is what a tier
+ * change wants: the new-tier request must replace the old fetch.
  */
 export function loadCompanionAssets(
   state: EngineState,

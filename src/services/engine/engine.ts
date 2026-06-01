@@ -1067,9 +1067,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // re-fetch the new tier's `.bin`, and run its commit step.
     //
     // Hidden sources skip the tier-change fetch too — there's no point
-    // downloading a new tier of a survey the user can't see.  When
-    // they later toggle it on, `setSourceVisible` fires a fresh
-    // `.load({ tier })` with the current tier.
+    // downloading a new tier of a survey the user can't see.  When they
+    // later toggle it on, `setSourceVisible` flips drawMask and the
+    // demand loop loads the now-visible slot at the current tier.
     //
     // Filaments are NOT swapped on tier change — see
     // `filamentFetcher.ts`'s docblock for the rationale.
