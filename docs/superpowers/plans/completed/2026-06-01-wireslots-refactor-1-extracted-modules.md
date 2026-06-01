@@ -40,17 +40,17 @@ test that exists today goes red, you changed behavior; stop and reconcile.
 
 **Files:** none (read-only).
 
-- [ ] Run `npm test`. Expected: all pass. Note the exact count (the per-task
+- [x] Run `npm test`. Expected: all pass. Note the exact count (the per-task
   deltas below are measured against it).
-- [ ] Run `npm run typecheck`. Zero errors.
-- [ ] Read `src/services/engine/phases/wireSlots.ts` end-to-end. The four
+- [x] Run `npm run typecheck`. Zero errors.
+- [x] Read `src/services/engine/phases/wireSlots.ts` end-to-end. The four
   blocks this part extracts are, by current line range:
   - impostor subsystems — `wireSlots.ts:302-365`
   - overlay/volumes/label fades — `wireSlots.ts:367-411`
   - POI merge (`rebuildAllPois` + the three subscriptions) — `wireSlots.ts:107-228`
   - synthetic-fallback gate — `wireSlots.ts:417-494` (extraction deferred to
     **Part 2 Task 13**; it depends on the demand context).
-- [ ] Read `src/services/engine/subsystems/poiSubsystem.ts:343-364` (the
+- [x] Read `src/services/engine/subsystems/poiSubsystem.ts:343-364` (the
   `setPois`/`clearPois`/visibility closures) — Tasks 3–4 modify this.
 
 If baseline is red, STOP and report — do not build on a broken tree.
@@ -74,24 +74,24 @@ If baseline is red, STOP and report — do not build on a broken tree.
 the current block does, including the renderer null-check throws
 (`wireSlots.ts:96-100`) — those move with it (they guard this block's reads).
 
-- [ ] Add test `assigns galaxyAtlas, texturedDisks, proceduralDisks, hiResFamous, hiResFamousTexture onto state.subsystems`
+- [x] Add test `assigns galaxyAtlas, texturedDisks, proceduralDisks, hiResFamous, hiResFamousTexture onto state.subsystems`
   against a stub `state` + `deps` with a mock `device`. Assert all five
   `state.subsystems.*` are non-null after the call.
-- [ ] Add test `binds the atlas and hi-res views into the textured-disk renderer`
+- [x] Add test `binds the atlas and hi-res views into the textured-disk renderer`
   — spy on `texturedDiskRenderer.bindAtlas` + `.bindHiResArray`; assert each
   called once with the atlas/hi-res texture view.
-- [ ] Add test `throws when texturedDisk/proceduralDisk renderers are null`
+- [x] Add test `throws when texturedDisk/proceduralDisk renderers are null`
   asserting the existing precondition message.
-- [ ] Implement by moving the block; do not rewrite the construction order
+- [x] Implement by moving the block; do not rewrite the construction order
   (the dependency comment at `wireSlots.ts:302-306` is load-bearing — atlas +
   hiRes planner must exist before `texturedDisks`).
-- [ ] In `wireSlots.ts`, replace the deleted block with a single
+- [x] In `wireSlots.ts`, replace the deleted block with a single
   `wireImpostorSubsystems(state, deps)` call at the same position.
-- [ ] `npm run typecheck` → clean. `npm test -- wireImpostorSubsystems` →
+- [x] `npm run typecheck` → clean. `npm test -- wireImpostorSubsystems` →
   3 new tests pass; full `npm test` → green at baseline+3.
-- [ ] **Whole-file comment-cleanup pass** on `wireImpostorSubsystems.ts` and
+- [x] **Whole-file comment-cleanup pass** on `wireImpostorSubsystems.ts` and
   `wireSlots.ts` (timeless + terse; keep the dependency-order *why*).
-- [ ] Commit (`wireImpostorSubsystems.ts`, its test, `wireSlots.ts`).
+- [x] Commit (`wireImpostorSubsystems.ts`, its test, `wireSlots.ts`).
 
 ---
 
@@ -111,19 +111,19 @@ four `labelLayer` handles (`youAreHere`/`poi`/`galaxyNames` at 0, `scaleBar`
 at 1). The settings-derived opacities (`wireSlots.ts:380-383`, `393-396`) are
 the load-bearing part — copy the exact gating.
 
-- [ ] Add test `registers milkyWay at 1 when settings.milkyWay.enabled` and the
+- [x] Add test `registers milkyWay at 1 when settings.milkyWay.enabled` and the
   companion `registers milkyWay at 0 when disabled` — spy on
   `state.subsystems.fades.register`; assert the opacity arg.
-- [ ] Add test `registers volumesMaster at settings.volumes.masterEnabled gate`
+- [x] Add test `registers volumesMaster at settings.volumes.masterEnabled gate`
   (both branches).
-- [ ] Add test `registers the four label-layer handles at 0,0,0,1` — assert each
+- [x] Add test `registers the four label-layer handles at 0,0,0,1` — assert each
   `register` call's handle + opacity.
-- [ ] Implement by moving the block.
-- [ ] In `wireSlots.ts`, replace the block with `registerOverlayFades(state)`.
-- [ ] `npm run typecheck` → clean. `npm test -- registerOverlayFades` → tests
+- [x] Implement by moving the block.
+- [x] In `wireSlots.ts`, replace the block with `registerOverlayFades(state)`.
+- [x] `npm run typecheck` → clean. `npm test -- registerOverlayFades` → tests
   pass; full `npm test` → green.
-- [ ] **Whole-file comment-cleanup pass** on both files.
-- [ ] Commit.
+- [x] **Whole-file comment-cleanup pass** on both files.
+- [x] Commit.
 
 ---
 
@@ -167,25 +167,25 @@ shims (`setPois(p)` = `setGroup('staticAnchors', p)` cleared of the other two;
 them and update callers. Audit callers before deciding (grep
 `setPois`/`clearPois` across `src/` + `tests/` via the Grep tool).
 
-- [ ] Add test `setGroup then a second setGroup for a different id both appear in produceMarkers output`
+- [x] Add test `setGroup then a second setGroup for a different id both appear in produceMarkers output`
   — set `staticAnchors` with one cluster POI, then `clusterBulk` with another;
   assert `produceMarkers` (or `getPoisForCategory`) returns both.
-- [ ] Add test `clearGroup removes only that group` — set two groups, clear one,
+- [x] Add test `clearGroup removes only that group` — set two groups, clear one,
   assert the other survives.
-- [ ] Add test `concatenation order is staticAnchors, famous, clusterBulk` —
+- [x] Add test `concatenation order is staticAnchors, famous, clusterBulk` —
   set all three with one POI each in the same category; assert
   `getPoisForCategory(cat)` returns them in that order (pins the pick-index
   alignment contract).
-- [ ] Implement: replace the single `pois` field with the group map; rewrite the
+- [x] Implement: replace the single `pois` field with the group map; rewrite the
   four readers to iterate concatenated groups (extract a private
   `allPois(): readonly PointOfInterest[]` helper so the four readers share one
   concatenation site).
-- [ ] Update `PoiSubsystem.d.ts` + create `PoiGroupId.d.ts`.
-- [ ] `npm run typecheck` → clean. `npm test -- poiSubsystem` → new + existing
+- [x] Update `PoiSubsystem.d.ts` + create `PoiGroupId.d.ts`.
+- [x] `npm run typecheck` → clean. `npm test -- poiSubsystem` → new + existing
   pass; full `npm test` → green.
-- [ ] **Whole-file comment-cleanup pass** on `poiSubsystem.ts` (timeless +
+- [x] **Whole-file comment-cleanup pass** on `poiSubsystem.ts` (timeless +
   terse; the module header's "why one subsystem for four kinds" stays).
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -220,29 +220,29 @@ Each subscriber resolves its slot from `state.assetSlots` rather than closing
 over locals (the slots are installed before this runs — Part 3 guarantees
 order; for Part 1 keep the current call position so they already exist).
 
-- [ ] Add test `publishes static anchors synchronously` — after the call,
+- [x] Add test `publishes static anchors synchronously` — after the call,
   assert `getPoisForCategory('cluster')` (or the anchor categories) is non-empty
   with no async slot ready.
-- [ ] Add test `famous group appears only when both Famous catalog and famousMeta are ready`
+- [x] Add test `famous group appears only when both Famous catalog and famousMeta are ready`
   — drive the meta slot ready alone → no famous POIs; then drive the Famous
   catalog ready → famous POIs appear. (The 2-asset join; spec Testing bullet.)
-- [ ] Add test `out-of-order arrival: clusterBulk before famous does not clobber famous`
+- [x] Add test `out-of-order arrival: clusterBulk before famous does not clobber famous`
   — fire clusterBulk ready, then the famous join; assert both groups present.
   (The bug the merge worked around; spec Testing bullet.)
-- [ ] Add test `emits onStructureCountsChange with per-category counts after a group change`
+- [x] Add test `emits onStructureCountsChange with per-category counts after a group change`
   — spy on `cb.sources.onStructureCountsChange`; assert it fires with the
   cluster/supercluster/void counts.
-- [ ] Implement; DELETE `rebuildAllPois` and the inline subscriptions from
+- [x] Implement; DELETE `rebuildAllPois` and the inline subscriptions from
   `wireSlots.ts`. Replace with `wirePoiProjection(state)`.
-- [ ] `buildPoisFromFamousMeta` / `buildPoisFromClusterCatalog` imports move to
+- [x] `buildPoisFromFamousMeta` / `buildPoisFromClusterCatalog` imports move to
   the new module; remove them from `wireSlots.ts` imports.
-- [ ] `npm run typecheck` → clean. `npm test -- wirePoiProjection` → 4 tests
+- [x] `npm run typecheck` → clean. `npm test -- wirePoiProjection` → 4 tests
   pass; full `npm test` → green.
-- [ ] **Whole-file comment-cleanup pass** on `wirePoiProjection.ts` and
+- [x] **Whole-file comment-cleanup pass** on `wirePoiProjection.ts` and
   `wireSlots.ts` (the merge-rationale comment block at `wireSlots.ts:161-182`
   is now obsolete — its replacement in the new module explains keyed groups,
   not the merge).
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -250,17 +250,17 @@ order; for Part 1 keep the current call position so they already exist).
 
 **Files:** none (verification only) + a possible `wireSlots.test.ts` update.
 
-- [ ] Confirm `wireSlots.ts` no longer contains the impostor block, the fade
+- [x] Confirm `wireSlots.ts` no longer contains the impostor block, the fade
   block, `rebuildAllPois`, or the inline POI subscriptions — only the calls
   `wireImpostorSubsystems`, `registerOverlayFades`, `wirePoiProjection` plus
   the still-inline slot mint + load loop (Parts 2–3 remove the rest).
-- [ ] If `tests/services/engine/phases/wireSlots.test.ts` asserted on the inlined
+- [x] If `tests/services/engine/phases/wireSlots.test.ts` asserted on the inlined
   structure (e.g. spied on `setPois`), update it to the new structure
   (`setGroup` calls). Behavior assertions (POIs published, fades registered,
   subsystems assigned) must still hold — that's the parity gate.
-- [ ] `npm run typecheck` + full `npm test` → green at baseline + (3 + N₂ + N₄)
+- [x] `npm run typecheck` + full `npm test` → green at baseline + (3 + N₂ + N₄)
   new tests.
-- [ ] Commit any test updates.
+- [x] Commit any test updates.
 
 **Part 1 done when:** four blocks extracted, POI merge dissolved into keyed
 groups, all extracted-module unit tests green, `wireSlots.test.ts` parity holds.

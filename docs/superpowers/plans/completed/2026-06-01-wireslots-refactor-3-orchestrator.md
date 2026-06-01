@@ -90,25 +90,25 @@ The boot load loop (`wireSlots.ts:496-525`), the inline POI block, fade block,
 impostor block, and synthetic gate are all DELETED — they live in the extracted
 modules + the registry now.
 
-- [ ] Add `buildSlotsFromRegistry` test `builds one slot per row without touching state`
+- [x] Add `buildSlotsFromRegistry` test `builds one slot per row without touching state`
   — frozen `state.assetSlots`; assert returned map size == rows length and no
   mutation.
-- [ ] Add `installSlots` test `installs string-keyed and source-keyed slots into their homes`
+- [x] Add `installSlots` test `installs string-keyed and source-keyed slots into their homes`
   — assert `state.assetSlots.filaments` set and
   `state.assetSlots.points.get(Source.SDSS)` set.
-- [ ] Add `installLoadProgress` test `attaches every installed slot to the emitter and populates allSlots`
+- [x] Add `installLoadProgress` test `attaches every installed slot to the emitter and populates allSlots`
   — assert `deps.allSlots.size` equals the installed count and
   `state.subsystems.loadProgress` is non-null.
-- [ ] Rewrite `wireSlots.ts` to the thinned shape. Delete the boot loop, inline
+- [x] Rewrite `wireSlots.ts` to the thinned shape. Delete the boot loop, inline
   POI block, fade block, impostor block, synthetic gate, and the
   `GALAXY_CATALOG_SOURCE_REGISTRY` / `loadCompanionAssets` imports if now unused.
-- [ ] `npm run typecheck` → clean. Full `npm test` → green (this is where the
+- [x] `npm run typecheck` → clean. Full `npm test` → green (this is where the
   Part 2 Task 12 install-dependent bootstrap tests come back to green).
-- [ ] **Whole-file comment pass** on all four touched/new files. The
+- [x] **Whole-file comment pass** on all four touched/new files. The
   `wireSlots.ts` module header (`wireSlots.ts:1-43`) must be rewritten to
   describe the orchestrator (build → install → wire → reevaluate), dropping the
   obsolete "kicks off the parallel survey loads" / "boot loop" prose.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 

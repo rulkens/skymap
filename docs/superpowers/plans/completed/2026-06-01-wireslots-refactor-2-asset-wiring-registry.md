@@ -53,13 +53,13 @@ fetched (`Cluster`/`Supercluster`/`Void` come from the cluster `.ccat` seed,
 not a per-source fetch) and the three string keys are not `Source`s. Document
 this in the module header.
 
-- [ ] Add a compile-only test (`expectTypeOf` or `satisfies`) asserting a
+- [x] Add a compile-only test (`expectTypeOf` or `satisfies`) asserting a
   literal of each variant (`Source.SDSS`, `'clusterCatalog'`, `'famousMeta'`,
   `'pgcAlias'`) is assignable to `AssetKey`.
-- [ ] Write the type + didactic header.
-- [ ] `npm run typecheck` → clean.
-- [ ] **Whole-file comment pass.**
-- [ ] Commit.
+- [x] Write the type + didactic header.
+- [x] `npm run typecheck` → clean.
+- [x] **Whole-file comment pass.**
+- [x] Commit.
 
 ---
 
@@ -96,14 +96,14 @@ settings types first; only create `EngineSettingsView.d.ts` if none fits.
 `LoadStateKind` is the existing slot-state discriminator (`'idle' | 'loading' |
 'ready' | 'error'` — confirm against `AssetSlot.d.ts` / `LoadState.d.ts`).
 
-- [ ] Add a compile-only test asserting a literal `DemandCtx` with all four
+- [x] Add a compile-only test asserting a literal `DemandCtx` with all four
   fields satisfies the type, and that `request('paletteOpened')` typechecks.
-- [ ] Write both types + headers (the `DemandCtx` header explains *why* a
+- [x] Write both types + headers (the `DemandCtx` header explains *why* a
   predicate reads slot state — companions + fallback are predicates over
   siblings, per ADR 0005 §3).
-- [ ] `npm run typecheck` → clean.
-- [ ] **Whole-file comment pass** on both new files.
-- [ ] Commit.
+- [x] `npm run typecheck` → clean.
+- [x] **Whole-file comment pass** on both new files.
+- [x] Commit.
 
 ---
 
@@ -141,14 +141,14 @@ have Task 12's factories accept that. Flag if this conflicts with a factory that
 needs extra params (e.g. the impostor deps) — those are NOT registry assets, so
 it should not.
 
-- [ ] Add a compile-only test: a literal row for one survey (`key: Source.SDSS`,
+- [x] Add a compile-only test: a literal row for one survey (`key: Source.SDSS`,
   a `factory`, `req: (tier) => ({ source: Source.SDSS, tier })`, `demand: (ctx)
   => ctx.isVisible(Source.SDSS)`) satisfies `AssetWiringRow<GalaxyCatalog,
   GalaxyCatalogReq>`.
-- [ ] Write the type + header.
-- [ ] `npm run typecheck` → clean.
-- [ ] **Whole-file comment pass.**
-- [ ] Commit.
+- [x] Write the type + header.
+- [x] `npm run typecheck` → clean.
+- [x] **Whole-file comment pass.**
+- [x] Commit.
 
 ---
 
@@ -189,19 +189,19 @@ small `slotFor(state, key): AssetSlot | undefined` helper that maps a numeric
 `state.assetSlots[key]`. Put it in `reevaluateDemand.ts` or `installSlots.ts`
 (Part 3) — wherever the install map is canonical; keep it single-sourced.
 
-- [ ] Add test `loads a row whose demand returns true` — stub `ASSET_WIRING`
+- [x] Add test `loads a row whose demand returns true` — stub `ASSET_WIRING`
   with one row; spy `slot.load`; assert called once with `row.req(tier)`.
-- [ ] Add test `does not load a row whose demand returns false`.
-- [ ] Add test `a throwing demand predicate is caught and does not stop later rows`
+- [x] Add test `does not load a row whose demand returns false`.
+- [x] Add test `a throwing demand predicate is caught and does not stop later rows`
   — two rows, first throws, second's demand true; assert the second still loads.
-- [ ] Add test `re-evaluation is safe to call twice` (idempotent `slot.load`
+- [x] Add test `re-evaluation is safe to call twice` (idempotent `slot.load`
   stub records call count; assert no error, and the no-op contract holds).
-- [ ] Add `buildDemandCtx` tests: `isVisible reflects drawMask`,
+- [x] Add `buildDemandCtx` tests: `isVisible reflects drawMask`,
   `slotState returns idle for an absent slot`, `request reflects the request flag set`.
-- [ ] Implement both. `npm run typecheck` → clean. `npm test -- reevaluateDemand demandCtx`
+- [x] Implement both. `npm run typecheck` → clean. `npm test -- reevaluateDemand demandCtx`
   → pass; full `npm test` → green.
-- [ ] **Whole-file comment pass** on all four new files.
-- [ ] Commit.
+- [x] **Whole-file comment pass** on all four new files.
+- [x] Commit.
 
 ---
 
@@ -251,30 +251,30 @@ Notes the implementer must honor:
   `false` when `!import.meta.env.DEV`; prefer omission so the slot is never even
   built in prod (matches today's tree-shaking, `wireSlots.ts:238-242`).
 
-- [ ] Add test `every AssetKey except non-fetched POI sources has exactly one row`
+- [x] Add test `every AssetKey except non-fetched POI sources has exactly one row`
   — assert the set of `row.key` equals the expected `AssetKey` set
   (`SURVEY_SOURCES` minus none, plus the three string keys; minus
   `Cluster`/`Supercluster`/`Void` which are not fetched).
-- [ ] Add test `survey rows demand visibility` — for SDSS, `demand` with a ctx
+- [x] Add test `survey rows demand visibility` — for SDSS, `demand` with a ctx
   where `isVisible(SDSS)` is true → true; false → false.
-- [ ] Add test `famousMeta demands when Famous slot is not idle` — `slotState`
+- [x] Add test `famousMeta demands when Famous slot is not idle` — `slotState`
   stub returns `'loading'` → true; `'idle'` → false.
-- [ ] Add test `filaments demand follows settings.filaments.enabled` —
+- [x] Add test `filaments demand follows settings.filaments.enabled` —
   **this is the bug-fix pin**: disabled → `demand` false (today it loaded
   unconditionally).
-- [ ] Add test `clusterCatalog demand follows settings.structures.enabled` —
+- [x] Add test `clusterCatalog demand follows settings.structures.enabled` —
   **bug-fix pin**: disabled → false.
-- [ ] Add test `cf4Density demand follows its field-enabled flag` (default-off →
+- [x] Add test `cf4Density demand follows its field-enabled flag` (default-off →
   false at boot).
-- [ ] Add test `pgcAlias demands only when paletteOpened request is set`.
-- [ ] Implement `ASSET_WIRING`; each row's `factory` references the existing
+- [x] Add test `pgcAlias demands only when paletteOpened request is set`.
+- [x] Implement `ASSET_WIRING`; each row's `factory` references the existing
   factory (e.g. `createFilamentSlot`), `req`, and `demand` from the table.
-- [ ] `npm run typecheck` → clean. `npm test -- assetWiring` → pass; full
+- [x] `npm run typecheck` → clean. `npm test -- assetWiring` → pass; full
   `npm test` → green.
-- [ ] **Whole-file comment pass** — the module header documents the table's
+- [x] **Whole-file comment pass** — the module header documents the table's
   rationale (every old policy was secretly "is it required?", ADR 0005 §3) and
   the two bug fixes.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -293,23 +293,23 @@ Drive `reevaluateDemand` against a stub `state` whose `assetSlots` are
 `slot.load` spies; assert the set of keys whose `load` fired equals
 `expectedLoadedKeys`.
 
-- [ ] Add case `boot defaults` — visible surveys (SDSS/2MRS/Glade per
+- [x] Add case `boot defaults` — visible surveys (SDSS/2MRS/Glade per
   `SOURCE_REGISTRY.visible`, NOT Milliquas), Famous, famousMeta, mcpm
   (default-on); NOT filaments (default-off), NOT clusterCatalog (structures
   default — confirm the default), NOT cf4Density (default-off), NOT pgcAlias,
   NOT Synthetic.
-- [ ] Add case `filaments enabled` — adds `filaments` to the loaded set; nothing
+- [x] Add case `filaments enabled` — adds `filaments` to the loaded set; nothing
   else changes. (Pins the bug fix: with filaments disabled it must be absent.)
-- [ ] Add case `structures disabled` — `clusterCatalog` absent. (Bug fix pin.)
-- [ ] Add case `palette opened` — adds `pgcAlias`.
-- [ ] Add case `all surveys hidden` — surveys absent; `Synthetic` present (the
+- [x] Add case `structures disabled` — `clusterCatalog` absent. (Bug fix pin.)
+- [x] Add case `palette opened` — adds `pgcAlias`.
+- [x] Add case `all surveys hidden` — surveys absent; `Synthetic` present (the
   fallback predicate fires once all real surveys are settled-without-success —
   drive `slotState` to reflect that).
-- [ ] Add case `cf4Density field enabled` — adds `cf4Density`.
-- [ ] `npm run typecheck` → clean. `npm test -- demandTable` → all cases pass;
+- [x] Add case `cf4Density field enabled` — adds `cf4Density`.
+- [x] `npm run typecheck` → clean. `npm test -- demandTable` → all cases pass;
   full `npm test` → green.
-- [ ] **Whole-file comment pass.**
-- [ ] Commit.
+- [x] **Whole-file comment pass.**
+- [x] Commit.
 
 ---
 
@@ -341,25 +341,25 @@ famousMeta → `state.sources.famousMeta`, clusterCatalog →
 construction-time installs (spec §"Construction purity": only the
 `state.assetSlots.X = slot` line and any inline `.load()` go).
 
-- [ ] For each factory, add/adjust a test `does not write state.assetSlots at construction`
+- [x] For each factory, add/adjust a test `does not write state.assetSlots at construction`
   — call the factory with a stub `state` whose `assetSlots` is a spy/frozen
   object; assert the factory returned a slot and `state.assetSlots` was not
   mutated.
-- [ ] For each factory, confirm (test) `does not call slot.load at construction`
+- [x] For each factory, confirm (test) `does not call slot.load at construction`
   — spy on the returned slot's `load`; assert zero calls.
-- [ ] Delete the self-install line from each factory. (Read each file first to
+- [x] Delete the self-install line from each factory. (Read each file first to
   locate it — the SlotFactory contract says step 3 is the install; that line is
   the deletion target.)
-- [ ] Update `SlotFactory.d.ts` docstring to drop step 3 (install) and state the
+- [x] Update `SlotFactory.d.ts` docstring to drop step 3 (install) and state the
   orchestrator owns install.
-- [ ] `npm run typecheck` → clean. Some `wireSlots`/bootstrap tests may now fail
+- [x] `npm run typecheck` → clean. Some `wireSlots`/bootstrap tests may now fail
   because nothing installs the slots yet — that is EXPECTED and fixed in Part 3
   Task 15. If full `npm test` goes red ONLY on install-dependent bootstrap
   tests, note it and proceed; if any factory's OWN unit test goes red, stop and
   fix. (Prefer: land Task 12 and Part 3 Task 15 back-to-back so the tree is
   never broken at a commit boundary — see the note below.)
-- [ ] **Whole-file comment pass** on every touched factory + `SlotFactory.d.ts`.
-- [ ] Commit.
+- [x] **Whole-file comment pass** on every touched factory + `SlotFactory.d.ts`.
+- [x] Commit.
 
 > **Sequencing note:** Task 12 removes installs; Part 3 Task 15 adds the single
 > install. To keep every commit green, an implementer MAY do Task 12 + Task 15
@@ -405,25 +405,25 @@ effect.
 The hidden-at-boot handling (`wireSlots.ts:450-457`: a hidden survey counts as
 settled so the gate doesn't wait forever) MUST be preserved.
 
-- [ ] Add test `allSurveysSettledWithoutSuccess true only when every survey settled and none succeeded`
+- [x] Add test `allSurveysSettledWithoutSuccess true only when every survey settled and none succeeded`
   — drive `ctx.slotState` over the survey set: all `error` → true; one `ready`
   → false; one `loading` → false.
-- [ ] Add test `hidden-at-boot survey counts as settled` — survey hidden in
+- [x] Add test `hidden-at-boot survey counts as settled` — survey hidden in
   drawMask, others error → gate trips (Synthetic demanded).
-- [ ] Add test `fires reevaluateDemand when all real surveys settle without success`
+- [x] Add test `fires reevaluateDemand when all real surveys settle without success`
   — spy on the re-eval (inject it or spy on `state.assetSlots[Synthetic].load`);
   assert Synthetic gets loaded once.
-- [ ] Add test `does not fire when any real survey succeeded` — one survey ready
+- [x] Add test `does not fire when any real survey succeeded` — one survey ready
   with count>0; assert Synthetic never loaded.
-- [ ] Implement; DELETE the gate from `wireSlots.ts` (the deletion completes in
+- [x] Implement; DELETE the gate from `wireSlots.ts` (the deletion completes in
   Part 3 Task 15 when the orchestrator calls `createSyntheticFallback`).
-- [ ] Wire the Synthetic row's `demand` (Task 10) to
+- [x] Wire the Synthetic row's `demand` (Task 10) to
   `allSurveysSettledWithoutSuccess`.
-- [ ] `npm run typecheck` → clean. `npm test -- createSyntheticFallback` → pass;
+- [x] `npm run typecheck` → clean. `npm test -- createSyntheticFallback` → pass;
   full `npm test` → green (or transiently red only on install-dependent
   bootstrap tests per Task 12 note).
-- [ ] **Whole-file comment pass** on the new file + `assetWiring.ts`.
-- [ ] Commit.
+- [x] **Whole-file comment pass** on the new file + `assetWiring.ts`.
+- [x] Commit.
 
 ---
 
@@ -431,15 +431,15 @@ settled so the gate doesn't wait forever) MUST be preserved.
 
 **Files:** none (verification) + possible test fixups.
 
-- [ ] Confirm `ASSET_WIRING` covers every fetchable asset and the demand table
+- [x] Confirm `ASSET_WIRING` covers every fetchable asset and the demand table
   matches Task 10's table exactly.
-- [ ] Confirm `reevaluateDemand` + `buildDemandCtx` + `createSyntheticFallback`
+- [x] Confirm `reevaluateDemand` + `buildDemandCtx` + `createSyntheticFallback`
   + the demand-table test are all green in isolation
   (`npm test -- reevaluateDemand demandCtx assetWiring demandTable createSyntheticFallback`).
-- [ ] Confirm no factory writes `state.assetSlots` (grep the factories for
+- [x] Confirm no factory writes `state.assetSlots` (grep the factories for
   `state.assetSlots` assignment via Grep tool — should be zero LHS assignments).
-- [ ] `npm run typecheck` → clean.
-- [ ] Commit any fixups.
+- [x] `npm run typecheck` → clean.
+- [x] Commit any fixups.
 
 **Part 2 done when:** the registry + demand evaluator + synthetic fallback exist
 and are unit-green, factories are pure constructors. Bootstrap may be transiently
