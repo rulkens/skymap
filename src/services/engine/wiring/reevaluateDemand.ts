@@ -18,14 +18,19 @@
  * from it; leaning on the slot keeps a single source of truth for "should this
  * fetch actually start."
  *
- * ### Why each row is guarded (ADR 0005 §"Error handling")
+ * ### Why each row is guarded
  *
- * A demand predicate is user-authored policy that reads settings, slot states,
- * and request flags — a buggy one can throw. Without a per-row guard, one bad
- * predicate would abort the loop and silently starve every row after it of its
- * load trigger (a tier swap that loads SDSS but not GLADE, say). Catching +
- * warning per row contains the blast radius to the offending asset; the rest
- * of the table still evaluates.
+ * A demand predicate is policy that reads settings, slot states, and request
+ * flags — a buggy one can throw. Without a per-row guard, one bad predicate
+ * would abort the loop and silently starve every row after it of its load
+ * trigger (a tier swap that loads SDSS but not GLADE, say). Catching + warning
+ * per row contains the blast radius to the offending asset; the rest of the
+ * table still evaluates.
+ *
+ * The guard also covers a sync throw from `req(tier)` or `slot.load()`. Those
+ * would be slot-construction bugs (real fetch errors flow to the slot's `error`
+ * state, not a sync throw), so containing rather than aborting is deliberate —
+ * such a bug surfaces as a per-row warn rather than a dead load loop.
  *
  * `evaluateRows` is factored out of `reevaluateDemand` so tests can drive the
  * loop with a stub row array — the public entry point reads the real
