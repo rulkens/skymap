@@ -32,8 +32,8 @@
  *   - `state.sources.clusterBulk` — via cluster-catalog subscriber (on `ready`).
  *   - `state.sources.catalogs` — populated by the per-source slot commit
  *     subscribers (wired in `initGpu`).
- *   - `state.subsystems.loadProgress`, `state.subsystems.galaxyAtlas`,
- *     `state.subsystems.texturedDisks`, `state.subsystems.proceduralDisks`.
+ *   - `state.subsystems.loadProgress`, and the five impostor subsystem
+ *     handles (via `wireImpostorSubsystems`).
  *   - `cb.onStatusChange({ kind: 'loading' })` synchronously; `kind:
  *     'ready'` fires from the per-arrival subscriber, not from this body.
  *
@@ -60,12 +60,7 @@ import { createFamousMetaSlot } from '../../loading/slots/famousMetaSlot';
 import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
 import { createSyntheticVolumeSlots } from '../../loading/slots/syntheticVolumeSlots';
 import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';
-import { createGalaxyAtlasSubsystem } from '../subsystems/galaxyAtlasSubsystem';
-import { createProceduralDiskSubsystem } from '../subsystems/proceduralDiskSubsystem';
-import { createTexturedDiskSubsystem } from '../subsystems/texturedDiskSubsystem';
-import { createHiResFamousSubsystem } from '../subsystems/hiResFamousSubsystem';
-import { createHiResFamousTexture } from '../../gpu/resources/hiResFamousTexture';
-import { HI_RES_LAYER_COUNT, HI_RES_LAYER_SIDE_BY_TIER } from '../../../data/sources';
+import { wireImpostorSubsystems } from '../wiring/wireImpostorSubsystems';
 // Cosmography POI anchors wired unconditionally into the POI subsystem
 // below — the user-facing toggle is the SettingsPanel per-category
 // checkbox, not a URL gate.
@@ -83,21 +78,6 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
  */
 export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const { cb, allSlots } = deps;
-  // `phaseLocals` is set by `initGpu`, which always runs before us per
-  // the orchestrator's order.  The non-null assertion is therefore
-  // safe; if `initGpu` ever stops setting it the orchestrator would
-  // need updating in lockstep.
-  const phaseLocals = deps.phaseLocals!;
-  const { device } = phaseLocals;
-  // Renderers are owned by `state.gpu.*` (written by `initGpu`).  The
-  // explicit null-checks below turn the phase-ordering assumption into
-  // a typed runtime error if `initGpu` is ever skipped/reordered.
-  const { texturedDiskRenderer, proceduralDiskRenderer } = state.gpu;
-  if (texturedDiskRenderer === null || proceduralDiskRenderer === null) {
-    throw new Error(
-      'wireSlots: texturedDisk/proceduralDisk renderers must be initialised by initGpu before this phase runs',
-    );
-  }
 
   // ── Filament asset slot ──────────────────────────────────────────
   // Factory owns the mint + subscribe + state write.  See
@@ -106,26 +86,18 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
 
   // ── Cosmography anchor POIs (always wired) ───────────────────────
   //
-  // The SettingsPanel's per-category checkboxes (Overlays → Labels)
-  // are the user-facing knob; this wire just makes the POIs available.
+  // The SettingsPanel per-category checkboxes are the user-facing knob;
+  // this wire just makes the POIs available.  The id-slug + worldPos
+  // build lives in `data/buildStaticAnchorPois.ts` so the React-side
+  // `usePoiUrlSync` deep-link drain constructs the same records without
+  // drifting on slug-rule changes.  physicalRadiusMpc comes from the seed
+  // JSON (R_200 / virial radii for clusters, characteristic extent for
+  // superclusters and voids).
   //
-  // The seed JSON holds all three categories (cluster / supercluster /
-  // void); the audit script in `tools/` filters by category directly
-  // from the parsed seed.
-  //
-  // physicalRadiusMpc per anchor comes from `data/cluster_anchors.seed.json` —
-  // literature-grounded values (R_200 / virial radii for clusters,
-  // characteristic structural extent for superclusters and voids).
-  // See the per-entry description fields in the seed JSON.
-  //
-  // The id-slug + worldPos build is factored into
-  // `data/buildStaticAnchorPois.ts` so the React-side `usePoiUrlSync`
-  // deep-link drain can construct the same `PointOfInterest` records
-  // by id without drifting on slug-rule changes.
+  // Initial publish carries only the static anchors — the famous-galaxy
+  // and bulk-cluster groups merge in via `rebuildAllPois` when their
+  // async assets land.
   const staticAnchorPois: PointOfInterest[] = buildStaticAnchorPois();
-  // Initial publish is just the static anchors — the famous-galaxy and
-  // bulk-cluster groups merge in later via `rebuildAllPois` once their
-  // async assets land (defined below, after the slots are minted).
 
   // ── CF-4 DM density volume slot ──────────────────────────────────
   // Slot minted unconditionally; the boot-time `.load()` below is
@@ -299,84 +271,18 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // PGC-aliases stay lazy; see `loadPgcAliases()` on the handle for
   // the on-demand trigger.
 
-  // Construct the impostor subsystems in dependency order. The
-  // textured-disk planner depends on the atlas (slot allocation +
-  // eviction subscription) AND on the LOD-3 hi-res planner (per-frame
-  // crossfade alpha lookup), so both must exist first. The
-  // procedural-disk planner is independent of the other two.
-  const galaxyAtlas = createGalaxyAtlasSubsystem({
-    device,
-    requestRender: () => state.subsystems.scheduler.requestRender(),
-  });
+  // Build and wire the five impostor subsystems (galaxy atlas, textured
+  // disks, procedural disks, hi-res Famous texture + planner).  The
+  // renderer null-check and all construction details live in the
+  // extracted module so each bootstrap concern has its own home.
+  wireImpostorSubsystems(state, deps);
 
-  // LOD-3 hi-res Famous-galaxy resources.  The texture's per-layer
-  // edge length depends on the current tier — mobile / "small" gets
-  // 512 px to stay under the GPU memory budget, desktop tiers get
-  // 1024 px.  Sized once here at boot; tier change destroys this pair
-  // and re-creates it at the new layerSide.  `initTexture()` is
-  // mandatory before `getTextureView()` — the texture handle throws
-  // otherwise.
-  const layerSide = HI_RES_LAYER_SIDE_BY_TIER[state.sources.tier];
-  const hiResFamousTexture = createHiResFamousTexture({
-    device,
-    layerSide,
-    layerCount: HI_RES_LAYER_COUNT,
-  });
-  hiResFamousTexture.initTexture();
-  const hiResFamous = createHiResFamousSubsystem({
-    texture: hiResFamousTexture,
-    requestRender: () => state.subsystems.scheduler.requestRender(),
-  });
-
-  const texturedDisks = createTexturedDiskSubsystem({
-    device,
-    atlas: galaxyAtlas,
-    requestRender: () => state.subsystems.scheduler.requestRender(),
-    // Passing the planner here is what enables the LOD-3 path: for
-    // Famous-source galaxies past ~200 px apparent diameter, the
-    // textured-disk subsystem folds the planner's per-galaxy
-    // `hiResLayerIdx` + `hiResCrossfadeAlpha` into the disk instance
-    // buffer.  Omitting it (tests, future non-Famous configurations)
-    // keeps the LOD-3 sentinel at -1 / 0 so the fragment shader takes
-    // the atlas-tile-only path with no extra branching.
-    hiResFamous,
-  });
-  // Passing the atlas here is what enables the famous-WebP fade-out:
-  // for Famous-source galaxies whose curated WebP has loaded into the
-  // atlas, the procedural pattern crossfades out across the textured-
-  // disk fade-IN band so it doesn't bleed through the photo. Non-famous
-  // galaxies and tests that omit the atlas keep procFadeOut at 1.0.
-  const proceduralDisks = createProceduralDiskSubsystem({ atlas: galaxyAtlas });
-
-  // Bind the atlas's texture view into the LOD-2 disk renderer.  The
-  // atlas owns the view; proceduralDiskRenderer doesn't sample it.
-  texturedDiskRenderer.bindAtlas(galaxyAtlas.getTextureView());
-  // Bind the hi-res texture_2d_array view too — the inner
-  // instancedQuadRenderer's `composeAtlasBindGroup()` gate waits for
-  // BOTH `bindAtlas` and `bindHiResArray` before becoming draw-ready.
-  // Until this fires the textured-disk pipeline has no bind group and
-  // skips every draw.
-  texturedDiskRenderer.bindHiResArray(hiResFamousTexture.getTextureView());
-
-  state.subsystems.galaxyAtlas = galaxyAtlas;
-  state.subsystems.texturedDisks = texturedDisks;
-  state.subsystems.proceduralDisks = proceduralDisks;
-  state.subsystems.hiResFamous = hiResFamous;
-  state.subsystems.hiResFamousTexture = hiResFamousTexture;
-
-  // Register the always-on overlay fade handles at opacity 1.0. The
-  // registry surfaces these to a future tour subsystem (which can
-  // fadeTo them programmatically) without any per-renderer plumbing.
-  // No loading-time fade-in is needed — the three overlays are
-  // procedural or bundled and appear immediately on first frame.
-  // `register(handle, 1)` sets the steady-state opacity directly; no
-  // setImmediate(1) follow-up is required.
-  // Milky Way registers at its current settings value (not blanket 1.0)
-  // because the toggle path multiplies this opacity into the renderer's
-  // distance-based fadeAlpha. If we always registered at 1 regardless
-  // of settings, a default-off session would still draw the Milky Way
-  // on the first frame after wireSlots completes — the settings.gate
-  // check used to be the only thing keeping it off. Now both must agree.
+  // Register the three always-on overlay fade handles. The registry makes
+  // them addressable by a future tour subsystem without per-renderer
+  // plumbing. Milky Way registers at its current settings value (not a
+  // blanket 1.0) because the toggle path multiplies this opacity into
+  // the renderer's distance-based fadeAlpha — always registering at 1
+  // would make a default-off session draw the Milky Way on the first frame.
   state.subsystems.fades.register(
     { kind: 'overlay', id: 'milkyWay' },
     state.settings.milkyWay.enabled ? 1 : 0,
@@ -398,13 +304,8 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // Register the four label-layer fade handles. youAreHere / poi /
   // galaxyNames start at 0 — their producers fire fadeTo(1) on first
   // non-empty emit (see youAreHereSubsystem + poiSubsystem). scaleBar
-  // is React-side so we register it at 1 — present in the registry
-  // for tour addressability but never auto-faded by the engine.
-  //
-  // v1 only registers the handles; the label renderer doesn't plumb
-  // their opacity into draw yet. Tour playback can already address
-  // these via state.subsystems.fades.fadeTo(...); per-layer-aware
-  // label draws are a follow-up plan.
+  // is React-side, registered at 1 for tour addressability but never
+  // auto-faded by the engine.
   state.subsystems.fades.register({ kind: 'labelLayer', layer: 'youAreHere' }, 0);
   state.subsystems.fades.register({ kind: 'labelLayer', layer: 'poi' }, 0);
   state.subsystems.fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 0);
