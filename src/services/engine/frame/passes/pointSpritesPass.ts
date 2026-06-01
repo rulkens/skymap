@@ -47,22 +47,10 @@
  */
 
 import type { Pass } from '../../../../@types/engine/frame/Pass';
-import type { FocusUniformsValue } from '../../../../@types/rendering/FocusUniformsValue';
 import {
   packSelection,
   SELECTION_NONE_SENTINEL,
 } from '../../../../data/selectionEncoding';
-
-// At-rest cluster-focus value: blend 0 makes the shader's per-vertex
-// focus multiplier collapse to 1.0 (no dim).  Used until the
-// clusterFocusSubsystem's live output is threaded through the frame
-// settings; mirrors the subsystem's own ZERO_FOCUS sentinel.
-const AT_REST_FOCUS: FocusUniformsValue = {
-  center: [0, 0, 0],
-  radiusMpc: 0,
-  blend: 0,
-  invert: 0,
-};
 
 export const pointSpritesPass: Pass = {
   name: 'point-sprites',
@@ -115,12 +103,11 @@ export const pointSpritesPass: Pass = {
       // donut artefact.
       pxFadeStart: settings.pxFadeStartPoints,
       pxFadeEnd: settings.pxFadeEndPoints,
-      // Cluster-focus state for the @group(3) FocusUniforms binding.
-      // At-rest value (blend 0) keeps the shader's per-vertex multiplier
-      // at 1.0 — no visible effect.  When the clusterFocusSubsystem is
-      // threaded through RenderFrameSettings it will produce the live
-      // value each frame; this literal is the no-op default until then.
-      focus: AT_REST_FOCUS,
+      // Cluster-focus state for the @group(3) FocusUniforms binding —
+      // produced by clusterFocusSubsystem in runFrame and threaded
+      // through RenderFrameSettings. At rest (blend 0) the shader's
+      // per-vertex multiplier is 1.0 (no visible effect).
+      focus: settings.focus,
       // Look up the FadeRegistry opacity for each source at this frame's
       // timestamp. The registry returns 1.0 for unregistered handles —
       // a safe fallback so a source that hasn't registered yet renders

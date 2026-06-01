@@ -306,6 +306,20 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // bookkeeping.  See that module's docstring for the in-order
   // pass description and the rationale for keeping pick + auto-LOD
   // out here in `frame()`.
+  // ── Cluster focus mode — selection-driven, synced once per frame ──
+  //
+  // Resolve the currently-selected POI (galaxy selections and "nothing
+  // selected" both resolve to null) and let the subsystem diff it against
+  // its focused id to drive the 400 ms member-isolation fade.  Done here,
+  // before the settings snapshot below, so `produceFocusUniforms` reads
+  // this frame's transition and everything shares one `nowMs`.
+  const focusSel = state.subsystems.selection.selected();
+  const focusedPoi =
+    focusSel !== null && focusSel.kind === 'poi'
+      ? (state.subsystems.pois.findPoi(focusSel.id) ?? null)
+      : null;
+  state.subsystems.clusterFocus.update(focusedPoi, nowMs);
+
   renderFrame({
     ctx,
     state,
@@ -337,6 +351,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       // in `proceduralDiskSubsystem.ts` as a single source of truth.
       pxFadeStartPoints: PROCEDURAL_DISK_FADE_START_PX,
       pxFadeEndPoints: PROCEDURAL_DISK_FADE_END_PX,
+      // Live cluster-focus uniform for this frame (blend ramps 0↔1 over
+      // 400 ms; at rest blend=0 → shader no-op). Shares runFrame's nowMs.
+      focus: state.subsystems.clusterFocus.produceFocusUniforms(nowMs),
       exposure: state.settings.tonemap.exposure,
       toneMapCurve: state.settings.tonemap.curve,
       galaxyTexturesEnabled: state.settings.thumbnails.enabled,
@@ -580,6 +597,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     (ready && state.subsystems.texturedDisks.hasInFlightWork()) ||
     // Survey + filament fade-in / fade-out: the FadeRegistry owns every
     // handle's animation clock.
-    state.subsystems.fades.isAnyAnimating(nowMs);
+    state.subsystems.fades.isAnyAnimating(nowMs) ||
+    // Cluster focus-mode member-isolation fade (its own FadeController,
+    // not in the registry) — keep the loop alive across the 400 ms ramp.
+    state.subsystems.clusterFocus.isAwake(nowMs);
   if (stillAnimating) state.subsystems.scheduler.requestRender();
 }

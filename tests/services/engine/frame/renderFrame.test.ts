@@ -268,6 +268,7 @@ function makeInput(
     // `thumbnailSubsystem.ts` so the test fixture mirrors production.
     pxFadeStartPoints: 8,
     pxFadeEndPoints: 14,
+    focus: { center: [0, 0, 0], radiusMpc: 0, blend: 0, invert: 0 } as const,
     exposure: 1.0,
     toneMapCurve: ToneMapCurve.Reinhard,
     galaxyTexturesEnabled: true,
