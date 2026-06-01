@@ -201,23 +201,30 @@ post-refactor boot must still:
 - publish static-anchor POIs on the first frame,
 - register all overlay/volume/label fade handles,
 - assign all five impostor subsystems,
-- load the default-visible surveys + Famous + famousMeta + mcpm,
-- NOT load filaments / clusterCatalog / cf4Density at default settings (the bug
-  fixes — these are NEW parity assertions),
+- load the default-visible surveys + Famous + famousMeta + mcpm + clusterCatalog
+  (structure categories are VISIBLE by default — engine.ts:423-428 — so the
+  cluster catalog correctly loads at boot),
+- NOT load filaments / cf4Density at default settings (off by default — the
+  genuine off-by-default bug fixes),
+- NOT load clusterCatalog when every structure category is HIDDEN (the real
+  visibility-gating fix; the plan originally framed this as "no clusterCatalog
+  at default" which is WRONG — see Definition of Done correction),
 - fire `onStatusChange({ kind: 'loading' })` once.
 
-- [ ] Update `wireSlots.test.ts` to drive the thinned orchestrator and assert the
-  six parity points above. Replace any assertions that spied on the old inline
-  structure (boot loop, `rebuildAllPois`) with assertions on the new seams
-  (`reevaluateDemand` outcomes, `setGroup` calls, extracted-module effects).
-- [ ] Add explicit parity test `does not load filaments at default settings` and
-  `does not load clusterCatalog at default settings` (the two bug fixes, pinned
-  at the bootstrap level in addition to the demand-table level).
-- [ ] Add parity test `loads default-visible surveys + Famous + famousMeta + mcpm at boot`.
-- [ ] `npm run typecheck` → clean. Full `npm test` → green.
-- [ ] **Whole-file comment pass** on touched test files (test files get the same
-  timeless-terse treatment).
-- [ ] Commit.
+- [x] Update `wireSlots.test.ts` to drive the thinned orchestrator and assert the
+  parity points above. (Most already covered by the Task 15 rewrite; this task
+  filled the gaps.)
+- [x] Add explicit parity test `does not load filaments at default settings`
+  (already present) + bootstrap-level `does not load clusterCatalog when every
+  structure category is hidden` (the corrected bug-fix pin, complementing
+  `demandTable.test.ts:301`).
+- [x] Parity test `loads default-visible surveys + Famous + famousMeta + mcpm + clusterCatalog at boot` (already present from Task 15).
+- [x] Gap fills: all five impostor subsystems assigned; the 8 overlay/volume/label
+  fade handles registered; `onStatusChange({kind:'loading'})` fires exactly once.
+  (`bootstrap.test.ts` needs NO change — it mocks wireSlots wholesale.)
+- [x] `npm run typecheck` → clean. Full `npm test` → green (2070).
+- [x] **Whole-file comment pass** on `wireSlots.test.ts`.
+- [x] Commit. (`12721813`)
 
 ---
 
@@ -275,8 +282,13 @@ post-refactor boot must still:
 - [ ] `reevaluateDemand` is the sole `slot.load(...)` caller for registry assets;
   the only remaining explicit triggers are the three event setters + the
   synthetic gate, each flip-then-reevaluate.
-- [ ] Filaments + clusterCatalog do NOT load at default settings (bug fixes,
-  pinned at both demand-table and bootstrap levels).
+- [x] Filaments + cf4Density do NOT load at default settings (off by default —
+  bug fixes, pinned at both demand-table and bootstrap levels). clusterCatalog
+  DOES load at default (structures visible by default); its fix is that it no
+  longer loads when all structure categories are HIDDEN — pinned at
+  `demandTable.test.ts:301` + the bootstrap hidden-case test. (The original DoD
+  wording "clusterCatalog does NOT load at default" was factually wrong about
+  the default and has been corrected.)
 - [ ] `npm test` + `npm run typecheck` green; test count up by the new suites.
 - [ ] No `TODO`/`FIXME` introduced; every touched file had its whole-file
   comment-cleanup pass.
