@@ -117,7 +117,7 @@ export function wirePoiProjection(state: EngineState, cb: EngineCallbacks): void
   // `famousMetaSlot.ts`) writes `state.sources.famousMeta` before the
   // subscription fires; reading it here always reflects the latest value.
   state.assetSlots.famousMeta?.subscribe((s) => {
-    if (s.kind === 'ready') rebuildFamousGroup();
+    if (s.kind === 'ready' || s.kind === 'error') rebuildFamousGroup();
   });
 
   // Subscribe to the Famous catalog slot.  Resolved from `state.assetSlots`
@@ -128,7 +128,7 @@ export function wirePoiProjection(state: EngineState, cb: EngineCallbacks): void
   const famousCatalogSlot = state.assetSlots.points.get(Source.Famous);
   if (famousCatalogSlot !== undefined) {
     famousCatalogSlot.subscribe((s) => {
-      if (s.kind === 'ready') rebuildFamousGroup();
+      if (s.kind === 'ready' || s.kind === 'error') rebuildFamousGroup();
     });
   }
 
@@ -142,7 +142,7 @@ export function wirePoiProjection(state: EngineState, cb: EngineCallbacks): void
   state.assetSlots.clusterCatalog?.subscribe((s) => {
     if (s.kind === 'ready') {
       const bulk = state.sources.clusterBulk;
-      if (bulk !== null && bulk !== undefined) {
+      if (bulk !== null) {
         state.subsystems.pois.setGroup('clusterBulk', buildPoisFromClusterCatalog(bulk));
       } else {
         state.subsystems.pois.clearGroup('clusterBulk');

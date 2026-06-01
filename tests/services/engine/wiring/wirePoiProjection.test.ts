@@ -121,7 +121,9 @@ import { createPoiSubsystem } from '../../../../src/services/engine/subsystems/p
 /**
  * Minimal fake asset slot with a `fire` helper for driving state
  * transitions in tests.  Only the `subscribe` path is exercised by
- * wirePoiProjection; `load`, `cancel`, etc. are no-ops.
+ * wirePoiProjection; `load`, `cancel`, etc. are no-ops.  Backed by a Set so
+ * a double-subscribe is observable rather than silently dropping the first
+ * listener.
  */
 type FakeSlot<V> = {
   subscribe: (fn: (s: LoadState<V>) => void) => () => void;
@@ -129,16 +131,16 @@ type FakeSlot<V> = {
 };
 
 function makeSlot<V>(): FakeSlot<V> {
-  let listener: ((s: LoadState<V>) => void) | null = null;
+  const listeners = new Set<(s: LoadState<V>) => void>();
   return {
     subscribe(fn) {
-      listener = fn;
+      listeners.add(fn);
       return () => {
-        listener = null;
+        listeners.delete(fn);
       };
     },
     fire(s) {
-      listener?.(s);
+      for (const fn of listeners) fn(s);
     },
   };
 }
@@ -295,6 +297,39 @@ describe('wirePoiProjection', () => {
     const famousPois = state.subsystems.pois.getPoisForCategory('famousGalaxy');
     expect(famousPois.length).toBeGreaterThan(0);
     expect(famousPois.some((p) => p.id === 'famous-m31')).toBe(true);
+  });
+
+  it('clears the famous group and re-emits counts when famousMeta errors after the join', () => {
+    // Symmetric with the cluster slot's error branch: a famousMeta error after
+    // a completed join must clear the famous group and refresh the counts so
+    // the Structures panel never shows a stale famous count.
+    const { state, slots } = makeState();
+    const { cb, countsSpy } = makeCb();
+
+    wirePoiProjection(state, cb);
+
+    // Land both assets so the famous group is populated.
+    (state.sources as { famousMeta: unknown[] }).famousMeta = [
+      { id: 'm31', commonName: 'Andromeda Galaxy' },
+    ];
+    const fakeCatalog = {
+      count: 1,
+      positions: new Float32Array([0.78, 0.1, 0.2]),
+      diameterKpc: new Float32Array([67]),
+      magnitudes: new Float32Array([3.4]),
+    } as unknown as GalaxyCatalog;
+    state.sources.catalogs.set(Source.Famous, fakeCatalog);
+    slots.famousMetaSlot.fire(readyState({ meta: [] }));
+    slots.famousCatalogSlot.fire(readyState(fakeCatalog));
+    expect(state.subsystems.pois.getPoisForCategory('famousGalaxy').length).toBeGreaterThan(0);
+
+    // famousMeta errors: the sidecar empties, the join condition fails, the
+    // group clears, and counts re-emit.
+    countsSpy.mockClear();
+    (state.sources as { famousMeta: unknown[] }).famousMeta = [];
+    slots.famousMetaSlot.fire({ kind: 'error', req: {}, error: new Error('fetch failed'), finalAttempt: 1 });
+    expect(state.subsystems.pois.getPoisForCategory('famousGalaxy')).toHaveLength(0);
+    expect(countsSpy).toHaveBeenCalled();
   });
 
   it('out-of-order arrival: clusterBulk before famous does not clobber famous', () => {
