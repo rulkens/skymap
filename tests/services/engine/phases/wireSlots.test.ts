@@ -1,46 +1,51 @@
 /**
  * wireSlots — focused tests for the highest-leverage invariants of the
- * second bootstrap phase.
+ * second bootstrap phase, the demand-driven asset orchestrator.
  *
- * `bootstrap.test.ts` mocks this phase at module scope, so the per-slot
- * mint sites, the all-arrivals gate, the synthetic-fallback path, and
- * the loadProgress emitter wiring otherwise have no direct asserts —
- * yet those four lines of logic gate "loading screen ⇒ stars on
- * canvas". Three invariants targeted here:
+ * `bootstrap.test.ts` mocks this phase at module scope, so the orchestrator's
+ * observable effects otherwise have no direct asserts — yet they gate "loading
+ * screen ⇒ stars on canvas". The phase's internals (the synthetic-fallback
+ * gate, the POI projection, the demand loop) each have their own unit tests
+ * (`createSyntheticFallback.test.ts`, `wirePoiProjection.test.ts`,
+ * `reevaluateDemand.test.ts` / `demandTable.test.ts`); this file pins that
+ * wireSlots composes them into the right boot behaviour:
  *
- *   1. The all-arrivals gate's Promise<void> resolves once every
- *      per-source slot reports `ready`, AND wireSlots completes (rather
- *      than hanging). The lifecycle callbacks that take the engine out
- *      of `loading` depend on this.
+ *   1. wireSlots returns synchronously (no await on survey arrivals) and fires
+ *      `onStatusChange({ kind: 'loading' })` once.
  *
- *   2. The synthetic-fallback path mints + loads a synthetic-source
- *      slot when every real survey errored out — a DEV-only safety net
- *      invisible in production. A refactor that drops the fallback
- *      would silently ship "all-real-surveys-down ⇒ black screen".
+ *   2. The demand loop loads the default boot set — the visible surveys load
+ *      via their point rows; per-arrival `ready` echoes still fire (via the
+ *      synthetic-fallback gate's status subscriber), and the synthetic backstop
+ *      still loads when every real survey errors.
  *
- *   3. The loadProgress emitter is wired against EVERY minted slot.
- *      `deps.allSlots` is the single registry both the loading bar AND
- *      the dev panel read from, so a missed slot makes the dev panel
- *      quietly lie.
+ *   3. The loadProgress emitter is wired against EVERY installed slot.
+ *      `deps.allSlots` is the single registry both the loading bar AND the dev
+ *      panel read from, so a missed slot makes the dev panel quietly lie.
  *
- * Mocking strategy: real `AssetSlot` instances are kept (pure CPU
- * state machines, easy to drive); fetchers are mocked so loads don't
- * network; thumbnail-subsystem factory is mocked so no real GPU
- * device is needed; load-progress emitter factory is spied so we can
- * intercept the `allSlots` Map. Per-source point slots are injected
- * via a fake-slot helper — wireSlots reads them off
- * `state.assetSlots.points` (initGpu mints them in production), which
- * is the seam that makes the all-arrivals gate testable.
+ *   4. The composition wires are all present after boot: every impostor
+ *      subsystem is assigned onto `state.subsystems.*`, every overlay /
+ *      volume-master / label-layer fade handle is registered at its frame-1
+ *      opacity, and the structures-visibility predicate threads through to the
+ *      demand loop (clusterCatalog loads at the visible default, skips when all
+ *      structure categories are hidden).
+ *
+ * Mocking strategy: real `AssetSlot` instances are kept (pure CPU state
+ * machines, easy to drive); fetchers are mocked so loads don't network;
+ * thumbnail-subsystem factory is mocked so no real GPU device is needed;
+ * load-progress emitter factory is spied so we can intercept the `allSlots`
+ * Map. Per-source point slots are injected via a fake-slot helper — wireSlots
+ * reads them off `state.assetSlots.points` (initGpu mints them in production),
+ * which is the seam that makes the demand loop's loads observable.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/sources';
+import { seedVolumeFields } from '../../../../src/data/volumeFieldDefaults';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
-import type { PointOfInterest } from '../../../../src/@types/engine/subsystems/PointOfInterest';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 
 // ── Module mocks ──────────────────────────────────────────────────────
@@ -96,6 +101,19 @@ vi.mock('../../../../src/services/loading/fetchers/clusterCatalogFetcher', () =>
 
 vi.mock('../../../../src/services/loading/fetchers/pgcAliasFetcher', () => ({
   pgcAliasFetcher: vi.fn(async () => new Map()),
+}));
+
+// MCPM is default-on, so the demand loop fires its load at boot.  Mock the
+// fetcher so the slot resolves without networking.
+vi.mock('../../../../src/services/loading/fetchers/mcpmFetcher', () => ({
+  mcpmFetcher: vi.fn(async () => ({
+    dims: [4, 4, 4],
+    voxels: new Float32Array(64),
+    valueMin: 0,
+    valueMax: 1,
+    frame: 'supergalactic',
+    boundsKpc: { min: [0, 0, 0], max: [1, 1, 1] },
+  })),
 }));
 
 vi.mock('../../../../src/services/loading/fetchers/syntheticVolumeFetcher', () => ({
@@ -185,6 +203,11 @@ vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () 
 import { wireSlots } from '../../../../src/services/engine/phases/wireSlots';
 import { famousMetaFetcher } from '../../../../src/services/loading/fetchers/famousMetaFetcher';
 import { clusterCatalogFetcher } from '../../../../src/services/loading/fetchers/clusterCatalogFetcher';
+import { mcpmFetcher } from '../../../../src/services/loading/fetchers/mcpmFetcher';
+import { filamentFetcher } from '../../../../src/services/loading/fetchers/filamentFetcher';
+import { cf4DensityFetcher } from '../../../../src/services/loading/fetchers/cf4DensityFetcher';
+import { pgcAliasFetcher } from '../../../../src/services/loading/fetchers/pgcAliasFetcher';
+import { createPoiSubsystem } from '../../../../src/services/engine/subsystems/poiSubsystem';
 
 // ── Test helpers ─────────────────────────────────────────────────────
 
@@ -229,6 +252,24 @@ function makeFakeSlot(name: string): FakeSlot {
   return slot;
 }
 
+/**
+ * Build a boot-shaped points map: SDSS/2MRS/GLADE survey fakes left idle
+ * (still "loading" — they never fire), plus a Famous fake pre-fired to
+ * `loading` so the famous-meta demand predicate (`slotState(Famous) !== 'idle'`)
+ * reads true.  Idle survey fakes keep the synthetic-fallback gate waiting
+ * rather than arming + re-running demand — the live-boot shape.
+ */
+function bootPointSlots(): Map<SourceType, ReturnType<typeof makeFakeSlot>> {
+  const famous = makeFakeSlot('famous-points');
+  famous.fire({ kind: 'loading', req: {}, attempt: 1 } as never);
+  return new Map<SourceType, ReturnType<typeof makeFakeSlot>>([
+    [Source.SDSS, makeFakeSlot('sdss-points')],
+    [Source.TwoMRS, makeFakeSlot('2mrs-points')],
+    [Source.Glade, makeFakeSlot('glade-points')],
+    [Source.Famous, famous],
+  ]);
+}
+
 /** A `ready` payload shaped enough for the all-arrivals gate's `count > 0` check. */
 const readyValue = (count: number): LoadState<unknown> => ({
   kind: 'ready',
@@ -254,9 +295,12 @@ const errorValue = (msg: string): LoadState<unknown> => ({
 function makeState(
   overrides: Partial<{
     points: Map<SourceType, ReturnType<typeof makeFakeSlot>>;
+    markerCategoryVisibility: Record<string, boolean>;
+    labelCategoryVisibility: Record<string, boolean>;
   }> = {},
 ): EngineState {
   const points = overrides.points ?? new Map();
+  const allVisible = { cluster: true, supercluster: true, void: true, famousGalaxy: true };
   return {
     settings: {
       points: {
@@ -272,9 +316,20 @@ function makeState(
       thumbnails: { enabled: true },
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 1.0 },
-      volumes: { masterEnabled: true, fields: {} },
+      // Seed volume fields the same way the engine does at construction, so the
+      // demand predicate for MCPM (default-on) reads true at boot — parity with
+      // the old imperative boot loop that loaded MCPM unconditionally.
+      volumes: { masterEnabled: true, fields: seedVolumeFields() },
+      // Structure categories all visible by default ⇒ clusterCatalog demanded.
+      // Overridable so a test can hide every category and pin the bug-fix
+      // (clusterCatalog must NOT load when nothing structural is visible).
+      markerCategoryVisibility: overrides.markerCategoryVisibility ?? allVisible,
+      labelCategoryVisibility: overrides.labelCategoryVisibility ?? allVisible,
     },
     bias: {} as never,
+    // The synthetic-fallback gate writes `state.requests.add('syntheticFallback')`
+    // and the demand loop reads request flags — both need a live Set.
+    requests: new Set(),
     sources: {
       catalogs: new Map(),
       pickMask: 0xff,
@@ -308,6 +363,9 @@ function makeState(
         setFieldPalette: vi.fn(),
         setDensityScale: vi.fn(),
         setEnvelope: vi.fn(),
+        setContrastCenter: vi.fn(),
+        setExposure: vi.fn(),
+        setTrim: vi.fn(),
       } as never,
     },
     subsystems: {
@@ -318,23 +376,13 @@ function makeState(
       hiResFamous: null,
       hiResFamousTexture: null,
       loadProgress: null,
-      // wireSlots unconditionally wires static cluster/supercluster/void
-      // anchors via `state.subsystems.pois.setPois(...)`, so this mock
-      // must be callable even when the test isn't asserting on POIs.
-      // `getPoisForCategory` filters the last-published list so the
-      // `onStructureCountsChange` echo in `rebuildAllPois` resolves real
-      // per-category counts (only exercised when a test wires that
-      // callback; otherwise the optional call short-circuits).
-      pois: (() => {
-        let current: readonly PointOfInterest[] = [];
-        return {
-          setPois: vi.fn((pois: readonly PointOfInterest[]) => {
-            current = pois;
-          }),
-          getPoisForCategory: (category: string) =>
-            current.filter((p) => p.category === category),
-        };
-      })() as never,
+      // wirePoiProjection (called from wireSlots) uses setGroup/clearGroup/
+      // getPoisForCategory on the POI subsystem.  A real createPoiSubsystem()
+      // instance is the cleanest fit: it's a pure CPU state machine with no
+      // GPU dependencies, and its getPoisForCategory reflects setGroup writes
+      // exactly as production code does.  Tests that need to observe POI state
+      // read it back via getPoisForCategory / findPoi on the same instance.
+      pois: createPoiSubsystem() as never,
       // wireSlots calls fades.register on filament + overlay +
       // label-layer handles after the slot mints — stub so it doesn't crash.
       fades: {
@@ -358,6 +406,7 @@ function makeState(
       clusterCatalog: null,
       pgcAlias: null,
       cf4Density: null,
+      mcpm: null,
     },
   } as unknown as EngineState;
 }
@@ -422,6 +471,122 @@ describe('wireSlots', () => {
     expect(twoMrsSlot.load).toHaveBeenCalled();
     expect(gladeSlot.load).toHaveBeenCalled();
     expect(famousSlot.load).toHaveBeenCalled();
+
+    // The `loading` status is fired exactly once — it's the one-shot
+    // "show the loading screen" signal, not a per-arrival echo (those are
+    // the `ready` emissions asserted elsewhere).
+    const statusCalls = (deps.cb.lifecycle?.onStatusChange as ReturnType<typeof vi.fn>).mock.calls;
+    const loadingCalls = statusCalls.filter((c) => (c[0] as { kind: string }).kind === 'loading');
+    expect(loadingCalls.length).toBe(1);
+  });
+
+  it('assigns all five impostor subsystems onto state.subsystems', async () => {
+    // wireImpostorSubsystems builds the LOD-1/2/3 GPU subsystems and writes
+    // each onto `state.subsystems.*`.  The downstream frame loop reads these
+    // five by name; a missed assignment is a silent "thumbnails never draw"
+    // bug.  The factories are mocked at module scope to hollow objects, so
+    // each assignment is merely truthy here — the contract under test is
+    // "all five slots are populated", not their internals.
+    const state = makeState({ points: bootPointSlots() });
+    const deps = makeDeps();
+
+    await wireSlots(state, deps);
+
+    expect(state.subsystems.galaxyAtlas).not.toBeNull();
+    expect(state.subsystems.proceduralDisks).not.toBeNull();
+    expect(state.subsystems.texturedDisks).not.toBeNull();
+    expect(state.subsystems.hiResFamous).not.toBeNull();
+    expect(state.subsystems.hiResFamousTexture).not.toBeNull();
+  });
+
+  it('registers the overlay, volume-master, and label-layer fade handles', async () => {
+    // registerOverlayFades pins each layer's frame-1 opacity in the fade
+    // registry.  A missed handle means that layer's toggle has nothing to
+    // multiply against (or flashes at the wrong opacity on frame 1).  We
+    // assert the handle shapes as a SUBSET — wireSlots also registers a
+    // filament overlay/label handle when it mints the filaments slot, so an
+    // exact-length check would break for the wrong reason.
+    const state = makeState({ points: bootPointSlots() });
+    const deps = makeDeps();
+
+    await wireSlots(state, deps);
+
+    const register = state.subsystems.fades.register as ReturnType<typeof vi.fn>;
+    const handles = register.mock.calls.map((c) => c[0]);
+    const hasHandle = (h: unknown): boolean =>
+      handles.some((got) => JSON.stringify(got) === JSON.stringify(h));
+
+    expect(hasHandle({ kind: 'overlay', id: 'milkyWay' })).toBe(true);
+    expect(hasHandle({ kind: 'overlay', id: 'proceduralDisks' })).toBe(true);
+    expect(hasHandle({ kind: 'overlay', id: 'texturedDisks' })).toBe(true);
+    expect(hasHandle({ kind: 'volumesMaster' })).toBe(true);
+    expect(hasHandle({ kind: 'labelLayer', layer: 'youAreHere' })).toBe(true);
+    expect(hasHandle({ kind: 'labelLayer', layer: 'poi' })).toBe(true);
+    expect(hasHandle({ kind: 'labelLayer', layer: 'galaxyNames' })).toBe(true);
+    expect(hasHandle({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(true);
+
+    // Opacities are deterministic under the default fixture (milkyWay enabled,
+    // volumes master enabled) — both gate to 1.
+    const opacityFor = (h: unknown): number | undefined => {
+      const call = register.mock.calls.find((c) => JSON.stringify(c[0]) === JSON.stringify(h));
+      return call?.[1] as number | undefined;
+    };
+    expect(opacityFor({ kind: 'overlay', id: 'milkyWay' })).toBe(1);
+    expect(opacityFor({ kind: 'volumesMaster' })).toBe(1);
+    expect(opacityFor({ kind: 'labelLayer', layer: 'youAreHere' })).toBe(0);
+    expect(opacityFor({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(1);
+  });
+
+  it('demand loop loads the default boot sidecar set (mcpm + clusterCatalog + famousMeta) and not the off-by-default ones', async () => {
+    // Boot parity: the old imperative boot loop loaded MCPM (default-on volume)
+    // + the cluster catalog (structures visible) + famous-meta but left
+    // filaments (off), CF-4 density (off) and the lazy PGC alias idle.  After
+    // the refactor those loads come from reevaluateDemand reading the
+    // construction-seeded state — same outcome.  Each sidecar's load is
+    // observable through its (mocked) fetcher; clear them first since the
+    // module-scoped mocks persist across tests.
+    vi.mocked(mcpmFetcher).mockClear();
+    vi.mocked(clusterCatalogFetcher).mockClear();
+    vi.mocked(famousMetaFetcher).mockClear();
+    vi.mocked(filamentFetcher).mockClear();
+    vi.mocked(cf4DensityFetcher).mockClear();
+    vi.mocked(pgcAliasFetcher).mockClear();
+
+    const state = makeState({ points: bootPointSlots() });
+    const deps = makeDeps();
+
+    await wireSlots(state, deps);
+
+    // Default-on / structures-visible / famous-loading ⇒ fetched.
+    expect(mcpmFetcher).toHaveBeenCalled();
+    expect(clusterCatalogFetcher).toHaveBeenCalled();
+    expect(famousMetaFetcher).toHaveBeenCalled();
+    // Default-off / lazy ⇒ never fetched at boot.
+    expect(filamentFetcher).not.toHaveBeenCalled();
+    expect(cf4DensityFetcher).not.toHaveBeenCalled();
+    expect(pgcAliasFetcher).not.toHaveBeenCalled();
+  });
+
+  it('does not load clusterCatalog when every structure category is hidden (bug-fix integration pin)', async () => {
+    // demandTable.test.ts pins the cluster predicate in isolation; this pins
+    // that wireSlots actually threads the visibility records THROUGH to the
+    // demand loop end-to-end.  Old code loaded the .ccat unconditionally; the
+    // fix gates it on any structure category being visible.  With both marker
+    // and label visibility all-false the predicate is false, so the boot
+    // demand pass must skip clusterCatalog entirely.
+    vi.mocked(clusterCatalogFetcher).mockClear();
+
+    const allHidden = { cluster: false, supercluster: false, void: false, famousGalaxy: false };
+    const state = makeState({
+      points: bootPointSlots(),
+      markerCategoryVisibility: allHidden,
+      labelCategoryVisibility: allHidden,
+    });
+    const deps = makeDeps();
+
+    await wireSlots(state, deps);
+
+    expect(clusterCatalogFetcher).not.toHaveBeenCalled();
   });
 
   it('fires `ready` status with a running total each time a survey arrives', async () => {
@@ -539,30 +704,30 @@ describe('wireSlots', () => {
   });
 
   it('wires static cluster/supercluster/void anchors unconditionally (no URL gate)', async () => {
-    // No `?anchors=1` gate: the POI subsystem always receives the
-    // static anchor list.
+    // No URL gate: wirePoiProjection always publishes the static anchors
+    // synchronously into the 'staticAnchors' group at boot.
     delete (globalThis as { location?: unknown }).location;
     (globalThis as { location: { search: string } }).location = { search: '' };
 
     const state = makeState();
     const deps = makeDeps();
-    let received: readonly PointOfInterest[] = [];
-    state.subsystems.pois.setPois = (pois) => {
-      received = pois;
-    };
     await wireSlots(state, deps);
-    expect(received.length).toBeGreaterThan(0);
-    expect(received.some((p) => p.category === 'cluster')).toBe(true);
-    expect(received.some((p) => p.category === 'supercluster')).toBe(true);
-    expect(received.some((p) => p.category === 'void')).toBe(true);
+    // The real createPoiSubsystem() instance reflects setGroup writes immediately.
+    const clusters = state.subsystems.pois.getPoisForCategory('cluster');
+    const superclusters = state.subsystems.pois.getPoisForCategory('supercluster');
+    const voids = state.subsystems.pois.getPoisForCategory('void');
+    expect(clusters.length).toBeGreaterThan(0);
+    expect(superclusters.length).toBeGreaterThan(0);
+    expect(voids.length).toBeGreaterThan(0);
   });
 
   it('wires famous POIs alongside static anchors once meta + catalog arrive', async () => {
     // Pre-populate the famous catalog (worldPos) and have the famous-meta
     // companion fetcher resolve with the meta sidecar — the realistic
-    // arrival path.  wireSlots fires the companion `.load()` from its boot
-    // loop, the slot writes `state.sources.famousMeta`, and the merge
-    // republishes with famous folded in.
+    // arrival path.  wirePoiProjection subscribes to both the famousMeta slot
+    // and the Famous catalog slot; when both are ready it calls setGroup('famous',
+    // ...).  The real poiSubsystem instance reflects that write immediately via
+    // getPoisForCategory / findPoi.
     delete (globalThis as { location?: unknown }).location;
     (globalThis as { location: { search: string } }).location = { search: '' };
 
@@ -573,44 +738,49 @@ describe('wireSlots', () => {
       ],
     } as never);
 
-    const state = makeState();
+    // famousMeta demands on the Famous point slot leaving `idle`.  Inject a
+    // Famous point fake pre-fired to `loading` so the demand loop fires the
+    // famous-meta load — mirrors the real boot order (Famous point row loads
+    // first, then famousMeta's row sees a non-idle slot state).  The survey
+    // fakes stay idle (never fire) so the synthetic-fallback gate waits on
+    // them rather than arming early — modelling a live boot where the surveys
+    // are still loading.  An armed gate re-runs reevaluateDemand, which would
+    // re-trigger the (non-idempotent) famous-meta load and race the mock's
+    // once-value against its default.
+    const famousSlot = bootPointSlots();
+    const state = makeState({ points: famousSlot });
     state.sources.catalogs.set(Source.Famous, {
       count: 2,
       positions: new Float32Array([0.78, 0.1, 0.2, 0.85, 0.05, 0.15]),
       diameterKpc: new Float32Array([67, 30]),
     } as never);
     const deps = makeDeps();
-    const received: Array<readonly PointOfInterest[]> = [];
-    state.subsystems.pois.setPois = (pois) => {
-      received.push(pois);
-    };
     await wireSlots(state, deps);
     // Let the famous-meta companion's async fetch + subscriber settle so
-    // the republish lands before we assert on the final list.
+    // setGroup('famous', ...) lands before we assert.
     await new Promise((r) => setTimeout(r, 0));
-    // The merge republishes whenever a group arrives; the LAST call holds
-    // the fully-merged list once the famous-meta companion has resolved.
-    const final = received[received.length - 1] ?? [];
-    const ids = final.map((p) => p.id);
+    // Both groups present in the real poiSubsystem.
+    const famousPois = state.subsystems.pois.getPoisForCategory('famousGalaxy');
+    const ids = famousPois.map((p) => p.id);
     expect(ids).toContain('famous-m31');
     expect(ids).toContain('famous-m33');
-    expect(ids.some((id) => id.startsWith('cluster-'))).toBe(true);
-    const m31 = final.find((p) => p.id === 'famous-m31');
+    // Static anchors still present (clusters come from staticAnchors group).
+    expect(state.subsystems.pois.getPoisForCategory('cluster').length).toBeGreaterThan(0);
+    const m31 = state.subsystems.pois.findPoi('famous-m31');
     expect(m31?.name).toBe('Andromeda Galaxy');
     expect(m31?.category).toBe('famousGalaxy');
-    // minApparentSizePx lives on the famousGalaxy arm — narrow before
-    // reading it.
+    // minApparentSizePx lives on the famousGalaxy arm — narrow before reading.
     const minPx = m31 && m31.category === 'famousGalaxy' ? m31.minApparentSizePx : undefined;
     expect(minPx).toBe(6);
   });
 
   it('merging famous then bulk clusters keeps both groups present', async () => {
     // The three-group merge must never let the famous wire clobber the
-    // bulk-cluster wire (or vice versa): the final published list has to
-    // carry static anchors + famous + bulk simultaneously.  Both async
-    // groups arrive via their own slot — the famous-meta companion and
-    // the cluster-catalog boot load — so we drive them through the
-    // (mocked) fetchers rather than pre-seeding `state.sources`.
+    // bulk-cluster wire (or vice versa).  Both async groups arrive via their
+    // own slot — the famous-meta companion and the cluster-catalog boot load —
+    // so we drive them through the (mocked) fetchers rather than pre-seeding
+    // `state.sources`.  wirePoiProjection's keyed-group approach ensures each
+    // subscriber only touches its own key, so order of arrival doesn't matter.
     delete (globalThis as { location?: unknown }).location;
     (globalThis as { location: { search: string } }).location = { search: '' };
 
@@ -636,7 +806,9 @@ describe('wireSlots', () => {
       ],
     } as never);
 
-    const state = makeState();
+    // See the famous-POI test: famousMeta demands on the Famous point slot
+    // leaving `idle`, and idle survey fakes keep the synthetic gate waiting.
+    const state = makeState({ points: bootPointSlots() });
     state.sources.catalogs.set(Source.Famous, {
       count: 1,
       positions: new Float32Array([0.78, 0.1, 0.2]),
@@ -644,21 +816,17 @@ describe('wireSlots', () => {
     } as never);
 
     const deps = makeDeps();
-    const received: Array<readonly PointOfInterest[]> = [];
-    state.subsystems.pois.setPois = (pois) => {
-      received.push(pois);
-    };
     await wireSlots(state, deps);
     // Let both async slot fetches + their subscribers settle.
     await new Promise((r) => setTimeout(r, 0));
 
-    const final = received[received.length - 1] ?? [];
-    const ids = final.map((p) => p.id);
-    // All three groups present in the final published list.
-    expect(ids.some((id) => id.startsWith('cluster-') && !id.includes('-bulk-'))).toBe(true);
-    expect(ids).toContain('famous-m31');
-    expect(ids).toContain('cluster-bulk-coma');
-    expect(ids).toContain('supercluster-bulk-shapley');
+    // All three groups present via the real poiSubsystem instance.
+    const allFamous = state.subsystems.pois.getPoisForCategory('famousGalaxy');
+    expect(allFamous.some((p) => p.id === 'famous-m31')).toBe(true);
+    expect(state.subsystems.pois.findPoi('cluster-bulk-coma')).not.toBeNull();
+    expect(state.subsystems.pois.findPoi('supercluster-bulk-shapley')).not.toBeNull();
+    // Static anchors still present.
+    expect(state.subsystems.pois.getPoisForCategory('cluster').length).toBeGreaterThan(0);
   });
 
   it('emits per-category structure counts that grow when the bulk catalog lands', async () => {
@@ -685,7 +853,10 @@ describe('wireSlots', () => {
       ],
     } as never);
 
-    const state = makeState();
+    // Idle survey fakes keep the synthetic gate waiting so demand runs once —
+    // a double-run would re-trigger the (non-idempotent) cluster-catalog load
+    // and race the mock once-value against its empty default.
+    const state = makeState({ points: bootPointSlots() });
     const deps = makeDeps();
     const counts: Array<Partial<Record<string, number>>> = [];
     (deps.cb.sources as { onStructureCountsChange?: (c: Record<string, number>) => void })

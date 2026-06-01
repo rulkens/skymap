@@ -44,6 +44,5 @@ export const createClusterCatalogSlot: SlotFactory<ClusterCatalogPayload, Cluste
       console.warn('[engine] cluster catalog failed to load:', s.error);
     }
   });
-  state.assetSlots.clusterCatalog = slot;
   return slot;
 };

@@ -83,6 +83,7 @@ import type { EngineGpuHandles } from '../handles/EngineGpuHandles';
 import type { EngineSubsystemHandles } from '../handles/EngineSubsystemHandles';
 import type { createOrbitCamera } from '../../../services/camera/orbitCamera';
 import type { InitialCam } from '../../camera/InitialCam';
+import type { RequestKey } from '../../loading/RequestKey';
 
 export type EngineState = {
   settings: EngineSettingsState;
@@ -94,6 +95,16 @@ export type EngineState = {
   cam: ReturnType<typeof createOrbitCamera> | null;
   initialCamSnapshot: InitialCam | null;
   assetSlots: EngineAssetSlots;
+  /**
+   * One-shot transient request flags read by demand predicates via
+   * `DemandCtx.request(k)`. A `Set<RequestKey>` rather than a field on
+   * `sources` because these are edge-triggered UI events (palette opened,
+   * lazy alias requested) with no persistent settings or loaded-data home.
+   * A flag is set and left set; the demand loop's idle-guard keeps the
+   * triggered slot from re-fetching, so no clear-on-ready is needed. Empty
+   * until the first such event fires.
+   */
+  requests: Set<RequestKey>;
   /**
    * Debug-only per-frame skip flags.  Populated only by the React-
    * side DebugPanel; empty in production.  See `EngineDebugState`

@@ -59,6 +59,7 @@ import { resolvePoiFromPick } from '../helpers/resolvePoiFromPick';
 import { collectPickTargets } from '../helpers/collectPickTargets';
 import { deriveFrameContext } from './frameContext';
 import { renderFrame } from './renderFrame';
+import { reevaluateDemand } from '../wiring/reevaluateDemand';
 import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
@@ -88,6 +89,24 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     deps.lastReportedFps.current = fpsNow;
     deps.cb.lifecycle?.onFpsChange?.(fpsNow);
   }
+
+  // ── Demand re-evaluation ──────────────────────────────────────────
+  //
+  // Re-derive what should be loading from current state, every frame.
+  // This is the single seam that turns any state change into the right
+  // loads: a handle setter flips its demand-gating state (a survey's
+  // drawMask bit, filaments.enabled, a structure category's visibility)
+  // and calls requestRender to repaint — which wakes the loop, which
+  // runs this.  No setter has to remember to trigger loading itself;
+  // requestRender is the universal "something changed" signal it already
+  // must send, and forgetting it visibly freezes the UI, so the load
+  // trigger can't silently regress.  The walk is idle-guarded, so once
+  // an asset is loading/ready/error it's skipped — a cheap no-op on the
+  // steady-state frames that dominate.  (Boot kicks the initial loads
+  // from wireSlots, and the synthetic-fallback gate kicks its backstop
+  // directly, because both need an immediate load the next frame can't
+  // wait for.)
+  reevaluateDemand(state);
 
   // ── Resize the swap-chain if the canvas element changed size ──────
   //

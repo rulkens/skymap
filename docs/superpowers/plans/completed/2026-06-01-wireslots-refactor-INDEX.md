@@ -128,21 +128,21 @@ If any name here disagrees with the spec, the spec wins — flag and stop.
 
 ## Definition of Done (whole plan)
 
-- [ ] All tasks across Parts 1–3 ticked.
-- [ ] `npm test` green; test count increased by the per-part new tests.
-- [ ] `npm run typecheck` green.
-- [ ] `wireSlots.ts` is the thin orchestrator from the spec (§"Construction
+- [x] All tasks across Parts 1–3 ticked.
+- [x] `npm test` green; test count increased by the per-part new tests.
+- [x] `npm run typecheck` green.
+- [x] `wireSlots.ts` is the thin orchestrator from the spec (§"Construction
   purity & single install"); no slot-load loop, no inline POI merge, no inline
   fade registration, no inline impostor construction.
-- [ ] No factory writes `state.assetSlots.X = slot` or calls `slot.load()` at
+- [x] No factory writes `state.assetSlots.X = slot` or calls `slot.load()` at
   construction time.
-- [ ] `reevaluateDemand` is the only place `slot.load(...)` is called for
+- [x] `reevaluateDemand` is the only place `slot.load(...)` is called for
   registry-managed assets; the only remaining explicit loads are the two
   event-driven re-evaluation triggers (palette request, synthetic gate), which
   flip state then call `reevaluateDemand`.
-- [ ] Filaments and clusterCatalog no longer load when their settings flag is
+- [x] Filaments and clusterCatalog no longer load when their settings flag is
   off (the two bug fixes), each pinned by a test.
-- [ ] No `TODO` / `FIXME` introduced in touched files.
-- [ ] Every touched file has had its whole-file comment-cleanup pass.
-- [ ] Manual dev-server smoke shows bootstrap parity: Milky Way on frame 1,
+- [x] No `TODO` / `FIXME` introduced in touched files.
+- [x] Every touched file has had its whole-file comment-cleanup pass.
+- [x] Manual dev-server smoke shows bootstrap parity: Milky Way on frame 1,
   surveys fade in, structures/filaments/volumes respect their toggles.

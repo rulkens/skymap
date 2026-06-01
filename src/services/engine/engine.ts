@@ -91,7 +91,6 @@ import {
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
-  DEFAULT_VOLUME_FIELD_INTENSITY,
 } from '../../data/defaults';
 import type { GalaxyCatalog } from '../../@types/data/GalaxyCatalog';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
@@ -125,11 +124,12 @@ import { isPoi } from './isPoi';
 import { logCameraState } from './helpers/logCameraState';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
+import type { RequestKey } from '../../@types/loading/RequestKey';
 import { awaitSlotReady } from '../loading/awaitSlotReady';
 import { tierTarget } from '../../data/tierTargets';
 import { snapToCameraSnapshot, tweenToCameraSnapshot } from './camera/cameraSnapshot';
 import { MILKY_WAY_CENTER_WORLD, MILKY_WAY_VIEW_DISTANCE_MPC } from '../../data/galacticCenter';
-import { getVolumeFieldDefaults } from '../../data/volumeFieldDefaults';
+import { buildVolumeFieldSettings, seedVolumeFields } from '../../data/volumeFieldDefaults';
 import { buildVolumeFieldsSnapshot } from './helpers/buildVolumeFieldsSnapshot';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
@@ -180,13 +180,17 @@ import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
 // stub without instantiating a full GPU engine. The closure inside
 // `createEngine` delegates straight here.
 //
-// The two parameters use intersection-typed picks so the function signature
-// remains narrow (only the fields it actually reads) while accepting the
-// full `EngineState` and `EngineCallbacks` types from production callers.
+// The state parameter uses an intersection-typed pick so the function
+// signature stays narrow (only the fields it reads) while accepting the full
+// `EngineState` from production callers. This function does NOT trigger
+// loading: it flips `drawMask`/`pickMask` and calls `requestRender`. The
+// per-frame `reevaluateDemand` in the render loop reads the flipped drawMask
+// and loads the now-visible survey (and its companions) on the next frame —
+// so visibility and loading stay decoupled, and a narrow state view suffices.
 export async function setSourceVisibleImpl(
   state: Pick<
     import('../../@types/engine/state/EngineState').EngineState,
-    'sources' | 'subsystems' | 'assetSlots'
+    'sources' | 'subsystems'
   >,
   opts: { cb: Pick<EngineCallbacks, 'sources'> },
   source: SourceType,
@@ -207,20 +211,12 @@ export async function setSourceVisibleImpl(
   state.subsystems.scheduler.requestRender();
 
   if (visible) {
-    // Lazy-load: any survey that was hidden at boot (and therefore
-    // skipped by the wireSlots loop) gets its first fetch kicked off
-    // here.  `.load()` is idempotent — calling it again on an already
-    // ready slot is a no-op, so default-on sources pay nothing.  Same
-    // shape CF-4 / MCPM use for default-off volume fields.
-    state.assetSlots.points
-      .get(source)
-      ?.load({ source, tier: state.sources.tier });
-    // Companion assets fire alongside the main `.bin` so InfoCard /
-    // search / picking have their parallel data ready by the time the
-    // user interacts. Each registry row's `companions: [...]` array
-    // names which slots to fire; `loadCompanionAssets` dispatches.
-    const cfg = GALAXY_CATALOG_SOURCE_REGISTRY.find((c) => c.source === source);
-    if (cfg) loadCompanionAssets(state as EngineState, cfg, state.sources.tier);
+    // Flip drawMask, then fade in. The per-frame `reevaluateDemand` reads the
+    // now-set bit and loads the idle survey (plus companions like famousMeta,
+    // which demands on the survey slot leaving `idle`); the idle-guard keeps
+    // an already-loaded survey from re-fetching, so re-toggling is cheap. The
+    // requestRender above already woke the loop, so the load starts on the
+    // next frame.
     state.sources.drawMask = targetMask;
     await state.subsystems.fades.fadeTo(handle, 1, FADE_IN_DURATION_MS);
   } else {
@@ -391,11 +387,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       },
       volumes: {
         masterEnabled: DEFAULT_VOLUMES_ENABLED,
-        // Starts empty; populated by addVolumeField / cleared by
-        // removeVolumeField.  SettingsPanel reads this map to render
-        // per-field intensity sliders without going through the GPU
-        // handle.
-        fields: {},
+        // Seeded from the shippable volume registry entries so each
+        // field's on/off bit + tunables EXIST before any cube loads —
+        // the demand predicate reads `fields[id]?.enabled` as pure
+        // state, fully symmetric with how `drawMask` seeds survey
+        // visibility.  Without this, a default-on volume (MCPM) never
+        // triggers its initial demand-driven load.  DEV-only debug
+        // fixtures are excluded (no on-disk payload).  SettingsPanel
+        // rows still come from the GPU handle list (loaded fields only),
+        // so seeding here adds no premature row.
+        fields: seedVolumeFields(),
       },
       // Per-category POI visibility — two independent axes (label-text vs
       // marker-glyph).  Both default to every category visible so the
@@ -709,6 +710,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Tier-aware: setTier reloads on tier change.  See loading/slots/mcpmSlot.ts.
       mcpm: null,
     },
+    // ── One-shot transient request flags ────────────────────────────────
+    //
+    // Edge-triggered UI events that drive demand predicates (palette
+    // opened, lazy alias requested) but have no persistent settings or
+    // loaded-data home.  Empty at boot; the wiring layer sets a key in
+    // response to a discrete event and leaves it set — the demand loop's
+    // idle-guard keeps the triggered slot from re-fetching, so no clear is
+    // needed.  See `@types/loading/RequestKey.d.ts`.
+    requests: new Set<RequestKey>(),
     // ── Debug-only per-frame skip flags ─────────────────────────────────
     //
     // The DebugPanel's `RenderTogglesSection` mutates this set via the
@@ -1020,14 +1030,23 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function loadPgcAliasesFn(): Promise<PgcAliasMap> {
-    const slot = state.assetSlots.pgcAlias;
-    slot?.load();
-    return awaitSlotReady(slot, new Map() as PgcAliasMap);
+    // Set the edge-triggered request flag and wake the loop: the pgcAlias row
+    // demands on `ctx.request('paletteOpened')`, so the next frame's
+    // `reevaluateDemand` fires its load. The flag stays set (harmless — the
+    // idle-guard prevents a re-fetch on later frames), so a second palette
+    // open resolves straight off the already-ready slot. An errored alias
+    // load is NOT auto-retried (the idle-guard skips a non-idle slot);
+    // awaitSlotReady then resolves to the empty-map fallback — graceful
+    // degradation, matching every other demand-driven asset.
+    state.requests.add('paletteOpened');
+    state.subsystems.scheduler.requestRender();
+    return awaitSlotReady(state.assetSlots.pgcAlias, new Map() as PgcAliasMap);
   }
 
   async function setSourceVisible(source: SourceType, visible: boolean): Promise<void> {
-    // Delegate to the module-scope helper so tests can drive the same
-    // logic against a partial-state stub without a full GPU engine.
+    // Delegate to the module-scope helper so tests can drive the same logic
+    // against a partial-state stub without a full GPU engine. Loading is the
+    // render loop's per-frame `reevaluateDemand`, not this setter's concern.
     return setSourceVisibleImpl(state, { cb }, source, visible);
   }
 
@@ -1043,9 +1062,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // re-fetch the new tier's `.bin`, and run its commit step.
     //
     // Hidden sources skip the tier-change fetch too — there's no point
-    // downloading a new tier of a survey the user can't see.  When
-    // they later toggle it on, `setSourceVisible` fires a fresh
-    // `.load({ tier })` with the current tier.
+    // downloading a new tier of a survey the user can't see.  When they
+    // later toggle it on, `setSourceVisible` flips drawMask and the
+    // demand loop loads the now-visible slot at the current tier.
     //
     // Filaments are NOT swapped on tier change — see
     // `filamentFetcher.ts`'s docblock for the rationale.
@@ -1126,22 +1145,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // yet, the call is a silent no-op — the field can be re-added
     // once the engine boots.
     state.gpu.scalarVolumeRenderer?.addField(fieldId, cube);
-    // Seed the per-field settings entry with defaults if not already
-    // present — re-registering the same handle preserves any
-    // previously-tuned values.  Presentation defaults (palette +
-    // densityScale) come from the per-handle registry in
-    // `src/data/volumeFieldDefaults.ts`.
+    // Seed the per-field settings entry from the registry defaults if
+    // not already present — re-registering the same handle preserves
+    // any previously-tuned values.  For the shippable volumes the
+    // construction seed already created this entry; the guard then only
+    // matters for a dynamically-added handle with no construction seed.
     if (!state.settings.volumes.fields[fieldId]) {
-      const defaults = getVolumeFieldDefaults(fieldId);
-      state.settings.volumes.fields[fieldId] = {
-        enabled: true,
-        intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
-        contrast: defaults.contrast,
-        densityScale: defaults.densityScale,
-        paletteId: defaults.paletteId,
-        trim: defaults.trim,
-        exposure: defaults.exposure,
-      };
+      state.settings.volumes.fields[fieldId] = buildVolumeFieldSettings(fieldId);
     }
     // Forward the current per-field tunables into the renderer so the
     // new upload inherits whatever the user set before re-registering.
@@ -1179,30 +1189,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   /**
-   * Lazy-load the asset slot that backs a volume-field handle, if the
-   * slot exists in `idle` state.  Used by `setVolumeFieldEnabled` so
-   * default-off fields (CF-4, the three synthetic debug fixtures) don't
-   * waste bandwidth at boot but still respond when toggled on later.
+   * Lazy-load the DEV-only debug volume slot backing a field, if it exists
+   * in `idle` state.  The shippable volumes (CF-4, MCPM) are NOT handled
+   * here — they're `ASSET_WIRING` rows whose demand reads
+   * `fields[id].enabled`, so they load via `reevaluateDemand`.  The three
+   * debug fixtures are excluded from the registry (DEV-only, no on-disk
+   * payload to tree-shake), so they keep a direct lazy-load.
    *
    * Idempotent — calling on a `loading` / `ready` / `error` slot is a
-   * no-op, so flipping a field off-then-on doesn't re-fetch.  Caller
-   * doesn't need to know which slot backs which handle; the routing
-   * (and per-slot request payload) is encapsulated here.
+   * no-op, so flipping a field off-then-on doesn't re-fetch.  A no-op for
+   * cf4/mcpm field ids (no matching switch arm), mirroring how
+   * `reevaluateDemand` is a no-op for the debug ids (not rows) — clean
+   * separation of the two load mechanisms.
    */
-  function maybeLazyLoadVolumeSlot(fieldId: VolumeFieldId): void {
+  function maybeLazyLoadDebugVolume(fieldId: VolumeFieldId): void {
     switch (fieldId) {
-      case 'cf4-density': {
-        const slot = state.assetSlots.cf4Density;
-        if (slot && slot.state().kind === 'idle') slot.load();
-        return;
-      }
-      case 'mcpm': {
-        const slot = state.assetSlots.mcpm;
-        if (slot && slot.state().kind === 'idle') {
-          slot.load({ tier: state.sources.tier });
-        }
-        return;
-      }
       case 'debug-gaussian':
       case 'debug-cartesian':
       case 'debug-spherical': {
@@ -1223,15 +1224,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function setVolumeFieldEnabled(fieldId: VolumeFieldId, enabled: boolean): void {
-    // Lazy-load gate — fires the slot's deferred boot fetch when a
-    // default-off field is first turned on.  No-op when the slot is
-    // already loading / ready, or when the handle has no associated
-    // slot (every settings-table field has an entry but only the
-    // bootstrapped slot-backed ones need the trigger).
-    if (enabled) maybeLazyLoadVolumeSlot(fieldId);
+    // Flip the settings flag: the demand predicate for cf4-density / mcpm
+    // reads `fields[id].enabled`, and the per-frame `reevaluateDemand` (woken
+    // by the requestRender below) loads them when it flips on — idle-guarded,
+    // so a field flipped off-then-on doesn't re-fetch. The three DEV debug
+    // fixtures aren't demand rows, so they keep a direct lazy load here; it's
+    // a no-op for the cf4/mcpm field ids, so the two paths are a clean
+    // partition.
     if (state.settings.volumes.fields[fieldId]) {
       state.settings.volumes.fields[fieldId].enabled = enabled;
     }
+    if (enabled) maybeLazyLoadDebugVolume(fieldId);
     state.gpu.scalarVolumeRenderer?.setEnabled(fieldId, enabled);
     // Drive the FadeRegistry alongside the renderer flip. The renderer's
     // draw loop accepts (!enabled && opacity <= 0) as the skip condition,

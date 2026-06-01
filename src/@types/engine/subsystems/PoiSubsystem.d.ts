@@ -1,22 +1,48 @@
 import type { LabelProducer } from './LabelProducer';
 import type { PoiCategory } from '../../../services/engine/subsystems/poiSubsystem';
 import type { PointOfInterest } from './PointOfInterest';
+import type { PoiGroupId } from './PoiGroupId';
 import type { ClusterMarkerDescriptor } from '../../rendering/ClusterMarkerDescriptor';
 import type { EngineState } from '../state/EngineState';
 import type { ReadyFrameContext } from '../frame/ReadyFrameContext';
 
 export type PoiSubsystem = LabelProducer & {
+  /**
+   * Store `pois` under `id`, replacing any previous content for that
+   * group.  Groups merge in a fixed order — staticAnchors → famous →
+   * clusterBulk — so each group's POIs cannot clobber another group's
+   * regardless of call order.  A defensive copy is taken internally so
+   * the caller may mutate their array freely after the call.
+   */
+  setGroup(id: PoiGroupId, pois: readonly PointOfInterest[]): void;
+  /**
+   * Remove the group `id` from the merged POI set.  Readers immediately
+   * see a list that excludes the cleared group; other groups are
+   * unaffected.
+   */
+  clearGroup(id: PoiGroupId): void;
+  /**
+   * Replace ALL groups with `pois` as the sole content of the
+   * `staticAnchors` group, clearing `famous` and `clusterBulk`.
+   *
+   * Kept for backwards compatibility with call-sites that hand the
+   * subsystem the full merged list in one shot (tests, older engine
+   * code not yet migrated to per-group wiring).  New code should prefer
+   * `setGroup` so groups don't clobber each other.
+   */
   setPois(pois: readonly PointOfInterest[]): void;
+  /**
+   * Clear every group.  Symmetric counterpart to `setPois([])`.  Kept
+   * alongside `setPois` so existing callers that pair them continue to
+   * work without migration.
+   */
   clearPois(): void;
   /**
    * Flip the MARKER (ring + halo) visibility for the given category.
    * Only consulted by `produceMarkers` — the text label for the same
    * category is unaffected and continues to render until
-   * `setCategoryLabelVisible(cat, false)` is called.
-   *
-   * The two-axis split landed with the 2026-05-19 settings-panel audit
-   * (Q11) — see the module header on `poiSubsystem.ts` for the
-   * conflation bug this fix addresses.
+   * `setCategoryLabelVisible(cat, false)` is called.  See the module
+   * header on `poiSubsystem.ts` for the two-axis split rationale.
    */
   setCategoryMarkerVisible(category: PoiCategory, visible: boolean): void;
   /**
@@ -58,16 +84,17 @@ export type PoiSubsystem = LabelProducer & {
    * instance `poiIndex` that, once a single category's bucket is
    * isolated, is a 0-based index into "the Nth POI of this category
    * that produceMarkers emitted".  `produceMarkers` emits EXACTLY ONE
-   * descriptor per marker-bearing POI of a visible category, in `pois`
-   * array order — including faded-out POIs, which emit at alpha 0 and
-   * are discarded in-fragment rather than omitted.  `setMarkers` groups
-   * by category preserving within-group order.  Because no faded POI is
-   * dropped, `pois.filter(p => p.category === cat)[poiIndex]` resolves
-   * the same structure the GPU picked — regardless of fade.  The
-   * contract holds as long as every POI of a marker-bearing category
-   * sets a radius (current truth: all clusters / superclusters / voids
-   * set physicalRadiusMpc); a marker category POI without a radius would
-   * emit no marker and break the alignment.
+   * descriptor per marker-bearing POI of a visible category, in
+   * `allPois()` order (staticAnchors → famous → clusterBulk) — including
+   * faded-out POIs, which emit at alpha 0 and are discarded in-fragment
+   * rather than omitted.  `setMarkers` groups by category preserving
+   * within-group order.  Because no faded POI is dropped,
+   * `getPoisForCategory(cat)[poiIndex]` resolves the same structure the
+   * GPU picked — regardless of fade.  The contract holds as long as every
+   * POI of a marker-bearing category sets a radius (current truth: all
+   * clusters / superclusters / voids set physicalRadiusMpc); a
+   * marker-category POI without a radius would emit no marker and break
+   * the alignment.
    *
    * The contract is exercised by the pick-index-alignment test in
    * `poiSubsystem.test.ts` and is structurally guarded by the fact that
@@ -76,12 +103,10 @@ export type PoiSubsystem = LabelProducer & {
    */
   getPoisForCategory(category: PoiCategory): readonly PointOfInterest[];
   /**
-   * Tear down the subsystem.  No-op — the subsystem owns only
-   * plain-data state (pois list, visibility record); there are no
-   * listeners, timers, or workers to release.  Method exists so the
-   * engine's bag of subsystems can be torn down uniformly via the
-   * shared `Destroyable` shape (`engine.destroy()` iterates and calls
-   * `destroy()` on each).
+   * Tear down the subsystem.  No-op — the subsystem owns only plain-data
+   * state (group map, visibility records); no listeners, timers, or
+   * workers to release.  Method exists so the engine's subsystem bag can
+   * be torn down uniformly via the shared `Destroyable` shape.
    */
   destroy(): void;
 };

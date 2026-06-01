@@ -28,17 +28,12 @@
  * settings-bag seed and renderer calls are intentionally the same
  * lines as `addVolumeField` so both paths stay in sync when the
  * engine's volume-field logic changes.
- *
- * Pre-H4 (2026-05-11) the mint helper + three instantiations lived
- * inline in `wireSlots.ts`; extracted here as part of the slot-factory
- * split.
  */
 
 import { createAssetSlot } from '../AssetSlot';
 import { syntheticVolumeFetcher } from '../fetchers/syntheticVolumeFetcher';
 import type { SyntheticVolumeReq } from '../../../@types/loading/SyntheticVolumeReq';
-import { DEFAULT_VOLUME_FIELD_INTENSITY } from '../../../data/defaults';
-import { getVolumeFieldDefaults } from '../../../data/volumeFieldDefaults';
+import { getVolumeFieldDefaults, buildVolumeFieldSettings } from '../../../data/volumeFieldDefaults';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
@@ -54,9 +49,12 @@ type SyntheticVolumeSlotRecord = Record<
 >;
 
 /**
- * createSyntheticVolumeSlots — mint all three DEV fixtures, write to
- * `state.assetSlots.syntheticVolumes`, and return the slot record so
- * the caller can register each one on `allSlots`.
+ * createSyntheticVolumeSlots — mint all three DEV fixtures and return
+ * the slot record. The caller installs it onto
+ * `state.assetSlots.syntheticVolumes` and registers each slot on
+ * `allSlots`. Construction-pure like the registry factories: it builds +
+ * subscribes but does NOT write `state.assetSlots` (the orchestrator owns
+ * install).
  *
  * Diverges from the `SlotFactory<TPayload, TRequest>` shape because
  * this factory returns a record of three slots, not a single one.
@@ -68,15 +66,16 @@ export function createSyntheticVolumeSlots(
   state: EngineState,
   cb: EngineCallbacks,
 ): SyntheticVolumeSlotRecord {
-  // Helper that mints one synthetic-volume slot.  The handle and the
-  // default-enabled flag are baked into a closure (the AssetSlot
-  // commit signature only sees the decoded payload, not the request,
-  // so per-fixture identity has to ride along on the slot).  Three
-  // sibling slots share this helper; refactoring to a Map of three
-  // would lose the per-handle commit closure that's the whole point.
+  // Helper that mints one synthetic-volume slot.  The handle is baked
+  // into a closure (the AssetSlot commit signature only sees the
+  // decoded payload, not the request, so per-fixture identity has to
+  // ride along on the slot).  Three sibling slots share this helper;
+  // refactoring to a Map of three would lose the per-handle commit
+  // closure that's the whole point.  The default-enabled bit comes from
+  // each fixture's registry `visible` flag (all three are false), so it
+  // no longer needs threading through as a separate argument.
   const mintSyntheticVolumeSlot = (
     handle: SyntheticVolumeHandle,
-    defaultEnabled: boolean,
   ): AssetSlot<ScalarCube, SyntheticVolumeReq> =>
     createAssetSlot({
       name: `syntheticVolume:${handle}`,
@@ -84,26 +83,17 @@ export function createSyntheticVolumeSlots(
       commit: async (cube) => {
         const renderer = state.gpu.scalarVolumeRenderer;
         if (!renderer) return;
-        // Seed defaults from the per-handle registry; see
+        // Presentation knobs come from the per-handle registry; see
         // `src/data/volumeFieldDefaults.ts` for the why-not-binary
-        // discussion.  Same shape as the cf4Density commit —
-        // only the handle (closure-captured) and the `enabled` seed
-        // (per-fixture via `defaultEnabled`) differ.
+        // discussion.  Same shape as the cf4Density commit.
         const defaults = getVolumeFieldDefaults(handle);
         renderer.addField(handle, cube);
-        // Seed the per-field settings entry with defaults if not
-        // already present — mirrors the guard in `addVolumeField`
-        // so re-registering preserves any previously-tuned values.
+        // Preserve any previously-tuned settings; otherwise seed from
+        // the registry via the shared builder.  Synthetic fixtures get
+        // NO construction seed (DEV-only, `binBaseName: null`), so this
+        // commit is their first settings-bag write.
         if (!state.settings.volumes.fields[handle]) {
-          state.settings.volumes.fields[handle] = {
-            enabled: defaultEnabled,
-            intensity: defaults.intensity ?? DEFAULT_VOLUME_FIELD_INTENSITY,
-            contrast: defaults.contrast,
-            densityScale: defaults.densityScale,
-            paletteId: defaults.paletteId,
-            trim: defaults.trim,
-            exposure: defaults.exposure,
-          };
+          state.settings.volumes.fields[handle] = buildVolumeFieldSettings(handle);
         }
         const persisted = state.settings.volumes.fields[handle]!;
         renderer.setIntensity(handle, persisted.intensity);
@@ -144,10 +134,9 @@ export function createSyntheticVolumeSlots(
   // first; cluttering the scene with a default-on Gaussian sphere
   // fights that.  Toggle any of them from the Volumes panel.
   const slots: SyntheticVolumeSlotRecord = {
-    'debug-gaussian': mintSyntheticVolumeSlot('debug-gaussian', false),
-    'debug-cartesian': mintSyntheticVolumeSlot('debug-cartesian', false),
-    'debug-spherical': mintSyntheticVolumeSlot('debug-spherical', false),
+    'debug-gaussian': mintSyntheticVolumeSlot('debug-gaussian'),
+    'debug-cartesian': mintSyntheticVolumeSlot('debug-cartesian'),
+    'debug-spherical': mintSyntheticVolumeSlot('debug-spherical'),
   };
-  state.assetSlots.syntheticVolumes = slots;
   return slots;
 }

@@ -352,9 +352,8 @@ export const SOURCE_REGISTRY = {
     code: Source.Cf4Density,
     label: 'CF-4 DM density',
     allSky: true, // Valade 2024 reconstruction covers the full 256³ box
-    // Default-off: ~32 MB voxel payload fetched eagerly at boot so the
-    // toggle in the Volumes panel feels instant, but the field doesn't
-    // render until the user opts in.
+    // Default-off: the ~32 MB voxel payload is demand-loaded the first
+    // time the user enables the field in the Volumes panel — not at boot.
     visible: false,
     handle: 'cf4-density',
     // Underscore in the filename for legacy reasons; `handle` mirrors it

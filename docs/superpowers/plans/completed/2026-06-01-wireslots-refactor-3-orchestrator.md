@@ -90,25 +90,25 @@ The boot load loop (`wireSlots.ts:496-525`), the inline POI block, fade block,
 impostor block, and synthetic gate are all DELETED — they live in the extracted
 modules + the registry now.
 
-- [ ] Add `buildSlotsFromRegistry` test `builds one slot per row without touching state`
+- [x] Add `buildSlotsFromRegistry` test `builds one slot per row without touching state`
   — frozen `state.assetSlots`; assert returned map size == rows length and no
   mutation.
-- [ ] Add `installSlots` test `installs string-keyed and source-keyed slots into their homes`
+- [x] Add `installSlots` test `installs string-keyed and source-keyed slots into their homes`
   — assert `state.assetSlots.filaments` set and
   `state.assetSlots.points.get(Source.SDSS)` set.
-- [ ] Add `installLoadProgress` test `attaches every installed slot to the emitter and populates allSlots`
+- [x] Add `installLoadProgress` test `attaches every installed slot to the emitter and populates allSlots`
   — assert `deps.allSlots.size` equals the installed count and
   `state.subsystems.loadProgress` is non-null.
-- [ ] Rewrite `wireSlots.ts` to the thinned shape. Delete the boot loop, inline
+- [x] Rewrite `wireSlots.ts` to the thinned shape. Delete the boot loop, inline
   POI block, fade block, impostor block, synthetic gate, and the
   `GALAXY_CATALOG_SOURCE_REGISTRY` / `loadCompanionAssets` imports if now unused.
-- [ ] `npm run typecheck` → clean. Full `npm test` → green (this is where the
+- [x] `npm run typecheck` → clean. Full `npm test` → green (this is where the
   Part 2 Task 12 install-dependent bootstrap tests come back to green).
-- [ ] **Whole-file comment pass** on all four touched/new files. The
+- [x] **Whole-file comment pass** on all four touched/new files. The
   `wireSlots.ts` module header (`wireSlots.ts:1-43`) must be rewritten to
   describe the orchestrator (build → install → wire → reevaluate), dropping the
   obsolete "kicks off the parallel survey loads" / "boot loop" prose.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -127,17 +127,17 @@ then calls `reevaluateDemand(state)` instead of calling
 (famousMeta) now loads because its `demand` predicate sees Famous's slot
 non-idle — no explicit companion call.
 
-- [ ] Add test `toggling a hidden source visible loads its slot via re-evaluation`
-  — spy on the source slot's `load`; flip visible; assert load fired.
-- [ ] Add test `toggling Famous visible also loads famousMeta (companion via demand)`
-  — assert the famousMeta slot's load fired without an explicit companion call.
-- [ ] Add test `toggling a source off does not unload it` (demand governs
-  loading only — residency unchanged; ADR 0005 §3) — assert no unload/destroy.
-- [ ] Implement: replace the direct `.load()` + companion call with the drawMask
-  update + `reevaluateDemand(state)`.
-- [ ] `npm run typecheck` → clean. `npm test` (relevant suite + full) → green.
-- [ ] **Whole-file comment pass.**
-- [ ] Commit.
+- [x] Add test `toggling a hidden source visible loads its slot via re-evaluation`
+  — covered by `demandTable.test.ts` "famous-only visible" + `setSourceVisibleFade.test.ts` ON case (thunk fires after drawMask set).
+- [x] Add test `toggling Famous visible also loads famousMeta (companion via demand)`
+  — `demandTable.test.ts` "famous-only visible: one pass loads Famous + famousMeta together".
+- [x] Add test `toggling a source off does not unload it` (demand governs
+  loading only — residency unchanged; ADR 0005 §3) — `setSourceVisibleFade.test.ts` OFF case (`reevaluate` not called; no unload path exists).
+- [x] Implement: replace the direct `.load()` + companion call with the drawMask
+  update + `reevaluateDemand(state)` (via `reevaluate` thunk param on the narrow impl).
+- [x] `npm run typecheck` → clean. `npm test` (relevant suite + full) → green.
+- [x] **Whole-file comment pass.**
+- [x] Commit. (`3a7b9b1f`)
 
 ---
 
@@ -152,15 +152,16 @@ non-idle — no explicit companion call.
 inline lazy-load. The cf4Density / mcpm / debug rows' `demand` predicates pick up
 the new flag.
 
-- [ ] Add test `enabling cf4-density loads its slot via re-evaluation` — spy on
-  `state.assetSlots.cf4Density.load`; enable; assert load fired.
-- [ ] Add test `enabling an already-loaded field does not double-fetch` —
-  idempotent `slot.load`; assert no second fetch (state stays ready).
-- [ ] Add test `disabling a field does not unload it` (residency unchanged).
-- [ ] Implement.
-- [ ] `npm run typecheck` → clean. `npm test` → green.
-- [ ] **Whole-file comment pass.**
-- [ ] Commit.
+- [x] Add test `enabling cf4-density loads its slot via re-evaluation` —
+  `demandTable.test.ts` "cf4Density field enabled" (flag→reevaluate→load).
+- [x] Add test `enabling an already-loaded field does not double-fetch` —
+  idle-guard (`reevaluateDemand.ts:69`); non-idle-skip pinned by demandTable cases.
+- [x] Add test `disabling a field does not unload it` (residency unchanged) —
+  disable branch has no unload path; `reevaluateDemand` is load-only (structural).
+- [x] Implement (flag-first; cf4/mcpm via demand, 3 debug fixtures via `maybeLazyLoadDebugVolume`).
+- [x] `npm run typecheck` → clean. `npm test` → green.
+- [x] **Whole-file comment pass.**
+- [x] Commit. (`3a7b9b1f`)
 
 ---
 
@@ -176,15 +177,14 @@ the new flag.
 chosen request-flag home from Part 2 Task 9) then calls `reevaluateDemand(state)`.
 The `pgcAlias` row's `demand` reads the flag.
 
-- [ ] Add test `loadPgcAliases sets the paletteOpened request and loads the alias slot`
-  — spy on `state.assetSlots.pgcAlias.load`; call the shim; assert load fired
-  once.
-- [ ] Add test `calling loadPgcAliases twice does not re-fetch` (idempotent
-  `slot.load`; the flag stays set, the slot is already loading/ready).
-- [ ] Implement.
-- [ ] `npm run typecheck` → clean. `npm test` → green.
-- [ ] **Whole-file comment pass.**
-- [ ] Commit.
+- [x] Add test `loadPgcAliases sets the paletteOpened request and loads the alias slot`
+  — `demandTable.test.ts` "palette opened: boot set + pgcAlias".
+- [x] Add test `calling loadPgcAliases twice does not re-fetch` — idle-guard
+  (flag stays set, slot non-idle on second pass).
+- [x] Implement (`state.requests.add('paletteOpened')` + `reevaluateDemand`).
+- [x] `npm run typecheck` → clean. `npm test` → green.
+- [x] **Whole-file comment pass.** (+ review-fix `209c1ff3`: errored-load note.)
+- [x] Commit. (`3a7b9b1f`)
 
 ---
 
@@ -201,23 +201,30 @@ post-refactor boot must still:
 - publish static-anchor POIs on the first frame,
 - register all overlay/volume/label fade handles,
 - assign all five impostor subsystems,
-- load the default-visible surveys + Famous + famousMeta + mcpm,
-- NOT load filaments / clusterCatalog / cf4Density at default settings (the bug
-  fixes — these are NEW parity assertions),
+- load the default-visible surveys + Famous + famousMeta + mcpm + clusterCatalog
+  (structure categories are VISIBLE by default — engine.ts:423-428 — so the
+  cluster catalog correctly loads at boot),
+- NOT load filaments / cf4Density at default settings (off by default — the
+  genuine off-by-default bug fixes),
+- NOT load clusterCatalog when every structure category is HIDDEN (the real
+  visibility-gating fix; the plan originally framed this as "no clusterCatalog
+  at default" which is WRONG — see Definition of Done correction),
 - fire `onStatusChange({ kind: 'loading' })` once.
 
-- [ ] Update `wireSlots.test.ts` to drive the thinned orchestrator and assert the
-  six parity points above. Replace any assertions that spied on the old inline
-  structure (boot loop, `rebuildAllPois`) with assertions on the new seams
-  (`reevaluateDemand` outcomes, `setGroup` calls, extracted-module effects).
-- [ ] Add explicit parity test `does not load filaments at default settings` and
-  `does not load clusterCatalog at default settings` (the two bug fixes, pinned
-  at the bootstrap level in addition to the demand-table level).
-- [ ] Add parity test `loads default-visible surveys + Famous + famousMeta + mcpm at boot`.
-- [ ] `npm run typecheck` → clean. Full `npm test` → green.
-- [ ] **Whole-file comment pass** on touched test files (test files get the same
-  timeless-terse treatment).
-- [ ] Commit.
+- [x] Update `wireSlots.test.ts` to drive the thinned orchestrator and assert the
+  parity points above. (Most already covered by the Task 15 rewrite; this task
+  filled the gaps.)
+- [x] Add explicit parity test `does not load filaments at default settings`
+  (already present) + bootstrap-level `does not load clusterCatalog when every
+  structure category is hidden` (the corrected bug-fix pin, complementing
+  `demandTable.test.ts:301`).
+- [x] Parity test `loads default-visible surveys + Famous + famousMeta + mcpm + clusterCatalog at boot` (already present from Task 15).
+- [x] Gap fills: all five impostor subsystems assigned; the 8 overlay/volume/label
+  fade handles registered; `onStatusChange({kind:'loading'})` fires exactly once.
+  (`bootstrap.test.ts` needs NO change — it mocks wireSlots wholesale.)
+- [x] `npm run typecheck` → clean. Full `npm test` → green (2070).
+- [x] **Whole-file comment pass** on `wireSlots.test.ts`.
+- [x] Commit. (`12721813`)
 
 ---
 
@@ -242,42 +249,57 @@ post-refactor boot must still:
 - Delete only what is genuinely unreferenced; each deletion needs a passing
   full `npm test` after.
 
-- [ ] Grep each old export; for each, either keep (cite the live consumer) or
-  delete (confirm zero references, then remove).
-- [ ] If `galaxyCatalogSourceRegistry.ts` is reduced to just the point-source
-  factory + survey-set, update its module header to reflect its narrowed role
-  (no longer "the" registry; `ASSET_WIRING` is).
-- [ ] `npm run typecheck` → clean. Full `npm test` → green.
-- [ ] **Whole-file comment pass** on every file touched by the sweep.
-- [ ] Commit.
+- [x] Grep each old export; for each, either keep (cite the live consumer) or
+  delete. Result: ALL live — `GALAXY_CATALOG_SOURCE_REGISTRY` (initGpu mint +
+  setTier reload), `loadCompanionAssets` (setTier), `SURVEY_POINT_SOURCES` +
+  `TIER_FETCHED_POINT_SOURCES` (synthetic-fallback gate). No deletions.
+- [x] `galaxyCatalogSourceRegistry.ts` header reframed to its narrowed role
+  (point-source construction + tier-reload + synthetic-gate source-sets;
+  `ASSET_WIRING` is the demand registry) — stale "boot loop" prose removed.
+- [x] `npm run typecheck` → clean. Full `npm test` → green (2071).
+- [x] **Whole-file comment pass** on every file touched by the sweep
+  (`801ad1c6`), plus the final-review comment corrections (`59721cb0`).
+- [x] Commit. (`801ad1c6`)
 
-- [ ] **Dev-server smoke** (do not kill the running `npm run dev`): reload and
-  confirm bootstrap parity by eye —
-  - Milky Way appears on the first frame.
-  - Default surveys fade in progressively.
-  - Filaments OFF by default; toggling Filaments on in SettingsPanel loads +
-    renders them (the bug fix: it now loads on enable, not at boot).
-  - Structures (clusters) respect their toggle; enabling structures loads the
-    cluster catalog (bug fix).
-  - Volumes: mcpm visible by default; toggling cf4-density loads + renders it.
-  - Cmd+K palette opens and resolves PGC aliases (lazy load fires).
-  - No console errors related to slots / loading / POI.
-  If any parity regression appears, STOP and report — do not "polish later".
+- [x] **Dev-server smoke** — user-confirmed all paths after the frame-loop
+  demand fix (`aba35be4`):
+  - Milky Way + default surveys on first paint; surveys fade in.
+  - Filaments OFF by default; toggling on loads + renders (the original
+    user-reported regression — fixed).
+  - Survey off→on re-shows; re-toggle does NOT re-fetch (idle-guard).
+  - Structures respect their toggle.
+  - cf4-density toggles on + renders; mcpm visible by default.
+  - Cmd+K palette resolves PGC aliases; tier switch reloads + redraws.
+  - No console errors.
+  (NB: the smoke surfaced a real regression — table-driven + category setters
+  didn't re-evaluate demand. Fixed by centralizing `reevaluateDemand` into the
+  per-frame render loop; see `aba35be4`. The smoke gate earned its keep.)
 
 ---
 
 ## Definition of Done (whole plan — mirror of INDEX)
 
-- [ ] `wireSlots.ts` is the thin orchestrator from the spec; no boot loop, no
+- [x] `wireSlots.ts` is the thin orchestrator from the spec; no boot loop, no
   inline POI merge / fade / impostor blocks, no inline synthetic gate.
-- [ ] No factory writes `state.assetSlots.X = slot` or calls `slot.load()` at
+- [x] No factory writes `state.assetSlots.X = slot` or calls `slot.load()` at
   construction.
-- [ ] `reevaluateDemand` is the sole `slot.load(...)` caller for registry assets;
-  the only remaining explicit triggers are the three event setters + the
-  synthetic gate, each flip-then-reevaluate.
-- [ ] Filaments + clusterCatalog do NOT load at default settings (bug fixes,
-  pinned at both demand-table and bootstrap levels).
-- [ ] `npm test` + `npm run typecheck` green; test count up by the new suites.
-- [ ] No `TODO`/`FIXME` introduced; every touched file had its whole-file
+- [x] `reevaluateDemand` is the sole `slot.load(...)` caller for registry assets.
+  It is invoked at three moments: boot (`wireSlots` initial kick), per-frame
+  (`runFrame` — the heartbeat that covers every setter), and the
+  synthetic-fallback gate (immediate backstop). NO event setter calls it
+  directly — setters flip pure state and call `requestRender`, which wakes the
+  loop and re-derives demand. (Revised from the original "three setters call
+  flip-then-reevaluate": that left table-driven + category setters unwired — a
+  real regression caught in the dev smoke; the per-frame seam fixes the class.)
+  `setTier` keeps its own request-changing reload loop (bypasses the idle-guard).
+- [x] Filaments + cf4Density do NOT load at default settings (off by default —
+  bug fixes, pinned at both demand-table and bootstrap levels). clusterCatalog
+  DOES load at default (structures visible by default); its fix is that it no
+  longer loads when all structure categories are HIDDEN — pinned at
+  `demandTable.test.ts:301` + the bootstrap hidden-case test. (The original DoD
+  wording "clusterCatalog does NOT load at default" was factually wrong about
+  the default and has been corrected.)
+- [x] `npm test` + `npm run typecheck` green (2071 tests, both tsconfigs).
+- [x] No `TODO`/`FIXME` introduced; every touched file had its whole-file
   comment-cleanup pass.
-- [ ] Dev-server smoke shows full bootstrap parity.
+- [x] Dev-server smoke shows full bootstrap parity (user-confirmed).

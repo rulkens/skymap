@@ -82,14 +82,14 @@ export type EngineAssetSlots = {
   /**
    * CF-4 dark-matter density volume — Valade 2024 256³ HAMLET cube.
    *
-   * Loaded eagerly at engine boot via `cf4DensityFetcher`; the slot's
-   * commit registers the cube as the `'cf4-density'` field on the
-   * scalar-volume renderer. Default-off in user settings, so the
-   * extra ~32 MB of decoded voxel data is paid on every page load
-   * but the field is invisible until the user toggles it on in the
-   * Volumes panel.
+   * Default-off, so demand-loaded: the slot stays idle until the user
+   * enables the field in the Volumes panel, at which point the per-frame
+   * `reevaluateDemand` fires `cf4DensityFetcher` and the commit registers
+   * the cube as the `'cf4-density'` field on the scalar-volume renderer.
+   * The ~32 MB of decoded voxel data is therefore paid only on opt-in,
+   * not on every page load.
    *
-   * Null until the IIFE mints it (matches `filaments` for the same
+   * Null until `wireSlots` mints it (matches `filaments` for the same
    * lifecycle reason — the renderer must exist before the slot can
    * commit). Missing/404 .scfd surfaces as a never-fires commit; the
    * field simply won't appear in the Volumes panel.
@@ -100,10 +100,9 @@ export type EngineAssetSlots = {
    * `SDSS_z_44-476mpc` cube (Wilde et al. 2023), 712×1200×728 voxels at
    * native resolution, downsampled into three tiers.
    *
-   * Tier-aware (unlike cf4Density above): slot is loaded at boot with
-   * `state.sources.tier`, and reloaded on tier change by `engine.setTier`.
-   * Default-off in user settings; the .scfd is fetched eagerly so the
-   * field is ready when the user toggles it on in the Volumes panel.
+   * Tier-aware (unlike cf4Density above). Default-on (the headline
+   * cosmic-web overlay), so demand loads it at boot with
+   * `state.sources.tier`; `engine.setTier` reloads it on tier change.
    *
    * Null until `wireSlots` mints it (matches cf4Density for the same
    * lifecycle reason — the renderer must exist before commit).

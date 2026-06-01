@@ -965,6 +965,108 @@ describe('poiSubsystem · marker/label visibility', () => {
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────
+// Keyed-group API: setGroup / clearGroup (Task 3 — wireSlots refactor)
+//
+// Three POI sources (staticAnchors, famous, clusterBulk) arrive on
+// different schedules.  Before this API, wireSlots merged them with a
+// re-merge-everything approach via setPois; now each group owns its
+// slot and cannot clobber another.  The observable POI set is the
+// stable-order concatenation: staticAnchors → famous → clusterBulk.
+// ─────────────────────────────────────────────────────────────────────
+describe('poiSubsystem · setGroup / clearGroup', () => {
+  const ANCHOR: PointOfInterest = {
+    id: 'anchor',
+    name: 'Anchor',
+    category: 'cluster',
+    worldPos: [10, 0, 0],
+    featured: true,
+    physicalRadiusMpc: 2,
+  };
+  const BULK: PointOfInterest = {
+    id: 'bulk-c',
+    name: 'Bulk C',
+    category: 'cluster',
+    worldPos: [5, 0, 0],
+    featured: false,
+    physicalRadiusMpc: 1,
+    significance: 0.4,
+  };
+
+  it('setGroup then a second setGroup for a different id both appear in produceMarkers output', () => {
+    const sub = createPoiSubsystem();
+    sub.setGroup('staticAnchors', [ANCHOR]);
+    sub.setGroup('clusterBulk', [BULK]);
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+    // Both groups contribute to the marker output.  Famous galaxies skip
+    // the marker pass so only cluster descriptors appear.
+    const ids = markers.map((m) => m.id);
+    expect(ids).toContain('anchor');
+    expect(ids).toContain('bulk-c');
+    expect(ids).toHaveLength(2);
+  });
+
+  it('a second setGroup for the same id replaces, not appends', () => {
+    const sub = createPoiSubsystem();
+    sub.setGroup('staticAnchors', [ANCHOR]);
+    sub.setGroup('staticAnchors', [BULK]);
+    // The keyed API's core safety property: re-setting a group replaces its
+    // contents (Map.set overwrites) rather than accumulating across calls.
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+    expect(markers.map((m) => m.id)).toEqual(['bulk-c']);
+  });
+
+  it('clearGroup removes only that group', () => {
+    const sub = createPoiSubsystem();
+    sub.setGroup('staticAnchors', [ANCHOR]);
+    sub.setGroup('clusterBulk', [BULK]);
+    // Clear only clusterBulk; staticAnchors must survive.
+    sub.clearGroup('clusterBulk');
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+    expect(markers.map((m) => m.id)).toEqual(['anchor']);
+  });
+
+  it('concatenation order is staticAnchors, famous, clusterBulk', () => {
+    // All three groups set with one cluster POI each in the same category.
+    // getPoisForCategory must return them in the canonical merge order.
+    // This pins the pick-index alignment contract across groups.
+    const A: PointOfInterest = {
+      id: 'a',
+      name: 'A',
+      category: 'cluster',
+      worldPos: [10, 0, 0],
+      featured: true,
+      physicalRadiusMpc: 2,
+    };
+    const B: PointOfInterest = {
+      id: 'b',
+      name: 'B',
+      category: 'cluster',
+      worldPos: [20, 0, 0],
+      featured: false,
+      physicalRadiusMpc: 3,
+      significance: 0.9,
+    };
+    const C: PointOfInterest = {
+      id: 'c',
+      name: 'C',
+      category: 'cluster',
+      worldPos: [30, 0, 0],
+      featured: false,
+      physicalRadiusMpc: 1,
+      significance: 0.5,
+    };
+    const sub = createPoiSubsystem();
+    // Intentionally set famous group (B) before staticAnchors (A) to
+    // confirm that group order — not insertion order — governs the result.
+    sub.setGroup('famous', [B]);
+    sub.setGroup('staticAnchors', [A]);
+    sub.setGroup('clusterBulk', [C]);
+    const ids = sub.getPoisForCategory('cluster').map((p) => p.id);
+    expect(ids).toEqual(['a', 'b', 'c']);
+  });
+});
+
 describe('POI_STYLES labelColor alpha', () => {
   it('every labelColor has alpha=1 so the straight->premultiplied migration is a no-op', () => {
     // Migration safety: the label pack loop now multiplies rgb * a on

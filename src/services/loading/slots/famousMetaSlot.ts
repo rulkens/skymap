@@ -40,6 +40,5 @@ export const createFamousMetaSlot: SlotFactory<FamousPayload, CompanionAssetReq>
       console.warn('[engine] famous sidecar failed to load:', s.error);
     }
   });
-  state.assetSlots.famousMeta = slot;
   return slot;
 };

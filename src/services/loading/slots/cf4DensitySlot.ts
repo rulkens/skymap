@@ -1,28 +1,25 @@
 /**
  * cf4DensitySlot — factory for the CF-4 DM density volume's asset slot.
  *
- * Eager-at-boot fetch of `public/data/cf4_density.scfd`.  On commit,
- * hands the decoded `ScalarCube` to `scalarVolumeRenderer.addField` under
- * the handle `'cf4-density'`, then seeds per-field settings if not
- * already present (preserving any user-tuned intensity/palette across
- * sessions).
+ * On commit, hands the decoded `ScalarCube` to
+ * `scalarVolumeRenderer.addField` under the handle `'cf4-density'`,
+ * preserving any user-tuned intensity/palette (the construction seed
+ * already created the entry).
  *
- * **Lazy fetch.**  This factory mints the slot unconditionally; the
- * boot-time `.load()` in `wireSlots` is gated on
- * `SOURCE_REGISTRY[Source.Cf4Density].visible` so a default-off CF-4
- * doesn't waste bandwidth at startup.  Toggling the field on later
- * lazy-loads via `engine.setVolumeFieldEnabled`.
+ * **Lazy fetch.**  This factory mints the slot unconditionally, but
+ * CF-4 is registry-visible:false, so its construction seed lands
+ * `enabled: false` and the slot stays idle at boot.  Toggling the field
+ * on flips the bit and lazy-loads via `engine.setVolumeFieldEnabled`,
+ * keeping a default-off CF-4 off the boot bandwidth budget.
  *
- * **Seed-and-forward shape.**  The commit duplicates the same seed
- * pattern the synthetic-volume factory uses (and that
- * `engineHandle.addVolumeField` performs against the public API).  H3 in
- * the same audit deferred dedup of that pattern to a follow-up PR; the
- * commit body here is copied verbatim from the inline block.
+ * **Seed shape.**  The settings seed is shared with the other volume
+ * slots + the construction seed via `buildVolumeFieldSettings`.
  */
 
 import { createAssetSlot } from '../AssetSlot';
 import { cf4DensityFetcher } from '../fetchers/cf4DensityFetcher';
 import { Source, SOURCE_REGISTRY } from '../../../data/sources';
+import { buildVolumeFieldSettings } from '../../../data/volumeFieldDefaults';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
@@ -44,16 +41,12 @@ export const createCf4DensitySlot: SlotFactory<ScalarCube, void> = (state, cb) =
       const defaults = SOURCE_REGISTRY[Source.Cf4Density];
       const handle = defaults.handle;
       renderer.addField(handle, cube);
+      // Preserve any previously-tuned settings; otherwise seed from the
+      // registry.  CF-4 is a shippable volume, so the engine's
+      // construction seed already created this entry — the guard
+      // normally takes the preserve branch.
       if (!state.settings.volumes.fields[handle]) {
-        state.settings.volumes.fields[handle] = {
-          enabled: defaults.visible,
-          intensity: defaults.intensity,
-          contrast: defaults.contrast,
-          densityScale: defaults.densityScale,
-          paletteId: defaults.paletteId,
-          trim: defaults.trim,
-          exposure: defaults.exposure,
-        };
+        state.settings.volumes.fields[handle] = buildVolumeFieldSettings(handle);
       }
       const persisted = state.settings.volumes.fields[handle]!;
       renderer.setIntensity(handle, persisted.intensity);
@@ -90,6 +83,5 @@ export const createCf4DensitySlot: SlotFactory<ScalarCube, void> = (state, cb) =
       );
     }
   });
-  state.assetSlots.cf4Density = slot;
   return slot;
 };

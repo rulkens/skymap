@@ -10,8 +10,8 @@
  * No `commit` — the resolved Map is consumed by the React layer via the
  * Promise the shim returns; nothing engine-side to mutate.
  *
- * Pre-H4 the mint block lived inline in `wireSlots.ts`; extracted here
- * as part of the slot-factory split (2026-05-11 audit).
+ * Construction-pure: builds + RETURNS the slot; `installSlots` owns the
+ * write to `state.assetSlots`.
  */
 
 import { createAssetSlot } from '../AssetSlot';
@@ -24,6 +24,5 @@ export const createPgcAliasSlot: SlotFactory<PgcAliasMap, void> = (state, _cb) =
     name: 'pgc-aliases',
     fetch: pgcAliasFetcher,
   });
-  state.assetSlots.pgcAlias = slot;
   return slot;
 };

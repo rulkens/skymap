@@ -1,526 +1,120 @@
 /**
- * wireSlots — bootstrap phase that wires sidecar asset slots, the
- * load-progress emitter, the thumbnail subsystem, and kicks off the
- * parallel multi-survey load.
+ * wireSlots — bootstrap phase 2: the demand-driven asset orchestrator.
  *
- * The 5 point-source slots are minted earlier (in `initGpu`, immediately
- * after the renderer that they commit into). This phase covers the rest:
+ * The 6 point-source slots are minted earlier (in `initGpu`, alongside the
+ * renderer their commit uploads into) and self-install into
+ * `state.assetSlots.points`. This phase wires everything else and then lets the
+ * demand loop decide what actually loads:
  *
- *   - Filament, CF-4 DM density, MCPM Cosmic Web volume slots.
- *   - Famous-meta + cluster-catalog + PGC-alias sidecar slots.
- *   - Synthetic-volume DEV fixtures.
- *   - The `allSlots` registry + load-progress emitter.
- *   - The galaxy-atlas / textured-disk / procedural-disk subsystems.
+ *   1. `buildSlotsFromRegistry` — construct every non-external slot from
+ *      `ASSET_WIRING` (sidecars: filaments, famous-meta, cluster catalog,
+ *      PGC alias, CF-4 + MCPM volumes). Pure: no state writes, no loads.
+ *   2. `installSlots` — the single mutation site that writes each built slot
+ *      onto its named `state.assetSlots` field.
+ *   3. DEV synthetic-volume fixtures — minted + installed here (not a wiring
+ *      row; tree-shaken from production).
+ *   4. `wireImpostorSubsystems` / `registerOverlayFades` / `wirePoiProjection`
+ *      — the thumbnail/disk subsystems, fade handles, and three-group POI
+ *      projection.
+ *   5. `createSyntheticFallback` — the imperative gate that arms the synthetic
+ *      backstop (via the `'syntheticFallback'` request flag) iff every real
+ *      survey settles without data.
+ *   6. `installLoadProgress` — the flat `allSlots` registry + load-progress
+ *      emitter, over both point + sidecar slots.
+ *   7. `reevaluateDemand` — the single place loads start. It walks every wiring
+ *      row and triggers each demanded slot with its tier-derived request,
+ *      replacing the old imperative boot loop. The same loop re-runs on every
+ *      state change, so "is this asset required?" has one answer in one place.
  *
- * After mint, this phase fires `cb.onStatusChange({ kind: 'loading' })`
- * and kicks off the parallel survey loads. It does NOT block on arrivals
- * — `wireInput` and `startLoop` run immediately afterwards so the camera
- * and the rAF loop come up with whatever has landed (often nothing yet),
- * letting the Milky Way appear on the first frame and surveys fade in
- * progressively. Two background subscribers handle the rest:
- *
- *   1. Per-arrival `ready` status emission with running totals.
- *   2. Synthetic fallback when every real survey settles without a
- *      successful ready+count>0.
+ * The phase does not block on data arrival: `cb.onStatusChange({ kind:
+ * 'loading' })` fires synchronously and `wireInput`/`startLoop` run immediately
+ * after, so the camera and rAF loop come up with whatever has landed. Per-
+ * arrival `ready` emission and the synthetic fallback run as background
+ * subscribers wired here.
  *
  * ### State writes
  *
- *   - `state.assetSlots.filaments`, `state.assetSlots.famousMeta`,
- *     `state.assetSlots.pgcAlias`, `state.assetSlots.cf4Density`,
- *     `state.assetSlots.mcpm`, `state.assetSlots.syntheticVolumes`.
- *   - `state.sources.famousMeta` — via famous-meta subscriber (on `ready`).
- *   - `state.sources.clusterBulk` — via cluster-catalog subscriber (on `ready`).
- *   - `state.sources.catalogs` — populated by the per-source slot commit
- *     subscribers (wired in `initGpu`).
- *   - `state.subsystems.loadProgress`, `state.subsystems.galaxyAtlas`,
- *     `state.subsystems.texturedDisks`, `state.subsystems.proceduralDisks`.
- *   - `cb.onStatusChange({ kind: 'loading' })` synchronously; `kind:
- *     'ready'` fires from the per-arrival subscriber, not from this body.
+ *   - `state.assetSlots.{filaments,famousMeta,clusterCatalog,pgcAlias,
+ *     cf4Density,mcpm}` (via `installSlots`) + `.syntheticVolumes` (DEV).
+ *   - `state.subsystems.{loadProgress, pois}` + the impostor subsystem handles.
+ *   - `state.requests` may gain `'syntheticFallback'` (via the gate).
+ *   - `cb.onStatusChange({ kind: 'loading' })` synchronously.
  *
  * ### Side effects on `deps`
  *
- *   - Mutates `deps.allSlots` — populates with every minted slot.
+ *   - Mutates `deps.allSlots` — populated with every installed slot.
  */
 
-import { Source } from '../../../data/sources';
-import { maskHas } from '../../../utils/sourceMask';
-import {
-  GALAXY_CATALOG_SOURCE_REGISTRY,
-  SURVEY_POINT_SOURCES,
-  TIER_FETCHED_POINT_SOURCES,
-  loadCompanionAssets,
-} from '../wiring/galaxyCatalogSourceRegistry';
-import { buildPoisFromFamousMeta } from './buildPoisFromFamousMeta';
-import { buildPoisFromClusterCatalog } from './buildPoisFromClusterCatalog';
-import { createFilamentSlot } from '../../loading/slots/filamentSlot';
-import { createClusterCatalogSlot } from '../../loading/slots/clusterCatalogSlot';
-import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
-import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
-import { createFamousMetaSlot } from '../../loading/slots/famousMetaSlot';
-import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
+import { ASSET_WIRING } from '../wiring/assetWiring';
+import { buildSlotsFromRegistry } from '../wiring/buildSlotsFromRegistry';
+import { installSlots } from '../wiring/installSlots';
+import { installLoadProgress } from '../wiring/installLoadProgress';
 import { createSyntheticVolumeSlots } from '../../loading/slots/syntheticVolumeSlots';
-import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';
-import { createGalaxyAtlasSubsystem } from '../subsystems/galaxyAtlasSubsystem';
-import { createProceduralDiskSubsystem } from '../subsystems/proceduralDiskSubsystem';
-import { createTexturedDiskSubsystem } from '../subsystems/texturedDiskSubsystem';
-import { createHiResFamousSubsystem } from '../subsystems/hiResFamousSubsystem';
-import { createHiResFamousTexture } from '../../gpu/resources/hiResFamousTexture';
-import { HI_RES_LAYER_COUNT, HI_RES_LAYER_SIDE_BY_TIER } from '../../../data/sources';
-// Cosmography POI anchors wired unconditionally into the POI subsystem
-// below — the user-facing toggle is the SettingsPanel per-category
-// checkbox, not a URL gate.
-import { buildStaticAnchorPois } from '../../../data/buildStaticAnchorPois';
-import { SOURCE_REGISTRY } from '../../../data/sources';
-import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfInterest';
+import { wireImpostorSubsystems } from '../wiring/wireImpostorSubsystems';
+import { registerOverlayFades } from '../wiring/registerOverlayFades';
+import { wirePoiProjection } from '../wiring/wirePoiProjection';
+import { createSyntheticFallback } from '../wiring/createSyntheticFallback';
+import { reevaluateDemand } from '../wiring/reevaluateDemand';
 
-import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 
-/**
- * Bootstrap phase 2: sidecar slots + load-progress emitter + thumbnail
- * subsystem + parallel multi-survey load with synthetic fallback.
- */
 export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promise<void> {
-  const { cb, allSlots } = deps;
-  // `phaseLocals` is set by `initGpu`, which always runs before us per
-  // the orchestrator's order.  The non-null assertion is therefore
-  // safe; if `initGpu` ever stops setting it the orchestrator would
-  // need updating in lockstep.
-  const phaseLocals = deps.phaseLocals!;
-  const { device } = phaseLocals;
-  // Renderers are owned by `state.gpu.*` (written by `initGpu`).  The
-  // explicit null-checks below turn the phase-ordering assumption into
-  // a typed runtime error if `initGpu` is ever skipped/reordered.
-  const { texturedDiskRenderer, proceduralDiskRenderer } = state.gpu;
-  if (texturedDiskRenderer === null || proceduralDiskRenderer === null) {
+  const { cb } = deps;
+
+  // Fail-fast precondition: both disk renderers must be non-null before any
+  // slot construction touches EngineState.  The same check is repeated inside
+  // `wireImpostorSubsystems` co-located with the reads it guards — the
+  // redundancy is intentional and cheap.
+  if (state.gpu.texturedDiskRenderer === null || state.gpu.proceduralDiskRenderer === null) {
     throw new Error(
       'wireSlots: texturedDisk/proceduralDisk renderers must be initialised by initGpu before this phase runs',
     );
   }
 
-  // ── Filament asset slot ──────────────────────────────────────────
-  // Factory owns the mint + subscribe + state write.  See
-  // `loading/slots/filamentSlot.ts` for the lifecycle rationale.
-  const filamentSlot = createFilamentSlot(state, cb);
+  // Build every non-external slot from the wiring registry, then install them
+  // in one mutation pass.  Point slots are skipped here (built: 'external' —
+  // already minted in initGpu).
+  const slots = buildSlotsFromRegistry(ASSET_WIRING, { state, cb });
+  installSlots(state, slots);
 
-  // ── Cosmography anchor POIs (always wired) ───────────────────────
-  //
-  // The SettingsPanel's per-category checkboxes (Overlays → Labels)
-  // are the user-facing knob; this wire just makes the POIs available.
-  //
-  // The seed JSON holds all three categories (cluster / supercluster /
-  // void); the audit script in `tools/` filters by category directly
-  // from the parsed seed.
-  //
-  // physicalRadiusMpc per anchor comes from `data/cluster_anchors.seed.json` —
-  // literature-grounded values (R_200 / virial radii for clusters,
-  // characteristic structural extent for superclusters and voids).
-  // See the per-entry description fields in the seed JSON.
-  //
-  // The id-slug + worldPos build is factored into
-  // `data/buildStaticAnchorPois.ts` so the React-side `usePoiUrlSync`
-  // deep-link drain can construct the same `PointOfInterest` records
-  // by id without drifting on slug-rule changes.
-  const staticAnchorPois: PointOfInterest[] = buildStaticAnchorPois();
-  // Initial publish is just the static anchors — the famous-galaxy and
-  // bulk-cluster groups merge in later via `rebuildAllPois` once their
-  // async assets land (defined below, after the slots are minted).
-
-  // ── CF-4 DM density volume slot ──────────────────────────────────
-  // Slot minted unconditionally; the boot-time `.load()` below is
-  // gated on `SOURCE_REGISTRY[Source.Cf4Density].visible` so a default-off CF-4
-  // doesn't waste bandwidth.  Toggling on later lazy-loads via
-  // `engine.setVolumeFieldEnabled`.  Factory owns mint + commit + state
-  // write — see `loading/slots/cf4DensitySlot.ts`.
-  createCf4DensitySlot(state, cb);
-  // MCPM Cosmic Web slot — minted here, but `.load()` deferred to the
-  // central coordination point below alongside filaments / CF-4 /
-  // point-source loads.  Loading inline at mint time fires too early
-  // in bootstrap (renderer not yet wired, no loading-bar registry),
-  // so the slot's commit is a silent no-op.  Same pattern as
-  // cf4DensitySlot: factory writes `state.assetSlots.mcpm`, the
-  // central `.load()` below picks it up and triggers the actual fetch.
-  createMcpmSlot(state, cb);
-
-  // ── Famous-galaxy sidecar slot ───────────────────────────────────
-  // Factory owns the mint + subscribe + state write.  See
-  // `loading/slots/famousMetaSlot.ts` for the dual-sidecar rationale and
-  // the graceful-degradation policy on fetch error.
-  const famousMetaSlot = createFamousMetaSlot(state, cb);
-
-  // ── Cluster/supercluster bulk-coverage slot ──────────────────────
-  // Boot-time, tier-agnostic asset (like filaments + famous-meta): the
-  // numeric `.ccat` + meta sidecar that the bulk POI producer turns into
-  // the ~375 non-featured ring/halo structures.  Factory owns the mint +
-  // subscribe + state write (`state.sources.clusterBulk`).  Unlike
-  // famous-meta this is NOT a registry companion, so its `.load({})`
-  // fires explicitly from the boot-load section below alongside filaments.
-  const clusterCatalogSlot = createClusterCatalogSlot(state, cb);
-
-  // ── POI merge wire (deferred, three groups) ──────────────────────
-  //
-  // The POI subsystem's published list is the union of THREE groups,
-  // each arriving on its own schedule:
-  //
-  //   1. Static anchors — synchronous, present from this phase's start.
-  //   2. Famous galaxies — need the meta sidecar (names + diameter) AND
-  //      the Famous galaxy catalog (worldPos), both async.
-  //   3. Bulk clusters/superclusters — present once the cluster-catalog
-  //      slot lands (writes `state.sources.clusterBulk`).
-  //
-  // A single `rebuildAllPois` always re-merges whichever groups are
-  // currently available and republishes the full list.  Routing all
-  // three subscribers through one rebuild (rather than three independent
-  // `setPois([...static, ...thisGroup])` calls) is essential: an
-  // independent famous subscriber would clobber the bulk POIs, and vice
-  // versa.
-  //
-  // Re-merging on every arrival isn't a performance concern: setPois is
-  // O(N) over the merged list (~500 POIs at most), and produceLabels only
-  // forwards downstream when the label set actually changes.  Simpler to
-  // recompute the merged list than to track partial state.
-  function rebuildAllPois(): void {
-    // Famous: needs both the meta sidecar and the Famous catalog (worldPos).
-    const meta = state.sources.famousMeta;
-    const famousCatalog = state.sources.catalogs.get(Source.Famous);
-    const famousPois =
-      meta.length === 0 || famousCatalog === undefined || famousCatalog.count === 0
-        ? []
-        : buildPoisFromFamousMeta(meta, famousCatalog);
-    // Bulk clusters: present once the cluster-catalog slot has loaded.
-    const clusterBulkPois = state.sources.clusterBulk
-      ? buildPoisFromClusterCatalog(state.sources.clusterBulk)
-      : [];
-    state.subsystems.pois.setPois([...staticAnchorPois, ...famousPois, ...clusterBulkPois]);
-    // Echo the per-category structure counts so the Structures panel can
-    // show "Clusters 573" alongside its toggles — the marker-category
-    // analogue of the per-survey onCatalogReady count.  Counted off the
-    // freshly-merged subsystem list (featured anchors + bulk) so the
-    // number matches exactly what renders.  Famous galaxies are a label-
-    // only category, not a Structures row, so they're omitted.
-    cb.sources?.onStructureCountsChange?.({
-      cluster: state.subsystems.pois.getPoisForCategory('cluster').length,
-      supercluster: state.subsystems.pois.getPoisForCategory('supercluster').length,
-      void: state.subsystems.pois.getPoisForCategory('void').length,
-    });
-  }
-  // Publish immediately (static anchors only at boot; both async groups
-  // are still empty unless wireSlots is replayed in tests / after a hot
-  // reload, in which case any already-present group merges in too).
-  rebuildAllPois();
-  // Subscribe to each async group's `ready`.  Each subscriber also fires
-  // once with the slot's current state, so a slot already in `ready`
-  // re-triggers the merge here.
-  famousMetaSlot.subscribe((s) => {
-    if (s.kind === 'ready') rebuildAllPois();
-  });
-  // Famous catalog's slot — the symmetric trigger for the worldPos half.
-  const famousCatalogSlot = state.assetSlots.points.get(Source.Famous);
-  if (famousCatalogSlot !== undefined) {
-    famousCatalogSlot.subscribe((s) => {
-      if (s.kind === 'ready') rebuildAllPois();
-    });
-  }
-  // Cluster-catalog slot — the bulk-structure trigger.
-  clusterCatalogSlot.subscribe((s) => {
-    if (s.kind === 'ready') rebuildAllPois();
-  });
-
-  // ── PGC-alias slot ───────────────────────────────────────────────
-  // Lazy: only `load()`-ed on first Cmd+K palette open via the public
-  // handle's `loadPgcAliases()` shim.  Factory owns the mint + state
-  // write; see `loading/slots/pgcAliasSlot.ts`.
-  const pgcAliasSlot = createPgcAliasSlot(state, cb);
-
-  // ── Synthetic volume slots (DEV-only) ────────────────────────────
-  // Axis-verification debug fixtures — gated on DEV so production
-  // users don't see synthetic noise.  Vite tree-shakes the factory
-  // out of production bundles.
+  // DEV-only synthetic volume fixtures — axis-verification debug cubes.  Not a
+  // wiring row (kept out so Vite tree-shakes the procedural generators from
+  // production); minted + installed at the call site under DEV.
   if (import.meta.env.DEV) {
-    createSyntheticVolumeSlots(state, cb);
+    state.assetSlots.syntheticVolumes = createSyntheticVolumeSlots(state, cb);
   }
 
-  // ── Loading-bar emitter ──────────────────────────────────────────
-  //
-  // The per-engine loading-bar aggregator is a thin subscriber over
-  // `aggregateRegistry`.  Build the slot registry here (now that every
-  // slot exists) and hand it to the emitter; `attachSlot` then wires
-  // each slot's `subscribe` so that any state transition recomputes
-  // the projection and forwards the snapshot to `cb.onLoadProgress`.
-  //
-  // A single shared Map (rather than per-subset `attachSlot` calls)
-  // also feeds the dev panel's per-slot view; building it once here
-  // keeps both consumers in lockstep on what counts as "in flight".
-  //
-  // The `unknown` type-erasure below is benign — `aggregateRegistry`
-  // only reads `slot.state()` discriminator fields, never the
-  // payload type.  We re-narrow at the dev panel's per-slot
-  // rendering site if it cares.
-  //
-  // `allSlots` is declared at outer scope (top of `createEngine`) so
-  // the public handle can expose the same Map as `assetSlots` for
-  // the `LoadingDevPanel` debug component.  We populate it here once
-  // every slot exists.
-  for (const [, slot] of state.assetSlots.points) {
-    allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
-  }
-  allSlots.set(filamentSlot.name, filamentSlot as unknown as AssetSlot<unknown, unknown>);
-  allSlots.set(famousMetaSlot.name, famousMetaSlot as unknown as AssetSlot<unknown, unknown>);
-  allSlots.set(
-    clusterCatalogSlot.name,
-    clusterCatalogSlot as unknown as AssetSlot<unknown, unknown>,
-  );
-  allSlots.set(pgcAliasSlot.name, pgcAliasSlot as unknown as AssetSlot<unknown, unknown>);
-  if (state.assetSlots.cf4Density) {
-    allSlots.set(
-      state.assetSlots.cf4Density.name,
-      state.assetSlots.cf4Density as unknown as AssetSlot<unknown, unknown>,
-    );
-  }
-  // Register the synthetic volume slots only when they were minted (dev
-  // builds).  Doing the registration here (after the DEV-guarded mint
-  // block) keeps the `allSlots` population site cohesive with its
-  // neighbours instead of scattering it into the DEV branch.
-  if (state.assetSlots.syntheticVolumes) {
-    for (const slot of Object.values(state.assetSlots.syntheticVolumes)) {
-      allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
-    }
-  }
+  // Build and wire the five impostor subsystems (galaxy atlas, textured
+  // disks, procedural disks, hi-res Famous texture + planner).
+  wireImpostorSubsystems(state, deps);
 
-  const progressEmitter = createLoadProgressEmitter((snapshot) => {
-    cb.sources?.onLoadProgress?.(snapshot);
-  }, allSlots);
-  for (const [, slot] of allSlots) progressEmitter.attachSlot(slot);
-  state.subsystems.loadProgress = progressEmitter;
+  // Register overlay, volume-master, and label-layer fade handles, seeded
+  // from the user's stored opacities so frame 1 is coherent.
+  registerOverlayFades(state);
 
-  // famous-meta is declared as Famous's `companion` in the registry;
-  // it fires from the boot loop below alongside the Famous bin.
-  // PGC-aliases stay lazy; see `loadPgcAliases()` on the handle for
-  // the on-demand trigger.
+  // Wire the three keyed POI groups (static anchors, the famous 2-asset join,
+  // the bulk-cluster subscription) into the poiSubsystem.
+  wirePoiProjection(state, cb);
 
-  // Construct the impostor subsystems in dependency order. The
-  // textured-disk planner depends on the atlas (slot allocation +
-  // eviction subscription) AND on the LOD-3 hi-res planner (per-frame
-  // crossfade alpha lookup), so both must exist first. The
-  // procedural-disk planner is independent of the other two.
-  const galaxyAtlas = createGalaxyAtlasSubsystem({
-    device,
-    requestRender: () => state.subsystems.scheduler.requestRender(),
-  });
+  // Arm the synthetic-fallback gate.  It subscribes to the survey slots and
+  // trips the `'syntheticFallback'` request flag (then re-runs demand) iff
+  // every real survey settles without data — the count-aware policy a pure
+  // demand predicate can't express.
+  createSyntheticFallback(state, cb);
 
-  // LOD-3 hi-res Famous-galaxy resources.  The texture's per-layer
-  // edge length depends on the current tier — mobile / "small" gets
-  // 512 px to stay under the GPU memory budget, desktop tiers get
-  // 1024 px.  Sized once here at boot; tier change destroys this pair
-  // and re-creates it at the new layerSide.  `initTexture()` is
-  // mandatory before `getTextureView()` — the texture handle throws
-  // otherwise.
-  const layerSide = HI_RES_LAYER_SIDE_BY_TIER[state.sources.tier];
-  const hiResFamousTexture = createHiResFamousTexture({
-    device,
-    layerSide,
-    layerCount: HI_RES_LAYER_COUNT,
-  });
-  hiResFamousTexture.initTexture();
-  const hiResFamous = createHiResFamousSubsystem({
-    texture: hiResFamousTexture,
-    requestRender: () => state.subsystems.scheduler.requestRender(),
-  });
+  // Build the flat `allSlots` registry + load-progress emitter over every
+  // installed slot (point + sidecar + DEV synthetic).
+  installLoadProgress(state, deps);
 
-  const texturedDisks = createTexturedDiskSubsystem({
-    device,
-    atlas: galaxyAtlas,
-    requestRender: () => state.subsystems.scheduler.requestRender(),
-    // Passing the planner here is what enables the LOD-3 path: for
-    // Famous-source galaxies past ~200 px apparent diameter, the
-    // textured-disk subsystem folds the planner's per-galaxy
-    // `hiResLayerIdx` + `hiResCrossfadeAlpha` into the disk instance
-    // buffer.  Omitting it (tests, future non-Famous configurations)
-    // keeps the LOD-3 sentinel at -1 / 0 so the fragment shader takes
-    // the atlas-tile-only path with no extra branching.
-    hiResFamous,
-  });
-  // Passing the atlas here is what enables the famous-WebP fade-out:
-  // for Famous-source galaxies whose curated WebP has loaded into the
-  // atlas, the procedural pattern crossfades out across the textured-
-  // disk fade-IN band so it doesn't bleed through the photo. Non-famous
-  // galaxies and tests that omit the atlas keep procFadeOut at 1.0.
-  const proceduralDisks = createProceduralDiskSubsystem({ atlas: galaxyAtlas });
-
-  // Bind the atlas's texture view into the LOD-2 disk renderer.  The
-  // atlas owns the view; proceduralDiskRenderer doesn't sample it.
-  texturedDiskRenderer.bindAtlas(galaxyAtlas.getTextureView());
-  // Bind the hi-res texture_2d_array view too — the inner
-  // instancedQuadRenderer's `composeAtlasBindGroup()` gate waits for
-  // BOTH `bindAtlas` and `bindHiResArray` before becoming draw-ready.
-  // Until this fires the textured-disk pipeline has no bind group and
-  // skips every draw.
-  texturedDiskRenderer.bindHiResArray(hiResFamousTexture.getTextureView());
-
-  state.subsystems.galaxyAtlas = galaxyAtlas;
-  state.subsystems.texturedDisks = texturedDisks;
-  state.subsystems.proceduralDisks = proceduralDisks;
-  state.subsystems.hiResFamous = hiResFamous;
-  state.subsystems.hiResFamousTexture = hiResFamousTexture;
-
-  // Register the always-on overlay fade handles at opacity 1.0. The
-  // registry surfaces these to a future tour subsystem (which can
-  // fadeTo them programmatically) without any per-renderer plumbing.
-  // No loading-time fade-in is needed — the three overlays are
-  // procedural or bundled and appear immediately on first frame.
-  // `register(handle, 1)` sets the steady-state opacity directly; no
-  // setImmediate(1) follow-up is required.
-  // Milky Way registers at its current settings value (not blanket 1.0)
-  // because the toggle path multiplies this opacity into the renderer's
-  // distance-based fadeAlpha. If we always registered at 1 regardless
-  // of settings, a default-off session would still draw the Milky Way
-  // on the first frame after wireSlots completes — the settings.gate
-  // check used to be the only thing keeping it off. Now both must agree.
-  state.subsystems.fades.register(
-    { kind: 'overlay', id: 'milkyWay' },
-    state.settings.milkyWay.enabled ? 1 : 0,
-  );
-  state.subsystems.fades.register({ kind: 'overlay', id: 'proceduralDisks' }, 1);
-  state.subsystems.fades.register({ kind: 'overlay', id: 'texturedDisks' }, 1);
-
-  // Scalar-volume master gate. Registered at the current settings
-  // value so a default-on session sees 1.0 from frame 1 (and the
-  // encodeHdr* multipliers don't accidentally suppress the per-field
-  // opacities); a default-off session sits at 0 until the user
-  // toggles master on, at which point setVolumesEnabled fires fadeTo
-  // up to 1 over FADE_IN_DURATION_MS.
-  state.subsystems.fades.register(
-    { kind: 'volumesMaster' },
-    state.settings.volumes.masterEnabled ? 1 : 0,
-  );
-
-  // Register the four label-layer fade handles. youAreHere / poi /
-  // galaxyNames start at 0 — their producers fire fadeTo(1) on first
-  // non-empty emit (see youAreHereSubsystem + poiSubsystem). scaleBar
-  // is React-side so we register it at 1 — present in the registry
-  // for tour addressability but never auto-faded by the engine.
-  //
-  // v1 only registers the handles; the label renderer doesn't plumb
-  // their opacity into draw yet. Tour playback can already address
-  // these via state.subsystems.fades.fadeTo(...); per-layer-aware
-  // label draws are a follow-up plan.
-  state.subsystems.fades.register({ kind: 'labelLayer', layer: 'youAreHere' }, 0);
-  state.subsystems.fades.register({ kind: 'labelLayer', layer: 'poi' }, 0);
-  state.subsystems.fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 0);
-  state.subsystems.fades.register({ kind: 'labelLayer', layer: 'scaleBar' }, 1);
-
-  // Signal loading state immediately so the user knows something is
-  // happening before the (potentially multi-second) fetch completes.
+  // Signal loading state immediately so the user sees progress before the
+  // (potentially multi-second) fetches complete.
   cb.lifecycle?.onStatusChange?.({ kind: 'loading' });
 
-  // ── Progressive survey loading ────────────────────────────────────
-  //
-  // Each survey flows through its own `AssetSlot`. The slot's long-lived
-  // commit subscriber (wired at slot construction) handles upload +
-  // `catalogs.set` + `onCatalogReady` + `requestRender` on every
-  // transition to `ready`. This block kicks off loads and registers two
-  // background subscribers; it does NOT block bootstrap on data arrival.
-  //
-  //   1. Per-arrival status emission: each time a slot reaches `ready`
-  //      with `count > 0`, fire `cb.onStatusChange({ kind: 'ready',
-  //      count: <running total>, source })` so the status bar reflects
-  //      progressive disclosure as surveys land.
-  //   2. Synthetic fallback: when every `survey`-category source has
-  //      settled with no successful ready+count>0, fire the synthetic
-  //      slot's load.  `curated` sources (Famous) are excluded — a
-  //      Famous-only success shouldn't suppress synthetic, a
-  //      Famous-only failure shouldn't trigger it.
-  //
-  // Both lists are derived from `GALAXY_CATALOG_SOURCE_REGISTRY` so
-  // adding a new tier-fetched survey is one registry-row edit, not
-  // three scattered enum literals.
-  const realSet = new Set(SURVEY_POINT_SOURCES);
-
-  let realSettled = 0;
-  let anyRealReady = false;
-  for (const source of TIER_FETCHED_POINT_SOURCES) {
-    const slot = state.assetSlots.points.get(source);
-    // A hidden-at-boot survey won't auto-load, so its slot stays in
-    // `idle` forever — never transitions to ready/error.  Treat it as
-    // "settled" here so the synthetic-fallback gate doesn't wait
-    // indefinitely.  When the user later toggles it on, the load
-    // fires (via `setSourceVisible`) and the upload happens, but by
-    // then the fallback decision is long made.
-    const hiddenAtBoot = !maskHas(state.sources.drawMask, source);
-    if (!slot || hiddenAtBoot) {
-      if (realSet.has(source)) {
-        realSettled++;
-        maybeFireSyntheticFallback();
-      }
-      continue;
-    }
-    let counted = false;
-    const unsub = slot.subscribe((s) => {
-      if (s.kind === 'ready' && s.value.count > 0) {
-        cb.lifecycle?.onStatusChange?.({
-          kind: 'ready',
-          count: state.gpu.renderer?.totalCount() ?? 0,
-          source,
-        });
-        if (realSet.has(source)) anyRealReady = true;
-      }
-      if (counted) return;
-      if (s.kind === 'ready' || s.kind === 'error') {
-        counted = true;
-        unsub();
-        if (realSet.has(source)) {
-          realSettled++;
-          maybeFireSyntheticFallback();
-        }
-      }
-    });
-  }
-
-  function maybeFireSyntheticFallback(): void {
-    if (realSettled < realSet.size || anyRealReady) return;
-    const synthSlot = state.assetSlots.points.get(Source.Synthetic);
-    if (!synthSlot) return;
-    synthSlot.subscribe((s) => {
-      if (s.kind === 'ready' && s.value.count > 0) {
-        cb.lifecycle?.onStatusChange?.({
-          kind: 'ready',
-          count: state.gpu.renderer?.totalCount() ?? 0,
-          source: Source.Synthetic,
-        });
-      }
-    });
-    synthSlot.load({ source: Source.Synthetic, tier: state.sources.tier });
-  }
-
-  // Boot-load only visible sources. Off-by-default surveys skip their
-  // multi-MB fetch until the user toggles them on (where
-  // `setSourceVisible` fires the slot's idempotent `.load()`).
-  // Companion sidecars ride alongside via the registry's `companions`
-  // list — see `loadCompanionAssets`.
-  for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
-    if (cfg.category === 'synthetic') continue;
-    if (!maskHas(state.sources.drawMask, cfg.source)) continue;
-    state.assetSlots.points.get(cfg.source)?.load({ source: cfg.source, tier: state.sources.tier });
-    loadCompanionAssets(state, cfg, state.sources.tier);
-  }
-  // Filaments load exactly once at boot — never on tier change.
-  // See `filamentFetcher.ts` for the rationale.
-  state.assetSlots.filaments?.load({ tier: state.sources.tier });
-  // Cluster/supercluster bulk coverage loads exactly once at boot — it's
-  // tier-agnostic and not a registry companion, so it needs its own
-  // explicit `.load({})` here (empty `ClusterCatalogReq`).  The slot
-  // subscriber writes `state.sources.clusterBulk` and `rebuildAllPois`
-  // (above) merges the bulk POIs in on the `ready` transition.
-  clusterCatalogSlot.load({});
-  // CF-4 DM density loads at boot only when its default is ON;
-  // otherwise the slot stays idle and `engine.setVolumeFieldEnabled`
-  // triggers a lazy load on toggle. No tier dependency.
-  if (SOURCE_REGISTRY[Source.Cf4Density].visible) {
-    state.assetSlots.cf4Density?.load();
-  }
-  // MCPM Cosmic Web loads at the boot tier; `engine.setTier` reloads
-  // on tier change. Missing/404 .scfd silently omits the field from
-  // the Volumes panel.
-  state.assetSlots.mcpm?.load({ tier: state.sources.tier });
+  // The single place loads start: walk the wiring registry and trigger every
+  // demanded slot with its tier-derived request.  At boot this loads the
+  // default-visible surveys + famous-meta + the default-on MCPM volume +
+  // the cluster catalog; filaments / CF-4 / PGC-alias stay idle until their
+  // demand flips.  The same loop re-runs on every state change.
+  reevaluateDemand(state);
 }

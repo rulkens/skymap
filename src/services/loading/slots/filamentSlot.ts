@@ -11,8 +11,8 @@
  * — see `filamentFetcher.ts`'s docblock for the detailed rationale,
  * including the "small-tier-on-desktop edge case" trade-off.
  *
- * Pre-H4 (2026-05-11) this mint block lived inline in `wireSlots.ts`.
- * Extracted into its own factory here as part of the slot-factory split.
+ * Construction-pure: builds + subscribes + RETURNS the slot. The
+ * orchestrator (`installSlots`) owns the write to `state.assetSlots`.
  */
 
 import { createAssetSlot } from '../AssetSlot';
@@ -53,9 +53,9 @@ export const createFilamentSlot: SlotFactory<FilamentCloud, FilamentReq> = (stat
     },
   });
   slot.subscribe((s) => {
-    // Loading-bar plumbing is owned by aggregateRegistry post-Task-12;
-    // this subscriber only fires the app-visible side effects (counts
-    // echo + render wake) on the `ready` transition.
+    // Loading-bar plumbing is owned by aggregateRegistry; this subscriber
+    // only fires the app-visible side effects (counts echo + render wake)
+    // on the `ready` transition.
     if (s.kind === 'ready') {
       console.log(
         `[engine] filaments: ${s.value.stripCount} strips, ${s.value.vertexCount} verts`,
@@ -67,6 +67,5 @@ export const createFilamentSlot: SlotFactory<FilamentCloud, FilamentReq> = (stat
       state.subsystems.scheduler.requestRender();
     }
   });
-  state.assetSlots.filaments = slot;
   return slot;
 };
