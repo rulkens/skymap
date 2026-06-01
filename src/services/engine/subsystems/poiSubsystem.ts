@@ -323,6 +323,15 @@ export type PoiCategory = keyof typeof POI_STYLES;
 const SIG_MIN_ALPHA = 0.25;
 
 /**
+ * Alpha scale applied to every NON-selected marker's ring + halo while
+ * some POI is selected (cluster focus mode). Dimming the rest of the
+ * field lets the focused structure's ring read clearly against its
+ * neighbours; the selected POI itself keeps its 1.5× bump. At rest
+ * (nothing selected) the scale is 1 — markers render unchanged.
+ */
+const NON_SELECTED_MARKER_DIM = 0.25;
+
+/**
  * Minimum screen-pixel gap between two featured labels before the
  * lower-significance one is suppressed.  produceLabels gates labels on
  * `featured` (only the ~25-30 curated anchors + famous galaxies get
@@ -913,32 +922,40 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
       const sigWeight = SIG_MIN_ALPHA + (1 - SIG_MIN_ALPHA) * (p.significance ?? 1);
       const weightedFade = fadeAlpha * sigWeight;
 
-      // Halo Vec4: bake style at-rest alpha × per-frame fade into the
-      // descriptor's alpha channel.  Voids opt out via null haloColor
-      // and emit a fully-transparent [0,0,0,0] (the renderer's halo
-      // pass skips alpha==0 instances entirely).
+      // Cluster focus mode: while some POI is selected, every OTHER
+      // marker dims to NON_SELECTED_MARKER_DIM so the focused structure
+      // stands out (the selected one keeps its 1.5× ring bump below). At
+      // rest (nothing selected) dim is 1 — no change.
+      const isSelected = p.id === selectedPoiId;
+      const dim = selectedPoiId !== null && !isSelected ? NON_SELECTED_MARKER_DIM : 1;
+
+      // Halo Vec4: bake style at-rest alpha × per-frame fade × focus dim
+      // into the descriptor's alpha channel.  Voids opt out via null
+      // haloColor and emit a fully-transparent [0,0,0,0] (the renderer's
+      // halo pass skips alpha==0 instances entirely).
       const haloColor: Vec4 =
         style.haloColor !== null
           ? [
               style.haloColor[0],
               style.haloColor[1],
               style.haloColor[2],
-              style.haloColor[3] * weightedFade,
+              style.haloColor[3] * weightedFade * dim,
             ]
           : [0, 0, 0, 0];
 
-      // Ring Vec4: same fade bake as halo, plus the selection bump.
-      // The focused POI's ring alpha is multiplied by 1.5 (capped at
-      // 1.0) so it visually pops out of its neighbours.  1.5× was
-      // chosen empirically as "noticeable but not jarring"; the cap
-      // keeps already-full-opacity rings from overflowing.  Wrapped
+      // Ring Vec4: same fade bake as halo, plus the selection treatment.
+      // The selected POI's ring alpha is multiplied by 1.5 (capped at
+      // 1.0) so it pops; every other ring is scaled by the focus dim.
+      // 1.5× was chosen empirically as "noticeable but not jarring"; the
+      // cap keeps already-full-opacity rings from overflowing.  Wrapped
       // in a fresh tuple (rather than mutated in place) to preserve
       // descriptor immutability — the selection path stays a pure
-      // transform on the per-frame output, no shared references
-      // between frames.
-      const isSelected = p.id === selectedPoiId;
+      // transform on the per-frame output, no shared references between
+      // frames.
       const ringAlphaBase = style.ringColor[3] * weightedFade;
-      const ringAlpha = isSelected ? Math.min(1, ringAlphaBase * 1.5) : ringAlphaBase;
+      const ringAlpha = isSelected
+        ? Math.min(1, ringAlphaBase * 1.5)
+        : ringAlphaBase * dim;
       const ringColor: Vec4 = [
         style.ringColor[0],
         style.ringColor[1],

@@ -489,6 +489,29 @@ describe('poiSubsystem — produceMarkers', () => {
     expect(markers).toHaveLength(3);
   });
 
+  it('dims non-selected markers to 25% while a POI is selected (selected keeps its bump)', () => {
+    const sub = createPoiSubsystem();
+    sub.setPois([
+      { id: 'virgo', name: 'Virgo', category: 'cluster', featured: true, worldPos: [10, 0, 0], physicalRadiusMpc: 2 },
+      { id: 'coma', name: 'Coma', category: 'cluster', featured: true, worldPos: [-10, 0, 0], physicalRadiusMpc: 2 },
+    ]);
+
+    // At rest: no selection → both markers at their unscaled baked alpha.
+    const atRest = sub.produceMarkers(makeState(null), makeCtx());
+    const restVirgo = atRest.find((m) => m.id === 'virgo')!;
+    const restComa = atRest.find((m) => m.id === 'coma')!;
+
+    // Virgo selected → Coma (non-selected) dims to 25%; Virgo's ring is
+    // bumped (≥ its at-rest alpha, capped at 1).
+    const focused = sub.produceMarkers(makeState('virgo'), makeCtx());
+    const focVirgo = focused.find((m) => m.id === 'virgo')!;
+    const focComa = focused.find((m) => m.id === 'coma')!;
+
+    expect(focComa.ringColor[3]).toBeCloseTo(restComa.ringColor[3] * 0.25, 6);
+    expect(focComa.haloColor[3]).toBeCloseTo(restComa.haloColor[3] * 0.25, 6);
+    expect(focVirgo.ringColor[3]).toBeGreaterThanOrEqual(restVirgo.ringColor[3]);
+  });
+
   it('excludes famous-galaxy POIs from markers', () => {
     const sub = createPoiSubsystem();
     sub.setPois([
