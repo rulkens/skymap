@@ -17,7 +17,7 @@ import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import sharp from 'sharp';
-import { handleProcess } from '../../../../tools/famous-curator/plugin/routes/process.js';
+import { handleProcess } from '../../../../tools/famous-curator/plugin/routes/process';
 import type { RecipeDisk } from '../../../../tools/famous-curator/plugin/recipe';
 
 async function seedSession(prefix: string): Promise<{ tmpId: string; dir: string }> {

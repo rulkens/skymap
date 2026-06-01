@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 
-import { writeMetaSidecar, type MetaSidecarEntry } from '../../../tools/curation/writeMetaSidecar.js';
+import { writeMetaSidecar, type MetaSidecarEntry } from '../../../tools/curation/writeMetaSidecar';
 
 function tmpPath(): string {
   return join(tmpdir(), `writeMetaSidecar-${randomBytes(6).toString('hex')}.json`);

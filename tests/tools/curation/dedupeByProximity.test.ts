@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { dedupeByProximity, type ProximityPoint } from '../../../tools/curation/dedupeByProximity.js';
-import type { Vec3 } from '../../../src/@types/math/Vec3.js';
+import { dedupeByProximity, type ProximityPoint } from '../../../tools/curation/dedupeByProximity';
+import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 describe('dedupeByProximity', () => {
   it('drops a candidate inside a featured anchor radius', () => {

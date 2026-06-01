@@ -11,7 +11,7 @@ import { existsSync, mkdirSync, mkdtempSync, writeFileSync, readFileSync } from 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import sharp from 'sharp';
-import { handleProcess } from '../../../../tools/famous-curator/plugin/routes/process.js';
+import { handleProcess } from '../../../../tools/famous-curator/plugin/routes/process';
 
 async function seedSession(): Promise<{ tmpId: string; dir: string }> {
   // 128×128 PNG with a bright disc in the middle so alpha-pass output

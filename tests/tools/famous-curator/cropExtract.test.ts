@@ -8,7 +8,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import sharp from 'sharp';
-import { rotatedExtract } from '../../../tools/famous-curator/plugin/cropExtract.js';
+import { rotatedExtract } from '../../../tools/famous-curator/plugin/cropExtract';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
