@@ -1,20 +1,18 @@
 /**
- * handleExport — deprojection pipeline tests.
+ * handleExport — deproject-frame tests.
  *
- * Verifies that a tilted-disk export is geometrically stretched to
- * face-on before downsize, that a forced toggle deprojects even a very
- * edge-on disk, and that the deproject=off path is byte-identical to the
- * no-disk baseline.
- *
- * Frame note: `starless.png` in the session dir is produced by
- * `handleProcess`, which runs `rotatedExtract` → StarNet → starless.png.
- * Both source (post-rotatedExtract) and starless are therefore in the
- * CROP frame.  The effective PA for deprojectDisk is
- *   effectivePaDeg = disk.paDeg - crop.rotationDeg.
- * For the tests below, rotationDeg=0 so effectivePaDeg = disk.paDeg.
+ * Frame note: `cropped.png` and `starless.png` in the session dir are produced
+ * by `handleProcess`, which deprojects the crop to face-on BEFORE StarNet.  By
+ * the time export runs they are ALREADY in the committed (square, for a tilted
+ * disk) frame, so export applies no geometry of its own — it just downsizes
+ * them.  These tests verify that faithful passthrough: a square in ships a
+ * square out, no skip warning fires, and a disabled toggle matches the no-disk
+ * baseline.  The "deproject actually stretches" geometry lives in the
+ * handleProcess + deprojectDisk unit tests; "no double-stretch / registration"
+ * lives in export.registration.test.ts.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import sharp from 'sharp';
@@ -23,16 +21,15 @@ import { curatedGalaxyDir } from '../../../tools/famous-curator/plugin/paths';
 import type { RecipeDisk } from '../../../tools/famous-curator/plugin/recipe';
 
 /**
- * Create a 128×128 RGBA PNG with a simple gradient (so deproject produces
- * measurable dimensional changes) and write it as source.png + starless.png.
+ * Seed the source.png + cropped.png + starless.png trio handleProcess leaves
+ * behind.  The 128×128 square stands in for the already-deprojected committed
+ * frame; export downsizes it without restretching.
  */
 async function seedSession(prefix: string): Promise<{ tmpId: string; sessionDir: string }> {
   const root = mkdtempSync(join(tmpdir(), `curator-deproject-${prefix}-`));
   const tmpId = 'dp';
   const dir = join(root, tmpId);
   mkdirSync(dir, { recursive: true });
-  // 128×128 gives enough pixels for the affine stretch to produce a measurably
-  // different output size, while keeping the test fast.
   const png = await sharp({
     create: {
       width: 128,
@@ -44,6 +41,7 @@ async function seedSession(prefix: string): Promise<{ tmpId: string; sessionDir:
     .png()
     .toBuffer();
   writeFileSync(join(dir, 'source.png'), png);
+  writeFileSync(join(dir, 'cropped.png'), png);
   writeFileSync(join(dir, 'starless.png'), png);
   return { tmpId, sessionDir: dir };
 }
@@ -56,10 +54,6 @@ function fakeRepoRoot(): string {
   return root;
 }
 
-/**
- * Centred 64×64 crop with no rotation — keeps effectivePaDeg = disk.paDeg
- * so the geometry is easy to reason about in assertions.
- */
 const CROP = { x: 32, y: 32, width: 64, height: 64, rotationDeg: 0 };
 
 function baseBody(tmpId: string) {
@@ -79,55 +73,23 @@ function baseBody(tmpId: string) {
 
 /** Read source.webp from the export result dir and return its dimensions. */
 async function sourceWebpDims(outDir: string): Promise<{ width: number; height: number }> {
-  const buf = readFileSync(resolve(outDir, 'source.webp'));
-  const meta = await sharp(buf).metadata();
-  return { width: meta.width!, height: meta.height! };
+  const buf = await sharp(resolve(outDir, 'source.webp')).metadata();
+  return { width: buf.width!, height: buf.height! };
 }
 
-describe('handleExport — deprojection', () => {
-  it('ships a square source.webp for a tilted disk', async () => {
-    // paDeg=0 → major axis vertical; minor axis is image-Y.
-    // squareDeprojectCrop snaps the 64×64 crop to a 64×32 (b/a) rect; deprojectDisk
-    // then Y-stretches it by 1/0.5=2× back to 64×64 — an exact square.  The square
-    // IS the observable contract now (deproject no longer auto-grows to a taller
-    // rectangle); the "did it stretch" geometry is covered by the unit tests.
+describe('handleExport — deproject frame', () => {
+  it('downsizes an already-deprojected crop without restretching it', async () => {
+    // Square cropped/starless in (handleProcess already squared them) ⇒ square
+    // out.  A forced edge-on disk (axisRatio 0.2) must NOT trigger any export
+    // re-stretch or skip warning — export owns no deproject step anymore.
     const sess = await seedSession('tilted');
     const repo = fakeRepoRoot();
 
     const disk: RecipeDisk = {
       centerPx: [64, 64],
       radiusPx: 24,
-      paDeg: 0, // major axis vertical in crop frame (same as source frame at rotationDeg=0)
-      axisRatio: 0.5, // > DEPROJECT_MIN_AXIS_RATIO (0.3) → should deproject
-      deproject: true,
-    };
-
-    await handleExport({
-      body: { ...baseBody(sess.tmpId), disk },
-      repoRoot: repo,
-      sessionDirOverride: sess.sessionDir,
-    });
-
-    const { width: deprojW, height: deprojH } = await sourceWebpDims(
-      curatedGalaxyDir(repo, 'ngc-deproject'),
-    );
-
-    // The deprojected source.webp is square.
-    expect(deprojW).toBe(deprojH);
-  });
-
-  it('still deprojects a very edge-on disk when the toggle is forced on', async () => {
-    // axisRatio=0.2 is below the advisory DEPROJECT_MIN_AXIS_RATIO (0.3) but
-    // the floor is no longer a hard-stop — a forced toggle must deproject, and
-    // it must do so without logging a skip warning.
-    const sess = await seedSession('edgeon');
-    const repo = fakeRepoRoot();
-
-    const disk: RecipeDisk = {
-      centerPx: [64, 64],
-      radiusPx: 24,
       paDeg: 0,
-      axisRatio: 0.2, // very edge-on — but forced on, so it deprojects
+      axisRatio: 0.2, // very edge-on, forced on — irrelevant to export's rasters now
       deproject: true,
     };
 
@@ -137,19 +99,11 @@ describe('handleExport — deprojection', () => {
       repoRoot: repo,
       sessionDirOverride: sess.sessionDir,
     });
-    // No skip warning fires for a forced edge-on deproject.
     expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('skip deproject'));
     warnSpy.mockRestore();
 
-    const { width: edgeonW, height: edgeonH } = await sourceWebpDims(
-      curatedGalaxyDir(repo, 'ngc-deproject'),
-    );
-
-    // The forced deproject squares the output.  At b/a=0.2 the 64-px crop snaps
-    // to height round(64·0.2)=13, which the ×5 stretch returns to 65 — a one-px
-    // rounding off perfect square that scales to ~1.5% after the fit-inside
-    // downsize, so we assert near-square rather than exact.
-    expect(Math.abs(edgeonW - edgeonH) / Math.max(edgeonW, edgeonH)).toBeLessThan(0.05);
+    const { width, height } = await sourceWebpDims(curatedGalaxyDir(repo, 'ngc-deproject'));
+    expect(width).toBe(height);
   });
 
   it('is unchanged when deproject is off', async () => {
