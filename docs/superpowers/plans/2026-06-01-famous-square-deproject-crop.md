@@ -178,11 +178,11 @@ describe('squareDeprojectCrop', () => {
 });
 ```
 
-- [ ] Write the test file above; `npm test -- squareDeprojectCrop > /tmp/t.log 2>&1; rc=$?` → FAIL (module missing).
-- [ ] Implement `squareDeprojectCrop` (header with the reduction reasoning; no rounding of x/y beyond what RotatedCrop callers tolerate — `rotatedExtract` does its own `Math.round`).
-- [ ] `npm test -- squareDeprojectCrop > /tmp/t.log 2>&1; rc=$?` → PASS.
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
-- [ ] Commit `tools/famous/squareDeprojectCrop.ts tests/tools/famous-curator/squareDeprojectCrop.test.ts`.
+- [x] Write the test file above; `npm test -- squareDeprojectCrop > /tmp/t.log 2>&1; rc=$?` → FAIL (module missing).
+- [x] Implement `squareDeprojectCrop` (header with the reduction reasoning; no rounding of x/y beyond what RotatedCrop callers tolerate — `rotatedExtract` does its own `Math.round`).
+- [x] `npm test -- squareDeprojectCrop > /tmp/t.log 2>&1; rc=$?` → PASS.
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
+- [x] Commit `tools/famous/squareDeprojectCrop.ts tests/tools/famous-curator/squareDeprojectCrop.test.ts`.
 
 ---
 
