@@ -4,7 +4,6 @@ import {
   createPoiSubsystem,
   POI_STYLES,
 } from '../../../../src/services/engine/subsystems/poiSubsystem';
-import type { PoiGroupId } from '../../../../src/@types/engine/subsystems/PoiGroupId';
 import type { PointOfInterest } from '../../../../src/@types/engine/subsystems/PointOfInterest';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -984,13 +983,6 @@ describe('poiSubsystem · setGroup / clearGroup', () => {
     featured: true,
     physicalRadiusMpc: 2,
   };
-  const FAMOUS: PointOfInterest = {
-    id: 'famous-g',
-    name: 'Famous G',
-    category: 'famousGalaxy',
-    worldPos: [0.5, 0, 0],
-    featured: true,
-  };
   const BULK: PointOfInterest = {
     id: 'bulk-c',
     name: 'Bulk C',
@@ -1012,6 +1004,16 @@ describe('poiSubsystem · setGroup / clearGroup', () => {
     expect(ids).toContain('anchor');
     expect(ids).toContain('bulk-c');
     expect(ids).toHaveLength(2);
+  });
+
+  it('a second setGroup for the same id replaces, not appends', () => {
+    const sub = createPoiSubsystem();
+    sub.setGroup('staticAnchors', [ANCHOR]);
+    sub.setGroup('staticAnchors', [BULK]);
+    // The keyed API's core safety property: re-setting a group replaces its
+    // contents (Map.set overwrites) rather than accumulating across calls.
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+    expect(markers.map((m) => m.id)).toEqual(['bulk-c']);
   });
 
   it('clearGroup removes only that group', () => {
@@ -1057,7 +1059,7 @@ describe('poiSubsystem · setGroup / clearGroup', () => {
     const sub = createPoiSubsystem();
     // Intentionally set famous group (B) before staticAnchors (A) to
     // confirm that group order — not insertion order — governs the result.
-    sub.setGroup('famous' as PoiGroupId, [B]);
+    sub.setGroup('famous', [B]);
     sub.setGroup('staticAnchors', [A]);
     sub.setGroup('clusterBulk', [C]);
     const ids = sub.getPoisForCategory('cluster').map((p) => p.id);
