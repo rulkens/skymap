@@ -288,3 +288,184 @@ the consuming subsystem.
 
 None blocking. Threshold (0.3) and the exact handle ergonomics are tunable
 during implementation against real images.
+
+## Addendum (2026-06-01): square-preserving deproject crop
+
+### The bug this addendum closes
+
+Deprojection (`deprojectDisk`) is an affine stretch of the crop's **minor axis**
+by `1/(b/a)`. `sharp().affine(...)` auto-grows the output canvas to fit the
+transformed bounding box, so a **square** crop fed through it comes out a
+**rectangle** (the minor axis is now `1/(b/a)` longer than the major axis). The
+export/process routes then run `.resize(FULL_PX, FULL_PX, { fit: 'inside' })`,
+and `fit: 'inside'` *preserves* that rectangle's aspect ratio — so the shipped
+`source.webp` / `full.webp` / `atlas.webp` are **non-square**. Atlas slots and
+`TexturedDiskSubsystem` both assume square thumbnails, so a deprojected galaxy
+renders distorted or letter-boxed.
+
+You cannot affine-deproject a square into a square without either distorting the
+pixels or padding the output. The fix runs the other way: make the crop a
+**rectangle whose aspect equals b/a** so that the minor-axis stretch lands it on
+an exact square.
+
+### Two modes, gated by `disk.deproject`
+
+**As-shot (deproject OFF): UNCHANGED.** Free 1:1 square crop, rotatable —
+exactly today's behaviour. `cropMath`'s square path, `CropCanvas`'s crop mode,
+and the existing export/process as-shot path are untouched.
+
+**Deproject ON: aspect-locked, PA-locked, freely-movable rectangular crop.**
+
+1. **Rotation locked to disk PA.** `crop.rotationDeg === disk.paDeg`. The rotate
+   handle is hidden/disabled in this mode; the major axis leads.
+2. **Aspect locked to b/a.** `crop.width` (major) is free; `crop.height` (minor)
+   `= crop.width * effectiveAxisRatio`. Resizing any handle scales the WHOLE rect
+   uniformly, preserving `major:minor = 1:(b/a)`.
+   `effectiveAxisRatio = disk.axisRatio ?? catalogAxisRatio ?? 1`.
+3. **Freely movable.** The crop can be panned so the disk sits OFF-CENTRE in the
+   output (to frame tidal tails / companions). The crop centre is independent of
+   the disk centre. Only the CENTRE-inside-image invariant from `cropMath`
+   applies.
+4. **Square output, no distortion.** Because `crop.rotationDeg === disk.paDeg`,
+   the existing `effectivePaDeg = disk.paDeg - crop.rotationDeg` becomes `0`, so
+   `deprojectDisk` runs as a pure axis-aligned Y-stretch (its `θ=0` spot-check:
+   `M = [[1,0],[0,s]]`, `s = 1/axisRatio`). The crop is
+   `width × (width·(b/a))`; stretching image-Y by `1/(b/a)` gives
+   `width × (width·(b/a)·(1/(b/a))) = width × width` → an exact square. The
+   existing `.resize(FULL_PX, FULL_PX, { fit: 'inside' })` then yields a square.
+
+   **Frame reduction, verified against the code:**
+   - `rotatedExtract` (`cropExtract.ts:54-89`) rotates the source by
+     `-crop.rotationDeg` and extracts an axis-aligned `width × height` rect, so
+     the returned pipeline is in the crop's local frame. With
+     `crop.rotationDeg === disk.paDeg`, the disk's major axis is image-X and its
+     minor axis is image-Y in that extracted rect.
+   - `export.ts:121` / `process.ts:83` compute
+     `effectivePaDeg = disk.paDeg - crop.rotationDeg = 0`.
+   - `deprojectDisk` (`deprojectDisk.ts:61-82`) with `paDeg = 0` yields
+     `M = [[1,0],[0,s]]` — a pure image-Y (minor-axis) stretch by `s = 1/(b/a)`,
+     exactly cancelling the `b/a` the rect was pre-squashed by. Output is square.
+
+5. **Initial deproject-crop seed.** When deproject turns ON (or a disk is first
+   drawn with deproject auto-on), seed the crop framing the disk:
+   `center = disk.centerPx`, `rotationDeg = disk.paDeg`,
+   `width = 2·disk.radiusPx·(1 + DEFAULT_DISK_MARGIN)`,
+   `height = width·effectiveAxisRatio`. `DEFAULT_DISK_MARGIN = 0.25` is a single
+   named constant in `src/data/famousCalibration.ts`, next to
+   `DEPROJECT_MIN_AXIS_RATIO`, so curator-seed, pipeline, and UI single-source
+   it. A per-disk `margin` override (recipe field + UI slider) re-seeds the
+   framing.
+
+### Server-side guarantee (defence in depth)
+
+The curator UI is the source of truth for the crop rect — it already sends
+`body.crop`, and in deproject mode it sends one with `rotationDeg = disk.paDeg`
+and `height = round(width · effectiveAxisRatio)`. Export/process therefore need
+no new crop *derivation*. But to guarantee a square output even if a client crop
+is slightly off, both routes normalise the crop through a shared pure helper
+before extraction:
+
+```ts
+// tools/famous/squareDeprojectCrop.ts
+export function squareDeprojectCrop(
+  crop: RotatedCrop,
+  disk: RecipeDisk,
+  effectiveAxisRatio: number,
+): RotatedCrop;
+```
+
+It snaps `rotationDeg = disk.paDeg` and `height = round(width · effectiveAxisRatio)`,
+preserving the crop's centre (re-derives `x`/`y` from centre so the snap doesn't
+drift the framing), and is called by BOTH `export.ts` and `process.ts` only when
+`deprojected` is true. As-shot exports never call it (the square 1:1 path is
+unchanged).
+
+### Runtime derivation (`deriveFamousCalibration`) in deproject mode
+
+When `deprojected` is true the shipped webp is the square deproject crop with the
+disk possibly OFF-CENTRE and rendered face-on. The derivation must therefore:
+
+- **PA → 0** in the final frame. After the square-deproject crop,
+  `crop.rotationDeg = disk.paDeg`, so the existing
+  `normalizePa(disk.paDeg - crop.rotationDeg)` already yields `0` — no special
+  case needed for PA, but the plan documents the reduction.
+- **axisRatio → 1 for placement.** The texture is already deprojected (round), so
+  the runtime must not re-apply the `b/a` tilt. The deprojected branch sets the
+  emitted `axisRatio = 1` (the `deprojected: true` flag already tells the runtime
+  the texture is face-on; emitting `axisRatio = 1` makes the placement math
+  unconditional).
+- **center / diskRadiusFrac from the disk's position WITHIN the final square
+  crop** — NOT assumed centred, because the user can move the crop. The existing
+  derivation already maps the disk centre into the crop frame and normalises;
+  the deprojected branch must additionally account for the minor-axis stretch.
+  In the final square the disk is round with radius `disk.radiusPx` along the
+  major axis (image-X, unstretched) but the crop's half-extent along that axis is
+  `crop.width / 2`. The disk's minor extent (`disk.radiusPx · (b/a)`) is stretched
+  by `1/(b/a)` back to `disk.radiusPx`, so the disk is round in the output. The
+  normalised radius is therefore:
+
+  ```
+  diskRadiusFrac = disk.radiusPx / (crop.width / 2)
+  ```
+
+  and the centre maps through the same minor-axis stretch: the crop-local Y of the
+  disk centre is multiplied by `1/(b/a)` (the image-Y stretch) before normalising
+  against the now-square half-width. The plan pins the exact formula and tests it
+  for an off-centre, tilted disk.
+
+When NOT deprojected, `deriveFamousCalibration` behaviour is unchanged.
+
+### `cropMath` approach
+
+The deproject crop needs aspect-locked resize/seed helpers that must NOT break
+the square path used by as-shot mode. The plan adds a **parallel set of pure
+helpers** (`resizeCornerAspect*` / `resizeEdgeAspect*` / `seedDeprojectCrop`)
+rather than parameterising the existing `squareDelta`/`edgeResult` — see the
+plan's rationale. The square path stays byte-for-byte as it is today.
+
+### Component changes (summary; the plan pins each)
+
+- **`CropCanvas.tsx`** — thread a `deprojectAspect?: number | undefined` prop
+  (`undefined` = square/as-shot; a number = locked aspect). In deproject mode:
+  hide the rotate knob + "Reset rotation", constrain rotation to `disk.paDeg`,
+  use the aspect-locked resize helpers, keep body-drag (free move).
+- **`DiskOverlay.tsx`** — a LIVE crop-preview: when interactive AND deproject
+  would apply, draw the to-be-cropped rectangle (PA-rotated, aspect-locked) and
+  darken outside it (SVG `<mask>`: full-canvas white + black rotated rect = hole,
+  over a semi-transparent black overlay), outlined with
+  `vector-effect="non-scaling-stroke"`, `data-testid="crop-preview-rect"`.
+- **`DiskControls.tsx`** — a margin slider (only when a disk exists AND deproject
+  is on) editing `disk.margin`, which re-seeds the framing.
+- **`recipe.ts`** — optional `margin?: number` on `RecipeDisk` (validated, clamped
+  `>= 0`, default via `DEFAULT_DISK_MARGIN`). Backward compatible — absence is a
+  valid state.
+- **`state.ts` + `App.tsx`** — thread `margin` and the deproject-crop coupling.
+  When deproject toggles on, App seeds/normalises the crop (rotation = paDeg,
+  aspect = b/a, default size from margin). When off, the crop reverts to a free
+  square — the prior square crop is restored (stored, not destroyed) rather than
+  reset, so toggling deproject is non-destructive. A crop change in deproject
+  mode marks `dirty.crop` so it re-Processes/re-Exports.
+
+### Testing additions
+
+- `squareDeprojectCrop` unit tests: snaps PA and height, preserves centre,
+  identity at `b/a = 1`.
+- `cropMath` aspect helpers: every resize keeps `height = width · aspect`;
+  `seedDeprojectCrop` frames the disk at the requested margin; the square path's
+  existing tests still pass unchanged.
+- Pipeline: an export with deproject ON for a **tilted** disk yields
+  `source.webp` AND `full.webp` with `width === height`; as-shot output is
+  unchanged (regression guard).
+- `deriveFamousCalibration` deprojected branch: PA = 0, axisRatio = 1, and
+  `center` / `diskRadiusFrac` correct for an off-centre tilted disk.
+- Component: `CropCanvas` hides the rotate handle and keeps aspect on resize when
+  `deprojectAspect` is set; `DiskOverlay` renders `crop-preview-rect` only when
+  deproject is active; `DiskControls` margin slider renders only with deproject on
+  and dispatches a new margin.
+
+### What this addendum does NOT change
+
+- The as-shot square crop path (cropMath square helpers, CropCanvas crop mode).
+- `deprojectDisk`'s affine math — only the crop *fed* to it changes.
+- The `famous_meta.json` storage decision, the bin format, the runtime subsystem
+  contract beyond the `axisRatio = 1` / `deprojected` flag it already reads.
