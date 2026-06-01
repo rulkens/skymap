@@ -609,7 +609,7 @@ it('omits crop-preview-rect when deprojectAspect is undefined', () => {
 - [x] Implement the preview rect + mask (+ the pure `deprojectPreviewRect` helper in `diskOverlay.ts` with its own unit test). Comment-tidy.
 - [x] `npm test -- DiskOverlay > /tmp/t.log 2>&1; rc=$?` → PASS.
 - [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
-- [ ] Manual visual check (curator dev server): preview rect appears + darkens outside only when deproject is on. _(VISUAL — pending user)_
+- [x] Manual visual check (curator dev server): preview rect appears + darkens outside only when deproject is on. _(VISUAL — user confirmed)_
 - [x] Commit `tools/famous-curator/ui/components/DiskOverlay.tsx tools/famous-curator/ui/diskOverlay.ts tests/tools/famous-curator/ui/components/DiskOverlay.test.tsx tests/tools/famous-curator/ui/diskOverlay.test.ts`.
 
 ---
@@ -742,7 +742,7 @@ it('selectGalaxy clears savedSquareCrop', () => {
 - [x] Implement the coupling in App (`willDeproject` from `tools/famous/deprojectDisk`; `seedDeprojectCrop` from cropMath; `DEFAULT_DISK_MARGIN` from `src/data/famousCalibration`). Thread `deprojectAspect` + `margin` to CropCanvas → DiskOverlay. Comment-tidy. (CropCanvas→DiskOverlay forwarding was missing; added.)
 - [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
 - [x] `npm test > /tmp/t.log 2>&1; rc=$?` → Read log, full suite green. (Surfaced a 3rd deproject consumer — `assembleFamousMeta` in buildFamous — fixed to normalise its crop too.)
-- [ ] Manual check (curator dev server): toggle deproject ON → crop snaps to a PA-rotated b/a rect framing the disk; rotate knob gone; margin slider re-frames; toggle OFF → prior square crop returns. _(VISUAL — pending user)_
+- [x] Manual check (curator dev server): toggle deproject ON → crop snaps to a PA-rotated b/a rect framing the disk; rotate knob gone; margin slider re-frames; toggle OFF → prior square crop returns. _(VISUAL — user confirmed)_
 - [x] Commit `tools/famous-curator/ui/App.tsx`.
 
 ---
