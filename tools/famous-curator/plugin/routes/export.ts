@@ -36,8 +36,7 @@ import { sessionPath } from '../tmpSession.js';
 import { serialiseRecipe, validateRecipeDisk, type Recipe, type RecipeDisk } from '../recipe.js';
 import { upsertOverrideEntry, type OverrideIndex } from '../overrideIndex.js';
 import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlpha.js';
-import { rotatedExtract } from '../cropExtract.js';
-import { deprojectDisk, willDeproject } from '../../../famous/deprojectDisk.js';
+import { willDeproject } from '../../../famous/deprojectDisk.js';
 import { squareDeprojectCrop } from '../../../famous/squareDeprojectCrop.js';
 import { deriveFamousCalibration } from '../../../famous/deriveFamousCalibration.js';
 import type { FamousCalibration } from '../../../../src/@types/loading/FamousCalibration';
@@ -96,6 +95,7 @@ export async function handleExport(opts: {
   mkdirSync(tmpDir, { recursive: true });
 
   const sourcePath = resolve(sessDir, 'source.png');
+  const croppedPath = resolve(sessDir, 'cropped.png');
   const starlessPath = resolve(sessDir, 'starless.png');
 
   // Source dimensions the crop + disk were authored against.  We read them from
@@ -109,51 +109,33 @@ export async function handleExport(opts: {
       ? { width: sourceMeta.width, height: sourceMeta.height }
       : undefined;
 
-  // 2. source.webp — full-resolution crop, lossless.
-  //    Resize to at most FULL_PX on the longest edge (`fit: 'inside'`)
-  //    so non-square crops aren't distorted.  rotatedExtract handles
-  //    rotation + out-of-image padding (transparent fill).
+  // Disk + deproject decision.  handleProcess already applied the deproject —
+  // it stretches the crop to face-on BEFORE StarNet, so the cached cropped.png
+  // (with stars) and starless.png (stars removed) are ALREADY in the committed
+  // frame.  Export adds no geometry of its own; it only downsizes those buffers.
+  // Re-running deprojectDisk here would Y-stretch the starless layer a second
+  // time, so the shipped thumbnail would be more foreshortened than the 512²
+  // preview — see tests/tools/famous-curator/export.registration.test.ts.
   //
-  //    Frame reasoning: rotatedExtract rotates the source by -crop.rotationDeg,
-  //    so the returned pipeline is in the CROP's local frame.  disk.paDeg is in
-  //    the SOURCE frame, so we subtract rotationDeg to get the effective PA
-  //    inside the crop.  sin²/cos² are 180-periodic, so normalization is
-  //    optional, but we skip it to keep the value directly interpretable.
-  //
-  //    Starless frame: starless.png was produced by handleProcess, which runs
-  //    rotatedExtract → StarNet → starless.png.  It is therefore already in the
-  //    CROP frame — the same frame as the source pipeline here.  Both use the
-  //    same effectivePaDeg.
+  // We still compute `deprojected` + the normalised `extractionCrop` because the
+  // runtime CALIBRATION (centre / radius / PA) must describe the shipped pixels,
+  // which handleProcess framed with squareDeprojectCrop.  willDeproject
+  // single-sources the gate (0 < b/a < 1) with handleProcess and deprojectDisk.
   const disk = body.disk !== undefined ? validateRecipeDisk(body.disk) : undefined;
   const effectiveAxisRatio = disk?.axisRatio ?? body.catalogAxisRatio;
   const wantsDeproject = disk?.deproject === true;
-  // The webp is deprojected whenever the maintainer asked AND the effective
-  // axis ratio is a tilted, valid disk (0 < b/a < 1) — single-sourced with
-  // deprojectDisk's own guard via willDeproject.  A forced toggle on a very
-  // edge-on disk still deprojects; the only skip is when there is nothing to
-  // stretch (b/a >= 1) or no axis ratio at all.
   const deprojected =
     wantsDeproject && effectiveAxisRatio !== undefined && willDeproject(effectiveAxisRatio);
 
-  // Extraction crop vs annotation crop.  When deprojecting, we snap the crop
-  // onto the geometry that makes the downstream stretch land on a square
+  // The extraction crop is the square-snapped framing handleProcess used
   // (rotationDeg = disk.paDeg, height = width·(b/a)); see squareDeprojectCrop.
-  // This normalised crop is what gets EXTRACTED and what calibration is derived
-  // from, so the runtime overlay matches the shipped pixels.  The recipe below
-  // still records the maintainer's ORIGINAL body.crop — the source-of-truth
-  // annotation — so a re-export reproduces the same normalisation from scratch.
+  // Calibration is derived from it so the runtime overlay matches the shipped
+  // pixels.  The recipe below still records the maintainer's ORIGINAL body.crop
+  // so a re-export reproduces the same normalisation from scratch.
   const extractionCrop =
     deprojected && disk !== undefined
       ? squareDeprojectCrop(body.crop, disk, effectiveAxisRatio!)
       : body.crop;
-
-  // effectivePaDeg is the disk PA inside the extraction crop's frame.
-  // rotatedExtract rotates the source by -extractionCrop.rotationDeg, so the
-  // crop-frame PA is disk.paDeg - extractionCrop.rotationDeg.  After the
-  // square-snap the extraction crop's rotationDeg == disk.paDeg, so this
-  // collapses to 0 and deprojectDisk applies the pure image-Y stretch that
-  // yields a square.
-  const effectivePaDeg = disk !== undefined ? disk.paDeg - extractionCrop.rotationDeg : 0;
 
   // Derive calibration whenever a disk and an axis ratio are both available.
   // catalogAxisRatio falls back to disk.axisRatio so callers that omit it but
@@ -167,30 +149,21 @@ export async function handleExport(opts: {
       ? deriveFamousCalibration({ disk, crop: extractionCrop, catalogAxisRatio, deprojected })
       : undefined;
 
-  const sourcePipeline = await rotatedExtract(sourcePath, extractionCrop);
-  // Deproject the hi-res crop to face-on before downsize so the extra resolution
-  // along the stretch direction is preserved in the final thumbnail.
-  const maybeDeprojectedSource = deprojected
-    ? deprojectDisk(sourcePipeline, { paDeg: effectivePaDeg, axisRatio: effectiveAxisRatio! })
-    : sourcePipeline;
-  const sourceCropped = await maybeDeprojectedSource
+  // 2. source.webp — the with-stars crop handleProcess cached (already
+  //    deprojected when applicable), downsized to at most FULL_PX on the
+  //    longest edge (`fit: 'inside'`), lossless.
+  const sourceCropped = await sharp(croppedPath)
     .resize(FULL_PX, FULL_PX, { fit: 'inside' })
     .webp({ lossless: true })
     .toBuffer();
   writeFileSync(resolve(tmpDir, 'source.webp'), sourceCropped);
 
-  // 3. starless.webp — post-StarNet at full resolution, lossless.
-  //    Starless is in the CROP frame (see frame reasoning above) — same
-  //    effectivePaDeg applies.  We deproject once to a buffer and reuse
-  //    it for both starless.webp and the alpha derivation so all three
-  //    outputs remain pixel-registered.
-  const starlessPipeline = deprojected
-    ? deprojectDisk(sharp(starlessPath), { paDeg: effectivePaDeg, axisRatio: effectiveAxisRatio! })
-    : sharp(starlessPath);
-  // Materialise the (possibly deprojected) starless pixels once.  All three
-  // downstream consumers — starless.webp, full.webp, atlas.webp — read from
-  // this buffer, so source/starless/alpha stay exactly registered.
-  const starlessFullBuf = await starlessPipeline
+  // 3. starless.webp — the StarNet output handleProcess cached, in the SAME
+  //    frame as cropped.png, downsized to FULL_PX and re-encoded lossless.
+  //    Materialise the resized pixels once so all three downstream consumers —
+  //    starless.webp, full.webp, atlas.webp — read from one buffer and stay
+  //    exactly registered with source.webp.
+  const starlessFullBuf = await sharp(starlessPath)
     .resize(FULL_PX, FULL_PX, { fit: 'inside' })
     .png()
     .toBuffer();

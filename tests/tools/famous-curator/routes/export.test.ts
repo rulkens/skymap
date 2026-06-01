@@ -25,23 +25,23 @@ async function makePng(width: number, height: number): Promise<Buffer> {
 
 async function seedSession(
   size = 256,
-  starless?: { width: number; height: number },
+  cropFrame?: { width: number; height: number },
 ): Promise<{ tmpId: string; sessionDir: string }> {
   const root = mkdtempSync(join(tmpdir(), 'curator-export-sess-'));
   const tmpId = 'sx';
   const dir = join(root, tmpId);
   mkdirSync(dir, { recursive: true });
-  // `size` lets the deproject tests below seed a source large enough that a
-  // tilted 400-px crop centred at [300,300] fits inside it; the default 256
-  // keeps the original happy-path fixtures unchanged.
+  // `size` is the ORIGINAL source frame, recorded in recipe.source.
   writeFileSync(join(dir, 'source.png'), await makePng(size, size));
-  // starless.png is produced by handleProcess (rotatedExtract → StarNet), so in
-  // the real pipeline it already lives in the EXTRACTED crop frame — for a
-  // deproject export that means the normalised b/a rect (e.g. 400×200), which
-  // export then Y-stretches back to a square.  The fixture mirrors that frame
-  // when `starless` is given; otherwise it matches the source.
-  const sl = starless ?? { width: size, height: size };
-  writeFileSync(join(dir, 'starless.png'), await makePng(sl.width, sl.height));
+  // cropped.png (with stars) + starless.png (stars removed) are what
+  // handleProcess caches — both ALREADY in the committed frame, i.e. the
+  // square the deproject stretch landed on.  Export only downsizes them, so
+  // the fixture seeds that final frame directly (defaulting to a square match
+  // of the source for the happy-path tests).
+  const cf = cropFrame ?? { width: size, height: size };
+  const crop = await makePng(cf.width, cf.height);
+  writeFileSync(join(dir, 'cropped.png'), crop);
+  writeFileSync(join(dir, 'starless.png'), crop);
   return { tmpId, sessionDir: dir };
 }
 
@@ -161,14 +161,11 @@ describe('handleExport', () => {
 
 describe('deproject square output', () => {
   it('ships a square source.webp AND full.webp for a tilted disk', async () => {
-    // Arrange a session with a non-square source and a tilted disk
-    // (axisRatio 0.5, paDeg 30, deproject true).  The crop the UI sends is an
-    // arbitrary square; squareDeprojectCrop snaps it (rotationDeg = paDeg,
-    // height = width·b/a) so the deproject stretch resolves to width × width.
-    // 600² source leaves room for the rotated 400×200 extract centred at
-    // [300,300]; starless is seeded at that post-process 400×200 frame so the
-    // export Y-stretch (×1/0.5 = 2) lands it on a 400×400 square like source.
-    const sess = await seedSession(600, { width: 400, height: 200 });
+    // handleProcess already deprojected the crop to a square before StarNet, so
+    // cropped.png + starless.png arrive at the committed 400×400 frame.  Export
+    // only downsizes them (no second stretch), so every shipped raster is square
+    // and the baked calibration is face-on.
+    const sess = await seedSession(600, { width: 400, height: 400 });
     const repo = fakeRepoRoot();
     const res = await handleExport({
       body: {
@@ -198,7 +195,7 @@ describe('deproject square output', () => {
   });
 
   it('leaves as-shot (deproject off) output unchanged — square crop ⇒ square out', async () => {
-    const sess = await seedSession(600);
+    const sess = await seedSession(600, { width: 400, height: 400 });
     const repo = fakeRepoRoot();
     const res = await handleExport({
       body: {

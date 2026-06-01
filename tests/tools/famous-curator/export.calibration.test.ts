@@ -19,7 +19,7 @@ import { deriveFamousCalibration } from '../../../tools/famous/deriveFamousCalib
 import { squareDeprojectCrop } from '../../../tools/famous/squareDeprojectCrop';
 import type { FamousCalibration } from '../../../src/@types/loading/FamousCalibration';
 
-/** Minimal session dir with source.png + starless.png. */
+/** Minimal session dir with the source.png + cropped.png + starless.png trio. */
 async function seedSession(prefix: string): Promise<{ tmpId: string; sessionDir: string }> {
   const root = mkdtempSync(join(tmpdir(), `curator-calibration-${prefix}-`));
   const tmpId = 'cal';
@@ -36,6 +36,7 @@ async function seedSession(prefix: string): Promise<{ tmpId: string; sessionDir:
     .png()
     .toBuffer();
   writeFileSync(join(dir, 'source.png'), png);
+  writeFileSync(join(dir, 'cropped.png'), png);
   writeFileSync(join(dir, 'starless.png'), png);
   return { tmpId, sessionDir: dir };
 }

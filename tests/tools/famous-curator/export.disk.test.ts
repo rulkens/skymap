@@ -22,7 +22,12 @@ import { handleExport } from '../../../tools/famous-curator/plugin/routes/export
 import { parseRecipe, type RecipeDisk } from '../../../tools/famous-curator/plugin/recipe';
 import { curatedGalaxyDir } from '../../../tools/famous-curator/plugin/paths';
 
-/** Create a tiny 64×64 RGBA PNG and write it as both source.png + starless.png. */
+/**
+ * Create a tiny 64×64 RGBA PNG and write the three buffers handleProcess
+ * leaves behind: source.png (original), cropped.png (with stars) and
+ * starless.png (stars removed).  Export reads cropped.png + starless.png for
+ * its rasters and source.png only for the recorded dimensions.
+ */
 async function seedSession(): Promise<{ tmpId: string; sessionDir: string }> {
   const root = mkdtempSync(join(tmpdir(), 'curator-disk-sess-'));
   const tmpId = 'dx';
@@ -34,6 +39,7 @@ async function seedSession(): Promise<{ tmpId: string; sessionDir: string }> {
     .png()
     .toBuffer();
   writeFileSync(join(dir, 'source.png'), png);
+  writeFileSync(join(dir, 'cropped.png'), png);
   writeFileSync(join(dir, 'starless.png'), png);
   return { tmpId, sessionDir: dir };
 }
