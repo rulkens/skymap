@@ -23,10 +23,10 @@
 
 **Behaviour:** a "Show disk radius ring" checkbox, off by default, wired exactly like `showPickBuffer` (find every `showPickBuffer` reference and add the parallel `showDiskRadiusRing`).
 
-- [ ] **Step 1:** Add the setting + default + toggle + prop threading, mirroring `showPickBuffer` at each site.
-- [ ] **Step 2:** `npm run typecheck` → PASS.
+- [x] **Step 1:** Add the setting + default + toggle + prop threading, mirroring `showPickBuffer` at each site.
+- [x] **Step 2:** `npm run typecheck` → PASS.
 - [ ] **Step 3:** Manual: the checkbox appears and toggles state (no overlay yet).
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/data/defaults.ts src/@types/settings/UseEngineSettingsState.d.ts src/services/engine/wiring/settingsTable.ts src/services/engine/wiring/seedSettingsCallbacks.ts src/components/DebugPanel/DebugPanel.tsx src/components/App/App.tsx
@@ -61,9 +61,9 @@ export function createDiskRadiusRing(device: GPUDevice, swapChainFormat: GPUText
 
 Notes: generate a unit circle line-loop in the vertex stage (or a small vertex buffer); scale by `radiusWorld`; place via the same disk-axes basis as `texturedDisks/vertex.wesl` so the ring lies in the disk plane. Use the premultiplied-OVER blend and `CameraUniforms` prefix exactly as `pickDebugOverlay.ts` / the marker passes do. Read the WESL skill for `?static` import + struct-layout rules before writing the shader.
 
-- [ ] **Step 1:** Write the pass factory + WESL, following `pickDebugOverlay.ts` for factory shape and a marker/line pass for the line-loop + camera binding.
-- [ ] **Step 2:** `npm run typecheck` → PASS; load the app and confirm no "Invalid ShaderModule" in the console (use `createShaderModuleWithDevLog`).
-- [ ] **Step 3: Commit**
+- [x] **Step 1:** Write the pass factory + WESL, following `pickDebugOverlay.ts` for factory shape and a marker/line pass for the line-loop + camera binding.
+- [x] **Step 2:** `npm run typecheck` → PASS; load the app and confirm no "Invalid ShaderModule" in the console (use `createShaderModuleWithDevLog`). _(typecheck PASS; shader-compile confirmed once Task 3 wires the pass into the frame)_
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/services/gpu/passes/diskRadiusRing.ts src/services/gpu/shaders/diskRadiusRing src/@types/rendering/DiskRadiusRing.d.ts
