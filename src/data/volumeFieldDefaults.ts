@@ -91,8 +91,11 @@ export function buildVolumeFieldSettings(id: VolumeFieldId): VolumeFieldSettings
  * no on-disk payload, register only under `import.meta.env.DEV`, and
  * would clutter production state with handles that never load.
  */
-export function seedVolumeFields(): Record<VolumeFieldId, VolumeFieldSettings> {
-  const seeded = {} as Record<VolumeFieldId, VolumeFieldSettings>;
+export function seedVolumeFields(): Partial<Record<VolumeFieldId, VolumeFieldSettings>> {
+  // Partial, not total: DEV-only debug handles are skipped below, so they
+  // are absent from the result — the type reflects that rather than lying
+  // about a complete mapping.
+  const seeded: Partial<Record<VolumeFieldId, VolumeFieldSettings>> = {};
   for (const entry of Object.values(SOURCE_REGISTRY)) {
     if (entry.type !== 'volume' || entry.binBaseName === null) continue;
     seeded[entry.handle] = buildVolumeFieldSettings(entry.handle);

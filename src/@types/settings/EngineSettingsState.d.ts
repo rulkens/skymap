@@ -129,8 +129,10 @@ export type EngineSettingsState = {
    * (when false, `volumeUpsamplePass.enabled` short-circuits before
    * consulting the renderer at zero GPU cost, and `encodeVolumes`
    * never opens its pre-HDR half-res render pass).  `fields` is the
-   * per-handle settings record populated by `addVolumeField` and
-   * emptied by `removeVolumeField` — empty `{}` at engine startup.
+   * per-handle settings record. Seeded at construction by `seedVolumeFields()`
+   * with the shippable volumes' on/off state (so the demand predicate reads
+   * pure state at boot, like survey `drawMask`); DEV-only debug fixtures start
+   * absent and are added on demand by `addVolumeField`.
    */
   volumes: {
     masterEnabled: boolean;
