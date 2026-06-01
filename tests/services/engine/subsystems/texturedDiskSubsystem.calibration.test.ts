@@ -20,6 +20,7 @@ import { Source } from '../../../../src/data/sources';
 import { createGalaxyAtlasSubsystem } from '../../../../src/services/engine/subsystems/galaxyAtlasSubsystem';
 import { createTexturedDiskSubsystem } from '../../../../src/services/engine/subsystems/texturedDiskSubsystem';
 import { paddedRadiusMpc } from '../../../../src/utils/galaxySize';
+import { fallbackOrientation } from '../../../../src/utils/random/fallbackOrientation';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
@@ -262,5 +263,26 @@ describe('texturedDiskSubsystem famous calibration', () => {
     expect(disks[0]!.axisRatio).toBe(Math.fround(0.7));
     expect(disks[0]!.positionAngleDeg).toBe(45);
     expect(disks[0]!.nucleusOffset).toEqual([0, 0]);
+  });
+
+  it('no-calibration disks are bit-identical to the pre-feature catalog path', async () => {
+    // Fallback-orientation rows carry deterministic but arbitrary ar/pa that
+    // the build pipeline's fallback detector matches by EXACT float equality
+    // (see buildFamous's fallbackOrientation comparison).  The calibration
+    // path must not perturb an uncalibrated row by even one ULP, or that
+    // detector silently stops firing.  Assert every emitted field equals the
+    // catalog Float32 value bit-for-bit (toBe, not toBeCloseTo).
+    const sentinel = fallbackOrientation(0n, 187.7, 12.4);
+    const cloud = makeDenseCloud(1, sentinel.axisRatio, sentinel.positionAngleDeg);
+    const disks = await emitOne(Source.Famous, cloud, []);
+    expect(disks.length).toBe(1);
+    const d = disks[0]!;
+    expect(d.x).toBe(cloud.positions[0]);
+    expect(d.y).toBe(cloud.positions[1]);
+    expect(d.z).toBe(cloud.positions[2]);
+    expect(d.sizeWorld).toBe(paddedRadiusMpc(DKPC) * 2);
+    expect(d.axisRatio).toBe(cloud.axisRatio[0]);
+    expect(d.positionAngleDeg).toBe(cloud.positionAngleDeg[0]);
+    expect(d.nucleusOffset).toEqual([0, 0]);
   });
 });
