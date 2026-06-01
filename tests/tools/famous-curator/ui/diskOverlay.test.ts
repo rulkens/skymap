@@ -14,6 +14,7 @@ import {
   majorAxisHandle,
   minorAxisHandle,
   axisRatioFromMinorDrag,
+  deprojectPreviewRect,
 } from '../../../../tools/famous-curator/ui/diskOverlay';
 import type { RecipeDisk } from '../../../../tools/famous-curator/plugin/recipe';
 
@@ -95,5 +96,24 @@ describe('axisRatioFromMinorDrag', () => {
       const recovered = axisRatioFromMinorDrag(disk, handle);
       expect(recovered).toBeCloseTo(axisRatio, 9);
     }
+  });
+});
+
+describe('deprojectPreviewRect', () => {
+  it('frames the disk: width = 2·radiusPx·(1+margin), height = width·aspect, centred', () => {
+    const disk: RecipeDisk = {
+      centerPx: [300, 300],
+      radiusPx: 80,
+      paDeg: 0,
+      axisRatio: 0.5,
+      deproject: true,
+    };
+    const rect = deprojectPreviewRect(disk, 0.5, 0.25);
+    // width = 2·80·1.25 = 200; height = 200·0.5 = 100.
+    expect(rect.width).toBe(200);
+    expect(rect.height).toBe(100);
+    // Centred on [300, 300]: x = 300 − 100, y = 300 − 50.
+    expect(rect.x).toBe(200);
+    expect(rect.y).toBe(250);
   });
 });

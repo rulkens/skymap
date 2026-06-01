@@ -41,8 +41,12 @@ import {
   majorAxisHandle,
   minorAxisHandle,
   axisRatioFromMinorDrag,
+  deprojectPreviewRect,
 } from '../diskOverlay';
-import { DEPROJECT_MIN_AXIS_RATIO } from '../../../../src/data/famousCalibration';
+import {
+  DEPROJECT_MIN_AXIS_RATIO,
+  DEFAULT_DISK_MARGIN,
+} from '../../../../src/data/famousCalibration';
 
 export type DiskOverlayProps = {
   source: { width: number; height: number; previewUrl: string };
@@ -55,6 +59,10 @@ export type DiskOverlayProps = {
   catalogAxisRatio?: number | undefined;
   interactive: boolean;
   onDiskChange: (d: RecipeDisk) => void;
+  /** Locked aspect (height/width = b/a) for the preview rect; absent ⇒ no preview drawn. */
+  deprojectAspect?: number | undefined;
+  /** Seed margin for the preview-rect framing; DEFAULT_DISK_MARGIN when absent. */
+  margin?: number | undefined;
 };
 
 /** Draggable handle kinds. */
@@ -101,7 +109,8 @@ function toSourcePx(
 const HANDLE_RADIUS_SCREEN = 7;
 
 export function DiskOverlay(props: DiskOverlayProps) {
-  const { source, disk, catalogAxisRatio, interactive, onDiskChange } = props;
+  const { source, disk, catalogAxisRatio, interactive, onDiskChange, deprojectAspect, margin } =
+    props;
   const svgRef = useRef<SVGSVGElement>(null);
   const dragRef = useRef<DragState | null>(null);
 
@@ -218,6 +227,19 @@ export function DiskOverlay(props: DiskOverlayProps) {
   // Screen-constant handle radius expressed in source-px user units.
   const handleRadiusSrc = HANDLE_RADIUS_SCREEN / scale;
 
+  // Deproject crop preview: the to-be-cropped rectangle, shown only while the
+  // disk is being deprojected (deprojectAspect supplied) and the overlay is
+  // interactive.  Geometry comes from the pure helper (centre + extents,
+  // pre-rotation); the SVG transform below carries the PA rotation so the DOM
+  // owns the only rotation, matching the ellipse's rotate(paDeg, cx, cy) idiom.
+  const previewRect =
+    interactive && disk && deprojectAspect !== undefined
+      ? deprojectPreviewRect(disk, deprojectAspect, margin ?? DEFAULT_DISK_MARGIN)
+      : undefined;
+  const previewTransform = disk
+    ? `rotate(${disk.paDeg}, ${disk.centerPx[0]}, ${disk.centerPx[1]})`
+    : undefined;
+
   return (
     <svg
       ref={svgRef}
@@ -235,6 +257,46 @@ export function DiskOverlay(props: DiskOverlayProps) {
       onPointerMove={onSvgPointerMove}
       onPointerUp={onSvgPointerUp}
     >
+      {previewRect && (
+        // Darken everything outside the crop preview via a mask hole, then
+        // outline the kept region.  The mask is a full-canvas white rect (keep)
+        // with a black rotated rect (hole = the crop), so the semi-transparent
+        // black overlay only paints the surrounding sky.  pointer-events:none so
+        // disk-creation drags on the background still reach the SVG.
+        <g style={{ pointerEvents: 'none' }}>
+          <mask id="curator-deproject-crop-mask">
+            <rect x={0} y={0} width={source.width} height={source.height} fill="white" />
+            <rect
+              x={previewRect.x}
+              y={previewRect.y}
+              width={previewRect.width}
+              height={previewRect.height}
+              transform={previewTransform}
+              fill="black"
+            />
+          </mask>
+          <rect
+            x={0}
+            y={0}
+            width={source.width}
+            height={source.height}
+            fill="rgba(0, 0, 0, 0.5)"
+            mask="url(#curator-deproject-crop-mask)"
+          />
+          <rect
+            data-testid="crop-preview-rect"
+            className="curator-deproject-crop-rect"
+            vectorEffect="non-scaling-stroke"
+            x={previewRect.x}
+            y={previewRect.y}
+            width={previewRect.width}
+            height={previewRect.height}
+            transform={previewTransform}
+            fill="none"
+          />
+        </g>
+      )}
+
       {disk && edgePt && minorPt && (
         <g style={{ pointerEvents: 'none' }}>
           {/* Major-axis line: centre → edge handle */}

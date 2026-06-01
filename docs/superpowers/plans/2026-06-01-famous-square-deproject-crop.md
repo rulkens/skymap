@@ -605,12 +605,12 @@ it('omits crop-preview-rect when deprojectAspect is undefined', () => {
 });
 ```
 
-- [ ] Add the tests; `npm test -- DiskOverlay > /tmp/t.log 2>&1; rc=$?` → FAIL.
-- [ ] Implement the preview rect + mask (+ the pure `deprojectPreviewRect` helper in `diskOverlay.ts` with its own unit test). Comment-tidy.
-- [ ] `npm test -- DiskOverlay > /tmp/t.log 2>&1; rc=$?` → PASS.
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
+- [x] Add the tests; `npm test -- DiskOverlay > /tmp/t.log 2>&1; rc=$?` → FAIL.
+- [x] Implement the preview rect + mask (+ the pure `deprojectPreviewRect` helper in `diskOverlay.ts` with its own unit test). Comment-tidy.
+- [x] `npm test -- DiskOverlay > /tmp/t.log 2>&1; rc=$?` → PASS.
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
 - [ ] Manual visual check (curator dev server): preview rect appears + darkens outside only when deproject is on. _(VISUAL — pending user)_
-- [ ] Commit `tools/famous-curator/ui/components/DiskOverlay.tsx tools/famous-curator/ui/diskOverlay.ts tests/tools/famous-curator/ui/components/DiskOverlay.test.tsx tests/tools/famous-curator/ui/diskOverlay.test.ts`.
+- [x] Commit `tools/famous-curator/ui/components/DiskOverlay.tsx tools/famous-curator/ui/diskOverlay.ts tests/tools/famous-curator/ui/components/DiskOverlay.test.tsx tests/tools/famous-curator/ui/diskOverlay.test.ts`.
 
 ---
 

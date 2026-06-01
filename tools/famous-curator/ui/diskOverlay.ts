@@ -118,3 +118,35 @@ export function axisRatioFromMinorDrag(disk: RecipeDisk, pointPx: Vec2): number 
   const raw = dot / disk.radiusPx;
   return Math.min(1, Math.max(epsilon, raw));
 }
+
+/**
+ * Axis-aligned, PRE-rotation source-px geometry of the deproject crop's
+ * preview rect — the curator's live view of what the deproject crop will
+ * frame.
+ *
+ *   width  = 2·radiusPx·(1 + margin)   (disk diameter plus margin per side)
+ *   height = width·aspect              (aspect = height/width = b/a)
+ *   x, y   = top-left so the rect is centred on disk.centerPx
+ *
+ * This is seedDeprojectCrop's rectangle without its two view-specific
+ * adjustments: the centre is NOT clamped to bounds, and no rotation is
+ * baked in.  The overlay renders the rect with an SVG `rotate(paDeg, …)`
+ * transform so the rotation is purely a DOM concern, leaving this helper
+ * a pure, frame-agnostic rectangle.  Wrapping seedDeprojectCrop instead
+ * would force us to un-clamp and strip its rotationDeg, so we compute the
+ * shared diameter+margin formula directly.
+ */
+export function deprojectPreviewRect(
+  disk: RecipeDisk,
+  aspect: number,
+  margin: number,
+): { x: number; y: number; width: number; height: number } {
+  const width = 2 * disk.radiusPx * (1 + margin);
+  const height = width * aspect;
+  return {
+    x: disk.centerPx[0] - width / 2,
+    y: disk.centerPx[1] - height / 2,
+    width,
+    height,
+  };
+}
