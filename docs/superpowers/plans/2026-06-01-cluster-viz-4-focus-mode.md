@@ -139,8 +139,8 @@ fn focusAlphaMultiplier(worldPos: vec3<f32>, focus: FocusUniforms) -> f32 {
 }
 ```
 
-- [ ] Create the file with the WESL above verbatim.
-- [ ] **Main thread:** `npm run typecheck` (TS doesn't compile WESL; just confirm the repo still typechecks). Commit.
+- [x] Create the file with the WESL above verbatim.
+- [x] **Main thread:** `npm run typecheck` (TS doesn't compile WESL; just confirm the repo still typechecks). Commit.
 
 ---
 
@@ -152,9 +152,9 @@ fn focusAlphaMultiplier(worldPos: vec3<f32>, focus: FocusUniforms) -> f32 {
 
 Mirror `FadeUniformsBgl` exactly. Type: `export type FocusUniformsBgl = GPUBindGroupLayout & { readonly __brand: 'FocusUniformsBgl' };` (model on `FadeUniformsBgl.d.ts:12`). Factory `createFocusUniformsBgl(device: GPUDevice): FocusUniformsBgl` (model on `bindGroupLayouts/fadeUniforms.ts:26`) — one entry, `binding: 0`, `visibility: GPUShaderStage.VERTEX` (the multiplier is computed in the vertex stage, unlike fade which is FRAGMENT-only), `buffer: { type: 'uniform' }`.
 
-- [ ] Add test `createFocusUniformsBgl builds one VERTEX-visible uniform binding at slot 0` (mock device capturing the descriptor; assert `entries.length === 1`, `entry.binding === 0`, `entry.visibility === GPUShaderStage.VERTEX`, `entry.buffer.type === 'uniform'`). Model on any existing BGL test if one exists; otherwise the descriptor-capture mock from the stale plan Task 2 Step 1 is a valid shape.
-- [ ] Implement type + factory.
-- [ ] **Main thread:** run the new test (green), commit type + factory + test together.
+- [x] Add test `createFocusUniformsBgl builds one VERTEX-visible uniform binding at slot 0` (mock device capturing the descriptor; assert `entries.length === 1`, `entry.binding === 0`, `entry.visibility === GPUShaderStage.VERTEX`, `entry.buffer.type === 'uniform'`). Model on any existing BGL test if one exists; otherwise the descriptor-capture mock from the stale plan Task 2 Step 1 is a valid shape.
+- [x] Implement type + factory.
+- [x] **Main thread:** run the new test (green), commit type + factory + test together.
 
 ### Task 3: `FocusUniformsValue` type + `ClusterFocusSubsystem` type
 
@@ -201,8 +201,8 @@ export type ClusterFocusSubsystem = {
 } & Destroyable;
 ```
 
-- [ ] Create both `.d.ts` (one type per file — `feedback_one_type_per_file`).
-- [ ] **Main thread:** `npm run typecheck`; commit both together.
+- [x] Create both `.d.ts` (one type per file — `feedback_one_type_per_file`).
+- [x] **Main thread:** `npm run typecheck`; commit both together.
 
 ---
 
@@ -222,16 +222,16 @@ Behaviour contract (implementer writes bodies against these — do not paste a f
 
 Tests (names = acceptance criteria; assertions shown). Use a `makePoi(overrides)` helper; cast through `PointOfInterest`.
 
-- [ ] `starts inactive with blend=0` — `produceFocusUniforms(0).blend === 0`; `isAwake(0) === false`.
-- [ ] `update with a cluster POI fades blend 0→1 with correct center/radius/invert` — `update(cluster{worldPos:[3,4,5], physicalRadiusMpc:7}, 0)`; mid: `produceFocusUniforms(200).blend` in (0,1); settled: `produceFocusUniforms(500)` → `blend===1`, `center` deep-equals `[3,4,5]`, `radiusMpc===7`, `invert===0`.
-- [ ] `apparentRadiusMpc takes precedence over physicalRadiusMpc for the membership radius` — `update(cluster{physicalRadiusMpc:2, apparentRadiusMpc:5}, 0)`; settled `radiusMpc===5`.
-- [ ] `update with a void POI sets invert=1` — settled `invert===1`.
-- [ ] `update with a famousGalaxy POI stays inactive` — `update(famousGalaxy, 0)`; `produceFocusUniforms(500).blend===0`; `isAwake` false.
-- [ ] `update(null) after a cluster fades blend 1→0` — focus a cluster, settle at 500; `update(null, 500)`; mid `produceFocusUniforms(600).blend` in (0,1); settled `produceFocusUniforms(900).blend===0`.
-- [ ] `update with the same POI id is idempotent (no re-fade dip)` — focus, settle (blend 1); `update(samePoi, 600)`; `produceFocusUniforms(601).blend===1` (no dip).
-- [ ] `replacing the focused POI does not pass through blend 0` — focus virgo, settle; `update(coma, 600)`; `produceFocusUniforms(601).blend` stays ≈1 (retarget from 1→1, no dip); after settle `center` reflects coma.
-- [ ] `isAwake is true mid-fade and false at rest` — false at 0; true at 200 mid fade-in; after `produceFocusUniforms(500)` settle → `isAwake(500) === false`.
-- [ ] **Main thread:** run the suite (green); commit impl + test + (recall Task 3's types already committed).
+- [x] `starts inactive with blend=0` — `produceFocusUniforms(0).blend === 0`; `isAwake(0) === false`.
+- [x] `update with a cluster POI fades blend 0→1 with correct center/radius/invert` — `update(cluster{worldPos:[3,4,5], physicalRadiusMpc:7}, 0)`; mid: `produceFocusUniforms(200).blend` in (0,1); settled: `produceFocusUniforms(500)` → `blend===1`, `center` deep-equals `[3,4,5]`, `radiusMpc===7`, `invert===0`.
+- [x] `apparentRadiusMpc takes precedence over physicalRadiusMpc for the membership radius` — `update(cluster{physicalRadiusMpc:2, apparentRadiusMpc:5}, 0)`; settled `radiusMpc===5`.
+- [x] `update with a void POI sets invert=1` — settled `invert===1`.
+- [x] `update with a famousGalaxy POI stays inactive` — `update(famousGalaxy, 0)`; `produceFocusUniforms(500).blend===0`; `isAwake` false.
+- [x] `update(null) after a cluster fades blend 1→0` — focus a cluster, settle at 500; `update(null, 500)`; mid `produceFocusUniforms(600).blend` in (0,1); settled `produceFocusUniforms(900).blend===0`. (Extended: re-call `update(null, 600)` to prove the per-frame fade-out does not restart its clock.)
+- [x] `update with the same POI id is idempotent (no re-fade dip)` — focus, settle (blend 1); `update(samePoi, 600)`; `produceFocusUniforms(601).blend===1` (no dip). (Extended: re-call `update(samePoi)` mid fade-in to prove it does not restart.)
+- [x] `replacing the focused POI does not pass through blend 0` — focus virgo, settle; `update(coma, 600)`; `produceFocusUniforms(601).blend` stays ≈1 (retarget from 1→1, no dip); after settle `center` reflects coma.
+- [x] `isAwake is true mid-fade and false at rest` — false at 0; true at 200 mid fade-in; after `produceFocusUniforms(500)` settle → `isAwake(500) === false`.
+- [x] **Main thread:** run the suite (green); commit impl + test + (recall Task 3's types already committed).
 
 ---
 
@@ -243,23 +243,23 @@ Tests (names = acceptance criteria; assertions shown). Use a `makePoi(overrides)
 
 **File:** `src/services/gpu/shaders/points/vertex.wesl`.
 
-- [ ] Add two imports after the existing `import package::lib::orientation::diskAxes;` (`vertex.wesl:42`): `import package::lib::focusUniforms::FocusUniforms;` and `import package::lib::focusUniforms::focusAlphaMultiplier;`.
-- [ ] Add the binding after `@group(2) @binding(0) var<uniform> source: SourceUniforms;` (`vertex.wesl:72`): `@group(3) @binding(0) var<uniform> focus: FocusUniforms;` with a short comment (single quotes only).
-- [ ] Fold the multiplier into the existing intensity product chain (`vertex.wesl:212-218`). Add one factor: `* focusAlphaMultiplier(p.position, focus)`. (`p.position` is the world position, used at `:89`/`:104`/`:140`.)
-- [ ] **Leave the Malmquist/realOnly early-out (`vertex.wesl:122-130`) UNCHANGED** — it returns offscreen with no intensity; multiplying nothing is correct, no edit needed. (Documented so the implementer doesn't double-handle it.)
-- [ ] **Known nuance (no code):** the invisibility cull at `vertex.wesl:238-241` hard-culls points with `intensity < 0.005` (visual pass only). A non-member faded to 8% whose folded intensity drops under 0.005 will be culled rather than drawn dim — acceptable (already near-invisible); note it for the smoke test.
+- [x] Add two imports after the existing `import package::lib::orientation::diskAxes;` (`vertex.wesl:42`): `import package::lib::focusUniforms::FocusUniforms;` and `import package::lib::focusUniforms::focusAlphaMultiplier;`.
+- [x] Add the binding after `@group(2) @binding(0) var<uniform> source: SourceUniforms;` (`vertex.wesl:72`): `@group(3) @binding(0) var<uniform> focus: FocusUniforms;` with a short comment (single quotes only).
+- [x] Fold the multiplier into the existing intensity product chain (`vertex.wesl:212-218`). Add one factor: `* focusAlphaMultiplier(p.position, focus)`. (`p.position` is the world position, used at `:89`/`:104`/`:140`.)
+- [x] **Leave the Malmquist/realOnly early-out (`vertex.wesl:122-130`) UNCHANGED** — it returns offscreen with no intensity; multiplying nothing is correct, no edit needed. (Documented so the implementer doesn't double-handle it.)
+- [x] **Known nuance (no code):** the invisibility cull at `vertex.wesl:238-241` hard-culls points with `intensity < 0.005` (visual pass only). A non-member faded to 8% whose folded intensity drops under 0.005 will be culled rather than drawn dim — acceptable (already near-invisible); note it for the smoke test.
 
 ### Task 6: pointRenderer — focusBgl param, @group(3), singleton buffer, per-frame write, destroy
 
 **Files:** `src/services/gpu/renderers/pointRenderer.ts`, `src/@types/rendering/PointDrawSettings.d.ts`.
 
-- [ ] Import `FocusUniformsBgl` (after the `FadeUniformsBgl` import) and `FocusUniformsValue`.
-- [ ] Add `focusBgl: FocusUniformsBgl` as the 4th param of `createPointRenderer` (`pointRenderer.ts:322-327`, currently `device, format, fadeBgl, sourceBgl`).
-- [ ] Append `focusBgl` to the pipeline-layout `bindGroupLayouts` array (`pointRenderer.ts:337-347`, currently `[group0, fadeBgl, sourceBgl]`) → `@group(3)`.
-- [ ] Allocate the singleton focus buffer + bind group after the existing `bindGroup` (`pointRenderer.ts:393-397`): 32-byte `UNIFORM | COPY_DST` buffer, one bind group `layout: focusBgl`, binding 0. Add the reusable 32-byte scratch (`ArrayBuffer` + `Float32Array` + `Uint32Array` views), mirroring `fadeScratchBuffer` at `:401-402`.
-- [ ] Add `focus: FocusUniformsValue` to `PointDrawSettings` (`PointDrawSettings.d.ts`) with a doc line.
-- [ ] In `draw` (`pointRenderer.ts:668`): destructure `focus` from settings; pack per the byte table above and `device.queue.writeBuffer(focusBuffer, 0, scratch)` once (alongside the existing `writeBuffer(uniformBuffer…)` at `:737`). Bind `@group(3)` once after `pass.setBindGroup(0, bindGroup)` (`:740`) and **before** the per-source loop (`:742`) — focus is global, not per-source.
-- [ ] Add `focusBuffer.destroy()` to `destroy()` (`pointRenderer.ts:773-781`).
+- [x] Import `FocusUniformsBgl` (after the `FadeUniformsBgl` import) and `FocusUniformsValue`.
+- [x] Add `focusBgl: FocusUniformsBgl` as the 4th param of `createPointRenderer` (`pointRenderer.ts:322-327`, currently `device, format, fadeBgl, sourceBgl`).
+- [x] Append `focusBgl` to the pipeline-layout `bindGroupLayouts` array (`pointRenderer.ts:337-347`, currently `[group0, fadeBgl, sourceBgl]`) → `@group(3)`.
+- [x] Allocate the singleton focus buffer + bind group after the existing `bindGroup` (`pointRenderer.ts:393-397`): 32-byte `UNIFORM | COPY_DST` buffer, one bind group `layout: focusBgl`, binding 0. Add the reusable 32-byte scratch (`ArrayBuffer` + `Float32Array` + `Uint32Array` views), mirroring `fadeScratchBuffer` at `:401-402`.
+- [x] Add `focus: FocusUniformsValue` to `PointDrawSettings` (`PointDrawSettings.d.ts`) with a doc line.
+- [x] In `draw` (`pointRenderer.ts:668`): destructure `focus` from settings; pack per the byte table above and `device.queue.writeBuffer(focusBuffer, 0, scratch)` once (alongside the existing `writeBuffer(uniformBuffer…)` at `:737`). Bind `@group(3)` once after `pass.setBindGroup(0, bindGroup)` (`:740`) and **before** the per-source loop (`:742`) — focus is global, not per-source.
+- [x] Add `focusBuffer.destroy()` to `destroy()` (`pointRenderer.ts:773-781`).
 
 ### Task 7: pickRenderer — dummy focus bind group
 
@@ -267,22 +267,22 @@ Tests (names = acceptance criteria; assertions shown). Use a `makePoi(overrides)
 
 The pick fragment ignores `out.intensity`, but the shared vertex shader's layout now declares `@group(3)`, so the pick pipeline layout MUST match. Mirror the dummy-fade pattern.
 
-- [ ] Import `FocusUniformsBgl` (after the `FadeUniformsBgl` import at `:33`).
-- [ ] Add `focusBgl: FocusUniformsBgl` to `createPickRenderer` — **insert it before the existing optional `clusterMarkerRenderer?` param** (`pickRenderer.ts:64-77`; new order: `device, pointRenderer, fadeBgl, sourceBgl, focusBgl, clusterMarkerRenderer?`).
-- [ ] Append `focusBgl` to the pipeline-layout `bindGroupLayouts` (`pickRenderer.ts:85-97`, currently `[group0, fadeBgl, sourceBgl]`).
-- [ ] Allocate a zeroed 32-byte dummy buffer + bind group after the dummy-fade block (`pickRenderer.ts:102-111`) — `UNIFORM` only (never written), `layout: focusBgl`.
-- [ ] Bind `@group(3)` once in `recordPickPass` after `pass.setBindGroup(1, dummyFadeBindGroup)` (`pickRenderer.ts:303`), before the per-source loop.
-- [ ] Add `dummyFocusBuffer.destroy()` to `destroy()` (`pickRenderer.ts:427-432`).
+- [x] Import `FocusUniformsBgl` (after the `FadeUniformsBgl` import at `:33`).
+- [x] Add `focusBgl: FocusUniformsBgl` to `createPickRenderer` — **insert it before the existing optional `clusterMarkerRenderer?` param** (`pickRenderer.ts:64-77`; new order: `device, pointRenderer, fadeBgl, sourceBgl, focusBgl, clusterMarkerRenderer?`).
+- [x] Append `focusBgl` to the pipeline-layout `bindGroupLayouts` (`pickRenderer.ts:85-97`, currently `[group0, fadeBgl, sourceBgl]`).
+- [x] Allocate a zeroed 32-byte dummy buffer + bind group after the dummy-fade block (`pickRenderer.ts:102-111`) — `UNIFORM` only (never written), `layout: focusBgl`.
+- [x] Bind `@group(3)` once in `recordPickPass` after `pass.setBindGroup(1, dummyFadeBindGroup)` (`pickRenderer.ts:303`), before the per-source loop.
+- [x] Add `dummyFocusBuffer.destroy()` to `destroy()` (`pickRenderer.ts:427-432`).
 
 ### Task 8: bootstrap call-site threading
 
 **Files:** `src/services/engine/phases/initGpu.ts`, `src/services/engine/phases/wireInput.ts`, `src/@types/engine/handles/EngineGpuHandles.d.ts`.
 
-- [ ] Add `focusBgl: FocusUniformsBgl | null;` to `EngineGpuHandles` (`EngineGpuHandles.d.ts:68+`, alongside `fadeBgl`/`sourceBgl` at `:77`/`:84`); import the type.
-- [ ] In `initGpu.ts`, after `state.gpu.sourceBgl = createSourceUniformsBgl(device);` (`:149`): `state.gpu.focusBgl = createFocusUniformsBgl(device);` (import from `../../gpu/bindGroupLayouts/focusUniforms`).
-- [ ] Thread `state.gpu.focusBgl!` as the 4th arg of `createPointRenderer` (`initGpu.ts:201-206`).
-- [ ] In `wireInput.ts`, thread `state.gpu.focusBgl!` as the 5th arg of `createPickRenderer` (`:66-72`) — **before** the `?? undefined` clusterMarkerRenderer arg.
-- [ ] **Main thread (Tasks 5–8 together):** `npm run typecheck && npm run build` green; commit shader + both renderers + bootstrap as one commit.
+- [x] Add `focusBgl: FocusUniformsBgl | null;` to `EngineGpuHandles` (`EngineGpuHandles.d.ts:68+`, alongside `fadeBgl`/`sourceBgl` at `:77`/`:84`); import the type.
+- [x] In `initGpu.ts`, after `state.gpu.sourceBgl = createSourceUniformsBgl(device);` (`:149`): `state.gpu.focusBgl = createFocusUniformsBgl(device);` (import from `../../gpu/bindGroupLayouts/focusUniforms`).
+- [x] Thread `state.gpu.focusBgl!` as the 4th arg of `createPointRenderer` (`initGpu.ts:201-206`).
+- [x] In `wireInput.ts`, thread `state.gpu.focusBgl!` as the 5th arg of `createPickRenderer` (`:66-72`) — **before** the `?? undefined` clusterMarkerRenderer arg.
+- [x] **Main thread (Tasks 5–8 together):** `npm run typecheck && npm run build` green; commit shader + both renderers + bootstrap as one commit.
 
 ---
 
@@ -292,22 +292,22 @@ The pick fragment ignores `out.intensity`, but the shared vertex shader's layout
 
 **Files:** `src/services/engine/engine.ts`, `src/@types/engine/handles/EngineSubsystemHandles.d.ts`.
 
-- [ ] Add `clusterFocus: ClusterFocusSubsystem;` (always-present, non-null — like `selection`/`pois`) to `EngineSubsystemHandles` (`:122` neighbourhood); import the type. The `_EnforceDestroyable` guard (`:144`) requires `destroy()` — already on the type.
-- [ ] Construct it in the subsystems literal (`engine.ts:544-642`, near `pois: createPoiSubsystem({})` at `:642`): `clusterFocus: createClusterFocusSubsystem(),`. Import `createClusterFocusSubsystem`.
-- [ ] Add `state.subsystems.clusterFocus.destroy();` to the teardown list (`engine.ts:1359-1387`, alongside `pois.destroy()` at `:1364`).
-- [ ] **Main thread:** `npm run typecheck`; commit.
+- [x] Add `clusterFocus: ClusterFocusSubsystem;` (always-present, non-null — like `selection`/`pois`) to `EngineSubsystemHandles` (`:122` neighbourhood); import the type. The `_EnforceDestroyable` guard (`:144`) requires `destroy()` — already on the type.
+- [x] Construct it in the subsystems literal (`engine.ts:544-642`, near `pois: createPoiSubsystem({})` at `:642`): `clusterFocus: createClusterFocusSubsystem(),`. Import `createClusterFocusSubsystem`.
+- [x] Add `state.subsystems.clusterFocus.destroy();` to the teardown list (`engine.ts:1359-1387`, alongside `pois.destroy()` at `:1364`).
+- [x] **Main thread:** `npm run typecheck`; commit.
 
 ### Task 10: per-frame `update` + render-on-demand in runFrame
 
 **Files:** `src/services/engine/frame/runFrame.ts`, `src/@types/engine/frame/RenderFrameSettings.d.ts`, `src/services/engine/frame/passes/pointSpritesPass.ts`.
 
-- [ ] In `runFrame`, near the `fades.tick(nowMs)` (`runFrame.ts:575`), resolve the selected POI and sync focus:
+- [x] In `runFrame`, near the `fades.tick(nowMs)` (`runFrame.ts:575`), resolve the selected POI and sync focus:
   `const sel = state.subsystems.selection.selected(); const poi = sel?.kind === 'poi' ? (state.subsystems.pois.findPoi(sel.id) ?? null) : null; state.subsystems.clusterFocus.update(poi, nowMs);`
-- [ ] Add `state.subsystems.clusterFocus.isAwake(nowMs)` to the `stillAnimating` OR-chain (`runFrame.ts:576-583`).
-- [ ] Add `focus: FocusUniformsValue` to `RenderFrameSettings` (`RenderFrameSettings.d.ts`); import the type.
-- [ ] Populate it in the `settings` object built in `runFrame` (`:321-347`, near `selected:` at `:324`): `focus: state.subsystems.clusterFocus.produceFocusUniforms(nowMs),` — reusing runFrame's `nowMs` (one clock).
-- [ ] In `pointSpritesPass.ts` (`:82-111`), forward `focus: settings.focus` into the `renderer.draw(...)` `PointDrawSettings` object. (`settings` here is the `RenderFrameSettings` block via `ctx`/the pass signature — confirm by reading the pass's `settings` param.)
-- [ ] **Main thread:** `npm run typecheck && npm test`; commit.
+- [x] Add `state.subsystems.clusterFocus.isAwake(nowMs)` to the `stillAnimating` OR-chain (`runFrame.ts:576-583`).
+- [x] Add `focus: FocusUniformsValue` to `RenderFrameSettings` (`RenderFrameSettings.d.ts`); import the type.
+- [x] Populate it in the `settings` object built in `runFrame` (`:321-347`, near `selected:` at `:324`): `focus: state.subsystems.clusterFocus.produceFocusUniforms(nowMs),` — reusing runFrame's `nowMs` (one clock).
+- [x] In `pointSpritesPass.ts` (`:82-111`), forward `focus: settings.focus` into the `renderer.draw(...)` `PointDrawSettings` object. (`settings` here is the `RenderFrameSettings` block via `ctx`/the pass signature — confirm by reading the pass's `settings` param.)
+- [x] **Main thread:** `npm run typecheck && npm test`; commit.
 
 ---
 
@@ -319,10 +319,10 @@ The pick fragment ignores `out.intensity`, but the shared vertex shader's layout
 
 Keyed off `selectedPoiId !== null` (already computed at `poiSubsystem.ts:809`), NOT a `clusterFocus` dependency — keeps `poiSubsystem` decoupled from focus state.
 
-- [ ] In `produceMarkers`, when `selectedPoiId !== null` and the current POI is NOT the selected one, multiply the baked `haloColor[3]` and `ringColor[3]` by `0.25`. Keep the existing selected-ring 1.5× bump (`:939-941`) for the selected POI. Introduce a `const NON_SELECTED_DIM = 0.25;` (or similar) near the other style constants. Apply to the alpha just before pushing the descriptor (`:920-947`), preserving the copy-on-write tuple style already used there.
-- [ ] Add test `produceMarkers dims non-selected markers to 25% while a POI is selected` — build ≥2 visible POIs, select one, assert the non-selected descriptor's `ringColor[3]` / `haloColor[3]` are 0.25× their at-rest baked value and the selected one is unchanged (still 1.5× bumped). Model setup on existing `produceMarkers` tests in the same file.
-- [ ] **Known v1 limitation (no code):** marker dim snaps on/off with selection (binary) while the galaxy fade is 400 ms — acceptable for v1; mention in the smoke test.
-- [ ] **Main thread:** run the suite; commit.
+- [x] In `produceMarkers`, when `selectedPoiId !== null` and the current POI is NOT the selected one, multiply the baked `haloColor[3]` and `ringColor[3]` by `0.25`. Keep the existing selected-ring 1.5× bump (`:939-941`) for the selected POI. Introduce a `const NON_SELECTED_DIM = 0.25;` (or similar) near the other style constants. Apply to the alpha just before pushing the descriptor (`:920-947`), preserving the copy-on-write tuple style already used there.
+- [x] Add test `produceMarkers dims non-selected markers to 25% while a POI is selected` — build ≥2 visible POIs, select one, assert the non-selected descriptor's `ringColor[3]` / `haloColor[3]` are 0.25× their at-rest baked value and the selected one is unchanged (still 1.5× bumped). Model setup on existing `produceMarkers` tests in the same file.
+- [x] **Known v1 limitation (no code):** marker dim snaps on/off with selection (binary) while the galaxy fade is 400 ms — acceptable for v1; mention in the smoke test.
+- [x] **Main thread:** run the suite; commit.
 
 ---
 
@@ -330,7 +330,7 @@ Keyed off `selectedPoiId !== null` (already computed at `poiSubsystem.ts:809`), 
 
 ### Task 12: full gate
 
-- [ ] **Main thread:** `npm run typecheck && npm test && npm run build` — all green. (Do NOT run repo-wide `npm run format`; prettier only touched files per `feedback_format_only_touched_files`.)
+- [x] **Main thread:** `npm run typecheck && npm test && npm run build` — all green (2220 tests). (Do NOT run repo-wide `npm run format`; prettier only touched files per `feedback_format_only_touched_files`.)
 
 ### Task 13: manual smoke test (user-driven)
 
@@ -349,15 +349,15 @@ Ask the user to verify in the dev server (HMR; do not restart it):
 
 ## Self-review checklist (tasks → spec)
 
-- [ ] Member isolation @ 8%, 400 ms smoothstep — spec §3.2, §3.4 → Tasks 1, 4, 5, 10.
-- [ ] Void inversion — spec §3.3 → Tasks 1 (`invert`), 4 (`category==='void'?1:0`), 5 (predicate).
-- [ ] Other markers dim to ~25%, selected ring 1.5× — spec §3.2 → Task 11 (+ existing `:939-941`).
-- [ ] GPU re-derivation (option b), no CPU member list, no `dataRev` cache — spec §4.4 → Architecture + Task 4.
-- [ ] Render-on-demand keeps the loop alive through the fade — spec §3.4, §8.3 → Task 10 (`isAwake`).
-- [ ] Pick pipeline layout matches (dummy `@group(3)`) — spec §6 / WESL reminder 4 → Task 7.
-- [ ] Famous-galaxy POIs never engage focus — spec §11.5 → Task 4 (eligibility) + Task 13.
-- [ ] Strict `<` membership predicate (hard edge) — spec §11.6 → Task 1.
-- [ ] Selection-driven single sync point (no scatter) — Architecture choice 1 → Task 10.
+- [x] Member isolation @ 8%, 400 ms smoothstep — spec §3.2, §3.4 → Tasks 1, 4, 5, 10.
+- [x] Void inversion — spec §3.3 → Tasks 1 (`invert`), 4 (`category==='void'?1:0`), 5 (predicate).
+- [x] Other markers dim to ~25%, selected ring 1.5× — spec §3.2 → Task 11 (+ existing `:939-941`).
+- [x] GPU re-derivation (option b), no CPU member list, no `dataRev` cache — spec §4.4 → Architecture + Task 4.
+- [x] Render-on-demand keeps the loop alive through the fade — spec §3.4, §8.3 → Task 10 (`isAwake`).
+- [x] Pick pipeline layout matches (dummy `@group(3)`) — spec §6 / WESL reminder 4 → Task 7.
+- [x] Famous-galaxy POIs never engage focus — spec §11.5 → Task 4 (eligibility) + Task 13.
+- [x] Strict `<` membership predicate (hard edge) — spec §11.6 → Task 1.
+- [x] Selection-driven single sync point (no scatter) — Architecture choice 1 → Task 10.
 
 ### Where this plan diverges from the original brief / corrects stated facts
 
