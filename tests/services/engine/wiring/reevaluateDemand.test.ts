@@ -3,12 +3,14 @@
  *
  * Tests exercise the factored-out `evaluateRows(state, rows)` with stub rows
  * and stub slots, so the loop logic is verified without the real ASSET_WIRING
- * registry (Task 10). The four behaviours under test:
+ * registry (Task 10). The behaviours under test:
  *
- *   - a row whose demand is true triggers `slot.load(row.req(tier))`,
+ *   - a row whose demand is true AND whose slot is idle triggers
+ *     `slot.load(row.req(tier))`,
  *   - a row whose demand is false does not load,
- *   - a throwing demand predicate is caught and does not stop later rows,
- *   - repeated evaluation is safe (idempotency lives in slot.load).
+ *   - a row whose slot is already loading/ready is left alone (the idle-guard
+ *     that prevents a re-fetch storm when the loop re-runs on every toggle),
+ *   - a throwing demand predicate is caught and does not stop later rows.
  *
  * Mocking strategy: stub slots live in `state.assetSlots.points` keyed by a
  * numeric SourceType; `slot.load` is a vi.fn so calls are assertable. Rows
@@ -21,21 +23,34 @@ import { Source } from '../../../../src/data/sources';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { AssetWiringRow } from '../../../../src/@types/loading/AssetWiringRow';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
+import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 
-type StubSlot = AssetSlot<unknown, unknown> & { load: ReturnType<typeof vi.fn> };
+type StubSlot = AssetSlot<unknown, unknown> & {
+  load: ReturnType<typeof vi.fn>;
+  /** Override the reported lifecycle kind so tests can pin the idle-guard. */
+  setKind: (kind: LoadState<unknown>['kind']) => void;
+};
 
-/** A stub slot whose `load` is a spy; other methods are no-ops. */
-function stubSlot(): StubSlot {
+/**
+ * A stub slot whose `load` is a spy. `state()` reports a mutable kind (idle by
+ * default — the boot model) so tests can simulate a slot that is already
+ * loading/ready and assert the idle-guard skips it.
+ */
+function stubSlot(initialKind: LoadState<unknown>['kind'] = 'idle'): StubSlot {
   const load = vi.fn();
+  let kind = initialKind;
   return {
     name: 'stub',
     load: load as unknown as StubSlot['load'],
     current: () => null,
-    state: () => ({ kind: 'idle' }),
+    state: () => ({ kind }) as LoadState<unknown>,
     subscribe: () => () => {},
     forceReload: () => {},
     cancel: () => {},
+    setKind: (next) => {
+      kind = next;
+    },
   };
 }
 
@@ -107,17 +122,37 @@ describe('evaluateRows', () => {
     expect(warn).toHaveBeenCalled();
   });
 
-  it('re-evaluation is safe to call twice', () => {
-    const slot = stubSlot();
+  it('does not re-load a slot that is already ready', () => {
+    const slot = stubSlot('ready');
+    const state = makeState(new Map([[Source.SDSS, slot]]));
+    evaluateRows(state, [row(Source.SDSS, () => true)]);
+    // Demanded, but the slot already holds data — the idle-guard skips it so a
+    // toggle-driven re-eval doesn't abort + re-fetch a ready survey.
+    expect(slot.load).not.toHaveBeenCalled();
+  });
+
+  it('does not re-load a slot that is already loading', () => {
+    const slot = stubSlot('loading');
+    const state = makeState(new Map([[Source.SDSS, slot]]));
+    evaluateRows(state, [row(Source.SDSS, () => true)]);
+    // A fetch is already in flight; re-triggering would abort and restart it.
+    expect(slot.load).not.toHaveBeenCalled();
+  });
+
+  it('re-evaluation after a slot becomes ready is a no-op for that row', () => {
+    // First eval finds the slot idle and loads it; flipping the stub to ready
+    // models the slot settling. The second eval must NOT re-load — this pins
+    // the toggle-storm prevention the idle-guard exists for.
+    const slot = stubSlot('idle');
     const state = makeState(new Map([[Source.SDSS, slot]]));
     const rows = [row(Source.SDSS, () => true)];
-    expect(() => {
-      evaluateRows(state, rows);
-      evaluateRows(state, rows);
-    }).not.toThrow();
-    // No internal dedup — each true evaluation calls load (idempotency is
-    // the slot's contract, not the loop's).
-    expect(slot.load).toHaveBeenCalledTimes(2);
+
+    evaluateRows(state, rows);
+    expect(slot.load).toHaveBeenCalledTimes(1);
+
+    slot.setKind('ready');
+    evaluateRows(state, rows);
+    expect(slot.load).toHaveBeenCalledTimes(1);
   });
 
   it('skips a true-demand row with no slot without throwing', () => {

@@ -22,17 +22,14 @@
  *
  * ### famousMeta boot-case modelling
  *
- * `famousMeta.demand(ctx)` is true when `slotState(Famous) !== 'idle'`.
- * The Famous POINT slot is demanded whenever Famous is in the drawMask
- * (visible by default), so at the moment `reevaluateDemand` fires at boot
- * the Famous slot has just had `.load()` called on it — its `state()` returns
- * `'loading'`. We model the boot case this way: the Famous point slot's stub
- * `state()` returns `{ kind: 'loading' }`, which makes `slotState(Famous)
- * !== 'idle'` true, and famousMeta IS in the expected boot set.
- * This is the honest model: if you want to test "Famous slot still idle",
- * override it explicitly and exclude famousMeta (see the 'structures all
- * hidden' case, where Famous stays in the mask but slot state is left at
- * 'idle' by default to isolate the cluster predicate).
+ * `famousMeta.demand(ctx)` is true when `slotState(Famous) !== 'idle'`. At boot
+ * the Famous POINT row evaluates first (Famous is in the drawMask), finds the
+ * slot idle, and loads it; the loop's idle-guard then leaves it alone, but the
+ * stub's `load()` flips its reported kind idle → 'loading'. The later
+ * famousMeta row sees `slotState(Famous) === 'loading'` and demands. The stub
+ * auto-transition (see `stubSlot`) reproduces this two-phase truth in a single
+ * `reevaluateDemand` pass — a stub frozen at one kind could only satisfy one of
+ * the two rows under the idle-guard.
  *
  * ### MCPM at boot
  *
@@ -48,10 +45,12 @@
  *
  * ### Synthetic fallback gate
  *
- * The Synthetic row's demand is now a plain `ctx.request('syntheticFallback')`
+ * The Synthetic row's demand is a plain `ctx.request('syntheticFallback')`
  * read. The precise gate (count-aware, hidden-at-boot-aware) lives in
  * `createSyntheticFallback` and trips that flag; this regression net only
- * models the armed state by seeding the request set.
+ * models the armed state by seeding the request set. Synthetic starts idle, so
+ * the loop's idle-guard lets it load when armed; the errored survey slots that
+ * triggered the fallback stay non-idle and are deliberately NOT re-loaded.
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
@@ -73,14 +72,29 @@ type StubSlot = AssetSlot<unknown, unknown> & { load: ReturnType<typeof vi.fn> }
 /**
  * Stub slot whose `load` is a vi.fn spy; `state()` returns a controllable
  * kind so `slotState` reads resolve correctly in demand predicates.
+ *
+ * Calling `load()` flips the reported kind from 'idle' to 'loading' — the same
+ * transition the real slot makes. This is what lets a single `reevaluateDemand`
+ * pass model the two-phase boot truth: the Famous point row sees an idle slot
+ * and loads it (under the loop's idle-guard), then the later famousMeta row
+ * sees the now-'loading' Famous slot and demands. A stub frozen at 'loading'
+ * would suppress the point row's load under the idle-guard; a stub frozen at
+ * 'idle' would suppress famousMeta. The transition models reality and resolves
+ * both.
+ *
+ * Pass a non-idle `kind` (e.g. 'error') to pin a slot that was NOT freshly
+ * loaded this pass — those don't auto-transition (already past idle).
  */
 function stubSlot(kind: LoadState<unknown>['kind'] = 'idle'): StubSlot {
-  const load = vi.fn();
+  let current = kind;
+  const load = vi.fn(() => {
+    if (current === 'idle') current = 'loading';
+  });
   return {
     name: 'stub',
     load: load as unknown as StubSlot['load'],
     current: () => null,
-    state: () => ({ kind } as LoadState<unknown>),
+    state: () => ({ kind: current } as LoadState<unknown>),
     subscribe: () => () => {},
     forceReload: () => {},
     cancel: () => {},
@@ -231,12 +245,10 @@ describe('reevaluateDemand demand-table regression', () => {
    * filaments: off. pgcAlias: no request. Synthetic: surveys not errored.
    */
   it('boot defaults: SDSS + 2MRS + GLADE + Famous + famousMeta + clusterCatalog + mcpm', () => {
-    // Famous slot is 'loading' — its point-row demand was already true (Famous
-    // is in the drawMask), so its slot fired first and is now loading.
-    const famousSlot = stubSlot('loading');
-    const pointSlots: PointSlotOverrides = { [Source.Famous]: famousSlot };
-    const namedSlots: NamedSlotOverrides = {};
-    const state = makeState({ pointSlots, namedSlots });
+    // Famous starts idle: its point row loads it (idle-guard passes), flipping
+    // the stub to 'loading', so the later famousMeta row sees Famous non-idle
+    // and demands. This is the honest two-phase boot model.
+    const state = makeState();
 
     const fired = firedKeys(state);
 
@@ -260,10 +272,7 @@ describe('reevaluateDemand demand-table regression', () => {
       ...BOOT_SETTINGS,
       filaments: { enabled: true },
     };
-    const famousSlot = stubSlot('loading');
-    const pointSlots: PointSlotOverrides = { [Source.Famous]: famousSlot };
-    const namedSlots: NamedSlotOverrides = {};
-    const state = makeState({ settings, pointSlots, namedSlots });
+    const state = makeState({ settings });
 
     const fired = firedKeys(state);
 
@@ -285,8 +294,9 @@ describe('reevaluateDemand demand-table regression', () => {
    * Bug-fix pin: clusterCatalog must NOT appear. This verifies the
    * consolidated predicate rather than the stale 'structures.enabled' flag.
    *
-   * Famous slot is modelled as idle here (isolating the cluster predicate;
-   * famousMeta is therefore also excluded from the expected set).
+   * Famous starts idle and is in the drawMask, so its point row loads it and
+   * famousMeta follows (the two-phase boot). The pin under test is the cluster
+   * predicate, asserted independently below.
    */
   it('structures all hidden: no clusterCatalog (bug-fix pin)', () => {
     const settings: SettingsLeaves = {
@@ -294,15 +304,12 @@ describe('reevaluateDemand demand-table regression', () => {
       markerCategoryVisibility: { cluster: false, supercluster: false, void: false, famousGalaxy: false },
       labelCategoryVisibility: { cluster: false, supercluster: false, void: false, famousGalaxy: false },
     };
-    // Famous slot stays idle — tests only the cluster predicate.
     const state = makeState({ settings });
 
     const fired = firedKeys(state);
 
     // clusterCatalog must be absent.
     expect(fired.has('clusterCatalog')).toBe(false);
-    // famousMeta absent (Famous slot is idle).
-    expect(fired.has('famousMeta')).toBe(false);
     // The three visible surveys are still demanded.
     expect(fired.has(Source.SDSS)).toBe(true);
     expect(fired.has(Source.TwoMRS)).toBe(true);
@@ -315,13 +322,8 @@ describe('reevaluateDemand demand-table regression', () => {
    * pgcAlias on top of the boot set. Famous slot 'loading' for famousMeta.
    */
   it('palette opened: boot set + pgcAlias', () => {
-    const famousSlot = stubSlot('loading');
-    const pointSlots: PointSlotOverrides = { [Source.Famous]: famousSlot };
-    const namedSlots: NamedSlotOverrides = {};
     const state = makeState({
       requests: new Set(['paletteOpened']),
-      pointSlots,
-      namedSlots,
     });
 
     const fired = firedKeys(state);
@@ -343,14 +345,15 @@ describe('reevaluateDemand demand-table regression', () => {
    * (the precise gate in createSyntheticFallback owns the decision to arm it;
    * here we just model the armed state), so the Synthetic row is demanded.
    *
-   * The survey slots are still driven to 'error' to mirror a realistic
-   * all-failed boot, but those slot states no longer feed the Synthetic
-   * predicate — the flag does. Milliquas is NOT in the default drawMask
-   * (visible: false in SOURCE_REGISTRY) so its point row's demand is false.
-   * Famous (curated) errored too; famousMeta still demands because Famous
-   * slot !== 'idle'. clusterCatalog is still demanded (categories visible).
+   * The survey slots are driven to 'error' to mirror a realistic all-failed
+   * boot. Synthetic starts idle (never loaded), so the idle-guard lets it load
+   * when armed — exactly the recovery path. The errored survey rows, by
+   * contrast, are NOT re-loaded: the idle-guard skips non-idle slots, which is
+   * the desired no-retry-storm behaviour (a re-eval must not abort + re-fetch
+   * failed surveys). famousMeta still demands because Famous slot !== 'idle';
+   * clusterCatalog is still demanded (categories visible).
    */
-  it('synthetic fallback armed: Synthetic demanded', () => {
+  it('synthetic fallback armed: Synthetic loads, errored surveys are not retried', () => {
     const pointSlots: PointSlotOverrides = {
       [Source.SDSS]: stubSlot('error'),
       [Source.TwoMRS]: stubSlot('error'),
@@ -365,22 +368,21 @@ describe('reevaluateDemand demand-table regression', () => {
 
     const fired = firedKeys(state);
 
-    // Synthetic fallback is now demanded.
+    // Synthetic fallback is demanded AND idle → it loads (the recovery path).
     expect(fired.has(Source.Synthetic)).toBe(true);
     // famousMeta is demanded (Famous slot !== 'idle').
     expect(fired.has('famousMeta')).toBe(true);
     // clusterCatalog still demanded (structure visibility unchanged).
     expect(fired.has('clusterCatalog')).toBe(true);
-    // The errored survey point rows: SDSS/2MRS/GLADE are still visible so
-    // their point row demand is true — load is still called (idempotency is
-    // the slot's problem, not the loop's).
-    expect(fired.has(Source.SDSS)).toBe(true);
-    expect(fired.has(Source.TwoMRS)).toBe(true);
-    expect(fired.has(Source.Glade)).toBe(true);
+    // The errored survey point rows are demanded (still visible) but NOT idle,
+    // so the idle-guard leaves them alone — no retry storm on re-evaluation.
+    expect(fired.has(Source.SDSS)).toBe(false);
+    expect(fired.has(Source.TwoMRS)).toBe(false);
+    expect(fired.has(Source.Glade)).toBe(false);
     // Milliquas is NOT in drawMask (visible:false) — its point row demand=false.
     expect(fired.has(Source.Milliquas)).toBe(false);
-    // Famous's point row is demanded (it IS in drawMask).
-    expect(fired.has(Source.Famous)).toBe(true);
+    // Famous's point row is demanded but errored (non-idle) — not re-loaded.
+    expect(fired.has(Source.Famous)).toBe(false);
   });
 
   /**
@@ -396,10 +398,7 @@ describe('reevaluateDemand demand-table regression', () => {
         fields: { ...seedVolumeFields(), 'cf4-density': { enabled: true } },
       },
     };
-    const famousSlot = stubSlot('loading');
-    const pointSlots: PointSlotOverrides = { [Source.Famous]: famousSlot };
-    const namedSlots: NamedSlotOverrides = {};
-    const state = makeState({ settings, pointSlots, namedSlots });
+    const state = makeState({ settings });
 
     const fired = firedKeys(state);
 

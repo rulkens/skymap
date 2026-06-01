@@ -208,8 +208,9 @@ export async function setSourceVisibleImpl(
   if (visible) {
     // Lazy-load: any survey that was hidden at boot (and therefore
     // skipped by the wireSlots loop) gets its first fetch kicked off
-    // here.  `.load()` is idempotent — calling it again on an already
-    // ready slot is a no-op, so default-on sources pay nothing.  Same
+    // here.  `.load()` re-fetches every call, but this fires only for a
+    // source the user just toggled visible — a one-shot action, not a
+    // re-evaluation loop — so a re-fetch isn't a concern here.  Same
     // shape CF-4 / MCPM use for default-off volume fields.
     state.assetSlots.points
       .get(source)

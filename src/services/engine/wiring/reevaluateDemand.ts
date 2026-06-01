@@ -2,21 +2,30 @@
  * reevaluateDemand — the guarded demand-evaluation loop.
  *
  * Builds a `DemandCtx` once, then walks every `AssetWiringRow`: for each row
- * whose `demand(ctx)` predicate is true, it triggers the row's slot with the
- * tier-derived request. This is the single place that turns the declarative
- * wiring registry into actual `slot.load()` calls — the same loop runs at boot
- * and on every state change (tier swap, source toggle, settings flip), which
- * keeps load policy in one re-runnable function rather than scattered across
- * dozens of handle setters.
+ * whose `demand(ctx)` predicate is true AND whose slot is still `idle`, it
+ * triggers the slot with the tier-derived request. This is the single place
+ * that turns the declarative wiring registry into actual `slot.load()` calls —
+ * the same loop runs at boot and on every state change (tier swap, source
+ * toggle, settings flip), which keeps load policy in one re-runnable function
+ * rather than scattered across dozens of handle setters.
  *
- * ### Why idempotency comes from the slot, not from here
+ * ### Why the idle-guard lives in the loop, not in slot.load()
  *
- * `reevaluateDemand` may run many times per second. It does NOT track which
- * rows it already loaded — `slot.load()` is itself a no-op when the slot is
- * already loading or ready (it only acts on an `idle` or differing request).
- * Adding a dedup layer here would duplicate that contract and risk drifting
- * from it; leaning on the slot keeps a single source of truth for "should this
- * fetch actually start."
+ * `slot.load()` is deliberately a re-fetch primitive: `forceReload()` and
+ * `setTier()` both call it expecting a fresh fetch (the latter with a new-tier
+ * request). A request-equality short-circuit inside `load()` would break those.
+ * So `load()` is non-idempotent — it always aborts any in-flight load and
+ * re-fetches.
+ *
+ * This loop's semantic is narrower: "start loading what should be loading but
+ * isn't." That is exactly an idle-check. Because the loop re-runs on every
+ * toggle/visibility/settings change, calling `load()` on every demanded row
+ * unconditionally would abort + re-fetch + re-upload already-`ready` surveys —
+ * a single checkbox flip into a multi-hundred-MB re-download storm. Guarding on
+ * `slot.state().kind === 'idle'` here, rather than trusting load() to be a
+ * no-op, prevents that without weakening the re-fetch primitive. Tier changes
+ * (request-changing reloads) flow through `setTier`'s own `load()` path, not
+ * this loop, so the idle-guard never blocks a legitimate tier reload.
  *
  * ### Why each row is guarded
  *
@@ -53,9 +62,13 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
   const ctx = buildDemandCtx(state);
   for (const row of rows) {
     try {
-      if (!row.demand(ctx)) continue;
-      // `slot.load` is idempotent — see the module docstring.
-      slotFor(state, row.key)?.load(row.req(state.sources.tier));
+      // Load only an idle slot whose demand is true. A loading/ready/error
+      // slot is left alone — see the module docstring on why the idle-guard
+      // lives here rather than inside load() (which stays a re-fetch primitive).
+      const slot = slotFor(state, row.key);
+      if (slot && row.demand(ctx) && slot.state().kind === 'idle') {
+        slot.load(row.req(state.sources.tier));
+      }
     } catch (err) {
       // Contain the failure to this row so later rows still evaluate.
       console.warn(`reevaluateDemand: row '${String(row.key)}' threw during evaluation`, err);
