@@ -70,6 +70,51 @@ describe('state reducer', () => {
     expect(s.galaxies).toHaveLength(1);
   });
 
+  it('markCuratedById flips curated + disk flags so the list badge appears without a refetch', () => {
+    const entry = {
+      id: 'm31',
+      names: ['M31'],
+      ra: 0,
+      dec: 0,
+      distanceMpc: 0,
+      diameterKpc: 0,
+      type: '',
+      description: '',
+      curated: false,
+      hasDisk: false,
+    };
+    let s = reducer(initialState, { type: 'setGalaxies', galaxies: [entry] });
+    s = reducer(s, { type: 'markCuratedById', id: 'm31', hasDisk: true, diskDeproject: true });
+    expect(s.galaxies[0]!.curated).toBe(true);
+    expect(s.galaxies[0]!.hasDisk).toBe(true);
+    expect(s.galaxies[0]!.diskDeproject).toBe(true);
+  });
+
+  it('markCuratedById clears the disk flags when a galaxy is committed without a disk', () => {
+    const entry = {
+      id: 'm31',
+      names: ['M31'],
+      ra: 0,
+      dec: 0,
+      distanceMpc: 0,
+      diameterKpc: 0,
+      type: '',
+      description: '',
+      curated: false,
+      hasDisk: true,
+      diskDeproject: true,
+    };
+    let s = reducer(initialState, { type: 'setGalaxies', galaxies: [entry] });
+    s = reducer(s, {
+      type: 'markCuratedById',
+      id: 'm31',
+      hasDisk: false,
+      diskDeproject: undefined,
+    });
+    expect(s.galaxies[0]!.hasDisk).toBe(false);
+    expect(s.galaxies[0]!.diskDeproject).toBeUndefined();
+  });
+
   it('selectGalaxy clears tmpId, source, crop, previews, processedOnce', () => {
     const s = apply([
       { type: 'setSource', tmpId: 't', width: 100, height: 80, previewUrl: '/p' },

@@ -322,7 +322,12 @@ function AppInner() {
         catalogAxisRatio,
         metadata: state.metadata,
       });
-      dispatch({ type: 'markCuratedById', id: state.activeId });
+      dispatch({
+        type: 'markCuratedById',
+        id: state.activeId,
+        hasDisk: state.disk !== undefined,
+        diskDeproject: state.disk?.deproject,
+      });
       setCommitPhase('building');
       // Best-effort rebuild — surface failures to the console but don't
       // tear down the workspace state (the export already landed on disk).

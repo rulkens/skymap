@@ -86,7 +86,7 @@ export type Action =
   | { type: 'setMetadata'; metadata: MetadataParams }
   | { type: 'setPreviews'; starless?: string; alpha?: string }
   | { type: 'markProcessed' }
-  | { type: 'markCuratedById'; id: string };
+  | { type: 'markCuratedById'; id: string; hasDisk: boolean; diskDeproject: boolean | undefined };
 
 export function reducer(s: State, a: Action): State {
   switch (a.type) {
@@ -216,9 +216,17 @@ export function reducer(s: State, a: Action): State {
       };
 
     case 'markCuratedById':
+      // A commit also writes the disk into the galaxy's recipe, which is what
+      // the server reads to derive the list's hasDisk/diskDeproject flags.  We
+      // mirror that locally so the disk badge appears immediately instead of
+      // only after a page refresh re-fetches /api/galaxies.
       return {
         ...s,
-        galaxies: s.galaxies.map((g) => (g.id === a.id ? { ...g, curated: true } : g)),
+        galaxies: s.galaxies.map((g) =>
+          g.id === a.id
+            ? { ...g, curated: true, hasDisk: a.hasDisk, diskDeproject: a.diskDeproject }
+            : g,
+        ),
       };
   }
 }
