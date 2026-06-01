@@ -34,6 +34,7 @@ import { parseRecipe, type Recipe } from '../famous-curator/plugin/recipe.js';
 import { curatedGalaxyDir } from '../famous-curator/plugin/paths.js';
 import { deriveFamousCalibration } from './deriveFamousCalibration.js';
 import { willDeproject } from './deprojectDisk.js';
+import { squareDeprojectCrop } from './squareDeprojectCrop.js';
 import { writeMetaSidecar } from '../curation/writeMetaSidecar.js';
 
 /**
@@ -99,9 +100,16 @@ export function assembleFamousMeta(
             // value, falling back to axisRatios[i] when absent.
             const effectiveAxisRatio = disk.axisRatio ?? axisRatios[i]!;
             const deprojected = disk.deproject && willDeproject(effectiveAxisRatio);
+            // The shipped WebP is deprojected from the SQUARE-normalised crop,
+            // not the recipe's annotation crop, so calibration must be derived
+            // from that same normalised frame to describe the actual pixels —
+            // the export route does the identical snap before deriving.
+            const crop = deprojected
+              ? squareDeprojectCrop(recipe!.crop, disk, effectiveAxisRatio)
+              : recipe!.crop;
             return deriveFamousCalibration({
               disk,
-              crop: recipe!.crop,
+              crop,
               catalogAxisRatio: axisRatios[i]!,
               deprojected,
             });

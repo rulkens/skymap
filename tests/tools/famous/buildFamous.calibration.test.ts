@@ -12,6 +12,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { assembleFamousMeta, readCuratedRecipe } from '../../../tools/famous/buildFamous';
 import { deriveFamousCalibration } from '../../../tools/famous/deriveFamousCalibration';
+import { squareDeprojectCrop } from '../../../tools/famous/squareDeprojectCrop';
 import type { Recipe, RecipeDisk } from '../../../tools/famous-curator/plugin/recipe';
 import type { FamousEntry } from '../../../tools/parsers/famousSeed';
 
@@ -71,10 +72,12 @@ describe('assembleFamousMeta', () => {
     const result = assembleFamousMeta([entry], axisRatios, () => recipe);
 
     // deprojected = disk.deproject && willDeproject(disk.axisRatio ?? axisRatios[0])
-    // = true && willDeproject(0.5) = true (0.5 is a tilted, valid disk in (0, 1))
+    // = true && willDeproject(0.5) = true (0.5 is a tilted, valid disk in (0, 1)).
+    // The build derives calibration from the SQUARE-normalised crop (matching the
+    // shipped WebP), so the expectation must normalise the same way.
     const expected = deriveFamousCalibration({
       disk,
-      crop: recipe.crop,
+      crop: squareDeprojectCrop(recipe.crop, disk, 0.5),
       catalogAxisRatio: 0.6,
       deprojected: true,
     });
@@ -91,10 +94,10 @@ describe('assembleFamousMeta', () => {
 
     const result = assembleFamousMeta([entry], axisRatios, () => recipe);
 
-    // deriveFamousCalibration itself uses disk.axisRatio (0.5) for the
-    // final axisRatio field; deprojected = willDeproject(0.5) = true.
+    // disk.axisRatio (0.5) gates willDeproject → deprojected = true; the
+    // deprojected texture is face-on, so the emitted axisRatio is 1.
     expect(result[0]!.calibration!.deprojected).toBe(true);
-    expect(result[0]!.calibration!.axisRatio).toBeCloseTo(0.5, 10);
+    expect(result[0]!.calibration!.axisRatio).toBe(1);
   });
 
   it('falls back to catalog axisRatio for willDeproject when disk.axisRatio absent', () => {
@@ -106,11 +109,10 @@ describe('assembleFamousMeta', () => {
 
     const result = assembleFamousMeta([entry], axisRatios, () => recipe);
 
-    // willDeproject(0.6) = true; deriveFamousCalibration falls back to catalogAxisRatio.
+    // disk.axisRatio absent → effectiveAxisRatio = catalog 0.6; willDeproject(0.6)
+    // = true → deprojected, so the emitted face-on axisRatio is 1.
     expect(result[0]!.calibration!.deprojected).toBe(true);
-    // axisRatios is a Float32Array so 0.6 is stored with float32 precision.
-    // Compare loosely — the value rounds to ~0.6 within float32 tolerance.
-    expect(result[0]!.calibration!.axisRatio).toBeCloseTo(0.6, 5);
+    expect(result[0]!.calibration!.axisRatio).toBe(1);
   });
 
   it('omits calibration when the recipe has no disk', () => {
