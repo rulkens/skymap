@@ -548,11 +548,11 @@ it('keeps aspect on a corner resize when deprojectAspect is set', () => {
 
 > jsdom returns a zero-size `getBoundingClientRect` by default; the React test setup stubs it (the existing CropCanvas tests rely on this). If the corner-resize assertion can't get a non-zero `canvasScale` in jsdom, the implementer keeps the two rotate-handle-presence assertions (which don't need layout) and verifies aspect-keeping via a direct `cropMath` unit test (Task 3 already covers that) — note the chosen split in the task checkbox. The square-path tests in this file must remain green.
 
-- [ ] Add the prop + tests; `npm test -- CropCanvas > /tmp/t.log 2>&1; rc=$?` → FAIL.
-- [ ] Implement: branch resize handlers + hide rotate control on `deprojectAspect`. Comment-tidy.
-- [ ] `npm test -- CropCanvas > /tmp/t.log 2>&1; rc=$?` → PASS (incl. existing square tests).
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
-- [ ] Commit `tools/famous-curator/ui/components/CropCanvas.tsx tests/tools/famous-curator/ui/CropCanvas.test.tsx`.
+- [x] Add the prop + tests; `npm test -- CropCanvas > /tmp/t.log 2>&1; rc=$?` → FAIL.
+- [x] Implement: branch resize handlers + hide rotate control on `deprojectAspect`. Comment-tidy.
+- [x] `npm test -- CropCanvas > /tmp/t.log 2>&1; rc=$?` → PASS (incl. existing square tests).
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
+- [x] Commit `tools/famous-curator/ui/components/CropCanvas.tsx tests/tools/famous-curator/ui/components/CropCanvas.test.tsx`.
 
 ---
 
