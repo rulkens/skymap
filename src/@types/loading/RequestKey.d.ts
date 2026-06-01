@@ -20,9 +20,11 @@
  * `RequestKey` names those transient edge-trigger conditions.  The
  * wiring layer sets a `RequestKey` flag in response to a discrete
  * trigger — a UI action (`paletteOpened`) or an internal data-availability
- * gate (`syntheticFallback`) — the demand predicate reads it via
- * `DemandCtx.request(k)`, and the flag is cleared once the triggered load
- * reaches `ready`.  No persistent settings mutation, no teardown coupling.
+ * gate (`syntheticFallback`) — and the demand predicate reads it via
+ * `DemandCtx.request(k)`.  The flag is never cleared: once set it stays set,
+ * and the demand loop's idle-guard keeps the already-loaded slot from
+ * re-fetching, so a second trigger is a no-op.  No persistent settings
+ * mutation, no teardown coupling.
  *
  * ### Members
  *

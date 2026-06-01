@@ -4,10 +4,10 @@
  * with a caller-supplied fallback on `error` / null-slot.
  *
  * `AssetSlot` (see `./types.ts`) is the project's typed I/O lifecycle
- * primitive.  Its public surface is event-shaped: `load(req)` is
- * idempotent and triggers (re)fetch; `state()` returns a discriminated
- * snapshot; `subscribe(fn)` fires on every transition and returns an
- * unsubscribe closure.  That shape is exactly what the slot needs —
+ * primitive.  Its public surface is event-shaped: `load(req)` triggers a
+ * (re)fetch — non-idempotent, every call aborts any prior load and
+ * re-fetches; `state()` returns a discriminated snapshot; `subscribe(fn)`
+ * fires on every transition and returns an unsubscribe closure.  That shape is exactly what the slot needs —
  * but most consumers (the palette's `useAliasIndex`, future MSDF-label
  * lazy loaders, etc.) prefer to `await` a single value.  This helper
  * is the boring adapter that bridges the two without each consumer
@@ -31,10 +31,8 @@
  * ### Why the fast-path read of `state()` is load-bearing
  *
  * Once a slot transitions to `ready`, it stays there until the next
- * `load()` (a successful re-fetch goes via a transient `loading` →
- * `committing` → `ready`, but a duplicate `load()` of the same
- * request can resolve directly back to `ready` without intervening
- * transitions).  Critically, `subscribe()` only fires on transitions —
+ * `load()` (which always re-fetches via a transient `loading` →
+ * `committing` → `ready`).  Critically, `subscribe()` only fires on transitions —
  * a subscription registered against an already-`ready` slot will
  * never fire on its own.  Without the synchronous fast-path read,
  * repeat callers (the palette opens twice, the React strict-mode

@@ -708,8 +708,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // Edge-triggered UI events that drive demand predicates (palette
     // opened, lazy alias requested) but have no persistent settings or
     // loaded-data home.  Empty at boot; the wiring layer sets a key in
-    // response to a discrete event and clears it once the triggered slot
-    // reaches `ready`.  See `@types/loading/RequestKey.d.ts`.
+    // response to a discrete event and leaves it set — the demand loop's
+    // idle-guard keeps the triggered slot from re-fetching, so no clear is
+    // needed.  See `@types/loading/RequestKey.d.ts`.
     requests: new Set<RequestKey>(),
     // ── Debug-only per-frame skip flags ─────────────────────────────────
     //

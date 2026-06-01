@@ -99,9 +99,10 @@ export type EngineState = {
    * One-shot transient request flags read by demand predicates via
    * `DemandCtx.request(k)`. A `Set<RequestKey>` rather than a field on
    * `sources` because these are edge-triggered UI events (palette opened,
-   * lazy alias requested) with no persistent settings or loaded-data home —
-   * they're level-read during a demand cycle and cleared once the triggered
-   * slot reaches `ready`. Empty until the first such event fires.
+   * lazy alias requested) with no persistent settings or loaded-data home.
+   * A flag is set and left set; the demand loop's idle-guard keeps the
+   * triggered slot from re-fetching, so no clear-on-ready is needed. Empty
+   * until the first such event fires.
    */
   requests: Set<RequestKey>;
   /**

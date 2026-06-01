@@ -26,8 +26,8 @@
  *   3. `request` — one-shot transient flags (see `RequestKey`).  Covers
  *      discrete UI events that have no persistent settings counterpart —
  *      opening the palette picker, requesting a lazy PGC-alias load, etc.
- *      Reads are level-triggered within a demand evaluation cycle; the
- *      wiring layer clears the flag once the triggered slot reaches `ready`.
+ *      The flag is never cleared; the demand loop's idle-guard stops the
+ *      already-loaded slot from re-fetching, so a set-and-leave flag is safe.
  *
  *   4. `slotState` — the `LoadStateKind` of any slot in the registry.
  *      Used for two patterns described in ADR 0005 §3:
