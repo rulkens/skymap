@@ -37,6 +37,11 @@ export type RecipeDisk = {
   axisRatio?: number;
   /** Deproject toggle, seeded from b/a >= DEPROJECT_MIN_AXIS_RATIO. */
   deproject: boolean;
+  /**
+   * Fractional sky padding around the disk for the deproject crop seed.
+   * Optional; absent ⇒ DEFAULT_DISK_MARGIN. Validated >= 0.
+   */
+  margin?: number;
 };
 
 export type RecipeCrop = {
@@ -130,6 +135,11 @@ export function validateRecipeDisk(raw: unknown): RecipeDisk {
       throw new Error('recipe: disk.axisRatio must be a finite number when set');
     }
   }
+  if (d.margin !== undefined) {
+    if (typeof d.margin !== 'number' || !Number.isFinite(d.margin) || d.margin < 0) {
+      throw new Error('recipe: disk.margin must be a finite number >= 0 when set');
+    }
+  }
   if (typeof d.deproject !== 'boolean') {
     throw new Error('recipe: disk.deproject must be a boolean');
   }
@@ -138,6 +148,7 @@ export function validateRecipeDisk(raw: unknown): RecipeDisk {
     radiusPx: d.radiusPx,
     paDeg: d.paDeg,
     ...(d.axisRatio !== undefined ? { axisRatio: d.axisRatio as number } : {}),
+    ...(d.margin !== undefined ? { margin: d.margin as number } : {}),
     deproject: d.deproject,
   };
 }

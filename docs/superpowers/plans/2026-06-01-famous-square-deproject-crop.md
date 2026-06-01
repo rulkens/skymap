@@ -325,11 +325,11 @@ describe('RecipeDisk.margin', () => {
 });
 ```
 
-- [ ] Add the tests (import `validateRecipeDisk`, `parseRecipe`, `serialiseRecipe` as the file already does); `npm test -- recipe > /tmp/t.log 2>&1; rc=$?` → FAIL.
-- [ ] Add the field + validation (mirror the `axisRatio` optional-finite pattern at `recipe.ts:128-132`, plus a `>= 0` check) and the docblock on `RecipeDisk`.
-- [ ] `npm test -- recipe > /tmp/t.log 2>&1; rc=$?` → PASS.
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
-- [ ] Commit `tools/famous-curator/plugin/recipe.ts tests/tools/famous-curator/recipe.test.ts`.
+- [x] Add the tests (import `validateRecipeDisk`, `parseRecipe`, `serialiseRecipe` as the file already does); `npm test -- recipe > /tmp/t.log 2>&1; rc=$?` → FAIL.
+- [x] Add the field + validation (mirror the `axisRatio` optional-finite pattern at `recipe.ts:128-132`, plus a `>= 0` check) and the docblock on `RecipeDisk`.
+- [x] `npm test -- recipe > /tmp/t.log 2>&1; rc=$?` → PASS.
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
+- [x] Commit `tools/famous-curator/plugin/recipe.ts tests/tools/famous-curator/recipe.test.ts`.
 
 ---
 
