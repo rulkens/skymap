@@ -40,10 +40,7 @@ import type { FamousCalibration } from '../../../@types/loading/FamousCalibratio
  * rather than producing `Infinity`/`NaN` from a div-by-zero — that keeps
  * a bad record visible-but-sane instead of blowing up the whole frame.
  */
-export function calibratedDiskSizeWorld(
-  catalogSizeWorld: number,
-  diskRadiusFrac: number,
-): number {
+export function calibratedDiskSizeWorld(catalogSizeWorld: number, diskRadiusFrac: number): number {
   if (diskRadiusFrac <= 0) return catalogSizeWorld;
   return catalogSizeWorld / diskRadiusFrac;
 }
@@ -81,12 +78,19 @@ export function nucleusCorner(center: Vec2): Vec2 {
  *
  * Two curated regimes:
  *   - deprojected WebP: the image was warped to face-on, so we re-apply a
- *     single correct squash from the calibration's PA and axis ratio.
- *     The axis ratio falls back to the catalog's measured value when the
- *     calibration doesn't override it.
+ *     single correct squash from the calibration's axis ratio.  The axis
+ *     ratio falls back to the catalog's measured value when the calibration
+ *     doesn't override it.
  *   - as-shot WebP: the image already carries the galaxy's real
  *     inclination, so the disk must render *flat* (axisRatio 1, PA 0) —
  *     applying another squash would double the projection.
+ *
+ * NOTE: the deprojected branch's `positionAngleDeg` is the calibration's
+ * `frameMajorAxisDeg`, which is ≡ 0 (the texture is axis-aligned), so the
+ * disk currently renders with no in-plane rotation.  This is a placeholder:
+ * `frameMajorAxisDeg` is an image-frame angle, not an on-sky PA, so it cannot
+ * orient the disk in 3D.  Real placement against the catalog's on-sky PA is
+ * the job of the disk-plane rework (see the famous-orientation backlog).
  */
 export function effectiveTilt(
   calibration: FamousCalibration,
@@ -94,7 +98,7 @@ export function effectiveTilt(
 ): { positionAngleDeg: number; axisRatio: number } {
   if (calibration.deprojected) {
     return {
-      positionAngleDeg: calibration.paDeg,
+      positionAngleDeg: calibration.frameMajorAxisDeg,
       axisRatio: calibration.axisRatio ?? catalogAxisRatio,
     };
   }

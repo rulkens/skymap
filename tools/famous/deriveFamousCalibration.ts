@@ -111,17 +111,20 @@ export function deriveFamousCalibration(input: DeriveCalibrationInput): FamousCa
   // both branches; for the deprojected crop the square side is crop.width.
   const diskRadiusFrac = disk.radiusPx / halfWidth;
 
-  // ── Position angle ────────────────────────────────────────────────────────
-  // The crop rotation shifts the image axes by rotationDeg clockwise.  A PA
-  // measured in the source frame decreases by the same amount in the final
-  // image frame.  Wrap into [0,180) because PA is axially symmetric.  For the
-  // deprojected crop rotationDeg === disk.paDeg, so this already yields 0.
-  const paDeg = normalizePa(disk.paDeg - crop.rotationDeg);
+  // ── Frame major-axis angle ──────────────────────────────────────────────
+  // The disk's major-axis angle WITHIN the final WebP frame — NOT an on-sky
+  // PA.  The crop rotation shifts the image axes by rotationDeg clockwise, so
+  // the source-frame disk PA decreases by the same amount in the final frame;
+  // wrap into [0,180) (axial symmetry).  For the deprojected crop
+  // rotationDeg === disk.paDeg, so this is always 0 (the disk is axis-aligned
+  // before the face-on stretch).  The on-sky PA for 3D placement comes from
+  // the catalog, never from this value.
+  const frameMajorAxisDeg = normalizePa(disk.paDeg - crop.rotationDeg);
 
   // ── Axis ratio ────────────────────────────────────────────────────────────
   // A deprojected texture is already face-on; emit 1 so the runtime does not
   // re-tilt it.  Otherwise carry the disk/catalog b/a through.
   const axisRatio = deprojected ? 1 : effectiveAxisRatio;
 
-  return { center, diskRadiusFrac, paDeg, axisRatio, deprojected };
+  return { center, diskRadiusFrac, frameMajorAxisDeg, axisRatio, deprojected };
 }

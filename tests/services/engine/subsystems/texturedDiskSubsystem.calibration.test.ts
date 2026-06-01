@@ -104,10 +104,7 @@ function makeInput(
 }
 
 /** One famousMeta record carrying a calibration at local index `idx`. */
-function metaWithCalibration(
-  idx: number,
-  calibration: FamousCalibration,
-): FamousMetaEntry[] {
+function metaWithCalibration(idx: number, calibration: FamousCalibration): FamousMetaEntry[] {
   const out: FamousMetaEntry[] = [];
   for (let i = 0; i <= idx; i++) {
     out[i] = {
@@ -126,11 +123,7 @@ function metaWithCalibration(
  * single emitted DiskInstance.  The harness builds one calibrated row at
  * index 0 of a 1-row cloud so the sort order is unambiguous.
  */
-async function emitOne(
-  source: SourceType,
-  cloud: GalaxyCatalog,
-  famousMeta: FamousMetaEntry[],
-) {
+async function emitOne(source: SourceType, cloud: GalaxyCatalog, famousMeta: FamousMetaEntry[]) {
   const device = makeFakeDevice();
   const fetcher = vi.fn(async () => makeFakeBitmap());
   const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
@@ -163,14 +156,10 @@ describe('texturedDiskSubsystem famous calibration', () => {
     const cal: FamousCalibration = {
       center: [0.5, 0.5],
       diskRadiusFrac: 0.5,
-      paDeg: 0,
+      frameMajorAxisDeg: 0,
       deprojected: false,
     };
-    const disks = await emitOne(
-      Source.Famous,
-      makeDenseCloud(1),
-      metaWithCalibration(0, cal),
-    );
+    const disks = await emitOne(Source.Famous, makeDenseCloud(1), metaWithCalibration(0, cal));
     expect(disks.length).toBe(1);
     expect(disks[0]!.sizeWorld).toBeCloseTo(uncalibratedSize * 2, 10);
   });
@@ -192,7 +181,7 @@ describe('texturedDiskSubsystem famous calibration', () => {
     const cal: FamousCalibration = {
       center: [0.5, 0.5],
       diskRadiusFrac: 1,
-      paDeg: 37,
+      frameMajorAxisDeg: 37,
       axisRatio: 0.6,
       deprojected: true,
     };
@@ -211,7 +200,7 @@ describe('texturedDiskSubsystem famous calibration', () => {
     const cal: FamousCalibration = {
       center: [0.5, 0.5],
       diskRadiusFrac: 1,
-      paDeg: 37,
+      frameMajorAxisDeg: 37,
       axisRatio: 0.6,
       deprojected: false,
     };
@@ -229,14 +218,10 @@ describe('texturedDiskSubsystem famous calibration', () => {
     const cal: FamousCalibration = {
       center: [0.25, 0.5],
       diskRadiusFrac: 1,
-      paDeg: 0,
+      frameMajorAxisDeg: 0,
       deprojected: false,
     };
-    const disks = await emitOne(
-      Source.Famous,
-      makeDenseCloud(1),
-      metaWithCalibration(0, cal),
-    );
+    const disks = await emitOne(Source.Famous, makeDenseCloud(1), metaWithCalibration(0, cal));
     expect(disks[0]!.nucleusOffset).toEqual([-0.5, 0]);
   });
 
@@ -247,7 +232,7 @@ describe('texturedDiskSubsystem famous calibration', () => {
     const cal: FamousCalibration = {
       center: [0.25, 0.5],
       diskRadiusFrac: 0.5,
-      paDeg: 37,
+      frameMajorAxisDeg: 37,
       axisRatio: 0.6,
       deprojected: true,
     };
