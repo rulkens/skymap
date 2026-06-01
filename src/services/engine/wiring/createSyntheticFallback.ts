@@ -57,10 +57,12 @@ import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
  * request flag + `reevaluateDemand`) once every real survey has settled
  * without a successful ready+count>0.
  *
- * Returns `void`: every subscriber self-unsubscribes on its first settle
- * (the once-only `counted`/`unsub` pattern), and the synthetic-slot status
- * subscriber is a long-lived per-arrival echo with no teardown of its own —
- * so there is no handle for a caller to dispose.
+ * Returns `void`: survey subscribers self-unsubscribe on first settle (the
+ * once-only `counted`/`unsub` pattern), and the synthetic-slot status
+ * subscriber is a long-lived per-arrival echo — so there is no handle for a
+ * caller to dispose. An `engine.destroy()` before all surveys settle leaves
+ * those survey subscriptions open until the slot is GC'd; the optional chains
+ * on `state.gpu.renderer` tolerate a torn-down renderer, so this is benign.
  */
 export function createSyntheticFallback(state: EngineState, cb: EngineCallbacks): void {
   // Only `survey`-category sources count toward the gate; curated Famous is
@@ -72,8 +74,9 @@ export function createSyntheticFallback(state: EngineState, cb: EngineCallbacks)
 
   for (const source of TIER_FETCHED_POINT_SOURCES) {
     const slot = state.assetSlots.points.get(source);
-    // Hidden-at-boot (or missing) surveys never transition, so count them as
-    // pre-settled rather than waiting on them forever.
+    // Hidden-at-boot (or missing) sources never transition, so count them as
+    // pre-settled rather than waiting on them forever. For Famous (curated,
+    // not in realSet) this branch just skips without touching the gate.
     const hiddenAtBoot = !maskHas(state.sources.drawMask, source);
     if (!slot || hiddenAtBoot) {
       if (realSet.has(source)) {
@@ -121,9 +124,11 @@ export function createSyntheticFallback(state: EngineState, cb: EngineCallbacks)
       }
     });
 
-    // Arm the fallback. `requests.add` is a no-op on repeat and
-    // `reevaluateDemand` is idempotent, so a double-trip is harmless — but the
-    // gate naturally trips only once, when `realSettled` first reaches size.
+    // Arm the fallback. The gate trips at most once: each survey subscriber
+    // calls unsub() before incrementing realSettled, so realSettled reaches
+    // size exactly once and this guard passes a single time. (That once-only
+    // property matters — synthSlot.subscribe above is NOT idempotent, so a
+    // second arm would attach a second status listener and double-emit.)
     state.requests.add('syntheticFallback');
     reevaluateDemand(state);
   }

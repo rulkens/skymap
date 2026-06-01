@@ -168,6 +168,11 @@ describe('createSyntheticFallback', () => {
 
     expect(state.requests.has('syntheticFallback')).toBe(false);
     expect(slots.get(Source.Synthetic)?.load).not.toHaveBeenCalled();
+    // Each settled survey subscriber self-unsubscribed (the once-only
+    // counted/unsub guard) — no listener leak.
+    for (const src of SURVEY_POINT_SOURCES) {
+      expect(slots.get(src)?.liveListeners()).toBe(0);
+    }
   });
 
   it('arms when a real survey is ready but EMPTY (count 0) and the rest error', () => {
