@@ -658,6 +658,7 @@
     "type": "SABb",
     "description": "A face-on grand-design spiral in Virgo and one of the brightest galaxies in its cluster, M100 was used by Hubble's Cepheid distance ladder to anchor the local distance scale.",
     "axisRatio": 0.9183325964835809,
+    "positionAngleDeg": 79,
     "magB": 10.011,
     "magV": 9.473,
     "magK": 6.713
@@ -968,6 +969,7 @@
     "type": "Sbc",
     "description": "A starburst spiral and one of the largest galaxies in the Virgo cluster, M61 has hosted six observed supernovae since 1926 — an unusually high rate.",
     "axisRatio": 0.9527961640236519,
+    "positionAngleDeg": 174,
     "magB": 10.159,
     "magK": 6.873
   },
@@ -1170,6 +1172,7 @@
     "type": "S0-a",
     "description": "Messier 85 is a lenticular galaxy, or elliptical galaxy for other authors, in the Coma Berenices constellation. It is 60 million light-years away, and has a diameter of about 36.99 kiloparsecs across.",
     "axisRatio": 0.7691304402866096,
+    "positionAngleDeg": 21,
     "magB": 9.943,
     "magV": 9.046,
     "magK": 6.17
@@ -1364,6 +1367,7 @@
     "type": "Sc",
     "description": "An asymmetric grand-design spiral on the outskirts of the Virgo cluster.  Its lopsided structure is thought to result from a recent high-speed encounter with the cluster's hot gas.",
     "axisRatio": 0.9418895965228413,
+    "positionAngleDeg": 63,
     "magB": 10.396,
     "magV": 9.841,
     "magK": 6.984
