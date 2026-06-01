@@ -30,12 +30,7 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 
-/**
- * Register all overlay, volume-master, and label-layer fade handles onto
- * `state.subsystems.fades`.  Initial opacities are derived from the current
- * `state.settings` so the first rendered frame is coherent with the user's
- * stored preferences.
- */
+/** Register overlay/volume-master/label-layer fade handles. See the module header for the opacity-coherence rationale. */
 export function registerOverlayFades(state: EngineState): void {
   // ── Overlay handles ──────────────────────────────────────────────────
   //

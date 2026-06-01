@@ -24,7 +24,7 @@
  * resources are needed — the function does not touch `state.gpu`.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FadeHandle } from '../../../../src/@types/animation/FadeHandle';
 
@@ -65,9 +65,7 @@ function calls(spy: ReturnType<typeof vi.fn>): RegisterCall[] {
 // ── Tests ────────────────────────────────────────────────────────────
 
 describe('registerOverlayFades', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+  // Each test builds its own state + spy via makeState(); no shared mock state to reset.
 
   // ── milkyWay gating ──────────────────────────────────────────────
 
