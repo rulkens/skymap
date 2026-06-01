@@ -20,7 +20,8 @@ import { useEffect, useReducer, useRef, useState } from 'react';
 import type { PointerEvent } from 'react';
 import { useApi } from './apiContext';
 import { reducer, initialState, canCommit } from './state';
-import { seedDeprojectCrop, fitCropToSource } from './cropMath';
+import { seedDeprojectCrop, fitCropToSource, rescaleCrop } from './cropMath';
+import { rescaleDisk } from './diskOverlay';
 import { willDeproject } from '../../famous/deprojectDisk';
 import { DEFAULT_DISK_MARGIN } from '../../../src/data/famousCalibration';
 import type { RecipeDisk } from '../plugin/recipe';
@@ -379,11 +380,9 @@ function AppInner() {
               dispatch({ type: 'setStarnet', starnet: r.recipe.starnet });
               dispatch({ type: 'setAlpha', alpha: r.recipe.alpha });
               dispatch({ type: 'setMetadata', metadata: r.recipe.metadata });
-              // Re-hydrate disk geometry when the prior session drew one.
-              // setDisk sets dirty.disk=true, so the resumed session will
-              // re-Process on next Commit — this is acceptable: setCrop below
-              // also dirties crop, so a re-Process on Commit is unavoidable.
-              if (r.recipe.disk) dispatch({ type: 'setDisk', disk: r.recipe.disk });
+              // Disk geometry is re-hydrated AFTER the re-fetch below, because it
+              // shares the crop's source-pixel frame and must be rescaled by the
+              // same fetched/authored ratio.
               // Same resolver fallthrough as onFetch — recipes from older
               // curator sessions may store a Wikipedia article URL or a
               // NOIRLab gallery page; either way we want the direct image
@@ -407,16 +406,37 @@ function AppInner() {
               // maintainer re-exports, the file bytes change but the URL
               // would otherwise be identical, causing the browser to
               // serve the stale image from its disk cache.
-              // The recipe's crop is in the ORIGINAL source's pixels; the
-              // re-fetch can return a different resolution, so reframe it onto
-              // the source we actually loaded (no-op when they match).
+              //
+              // The recipe's crop + disk are in the ORIGINAL source's pixels and
+              // the re-fetch can return a different resolution.  When the recipe
+              // records the dimensions it was authored against (recipe.source),
+              // we rescale BOTH by the exact fetched/authored ratio so they stay
+              // co-registered with each other and the image.  Older recipes
+              // predate that field, so the crop falls back to the best-effort
+              // reframe and the disk is left as-is (no scale is knowable).
+              const authored = r.recipe.source;
+              const scale =
+                authored && authored.width > 0 ? fetched.width / authored.width : undefined;
               dispatch({
                 type: 'setCrop',
-                crop: fitCropToSource(r.recipe.crop, {
-                  width: fetched.width,
-                  height: fetched.height,
-                }),
+                crop:
+                  scale !== undefined
+                    ? rescaleCrop(r.recipe.crop, scale)
+                    : fitCropToSource(r.recipe.crop, {
+                        width: fetched.width,
+                        height: fetched.height,
+                      }),
               });
+              // Re-hydrate disk geometry when the prior session drew one.
+              // setDisk sets dirty.disk=true, so the resumed session will
+              // re-Process on next Commit — acceptable, since setCrop above also
+              // dirties crop, making a re-Process on Commit unavoidable anyway.
+              if (r.recipe.disk) {
+                dispatch({
+                  type: 'setDisk',
+                  disk: scale !== undefined ? rescaleDisk(r.recipe.disk, scale) : r.recipe.disk,
+                });
+              }
               const cacheBust = encodeURIComponent(r.recipe.processedAt);
               dispatch({
                 type: 'setPreviews',

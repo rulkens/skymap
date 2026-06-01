@@ -56,6 +56,19 @@ export type RecipeCrop = {
   rotationDeg: number;
 };
 
+/**
+ * Source-image dimensions (pixels) the crop + disk were authored against.
+ *
+ * Crop and disk coordinates are ABSOLUTE source pixels, but the source bytes
+ * are not cached across sessions — on resume the curator re-fetches the same
+ * URL, which can return a DIFFERENT resolution (e.g. Wikipedia serving a
+ * smaller rendition).  Recording the authoring dimensions lets the resume flow
+ * rescale by the EXACT ratio instead of the best-effort `fitCropToSource`
+ * reframe.  Optional: recipes written before this field round-trip unchanged
+ * and fall back to the heuristic.
+ */
+export type RecipeSource = { width: number; height: number };
+
 export type RecipeStarnet = {
   stride: number;
   upsample: boolean;
@@ -77,6 +90,13 @@ export type Recipe = {
   version: 1;
   id: string;
   crop: RecipeCrop;
+  /**
+   * Optional source dimensions the crop was authored against.  Absence is a
+   * valid state (older recipes predate the field); when present it enables an
+   * exact resume rescale.  Version is NOT bumped — the field is optional, and a
+   * strict bump would reject every existing recipe.json on disk.
+   */
+  source?: RecipeSource;
   starnet: RecipeStarnet;
   alpha: RecipeAlpha;
   metadata: RecipeMetadata;
@@ -205,6 +225,19 @@ export function parseRecipe(json: string): Recipe {
   if (typeof raw.processedAt !== 'string' || raw.processedAt.length === 0) {
     throw new Error('recipe: processedAt must be a non-empty string');
   }
+  // Optional source dimensions — validate both axes are finite + positive when
+  // present.  A zero or negative dimension would make the resume rescale divide
+  // by zero / flip the crop, so we reject it at the boundary.
+  let parsedSource: RecipeSource | undefined;
+  if (raw.source !== undefined) {
+    const s = raw.source as Record<string, unknown>;
+    for (const k of ['width', 'height'] as const) {
+      if (typeof s[k] !== 'number' || !Number.isFinite(s[k]) || (s[k] as number) <= 0) {
+        throw new Error(`recipe: source.${k} must be a finite number > 0`);
+      }
+    }
+    parsedSource = { width: s.width as number, height: s.height as number };
+  }
   // Optional — delegate to the shared validator which returns a fresh RecipeDisk.
   const parsedDisk = raw.disk !== undefined ? validateRecipeDisk(raw.disk) : undefined;
   return {
@@ -217,6 +250,7 @@ export function parseRecipe(json: string): Recipe {
       height: crop.height as number,
       rotationDeg: (crop.rotationDeg as number | undefined) ?? 0,
     },
+    ...(parsedSource !== undefined ? { source: parsedSource } : {}),
     starnet: {
       stride: starnet.stride,
       upsample: starnet.upsample,

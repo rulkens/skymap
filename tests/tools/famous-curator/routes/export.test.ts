@@ -76,6 +76,29 @@ describe('handleExport', () => {
     expect(result.paths.recipe.endsWith('recipe.json')).toBe(true);
   });
 
+  it('records the source.png dimensions in recipe.source', async () => {
+    // The crop is authored against source.png, so the recipe must capture that
+    // image's true dimensions (read from the bytes, not the client) to let the
+    // resume flow rescale exactly when a re-fetch returns a different size.
+    const sess = await seedSession(300);
+    const repo = fakeRepoRoot();
+    await handleExport({
+      body: {
+        id: 'm31',
+        tmpId: sess.tmpId,
+        crop: { x: 0, y: 0, width: 300, height: 300, rotationDeg: 0 },
+        starnet: { stride: 256, upsample: false },
+        alpha: { blackPoint: 8, whitePoint: 200, gamma: 0.7 },
+        metadata: { sourceUrl: 'https://example.com', license: 'CC-BY', author: 'Alice' },
+      },
+      repoRoot: repo,
+      sessionDirOverride: sess.sessionDir,
+    });
+    const outDir = resolve(repo, 'public/images/famous-curated/m31');
+    const recipe = JSON.parse(readFileSync(resolve(outDir, 'recipe.json'), 'utf8'));
+    expect(recipe.source).toEqual({ width: 300, height: 300 });
+  });
+
   it('records the entry in the override index', async () => {
     const sess = await seedSession();
     const repo = fakeRepoRoot();

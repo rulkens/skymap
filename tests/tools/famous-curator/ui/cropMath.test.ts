@@ -31,6 +31,7 @@ import {
   resizeEdgeAspectE,
   seedDeprojectCrop,
   fitCropToSource,
+  rescaleCrop,
   type Crop,
   type Bounds,
 } from '../../../../tools/famous-curator/ui/cropMath';
@@ -258,6 +259,44 @@ describe('cropMath aspect-locked helpers', () => {
   it('seedDeprojectCrop at aspect 1 is a square framing', () => {
     const out = seedDeprojectCrop([500, 500], 50, 0, 1, 0, B);
     expect(out.width).toBe(out.height);
+  });
+});
+
+describe('rescaleCrop', () => {
+  it('multiplies every coordinate by the scale and preserves rotation', () => {
+    const c: Crop = { x: 100, y: 200, width: 400, height: 400, rotationDeg: 30 };
+    expect(rescaleCrop(c, 0.5)).toEqual({
+      x: 50,
+      y: 100,
+      width: 200,
+      height: 200,
+      rotationDeg: 30,
+    });
+  });
+
+  it('is identity at scale 1', () => {
+    const c: Crop = { x: 17, y: 23, width: 99, height: 99, rotationDeg: -12 };
+    expect(rescaleCrop(c, 1)).toEqual(c);
+  });
+
+  it('maps the real m77 crop onto the smaller re-fetch exactly', () => {
+    // Authored 3774² on a 3774-wide source, re-fetched at 1718 wide:
+    // scale = 1718/3774 ⇒ width 1718, fully inside the 1718×1716 source.
+    const c: Crop = { x: 0, y: 176.49, width: 3774, height: 3774, rotationDeg: 0 };
+    const out = rescaleCrop(c, 1718 / 3774);
+    expect(out.width).toBeCloseTo(1718, 6);
+    expect(out.height).toBeCloseTo(1718, 6);
+    expect(out.x).toBe(0);
+  });
+
+  it('preserves an intentional off-image overhang (unlike fitCropToSource)', () => {
+    // A crop whose centre is in-bounds but corners hang off must keep hanging
+    // off after an exact rescale — the relationship to the image is unchanged.
+    const c: Crop = { x: -50, y: -50, width: 200, height: 200, rotationDeg: 0 };
+    const out = rescaleCrop(c, 2);
+    expect(out.x).toBe(-100);
+    expect(out.y).toBe(-100);
+    expect(out.width).toBe(400);
   });
 });
 

@@ -98,6 +98,17 @@ export async function handleExport(opts: {
   const sourcePath = resolve(sessDir, 'source.png');
   const starlessPath = resolve(sessDir, 'starless.png');
 
+  // Source dimensions the crop + disk were authored against.  We read them from
+  // the actual source.png bytes (the frame the crop coordinates reference)
+  // rather than trusting a client-supplied value, so the recorded value is the
+  // single source of truth.  Persisted in recipe.json to let the resume flow
+  // rescale by the exact ratio when a later re-fetch returns a different size.
+  const sourceMeta = await sharp(sourcePath).metadata();
+  const source =
+    sourceMeta.width !== undefined && sourceMeta.height !== undefined
+      ? { width: sourceMeta.width, height: sourceMeta.height }
+      : undefined;
+
   // 2. source.webp — full-resolution crop, lossless.
   //    Resize to at most FULL_PX on the longest edge (`fit: 'inside'`)
   //    so non-square crops aren't distorted.  rotatedExtract handles
@@ -233,6 +244,7 @@ export async function handleExport(opts: {
     alpha: body.alpha,
     metadata: body.metadata,
     processedAt: new Date().toISOString(),
+    ...(source !== undefined ? { source } : {}),
     ...(disk !== undefined ? { disk } : {}),
   };
   writeFileSync(resolve(tmpDir, 'recipe.json'), serialiseRecipe(recipe));

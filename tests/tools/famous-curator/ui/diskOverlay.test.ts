@@ -15,6 +15,7 @@ import {
   minorAxisHandle,
   axisRatioFromMinorDrag,
   deprojectPreviewRect,
+  rescaleDisk,
 } from '../../../../tools/famous-curator/ui/diskOverlay';
 import type { RecipeDisk } from '../../../../tools/famous-curator/plugin/recipe';
 
@@ -115,5 +116,33 @@ describe('deprojectPreviewRect', () => {
     // Centred on [300, 300]: x = 300 − 100, y = 300 − 50.
     expect(rect.x).toBe(200);
     expect(rect.y).toBe(250);
+  });
+});
+
+describe('rescaleDisk', () => {
+  it('scales centre + radius and leaves angle / ratios untouched', () => {
+    const disk: RecipeDisk = {
+      centerPx: [300, 400],
+      radiusPx: 80,
+      paDeg: 30,
+      axisRatio: 0.5,
+      deproject: true,
+      margin: 0.25,
+    };
+    const out = rescaleDisk(disk, 0.5);
+    expect(out.centerPx).toEqual([150, 200]);
+    expect(out.radiusPx).toBe(40);
+    // Dimensionless / angular fields are scale-invariant.
+    expect(out.paDeg).toBe(30);
+    expect(out.axisRatio).toBe(0.5);
+    expect(out.margin).toBe(0.25);
+    expect(out.deproject).toBe(true);
+  });
+
+  it('is identity at scale 1 and returns a fresh centre tuple', () => {
+    const disk: RecipeDisk = { centerPx: [10, 20], radiusPx: 5, paDeg: 0, deproject: false };
+    const out = rescaleDisk(disk, 1);
+    expect(out).toEqual(disk);
+    expect(out.centerPx).not.toBe(disk.centerPx);
   });
 });

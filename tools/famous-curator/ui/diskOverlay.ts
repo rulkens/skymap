@@ -120,6 +120,23 @@ export function axisRatioFromMinorDrag(disk: RecipeDisk, pointPx: Vec2): number 
 }
 
 /**
+ * Scale a disk annotation uniformly about the source origin.
+ *
+ * The disk's centre + radius are source pixels, so a resumed source returned at
+ * a different resolution must scale them by the same ratio the crop uses (see
+ * rescaleCrop) to keep the overlay co-registered with the crop and the image.
+ * paDeg (an angle), axisRatio and margin (dimensionless ratios) are all
+ * scale-invariant and pass through untouched.
+ */
+export function rescaleDisk(disk: RecipeDisk, scale: number): RecipeDisk {
+  return {
+    ...disk,
+    centerPx: [disk.centerPx[0] * scale, disk.centerPx[1] * scale],
+    radiusPx: disk.radiusPx * scale,
+  };
+}
+
+/**
  * Axis-aligned, PRE-rotation source-px geometry of the deproject crop's
  * preview rect — the curator's live view of what the deproject crop will
  * frame.

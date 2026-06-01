@@ -117,6 +117,28 @@ export function fitCropToSource(c: Crop, b: Bounds): Crop {
   };
 }
 
+/**
+ * Scale a crop uniformly about the source origin.
+ *
+ * The exact counterpart to `fitCropToSource`: when the recipe records the
+ * dimensions the crop was authored against, the resume flow knows the precise
+ * ratio between the authoring source and the re-fetched one, so it can map the
+ * stored crop onto the new pixel grid by multiplying every coordinate.  Unlike
+ * `fitCropToSource` this preserves an intentional off-image overhang (the
+ * centre-clamp invariant lets corners exit the image) — an exact rescale keeps
+ * the crop's relationship to the image identical instead of forcing it inside
+ * the bounds.  Rotation is scale-invariant and passes through untouched.
+ */
+export function rescaleCrop(c: Crop, scale: number): Crop {
+  return {
+    x: c.x * scale,
+    y: c.y * scale,
+    width: c.width * scale,
+    height: c.height * scale,
+    rotationDeg: c.rotationDeg,
+  };
+}
+
 export function translateCrop(c: Crop, dx: number, dy: number, b: Bounds): Crop {
   return clampCenter(
     { x: c.x + dx, y: c.y + dy, width: c.width, height: c.height, rotationDeg: c.rotationDeg },
