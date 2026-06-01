@@ -1,0 +1,155 @@
+/**
+ * wirePoiProjection — wires the three independently-arriving POI groups
+ * into the `poiSubsystem` via its keyed `setGroup`/`clearGroup` API.
+ *
+ * ### Why keyed groups replace the old `rebuildAllPois` merge
+ *
+ * The predecessor pattern held a single `rebuildAllPois` closure that
+ * concatenated whichever groups were available (`[...staticAnchorPois,
+ * ...famousPois, ...clusterBulkPois]`) and called `setPois` with the full
+ * merged list on every subscription event.  That worked as long as all
+ * three subscriptions routed through the single rebuild — a subscriber
+ * that called `setPois` independently would clobber the other groups,
+ * because `setPois` replaces the entire list.
+ *
+ * Keyed groups eliminate the clobber risk structurally: each subscriber
+ * owns exactly one group key and can only modify that key.  The subsystem
+ * merges in a fixed order (`staticAnchors → famous → clusterBulk`), so
+ * arrival order among the async groups does not affect the final list.
+ * An out-of-order clusterBulk arrival can never overwrite the famous
+ * group, because it only calls `setGroup('clusterBulk', ...)`.
+ *
+ * ### Group semantics and arrival schedule
+ *
+ *   - `staticAnchors` — hand-curated cluster/SC/void anchors from
+ *     `buildStaticAnchorPois`.  Published synchronously at boot so the
+ *     Structures panel has counts from frame 1.
+ *   - `famous` — requires BOTH the `famousMeta` slot (names + diameter)
+ *     AND the Famous catalog slot (world positions).  Either alone is
+ *     insufficient — `buildPoisFromFamousMeta` needs both.  The join
+ *     fires whenever EITHER slot transitions; it reads the current state
+ *     of the other asset from `state.sources` (written by the respective
+ *     slot's own subscriber in the load chain).
+ *   - `clusterBulk` — present once the cluster-catalog slot lands and
+ *     writes `state.sources.clusterBulk`.  A single subscription.
+ *
+ * ### Structure-count emissions
+ *
+ * After every group change we forward `{ cluster, supercluster, void }`
+ * counts to `cb.sources?.onStructureCountsChange` so the Structures
+ * panel's toggles can display "Clusters 573" alongside their checkboxes.
+ * Counts are read from `getPoisForCategory` — the freshly-merged set —
+ * so the number matches exactly what will render.  Famous galaxies are
+ * a label-only category and not a Structures panel row, so they're
+ * excluded from the emission.
+ */
+
+import { Source } from '../../../data/sources';
+import { buildStaticAnchorPois } from '../../../data/buildStaticAnchorPois';
+import { buildPoisFromFamousMeta } from '../phases/buildPoisFromFamousMeta';
+import { buildPoisFromClusterCatalog } from '../phases/buildPoisFromClusterCatalog';
+
+import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
+
+/**
+ * Wire the three POI groups into the `poiSubsystem` via keyed groups.
+ *
+ * Precondition: `state.assetSlots.famousMeta` and
+ * `state.assetSlots.clusterCatalog` and `state.assetSlots.points.get(
+ * Source.Famous)` must all be non-null — they are minted by `wireSlots`
+ * before this function is called.  The Famous catalog slot is looked up
+ * defensively and skips wiring its subscription if absent, which can
+ * only happen in test environments that don't seed the Famous slot.
+ */
+export function wirePoiProjection(state: EngineState, cb: EngineCallbacks): void {
+  /**
+   * Emit fresh per-category structure counts after any group change.
+   * Called once at boot (static anchors) and again whenever an async
+   * group lands or clears.  Counts are read from `getPoisForCategory`
+   * so they reflect the freshly-merged list — the same set that renders.
+   * Famous galaxies are a label-only category; not a Structures row.
+   */
+  function emitCounts(): void {
+    cb.sources?.onStructureCountsChange?.({
+      cluster: state.subsystems.pois.getPoisForCategory('cluster').length,
+      supercluster: state.subsystems.pois.getPoisForCategory('supercluster').length,
+      void: state.subsystems.pois.getPoisForCategory('void').length,
+    });
+  }
+
+  // ── Group 1: static anchors (synchronous) ───────────────────────────
+  //
+  // The id-slug + worldPos build lives in `data/buildStaticAnchorPois.ts`
+  // so the React-side `usePoiUrlSync` deep-link drain constructs the same
+  // records without drifting on slug-rule changes.  physicalRadiusMpc
+  // comes from the seed JSON (R_200 / virial radii for clusters,
+  // characteristic extent for superclusters and voids).
+  state.subsystems.pois.setGroup('staticAnchors', buildStaticAnchorPois());
+  emitCounts();
+
+  // ── Group 2: famous galaxies (2-asset join) ──────────────────────────
+  //
+  // Both the meta sidecar (`state.sources.famousMeta`, written by the
+  // famousMeta slot subscriber) and the Famous catalog (`state.sources.
+  // catalogs.get(Source.Famous)`, written by the Famous slot's commit
+  // subscriber) must be present before any famous POI is built.  One
+  // asset alone carries half the information: meta has names + diameter,
+  // the catalog has world positions.  Attempting to build with only one
+  // produces partial or zero output, so we clear the group until both are
+  // in hand.
+  //
+  // Subscribing to BOTH slots and re-evaluating the join on EITHER
+  // arrival is the minimal correct pattern: whichever slot arrives second
+  // will find the other already present in state and complete the join.
+  function rebuildFamousGroup(): void {
+    const meta = state.sources.famousMeta;
+    const famousCatalog = state.sources.catalogs.get(Source.Famous);
+    if (meta.length > 0 && famousCatalog !== undefined && famousCatalog.count > 0) {
+      state.subsystems.pois.setGroup('famous', buildPoisFromFamousMeta(meta, famousCatalog));
+    } else {
+      state.subsystems.pois.clearGroup('famous');
+    }
+    emitCounts();
+  }
+
+  // Subscribe to the famousMeta slot.  The slot subscriber (in
+  // `famousMetaSlot.ts`) writes `state.sources.famousMeta` before the
+  // subscription fires; reading it here always reflects the latest value.
+  state.assetSlots.famousMeta?.subscribe((s) => {
+    if (s.kind === 'ready') rebuildFamousGroup();
+  });
+
+  // Subscribe to the Famous catalog slot.  Resolved from `state.assetSlots`
+  // rather than a closed-over local so the lookup happens at runtime (the
+  // slot is installed by `initGpu` before this phase runs).  Missing slot
+  // means Famous was never minted — defensive guard, not expected in
+  // production.
+  const famousCatalogSlot = state.assetSlots.points.get(Source.Famous);
+  if (famousCatalogSlot !== undefined) {
+    famousCatalogSlot.subscribe((s) => {
+      if (s.kind === 'ready') rebuildFamousGroup();
+    });
+  }
+
+  // ── Group 3: bulk clusters/superclusters ─────────────────────────────
+  //
+  // Present once the cluster-catalog slot lands and the slot subscriber
+  // writes `state.sources.clusterBulk`.  A non-null clusterBulk means
+  // the slot resolved successfully; null means it hasn't landed yet or
+  // the fetch failed (graceful degradation — bulk structures don't appear
+  // but the engine continues normally).
+  state.assetSlots.clusterCatalog?.subscribe((s) => {
+    if (s.kind === 'ready') {
+      const bulk = state.sources.clusterBulk;
+      if (bulk !== null && bulk !== undefined) {
+        state.subsystems.pois.setGroup('clusterBulk', buildPoisFromClusterCatalog(bulk));
+      } else {
+        state.subsystems.pois.clearGroup('clusterBulk');
+      }
+    } else if (s.kind === 'error') {
+      state.subsystems.pois.clearGroup('clusterBulk');
+    }
+    emitCounts();
+  });
+}
