@@ -413,4 +413,31 @@ describe('reevaluateDemand demand-table regression', () => {
       'cf4Density',
     ]));
   });
+
+  /**
+   * Companion join in a single pass: when ONLY Famous is visible (its
+   * drawMask bit set, all other categories hidden), one `reevaluateDemand`
+   * loads BOTH the Famous point slot AND famousMeta. The Famous point row
+   * evaluates first, finds the slot idle, and loads it — which synchronously
+   * flips the stub to 'loading' (mirroring the real slot's load-started
+   * dispatch). The later famousMeta row then reads `slotState(Famous) ===
+   * 'loading'` and demands. This pins the ordering fact `setSourceVisible`
+   * relies on: toggling Famous visible fetches both in the same pass.
+   */
+  it('famous-only visible: one pass loads Famous + famousMeta together', () => {
+    const settings: SettingsLeaves = {
+      ...BOOT_SETTINGS,
+      // Hide every structure category so clusterCatalog stays out of the set
+      // and the assertion is purely the Famous companion join.
+      markerCategoryVisibility: { cluster: false, supercluster: false, void: false, famousGalaxy: false },
+      labelCategoryVisibility: { cluster: false, supercluster: false, void: false, famousGalaxy: false },
+      // Disable mcpm too so the fired set is exactly the join under test.
+      volumes: { fields: { ...seedVolumeFields(), mcpm: { enabled: false } } },
+    };
+    const state = makeState({ settings, drawMask: 1 << Source.Famous });
+
+    const fired = firedKeys(state);
+
+    expect(fired).toEqual(new Set<AssetKey>([Source.Famous, 'famousMeta']));
+  });
 });

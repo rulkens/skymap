@@ -4,13 +4,21 @@
  * These tests drive `setSourceVisibleForTest` directly against a minimal
  * state stub rather than instantiating a full GPU engine.  The exported
  * helper reads only `state.sources` / `state.subsystems.fades` /
- * `state.subsystems.scheduler`, so a mock of those three surfaces is
- * sufficient.
+ * `state.subsystems.scheduler`, plus the `reevaluate` thunk passed in opts,
+ * so a mock of those surfaces is sufficient.
  *
- * Three cases:
+ * Loading is no longer the helper's concern — it flips `drawMask` and calls
+ * the injected `reevaluate` thunk, which drives demand-based loading. So the
+ * tests assert the thunk is called (after drawMask is set, on the visible
+ * branch) rather than asserting a direct `slot.load()`. The demand-table
+ * regression net (`wiring/demandTable.test.ts`) proves the thunk loads the
+ * right set; here we only pin the flip-then-reevaluate ordering.
+ *
+ * Cases:
  *   1. Toggle OFF  — pickMask clears immediately; fadeTo(0, FADE_OUT)
- *      called; drawMask clears after the await.
- *   2. Toggle ON   — drawMask sets before fadeTo; fadeTo(1, FADE_IN) called.
+ *      called; drawMask clears after the await; reevaluate NOT called.
+ *   2. Toggle ON   — drawMask sets before reevaluate; reevaluate called;
+ *      fadeTo(1, FADE_IN) called.
  *   3. Rapid off → on — by the time the fade-out promise resolves,
  *      opacityOf returns 1 (the re-toggle won); drawMask must stay set.
  */
@@ -50,26 +58,34 @@ function makeFixture(initialMask: number) {
       fades,
       scheduler: { requestRender: vi.fn() },
     },
-    // setSourceVisibleImpl reads `assetSlots.points.get(source)?.load(...)`
-    // to lazy-load surveys that were hidden at boot.  Empty Map is
-    // fine — the `?.` short-circuits when no slot is registered.
+    // The impl no longer touches assetSlots directly — loading is the
+    // `reevaluate` thunk's job. Kept as an empty bag so any future read
+    // short-circuits harmlessly.
     assetSlots: {
       points: new Map(),
     },
   };
-  return { state, fades, fadeCalls };
+  // Records drawMask at the moment reevaluate fires, so the ordering
+  // assertion ("bit set BEFORE the thunk runs") can be checked directly.
+  const reevaluate = vi.fn();
+  return { state, fades, fadeCalls, reevaluate };
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────
 
 describe('setSourceVisible — fade orchestration', () => {
-  it('toggle OFF flips pickMask immediately, awaits FADE_OUT_DURATION_MS, then clears drawMask', async () => {
+  it('toggle OFF flips pickMask immediately, awaits FADE_OUT_DURATION_MS, then clears drawMask — and never re-evaluates', async () => {
     const fx = makeFixture(0b11111);
     // The fixture default opacityOf returns 0, matching the post-fade
     // state — no reassignment needed for this case (the rapid-toggle
     // case below DOES override to simulate the concurrent fade-in).
 
-    await setSourceVisibleForTest(fx.state as never, { cb: {} } as never, Source.SDSS, false);
+    await setSourceVisibleForTest(
+      fx.state as never,
+      { cb: {}, reevaluate: fx.reevaluate } as never,
+      Source.SDSS,
+      false,
+    );
 
     // pickMask bit cleared synchronously before fadeTo:
     expect((fx.state.sources.pickMask >> Source.SDSS) & 1).toBe(0);
@@ -77,18 +93,36 @@ describe('setSourceVisible — fade orchestration', () => {
     expect(fx.fadeCalls).toEqual([{ target: 0, duration: FADE_OUT_DURATION_MS }]);
     // drawMask bit cleared after the await (opacityOf returned 0):
     expect((fx.state.sources.drawMask >> Source.SDSS) & 1).toBe(0);
+    // Hiding a source loads nothing — residency is demand's concern only
+    // for the visible branch, so the thunk must not fire here.
+    expect(fx.reevaluate).not.toHaveBeenCalled();
   });
 
-  it('toggle ON sets drawMask before fadeTo, then awaits FADE_IN_DURATION_MS', async () => {
+  it('toggle ON sets drawMask before reevaluate, calls reevaluate, then awaits FADE_IN_DURATION_MS', async () => {
     const fx = makeFixture(0); // every bit off
+    // Capture drawMask AT the moment reevaluate fires so the ordering
+    // invariant (bit set before the thunk) is asserted, not assumed.
+    let drawMaskAtReevaluate = -1;
+    fx.reevaluate.mockImplementation(() => {
+      drawMaskAtReevaluate = fx.state.sources.drawMask;
+    });
 
-    await setSourceVisibleForTest(fx.state as never, { cb: {} } as never, Source.SDSS, true);
+    await setSourceVisibleForTest(
+      fx.state as never,
+      { cb: {}, reevaluate: fx.reevaluate } as never,
+      Source.SDSS,
+      true,
+    );
 
     // pickMask bit set:
     expect((fx.state.sources.pickMask >> Source.SDSS) & 1).toBe(1);
     // drawMask bit set before the fade starts (so the renderer starts
     // drawing this frame at opacity 0 and fades in):
     expect((fx.state.sources.drawMask >> Source.SDSS) & 1).toBe(1);
+    // reevaluate fired exactly once, AND saw the drawMask bit already set
+    // (the demand predicate reads drawMask, so the order is load-bearing):
+    expect(fx.reevaluate).toHaveBeenCalledTimes(1);
+    expect((drawMaskAtReevaluate >> Source.SDSS) & 1).toBe(1);
     // fadeTo called with target=1 and the fade-in duration:
     expect(fx.fadeCalls).toEqual([{ target: 1, duration: FADE_IN_DURATION_MS }]);
   });
@@ -99,7 +133,7 @@ describe('setSourceVisible — fade orchestration', () => {
     // First toggle off — pickMask clears, fadeTo(0, FADE_OUT_DURATION_MS) starts.
     const p1 = setSourceVisibleForTest(
       fx.state as never,
-      { cb: {} } as never,
+      { cb: {}, reevaluate: fx.reevaluate } as never,
       Source.SDSS,
       false,
     );
@@ -109,7 +143,7 @@ describe('setSourceVisible — fade orchestration', () => {
     fx.fades.opacityOf = vi.fn(() => 1);
     const p2 = setSourceVisibleForTest(
       fx.state as never,
-      { cb: {} } as never,
+      { cb: {}, reevaluate: fx.reevaluate } as never,
       Source.SDSS,
       true,
     );
