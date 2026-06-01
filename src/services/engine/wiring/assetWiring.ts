@@ -23,7 +23,7 @@
  * ### Two corrections to the original demand table (bug fixes)
  *
  *   - **filaments** gates on `settings.filaments.enabled` — the real master
- *     toggle. (An earlier draft gated on a non-existent flag.)
+ *     toggle, so a disabled filament overlay never fetches the skeleton.
  *   - **clusterCatalog** gates on structure-category visibility: it loads when
  *     ANY of the cluster / supercluster / void categories is visible in either
  *     the marker or the label overlay. There is no `settings.structures.enabled`
@@ -113,7 +113,7 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
   {
     // Synthetic fallback: loads only when every real survey has failed.
     // Predicate (ctx-level approximation) lives in createSyntheticFallback;
-    // Task 13 owns the precise empty-ready edge.
+    // the slot-level fallback wiring owns the precise empty-ready edge.
     key: Source.Synthetic,
     built: 'external',
     factory: externalFactory,
