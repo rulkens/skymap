@@ -1033,7 +1033,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // row demands on `ctx.request('paletteOpened')`, so the idle-guarded
     // pass fires its load. The flag stays set (harmless — the idle-guard
     // prevents a re-fetch on subsequent re-evaluations), so a second
-    // palette open resolves straight off the already-ready slot.
+    // palette open resolves straight off the already-ready slot. An errored
+    // alias load is NOT auto-retried (the idle-guard skips a non-idle slot);
+    // awaitSlotReady then resolves to the empty-map fallback — graceful
+    // degradation, matching every other demand-driven asset.
     state.requests.add('paletteOpened');
     reevaluateDemand(state);
     return awaitSlotReady(state.assetSlots.pgcAlias, new Map() as PgcAliasMap);
