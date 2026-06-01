@@ -30,6 +30,12 @@ test that exists today goes red, you changed behavior; stop and reconcile.
 
 ---
 
+> **STATUS: ✅ COMPLETE** (Tasks 0–5). All four concerns extracted from
+> `wireSlots`, POI merge dissolved into keyed groups, both reviews passed +
+> fixes applied per task. `wireSlots.ts` 530 → 326 lines. 2003 tests green.
+> Commits: `09fc18e7`/`dbb65b2c` (impostor), `40c32cea`/`7ac173d0` (fades),
+> `f7379a57`/`ea2b93c5` (poi keyed groups), `3d4ae0a3`/`a185e77f` (wirePoiProjection).
+
 ## Task 0: Pre-flight — verify baseline
 
 **Files:** none (read-only).
