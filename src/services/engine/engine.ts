@@ -113,6 +113,7 @@ import { createYouAreHereSubsystem } from './subsystems/youAreHereSubsystem';
 import { createLabelDirectorSubsystem } from './subsystems/labelDirectorSubsystem';
 import { registerLabelStyleOverrideWake } from './labelStyleOverride';
 import { createPoiSubsystem } from './subsystems/poiSubsystem';
+import { createClusterFocusSubsystem } from './subsystems/clusterFocusSubsystem';
 import { createFpsCounter } from './subsystems/fpsCounter';
 import { HDR_PASSES, UI_PASSES } from './frame/passes';
 import { buildGalaxyInfo } from './helpers/galaxyInfoBuilder';
@@ -641,6 +642,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // director sees both producers before the first frame fires.
       labelDirector: createLabelDirectorSubsystem(),
       pois: createPoiSubsystem({}),
+
+      // ── Cluster focus-mode subsystem ─────────────────────────────
+      // Selection-driven: `runFrame` calls `update(selectedPoi, nowMs)`
+      // each frame, diffing the selected cluster/SC/void POI to drive the
+      // 400 ms member-isolation fade, and threads `produceFocusUniforms`
+      // into the points draw. Eager, no GPU dep.
+      clusterFocus: createClusterFocusSubsystem(),
 
       // ── Render scheduler — eager, capture-safe ────────────────────
       //
@@ -1363,6 +1371,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.youAreHere.destroy();
     state.subsystems.labelDirector.destroy();
     state.subsystems.pois.destroy();
+    state.subsystems.clusterFocus.destroy();
     // Teardown order across the impostor subsystems matters:
     // texturedDisks reads `hiResFamous.lastOutput` per frame and
     // subscribes to galaxyAtlas's eviction handler, so destroy it
