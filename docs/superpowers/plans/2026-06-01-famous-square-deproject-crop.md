@@ -474,11 +474,11 @@ describe('deriveFamousCalibration deprojected branch', () => {
 });
 ```
 
-- [ ] Add the tests; `npm test -- deriveFamousCalibration > /tmp/t.log 2>&1; rc=$?` → FAIL (deprojected branch not implemented).
-- [ ] Implement the branch (header note documenting the Y-stretch reasoning; `effectiveAxisRatio` fallback chain; emit `axisRatio: 1` only when `deprojected`).
-- [ ] `npm test -- deriveFamousCalibration > /tmp/t.log 2>&1; rc=$?` → PASS.
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
-- [ ] Commit `tools/famous/deriveFamousCalibration.ts tests/tools/famous-curator/deriveFamousCalibration.test.ts`.
+- [x] Add the tests; `npm test -- deriveFamousCalibration > /tmp/t.log 2>&1; rc=$?` → FAIL (deprojected branch not implemented).
+- [x] Implement the branch (header note documenting the Y-stretch reasoning; `effectiveAxisRatio` fallback chain; emit `axisRatio: 1` only when `deprojected`).
+- [x] `npm test -- deriveFamousCalibration > /tmp/t.log 2>&1; rc=$?` → PASS.
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
+- [x] Commit `tools/famous/deriveFamousCalibration.ts tests/tools/famous/deriveFamousCalibration.test.ts`.
 
 ---
 
