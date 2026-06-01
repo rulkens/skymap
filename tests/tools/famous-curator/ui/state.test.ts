@@ -192,3 +192,31 @@ describe('state reducer — disk slice', () => {
     expect(s.dirty.disk).toBe(false);
   });
 });
+
+describe('state reducer — deproject crop slice', () => {
+  const sq = { x: 100, y: 100, width: 200, height: 200, rotationDeg: 0 };
+  const rect = { x: 100, y: 100, width: 200, height: 100, rotationDeg: 30 };
+
+  it('setDeprojectCrop saves the prior square crop on first transition', () => {
+    let s = reducer(initialState, { type: 'setCrop', crop: sq });
+    s = reducer(s, { type: 'setDeprojectCrop', crop: rect });
+    expect(s.crop).toEqual(rect);
+    expect(s.savedSquareCrop).toEqual(sq);
+    expect(s.dirty.crop).toBe(true);
+  });
+
+  it('restoreSquareCrop restores the saved square and clears the slot', () => {
+    let s = reducer(initialState, { type: 'setCrop', crop: sq });
+    s = reducer(s, { type: 'setDeprojectCrop', crop: rect });
+    s = reducer(s, { type: 'restoreSquareCrop' });
+    expect(s.crop).toEqual(sq);
+    expect(s.savedSquareCrop).toBeUndefined();
+  });
+
+  it('selectGalaxy clears savedSquareCrop', () => {
+    let s = reducer(initialState, { type: 'setCrop', crop: sq });
+    s = reducer(s, { type: 'setDeprojectCrop', crop: rect });
+    s = reducer(s, { type: 'selectGalaxy', id: 'm51' });
+    expect(s.savedSquareCrop).toBeUndefined();
+  });
+});

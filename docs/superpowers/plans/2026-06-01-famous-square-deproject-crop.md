@@ -716,11 +716,11 @@ it('selectGalaxy clears savedSquareCrop', () => {
 });
 ```
 
-- [ ] Add the tests; `npm test -- state > /tmp/t.log 2>&1; rc=$?` → FAIL.
-- [ ] Add `savedSquareCrop` (default `undefined` in `initialState`), the two actions, the reducer cases. Comment-tidy.
-- [ ] `npm test -- state > /tmp/t.log 2>&1; rc=$?` → PASS (incl. existing).
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
-- [ ] Commit `tools/famous-curator/ui/state.ts tests/tools/famous-curator/ui/state.test.ts`.
+- [x] Add the tests; `npm test -- state > /tmp/t.log 2>&1; rc=$?` → FAIL.
+- [x] Add `savedSquareCrop` (default `undefined` in `initialState`), the two actions, the reducer cases. Comment-tidy.
+- [x] `npm test -- state > /tmp/t.log 2>&1; rc=$?` → PASS (incl. existing).
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
+- [x] Commit `tools/famous-curator/ui/state.ts tests/tools/famous-curator/ui/state.test.ts`.
 
 ---
 

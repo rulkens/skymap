@@ -36,6 +36,12 @@ export type State = {
   tmpId: string | undefined;
   source: { width: number; height: number; previewUrl: string } | undefined;
   crop: Crop | undefined;
+  // The as-shot square crop, stashed when deproject is first turned on.  A
+  // deprojected crop is a non-square rectangle derived from the disk
+  // geometry; remembering the user's prior square lets toggling deproject
+  // back off restore it rather than snapping to a fresh reset.  undefined
+  // when no deproject crop is active.
+  savedSquareCrop: Crop | undefined;
   // Source-px disk geometry annotation; undefined = not drawn for this galaxy.
   disk: RecipeDisk | undefined;
   starnet: StarnetParams;
@@ -52,6 +58,7 @@ export const initialState: State = {
   tmpId: undefined,
   source: undefined,
   crop: undefined,
+  savedSquareCrop: undefined,
   disk: undefined,
   starnet: { stride: 256, upsample: false },
   // Default alpha parameters tuned for typical astrophotography: a modest
@@ -70,6 +77,8 @@ export type Action =
   | { type: 'selectGalaxy'; id: string }
   | { type: 'setSource'; tmpId: string; width: number; height: number; previewUrl: string }
   | { type: 'setCrop'; crop: Crop }
+  | { type: 'setDeprojectCrop'; crop: Crop }
+  | { type: 'restoreSquareCrop' }
   | { type: 'setDisk'; disk: RecipeDisk }
   | { type: 'clearDisk' }
   | { type: 'setStarnet'; starnet: StarnetParams }
@@ -96,6 +105,7 @@ export function reducer(s: State, a: Action): State {
         tmpId: undefined,
         source: undefined,
         crop: undefined,
+        savedSquareCrop: undefined,
         disk: undefined,
         previews: {},
         processedOnce: false,
@@ -130,6 +140,31 @@ export function reducer(s: State, a: Action): State {
       // explicitly clicks Process, so they can see the old previews while
       // they refine the crop.
       return { ...s, crop: a.crop, dirty: { ...s.dirty, crop: true } };
+
+    case 'setDeprojectCrop':
+      // A deproject-derived rectangular crop replaces the active crop.  On the
+      // first transition (no saved square yet) we stash the current crop so
+      // toggling deproject off later restores the user's as-shot square rather
+      // than a fresh reset.  Re-deriving while already deprojected (margin /
+      // axisRatio / paDeg tweaks) keeps the original square untouched.
+      // Deproject crop changes re-bake the webp, so mark crop dirty.
+      return {
+        ...s,
+        crop: a.crop,
+        savedSquareCrop: s.savedSquareCrop ?? s.crop,
+        dirty: { ...s.dirty, crop: true },
+      };
+
+    case 'restoreSquareCrop':
+      // Toggling deproject off: restore the stashed as-shot square (falling
+      // back to the current crop if nothing was saved) and clear the slot.
+      // Still a crop change, so re-Process is required.
+      return {
+        ...s,
+        crop: s.savedSquareCrop ?? s.crop,
+        savedSquareCrop: undefined,
+        dirty: { ...s.dirty, crop: true },
+      };
 
     case 'setDisk':
       // Disk geometry feeds the derived calibration and, when deproject is on,
