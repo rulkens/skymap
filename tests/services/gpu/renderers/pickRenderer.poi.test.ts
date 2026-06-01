@@ -1,21 +1,14 @@
 /**
- * pickRenderer.poi.test — type-level contract test that
- * `createPickRenderer` keeps `clusterMarkerRenderer` as its OPTIONAL
- * tail positional argument.
+ * pickRenderer.poi.test — type-level contract that `createPickRenderer`
+ * keeps `clusterMarkerRenderer` as its OPTIONAL tail positional argument
+ * (the 6th, index 5, after the required `focusBgl` at index 4).
  *
- * Why a type-only test rather than a GPU integration test?  The pick
- * pass needs a live `GPUDevice` and a constructed `PointRenderer` +
- * `ClusterMarkerRenderer` to exercise end-to-end; that's well beyond
- * what Vitest can stand up in a Node environment.  What we *can*
- * lock down here is the public signature shape: if a future refactor
- * accidentally drops the optional marker, makes it required, or
- * reorders positional args, the type assertions below fail to compile
- * and the test fails at type-check time (vitest runs through tsc).
- *
- * The optional marker is now the 6th positional (index 5): cluster
- * focus mode inserted the required `focusBgl` as the 5th (index 4), so
- * `clusterMarkerRenderer` shifted one slot right but stays at the tail
- * and stays optional.
+ * Why type-only rather than a GPU integration test? The pick pass needs
+ * a live `GPUDevice` plus constructed `PointRenderer` +
+ * `ClusterMarkerRenderer` to exercise end-to-end — beyond what Vitest can
+ * stand up in Node. What we can lock down is the signature shape: dropping
+ * the optional marker, making it required, or reordering positional args
+ * breaks the type assertions below at type-check time (vitest runs tsc).
  */
 
 import { describe, it, expect } from 'vitest';

@@ -18,11 +18,11 @@ import type { Destroyable } from '../../rendering/Destroyable';
  *
  * ### GPU re-derives membership
  *
- * Per spec §4.4 option (b), the points vertex shader re-derives
- * `distance(p.position, center) < radius` per-vertex. So this subsystem
- * never computes a CPU member list — it only supplies center, radius,
- * invert, and the smoothstep blend. (The pure `clusterMembership` fn
- * stays available if a future feature needs an explicit count/list.)
+ * The points vertex shader re-derives `distance(p.position, center) <
+ * radius` per-vertex, so this subsystem never computes a CPU member list
+ * — it only supplies center, radius, invert, and the smoothstep blend.
+ * (The pure `clusterMembership` fn stays available if a future feature
+ * needs an explicit count/list.)
  */
 export type ClusterFocusSubsystem = {
   readonly id: 'clusterFocus';

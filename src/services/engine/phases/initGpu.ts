@@ -12,19 +12,9 @@
  *     target.  Stored on `state.gpu.renderer`.
  *   - `PostProcess` — combined HDR offscreen rgba16float texture + the
  *     tone-map pass that compresses linear-light into the swap chain.
- *     Stored on `state.gpu.postProcess`.
- *   - `TexturedQuadRenderer`, `TexturedDiskRenderer`, `ProceduralDiskRenderer` — the
- *     three thumbnail-pass renderers (textured quads for medium
- *     galaxies, oriented disks for large galaxies, procedural fade-in
- *     for the visibility band between point glow and textured disk).
- *     Held in module-local closures rather than `state.gpu.*` because
- *     they're consumed by `wireSlots` (thumbnail subsystem
- *     construction) and `startLoop` (frame-body deps) but never read
- *     by the public-handle setters.
- *   - `MilkyWayRenderer`, `FilamentRenderer` — overlay renderers that
- *     write into the same HDR target as the points pass.  The filament
- *     renderer is stored on `state.gpu.filamentRenderer` because the
- *     `destroy()` path needs to release it.
+ *   - `TexturedDiskRenderer`, `ProceduralDiskRenderer`, `MilkyWayRenderer`,
+ *     `FilamentRenderer`, … — thumbnail + overlay renderers that write
+ *     into the same HDR target as the points pass.
  *
  * The 5 galaxy-catalog source asset slots are also wired here via the
  * `GALAXY_CATALOG_SOURCE_REGISTRY` declarative table —
@@ -44,28 +34,11 @@
  *   - `startLoop` packages `device`, `context`, and every renderer into
  *     `RunFrameDeps` for the frame body.
  *
- * ### State writes
- *
- *   - `state.gpu.renderer` (PointRenderer)
- *   - `state.gpu.postProcess` (PostProcess)
- *   - `state.gpu.filamentRenderer` (FilamentRenderer)
- *   - `state.assetSlots.points` (each row of GALAXY_CATALOG_SOURCE_REGISTRY)
- *
- * ### Async work
- *
- *   - `await initGpu(canvas)` — the WebGPU device-acquisition handshake.
- *
- * ### Outputs threaded forward to later phases
- *
  * `device` and `context` survive past this phase via the `phaseLocals`
- * carrier (read by `wireSlots` / `wireInput` / `startLoop`); they don't
- * have a `state.gpu.*` home today.  Every renderer constructed here is
- * stored on `state.gpu.*` directly — the four thumbnail-related renderers
- * (`texturedQuadRenderer`, `texturedDiskRenderer`, `proceduralDiskRenderer`,
- * `milkyWayRenderer`) used to ride on `phaseLocals` too, but M1 of the
- * 2026-05-11 audit collapsed that mirror because phase code already had
- * the same identities reachable via `state.gpu.*`.  See `PhaseLocals`
- * below and `BootstrapDeps` in `bootstrap.ts` for the wiring.
+ * carrier (read by `wireSlots` / `wireInput` / `startLoop`); they have no
+ * `state.gpu.*` home. Every renderer is stored on `state.gpu.*` directly,
+ * which is also how later phases consume them. See `BootstrapDeps` in
+ * `bootstrap.ts` for the wiring.
  */
 
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay } from '../../gpu/device';
@@ -101,37 +74,17 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 
 /**
- * PhaseLocals — minimal cross-phase carrier for objects that don't
- * (yet) live on `state.gpu`.
- *
- * Pre-cleanup (M1, 2026-05-11) this bag also carried `texturedQuadRenderer`,
- * `texturedDiskRenderer`, `proceduralDiskRenderer`, `milkyWayRenderer`, and
- * `firstReadySource`.  The four renderers were moved off here because
- * they were duplicates of `state.gpu.X` — phase code now reads them
- * directly with an explicit non-null check that formalises what the
- * previous `deps.phaseLocals!.X` bang silently assumed (phase
- * ordering).  `firstReadySource` became a typed ref on `BootstrapDeps`;
- * passing it through a phase channel was hiding the mutation site.
- *
- * `device` and `context` remain on this bag because they don't have a
- * `state.gpu.*` home today.  Moving them would mean adding them to
- * `EngineGpuHandles` (the shape behind `state.gpu`); out of scope for
- * M1, but tracked as a follow-up in the 2026-05-11 audit.
- */
-// PhaseLocals moved to @types/engine/PhaseLocals.d.ts.
-
-/**
  * Bootstrap phase 1: GPU device acquisition + renderer construction +
  * point-source slot wiring.
  *
  * Side effects on `state`:
  *   - writes `state.gpu.renderer`, `state.gpu.postProcess`,
- *     `state.gpu.filamentRenderer`;
+ *     `state.gpu.filamentRenderer`, and every other renderer handle;
  *   - populates `state.assetSlots.points` via the registry loop.
  *
  * Side effects on `deps`:
- *   - attaches a phase-local carrier (see `PhaseLocals`) so subsequent
- *     phases can read the IIFE-scoped renderer handles.
+ *   - attaches a minimal phase-local carrier (`device`, `context`) so
+ *     subsequent phases can read them; the renderers flow via `state.gpu`.
  */
 export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const { canvas, cb } = deps;
@@ -142,9 +95,9 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
 
   const { device, context, format } = await gpuInitGpu(canvas);
 
-  // Build the canonical fade + source bind-group layouts ONCE — every
-  // renderer pipeline below threads these into createPipelineLayout so
-  // each consumer's bind groups are valid across pipelines. See
+  // Build the canonical fade + source + focus bind-group layouts ONCE —
+  // every renderer pipeline below threads these into createPipelineLayout
+  // so each consumer's bind groups are valid across pipelines. See
   // src/services/gpu/bindGroupLayouts/fadeUniforms.ts for the rationale.
   state.gpu.fadeBgl = createFadeUniformsBgl(device);
   state.gpu.sourceBgl = createSourceUniformsBgl(device);
@@ -153,53 +106,43 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // ── HDR offscreen target + tone-map post-process ──────────────────
   //
   // Every visible draw pass (points, quads, disks) writes into a
-  // viewport-sized rgba16float texture instead of the swap chain.  At
-  // the end of the frame, the tone-map pass samples the HDR target
-  // and writes tone-mapped, compressed-into-[0,1] values into the
-  // swap chain.  This eliminates the saturated-white "blown-out"
-  // cluster cores that pure additive blending into bgra8unorm
-  // suffers from, and gives the user a runtime curve selector so
-  // they can compare Linear / Reinhard / Asinh / Gamma 2 / ACES
-  // (see `data/toneMapCurve.ts`).
+  // viewport-sized rgba16float texture instead of the swap chain.  The
+  // tone-map pass then samples the HDR target and writes tone-mapped,
+  // compressed-into-[0,1] values into the swap chain.  This eliminates
+  // the saturated-white blown-out cluster cores that pure additive
+  // blending into bgra8unorm suffers from, and gives the user a runtime
+  // curve selector (Linear / Reinhard / Asinh / Gamma 2 / ACES — see
+  // `data/toneMapCurve.ts`).
   //
-  // The HDR target is recreated on resize (further down in the
-  // frame loop's resize branch) so it always tracks the swap chain
-  // size 1:1 — that's also why the tone-map sampler uses 'nearest'
-  // filtering (each fragment samples a single texel).
+  // The HDR target is recreated on resize (in the frame loop's resize
+  // branch) so it always tracks the swap chain size 1:1 — that's also
+  // why the tone-map sampler uses 'nearest' (each fragment samples one
+  // texel).  The pick renderer's r32uint integer target is separate and
+  // never wants tone-mapping.
   //
-  // Pick renderer is unaffected — its r32uint integer target is
-  // separate and never wants tone-mapping.  See
-  // `docs/superpowers/plans/2026-05-04-hdr-tonemap.md` for the full
-  // rationale.
-  // Combined HDR offscreen target + tone-map post-process.  See
-  // `services/gpu/postProcess.ts` for why these merged into one
-  // factory (Phase 4 of the engine-renderer-boundaries spec) —
-  // they share a lifetime, share a swap-chain-format dependency,
-  // and were previously two separate construction sites that the
-  // engine had to thread together for every resize and destroy.
+  // The target + tone-map pass live in one factory (see
+  // `services/gpu/postProcess.ts`): they share a lifetime and a
+  // swap-chain-format dependency.
   const postProcess = createPostProcess(device, format, {
     width: canvas.width,
     height: canvas.height,
   });
-  // Mirror into the engine state so `destroy()` (defined on the
-  // public handle, outside this IIFE) can release the GPU resources.
+  // Mirror into engine state so `destroy()` can release the resources.
   state.gpu.postProcess = postProcess;
 
-  // Half-res offscreen target for the scalar-volume pass.  Sized in
-  // lockstep with the HDR target (canvas backing-store dimensions).
-  // Conceptually unrelated to postProcess (its only consumer is the
-  // volume upsample pass, never the tone-map), but the construction
-  // and resize call sites happen to live in the same places.
+  // Half-res offscreen target for the scalar-volume pass, sized in
+  // lockstep with the HDR target.  Conceptually unrelated to postProcess
+  // (its only consumer is the volume upsample pass), but constructed and
+  // resized at the same sites.
   state.gpu.volumeOffscreen = createVolumeOffscreen(device, {
     width: canvas.width,
     height: canvas.height,
   });
 
-  // Build the GPU pipeline; cloud data is loaded below.
-  // PointRenderer (and TexturedQuadRenderer/TexturedDiskRenderer further down) target
-  // the HDR rgba16float texture instead of the swap-chain `format`.
-  // Their pipelines bake this into a fixed colour-target descriptor at
-  // construction time, so the format choice has to land here.
+  // PointRenderer (and the disk renderers below) target the HDR
+  // rgba16float texture, not the swap-chain `format`.  Their pipelines
+  // bake this into a fixed colour-target descriptor at construction
+  // time, so the format choice has to land here.
   const renderer = createPointRenderer(
     device,
     'rgba16float',
@@ -211,168 +154,92 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
 
   // ── Wire the bias-correction subsystem to the freshly-built renderer ──
   //
-  // Spec E phase E.3 + E.4.  The subsystem was constructed eagerly in
-  // the engine state literal (no GPU dep); now that the renderer
-  // exists, we hand it to the subsystem so its splice methods can fire
-  // when bakes resolve.  `attachRenderer` also installs the
-  // upload/unload callbacks the renderer fires from `upload(...)` /
-  // `unload(...)`, so a tier-swap upload mid-mode triggers a per-source
-  // bake without any engine-side coordination.  Phase E.4 cut
-  // `handle.setBiasMode` over to call `setMode` on this subsystem;
-  // production now routes the user's mode toggles through here.
+  // The subsystem was constructed eagerly in the engine state literal
+  // (no GPU dep); now that the renderer exists, we hand it over so its
+  // splice methods can fire when bakes resolve.  `attachRenderer` also
+  // installs the upload/unload callbacks the renderer fires from
+  // `upload(...)` / `unload(...)`, so a tier-swap upload mid-mode
+  // triggers a per-source bake without any engine-side coordination.
   state.subsystems.biasCorrection.attachRenderer(renderer);
 
-  // ── MSDF label renderer + marker-line renderer (Task R4) ──────────────
+  // ── MSDF label renderer + marker-line renderer ───────────────────────
   //
-  // Load the font atlas (BMFont JSON + MSDF PNG) and construct both overlay
-  // renderers in one block.  Sequenced here — after the PointRenderer but
-  // before the GALAXY_CATALOG_SOURCE_REGISTRY loop — for two reasons:
+  // Load the font atlas (BMFont JSON + MSDF PNG) and construct the UI
+  // overlay renderers in one block, sequenced after the PointRenderer but
+  // before the GALAXY_CATALOG_SOURCE_REGISTRY loop.  Awaiting the atlas
+  // fetch here keeps the loop below from racing ahead of it; in practice
+  // the ~120 KB atlas resolves well before the much larger per-survey
+  // `.bin` fetches.  All renderers share the `{ device, context, format,
+  // canvas }` GpuContext shape, so building them here keeps GPU-resource
+  // allocation at one site.
   //
-  //   1. The atlas fetch is short (~120 KB on fast localhost; served from
-  //      Cloudflare Workers Assets CDN edge in production).  Awaiting it
-  //      here blocks the `for` loop below from racing ahead of the atlas
-  //      load, but in practice the atlas resolves well before the much
-  //      larger per-survey `.bin` fetches finish.
+  // Stored on `state.gpu` so `engine.ts.destroy()` can release their
+  // buffers + atlas texture.  Excluded from `isEngineReady` (same as
+  // `filamentRenderer`): optional async resources, null-checked at use.
   //
-  //   2. Both renderers need a `GpuContext` shaped as `{ device, context,
-  //      format, canvas }` — the same shape the TexturedQuadRenderer / TexturedDiskRenderer
-  //      below use.  Constructing them here keeps all "GPU resource allocation
-  //      from a GpuContext" at one cohesive site.
-  //
-  // These renderers are stored on `state.gpu` (unlike `texturedQuadRenderer` /
-  // `milkyWayRenderer` which stay phase-local) because the `destroy()`
-  // method in `engine.ts` needs to release their GPU buffers + atlas
-  // texture.  They're excluded from `isEngineReady` for the same
-  // reason as `filamentRenderer`: optional async resources, null-
-  // checked at point of use.
-  //
-  // ### Why the swap-chain format, not the HDR target
-  //
-  // Marker-lines + labels are UI overlay drawn AFTER tone-map onto
-  // the swap chain (see `uiOverlay` in `services/engine/frame/`).
-  // Their pipelines are constructed with the swap-chain format so
-  // the WebGPU validation lines up at the colorAttachment.  Drawing
-  // INTO the HDR target (rgba16float) used to require an `[8, 8, 8, 1]`
-  // overshoot to survive the tone-map compression; with the post-
-  // tone-map pass `[1, 1, 1, 1]` is correct (and matches what the
-  // `youAreHereSubsystem` now emits).
+  // They target the swap-chain format, NOT the HDR target: marker-lines +
+  // labels are UI overlays drawn AFTER tone-map onto the swap chain (see
+  // `uiOverlay` in `services/engine/frame/`), so their pipelines need the
+  // swap-chain format for the colorAttachment to validate.
   const uiCtx = { device, context, format, canvas };
 
   const fontAtlases = await loadFontAtlases();
   state.gpu.labelRenderer = createLabelRenderer(uiCtx, fontAtlases);
   state.gpu.markerLineRenderer = createMarkerLineRenderer(uiCtx);
   state.gpu.selectionRingRenderer = createSelectionRingRenderer(uiCtx);
-  // HDR pass — must write into the rgba16float offscreen target the
-  // tone-map pass reads from, NOT the canvas swap-chain.  Mirrors the
-  // explicit hdrFormat arg on createFilamentRenderer.  The fadeBgl
-  // placeholder at @group(1) must match what the other HDR passes
-  // (filaments) bind at the same slot on the shared RenderPassEncoder;
-  // see the renderer's pipeline-layout comment for why.
+  // HDR pass — writes into the rgba16float offscreen target, NOT the
+  // swap chain.  The fadeBgl placeholder at @group(1) must match what the
+  // other HDR passes (filaments) bind at the same slot on the shared
+  // RenderPassEncoder; see the renderer's pipeline-layout comment.
   state.gpu.clusterMarkerRenderer = createClusterMarkerRenderer(
     uiCtx,
     'rgba16float',
     state.gpu.fadeBgl!,
   );
 
-  // Wire the freshly-constructed renderers into the label director.
-  // The director was built eagerly in the engine state literal (alongside
-  // `tweens`, `biasCorrection`, etc.) but had no renderers to call into yet.
-  // This is the same `attachRenderer` post-construction wiring pattern that
-  // `biasCorrectionSubsystem` uses — see that module's header comment for
-  // the "why renderers are null at eager-construction time" rationale.
-  //
-  // Post-Task-6: the director (not youAreHere directly) owns the renderer
-  // refs.  All `LabelProducer`s — youAreHere, pois, future overlays — are
-  // polled by the director, which merges their outputs and flushes once.
+  // Wire the freshly-constructed renderers into the label director, which
+  // was built eagerly in the engine state literal with no renderers yet.
+  // Same `attachRenderer` post-construction pattern `biasCorrectionSubsystem`
+  // uses.  The director (not youAreHere directly) owns the renderer refs:
+  // all `LabelProducer`s — youAreHere, pois, future overlays — are polled
+  // by the director, which merges their outputs and flushes once.
   state.subsystems.labelDirector.attachRenderers(
     state.gpu.labelRenderer,
     state.gpu.markerLineRenderer,
   );
 
-  // ── Per-source asset slots (Task 8 SDSS, Task 9 the rest) ────────────
+  // ── Per-source asset slots ───────────────────────────────────────────
   //
-  // Every survey now flows through `createAssetSlot`.  The slot owns
-  // one cell of mutable state (its current LoadState) and exposes
-  // the fetch→commit lifecycle behind a race-checked façade — see
-  // `AssetSlot.ts`'s header for the full why-and-how, especially
-  // the two race-check points that fix the tier-swap stomping bug.
+  // Every survey flows through `createAssetSlot`: one cell of mutable
+  // LoadState behind a race-checked fetch→commit façade (see
+  // `AssetSlot.ts` for the race-check points that fix the tier-swap
+  // stomping bug).
   //
-  // Why construct here, after the renderer exists?
-  //   The commit step uploads the freshly-decoded GalaxyCatalog to
-  //   `state.gpu.renderer`, so the renderer must be non-null at the
-  //   moment commit runs.  Constructing the slots AFTER
-  //   `state.gpu.renderer = renderer` in the same lexical scope
-  //   makes that ordering obvious to anyone reading top-down.  An
-  //   alternative would be to lazily build slots inside setTier on
-  //   first call, but that splits one cohesive subsystem across
-  //   two files.
+  // Constructed here, after `state.gpu.renderer = renderer`, because the
+  // commit step uploads the decoded GalaxyCatalog to the renderer — so it
+  // must be non-null when commit runs, and the same lexical scope makes
+  // that ordering obvious top-down.
   //
-  // Why `await renderer.upload(...)` inside commit?
-  //   The slot fires its `committed` event (which transitions the
-  //   state to `ready`) only after `commit` resolves.  Awaiting the
-  //   GPU upload here — rather than fire-and-forget — guarantees
-  //   that subscribers seeing `kind === 'ready'` can rely on the
-  //   GPU buffer being populated, which is the primary contract the
-  //   asset-loading rework is delivering.  This is also what closes
-  //   the race window the old `loadAllClouds` path papered over with
-  //   an out-of-band `uploadChain` promise.
+  // Commit `await`s `renderer.upload(...)` so a subscriber seeing
+  // `kind === 'ready'` can rely on the GPU buffer being populated.  The
+  // subscriber's `requestRender()` wakes the render-on-demand loop so the
+  // new buffer paints without the user nudging the camera; firing it on
+  // the `ready` transition (not inside commit) keeps commit free of UI
+  // concerns.
   //
-  // Why `requestRender()` in the subscriber?
-  //   The render loop is gated on `requestRender` — without an
-  //   explicit wake-up the new GPU buffer would sit unrendered until
-  //   the user nudged the camera.  Firing it on the `ready`
-  //   transition (rather than inside `commit`) keeps the slot's
-  //   commit step pure of UI concerns; the wake-up is a downstream
-  //   side-effect of the slot's state transition, not part of the
-  //   commit contract.
-  //
-  // Naming: `<source>-points` for survey clouds, `filaments` for
-  // filaments.  The progress aggregator keys on these strings, so
-  // they double as the load-progress identifier.
-  //
-  // The 5 galaxy-catalog source slots are now constructed via the
-  // `GALAXY_CATALOG_SOURCE_REGISTRY` declarative table — see
-  // `galaxyCatalogSourceRegistry.ts` for the registry schema, the per-row
-  // fetcher choice, and the rationale for keeping sidecar slots
-  // (filaments, famous-meta, pgc-aliases) inline below rather than
-  // absorbing them into the registry.  Each call mints the slot,
-  // attaches the upload-on-commit body + ready-state subscriber,
-  // and stores the slot in `state.assetSlots.points` keyed by
-  // `Source` — exactly what the pre-registry inline loop did.
+  // The 5 source slots are built from the `GALAXY_CATALOG_SOURCE_REGISTRY`
+  // declarative table; sidecar slots (filaments, famous-meta, pgc-aliases)
+  // stay inline below — see `galaxyCatalogSourceRegistry.ts` for why.
   for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
     wireGalaxyCatalogSourceSlot(state, cfg, { cb });
   }
 
-  // ── Galaxy thumbnail subsystem ─────────────────────────────────────
+  // ── Galaxy thumbnail renderers ─────────────────────────────────────
   //
-  // Three collaborators wired together here:
-  //
-  //   - thumbnails:   owns the atlas (GPU texture + slot LRU), the
-  //                   priority queue, and the per-frame loop that
-  //                   allocates slots, kicks off fetches, and emits
-  //                   sorted Quad/Disk instances.  See
-  //                   `thumbnailSubsystem.ts` for the why-and-how.
-  //   - texturedQuadRenderer: textured-quad render pass running after the
-  //                   point pass each frame.  Engine owns it
-  //                   directly (rather than the subsystem) because
-  //                   future passes (selection halo) may share it.
-  //   - texturedDiskRenderer: 3D-oriented disk variant for large galaxies.
-  //                   Same ownership story as texturedQuadRenderer.
-  //
-  // `galaxyTexturesEnabled` is mutated by the SettingsPanel toggle.
-  // The engine simply skips `thumbnails.runFrame()` when the toggle
-  // is off — the LRU clock pauses with it, which is fine because
-  // nothing else reads it while the toggle is off.
-  //
-  // The TexturedQuadRenderer/TexturedDiskRenderer constructors want a GpuContext;
-  // we build them with the four constituents in scope rather than
-  // restructuring initGpu's return signature.
-
-  // TexturedDiskRenderer targets the HDR offscreen texture (see the
-  // rationale at PointRenderer construction above) — it composites
-  // galaxy thumbnails into the same accumulated linear-light buffer
-  // the points pass writes into.  Atlas-bound, 3D-oriented quads sized
-  // by per-galaxy diameter (matched by the LOD-2 `texturedDisksPass`).
+  // TexturedDiskRenderer targets the HDR offscreen texture (same rationale
+  // as PointRenderer above): atlas-bound, 3D-oriented quads sized by
+  // per-galaxy diameter, composited into the same linear-light buffer as
+  // the points pass.  Matched by the LOD-2 `texturedDisksPass`.
   const texturedDiskRenderer = createTexturedDiskRenderer({
     device,
     context,
@@ -380,13 +247,12 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     canvas,
   });
   // ProceduralDiskRenderer fills the visibility gap between the
-  // screen-aligned point glow (which goes pixelated above ~8 px) and
-  // the textured-disk pass (which only kicks in at 24 px).  In the
-  // 8-14 px band both the points pass and this renderer are active,
-  // crossfading via complementary smoothstep alphas (see
-  // PROCEDURAL_DISK_FADE_START_PX / _END_PX in thumbnailSubsystem.ts).
-  // Same HDR target as the other thumbnail-pass renderers so the
-  // procedural disk composites into the same linear-light buffer.
+  // screen-aligned point glow (pixelated above ~8 px) and the
+  // textured-disk pass (kicks in at 24 px).  In the 8-14 px band both the
+  // points pass and this renderer crossfade via complementary smoothstep
+  // alphas (PROCEDURAL_DISK_FADE_START_PX / _END_PX in
+  // proceduralDiskSubsystem.ts).  Same HDR target as the other thumbnail
+  // renderers.
   const proceduralDiskRenderer = createProceduralDiskRenderer({
     device,
     context,
@@ -411,37 +277,25 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   });
   // ── Cosmic-web filament-skeleton renderer ─────────────────────────
   //
-  // Built unconditionally (the pipeline / quad VBO / uniform buffer
-  // are cheap), but the per-instance buffer is populated only after
-  // `loadFilaments()` resolves with a non-null cloud — i.e. when the
-  // optional `filaments.bin` exists.  When the binary is absent
-  // (fresh clone before `npm run build-filaments`), `upload` is
-  // simply never called and `draw` returns early on `segmentCount=0`.
-  //
-  // Same HDR target as every other overlay so the additive
-  // contribution accumulates in float-precision before tone mapping.
+  // Built unconditionally (pipeline / quad VBO / uniform buffer are
+  // cheap), but the per-instance buffer is populated only when the
+  // optional `filaments.bin` exists.  When absent (fresh clone before
+  // `npm run build-filaments`), `upload` is never called and `draw`
+  // returns early on `segmentCount=0`.  Same HDR target as every overlay.
   const filamentRenderer = createFilamentRenderer(device, 'rgba16float', state.gpu.fadeBgl!);
   state.gpu.filamentRenderer = filamentRenderer;
 
   // Store the thumbnail-related renderers on `state.gpu.*` so
-  // `engine.ts.destroy()` has a reachable reference path for teardown,
-  // AND so the later bootstrap phases (`wireSlots`, `startLoop`) can
-  // consume them by reading `state.gpu.X` directly.  Pre-2026-05-08
-  // these renderers lived only on `phaseLocals` — PR #66 flagged that
-  // `destroy()` couldn't reach them.  The initial fix mirrored them
-  // onto `state.gpu.*` for destroy reachability while leaving the
-  // phase-side reads pointing at `phaseLocals`; M1 of the 2026-05-11
-  // audit collapsed that mirror, so `state.gpu.*` is now the single
-  // home for these references.
+  // `engine.ts.destroy()` can reach them for teardown, and so later
+  // bootstrap phases (`wireSlots`, `startLoop`) consume the same
+  // identities by reading `state.gpu.X` directly.
   //
-  // **Lifecycle note for future contributors.**  Do NOT add these
-  // fields to `isEngineReady` (in `helpers/engineReady.ts`).  They're
-  // populated during `initGpu` (the first phase), but the predicate
-  // intentionally tracks only the five bootstrap-complete fields whose
-  // simultaneous non-null state means "every phase has finished".  The
-  // 2026-05-08 black-screen incident is the cautionary tale: bootstrap
-  // progression isn't the inverse of teardown, and over-eager predicate
-  // growth re-creates that bug class.
+  // Lifecycle invariant: do NOT add these fields to `isEngineReady` (in
+  // `helpers/engineReady.ts`).  That predicate intentionally tracks only
+  // the five bootstrap-complete fields whose simultaneous non-null state
+  // means "every phase has finished" — bootstrap progression isn't the
+  // inverse of teardown, and over-eager predicate growth re-creates the
+  // black-screen bug class.
   state.gpu.texturedDiskRenderer = texturedDiskRenderer;
   state.gpu.proceduralDiskRenderer = proceduralDiskRenderer;
   state.gpu.milkyWayRenderer = milkyWayRenderer;
@@ -449,27 +303,18 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
 
   // ── 3D scalar-field volume renderer ──────────────────────────────────
   //
-  // Built unconditionally alongside the other overlay renderers.  The
-  // pipeline + corner/index VBOs are cheap (~1 KB of GPU memory); the
-  // large allocations (per-field r16float 3D textures, palette LUT
-  // textures, uniform buffers) happen only when the caller invokes
-  // `handle.addVolumeField(...)`.  When no fields are registered,
-  // `hasActiveFields()` returns false and the pass draws nothing at zero
-  // GPU cost.
+  // Built unconditionally; the pipeline + corner/index VBOs are cheap
+  // (~1 KB GPU).  The large allocations (per-field r16float 3D textures,
+  // palette LUTs, uniform buffers) happen only on `handle.addVolumeField`;
+  // with no fields registered, `hasActiveFields()` is false and the pass
+  // draws nothing.  Same HDR target as every overlay so the raymarch
+  // accumulates into the linear-light buffer before tone mapping.
   //
-  // Same HDR target as every other overlay (`'rgba16float'`) so the
-  // raymarch accumulates into the same linear-light buffer before tone
-  // mapping.  Stored on `state.gpu` so `destroy()` can release the
-  // shared corner/index VBOs and every per-field GPU resource.
-  //
-  // Why callbacks rather than a direct `fades` reference: scalarVolume
-  // is GPU-only (no EngineState dependency), so the renderer doesn't
-  // need to know about state.subsystems.fades at all. Threading the
-  // registry interactions through onFieldAdded/onFieldRemoved
-  // callbacks keeps the factory pure (testable without a FadeRegistry
-  // stub) and puts the registry-side wiring at the bootstrap layer
-  // alongside every other subsystem registration. Same shape as the
-  // `commit` callback on AssetSlot factories.
+  // Registry wiring goes through onFieldAdded/onFieldRemoved callbacks
+  // rather than a direct `fades` reference: scalarVolume is GPU-only (no
+  // EngineState dependency), so keeping it FadeRegistry-agnostic leaves
+  // the factory pure (testable without a registry stub) and puts the
+  // registry-side wiring at the bootstrap layer.
   state.gpu.scalarVolumeRenderer = createScalarVolumeRenderer(
     device,
     'rgba16float',
@@ -495,45 +340,33 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
 
   // ── Half-res-to-HDR volume upsample pass ──────────────────────────
   //
-  // Built unconditionally alongside the scalar-volume renderer; the
-  // pipeline is cheap (one sampler + one bind-group-layout + one render
-  // pipeline) and the half-res target lives on `postProcess` so we have
-  // nothing to allocate here that depends on viewport size.  Stored on
-  // `state.gpu` so `destroy()` can release the pipeline and so the new
-  // `volumeUpsamplePass` can read it via `state.gpu.volumeUpsample`.
+  // Built unconditionally; the pipeline is cheap and the half-res target
+  // lives on `postProcess`, so nothing here depends on viewport size.
   state.gpu.volumeUpsample = createVolumeUpsample(device, 'rgba16float');
 
   // ── Pick-buffer debug overlay ────────────────────────────────────
   //
-  // Fullscreen pass that samples the r32uint pick texture and writes
-  // a colour-mapped RGBA image over the tone-mapped swap chain.
-  // Always constructed (pipeline + bind-group-layout are cheap, no
-  // GPU buffers allocated until first draw); the per-frame consumer
-  // gates on `state.settings.debug.showPickBuffer` so a default-off
-  // build pays zero per-frame cost beyond a single boolean check.
-  // Targets the swap-chain `format`, not 'rgba16float' — the overlay
-  // draws AFTER tone-map onto the same target marker-lines / labels
-  // composite onto.
+  // Fullscreen pass that samples the r32uint pick texture and writes a
+  // colour-mapped RGBA image over the tone-mapped swap chain.  Always
+  // constructed (cheap, no GPU buffers until first draw); the per-frame
+  // consumer gates on `state.settings.debug.showPickBuffer`.  Targets the
+  // swap-chain `format` since it draws AFTER tone-map, like marker-lines.
   state.gpu.pickDebugOverlay = createPickDebugOverlay(device, format);
 
   // ── Disk-radius debug ring ───────────────────────────────────────
   //
   // World-space line-strip drawn in the disk plane around the selected
   // galaxy at its catalog disk radius (a famous-galaxy calibration aid).
-  // Targets the swap-chain `format` like the other post-tone-map UI
-  // overlays; the per-frame `diskRadiusRingPass` gates on
-  // `state.settings.debug.showDiskRadiusRing`, so a default-off build
-  // pays nothing beyond one boolean check.
+  // Swap-chain `format` (post-tone-map UI overlay); the per-frame
+  // `diskRadiusRingPass` gates on `state.settings.debug.showDiskRadiusRing`.
   state.gpu.diskRadiusRing = createDiskRadiusRing(device, format);
 
   // ── GPU timing service ────────────────────────────────────────────
   //
-  // Always-constructed: the factory takes the URL-gate result and
-  // returns a no-op stub when the gate is off OR the adapter lacks
-  // `timestamp-query`.  Consumers gate work behind one check
-  // (`if (state.gpu.timingService.enabled)`) instead of juggling
-  // null + flag combinations.  The no-op path allocates no GPU
-  // resources, so always-constructing is free.
+  // Always-constructed: the factory returns a no-op stub when the URL
+  // gate is off OR the adapter lacks `timestamp-query`, so consumers gate
+  // behind one `state.gpu.timingService.enabled` check.  The no-op path
+  // allocates no GPU resources.
   state.gpu.timingService = createGpuTimingService(
     device,
     hasUrlGate('gpuTimings'),
@@ -542,11 +375,8 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
 
   // Stash phase-locals so subsequent phases (`wireSlots`, `wireInput`,
   // `startLoop`) can read the IIFE-scoped device/context handles.  The
-  // renderers themselves now flow via `state.gpu.*` (see the mirror
-  // block above); this carrier is intentionally minimal — only the
-  // things without a `state.gpu.*` home today.  See `PhaseLocals`
-  // above for the rationale on what does (and doesn't) live here
-  // after M1.
+  // renderers flow via `state.gpu.*`; this carrier is intentionally
+  // minimal — only what has no `state.gpu.*` home.
   deps.phaseLocals = {
     device,
     context,

@@ -10,14 +10,13 @@
  *
  * ### Why a `focusedId` separate from the display target
  *
- * `update` runs every frame with the live selection. Both the fade-in
- * and the fade-out must fire exactly once, on the transition — not every
- * frame. Re-calling `fade.fadeTo` each frame would reset the ramp's
- * clock and the blend would never advance. `focusedId` records the id we
- * are currently fading *toward* (null = fading out / at rest), so a
- * frame whose selection matches it is a true no-op.
+ * `update` runs every frame with the live selection. The fade-in and
+ * fade-out must each fire once, on the transition — re-calling
+ * `fade.fadeTo` every frame would reset the ramp's clock and the blend
+ * would never advance. `focusedId` records the id we are fading *toward*
+ * (null = fading out / at rest), so a frame matching it is a no-op.
  *
- * The display target (`active`) is kept latched through the fade-out so
+ * The display target (`active`) stays latched through the fade-out so
  * `produceFocusUniforms` keeps emitting the correct centre/radius until
  * the blend reaches 0; only then is it dropped.
  */
@@ -28,7 +27,7 @@ import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfI
 import type { FocusUniformsValue } from '../../../@types/rendering/FocusUniformsValue';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
-/** Focus fade duration in ms (spec §3.4). */
+/** Focus fade duration in ms. */
 export const FOCUS_FADE_DURATION_MS = 400;
 
 /** At-rest sentinel: blend=0 makes the shader multiplier collapse to 1.0. */

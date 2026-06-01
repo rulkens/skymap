@@ -5,23 +5,19 @@
 // pass; the offscreen PickRenderer compiles it alongside
 // 'pickFragment.wesl' for the r32uint picking pass. Both pipelines
 // build their OWN GPUShaderModule from this same source — never share
-// a module across pipelines, because WebGPU's 'auto' bind-group-
-// layout system gives each pipeline its own pipeline-local layout
-// identity and sharing modules tempts you into sharing layouts that
-// don't actually pass the 'group-equivalent' compatibility check.
+// a module across pipelines, because WebGPU's 'auto' bind-group-layout
+// system gives each pipeline its own pipeline-local layout identity.
 //
 // ## Why the bindings are declared here, not in io.wesl
 //
-// WESL has no global state — '@group(N) @binding(M) var<uniform> X'
-// is a module-local declaration that cannot be exported across
-// modules. We re-declare 'u' here using the structs imported from
-// 'points/io.wesl', so the layout numbers (and the underlying byte
-// layout via the imported 'Uniforms' struct) are guaranteed to match
-// the colorFragment + pickFragment
-// counterparts. WGSL accepts the same '@group/@binding' pair appearing
-// in multiple compiled modules so long as the layout is identical;
-// importing a single authoritative struct definition makes drift
-// structurally impossible.
+// WESL has no global state — '@group(N) @binding(M) var<uniform> X' is
+// a module-local declaration that cannot be exported across modules. We
+// re-declare 'u' here using the structs imported from 'points/io.wesl',
+// so the layout numbers (and the underlying byte layout via the
+// imported 'Uniforms' struct) are guaranteed to match the colorFragment
+// + pickFragment counterparts. WGSL accepts the same '@group/@binding'
+// pair in multiple compiled modules so long as the layout is identical;
+// importing one authoritative struct makes drift structurally impossible.
 //
 // pickFragment.wesl declares no bindings of its own — this vertex
 // module references '@group(0)' (Uniforms) and '@group(2)' (per-source
@@ -164,12 +160,10 @@ fn vs(
 
   var out: VSOut;
 
-  // Add the screen-space offset to the projected centre.
-  // Only X and Y move; Z and W stay unchanged.
+  // Add the screen-space offset to the projected centre — only X/Y move.
   out.clip = center + vec4<f32>(offset, 0.0, 0.0);
 
-  // Pass the quad corner through as UV; used in the fragment shader to
-  // compute distance from the billboard centre.
+  // Quad corner as UV; the fragment uses it for distance-from-centre.
   out.uv = corner;
 
   // p.colorIndex is the rest-frame, sentinel-substituted ramp position
@@ -215,10 +209,10 @@ fn vs(
     inPickPass,
   );
 
-  // Per-source intensity floor ('source.intensityFloor') replaces the prior
-  // hardcoded 0.05. Lower floors reduce per-galaxy contribution to the
-  // additive HDR target in dense regions (tames center saturation); higher
-  // floors keep faint objects visible (Milliquas at high z).
+  // Per-source intensity floor ('source.intensityFloor'). Lower floors
+  // reduce per-galaxy contribution to the additive HDR target in dense
+  // regions (tames center saturation); higher floors keep faint objects
+  // visible (Milliquas at high z).
   // Cluster-focus dim: non-members of the focused POI fade toward 0.08,
   // scaled by the smoothstep blend. Collapses to 1.0 when no POI is
   // focused (blend == 0), so the visual pass is unchanged at rest.

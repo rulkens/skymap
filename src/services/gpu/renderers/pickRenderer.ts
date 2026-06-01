@@ -114,10 +114,9 @@ export function createPickRenderer(
   });
 
   // The shared vertex shader also declares @group(3) FocusUniforms.  The
-  // pick path ignores intensity entirely (the focus dim folds into
-  // intensity, which the pick fragment never reads), but the explicit
-  // pipeline layout must still match the visual pipeline — so we bind a
-  // zeroed dummy focus buffer, never written from the CPU.
+  // pick fragment never reads intensity (where the focus dim folds in),
+  // but the explicit pipeline layout must still match the visual
+  // pipeline — so bind a zeroed dummy focus buffer, never CPU-written.
   const dummyFocusBuffer = device.createBuffer({
     label: 'pick-focus-uniform-dummy',
     size: 32,
@@ -349,16 +348,13 @@ export function createPickRenderer(
   }
 
   // Whether this pick pass has anything to draw — galaxy sources OR
-  // cluster / SC / void ring markers (drawn by `clusterMarkerRenderer.
-  // pickRing` inside `recordPickPass`).  A single predicate so `pick`
-  // and `renderForDebug` share one gate instead of each growing a `&&`
-  // clause: bailing on empty galaxy sources alone made clusters
-  // unpickable and the pick-debug texture black whenever every galaxy
-  // survey was toggled off.  `markerCount() > 0` mirrors
+  // cluster / SC / void ring markers (drawn by
+  // `clusterMarkerRenderer.pickRing` inside `recordPickPass`).  Shared
+  // by `pick` and `renderForDebug` so a galaxy-empty scene with visible
+  // rings still picks (and the pick-debug texture isn't black when every
+  // survey is toggled off).  `markerCount() > 0` mirrors
   // `clusterMarkersPass`'s enable gate (0 when the category is hidden or
-  // every ring has faded out).  The state-level callers gate on the same
-  // notion via `collectPickTargets`; this is the renderer-layer echo for
-  // the inputs it actually has.
+  // every ring has faded out).
   const hasAnyPickTarget = (sourceList: readonly PickSourceDraw[]): boolean =>
     sourceList.length > 0 ||
     (clusterMarkerRenderer !== undefined && clusterMarkerRenderer.markerCount() > 0);

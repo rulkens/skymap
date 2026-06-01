@@ -1,17 +1,10 @@
 /**
  * PointDrawSettings — per-call draw parameters for `PointRenderer.draw`.
  *
- * Pre-cleanup, `draw()` took these as 16 trailing positional arguments
- * (`pointSizePx`, `brightness`, …, `pxFadeEnd`).  Grouping them into a
- * single record decouples the renderer's contract from the order each
- * argument was added in: callers fill named fields, new knobs are
- * added at the type level with one edit, and TypeScript's structural
- * matching catches a missing field at compile time instead of a silent
- * shifted-argument bug at draw time.
- *
- * Field semantics are unchanged from the pre-cleanup positional list;
- * see each field's inline doc for details.  The block deliberately
- * mirrors `RenderFrameSettings`'s naming (renderFrame.ts) so the
+ * A single record rather than positional args: callers fill named fields,
+ * new knobs are one type-level edit, and TypeScript's structural matching
+ * catches a missing field at compile time instead of a silent shifted-
+ * argument bug at draw time. Mirrors `RenderFrameSettings`'s naming so the
  * engine-side pass code can pass `{ …settings, … }` without renames.
  */
 

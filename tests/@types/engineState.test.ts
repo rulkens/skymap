@@ -1,19 +1,16 @@
 /**
- * EngineState — type-shape smoke tests.
+ * EngineState — type-shape smoke tests. The module is pure types, so
+ * `tsc --noEmit` does most of the verification; these runtime tests pin
+ * the assertable subset:
  *
- * The module is pure types, so most verification is "does the project
- * still typecheck?" — answered by `tsc --noEmit`. These runtime tests
- * pin the subset that's actually assertable:
+ *   1. A literal compiles when populated with realistic values.
+ *   2. Building the same shape from `data/defaults.ts` typechecks.
+ *   3. Sub-bag fields are mutable — the type isn't accidentally
+ *      `Readonly<>` where the engine wants to assign.
  *
- *   1. A literal of the type compiles when populated with realistic values.
- *   2. Building the same shape from `data/defaults.ts` typechecks
- *      (catches drift in the defaults' types).
- *   3. Sub-bag fields are mutable — i.e. the type isn't accidentally
- *      `Readonly<>` anywhere the engine wants to assign.
- *
- * `EngineSettingsState` is a flat list of cluster sub-bags; the
- * user-facing `mode` and `absMagLimit` live inside `settings.bias`,
- * while `EngineBiasState` holds only the bake-output sentinels
+ * `EngineSettingsState` is a flat list of sub-bags; the user-facing
+ * `mode` and `absMagLimit` live inside `settings.bias`, while
+ * `EngineBiasState` holds only the bake-output sentinels
  * (`apparentMagLimit`, `schechterMStar`, `schechterAlpha`).
  */
 
@@ -56,27 +53,27 @@ import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gp
 import type { EngineCallbacks } from '../../src/@types/engine/EngineCallbacks';
 import { Source, SOURCE_REGISTRY } from '../../src/data/sources';
 
-// A no-op callback bag suitable for the selection subsystem fixture.
-// `onHoverChange` / `onSelectChange` are the only fields the subsystem
-// actually reads; the rest are typed-required-only.
+// No-op callback bag for the selection subsystem fixture.
+// `onHoverChange` / `onSelectChange` are the only fields it reads; the
+// rest exist only to satisfy the type.
 const noopCb = {
   onStatusChange: () => {},
   onHoverChange: () => {},
   onSelectChange: () => {},
 } as unknown as EngineCallbacks;
 
-// Inject a no-op rAF/cAF pair so the scheduler factory doesn't reach
-// for `window.requestAnimationFrame` in the Vitest node environment.
-// We never fire frames in these tests — the scheduler is built only so
-// the EngineState literal has a real (typed) value to point at.
+// No-op rAF/cAF pair so the scheduler factory doesn't reach for
+// `window.requestAnimationFrame` in the Vitest node environment. No
+// frames fire here — the scheduler is built only to give the
+// EngineState literal a real (typed) value.
 const noopRaf: typeof requestAnimationFrame = () => 0;
 const noopCaf: typeof cancelAnimationFrame = () => {};
 
 describe('EngineState type', () => {
   it('accepts a literal populated with realistic values', () => {
     // Build each sub-bag separately so a future field addition forces
-    // an explicit update here too — easier to spot the drift than a
-    // single 30-line literal.
+    // an explicit update here — easier to spot than in a single
+    // 30-line literal.
     const settings: EngineSettingsState = {
       points: {
         sizePx: 2.5,
@@ -219,10 +216,9 @@ describe('EngineState type', () => {
   });
 
   it('builds the settings + bias + sources sub-bags directly from data/defaults.ts', () => {
-    // Mirror the construction the engine itself uses on startup — if
-    // any default's type drifts (e.g. `DEFAULT_BIAS_MODE` becomes a
-    // string), this test fails to compile and we catch it here rather
-    // than inside the 1500-line engine.ts.
+    // Mirror the engine's startup construction — if a default's type
+    // drifts (e.g. `DEFAULT_BIAS_MODE` becomes a string), this fails to
+    // compile here rather than inside engine.ts.
     const settings: EngineSettingsState = {
       points: {
         sizePx: DEFAULT_POINT_SIZE_PX,
@@ -273,9 +269,8 @@ describe('EngineState type', () => {
 
   it('allows in-place mutation of every sub-bag field', () => {
     // The engine mutates fields directly (e.g.
-    // `state.settings.points.brightness = v`), so the type must NOT
-    // be Readonly.  We exercise a representative mutation per bag to
-    // lock that contract.
+    // `state.settings.points.brightness = v`), so the type must NOT be
+    // Readonly. Exercise one representative mutation per bag.
     // eslint-disable-next-line prefer-const
     let stateRef: { current: EngineState | null } = { current: null };
     const state: EngineState = {

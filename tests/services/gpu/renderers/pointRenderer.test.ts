@@ -1,25 +1,20 @@
 /**
  * PointRenderer — unit tests for the multi-source bookkeeping API.
  *
- * Task 4 of the multi-survey integration: the renderer now owns one
- * `GPUBuffer` per `Source`, with per-source draw calls toggled by a bitmask.
- * These tests focus on the *bookkeeping* side of that change (count tracking,
- * unload, recompute of `instanceIdOffset`) — not on the actual GPU draw.
+ * The renderer owns one `GPUBuffer` per `Source`, with per-source draw
+ * calls toggled by a bitmask. These tests cover the bookkeeping side
+ * (count tracking, unload, recompute of `instanceIdOffset`), not the GPU
+ * draw.
  *
- * ### Why we cast `device` to `any`
+ * ### Why a stub `GPUDevice`
  *
- * `PointRenderer`'s constructor calls real WebGPU APIs (`createShaderModule`,
- * `createRenderPipeline`, `createBuffer`, …) which only exist on a live
- * `GPUDevice` and cannot be exercised inside Vitest's Node environment. We
- * use a minimal stub `GPUDevice` whose `createBuffer` returns a sentinel
- * object (no real VRAM) and whose `createShaderModule`/`createRenderPipeline`
- * return enough shape for construction to succeed. The tests below only call
- * methods that don't actually touch the GPU pipeline state — `upload()`,
- * `unload()`, `totalCount()` — so this stub is sufficient.
- *
- * If a future test needs to assert anything about the rendered pixels it
- * should run under @webgpu/types in a real browser harness; vitest is the
- * wrong tool for that.
+ * `PointRenderer`'s constructor calls real WebGPU APIs
+ * (`createShaderModule`, `createRenderPipeline`, `createBuffer`, …) that
+ * only exist on a live device. The stub's `createBuffer` returns a
+ * sentinel (no VRAM) and the pipeline factories return just enough shape
+ * for construction. The tests only call methods that don't touch GPU
+ * pipeline state — `upload()`, `unload()`, `totalCount()` — so this is
+ * sufficient. Pixel-level assertions need a real browser harness.
  */
 
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
@@ -33,21 +28,14 @@ import { Source } from '../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { mat4 } from 'gl-matrix';
 
-// `GPUBufferUsage` and friends are populated by the shared
-// `tests/setup/webgpuGlobals.ts` setupFile, which runs once per worker
-// before any `import` here.  We only retain the beforeAll below to wire
-// the bake-runner override.
+// `GPUBufferUsage` and friends come from the shared
+// `tests/setup/webgpuGlobals.ts` setupFile. The beforeAll below only
+// wires the bake-runner override.
 beforeAll(() => {
-  // The production `upload()` spawns a Vite `?worker` chunk to run the bake
-  // off-thread.  Vitest loads modules in Node, where `Worker` doesn't exist
-  // — instead of trying to polyfill the whole worker harness we just route
-  // the bake through the same pure function the worker would call.  Tests
-  // get bit-identical behaviour without any structured-clone round-trip.
-  //
-  // Spec E phase E.4 moved `setBuildBufferRunner` from a class static
-  // (`setBuildBufferRunner(...)`) to a module-level export
-  // (the bare `setBuildBufferRunner(...)` imported above).  See the
-  // function's docstring in pointRenderer.ts for the rationale.
+  // Production `upload()` spawns a Vite `?worker` chunk to bake
+  // off-thread, but `Worker` doesn't exist in Vitest's Node environment.
+  // Route the bake through the same pure function the worker would call —
+  // bit-identical behaviour without a structured-clone round-trip.
   setBuildBufferRunner(async (input) => buildPointInterleavedBuffer(input));
 });
 
@@ -72,16 +60,15 @@ function makeCloud(count: number): GalaxyCatalog {
     magR: new Float32Array(count),
     magI: new Float32Array(count),
     magZ: new Float32Array(count),
-    // v3 orientation fields — the renderer's bookkeeping path doesn't inspect
-    // their values yet (later tasks in galaxy-orientation-disks will), so
-    // zero-filled arrays of the right length are sufficient.
+    // Orientation fields — the bookkeeping path doesn't read their values,
+    // so zero-filled arrays of the right length suffice.
     axisRatio: new Float32Array(count),
     positionAngleDeg: new Float32Array(count),
-    // v4 diameter field — fill with 30 kpc (the project-wide default) so
-    // any future test that reads apparent-size logic won't divide by zero.
+    // Fill with the 30 kpc project default so apparent-size logic never
+    // divides by zero.
     diameterKpc: new Float32Array(count).fill(30),
-    // v5 per-record metadata bytes; zero-filled for non-Milliquas test
-    // fixtures (the renderer's bookkeeping path doesn't read them).
+    // Per-record metadata bytes; zero-filled (the bookkeeping path
+    // doesn't read them).
     classByte: new Uint8Array(count),
     parentSurveyByte: new Uint8Array(count),
     spectroscopicZ: new Float32Array(count),
@@ -133,9 +120,9 @@ function makeStubDevice(): GPUDevice {
   } as unknown as GPUDevice;
 }
 
-// Stub BGLs for the unified-fade architecture — createPointRenderer now
-// requires fadeBgl + sourceBgl as canonical shared layouts.  The stub
-// objects satisfy the branded opaque-newtype shape structurally.
+// Stub BGLs — createPointRenderer requires fadeBgl + sourceBgl +
+// focusBgl as canonical shared layouts. These stubs satisfy the branded
+// opaque-newtype shape structurally.
 function makeStubFadeBgl() {
   return {} as import('../../../../src/@types/rendering/FadeUniformsBgl').FadeUniformsBgl;
 }
@@ -451,26 +438,18 @@ describe('PointRenderer pick-identity packing — cross-source disjointness', ()
   });
 });
 
-// ─── Bias-mode tests deleted (Spec E phase E.4) ──────────────────────────────
+// ─── Bias-mode bake coverage lives elsewhere ─────────────────────────────────
 //
-// Pre-E.4 this file held a `describe('PointRenderer.setBiasMode', …)` block
-// that exercised the renderer's `setBiasMode` / `setSchechterRatioRunner` /
-// `setAngularWeightRunner` surface.  Phase E.4 deleted that surface from
-// PointRenderer (the bake state machine moved to `biasCorrectionSubsystem.ts`).
-// The same scenarios — fast toggle, cache hit on re-toggle, no-bake for
-// identity modes, mid-bake source upload — are covered at the right layer
-// in `tests/services/engine/subsystems/biasCorrectionSubsystem.test.ts`
-// under the named race tests `fast_toggle_race`, `mid_bake_upload_race`,
-// `multi_source_completion_ordering`, plus `attach_before_setMode` /
-// `attach_after_setMode_completes` for the renderer-attach edges.
+// The bias-bake state machine lives in `biasCorrectionSubsystem.ts`, not
+// PointRenderer. Its scenarios — fast toggle, cache hit on re-toggle,
+// no-bake for identity modes, mid-bake source upload — are covered in
+// `tests/services/engine/subsystems/biasCorrectionSubsystem.test.ts`.
 
-// ─── Splice surface (Spec E phase E.1) ───────────────────────────────────────
+// ─── Splice surface ──────────────────────────────────────────────────────────
 //
-// Three new public methods carry the layout-aware splice contract that the
-// future biasCorrectionSubsystem (Spec E phase E.3) will call into.  In
-// E.1 they're dead code from the public surface's POV — no caller invokes
-// them yet — but the tests below assert their byte-write semantics so the
-// surface is verified before the subsystem depends on it.
+// Three public methods carry the layout-aware splice contract that
+// biasCorrectionSubsystem calls into. The tests below assert their
+// byte-write semantics.
 
 /**
  * Build a stub device whose `queue.writeBuffer` calls are captured into the
@@ -650,7 +629,7 @@ describe('PointRenderer.destroy', () => {
     const device = makeDestroyTrackingDevice(buffers);
     const renderer = createPointRenderer(device, 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
     // The constructor allocates two buffers: the renderer's own uniform
-    // and the singleton focus uniform (@group(3), cluster focus mode).
+    // and the singleton focus uniform (@group(3)).
     expect(buffers).toHaveLength(2);
     for (const b of buffers) expect(b.destroyCount).toBe(0);
 

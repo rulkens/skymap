@@ -33,21 +33,19 @@ import type { SourceType } from '../../../@types/data/SourceType';
 // whose `new` spawns it.  The bake runs off-thread to dodge the
 // 10-second main-thread freeze on .bin arrival.  Node-only tests
 // can't resolve `?worker`; they inject a synchronous fallback via
-// `setBuildBufferFactory`.
+// `setBuildBufferRunner`.
 import BuildPointBufferWorker from '../../engine/bake/buildPointInterleavedBuffer.worker?worker';
 import { cloneGalaxyCatalogForTransfer } from '../../../data/galaxyCatalogTransfer';
 import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
 
 // `?static` runs the WESL linker at build time and hands back a plain
-// WGSL string with imports resolved.  Required once we split into
-// `shaders/lib/` — the older `?raw` suffix bypassed the linker.
+// WGSL string with imports resolved.
 import vsCode from '../shaders/points/vertex.wesl?static';
 import colorFsCode from '../shaders/points/colorFragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
-import type { FocusUniformsValue } from '../../../@types/rendering/FocusUniformsValue';
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
 
@@ -97,7 +95,7 @@ const SCHECHTER_RATIO_BYTE_OFFSET = 36;
  * Slot 10: HEALPix angular re-weight (Malmquist mode 4).  Default
  * 1.0; real per-galaxy values spliced in lazily by
  * `biasCorrectionSubsystem` when the user first picks mode 4 (same
- * pattern as Schechter — see `SCHECHTER_RATIO_BYTE_OFFSET`).
+ * pattern as Schechter).
  *
  * Per-vertex (not uniform) because the weight depends on each galaxy's
  * HEALPix cell + log-distance shell, which in turn depend on the
@@ -141,8 +139,8 @@ export const POINT_VERTEX_ATTRIBUTES: readonly GPUVertexAttribute[] = [
 
 /**
  * Byte offsets into the shared `Uniforms` buffer for the slots PickRenderer
- * overwrites per-pass.  Single source of truth: PointRenderer's full pack
- * and PickRenderer's partial writes both read from these constants.
+ * overwrites per-pass.  Single source of truth for both the full pack and
+ * the partial pick writes.
  *
  *   - `SELECTED_PACKED_BYTE_OFFSET` — picker writes the "no selection"
  *     sentinel so the 8× ring scaling doesn't inflate the pick area.
@@ -157,78 +155,55 @@ export const POINT_SIZE_BYTE_OFFSET = 88;
 export const PICK_PASS_BYTE_OFFSET = 168;
 
 /**
- * Byte size of the `Uniforms` struct as seen by the GPU.
- *
- * The struct contains (offsets are byte offsets from the start of the buffer):
+ * Byte size of the `Uniforms` struct as seen by the GPU.  Byte offsets
+ * from the start of the buffer:
  *
  *   bytes  0..63  : cam.viewProj      mat4x4<f32>  (16 floats = 64 bytes)  } CameraUniforms
  *   bytes 64..71  : cam.viewportPx    vec2<f32>    (2 floats)              } prefix from
  *   bytes 72..75  : cam._pad0         f32          (alignment slack)       } lib/camera.wesl
  *   bytes 76..79  : cam._pad1         f32          (alignment slack)       } (80 B total)
- *   bytes 80..83  : selectedPacked    u32                             ← (selectedSource << 27) | selectedLocalIdx, or 0xFFFFFFFF
- *   bytes 84..87  : sourceCode        u32                             ← per-draw source tag (5 bits used)
- *   bytes 88..91  : pointSizePx       f32   (moved here from offset 72 — see Uniforms doc-block)
- *   bytes 92..95  : brightness        f32   (moved here from offset 76 — see Uniforms doc-block)
+ *   bytes 80..83  : selectedPacked    u32          ← (selectedSource << 27) | selectedLocalIdx, or 0xFFFFFFFF
+ *   bytes 84..87  : sourceCode        u32          ← per-draw source tag (5 bits used)
+ *   bytes 88..91  : pointSizePx       f32
+ *   bytes 92..95  : brightness        f32
  *   bytes 96..107 : camPosWorld       vec3<f32>    (3 floats)        } 16 bytes (one vec4 slot)
  *   bytes 108..111: pxPerRad          f32          (1 float)         }
  *   bytes 112..115: highlightFallback u32                            }
  *   bytes 116..119: realOnlyMode      u32                            } 16 bytes (one vec4 slot)
- *   bytes 120..123: depthFadeEnabled  u32   (formerly _pad3, now a UI toggle)
- *   bytes 120..127: _pad3/_pad4       u32×2        (written as 0)    }
+ *   bytes 120..123: depthFadeEnabled  u32          (UI toggle)
+ *   bytes 124..127: _pad4             u32          (written as 0)
  *   bytes 128..131: biasMode          u32          (Malmquist mode)  }
  *   bytes 132..135: absMagLimit       f32          (volume-limit M)  }
- *   bytes 136..139: apparentMagLimit  f32          (Task 3, reserved)} 32 bytes
- *   bytes 140..143: schechterMStar    f32          (Task 4 — per-source) }  (two vec4 slots)
- *   bytes 144..147: schechterAlpha    f32          (Task 4 — per-source) }
- *   bytes 148..151: schechterMLim     f32          (Task 4 — per-source) }
- *   bytes 152..155: schechterNRef     f32          (Task 4 — per-source) }
- *   bytes 156..159: _pad5             u32          (written as 0)        }
- *   bytes 160..163: pxFadeStart       f32   (Task 8 procedural-disk band low)  }
- *   bytes 164..167: pxFadeEnd         f32   (Task 8 procedural-disk band high) } 16 bytes
- *   bytes 168..171: pickPass          u32          (0 = visual, 1 = pick)       }
- *   bytes 172..175: _padFade1         f32          (written as 0)               }
+ *   bytes 136..139: apparentMagLimit  f32          (reserved)        } 32 bytes
+ *   bytes 140..143: schechterMStar    f32          (per-source)      }  (two vec4 slots)
+ *   bytes 144..147: schechterAlpha    f32          (per-source)      }
+ *   bytes 148..151: schechterMLim     f32          (per-source)      }
+ *   bytes 152..155: schechterNRef     f32          (per-source)      }
+ *   bytes 156..159: _pad5             u32          (written as 0)    }
+ *   bytes 160..163: pxFadeStart       f32          (procedural-disk band low)  }
+ *   bytes 164..167: pxFadeEnd         f32          (procedural-disk band high) } 16 bytes
+ *   bytes 168..171: pickPass          u32          (0 = visual, 1 = pick)      }
+ *   bytes 172..175: _padFade1         f32          (written as 0)              }
  *
  * Total: 176 bytes — a multiple of 16 ✓
  *
- * WGSL uniform buffers follow rules similar to std140 (see WGSL spec §13,
- * "Memory Layout"). Each member must be aligned to its alignment value:
- * `vec3<f32>` requires 16-byte alignment, which is why we still need 8
- * bytes between `sourceCode` (offset 84) and `camPosWorld` (offset 96).
- * The pre-CameraUniforms layout filled those 8 bytes with explicit
- * `_pad0/_pad1` u32s; the post-refactor layout fills them with
- * `pointSizePx` + `brightness` (formerly at offsets 72/76, which now
- * belong to `CameraUniforms._pad0/_pad1`). Same number of bytes, same
- * alignment — the displaced scalars simply moved into the existing pad slack.
+ * WGSL uniform buffers follow rules similar to std140 (WGSL spec §13,
+ * "Memory Layout").  `vec3<f32>` requires 16-byte alignment, which is why
+ * 8 bytes sit between `sourceCode` (offset 84) and `camPosWorld` (offset
+ * 96) — filled here by `pointSizePx` + `brightness`.
  *
- * The picker (`pickRenderer.ts`) writes `selectedPacked` (offset 80,
- * UNCHANGED across the refactor) + `sourceCode` (offset 84) for every
- * per-source draw — see its `pick()` docblock for the per-source
- * uniform-write pattern that lets the pick pass see the same packed
- * identity space the visual pass does. It also writes `pointSizePx` at
- * offset 88 (moved from offset 72 by the CameraUniforms refactor).
+ * The picker (`pickRenderer.ts`) writes `selectedPacked` (offset 80) +
+ * `sourceCode` (offset 84) for every per-source draw — see its `pick()`
+ * docblock for the per-source uniform-write pattern that lets the pick
+ * pass see the same packed identity space the visual pass does.  It also
+ * writes `pointSizePx` at offset 88.
  *
- * Task 15 added the trailing 16-byte slot for the orientation-visibility
- * toggles (`highlightFallback`, `realOnlyMode`).  The two trailing u32
- * padding words round the struct out to a 16-byte boundary so a future
- * vec3/vec4 append doesn't fall into mis-alignment.
- *
- * The Malmquist-bias plan adds 7 × 4 = 28 bytes of payload (one u32 mode
- * selector + six f32 thresholds for Tasks 2-4).  Rounded up to a 16-byte
- * boundary that's 32 bytes added → 160 bytes total.  Task 4 (Schechter
- * density correction) writes the four `schechter*` slots PER SOURCE in
- * `draw()` between per-source draw calls — each survey has its own M*,
- * α, m_lim, and pre-computed central-density normaliser.  See the
- * `LoadedSource.schechter*` fields and `draw()`'s per-source uniform
- * write for the full reasoning.
- *
- * BYTE-OFFSET CONSTANTS for the per-source partial uniform write below.
+ * The trailing u32 padding words round the struct out to a 16-byte
+ * boundary so a future vec3/vec4 append doesn't fall into mis-alignment.
+ * The four `schechter*` slots are written PER SOURCE in `draw()` between
+ * per-source draw calls — each survey has its own M*, α, m_lim, and
+ * pre-computed central-density normaliser.
  */
-// Trailing 16-byte block for the procedural-disk crossfade-OUT band:
-//   bytes 160..163: pxFadeStart  f32
-//   bytes 164..167: pxFadeEnd    f32
-//   bytes 168..171: pickPass     u32   (pickRenderer writes 1 here)
-//   bytes 172..175: _padFade1    f32   (alignment pad)
-// Total: 176 bytes (multiple of 16 ✓).
 const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4 + 4 * 4; // 176 bytes
 
 /**
@@ -279,11 +254,10 @@ export function setBuildBufferRunner(runner: BuildRunner | null): void {
 }
 
 // The `schechter*` uniform slots at byte offsets 140..155 are
-// dead-but-reserved.  The Schechter integral now bakes into the
-// per-vertex `schechterRatio` attribute, so the fragment shader no
-// longer reads these slots.  They stay in the `Uniforms` struct for
-// binary compatibility — removing them would shift every subsequent
-// member's offset.
+// dead-but-reserved: the Schechter integral bakes into the per-vertex
+// `schechterRatio` attribute, so no shader reads these slots.  They
+// stay in the `Uniforms` struct for layout stability — removing them
+// would shift every subsequent member's offset.
 
 // ─── Per-source bookkeeping ───────────────────────────────────────────────────
 
@@ -377,8 +351,7 @@ export function createPointRenderer(
       targets: [
         {
           format,
-          // Additive blend so overlapping halos brighten (long-exposure
-          // style).  See points.wgsl @module comment.
+          // Additive blend so overlapping halos brighten (long-exposure style).
           blend: {
             color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
             alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
@@ -755,9 +728,8 @@ export function createPointRenderer(
     // u32[37..39] (_pad5/6/7) stay zero (16-byte boundary padding).
 
     // Procedural-disk crossfade band.  Slot 42 is `pickPass` — stays 0
-    // here (visual pass); pickRenderer flips it to 1 in place before
-    // its draw, and this full-buffer rewrite resets it on the next
-    // visual frame.
+    // here (visual pass); pickRenderer flips it to 1 in place before its
+    // draw, and this full-buffer rewrite resets it each visual frame.
     f32[40] = pxFadeStart;
     f32[41] = pxFadeEnd;
     // f32[42] (pickPass) / f32[43] (_padFade1) stay zero.

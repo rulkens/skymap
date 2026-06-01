@@ -35,15 +35,13 @@ export type RenderFrameSettings = {
   depthFadeEnabled: boolean;
   /**
    * Procedural-disk crossfade-OUT thresholds for the points-pass
-   * fragment shader (Task 8 of the procedural-disk-impostor plan).
-   * Below `pxFadeStartPoints` the points pass renders at full alpha;
-   * above `pxFadeEndPoints` it renders at zero alpha (handing off to
-   * the procedural-disk pass entirely); inside the band a smoothstep
-   * complementary to the disk pass's fade-IN does a continuous
-   * crossfade.  Engine sources both from
-   * `PROCEDURAL_DISK_FADE_START_PX` / `_END_PX` in
-   * `subsystems/thumbnailSubsystem` so the two passes share a single
-   * source of truth.
+   * fragment shader.  Below `pxFadeStartPoints` points render at full
+   * alpha; above `pxFadeEndPoints` at zero alpha (handing off to the
+   * procedural-disk pass); inside the band a smoothstep complementary
+   * to the disk pass's fade-IN does a continuous crossfade.  Both come
+   * from `PROCEDURAL_DISK_FADE_START_PX` / `_END_PX` in
+   * `subsystems/thumbnailSubsystem` so the two passes share one source
+   * of truth.
    */
   pxFadeStartPoints: number;
   pxFadeEndPoints: number;
