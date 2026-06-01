@@ -61,9 +61,7 @@ import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
 import { createSyntheticVolumeSlots } from '../../loading/slots/syntheticVolumeSlots';
 import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';
 import { wireImpostorSubsystems } from '../wiring/wireImpostorSubsystems';
-// Cosmography POI anchors wired unconditionally into the POI subsystem
-// below — the user-facing toggle is the SettingsPanel per-category
-// checkbox, not a URL gate.
+import { registerOverlayFades } from '../wiring/registerOverlayFades';
 import { buildStaticAnchorPois } from '../../../data/buildStaticAnchorPois';
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfInterest';
@@ -276,50 +274,16 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   for (const [, slot] of allSlots) progressEmitter.attachSlot(slot);
   state.subsystems.loadProgress = progressEmitter;
 
-  // famous-meta is declared as Famous's `companion` in the registry;
-  // it fires from the boot loop below alongside the Famous bin.
-  // PGC-aliases stay lazy; see `loadPgcAliases()` on the handle for
-  // the on-demand trigger.
-
   // Build and wire the five impostor subsystems (galaxy atlas, textured
   // disks, procedural disks, hi-res Famous texture + planner).  The
   // renderer null-check and all construction details live in the
   // extracted module so each bootstrap concern has its own home.
   wireImpostorSubsystems(state, deps);
 
-  // Register the three always-on overlay fade handles. The registry makes
-  // them addressable by a future tour subsystem without per-renderer
-  // plumbing. Milky Way registers at its current settings value (not a
-  // blanket 1.0) because the toggle path multiplies this opacity into
-  // the renderer's distance-based fadeAlpha — always registering at 1
-  // would make a default-off session draw the Milky Way on the first frame.
-  state.subsystems.fades.register(
-    { kind: 'overlay', id: 'milkyWay' },
-    state.settings.milkyWay.enabled ? 1 : 0,
-  );
-  state.subsystems.fades.register({ kind: 'overlay', id: 'proceduralDisks' }, 1);
-  state.subsystems.fades.register({ kind: 'overlay', id: 'texturedDisks' }, 1);
-
-  // Scalar-volume master gate. Registered at the current settings
-  // value so a default-on session sees 1.0 from frame 1 (and the
-  // encodeHdr* multipliers don't accidentally suppress the per-field
-  // opacities); a default-off session sits at 0 until the user
-  // toggles master on, at which point setVolumesEnabled fires fadeTo
-  // up to 1 over FADE_IN_DURATION_MS.
-  state.subsystems.fades.register(
-    { kind: 'volumesMaster' },
-    state.settings.volumes.masterEnabled ? 1 : 0,
-  );
-
-  // Register the four label-layer fade handles. youAreHere / poi /
-  // galaxyNames start at 0 — their producers fire fadeTo(1) on first
-  // non-empty emit (see youAreHereSubsystem + poiSubsystem). scaleBar
-  // is React-side, registered at 1 for tour addressability but never
-  // auto-faded by the engine.
-  state.subsystems.fades.register({ kind: 'labelLayer', layer: 'youAreHere' }, 0);
-  state.subsystems.fades.register({ kind: 'labelLayer', layer: 'poi' }, 0);
-  state.subsystems.fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 0);
-  state.subsystems.fades.register({ kind: 'labelLayer', layer: 'scaleBar' }, 1);
+  // Register overlay, volume-master, and label-layer fade handles.
+  // Initial opacities are settings-derived so frame 1 is coherent with
+  // the user's stored preferences.  Details in registerOverlayFades.ts.
+  registerOverlayFades(state);
 
   // Signal loading state immediately so the user knows something is
   // happening before the (potentially multi-second) fetch completes.
