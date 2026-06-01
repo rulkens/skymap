@@ -181,22 +181,25 @@ describe('ASSET_WIRING demand predicates', () => {
     expect(pgc.demand(makeCtx({ requests: new Set() }))).toBe(false);
   });
 
-  it('Synthetic demands only when every real survey settled in error', () => {
+  it("Synthetic demands only when the 'syntheticFallback' request is armed", () => {
+    // The precise gate (count-aware, hidden-at-boot-aware) lives in
+    // createSyntheticFallback, which trips this request flag. The row's
+    // predicate is now a plain flag read; slot states are irrelevant to it.
     const synth = rowFor(Source.Synthetic);
-    const allError = {
-      [Source.SDSS]: 'error' as const,
-      [Source.TwoMRS]: 'error' as const,
-      [Source.Glade]: 'error' as const,
-      [Source.Milliquas]: 'error' as const,
-    };
-    expect(synth.demand(makeCtx({ slotStates: allError }))).toBe(true);
-    // One survey ready ⇒ not a fallback case.
+    expect(synth.demand(makeCtx({ requests: new Set(['syntheticFallback']) }))).toBe(true);
+    expect(synth.demand(makeCtx({ requests: new Set() }))).toBe(false);
+    // Survey slot states don't move the predicate any more.
     expect(
-      synth.demand(makeCtx({ slotStates: { ...allError, [Source.SDSS]: 'ready' } })),
-    ).toBe(false);
-    // One survey still loading ⇒ not yet settled.
-    expect(
-      synth.demand(makeCtx({ slotStates: { ...allError, [Source.Glade]: 'loading' } })),
+      synth.demand(
+        makeCtx({
+          slotStates: {
+            [Source.SDSS]: 'error',
+            [Source.TwoMRS]: 'error',
+            [Source.Glade]: 'error',
+            [Source.Milliquas]: 'error',
+          },
+        }),
+      ),
     ).toBe(false);
   });
 });

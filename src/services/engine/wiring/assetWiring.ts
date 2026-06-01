@@ -62,7 +62,6 @@ import { createClusterCatalogSlot } from '../../loading/slots/clusterCatalogSlot
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
 import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
-import { allSurveysSettledWithoutSuccess } from './createSyntheticFallback';
 import type { SourceType } from '../../../@types/data/SourceType';
 
 /**
@@ -111,14 +110,15 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
   pointRow(Source.Milliquas),
   pointRow(Source.Famous),
   {
-    // Synthetic fallback: loads only when every real survey has failed.
-    // Predicate (ctx-level approximation) lives in createSyntheticFallback;
-    // the slot-level fallback wiring owns the precise empty-ready edge.
+    // Synthetic fallback: loads only when armed by `createSyntheticFallback`,
+    // which runs the precise gate (count-aware, hidden-at-boot-aware) at the
+    // slot-subscription level and trips the `'syntheticFallback'` request flag.
+    // A pure ctx predicate can't express that gate — see createSyntheticFallback.
     key: Source.Synthetic,
     built: 'external',
     factory: externalFactory,
     req: (tier) => ({ source: Source.Synthetic, tier }),
-    demand: (ctx) => allSurveysSettledWithoutSuccess(ctx),
+    demand: (ctx) => ctx.request('syntheticFallback'),
   },
 
   // ── Famous-galaxy meta sidecar ───────────────────────────────────

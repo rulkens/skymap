@@ -46,12 +46,12 @@
  * The boot settings stub uses the same `seedVolumeFields` helper so the
  * test exercises the real defaults rather than a hand-rolled record.
  *
- * ### SURVEY_POINT_SOURCES (Synthetic fallback gate)
+ * ### Synthetic fallback gate
  *
- * `allSurveysSettledWithoutSuccess` iterates `SURVEY_POINT_SOURCES`:
- * SDSS, TwoMRS, Glade, Milliquas (the `category === 'survey'` rows).
- * Famous is category 'curated'; Synthetic is 'synthetic'. Both are excluded.
- * The 'all surveys errored' case must drive all four to 'error'.
+ * The Synthetic row's demand is now a plain `ctx.request('syntheticFallback')`
+ * read. The precise gate (count-aware, hidden-at-boot-aware) lives in
+ * `createSyntheticFallback` and trips that flag; this regression net only
+ * models the armed state by seeding the request set.
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
@@ -339,19 +339,18 @@ describe('reevaluateDemand demand-table regression', () => {
   });
 
   /**
-   * All real surveys errored: Synthetic fallback is demanded.
-   * SURVEY_POINT_SOURCES = [SDSS, TwoMRS, Glade, Milliquas] (category 'survey').
-   * All four slots must be 'error' for allSurveysSettledWithoutSuccess to fire.
-   * Milliquas is NOT in the default drawMask (visible: false in SOURCE_REGISTRY)
-   * so its point row's demand is false — only Synthetic gets triggered here
-   * among the survey/synthetic rows. Famous (curated) and its slot states are
-   * orthogonal.
+   * Synthetic fallback armed: the `'syntheticFallback'` request flag is set
+   * (the precise gate in createSyntheticFallback owns the decision to arm it;
+   * here we just model the armed state), so the Synthetic row is demanded.
    *
-   * In this case Famous slot is also set to 'error' to reflect that it failed
-   * too, but famousMeta will still be demanded because Famous slot !== 'idle'.
-   * clusterCatalog is still demanded (structure categories still visible).
+   * The survey slots are still driven to 'error' to mirror a realistic
+   * all-failed boot, but those slot states no longer feed the Synthetic
+   * predicate — the flag does. Milliquas is NOT in the default drawMask
+   * (visible: false in SOURCE_REGISTRY) so its point row's demand is false.
+   * Famous (curated) errored too; famousMeta still demands because Famous
+   * slot !== 'idle'. clusterCatalog is still demanded (categories visible).
    */
-  it('all real surveys errored: Synthetic demanded', () => {
+  it('synthetic fallback armed: Synthetic demanded', () => {
     const pointSlots: PointSlotOverrides = {
       [Source.SDSS]: stubSlot('error'),
       [Source.TwoMRS]: stubSlot('error'),
@@ -362,7 +361,7 @@ describe('reevaluateDemand demand-table regression', () => {
       [Source.Famous]: stubSlot('error'),
     };
     const namedSlots: NamedSlotOverrides = {};
-    const state = makeState({ pointSlots, namedSlots });
+    const state = makeState({ requests: new Set(['syntheticFallback']), pointSlots, namedSlots });
 
     const fired = firedKeys(state);
 
