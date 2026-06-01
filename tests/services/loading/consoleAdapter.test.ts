@@ -55,10 +55,7 @@ describe('consoleAdapterFor', () => {
   it('logs ready transition', () => {
     const log = consoleAdapterFor('test');
     log(loading(100, 100), ready);
-    expect(console.log).toHaveBeenCalledWith(
-      expect.stringContaining('ready'),
-      expect.anything(),
-    );
+    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('ready'), expect.anything());
   });
 
   it('does not log idle→idle no-op transitions', () => {

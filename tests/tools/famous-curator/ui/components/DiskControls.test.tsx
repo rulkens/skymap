@@ -53,7 +53,13 @@ describe('DiskControls', () => {
   });
 });
 
-const base: RecipeDisk = { centerPx: [1, 2], radiusPx: 3, paDeg: 4, axisRatio: 0.5, deproject: true };
+const base: RecipeDisk = {
+  centerPx: [1, 2],
+  radiusPx: 3,
+  paDeg: 4,
+  axisRatio: 0.5,
+  deproject: true,
+};
 
 describe('DiskControls margin slider', () => {
   it('renders the slider only when deproject is on', () => {
@@ -62,7 +68,11 @@ describe('DiskControls margin slider', () => {
     );
     expect(queryByTestId('margin-slider')).not.toBeNull();
     rerender(
-      <DiskControls disk={{ ...base, deproject: false }} catalogAxisRatio={0.5} onDiskChange={() => {}} />,
+      <DiskControls
+        disk={{ ...base, deproject: false }}
+        catalogAxisRatio={0.5}
+        onDiskChange={() => {}}
+      />,
     );
     expect(queryByTestId('margin-slider')).toBeNull();
   });

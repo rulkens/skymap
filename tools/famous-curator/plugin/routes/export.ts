@@ -31,11 +31,7 @@
 import sharp from 'sharp';
 import { copyFileSync, existsSync, mkdirSync, rmSync, renameSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import {
-  curatedGalaxyDir,
-  curatedTmpDir,
-  overrideIndexPath,
-} from '../paths.js';
+import { curatedGalaxyDir, curatedTmpDir, overrideIndexPath } from '../paths.js';
 import { sessionPath } from '../tmpSession.js';
 import { serialiseRecipe, validateRecipeDisk, type Recipe, type RecipeDisk } from '../recipe.js';
 import { upsertOverrideEntry, type OverrideIndex } from '../overrideIndex.js';

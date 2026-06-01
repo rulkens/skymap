@@ -103,10 +103,7 @@ export function deriveFamousCalibration(input: DeriveCalibrationInput): FamousCa
   // face-on texture actually shows it; the disk becomes round (axisRatio 1).
   // Non-deprojected: pass the local coords through unchanged.
   const localYNorm = deprojected ? localY / effectiveAxisRatio : localY;
-  const center: Vec2 = [
-    (localX + halfWidth) / crop.width,
-    (localYNorm + halfWidth) / crop.width,
-  ];
+  const center: Vec2 = [(localX + halfWidth) / crop.width, (localYNorm + halfWidth) / crop.width];
 
   // ── Radius ────────────────────────────────────────────────────────────────
   // Fraction of the final-image half-width, so 1.0 means the disk edge

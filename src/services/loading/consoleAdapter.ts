@@ -28,10 +28,9 @@ import type { LoadState } from '../../@types/loading/LoadState';
 
 const BYTES_LOG_INTERVAL_MS = 250;
 
-export function consoleAdapterFor(name: string): (
-  prev: LoadState<unknown>,
-  next: LoadState<unknown>,
-) => void {
+export function consoleAdapterFor(
+  name: string,
+): (prev: LoadState<unknown>, next: LoadState<unknown>) => void {
   let lastBytesLogMs = 0;
   const dev = !!import.meta.env.DEV;
 
@@ -48,10 +47,9 @@ export function consoleAdapterFor(name: string): (
         lastBytesLogMs = now;
         if (dev) {
           const pct = next.total > 0 ? Math.round((next.loaded / next.total) * 100) : 0;
-          console.log(
-            `[loading] ${name} bytes ${pct}% (${next.loaded}/${next.total})`,
-            { attempt: next.attempt },
-          );
+          console.log(`[loading] ${name} bytes ${pct}% (${next.loaded}/${next.total})`, {
+            attempt: next.attempt,
+          });
         }
       }
       return;

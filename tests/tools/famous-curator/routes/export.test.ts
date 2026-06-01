@@ -81,7 +81,8 @@ describe('handleExport', () => {
     const repo = fakeRepoRoot();
     await handleExport({
       body: {
-        id: 'm31', tmpId: sess.tmpId,
+        id: 'm31',
+        tmpId: sess.tmpId,
         crop: { x: 0, y: 0, width: 256, height: 256, rotationDeg: 0 },
         starnet: { stride: 256, upsample: false },
         alpha: { blackPoint: 8, whitePoint: 200, gamma: 0.7 },
@@ -90,7 +91,9 @@ describe('handleExport', () => {
       repoRoot: repo,
       sessionDirOverride: sess.sessionDir,
     });
-    const idx = JSON.parse(readFileSync(resolve(repo, 'data/famous_curated_overrides.json'), 'utf8'));
+    const idx = JSON.parse(
+      readFileSync(resolve(repo, 'data/famous_curated_overrides.json'), 'utf8'),
+    );
     expect(idx.entries.m31.author).toBe('Alice');
     expect(idx.entries.m31.dir).toBe('famous-curated/m31');
   });
@@ -101,7 +104,8 @@ describe('handleExport', () => {
     // First export.
     await handleExport({
       body: {
-        id: 'm31', tmpId: sess.tmpId,
+        id: 'm31',
+        tmpId: sess.tmpId,
         crop: { x: 0, y: 0, width: 256, height: 256, rotationDeg: 0 },
         starnet: { stride: 256, upsample: false },
         alpha: { blackPoint: 8, whitePoint: 200, gamma: 0.7 },
@@ -116,7 +120,8 @@ describe('handleExport', () => {
     // Re-export.
     await handleExport({
       body: {
-        id: 'm31', tmpId: sess.tmpId,
+        id: 'm31',
+        tmpId: sess.tmpId,
         crop: { x: 0, y: 0, width: 256, height: 256, rotationDeg: 0 },
         starnet: { stride: 256, upsample: false },
         alpha: { blackPoint: 8, whitePoint: 200, gamma: 0.7 },

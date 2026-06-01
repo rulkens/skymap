@@ -247,8 +247,7 @@ function AppInner() {
   function onDiskChange(nextDisk: RecipeDisk): void {
     const prevDisk = state.disk;
     const wasDeproj =
-      prevDisk?.deproject === true &&
-      willDeproject(prevDisk.axisRatio ?? catalogAxisRatio ?? 1);
+      prevDisk?.deproject === true && willDeproject(prevDisk.axisRatio ?? catalogAxisRatio ?? 1);
     const nextEffectiveAxisRatio = nextDisk.axisRatio ?? catalogAxisRatio ?? 1;
     const nowDeproj = nextDisk.deproject === true && willDeproject(nextEffectiveAxisRatio);
 

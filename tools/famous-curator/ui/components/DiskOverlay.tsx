@@ -348,7 +348,7 @@ export function DiskOverlay(props: DiskOverlayProps) {
               cx={edgePt[0]}
               cy={edgePt[1]}
               r={handleRadiusSrc}
-            vectorEffect="non-scaling-stroke"
+              vectorEffect="non-scaling-stroke"
               style={{ pointerEvents: interactive ? 'all' : 'none', cursor: 'crosshair' }}
               onPointerDown={startHandleDrag('edge')}
               onPointerMove={onHandlePointerMove}
@@ -364,7 +364,7 @@ export function DiskOverlay(props: DiskOverlayProps) {
               cx={minorPt[0]}
               cy={minorPt[1]}
               r={handleRadiusSrc}
-            vectorEffect="non-scaling-stroke"
+              vectorEffect="non-scaling-stroke"
               style={{ pointerEvents: interactive ? 'all' : 'none', cursor: 'ns-resize' }}
               onPointerDown={startHandleDrag('minor')}
               onPointerMove={onHandlePointerMove}

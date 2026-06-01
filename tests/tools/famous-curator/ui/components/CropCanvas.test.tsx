@@ -120,8 +120,7 @@ describe('CropCanvas', () => {
     // infinite.  Stub the source <img> to report a 1:1 layout so the drag
     // math is exercisable; source.width === 1000 ⇒ canvasScale === 1.
     const img = container.querySelector('img.curator-crop-source') as HTMLImageElement;
-    img.getBoundingClientRect = () =>
-      ({ left: 0, top: 0, width: 1000, height: 1000 }) as DOMRect;
+    img.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1000, height: 1000 }) as DOMRect;
     const se = container.querySelector('[data-handle="se"]') as Element;
     // jsdom's setPointerCapture/releasePointerCapture throw "No active
     // pointer" for synthetic fireEvent pointers; stub them to no-ops.

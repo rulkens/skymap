@@ -14,6 +14,7 @@
 import { describe, expect, it } from 'vitest';
 import { deriveFamousCalibration } from '../../../tools/famous/deriveFamousCalibration';
 import type { RecipeCrop, RecipeDisk } from '../../../tools/famous-curator/plugin/recipe';
+import type { Vec2 } from '../../../src/@types/math/Vec2';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -45,7 +46,7 @@ function makeCrop(overrides: Partial<RecipeCrop> = {}): RecipeCrop {
 describe('deriveFamousCalibration', () => {
   it('centred nucleus, unrotated crop → center [0.5, 0.5]', () => {
     // Nucleus sits exactly at the crop centre → should map to [0.5, 0.5].
-    const disk = makeDisk({ centerPx: [256, 256] });  // crop center = (128+128, 128+128) = (256,256)
+    const disk = makeDisk({ centerPx: [256, 256] }); // crop center = (128+128, 128+128) = (256,256)
     const crop = makeCrop();
     const cal = deriveFamousCalibration({ disk, crop, catalogAxisRatio: 0.6, deprojected: false });
 
@@ -111,23 +112,43 @@ describe('deriveFamousCalibration', () => {
 
   it('axisRatio falls back to catalogAxisRatio when disk.axisRatio absent', () => {
     // disk has no axisRatio field → should use catalogAxisRatio.
-    const disk = makeDisk();  // no axisRatio
-    const cal = deriveFamousCalibration({ disk, crop: makeCrop(), catalogAxisRatio: 0.42, deprojected: false });
+    const disk = makeDisk(); // no axisRatio
+    const cal = deriveFamousCalibration({
+      disk,
+      crop: makeCrop(),
+      catalogAxisRatio: 0.42,
+      deprojected: false,
+    });
 
     expect(cal.axisRatio).toBeCloseTo(0.42, 10);
   });
 
   it('disk.axisRatio takes precedence over catalogAxisRatio when present', () => {
     const disk = makeDisk({ axisRatio: 0.7 });
-    const cal = deriveFamousCalibration({ disk, crop: makeCrop(), catalogAxisRatio: 0.42, deprojected: false });
+    const cal = deriveFamousCalibration({
+      disk,
+      crop: makeCrop(),
+      catalogAxisRatio: 0.42,
+      deprojected: false,
+    });
 
     expect(cal.axisRatio).toBeCloseTo(0.7, 10);
   });
 
   it('deprojected flag passes through', () => {
     const disk = makeDisk();
-    const calTrue = deriveFamousCalibration({ disk, crop: makeCrop(), catalogAxisRatio: 0.6, deprojected: true });
-    const calFalse = deriveFamousCalibration({ disk, crop: makeCrop(), catalogAxisRatio: 0.6, deprojected: false });
+    const calTrue = deriveFamousCalibration({
+      disk,
+      crop: makeCrop(),
+      catalogAxisRatio: 0.6,
+      deprojected: true,
+    });
+    const calFalse = deriveFamousCalibration({
+      disk,
+      crop: makeCrop(),
+      catalogAxisRatio: 0.6,
+      deprojected: false,
+    });
 
     expect(calTrue.deprojected).toBe(true);
     expect(calFalse.deprojected).toBe(false);
@@ -139,29 +160,52 @@ describe('deriveFamousCalibration deprojected branch', () => {
   const aspect = 0.5;
   const crop = { x: 100, y: 100, width: 400, height: 200, rotationDeg: 30 };
   const disk = {
-    centerPx: [300, 200] as [number, number], // off-centre vs crop centre (300,200)
-    radiusPx: 80, paDeg: 30, axisRatio: aspect, deproject: true,
+    centerPx: [300, 200] as Vec2, // off-centre vs crop centre (300,200)
+    radiusPx: 80,
+    paDeg: 30,
+    axisRatio: aspect,
+    deproject: true,
   };
 
   it('emits PA = 0 (texture is face-on)', () => {
-    const cal = deriveFamousCalibration({ disk, crop, catalogAxisRatio: aspect, deprojected: true });
+    const cal = deriveFamousCalibration({
+      disk,
+      crop,
+      catalogAxisRatio: aspect,
+      deprojected: true,
+    });
     expect(cal.paDeg).toBe(0);
   });
 
   it('emits axisRatio = 1 (no runtime re-tilt)', () => {
-    const cal = deriveFamousCalibration({ disk, crop, catalogAxisRatio: aspect, deprojected: true });
+    const cal = deriveFamousCalibration({
+      disk,
+      crop,
+      catalogAxisRatio: aspect,
+      deprojected: true,
+    });
     expect(cal.axisRatio).toBe(1);
   });
 
   it('diskRadiusFrac is radiusPx / (crop.width/2)', () => {
-    const cal = deriveFamousCalibration({ disk, crop, catalogAxisRatio: aspect, deprojected: true });
+    const cal = deriveFamousCalibration({
+      disk,
+      crop,
+      catalogAxisRatio: aspect,
+      deprojected: true,
+    });
     expect(cal.diskRadiusFrac).toBeCloseTo(80 / (400 / 2), 6); // 0.4
   });
 
   it('center accounts for the minor-axis stretch (off-centre disk)', () => {
     // Disk centre = crop centre here ⇒ local (0,0) ⇒ normalised (0.5,0.5)
     // even after the Y stretch (0/aspect = 0).
-    const cal = deriveFamousCalibration({ disk, crop, catalogAxisRatio: aspect, deprojected: true });
+    const cal = deriveFamousCalibration({
+      disk,
+      crop,
+      catalogAxisRatio: aspect,
+      deprojected: true,
+    });
     expect(cal.center[0]).toBeCloseTo(0.5, 6);
     expect(cal.center[1]).toBeCloseTo(0.5, 6);
   });
@@ -169,15 +213,31 @@ describe('deriveFamousCalibration deprojected branch', () => {
   it('center Y-stretch: a disk offset along the minor axis grows post-deproject', () => {
     // Move the disk centre off the crop centre along image-Y (paDeg=0 case for clarity).
     const c2 = { x: 0, y: 0, width: 400, height: 200, rotationDeg: 0 };
-    const d2 = { centerPx: [200, 120] as [number, number], radiusPx: 40, paDeg: 0, axisRatio: aspect, deproject: true };
+    const d2 = {
+      centerPx: [200, 120] as Vec2,
+      radiusPx: 40,
+      paDeg: 0,
+      axisRatio: aspect,
+      deproject: true,
+    };
     // localY = 120 - 100 = 20; stretched = 20 / 0.5 = 40; normalised = (40 + 200)/400 = 0.6
-    const cal = deriveFamousCalibration({ disk: d2, crop: c2, catalogAxisRatio: aspect, deprojected: true });
+    const cal = deriveFamousCalibration({
+      disk: d2,
+      crop: c2,
+      catalogAxisRatio: aspect,
+      deprojected: true,
+    });
     expect(cal.center[1]).toBeCloseTo(0.6, 6);
     expect(cal.center[0]).toBeCloseTo(0.5, 6);
   });
 
   it('non-deprojected branch is unchanged', () => {
-    const cal = deriveFamousCalibration({ disk, crop, catalogAxisRatio: aspect, deprojected: false });
+    const cal = deriveFamousCalibration({
+      disk,
+      crop,
+      catalogAxisRatio: aspect,
+      deprojected: false,
+    });
     expect(cal.axisRatio).toBe(aspect);
     expect(cal.deprojected).toBe(false);
   });

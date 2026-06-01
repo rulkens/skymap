@@ -53,14 +53,22 @@ describe('translateCrop (center-clamp)', () => {
 
   it('moves freely when the new center is inside bounds', () => {
     expect(translateCrop(start, 50, 30, bounds)).toEqual({
-      x: 150, y: 130, width: 400, height: 400, rotationDeg: 0,
+      x: 150,
+      y: 130,
+      width: 400,
+      height: 400,
+      rotationDeg: 0,
     });
   });
 
   it('allows the rect to extend off the left edge as long as the center stays in', () => {
     // dx=-200 → new center x = 100, still inside bounds.  Corners hang off.
     expect(translateCrop(start, -200, 0, bounds)).toEqual({
-      x: -100, y: 100, width: 400, height: 400, rotationDeg: 0,
+      x: -100,
+      y: 100,
+      width: 400,
+      height: 400,
+      rotationDeg: 0,
     });
   });
 
@@ -68,13 +76,21 @@ describe('translateCrop (center-clamp)', () => {
     // dx=2000 would put center at 2300; clamps to width=1000.
     // → center x = 1000 → x = 1000 - 200 = 800.
     expect(translateCrop(start, 2000, 0, bounds)).toEqual({
-      x: 800, y: 100, width: 400, height: 400, rotationDeg: 0,
+      x: 800,
+      y: 100,
+      width: 400,
+      height: 400,
+      rotationDeg: 0,
     });
   });
 
   it('clamps the center to the bottom edge', () => {
     expect(translateCrop(start, 0, 2000, bounds)).toEqual({
-      x: 100, y: 600, width: 400, height: 400, rotationDeg: 0,
+      x: 100,
+      y: 600,
+      width: 400,
+      height: 400,
+      rotationDeg: 0,
     });
   });
 

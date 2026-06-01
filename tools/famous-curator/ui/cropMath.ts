@@ -98,7 +98,7 @@ export function translateCrop(c: Crop, dx: number, dy: number, b: Bounds): Crop 
  */
 export function setRotation(c: Crop, rotationDeg: number): Crop {
   // Normalise to (-180, 180].  Avoids unbounded growth across repeated drags.
-  const wrapped = ((rotationDeg + 180) % 360 + 360) % 360 - 180;
+  const wrapped = ((((rotationDeg + 180) % 360) + 360) % 360) - 180;
   return { ...c, rotationDeg: wrapped };
 }
 
@@ -126,7 +126,10 @@ export function resizeCornerNW(c: Crop, dx: number, dy: number, b: Bounds): Crop
   const sign = dx + dy <= 0 ? 1 : -1;
   const mag = squareDelta(dx, dy);
   const size = Math.max(1, c.width + sign * mag);
-  return clampCenter({ x: seX - size, y: seY - size, width: size, height: size, rotationDeg: c.rotationDeg }, b);
+  return clampCenter(
+    { x: seX - size, y: seY - size, width: size, height: size, rotationDeg: c.rotationDeg },
+    b,
+  );
 }
 
 export function resizeCornerNE(c: Crop, dx: number, dy: number, b: Bounds): Crop {
@@ -136,7 +139,10 @@ export function resizeCornerNE(c: Crop, dx: number, dy: number, b: Bounds): Crop
   const sign = dx - dy >= 0 ? 1 : -1;
   const mag = squareDelta(dx, dy);
   const size = Math.max(1, c.width + sign * mag);
-  return clampCenter({ x: swX, y: swY - size, width: size, height: size, rotationDeg: c.rotationDeg }, b);
+  return clampCenter(
+    { x: swX, y: swY - size, width: size, height: size, rotationDeg: c.rotationDeg },
+    b,
+  );
 }
 
 export function resizeCornerSW(c: Crop, dx: number, dy: number, b: Bounds): Crop {
@@ -146,7 +152,10 @@ export function resizeCornerSW(c: Crop, dx: number, dy: number, b: Bounds): Crop
   const sign = -dx + dy >= 0 ? 1 : -1;
   const mag = squareDelta(dx, dy);
   const size = Math.max(1, c.width + sign * mag);
-  return clampCenter({ x: neX - size, y: neY, width: size, height: size, rotationDeg: c.rotationDeg }, b);
+  return clampCenter(
+    { x: neX - size, y: neY, width: size, height: size, rotationDeg: c.rotationDeg },
+    b,
+  );
 }
 
 /**
@@ -250,7 +259,10 @@ export function resizeCornerAspectNW(
   const mag = squareDelta(dx, dy);
   const width = Math.max(1, c.width + sign * mag);
   const height = heightFromWidth(width, aspect);
-  return clampCenter({ x: seX - width, y: seY - height, width, height, rotationDeg: c.rotationDeg }, b);
+  return clampCenter(
+    { x: seX - width, y: seY - height, width, height, rotationDeg: c.rotationDeg },
+    b,
+  );
 }
 
 export function resizeCornerAspectNE(
@@ -303,8 +315,14 @@ function edgeResultAspect(
   rotationDeg: number,
   b: Bounds,
 ): Crop {
-  const width = driveAxis === 'width' ? Math.max(1, driveSize) : widthFromHeight(Math.max(1, driveSize), aspect);
-  const height = driveAxis === 'height' ? Math.max(1, driveSize) : heightFromWidth(Math.max(1, driveSize), aspect);
+  const width =
+    driveAxis === 'width'
+      ? Math.max(1, driveSize)
+      : widthFromHeight(Math.max(1, driveSize), aspect);
+  const height =
+    driveAxis === 'height'
+      ? Math.max(1, driveSize)
+      : heightFromWidth(Math.max(1, driveSize), aspect);
   if (fixedEdgeAxis === 'x') {
     const x = fixedEdgeStart;
     const y = originalMidPerp - height / 2;
