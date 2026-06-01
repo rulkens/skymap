@@ -652,11 +652,11 @@ describe('DiskControls margin slider', () => {
 });
 ```
 
-- [ ] Write the test file; `npm test -- DiskControls > /tmp/t.log 2>&1; rc=$?` → FAIL.
-- [ ] Implement the slider (import `DEFAULT_DISK_MARGIN`). Comment-tidy.
-- [ ] `npm test -- DiskControls > /tmp/t.log 2>&1; rc=$?` → PASS.
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
-- [ ] Commit `tools/famous-curator/ui/components/DiskControls.tsx tests/tools/famous-curator/ui/DiskControls.test.tsx`.
+- [x] Write the test file; `npm test -- DiskControls > /tmp/t.log 2>&1; rc=$?` → FAIL.
+- [x] Implement the slider (import `DEFAULT_DISK_MARGIN`). Comment-tidy.
+- [x] `npm test -- DiskControls > /tmp/t.log 2>&1; rc=$?` → PASS.
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
+- [x] Commit `tools/famous-curator/ui/components/DiskControls.tsx tests/tools/famous-curator/ui/components/DiskControls.test.tsx`.
 
 ---
 

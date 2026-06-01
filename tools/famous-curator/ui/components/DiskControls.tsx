@@ -17,7 +17,10 @@
  * from the same value the pipeline will use.
  */
 import type { RecipeDisk } from '../../plugin/recipe';
-import { DEPROJECT_MIN_AXIS_RATIO } from '../../../../src/data/famousCalibration';
+import {
+  DEPROJECT_MIN_AXIS_RATIO,
+  DEFAULT_DISK_MARGIN,
+} from '../../../../src/data/famousCalibration';
 
 export type DiskControlsProps = {
   disk: RecipeDisk | undefined;
@@ -48,6 +51,24 @@ export function DiskControls(props: DiskControlsProps) {
         />
         Deproject to face-on
       </label>
+      {/* Sky-padding slider — only meaningful for the deproject crop, so it is
+          hidden until deproject is on.  Falls back to the shared default when
+          the disk has no stored margin yet. */}
+      {disk.deproject === true && (
+        <label htmlFor="disk-margin" className="curator-disk-controls__margin">
+          Margin
+          <input
+            id="disk-margin"
+            data-testid="margin-slider"
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={disk.margin ?? DEFAULT_DISK_MARGIN}
+            onChange={(e) => onDiskChange({ ...disk, margin: Number(e.target.value) })}
+          />
+        </label>
+      )}
       {veryEdgeOn && (
         <p className="curator-disk-controls__note" data-testid="deproject-warning">
           Very edge-on (b/a {effectiveAxisRatio.toFixed(2)}) — deprojection will stretch the minor
