@@ -13,9 +13,10 @@
  *
  * ### Why the renderer null-checks live here
  *
- * `texturedDiskRenderer` and `proceduralDiskRenderer` are read in this
- * function.  Keeping the phase-ordering assertion co-located with the reads
- * it guards avoids a guard that lives pages away from what it protects.
+ * `texturedDiskRenderer` is used directly (bindAtlas / bindHiResArray);
+ * `proceduralDiskRenderer` is checked as a phase-ordering precondition.
+ * Co-locating both checks with the reads they guard avoids a guard that
+ * lives pages away from what it protects.
  */
 
 import { createGalaxyAtlasSubsystem } from '../subsystems/galaxyAtlasSubsystem';

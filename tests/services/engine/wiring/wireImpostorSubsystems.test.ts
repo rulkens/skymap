@@ -18,7 +18,7 @@
  *      phase-ordering assertion that protects against accidentally
  *      skipping or reordering `initGpu`.
  *
- * Mocking strategy: stub the four GPU-bearing factory functions so no
+ * Mocking strategy: stub the five GPU-bearing factory functions so no
  * real GPUDevice is needed; inject a stub `state.gpu.texturedDiskRenderer`
  * with spied bind methods to verify the bind contract.
  */

@@ -79,6 +79,16 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const { cb, allSlots } = deps;
 
+  // Fail-fast precondition: both disk renderers must be non-null before any
+  // slot construction touches EngineState.  The same check is repeated inside
+  // `wireImpostorSubsystems` co-located with the reads it guards — the
+  // redundancy is intentional and cheap.
+  if (state.gpu.texturedDiskRenderer === null || state.gpu.proceduralDiskRenderer === null) {
+    throw new Error(
+      'wireSlots: texturedDisk/proceduralDisk renderers must be initialised by initGpu before this phase runs',
+    );
+  }
+
   // ── Filament asset slot ──────────────────────────────────────────
   // Factory owns the mint + subscribe + state write.  See
   // `loading/slots/filamentSlot.ts` for the lifecycle rationale.
