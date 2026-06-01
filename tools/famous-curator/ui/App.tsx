@@ -20,7 +20,7 @@ import { useEffect, useReducer, useRef, useState } from 'react';
 import type { PointerEvent } from 'react';
 import { useApi } from './apiContext';
 import { reducer, initialState, canCommit } from './state';
-import { seedDeprojectCrop } from './cropMath';
+import { seedDeprojectCrop, fitCropToSource } from './cropMath';
 import { willDeproject } from '../../famous/deprojectDisk';
 import { DEFAULT_DISK_MARGIN } from '../../../src/data/famousCalibration';
 import type { RecipeDisk } from '../plugin/recipe';
@@ -407,7 +407,16 @@ function AppInner() {
               // maintainer re-exports, the file bytes change but the URL
               // would otherwise be identical, causing the browser to
               // serve the stale image from its disk cache.
-              dispatch({ type: 'setCrop', crop: r.recipe.crop });
+              // The recipe's crop is in the ORIGINAL source's pixels; the
+              // re-fetch can return a different resolution, so reframe it onto
+              // the source we actually loaded (no-op when they match).
+              dispatch({
+                type: 'setCrop',
+                crop: fitCropToSource(r.recipe.crop, {
+                  width: fetched.width,
+                  height: fetched.height,
+                }),
+              });
               const cacheBust = encodeURIComponent(r.recipe.processedAt);
               dispatch({
                 type: 'setPreviews',

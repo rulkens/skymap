@@ -30,6 +30,7 @@ import {
   resizeCornerAspectSE,
   resizeEdgeAspectE,
   seedDeprojectCrop,
+  fitCropToSource,
   type Crop,
   type Bounds,
 } from '../../../../tools/famous-curator/ui/cropMath';
@@ -257,5 +258,35 @@ describe('cropMath aspect-locked helpers', () => {
   it('seedDeprojectCrop at aspect 1 is a square framing', () => {
     const out = seedDeprojectCrop([500, 500], 50, 0, 1, 0, B);
     expect(out.width).toBe(out.height);
+  });
+});
+
+describe('fitCropToSource', () => {
+  it('returns a crop that already fits unchanged', () => {
+    const c: Crop = { x: 100, y: 100, width: 200, height: 200, rotationDeg: 30 };
+    expect(fitCropToSource(c, { width: 1000, height: 1000 })).toEqual(c);
+  });
+
+  it('scales an oversized crop down to fit and keeps it within bounds', () => {
+    // The real m77 case: a 3774² crop authored on a ~3774px source, resumed
+    // against a 1718×1716 re-fetch — must no longer overflow.
+    const c: Crop = { x: 0, y: 176.49, width: 3774, height: 3774, rotationDeg: 0 };
+    const b = { width: 1718, height: 1716 };
+    const out = fitCropToSource(c, b);
+    expect(out.x).toBeGreaterThanOrEqual(0);
+    expect(out.y).toBeGreaterThanOrEqual(0);
+    expect(out.x + out.width).toBeLessThanOrEqual(b.width + 1e-6);
+    expect(out.y + out.height).toBeLessThanOrEqual(b.height + 1e-6);
+    expect(out.width).toBeCloseTo(out.height, 6); // square preserved
+    expect(out.rotationDeg).toBe(0);
+  });
+
+  it('clamps a negative-origin overflow crop into the image', () => {
+    const c: Crop = { x: -30, y: 40, width: 2838, height: 2838, rotationDeg: -32 };
+    const b = { width: 1290, height: 1290 };
+    const out = fitCropToSource(c, b);
+    expect(out.x).toBeGreaterThanOrEqual(0);
+    expect(out.x + out.width).toBeLessThanOrEqual(b.width + 1e-6);
+    expect(out.rotationDeg).toBe(-32); // rotation carried through
   });
 });

@@ -85,6 +85,38 @@ export function resetCrop(b: Bounds): Crop {
   };
 }
 
+/**
+ * Reframe a resumed crop onto the re-fetched source.
+ *
+ * A recipe stores its crop in ABSOLUTE source pixels, but the source bytes are
+ * not cached across sessions — on resume the curator re-fetches from the same
+ * URL, which can return a DIFFERENT resolution than the one the crop was drawn
+ * against (e.g. Wikipedia serving a smaller rendition).  The stored crop is
+ * then in the wrong coordinate space and spills far outside the image.
+ *
+ * Without the original source dimensions recorded in the recipe we can't do an
+ * exact rescale, but we can keep the crop usable: if it already fits, it is
+ * returned untouched (the matched-resolution common case); if it overflows, it
+ * is scaled down uniformly about the origin — the right transform for a crop
+ * that spanned the full committed source under a uniform downscale — then
+ * clamped fully inside the bounds so it never renders larger than the image.
+ */
+export function fitCropToSource(c: Crop, b: Bounds): Crop {
+  const fits = c.x >= 0 && c.y >= 0 && c.x + c.width <= b.width && c.y + c.height <= b.height;
+  if (fits) return c;
+
+  const scale = Math.min(b.width / c.width, b.height / c.height, 1);
+  const width = c.width * scale;
+  const height = c.height * scale;
+  return {
+    x: Math.min(Math.max(c.x * scale, 0), Math.max(0, b.width - width)),
+    y: Math.min(Math.max(c.y * scale, 0), Math.max(0, b.height - height)),
+    width,
+    height,
+    rotationDeg: c.rotationDeg,
+  };
+}
+
 export function translateCrop(c: Crop, dx: number, dy: number, b: Bounds): Crop {
   return clampCenter(
     { x: c.x + dx, y: c.y + dy, width: c.width, height: c.height, rotationDeg: c.rotationDeg },
