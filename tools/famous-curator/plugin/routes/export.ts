@@ -31,17 +31,14 @@
 import sharp from 'sharp';
 import { copyFileSync, existsSync, mkdirSync, rmSync, renameSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import {
-  curatedGalaxyDir,
-  curatedTmpDir,
-  overrideIndexPath,
-} from '../paths.js';
+import { curatedGalaxyDir, curatedTmpDir, overrideIndexPath } from '../paths.js';
 import { sessionPath } from '../tmpSession.js';
 import { serialiseRecipe, validateRecipeDisk, type Recipe, type RecipeDisk } from '../recipe.js';
 import { upsertOverrideEntry, type OverrideIndex } from '../overrideIndex.js';
 import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlpha.js';
 import { rotatedExtract } from '../cropExtract.js';
 import { deprojectDisk, willDeproject } from '../../../famous/deprojectDisk.js';
+import { squareDeprojectCrop } from '../../../famous/squareDeprojectCrop.js';
 import { deriveFamousCalibration } from '../../../famous/deriveFamousCalibration.js';
 import type { FamousCalibration } from '../../../../src/@types/loading/FamousCalibration';
 
@@ -101,6 +98,17 @@ export async function handleExport(opts: {
   const sourcePath = resolve(sessDir, 'source.png');
   const starlessPath = resolve(sessDir, 'starless.png');
 
+  // Source dimensions the crop + disk were authored against.  We read them from
+  // the actual source.png bytes (the frame the crop coordinates reference)
+  // rather than trusting a client-supplied value, so the recorded value is the
+  // single source of truth.  Persisted in recipe.json to let the resume flow
+  // rescale by the exact ratio when a later re-fetch returns a different size.
+  const sourceMeta = await sharp(sourcePath).metadata();
+  const source =
+    sourceMeta.width !== undefined && sourceMeta.height !== undefined
+      ? { width: sourceMeta.width, height: sourceMeta.height }
+      : undefined;
+
   // 2. source.webp — full-resolution crop, lossless.
   //    Resize to at most FULL_PX on the longest edge (`fit: 'inside'`)
   //    so non-square crops aren't distorted.  rotatedExtract handles
@@ -118,7 +126,6 @@ export async function handleExport(opts: {
   //    same effectivePaDeg.
   const disk = body.disk !== undefined ? validateRecipeDisk(body.disk) : undefined;
   const effectiveAxisRatio = disk?.axisRatio ?? body.catalogAxisRatio;
-  const effectivePaDeg = disk !== undefined ? disk.paDeg - body.crop.rotationDeg : 0;
   const wantsDeproject = disk?.deproject === true;
   // The webp is deprojected whenever the maintainer asked AND the effective
   // axis ratio is a tilted, valid disk (0 < b/a < 1) — single-sourced with
@@ -128,17 +135,39 @@ export async function handleExport(opts: {
   const deprojected =
     wantsDeproject && effectiveAxisRatio !== undefined && willDeproject(effectiveAxisRatio);
 
+  // Extraction crop vs annotation crop.  When deprojecting, we snap the crop
+  // onto the geometry that makes the downstream stretch land on a square
+  // (rotationDeg = disk.paDeg, height = width·(b/a)); see squareDeprojectCrop.
+  // This normalised crop is what gets EXTRACTED and what calibration is derived
+  // from, so the runtime overlay matches the shipped pixels.  The recipe below
+  // still records the maintainer's ORIGINAL body.crop — the source-of-truth
+  // annotation — so a re-export reproduces the same normalisation from scratch.
+  const extractionCrop =
+    deprojected && disk !== undefined
+      ? squareDeprojectCrop(body.crop, disk, effectiveAxisRatio!)
+      : body.crop;
+
+  // effectivePaDeg is the disk PA inside the extraction crop's frame.
+  // rotatedExtract rotates the source by -extractionCrop.rotationDeg, so the
+  // crop-frame PA is disk.paDeg - extractionCrop.rotationDeg.  After the
+  // square-snap the extraction crop's rotationDeg == disk.paDeg, so this
+  // collapses to 0 and deprojectDisk applies the pure image-Y stretch that
+  // yields a square.
+  const effectivePaDeg = disk !== undefined ? disk.paDeg - extractionCrop.rotationDeg : 0;
+
   // Derive calibration whenever a disk and an axis ratio are both available.
   // catalogAxisRatio falls back to disk.axisRatio so callers that omit it but
   // set disk.axisRatio still get a valid calibration — the curator always threads
   // catalogAxisRatio, but the fallback keeps the function total.
+  // We feed the EXTRACTION crop (not body.crop) so the calibration's centre /
+  // radius / PA frame matches the pixels we actually ship.
   const catalogAxisRatio = body.catalogAxisRatio ?? disk?.axisRatio;
   const calibration: FamousCalibration | undefined =
     disk !== undefined && catalogAxisRatio !== undefined
-      ? deriveFamousCalibration({ disk, crop: body.crop, catalogAxisRatio, deprojected })
+      ? deriveFamousCalibration({ disk, crop: extractionCrop, catalogAxisRatio, deprojected })
       : undefined;
 
-  const sourcePipeline = await rotatedExtract(sourcePath, body.crop);
+  const sourcePipeline = await rotatedExtract(sourcePath, extractionCrop);
   // Deproject the hi-res crop to face-on before downsize so the extra resolution
   // along the stretch direction is preserved in the final thumbnail.
   const maybeDeprojectedSource = deprojected
@@ -215,6 +244,7 @@ export async function handleExport(opts: {
     alpha: body.alpha,
     metadata: body.metadata,
     processedAt: new Date().toISOString(),
+    ...(source !== undefined ? { source } : {}),
     ...(disk !== undefined ? { disk } : {}),
   };
   writeFileSync(resolve(tmpDir, 'recipe.json'), serialiseRecipe(recipe));

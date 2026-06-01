@@ -16,7 +16,20 @@
  * resize/translate helpers operate in the rect's LOCAL frame — the
  * caller is responsible for rotating screen-space deltas by
  * `-rotationDeg` (via `rotateDelta`) before passing them in.
+ *
+ * Aspect-locked family: the deproject crop is NOT square — it frames a
+ * disk whose intrinsic shape is an ellipse with axis ratio b/a.  The
+ * `*Aspect*` helpers and `seedDeprojectCrop` below preserve
+ * `height = width * aspect` where `aspect = height/width = b/a`, instead
+ * of the square `width === height`.  They are a SEPARATE family from the
+ * square helpers rather than a parameterised generalisation: the square
+ * path is load-bearing for as-shot mode with its own per-handle sign
+ * logic, so keeping it byte-for-byte untouched avoids silent drift.
+ * Each aspect helper mirrors the matching square helper's anchor + sign
+ * convention exactly, only swapping the square snap for the aspect one.
  */
+
+import type { Vec2 } from '../../../src/@types/math/Vec2';
 
 export type Crop = {
   x: number;
@@ -72,6 +85,60 @@ export function resetCrop(b: Bounds): Crop {
   };
 }
 
+/**
+ * Reframe a resumed crop onto the re-fetched source.
+ *
+ * A recipe stores its crop in ABSOLUTE source pixels, but the source bytes are
+ * not cached across sessions — on resume the curator re-fetches from the same
+ * URL, which can return a DIFFERENT resolution than the one the crop was drawn
+ * against (e.g. Wikipedia serving a smaller rendition).  The stored crop is
+ * then in the wrong coordinate space and spills far outside the image.
+ *
+ * Without the original source dimensions recorded in the recipe we can't do an
+ * exact rescale, but we can keep the crop usable: if it already fits, it is
+ * returned untouched (the matched-resolution common case); if it overflows, it
+ * is scaled down uniformly about the origin — the right transform for a crop
+ * that spanned the full committed source under a uniform downscale — then
+ * clamped fully inside the bounds so it never renders larger than the image.
+ */
+export function fitCropToSource(c: Crop, b: Bounds): Crop {
+  const fits = c.x >= 0 && c.y >= 0 && c.x + c.width <= b.width && c.y + c.height <= b.height;
+  if (fits) return c;
+
+  const scale = Math.min(b.width / c.width, b.height / c.height, 1);
+  const width = c.width * scale;
+  const height = c.height * scale;
+  return {
+    x: Math.min(Math.max(c.x * scale, 0), Math.max(0, b.width - width)),
+    y: Math.min(Math.max(c.y * scale, 0), Math.max(0, b.height - height)),
+    width,
+    height,
+    rotationDeg: c.rotationDeg,
+  };
+}
+
+/**
+ * Scale a crop uniformly about the source origin.
+ *
+ * The exact counterpart to `fitCropToSource`: when the recipe records the
+ * dimensions the crop was authored against, the resume flow knows the precise
+ * ratio between the authoring source and the re-fetched one, so it can map the
+ * stored crop onto the new pixel grid by multiplying every coordinate.  Unlike
+ * `fitCropToSource` this preserves an intentional off-image overhang (the
+ * centre-clamp invariant lets corners exit the image) — an exact rescale keeps
+ * the crop's relationship to the image identical instead of forcing it inside
+ * the bounds.  Rotation is scale-invariant and passes through untouched.
+ */
+export function rescaleCrop(c: Crop, scale: number): Crop {
+  return {
+    x: c.x * scale,
+    y: c.y * scale,
+    width: c.width * scale,
+    height: c.height * scale,
+    rotationDeg: c.rotationDeg,
+  };
+}
+
 export function translateCrop(c: Crop, dx: number, dy: number, b: Bounds): Crop {
   return clampCenter(
     { x: c.x + dx, y: c.y + dy, width: c.width, height: c.height, rotationDeg: c.rotationDeg },
@@ -85,7 +152,7 @@ export function translateCrop(c: Crop, dx: number, dy: number, b: Bounds): Crop 
  */
 export function setRotation(c: Crop, rotationDeg: number): Crop {
   // Normalise to (-180, 180].  Avoids unbounded growth across repeated drags.
-  const wrapped = ((rotationDeg + 180) % 360 + 360) % 360 - 180;
+  const wrapped = ((((rotationDeg + 180) % 360) + 360) % 360) - 180;
   return { ...c, rotationDeg: wrapped };
 }
 
@@ -113,7 +180,10 @@ export function resizeCornerNW(c: Crop, dx: number, dy: number, b: Bounds): Crop
   const sign = dx + dy <= 0 ? 1 : -1;
   const mag = squareDelta(dx, dy);
   const size = Math.max(1, c.width + sign * mag);
-  return clampCenter({ x: seX - size, y: seY - size, width: size, height: size, rotationDeg: c.rotationDeg }, b);
+  return clampCenter(
+    { x: seX - size, y: seY - size, width: size, height: size, rotationDeg: c.rotationDeg },
+    b,
+  );
 }
 
 export function resizeCornerNE(c: Crop, dx: number, dy: number, b: Bounds): Crop {
@@ -123,7 +193,10 @@ export function resizeCornerNE(c: Crop, dx: number, dy: number, b: Bounds): Crop
   const sign = dx - dy >= 0 ? 1 : -1;
   const mag = squareDelta(dx, dy);
   const size = Math.max(1, c.width + sign * mag);
-  return clampCenter({ x: swX, y: swY - size, width: size, height: size, rotationDeg: c.rotationDeg }, b);
+  return clampCenter(
+    { x: swX, y: swY - size, width: size, height: size, rotationDeg: c.rotationDeg },
+    b,
+  );
 }
 
 export function resizeCornerSW(c: Crop, dx: number, dy: number, b: Bounds): Crop {
@@ -133,7 +206,10 @@ export function resizeCornerSW(c: Crop, dx: number, dy: number, b: Bounds): Crop
   const sign = -dx + dy >= 0 ? 1 : -1;
   const mag = squareDelta(dx, dy);
   const size = Math.max(1, c.width + sign * mag);
-  return clampCenter({ x: neX - size, y: neY, width: size, height: size, rotationDeg: c.rotationDeg }, b);
+  return clampCenter(
+    { x: neX - size, y: neY, width: size, height: size, rotationDeg: c.rotationDeg },
+    b,
+  );
 }
 
 /**
@@ -186,4 +262,185 @@ export function resizeEdgeS(c: Crop, dy: number, b: Bounds): Crop {
   const fixedEdgeY = c.y;
   const midX = c.x + c.width / 2;
   return edgeResult(newSize, 'y', fixedEdgeY, midX, c.rotationDeg, b);
+}
+
+// ── Aspect-locked family (deproject crop) ──────────────────────────────
+//
+// aspect = height/width = b/a.  Each corner helper drives WIDTH from the
+// drag exactly as its square sibling drives `size`, then derives HEIGHT
+// from aspect.  Each edge helper sets the axis the dragged edge owns and
+// follows the perpendicular axis from aspect, recentred like edgeResult.
+
+/** Height from width under the aspect lock, floored at 1 px. */
+function heightFromWidth(width: number, aspect: number): number {
+  return Math.max(1, Math.round(width * aspect));
+}
+
+/** Width from height under the aspect lock, floored at 1 px. */
+function widthFromHeight(height: number, aspect: number): number {
+  // aspect = height/width ⇒ width = height/aspect.  Guard a zero/NaN
+  // aspect by falling back to the height (square) rather than dividing
+  // by zero — callers always pass a positive b/a, this is belt-and-braces.
+  return Math.max(1, Math.round(aspect > 0 ? height / aspect : height));
+}
+
+export function resizeCornerAspectSE(
+  c: Crop,
+  dx: number,
+  dy: number,
+  aspect: number,
+  b: Bounds,
+): Crop {
+  // Anchor NW = (c.x, c.y).  Width grows when dx > 0 OR dy > 0.
+  const sign = dx + dy >= 0 ? 1 : -1;
+  const mag = squareDelta(dx, dy);
+  const width = Math.max(1, c.width + sign * mag);
+  const height = heightFromWidth(width, aspect);
+  return clampCenter({ x: c.x, y: c.y, width, height, rotationDeg: c.rotationDeg }, b);
+}
+
+export function resizeCornerAspectNW(
+  c: Crop,
+  dx: number,
+  dy: number,
+  aspect: number,
+  b: Bounds,
+): Crop {
+  // Anchor SE = (c.x + c.width, c.y + c.height).  Width grows when dx<0 or dy<0.
+  const seX = c.x + c.width;
+  const seY = c.y + c.height;
+  const sign = dx + dy <= 0 ? 1 : -1;
+  const mag = squareDelta(dx, dy);
+  const width = Math.max(1, c.width + sign * mag);
+  const height = heightFromWidth(width, aspect);
+  return clampCenter(
+    { x: seX - width, y: seY - height, width, height, rotationDeg: c.rotationDeg },
+    b,
+  );
+}
+
+export function resizeCornerAspectNE(
+  c: Crop,
+  dx: number,
+  dy: number,
+  aspect: number,
+  b: Bounds,
+): Crop {
+  // Anchor SW = (c.x, c.y + c.height).  Width grows when dx>0 or dy<0.
+  const swX = c.x;
+  const swY = c.y + c.height;
+  const sign = dx - dy >= 0 ? 1 : -1;
+  const mag = squareDelta(dx, dy);
+  const width = Math.max(1, c.width + sign * mag);
+  const height = heightFromWidth(width, aspect);
+  return clampCenter({ x: swX, y: swY - height, width, height, rotationDeg: c.rotationDeg }, b);
+}
+
+export function resizeCornerAspectSW(
+  c: Crop,
+  dx: number,
+  dy: number,
+  aspect: number,
+  b: Bounds,
+): Crop {
+  // Anchor NE = (c.x + c.width, c.y).  Width grows when dx<0 or dy>0.
+  const neX = c.x + c.width;
+  const neY = c.y;
+  const sign = -dx + dy >= 0 ? 1 : -1;
+  const mag = squareDelta(dx, dy);
+  const width = Math.max(1, c.width + sign * mag);
+  const height = heightFromWidth(width, aspect);
+  return clampCenter({ x: neX - width, y: neY, width, height, rotationDeg: c.rotationDeg }, b);
+}
+
+/**
+ * Edge resize under the aspect lock.  The dragged edge sets the new
+ * width (E/W) or height (N/S); the perpendicular axis follows from
+ * aspect and the rect is recentred on the perpendicular mid-axis, exactly
+ * as `edgeResult` does for the square case.
+ */
+function edgeResultAspect(
+  driveAxis: 'width' | 'height',
+  driveSize: number,
+  aspect: number,
+  fixedEdgeAxis: 'x' | 'y',
+  fixedEdgeStart: number,
+  originalMidPerp: number,
+  rotationDeg: number,
+  b: Bounds,
+): Crop {
+  const width =
+    driveAxis === 'width'
+      ? Math.max(1, driveSize)
+      : widthFromHeight(Math.max(1, driveSize), aspect);
+  const height =
+    driveAxis === 'height'
+      ? Math.max(1, driveSize)
+      : heightFromWidth(Math.max(1, driveSize), aspect);
+  if (fixedEdgeAxis === 'x') {
+    const x = fixedEdgeStart;
+    const y = originalMidPerp - height / 2;
+    return clampCenter({ x, y, width, height, rotationDeg }, b);
+  }
+  const y = fixedEdgeStart;
+  const x = originalMidPerp - width / 2;
+  return clampCenter({ x, y, width, height, rotationDeg }, b);
+}
+
+export function resizeEdgeAspectE(c: Crop, dx: number, aspect: number, b: Bounds): Crop {
+  const newWidth = c.width + dx;
+  const fixedEdgeX = c.x;
+  const midY = c.y + c.height / 2;
+  return edgeResultAspect('width', newWidth, aspect, 'x', fixedEdgeX, midY, c.rotationDeg, b);
+}
+
+export function resizeEdgeAspectW(c: Crop, dx: number, aspect: number, b: Bounds): Crop {
+  const newWidth = c.width - dx;
+  const fixedEdgeX = c.x + c.width - Math.max(1, newWidth);
+  const midY = c.y + c.height / 2;
+  return edgeResultAspect('width', newWidth, aspect, 'x', fixedEdgeX, midY, c.rotationDeg, b);
+}
+
+export function resizeEdgeAspectN(c: Crop, dy: number, aspect: number, b: Bounds): Crop {
+  const newHeight = c.height - dy;
+  const fixedEdgeY = c.y + c.height - Math.max(1, newHeight);
+  const midX = c.x + c.width / 2;
+  return edgeResultAspect('height', newHeight, aspect, 'y', fixedEdgeY, midX, c.rotationDeg, b);
+}
+
+export function resizeEdgeAspectS(c: Crop, dy: number, aspect: number, b: Bounds): Crop {
+  const newHeight = c.height + dy;
+  const fixedEdgeY = c.y;
+  const midX = c.x + c.width / 2;
+  return edgeResultAspect('height', newHeight, aspect, 'y', fixedEdgeY, midX, c.rotationDeg, b);
+}
+
+/**
+ * Seed a deproject crop framing a disk.  Width spans the disk diameter
+ * plus a fractional margin on each side (`2·radiusPx·(1 + margin)`),
+ * height follows the aspect lock, the rect is centred on `centerPx`, and
+ * `rotationDeg` is set to the disk's position angle so the crop's local
+ * axes align with the ellipse's major/minor axes.  The centre is clamped
+ * into bounds (corners may exit), matching the resize invariant.
+ */
+export function seedDeprojectCrop(
+  centerPx: Vec2,
+  radiusPx: number,
+  paDeg: number,
+  aspect: number,
+  margin: number,
+  b: Bounds,
+): Crop {
+  const width = 2 * radiusPx * (1 + margin);
+  const height = width * aspect;
+  return clampCenter(
+    {
+      x: centerPx[0] - width / 2,
+      y: centerPx[1] - height / 2,
+      width,
+      height,
+      rotationDeg: paDeg,
+    },
+    b,
+  );
 }

@@ -28,6 +28,7 @@ import {
 import { curatedGalaxyDir } from '../../../tools/famous-curator/plugin/paths';
 import { deriveFamousCalibration } from '../../../tools/famous/deriveFamousCalibration';
 import { willDeproject } from '../../../tools/famous/deprojectDisk';
+import { squareDeprojectCrop } from '../../../tools/famous/squareDeprojectCrop';
 import type { FamousEntry } from '../../../tools/parsers/famousSeed';
 
 // ─── shared fixtures ──────────────────────────────────────────────────────────
@@ -109,12 +110,15 @@ describe('calibration round-trip (real filesystem)', () => {
     // Replicate the assembler's deprojection logic:
     //   effectiveAxisRatio = disk.axisRatio (0.5), not catalog value.
     //   deprojected = disk.deproject && willDeproject(0.5)
+    //   and, when deprojected, calibration is derived from the SQUARE-normalised
+    //   crop (matching the shipped WebP), not the recipe's annotation crop.
     const effectiveAxisRatio = DISK.axisRatio ?? axisRatios[0]!;
     const deprojected = DISK.deproject && willDeproject(effectiveAxisRatio);
+    const crop = deprojected ? squareDeprojectCrop(CROP, DISK, effectiveAxisRatio) : CROP;
 
     const expected = deriveFamousCalibration({
       disk: DISK,
-      crop: CROP,
+      crop,
       catalogAxisRatio: axisRatios[0]!,
       deprojected,
     });

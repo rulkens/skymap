@@ -74,10 +74,10 @@ export const DEFAULT_DISK_MARGIN = 0.25;
 
 **Behaviour:** the default fractional padding around a disk when seeding the deproject crop — `width = 2·radiusPx·(1 + DEFAULT_DISK_MARGIN)`. Single source of truth for curator-seed, pipeline, and UI.
 
-- [ ] Add the constant with a didactic docblock (WHY 0.25: leaves a quarter-radius of sky around the disk so the deprojected square isn't cropped tight to the edge; tunable against real images).
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → Read log, `rc == 0`.
-- [ ] Comment-tidy the file (it's tiny — confirm both constants read cleanly).
-- [ ] Commit `src/data/famousCalibration.ts`.
+- [x] Add the constant with a didactic docblock (WHY 0.25: leaves a quarter-radius of sky around the disk so the deprojected square isn't cropped tight to the edge; tunable against real images).
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → Read log, `rc == 0`.
+- [x] Comment-tidy the file (it's tiny — confirm both constants read cleanly).
+- [x] Commit `src/data/famousCalibration.ts`.
 
 ---
 
@@ -178,11 +178,11 @@ describe('squareDeprojectCrop', () => {
 });
 ```
 
-- [ ] Write the test file above; `npm test -- squareDeprojectCrop > /tmp/t.log 2>&1; rc=$?` → FAIL (module missing).
-- [ ] Implement `squareDeprojectCrop` (header with the reduction reasoning; no rounding of x/y beyond what RotatedCrop callers tolerate — `rotatedExtract` does its own `Math.round`).
-- [ ] `npm test -- squareDeprojectCrop > /tmp/t.log 2>&1; rc=$?` → PASS.
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
-- [ ] Commit `tools/famous/squareDeprojectCrop.ts tests/tools/famous-curator/squareDeprojectCrop.test.ts`.
+- [x] Write the test file above; `npm test -- squareDeprojectCrop > /tmp/t.log 2>&1; rc=$?` → FAIL (module missing).
+- [x] Implement `squareDeprojectCrop` (header with the reduction reasoning; no rounding of x/y beyond what RotatedCrop callers tolerate — `rotatedExtract` does its own `Math.round`).
+- [x] `npm test -- squareDeprojectCrop > /tmp/t.log 2>&1; rc=$?` → PASS.
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
+- [x] Commit `tools/famous/squareDeprojectCrop.ts tests/tools/famous-curator/squareDeprojectCrop.test.ts`.
 
 ---
 
@@ -271,11 +271,11 @@ describe('cropMath aspect-locked helpers', () => {
 });
 ```
 
-- [ ] Add the imports + tests above; `npm test -- cropMath > /tmp/t.log 2>&1; rc=$?` → FAIL.
-- [ ] Implement the helpers (reuse `clampCenter`; add a file-header paragraph documenting the aspect convention `aspect = height/width = b/a`).
-- [ ] `npm test -- cropMath > /tmp/t.log 2>&1; rc=$?` → PASS (new + all existing square tests still green).
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
-- [ ] Commit `tools/famous-curator/ui/cropMath.ts tests/tools/famous-curator/cropMath.test.ts`.
+- [x] Add the imports + tests above; `npm test -- cropMath > /tmp/t.log 2>&1; rc=$?` → FAIL.
+- [x] Implement the helpers (reuse `clampCenter`; add a file-header paragraph documenting the aspect convention `aspect = height/width = b/a`).
+- [x] `npm test -- cropMath > /tmp/t.log 2>&1; rc=$?` → PASS (new + all existing square tests still green).
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
+- [x] Commit `tools/famous-curator/ui/cropMath.ts tests/tools/famous-curator/cropMath.test.ts`.
 
 ---
 
@@ -325,11 +325,11 @@ describe('RecipeDisk.margin', () => {
 });
 ```
 
-- [ ] Add the tests (import `validateRecipeDisk`, `parseRecipe`, `serialiseRecipe` as the file already does); `npm test -- recipe > /tmp/t.log 2>&1; rc=$?` → FAIL.
-- [ ] Add the field + validation (mirror the `axisRatio` optional-finite pattern at `recipe.ts:128-132`, plus a `>= 0` check) and the docblock on `RecipeDisk`.
-- [ ] `npm test -- recipe > /tmp/t.log 2>&1; rc=$?` → PASS.
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
-- [ ] Commit `tools/famous-curator/plugin/recipe.ts tests/tools/famous-curator/recipe.test.ts`.
+- [x] Add the tests (import `validateRecipeDisk`, `parseRecipe`, `serialiseRecipe` as the file already does); `npm test -- recipe > /tmp/t.log 2>&1; rc=$?` → FAIL.
+- [x] Add the field + validation (mirror the `axisRatio` optional-finite pattern at `recipe.ts:128-132`, plus a `>= 0` check) and the docblock on `RecipeDisk`.
+- [x] `npm test -- recipe > /tmp/t.log 2>&1; rc=$?` → PASS.
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
+- [x] Commit `tools/famous-curator/plugin/recipe.ts tests/tools/famous-curator/recipe.test.ts`.
 
 ---
 
@@ -395,11 +395,11 @@ describe('deproject square output', () => {
 
 > The `/* fixture */` placeholders: wire them to this file's existing setup (it already constructs a tmp session with `source.png` + `starless.png` and a `repoRoot`). The implementer fills these from the surrounding test scaffolding rather than inventing a new harness.
 
-- [ ] Add the tests; `npm test -- export > /tmp/t.log 2>&1; rc=$?` → the tilted-disk square assertion FAILS (rectangle today), as-shot passes.
-- [ ] Import `squareDeprojectCrop` in both routes; insert the normalisation (only in the `deprojected` branch) and feed the normalised crop to `rotatedExtract` (both routes) and `deriveFamousCalibration` (export). Comment-tidy the touched comment blocks.
-- [ ] `npm test -- export > /tmp/t.log 2>&1; rc=$?` and `npm test -- process > /tmp/t.log 2>&1; rc=$?` → PASS.
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
-- [ ] Commit `tools/famous-curator/plugin/routes/export.ts tools/famous-curator/plugin/routes/process.ts tests/tools/famous-curator/export.test.ts`.
+- [x] Add the tests; `npm test -- export > /tmp/t.log 2>&1; rc=$?` → the tilted-disk square assertion FAILS (rectangle today), as-shot passes.
+- [x] Import `squareDeprojectCrop` in both routes; insert the normalisation (only in the `deprojected` branch) and feed the normalised crop to `rotatedExtract` (both routes) and `deriveFamousCalibration` (export). Comment-tidy the touched comment blocks.
+- [x] `npm test -- export > /tmp/t.log 2>&1; rc=$?` and `npm test -- process > /tmp/t.log 2>&1; rc=$?` → PASS. (Also reconciled the pre-existing #229 deproject tests whose "taller" premise the square design replaces: `export.deproject.test.ts`, `process.deproject.test.ts` now assert square; `export.calibration.test.ts` derives `expected` from the normalised crop.)
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
+- [x] Commit `tools/famous-curator/plugin/routes/export.ts tools/famous-curator/plugin/routes/process.ts tests/tools/famous-curator/export.test.ts`.
 
 ---
 
@@ -474,11 +474,11 @@ describe('deriveFamousCalibration deprojected branch', () => {
 });
 ```
 
-- [ ] Add the tests; `npm test -- deriveFamousCalibration > /tmp/t.log 2>&1; rc=$?` → FAIL (deprojected branch not implemented).
-- [ ] Implement the branch (header note documenting the Y-stretch reasoning; `effectiveAxisRatio` fallback chain; emit `axisRatio: 1` only when `deprojected`).
-- [ ] `npm test -- deriveFamousCalibration > /tmp/t.log 2>&1; rc=$?` → PASS.
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
-- [ ] Commit `tools/famous/deriveFamousCalibration.ts tests/tools/famous-curator/deriveFamousCalibration.test.ts`.
+- [x] Add the tests; `npm test -- deriveFamousCalibration > /tmp/t.log 2>&1; rc=$?` → FAIL (deprojected branch not implemented).
+- [x] Implement the branch (header note documenting the Y-stretch reasoning; `effectiveAxisRatio` fallback chain; emit `axisRatio: 1` only when `deprojected`).
+- [x] `npm test -- deriveFamousCalibration > /tmp/t.log 2>&1; rc=$?` → PASS.
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
+- [x] Commit `tools/famous/deriveFamousCalibration.ts tests/tools/famous/deriveFamousCalibration.test.ts`.
 
 ---
 
@@ -548,11 +548,11 @@ it('keeps aspect on a corner resize when deprojectAspect is set', () => {
 
 > jsdom returns a zero-size `getBoundingClientRect` by default; the React test setup stubs it (the existing CropCanvas tests rely on this). If the corner-resize assertion can't get a non-zero `canvasScale` in jsdom, the implementer keeps the two rotate-handle-presence assertions (which don't need layout) and verifies aspect-keeping via a direct `cropMath` unit test (Task 3 already covers that) — note the chosen split in the task checkbox. The square-path tests in this file must remain green.
 
-- [ ] Add the prop + tests; `npm test -- CropCanvas > /tmp/t.log 2>&1; rc=$?` → FAIL.
-- [ ] Implement: branch resize handlers + hide rotate control on `deprojectAspect`. Comment-tidy.
-- [ ] `npm test -- CropCanvas > /tmp/t.log 2>&1; rc=$?` → PASS (incl. existing square tests).
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
-- [ ] Commit `tools/famous-curator/ui/components/CropCanvas.tsx tests/tools/famous-curator/ui/CropCanvas.test.tsx`.
+- [x] Add the prop + tests; `npm test -- CropCanvas > /tmp/t.log 2>&1; rc=$?` → FAIL.
+- [x] Implement: branch resize handlers + hide rotate control on `deprojectAspect`. Comment-tidy.
+- [x] `npm test -- CropCanvas > /tmp/t.log 2>&1; rc=$?` → PASS (incl. existing square tests).
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
+- [x] Commit `tools/famous-curator/ui/components/CropCanvas.tsx tests/tools/famous-curator/ui/components/CropCanvas.test.tsx`.
 
 ---
 
@@ -605,12 +605,12 @@ it('omits crop-preview-rect when deprojectAspect is undefined', () => {
 });
 ```
 
-- [ ] Add the tests; `npm test -- DiskOverlay > /tmp/t.log 2>&1; rc=$?` → FAIL.
-- [ ] Implement the preview rect + mask (+ the pure `deprojectPreviewRect` helper in `diskOverlay.ts` with its own unit test). Comment-tidy.
-- [ ] `npm test -- DiskOverlay > /tmp/t.log 2>&1; rc=$?` → PASS.
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
-- [ ] Manual visual check (curator dev server): preview rect appears + darkens outside only when deproject is on. _(VISUAL — pending user)_
-- [ ] Commit `tools/famous-curator/ui/components/DiskOverlay.tsx tools/famous-curator/ui/diskOverlay.ts tests/tools/famous-curator/ui/components/DiskOverlay.test.tsx tests/tools/famous-curator/ui/diskOverlay.test.ts`.
+- [x] Add the tests; `npm test -- DiskOverlay > /tmp/t.log 2>&1; rc=$?` → FAIL.
+- [x] Implement the preview rect + mask (+ the pure `deprojectPreviewRect` helper in `diskOverlay.ts` with its own unit test). Comment-tidy.
+- [x] `npm test -- DiskOverlay > /tmp/t.log 2>&1; rc=$?` → PASS.
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
+- [x] Manual visual check (curator dev server): preview rect appears + darkens outside only when deproject is on. _(VISUAL — user confirmed)_
+- [x] Commit `tools/famous-curator/ui/components/DiskOverlay.tsx tools/famous-curator/ui/diskOverlay.ts tests/tools/famous-curator/ui/components/DiskOverlay.test.tsx tests/tools/famous-curator/ui/diskOverlay.test.ts`.
 
 ---
 
@@ -652,11 +652,11 @@ describe('DiskControls margin slider', () => {
 });
 ```
 
-- [ ] Write the test file; `npm test -- DiskControls > /tmp/t.log 2>&1; rc=$?` → FAIL.
-- [ ] Implement the slider (import `DEFAULT_DISK_MARGIN`). Comment-tidy.
-- [ ] `npm test -- DiskControls > /tmp/t.log 2>&1; rc=$?` → PASS.
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
-- [ ] Commit `tools/famous-curator/ui/components/DiskControls.tsx tests/tools/famous-curator/ui/DiskControls.test.tsx`.
+- [x] Write the test file; `npm test -- DiskControls > /tmp/t.log 2>&1; rc=$?` → FAIL.
+- [x] Implement the slider (import `DEFAULT_DISK_MARGIN`). Comment-tidy.
+- [x] `npm test -- DiskControls > /tmp/t.log 2>&1; rc=$?` → PASS.
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
+- [x] Commit `tools/famous-curator/ui/components/DiskControls.tsx tests/tools/famous-curator/ui/components/DiskControls.test.tsx`.
 
 ---
 
@@ -716,11 +716,11 @@ it('selectGalaxy clears savedSquareCrop', () => {
 });
 ```
 
-- [ ] Add the tests; `npm test -- state > /tmp/t.log 2>&1; rc=$?` → FAIL.
-- [ ] Add `savedSquareCrop` (default `undefined` in `initialState`), the two actions, the reducer cases. Comment-tidy.
-- [ ] `npm test -- state > /tmp/t.log 2>&1; rc=$?` → PASS (incl. existing).
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
-- [ ] Commit `tools/famous-curator/ui/state.ts tests/tools/famous-curator/ui/state.test.ts`.
+- [x] Add the tests; `npm test -- state > /tmp/t.log 2>&1; rc=$?` → FAIL.
+- [x] Add `savedSquareCrop` (default `undefined` in `initialState`), the two actions, the reducer cases. Comment-tidy.
+- [x] `npm test -- state > /tmp/t.log 2>&1; rc=$?` → PASS (incl. existing).
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
+- [x] Commit `tools/famous-curator/ui/state.ts tests/tools/famous-curator/ui/state.test.ts`.
 
 ---
 
@@ -739,11 +739,11 @@ it('selectGalaxy clears savedSquareCrop', () => {
 
 > **Where to hook the transition:** the cleanest spot is App's `onDiskChange` handler (it already dispatches `setDisk`). Compare the incoming `deproject`/`margin`/`paDeg`/`axisRatio` against `state.disk` to decide seed-vs-restore-vs-reseed, then dispatch `setDisk` plus the appropriate crop action. Use `willDeproject` (single deproject gate) — do NOT re-implement the `0<b/a<1` test. Comment this coupling clearly (it's the non-obvious part).
 
-- [ ] Implement the coupling in App (`willDeproject` from `tools/famous/deprojectDisk`; `seedDeprojectCrop` from cropMath; `DEFAULT_DISK_MARGIN` from `src/data/famousCalibration`). Thread `deprojectAspect` + `margin` to CropCanvas → DiskOverlay. Comment-tidy.
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
-- [ ] `npm test > /tmp/t.log 2>&1; rc=$?` → Read log, full suite green.
-- [ ] Manual check (curator dev server): toggle deproject ON → crop snaps to a PA-rotated b/a rect framing the disk; rotate knob gone; margin slider re-frames; toggle OFF → prior square crop returns. _(VISUAL — pending user)_
-- [ ] Commit `tools/famous-curator/ui/App.tsx`.
+- [x] Implement the coupling in App (`willDeproject` from `tools/famous/deprojectDisk`; `seedDeprojectCrop` from cropMath; `DEFAULT_DISK_MARGIN` from `src/data/famousCalibration`). Thread `deprojectAspect` + `margin` to CropCanvas → DiskOverlay. Comment-tidy. (CropCanvas→DiskOverlay forwarding was missing; added.)
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
+- [x] `npm test > /tmp/t.log 2>&1; rc=$?` → Read log, full suite green. (Surfaced a 3rd deproject consumer — `assembleFamousMeta` in buildFamous — fixed to normalise its crop too.)
+- [x] Manual check (curator dev server): toggle deproject ON → crop snaps to a PA-rotated b/a rect framing the disk; rotate knob gone; margin slider re-frames; toggle OFF → prior square crop returns. _(VISUAL — user confirmed)_
+- [x] Commit `tools/famous-curator/ui/App.tsx`.
 
 ---
 
@@ -754,10 +754,10 @@ it('selectGalaxy clears savedSquareCrop', () => {
 
 **Behaviour:** confirm the whole chain holds: a deproject ON export for a tilted disk produces square `source.webp` + `full.webp` + `atlas.webp`, the emitted `calibration` has `paDeg === 0` and `axisRatio === 1`, and as-shot is unchanged.
 
-- [ ] Extend the Task-5 export test (or add one) asserting `res.calibration?.paDeg === 0` and `res.calibration?.axisRatio === 1` for the tilted deproject case, and that `atlas.webp` is square too.
-- [ ] `npm test > /tmp/t.log 2>&1; rc=$?` → full suite green.
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
-- [ ] Commit the test.
+- [x] Extend the Task-5 export test (or add one) asserting `res.calibration?.paDeg === 0` and `res.calibration?.axisRatio === 1` for the tilted deproject case, and that `atlas.webp` is square too.
+- [x] `npm test > /tmp/t.log 2>&1; rc=$?` → full suite green. (2086 passed)
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
+- [x] Commit the test.
 
 ---
 

@@ -78,4 +78,58 @@ describe('CropCanvas', () => {
     fireEvent.drop(dz, { dataTransfer: { files: [file] } });
     expect(onFileDrop).toHaveBeenCalledWith(file);
   });
+
+  // ── Deproject (aspect-locked) mode ────────────────────────────────────
+  //
+  // `deprojectAspect` switches the crop from square/as-shot to an
+  // aspect-locked rect that frames a disk's ellipse.  In this mode the
+  // rotation knob + "Reset rotation" disappear (the App pins rotation to
+  // the disk's position angle) and resize handles snap height = width *
+  // aspect.
+
+  const baseProps = {
+    source: { width: 1000, height: 1000, previewUrl: 'data:,' },
+    crop: { x: 100, y: 100, width: 200, height: 100, rotationDeg: 30 },
+    onFileDrop: () => {},
+    disk: undefined,
+    catalogAxisRatio: 0.5,
+    onDiskChange: () => {},
+  };
+
+  it('hides the rotate handle when deprojectAspect is set', () => {
+    const { container } = render(
+      <CropCanvas {...baseProps} onCropChange={() => {}} deprojectAspect={0.5} />,
+    );
+    expect(container.querySelector('[data-handle="rotate"]')).toBeNull();
+  });
+
+  it('still shows the rotate handle in as-shot mode (deprojectAspect undefined)', () => {
+    const { container } = render(
+      <CropCanvas {...baseProps} onCropChange={() => {}} deprojectAspect={undefined} />,
+    );
+    expect(container.querySelector('[data-handle="rotate"]')).not.toBeNull();
+  });
+
+  it('keeps aspect on a corner resize when deprojectAspect is set', () => {
+    const onCropChange = vi.fn();
+    const { container } = render(
+      <CropCanvas {...baseProps} onCropChange={onCropChange} deprojectAspect={0.5} />,
+    );
+    // jsdom's default getBoundingClientRect is all zeros, which would make
+    // canvasScale (= imgRect.width / source.width) zero and the drag delta
+    // infinite.  Stub the source <img> to report a 1:1 layout so the drag
+    // math is exercisable; source.width === 1000 ⇒ canvasScale === 1.
+    const img = container.querySelector('img.curator-crop-source') as HTMLImageElement;
+    img.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1000, height: 1000 }) as DOMRect;
+    const se = container.querySelector('[data-handle="se"]') as Element;
+    // jsdom's setPointerCapture/releasePointerCapture throw "No active
+    // pointer" for synthetic fireEvent pointers; stub them to no-ops.
+    (se as HTMLElement).setPointerCapture = () => {};
+    (se as HTMLElement).releasePointerCapture = () => {};
+    fireEvent.pointerDown(se, { clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(se, { clientX: 80, clientY: 80 });
+    fireEvent.pointerUp(se);
+    const last = onCropChange.mock.calls.at(-1)?.[0];
+    expect(last.height).toBeCloseTo(last.width * 0.5, 0);
+  });
 });

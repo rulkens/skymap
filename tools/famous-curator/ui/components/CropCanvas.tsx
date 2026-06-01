@@ -35,6 +35,14 @@ import {
   resizeEdgeE,
   resizeEdgeS,
   resizeEdgeW,
+  resizeCornerAspectNE,
+  resizeCornerAspectNW,
+  resizeCornerAspectSE,
+  resizeCornerAspectSW,
+  resizeEdgeAspectN,
+  resizeEdgeAspectE,
+  resizeEdgeAspectS,
+  resizeEdgeAspectW,
   rotateDelta,
   setRotation,
 } from '../cropMath';
@@ -67,6 +75,21 @@ export type CropCanvasProps = {
    * attribute.
    */
   downloadOriginalUrl?: string;
+  /**
+   * Aspect lock for the deproject crop.  `undefined` = square / as-shot
+   * (today's behaviour).  A number locks `height = width * deprojectAspect`
+   * (i.e. height/width = b/a), so resize handles preserve the disk's
+   * intrinsic ellipse shape.  In this mode the rotation knob and the
+   * "Reset rotation" button are hidden — the App owns rotation, pinning
+   * it to the disk's position angle.
+   */
+  deprojectAspect?: number | undefined;
+  /**
+   * Seed margin (fractional sky padding) for the disk-overlay's deproject
+   * crop preview.  Forwarded verbatim to DiskOverlay alongside
+   * `deprojectAspect` so the preview rect matches the crop the App seeds.
+   */
+  margin?: number | undefined;
 };
 
 type DragState = {
@@ -170,31 +193,60 @@ export function CropCanvas(props: CropCanvasProps) {
       // rotation=0 this reduces to (dxScreen, dyScreen).
       const { dx, dy } = rotateDelta(dxScreen, dyScreen, -d.startCrop.rotationDeg);
 
+      // Deproject mode locks height = width * aspect; the *Aspect* helpers
+      // mirror each square helper's anchor + sign logic but snap to the
+      // aspect ratio instead of a square.  Rotation is carried through the
+      // helpers untouched — the App pins it to the disk's position angle.
+      const aspect = props.deprojectAspect;
       let next: Crop;
       switch (d.handle) {
         case 'nw':
-          next = resizeCornerNW(d.startCrop, dx, dy, b);
+          next =
+            aspect !== undefined
+              ? resizeCornerAspectNW(d.startCrop, dx, dy, aspect, b)
+              : resizeCornerNW(d.startCrop, dx, dy, b);
           break;
         case 'n':
-          next = resizeEdgeN(d.startCrop, dy, b);
+          next =
+            aspect !== undefined
+              ? resizeEdgeAspectN(d.startCrop, dy, aspect, b)
+              : resizeEdgeN(d.startCrop, dy, b);
           break;
         case 'ne':
-          next = resizeCornerNE(d.startCrop, dx, dy, b);
+          next =
+            aspect !== undefined
+              ? resizeCornerAspectNE(d.startCrop, dx, dy, aspect, b)
+              : resizeCornerNE(d.startCrop, dx, dy, b);
           break;
         case 'e':
-          next = resizeEdgeE(d.startCrop, dx, b);
+          next =
+            aspect !== undefined
+              ? resizeEdgeAspectE(d.startCrop, dx, aspect, b)
+              : resizeEdgeE(d.startCrop, dx, b);
           break;
         case 'se':
-          next = resizeCornerSE(d.startCrop, dx, dy, b);
+          next =
+            aspect !== undefined
+              ? resizeCornerAspectSE(d.startCrop, dx, dy, aspect, b)
+              : resizeCornerSE(d.startCrop, dx, dy, b);
           break;
         case 's':
-          next = resizeEdgeS(d.startCrop, dy, b);
+          next =
+            aspect !== undefined
+              ? resizeEdgeAspectS(d.startCrop, dy, aspect, b)
+              : resizeEdgeS(d.startCrop, dy, b);
           break;
         case 'sw':
-          next = resizeCornerSW(d.startCrop, dx, dy, b);
+          next =
+            aspect !== undefined
+              ? resizeCornerAspectSW(d.startCrop, dx, dy, aspect, b)
+              : resizeCornerSW(d.startCrop, dx, dy, b);
           break;
         case 'w':
-          next = resizeEdgeW(d.startCrop, dx, b);
+          next =
+            aspect !== undefined
+              ? resizeEdgeAspectW(d.startCrop, dx, aspect, b)
+              : resizeEdgeW(d.startCrop, dx, b);
           break;
         // Exhaustive — `rotate` and `body` returned above.
         default:
@@ -276,12 +328,17 @@ export function CropCanvas(props: CropCanvasProps) {
         >
           Reset crop
         </button>
-        <button
-          onClick={() => props.onCropChange(setRotation(props.crop!, 0))}
-          disabled={props.crop.rotationDeg === 0}
-        >
-          Reset rotation
-        </button>
+        {/* Rotation is user-editable only in as-shot mode.  In deproject
+            mode the App pins rotation to the disk's position angle, so the
+            "Reset rotation" affordance would fight that lock. */}
+        {props.deprojectAspect === undefined && (
+          <button
+            onClick={() => props.onCropChange(setRotation(props.crop!, 0))}
+            disabled={props.crop.rotationDeg === 0}
+          >
+            Reset rotation
+          </button>
+        )}
         {/* Mode toggle: switches between crop-rect interaction and disk-overlay interaction.
             The two modes are mutually exclusive — only one can receive pointer events
             at a time — but both annotations persist independently. */}
@@ -373,19 +430,26 @@ export function CropCanvas(props: CropCanvasProps) {
               />
             ))}
             {/* Rotation knob: short stem extending above the N edge, with a
-                circular grab target at the top.  Rotates with the rect. */}
-            <span className="curator-crop-rotate-stem" aria-hidden="true" />
-            <span
-              className="curator-crop-handle curator-crop-handle--rotate"
-              data-handle="rotate"
-              aria-label="Rotate crop"
-              onPointerDown={(e) => {
-                e.stopPropagation();
-                startDrag('rotate')(e as PointerEvent<HTMLElement>);
-              }}
-              onPointerMove={moveDrag as (e: React.PointerEvent<HTMLSpanElement>) => void}
-              onPointerUp={endDrag as (e: React.PointerEvent<HTMLSpanElement>) => void}
-            />
+                circular grab target at the top.  Rotates with the rect.
+                Hidden in deproject mode — rotation there is locked to the
+                disk's position angle and owned by the App. */}
+            {props.deprojectAspect === undefined && (
+              <>
+                <span className="curator-crop-rotate-stem" aria-hidden="true" />
+                <span
+                  className="curator-crop-handle curator-crop-handle--rotate"
+                  data-handle="rotate"
+                  data-testid="rotate-handle"
+                  aria-label="Rotate crop"
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    startDrag('rotate')(e as PointerEvent<HTMLElement>);
+                  }}
+                  onPointerMove={moveDrag as (e: React.PointerEvent<HTMLSpanElement>) => void}
+                  onPointerUp={endDrag as (e: React.PointerEvent<HTMLSpanElement>) => void}
+                />
+              </>
+            )}
           </div>
 
           {/* DiskOverlay sits above the image and crop rect.  Interactive only
@@ -398,6 +462,11 @@ export function CropCanvas(props: CropCanvasProps) {
             catalogAxisRatio={props.catalogAxisRatio}
             interactive={mode === 'disk'}
             onDiskChange={props.onDiskChange}
+            // Forward the deproject framing so the overlay's crop-preview rect
+            // matches the App-seeded deproject crop; both are undefined in
+            // as-shot mode, which leaves the preview unrendered.
+            deprojectAspect={props.deprojectAspect}
+            margin={props.margin}
           />
         </div>
       </div>

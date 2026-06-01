@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 import {
   serialiseRecipe,
   parseRecipe,
+  validateRecipeDisk,
   type Recipe,
   type RecipeDisk,
 } from '../../../tools/famous-curator/plugin/recipe';
@@ -113,11 +114,21 @@ describe('recipe', () => {
   it('parseRecipe throws when disk.centerPx is not a 2-number tuple', () => {
     const r = sample();
     // Length-1 array.
-    r.disk = { centerPx: [1] as unknown as [number, number], radiusPx: 50, paDeg: 0, deproject: false };
+    r.disk = {
+      centerPx: [1] as unknown as [number, number],
+      radiusPx: 50,
+      paDeg: 0,
+      deproject: false,
+    };
     expect(() => parseRecipe(serialiseRecipe(r))).toThrow(/centerPx/);
 
     // Not an array at all.
-    r.disk = { centerPx: 5 as unknown as [number, number], radiusPx: 50, paDeg: 0, deproject: false };
+    r.disk = {
+      centerPx: 5 as unknown as [number, number],
+      radiusPx: 50,
+      paDeg: 0,
+      deproject: false,
+    };
     expect(() => parseRecipe(serialiseRecipe(r))).toThrow(/centerPx/);
   });
 
@@ -134,5 +145,67 @@ describe('recipe', () => {
     const r = sample();
     r.disk = { centerPx: [100, 100], radiusPx: 50, paDeg: 0, deproject: 1 as unknown as boolean };
     expect(() => parseRecipe(serialiseRecipe(r))).toThrow(/deproject/);
+  });
+});
+
+describe('Recipe.source', () => {
+  it('round-trips a source block through serialise/parse', () => {
+    const r = sample();
+    r.source = { width: 3774, height: 3950 };
+    const parsed = parseRecipe(serialiseRecipe(r));
+    expect(parsed.source).toEqual({ width: 3774, height: 3950 });
+  });
+
+  it('leaves source undefined when absent (backward compatible)', () => {
+    const r = sample();
+    expect(r.source).toBeUndefined();
+    expect(parseRecipe(serialiseRecipe(r)).source).toBeUndefined();
+  });
+
+  it('throws when a source dimension is non-finite or non-positive', () => {
+    const r = sample();
+    r.source = { width: 0, height: 100 };
+    expect(() => parseRecipe(JSON.stringify(r))).toThrow(/source\.width/);
+
+    r.source = { width: 100, height: Number.NaN };
+    expect(() => parseRecipe(JSON.stringify(r))).toThrow(/source\.height/);
+
+    r.source = { width: -1, height: 100 };
+    expect(() => parseRecipe(JSON.stringify(r))).toThrow(/source\.width/);
+  });
+});
+
+describe('RecipeDisk.margin', () => {
+  it('round-trips a margin through serialise/parse', () => {
+    const r = parseRecipe(
+      serialiseRecipe({
+        version: 1,
+        id: 'm51',
+        crop: { x: 0, y: 0, width: 10, height: 10, rotationDeg: 0 },
+        starnet: { stride: 16, upsample: false },
+        alpha: { blackPoint: 0, whitePoint: 1, gamma: 1 },
+        metadata: { sourceUrl: 'u', license: 'l', author: 'a' },
+        processedAt: '2026-06-01T00:00:00Z',
+        disk: { centerPx: [1, 2], radiusPx: 3, paDeg: 4, deproject: true, margin: 0.5 },
+      }),
+    );
+    expect(r.disk?.margin).toBe(0.5);
+  });
+
+  it('omits margin when absent (backward compatible)', () => {
+    const d = validateRecipeDisk({ centerPx: [1, 2], radiusPx: 3, paDeg: 4, deproject: false });
+    expect('margin' in d).toBe(false);
+  });
+
+  it('throws on a negative margin', () => {
+    expect(() =>
+      validateRecipeDisk({
+        centerPx: [1, 2],
+        radiusPx: 3,
+        paDeg: 4,
+        deproject: true,
+        margin: -0.1,
+      }),
+    ).toThrow(/margin/);
   });
 });

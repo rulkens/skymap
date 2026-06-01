@@ -63,4 +63,43 @@ describe('DiskOverlay', () => {
     const svg = container.querySelector('svg') as SVGSVGElement;
     expect(svg.style.pointerEvents).toBe('auto');
   });
+
+  const previewDisk: RecipeDisk = {
+    centerPx: [300, 300],
+    radiusPx: 80,
+    paDeg: 30,
+    axisRatio: 0.5,
+    deproject: true,
+  };
+  const src = { width: 1000, height: 1000, previewUrl: 'data:,' };
+
+  it('renders crop-preview-rect when interactive + deproject active', () => {
+    const { queryByTestId } = render(
+      <DiskOverlay
+        source={src}
+        disk={previewDisk}
+        catalogAxisRatio={0.5}
+        interactive={true}
+        onDiskChange={() => {}}
+        deprojectAspect={0.5}
+        margin={0.25}
+      />,
+    );
+    expect(queryByTestId('crop-preview-rect')).not.toBeNull();
+  });
+
+  it('omits crop-preview-rect when deprojectAspect is undefined', () => {
+    const { queryByTestId } = render(
+      <DiskOverlay
+        source={src}
+        disk={previewDisk}
+        catalogAxisRatio={0.5}
+        interactive={true}
+        onDiskChange={() => {}}
+        deprojectAspect={undefined}
+        margin={undefined}
+      />,
+    );
+    expect(queryByTestId('crop-preview-rect')).toBeNull();
+  });
 });

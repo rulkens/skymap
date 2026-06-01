@@ -85,12 +85,12 @@ async function sourceWebpDims(outDir: string): Promise<{ width: number; height: 
 }
 
 describe('handleExport — deprojection', () => {
-  it('deprojects a tilted disk', async () => {
+  it('ships a square source.webp for a tilted disk', async () => {
     // paDeg=0 → major axis vertical; minor axis is image-Y.
-    // deprojectDisk with paDeg=0, axisRatio=0.5 stretches image-Y by 1/0.5=2×.
-    // Spot-check from deprojectDisk.ts header: θ=0 → M=[[1,0],[0,s]] scales Y.
-    // The output canvas auto-grows to fit the stretched bounding box, so the
-    // output height > input height before the final fit-inside downsize.
+    // squareDeprojectCrop snaps the 64×64 crop to a 64×32 (b/a) rect; deprojectDisk
+    // then Y-stretches it by 1/0.5=2× back to 64×64 — an exact square.  The square
+    // IS the observable contract now (deproject no longer auto-grows to a taller
+    // rectangle); the "did it stretch" geometry is covered by the unit tests.
     const sess = await seedSession('tilted');
     const repo = fakeRepoRoot();
 
@@ -108,21 +108,12 @@ describe('handleExport — deprojection', () => {
       sessionDirOverride: sess.sessionDir,
     });
 
-    const { height: deprojH } = await sourceWebpDims(curatedGalaxyDir(repo, 'ngc-deproject'));
+    const { width: deprojW, height: deprojH } = await sourceWebpDims(
+      curatedGalaxyDir(repo, 'ngc-deproject'),
+    );
 
-    // Control: same geometry, deproject=false — no stretch.
-    const sessOff = await seedSession('off');
-    const repoOff = fakeRepoRoot();
-    const diskOff: RecipeDisk = { ...disk, deproject: false };
-    await handleExport({
-      body: { ...baseBody(sessOff.tmpId), disk: diskOff, id: 'ngc-deproject' },
-      repoRoot: repoOff,
-      sessionDirOverride: sessOff.sessionDir,
-    });
-    const { height: controlH } = await sourceWebpDims(curatedGalaxyDir(repoOff, 'ngc-deproject'));
-
-    // Deprojected export must be taller (Y-stretched bounding box is larger).
-    expect(deprojH).toBeGreaterThan(controlH);
+    // The deprojected source.webp is square.
+    expect(deprojW).toBe(deprojH);
   });
 
   it('still deprojects a very edge-on disk when the toggle is forced on', async () => {
@@ -150,21 +141,15 @@ describe('handleExport — deprojection', () => {
     expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('skip deproject'));
     warnSpy.mockRestore();
 
-    const { height: edgeonH } = await sourceWebpDims(curatedGalaxyDir(repo, 'ngc-deproject'));
+    const { width: edgeonW, height: edgeonH } = await sourceWebpDims(
+      curatedGalaxyDir(repo, 'ngc-deproject'),
+    );
 
-    // Control: same geometry, deproject=off — no stretch.
-    const sessOff = await seedSession('edgeon-off');
-    const repoOff = fakeRepoRoot();
-    const diskOff: RecipeDisk = { ...disk, deproject: false };
-    await handleExport({
-      body: { ...baseBody(sessOff.tmpId), disk: diskOff, id: 'ngc-deproject' },
-      repoRoot: repoOff,
-      sessionDirOverride: sessOff.sessionDir,
-    });
-    const { height: controlH } = await sourceWebpDims(curatedGalaxyDir(repoOff, 'ngc-deproject'));
-
-    // The deproject actually ran: the stretched bounding box is taller.
-    expect(edgeonH).toBeGreaterThan(controlH);
+    // The forced deproject squares the output.  At b/a=0.2 the 64-px crop snaps
+    // to height round(64·0.2)=13, which the ×5 stretch returns to 65 — a one-px
+    // rounding off perfect square that scales to ~1.5% after the fit-inside
+    // downsize, so we assert near-square rather than exact.
+    expect(Math.abs(edgeonW - edgeonH) / Math.max(edgeonW, edgeonH)).toBeLessThan(0.05);
   });
 
   it('is unchanged when deproject is off', async () => {

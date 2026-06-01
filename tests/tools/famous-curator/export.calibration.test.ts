@@ -16,6 +16,7 @@ import sharp from 'sharp';
 import { handleExport } from '../../../tools/famous-curator/plugin/routes/export';
 import type { RecipeDisk } from '../../../tools/famous-curator/plugin/recipe';
 import { deriveFamousCalibration } from '../../../tools/famous/deriveFamousCalibration';
+import { squareDeprojectCrop } from '../../../tools/famous/squareDeprojectCrop';
 import type { FamousCalibration } from '../../../src/@types/loading/FamousCalibration';
 
 /** Minimal session dir with source.png + starless.png. */
@@ -89,11 +90,15 @@ describe('handleExport — calibration derivation', () => {
       sessionDirOverride: sess.sessionDir,
     });
 
-    // deprojected=true because wantsDeproject && axisRatio=0.5 >= 0.3 && < 1
+    // deprojected=true because wantsDeproject && axisRatio=0.5 >= 0.3 && < 1.
+    // The route derives calibration from the NORMALISED (square-deproject) crop,
+    // not body.crop — so the expectation must use the same normalised crop or
+    // the PA frames won't match (effectivePaDeg collapses to 0 once snapped).
     const deprojected = true;
+    const effectiveAxisRatio = disk.axisRatio ?? catalogAxisRatio;
     const expected: FamousCalibration = deriveFamousCalibration({
       disk,
-      crop: CROP,
+      crop: squareDeprojectCrop(CROP, disk, effectiveAxisRatio),
       catalogAxisRatio,
       deprojected,
     });
