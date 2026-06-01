@@ -1,6 +1,6 @@
 # Famous-galaxy thumbnail calibration — Plan 4: runtime placement
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Extend `texturedDiskSubsystem` to consume the optional `calibration` on each `FamousMetaEntry`: offset the disk so the **nucleus** lands on the catalog 3-D position, size it from `diskRadiusFrac` so the disk matches `diameterKpc`, and route deprojected textures through the existing PA/axisRatio tilt while rendering as-shot textures flat. Absent calibration → today's render path, bit-identical. This also resolves the latent double-foreshortening bug.
 **Architecture:** Placement math is extracted into a pure, GPUDevice-free helper module so it's unit-testable; the subsystem's per-row planner calls it when emitting each `DiskInstance` for `Source.Famous` rows that carry calibration. The per-frame loop is otherwise unchanged except for the position/size/tilt values it feeds the disk.
@@ -70,16 +70,16 @@ export function effectiveTilt(
 - `nucleusOffsetWorld`: the normalized centre delta `(center - [0.5,0.5])` scaled by `diskSizeWorld` (the disk spans `±diskSizeWorld/2`, so a full half-frame delta of 0.5 maps to `diskSizeWorld/2`), projected onto `right`/`up`, **negated** so the nucleus moves onto the catalog point. `[0.5,0.5]` → `[0,0,0]`. Confirm sign against the shader's UV→corner convention.
 - `effectiveTilt`: `deprojected` → `{ positionAngleDeg: calibration.paDeg, axisRatio: calibration.axisRatio ?? catalogAxisRatio }`; `!deprojected` → `{ positionAngleDeg: 0, axisRatio: 1 }`.
 
-- [ ] Write failing test `calibratedDiskSizeWorld keeps a full-frame disk at catalog size` — `diskRadiusFrac 1` → returns `catalogSizeWorld`.
-- [ ] Write failing test `calibratedDiskSizeWorld doubles a half-frame disk` — `diskRadiusFrac 0.5` → `2 * catalogSizeWorld`.
-- [ ] Write failing test `nucleusOffsetWorld is zero for a centred nucleus` — `center [0.5,0.5]` → `[0,0,0]`.
-- [ ] Write failing test `nucleusOffsetWorld moves an off-centre nucleus along the basis` — `center [0.25,0.5]`, `right=[1,0,0]`, `up=[0,1,0]`, known `diskSizeWorld` → a hand-computed offset along `right` (sign matches "nucleus onto catalog point").
-- [ ] Write failing test `effectiveTilt applies PA+axisRatio for a deprojected texture`.
-- [ ] Write failing test `effectiveTilt renders an as-shot texture flat` — `deprojected false` → `axisRatio 1`, `positionAngleDeg 0`.
-- [ ] Write failing test `effectiveTilt falls back to catalog axisRatio when calibration.axisRatio absent` (deprojected case).
-- [ ] `npm test -- famousPlacement` → all FAIL.
-- [ ] Implement. Import `Vec2`, `Vec3`, `FamousCalibration` deep-relative.
-- [ ] `npm test -- famousPlacement` → all PASS. `npm run typecheck` → clean. Commit.
+- [x] Write failing test `calibratedDiskSizeWorld keeps a full-frame disk at catalog size` — `diskRadiusFrac 1` → returns `catalogSizeWorld`.
+- [x] Write failing test `calibratedDiskSizeWorld doubles a half-frame disk` — `diskRadiusFrac 0.5` → `2 * catalogSizeWorld`.
+- [x] Write failing test `nucleusOffsetWorld is zero for a centred nucleus` — `center [0.5,0.5]` → `[0,0,0]`.
+- [x] Write failing test `nucleusOffsetWorld moves an off-centre nucleus along the basis` — `center [0.25,0.5]`, `right=[1,0,0]`, `up=[0,1,0]`, known `diskSizeWorld` → a hand-computed offset along `right` (sign matches "nucleus onto catalog point").
+- [x] Write failing test `effectiveTilt applies PA+axisRatio for a deprojected texture`.
+- [x] Write failing test `effectiveTilt renders an as-shot texture flat` — `deprojected false` → `axisRatio 1`, `positionAngleDeg 0`.
+- [x] Write failing test `effectiveTilt falls back to catalog axisRatio when calibration.axisRatio absent` (deprojected case).
+- [x] `npm test -- famousPlacement` → all FAIL.
+- [x] Implement. Import `Vec2`, `Vec3`, `FamousCalibration` deep-relative.
+- [x] `npm test -- famousPlacement` → all PASS. `npm run typecheck` → clean. Commit.
 
 ## Task 2: wire placement helpers into texturedDiskSubsystem
 
@@ -92,14 +92,14 @@ export function effectiveTilt(
 
 When `calibration` is absent, the existing catalog-driven path runs unchanged.
 
-- [ ] Write failing test `calibrated size scales the emitted disk` — a `famousMeta` entry with `calibration.diskRadiusFrac 0.5` on a `Source.Famous` row → the emitted `DiskInstance.sizeWorld` is 2× the uncalibrated value.
-- [ ] Write failing test `uncalibrated rows use catalog size and orientation` — entry without `calibration` → `sizeWorld == paddedRadiusMpc(dKpc)*2`, `axisRatio == catalog ar`, `positionAngleDeg == catalog pa` (backward-compat / exact-equality guard).
-- [ ] Write failing test `a deprojected entry keeps PA+axisRatio tilt` — emitted `axisRatio`/`positionAngleDeg` match `effectiveTilt` for the deprojected case.
-- [ ] Write failing test `an as-shot entry renders flat` — emitted `axisRatio === 1`, `positionAngleDeg === 0`.
-- [ ] Write failing test `calibration only affects Source.Famous rows` — a non-Famous source is never offset/resized by calibration even if a same-index meta entry exists.
-- [ ] `npm test -- texturedDiskSubsystem.calibration` → FAIL. (Drive `runFrame` with a stub `atlas` + `famousMeta`, as existing texturedDiskSubsystem tests do — read them for the harness shape.)
-- [ ] Implement, reusing Task 1 helpers. Do not disturb the catalog-value flow for uncalibrated entries or the finite-orientation gate.
-- [ ] `npm test -- texturedDiskSubsystem.calibration` → PASS. Confirm existing `npm test -- texturedDiskSubsystem` stays green. `npm run typecheck` → clean. Commit.
+- [x] Write failing test `calibrated size scales the emitted disk` — a `famousMeta` entry with `calibration.diskRadiusFrac 0.5` on a `Source.Famous` row → the emitted `DiskInstance.sizeWorld` is 2× the uncalibrated value.
+- [x] Write failing test `uncalibrated rows use catalog size and orientation` — entry without `calibration` → `sizeWorld == paddedRadiusMpc(dKpc)*2`, `axisRatio == catalog ar`, `positionAngleDeg == catalog pa` (backward-compat / exact-equality guard).
+- [x] Write failing test `a deprojected entry keeps PA+axisRatio tilt` — emitted `axisRatio`/`positionAngleDeg` match `effectiveTilt` for the deprojected case.
+- [x] Write failing test `an as-shot entry renders flat` — emitted `axisRatio === 1`, `positionAngleDeg === 0`.
+- [x] Write failing test `calibration only affects Source.Famous rows` — a non-Famous source is never offset/resized by calibration even if a same-index meta entry exists.
+- [x] `npm test -- texturedDiskSubsystem.calibration` → FAIL. (Drive `runFrame` with a stub `atlas` + `famousMeta`, as existing texturedDiskSubsystem tests do — read them for the harness shape.)
+- [x] Implement, reusing Task 1 helpers. Do not disturb the catalog-value flow for uncalibrated entries or the finite-orientation gate.
+- [x] `npm test -- texturedDiskSubsystem.calibration` → PASS. Confirm existing `npm test -- texturedDiskSubsystem` stays green. `npm run typecheck` → clean. Commit.
 
 ## Task 3: backward-compat regression guard
 
@@ -107,9 +107,9 @@ When `calibration` is absent, the existing catalog-driven path runs unchanged.
 
 **Behaviour (spec "Testing — Backward-compat"):** A meta set with no `calibration` produces `DiskInstance`s identical to the pre-feature path — including the exact-float catalog `ar`/`pa` the fallback-orientation detector depends on.
 
-- [ ] Write failing test `no-calibration disks are identical to the pre-feature path` — run `runFrame` over a Famous cloud whose `famousMeta` entries have no `calibration`; assert each emitted disk's `x,y,z,sizeWorld,axisRatio,positionAngleDeg` equal the values computed directly from the catalog arrays (no float perturbation). Include a row carrying fallback-sentinel `ar`/`pa` and assert exact equality survives.
-- [ ] `npm test -- texturedDiskSubsystem.calibration` → PASS (confirms no regression).
-- [ ] `npm run typecheck` → clean. Full `npm test` green. Commit.
+- [x] Write failing test `no-calibration disks are identical to the pre-feature path` — run `runFrame` over a Famous cloud whose `famousMeta` entries have no `calibration`; assert each emitted disk's `x,y,z,sizeWorld,axisRatio,positionAngleDeg` equal the values computed directly from the catalog arrays (no float perturbation). Include a row carrying fallback-sentinel `ar`/`pa` and assert exact equality survives.
+- [x] `npm test -- texturedDiskSubsystem.calibration` → PASS (confirms no regression).
+- [x] `npm run typecheck` → clean. Full `npm test` green. Commit.
 
 ## Manual verification (renderer)
 
@@ -117,7 +117,7 @@ After tests pass, ask the user to confirm visually with the dev server (already 
 
 ## Definition of done for Plan 4
 
-- [ ] Pure placement helpers (`calibratedDiskSizeWorld`, `nucleusOffsetWorld`, `effectiveTilt`) unit-tested.
-- [ ] `texturedDiskSubsystem` offsets/sizes/tilts from `calibration` on Famous rows; deprojected → tilt, as-shot → flat.
-- [ ] No-calibration path is provably unchanged (regression test + exact-equality preserved).
-- [ ] `npm run typecheck` clean; full `npm test` green.
+- [x] Pure placement helpers (`calibratedDiskSizeWorld`, `nucleusOffsetWorld`, `effectiveTilt`) unit-tested.
+- [x] `texturedDiskSubsystem` offsets/sizes/tilts from `calibration` on Famous rows; deprojected → tilt, as-shot → flat.
+- [x] No-calibration path is provably unchanged (regression test + exact-equality preserved).
+- [x] `npm run typecheck` clean; full `npm test` green.

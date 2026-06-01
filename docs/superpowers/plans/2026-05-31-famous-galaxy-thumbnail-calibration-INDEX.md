@@ -108,6 +108,6 @@ Fixed by the spec; must match across all plans:
 - [x] Plan 1 — data & deprojection
 - [x] Plan 2 — build pipeline
 - [x] Plan 3 — curator UI (code complete; visual verification pending)
-- [ ] Plan 4 — runtime placement
-- [ ] Plan 5 — debug ring
-- [ ] Plan 6 — ADR
+- [x] Plan 4 — runtime placement (code complete; visual verification pending)
+- [x] Plan 5 — debug ring (code complete; visual verification pending)
+- [x] Plan 6 — ADR

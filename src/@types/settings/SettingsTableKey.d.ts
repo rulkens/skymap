@@ -1,5 +1,5 @@
 /**
- * SettingsTableKey — the thirteen names of the engine's "boring"
+ * SettingsTableKey — the fifteen names of the engine's "boring"
  * table-driven public-handle setters (see
  * `src/services/engine/wiring/settingsTable.ts`).
  *
@@ -28,4 +28,5 @@ export type SettingsTableKey =
   | 'setAbsMagLimit'
   | 'setExposure'
   | 'setToneMapCurve'
-  | 'setShowPickBuffer';
+  | 'setShowPickBuffer'
+  | 'setShowDiskRadiusRing';

@@ -53,7 +53,8 @@ struct Uniforms {
 // 64 bytes / 16 floats per instance (matches BYTES_PER_INSTANCE in
 // 'instancedQuadRenderer.ts'). Four vec4 slots: position+size, uvRect,
 // the orientation pack (axisRatio, PA, fadeAlpha, reserved), and the
-// hi-res LOD pack (layer index, crossfade alpha, reserved, reserved).
+// hi-res LOD pack (layer index, crossfade alpha, nucleus offset x,
+// nucleus offset y).
 
 struct InstanceIn {
   @location(0) posSize: vec4<f32>,
@@ -63,8 +64,10 @@ struct InstanceIn {
   @location(2) orient:  vec4<f32>,
   // x: hiResLayerIdx (cast to i32 in the vertex stage; -1 means 'no
   // hi-res slot bound, sample atlas only'). y: hiResCrossfadeAlpha in
-  // [0, 1] — fragment 'mix(atlas, hiRes, alpha)' weight. z, w:
-  // reserved padding for future hi-res controls.
+  // [0, 1] — fragment 'mix(atlas, hiRes, alpha)' weight. z, w: the
+  // calibrated nucleus offset in the disk's local corner frame
+  // ([0, 0] = centred); the vertex stage subtracts it from each corner
+  // so a curated galaxy's nucleus lands on the catalog point.
   @location(3) hiRes:   vec4<f32>,
 };
 

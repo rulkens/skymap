@@ -78,4 +78,10 @@ export type EngineDebugHandle = {
    * `EngineCallbacks.debug.onShowPickBufferChange`.
    */
   setShowPickBuffer(enabled: boolean): void;
+  /**
+   * Toggle the disk-radius debug ring (see
+   * `EngineSettingsState.debug.showDiskRadiusRing`).  Echoes through
+   * `EngineCallbacks.debug.onShowDiskRadiusRingChange`.
+   */
+  setShowDiskRadiusRing(enabled: boolean): void;
 };

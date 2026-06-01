@@ -234,6 +234,14 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     path: ['settings', 'debug', 'showPickBuffer'],
     callback: ['debug', 'onShowPickBufferChange'],
   },
+  {
+    // Disk-radius debug ring master toggle.  Off by default; gated
+    // behind the SettingsPanel's Debug section.  Echoes through the
+    // 'debug' callback cluster, same shape as the pick-buffer toggle.
+    name: 'setShowDiskRadiusRing',
+    path: ['settings', 'debug', 'showDiskRadiusRing'],
+    callback: ['debug', 'onShowDiskRadiusRingChange'],
+  },
 ];
 
 /**

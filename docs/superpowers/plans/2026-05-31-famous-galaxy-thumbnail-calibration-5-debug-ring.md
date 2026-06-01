@@ -23,10 +23,10 @@
 
 **Behaviour:** a "Show disk radius ring" checkbox, off by default, wired exactly like `showPickBuffer` (find every `showPickBuffer` reference and add the parallel `showDiskRadiusRing`).
 
-- [ ] **Step 1:** Add the setting + default + toggle + prop threading, mirroring `showPickBuffer` at each site.
-- [ ] **Step 2:** `npm run typecheck` → PASS.
+- [x] **Step 1:** Add the setting + default + toggle + prop threading, mirroring `showPickBuffer` at each site.
+- [x] **Step 2:** `npm run typecheck` → PASS.
 - [ ] **Step 3:** Manual: the checkbox appears and toggles state (no overlay yet).
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/data/defaults.ts src/@types/settings/UseEngineSettingsState.d.ts src/services/engine/wiring/settingsTable.ts src/services/engine/wiring/seedSettingsCallbacks.ts src/components/DebugPanel/DebugPanel.tsx src/components/App/App.tsx
@@ -61,9 +61,9 @@ export function createDiskRadiusRing(device: GPUDevice, swapChainFormat: GPUText
 
 Notes: generate a unit circle line-loop in the vertex stage (or a small vertex buffer); scale by `radiusWorld`; place via the same disk-axes basis as `texturedDisks/vertex.wesl` so the ring lies in the disk plane. Use the premultiplied-OVER blend and `CameraUniforms` prefix exactly as `pickDebugOverlay.ts` / the marker passes do. Read the WESL skill for `?static` import + struct-layout rules before writing the shader.
 
-- [ ] **Step 1:** Write the pass factory + WESL, following `pickDebugOverlay.ts` for factory shape and a marker/line pass for the line-loop + camera binding.
-- [ ] **Step 2:** `npm run typecheck` → PASS; load the app and confirm no "Invalid ShaderModule" in the console (use `createShaderModuleWithDevLog`).
-- [ ] **Step 3: Commit**
+- [x] **Step 1:** Write the pass factory + WESL, following `pickDebugOverlay.ts` for factory shape and a marker/line pass for the line-loop + camera binding.
+- [x] **Step 2:** `npm run typecheck` → PASS; load the app and confirm no "Invalid ShaderModule" in the console (use `createShaderModuleWithDevLog`). _(typecheck PASS; shader-compile confirmed once Task 3 wires the pass into the frame)_
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/services/gpu/passes/diskRadiusRing.ts src/services/gpu/shaders/diskRadiusRing src/@types/rendering/DiskRadiusRing.d.ts
@@ -83,10 +83,10 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 **Behaviour:** when the toggle is on and a famous galaxy is selected, draw the ring at `paddedRadiusMpc(selected.diameterKpc)` centred on the selected galaxy's world position, with its catalog/calibration `paDeg` + `axisRatio` so the ring sits in the disk plane. Selection comes from the existing selection plumbing (`getFamousMeta` / selection subsystem). Off or nothing selected → no draw.
 
-- [ ] **Step 1:** Construct the pass in `initGpu` and invoke it in `runFrame` behind the toggle, reading the selected galaxy's diameter/position/orientation.
-- [ ] **Step 2:** `npm run typecheck` → PASS.
+- [x] **Step 1:** Construct the pass in `initGpu` and invoke it in `runFrame` behind the toggle, reading the selected galaxy's diameter/position/orientation. _(invoked as a `diskRadiusRingPass` in `UI_PASSES` rather than an inline `runFrame` call — same gate, cleaner than a bespoke encoder; mirrors `selectionRingPass`.)_
+- [x] **Step 2:** `npm run typecheck` → PASS. _(also `npm run build` — wesl-plugin compiles the ring shaders clean.)_
 - [ ] **Step 3:** Manual: select a famous galaxy, toggle the ring on, confirm it draws at the procedural-disk radius and tracks the galaxy as the camera moves; compare against the textured disk (Plan 4).
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/services/engine/frame/runFrame.ts src/services/engine/phases/initGpu.ts

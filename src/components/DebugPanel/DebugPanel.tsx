@@ -48,6 +48,13 @@ export type DebugPanelProps = {
    */
   showPickBuffer: boolean;
   onShowPickBufferChange: (enabled: boolean) => void;
+  /**
+   * Disk-radius debug ring toggle.  When on, the renderer outlines each
+   * famous-galaxy thumbnail's disk-radius footprint so the developer can
+   * calibrate the placement against the underlying billboard.
+   */
+  showDiskRadiusRing: boolean;
+  onShowDiskRadiusRingChange: (enabled: boolean) => void;
 };
 
 export function DebugPanel({
@@ -60,6 +67,8 @@ export function DebugPanel({
   onRealOnlyModeChange,
   showPickBuffer,
   onShowPickBufferChange,
+  showDiskRadiusRing,
+  onShowDiskRadiusRingChange,
 }: DebugPanelProps) {
   return (
     <div
@@ -91,6 +100,14 @@ export function DebugPanel({
           onChange={(e) => onShowPickBufferChange(e.target.checked)}
         />
         <span>Show pick buffer</span>
+      </label>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+        <input
+          type="checkbox"
+          checked={showDiskRadiusRing}
+          onChange={(e) => onShowDiskRadiusRingChange(e.target.checked)}
+        />
+        <span>Show disk radius ring</span>
       </label>
       <div style={{ marginTop: 6 }} />
       <DataQualitySection

@@ -55,6 +55,7 @@ import {
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_SHOW_PICK_BUFFER,
+  DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_SPACE_MOUSE_SENSITIVITY,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
@@ -81,6 +82,9 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   const [realOnlyMode, setRealOnlyMode] = useState<boolean>(DEFAULT_REAL_ONLY_MODE);
   const [depthFadeEnabled, setDepthFadeEnabled] = useState<boolean>(DEFAULT_DEPTH_FADE_ENABLED);
   const [showPickBuffer, setShowPickBuffer] = useState<boolean>(DEFAULT_SHOW_PICK_BUFFER);
+  const [showDiskRadiusRing, setShowDiskRadiusRing] = useState<boolean>(
+    DEFAULT_SHOW_DISK_RADIUS_RING,
+  );
   // `visibleSourceMask` is a 32-bit bitmask: bit `n` set means "draw points
   // from source n". Seeded with ALL_VISIBLE_MASK so the first paint matches
   // the engine's startup default.
@@ -183,6 +187,7 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       realOnlyMode,
       depthFadeEnabled,
       showPickBuffer,
+      showDiskRadiusRing,
       visibleSourceMask,
       biasMode,
       absMagLimit,
@@ -230,6 +235,7 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       },
       debug: {
         onShowPickBufferChange: setShowPickBuffer,
+        onShowDiskRadiusRingChange: setShowDiskRadiusRing,
       },
       filaments: {
         onReady: (stripCount, vertexCount) => setFilamentCounts({ stripCount, vertexCount }),

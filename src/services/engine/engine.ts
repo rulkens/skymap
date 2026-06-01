@@ -82,6 +82,7 @@ import {
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_SHOW_PICK_BUFFER,
+  DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_EXPOSURE,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
@@ -411,6 +412,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       },
       debug: {
         showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
+        showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
       },
       markerCategoryVisibility: {
         cluster: true,
@@ -526,6 +528,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // frame consumer null-checks the handle together with the
       // 'settings.debug.showPickBuffer' toggle.
       pickDebugOverlay: null,
+      // Disk-radius debug ring.  Constructed in initGpu; null until
+      // then.  Excluded from isEngineReady — the per-frame pass
+      // null-checks the handle together with the
+      // 'settings.debug.showDiskRadiusRing' toggle.
+      diskRadiusRing: null,
       // Per-pass GPU timing service.  Always non-null — initialized
       // here with a no-op stub (no GPU resources), then replaced by
       // initGpu with the device-aware service after the device is
@@ -1411,6 +1418,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.volumeUpsample = null;
     state.gpu.pickDebugOverlay?.destroy();
     state.gpu.pickDebugOverlay = null;
+    state.gpu.diskRadiusRing?.destroy();
+    state.gpu.diskRadiusRing = null;
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
     state.gpu.renderer?.destroy();
@@ -1582,6 +1591,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         },
       },
       setShowPickBuffer: (enabled: boolean) => boringSetters.setShowPickBuffer(enabled),
+      setShowDiskRadiusRing: (enabled: boolean) =>
+        boringSetters.setShowDiskRadiusRing(enabled),
     },
 
     destroy,

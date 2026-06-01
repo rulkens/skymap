@@ -88,7 +88,15 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   // Place the corner in world space using (major, minor_3d) as the
   // disk's basis. No squash needed — the basis vectors are unit length;
   // inclination foreshortening falls out of the projection.
-  let world = center + (major * corner.x + minor_3d * corner.y) * halfSize;
+  //
+  // The nucleus offset (instance.hiRes.zw, corner space, default [0, 0])
+  // shifts the quad so a curated galaxy's nucleus — not the frame centre
+  // — lands on the catalog point. Subtracting in the disk-plane LOCAL
+  // frame reuses this shader's own (major, minor_3d) basis, so there is
+  // no CPU/GPU orientation divergence. The texture UV below stays on the
+  // ORIGINAL 'corner', so only the world placement shifts, not the sample.
+  let localCorner = corner - instance.hiRes.zw;
+  let world = center + (major * localCorner.x + minor_3d * localCorner.y) * halfSize;
   var out: VsOut;
   out.clipPos = worldToClip(u.cam, world);
 

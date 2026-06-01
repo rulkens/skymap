@@ -31,6 +31,7 @@ function makeSnapshot(): SettingsCallbackSeed {
     realOnlyMode: false,
     depthFadeEnabled: true,
     showPickBuffer: false,
+    showDiskRadiusRing: false,
     biasMode: BiasMode.None,
     absMagLimit: -19.5,
     toneMapCurve: ToneMapCurve.Reinhard,

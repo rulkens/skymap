@@ -106,6 +106,7 @@ import { markerLinesPass } from './markerLinesPass';
 import { labelsPass } from './labelsPass';
 import { clusterMarkersPass } from './clusterMarkersPass';
 import { selectionRingPass } from './selectionRingPass';
+import { diskRadiusRingPass } from './diskRadiusRingPass';
 
 /** The seven HDR passes, in deterministic draw order. */
 export const HDR_PASSES: readonly Pass[] = [
@@ -122,11 +123,19 @@ export const HDR_PASSES: readonly Pass[] = [
 /**
  * The UI overlay passes, in deterministic draw order.  The selection
  * ring leads so marker-lines and labels composite over its stroke —
- * labels carry information that must stay legible.  All entries share
- * one swap-chain `beginRenderPass` (see `uiOverlay.ts`) and one timing
- * slot (`ui-overlay`).
+ * labels carry information that must stay legible.  The disk-radius
+ * debug ring follows the selection ring (both are world-space strokes
+ * around the selected galaxy); it is default-off, so it contributes
+ * nothing unless the curator enables it.  All entries share one
+ * swap-chain `beginRenderPass` (see `uiOverlay.ts`) and one timing slot
+ * (`ui-overlay`).
  */
-export const UI_PASSES: readonly Pass[] = [selectionRingPass, markerLinesPass, labelsPass];
+export const UI_PASSES: readonly Pass[] = [
+  selectionRingPass,
+  diskRadiusRingPass,
+  markerLinesPass,
+  labelsPass,
+];
 
 /**
  * The ordered list of GPU-timing slots — the single source of truth for
@@ -167,3 +176,4 @@ export { markerLinesPass } from './markerLinesPass';
 export { labelsPass } from './labelsPass';
 export { clusterMarkersPass } from './clusterMarkersPass';
 export { selectionRingPass } from './selectionRingPass';
+export { diskRadiusRingPass } from './diskRadiusRingPass';

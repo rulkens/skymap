@@ -84,6 +84,7 @@ import { createClusterMarkerRenderer } from '../../gpu/renderers/clusterMarkerRe
 import { createScalarVolumeRenderer } from '../../gpu/renderers/scalarVolumeRenderer';
 import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
+import { createDiskRadiusRing } from '../../gpu/passes/diskRadiusRing';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOT_NAMES } from '../frame/passes';
 import { loadFontAtlases } from '../../gpu/labels/loadFontAtlases';
@@ -511,6 +512,16 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // draws AFTER tone-map onto the same target marker-lines / labels
   // composite onto.
   state.gpu.pickDebugOverlay = createPickDebugOverlay(device, format);
+
+  // ── Disk-radius debug ring ───────────────────────────────────────
+  //
+  // World-space line-strip drawn in the disk plane around the selected
+  // galaxy at its catalog disk radius (a famous-galaxy calibration aid).
+  // Targets the swap-chain `format` like the other post-tone-map UI
+  // overlays; the per-frame `diskRadiusRingPass` gates on
+  // `state.settings.debug.showDiskRadiusRing`, so a default-off build
+  // pays nothing beyond one boolean check.
+  state.gpu.diskRadiusRing = createDiskRadiusRing(device, format);
 
   // ── GPU timing service ────────────────────────────────────────────
   //

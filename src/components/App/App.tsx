@@ -67,6 +67,7 @@ export function App(): React.ReactElement {
     realOnlyMode,
     depthFadeEnabled,
     showPickBuffer,
+    showDiskRadiusRing,
     visibleSourceMask,
     biasMode,
     absMagLimit,
@@ -361,6 +362,10 @@ export function App(): React.ReactElement {
               showPickBuffer={showPickBuffer}
               onShowPickBufferChange={(enabled) => {
                 handleRef.current?.debug.setShowPickBuffer(enabled);
+              }}
+              showDiskRadiusRing={showDiskRadiusRing}
+              onShowDiskRadiusRingChange={(enabled) => {
+                handleRef.current?.debug.setShowDiskRadiusRing(enabled);
               }}
             />
           )}
