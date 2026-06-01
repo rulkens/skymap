@@ -156,10 +156,17 @@ describe('deproject square output', () => {
       repoRoot: repo,
       sessionDirOverride: sess.sessionDir,
     });
+    // Every shipped raster is square...
     const src = await sharp(res.paths.source).metadata();
     const full = await sharp(res.paths.full).metadata();
+    const atlas = await sharp(res.paths.atlas).metadata();
     expect(src.width).toBe(src.height);
     expect(full.width).toBe(full.height);
+    expect(atlas.width).toBe(atlas.height);
+    // ...and the baked calibration describes a face-on texture: PA collapsed to
+    // 0 and axisRatio 1, so the runtime neither rotates nor re-tilts the quad.
+    expect(res.calibration?.paDeg).toBe(0);
+    expect(res.calibration?.axisRatio).toBe(1);
   });
 
   it('leaves as-shot (deproject off) output unchanged — square crop ⇒ square out', async () => {

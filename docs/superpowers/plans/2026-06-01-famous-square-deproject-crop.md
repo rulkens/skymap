@@ -754,10 +754,10 @@ it('selectGalaxy clears savedSquareCrop', () => {
 
 **Behaviour:** confirm the whole chain holds: a deproject ON export for a tilted disk produces square `source.webp` + `full.webp` + `atlas.webp`, the emitted `calibration` has `paDeg === 0` and `axisRatio === 1`, and as-shot is unchanged.
 
-- [ ] Extend the Task-5 export test (or add one) asserting `res.calibration?.paDeg === 0` and `res.calibration?.axisRatio === 1` for the tilted deproject case, and that `atlas.webp` is square too.
-- [ ] `npm test > /tmp/t.log 2>&1; rc=$?` → full suite green.
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
-- [ ] Commit the test.
+- [x] Extend the Task-5 export test (or add one) asserting `res.calibration?.paDeg === 0` and `res.calibration?.axisRatio === 1` for the tilted deproject case, and that `atlas.webp` is square too.
+- [x] `npm test > /tmp/t.log 2>&1; rc=$?` → full suite green. (2086 passed)
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
+- [x] Commit the test.
 
 ---
 
