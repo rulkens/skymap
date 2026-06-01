@@ -21,7 +21,17 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
+// Demand re-evaluation is the engine's per-frame heartbeat: runFrame calls it
+// every tick so any state change (a setter flipping a flag, then waking the
+// loop via requestRender) re-derives what should load.  Mock it here so the
+// FPS-wiring fixtures don't drive the real demand table, and so the dedicated
+// test below can assert the per-frame call without a full registry.
+vi.mock('../../../../src/services/engine/wiring/reevaluateDemand', () => ({
+  reevaluateDemand: vi.fn(),
+}));
+
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
+import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -187,5 +197,24 @@ describe('runFrame — FPS wiring', () => {
 
     expect(onFpsChange).not.toHaveBeenCalled();
     expect(lastReportedFps.current).toBeNull();
+  });
+});
+
+describe('runFrame — demand re-evaluation', () => {
+  it('re-derives demand once per frame', () => {
+    // The per-frame call is what lets every setter Just Work: a setter flips
+    // its demand-gating state and calls requestRender (which it must, to
+    // repaint), the loop wakes, and this re-derivation loads whatever became
+    // demanded.  No setter has to remember to call reevaluateDemand itself —
+    // forgetting requestRender would visibly freeze the UI, so the trigger
+    // can't silently regress the way a forgotten per-setter call did.
+    vi.mocked(reevaluateDemand).mockClear();
+    const state = makeState();
+    const deps = makeDeps({ fpsValue: null, lastReportedFps: { current: null } });
+
+    runFrame(state, deps, 1000);
+
+    expect(reevaluateDemand).toHaveBeenCalledOnce();
+    expect(reevaluateDemand).toHaveBeenCalledWith(state);
   });
 });

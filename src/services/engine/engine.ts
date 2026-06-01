@@ -143,7 +143,6 @@ import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
 // connect/disconnect/sensitivity setters forward straight through.
 import { createSpaceMouseSubsystem } from './subsystems/spaceMouseSubsystem';
 import { buildSettersFromTable } from './wiring/settingsTable';
-import { reevaluateDemand } from './wiring/reevaluateDemand';
 import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
   loadCompanionAssets,
@@ -182,22 +181,21 @@ import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
 //
 // The state parameter uses an intersection-typed pick so the function
 // signature stays narrow (only the fields it reads) while accepting the full
-// `EngineState` from production callers. Demand-driven loading needs the
-// whole `EngineState` (settings + requests), which this narrow view can't
-// supply — so the engine-scope wrapper passes a `reevaluate` thunk that
-// closes over the full state and calls `reevaluateDemand(state)`. The impl
-// flips `drawMask` then invokes the thunk; loading is demand's concern, not
-// this function's.
+// `EngineState` from production callers. This function does NOT trigger
+// loading: it flips `drawMask`/`pickMask` and calls `requestRender`. The
+// per-frame `reevaluateDemand` in the render loop reads the flipped drawMask
+// and loads the now-visible survey (and its companions) on the next frame —
+// so visibility and loading stay decoupled, and a narrow state view suffices.
 export async function setSourceVisibleImpl(
   state: Pick<
     import('../../@types/engine/state/EngineState').EngineState,
-    'sources' | 'subsystems' | 'assetSlots'
+    'sources' | 'subsystems'
   >,
-  opts: { cb: Pick<EngineCallbacks, 'sources'>; reevaluate: () => void },
+  opts: { cb: Pick<EngineCallbacks, 'sources'> },
   source: SourceType,
   visible: boolean,
 ): Promise<void> {
-  const { cb, reevaluate } = opts;
+  const { cb } = opts;
 
   const handle: FadeHandle = { kind: 'survey', source };
   const targetMask = visible
@@ -212,18 +210,13 @@ export async function setSourceVisibleImpl(
   state.subsystems.scheduler.requestRender();
 
   if (visible) {
-    // Flip drawMask FIRST, then re-evaluate demand: the demand predicate for
-    // a survey row reads `maskHas(drawMask, source)`, so the bit must be set
-    // before the thunk runs. `reevaluateDemand` then loads the now-visible
-    // idle survey AND its companions (e.g. famousMeta, which demands on
-    // `slotState(Famous) !== 'idle'` — the survey's synchronous load-started
-    // dispatch satisfies it within the same pass). The idle-guard keeps an
-    // already-loaded survey from re-fetching, so re-toggling is cheap.
-    //
-    // The thunk runs BEFORE the fade so the fetch starts immediately rather
-    // than after the ~250 ms ramp-in.
+    // Flip drawMask, then fade in. The per-frame `reevaluateDemand` reads the
+    // now-set bit and loads the idle survey (plus companions like famousMeta,
+    // which demands on the survey slot leaving `idle`); the idle-guard keeps
+    // an already-loaded survey from re-fetching, so re-toggling is cheap. The
+    // requestRender above already woke the loop, so the load starts on the
+    // next frame.
     state.sources.drawMask = targetMask;
-    reevaluate();
     await state.subsystems.fades.fadeTo(handle, 1, FADE_IN_DURATION_MS);
   } else {
     await state.subsystems.fades.fadeTo(handle, 0, FADE_OUT_DURATION_MS);
@@ -1029,30 +1022,24 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function loadPgcAliasesFn(): Promise<PgcAliasMap> {
-    // Set the edge-triggered request flag, then re-evaluate: the pgcAlias
-    // row demands on `ctx.request('paletteOpened')`, so the idle-guarded
-    // pass fires its load. The flag stays set (harmless — the idle-guard
-    // prevents a re-fetch on subsequent re-evaluations), so a second
-    // palette open resolves straight off the already-ready slot. An errored
-    // alias load is NOT auto-retried (the idle-guard skips a non-idle slot);
+    // Set the edge-triggered request flag and wake the loop: the pgcAlias row
+    // demands on `ctx.request('paletteOpened')`, so the next frame's
+    // `reevaluateDemand` fires its load. The flag stays set (harmless — the
+    // idle-guard prevents a re-fetch on later frames), so a second palette
+    // open resolves straight off the already-ready slot. An errored alias
+    // load is NOT auto-retried (the idle-guard skips a non-idle slot);
     // awaitSlotReady then resolves to the empty-map fallback — graceful
     // degradation, matching every other demand-driven asset.
     state.requests.add('paletteOpened');
-    reevaluateDemand(state);
+    state.subsystems.scheduler.requestRender();
     return awaitSlotReady(state.assetSlots.pgcAlias, new Map() as PgcAliasMap);
   }
 
   async function setSourceVisible(source: SourceType, visible: boolean): Promise<void> {
-    // Delegate to the module-scope helper so tests can drive the same
-    // logic against a partial-state stub without a full GPU engine. The
-    // `reevaluate` thunk closes over the full state so the narrow impl can
-    // drive demand-based loading without seeing settings/requests itself.
-    return setSourceVisibleImpl(
-      state,
-      { cb, reevaluate: () => reevaluateDemand(state) },
-      source,
-      visible,
-    );
+    // Delegate to the module-scope helper so tests can drive the same logic
+    // against a partial-state stub without a full GPU engine. Loading is the
+    // render loop's per-frame `reevaluateDemand`, not this setter's concern.
+    return setSourceVisibleImpl(state, { cb }, source, visible);
   }
 
   function setTier(tier: Tier): void {
@@ -1229,22 +1216,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function setVolumeFieldEnabled(fieldId: VolumeFieldId, enabled: boolean): void {
-    // Flip the settings flag FIRST: the demand predicate for cf4-density /
-    // mcpm reads `fields[id].enabled`, so the bit must be set before the
-    // re-evaluation pass sees it.
+    // Flip the settings flag: the demand predicate for cf4-density / mcpm
+    // reads `fields[id].enabled`, and the per-frame `reevaluateDemand` (woken
+    // by the requestRender below) loads them when it flips on — idle-guarded,
+    // so a field flipped off-then-on doesn't re-fetch. The three DEV debug
+    // fixtures aren't demand rows, so they keep a direct lazy load here; it's
+    // a no-op for the cf4/mcpm field ids, so the two paths are a clean
+    // partition.
     if (state.settings.volumes.fields[fieldId]) {
       state.settings.volumes.fields[fieldId].enabled = enabled;
     }
-    // Loading splits by mechanism: cf4-density / mcpm are demand-driven
-    // rows, so `reevaluateDemand` fetches them when their flag flips on
-    // (idle-guarded — a field flipped off-then-on doesn't re-fetch). The
-    // three DEV debug fixtures aren't rows, so they keep a direct lazy
-    // load.  Each is a no-op for the other's field ids, so the pair is a
-    // clean partition.
-    if (enabled) {
-      reevaluateDemand(state);
-      maybeLazyLoadDebugVolume(fieldId);
-    }
+    if (enabled) maybeLazyLoadDebugVolume(fieldId);
     state.gpu.scalarVolumeRenderer?.setEnabled(fieldId, enabled);
     // Drive the FadeRegistry alongside the renderer flip. The renderer's
     // draw loop accepts (!enabled && opacity <= 0) as the skip condition,
