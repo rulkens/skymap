@@ -52,14 +52,14 @@
  *
  * ### Immutability
  *
- * `setPois` takes a readonly array and stores a defensive copy via
- * spread so external mutation can't bleed in.  The two visibility
- * setters (`setCategoryMarkerVisible` and `setCategoryLabelVisible`)
- * each replace their per-category visibility record wholesale.  Each
- * call to `produceLabels` returns a fresh output object — no caching,
- * no shared references between frames.  Per-frame label/line
- * accumulators are locally-mutable for perf, but the returned arrays
- * are typed readonly so callers can't mutate them in place.
+ * `setGroup` and `setPois` store a defensive copy via spread so external
+ * mutation can't bleed in after the call.  The two visibility setters
+ * (`setCategoryMarkerVisible` and `setCategoryLabelVisible`) each replace
+ * their per-category visibility record wholesale.  Each call to
+ * `produceLabels` returns a fresh output object — no caching, no shared
+ * references between frames.  Per-frame label/line accumulators are
+ * locally-mutable for perf, but the returned arrays are typed readonly so
+ * callers can't mutate them in place.
  *
  * ### Why marker vs label visibility are separate axes
  *
@@ -88,6 +88,7 @@ import type { Vec4 } from '../../../@types/math/Vec4';
 import type { LabelProducerOutput } from '../../../@types/engine/subsystems/LabelProducerOutput';
 import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfInterest';
 import type { PoiSubsystem } from '../../../@types/engine/subsystems/PoiSubsystem';
+import type { PoiGroupId } from '../../../@types/engine/subsystems/PoiGroupId';
 import type { CreatePoiSubsystemInput } from '../../../@types/engine/subsystems/CreatePoiSubsystemInput';
 import type { ClusterMarkerDescriptor } from '../../../@types/rendering/ClusterMarkerDescriptor';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
@@ -340,11 +341,27 @@ const ALL_CATEGORIES_VISIBLE: Readonly<Record<PoiCategory, boolean>> = {
   void: true,
 };
 
+/**
+ * Stable iteration order for the three POI groups.  Matches the
+ * historical merge in `wireSlots`: `[...staticAnchorPois, ...famousPois,
+ * ...clusterBulkPois]`.  Fixed here so every reader — `findPoi`,
+ * `getPoisForCategory`, `produceLabels`, `produceMarkers` — sees the
+ * same order, keeping the ring pick-path's `instance_index →
+ * getPoisForCategory(cat)[poiIndex]` alignment intact.
+ */
+const GROUP_ORDER: readonly PoiGroupId[] = ['staticAnchors', 'famous', 'clusterBulk'];
+
 export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSubsystem {
   // One-shot fade-in flag for the 'poi' label layer. Flips true on
   // the first frame that emits a non-empty label set.
   let didFireFadeIn = false;
-  let pois: readonly PointOfInterest[] = [];
+
+  // Each group owns its own slot; absent groups contribute nothing to the
+  // merged list.  Storing as a Map keyed by PoiGroupId makes the slot
+  // lifecycle explicit and prevents the three sources from clobbering each
+  // other — the root cause of the wireSlots merge.
+  const groups = new Map<PoiGroupId, readonly PointOfInterest[]>();
+
   // Two independent visibility axes.  `markerVisibility` gates the
   // ring + halo descriptors in `produceMarkers`; `labelVisibility`
   // gates the text labels in `produceLabels`.  Both default to "every
@@ -353,14 +370,49 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
   let markerVisibility: Readonly<Record<PoiCategory, boolean>> = ALL_CATEGORIES_VISIBLE;
   let labelVisibility: Readonly<Record<PoiCategory, boolean>> = ALL_CATEGORIES_VISIBLE;
 
+  /**
+   * Concatenate all groups in canonical order (staticAnchors → famous →
+   * clusterBulk).  Every reader calls this once per invocation; the
+   * result is not cached — POI lists are small (~500 entries at most) and
+   * the concat is negligibly cheap relative to the per-POI math that
+   * follows.  A single helper avoids four independent copies of the concat
+   * and makes the iteration-order contract enforceable in one place.
+   */
+  function allPois(): readonly PointOfInterest[] {
+    const out: PointOfInterest[] = [];
+    for (const id of GROUP_ORDER) {
+      const g = groups.get(id);
+      if (g !== undefined) {
+        for (const p of g) out.push(p);
+      }
+    }
+    return out;
+  }
+
+  function setGroup(id: PoiGroupId, pois: readonly PointOfInterest[]): void {
+    // Defensive copy so external mutation can't bleed in after the call.
+    groups.set(id, [...pois]);
+  }
+
+  function clearGroup(id: PoiGroupId): void {
+    groups.delete(id);
+  }
+
   function setPois(next: readonly PointOfInterest[]): void {
-    // Defensive copy — caller can mutate their array freely without
-    // bleeding through to our internal state.
-    pois = [...next];
+    // Shim over setGroup so existing callers keep working.  Semantics:
+    // the caller is handing us the complete merged list as a single unit,
+    // so we place it all in 'staticAnchors' and clear the other two groups
+    // — any group state those callers never knew about is evicted.  Callers
+    // that have migrated to setGroup don't call setPois at all; those that
+    // haven't still get the historical "replace everything" behaviour.
+    groups.set('staticAnchors', [...next]);
+    groups.delete('famous');
+    groups.delete('clusterBulk');
   }
 
   function clearPois(): void {
-    pois = [];
+    // Clear all groups — symmetric counterpart to setPois([]).
+    groups.clear();
   }
 
   function setCategoryMarkerVisible(category: PoiCategory, visible: boolean): void {
@@ -378,19 +430,18 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
   }
 
   function findPoi(id: string): PointOfInterest | null {
-    // O(n) walk; n ≤ ~50 (clusters + SCs + voids + famous galaxies),
-    // so this is invisible at the budget level even when the
-    // selectionSubsystem looks up POI hovers per pick frame.
-    return pois.find((p) => p.id === id) ?? null;
+    // O(n) walk; n ≤ ~500 (static anchors + famous galaxies + bulk
+    // clusters combined).  Cost is invisible at the budget level even
+    // when selectionSubsystem looks up POI hovers per pick frame.
+    return allPois().find((p) => p.id === id) ?? null;
   }
 
   function getPoisForCategory(category: PoiCategory): readonly PointOfInterest[] {
-    // O(n) filter over the POI table.  n is ≤ ~50 (clusters + SCs +
-    // voids + famous galaxies combined) and this is only called from
-    // the click resolver, so cost is invisible at the budget level
-    // even on slow phones.  See the PoiSubsystem type docstring for
-    // why this is the canonical accessor for pick-index → POI lookup.
-    return pois.filter((p) => p.category === category);
+    // O(n) filter; n ≤ ~500.  Only called from the click resolver so
+    // cost is invisible at the budget level.  Walks allPois() so the
+    // result order matches the iteration order of produceMarkers — this
+    // is the contract the ring pick-path's instance_index relies on.
+    return allPois().filter((p) => p.category === category);
   }
 
   function produceLabels(state: EngineState, ctx: ReadyFrameContext): LabelProducerOutput {
@@ -435,7 +486,7 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
     // within the same frame.  See `labelStyleOverride.ts` for the
     // module-scoped state's rationale.
     const override = getLabelStyleOverride();
-    for (const p of pois) {
+    for (const p of allPois()) {
       // Label-axis gate.  Markers consult their own `markerVisibility`
       // record in `produceMarkers` below — flipping a category's label
       // visibility off here leaves its ring + halo marker intact, and
@@ -758,20 +809,19 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
     const selectedPoiId = sel !== null && sel.kind === 'poi' ? sel.id : null;
 
     // Emit-all-then-discard contract.  Every marker-bearing POI of a
-    // VISIBLE category emits EXACTLY ONE descriptor here, in `pois`
-    // array order — including ones faded fully out (those emit alpha-0
-    // halo + ring colours, which the visible fragments and the ring
-    // pick fragment discard).  This keeps each category's descriptor run
-    // index-aligned with `getPoisForCategory(category)`: the ring pick
-    // path packs `@builtin(instance_index)` as the per-category-local
-    // POI index, and `resolvePoiFromPick` resolves it through
+    // VISIBLE category emits EXACTLY ONE descriptor here, in allPois()
+    // order — including ones faded fully out (those emit alpha-0 halo +
+    // ring colours, which the visible fragments and the ring pick fragment
+    // discard).  This keeps each category's descriptor run index-aligned
+    // with `getPoisForCategory(category)`: the ring pick path packs
+    // `@builtin(instance_index)` as the per-category-local POI index, and
+    // `resolvePoiFromPick` resolves it through
     // `getPoisForCategory(cat)[poiIndex]`.  Omitting faded POIs (the
-    // pre-fix behaviour) index-shifted that lookup and selected the
-    // wrong structure on click/hover.  The only legitimate `continue`s
-    // are all-or-nothing-per-category (visibility) or a different,
-    // non-marker category (famousGalaxy) — neither perturbs the
-    // within-category alignment.
-    for (const p of pois) {
+    // pre-fix behaviour) index-shifted that lookup and selected the wrong
+    // structure on click/hover.  The only legitimate `continue`s are
+    // all-or-nothing-per-category (visibility) or a different, non-marker
+    // category (famousGalaxy) — neither perturbs within-category alignment.
+    for (const p of allPois()) {
       // Marker-axis gate only.  See the symmetric comment in
       // `produceLabels` — these two records are deliberately
       // independent so the SettingsPanel can offer separate "show
@@ -916,6 +966,8 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
     id: 'pois',
     produceLabels,
     produceMarkers,
+    setGroup,
+    clearGroup,
     setPois,
     clearPois,
     setCategoryMarkerVisible,
@@ -923,7 +975,10 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
     findPoi,
     getPoisForCategory,
     destroy(): void {
-      // Intentionally empty — see the type-level docstring for why.
+      // Intentionally empty — the subsystem owns only plain-data state
+      // (group map, visibility records); no listeners, timers, or workers
+      // to release.  Method exists so engine.destroy() can iterate its
+      // subsystem bag uniformly.
     },
   };
   subsystem satisfies Destroyable;
