@@ -50,8 +50,11 @@ async function croppedDims(dir: string): Promise<{ width: number; height: number
 const CROP = { x: 32, y: 32, width: 64, height: 64, rotationDeg: 0 };
 
 describe('handleProcess — deprojection', () => {
-  it('deprojected cropped.png is taller than the deproject-off baseline', async () => {
+  it('deprojected cropped.png is square', async () => {
     // paDeg=0 → major axis vertical; deprojectDisk stretches image-Y by 1/0.5=2×.
+    // squareDeprojectCrop snaps the 64×64 crop to 64×32 (b/a) before extraction,
+    // so the ×2 stretch returns cropped.png to an exact 64×64 square — the new
+    // observable contract (deproject no longer grows a taller rectangle).
     const disk: RecipeDisk = {
       centerPx: [64, 64],
       radiusPx: 24,
@@ -73,26 +76,9 @@ describe('handleProcess — deprojection', () => {
       starnetConfig: { mock: true },
       sessionDirOverride: sessOn.dir,
     });
-    const { height: onH } = await croppedDims(sessOn.dir);
+    const { width: onW, height: onH } = await croppedDims(sessOn.dir);
 
-    // Control: same geometry, deproject=false.
-    const sessOff = await seedSession('off');
-    await handleProcess({
-      body: {
-        tmpId: sessOff.tmpId,
-        crop: CROP,
-        starnet: { stride: 64, upsample: false },
-        alpha: { blackPoint: 5, whitePoint: 220, gamma: 0.8 },
-        disk: { ...disk, deproject: false },
-        catalogAxisRatio: 0.5,
-      },
-      starnetConfig: { mock: true },
-      sessionDirOverride: sessOff.dir,
-    });
-    const { height: offH } = await croppedDims(sessOff.dir);
-
-    // Deprojected crop must be taller — Y-stretched bounding box is larger.
-    expect(onH).toBeGreaterThan(offH);
+    expect(onW).toBe(onH);
   });
 
   it('processing without disk is unaffected by the new optional fields', async () => {

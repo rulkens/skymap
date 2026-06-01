@@ -22,6 +22,7 @@ import { runStarnet, type StarnetConfig } from '../starnet.js';
 import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlpha.js';
 import { rotatedExtract } from '../cropExtract.js';
 import { deprojectDisk, willDeproject } from '../../../famous/deprojectDisk.js';
+import { squareDeprojectCrop } from '../../../famous/squareDeprojectCrop.js';
 import { validateRecipeDisk, type RecipeDisk } from '../recipe.js';
 
 const PREVIEW_PX = 512;
@@ -73,17 +74,30 @@ export async function handleProcess(opts: {
   //    rotated rect, out-of-image rect (transparent fill).
   //
   //    Deproject logic mirrors export.ts exactly so the starless preview
-  //    reflects the same geometry the maintainer will commit.
-  //    effectivePaDeg: disk.paDeg is in the SOURCE frame; rotatedExtract
-  //    rotates the image by -rotationDeg, so the crop frame PA is
-  //    disk.paDeg - rotationDeg (same derivation as export.ts).
-  const pipeline = await rotatedExtract(sourcePath, body.crop);
+  //    reflects the same geometry the maintainer will commit: derive the disk
+  //    and the deproject flag, square-snap the extraction crop, then extract.
+  //    effectivePaDeg is disk.paDeg measured in the extraction crop's frame —
+  //    rotatedExtract rotates the image by -extractionCrop.rotationDeg.
   const disk = body.disk !== undefined ? validateRecipeDisk(body.disk) : undefined;
   const effectiveAxisRatio = disk?.axisRatio ?? body.catalogAxisRatio;
-  const effectivePaDeg = disk !== undefined ? disk.paDeg - body.crop.rotationDeg : 0;
   const wantsDeproject = disk?.deproject === true;
   const deprojected =
     wantsDeproject && effectiveAxisRatio !== undefined && willDeproject(effectiveAxisRatio);
+
+  // Square-snap the extraction crop when deprojecting so the preview matches
+  // the square geometry the export route will commit (rotationDeg = disk.paDeg,
+  // height = width·(b/a); see squareDeprojectCrop).  The as-shot path uses
+  // body.crop verbatim.  We extract from this normalised crop so the starless
+  // preview reflects the committed framing, not the raw annotation rect.
+  const extractionCrop =
+    deprojected && disk !== undefined
+      ? squareDeprojectCrop(body.crop, disk, effectiveAxisRatio!)
+      : body.crop;
+  // After the square-snap, extractionCrop.rotationDeg == disk.paDeg, so this
+  // collapses to 0 — the pure image-Y stretch that yields a square.
+  const effectivePaDeg = disk !== undefined ? disk.paDeg - extractionCrop.rotationDeg : 0;
+
+  const pipeline = await rotatedExtract(sourcePath, extractionCrop);
   // willDeproject gates the stretch to a tilted, valid disk (0 < b/a < 1), so a
   // forced toggle on a very edge-on disk is honored here too — preview matches
   // the committed geometry.  No console.warn here: export.ts owns user-facing

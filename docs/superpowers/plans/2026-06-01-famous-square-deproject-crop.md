@@ -395,11 +395,11 @@ describe('deproject square output', () => {
 
 > The `/* fixture */` placeholders: wire them to this file's existing setup (it already constructs a tmp session with `source.png` + `starless.png` and a `repoRoot`). The implementer fills these from the surrounding test scaffolding rather than inventing a new harness.
 
-- [ ] Add the tests; `npm test -- export > /tmp/t.log 2>&1; rc=$?` → the tilted-disk square assertion FAILS (rectangle today), as-shot passes.
-- [ ] Import `squareDeprojectCrop` in both routes; insert the normalisation (only in the `deprojected` branch) and feed the normalised crop to `rotatedExtract` (both routes) and `deriveFamousCalibration` (export). Comment-tidy the touched comment blocks.
-- [ ] `npm test -- export > /tmp/t.log 2>&1; rc=$?` and `npm test -- process > /tmp/t.log 2>&1; rc=$?` → PASS.
-- [ ] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
-- [ ] Commit `tools/famous-curator/plugin/routes/export.ts tools/famous-curator/plugin/routes/process.ts tests/tools/famous-curator/export.test.ts`.
+- [x] Add the tests; `npm test -- export > /tmp/t.log 2>&1; rc=$?` → the tilted-disk square assertion FAILS (rectangle today), as-shot passes.
+- [x] Import `squareDeprojectCrop` in both routes; insert the normalisation (only in the `deprojected` branch) and feed the normalised crop to `rotatedExtract` (both routes) and `deriveFamousCalibration` (export). Comment-tidy the touched comment blocks.
+- [x] `npm test -- export > /tmp/t.log 2>&1; rc=$?` and `npm test -- process > /tmp/t.log 2>&1; rc=$?` → PASS. (Also reconciled the pre-existing #229 deproject tests whose "taller" premise the square design replaces: `export.deproject.test.ts`, `process.deproject.test.ts` now assert square; `export.calibration.test.ts` derives `expected` from the normalised crop.)
+- [x] `npm run typecheck > /tmp/tc.log 2>&1; rc=$?` → `rc == 0`.
+- [x] Commit `tools/famous-curator/plugin/routes/export.ts tools/famous-curator/plugin/routes/process.ts tests/tools/famous-curator/export.test.ts`.
 
 ---
 

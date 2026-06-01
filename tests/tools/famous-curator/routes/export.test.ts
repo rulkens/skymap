@@ -15,16 +15,33 @@ import { join, resolve } from 'node:path';
 import sharp from 'sharp';
 import { handleExport } from '../../../../tools/famous-curator/plugin/routes/export';
 
-async function seedSession(): Promise<{ tmpId: string; sessionDir: string }> {
+async function makePng(width: number, height: number): Promise<Buffer> {
+  return sharp({
+    create: { width, height, channels: 4, background: { r: 100, g: 110, b: 120, alpha: 1 } },
+  })
+    .png()
+    .toBuffer();
+}
+
+async function seedSession(
+  size = 256,
+  starless?: { width: number; height: number },
+): Promise<{ tmpId: string; sessionDir: string }> {
   const root = mkdtempSync(join(tmpdir(), 'curator-export-sess-'));
   const tmpId = 'sx';
   const dir = join(root, tmpId);
   mkdirSync(dir, { recursive: true });
-  const png = await sharp({
-    create: { width: 256, height: 256, channels: 4, background: { r: 100, g: 110, b: 120, alpha: 1 } },
-  }).png().toBuffer();
-  writeFileSync(join(dir, 'source.png'), png);
-  writeFileSync(join(dir, 'starless.png'), png);
+  // `size` lets the deproject tests below seed a source large enough that a
+  // tilted 400-px crop centred at [300,300] fits inside it; the default 256
+  // keeps the original happy-path fixtures unchanged.
+  writeFileSync(join(dir, 'source.png'), await makePng(size, size));
+  // starless.png is produced by handleProcess (rotatedExtract → StarNet), so in
+  // the real pipeline it already lives in the EXTRACTED crop frame — for a
+  // deproject export that means the normalised b/a rect (e.g. 400×200), which
+  // export then Y-stretches back to a square.  The fixture mirrors that frame
+  // when `starless` is given; otherwise it matches the source.
+  const sl = starless ?? { width: size, height: size };
+  writeFileSync(join(dir, 'starless.png'), await makePng(sl.width, sl.height));
   return { tmpId, sessionDir: dir };
 }
 
@@ -111,5 +128,58 @@ describe('handleExport', () => {
     expect(existsSync(resolve(outDir, 'stale.txt'))).toBe(false);
     const recipe = JSON.parse(readFileSync(resolve(outDir, 'recipe.json'), 'utf8'));
     expect(recipe.metadata.author).toBe('Bob');
+  });
+});
+
+describe('deproject square output', () => {
+  it('ships a square source.webp AND full.webp for a tilted disk', async () => {
+    // Arrange a session with a non-square source and a tilted disk
+    // (axisRatio 0.5, paDeg 30, deproject true).  The crop the UI sends is an
+    // arbitrary square; squareDeprojectCrop snaps it (rotationDeg = paDeg,
+    // height = width·b/a) so the deproject stretch resolves to width × width.
+    // 600² source leaves room for the rotated 400×200 extract centred at
+    // [300,300]; starless is seeded at that post-process 400×200 frame so the
+    // export Y-stretch (×1/0.5 = 2) lands it on a 400×400 square like source.
+    const sess = await seedSession(600, { width: 400, height: 200 });
+    const repo = fakeRepoRoot();
+    const res = await handleExport({
+      body: {
+        id: 'tilt',
+        tmpId: sess.tmpId,
+        crop: { x: 100, y: 100, width: 400, height: 400, rotationDeg: 0 },
+        starnet: { stride: 16, upsample: false },
+        alpha: { blackPoint: 0, whitePoint: 1, gamma: 1 },
+        metadata: { sourceUrl: 'u', license: 'l', author: 'a' },
+        disk: { centerPx: [300, 300], radiusPx: 80, paDeg: 30, axisRatio: 0.5, deproject: true },
+        catalogAxisRatio: 0.5,
+      },
+      repoRoot: repo,
+      sessionDirOverride: sess.sessionDir,
+    });
+    const src = await sharp(res.paths.source).metadata();
+    const full = await sharp(res.paths.full).metadata();
+    expect(src.width).toBe(src.height);
+    expect(full.width).toBe(full.height);
+  });
+
+  it('leaves as-shot (deproject off) output unchanged — square crop ⇒ square out', async () => {
+    const sess = await seedSession(600);
+    const repo = fakeRepoRoot();
+    const res = await handleExport({
+      body: {
+        id: 'asshot',
+        tmpId: sess.tmpId,
+        crop: { x: 100, y: 100, width: 400, height: 400, rotationDeg: 0 },
+        starnet: { stride: 16, upsample: false },
+        alpha: { blackPoint: 0, whitePoint: 1, gamma: 1 },
+        metadata: { sourceUrl: 'u', license: 'l', author: 'a' },
+        disk: { centerPx: [300, 300], radiusPx: 80, paDeg: 30, axisRatio: 0.5, deproject: false },
+        catalogAxisRatio: 0.5,
+      },
+      repoRoot: repo,
+      sessionDirOverride: sess.sessionDir,
+    });
+    const src = await sharp(res.paths.source).metadata();
+    expect(src.width).toBe(src.height);
   });
 });
