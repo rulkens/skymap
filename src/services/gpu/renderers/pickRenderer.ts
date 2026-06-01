@@ -32,6 +32,7 @@ import type { Vec2 } from '../../../@types/math/Vec2';
 import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
+import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
 import type { ClusterMarkerRenderer } from '../../../@types/rendering/ClusterMarkerRenderer';
 import {
   POINT_STRIDE,
@@ -66,6 +67,7 @@ export function createPickRenderer(
   pointRenderer: PointRenderer,
   fadeBgl: FadeUniformsBgl,
   sourceBgl: SourceUniformsBgl,
+  focusBgl: FocusUniformsBgl,
   // Optional POI-ring pick provider.  When present, the pick pass
   // calls `clusterMarkerRenderer.pickRing(pass)` after the galaxy
   // draws so cluster / supercluster / void ring hits land in the same
@@ -93,6 +95,7 @@ export function createPickRenderer(
       }),
       fadeBgl,
       sourceBgl,
+      focusBgl,
     ],
   });
 
@@ -108,6 +111,22 @@ export function createPickRenderer(
     label: 'pick-fade-bg-dummy',
     layout: fadeBgl,
     entries: [{ binding: 0, resource: { buffer: dummyFadeBuffer } }],
+  });
+
+  // The shared vertex shader also declares @group(3) FocusUniforms.  The
+  // pick path ignores intensity entirely (the focus dim folds into
+  // intensity, which the pick fragment never reads), but the explicit
+  // pipeline layout must still match the visual pipeline — so we bind a
+  // zeroed dummy focus buffer, never written from the CPU.
+  const dummyFocusBuffer = device.createBuffer({
+    label: 'pick-focus-uniform-dummy',
+    size: 32,
+    usage: GPUBufferUsage.UNIFORM,
+  });
+  const dummyFocusBindGroup = device.createBindGroup({
+    label: 'pick-focus-bg-dummy',
+    layout: focusBgl,
+    entries: [{ binding: 0, resource: { buffer: dummyFocusBuffer } }],
   });
 
   // @group(2) bind groups cached by GPUBuffer identity — pick() fires
@@ -301,6 +320,7 @@ export function createPickRenderer(
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
     pass.setBindGroup(1, dummyFadeBindGroup);
+    pass.setBindGroup(3, dummyFocusBindGroup);
 
     for (const src of sourceList) {
       let sourceBindGroup = sourceBindGroupCache.get(src.sourceBuffer);
@@ -430,6 +450,7 @@ export function createPickRenderer(
     depthTexture?.destroy();
     stagingBuffer.destroy();
     dummyFadeBuffer.destroy();
+    dummyFocusBuffer.destroy();
   }
 
   const renderer: PickRenderer = { label: 'pickRenderer', pick, renderForDebug, destroy };

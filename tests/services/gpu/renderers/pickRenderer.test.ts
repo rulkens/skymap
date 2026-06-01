@@ -60,12 +60,15 @@ function makeStubFadeBgl() {
 function makeStubSourceBgl() {
   return {} as import('../../../../src/@types/rendering/SourceUniformsBgl').SourceUniformsBgl;
 }
+function makeStubFocusBgl() {
+  return {} as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl;
+}
 
 describe('createPickRenderer', () => {
   it('takes a PointRenderer at construction (no per-call uniformBuffer arg)', () => {
     const device = makeStubDevice();
-    const pointRenderer = createPointRenderer(device, 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl());
-    const pickRenderer = createPickRenderer(device, pointRenderer, makeStubFadeBgl(), makeStubSourceBgl());
+    const pointRenderer = createPointRenderer(device, 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
+    const pickRenderer = createPickRenderer(device, pointRenderer, makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
 
     // The compile-time test is the strongest one: this file would fail
     // to typecheck if `createPickRenderer` still required only a device
@@ -104,6 +107,7 @@ describe('createPickRenderer', () => {
     // passed to both createPointRenderer and createPickRenderer.
     const canonicalSourceBgl = makeStubSourceBgl();
     const canonicalFadeBgl = makeStubFadeBgl();
+    const canonicalFocusBgl = makeStubFocusBgl();
 
     const createBindGroupCalls: Array<{ layout: unknown; buffer: unknown }> = [];
 
@@ -160,8 +164,8 @@ describe('createPickRenderer', () => {
     } as unknown as GPUDevice;
 
     // Both renderers share the same canonical fadeBgl + sourceBgl.
-    const pointRenderer = createPointRenderer(device, 'rgba16float', canonicalFadeBgl, canonicalSourceBgl);
-    const pickRenderer = createPickRenderer(device, pointRenderer, canonicalFadeBgl, canonicalSourceBgl);
+    const pointRenderer = createPointRenderer(device, 'rgba16float', canonicalFadeBgl, canonicalSourceBgl, canonicalFocusBgl);
+    const pickRenderer = createPickRenderer(device, pointRenderer, canonicalFadeBgl, canonicalSourceBgl, canonicalFocusBgl);
 
     // Two distinct sourceBuffers — the production case is N visible
     // surveys and we want one bind group per source.

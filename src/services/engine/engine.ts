@@ -483,6 +483,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // (layout:'auto' cross-pipeline trap).
       fadeBgl: null,
       sourceBgl: null,
+      focusBgl: null,
       postProcess: null,
       volumeOffscreen: null,
       filamentRenderer: null,

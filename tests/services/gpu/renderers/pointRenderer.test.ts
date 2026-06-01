@@ -142,17 +142,24 @@ function makeStubFadeBgl() {
 function makeStubSourceBgl() {
   return {} as import('../../../../src/@types/rendering/SourceUniformsBgl').SourceUniformsBgl;
 }
+function makeStubFocusBgl() {
+  return {} as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl;
+}
+
+// At-rest focus value (blend=0 → shader multiplier is a no-op).
+const AT_REST_FOCUS: import('../../../../src/@types/rendering/FocusUniformsValue').FocusUniformsValue =
+  { center: [0, 0, 0], radiusMpc: 0, blend: 0, invert: 0 };
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('PointRenderer.totalCount', () => {
   it('returns 0 before any upload', () => {
-    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm', makeStubFadeBgl(), makeStubSourceBgl());
+    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
     expect(renderer.totalCount()).toBe(0);
   });
 
   it('sums counts across multiple sources', async () => {
-    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm', makeStubFadeBgl(), makeStubSourceBgl());
+    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
     await renderer.upload(Source.SDSS, makeCloud(100));
     await renderer.upload(Source.TwoMRS, makeCloud(50));
     await renderer.upload(Source.Glade, makeCloud(25));
@@ -160,7 +167,7 @@ describe('PointRenderer.totalCount', () => {
   });
 
   it('updates after a source is unloaded', async () => {
-    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm', makeStubFadeBgl(), makeStubSourceBgl());
+    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
     await renderer.upload(Source.SDSS, makeCloud(100));
     await renderer.upload(Source.TwoMRS, makeCloud(50));
     expect(renderer.totalCount()).toBe(150);
@@ -172,7 +179,7 @@ describe('PointRenderer.totalCount', () => {
 
 describe('PointRenderer.loadedSources', () => {
   it('iterates clouds in `SURVEY_SOURCES` order regardless of upload order', async () => {
-    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm', makeStubFadeBgl(), makeStubSourceBgl());
+    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
     // Upload in non-iteration order on purpose — the renderer must re-sort.
     // SURVEY_SOURCES is ordered smallest-catalogue → largest:
     //   [Synthetic, Famous, TwoMRS, SDSS, Glade]
@@ -189,7 +196,7 @@ describe('PointRenderer.loadedSources', () => {
   });
 
   it('drops an unloaded source from the iterator', async () => {
-    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm', makeStubFadeBgl(), makeStubSourceBgl());
+    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
     await renderer.upload(Source.TwoMRS, makeCloud(50));
     await renderer.upload(Source.SDSS, makeCloud(100));
     await renderer.upload(Source.Glade, makeCloud(25));
@@ -216,7 +223,7 @@ describe('PointRenderer.upload — regression: replace, not append', () => {
   it('destroys the prior buffer for a source on second upload', async () => {
     // Two clouds with different counts: an "append" bug would leave the
     // sum (1500) in the bookkeeping; a correct "replace" leaves only 500.
-    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm', makeStubFadeBgl(), makeStubSourceBgl());
+    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
     const cloudA = makeCloud(1000);
     const cloudB = makeCloud(500);
 
@@ -258,7 +265,7 @@ describe('PointRenderer.upload — regression: replace, not append', () => {
 // excluded source.
 describe('PointRenderer.upload — regression: empty-cloud unload', () => {
   it('destroys the prior buffer and removes the entry on a count=0 upload', async () => {
-    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm', makeStubFadeBgl(), makeStubSourceBgl());
+    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
     await renderer.upload(Source.SDSS, makeCloud(1000));
 
     const firstEntry = Array.from(renderer.loadedSources()).find((e) => e.source === Source.SDSS);
@@ -283,7 +290,7 @@ describe('PointRenderer.upload — regression: empty-cloud unload', () => {
   it('survives upload(0) when no prior cloud exists', async () => {
     // Pathological-but-legal: the engine could in principle call setTier
     // before any cloud has loaded.  Should be a no-op, not a crash.
-    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm', makeStubFadeBgl(), makeStubSourceBgl());
+    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
     await expect(renderer.upload(Source.SDSS, makeCloud(0))).resolves.toBeUndefined();
     expect(renderer.totalCount()).toBe(0);
   });
@@ -292,7 +299,7 @@ describe('PointRenderer.upload — regression: empty-cloud unload', () => {
     // small → medium swap: SDSS goes from count=0 (excluded) back to count>0
     // (the medium tier file).  The empty-cloud path must leave the renderer
     // in a state where a subsequent real upload works normally.
-    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm', makeStubFadeBgl(), makeStubSourceBgl());
+    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
     await renderer.upload(Source.SDSS, makeCloud(1000));
     await renderer.upload(Source.SDSS, makeCloud(0));
     await renderer.upload(Source.SDSS, makeCloud(750));
@@ -324,7 +331,7 @@ describe('PointRenderer.upload — regression: empty-cloud unload', () => {
 // catch any residual staleness with the correct (current) cloud reference.
 describe('PointRenderer.upload — regression: parallel-upload rebake race', () => {
   it('does not overwrite a concurrent upload during rebake', async () => {
-    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm', makeStubFadeBgl(), makeStubSourceBgl());
+    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
 
     // Seed with the "prior tier" layout so the rebake has stale offsets to act on.
     await renderer.upload(Source.SDSS, makeCloud(498_227));
@@ -488,7 +495,7 @@ describe('PointRenderer.spliceSchechterRatios', () => {
   it('writes ratios[i] into slot 9 of row i of the interleaved mirror', async () => {
     const writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[] = [];
     const device = makeCapturingDevice(writeCalls);
-    const renderer = createPointRenderer(device, 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl());
+    const renderer = createPointRenderer(device, 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
     await renderer.upload(Source.SDSS, makeCloud(3));
 
     const ratios = new Float32Array([0.25, 0.5, 0.75]);
@@ -505,7 +512,7 @@ describe('PointRenderer.spliceSchechterRatios', () => {
   });
 
   it('throws when ratios.length !== source count', async () => {
-    const renderer = createPointRenderer(makeStubDevice(), 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl());
+    const renderer = createPointRenderer(makeStubDevice(), 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
     await renderer.upload(Source.SDSS, makeCloud(5));
     expect(() => renderer.spliceSchechterRatios(Source.SDSS, new Float32Array(4))).toThrow(
       /length/i,
@@ -513,7 +520,7 @@ describe('PointRenderer.spliceSchechterRatios', () => {
   });
 
   it('is a no-op when the source is not loaded', () => {
-    const renderer = createPointRenderer(makeStubDevice(), 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl());
+    const renderer = createPointRenderer(makeStubDevice(), 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
     // Should not throw — subsystem may call this for a stale source mid-bake.
     expect(() => renderer.spliceSchechterRatios(Source.Glade, new Float32Array(0))).not.toThrow();
   });
@@ -523,7 +530,7 @@ describe('PointRenderer.spliceAngularWeights', () => {
   it('writes weights[i] into slot 10 of row i', async () => {
     const writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[] = [];
     const device = makeCapturingDevice(writeCalls);
-    const renderer = createPointRenderer(device, 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl());
+    const renderer = createPointRenderer(device, 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
     await renderer.upload(Source.SDSS, makeCloud(2));
 
     const weights = new Float32Array([0.1, 0.9]);
@@ -538,7 +545,7 @@ describe('PointRenderer.spliceAngularWeights', () => {
   });
 
   it('throws when weights.length !== source count', async () => {
-    const renderer = createPointRenderer(makeStubDevice(), 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl());
+    const renderer = createPointRenderer(makeStubDevice(), 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
     await renderer.upload(Source.SDSS, makeCloud(5));
     expect(() => renderer.spliceAngularWeights(Source.SDSS, new Float32Array(6))).toThrow(
       /length/i,
@@ -550,7 +557,7 @@ describe('PointRenderer.clearBiasOverlays', () => {
   it('zeroes slots 9 and 10 for the named source', async () => {
     const writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[] = [];
     const device = makeCapturingDevice(writeCalls);
-    const renderer = createPointRenderer(device, 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl());
+    const renderer = createPointRenderer(device, 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
     await renderer.upload(Source.SDSS, makeCloud(2));
 
     // Populate slots 9/10 first so we can assert clear actually clears.
@@ -572,7 +579,7 @@ describe('PointRenderer.clearBiasOverlays', () => {
   it('zeroes for every loaded source when called with no argument', async () => {
     const writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[] = [];
     const device = makeCapturingDevice(writeCalls);
-    const renderer = createPointRenderer(device, 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl());
+    const renderer = createPointRenderer(device, 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
     await renderer.upload(Source.SDSS, makeCloud(1));
     await renderer.upload(Source.Glade, makeCloud(1));
 
@@ -583,7 +590,7 @@ describe('PointRenderer.clearBiasOverlays', () => {
   });
 
   it('is a no-op when no sources are loaded', () => {
-    const renderer = createPointRenderer(makeStubDevice(), 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl());
+    const renderer = createPointRenderer(makeStubDevice(), 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
     expect(() => renderer.clearBiasOverlays()).not.toThrow();
   });
 });
@@ -641,46 +648,47 @@ describe('PointRenderer.destroy', () => {
   it("releases the renderer's uniform buffer", () => {
     const buffers: TrackedBuffer[] = [];
     const device = makeDestroyTrackingDevice(buffers);
-    const renderer = createPointRenderer(device, 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl());
-    // The constructor allocates exactly one buffer — `uniformBuffer_internal`.
-    expect(buffers).toHaveLength(1);
-    const uniformBuffer = buffers[0]!;
-    expect(uniformBuffer.destroyCount).toBe(0);
+    const renderer = createPointRenderer(device, 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
+    // The constructor allocates two buffers: the renderer's own uniform
+    // and the singleton focus uniform (@group(3), cluster focus mode).
+    expect(buffers).toHaveLength(2);
+    for (const b of buffers) expect(b.destroyCount).toBe(0);
 
     renderer.destroy();
 
-    expect(uniformBuffer.destroyCount).toBe(1);
+    for (const b of buffers) expect(b.destroyCount).toBe(1);
   });
 
   it('releases each per-source buffer + fade uniform', async () => {
     const buffers: TrackedBuffer[] = [];
     const device = makeDestroyTrackingDevice(buffers);
-    const renderer = createPointRenderer(device, 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl());
-    // Constructor allocates 1 buffer (the renderer's own uniform).
-    expect(buffers).toHaveLength(1);
+    const renderer = createPointRenderer(device, 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
+    // Constructor allocates 2 buffers (the renderer's own uniform + the
+    // singleton focus uniform).
+    expect(buffers).toHaveLength(2);
 
     await renderer.upload(Source.SDSS, makeCloud(2));
     // upload() allocates 3 more buffers per source: the vertex buffer,
     // the FadeUniforms 16-byte uniform, and the SourceUniforms 16-byte
     // uniform (unified-fade architecture).
-    expect(buffers).toHaveLength(4);
+    expect(buffers).toHaveLength(5);
 
     await renderer.upload(Source.TwoMRS, makeCloud(3));
     // Second source: another vertex + fade + source triple.
-    expect(buffers).toHaveLength(7);
+    expect(buffers).toHaveLength(8);
 
     // Sanity: every tracked buffer starts at 0 destroys.
     for (const b of buffers) expect(b.destroyCount).toBe(0);
 
     renderer.destroy();
 
-    // All seven buffers (1 renderer uniform + 2 sources × {vertex, fade, source})
-    // should be destroyed exactly once.
+    // All eight buffers (renderer uniform + focus uniform + 2 sources ×
+    // {vertex, fade, source}) should be destroyed exactly once.
     for (const b of buffers) expect(b.destroyCount).toBe(1);
   });
 
   it('clears the clouds map', async () => {
-    const renderer = createPointRenderer(makeStubDevice(), 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl());
+    const renderer = createPointRenderer(makeStubDevice(), 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
     await renderer.upload(Source.SDSS, makeCloud(2));
     await renderer.upload(Source.TwoMRS, makeCloud(3));
     expect(Array.from(renderer.loadedSources())).toHaveLength(2);
@@ -693,7 +701,7 @@ describe('PointRenderer.destroy', () => {
   it('is idempotent — safe to call twice without throwing', async () => {
     const buffers: TrackedBuffer[] = [];
     const device = makeDestroyTrackingDevice(buffers);
-    const renderer = createPointRenderer(device, 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl());
+    const renderer = createPointRenderer(device, 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
     await renderer.upload(Source.SDSS, makeCloud(1));
 
     expect(() => renderer.destroy()).not.toThrow();
@@ -708,7 +716,7 @@ describe('PointRenderer.destroy', () => {
 
 describe('PointRenderer.draw — PointDrawSettings shape', () => {
   it('accepts a single PointDrawSettings record', async () => {
-    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm', makeStubFadeBgl(), makeStubSourceBgl());
+    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
     await renderer.upload(Source.SDSS, makeCloud(10));
 
     // Stub the encoder.  draw() must call setPipeline + setBindGroup + draw
@@ -740,6 +748,7 @@ describe('PointRenderer.draw — PointDrawSettings shape', () => {
       depthFadeEnabled: false,
       pxFadeStart: 0,
       pxFadeEnd: 0,
+      focus: AT_REST_FOCUS,
       fadeOpacityOf: () => 1,
     });
 

@@ -68,6 +68,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     renderer,
     state.gpu.fadeBgl!,
     state.gpu.sourceBgl!,
+    state.gpu.focusBgl!,
     state.gpu.clusterMarkerRenderer ?? undefined,
   );
   state.gpu.pickRenderer = pickRenderer;

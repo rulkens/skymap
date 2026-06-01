@@ -46,6 +46,8 @@ import colorFsCode from '../shaders/points/colorFragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
+import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
+import type { FocusUniformsValue } from '../../../@types/rendering/FocusUniformsValue';
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
 
@@ -324,6 +326,7 @@ export function createPointRenderer(
   format: GPUTextureFormat,
   fadeBgl: FadeUniformsBgl,
   sourceBgl: SourceUniformsBgl,
+  focusBgl: FocusUniformsBgl,
 ): PointRenderer {
   // Each renderer compiles its own GPUShaderModule from the shared
   // vertex source — sharing modules across pipelines hits the WebGPU
@@ -344,6 +347,9 @@ export function createPointRenderer(
       }),
       fadeBgl,   // @group(1) FadeUniforms (canonical)
       sourceBgl, // @group(2) SourceUniforms (canonical, shared with PickRenderer)
+      // @group(3) FocusUniforms — a single shared/global binding (only
+      // one POI focused at a time), unlike the per-source @group(1) fade.
+      focusBgl,
     ],
   });
 
@@ -400,6 +406,27 @@ export function createPointRenderer(
   // for the fade `writeBuffer` call.  Pad slots stay zero.
   const fadeScratchBuffer = new ArrayBuffer(16);
   const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
+
+  // SINGLETON cluster-focus buffer + bind group (@group(3)).  Unlike the
+  // per-source fade, only one POI is ever focused at a time, so a single
+  // shared 32-byte buffer is written once per frame and bound once before
+  // the per-source draw loop.  See lib/focusUniforms.wesl for the byte
+  // layout (center vec3 + radiusMpc + blend + invert + pad).
+  const focusBuffer = device.createBuffer({
+    label: 'points-focus-uniform',
+    size: 32,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+  const focusBindGroup = device.createBindGroup({
+    label: 'points-focus-bg',
+    layout: focusBgl,
+    entries: [{ binding: 0, resource: { buffer: focusBuffer } }],
+  });
+  // Reusable 32-byte scratch, packed each frame in `draw`.  Aliased by
+  // both f32 (center/radius/blend) and u32 (invert) views.
+  const focusScratch = new ArrayBuffer(32);
+  const focusScratchF32 = new Float32Array(focusScratch);
+  const focusScratchU32 = new Uint32Array(focusScratch);
 
   // Loaded survey buffers keyed by SourceType.  Map preserves insert
   // order and dodges the prototype-chain ambiguity of a numeric-keyed
@@ -688,6 +715,7 @@ export function createPointRenderer(
       depthFadeEnabled,
       pxFadeStart,
       pxFadeEnd,
+      focus,
     } = settings;
     if (clouds.size === 0) return;
 
@@ -736,8 +764,24 @@ export function createPointRenderer(
 
     device.queue.writeBuffer(uniformBuffer, 0, buf);
 
+    // Pack + write the singleton focus buffer once per draw.  Byte layout
+    // mirrors FocusUniforms: center vec3 (indices 0..2, index 3 is the
+    // vec3 trailing pad), radiusMpc, blend, invert (u32), then a u32 pad.
+    focusScratchF32[0] = focus.center[0];
+    focusScratchF32[1] = focus.center[1];
+    focusScratchF32[2] = focus.center[2];
+    // focusScratchF32[3] (vec3 pad) stays zero.
+    focusScratchF32[4] = focus.radiusMpc;
+    focusScratchF32[5] = focus.blend;
+    focusScratchU32[6] = focus.invert;
+    // focusScratchU32[7] (_pad) stays zero.
+    device.queue.writeBuffer(focusBuffer, 0, focusScratch);
+
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
+    // @group(3) focus is global (one POI focused at a time) — bind once
+    // before the per-source loop, not per source like fade/source.
+    pass.setBindGroup(3, focusBindGroup);
 
     for (const source of SURVEY_SOURCES) {
       const entry = clouds.get(source);
@@ -778,6 +822,7 @@ export function createPointRenderer(
     }
     clouds.clear();
     uniformBuffer.destroy();
+    focusBuffer.destroy();
   }
 
   const renderer: PointRenderer = {

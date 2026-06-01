@@ -95,6 +95,7 @@ import {
 } from '../wiring/galaxyCatalogSourceRegistry';
 import { createFadeUniformsBgl } from '../../gpu/bindGroupLayouts/fadeUniforms';
 import { createSourceUniformsBgl } from '../../gpu/bindGroupLayouts/sourceUniforms';
+import { createFocusUniformsBgl } from '../../gpu/bindGroupLayouts/focusUniforms';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -147,6 +148,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // src/services/gpu/bindGroupLayouts/fadeUniforms.ts for the rationale.
   state.gpu.fadeBgl = createFadeUniformsBgl(device);
   state.gpu.sourceBgl = createSourceUniformsBgl(device);
+  state.gpu.focusBgl = createFocusUniformsBgl(device);
 
   // ── HDR offscreen target + tone-map post-process ──────────────────
   //
@@ -203,6 +205,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     'rgba16float',
     state.gpu.fadeBgl!,
     state.gpu.sourceBgl!,
+    state.gpu.focusBgl!,
   );
   state.gpu.renderer = renderer;
 

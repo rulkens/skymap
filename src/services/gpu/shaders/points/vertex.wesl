@@ -40,6 +40,8 @@ import package::lib::colorIndex::ramp;
 import package::lib::astro::distanceModulus;
 import package::lib::selectionEncoding::packSelection;
 import package::lib::orientation::diskAxes;
+import package::lib::focusUniforms::FocusUniforms;
+import package::lib::focusUniforms::focusAlphaMultiplier;
 
 // ── @group(0) — per-frame uniforms ──────────────────────────────────
 //
@@ -70,6 +72,14 @@ import package::lib::orientation::diskAxes;
 // 'source.sourceCode' to compose '(sourceCode << 27u) | instance_index'
 // for the pick-output path.
 @group(2) @binding(0) var<uniform> source: SourceUniforms;
+
+// ── @group(3) — cluster-focus uniform (single shared binding) ───────
+//
+// One POI is focused at a time, so this is a single global binding (not
+// per-source like fade). 'focusAlphaMultiplier' folds a membership-based
+// dim into 'intensity'; at blend == 0 it returns 1.0 (no-op when nothing
+// is focused). See lib/focusUniforms.wesl for the math.
+@group(3) @binding(0) var<uniform> focus: FocusUniforms;
 
 // ─── vertex stage ─────────────────────────────────────────────────────
 //
@@ -209,13 +219,17 @@ fn vs(
   // hardcoded 0.05. Lower floors reduce per-galaxy contribution to the
   // additive HDR target in dense regions (tames center saturation); higher
   // floors keep faint objects visible (Milliquas at high z).
+  // Cluster-focus dim: non-members of the focused POI fade toward 0.08,
+  // scaled by the smoothstep blend. Collapses to 1.0 when no POI is
+  // focused (blend == 0), so the visual pass is unchanged at rest.
   let intensity = clamp((22.0 - p.magnitude) / 8.0, source.intensityFloor, 1.0)
     * u.brightness
     * vMaxAlpha
     * schechterMult
     * angularMult
     * depthFadeMult
-    * crossfadeOut;
+    * crossfadeOut
+    * focusAlphaMultiplier(p.position, focus);
 
   // Bake the K-corrected ramp colour, the magenta highlight, and the
   // intensity scalar straight into out.shaded.rgb. .w carries safeAB —

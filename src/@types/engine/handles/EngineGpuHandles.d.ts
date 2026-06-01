@@ -64,6 +64,7 @@ import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { DiskRadiusRing } from '../../rendering/DiskRadiusRing';
 import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
+import type { FocusUniformsBgl } from '../../rendering/FocusUniformsBgl';
 
 export type EngineGpuHandles = {
   renderer: PointRenderer | null;
@@ -82,6 +83,14 @@ export type EngineGpuHandles = {
    * `initGpu` resolves.
    */
   sourceBgl: SourceUniformsBgl | null;
+  /**
+   * Canonical FocusUniforms bind-group layout (@group(3), points +
+   * pick). Constructed once in `initGpu` and shared between the visual
+   * PointRenderer (binds the live focus buffer) and the offscreen
+   * PickRenderer (binds a zeroed dummy so its explicit layout matches).
+   * Null until `initGpu` resolves.
+   */
+  focusBgl: FocusUniformsBgl | null;
   /**
    * Combined HDR offscreen target + tone-map post-process.  Pre-Phase-4
    * this was two fields (`hdrTarget` + `toneMapPass`); they merged into
