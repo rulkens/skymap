@@ -249,39 +249,49 @@ post-refactor boot must still:
 - Delete only what is genuinely unreferenced; each deletion needs a passing
   full `npm test` after.
 
-- [ ] Grep each old export; for each, either keep (cite the live consumer) or
-  delete (confirm zero references, then remove).
-- [ ] If `galaxyCatalogSourceRegistry.ts` is reduced to just the point-source
-  factory + survey-set, update its module header to reflect its narrowed role
-  (no longer "the" registry; `ASSET_WIRING` is).
-- [ ] `npm run typecheck` → clean. Full `npm test` → green.
-- [ ] **Whole-file comment pass** on every file touched by the sweep.
-- [ ] Commit.
+- [x] Grep each old export; for each, either keep (cite the live consumer) or
+  delete. Result: ALL live — `GALAXY_CATALOG_SOURCE_REGISTRY` (initGpu mint +
+  setTier reload), `loadCompanionAssets` (setTier), `SURVEY_POINT_SOURCES` +
+  `TIER_FETCHED_POINT_SOURCES` (synthetic-fallback gate). No deletions.
+- [x] `galaxyCatalogSourceRegistry.ts` header reframed to its narrowed role
+  (point-source construction + tier-reload + synthetic-gate source-sets;
+  `ASSET_WIRING` is the demand registry) — stale "boot loop" prose removed.
+- [x] `npm run typecheck` → clean. Full `npm test` → green (2071).
+- [x] **Whole-file comment pass** on every file touched by the sweep
+  (`801ad1c6`), plus the final-review comment corrections (`59721cb0`).
+- [x] Commit. (`801ad1c6`)
 
-- [ ] **Dev-server smoke** (do not kill the running `npm run dev`): reload and
-  confirm bootstrap parity by eye —
-  - Milky Way appears on the first frame.
-  - Default surveys fade in progressively.
-  - Filaments OFF by default; toggling Filaments on in SettingsPanel loads +
-    renders them (the bug fix: it now loads on enable, not at boot).
-  - Structures (clusters) respect their toggle; enabling structures loads the
-    cluster catalog (bug fix).
-  - Volumes: mcpm visible by default; toggling cf4-density loads + renders it.
-  - Cmd+K palette opens and resolves PGC aliases (lazy load fires).
-  - No console errors related to slots / loading / POI.
-  If any parity regression appears, STOP and report — do not "polish later".
+- [x] **Dev-server smoke** — user-confirmed all paths after the frame-loop
+  demand fix (`aba35be4`):
+  - Milky Way + default surveys on first paint; surveys fade in.
+  - Filaments OFF by default; toggling on loads + renders (the original
+    user-reported regression — fixed).
+  - Survey off→on re-shows; re-toggle does NOT re-fetch (idle-guard).
+  - Structures respect their toggle.
+  - cf4-density toggles on + renders; mcpm visible by default.
+  - Cmd+K palette resolves PGC aliases; tier switch reloads + redraws.
+  - No console errors.
+  (NB: the smoke surfaced a real regression — table-driven + category setters
+  didn't re-evaluate demand. Fixed by centralizing `reevaluateDemand` into the
+  per-frame render loop; see `aba35be4`. The smoke gate earned its keep.)
 
 ---
 
 ## Definition of Done (whole plan — mirror of INDEX)
 
-- [ ] `wireSlots.ts` is the thin orchestrator from the spec; no boot loop, no
+- [x] `wireSlots.ts` is the thin orchestrator from the spec; no boot loop, no
   inline POI merge / fade / impostor blocks, no inline synthetic gate.
-- [ ] No factory writes `state.assetSlots.X = slot` or calls `slot.load()` at
+- [x] No factory writes `state.assetSlots.X = slot` or calls `slot.load()` at
   construction.
-- [ ] `reevaluateDemand` is the sole `slot.load(...)` caller for registry assets;
-  the only remaining explicit triggers are the three event setters + the
-  synthetic gate, each flip-then-reevaluate.
+- [x] `reevaluateDemand` is the sole `slot.load(...)` caller for registry assets.
+  It is invoked at three moments: boot (`wireSlots` initial kick), per-frame
+  (`runFrame` — the heartbeat that covers every setter), and the
+  synthetic-fallback gate (immediate backstop). NO event setter calls it
+  directly — setters flip pure state and call `requestRender`, which wakes the
+  loop and re-derives demand. (Revised from the original "three setters call
+  flip-then-reevaluate": that left table-driven + category setters unwired — a
+  real regression caught in the dev smoke; the per-frame seam fixes the class.)
+  `setTier` keeps its own request-changing reload loop (bypasses the idle-guard).
 - [x] Filaments + cf4Density do NOT load at default settings (off by default —
   bug fixes, pinned at both demand-table and bootstrap levels). clusterCatalog
   DOES load at default (structures visible by default); its fix is that it no
@@ -289,7 +299,7 @@ post-refactor boot must still:
   `demandTable.test.ts:301` + the bootstrap hidden-case test. (The original DoD
   wording "clusterCatalog does NOT load at default" was factually wrong about
   the default and has been corrected.)
-- [ ] `npm test` + `npm run typecheck` green; test count up by the new suites.
-- [ ] No `TODO`/`FIXME` introduced; every touched file had its whole-file
+- [x] `npm test` + `npm run typecheck` green (2071 tests, both tsconfigs).
+- [x] No `TODO`/`FIXME` introduced; every touched file had its whole-file
   comment-cleanup pass.
-- [ ] Dev-server smoke shows full bootstrap parity.
+- [x] Dev-server smoke shows full bootstrap parity (user-confirmed).
