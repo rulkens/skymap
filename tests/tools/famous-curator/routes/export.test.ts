@@ -212,7 +212,7 @@ describe('deproject square output', () => {
     expect(atlas.width).toBe(atlas.height);
     // ...and the baked calibration describes a face-on texture: PA collapsed to
     // 0 and axisRatio 1, so the runtime neither rotates nor re-tilts the quad.
-    expect(res.calibration?.paDeg).toBe(0);
+    expect(res.calibration?.frameMajorAxisDeg).toBe(0);
     expect(res.calibration?.axisRatio).toBe(1);
   });
 

@@ -72,7 +72,7 @@ describe('effectiveTilt', () => {
     const calibration: FamousCalibration = {
       center: [0.5, 0.5],
       diskRadiusFrac: 1,
-      paDeg: 37,
+      frameMajorAxisDeg: 37,
       axisRatio: 0.6,
       deprojected: true,
     };
@@ -86,7 +86,7 @@ describe('effectiveTilt', () => {
     const calibration: FamousCalibration = {
       center: [0.5, 0.5],
       diskRadiusFrac: 1,
-      paDeg: 37,
+      frameMajorAxisDeg: 37,
       axisRatio: 0.6,
       deprojected: false,
     };
@@ -102,7 +102,7 @@ describe('effectiveTilt', () => {
     const calibration: FamousCalibration = {
       center: [0.5, 0.5],
       diskRadiusFrac: 1,
-      paDeg: 12,
+      frameMajorAxisDeg: 12,
       deprojected: true,
     };
     expect(effectiveTilt(calibration, 0.72)).toEqual({

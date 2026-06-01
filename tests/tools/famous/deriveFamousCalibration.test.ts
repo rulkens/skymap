@@ -77,21 +77,21 @@ describe('deriveFamousCalibration', () => {
     expect(cal.diskRadiusFrac).toBeCloseTo(0.5, 10);
   });
 
-  it('paDeg rotated into final frame: disk 40, crop 10 → 30', () => {
+  it('frameMajorAxisDeg rotated into final frame: disk 40, crop 10 → 30', () => {
     const disk = makeDisk({ paDeg: 40 });
     const crop = makeCrop({ rotationDeg: 10 });
     const cal = deriveFamousCalibration({ disk, crop, catalogAxisRatio: 0.6, deprojected: false });
 
-    expect(cal.paDeg).toBeCloseTo(30, 10);
+    expect(cal.frameMajorAxisDeg).toBeCloseTo(30, 10);
   });
 
-  it('paDeg wraparound: disk 10, crop 30 → 160 (stays in [0,180))', () => {
+  it('frameMajorAxisDeg wraparound: disk 10, crop 30 → 160 (stays in [0,180))', () => {
     // 10 - 30 = -20 → normalise to 160.
     const disk = makeDisk({ paDeg: 10 });
     const crop = makeCrop({ rotationDeg: 30 });
     const cal = deriveFamousCalibration({ disk, crop, catalogAxisRatio: 0.6, deprojected: false });
 
-    expect(cal.paDeg).toBeCloseTo(160, 10);
+    expect(cal.frameMajorAxisDeg).toBeCloseTo(160, 10);
   });
 
   it('rotated crop maps the nucleus through R(-rotationDeg)', () => {
@@ -174,7 +174,7 @@ describe('deriveFamousCalibration deprojected branch', () => {
       catalogAxisRatio: aspect,
       deprojected: true,
     });
-    expect(cal.paDeg).toBe(0);
+    expect(cal.frameMajorAxisDeg).toBe(0);
   });
 
   it('emits axisRatio = 1 (no runtime re-tilt)', () => {

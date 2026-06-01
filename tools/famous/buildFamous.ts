@@ -26,7 +26,7 @@ import { fileURLToPath } from 'node:url';
 import { parseFamousSeed, type FamousEntry } from '../parsers/famousSeed.js';
 import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalogFormat.js';
 import { Source } from '../../src/data/sources.js';
-import { fallbackOrientation } from '../../src/utils/random/fallbackOrientation.js';
+import { resolveFamousOrientation } from './resolveFamousOrientation.js';
 import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog.js';
 import type { FamousMetaEntry } from '../../src/@types/loading/FamousMetaEntry.js';
 import { rawDataPath } from '../utils/io/rawDataRegistry.js';
@@ -168,28 +168,28 @@ async function main(): Promise<void> {
     // photometry, or any subset.  Absent fields stay at NaN (the array's
     // `.fill(NaN)` initial value), which the renderer/colour-index code
     // treats as "no measurement, fall back to defaults".
-    // Orientation: bake real values when both axisRatio AND positionAngleDeg
-    // are present; otherwise emit the deterministic fallback for THIS row.
     //
-    // We must bake fallback values rather than leaving NaN, because the
-    // pointRenderer detects fallback rows by EXACT equality with what
-    // `fallbackOrientation()` produces (via `Float32Array` round-tripped
-    // floats).  NaN never equals anything, so a NaN slot would slip past
-    // the detection AND then propagate NaN into the vertex attributes,
-    // making the orientation-disk shader render an axis-aligned square.
+    // Orientation is resolved field-by-field: keep every real measurement and
+    // fall back ONLY the genuinely-missing one.  Most famous galaxies are
+    // near-face-on showpieces with a real axisRatio (HyperLEDA logR25) but no
+    // measured PA — discarding that axis ratio just because PA is absent baked
+    // a random ~0.53/58° tilt onto galaxies that are really ~0.96 face-on.
     //
-    // Partial measurements (axisRatio without PA, or vice versa) get the
-    // full fallback pair — mixing one real number with one hashed number
-    // would be a worst-of-both-worlds stable orientation that's still
-    // arbitrary.  Keep the renderer's "real vs fallback" check binary.
-    if (e.axisRatio != null && e.positionAngleDeg != null) {
-      cloud.axisRatio[i] = e.axisRatio;
-      cloud.positionAngleDeg[i] = e.positionAngleDeg;
-    } else {
-      const fb = fallbackOrientation(cloud.objIDs[i]!, e.ra, e.dec);
-      cloud.axisRatio[i] = fb.axisRatio;
-      cloud.positionAngleDeg[i] = fb.positionAngleDeg;
-    }
+    // We always bake a deterministic value (never NaN): NaN would slip past
+    // the renderer's fallback detector AND propagate into the vertex
+    // attributes, collapsing the orientation disk.  The detector keys on BOTH
+    // fields equalling the hash, so a real-axisRatio + fallback-PA row is
+    // correctly read as real — and an arbitrary PA on a near-circular disk is
+    // visually irrelevant.  See `resolveFamousOrientation`.
+    const orient = resolveFamousOrientation({
+      axisRatio: e.axisRatio,
+      positionAngleDeg: e.positionAngleDeg,
+      objID: cloud.objIDs[i]!,
+      ra: e.ra,
+      dec: e.dec,
+    });
+    cloud.axisRatio[i] = orient.axisRatio;
+    cloud.positionAngleDeg[i] = orient.positionAngleDeg;
     // Photometric mapping: HyperLEDA gives B/V/K, the GalaxyCatalog arrays
     // are SDSS-shaped (u/g/r/i/z).  Same shoehorn convention as GLADE:
     // map B→G, V→R, K→I.  magU/magZ stay NaN — HyperLEDA doesn't carry
