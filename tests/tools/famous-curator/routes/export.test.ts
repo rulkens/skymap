@@ -76,6 +76,28 @@ describe('handleExport', () => {
     expect(result.paths.recipe.endsWith('recipe.json')).toBe(true);
   });
 
+  it('publishes BOTH runtime tiers (low-res atlas + hi-res full)', async () => {
+    // Regression: Commit used to publish only the low-res atlas tile; the
+    // gitignored hi-res slot was left stale until a manual build-famous-hires.
+    // handleExport now publishes both via publishFamousRuntimeImages.
+    const sess = await seedSession();
+    const repo = fakeRepoRoot();
+    await handleExport({
+      body: {
+        id: 'm31',
+        tmpId: sess.tmpId,
+        crop: { x: 0, y: 0, width: 256, height: 256, rotationDeg: 0 },
+        starnet: { stride: 256, upsample: false },
+        alpha: { blackPoint: 8, whitePoint: 200, gamma: 0.7 },
+        metadata: { sourceUrl: 'https://example.com', license: 'CC-BY', author: 'Alice' },
+      },
+      repoRoot: repo,
+      sessionDirOverride: sess.sessionDir,
+    });
+    expect(existsSync(resolve(repo, 'public/images/famous/m31.webp'))).toBe(true);
+    expect(existsSync(resolve(repo, 'public/data/images/famous-hires/m31.webp'))).toBe(true);
+  });
+
   it('records the source.png dimensions in recipe.source', async () => {
     // The crop is authored against source.png, so the recipe must capture that
     // image's true dimensions (read from the bytes, not the client) to let the

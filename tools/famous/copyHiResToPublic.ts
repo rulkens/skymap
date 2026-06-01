@@ -33,32 +33,26 @@
  * `<base>/data/images/famous-hires/m31.webp`, and the dev server (and
  * R2 in prod) serves that path from `public/data/images/famous-hires/`.
  *
- * Keeping flattening as a separate step rather than asking the curator
- * to write both layouts has two benefits:
+ * ── When this runs ────────────────────────────────────────────────────
  *
- *  1. The curator's output stays self-contained — a single directory
- *     per galaxy holds every byproduct, easy to delete + re-curate.
- *  2. The build pipeline owns the deploy-shape, so changing the runtime
- *     URL convention is a one-file edit here, not a curator change.
+ * The curator's Commit already publishes the hi-res for the ONE galaxy it
+ * just exported (via `publishFamousRuntimeImages`), so the day-to-day loop
+ * never needs this.  This bulk step is the fresh-clone / mass-regeneration
+ * path: `public/data/images/famous-hires/` is gitignored, so a clean
+ * checkout rebuilds it from the committed `famous-curated/<id>/full.webp`
+ * masters with `npm run build-famous-hires`.  It is NOT chained into
+ * `build-all` / `build-tiers` — it's a standalone command.
  *
  * ── Idempotency ───────────────────────────────────────────────────────
  *
- * This step runs as part of `build-tiers` / `build-all` and gets invoked
- * many times in a typical day's work.  A naive "copy every full.webp on
- * every run" would re-encode dozens of MB for no signal change — and
- * worse, would touch the destination mtimes, which defeats downstream
- * caching (`syncR2`'s skip-if-already-on-R2 check is mtime-aware in
- * spirit, and Vite's HMR watches the dest tree).
- *
- * Skip rule: dest exists AND (source.mtime, source.size) match the
- * dest's (mtime, size).  When we DO copy, we set the dest's mtime to
- * the source's mtime via `utimes` so subsequent runs find the match.
- *
- * Why mtime+size, not a checksum?  Curator runs are append-only — a
- * re-render REWRITES `full.webp` with a fresh mtime, even if the bytes
- * happen to be identical.  So mtime is a stronger signal than content
- * hash for "did the curator touch this entry", and avoiding the
- * per-file SHA keeps the build step under 100 ms for 75 entries.
+ * The per-file skip/copy/stamp logic lives in `copyIfChanged`
+ * (publishFamousRuntimeImages.ts) — shared with the curator's Commit so
+ * both paths treat "already in sync" identically.  Skip rule: dest exists
+ * AND (source.mtime-to-the-second, source.size) match.  When we DO copy we
+ * stamp the dest's mtime to the source's so the next run finds the match.
+ * mtime+size (not a checksum) because curator re-renders REWRITE full.webp
+ * with a fresh mtime even when bytes are identical, and avoiding per-file
+ * SHA keeps the sweep under 100 ms for ~75 entries.
  *
  * ── Missing entries ───────────────────────────────────────────────────
  *
@@ -69,14 +63,15 @@
  * can decide whether to push the curator further.  Those IDs come back
  * in the `missing[]` field of the return; we never throw on them.
  */
-import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync, utimesSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { copyIfChanged, CURATED_DIR, HIRES_RUNTIME_DIR } from './publishFamousRuntimeImages.js';
 
 type CopyHiResOptions = {
-  /** Source root.  Defaults to `public/images/famous-curated` relative to CWD. */
+  /** Source root.  Defaults to the curated master dir relative to CWD. */
   sourceDir?: string;
-  /** Destination root.  Defaults to `public/data/images/famous-hires` relative to CWD. */
+  /** Destination root.  Defaults to the hi-res runtime dir relative to CWD. */
   destDir?: string;
 };
 
@@ -89,8 +84,8 @@ type CopyHiResResult = {
   missing: string[];
 };
 
-const DEFAULT_SOURCE = 'public/images/famous-curated';
-const DEFAULT_DEST = 'public/data/images/famous-hires';
+const DEFAULT_SOURCE = CURATED_DIR;
+const DEFAULT_DEST = HIRES_RUNTIME_DIR;
 
 /**
  * Iterate every direct subdirectory of `sourceDir`, copy each
@@ -131,37 +126,12 @@ export async function copyHiResToPublic(opts: CopyHiResOptions = {}): Promise<Co
     .sort();
 
   for (const id of ids) {
-    const src = join(sourceDir, id, 'full.webp');
-    if (!existsSync(src)) {
-      missing.push(id);
-      continue;
-    }
-    const dst = join(destDir, `${id}.webp`);
-    const srcStat = statSync(src);
-    if (existsSync(dst)) {
-      const dstStat = statSync(dst);
-      // Compare at whole-second resolution.  `fs.utimesSync` accepts a
-      // Date but writes seconds-precision on most platforms (the POSIX
-      // utimes() syscall takes a `struct timespec` but the Node wrapper
-      // truncates), so a round-trip can lose sub-second bits — exact
-      // ms equality would falsely report "stale" and re-copy every run.
-      // Whole-second match is what `make`, `rsync`, and friends use for
-      // the same reason.
-      if (
-        Math.floor(dstStat.mtimeMs / 1000) === Math.floor(srcStat.mtimeMs / 1000) &&
-        dstStat.size === srcStat.size
-      ) {
-        skipped++;
-        continue;
-      }
-    }
-    copyFileSync(src, dst);
-    // Stamp the dest's mtime to match the source so the next run's
-    // skip check matches.  Without this, copyFileSync sets the dest's
-    // mtime to "now", and a subsequent re-run sees a mismatch and
-    // re-copies — defeating the idempotency.
-    utimesSync(dst, srcStat.atime, srcStat.mtime);
-    copied++;
+    // Delegate the skip/copy/stamp to the shared primitive so this bulk path
+    // and the curator's per-galaxy Commit stay byte-for-byte consistent.
+    const result = copyIfChanged(join(sourceDir, id, 'full.webp'), join(destDir, `${id}.webp`));
+    if (result === 'missing') missing.push(id);
+    else if (result === 'skipped') skipped++;
+    else copied++;
   }
 
   return { copied, skipped, missing };
