@@ -426,6 +426,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       fadeBgl: null,
       sourceBgl: null,
       focusBgl: null,
+      focusUniform: null,
       postProcess: null,
       volumeOffscreen: null,
       filamentRenderer: null,
@@ -1169,6 +1170,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.timingService = createDisabledGpuTimingService();
     state.gpu.renderer?.destroy();
     state.gpu.renderer = null;
+    // Shared cluster-focus uniform — released after the renderers that bind
+    // its group (points/disks/pick already destroyed above).
+    state.gpu.focusUniform?.destroy();
+    state.gpu.focusUniform = null;
 
     // 5. Drop remaining strong references to aid GC.
     state.sources.catalogs.clear();

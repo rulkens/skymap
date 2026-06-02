@@ -10,7 +10,6 @@
 
 import type { Vec3 } from '../math/Vec3';
 import type { SourceType } from '../data/SourceType';
-import type { FocusUniformsValue } from './FocusUniformsValue';
 
 export type PointDrawSettings = {
   /** Far-field billboard floor radius in pixels.  Galaxies smaller than this stay rendered at this size; nearby galaxies grow past it to their real disc size. */
@@ -46,13 +45,13 @@ export type PointDrawSettings = {
   /** Procedural-disk crossfade band — pixel threshold above which points render zero-alpha (hand-off to disk pass). */
   pxFadeEnd: number;
   /**
-   * Cluster-focus state for the @group(3) FocusUniforms binding. The
-   * renderer packs this into a singleton 32-byte buffer once per draw;
-   * the vertex stage dims non-members of the focused POI. At rest
-   * (`blend: 0`) the shader multiplier collapses to 1.0 — no visible
-   * effect — so this is always supplied, never optional.
+   * Shared cluster-focus bind group for the @group(3) FocusUniforms
+   * binding. The engine owns the single focus buffer (written once per
+   * frame in renderFrame) and hands its bind group here; the vertex stage
+   * dims non-members of the focused POI. At rest (`blend: 0`) the shader
+   * multiplier collapses to 1.0, so this is always supplied.
    */
-  focus: FocusUniformsValue;
+  focusBindGroup: GPUBindGroup;
   /**
    * Look up the registry-managed opacity for a given source. Called
    * once per visible source per frame from the points draw loop;

@@ -97,9 +97,10 @@ export const pointSpritesPass: Pass = {
       // apart and re-introduce the double-bright donut artefact.
       pxFadeStart: settings.pxFadeStartPoints,
       pxFadeEnd: settings.pxFadeEndPoints,
-      // Cluster-focus state for the @group(3) FocusUniforms binding.
-      // At rest (blend 0) the shader's per-vertex multiplier is 1.0.
-      focus: settings.focus,
+      // Shared cluster-focus bind group (@group(3)). The engine owns the
+      // single focus buffer (written once per frame in renderFrame); we
+      // bind its group. At rest (blend 0) the shader multiplier is 1.0.
+      focusBindGroup: state.gpu.focusUniform!.bindGroup,
       // Look up the FadeRegistry opacity for each source at this frame's
       // timestamp. The registry returns 1.0 for unregistered handles —
       // a safe fallback so a source that hasn't registered yet renders

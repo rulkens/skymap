@@ -361,6 +361,10 @@ describe('renderFrame visual baseline', () => {
           scalarVolumeRenderer,
           volumeUpsample,
           clusterMarkerRenderer: null,
+          // Shared focus uniform — no-op write (doesn't touch the recorded
+          // encoder); its bind group is bound identically in both the
+          // single and split paths, so the sequence stays stable.
+          focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
         },
         subsystems: {
           proceduralDisks: proceduralDisksSubsystem,
@@ -419,11 +423,11 @@ describe('renderFrame visual baseline', () => {
           "renderer": "point-sprites",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],Array[3],number,Array[1]",
+          "argShape": "pass,Float32Array[16],Array[2],Array[3],number,object,Array[1]",
           "renderer": "procedural-disks",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],Array[3],Array[1]",
+          "argShape": "pass,Float32Array[16],Array[2],Array[3],object,Array[1]",
           "renderer": "textured-disks",
         },
         {

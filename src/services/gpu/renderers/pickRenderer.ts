@@ -33,6 +33,7 @@ import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
+import { createFocusUniformBuffer } from './createFocusUniformBuffer';
 import type { ClusterMarkerRenderer } from '../../../@types/rendering/ClusterMarkerRenderer';
 import {
   POINT_STRIDE,
@@ -116,17 +117,10 @@ export function createPickRenderer(
   // The shared vertex shader also declares @group(3) FocusUniforms.  The
   // pick fragment never reads intensity (where the focus dim folds in),
   // but the explicit pipeline layout must still match the visual
-  // pipeline — so bind a zeroed dummy focus buffer, never CPU-written.
-  const dummyFocusBuffer = device.createBuffer({
-    label: 'pick-focus-uniform-dummy',
-    size: 32,
-    usage: GPUBufferUsage.UNIFORM,
-  });
-  const dummyFocusBindGroup = device.createBindGroup({
-    label: 'pick-focus-bg-dummy',
-    layout: focusBgl,
-    entries: [{ binding: 0, resource: { buffer: dummyFocusBuffer } }],
-  });
+  // pipeline — so bind a focus buffer that stays at its zero-initialised
+  // (at-rest) value, never written.  Reusing the shared helper keeps the
+  // layout identical to the visual pipelines'.
+  const dummyFocus = createFocusUniformBuffer(device, focusBgl, 'pick');
 
   // @group(2) bind groups cached by GPUBuffer identity — pick() fires
   // on every hover/click and the loaded sources are stable between
@@ -319,7 +313,7 @@ export function createPickRenderer(
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
     pass.setBindGroup(1, dummyFadeBindGroup);
-    pass.setBindGroup(3, dummyFocusBindGroup);
+    pass.setBindGroup(3, dummyFocus.bindGroup);
 
     for (const src of sourceList) {
       let sourceBindGroup = sourceBindGroupCache.get(src.sourceBuffer);
@@ -446,7 +440,7 @@ export function createPickRenderer(
     depthTexture?.destroy();
     stagingBuffer.destroy();
     dummyFadeBuffer.destroy();
-    dummyFocusBuffer.destroy();
+    dummyFocus.destroy();
   }
 
   const renderer: PickRenderer = { label: 'pickRenderer', pick, renderForDebug, destroy };

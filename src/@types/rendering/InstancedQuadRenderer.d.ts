@@ -46,6 +46,10 @@ export type InstancedQuadRenderer = {
     instanceCount: number;
     camPosWorld?: Readonly<Vec3>;
     pxPerRad?: number;
+    /** Shared cluster-focus bind group, bound at `@group(1)`. Built once by
+     *  the engine against the canonical focusBgl and written once per frame;
+     *  the same group serves every impostor pipeline. */
+    focusBindGroup: GPUBindGroup;
   }) => void;
   /**
    * Release the GPU buffers this factory owns: the uniform buffer

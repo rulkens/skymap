@@ -133,9 +133,9 @@ function makeStubFocusBgl() {
   return {} as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl;
 }
 
-// At-rest focus value (blend=0 → shader multiplier is a no-op).
-const AT_REST_FOCUS: import('../../../../src/@types/rendering/FocusUniformsValue').FocusUniformsValue =
-  { center: [0, 0, 0], radiusMpc: 0, blend: 0, invert: 0 };
+// Stub shared focus bind group passed into draw() — the renderer only
+// binds it (setBindGroup(3, …)), never introspects it.
+const FOCUS_BIND_GROUP = {} as unknown as GPUBindGroup;
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
@@ -628,9 +628,10 @@ describe('PointRenderer.destroy', () => {
     const buffers: TrackedBuffer[] = [];
     const device = makeDestroyTrackingDevice(buffers);
     const renderer = createPointRenderer(device, 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
-    // The constructor allocates two buffers: the renderer's own uniform
-    // and the singleton focus uniform (@group(3)).
-    expect(buffers).toHaveLength(2);
+    // The constructor allocates one buffer: the renderer's own uniform.
+    // The cluster-focus uniform is shared and owned by the engine
+    // (state.gpu.focusUniform), not the renderer.
+    expect(buffers).toHaveLength(1);
     for (const b of buffers) expect(b.destroyCount).toBe(0);
 
     renderer.destroy();
@@ -642,27 +643,27 @@ describe('PointRenderer.destroy', () => {
     const buffers: TrackedBuffer[] = [];
     const device = makeDestroyTrackingDevice(buffers);
     const renderer = createPointRenderer(device, 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
-    // Constructor allocates 2 buffers (the renderer's own uniform + the
-    // singleton focus uniform).
-    expect(buffers).toHaveLength(2);
+    // Constructor allocates 1 buffer: the renderer's own uniform (the
+    // cluster-focus uniform is shared/engine-owned, not per renderer).
+    expect(buffers).toHaveLength(1);
 
     await renderer.upload(Source.SDSS, makeCloud(2));
     // upload() allocates 3 more buffers per source: the vertex buffer,
     // the FadeUniforms 16-byte uniform, and the SourceUniforms 16-byte
     // uniform (unified-fade architecture).
-    expect(buffers).toHaveLength(5);
+    expect(buffers).toHaveLength(4);
 
     await renderer.upload(Source.TwoMRS, makeCloud(3));
     // Second source: another vertex + fade + source triple.
-    expect(buffers).toHaveLength(8);
+    expect(buffers).toHaveLength(7);
 
     // Sanity: every tracked buffer starts at 0 destroys.
     for (const b of buffers) expect(b.destroyCount).toBe(0);
 
     renderer.destroy();
 
-    // All eight buffers (renderer uniform + focus uniform + 2 sources ×
-    // {vertex, fade, source}) should be destroyed exactly once.
+    // All seven buffers (renderer uniform + 2 sources × {vertex, fade,
+    // source}) should be destroyed exactly once.
     for (const b of buffers) expect(b.destroyCount).toBe(1);
   });
 
@@ -727,7 +728,7 @@ describe('PointRenderer.draw — PointDrawSettings shape', () => {
       depthFadeEnabled: false,
       pxFadeStart: 0,
       pxFadeEnd: 0,
-      focus: AT_REST_FOCUS,
+      focusBindGroup: FOCUS_BIND_GROUP,
       fadeOpacityOf: () => 1,
     });
 

@@ -69,6 +69,7 @@ import {
 import { createFadeUniformsBgl } from '../../gpu/bindGroupLayouts/fadeUniforms';
 import { createSourceUniformsBgl } from '../../gpu/bindGroupLayouts/sourceUniforms';
 import { createFocusUniformsBgl } from '../../gpu/bindGroupLayouts/focusUniforms';
+import { createFocusUniformBuffer } from '../../gpu/renderers/createFocusUniformBuffer';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -102,6 +103,10 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   state.gpu.fadeBgl = createFadeUniformsBgl(device);
   state.gpu.sourceBgl = createSourceUniformsBgl(device);
   state.gpu.focusBgl = createFocusUniformsBgl(device);
+  // The single shared cluster-focus uniform — written once per frame in
+  // renderFrame; its bind group is bound by points, the impostor disks, and
+  // the pick pass (each at its own group slot). See EngineGpuHandles.
+  state.gpu.focusUniform = createFocusUniformBuffer(device, state.gpu.focusBgl!);
 
   // ── HDR offscreen target + tone-map post-process ──────────────────
   //
@@ -240,12 +245,10 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // as PointRenderer above): atlas-bound, 3D-oriented quads sized by
   // per-galaxy diameter, composited into the same linear-light buffer as
   // the points pass.  Matched by the LOD-2 `texturedDisksPass`.
-  const texturedDiskRenderer = createTexturedDiskRenderer({
-    device,
-    context,
-    format: 'rgba16float',
-    canvas,
-  });
+  const texturedDiskRenderer = createTexturedDiskRenderer(
+    { device, context, format: 'rgba16float', canvas },
+    state.gpu.focusBgl!,
+  );
   // ProceduralDiskRenderer fills the visibility gap between the
   // screen-aligned point glow (pixelated above ~8 px) and the
   // textured-disk pass (kicks in at 24 px).  In the 8-14 px band both the
@@ -258,6 +261,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     context,
     format: 'rgba16float',
     canvas,
+    focusBgl: state.gpu.focusBgl!,
   });
   // Procedural Milky Way impostor at world origin.  See
   // `services/gpu/milkyWayRenderer.ts` for the rationale on why this

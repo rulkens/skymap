@@ -325,7 +325,17 @@ function makeInput(
       // nulling those handles makes the passes skip (enabled → false), so
       // these tests stay focused on point + milky-way ordering.
       state: {
-        gpu: { labelRenderer: null, markerLineRenderer: null, selectionRingRenderer: null, scalarVolumeRenderer: null, clusterMarkerRenderer: null },
+        // focusUniform: renderFrame writes it once per frame and
+        // pointSpritesPass binds its group; a no-op write + opaque bind
+        // group keeps the mock encoder happy.
+        gpu: {
+          labelRenderer: null,
+          markerLineRenderer: null,
+          selectionRingRenderer: null,
+          scalarVolumeRenderer: null,
+          clusterMarkerRenderer: null,
+          focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
+        },
         // proceduralDisksPass / texturedDisksPass each read their slot
         // off `state.subsystems` in their `enabled()` gate; nulling both
         // references makes the passes skip cleanly.

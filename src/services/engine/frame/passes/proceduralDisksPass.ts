@@ -36,6 +36,7 @@ export const proceduralDisksPass: Pass = {
       [ctx.canvasSize.width, ctx.canvasSize.height],
       [ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]],
       ctx.drawPxPerRad,
+      state.gpu.focusUniform!.bindGroup,
       instances,
     );
   },

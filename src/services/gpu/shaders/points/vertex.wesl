@@ -215,7 +215,10 @@ fn vs(
   // visible (Milliquas at high z).
   // Cluster-focus dim: non-members of the focused POI fade toward 0.08,
   // scaled by the smoothstep blend. Collapses to 1.0 when no POI is
-  // focused (blend == 0), so the visual pass is unchanged at rest.
+  // focused (blend == 0), so the visual pass is unchanged at rest.  The
+  // dim folds into the same intensity the invisibility cull tests below,
+  // so a faded non-member that drops under the perceptibility floor is
+  // culled rather than left to pile up additively in a dense field.
   let intensity = clamp((22.0 - p.magnitude) / 8.0, source.intensityFloor, 1.0)
     * u.brightness
     * vMaxAlpha

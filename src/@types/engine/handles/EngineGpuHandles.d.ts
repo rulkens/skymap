@@ -60,6 +60,7 @@ import type { DiskRadiusRing } from '../../rendering/DiskRadiusRing';
 import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../rendering/FocusUniformsBgl';
+import type { FocusUniformBuffer } from '../../rendering/FocusUniformBuffer';
 
 export type EngineGpuHandles = {
   renderer: PointRenderer | null;
@@ -79,13 +80,23 @@ export type EngineGpuHandles = {
    */
   sourceBgl: SourceUniformsBgl | null;
   /**
-   * Canonical FocusUniforms bind-group layout (@group(3), points +
-   * pick). Constructed once in `initGpu` and shared between the visual
-   * PointRenderer (binds the live focus buffer) and the offscreen
-   * PickRenderer (binds a zeroed dummy so its explicit layout matches).
-   * Null until `initGpu` resolves.
+   * Canonical FocusUniforms bind-group layout. Constructed once in
+   * `initGpu` and shared by every pipeline that renders the cluster-focus
+   * dim — points (@group(3)), the impostor disks (@group(1)), and the
+   * pick pass. Null until `initGpu` resolves.
    */
   focusBgl: FocusUniformsBgl | null;
+  /**
+   * The single shared cluster-focus uniform (buffer + bind group + packer).
+   * Only one POI is focused at a time, so one buffer serves the whole
+   * engine: written once per frame in `renderFrame`, and its bind group —
+   * built against `focusBgl` — is bound by every focus-aware pipeline at
+   * its own group slot (a bind group is tied to a layout, not a group
+   * number). The pick pass binds this same live buffer so non-members of a
+   * focused structure are excluded from hit-testing. Null until `initGpu`
+   * resolves; released and re-nulled by `destroy()`.
+   */
+  focusUniform: FocusUniformBuffer | null;
   /**
    * Combined HDR offscreen target + tone-map post-process.  One field
    * because their lifetimes are identical and they're always used

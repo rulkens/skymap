@@ -125,6 +125,11 @@ export function renderFrame(input: RenderFrameInput): void {
     milkyWayITimeSec,
   };
 
+  // Write the single shared cluster-focus uniform once per frame, before
+  // any pass (points, impostor disks, and the later pick submit) reads it.
+  // blend=0 at rest makes the per-vertex multiplier a no-op.
+  state.gpu.focusUniform?.write(settings.focus);
+
   // ── Encoder + HDR rendering ───────────────────────────────────────
   //
   // Two HDR-rendering shapes, picked at frame start based on whether

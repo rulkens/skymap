@@ -141,6 +141,11 @@ const STATE_STUB = {
       isAnyAnimating: () => false,
     },
   },
+  // pointSpritesPass / disk passes bind the shared focus group off
+  // state.gpu.focusUniform; an opaque bind group is all they read.
+  gpu: {
+    focusUniform: { bindGroup: {} as GPUBindGroup, write: () => {}, destroy: () => {} },
+  },
 } as unknown as EngineState;
 
 const PASS_STUB = {

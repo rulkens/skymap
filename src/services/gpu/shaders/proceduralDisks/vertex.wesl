@@ -50,8 +50,18 @@ import package::lib::billboard::quadCorner;
 // camera-independence invariant + the pole-degeneracy discussion.
 import package::lib::orientation::DiskAxes;
 import package::lib::orientation::diskAxes;
+// Shared cluster-focus dim — same lib the points pass uses, so disks fade
+// in lockstep with their companion point sprites. The membership test is
+// per-galaxy (constant across a quad's corners), so we evaluate it once
+// here in the vertex stage and forward the scalar via VsOut.focusDim.
+import package::lib::focusUniforms::FocusUniforms;
+import package::lib::focusUniforms::focusAlphaMultiplier;
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
+// @group(1) cluster-focus uniform — the impostor pipelines have no fade /
+// source groups, so focus takes the first free slot (the points pipeline
+// parks it at @group(3)). Single shared binding: one POI focused at a time.
+@group(1) @binding(0) var<uniform> focus: FocusUniforms;
 
 @vertex
 fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
@@ -133,5 +143,8 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   // WebP is loaded into the atlas. See the override site in
   // 'proceduralDiskSubsystem.ts'.
   out.procFadeOut = instance.extras.z;
+  // Cluster-focus dim, evaluated once per instance at the galaxy centre
+  // (constant across the quad's corners). At rest (blend=0) this is 1.0.
+  out.focusDim = focusAlphaMultiplier(pos, focus);
   return out;
 }

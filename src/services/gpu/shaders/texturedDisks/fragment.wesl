@@ -64,7 +64,7 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   // identically to the atlas tile's.
   let lum = max(c.r, max(c.g, c.b));
   let lumGate = lumAlpha(lum, 0.05, 0.30);
-  let alpha = lumGate * mask * in.fadeAlpha;
+  let alpha = lumGate * mask * in.fadeAlpha * in.focusDim;
   // Discard near-transparent fragments so we don't waste blend
   // bandwidth on near-zero contributions.  See 'quads.wesl' for
   // the longer note — same reasoning applies here.
