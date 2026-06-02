@@ -18,6 +18,13 @@ import styles from './DetailCard.module.css';
 export type PoiDetailCardProps = {
   poi: PointOfInterest;
   pinned?: boolean;
+  /**
+   * Catalogued galaxies inside this structure's membership sphere at the
+   * current tier + survey visibility, or null/undefined when not countable
+   * (famous-galaxy POI, or catalogs not loaded yet) — in which case the
+   * row is omitted rather than flashing a misleading "0".
+   */
+  memberCount?: number | null;
   onFocus?: (poi: PointOfInterest) => void;
   onClose?: () => void;
 };
@@ -25,6 +32,7 @@ export type PoiDetailCardProps = {
 export function PoiDetailCard({
   poi,
   pinned = false,
+  memberCount,
   onFocus,
   onClose,
 }: PoiDetailCardProps): ReactNode {
@@ -48,6 +56,9 @@ export function PoiDetailCard({
         <CardRow label="Distance" value={formatDistance(distanceMpc)} />
         {poi.category !== 'famousGalaxy' && (
           <CardRow label="Radius" value={formatDistance(poi.physicalRadiusMpc)} />
+        )}
+        {poi.category !== 'famousGalaxy' && memberCount != null && (
+          <CardRow label="Galaxies" value={memberCount.toLocaleString()} />
         )}
         {poi.category === 'cluster' && poi.abell !== undefined && (
           <CardRow label="Abell" value={formatAbellDesignation(poi.abell)} />

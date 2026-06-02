@@ -44,4 +44,40 @@ describe('PoiDetailCard', () => {
     const { container } = render(createElement(PoiDetailCard, { poi: virgoNoAbell }));
     expect(container.textContent).not.toMatch(/Abell/);
   });
+
+  it('shows the Galaxies row when a member count is supplied', () => {
+    render(createElement(PoiDetailCard, { poi: virgoNoAbell, memberCount: 42 }));
+    expect(screen.getByText('Galaxies')).toBeInTheDocument();
+    expect(screen.getByText('42')).toBeInTheDocument();
+  });
+
+  it('omits the Galaxies row when no member count is supplied', () => {
+    const { container } = render(createElement(PoiDetailCard, { poi: virgoNoAbell }));
+    expect(container.textContent).not.toMatch(/Galaxies/);
+  });
+
+  it('omits the Galaxies row when the count is null (not yet computable)', () => {
+    const { container } = render(
+      createElement(PoiDetailCard, { poi: virgoNoAbell, memberCount: null }),
+    );
+    expect(container.textContent).not.toMatch(/Galaxies/);
+  });
+
+  it('renders a zero count truthfully (empty sphere over loaded data)', () => {
+    render(createElement(PoiDetailCard, { poi: virgoNoAbell, memberCount: 0 }));
+    expect(screen.getByText('Galaxies')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
+  });
+
+  it('omits the Galaxies row for a famous-galaxy POI even if a count is passed', () => {
+    const famous: PointOfInterest = {
+      id: 'm31',
+      name: 'Andromeda',
+      category: 'famousGalaxy',
+      worldPos: [1, 2, 3],
+      featured: true,
+    } as unknown as PointOfInterest;
+    const { container } = render(createElement(PoiDetailCard, { poi: famous, memberCount: 99 }));
+    expect(container.textContent).not.toMatch(/Galaxies/);
+  });
 });
