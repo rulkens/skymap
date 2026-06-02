@@ -64,12 +64,11 @@ describe('Source enum — POI codes (cluster/supercluster/void)', () => {
 
   it('ALL_VISIBLE_MASK covers default-visible survey sources only (no POI bits)', () => {
     // Default-visible survey bits: 0 (Synthetic), 1 (SDSS), 2 (2MRS),
-    // 3 (Glade), 4 (Famous) = 0b11111.  Milliquas (bit 8) is in the
-    // registry but its `visible` flag is false, so its bit stays clear.
-    // POI codes 5/6/7 also stay clear so the survey draw loop doesn't
-    // accidentally gate on them.
-    expect(ALL_VISIBLE_MASK).toBe(0b11111);
-    expect(maskHas(ALL_VISIBLE_MASK, Source.Milliquas)).toBe(false);
+    // 3 (Glade), 4 (Famous), 8 (Milliquas) = 0b100011111.  Milliquas ships
+    // on by default now that the quasar source is stable.  POI codes 5/6/7
+    // stay clear so the survey draw loop doesn't accidentally gate on them.
+    expect(ALL_VISIBLE_MASK).toBe(0b100011111);
+    expect(maskHas(ALL_VISIBLE_MASK, Source.Milliquas)).toBe(true);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Cluster)).toBe(false);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Supercluster)).toBe(false);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Void)).toBe(false);

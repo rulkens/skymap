@@ -285,12 +285,11 @@ export const SOURCE_REGISTRY = {
     label: 'Milliquas',
     binBaseName: 'milliquas',
     allSky: true,
-    // Hidden by default until the quasar-specific render path lands.
-    // The `.bin` is still fetched (Milliquas is in SURVEY_SOURCES so
-    // cloudLoader requests it); the bit just stays clear in the visible
-    // mask so the existing galaxy billboards don't represent unresolved
-    // AGN until dedicated quasar visuals exist.
-    visible: false,
+    // Visible by default: the quasar source is stable enough to ship on.
+    // It renders with the shared galaxy-billboard path (no quasar-specific
+    // visuals yet), which is acceptable for the bright low-z tail the
+    // catalog mostly shows.
+    visible: true,
     // Milliquas reaches z ~ 7 (quasars at the edge of the observable
     // universe). Hubble's law with z = 7 ⇒ ~25 Gpc, but the bulk of
     // Milliquas is at z < 3 (~12 Gpc). While the renderer uses the
