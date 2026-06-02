@@ -380,7 +380,6 @@ export function createPointRenderer(
   const fadeScratchBuffer = new ArrayBuffer(16);
   const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
 
-
   // Loaded survey buffers keyed by SourceType.  Map preserves insert
   // order and dodges the prototype-chain ambiguity of a numeric-keyed
   // object literal.

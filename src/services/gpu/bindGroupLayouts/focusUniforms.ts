@@ -1,16 +1,18 @@
 /**
- * focusUniforms — canonical bind-group layout for the @group(3)
- * FocusUniforms binding (cluster focus mode).
+ * focusUniforms — canonical bind-group layout for the FocusUniforms
+ * binding (cluster focus mode).
  *
  * Canonical, not `layout: 'auto'`: auto layouts don't cross pipelines
- * (see CLAUDE.md). One layout built at bootstrap is threaded into both
- * the points pipeline (binds the live focus buffer) and the pick pipeline
- * (binds a zeroed dummy so its explicit layout matches), keeping every
- * consumer's bind groups valid.
+ * (see CLAUDE.md). One layout built at bootstrap is threaded into every
+ * focus-aware pipeline — points (@group(3)), the impostor disks (@group(1)),
+ * and the pick pipeline — and the single shared focus bind group, built
+ * against this layout, binds in all of them (a bind group is tied to a
+ * layout, not a group number).
  *
  * The buffer is VERTEX-stage-visible (unlike fragment-stage FadeUniforms):
- * the focus alpha multiplier folds into `out.intensity` in the points
- * vertex stage, so the fragment never reads it.
+ * the focus alpha multiplier folds into the per-vertex intensity (points)
+ * or a forwarded per-instance `focusDim` (disks), so the fragment stage
+ * reads only the result, never the uniform.
  */
 
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';

@@ -3,8 +3,11 @@
 // per-vertex multiplier to 1.0 (no effect); when active, members keep alpha
 // 1.0 and non-members fade to 0.08, scaled by the smoothstep blend.
 //
-// @group(3): @group(0) per-frame Uniforms, @group(1) FadeUniforms,
-// @group(2) per-source SourceUniforms occupy the lower slots.
+// The @group/@binding decoration is declared by each consuming shader, not
+// here: points parks it at @group(3) (its lower slots hold Uniforms / Fade /
+// Source), while the impostor disks have no intervening groups and use
+// @group(1). A single shared bind group serves both — it binds to a layout,
+// not a group number.
 //
 // Byte layout (32 bytes total).  centerRadius is a vec4 rather than a
 // vec3 + separate f32 ON PURPOSE: WGSL packs a scalar that follows a

@@ -61,6 +61,9 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     state.gpu.fadeBgl!,
     state.gpu.sourceBgl!,
     state.gpu.focusBgl!,
+    // The live shared focus buffer — so the pick pass excludes non-members
+    // of a focused structure from hit-testing (vertex shader culls them).
+    state.gpu.focusUniform!.bindGroup,
     state.gpu.clusterMarkerRenderer ?? undefined,
   );
   state.gpu.pickRenderer = pickRenderer;

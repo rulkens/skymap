@@ -214,11 +214,14 @@ fn vs(
   // regions (tames center saturation); higher floors keep faint objects
   // visible (Milliquas at high z).
   // Cluster-focus dim: non-members of the focused POI fade toward 0.08,
-  // scaled by the smoothstep blend. Collapses to 1.0 when no POI is
-  // focused (blend == 0), so the visual pass is unchanged at rest.  The
-  // dim folds into the same intensity the invisibility cull tests below,
-  // so a faded non-member that drops under the perceptibility floor is
-  // culled rather than left to pile up additively in a dense field.
+  // scaled by the smoothstep blend. Collapses to exactly 1.0 when no POI
+  // is focused (blend == 0) AND for members (mix(1.0, 1.0, blend)), so a
+  // value below 1.0 uniquely marks a non-member of an active focus — used
+  // both for the visual dim here and the pick exclusion below.  The dim
+  // folds into the same intensity the invisibility cull tests, so a faded
+  // non-member that drops under the perceptibility floor is culled rather
+  // than left to pile up additively in a dense field.
+  let focusMult = focusAlphaMultiplier(p.position, focus);
   let intensity = clamp((22.0 - p.magnitude) / 8.0, source.intensityFloor, 1.0)
     * u.brightness
     * vMaxAlpha
@@ -226,7 +229,7 @@ fn vs(
     * angularMult
     * depthFadeMult
     * crossfadeOut
-    * focusAlphaMultiplier(p.position, focus);
+    * focusMult;
 
   // Bake the K-corrected ramp colour, the magenta highlight, and the
   // intensity scalar straight into out.shaded.rgb. .w carries safeAB —
@@ -248,6 +251,18 @@ fn vs(
   // pass has dimmed below the additive-HDR contribution threshold.
   let INVISIBILITY_THRESHOLD = 0.005;
   if (intensity < INVISIBILITY_THRESHOLD && !inPickPass) {
+    out.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
+  }
+
+  // Pick exclusion: while a structure is focused, its non-members must not
+  // be hit-testable — clicking dimmed-out galaxies would fight the
+  // isolation.  focusMult is exactly 1.0 for members and at rest, and
+  // below 1.0 only for a non-member under an active focus, so this fires
+  // precisely on the galaxies the visual pass is fading away.  The pick
+  // pass binds the live focus buffer (the visual pass and pick share it);
+  // at rest blend == 0 makes focusMult 1.0 for everything, so picking is
+  // unaffected.
+  if (inPickPass && focusMult < 1.0) {
     out.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
   }
 

@@ -33,7 +33,6 @@ import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
-import { createFocusUniformBuffer } from './createFocusUniformBuffer';
 import type { ClusterMarkerRenderer } from '../../../@types/rendering/ClusterMarkerRenderer';
 import {
   POINT_STRIDE,
@@ -69,6 +68,11 @@ export function createPickRenderer(
   fadeBgl: FadeUniformsBgl,
   sourceBgl: SourceUniformsBgl,
   focusBgl: FocusUniformsBgl,
+  // The engine's shared cluster-focus bind group (live buffer, written
+  // once per frame in renderFrame).  Bound at @group(3) so the pick pass
+  // sees the same focus state the visual pass does and the shared vertex
+  // shader can cull non-members of a focused structure from hit-testing.
+  focusBindGroup: GPUBindGroup,
   // Optional POI-ring pick provider.  When present, the pick pass
   // calls `clusterMarkerRenderer.pickRing(pass)` after the galaxy
   // draws so cluster / supercluster / void ring hits land in the same
@@ -113,14 +117,6 @@ export function createPickRenderer(
     layout: fadeBgl,
     entries: [{ binding: 0, resource: { buffer: dummyFadeBuffer } }],
   });
-
-  // The shared vertex shader also declares @group(3) FocusUniforms.  The
-  // pick fragment never reads intensity (where the focus dim folds in),
-  // but the explicit pipeline layout must still match the visual
-  // pipeline — so bind a focus buffer that stays at its zero-initialised
-  // (at-rest) value, never written.  Reusing the shared helper keeps the
-  // layout identical to the visual pipelines'.
-  const dummyFocus = createFocusUniformBuffer(device, focusBgl, 'pick');
 
   // @group(2) bind groups cached by GPUBuffer identity — pick() fires
   // on every hover/click and the loaded sources are stable between
@@ -313,7 +309,7 @@ export function createPickRenderer(
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
     pass.setBindGroup(1, dummyFadeBindGroup);
-    pass.setBindGroup(3, dummyFocus.bindGroup);
+    pass.setBindGroup(3, focusBindGroup);
 
     for (const src of sourceList) {
       let sourceBindGroup = sourceBindGroupCache.get(src.sourceBuffer);
@@ -440,7 +436,8 @@ export function createPickRenderer(
     depthTexture?.destroy();
     stagingBuffer.destroy();
     dummyFadeBuffer.destroy();
-    dummyFocus.destroy();
+    // focusBindGroup wraps the engine-owned shared focus buffer; the
+    // engine's destroy() releases it, not the picker.
   }
 
   const renderer: PickRenderer = { label: 'pickRenderer', pick, renderForDebug, destroy };

@@ -68,7 +68,7 @@ describe('createPickRenderer', () => {
   it('takes a PointRenderer at construction (no per-call uniformBuffer arg)', () => {
     const device = makeStubDevice();
     const pointRenderer = createPointRenderer(device, 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
-    const pickRenderer = createPickRenderer(device, pointRenderer, makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
+    const pickRenderer = createPickRenderer(device, pointRenderer, makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl(), {} as unknown as GPUBindGroup);
 
     // The compile-time check is the strongest part: this file fails to
     // typecheck if `createPickRenderer` doesn't take a PointRenderer (or
@@ -156,7 +156,7 @@ describe('createPickRenderer', () => {
 
     // Both renderers share the same canonical fadeBgl + sourceBgl.
     const pointRenderer = createPointRenderer(device, 'rgba16float', canonicalFadeBgl, canonicalSourceBgl, canonicalFocusBgl);
-    const pickRenderer = createPickRenderer(device, pointRenderer, canonicalFadeBgl, canonicalSourceBgl, canonicalFocusBgl);
+    const pickRenderer = createPickRenderer(device, pointRenderer, canonicalFadeBgl, canonicalSourceBgl, canonicalFocusBgl, {} as unknown as GPUBindGroup);
 
     // Two distinct sourceBuffers — the production case is N visible
     // surveys and we want one bind group per source.

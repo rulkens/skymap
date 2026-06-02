@@ -1,7 +1,9 @@
 /**
- * createFocusUniformBuffer — allocate the singleton cluster-focus uniform
- * (buffer + bind group + scratch packer) shared by every pipeline that
- * renders the member-isolation dim.
+ * createFocusUniformBuffer — allocate the single engine-owned cluster-focus
+ * uniform (buffer + bind group + scratch packer). One POI is focused at a
+ * time, so one instance lives on `state.gpu.focusUniform`; `renderFrame`
+ * writes it once per frame and every focus-aware pipeline (points, the
+ * impostor disks, and the pick pass) binds its bind group.
  *
  * ## Why this is the only place that packs FocusUniforms
  *
@@ -10,13 +12,9 @@
  * (rather than a `vec3` + separate `f32`) is deliberate: WGSL packs a scalar
  * that follows a `vec3<f32>` into the vec3's empty 4th lane at byte 12, but a
  * naive std140-style CPU packer pads the vec3 to 16 bytes — a one-slot skew
- * that silently corrupts every field after it. Centralising the packing here
- * means that subtlety is encoded once instead of re-derived at each call site
- * (points, procedural disks, textured disks). See `lib/focusUniforms.wesl`.
- *
- * At rest every field is zero, which makes the shader's per-vertex multiplier
- * collapse to 1.0 — so a pipeline that never calls `write` (e.g. the pick
- * pass, which only needs a layout-matching dummy) renders unaffected.
+ * that silently corrupts every field after it. Encoding that subtlety in one
+ * factory keeps it from being re-derived per pipeline. See
+ * `lib/focusUniforms.wesl`.
  */
 
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
