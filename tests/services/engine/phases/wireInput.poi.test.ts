@@ -50,4 +50,13 @@ describe('wireInput POI wiring', () => {
     // method the single-click galaxy path uses.
     expect(src).toContain('focusOn(lastClickedPoi)');
   });
+
+  it('releases focus on an empty-space double-click', () => {
+    // Double-clicking the background (no cached galaxy/POI hit) is the
+    // inverse of double-clicking a structure: it drops the focus slot so
+    // the cluster-focus fade lifts and everything returns to full
+    // visibility.  Guards against a refactor that turns the empty-space
+    // dblclick back into a bare early-return.
+    expect(src).toContain('selection.setFocused(null)');
+  });
 });

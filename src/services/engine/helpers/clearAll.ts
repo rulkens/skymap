@@ -1,24 +1,33 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
 
 /**
  * clearAll — unified teardown for the public `selection.clear()` handle
- * method.  Drops the unified selection slot (galaxy OR POI) and fires
- * `onFocusChange(null)` on top, mirroring the "close the card" semantic
- * everywhere the InfoCard is dismissed (Esc, × button, URL drift back
- * to empty hash).
+ * method, wired to the deliberate "dismiss" gestures: the InfoCard ×
+ * button and Esc.  Drops BOTH the selection slot and the focus slot,
+ * so dismissing also collapses the cluster-focus member-isolation fade
+ * (and clears the `#focus=` / `#poi=` URL hash via `onFocusChange`).
  *
- * The selection subsystem's `setSelected(null)` fires both
- * `onSelectChange(null)` and `onPoiFocusChange(null)` for us, so the
- * React-side gets one consistent (null, null) snapshot rather than the
- * old two-step dance.  `onFocusChange(null)` is the extra one the
- * selection setter doesn't own — focus and selection are separate
- * callbacks (see EngineCallbacks).
+ * Each setter owns its own callback fan-out: `setSelected(null)` fires
+ * `onSelectChange(null)`, `setFocused(null)` fires `onFocusChange(null)`.
+ * Both dedupe internally, so calling them when the slot is already null
+ * is a silent no-op — no spurious React churn.
+ *
+ * ### Dismiss clears focus; a bare empty-space click does not
+ *
+ * The casual deselect — clicking empty space — only calls
+ * `setSelected(null)` (see the click handler), leaving the fade up so
+ * you can look around inside a focused structure.  Esc and × are the
+ * explicit exits and route here, where focus is dropped too.  Focus
+ * also clears on `focusOnHome` / `focusOnMilkyWay` and on focusing
+ * something else.
  */
-export function clearAll(state: EngineState, cb: EngineCallbacks): void {
-  if (state.subsystems.selection.selected() !== null) {
-    state.subsystems.selection.setSelected(null);
-    cb.camera?.onFocusChange?.(null);
+export function clearAll(state: EngineState): void {
+  const { selection, scheduler } = state.subsystems;
+  // Fire only when something actually changes, so an Esc on an empty
+  // scene stays an idle no-op (no needless render wake).
+  if (selection.selected() !== null || selection.focused() !== null) {
+    selection.setSelected(null);
+    selection.setFocused(null);
   }
-  state.subsystems.scheduler.requestRender();
+  scheduler.requestRender();
 }

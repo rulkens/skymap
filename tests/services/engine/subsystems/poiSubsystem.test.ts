@@ -8,13 +8,20 @@ import type { PointOfInterest } from '../../../../src/@types/engine/subsystems/P
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
-function makeState(selectedPoiId: string | null = null): EngineState {
+// `selectedPoiId` drives the 1.5× ring bump; `focusedPoiId` (defaulting
+// to the selection so existing call sites keep their meaning) drives the
+// other-rings dim, mirroring the engine split between select and focus.
+function makeState(
+  selectedPoiId: string | null = null,
+  focusedPoiId: string | null = selectedPoiId,
+): EngineState {
   return {
     subsystems: {
       scheduler: { requestRender: () => {} },
       fades: { fadeTo: () => Promise.resolve() },
       selection: {
         selected: () => (selectedPoiId !== null ? { kind: 'poi', id: selectedPoiId } : null),
+        focused: () => (focusedPoiId !== null ? { kind: 'poi', id: focusedPoiId } : null),
       },
     },
   } as unknown as EngineState;
@@ -485,20 +492,35 @@ describe('poiSubsystem — produceMarkers', () => {
     expect(markers).toHaveLength(3);
   });
 
-  it('dims non-selected markers to 25% while a POI is selected (selected keeps its bump)', () => {
+  it('dims non-focused markers to 25% while a POI is focused (focused keeps its bump)', () => {
     const sub = createPoiSubsystem();
     sub.setPois([
-      { id: 'virgo', name: 'Virgo', category: 'cluster', featured: true, worldPos: [10, 0, 0], physicalRadiusMpc: 2 },
-      { id: 'coma', name: 'Coma', category: 'cluster', featured: true, worldPos: [-10, 0, 0], physicalRadiusMpc: 2 },
+      {
+        id: 'virgo',
+        name: 'Virgo',
+        category: 'cluster',
+        featured: true,
+        worldPos: [10, 0, 0],
+        physicalRadiusMpc: 2,
+      },
+      {
+        id: 'coma',
+        name: 'Coma',
+        category: 'cluster',
+        featured: true,
+        worldPos: [-10, 0, 0],
+        physicalRadiusMpc: 2,
+      },
     ]);
 
-    // At rest: no selection → both markers at their unscaled baked alpha.
+    // At rest: no selection/focus → both markers at their unscaled baked alpha.
     const atRest = sub.produceMarkers(makeState(null), makeCtx());
     const restVirgo = atRest.find((m) => m.id === 'virgo')!;
     const restComa = atRest.find((m) => m.id === 'coma')!;
 
-    // Virgo selected → Coma (non-selected) dims to 25%; Virgo's ring is
-    // bumped (≥ its at-rest alpha, capped at 1).
+    // Virgo focused (and selected) → Coma (the other) dims to 25%; Virgo's
+    // ring is bumped (≥ its at-rest alpha, capped at 1).  makeState defaults
+    // focus to the selection, so one arg sets both.
     const focused = sub.produceMarkers(makeState('virgo'), makeCtx());
     const focVirgo = focused.find((m) => m.id === 'virgo')!;
     const focComa = focused.find((m) => m.id === 'coma')!;
@@ -506,6 +528,83 @@ describe('poiSubsystem — produceMarkers', () => {
     expect(focComa.ringColor[3]).toBeCloseTo(restComa.ringColor[3] * 0.25, 6);
     expect(focComa.haloColor[3]).toBeCloseTo(restComa.haloColor[3] * 0.25, 6);
     expect(focVirgo.ringColor[3]).toBeGreaterThanOrEqual(restVirgo.ringColor[3]);
+  });
+
+  it('a bare select (no focus) does NOT dim the other markers', () => {
+    // Single-click on a cluster selects it (1.5× ring bump) but must not
+    // trigger the cluster-focus recede — that fires only on focus, in
+    // lockstep with the galaxy/disk member fade.
+    const sub = createPoiSubsystem();
+    sub.setPois([
+      {
+        id: 'virgo',
+        name: 'Virgo',
+        category: 'cluster',
+        featured: true,
+        worldPos: [10, 0, 0],
+        physicalRadiusMpc: 2,
+      },
+      {
+        id: 'coma',
+        name: 'Coma',
+        category: 'cluster',
+        featured: true,
+        worldPos: [-10, 0, 0],
+        physicalRadiusMpc: 2,
+      },
+    ]);
+
+    const rest = sub.produceMarkers(makeState(null), makeCtx());
+    const restComa = rest.find((m) => m.id === 'coma')!;
+    const restVirgo = rest.find((m) => m.id === 'virgo')!;
+    // Virgo selected but NOT focused (focusedPoiId = null).
+    const out = sub.produceMarkers(makeState('virgo', null), makeCtx());
+    const selComa = out.find((m) => m.id === 'coma')!;
+    const selVirgo = out.find((m) => m.id === 'virgo')!;
+
+    // Coma is undimmed…
+    expect(selComa.ringColor[3]).toBeCloseTo(restComa.ringColor[3], 6);
+    // …while Virgo still gets its selection bump (≥ at-rest, capped at 1).
+    expect(selVirgo.ringColor[3]).toBeGreaterThanOrEqual(restVirgo.ringColor[3]);
+  });
+
+  it('focus without selection dims the others but bumps nothing', () => {
+    // Focus and selection are independent slots: a focus that isn't also
+    // the current selection (e.g. focus cluster A, then single-click B)
+    // dims every other ring but leaves the focused ring at its plain
+    // (un-bumped) alpha, since the 1.5× bump tracks selection.
+    const sub = createPoiSubsystem();
+    sub.setPois([
+      {
+        id: 'virgo',
+        name: 'Virgo',
+        category: 'cluster',
+        featured: true,
+        worldPos: [10, 0, 0],
+        physicalRadiusMpc: 2,
+      },
+      {
+        id: 'coma',
+        name: 'Coma',
+        category: 'cluster',
+        featured: true,
+        worldPos: [-10, 0, 0],
+        physicalRadiusMpc: 2,
+      },
+    ]);
+
+    const rest = sub.produceMarkers(makeState(null), makeCtx());
+    const restVirgo = rest.find((m) => m.id === 'virgo')!;
+    const restComa = rest.find((m) => m.id === 'coma')!;
+
+    // Focused on Virgo, nothing selected.
+    const out = sub.produceMarkers(makeState(null, 'virgo'), makeCtx());
+    const outVirgo = out.find((m) => m.id === 'virgo')!;
+    const outComa = out.find((m) => m.id === 'coma')!;
+
+    expect(outComa.ringColor[3]).toBeCloseTo(restComa.ringColor[3] * 0.25, 6);
+    // No selection bump — Virgo's ring is at its plain at-rest alpha.
+    expect(outVirgo.ringColor[3]).toBeCloseTo(restVirgo.ringColor[3], 6);
   });
 
   it('excludes famous-galaxy POIs from markers', () => {
@@ -648,9 +747,7 @@ describe('poiSubsystem — produceMarkers', () => {
     // Per-category descriptor order, mapped to id, EQUALS
     // getPoisForCategory order — independent of fade.  This is the
     // invariant the ring-pick instance_index relies on.
-    const clusterDescriptorIds = markers
-      .filter((m) => m.category === 'cluster')
-      .map((m) => m.id);
+    const clusterDescriptorIds = markers.filter((m) => m.category === 'cluster').map((m) => m.id);
     const expected = sub.getPoisForCategory('cluster').map((p) => p.id);
     expect(clusterDescriptorIds).toEqual(expected);
     expect(clusterDescriptorIds).toEqual(['faded-out', 'visible']);

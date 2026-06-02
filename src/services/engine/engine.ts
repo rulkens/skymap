@@ -696,11 +696,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // reference each by name — no forward references, no `!` assertions.
 
   function clearSelection(): void {
-    // Unified teardown — clears galaxy AND POI selection in one call.
-    // The branching + render-scheduling lives in `clearAll` so the
-    // engine.ts closure stays a thin wrapper.  See clearAll.ts for the
-    // "close the card" rationale and the order-of-firing guarantee.
-    clearAll(state, cb);
+    // Unified teardown — clears galaxy/POI selection AND the focus slot
+    // (so the cluster-focus fade collapses) in one call.  The branching
+    // + render-scheduling lives in `clearAll` so the engine.ts closure
+    // stays a thin wrapper.  See clearAll.ts for the dismiss-vs-deselect
+    // rationale and the order-of-firing guarantee.
+    clearAll(state);
   }
 
   function setBiasMode(mode: BiasMode): void {
@@ -733,19 +734,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // branch skips the guard so deep-link drains can land POI state
     // pre-camera (see commitPoiFocus).
     if (!isPoi(target) && !state.cam) return;
-    commitFocus(state, cb, target);
+    commitFocus(state, target);
   }
 
   function focusOnHome(): void {
     // Snapshot null-check; cam-null is absorbed inside the helper.
     if (!state.initialCamSnapshot) return;
 
-    // Returning to the home view means we're no longer focused on any
-    // particular galaxy.  Notify so the URL clears its `#focus=…`.
-    // Stays at the call site (not in the helper) because firing
-    // `onFocusChange(null)` is "this action is leaving a focus
-    // state", which `tweenToCameraSnapshot` doesn't decide.
-    cb.camera?.onFocusChange?.(null);
+    // Returning to the home view means we're no longer focused on
+    // anything: drop the focus slot, which collapses the cluster-focus
+    // fade AND fires `onFocusChange(null)` so the URL clears its
+    // `#focus=…`.  Stays at the call site (not in the helper) because
+    // "this action is leaving a focus state" is something
+    // `tweenToCameraSnapshot` doesn't decide.
+    state.subsystems.selection.setFocused(null);
 
     tweenToCameraSnapshot(state, state.initialCamSnapshot);
   }
@@ -760,9 +762,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     const cam = state.cam;
     if (!cam) return;
 
-    // Not a catalog object — clear any pinned galaxy focus so the URL hash
-    // doesn't resolve a stale one.
-    cb.camera?.onFocusChange?.(null);
+    // Not a catalog object — drop the focus slot so the URL hash doesn't
+    // resolve a stale one and the cluster-focus fade collapses on the
+    // way to the Milky Way.  `setFocused(null)` fires `onFocusChange`.
+    state.subsystems.selection.setFocused(null);
 
     tweenToCameraSnapshot(state, {
       target: [MILKY_WAY_CENTER_WORLD[0], MILKY_WAY_CENTER_WORLD[1], MILKY_WAY_CENTER_WORLD[2]],
@@ -788,16 +791,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     if (localIdx < 0) return;
 
     // Build the GalaxyInfo the picker would, from live sidecars.
-    const info = buildGalaxyInfo(
-      cloud,
-      localIdx,
-      Source.Famous,
-      state.sources.famousMeta,
-    );
+    const info = buildGalaxyInfo(cloud, localIdx, Source.Famous, state.sources.famousMeta);
     if (!info) return;
 
     // A palette pick is a deliberate focus action, so move the camera too.
-    commitGalaxyFocus(state, cb, info);
+    commitGalaxyFocus(state, info);
   }
 
   type SelectByAliasTarget = {
@@ -815,15 +813,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
     // Caller-supplied `famousMeta` wins over the engine's copy — see the
     // EngineHandle JSDoc for the race this defends against.
-    const info = buildGalaxyInfo(
-      cloud,
-      localIdx,
-      source,
-      famousMeta ?? state.sources.famousMeta,
-    );
+    const info = buildGalaxyInfo(cloud, localIdx, source, famousMeta ?? state.sources.famousMeta);
     if (!info) return;
 
-    commitGalaxyFocus(state, cb, info);
+    commitGalaxyFocus(state, info);
   }
 
   function loadPgcAliasesFn(): Promise<PgcAliasMap> {
@@ -1327,8 +1320,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         },
       },
       setShowPickBuffer: (enabled: boolean) => boringSetters.setShowPickBuffer(enabled),
-      setShowDiskRadiusRing: (enabled: boolean) =>
-        boringSetters.setShowDiskRadiusRing(enabled),
+      setShowDiskRadiusRing: (enabled: boolean) => boringSetters.setShowDiskRadiusRing(enabled),
     },
 
     destroy,

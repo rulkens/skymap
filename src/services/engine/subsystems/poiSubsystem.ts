@@ -667,11 +667,21 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
     const fovYRad = 2 * Math.atan(halfH / ctx.drawPxPerRad);
     const pxPerRad = (ctx.canvasSize.height * 0.5) / Math.tan(fovYRad * 0.5);
     const [cx, cy, cz] = ctx.drawCamPos;
-    // Selected POI id (if any), read off the selection subsystem so
-    // produceMarkers stays a pure function of state.  Galaxy selections
-    // leave this null → no ring gets the selection bump.
+    // Two POI ids drive two distinct marker effects, mirroring the
+    // galaxy side so POIs and galaxies behave identically:
+    //   - selected  → the 1.5× ring bump (highlight what you clicked),
+    //     the analogue of the galaxy selection halo (selectionRingPass
+    //     also reads selected()).
+    //   - focused   → the "every OTHER ring recedes" dim, the marker
+    //     half of cluster-focus mode — same trigger as the galaxy/disk
+    //     member-isolation fade (runFrame reads focused()).
+    // Reading both off the subsystem keeps produceMarkers a pure
+    // function of state.  Galaxy selections/focuses leave the matching
+    // id null → no ring is bumped / nothing dims.
     const sel = state.subsystems.selection.selected();
     const selectedPoiId = sel !== null && sel.kind === 'poi' ? sel.id : null;
+    const foc = state.subsystems.selection.focused();
+    const focusedPoiId = foc !== null && foc.kind === 'poi' ? foc.id : null;
 
     // Emit-all-then-discard contract.  Every marker-bearing POI of a
     // VISIBLE category emits EXACTLY ONE descriptor, in allPois() order —
@@ -759,11 +769,12 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
       const sigWeight = SIG_MIN_ALPHA + (1 - SIG_MIN_ALPHA) * (p.significance ?? 1);
       const weightedFade = fadeAlpha * sigWeight;
 
-      // Cluster focus mode: while some POI is selected, every OTHER marker
-      // dims to NON_SELECTED_MARKER_DIM (the selected one keeps its 1.5×
-      // ring bump below).  At rest dim is 1.
+      // Cluster focus mode: while some POI is FOCUSED, every OTHER marker
+      // dims to NON_SELECTED_MARKER_DIM, in lockstep with the galaxy/disk
+      // member fade.  A bare select (single-click) does NOT dim — only a
+      // focus (double-click) does.  At rest dim is 1.
       const isSelected = p.id === selectedPoiId;
-      const dim = selectedPoiId !== null && !isSelected ? NON_SELECTED_MARKER_DIM : 1;
+      const dim = focusedPoiId !== null && p.id !== focusedPoiId ? NON_SELECTED_MARKER_DIM : 1;
 
       // Halo: bake style at-rest alpha × per-frame fade × focus dim into
       // the alpha channel.  Voids opt out via null haloColor → [0,0,0,0]
@@ -783,9 +794,7 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
       // scaled by the focus dim.  Fresh tuple, not mutated in place, to
       // keep the descriptor immutable.
       const ringAlphaBase = style.ringColor[3] * weightedFade;
-      const ringAlpha = isSelected
-        ? Math.min(1, ringAlphaBase * 1.5)
-        : ringAlphaBase * dim;
+      const ringAlpha = isSelected ? Math.min(1, ringAlphaBase * 1.5) : ringAlphaBase * dim;
       const ringColor: Vec4 = [
         style.ringColor[0],
         style.ringColor[1],

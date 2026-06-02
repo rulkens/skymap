@@ -83,12 +83,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       return { source: sel.source, localIdx: sel.localIdx, cloud };
     },
     buildGalaxyInfo: (cloud, localIdx, src) =>
-      buildGalaxyInfo(
-        cloud,
-        localIdx,
-        src,
-        state.sources.famousMeta,
-      ),
+      buildGalaxyInfo(cloud, localIdx, src, state.sources.famousMeta),
     // POI pick hit `(category, poiIndex)` → `PointOfInterest`.  Shared
     // with the hover throttler in `runFrame.ts` so the click and hover
     // paths can't drift on the lookup logic; see `resolvePoiFromPick`.
@@ -177,11 +172,15 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     onPointerUp: () => {
       state.picking.pointerDown = false;
     },
-    // Esc clears selection.  App.tsx also has a useEffect that
-    // forwards Esc through the engine handle's `clearSelection()`
-    // — same result, both paths are fine.
+    // Esc is an explicit dismiss: clear BOTH the selection (close the
+    // card) and the focus slot (collapse the cluster-focus fade).
+    // Self-contained at the engine level so it doesn't depend on the
+    // React Esc path — App.tsx also forwards Esc through the handle's
+    // `clearSelection()` (→ clearAll), which does the same two clears;
+    // both setters dedupe, so the double-fire is a no-op.
     onEscape: () => {
       state.subsystems.selection.setSelected(null);
+      state.subsystems.selection.setFocused(null);
     },
     // resize: the next frame's resizeCanvasToDisplay() picks up
     // the new dimensions and recreates the HDR target.  All we
@@ -326,9 +325,19 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
         handle?.camera.focusOn(lastClickedPoi);
         return;
       }
-      // Empty-space dblclick: `lastClickedInfo` was cleared by the
-      // single-click handler, so no stale focus tween.
-      if (!lastClickedInfo) return;
+      // Empty-space dblclick: both caches were cleared by the preceding
+      // single-clicks, so this is a deliberate "release focus" gesture —
+      // the inverse of double-clicking a structure to focus it.  Drop the
+      // focus slot so the cluster-focus fade lifts and every galaxy +
+      // structure returns to full visibility.  The camera stays put
+      // (flying home is the separate reset gesture); `setFocused(null)`
+      // fires `onFocusChange(null)`, and we wake the loop so the fade-out
+      // animates.
+      if (!lastClickedInfo) {
+        state.subsystems.selection.setFocused(null);
+        state.subsystems.scheduler.requestRender();
+        return;
+      }
       // `handle` is constructed after the bootstrap IIFE; resolved lazily
       // through `deps.handleRef`, non-null by the time a user can dblclick.
       handle?.camera.focusOn(lastClickedInfo);

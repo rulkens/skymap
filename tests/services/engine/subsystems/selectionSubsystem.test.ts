@@ -14,6 +14,8 @@
  *   - Cross-kind transitions clear the previous slot correctly.
  *   - prebuiltInfo escape hatch on setSelected (selectByAlias race).
  *   - Cloud-missing / out-of-range galaxy lookups fire onChange(null).
+ *   - Focus slot: setFocused is independent of setSelected, dedupes,
+ *     and fires onFocusChange (not the selection callbacks).
  *   - destroy() clears state.
  */
 
@@ -28,12 +30,14 @@ import { Source } from '../../../../src/data/sources';
 
 type Callbacks = EngineCallbacks & {
   selection: { onHoverChange: ReturnType<typeof vi.fn>; onSelectChange: ReturnType<typeof vi.fn> };
+  camera: { onFocusChange: ReturnType<typeof vi.fn> };
 };
 
 function makeCallbacks(): Callbacks {
   return {
     lifecycle: { onStatusChange: vi.fn() },
     selection: { onHoverChange: vi.fn(), onSelectChange: vi.fn() },
+    camera: { onFocusChange: vi.fn() },
   } as unknown as Callbacks;
 }
 
@@ -76,7 +80,10 @@ const FORNAX: PointOfInterest = {
   physicalRadiusMpc: 1.5,
 };
 
-function makeSub(cb: Callbacks, opts: { cloud?: GalaxyCatalog; pois?: readonly PointOfInterest[] } = {}) {
+function makeSub(
+  cb: Callbacks,
+  opts: { cloud?: GalaxyCatalog; pois?: readonly PointOfInterest[] } = {},
+) {
   const pois = opts.pois ?? [];
   return createSelectionSubsystem({
     cb,
@@ -168,10 +175,9 @@ describe('createSelectionSubsystem — cross-kind transitions', () => {
     const cb = makeCallbacks();
     const sub = makeSub(cb, { cloud: makeCloud(10), pois: [VIRGO] });
 
-    sub.setSelected(
-      { kind: 'galaxy', source: Source.SDSS, localIdx: 1 },
-      { sentinel: 'galaxy' } as unknown as GalaxyInfo,
-    );
+    sub.setSelected({ kind: 'galaxy', source: Source.SDSS, localIdx: 1 }, {
+      sentinel: 'galaxy',
+    } as unknown as GalaxyInfo);
     sub.setSelected({ kind: 'poi', id: 'virgo' });
 
     expect(cb.selection.onSelectChange).toHaveBeenLastCalledWith(VIRGO);
@@ -195,6 +201,70 @@ describe('createSelectionSubsystem — cross-kind transitions', () => {
   });
 });
 
+describe('createSelectionSubsystem — focus slot', () => {
+  it('setFocused updates focused() independently of selected()', () => {
+    const cb = makeCallbacks();
+    const sub = makeSub(cb, { cloud: makeCloud(10), pois: [VIRGO] });
+
+    sub.setFocused({ kind: 'poi', id: 'virgo' });
+    expect(sub.focused()).toEqual({ kind: 'poi', id: 'virgo' });
+    // Focus is its own rung — setting it does not pin the selection.
+    expect(sub.selected()).toBeNull();
+  });
+
+  it('deselecting (setSelected null) leaves the focus slot intact', () => {
+    const cb = makeCallbacks();
+    const sub = makeSub(cb, { cloud: makeCloud(10), pois: [VIRGO] });
+
+    sub.setFocused({ kind: 'poi', id: 'virgo' });
+    sub.setSelected({ kind: 'poi', id: 'virgo' });
+    sub.setSelected(null); // deselect — must NOT drop the fade's focus
+
+    expect(sub.selected()).toBeNull();
+    expect(sub.focused()).toEqual({ kind: 'poi', id: 'virgo' });
+  });
+
+  it('setFocused fires onFocusChange with the resolved target, not the selection callbacks', () => {
+    const cb = makeCallbacks();
+    const sub = makeSub(cb, { cloud: makeCloud(10), pois: [VIRGO] });
+
+    sub.setFocused({ kind: 'poi', id: 'virgo' });
+
+    // Symmetric with setSelected → onSelectChange: setFocused owns the
+    // camera focus callback (which React mirrors into the URL hash).
+    expect(cb.camera.onFocusChange).toHaveBeenCalledWith(VIRGO);
+    expect(cb.selection.onSelectChange).not.toHaveBeenCalled();
+    expect(cb.selection.onHoverChange).not.toHaveBeenCalled();
+  });
+
+  it('setFocused dedupes — re-focusing the same target fires onFocusChange once', () => {
+    const cb = makeCallbacks();
+    const sub = makeSub(cb, { cloud: makeCloud(10), pois: [VIRGO] });
+
+    sub.setFocused({ kind: 'poi', id: 'virgo' });
+    sub.setFocused({ kind: 'poi', id: 'virgo' }); // dup — no refire
+    expect(cb.camera.onFocusChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('setFocused(null) fires onFocusChange(null)', () => {
+    const cb = makeCallbacks();
+    const sub = makeSub(cb, { cloud: makeCloud(10), pois: [VIRGO] });
+
+    sub.setFocused({ kind: 'poi', id: 'virgo' });
+    sub.setFocused(null);
+    expect(cb.camera.onFocusChange).toHaveBeenLastCalledWith(null);
+  });
+
+  it('setFocused(null) collapses focus', () => {
+    const cb = makeCallbacks();
+    const sub = makeSub(cb, { cloud: makeCloud(10), pois: [VIRGO] });
+
+    sub.setFocused({ kind: 'poi', id: 'virgo' });
+    sub.setFocused(null);
+    expect(sub.focused()).toBeNull();
+  });
+});
+
 describe('createSelectionSubsystem — lifecycle', () => {
   it('destroy() clears internal state', () => {
     const cb = makeCallbacks();
@@ -202,12 +272,15 @@ describe('createSelectionSubsystem — lifecycle', () => {
 
     sub.setHovered({ kind: 'galaxy', source: Source.SDSS, localIdx: 1 });
     sub.setSelected({ kind: 'poi', id: 'virgo' });
+    sub.setFocused({ kind: 'poi', id: 'virgo' });
     expect(sub.hovered()).not.toBeNull();
     expect(sub.selected()).not.toBeNull();
+    expect(sub.focused()).not.toBeNull();
 
     sub.destroy();
 
     expect(sub.hovered()).toBeNull();
     expect(sub.selected()).toBeNull();
+    expect(sub.focused()).toBeNull();
   });
 });

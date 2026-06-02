@@ -247,12 +247,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // lives in `renderFrame.ts`; every value it reads is forwarded as a
   // field on `RenderFrameInput` so this site stays free of GPU bookkeeping.
   //
-  // First, cluster focus mode — selection-driven, synced once per frame:
-  // resolve the selected POI (galaxy / nothing both → null) and let the
-  // subsystem diff it against its focused id to drive the 400 ms
-  // member-isolation fade.  Done before the settings snapshot below so
-  // `produceFocusUniforms` reads this frame's transition on one `nowMs`.
-  const focusSel = state.subsystems.selection.selected();
+  // First, cluster focus mode — focus-driven, synced once per frame:
+  // resolve the FOCUSED POI (a bare single-click select does not count;
+  // galaxy / nothing both → null) and let the subsystem diff it against
+  // its focused id to drive the 400 ms member-isolation fade.  Done
+  // before the settings snapshot below so `produceFocusUniforms` reads
+  // this frame's transition on one `nowMs`.
+  const focusSel = state.subsystems.selection.focused();
   const focusedPoi =
     focusSel !== null && focusSel.kind === 'poi'
       ? (state.subsystems.pois.findPoi(focusSel.id) ?? null)
@@ -455,9 +456,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
             category: pick.kind,
             poiIndex: pick.poiIndex,
           });
-          state.subsystems.selection.setHovered(
-            poi !== null ? { kind: 'poi', id: poi.id } : null,
-          );
+          state.subsystems.selection.setHovered(poi !== null ? { kind: 'poi', id: poi.id } : null);
         }
         // No scheduler.requestRender() here intentionally.
         // The hover state only feeds the React InfoCard text —

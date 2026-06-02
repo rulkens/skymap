@@ -36,35 +36,59 @@ import type { FadeUniformsBgl } from '../../../src/@types/rendering/FadeUniforms
 describe('poiSubsystem.produceMarkers → clusterMarkerRenderer.setMarkers', () => {
   it('the renderer reports the same marker count produceMarkers emitted', () => {
     const sub = createPoiSubsystem();
-    const renderer = createClusterMarkerRenderer({
-      device: null as unknown as GPUDevice,
-      context: null as unknown as GPUCanvasContext,
-      format: 'rgba16float' as GPUTextureFormat,
-      canvas: null as unknown as HTMLCanvasElement,
-    }, 'rgba16float', null as unknown as FadeUniformsBgl);
+    const renderer = createClusterMarkerRenderer(
+      {
+        device: null as unknown as GPUDevice,
+        context: null as unknown as GPUCanvasContext,
+        format: 'rgba16float' as GPUTextureFormat,
+        canvas: null as unknown as HTMLCanvasElement,
+      },
+      'rgba16float',
+      null as unknown as FadeUniformsBgl,
+    );
     // World positions chosen so each POI lands above its category's
     // markerMinApparentRadiusPx floor at the test camera (which sits at
     // [0,0,1000] with pxPerRad=500).  Without this, the far-distance
     // fade introduced in 2026-05-28 drops sub-floor POIs from the
     // descriptor stream and the count contract would be off.
     sub.setPois([
-      { id: 'virgo', name: 'Virgo', category: 'cluster',
-        worldPos: [10, 0, 990], physicalRadiusMpc: 2 },
-      { id: 'hercules', name: 'Hercules SC', category: 'supercluster',
-        worldPos: [0, 100, 950], physicalRadiusMpc: 50 },
-      { id: 'bootes', name: 'Boötes Void', category: 'void',
-        worldPos: [0, 0, 800], physicalRadiusMpc: 50 },
+      {
+        id: 'virgo',
+        name: 'Virgo',
+        category: 'cluster',
+        worldPos: [10, 0, 990],
+        physicalRadiusMpc: 2,
+      },
+      {
+        id: 'hercules',
+        name: 'Hercules SC',
+        category: 'supercluster',
+        worldPos: [0, 100, 950],
+        physicalRadiusMpc: 50,
+      },
+      {
+        id: 'bootes',
+        name: 'Boötes Void',
+        category: 'void',
+        worldPos: [0, 0, 800],
+        physicalRadiusMpc: 50,
+      },
       // famousGalaxy excluded by produceMarkers — the famous-galaxy
       // billboards are drawn by a different subsystem, so the cluster
       // marker pass intentionally skips them.
-      { id: 'm31', name: 'M31', category: 'famousGalaxy',
-        worldPos: [0.78, 0, 999], physicalRadiusMpc: 0.05 },
+      {
+        id: 'm31',
+        name: 'M31',
+        category: 'famousGalaxy',
+        worldPos: [0.78, 0, 999],
+        physicalRadiusMpc: 0.05,
+      },
     ] as PointOfInterest[]);
 
     const state = {
       subsystems: {
         fades: { fadeTo: () => Promise.resolve() },
-        selection: { selected: () => null },
+        selection: { selected: () => null, focused: () => null },
       },
     } as unknown as EngineState;
     const ctx = {

@@ -1,13 +1,28 @@
 /**
- * selectionSubsystem — owns the engine's hover + select state.
+ * selectionSubsystem — owns the engine's hover + select + focus state.
  *
- * Two slots, each holding a `Selection` discriminated union
+ * Three slots, each holding a `Selection` discriminated union
  * (`{kind:'galaxy', source, localIdx}` or `{kind:'poi', id}`) or
- * null.  Setters dedupe via `selectionEq` and fan out to
+ * null, forming the engine's attention ladder: hover → select →
+ * focus.  Setters dedupe via `selectionEq` and fan out to
  * `cb.selection.onHoverChange` / `onSelectChange` with the resolved
  * `FocusableTarget` (GalaxyInfo for galaxy variants, PointOfInterest
  * for POIs) — callers never have to remember to fire the callback
  * themselves.
+ *
+ * ### Why `focused` is a third slot, not a synonym for `selected`
+ *
+ * A single click *selects* (pins the InfoCard); a double-click
+ * *focuses* (tweens the camera in).  Cluster-focus mode — the
+ * member-isolation fade that dims non-members of a structure — keys
+ * off the deliberate focus gesture, not the casual select, so it
+ * needs its own slot.  `setFocused` is symmetric with `setSelected`:
+ * it owns the `cb.camera.onFocusChange` fan-out the same way
+ * `setSelected` owns `onSelectChange`, so the GPU fade (read off
+ * `focused()` in `runFrame`) and the React/URL focus state can never
+ * desync — there is exactly one setter.  The optional `prebuiltInfo`
+ * mirrors `setSelected`'s escape hatch for the `selectByAlias`
+ * deep-link race.
  *
  * ### Deps are closures, not snapshots
  *
@@ -56,15 +71,15 @@ function selectionEq(a: Selection | null, b: Selection | null): boolean {
   return false;
 }
 
-export function createSelectionSubsystem(
-  input: CreateSelectionSubsystemInput,
-): SelectionSubsystem {
+export function createSelectionSubsystem(input: CreateSelectionSubsystemInput): SelectionSubsystem {
   const { cb, getCloud, getFamousMeta, getPoi } = input;
 
   // Closure-captured `let`s — genuinely inaccessible from outside.
-  // Both start null; populated by the first hover pick / click resolve.
+  // All start null; `hovered`/`selected` populate from the first hover
+  // pick / click resolve, `focused` from the first focus commit.
   let hovered: Selection | null = null;
   let selected: Selection | null = null;
+  let focused: Selection | null = null;
 
   /**
    * Build a GalaxyInfo for a `(source, localIdx)` selection, or null if
@@ -83,12 +98,7 @@ export function createSelectionSubsystem(
     const c = getCloud(sel.source);
     if (!c) return null;
     if (sel.localIdx < 0 || sel.localIdx >= c.count) return null;
-    return buildGalaxyInfo(
-      c,
-      sel.localIdx,
-      sel.source,
-      getFamousMeta(),
-    );
+    return buildGalaxyInfo(c, sel.localIdx, sel.source, getFamousMeta());
   }
 
   /**
@@ -124,13 +134,34 @@ export function createSelectionSubsystem(
     cb.selection?.onSelectChange?.(target);
   }
 
+  /**
+   * Update the focus slot and fan out `cb.camera.onFocusChange`.
+   * Symmetric with `setSelected`: the cluster-focus fade reads
+   * `focused()` in `runFrame`, while React mirrors the same target
+   * into the `#focus=` / `#poi=` URL hash via the callback.  One
+   * setter for both consumers means they can't drift.  `prebuiltInfo`
+   * short-circuits the cloud lookup for the `selectByAlias` race —
+   * same escape hatch as `setSelected`; ignored for POI focuses.
+   */
+  function setFocused(sel: Selection | null, prebuiltInfo?: GalaxyInfo | null): void {
+    if (selectionEq(sel, focused)) return;
+    focused = sel;
+    const target =
+      sel !== null && sel.kind === 'galaxy' && prebuiltInfo !== undefined
+        ? prebuiltInfo
+        : resolveTarget(sel);
+    cb.camera?.onFocusChange?.(target);
+  }
+
   function destroy(): void {
     // Release internal refs — purely defensive (engine is a singleton,
     // remounts replace the whole subsystem instance anyway), but
     // matches the symmetric `destroy()` shape every sibling subsystem
-    // exposes.  Subsequent `hovered()` / `selected()` reads return null.
+    // exposes.  Subsequent `hovered()` / `selected()` / `focused()`
+    // reads return null.
     hovered = null;
     selected = null;
+    focused = null;
   }
 
   // Built as a `const` (rather than returned inline) so we can attach
@@ -140,8 +171,10 @@ export function createSelectionSubsystem(
   const subsystem: SelectionSubsystem = {
     hovered: () => hovered,
     selected: () => selected,
+    focused: () => focused,
     setHovered,
     setSelected,
+    setFocused,
     destroy,
   };
   subsystem satisfies Destroyable;

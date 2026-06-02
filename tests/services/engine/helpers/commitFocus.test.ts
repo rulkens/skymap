@@ -9,7 +9,6 @@
  * commitPoiFocus.test.ts.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { GalaxyInfo } from '../../../../src/@types/engine/GalaxyInfo';
 import type { PointOfInterest } from '../../../../src/@types/engine/subsystems/PointOfInterest';
@@ -29,7 +28,6 @@ import { commitFocus } from '../../../../src/services/engine/helpers/commitFocus
 
 function makeFixtures() {
   const state = {} as unknown as EngineState;
-  const cb = {} as unknown as EngineCallbacks;
   const galaxy = { index: 0, x: 0, y: 0, z: 0 } as unknown as GalaxyInfo;
   const poi: PointOfInterest = {
     id: 'virgo-cluster',
@@ -39,7 +37,7 @@ function makeFixtures() {
     featured: true,
     physicalRadiusMpc: 2,
   };
-  return { state, cb, galaxy, poi };
+  return { state, galaxy, poi };
 }
 
 describe('commitFocus', () => {
@@ -49,17 +47,16 @@ describe('commitFocus', () => {
   });
 
   it('routes a GalaxyInfo through commitGalaxyFocus', () => {
-    const { state, cb, galaxy } = makeFixtures();
-    commitFocus(state, cb, galaxy);
-    expect(commitGalaxyFocusSpy).toHaveBeenCalledTimes(1);
+    const { state, galaxy } = makeFixtures();
+    commitFocus(state, galaxy);
+    expect(commitGalaxyFocusSpy).toHaveBeenCalledWith(state, galaxy);
     expect(commitPoiFocusSpy).not.toHaveBeenCalled();
   });
 
   it('routes a PointOfInterest through commitPoiFocus', () => {
-    const { state, cb, poi } = makeFixtures();
-    commitFocus(state, cb, poi);
-    expect(commitPoiFocusSpy).toHaveBeenCalledTimes(1);
-    expect(commitPoiFocusSpy).toHaveBeenCalledWith(state, cb, poi);
+    const { state, poi } = makeFixtures();
+    commitFocus(state, poi);
+    expect(commitPoiFocusSpy).toHaveBeenCalledWith(state, poi);
     expect(commitGalaxyFocusSpy).not.toHaveBeenCalled();
   });
 });
