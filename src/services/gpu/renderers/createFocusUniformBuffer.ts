@@ -8,9 +8,9 @@
  * ## Why this is the only place that packs FocusUniforms
  *
  * The 32-byte block is laid out as a `vec4 centerRadius` (xyz = centre Mpc,
- * w = radiusMpc) followed by `blend`, `invert`, and two pad words. The vec4
- * (rather than a `vec3` + separate `f32`) is deliberate: WGSL packs a scalar
- * that follows a `vec3<f32>` into the vec3's empty 4th lane at byte 12, but a
+ * w = radiusMpc) followed by `blend` and three pad words. The vec4 (rather
+ * than a `vec3` + separate `f32`) is deliberate: WGSL packs a scalar that
+ * follows a `vec3<f32>` into the vec3's empty 4th lane at byte 12, but a
  * naive std140-style CPU packer pads the vec3 to 16 bytes — a one-slot skew
  * that silently corrupts every field after it. Encoding that subtlety in one
  * factory keeps it from being re-derived per pipeline. See
@@ -40,11 +40,9 @@ export function createFocusUniformBuffer(
     entries: [{ binding: 0, resource: { buffer } }],
   });
 
-  // Reusable scratch aliased by both views: f32 for centre/radius/blend,
-  // u32 for the invert flag. Pad words [6..7] stay zero.
+  // Reusable scratch: f32 for centre/radius/blend. Pad words [5..7] stay zero.
   const scratch = new ArrayBuffer(FOCUS_UNIFORM_BYTES);
   const f32 = new Float32Array(scratch);
-  const u32 = new Uint32Array(scratch);
 
   function write(focus: FocusUniformsValue): void {
     f32[0] = focus.center[0];
@@ -52,7 +50,6 @@ export function createFocusUniformBuffer(
     f32[2] = focus.center[2];
     f32[3] = focus.radiusMpc; // vec4 .w
     f32[4] = focus.blend;
-    u32[5] = focus.invert;
     device.queue.writeBuffer(buffer, 0, scratch);
   }
 

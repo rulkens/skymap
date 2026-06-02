@@ -1,16 +1,18 @@
 /**
- * clusterFocusSubsystem — selection-driven cluster "focus mode".
+ * clusterFocusSubsystem — focus-driven cluster "focus mode".
  *
- * When a cluster / supercluster / void POI is the current selection,
- * non-member galaxies fade to ~8% alpha over ~400 ms (the shader does
- * the per-vertex membership test; this subsystem only supplies the
- * centre, radius, invert flag, and the smoothstep blend). See
- * `ClusterFocusSubsystem.d.ts` for the rationale (selection as single
+ * When a cluster / supercluster / void POI is focused, non-member
+ * galaxies fade to ~8% alpha over ~400 ms (the shader does the
+ * per-vertex membership test; this subsystem only supplies the centre,
+ * radius, and the smoothstep blend). All three categories behave
+ * identically — the focused structure's interior galaxies stay bright;
+ * voids are just an underdense case of the same rule. See
+ * `ClusterFocusSubsystem.d.ts` for the rationale (focus as single
  * source of truth; GPU re-derivation instead of a CPU member list).
  *
  * ### Why a `focusedId` separate from the display target
  *
- * `update` runs every frame with the live selection. The fade-in and
+ * `update` runs every frame with the live focused POI. The fade-in and
  * fade-out must each fire once, on the transition — re-calling
  * `fade.fadeTo` every frame would reset the ramp's clock and the blend
  * would never advance. `focusedId` records the id we are fading *toward*
@@ -35,7 +37,6 @@ const ZERO_FOCUS: FocusUniformsValue = {
   center: [0, 0, 0],
   radiusMpc: 0,
   blend: 0,
-  invert: 0,
 };
 
 /** The latched display target while focus is active or fading out. */
@@ -43,7 +44,6 @@ type ActiveFocus = {
   readonly id: string;
   readonly center: Vec3;
   readonly radiusMpc: number;
-  readonly invert: 0 | 1;
 };
 
 export function createClusterFocusSubsystem(
@@ -61,15 +61,12 @@ export function createClusterFocusSubsystem(
     let next: ActiveFocus | null = null;
     if (
       poi !== null &&
-      (poi.category === 'cluster' ||
-        poi.category === 'supercluster' ||
-        poi.category === 'void')
+      (poi.category === 'cluster' || poi.category === 'supercluster' || poi.category === 'void')
     ) {
       next = {
         id: poi.id,
         center: [poi.worldPos[0], poi.worldPos[1], poi.worldPos[2]],
         radiusMpc: poi.apparentRadiusMpc ?? poi.physicalRadiusMpc,
-        invert: poi.category === 'void' ? 1 : 0,
       };
     }
 
@@ -100,7 +97,6 @@ export function createClusterFocusSubsystem(
       center: active.center,
       radiusMpc: active.radiusMpc,
       blend,
-      invert: active.invert,
     };
   }
 

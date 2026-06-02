@@ -103,7 +103,7 @@ function makeSettings(overrides: Partial<RenderFrameSettings> = {}): RenderFrame
     depthFadeEnabled: true,
     pxFadeStartPoints: 8,
     pxFadeEndPoints: 14,
-    focus: { center: [0, 0, 0], radiusMpc: 0, blend: 0, invert: 0 },
+    focus: { center: [0, 0, 0], radiusMpc: 0, blend: 0 },
     exposure: 1.0,
     toneMapCurve: ToneMapCurve.Reinhard,
     galaxyTexturesEnabled: true,

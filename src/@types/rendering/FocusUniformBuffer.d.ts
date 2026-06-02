@@ -2,8 +2,8 @@
  * FocusUniformBuffer — the singleton cluster-focus uniform a pipeline binds
  * to render the member-isolation dim. Owns the 32-byte GPU buffer, its bind
  * group, and a reusable scratch packer; `createFocusUniformBuffer` is the
- * single place that knows the `vec4 centerRadius + blend + invert` byte
- * layout (mirrored in `lib/focusUniforms.wesl`).
+ * single place that knows the `vec4 centerRadius + blend` byte layout
+ * (mirrored in `lib/focusUniforms.wesl`).
  *
  * One POI is focused at a time, so every pipeline (points, procedural disks,
  * textured disks) holds exactly one of these and writes it once per frame.

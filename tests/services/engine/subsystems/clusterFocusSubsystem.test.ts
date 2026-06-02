@@ -36,7 +36,7 @@ describe('clusterFocusSubsystem', () => {
     expect(sub.isAwake(0)).toBe(false);
   });
 
-  it('update with a cluster POI fades blend 0→1 with correct center/radius/invert', () => {
+  it('update with a cluster POI fades blend 0→1 with correct center/radius', () => {
     const sub = createClusterFocusSubsystem(0);
     sub.update(makeCluster({ worldPos: [3, 4, 5], physicalRadiusMpc: 7 }), 0);
     const mid = sub.produceFocusUniforms(200);
@@ -46,7 +46,6 @@ describe('clusterFocusSubsystem', () => {
     expect(settled.blend).toBe(1);
     expect(settled.center).toEqual([3, 4, 5]);
     expect(settled.radiusMpc).toBe(7);
-    expect(settled.invert).toBe(0);
   });
 
   it('apparentRadiusMpc takes precedence over physicalRadiusMpc for the membership radius', () => {
@@ -55,10 +54,16 @@ describe('clusterFocusSubsystem', () => {
     expect(sub.produceFocusUniforms(500).radiusMpc).toBe(5);
   });
 
-  it('update with a void POI sets invert=1', () => {
+  it('update with a void POI focuses it exactly like a cluster (no inversion)', () => {
+    // Voids share the cluster rule: galaxies inside the void's radius are
+    // members (stay bright), everything else fades.  The uniform carries
+    // no per-category bit — just center/radius/blend, same as a cluster.
     const sub = createClusterFocusSubsystem(0);
-    sub.update(makeVoid(), 0);
-    expect(sub.produceFocusUniforms(500).invert).toBe(1);
+    sub.update(makeVoid({ worldPos: [1, 2, 3], physicalRadiusMpc: 9 }), 0);
+    const settled = sub.produceFocusUniforms(500);
+    expect(settled.blend).toBe(1);
+    expect(settled.center).toEqual([1, 2, 3]);
+    expect(settled.radiusMpc).toBe(9);
   });
 
   it('update with a famousGalaxy POI stays inactive (no radius → no focus)', () => {

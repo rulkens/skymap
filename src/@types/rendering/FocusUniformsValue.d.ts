@@ -17,6 +17,4 @@ export type FocusUniformsValue = {
   readonly radiusMpc: number;
   /** 0..1 smoothstep amount. 0 = no focus active. */
   readonly blend: number;
-  /** 0 = cluster/SC (inside is member); 1 = void (outside is member). */
-  readonly invert: 0 | 1;
 };

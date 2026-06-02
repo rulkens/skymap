@@ -264,7 +264,7 @@ function makeInput(
     // production.
     pxFadeStartPoints: 8,
     pxFadeEndPoints: 14,
-    focus: { center: [0, 0, 0], radiusMpc: 0, blend: 0, invert: 0 } as const,
+    focus: { center: [0, 0, 0], radiusMpc: 0, blend: 0 } as const,
     exposure: 1.0,
     toneMapCurve: ToneMapCurve.Reinhard,
     galaxyTexturesEnabled: true,
@@ -453,7 +453,9 @@ describe('renderFrame', () => {
 
   it('packs (source, localIdx) into the selectedPacked u32 sent to pointRenderer.draw', () => {
     // SDSS = 1, localIdx = 42 → (1 << 27) | 42 = 0x0800_002a = 134217770.
-    const fx2 = makeInput({ settings: { selected: { kind: 'galaxy', source: Source.SDSS, localIdx: 42 } } });
+    const fx2 = makeInput({
+      settings: { selected: { kind: 'galaxy', source: Source.SDSS, localIdx: 42 } },
+    });
     renderFrame(fx2.input);
     const draw = fx2.pointRenderer.draw as ReturnType<typeof vi.fn>;
     const expected = ((Source.SDSS << 27) | 42) >>> 0;
@@ -553,7 +555,11 @@ describe('renderFrame', () => {
     // The half-res view comes off ctx.volumeOffscreen.view.  The
     // fixture's mock may not include volumeOffscreen — patch it on.
     const halfResView = { __id: 'half-res' } as unknown as GPUTextureView;
-    (fx2.input.ctx as any).volumeOffscreen = { view: halfResView, resize: () => {}, destroy: () => {} };
+    (fx2.input.ctx as any).volumeOffscreen = {
+      view: halfResView,
+      resize: () => {},
+      destroy: () => {},
+    };
 
     renderFrame(fx2.input);
 

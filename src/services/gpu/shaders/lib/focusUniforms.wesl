@@ -1,7 +1,13 @@
 // lib/focusUniforms.wesl — shared 'which POI is focused' uniform, written
 // once per frame from clusterFocusSubsystem state. blend=0 collapses the
-// per-vertex multiplier to 1.0 (no effect); when active, members keep alpha
-// 1.0 and non-members fade to 0.08, scaled by the smoothstep blend.
+// per-vertex multiplier to 1.0 (no effect); when active, members (galaxies
+// inside the focused structure's sphere) keep alpha 1.0 and everything
+// else fades to 0.08, scaled by the smoothstep blend.
+//
+// Clusters, superclusters and voids all behave identically: the focused
+// structure's interior galaxies stay bright, the rest recede. (Voids are
+// underdense, so focusing one isolates the few galaxies that sit inside
+// its radius — same rule, no inversion.)
 //
 // The @group/@binding decoration is declared by each consuming shader, not
 // here: points parks it at @group(3) (its lower slots hold Uniforms / Fade /
@@ -17,27 +23,23 @@
 // vec4 has a single unambiguous 16-byte slot, so CPU and GPU agree.
 //   offset  0 : centerRadius  vec4<f32>  (xyz = center Mpc, w = radiusMpc)
 //   offset 16 : blend         f32        0..1 smoothstep
-//   offset 20 : invert        u32        0 = cluster/SC, 1 = void
-//   offset 24 : _pad0         u32
-//   offset 28 : _pad1         u32
+//   offset 20 : _pad0         f32
+//   offset 24 : _pad1         f32
+//   offset 28 : _pad2         f32
 
 struct FocusUniforms {
   centerRadius: vec4<f32>,
   blend: f32,
-  invert: u32,
-  _pad0: u32,
-  _pad1: u32,
+  _pad0: f32,
+  _pad1: f32,
+  _pad2: f32,
 };
 
-// Per-vertex focus alpha multiplier. invert=0 (cluster/SC) makes inside a
-// member; invert=1 (void) makes outside a member. Members get alpha 1.0,
-// others 0.08, mixed by blend. At blend == 0 this is a branch-free 1.0.
+// Per-vertex focus alpha multiplier. Galaxies inside the focused
+// structure's sphere are members (alpha 1.0); everything else fades to
+// 0.08, mixed by blend. At blend == 0 this is a branch-free 1.0.
 fn focusAlphaMultiplier(worldPos: vec3<f32>, focus: FocusUniforms) -> f32 {
-  let isInside = distance(worldPos, focus.centerRadius.xyz) < focus.centerRadius.w;
-  // Membership is inside XOR invert: a cluster/SC (invert=0) counts inside
-  // galaxies as members; a void (invert=1) counts outside galaxies (the
-  // walls) as members so the galaxies within the void fade instead.
-  let isMember = isInside != (focus.invert == 1u);
+  let isMember = distance(worldPos, focus.centerRadius.xyz) < focus.centerRadius.w;
   let baseAlpha = select(0.08, 1.0, isMember);
   return mix(1.0, baseAlpha, focus.blend);
 }

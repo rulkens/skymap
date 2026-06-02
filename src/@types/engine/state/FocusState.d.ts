@@ -18,14 +18,6 @@
  *     events; nullifying it on deactivation would force a recomputation
  *     on every reactivation. Same field, `active = false`, no recompute.
  *
- * Why `invert` (not `category === 'void'`):
- *   - The shader's alpha multiplier needs a single bit, not a category
- *     string. Decoding `category === 'void'` on the CPU and packing
- *     the result into a u32 uniform keeps the shader's branch logic
- *     in the language that's good at branches (TypeScript) and the
- *     shader's arithmetic in the language that's good at arithmetic
- *     (WGSL).
- *
  * **Not yet wired into `EngineState`.** This file lands the type for
  * plan 4 to import; plan 4's bootstrap adds the `state.focus` field
  * and the subsystem that mutates it.
@@ -42,10 +34,10 @@ export type FocusState = {
   readonly poiId: string;
 
   /**
-   * POI category — controls the shader's `invert` semantics, the
-   * camera framing multiplier (plan 3 §5.3), and the InfoCard layout.
-   * Kept as a string here for ergonomics; the shader gets the boolean
-   * `invert` derived from this on the CPU side.
+   * POI category — drives the camera framing multiplier (plan 3 §5.3)
+   * and the InfoCard layout. All three categories share one fade rule
+   * (interior galaxies stay bright), so the shader needs no per-category
+   * bit.
    */
   readonly category: 'cluster' | 'supercluster' | 'void';
 
@@ -70,15 +62,6 @@ export type FocusState = {
    * `memberPackedIds`.
    */
   readonly radiusMpc: number;
-
-  /**
-   * `true` for void POIs (galaxies INSIDE the ring fade; outside stay
-   * bright — preserves the wall structure). `false` for clusters and
-   * superclusters (galaxies INSIDE stay bright; outside fade).
-   * Derived from `category` on the CPU side, packed as a `u32` into
-   * the shader's FocusUniforms block.
-   */
-  readonly invert: boolean;
 
   /**
    * `true` while the focus is engaged; `false` after a clear gesture
