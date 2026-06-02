@@ -14,17 +14,12 @@ export type FamousCalibration = {
   /** Disk radius as a fraction of the image half-width. */
   diskRadiusFrac: number;
   /**
-   * Major-axis angle of the disk WITHIN the final WebP frame, degrees
-   * [0, 180) — NOT an on-sky position angle.  It is ≡ 0 for any deprojected
-   * thumbnail (the crop is rotated to axis-align the disk before the face-on
-   * stretch), and only nonzero for an as-shot thumbnail whose crop wasn't
-   * rotated to the disk.  The on-sky PA used to orient the disk in 3D comes
-   * from the catalog, never from this field — feeding this into a sky-PA
-   * basis would tilt the disk along an image axis, not the real sky axis.
+   * True when the shipped WebP was deprojected to face-on.  This is the
+   * calibration's ONLY orientation input: a deprojected texture re-projects
+   * correctly on the galaxy's real catalog plane (on-sky PA + inclination),
+   * while an as-shot texture already carries Earth's projection and renders
+   * face-on to the sky.  The disk's 3D orientation itself always comes from
+   * the catalog — the calibration never carries an angle or an axis ratio.
    */
-  frameMajorAxisDeg: number;
-  /** b/a override; absent → catalog axisRatio is used instead. */
-  axisRatio?: number;
-  /** True when the shipped WebP was deprojected to face-on. */
   deprojected: boolean;
 };

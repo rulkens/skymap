@@ -77,23 +77,6 @@ describe('deriveFamousCalibration', () => {
     expect(cal.diskRadiusFrac).toBeCloseTo(0.5, 10);
   });
 
-  it('frameMajorAxisDeg rotated into final frame: disk 40, crop 10 → 30', () => {
-    const disk = makeDisk({ paDeg: 40 });
-    const crop = makeCrop({ rotationDeg: 10 });
-    const cal = deriveFamousCalibration({ disk, crop, catalogAxisRatio: 0.6, deprojected: false });
-
-    expect(cal.frameMajorAxisDeg).toBeCloseTo(30, 10);
-  });
-
-  it('frameMajorAxisDeg wraparound: disk 10, crop 30 → 160 (stays in [0,180))', () => {
-    // 10 - 30 = -20 → normalise to 160.
-    const disk = makeDisk({ paDeg: 10 });
-    const crop = makeCrop({ rotationDeg: 30 });
-    const cal = deriveFamousCalibration({ disk, crop, catalogAxisRatio: 0.6, deprojected: false });
-
-    expect(cal.frameMajorAxisDeg).toBeCloseTo(160, 10);
-  });
-
   it('rotated crop maps the nucleus through R(-rotationDeg)', () => {
     // See module-level comment for the derivation.
     // crop { x:100, y:100, w:256, h:256, rotationDeg:45 }
@@ -108,31 +91,6 @@ describe('deriveFamousCalibration', () => {
 
     expect(cal.center[0]).toBeCloseTo(expected_u, 10);
     expect(cal.center[1]).toBeCloseTo(expected_v, 10);
-  });
-
-  it('axisRatio falls back to catalogAxisRatio when disk.axisRatio absent', () => {
-    // disk has no axisRatio field → should use catalogAxisRatio.
-    const disk = makeDisk(); // no axisRatio
-    const cal = deriveFamousCalibration({
-      disk,
-      crop: makeCrop(),
-      catalogAxisRatio: 0.42,
-      deprojected: false,
-    });
-
-    expect(cal.axisRatio).toBeCloseTo(0.42, 10);
-  });
-
-  it('disk.axisRatio takes precedence over catalogAxisRatio when present', () => {
-    const disk = makeDisk({ axisRatio: 0.7 });
-    const cal = deriveFamousCalibration({
-      disk,
-      crop: makeCrop(),
-      catalogAxisRatio: 0.42,
-      deprojected: false,
-    });
-
-    expect(cal.axisRatio).toBeCloseTo(0.7, 10);
   });
 
   it('deprojected flag passes through', () => {
@@ -166,26 +124,6 @@ describe('deriveFamousCalibration deprojected branch', () => {
     axisRatio: aspect,
     deproject: true,
   };
-
-  it('emits PA = 0 (texture is face-on)', () => {
-    const cal = deriveFamousCalibration({
-      disk,
-      crop,
-      catalogAxisRatio: aspect,
-      deprojected: true,
-    });
-    expect(cal.frameMajorAxisDeg).toBe(0);
-  });
-
-  it('emits axisRatio = 1 (no runtime re-tilt)', () => {
-    const cal = deriveFamousCalibration({
-      disk,
-      crop,
-      catalogAxisRatio: aspect,
-      deprojected: true,
-    });
-    expect(cal.axisRatio).toBe(1);
-  });
 
   it('diskRadiusFrac is radiusPx / (crop.width/2)', () => {
     const cal = deriveFamousCalibration({
@@ -231,14 +169,18 @@ describe('deriveFamousCalibration deprojected branch', () => {
     expect(cal.center[0]).toBeCloseTo(0.5, 6);
   });
 
-  it('non-deprojected branch is unchanged', () => {
+  it('non-deprojected branch skips the minor-axis stretch', () => {
+    // Without the face-on stretch the centre maps straight through R(-rot)
+    // with no Y scaling; the disk centre equals the crop centre here, so it
+    // normalises to [0.5, 0.5].
     const cal = deriveFamousCalibration({
       disk,
       crop,
       catalogAxisRatio: aspect,
       deprojected: false,
     });
-    expect(cal.axisRatio).toBe(aspect);
     expect(cal.deprojected).toBe(false);
+    expect(cal.center[0]).toBeCloseTo(0.5, 6);
+    expect(cal.center[1]).toBeCloseTo(0.5, 6);
   });
 });
