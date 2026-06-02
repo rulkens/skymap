@@ -76,31 +76,30 @@ export function nucleusCorner(center: Vec2): Vec2 {
 /**
  * Effective tilt (PA + axis ratio) the disk should render with.
  *
- * Two curated regimes:
- *   - deprojected WebP: the image was warped to face-on, so we re-apply a
- *     single correct squash from the calibration's axis ratio.  The axis
- *     ratio falls back to the catalog's measured value when the calibration
- *     doesn't override it.
- *   - as-shot WebP: the image already carries the galaxy's real
- *     inclination, so the disk must render *flat* (axisRatio 1, PA 0) —
- *     applying another squash would double the projection.
+ * Orientation is owned by the CATALOG, never by the image frame.  The
+ * calibration only decides *which* of two regimes applies:
+ *   - deprojected WebP: the image was warped to face-on, so the texture
+ *     re-projects correctly when mapped onto the galaxy's real world-fixed
+ *     plane.  The disk renders with the catalog's on-sky PA + inclination —
+ *     byte-identical to the procedural and uncalibrated paths, which is what
+ *     unifies the three disk renderers on one orientation source.
+ *   - as-shot WebP: the image already carries the galaxy's real inclination,
+ *     so the disk must face the sky plane (axisRatio 1, PA 0) — re-tilting
+ *     would double the projection.  No as-shot thumbnail exists today; the
+ *     branch is retained for forward-compat with a deproject-off curation.
  *
- * NOTE: the deprojected branch's `positionAngleDeg` is the calibration's
- * `frameMajorAxisDeg`, which is ≡ 0 (the texture is axis-aligned), so the
- * disk currently renders with no in-plane rotation.  This is a placeholder:
- * `frameMajorAxisDeg` is an image-frame angle, not an on-sky PA, so it cannot
- * orient the disk in 3D.  Real placement against the catalog's on-sky PA is
- * the job of the disk-plane rework (see the famous-orientation backlog).
+ * Why the catalog PA is a parameter rather than read from the calibration:
+ * the calibration's image-frame angle is meaningless in 3D (it is the disk's
+ * major-axis angle WITHIN the WebP, ≡ 0 for a deprojected crop).  The on-sky
+ * PA that orients `diskAxes` comes from the catalog.
  */
 export function effectiveTilt(
   calibration: FamousCalibration,
   catalogAxisRatio: number,
+  catalogPaDeg: number,
 ): { positionAngleDeg: number; axisRatio: number } {
   if (calibration.deprojected) {
-    return {
-      positionAngleDeg: calibration.frameMajorAxisDeg,
-      axisRatio: calibration.axisRatio ?? catalogAxisRatio,
-    };
+    return { positionAngleDeg: catalogPaDeg, axisRatio: catalogAxisRatio };
   }
   return { positionAngleDeg: 0, axisRatio: 1 };
 }
