@@ -36,6 +36,8 @@ Plans live in `docs/superpowers/plans/`. All have TDD task lists with checkboxes
 
 Design is captured; an implementer or `superpowers:writing-plans` needs to turn each into a task list before pickup.
 
+- **[2026-06-01 Engine data stores](superpowers/specs/2026-06-01-engine-data-stores-design.md)** — per-type data stores + demand-driven loading, the next stage of the engine data-layer redesign. The prerequisite wireSlots refactor shipped (#237); this spec and the POI realignment below are the remaining two stages and need plans.
+- **[2026-06-01 POI presentation realignment](superpowers/specs/2026-06-01-poi-presentation-realignment-design.md)** — dissolve the bespoke POI path into the per-type-store model so clusters/famous/labels share one presentation pipeline. Sequenced after the data-stores spec above.
 - **[2026-05-07 Tour animation](superpowers/specs/2026-05-07-tour-animation-design.md)** — brainstorm-in-progress; needs to be finished before it can be planned. May be subsumed by the splash-screen Part 2 stub-tour.
 
 ---
@@ -60,17 +62,16 @@ From [ADR 0001 §"explicitly not deciding"](adrs/0001-fade-ownership.md):
 
 Diagnosed but unplanned. Captured here so they don't get lost; promote to a spec or plan when prioritised. Most have richer notes in agent memory (`~/.claude/projects/-Users-rulkens-Development-js-skymap/memory/`).
 
-- **Mobile layout** — touch devices have no hover, so any interaction gated on a hover state is dead on mobile. Needs a responsive pass: drop hover-only affordances (hover preview/halo) on touch and route them through tap-to-select, plus general layout reflow for narrow viewports.
+- **Mobile layout reflow** — hover-on-touch is handled (`disable hover on touch input`, #226: hover-only affordances now route through tap). What remains is the general responsive layout pass: reflow the InfoCard / SettingsPanel / StatusBar for narrow viewports so the UI is usable on a phone, not just non-broken.
 - **Enable Milliquas by default** — the Million Quasars source is wired up but ships off by default; flip it on in the default source set (and confirm the tier/perf budget still holds with it enabled).
 - **Lower-tier "close to home" weighting** — retune the small/medium tier subsampling so more galaxies survive near the camera's home position for maximum visual density on first load, while keeping the on-screen count fast. Distinct from the deliberate SDSS far-shell sample (memory `project_sdss_medium_intentionally_far`).
 - **Milliquas colour check** — Milliquas points currently all render blue; verify the colour-index / colour mapping for the quasar source isn't collapsing to a single hue.
 - **Tour feature (full)** — finish the camera tour beyond the Part-2 stub. Tracked design: [splash-screen Part 2 stub-tour plan](superpowers/plans/2026-05-20-splash-screen-02-stub-tour.md) and [2026-05-07 tour-animation spec](superpowers/specs/2026-05-07-tour-animation-design.md) (brainstorm-in-progress). Promote the spec to a plan, then implement the real waypoint tour.
-- **Thumbnail quality** — five ranked fix options (mask, sky-sub, per-galaxy size, DESI source, brightness norm). See memory `project_thumbnail_quality`. Partially addressed for famous galaxies via [procedural-disk fade-out](superpowers/specs/completed/2026-05-28-procedural-disk-fade-out-design.md) (2026-05-28); SDSS/DSS branches still open.
-- **Famous-galaxy high-res LOD** — curated WebPs are 128 px; soft when zoomed close. Needs LOD pyramid vs single-high-res decision; atlas-vs-bespoke-texture trade-off. Identified in the 2026-05-28 famous-galaxy thumbnail brainstorm (Issue #2 of three).
-- **Famous-galaxy in-app calibration** — curated WebPs aren't always centred/scaled/rotated correctly on the disk. Proposed UX: draw a line from disk centre to edge in-app to pin scale + rotation. Storage in `famous_calibration.json` sidecar JSON. Warrants an ADR for the storage choice. Identified in the 2026-05-28 famous-galaxy thumbnail brainstorm (Issue #3 of three).
+- **Thumbnail quality (SDSS / DSS branches)** — the auto-fetched SDSS-cutout and CDS-DSS thumbnails still have the original quality issues: ranked fix options are mask, sky-sub, per-galaxy size, DESI source, brightness norm (see memory `project_thumbnail_quality`). The *famous-galaxy* branch is now fully addressed — procedural-disk fade-out, high-res LOD (#214), and thumbnail calibration + square deproject + disk-plane unification (#229/#234/#235/#240) all shipped — so this item is scoped to the non-curated SDSS/DSS path only.
 - **GLADE shell artifact at ~400 Mpc** — hard depth boundary created by Task 7 abs-mag filter; 3 fix options deferred 2026-05-04. See memory `project_glade_shell_artifact`.
 - **Per-frame thumbnail-priority loop CPU cost** — RoD + stride decimation (PR #79) addressed panning case; BVH or compute-shader pass needed if scaling to larger tiers. See memory `project_thumbnail_loop_perf`.
 - **Cosmic zoom plan** — 60-doc "Powers of Ten" walkthrough plan drafted in worktree `cosmic-zoom-plan` (2026-05-08), awaiting user review. See memory `project_cosmic_zoom_plan`.
+- **Cluster / supercluster search** — the command palette (`CommandPalette.tsx`) only indexes the famous-galaxy atlas (~75) and the PGC alias index (~48k GLADE+2MRS rows). Clusters and superclusters (MCXC + MSCC, names + Abell numbers + descriptions already in `public/data/clusters_meta.json`) aren't searchable, so there's no way to look up "Coma", "A2703", "MSCC 216", etc. and fly to them. Add a third search index over the cluster catalog + a select handler that selects the cluster POI and frames the camera. Naturally pairs with naming large-scale structures (e.g. a "Sloan Great Wall" / "CfA Great Wall" entry) so they become navigable by name.
 
 ---
 
