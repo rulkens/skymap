@@ -235,16 +235,16 @@ afterEach(() => {
 
 describe('reevaluateDemand demand-table regression', () => {
   /**
-   * Boot defaults: SDSS/2MRS/GLADE/Famous visible (Milliquas NOT — visible:false
-   * in SOURCE_REGISTRY). Famous slot is modelled as 'loading' (it was just
-   * triggered by its own demand row before famousMeta's row evaluates), so
+   * Boot defaults: SDSS/2MRS/GLADE/Famous/Milliquas all visible (every survey
+   * ships on in SOURCE_REGISTRY). Famous slot is modelled as 'loading' (it was
+   * just triggered by its own demand row before famousMeta's row evaluates), so
    * famousMeta is also demanded. clusterCatalog loads because every structure
    * category is visible by default. mcpm IS demanded: the predicate checks
    * settings.volumes.fields['mcpm']?.enabled, which the construction seed lands
    * as true (registry visible:true). cf4Density is NOT (seeded enabled:false).
    * filaments: off. pgcAlias: no request. Synthetic: surveys not errored.
    */
-  it('boot defaults: SDSS + 2MRS + GLADE + Famous + famousMeta + clusterCatalog + mcpm', () => {
+  it('boot defaults: SDSS + 2MRS + GLADE + Famous + Milliquas + famousMeta + clusterCatalog + mcpm', () => {
     // Famous starts idle: its point row loads it (idle-guard passes), flipping
     // the stub to 'loading', so the later famousMeta row sees Famous non-idle
     // and demands. This is the honest two-phase boot model.
@@ -257,6 +257,7 @@ describe('reevaluateDemand demand-table regression', () => {
       Source.TwoMRS,
       Source.Glade,
       Source.Famous,
+      Source.Milliquas,
       'famousMeta',
       'clusterCatalog',
       'mcpm',
@@ -281,6 +282,7 @@ describe('reevaluateDemand demand-table regression', () => {
       Source.TwoMRS,
       Source.Glade,
       Source.Famous,
+      Source.Milliquas,
       'famousMeta',
       'clusterCatalog',
       'mcpm',
@@ -333,6 +335,7 @@ describe('reevaluateDemand demand-table regression', () => {
       Source.TwoMRS,
       Source.Glade,
       Source.Famous,
+      Source.Milliquas,
       'famousMeta',
       'clusterCatalog',
       'mcpm',
@@ -379,7 +382,8 @@ describe('reevaluateDemand demand-table regression', () => {
     expect(fired.has(Source.SDSS)).toBe(false);
     expect(fired.has(Source.TwoMRS)).toBe(false);
     expect(fired.has(Source.Glade)).toBe(false);
-    // Milliquas is NOT in drawMask (visible:false) — its point row demand=false.
+    // Milliquas is visible (in drawMask) but errored (non-idle) like the other
+    // surveys, so the idle-guard skips it too — no retry storm.
     expect(fired.has(Source.Milliquas)).toBe(false);
     // Famous's point row is demanded but errored (non-idle) — not re-loaded.
     expect(fired.has(Source.Famous)).toBe(false);
@@ -407,6 +411,7 @@ describe('reevaluateDemand demand-table regression', () => {
       Source.TwoMRS,
       Source.Glade,
       Source.Famous,
+      Source.Milliquas,
       'famousMeta',
       'clusterCatalog',
       'mcpm',
