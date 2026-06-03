@@ -1,0 +1,61 @@
+import { describe, it, expect } from 'vitest';
+import { createStructureStore } from '../../../../src/services/engine/data/createStructureStore';
+import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
+import type { StructureCategory } from '../../../../src/@types/engine/data/StructureCategory';
+
+// StructureRecord is a discriminated union; a union-typed `category` can't be
+// narrowed to a single arm at construction, so the helper asserts the type.
+// The object is a structurally-valid record regardless of which arm.
+const rec = (id: string, category: StructureCategory = 'cluster'): StructureRecord =>
+  ({ id, name: id, worldPos: [0, 0, 0], category, featured: true, physicalRadiusMpc: 1 }) as StructureRecord;
+
+describe('createStructureStore', () => {
+  it('all() concatenates anchors before bulk, preserving within-group order', () => {
+    const s = createStructureStore();
+    s.setGroup('bulk', [rec('b1'), rec('b2')]);
+    s.setGroup('anchors', [rec('a1')]);
+    expect(s.all().map((r) => r.id)).toEqual(['a1', 'b1', 'b2']);
+  });
+
+  it('setGroup replaces only its own group', () => {
+    const s = createStructureStore();
+    s.setGroup('anchors', [rec('a1')]);
+    s.setGroup('bulk', [rec('b1')]);
+    s.setGroup('anchors', [rec('a2')]);
+    expect(s.all().map((r) => r.id)).toEqual(['a2', 'b1']);
+  });
+
+  it('clearGroup drops only its group', () => {
+    const s = createStructureStore();
+    s.setGroup('anchors', [rec('a1')]);
+    s.setGroup('bulk', [rec('b1')]);
+    s.clearGroup('bulk');
+    expect(s.all().map((r) => r.id)).toEqual(['a1']);
+  });
+
+  it('byId and byCategory resolve across groups in all() order', () => {
+    const s = createStructureStore();
+    s.setGroup('anchors', [rec('a1', 'cluster')]);
+    s.setGroup('bulk', [rec('b1', 'cluster'), rec('v1', 'void')]);
+    expect(s.byId('b1')?.id).toBe('b1');
+    expect(s.byId('nope')).toBeNull();
+    expect(s.byCategory('cluster').map((r) => r.id)).toEqual(['a1', 'b1']);
+  });
+
+  it('setGroup takes a defensive copy (caller may mutate after)', () => {
+    const s = createStructureStore();
+    const arr = [rec('a1')];
+    s.setGroup('anchors', arr);
+    arr.push(rec('a2'));
+    expect(s.all().map((r) => r.id)).toEqual(['a1']);
+  });
+
+  it('marker and label visibility are independent per category, default true', () => {
+    const s = createStructureStore();
+    expect(s.markerVisible('cluster')).toBe(true);
+    expect(s.labelVisible('cluster')).toBe(true);
+    s.setMarkerVisible('cluster', false);
+    expect(s.markerVisible('cluster')).toBe(false);
+    expect(s.labelVisible('cluster')).toBe(true);
+  });
+});
