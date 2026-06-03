@@ -5,23 +5,19 @@
 // pass; the offscreen PickRenderer compiles it alongside
 // 'pickFragment.wesl' for the r32uint picking pass. Both pipelines
 // build their OWN GPUShaderModule from this same source — never share
-// a module across pipelines, because WebGPU's 'auto' bind-group-
-// layout system gives each pipeline its own pipeline-local layout
-// identity and sharing modules tempts you into sharing layouts that
-// don't actually pass the 'group-equivalent' compatibility check.
+// a module across pipelines, because WebGPU's 'auto' bind-group-layout
+// system gives each pipeline its own pipeline-local layout identity.
 //
 // ## Why the bindings are declared here, not in io.wesl
 //
-// WESL has no global state — '@group(N) @binding(M) var<uniform> X'
-// is a module-local declaration that cannot be exported across
-// modules. We re-declare 'u' here using the structs imported from
-// 'points/io.wesl', so the layout numbers (and the underlying byte
-// layout via the imported 'Uniforms' struct) are guaranteed to match
-// the colorFragment + pickFragment
-// counterparts. WGSL accepts the same '@group/@binding' pair appearing
-// in multiple compiled modules so long as the layout is identical;
-// importing a single authoritative struct definition makes drift
-// structurally impossible.
+// WESL has no global state — '@group(N) @binding(M) var<uniform> X' is
+// a module-local declaration that cannot be exported across modules. We
+// re-declare 'u' here using the structs imported from 'points/io.wesl',
+// so the layout numbers (and the underlying byte layout via the
+// imported 'Uniforms' struct) are guaranteed to match the colorFragment
+// + pickFragment counterparts. WGSL accepts the same '@group/@binding'
+// pair in multiple compiled modules so long as the layout is identical;
+// importing one authoritative struct makes drift structurally impossible.
 //
 // pickFragment.wesl declares no bindings of its own — this vertex
 // module references '@group(0)' (Uniforms) and '@group(2)' (per-source
@@ -40,6 +36,8 @@ import package::lib::colorIndex::ramp;
 import package::lib::astro::distanceModulus;
 import package::lib::selectionEncoding::packSelection;
 import package::lib::orientation::diskAxes;
+import package::lib::focusUniforms::FocusUniforms;
+import package::lib::focusUniforms::focusAlphaMultiplier;
 
 // ── @group(0) — per-frame uniforms ──────────────────────────────────
 //
@@ -70,6 +68,14 @@ import package::lib::orientation::diskAxes;
 // 'source.sourceCode' to compose '(sourceCode << 27u) | instance_index'
 // for the pick-output path.
 @group(2) @binding(0) var<uniform> source: SourceUniforms;
+
+// ── @group(3) — cluster-focus uniform (single shared binding) ───────
+//
+// One POI is focused at a time, so this is a single global binding (not
+// per-source like fade). 'focusAlphaMultiplier' folds a membership-based
+// dim into 'intensity'; at blend == 0 it returns 1.0 (no-op when nothing
+// is focused). See lib/focusUniforms.wesl for the math.
+@group(3) @binding(0) var<uniform> focus: FocusUniforms;
 
 // ─── vertex stage ─────────────────────────────────────────────────────
 //
@@ -154,12 +160,10 @@ fn vs(
 
   var out: VSOut;
 
-  // Add the screen-space offset to the projected centre.
-  // Only X and Y move; Z and W stay unchanged.
+  // Add the screen-space offset to the projected centre — only X/Y move.
   out.clip = center + vec4<f32>(offset, 0.0, 0.0);
 
-  // Pass the quad corner through as UV; used in the fragment shader to
-  // compute distance from the billboard centre.
+  // Quad corner as UV; the fragment uses it for distance-from-centre.
   out.uv = corner;
 
   // p.colorIndex is the rest-frame, sentinel-substituted ramp position
@@ -205,17 +209,27 @@ fn vs(
     inPickPass,
   );
 
-  // Per-source intensity floor ('source.intensityFloor') replaces the prior
-  // hardcoded 0.05. Lower floors reduce per-galaxy contribution to the
-  // additive HDR target in dense regions (tames center saturation); higher
-  // floors keep faint objects visible (Milliquas at high z).
+  // Per-source intensity floor ('source.intensityFloor'). Lower floors
+  // reduce per-galaxy contribution to the additive HDR target in dense
+  // regions (tames center saturation); higher floors keep faint objects
+  // visible (Milliquas at high z).
+  // Cluster-focus dim: non-members of the focused POI fade toward 0.08,
+  // scaled by the smoothstep blend. Collapses to exactly 1.0 when no POI
+  // is focused (blend == 0) AND for members (mix(1.0, 1.0, blend)), so a
+  // value below 1.0 uniquely marks a non-member of an active focus — used
+  // both for the visual dim here and the pick exclusion below.  The dim
+  // folds into the same intensity the invisibility cull tests, so a faded
+  // non-member that drops under the perceptibility floor is culled rather
+  // than left to pile up additively in a dense field.
+  let focusMult = focusAlphaMultiplier(p.position, focus);
   let intensity = clamp((22.0 - p.magnitude) / 8.0, source.intensityFloor, 1.0)
     * u.brightness
     * vMaxAlpha
     * schechterMult
     * angularMult
     * depthFadeMult
-    * crossfadeOut;
+    * crossfadeOut
+    * focusMult;
 
   // Bake the K-corrected ramp colour, the magenta highlight, and the
   // intensity scalar straight into out.shaded.rgb. .w carries safeAB —
@@ -237,6 +251,18 @@ fn vs(
   // pass has dimmed below the additive-HDR contribution threshold.
   let INVISIBILITY_THRESHOLD = 0.005;
   if (intensity < INVISIBILITY_THRESHOLD && !inPickPass) {
+    out.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
+  }
+
+  // Pick exclusion: while a structure is focused, its non-members must not
+  // be hit-testable — clicking dimmed-out galaxies would fight the
+  // isolation.  focusMult is exactly 1.0 for members and at rest, and
+  // below 1.0 only for a non-member under an active focus, so this fires
+  // precisely on the galaxies the visual pass is fading away.  The pick
+  // pass binds the live focus buffer (the visual pass and pick share it);
+  // at rest blend == 0 makes focusMult 1.0 for everything, so picking is
+  // unaffected.
+  if (inPickPass && focusMult < 1.0) {
     out.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
   }
 

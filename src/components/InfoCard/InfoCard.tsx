@@ -42,6 +42,13 @@ export type InfoCardProps = {
    */
   selected: FocusableTarget | null;
   /**
+   * Catalogued galaxy count for the pinned structure (cluster / supercluster
+   * / void), or null/undefined when not applicable.  Forwarded to
+   * PoiDetailCard, which renders it as the "Galaxies" row.  Ignored for
+   * galaxy selections (GalaxyDetailCard has no such row).
+   */
+  selectedMemberCount?: number | null;
+  /**
    * Optional callback fired when the user clicks "Focus" (galaxy) or "Fly here"
    * (POI) on the pinned card.  Caller routes to the unified handle method
    * `handle.camera.focusOn(target)`.
@@ -59,6 +66,7 @@ export type InfoCardProps = {
 export function InfoCard({
   hovered,
   selected,
+  selectedMemberCount,
   onFocus,
   onClose,
 }: InfoCardProps): ReactNode {
@@ -68,11 +76,9 @@ export function InfoCard({
   // by a top-level `category` field; GalaxyInfo carries category only at
   // `galaxyType.category`.  See isPoi.ts for the discriminant rationale.
   const selectedPoi = selected && isPoi(selected) ? selected : null;
-  const selectedGalaxy =
-    selected && !isPoi(selected) ? (selected as GalaxyInfo) : null;
+  const selectedGalaxy = selected && !isPoi(selected) ? (selected as GalaxyInfo) : null;
   const hoveredPoi = hovered && isPoi(hovered) ? hovered : null;
-  const hoveredGalaxy =
-    hovered && !isPoi(hovered) ? (hovered as GalaxyInfo) : null;
+  const hoveredGalaxy = hovered && !isPoi(hovered) ? (hovered as GalaxyInfo) : null;
 
   // POI hover wins over galaxy hover when both are non-null (a transient
   // cross-render race; the engine's hover throttler normally clears the
@@ -87,6 +93,7 @@ export function InfoCard({
         <PoiDetailCard
           poi={selectedPoi}
           pinned
+          memberCount={selectedMemberCount}
           onFocus={onFocus}
           onClose={onClose}
         />
@@ -97,9 +104,7 @@ export function InfoCard({
   }
 
   const isStacked =
-    showGalaxyHover &&
-    selectedGalaxy != null &&
-    hoveredGalaxy!.index !== selectedGalaxy.index;
+    showGalaxyHover && selectedGalaxy != null && hoveredGalaxy!.index !== selectedGalaxy.index;
   const detailInfo: GalaxyInfo | null = isStacked
     ? selectedGalaxy
     : showGalaxyHover

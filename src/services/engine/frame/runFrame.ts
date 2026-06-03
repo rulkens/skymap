@@ -11,41 +11,27 @@
  *
  * Everything from the FPS sample at the top to the `renderFrame()` GPU
  * dispatch and the throttled hover pick that follows.  The
- * still-animating "keep ticking ONLY if motion or async work is in
- * flight" predicate lives in here too — a single condition that fires
- * `state.subsystems.scheduler.requestRender()` if any of the busy-flags
- * are still set.
- *
- * The bootstrap IIFE that *assigns* `frame = () => { runFrame(...) }`
- * stays in engine.ts because it captures the GPU device/context and the
- * renderer instances (`milkyWayRenderer`, `texturedDiskRenderer`, …)
- * that `initGpu()` returns asynchronously.  Those instances flow
- * through `RunFrameDeps` rather than living on `EngineState` — see the
- * dep-vs-state rationale below.
+ * still-animating predicate ("keep ticking ONLY if motion or async work
+ * is in flight") lives here too — a single condition that fires
+ * `state.subsystems.scheduler.requestRender()` if any busy-flag is set.
  *
  * ### Why deps are passed explicitly instead of lifted to EngineState
  *
  * The IIFE-local renderers (`device`, `context`, `milkyWayRenderer`,
- * `filamentRenderer`, `texturedDiskRenderer`) are *only* read by the
- * frame body — promoting them to `state.gpu.*` would widen
- * `EngineState`'s contract for one consumer's convenience, and every
- * other reader of `EngineState` would have to null-check fields it
- * never touches.  The pure `cssToTexPx` helper captures nothing, so
- * it's imported directly at the top of this module instead of being
- * threaded.
+ * `filamentRenderer`, `texturedDiskRenderer`) are read *only* by the
+ * frame body; promoting them to `state.gpu.*` would widen `EngineState`'s
+ * contract for one consumer and force every other reader to null-check
+ * fields it never touches.  They flow through `RunFrameDeps` instead.
+ * The pure `cssToTexPx` helper captures nothing, so it's imported
+ * directly rather than threaded.
  *
  * ### The `{current}` ref pattern for mutable closure values
  *
- * The frame body reads-and-writes `lastReportedFps`, which is owned by
- * `createEngine`'s closure but mutated from this module.  Wrapping the
- * value as `{ current: T }` — a one-field box — lets `RunFrameDeps`
- * carry it by reference.  The body reads `deps.lastReportedFps.current`
- * and writes `deps.lastReportedFps.current = newValue`; engine.ts sees
- * the same object and observes the writes.
- *
- * `fpsCounter` (a `const` whose `.sample()` method is called once at
- * the top of the body) needs no ref-ification — we pass the counter
- * object itself.
+ * `lastReportedFps` is owned by `createEngine`'s closure but mutated
+ * here.  Wrapping it as `{ current: T }` lets `RunFrameDeps` carry it by
+ * reference: the body writes `deps.lastReportedFps.current` and engine.ts
+ * sees the same object.  `fpsCounter` is passed as-is (no mutation of a
+ * binding, just a method call).
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -77,13 +63,11 @@ import {
 export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number): void {
   // ── FPS measurement ───────────────────────────────────────────────
   //
-  // Sample BEFORE any frame work so the recorded timestamp is the
-  // gap between successive rAF dispatches — that's what the user
-  // perceives as "framerate", not the gap between when the frame
-  // body finishes.  The counter handles its own < 2-samples
-  // bootstrap (returns null) and rolls over a 60-frame window;
-  // we just throttle the callback to integer-value changes so
-  // React doesn't re-render on noise.
+  // Sample BEFORE any frame work so the timestamp is the gap between
+  // successive rAF dispatches — what the user perceives as framerate.  The
+  // counter handles its own < 2-samples bootstrap (null) and a 60-frame
+  // window; we throttle the callback to integer changes so React doesn't
+  // re-render on noise.
   const fpsNow = deps.fpsCounter.sample(nowMs);
   if (fpsNow !== null && fpsNow !== deps.lastReportedFps.current) {
     deps.lastReportedFps.current = fpsNow;
@@ -93,39 +77,29 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // ── Demand re-evaluation ──────────────────────────────────────────
   //
   // Re-derive what should be loading from current state, every frame.
-  // This is the single seam that turns any state change into the right
-  // loads: a handle setter flips its demand-gating state (a survey's
-  // drawMask bit, filaments.enabled, a structure category's visibility)
-  // and calls requestRender to repaint — which wakes the loop, which
-  // runs this.  No setter has to remember to trigger loading itself;
-  // requestRender is the universal "something changed" signal it already
-  // must send, and forgetting it visibly freezes the UI, so the load
-  // trigger can't silently regress.  The walk is idle-guarded, so once
-  // an asset is loading/ready/error it's skipped — a cheap no-op on the
-  // steady-state frames that dominate.  (Boot kicks the initial loads
-  // from wireSlots, and the synthetic-fallback gate kicks its backstop
-  // directly, because both need an immediate load the next frame can't
-  // wait for.)
+  // The single seam that turns any state change into the right loads: a
+  // handle setter flips its demand-gating state (a survey's drawMask bit,
+  // filaments.enabled, a structure category's visibility) and calls
+  // requestRender, which wakes the loop, which runs this.  No setter has
+  // to remember to trigger loading — requestRender is the universal
+  // "something changed" signal it already must send.  Idle-guarded, so an
+  // already loading/ready/error asset is a cheap no-op on steady-state
+  // frames.  (Boot loads are kicked from wireSlots, and the
+  // synthetic-fallback gate kicks its backstop directly.)
   reevaluateDemand(state);
 
   // ── Resize the swap-chain if the canvas element changed size ──────
   //
   // `resizeCanvasToDisplay` returns `true` only when dimensions changed,
-  // so we patch `cam.aspect` and `updatePosition` only in that branch.
+  // so we patch `cam.aspect` + the HDR/volume targets only in that branch.
+  // The HDR texture is sized 1:1 with the swap chain, so a stale target
+  // after resize would smear pixels or render off-canvas; the tone-map
+  // pass rebuilds its bind group each frame so it picks up the new view.
   //
-  // We also recreate the HDR target at the new viewport size in the
-  // same branch.  The HDR texture is sized 1:1 with the swap chain,
-  // so a stale (smaller / larger) HDR target after a resize would
-  // either smear pixels or render off-canvas.  The tone-map pass
-  // recreates its bind group every frame, so the new view is picked
-  // up automatically on the next call.
-  //
-  // We read `state.cam` directly here (rather than going through
-  // `deriveFrameContext`) because resize legitimately runs in the
-  // pre-bootstrap window — the canvas can change size before the
-  // first cloud lands, and the GPU postProcess `?.resize(...)` already
-  // tolerates a null handle.  All the *post-bootstrap* sections
-  // below funnel through the `ctx` snapshot.
+  // We read `state.cam` directly (not via `deriveFrameContext`) because
+  // resize legitimately runs pre-bootstrap — the canvas can change size
+  // before the first cloud lands, and `postProcess?.resize` tolerates a
+  // null handle.  All post-bootstrap sections below funnel through `ctx`.
   if (state.cam && resizeCanvasToDisplay(deps.canvas)) {
     state.cam.aspect = deps.canvas.width / deps.canvas.height;
     updatePosition(state.cam);
@@ -152,19 +126,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // ── Focus / home tween ────────────────────────────────────────────
   //
-  // If a tween is in flight the manager advances it.  `advance`
-  // mutates the camera state and calls updatePosition internally,
-  // so by the time we hit the auto-rotate block below the camera
-  // is already at the eased intermediate frame.  The manager
-  // auto-clears its internal reference when the tween finishes,
-  // so subsequent frames skip this branch via `isActive()` returning
-  // false.
+  // `advance` mutates the camera and calls updatePosition internally, so
+  // by the auto-rotate block below the camera is at the eased
+  // intermediate.  The manager auto-clears when the tween finishes, so
+  // later frames skip this via `isActive()`.
   //
   // Tween / SpaceMouse / auto-rotate all run *before* the
-  // `deriveFrameContext` gate so a camera-only-ready frame (rare in
-  // practice — GPU usually boots before the first cloud lands) still
-  // makes forward progress on motion before we early-return for the
-  // missing GPU handles.
+  // `deriveFrameContext` gate so a camera-only-ready frame still makes
+  // motion progress before we early-return for missing GPU handles.
   if (state.cam) {
     state.subsystems.tweens.advance(state.cam, performance.now());
   }
@@ -184,28 +153,16 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // ── Auto-rotate yaw ───────────────────────────────────────────────
   //
-  // When autoRotate is on, advance yaw by a small amount every frame.
-  // ~3°/sec at 60 Hz:  3° / 60 frames = 0.05° / frame
-  //                    0.05° × (π/180) ≈ 0.000873 radians / frame.
+  // Advance yaw by a fixed per-frame delta (~3°/sec at 60 Hz → 0.000873
+  // rad/frame).  Fixed delta, not wall-clock: at 120 Hz it's smoother but
+  // twice as fast — acceptable for a gentle ambient effect, no timer
+  // bookkeeping.
   //
-  // Note: this uses a fixed per-frame delta rather than tracking elapsed
-  // wall-clock time.  At high refresh rates (120 Hz) the rotation is
-  // smoother but twice as fast.  For a gentle ambient effect this is
-  // an acceptable trade-off — no timer bookkeeping needed.
-  //
-  // **Why we skip auto-rotate while a tween is active:**
-  //
-  // The focus / focusOnHome tweens drive `cam.yaw` toward a target
-  // value over ~600 ms.  The `tweens.advance()` call earlier in
-  // this frame already mutated `cam.yaw` to its eased intermediate;
-  // if we then add 0.000873 rad on top *every frame* the tween
-  // runs, yaw lands ~36 frames × 0.000873 rad ≈ 1.8° past the
-  // target by the time the tween completes — and continues
-  // drifting forever after.  The user reports this as
-  // "Reset Camera doesn't actually reset to the centre".  Gating
-  // auto-rotate on `!tweens.isActive()` lets the home tween land
-  // exactly on the target yaw; auto-rotate resumes from that
-  // landing point on the next frame.
+  // Skipped while a tween is active: focus / focusOnHome tweens drive
+  // `cam.yaw` toward a target, and `tweens.advance()` already set the
+  // eased intermediate this frame.  Adding the auto-rotate delta on top
+  // would overshoot the target (and drift forever after), so gating on
+  // `!tweens.isActive()` lets the home tween land exactly.
   if (state.settings.camera.autoRotate && state.cam && !state.subsystems.tweens.isActive()) {
     state.cam.yaw += 0.000873;
     updatePosition(state.cam);
@@ -213,14 +170,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // ── Per-frame derived snapshot ────────────────────────────────────
   //
-  // `deriveFrameContext` runs the camera + GPU + thumbnail bootstrap
-  // gate (formerly a 5-way `||` chain inline here) and pre-computes
-  // the view-projection matrix, camera-position tuple, and pixel-
-  // per-radian scalar — values that downstream `renderFrame()`
-  // consumes.  The "not ready" branch is the brief window between
-  // engine startup and the first cloud landing; once `state.cam`
-  // and the GPU handles are populated together, this gate is
-  // never taken again for the lifetime of the engine.
+  // `deriveFrameContext` runs the camera + GPU + thumbnail bootstrap gate
+  // and pre-computes the view-projection matrix, camera-position tuple,
+  // and pixel-per-radian scalar for downstream `renderFrame()`.  The "not
+  // ready" branch is the brief window before the first cloud lands; once
+  // cam + GPU handles populate together, it's never taken again.
   const ctx = deriveFrameContext(state, deps.canvas);
   if (!ctx.isReady) {
     state.subsystems.scheduler.requestRender();
@@ -229,13 +183,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // ── Per-frame impostor planners ───────────────────────────────────
   //
-  // CPU-side step that populates the two LOD-aligned subsystems'
-  // `lastOutput` arrays.  The HDR_PASSES loop reads those arrays via
-  // the proceduralDisksPass / texturedDisksPass entries; this call
-  // site is the one place both walks happen each frame.  The atlas
-  // subsystem is mutated transitively by the textured-disk run
-  // (slot allocations + fetch enqueues); we don't call into it
-  // directly here.
+  // CPU-side step that populates the LOD subsystems' `lastOutput` arrays,
+  // which the HDR_PASSES loop reads via proceduralDisksPass /
+  // texturedDisksPass.  The atlas subsystem is mutated transitively by the
+  // textured-disk run (slot allocations + fetch enqueues).
   if (state.subsystems.proceduralDisks !== null) {
     state.subsystems.proceduralDisks.runFrame({
       cam: ctx.cam,
@@ -270,27 +221,20 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // ── Label director per-frame update ───────────────────────────────
   //
-  // Run BEFORE the GPU dispatch so `labelRenderer.setLabels` /
-  // `markerLineRenderer.setLines` are uploaded to the GPU before
-  // `renderFrame` issues the draw calls that read those buffers.  The
-  // director internally null-checks its renderers, so this call is
-  // safe even before the atlas load completes (the brief window between
-  // engine start and initGpu finishing).
-  //
-  // The director polls every registered `LabelProducer` (youAreHere,
-  // pois, ...), merges their outputs, change-detects via signature
-  // hash, and flushes once.
+  // Runs BEFORE the GPU dispatch so `labelRenderer.setLabels` /
+  // `markerLineRenderer.setLines` are uploaded before `renderFrame` reads
+  // those buffers.  The director polls every registered `LabelProducer`
+  // (youAreHere, pois, ...), merges, change-detects via signature hash,
+  // and flushes once; it null-checks its renderers, so this is safe before
+  // the atlas load completes.
   state.subsystems.labelDirector.runFrame(state, ctx);
 
   // ── Per-frame marker upload ───────────────────────────────────────
   //
-  // Mirrors the label-director flush right above: produceMarkers walks
-  // the POI list, applies fade math, and hands typed descriptors to
-  // the renderer.  Must run BEFORE the GPU dispatch so the instance
-  // buffer is uploaded before clusterMarkersPass's draw reads it.
-  //
-  // Gated on the renderer being non-null so a null GPU device (test
-  // fixtures, the brief pre-initGpu window) is safe.
+  // Like the label flush above: produceMarkers walks the POI list, applies
+  // fade math, and hands descriptors to the renderer.  Must run BEFORE the
+  // GPU dispatch so the instance buffer is uploaded before
+  // clusterMarkersPass reads it.  Null-checked for the pre-initGpu window.
   if (state.gpu.clusterMarkerRenderer !== null) {
     const markers = state.subsystems.pois.produceMarkers(state, ctx);
     state.gpu.clusterMarkerRenderer.setMarkers(markers);
@@ -299,13 +243,23 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // ── GPU dispatch ──────────────────────────────────────────────────
   //
   // The whole encoder lifecycle (createCommandEncoder, beginRenderPass
-  // against the HDR target, pointRenderer.draw, thumbnails.runFrame,
-  // pass.end, postProcess.draw, queue.submit) lives in `renderFrame.ts`.
-  // Every closure variable that block read is forwarded as an explicit
-  // field on `RenderFrameInput` so this site stays free of GPU
-  // bookkeeping.  See that module's docstring for the in-order
-  // pass description and the rationale for keeping pick + auto-LOD
-  // out here in `frame()`.
+  // against the HDR target, the draws, postProcess.draw, queue.submit)
+  // lives in `renderFrame.ts`; every value it reads is forwarded as a
+  // field on `RenderFrameInput` so this site stays free of GPU bookkeeping.
+  //
+  // First, cluster focus mode — focus-driven, synced once per frame:
+  // resolve the FOCUSED POI (a bare single-click select does not count;
+  // galaxy / nothing both → null) and let the subsystem diff it against
+  // its focused id to drive the 400 ms member-isolation fade.  Done
+  // before the settings snapshot below so `produceFocusUniforms` reads
+  // this frame's transition on one `nowMs`.
+  const focusSel = state.subsystems.selection.focused();
+  const focusedPoi =
+    focusSel !== null && focusSel.kind === 'poi'
+      ? (state.subsystems.pois.findPoi(focusSel.id) ?? null)
+      : null;
+  state.subsystems.clusterFocus.update(focusedPoi, nowMs);
+
   renderFrame({
     ctx,
     state,
@@ -331,12 +285,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       schechterMStar: state.bias.schechterMStar,
       schechterAlpha: state.bias.schechterAlpha,
       depthFadeEnabled: state.settings.points.depthFade,
-      // Feed the points-pass vertex shader the same crossfade band
-      // the procedural-disk pass fades IN over, so the two passes
-      // blend cleanly without a double-bright donut.  Constants live
-      // in `proceduralDiskSubsystem.ts` as a single source of truth.
+      // Same crossfade band the procedural-disk pass fades IN over, so the
+      // two passes blend cleanly without a double-bright donut.  Constants
+      // are the single source of truth in `proceduralDiskSubsystem.ts`.
       pxFadeStartPoints: PROCEDURAL_DISK_FADE_START_PX,
       pxFadeEndPoints: PROCEDURAL_DISK_FADE_END_PX,
+      // Live cluster-focus uniform (blend ramps 0↔1 over 400 ms; at rest
+      // blend=0 → shader no-op).  Shares runFrame's nowMs.
+      focus: state.subsystems.clusterFocus.produceFocusUniforms(nowMs),
       exposure: state.settings.tonemap.exposure,
       toneMapCurve: state.settings.tonemap.curve,
       galaxyTexturesEnabled: state.settings.thumbnails.enabled,
@@ -352,16 +308,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // ── Pick-buffer debug overlay ─────────────────────────────────────
   //
-  // Populate the pick texture (no readback) and composite a colour-
-  // mapped overlay over the swap chain.  Sequencing matters:
-  //   - AFTER renderFrame's submit so the shared uniform buffer
-  //     reflects this frame's visual state (queue.writeBuffer is
-  //     ordered per submit).
-  //   - BEFORE the hover pick so both writers see the pick texture in
-  //     a known state.
-  //   - In its own encoder/submit with `loadOp: 'load'` so the
-  //     pre-multiplied OVER blend composites cleanly on top of the
-  //     tone-mapped frame without re-plumbing renderFrame.
+  // Populate the pick texture (no readback) and composite a colour-mapped
+  // overlay over the swap chain.  Sequencing matters:
+  //   - AFTER renderFrame's submit so the shared uniform buffer reflects
+  //     this frame's visual state (queue.writeBuffer is ordered per submit).
+  //   - BEFORE the hover pick so both writers see a known texture state.
+  //   - Own encoder/submit with `loadOp: 'load'` so the pre-multiplied
+  //     OVER blend composites on top of the tone-mapped frame.
   if (
     state.settings.debug.showPickBuffer &&
     state.gpu.pickRenderer !== null &&
@@ -406,23 +359,17 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // ── Throttled hover pick ──────────────────────────────────────────
   //
-  // Strategy: pointermove updates `state.picking.latestMouseCss`; here
-  // (once per frame) we check whether the mouse has moved since the
-  // last pick. If it has AND no pick is already in flight, we kick
-  // off a new one.
+  // pointermove updates `state.picking.latestMouseCss`; once per frame we
+  // kick off a pick if the mouse moved and none is already in flight.
+  // Movement is detected by object-reference inequality (the pointermove
+  // handler allocates a fresh position object).
   //
-  // We compare object references rather than coordinates — a new position
-  // object was created by the pointermove handler, so reference inequality
-  // means the mouse actually moved.
+  // Fire-and-forget: awaiting inside rAF would block the loop, so the
+  // `.then` updates state when the GPU readback lands (1-2 frames later).
   //
-  // The pick is fire-and-forget: we do NOT await it here. Awaiting inside
-  // requestAnimationFrame would block the frame loop. Instead the `.then`
-  // callback updates state when the GPU readback completes (typically 1-2
-  // frames later).
-  //
-  // IMPORTANT: pick() is called *after* device.queue.submit(), so the
-  // visual frame's uniform buffer has already been written with the latest
-  // viewProj. The pick renderer reads the same uniform buffer.
+  // IMPORTANT: pick() runs *after* device.queue.submit(), so the visual
+  // frame's uniform buffer already holds the latest viewProj — and the
+  // pick renderer reads that same buffer.
   if (
     state.sources.catalogs.size > 0 &&
     state.picking.latestMouseCss !== null &&
@@ -448,16 +395,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       state.gpu.clusterMarkerRenderer,
     );
     if (!hasAny) {
-      // Nothing pickable right now (every galaxy survey toggled off AND
-      // no cluster ring visible).  Let the loop sleep — the next
-      // setSourceVisible / cluster-marker change will wake it.
-      //
-      // By design: this `return` skips the keep-rendering predicate
-      // at the end of runFrame.  That's correct — with nothing pickable
-      // there's nothing to animate, and the predicate would only ever
-      // return false in this state anyway.  Acknowledged here because
-      // the early-out is now far enough from the predicate that the
-      // asymmetry isn't visually obvious.
+      // Nothing pickable (every survey off AND no cluster ring visible).
+      // Let the loop sleep — the next setSourceVisible / cluster-marker
+      // change wakes it.  This `return` skips the keep-rendering predicate
+      // at the tail, which is correct: with nothing pickable there's
+      // nothing to animate, so the predicate would return false anyway.
       return;
     }
 
@@ -492,14 +434,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         //                          onPoiHoverChange internally);
         //                          galaxy hover cleared.
         //
-        // The two sinks are mutually exclusive on every pick: a single
-        // pick resolves to one fragment, so we can't hit two POIs or a
-        // POI+galaxy at the same time.  Clearing the OTHER sink on
-        // every dispatch keeps the InfoCard from showing stale hover
-        // text when the cursor drags from a galaxy onto a ring (or
-        // vice versa).  Each subsystem's setter does its own equality
-        // short-circuit, so the repeated "clear the other sink" calls
-        // on consecutive same-kind picks are O(1) no-ops.
+        // The two sinks are mutually exclusive (one pick → one fragment).
+        // Clearing the OTHER sink on every dispatch keeps the InfoCard
+        // from showing stale hover text when the cursor drags from a
+        // galaxy onto a ring (or vice versa).  Each setter equality-
+        // short-circuits, so the repeated clears are O(1) no-ops.
         if (pick === null) {
           state.subsystems.selection.setHovered(null);
         } else if (pick.kind === 'galaxy') {
@@ -517,9 +456,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
             category: pick.kind,
             poiIndex: pick.poiIndex,
           });
-          state.subsystems.selection.setHovered(
-            poi !== null ? { kind: 'poi', id: poi.id } : null,
-          );
+          state.subsystems.selection.setHovered(poi !== null ? { kind: 'poi', id: poi.id } : null);
         }
         // No scheduler.requestRender() here intentionally.
         // The hover state only feeds the React InfoCard text —
@@ -535,51 +472,38 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   }
 
   // ── Render-on-demand: continue ticking ONLY if motion or async
-  // work is in flight.  Otherwise the loop sleeps; event handlers
-  // and engine handle setters call scheduler.requestRender() to
-  // wake it for one frame each.
+  // work is in flight.  Otherwise the loop sleeps; event handlers and
+  // engine handle setters call scheduler.requestRender() to wake it one
+  // frame each.
   //
   // Predicate breakdown:
-  //   - autoRotate: continuous yaw advancement; render every frame.
-  //   - currentTween: easeOutCubic interpolation; render until
-  //     advanceCameraTween reports finished and clears the ref.
-  //   - hasAnyAxis(latestSpaceMouseAxes): puck deflected; render
-  //     every frame to apply the per-frame velocity.
-  //   - thumbnails.hasInFlightFetches(): a thumbnail fetch is
-  //     racing the network OR a recently-landed bitmap is still
-  //     in its 400 ms load-fade window.  The subsystem owns both
-  //     bookkeeping paths; we just OR its single boolean in.
-  //     When it lands, the onResult uploads to the atlas and
-  //     calls requestRender() — but we keep one frame queued
-  //     anyway so the load-fade lerp ramps smoothly.
-  //   - fades.isAnyAnimating(): one or more handles (point surveys or
-  //     the filament skeleton) are still ramping up/down their
-  //     per-source opacity from a recent upload (initial load or
-  //     tier-swap).  The FadeRegistry owns every controller's animation
-  //     clock after the unified-fade migration — filaments register
-  //     { kind: 'filaments' } in filamentSlot, so no separate
-  //     isFading() probe is needed.  We keep ticking the loop so the
-  //     opacity lerp advances every frame, then go silent again when
-  //     all controllers settle.
-  // The bootstrap-bag fields (thumbnails, point-renderer) might still
-  // be null on the very first few frames after engine construction —
-  // before initGpu / wireSlots have written their handles.  `isEngineReady`
-  // consolidates the guard: when the engine is ready, all bootstrap-bag
-  // fields are simultaneously non-null, so we dereference them without
-  // bespoke checks.
+  //   - autoRotate: continuous yaw advancement.
+  //   - tweens.isActive(): camera tween in progress.
+  //   - spaceMouse.hasAxes(): puck deflected; apply per-frame velocity.
+  //   - texturedDisks.hasInFlightWork(): a thumbnail fetch is racing the
+  //     network OR a landed bitmap is in its 400 ms load-fade window.  The
+  //     onResult calls requestRender(), but we keep a frame queued anyway
+  //     so the fade lerp ramps smoothly.
+  //   - fades.isAnyAnimating(): a survey / filament handle is ramping its
+  //     opacity from a recent upload (the FadeRegistry owns every clock,
+  //     filaments included).
+  //   - clusterFocus.isAwake(): the member-isolation fade (its own
+  //     controller, not in the registry) across the 400 ms ramp.
+  //
+  // `isEngineReady` consolidates the bootstrap-bag null guard: when ready,
+  // all those fields are simultaneously non-null, so we dereference
+  // texturedDisks without a bespoke check.
   const ready = isEngineReady(state);
-  // Tick the FadeRegistry BEFORE consulting isAnyAnimating: tick is
-  // the single resolution site for fadeTo promises, so without this
-  // call the awaited fade-out in setSourceVisible / tier-swap commit
-  // would hang forever in production.
+  // Tick the FadeRegistry BEFORE isAnyAnimating: tick is the single
+  // resolution site for fadeTo promises, so without it the awaited
+  // fade-out in setSourceVisible / tier-swap commit would hang forever.
   state.subsystems.fades.tick(nowMs);
   const stillAnimating =
     state.settings.camera.autoRotate ||
     state.subsystems.tweens.isActive() ||
     state.subsystems.spaceMouse.hasAxes() ||
     (ready && state.subsystems.texturedDisks.hasInFlightWork()) ||
-    // Survey + filament fade-in / fade-out: the FadeRegistry owns every
-    // handle's animation clock.
-    state.subsystems.fades.isAnyAnimating(nowMs);
+    state.subsystems.fades.isAnyAnimating(nowMs) ||
+    state.subsystems.clusterFocus.isAwake(nowMs);
   if (stillAnimating) state.subsystems.scheduler.requestRender();
 }

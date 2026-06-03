@@ -4,9 +4,9 @@ import { createPointRenderer } from '../../../../src/services/gpu/renderers/poin
 import { Source } from '../../../../src/data/sources';
 
 beforeAll(() => {
-  // GPUBufferUsage / GPUShaderStage / GPUTextureUsage now come from the
-  // shared `tests/setup/webgpuGlobals.ts` setupFile.  GPUMapMode is only
-  // used by pickRenderer's read-back path, so it stays local for now.
+  // GPUBufferUsage / GPUShaderStage / GPUTextureUsage come from the
+  // shared `tests/setup/webgpuGlobals.ts` setupFile. GPUMapMode is only
+  // used by pickRenderer's read-back path, so it stays local.
   const g = globalThis as unknown as Record<string, unknown>;
   g.GPUMapMode ??= { READ: 1, WRITE: 2 };
 });
@@ -52,26 +52,28 @@ function makeStubDevice(): GPUDevice {
   } as unknown as GPUDevice;
 }
 
-// Stub BGLs for the unified-fade architecture — both renderers now require
-// fadeBgl + sourceBgl as canonical shared layouts.
+// Stub BGLs — both renderers require fadeBgl + sourceBgl + focusBgl as
+// canonical shared layouts.
 function makeStubFadeBgl() {
   return {} as import('../../../../src/@types/rendering/FadeUniformsBgl').FadeUniformsBgl;
 }
 function makeStubSourceBgl() {
   return {} as import('../../../../src/@types/rendering/SourceUniformsBgl').SourceUniformsBgl;
 }
+function makeStubFocusBgl() {
+  return {} as import('../../../../src/@types/rendering/FocusUniformsBgl').FocusUniformsBgl;
+}
 
 describe('createPickRenderer', () => {
   it('takes a PointRenderer at construction (no per-call uniformBuffer arg)', () => {
     const device = makeStubDevice();
-    const pointRenderer = createPointRenderer(device, 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl());
-    const pickRenderer = createPickRenderer(device, pointRenderer, makeStubFadeBgl(), makeStubSourceBgl());
+    const pointRenderer = createPointRenderer(device, 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl());
+    const pickRenderer = createPickRenderer(device, pointRenderer, makeStubFadeBgl(), makeStubSourceBgl(), makeStubFocusBgl(), {} as unknown as GPUBindGroup);
 
-    // The compile-time test is the strongest one: this file would fail
-    // to typecheck if `createPickRenderer` still required only a device
-    // (or if `pick()` still wanted a sharedUniformBuffer arg).  Runtime
-    // assertion is a sanity check that construction returned a usable
-    // handle.
+    // The compile-time check is the strongest part: this file fails to
+    // typecheck if `createPickRenderer` doesn't take a PointRenderer (or
+    // if `pick()` wants a sharedUniformBuffer arg). The runtime assertion
+    // is just a sanity check that construction returned a usable handle.
     expect(pickRenderer).toBeDefined();
     expect(typeof pickRenderer.pick).toBe('function');
     expect(typeof pickRenderer.destroy).toBe('function');
@@ -80,30 +82,23 @@ describe('createPickRenderer', () => {
   it('builds @group(2) source bind groups against the CANONICAL sourceBgl layout (regression: cross-pipeline auto-layout incompatibility)', async () => {
     // ── Why this test exists ──────────────────────────────────────────
     //
-    // The unified-fade architecture replaces `layout: 'auto'` with an
-    // explicit pipelineLayout that uses shared canonical BGLs for
-    // @group(1) (FadeUniforms) and @group(2) (SourceUniforms).  Both
-    // PointRenderer and PickRenderer declare the SAME canonical layout,
-    // so bind groups built against it are valid for either pipeline
-    // without the old "group-equivalent" cross-pipeline incompatibility.
+    // PointRenderer and PickRenderer use an explicit pipelineLayout with
+    // shared canonical BGLs for @group(1) (FadeUniforms) and @group(2)
+    // (SourceUniforms). Both declare the SAME canonical layout, so bind
+    // groups built against it are valid for either pipeline — WebGPU's
+    // auto-derived layouts are pipeline-specific and would not be.
     //
-    // In the old architecture (@group(1) / auto layout), the test had to
-    // verify that PickRenderer built its OWN bind groups against its OWN
-    // auto-derived layout.  In the new architecture, the caller passes a
-    // single canonical sourceBgl, and createPickRenderer builds per-source
-    // @group(2) bind groups against it — the same object both pipelines
-    // declared.
-    //
-    // This test asserts the contract by:
-    //   1. Passing a single canonical sourceBgl instance to both renderers.
-    //   2. Calling `pick()` with two distinct sourceBuffers.
-    //   3. Asserting every @group(2) `createBindGroup` call uses the
-    //      canonical sourceBgl — never the per-pipeline auto-derived layout.
+    // The contract, asserted below:
+    //   1. Pass a single canonical sourceBgl to both renderers.
+    //   2. Call `pick()` with two distinct sourceBuffers.
+    //   3. Every @group(2) `createBindGroup` call uses that canonical
+    //      sourceBgl — never a per-pipeline auto-derived layout.
 
     // The canonical sourceBgl is a shared object — the same identity
     // passed to both createPointRenderer and createPickRenderer.
     const canonicalSourceBgl = makeStubSourceBgl();
     const canonicalFadeBgl = makeStubFadeBgl();
+    const canonicalFocusBgl = makeStubFocusBgl();
 
     const createBindGroupCalls: Array<{ layout: unknown; buffer: unknown }> = [];
 
@@ -160,8 +155,8 @@ describe('createPickRenderer', () => {
     } as unknown as GPUDevice;
 
     // Both renderers share the same canonical fadeBgl + sourceBgl.
-    const pointRenderer = createPointRenderer(device, 'rgba16float', canonicalFadeBgl, canonicalSourceBgl);
-    const pickRenderer = createPickRenderer(device, pointRenderer, canonicalFadeBgl, canonicalSourceBgl);
+    const pointRenderer = createPointRenderer(device, 'rgba16float', canonicalFadeBgl, canonicalSourceBgl, canonicalFocusBgl);
+    const pickRenderer = createPickRenderer(device, pointRenderer, canonicalFadeBgl, canonicalSourceBgl, canonicalFocusBgl, {} as unknown as GPUBindGroup);
 
     // Two distinct sourceBuffers — the production case is N visible
     // surveys and we want one bind group per source.

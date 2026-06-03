@@ -246,6 +246,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         selectionRingRenderer: null,
         scalarVolumeRenderer: null,
         clusterMarkerRenderer: null,
+        focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
       },
       subsystems: {
         proceduralDisks: null,

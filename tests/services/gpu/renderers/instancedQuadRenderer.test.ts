@@ -21,6 +21,14 @@ import {
 } from '../../../../src/services/gpu/renderers/instancedQuadRenderer';
 import { MILKY_WAY_UNIFORM_BUFFER_SIZE } from '../../../../src/services/gpu/renderers/milkyWayRenderer';
 import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
+import type { FocusUniformsBgl } from '../../../../src/@types/rendering/FocusUniformsBgl';
+
+// Stub focus BGL — the factory only forwards it into the pipeline layout;
+// the mock device returns {} for it, so a branded empty object suffices.
+const FOCUS_BGL = {} as unknown as FocusUniformsBgl;
+// Stub shared focus bind group passed into draw(). The factory only binds
+// it (setBindGroup) — never introspected — so {} is enough.
+const FOCUS_BIND_GROUP = {} as unknown as GPUBindGroup;
 
 /**
  * Fluent stub-device builder. Each method captures its calls into
@@ -81,6 +89,7 @@ describe('createInstancedQuadRenderer', () => {
     it('builds a 3-binding BGL when atlas is configured', () => {
       const { ctx, calls } = makeStubContext();
       createInstancedQuadRenderer(ctx, {
+      focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -108,6 +117,7 @@ describe('createInstancedQuadRenderer', () => {
     it('builds a 1-binding BGL when atlas is omitted', () => {
       const { ctx, calls } = makeStubContext();
       createInstancedQuadRenderer(ctx, {
+      focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -126,6 +136,7 @@ describe('createInstancedQuadRenderer', () => {
     it('honours uniformVisibility config when overridden', () => {
       const { ctx, calls } = makeStubContext();
       createInstancedQuadRenderer(ctx, {
+      focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -146,6 +157,7 @@ describe('createInstancedQuadRenderer', () => {
     it('defaults uniformVisibility to VERTEX when not specified', () => {
       const { ctx, calls } = makeStubContext();
       createInstancedQuadRenderer(ctx, {
+      focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -165,6 +177,7 @@ describe('createInstancedQuadRenderer', () => {
     it('exposes bindAtlas only when atlas is configured', () => {
       const { ctx } = makeStubContext();
       const withAtlas = createInstancedQuadRenderer(ctx, {
+      focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -177,6 +190,7 @@ describe('createInstancedQuadRenderer', () => {
 
       const { ctx: ctx2 } = makeStubContext();
       const noAtlas = createInstancedQuadRenderer(ctx2, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -190,6 +204,7 @@ describe('createInstancedQuadRenderer', () => {
     it('prebuilds the bind group at construction when no atlas (no late binding)', () => {
       const { ctx, calls } = makeStubContext();
       createInstancedQuadRenderer(ctx, {
+      focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -205,6 +220,7 @@ describe('createInstancedQuadRenderer', () => {
     it('defers bind-group creation until bindAtlas is called when atlas is configured', () => {
       const { ctx, calls } = makeStubContext();
       const r = createInstancedQuadRenderer(ctx, {
+      focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -234,6 +250,7 @@ describe('createInstancedQuadRenderer', () => {
     it('extends the BGL from 3 → 5 entries when atlas.hiResArray is true', () => {
       const { ctx, calls } = makeStubContext();
       createInstancedQuadRenderer(ctx, {
+      focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -265,6 +282,7 @@ describe('createInstancedQuadRenderer', () => {
     it('keeps the BGL at 3 entries when atlas is configured without hiResArray', () => {
       const { ctx, calls } = makeStubContext();
       createInstancedQuadRenderer(ctx, {
+      focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -281,6 +299,7 @@ describe('createInstancedQuadRenderer', () => {
     it('exposes bindHiResArray only when atlas.hiResArray is true', () => {
       const { ctx } = makeStubContext();
       const withHiRes = createInstancedQuadRenderer(ctx, {
+      focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -293,6 +312,7 @@ describe('createInstancedQuadRenderer', () => {
 
       const { ctx: ctx2 } = makeStubContext();
       const atlasOnly = createInstancedQuadRenderer(ctx2, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -305,6 +325,7 @@ describe('createInstancedQuadRenderer', () => {
 
       const { ctx: ctx3 } = makeStubContext();
       const noAtlas = createInstancedQuadRenderer(ctx3, {
+        focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -318,6 +339,7 @@ describe('createInstancedQuadRenderer', () => {
     it('defers bind-group composition until both bindAtlas + bindHiResArray are called', () => {
       const { ctx, calls } = makeStubContext();
       const r = createInstancedQuadRenderer(ctx, {
+      focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -350,6 +372,7 @@ describe('createInstancedQuadRenderer', () => {
     it('preallocates the instance buffer at construction with kind:fixed', () => {
       const { ctx, calls } = makeStubContext();
       createInstancedQuadRenderer(ctx, {
+      focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -370,6 +393,7 @@ describe('createInstancedQuadRenderer', () => {
     it('does NOT allocate the instance buffer at construction with kind:grow', () => {
       const { ctx, calls } = makeStubContext();
       createInstancedQuadRenderer(ctx, {
+      focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -385,6 +409,7 @@ describe('createInstancedQuadRenderer', () => {
     it('lazy-allocates the instance buffer on first non-empty draw with kind:grow', () => {
       const { ctx, calls } = makeStubContext();
       const r = createInstancedQuadRenderer(ctx, {
+      focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -404,6 +429,7 @@ describe('createInstancedQuadRenderer', () => {
       const viewProj = new Float32Array(16);
       const instanceBytes = new Float32Array(10 * FLOATS_PER_INSTANCE);
       r.draw({
+        focusBindGroup: FOCUS_BIND_GROUP,
         pass,
         viewProj,
         viewport: [800, 600],
@@ -420,6 +446,7 @@ describe('createInstancedQuadRenderer', () => {
     it('regrows the instance buffer when subsequent draws exceed capacity', () => {
       const { ctx, calls } = makeStubContext();
       const r = createInstancedQuadRenderer(ctx, {
+      focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -439,6 +466,7 @@ describe('createInstancedQuadRenderer', () => {
 
       // First draw: 10 instances → buffer sized at 64 (the floor).
       r.draw({
+        focusBindGroup: FOCUS_BIND_GROUP,
         pass,
         viewProj,
         viewport: [800, 600],
@@ -450,6 +478,7 @@ describe('createInstancedQuadRenderer', () => {
 
       // Second draw within capacity: no realloc.
       r.draw({
+        focusBindGroup: FOCUS_BIND_GROUP,
         pass,
         viewProj,
         viewport: [800, 600],
@@ -461,6 +490,7 @@ describe('createInstancedQuadRenderer', () => {
       // Third draw exceeds capacity: old buffer destroyed, new one
       // allocated at the requested size.
       r.draw({
+        focusBindGroup: FOCUS_BIND_GROUP,
         pass,
         viewProj,
         viewport: [800, 600],
@@ -476,6 +506,7 @@ describe('createInstancedQuadRenderer', () => {
     it('skips draw entirely on instanceCount === 0', () => {
       const { ctx, calls } = makeStubContext();
       const r = createInstancedQuadRenderer(ctx, {
+      focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -492,6 +523,7 @@ describe('createInstancedQuadRenderer', () => {
       } as unknown as GPURenderPassEncoder;
 
       r.draw({
+        focusBindGroup: FOCUS_BIND_GROUP,
         pass,
         viewProj: new Float32Array(16),
         viewport: [100, 100],
@@ -507,6 +539,7 @@ describe('createInstancedQuadRenderer', () => {
     it('skips draw silently when atlas-capable renderer has no atlas bound yet', () => {
       const { ctx, calls } = makeStubContext();
       const r = createInstancedQuadRenderer(ctx, {
+      focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -525,6 +558,7 @@ describe('createInstancedQuadRenderer', () => {
 
       // No bindAtlas() call — bind group is undefined.
       r.draw({
+        focusBindGroup: FOCUS_BIND_GROUP,
         pass,
         viewProj: new Float32Array(16),
         viewport: [100, 100],
@@ -542,6 +576,7 @@ describe('createInstancedQuadRenderer', () => {
     it('destroys uniform + instance buffers under fixed capacity', () => {
       const { ctx, calls } = makeStubContext();
       const r = createInstancedQuadRenderer(ctx, {
+      focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -558,6 +593,7 @@ describe('createInstancedQuadRenderer', () => {
     it('destroys only the uniform buffer under grow when no draw has happened', () => {
       const { ctx, calls } = makeStubContext();
       const r = createInstancedQuadRenderer(ctx, {
+      focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -573,6 +609,7 @@ describe('createInstancedQuadRenderer', () => {
     it('destroys uniform + lazily-allocated instance buffer under grow after a draw', () => {
       const { ctx, calls } = makeStubContext();
       const r = createInstancedQuadRenderer(ctx, {
+      focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -587,6 +624,7 @@ describe('createInstancedQuadRenderer', () => {
         draw: vi.fn(),
       } as unknown as GPURenderPassEncoder;
       r.draw({
+        focusBindGroup: FOCUS_BIND_GROUP,
         pass,
         viewProj: new Float32Array(16),
         viewport: [100, 100],
@@ -605,6 +643,7 @@ describe('createInstancedQuadRenderer', () => {
         ctx.device as unknown as { createRenderPipeline: ReturnType<typeof vi.fn> }
       ).createRenderPipeline;
       createInstancedQuadRenderer(ctx, {
+      focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',
@@ -625,6 +664,7 @@ describe('createInstancedQuadRenderer', () => {
         ctx.device as unknown as { createRenderPipeline: ReturnType<typeof vi.fn> }
       ).createRenderPipeline;
       createInstancedQuadRenderer(ctx, {
+      focusBgl: FOCUS_BGL,
         label: 'test',
         vertexSource: '@vertex fn vs() {}',
         fragmentSource: '@fragment fn fs() {}',

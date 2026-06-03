@@ -41,6 +41,7 @@ import type { ProceduralDiskInstance } from '../../../@types/rendering/Procedura
 import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
 import { FLOATS_PER_INSTANCE, createInstancedQuadRenderer } from './instancedQuadRenderer';
 
 type Init = {
@@ -48,6 +49,8 @@ type Init = {
   context: GPUCanvasContext;
   format: GPUTextureFormat;
   canvas: HTMLCanvasElement;
+  /** Shared cluster-focus layout, bound at @group(1) — see instancedQuadRenderer. */
+  focusBgl: FocusUniformsBgl;
 };
 
 export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer {
@@ -58,6 +61,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     // No atlas — the procedural fragment shader generates the
     // brightness profile from scratch.
     capacity: { kind: 'grow' },
+    focusBgl: init.focusBgl,
     // Procedural disks are EMISSIVE; same rationale as quad/disk.
     blend: 'additive',
     format: init.format,
@@ -73,6 +77,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     viewport: [number, number],
     camPosWorld: Readonly<Vec3>,
     pxPerRad: number,
+    focusBindGroup: GPUBindGroup,
     instances: ReadonlyArray<ProceduralDiskInstance>,
   ): void {
     if (instances.length === 0) return;
@@ -115,6 +120,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
       instanceCount: instances.length,
       camPosWorld,
       pxPerRad,
+      focusBindGroup,
     });
   }
 

@@ -50,24 +50,20 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // the visual renderer — no extra GPU memory for point data.
   const renderer = state.gpu.renderer;
   if (!renderer) return;
-  // `phaseLocals.device` was set by `initGpu`.  We don't need it
-  // here directly — pickRenderer sources its device from the
-  // PointRenderer's bound device — but we still bail if it's
-  // somehow unset (defensive).
   // Thread the cluster marker renderer through so the pick pass can
-  // append POI ring draws after the galaxy per-source loop — see the
-  // POI ring block inside `pick()` for the depth-ordering rationale.
-  // `state.gpu.clusterMarkerRenderer` is typed as `… | null` (uniform
-  // bootstrap convention), but `createPickRenderer`'s param is `?`-
-  // optional (`… | undefined`).  Normalise here with `?? undefined` so
-  // the renderer's public signature stays clean (no `| null` in the
-  // arg type) and the optional-vs-null distinction stays an
-  // implementation detail of the engine's GPU handle bag.
+  // append POI ring draws after the galaxy per-source loop — see the POI
+  // ring block inside `pick()` for the depth-ordering rationale.  Normalise
+  // `null` → `undefined` so the renderer's param type stays `| undefined`
+  // and the optional-vs-null distinction stays internal to the handle bag.
   const pickRenderer = createPickRenderer(
     deps.phaseLocals!.device,
     renderer,
     state.gpu.fadeBgl!,
     state.gpu.sourceBgl!,
+    state.gpu.focusBgl!,
+    // The live shared focus buffer — so the pick pass excludes non-members
+    // of a focused structure from hit-testing (vertex shader culls them).
+    state.gpu.focusUniform!.bindGroup,
     state.gpu.clusterMarkerRenderer ?? undefined,
   );
   state.gpu.pickRenderer = pickRenderer;
@@ -87,18 +83,10 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       return { source: sel.source, localIdx: sel.localIdx, cloud };
     },
     buildGalaxyInfo: (cloud, localIdx, src) =>
-      buildGalaxyInfo(
-        cloud,
-        localIdx,
-        src,
-        state.sources.famousMeta,
-      ),
-    // POI pick hit `(category, poiIndex)` → `PointOfInterest`.  The full
-    // contract (per-category-local indexing, why the array lookup is
-    // safe, why the helper is shared) lives in the module header of
-    // `resolvePoiFromPick`.  The same helper is called from the hover
-    // throttler in `runFrame.ts` so the click and hover paths can't
-    // drift on the lookup logic.
+      buildGalaxyInfo(cloud, localIdx, src, state.sources.famousMeta),
+    // POI pick hit `(category, poiIndex)` → `PointOfInterest`.  Shared
+    // with the hover throttler in `runFrame.ts` so the click and hover
+    // paths can't drift on the lookup logic; see `resolvePoiFromPick`.
     resolvePoi: (input) => resolvePoiFromPick(state.subsystems.pois, input),
   });
 
@@ -123,32 +111,19 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
 
   // ── Initial camera snapshot for resetCamera() ────────────────────────
   //
-  // Capture the framing values now, after the cloud bbox is known, so
-  // `resetCamera()` can restore them at any later time.  We mirror the
-  // helper's output rather than re-reading from `cam` so future
-  // reconfigures of the camera (e.g. user-driven FOV changes) don't
-  // accidentally drift the reset target.  `aspect` is intentionally not
-  // captured — reset uses the *current* canvas aspect so the projection
-  // stays correct after a window resize.
+  // Capture the framing values so `resetCamera()` can restore them later.
+  // We mirror the helper's output rather than re-reading from `cam` so
+  // later camera reconfigures (e.g. user FOV changes) don't drift the
+  // reset target.  `aspect` is intentionally not captured — reset uses the
+  // *current* canvas aspect so the projection survives a window resize.
   //
-  // **Why we clone `target` into a fresh tuple:**
-  //
-  // `createOrbitCamera` does `{ ...init, position: vec3.create() }` —
-  // a shallow spread.  That makes `cam.target` and `initialCam.target`
-  // alias the SAME array object.  Every subsequent `focusOn()` /
-  // tween-advance / orbit-pan call mutates `cam.target` in place via
-  // vec3 ops, which also mutates `initialCam.target`.  By the time
-  // `resetCamera()` later reads `state.initialCamSnapshot.target[0..2]`,
-  // it's reading the most recently-focused galaxy's position back
-  // into itself — i.e. the camera "resets" to whatever it was last
-  // looking at, not to the catalog origin (the user-visible bug:
-  // "reset camera resets the zoom level, but stays focussed on the
-  // currently selected galaxy").
-  //
-  // Fixing it at the spread site (cloning inside `createOrbitCamera`)
-  // would be the architecturally cleaner cure but ripples through the
-  // OrbitCamera type contract; cloning *here* is a one-line fix that
-  // restores the invariant `state.initialCamSnapshot` is meant to uphold.
+  // `target` is cloned into a fresh tuple because `createOrbitCamera`'s
+  // shallow spread makes `cam.target` and `initialCam.target` alias the
+  // SAME array; every later focusOn / tween / pan mutates `cam.target` in
+  // place, which would otherwise corrupt the snapshot into "reset to the
+  // last-focused galaxy" instead of the catalog origin.  Cloning here is a
+  // one-line fix; fixing it at the spread site ripples through the
+  // OrbitCamera contract.
   state.initialCamSnapshot = {
     ...initialCam,
     target: [initialCam.target[0], initialCam.target[1], initialCam.target[2]],
@@ -164,10 +139,9 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // don't repeat that wake-up at every site.
   state.subsystems.inputBindings = attachEngineInputs({
     canvas,
-    // Pass the scheduler by reference — safe because it was created
-    // eagerly in the state literal above (the forward-declared
-    // `frame` binding handles the chicken-and-egg between scheduler
-    // construction and frame-body availability).
+    // Scheduler by reference — created eagerly in the state literal (the
+    // forward-declared `frame` binding handles the construction-vs-body
+    // chicken-and-egg).
     scheduler: state.subsystems.scheduler,
     // Track latest mouse position for the per-frame throttled
     // hover pick.  The pick itself is async (1-2 frames later)
@@ -198,11 +172,15 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     onPointerUp: () => {
       state.picking.pointerDown = false;
     },
-    // Esc clears selection.  App.tsx also has a useEffect that
-    // forwards Esc through the engine handle's `clearSelection()`
-    // — same result, both paths are fine.
+    // Esc is an explicit dismiss: clear BOTH the selection (close the
+    // card) and the focus slot (collapse the cluster-focus fade).
+    // Self-contained at the engine level so it doesn't depend on the
+    // React Esc path — App.tsx also forwards Esc through the handle's
+    // `clearSelection()` (→ clearAll), which does the same two clears;
+    // both setters dedupe, so the double-fire is a no-op.
     onEscape: () => {
       state.subsystems.selection.setSelected(null);
+      state.subsystems.selection.setFocused(null);
     },
     // resize: the next frame's resizeCanvasToDisplay() picks up
     // the new dimensions and recreates the HDR target.  All we
@@ -218,38 +196,24 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // option. A "click" fires only when pointerup is within 4 CSS pixels of
   // pointerdown — pure drags (orbit gestures) are suppressed.
 
-  // Cache of the most-recent successful click pick.  The
-  // double-click handler reads from this rather than running a
-  // second pick: two readbacks racing on shared GPU resources
-  // produced flaky results (the dblclick readback would resolve
-  // first and return `clear` while the click's resolved later
-  // with the real hit).  By reusing the click's GalaxyInfo we
-  // also save one readback per double-click.
-  //
-  // Stored as the full GalaxyInfo so we can pull `x/y/z` and
-  // `diameterKpc` straight into `handle.focusOn` without a
-  // second cloud-lookup.  Cleared on every empty-space click so
-  // a dblclick on empty space doesn't trigger a stale focus.
+  // Cache of the most-recent successful click pick.  The double-click
+  // handler reads from this rather than running a second pick: two
+  // readbacks racing on shared GPU resources resolve out of order (the
+  // dblclick read returns `clear` while the click resolves later with the
+  // real hit).  Stored as the full GalaxyInfo so `handle.focusOn` can pull
+  // `x/y/z` + `diameterKpc` without a second cloud-lookup.  Cleared on
+  // empty-space clicks so a dblclick there doesn't trigger a stale focus.
   let lastClickedInfo: GalaxyInfo | null = null;
 
-  // Sister cache to `lastClickedInfo`, for the POI variant of the
-  // dblclick flow.  Same race rationale: the dblclick handler must
-  // not re-run a pick (two readbacks against the same pickRenderer
-  // resolve out of order); reuse the single-click's resolved POI.
-  //
-  // Cleared on every empty-space click AND on every galaxy click so
-  // a dblclick path can unambiguously prefer POI over galaxy when the
-  // most-recent single-click was a ring hit.  (POI takes priority
-  // when both are non-null — see onDoubleClick below.)
+  // POI sister cache to `lastClickedInfo`, same race rationale.  Cleared
+  // on every empty-space AND galaxy click so the dblclick path can prefer
+  // POI over galaxy when the most-recent single-click was a ring hit (POI
+  // wins when both are non-null — see onDoubleClick below).
   let lastClickedPoi: PointOfInterest | null = null;
 
-  // Shared pick body — used by single-click only now (dblclick
-  // reuses the cached GalaxyInfo).  Returns the click resolver's
-  // result so the caller can decide what to do with it.  Inline
-  // rather than module-level because it closes over `state` and
-  // `canvas` from the surrounding scope.  `cssToTexPx` is a pure
-  // module function imported directly — no per-engine state, no
-  // need to thread through deps.
+  // Shared pick body for single-click (dblclick reuses the cached
+  // payloads).  Inline rather than module-level because it closes over
+  // `state` and `canvas`.
   const runPickAtCss = (
     xCss: number,
     yCss: number,
@@ -346,55 +310,47 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       });
     },
     onDoubleClick: () => {
-      // Native dblclick fires AFTER the two preceding click
-      // events.  Both have already routed through `onClick` and
-      // populated either `lastClickedInfo` (galaxy) or
-      // `lastClickedPoi` (POI) with the resolved record.  We
-      // deliberately do NOT run a second pick here: two readbacks
-      // racing on the same pickRenderer resources resolved out of
-      // order in practice — the dblclick read returned `clear`
-      // while the click read resolved later with the real hit.
-      // Reusing the cached payload is correct (same coordinates +
-      // camera state, since dblclick fires before any frame can
-      // shift the scene) and saves a redundant readback.
+      // Native dblclick fires AFTER the two preceding click events, which
+      // have already populated `lastClickedInfo` / `lastClickedPoi`.  We
+      // reuse those rather than running a second pick (the racing readbacks
+      // resolve out of order); same coordinates + camera state, since
+      // dblclick fires before any frame can shift the scene.
       //
-      // POI takes priority over galaxy: the single-click handler
-      // clears `lastClickedPoi` on every galaxy / empty-space
-      // resolution, so when `lastClickedPoi` is non-null the
-      // most-recent click was unambiguously a ring hit.  Without
-      // the priority, a galaxy that happens to sit behind a ring
-      // would steal the dblclick from the ring (which is what the
-      // user almost certainly aimed at).
+      // POI takes priority over galaxy: the single-click handler clears
+      // `lastClickedPoi` on every galaxy / empty-space resolution, so a
+      // non-null value means the most-recent click was a ring hit.  Without
+      // the priority a galaxy behind the ring would steal the dblclick.
       const handle = deps.handleRef.current;
       if (lastClickedPoi) {
         handle?.camera.focusOn(lastClickedPoi);
         return;
       }
-      // No-op when the user double-clicked empty space —
-      // `lastClickedInfo` would have been cleared by the
-      // single-click handler in that case, and we don't want a
-      // stale focus tween toward whatever was last clicked.
-      if (!lastClickedInfo) return;
-      // The handle is constructed AFTER the bootstrap IIFE in
-      // engine.ts; threaded through `deps.handleRef` so this
-      // callback resolves it lazily — by the time a user can
-      // physically double-click, the handle has been assigned.
+      // Empty-space dblclick: both caches were cleared by the preceding
+      // single-clicks, so this is a deliberate "release focus" gesture —
+      // the inverse of double-clicking a structure to focus it.  Drop the
+      // focus slot so the cluster-focus fade lifts and every galaxy +
+      // structure returns to full visibility.  The camera stays put
+      // (flying home is the separate reset gesture); `setFocused(null)`
+      // fires `onFocusChange(null)`, and we wake the loop so the fade-out
+      // animates.
+      if (!lastClickedInfo) {
+        state.subsystems.selection.setFocused(null);
+        state.subsystems.scheduler.requestRender();
+        return;
+      }
+      // `handle` is constructed after the bootstrap IIFE; resolved lazily
+      // through `deps.handleRef`, non-null by the time a user can dblclick.
       handle?.camera.focusOn(lastClickedInfo);
     },
   });
 
   // ── Seed settings callbacks ───────────────────────────────────────────
   //
-  // Fire each optional settings callback once with the engine's default
-  // value so React's initial state matches the engine truth (pointSizePx
-  // = 2.5, brightness = 1.0, autoRotate = false, …).  Without this seed,
-  // App.tsx's React state would only update on the first explicit user
-  // interaction — leaving the UI showing stale values if any default
-  // ever drifts between engine and component.
-  //
-  // The fan-out lives in `seedSettingsCallbacks.ts`; see that module for
-  // the rationale on why every engine-owned setting React mirrors goes
-  // through the same single audited code path.
+  // Fire each optional settings callback once with the engine's default so
+  // React's initial state matches the engine truth.  Without this, App.tsx
+  // would only update on the first user interaction, showing stale values
+  // if any default drifts between engine and component.  The fan-out lives
+  // in `seedSettingsCallbacks.ts`.
   seedSettingsCallbacks(cb, {
     pointSize: state.settings.points.sizePx,
     brightness: state.settings.points.brightness,
@@ -409,12 +365,9 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     absMagLimit: state.settings.bias.absMagLimit,
     toneMapCurve: state.settings.tonemap.curve,
     exposure: state.settings.tonemap.exposure,
-    // Use drawMask (not pickMask) for the initial UI seed — at bootstrap
-    // time the two are identical (both initialised from ALL_VISIBLE_MASK
-    // in engine.ts), but if a future toggle-then-immediate-reseed
-    // sequence ever materialises, drawMask is the better choice: it
-    // tracks what the user actually sees, matching the legacy
-    // visibleMask semantics the UI was built against.
+    // drawMask (not pickMask) for the UI seed — they're identical at
+    // bootstrap, but drawMask tracks what the user actually sees, which is
+    // the semantics the UI is built against.
     visibleSourceMask: state.sources.drawMask,
     labelCategoryVisibility: state.settings.labelCategoryVisibility,
     markerCategoryVisibility: state.settings.markerCategoryVisibility,

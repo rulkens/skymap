@@ -20,6 +20,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import cx from 'classnames';
 import { useEngine } from '../../hooks/useEngine';
+import { useStructureMemberCount } from '../../hooks/useStructureMemberCount';
 import { useSplash } from '../../hooks/useSplash';
 import { StatusBar } from '../StatusBar/StatusBar';
 import { LoadingBar } from '../LoadingBar/LoadingBar';
@@ -99,6 +100,17 @@ export function App(): React.ReactElement {
     loadProgress,
     currentTier,
   } = useEngine({ extraCallbacks: settingsCallbacks });
+
+  // Live "N galaxies" figure for a pinned cluster/SC/void card.  Recomputes
+  // on selection / tier swap / catalog landing (`sourceCounts`) / survey
+  // toggle — null for galaxy selections and famous-galaxy POIs.
+  const selectedMemberCount = useStructureMemberCount({
+    selected,
+    engineHandleRef: handleRef,
+    tier: currentTier,
+    sourceCounts,
+    visibleSourceMask,
+  });
 
   // Mobile gets the left-stack panels collapsed on first paint.  Lazy
   // initializer reads `window.innerWidth` exactly once at mount and the
@@ -182,7 +194,12 @@ export function App(): React.ReactElement {
       {/* HUD wrapper.  All overlay chrome lives inside this single
           `<div>` so `Tab` can fade the whole stack via one CSS
           opacity transition.  Splash also forces the HUD hidden. */}
-      <div className={cx(appStyles.uiStack, (uiHidden || splash.splashVisible) && appStyles.uiStackHidden)}>
+      <div
+        className={cx(
+          appStyles.uiStack,
+          (uiHidden || splash.splashVisible) && appStyles.uiStackHidden,
+        )}
+      >
         {/* Mounted unconditionally; fades itself out when `loadProgress`
             goes null.  Keeps tier-swap first paints from flashing a
             visible mount frame. */}
@@ -192,6 +209,7 @@ export function App(): React.ReactElement {
         <InfoCard
           hovered={hovered}
           selected={selected}
+          selectedMemberCount={selectedMemberCount}
           onFocus={(target) => handleRef.current?.camera.focusOn(target)}
           onClose={() => handleRef.current?.selection.clear()}
         />
@@ -344,31 +362,31 @@ export function App(): React.ReactElement {
         {/* `handleRef.current` set means the engine finished constructing,
             so the panel can subscribe to slots without racing. */}
         {debugPanelOpen && handleRef.current && (
-            <DebugPanel
-              slots={handleRef.current.assetSlots}
-              timingService={handleRef.current.debug.timingService}
-              passOverrides={handleRef.current.debug.passOverrides}
-              // Orientation-fallback diagnostic toggles — `points`
-              // setters echo synchronously, so React mirrors engine
-              // truth without an optimistic update.
-              highlightFallback={highlightFallback}
-              realOnlyMode={realOnlyMode}
-              onHighlightFallbackChange={(enabled) => {
-                handleRef.current?.points.setHighlightFallback(enabled);
-              }}
-              onRealOnlyModeChange={(enabled) => {
-                handleRef.current?.points.setRealOnly(enabled);
-              }}
-              showPickBuffer={showPickBuffer}
-              onShowPickBufferChange={(enabled) => {
-                handleRef.current?.debug.setShowPickBuffer(enabled);
-              }}
-              showDiskRadiusRing={showDiskRadiusRing}
-              onShowDiskRadiusRingChange={(enabled) => {
-                handleRef.current?.debug.setShowDiskRadiusRing(enabled);
-              }}
-            />
-          )}
+          <DebugPanel
+            slots={handleRef.current.assetSlots}
+            timingService={handleRef.current.debug.timingService}
+            passOverrides={handleRef.current.debug.passOverrides}
+            // Orientation-fallback diagnostic toggles — `points`
+            // setters echo synchronously, so React mirrors engine
+            // truth without an optimistic update.
+            highlightFallback={highlightFallback}
+            realOnlyMode={realOnlyMode}
+            onHighlightFallbackChange={(enabled) => {
+              handleRef.current?.points.setHighlightFallback(enabled);
+            }}
+            onRealOnlyModeChange={(enabled) => {
+              handleRef.current?.points.setRealOnly(enabled);
+            }}
+            showPickBuffer={showPickBuffer}
+            onShowPickBufferChange={(enabled) => {
+              handleRef.current?.debug.setShowPickBuffer(enabled);
+            }}
+            showDiskRadiusRing={showDiskRadiusRing}
+            onShowDiskRadiusRingChange={(enabled) => {
+              handleRef.current?.debug.setShowDiskRadiusRing(enabled);
+            }}
+          />
+        )}
       </div>
       {splash.splashVisible && (
         <Splash

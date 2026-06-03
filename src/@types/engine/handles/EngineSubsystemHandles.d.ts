@@ -29,6 +29,7 @@ import type { BiasCorrectionSubsystem } from '../subsystems/BiasCorrectionSubsys
 import type { YouAreHereSubsystem } from '../subsystems/YouAreHereSubsystem';
 import type { LabelDirectorSubsystem } from '../subsystems/LabelDirectorSubsystem';
 import type { PoiSubsystem } from '../subsystems/PoiSubsystem';
+import type { ClusterFocusSubsystem } from '../subsystems/ClusterFocusSubsystem';
 import type { TweenManager } from '../../camera/TweenManager';
 import type { ClickResolver } from '../ClickResolver';
 import type { InputBindings } from '../../input/InputBindings';
@@ -120,6 +121,14 @@ export type EngineSubsystemHandles = {
    * Constructed eagerly; no GPU dep. Empty until something calls `setPois`.
    */
   pois: PoiSubsystem;
+  /**
+   * Cluster focus-mode subsystem — drives the "dim non-members of the
+   * selected cluster/SC/void" effect. Selection-driven: `runFrame` calls
+   * `update(selectedPoi, nowMs)` each frame and threads
+   * `produceFocusUniforms(nowMs)` into the points draw. Constructed
+   * eagerly; no GPU dep, non-null from t=0.
+   */
+  clusterFocus: ClusterFocusSubsystem;
   /**
    * Per-engine download-progress emitter — instantiated inside the GPU
    * init IIFE so `cb.onLoadProgress` and the slot registry are in scope.

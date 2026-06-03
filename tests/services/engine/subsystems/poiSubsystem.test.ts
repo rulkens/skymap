@@ -8,13 +8,20 @@ import type { PointOfInterest } from '../../../../src/@types/engine/subsystems/P
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
-function makeState(selectedPoiId: string | null = null): EngineState {
+// `selectedPoiId` drives the 1.5× ring bump; `focusedPoiId` (defaulting
+// to the selection so existing call sites keep their meaning) drives the
+// other-rings dim, mirroring the engine split between select and focus.
+function makeState(
+  selectedPoiId: string | null = null,
+  focusedPoiId: string | null = selectedPoiId,
+): EngineState {
   return {
     subsystems: {
       scheduler: { requestRender: () => {} },
       fades: { fadeTo: () => Promise.resolve() },
       selection: {
         selected: () => (selectedPoiId !== null ? { kind: 'poi', id: selectedPoiId } : null),
+        focused: () => (focusedPoiId !== null ? { kind: 'poi', id: focusedPoiId } : null),
       },
     },
   } as unknown as EngineState;
@@ -156,9 +163,8 @@ describe('poiSubsystem', () => {
     expect(out.labels[0]!.alignX).toBe('center');
     expect(out.labels[0]!.alignY).toBe('center');
     expect(out.labels[0]!.worldPos[1]).toBe(-2.13); // not lifted
-    // Pre-cluster-viz this would have been 3 (perpendicular crosshair).
-    // Now: 0 — crosshair removed in plan 2/4 task 9; clusters render
-    // as halo + ring via clusterMarkerRenderer instead.
+    // No crosshair lines — clusters render as halo + ring via
+    // clusterMarkerRenderer.
     expect(out.lines).toHaveLength(0);
   });
 
@@ -319,13 +325,12 @@ describe('poiSubsystem', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────
-// Featured gate + screen-space declutter (Plan 2 / Task 7)
+// Featured gate + screen-space declutter
 //
-// After Task 5 the ~375 bulk cluster/SC POIs sit in the POI list with
-// `featured: false`; labelling them all is noise.  produceLabels now
-// (1) gates on `featured` so only the ~25-30 curated anchors + famous
-// galaxies get labels, and (2) runs an O(n²) greedy declutter over the
-// surviving candidates keeping the higher-significance label when two
+// The ~375 bulk cluster/SC POIs sit in the list with `featured: false`;
+// labelling them all is noise. produceLabels (1) gates on `featured` so
+// only the curated anchors + famous galaxies get labels, and (2) runs an
+// O(n²) greedy declutter keeping the higher-significance label when two
 // project to overlapping screen boxes.
 //
 // Projection uses an identity `vp` here: clip.w == 1, so a worldPos
@@ -378,8 +383,7 @@ describe('poiSubsystem · featured gate + declutter', () => {
     // is on-screen prominence (apparent ring radius), NOT a flat
     // significance: `small` is listed FIRST so a plain array-order
     // tiebreak would wrongly keep it — the prominence sort must override
-    // that and keep `big`.  This is the orbit-flicker fix: the larger
-    // structure under the camera wins, the small one yields.
+    // that and keep `big`. The larger structure under the camera wins.
     const small: PointOfInterest = {
       id: 'small',
       name: 'Small',
@@ -447,9 +451,8 @@ describe('poiSubsystem — crosshair removal', () => {
     };
     sub.setPois([poi]);
     const out = sub.produceLabels(makeState(), makeCtx());
-    // Pre-cluster-viz this would have been 3 (three perpendicular
-    // crosshair lines).  Now: 0, because the cluster has no
-    // labelAnchorOffsetMpc and the crosshair is gone.
+    // Zero lines: the cluster has no labelAnchorOffsetMpc and there is
+    // no crosshair.
     expect(out.lines).toHaveLength(0);
     // Label is still produced.
     expect(out.labels).toHaveLength(1);
@@ -489,6 +492,121 @@ describe('poiSubsystem — produceMarkers', () => {
     expect(markers).toHaveLength(3);
   });
 
+  it('dims non-focused markers to 25% while a POI is focused (focused keeps its bump)', () => {
+    const sub = createPoiSubsystem();
+    sub.setPois([
+      {
+        id: 'virgo',
+        name: 'Virgo',
+        category: 'cluster',
+        featured: true,
+        worldPos: [10, 0, 0],
+        physicalRadiusMpc: 2,
+      },
+      {
+        id: 'coma',
+        name: 'Coma',
+        category: 'cluster',
+        featured: true,
+        worldPos: [-10, 0, 0],
+        physicalRadiusMpc: 2,
+      },
+    ]);
+
+    // At rest: no selection/focus → both markers at their unscaled baked alpha.
+    const atRest = sub.produceMarkers(makeState(null), makeCtx());
+    const restVirgo = atRest.find((m) => m.id === 'virgo')!;
+    const restComa = atRest.find((m) => m.id === 'coma')!;
+
+    // Virgo focused (and selected) → Coma (the other) dims to 25%; Virgo's
+    // ring is bumped (≥ its at-rest alpha, capped at 1).  makeState defaults
+    // focus to the selection, so one arg sets both.
+    const focused = sub.produceMarkers(makeState('virgo'), makeCtx());
+    const focVirgo = focused.find((m) => m.id === 'virgo')!;
+    const focComa = focused.find((m) => m.id === 'coma')!;
+
+    expect(focComa.ringColor[3]).toBeCloseTo(restComa.ringColor[3] * 0.25, 6);
+    expect(focComa.haloColor[3]).toBeCloseTo(restComa.haloColor[3] * 0.25, 6);
+    expect(focVirgo.ringColor[3]).toBeGreaterThanOrEqual(restVirgo.ringColor[3]);
+  });
+
+  it('a bare select (no focus) does NOT dim the other markers', () => {
+    // Single-click on a cluster selects it (1.5× ring bump) but must not
+    // trigger the cluster-focus recede — that fires only on focus, in
+    // lockstep with the galaxy/disk member fade.
+    const sub = createPoiSubsystem();
+    sub.setPois([
+      {
+        id: 'virgo',
+        name: 'Virgo',
+        category: 'cluster',
+        featured: true,
+        worldPos: [10, 0, 0],
+        physicalRadiusMpc: 2,
+      },
+      {
+        id: 'coma',
+        name: 'Coma',
+        category: 'cluster',
+        featured: true,
+        worldPos: [-10, 0, 0],
+        physicalRadiusMpc: 2,
+      },
+    ]);
+
+    const rest = sub.produceMarkers(makeState(null), makeCtx());
+    const restComa = rest.find((m) => m.id === 'coma')!;
+    const restVirgo = rest.find((m) => m.id === 'virgo')!;
+    // Virgo selected but NOT focused (focusedPoiId = null).
+    const out = sub.produceMarkers(makeState('virgo', null), makeCtx());
+    const selComa = out.find((m) => m.id === 'coma')!;
+    const selVirgo = out.find((m) => m.id === 'virgo')!;
+
+    // Coma is undimmed…
+    expect(selComa.ringColor[3]).toBeCloseTo(restComa.ringColor[3], 6);
+    // …while Virgo still gets its selection bump (≥ at-rest, capped at 1).
+    expect(selVirgo.ringColor[3]).toBeGreaterThanOrEqual(restVirgo.ringColor[3]);
+  });
+
+  it('focus without selection dims the others but bumps nothing', () => {
+    // Focus and selection are independent slots: a focus that isn't also
+    // the current selection (e.g. focus cluster A, then single-click B)
+    // dims every other ring but leaves the focused ring at its plain
+    // (un-bumped) alpha, since the 1.5× bump tracks selection.
+    const sub = createPoiSubsystem();
+    sub.setPois([
+      {
+        id: 'virgo',
+        name: 'Virgo',
+        category: 'cluster',
+        featured: true,
+        worldPos: [10, 0, 0],
+        physicalRadiusMpc: 2,
+      },
+      {
+        id: 'coma',
+        name: 'Coma',
+        category: 'cluster',
+        featured: true,
+        worldPos: [-10, 0, 0],
+        physicalRadiusMpc: 2,
+      },
+    ]);
+
+    const rest = sub.produceMarkers(makeState(null), makeCtx());
+    const restVirgo = rest.find((m) => m.id === 'virgo')!;
+    const restComa = rest.find((m) => m.id === 'coma')!;
+
+    // Focused on Virgo, nothing selected.
+    const out = sub.produceMarkers(makeState(null, 'virgo'), makeCtx());
+    const outVirgo = out.find((m) => m.id === 'virgo')!;
+    const outComa = out.find((m) => m.id === 'coma')!;
+
+    expect(outComa.ringColor[3]).toBeCloseTo(restComa.ringColor[3] * 0.25, 6);
+    // No selection bump — Virgo's ring is at its plain at-rest alpha.
+    expect(outVirgo.ringColor[3]).toBeCloseTo(restVirgo.ringColor[3], 6);
+  });
+
   it('excludes famous-galaxy POIs from markers', () => {
     const sub = createPoiSubsystem();
     sub.setPois([
@@ -518,7 +636,7 @@ describe('poiSubsystem — produceMarkers', () => {
     expect(markers[0]?.haloColor[3]).toBeLessThan(markers[0]!.ringColor[3]);
   });
 
-  // ── Significance weighting (Plan 2 / Task 6) ──────────────────────
+  // ── Significance weighting ────────────────────────────────────────
   //
   // produceMarkers folds a per-POI significance factor into the baked
   // halo + ring alpha so low-significance distant structures stay faint
@@ -629,9 +747,7 @@ describe('poiSubsystem — produceMarkers', () => {
     // Per-category descriptor order, mapped to id, EQUALS
     // getPoisForCategory order — independent of fade.  This is the
     // invariant the ring-pick instance_index relies on.
-    const clusterDescriptorIds = markers
-      .filter((m) => m.category === 'cluster')
-      .map((m) => m.id);
+    const clusterDescriptorIds = markers.filter((m) => m.category === 'cluster').map((m) => m.id);
     const expected = sub.getPoisForCategory('cluster').map((p) => p.id);
     expect(clusterDescriptorIds).toEqual(expected);
     expect(clusterDescriptorIds).toEqual(['faded-out', 'visible']);
@@ -831,17 +947,8 @@ describe('poiSubsystem — far-distance marker fade-out', () => {
   });
 });
 
-// Note: a former "produceLabels awake propagation" block asserted that
-// the marker close-approach fade-out set awake=true while mid-band.
-// That contract was reversed by main's #146 ("drop spurious 'awake'
-// flag from label producers") — the fade is a pure function of camera
-// distance, and camera motion already wakes the loop via tweens /
-// spaceMouse / pointer events.  Setting awake mid-band would pin the
-// render loop on while a POI happens to be mid-fade.
-
 // ─────────────────────────────────────────────────────────────────────
-// Marker vs label visibility records (audit Q11, 2026-05-19) +
-// anchor gate (2026-05-19 follow-up)
+// Marker vs label visibility records + anchor gate
 //
 // Two underlying records (`markerVisibility`, `labelVisibility`) gate
 // the two outputs independently in the data model — flipping a label
@@ -966,13 +1073,12 @@ describe('poiSubsystem · marker/label visibility', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────
-// Keyed-group API: setGroup / clearGroup (Task 3 — wireSlots refactor)
+// Keyed-group API: setGroup / clearGroup
 //
 // Three POI sources (staticAnchors, famous, clusterBulk) arrive on
-// different schedules.  Before this API, wireSlots merged them with a
-// re-merge-everything approach via setPois; now each group owns its
-// slot and cannot clobber another.  The observable POI set is the
-// stable-order concatenation: staticAnchors → famous → clusterBulk.
+// different schedules. Each group owns its slot and cannot clobber
+// another. The observable POI set is the stable-order concatenation:
+// staticAnchors → famous → clusterBulk.
 // ─────────────────────────────────────────────────────────────────────
 describe('poiSubsystem · setGroup / clearGroup', () => {
   const ANCHOR: PointOfInterest = {
@@ -1069,13 +1175,11 @@ describe('poiSubsystem · setGroup / clearGroup', () => {
 
 describe('POI_STYLES labelColor alpha', () => {
   it('every labelColor has alpha=1 so the straight->premultiplied migration is a no-op', () => {
-    // Migration safety: the label pack loop now multiplies rgb * a on
-    // write (straight RGBA -> premultiplied at the GPU boundary).  If a
-    // future POI_STYLES edit lowers a labelColor's alpha below 1, the
-    // new pack-loop premultiplication will silently dim its RGB
-    // channels relative to the pre-migration behaviour.  This test
-    // fails loudly so the implementer can either re-balance the RGB
-    // intent or confirm the dimming was deliberate.
+    // The label pack loop premultiplies rgb * a at the GPU boundary. If a
+    // future POI_STYLES edit lowers a labelColor's alpha below 1, that
+    // premultiplication silently dims its RGB channels — this test fails
+    // loudly so the implementer re-balances the RGB intent or confirms
+    // the dimming was deliberate.
     for (const [category, style] of Object.entries(POI_STYLES)) {
       expect(style.labelColor[3], `${category}.labelColor alpha`).toBe(1);
     }

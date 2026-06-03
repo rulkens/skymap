@@ -31,6 +31,7 @@ export const texturedDisksPass: Pass = {
       ctx.vp,
       [ctx.canvasSize.width, ctx.canvasSize.height],
       ctx.drawCamPos,
+      state.gpu.focusUniform!.bindGroup,
       disks,
     );
   },

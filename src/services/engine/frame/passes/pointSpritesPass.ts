@@ -13,11 +13,9 @@
  * ### When it draws
  *
  * Always — there's no user-facing toggle for "hide all the points".
- * `enabled` returns `true` unconditionally; the pass remains a
- * fixed-cost contribution to every frame.  Visibility is gated
- * inside the shader instead, via the `visibleSourceMask` uniform
- * (so disabling SDSS is a 4-byte uniform write, not a CPU-side
- * skip).
+ * Per-source visibility is gated inside the shader via the
+ * `visibleSourceMask` uniform, so disabling SDSS is a 4-byte uniform
+ * write, not a CPU-side skip.
  *
  * ### What it reads
  *
@@ -40,10 +38,9 @@
  * (or `0xFFFFFFFF` for "nothing selected").  Settings carries the
  * structured `{ source, localIdx } | null` shape; we translate to
  * the packed u32 here so settings stays in plain-TS-land and the
- * shader sees a single integer.  Sentinel choice: `0xFFFFFFFF` is
- * the max u32, well outside any realistic packed identity (the top
- * 5 bits would have to encode source code 31, which we don't
- * currently allocate).
+ * shader sees a single integer.  `0xFFFFFFFF` is the sentinel: the
+ * max u32, well outside any realistic packed identity (the top 5
+ * bits would have to encode source code 31, which we don't allocate).
  */
 
 import type { Pass } from '../../../../@types/engine/frame/Pass';
@@ -68,14 +65,14 @@ export const pointSpritesPass: Pass = {
     // Pack the galaxy selection into the u32 the shader compares
     // against per-vertex `(sourceCode << 27u) | instance_index`.  POI
     // selections don't light up galaxy halos, so they map to the
-    // "nothing selected" sentinel.  See module header for sentinel rationale.
+    // "nothing selected" sentinel.
     const selectedPacked =
       settings.selected !== null && settings.selected.kind === 'galaxy'
         ? packSelection(settings.selected.source, settings.selected.localIdx)
         : SELECTION_NONE_SENTINEL;
 
-    // Capture the fade registry + timestamp once for this frame so the
-    // per-source closure below doesn't call performance.now() per source.
+    // Capture the fade registry + timestamp once so the per-source
+    // closure below doesn't call performance.now() per source.
     const nowMs = performance.now();
     const fades = state.subsystems.fades;
 
@@ -94,15 +91,16 @@ export const pointSpritesPass: Pass = {
       schechterMStar: settings.schechterMStar,
       schechterAlpha: settings.schechterAlpha,
       depthFadeEnabled: settings.depthFadeEnabled,
-      // Task 8 (procedural-disk-impostor): the points-pass fragment
-      // fades alpha to zero across this same apparent-pixel-size band
-      // that the procedural-disk pass fades IN over.  Both thresholds
-      // come from `subsystems/thumbnailSubsystem`'s exported constants
-      // — single source of truth shared between the two passes so
-      // they can never drift apart and re-introduce the double-bright
-      // donut artefact.
+      // The points-pass fragment fades alpha to zero across the same
+      // apparent-pixel-size band the procedural-disk pass fades IN over.
+      // Both thresholds come from one source of truth so they can't drift
+      // apart and re-introduce the double-bright donut artefact.
       pxFadeStart: settings.pxFadeStartPoints,
       pxFadeEnd: settings.pxFadeEndPoints,
+      // Shared cluster-focus bind group (@group(3)). The engine owns the
+      // single focus buffer (written once per frame in renderFrame); we
+      // bind its group. At rest (blend 0) the shader multiplier is 1.0.
+      focusBindGroup: state.gpu.focusUniform!.bindGroup,
       // Look up the FadeRegistry opacity for each source at this frame's
       // timestamp. The registry returns 1.0 for unregistered handles —
       // a safe fallback so a source that hasn't registered yet renders

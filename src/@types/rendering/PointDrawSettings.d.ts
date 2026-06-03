@@ -1,17 +1,10 @@
 /**
  * PointDrawSettings — per-call draw parameters for `PointRenderer.draw`.
  *
- * Pre-cleanup, `draw()` took these as 16 trailing positional arguments
- * (`pointSizePx`, `brightness`, …, `pxFadeEnd`).  Grouping them into a
- * single record decouples the renderer's contract from the order each
- * argument was added in: callers fill named fields, new knobs are
- * added at the type level with one edit, and TypeScript's structural
- * matching catches a missing field at compile time instead of a silent
- * shifted-argument bug at draw time.
- *
- * Field semantics are unchanged from the pre-cleanup positional list;
- * see each field's inline doc for details.  The block deliberately
- * mirrors `RenderFrameSettings`'s naming (renderFrame.ts) so the
+ * A single record rather than positional args: callers fill named fields,
+ * new knobs are one type-level edit, and TypeScript's structural matching
+ * catches a missing field at compile time instead of a silent shifted-
+ * argument bug at draw time. Mirrors `RenderFrameSettings`'s naming so the
  * engine-side pass code can pass `{ …settings, … }` without renames.
  */
 
@@ -51,6 +44,14 @@ export type PointDrawSettings = {
   pxFadeStart: number;
   /** Procedural-disk crossfade band — pixel threshold above which points render zero-alpha (hand-off to disk pass). */
   pxFadeEnd: number;
+  /**
+   * Shared cluster-focus bind group for the @group(3) FocusUniforms
+   * binding. The engine owns the single focus buffer (written once per
+   * frame in renderFrame) and hands its bind group here; the vertex stage
+   * dims non-members of the focused POI. At rest (`blend: 0`) the shader
+   * multiplier collapses to 1.0, so this is always supplied.
+   */
+  focusBindGroup: GPUBindGroup;
   /**
    * Look up the registry-managed opacity for a given source. Called
    * once per visible source per frame from the points draw loop;

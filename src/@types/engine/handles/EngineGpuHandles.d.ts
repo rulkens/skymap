@@ -32,16 +32,11 @@
  * fields exist on this bag specifically so the `destroy()` chain has a
  * reachable reference to call `.destroy()` on — they are not consumed
  * via this bag at runtime (the frame loop receives them through
- * `RunFrameDeps` for historical reasons).  When adding a new GPU-
- * resource-owning renderer, add it here so the teardown path stays
- * complete.
+ * `RunFrameDeps`).  When adding a new GPU-resource-owning renderer, add
+ * it here so the teardown path stays complete.
  *
- * ### Why grouped vs. flat?
- *
- * Mirrors the original closure grouping in pre-Phase-4 `engine.ts`,
- * where these bindings sat together under one header comment.
- * Keeping the bag named lets the renderFrame helper accept just the
- * GPU bag rather than the whole `EngineState`.
+ * Keeping the bag named lets the renderFrame helper accept just the GPU
+ * bag rather than the whole `EngineState`.
  */
 
 import type { PointRenderer } from '../../rendering/PointRenderer';
@@ -64,6 +59,8 @@ import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { DiskRadiusRing } from '../../rendering/DiskRadiusRing';
 import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
+import type { FocusUniformsBgl } from '../../rendering/FocusUniformsBgl';
+import type { FocusUniformBuffer } from '../../rendering/FocusUniformBuffer';
 
 export type EngineGpuHandles = {
   renderer: PointRenderer | null;
@@ -83,9 +80,26 @@ export type EngineGpuHandles = {
    */
   sourceBgl: SourceUniformsBgl | null;
   /**
-   * Combined HDR offscreen target + tone-map post-process.  Pre-Phase-4
-   * this was two fields (`hdrTarget` + `toneMapPass`); they merged into
-   * one because their lifetimes are identical and they're always used
+   * Canonical FocusUniforms bind-group layout. Constructed once in
+   * `initGpu` and shared by every pipeline that renders the cluster-focus
+   * dim — points (@group(3)), the impostor disks (@group(1)), and the
+   * pick pass. Null until `initGpu` resolves.
+   */
+  focusBgl: FocusUniformsBgl | null;
+  /**
+   * The single shared cluster-focus uniform (buffer + bind group + packer).
+   * Only one POI is focused at a time, so one buffer serves the whole
+   * engine: written once per frame in `renderFrame`, and its bind group —
+   * built against `focusBgl` — is bound by every focus-aware pipeline at
+   * its own group slot (a bind group is tied to a layout, not a group
+   * number). The pick pass binds this same live buffer so non-members of a
+   * focused structure are excluded from hit-testing. Null until `initGpu`
+   * resolves; released and re-nulled by `destroy()`.
+   */
+  focusUniform: FocusUniformBuffer | null;
+  /**
+   * Combined HDR offscreen target + tone-map post-process.  One field
+   * because their lifetimes are identical and they're always used
    * together (HDR pass writes the texture, post-process samples it).
    * See `services/gpu/postProcess.ts` for the rationale.
    */
@@ -140,33 +154,25 @@ export type EngineGpuHandles = {
   /**
    * Cluster-marker renderer — draws halo + ring overlays for POI clusters
    * (one renderer for all POI source categories; per-source bind groups
-   * live inside the renderer).  Null until `initGpu` constructs it
-   * (task 13 of cluster-viz sub-plan 2).  Excluded from the
-   * `isEngineReady` predicate for the same reason as `markerLineRenderer`
-   * — null-checked at point of use by the cluster-marker frame pass
-   * (task 14).  Stored here so `destroy()` can release the renderer's
-   * GPU buffers (per-category bind groups + per-instance buffer +
-   * corner VBO).
+   * live inside the renderer).  Null until `initGpu` constructs it.
+   * Excluded from the `isEngineReady` predicate for the same reason as
+   * `markerLineRenderer` — null-checked at point of use by the
+   * cluster-marker frame pass.  Stored here so `destroy()` can release
+   * the renderer's GPU buffers (per-category bind groups + per-instance
+   * buffer + corner VBO).
    */
   clusterMarkerRenderer: ClusterMarkerRenderer | null;
   /**
    * Atlas-bound 3D-oriented disk renderer for large galaxy thumbnails
    * (close-approach view).  Null until `initGpu` constructs it from a
-   * `GpuContext` snapshot.  Stored here purely so `destroy()` can
-   * release the renderer's GPU buffers (uniform + per-instance + corner)
-   * — pre-2026-05-08 this lived on the bootstrap-local `phaseLocals`
-   * carrier, which `engine.ts.destroy()` had no reachable reference to
-   * (PR #66 follow-up: phaseLocals goes away once `startLoop` finishes,
-   * by design).  Promoting to `state.gpu.*` fixes the destroy-
-   * reachability gap without rewiring the frame-loop's existing
-   * references through `phaseLocals`.
+   * `GpuContext` snapshot.  Stored here so `destroy()` can release the
+   * renderer's GPU buffers (uniform + per-instance + corner).
    *
-   * Excluded from `isEngineReady` — it's set during `initGpu` (the
-   * first bootstrap phase, well before `wireSlots`/`wireInput`), and
-   * adding fields to that predicate is the same lifecycle hazard the
-   * 2026-05-08 black-screen incident exposed (bootstrap progression
-   * isn't the inverse of teardown).  Read sites that run during
-   * bootstrap null-check this field individually.
+   * Excluded from `isEngineReady` — it's set during `initGpu` (well
+   * before `wireSlots`/`wireInput`), and adding fields to that predicate
+   * is a lifecycle hazard: bootstrap progression isn't the inverse of
+   * teardown.  Read sites that run during bootstrap null-check this
+   * field individually.
    */
   texturedDiskRenderer: TexturedDiskRenderer | null;
   /**

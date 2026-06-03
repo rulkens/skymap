@@ -93,7 +93,7 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   // the procedural pattern stops competing with the photo. See the
   // override site in 'proceduralDiskSubsystem.ts' and the io.wesl
   // VsOut.procFadeOut field comment.
-  let alpha = intensity * in.crossfadeAlpha * edgeFadeLinear * in.procFadeOut;
+  let alpha = intensity * in.crossfadeAlpha * edgeFadeLinear * in.procFadeOut * in.focusDim;
   // Premultiplied alpha — matches the project's blend mode (see
   // device.ts 'alphaMode: 'premultiplied'').
   return vec4<f32>(tinted * alpha, alpha);

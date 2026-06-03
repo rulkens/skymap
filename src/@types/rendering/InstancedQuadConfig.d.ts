@@ -6,6 +6,7 @@
 import type { AtlasConfig } from './AtlasConfig';
 import type { BlendMode } from './BlendMode';
 import type { CapacityStrategy } from './CapacityStrategy';
+import type { FocusUniformsBgl } from './FocusUniformsBgl';
 
 export type InstancedQuadConfig = {
   /** Human-readable label prefix for GPU resource labels and shader
@@ -31,6 +32,12 @@ export type InstancedQuadConfig = {
   /** Color target format. All three current consumers target the
    *  HDR offscreen `'rgba16float'`. */
   format: GPUTextureFormat;
+  /** Canonical cluster-focus bind-group layout, bound at `@group(1)`.
+   *  The focus dim (non-members of a focused POI fade to 8%) is computed
+   *  per instance in each consumer's vertex stage via
+   *  `focusAlphaMultiplier`; the same shared layout serves every impostor
+   *  pipeline so the points pass and the disks fade in lockstep. */
+  focusBgl: FocusUniformsBgl;
   /** Visibility for the uniform binding. Defaults to `VERTEX` —
    *  matches TexturedQuadRenderer + TexturedDiskRenderer. ProceduralDiskRenderer
    *  passes `VERTEX | FRAGMENT` to mirror its existing BGL even

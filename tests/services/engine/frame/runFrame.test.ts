@@ -92,14 +92,17 @@ function makeState(): EngineState {
       spaceMouse: { applyToCamera: vi.fn(), hasAxes: () => false },
       scheduler: { requestRender: vi.fn() },
       // Minimal selection-subsystem stub.  The runFrame body reads
-      // `selected()` for the renderFrame settings bag; the renderer-null
-      // guard short-circuits before that read fires in this fixture, but
-      // we provide the stub so the EngineState type is satisfied.
+      // `focused()` (cluster-focus fade) + `selected()` (halo) for the
+      // renderFrame settings bag; the renderer-null guard short-circuits
+      // before those reads fire in this fixture, but we provide the stub
+      // so the EngineState type is satisfied.
       selection: {
         hovered: () => null,
         selected: () => null,
+        focused: () => null,
         setHovered: vi.fn(),
         setSelected: vi.fn(),
+        setFocused: vi.fn(),
         destroy: vi.fn(),
       },
       galaxyAtlas: null,

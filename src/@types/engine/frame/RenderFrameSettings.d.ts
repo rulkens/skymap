@@ -11,6 +11,7 @@
 import type { Selection } from '../subsystems/Selection';
 import type { BiasMode } from '../../data/BiasMode';
 import type { ToneMapCurve } from '../../data/ToneMapCurve';
+import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
 
 export type RenderFrameSettings = {
   pointSizePx: number;
@@ -34,18 +35,23 @@ export type RenderFrameSettings = {
   depthFadeEnabled: boolean;
   /**
    * Procedural-disk crossfade-OUT thresholds for the points-pass
-   * fragment shader (Task 8 of the procedural-disk-impostor plan).
-   * Below `pxFadeStartPoints` the points pass renders at full alpha;
-   * above `pxFadeEndPoints` it renders at zero alpha (handing off to
-   * the procedural-disk pass entirely); inside the band a smoothstep
-   * complementary to the disk pass's fade-IN does a continuous
-   * crossfade.  Engine sources both from
-   * `PROCEDURAL_DISK_FADE_START_PX` / `_END_PX` in
-   * `subsystems/thumbnailSubsystem` so the two passes share a single
-   * source of truth.
+   * fragment shader.  Below `pxFadeStartPoints` points render at full
+   * alpha; above `pxFadeEndPoints` at zero alpha (handing off to the
+   * procedural-disk pass); inside the band a smoothstep complementary
+   * to the disk pass's fade-IN does a continuous crossfade.  Both come
+   * from `PROCEDURAL_DISK_FADE_START_PX` / `_END_PX` in
+   * `subsystems/thumbnailSubsystem` so the two passes share one source
+   * of truth.
    */
   pxFadeStartPoints: number;
   pxFadeEndPoints: number;
+  /**
+   * Cluster focus-mode uniform for the points pass's @group(3) binding.
+   * Produced once per frame by `clusterFocusSubsystem.produceFocusUniforms`
+   * in `runFrame` (so it shares the frame's single `nowMs`). At rest
+   * (`blend: 0`) the shader's per-vertex multiplier collapses to 1.0.
+   */
+  focus: FocusUniformsValue;
   exposure: number;
   toneMapCurve: ToneMapCurve;
   /**

@@ -1,46 +1,31 @@
 /**
- * initGpu.destroyReachability — regression test for PR #66's follow-up.
+ * initGpu.destroyReachability — guards that GPU-owning renderers are
+ * reachable from the teardown chain.
  *
  * ### What this protects
  *
- * Three renderers (`texturedDiskRenderer`, `proceduralDiskRenderer`,
- * `milkyWayRenderer`) each own GPU resources — uniform buffer + per-
- * instance buffer + per-renderer specifics — and each expose a
- * `.destroy()` method.  Pre-2026-05-08 they lived only on the
- * bootstrap-local `phaseLocals` carrier, which `engine.ts.destroy()`
- * had no reference path to: `phaseLocals` is intentionally short-lived
- * (it goes away once `startLoop` finishes), and the frame loop captured
- * the renderers via `RunFrameDeps` closures.  PR #66 flagged this as
- * a destroy reachability gap — every HMR / StrictMode remount leaked
- * the renderers' GPU buffers.
- *
- * The fix promoted the renderers to `state.gpu.*` (mirroring the
- * existing pattern shared by `renderer`, `pickRenderer`, `postProcess`,
- * `filamentRenderer`, `labelRenderer`, `markerLineRenderer`) so the
- * `destroy()` chain has a reachable reference to each.
+ * `texturedDiskRenderer`, `proceduralDiskRenderer`, `milkyWayRenderer`,
+ * and `horizonShellRenderer` each own GPU resources and expose
+ * `.destroy()`. They must live on `state.gpu.*` (alongside `renderer`,
+ * `pickRenderer`, `postProcess`, …) so `engine.ts.destroy()` has a
+ * reachable reference to each — otherwise every HMR / StrictMode remount
+ * leaks their GPU buffers.
  *
  * ### What this test asserts
  *
- *   1. After `initGpu(state, deps)` runs, each of the three renderer
- *      fields on `state.gpu.*` is populated with the constructed
- *      renderer (not null, not undefined).
- *   2. Replaying the `engine.ts.destroy()` chain — the same
- *      `state.gpu.<field>?.destroy()` invocation pattern used by every
- *      other handle in the bag — reaches each renderer's destroy spy.
- *
- * Together those two clauses prove that the destroy-reachability gap
- * is closed by construction: as long as `initGpu` writes the four
- * fields and `engine.ts.destroy()` walks them, the renderers cannot
- * leak across HMR / StrictMode cycles.
+ *   1. After `initGpu(state, deps)`, each renderer field on `state.gpu.*`
+ *      holds the constructed renderer (not null/undefined).
+ *   2. Replaying the `engine.ts.destroy()` chain —
+ *      `state.gpu.<field>?.destroy()` for every handle in the bag —
+ *      reaches each renderer's destroy spy.
  *
  * ### Why mock the heavy modules
  *
  * `initGpu` calls `gpuInitGpu(canvas)` (real WebGPU device acquisition),
- * `loadFontAtlases()` (network fetch), and seven renderer constructors —
- * none of which work in a JSDOM test environment.  We mock the lot so
- * the phase body runs to completion and we can observe the writes it
- * makes to `state.gpu.*`.  Each mock returns a spy-bearing stub whose
- * `destroy` we can assert was called.
+ * `loadFontAtlases()` (network fetch), and the renderer constructors —
+ * none of which work in JSDOM. Mocking them lets the phase body run to
+ * completion so we can observe its writes to `state.gpu.*`. Each mock
+ * returns a spy-bearing stub whose `destroy` we can assert was called.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -50,21 +35,17 @@ import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps'
 
 // ── Module mocks ──────────────────────────────────────────────────────
 //
-// vi.mock is hoisted, so we declare the spies via a factory that runs
-// per-mock and stash the produced spy objects in module-scoped maps the
-// tests can read.  Each mock returns a stub shaped enough for `initGpu`
-// to thread through (constructors return objects with `.destroy`; the
-// few methods called during `initGpu` itself like
-// `attachRenderer`/`attachRenderers` are present as no-ops).
+// vi.mock is hoisted, so a per-mock factory stashes its spy objects in a
+// module-scoped map the tests read. Each mock returns a stub shaped
+// enough for `initGpu` to thread through: constructors return objects
+// with `.destroy`, plus the few methods `initGpu` calls synchronously.
 
 const stubs: Record<string, { destroy: ReturnType<typeof vi.fn> }> = {};
 
 function makeStub(name: string): { destroy: ReturnType<typeof vi.fn> } {
   const stub = {
     destroy: vi.fn(),
-    // Methods called during `initGpu` body itself.  See module under
-    // test for the call sites; we only stub what's actually invoked
-    // synchronously inside the phase.
+    // Methods `initGpu` invokes synchronously inside the phase.
     upload: vi.fn().mockResolvedValue(undefined),
     setBiasMode: vi.fn(),
   };
@@ -82,15 +63,28 @@ vi.mock('../../../../src/services/gpu/device', () => ({
 }));
 
 // The canonical BGLs are constructed in initGpu by calling
-// createFadeUniformsBgl / createSourceUniformsBgl, both of which call
-// device.createBindGroupLayout. The mock device returned by the
-// gpuInitGpu mock is a plain object without WebGPU methods, so we mock
-// the BGL factories directly instead of stubbing the device.
+// createFadeUniformsBgl / createSourceUniformsBgl / createFocusUniformsBgl,
+// all of which call device.createBindGroupLayout. The mock device returned
+// by the gpuInitGpu mock is a plain object without WebGPU methods, so we
+// mock the BGL factories directly instead of stubbing the device.
 vi.mock('../../../../src/services/gpu/bindGroupLayouts/fadeUniforms', () => ({
   createFadeUniformsBgl: vi.fn(() => ({ __mockFadeBgl: true })),
 }));
 vi.mock('../../../../src/services/gpu/bindGroupLayouts/sourceUniforms', () => ({
   createSourceUniformsBgl: vi.fn(() => ({ __mockSourceBgl: true })),
+}));
+vi.mock('../../../../src/services/gpu/bindGroupLayouts/focusUniforms', () => ({
+  createFocusUniformsBgl: vi.fn(() => ({ __mockFocusBgl: true })),
+}));
+
+// The shared focus uniform allocates a real GPU buffer; the minimal device
+// stub here has no createBuffer, so mock the factory to a no-op handle.
+vi.mock('../../../../src/services/gpu/renderers/createFocusUniformBuffer', () => ({
+  createFocusUniformBuffer: vi.fn(() => ({
+    bindGroup: { __mockFocusBindGroup: true },
+    write: () => {},
+    destroy: () => {},
+  })),
 }));
 
 vi.mock('../../../../src/services/gpu/renderers/pointRenderer', () => ({
@@ -119,7 +113,7 @@ vi.mock('../../../../src/services/gpu/renderers/milkyWayRenderer', () => ({
 
 vi.mock('../../../../src/services/gpu/renderers/horizonShellRenderer', () => ({
   createHorizonShellRenderer: vi.fn(() => makeStub('horizonShellRenderer')),
-  // initGpu now imports the pass registry (for TIMED_SLOT_NAMES), which
+  // initGpu imports the pass registry (for TIMED_SLOT_NAMES), which
   // transitively loads horizonShellPass — that module reads this const,
   // so the mock must provide it.
   HORIZON_RADIUS_GPC: 14.3,
@@ -181,10 +175,9 @@ vi.mock('../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry', ()
 import { initGpu } from '../../../../src/services/engine/phases/initGpu';
 
 /**
- * Build a minimal `EngineState` covering the slices `initGpu` reads
- * and writes.  We populate `gpu.*` with the post-Phase-5 expanded
- * shape (every nullable handle starts at `null`); the `subsystems`
- * bag carries just the two facades `initGpu` calls into
+ * Build a minimal `EngineState` covering the slices `initGpu` reads and
+ * writes. Every nullable `gpu.*` handle starts at `null`; the
+ * `subsystems` bag carries just the facades `initGpu` calls into
  * (`biasCorrection.attachRenderer`, `labelDirector.attachRenderers`).
  */
 function makeState(): EngineState {
@@ -255,9 +248,8 @@ function makeDeps(): BootstrapDeps {
 
 describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/milky-way renderers', () => {
   beforeEach(() => {
-    // Clear the module-scoped spy cache between tests so each test sees
-    // a fresh set of stubs.  The vi.mock factories run per-call, so the
-    // stubs Map repopulates as initGpu runs.
+    // Clear the spy cache so each test sees fresh stubs. The vi.mock
+    // factories run per-call, so the map repopulates as initGpu runs.
     for (const k of Object.keys(stubs)) delete stubs[k];
   });
 
@@ -266,9 +258,8 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     const deps = makeDeps();
     await initGpu(state, deps);
 
-    // All three renderers must reach `state.gpu.*` — that's the
-    // reachability claim PR #66's follow-up makes.  Pre-fix these were
-    // stashed only on `deps.phaseLocals`.
+    // Every GPU-owning renderer must reach `state.gpu.*` — that's the
+    // reachability claim the destroy chain depends on.
     expect(state.gpu.texturedDiskRenderer).toBe(stubs.texturedDiskRenderer);
     expect(state.gpu.proceduralDiskRenderer).toBe(stubs.proceduralDiskRenderer);
     expect(state.gpu.milkyWayRenderer).toBe(stubs.milkyWayRenderer);
@@ -276,22 +267,17 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
   });
 
   it('phaseLocals no longer carries the thumbnail/milky-way renderers — they live solely on state.gpu.*', async () => {
-    // M1 of the 2026-05-11 architectural audit collapsed the
-    // phaseLocals renderer mirror.  Previously initGpu wrote the
-    // renderers onto BOTH `state.gpu.*` (for destroy reachability) and
-    // `deps.phaseLocals` (for later phases to consume).  That mirror
-    // was redundant: `state.gpu.*` is set before any later phase reads,
-    // so phases now read directly from there with an explicit non-null
-    // check that replaces the previous `deps.phaseLocals!.X` folklore
-    // bang.  This test pins down that decision so a future
-    // "re-add phaseLocals mirror" doesn't silently regress us back to
-    // the hidden phase channel.
+    // `phaseLocals` carries no renderer mirror: a renderer set on
+    // `state.gpu.*` is visible to every later phase, so mirroring it onto
+    // `deps.phaseLocals` would be a redundant hidden channel. This pins
+    // that decision so a future "re-add phaseLocals mirror" can't sneak
+    // back in.
     const state = makeState();
     const deps = makeDeps();
     await initGpu(state, deps);
 
     expect(deps.phaseLocals).toBeDefined();
-    // PhaseLocals is now exactly { device, context } — no renderer fields.
+    // PhaseLocals is exactly { device, context } — no renderer fields.
     expect(deps.phaseLocals!).not.toHaveProperty('texturedDiskRenderer');
     expect(deps.phaseLocals!).not.toHaveProperty('proceduralDiskRenderer');
     expect(deps.phaseLocals!).not.toHaveProperty('milkyWayRenderer');
@@ -306,11 +292,10 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     const deps = makeDeps();
     await initGpu(state, deps);
 
-    // Reach into each handle the same way `engine.ts.destroy()` does —
-    // optional-chained `.destroy()` followed by a null-out.  This is
-    // the load-bearing assertion: if `initGpu` wrote the renderer to
-    // `state.gpu.*` AND `engine.ts.destroy()` walks `state.gpu.*?.destroy()`,
-    // then the renderer's destroy spy MUST fire.
+    // Reach into each handle the way `engine.ts.destroy()` does —
+    // optional-chained `.destroy()` then a null-out. If initGpu wrote the
+    // renderer to `state.gpu.*` and destroy() walks it, the destroy spy
+    // must fire.
     state.gpu.texturedDiskRenderer?.destroy();
     state.gpu.texturedDiskRenderer = null;
     state.gpu.proceduralDiskRenderer?.destroy();
@@ -334,10 +319,9 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
   });
 
   it('destroy is safe when initGpu never ran — every state.gpu.* renderer is null and ?.destroy() no-ops', () => {
-    // The destroy() path must tolerate "engine torn down before
-    // bootstrap finished" — same contract every other handle in this
-    // bag honours.  No initGpu call here; just walk the destroy chain
-    // against the zero-state and assert it doesn't throw.
+    // destroy() must tolerate "engine torn down before bootstrap
+    // finished" — same contract every handle in this bag honours. No
+    // initGpu call; just walk the destroy chain against the zero-state.
     const state = makeState();
     expect(() => {
       state.gpu.texturedDiskRenderer?.destroy();

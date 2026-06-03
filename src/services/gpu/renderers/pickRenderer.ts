@@ -32,6 +32,7 @@ import type { Vec2 } from '../../../@types/math/Vec2';
 import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
+import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
 import type { ClusterMarkerRenderer } from '../../../@types/rendering/ClusterMarkerRenderer';
 import {
   POINT_STRIDE,
@@ -66,6 +67,12 @@ export function createPickRenderer(
   pointRenderer: PointRenderer,
   fadeBgl: FadeUniformsBgl,
   sourceBgl: SourceUniformsBgl,
+  focusBgl: FocusUniformsBgl,
+  // The engine's shared cluster-focus bind group (live buffer, written
+  // once per frame in renderFrame).  Bound at @group(3) so the pick pass
+  // sees the same focus state the visual pass does and the shared vertex
+  // shader can cull non-members of a focused structure from hit-testing.
+  focusBindGroup: GPUBindGroup,
   // Optional POI-ring pick provider.  When present, the pick pass
   // calls `clusterMarkerRenderer.pickRing(pass)` after the galaxy
   // draws so cluster / supercluster / void ring hits land in the same
@@ -93,6 +100,7 @@ export function createPickRenderer(
       }),
       fadeBgl,
       sourceBgl,
+      focusBgl,
     ],
   });
 
@@ -301,6 +309,7 @@ export function createPickRenderer(
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
     pass.setBindGroup(1, dummyFadeBindGroup);
+    pass.setBindGroup(3, focusBindGroup);
 
     for (const src of sourceList) {
       let sourceBindGroup = sourceBindGroupCache.get(src.sourceBuffer);
@@ -329,16 +338,13 @@ export function createPickRenderer(
   }
 
   // Whether this pick pass has anything to draw — galaxy sources OR
-  // cluster / SC / void ring markers (drawn by `clusterMarkerRenderer.
-  // pickRing` inside `recordPickPass`).  A single predicate so `pick`
-  // and `renderForDebug` share one gate instead of each growing a `&&`
-  // clause: bailing on empty galaxy sources alone made clusters
-  // unpickable and the pick-debug texture black whenever every galaxy
-  // survey was toggled off.  `markerCount() > 0` mirrors
+  // cluster / SC / void ring markers (drawn by
+  // `clusterMarkerRenderer.pickRing` inside `recordPickPass`).  Shared
+  // by `pick` and `renderForDebug` so a galaxy-empty scene with visible
+  // rings still picks (and the pick-debug texture isn't black when every
+  // survey is toggled off).  `markerCount() > 0` mirrors
   // `clusterMarkersPass`'s enable gate (0 when the category is hidden or
-  // every ring has faded out).  The state-level callers gate on the same
-  // notion via `collectPickTargets`; this is the renderer-layer echo for
-  // the inputs it actually has.
+  // every ring has faded out).
   const hasAnyPickTarget = (sourceList: readonly PickSourceDraw[]): boolean =>
     sourceList.length > 0 ||
     (clusterMarkerRenderer !== undefined && clusterMarkerRenderer.markerCount() > 0);
@@ -430,6 +436,8 @@ export function createPickRenderer(
     depthTexture?.destroy();
     stagingBuffer.destroy();
     dummyFadeBuffer.destroy();
+    // focusBindGroup wraps the engine-owned shared focus buffer; the
+    // engine's destroy() releases it, not the picker.
   }
 
   const renderer: PickRenderer = { label: 'pickRenderer', pick, renderForDebug, destroy };
