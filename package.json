@@ -37,6 +37,7 @@
     "build-mcpm": "tsx tools/volumes/buildMcpmVolume.ts --all",
     "build-famous": "tsx tools/famous/buildFamous.ts",
     "build-famous-hires": "tsx tools/famous/copyHiResToPublic.ts",
+    "build-famous-thumbs": "tsx tools/famous/buildFamousThumbs.ts",
     "build-pgc-aliases": "tsx tools/fetch/buildPgcAliases.ts",
     "build-filaments": "tsx tools/filaments/buildFilaments.ts",
     "build-filaments-sdss": "tsx tools/filaments/buildFilaments.ts --sources sdss --output public/data/filaments-sdss.bin",

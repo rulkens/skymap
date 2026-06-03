@@ -43,16 +43,12 @@ import { willDeproject } from '../../../famous/deprojectDisk.js';
 import { squareDeprojectCrop } from '../../../famous/squareDeprojectCrop.js';
 import { deriveFamousCalibration } from '../../../famous/deriveFamousCalibration.js';
 import { publishFamousRuntimeImages } from '../../../famous/publishFamousRuntimeImages.js';
-import { rotatedExtract } from '../cropExtract.js';
-import { runStarnet, type StarnetConfig } from '../starnet.js';
+import { buildThumbTile } from '../../../famous/buildThumbTile.js';
+import { type StarnetConfig } from '../starnet.js';
 import type { FamousCalibration } from '../../../../src/@types/loading/FamousCalibration';
 
 const FULL_PX = 1024;
 const ATLAS_PX = 256;
-// thumb.webp is the InfoCard tile: small, so a 512² StarNet working size is
-// ample fidelity at a fraction of the full-tier cost, then we downsize to 256².
-const THUMB_WORK_PX = 512;
-const THUMB_PX = 256;
 
 export type ExportBody = {
   id: string;
@@ -230,41 +226,15 @@ export async function handleExport(opts: {
   //     deprojected crop), deliberately at export rather than process time so
   //     the maintainer's re-process tuning loop stays cheap.  For a face-on
   //     disk extractionCrop == body.crop and the thumb matches the atlas.
-  const thumbCropPath = resolve(tmpDir, 'thumb-crop.png');
-  const thumbStarlessPath = resolve(tmpDir, 'thumb-starless.png');
-  const thumbExtract = await rotatedExtract(sourcePath, extractionCrop);
-  await thumbExtract
-    .resize(THUMB_WORK_PX, THUMB_WORK_PX, { fit: 'inside' })
-    .png()
-    .toFile(thumbCropPath);
-  await runStarnet({
-    input: thumbCropPath,
-    output: thumbStarlessPath,
-    stride: body.starnet.stride,
-    upsample: body.starnet.upsample,
-    config: starnetConfig,
+  //     buildThumbTile is shared with the bulk backfill so both stay identical.
+  const thumbOut = await buildThumbTile({
+    sourcePath,
+    extractionCrop,
+    starnet: body.starnet,
+    alpha: body.alpha,
+    starnetConfig,
+    workDir: tmpDir,
   });
-  const { data: thumbData, info: thumbInfo } = await sharp(thumbStarlessPath)
-    .ensureAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  const thumbRgba = new Uint8ClampedArray(
-    thumbData.buffer,
-    thumbData.byteOffset,
-    thumbData.byteLength,
-  );
-  applyLuminanceAsAlpha(thumbRgba, thumbInfo.width, thumbInfo.height, body.alpha);
-  const thumbOut = await sharp(Buffer.from(thumbRgba), {
-    raw: { width: thumbInfo.width, height: thumbInfo.height, channels: 4 },
-  })
-    .resize(THUMB_PX, THUMB_PX, { fit: 'inside' })
-    .webp({ quality: 82, alphaQuality: 90 })
-    .toBuffer();
-  // The intermediate crop/starless PNGs were staged in tmpDir only so StarNet
-  // had file paths to work with; they must not survive into the committed
-  // outDir, so remove them before the atomic swap moves tmpDir into place.
-  rmSync(thumbCropPath, { force: true });
-  rmSync(thumbStarlessPath, { force: true });
   writeFileSync(resolve(tmpDir, 'thumb.webp'), thumbOut);
 
   // 7. recipe.json — provenance record for re-runs and auditing.
