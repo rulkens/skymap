@@ -704,16 +704,16 @@ git commit -m "test(engine): forbid reads of pre-store data locations"
 
 ## Task 13: Behaviour-parity gate
 
-- [ ] **Step 1: Full suite + typecheck + build**
+- [x] **Step 1: Full suite + typecheck + build**
 
 Run: `npm run test && npm run typecheck && npm run build`
-Expected: all green; 590+ tests still pass.
+Expected: all green; 590+ tests still pass. **As-built:** 2266 tests pass (349 files), typecheck clean, `npm run build` succeeds (pre-existing >500 kB chunk-size warning unrelated).
 
-- [ ] **Step 2: Manual smoke (dev server)**
+- [ ] **Step 2: Manual smoke (dev server)** — *awaiting user*
 
 Ask the user to confirm in the running dev server: survey toggle, cluster marker + label visibility, famous-galaxy InfoCard text, volume field sliders, filament status — all behave exactly as before. (This is a no-behaviour-change refactor; the visible result is "nothing changed.")
 
-- [ ] **Step 3: Update the backlog**
+- [x] **Step 3: Update the backlog**
 
 In `docs/BACKLOG.md`, the "Specs awaiting plans" entry for Engine data stores now has a plan — leave the spec where it is (it moves to `completed/` with the plan once shipped, per the backlog process). Add nothing new; `/feature-done` handles the move.
 
