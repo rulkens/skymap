@@ -2,11 +2,11 @@
   "version": 1,
   "id": "m104",
   "crop": {
-    "x": -190.662109375,
-    "y": -394.8411526775717,
-    "width": 4336.116543302572,
-    "height": 4336.116543302572,
-    "rotationDeg": 18.16617599321728
+    "x": -482.54186195606235,
+    "y": 412.3952777039365,
+    "width": 4813.228255162125,
+    "height": 2795.3517040063525,
+    "rotationDeg": 15.657536161683424
   },
   "starnet": {
     "stride": 256,
@@ -18,9 +18,23 @@
     "gamma": 0.7
   },
   "metadata": {
-    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4594#/media/File:Sombrero_Galaxy_(NIRCam)_(2025-127).png",
-    "license": "Public domain",
-    "author": "Image: NASA, ESA, CSA, STScI"
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4594#/media/File:Sombrero_Galaxy_(heic2506a).jpg",
+    "license": "CC BY 4.0",
+    "author": "ESA/Hubble &amp; NASA, K. Noll"
   },
-  "processedAt": "2026-05-19T09:47:25.245Z"
+  "processedAt": "2026-06-03T23:09:30.727Z",
+  "source": {
+    "width": 3840,
+    "height": 3584
+  },
+  "disk": {
+    "centerPx": [
+      1924.072265625,
+      1810.0711297071127
+    ],
+    "radiusPx": 1925.29130206485,
+    "paDeg": 15.657536161683424,
+    "axisRatio": 0.580764417521312,
+    "deproject": true
+  }
 }

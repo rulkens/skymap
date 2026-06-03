@@ -161,6 +161,14 @@ data/raw/hyperleda_pa.csv
 # accidentally check them in.
 data/starnet/
 
+# Ephemeral working artefacts the famous-galaxy curator drops next to the
+# committed tiles: `mask.jpg` is the star-removal luminance mask used mid-
+# pipeline, and `.tmp/` holds StarNet scratch.  The committed tile set per
+# galaxy is fixed (atlas/full/source/starless/thumb.webp + recipe.json); these
+# two are regenerable scratch that must never ride along on a `git add`.
+public/images/famous-curated/*/mask.jpg
+public/images/famous-curated/*/.tmp/
+
 # ── Claude Code per-developer state ───────────────────────────────────────────
 # `settings.local.json` accumulates this developer's locally-granted tool
 # permissions; the shared `settings.json` (when it exists) stays tracked.

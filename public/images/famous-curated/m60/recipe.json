@@ -2,11 +2,11 @@
   "version": 1,
   "id": "m60",
   "crop": {
-    "x": -43.890380859375,
-    "y": 380.2093505859375,
-    "width": 2740.155029296875,
-    "height": 2740.155029296875,
-    "rotationDeg": 17.79423033848491
+    "x": -24.606639415535938,
+    "y": 734.5677947742333,
+    "width": 2428.412497581072,
+    "height": 1951.2928772484083,
+    "rotationDeg": 30.864012259886664
   },
   "starnet": {
     "stride": 256,
@@ -22,5 +22,19 @@
     "license": "Public domain",
     "author": "NASA, ESA, CXC, and J. Strader (Michigan State University)"
   },
-  "processedAt": "2026-05-28T21:09:20.077Z"
+  "processedAt": "2026-06-03T23:16:46.868Z",
+  "source": {
+    "width": 3600,
+    "height": 3600
+  },
+  "disk": {
+    "centerPx": [
+      1189.599609375,
+      1710.2142333984375
+    ],
+    "radiusPx": 971.3649990324287,
+    "paDeg": 30.864012259886664,
+    "axisRatio": 0.8035261221856173,
+    "deproject": true
+  }
 }

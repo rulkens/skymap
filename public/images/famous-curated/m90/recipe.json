@@ -2,10 +2,11 @@
   "version": 1,
   "id": "m90",
   "crop": {
-    "x": 0,
-    "y": 0,
-    "width": 2000,
-    "height": 2000
+    "x": 240.91837861588397,
+    "y": 697.2158811184271,
+    "width": 1510.472813080732,
+    "height": 632.5762944037708,
+    "rotationDeg": 65.29509834393284
   },
   "starnet": {
     "stride": 256,
@@ -21,5 +22,19 @@
     "license": "CC BY 4.0",
     "author": "Sloan Digital Sky Survey"
   },
-  "processedAt": "2026-05-18T10:25:42.301Z"
+  "processedAt": "2026-06-03T23:14:52.599Z",
+  "source": {
+    "width": 2000,
+    "height": 2000
+  },
+  "disk": {
+    "centerPx": [
+      996.15478515625,
+      1013.5040283203125
+    ],
+    "radiusPx": 604.1891252322928,
+    "paDeg": 65.29509834393284,
+    "axisRatio": 0.4187935651179183,
+    "deproject": true
+  }
 }

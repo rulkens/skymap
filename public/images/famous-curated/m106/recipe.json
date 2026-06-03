@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "m106",
+  "crop": {
+    "x": 170.21861171857358,
+    "y": 717.1873821840575,
+    "width": 1664.2857769540922,
+    "height": 710,
+    "rotationDeg": 116.51061673491654
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://noirlab.edu/public/images/noao-m106/",
+    "license": "CC BY 4.0",
+    "author": "N.A.Sharp, REU program/NOIRLab/NSF/AURA/"
+  },
+  "processedAt": "2026-06-03T22:58:15.059Z",
+  "source": {
+    "width": 2048,
+    "height": 2048
+  },
+  "disk": {
+    "centerPx": [
+      1020.953125,
+      1064.34375
+    ],
+    "radiusPx": 456.01133125012984,
+    "paDeg": 116.51061673491654,
+    "axisRatio": 0.42657951880159267,
+    "deproject": true
+  }
+}

@@ -2,11 +2,11 @@
   "version": 1,
   "id": "m94",
   "crop": {
-    "x": 0,
-    "y": 0,
-    "width": 3000,
-    "height": 3000,
-    "rotationDeg": 0
+    "x": 144.35284619055165,
+    "y": 349.5491105911997,
+    "width": 2689.4506676318124,
+    "height": 2321,
+    "rotationDeg": 158.50834705266797
   },
   "starnet": {
     "stride": 256,
@@ -22,5 +22,19 @@
     "license": "CC 4.0",
     "author": "Hillary Mathis, N.A.Sharp/NOIRLab/NSF/AURA/"
   },
-  "processedAt": "2026-05-28T21:23:24.066Z"
+  "processedAt": "2026-06-03T23:13:10.631Z",
+  "source": {
+    "width": 3000,
+    "height": 3000
+  },
+  "disk": {
+    "centerPx": [
+      1487.5946044921875,
+      1510.894775390625
+    ],
+    "radiusPx": 650.1627801657097,
+    "paDeg": 158.50834705266797,
+    "axisRatio": 0.8629785477669702,
+    "deproject": true
+  }
 }

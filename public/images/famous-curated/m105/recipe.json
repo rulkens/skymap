@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "m105",
+  "crop": {
+    "x": -93.34932025419084,
+    "y": 31.20832587767245,
+    "width": 3322.466133211417,
+    "height": 2914,
+    "rotationDeg": 138.07577606721765
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_3379#/media/File:Messier105_-_HST_-_Potw1901a.jpg",
+    "license": "CC BY 4.0",
+    "author": "Credit: ESA/Hubble &amp; NASA, C. Sarazin et al."
+  },
+  "processedAt": "2026-06-03T23:06:29.671Z",
+  "source": {
+    "width": 3840,
+    "height": 3893
+  },
+  "disk": {
+    "centerPx": [
+      1891.990099009901,
+      1941.569595336914
+    ],
+    "radiusPx": 726.0974107618201,
+    "paDeg": 138.07577606721765,
+    "axisRatio": 0.8770008211436348,
+    "deproject": true
+  }
+}
