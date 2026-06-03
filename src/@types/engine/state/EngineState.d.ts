@@ -26,7 +26,8 @@
  *
  *   - `state.settings`   — what the SettingsPanel surfaces.
  *   - `state.bias`       — Malmquist-bias correction tuning.
- *   - `state.sources`    — loaded clouds + visibility selectors.
+ *   - `state.sources`    — visibility selectors + loading inputs (tier, masks).
+ *   - `state.data`       — per-type data stores (galaxies, structures, …).
  *   - `state.picking`    — hover / click / drag mutables.
  *   - `state.gpu`        — pipelines / textures allocated lazily.
  *   - `state.subsystems` — owned long-lived helpers.
@@ -77,6 +78,7 @@ import type { EngineSettingsState } from '../../settings/EngineSettingsState';
 import type { EngineBiasState } from './EngineBiasState';
 import type { EngineDebugState } from './EngineDebugState';
 import type { EngineSourceState } from './EngineSourceState';
+import type { EngineData } from '../data/EngineData';
 import type { EnginePickingState } from './EnginePickingState';
 import type { EngineAssetSlots } from './EngineAssetSlots';
 import type { EngineGpuHandles } from '../handles/EngineGpuHandles';
@@ -89,6 +91,12 @@ export type EngineState = {
   settings: EngineSettingsState;
   bias: EngineBiasState;
   sources: EngineSourceState;
+  /**
+   * Per-type data stores — the authoritative app-side home for each
+   * data type (galaxies, structures, volumes, filaments). Slot commits
+   * write; producers / UI / pick / camera read. See `EngineData`.
+   */
+  data: EngineData;
   picking: EnginePickingState;
   gpu: EngineGpuHandles;
   subsystems: EngineSubsystemHandles;

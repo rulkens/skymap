@@ -100,6 +100,7 @@ import type { Tier } from '../../@types/data/Tier';
 import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 
 import { createTweenManager } from './camera/tweenManager';
+import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
 import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../animation/fadeController';
@@ -405,6 +406,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // is the ~600k-galaxy desktop budget.  `setTier` mutates in place.
       tier: cb.initialTier ?? 'medium',
     },
+    // Per-type data stores. Empty at construction; slot commits fill them.
+    // The legacy `sources.catalogs/famousMeta/clusterBulk` fields above are
+    // migrated onto these stores in the following tasks.
+    data: createEngineData(),
     picking: {
       // Per-frame pick-throttle state. Hover / select live on
       // `state.subsystems.selection`; see `EnginePickingState.d.ts`.

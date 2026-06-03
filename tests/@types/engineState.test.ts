@@ -18,6 +18,7 @@ import { describe, it, expect } from 'vitest';
 import type { SourceType } from '../../src/@types/data/SourceType';
 
 import type { EngineState } from '../../src/@types/engine/state/EngineState';
+import { createEngineData } from '../../src/services/engine/data/createEngineData';
 import type { EngineSettingsState } from '../../src/@types/settings/EngineSettingsState';
 import type { EngineBiasState } from '../../src/@types/engine/state/EngineBiasState';
 import type { EngineSourceState } from '../../src/@types/engine/state/EngineSourceState';
@@ -132,6 +133,7 @@ describe('EngineState type', () => {
       settings,
       bias,
       sources,
+      data: createEngineData(),
       picking,
       gpu: {
         renderer: null,
@@ -317,6 +319,7 @@ describe('EngineState type', () => {
         clusterBulk: null,
         tier: 'medium',
       },
+      data: createEngineData(),
       picking: {
         latestMouseCss: null,
         lastPickedMouseCss: null,
