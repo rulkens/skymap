@@ -17,6 +17,9 @@ import { defaultViewSlice, toggleLayer } from '../../../../tools/cosmic-flow/src
 import {
   defaultCameraSlice,
   setCameraViewProj,
+  setCameraYawPitch,
+  setCameraDistance,
+  setAutoRotate,
 } from '../../../../tools/cosmic-flow/src/state/slices/cameraSlice';
 import type { Mat4 } from '../../../../src/@types/math/Mat4';
 
@@ -82,5 +85,24 @@ describe('cameraSlice', () => {
     expect(result.pitch).toBe(defaultCameraSlice.pitch);
     expect(result.distance).toBe(defaultCameraSlice.distance);
     expect(result.autoRotate).toBe(defaultCameraSlice.autoRotate);
+  });
+
+  it('setCameraYawPitch clamps pitch to [-1.5, 1.5]', () => {
+    expect(setCameraYawPitch(defaultCameraSlice, 2, 5).pitch).toBe(1.5);
+    expect(setCameraYawPitch(defaultCameraSlice, 2, -5).pitch).toBe(-1.5);
+    expect(setCameraYawPitch(defaultCameraSlice, 2, 0).yaw).toBe(2);
+    expect(defaultCameraSlice.pitch).toBe(0.35); // prev untouched
+  });
+
+  it('setCameraDistance clamps to [0.6, 7]', () => {
+    expect(setCameraDistance(defaultCameraSlice, 100).distance).toBe(7);
+    expect(setCameraDistance(defaultCameraSlice, 0.1).distance).toBe(0.6);
+    expect(setCameraDistance(defaultCameraSlice, 2).distance).toBe(2);
+  });
+
+  it('setAutoRotate flips the flag immutably', () => {
+    const result = setAutoRotate(defaultCameraSlice, false);
+    expect(result.autoRotate).toBe(false);
+    expect(defaultCameraSlice.autoRotate).toBe(true);
   });
 });

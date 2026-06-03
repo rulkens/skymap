@@ -1,0 +1,9 @@
+.tabs {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.tab {
+  flex: 1;
+  text-transform: capitalize;
+}

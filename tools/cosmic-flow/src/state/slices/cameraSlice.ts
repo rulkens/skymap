@@ -23,3 +23,27 @@ export const defaultCameraSlice: CameraSlice = {
 export function setCameraViewProj(prev: CameraSlice, viewProj: Mat4): CameraSlice {
   return { ...prev, viewProj };
 }
+
+// Orbit-control bounds, mirroring the spike: pitch can't flip past the poles,
+// and distance is held to a range that keeps the cube framed (spike index.html
+// clamped drag pitch to ±1.5 and wheel distance to [0.6, 7]).
+const PITCH_LIMIT = 1.5;
+const MIN_DISTANCE = 0.6;
+const MAX_DISTANCE = 7;
+
+const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
+
+/** Set the orbit yaw/pitch (drag), clamping pitch away from the poles. */
+export function setCameraYawPitch(prev: CameraSlice, yaw: number, pitch: number): CameraSlice {
+  return { ...prev, yaw, pitch: clamp(pitch, -PITCH_LIMIT, PITCH_LIMIT) };
+}
+
+/** Set the orbit distance (wheel/zoom), clamped to the framed range. */
+export function setCameraDistance(prev: CameraSlice, distance: number): CameraSlice {
+  return { ...prev, distance: clamp(distance, MIN_DISTANCE, MAX_DISTANCE) };
+}
+
+/** Toggle idle auto-rotation. */
+export function setAutoRotate(prev: CameraSlice, autoRotate: boolean): CameraSlice {
+  return { ...prev, autoRotate };
+}
