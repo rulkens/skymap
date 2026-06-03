@@ -66,6 +66,7 @@ describe('handleExport', () => {
         metadata: { sourceUrl: 'https://example.com', license: 'CC-BY', author: 'Alice' },
       },
       repoRoot: repo,
+      starnetConfig: { mock: true },
       sessionDirOverride: sess.sessionDir,
     });
     const outDir = resolve(repo, 'public/images/famous-curated/m31');
@@ -92,6 +93,7 @@ describe('handleExport', () => {
         metadata: { sourceUrl: 'https://example.com', license: 'CC-BY', author: 'Alice' },
       },
       repoRoot: repo,
+      starnetConfig: { mock: true },
       sessionDirOverride: sess.sessionDir,
     });
     expect(existsSync(resolve(repo, 'public/images/famous/m31.webp'))).toBe(true);
@@ -114,6 +116,7 @@ describe('handleExport', () => {
         metadata: { sourceUrl: 'https://example.com', license: 'CC-BY', author: 'Alice' },
       },
       repoRoot: repo,
+      starnetConfig: { mock: true },
       sessionDirOverride: sess.sessionDir,
     });
     const outDir = resolve(repo, 'public/images/famous-curated/m31');
@@ -134,6 +137,7 @@ describe('handleExport', () => {
         metadata: { sourceUrl: 'https://example.com', license: 'CC-BY', author: 'Alice' },
       },
       repoRoot: repo,
+      starnetConfig: { mock: true },
       sessionDirOverride: sess.sessionDir,
     });
     const idx = JSON.parse(
@@ -157,6 +161,7 @@ describe('handleExport', () => {
         metadata: { sourceUrl: 'https://a', license: 'CC-BY', author: 'Alice' },
       },
       repoRoot: repo,
+      starnetConfig: { mock: true },
       sessionDirOverride: sess.sessionDir,
     });
     // Drop a stale file inside the output dir that should NOT survive.
@@ -173,6 +178,7 @@ describe('handleExport', () => {
         metadata: { sourceUrl: 'https://b', license: 'CC-BY', author: 'Bob' },
       },
       repoRoot: repo,
+      starnetConfig: { mock: true },
       sessionDirOverride: sess.sessionDir,
     });
     expect(existsSync(resolve(outDir, 'stale.txt'))).toBe(false);
@@ -201,6 +207,7 @@ describe('deproject square output', () => {
         catalogAxisRatio: 0.5,
       },
       repoRoot: repo,
+      starnetConfig: { mock: true },
       sessionDirOverride: sess.sessionDir,
     });
     // Every shipped raster is square...
@@ -231,6 +238,7 @@ describe('deproject square output', () => {
         catalogAxisRatio: 0.5,
       },
       repoRoot: repo,
+      starnetConfig: { mock: true },
       sessionDirOverride: sess.sessionDir,
     });
     const src = await sharp(res.paths.source).metadata();

@@ -69,6 +69,7 @@ describe('handleExport — hi-res / low-res registration', () => {
         catalogAxisRatio: 0.5,
       },
       repoRoot: repo,
+      starnetConfig: { mock: true },
       sessionDirOverride: sess.sessionDir,
     });
 

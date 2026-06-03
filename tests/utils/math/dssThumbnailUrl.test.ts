@@ -8,7 +8,7 @@ describe('dssThumbnailUrl', () => {
     // produces — match the `Number.toString()` shape `0.03333333333333333`.
     expect(dssThumbnailUrl(180, 0)).toBe(
       'https://alasky.cds.unistra.fr/hips-image-services/hips2fits' +
-        '?hips=CDS%2FP%2FDSS2%2Fred' +
+        '?hips=CDS%2FP%2FDSS2%2Fcolor' +
         '&ra=180&dec=0' +
         `&fov=${2 / 60}&width=128&height=128&format=jpg`,
     );
@@ -23,9 +23,9 @@ describe('dssThumbnailUrl', () => {
     expect(url).toContain('width=128&height=128');
   });
 
-  it('uses the URL-encoded HiPS path for DSS2 red', () => {
+  it('uses the URL-encoded HiPS path for the DSS2 colour composite', () => {
     // hips2fits requires the slashes in the HiPS path to be percent-
-    // encoded — `CDS/P/DSS2/red` → `CDS%2FP%2FDSS2%2Fred`.
-    expect(dssThumbnailUrl(0, 0)).toContain('hips=CDS%2FP%2FDSS2%2Fred');
+    // encoded — `CDS/P/DSS2/color` → `CDS%2FP%2FDSS2%2Fcolor`.
+    expect(dssThumbnailUrl(0, 0)).toContain('hips=CDS%2FP%2FDSS2%2Fcolor');
   });
 });

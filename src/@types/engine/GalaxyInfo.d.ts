@@ -303,11 +303,19 @@ export type GalaxyInfo = {
   /**
    * Image cutout URL for this galaxy's thumbnail.
    *
-   * For SDSS-sourced galaxies this is the SDSS DR18 ImgCutout JPEG (200 px,
-   * 0.4 arcsec/pixel).  For non-SDSS surveys (2MRS, GLADE, Synthetic) this
-   * falls back to the all-sky DSS cutout service via `dssThumbnailUrl` —
-   * SDSS only covers ~1/3 of the sky, so its cutout would return blank
-   * frames for many of those positions.
+   * Famous galaxies use their curated, non-deprojected tile at
+   * `/images/famous-thumb/<id>.webp`.  Survey rows use a sky cutout sized to
+   * the galaxy's angular extent: SDSS DR18 ImgCutout for SDSS-sourced rows,
+   * and the all-sky DSS colour composite via `dssThumbnailUrl` for 2MRS /
+   * GLADE / Synthetic (SDSS only covers ~1/3 of the sky).
    */
   thumbnailUrl: string;
+
+  /**
+   * Fallback cutout URL, shown if `thumbnailUrl` fails to load.  Set only for
+   * famous galaxies — the survey sky cutout, used when a curated tile is
+   * absent (e.g. a source that couldn't be re-fetched for the thumb backfill).
+   * Absent for survey rows, whose `thumbnailUrl` is already the cutout.
+   */
+  thumbnailFallbackUrl?: string;
 };

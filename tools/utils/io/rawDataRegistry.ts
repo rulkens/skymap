@@ -163,6 +163,13 @@ export const RAW_DATA = {
       'Wikipedia metadata pull for the famous-galaxy entries — source URLs + descriptions.',
     fetcher: 'tools/famous/fetchFamousImages.ts',
   },
+  'famous.source-cache-dir': {
+    path: 'data/raw/famous/source-cache',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'Persistent download cache for curator source images, keyed by sha256(url). Lets resume / re-curation / the thumb backfill reuse a fetched original instead of re-downloading. Populated on first fetch by tools/famous/sourceImageCache.ts.',
+  },
 
   // ─── Cosmicflows-4 (DM density volume; per-galaxy distances pending) ──
 

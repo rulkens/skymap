@@ -159,6 +159,17 @@
   word-break: break-all; /* long names like "SDSS J..." don't overflow the card */
 }
 
+/*
+ * Catalogue aliases trailing the primary name (e.g. "Triangulum Galaxy ·
+ * M33 · NGC 598").  Dimmed and one step smaller so the eye lands on the
+ * common name first and reads the designations as secondary — folding the
+ * former "Also known as" row into the headline.
+ */
+.headlineAlias {
+  color: var(--color-fg-subtle);
+  font-size: var(--font-size-lg);
+}
+
 /* ── Section separators ───────────────────────────────────────────────────── */
 
 .cardSection {
@@ -318,10 +329,27 @@ details:not([open]) > .detailsSummary::before {
 }
 
 /*
+ * Description prose + its show-more toggle, stacked vertically.  The toggle
+ * sits underneath the text instead of floating to its right (the CardRow
+ * shape this block used to borrow).  Left-aligned so the italic prose reads
+ * naturally — .cardValue's right alignment is overridden here.
+ */
+.descBlock {
+  padding: var(--space-1) 0;
+}
+.descBlock .cardValue {
+  display: block;
+  text-align: left;
+}
+.descBlock .descCollapsed {
+  /* -webkit-box (line-clamp) must win over the block override above */
+  display: -webkit-box;
+}
+
+/*
  * Plain-text "show more / show less" affordance.  Looks like a tiny link
  * rather than a button so it doesn't distract from the description text
- * itself; the click target is generous (full-width row baseline) thanks
- * to the cardRow layout.
+ * itself.
  */
 .descToggle {
   margin-top: var(--space-2);

@@ -39,6 +39,7 @@ import {
   sdssExplorerUrl,
   sdssThumbnailUrl,
   dssThumbnailUrl,
+  galaxyThumbnailFovArcmin,
   nedByNameUrl,
   nedNearPositionUrl,
   DEFAULT_GALAXY_DIAMETER_KPC,
@@ -240,6 +241,11 @@ export function buildGalaxyInfo(
   // of HyperLEDA's PGC-only database.  Verified empirically.
   const isSdss = source === Source.SDSS;
   const objID = cloud.objIDs[idx]!;
+  // Single source of truth for "is this a famous row with loaded metadata?":
+  // the catalogue link, the curated thumbnail, and the famous block below all
+  // key off the same entry.  Undefined for non-famous rows or before the
+  // sidecar resolves (the InfoCard then renders the generic survey layout).
+  const famousEntry = source === Source.Famous && famousMeta ? famousMeta[idx] : undefined;
   let catalogUrl: string | null;
   if (isSdss && objID > 0n) {
     catalogUrl = sdssExplorerUrl(objID);
@@ -257,8 +263,8 @@ export function buildGalaxyInfo(
     catalogUrl = nedNearPositionUrl(ra, dec);
   } else if (source === Source.Glade) {
     catalogUrl = objID > 0n ? nedByNameUrl(`PGC ${objID}`) : nedNearPositionUrl(ra, dec);
-  } else if (source === Source.Famous && famousMeta && famousMeta[idx]) {
-    catalogUrl = nedByNameUrl(famousMeta[idx]!.names[0]!);
+  } else if (famousEntry) {
+    catalogUrl = nedByNameUrl(famousEntry.names[0]!);
   } else if (source === Source.SDSS) {
     // SDSS row with objID = 0n (synthetic-style test fixture).  Falling
     // back to coord search keeps the link non-null in tests so the UI
@@ -267,7 +273,22 @@ export function buildGalaxyInfo(
   } else {
     catalogUrl = null;
   }
-  const thumbnailUrl = isSdss ? sdssThumbnailUrl(ra, dec, 200) : dssThumbnailUrl(ra, dec, 2);
+  // Size the cutout to the galaxy's angular extent so a nearby giant and a
+  // distant dwarf both roughly fill the frame, instead of a fixed FOV that
+  // crops the former and shrinks the latter.
+  const fovArcmin = galaxyThumbnailFovArcmin(cloud.diameterKpc[idx]!, distanceMpc);
+  const surveyThumbnailUrl = isSdss
+    ? sdssThumbnailUrl(ra, dec, 200, fovArcmin)
+    : dssThumbnailUrl(ra, dec, fovArcmin);
+  // Famous galaxies have a curated, non-deprojected tile committed at
+  // /images/famous-thumb/<id>.webp — prefer it, since the survey cutout is
+  // generic and lower quality.  The survey cutout becomes the fallback for the
+  // few famous rows whose source couldn't be re-fetched (no curated tile);
+  // Thumbnail swaps to it on the curated tile's 404.
+  const thumbnailUrl = famousEntry
+    ? `/images/famous-thumb/${famousEntry.id}.webp`
+    : surveyThumbnailUrl;
+  const thumbnailFallbackUrl = famousEntry ? surveyThumbnailUrl : undefined;
 
   // ── Orientation provenance recovery ────────────────────────────────────────
   //
@@ -367,14 +388,13 @@ export function buildGalaxyInfo(
   // entirely — the InfoCard renders the generic layout on that hover, and the
   // next hover (after sidecars land) will produce the full block.
   let famous: GalaxyInfo['famous'];
-  if (source === Source.Famous && famousMeta && famousMeta[idx]) {
-    const meta = famousMeta[idx]!;
+  if (famousEntry) {
     famous = {
-      id: meta.id,
-      ...(meta.commonName !== undefined ? { commonName: meta.commonName } : {}),
-      names: meta.names,
-      description: meta.description,
-      type: meta.type,
+      id: famousEntry.id,
+      ...(famousEntry.commonName !== undefined ? { commonName: famousEntry.commonName } : {}),
+      names: famousEntry.names,
+      description: famousEntry.description,
+      type: famousEntry.type,
     };
   }
 
@@ -461,6 +481,7 @@ export function buildGalaxyInfo(
     // External URLs — chosen above based on `source` (and PGC for GLADE).
     catalogUrl,
     thumbnailUrl,
+    ...(thumbnailFallbackUrl !== undefined ? { thumbnailFallbackUrl } : {}),
 
     // Physical size — drives the focus-tween framing distance and the
     // diameter row in the InfoCard.
