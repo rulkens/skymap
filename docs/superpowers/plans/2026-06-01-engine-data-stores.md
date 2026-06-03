@@ -622,25 +622,25 @@ Today the spec notes filament counts are "transient" (nowhere durable). Find the
 **Files (writer):** the filament/skeleton slot commit.
 **Files (reader):** filament status UI (StatusBar or the filament settings row).
 
-- [ ] **Step 1: Failing test**
+- [x] **Step 1: Failing test**
 
 Add a test asserting that after the filament slot commits, `state.data.filaments.loaded === true` with the decoded strip/vertex counts.
 
-- [ ] **Step 2: Run it, expect failure**
+- [x] **Step 2: Run it, expect failure**
 
 Run: `npm run test -- tests/services/loading/slots/`
 Expected: FAIL.
 
-- [ ] **Step 3: Write to + read from the store**
+- [x] **Step 3: Write to + read from the store**
 
 On filament slot commit, call `state.data.filaments.setLoaded(stripCount, vertexCount)`. Point the status reader at `state.data.filaments`.
 
-- [ ] **Step 4: Run the full suite**
+- [x] **Step 4: Run the full suite**
 
 Run: `npm run test && npm run typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git commit -m "feat(engine): filament status tracked in filamentStore"
@@ -655,7 +655,7 @@ The spec calls for a greppable forbidden-path assertion that no code still reads
 **Files:**
 - Create: `tests/services/engine/data/forbiddenPaths.test.ts`
 
-- [ ] **Step 1: Write the sweep test**
+- [x] **Step 1: Write the sweep test**
 
 ```ts
 // tests/services/engine/data/forbiddenPaths.test.ts
@@ -688,12 +688,12 @@ describe('no consumer reads the pre-store data locations', () => {
 });
 ```
 
-- [ ] **Step 2: Run it**
+- [x] **Step 2: Run it**
 
 Run: `npm run test -- tests/services/engine/data/forbiddenPaths.test.ts`
 Expected: PASS if Tasks 7–11 are complete. If it fails, the offender list names the file to fix.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add tests/services/engine/data/forbiddenPaths.test.ts
