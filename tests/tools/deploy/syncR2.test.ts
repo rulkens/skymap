@@ -13,7 +13,7 @@
  * importing here does not fire the network/filesystem sync.
  */
 import { describe, expect, it } from 'vitest';
-import { ALLOW } from '../../../tools/deploy/syncR2';
+import { ALLOW, etagMatches } from '../../../tools/deploy/syncR2';
 
 describe('syncR2 ALLOW', () => {
   it('accepts clusters.ccat and clusters_meta.json', () => {
@@ -26,5 +26,47 @@ describe('syncR2 ALLOW', () => {
     // from the browser — they must stay out of the R2 sync.
     expect(ALLOW('glade.bin')).toBe(false);
     expect(ALLOW('sdss.bin')).toBe(false);
+  });
+});
+
+describe('syncR2 etagMatches', () => {
+  // R2 stores a single-PUT object's ETag as the hex MD5 of its content.
+  // The decision to skip an unchanged upload is exactly "does the local
+  // file's MD5 equal the remote ETag?", so this predicate is the testable
+  // seam — the HEAD fetch and the MD5 streaming are thin I/O wrappers.
+  const md5 = 'd41d8cd98f00b204e9800998ecf8427e';
+
+  it('matches a bare hex ETag', () => {
+    expect(etagMatches(md5, md5)).toBe(true);
+  });
+
+  it('matches a quoted ETag (R2/HTTP wrap ETags in double quotes)', () => {
+    expect(etagMatches(md5, `"${md5}"`)).toBe(true);
+  });
+
+  it('matches a weak-validator ETag (strips the W/ prefix)', () => {
+    expect(etagMatches(md5, `W/"${md5}"`)).toBe(true);
+  });
+
+  it('is case-insensitive on the hex digest', () => {
+    expect(etagMatches(md5.toUpperCase(), `"${md5}"`)).toBe(true);
+  });
+
+  it('does not match a different digest', () => {
+    expect(etagMatches(md5, '"ffffffffffffffffffffffffffffffff"')).toBe(false);
+  });
+
+  it('never matches a multipart composite ETag (contains a part count)', () => {
+    // Multipart uploads produce `md5-of-part-md5s + "-N"`, not a plain MD5
+    // of the whole object — uncomparable, so force a re-upload to be safe.
+    expect(etagMatches(md5, '"abc123-3"')).toBe(false);
+  });
+
+  it('does not match when the object is absent (null remote ETag)', () => {
+    expect(etagMatches(md5, null)).toBe(false);
+  });
+
+  it('does not match an empty remote ETag', () => {
+    expect(etagMatches(md5, '')).toBe(false);
   });
 });

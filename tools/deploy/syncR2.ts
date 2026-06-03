@@ -81,7 +81,8 @@
  * They are tracked in EXTRA_FILES below and uploaded after the main public/data
  * sweep so the two concerns remain visually separable in the script.
  */
-import { existsSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
@@ -136,6 +137,32 @@ export const ALLOW = (name: string): boolean =>
   // per-structure metadata sidecar.  Tier-agnostic, like famous.bin.
   name === 'clusters.ccat' ||
   name === 'clusters_meta.json';
+
+/**
+ * Decide whether a local file is byte-identical to the object already in R2,
+ * so an unchanged file can be skipped instead of re-uploaded.
+ *
+ * R2 records a single-PUT object's ETag as the lowercase hex MD5 of its
+ * content; HTTP wraps it in double quotes and a weak validator prepends `W/`.
+ * Every file this script uploads goes up as a single PUT — wrangler
+ * `r2 object put` has no multipart path and our largest artefact (the ~297 MB
+ * MCPM tier) stays under its ~300 MiB cap — so a plain whole-file MD5
+ * comparison is exact.
+ *
+ * A composite multipart ETag (`<hash>-<partCount>`) can't be reproduced from
+ * the whole-file MD5, so we treat it as a non-match and re-upload: correctness
+ * over the marginal bandwidth saving.  A missing object (null/empty ETag — a
+ * 404 on first sync) is likewise a non-match.
+ */
+export const etagMatches = (localMd5: string, remoteEtag: string | null): boolean => {
+  if (!remoteEtag) return false;
+  const normalized = remoteEtag
+    .replace(/^W\//, '') // weak-validator prefix
+    .replace(/^"|"$/g, '') // surrounding double quotes
+    .toLowerCase();
+  if (normalized.includes('-')) return false; // multipart composite — uncomparable
+  return normalized === localMd5.toLowerCase();
+};
 
 /**
  * Extra files outside public/data/ that should also land in R2.
@@ -221,6 +248,54 @@ function uploadFile(localPath: string, key: string): void {
       ` --remote --force`,
     { stdio: 'inherit' },
   );
+}
+
+/** Hex MD5 of a file's bytes — the digest R2 reports as a single-PUT object's ETag. */
+function localMd5(localPath: string): string {
+  return createHash('md5').update(readFileSync(localPath)).digest('hex');
+}
+
+/**
+ * The remote object's ETag, or null if it's absent / unreadable.
+ *
+ * wrangler exposes no metadata-only read (its `r2 object get` downloads the
+ * body), so we HEAD the public URL — the CDN/R2 returns the ETag header
+ * without transferring the object.  A cached edge response is still the ETag
+ * of the stored object, so the only failure mode is an occasional needless
+ * re-upload, never a wrong skip.
+ */
+async function remoteEtag(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, { method: 'HEAD' });
+    return res.ok ? res.headers.get('etag') : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Upload `localPath` to `key` unless R2 already holds byte-identical content.
+ *
+ * Skipping unchanged files keeps a metadata-sized change (a few KB of
+ * famous_meta.json) from dragging the whole ~370 MB artefact set across the
+ * wire each sync — and, because the largest tiers are skipped when unchanged,
+ * stops a flaky multi-hundred-MB upload from aborting the run before the CDN
+ * purge.  A skipped file is left out of `touchedKeys`: its edge cache already
+ * matches the origin, so there's nothing to purge.
+ */
+async function uploadIfChanged(
+  localPath: string,
+  key: string,
+  touchedKeys: string[],
+): Promise<void> {
+  const remote = await remoteEtag(`${R2_PUBLIC_URL}/${key}`);
+  if (remote && etagMatches(localMd5(localPath), remote)) {
+    const sizeMB = (statSync(localPath).size / 1024 / 1024).toFixed(1);
+    console.log(`= ${localPath} (${sizeMB} MB) unchanged — skip`);
+    return;
+  }
+  uploadFile(localPath, key);
+  touchedKeys.push(key);
 }
 
 /**
@@ -315,24 +390,20 @@ async function main(): Promise<void> {
   const touchedKeys: string[] = [];
 
   for (const name of files) {
-    const key = `data/${name}`;
-    uploadFile(join(DATA_DIR, name), key);
-    touchedKeys.push(key);
+    await uploadIfChanged(join(DATA_DIR, name), `data/${name}`, touchedKeys);
   }
 
   if (hiResImages.length > 0) {
     console.log('\n--- Hi-res famous-galaxy images ---\n');
     for (const { localPath, r2Key } of hiResImages) {
-      uploadFile(localPath, r2Key);
-      touchedKeys.push(r2Key);
+      await uploadIfChanged(localPath, r2Key, touchedKeys);
     }
   }
 
   if (presentExtras.length > 0) {
     console.log('\n--- Extra files ---\n');
     for (const { localPath, r2Key } of presentExtras) {
-      uploadFile(localPath, r2Key);
-      touchedKeys.push(r2Key);
+      await uploadIfChanged(localPath, r2Key, touchedKeys);
     }
   }
 
@@ -348,10 +419,20 @@ async function main(): Promise<void> {
   }
 
   const total = files.length + hiResImages.length + presentExtras.length;
-  console.log(`\n✓ Synced ${total} file(s) to r2://${BUCKET}/data/`);
+  const uploaded = touchedKeys.length;
+  console.log(
+    `\n✓ Synced ${total} file(s) to r2://${BUCKET}/data/` +
+      ` (${uploaded} uploaded, ${total - uploaded} unchanged)`,
+  );
 
+  // Only changed files need a CDN purge — skipped objects already match the
+  // edge.  An empty list short-circuits inside purgeCloudflareCache.
   console.log('\n--- Cloudflare CDN cache purge ---\n');
-  await purgeCloudflareCache(touchedKeys);
+  if (touchedKeys.length === 0) {
+    console.log('  nothing changed — edge cache already current.');
+  } else {
+    await purgeCloudflareCache(touchedKeys);
+  }
 }
 
 // Allow the script to be both executed (CLI) and imported (tests for ALLOW).
