@@ -121,7 +121,13 @@ export function GalaxyDetailCard({
       )}
 
       <div className={cx(styles.cardSection, styles.cardTopRow)}>
-        <Thumbnail ra={info.ra} dec={info.dec} url={info.thumbnailUrl} />
+        <Thumbnail
+          key={info.thumbnailUrl}
+          ra={info.ra}
+          dec={info.dec}
+          url={info.thumbnailUrl}
+          fallbackUrl={info.thumbnailFallbackUrl}
+        />
         <div className={styles.cardSummary}>
           <div className={styles.cardLookbackLine}>
             <InfoTip {...TIPS.lookback!}>Light left</InfoTip> {info.lookbackGyr.toFixed(1)} Gyr ago

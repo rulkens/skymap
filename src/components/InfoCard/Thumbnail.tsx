@@ -1,8 +1,12 @@
 /**
- * Thumbnail — 80×80 px SDSS image cutout shown in GalaxyDetailCard.
- * `loading="lazy"` defers fetch until the card is in the viewport.  On any
- * error (404, CORS, network) we swap to a same-size placeholder so the
- * surrounding layout doesn't reflow.
+ * Thumbnail — 80×80 px galaxy image shown in GalaxyDetailCard.
+ * `loading="lazy"` defers fetch until the card is in the viewport.  On a load
+ * error (404, CORS, network) we try `fallbackUrl` once, then swap to a
+ * same-size placeholder so the surrounding layout doesn't reflow.
+ *
+ * The fallback chain serves famous galaxies: `url` is the curated tile and
+ * `fallbackUrl` the survey sky cutout, so a galaxy without a curated tile
+ * still shows an image instead of the placeholder.
  */
 
 import { useState } from 'react';
@@ -13,9 +17,12 @@ export type ThumbnailProps = {
   ra: number;
   dec: number;
   url: string;
+  /** Tried once if `url` fails to load (e.g. a missing curated tile). */
+  fallbackUrl?: string;
 };
 
-export function Thumbnail({ url }: ThumbnailProps): ReactNode {
+export function Thumbnail({ url, fallbackUrl }: ThumbnailProps): ReactNode {
+  const [src, setSrc] = useState(url);
   const [errored, setErrored] = useState(false);
 
   if (errored) {
@@ -29,12 +36,15 @@ export function Thumbnail({ url }: ThumbnailProps): ReactNode {
   return (
     <img
       className={styles.thumbImg}
-      src={url}
-      alt="SDSS cutout"
+      src={src}
+      alt="Galaxy thumbnail"
       width={80}
       height={80}
       loading="lazy"
-      onError={() => setErrored(true)}
+      onError={() => {
+        if (fallbackUrl !== undefined && src !== fallbackUrl) setSrc(fallbackUrl);
+        else setErrored(true);
+      }}
     />
   );
 }
