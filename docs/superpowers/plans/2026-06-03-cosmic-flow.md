@@ -365,7 +365,9 @@ export function structureWorld(raDeg: number, decDeg: number, distMpc: number): 
 
 ---
 
-## Phase 5 — Engine + RenderGraph (build + visual-verify, NOT TDD)
+## Phase 5 — Engine + RenderGraph (build + visual-verify, NOT TDD) ✅ DONE (commits b3108956..fbc8d2e0; registry 3 tests green, typecheck green; visual-verify at Phase 6)
+
+> **Decisions resolved:** §G camera/store bridge — engine owns the OrbitCamera but reads yaw/pitch/distance/autoRotate from the store each frame + writes viewProj back (controls push into the store in Phase 8; no shared mutable camera). §D flow-phase — accumulated inside the FlowField viz from `frame.dt`, not in the store. Draw order fixed (densityVolume behind flowField) via a DRAW_ORDER list, independent of registration order.
 
 ### Task 15: `RenderGraph` — HDR accum target + Reinhard tonemap blit
 
@@ -466,7 +468,9 @@ export function createEngine(canvas: HTMLCanvasElement, store: Store<AppState>):
 
 ---
 
-## Phase 6 — FlowFieldVisualization (build + visual-verify)
+## Phase 6 — FlowFieldVisualization (build + visual-verify) ✅ DONE (commits 1e1bc71d..20406eca; user-confirmed flow renders; 34 tests green)
+
+> **Bug found at the gate:** the ported seed used the shared frame encoder with two `writeBuffer(compPrm)` calls before one submit → both passes read `seedFlag=0` (the CLAUDE.md writeBuffer/submit race) → seeding skipped → all particles at origin → black. Fixed by seeding in its own submit (commit 20406eca). Verified via a headless Playwright+WebGPU probe (`tools/cosmic-flow/data/_probe.mjs`, untracked) that screenshots the canvas — reusable for the remaining visual gates.
 
 > Preserve the spike's compute integrators + ribbon render + defaults EXACTLY. Tunable constants the spike injected into WGSL from JS stay as typed module constants co-located with the viz (spec §8). The two compute modes (advect/streamline) are ONE visualization selected by the `mode` flow param — NOT two visualizations (spec §4).
 
