@@ -10,7 +10,7 @@
  *
  * ── The two tiers, and why they're treated differently ────────────────
  *
- *   master:  public/images/famous-curated/<id>/{atlas.webp, full.webp}
+ *   master:  public/images/famous-curated/<id>/{atlas.webp, full.webp, thumb.webp}
  *            ↑ committed; the curator's self-contained per-galaxy output.
  *
  *   low-res: public/images/famous/<id>.webp           ← from atlas.webp (256²)
@@ -22,9 +22,14 @@
  *              master — that's why the bulk step exists and why this copy is
  *              part of the pipeline rather than something the curator could skip.
  *
- * The runtime read side (`src/utils/network/galaxyImageFetcher.ts`) encodes the
- * matching URLs `/images/famous/<id>.webp` and `images/famous-hires/<id>.webp`;
- * those two templates must stay in agreement with the dirs below.
+ *   thumb:   public/images/famous-thumb/<id>.webp     ← from thumb.webp (256²)
+ *            ↑ COMMITTED, ships with the static shell.  The NON-deprojected
+ *              InfoCard tile (atlas/full are deprojected for the billboard quad).
+ *
+ * The runtime read side encodes the matching URLs: `galaxyImageFetcher.ts` reads
+ * `/images/famous/<id>.webp` + `images/famous-hires/<id>.webp` for the billboard
+ * tiers, and the InfoCard (`galaxyInfoBuilder.ts`) reads
+ * `/images/famous-thumb/<id>.webp`; those templates must agree with the dirs below.
  */
 import { copyFileSync, existsSync, mkdirSync, statSync, utimesSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -33,6 +38,8 @@ import { dirname, resolve } from 'node:path';
 export const LOWRES_RUNTIME_DIR = 'public/images/famous';
 /** Hi-res runtime slot — gitignored build artifact, served from R2. */
 export const HIRES_RUNTIME_DIR = 'public/data/images/famous-hires';
+/** Non-deprojected InfoCard tile — committed, served with the static shell. */
+export const THUMB_RUNTIME_DIR = 'public/images/famous-thumb';
 /** The curator's committed per-galaxy master dir. */
 export const CURATED_DIR = 'public/images/famous-curated';
 
@@ -42,6 +49,7 @@ export type TierResult = 'copied' | 'skipped' | 'missing';
 export type PublishResult = {
   lowRes: TierResult;
   hiRes: TierResult;
+  thumb: TierResult;
 };
 
 /**
@@ -88,6 +96,11 @@ export function hiResRuntimePath(repoRoot: string, id: string): string {
   return resolve(repoRoot, HIRES_RUNTIME_DIR, `${id}.webp`);
 }
 
+/** Absolute path of the committed non-deprojected InfoCard slot. */
+export function thumbRuntimePath(repoRoot: string, id: string): string {
+  return resolve(repoRoot, THUMB_RUNTIME_DIR, `${id}.webp`);
+}
+
 /**
  * Publish both runtime tiers for one curated galaxy.  Called by the curator's
  * Commit so the running app reflects the curation completely — low-res AND
@@ -103,6 +116,10 @@ export function publishFamousRuntimeImages(opts: { repoRoot: string; id: string 
     hiRes: copyIfChanged(
       curatedTierPath(repoRoot, id, 'full.webp'),
       hiResRuntimePath(repoRoot, id),
+    ),
+    thumb: copyIfChanged(
+      curatedTierPath(repoRoot, id, 'thumb.webp'),
+      thumbRuntimePath(repoRoot, id),
     ),
   };
 }

@@ -2,11 +2,12 @@
  * publishFamousRuntimeImages — publish one curated galaxy's two runtime tiers.
  *
  * Single source of truth for where the runtime reads each famous-galaxy image:
- *   atlas.webp -> public/images/famous/<id>.webp           (low-res, committed)
+ *   atlas.webp -> public/images/famous/<id>.webp            (low-res, committed)
  *   full.webp  -> public/data/images/famous-hires/<id>.webp (hi-res, gitignored)
+ *   thumb.webp -> public/images/famous-thumb/<id>.webp      (InfoCard, committed)
  *
- * Verifies both copies land, the idempotent skip fires on an unchanged re-run,
- * and a missing master tier is reported (not thrown).
+ * Verifies all three copies land, the idempotent skip fires on an unchanged
+ * re-run, and a missing master tier is reported (not thrown).
  */
 import { describe, expect, it } from 'vitest';
 import { existsSync, mkdirSync, writeFileSync, utimesSync } from 'node:fs';
@@ -18,6 +19,7 @@ import {
   publishFamousRuntimeImages,
   HIRES_RUNTIME_DIR,
   LOWRES_RUNTIME_DIR,
+  THUMB_RUNTIME_DIR,
   CURATED_DIR,
 } from '../../../tools/famous/publishFamousRuntimeImages';
 
@@ -40,6 +42,7 @@ async function seedRepo(id: string, opts: { full?: boolean } = {}): Promise<stri
   const curated = resolve(repoRoot, CURATED_DIR, id);
   mkdirSync(curated, { recursive: true });
   writeFileSync(join(curated, 'atlas.webp'), await makeWebp(256));
+  writeFileSync(join(curated, 'thumb.webp'), await makeWebp(256));
   if (opts.full !== false) writeFileSync(join(curated, 'full.webp'), await makeWebp(1024));
   return repoRoot;
 }
@@ -49,9 +52,10 @@ describe('publishFamousRuntimeImages', () => {
     const repoRoot = await seedRepo('m101');
     const result = publishFamousRuntimeImages({ repoRoot, id: 'm101' });
 
-    expect(result).toEqual({ lowRes: 'copied', hiRes: 'copied' });
+    expect(result).toEqual({ lowRes: 'copied', hiRes: 'copied', thumb: 'copied' });
     expect(existsSync(resolve(repoRoot, LOWRES_RUNTIME_DIR, 'm101.webp'))).toBe(true);
     expect(existsSync(resolve(repoRoot, HIRES_RUNTIME_DIR, 'm101.webp'))).toBe(true);
+    expect(existsSync(resolve(repoRoot, THUMB_RUNTIME_DIR, 'm101.webp'))).toBe(true);
   });
 
   it('skips an unchanged re-run (idempotent)', async () => {
@@ -59,7 +63,7 @@ describe('publishFamousRuntimeImages', () => {
     publishFamousRuntimeImages({ repoRoot, id: 'm101' });
     // Second run with no source change must skip both tiers.
     const again = publishFamousRuntimeImages({ repoRoot, id: 'm101' });
-    expect(again).toEqual({ lowRes: 'skipped', hiRes: 'skipped' });
+    expect(again).toEqual({ lowRes: 'skipped', hiRes: 'skipped', thumb: 'skipped' });
   });
 
   it('re-copies after the master changes', async () => {
