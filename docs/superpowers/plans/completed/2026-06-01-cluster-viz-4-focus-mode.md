@@ -8,7 +8,7 @@
 
 ## Goal
 
-When a cluster / supercluster / void POI is the current selection, non-member galaxies fade to ~8% alpha over ~400 ms (smoothstep) so the structure's membership pops out of the field. Void POIs invert (galaxies **inside** the void radius fade; surrounding walls stay bright). Other POI ring/halo markers dim to ~25% while a POI is selected. Dismissing focus (selection cleared, or selecting a galaxy / famous-galaxy POI) fades everything back.
+When a cluster / supercluster / void POI is the current selection, non-member galaxies fade to ~8% alpha over ~400 ms (smoothstep) so the structure's membership pops out of the field. Void POIs use the same rule as clusters: galaxies **inside** the void radius stay bright while the rest fade (an early inversion was dropped — isolating the contained galaxies read better). Other POI ring/halo markers dim to ~25% while a POI is selected. Dismissing focus (selection cleared, or selecting a galaxy / famous-galaxy POI) fades everything back.
 
 ## Architecture
 
@@ -55,11 +55,20 @@ TypeScript, WebGPU, WESL (`wesl-plugin` Vite linker), Vitest.
 `npm run typecheck && npm test && npm run build` all green. Manual smoke (Task 14) confirms:
 
 - Single-click a cluster (e.g. Virgo) → non-member galaxies fade to ~8% over ~400 ms; the cluster's members stay bright.
-- Single-click a void → galaxies INSIDE the radius fade; surrounding walls stay bright.
+- Single-click a void → galaxies INSIDE the radius stay bright; everything outside fades (same rule as a cluster — no inversion).
 - Clear selection (Esc / empty space / InfoCard close) → all galaxies fade back to full over ~400 ms.
 - Clicking a **famous-galaxy** POI does NOT engage focus (no radius) — field stays full-bright.
 - Other POI rings/halos dim to ~25% while a POI is selected; the selected ring keeps its 1.5× bump.
 - The picker still works (no WebGPU validation error at `setPipeline`).
+
+## Shipped divergences from this plan
+
+Refinements made after the task list executed. The inline task bodies below predate these — read them for structure/intent, but trust the shipped code (and this note) for the final shape:
+
+- **Void inversion dropped.** Voids now isolate the galaxies *inside* their radius (the same predicate as clusters), not the surrounding walls. The `invert` uniform field and the `isMember = isInside == (invert == 1u)` predicate were removed — showing the contained galaxies read better.
+- **FocusUniforms layout redesigned.** The byte layout below (`center` vec3 + `radiusMpc` + `invert` + pad) was replaced by `centerApparent` vec4 (xyz = center, w = `apparentRadiusMpc`) + `blend` + `physicalRadiusMpc` + 2 pad words, so both the fade edge and the core radius reach the GPU.
+- **Soft membership edge.** The hard `distance < radius` cut became a `smoothstep(inner, apparent, d)` ramp (core→apparent band, capped by `FOCUS_CORE_FRACTION`) to avoid a sharp circular ring.
+- **Member-count InfoCard row.** A "Galaxies" count for the focused structure was added (`structureMemberCount` + `useStructureMemberCount`), beyond the original task scope.
 
 ## WESL conventions reminder (read before any shader task)
 
@@ -336,14 +345,14 @@ Keyed off `selectedPoiId !== null` (already computed at `poiSubsystem.ts:809`), 
 
 Ask the user to verify in the dev server (HMR; do not restart it):
 
-- [ ] Single-click a cluster (Virgo) → non-member galaxies fade to ~8% over ~400 ms; members stay bright. Re-click the same ring → no flicker/re-fade (idempotent `update`).
-- [ ] Single-click a void → galaxies INSIDE the radius stay bright; everything outside fades (same rule as a cluster, no inversion).
-- [ ] Select a different cluster while one is focused → the field re-targets to the new membership without flashing back to full bright (no blend-0 pass-through).
-- [ ] Clear selection (Esc / empty space / InfoCard close) → everything fades back to full over ~400 ms.
-- [ ] Click a famous-galaxy POI → field stays full bright (no focus engaged — it has no radius).
-- [ ] While a POI is selected, other rings/halos visibly dim to ~25%; the selected ring keeps its 1.5× bump.
-- [ ] Galaxies right at the membership boundary that fall under the 0.005 cull may vanish rather than show at 8% — expected (Task 5 nuance).
-- [ ] The picker still resolves galaxies and POI rings — no WebGPU validation error in the console (confirms the pick dummy `@group(3)` matches).
+- [x] Single-click a cluster (Virgo) → non-member galaxies fade to ~8% over ~400 ms; members stay bright. Re-click the same ring → no flicker/re-fade (idempotent `update`).
+- [x] Single-click a void → galaxies INSIDE the radius stay bright; everything outside fades (same rule as a cluster, no inversion).
+- [x] Select a different cluster while one is focused → the field re-targets to the new membership without flashing back to full bright (no blend-0 pass-through).
+- [x] Clear selection (Esc / empty space / InfoCard close) → everything fades back to full over ~400 ms.
+- [x] Click a famous-galaxy POI → field stays full bright (no focus engaged — it has no radius).
+- [x] While a POI is selected, other rings/halos visibly dim to ~25%; the selected ring keeps its 1.5× bump.
+- [x] Galaxies right at the membership boundary that fall under the 0.005 cull may vanish rather than show at 8% — expected (Task 5 nuance).
+- [x] The picker still resolves galaxies and POI rings — no WebGPU validation error in the console (confirms the pick dummy `@group(3)` matches).
 
 ---
 
