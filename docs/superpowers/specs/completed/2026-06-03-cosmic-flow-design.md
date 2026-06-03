@@ -315,3 +315,10 @@ dark glassmorphic blue panels floating over the black field view.
   consumer exists.
 - **Additional field layers** (rhizome density, clusters, filaments) — the
   architecture supports them; none are built in this release.
+- **Reseed on reset / density-bias change** — deferred. `seedPending` is
+  one-way (set once, never re-armed), so streamline anchors are fixed after the
+  initial seed and the density-bias slider is inert in streamline mode until
+  reload. Advect tracks bias live via natural respawn, so the gap is
+  streamline-only. A `flowSlice.reseedToken` the UI bumps (reset button /
+  `setDensityBias`), watched in `FlowFieldVisualization.encodeCompute`, would
+  close it — this is plan decision §C, left unbuilt.

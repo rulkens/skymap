@@ -20,21 +20,27 @@
  * the render pipeline's layout. Sharing one layout across pipelines would throw
  * at draw time.
  *
- * ### Seeding (internal, decision §C)
+ * ### Seeding
  *
  * Spawn positions are chosen on the GPU by density-weighted rejection sampling.
- * A mode is seeded once up front: `seedPending` starts true for both, and on the
- * first `encodeCompute` for the active mode we record a dedicated SEED pass
- * (seedFlag=1, n=MAX_PARTICLES) before the per-frame advance, then clear that
- * mode's flag. The spike seeds via a SEPARATE submit; here we record the seed
- * pass into the same frame encoder (passes in one encoder run in order, so the
- * advance sees the seeded buffers). TODO(Phase 8): a store-driven reseed trigger
- * (reset button / density-bias change) will re-arm seedPending[mode].
+ * Each mode is seeded exactly once: `seedPending` starts true for both, and the
+ * first `encodeCompute` for a mode records a dedicated SEED pass (seedFlag=1,
+ * n=MAX_PARTICLES) in its OWN submit — separate from the frame encoder, because
+ * the seed and the advance both read the same `compPrm` uniform and batching two
+ * writeBuffers before one submit would make both passes see the last value (the
+ * writeBuffer/submit race; see the seed site for the full reasoning).
  *
- * ### Phase (decision §D)
+ * The flag is then cleared and never re-armed — there is no reseed trigger.
+ * Advect still tracks density-bias changes because particles respawn on age-out
+ * / box-exit with the live bias; streamline anchors are fixed at seed time, so
+ * changing density-bias in streamline mode has no effect until reload. A
+ * store-driven reseed (reset button / bias change re-arms `seedPending`) is
+ * deferred — see the cosmic-flow spec's deferred section.
+ *
+ * ### Phase
  *
  * The travelling streamline pulse is driven by `this.phase`, advanced each frame
- * by dt * flowSpeed — an internal accumulator, exactly the spike's `flowPhase`.
+ * by dt * flowSpeed — an internal per-frame accumulator, kept out of the store.
  */
 import type { Visualization } from '../../../@types/visualizations/Visualization';
 import type { SliderSpec } from '../../../@types/visualizations/SliderSpec';
