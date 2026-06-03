@@ -18,7 +18,7 @@
  * The blit uniform write order is `[exposure, contrast]`.
  */
 import type { RenderGraph } from '../../@types/engine/RenderGraph';
-import { blitWgsl } from './blit.wgsl';
+import blitWgsl from './shaders/blit.wesl?static';
 
 const HDR_FORMAT: GPUTextureFormat = 'rgba16float';
 

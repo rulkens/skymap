@@ -1,35 +1,26 @@
-/**
- * volume.wgsl — the density-volume raymarch module (vsFull / fsVolume), ported
- * to behavioural parity with the spike's volumeWGSL.
- *
- * A fullscreen triangle whose fragment shader marches the SAME world cube
- * [-1,1]^3 the flow trails live in, sampling the overdensity field (delta,
- * carried in the field texture's alpha channel) front-to-back. The emitted glow
- * lines up with the flow and labels, so a structure label can be eyeballed
- * against a reconstructed overdensity. It blends additively into the shared HDR
- * target, so the tonemap treats the glow like any other emission.
- *
- * ### One deliberate divergence from the spike: no 'eye' field
- *
- * The spike's Vol struct carried an 'eye' (camera position) field, but the
- * fragment never reads it — the ray origin is reconstructed by unprojecting the
- * near plane through invMvp (ro = near.xyz / near.w), which already yields the
- * eye for that pixel. So we drop 'eye' from the struct and the uniform buffer,
- * shrinking it from 96 to 80 bytes. The ray is reconstructed identically: ro
- * from the near point, rd = normalize(far point minus ro).
- *
- * NOTE: no backtick may appear inside this template literal's comments — it
- * would terminate the JS string.
- *
- * Volume uniform 'Vol' byte layout (buffer is 80 bytes):
- *   invMvp     mat4x4<f32> @ 0   (64 bytes)
- *   gain       f32         @ 64
- *   dMax       f32         @ 68
- *   alphaScale f32         @ 72
- *   (4 bytes tail padding to a 16-byte multiple)
- */
+// volume.wesl — the density-volume raymarch module (vsFull / fsVolume).
+//
+// A fullscreen triangle whose fragment shader marches the SAME world cube
+// [-1,1]^3 the flow trails live in, sampling the overdensity field (delta,
+// carried in the field texture's alpha channel) front-to-back. The emitted glow
+// lines up with the flow and labels, so a structure label can be eyeballed
+// against a reconstructed overdensity. It blends additively into the shared HDR
+// target, so the tonemap treats the glow like any other emission.
+//
+// ### No 'eye' field
+//
+// The ray origin is reconstructed by unprojecting the near plane through invMvp
+// (ro = near.xyz / near.w), which already yields the eye for that pixel, so no
+// separate 'eye' uniform is needed. The ray direction is rd = normalize(far
+// point minus ro).
+//
+// Volume uniform 'Vol' byte layout (buffer is 80 bytes):
+//   invMvp     mat4x4<f32> @ 0   (64 bytes)
+//   gain       f32         @ 64
+//   dMax       f32         @ 68
+//   alphaScale f32         @ 72
+//   (4 bytes tail padding to a 16-byte multiple)
 
-export const volumeWgsl: string = /* wgsl */ `
 const STEPS: i32 = 128;                       // raymarch samples across the cube
 const LOWCOL = vec3<f32>(0.05, 0.18, 0.55);   // colour at faint overdensity
 const HIGHCOL = vec3<f32>(1.0, 0.72, 0.38);   // colour at the densest knots
@@ -87,4 +78,4 @@ fn fsVolume(i: FsOut) -> @location(0) vec4<f32> {
     if (trans < TRANS_CUTOFF) { break; }
   }
   return vec4<f32>(emitted, 1.0 - trans);
-}`;
+}

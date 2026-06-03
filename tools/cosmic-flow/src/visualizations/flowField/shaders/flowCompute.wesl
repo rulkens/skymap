@@ -1,36 +1,33 @@
-/**
- * flow.compute.wgsl — the particle-integration compute module (advect +
- * streamline), ported verbatim from the spike.
- *
- * Two entry points share one module and one buffer layout:
- *   - advect    — particles physically drift through the field; each trail is a
- *                 genuine PATHLINE (the ring of the particle's real recent
- *                 positions). Binds the carried-distance accumulator at @5.
- *   - streamline — the seed is fixed, so the integrated curve is stationary and
- *                 the motion is a render-pass pulse along it. Omits @5.
- *
- * The TRAIL / LIFE / DENS_SCALE constants are injected from ./constants so the
- * TS buffer geometry and the WGSL ring length cannot drift. NOTE: comments
- * inside this template literal must not contain a backtick — it would terminate
- * the JS string. WGSL identifier references in comments use single quotes.
- *
- * Compute uniform 'Prm' byte layout (buffer is 48 bytes):
- *   dt        f32 @ 0
- *   trailStep f32 @ 4
- *   headStep  f32 @ 8
- *   n         u32 @ 12
- *   frame     u32 @ 16
- *   mode      u32 @ 20
- *   seedFlag  u32 @ 24
- *   bias      f32 @ 28
- *   wander    f32 @ 32
- */
-import { TRAIL, LIFE, DENS_SCALE, wgslF } from './constants';
+// flowCompute.wesl — the particle-integration compute module (advect +
+// streamline).
+//
+// Two entry points share one module and one buffer layout:
+//   - advect    — particles physically drift through the field; each trail is a
+//                 genuine PATHLINE (the ring of the particle's real recent
+//                 positions). Binds the carried-distance accumulator at @5.
+//   - streamline — the seed is fixed, so the integrated curve is stationary and
+//                 the motion is a render-pass pulse along it. Omits @5.
+//
+// TRAIL / LIFE / DENS_SCALE are imported from 'flowConstants' (the WESL mirror
+// of constants.ts) so the TS buffer geometry and the WGSL ring length cannot
+// drift. WGSL identifier references in comments use single quotes (a backtick
+// breaks the wesl-plugin parser).
+//
+// Compute uniform 'Prm' byte layout (buffer is 48 bytes):
+//   dt        f32 @ 0
+//   trailStep f32 @ 4
+//   headStep  f32 @ 8
+//   n         u32 @ 12
+//   frame     u32 @ 16
+//   mode      u32 @ 20
+//   seedFlag  u32 @ 24
+//   bias      f32 @ 28
+//   wander    f32 @ 32
 
-export const flowComputeWgsl: string = /* wgsl */ `
-const TRAIL: u32 = ${TRAIL}u;
-const LIFE: f32 = ${wgslF(LIFE)};               // advect particle lifetime (frame-time units)
-const DENS_SCALE: f32 = ${wgslF(DENS_SCALE)};   // overdensity delta -> spawn weight
+import package::visualizations::flowField::shaders::flowConstants::TRAIL;
+import package::visualizations::flowField::shaders::flowConstants::LIFE;
+import package::visualizations::flowField::shaders::flowConstants::DENS_SCALE;
+
 const DIR_EPS = vec3<f32>(1e-6);                // guards normalize() against a zero velocity
 const MIN_TRAVEL: f32 = 1e-9;                   // advect loop stops when the remaining step is below this
 const SEED_TRIES: u32 = 16u;                    // rejection-sampling attempts per spawn
@@ -183,4 +180,4 @@ fn streamline(@builtin(global_invocation_id) gid: vec3<u32>) {
     if (insideBox(next)) { walk = next; }
     trail[base + u32(k)] = vec4<f32>(walk, length(textureSampleLevel(velTex, velSamp, walk, 0.0).xyz));
   }
-}`;
+}

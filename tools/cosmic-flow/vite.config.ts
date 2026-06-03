@@ -15,15 +15,31 @@
  *    serving the runtime atlas), this tool DOES need a public dir: it reads
  *    those two static field assets and nothing else. There is no API plugin —
  *    Cosmic Flow is purely a static-asset reader, with no server-side state.
+ *
+ * The WESL plugin mirrors the main app's setup (`vite.config.ts`): the
+ * `staticBuildExtension` resolves `?static` imports by running the WESL linker
+ * at build time into a flat WGSL string, so there is no runtime linker
+ * dependency. `weslToml` is passed EXPLICITLY because the plugin otherwise reads
+ * `<process.cwd()>/wesl.toml` — and `npm run cosmic-flow` keeps cwd at the repo
+ * root, where the runtime's toml lives. Without the explicit path it would link
+ * against the wrong shader set and never find this tool's `.wesl` files.
  */
 
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'node:path';
+import { staticBuildExtension } from 'wesl-plugin';
+import viteWesl from 'wesl-plugin/vite';
 
 export default defineConfig({
   root: resolve(__dirname),
   publicDir: resolve(__dirname, 'public'),
   server: { port: 5300 },
-  plugins: [react()],
+  plugins: [
+    viteWesl({
+      extensions: [staticBuildExtension],
+      weslToml: resolve(__dirname, 'wesl.toml'),
+    }),
+    react(),
+  ],
 });

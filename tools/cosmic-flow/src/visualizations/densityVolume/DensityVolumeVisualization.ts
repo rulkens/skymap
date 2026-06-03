@@ -35,7 +35,7 @@ import type { Visualization } from '../../../@types/visualizations/Visualization
 import type { SliderSpec } from '../../../@types/visualizations/SliderSpec';
 import type { EngineContext } from '../../../@types/engine/EngineContext';
 import type { FrameContext } from '../../../@types/engine/FrameContext';
-import { volumeWgsl } from './volume.wgsl';
+import volumeWgsl from './shaders/volume.wesl?static';
 import { VOLUME_PARAM_SPECS } from './params';
 
 // Vol uniform: invMvp (16 floats) + gain + dMax + alphaScale = 19 floats, but

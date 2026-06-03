@@ -40,8 +40,8 @@ import type { Visualization } from '../../../@types/visualizations/Visualization
 import type { SliderSpec } from '../../../@types/visualizations/SliderSpec';
 import type { EngineContext } from '../../../@types/engine/EngineContext';
 import type { FrameContext } from '../../../@types/engine/FrameContext';
-import { flowComputeWgsl } from './flow.compute.wgsl';
-import { flowRenderWgsl } from './flow.render.wgsl';
+import flowComputeWgsl from './shaders/flowCompute.wesl?static';
+import flowRenderWgsl from './shaders/flowRender.wesl?static';
 import { FLOW_ADVECT_PARAM_SPECS } from './params';
 import { TRAIL, DT, MAX_PARTICLES, HEAD_STEP_SCALE } from './constants';
 
@@ -202,8 +202,14 @@ export class FlowFieldVisualization implements Visualization {
     // Destructure with `= 0` defaults: params is a Record<string, number> (so
     // each read is `number | undefined`), but selectFrameParams always supplies
     // these keys — the defaults just narrow the type to a plain number.
-    const { count = 0, trail = 0, flowSpeed = 0, densityBias = 0, wander = 0, modeIndex: mi = 0 } =
-      frame.params;
+    const {
+      count = 0,
+      trail = 0,
+      flowSpeed = 0,
+      densityBias = 0,
+      wander = 0,
+      modeIndex: mi = 0,
+    } = frame.params;
     const modeIndex = mi === ADVECT ? ADVECT : STREAMLINE;
 
     // Seed the active mode once, before its first per-frame advance. We record

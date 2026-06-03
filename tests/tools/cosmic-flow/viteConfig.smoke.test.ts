@@ -3,7 +3,8 @@
  * the expected port + plugin list. Mirrors the curator's smoke test — it
  * guards against a typo in the config that would make `npm run cosmic-flow`
  * fail at import time. There is no API plugin here, so (unlike the curator
- * test) we do NOT assert one.
+ * test) we do NOT assert one — but we DO assert the wesl plugin, which is
+ * load-bearing: the `?static` shader imports fail to resolve without it.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -17,12 +18,14 @@ describe('tools/cosmic-flow/vite.config.ts', () => {
     // explicitly through `unknown` first. We then re-cast to the shape we
     // actually assert on (just the two fields the smoke test reads).
     type ResolvedShape = { server?: { port?: number }; plugins?: unknown[] };
-    const resolved = (typeof config === 'function'
-      ? await (config as (env: { command: 'serve'; mode: string }) => unknown)({
-          command: 'serve',
-          mode: 'development',
-        })
-      : config) as ResolvedShape;
+    const resolved = (
+      typeof config === 'function'
+        ? await (config as (env: { command: 'serve'; mode: string }) => unknown)({
+            command: 'serve',
+            mode: 'development',
+          })
+        : config
+    ) as ResolvedShape;
     expect(resolved.server?.port).toBe(5300);
     expect(Array.isArray(resolved.plugins)).toBe(true);
     // `@vitejs/plugin-react()` returns an *array* of sub-plugins, so the
@@ -31,5 +34,6 @@ describe('tools/cosmic-flow/vite.config.ts', () => {
       .flat(Infinity)
       .map((p) => (p as { name?: string } | null)?.name);
     expect(names.some((n) => typeof n === 'string' && n.includes('react'))).toBe(true);
+    expect(names.some((n) => typeof n === 'string' && n.includes('wesl'))).toBe(true);
   });
 });

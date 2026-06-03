@@ -757,7 +757,7 @@ Composes `common/Panel` (reuse — `src/components/common/Panel/Panel.tsx`) wrap
 
 ---
 
-## Phase 10 — WESL shader conversion (post-parity; added 2026-06-03)
+## Phase 10 — WESL shader conversion (post-parity; added 2026-06-03) ✅ DONE (2026-06-04; headless WebGPU probe confirmed identical render for all 4 shaders)
 
 > **Gate:** only after Phase 8 visual parity is confirmed. The working WGSL-string
 > version + the spike are the golden references — convert against them so any
@@ -769,12 +769,12 @@ but AFTER reaching a known-good rendered baseline (debugging a new wesl-plugin
 build + the port + WESL const-injection simultaneously against a blank canvas is
 the failure mode CLAUDE.md warns about).
 
-- [ ] Add `wesl-plugin` to `tools/cosmic-flow/vite.config.ts` (mirror the main app's `vite.config.ts` wesl setup) + the `wesl.toml`/package wiring the runtime uses.
-- [ ] Move each WGSL template module to a `.wesl` file under `src/<viz>/shaders/` (mirroring `src/services/gpu/shaders/`): `blit`, `flow.compute`, `flow.render`, `volume`. NO backticks in WESL comments (wesl-plugin parse error — use single quotes; see memory `feedback_wesl_no_backticks`).
-- [ ] Replace JS template-literal constant injection (`${TRAIL}u`, `wgslF(...)`) with WESL's const/`?static`/`package::` mechanism (memory `project_wesl_conversion`). The typed constants in `flowField/constants.ts` become the single source the `.wesl` reads.
-- [ ] Update `makeShaderFactory`/viz `init` to consume the wesl-plugin module output instead of a raw string.
-- [ ] Visual-verify each shader still renders identically to the WGSL baseline; typecheck + tests green.
-- [ ] Commit per shader converted.
+- [x] Add `wesl-plugin` to `tools/cosmic-flow/vite.config.ts` (`viteWesl({ extensions:[staticBuildExtension], weslToml })`). The plugin reads `wesl.toml` from `process.cwd()` (= repo root, where the RUNTIME toml lives), so the `weslToml` option is passed EXPLICITLY to point at the new `tools/cosmic-flow/wesl.toml` (`root="src"`, `include=["src/**/*.wesl"]`). `wesl-plugin/suffixes` added to `tsconfig.tools.json` types for the `?static` import declaration.
+- [x] Move each WGSL template module to a `.wesl` file under `src/<viz>/shaders/`: `engine/shaders/blit.wesl`, `flowField/shaders/{flowCompute,flowRender}.wesl`, `densityVolume/shaders/volume.wesl` (renamed off the dotted `flow.compute` form — `.` is not a valid WESL module-name char). No backticks in comments.
+- [x] Replace JS template-literal injection with the project-blessed pattern (mirrors runtime `lib/selectionEncoding.wesl`): `flowField/shaders/flowConstants.wesl` holds the shared subset as plain WESL `const`s, imported via `package::visualizations::flowField::shaders::flowConstants::NAME`; `constants.ts` stays the TS source of truth; a parity test (`tests/.../flowConstants.parity.test.ts`) guards drift. Deleted `wgslF` (no injection left). The runtime has NO value-injection for `?static` — duplication-guarded-by-test is the idiom, not `override` constants.
+- [x] Viz `init` / RenderGraph consume the `?static` default-string import instead of the named WGSL-string export. The 4 `.wgsl.ts` modules deleted.
+- [x] Visual-verify each shader renders identically to the WGSL baseline via headless WebGPU probe (flow trails, blit tonemap, isolated volume glow — all render, zero compile errors); typecheck + 2250 tests green.
+- [x] Commit: `refactor(cosmic-flow): convert WGSL string modules to WESL`.
 
 ## Decisions the implementer must resolve (flagged inline above)
 

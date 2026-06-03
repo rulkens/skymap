@@ -1,6 +1,6 @@
 /**
- * Flow-field tunables — the single source of truth for the constants the WGSL
- * modules and the TS visualization share.
+ * Flow-field tunables — the single source of truth for the constants the shaders
+ * and the TS visualization share.
  *
  * These are the look and the buffer geometry, so they are
  * NOT to be "tidied": TRAIL sets the ring length AND the vertex count of every
@@ -8,10 +8,13 @@
  * MAX_PARTICLES sizes the storage buffers, and HEAD_STEP_SCALE / SPEED_COLOR_MAX
  * / DENS_SCALE map slider values into the integrator and the colour ramp.
  *
- * The WGSL modules inject these via `${...}` string interpolation; floats must
- * be emitted as WGSL float literals (e.g. 8 -> '8.0', never bare '8' which WGSL
- * would read as an i32). `wgslF` does exactly that — integers get a '.0'
- * suffix, non-integers print as-is.
+ * The shader-side subset (TRAIL, LIFE, FADE, DENS_SCALE, SPEED_COLOR_MAX) is
+ * mirrored as plain WESL consts in `shaders/flowConstants.wesl`; this module
+ * stays authoritative and a parity test
+ * (`tests/tools/cosmic-flow/visualizations/flowConstants.parity.test.ts`) reads
+ * that `.wesl` file and asserts each value matches the export of the same name,
+ * so the two cannot drift. DT / MAX_PARTICLES / HEAD_STEP_SCALE are TS-only
+ * (buffer sizing + uniform values), so they have no WESL mirror.
  */
 
 export const TRAIL = 32; // ring length per particle — pathline / streamline points
@@ -22,6 +25,3 @@ export const MAX_PARTICLES = 100000; // buffer capacity; the particle slider dra
 export const HEAD_STEP_SCALE = 0.012; // flowSpeed -> advect head distance per frame (motion speed)
 export const SPEED_COLOR_MAX = 1200.0; // km/s mapped to the hot end of the speed colour ramp
 export const DENS_SCALE = 1.0; // overdensity delta -> spawn weight (clamped 0..1); seeding selectivity
-
-/** Emit a WGSL float literal: integers gain a '.0' suffix, others print as-is. */
-export const wgslF = (x: number): string => (Number.isInteger(x) ? x.toFixed(1) : String(x));
