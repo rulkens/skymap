@@ -31,6 +31,12 @@ export function selectEnabledLayers(s: Readonly<AppState>): ReadonlySet<string> 
 export function selectFrameParams(s: Readonly<AppState>): Readonly<Record<string, number>> {
   const flow = selectActiveFlowParams(s);
   return {
+    // The active flow MODE as a number (0 = advect, 1 = streamline). FrameContext.params
+    // is a flat number record (no strings), but a layer still needs to know which mode is
+    // live to pick its per-mode buffer set / pipeline / bind group and to set the WGSL
+    // 'mode' uniform. Flattening the mode here keeps that the engine's single source of
+    // truth, so the flow layer never reaches back into the store.
+    modeIndex: s.flow.mode === 'advect' ? 0 : 1,
     count: flow.count,
     flowSpeed: flow.flowSpeed,
     densityBias: flow.densityBias,

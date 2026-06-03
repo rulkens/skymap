@@ -51,4 +51,13 @@ describe('selectors', () => {
     expect(params.dMax).toBe(defaultVolumeSlice.dMax);
     expect(params.alpha).toBe(defaultVolumeSlice.alpha);
   });
+
+  it('selectFrameParams exposes modeIndex (1 for streamline, 0 for advect)', () => {
+    expect(selectFrameParams(defaultAppState).modeIndex).toBe(1);
+    const advectState: AppState = {
+      ...defaultAppState,
+      flow: { ...defaultAppState.flow, mode: 'advect' },
+    };
+    expect(selectFrameParams(advectState).modeIndex).toBe(0);
+  });
 });
