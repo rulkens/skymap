@@ -2,11 +2,11 @@
   "version": 1,
   "id": "m91",
   "crop": {
-    "x": 441.515625,
-    "y": 394.5,
-    "width": 1181.984375,
-    "height": 1181.984375,
-    "rotationDeg": 0
+    "x": 516.6796430147929,
+    "y": 589.8263753701397,
+    "width": 1047.5469639704143,
+    "height": 853.4409992597206,
+    "rotationDeg": 114.27031673469118
   },
   "starnet": {
     "stride": 256,
@@ -22,5 +22,19 @@
     "license": "Public Domain",
     "author": "NOIRLab/NSF/AURA"
   },
-  "processedAt": "2026-05-28T21:21:57.149Z"
+  "processedAt": "2026-06-03T22:55:19.320Z",
+  "source": {
+    "width": 2048,
+    "height": 2048
+  },
+  "disk": {
+    "centerPx": [
+      1040.453125,
+      1016.546875
+    ],
+    "radiusPx": 419.0187855881657,
+    "paDeg": 114.27031673469118,
+    "axisRatio": 0.8147042840208396,
+    "deproject": true
+  }
 }

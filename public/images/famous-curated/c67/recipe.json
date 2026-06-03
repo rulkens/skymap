@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "c67",
+  "crop": {
+    "x": -399.6983293218259,
+    "y": 749.4387913596156,
+    "width": 4487.786919351347,
+    "height": 2742,
+    "rotationDeg": 122.3984127892686
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_1097#/media/File:NGC1097_-_ESO_-_eso0438d.jpg",
+    "license": "CC BY 4.0",
+    "author": "ESO"
+  },
+  "processedAt": "2026-06-03T23:19:47.955Z",
+  "source": {
+    "width": 3840,
+    "height": 4500
+  },
+  "disk": {
+    "centerPx": [
+      1807.0366132723113,
+      2143.5012817382812
+    ],
+    "radiusPx": 1189.0653493925442,
+    "paDeg": 122.3984127892686,
+    "axisRatio": 0.610942024905572,
+    "deproject": true
+  }
+}
