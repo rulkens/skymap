@@ -2,12 +2,12 @@
  * hiResFamousSubsystem — LOD-3 per-frame planner for Famous-source galaxies.
  *
  * One rung above the textured-disk planner.  When a famous galaxy grows
- * past ~200 px of apparent diameter the curated 128 px atlas tile starts
- * to look soft, so we cut over to a 512²/1024² hi-res WebP held in a
- * small fixed-capacity `texture_2d_array` (see `hiResFamousTexture.ts`).
- * The crossfade is smooth across the 200 → 260 px band so the user
- * doesn't perceive the seam — the fragment shader does the blend; this
- * subsystem only owns the planner state.
+ * past ~120 px of apparent diameter the curated 128 px atlas tile is at
+ * 1:1 and about to pixel-double, so we cut over to a 512²/1024² hi-res
+ * WebP held in a small fixed-capacity `texture_2d_array` (see
+ * `hiResFamousTexture.ts`).  The crossfade is smooth across the
+ * 120 → 160 px band so the user doesn't perceive the seam — the fragment
+ * shader does the blend; this subsystem only owns the planner state.
  *
  * ### Why famous-only + no decimation
  *
@@ -52,15 +52,15 @@ import type {
  * touches the hi-res array.  Re-exported so the texturedDiskSubsystem
  * fragment shader's atlas-tile fade-OUT band can stay in lockstep.
  */
-export const HI_RES_TRIGGER_PX = 200;
+export const HI_RES_TRIGGER_PX = 120;
 /**
  * Crossfade band: above the gate, the alpha ramps from 0 → 1 across
- * `[HI_RES_TRIGGER_PX, HI_RES_TRIGGER_PX + HI_RES_FADE_BAND_PX]`.  60 px
+ * `[HI_RES_TRIGGER_PX, HI_RES_TRIGGER_PX + HI_RES_FADE_BAND_PX]`.  40 px
  * gives the eye time to register the handoff at typical fly-in speeds
  * — narrower bands flash; wider bands let the soft 128 px atlas tile
  * dominate too long after it's started to pixel-double.
  */
-export const HI_RES_FADE_BAND_PX = 60;
+export const HI_RES_FADE_BAND_PX = 40;
 
 /**
  * Upper-bound clamp for the squared-distance early-out, tuned higher

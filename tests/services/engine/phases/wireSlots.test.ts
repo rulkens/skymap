@@ -181,8 +181,8 @@ vi.mock('../../../../src/services/engine/subsystems/hiResFamousSubsystem', () =>
     lastOutput: { byFamousIdx: new Map() },
     destroy: vi.fn(),
   })),
-  HI_RES_TRIGGER_PX: 200,
-  HI_RES_FADE_BAND_PX: 60,
+  HI_RES_TRIGGER_PX: 120,
+  HI_RES_FADE_BAND_PX: 40,
 }));
 
 // Load-progress emitter: keep the real factory (so the slot registry
