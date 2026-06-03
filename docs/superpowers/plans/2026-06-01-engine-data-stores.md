@@ -583,25 +583,31 @@ git commit -m "refactor(engine): structures owned by structureStore, feeding poi
 **Files (contract):** `DemandCtx.d.ts` (+ its builder), `volumeFieldDefaults.ts` (seeding).
 **Files (state):** `EngineSettingsState` (remove `volumes.fields`).
 
-- [ ] **Step 1: Failing test for the demand accessor**
+- [x] **Step 1: Failing test for the demand accessor**
 
 Add a test asserting the `DemandCtx` built from a state whose `volumeStore` has `rhizome` enabled returns `ctx.volumeField('rhizome')?.enabled === true`, and that the MCPM/CF4 wiring `demand` predicate (`assetWiring.ts`) fires off the store, not `ctx.settings`.
 
-- [ ] **Step 2: Run it, expect failure**
+- [x] **Step 2: Run it, expect failure**
 
 Run: `npm run test -- tests/services/engine/wiring/`
 Expected: FAIL.
 
-- [ ] **Step 3: Add the `DemandCtx` surface + migrate writers/readers**
+- [x] **Step 3: Add the `DemandCtx` surface + migrate writers/readers**
 
 Add `volumeField: (id: VolumeFieldId) => VolumeFieldParams | undefined` to `DemandCtx.d.ts` and its builder (sourced from `state.data.volumes`). Repoint the volume slot commits + `engine.ts` setters to `state.data.volumes.setParams(id, …)` / `params(id)`. Repoint each reader (`buildVolumeFieldsSnapshot`, `runFrame`, `encodeHdr*`, `volumeUpsamplePass`, `registerOverlayFades`, `assetWiring` predicates) to the store. Move the construction-time seeding (`volumeFieldDefaults.ts` → today seeds `settings.volumes.fields`) to seed `volumeStore` — preserving the spec-noted invariant that volume fields seed at construction from `SOURCE_REGISTRY` (see memory `project_volume_field_seeding`). Remove `volumes.fields` from `EngineSettingsState`.
 
-- [ ] **Step 4: Run the full suite**
+> **Notes on the as-built result:**
+> - **`VolumeFieldParams` rename not done** (Decision B was already settled to keep the `VolumeFieldSettings` name in Task 4). The accessor returns `VolumeFieldSettings | undefined`.
+> - **Readers were narrower than the plan feared.** `runFrame` / `encodeHdr*` / `volumeUpsamplePass` / `registerOverlayFades` don't read `settings.volumes.fields` directly — they consume the derived `buildVolumeFieldsSnapshot`, so repointing that one helper covered them all. The only direct readers were `assetWiring` predicates + `buildVolumeFieldsSnapshot`.
+> - **Seeding** lives in `engine.ts` construction (right after the state literal) iterating `seedVolumeFields()` into `state.data.volumes.setParams(...)` — keeps `createEngineData`/`createVolumeStore` empty-by-default (their Task 4/6 tests still pass) while satisfying the seed-at-construction invariant.
+> - **`volumeStore` gained a `remove(id)`** method (parity with the old `delete settings.volumes.fields[id]` in `removeVolumeField`); per-knob `engine.ts` setters use copy-on-write (`setParams(id, { ...cur, knob })`) so mutation stays on the store's setter seam.
+
+- [x] **Step 4: Run the full suite**
 
 Run: `npm run test && npm run typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git commit -m "refactor(engine): volume field params owned by volumeStore"

@@ -340,14 +340,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       },
       volumes: {
         masterEnabled: DEFAULT_VOLUMES_ENABLED,
-        // Seeded from the shippable volume registry so each field's on/off
-        // bit + tunables EXIST before any cube loads — the demand predicate
-        // reads `fields[id]?.enabled` as pure state, symmetric with how
-        // `drawMask` seeds survey visibility.  Without it a default-on
-        // volume (MCPM) never triggers its initial load.  DEV-only debug
-        // fixtures are excluded; SettingsPanel rows still come from the GPU
-        // handle list, so seeding adds no premature row.
-        fields: seedVolumeFields(),
       },
       // Per-category POI visibility — two independent axes (label-text vs
       // marker-glyph), both default-all-on.  Each record is the source of
@@ -595,6 +587,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // one `Set.has` per pass per frame, noise next to the GPU dispatch.
     debug: { disabledPasses: new Set<string>() },
   };
+
+  // ── Seed the volume store from the shippable volume registry ──────────
+  //
+  // Every shippable volume's on/off bit + tunables must EXIST before any
+  // cube loads, so the demand predicate reads `volumeField(id)?.enabled` as
+  // pure state — symmetric with how `drawMask` seeds survey visibility.
+  // Without it a default-on volume (MCPM) never triggers its initial load.
+  // DEV-only debug fixtures are excluded by `seedVolumeFields`; SettingsPanel
+  // rows still come from the GPU handle list, so seeding adds no premature row.
+  for (const [id, params] of Object.entries(seedVolumeFields())) {
+    state.data.volumes.setParams(id as VolumeFieldId, params!);
+  }
 
   // ── Register label producers with the director ───────────────────────
   //
@@ -909,12 +913,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // re-registering preserves previously-tuned values.  Shippable volumes
     // already have a construction seed, so the guard only matters for a
     // dynamically-added handle.
-    if (!state.settings.volumes.fields[fieldId]) {
-      state.settings.volumes.fields[fieldId] = buildVolumeFieldSettings(fieldId);
+    if (!state.data.volumes.params(fieldId)) {
+      state.data.volumes.setParams(fieldId, buildVolumeFieldSettings(fieldId));
     }
     // Forward the current per-field tunables into the renderer so the
     // new upload inherits whatever the user set before re-registering.
-    const persisted = state.settings.volumes.fields[fieldId]!;
+    const persisted = state.data.volumes.params(fieldId)!;
     state.gpu.scalarVolumeRenderer?.setIntensity(fieldId, persisted.intensity);
     state.gpu.scalarVolumeRenderer?.setEnabled(fieldId, persisted.enabled);
     state.gpu.scalarVolumeRenderer?.setContrast(fieldId, persisted.contrast);
@@ -939,7 +943,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   function removeVolumeField(fieldId: VolumeFieldId): void {
     state.gpu.scalarVolumeRenderer?.removeField(fieldId);
-    delete state.settings.volumes.fields[fieldId];
+    state.data.volumes.remove(fieldId);
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
@@ -980,9 +984,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // (idle-guarded against re-fetch).  The DEV debug fixtures aren't demand
     // rows, so they keep a direct lazy load here — a no-op for cf4/mcpm ids,
     // so the two paths partition cleanly.
-    if (state.settings.volumes.fields[fieldId]) {
-      state.settings.volumes.fields[fieldId].enabled = enabled;
-    }
+    const curEnabled = state.data.volumes.params(fieldId);
+    if (curEnabled) state.data.volumes.setParams(fieldId, { ...curEnabled, enabled });
     if (enabled) maybeLazyLoadDebugVolume(fieldId);
     state.gpu.scalarVolumeRenderer?.setEnabled(fieldId, enabled);
     // Drive the FadeRegistry alongside the renderer flip; the draw loop's
@@ -997,54 +1000,48 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function setVolumeFieldIntensity(fieldId: VolumeFieldId, intensity: number): void {
-    if (state.settings.volumes.fields[fieldId]) {
-      state.settings.volumes.fields[fieldId].intensity = intensity;
-    }
+    const cur = state.data.volumes.params(fieldId);
+    if (cur) state.data.volumes.setParams(fieldId, { ...cur, intensity });
     state.gpu.scalarVolumeRenderer?.setIntensity(fieldId, intensity);
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldContrast(fieldId: VolumeFieldId, contrast: number): void {
-    if (state.settings.volumes.fields[fieldId]) {
-      state.settings.volumes.fields[fieldId].contrast = contrast;
-    }
+    const cur = state.data.volumes.params(fieldId);
+    if (cur) state.data.volumes.setParams(fieldId, { ...cur, contrast });
     state.gpu.scalarVolumeRenderer?.setContrast(fieldId, contrast);
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldDensityScale(fieldId: VolumeFieldId, value: number): void {
-    if (state.settings.volumes.fields[fieldId]) {
-      state.settings.volumes.fields[fieldId].densityScale = value;
-    }
+    const cur = state.data.volumes.params(fieldId);
+    if (cur) state.data.volumes.setParams(fieldId, { ...cur, densityScale: value });
     state.gpu.scalarVolumeRenderer?.setDensityScale(fieldId, value);
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldTrim(fieldId: VolumeFieldId, trim: number): void {
-    if (state.settings.volumes.fields[fieldId]) {
-      state.settings.volumes.fields[fieldId].trim = trim;
-    }
+    const cur = state.data.volumes.params(fieldId);
+    if (cur) state.data.volumes.setParams(fieldId, { ...cur, trim });
     state.gpu.scalarVolumeRenderer?.setTrim(fieldId, trim);
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldExposure(fieldId: VolumeFieldId, exposure: number): void {
-    if (state.settings.volumes.fields[fieldId]) {
-      state.settings.volumes.fields[fieldId].exposure = exposure;
-    }
+    const cur = state.data.volumes.params(fieldId);
+    if (cur) state.data.volumes.setParams(fieldId, { ...cur, exposure });
     state.gpu.scalarVolumeRenderer?.setExposure(fieldId, exposure);
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldPalette(fieldId: VolumeFieldId, id: ScalarFieldPaletteId): void {
-    if (state.settings.volumes.fields[fieldId]) {
-      state.settings.volumes.fields[fieldId].paletteId = id;
-    }
+    const cur = state.data.volumes.params(fieldId);
+    if (cur) state.data.volumes.setParams(fieldId, { ...cur, paletteId: id });
     state.gpu.scalarVolumeRenderer?.setFieldPalette(fieldId, id);
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();

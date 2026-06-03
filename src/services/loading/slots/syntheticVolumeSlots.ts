@@ -92,10 +92,10 @@ export function createSyntheticVolumeSlots(
         // the registry via the shared builder.  Synthetic fixtures get
         // NO construction seed (DEV-only, `binBaseName: null`), so this
         // commit is their first settings-bag write.
-        if (!state.settings.volumes.fields[handle]) {
-          state.settings.volumes.fields[handle] = buildVolumeFieldSettings(handle);
+        if (!state.data.volumes.params(handle)) {
+          state.data.volumes.setParams(handle, buildVolumeFieldSettings(handle));
         }
-        const persisted = state.settings.volumes.fields[handle]!;
+        const persisted = state.data.volumes.params(handle)!;
         renderer.setIntensity(handle, persisted.intensity);
         renderer.setEnabled(handle, persisted.enabled);
         renderer.setContrast(handle, persisted.contrast);

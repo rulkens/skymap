@@ -26,5 +26,8 @@ export function createVolumeStore(): VolumeStore {
     setParams(id: VolumeFieldId, params: VolumeFieldSettings): void {
       fields.set(id, params);
     },
+    remove(id: VolumeFieldId): void {
+      fields.delete(id);
+    },
   });
 }

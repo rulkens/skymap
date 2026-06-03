@@ -143,12 +143,12 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
 
   // ── MCPM Cosmic Web volume ───────────────────────────────────────
   // Tier-aware. Field id read from the registry; access is optional-chained
-  // because `volumes.fields` is a Partial record (empty until first add).
+  // because the volume store has no entry for a field until it is seeded.
   {
     key: 'mcpm',
     factory: (deps) => createMcpmSlot(deps.state, deps.cb),
     req: (tier) => ({ tier }),
-    demand: (ctx) => ctx.settings.volumes.fields[MCPM_FIELD]?.enabled === true,
+    demand: (ctx) => ctx.volumeField(MCPM_FIELD)?.enabled === true,
   },
 
   // ── CF-4 DM density volume ───────────────────────────────────────
@@ -157,7 +157,7 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     key: 'cf4Density',
     factory: (deps) => createCf4DensitySlot(deps.state, deps.cb),
     req: () => undefined,
-    demand: (ctx) => ctx.settings.volumes.fields[CF4_FIELD]?.enabled === true,
+    demand: (ctx) => ctx.volumeField(CF4_FIELD)?.enabled === true,
   },
 
   // ── Cluster/supercluster bulk coverage ───────────────────────────

@@ -45,10 +45,10 @@ export const createCf4DensitySlot: SlotFactory<ScalarCube, void> = (state, cb) =
       // registry.  CF-4 is a shippable volume, so the engine's
       // construction seed already created this entry — the guard
       // normally takes the preserve branch.
-      if (!state.settings.volumes.fields[handle]) {
-        state.settings.volumes.fields[handle] = buildVolumeFieldSettings(handle);
+      if (!state.data.volumes.params(handle)) {
+        state.data.volumes.setParams(handle, buildVolumeFieldSettings(handle));
       }
-      const persisted = state.settings.volumes.fields[handle]!;
+      const persisted = state.data.volumes.params(handle)!;
       renderer.setIntensity(handle, persisted.intensity);
       renderer.setEnabled(handle, persisted.enabled);
       renderer.setContrast(handle, persisted.contrast);

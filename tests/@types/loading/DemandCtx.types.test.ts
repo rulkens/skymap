@@ -2,11 +2,12 @@
  * DemandCtx — compile-time assignability checks.
  *
  * Confirms that:
- *   - A literal object with all four fields satisfies `DemandCtx`.
+ *   - A literal object with all fields satisfies `DemandCtx`.
  *   - `request('paletteOpened')` typechecks (i.e. `'paletteOpened'` is a
  *     valid `RequestKey` and the return type is `boolean`).
  *   - `slotState('clusterCatalog')` typechecks with the `LoadState['kind']`
  *     return type.
+ *   - `volumeField('mcpm')` typechecks (returns the params or undefined).
  *
  * These are purely compile-time assertions: the `it` bodies just prove
  * that TypeScript accepted the expression — the runtime `expect` calls are
@@ -29,14 +30,20 @@ const fakeSettings = {} as unknown as EngineSettingsState;
 
 const ctx: DemandCtx = {
   settings: fakeSettings,
+  volumeField: (_id) => undefined,
   isVisible: (_s) => true,
   request: (_k) => false,
   slotState: (_k) => 'idle',
 };
 
 describe('DemandCtx assignability', () => {
-  it('accepts a literal object with all four fields', () => {
+  it('accepts a literal object with all fields', () => {
     expect(ctx).toBeDefined();
+  });
+
+  it("volumeField('mcpm') returns the params or undefined", () => {
+    const result = ctx.volumeField('mcpm');
+    expect(result).toBeUndefined();
   });
 
   it("request('paletteOpened') returns boolean", () => {

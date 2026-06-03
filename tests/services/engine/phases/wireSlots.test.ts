@@ -48,6 +48,7 @@ import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps'
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { VolumeFieldId } from '../../../../src/@types/data/VolumeFieldId';
 
 // ── Module mocks ──────────────────────────────────────────────────────
 //
@@ -290,8 +291,8 @@ const errorValue = (msg: string): LoadState<unknown> => ({
  * Minimal `EngineState` shaped for wireSlots's body.  Mirrors the
  * post-`initGpu` shape: the GPU renderers are present (so commit
  * subscribers don't NPE), the per-source slot map is empty (the test
- * populates it per-case), and the settings bag has the slots wireSlots
- * inspects (`volumes.fields`).
+ * populates it per-case), and the volume store is seeded (so the MCPM
+ * demand predicate reads true at boot, as wireSlots expects).
  */
 function makeState(
   overrides: Partial<{
@@ -302,6 +303,13 @@ function makeState(
 ): EngineState {
   const points = overrides.points ?? new Map();
   const allVisible = { cluster: true, supercluster: true, void: true, famousGalaxy: true };
+  // Seed the volume store the same way the engine does at construction, so the
+  // demand predicate for MCPM (default-on) reads true at boot — parity with the
+  // old imperative boot loop that loaded MCPM unconditionally.
+  const data = createEngineData();
+  for (const [id, params] of Object.entries(seedVolumeFields())) {
+    data.volumes.setParams(id as VolumeFieldId, params!);
+  }
   return {
     settings: {
       points: {
@@ -317,10 +325,7 @@ function makeState(
       thumbnails: { enabled: true },
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 1.0 },
-      // Seed volume fields the same way the engine does at construction, so the
-      // demand predicate for MCPM (default-on) reads true at boot — parity with
-      // the old imperative boot loop that loaded MCPM unconditionally.
-      volumes: { masterEnabled: true, fields: seedVolumeFields() },
+      volumes: { masterEnabled: true },
       // Structure categories all visible by default ⇒ clusterCatalog demanded.
       // Overridable so a test can hide every category and pin the bug-fix
       // (clusterCatalog must NOT load when nothing structural is visible).
@@ -337,7 +342,7 @@ function makeState(
       famousMeta: [],
       tier: 'medium',
     },
-    data: createEngineData(),
+    data,
     picking: {} as never,
     gpu: {
       // Renderers are stubs — the slot commits we mint inside wireSlots

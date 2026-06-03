@@ -89,7 +89,7 @@ describe('EngineState type', () => {
       thumbnails: { enabled: true },
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 1 },
-      volumes: { masterEnabled: false, fields: {} },
+      volumes: { masterEnabled: false },
       debug: { showPickBuffer: false, showDiskRadiusRing: false },
       labelCategoryVisibility: {
         cluster: true,
@@ -236,7 +236,7 @@ describe('EngineState type', () => {
         enabled: SOURCE_REGISTRY[Source.Filaments].visible,
         intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
       },
-      volumes: { masterEnabled: DEFAULT_VOLUMES_ENABLED, fields: {} },
+      volumes: { masterEnabled: DEFAULT_VOLUMES_ENABLED },
       debug: { showPickBuffer: false, showDiskRadiusRing: false },
       labelCategoryVisibility: {
         cluster: true,
@@ -288,7 +288,7 @@ describe('EngineState type', () => {
         thumbnails: { enabled: true },
         milkyWay: { enabled: true },
         filaments: { enabled: false, intensity: 1 },
-        volumes: { masterEnabled: false, fields: {} },
+        volumes: { masterEnabled: false },
         debug: { showPickBuffer: false, showDiskRadiusRing: false },
         labelCategoryVisibility: {
           cluster: true,

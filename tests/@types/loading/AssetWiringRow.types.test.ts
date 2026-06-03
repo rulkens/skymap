@@ -51,6 +51,7 @@ describe('AssetWiringRow assignability', () => {
   it('demand returns a boolean from ctx.isVisible', () => {
     const fakeCtx = {
       settings: {} as never,
+      volumeField: (_id: string) => undefined,
       isVisible: (_s: number) => true,
       request: (_k: string) => false,
       slotState: (_k: unknown) => 'idle' as const,

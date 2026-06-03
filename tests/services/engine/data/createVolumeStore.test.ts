@@ -27,4 +27,16 @@ describe('createVolumeStore', () => {
     expect(s.params('mcpm')?.enabled).toBe(true);
     expect(s.fields.get('mcpm')?.enabled).toBe(true);
   });
+
+  it('remove drops only its field and is idempotent', () => {
+    const s = createVolumeStore();
+    s.setParams('mcpm', params());
+    s.setParams('cf4-density', params());
+    s.remove('mcpm');
+    expect(s.registered()).toEqual(['cf4-density']);
+    expect(s.params('mcpm')).toBeUndefined();
+    // Idempotent — removing an absent field is a no-op.
+    s.remove('mcpm');
+    expect(s.registered()).toEqual(['cf4-density']);
+  });
 });

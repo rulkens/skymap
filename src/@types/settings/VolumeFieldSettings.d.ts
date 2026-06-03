@@ -2,11 +2,10 @@
  * VolumeFieldSettings — per-field runtime controls for one registered
  * scalar-volume field.
  *
- * Stored in `EngineSettingsState.volumes.fields` keyed by `VolumeFieldId`.
- * The engine seeds these at registration time from the field's
- * SOURCE_REGISTRY entry and keeps them in sync with every per-field
- * setter, so the SettingsPanel can read authoritative state without
- * polling the GPU handle.
+ * Held by the volume store (`state.data.volumes`) keyed by `VolumeFieldId`.
+ * The engine seeds these at construction from the field's SOURCE_REGISTRY
+ * entry and keeps them in sync with every per-field setter, so the
+ * SettingsPanel can read authoritative state without polling the GPU handle.
  */
 
 import type { ScalarFieldPaletteId } from '../data/ScalarFieldPaletteId';

@@ -25,4 +25,6 @@ export type VolumeStore = {
   params(id: VolumeFieldId): VolumeFieldSettings | undefined;
   /** Register (or update) a field's params. */
   setParams(id: VolumeFieldId, params: VolumeFieldSettings): void;
+  /** Drop a field's params; other fields are unaffected. Idempotent. */
+  remove(id: VolumeFieldId): void;
 };
