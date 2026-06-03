@@ -76,7 +76,7 @@ Assert `resolved.server?.port === 5300`; `Array.isArray(resolved.plugins)`; flat
 
 ---
 
-## Phase 2 — Contracts / types (lock interfaces before consumers)
+## Phase 2 — Contracts / types (lock interfaces before consumers) ✅ DONE (commits 70886c10..fdf614b6; restructured into @types/; typecheck + disposable tests green)
 
 ### Task 5: `SliderSpec` and `Visualization` interface
 
@@ -181,7 +181,7 @@ export function createDisposableTracker(): {
 
 ---
 
-## Phase 3 — State store (Observer · TDD)
+## Phase 3 — State store (Observer · TDD) ✅ DONE (commits 1a1638cd..9ae9617d; 14 tests green, typecheck green)
 
 ### Task 9: `createStore` + `useStore`
 
@@ -316,7 +316,9 @@ export function selectFrameParams(s: Readonly<AppState>): Readonly<Record<string
 
 ---
 
-## Phase 4 — Domain (structures TDD; field is GPU)
+## Phase 4 — Domain (structures TDD; field is GPU) ✅ DONE (commits f985e6d7..cabc6874; 7 tests green)
+
+> **Decisions resolved:** §B — `eqToSg` produces SG vectors IDENTICAL to the spike's `R_SG·R_G` (verified by direct comparison), so it's reused with NO axis permutation. §A — the spike's verified box mapping (`×h=0.77`, centre 63.5, `/127`) is reproduced in `structureWorld.ts`; `sgToVoxelIndex` is intentionally NOT used (no-h / centre-64 convention). **Plan correction:** the Task-14 guess "Shapley radius > 0.5" was WRONG — actual is ~0.31 (200 Mpc × h / 500-Mpc half-box); the anchor test pins the real value.
 
 ### Task 13: Structure catalog data
 
