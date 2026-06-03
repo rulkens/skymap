@@ -643,7 +643,11 @@ Implements `Visualization`. `id='densityVolume'`, `label='Density'`. `init(ctx)`
 
 ---
 
-## Phase 8 — UI components (component skill; CSS modules; tokens)
+## Phase 8 — UI components (component skill; CSS modules; tokens) ✅ DONE (commits 3a8dce23..c55c8098; user-confirmed full parity; 39 tests green)
+
+> Built in two parts: 8a primitives (Slider/Toggle/ModeTabs/LayerToggles) + camera-control slice setters (TDD); 8b shell (storeContext, Viewport with store-bridged orbit input, ControlsPanel on common/Panel, LabelsOverlay, Hud, App) replacing the temp bootstrap. Panel width left to common/Panel's `--panel-width` (a narrower wrapper clipped the slider readouts). Reset = restore default camera pose.
+>
+> **Phases 9 (delete tools/spike/) and 10 (WESL conversion) are deferred to follow-up PRs** — the implementation PR for Phases 1–8 ships first (user request 2026-06-04). The spike stays as reference until a later cleanup.
 
 > All components: one folder per component under `tools/cosmic-flow/src/ui/<Name>/` with co-located `<Name>.module.css`, `function Name()` + `export default Name` (or named export per the curator's ui convention — match whichever the curator uses; the repo component skill prefers `export default`). `type` aliases never `interface`. `Vec2`/`Vec3` over tuples. Consume `var(--token)` from `global.css` (imported once in `main.tsx`). Reuse `common/Panel`, `common/Button`, `common/PillButton` (imported deep from `../../../../src/components/common/...`). These are presentational — they read from / write to the store via `useStore` + slice actions, no GPU coupling.
 
