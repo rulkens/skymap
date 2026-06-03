@@ -4,5 +4,5 @@
     "types": ["node", "@webgpu/types", "vite/client"],
     "lib": ["ES2022", "DOM", "DOM.Iterable"]
   },
-  "include": ["src", "../../src", "../../tools/utils"]
+  "include": ["@types", "src", "../../src", "../../tools/utils"]
 }
