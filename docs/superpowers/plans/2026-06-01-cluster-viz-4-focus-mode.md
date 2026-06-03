@@ -337,7 +337,7 @@ Keyed off `selectedPoiId !== null` (already computed at `poiSubsystem.ts:809`), 
 Ask the user to verify in the dev server (HMR; do not restart it):
 
 - [ ] Single-click a cluster (Virgo) → non-member galaxies fade to ~8% over ~400 ms; members stay bright. Re-click the same ring → no flicker/re-fade (idempotent `update`).
-- [ ] Single-click a void → galaxies INSIDE the radius fade; outside walls stay bright (invert).
+- [ ] Single-click a void → galaxies INSIDE the radius stay bright; everything outside fades (same rule as a cluster, no inversion).
 - [ ] Select a different cluster while one is focused → the field re-targets to the new membership without flashing back to full bright (no blend-0 pass-through).
 - [ ] Clear selection (Esc / empty space / InfoCard close) → everything fades back to full over ~400 ms.
 - [ ] Click a famous-galaxy POI → field stays full bright (no focus engaged — it has no radius).
@@ -350,7 +350,7 @@ Ask the user to verify in the dev server (HMR; do not restart it):
 ## Self-review checklist (tasks → spec)
 
 - [x] Member isolation @ 8%, 400 ms smoothstep — spec §3.2, §3.4 → Tasks 1, 4, 5, 10.
-- [x] Void inversion — spec §3.3 → Tasks 1 (`invert`), 4 (`category==='void'?1:0`), 5 (predicate).
+- [x] Voids isolate interior galaxies like clusters (no inversion) — spec §3.3 → Tasks 1, 4, 5 (shared predicate).
 - [x] Other markers dim to ~25%, selected ring 1.5× — spec §3.2 → Task 11 (+ existing `:939-941`).
 - [x] GPU re-derivation (option b), no CPU member list, no `dataRev` cache — spec §4.4 → Architecture + Task 4.
 - [x] Render-on-demand keeps the loop alive through the fade — spec §3.4, §8.3 → Task 10 (`isAwake`).
