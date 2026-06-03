@@ -2,10 +2,11 @@
   "version": 1,
   "id": "m82",
   "crop": {
-    "x": 424,
-    "y": 0,
-    "width": 2991,
-    "height": 2991
+    "x": -169.9951119359248,
+    "y": 382.94297549534235,
+    "width": 4322.78319262185,
+    "height": 2007.9988244490137,
+    "rotationDeg": 154.71746597027877
   },
   "starnet": {
     "stride": 256,
@@ -21,5 +22,19 @@
     "license": "Public domain",
     "author": "NASA, ESA, and The Hubble Heritage Team (STScI/AURA)"
   },
-  "processedAt": "2026-05-18T11:46:20.016Z"
+  "processedAt": "2026-06-03T08:29:17.079Z",
+  "source": {
+    "width": 3840,
+    "height": 2991
+  },
+  "disk": {
+    "centerPx": [
+      1991.396484375,
+      1386.9423877198492
+    ],
+    "radiusPx": 1729.1132770487397,
+    "paDeg": 154.71746597027877,
+    "axisRatio": 0.4645152752227494,
+    "deproject": true
+  }
 }

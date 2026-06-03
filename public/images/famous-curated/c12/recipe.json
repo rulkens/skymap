@@ -2,10 +2,11 @@
   "version": 1,
   "id": "c12",
   "crop": {
-    "x": 0,
-    "y": 0,
-    "width": 1080,
-    "height": 1080
+    "x": 30.632726569833608,
+    "y": 64.06334048110142,
+    "width": 993.9493906103328,
+    "height": 944.8530553659222,
+    "rotationDeg": 90.44529502008515
   },
   "starnet": {
     "stride": 256,
@@ -21,5 +22,19 @@
     "license": "CC0",
     "author": "Andreigusan"
   },
-  "processedAt": "2026-05-18T10:51:57.784Z"
+  "processedAt": "2026-06-03T08:30:05.289Z",
+  "source": {
+    "width": 1080,
+    "height": 1080
+  },
+  "disk": {
+    "centerPx": [
+      527.607421875,
+      536.4898681640625
+    ],
+    "radiusPx": 397.57975624413314,
+    "paDeg": 90.44529502008515,
+    "axisRatio": 0.9506047936562815,
+    "deproject": true
+  }
 }

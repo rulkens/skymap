@@ -2,10 +2,11 @@
   "version": 1,
   "id": "c43",
   "crop": {
-    "x": 65,
-    "y": 0,
-    "width": 1069,
-    "height": 1069
+    "x": 177.98170266830903,
+    "y": 372.2479343176775,
+    "width": 824.865452085257,
+    "height": 355.12652719797825,
+    "rotationDeg": 12.401595996043397
   },
   "starnet": {
     "stride": 256,
@@ -21,5 +22,19 @@
     "license": "CC BY-SA 3.0 us",
     "author": "Credit Line and Copyright Adam Block/Mount Lemmon SkyCenter/University of Arizona"
   },
-  "processedAt": "2026-05-18T10:12:57.248Z"
+  "processedAt": "2026-06-03T16:34:55.432Z",
+  "source": {
+    "width": 1200,
+    "height": 1069
+  },
+  "disk": {
+    "centerPx": [
+      590.4144287109375,
+      549.8111979166666
+    ],
+    "radiusPx": 329.9461808341028,
+    "paDeg": 12.401595996043397,
+    "axisRatio": 0.43052661049171065,
+    "deproject": true
+  }
 }

@@ -2,10 +2,11 @@
   "version": 1,
   "id": "m87",
   "crop": {
-    "x": 0,
-    "y": 0,
-    "width": 2160,
-    "height": 2160
+    "x": 47.87250196803575,
+    "y": -69.81445638280707,
+    "width": 2216.8221347358035,
+    "height": 2078.408209640614,
+    "rotationDeg": 179.94995352081
   },
   "starnet": {
     "stride": 256,
@@ -21,5 +22,19 @@
     "license": "Public domain",
     "author": "en:NASA, en:STScI, en:WikiSky"
   },
-  "processedAt": "2026-05-18T10:24:44.702Z"
+  "processedAt": "2026-06-03T16:59:13.165Z",
+  "source": {
+    "width": 2160,
+    "height": 2160
+  },
+  "disk": {
+    "centerPx": [
+      1156.2835693359375,
+      969.3896484375
+    ],
+    "radiusPx": 886.7288538943213,
+    "paDeg": 179.94995352081,
+    "axisRatio": 0.9375620069258802,
+    "deproject": true
+  }
 }

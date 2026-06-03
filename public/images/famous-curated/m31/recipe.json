@@ -2,15 +2,15 @@
   "version": 1,
   "id": "m31",
   "crop": {
-    "x": 146.978515625,
-    "y": -190.63748899157645,
-    "width": 1636.4714733665764,
-    "height": 1636.4714733665764,
-    "rotationDeg": 36.230436499834354
+    "x": 152.39643945246826,
+    "y": 577.6510899867593,
+    "width": 3474.5625898450635,
+    "height": 1361.1316710743856,
+    "rotationDeg": 174.48791839717484
   },
   "starnet": {
     "stride": 256,
-    "upsample": false
+    "upsample": true
   },
   "alpha": {
     "blackPoint": 8,
@@ -22,5 +22,19 @@
     "license": "CC0",
     "author": "Brody Wesner"
   },
-  "processedAt": "2026-05-18T23:13:00.005Z"
+  "processedAt": "2026-06-03T16:50:06.173Z",
+  "source": {
+    "width": 3840,
+    "height": 2506
+  },
+  "disk": {
+    "centerPx": [
+      1889.677734375,
+      1258.216925523952
+    ],
+    "radiusPx": 1389.8250359380254,
+    "paDeg": 174.48791839717484,
+    "axisRatio": 0.39174187710778313,
+    "deproject": true
+  }
 }

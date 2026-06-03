@@ -2,10 +2,11 @@
   "version": 1,
   "id": "m110",
   "crop": {
-    "x": 2647.2421875,
-    "y": 1879.2421875,
-    "width": 534.7734375,
-    "height": 534.7734375
+    "x": 150.28001723400848,
+    "y": 590.4732652358496,
+    "width": 1400.9665459917533,
+    "height": 828.7580593720508,
+    "rotationDeg": 95.71428848347553
   },
   "starnet": {
     "stride": 256,
@@ -17,9 +18,23 @@
     "gamma": 0.7
   },
   "metadata": {
-    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_205#/media/File:M31_09-01-2011.jpg",
-    "license": "CC BY 2.0",
-    "author": "Torben Hansen"
+    "sourceUrl": "https://noirlab.edu/public/images/noao-m110/",
+    "license": "CC BY 4.0",
+    "author": "NOIRLab/NSF/AURA"
   },
-  "processedAt": "2026-05-18T11:16:59.407Z"
+  "processedAt": "2026-06-03T16:51:15.091Z",
+  "source": {
+    "width": 1700,
+    "height": 2000
+  },
+  "disk": {
+    "centerPx": [
+      850.7632902298851,
+      1004.852294921875
+    ],
+    "radiusPx": 560.3866183967014,
+    "paDeg": 95.71428848347553,
+    "axisRatio": 0.5915616341754739,
+    "deproject": true
+  }
 }
