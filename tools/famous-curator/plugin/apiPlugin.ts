@@ -47,6 +47,8 @@ import { parseNoirLabPage } from './noirlabResolver';
 import { sessionPath, createSession } from './tmpSession';
 import { curatedGalaxyDir } from './paths';
 import { resolveStarnetConfig, type StarnetConfig } from './starnet';
+import { fetchWithCache } from '../../famous/sourceImageCache';
+import { rawDataPath } from '../../utils/io/rawDataRegistry';
 
 // Resolve the repo root relative to this file's location.
 // `tools/famous-curator/plugin/apiPlugin.ts` → 3 levels up → repo root.
@@ -238,23 +240,32 @@ export function apiPlugin(): Plugin {
             const out = await handleFetch({
               body,
               imageFetcher: async (u) => {
-                // Wikimedia's CDN returns 429 to requests with Node's
-                // default User-Agent (which looks like a bot to them).
-                // Their User-Agent policy requires a descriptive UA with
-                // contact info — see https://meta.wikimedia.org/wiki/User-Agent_policy.
-                // Sending a meaningful UA fixes 429s on upload.wikimedia.org
-                // and is good citizenship for any other origin we hit.
-                const r = await fetch(u, {
-                  headers: {
-                    'User-Agent':
-                      'skymap-curator/0.3 (https://github.com/rulkens/skymap; rulkens@gmail.com)',
+                // Persist downloads under data/raw/famous/source-cache/ so a
+                // resume / re-curation reuses the original instead of re-hitting
+                // the origin (a rotted upstream URL would otherwise break resume).
+                const { bytes, mediaType } = await fetchWithCache(u, {
+                  cacheDir: rawDataPath('famous.source-cache-dir'),
+                  download: async (url) => {
+                    // Wikimedia's CDN returns 429 to requests with Node's
+                    // default User-Agent (which looks like a bot to them).
+                    // Their User-Agent policy requires a descriptive UA with
+                    // contact info — see https://meta.wikimedia.org/wiki/User-Agent_policy.
+                    // Sending a meaningful UA fixes 429s on upload.wikimedia.org
+                    // and is good citizenship for any other origin we hit.
+                    const r = await fetch(url, {
+                      headers: {
+                        'User-Agent':
+                          'skymap-curator/0.3 (https://github.com/rulkens/skymap; rulkens@gmail.com)',
+                      },
+                    });
+                    if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
+                    return {
+                      bytes: Buffer.from(await r.arrayBuffer()),
+                      mediaType: r.headers.get('content-type') ?? 'application/octet-stream',
+                    };
                   },
                 });
-                if (!r.ok) throw new Error(`HTTP ${r.status} for ${u}`);
-                return {
-                  bytes: Buffer.from(await r.arrayBuffer()),
-                  mediaType: r.headers.get('content-type') ?? 'application/octet-stream',
-                };
+                return { bytes, mediaType };
               },
               // sessionFactory is injected so the handler doesn't call
               // createSession() directly — keeps the handler testable
