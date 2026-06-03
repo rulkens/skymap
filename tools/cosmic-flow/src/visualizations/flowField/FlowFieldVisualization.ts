@@ -210,6 +210,13 @@ export class FlowFieldVisualization implements Visualization {
     // the seed pass into THIS encoder (ordered before the advance pass below),
     // rather than the spike's separate submit — same effect, one fewer submit.
     if (this.seedPending[modeIndex]) {
+      // Seed in its OWN submit, NOT the shared frame encoder. compPrm is a
+      // uniform both the seed and advance passes read; queuing two writeBuffers
+      // to it before a single submit would make BOTH passes see the LAST value
+      // (seedFlag=0) — the writeBuffer/submit race CLAUDE.md warns about, which
+      // silently skips seeding and leaves every particle at the origin. A
+      // dedicated submit forces queue order: writeBuffer(seed) → seed runs →
+      // (later) writeBuffer(advance) → advance runs. Matches the spike's seedMode.
       this.writeCompPrm({
         trailStep: trail,
         headStep: 0,
@@ -220,11 +227,13 @@ export class FlowFieldVisualization implements Visualization {
         bias: densityBias,
         wander: 0,
       });
-      const seedPass = encoder.beginComputePass();
+      const seedEncoder = this.device.createCommandEncoder();
+      const seedPass = seedEncoder.beginComputePass();
       seedPass.setPipeline(this.computePipelines[modeIndex]);
       seedPass.setBindGroup(0, this.computeBindGroups[modeIndex]);
       seedPass.dispatchWorkgroups(Math.ceil(MAX_PARTICLES / WORKGROUP_SIZE));
       seedPass.end();
+      this.device.queue.submit([seedEncoder.finish()]);
       this.seedPending[modeIndex] = false;
     }
 
