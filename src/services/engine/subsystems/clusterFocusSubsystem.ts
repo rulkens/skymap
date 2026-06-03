@@ -32,10 +32,16 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 /** Focus fade duration in ms. */
 export const FOCUS_FADE_DURATION_MS = 400;
 
-/** At-rest sentinel: blend=0 makes the shader multiplier collapse to 1.0. */
+/**
+ * At-rest sentinel: blend=0 makes the shader multiplier collapse to 1.0.
+ * `apparentRadiusMpc` is 1 (not 0) so the shader's smoothstep edges are
+ * never equal — a degenerate edge0 == edge1 would risk a NaN that mix()
+ * propagates even at blend 0. The values are otherwise don't-cares here.
+ */
 const ZERO_FOCUS: FocusUniformsValue = {
   center: [0, 0, 0],
-  radiusMpc: 0,
+  apparentRadiusMpc: 1,
+  physicalRadiusMpc: 0,
   blend: 0,
 };
 
@@ -43,7 +49,8 @@ const ZERO_FOCUS: FocusUniformsValue = {
 type ActiveFocus = {
   readonly id: string;
   readonly center: Vec3;
-  readonly radiusMpc: number;
+  readonly apparentRadiusMpc: number;
+  readonly physicalRadiusMpc: number;
 };
 
 export function createClusterFocusSubsystem(
@@ -63,10 +70,14 @@ export function createClusterFocusSubsystem(
       poi !== null &&
       (poi.category === 'cluster' || poi.category === 'supercluster' || poi.category === 'void')
     ) {
+      // Pass the structure's two real radii; the shader ramps the fade
+      // across the [physical, apparent] band (and supplies a soft band of
+      // its own when the two are equal — SC/void have no wider extent).
       next = {
         id: poi.id,
         center: [poi.worldPos[0], poi.worldPos[1], poi.worldPos[2]],
-        radiusMpc: poi.apparentRadiusMpc ?? poi.physicalRadiusMpc,
+        apparentRadiusMpc: poi.apparentRadiusMpc ?? poi.physicalRadiusMpc,
+        physicalRadiusMpc: poi.physicalRadiusMpc,
       };
     }
 
@@ -95,7 +106,8 @@ export function createClusterFocusSubsystem(
     if (active === null) return ZERO_FOCUS;
     return {
       center: active.center,
-      radiusMpc: active.radiusMpc,
+      apparentRadiusMpc: active.apparentRadiusMpc,
+      physicalRadiusMpc: active.physicalRadiusMpc,
       blend,
     };
   }

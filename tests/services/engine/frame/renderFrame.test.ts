@@ -264,7 +264,7 @@ function makeInput(
     // production.
     pxFadeStartPoints: 8,
     pxFadeEndPoints: 14,
-    focus: { center: [0, 0, 0], radiusMpc: 0, blend: 0 } as const,
+    focus: { center: [0, 0, 0], apparentRadiusMpc: 0, physicalRadiusMpc: 0, blend: 0 } as const,
     exposure: 1.0,
     toneMapCurve: ToneMapCurve.Reinhard,
     galaxyTexturesEnabled: true,

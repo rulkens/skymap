@@ -13,8 +13,18 @@ import type { Vec3 } from '../math/Vec3';
 export type FocusUniformsValue = {
   /** POI world-space centre in Mpc. `Readonly` because Vec3 is mutable. */
   readonly center: Readonly<Vec3>;
-  /** Membership radius in Mpc = `apparentRadiusMpc ?? physicalRadiusMpc`. */
-  readonly radiusMpc: number;
+  /**
+   * Apparent (outer) radius in Mpc = `apparentRadiusMpc ?? physicalRadiusMpc`
+   * on the POI. The smoothstep edge where the fade reaches full recede (0.08).
+   */
+  readonly apparentRadiusMpc: number;
+  /**
+   * Physical (core) radius in Mpc — the structure's `physicalRadiusMpc`. The
+   * smoothstep edge inside which galaxies stay fully bright. The shader caps
+   * the effective inner edge below the apparent radius, so the band is never
+   * degenerate even when the two radii are equal (superclusters / voids).
+   */
+  readonly physicalRadiusMpc: number;
   /** 0..1 smoothstep amount. 0 = no focus active. */
   readonly blend: number;
 };

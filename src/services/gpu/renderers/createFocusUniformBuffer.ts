@@ -7,8 +7,9 @@
  *
  * ## Why this is the only place that packs FocusUniforms
  *
- * The 32-byte block is laid out as a `vec4 centerRadius` (xyz = centre Mpc,
- * w = radiusMpc) followed by `blend` and three pad words. The vec4 (rather
+ * The 32-byte block is laid out as a `vec4 centerApparent` (xyz = centre Mpc,
+ * w = apparentRadiusMpc) followed by `blend`, `physicalRadiusMpc`, and two
+ * pad words. The vec4 (rather
  * than a `vec3` + separate `f32`) is deliberate: WGSL packs a scalar that
  * follows a `vec3<f32>` into the vec3's empty 4th lane at byte 12, but a
  * naive std140-style CPU packer pads the vec3 to 16 bytes — a one-slot skew
@@ -40,7 +41,7 @@ export function createFocusUniformBuffer(
     entries: [{ binding: 0, resource: { buffer } }],
   });
 
-  // Reusable scratch: f32 for centre/radius/blend. Pad words [5..7] stay zero.
+  // Reusable scratch: f32 for centre/radius/blend/inner. Pad words [6..7] stay zero.
   const scratch = new ArrayBuffer(FOCUS_UNIFORM_BYTES);
   const f32 = new Float32Array(scratch);
 
@@ -48,8 +49,9 @@ export function createFocusUniformBuffer(
     f32[0] = focus.center[0];
     f32[1] = focus.center[1];
     f32[2] = focus.center[2];
-    f32[3] = focus.radiusMpc; // vec4 .w
+    f32[3] = focus.apparentRadiusMpc; // vec4 .w (apparent/outer radius)
     f32[4] = focus.blend;
+    f32[5] = focus.physicalRadiusMpc; // smoothstep inner edge (core radius)
     device.queue.writeBuffer(buffer, 0, scratch);
   }
 

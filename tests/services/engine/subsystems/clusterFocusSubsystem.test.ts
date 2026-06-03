@@ -36,7 +36,7 @@ describe('clusterFocusSubsystem', () => {
     expect(sub.isAwake(0)).toBe(false);
   });
 
-  it('update with a cluster POI fades blend 0→1 with correct center/radius', () => {
+  it('update with a cluster POI fades blend 0→1 with correct center/radii', () => {
     const sub = createClusterFocusSubsystem(0);
     sub.update(makeCluster({ worldPos: [3, 4, 5], physicalRadiusMpc: 7 }), 0);
     const mid = sub.produceFocusUniforms(200);
@@ -45,25 +45,30 @@ describe('clusterFocusSubsystem', () => {
     const settled = sub.produceFocusUniforms(500);
     expect(settled.blend).toBe(1);
     expect(settled.center).toEqual([3, 4, 5]);
-    expect(settled.radiusMpc).toBe(7);
+    // No apparent extent → apparent falls back to physical; both radii equal.
+    expect(settled.apparentRadiusMpc).toBe(7);
+    expect(settled.physicalRadiusMpc).toBe(7);
   });
 
-  it('apparentRadiusMpc takes precedence over physicalRadiusMpc for the membership radius', () => {
+  it('emits apparent (fade outer edge) and physical (core) radii independently', () => {
     const sub = createClusterFocusSubsystem(0);
     sub.update(makeCluster({ physicalRadiusMpc: 2, apparentRadiusMpc: 5 }), 0);
-    expect(sub.produceFocusUniforms(500).radiusMpc).toBe(5);
+    const settled = sub.produceFocusUniforms(500);
+    expect(settled.apparentRadiusMpc).toBe(5);
+    expect(settled.physicalRadiusMpc).toBe(2);
   });
 
   it('update with a void POI focuses it exactly like a cluster (no inversion)', () => {
     // Voids share the cluster rule: galaxies inside the void's radius are
     // members (stay bright), everything else fades.  The uniform carries
-    // no per-category bit — just center/radius/blend, same as a cluster.
+    // no per-category bit — just center + the two radii + blend.
     const sub = createClusterFocusSubsystem(0);
     sub.update(makeVoid({ worldPos: [1, 2, 3], physicalRadiusMpc: 9 }), 0);
     const settled = sub.produceFocusUniforms(500);
     expect(settled.blend).toBe(1);
     expect(settled.center).toEqual([1, 2, 3]);
-    expect(settled.radiusMpc).toBe(9);
+    expect(settled.apparentRadiusMpc).toBe(9);
+    expect(settled.physicalRadiusMpc).toBe(9);
   });
 
   it('update with a famousGalaxy POI stays inactive (no radius → no focus)', () => {
