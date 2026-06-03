@@ -67,13 +67,15 @@ export const diskRadiusRingPass: Pass = {
     const catalogAxisRatio = catalog.axisRatio[i]!;
 
     // Tilt the ring into the SAME plane the textured disk renders in: the
-    // calibration's effective tilt when present (deprojected → re-applied
-    // PA + axisRatio; as-shot → flat), else the catalog orientation.
-    const cal =
-      sel.source === Source.Famous ? state.sources.famousMeta[i]?.calibration : undefined;
+    // calibration's effective tilt when present (deprojected → catalog PA +
+    // axisRatio; as-shot → flat), else the catalog orientation. The
+    // deprojected and uncalibrated branches both resolve to the catalog
+    // plane, so the ring matches the disk for every famous galaxy.
+    const cal = sel.source === Source.Famous ? state.sources.famousMeta[i]?.calibration : undefined;
+    const catalogPaDeg = catalog.positionAngleDeg[i]!;
     const tilt = cal
-      ? effectiveTilt(cal, catalogAxisRatio)
-      : { axisRatio: catalogAxisRatio, positionAngleDeg: catalog.positionAngleDeg[i]! };
+      ? effectiveTilt(cal, catalogAxisRatio, catalogPaDeg)
+      : { axisRatio: catalogAxisRatio, positionAngleDeg: catalogPaDeg };
 
     state.gpu.diskRadiusRing!.draw(pass, ctx.vp as Float32Array, {
       center,

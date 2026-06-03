@@ -94,10 +94,8 @@ describe('assembleFamousMeta', () => {
 
     const result = assembleFamousMeta([entry], axisRatios, () => recipe);
 
-    // disk.axisRatio (0.5) gates willDeproject → deprojected = true; the
-    // deprojected texture is face-on, so the emitted axisRatio is 1.
+    // disk.axisRatio (0.5) gates willDeproject → deprojected = true.
     expect(result[0]!.calibration!.deprojected).toBe(true);
-    expect(result[0]!.calibration!.axisRatio).toBe(1);
   });
 
   it('falls back to catalog axisRatio for willDeproject when disk.axisRatio absent', () => {
@@ -110,9 +108,8 @@ describe('assembleFamousMeta', () => {
     const result = assembleFamousMeta([entry], axisRatios, () => recipe);
 
     // disk.axisRatio absent → effectiveAxisRatio = catalog 0.6; willDeproject(0.6)
-    // = true → deprojected, so the emitted face-on axisRatio is 1.
+    // = true → deprojected.
     expect(result[0]!.calibration!.deprojected).toBe(true);
-    expect(result[0]!.calibration!.axisRatio).toBe(1);
   });
 
   it('omits calibration when the recipe has no disk', () => {

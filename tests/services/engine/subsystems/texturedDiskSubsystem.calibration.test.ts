@@ -5,8 +5,8 @@
  * `FamousCalibration` for the EMITTED DiskInstance only:
  *   - size scales by `1 / diskRadiusFrac` (a half-frame disk renders a
  *     double-size quad so the disk inside spans the catalog size),
- *   - tilt follows `effectiveTilt` (deprojected → PA + axisRatio re-applied;
- *     as-shot → flat),
+ *   - tilt follows `effectiveTilt` (deprojected → catalog PA + axisRatio,
+ *     i.e. the real 3D plane; as-shot → flat),
  *   - the nucleus offset (`nucleusCorner`) slides the quad so the curated
  *     nucleus lands on the catalog point.
  *
@@ -19,6 +19,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/sources';
 import { createGalaxyAtlasSubsystem } from '../../../../src/services/engine/subsystems/galaxyAtlasSubsystem';
 import { createTexturedDiskSubsystem } from '../../../../src/services/engine/subsystems/texturedDiskSubsystem';
+import { createProceduralDiskSubsystem } from '../../../../src/services/engine/subsystems/proceduralDiskSubsystem';
 import { paddedRadiusMpc } from '../../../../src/utils/galaxySize';
 import { fallbackOrientation } from '../../../../src/utils/random/fallbackOrientation';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
@@ -104,10 +105,7 @@ function makeInput(
 }
 
 /** One famousMeta record carrying a calibration at local index `idx`. */
-function metaWithCalibration(
-  idx: number,
-  calibration: FamousCalibration,
-): FamousMetaEntry[] {
+function metaWithCalibration(idx: number, calibration: FamousCalibration): FamousMetaEntry[] {
   const out: FamousMetaEntry[] = [];
   for (let i = 0; i <= idx; i++) {
     out[i] = {
@@ -126,11 +124,7 @@ function metaWithCalibration(
  * single emitted DiskInstance.  The harness builds one calibrated row at
  * index 0 of a 1-row cloud so the sort order is unambiguous.
  */
-async function emitOne(
-  source: SourceType,
-  cloud: GalaxyCatalog,
-  famousMeta: FamousMetaEntry[],
-) {
+async function emitOne(source: SourceType, cloud: GalaxyCatalog, famousMeta: FamousMetaEntry[]) {
   const device = makeFakeDevice();
   const fetcher = vi.fn(async () => makeFakeBitmap());
   const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
@@ -163,14 +157,9 @@ describe('texturedDiskSubsystem famous calibration', () => {
     const cal: FamousCalibration = {
       center: [0.5, 0.5],
       diskRadiusFrac: 0.5,
-      paDeg: 0,
       deprojected: false,
     };
-    const disks = await emitOne(
-      Source.Famous,
-      makeDenseCloud(1),
-      metaWithCalibration(0, cal),
-    );
+    const disks = await emitOne(Source.Famous, makeDenseCloud(1), metaWithCalibration(0, cal));
     expect(disks.length).toBe(1);
     expect(disks[0]!.sizeWorld).toBeCloseTo(uncalibratedSize * 2, 10);
   });
@@ -186,14 +175,14 @@ describe('texturedDiskSubsystem famous calibration', () => {
     expect(disks[0]!.nucleusOffset).toEqual([0, 0]);
   });
 
-  it('a deprojected entry keeps PA + axisRatio tilt', async () => {
-    // deprojected → effectiveTilt re-applies the calibration's PA and its
-    // axisRatio override (here 0.6, distinct from the catalog 0.7).
+  it('a deprojected entry renders in the catalog 3D plane', async () => {
+    // deprojected → the face-on texture re-projects on the galaxy's real
+    // plane, so the emitted disk carries the CATALOG ar/pa (here 0.7 / 45),
+    // identical to the procedural and uncalibrated paths.  The calibration
+    // no longer contributes any orientation.
     const cal: FamousCalibration = {
       center: [0.5, 0.5],
       diskRadiusFrac: 1,
-      paDeg: 37,
-      axisRatio: 0.6,
       deprojected: true,
     };
     const disks = await emitOne(
@@ -201,8 +190,9 @@ describe('texturedDiskSubsystem famous calibration', () => {
       makeDenseCloud(1, 0.7, 45),
       metaWithCalibration(0, cal),
     );
-    expect(disks[0]!.axisRatio).toBe(0.6);
-    expect(disks[0]!.positionAngleDeg).toBe(37);
+    // Catalog 0.7 round-trips through the Float32Array store.
+    expect(disks[0]!.axisRatio).toBe(Math.fround(0.7));
+    expect(disks[0]!.positionAngleDeg).toBe(45);
   });
 
   it('an as-shot entry renders flat', async () => {
@@ -211,8 +201,6 @@ describe('texturedDiskSubsystem famous calibration', () => {
     const cal: FamousCalibration = {
       center: [0.5, 0.5],
       diskRadiusFrac: 1,
-      paDeg: 37,
-      axisRatio: 0.6,
       deprojected: false,
     };
     const disks = await emitOne(
@@ -229,14 +217,9 @@ describe('texturedDiskSubsystem famous calibration', () => {
     const cal: FamousCalibration = {
       center: [0.25, 0.5],
       diskRadiusFrac: 1,
-      paDeg: 0,
       deprojected: false,
     };
-    const disks = await emitOne(
-      Source.Famous,
-      makeDenseCloud(1),
-      metaWithCalibration(0, cal),
-    );
+    const disks = await emitOne(Source.Famous, makeDenseCloud(1), metaWithCalibration(0, cal));
     expect(disks[0]!.nucleusOffset).toEqual([-0.5, 0]);
   });
 
@@ -247,8 +230,6 @@ describe('texturedDiskSubsystem famous calibration', () => {
     const cal: FamousCalibration = {
       center: [0.25, 0.5],
       diskRadiusFrac: 0.5,
-      paDeg: 37,
-      axisRatio: 0.6,
       deprojected: true,
     };
     const disks = await emitOne(
@@ -284,5 +265,36 @@ describe('texturedDiskSubsystem famous calibration', () => {
     expect(d.axisRatio).toBe(cloud.axisRatio[0]);
     expect(d.positionAngleDeg).toBe(cloud.positionAngleDeg[0]);
     expect(d.nucleusOffset).toEqual([0, 0]);
+  });
+});
+
+describe('procedural ↔ textured orientation convergence', () => {
+  it('a deprojected textured disk renders in the procedural disk plane', async () => {
+    // The headline invariant of the disk-plane unification: a deprojected
+    // calibrated row resolves to the SAME (axisRatio, positionAngleDeg) in the
+    // textured LOD-2 planner as the procedural LOD-1 impostor uses — both the
+    // catalog values — so the crossfade between them shows no orientation pop.
+    const cloud = makeDenseCloud(1, 0.7, 45);
+    const cal: FamousCalibration = {
+      center: [0.5, 0.5],
+      diskRadiusFrac: 1,
+      deprojected: true,
+    };
+
+    const texturedDisks = await emitOne(Source.Famous, cloud, metaWithCalibration(0, cal));
+    expect(texturedDisks.length).toBe(1);
+
+    const proc = createProceduralDiskSubsystem({ decimationFactor: 1 });
+    const procOut = proc.runFrame(makeInput(new Map([[Source.Famous, cloud]])));
+    expect(procOut.instances.length).toBe(1);
+
+    const t = texturedDisks[0]!;
+    const p = procOut.instances[0]!;
+    // Catalog 0.7 round-trips through the Float32Array store.
+    expect(t.axisRatio).toBe(Math.fround(0.7));
+    expect(t.positionAngleDeg).toBe(45);
+    // Textured deprojected tilt === procedural tilt === catalog tilt.
+    expect(p.axisRatio).toBe(t.axisRatio);
+    expect(p.positionAngleDeg).toBe(t.positionAngleDeg);
   });
 });

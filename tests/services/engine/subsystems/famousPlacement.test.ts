@@ -68,46 +68,34 @@ describe('nucleusCorner', () => {
 });
 
 describe('effectiveTilt', () => {
-  it('applies PA + axisRatio for a deprojected texture', () => {
+  it('places a deprojected texture in the catalog 3D plane', () => {
+    // A deprojected (face-on) texture re-projects correctly when mapped onto
+    // the galaxy's real world-fixed plane, so the disk must render with the
+    // catalog's on-sky PA + inclination — identical to the procedural and
+    // uncalibrated paths. The calibration contributes no orientation.
     const calibration: FamousCalibration = {
       center: [0.5, 0.5],
       diskRadiusFrac: 1,
-      paDeg: 37,
-      axisRatio: 0.6,
       deprojected: true,
     };
-    expect(effectiveTilt(calibration, 0.9)).toEqual({
-      positionAngleDeg: 37,
-      axisRatio: 0.6,
+    expect(effectiveTilt(calibration, 0.72, 137)).toEqual({
+      positionAngleDeg: 137,
+      axisRatio: 0.72,
     });
   });
 
-  it('renders an as-shot texture flat', () => {
+  it('renders an as-shot texture flat regardless of catalog tilt', () => {
+    // As-shot images already carry Earth's projection — re-tilting would
+    // double the foreshortening, so the disk faces the sky plane (PA 0,
+    // axisRatio 1) and ignores the catalog tilt.
     const calibration: FamousCalibration = {
       center: [0.5, 0.5],
       diskRadiusFrac: 1,
-      paDeg: 37,
-      axisRatio: 0.6,
       deprojected: false,
     };
-    // As-shot images already carry the real inclination — re-squashing
-    // would double the projection, so the disk renders flat.
-    expect(effectiveTilt(calibration, 0.9)).toEqual({
+    expect(effectiveTilt(calibration, 0.72, 137)).toEqual({
       positionAngleDeg: 0,
       axisRatio: 1,
-    });
-  });
-
-  it('falls back to the catalog axisRatio when calibration.axisRatio is absent', () => {
-    const calibration: FamousCalibration = {
-      center: [0.5, 0.5],
-      diskRadiusFrac: 1,
-      paDeg: 12,
-      deprojected: true,
-    };
-    expect(effectiveTilt(calibration, 0.72)).toEqual({
-      positionAngleDeg: 12,
-      axisRatio: 0.72,
     });
   });
 });

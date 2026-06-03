@@ -2,8 +2,8 @@
  * hiResFamousSubsystem — unit tests for the LOD-3 per-frame planner.
  *
  * Coverage focus:
- *   - apparent-size gate (no entry under 200 px; smoothstep across the
- *     200 → 260 px crossfade band; full alpha above)
+ *   - apparent-size gate (no entry under 120 px; smoothstep across the
+ *     120 → 160 px crossfade band; full alpha above)
  *   - texture LRU allocation + LRU eviction by recent diameter (9 distinct
  *     famous galaxies push the smallest out)
  *   - fetch enqueue: idempotent, null → markFailed + no retry
@@ -16,7 +16,7 @@
  * sits at `[10 - camDist, 0, 0]`, so the squared-distance test reduces
  * to `camDist²` and the apparent-size formula collapses to
  * `px = (dMpcRow / camDist) * pxPerRad`.  We pre-compute `camDistFor(px)`
- * to pin tests at exact band boundaries (200 / 230 / 260 px) instead of
+ * to pin tests at exact band boundaries (120 / 140 / 160 px) instead of
  * eyeballing camera positions.
  */
 
@@ -142,7 +142,7 @@ describe('createHiResFamousSubsystem', () => {
     const fetcher = vi.fn(async () => makeFakeBitmap());
     const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
     const clouds = new Map([[Source.Famous, makeFamousCloud(1)]]);
-    // Camera far enough to put apparent size well below 200 px.
+    // Camera far enough to put apparent size well below 120 px.
     const out = sys.runFrame(makeInput(clouds, camDistFor(50), makeFamousMeta(1)));
     expect(out.byFamousIdx.get(0)?.hiResLayerIdx ?? -1).toBe(-1);
     // Below-the-gate galaxies should never have triggered a fetch.
@@ -159,7 +159,7 @@ describe('createHiResFamousSubsystem', () => {
     const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
     const clouds = new Map([[Source.Famous, makeFamousCloud(1)]]);
     const meta = makeFamousMeta(1);
-    const input = makeInput(clouds, camDistFor(230), meta);
+    const input = makeInput(clouds, camDistFor(140), meta);
 
     // Frame 1 → enters the gate, allocates layer 0, enqueues a fetch.
     // Bitmap is not loaded yet so the planner emits hiResLayerIdx: -1.
@@ -203,7 +203,7 @@ describe('createHiResFamousSubsystem', () => {
       // smoothstep is steep enough at the boundaries that 0.01 px of
       // slop is invisible to the assertions (alpha diff ≤ 3e-4) and
       // crucially avoids the gate's strict `<` check rejecting the
-      // 200 px lower-edge case.
+      // 120 px lower-edge case.
       const camDist = camDistFor(targetPx + 0.01);
       const out = sys.runFrame(makeInput(clouds, camDist, makeFamousMeta(1)));
       const alpha = out.byFamousIdx.get(0)?.hiResCrossfadeAlpha ?? -1;
@@ -215,14 +215,14 @@ describe('createHiResFamousSubsystem', () => {
     // upstream `px = (dMpc / camDist) * pxPerRad` roundtrip leaks ~1e-5
     // of float error that compounds through `t` and `t² (3 - 2t)`.
     // 3 decimals is plenty to pin the three band positions.
-    it('alpha ≈ 0 at px = 200 (lower band edge)', async () => {
-      expect(await alphaAtPx(200)).toBeCloseTo(0, 3);
+    it('alpha ≈ 0 at px = 120 (lower band edge)', async () => {
+      expect(await alphaAtPx(120)).toBeCloseTo(0, 3);
     });
-    it('alpha ≈ 0.5 at px = 230 (band midpoint)', async () => {
-      expect(await alphaAtPx(230)).toBeCloseTo(0.5, 3);
+    it('alpha ≈ 0.5 at px = 140 (band midpoint)', async () => {
+      expect(await alphaAtPx(140)).toBeCloseTo(0.5, 3);
     });
-    it('alpha ≈ 1 at px = 260 (upper band edge)', async () => {
-      expect(await alphaAtPx(260)).toBeCloseTo(1, 3);
+    it('alpha ≈ 1 at px = 160 (upper band edge)', async () => {
+      expect(await alphaAtPx(160)).toBeCloseTo(1, 3);
     });
   });
 
@@ -286,9 +286,9 @@ describe('createHiResFamousSubsystem', () => {
     };
     const clouds = new Map([[Source.Famous, cloud]]);
     const meta = makeFamousMeta(count);
-    // Camera close enough that every galaxy clears the 200 px gate —
+    // Camera close enough that every galaxy clears the 120 px gate —
     // pin to the smallest galaxy (i=0, diameter 220 kpc): cam distance
-    // such that diameter 220 gives ~210 px (above the gate but in the
+    // such that diameter 220 gives ~210 px (well above the gate and the
     // crossfade band).  Larger diameters give even larger apparent sizes.
     const camDist = camDistFor(210, 220);
     sys.runFrame(makeInput(clouds, camDist, meta));
@@ -378,7 +378,7 @@ describe('createHiResFamousSubsystem', () => {
     );
     const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
 
-    // 3 distinct famous galaxies, each gated above 200 px.
+    // 3 distinct famous galaxies, each gated above 120 px.
     const cloud = makeFamousCloud(3, 50);
     // Spread them so each picks up a unique row index.
     cloud.positions[1 * 3 + 1] = 0.001;

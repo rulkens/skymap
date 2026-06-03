@@ -8,6 +8,11 @@
  * disk geometry into the coordinate frame of the final WebP so the renderer
  * can overlay the disk overlay without knowing anything about the crop.
  *
+ * The calibration describes only the disk's FRAMING within the WebP —
+ * nucleus `center` and `diskRadiusFrac` — plus the `deprojected` flag.  The
+ * disk's 3D orientation is owned by the catalog (on-sky PA + inclination) and
+ * is not derived here.
+ *
  * Geometry summary (all in y-down screen coordinates):
  *
  *   1. Translate disk.centerPx relative to the crop centre.
@@ -15,8 +20,6 @@
  *      uses (see cropExtract.ts lines 77-84) — to get local crop-frame coords.
  *   3. Normalise to [0,1]^2 within the square crop rect.
  *   4. Map radiusPx to a fraction of the final image half-width.
- *   5. Subtract rotationDeg from disk.paDeg (both in the same y-down frame)
- *      and wrap into [0,180).
  *
  * The rotation matrix R(-θ) for angle θ = rotationDeg (y-down, clockwise):
  *   x' =  dx·cos θ + dy·sin θ
@@ -32,11 +35,6 @@
  * width·(b/a)) that gets stretched along image-Y by 1/(b/a) into a square,
  * tilting the disk face-on.  In that frame:
  *
- *   - PA collapses to 0.  The normalised crop has rotationDeg === disk.paDeg,
- *     so the same normalizePa(disk.paDeg - crop.rotationDeg) used by the
- *     non-deprojected branch already yields 0 — no separate PA code path.
- *   - axisRatio is emitted as 1: the texture is already face-on, so the
- *     runtime must NOT re-tilt it.
  *   - The disk is round with radius disk.radiusPx (the major-axis extent,
  *     measured in unstretched image-X).  The square side is crop.width, so
  *     diskRadiusFrac = radiusPx / (crop.width / 2).
@@ -59,17 +57,6 @@ export type DeriveCalibrationInput = {
   /** True when the shipped webp was deprojected (texture is face-on). */
   deprojected: boolean;
 };
-
-/**
- * Wraps any real-valued angle (degrees) into [0, 180).
- *
- * Position angles are axially symmetric — 0° and 180° describe the same
- * orientation — so we collapse the full circle onto the half-circle [0,180).
- * Negative inputs (e.g. -20°) map to their positive equivalent (160°).
- */
-function normalizePa(deg: number): number {
-  return ((deg % 180) + 180) % 180;
-}
 
 /** Pure. Source-px disk + final crop → normalized final-webp calibration. */
 export function deriveFamousCalibration(input: DeriveCalibrationInput): FamousCalibration {
@@ -111,17 +98,10 @@ export function deriveFamousCalibration(input: DeriveCalibrationInput): FamousCa
   // both branches; for the deprojected crop the square side is crop.width.
   const diskRadiusFrac = disk.radiusPx / halfWidth;
 
-  // ── Position angle ────────────────────────────────────────────────────────
-  // The crop rotation shifts the image axes by rotationDeg clockwise.  A PA
-  // measured in the source frame decreases by the same amount in the final
-  // image frame.  Wrap into [0,180) because PA is axially symmetric.  For the
-  // deprojected crop rotationDeg === disk.paDeg, so this already yields 0.
-  const paDeg = normalizePa(disk.paDeg - crop.rotationDeg);
-
-  // ── Axis ratio ────────────────────────────────────────────────────────────
-  // A deprojected texture is already face-on; emit 1 so the runtime does not
-  // re-tilt it.  Otherwise carry the disk/catalog b/a through.
-  const axisRatio = deprojected ? 1 : effectiveAxisRatio;
-
-  return { center, diskRadiusFrac, paDeg, axisRatio, deprojected };
+  // Orientation is NOT part of the calibration: the disk's 3D plane comes
+  // from the catalog's on-sky PA + inclination at runtime.  The image-frame
+  // major-axis angle (≡ 0 for a deprojected crop) and the b/a are curation
+  // intermediates only — `effectiveAxisRatio` above already served its single
+  // runtime purpose (the deprojected centre's minor-axis stretch).
+  return { center, diskRadiusFrac, deprojected };
 }

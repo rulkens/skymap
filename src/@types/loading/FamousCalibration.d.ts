@@ -13,10 +13,13 @@ export type FamousCalibration = {
   center: Vec2;
   /** Disk radius as a fraction of the image half-width. */
   diskRadiusFrac: number;
-  /** Major-axis PA in the final image frame, degrees [0, 180). */
-  paDeg: number;
-  /** b/a override; absent → catalog axisRatio is used instead. */
-  axisRatio?: number;
-  /** True when the shipped WebP was deprojected to face-on. */
+  /**
+   * True when the shipped WebP was deprojected to face-on.  This is the
+   * calibration's ONLY orientation input: a deprojected texture re-projects
+   * correctly on the galaxy's real catalog plane (on-sky PA + inclination),
+   * while an as-shot texture already carries Earth's projection and renders
+   * face-on to the sky.  The disk's 3D orientation itself always comes from
+   * the catalog — the calibration never carries an angle or an axis ratio.
+   */
   deprojected: boolean;
 };

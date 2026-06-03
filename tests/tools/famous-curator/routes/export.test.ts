@@ -210,10 +210,10 @@ describe('deproject square output', () => {
     expect(src.width).toBe(src.height);
     expect(full.width).toBe(full.height);
     expect(atlas.width).toBe(atlas.height);
-    // ...and the baked calibration describes a face-on texture: PA collapsed to
-    // 0 and axisRatio 1, so the runtime neither rotates nor re-tilts the quad.
-    expect(res.calibration?.paDeg).toBe(0);
-    expect(res.calibration?.axisRatio).toBe(1);
+    // ...and the baked calibration is flagged deprojected, so the runtime
+    // places the face-on texture on the catalog's real 3D plane.  Orientation
+    // is no longer carried on the calibration (no PA / axisRatio fields).
+    expect(res.calibration?.deprojected).toBe(true);
   });
 
   it('leaves as-shot (deproject off) output unchanged — square crop ⇒ square out', async () => {

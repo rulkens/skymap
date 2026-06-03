@@ -41,11 +41,7 @@ import type {
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import { fetchGalaxyBitmap } from '../../../utils/network/galaxyImageFetcher';
 import { cartesianToRaDec } from '../../../utils/math';
-import {
-  calibratedDiskSizeWorld,
-  effectiveTilt,
-  nucleusCorner,
-} from './famousPlacement';
+import { calibratedDiskSizeWorld, effectiveTilt, nucleusCorner } from './famousPlacement';
 import type { Vec2 } from '../../../@types/math/Vec2';
 
 /**
@@ -204,15 +200,14 @@ export function createTexturedDiskSubsystem(
         // them as the corrupted-bin guard, not the render values.  An
         // absent calibration (the common case) leaves every emitted value
         // bit-identical to the catalog path.
-        const cal =
-          cloudSource === Source.Famous ? famousMeta[i]?.calibration : undefined;
+        const cal = cloudSource === Source.Famous ? famousMeta[i]?.calibration : undefined;
         let sizeForInstance = sizeWorldMpc;
         let axisRatioForInstance = ar;
         let paForInstance = pa;
         let nucleus: Vec2 = [0, 0];
         if (cal !== undefined) {
           sizeForInstance = calibratedDiskSizeWorld(sizeWorldMpc, cal.diskRadiusFrac);
-          const tilt = effectiveTilt(cal, ar);
+          const tilt = effectiveTilt(cal, ar, pa);
           axisRatioForInstance = tilt.axisRatio;
           paForInstance = tilt.positionAngleDeg;
           nucleus = nucleusCorner(cal.center);
@@ -233,7 +228,8 @@ export function createTexturedDiskSubsystem(
             key,
             priority: px,
             fetcher: () => {
-              const fId = sourceForFetch === Source.Famous ? famousMeta[idxForFetch]?.id : undefined;
+              const fId =
+                sourceForFetch === Source.Famous ? famousMeta[idxForFetch]?.id : undefined;
               return fetcher({ ra, dec, famousId: fId });
             },
             onResult: (bitmap) => {
@@ -310,7 +306,10 @@ export function createTexturedDiskSubsystem(
     const camPosX = cam.position[0];
     const camPosY = cam.position[1];
     const camPosZ = cam.position[2];
-    const cmpFar = (a: { x: number; y: number; z: number }, b: { x: number; y: number; z: number }): number => {
+    const cmpFar = (
+      a: { x: number; y: number; z: number },
+      b: { x: number; y: number; z: number },
+    ): number => {
       const dax = a.x - camPosX;
       const day = a.y - camPosY;
       const daz = a.z - camPosZ;
