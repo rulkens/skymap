@@ -595,7 +595,9 @@ Implements `Visualization` (spec §4). `id='flowField'`, `label='Flow'`, `paramS
 
 ---
 
-## Phase 7 — DensityVolumeVisualization (build + visual-verify)
+## Phase 7 — DensityVolumeVisualization (build + visual-verify) ✅ DONE (commits 15603e7b..c2ee674a; headless-probe verified glow composites behind flow; 36 tests green)
+
+> **Decision §E resolved:** the spike's `eye` field was vestigial (ray origin already reconstructed from the `invMvp` near-plane unprojection), so cosmic-flow drops `eye` — the Vol uniform is 80 bytes (invMvp + gain/dMax/alphaScale). Parity-equivalent (same ray line). gl-matrix `mat4.invert` null-guarded.
 
 ### Task 26: Density volume params + WGSL
 
