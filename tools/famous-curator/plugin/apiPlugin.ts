@@ -309,7 +309,7 @@ export function apiPlugin(): Plugin {
 
           if (method === 'POST' && path === '/api/export') {
             const body = await readJsonBody(req) as Parameters<typeof handleExport>[0]['body'];
-            const out = await handleExport({ body, repoRoot });
+            const out = await handleExport({ body, repoRoot, starnetConfig });
             sendJson(res, 200, out);
             return;
           }
