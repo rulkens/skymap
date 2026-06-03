@@ -20,6 +20,12 @@
  * the HiPS multi-resolution tile system rather than the original on-the-
  * fly cutout.  Visually indistinguishable for our 128×128 thumbnails.
  *
+ * We request the `CDS/P/DSS2/color` composite (blue + red plates) rather
+ * than the monochrome `CDS/P/DSS2/red` plate so non-SDSS galaxies (2MRS,
+ * GLADE, and famous-galaxy fallbacks) get a colour InfoCard thumbnail
+ * instead of a grey one.  Both layers cover the full sky and share the
+ * same hips2fits CORS support, so this is a drop-in upgrade.
+ *
  * Reference: https://aladin.cds.unistra.fr/hips/HipsImageList.html
  *
  * `arcMin` is the field-of-view side length in arcminutes; 2 is a
@@ -36,7 +42,7 @@ export function dssThumbnailUrl(raDeg: number, decDeg: number, arcMin = 2): stri
   const sizePx = 128;
   return (
     `https://alasky.cds.unistra.fr/hips-image-services/hips2fits` +
-    `?hips=${encodeURIComponent('CDS/P/DSS2/red')}` +
+    `?hips=${encodeURIComponent('CDS/P/DSS2/color')}` +
     `&ra=${raDeg}&dec=${decDeg}` +
     `&fov=${fovDeg}&width=${sizePx}&height=${sizePx}&format=jpg`
   );
