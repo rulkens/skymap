@@ -16,10 +16,10 @@
  *
  * The `.ccat` stores a category byte (0 = cluster, 1 = supercluster; higher
  * values reserved for a future void source).  We switch on it and return an
- * arm-typed literal so the discriminated `PointOfInterest` union narrows
+ * arm-typed literal so the discriminated `StructureRecord` union narrows
  * with no `as` cast (same construction as `buildAnchorPoi`).  Records whose
  * byte is neither 0 nor 1 are skipped defensively — a reserved/void byte
- * must not crash the producer or emit a malformed POI.
+ * must not crash the producer or emit a malformed record.
  *
  * ### Significance normalisation — PER CATEGORY
  *
@@ -51,7 +51,7 @@
  */
 
 import type { ClusterCatalogPayload } from '../../../@types/loading/ClusterCatalogPayload';
-import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfInterest';
+import type { StructureRecord } from '../../../@types/engine/data/StructureRecord';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
 /** The two renderable category bytes; everything else is skipped. */
@@ -102,7 +102,7 @@ function makeNormaliser(
   return (raw: number) => (transform(raw) - min) / span;
 }
 
-export function buildPoisFromClusterCatalog(payload: ClusterCatalogPayload): PointOfInterest[] {
+export function buildPoisFromClusterCatalog(payload: ClusterCatalogPayload): StructureRecord[] {
   const { catalog, meta } = payload;
   if (catalog.count === 0) return [];
 
@@ -122,7 +122,7 @@ export function buildPoisFromClusterCatalog(payload: ClusterCatalogPayload): Poi
   const normaliseCluster = makeNormaliser(clusterRaw, safeLog);
   const normaliseSupercluster = makeNormaliser(superclusterRaw, (raw) => raw);
 
-  const out: PointOfInterest[] = [];
+  const out: StructureRecord[] = [];
   for (let i = 0; i < catalog.count; i++) {
     const category = categoryFromByte(catalog.category[i]!);
     if (category === null) continue; // reserved/void byte — skip, don't emit

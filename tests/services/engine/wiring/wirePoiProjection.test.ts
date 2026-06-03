@@ -160,11 +160,11 @@ type TestSlots = {
 };
 
 /**
- * Build a minimal EngineState with a real `poiSubsystem` and fake asset
- * slots for the three POI groups.  `state.sources.famousMeta` and
- * `state.sources.clusterBulk` start empty/null and are updated manually
- * in each test to mirror production (the slot subscribers write them in
- * the real engine, but here we control the timing explicitly).
+ * Build a minimal EngineState with a real `poiSubsystem`, a real
+ * `engineData` (so `state.data.structures` is the production store), and
+ * fake asset slots for the three POI groups.  Famous meta + catalog are
+ * written into `state.data.galaxies` per-test; the cluster payload flows
+ * through the fired slot value, mirroring production timing.
  */
 function makeState(): { state: EngineState; slots: TestSlots } {
   const famousMetaSlot = makeSlot<{ meta: Array<{ id: string; commonName?: string }> }>();
@@ -184,8 +184,6 @@ function makeState(): { state: EngineState; slots: TestSlots } {
 
   const state = {
     sources: {
-      famousMeta: [] as ReturnType<typeof Array<{ id: string }>>,
-      clusterBulk: null as ClusterCatalogPayload | null,
       drawMask: 0xff,
       pickMask: 0xff,
       tier: 'medium' as const,
@@ -266,6 +264,43 @@ describe('wirePoiProjection', () => {
     expect(state.subsystems.pois.getPoisForCategory('famousGalaxy').length).toBe(0);
   });
 
+  it('feeds structureStore from the same records as poiSubsystem (anchors + bulk)', () => {
+    // structureStore is the authoritative home for structure records; the
+    // poiSubsystem still produces per-frame markers/labels from the SAME
+    // records.  Both must carry the static anchors at boot and the bulk
+    // clusters once the slot lands — and stay index-aligned.
+    const { state, slots } = makeState();
+    const { cb } = makeCb();
+
+    wirePoiProjection(state, cb);
+
+    // Boot: the static anchors are written to the store's `anchors` group.
+    expect(state.data.structures.byCategory('cluster').some((r) => r.id === 'cluster-virgo')).toBe(
+      true,
+    );
+    expect(state.data.structures.byCategory('void').some((r) => r.id === 'void-local')).toBe(true);
+
+    // Bulk clusters arrive via the slot's ready value.
+    const clusterPayload: ClusterCatalogPayload = {
+      catalog: {
+        count: 1,
+        positions: new Float32Array([1, 2, 3]),
+        physicalRadiusMpc: new Float32Array([2]),
+        apparentRadiusMpc: new Float32Array([4]),
+        significance: new Float32Array([0.9]),
+        category: new Uint8Array([0]),
+      },
+      meta: [{ id: 'coma', names: ['Coma Cluster'], abell: 'A1656', description: '' }],
+    };
+    slots.clusterCatalogSlot.fire(readyState(clusterPayload));
+
+    // The bulk record lands in the store AND the poiSubsystem from one feed.
+    expect(state.data.structures.byId('cluster-bulk-coma')?.id).toBe('cluster-bulk-coma');
+    expect(state.subsystems.pois.findPoi('cluster-bulk-coma')).not.toBeNull();
+    // Anchors survive the bulk write (separate group).
+    expect(state.data.structures.byId('cluster-virgo')?.id).toBe('cluster-virgo');
+  });
+
   it('famous group appears only when both Famous catalog and famousMeta are ready', () => {
     // The 2-asset join: meta alone is not enough.  Famous POIs must appear
     // only when the Famous catalog slot is also in the ready state.
@@ -324,7 +359,12 @@ describe('wirePoiProjection', () => {
     // group clears, and counts re-emit.
     countsSpy.mockClear();
     state.data.galaxies.setFamousMeta([]);
-    slots.famousMetaSlot.fire({ kind: 'error', req: {}, error: new Error('fetch failed'), finalAttempt: 1 });
+    slots.famousMetaSlot.fire({
+      kind: 'error',
+      req: {},
+      error: new Error('fetch failed'),
+      finalAttempt: 1,
+    });
     expect(state.subsystems.pois.getPoisForCategory('famousGalaxy')).toHaveLength(0);
     expect(countsSpy).toHaveBeenCalled();
   });
@@ -351,7 +391,6 @@ describe('wirePoiProjection', () => {
       },
       meta: [{ id: 'coma', names: ['Coma Cluster'], abell: 'A1656', description: '' }],
     };
-    (state.sources as { clusterBulk: unknown }).clusterBulk = clusterPayload;
     slots.clusterCatalogSlot.fire(readyState(clusterPayload));
 
     // clusterBulk POIs present.
@@ -401,7 +440,6 @@ describe('wirePoiProjection', () => {
       },
       meta: [{ id: 'coma', names: ['Coma Cluster'], abell: 'A1656', description: '' }],
     };
-    (state.sources as { clusterBulk: unknown }).clusterBulk = clusterPayload;
     slots.clusterCatalogSlot.fire(readyState(clusterPayload));
 
     expect(countsSpy).toHaveBeenCalledTimes(2);

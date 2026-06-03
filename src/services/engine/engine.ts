@@ -391,10 +391,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // in the settings panel.
       pickMask: ALL_VISIBLE_MASK,
       drawMask: ALL_VISIBLE_MASK,
-      // Bulk cluster/supercluster coverage — null until the slot resolves
-      // (and on fetch failure).  The POI merge null-checks, so a boot before
-      // it lands shows only the featured anchors.
-      clusterBulk: null,
       // Currently-loaded data tier, seeded from `cb.initialTier`; 'medium'
       // is the ~600k-galaxy desktop budget.  `setTier` mutates in place.
       tier: cb.initialTier ?? 'medium',
@@ -809,7 +805,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
     // Caller-supplied `famousMeta` wins over the engine's copy — see the
     // EngineHandle JSDoc for the race this defends against.
-    const info = buildGalaxyInfo(cloud, localIdx, source, famousMeta ?? state.data.galaxies.famousMeta);
+    const info = buildGalaxyInfo(
+      cloud,
+      localIdx,
+      source,
+      famousMeta ?? state.data.galaxies.famousMeta,
+    );
     if (!info) return;
 
     commitGalaxyFocus(state, info);

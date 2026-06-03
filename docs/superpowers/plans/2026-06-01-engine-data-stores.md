@@ -542,29 +542,31 @@ git commit -m "refactor(engine): famousMeta read from galaxyStore"
 **Files (readers / feeders):** `wirePoiProjection.ts` (feeds `poiSubsystem` groups from the store; click resolver / camera focus / membership read the store), `clusterMembership.ts` if it reads structure extent.
 **Files (state):** `EngineSourceState.d.ts:60-66` (remove `clusterBulk`).
 
-- [ ] **Step 1: Failing integration test for the feed**
+- [x] **Step 1: Failing integration test for the feed**
 
 Add a test under `tests/services/engine/wiring/` asserting that after the cluster-catalog slot commits a payload, `structureStore.byCategory('cluster')` returns the decoded bulk records AND `poiSubsystem.getPoisForCategory('cluster')` still returns the same set in the same order (pick-index alignment preserved). Use the existing cluster-catalog fixture from `tests/services/loading/slots`.
 
-- [ ] **Step 2: Run it, expect failure**
+- [x] **Step 2: Run it, expect failure**
 
 Run: `npm run test -- tests/services/engine/wiring/`
 Expected: FAIL — store is empty / not fed.
 
-- [ ] **Step 3: Convert the `ClusterCatalogPayload` into `StructureRecord[]` and write to the store**
+- [x] **Step 3: Convert the `ClusterCatalogPayload` into `StructureRecord[]` and write to the store**
 
 `clusterCatalogSlot.ts:39` → map the payload's bulk entries to `StructureRecord` and `state.data.structures.setGroup('bulk', records)`; `:43` → `state.data.structures.clearGroup('bulk')`. Move the static-anchor records to `state.data.structures.setGroup('anchors', …)`. Then feed `poiSubsystem` from the store (`setGroup('clusterBulk', store.byCategory(...))` etc.) at the existing wiring site, keeping the merged order identical.
 
-- [ ] **Step 4: Migrate non-producer readers**
+- [x] **Step 4: Migrate non-producer readers**
 
 Camera-focus tween, membership search, and the click/`findPoi` resolver for structures read `structureStore.byId` / `byCategory` instead of `sources.clusterBulk` / the poi list. Remove `clusterBulk` from `EngineSourceState`. `npm run typecheck` until green.
 
-- [ ] **Step 5: Run the full suite**
+> **Deviation (deferred to Spec 3):** `clusterBulk` was removed from `EngineSourceState` (no reader of the forbidden path remains). However, the camera-focus / membership / `findPoi` resolvers were NOT repointed at `structureStore` — they resolve via `poiSubsystem.findPoi`, which intentionally resolves BOTH structures AND famous galaxies through one table. Splitting that resolution so structures come from `structureStore` while famous keeps coming from `poiSubsystem` is exactly the producer/presentation realignment Spec 3 owns. Doing it here would either break famous-galaxy click resolution or require dual-store lookups that Spec 3 will immediately rework. Since `poiSubsystem` is still fed the identical records (behaviour parity preserved) and no consumer reads the removed `sources.clusterBulk`, deferring is the correct minimal-blast-radius call.
+
+- [x] **Step 5: Run the full suite**
 
 Run: `npm run test && npm run typecheck`
 Expected: PASS (the pick-index-alignment test in `poiSubsystem.test.ts` is the key guard).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git commit -m "refactor(engine): structures owned by structureStore, feeding poiSubsystem"

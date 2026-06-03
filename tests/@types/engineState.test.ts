@@ -112,7 +112,6 @@ describe('EngineState type', () => {
     const sources: EngineSourceState = {
       pickMask: ALL_VISIBLE_MASK,
       drawMask: ALL_VISIBLE_MASK,
-      clusterBulk: null,
       tier: 'medium',
     };
     const picking: EnginePickingState = {
@@ -312,7 +311,6 @@ describe('EngineState type', () => {
       sources: {
         pickMask: 0,
         drawMask: 0,
-        clusterBulk: null,
         tier: 'medium',
       },
       data: createEngineData(),
@@ -400,14 +398,22 @@ describe('EngineState type', () => {
     state.sources.pickMask = 0xff;
     state.sources.drawMask = 0xff;
     // Hovered/selected live on the selection subsystem, not `state.picking`.
-    state.subsystems.selection.setHovered({ kind: 'galaxy', source: 1 as SourceType, localIdx: 42 });
+    state.subsystems.selection.setHovered({
+      kind: 'galaxy',
+      source: 1 as SourceType,
+      localIdx: 42,
+    });
     state.picking.pickInFlight = true;
 
     expect(state.settings.points.brightness).toBe(2.5);
     expect(state.settings.bias.absMagLimit).toBe(-20);
     expect(state.sources.pickMask).toBe(0xff);
     expect(state.sources.drawMask).toBe(0xff);
-    expect(state.subsystems.selection.hovered()).toEqual({ kind: 'galaxy', source: 1, localIdx: 42 });
+    expect(state.subsystems.selection.hovered()).toEqual({
+      kind: 'galaxy',
+      source: 1,
+      localIdx: 42,
+    });
     expect(state.picking.pickInFlight).toBe(true);
   });
 });

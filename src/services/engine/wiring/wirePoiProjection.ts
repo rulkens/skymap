@@ -30,8 +30,9 @@
  *     fires whenever EITHER slot transitions; it reads the current state
  *     of the other asset from `state.sources` (written by the respective
  *     slot's own subscriber in the load chain).
- *   - `clusterBulk` — present once the cluster-catalog slot lands and
- *     writes `state.sources.clusterBulk`.  A single subscription.
+ *   - `clusterBulk` — built from the cluster-catalog slot's ready value
+ *     when it lands.  A single subscription.  Records are written to the
+ *     authoritative `structureStore` and mirrored into `poiSubsystem`.
  *
  * ### Structure-count emissions
  *
@@ -85,7 +86,9 @@ export function wirePoiProjection(state: EngineState, cb: EngineCallbacks): void
   // records without drifting on slug-rule changes.  physicalRadiusMpc
   // comes from the seed JSON (R_200 / virial radii for clusters,
   // characteristic extent for superclusters and voids).
-  state.subsystems.pois.setGroup('staticAnchors', buildStaticAnchorPois());
+  const anchors = buildStaticAnchorPois();
+  state.data.structures.setGroup('anchors', anchors);
+  state.subsystems.pois.setGroup('staticAnchors', anchors);
   emitCounts();
 
   // ── Group 2: famous galaxies (2-asset join) ──────────────────────────
@@ -135,20 +138,19 @@ export function wirePoiProjection(state: EngineState, cb: EngineCallbacks): void
 
   // ── Group 3: bulk clusters/superclusters ─────────────────────────────
   //
-  // Present once the cluster-catalog slot lands and the slot subscriber
-  // writes `state.sources.clusterBulk`.  A non-null clusterBulk means
-  // the slot resolved successfully; null means it hasn't landed yet or
-  // the fetch failed (graceful degradation — bulk structures don't appear
-  // but the engine continues normally).
+  // The bulk records come straight off the cluster-catalog slot's ready
+  // value — the authoritative home is `structureStore`'s `bulk` group, and
+  // the same records feed `poiSubsystem`'s `clusterBulk` group so the
+  // per-frame marker/label producer keeps rendering them unchanged.  A
+  // slot error clears both (graceful degradation — bulk structures don't
+  // appear but the engine continues normally).
   state.assetSlots.clusterCatalog?.subscribe((s) => {
     if (s.kind === 'ready') {
-      const bulk = state.sources.clusterBulk;
-      if (bulk !== null) {
-        state.subsystems.pois.setGroup('clusterBulk', buildPoisFromClusterCatalog(bulk));
-      } else {
-        state.subsystems.pois.clearGroup('clusterBulk');
-      }
+      const records = buildPoisFromClusterCatalog(s.value);
+      state.data.structures.setGroup('bulk', records);
+      state.subsystems.pois.setGroup('clusterBulk', records);
     } else if (s.kind === 'error') {
+      state.data.structures.clearGroup('bulk');
       state.subsystems.pois.clearGroup('clusterBulk');
     }
     emitCounts();

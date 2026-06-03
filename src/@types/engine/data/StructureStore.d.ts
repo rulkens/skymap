@@ -7,12 +7,11 @@ import type { StructureCategory } from './StructureCategory';
  * data (clusters / superclusters / voids), both the curated featured
  * anchors and the bulk catalog.
  *
- * Replaces the pre-store split where structures lived across
- * `state.sources.clusterBulk`, the `poiSubsystem`'s merged list, and the
- * static-anchor seed. Records arrive in keyed groups (`anchors` / `bulk`);
+ * The single authoritative home for structure records. They arrive in keyed
+ * groups (`anchors` for the curated featured seed, `bulk` for the catalog);
  * `all()` concatenates them in a fixed `anchors` → `bulk` order, which
  * preserves the ring pick-path's `instance_index → byCategory(...)[idx]`
- * alignment (carried over from the old `PoiGroupId` ordering contract).
+ * alignment (the same ordering contract the `poiSubsystem` groups follow).
  *
  * Marker and label visibility are two independent per-category axes: a
  * category's ring can be hidden while its label still renders, and vice

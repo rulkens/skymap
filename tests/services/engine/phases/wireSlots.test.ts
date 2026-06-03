@@ -83,9 +83,9 @@ vi.mock('../../../../src/services/loading/fetchers/famousMetaFetcher', () => ({
 }));
 
 // The cluster-catalog slot fires `.load({})` at boot; mock its fetcher so
-// the test doesn't network.  An empty catalog is enough — the merge test
-// pre-seeds `state.sources.clusterBulk` directly, so the slot's own value
-// is irrelevant here.
+// the test doesn't network.  An empty catalog is enough by default — the
+// merge test overrides this mock with a populated payload so wirePoiProjection
+// builds bulk records from the slot's ready value.
 vi.mock('../../../../src/services/loading/fetchers/clusterCatalogFetcher', () => ({
   clusterCatalogFetcher: vi.fn(async () => ({
     catalog: {
@@ -791,7 +791,7 @@ describe('wireSlots', () => {
       ],
     } as never);
     // The cluster-catalog slot's boot load resolves with one cluster + one
-    // supercluster; the slot subscriber writes `state.sources.clusterBulk`.
+    // supercluster; wirePoiProjection builds bulk records from the slot value.
     vi.mocked(clusterCatalogFetcher).mockResolvedValueOnce({
       catalog: {
         count: 2,
@@ -860,8 +860,9 @@ describe('wireSlots', () => {
     const state = makeState({ points: bootPointSlots() });
     const deps = makeDeps();
     const counts: Array<Partial<Record<string, number>>> = [];
-    (deps.cb.sources as { onStructureCountsChange?: (c: Record<string, number>) => void })
-      .onStructureCountsChange = (c) => {
+    (
+      deps.cb.sources as { onStructureCountsChange?: (c: Record<string, number>) => void }
+    ).onStructureCountsChange = (c) => {
       counts.push(c);
     };
     await wireSlots(state, deps);

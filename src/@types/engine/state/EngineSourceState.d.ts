@@ -14,9 +14,6 @@
  *                   falling opacity) or AT the START of fade-in (so the
  *                   renderer begins drawing the layer even though opacity is
  *                   currently 0).  Updated by `setSourceVisible`.
- *   - `clusterBulk` — decoded cluster/supercluster coverage layer
- *                    (`{ catalog, meta }`). Null until the slot resolves,
- *                    and on fetch failure; the POI merge null-checks.
  *
  * ### Why a separate type
  *
@@ -28,7 +25,6 @@
  */
 
 import type { Tier } from '../../data/Tier';
-import type { ClusterCatalogPayload } from '../../loading/ClusterCatalogPayload';
 
 export type EngineSourceState = {
   /**
@@ -45,13 +41,6 @@ export type EngineSourceState = {
    * the draw entirely — saves a writeBuffer + draw call.
    */
   drawMask: number;
-  /**
-   * Bulk cluster/supercluster coverage layer — the decoded `{ catalog, meta }`
-   * payload. Null until the cluster-catalog slot resolves, and stays null if
-   * the fetch fails (graceful degradation — bulk structures simply don't
-   * appear). A later step merges this into the POI subsystem.
-   */
-  clusterBulk: ClusterCatalogPayload | null;
   /**
    * Currently-loaded data tier — drives subsequent `setTier` diffing.
    * Seeded at engine init from `opts.initialTier` (defaulting to 'medium')
