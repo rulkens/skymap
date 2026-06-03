@@ -1,22 +1,30 @@
 /**
- * Cosmic Flow — React entry point.
+ * Cosmic Flow — entry point.
  *
- * This is the stub bootstrap: it mounts a placeholder into `#root` so the
- * Vite app boots end-to-end before any real UI exists. The actual App
- * component — Viewport, controls, the WebGPU flow renderer — lands in a
- * later task.
+ * TEMP — replaced by <App> in Phase 8. This is a minimal plain-DOM bootstrap
+ * that boots the WebGPU engine against a full-viewport canvas so the flow layer
+ * is viewable at the Phase 6 gate, before the React UI shell exists. The real
+ * App (Viewport, controls, labels overlay) lands in Phase 8.
  *
  * We import the shared skymap design tokens (`src/styles/global.css`) so the
- * tool inherits the same `var(--token)` palette and typography as the main
- * app and the curator, keeping a single source of truth for the look.
- * From `tools/cosmic-flow/src/`, three `..` segments reach the repo root,
- * then `src/styles/global.css`.
+ * tool inherits the same palette/typography as the main app. We import the flow
+ * layer's `register` module for its side effect, so `listFactories()` sees it
+ * when `createEngine` enumerates the registry.
  */
-
-import { createRoot } from 'react-dom/client';
 import '../../../src/styles/global.css';
+import './visualizations/flowField/register';
+import { createStore } from './state/createStore';
+import { defaultAppState } from './state/defaultAppState';
+import { createEngine } from './engine/createEngine';
 
-// Real App lands in a later task
-const container = document.getElementById('root');
-if (!container) throw new Error('Cosmic Flow: #root element not found');
-createRoot(container).render(<div>CosmicFlow</div>);
+const root = document.getElementById('root');
+if (!root) throw new Error('Cosmic Flow: #root element not found');
+
+const canvas = document.createElement('canvas');
+canvas.style.width = '100vw';
+canvas.style.height = '100vh';
+canvas.style.display = 'block';
+root.appendChild(canvas);
+
+const store = createStore(defaultAppState);
+createEngine(canvas, store).then((engine) => engine.start());
