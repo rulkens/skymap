@@ -741,7 +741,7 @@ Composes `common/Panel` (reuse — `src/components/common/Panel/Panel.tsx`) wrap
 
 ---
 
-## Phase 9 — Spike retirement (gated on parity)
+## Phase 9 — Spike retirement (gated on parity) ✅ DONE (2026-06-04; user gave explicit go after parity)
 
 ### Task 32: Delete `tools/spike/`
 
@@ -749,11 +749,11 @@ Composes `common/Panel` (reuse — `src/components/common/Panel/Panel.tsx`) wrap
 
 > **Gate:** ONLY after Task 31's visual parity is confirmed by the user. Spec §10: "Port to visual parity with the spike, verify by eye, then delete `tools/spike/`."
 
-- [ ] Confirm with the user that parity is verified.
-- [ ] Grep the repo for `tools/spike` references (Grep tool, not bash grep) — package.json scripts, docs, tests — and remove/redirect them.
-- [ ] Delete `tools/spike/`. The `convertCf4ppVfield.py` + `findEdgeAttractors.py` already moved in Task 4, so nothing unique is lost.
-- [ ] `npm run typecheck` + `npm test` → green.
-- [ ] Commit: `chore(cosmic-flow): retire tools/spike at parity`.
+- [x] Confirm with the user that parity is verified.
+- [x] Grep the repo for `tools/spike` references (Grep tool, not bash grep) — no functional deps; cleaned stale "Spike provenance:" comment pointers (would dangle to deleted file) in RenderGraph.ts/.d.ts, blit.wgsl.ts, createVelocityField.ts, constants.ts. Plan/spec doc references left as historical record.
+- [x] Delete `tools/spike/`. The `convertCf4ppVfield.py` + `findEdgeAttractors.py` already moved in Task 4, so nothing unique is lost.
+- [x] `npm run typecheck` + `npm test` → green.
+- [x] Commit: `chore(cosmic-flow): retire tools/spike at parity`.
 
 ---
 

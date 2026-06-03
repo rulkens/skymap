@@ -13,9 +13,6 @@
  * packs. The JSON keys (`n`, `boxMpcPerH`, `speedKmsMax`, `speedKmsP99`,
  * `deltaMax`, `deltaP99`) come straight from that same script and map 1:1 onto
  * `VelocityFieldMeta`.
- *
- * Spike provenance: `tools/spike/public/index.html` lines ~116-131 (meta fetch,
- * texture creation, writeTexture, sampler).
  */
 import type { VelocityField } from '../../@types/field/VelocityField';
 import type { VelocityFieldMeta } from '../../@types/field/VelocityFieldMeta';

@@ -15,9 +15,7 @@
  * derived from this pipeline and only valid here, so the bind group is rebuilt
  * (alongside the texture) inside `resize` rather than handed in from outside.
  *
- * Spike provenance: `tools/spike/public/index.html` lines ~382-401 (WGSL) and
- * ~513-547 (pipeline, accum texture, resize, blit bind group). The blit uniform
- * write order — `[exposure, contrast]` — matches the spike's line ~798.
+ * The blit uniform write order is `[exposure, contrast]`.
  */
 import type { RenderGraph } from '../../@types/engine/RenderGraph';
 import { blitWgsl } from './blit.wgsl';

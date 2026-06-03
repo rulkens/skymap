@@ -2,8 +2,7 @@
  * Flow-field tunables — the single source of truth for the constants the WGSL
  * modules and the TS visualization share.
  *
- * These are lifted verbatim from the spike (tools/spike/public/index.html, the
- * "tunables" block). They are the look and the buffer geometry, so they are
+ * These are the look and the buffer geometry, so they are
  * NOT to be "tidied": TRAIL sets the ring length AND the vertex count of every
  * ribbon (draw is 2*TRAIL vertices), LIFE/FADE shape the advect alpha envelope,
  * MAX_PARTICLES sizes the storage buffers, and HEAD_STEP_SCALE / SPEED_COLOR_MAX

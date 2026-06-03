@@ -11,10 +11,6 @@
  * `accumView()` is a METHOD, not a field, because the underlying texture is
  * recreated on resize — a cached field would dangle after the first resize.
  * Callers fetch the live view each frame.
- *
- * Spike provenance: `tools/spike/public/index.html` lines ~382-401 (the
- * `vsFullscreen` / `fsTonemap` WGSL) and ~513-547 (blit pipeline, accum
- * texture, `resize`, blit bind group). Behaviour is preserved exactly.
  */
 export type RenderGraph = {
   /** The HDR accumulation format every layer's pipeline must target ('rgba16float'). */

@@ -9,13 +9,11 @@
  * swap-chain.
  *
  * The accum sample flips V (`1.0 - uv.y`) because the fullscreen triangle's UVs
- * are computed in clip space (y-up) while the texture is y-down — the spike did
- * this flip and we preserve it byte-for-byte so the resolved image is upright.
+ * are computed in clip space (y-up) while the texture is y-down — the flip keeps
+ * the resolved image upright.
  *
  * The `Blit` uniform is 16 bytes (two f32 + 8 bytes padding to the 16-byte
  * minimum uniform-buffer alignment): exposure at offset 0, contrast at offset 4.
- *
- * Spike provenance: `tools/spike/public/index.html` lines ~382-401.
  */
 export const blitWgsl: string = /* wgsl */ `
 // fullscreen triangle (used by blit)
