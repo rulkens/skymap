@@ -90,10 +90,11 @@ export function wirePoiProjection(state: EngineState, cb: EngineCallbacks): void
 
   // ── Group 2: famous galaxies (2-asset join) ──────────────────────────
   //
-  // Both the meta sidecar (`state.sources.famousMeta`, written by the
-  // famousMeta slot subscriber) and the Famous catalog (`state.sources.
-  // catalogs.get(Source.Famous)`, written by the Famous slot's commit
-  // subscriber) must be present before any famous POI is built.  One
+  // Both the meta sidecar (`galaxyStore.famousMeta`, written by the
+  // famousMeta slot subscriber) and the Famous catalog
+  // (`galaxyStore.catalogs.get(Source.Famous)`, written by the Famous
+  // slot's commit subscriber) must be present before any famous POI is
+  // built.  One
   // asset alone carries half the information: meta has names + diameter,
   // the catalog has world positions.  Attempting to build with only one
   // produces partial or zero output, so we clear the group until both are
@@ -103,7 +104,7 @@ export function wirePoiProjection(state: EngineState, cb: EngineCallbacks): void
   // arrival is the minimal correct pattern: whichever slot arrives second
   // will find the other already present in state and complete the join.
   function rebuildFamousGroup(): void {
-    const meta = state.sources.famousMeta;
+    const meta = state.data.galaxies.famousMeta;
     const famousCatalog = state.data.galaxies.catalogs.get(Source.Famous);
     if (meta.length > 0 && famousCatalog !== undefined && famousCatalog.count > 0) {
       state.subsystems.pois.setGroup('famous', buildPoisFromFamousMeta(meta, famousCatalog));
@@ -114,7 +115,7 @@ export function wirePoiProjection(state: EngineState, cb: EngineCallbacks): void
   }
 
   // Subscribe to the famousMeta slot.  The slot subscriber (in
-  // `famousMetaSlot.ts`) writes `state.sources.famousMeta` before the
+  // `famousMetaSlot.ts`) writes `galaxyStore.famousMeta` before the
   // subscription fires; reading it here always reflects the latest value.
   state.assetSlots.famousMeta?.subscribe((s) => {
     if (s.kind === 'ready' || s.kind === 'error') rebuildFamousGroup();

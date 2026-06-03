@@ -83,7 +83,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       return { source: sel.source, localIdx: sel.localIdx, cloud };
     },
     buildGalaxyInfo: (cloud, localIdx, src) =>
-      buildGalaxyInfo(cloud, localIdx, src, state.sources.famousMeta),
+      buildGalaxyInfo(cloud, localIdx, src, state.data.galaxies.famousMeta),
     // POI pick hit `(category, poiIndex)` → `PointOfInterest`.  Shared
     // with the hover throttler in `runFrame.ts` so the click and hover
     // paths can't drift on the lookup logic; see `resolvePoiFromPick`.

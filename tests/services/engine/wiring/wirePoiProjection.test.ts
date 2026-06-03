@@ -277,9 +277,7 @@ describe('wirePoiProjection', () => {
     // Phase 1 — meta arrives alone.  Famous catalog slot still idle.
     // wirePoiProjection reads state.sources.famousMeta on each transition,
     // so we write it before firing the slot.
-    (state.sources as { famousMeta: unknown[] }).famousMeta = [
-      { id: 'm31', commonName: 'Andromeda Galaxy' },
-    ];
+    state.data.galaxies.setFamousMeta([{ id: 'm31', commonName: 'Andromeda Galaxy' }] as never);
     slots.famousMetaSlot.fire(readyState({ meta: [] }));
 
     // No famous POIs yet — the Famous catalog slot hasn't fired.
@@ -310,9 +308,7 @@ describe('wirePoiProjection', () => {
     wirePoiProjection(state, cb);
 
     // Land both assets so the famous group is populated.
-    (state.sources as { famousMeta: unknown[] }).famousMeta = [
-      { id: 'm31', commonName: 'Andromeda Galaxy' },
-    ];
+    state.data.galaxies.setFamousMeta([{ id: 'm31', commonName: 'Andromeda Galaxy' }] as never);
     const fakeCatalog = {
       count: 1,
       positions: new Float32Array([0.78, 0.1, 0.2]),
@@ -327,7 +323,7 @@ describe('wirePoiProjection', () => {
     // famousMeta errors: the sidecar empties, the join condition fails, the
     // group clears, and counts re-emit.
     countsSpy.mockClear();
-    (state.sources as { famousMeta: unknown[] }).famousMeta = [];
+    state.data.galaxies.setFamousMeta([]);
     slots.famousMetaSlot.fire({ kind: 'error', req: {}, error: new Error('fetch failed'), finalAttempt: 1 });
     expect(state.subsystems.pois.getPoisForCategory('famousGalaxy')).toHaveLength(0);
     expect(countsSpy).toHaveBeenCalled();
@@ -362,9 +358,7 @@ describe('wirePoiProjection', () => {
     expect(state.subsystems.pois.findPoi('cluster-bulk-coma')).not.toBeNull();
 
     // Step 2: famous join fires.
-    (state.sources as { famousMeta: unknown[] }).famousMeta = [
-      { id: 'm31', commonName: 'Andromeda Galaxy' },
-    ];
+    state.data.galaxies.setFamousMeta([{ id: 'm31', commonName: 'Andromeda Galaxy' }] as never);
     const fakeCatalog = {
       count: 1,
       positions: new Float32Array([0.78, 0.1, 0.2]),

@@ -95,7 +95,7 @@ export type RenderFrameInput = {
   settings: RenderFrameSettings;
 
   // ── Forwarded to the thumbnail subsystem ──────────────────────────────
-  famousMeta: FamousMetaEntry[];
+  famousMeta: readonly FamousMetaEntry[];
   catalogs: ReadonlyMap<SourceType, GalaxyCatalog>;
 
   /**

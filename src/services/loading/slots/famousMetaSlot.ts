@@ -4,7 +4,7 @@
  * Carries `famous_meta.json` through the standard asset-slot machinery.
  *
  * No `commit` step: there's nothing GPU-side to upload — the payload is
- * pure metadata consumed by the InfoCard via `state.sources.famousMeta`.
+ * pure metadata consumed by the InfoCard via `galaxyStore.famousMeta`.
  * The subscriber writes the field and wakes one frame so the famous-
  * galaxy thumbnails become enqueueable from the per-frame loop without
  * the user having to nudge the camera.
@@ -29,14 +29,14 @@ export const createFamousMetaSlot: SlotFactory<FamousPayload, CompanionAssetReq>
   });
   slot.subscribe((s) => {
     if (s.kind === 'ready') {
-      state.sources.famousMeta = s.value.meta;
+      state.data.galaxies.setFamousMeta(s.value.meta);
       state.subsystems.scheduler.requestRender();
     }
     if (s.kind === 'error') {
       // Defensive — the field defaults to `[]` already, but writing it
       // again here is explicit about the contract: missing sidecar
       // disables enriched InfoCard text but keeps the engine functional.
-      state.sources.famousMeta = [];
+      state.data.galaxies.setFamousMeta([]);
       console.warn('[engine] famous sidecar failed to load:', s.error);
     }
   });

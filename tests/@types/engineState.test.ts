@@ -112,7 +112,6 @@ describe('EngineState type', () => {
     const sources: EngineSourceState = {
       pickMask: ALL_VISIBLE_MASK,
       drawMask: ALL_VISIBLE_MASK,
-      famousMeta: [],
       clusterBulk: null,
       tier: 'medium',
     };
@@ -313,7 +312,6 @@ describe('EngineState type', () => {
       sources: {
         pickMask: 0,
         drawMask: 0,
-        famousMeta: [],
         clusterBulk: null,
         tier: 'medium',
       },

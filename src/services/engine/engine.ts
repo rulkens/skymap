@@ -391,9 +391,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // in the settings panel.
       pickMask: ALL_VISIBLE_MASK,
       drawMask: ALL_VISIBLE_MASK,
-      // Optional sidecar — `galaxyInfoBuilder` null-checks, so a hover
-      // before it lands just renders the generic InfoCard layout.
-      famousMeta: [],
       // Bulk cluster/supercluster coverage — null until the slot resolves
       // (and on fetch failure).  The POI merge null-checks, so a boot before
       // it lands shows only the featured anchors.
@@ -504,7 +501,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       selection: createSelectionSubsystem({
         cb,
         getCloud: (s) => state.data.galaxies.catalogs.get(s),
-        getFamousMeta: () => state.sources.famousMeta,
+        getFamousMeta: () => state.data.galaxies.famousMeta,
         // Forward-reference: `state.subsystems.pois` is bound later in this
         // literal, but the closure resolves at call time.
         getPoi: (id) => state.subsystems.pois.findPoi(id),
@@ -786,11 +783,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // slightly after the point cloud).  Early return is cosmetically safe.
     const cloud = state.data.galaxies.catalogs.get(Source.Famous);
     if (!cloud) return;
-    const localIdx = state.sources.famousMeta.findIndex((m) => m.id === id);
+    const localIdx = state.data.galaxies.famousMeta.findIndex((m) => m.id === id);
     if (localIdx < 0) return;
 
     // Build the GalaxyInfo the picker would, from live sidecars.
-    const info = buildGalaxyInfo(cloud, localIdx, Source.Famous, state.sources.famousMeta);
+    const info = buildGalaxyInfo(cloud, localIdx, Source.Famous, state.data.galaxies.famousMeta);
     if (!info) return;
 
     // A palette pick is a deliberate focus action, so move the camera too.
@@ -812,7 +809,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
     // Caller-supplied `famousMeta` wins over the engine's copy — see the
     // EngineHandle JSDoc for the race this defends against.
-    const info = buildGalaxyInfo(cloud, localIdx, source, famousMeta ?? state.sources.famousMeta);
+    const info = buildGalaxyInfo(cloud, localIdx, source, famousMeta ?? state.data.galaxies.famousMeta);
     if (!info) return;
 
     commitGalaxyFocus(state, info);

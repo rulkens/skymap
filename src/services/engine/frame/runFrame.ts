@@ -206,7 +206,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       catalogs: state.data.galaxies.catalogs,
       visibleSourceMask: state.sources.drawMask,
       pxPerRad: ctx.drawPxPerRad,
-      famousMeta: state.sources.famousMeta,
+      famousMeta: state.data.galaxies.famousMeta,
     });
   }
   if (state.subsystems.texturedDisks !== null) {
@@ -215,7 +215,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       catalogs: state.data.galaxies.catalogs,
       visibleSourceMask: state.sources.drawMask,
       pxPerRad: ctx.drawPxPerRad,
-      famousMeta: state.sources.famousMeta,
+      famousMeta: state.data.galaxies.famousMeta,
     });
   }
 
@@ -301,7 +301,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       filamentIntensity: state.settings.filaments.intensity,
       volumesEnabled: state.settings.volumes.masterEnabled,
     },
-    famousMeta: state.sources.famousMeta,
+    famousMeta: state.data.galaxies.famousMeta,
     catalogs: state.data.galaxies.catalogs,
     timingService: deps.timingService,
   });

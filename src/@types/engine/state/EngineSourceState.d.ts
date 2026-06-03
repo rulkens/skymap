@@ -14,9 +14,6 @@
  *                   falling opacity) or AT the START of fade-in (so the
  *                   renderer begins drawing the layer even though opacity is
  *                   currently 0).  Updated by `setSourceVisible`.
- *   - `famousMeta` — optional sidecar that enriches the InfoCard text
- *                    for the Famous catalog. Empty until the fetch
- *                    resolves; consumers null-check before reading.
  *   - `clusterBulk` — decoded cluster/supercluster coverage layer
  *                    (`{ catalog, meta }`). Null until the slot resolves,
  *                    and on fetch failure; the POI merge null-checks.
@@ -31,7 +28,6 @@
  */
 
 import type { Tier } from '../../data/Tier';
-import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
 import type { ClusterCatalogPayload } from '../../loading/ClusterCatalogPayload';
 
 export type EngineSourceState = {
@@ -49,7 +45,6 @@ export type EngineSourceState = {
    * the draw entirely — saves a writeBuffer + draw call.
    */
   drawMask: number;
-  famousMeta: FamousMetaEntry[];
   /**
    * Bulk cluster/supercluster coverage layer — the decoded `{ catalog, meta }`
    * payload. Null until the cluster-catalog slot resolves, and stays null if
