@@ -1,0 +1,94 @@
+/**
+ * StructureRecord — one extended structure (cluster / supercluster / void)
+ * as held by the structure store.
+ *
+ * This is the non-famous arm of `PointOfInterest` pulled out as the single
+ * source of truth: `PointOfInterest` re-imports it as `PointOfInterest =
+ * StructureRecord | FamousGalaxyPoi`.  Famous galaxies are galaxy data, not
+ * structures, so they are deliberately absent here.
+ *
+ * ### Why a discriminated union on `category`
+ *
+ * Clusters alone carry an Abell/ACO designation.  Modelling the record as a
+ * flat shape with `abell?` optional would let a supercluster or void literal
+ * silently carry one.  Splitting on `category` (`StructureCategory`) makes
+ * `abell` exist only on the cluster arm — consumers must narrow on
+ * `category` before reading it, and a producer can't build a void with an
+ * Abell number.  The shared structure fields live on `StructureBase` so the
+ * three arms stay in lockstep.
+ */
+
+import type { Vec3 } from '../../math/Vec3';
+
+/**
+ * Fields every structure record carries regardless of category.  `category`
+ * is added per-arm below so each arm's literal pins a single discriminant.
+ */
+type StructureBase = {
+  readonly id: string;
+  readonly name: string;
+  readonly worldPos: Vec3;
+  /**
+   * Whether this structure is a hand-curated "featured" anchor.  Gates label
+   * rendering (only featured structures get labels) and deep-link
+   * eligibility.  Bulk catalog records set false; curated anchors set true.
+   */
+  readonly featured: boolean;
+  /**
+   * Human-readable blurb shown in the expanded info card.  Curated lead
+   * paragraph for featured anchors; auto-generated one-liner for bulk
+   * catalog entries.  Optional — the card renders no description rather than
+   * empty chrome when absent.
+   */
+  readonly description?: string;
+  /**
+   * Normalized significance in [0,1] driving ring brightness / size weight.
+   * Normalized M500 for clusters, normalized Nm for superclusters; featured
+   * anchors default to 1.  Optional — falls back to full weight at render.
+   */
+  readonly significance?: number;
+  /**
+   * Physical CORE radius in Mpc — virial / R_200 for clusters,
+   * characteristic scale for superclusters and voids.  Drives the
+   * camera-focus tween distance and the InfoCard's "r {value}" line.
+   * Required — every structure producer sets it.
+   */
+  readonly physicalRadiusMpc: number;
+  /**
+   * Apparent / named-extent radius in Mpc — the wider visual/membership
+   * boundary.  Typically 2-3× `physicalRadiusMpc` for clusters; equal to it
+   * for superclusters and voids.  Drives the on-screen ring + halo extent,
+   * the label's close-approach fade, and the galaxy-membership cone search.
+   * Optional — the render falls back to `physicalRadiusMpc` when absent.
+   */
+  readonly apparentRadiusMpc?: number;
+};
+
+/** A galaxy cluster.  Clusters alone carry an Abell/ACO designation. */
+type ClusterRecord = StructureBase & {
+  readonly category: 'cluster';
+  /**
+   * Abell/ACO catalog designation where known (e.g. 'A1656' for Coma),
+   * surfaced for the InfoCard.  Omitted when the cluster has no Abell number
+   * (e.g. Virgo).  Lives on the cluster arm only — superclusters and voids
+   * never have one.
+   */
+  readonly abell?: string;
+};
+
+/** A supercluster — an extended structure with no Abell designation. */
+type SuperclusterRecord = StructureBase & {
+  readonly category: 'supercluster';
+};
+
+/** A cosmic void — an extended structure with no Abell designation. */
+type VoidRecord = StructureBase & {
+  readonly category: 'void';
+};
+
+/**
+ * An extended structure record.  `category` is a `StructureCategory`
+ * (cluster / supercluster / void); famous galaxies are not structures and
+ * are absent from this union.
+ */
+export type StructureRecord = ClusterRecord | SuperclusterRecord | VoidRecord;
