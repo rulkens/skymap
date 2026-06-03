@@ -747,6 +747,25 @@ Composes `common/Panel` (reuse — `src/components/common/Panel/Panel.tsx`) wrap
 
 ---
 
+## Phase 10 — WESL shader conversion (post-parity; added 2026-06-03)
+
+> **Gate:** only after Phase 8 visual parity is confirmed. The working WGSL-string
+> version + the spike are the golden references — convert against them so any
+> regression is unambiguously the WESL change. Refactor-style plan (terse): the
+> shader *source* barely changes; what changes is the plumbing.
+
+Decision (user, 2026-06-03): adopt WESL to match the main app's shader system,
+but AFTER reaching a known-good rendered baseline (debugging a new wesl-plugin
+build + the port + WESL const-injection simultaneously against a blank canvas is
+the failure mode CLAUDE.md warns about).
+
+- [ ] Add `wesl-plugin` to `tools/cosmic-flow/vite.config.ts` (mirror the main app's `vite.config.ts` wesl setup) + the `wesl.toml`/package wiring the runtime uses.
+- [ ] Move each WGSL template module to a `.wesl` file under `src/<viz>/shaders/` (mirroring `src/services/gpu/shaders/`): `blit`, `flow.compute`, `flow.render`, `volume`. NO backticks in WESL comments (wesl-plugin parse error — use single quotes; see memory `feedback_wesl_no_backticks`).
+- [ ] Replace JS template-literal constant injection (`${TRAIL}u`, `wgslF(...)`) with WESL's const/`?static`/`package::` mechanism (memory `project_wesl_conversion`). The typed constants in `flowField/constants.ts` become the single source the `.wesl` reads.
+- [ ] Update `makeShaderFactory`/viz `init` to consume the wesl-plugin module output instead of a raw string.
+- [ ] Visual-verify each shader still renders identically to the WGSL baseline; typecheck + tests green.
+- [ ] Commit per shader converted.
+
 ## Decisions the implementer must resolve (flagged inline above)
 
 These are genuine ambiguities between the spike's hand-rolled coordinate handling and the repo's verified transform. Resolve each with a test (where TDD applies) or a one-line ADR-style note in the relevant module header. The plan does not pre-decide them because the correct answer depends on what the verification test (Task 14) reveals about the shared transform vs the spike's empirical fit.
