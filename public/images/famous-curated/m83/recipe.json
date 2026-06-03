@@ -2,10 +2,11 @@
   "version": 1,
   "id": "m83",
   "crop": {
-    "x": 689.9180297851562,
-    "y": 158.74282836914062,
-    "width": 5682.444900512695,
-    "height": 5682.444900512695
+    "x": 440.28740458741504,
+    "y": 85.37585210922066,
+    "width": 2980.22597207517,
+    "height": 2879.049919911489,
+    "rotationDeg": 38.820840971011535
   },
   "starnet": {
     "stride": 256,
@@ -21,5 +22,19 @@
     "license": "CC BY 4.0",
     "author": "CTIO/NOIRLab/DOE/NSF/AURA Image processing: T.A. Rector (University of Alaska Anchorage/NSF NOIRLab), D. de Martin (NSF NOIRLab) &amp; M. Zamani (NSF NOIRLab)"
   },
-  "processedAt": "2026-05-18T09:42:01.410Z"
+  "processedAt": "2026-06-02T23:56:28.035Z",
+  "source": {
+    "width": 3840,
+    "height": 3232
+  },
+  "disk": {
+    "centerPx": [
+      1930.400390625,
+      1524.900812064965
+    ],
+    "radiusPx": 1192.090388830068,
+    "paDeg": 38.820840971011535,
+    "axisRatio": 0.9660508789898133,
+    "deproject": true
+  }
 }

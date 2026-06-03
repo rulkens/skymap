@@ -2,11 +2,11 @@
   "version": 1,
   "id": "c29",
   "crop": {
-    "x": 158.70196930473378,
-    "y": 427.5940618415532,
-    "width": 797.2999760436628,
-    "height": 797.2999760436628,
-    "rotationDeg": -32.79741522727704
+    "x": 244.5869361919485,
+    "y": 669.1379289066582,
+    "width": 666.845728207819,
+    "height": 283.95290195230854,
+    "rotationDeg": 144.85323585395506
   },
   "starnet": {
     "stride": 256,
@@ -22,5 +22,19 @@
     "license": "unknown",
     "author": "KPNO/NOIRLab/NSF/AURA/Ray and Emily Magnani/Adam Block"
   },
-  "processedAt": "2026-05-28T21:05:43.308Z"
+  "processedAt": "2026-06-03T08:31:43.496Z",
+  "source": {
+    "width": 1074,
+    "height": 1626
+  },
+  "disk": {
+    "centerPx": [
+      578.009800295858,
+      811.1143798828125
+    ],
+    "radiusPx": 266.7382912831276,
+    "paDeg": 144.85323585395506,
+    "axisRatio": 0.42581498229799875,
+    "deproject": true
+  }
 }

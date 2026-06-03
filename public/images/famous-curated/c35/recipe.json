@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "c35",
+  "crop": {
+    "x": 615.2470423922641,
+    "y": 723.5434666605328,
+    "width": 2674.8965402154718,
+    "height": 1735.0300021628052,
+    "rotationDeg": 52.55086467748686
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4889#/media/File:Caldwell_35.jpg",
+    "license": "CC BY 2.0",
+    "author": "NASA Hubble"
+  },
+  "processedAt": "2026-06-03T16:34:12.021Z",
+  "source": {
+    "width": 3840,
+    "height": 2556
+  },
+  "disk": {
+    "centerPx": [
+      1952.6953125,
+      1591.0584677419354
+    ],
+    "radiusPx": 1069.9586160861886,
+    "paDeg": 52.55086467748686,
+    "axisRatio": 0.6486344335482384,
+    "deproject": true
+  }
+}

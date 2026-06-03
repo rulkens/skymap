@@ -22,5 +22,19 @@
     "license": "CC BY-SA 4.0",
     "author": "Shark13016"
   },
-  "processedAt": "2026-05-18T22:28:11.862Z"
+  "processedAt": "2026-06-03T08:33:20.895Z",
+  "source": {
+    "width": 2682,
+    "height": 2924
+  },
+  "disk": {
+    "centerPx": [
+      1317.9069813829788,
+      1461.9330749511719
+    ],
+    "radiusPx": 892.613427124045,
+    "paDeg": 32.96349693018948,
+    "axisRatio": 0.17258378919902034,
+    "deproject": false
+  }
 }

@@ -2,11 +2,11 @@
   "version": 1,
   "id": "m88",
   "crop": {
-    "x": 503.91387939453114,
-    "y": 24.84393310546875,
-    "width": 1167.2925172380185,
-    "height": 1167.2925172380185,
-    "rotationDeg": -50.35074638413374
+    "x": 392.02057737876635,
+    "y": 255.7422176498426,
+    "width": 1352.9369946565298,
+    "height": 684.3488980336481,
+    "rotationDeg": 129.8097597950563
   },
   "starnet": {
     "stride": 256,
@@ -22,5 +22,19 @@
     "license": "Public domain",
     "author": "KPNO/NOIRLab/NSF/AURA/Jim Quinn/Adam Block"
   },
-  "processedAt": "2026-05-28T21:18:04.912Z"
+  "processedAt": "2026-06-03T16:59:36.608Z",
+  "source": {
+    "width": 2184,
+    "height": 1472
+  },
+  "disk": {
+    "centerPx": [
+      1068.4890747070312,
+      597.9166666666666
+    ],
+    "radiusPx": 541.174797862612,
+    "paDeg": 129.8097597950563,
+    "axisRatio": 0.505824662003114,
+    "deproject": true
+  }
 }

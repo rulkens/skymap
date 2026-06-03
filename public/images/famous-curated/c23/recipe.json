@@ -22,5 +22,19 @@
     "license": "CC BY-SA 3.0",
     "author": "Hewholooks"
   },
-  "processedAt": "2026-05-19T09:44:23.729Z"
+  "processedAt": "2026-06-03T08:30:44.283Z",
+  "source": {
+    "width": 3000,
+    "height": 2361
+  },
+  "disk": {
+    "centerPx": [
+      1489.19677734375,
+      1166.4257230924318
+    ],
+    "radiusPx": 809.0220286014927,
+    "paDeg": 36.51824557243725,
+    "axisRatio": 0.2322736796357107,
+    "deproject": false
+  }
 }
