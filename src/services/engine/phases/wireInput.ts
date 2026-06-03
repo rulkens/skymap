@@ -77,7 +77,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   state.subsystems.clickResolver = createClickResolver({
     pickRenderer,
     resolveSelection: (sel) => {
-      const cloud = state.sources.catalogs.get(sel.source);
+      const cloud = state.data.galaxies.catalogs.get(sel.source);
       if (!cloud) return null;
       if (sel.localIdx < 0 || sel.localIdx >= cloud.count) return null;
       return { source: sel.source, localIdx: sel.localIdx, cloud };
@@ -220,7 +220,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   ): ReturnType<NonNullable<typeof state.subsystems.clickResolver>['resolveClick']> | null => {
     const r = state.gpu.renderer;
     const cr = state.subsystems.clickResolver;
-    if (!r || state.sources.catalogs.size === 0 || !cr) return null;
+    if (!r || state.data.galaxies.catalogs.size === 0 || !cr) return null;
 
     // Snapshot what's pickable — visible galaxy surveys (filtered by the
     // pick mask; a fading-out layer clears its bit immediately so it

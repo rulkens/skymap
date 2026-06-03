@@ -104,7 +104,7 @@ export function wirePoiProjection(state: EngineState, cb: EngineCallbacks): void
   // will find the other already present in state and complete the join.
   function rebuildFamousGroup(): void {
     const meta = state.sources.famousMeta;
-    const famousCatalog = state.sources.catalogs.get(Source.Famous);
+    const famousCatalog = state.data.galaxies.catalogs.get(Source.Famous);
     if (meta.length > 0 && famousCatalog !== undefined && famousCatalog.count > 0) {
       state.subsystems.pois.setGroup('famous', buildPoisFromFamousMeta(meta, famousCatalog));
     } else {

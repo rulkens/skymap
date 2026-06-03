@@ -40,6 +40,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/sources';
+import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { seedVolumeFields } from '../../../../src/data/volumeFieldDefaults';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -331,12 +332,12 @@ function makeState(
     // and the demand loop reads request flags — both need a live Set.
     requests: new Set(),
     sources: {
-      catalogs: new Map(),
       pickMask: 0xff,
       drawMask: 0xff,
       famousMeta: [],
       tier: 'medium',
     },
+    data: createEngineData(),
     picking: {} as never,
     gpu: {
       // Renderers are stubs — the slot commits we mint inside wireSlots
@@ -749,7 +750,7 @@ describe('wireSlots', () => {
     // once-value against its default.
     const famousSlot = bootPointSlots();
     const state = makeState({ points: famousSlot });
-    state.sources.catalogs.set(Source.Famous, {
+    state.data.galaxies.setCatalog(Source.Famous, {
       count: 2,
       positions: new Float32Array([0.78, 0.1, 0.2, 0.85, 0.05, 0.15]),
       diameterKpc: new Float32Array([67, 30]),
@@ -809,7 +810,7 @@ describe('wireSlots', () => {
     // See the famous-POI test: famousMeta demands on the Famous point slot
     // leaving `idle`, and idle survey fakes keep the synthetic gate waiting.
     const state = makeState({ points: bootPointSlots() });
-    state.sources.catalogs.set(Source.Famous, {
+    state.data.galaxies.setCatalog(Source.Famous, {
       count: 1,
       positions: new Float32Array([0.78, 0.1, 0.2]),
       diameterKpc: new Float32Array([67]),

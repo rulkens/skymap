@@ -50,7 +50,7 @@ export const diskRadiusRingPass: Pass = {
     const sel = state.subsystems.selection.selected();
     // `enabled()` proved a galaxy selection — narrow accordingly.
     if (sel === null || sel.kind !== 'galaxy') return;
-    const catalog = state.sources.catalogs.get(sel.source);
+    const catalog = state.data.galaxies.catalogs.get(sel.source);
     // Defensive: a tier swap can evict the catalog between `enabled()`
     // and `draw()`; a no-op is correct (next frame's gate re-reads it).
     if (!catalog) return;

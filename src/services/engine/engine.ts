@@ -391,10 +391,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // in the settings panel.
       pickMask: ALL_VISIBLE_MASK,
       drawMask: ALL_VISIBLE_MASK,
-      // Mirrors the renderer's per-source GPU buffers in CPU memory so
-      // picking can resolve `(source, localIdx)` → GalaxyInfo without a GPU
-      // readback per hover.  Empty until the first fetch resolves.
-      catalogs: new Map<SourceType, GalaxyCatalog>(),
       // Optional sidecar — `galaxyInfoBuilder` null-checks, so a hover
       // before it lands just renders the generic InfoCard layout.
       famousMeta: [],
@@ -407,8 +403,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       tier: cb.initialTier ?? 'medium',
     },
     // Per-type data stores. Empty at construction; slot commits fill them.
-    // The legacy `sources.catalogs/famousMeta/clusterBulk` fields above are
-    // migrated onto these stores in the following tasks.
     data: createEngineData(),
     picking: {
       // Per-frame pick-throttle state. Hover / select live on
@@ -509,7 +503,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // call time — see the module header for the tier-swap rationale.
       selection: createSelectionSubsystem({
         cb,
-        getCloud: (s) => state.sources.catalogs.get(s),
+        getCloud: (s) => state.data.galaxies.catalogs.get(s),
         getFamousMeta: () => state.sources.famousMeta,
         // Forward-reference: `state.subsystems.pois` is bound later in this
         // literal, but the closure resolves at call time.
@@ -524,7 +518,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Vite `?worker` runners; tests inject synchronous stubs.
       biasCorrection: createBiasCorrectionSubsystem({
         getMode: () => state.settings.bias.mode,
-        getLoadedClouds: () => state.sources.catalogs,
+        getLoadedClouds: () => state.data.galaxies.catalogs,
         requestRender: () => state.subsystems.scheduler.requestRender(),
       }),
 
@@ -790,7 +784,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   function selectFamous(id: string): void {
     // Guard: the famous catalog may not be loaded yet (sidecars arrive
     // slightly after the point cloud).  Early return is cosmetically safe.
-    const cloud = state.sources.catalogs.get(Source.Famous);
+    const cloud = state.data.galaxies.catalogs.get(Source.Famous);
     if (!cloud) return;
     const localIdx = state.sources.famousMeta.findIndex((m) => m.id === id);
     if (localIdx < 0) return;
@@ -812,7 +806,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   function selectByAlias({ source, localIdx, famousMeta }: SelectByAliasTarget): void {
     // Guard: the source cloud may not be loaded yet, or localIdx could be
     // stale across a tier swap.  Both early-return safely.
-    const cloud = state.sources.catalogs.get(source);
+    const cloud = state.data.galaxies.catalogs.get(source);
     if (!cloud) return;
     if (localIdx < 0 || localIdx >= cloud.count) return;
 
@@ -885,11 +879,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function getCloud(source: SourceType): GalaxyCatalog | undefined {
-    return state.sources.catalogs.get(source);
+    return state.data.galaxies.catalogs.get(source);
   }
 
   function getCloudObjIds(source: SourceType): BigUint64Array | undefined {
-    return state.sources.catalogs.get(source)?.objIDs;
+    return state.data.galaxies.catalogs.get(source)?.objIDs;
   }
 
   function setVolumesEnabled(enabled: boolean): void {
@@ -1174,7 +1168,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.focusUniform = null;
 
     // 5. Drop remaining strong references to aid GC.
-    state.sources.catalogs.clear();
+    for (const source of [...state.data.galaxies.catalogs.keys()]) {
+      state.data.galaxies.removeCatalog(source);
+    }
     state.cam = null;
   }
 

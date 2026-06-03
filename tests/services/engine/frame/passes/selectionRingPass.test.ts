@@ -53,13 +53,15 @@ function makeRendererSpy() {
 function makeStateWithSelection(selection: GalaxySelection | null): EngineState {
   const positions = new Float32Array([0, 0, 100]); // 100 Mpc away on +z
   const diameterKpc = new Float32Array([60]);       // 60 kpc galaxy
-  const catalog = { positions, diameterKpc } as unknown as Parameters<EngineState['sources']['catalogs']['set']>[1];
+  const catalog = { positions, diameterKpc } as unknown as Parameters<
+    EngineState['data']['galaxies']['setCatalog']
+  >[1];
   const catalogs = new Map();
   catalogs.set(Source.Glade, catalog);
 
   return {
     gpu: { selectionRingRenderer: makeRendererSpy() },
-    sources: { catalogs },
+    data: { galaxies: { catalogs } },
     subsystems: {
       selection: {
         selected: () => selection,
@@ -115,7 +117,7 @@ describe('selectionRingPass.draw', () => {
     const state = makeStateWithSelection({ kind: 'galaxy', source: Source.Glade, localIdx: 0 });
     // Override the catalog position to put galaxy at 10 Mpc so the
     // apparent radius dominates.
-    const cat = state.sources.catalogs.get(Source.Glade)!;
+    const cat = state.data.galaxies.catalogs.get(Source.Glade)!;
     (cat as unknown as { positions: Float32Array }).positions = new Float32Array([0, 0, 10]);
 
     selectionRingPass.draw(PASS_STUB, makeCtx(), state, makeSettings({ pointSizePx: 4 }), DEPS_STUB);

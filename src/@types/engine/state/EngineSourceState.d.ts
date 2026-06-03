@@ -14,10 +14,6 @@
  *                   falling opacity) or AT the START of fade-in (so the
  *                   renderer begins drawing the layer even though opacity is
  *                   currently 0).  Updated by `setSourceVisible`.
- *   - `catalogs` — CPU-side mirror of every uploaded `GalaxyCatalog`, keyed by
- *                 `Source`.  Required for picking / hover (resolving a
- *                 GPU instance index back into GalaxyInfo) and for the
- *                 cross-catalog framing snapshot.
  *   - `famousMeta` — optional sidecar that enriches the InfoCard text
  *                    for the Famous catalog. Empty until the fetch
  *                    resolves; consumers null-check before reading.
@@ -34,9 +30,7 @@
  * is otherwise a recipe for callers reaching into unrelated bags.
  */
 
-import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { Tier } from '../../data/Tier';
-import type { SourceType } from '../../data/SourceType';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
 import type { ClusterCatalogPayload } from '../../loading/ClusterCatalogPayload';
 
@@ -55,7 +49,6 @@ export type EngineSourceState = {
    * the draw entirely — saves a writeBuffer + draw call.
    */
   drawMask: number;
-  catalogs: Map<SourceType, GalaxyCatalog>;
   famousMeta: FamousMetaEntry[];
   /**
    * Bulk cluster/supercluster coverage layer — the decoded `{ catalog, meta }`

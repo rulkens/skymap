@@ -43,7 +43,7 @@ import type { Vec3 } from '../../@types/math/Vec3';
  * the call boundary because the catalog itself is source-agnostic —
  * it's the same `GalaxyCatalog` shape regardless of which survey
  * produced it. The caller assembles the list from the engine's
- * `state.sources.catalogs` map.
+ * `galaxyStore` catalogs map.
  */
 export type CatalogWithSource = {
   readonly source: SourceType;

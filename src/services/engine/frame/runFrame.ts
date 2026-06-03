@@ -190,7 +190,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   if (state.subsystems.proceduralDisks !== null) {
     state.subsystems.proceduralDisks.runFrame({
       cam: ctx.cam,
-      catalogs: state.sources.catalogs,
+      catalogs: state.data.galaxies.catalogs,
       visibleSourceMask: state.sources.drawMask,
       pxPerRad: ctx.drawPxPerRad,
     });
@@ -203,7 +203,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   if (state.subsystems.hiResFamous !== null) {
     state.subsystems.hiResFamous.runFrame({
       cam: ctx.cam,
-      catalogs: state.sources.catalogs,
+      catalogs: state.data.galaxies.catalogs,
       visibleSourceMask: state.sources.drawMask,
       pxPerRad: ctx.drawPxPerRad,
       famousMeta: state.sources.famousMeta,
@@ -212,7 +212,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   if (state.subsystems.texturedDisks !== null) {
     state.subsystems.texturedDisks.runFrame({
       cam: ctx.cam,
-      catalogs: state.sources.catalogs,
+      catalogs: state.data.galaxies.catalogs,
       visibleSourceMask: state.sources.drawMask,
       pxPerRad: ctx.drawPxPerRad,
       famousMeta: state.sources.famousMeta,
@@ -302,7 +302,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       volumesEnabled: state.settings.volumes.masterEnabled,
     },
     famousMeta: state.sources.famousMeta,
-    catalogs: state.sources.catalogs,
+    catalogs: state.data.galaxies.catalogs,
     timingService: deps.timingService,
   });
 
@@ -319,7 +319,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.settings.debug.showPickBuffer &&
     state.gpu.pickRenderer !== null &&
     state.gpu.pickDebugOverlay !== null &&
-    state.sources.catalogs.size > 0 &&
+    state.data.galaxies.catalogs.size > 0 &&
     ctx.isReady
   ) {
     const { visibleSources: overlaySources, hasAny } = collectPickTargets(
@@ -371,7 +371,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // frame's uniform buffer already holds the latest viewProj — and the
   // pick renderer reads that same buffer.
   if (
-    state.sources.catalogs.size > 0 &&
+    state.data.galaxies.catalogs.size > 0 &&
     state.picking.latestMouseCss !== null &&
     state.picking.latestMouseCss !== state.picking.lastPickedMouseCss &&
     !state.picking.pickInFlight &&

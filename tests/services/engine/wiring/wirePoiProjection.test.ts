@@ -34,6 +34,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/sources';
+import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
@@ -185,11 +186,11 @@ function makeState(): { state: EngineState; slots: TestSlots } {
     sources: {
       famousMeta: [] as ReturnType<typeof Array<{ id: string }>>,
       clusterBulk: null as ClusterCatalogPayload | null,
-      catalogs: new Map(),
       drawMask: 0xff,
       pickMask: 0xff,
       tier: 'medium' as const,
     },
+    data: createEngineData(),
     assetSlots: {
       points,
       famousMeta: {
@@ -290,7 +291,7 @@ describe('wirePoiProjection', () => {
       positions: new Float32Array([0.78, 0.1, 0.2]),
       diameterKpc: new Float32Array([67]),
     } as unknown as GalaxyCatalog;
-    state.sources.catalogs.set(Source.Famous, fakeCatalog);
+    state.data.galaxies.setCatalog(Source.Famous, fakeCatalog);
     slots.famousCatalogSlot.fire(readyState(fakeCatalog));
 
     // Famous POIs must now be present.
@@ -318,7 +319,7 @@ describe('wirePoiProjection', () => {
       diameterKpc: new Float32Array([67]),
       magnitudes: new Float32Array([3.4]),
     } as unknown as GalaxyCatalog;
-    state.sources.catalogs.set(Source.Famous, fakeCatalog);
+    state.data.galaxies.setCatalog(Source.Famous, fakeCatalog);
     slots.famousMetaSlot.fire(readyState({ meta: [] }));
     slots.famousCatalogSlot.fire(readyState(fakeCatalog));
     expect(state.subsystems.pois.getPoisForCategory('famousGalaxy').length).toBeGreaterThan(0);
@@ -369,7 +370,7 @@ describe('wirePoiProjection', () => {
       positions: new Float32Array([0.78, 0.1, 0.2]),
       diameterKpc: new Float32Array([67]),
     } as unknown as GalaxyCatalog;
-    state.sources.catalogs.set(Source.Famous, fakeCatalog);
+    state.data.galaxies.setCatalog(Source.Famous, fakeCatalog);
     slots.famousCatalogSlot.fire(readyState(fakeCatalog));
 
     // BOTH groups must be present simultaneously.
