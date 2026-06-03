@@ -13,6 +13,7 @@
  */
 import '../../../src/styles/global.css';
 import './visualizations/flowField/register';
+import './visualizations/densityVolume/register';
 import { createStore } from './state/createStore';
 import { defaultAppState } from './state/defaultAppState';
 import { createEngine } from './engine/createEngine';
