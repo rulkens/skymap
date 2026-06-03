@@ -39,6 +39,7 @@ import {
   sdssExplorerUrl,
   sdssThumbnailUrl,
   dssThumbnailUrl,
+  galaxyThumbnailFovArcmin,
   nedByNameUrl,
   nedNearPositionUrl,
   DEFAULT_GALAXY_DIAMETER_KPC,
@@ -267,7 +268,13 @@ export function buildGalaxyInfo(
   } else {
     catalogUrl = null;
   }
-  const thumbnailUrl = isSdss ? sdssThumbnailUrl(ra, dec, 200) : dssThumbnailUrl(ra, dec, 2);
+  // Size the cutout to the galaxy's angular extent so a nearby giant and a
+  // distant dwarf both roughly fill the frame, instead of a fixed FOV that
+  // crops the former and shrinks the latter.
+  const fovArcmin = galaxyThumbnailFovArcmin(cloud.diameterKpc[idx]!, distanceMpc);
+  const thumbnailUrl = isSdss
+    ? sdssThumbnailUrl(ra, dec, 200, fovArcmin)
+    : dssThumbnailUrl(ra, dec, fovArcmin);
 
   // ── Orientation provenance recovery ────────────────────────────────────────
   //
