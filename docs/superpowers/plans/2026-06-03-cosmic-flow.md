@@ -12,13 +12,15 @@
 
 **Conventions (override defaults):** `type` aliases never `interface`; no barrel exports for components (import each `.tsx` directly); one folder per component with co-located `.module.css`, `function Name()` + `export default Name`; `Vec2`/`Vec3`/`Mat4` aliases from `src/@types/math` never raw tuples; CSS modules consume `var(--token)` from `global.css`; didactic multi-paragraph module headers; commit per task (human runs commits with their own identity — never pass author flags). Run bash sequentially, never in parallel; use Read/Grep tools not sed/awk/grep.
 
+**TYPE-CONTRACT LOCATION (binding — overrides any src/ path shown in a task below):** every standalone exported `type` lives in `tools/cosmic-flow/@types/<path-mirroring-src>/TypeName.d.ts`, ONE type per file (mirrors the repo's `src/@types/` convention). Runtime modules in `src/` import them via `import type`. Single-function runtime modules are named after their export (`createVelocityField.ts`, `makeShaderFactory.ts`, `createDisposableTracker.ts`). The ONLY types that stay co-located are React component `Props` types (in the `.tsx`, matching the main app). So where a task says e.g. "create the type in `src/field/VelocityField.ts`", instead put the type in `@types/field/VelocityField.d.ts` and any factory in `src/field/createX.ts`. The tool's `tsconfig.json` `include`s `@types`.
+
 **Test locations:** tests mirror the repo tree under `tests/tools/cosmic-flow/**` (e.g. `tests/tools/cosmic-flow/state/store.test.ts`, `tests/tools/cosmic-flow/ui/...`), matching the curator precedent at `tests/tools/famous-curator/`. Run with `npm test -- <pattern>`. Typecheck with `npm run typecheck`.
 
 **TDD honesty:** Tasks for the store, slices, selectors, `structures.ts` mapping, and `paramSpecs`-range checks are genuine TDD (failing test → implement → pass). Tasks for GPU/WGSL/React-render are NOT unit-tested (consistent with the repo — renderers verified by eye); their step shape is implement-against-cited-reference → typecheck → visual-verify → commit. Do not fabricate GPU unit tests.
 
 ---
 
-## Phase 1 — Build wiring
+## Phase 1 — Build wiring ✅ DONE (commits 96f7fcd0..3717b857; typecheck + smoke green)
 
 ### Task 1: Scaffold the tool directory + Vite config
 
