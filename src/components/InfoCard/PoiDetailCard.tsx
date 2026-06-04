@@ -5,14 +5,15 @@
  */
 
 import type { ReactNode } from 'react';
-import { useState } from 'react';
-import cx from 'classnames';
 import type { StructureRecord } from '../../@types/engine/data/StructureRecord';
 import { formatDistance } from '../../utils/format/distance';
 import { formatAbellDesignation } from '../../utils/format/formatAbellDesignation';
 import { POI_CATEGORY_INFO } from '../../data/poiCategoryInfo';
 import { CardHeader } from './CardHeader';
 import { CardRow } from './CardRow';
+import { DescriptionBlock } from './DescriptionBlock';
+import { InfoTip } from '../InfoTip/InfoTip';
+import { TIPS } from './tooltips';
 import styles from './DetailCard.module.css';
 
 export type PoiDetailCardProps = {
@@ -36,7 +37,6 @@ export function PoiDetailCard({
   onFocus,
   onClose,
 }: PoiDetailCardProps): ReactNode {
-  const [descExpanded, setDescExpanded] = useState(false);
   const distanceMpc = Math.hypot(poi.worldPos[0], poi.worldPos[1], poi.worldPos[2]);
   const outerClass = `${styles.infoCardFull} ${styles.poi}${pinned ? ` ${styles.pinned}` : ''}`;
 
@@ -53,36 +53,31 @@ export function PoiDetailCard({
       <div className={styles.sourceBadge}>{POI_CATEGORY_INFO[poi.category].label}</div>
 
       <div className={styles.cardSection}>
-        <CardRow label="Distance" value={formatDistance(distanceMpc)} />
-        <CardRow label="Radius" value={formatDistance(poi.physicalRadiusMpc)} />
-        {memberCount != null && <CardRow label="Galaxies" value={memberCount.toLocaleString()} />}
+        <CardRow
+          label={<InfoTip {...TIPS.structureDistance!}>Distance</InfoTip>}
+          value={formatDistance(distanceMpc)}
+        />
+        <CardRow
+          label={<InfoTip {...TIPS.structureRadius!}>Radius</InfoTip>}
+          value={formatDistance(poi.physicalRadiusMpc)}
+        />
+        {memberCount != null && (
+          <CardRow
+            label={<InfoTip {...TIPS.memberCount!}>Galaxies</InfoTip>}
+            value={memberCount.toLocaleString()}
+          />
+        )}
         {poi.category === 'cluster' && poi.abell !== undefined && (
-          <CardRow label="Abell" value={formatAbellDesignation(poi.abell)} />
+          <CardRow
+            label={<InfoTip {...TIPS.abell!}>Abell</InfoTip>}
+            value={formatAbellDesignation(poi.abell)}
+          />
         )}
         {poi.description && (
           // Curated Wikipedia-lead blurb (featured anchors) or the build's
-          // auto one-liner (bulk entries).  Same label-less collapse pattern
-          // as GalaxyDetailCard's famous description so the two info cards
-          // read identically.
-          <div className={styles.cardRow}>
-            <span
-              className={cx(
-                styles.cardValue,
-                descExpanded ? styles.descExpanded : styles.descCollapsed,
-              )}
-              style={{ fontStyle: 'italic' }}
-            >
-              {poi.description}
-            </span>
-            <button
-              type="button"
-              className={styles.descToggle}
-              onClick={() => setDescExpanded((v) => !v)}
-              aria-expanded={descExpanded}
-            >
-              {descExpanded ? 'show less' : 'show more'}
-            </button>
-          </div>
+          // auto one-liner (bulk entries).  Shares DescriptionBlock with
+          // GalaxyDetailCard so the show-more toggle sits in the same place.
+          <DescriptionBlock text={poi.description} />
         )}
       </div>
     </div>

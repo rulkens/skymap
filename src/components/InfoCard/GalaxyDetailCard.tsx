@@ -8,7 +8,6 @@
  */
 
 import type { ReactNode } from 'react';
-import { useState } from 'react';
 import cx from 'classnames';
 import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
 import { Source } from '../../data/sources';
@@ -17,6 +16,7 @@ import { Thumbnail } from './Thumbnail';
 import { famousWikipediaTitle } from './famousWikipediaTitle';
 import { CardHeader } from './CardHeader';
 import { CardRow } from './CardRow';
+import { DescriptionBlock } from './DescriptionBlock';
 import { InfoTip } from '../InfoTip/InfoTip';
 import { TIPS } from './tooltips';
 import styles from './DetailCard.module.css';
@@ -34,14 +34,9 @@ export function GalaxyDetailCard({
   onFocus,
   onClose,
 }: GalaxyDetailCardProps): ReactNode {
-  const [descExpanded, setDescExpanded] = useState(false);
+  const outerClass = pinned ? `${styles.infoCardFull} ${styles.pinned}` : styles.infoCardFull;
 
-  const outerClass = pinned
-    ? `${styles.infoCardFull} ${styles.pinned}`
-    : styles.infoCardFull;
-
-  const famousAliases =
-    info.famous?.names.filter((n) => n !== info.displayName) ?? [];
+  const famousAliases = info.famous?.names.filter((n) => n !== info.displayName) ?? [];
 
   return (
     <div className={outerClass} role="status" aria-live="polite">
@@ -65,30 +60,7 @@ export function GalaxyDetailCard({
 
       {info.famous && (
         <div className={styles.cardSection}>
-          {info.famous.description && (
-            // Description prose stacked above its show-more toggle — a column,
-            // not the label/value CardRow shape, so the toggle sits underneath
-            // the text rather than floating to its right.
-            <div className={styles.descBlock}>
-              <span
-                className={cx(
-                  styles.cardValue,
-                  descExpanded ? styles.descExpanded : styles.descCollapsed,
-                )}
-                style={{ fontStyle: 'italic' }}
-              >
-                {info.famous.description}
-              </span>
-              <button
-                type="button"
-                className={styles.descToggle}
-                onClick={() => setDescExpanded((v) => !v)}
-                aria-expanded={descExpanded}
-              >
-                {descExpanded ? 'show less' : 'show more'}
-              </button>
-            </div>
-          )}
+          {info.famous.description && <DescriptionBlock text={info.famous.description} />}
           {/*
             Wikipedia article slug comes from `famousWikipediaTitle`, which
             prefers the NGC/IC designation: Messier short ids ("M51"/"M109")
