@@ -140,17 +140,17 @@ Port the structure arm of `produceLabels`. Crucially: **emit every surviving can
 - Modify: `src/@types/rendering/Label.d.ts` (add `prominencePx?: number`)
 - Test: `tests/services/engine/presentation/produceStructureLabels.test.ts`
 
-- [ ] **Step 1: Write the failing test** — assert: featured-only gate; label-visibility gate; anchor gate (structure label needs its marker visible); marker close-approach + far-distance fade applied to label alpha; `prominencePx` set to the ring's apparent radius; no declutter (two near labels both emitted).
+- [x] **Step 1: Write the failing test** — assert: featured-only gate; label-visibility gate; anchor gate (structure label needs its marker visible); marker close-approach + far-distance fade applied to label alpha; `prominencePx` set to the ring's apparent radius; no declutter (two near labels both emitted).
 
-- [ ] **Step 2: Run it, expect failure.**
+- [x] **Step 2: Run it, expect failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Add `readonly prominencePx?: number;` to `Label` (docstring: declutter sort key, consumed by the labelDirector merge, ignored by the renderer). `produceStructureLabels(state, ctx)`: port the structure branch of `produceLabels` (the `p.category !== 'famousGalaxy'` paths: featured gate, label+marker visibility gates via `structureStore`, the marker max/min apparent-radius fade applied to `fadeAlpha`, ring-centre anchor). Set `prominencePx` on each emitted `Label`. Return `{ labels, lines: [], awake: false }` (structures emit no anchor lines). Read records from `state.data.structures.all()`. Keep the one-shot `labelLayer:'poi'` fade-in? — see Task 5 note (move the fade-in fire to whichever producer emits first, or to the director; for now omit and restore in Task 5).
 
-- [ ] **Step 4: Run it, expect pass.**
+- [x] **Step 4: Run it, expect pass.**
 
-- [ ] **Step 5: Commit** — `feat(engine): produceStructureLabels reads structureStore`
+- [x] **Step 5: Commit** — `feat(engine): produceStructureLabels reads structureStore`
 
 ---
 
