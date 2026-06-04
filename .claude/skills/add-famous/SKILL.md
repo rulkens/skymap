@@ -145,6 +145,23 @@ interacting pair). The Wikipedia link resolves via the NGC/IC name regardless of
 alias order (`famousWikipediaTitle`), so the aliases are free to be the obscure
 ones — e.g. `["NGC 3166", "UGC 5516", "PGC 29814", "KPG 228A"]`.
 
+**Interacting pairs — co-locate them in depth.** The seed's `distanceMpc` is a
+HyperLEDA value (`mod0`, or `v3k/70` when `mod0` is missing), *not* the CF4
+override the GLADE/2MRS bins use. For a close pair, one member often has `mod0`
+and the other falls back to `v3k`, splitting them by several Mpc along the line
+of sight — they render light-years apart despite sharing a tidal bridge. Anchor
+both at the CF4 *group* distance instead: grab `table3.dat.gz` from VizieR
+`J/ApJ/944/94` (the local `fetch-cf4` only pulls `table2`), find the row whose
+`1PGC` is the pair's brightest member, and use its `DMav`
+(`distanceMpc = 10^((DMav−25)/5)`; remember to rescale each `diameterKpc` by the
+distance ratio — angular size is fixed). Co-locating leaves only the real on-sky
+separation (tens of kpc). If the disks then overlap and you want a depth cue,
+nudge the measured-farther member back by a few tens of kpc — CF4's individual
+`table2` `DM`s say which is farther, but keep the offset at interacting-pair
+scale: the per-galaxy error bars dwarf the real gap, so a literal split would
+un-interact them. NGC 3166/3169 are the worked example (co-located at the group
+24.04 Mpc, then split 60 kpc so 3169 sits just behind 3166).
+
 ### 3a. CURATED path — hand-tune in the curator, then stop
 
 **First check whether the curator is already running** — the maintainer often
@@ -265,6 +282,7 @@ the hi-res tile.
 | Stage specific paths | Project rule: never `git add -A`; the famous webps span three dirs |
 | `STARNET_WEIGHTS` must point at the weights | The curator and `build-famous-thumbs` shell out to StarNet — see `reference_starnet_weights` |
 | Check for an already-running curator before launching | The maintainer usually has it open at `:5200`; a second `curate-famous` silently lands on `:5201` (Vite non-strict port) and you curate the wrong instance |
+| Interacting pairs land at mismatched depths | Seed `distanceMpc` is HyperLEDA (`mod0`/`v3k`), not the CF4 override the survey bins use — one member gets `mod0`, the other `v3k`, splitting them by Mpc. Co-locate both at the CF4 group distance (`table3` `DMav`); see the pairs note in 2b |
 
 ## Red flags — STOP
 
