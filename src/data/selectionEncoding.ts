@@ -71,7 +71,7 @@ export function packSelection(sourceCode: number, localIdx: number): number {
 
 /**
  * Decoded pick-buffer result. Discriminator `kind` says which of the
- * five categories the hit was, and the payload shape differs per kind:
+ * six categories the hit was, and the payload shape differs per kind:
  *
  *   - 'galaxy'     — a survey-galaxy hit. Carries the Source enum +
  *                    the per-source local index.
@@ -79,6 +79,7 @@ export function packSelection(sourceCode: number, localIdx: number): number {
  *                    the cluster anchor table.
  *   - 'supercluster' — same as cluster, but for supercluster anchors.
  *   - 'void'       — same as cluster, but for void anchors.
+ *   - 'group'      — same as cluster, but for nearby-galaxy-group anchors.
  *
  * The discriminated-union shape forces callers to switch on `kind`
  * (rather than read a magic source-code number) — the type system
@@ -90,7 +91,8 @@ export type PickResult =
   | { readonly kind: 'galaxy'; readonly source: SourceType; readonly localIdx: number }
   | { readonly kind: 'cluster'; readonly poiIndex: number }
   | { readonly kind: 'supercluster'; readonly poiIndex: number }
-  | { readonly kind: 'void'; readonly poiIndex: number };
+  | { readonly kind: 'void'; readonly poiIndex: number }
+  | { readonly kind: 'group'; readonly poiIndex: number };
 
 /**
  * Decode a raw r32uint pick-buffer value into the canonical
@@ -107,7 +109,8 @@ export type PickResult =
  *   - 6     → supercluster POI
  *   - 7     → void POI
  *   - 8     → Milliquas galaxy hit (point-source AGN)
- *   - 9..30 → unallocated; log a defensive warning and return null
+ *   - 15    → group POI (nearby-galaxy-group anchors)
+ *   - 9..14, 16..30 → unallocated; log a defensive warning and return null
  *   - 31    → reserved (all-ones sentinel); return null
  *
  * The 9..30 branch should never fire at runtime (we don't render any
@@ -132,6 +135,7 @@ export function unpackPick(rawPickValue: number): PickResult | null {
   if (sourceCode === 5) return { kind: 'cluster', poiIndex: localIdx };
   if (sourceCode === 6) return { kind: 'supercluster', poiIndex: localIdx };
   if (sourceCode === 7) return { kind: 'void', poiIndex: localIdx };
+  if (sourceCode === Source.Group) return { kind: 'group', poiIndex: localIdx };
   console.warn(
     `unpackPick: unexpected source code ${sourceCode} ` +
       `(raw=0x${rawPickValue.toString(16).padStart(8, '0')}); returning null`,
