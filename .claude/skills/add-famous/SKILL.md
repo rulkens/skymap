@@ -137,7 +137,22 @@ Two traps the formulas encode:
 Take `description` from the galaxy's Wikipedia lead, matching the M/C entries'
 prose style.
 
+**Add the cross-ID aliases** to `names` after the NGC/IC name (the script only
+emits the one primary name). The InfoCard renders `names[1+]` as alias chips and
+the Cmd+K palette indexes them, so include the designations from the HyperLEDA
+record — the UGC and PGC numbers, plus any pair label (`KPG …` for an
+interacting pair). The Wikipedia link resolves via the NGC/IC name regardless of
+alias order (`famousWikipediaTitle`), so the aliases are free to be the obscure
+ones — e.g. `["NGC 3166", "UGC 5516", "PGC 29814", "KPG 228A"]`.
+
 ### 3a. CURATED path — hand-tune in the curator, then stop
+
+**First check whether the curator is already running** — the maintainer often
+has it open at `http://localhost:5200`. If so, reuse that tab and skip the
+launch. Do **not** start a second one: a second `curate-famous` finds 5200 taken
+and (Vite's non-strict port) silently starts on `5201`, so you'd be curating
+against the wrong instance while the maintainer watches the first. Only launch if
+none is running:
 
 ```bash
 STARNET_WEIGHTS=data/starnet/StarNet2_weights.pt npm run curate-famous
@@ -249,6 +264,7 @@ the hi-res tile.
 | Use total `bt`/`vt`/`kt`, drop bands with error > 0.5 | SIMBAD/aperture mags aren't whole-galaxy; HyperLEDA's large error bars flag unreliable aggregates |
 | Stage specific paths | Project rule: never `git add -A`; the famous webps span three dirs |
 | `STARNET_WEIGHTS` must point at the weights | The curator and `build-famous-thumbs` shell out to StarNet — see `reference_starnet_weights` |
+| Check for an already-running curator before launching | The maintainer usually has it open at `:5200`; a second `curate-famous` silently lands on `:5201` (Vite non-strict port) and you curate the wrong instance |
 
 ## Red flags — STOP
 

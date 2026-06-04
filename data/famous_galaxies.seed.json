@@ -1371,5 +1371,63 @@
     "magB": 10.396,
     "magV": 9.841,
     "magK": 6.984
+  },
+  {
+    "id": "ngc3166",
+    "names": [
+      "NGC 3166",
+      "UGC 5516",
+      "PGC 29814",
+      "KPG 228A"
+    ],
+    "ra": 153.4404105,
+    "dec": 3.4248246,
+    "distanceMpc": 24.065714285714286,
+    "diameterKpc": 31.48653522510734,
+    "type": "S0-a",
+    "description": "NGC 3166 is a lenticular galaxy in the constellation Sextans, the brighter member of a close interacting pair with the spiral NGC 3169. It lies roughly 65 million light-years away; the gravitational tug-of-war between the two has drawn faint tidal streams of hydrogen across the gap separating them. The galaxy was discovered by William Herschel on 19 December 1783.",
+    "axisRatio": 0.6324118513762195,
+    "positionAngleDeg": 87.25,
+    "magB": 11.416,
+    "magV": 10.621,
+    "magK": 7.225
+  },
+  {
+    "id": "ngc3169",
+    "names": [
+      "NGC 3169",
+      "UGC 5525",
+      "PGC 29855",
+      "KPG 228B"
+    ],
+    "ra": 153.561621,
+    "dec": 3.4664709,
+    "distanceMpc": 20.118703951494332,
+    "diameterKpc": 25.3703300549957,
+    "type": "Sa",
+    "description": "NGC 3169 is a spiral galaxy in the constellation Sextans, locked in a gravitational encounter with its lenticular neighbour NGC 3166. Its classification SA(s)a pec marks an unbarred spiral whose tightly wound arms have been pulled out of symmetry by the interaction, leaving one arm drawn open and the galaxy wrapped in a distorted, extended halo. It lies roughly 60 million light-years away and was discovered by William Herschel on 19 December 1783.",
+    "axisRatio": 0.610942024905572,
+    "positionAngleDeg": 48.65,
+    "magB": 11.254,
+    "magK": 7.293
+  },
+  {
+    "id": "ngc5394",
+    "names": [
+      "NGC 5394",
+      "Arp 84",
+      "UGC 8898",
+      "PGC 49739"
+    ],
+    "ra": 209.6401755,
+    "dec": 37.4534963,
+    "distanceMpc": 52.25,
+    "diameterKpc": 39.97720359872638,
+    "type": "SBb",
+    "description": "NGC 5394 is a barred spiral galaxy in the constellation Canes Venatici, the smaller and more distorted member of the interacting pair Arp 84 (with NGC 5395). The gravitational encounter has swept its arms into a tight, bird-like shape — Halton Arp catalogued it as a spiral with a bright companion at the end of one arm. It was discovered by William Herschel in 1787.",
+    "axisRatio": 0.4083193863326921,
+    "magB": 13.567,
+    "magV": 12.942,
+    "magK": 10.143
   }
 ]
