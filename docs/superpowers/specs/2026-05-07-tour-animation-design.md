@@ -1,26 +1,34 @@
-# Tour animation — design (brainstorm-in-progress)
+# Tour animation — design (brainstorm, grounded 2026-06-04)
 
-> **Status: incomplete brainstorm.** Started 2026-05-07 during the outreach
-> work (the trigger was needing a 20-30 s screen capture for r/Astronomy
-> and r/WebGPU; the existing sub-second `cameraTween` produces hard cuts
-> that don't read as cinematic). Brainstorming was paused after two
-> decisions; this doc captures the state so it can be picked up cleanly
-> in a future session.
+> **Status: brainstorm, partially resolved.** Started 2026-05-07 during the
+> outreach work (the trigger was needing a 20-30 s screen capture for
+> r/Astronomy and r/WebGPU; the existing sub-second focus tween produces
+> hard cuts that don't read as cinematic). Brainstorming was paused after
+> two decisions.
+>
+> **Re-grounded 2026-06-04 against the current codebase.** Two of the six
+> open decisions (labels, Milky Way impostor) have been answered by code
+> that has since shipped; several new subsystems now exist that this tour
+> should showcase. The "open decisions" and "infrastructure" sections
+> below have been rewritten to reflect what is actually available today.
+> The companion **stub tour** (`../plans/2026-05-20-splash-screen-02-stub-tour.md`)
+> ships a rough-cut version from the splash's Tour button; this spec is the
+> polished cinematic successor that supersedes it.
 
 ## What it is
 
 A "guided tour" mode for skymap: the camera flies through a scripted
-sequence of targets (Milky Way → M31 → wide cosmic-web view), narrating
-the scale story (familiar → bigger neighbour → cosmic structure) over
-20-30 seconds. Triggered by URL flag for now (e.g. `?tour=default`),
-not exposed as visible UI.
+sequence of targets, narrating a powers-of-ten scale story (familiar →
+neighbour → cosmic structure → the observable horizon) over 30-60
+seconds. Triggered by URL flag for now (e.g. `?tour=default`), not
+exposed as visible UI.
 
 Primary use case: record a single screen capture, then post the same
 clip to r/Astronomy and r/WebGPU (the per-sub drafts in
 `docs/superpowers/plans/2026-05-05-outreach-and-promotion/posts-and-emails/`
 both say video has +14 to +17pp lift over still-image / link posts).
 
-Secondary use case: ship as a scaffolding for a future "named tour
+Secondary use case: ship as scaffolding for a future "named tour
 presets" UI feature, but that UI is explicitly out of scope here.
 
 ## Decisions made so far
@@ -28,127 +36,266 @@ presets" UI feature, but that UI is explicitly out of scope here.
 ### Scope: minimal feature exposed via URL flag, UI polish later
 
 Build a single named tour as a hard-coded script with a clean
-tour-engine API. Expose via `?tour=default`. UI / settings / preset
-library punted to a later plan. Captures the recording need now without
-painting the design into a corner — the engine's API can grow into a
-preset library later without throwing it away.
+tour-engine API. Expose via `?tour=default` (the `?tour=` key is already
+registered as a deep-link in `src/utils/url/hasDeepLink.ts` and already
+bypasses the splash — but nothing consumes it yet). UI / settings /
+preset library punted to a later plan. Captures the recording need now
+without painting the design into a corner — the engine's API can grow
+into a preset library later without throwing it away.
 
-Estimated lift: ~1 day of focused work on top of the existing camera
-tween + (probably) the MSDF labels plan + (probably) the Milky Way
-impostor.
+Estimated lift, re-scoped 2026-06-04: ~1-1.5 days. The two heavy
+dependencies the original estimate hedged on ("probably the labels plan,
+probably the Milky Way impostor") have both shipped, so the remaining
+work is the tour-engine itself plus the one genuinely-new piece —
+optional rotation-toward-target interpolation (decision 1) — and the
+optional per-beat caption producer (decision 2b).
 
-### Narrative: local-to-cosmic — Milky Way → M31 → wide cosmic-web view
+### Narrative: powers-of-ten ladder — Milky Way → Local Group → cosmic web → horizon
 
-Open zoomed in on the Milky Way (showcases the custom impostor shader
-the user wants to feature; "you are here" label fits naturally if the
-labels plan is in by then). Slow pull-out, then fly to Andromeda for a
-familiar second beat. End wide on the SDSS wedge / Sloan Great Wall
-structure.
+Open zoomed in on the Milky Way (the procedural impostor at the world
+origin, now shipped and on by default; the "You are here" marker
+auto-renders inside ~2 Mpc). Slow pull-out, fly to the Local Group
+(Andromeda / M31), step out through the Local Volume galaxy groups
+(M81, Cen A — the nearest neighbours at 3-4 Mpc, an intermediate rung
+between "our galaxy" and "the nearest big cluster"), then climb the
+scale ladder through a nearby cluster (Virgo), out to the cosmic-web
+structure (Coma supercluster with filaments + the MCPM density volume),
+and finish wide with the milliquas quasar shell fading toward the
+observable-universe horizon shell.
 
-Familiar → stranger arc — works for both r/Astronomy (recognisable +
-structural) and r/WebGPU (LOD + scale + 2M+ instanced points on
-screen at the wide-view climax).
+Familiar → stranger → vast arc — works for both r/Astronomy
+(recognisable → structural → cosmological) and r/WebGPU (LOD + scale +
+2M+ instanced points, a raymarched density volume, and an analytic
+horizon shell all on screen at the climax). The full target palette is
+listed under "Showcase palette" below; the exact beat list and per-beat
+timing are decisions 3 and 4.
+
+## Decisions resolved since 2026-05-07
+
+These were open in the original brainstorm and have since been answered
+by shipped code. They are recorded here so the resume session doesn't
+re-litigate them.
+
+### ✅ "You are here" label + Milky Way impostor — both shipped
+
+The original decisions 2 and 3 hedged on two then-pending plans. Both
+landed:
+
+- **MSDF labels shipped.** `src/services/gpu/renderers/labelRenderer.ts`
+  draws world-anchored MSDF text; a per-frame `labelDirectorSubsystem`
+  (`src/services/engine/subsystems/labelDirectorSubsystem.ts`) merges
+  labels from registered producers and runs screen-space declutter.
+- **"You are here" auto-renders.** `youAreHereSubsystem`
+  (`src/services/engine/subsystems/youAreHereSubsystem.ts`) emits a
+  white "You are here" MSDF label + connector line at the world origin,
+  fading in over the ~0.6-2.0 Mpc camera-distance band. It is automatic
+  and read-only — no enable/disable, no text override.
+- **Milky Way impostor shipped.** `milkyWayRenderer.ts` draws a
+  procedural spiral galaxy at the origin; on by default
+  (`DEFAULT_MILKY_WAY_ENABLED = true`). Toggle via
+  `engine.milkyWay.setEnabled(boolean)`.
+
+**Consequence for the tour:** the opening Milky-Way beat is "free" — the
+hero visual and the "you are here" anchor both render with no tour-side
+work. The tour just has to put the camera in the fade band.
 
 ## Decisions still pending (resume from here)
 
-The brainstorm was interrupted after the narrative question. The
-remaining gates are:
+### 1. Camera rotation during a fly leg — STILL OPEN, the one real build
 
-1. **Camera rotation during a fly leg.** Three options surfaced:
-   - Smoothly rotate to face destination as it flies (slerp from
-     starting orientation to "looking at next target" over the leg
-     duration). Recommended — feels cinematic / human, like a slow
-     head-turn while walking.
-   - Snap-rotate to face destination, then dolly in. Simpler to
-     implement; can feel jarring.
-   - Author-tuned cinematic curve per leg (hand-picked start/end
-     orientation per leg). Most polish; fights the minimal-feature
-     scope.
+This is the only beat-to-beat motion question that requires new engine
+code. The focus tween today
+(`src/services/camera/cameraTween.ts` + `src/services/engine/camera/tweenManager.ts`)
+interpolates orbit **target (xyz), distance, yaw, and pitch** with
+ease-out-cubic over `FOCUS_TWEEN_MS = 600` ms, single-in-flight (starting
+a new tween snapshots current state). There is **no separate
+rotation-toward-target slerp** — orientation change is whatever the
+yaw/pitch channels happen to do between the two endpoints. Options:
 
-   This question matters because the user explicitly flagged that the
-   browser-nav `#target=` flow does NOT rotate toward the target (and
-   shouldn't), but the tour mode SHOULD. So the design needs a
-   "rotate-on-tour, no-rotate-on-nav" switch on whatever the entry
-   point is.
+- **Reuse the existing yaw/pitch tween, longer duration.** Cheapest:
+  the tour just issues `focusOn`-style tweens with a tour-specific
+  (longer) duration. Rotation "comes along for free" but isn't authored —
+  it's the shortest-arc yaw + scalar pitch interpolation. May read as a
+  slightly mechanical orbit-swing rather than a cinematic head-turn.
+- **Add an authored look-at slerp per leg.** Smoothly rotate to face the
+  destination as the camera flies. Most cinematic ("slow head-turn while
+  walking"), but requires a new tween channel or a per-leg orientation
+  keyframe.
+- **Author-tuned cinematic curve per leg.** Hand-picked start/end
+  orientation per leg. Most polish; fights the minimal-feature scope.
 
-2. **"You are here" label inclusion.**  Depends on the MSDF labels
-   plan (`docs/superpowers/plans/2026-05-07-msdf-labels.md`, 13 tasks,
-   status pending) being implemented. Three sub-options:
-   - Hard dependency: implement labels plan first, then tour. Gives the
-     opening Milky-Way beat a textual anchor.
-   - Soft dependency: design the tour engine to call into a label API
-     if it exists, no-op if it doesn't. Lets either plan ship first.
-   - No label: just camera + scene, no text. Smallest scope.
+This question matters because the user explicitly flagged that the
+browser-nav deep-link flow (`#focus=` / `#poi=`, see
+`src/hooks/useUrlSync` wiring in `App.tsx`) does NOT rotate toward the
+target (and shouldn't), but the tour mode SHOULD. So the design needs a
+"rotate-on-tour, no-rotate-on-nav" switch on whatever the entry point is —
+the tour engine drives the camera through a path that the standard
+`camera.focusOn` does not.
 
-3. **Milky Way impostor inclusion.**  Same shape as the label
-   question — the opening beat WANTS the custom shader, but the
-   impostor plan (`2026-05-04-milky-way-impostor.md`) status is
-   pending too. Either ship the impostor first, or open the tour at
-   M31 instead and skip the MW beat.
+### 2. Per-beat captions — NEW sub-question (labels exist, captions don't)
 
-4. **Per-leg duration / easing curve.**  Total budget is 20-30 s.
-   Open question whether each leg is equal-duration or whether the
-   pull-out (leg 1) gets more time than the M31 fly (leg 2) etc.
-   Easing is presumably ease-in-out cubic (matches existing
-   `cameraTween`), but worth confirming for the dwell/transition
-   feel.
+Labels shipped, but they are produced **declaratively per frame** by
+registered producers; the public `engine.labels` handle exposes only
+per-category visibility toggles (`setCategoryLabelVisible`,
+`setCategoryMarkerVisible`) — there is **no API to push an arbitrary
+one-off caption** like "Virgo Cluster — the nearest big cluster". Two
+sub-options:
 
-5. **Tour-engine API shape.**  `start(name)` / `stop()` / `tick(now)`
-   on a singleton? Or a state object the engine holds and ticks
-   like the existing tween? Whatever the shape, it has to integrate
-   with the existing render-on-demand scheduler — the loop must keep
-   ticking while a tour is running, same way it does for an
-   in-flight `cameraTween` and autoRotate.
+- **(2a) Lean on auto-rendered structure/famous names only.** When the
+  tour focuses Virgo / Coma / the Boötes void, their names render
+  automatically *if* the structure is `featured` and its category labels
+  + markers are visible (gates in
+  `src/services/engine/presentation/produceStructureLabels.ts`). Famous
+  galaxies render via `produceFamousLabels`. Zero new code; no editorial
+  caption copy.
+- **(2b) Add a `tourCaptionSubsystem` producer.** A new `LabelProducer`
+  registered alongside youAreHere/structure/famous that reads the active
+  tour beat and emits a styled caption (screen-anchored or
+  world-anchored), fading in/out with beat transitions. This is the
+  "narration text" the original brainstorm wanted. It is a contained
+  piece of work — one producer + a beat-state read — because the
+  director/declutter/GPU-upload pipeline already exists. Recommended for
+  the cinematic version; it's what turns "camera moves" into "narrated
+  tour".
 
-6. **What does Tab-hidden UI actually mean for this mode?** If the
-   tour autoplays on `?tour=default`, should the UI auto-hide on
-   start? Or rely on the user pressing Tab manually as today?
-   Auto-hide is friendlier for the recording flow, but coupling
-   tour-mode to UI-hide adds a side effect.
+### 3. Beat list + per-leg duration / easing
 
-## Existing infrastructure this would build on
+Total budget 30-60 s (longer than the original 20-30 s now that the
+ladder reaches the cosmic web + horizon). Open whether each leg is
+equal-duration or weighted (the opening pull-out and the final
+horizon-reveal probably want more dwell than the mid-ladder cluster
+hops). Easing is presumably ease-out-cubic to match the existing tween,
+but the cinematic version may want ease-in-out per leg for a softer
+departure. The candidate beat list draws from the Showcase palette
+below; locking it is part of this decision.
 
-- **`src/services/camera/cameraTween.ts`** — pure tween state machine
-  for orbit target / distance / yaw with shortest-arc and ease-in-out.
-  Single in-flight tween policy (starting a new one snapshots current
-  state). The tour-engine probably builds a queue of these, one per
-  leg, advancing to the next when the current returns "done".
-- **`src/services/camera/orbitCamera.ts` + `orbitControls.ts`** — the
-  camera the tween drives.
-- **Existing `#target=` deep-link flow** — already works for
-  user-driven nav. Tour mode is a separate entry point and must NOT
-  hijack that flow.
-- **MSDF labels plan (`2026-05-07-msdf-labels.md`)** — pending; would
-  supply the "you are here" overlay if we choose to depend on it.
-- **Milky Way impostor plan (`2026-05-04-milky-way-impostor.md`)** —
-  pending; would supply the opening beat's hero visual.
-- **Famous-galaxy command palette (Cmd+K)** — already maps names like
-  M31, M51, etc. to coords. The tour script can reuse the same name
-  → target lookup rather than hard-coding coords.
-- **Render-on-demand scheduler** — `engine.ts` re-schedules frames
-  while `autoRotate || currentTween || hasAnyAxis ||
-  queue.inFlightCount > 0 || recent-fade` is true. Tour mode adds
-  another truthy condition to that gate.
+### 4. Tour-engine API shape
+
+`start(name)` / `stop()` / `tick(now)` on a singleton? Or a state object
+the engine holds and ticks like the existing tween? Whatever the shape,
+it must integrate with the render-on-demand scheduler — the loop keeps
+ticking while a focus tween is active (`tweens.isActive()` gate in
+`src/services/engine/frame/runFrame.ts`; reschedule condition documented
+in `src/services/engine/subsystems/renderScheduler.ts`). Tour mode adds
+another truthy condition to that gate, exactly like an in-flight tween
+or autoRotate does today. Likely shape: a `tour` sub-handle on
+`EngineHandle` (`start(beats)`, `stop()`, plus an `isActive()` the
+scheduler reads), with the beat-runner living engine-side rather than in
+React (unlike the stub, which runs the chain from `App.tsx`).
+
+### 5. UI auto-hide on autoplay — pattern now exists
+
+The stub tour already establishes the pattern: an `App.tsx` `tourActive`
+state forces `uiHidden` while the tour runs and arms window-level
+input listeners that cancel on any pointer/key event. The cinematic
+tour can reuse that exact coordination. The only open part is whether
+`?tour=default` autoplay should auto-hide on load (friendlier for the
+recording flow) — recommended yes, since the recording use case is the
+whole point.
+
+## Showcase palette (what the cinematic tour can now visit / toggle)
+
+Everything here is shipped and scriptable from the engine handle today,
+unless noted. These are the new building blocks the original brainstorm
+predates — the climb-the-scale-ladder narrative leans on them.
+
+- **Milky Way impostor** — `engine.milkyWay.setEnabled(bool)`; on by
+  default. Origin hero visual for beat 1.
+- **"You are here" marker** — automatic, fades in within ~2 Mpc. No
+  toggle; just frame the origin.
+- **Famous galaxies** — `engine.selection.selectFamous(id)` pins +
+  focuses (e.g. `'m31'` for Andromeda). Names auto-label via
+  `produceFamousLabels`.
+- **Focusable clusters / superclusters / voids** — `StructureRecord`s
+  built by `buildStaticAnchorPois()` (`src/data/buildStaticAnchorPois.ts`,
+  seed `data/cluster_anchors.seed.json`). Focus via
+  `camera.focusOn(structureRecord)` — `FocusableTarget = GalaxyInfo |
+  StructureRecord`. Featured anchors include Virgo (`cluster-virgo-m87`),
+  Coma supercluster (`supercluster-coma-sc`), and the Boötes void
+  (`void-bootes-void`). Names auto-label for `featured` structures with
+  category labels + markers on (`engine.labels.setCategoryLabelVisible` /
+  `setCategoryMarkerVisible`).
+- **Local Volume galaxy groups** — *almost landed* (branch
+  `worktree-nearby-galaxy-groups`, ~70% done as of 2026-06-04: the
+  `'group'` `StructureRecord` arm, `Source.Group = 15`, soft-green
+  markers, focus, and labels are committed; seeding the 16 groups into
+  `data/cluster_anchors.seed.json` is the remaining Task 9). Works
+  **identically to clusters/SC/voids** — same `StructureRecord` shape
+  (no `abell` field, like `VoidRecord`), same `camera.focusOn(record)`,
+  same `engine.labels.setCategoryLabelVisible('group', …)`, same
+  deep-link (`#poi=group-<id>`). 16 Local Volume groups at 0.4-13.5 Mpc:
+  ids like `group-local-group`, `group-m81-group`, `group-cen-a-group`,
+  `group-sculptor-group`, `group-leo-triplet`. These fill the awkward
+  empty rung between the Local Group beat and Virgo — the nearest
+  galaxy neighbourhoods. Use once the branch merges; until then the
+  ladder skips straight from M31 to Virgo.
+- **Filaments overlay** — `engine.filaments.setEnabled(bool)` +
+  `setIntensity(value)`. The DisPerSE cosmic-web skeleton. A natural
+  toggle-on for the cosmic-web beat.
+- **MCPM cosmic-web density volume** — `engine.volumes` handle:
+  `setEnabled('mcpm', bool)`, `setIntensity('mcpm', v)`, plus contrast /
+  densityScale / palette / exposure. Default-on, tiered. The raymarched
+  density field that makes the cosmic-web beat read as volume, not points.
+  (CF-4 dark-matter density `'cf4-density'` is also available,
+  default-off.)
+- **Milliquas quasar shell** — `Source.Milliquas` (registered source,
+  on by default; capped per tier). Toggle via
+  `engine.sources.setVisible(Source.Milliquas, bool)`. The far quasar
+  population (out to ~4000 Mpc) that populates the deep-field beat.
+- **Observable-universe horizon shell** — `horizonShellRenderer.ts`,
+  analytic raymarched sphere at `HORIZON_RADIUS_GPC = 14.3`. **No handle
+  toggle** — it fades in automatically by camera distance (invisible
+  below ~5% of shell radius, full strength past ~40%). The tour reaches
+  it simply by pulling the camera far enough out. This is the climax
+  visual: the literal edge of the observable universe.
+- **Tone-map / exposure / point appearance** — `engine.tonemap`,
+  `engine.points` handles, if the tour wants to push exposure or point
+  size for dramatic effect during the wide climax. Optional.
+
+## Existing infrastructure this builds on (verified 2026-06-04)
+
+- **Focus tween** — `src/services/camera/cameraTween.ts` (pure tween
+  state machine: target/distance/yaw/pitch, ease-out-cubic, shortest-arc
+  yaw) + `src/services/engine/camera/tweenManager.ts` (single-in-flight
+  policy) + `FOCUS_TWEEN_MS = 600` in
+  `src/services/engine/camera/focusTweenDuration.ts`. The tour-engine
+  likely drives a queue of these (one per leg) with a tour-specific
+  duration, advancing on completion.
+- **Camera handle** — `engine.camera`:
+  `focusOn(FocusableTarget)`, `focusOnHome()`, `focusOnMilkyWay()`,
+  `setAutoRotate(bool)`, `reset()`. (`EngineCameraHandle.d.ts`.)
+- **Deep-link flow** — `#focus=` / `#poi=` handled by `useUrlSync`,
+  routed to `camera.focusOn`; `?tour=` recognised by `hasDeepLink` but
+  not yet consumed. Tour mode is a separate entry point and must NOT
+  hijack the no-rotate nav flow.
+- **Label director + producers** —
+  `labelDirectorSubsystem.registerProducer(...)` is the extension point
+  for the optional caption producer (decision 2b). Producers are pure
+  `(state, ctx) => { labels, lines }`.
+- **Render-on-demand scheduler** — `runFrame.ts` / `renderScheduler.ts`.
+  Reschedules while a tween is active (among other conditions). Tour adds
+  one more condition.
 
 ## How to resume
 
-Pick up the brainstorm at decision (1) above (camera rotation during
-fly). Walk through (2)-(6) in order. Then proceed to "propose
-approaches" → "present design" → write a real spec doc that replaces
-this one (or rename this from `-design.md` to `-spec.md` once it's
-locked).
+The brainstorm is unblocked on its two heaviest dependencies. Pick up at
+decision 1 (rotation) — it's the only piece that needs new engine motion
+code, so settle it first; it drives the tour-engine API shape (decision
+4). Then 2b (caption producer — recommended for "narrated"), then 3
+(beat list + timing), then 5 (autoplay UI-hide). Then proceed to
+"propose approaches" → "present design" → write the real spec /
+implementation plan that replaces this doc (or rename this from
+`-design.md` to `-spec.md` once locked).
 
-Touch points to check before resuming:
+Touch points worth a fresh check before resuming (in case more has
+landed):
 
-```bash
-# Has the MSDF labels plan progressed?
-git log --oneline --all -- docs/superpowers/plans/2026-05-07-msdf-labels.md
-
-# Has the Milky Way impostor landed?
-ls src/services/gpu/milkyWayRenderer.ts 2>/dev/null
-grep -r MilkyWayRenderer src/services/engine/engine.ts 2>/dev/null
-
-# What does cameraTween actually tween today (the user's "rotate
-# toward target" claim hinges on this)?
-head -80 src/services/camera/cameraTween.ts
-```
+- Has the **nearby galaxy groups** feature merged to main yet? (As of
+  2026-06-04 it's ~70% done on branch `worktree-nearby-galaxy-groups` —
+  Tasks 1-7 committed, Task 9 seeds the 16 groups. Once merged, the
+  `'group'` rung is available.) Check `StructureCategory` for a `'group'`
+  arm and whether `data/cluster_anchors.seed.json` contains group
+  entries. Plan: `docs/superpowers/plans/2026-06-04-nearby-galaxy-groups.md`.
+- Has anything been wired to consume `?tour=` yet? `grep -rn "tour" src/hooks src/components/App`.
+- Does the focus tween still interpolate only target/distance/yaw/pitch?
+  Re-read `src/@types/camera/CameraTween.d.ts` — decision 1 hinges on it.

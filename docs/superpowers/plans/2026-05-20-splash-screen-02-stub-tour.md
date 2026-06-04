@@ -2,13 +2,15 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **Companion plan:** `2026-05-20-splash-screen-01-core.md` — the splash dialog + AboutPill + useSplash hook + WebGPU gate. **This plan depends on Plan 1 landing first.** While Plan 1 is live the Tour button just dismisses; this plan replaces that no-op with a real stub camera tour.
+> **Companion plan:** `2026-05-20-splash-screen-01-core.md` — the splash dialog + AboutPill + useSplash hook + WebGPU gate. **Plan 1 has landed** (the `Splash` component, `useSplash` hook with `dismissExplore`/`dismissTour`/`reopen`, and the `<Splash onTour={...}>` prop all exist; `onTour` is currently wired to `splash.dismissTour`, i.e. the Tour button just dismisses). This plan replaces that no-op with a real stub camera tour.
+
+> **Grounding refresh (2026-06-04):** verified every API this plan calls against the current codebase. All still present and correctly shaped. One drift: `FOCUS_TWEEN_MS` now lives in `src/services/engine/camera/focusTweenDuration.ts` (not `focusTween.ts`); the value is still `600`. The Task 3 import + grep below have been corrected. Bonus since this plan was written: the **Milky Way impostor** is shipped and on by default, the **"You are here"** marker auto-renders within ~2 Mpc, and **structure name labels** (`produceStructureLabels`) auto-render for `featured` anchors — so beats 1, 3, 4 and 5 now get hero visuals and on-screen names *for free*, with no tour-side work. See the Q8 note below.
 
 **Goal:** Wire a short scripted camera tour (Powers-of-Ten-style: Milky Way → Local Group → Virgo Cluster → Boötes Void → Coma Cluster → wide view) to the Tour button. The tour is a chained sequence of `camera.focusOn(...)` calls with cancel-on-input, UI-hidden coordination, and end-state restoration.
 
 **Architecture:** A pure async function `runSplashStubTour(deps)` takes the engine handle and a cancellation token, awaits a fixed dwell after each `focusOn` (matching `FOCUS_TWEEN_MS` plus a beat), and bails between beats if cancellation is requested. App.tsx owns a `tourActive` state that (1) replaces the previous no-op `onTour` wiring with a real invocation, (2) forces `uiHidden` while the tour runs, and (3) cancels on any pointer / key event captured at the window level.
 
-**Tech Stack:** Existing engine handle (`camera.focusOn`, `filaments.setEnabled`), `services/camera/cameraTween.ts`'s `FOCUS_TWEEN_MS` constant, `buildStaticAnchorPois` for POI lookups, React useEffect for the input-cancel listener.
+**Tech Stack:** Existing engine handle (`camera.focusOn`, `camera.focusOnMilkyWay`, `camera.focusOnHome`, `selection.selectFamous`, `filaments.setEnabled`), the `FOCUS_TWEEN_MS` constant from `src/services/engine/camera/focusTweenDuration.ts`, `buildStaticAnchorPois` for structure (POI) lookups, React useEffect for the input-cancel listener.
 
 ---
 
@@ -27,18 +29,20 @@ The grill flagged the **Boötes Void** beat as risky in a snap-cut stub: a camer
 - **(a) reorder** — make wide view the climax; put the void mid-sequence.
 - **(b) MSDF per-beat captions** — requires building new MSDF caption infra in the renderer (the existing labels system is per-galaxy / per-POI, not per-tour-beat).
 
-**This plan picks (a).** Rationale: the existing renderer has no "ephemeral tour caption" API, and building one is a meaningful sub-project (atlas slot allocation, lifetime management, fade-in/fade-out coupled to tween completion). Caption infra is a natural piece of the real-tour plan; bundling it here would inflate scope past the "stub" framing. Reordering is free and addresses the ambiguity through positioning alone: the void is one beat in a longer sequence with a strong climax, so the user reads it as part of a tour through different scales, not as a broken final state.
+**This plan picks (a).** Rationale: the public `engine.labels` handle still exposes no "ephemeral tour caption" API — labels are produced declaratively per frame by registered producers, and pushing an arbitrary one-off caption would mean adding a new `tourCaptionSubsystem` producer (real work; see the cinematic spec's decision 2b). That's real-tour-plan territory; bundling it here would inflate scope past the "stub" framing. Reordering is free and addresses the ambiguity through positioning alone: the void is one beat in a longer sequence with a strong climax, so the user reads it as part of a tour through different scales, not as a broken final state.
 
-The chosen itinerary (six beats, ~50 s wall time):
+> **2026-06-04 grounding note (strengthens, doesn't change, decision (a)):** structure name labels now auto-render — `produceStructureLabels` emits a label for any `featured` structure with its category labels + markers visible. So when the tour focuses the Boötes void (a featured void anchor), the on-screen "Boötes Void" name renders automatically, which already softens the "is it broken?" read. The reorder still stands as the cheap, robust mitigation; the auto-label is a bonus, not a substitute.
 
-1. **Milky Way** (home view, pulled out slightly) — anchor; "you are here".
-2. **Local Group** (M31 / Andromeda area via the famous-meta atlas) — "our neighbourhood".
-3. **Virgo Cluster** (POI: `cluster-virgo-m87`) — "the nearest big cluster".
-4. **Boötes Void** (POI: `void-bootes-void`) — "the strangest absence we know about". Mid-sequence; the next beat re-populates the frame.
-5. **Coma Supercluster** with **filaments on** (POI: `supercluster-coma-sc`) — "the cosmic web in action".
+The chosen itinerary (six beats, ~50 s wall time). Items marked *(auto)* render with no tour-side work thanks to shipped subsystems:
+
+1. **Milky Way** (home view, pulled out slightly) — anchor. The procedural Milky Way impostor *(auto, on by default)* and the "You are here" marker *(auto, fades in within ~2 Mpc)* both render here for free.
+2. **Local Group** (M31 / Andromeda via `selection.selectFamous('m31')`) — "our neighbourhood". Famous-galaxy name label *(auto)*.
+3. **Virgo Cluster** (structure: `cluster-virgo-m87`) — "the nearest big cluster". Name label *(auto)*.
+4. **Boötes Void** (structure: `void-bootes-void`) — "the strangest absence we know about". Mid-sequence; the next beat re-populates the frame. Name label *(auto)*.
+5. **Coma Supercluster** with **filaments on** (structure: `supercluster-coma-sc`) — "the cosmic web in action". Name label *(auto)*.
 6. **Wide view** (camera home) — climax; "this is the whole map".
 
-Filaments are toggled on for beat 5 and restored to the user's pre-tour setting at end-of-tour.
+Filaments are toggled on for beat 5 and restored to the user's pre-tour setting at end-of-tour. (The stub deliberately does NOT touch the MCPM density volume, milliquas, or the horizon shell — those are the cinematic tour's palette, not the stub's.)
 
 ---
 
@@ -109,7 +113,7 @@ git add src/@types/splash/TourCancelToken.d.ts src/@types/splash/SplashStubTourD
 git commit -m "$(cat <<'EOF'
 feat(splash-tour): add TourCancelToken + SplashStubTourDeps types
 
-Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
 EOF
 )"
 ```
@@ -209,7 +213,7 @@ git add src/components/Splash/createTourCancelToken.ts tests/components/Splash/c
 git commit -m "$(cat <<'EOF'
 feat(splash-tour): add createTourCancelToken factory
 
-Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
 EOF
 )"
 ```
@@ -226,8 +230,8 @@ EOF
 
 - [ ] **Step 1: Confirm the FOCUS_TWEEN_MS constant exists for reference**
 
-Run: `grep -n "export const FOCUS_TWEEN_MS" /Users/rulkens/Development/js/skymap/src/services/engine/camera/focusTween.ts`
-Expected output: `24:export const FOCUS_TWEEN_MS = 600;`
+Run: `grep -n "export const FOCUS_TWEEN_MS" src/services/engine/camera/focusTweenDuration.ts`
+Expected output: `export const FOCUS_TWEEN_MS = 600;`
 
 This is the duration of a single `focusOn` tween — the runner dwells at each beat for `FOCUS_TWEEN_MS + STUB_TOUR_DWELL_MS`.
 
@@ -435,7 +439,7 @@ Expected: FAIL — module not found.
 
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { SplashStubTourDeps } from '../../@types/splash/SplashStubTourDeps';
-import { FOCUS_TWEEN_MS } from '../../services/engine/camera/focusTween';
+import { FOCUS_TWEEN_MS } from '../../services/engine/camera/focusTweenDuration';
 import { buildStaticAnchorPois } from '../../data/buildStaticAnchorPois';
 
 /**
@@ -566,7 +570,7 @@ Cluster → Boötes Void → Coma Supercluster (with filaments) → wide view.
 Cancellation is cooperative at beat boundaries; filaments are restored
 via try/finally regardless of completion path.
 
-Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
 EOF
 )"
 ```
@@ -580,7 +584,7 @@ EOF
 
 - [ ] **Step 1: Read the current Splash wiring**
 
-Run: `grep -n "splash\|onTour\|Splash" /Users/rulkens/Development/js/skymap/src/components/App/App.tsx`
+Run: `grep -n "splash\|onTour\|Splash" src/components/App/App.tsx`
 Expected to see: `useSplash` hook call, the `<Splash>` JSX block from Plan 1's Task 10, currently with `onTour={splash.dismissTour}`.
 
 - [ ] **Step 2: Add the new imports near the top of App.tsx**
@@ -710,7 +714,7 @@ window-level pointer/key listeners that cancel the tour cooperatively
 at the next beat boundary.  UI chrome is auto-hidden while the tour
 runs; the existing Tab toggle still works as an override.
 
-Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
 EOF
 )"
 ```
@@ -737,11 +741,11 @@ Confirm in the live dev server:
 6. After the tour ends, normal UI returns and the user has free orbit control.
 7. Clicking About on the top bar mid-tour: the splash reopens AND the tour cancels (the splash reopen click event triggers the cancel listener).
 
-- [ ] **Step 3: Verify the deprecated tour spec is still in place**
+- [ ] **Step 3: Verify the cinematic tour spec is still in place**
 
-The old `docs/superpowers/specs/2026-05-07-tour-animation-design.md` should still exist untouched. The grill explicitly deferred its retirement/rewrite to the real-tour plan — not this plan, not Plan 1.
+`docs/superpowers/specs/2026-05-07-tour-animation-design.md` should still exist. (It was re-grounded on 2026-06-04 against the shipped labels / Milky Way impostor / cluster / volume / horizon subsystems — it is the cinematic successor to this stub, not retired.) Don't delete or supersede it here; its formal retirement/rewrite belongs to the real-tour implementation plan.
 
-Run: `ls /Users/rulkens/Development/js/skymap/docs/superpowers/specs/ | grep tour`
+Run: `ls docs/superpowers/specs/ | grep tour`
 Expected output: `2026-05-07-tour-animation-design.md` present.
 
 - [ ] **Step 4: Update plan cross-references if anything drifted**
