@@ -12,8 +12,10 @@
 > should showcase. The "open decisions" and "infrastructure" sections
 > below have been rewritten to reflect what is actually available today.
 > The companion **stub tour** (`../plans/2026-05-20-splash-screen-02-stub-tour.md`)
-> ships a rough-cut version from the splash's Tour button; this spec is the
-> polished cinematic successor that supersedes it.
+> ships a rough-cut version from the splash's Tour button, built as an
+> engine-side seed (`engine.tour` + `tourSubsystem` + the `TourBeat` data
+> model). This spec is the polished cinematic tour that **extends that
+> seed** — richer beats, rotation, captions — rather than replacing it.
 
 ## What it is
 
@@ -43,12 +45,14 @@ preset library punted to a later plan. Captures the recording need now
 without painting the design into a corner — the engine's API can grow
 into a preset library later without throwing it away.
 
-Estimated lift, re-scoped 2026-06-04: ~1-1.5 days. The two heavy
-dependencies the original estimate hedged on ("probably the labels plan,
-probably the Milky Way impostor") have both shipped, so the remaining
-work is the tour-engine itself plus the one genuinely-new piece —
-optional rotation-toward-target interpolation (decision 1) — and the
-optional per-beat caption producer (decision 2b).
+Estimated lift, re-scoped 2026-06-04: ~1 day. The two heavy dependencies
+the original estimate hedged on ("probably the labels plan, probably the
+Milky Way impostor") have both shipped, and the tour-engine itself
+(`engine.tour` + `tourSubsystem` + the `TourBeat` data model) is delivered
+by the Part-2 stub seed. So the cinematic-only remaining work is: rotation-
+toward-target interpolation (decision 1, the one genuinely-new build), the
+per-beat caption producer (decision 2b), a richer beat list reaching the
+cosmic-web + horizon (decision 3), and per-leg timing/easing polish.
 
 ### Narrative: powers-of-ten ladder — Milky Way → Local Group → cosmic web → horizon
 
@@ -150,13 +154,16 @@ sub-options:
   caption copy.
 - **(2b) Add a `tourCaptionSubsystem` producer.** A new `LabelProducer`
   registered alongside youAreHere/structure/famous that reads the active
-  tour beat and emits a styled caption (screen-anchored or
+  tour beat's `caption` (the field already exists on `TourBeat` — it's the
+  wired seam) and emits a styled caption (screen-anchored or
   world-anchored), fading in/out with beat transitions. This is the
   "narration text" the original brainstorm wanted. It is a contained
-  piece of work — one producer + a beat-state read — because the
-  director/declutter/GPU-upload pipeline already exists. Recommended for
-  the cinematic version; it's what turns "camera moves" into "narrated
-  tour".
+  piece of work — one producer reading the `tourSubsystem`'s current beat —
+  because the director/declutter/GPU-upload pipeline and the `caption`
+  contract already exist. Recommended for the cinematic version; it's what
+  turns "camera moves" into "narrated tour". (To read the current beat,
+  the `tourSubsystem` needs to expose it — a small `currentBeat()` getter
+  added when this lands.)
 
 ### 3. Beat list + per-leg duration / easing
 
@@ -169,19 +176,32 @@ but the cinematic version may want ease-in-out per leg for a softer
 departure. The candidate beat list draws from the Showcase palette
 below; locking it is part of this decision.
 
-### 4. Tour-engine API shape
+### ✅ 4. Tour-engine API shape — RESOLVED by the stub seed
 
-`start(name)` / `stop()` / `tick(now)` on a singleton? Or a state object
-the engine holds and ticks like the existing tween? Whatever the shape,
-it must integrate with the render-on-demand scheduler — the loop keeps
-ticking while a focus tween is active (`tweens.isActive()` gate in
-`src/services/engine/frame/runFrame.ts`; reschedule condition documented
-in `src/services/engine/subsystems/renderScheduler.ts`). Tour mode adds
-another truthy condition to that gate, exactly like an in-flight tween
-or autoRotate does today. Likely shape: a `tour` sub-handle on
-`EngineHandle` (`start(beats)`, `stop()`, plus an `isActive()` the
-scheduler reads), with the beat-runner living engine-side rather than in
-React (unlike the stub, which runs the chain from `App.tsx`).
+Settled by the Part-2 plan (`../plans/2026-05-20-splash-screen-02-stub-tour.md`),
+which the cinematic tour extends rather than replaces:
+
+- **`engine.tour` sub-handle** — `start(beats): Promise<void>` / `stop()` /
+  `isActive()`. `start` resolves when the tour ends (the engine has no
+  tween-completion promise, but `fades.fadeTo()` returns one — same
+  precedent).
+- **`tourSubsystem`** — a frame-driven subsystem (mirrors `tweenManager`
+  and `clusterFocus`) that owns beat sequencing; `advance(nowMs)` is
+  ticked once per frame, and `|| state.subsystems.tour.isActive()` is
+  added to the `stillAnimating` reschedule gate
+  (`src/services/engine/frame/runFrame.ts:502-509`) so frames keep
+  flowing through each dwell.
+- **`TourActions` port** — the subsystem affects the world only through an
+  injected adapter (`focus` / `applyEffect` / `snapshot` / `requestRender`),
+  keeping the sequencing core pure + unit-testable with a fake clock.
+- **Beat data structure** — `TourBeat { id, focus, dwellMs, effects?,
+  caption? }`, with symbolic `TourFocus` and a generic `TourEffect` delta
+  union. The cinematic tour adds richer beats (volume / source / group
+  effects) with **no change to the shape**, weights legs via per-beat
+  `dwellMs`, and feeds captions via `caption` (decision 2b).
+
+The only piece the cinematic tour still has to *build* on top of this seed
+is decision 1 (rotation-toward-target).
 
 ### 5. UI auto-hide on autoplay — pattern now exists
 
