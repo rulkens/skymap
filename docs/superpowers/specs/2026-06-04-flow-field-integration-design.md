@@ -192,9 +192,14 @@ tools dir rather than living under `tools/volumes/`.
   extraction (rehomed + fixed from `tools/cosmic-flow/data/convertCf4ppVfield.py`).
 - `tools/flow/buildFlowField.ts` — tsx wrapper (mirrors the `build-mcpm` pattern).
 - npm script **`build-flow-field`**.
-- Raw npz registered in `rawDataRegistry`: `cf4pp.vfield-npz →
-  data/raw/cf4pp/CF4pp_mean_std_grids.npz` (`source: 'gitignored'`, upstream URL),
-  plus a provenance `data/raw/cf4pp/README.md`.
+- Raw npz registered in `rawDataRegistry` as `cf4.vfield-npz →
+  data/raw/cf4/CF4pp_mean_std_grids.npz` (`source: 'gitignored'`, upstream URL).
+  It is the **same** upstream ensemble the CF-4 density pipeline already slices
+  `d_mean_CF4pp.npy` from — one file, two consumers — so it lives in `data/raw/cf4/`
+  (not a parallel `cf4pp/` dir) and its provenance is a "Velocity field" section
+  appended to the existing `data/raw/cf4/README.md`, preserving single source of
+  truth. *(Refined during execution 2026-06-04; the original draft assumed a
+  separate `cf4pp/` artifact.)*
 - Output `public/data/flowfield.bin` (+ sidecar) added to the `tools/deploy/syncR2.ts`
   `ALLOW` filter (tier-agnostic, like `2mrs.bin`/`filaments.bin`).
 

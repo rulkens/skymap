@@ -181,6 +181,19 @@ export const RAW_DATA = {
       'CF-4 mean DM density cube (Float32 .npy). Shipped to R2; downloaded by build-cf4-density.',
     upstream: 'https://edd.ifa.hawaii.edu/CF4calculator/',
   },
+  'cf4.vfield-npz': {
+    // The same upstream 167 MB ensemble that d_mean_CF4pp.npy is sliced from —
+    // one file, two consumers. The density pipeline extracts d_mean_CF4pp; the
+    // flow extractor reads v_mean_CF4pp + d_mean_CF4pp. Registering it once here
+    // (rather than under a parallel cf4pp/ dir) keeps a single source of truth
+    // for the npz. Maintainer-only: never committed, never synced to R2.
+    path: 'data/raw/cf4/CF4pp_mean_std_grids.npz',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'CF4++ mean/std velocity + density ensemble (Courtois 2025). Six 128^3 arrays over a 1000 Mpc/h supergalactic box; the flow extractor packs v_mean_CF4pp + d_mean_CF4pp.',
+    upstream: 'https://projets.ip2i.in2p3.fr/cosmicflows/',
+  },
   'cf4.dir': {
     path: 'data/raw/cf4',
     kind: 'directory',

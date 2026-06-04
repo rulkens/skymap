@@ -105,6 +105,63 @@ slice goes up.
 
 ---
 
+## Velocity field (flow viz)
+
+The same `CF4pp_mean_std_grids.npz` ensemble is the source for Skymap's
+animated **flow-field** layer — drifting / streamline ribbons that trace
+the CF4++ peculiar-velocity reconstruction over the galaxy field.  It is
+registered once as `cf4.vfield-npz` (path `data/raw/cf4/CF4pp_mean_std_grids.npz`)
+and consumed by a *second* extractor alongside the density slice above:
+one upstream file, two consumers.  Registering it under a parallel
+`cf4pp/` directory would have duplicated the 167 MB download and this
+provenance doc, so it lives here with the rest of the CF4++ ensemble.
+
+### npz keys
+
+The extractor (`tools/flow/extractFlowField.py`) packs two of the six
+ensemble arrays:
+
+| npz key | Array | Shape | Units | Role |
+|---------|-------|-------|-------|------|
+| `v_mean_CF4pp` | Cartesian peculiar velocity, posterior mean | `(3,128,128,128)` or `(128,128,128,3)` | km/s | RGB = (vx, vy, vz) |
+| `d_mean_CF4pp` | Overdensity δ, posterior mean | `(128,128,128)` | dimensionless | A = δ (drives density-weighted seeding) |
+
+The full ensemble holds **six** 128³ arrays — posterior **mean and std**
+for density, Cartesian velocity, and radial velocity.  The flow extractor
+uses only the two mean arrays above; the exact remaining key names are
+printed by the extractor at run time (`print("npz keys:", …)`).  The std
+cubes are the natural future input for an uncertainty-aware overlay — a
+separate plan, same as for the density cube.
+
+### Box geometry & frame
+
+128³ grid over a **1000 Mpc** cube (**physical** Mpc, not Mpc/h — matching
+the density build's `CF4PP_VOXEL_SIZE_MPC = 1000/128`; the spike's
+`boxMpcPerH` sidecar key is a misnomer) in **supergalactic Cartesian**
+coordinates.  Unlike the throwaway cosmic-flow spike (which labelled the
+array axes arbitrarily because flow *coherence* is frame-invariant), the
+production extractor replicates the density cube's frame handling: the same
+numpy-C-order → WebGPU-x-fastest memory transpose, the same observer-centred
+`origin` (`-voxelSize · dims/2`), and `frameKind: 'supergalactic-cartesian'`,
+so the flow cube co-registers with the galaxies and the CF-4 density volume
+by construction.  The velocity components ride along in native SG order
+(`v_mean_CF4pp` is SG-Cartesian, aligned with the grid position axes — the
+same axis-0 = SGX convention the density build assumes); the memory
+transpose relocates each vector without rotating its basis.
+
+### Build
+
+```
+npm run build-flow-field    # extracts → public/data/flowfield.{bin,json}
+```
+
+`flowfield.bin` is a 128³ RGBA16F cube (vx, vy, vz, δ), stored in the
+version-3 scalar-field format (`channels = 4`).  Like the density `.scfd`
+it is a gitignored build artefact synced to R2, not committed.  Citation
+is the same as the density cube above (Courtois et al. 2025).
+
+---
+
 ## Local-volume distance table (Tully 2023)
 
 Source: CDS Vizier table [J/ApJ/944/94](https://cdsarc.cds.unistra.fr/viz-bin/cat/J/ApJ/944/94),

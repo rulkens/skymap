@@ -56,7 +56,6 @@ Vitest for codec round-trip + extractor frame-correctness + ALLOW-filter tests.
 |---|---|
 | `tools/flow/extractFlowField.py` | Frame-correct Python core: read CF4++ npz, emit true-SG-order RGBA16F `.bin` + JSON sidecar (vx,vy,vz,δ). |
 | `tools/flow/buildFlowField.ts` | tsx wrapper around the Python core (mirrors `build-mcpm`); resolves paths via `rawDataPath`, invokes Python, validates output. |
-| `data/raw/cf4pp/README.md` | Provenance: upstream npz URL, npz keys, byte layout, fetch date, checksum. |
 | `tests/data/scalarFieldFormat.test.ts` (extend) | Codec round-trip for `channels=1` and `channels=4`; derived `GPUTextureFormat`. |
 | `tests/tools/flow/extractFlowFieldFrame.test.ts` | Known-attractor lands in expected voxel under the emitted frame. |
 | `tests/tools/deploy/syncR2.test.ts` (extend) | `ALLOW('flowfield.bin')` is true; sidecar allowed. |
@@ -67,11 +66,11 @@ Vitest for codec round-trip + extractor frame-correctness + ALLOW-filter tests.
 |---|---|
 | `src/data/scalarFieldFormat.ts` | Add `channels` header byte; version → 3; derive format; round-trip 1 and 4 channels. |
 | `src/@types/data/ScalarCube.d.ts` | Add `readonly channels: 1 \| 4` field. |
-| `tools/utils/io/rawDataRegistry.ts` | Register `cf4pp.vfield-npz` + `cf4pp.readme`. |
+| `tools/utils/io/rawDataRegistry.ts` | Register `cf4.vfield-npz` — the upstream npz, shared with the density pipeline (see Task 2 deviation note). |
+| `data/raw/cf4/README.md` (extend) | Add a "Velocity field (flow viz)" section documenting the npz keys, box geometry, SG frame, build. |
 | `tools/deploy/syncR2.ts` | Add `flowfield.bin` + sidecar to `ALLOW`. |
 | `tools/volumes/buildMcpmVolume.ts` + `tools/volumes/buildCf4Density.ts` | Set `channels: 1` on the emitted cube (re-emit under v3). |
 | `package.json` | Add `build-flow-field` script. |
-| `.gitignore` | Whitelist `data/raw/cf4pp/README.md`. |
 
 ---
 
@@ -129,39 +128,44 @@ export function gpuTextureFormatForChannels(channels: 1 | 4): GPUTextureFormat;
 - [x] `npm test -- scalarFieldFormat` → all pass. `npm run typecheck` → clean. **(Scope note: the `channels: 1` edits to every other `ScalarCube` producer — deferred to Task 5 in the original plan — were pulled into this commit so typecheck stays green on every commit. Task 5 retains only the syncR2 ALLOW additions + tests + operator re-emit note.)**
 - [x] Commit: `feat(data): add channels field to scalar-field format (v3)`.
 
-## Task 2: Register the CF4++ npz + provenance README
+## Task 2: Register the CF4++ npz + provenance
 
-**Files:** `tools/utils/io/rawDataRegistry.ts` (modify), `data/raw/cf4pp/README.md` (create), `.gitignore` (modify)
+**Files:** `tools/utils/io/rawDataRegistry.ts` (modify), `data/raw/cf4/README.md` (extend)
+
+> **Deviation from the original plan (decided 2026-06-04):** The plan first
+> specified a *new* `data/raw/cf4pp/` directory with its own copy of the npz
+> and its own README. But `CF4pp_mean_std_grids.npz` is the **same** 167 MB
+> upstream ensemble the CF-4 density pipeline already documents under
+> `data/raw/cf4/` (it slices `d_mean_CF4pp.npy` from it) — one file, two
+> consumers, not "a different release artifact." A parallel `cf4pp/` dir would
+> duplicate the maintainer download and the provenance doc (violating
+> single-source-of-truth). So the npz is registered **once** as
+> `cf4.vfield-npz` pointing at `data/raw/cf4/CF4pp_mean_std_grids.npz`, and the
+> provenance is a new section in the existing `data/raw/cf4/README.md`. No
+> `cf4pp/` dir, no second README, no extra `.gitignore` line (the cf4 README is
+> already whitelisted).
 
 The CF4++ release npz (`CF4pp_mean_std_grids.npz`, ~167 MB) holds six 128³
-arrays over a 1000 Mpc/h supergalactic box. We register the npz (gitignored,
-fetched manually) and a committed provenance README.
+arrays over a 1000 Mpc/h supergalactic box. The density pipeline already uses
+it; the flow extractor is a second consumer of the same file.
 
-**Registry entries** (dotted-lowercase `<catalog>.<artifact>`):
+**Registry entry** (added within the existing `cf4` group, after `cf4.density-mean`):
 
 ```ts
-'cf4pp.vfield-npz': {
-  path: 'data/raw/cf4pp/CF4pp_mean_std_grids.npz',
+'cf4.vfield-npz': {
+  path: 'data/raw/cf4/CF4pp_mean_std_grids.npz',
   kind: 'file',
   source: 'gitignored',
   description:
-    'CF4++ mean/std velocity + density grids (Courtois 2025). Six 128³ arrays over a 1000 Mpc/h supergalactic box; the flow extractor packs v_mean_CF4pp + d_mean_CF4pp.',
+    'CF4++ mean/std velocity + density ensemble (Courtois 2025). Six 128³ arrays over a 1000 Mpc/h supergalactic box; the flow extractor packs v_mean_CF4pp + d_mean_CF4pp.',
   upstream: 'https://projets.ip2i.in2p3.fr/cosmicflows/',
-  readme: 'cf4pp.readme',
-},
-'cf4pp.readme': {
-  path: 'data/raw/cf4pp/README.md',
-  kind: 'file',
-  source: 'committed',
-  description:
-    'Provenance for the CF4++ velocity-field extraction — upstream URL, npz keys, box geometry, SG frame, fetch date.',
 },
 ```
 
-- [ ] Add the two entries to `RAW_DATA` under a new `// ─── CF4++ velocity field ───` section (the `cf4` density entries already exist — keep this separate, it's a different release artifact).
-- [ ] Create `data/raw/cf4pp/README.md` documenting: upstream URL, the npz key set (`v_mean_CF4pp`, `d_mean_CF4pp`, …), the 1000 Mpc/h supergalactic box, the true SG axis order the extractor assumes, fetch date, and the npz sha256 if computed.
-- [ ] Add a `.gitignore` whitelist line `!/data/raw/cf4pp/README.md` near the existing `data/raw/*/README.md` exceptions, with a one-line comment.
-- [ ] `npm run typecheck` → clean (registry keys are compile-checked via `RawDataKey`).
+- [x] Add the `cf4.vfield-npz` entry to `RAW_DATA` within the existing `cf4` group (a didactic comment explains the one-file-two-consumers rationale).
+- [x] Extend `data/raw/cf4/README.md` with a "Velocity field (flow viz)" section: the npz keys (`v_mean_CF4pp`, `d_mean_CF4pp`; the full six-array mean/std set printed at run time), the 1000 Mpc/h supergalactic box, the true SG axis order the production extractor assumes (vs the frame-agnostic spike), and the `build-flow-field` build step.
+- [x] (No `.gitignore` change — `!/data/raw/cf4/README.md` already whitelisted.)
+- [x] `npm run typecheck` → clean (registry keys are compile-checked via `RawDataKey`).
 - [ ] Commit: `feat(flow): register CF4++ velocity-field npz + provenance`.
 
 ## Task 3: Frame-correct Python extractor
@@ -189,7 +193,7 @@ with the anchor evidence.
 (`'supergalactic-cartesian'`), `speedKmsMax`, `speedKmsP99`, `deltaMax`,
 `deltaP99`.
 
-- [ ] Create `tools/flow/extractFlowField.py` reading `data/raw/cf4pp/CF4pp_mean_std_grids.npz`, writing `public/data/flowfield.bin` + `public/data/flowfield.json`.
+- [ ] Create `tools/flow/extractFlowField.py` reading `data/raw/cf4/CF4pp_mean_std_grids.npz` (registered as `cf4.vfield-npz`), writing `public/data/flowfield.bin` + `public/data/flowfield.json`.
 - [ ] Normalise `v_mean_CF4pp` to `(N,N,N,3)` (handle leading- or trailing-component layouts, as the spike does).
 - [ ] Apply the frame-correct axis permutation + sign so SG axes map to numpy axes correctly; document the permutation + the anchor evidence in the docstring.
 - [ ] Pack RGBA16F C-order `[z][y][x][c]`, R/G/B = velocity, A = δ.
@@ -212,7 +216,7 @@ present). Pure orchestration — the numeric work is in Python.
 ```ts
 // tools/flow/buildFlowField.ts
 export async function buildFlowField(): Promise<void>;
-// Invokes the Python extractor with rawDataPath('cf4pp.vfield-npz') as input,
+// Invokes the Python extractor with rawDataPath('cf4.vfield-npz') as input,
 // writes public/data/flowfield.{bin,json}, then asserts the output byte length
 // and sidecar key set. Throws on mismatch. CLI-invokable (import.meta.url guard).
 ```
