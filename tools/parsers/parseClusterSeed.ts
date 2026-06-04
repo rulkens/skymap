@@ -2,7 +2,8 @@
  * parseClusterSeed — parse + validate `data/cluster_anchors.seed.json`.
  *
  * The seed file is the single source of truth for which galaxy clusters,
- * superclusters, and voids appear as featured labelled POIs in the renderer.
+ * superclusters, voids, and nearby galaxy groups appear as featured labelled
+ * POIs in the renderer.
  * Two Plan-2 scripts will read it: `buildClusterPois.ts` (cross-matches
  * catalog coverage and emits the runtime POI list) and `auditClusterCoverage.ts`
  * (verifies MCXC/MSCC catalog density at each anchor).  Centralising parsing
@@ -18,7 +19,7 @@
  */
 
 /** Valid structural categories. */
-const VALID_CATEGORIES = ['cluster', 'supercluster', 'void'] as const;
+const VALID_CATEGORIES = ['cluster', 'supercluster', 'void', 'group'] as const;
 
 /**
  * One featured structure from `cluster_anchors.seed.json`.
@@ -26,10 +27,13 @@ const VALID_CATEGORIES = ['cluster', 'supercluster', 'void'] as const;
  * Coordinates follow the `SkyCoord` convention: RA in hours [0, 24),
  * Dec in degrees [-90, 90], distances in Mpc.
  *
- * `physicalRadiusMpc` is the gravitationally-bound virial/R_200 radius for
- * clusters; for superclusters and voids it equals `apparentRadiusMpc` (they
- * have no bound core).  `apparentRadiusMpc` is the wider "named extent" used
- * for on-screen ring sizing and cone-search membership.
+ * `physicalRadiusMpc` is the gravitationally-bound virial/core radius for
+ * clusters and groups (e.g. the harmonic radius Rh for groups); for
+ * superclusters and voids it equals `apparentRadiusMpc` (no bound core).
+ * `apparentRadiusMpc` is the wider "named extent" — for clusters and groups
+ * this is the zero-velocity turnaround radius R0 (physR < appR); for
+ * superclusters and voids it matches physR.  Drives ring sizing and
+ * cone-search membership.
  */
 export type ClusterSeedEntry = {
   /** URL-safe lower-kebab id, unique within the file (no category prefix). */
@@ -49,8 +53,8 @@ export type ClusterSeedEntry = {
   /** Distance in Mpc, > 0. */
   distMpc: number;
   /**
-   * Virial / R_200 radius for clusters; equals `apparentRadiusMpc` for
-   * superclusters and voids (no bound core concept applies).
+   * Virial/core radius for clusters and groups; equals `apparentRadiusMpc`
+   * for superclusters and voids (no bound core concept applies).
    */
   physicalRadiusMpc: number;
   /**
@@ -75,7 +79,7 @@ export function validateClusterSeedEntry(e: ClusterSeedEntry): ClusterSeedEntry 
   }
   if (!VALID_CATEGORIES.includes(e.category as (typeof VALID_CATEGORIES)[number])) {
     throw new Error(
-      `cluster seed: ${e.id} has unknown category ${JSON.stringify(e.category)} (expected 'cluster' | 'supercluster' | 'void')`,
+      `cluster seed: ${e.id} has unknown category ${JSON.stringify(e.category)} (expected 'cluster' | 'supercluster' | 'void' | 'group')`,
     );
   }
   if (!Number.isFinite(e.raHours) || e.raHours < 0 || e.raHours >= 24) {

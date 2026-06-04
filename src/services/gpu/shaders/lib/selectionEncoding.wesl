@@ -41,6 +41,9 @@ const SOURCE_CODE_SUPERCLUSTER: u32 = 6u;
 /** Source code for void POIs — see TS Source.Void. */
 const SOURCE_CODE_VOID: u32 = 7u;
 
+/** Source code for nearby-galaxy-group POIs — see TS Source.Group (= 15). */
+const SOURCE_CODE_GROUP: u32 = 15u;
+
 /** Pack a (sourceCode, localIdx) pair into the canonical u32 layout. */
 fn packSelection(sourceCode: u32, localIdx: u32) -> u32 {
   return (sourceCode << SELECTION_SOURCE_SHIFT) | localIdx;

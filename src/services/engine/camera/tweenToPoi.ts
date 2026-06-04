@@ -22,9 +22,10 @@ export function tweenToPoi(state: EngineState, poi: StructureRecord): void {
   const cam = state.cam;
   if (!cam) return;
 
-  // Every structure carries a physical radius (famous galaxies are not
-  // structures and never reach this path).
-  const radius = poi.physicalRadiusMpc;
+  // Frame on the WIDER apparent extent — the radius the close-approach fade
+  // reads — so the framing lands the ring + label just past their fade-out.
+  // Falls back to the physical core for structures with no wider extent.
+  const radius = poi.apparentRadiusMpc ?? poi.physicalRadiusMpc;
   state.subsystems.tweens.start({
     startMs: performance.now(),
     durationMs: FOCUS_TWEEN_MS,
@@ -34,7 +35,8 @@ export function tweenToPoi(state: EngineState, poi: StructureRecord): void {
     fromTarget: vec3.clone(cam.target as vec3),
     toTarget: vec3.fromValues(poi.worldPos[0], poi.worldPos[1], poi.worldPos[2]),
     fromDistance: cam.distance,
-    toDistance: poiFocusDistance(poi.category, radius),
+    // fovY drives the screen-fill framing — same value the projection uses.
+    toDistance: poiFocusDistance(poi.category, radius, cam.fovYRad),
     // Yaw and pitch preserved — the user keeps their orientation;
     // only the orbit target and distance change.
     fromYaw: cam.yaw,

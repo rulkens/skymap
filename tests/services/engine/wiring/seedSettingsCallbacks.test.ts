@@ -42,12 +42,14 @@ function makeSnapshot(): SettingsCallbackSeed {
       supercluster: true,
       famousGalaxy: true,
       void: true,
+      group: true,
     },
     markerCategoryVisibility: {
       cluster: true,
       supercluster: true,
       famousGalaxy: true,
       void: true,
+      group: true,
     },
   };
 }
@@ -111,9 +113,7 @@ describe('seedSettingsCallbacks', () => {
     expect(points.onSizeChange).toHaveBeenCalledExactlyOnceWith(snap.pointSize);
     expect(points.onBrightnessChange).toHaveBeenCalledExactlyOnceWith(snap.brightness);
     expect(camera.onAutoRotateChange).toHaveBeenCalledExactlyOnceWith(snap.autoRotate);
-    expect(thumbnails.onEnabledChange).toHaveBeenCalledExactlyOnceWith(
-      snap.galaxyTexturesEnabled,
-    );
+    expect(thumbnails.onEnabledChange).toHaveBeenCalledExactlyOnceWith(snap.galaxyTexturesEnabled);
     expect(points.onHighlightFallbackChange).toHaveBeenCalledExactlyOnceWith(
       snap.highlightFallback,
     );

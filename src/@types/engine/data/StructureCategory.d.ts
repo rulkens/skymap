@@ -8,5 +8,5 @@
  * layer's types reject a famous-galaxy category at compile time.
  */
 
-/** Extended-structure category — cluster / supercluster / void. */
-export type StructureCategory = 'cluster' | 'supercluster' | 'void';
+/** Extended-structure category — cluster / supercluster / void / group. */
+export type StructureCategory = 'cluster' | 'supercluster' | 'void' | 'group';

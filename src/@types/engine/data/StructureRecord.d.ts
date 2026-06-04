@@ -1,6 +1,6 @@
 /**
- * StructureRecord — one extended structure (cluster / supercluster / void)
- * as held by the structure store.
+ * StructureRecord — one extended structure (cluster / supercluster / void /
+ * group) as held by the structure store.
  *
  * The single source of truth for a structure record.  Famous galaxies are
  * galaxy data, not structures, so they are deliberately absent here.
@@ -8,12 +8,12 @@
  * ### Why a discriminated union on `category`
  *
  * Clusters alone carry an Abell/ACO designation.  Modelling the record as a
- * flat shape with `abell?` optional would let a supercluster or void literal
- * silently carry one.  Splitting on `category` (`StructureCategory`) makes
- * `abell` exist only on the cluster arm — consumers must narrow on
- * `category` before reading it, and a producer can't build a void with an
- * Abell number.  The shared structure fields live on `StructureBase` so the
- * three arms stay in lockstep.
+ * flat shape with `abell?` optional would let a supercluster, void, or group
+ * literal silently carry one.  Splitting on `category` (`StructureCategory`)
+ * makes `abell` exist only on the cluster arm — consumers must narrow on
+ * `category` before reading it, and a producer can't build a void or group
+ * with an Abell number.  The shared structure fields live on `StructureBase`
+ * so the four arms stay in lockstep.
  */
 
 import type { Vec3 } from '../../math/Vec3';
@@ -85,8 +85,18 @@ type VoidRecord = StructureBase & {
 };
 
 /**
- * An extended structure record.  `category` is a `StructureCategory`
- * (cluster / supercluster / void); famous galaxies are not structures and
- * are absent from this union.
+ * A nearby galaxy group — a seed-only featured structure with no Abell
+ * designation.  Groups (Local Group, M81 Group, Cen A Group, …) are
+ * hand-curated anchors rather than catalog-derived; they carry only the
+ * shared `StructureBase` fields, just like voids.
  */
-export type StructureRecord = ClusterRecord | SuperclusterRecord | VoidRecord;
+type GroupRecord = StructureBase & {
+  readonly category: 'group';
+};
+
+/**
+ * An extended structure record.  `category` is a `StructureCategory`
+ * (cluster / supercluster / void / group); famous galaxies are not
+ * structures and are absent from this union.
+ */
+export type StructureRecord = ClusterRecord | SuperclusterRecord | VoidRecord | GroupRecord;

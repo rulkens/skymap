@@ -65,13 +65,14 @@ import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
 import type { SourceType } from '../../../@types/data/SourceType';
 
 /**
- * The structure POI categories whose visibility gates the cluster-catalog
- * fetch. `famousGalaxy` is excluded — famous galaxies arrive via the Famous
- * `.bin` + meta sidecar, not the `.ccat`. Spelled as `PoiCategory` members so
- * a rename in `POI_STYLES` breaks compilation here rather than silently
- * skipping a category.
+ * The categories backed by the bulk `.ccat` catalog — their visibility
+ * gates the cluster-catalog fetch. `famousGalaxy` is excluded (Famous
+ * `.bin` + meta sidecar), and `group` is excluded (seed-only, no `.ccat`
+ * — adding it here would trigger a pointless fetch when group visibility
+ * toggles). Spelled as `PoiCategory` members so a type error surfaces
+ * here rather than silently skipping a category on rename.
  */
-const STRUCTURE_CATEGORIES: readonly PoiCategory[] = ['cluster', 'supercluster', 'void'];
+const BULK_CATALOG_CATEGORIES: readonly PoiCategory[] = ['cluster', 'supercluster', 'void'];
 
 /**
  * Volume-field handle ids, read from the registry rather than re-spelled, so
@@ -169,7 +170,7 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     factory: (deps) => createClusterCatalogSlot(deps.state, deps.cb),
     req: () => ({}),
     demand: (ctx) =>
-      STRUCTURE_CATEGORIES.some(
+      BULK_CATALOG_CATEGORIES.some(
         (cat) =>
           ctx.settings.markerCategoryVisibility[cat] || ctx.settings.labelCategoryVisibility[cat],
       ),

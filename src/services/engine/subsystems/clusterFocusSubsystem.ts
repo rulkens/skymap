@@ -1,10 +1,10 @@
 /**
  * clusterFocusSubsystem — focus-driven cluster "focus mode".
  *
- * When a cluster / supercluster / void POI is focused, non-member
+ * When a cluster / supercluster / void / group POI is focused, non-member
  * galaxies fade to ~8% alpha over ~400 ms (the shader does the
  * per-vertex membership test; this subsystem only supplies the centre,
- * radius, and the smoothstep blend). All three categories behave
+ * radius, and the smoothstep blend). All four categories behave
  * identically — the focused structure's interior galaxies stay bright;
  * voids are just an underdense case of the same rule. See
  * `ClusterFocusSubsystem.d.ts` for the rationale (focus as single
@@ -64,11 +64,15 @@ export function createClusterFocusSubsystem(
 
   function update(poi: StructureRecord | null, nowMs: number): void {
     // Narrow to a focus-eligible extended-structure POI. famousGalaxy has
-    // no radius, so it (and null) drives a fade-out.
+    // no radius, so it (and null) drives a fade-out. Groups share the
+    // same fade band mechanic as clusters — R0 > Rh gives a real band.
     let next: ActiveFocus | null = null;
     if (
       poi !== null &&
-      (poi.category === 'cluster' || poi.category === 'supercluster' || poi.category === 'void')
+      (poi.category === 'cluster' ||
+        poi.category === 'supercluster' ||
+        poi.category === 'void' ||
+        poi.category === 'group')
     ) {
       // Pass the structure's two real radii; the shader ramps the fade
       // across the [physical, apparent] band (and supplies a soft band of

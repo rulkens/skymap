@@ -14,17 +14,19 @@ describe('EngineSettingsState.labelCategoryVisibility', () => {
       supercluster: true,
       famousGalaxy: true,
       void: true,
+      group: true,
     };
     const c: PoiCategory = 'famousGalaxy';
     expect(v[c]).toBe(true);
   });
 
-  it('all four categories default to true (compile-time check)', () => {
+  it('all five categories default to true (compile-time check)', () => {
     const all: Record<PoiCategory, boolean> = {
       cluster: true,
       supercluster: true,
       famousGalaxy: true,
       void: true,
+      group: true,
     };
     expect(Object.values(all).every(Boolean)).toBe(true);
   });

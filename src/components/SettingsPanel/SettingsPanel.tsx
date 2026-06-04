@@ -88,6 +88,7 @@ import type { BiasMode as BiasModeT } from '../../@types/data/BiasMode';
 import { ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../../@types/data/ToneMapCurve';
 import type { PoiCategory } from '../../@types/engine/data/PoiCategory';
+import { POI_CATEGORY_INFO } from '../../data/poiCategoryInfo';
 import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
@@ -125,13 +126,13 @@ const TOGGLEABLE_SOURCES: readonly SourceType[] = [
  * The marker categories the "Structures" master toggle batches over.
  * `famousGalaxy` is intentionally absent — famous galaxies don't have
  * a marker ring (their visualisation is the galaxy point + thumbnail),
- * only a label.  Cluster / supercluster / void are the three POI-marker
- * categories that share the structures master.
+ * only a label.  Cluster / supercluster / void / group are the four
+ * POI-marker categories that share the structures master.
  */
-const STRUCTURE_CATEGORIES: readonly PoiCategory[] = ['cluster', 'supercluster', 'void'];
+const STRUCTURE_CATEGORIES: readonly PoiCategory[] = ['cluster', 'supercluster', 'void', 'group'];
 
 /**
- * The label categories the "Labels" master toggle batches over.  All four
+ * The label categories the "Labels" master toggle batches over.  All five
  * PoiCategory values — labels are independent of marker visibility (axis
  * separation landed in PR #160 / audit Q11).
  *
@@ -144,6 +145,7 @@ const LABEL_CATEGORIES: readonly PoiCategory[] = [
   'cluster',
   'supercluster',
   'void',
+  'group',
 ];
 
 /**
@@ -786,7 +788,7 @@ export function SettingsPanel({
             return (
               <div className={styles.panelRow} key={`marker-${cat}`}>
                 <label htmlFor={`toggle-marker-${cat}`}>
-                  {cat === 'supercluster' ? 'Superclusters' : cat === 'void' ? 'Voids' : 'Clusters'}
+                  {POI_CATEGORY_INFO[cat].plural}
                   {count !== undefined && (
                     <span className={styles.sourceCount}>{count.toLocaleString()}</span>
                   )}
@@ -824,15 +826,7 @@ export function SettingsPanel({
             useful). */}
         {LABEL_CATEGORIES.map((cat) => (
           <div className={styles.panelRow} key={`label-${cat}`}>
-            <label htmlFor={`toggle-label-${cat}`}>
-              {cat === 'supercluster'
-                ? 'Superclusters'
-                : cat === 'famousGalaxy'
-                  ? 'Famous galaxies'
-                  : cat === 'void'
-                    ? 'Voids'
-                    : 'Clusters'}
-            </label>
+            <label htmlFor={`toggle-label-${cat}`}>{POI_CATEGORY_INFO[cat].plural}</label>
             <input
               id={`toggle-label-${cat}`}
               type="checkbox"

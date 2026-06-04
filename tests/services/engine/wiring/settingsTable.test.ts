@@ -66,12 +66,14 @@ function makeState(): Pick<EngineState, 'settings' | 'bias'> {
         supercluster: true,
         famousGalaxy: true,
         void: true,
+        group: true,
       },
       markerCategoryVisibility: {
         cluster: true,
         supercluster: true,
         famousGalaxy: true,
         void: true,
+        group: true,
       },
     },
     bias: {

@@ -152,9 +152,24 @@ what's being moved in one line, then do it:
   If the plan referenced a deferred item that's still open, leave
   that item — it stays in the backlog until separately picked up.
 
-Don't update CLAUDE.md, don't commit, don't push. The moves are
-staged; the user commits them alongside the implementation PR (so the
-"this plan shipped" diff lives next to the code that shipped it).
+Then **commit and push** the moves so the "this plan shipped" record
+lands on the feature branch / PR without a manual follow-up:
+
+- Stage the moved plan/spec at their new `completed/` paths **including
+  any in-place edits** (ticked checkboxes, a completion note). A bare
+  `git mv` over an unstaged edit stages only the rename and strands the
+  content change, so `git add` the new paths explicitly. Stage the
+  BACKLOG edit too. Stage only those doc paths — never `git add -A`.
+- Commit with a `docs(plan): mark <slug> complete` message under the
+  user's git identity + the `Co-Authored-By: Claude …` trailer, with the
+  audit verdict in the body.
+- `git push` to the current branch's upstream if it has one, so the
+  commit lands on the open PR. If the branch has no upstream yet, leave
+  the first push to the user and say so.
+
+Don't update CLAUDE.md, and don't commit anything beyond the completion
+moves — the implementation should already be committed; this commit is
+*only* the plan/spec relocation + checkbox ticks + BACKLOG edit.
 
 If the user explicitly says "audit only" / "don't move" / similar
 before invoking, skip the moves and just report. Otherwise default to

@@ -4,9 +4,9 @@ import { FAMOUS_LABEL_STYLE } from '../../src/services/engine/presentation/famou
 import type { PoiCategory } from '../../src/@types/engine/data/PoiCategory';
 
 describe('POI category styles (split into structure + famous tables)', () => {
-  it('STRUCTURE_POI_STYLES exposes the three structure category keys', () => {
+  it('STRUCTURE_POI_STYLES exposes the four structure category keys', () => {
     expect(Object.keys(STRUCTURE_POI_STYLES).sort()).toEqual(
-      ['cluster', 'supercluster', 'void'].sort(),
+      ['cluster', 'supercluster', 'void', 'group'].sort(),
     );
   });
 
@@ -33,11 +33,18 @@ describe('POI category styles (split into structure + famous tables)', () => {
     expect(FAMOUS_LABEL_STYLE.fadeBandPx).toBeGreaterThan(0);
   });
 
-  it('PoiCategory is the four-category union (compile-time check)', () => {
+  it('PoiCategory is the five-category union (compile-time check)', () => {
     const c1: PoiCategory = 'cluster';
     const c2: PoiCategory = 'supercluster';
     const c3: PoiCategory = 'famousGalaxy';
     const c4: PoiCategory = 'void';
-    expect([c1, c2, c3, c4]).toEqual(['cluster', 'supercluster', 'famousGalaxy', 'void']);
+    const c5: PoiCategory = 'group';
+    expect([c1, c2, c3, c4, c5]).toEqual([
+      'cluster',
+      'supercluster',
+      'famousGalaxy',
+      'void',
+      'group',
+    ]);
   });
 });
