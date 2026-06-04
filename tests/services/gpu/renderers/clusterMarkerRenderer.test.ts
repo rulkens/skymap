@@ -31,6 +31,25 @@ const cluster = (id: number): ClusterMarkerDescriptor => ({
   ringColor: [1, 0.85, 0.4, 1],
 });
 
+// `void` is a JS reserved word; use void_ to avoid a syntax error.
+const void_ = (id: number): ClusterMarkerDescriptor => ({
+  id: `test-void-${id}`,
+  category: 'void',
+  worldPos: [id, 0, 0],
+  radiusMpc: 5,
+  haloColor: [0, 0, 0, 0], // haloAlpha = 0 per spec — no halo for voids
+  ringColor: [0, 0.9, 0.9, 1],
+});
+
+const group = (id: number): ClusterMarkerDescriptor => ({
+  id: `test-group-${id}`,
+  category: 'group',
+  worldPos: [id, 0, 0],
+  radiusMpc: 1,
+  haloColor: [0.5, 0.9, 0.6, 0.8], // soft green — colour irrelevant for CPU bucketing
+  ringColor: [0.5, 0.9, 0.6, 1],
+});
+
 describe('ClusterMarkerRenderer (CPU state)', () => {
   it('starts with zero markers', () => {
     const r = newRenderer();
@@ -63,5 +82,23 @@ describe('ClusterMarkerRenderer (CPU state)', () => {
   it('label is stable', () => {
     const r = newRenderer();
     expect(r.label).toBe('clusterMarkerRenderer');
+  });
+
+  it('counts group descriptors alongside cluster / void', () => {
+    // Regression guard: group descriptors must NOT be skipped by the
+    // write-pass guard.  Feed a mix of all four marker-bearing categories
+    // and assert every descriptor is counted.
+    const r = newRenderer();
+    r.setMarkers([cluster(1), void_(2), group(3), group(4)]);
+    expect(r.markerCount()).toBe(4);
+  });
+
+  it('group descriptors do not affect cluster or void counts', () => {
+    // Buckets are independent: adding group markers must not bleed into
+    // the cluster or void buckets (which would desync pick indices).
+    const r = newRenderer();
+    r.setMarkers([cluster(1), cluster(2), void_(3), group(4), group(5), group(6)]);
+    // Total = 6; if any bucket bleed occurred markerCount would be wrong.
+    expect(r.markerCount()).toBe(6);
   });
 });

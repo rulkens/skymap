@@ -44,10 +44,10 @@ describe('wireInput POI wiring', () => {
   });
 
   it('routes double-click on a cached POI through camera.focusOn', () => {
-    // The unified focusOn (since 2026-05-19) takes either a GalaxyInfo or
-    // a PointOfInterest and dispatches internally.  The dblclick handler
-    // passes `lastClickedPoi` — a PointOfInterest — through the same
-    // method the single-click galaxy path uses.
+    // The unified focusOn takes either a GalaxyInfo or a StructureRecord
+    // and dispatches internally.  The dblclick handler passes
+    // `lastClickedPoi` — a StructureRecord — through the same method the
+    // single-click galaxy path uses.
     expect(src).toContain('focusOn(lastClickedPoi)');
   });
 

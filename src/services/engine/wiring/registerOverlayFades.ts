@@ -61,8 +61,8 @@ export function registerOverlayFades(state: EngineState): void {
 
   // ── Label-layer handles ──────────────────────────────────────────────
   //
-  // youAreHere / poi / galaxyNames start at 0: their producers fire fadeTo(1)
-  // on first non-empty emit (see youAreHereSubsystem + poiSubsystem).
+  // youAreHere / poi / galaxyNames start at 0: fadeTo(1) fires on first
+  // non-empty emit (see youAreHereSubsystem + labelDirectorSubsystem).
   // scaleBar is React-side — registered at 1 for tour addressability but
   // never auto-faded by the engine.
   state.subsystems.fades.register({ kind: 'labelLayer', layer: 'youAreHere' }, 0);

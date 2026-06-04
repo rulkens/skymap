@@ -7,11 +7,10 @@
  * across the single↔pair transition forced React to remount the detail card,
  * which lost the native `<details>` "More details" open state on every hover.
  *
- * As of the unify-focus-clear refactor (2026-05-19), both `hovered` and
- * `selected` accept the full `FocusableTarget` union (`GalaxyInfo |
- * PointOfInterest`).  App.tsx merges POI and galaxy state before handing
- * them here — POI wins when both are present.  InfoCard then dispatches
- * via `isPoi` into typed sub-slots and picks the right detail-card
+ * Both `hovered` and `selected` accept the full `FocusableTarget` union
+ * (`GalaxyInfo | StructureRecord`).  App.tsx merges POI and galaxy state
+ * before handing them here — POI wins when both are present.  InfoCard then
+ * dispatches via `isPoi` into typed sub-slots and picks the right detail-card
  * variant (`GalaxyDetailCard` vs `PoiDetailCard`).
  */
 
@@ -72,7 +71,7 @@ export function InfoCard({
 }: InfoCardProps): ReactNode {
   if (!hovered && !selected) return null;
 
-  // Dispatch via isPoi into typed sub-slots.  PointOfInterest is identified
+  // Dispatch via isPoi into typed sub-slots.  A StructureRecord is identified
   // by a top-level `category` field; GalaxyInfo carries category only at
   // `galaxyType.category`.  See isPoi.ts for the discriminant rationale.
   const selectedPoi = selected && isPoi(selected) ? selected : null;

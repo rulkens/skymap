@@ -11,7 +11,7 @@ import type { StructureCategory } from './StructureCategory';
  * groups (`anchors` for the curated featured seed, `bulk` for the catalog);
  * `all()` concatenates them in a fixed `anchors` → `bulk` order, which
  * preserves the ring pick-path's `instance_index → byCategory(...)[idx]`
- * alignment (the same ordering contract the `poiSubsystem` groups follow).
+ * alignment that pick-index decode requires.
  *
  * Marker and label visibility are two independent per-category axes: a
  * category's ring can be hidden while its label still renders, and vice

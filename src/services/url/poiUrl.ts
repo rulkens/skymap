@@ -12,7 +12,7 @@
  * both into a single `urlHash.ts` codec — would couple unrelated
  * features and force every change to reason about both schemes at once.
  *
- * The id is the literal `PointOfInterest.id` (e.g. `virgo-m87`,
+ * The id is the literal `StructureRecord.id` (e.g. `virgo-m87`,
  * `hercules-sc`, `bootes-void`).  POI ids are curated and stable across
  * rebuilds (they live in `data/cluster_anchors.seed.json`), so encoding
  * them directly is safe — unlike galaxies, there's no priority ladder to

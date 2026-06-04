@@ -141,12 +141,14 @@ describe('selectionEncoding TS↔WESL parity', () => {
       ['SELECTION_NONE_SENTINEL', SELECTION_NONE_SENTINEL],
       ['PICK_SENTINEL_OFFSET', PICK_SENTINEL_OFFSET],
       // POI category source codes — mirror of TS Source.Cluster /
-      // Source.Supercluster / Source.Void. These appear at the WESL side
-      // so the future cluster-marker pick fragment can refer to them by
-      // name instead of inlining a magic 5u/6u/7u literal.
+      // Source.Supercluster / Source.Void / Source.Group. These appear
+      // at the WESL side so the future cluster-marker pick fragment can
+      // refer to them by name instead of inlining a magic 5u/6u/7u/15u
+      // literal.
       ['SOURCE_CODE_CLUSTER', Source.Cluster],
       ['SOURCE_CODE_SUPERCLUSTER', Source.Supercluster],
       ['SOURCE_CODE_VOID', Source.Void],
+      ['SOURCE_CODE_GROUP', Source.Group],
     ];
 
     for (const [name, tsValue] of cases) {
@@ -201,6 +203,14 @@ describe('unpackPick — discriminated union for POI categories', () => {
     expect(result).toEqual<PickResult>({ kind: 'void', poiIndex: 2 });
   });
 
+  it('returns kind:group for Source.Group (code 15)', () => {
+    // Source.Group = 15, appended after the 0..8 survey/POI band.
+    // The pick fragment writes packSelection(15, idx) + PICK_SENTINEL_OFFSET;
+    // unpackPick must reverse the offset and return the group variant.
+    const result = unpackPick(rawFor(Source.Group, 3));
+    expect(result).toEqual<PickResult>({ kind: 'group', poiIndex: 3 });
+  });
+
   it('returns null for raw==0 (cleared pick texture)', () => {
     expect(unpackPick(0)).toBeNull();
   });
@@ -218,10 +228,11 @@ describe('unpackPick — discriminated union for POI categories', () => {
     });
   });
 
-  it('logs a warning and returns null for unallocated codes 9..30', () => {
+  it('logs a warning and returns null for unallocated codes (9..14, 16..30)', () => {
+    // Code 15 (Source.Group) is now allocated — use 14 and 16 instead.
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
-      for (const code of [9, 15, 30]) {
+      for (const code of [9, 14, 16, 30]) {
         const result = unpackPick(rawFor(code, 0));
         expect(result).toBeNull();
       }

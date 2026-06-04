@@ -133,8 +133,20 @@ type VolumeFieldLeaves = Partial<Record<VolumeFieldId, { enabled: boolean }>>;
  */
 const BOOT_SETTINGS: SettingsLeaves = {
   filaments: { enabled: false },
-  markerCategoryVisibility: { cluster: true, supercluster: true, void: true, famousGalaxy: true },
-  labelCategoryVisibility: { cluster: true, supercluster: true, void: true, famousGalaxy: true },
+  markerCategoryVisibility: {
+    cluster: true,
+    supercluster: true,
+    void: true,
+    famousGalaxy: true,
+    group: true,
+  },
+  labelCategoryVisibility: {
+    cluster: true,
+    supercluster: true,
+    void: true,
+    famousGalaxy: true,
+    group: true,
+  },
 };
 
 /**

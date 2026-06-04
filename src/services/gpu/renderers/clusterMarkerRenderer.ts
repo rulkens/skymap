@@ -101,16 +101,18 @@ const UNIFORM_BYTES = 80;
 const SOURCE_UNIFORM_BYTES = 16;
 
 /** Maps each pick-able POI category to its 5-bit source code (allocated by plan 1). */
-const SOURCE_CODE_BY_CATEGORY: Readonly<Record<'cluster' | 'supercluster' | 'void', number>> = {
+const SOURCE_CODE_BY_CATEGORY: Readonly<Record<'cluster' | 'supercluster' | 'void' | 'group', number>> = {
   cluster: Source.Cluster,
   supercluster: Source.Supercluster,
   void: Source.Void,
+  group: Source.Group,
 };
 
-const POI_CATEGORIES_WITH_MARKERS: readonly ('cluster' | 'supercluster' | 'void')[] = [
+const POI_CATEGORIES_WITH_MARKERS: readonly ('cluster' | 'supercluster' | 'void' | 'group')[] = [
   'cluster',
   'supercluster',
   'void',
+  'group',
 ];
 
 export function createClusterMarkerRenderer(
@@ -166,15 +168,17 @@ export function createClusterMarkerRenderer(
   // Per-category bucket bookkeeping: where each category's run begins
   // in the instance buffer + how many descriptors it owns.  Reset at
   // the start of every setMarkers call.
-  const bucketOffsets: Record<'cluster' | 'supercluster' | 'void', number> = {
+  const bucketOffsets: Record<'cluster' | 'supercluster' | 'void' | 'group', number> = {
     cluster: 0,
     supercluster: 0,
     void: 0,
+    group: 0,
   };
-  const bucketCounts: Record<'cluster' | 'supercluster' | 'void', number> = {
+  const bucketCounts: Record<'cluster' | 'supercluster' | 'void' | 'group', number> = {
     cluster: 0,
     supercluster: 0,
     void: 0,
+    group: 0,
   };
 
   // GPU resources — null when device is null.
@@ -200,16 +204,18 @@ export function createClusterMarkerRenderer(
   // groups remain layout-compatible across the encoder boundary.
   let pickDummyFadeBuffer: GPUBuffer | null = null;
   let pickDummyFadeBindGroup: GPUBindGroup | null = null;
-  const sourceBuffers: Record<'cluster' | 'supercluster' | 'void', GPUBuffer | null> = {
+  const sourceBuffers: Record<'cluster' | 'supercluster' | 'void' | 'group', GPUBuffer | null> = {
     cluster: null,
     supercluster: null,
     void: null,
+    group: null,
   };
   let cameraBindGroup: GPUBindGroup | null = null;
-  const sourceBindGroups: Record<'cluster' | 'supercluster' | 'void', GPUBindGroup | null> = {
+  const sourceBindGroups: Record<'cluster' | 'supercluster' | 'void' | 'group', GPUBindGroup | null> = {
     cluster: null,
     supercluster: null,
     void: null,
+    group: null,
   };
   // Scratch arrays for the per-frame fade.opacity write.  Same shape
   // as filamentRenderer's fadeScratchF32: a single f32 sliced into the
@@ -459,6 +465,7 @@ export function createClusterMarkerRenderer(
     bucketCounts.cluster = 0;
     bucketCounts.supercluster = 0;
     bucketCounts.void = 0;
+    bucketCounts.group = 0;
 
     // Grow to fit the full descriptor set — no truncation.  See growTo
     // and the `capacity` docstring for why a cap here was a correctness
@@ -473,21 +480,24 @@ export function createClusterMarkerRenderer(
       if (d.category === 'cluster') bucketCounts.cluster++;
       else if (d.category === 'supercluster') bucketCounts.supercluster++;
       else if (d.category === 'void') bucketCounts.void++;
+      else if (d.category === 'group') bucketCounts.group++;
       // famousGalaxy and any future label-only category have no markers; skip.
     }
     bucketOffsets.cluster = 0;
     bucketOffsets.supercluster = bucketOffsets.cluster + bucketCounts.cluster;
     bucketOffsets.void = bucketOffsets.supercluster + bucketCounts.supercluster;
+    bucketOffsets.group = bucketOffsets.void + bucketCounts.void;
 
     // Second pass: pack into the instance buffer in category-ordered runs.
-    const writeCursor: Record<'cluster' | 'supercluster' | 'void', number> = {
+    const writeCursor: Record<'cluster' | 'supercluster' | 'void' | 'group', number> = {
       cluster: bucketOffsets.cluster,
       supercluster: bucketOffsets.supercluster,
       void: bucketOffsets.void,
+      group: bucketOffsets.group,
     };
     for (let i = 0; i < count; i++) {
       const d = descriptors[i]!;
-      if (d.category !== 'cluster' && d.category !== 'supercluster' && d.category !== 'void') continue;
+      if (d.category !== 'cluster' && d.category !== 'supercluster' && d.category !== 'void' && d.category !== 'group') continue;
       const slot = writeCursor[d.category];
       writeCursor[d.category]++;
       const base = slot * MARKER_INSTANCE_FLOATS;

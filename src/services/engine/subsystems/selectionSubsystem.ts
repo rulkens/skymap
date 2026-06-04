@@ -6,7 +6,7 @@
  * null, forming the engine's attention ladder: hover → select →
  * focus.  Setters dedupe via `selectionEq` and fan out to
  * `cb.selection.onHoverChange` / `onSelectChange` with the resolved
- * `FocusableTarget` (GalaxyInfo for galaxy variants, PointOfInterest
+ * `FocusableTarget` (GalaxyInfo for galaxy variants, StructureRecord
  * for POIs) — callers never have to remember to fire the callback
  * themselves.
  *
@@ -103,9 +103,9 @@ export function createSelectionSubsystem(input: CreateSelectionSubsystemInput): 
 
   /**
    * Resolve a Selection to its expanded `FocusableTarget` (GalaxyInfo
-   * | PointOfInterest), or null.  Galaxy variant uses the cloud
+   * | StructureRecord), or null.  Galaxy variant uses the cloud
    * lookup; POI variant resolves through `getPoi` (which the engine
-   * wires to `poiSubsystem.findPoi`).  Unknown POI ids resolve to
+   * wires to `state.data.structures.byId`).  Unknown POI ids resolve to
    * null — fire-the-callback-with-null is the right semantics for a
    * stale id pick.
    */

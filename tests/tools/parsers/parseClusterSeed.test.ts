@@ -27,7 +27,7 @@ describe('parseClusterSeed', () => {
     const raw = readFileSync(rawDataPath('clusters.seed'), 'utf8');
     const entries = parseClusterSeed(raw);
     expect(entries.length).toBeGreaterThanOrEqual(25);
-    const validCategories = new Set(['cluster', 'supercluster', 'void']);
+    const validCategories = new Set(['cluster', 'supercluster', 'void', 'group']);
     for (const e of entries) {
       expect(validCategories.has(e.category)).toBe(true);
     }
@@ -51,6 +51,18 @@ describe('parseClusterSeed', () => {
   it('validateClusterSeedEntry rejects unknown category', () => {
     const e = baseEntry({ category: 'supergroup' as ClusterSeedEntry['category'] });
     expect(() => validateClusterSeedEntry(e)).toThrow(/category/);
+  });
+
+  it('accepts category group and round-trips it', () => {
+    const e = baseEntry({ id: 'local-group', category: 'group' });
+    const result = validateClusterSeedEntry(e);
+    expect(result.category).toBe('group');
+    expect(result.id).toBe('local-group');
+
+    // Also verify parseClusterSeed round-trips a group entry end-to-end.
+    const entries = parseClusterSeed(JSON.stringify([e]));
+    expect(entries).toHaveLength(1);
+    expect(entries[0]?.category).toBe('group');
   });
 
   it('rejects raHours below 0', () => {

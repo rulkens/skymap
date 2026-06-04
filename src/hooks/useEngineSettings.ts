@@ -151,11 +151,10 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   // ── POI per-category visibility (two independent axes) ──────────────
   // Engine echoes the full Record<PoiCategory, boolean> per axis on
   // every matching setter call (plus once at init via
-  // seedSettingsCallbacks).  The two records were split by the
-  // 2026-05-19 settings-panel audit (Q11) — see
-  // `poiSubsystem.ts` for the conflation bug that motivated the
-  // split.  Both seed to "all categories on" so first paint matches
-  // the engine default.
+  // seedSettingsCallbacks).  Label and marker visibility are kept as two
+  // separate records on purpose: conflating them into one axis lets a
+  // category hidden on one axis silently suppress it on the other.  Both
+  // seed to "all categories on" so first paint matches the engine default.
   const [labelCategoryVisibility, setLabelCategoryVisibility] = useState<
     Record<PoiCategory, boolean>
   >({
@@ -163,6 +162,7 @@ export function useEngineSettings(): UseEngineSettingsReturn {
     supercluster: true,
     famousGalaxy: true,
     void: true,
+    group: true,
   });
   const [markerCategoryVisibility, setMarkerCategoryVisibility] = useState<
     Record<PoiCategory, boolean>
@@ -171,6 +171,7 @@ export function useEngineSettings(): UseEngineSettingsReturn {
     supercluster: true,
     famousGalaxy: true,
     void: true,
+    group: true,
   });
 
   return {

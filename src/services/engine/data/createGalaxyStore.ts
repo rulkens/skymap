@@ -21,8 +21,7 @@ export function createGalaxyStore(): GalaxyStore {
   const catalogs = new Map<SourceType, GalaxyCatalog>();
   let famousMeta: readonly FamousMetaEntry[] = [];
   // Famous-label visibility — the galaxy-side counterpart to the structure
-  // store's label axis. Defaults visible (parity with the old poiSubsystem
-  // all-categories-visible seed).
+  // store's label axis. Famous labels default visible.
   let famousLabelsVisible = true;
 
   return Object.freeze({

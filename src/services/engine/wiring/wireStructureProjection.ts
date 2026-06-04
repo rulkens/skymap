@@ -6,7 +6,7 @@
  * ### Group semantics and arrival schedule
  *
  *   - `anchors` — hand-curated cluster/SC/void anchors from
- *     `buildStaticAnchorPois`.  Published synchronously at boot so the
+ *     `buildStaticAnchorStructures`.  Published synchronously at boot so the
  *     Structures panel has counts from frame 1.
  *   - `bulk` — built from the cluster-catalog slot's ready value when it
  *     lands (a single subscription).  A slot error clears the group
@@ -19,14 +19,16 @@
  *
  * ### Structure-count emissions
  *
- * After every group change we forward `{ cluster, supercluster, void }`
+ * After every group change we forward `{ cluster, supercluster, void, group }`
  * counts to `cb.sources?.onStructureCountsChange` so the Structures panel's
  * toggles can display "Clusters 573" alongside their checkboxes.  Counts are
  * read from `structureStore.byCategory` — the authoritative record set — so
- * the number matches exactly what will render.
+ * the number matches exactly what will render.  Every structure category MUST
+ * appear here; a missing one renders its toggle with no count (the bug that
+ * left `group` countless until it was added).
  */
 
-import { buildStaticAnchorPois } from '../../../data/buildStaticAnchorPois';
+import { buildStaticAnchorStructures } from '../../../data/buildStaticAnchorStructures';
 import { clusterCatalogToStructures } from '../phases/clusterCatalogToStructures';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -50,17 +52,18 @@ export function wireStructureProjection(state: EngineState, cb: EngineCallbacks)
       cluster: state.data.structures.byCategory('cluster').length,
       supercluster: state.data.structures.byCategory('supercluster').length,
       void: state.data.structures.byCategory('void').length,
+      group: state.data.structures.byCategory('group').length,
     });
   }
 
   // ── Group 1: static anchors (synchronous) ───────────────────────────
   //
-  // The id-slug + worldPos build lives in `data/buildStaticAnchorPois.ts`
-  // so the React-side `usePoiUrlSync` deep-link drain constructs the same
+  // The id-slug + worldPos build lives in `data/buildStaticAnchorStructures.ts`
+  // so the React-side `useUrlSync` deep-link drain constructs the same
   // records without drifting on slug-rule changes.  physicalRadiusMpc comes
   // from the seed JSON (R_200 / virial radii for clusters, characteristic
   // extent for superclusters and voids).
-  state.data.structures.setGroup('anchors', buildStaticAnchorPois());
+  state.data.structures.setGroup('anchors', buildStaticAnchorStructures());
   emitCounts();
 
   // ── Group 2: bulk clusters/superclusters ─────────────────────────────

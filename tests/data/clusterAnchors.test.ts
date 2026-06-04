@@ -1,15 +1,12 @@
 /**
  * Tests for `raDecDistToEqCart` and the cluster seed content.
  *
- * Previously this file imported CLUSTER_ANCHORS / SUPERCLUSTER_ANCHORS /
- * VOID_ANCHORS constants from `src/data/clusterAnchors.ts`.  That module
- * has been deleted; the seed data now lives in
- * `data/cluster_anchors.seed.json` and is parsed by
- * `tools/parsers/parseClusterSeed.ts`.  The coordinate helper lives at
+ * The seed data lives in `data/cluster_anchors.seed.json`, parsed by
+ * `tools/parsers/parseClusterSeed.ts`; the coordinate helper lives at
  * `src/utils/math/raDecDistToEqCart.ts`.
  *
  * The id invariants that matter for deep-link stability are covered in
- * `buildStaticAnchorPois.test.ts`.  Tests here focus on the coordinate
+ * `buildStaticAnchorStructures.test.ts`.  Tests here focus on the coordinate
  * maths and the seed content.
  */
 

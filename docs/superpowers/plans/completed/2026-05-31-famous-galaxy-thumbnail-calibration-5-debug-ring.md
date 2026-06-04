@@ -25,7 +25,7 @@
 
 - [x] **Step 1:** Add the setting + default + toggle + prop threading, mirroring `showPickBuffer` at each site.
 - [x] **Step 2:** `npm run typecheck` → PASS.
-- [ ] **Step 3:** Manual: the checkbox appears and toggles state (no overlay yet).
+- [x] **Step 3:** Manual: the checkbox appears and toggles state (no overlay yet).
 - [x] **Step 4: Commit**
 
 ```bash
@@ -85,7 +85,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 - [x] **Step 1:** Construct the pass in `initGpu` and invoke it in `runFrame` behind the toggle, reading the selected galaxy's diameter/position/orientation. _(invoked as a `diskRadiusRingPass` in `UI_PASSES` rather than an inline `runFrame` call — same gate, cleaner than a bespoke encoder; mirrors `selectionRingPass`.)_
 - [x] **Step 2:** `npm run typecheck` → PASS. _(also `npm run build` — wesl-plugin compiles the ring shaders clean.)_
-- [ ] **Step 3:** Manual: select a famous galaxy, toggle the ring on, confirm it draws at the procedural-disk radius and tracks the galaxy as the camera moves; compare against the textured disk (Plan 4).
+- [x] **Step 3:** Manual: select a famous galaxy, toggle the ring on, confirm it draws at the procedural-disk radius and tracks the galaxy as the camera moves; compare against the textured disk (Plan 4).
 - [x] **Step 4: Commit**
 
 ```bash

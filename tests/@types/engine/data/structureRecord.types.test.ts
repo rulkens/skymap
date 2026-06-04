@@ -12,8 +12,15 @@ describe('StructureRecord types', () => {
     };
     expectTypeOf(rec.category).toExtend<StructureCategory>();
   });
+  it('a group record carries radius and a structure category', () => {
+    const rec: StructureRecord = {
+      id: 'local-group', name: 'Local Group', worldPos: [0, 0, 0],
+      category: 'group', featured: true, physicalRadiusMpc: 1.5,
+    };
+    expectTypeOf(rec.category).toExtend<StructureCategory>();
+  });
   it('StructureCategory excludes famousGalaxy', () => {
-    expectTypeOf<StructureCategory>().toEqualTypeOf<'cluster' | 'supercluster' | 'void'>();
+    expectTypeOf<StructureCategory>().toEqualTypeOf<'cluster' | 'supercluster' | 'void' | 'group'>();
   });
   it('StructureGroupId is anchors | bulk', () => {
     expectTypeOf<StructureGroupId>().toEqualTypeOf<'anchors' | 'bulk'>();

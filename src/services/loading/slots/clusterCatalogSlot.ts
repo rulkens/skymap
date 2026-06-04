@@ -5,17 +5,16 @@
  * `clusters_meta.json`) through the standard asset-slot machinery.
  *
  * No `commit` step: there is nothing to upload GPU-side here. The payload is
- * CPU-resident structure data — `wirePoiProjection` subscribes to this same
- * slot and converts the ready value into `StructureRecord`s, writing them to
- * `structureStore` (and mirroring them into `poiSubsystem`). Mirrors
- * `famousMetaSlot` in shape.
+ * CPU-resident structure data — `wireStructureProjection` subscribes to this
+ * same slot and converts the ready value into `StructureRecord`s, writing them
+ * to `structureStore`. Mirrors `famousMetaSlot` in shape.
  *
  * This subscriber's only job is to wake the renderer once the layer lands so
  * the freshly-added bulk markers get drawn, and to warn on failure. It does
  * not own any state — the data flows through the slot's ready value.
  *
  * **Graceful degradation on error.** A failed fetch (404 / network) maps to
- * "feature off": the subscriber warns and `wirePoiProjection` clears the
+ * "feature off": the subscriber warns and `wireStructureProjection` clears the
  * bulk group. Net effect for the user — bulk clusters simply don't appear,
  * while the featured cluster anchors and the rest of the app keep working
  * unchanged.

@@ -44,8 +44,8 @@ export type BootstrapDeps = {
    * helpers that close over `state`), but `wireInput`'s onDoubleClick
    * handler calls `handle.focusOn(lastClickedInfo)` for galaxies and
    * `handle.focusOn(lastClickedPoi)` for POIs (the unified `focusOn`
-   * method, introduced 2026-05-19, accepts both `GalaxyInfo` and
-   * `PointOfInterest`).  We thread the
+   * method accepts the full `FocusableTarget` — both `GalaxyInfo` and
+   * `StructureRecord`).  We thread the
    * reference through a `{current}` ref so engine.ts can assign it
    * after the handle literal evaluates — by the time the user can
    * actually double-click, the handle is fully wired.  Null until

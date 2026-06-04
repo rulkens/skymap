@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { ClusterMarkerRenderer } from '../../../../src/@types/rendering/ClusterMarkerRenderer';
+import type { ClusterMarkerDescriptor } from '../../../../src/@types/rendering/ClusterMarkerDescriptor';
 
 // Type-level assertion that the renderer's public surface declares the
 // `pickRing` method introduced in plan 3.  The GPU side cannot be unit-
@@ -20,5 +21,20 @@ describe('ClusterMarkerRenderer pick API', () => {
       void _pass;
     };
     expect(fn).toBeTypeOf('function');
+  });
+
+  it('ClusterMarkerDescriptor accepts category group (type gate)', () => {
+    // Compile-time guard: ensures `'group'` is a valid PoiCategory on
+    // ClusterMarkerDescriptor so group descriptors can reach pickRing.
+    // If the category union loses 'group' this assignment is a type error.
+    const d: ClusterMarkerDescriptor = {
+      id: 'test-group-pick-1',
+      category: 'group',
+      worldPos: [1, 2, 3],
+      radiusMpc: 1,
+      haloColor: [0.5, 0.9, 0.6, 0.8],
+      ringColor: [0.5, 0.9, 0.6, 1],
+    };
+    expect(d.category).toBe('group');
   });
 });

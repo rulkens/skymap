@@ -96,7 +96,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 - [x] **Step 1:** Add the overlay rendering + pointer handlers, reusing `CropCanvas.tsx`'s existing pointer-capture drag pattern and source↔canvas coordinate transform. Dispatch `setDisk` on change. _(own `components/DiskOverlay.tsx`; mode toggle locks crop in disk mode; catalog b/a pre-fill threaded through `/api/galaxies`)_
 - [x] **Step 2:** `npm run typecheck` → PASS (rc=0).
-- [ ] **Step 3:** Manual check (curator dev server): drawing/adjusting the disk does not move the crop, and vice versa. _(VISUAL — pending user)_
+- [x] **Step 3:** Manual check (curator dev server): drawing/adjusting the disk does not move the crop, and vice versa. _(VISUAL — pending user)_
 - [x] **Step 4: Commit** `047c9675`
 
 ```bash
@@ -121,7 +121,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 - [x] **Step 1:** Add the toggle (dispatches `setDisk` with flipped `deproject`). Disable/annotate it when `axisRatio < DEPROJECT_MIN_AXIS_RATIO` (too edge-on — show "as-shot only"). _(own `components/DiskControls.tsx`)_
 - [x] **Step 2:** Thread `disk` into the preview request so the server-rendered preview reflects deprojection. Show the deprojected image in `PreviewPane`. _(process.ts deprojects `cropped.png` mirroring export.ts; `disk`/`catalogAxisRatio` on `ProcessParams`; `needsProcess` includes `dirty.disk`)_
 - [x] **Step 3:** `npm run typecheck` → PASS (rc=0).
-- [ ] **Step 4:** Manual check: toggling shows as-shot vs deprojected; edge-on galaxies lock to as-shot. _(VISUAL — pending user)_
+- [x] **Step 4:** Manual check: toggling shows as-shot vs deprojected; edge-on galaxies lock to as-shot. _(VISUAL — pending user)_
 - [x] **Step 5: Commit** `5f9a1a31`
 
 ```bash
@@ -144,7 +144,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 - [x] **Step 1:** Include `disk` in the export params object. _(plus `catalogAxisRatio`; api.ts unchanged — ExportParams inherits both from ProcessParams)_
 - [x] **Step 2:** In the resume path (where crop/sliders are restored from the recipe), dispatch `setDisk(recipe.disk)` when present. _(accepts spurious dirty.disk on resume — resume already re-Processes via setCrop; documented)_
 - [x] **Step 3:** `npm run typecheck` → PASS (rc=0).
-- [ ] **Step 4:** Manual round-trip: curate a galaxy with a disk → commit → re-select it → overlay reappears. _(VISUAL — pending user)_
+- [x] **Step 4:** Manual round-trip: curate a galaxy with a disk → commit → re-select it → overlay reappears. _(VISUAL — pending user)_
 - [x] **Step 5: Commit** `7448423d`
 
 ```bash

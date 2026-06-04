@@ -97,13 +97,18 @@ export function createClickResolver(input: CreateClickResolverInput): ClickResol
       if (result === null) return { kind: 'clear' };
 
       // POI variants from the discriminated `PickResult` (plan 1):
-      // a cluster / supercluster / void ring claimed the pixel.  We
-      // hand the (category, poiIndex) pair to `resolvePoi` to recover
+      // a cluster / supercluster / void / group ring claimed the pixel.
+      // We hand the (category, poiIndex) pair to `resolvePoi` to recover
       // the matching record — if the caller didn't pass a resolver,
       // or the resolver returns null (e.g. an unallocated index from
       // an old shader frame), fall through to `'clear'` so the
       // InfoCard never displays a phantom POI card.
-      if (result.kind === 'cluster' || result.kind === 'supercluster' || result.kind === 'void') {
+      if (
+        result.kind === 'cluster' ||
+        result.kind === 'supercluster' ||
+        result.kind === 'void' ||
+        result.kind === 'group'
+      ) {
         if (!resolvePoi) return { kind: 'clear' };
         const poi = resolvePoi({ category: result.kind, poiIndex: result.poiIndex });
         if (!poi) return { kind: 'clear' };
