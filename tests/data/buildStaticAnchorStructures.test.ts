@@ -106,8 +106,9 @@ describe('buildStaticAnchorStructures', () => {
     expect(cats.has('cluster')).toBe(true);
     expect(cats.has('supercluster')).toBe(true);
     expect(cats.has('void')).toBe(true);
+    expect(cats.has('group')).toBe(true);
     // No other categories sneak in.
-    expect(cats.size).toBe(3);
+    expect(cats.size).toBe(4);
   });
 });
 
