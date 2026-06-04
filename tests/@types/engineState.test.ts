@@ -95,12 +95,14 @@ describe('EngineState type', () => {
         supercluster: true,
         famousGalaxy: true,
         void: true,
+        group: true,
       },
       markerCategoryVisibility: {
         cluster: true,
         supercluster: true,
         famousGalaxy: true,
         void: true,
+        group: true,
       },
     };
     const bias: EngineBiasState = {
@@ -241,12 +243,14 @@ describe('EngineState type', () => {
         supercluster: true,
         famousGalaxy: true,
         void: true,
+        group: true,
       },
       markerCategoryVisibility: {
         cluster: true,
         supercluster: true,
         famousGalaxy: true,
         void: true,
+        group: true,
       },
     };
     const bias: EngineBiasState = {
@@ -293,12 +297,14 @@ describe('EngineState type', () => {
           supercluster: true,
           famousGalaxy: true,
           void: true,
+          group: true,
         },
         markerCategoryVisibility: {
           cluster: true,
           supercluster: true,
           famousGalaxy: true,
           void: true,
+          group: true,
         },
       },
       bias: {

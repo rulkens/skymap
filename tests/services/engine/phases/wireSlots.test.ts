@@ -301,7 +301,13 @@ function makeState(
   }> = {},
 ): EngineState {
   const points = overrides.points ?? new Map();
-  const allVisible = { cluster: true, supercluster: true, void: true, famousGalaxy: true };
+  const allVisible = {
+    cluster: true,
+    supercluster: true,
+    void: true,
+    famousGalaxy: true,
+    group: true,
+  };
   // Seed the volume store the same way the engine does at construction, so the
   // demand predicate for MCPM (default-on) reads true at boot — parity with the
   // old imperative boot loop that loaded MCPM unconditionally.

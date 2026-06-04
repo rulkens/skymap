@@ -22,6 +22,9 @@
  *   - A void at 2.5× matches the supercluster framing — voids and
  *     superclusters are roughly the same scale, and the goal is the
  *     same: the structure fills the screen.
+ *   - A group at 8× mirrors the cluster framing — groups are halo
+ *     structures at sub-Mpc to few-Mpc scale; the 1 Mpc min-clamp
+ *     keeps the Local Group (R0 ≈ 1 Mpc) sane.
  *
  * Famous galaxies are NOT a category here.  They route through the
  * galaxy `focusOn` / `selectFamous` chain, which uses
@@ -58,6 +61,9 @@ const CATEGORY_MULTIPLIER: Readonly<Record<Exclude<PoiCategory, 'famousGalaxy'>,
   cluster: 8,
   supercluster: 2.5,
   void: 2.5,
+  // Groups are halo structures like clusters; 8× frames the halo + neighbourhood.
+  // The 1 Mpc min-clamp keeps the tiny Local Group sane.
+  group: 8,
 };
 
 const MIN_FRAMING_DISTANCE_MPC = 1;

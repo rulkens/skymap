@@ -162,6 +162,7 @@ export function useEngineSettings(): UseEngineSettingsReturn {
     supercluster: true,
     famousGalaxy: true,
     void: true,
+    group: true,
   });
   const [markerCategoryVisibility, setMarkerCategoryVisibility] = useState<
     Record<PoiCategory, boolean>
@@ -170,6 +171,7 @@ export function useEngineSettings(): UseEngineSettingsReturn {
     supercluster: true,
     famousGalaxy: true,
     void: true,
+    group: true,
   });
 
   return {

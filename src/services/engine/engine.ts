@@ -344,13 +344,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       },
       // Per-category POI visibility — two independent axes (label-text vs
       // marker-glyph), both default-all-on.  Each record is the source of
-      // truth for its axis: a fifth POI category means widening `POI_STYLES`
-      // AND adding the row to BOTH records here.
+      // truth for its axis: adding a new POI category means widening
+      // `STRUCTURE_POI_STYLES` AND adding the row to BOTH records here.
+      // `group` is the fifth category, added alongside the nearby-galaxy-
+      // groups feature.
       labelCategoryVisibility: {
         cluster: true,
         supercluster: true,
         famousGalaxy: true,
         void: true,
+        group: true,
       },
       debug: {
         showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
@@ -361,6 +364,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         supercluster: true,
         famousGalaxy: true,
         void: true,
+        group: true,
       },
     },
     bias: {

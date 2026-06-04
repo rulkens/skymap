@@ -23,6 +23,7 @@ const CATEGORIES: readonly LabelStyleOverrideTarget[] = [
   'supercluster',
   'famousGalaxy',
   'void',
+  'group',
 ];
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -58,20 +59,41 @@ export function LabelEffectsSection(): ReactElement {
       <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 4 }}>
         <label style={labelStyle}>
           <span style={{ width: 70 }}>Target</span>
-          <select value={target} onChange={(e) => setTarget(e.target.value as LabelStyleOverrideTarget | '')}>
+          <select
+            value={target}
+            onChange={(e) => setTarget(e.target.value as LabelStyleOverrideTarget | '')}
+          >
             <option value="">(off)</option>
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
           </select>
         </label>
         <label style={labelStyle}>
           <span style={{ width: 70 }}>Outline</span>
           <input type="color" value={outlineHex} onChange={(e) => setOutlineHex(e.target.value)} />
-          <input type="range" min={0} max={1} step={0.01} value={outlineAlpha} onChange={(e) => setOutlineAlpha(parseFloat(e.target.value))} />
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={outlineAlpha}
+            onChange={(e) => setOutlineAlpha(parseFloat(e.target.value))}
+          />
           <span style={{ width: 30 }}>{outlineAlpha.toFixed(2)}</span>
         </label>
         <label style={labelStyle}>
           <span style={{ width: 70 }}>Out width</span>
-          <input type="range" min={0} max={0.28} step={0.005} value={outlineEmFrac} onChange={(e) => setOutlineEmFrac(parseFloat(e.target.value))} />
+          <input
+            type="range"
+            min={0}
+            max={0.28}
+            step={0.005}
+            value={outlineEmFrac}
+            onChange={(e) => setOutlineEmFrac(parseFloat(e.target.value))}
+          />
           <span style={{ width: 40 }}>{outlineEmFrac.toFixed(3)}</span>
         </label>
       </div>
