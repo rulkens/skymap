@@ -13,7 +13,7 @@
  *
  *   apparentPxRadius = (max(diameterKpc, 30) * 2 / 1000 / max(camDist, 0.001))
  *                      * pxPerRad
- *   ringRadiusPx    = max(pointSizePx, apparentPxRadius * 0.5) * 8
+ *   ringRadiusPx    = max(pointSizePx, apparentPxRadius * 0.5) * RING_SIZE_SCALE
  *
  * The `* 0.5` on `apparentPxRadius` cancels half of the 4× padding the
  * points pipeline bakes into its billboard footprint (to share size with
@@ -34,6 +34,10 @@
  */
 
 import type { Pass } from '../../../../@types/engine/frame/Pass';
+
+// Multiplier from the galaxy's base on-screen size to the halo radius.
+// Tune for visual breathing room around the selected point.
+const RING_SIZE_SCALE = 6;
 
 export const selectionRingPass: Pass = {
   name: 'selection-ring',
@@ -77,10 +81,10 @@ export const selectionRingPass: Pass = {
     const apparentPxRadius = (galaxyRadiusMpc / safeDist) * ctx.drawPxPerRad;
     // Halve the apparent-radius contribution: the points shader bakes a 4×
     // padding into the billboard footprint to share size with the textured
-    // thumbnail, which makes a straight `* 8` halo balloon when zoomed in.
+    // thumbnail, which would otherwise make the halo balloon when zoomed in.
     // The pointSizePx floor keeps faint, sub-pixel galaxies visibly ringed.
     const sizePx = Math.max(settings.pointSizePx, apparentPxRadius * 0.5);
-    const ringRadiusPx = sizePx * 8;
+    const ringRadiusPx = sizePx * RING_SIZE_SCALE;
 
     state.gpu.selectionRingRenderer!.setSelection({ worldPos, ringRadiusPx });
     state.gpu.selectionRingRenderer!.render(
