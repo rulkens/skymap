@@ -709,7 +709,7 @@ git commit -m "test(engine): forbid reads of pre-store data locations"
 Run: `npm run test && npm run typecheck && npm run build`
 Expected: all green; 590+ tests still pass. **As-built:** 2266 tests pass (349 files), typecheck clean, `npm run build` succeeds (pre-existing >500 kB chunk-size warning unrelated).
 
-- [ ] **Step 2: Manual smoke (dev server)** — *awaiting user*
+- [x] **Step 2: Manual smoke (dev server)** — user confirmed all areas behave as before (2026-06-04)
 
 Ask the user to confirm in the running dev server: survey toggle, cluster marker + label visibility, famous-galaxy InfoCard text, volume field sliders, filament status — all behave exactly as before. (This is a no-behaviour-change refactor; the visible result is "nothing changed.")
 
