@@ -43,6 +43,7 @@ import { cssToTexPx } from '../helpers/cssToTexPx';
 import { isEngineReady } from '../helpers/engineReady';
 import { resolvePoiFromPick } from '../helpers/resolvePoiFromPick';
 import { collectPickTargets } from '../helpers/collectPickTargets';
+import { produceStructureMarkers } from '../presentation/produceStructureMarkers';
 import { deriveFrameContext } from './frameContext';
 import { renderFrame } from './renderFrame';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
@@ -231,12 +232,12 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // ── Per-frame marker upload ───────────────────────────────────────
   //
-  // Like the label flush above: produceMarkers walks the POI list, applies
-  // fade math, and hands descriptors to the renderer.  Must run BEFORE the
-  // GPU dispatch so the instance buffer is uploaded before
+  // Like the label flush above: produceStructureMarkers walks the structure
+  // store, applies fade math, and hands descriptors to the renderer.  Must run
+  // BEFORE the GPU dispatch so the instance buffer is uploaded before
   // clusterMarkersPass reads it.  Null-checked for the pre-initGpu window.
   if (state.gpu.clusterMarkerRenderer !== null) {
-    const markers = state.subsystems.pois.produceMarkers(state, ctx);
+    const markers = produceStructureMarkers(state, ctx);
     state.gpu.clusterMarkerRenderer.setMarkers(markers);
   }
 

@@ -188,6 +188,9 @@ export function produceFamousLabels(
       pixelWidth: style.pixelWidth,
       color: [...style.lineColor],
       fadeAlpha,
+      // Anchor for this label — the director drops the connector if the label
+      // loses an overlap during declutter.
+      ownerLabelId: p.id,
     });
 
     // Per-POI override fields apply only when the override targets the famous

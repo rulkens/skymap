@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { mat4 } from 'gl-matrix';
 import { createLabelDirectorSubsystem } from '../../../../src/services/engine/subsystems/labelDirectorSubsystem';
 import {
   clearLabelStyleOverride,
@@ -11,19 +12,40 @@ import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/Read
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
 function makeState(requestRender: () => void = () => {}): EngineState {
-  return { subsystems: { scheduler: { requestRender } } } as unknown as EngineState;
+  // The director fires a one-shot 'poi' layer fade on the first non-empty
+  // flush, so the stub state needs a `fades.fadeTo`.
+  return {
+    subsystems: { scheduler: { requestRender }, fades: { fadeTo: vi.fn() } },
+  } as unknown as EngineState;
 }
 
 function makeCtx(): ReadyFrameContext {
-  return { drawCamPos: [0, 0, 0] } as unknown as ReadyFrameContext;
+  // identity vp + a canvas so the director's declutter projection has the
+  // fields it reads; the single sample label projects on-screen and survives.
+  return {
+    drawCamPos: [0, 0, 0],
+    vp: mat4.create(),
+    canvasSize: { width: 1000, height: 1000 },
+  } as unknown as ReadyFrameContext;
 }
 
-function makeProducer(id: string, labels: Label[], lines: MarkerLine[], awake = false): LabelProducer {
+function makeProducer(
+  id: string,
+  labels: Label[],
+  lines: MarkerLine[],
+  awake = false,
+): LabelProducer {
   return { id, produceLabels: () => ({ labels, lines, awake }) };
 }
 
 function makeLabelStub() {
-  return { setLabels: vi.fn(), render: vi.fn(), glyphCount: () => 0, labelCount: () => 0, destroy: vi.fn() };
+  return {
+    setLabels: vi.fn(),
+    render: vi.fn(),
+    glyphCount: () => 0,
+    labelCount: () => 0,
+    destroy: vi.fn(),
+  };
 }
 function makeLineStub() {
   return { setLines: vi.fn(), render: vi.fn(), lineCount: () => 0, destroy: vi.fn() };

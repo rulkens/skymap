@@ -186,17 +186,17 @@ Relocate the `DECLUTTER_MARGIN_PX` greedy screen-space declutter from `poiSubsys
 - Modify: `src/services/engine/subsystems/labelDirectorSubsystem.ts`
 - Test: `tests/services/engine/subsystems/labelDirectorSubsystem.test.ts` (extend)
 
-- [ ] **Step 1: Write the failing test** — register two stub producers each emitting a label whose projected screen positions are within `DECLUTTER_MARGIN_PX`; assert only the higher-`prominencePx` one survives the merge, AND its dropped partner's anchor line (id `${labelId}-anchor`) is also dropped. Off-screen labels (behind camera) are never dropped and never block. youAreHere (no `prominencePx`) participates with prominence 0.
+- [x] **Step 1: Write the failing test** — register two stub producers each emitting a label whose projected screen positions are within `DECLUTTER_MARGIN_PX`; assert only the higher-`prominencePx` one survives the merge, AND its dropped partner's anchor line (id `${labelId}-anchor`) is also dropped. Off-screen labels (behind camera) are never dropped and never block. youAreHere (no `prominencePx`) participates with prominence 0.
 
-- [ ] **Step 2: Run it, expect failure.**
+- [x] **Step 2: Run it, expect failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `labelDirectorSubsystem.runFrame`, after collecting `mergedLabels`/`mergedLines`: project each label's `worldPos` via `ctx.vp` (port the clip→screen + `onScreen` logic from `produceLabels`), sort by `prominencePx ?? 0` desc (stable index tiebreak), greedy-accept by `DECLUTTER_MARGIN_PX` against accepted on-screen anchors. Build an accepted label-id set; filter `mergedLines` to lines whose owning label survived (line id convention `${labelId}-anchor` — document this as the contract, or add `ownerLabelId` to `MarkerLine` if cleaner). Feed the decluttered arrays to the existing signature-hash + flush. Move `DECLUTTER_MARGIN_PX` into the director. Producers already stopped self-decluttering (Tasks 2/3 emit all candidates).
 
-- [ ] **Step 4: Run it, expect pass** + full suite still green (poiSubsystem still registered + still self-declutters at this point — it must be the ONLY label producer until Task 5, so the director declutter is a no-op over its single pre-decluttered output. NOTE: to avoid double-declutter, gate this task to land together with Task 5, OR have poiSubsystem stop self-decluttering first. Recommended: do Task 4 + Task 5 as one commit to keep the tree green — see Task 5.)
+- [x] **Step 4: Run it, expect pass** + full suite still green (poiSubsystem still registered + still self-declutters at this point — it must be the ONLY label producer until Task 5, so the director declutter is a no-op over its single pre-decluttered output. NOTE: to avoid double-declutter, gate this task to land together with Task 5, OR have poiSubsystem stop self-decluttering first. Recommended: do Task 4 + Task 5 as one commit to keep the tree green — see Task 5.)
 
-- [ ] **Step 5: Commit** (folded into Task 5).
+- [x] **Step 5: Commit** (folded into Task 5).
 
 ---
 
@@ -207,17 +207,17 @@ Replace `poiSubsystem` in the per-frame paths: register `produceStructureLabels`
 **Files:**
 - Modify: `src/services/engine/engine.ts` (registration), `src/services/engine/frame/runFrame.ts` (markers)
 
-- [ ] **Step 1: Write/adjust the failing test** — an engine-level or runFrame-level test asserting markers come from `structureStore` and labels include both structure + famous, decluttered once. (Reuse `wireSlots`/`runFrame` harnesses.)
+- [x] **Step 1: Write/adjust the failing test** — an engine-level or runFrame-level test asserting markers come from `structureStore` and labels include both structure + famous, decluttered once. (Reuse `wireSlots`/`runFrame` harnesses.)
 
-- [ ] **Step 2: Run it, expect failure.**
+- [x] **Step 2: Run it, expect failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `engine.ts:611`: replace `registerProducer(pois)` with `registerProducer(structureLabelProducer)` then `registerProducer(famousLabelProducer)` (LabelProducer-shaped wrappers around the Task 2/3 functions). `runFrame.ts:239`: `produceStructureMarkers(state, ctx)`. Stop `poiSubsystem.produceLabels` self-decluttering (it's no longer registered, so it simply isn't called — delete is Task 7). Land the Task 4 director declutter in this same commit so there's never a double-declutter window. Restore the one-shot `labelLayer:'poi'` fade-in in the director (fires on first non-empty merged label set) so it survives the producer split.
 
-- [ ] **Step 4: Run the full suite + typecheck** — visual-parity tests + pick-alignment must stay green.
+- [x] **Step 4: Run the full suite + typecheck** — visual-parity tests + pick-alignment must stay green.
 
-- [ ] **Step 5: Commit** — `refactor(engine): frame uses structure/famous producers + director declutter`
+- [x] **Step 5: Commit** — `refactor(engine): frame uses structure/famous producers + director declutter`
 
 ---
 

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { mat4 } from 'gl-matrix';
 import { createLabelDirectorSubsystem } from '../../../../src/services/engine/subsystems/labelDirectorSubsystem';
 import type { LabelProducer } from '../../../../src/@types/engine/subsystems/LabelProducer';
 import type { Label } from '../../../../src/@types/rendering/Label';
@@ -7,19 +8,42 @@ import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/Read
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
 function makeState(requestRender: () => void = () => {}): EngineState {
-  return { subsystems: { scheduler: { requestRender } } } as unknown as EngineState;
+  // The director fires a one-shot 'poi' layer fade on the first non-empty
+  // flush, so the stub state needs a `fades.fadeTo`.
+  return {
+    subsystems: { scheduler: { requestRender }, fades: { fadeTo: vi.fn() } },
+  } as unknown as EngineState;
 }
 
+// Identity vp + 1000×1000 canvas: a label at world [x,y,0] projects to screen
+// ((x·0.5+0.5)·1000, (1−(y·0.5+0.5))·1000). So [0,0,0] → centre (500,500);
+// |x| or |y| ≥ ~0.1 separates two anchors past the 48 px declutter margin;
+// |x| or |y| > 1 lands the anchor off-screen (never dropped, never blocks).
 function makeCtx(): ReadyFrameContext {
-  return { drawCamPos: [0, 0, 0] } as unknown as ReadyFrameContext;
+  return {
+    drawCamPos: [0, 0, 0],
+    vp: mat4.create(),
+    canvasSize: { width: 1000, height: 1000 },
+  } as unknown as ReadyFrameContext;
 }
 
-function makeProducer(id: string, labels: Label[], lines: MarkerLine[], awake = false): LabelProducer {
+function makeProducer(
+  id: string,
+  labels: Label[],
+  lines: MarkerLine[],
+  awake = false,
+): LabelProducer {
   return { id, produceLabels: () => ({ labels, lines, awake }) };
 }
 
 function makeLabelStub() {
-  return { setLabels: vi.fn(), render: vi.fn(), glyphCount: () => 0, labelCount: () => 0, destroy: vi.fn() };
+  return {
+    setLabels: vi.fn(),
+    render: vi.fn(),
+    glyphCount: () => 0,
+    labelCount: () => 0,
+    destroy: vi.fn(),
+  };
 }
 function makeLineStub() {
   return { setLines: vi.fn(), render: vi.fn(), lineCount: () => 0, destroy: vi.fn() };
@@ -53,8 +77,9 @@ describe('labelDirectorSubsystem', () => {
     const lineStub = makeLineStub();
     dir.attachRenderers(labelStub as never, lineStub as never);
 
-    const a: Label = { ...SAMPLE_LABEL, id: 'a' };
-    const b: Label = { ...SAMPLE_LABEL, id: 'b' };
+    // Distinct world positions so the two anchors don't collide on screen.
+    const a: Label = { ...SAMPLE_LABEL, id: 'a', worldPos: [-0.5, 0, 0] };
+    const b: Label = { ...SAMPLE_LABEL, id: 'b', worldPos: [0.5, 0, 0] };
     const la: MarkerLine = { ...SAMPLE_LINE, id: 'la' };
     const lb: MarkerLine = { ...SAMPLE_LINE, id: 'lb' };
     dir.registerProducer(makeProducer('pa', [a], [la]));
@@ -64,6 +89,7 @@ describe('labelDirectorSubsystem', () => {
     expect(labelStub.setLabels).toHaveBeenCalledTimes(1);
     expect(labelStub.setLabels).toHaveBeenCalledWith([a, b]);
     expect(lineStub.setLines).toHaveBeenCalledTimes(1);
+    // Lines without an ownerLabelId survive declutter unconditionally.
     expect(lineStub.setLines).toHaveBeenCalledWith([la, lb]);
   });
 
@@ -143,5 +169,65 @@ describe('labelDirectorSubsystem', () => {
     // First call writes []; second call's signature matches, skip.
     expect(labelStub.setLabels).toHaveBeenCalledTimes(1);
     expect(labelStub.setLabels).toHaveBeenCalledWith([]);
+  });
+
+  it('declutters colliding on-screen labels across producers, keeping higher prominence', () => {
+    const dir = createLabelDirectorSubsystem();
+    const labelStub = makeLabelStub();
+    const lineStub = makeLineStub();
+    dir.attachRenderers(labelStub as never, lineStub as never);
+
+    // Two labels at the same world point (both project to screen centre, so
+    // within the 48 px margin). The higher-prominence one wins; the loser's
+    // anchor line (ownerLabelId) is dropped with it.
+    const big: Label = { ...SAMPLE_LABEL, id: 'big', prominencePx: 100 };
+    const small: Label = { ...SAMPLE_LABEL, id: 'small', prominencePx: 10 };
+    const bigLine: MarkerLine = { ...SAMPLE_LINE, id: 'big-anchor', ownerLabelId: 'big' };
+    const smallLine: MarkerLine = { ...SAMPLE_LINE, id: 'small-anchor', ownerLabelId: 'small' };
+    dir.registerProducer(makeProducer('pbig', [big], [bigLine]));
+    dir.registerProducer(makeProducer('psmall', [small], [smallLine]));
+
+    dir.runFrame(makeState(), makeCtx());
+    expect(labelStub.setLabels).toHaveBeenCalledWith([big]);
+    expect(lineStub.setLines).toHaveBeenCalledWith([bigLine]);
+  });
+
+  it('never drops or blocks off-screen labels', () => {
+    const dir = createLabelDirectorSubsystem();
+    const labelStub = makeLabelStub();
+    const lineStub = makeLineStub();
+    dir.attachRenderers(labelStub as never, lineStub as never);
+
+    // On-screen low-prominence label + an off-screen label (|x| > 1 → outside
+    // NDC). The off-screen one is accepted unconditionally and never blocks.
+    const onScreen: Label = { ...SAMPLE_LABEL, id: 'on', prominencePx: 1, worldPos: [0, 0, 0] };
+    const offScreen: Label = { ...SAMPLE_LABEL, id: 'off', prominencePx: 999, worldPos: [5, 0, 0] };
+    dir.registerProducer(makeProducer('p', [onScreen, offScreen], []));
+
+    dir.runFrame(makeState(), makeCtx());
+    expect(labelStub.setLabels).toHaveBeenCalledWith([onScreen, offScreen]);
+  });
+
+  it('treats a label with no prominencePx (you-are-here) as prominence 0', () => {
+    const dir = createLabelDirectorSubsystem();
+    const labelStub = makeLabelStub();
+    const lineStub = makeLineStub();
+    dir.attachRenderers(labelStub as never, lineStub as never);
+
+    // you-are-here (no prominencePx) collides with a prominent structure label
+    // at the same point → loses the overlap; its stem line drops with it.
+    const youAreHere: Label = { ...SAMPLE_LABEL, id: 'you-are-here' };
+    const yahLine: MarkerLine = {
+      ...SAMPLE_LINE,
+      id: 'you-are-here',
+      ownerLabelId: 'you-are-here',
+    };
+    const structure: Label = { ...SAMPLE_LABEL, id: 'coma', prominencePx: 200 };
+    dir.registerProducer(makeProducer('yah', [youAreHere], [yahLine]));
+    dir.registerProducer(makeProducer('struct', [structure], []));
+
+    dir.runFrame(makeState(), makeCtx());
+    expect(labelStub.setLabels).toHaveBeenCalledWith([structure]);
+    expect(lineStub.setLines).toHaveBeenCalledWith([]);
   });
 });

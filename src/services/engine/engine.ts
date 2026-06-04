@@ -111,6 +111,8 @@ import { createYouAreHereSubsystem } from './subsystems/youAreHereSubsystem';
 import { createLabelDirectorSubsystem } from './subsystems/labelDirectorSubsystem';
 import { registerLabelStyleOverrideWake } from './labelStyleOverride';
 import { createPoiSubsystem } from './subsystems/poiSubsystem';
+import { produceStructureLabels } from './presentation/produceStructureLabels';
+import { produceFamousLabels } from './presentation/produceFamousLabels';
 import { createClusterFocusSubsystem } from './subsystems/clusterFocusSubsystem';
 import { createFpsCounter } from './subsystems/fpsCounter';
 import { HDR_PASSES, UI_PASSES } from './frame/passes';
@@ -602,13 +604,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   // ── Register label producers with the director ───────────────────────
   //
-  // Registration order = merged label order (youAreHere first, POIs after).
-  // Both are eager in the state literal, so this is synchronous before any
-  // frame fires.  Register both even when POIs are empty — the director
-  // treats an empty contribution as a no-op.  Structural typing carries it:
-  // `YouAreHereSubsystem` aliases `LabelProducer`, `PoiSubsystem` extends it.
+  // Registration order = merged label order: youAreHere, then the structure
+  // labels, then the famous-galaxy labels.  The director declutters across
+  // all of them by `prominencePx`, so registration order only sets the
+  // tiebreak for equal-prominence collisions (rare).  The structure + famous
+  // producers are pure functions over the stores; wrap each as a LabelProducer
+  // with a stable id.  All eager, so this is synchronous before any frame.
   state.subsystems.labelDirector.registerProducer(state.subsystems.youAreHere);
-  state.subsystems.labelDirector.registerProducer(state.subsystems.pois);
+  state.subsystems.labelDirector.registerProducer({
+    id: 'structureLabels',
+    produceLabels: produceStructureLabels,
+  });
+  state.subsystems.labelDirector.registerProducer({
+    id: 'famousLabels',
+    produceLabels: produceFamousLabels,
+  });
 
   // ── Wake on label-style override edits ────────────────────────────────
   //

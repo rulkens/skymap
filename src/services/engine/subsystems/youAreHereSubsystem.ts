@@ -112,6 +112,9 @@ export function createYouAreHereSubsystem(): YouAreHereSubsystem {
         pixelWidth: 3,
         color: [...LINE_COLOR],
         fadeAlpha: alpha,
+        // Anchor for the 'you-are-here' label: the director's declutter drops
+        // this stem if the label loses an overlap, so it never floats orphaned.
+        ownerLabelId: 'you-are-here',
       },
     ];
     // No `awake` signal: alpha is a pure function of camera distance,
