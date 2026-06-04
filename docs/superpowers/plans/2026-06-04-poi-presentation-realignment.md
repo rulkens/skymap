@@ -251,10 +251,10 @@ With nothing reading it, remove the subsystem and the dual-write wiring half.
 - Rename: `wirePoiProjection.ts` → `wireStructureProjection.ts` (drop the `poiSubsystem.setGroup`/`clearGroup` calls; keep only `structureStore` writes + counts); update its caller in `wireSlots.ts` + its test.
 - Rename: `buildPoisFromClusterCatalog.ts` → `clusterCatalogToStructures.ts` (returns `StructureRecord[]` already); delete `buildPoisFromFamousMeta.ts`.
 
-- [ ] **Step 1:** Delete the files; update the subsystem bag type + `engine.ts` construction/destroy. `npm run typecheck` surfaces every dangling reference — fix until clean.
-- [ ] **Step 2:** Rename `wirePoiProjection`→`wireStructureProjection`, drop the poiSubsystem writes, update `wireSlots.ts` + rename the test file. Delete `buildPoisFromFamousMeta.ts` + its test (join now in `produceFamousLabels`). Rename `buildPoisFromClusterCatalog`→`clusterCatalogToStructures` + its test.
-- [ ] **Step 3:** Run the full suite + typecheck until green.
-- [ ] **Step 4: Commit** — `refactor(engine): delete poiSubsystem; wireStructureProjection`
+- [x] **Step 1:** Delete the files; update the subsystem bag type + `engine.ts` construction/destroy. `npm run typecheck` surfaces every dangling reference — fix until clean.
+- [x] **Step 2:** Rename `wirePoiProjection`→`wireStructureProjection`, drop the poiSubsystem writes, update `wireSlots.ts` + rename the test file. Delete `buildPoisFromFamousMeta.ts` + its test (join now in `produceFamousLabels`). Rename `buildPoisFromClusterCatalog`→`clusterCatalogToStructures` + its test.
+- [x] **Step 3:** Run the full suite + typecheck until green.
+- [x] **Step 4: Commit** — `refactor(engine): delete poiSubsystem; wireStructureProjection`
 
 ---
 

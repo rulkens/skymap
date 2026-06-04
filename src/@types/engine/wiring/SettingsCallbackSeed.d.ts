@@ -13,7 +13,7 @@
 
 import type { BiasMode } from '../../data/BiasMode';
 import type { ToneMapCurve } from '../../data/ToneMapCurve';
-import type { PoiCategory } from '../../../services/engine/subsystems/poiSubsystem';
+import type { PoiCategory } from '../data/PoiCategory';
 
 export type SettingsCallbackSeed = {
   pointSize: number;

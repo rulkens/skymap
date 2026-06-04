@@ -44,7 +44,7 @@
 
 import type { StructureRecord } from '../../../@types/engine/data/StructureRecord';
 import type { StructureCategory } from '../../../@types/engine/data/StructureCategory';
-import type { PoiCategory } from '../subsystems/poiSubsystem';
+import type { PoiCategory } from '../../../@types/engine/data/PoiCategory';
 
 export type PickPoiInput = {
   readonly category: PoiCategory;

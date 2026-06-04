@@ -55,7 +55,7 @@ import type { UseEngineInput } from '../@types/engine/UseEngineInput';
 import type { UseEngineReturn } from '../@types/engine/UseEngineReturn';
 import { initialTierFromViewport } from '../utils/initialTierFromViewport';
 import type { SourceType } from '../@types/data/SourceType';
-import type { PoiCategory } from '../services/engine/subsystems/poiSubsystem';
+import type { PoiCategory } from '../@types/engine/data/PoiCategory';
 
 /**
  * Initial scale-bar value that renders something sensible before the

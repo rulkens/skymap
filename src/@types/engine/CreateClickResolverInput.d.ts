@@ -2,7 +2,7 @@ import type { PickRenderer } from '../rendering/PickRenderer';
 import type { ResolveSelection } from './ResolveSelection';
 import type { BuildGalaxyInfo } from './BuildGalaxyInfo';
 import type { PointOfInterest } from './subsystems/PointOfInterest';
-import type { PoiCategory } from '../../services/engine/subsystems/poiSubsystem';
+import type { PoiCategory } from './data/PoiCategory';
 
 export type CreateClickResolverInput = {
   pickRenderer: PickRenderer;

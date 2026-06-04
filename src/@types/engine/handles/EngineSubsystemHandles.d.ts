@@ -28,7 +28,6 @@ import type { SelectionSubsystem } from '../subsystems/SelectionSubsystem';
 import type { BiasCorrectionSubsystem } from '../subsystems/BiasCorrectionSubsystem';
 import type { YouAreHereSubsystem } from '../subsystems/YouAreHereSubsystem';
 import type { LabelDirectorSubsystem } from '../subsystems/LabelDirectorSubsystem';
-import type { PoiSubsystem } from '../subsystems/PoiSubsystem';
 import type { ClusterFocusSubsystem } from '../subsystems/ClusterFocusSubsystem';
 import type { TweenManager } from '../../camera/TweenManager';
 import type { ClickResolver } from '../ClickResolver';
@@ -111,17 +110,6 @@ export type EngineSubsystemHandles = {
    */
   labelDirector: LabelDirectorSubsystem;
   /**
-   * Points-of-interest subsystem — typed list of named anchors (clusters,
-   * famous galaxies, voids) rendered as text labels with optional
-   * crosshairs. Implements `LabelProducer`; registered with
-   * `labelDirector`. The `?anchors=1` URL flag pushes the six cluster
-   * anchors at startup; other code may add runtime entries from clicks
-   * or palette searches.
-   *
-   * Constructed eagerly; no GPU dep. Empty until something calls `setPois`.
-   */
-  pois: PoiSubsystem;
-  /**
    * Cluster focus-mode subsystem — drives the "dim non-members of the
    * selected cluster/SC/void" effect. Selection-driven: `runFrame` calls
    * `update(selectedPoi, nowMs)` each frame and threads
@@ -151,6 +139,7 @@ export type EngineSubsystemHandles = {
  * the bag uniformly.
  */
 type _EnforceDestroyable = {
-  [K in keyof EngineSubsystemHandles]:
-    NonNullable<EngineSubsystemHandles[K]> extends Destroyable ? true : never;
+  [K in keyof EngineSubsystemHandles]: NonNullable<EngineSubsystemHandles[K]> extends Destroyable
+    ? true
+    : never;
 };

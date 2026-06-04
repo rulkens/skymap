@@ -3,12 +3,13 @@
  * void, famousGalaxy).  Keyed by `PoiCategory`.  Add fields here when the UI
  * needs more per-category info (icon, accent color for chips, ordering, etc.).
  *
- * Distinct from `POI_STYLES` in `poiSubsystem.ts` — that owns *rendering* config
- * (halo/ring colors, pixel sizes, fade bands).  This owns *display* metadata
- * (human labels and any future copy/iconography).
+ * Distinct from the presentation style tables (`structurePoiStyles.ts` +
+ * `famousLabelStyle.ts`) — those own *rendering* config (halo/ring colors,
+ * pixel sizes, fade bands).  This owns *display* metadata (human labels and
+ * any future copy/iconography).
  */
 
-import type { PoiCategory } from '../services/engine/subsystems/poiSubsystem';
+import type { PoiCategory } from '../@types/engine/data/PoiCategory';
 
 export type PoiCategoryInfo = {
   /** Long form for detail surfaces ("Galaxy Cluster"). */

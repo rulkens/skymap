@@ -209,7 +209,6 @@ import { mcpmFetcher } from '../../../../src/services/loading/fetchers/mcpmFetch
 import { filamentFetcher } from '../../../../src/services/loading/fetchers/filamentFetcher';
 import { cf4DensityFetcher } from '../../../../src/services/loading/fetchers/cf4DensityFetcher';
 import { pgcAliasFetcher } from '../../../../src/services/loading/fetchers/pgcAliasFetcher';
-import { createPoiSubsystem } from '../../../../src/services/engine/subsystems/poiSubsystem';
 
 // ── Test helpers ─────────────────────────────────────────────────────
 
@@ -382,15 +381,11 @@ function makeState(
       hiResFamous: null,
       hiResFamousTexture: null,
       loadProgress: null,
-      // wirePoiProjection (called from wireSlots) uses setGroup/clearGroup/
-      // getPoisForCategory on the POI subsystem.  A real createPoiSubsystem()
-      // instance is the cleanest fit: it's a pure CPU state machine with no
-      // GPU dependencies, and its getPoisForCategory reflects setGroup writes
-      // exactly as production code does.  Tests that need to observe POI state
-      // read it back via getPoisForCategory / findPoi on the same instance.
-      pois: createPoiSubsystem() as never,
-      // wireSlots calls fades.register on filament + overlay +
-      // label-layer handles after the slot mints — stub so it doesn't crash.
+      // wireStructureProjection (called from wireSlots) writes the static
+      // anchors + bulk clusters into `state.data.structures`; tests read them
+      // back from that real store. wireSlots calls fades.register on filament
+      // + overlay + label-layer handles after the slot mints — stub so it
+      // doesn't crash.
       fades: {
         register: vi.fn(),
         unregister: vi.fn(),
@@ -710,93 +705,28 @@ describe('wireSlots', () => {
   });
 
   it('wires static cluster/supercluster/void anchors unconditionally (no URL gate)', async () => {
-    // No URL gate: wirePoiProjection always publishes the static anchors
-    // synchronously into the 'staticAnchors' group at boot.
+    // No URL gate: wireStructureProjection always publishes the static anchors
+    // synchronously into the structure store's 'anchors' group at boot.
     delete (globalThis as { location?: unknown }).location;
     (globalThis as { location: { search: string } }).location = { search: '' };
 
     const state = makeState();
     const deps = makeDeps();
     await wireSlots(state, deps);
-    // The real createPoiSubsystem() instance reflects setGroup writes immediately.
-    const clusters = state.subsystems.pois.getPoisForCategory('cluster');
-    const superclusters = state.subsystems.pois.getPoisForCategory('supercluster');
-    const voids = state.subsystems.pois.getPoisForCategory('void');
-    expect(clusters.length).toBeGreaterThan(0);
-    expect(superclusters.length).toBeGreaterThan(0);
-    expect(voids.length).toBeGreaterThan(0);
+    // The real structure store reflects setGroup writes immediately.
+    expect(state.data.structures.byCategory('cluster').length).toBeGreaterThan(0);
+    expect(state.data.structures.byCategory('supercluster').length).toBeGreaterThan(0);
+    expect(state.data.structures.byCategory('void').length).toBeGreaterThan(0);
   });
 
-  it('wires famous POIs alongside static anchors once meta + catalog arrive', async () => {
-    // Pre-populate the famous catalog (worldPos) and have the famous-meta
-    // companion fetcher resolve with the meta sidecar — the realistic
-    // arrival path.  wirePoiProjection subscribes to both the famousMeta slot
-    // and the Famous catalog slot; when both are ready it calls setGroup('famous',
-    // ...).  The real poiSubsystem instance reflects that write immediately via
-    // getPoisForCategory / findPoi.
-    delete (globalThis as { location?: unknown }).location;
-    (globalThis as { location: { search: string } }).location = { search: '' };
-
-    vi.mocked(famousMetaFetcher).mockResolvedValueOnce({
-      meta: [
-        { id: 'm31', names: ['M31'], commonName: 'Andromeda Galaxy', description: '', type: '' },
-        { id: 'm33', names: ['M33'], description: '', type: '' },
-      ],
-    } as never);
-
-    // famousMeta demands on the Famous point slot leaving `idle`.  Inject a
-    // Famous point fake pre-fired to `loading` so the demand loop fires the
-    // famous-meta load — mirrors the real boot order (Famous point row loads
-    // first, then famousMeta's row sees a non-idle slot state).  The survey
-    // fakes stay idle (never fire) so the synthetic-fallback gate waits on
-    // them rather than arming early — modelling a live boot where the surveys
-    // are still loading.  An armed gate re-runs reevaluateDemand, which would
-    // re-trigger the (non-idempotent) famous-meta load and race the mock's
-    // once-value against its default.
-    const famousSlot = bootPointSlots();
-    const state = makeState({ points: famousSlot });
-    state.data.galaxies.setCatalog(Source.Famous, {
-      count: 2,
-      positions: new Float32Array([0.78, 0.1, 0.2, 0.85, 0.05, 0.15]),
-      diameterKpc: new Float32Array([67, 30]),
-    } as never);
-    const deps = makeDeps();
-    await wireSlots(state, deps);
-    // Let the famous-meta companion's async fetch + subscriber settle so
-    // setGroup('famous', ...) lands before we assert.
-    await new Promise((r) => setTimeout(r, 0));
-    // Both groups present in the real poiSubsystem.
-    const famousPois = state.subsystems.pois.getPoisForCategory('famousGalaxy');
-    const ids = famousPois.map((p) => p.id);
-    expect(ids).toContain('famous-m31');
-    expect(ids).toContain('famous-m33');
-    // Static anchors still present (clusters come from staticAnchors group).
-    expect(state.subsystems.pois.getPoisForCategory('cluster').length).toBeGreaterThan(0);
-    const m31 = state.subsystems.pois.findPoi('famous-m31');
-    expect(m31?.name).toBe('Andromeda Galaxy');
-    expect(m31?.category).toBe('famousGalaxy');
-    // minApparentSizePx lives on the famousGalaxy arm — narrow before reading.
-    const minPx = m31 && m31.category === 'famousGalaxy' ? m31.minApparentSizePx : undefined;
-    expect(minPx).toBe(6);
-  });
-
-  it('merging famous then bulk clusters keeps both groups present', async () => {
-    // The three-group merge must never let the famous wire clobber the
-    // bulk-cluster wire (or vice versa).  Both async groups arrive via their
-    // own slot — the famous-meta companion and the cluster-catalog boot load —
-    // so we drive them through the (mocked) fetchers rather than pre-seeding
-    // `state.sources`.  wirePoiProjection's keyed-group approach ensures each
-    // subscriber only touches its own key, so order of arrival doesn't matter.
-    delete (globalThis as { location?: unknown }).location;
-    (globalThis as { location: { search: string } }).location = { search: '' };
-
-    vi.mocked(famousMetaFetcher).mockResolvedValueOnce({
-      meta: [
-        { id: 'm31', names: ['M31'], commonName: 'Andromeda Galaxy', description: '', type: '' },
-      ],
-    } as never);
+  it('lands bulk clusters + superclusters in the structure store, keeping anchors', async () => {
     // The cluster-catalog slot's boot load resolves with one cluster + one
-    // supercluster; wirePoiProjection builds bulk records from the slot value.
+    // supercluster; wireStructureProjection builds bulk records (via the real
+    // clusterCatalogToStructures) and writes them to the structure store's
+    // 'bulk' group, alongside the static-anchor group from boot.
+    delete (globalThis as { location?: unknown }).location;
+    (globalThis as { location: { search: string } }).location = { search: '' };
+
     vi.mocked(clusterCatalogFetcher).mockResolvedValueOnce({
       catalog: {
         count: 2,
@@ -812,27 +742,18 @@ describe('wireSlots', () => {
       ],
     } as never);
 
-    // See the famous-POI test: famousMeta demands on the Famous point slot
-    // leaving `idle`, and idle survey fakes keep the synthetic gate waiting.
+    // Idle survey fakes keep the synthetic gate waiting so demand runs once.
     const state = makeState({ points: bootPointSlots() });
-    state.data.galaxies.setCatalog(Source.Famous, {
-      count: 1,
-      positions: new Float32Array([0.78, 0.1, 0.2]),
-      diameterKpc: new Float32Array([67]),
-    } as never);
-
     const deps = makeDeps();
     await wireSlots(state, deps);
-    // Let both async slot fetches + their subscribers settle.
+    // Let the async cluster-catalog fetch + its subscriber settle.
     await new Promise((r) => setTimeout(r, 0));
 
-    // All three groups present via the real poiSubsystem instance.
-    const allFamous = state.subsystems.pois.getPoisForCategory('famousGalaxy');
-    expect(allFamous.some((p) => p.id === 'famous-m31')).toBe(true);
-    expect(state.subsystems.pois.findPoi('cluster-bulk-coma')).not.toBeNull();
-    expect(state.subsystems.pois.findPoi('supercluster-bulk-shapley')).not.toBeNull();
-    // Static anchors still present.
-    expect(state.subsystems.pois.getPoisForCategory('cluster').length).toBeGreaterThan(0);
+    // Bulk records land in the structure store.
+    expect(state.data.structures.byId('cluster-bulk-coma')).not.toBeNull();
+    expect(state.data.structures.byId('supercluster-bulk-shapley')).not.toBeNull();
+    // Static anchors survive the bulk write (separate group).
+    expect(state.data.structures.byCategory('cluster').length).toBeGreaterThan(0);
   });
 
   it('emits per-category structure counts that grow when the bulk catalog lands', async () => {

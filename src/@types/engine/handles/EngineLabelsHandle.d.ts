@@ -11,7 +11,7 @@
  * the namespace if the project decides to.
  */
 
-import type { PoiCategory } from '../../../services/engine/subsystems/poiSubsystem';
+import type { PoiCategory } from '../data/PoiCategory';
 
 export type EngineLabelsHandle = {
   /**

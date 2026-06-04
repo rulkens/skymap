@@ -110,7 +110,6 @@ import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsys
 import { createYouAreHereSubsystem } from './subsystems/youAreHereSubsystem';
 import { createLabelDirectorSubsystem } from './subsystems/labelDirectorSubsystem';
 import { registerLabelStyleOverrideWake } from './labelStyleOverride';
-import { createPoiSubsystem } from './subsystems/poiSubsystem';
 import { produceStructureLabels } from './presentation/produceStructureLabels';
 import { produceFamousLabels } from './presentation/produceFamousLabels';
 import { createClusterFocusSubsystem } from './subsystems/clusterFocusSubsystem';
@@ -517,14 +516,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // fetch.
       youAreHere: createYouAreHereSubsystem(),
 
-      // ── Label director + POI subsystem ───────────────────────────
+      // ── Label director ───────────────────────────────────────────
       // The director owns the `labelRenderer.setLabels` /
-      // `markerLineRenderer.setLines` calls; youAreHere and pois are
-      // `LabelProducer`s it polls and merges each frame.  Renderers are
-      // wired in during initGpu; producer registration happens just after
-      // this literal so the director sees both before the first frame.
+      // `markerLineRenderer.setLines` calls and declutters across all its
+      // `LabelProducer`s (youAreHere + the structure/famous label producers,
+      // registered just after this literal).  Renderers are wired in during
+      // initGpu so the director sees everything before the first frame.
       labelDirector: createLabelDirectorSubsystem(),
-      pois: createPoiSubsystem({}),
 
       // ── Cluster focus-mode subsystem ─────────────────────────────
       // Selection-driven: `runFrame` calls `update(selectedPoi, nowMs)` to
@@ -1106,7 +1104,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.biasCorrection.destroy();
     state.subsystems.youAreHere.destroy();
     state.subsystems.labelDirector.destroy();
-    state.subsystems.pois.destroy();
     state.subsystems.clusterFocus.destroy();
     // Impostor teardown order matters: texturedDisks subscribes to
     // galaxyAtlas's eviction handler (destroy it first); hiResFamous

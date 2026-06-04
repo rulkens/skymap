@@ -13,9 +13,9 @@
  *      onto its named `state.assetSlots` field.
  *   3. DEV synthetic-volume fixtures — minted + installed here (not a wiring
  *      row; tree-shaken from production).
- *   4. `wireImpostorSubsystems` / `registerOverlayFades` / `wirePoiProjection`
- *      — the thumbnail/disk subsystems, fade handles, and three-group POI
- *      projection.
+ *   4. `wireImpostorSubsystems` / `registerOverlayFades` /
+ *      `wireStructureProjection` — the thumbnail/disk subsystems, fade
+ *      handles, and the structure-store anchor + bulk projection.
  *   5. `createSyntheticFallback` — the imperative gate that arms the synthetic
  *      backstop (via the `'syntheticFallback'` request flag) iff every real
  *      survey settles without data.
@@ -52,7 +52,7 @@ import { installLoadProgress } from '../wiring/installLoadProgress';
 import { createSyntheticVolumeSlots } from '../../loading/slots/syntheticVolumeSlots';
 import { wireImpostorSubsystems } from '../wiring/wireImpostorSubsystems';
 import { registerOverlayFades } from '../wiring/registerOverlayFades';
-import { wirePoiProjection } from '../wiring/wirePoiProjection';
+import { wireStructureProjection } from '../wiring/wireStructureProjection';
 import { createSyntheticFallback } from '../wiring/createSyntheticFallback';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
 
@@ -93,9 +93,10 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // from the user's stored opacities so frame 1 is coherent.
   registerOverlayFades(state);
 
-  // Wire the three keyed POI groups (static anchors, the famous 2-asset join,
-  // the bulk-cluster subscription) into the poiSubsystem.
-  wirePoiProjection(state, cb);
+  // Wire the structure groups (static anchors + the bulk-cluster
+  // subscription) into the structure store. Famous-galaxy labels are derived
+  // straight from galaxyStore by produceFamousLabels — not wired here.
+  wireStructureProjection(state, cb);
 
   // Arm the synthetic-fallback gate.  It subscribes to the survey slots and
   // trips the `'syntheticFallback'` request flag (then re-runs demand) iff

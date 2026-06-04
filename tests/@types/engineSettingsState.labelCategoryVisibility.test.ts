@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { EngineSettingsState } from '../../src/@types/settings/EngineSettingsState';
-import type { PoiCategory } from '../../src/services/engine/subsystems/poiSubsystem';
+import type { PoiCategory } from '../../src/@types/engine/data/PoiCategory';
 
 /**
  * Type-level check: `EngineSettingsState.labelCategoryVisibility` is

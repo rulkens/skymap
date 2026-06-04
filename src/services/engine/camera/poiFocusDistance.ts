@@ -49,7 +49,7 @@
  *   freakishly-large structure to something visually useful.
  */
 
-import type { PoiCategory } from '../subsystems/poiSubsystem';
+import type { PoiCategory } from '../../../@types/engine/data/PoiCategory';
 
 // Per-category framing multipliers.  See module header for rationale.
 // Famous galaxies are not in this table — they take the galaxy path
@@ -77,14 +77,9 @@ const MAX_FRAMING_DISTANCE_MPC = 800;
  * (rather than silently returning a fallback) makes a wrong-path call
  * surface immediately instead of producing a confusing framing.
  */
-export function poiFocusDistance(
-  category: PoiCategory,
-  physicalRadiusMpc: number,
-): number {
+export function poiFocusDistance(category: PoiCategory, physicalRadiusMpc: number): number {
   if (category === 'famousGalaxy') {
-    throw new TypeError(
-      'poiFocusDistance: famousGalaxy POIs use the galaxyFocusDistance path',
-    );
+    throw new TypeError('poiFocusDistance: famousGalaxy POIs use the galaxyFocusDistance path');
   }
   const multiplier = CATEGORY_MULTIPLIER[category];
   // Treat NaN / negative as 0 so the clamp does the right thing.
