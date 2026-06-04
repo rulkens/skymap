@@ -164,6 +164,7 @@ export async function buildMcpmVolume(args: {
   // ── 4. Build the data-only cube ────────────────────────────────────
   const cube: ScalarCube = {
     dims,
+    channels: 1,
     voxels,
     // Equatorial-cartesian: the export_metadata.txt grid center is given
     // in equatorial-cartesian comoving Mpc with observer at origin —

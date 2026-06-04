@@ -17,6 +17,7 @@ import type { ScalarCube } from '../../../../src/@types/data/ScalarCube';
 
 const fakeCube: ScalarCube = {
   dims: [2, 2, 2],
+  channels: 1,
   voxels: new Uint16Array(8),
   frameKind: 'equatorial-cartesian',
   origin: [0, 0, 0],

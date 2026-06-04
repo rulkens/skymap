@@ -8,6 +8,7 @@ import type { ScalarCube } from '../../../../src/@types/data/ScalarCube';
 function fixture(overrides: Partial<ScalarCube> = {}): ScalarCube {
   return {
     dims: [4, 4, 4],
+    channels: 1,
     voxels: new Uint16Array(64),
     frameKind: 'equatorial-cartesian',
     origin: [-100, -100, -100],

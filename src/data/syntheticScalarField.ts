@@ -58,6 +58,7 @@ export function makeSyntheticGaussianCube(opts: SyntheticGaussianOptions = {}): 
 
   return {
     dims: [dims, dims, dims],
+    channels: 1,
     voxels,
     frameKind,
     origin: [-boxSizeMpc / 2, -boxSizeMpc / 2, -boxSizeMpc / 2],
@@ -134,6 +135,7 @@ export function makeCartesianGridCube(opts: CartesianGridOptions = {}): ScalarCu
 
   return {
     dims: [dims, dims, dims],
+    channels: 1,
     voxels,
     frameKind,
     origin: [-boxSizeMpc / 2, -boxSizeMpc / 2, -boxSizeMpc / 2],
@@ -219,6 +221,7 @@ export function makeSphericalGridCube(opts: SphericalGridOptions = {}): ScalarCu
 
   return {
     dims: [dims, dims, dims],
+    channels: 1,
     voxels,
     frameKind,
     origin: [-boxSizeMpc / 2, -boxSizeMpc / 2, -boxSizeMpc / 2],
