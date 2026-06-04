@@ -69,6 +69,7 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
     case Source.Cluster:
     case Source.Supercluster:
     case Source.Void:
+    case Source.Group:
     case Source.Filaments:
     case Source.Cf4Density:
     case Source.Mcpm:

@@ -112,6 +112,15 @@ export const Source = {
   DebugCartesian: 13,
   /** DEV-only spherical-shell-and-spoke volume for radial-symmetry verification. */
   DebugSpherical: 14,
+  /**
+   * Nearby galaxy-group anchors (Local Group, M81, Cen A, ...). Picks
+   * against a group's marker ring return source code 15 in the upper 5
+   * bits of the packed identity; the 27-bit `localIdx` carries the POI's
+   * index into the structure store. Same encoding as Cluster/Supercluster/
+   * Void. Seed-only (no bulk catalog), like Void. Appended at 15 — NEVER
+   * renumber the survey codes 0–8 below it.
+   */
+  Group: 15,
 } as const;
 
 // ─── Registry ───────────────────────────────────────────────────────────────
@@ -279,6 +288,7 @@ export const SOURCE_REGISTRY = {
     visible: true,
   },
   [Source.Void]: { type: 'poi', code: Source.Void, label: 'Void', allSky: true, visible: true },
+  [Source.Group]: { type: 'poi', code: Source.Group, label: 'Group', allSky: true, visible: true },
   [Source.Milliquas]: {
     type: 'survey',
     code: Source.Milliquas,
