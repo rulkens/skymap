@@ -19,11 +19,13 @@
  *
  * ### Structure-count emissions
  *
- * After every group change we forward `{ cluster, supercluster, void }`
+ * After every group change we forward `{ cluster, supercluster, void, group }`
  * counts to `cb.sources?.onStructureCountsChange` so the Structures panel's
  * toggles can display "Clusters 573" alongside their checkboxes.  Counts are
  * read from `structureStore.byCategory` — the authoritative record set — so
- * the number matches exactly what will render.
+ * the number matches exactly what will render.  Every structure category MUST
+ * appear here; a missing one renders its toggle with no count (the bug that
+ * left `group` countless until it was added).
  */
 
 import { buildStaticAnchorStructures } from '../../../data/buildStaticAnchorStructures';
@@ -50,6 +52,7 @@ export function wireStructureProjection(state: EngineState, cb: EngineCallbacks)
       cluster: state.data.structures.byCategory('cluster').length,
       supercluster: state.data.structures.byCategory('supercluster').length,
       void: state.data.structures.byCategory('void').length,
+      group: state.data.structures.byCategory('group').length,
     });
   }
 

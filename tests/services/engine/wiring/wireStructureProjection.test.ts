@@ -61,6 +61,15 @@ vi.mock('../../../../src/data/buildStaticAnchorStructures', () => ({
       physicalRadiusMpc: 45,
       featured: true,
     } as StructureRecord,
+    {
+      id: 'group-local-group',
+      name: 'Local Group',
+      category: 'group',
+      worldPos: [0, 0, 0],
+      physicalRadiusMpc: 0.16,
+      apparentRadiusMpc: 0.94,
+      featured: true,
+    } as StructureRecord,
   ]),
 }));
 
@@ -209,6 +218,9 @@ describe('wireStructureProjection', () => {
     expect(typeof bootCounts.cluster).toBe('number');
     expect(typeof bootCounts.supercluster).toBe('number');
     expect(typeof bootCounts.void).toBe('number');
+    // Every structure category must be reported — group included, else the
+    // Settings panel renders its toggle with no count.
+    expect(bootCounts.group).toBe(1);
 
     clusterCatalogSlot.fire(readyState(clusterPayload));
 
@@ -217,5 +229,6 @@ describe('wireStructureProjection', () => {
     expect(afterCluster['cluster']).toBe(bootCounts['cluster']! + 1);
     expect(afterCluster['supercluster']).toBe(bootCounts['supercluster']!);
     expect(afterCluster['void']).toBe(bootCounts['void']!);
+    expect(afterCluster['group']).toBe(bootCounts['group']!);
   });
 });
