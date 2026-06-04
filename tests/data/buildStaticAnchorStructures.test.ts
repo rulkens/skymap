@@ -21,7 +21,7 @@ import clusterSeedJson from '../../data/cluster_anchors.seed.json';
 import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
 
 describe('buildStaticAnchorStructures', () => {
-  it('emits one structure per seed entry across all three categories', () => {
+  it('emits one structure per seed entry across all four categories', () => {
     const pois = buildStaticAnchorStructures();
     expect(pois.length).toBe(clusterSeedJson.length);
   });
@@ -116,11 +116,10 @@ describe('buildStaticAnchorStructures', () => {
  * Group-entry mapping — isolated describe block so the vi.doMock + dynamic
  * import pattern doesn't affect the module cache shared by the tests above.
  *
- * No group entries exist in the real seed yet (they land in Task 9), so we
- * cannot use the same bundled-seed lookup the void tests use.  Instead we
- * inject a synthetic group entry via vi.doMock before dynamically importing
- * the module under test — this is the same seam the void test would use if
- * there were no 'void-bootes-void' in the seed yet.
+ * The real seed now carries group entries, but this block keeps an isolated
+ * synthetic fixture (injected via vi.doMock before a dynamic import) so the
+ * id/category/worldPos wiring is asserted against a single known entry rather
+ * than coupling to whichever groups happen to be seeded.
  */
 describe('buildStaticAnchorStructures — group seed entry mapping', () => {
   it('maps a group seed entry to a GroupRecord with the correct id, category, featured, and worldPos', async () => {
