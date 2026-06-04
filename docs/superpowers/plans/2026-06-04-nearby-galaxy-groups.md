@@ -35,11 +35,11 @@ export type StructureRecord = ClusterRecord | SuperclusterRecord | VoidRecord | 
 ```
 `PoiCategory` (`= StructureCategory | 'famousGalaxy'`) widens automatically; no edit there.
 
-- [ ] **Step 1: Extend the type test.** In `tests/@types/engine/data/structureRecord.types.test.ts`, add a `group` case mirroring the existing `void` assertion (a `GroupRecord`-shaped literal is assignable to `StructureRecord`; `category: 'group'` narrows to the group arm). Match the file's existing `expectTypeOf`/`satisfies` idiom.
-- [ ] **Step 2: Run it, expect FAIL.** Run: `npm run typecheck` — expect a type error that `'group'` is not assignable to `StructureCategory`.
-- [ ] **Step 3: Add `'group'`** to the `StructureCategory` union and the `GroupRecord` arm + union member per the contract above.
-- [ ] **Step 4: Run, expect PASS.** Run: `npm run typecheck` — clean.
-- [ ] **Step 5: Commit.** `git add` the three files; message `feat(groups): add 'group' to StructureCategory + StructureRecord`.
+- [x] **Step 1: Extend the type test.** In `tests/@types/engine/data/structureRecord.types.test.ts`, add a `group` case mirroring the existing `void` assertion (a `GroupRecord`-shaped literal is assignable to `StructureRecord`; `category: 'group'` narrows to the group arm). Match the file's existing `expectTypeOf`/`satisfies` idiom.
+- [x] **Step 2: Run it, expect FAIL.** Run: `npm run typecheck` — expect a type error that `'group'` is not assignable to `StructureCategory`.
+- [x] **Step 3: Add `'group'`** to the `StructureCategory` union and the `GroupRecord` arm + union member per the contract above.
+- [x] **Step 4: Run.** `npm run typecheck` — Task-1 files compile clean. NOTE (correction): the global typecheck is NOT clean here — widening the union trips `Record<StructureCategory|PoiCategory, …>` totality at sites owned by Tasks 5 & 8 (and the extra sites listed in Task 8's note). vitest `run` strips types, so per-task behavioural tests stay green throughout; the global `tsc` gate goes green at Task 8 and is re-verified in Task 10.
+- [x] **Step 5: Commit.** `git add` the three files; message `feat(groups): add 'group' to StructureCategory + StructureRecord`. (commit 4406e305)
 
 ---
 
@@ -61,10 +61,10 @@ Group: 15,
 ```
 `Source.Group` is pick-safe (5-bit code, < 31 sentinel) and NOT persisted to `.bin` (only survey codes 0–8 are) — so no data rebuild, non-breaking.
 
-- [ ] **Step 1:** Add `Group: 15` to the `Source` const and the `SOURCE_REGISTRY[Source.Group]` row per the contract. The registry `satisfies Readonly<Record<SourceType, SourceEntry>>` totality will force the row to exist.
-- [ ] **Step 2:** In `galaxyType.ts:69-71`, add `case Source.Group:` to the existing non-survey `case Source.Cluster: case Source.Supercluster: case Source.Void: …` fallthrough that `throw`s — groups have no photometry. (Place it adjacent to the other POI cases.)
-- [ ] **Step 3: Run, expect PASS.** Run: `npm run typecheck && npm test` — clean (totality satisfied; the `galaxyType` switch is now exhaustive over `Source`).
-- [ ] **Step 4: Commit.** `feat(groups): allocate Source.Group=15 + registry row`.
+- [x] **Step 1:** Add `Group: 15` to the `Source` const and the `SOURCE_REGISTRY[Source.Group]` row per the contract. The registry `satisfies Readonly<Record<SourceType, SourceEntry>>` totality will force the row to exist.
+- [x] **Step 2:** In `galaxyType.ts:69-71`, add `case Source.Group:` to the existing non-survey `case Source.Cluster: case Source.Supercluster: case Source.Void: …` fallthrough that `throw`s — groups have no photometry. (Place it adjacent to the other POI cases.)
+- [x] **Step 3: Run.** Task-2 files compile clean (no errors in `sources.ts`/`galaxyType.ts`); `vitest run galaxyType` 22/22 green. Global `tsc` still carries the Task 5/8 cascade.
+- [x] **Step 4: Commit.** `feat(groups): allocate Source.Group=15 + registry row` (commit 4933aa75).
 
 ---
 
@@ -84,11 +84,11 @@ if (sourceCode === Source.Group) return { kind: 'group', poiIndex: localIdx };
 ```
 `runFrame.ts:456` passes `category: pick.kind` generically and `resolvePoiFromPick` dispatches on `byCategory(category)` — both work unchanged once `'group'` is a valid `kind`/`PoiCategory`. Only `clickHandler.ts:106`'s explicit `result.kind === 'cluster' || … || 'void'` guard needs `|| result.kind === 'group'`.
 
-- [ ] **Step 1: Write the failing test.** In the selection-encoding decode test, assert that a pick word built from `sourceCode = Source.Group (15)` and a `localIdx` decodes to `{ kind: 'group', poiIndex: localIdx }`. Mirror the existing `'void'` decode assertion in that file (use the same pack helper the void case uses).
-- [ ] **Step 2: Run, expect FAIL.** Run: `npm test -- selectionEncoding` — the group decode returns the fallthrough/sentinel, not `kind: 'group'`.
-- [ ] **Step 3: Implement** the `DecodedPick` arm + decode branch + the `clickHandler.ts:106` guard per the contract.
-- [ ] **Step 4: Run, expect PASS.** Run: `npm test -- selectionEncoding && npm run typecheck`.
-- [ ] **Step 5: Commit.** `feat(groups): decode Source.Group picks to kind 'group'`.
+- [x] **Step 1: Write the failing test.** Added a group decode case to `tests/data/selectionEncoding.test.ts` (the real type is `PickResult`/`unpackPick`, not `DecodedPick`).
+- [x] **Step 2: Run, expect FAIL.** (covered by the green run below)
+- [x] **Step 3: Implement** the `PickResult` arm + `unpackPick` branch + the `clickHandler.ts:106` guard. ALSO (deviation from spec §3 YAGNI, accepted): added `SOURCE_CODE_GROUP` to `selectionEncoding.wesl` + the TS↔WESL parity test — the parity test already enforces this for cluster/supercluster/void, so group must match. `runFrame.ts`/`resolvePoiFromPick.ts` need no edit (generic dispatch).
+- [x] **Step 4: Run.** `vitest run selectionEncoding` 17/17 green; no type errors in the Task-3 files.
+- [x] **Step 5: Commit.** commit 1826a325.
 
 ---
 
@@ -100,11 +100,11 @@ if (sourceCode === Source.Group) return { kind: 'group', poiIndex: localIdx };
 
 **Contract:** `const VALID_CATEGORIES = ['cluster', 'supercluster', 'void', 'group'] as const;` — `ClusterSeedEntry['category']` widens from this const automatically, so no other change in the parser.
 
-- [ ] **Step 1: Write the failing test.** Add a case asserting `parseClusterSeed` accepts a minimal valid entry with `category: 'group'` and round-trips it (mirror the existing `'void'`-accepts test); keep the existing "rejects unknown category" test green by using a still-invalid string like `'blob'`.
-- [ ] **Step 2: Run, expect FAIL.** Run: `npm test -- parseClusterSeed` — the group entry is rejected as an unknown category.
-- [ ] **Step 3: Add `'group'`** to `VALID_CATEGORIES`.
-- [ ] **Step 4: Run, expect PASS.** Run: `npm test -- parseClusterSeed`.
-- [ ] **Step 5: Commit.** `feat(groups): accept 'group' category in parseClusterSeed`.
+- [x] **Step 1: Write the failing test.** Added an `accepts category group and round-trips it` case; the bundled-seed smoke test's `validCategories` set also gained `'group'`. (rejects-unknown test already used `'supergroup'`.)
+- [x] **Step 2: Run, expect FAIL.** (covered by green run below)
+- [x] **Step 3: Add `'group'`** to `VALID_CATEGORIES` + updated error message + radius doc (groups have a bound core like clusters: physR=Rh, appR=R0).
+- [x] **Step 4: Run.** `vitest run parseClusterSeed` 19/19; no type errors. (Fixed one `noUncheckedIndexedAccess` slip: `entries[0]?.category`.)
+- [x] **Step 5: Commit.** commit ab26b7fd.
 
 ---
 
@@ -116,10 +116,10 @@ if (sourceCode === Source.Group) return { kind: 'group', poiIndex: localIdx };
 
 **Contract.** Add a `group` row. Start from the `void` row (closest analog) but: tint `#8FBF8F` (soft green) for `labelColor`/`haloColor`/`ringColor`; `worldEmMpc ≈ 0.3` (group labels are physically tiny); `markerMinApparentRadiusPx ≈ 5` + `markerMinApparentFadeBandPx ≈ 4` (like `cluster`, so a small *near* ring stays visible rather than tripping the void/SC floor of 28). `haloColor` is a plain `Vec4` now — groups get a normal halo (no skip). Keep `markerMax*`, `outline*`, `minPixelSize`/`maxPixelSize` matching the `cluster` row.
 
-- [ ] **Step 1: Run typecheck, expect FAIL.** Run: `npm run typecheck` — `STRUCTURE_POI_STYLES` is missing the `group` key required by `Record<StructureCategory, StructureMarkerStyle>` (since Task 1 added `'group'`).
-- [ ] **Step 2: Add the `group` row** per the contract.
-- [ ] **Step 3: Run, expect PASS.** Run: `npm run typecheck`.
-- [ ] **Step 4: Commit.** `feat(groups): add group marker style (soft-green ring/halo)`.
+- [x] **Step 1: Run typecheck, expect FAIL.** Confirmed — the missing `group` key was part of the post-Task-1 cascade.
+- [x] **Step 2: Add the `group` row** per the contract: `#8FBF8F` label/ring, `#8FBF8FA5` translucent halo, `worldEmMpc 0.3`, cluster-like `markerMin*` (5/4), cluster-matched max/outline.
+- [x] **Step 3: Run.** Style cascade cleared (`structurePoiStyles`/`produceStructureMarkers`/`produceStructureLabels` now compile); presentation tests 10/10 green.
+- [x] **Step 4: Commit.** commit e2f07f90.
 
 ---
 
@@ -136,11 +136,11 @@ case 'group':
 ```
 (`common` already carries `id`, `name`, `worldPos`, `featured: true`, `significance`, radii — same as the `void` branch.) Resulting id is `group-<seed.id>`.
 
-- [ ] **Step 1: Write the failing test.** Add a case feeding a `group` seed entry (build it inline, mirroring the existing `void` test fixture) and asserting the returned record has `id === 'group-<id>'`, `category === 'group'`, `featured === true`, and a `worldPos` equal to `raDecDistToEqCart(entry)`.
-- [ ] **Step 2: Run, expect FAIL.** Run: `npm test -- buildStaticAnchorPois` — the switch has no `'group'` arm (non-exhaustive / wrong category).
-- [ ] **Step 3: Implement** the `SeedEntry` widening + switch case.
-- [ ] **Step 4: Run, expect PASS.** Run: `npm test -- buildStaticAnchorPois && npm run typecheck`.
-- [ ] **Step 5: Commit.** `feat(groups): build group StructureRecords from the seed`.
+- [x] **Step 1: Write the failing test.** The existing tests assert against the real bundled seed (which has no group entries until Task 9), so the group test uses `vi.resetModules()` + `vi.doMock` of the seed JSON + dynamic import to inject an inline group fixture; asserts `id === 'group-local-group'`, `category === 'group'`, `featured === true`, `worldPos === raDecDistToEqCart(fixture)`.
+- [x] **Step 2: Run, expect FAIL.** Confirmed (initially failed once for a missing `vi.resetModules()` — ESM cache wasn't busted; fixed).
+- [x] **Step 3: Implement** the `SeedEntry` widening + `case 'group'` switch arm.
+- [x] **Step 4: Run.** `vitest run buildStaticAnchorPois` 10/10; no type errors.
+- [x] **Step 5: Commit.** commit b5016d96.
 
 ---
 
@@ -159,11 +159,11 @@ case 'group':
 
 **Group renders a normal halo** — do NOT add a `cat === 'group'` skip in the halo draw (~568); that skip is void-only.
 
-- [ ] **Step 1: Write the failing test.** In `clusterMarkerRenderer.test.ts`, mirror the existing void bucket test: feed descriptors of mixed categories incl. one `category: 'group'`, assert the `group` bucket count/offset is correct and `markerCount()` includes it. In `clusterMarkerRenderer.pick.test.ts`, mirror the void pick case: assert a `group` descriptor draws under the `Source.Group` source-uniform bucket (per-category `instance_index` 0-based).
-- [ ] **Step 2: Run, expect FAIL.** Run: `npm test -- clusterMarkerRenderer` — group descriptors are dropped (no bucket) and/or a type error on the records missing `group`.
-- [ ] **Step 3: Implement** the additions at every cited site.
-- [ ] **Step 4: Run, expect PASS.** Run: `npm test -- clusterMarkerRenderer && npm run typecheck`.
-- [ ] **Step 5: Commit.** `feat(groups): render + pick group markers in clusterMarkerRenderer`.
+- [x] **Step 1: Write the failing test.** Added `group`/`void_` helpers + markerCount-inclusion + bucket-bleed-guard tests in `clusterMarkerRenderer.test.ts`; a type-gate test in `.pick.test.ts`.
+- [x] **Step 2: Run, expect FAIL.** Confirmed (totality errors on the ~6 narrow records + dropped group descriptors).
+- [x] **Step 3: Implement** all 11 renderer sites; `bucketOffsets.group = bucketOffsets.void + bucketCounts.void` (group bucket last); void-halo-skip at ~578 left untouched (group gets a normal halo).
+- [x] **Step 4: Run.** `vitest run clusterMarkerRenderer` 9/9; renderer cascade cleared in `tsc`.
+- [x] **Step 5: Commit.** commit 0e9ae86f.
 
 ---
 
@@ -182,9 +182,16 @@ case 'group':
 - `DebugPanel/LabelEffectsSection.tsx:25`: add `'group'` to its category list (verify it's a structure-category list before editing).
 - `assetWiring.ts:74`: **rename** `STRUCTURE_CATEGORIES` → `BULK_CATALOG_CATEGORIES` and leave its membership as `['cluster', 'supercluster', 'void']` (do **NOT** add `'group'`). Update its docstring to say "categories backed by the bulk `.ccat`; groups are seed-only and excluded." This prevents a future reader from merging it with the UI list and wrongly gating the fetch on group visibility (spec §3).
 
-- [ ] **Step 1:** Make the four edits per the contract. If `SettingsPanel`/`LabelEffectsSection` have snapshot or enumeration tests, update expected category counts to include `group` first (so the test drives the change).
-- [ ] **Step 2: Run, expect PASS.** Run: `npm run typecheck && npm test` — green (the `assetWiring` rename has no behaviour change; UI lists now include group).
-- [ ] **Step 3: Commit.** `feat(groups): wire group into focus + settings UI; rename bulk-catalog category list`.
+**Additional `PoiCategory`/`StructureCategory` totality sites the union widening (Task 1) forced — these were NOT in the original plan; they belong here in Task 8 because they're all UI/settings/focus-domain. The global `tsc` gate goes green only once all of these carry a `group` entry:**
+- `src/data/poiCategoryInfo.ts`: add a `group` row → `{ label: 'Galaxy Group', shortLabel: 'Group' }`.
+- `src/services/engine/camera/poiFocusDistance.ts`: add `group` to `CATEGORY_MULTIPLIER` (`Record<Exclude<PoiCategory,'famousGalaxy'>, number>`). Use `group: 8` (mirror cluster — both are halo structures; 8× the harmonic radius frames the group + its neighbourhood; the 1 Mpc min-clamp keeps the Local Group's tiny `Rh` sane). Tunable in the Task 10 visual check.
+- `src/hooks/useEngineSettings.ts`: the two `useState<Record<PoiCategory, boolean>>` defaults (`labelCategoryVisibility` ~162, `markerCategoryVisibility` ~170) each need `group: true`.
+- `src/services/engine/engine.ts`: the two `Record<PoiCategory, boolean>` defaults (`labelCategoryVisibility` ~349, `markerCategoryVisibility` ~359) each need `group: true`. (The `...spread` mutators at ~1264/1280 need no change.)
+- Test fixtures that hardcode the 4-key visibility object — add `group: true`: `tests/@types/engineState.test.ts`, `tests/@types/engineSettingsState.labelCategoryVisibility.test.ts`, `tests/services/engine/wiring/seedSettingsCallbacks.test.ts`, `tests/services/engine/wiring/settingsTable.test.ts`.
+
+- [x] **Step 1:** Made edits A–G (focus predicate; `poiCategoryInfo` + `plural` field; SettingsPanel toggle labels now read `POI_CATEGORY_INFO[cat].plural` instead of ternaries — improvement over the plan, kills the silent-else mislabel; LabelEffectsSection target; assetWiring rename; poiFocusDistance `group: 8`; `group: true` in all 4 visibility defaults + 6 test fixtures incl. two the plan missed: `demandTable.test.ts`, `wireSlots.test.ts`; and the runtime key-enumeration tests in `poiCategories.test.ts`).
+- [x] **Step 2: Run.** Global `npm run typecheck` GREEN (cascade from Task 1 closed); `vitest run` 2300/2300 green. Prettier on touched files only.
+- [x] **Step 3: Commit.** commit 6bbccddc.
 
 ---
 
@@ -197,9 +204,9 @@ case 'group':
 
 Local Group: `raHours: 0.71`, `decDeg: 41.3`, `distMpc: 0.43`, `physicalRadiusMpc: 0.16`, `apparentRadiusMpc: 0.94` (barycentre along the M31 sightline — note this in the description). Maffei keeps its `[est]` radii; its description states the distance is contested (3.4–6.7 Mpc).
 
-- [ ] **Step 1:** Add the 16 entries to the JSON array, one per spec §6 table row, with curated 1–2 sentence descriptions (member count + caveats inline). Honest wording for Sculptor/CVn I (clouds/filaments) and Maffei (contested distance).
-- [ ] **Step 2: Validate.** Run: `npm test -- parseClusterSeed` and confirm `buildStaticAnchorPois` tests still pass — the parser validates every new entry's ranges (raHours [0,24), decDeg [-90,90], positive distances/radii) and rejects duplicates loudly. Fix any flagged entry.
-- [ ] **Step 3: Commit.** `feat(groups): seed 16 Local Volume galaxy groups`.
+- [x] **Step 1:** Added 16 group entries (hand-formatted inline to match the existing 26 entries — purely additive diff). Transcribed directly from spec §6 (not via subagent — precise scientific values, parser only range-checks). Honest descriptions for Sculptor/CVn I (cloud/filament), Maffei + NGC 1023 (contested distance), estimated radii flagged.
+- [x] **Step 2: Validate.** JSON valid, 42 total / 16 groups, no dup ids, all invariants (`appR ≥ physR`, ranges) hold. `buildStaticAnchorPois`'s `cats.size` enum test bumped 3→4. Full `vitest run` 2300/2300 green.
+- [x] **Step 3: Commit.** commit def2b8fa (note: seed file is `.gitignore`-excepted, staged with `-f`).
 
 ---
 
