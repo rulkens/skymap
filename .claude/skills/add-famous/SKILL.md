@@ -86,19 +86,34 @@ so don't add one — the display name falls back to `names[0]`.
 
 ### 2b. Hand-authoring a custom entry from HyperLEDA
 
-HyperLEDA is the same source `expand-famous` uses, so deriving fields the same
-way keeps the catalog homogeneous. Fetch the record:
+**Use the helper script** — it fetches HyperLEDA and prints paste-ready seed
+entries with every field already computed by the pipeline's own formulas:
 
 ```bash
-# leda.univ-lyon1.fr's TLS cert is expired AND it 302-redirects to the
-# atlas.obs-hp.fr mirror. WebFetch refuses the expired cert — use curl:
-#   -k accept the expired cert   -L follow the redirect to the mirror
+npm run famous-seed-from-leda -- NGC3166 NGC3169
+```
+
+It emits a JSON array (canonical field order) with `description` left empty for
+you to fill from each galaxy's Wikipedia lead. Paste the objects into
+`data/famous_galaxies.seed.json` (sorted by `id`; `ngc…` ids sort after `m…`,
+i.e. at the end), then write the descriptions. That's the whole step — the rest
+of this section is what the script does under the hood.
+
+The script (`tools/famous/famousSeedFromHyperleda.ts`) reuses
+`parseHyperLedaMeandata` + `mergeIntoFamousEntry` + `orderEntryFields`, so it
+can't drift from `expand-famous`. It hits the `meandata` endpoint on the
+plain-HTTP `atlas.obs-hp.fr` mirror, so a Node `fetch` reaches it directly — the
+expired-cert wall only bites browser/WebFetch paths that upgrade
+`leda.univ-lyon1.fr` to HTTPS. If you ever need the human-readable record in a
+browser, that path *does* hit the expired cert + a 302, so fall back to curl:
+
+```bash
+#   -k accept the expired cert   -L follow the 302 to the atlas.obs-hp.fr mirror
 curl -skL "http://leda.univ-lyon1.fr/ledacat.cgi?o=NGC3166" -o /tmp/leda.html
 ```
 
-Map the parameters with the **exact** formulas from
-`tools/famous/expandFamousFromCatalogs.ts` (so the entry is reproducible and a
-future `expand-famous` wouldn't change it):
+The field-by-field mapping the script applies (from
+`tools/famous/expandFamousFromCatalogs.ts`):
 
 | Seed field | HyperLEDA param | Formula |
 |------------|-----------------|---------|
