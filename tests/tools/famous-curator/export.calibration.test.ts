@@ -88,6 +88,7 @@ describe('handleExport — calibration derivation', () => {
     const result = await handleExport({
       body: { ...baseBody(sess.tmpId), disk, catalogAxisRatio },
       repoRoot: repo,
+      starnetConfig: { mock: true },
       sessionDirOverride: sess.sessionDir,
     });
 
@@ -115,6 +116,7 @@ describe('handleExport — calibration derivation', () => {
     const result = await handleExport({
       body: baseBody(sess.tmpId),
       repoRoot: repo,
+      starnetConfig: { mock: true },
       sessionDirOverride: sess.sessionDir,
     });
 

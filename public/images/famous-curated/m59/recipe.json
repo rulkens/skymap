@@ -2,10 +2,11 @@
   "version": 1,
   "id": "m59",
   "crop": {
-    "x": 381,
-    "y": 0,
-    "width": 3000,
-    "height": 3000
+    "x": 447.55278872574036,
+    "y": 440.86365860386877,
+    "width": 2917.6391735250813,
+    "height": 2056.0401033301596,
+    "rotationDeg": 39.774702220346086
   },
   "starnet": {
     "stride": 256,
@@ -21,5 +22,19 @@
     "license": "CC BY 4.0",
     "author": "Credit: ESA/Hubble &amp; NASA, L. Ho et al."
   },
-  "processedAt": "2026-05-18T11:27:04.241Z"
+  "processedAt": "2026-06-03T23:17:12.239Z",
+  "source": {
+    "width": 3762,
+    "height": 3000
+  },
+  "disk": {
+    "centerPx": [
+      1906.372375488281,
+      1468.8837102689486
+    ],
+    "radiusPx": 1167.0556694100326,
+    "paDeg": 39.774702220346086,
+    "axisRatio": 0.7046930689671469,
+    "deproject": true
+  }
 }

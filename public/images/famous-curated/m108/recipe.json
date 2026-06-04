@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "m108",
+  "crop": {
+    "x": 246.743699814622,
+    "y": 330.85638944361006,
+    "width": 1595.825100370756,
+    "height": 665.2506257180432,
+    "rotationDeg": 8.920332801742916
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://noirlab.edu/public/images/noao-m108/",
+    "license": "CC BY 4.0",
+    "author": "NOIRLab/NSF/AURA"
+  },
+  "processedAt": "2026-06-03T22:59:20.172Z",
+  "source": {
+    "width": 2048,
+    "height": 1366
+  },
+  "disk": {
+    "centerPx": [
+      1044.65625,
+      663.4817023026317
+    ],
+    "radiusPx": 638.3300401483024,
+    "paDeg": 8.920332801742916,
+    "axisRatio": 0.4168693834703354,
+    "deproject": true
+  }
+}

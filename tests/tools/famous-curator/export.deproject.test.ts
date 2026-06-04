@@ -97,6 +97,7 @@ describe('handleExport — deproject frame', () => {
     await handleExport({
       body: { ...baseBody(sess.tmpId), disk },
       repoRoot: repo,
+      starnetConfig: { mock: true },
       sessionDirOverride: sess.sessionDir,
     });
     expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('skip deproject'));
@@ -113,6 +114,7 @@ describe('handleExport — deproject frame', () => {
     await handleExport({
       body: baseBody(sessNoDisk.tmpId),
       repoRoot: repoNoDisk,
+      starnetConfig: { mock: true },
       sessionDirOverride: sessNoDisk.sessionDir,
     });
     const noDiskDims = await sourceWebpDims(curatedGalaxyDir(repoNoDisk, 'ngc-deproject'));
@@ -132,6 +134,7 @@ describe('handleExport — deproject frame', () => {
     await handleExport({
       body: { ...baseBody(sessOff.tmpId), disk },
       repoRoot: repoOff,
+      starnetConfig: { mock: true },
       sessionDirOverride: sessOff.sessionDir,
     });
     expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('skip deproject'));

@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "m96",
+  "crop": {
+    "x": -238.03353948029337,
+    "y": 252.72851860296737,
+    "width": 2412.850831401993,
+    "height": 1608.9052674815653,
+    "rotationDeg": 106.67582084771301
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_3368#/media/File:NGC_3368_ESO.jpg",
+    "license": "CC BY 3.0",
+    "author": "ESO/Oleg Maliy"
+  },
+  "processedAt": "2026-06-03T23:11:38.654Z",
+  "source": {
+    "width": 2045,
+    "height": 2044
+  },
+  "disk": {
+    "centerPx": [
+      968.3918762207032,
+      1057.18115234375
+    ],
+    "radiusPx": 965.1403325607972,
+    "paDeg": 106.67582084771301,
+    "axisRatio": 0.6668067692136221,
+    "deproject": true
+  }
+}

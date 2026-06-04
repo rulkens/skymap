@@ -2,11 +2,11 @@
   "version": 1,
   "id": "m74",
   "crop": {
-    "x": 217,
-    "y": 0,
-    "width": 1366,
-    "height": 1366,
-    "rotationDeg": 0
+    "x": 288.2307869429501,
+    "y": 113.12836052853106,
+    "width": 1237.8481184969123,
+    "height": 1168.6039794570765,
+    "rotationDeg": 158.77857258021794
   },
   "starnet": {
     "stride": 256,
@@ -19,8 +19,22 @@
   },
   "metadata": {
     "sourceUrl": "https://noirlab.edu/public/images/noao-m74/",
-    "license": "Public domain",
+    "license": "CC BY 4.0",
     "author": "Todd Boroson/NOIRLab/NSF/AURA/"
   },
-  "processedAt": "2026-05-28T21:15:31.782Z"
+  "processedAt": "2026-06-03T22:50:24.890Z",
+  "source": {
+    "width": 1800,
+    "height": 1366
+  },
+  "disk": {
+    "centerPx": [
+      907.1548461914062,
+      697.4303502570693
+    ],
+    "radiusPx": 495.1392473987649,
+    "paDeg": 158.77857258021794,
+    "axisRatio": 0.9440608762859234,
+    "deproject": true
+  }
 }

@@ -7,7 +7,15 @@
     ],
     "description": "NGC 6744 is an intermediate spiral galaxy in the constellation Pavo (Peacock). Its velocity with respect to the cosmic microwave background is 802 ± 3 km/s, which corresponds to a Hubble distance of 38.6 ± 2.7 Mly (11.82 ± 0.83 Mpc). However, 21 non redshift measurements give a distance of 23.63 ± 1.68 Mly (7.244 ± 0.514 Mpc). It was discovered on 30 June 1826 by Scottish astronomer James Dunlop, observing from Parramatta, Australia. It has a mass of 5.92×1010 M☉.",
     "type": "Sbc",
-    "commonName": "Milky Way Twin"
+    "commonName": "Milky Way Twin",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "c12",
@@ -17,7 +25,15 @@
     ],
     "description": "NGC 6946, sometimes referred to as the Fireworks Galaxy, is a grand design, face-on intermediate spiral galaxy with a small bright nucleus, whose location in the sky straddles the boundary between the northern constellations of Cepheus and Cygnus. Its distance from Earth is about 25.2 million light-years or 7.72 megaparsecs, similar to the distance of M101 in the constellation Ursa Major. Both were once considered to be part of the Local Group, but are now known to be among the dozen bright spiral galaxies near the Milky Way but beyond the confines of the Local Group. NGC 6946 lies within the Virgo Supercluster.",
     "type": "SABc",
-    "commonName": "Fireworks Galaxy"
+    "commonName": "Fireworks Galaxy",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "c17",
@@ -47,7 +63,15 @@
     ],
     "description": "NGC 4449, also known as Caldwell 21, is an irregular Magellanic type galaxy in the constellation Canes Venatici, being located about 13 million light-years away. It was discovered by German-British astronomer William Herschel on 27 April 1788. It is part of the M94 Group or Canes Venatici I Group that is relatively close to the Local Group hosting our Milky Way galaxy.",
     "type": "IB",
-    "commonName": "NGC 4449"
+    "commonName": "NGC 4449",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "c23",
@@ -57,7 +81,15 @@
     ],
     "description": "NGC 891 is an edge-on unbarred spiral galaxy about 30 million light-years away in the constellation Andromeda. It was discovered by William Herschel on October 6, 1784. The galaxy is a member of the NGC 1023 group of galaxies in the Local Supercluster. It has an H II nucleus.",
     "type": "Sb",
-    "commonName": "Silver Sliver Galaxy"
+    "commonName": "Silver Sliver Galaxy",
+    "calibration": {
+      "center": [
+        0.4875143690191425,
+        0.5069347947854553
+      ],
+      "diskRadiusFrac": 0.9173617579194315,
+      "deprojected": false
+    }
   },
   {
     "id": "c24",
@@ -67,7 +99,15 @@
     ],
     "description": "NGC 1275 is a type 1.5 Seyfert galaxy located around 225 million light-years away from Earth in the direction of the constellation of Perseus. NGC 1275 is a member of the large Perseus Cluster of galaxies. It was discovered by German-British astronomer William Herschel on 17 October 1786.",
     "type": "S0",
-    "commonName": "Perseus A"
+    "commonName": "Perseus A",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "c26",
@@ -77,7 +117,15 @@
     ],
     "description": "NGC 4244, also known as Caldwell 26, is an edge-on loose spiral galaxy in the constellation Canes Venatici, and is part of the M94 Group or Canes Venatici I Group, a galaxy group relatively close to the Local Group containing the Milky Way. In the sky, it is located near the yellow naked-eye star, Beta Canum Venaticorum, but also near the barred spiral galaxy NGC 4151 and irregular galaxy NGC 4214.",
     "type": "Sc",
-    "commonName": "Silver Needle Galaxy"
+    "commonName": "Silver Needle Galaxy",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "c29",
@@ -87,7 +135,15 @@
     ],
     "description": "NGC 5005, also known as Caldwell 29, is an inclined spiral galaxy in the constellation Canes Venatici. It was discovered by German-British astronomer William Herschel on 1 May 1785. The galaxy has a relatively bright nucleus and a bright disk that contains multiple dust lanes. The galaxy's high surface brightness makes it an object that is visible to amateur astronomers using large amateur telescopes.",
     "type": "SABb",
-    "commonName": "NGC 5005"
+    "commonName": "NGC 5005",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.7999999999999999,
+      "deprojected": true
+    }
   },
   {
     "id": "c3",
@@ -97,7 +153,15 @@
     ],
     "description": "NGC 4236 is a barred Magellanic spiral galaxy located in the constellation Draco.",
     "type": "SBd",
-    "commonName": "NGC 4236"
+    "commonName": "NGC 4236",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.7999999999999999,
+      "deprojected": true
+    }
   },
   {
     "id": "c30",
@@ -107,7 +171,15 @@
     ],
     "description": "",
     "type": "Sbc",
-    "commonName": "Deer Lick Galaxy"
+    "commonName": "Deer Lick Galaxy",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "c32",
@@ -117,7 +189,15 @@
     ],
     "description": "",
     "type": "SBcd",
-    "commonName": "Whale Galaxy"
+    "commonName": "Whale Galaxy",
+    "calibration": {
+      "center": [
+        0.5294958976692298,
+        0.5294916042750606
+      ],
+      "diskRadiusFrac": 0.8515074355858684,
+      "deprojected": false
+    }
   },
   {
     "id": "c35",
@@ -127,7 +207,15 @@
     ],
     "description": "",
     "type": "E",
-    "commonName": "NGC 4889"
+    "commonName": "NGC 4889",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.7999999999999999,
+      "deprojected": true
+    }
   },
   {
     "id": "c36",
@@ -137,7 +225,15 @@
     ],
     "description": "",
     "type": "Sc",
-    "commonName": "NGC 4559"
+    "commonName": "NGC 4559",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "c38",
@@ -147,7 +243,15 @@
     ],
     "description": "",
     "type": "Sb",
-    "commonName": "Needle Galaxy"
+    "commonName": "Needle Galaxy",
+    "calibration": {
+      "center": [
+        0.4735468569173168,
+        0.5037338447811651
+      ],
+      "diskRadiusFrac": 0.8946683834387382,
+      "deprojected": false
+    }
   },
   {
     "id": "c40",
@@ -157,7 +261,15 @@
     ],
     "description": "",
     "type": "S0-a",
-    "commonName": "NGC 3626"
+    "commonName": "NGC 3626",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "c43",
@@ -167,7 +279,15 @@
     ],
     "description": "NGC 7814 is a spiral galaxy about 40 million light-years away in the constellation Pegasus. The galaxy is seen edge-on from Earth. It is sometimes referred to as \"the little sombrero\", a miniature version of Messier 104. The star field behind NGC 7814 is known for its density of faint, remote galaxies as can be seen in the image here, in the same vein as the Hubble Deep Field.",
     "type": "Sab",
-    "commonName": "Little Sombrero Galaxy"
+    "commonName": "Little Sombrero Galaxy",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "c44",
@@ -187,7 +307,15 @@
     ],
     "description": "NGC 5248 is a compact intermediate spiral galaxy in the constellation Boötes. Its velocity with respect to the cosmic microwave background is 1437 ± 20 km/s, which corresponds to a Hubble distance of 69.1 ± 4.9 Mly (21.19 ± 1.51 Mpc). However, 17 non redshift measurements give a much closer distance of 42.52 ± 3.16 Mly (13.038 ± 0.969 Mpc). It was discovered on 15 April 1784 by German-British astronomer William Herschel.",
     "type": "SABb",
-    "commonName": "NGC 5248"
+    "commonName": "NGC 5248",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "c48",
@@ -197,7 +325,15 @@
     ],
     "description": "NGC 2775, also known as Caldwell 48, is a spiral galaxy in the constellation Cancer. It is 67 million light-years away from the Milky Way. It was discovered by German-British astronomer William Herschel on 19 December 1783.",
     "type": "Sab",
-    "commonName": "NGC 2775"
+    "commonName": "NGC 2775",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.7999999999999999,
+      "deprojected": true
+    }
   },
   {
     "id": "c5",
@@ -207,7 +343,15 @@
     ],
     "description": "IC 342 is an intermediate spiral galaxy in the constellation Camelopardalis, located relatively close to the Milky Way. Despite its size and actual brightness, its location behind dusty areas near the galactic equator makes it difficult to observe, leading to the nickname \"The Hidden Galaxy\", though it can readily be detected even with binoculars. If the galaxy were not obscured, it would be visible by naked eye. The dust makes it difficult to determine its precise distance; modern estimates range from about 7 million light-years (Mly) to about 11 Mly. The galaxy was discovered by William Frederick Denning in 1892. It is one of the brightest in the IC 342/Maffei Group, one of the closest galaxy groups to the Local Group. Edwin Hubble first thought it to be in the Local Group, but it was later determined not to be a member.",
     "type": "SABc",
-    "commonName": "Hidden Galaxy"
+    "commonName": "Hidden Galaxy",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "c51",
@@ -287,7 +431,15 @@
     ],
     "description": "",
     "type": "SABc",
-    "commonName": "Sculptor Galaxy"
+    "commonName": "Sculptor Galaxy",
+    "calibration": {
+      "center": [
+        0.5273186731995501,
+        0.49567584069187476
+      ],
+      "diskRadiusFrac": 0.5943579681465987,
+      "deprojected": false
+    }
   },
   {
     "id": "c67",
@@ -297,7 +449,15 @@
     ],
     "description": "",
     "type": "SBb",
-    "commonName": "NGC 1097"
+    "commonName": "NGC 1097",
+    "calibration": {
+      "center": [
+        0.5087754404720102,
+        0.5069362168992895
+      ],
+      "diskRadiusFrac": 0.5299116784111526,
+      "deprojected": true
+    }
   },
   {
     "id": "c7",
@@ -307,7 +467,15 @@
     ],
     "description": "",
     "type": "SABc",
-    "commonName": "NGC 2403"
+    "commonName": "NGC 2403",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "c70",
@@ -317,7 +485,15 @@
     ],
     "description": "",
     "type": "Scd",
-    "commonName": "Sculptor Pinwheel Galaxy"
+    "commonName": "Sculptor Pinwheel Galaxy",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.7999999999999999,
+      "deprojected": true
+    }
   },
   {
     "id": "c72",
@@ -356,7 +532,15 @@
       "NGC 4321"
     ],
     "description": "A face-on grand-design spiral in Virgo and one of the brightest galaxies in its cluster, M100 was used by Hubble's Cepheid distance ladder to anchor the local distance scale.",
-    "type": "SABb"
+    "type": "SABb",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "m101",
@@ -367,7 +551,15 @@
     ],
     "description": "M101 is one of the largest and most luminous spirals in the local universe — a grand-design spiral nearly 70% larger than the Milky Way, with a famously asymmetric arm pattern from a past encounter with NGC 5474.",
     "type": "SABc",
-    "commonName": "Pinwheel Galaxy"
+    "commonName": "Pinwheel Galaxy",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.7999999999999999,
+      "deprojected": true
+    }
   },
   {
     "id": "m102",
@@ -376,7 +568,15 @@
       "NGC 5866"
     ],
     "description": "",
-    "type": "S0-a"
+    "type": "S0-a",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "m104",
@@ -387,7 +587,15 @@
     ],
     "description": "Famous for its bright nucleus and prominent dust lane, M104 is a near edge-on spiral with an unusually large central bulge.  Hosts a billion-solar-mass black hole.",
     "type": "Sa",
-    "commonName": "Sombrero Galaxy"
+    "commonName": "Sombrero Galaxy",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "m105",
@@ -396,7 +604,15 @@
       "NGC 3379"
     ],
     "description": "",
-    "type": "E"
+    "type": "E",
+    "calibration": {
+      "center": [
+        0.5185908553178227,
+        0.30991705484144866
+      ],
+      "diskRadiusFrac": 0.4370834083175389,
+      "deprojected": true
+    }
   },
   {
     "id": "m106",
@@ -405,7 +621,15 @@
       "NGC 4258"
     ],
     "description": "",
-    "type": "Sbc"
+    "type": "Sbc",
+    "calibration": {
+      "center": [
+        0.4907963447386418,
+        0.48149780955631843
+      ],
+      "diskRadiusFrac": 0.547996428936265,
+      "deprojected": true
+    }
   },
   {
     "id": "m108",
@@ -415,7 +639,15 @@
     ],
     "description": "",
     "type": "Sc",
-    "commonName": "Surfboard Galaxy"
+    "commonName": "Surfboard Galaxy",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.7999999999999999,
+      "deprojected": true
+    }
   },
   {
     "id": "m109",
@@ -424,7 +656,15 @@
       "NGC 3992"
     ],
     "description": "",
-    "type": "Sbc"
+    "type": "Sbc",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.7999999999999999,
+      "deprojected": true
+    }
   },
   {
     "id": "m110",
@@ -433,7 +673,15 @@
       "NGC 205"
     ],
     "description": "",
-    "type": "E"
+    "type": "E",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "m31",
@@ -444,7 +692,15 @@
     ],
     "description": "The nearest large spiral galaxy, M31 (Andromeda) sits 778 kpc away and spans about 220,000 light-years — roughly twice the Milky Way's diameter.  Visible to the naked eye as a faint smudge, it is on a collision course with our own galaxy.",
     "type": "Sb",
-    "commonName": "Andromeda Galaxy"
+    "commonName": "Andromeda Galaxy",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "m32",
@@ -464,7 +720,15 @@
     ],
     "description": "The third-largest member of the Local Group, M33 is a flocculent spiral about half the size of the Milky Way.  Its distance has been used as a key calibrator on the cosmic distance ladder.",
     "type": "Sc",
-    "commonName": "Triangulum Galaxy"
+    "commonName": "Triangulum Galaxy",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.7999999999999999,
+      "deprojected": true
+    }
   },
   {
     "id": "m49",
@@ -493,7 +757,15 @@
       "NGC 4579"
     ],
     "description": "A barred spiral in the Virgo cluster, M58 hosts a low-luminosity active galactic nucleus and is one of the brightest galaxies in the cluster's central concentration.",
-    "type": "Sb"
+    "type": "Sb",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "m59",
@@ -502,7 +774,15 @@
       "NGC 4621"
     ],
     "description": "M59 is an elliptical galaxy in Virgo containing one of the most massive black holes known in the local universe (≈ 5 billion solar masses).",
-    "type": "E"
+    "type": "E",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "m60",
@@ -511,7 +791,15 @@
       "NGC 4649"
     ],
     "description": "",
-    "type": "E"
+    "type": "E",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.7999999999999999,
+      "deprojected": true
+    }
   },
   {
     "id": "m61",
@@ -520,7 +808,15 @@
       "NGC 4303"
     ],
     "description": "A starburst spiral and one of the largest galaxies in the Virgo cluster, M61 has hosted six observed supernovae since 1926 — an unusually high rate.",
-    "type": "Sbc"
+    "type": "Sbc",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.7999999999999999,
+      "deprojected": true
+    }
   },
   {
     "id": "m63",
@@ -530,7 +826,15 @@
     ],
     "description": "",
     "type": "Sbc",
-    "commonName": "Sunflower Galaxy"
+    "commonName": "Sunflower Galaxy",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.7999999999999999,
+      "deprojected": true
+    }
   },
   {
     "id": "m64",
@@ -541,7 +845,15 @@
     ],
     "description": "Named for the prominent dust band absorbing light in front of its bright nucleus, M64's gas in the outer disk rotates in the opposite direction to the inner disk — evidence of a past minor merger.",
     "type": "SABa",
-    "commonName": "Black Eye Galaxy"
+    "commonName": "Black Eye Galaxy",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "m65",
@@ -550,7 +862,15 @@
       "NGC 3623"
     ],
     "description": "",
-    "type": "Sa"
+    "type": "Sa",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "m66",
@@ -559,7 +879,15 @@
       "NGC 3627"
     ],
     "description": "Messier 66 or M66, also known as NGC 3627, is an intermediate spiral galaxy located around 31 million light years from Earth in the equatorial half of the Leo constellation. This galaxy is a member of the Leo Triplet, a small group of galaxies that includes M65 and NGC 3628. M66 has a morphological classification of SABb, indicating that is has a spiral shape with a weak bar feature and loosely wound arms.",
-    "type": "Sb"
+    "type": "Sb",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.7999999999999999,
+      "deprojected": true
+    }
   },
   {
     "id": "m74",
@@ -569,7 +897,15 @@
     ],
     "description": "Messier 74 is a large spiral galaxy in the equatorial constellation Pisces. It is about 32 million light-years away from Earth. The galaxy contains two clearly defined spiral arms and is therefore used as an archetypal example of a grand design spiral galaxy. The galaxy's low surface brightness makes it the most difficult Messier object for amateur astronomers to observe. Its relatively large angular size and the galaxy's face-on orientation make it an ideal object for professional astronomers who want to study spiral arm structure and spiral density waves. It is estimated that M74 hosts about 100 billion stars.",
     "type": "Sc",
-    "commonName": "Phantom Galaxy"
+    "commonName": "Phantom Galaxy",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.7999999999999999,
+      "deprojected": true
+    }
   },
   {
     "id": "m77",
@@ -580,7 +916,15 @@
     ],
     "description": "M77 is the closest type-2 Seyfert galaxy and one of the brightest active galactic nuclei in the local universe — a textbook case of an obscured supermassive black hole.",
     "type": "Sb",
-    "commonName": "Cetus A"
+    "commonName": "Cetus A",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "m81",
@@ -591,7 +935,15 @@
     ],
     "description": "A grand-design spiral 3.7 Mpc away, M81 is the largest member of its eponymous galaxy group and a popular target for amateur astronomers in the spring sky.",
     "type": "Sab",
-    "commonName": "Bode's Galaxy"
+    "commonName": "Bode's Galaxy",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "m82",
@@ -602,7 +954,15 @@
     ],
     "description": "An edge-on starburst galaxy in the M81 group, M82 is being gravitationally disturbed by M81 — driving an enormous nuclear starburst with hot gas streaming kiloparsecs above the disk.",
     "type": "S?",
-    "commonName": "Cigar Galaxy"
+    "commonName": "Cigar Galaxy",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.7999999999999999,
+      "deprojected": true
+    }
   },
   {
     "id": "m83",
@@ -613,7 +973,15 @@
     ],
     "description": "A face-on barred spiral with a prominent star-forming bar, M83 has hosted six supernovae and is one of the closest barred spirals to us.",
     "type": "Sc",
-    "commonName": "Southern Pinwheel Galaxy"
+    "commonName": "Southern Pinwheel Galaxy",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.7999999999999999,
+      "deprojected": true
+    }
   },
   {
     "id": "m84",
@@ -622,7 +990,15 @@
       "NGC 4374"
     ],
     "description": "A giant elliptical near the heart of the Virgo cluster, M84 displays radio jets emerging from a central supermassive black hole.",
-    "type": "E"
+    "type": "E",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.7999999999999999,
+      "deprojected": true
+    }
   },
   {
     "id": "m85",
@@ -631,7 +1007,15 @@
       "NGC 4382"
     ],
     "description": "Messier 85 is a lenticular galaxy, or elliptical galaxy for other authors, in the Coma Berenices constellation. It is 60 million light-years away, and has a diameter of about 36.99 kiloparsecs across.",
-    "type": "S0-a"
+    "type": "S0-a",
+    "calibration": {
+      "center": [
+        0.5007655629090123,
+        0.49305596418616476
+      ],
+      "diskRadiusFrac": 0.6066502395201028,
+      "deprojected": true
+    }
   },
   {
     "id": "m86",
@@ -640,7 +1024,15 @@
       "NGC 4406"
     ],
     "description": "A lenticular giant in the Virgo cluster, M86 has the highest blueshift of any Messier object — it's plunging toward us at over 400 km/s as it falls through the cluster core.",
-    "type": "E"
+    "type": "E",
+    "calibration": {
+      "center": [
+        0.48436701694768297,
+        0.49660609005217693
+      ],
+      "diskRadiusFrac": 0.5529426885418736,
+      "deprojected": true
+    }
   },
   {
     "id": "m87",
@@ -651,7 +1043,15 @@
     ],
     "description": "The supergiant elliptical at the heart of the Virgo cluster, M87 hosts the first black hole ever directly imaged (Event Horizon Telescope, 2019).  Its relativistic jet is visible from optical to radio wavelengths.",
     "type": "E",
-    "commonName": "Virgo A"
+    "commonName": "Virgo A",
+    "calibration": {
+      "center": [
+        0.4909060014452517,
+        0.49682549880999155
+      ],
+      "diskRadiusFrac": 0.5015265957482247,
+      "deprojected": true
+    }
   },
   {
     "id": "m88",
@@ -660,7 +1060,15 @@
       "NGC 4501"
     ],
     "description": "A multi-armed spiral in the Virgo cluster, M88 is one of the cluster's brightest spirals and shows clear signs of ram-pressure stripping by intracluster gas.",
-    "type": "Sb"
+    "type": "Sb",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "m89",
@@ -669,7 +1077,15 @@
       "NGC 4552"
     ],
     "description": "Messier 89 is an elliptical galaxy in the constellation Virgo. It was discovered by Charles Messier on March 18, 1781. M89 is a member of the Virgo Cluster of galaxies.",
-    "type": "E"
+    "type": "E",
+    "calibration": {
+      "center": [
+        0.6006974691549805,
+        0.4880209543325071
+      ],
+      "diskRadiusFrac": 0.613897854550835,
+      "deprojected": true
+    }
   },
   {
     "id": "m90",
@@ -678,7 +1094,15 @@
       "NGC 4569"
     ],
     "description": "A blueshifted Virgo spiral whose gas is being progressively stripped by the cluster — leaving behind an anaemic disk with truncated star formation.",
-    "type": "Sab"
+    "type": "Sab",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.7999999999999999,
+      "deprojected": true
+    }
   },
   {
     "id": "m91",
@@ -687,7 +1111,15 @@
       "NGC 4548"
     ],
     "description": "Messier 91 is a barred spiral galaxy that is found in the south of Coma Berenices. It is in the local supercluster and is part of the Virgo Cluster of galaxies. It is about 63 million light-years away from our galaxy. It was the last of a group of eight \"nebulae\" – the term 'galaxy' only coming into use for these objects once it was realized in the 20th century that they were extragalactic – discovered by Charles Messier in 1781. It is the faintest object in the Messier catalog, with an apparent magnitude of 10.2.",
-    "type": "Sb"
+    "type": "Sb",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "m94",
@@ -697,7 +1129,15 @@
     ],
     "description": "Messier 94 is a spiral galaxy in the mid-northern constellation Canes Venatici. It was discovered by Pierre Méchain in 1781, and catalogued by Charles Messier two days later. Although some references describe M94 as a barred spiral galaxy, the \"bar\" structure appears to be more oval-shaped. The galaxy has two ring structures.",
     "type": "SABa",
-    "commonName": "Croc's Eye Galaxy"
+    "commonName": "Croc's Eye Galaxy",
+    "calibration": {
+      "center": [
+        0.5006284727571353,
+        0.499895156458502
+      ],
+      "diskRadiusFrac": 0.48349113667751975,
+      "deprojected": true
+    }
   },
   {
     "id": "m95",
@@ -706,7 +1146,15 @@
       "NGC 3351"
     ],
     "description": "Messier 95, also known as M95 or NGC 3351, is a barred spiral galaxy about 33 million light-years away in the zodiac constellation Leo. It was discovered by Pierre Méchain in 1781, and catalogued by compatriot Charles Messier four days later. In 2012 its most recent supernova was discovered.",
-    "type": "Sb"
+    "type": "Sb",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "m96",
@@ -715,7 +1163,15 @@
       "NGC 3368"
     ],
     "description": "Messier 96 is an intermediate spiral galaxy about 31 million light-years away in the constellation Leo.",
-    "type": "Sab"
+    "type": "Sab",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.7999999999999999,
+      "deprojected": true
+    }
   },
   {
     "id": "m98",
@@ -724,7 +1180,15 @@
       "NGC 4192"
     ],
     "description": "Messier 98, M98 or NGC 4192, is an intermediate spiral galaxy about 44.4 million light-years away in slightly northerly Coma Berenices, about 6° to the east of the bright star Denebola. It was discovered by French astronomer Pierre Méchain on 1781, along with nearby M99 and M100, and was catalogued by compatriot Charles Messier 29 days later in his Catalogue des Nébuleuses & des amas d'Étoiles. It has a blueshift, denoting ignoring of its fast other movement, it is approaching at about 140 km/s.",
-    "type": "SABb"
+    "type": "SABb",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "m99",
@@ -735,6 +1199,14 @@
     ],
     "description": "An asymmetric grand-design spiral on the outskirts of the Virgo cluster.  Its lopsided structure is thought to result from a recent high-speed encounter with the cluster's hot gas.",
     "type": "Sc",
-    "commonName": "Coma Pinwheel"
+    "commonName": "Coma Pinwheel",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.7999999999999999,
+      "deprojected": true
+    }
   }
 ]

@@ -2,10 +2,11 @@
   "version": 1,
   "id": "m109",
   "crop": {
-    "x": 1139.8390197753906,
-    "y": 209.21864318847656,
-    "width": 1468.9491424560547,
-    "height": 1468.9491424560547
+    "x": 286.1568168269089,
+    "y": 271.20808469952993,
+    "width": 1465.3426163461822,
+    "height": 827.2971438319345,
+    "rotationDeg": 20.373888787860352
   },
   "starnet": {
     "stride": 256,
@@ -17,9 +18,23 @@
     "gamma": 0.7
   },
   "metadata": {
-    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_3992#/media/File:M109_NGC_3992.png",
+    "sourceUrl": "https://noirlab.edu/public/images/noao-m109/",
     "license": "CC BY 4.0",
-    "author": "Juan lacruz"
+    "author": "NOIRLab/NSF/AURA"
   },
-  "processedAt": "2026-05-18T11:17:27.616Z"
+  "processedAt": "2026-06-03T16:52:16.671Z",
+  "source": {
+    "width": 2048,
+    "height": 1366
+  },
+  "disk": {
+    "centerPx": [
+      1018.828125,
+      684.8566566154972
+    ],
+    "radiusPx": 586.1370465384729,
+    "paDeg": 20.373888787860352,
+    "axisRatio": 0.564575911874311,
+    "deproject": true
+  }
 }

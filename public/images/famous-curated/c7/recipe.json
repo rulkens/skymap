@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "c7",
+  "crop": {
+    "x": 292.01846000783326,
+    "y": 401.4096847129863,
+    "width": 3247.2912049843335,
+    "height": 1638.7821930740274,
+    "rotationDeg": 142.32755899699475
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_2403#/media/File:NGC_2403_-_A_Galaxy_of_Birth_and_Death_(iotw2221a).jpg",
+    "license": "CC BY 4.0",
+    "author": "KPNO/NOIRLab/NSF/AURA/M. T. Patterson (New Mexico State University) Image processing: T.A. Rector (University of Alaska Anchorage/NSF’s NOIRLab), M. Zamani &amp; D. de Martin (NSF’s NOIRLab)"
+  },
+  "processedAt": "2026-06-03T23:18:27.783Z",
+  "source": {
+    "width": 3840,
+    "height": 2700
+  },
+  "disk": {
+    "centerPx": [
+      1915.6640625,
+      1220.80078125
+    ],
+    "radiusPx": 1298.9164819937334,
+    "paDeg": 142.32755899699475,
+    "axisRatio": 0.5046612975635284,
+    "deproject": true
+  }
+}

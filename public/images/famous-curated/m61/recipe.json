@@ -2,13 +2,14 @@
   "version": 1,
   "id": "m61",
   "crop": {
-    "x": 721.4991760253906,
-    "y": 385.92926025390625,
-    "width": 1424.0707397460938,
-    "height": 1424.0707397460938
+    "x": 793.6795376905742,
+    "y": 512.2233935358587,
+    "width": 1289.660577939164,
+    "height": 1228.7836515529614,
+    "rotationDeg": 111.95975786352577
   },
   "starnet": {
-    "stride": 256,
+    "stride": 64,
     "upsample": false
   },
   "alpha": {
@@ -21,5 +22,19 @@
     "license": "CC BY 4.0",
     "author": "RubinObs/NOIRLab/SLAC/NSF/DOE/AURA"
   },
-  "processedAt": "2026-05-18T11:04:10.687Z"
+  "processedAt": "2026-06-03T23:16:10.311Z",
+  "source": {
+    "width": 2380,
+    "height": 1810
+  },
+  "disk": {
+    "centerPx": [
+      1438.5098266601562,
+      1126.6152193123394
+    ],
+    "radiusPx": 515.8642311756656,
+    "paDeg": 111.95975786352577,
+    "axisRatio": 0.9527961640236519,
+    "deproject": true
+  }
 }

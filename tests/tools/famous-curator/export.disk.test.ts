@@ -83,6 +83,7 @@ describe('handleExport — disk field', () => {
     await handleExport({
       body: { ...baseBody(sess.tmpId), disk },
       repoRoot: repo,
+      starnetConfig: { mock: true },
       sessionDirOverride: sess.sessionDir,
     });
 
@@ -104,6 +105,7 @@ describe('handleExport — disk field', () => {
     await handleExport({
       body: baseBody(sess.tmpId),
       repoRoot: repo,
+      starnetConfig: { mock: true },
       sessionDirOverride: sess.sessionDir,
     });
 

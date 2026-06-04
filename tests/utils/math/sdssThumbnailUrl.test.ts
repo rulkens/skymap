@@ -53,4 +53,10 @@ describe('sdssThumbnailUrl', () => {
     expect(url).toContain('width=200');
     expect(url).toContain('height=200');
   });
+
+  it('derives scale from fovArcmin so the cutout frames the galaxy', () => {
+    // 4 arcmin over 200 px → 4×60/200 = 1.2 arcsec/pixel.  Without the FOV
+    // arg the scale stays at the native 0.4 (asserted in the first test).
+    expect(sdssThumbnailUrl(0, 0, 200, 4)).toContain('scale=1.2');
+  });
 });

@@ -2,10 +2,11 @@
   "version": 1,
   "id": "m86",
   "crop": {
-    "x": 209,
-    "y": 0,
-    "width": 3464,
-    "height": 3464
+    "x": -732.4500470431576,
+    "y": 46.3125100188272,
+    "width": 5198.182578649344,
+    "height": 3801,
+    "rotationDeg": 117.04411437579907
   },
   "starnet": {
     "stride": 256,
@@ -21,5 +22,19 @@
     "license": "CC BY 4.0",
     "author": "ESA/Hubble &amp; NASA, P. Cote et al."
   },
-  "processedAt": "2026-05-18T10:22:14.140Z"
+  "processedAt": "2026-06-03T16:58:50.531Z",
+  "source": {
+    "width": 3840,
+    "height": 3426
+  },
+  "disk": {
+    "centerPx": [
+      1915.078125,
+      1880.2997982768052
+    ],
+    "radiusPx": 1437.1485252849486,
+    "paDeg": 117.04411437579907,
+    "axisRatio": 0.7311390834834175,
+    "deproject": true
+  }
 }

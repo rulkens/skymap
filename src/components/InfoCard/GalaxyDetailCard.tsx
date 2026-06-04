@@ -51,18 +51,24 @@ export function GalaxyDetailCard({
         onClose={pinned ? onClose : undefined}
       />
 
-      <div className={styles.cardHeadline}>{info.displayName}</div>
+      <div className={styles.cardHeadline}>
+        {info.displayName}
+        {famousAliases.map((alias) => (
+          <span key={alias} className={styles.headlineAlias}>
+            {' · '}
+            {alias}
+          </span>
+        ))}
+      </div>
       <div className={styles.sourceBadge}>{info.sourceLabel}</div>
 
       {info.famous && (
         <div className={styles.cardSection}>
-          {famousAliases.length > 0 && (
-            <CardRow label="Also known as" value={famousAliases.join(' · ')} />
-          )}
           {info.famous.description && (
-            // Label-less row: description + sibling toggle button.  Doesn't fit
-            // the CardRow label/value shape, so the cardRow class is inlined.
-            <div className={styles.cardRow}>
+            // Description prose stacked above its show-more toggle — a column,
+            // not the label/value CardRow shape, so the toggle sits underneath
+            // the text rather than floating to its right.
+            <div className={styles.descBlock}>
               <span
                 className={cx(
                   styles.cardValue,
@@ -115,7 +121,13 @@ export function GalaxyDetailCard({
       )}
 
       <div className={cx(styles.cardSection, styles.cardTopRow)}>
-        <Thumbnail ra={info.ra} dec={info.dec} url={info.thumbnailUrl} />
+        <Thumbnail
+          key={info.thumbnailUrl}
+          ra={info.ra}
+          dec={info.dec}
+          url={info.thumbnailUrl}
+          fallbackUrl={info.thumbnailFallbackUrl}
+        />
         <div className={styles.cardSummary}>
           <div className={styles.cardLookbackLine}>
             <InfoTip {...TIPS.lookback!}>Light left</InfoTip> {info.lookbackGyr.toFixed(1)} Gyr ago

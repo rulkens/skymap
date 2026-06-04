@@ -1,0 +1,8 @@
+.canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  /* Without this, the browser claims drag gestures for native pan/zoom and
+     fires pointercancel mid-drag (the orbit then freezes on touch devices). */
+  touch-action: none;
+}

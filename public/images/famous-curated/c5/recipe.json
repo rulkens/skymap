@@ -2,10 +2,11 @@
   "version": 1,
   "id": "c5",
   "crop": {
-    "x": 0,
-    "y": 0,
-    "width": 8200,
-    "height": 8200
+    "x": 185.22395306360977,
+    "y": 50.28726954749618,
+    "width": 3676.7933048102805,
+    "height": 3495.177340835974,
+    "rotationDeg": 1.07392301895473
   },
   "starnet": {
     "stride": 256,
@@ -17,9 +18,23 @@
     "gamma": 0.7
   },
   "metadata": {
-    "sourceUrl": "https://en.wikipedia.org/wiki/IC_342#/media/File:Euclid%E2%80%99s_view_of_spiral_galaxy_IC_342_ESA25170723.jpg",
-    "license": "CC BY-SA 3.0 igo",
-    "author": "ESA/Euclid/Euclid Consortium/NASA image processing by J.-C. Cuillandre (CEA Paris-Saclay) G. Anselmi"
+    "sourceUrl": "https://noirlab.edu/public/images/noao0703a/",
+    "license": "CC BY 4.0",
+    "author": "NOIRLab/NSF/AURA/T.A. Rector (NSF NOIRLab/University of Alaska Anchorage) &amp; H. Schweiker (WIYN/NSF NOIRLab)"
   },
-  "processedAt": "2026-05-18T10:57:33.524Z"
+  "processedAt": "2026-06-03T22:46:46.655Z",
+  "source": {
+    "width": 4000,
+    "height": 3962
+  },
+  "disk": {
+    "centerPx": [
+      2023.62060546875,
+      1797.8759399654832
+    ],
+    "radiusPx": 1470.7173219241122,
+    "paDeg": 1.07392301895473,
+    "axisRatio": 0.9506047936562815,
+    "deproject": true
+  }
 }

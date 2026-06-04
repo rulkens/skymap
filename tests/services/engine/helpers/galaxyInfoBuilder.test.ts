@@ -416,7 +416,10 @@ describe('buildGalaxyInfo — Famous source', () => {
 
     expect(info.source).toBe(Source.Famous);
     expect(info.iauName.startsWith('Famous J')).toBe(true);
-    expect(info.thumbnailUrl).toContain('alasky.cds.unistra.fr');
+    // Famous rows prefer the curated, non-deprojected tile; the DSS sky cutout
+    // becomes the fallback shown if the curated tile is missing.
+    expect(info.thumbnailUrl).toBe('/images/famous-thumb/m31.webp');
+    expect(info.thumbnailFallbackUrl).toContain('alasky.cds.unistra.fr');
 
     // famous block is populated from the sidecar entry.
     expect(info.famous).toBeDefined();

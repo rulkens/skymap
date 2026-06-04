@@ -1,0 +1,33 @@
+/* Position only — let common/Panel own its width (var(--panel-width)); a narrower
+   wrapper would clip the panel's right edge (slider value readouts). */
+.panel {
+  position: fixed;
+  top: var(--corner-offset);
+  right: var(--corner-offset);
+}
+
+/* The control list is the scroll area, so the panel title stays visible and a
+   tall set of controls (e.g. density on → extra slider) scrolls within the
+   viewport rather than overflowing off the bottom. */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-height: calc(100vh - 9rem);
+  overflow-y: auto;
+}
+
+.sliders {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.row > * {
+  flex: 1;
+}

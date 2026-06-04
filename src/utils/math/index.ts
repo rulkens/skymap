@@ -37,6 +37,7 @@ export * from './lerpAngleShortest';
 export * from './sdssExplorerUrl';
 export * from './sdssThumbnailUrl';
 export * from './dssThumbnailUrl';
+export * from './galaxyThumbnailFovArcmin';
 export * from './nedUrl';
 export * from './distanceModulus';
 export * from './schechterDensity';

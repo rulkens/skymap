@@ -2,10 +2,11 @@
   "version": 1,
   "id": "m33",
   "crop": {
-    "x": 0,
-    "y": 0,
-    "width": 2904,
-    "height": 2904
+    "x": -397.74187768291426,
+    "y": 948.3722837537657,
+    "width": 4792.739569319317,
+    "height": 2835.200851803992,
+    "rotationDeg": 67.12940731377228
   },
   "starnet": {
     "stride": 256,
@@ -17,9 +18,23 @@
     "gamma": 0.7
   },
   "metadata": {
-    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_598#/media/File:M33.jpg",
-    "license": "Public domain",
-    "author": "NASA/JPL-Caltech"
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_598#/media/File:VST_snaps_a_very_detailed_view_of_the_Triangulum_Galaxy.jpg",
+    "license": "CC BY 4.0",
+    "author": "ESO"
   },
-  "processedAt": "2026-05-18T11:15:35.349Z"
+  "processedAt": "2026-06-03T23:17:59.327Z",
+  "source": {
+    "width": 3840,
+    "height": 4579
+  },
+  "disk": {
+    "centerPx": [
+      1998.627906976744,
+      2365.9727096557617
+    ],
+    "radiusPx": 1917.0958277277266,
+    "paDeg": 67.12940731377228,
+    "axisRatio": 0.5915616341754739,
+    "deproject": true
+  }
 }

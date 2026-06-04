@@ -2,10 +2,11 @@
   "version": 1,
   "id": "m85",
   "crop": {
-    "x": 175.15496134020617,
-    "y": 0,
-    "width": 3446.5484858247423,
-    "height": 3446.5484858247423
+    "x": -887.0347500145126,
+    "y": -336.41394417878246,
+    "width": 5522.782555120317,
+    "height": 4248,
+    "rotationDeg": 43.322567986467675
   },
   "starnet": {
     "stride": 256,
@@ -21,5 +22,19 @@
     "license": "CC BY 4.0",
     "author": "Credit: ESA/Hubble &amp; NASA, R. O'Connell"
   },
-  "processedAt": "2026-05-18T10:21:46.191Z"
+  "processedAt": "2026-06-03T16:57:55.701Z",
+  "source": {
+    "width": 3840,
+    "height": 4058
+  },
+  "disk": {
+    "centerPx": [
+      1897.6701030927834,
+      1769.0281829833984
+    ],
+    "radiusPx": 1675.1986799405927,
+    "paDeg": 43.322567986467675,
+    "axisRatio": 0.7691304402866096,
+    "deproject": true
+  }
 }

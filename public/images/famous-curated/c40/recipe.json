@@ -2,10 +2,11 @@
   "version": 1,
   "id": "c40",
   "crop": {
-    "x": 0,
-    "y": 0,
-    "width": 800,
-    "height": 800
+    "x": 43.31277027109252,
+    "y": 162.94376571723484,
+    "width": 711.555611801565,
+    "height": 467.9601248155303,
+    "rotationDeg": 101.26559560243254
   },
   "starnet": {
     "stride": 256,
@@ -21,5 +22,19 @@
     "license": "CC BY 4.0",
     "author": "Sloan Digital Sky Survey"
   },
-  "processedAt": "2026-05-18T10:12:36.238Z"
+  "processedAt": "2026-06-03T16:34:32.645Z",
+  "source": {
+    "width": 800,
+    "height": 800
+  },
+  "disk": {
+    "centerPx": [
+      399.090576171875,
+      396.923828125
+    ],
+    "radiusPx": 284.622244720626,
+    "paDeg": 101.26559560243254,
+    "axisRatio": 0.6576578373554205,
+    "deproject": true
+  }
 }

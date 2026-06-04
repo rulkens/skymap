@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "m98",
+  "crop": {
+    "x": -122.40157267638847,
+    "y": 120.4612520121961,
+    "width": 1274.6551350988707,
+    "height": 584.1634883643667,
+    "rotationDeg": 24.233120810736352
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4192#/media/File:Messier_98.jpg",
+    "license": "CC BY 4.0",
+    "author": "ESO Acknowledgements: Flickr user jbarring"
+  },
+  "processedAt": "2026-06-03T23:10:58.136Z",
+  "source": {
+    "width": 1020,
+    "height": 850
+  },
+  "disk": {
+    "centerPx": [
+      514.9259948730469,
+      412.54299619437944
+    ],
+    "radiusPx": 509.8620540395483,
+    "paDeg": 24.233120810736352,
+    "axisRatio": 0.4582914015554922,
+    "deproject": true
+  }
+}
