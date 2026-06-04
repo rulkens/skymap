@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "ngc5394",
+  "crop": {
+    "x": 103.02749144098198,
+    "y": 205.32392439978776,
+    "width": 1788.4162766288057,
+    "height": 1141,
+    "rotationDeg": 31.085043366743463
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://noirlab.edu/public/images/noirlab1912a/",
+    "license": "CC BY 4.0",
+    "author": "International Gemini Observatory/NOIRLab/NSF/AURA"
+  },
+  "processedAt": "2026-06-04T00:55:14.143Z",
+  "source": {
+    "width": 1886,
+    "height": 1724
+  },
+  "disk": {
+    "centerPx": [
+      742.9635925292968,
+      613.7058961004274
+    ],
+    "radiusPx": 511.94888087065186,
+    "paDeg": 31.085043366743463,
+    "axisRatio": 0.6381605460390811,
+    "deproject": true
+  }
+}
