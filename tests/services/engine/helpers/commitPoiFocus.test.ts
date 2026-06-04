@@ -7,8 +7,9 @@
  *   - Focus update goes through `selection.setFocused` with the same
  *     Selection — the setter owns the `onFocusChange` fan-out, so the
  *     helper no longer takes a `cb`.
- *   - Tween distance comes from `poiFocusDistance(category, radiusMpc)`,
- *     NOT the galaxy `galaxyFocusDistance(diameterKpc)`.
+ *   - Tween distance comes from
+ *     `poiFocusDistance(category, apparentRadiusMpc, fovYRad)`, NOT the
+ *     galaxy `galaxyFocusDistance(diameterKpc)`.
  *
  * Why a separate suite: the helper has its own cam-null contract (only
  * the tween is gated; selection + focus still fire) which differs from
@@ -20,8 +21,11 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { commitPoiFocus } from '../../../../src/services/engine/helpers/commitPoiFocus';
+import { poiFocusDistance } from '../../../../src/services/engine/camera/poiFocusDistance';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
+
+const FOV60 = (Math.PI / 180) * 60;
 
 const virgo: StructureRecord = {
   id: 'virgo-m87',
@@ -39,6 +43,7 @@ function makeMockState(): EngineState {
       distance: 100,
       yaw: 0,
       pitch: 0,
+      fovYRad: FOV60,
     },
     subsystems: {
       selection: { setSelected: vi.fn(), setFocused: vi.fn(), selected: () => null },
@@ -83,8 +88,10 @@ describe('commitPoiFocus', () => {
     const firstCall = startMock.mock.calls[0];
     if (!firstCall) throw new Error('tweens.start was not called');
     const payload = firstCall[0];
-    // Virgo: 2 Mpc radius × 8 (cluster multiplier) = 16 Mpc framing distance.
-    expect(payload.toDistance).toBe(16);
+    // Virgo has no apparentRadiusMpc → frames the physical core (2 Mpc) at the
+    // camera's 60° FOV. Asserts against the helper so the framing law has one
+    // source of truth.
+    expect(payload.toDistance).toBe(poiFocusDistance('cluster', 2, FOV60));
     expect(Array.from(payload.toTarget)).toEqual([10, 0, 0]);
   });
 
