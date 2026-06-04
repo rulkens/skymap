@@ -87,7 +87,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // POI pick hit `(category, poiIndex)` → `PointOfInterest`.  Shared
     // with the hover throttler in `runFrame.ts` so the click and hover
     // paths can't drift on the lookup logic; see `resolvePoiFromPick`.
-    resolvePoi: (input) => resolvePoiFromPick(state.subsystems.pois, input),
+    resolvePoi: (input) => resolvePoiFromPick(state.data.structures, input),
   });
 
   // ── Camera auto-framing ──────────────────────────────────────────────

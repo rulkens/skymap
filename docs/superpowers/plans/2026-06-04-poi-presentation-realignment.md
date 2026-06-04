@@ -229,15 +229,15 @@ Move every remaining `poiSubsystem` reader onto `structureStore` (structures) an
 - Modify: `src/services/engine/helpers/resolvePoiFromPick.ts` (narrow to `{ byCategory }` over `StructureRecord`), `runFrame.ts`, `wireInput.ts`, `engine.ts` (getPoi + visibility setters), `wirePoiProjection.ts` (counts).
 - Test: `tests/services/engine/helpers/resolvePoiFromPick.test.ts` (restub), affected wiring tests.
 
-- [ ] **Step 1: Adjust the failing tests** — `resolvePoiFromPick` stub becomes `{ byCategory(cat): StructureRecord[] }`; assert `byCategory(cat)[poiIndex]`. getPoi resolves a structure by id from `structureStore.byId`. Settings toggles route cluster/sc/void → `structureStore.setLabelVisible`/`setMarkerVisible`, famousGalaxy → `galaxyStore.setFamousLabelsVisible`.
+- [x] **Step 1: Adjust the failing tests** — `resolvePoiFromPick` stub becomes `{ byCategory(cat): StructureRecord[] }`; assert `byCategory(cat)[poiIndex]`. getPoi resolves a structure by id from `structureStore.byId`. Settings toggles route cluster/sc/void → `structureStore.setLabelVisible`/`setMarkerVisible`, famousGalaxy → `galaxyStore.setFamousLabelsVisible`.
 
-- [ ] **Step 2: Run, expect failure.**
+- [x] **Step 2: Run, expect failure.**
 
-- [ ] **Step 3: Implement** — `resolvePoiFromPick(structures, {category, poiIndex})` → `structures.byCategory(category)[poiIndex] ?? null`, param typed `{ byCategory(c: StructureCategory): readonly StructureRecord[] }`, returns `StructureRecord | null`. `runFrame.ts:259` camera focus + `:455` hover and `wireInput.ts:90` click → pass `state.data.structures`. `engine.ts:495` `getPoi` → `state.data.structures.byId(id)`. `engine.ts:1251/1262` visibility → structure store (cluster/sc/void) + `galaxyStore.setFamousLabelsVisible` (famousGalaxy); `setCategoryMarkerVisible('famousGalaxy', …)` becomes a documented no-op. `wirePoiProjection.ts` counts → `structureStore.byCategory(cat).length`.
+- [x] **Step 3: Implement** — `resolvePoiFromPick(structures, {category, poiIndex})` → `structures.byCategory(category)[poiIndex] ?? null`, param typed `{ byCategory(c: StructureCategory): readonly StructureRecord[] }`, returns `StructureRecord | null`. `runFrame.ts:259` camera focus + `:455` hover and `wireInput.ts:90` click → pass `state.data.structures`. `engine.ts:495` `getPoi` → `state.data.structures.byId(id)`. `engine.ts:1251/1262` visibility → structure store (cluster/sc/void) + `galaxyStore.setFamousLabelsVisible` (famousGalaxy); `setCategoryMarkerVisible('famousGalaxy', …)` becomes a documented no-op. `wirePoiProjection.ts` counts → `structureStore.byCategory(cat).length`.
 
-- [ ] **Step 4: Run the full suite + typecheck.**
+- [x] **Step 4: Run the full suite + typecheck.**
 
-- [ ] **Step 5: Commit** — `refactor(engine): POI resolver/visibility/counts read the stores`
+- [x] **Step 5: Commit** — `refactor(engine): POI resolver/visibility/counts read the stores`
 
 ---
 

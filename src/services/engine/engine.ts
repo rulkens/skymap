@@ -492,9 +492,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         cb,
         getCloud: (s) => state.data.galaxies.catalogs.get(s),
         getFamousMeta: () => state.data.galaxies.famousMeta,
-        // Forward-reference: `state.subsystems.pois` is bound later in this
-        // literal, but the closure resolves at call time.
-        getPoi: (id) => state.subsystems.pois.findPoi(id),
+        // POI-kind selections are structure ring hits (cluster / SC / void);
+        // resolve them straight from the structure store. Famous galaxies are
+        // selected via the point path (kind 'galaxy'), never as a POI.
+        getPoi: (id) => state.data.structures.byId(id),
       }),
 
       // ── Bias-correction subsystem ─────────────────────────────────
@@ -1252,13 +1253,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setIntensity: (value) => boringSetters.setFilamentIntensity(value),
     },
     labels: {
-      // Two parallel setters, one per independent axis.  Both forward into
-      // the POI subsystem (the canonical record), mirror into
-      // `state.settings`, then echo a fresh copy as an immutable snapshot.
-      // The OTHER axis is never touched — see `poiSubsystem.ts` for the
-      // orthogonality rationale.
+      // Two parallel setters, one per independent visibility axis.  Each
+      // routes to the canonical store — structure categories (cluster / SC /
+      // void) to the structure store, famousGalaxy to the galaxy store —
+      // then mirrors into `state.settings` and echoes a fresh immutable
+      // snapshot.  The OTHER axis is never touched (orthogonal axes).
       setCategoryLabelVisible: (category, visible) => {
-        state.subsystems.pois.setCategoryLabelVisible(category, visible);
+        if (category === 'famousGalaxy') {
+          state.data.galaxies.setFamousLabelsVisible(visible);
+        } else {
+          state.data.structures.setLabelVisible(category, visible);
+        }
         state.settings.labelCategoryVisibility = {
           ...state.settings.labelCategoryVisibility,
           [category]: visible,
@@ -1269,7 +1274,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         state.subsystems.scheduler.requestRender();
       },
       setCategoryMarkerVisible: (category, visible) => {
-        state.subsystems.pois.setCategoryMarkerVisible(category, visible);
+        // Famous galaxies have no ring/halo marker — curated thumbnails do
+        // that job — so a marker-visibility toggle for them is a no-op. Only
+        // structure categories route to the structure store's marker axis.
+        if (category !== 'famousGalaxy') {
+          state.data.structures.setMarkerVisible(category, visible);
+        }
         state.settings.markerCategoryVisibility = {
           ...state.settings.markerCategoryVisibility,
           [category]: visible,

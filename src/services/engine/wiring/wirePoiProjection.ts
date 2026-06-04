@@ -39,10 +39,10 @@
  * After every group change we forward `{ cluster, supercluster, void }`
  * counts to `cb.sources?.onStructureCountsChange` so the Structures
  * panel's toggles can display "Clusters 573" alongside their checkboxes.
- * Counts are read from `getPoisForCategory` — the freshly-merged set —
- * so the number matches exactly what will render.  Famous galaxies are
- * a label-only category and not a Structures panel row, so they're
- * excluded from the emission.
+ * Counts are read from `structureStore.byCategory` — the authoritative
+ * record set — so the number matches exactly what will render.  Famous
+ * galaxies are a label-only category and not a Structures panel row, so
+ * they're excluded from the emission.
  */
 
 import { Source } from '../../../data/sources';
@@ -67,15 +67,15 @@ export function wirePoiProjection(state: EngineState, cb: EngineCallbacks): void
   /**
    * Emit fresh per-category structure counts after any group change.
    * Called once at boot (static anchors) and again whenever an async
-   * group lands or clears.  Counts are read from `getPoisForCategory`
-   * so they reflect the freshly-merged list — the same set that renders.
+   * group lands or clears.  Counts are read from `structureStore.byCategory`
+   * so they reflect the authoritative record set — the same one that renders.
    * Famous galaxies are a label-only category; not a Structures row.
    */
   function emitCounts(): void {
     cb.sources?.onStructureCountsChange?.({
-      cluster: state.subsystems.pois.getPoisForCategory('cluster').length,
-      supercluster: state.subsystems.pois.getPoisForCategory('supercluster').length,
-      void: state.subsystems.pois.getPoisForCategory('void').length,
+      cluster: state.data.structures.byCategory('cluster').length,
+      supercluster: state.data.structures.byCategory('supercluster').length,
+      void: state.data.structures.byCategory('void').length,
     });
   }
 

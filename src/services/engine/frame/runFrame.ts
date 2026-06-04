@@ -257,7 +257,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const focusSel = state.subsystems.selection.focused();
   const focusedPoi =
     focusSel !== null && focusSel.kind === 'poi'
-      ? (state.subsystems.pois.findPoi(focusSel.id) ?? null)
+      ? (state.data.structures.byId(focusSel.id) ?? null)
       : null;
   state.subsystems.clusterFocus.update(focusedPoi, nowMs);
 
@@ -453,7 +453,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
           // the shared helper so the click and hover paths agree
           // byte-for-byte on the lookup.  An out-of-bounds index or
           // missing POI produces null; same as "no hover".
-          const poi = resolvePoiFromPick(state.subsystems.pois, {
+          const poi = resolvePoiFromPick(state.data.structures, {
             category: pick.kind,
             poiIndex: pick.poiIndex,
           });
