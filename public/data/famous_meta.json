@@ -361,7 +361,15 @@
     ],
     "description": "IC 1613 is an irregular dwarf galaxy located on the outskirts of the Local group around 730 kiloparsecs from Earth in the constellation of Cetus near the star 26 Ceti. It has a low mass with its mass only being around 10^8 solar masses. It has played an important role in the calibration of the Cepheid variable period-luminosity relation for estimating distances. Other than the Magellanic Clouds, it is one of the few Local Group dwarf irregular galaxy where RR Lyrae-type variables have been observed; this factor, along with an unusually low abundance of interstellar dust both within IC 1613 and along the line of sight enable especially accurate distance estimates. IC 1613 was discovered in 1906 by Max Wolf, and is approaching Earth at 234 km/s.",
     "type": "I",
-    "commonName": "IC 1613"
+    "commonName": "IC 1613",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.7999999999999999,
+      "deprojected": true
+    }
   },
   {
     "id": "c52",
@@ -391,7 +399,15 @@
     ],
     "description": "NGC 6822 is a barred irregular galaxy approximately 1.6 million light-years away in the constellation Sagittarius. Part of the Local Group of galaxies, it was discovered by E. E. Barnard in 1884, with a six-inch refractor telescope. It is the closest non-satellite galaxy to the Milky Way, but lies just outside its virial radius. It is similar in structure and composition to the Small Magellanic Cloud. It is about 7,000 light-years in diameter.",
     "type": "IB",
-    "commonName": "Barnard's Galaxy"
+    "commonName": "Barnard's Galaxy",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
   },
   {
     "id": "c60",
@@ -421,7 +437,15 @@
     ],
     "description": "",
     "type": "SABc",
-    "commonName": "Needle's Eye Galaxy"
+    "commonName": "Needle's Eye Galaxy",
+    "calibration": {
+      "center": [
+        0.47372322737746125,
+        0.5283510220125786
+      ],
+      "diskRadiusFrac": 1.0579588205467831,
+      "deprojected": false
+    }
   },
   {
     "id": "c65",
@@ -503,7 +527,15 @@
     ],
     "description": "",
     "type": "SBm",
-    "commonName": "String of Pearls Galaxy"
+    "commonName": "String of Pearls Galaxy",
+    "calibration": {
+      "center": [
+        0.5308204352327907,
+        0.47771680942184147
+      ],
+      "diskRadiusFrac": 1.0010596424058902,
+      "deprojected": false
+    }
   },
   {
     "id": "c77",
@@ -513,7 +545,15 @@
     ],
     "description": "",
     "type": "S0",
-    "commonName": "Centaurus A"
+    "commonName": "Centaurus A",
+    "calibration": {
+      "center": [
+        0.4943692501012034,
+        0.4650647688388591
+      ],
+      "diskRadiusFrac": 0.4667178723941312,
+      "deprojected": true
+    }
   },
   {
     "id": "c83",
@@ -523,7 +563,15 @@
     ],
     "description": "",
     "type": "SBc",
-    "commonName": "NGC 4945"
+    "commonName": "NGC 4945",
+    "calibration": {
+      "center": [
+        0.4439776483384533,
+        0.5069906398554952
+      ],
+      "diskRadiusFrac": 0.8884501213288978,
+      "deprojected": false
+    }
   },
   {
     "id": "m100",
@@ -1206,6 +1254,63 @@
         0.5
       ],
       "diskRadiusFrac": 0.7999999999999999,
+      "deprojected": true
+    }
+  },
+  {
+    "id": "ngc3166",
+    "names": [
+      "NGC 3166",
+      "UGC 5516",
+      "PGC 29814",
+      "KPG 228A"
+    ],
+    "description": "NGC 3166 is a lenticular galaxy in the constellation Sextans, the brighter member of a close interacting pair with the spiral NGC 3169. It lies roughly 78 million light-years away; the gravitational tug-of-war between the two has drawn faint tidal streams of hydrogen across the gap separating them. The galaxy was discovered by William Herschel on 19 December 1783.",
+    "type": "S0-a",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.8,
+      "deprojected": true
+    }
+  },
+  {
+    "id": "ngc3169",
+    "names": [
+      "NGC 3169",
+      "UGC 5525",
+      "PGC 29855",
+      "KPG 228B"
+    ],
+    "description": "NGC 3169 is a spiral galaxy in the constellation Sextans, locked in a gravitational encounter with its lenticular neighbour NGC 3166. Its classification SA(s)a pec marks an unbarred spiral whose tightly wound arms have been pulled out of symmetry by the interaction, leaving one arm drawn open and the galaxy wrapped in a distorted, extended halo. It lies roughly 78 million light-years away and was discovered by William Herschel on 19 December 1783.",
+    "type": "Sa",
+    "calibration": {
+      "center": [
+        0.5,
+        0.5
+      ],
+      "diskRadiusFrac": 0.7999999999999999,
+      "deprojected": true
+    }
+  },
+  {
+    "id": "ngc5394",
+    "names": [
+      "NGC 5394",
+      "Arp 84",
+      "UGC 8898",
+      "PGC 49739"
+    ],
+    "description": "NGC 5394 is a barred spiral galaxy in the constellation Canes Venatici, the smaller and more distorted member of the interacting pair Arp 84 (with NGC 5395). The gravitational encounter has swept its arms into a tight, bird-like shape — Halton Arp catalogued it as a spiral with a bright companion at the end of one arm. It was discovered by William Herschel in 1787.",
+    "type": "SBb",
+    "calibration": {
+      "center": [
+        0.3314362361487276,
+        0.493380297803067
+      ],
+      "diskRadiusFrac": 0.5725164633769538,
       "deprojected": true
     }
   }
