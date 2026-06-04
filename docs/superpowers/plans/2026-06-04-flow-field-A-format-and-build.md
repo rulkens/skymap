@@ -115,19 +115,19 @@ export function gpuTextureFormatForChannels(channels: 1 | 4): GPUTextureFormat;
 // 1 → 'r16float', 4 → 'rgba16float'; throws on any other value.
 ```
 
-- [ ] Bump `VERSION = 3`. Update the module header byte table (byte 22 now `channels`).
-- [ ] Add `channels: 1 | 4` to `ScalarCube` (its own `@types` file already exists — edit it).
-- [ ] In `encodeScalarField`: write `dv.setUint8(22, cube.channels)`; size the buffer `SCFD_HEADER_BYTES + Nx*Ny*Nz*channels*2`; assert `cube.voxels.length === Nx*Ny*Nz*channels`.
-- [ ] In `decodeScalarField`: read `channels` at byte 22; reject values other than 1 or 4 with a clear throw; compute `expectedBytes` with the channel multiplier; return `channels` on the cube.
-- [ ] Add `gpuTextureFormatForChannels`.
-- [ ] Tests — add to `tests/data/scalarFieldFormat.test.ts`:
+- [x] Bump `VERSION = 3`. Update the module header byte table (byte 22 now `channels`).
+- [x] Add `channels: 1 | 4` to `ScalarCube` (its own `@types` file already exists — edit it).
+- [x] In `encodeScalarField`: write `dv.setUint8(22, cube.channels)`; size the buffer `SCFD_HEADER_BYTES + Nx*Ny*Nz*channels*2`; assert `cube.voxels.length === Nx*Ny*Nz*channels`.
+- [x] In `decodeScalarField`: read `channels` at byte 22; reject values other than 1 or 4 with a clear throw; compute `expectedBytes` with the channel multiplier; return `channels` on the cube.
+- [x] Add `gpuTextureFormatForChannels`.
+- [x] Tests — add to `tests/data/scalarFieldFormat.test.ts`:
   - `encode/decode round-trips a channels=1 cube` — build a tiny 2×2×2 single-channel cube, encode, decode, assert `dims`, `channels === 1`, `voxels` byte-identical, `frameKind`, `origin`, `voxelSize`, `rotation`, `valueMin/Max`.
   - `encode/decode round-trips a channels=4 cube` — 2×2×2 with `voxels.length === 8*4`; same field assertions plus `channels === 4`.
   - `decodeScalarField rejects an unknown channel count` — hand-craft a header with `channels=3`; assert it throws.
   - `gpuTextureFormatForChannels maps 1→r16float and 4→rgba16float` and throws otherwise.
   - `decodeScalarField rejects a v2 header` — assert the existing version guard still fires with the "regenerate" hint for `version=2`.
-- [ ] `npm test -- scalarFieldFormat` → all pass. `npm run typecheck` → clean (every `ScalarCube` literal in the codebase now needs `channels` — fix call sites in Task 5; expect typecheck failures there until then, but the format file + its test compile).
-- [ ] Commit: `feat(data): add channels field to scalar-field format (v3)`.
+- [x] `npm test -- scalarFieldFormat` → all pass. `npm run typecheck` → clean. **(Scope note: the `channels: 1` edits to every other `ScalarCube` producer — deferred to Task 5 in the original plan — were pulled into this commit so typecheck stays green on every commit. Task 5 retains only the syncR2 ALLOW additions + tests + operator re-emit note.)**
+- [x] Commit: `feat(data): add channels field to scalar-field format (v3)`.
 
 ## Task 2: Register the CF4++ npz + provenance README
 
