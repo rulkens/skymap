@@ -101,7 +101,7 @@ Extract the structure shape from the existing `PointOfInterest` discriminated un
 - Create: `src/@types/engine/data/StructureRecord.d.ts`
 - Test: `tests/@types/engine/data/structureRecord.types.test.ts`
 
-- [ ] **Step 1: Write the failing type-level test**
+- [x] **Step 1: Write the failing type-level test**
 
 ```ts
 // tests/@types/engine/data/structureRecord.types.test.ts
@@ -127,25 +127,25 @@ describe('StructureRecord types', () => {
 });
 ```
 
-- [ ] **Step 2: Run it, expect failure**
+- [x] **Step 2: Run it, expect failure**
 
 Run: `npm run test -- tests/@types/engine/data/structureRecord.types.test.ts`
 Expected: FAIL — modules not found.
 
-- [ ] **Step 3: Create the three type files**
+- [x] **Step 3: Create the three type files**
 
 `StructureCategory.d.ts` exports `'cluster' | 'supercluster' | 'void'` with a docblock noting it is `PoiCategory` minus `'famousGalaxy'`. `StructureGroupId.d.ts` exports `'anchors' | 'bulk'` (docblock: spec renames `PoiGroupId`'s `staticAnchors`/`clusterBulk`; `famous` is dropped because famous is galaxy data). `StructureRecord.d.ts` defines the record by extracting the extended-structure arms; `worldPos` uses the `Vec3` alias (import from `src/@types/math/Vec3`). Mirror the field docs from `PointOfInterest.d.ts` (timeless, terse). Follow the convention rule from CLAUDE.md (`type` not `interface`).
 
-- [ ] **Step 4: Run it, expect pass**
+- [x] **Step 4: Run it, expect pass**
 
 Run: `npm run test -- tests/@types/engine/data/structureRecord.types.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Re-point `PointOfInterest`'s structure arms at `StructureRecord` (single source of truth)**
+- [x] **Step 5: Re-point `PointOfInterest`'s structure arms at `StructureRecord` (single source of truth)**
 
 In `src/@types/engine/subsystems/PointOfInterest.d.ts`, replace the inline `ClusterPoi | SuperclusterPoi | VoidPoi` arm definitions with a reference to `StructureRecord` (so `PointOfInterest = StructureRecord | FamousGalaxyPoi`). Verify `npm run typecheck` stays green — every existing `PointOfInterest` consumer must still narrow on `category` unchanged.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/@types/engine/data/StructureCategory.d.ts src/@types/engine/data/StructureGroupId.d.ts src/@types/engine/data/StructureRecord.d.ts src/@types/engine/subsystems/PointOfInterest.d.ts tests/@types/engine/data/structureRecord.types.test.ts
@@ -163,7 +163,7 @@ git commit -m "feat(engine): StructureRecord/Category/GroupId types extracted fr
 - Create: `src/services/engine/data/createGalaxyStore.ts`
 - Test: `tests/services/engine/data/createGalaxyStore.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // tests/services/engine/data/createGalaxyStore.test.ts
@@ -197,21 +197,21 @@ describe('createGalaxyStore', () => {
 });
 ```
 
-- [ ] **Step 2: Run it, expect failure**
+- [x] **Step 2: Run it, expect failure**
 
 Run: `npm run test -- tests/services/engine/data/createGalaxyStore.test.ts`
 Expected: FAIL — `createGalaxyStore` not found.
 
-- [ ] **Step 3: Define the type, then the factory**
+- [x] **Step 3: Define the type, then the factory**
 
 `GalaxyStore.d.ts`: the spec's exact shape, `catalogs` typed `ReadonlyMap`, `famousMeta` typed `readonly FamousMetaEntry[]` (import `SourceType`, `GalaxyCatalog`, `FamousMetaEntry` from their `@types` homes). `createGalaxyStore.ts`: a plain factory closing over a private `Map<SourceType, GalaxyCatalog>` and a private `FamousMetaEntry[]`; return a frozen object whose `catalogs` getter exposes the map (the `ReadonlyMap` type makes it read-only to consumers) and `famousMeta` getter exposes the array. Setters mutate the private state in place. Match the immutability-leaning convention: consumers get read-only views, mutation only via setters. Add a didactic module header explaining why a factory + closure (not a class) and why mutation is concentrated in the setters.
 
-- [ ] **Step 4: Run it, expect pass**
+- [x] **Step 4: Run it, expect pass**
 
 Run: `npm run test -- tests/services/engine/data/createGalaxyStore.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/@types/engine/data/GalaxyStore.d.ts src/services/engine/data/createGalaxyStore.ts tests/services/engine/data/createGalaxyStore.test.ts
@@ -229,7 +229,7 @@ git commit -m "feat(engine): galaxyStore factory (catalogs + famousMeta)"
 - Create: `src/services/engine/data/createStructureStore.ts`
 - Test: `tests/services/engine/data/createStructureStore.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // tests/services/engine/data/createStructureStore.test.ts
@@ -280,21 +280,21 @@ describe('createStructureStore', () => {
 });
 ```
 
-- [ ] **Step 2: Run it, expect failure**
+- [x] **Step 2: Run it, expect failure**
 
 Run: `npm run test -- tests/services/engine/data/createStructureStore.test.ts`
 Expected: FAIL — `createStructureStore` not found.
 
-- [ ] **Step 3: Define the type, then the factory**
+- [x] **Step 3: Define the type, then the factory**
 
 `StructureStore.d.ts`: the spec's exact API; `all()`/`byCategory()` return `readonly StructureRecord[]`. `createStructureStore.ts`: close over a `Map<StructureGroupId, readonly StructureRecord[]>` and two `Map<StructureCategory, boolean>` visibility records (default true). `all()` concatenates groups in fixed `['anchors','bulk']` order — document that this preserves the ring pick-path's `instance_index → getPoisForCategory` alignment (carried over from `PoiGroupId`'s ordering contract). `byId` linear-scans `all()`; `byCategory` filters `all()`. `setGroup` takes a defensive copy (callers may mutate their array afterward — same contract as today's `poiSubsystem.setGroup`).
 
-- [ ] **Step 4: Run it, expect pass**
+- [x] **Step 4: Run it, expect pass**
 
 Run: `npm run test -- tests/services/engine/data/createStructureStore.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/@types/engine/data/StructureStore.d.ts src/services/engine/data/createStructureStore.ts tests/services/engine/data/createStructureStore.test.ts
@@ -313,7 +313,7 @@ git commit -m "feat(engine): structureStore factory (groups + visibility axes)"
 - Create: `src/services/engine/data/createVolumeStore.ts`
 - Test: `tests/services/engine/data/createVolumeStore.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // tests/services/engine/data/createVolumeStore.test.ts
@@ -340,21 +340,21 @@ describe('createVolumeStore', () => {
 });
 ```
 
-- [ ] **Step 2: Run it, expect failure**
+- [x] **Step 2: Run it, expect failure**
 
 Run: `npm run test -- tests/services/engine/data/createVolumeStore.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Define types + factory**
+- [x] **Step 3: Define types + factory**
 
 Resolve Decision B first. If relocate: create `VolumeFieldParams.d.ts` with the `VolumeFieldSettings` shape (move the type, update the ~3 importers, keep the field docs), then delete `VolumeFieldSettings.d.ts`. `VolumeStore.d.ts`: spec API; `fields` typed `ReadonlyMap<VolumeFieldId, VolumeFieldParams>`. `createVolumeStore.ts`: close over a `Map<VolumeFieldId, VolumeFieldParams>`; `registered()` returns `[...map.keys()]`; `setParams` sets in place. Confirm `VolumeFieldId` already exists in `@types` and reuse it.
 
-- [ ] **Step 4: Run it, expect pass**
+- [x] **Step 4: Run it, expect pass**
 
 Run: `npm run test -- tests/services/engine/data/createVolumeStore.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/@types/engine/data/VolumeStore.d.ts src/@types/engine/data/VolumeFieldParams.d.ts src/services/engine/data/createVolumeStore.ts tests/services/engine/data/createVolumeStore.test.ts
@@ -372,7 +372,7 @@ git commit -m "feat(engine): volumeStore factory (registered fields + params)"
 - Create: `src/services/engine/data/createFilamentStore.ts`
 - Test: `tests/services/engine/data/createFilamentStore.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // tests/services/engine/data/createFilamentStore.test.ts
@@ -396,21 +396,21 @@ describe('createFilamentStore', () => {
 });
 ```
 
-- [ ] **Step 2: Run it, expect failure**
+- [x] **Step 2: Run it, expect failure**
 
 Run: `npm run test -- tests/services/engine/data/createFilamentStore.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Define type + factory**
+- [x] **Step 3: Define type + factory**
 
 `FilamentStore.d.ts`: spec API. `createFilamentStore.ts`: close over `loaded`/`stripCount`/`vertexCount` (getters); `setLoaded(strip, vert)` sets all three (`loaded = true`).
 
-- [ ] **Step 4: Run it, expect pass**
+- [x] **Step 4: Run it, expect pass**
 
 Run: `npm run test -- tests/services/engine/data/createFilamentStore.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/@types/engine/data/FilamentStore.d.ts src/services/engine/data/createFilamentStore.ts tests/services/engine/data/createFilamentStore.test.ts
@@ -428,7 +428,7 @@ git commit -m "feat(engine): filamentStore factory (status + counts)"
 - Modify: `src/services/engine/engine.ts:299`
 - Test: `tests/services/engine/data/createEngineData.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // tests/services/engine/data/createEngineData.test.ts
@@ -446,21 +446,21 @@ describe('createEngineData', () => {
 });
 ```
 
-- [ ] **Step 2: Run it, expect failure**
+- [x] **Step 2: Run it, expect failure**
 
 Run: `npm run test -- tests/services/engine/data/createEngineData.test.ts`
 Expected: FAIL.
 
-- [ ] **Step 3: Define `EngineData`, factory, wire into state**
+- [x] **Step 3: Define `EngineData`, factory, wire into state**
 
 `EngineData.d.ts`: `{ galaxies: GalaxyStore; structures: StructureStore; volumes: VolumeStore; filaments: FilamentStore }`. `createEngineData.ts`: calls the four factories. In `EngineState.d.ts`, add `data: EngineData;` to the `EngineState` type and update the module-header bullet list to include `state.data — per-type data stores`. In `engine.ts:299`, add `data: createEngineData(),` to the `const state: EngineState = { … }` literal.
 
-- [ ] **Step 4: Run it, expect pass; typecheck still green**
+- [x] **Step 4: Run it, expect pass; typecheck still green**
 
 Run: `npm run test -- tests/services/engine/data/createEngineData.test.ts && npm run typecheck`
 Expected: test PASS; typecheck PASS (the old `sources.*` fields are still present, so nothing breaks yet).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/@types/engine/data/EngineData.d.ts src/services/engine/data/createEngineData.ts src/@types/engine/state/EngineState.d.ts src/services/engine/engine.ts tests/services/engine/data/createEngineData.test.ts
@@ -477,24 +477,24 @@ Migrate the single writer + all readers, then remove `catalogs` from `EngineSour
 **Files (readers):** `clusterMembership.ts`, `engine.ts`, `runFrame.ts`, `selectionRingPass.ts`, `diskRadiusRingPass.ts`, `galaxyCatalogSourceRegistry.ts`, `wirePoiProjection.ts`, `wireInput.ts`, plus types `BiasCorrectionDeps.d.ts`, `SelectionSubsystem.d.ts`.
 **Files (state):** `EngineSourceState.d.ts:58`.
 
-- [ ] **Step 1: Update the writer**
+- [x] **Step 1: Update the writer**
 
 `galaxyCatalogSourceRegistry.ts:187` → `state.data.galaxies.setCatalog(source, cloud)`.
 
-- [ ] **Step 2: Update every reader**
+- [x] **Step 2: Update every reader**
 
 Replace each `state.sources.catalogs.get(s)` → `state.data.galaxies.get(s)`, `state.sources.catalogs` (iteration) → `state.data.galaxies.catalogs`. Where a type (`BiasCorrectionDeps`, `SelectionSubsystem`) declares `catalogs: Map<…>`, retype it `ReadonlyMap<…>` from the store or accept the `GalaxyStore` itself — follow whichever keeps the dep surface minimal.
 
-- [ ] **Step 3: Remove `catalogs` from `EngineSourceState` and typecheck**
+- [x] **Step 3: Remove `catalogs` from `EngineSourceState` and typecheck**
 
 Delete `catalogs` (line 58) + its docblock from `EngineSourceState.d.ts`. Run `npm run typecheck` — it must surface any reader you missed (this is the safety net). Fix until green.
 
-- [ ] **Step 4: Run the full suite**
+- [x] **Step 4: Run the full suite**
 
 Run: `npm run test && npm run typecheck`
 Expected: PASS (behaviour parity — pick/hover/framing tests exercise these readers).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -p   # stage only the touched files listed above (NEVER git add -A)
@@ -509,24 +509,24 @@ git commit -m "refactor(engine): galaxy catalogs read from galaxyStore"
 **Files (readers):** `engine.ts`, `runFrame.ts`, `diskRadiusRingPass.ts`, `wirePoiProjection.ts`, `buildPoisFromFamousMeta.ts`, `wireInput.ts`, plus type `EngineAssetSlots.d.ts`.
 **Files (state):** `EngineSourceState.d.ts:59`.
 
-- [ ] **Step 1: Update the writer**
+- [x] **Step 1: Update the writer**
 
 `famousMetaSlot.ts:32` → `state.data.galaxies.setFamousMeta(s.value.meta)`; `:39` → `state.data.galaxies.setFamousMeta([])`.
 
-- [ ] **Step 2: Update readers**
+- [x] **Step 2: Update readers**
 
 Replace `state.sources.famousMeta` → `state.data.galaxies.famousMeta` at each reader. `buildPoisFromFamousMeta.ts` keeps building the `famous` POI group (Spec 3 evicts it later) but now reads `famousMeta` from `galaxyStore`.
 
-- [ ] **Step 3: Remove `famousMeta` from `EngineSourceState`; typecheck**
+- [x] **Step 3: Remove `famousMeta` from `EngineSourceState`; typecheck**
 
 Delete `famousMeta` (line 59) + docblock. `npm run typecheck` until green.
 
-- [ ] **Step 4: Run the full suite**
+- [x] **Step 4: Run the full suite**
 
 Run: `npm run test && npm run typecheck`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git commit -m "refactor(engine): famousMeta read from galaxyStore"

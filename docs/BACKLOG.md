@@ -36,7 +36,6 @@ Plans live in `docs/superpowers/plans/`. All have TDD task lists with checkboxes
 
 Design is captured; an implementer or `superpowers:writing-plans` needs to turn each into a task list before pickup.
 
-- **[2026-06-01 Engine data stores](superpowers/specs/2026-06-01-engine-data-stores-design.md)** — per-type data stores + demand-driven loading, the next stage of the engine data-layer redesign. The prerequisite wireSlots refactor shipped (#237); this spec and the POI realignment below are the remaining two stages and need plans.
 - **[2026-05-07 Tour animation](superpowers/specs/2026-05-07-tour-animation-design.md)** — brainstorm-in-progress; needs to be finished before it can be planned. May be subsumed by the splash-screen Part 2 stub-tour.
 
 ---
