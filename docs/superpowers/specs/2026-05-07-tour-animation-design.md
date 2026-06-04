@@ -226,29 +226,31 @@ predates — the climb-the-scale-ladder narrative leans on them.
 - **Famous galaxies** — `engine.selection.selectFamous(id)` pins +
   focuses (e.g. `'m31'` for Andromeda). Names auto-label via
   `produceFamousLabels`.
-- **Focusable clusters / superclusters / voids** — `StructureRecord`s
-  built by `buildStaticAnchorPois()` (`src/data/buildStaticAnchorPois.ts`,
-  seed `data/cluster_anchors.seed.json`). Focus via
+- **Focusable clusters / superclusters / voids / groups** —
+  `StructureRecord`s built by `buildStaticAnchorStructures()`
+  (`src/data/buildStaticAnchorStructures.ts`, seed
+  `data/cluster_anchors.seed.json`), resolved at runtime by id via
+  `state.data.structures.byId(id)`. Focus via
   `camera.focusOn(structureRecord)` — `FocusableTarget = GalaxyInfo |
   StructureRecord`. Featured anchors include Virgo (`cluster-virgo-m87`),
   Coma supercluster (`supercluster-coma-sc`), and the Boötes void
   (`void-bootes-void`). Names auto-label for `featured` structures with
   category labels + markers on (`engine.labels.setCategoryLabelVisible` /
   `setCategoryMarkerVisible`).
-- **Local Volume galaxy groups** — *almost landed* (branch
-  `worktree-nearby-galaxy-groups`, ~70% done as of 2026-06-04: the
-  `'group'` `StructureRecord` arm, `Source.Group = 15`, soft-green
-  markers, focus, and labels are committed; seeding the 16 groups into
-  `data/cluster_anchors.seed.json` is the remaining Task 9). Works
+- **Local Volume galaxy groups** — **landed** (merged via PR #260): the
+  `'group'` `StructureCategory` arm, `Source.Group = 15`, soft-green
+  markers, focus, labels, and the 16 seeded groups are all in. Works
   **identically to clusters/SC/voids** — same `StructureRecord` shape
   (no `abell` field, like `VoidRecord`), same `camera.focusOn(record)`,
   same `engine.labels.setCategoryLabelVisible('group', …)`, same
   deep-link (`#poi=group-<id>`). 16 Local Volume groups at 0.4-13.5 Mpc:
   ids like `group-local-group`, `group-m81-group`, `group-cen-a-group`,
-  `group-sculptor-group`, `group-leo-triplet`. These fill the awkward
-  empty rung between the Local Group beat and Virgo — the nearest
-  galaxy neighbourhoods. Use once the branch merges; until then the
-  ladder skips straight from M31 to Virgo.
+  `group-sculptor-group`, `group-leo-triplet`. They fill the rung between
+  the Local Group beat and Virgo — the nearest galaxy neighbourhoods.
+  (Caveat: at small/medium tier a group sphere can render nearly empty
+  because `subsampleByAbsMag` thins the Local Volume — see the BACKLOG
+  "group explorability" issue; the tour reads best at large tier until
+  per-group seeding lands.)
 - **Filaments overlay** — `engine.filaments.setEnabled(bool)` +
   `setIntensity(value)`. The DisPerSE cosmic-web skeleton. A natural
   toggle-on for the cosmic-web beat.
@@ -310,12 +312,11 @@ implementation plan that replaces this doc (or rename this from
 Touch points worth a fresh check before resuming (in case more has
 landed):
 
-- Has the **nearby galaxy groups** feature merged to main yet? (As of
-  2026-06-04 it's ~70% done on branch `worktree-nearby-galaxy-groups` —
-  Tasks 1-7 committed, Task 9 seeds the 16 groups. Once merged, the
-  `'group'` rung is available.) Check `StructureCategory` for a `'group'`
-  arm and whether `data/cluster_anchors.seed.json` contains group
-  entries. Plan: `docs/superpowers/plans/2026-06-04-nearby-galaxy-groups.md`.
-- Has anything been wired to consume `?tour=` yet? `grep -rn "tour" src/hooks src/components/App`.
+- Galaxy groups **landed** (PR #260) — the `'group'` rung is live. Open
+  follow-up: at small/medium tier the group spheres can be sparse
+  (`subsampleByAbsMag` thinning); see the BACKLOG "group explorability"
+  issue if the tour needs denser group membership.
+- Has the Part-2 seed (`engine.tour` + `tourSubsystem`) landed, and has
+  anything been wired to consume `?tour=` yet? `grep -rn "tour" src/services/engine src/hooks src/components/App`.
 - Does the focus tween still interpolate only target/distance/yaw/pitch?
   Re-read `src/@types/camera/CameraTween.d.ts` — decision 1 hinges on it.

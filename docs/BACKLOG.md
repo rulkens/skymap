@@ -36,7 +36,7 @@ Plans live in `docs/superpowers/plans/`. All have TDD task lists with checkboxes
 
 Design is captured; an implementer or `superpowers:writing-plans` needs to turn each into a task list before pickup.
 
-- **[2026-05-07 Tour animation](superpowers/specs/2026-05-07-tour-animation-design.md)** — brainstorm, re-grounded 2026-06-04. The decisions that were open now resolve: MSDF labels + Milky Way impostor shipped, and the tour-engine API shape is settled by the Part-2 engine-side seed (`engine.tour` + `tourSubsystem` + the `TourBeat` model). The cinematic palette (focusable clusters/SC/voids, almost-landed galaxy groups, MCPM volume, filaments, milliquas, horizon shell) is documented. Remaining open: rotation-toward-target slerp, per-beat caption producer, beat list/timing. Finish those, then promote to a plan. The cinematic tour extends the Part-2 seed.
+- **[2026-05-07 Tour animation](superpowers/specs/2026-05-07-tour-animation-design.md)** — brainstorm, re-grounded 2026-06-04. The decisions that were open now resolve: MSDF labels + Milky Way impostor shipped, and the tour-engine API shape is settled by the Part-2 engine-side seed (`engine.tour` + `tourSubsystem` + the `TourBeat` model). The cinematic palette (focusable clusters/SC/voids/groups, MCPM volume, filaments, milliquas, horizon shell) is documented. Remaining open: rotation-toward-target slerp, per-beat caption producer, beat list/timing. Finish those, then promote to a plan. The cinematic tour extends the Part-2 seed.
 
 ---
 
