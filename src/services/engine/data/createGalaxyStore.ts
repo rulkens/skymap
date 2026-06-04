@@ -20,6 +20,10 @@ import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 export function createGalaxyStore(): GalaxyStore {
   const catalogs = new Map<SourceType, GalaxyCatalog>();
   let famousMeta: readonly FamousMetaEntry[] = [];
+  // Famous-label visibility — the galaxy-side counterpart to the structure
+  // store's label axis. Defaults visible (parity with the old poiSubsystem
+  // all-categories-visible seed).
+  let famousLabelsVisible = true;
 
   return Object.freeze({
     get catalogs(): ReadonlyMap<SourceType, GalaxyCatalog> {
@@ -27,6 +31,9 @@ export function createGalaxyStore(): GalaxyStore {
     },
     get famousMeta(): readonly FamousMetaEntry[] {
       return famousMeta;
+    },
+    get famousLabelsVisible(): boolean {
+      return famousLabelsVisible;
     },
     setCatalog(source: SourceType, catalog: GalaxyCatalog): void {
       catalogs.set(source, catalog);
@@ -39,6 +46,9 @@ export function createGalaxyStore(): GalaxyStore {
     },
     setFamousMeta(meta: readonly FamousMetaEntry[]): void {
       famousMeta = meta;
+    },
+    setFamousLabelsVisible(visible: boolean): void {
+      famousLabelsVisible = visible;
     },
   });
 }

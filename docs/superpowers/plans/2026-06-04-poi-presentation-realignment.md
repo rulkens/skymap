@@ -164,17 +164,17 @@ Port the famous arm of `produceLabels`, deriving the famous label inputs from `g
 - Modify: `src/@types/engine/data/GalaxyStore.d.ts` + `src/services/engine/data/createGalaxyStore.ts` (add `famousLabelsVisible` getter + `setFamousLabelsVisible`)
 - Test: `tests/services/engine/presentation/produceFamousLabels.test.ts` + extend `createGalaxyStore.test.ts`
 
-- [ ] **Step 1: Write the failing tests** — galaxyStore: `famousLabelsVisible` defaults true, setter flips it. produceFamousLabels: apparent-size gate (`minApparentSizePx` vs projected `apparentDiameterKpc`); fade band smoothstep; lifted label + vertical `MarkerLine` anchor (`labelAnchorOffsetMpc`); per-POI `labelWorldEmMpc`; emits nothing when famousMeta empty OR famous catalog absent (graceful degrade); emits nothing when `famousLabelsVisible === false`; sets `prominencePx` to the galaxy's apparent diameter.
+- [x] **Step 1: Write the failing tests** — galaxyStore: `famousLabelsVisible` defaults true, setter flips it. produceFamousLabels: apparent-size gate (`minApparentSizePx` vs projected `apparentDiameterKpc`); fade band smoothstep; lifted label + vertical `MarkerLine` anchor (`labelAnchorOffsetMpc`); per-POI `labelWorldEmMpc`; emits nothing when famousMeta empty OR famous catalog absent (graceful degrade); emits nothing when `famousLabelsVisible === false`; sets `prominencePx` to the galaxy's apparent diameter.
 
-- [ ] **Step 2: Run it, expect failure.**
+- [x] **Step 2: Run it, expect failure.**
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
-`GalaxyStore`: add `readonly famousLabelsVisible: boolean` + `setFamousLabelsVisible(v: boolean): void` (default true). `famousLabelStyle.ts`: the `famousGalaxy` row of `POI_STYLES`. `produceFamousLabels(state, ctx)`: read `state.data.galaxies`; if `!famousLabelsVisible` or meta empty or catalog absent/empty → `{ labels: [], lines: [], awake: false }`. Otherwise zip `famousMeta[i]` with catalog row `i` (the famous `.bin` is meta-aligned — verify against `buildPoisFromFamousMeta` before deleting it) into a local `FamousLabelInput` ({ id, name, worldPos, apparentDiameterKpc, minApparentSizePx, labelAnchorOffsetMpc, labelWorldEmMpc }) and port the famous label math verbatim (apparent-size gate, smoothstep fade, lift + line, per-POI em). Set `prominencePx`. Carry the one-shot `labelLayer:'poi'` fade-in here (it fired on first non-empty famous-or-structure label set; pick one owner — see Task 5).
+`GalaxyStore`: add `readonly famousLabelsVisible: boolean` + `setFamousLabelsVisible(v: boolean): void` (default true). `famousLabelStyle.ts`: the `famousGalaxy` row of `POI_STYLES`. `produceFamousLabels(state, ctx)`: read `state.data.galaxies`; if `!famousLabelsVisible` or meta empty or catalog absent/empty → `{ labels: [], lines: [], awake: false }`. Otherwise zip `famousMeta[i]` with catalog row `i` (the famous `.bin` is meta-aligned — verify against `buildPoisFromFamousMeta` before deleting it) into a local `FamousLabelInput` ({ id, name, worldPos, apparentDiameterKpc, minApparentSizePx, labelAnchorOffsetMpc, labelWorldEmMpc }) and port the famous label math verbatim (apparent-size gate, smoothstep fade, lift + line, per-POI em). Set `prominencePx`. The one-shot `labelLayer:'poi'` fade-in is omitted here (producers stay pure) and re-homed to the director in Task 5.
 
-- [ ] **Step 4: Run it, expect pass.**
+- [x] **Step 4: Run it, expect pass.**
 
-- [ ] **Step 5: Commit** — `feat(engine): produceFamousLabels — galaxy-side famous join`
+- [x] **Step 5: Commit** — `feat(engine): produceFamousLabels — galaxy-side famous join`
 
 ---
 
