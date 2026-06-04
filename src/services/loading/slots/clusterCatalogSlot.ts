@@ -5,19 +5,20 @@
  * `clusters_meta.json`) through the standard asset-slot machinery.
  *
  * No `commit` step: there is nothing to upload GPU-side here. The payload is
- * CPU-resident POI data — a later task merges it into `poiSubsystem` so the
- * bulk structures render through the same marker/label path as the featured
- * anchors. Mirrors `famousMetaSlot` in shape.
+ * CPU-resident structure data — `wirePoiProjection` subscribes to this same
+ * slot and converts the ready value into `StructureRecord`s, writing them to
+ * `structureStore` (and mirroring them into `poiSubsystem`). Mirrors
+ * `famousMetaSlot` in shape.
  *
- * The subscriber writes the WHOLE payload (not just `.meta`) into
- * `state.sources.clusterBulk`, because the bulk POI builder needs both the
- * numeric `catalog` (positions, radii, category) and the string `meta`
- * (names, descriptions) keyed by the same localIdx.
+ * This subscriber's only job is to wake the renderer once the layer lands so
+ * the freshly-added bulk markers get drawn, and to warn on failure. It does
+ * not own any state — the data flows through the slot's ready value.
  *
  * **Graceful degradation on error.** A failed fetch (404 / network) maps to
- * "feature off": the subscriber writes `null` and warns. Net effect for the
- * user — bulk clusters simply don't appear, while the featured cluster
- * anchors and the rest of the app keep working unchanged.
+ * "feature off": the subscriber warns and `wirePoiProjection` clears the
+ * bulk group. Net effect for the user — bulk clusters simply don't appear,
+ * while the featured cluster anchors and the rest of the app keep working
+ * unchanged.
  */
 
 import { createAssetSlot } from '../AssetSlot';
@@ -36,11 +37,9 @@ export const createClusterCatalogSlot: SlotFactory<ClusterCatalogPayload, Cluste
   });
   slot.subscribe((s) => {
     if (s.kind === 'ready') {
-      state.sources.clusterBulk = s.value;
       state.subsystems.scheduler.requestRender();
     }
     if (s.kind === 'error') {
-      state.sources.clusterBulk = null;
       console.warn('[engine] cluster catalog failed to load:', s.error);
     }
   });

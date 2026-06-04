@@ -80,9 +80,10 @@ export function buildVolumeFieldSettings(id: VolumeFieldId): VolumeFieldSettings
 }
 
 /**
- * Seed the `volumes.fields` record at engine construction so every
+ * Build the construction-time volume-field seed record. The engine populates
+ * the volume store (`state.data.volumes`) from this at construction so every
  * shippable volume's on/off state (and tunables) EXISTS before any cube
- * loads — the demand predicate `fields[id]?.enabled` then reads pure
+ * loads — the demand predicate `volumeField(id)?.enabled` then reads pure
  * state, fully symmetric with survey `isVisible`. Without this, a
  * default-on volume (MCPM) never triggers its initial demand-driven
  * load because its field entry didn't exist yet.

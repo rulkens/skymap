@@ -30,8 +30,9 @@
  *     fires whenever EITHER slot transitions; it reads the current state
  *     of the other asset from `state.sources` (written by the respective
  *     slot's own subscriber in the load chain).
- *   - `clusterBulk` — present once the cluster-catalog slot lands and
- *     writes `state.sources.clusterBulk`.  A single subscription.
+ *   - `clusterBulk` — built from the cluster-catalog slot's ready value
+ *     when it lands.  A single subscription.  Records are written to the
+ *     authoritative `structureStore` and mirrored into `poiSubsystem`.
  *
  * ### Structure-count emissions
  *
@@ -85,15 +86,18 @@ export function wirePoiProjection(state: EngineState, cb: EngineCallbacks): void
   // records without drifting on slug-rule changes.  physicalRadiusMpc
   // comes from the seed JSON (R_200 / virial radii for clusters,
   // characteristic extent for superclusters and voids).
-  state.subsystems.pois.setGroup('staticAnchors', buildStaticAnchorPois());
+  const anchors = buildStaticAnchorPois();
+  state.data.structures.setGroup('anchors', anchors);
+  state.subsystems.pois.setGroup('staticAnchors', anchors);
   emitCounts();
 
   // ── Group 2: famous galaxies (2-asset join) ──────────────────────────
   //
-  // Both the meta sidecar (`state.sources.famousMeta`, written by the
-  // famousMeta slot subscriber) and the Famous catalog (`state.sources.
-  // catalogs.get(Source.Famous)`, written by the Famous slot's commit
-  // subscriber) must be present before any famous POI is built.  One
+  // Both the meta sidecar (`galaxyStore.famousMeta`, written by the
+  // famousMeta slot subscriber) and the Famous catalog
+  // (`galaxyStore.catalogs.get(Source.Famous)`, written by the Famous
+  // slot's commit subscriber) must be present before any famous POI is
+  // built.  One
   // asset alone carries half the information: meta has names + diameter,
   // the catalog has world positions.  Attempting to build with only one
   // produces partial or zero output, so we clear the group until both are
@@ -103,8 +107,8 @@ export function wirePoiProjection(state: EngineState, cb: EngineCallbacks): void
   // arrival is the minimal correct pattern: whichever slot arrives second
   // will find the other already present in state and complete the join.
   function rebuildFamousGroup(): void {
-    const meta = state.sources.famousMeta;
-    const famousCatalog = state.sources.catalogs.get(Source.Famous);
+    const meta = state.data.galaxies.famousMeta;
+    const famousCatalog = state.data.galaxies.catalogs.get(Source.Famous);
     if (meta.length > 0 && famousCatalog !== undefined && famousCatalog.count > 0) {
       state.subsystems.pois.setGroup('famous', buildPoisFromFamousMeta(meta, famousCatalog));
     } else {
@@ -114,7 +118,7 @@ export function wirePoiProjection(state: EngineState, cb: EngineCallbacks): void
   }
 
   // Subscribe to the famousMeta slot.  The slot subscriber (in
-  // `famousMetaSlot.ts`) writes `state.sources.famousMeta` before the
+  // `famousMetaSlot.ts`) writes `galaxyStore.famousMeta` before the
   // subscription fires; reading it here always reflects the latest value.
   state.assetSlots.famousMeta?.subscribe((s) => {
     if (s.kind === 'ready' || s.kind === 'error') rebuildFamousGroup();
@@ -134,20 +138,19 @@ export function wirePoiProjection(state: EngineState, cb: EngineCallbacks): void
 
   // ── Group 3: bulk clusters/superclusters ─────────────────────────────
   //
-  // Present once the cluster-catalog slot lands and the slot subscriber
-  // writes `state.sources.clusterBulk`.  A non-null clusterBulk means
-  // the slot resolved successfully; null means it hasn't landed yet or
-  // the fetch failed (graceful degradation — bulk structures don't appear
-  // but the engine continues normally).
+  // The bulk records come straight off the cluster-catalog slot's ready
+  // value — the authoritative home is `structureStore`'s `bulk` group, and
+  // the same records feed `poiSubsystem`'s `clusterBulk` group so the
+  // per-frame marker/label producer keeps rendering them unchanged.  A
+  // slot error clears both (graceful degradation — bulk structures don't
+  // appear but the engine continues normally).
   state.assetSlots.clusterCatalog?.subscribe((s) => {
     if (s.kind === 'ready') {
-      const bulk = state.sources.clusterBulk;
-      if (bulk !== null) {
-        state.subsystems.pois.setGroup('clusterBulk', buildPoisFromClusterCatalog(bulk));
-      } else {
-        state.subsystems.pois.clearGroup('clusterBulk');
-      }
+      const records = buildPoisFromClusterCatalog(s.value);
+      state.data.structures.setGroup('bulk', records);
+      state.subsystems.pois.setGroup('clusterBulk', records);
     } else if (s.kind === 'error') {
+      state.data.structures.clearGroup('bulk');
       state.subsystems.pois.clearGroup('clusterBulk');
     }
     emitCounts();

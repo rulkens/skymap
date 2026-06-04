@@ -23,7 +23,7 @@
  * in at the React layer; not present in `famous.bin` itself) are
  * skipped — `youAreHereSubsystem` already labels the user's position
  * and the meta array index doesn't line up with the catalog index for
- * pseudo rows.  In practice the engine's `state.sources.famousMeta`
+ * pseudo rows.  In practice the engine's `galaxyStore.famousMeta`
  * comes from the bin and never contains pseudo entries, but defending
  * against the hybrid case here keeps the producer robust to future
  * meta-source changes.

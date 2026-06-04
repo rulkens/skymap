@@ -61,9 +61,9 @@ export type PassDeps = {
    * snapshot — it's a long-lived reference whose contents change
    * across frames.
    */
-  catalogs: Map<SourceType, GalaxyCatalog>;
+  catalogs: ReadonlyMap<SourceType, GalaxyCatalog>;
   /** Famous-galaxy metadata — also forwarded into thumbnails. */
-  famousMeta: FamousMetaEntry[];
+  famousMeta: readonly FamousMetaEntry[];
   /**
    * Animation time in seconds for the Milky Way impostor's
    * shader-clock uniform.  Already scaled by the engine's chosen

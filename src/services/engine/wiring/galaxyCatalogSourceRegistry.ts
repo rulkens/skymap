@@ -175,7 +175,7 @@ export function wireGalaxyCatalogSourceSlot(
       // straight to fade-in.  The renderer keeps drawing the OLD
       // buffer with falling alpha until fade-out completes — only
       // then does `upload()` destroy + recreate it.
-      const isFirstLoad = !state.sources.catalogs.has(source);
+      const isFirstLoad = !state.data.galaxies.catalogs.has(source);
       if (!isFirstLoad) {
         await fades.fadeTo(handle, 0, FADE_OUT_DURATION_MS);
       }
@@ -184,7 +184,7 @@ export function wireGalaxyCatalogSourceSlot(
       // eslint-disable-next-line no-console
       console.log(`[engine] upload start ${shortName} count=${cloud.count}`);
       await state.gpu.renderer.upload(source, cloud);
-      state.sources.catalogs.set(source, cloud);
+      state.data.galaxies.setCatalog(source, cloud);
 
       // Fire-and-forget fade-in so the slot's `ready` transition
       // fires immediately; user interaction doesn't wait for the

@@ -16,6 +16,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { wireGalaxyCatalogSourceSlot } from '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry';
 import { Source } from '../../../../src/data/sources';
+import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import {
   FADE_IN_DURATION_MS,
@@ -64,7 +65,7 @@ function makeFixture() {
         totalCount: () => 0,
       },
     },
-    sources: { catalogs: new Map<SourceType, GalaxyCatalog>() },
+    data: createEngineData(),
     subsystems: { fades, scheduler: { requestRender: vi.fn() } },
     assetSlots: { points: new Map() },
   } as unknown as EngineState;
@@ -103,7 +104,7 @@ describe('wireGalaxyCatalogSourceSlot — fade orchestration', () => {
   it('second load awaits fadeTo(0, FADE_OUT_DURATION_MS) BEFORE upload, then fires fadeTo(1) after', async () => {
     const fx = makeFixture();
     // Pre-seed: pretend a catalog is already loaded for this source.
-    fx.state.sources.catalogs.set(Source.SDSS, fakeCloud(99));
+    fx.state.data.galaxies.setCatalog(Source.SDSS, fakeCloud(99));
 
     const cloud = fakeCloud(7);
     const cfg: GalaxyCatalogSourceConfig = {

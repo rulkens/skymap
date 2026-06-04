@@ -61,7 +61,7 @@ function makeState(): EngineState {
       thumbnails: { enabled: false },
       milkyWay: { enabled: false },
       filaments: { enabled: false, intensity: 1 },
-      volumes: { masterEnabled: false, fields: {} },
+      volumes: { masterEnabled: false },
     },
     bias: {
       apparentMagLimit: 0,

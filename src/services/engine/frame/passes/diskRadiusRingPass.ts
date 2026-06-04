@@ -50,7 +50,7 @@ export const diskRadiusRingPass: Pass = {
     const sel = state.subsystems.selection.selected();
     // `enabled()` proved a galaxy selection — narrow accordingly.
     if (sel === null || sel.kind !== 'galaxy') return;
-    const catalog = state.sources.catalogs.get(sel.source);
+    const catalog = state.data.galaxies.catalogs.get(sel.source);
     // Defensive: a tier swap can evict the catalog between `enabled()`
     // and `draw()`; a no-op is correct (next frame's gate re-reads it).
     if (!catalog) return;
@@ -71,7 +71,7 @@ export const diskRadiusRingPass: Pass = {
     // axisRatio; as-shot → flat), else the catalog orientation. The
     // deprojected and uncalibrated branches both resolve to the catalog
     // plane, so the ring matches the disk for every famous galaxy.
-    const cal = sel.source === Source.Famous ? state.sources.famousMeta[i]?.calibration : undefined;
+    const cal = sel.source === Source.Famous ? state.data.galaxies.famousMeta[i]?.calibration : undefined;
     const catalogPaDeg = catalog.positionAngleDeg[i]!;
     const tilt = cal
       ? effectiveTilt(cal, catalogAxisRatio, catalogPaDeg)

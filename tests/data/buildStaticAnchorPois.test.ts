@@ -46,20 +46,14 @@ describe('buildStaticAnchorPois', () => {
   it('carries physicalRadiusMpc through from the seed', () => {
     const pois = buildStaticAnchorPois();
     const virgo = pois.find((p) => p.id === 'cluster-virgo-m87');
-    // Narrow off the famousGalaxy arm so the radius field is in scope —
-    // static anchors are always extended structures.
-    const radius = virgo && virgo.category !== 'famousGalaxy' ? virgo.physicalRadiusMpc : undefined;
-    expect(radius).toBe(2.2);
+    // StructureRecord carries the radius on every arm — no narrowing needed.
+    expect(virgo?.physicalRadiusMpc).toBe(2.2);
   });
 
   it('carries apparentRadiusMpc through from the seed', () => {
     const pois = buildStaticAnchorPois();
     const virgo = pois.find((p) => p.id === 'cluster-virgo-m87');
-    // Same narrow as the physical-radius test: static anchors are always
-    // extended structures, so the apparent-radius field is in scope.
-    const radius =
-      virgo && virgo.category !== 'famousGalaxy' ? virgo.apparentRadiusMpc : undefined;
-    expect(radius).toBe(6);
+    expect(virgo?.apparentRadiusMpc).toBe(6);
   });
 
   it('carries the curated description through from the seed', () => {
@@ -67,9 +61,9 @@ describe('buildStaticAnchorPois', () => {
     // Assert against the seed's own value (not a hardcoded string) so the
     // test stays green when the curated blurbs are rewritten — it verifies
     // the carry-through wiring, not the prose.
-    const seedVirgo = (
-      clusterSeedJson as readonly { id: string; description?: string }[]
-    ).find((e) => e.id === 'virgo-m87')!;
+    const seedVirgo = (clusterSeedJson as readonly { id: string; description?: string }[]).find(
+      (e) => e.id === 'virgo-m87',
+    )!;
     const virgo = pois.find((p) => p.id === 'cluster-virgo-m87')!;
     expect(virgo.description).toBe(seedVirgo.description);
     expect(virgo.description).toBeTruthy();

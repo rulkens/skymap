@@ -52,8 +52,6 @@
 
 import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
-import type { VolumeFieldSettings } from './VolumeFieldSettings';
-import type { VolumeFieldId } from '../data/VolumeFieldId';
 import type { PoiCategory } from '../../services/engine/subsystems/poiSubsystem';
 
 export type EngineSettingsState = {
@@ -125,18 +123,14 @@ export type EngineSettingsState = {
   };
 
   /**
-   * Scalar-volume overlay controls.  `masterEnabled` is the master gate
-   * (when false, `volumeUpsamplePass.enabled` short-circuits before
-   * consulting the renderer at zero GPU cost, and `encodeVolumes`
-   * never opens its pre-HDR half-res render pass).  `fields` is the
-   * per-handle settings record. Seeded at construction by `seedVolumeFields()`
-   * with the shippable volumes' on/off state (so the demand predicate reads
-   * pure state at boot, like survey `drawMask`); DEV-only debug fixtures start
-   * absent and are added on demand by `addVolumeField`.
+   * Scalar-volume overlay master gate.  When false,
+   * `volumeUpsamplePass.enabled` short-circuits before consulting the
+   * renderer at zero GPU cost, and `encodeVolumes` never opens its pre-HDR
+   * half-res render pass.  Per-field params (enabled / intensity / palette /
+   * …) live on the volume store (`state.data.volumes`), not here.
    */
   volumes: {
     masterEnabled: boolean;
-    fields: Partial<Record<VolumeFieldId, VolumeFieldSettings>>;
   };
 
   /**

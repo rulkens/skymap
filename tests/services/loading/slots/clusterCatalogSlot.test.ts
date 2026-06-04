@@ -1,11 +1,12 @@
 /**
- * clusterCatalogSlot — verifies the slot subscriber writes CPU-side POI data
- * into engine state and degrades gracefully on fetch failure.
+ * clusterCatalogSlot — verifies the slot wakes the renderer on a successful
+ * load and degrades gracefully on fetch failure.
  *
- * The slot has no GPU commit, so the only observable behaviour is its effect
- * on `state.sources.clusterBulk` + a `requestRender()` wake. We mock the
- * fetcher module so `slot.load()` drives a deterministic ready/error
- * transition without touching the network.
+ * The slot has no GPU commit and owns no state — `wirePoiProjection`
+ * subscribes to the same slot and consumes the ready value.  So the only
+ * observable behaviour here is a `requestRender()` wake on ready and a warn
+ * on error.  We mock the fetcher module so `slot.load()` drives a
+ * deterministic ready/error transition without touching the network.
  */
 import { describe, expect, it, vi } from 'vitest';
 import type { ClusterCatalogPayload } from '../../../../src/@types/loading/ClusterCatalogPayload';
@@ -36,13 +37,12 @@ function fakePayload(): ClusterCatalogPayload {
   };
 }
 
-// Minimal fake state — the slot only touches `sources.clusterBulk` and
+// Minimal fake state — the slot only touches
 // `subsystems.scheduler.requestRender`. `as never` lets us hand the factory
 // a stub without modelling the whole EngineState tree.
 function fakeState(): { state: EngineState; requestRender: ReturnType<typeof vi.fn> } {
   const requestRender = vi.fn();
   const state = {
-    sources: { clusterBulk: null },
     subsystems: { scheduler: { requestRender } },
     assetSlots: {},
   } as unknown as EngineState;
@@ -52,7 +52,7 @@ function fakeState(): { state: EngineState; requestRender: ReturnType<typeof vi.
 const noopCb = {} as EngineCallbacks;
 
 describe('createClusterCatalogSlot', () => {
-  it('writes the payload to state on ready', async () => {
+  it('wakes the renderer on ready', async () => {
     const payload = fakePayload();
     mockFetch.mockResolvedValue(payload);
     const { state, requestRender } = fakeState();
@@ -61,9 +61,8 @@ describe('createClusterCatalogSlot', () => {
     slot.load({});
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
-    // The WHOLE payload (catalog + meta) lands in state, not just .meta —
-    // the bulk POI builder needs both halves.
-    expect(state.sources.clusterBulk).toBe(payload);
+    // The slot owns no state — it only wakes the renderer so the bulk
+    // markers (fed by wirePoiProjection from the same ready value) get drawn.
     expect(requestRender).toHaveBeenCalled();
     // Construction purity: the factory RETURNS the slot and does NOT
     // self-install it — `installSlots` (the orchestrator) owns the write.
@@ -71,7 +70,7 @@ describe('createClusterCatalogSlot', () => {
     expect(state.assetSlots.clusterCatalog).toBeUndefined();
   });
 
-  it('writes null on error and warns', async () => {
+  it('warns on error', async () => {
     // A 404 is a permanent failure under defaultRetryPolicy → give-up
     // immediately (no slow backoff), so the slot reaches 'error' at once.
     mockFetch.mockRejectedValue(new HttpError(404, 'clusters.ccat'));
@@ -82,7 +81,6 @@ describe('createClusterCatalogSlot', () => {
     slot.load({});
     await vi.waitFor(() => expect(slot.state().kind).toBe('error'));
 
-    expect(state.sources.clusterBulk).toBeNull();
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();
   });

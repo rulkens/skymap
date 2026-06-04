@@ -40,6 +40,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/sources';
+import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { seedVolumeFields } from '../../../../src/data/volumeFieldDefaults';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -47,6 +48,7 @@ import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps'
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { VolumeFieldId } from '../../../../src/@types/data/VolumeFieldId';
 
 // ── Module mocks ──────────────────────────────────────────────────────
 //
@@ -82,9 +84,9 @@ vi.mock('../../../../src/services/loading/fetchers/famousMetaFetcher', () => ({
 }));
 
 // The cluster-catalog slot fires `.load({})` at boot; mock its fetcher so
-// the test doesn't network.  An empty catalog is enough — the merge test
-// pre-seeds `state.sources.clusterBulk` directly, so the slot's own value
-// is irrelevant here.
+// the test doesn't network.  An empty catalog is enough by default — the
+// merge test overrides this mock with a populated payload so wirePoiProjection
+// builds bulk records from the slot's ready value.
 vi.mock('../../../../src/services/loading/fetchers/clusterCatalogFetcher', () => ({
   clusterCatalogFetcher: vi.fn(async () => ({
     catalog: {
@@ -289,8 +291,8 @@ const errorValue = (msg: string): LoadState<unknown> => ({
  * Minimal `EngineState` shaped for wireSlots's body.  Mirrors the
  * post-`initGpu` shape: the GPU renderers are present (so commit
  * subscribers don't NPE), the per-source slot map is empty (the test
- * populates it per-case), and the settings bag has the slots wireSlots
- * inspects (`volumes.fields`).
+ * populates it per-case), and the volume store is seeded (so the MCPM
+ * demand predicate reads true at boot, as wireSlots expects).
  */
 function makeState(
   overrides: Partial<{
@@ -301,6 +303,13 @@ function makeState(
 ): EngineState {
   const points = overrides.points ?? new Map();
   const allVisible = { cluster: true, supercluster: true, void: true, famousGalaxy: true };
+  // Seed the volume store the same way the engine does at construction, so the
+  // demand predicate for MCPM (default-on) reads true at boot — parity with the
+  // old imperative boot loop that loaded MCPM unconditionally.
+  const data = createEngineData();
+  for (const [id, params] of Object.entries(seedVolumeFields())) {
+    data.volumes.setParams(id as VolumeFieldId, params!);
+  }
   return {
     settings: {
       points: {
@@ -316,10 +325,7 @@ function makeState(
       thumbnails: { enabled: true },
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 1.0 },
-      // Seed volume fields the same way the engine does at construction, so the
-      // demand predicate for MCPM (default-on) reads true at boot — parity with
-      // the old imperative boot loop that loaded MCPM unconditionally.
-      volumes: { masterEnabled: true, fields: seedVolumeFields() },
+      volumes: { masterEnabled: true },
       // Structure categories all visible by default ⇒ clusterCatalog demanded.
       // Overridable so a test can hide every category and pin the bug-fix
       // (clusterCatalog must NOT load when nothing structural is visible).
@@ -331,12 +337,12 @@ function makeState(
     // and the demand loop reads request flags — both need a live Set.
     requests: new Set(),
     sources: {
-      catalogs: new Map(),
       pickMask: 0xff,
       drawMask: 0xff,
       famousMeta: [],
       tier: 'medium',
     },
+    data,
     picking: {} as never,
     gpu: {
       // Renderers are stubs — the slot commits we mint inside wireSlots
@@ -749,7 +755,7 @@ describe('wireSlots', () => {
     // once-value against its default.
     const famousSlot = bootPointSlots();
     const state = makeState({ points: famousSlot });
-    state.sources.catalogs.set(Source.Famous, {
+    state.data.galaxies.setCatalog(Source.Famous, {
       count: 2,
       positions: new Float32Array([0.78, 0.1, 0.2, 0.85, 0.05, 0.15]),
       diameterKpc: new Float32Array([67, 30]),
@@ -790,7 +796,7 @@ describe('wireSlots', () => {
       ],
     } as never);
     // The cluster-catalog slot's boot load resolves with one cluster + one
-    // supercluster; the slot subscriber writes `state.sources.clusterBulk`.
+    // supercluster; wirePoiProjection builds bulk records from the slot value.
     vi.mocked(clusterCatalogFetcher).mockResolvedValueOnce({
       catalog: {
         count: 2,
@@ -809,7 +815,7 @@ describe('wireSlots', () => {
     // See the famous-POI test: famousMeta demands on the Famous point slot
     // leaving `idle`, and idle survey fakes keep the synthetic gate waiting.
     const state = makeState({ points: bootPointSlots() });
-    state.sources.catalogs.set(Source.Famous, {
+    state.data.galaxies.setCatalog(Source.Famous, {
       count: 1,
       positions: new Float32Array([0.78, 0.1, 0.2]),
       diameterKpc: new Float32Array([67]),
@@ -859,8 +865,9 @@ describe('wireSlots', () => {
     const state = makeState({ points: bootPointSlots() });
     const deps = makeDeps();
     const counts: Array<Partial<Record<string, number>>> = [];
-    (deps.cb.sources as { onStructureCountsChange?: (c: Record<string, number>) => void })
-      .onStructureCountsChange = (c) => {
+    (
+      deps.cb.sources as { onStructureCountsChange?: (c: Record<string, number>) => void }
+    ).onStructureCountsChange = (c) => {
       counts.push(c);
     };
     await wireSlots(state, deps);

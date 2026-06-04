@@ -25,7 +25,7 @@
  */
 
 import type { Vec3 } from '../../math/Vec3';
-import type { PoiCategory } from '../../../services/engine/subsystems/poiSubsystem';
+import type { StructureRecord } from '../data/StructureRecord';
 
 /**
  * Fields every POI carries regardless of category.  `category` is added
@@ -52,76 +52,6 @@ type PoiCommon = {
    * description rather than empty chrome.
    */
   readonly description?: string;
-};
-
-/**
- * Shared shape for the extended-structure arms (cluster / supercluster /
- * void).  These three go through the ring/halo marker pass and frame the
- * camera by physical radius.
- */
-type ExtendedStructurePoi = PoiCommon & {
-  /**
-   * Normalized significance in [0,1] driving ring brightness / size weight.
-   * For clusters this is a normalized M500; superclusters a normalized Nm;
-   * featured anchors default to 1 (always full weight).  Optional so
-   * producers that don't compute it fall back to full weight at the render
-   * site.
-   */
-  readonly significance?: number;
-  /**
-   * Physical CORE radius of the structure in Mpc — virial / R_200 for
-   * clusters, characteristic scale for superclusters and voids.
-   *
-   * Drives:
-   *   - Camera-focus tween distance (how close `f` / Focus parks)
-   *   - InfoCard's "r {value}" line (citable literature number)
-   *
-   * Required — every structure producer sets it.  See `apparentRadiusMpc`
-   * for the wider visual/membership extent.
-   */
-  readonly physicalRadiusMpc: number;
-  /**
-   * Apparent / named-extent radius of the structure in Mpc — the wider
-   * "what the user sees as the cluster" boundary.  Typically 2-3× the
-   * `physicalRadiusMpc` for clusters; equal to it for superclusters and
-   * voids (those structures have no virial core, so the literature value
-   * IS the apparent extent).
-   *
-   * Drives:
-   *   - The on-screen ring + halo half-extent (cluster marker render)
-   *   - The label's close-approach fade-out, so the label disappears
-   *     together with the disc it labels
-   *   - Galaxy-membership cone search: which galaxies count as "part of
-   *     this cluster" for visual hide/show
-   *
-   * Optional — the render falls back to `physicalRadiusMpc` when absent.
-   * The static anchor builder always populates both.
-   */
-  readonly apparentRadiusMpc?: number;
-};
-
-/**
- * A galaxy cluster.  Clusters alone carry an Abell/ACO designation.
- */
-type ClusterPoi = ExtendedStructurePoi & {
-  readonly category: 'cluster';
-  /**
-   * Abell/ACO catalog designation where known (e.g. 'A1656' for Coma),
-   * surfaced directly so the InfoCard can show it.  Omitted when the
-   * cluster has no Abell number (e.g. Virgo).  Lives on the cluster arm
-   * only — superclusters, voids, and galaxies never have one.
-   */
-  readonly abell?: string;
-};
-
-/** A supercluster — an extended structure with no Abell designation. */
-type SuperclusterPoi = ExtendedStructurePoi & {
-  readonly category: 'supercluster';
-};
-
-/** A cosmic void — an extended structure with no Abell designation. */
-type VoidPoi = ExtendedStructurePoi & {
-  readonly category: 'void';
 };
 
 /**
@@ -176,4 +106,10 @@ type FamousGalaxyPoi = PoiCommon & {
   readonly labelWorldEmMpc?: number;
 };
 
-export type PointOfInterest = ClusterPoi | SuperclusterPoi | VoidPoi | FamousGalaxyPoi;
+/**
+ * A point of interest — either an extended structure (the
+ * `StructureRecord` arms: cluster / supercluster / void, the single source
+ * of truth for structure fields) or a famous galaxy.  Consumers narrow on
+ * `category` before touching arm-specific fields.
+ */
+export type PointOfInterest = StructureRecord | FamousGalaxyPoi;

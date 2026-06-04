@@ -41,6 +41,7 @@ import {
 import type { GalaxyCatalogSourceConfig } from '../../../../src/@types/engine/wiring/GalaxyCatalogSourceConfig';
 import type { WirePointSourceDeps } from '../../../../src/@types/engine/wiring/WirePointSourceDeps';
 import { Source } from '../../../../src/data/sources';
+import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
@@ -59,7 +60,6 @@ function makeState(opts: {
   loadedSources?: Iterable<{ source: SourceType; count: number }>;
   fadesStub?: Record<string, unknown>;
 }): EngineState {
-  const catalogs = new Map<SourceType, GalaxyCatalog>();
   return {
     gpu: {
       renderer: {
@@ -68,9 +68,7 @@ function makeState(opts: {
         totalCount: () => 0,
       },
     },
-    sources: {
-      catalogs,
-    },
+    data: createEngineData(),
     subsystems: {
       scheduler: { requestRender: vi.fn() },
       fades: opts.fadesStub ?? {
@@ -243,7 +241,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     expect(upload).toHaveBeenCalledOnce();
     expect(upload).toHaveBeenCalledWith(Source.Glade, cloud);
     // sources.catalogs was populated post-upload.
-    expect(state.sources.catalogs.get(Source.Glade)).toBe(cloud);
+    expect(state.data.galaxies.catalogs.get(Source.Glade)).toBe(cloud);
   });
 
   it('skips the upload silently when state.gpu.renderer is null (post-destroy / pre-init race)', async () => {
@@ -272,7 +270,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     });
 
     // sources.catalogs NOT populated — the upload was skipped.
-    expect(state.sources.catalogs.has(Source.TwoMRS)).toBe(false);
+    expect(state.data.galaxies.catalogs.has(Source.TwoMRS)).toBe(false);
   });
 
   it('registers a survey fade handle at opacity 0 for the wired source', () => {

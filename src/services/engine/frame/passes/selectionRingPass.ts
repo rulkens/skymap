@@ -50,7 +50,7 @@ export const selectionRingPass: Pass = {
     const sel = state.subsystems.selection.selected();
     // `enabled()` proved sel is a galaxy selection — narrow accordingly.
     if (sel === null || sel.kind !== 'galaxy') return;
-    const catalog = state.sources.catalogs.get(sel.source);
+    const catalog = state.data.galaxies.catalogs.get(sel.source);
     // Defensive: catalog could be evicted between `enabled()` and
     // `draw()` if a tier swap completes mid-frame.  A no-op is the
     // correct response — the next frame's `enabled()` will see the

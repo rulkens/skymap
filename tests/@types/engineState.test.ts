@@ -18,6 +18,7 @@ import { describe, it, expect } from 'vitest';
 import type { SourceType } from '../../src/@types/data/SourceType';
 
 import type { EngineState } from '../../src/@types/engine/state/EngineState';
+import { createEngineData } from '../../src/services/engine/data/createEngineData';
 import type { EngineSettingsState } from '../../src/@types/settings/EngineSettingsState';
 import type { EngineBiasState } from '../../src/@types/engine/state/EngineBiasState';
 import type { EngineSourceState } from '../../src/@types/engine/state/EngineSourceState';
@@ -88,7 +89,7 @@ describe('EngineState type', () => {
       thumbnails: { enabled: true },
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 1 },
-      volumes: { masterEnabled: false, fields: {} },
+      volumes: { masterEnabled: false },
       debug: { showPickBuffer: false, showDiskRadiusRing: false },
       labelCategoryVisibility: {
         cluster: true,
@@ -111,9 +112,6 @@ describe('EngineState type', () => {
     const sources: EngineSourceState = {
       pickMask: ALL_VISIBLE_MASK,
       drawMask: ALL_VISIBLE_MASK,
-      catalogs: new Map(),
-      famousMeta: [],
-      clusterBulk: null,
       tier: 'medium',
     };
     const picking: EnginePickingState = {
@@ -132,6 +130,7 @@ describe('EngineState type', () => {
       settings,
       bias,
       sources,
+      data: createEngineData(),
       picking,
       gpu: {
         renderer: null,
@@ -178,7 +177,7 @@ describe('EngineState type', () => {
         }),
         biasCorrection: createBiasCorrectionSubsystem({
           getMode: () => stateRef.current!.settings.bias.mode,
-          getLoadedClouds: () => stateRef.current!.sources.catalogs,
+          getLoadedClouds: () => stateRef.current!.data.galaxies.catalogs,
           requestRender: () => stateRef.current!.subsystems.scheduler.requestRender(),
         }),
         youAreHere: createYouAreHereSubsystem(),
@@ -237,7 +236,7 @@ describe('EngineState type', () => {
         enabled: SOURCE_REGISTRY[Source.Filaments].visible,
         intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
       },
-      volumes: { masterEnabled: DEFAULT_VOLUMES_ENABLED, fields: {} },
+      volumes: { masterEnabled: DEFAULT_VOLUMES_ENABLED },
       debug: { showPickBuffer: false, showDiskRadiusRing: false },
       labelCategoryVisibility: {
         cluster: true,
@@ -289,7 +288,7 @@ describe('EngineState type', () => {
         thumbnails: { enabled: true },
         milkyWay: { enabled: true },
         filaments: { enabled: false, intensity: 1 },
-        volumes: { masterEnabled: false, fields: {} },
+        volumes: { masterEnabled: false },
         debug: { showPickBuffer: false, showDiskRadiusRing: false },
         labelCategoryVisibility: {
           cluster: true,
@@ -312,11 +311,9 @@ describe('EngineState type', () => {
       sources: {
         pickMask: 0,
         drawMask: 0,
-        catalogs: new Map(),
-        famousMeta: [],
-        clusterBulk: null,
         tier: 'medium',
       },
+      data: createEngineData(),
       picking: {
         latestMouseCss: null,
         lastPickedMouseCss: null,
@@ -368,7 +365,7 @@ describe('EngineState type', () => {
         }),
         biasCorrection: createBiasCorrectionSubsystem({
           getMode: () => stateRef.current!.settings.bias.mode,
-          getLoadedClouds: () => stateRef.current!.sources.catalogs,
+          getLoadedClouds: () => stateRef.current!.data.galaxies.catalogs,
           requestRender: () => stateRef.current!.subsystems.scheduler.requestRender(),
         }),
         youAreHere: createYouAreHereSubsystem(),
@@ -401,14 +398,22 @@ describe('EngineState type', () => {
     state.sources.pickMask = 0xff;
     state.sources.drawMask = 0xff;
     // Hovered/selected live on the selection subsystem, not `state.picking`.
-    state.subsystems.selection.setHovered({ kind: 'galaxy', source: 1 as SourceType, localIdx: 42 });
+    state.subsystems.selection.setHovered({
+      kind: 'galaxy',
+      source: 1 as SourceType,
+      localIdx: 42,
+    });
     state.picking.pickInFlight = true;
 
     expect(state.settings.points.brightness).toBe(2.5);
     expect(state.settings.bias.absMagLimit).toBe(-20);
     expect(state.sources.pickMask).toBe(0xff);
     expect(state.sources.drawMask).toBe(0xff);
-    expect(state.subsystems.selection.hovered()).toEqual({ kind: 'galaxy', source: 1, localIdx: 42 });
+    expect(state.subsystems.selection.hovered()).toEqual({
+      kind: 'galaxy',
+      source: 1,
+      localIdx: 42,
+    });
     expect(state.picking.pickInFlight).toBe(true);
   });
 });

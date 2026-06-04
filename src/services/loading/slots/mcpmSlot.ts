@@ -37,10 +37,10 @@ export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, cb) => {
       // entry (MCPM is a shippable volume), so the guard normally takes
       // the preserve branch — it stays only to cover a handle with no
       // construction seed.
-      if (!state.settings.volumes.fields[handle]) {
-        state.settings.volumes.fields[handle] = buildVolumeFieldSettings(handle);
+      if (!state.data.volumes.params(handle)) {
+        state.data.volumes.setParams(handle, buildVolumeFieldSettings(handle));
       }
-      const persisted = state.settings.volumes.fields[handle]!;
+      const persisted = state.data.volumes.params(handle)!;
       renderer.setIntensity(handle, persisted.intensity);
       renderer.setEnabled(handle, persisted.enabled);
       renderer.setContrast(handle, persisted.contrast);

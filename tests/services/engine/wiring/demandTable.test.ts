@@ -33,15 +33,14 @@
  *
  * ### MCPM at boot
  *
- * The demand predicate for `mcpm` reads
- * `settings.volumes.fields['mcpm']?.enabled`. The engine seeds
- * `volumes.fields` at construction from the shippable volume registry
- * entries (`seedVolumeFields`), so `fields['mcpm'].enabled` is `true`
- * (registry visible:true) at boot, symmetric with how `drawMask` seeds
- * survey visibility. MCPM therefore IS in the boot demand set —
- * `cf4-density` is NOT (registry visible:false → seeded enabled:false).
- * The boot settings stub uses the same `seedVolumeFields` helper so the
- * test exercises the real defaults rather than a hand-rolled record.
+ * The demand predicate for `mcpm` reads `ctx.volumeField('mcpm')?.enabled`,
+ * sourced from the volume store. The engine seeds the store at construction
+ * from the shippable volume registry entries (`seedVolumeFields`), so
+ * `mcpm`'s enabled bit is `true` (registry visible:true) at boot, symmetric
+ * with how `drawMask` seeds survey visibility. MCPM therefore IS in the boot
+ * demand set — `cf4-density` is NOT (registry visible:false → seeded
+ * enabled:false). `makeState` seeds the store with the same `seedVolumeFields`
+ * helper so the test exercises the real defaults rather than a hand-rolled set.
  *
  * ### Synthetic fallback gate
  *
@@ -58,10 +57,14 @@ import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevalu
 import { Source } from '../../../../src/data/sources';
 import { ALL_VISIBLE_MASK } from '../../../../src/utils/sourceMask';
 import { seedVolumeFields } from '../../../../src/data/volumeFieldDefaults';
+import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { EngineData } from '../../../../src/@types/engine/data/EngineData';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { VolumeFieldId } from '../../../../src/@types/data/VolumeFieldId';
+import type { VolumeFieldSettings } from '../../../../src/@types/settings/VolumeFieldSettings';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 
@@ -94,7 +97,7 @@ function stubSlot(kind: LoadState<unknown>['kind'] = 'idle'): StubSlot {
     name: 'stub',
     load: load as unknown as StubSlot['load'],
     current: () => null,
-    state: () => ({ kind: current } as LoadState<unknown>),
+    state: () => ({ kind: current }) as LoadState<unknown>,
     subscribe: () => () => {},
     forceReload: () => {},
     cancel: () => {},
@@ -110,26 +113,36 @@ function stubSlot(kind: LoadState<unknown>['kind'] = 'idle'): StubSlot {
  */
 type SettingsLeaves = {
   filaments?: { enabled: boolean };
-  volumes?: { masterEnabled?: boolean; fields: Record<string, { enabled: boolean }> };
   markerCategoryVisibility?: Record<string, boolean>;
   labelCategoryVisibility?: Record<string, boolean>;
 };
 
 /**
+ * Volume-field params keyed by id. Demand predicates read these through the
+ * volume store (`ctx.volumeField(id)?.enabled`), so `makeState` seeds the
+ * store from this record rather than from the settings bag.
+ */
+type VolumeFieldLeaves = Partial<Record<VolumeFieldId, { enabled: boolean }>>;
+
+/**
  * Default-at-boot settings: all structure categories visible, filaments off,
- * Synthetic fallback visible, and `volumes.fields` seeded from the shippable
- * volume registry via the same `seedVolumeFields` the engine runs at
- * construction (mcpm enabled, cf4-density disabled).
+ * Synthetic fallback visible.
  *
  * These match the engine's real initial state as documented in
  * `data/defaults.ts` and `EngineSettingsState`.
  */
 const BOOT_SETTINGS: SettingsLeaves = {
   filaments: { enabled: false },
-  volumes: { fields: seedVolumeFields() },
   markerCategoryVisibility: { cluster: true, supercluster: true, void: true, famousGalaxy: true },
   labelCategoryVisibility: { cluster: true, supercluster: true, void: true, famousGalaxy: true },
 };
+
+/**
+ * Default-at-boot volume fields: seeded from the shippable volume registry via
+ * the same `seedVolumeFields` the engine runs at construction (mcpm enabled,
+ * cf4-density disabled).
+ */
+const BOOT_VOLUME_FIELDS: VolumeFieldLeaves = seedVolumeFields();
 
 // ── Stub state builder ───────────────────────────────────────────────────────
 
@@ -146,6 +159,8 @@ type NamedSlotOverrides = Partial<{
 type MakeStateOptions = {
   drawMask?: number;
   settings?: SettingsLeaves;
+  /** Volume-field params; seeded into `state.data.volumes`. Defaults to boot. */
+  volumeFields?: VolumeFieldLeaves;
   requests?: Set<string>;
   /** Per-source point slots. Defaults to a fresh idle stub for every Source. */
   pointSlots?: PointSlotOverrides;
@@ -170,6 +185,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
   const {
     drawMask = ALL_VISIBLE_MASK,
     settings = BOOT_SETTINGS,
+    volumeFields = BOOT_VOLUME_FIELDS,
     requests = new Set(),
     pointSlots = {},
     namedSlots = {},
@@ -178,18 +194,32 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
   // Build the points map: every source gets either the caller's override or a
   // fresh idle stub, so slotFor never returns undefined for a demanded key.
   const points = new Map<SourceType, AssetSlot<unknown, unknown>>(
-    ALL_POINT_SOURCES.map((src) => [src, (pointSlots[src] ?? stubSlot()) as AssetSlot<unknown, unknown>]),
+    ALL_POINT_SOURCES.map((src) => [
+      src,
+      (pointSlots[src] ?? stubSlot()) as AssetSlot<unknown, unknown>,
+    ]),
   );
+
+  // Seed the volume store the demand predicates read through `ctx.volumeField`.
+  // Only `.enabled` is consulted, so partial leaves are cast to the full shape.
+  const data: EngineData = createEngineData();
+  for (const [id, params] of Object.entries(volumeFields)) {
+    if (params) data.volumes.setParams(id as VolumeFieldId, params as VolumeFieldSettings);
+  }
 
   return {
     settings: settings as unknown as EngineSettingsState,
+    data,
     sources: { drawMask, tier: 'medium' },
     requests: requests as Set<import('../../../../src/@types/loading/RequestKey').RequestKey>,
     assetSlots: {
       points,
       filaments: (namedSlots.filaments ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
       famousMeta: (namedSlots.famousMeta ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
-      clusterCatalog: (namedSlots.clusterCatalog ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
+      clusterCatalog: (namedSlots.clusterCatalog ?? stubSlot()) as AssetSlot<
+        unknown,
+        unknown
+      > as never,
       pgcAlias: (namedSlots.pgcAlias ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
       cf4Density: (namedSlots.cf4Density ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
       mcpm: (namedSlots.mcpm ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
@@ -213,14 +243,21 @@ function firedKeys(state: EngineState): Set<AssetKey> {
 
   // Point slots — check each source we put in the map.
   for (const src of ALL_POINT_SOURCES) {
-    const slot = (state.assetSlots.points.get(src) as StubSlot | undefined);
+    const slot = state.assetSlots.points.get(src) as StubSlot | undefined;
     if (slot?.load.mock.calls.length) fired.add(src);
   }
 
   // Named slots — check the ones that might have fired.
-  const namedKeys = ['famousMeta', 'filaments', 'clusterCatalog', 'pgcAlias', 'cf4Density', 'mcpm'] as const;
+  const namedKeys = [
+    'famousMeta',
+    'filaments',
+    'clusterCatalog',
+    'pgcAlias',
+    'cf4Density',
+    'mcpm',
+  ] as const;
   for (const key of namedKeys) {
-    const slot = (state.assetSlots[key] as StubSlot | null | undefined);
+    const slot = state.assetSlots[key] as StubSlot | null | undefined;
     if (slot?.load.mock.calls.length) fired.add(key);
   }
 
@@ -240,8 +277,8 @@ describe('reevaluateDemand demand-table regression', () => {
    * just triggered by its own demand row before famousMeta's row evaluates), so
    * famousMeta is also demanded. clusterCatalog loads because every structure
    * category is visible by default. mcpm IS demanded: the predicate checks
-   * settings.volumes.fields['mcpm']?.enabled, which the construction seed lands
-   * as true (registry visible:true). cf4Density is NOT (seeded enabled:false).
+   * `ctx.volumeField('mcpm')?.enabled`, which the construction seed lands as
+   * true (registry visible:true). cf4Density is NOT (seeded enabled:false).
    * filaments: off. pgcAlias: no request. Synthetic: surveys not errored.
    */
   it('boot defaults: SDSS + 2MRS + GLADE + Famous + Milliquas + famousMeta + clusterCatalog + mcpm', () => {
@@ -252,16 +289,18 @@ describe('reevaluateDemand demand-table regression', () => {
 
     const fired = firedKeys(state);
 
-    expect(fired).toEqual(new Set<AssetKey>([
-      Source.SDSS,
-      Source.TwoMRS,
-      Source.Glade,
-      Source.Famous,
-      Source.Milliquas,
-      'famousMeta',
-      'clusterCatalog',
-      'mcpm',
-    ]));
+    expect(fired).toEqual(
+      new Set<AssetKey>([
+        Source.SDSS,
+        Source.TwoMRS,
+        Source.Glade,
+        Source.Famous,
+        Source.Milliquas,
+        'famousMeta',
+        'clusterCatalog',
+        'mcpm',
+      ]),
+    );
   });
 
   /**
@@ -277,17 +316,19 @@ describe('reevaluateDemand demand-table regression', () => {
 
     const fired = firedKeys(state);
 
-    expect(fired).toEqual(new Set<AssetKey>([
-      Source.SDSS,
-      Source.TwoMRS,
-      Source.Glade,
-      Source.Famous,
-      Source.Milliquas,
-      'famousMeta',
-      'clusterCatalog',
-      'mcpm',
-      'filaments',
-    ]));
+    expect(fired).toEqual(
+      new Set<AssetKey>([
+        Source.SDSS,
+        Source.TwoMRS,
+        Source.Glade,
+        Source.Famous,
+        Source.Milliquas,
+        'famousMeta',
+        'clusterCatalog',
+        'mcpm',
+        'filaments',
+      ]),
+    );
   });
 
   /**
@@ -303,8 +344,18 @@ describe('reevaluateDemand demand-table regression', () => {
   it('structures all hidden: no clusterCatalog (bug-fix pin)', () => {
     const settings: SettingsLeaves = {
       ...BOOT_SETTINGS,
-      markerCategoryVisibility: { cluster: false, supercluster: false, void: false, famousGalaxy: false },
-      labelCategoryVisibility: { cluster: false, supercluster: false, void: false, famousGalaxy: false },
+      markerCategoryVisibility: {
+        cluster: false,
+        supercluster: false,
+        void: false,
+        famousGalaxy: false,
+      },
+      labelCategoryVisibility: {
+        cluster: false,
+        supercluster: false,
+        void: false,
+        famousGalaxy: false,
+      },
     };
     const state = makeState({ settings });
 
@@ -330,17 +381,19 @@ describe('reevaluateDemand demand-table regression', () => {
 
     const fired = firedKeys(state);
 
-    expect(fired).toEqual(new Set<AssetKey>([
-      Source.SDSS,
-      Source.TwoMRS,
-      Source.Glade,
-      Source.Famous,
-      Source.Milliquas,
-      'famousMeta',
-      'clusterCatalog',
-      'mcpm',
-      'pgcAlias',
-    ]));
+    expect(fired).toEqual(
+      new Set<AssetKey>([
+        Source.SDSS,
+        Source.TwoMRS,
+        Source.Glade,
+        Source.Famous,
+        Source.Milliquas,
+        'famousMeta',
+        'clusterCatalog',
+        'mcpm',
+        'pgcAlias',
+      ]),
+    );
   });
 
   /**
@@ -396,27 +449,27 @@ describe('reevaluateDemand demand-table regression', () => {
    * mcpm's default-on bit survives. Famous slot 'loading' for famousMeta.
    */
   it('cf4Density field enabled: boot set + cf4Density', () => {
-    const settings: SettingsLeaves = {
-      ...BOOT_SETTINGS,
-      volumes: {
-        fields: { ...seedVolumeFields(), 'cf4-density': { enabled: true } },
-      },
+    const volumeFields: VolumeFieldLeaves = {
+      ...BOOT_VOLUME_FIELDS,
+      'cf4-density': { enabled: true },
     };
-    const state = makeState({ settings });
+    const state = makeState({ volumeFields });
 
     const fired = firedKeys(state);
 
-    expect(fired).toEqual(new Set<AssetKey>([
-      Source.SDSS,
-      Source.TwoMRS,
-      Source.Glade,
-      Source.Famous,
-      Source.Milliquas,
-      'famousMeta',
-      'clusterCatalog',
-      'mcpm',
-      'cf4Density',
-    ]));
+    expect(fired).toEqual(
+      new Set<AssetKey>([
+        Source.SDSS,
+        Source.TwoMRS,
+        Source.Glade,
+        Source.Famous,
+        Source.Milliquas,
+        'famousMeta',
+        'clusterCatalog',
+        'mcpm',
+        'cf4Density',
+      ]),
+    );
   });
 
   /**
@@ -434,12 +487,22 @@ describe('reevaluateDemand demand-table regression', () => {
       ...BOOT_SETTINGS,
       // Hide every structure category so clusterCatalog stays out of the set
       // and the assertion is purely the Famous companion join.
-      markerCategoryVisibility: { cluster: false, supercluster: false, void: false, famousGalaxy: false },
-      labelCategoryVisibility: { cluster: false, supercluster: false, void: false, famousGalaxy: false },
-      // Disable mcpm too so the fired set is exactly the join under test.
-      volumes: { fields: { ...seedVolumeFields(), mcpm: { enabled: false } } },
+      markerCategoryVisibility: {
+        cluster: false,
+        supercluster: false,
+        void: false,
+        famousGalaxy: false,
+      },
+      labelCategoryVisibility: {
+        cluster: false,
+        supercluster: false,
+        void: false,
+        famousGalaxy: false,
+      },
     };
-    const state = makeState({ settings, drawMask: 1 << Source.Famous });
+    // Disable mcpm too so the fired set is exactly the join under test.
+    const volumeFields: VolumeFieldLeaves = { ...BOOT_VOLUME_FIELDS, mcpm: { enabled: false } };
+    const state = makeState({ settings, volumeFields, drawMask: 1 << Source.Famous });
 
     const fired = firedKeys(state);
 

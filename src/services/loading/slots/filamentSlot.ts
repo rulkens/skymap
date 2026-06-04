@@ -60,9 +60,11 @@ export const createFilamentSlot: SlotFactory<FilamentCloud, FilamentReq> = (stat
       console.log(
         `[engine] filaments: ${s.value.stripCount} strips, ${s.value.vertexCount} verts`,
       );
-      // Push the parsed counts up to the UI layer.  See
+      // Record the durable load status on the filament store (the authoritative
+      // home), then push the parsed counts up to the UI layer.  See
       // `EngineCallbacks.filaments.onReady` for the lifecycle rationale —
       // one-shot, fires only when the optional binary actually loaded.
+      state.data.filaments.setLoaded(s.value.stripCount, s.value.vertexCount);
       cb.filaments?.onReady?.(s.value.stripCount, s.value.vertexCount);
       state.subsystems.scheduler.requestRender();
     }

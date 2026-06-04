@@ -12,24 +12,29 @@
  * policy across dozens of locations and makes it easy to miss an edge case
  * (e.g. filaments disabled mid-flight, tier change, source toggle off).
  *
- * ### The four read surfaces (ADR 0005 §3)
+ * ### The read surfaces (ADR 0005 §3)
  *
  *   1. `settings` — the `EngineSettingsState` (read-only view).  Covers
  *      master-enable toggles (`filaments.enabled`, `volumes.masterEnabled`,
- *      `milkyWay.enabled`) and per-field flags
- *      (`volumes.fields[id].enabled`).  Most predicates start here.
+ *      `milkyWay.enabled`).  Most predicates start here.
  *
- *   2. `isVisible` — the per-source drawMask bit.  A source-specific asset
+ *   2. `volumeField` — a per-field volume params accessor reading the volume
+ *      store (the authoritative home for `VolumeFieldSettings`).  Volume
+ *      demand predicates query this (`volumeField(id)?.enabled`) rather than
+ *      `settings`, since the per-field params no longer live on the settings
+ *      bag.
+ *
+ *   3. `isVisible` — the per-source drawMask bit.  A source-specific asset
  *      should only be loaded if its source is visible; this avoids
  *      background-loading a survey the user has toggled off.
  *
- *   3. `request` — one-shot transient flags (see `RequestKey`).  Covers
+ *   4. `request` — one-shot transient flags (see `RequestKey`).  Covers
  *      discrete UI events that have no persistent settings counterpart —
  *      opening the palette picker, requesting a lazy PGC-alias load, etc.
  *      The flag is never cleared; the demand loop's idle-guard stops the
  *      already-loaded slot from re-fetching, so a set-and-leave flag is safe.
  *
- *   4. `slotState` — the `LoadStateKind` of any slot in the registry.
+ *   5. `slotState` — the `LoadStateKind` of any slot in the registry.
  *      Used for two patterns described in ADR 0005 §3:
  *
  *        - *Companion join*: an asset that should only start loading after
@@ -49,12 +54,14 @@
  *
  * `DemandCtx` is consumed inside `shouldLoad` callbacks; those callbacks
  * must not mutate engine state.  The surfaces are read-only by construction:
- * `settings` is a `Readonly<EngineSettingsState>`, `isVisible`/`request`/
- * `slotState` are query functions that return primitives.
+ * `settings` is a `Readonly<EngineSettingsState>`, `volumeField`/`isVisible`/
+ * `request`/`slotState` are query functions that return read-only values.
  */
 
 import type { EngineSettingsState } from '../settings/EngineSettingsState';
 import type { SourceType } from '../data/SourceType';
+import type { VolumeFieldId } from '../data/VolumeFieldId';
+import type { VolumeFieldSettings } from '../settings/VolumeFieldSettings';
 import type { AssetKey } from './AssetKey';
 import type { LoadState } from './LoadState';
 import type { RequestKey } from './RequestKey';
@@ -62,6 +69,11 @@ import type { RequestKey } from './RequestKey';
 export type DemandCtx = {
   /** Read-only view of the user-facing rendering settings. */
   settings: Readonly<EngineSettingsState>;
+  /**
+   * A volume field's params from the volume store, or undefined if not
+   * registered. Volume demand predicates read `volumeField(id)?.enabled`.
+   */
+  volumeField: (id: VolumeFieldId) => VolumeFieldSettings | undefined;
   /** Returns true when the given source's drawMask bit is set. */
   isVisible: (s: SourceType) => boolean;
   /** Returns true when the given one-shot request flag is pending. */

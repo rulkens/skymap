@@ -7,14 +7,14 @@
  *
  * Two consumers want exactly the same id-slug + worldPos mapping:
  *
- *   1.  `services/engine/phases/wireSlots.ts` — the engine bootstrap
- *       pushes these into `state.subsystems.pois.setPois(...)` so the
+ *   1.  `services/engine/wiring/wirePoiProjection.ts` — the engine bootstrap
+ *       writes these into the structure store and the `poiSubsystem` so the
  *       label/ring overlays know where to draw.
  *
  *   2.  `hooks/usePoiUrlSync.ts` — the React-side `#poi=<id>` deep-link
- *       drain needs a `PointOfInterest` to feed `camera.focusOn`, but
- *       App.tsx has no public read-side accessor for the engine's POI
- *       table (the subsystem owns the list).
+ *       drain needs a `StructureRecord` to feed `camera.focusOn`, but
+ *       App.tsx has no public read-side accessor for the engine's structure
+ *       table (the store owns the list).
  *
  * Keeping a single helper here means both call sites agree on:
  *
@@ -32,9 +32,9 @@
  *     (cone-search, ring sizing) rely on.
  *
  *   - The cluster-only `abell` carry-through: the seed's Abell/ACO
- *     designation lands on the cluster arm alone (the `PointOfInterest`
- *     union has no `abell` field on the supercluster/void/galaxy arms),
- *     so the field never leaks onto a non-cluster anchor.
+ *     designation lands on the cluster arm alone (the `StructureRecord`
+ *     union has no `abell` field on the supercluster/void arms), so the
+ *     field never leaks onto a non-cluster anchor.
  *
  * ### Why not expose the engine's POI list directly?
  *
@@ -57,7 +57,7 @@
  */
 
 import { raDecDistToEqCart } from '../utils/math/raDecDistToEqCart';
-import type { PointOfInterest } from '../@types/engine/subsystems/PointOfInterest';
+import type { StructureRecord } from '../@types/engine/data/StructureRecord';
 // Vite resolves JSON imports at build time; TypeScript narrows the type
 // via `resolveJsonModule: true`.  We cast to the fields we consume so
 // new seed columns don't require a type update here.  The JSON's shape is
@@ -86,15 +86,15 @@ type SeedEntry = {
 };
 
 /**
- * Build one POI from a seed entry.  The seed's `category` is the union
+ * Build one record from a seed entry.  The seed's `category` is the union
  * `'cluster' | 'supercluster' | 'void'`; a single object literal whose
  * `category` is that union does NOT narrow to one arm of the discriminated
- * `PointOfInterest`, so we switch on it and let each branch produce a
+ * `StructureRecord`, so we switch on it and let each branch produce a
  * literal whose `category` is a single string — which the arm types accept.
- * The three structure arms share `ExtendedStructurePoi`'s body, so the only
+ * The three structure arms share `StructureBase`'s body, so the only
  * difference between branches is the discriminant.
  */
-function buildAnchorPoi(a: SeedEntry): PointOfInterest {
+function buildAnchorPoi(a: SeedEntry): StructureRecord {
   const common = {
     // `${category}-${seed.id}` is the canonical POI id — the seed's
     // curated `id` field is the single source of truth, so deep-link
@@ -135,6 +135,6 @@ function buildAnchorPoi(a: SeedEntry): PointOfInterest {
  * each call — callers should memoize at the React boundary so reference
  * identity is preserved across renders).
  */
-export function buildStaticAnchorPois(): PointOfInterest[] {
+export function buildStaticAnchorPois(): StructureRecord[] {
   return (clusterSeedJson as SeedEntry[]).map(buildAnchorPoi);
 }
