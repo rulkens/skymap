@@ -3,12 +3,9 @@
  * `#focus=<galaxyId>` (galaxy commit) and `#poi=<poiId>` (POI commit)
  * segments in one place.
  *
- * Replaces the legacy `useFocusUrlSync` + `usePoiUrlSync` pair.  Why
- * merging is now clean: both legacy hooks had to coordinate via "is
- * the hash someone else's segment?" prefix guards (`hashIsFocusOrEmpty`
- * / `hashIsPoiOrEmpty`).  One owner can't race itself, so those
- * guards collapse — the write effect just computes the canonical body
- * from whichever state slot is set.  Galaxy wins the mutex tiebreak
+ * One owner can't race itself, so there are no "is the hash someone
+ * else's segment?" prefix guards — the write effect just computes the
+ * canonical body from whichever state slot is set.  Galaxy wins the mutex tiebreak
  * (matches engine click-handler precedence: POI clicks clear galaxy
  * selection at the engine level today, so "both set" is only ever a
  * transient cross-render race, and we resolve it deterministically
@@ -19,8 +16,7 @@
  * ──────────────────────────────────────────────────────────────────────
  * Vitest runs in `node` env (no DOM), so all interesting branches live
  * in `computeDesiredHash` and `initialPendingFromHash`, which the hook's
- * effects shovel into `history.pushState`.  Same pattern as the legacy
- * galaxy hook.
+ * effects shovel into `history.pushState`.
  *
  * ──────────────────────────────────────────────────────────────────────
  * Why `pushState` (not `replaceState`)
@@ -28,15 +24,13 @@
  * Pinning a galaxy OR focusing a POI is a navigational act — Back
  * should return to the previous selection (galaxy ↔ POI ↔ empty).
  * popstate translates browser-driven hash changes into the same
- * pending-slot mechanism the initial mount uses.  Same rationale the
- * two legacy hooks used independently.
+ * pending-slot mechanism the initial mount uses.
  *
  * ──────────────────────────────────────────────────────────────────────
  * SSR safety
  * ──────────────────────────────────────────────────────────────────────
  * Every `window` / `history` access is wrapped in `typeof window !==
- * 'undefined'`.  Skymap doesn't SSR today but the guard is cheap and
- * matches the legacy hooks' shape.
+ * 'undefined'`.  Skymap doesn't SSR today but the guard is cheap.
  *
  * ──────────────────────────────────────────────────────────────────────
  * Five effects
@@ -45,8 +39,8 @@
  *      disambiguates the URL on popstate via `initialPendingFromHash`,
  *      routes into the right pending slot, and clears stale pending
  *      from the other slot.  An empty hash on popstate calls
- *      `selection.clear()` (which Task 3 widened to tear down both
- *      galaxy and POI selection in one call).
+ *      `selection.clear()`, which tears down both galaxy and POI
+ *      selection in one call.
  *
  *   2. State → URL — derives the canonical body via `computeDesiredHash`
  *      and writes it via `pushState`.  Skips no-op writes (`matches`
@@ -55,21 +49,19 @@
  *      segment-guard skip — we own the hash.
  *
  *   3. Galaxy drain — resolves `pendingTarget` against the loaded
- *      catalogs (same logic as the legacy galaxy hook).  Resolution
- *      is monotonic: `unknown` is treated as "not yet" and the effect
- *      re-fires on data dep changes.
+ *      catalogs.  Resolution is monotonic: `unknown` is treated as
+ *      "not yet" and the effect re-fires on data dep changes.
  *
  *   4. POI drain — resolves `pendingPoiId` against the POI table and
- *      dispatches via `camera.focusOn(poi)` (Task 2's unified method,
- *      which accepts both GalaxyInfo and PointOfInterest).  Clears
+ *      dispatches via `camera.focusOn(poi)` (the unified method,
+ *      which accepts both GalaxyInfo and StructureRecord).  Clears
  *      pending only on successful resolve; missing-id leaves pending
  *      set so a future `pois` change (e.g. famous-meta load) re-fires
  *      the drain.
  *
  *   5. Galaxy supersede — collapses `pendingTarget` once `focused`
- *      lands (deep-link wins vs casual click race; matches the legacy
- *      galaxy hook's effect 3b).  No POI supersede because the POI
- *      table is synchronous.
+ *      lands (deep-link wins vs casual click race).  No POI supersede
+ *      because the POI table is synchronous.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -148,16 +140,8 @@ export function initialPendingFromHash(hash: string): InitialPending {
 // ── React hook ─────────────────────────────────────────────────────────────
 
 export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
-  const {
-    focused,
-    status,
-    sourceCounts,
-    famousMeta,
-    aliasMap,
-    ready,
-    pois,
-    engineHandleRef,
-  } = input;
+  const { focused, status, sourceCounts, famousMeta, aliasMap, ready, pois, engineHandleRef } =
+    input;
 
   const [pendingTarget, setPendingTarget] = useState<FocusTarget | null>(null);
   const [pendingPoiId, setPendingPoiId] = useState<string | null>(null);
@@ -167,8 +151,7 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
   // Back/Forward presses also drive both pending slots through the same
   // resolution paths.  A single handler disambiguates via
   // `initialPendingFromHash` and clears the stale slot from the other
-  // kind — the two legacy hooks had to guard against clobbering each
-  // other's segment; here we are the sole owner so a switch in hash
+  // kind — we are the sole owner of the hash, so a switch in hash
   // kind (e.g. back-nav from `#focus=m31` to `#poi=virgo`) is just
   // "set the new slot, clear the old one."
   const mountedRef = useRef(false);
@@ -195,9 +178,9 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
         setPendingTarget(null);
       } else {
         // Back-step to empty hash — clear any stale pending AND tell
-        // the engine to drop both kinds of selection (Task 3 widened
-        // `clear()` to handle both).  Without this, the next render
-        // would write the previous body back over the empty one.
+        // the engine to drop both kinds of selection (`clear()` handles
+        // both).  Without this, the next render would write the previous
+        // body back over the empty one.
         setPendingTarget(null);
         setPendingPoiId(null);
         engineHandleRef.current?.selection.clear();
@@ -240,7 +223,7 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
 
   // ── Effect 3: galaxy drain ────────────────────────────────────────────
   // Resolve pendingTarget against the engine's currently loaded data
-  // and dispatch a selection.  Re-runs on every data dep change because
+  // and dispatch a selection.  Re-runs on every data dep change since
   // resolution is monotonic — a transient `unknown` is just "not yet."
   // We deliberately do NOT clear pending on `unknown`; the supersede
   // effect below collapses pending the moment any selection lands.
@@ -299,7 +282,7 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
   // "deep-link arrival waits as long as it takes" contract.
   //
   // `camera.focusOn` is the unified method that accepts both GalaxyInfo
-  // and PointOfInterest, routing each to its own commit path internally.
+  // and StructureRecord, routing each to its own commit path internally.
   useEffect(() => {
     if (!pendingPoiId) return;
     if (!ready) return;
@@ -308,7 +291,7 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
     if (!handle) return;
     const poi = pois.find((p) => p.id === pendingPoiId);
     if (!poi) return; // Leave pending set — re-fires when `pois` grows.
-    handle.camera.focusOn(poi); // Task 2's unified focusOn.
+    handle.camera.focusOn(poi); // The unified focusOn.
     setPendingPoiId(null);
   }, [pendingPoiId, ready, pois, engineHandleRef]);
 

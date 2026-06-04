@@ -4,11 +4,8 @@
  *
  * Despite the name "labels", this handle exposes setters for BOTH the
  * text-label axis AND the marker (ring + halo) axis of POI rendering.
- * The two axes are deliberately independent — see the docblock on
- * `poiSubsystem.ts` for the 2026-05-19 audit (Q11) decision that split
- * them.  The handle name pre-dates the split; the Settings-panel
- * restructure (Task #6 of that audit) is the natural moment to rename
- * the namespace if the project decides to.
+ * The two axes are deliberately independent: a category's marker can be
+ * hidden while its text label still renders, and vice versa.
  */
 
 import type { PoiCategory } from '../data/PoiCategory';

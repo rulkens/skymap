@@ -2,7 +2,7 @@
  * clusterCatalogSlot — verifies the slot wakes the renderer on a successful
  * load and degrades gracefully on fetch failure.
  *
- * The slot has no GPU commit and owns no state — `wirePoiProjection`
+ * The slot has no GPU commit and owns no state — `wireStructureProjection`
  * subscribes to the same slot and consumes the ready value.  So the only
  * observable behaviour here is a `requestRender()` wake on ready and a warn
  * on error.  We mock the fetcher module so `slot.load()` drives a
@@ -62,7 +62,7 @@ describe('createClusterCatalogSlot', () => {
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
     // The slot owns no state — it only wakes the renderer so the bulk
-    // markers (fed by wirePoiProjection from the same ready value) get drawn.
+    // markers (fed by wireStructureProjection from the same ready value) get drawn.
     expect(requestRender).toHaveBeenCalled();
     // Construction purity: the factory RETURNS the slot and does NOT
     // self-install it — `installSlots` (the orchestrator) owns the write.

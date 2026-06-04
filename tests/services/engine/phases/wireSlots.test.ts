@@ -6,7 +6,7 @@
  * observable effects otherwise have no direct asserts — yet they gate "loading
  * screen ⇒ stars on canvas". The phase's internals (the synthetic-fallback
  * gate, the POI projection, the demand loop) each have their own unit tests
- * (`createSyntheticFallback.test.ts`, `wirePoiProjection.test.ts`,
+ * (`createSyntheticFallback.test.ts`, `wireStructureProjection.test.ts`,
  * `reevaluateDemand.test.ts` / `demandTable.test.ts`); this file pins that
  * wireSlots composes them into the right boot behaviour:
  *
@@ -85,7 +85,7 @@ vi.mock('../../../../src/services/loading/fetchers/famousMetaFetcher', () => ({
 
 // The cluster-catalog slot fires `.load({})` at boot; mock its fetcher so
 // the test doesn't network.  An empty catalog is enough by default — the
-// merge test overrides this mock with a populated payload so wirePoiProjection
+// merge test overrides this mock with a populated payload so wireStructureProjection
 // builds bulk records from the slot's ready value.
 vi.mock('../../../../src/services/loading/fetchers/clusterCatalogFetcher', () => ({
   clusterCatalogFetcher: vi.fn(async () => ({

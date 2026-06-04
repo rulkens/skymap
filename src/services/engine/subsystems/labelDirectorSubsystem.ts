@@ -65,8 +65,8 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
   // and is distinct from null.
   let prevSignature: string | null = null;
   // One-shot fade-in flag for the 'poi' label layer.  Flips true on the first
-  // frame that flushes a non-empty (decluttered) label set.  Re-homed here
-  // from poiSubsystem when the producers split (Spec 3) so the fade survives.
+  // frame that flushes a non-empty (decluttered) label set.  Lives here because
+  // only the director sees the merged, decluttered set the fade should react to.
   let didFireFadeIn = false;
 
   function attachRenderers(label: LabelRenderer, line: MarkerLineRenderer): void {
@@ -228,8 +228,8 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
     const { labels, lines } = declutter(mergedLabels, mergedLines, ctx);
 
     // One-shot layer fade-in: the first non-empty (decluttered) label set
-    // fires fadeTo(1) on the POI layer's FadeHandle.  Re-homed from
-    // poiSubsystem (Spec 3) so the producer split doesn't strand it.  The
+    // fires fadeTo(1) on the POI layer's FadeHandle.  It lives here because the
+    // director owns the merged, decluttered set the fade should react to.  The
     // label renderer doesn't consume the opacity yet — registration is
     // structural for future tour addressing.
     if (!didFireFadeIn && labels.length > 0) {

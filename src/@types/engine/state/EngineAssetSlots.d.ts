@@ -62,9 +62,9 @@ export type EngineAssetSlots = {
    * routed through a slot for parity with the other CPU-side sidecars.  Loaded
    * eagerly at engine boot; the payload is small.
    *
-   * No `commit` step — there is nothing GPU-side to upload.  `wirePoiProjection`
+   * No `commit` step — there is nothing GPU-side to upload.  `wireStructureProjection`
    * subscribes to this slot and converts the ready value into structure records
-   * for `structureStore` + `poiSubsystem`.  Null until the IIFE mints it
+   * written into the structure store.  Null until the IIFE mints it
    * (matches `famousMeta` for the same lifecycle reason).
    */
   clusterCatalog: AssetSlot<ClusterCatalogPayload, ClusterCatalogReq> | null;

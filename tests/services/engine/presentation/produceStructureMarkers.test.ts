@@ -6,9 +6,9 @@ import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/Read
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
 
-// Reuses the poiSubsystem.test harness shape: a real engineData (so
-// state.data.structures is the production store) plus a selection stub whose
-// selected()/focused() drive the ring bump + focus dim.
+// Builds a real engineData store (so state.data.structures is the production
+// store) plus a selection stub whose selected()/focused() drive the ring
+// bump + focus dim, then drives the producer.
 function makeState(
   selectedPoiId: string | null = null,
   focusedPoiId: string | null = selectedPoiId,

@@ -3,12 +3,11 @@
  * structures (cluster / supercluster / void) rendered as ring/halo markers
  * and text labels.
  *
- * Split out of the former `poiSubsystem.POI_STYLES` (Spec 3): the structure
- * rows travel with the structure presentation producers
- * (`produceStructureMarkers`, `produceStructureLabels`), the famous-galaxy
- * row travels with `produceFamousLabels`. Keeping the structure styles here
- * keeps the producers' per-category math reading a single local table rather
- * than a four-category union that includes a kind they never emit.
+ * The per-`StructureCategory` marker styles travel with the structure
+ * presentation producers (`produceStructureMarkers`, `produceStructureLabels`);
+ * famous-galaxy styling lives in `famousLabelStyle`. Keeping the structure
+ * styles here lets the producers' per-category math read a single local table
+ * rather than a wider union that includes a kind they never emit.
  *
  * `StructureCategory` (cluster | supercluster | void) is the discriminant;
  * every row is keyed by it so the table and the type can't drift.

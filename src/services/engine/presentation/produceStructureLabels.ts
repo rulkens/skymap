@@ -2,18 +2,17 @@
  * produceStructureLabels — per-frame text labels for the extended structures
  * (cluster / supercluster / void), read from `structureStore`.
  *
- * Extracted from the structure arm of `poiSubsystem.produceLabels` (Spec 3):
- * the data now lives in `state.data.structures` and the famous-galaxy arm has
- * moved to `produceFamousLabels`. The marker close-approach / far-distance
- * fades, the featured + visibility gates, and the ring-centre anchor are
- * carried verbatim.
+ * Reads `state.data.structures` and emits structure labels — applying the
+ * marker close-approach / far-distance fades, the featured + visibility gates,
+ * and the ring-centre anchor. Famous-galaxy labels come from
+ * `produceFamousLabels` instead.
  *
  * ### No declutter here — the director owns it
  *
- * The old `produceLabels` ran a greedy screen-space declutter on its own
- * candidates before emitting. That only de-collided structure-vs-structure
- * labels; it couldn't see the famous or you-are-here labels. This producer
- * therefore emits EVERY surviving candidate, tagging each with a
+ * A producer-local screen-space declutter could only de-collide
+ * structure-vs-structure labels; it couldn't see the famous or you-are-here
+ * labels. This producer therefore emits EVERY surviving candidate, tagging each
+ * with a
  * `prominencePx` (the ring's apparent radius) as the declutter sort key, and
  * the `labelDirectorSubsystem` declutters across ALL producers in its merge
  * step. Decluttering by apparent size (not a flat significance) keeps the

@@ -3,12 +3,11 @@
  * derived entirely from `galaxyStore` (the famous `.bin` catalog joined with
  * its `famousMeta` sidecar).
  *
- * Extracted from the famous arm of `poiSubsystem.produceLabels` (Spec 3), and
- * folding in what `buildPoisFromFamousMeta` used to do as a separate wiring
- * phase. Famous galaxies are galaxy data, not structures — their anchor is the
- * galaxy point itself, they emit no ring/halo marker, and their visibility
- * lives on `galaxyStore.famousLabelsVisible`. The two-asset join (catalog
- * positions/diameters ⋈ meta names) now happens here, on the galaxy side.
+ * Famous galaxies are galaxy data, not structures — their anchor is the galaxy
+ * point itself, they emit no ring/halo marker, and their visibility lives on
+ * `galaxyStore.famousLabelsVisible`. The two-asset join (catalog
+ * positions/diameters ⋈ meta names) happens here, on the galaxy side, and emits
+ * the famous labels plus their anchor lines.
  *
  * ### Meta ⋈ catalog alignment
  *
@@ -74,8 +73,7 @@ function famousLabelWorldEmMpc(diameterKpc: number): number {
 
 /**
  * The famous-galaxy fields the label math needs, derived per frame from the
- * catalog ⋈ meta join. The former `FamousGalaxyPoi` arm of `PointOfInterest`,
- * now a transient local shape rather than stored data.
+ * catalog ⋈ meta join. A transient local shape rather than stored data.
  */
 type FamousLabelInput = {
   readonly id: string;
@@ -88,9 +86,9 @@ type FamousLabelInput = {
 };
 
 /**
- * Zip the meta sidecar with the famous catalog rows into label inputs. Mirrors
- * the former `buildPoisFromFamousMeta`; the `catalogIdx` counter advances only
- * for non-pseudo entries so the index mapping survives mixed-in pseudo rows.
+ * Zip the meta sidecar with the famous catalog rows into label inputs. The
+ * `catalogIdx` counter advances only for non-pseudo entries so the index
+ * mapping survives mixed-in pseudo rows.
  */
 function deriveFamousLabelInputs(
   meta: readonly FamousMetaEntry[],

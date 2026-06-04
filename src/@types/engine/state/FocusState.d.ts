@@ -27,7 +27,7 @@ import type { Vec3 } from '../../math/Vec3';
 
 export type FocusState = {
   /**
-   * Stable POI identifier (matches `PointOfInterest.id`). Used to key
+   * Stable POI identifier (matches `StructureRecord.id`). Used to key
    * the membership cache (`(poiId, dataRev) → packedIds`) and to wire
    * the URL hash echo.
    */
@@ -51,7 +51,7 @@ export type FocusState = {
 
   /**
    * World-space center of the POI (Mpc). Mirrors
-   * `PointOfInterest.worldPos`. Carried separately so the focus
+   * `StructureRecord.worldPos`. Carried separately so the focus
    * uniform write doesn't have to re-resolve the POI by id every frame.
    */
   readonly center: Vec3;

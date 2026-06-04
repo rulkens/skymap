@@ -1,11 +1,11 @@
 /**
- * Tests for `buildStaticAnchorPois` — the shared id + worldPos builder
- * that backs both the engine's POI subsystem seed and the React-side
+ * Tests for `buildStaticAnchorStructures` — the shared id + worldPos builder
+ * that backs both the structure store's `anchors` group and the React-side
  * `#poi=<id>` deep-link drain.
  *
  * The interesting invariant is the id rule: the URL hash codec
  * (`parsePoiHash`) accepts `[a-z0-9_-]+`, and the drain looks up the
- * pending id verbatim against the POI table.  We assert that the
+ * pending id verbatim against the structure table.  We assert that the
  * emitted ids match the seed's curated `id` field prefixed by category,
  * including entries whose display names contain non-ASCII characters
  * (Boötes Void → `void-bootes-void` from seed id, not `bo-tes-void`
@@ -16,17 +16,17 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { buildStaticAnchorPois } from '../../src/data/buildStaticAnchorPois';
+import { buildStaticAnchorStructures } from '../../src/data/buildStaticAnchorStructures';
 import clusterSeedJson from '../../data/cluster_anchors.seed.json';
 
-describe('buildStaticAnchorPois', () => {
-  it('emits one POI per seed entry across all three categories', () => {
-    const pois = buildStaticAnchorPois();
+describe('buildStaticAnchorStructures', () => {
+  it('emits one structure per seed entry across all three categories', () => {
+    const pois = buildStaticAnchorStructures();
     expect(pois.length).toBe(clusterSeedJson.length);
   });
 
   it('produces URL-safe ids by prefixing the category to the seed id field', () => {
-    const pois = buildStaticAnchorPois();
+    const pois = buildStaticAnchorStructures();
     const byName = new Map(pois.map((p) => [p.name, p.id]));
     // Ids come from the curated seed `id` field, not a runtime slug —
     // so they're stable regardless of display-name punctuation or encoding.
@@ -44,20 +44,20 @@ describe('buildStaticAnchorPois', () => {
   });
 
   it('carries physicalRadiusMpc through from the seed', () => {
-    const pois = buildStaticAnchorPois();
+    const pois = buildStaticAnchorStructures();
     const virgo = pois.find((p) => p.id === 'cluster-virgo-m87');
     // StructureRecord carries the radius on every arm — no narrowing needed.
     expect(virgo?.physicalRadiusMpc).toBe(2.2);
   });
 
   it('carries apparentRadiusMpc through from the seed', () => {
-    const pois = buildStaticAnchorPois();
+    const pois = buildStaticAnchorStructures();
     const virgo = pois.find((p) => p.id === 'cluster-virgo-m87');
     expect(virgo?.apparentRadiusMpc).toBe(6);
   });
 
   it('carries the curated description through from the seed', () => {
-    const pois = buildStaticAnchorPois();
+    const pois = buildStaticAnchorStructures();
     // Assert against the seed's own value (not a hardcoded string) so the
     // test stays green when the curated blurbs are rewritten — it verifies
     // the carry-through wiring, not the prose.
@@ -70,8 +70,8 @@ describe('buildStaticAnchorPois', () => {
   });
 
   it('is synchronous and returns a fresh array per call', () => {
-    const a = buildStaticAnchorPois();
-    const b = buildStaticAnchorPois();
+    const a = buildStaticAnchorStructures();
+    const b = buildStaticAnchorStructures();
     // Fresh array each call (so a mutating caller can't corrupt a shared
     // instance) but structurally identical — the build is deterministic.
     expect(a).not.toBe(b);
@@ -79,7 +79,7 @@ describe('buildStaticAnchorPois', () => {
   });
 
   it('surfaces the abell designation on a featured cluster', () => {
-    const pois = buildStaticAnchorPois();
+    const pois = buildStaticAnchorStructures();
     const coma = pois.find((p) => p.id === 'cluster-coma-a1656');
     // Narrow to the cluster arm — `abell` lives there alone.
     const abell = coma && coma.category === 'cluster' ? coma.abell : undefined;
@@ -93,14 +93,14 @@ describe('buildStaticAnchorPois', () => {
     expect(aVoid && 'abell' in aVoid).toBe(false);
   });
 
-  it('marks every static anchor POI as featured', () => {
-    const pois = buildStaticAnchorPois();
+  it('marks every static anchor as featured', () => {
+    const pois = buildStaticAnchorStructures();
     expect(pois.length).toBeGreaterThan(0);
     expect(pois.every((p) => p.featured === true)).toBe(true);
   });
 
   it('assigns the correct category per anchor list', () => {
-    const pois = buildStaticAnchorPois();
+    const pois = buildStaticAnchorStructures();
     const cats = new Set(pois.map((p) => p.category));
     expect(cats.has('cluster')).toBe(true);
     expect(cats.has('supercluster')).toBe(true);

@@ -157,13 +157,13 @@ export type EngineSettingsState = {
 
   /**
    * Per-category visibility for the POI TEXT LABEL overlay.  Keyed by
-   * the canonical `PoiCategory` union from `poiSubsystem`.  Defaults
-   * to every category visible.
+   * the canonical `PoiCategory` union (`@types/engine/data/PoiCategory`).
+   * Defaults to every category visible.
    *
-   * The 2026-05-19 settings-panel audit (Q11) split this into two
-   * orthogonal records — see `markerCategoryVisibility` for the
-   * marker (ring + halo) counterpart, and `poiSubsystem.ts`'s module
-   * docblock for the conflation bug the split fixed.
+   * This is one of two orthogonal records — see `markerCategoryVisibility`
+   * for the marker (ring + halo) counterpart.  Label-text and marker
+   * visibility are independent so a category's ring can be hidden while
+   * its label still renders, and vice versa.
    */
   labelCategoryVisibility: Record<PoiCategory, boolean>;
   /**

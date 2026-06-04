@@ -2,10 +2,10 @@
  * produceStructureMarkers — per-frame ring/halo descriptors for the extended
  * structures (cluster / supercluster / void), read from `structureStore`.
  *
- * Extracted from `poiSubsystem.produceMarkers` (Spec 3): the data now lives in
- * `state.data.structures` and famous galaxies are gone from this path (they
- * never emitted markers). Everything else — the apparent-size fades,
- * significance weighting, selection bump, focus dim — is carried verbatim.
+ * Reads `state.data.structures` and emits one cluster marker descriptor per
+ * marker-bearing structure — applying apparent-size fades, significance
+ * weighting, the selection bump, and the focus dim. Famous galaxies are not on
+ * this path; they never emit markers.
  *
  * ### Emit-all-then-discard contract (pick-index alignment)
  *

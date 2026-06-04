@@ -42,7 +42,7 @@ import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useEngineSettings } from '../../hooks/useEngineSettings';
 import { useSpaceMouseDevicePresence } from '../../hooks/useSpaceMouseDevicePresence';
-import { buildStaticAnchorPois } from '../../data/buildStaticAnchorPois';
+import { buildStaticAnchorStructures } from '../../data/buildStaticAnchorStructures';
 import { DebugPanel } from '../DebugPanel/DebugPanel';
 import { isWebHIDSupported } from '../../services/input/spaceMouse';
 
@@ -157,13 +157,13 @@ export function App(): React.ReactElement {
     engineHandleRef: handleRef,
   });
 
-  // Static POI table for the URL drain.  The engine owns the merged list
-  // (static anchors + async famous-galaxy POIs), but threading that as a
-  // reactive React slice would re-render App on every famous-meta load.
+  // Static structure table for the URL drain.  The engine owns the merged
+  // list (static anchors + the async bulk cluster catalog), but threading
+  // that as a reactive React slice would re-render App on every catalog load.
   // Deep-link arrivals only need the static subset (`#poi=cluster-…` /
   // `supercluster-…` / `void-…`).  `useMemo([])` so the drain effect
   // doesn't re-fire on every render.
-  const staticPois = useMemo(() => buildStaticAnchorPois(), []);
+  const staticStructures = useMemo(() => buildStaticAnchorStructures(), []);
   useUrlSync({
     focused,
     status,
@@ -171,7 +171,7 @@ export function App(): React.ReactElement {
     famousMeta,
     aliasMap,
     ready: status.kind === 'ready',
-    pois: staticPois,
+    pois: staticStructures,
     engineHandleRef: handleRef,
   });
 

@@ -3,10 +3,9 @@
  * selection layers speak: the three extended-structure categories plus
  * `famousGalaxy`.
  *
- * Relocated out of the (now deleted) `poiSubsystem` when the producers split
- * (Spec 3).  Defined as `StructureCategory | 'famousGalaxy'` so the structure
- * categories and this superset can't drift: adding a structure category in one
- * place adds it here too.
+ * Defined as `StructureCategory | 'famousGalaxy'` so the structure categories
+ * and this superset can't drift: adding a structure category in one place adds
+ * it here too.
  *
  * Used where the FOUR-category space is genuinely needed — the SettingsPanel
  * label/marker visibility toggles, `EngineSettingsState`'s per-category
