@@ -16,9 +16,9 @@ export type CreateClickResolverInput = {
    * Why optional?  The galaxy-only call paths (unit tests for the
    * pre-Plan-3 shape; the engine bootstrap window before POI tables
    * exist) shouldn't be forced to stub a callback they never trigger.
-   * In production, `wireInput` passes a closure that walks the arrays
-   * handed to `poiSubsystem.setPois`; in tests, a static lookup or
-   * `() => null` suffices.
+   * In production, `wireInput` passes a closure that reads
+   * `state.data.structures` (the structure store); in tests, a static
+   * lookup or `() => null` suffices.
    *
    * Returning `null` from the callback (e.g. an unallocated `poiIndex`,
    * or a category the engine hasn't been seeded with yet) resolves to

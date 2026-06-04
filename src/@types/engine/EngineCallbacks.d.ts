@@ -82,7 +82,7 @@ export type EngineCallbacks = {
   /**
    * Selection-state callbacks.  Carry the resolved `FocusableTarget`
    * (galaxy or POI) so consumers don't need to branch on a separate
-   * id callback — they receive the full GalaxyInfo / PointOfInterest
+   * id callback — they receive the full GalaxyInfo / StructureRecord
    * directly.  Both required: every engine consumer needs hover /
    * select fan-out (InfoCard text, halo, hover preview).
    */
@@ -233,9 +233,9 @@ export type EngineCallbacks = {
   /**
    * Echoes for the two independent POI visibility axes
    * (label-text vs marker-glyph).  The two records are deliberately
-   * separate — flipping one does NOT fire the other.  See the
-   * docblock on `poiSubsystem.ts` (and the 2026-05-19 settings-panel
-   * audit, Q11) for why the axes were split.
+   * separate — flipping one does NOT fire the other.  Label-text and
+   * marker-glyph visibility are independent because a category's ring
+   * can be hidden while its label still renders, and vice versa.
    *
    * The engine fires each callback once at init (with the default
    * record — all categories visible) and once per matching

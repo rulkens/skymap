@@ -9,7 +9,7 @@ import type { SourceType } from '../../data/SourceType';
  *     subsystem's galaxy lookup to a `GalaxyInfo` for the InfoCard.
  *   - `{ kind: 'poi', id }` — a Point of Interest (cluster /
  *     supercluster / void / famous-galaxy anchor).  Resolves through
- *     the POI lookup to a `PointOfInterest`.
+ *     the POI lookup to a `FocusableTarget`.
  *
  * The two variants share one slot inside `selectionSubsystem` because
  * the picker can only resolve to one entity per pixel — a galaxy hover

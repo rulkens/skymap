@@ -5,8 +5,8 @@ import type { StructureCategory } from '../../../@types/engine/data/StructureCat
 
 /**
  * Fixed concatenation order for `all()`. Anchors come before bulk so the
- * merged list matches the historical `poiSubsystem` order, preserving the
- * ring pick-path's per-category instance-index alignment.
+ * merged list matches the order the ring pick-index decode contract requires,
+ * preserving the pick-path's per-category instance-index alignment.
  */
 const GROUP_ORDER: readonly StructureGroupId[] = ['anchors', 'bulk'];
 

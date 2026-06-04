@@ -17,7 +17,7 @@
  * The `.ccat` stores a category byte (0 = cluster, 1 = supercluster; higher
  * values reserved for a future void source).  We switch on it and return an
  * arm-typed literal so the discriminated `StructureRecord` union narrows
- * with no `as` cast (same construction as `buildAnchorPoi`).  Records whose
+ * with no `as` cast (same construction as `buildAnchorStructure`).  Records whose
  * byte is neither 0 nor 1 are skipped defensively — a reserved/void byte
  * must not crash the producer or emit a malformed record.
  *

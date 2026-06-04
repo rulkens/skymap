@@ -18,7 +18,7 @@
  *
  * ### Mocking strategy
  *
- * `buildStaticAnchorPois` is mocked to a deterministic minimal list so tests
+ * `buildStaticAnchorStructures` is mocked to a deterministic minimal list so tests
  * don't depend on the curated JSON.  `clusterCatalogToStructures` is mocked to
  * one record per meta entry.  The structure store is a real `createEngineData`
  * instance so `setGroup` / `byCategory` behave exactly as production.  The
@@ -35,8 +35,8 @@ import type { ClusterCatalogPayload } from '../../../../src/@types/loading/Clust
 
 // ── Module mocks ───────────────────────────────────────────────────────
 
-vi.mock('../../../../src/data/buildStaticAnchorPois', () => ({
-  buildStaticAnchorPois: vi.fn((): StructureRecord[] => [
+vi.mock('../../../../src/data/buildStaticAnchorStructures', () => ({
+  buildStaticAnchorStructures: vi.fn((): StructureRecord[] => [
     {
       id: 'cluster-virgo',
       name: 'Virgo Cluster',

@@ -2,10 +2,8 @@
  * StructureRecord — one extended structure (cluster / supercluster / void)
  * as held by the structure store.
  *
- * This is the non-famous arm of `PointOfInterest` pulled out as the single
- * source of truth: `PointOfInterest` re-imports it as `PointOfInterest =
- * StructureRecord | FamousGalaxyPoi`.  Famous galaxies are galaxy data, not
- * structures, so they are deliberately absent here.
+ * The single source of truth for a structure record.  Famous galaxies are
+ * galaxy data, not structures, so they are deliberately absent here.
  *
  * ### Why a discriminated union on `category`
  *

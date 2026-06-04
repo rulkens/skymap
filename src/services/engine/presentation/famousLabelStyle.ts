@@ -1,7 +1,6 @@
 /**
  * famousLabelStyle — visual style for famous-galaxy text labels.
  *
- * Split out of the former `poiSubsystem.POI_STYLES.famousGalaxy` row (Spec 3).
  * Unlike the structure styles, the famous-galaxy presentation is label-only —
  * curated thumbnails handle the close-approach detail, so there is no ring or
  * halo and none of the marker apparent-radius fade fields. Famous galaxies

@@ -1,5 +1,5 @@
 /**
- * buildStaticAnchorPois — assemble the static `PointOfInterest[]` list
+ * buildStaticAnchorStructures — assemble the static `StructureRecord[]` list
  * from the curated cluster/supercluster/void seed in
  * `data/cluster_anchors.seed.json`.
  *
@@ -7,14 +7,14 @@
  *
  * Two consumers want exactly the same id-slug + worldPos mapping:
  *
- *   1.  `services/engine/wiring/wirePoiProjection.ts` — the engine bootstrap
- *       writes these into the structure store and the `poiSubsystem` so the
- *       label/ring overlays know where to draw.
+ *   1.  `services/engine/wiring/wireStructureProjection.ts` — the engine
+ *       bootstrap writes these into the structure store so the label/ring
+ *       overlays know where to draw.
  *
- *   2.  `hooks/usePoiUrlSync.ts` — the React-side `#poi=<id>` deep-link
- *       drain needs a `StructureRecord` to feed `camera.focusOn`, but
- *       App.tsx has no public read-side accessor for the engine's structure
- *       table (the store owns the list).
+ *   2.  `hooks/useUrlSync.ts` — the React-side `#poi=<id>` deep-link drain
+ *       needs a `StructureRecord` to feed `camera.focusOn`, but App.tsx has
+ *       no public read-side accessor for the engine's structure table (the
+ *       store owns the list).
  *
  * Keeping a single helper here means both call sites agree on:
  *
@@ -25,7 +25,7 @@
  *     characters or punctuation.
  *
  *   - The worldPos conversion (RA hours / Dec deg / Mpc → equatorial
- *     Cartesian Mpc via `raDecDistToEqCart`), so the POI the drain hands
+ *     Cartesian Mpc via `raDecDistToEqCart`), so the record the drain hands
  *     to the camera is the same Vec3 the ring renderer is drawing at.
  *
  *   - The `physicalRadiusMpc` carry-through, which downstream consumers
@@ -36,18 +36,18 @@
  *     union has no `abell` field on the supercluster/void arms), so the
  *     field never leaks onto a non-cluster anchor.
  *
- * ### Why not expose the engine's POI list directly?
+ * ### Why not expose the engine's structure list directly?
  *
- * The engine's POI table is dynamic — `wireSlots` merges static anchors
- * with the asynchronously-loaded famous-galaxy POIs.  Exposing the merged
+ * The engine's structure table is dynamic — the curated anchors merge with
+ * the asynchronously-loaded bulk cluster catalog.  Exposing the merged
  * snapshot as a reactive React state slice would mean threading a new
- * callback through EngineCallbacks and re-rendering App on every famous-
- * meta load.  For the deep-link drain use case, the static subset is
+ * callback through EngineCallbacks and re-rendering App on every catalog
+ * load.  For the deep-link drain use case, the static subset is
  * sufficient — `#poi=cluster-virgo-m87` / `#poi=supercluster-coma-sc`
  * / `#poi=void-bootes-void` all live in this table.  Famous-galaxy
- * deep-links (`#poi=famous-…`) are a future extension; the drain
- * leaves the pending id set so a future "famous POIs ready" subscriber
- * can resolve it.
+ * deep-links (`#poi=famous-…`) are a future extension; the drain leaves
+ * the pending id set so a future "famous galaxies ready" subscriber can
+ * resolve it.
  *
  * ### Pure
  *
@@ -94,12 +94,12 @@ type SeedEntry = {
  * The three structure arms share `StructureBase`'s body, so the only
  * difference between branches is the discriminant.
  */
-function buildAnchorPoi(a: SeedEntry): StructureRecord {
+function buildAnchorStructure(a: SeedEntry): StructureRecord {
   const common = {
-    // `${category}-${seed.id}` is the canonical POI id — the seed's
+    // `${category}-${seed.id}` is the canonical structure id — the seed's
     // curated `id` field is the single source of truth, so deep-link
-    // hashes never diverge from the stored POI ids regardless of
-    // punctuation or non-ASCII characters in the display name.
+    // hashes never diverge from the stored ids regardless of punctuation
+    // or non-ASCII characters in the display name.
     id: `${a.category}-${a.id}`,
     name: a.names[0]!,
     worldPos: raDecDistToEqCart(a),
@@ -130,11 +130,11 @@ function buildAnchorPoi(a: SeedEntry): StructureRecord {
 }
 
 /**
- * Build the static cluster + supercluster + void POI list.  Synchronous,
- * deterministic, and reference-stable per call (returns a fresh array
- * each call — callers should memoize at the React boundary so reference
- * identity is preserved across renders).
+ * Build the static cluster + supercluster + void structure list.
+ * Synchronous, deterministic, and reference-stable per call (returns a
+ * fresh array each call — callers should memoize at the React boundary so
+ * reference identity is preserved across renders).
  */
-export function buildStaticAnchorPois(): StructureRecord[] {
-  return (clusterSeedJson as SeedEntry[]).map(buildAnchorPoi);
+export function buildStaticAnchorStructures(): StructureRecord[] {
+  return (clusterSeedJson as SeedEntry[]).map(buildAnchorStructure);
 }
