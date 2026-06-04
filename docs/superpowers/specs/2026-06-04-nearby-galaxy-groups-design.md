@@ -45,55 +45,71 @@ catalog behind them. So the `.ccat` format is reused *untouched* — groups
 simply never flow through it. Everything group-specific lives in the seed
 JSON plus the category plumbing.
 
+> **Note (2026-06-04):** symbol names below reflect the post-#253/#254
+> architecture (per-type data stores + POI presentation realignment). The
+> design is unchanged; the integration points were renamed/relocated.
+
 | Layer | Change for groups |
 |---|---|
-| `clusterCatalogFormat.ts` (`.ccat`) | **none** — groups are seed-only, like voids |
+| `src/data/clusterCatalogFormat.ts` (`.ccat`) | **none** — groups are seed-only, like voids |
 | `data/cluster_anchors.seed.json` | + 16 `"category": "group"` entries |
 | `tools/parsers/parseClusterSeed.ts` | add `'group'` to `VALID_CATEGORIES` |
-| `src/@types/.../PointOfInterest` | add a `'group'` arm (mirrors the void arm) |
-| `src/data/sources.ts` | add `Source.Group = 15` + a `PoiEntry` |
-| `src/data/buildStaticAnchorPois.ts` | add a `'group'` case to the switch |
-| `poiSubsystem.ts` `POI_STYLES` | add a `group` style row (extends `PoiCategory`) |
-| `clusterMarkerRenderer.ts` | add `'group'` to the marker-bearing category set |
-| `clusterFocusSubsystem.ts` | add `'group'` to the focus-eligible predicate |
+| `src/@types/engine/data/StructureCategory.d.ts` | add `'group'` to the union (widens `PoiCategory` for free) |
+| `src/@types/engine/data/StructureRecord.d.ts` | add a `GroupRecord` arm (mirrors `VoidRecord`) |
+| `src/data/sources.ts` | add `Source.Group = 15` + a `'poi'` `PoiEntry` row |
+| `src/utils/math/galaxyType.ts` | add `case Source.Group:` to the non-survey `throw` list |
+| `src/data/buildStaticAnchorPois.ts` | widen local `SeedEntry.category` + add a `'group'` switch case |
+| `src/services/engine/presentation/structurePoiStyles.ts` | add a `group` row to `STRUCTURE_POI_STYLES` (totality on `Record<StructureCategory, …>` forces it) |
+| `src/services/gpu/renderers/clusterMarkerRenderer.ts` | add `'group'` to the marker-bearing set (~5 record/array/guard sites); group gets a **normal halo** (no void-style skip) |
+| `src/services/engine/subsystems/clusterFocusSubsystem.ts` | add `\|\| poi.category === 'group'` to the focus-eligible predicate |
+| `src/components/SettingsPanel/SettingsPanel.tsx` | add `'group'` to the UI `STRUCTURE_CATEGORIES` list + a `'Groups'` label |
+| `src/components/DebugPanel/LabelEffectsSection.tsx` | add `'group'` to its category list |
+| `src/services/engine/wiring/assetWiring.ts` | **do NOT add group** — that list gates the `.ccat` fetch, and groups have no bulk catalog (see §3) |
 
 ## 3. Category plumbing — derived where possible, explicit where not
 
-The codebase already anticipated a new category, so most of the surface is
-data, not code:
+The #253/#254 refactors left the category plumbing friendly — much of the
+surface is data, and the types fan out from a single union:
 
-- **`PoiCategory` is `keyof typeof POI_STYLES`** (`poiSubsystem.ts`). Adding
-  a `group` row to `POI_STYLES` extends the union automatically — visibility
-  records, label gating, and `getPoisForCategory` all follow for free. The
-  module header states this contract explicitly ("adding a fifth category is
-  one POI_STYLES row").
-- **`Source.Group = 15`** — the next free append in the `Source` enum.
-  Source codes 5/6/7 are Cluster/Supercluster/Void; 8–14 are taken
-  (Milliquas, filaments, volumes, debug). 15 is the next POI code and is
-  pick-safe: it's packed into the pick texture's upper 5 bits, well under
-  the all-ones sentinel (31) reserved in `selectionEncoding.ts`. Append,
-  never renumber.
-- **The one genuinely-hand-edited spot is the *marker-bearing* category
-  set** in `clusterMarkerRenderer.ts`. That renderer hardcodes
-  `'cluster' | 'supercluster' | 'void'` (famous galaxies have no markers)
-  in ~8 record/union sites. Groups are marker-bearing, so they join it.
+- **`StructureCategory`** (`src/@types/engine/data/StructureCategory.d.ts`)
+  is a hand-written union `'cluster' | 'supercluster' | 'void'`. Adding
+  `'group'` here widens `PoiCategory` (`= StructureCategory | 'famousGalaxy'`)
+  automatically, and forces the `Record<StructureCategory, …>` style/visibility
+  tables to declare a `group` row (compile error until they do — good).
+- **`Source.Group = 15`** — the next free **append** in the `Source` enum
+  (5/6/7 = Cluster/Supercluster/Void; 8–14 = Milliquas + filaments + volumes
+  + debug). 15 is pick-safe: POI codes pack into the pick texture's upper
+  5 bits, well under the all-ones sentinel (31) in `selectionEncoding.wesl`.
+  It is **non-breaking**: POI codes are *not* persisted to `.bin` (only
+  survey codes 0–8 are), so no data rebuild is needed.
+  **Do NOT** insert `Group` at 8 and renumber Milliquas → that *is* the
+  cardinal sin the enum's docstring forbids (silently corrupts every `.bin`
+  + saved selection URL). Append at 15.
+- **The WESL `SOURCE_CODE_*` consts** (`selectionEncoding.wesl`) are
+  documentation-only — nothing branches on them (pick encode writes
+  `source.sourceCode` generically from the per-category uniform). No
+  `SOURCE_CODE_GROUP` const is required (YAGNI).
 
-### Consolidate the marker-category literal (the "generalize repeated fixes" rule)
+### Three category lists, *different* memberships — don't merge them
 
-Rather than smear `'group'` across ~8 inline `'cluster' | 'supercluster' |
-'void'` literals in `clusterMarkerRenderer.ts`, introduce **one** exported
-`MARKER_CATEGORIES` tuple + `MarkerCategory` type (the marker-bearing
-subset of `PoiCategory`, i.e. all categories except `famousGalaxy`) and
-derive the renderer's records from it. This is the repo's
-"second hand-edited list = consolidate" rule applied before the duplication
-grows. Two distinct category sets exist and must stay distinct:
+There is no single category const today; the set is re-spelled in a few
+places. Crucially these lists are **not** interchangeable, and `group`
+belongs to only **two of three**:
 
-- **All POI categories** — `cluster | supercluster | famousGalaxy | void |
-  group` (from `POI_STYLES`).
-- **Marker-bearing categories** — `cluster | supercluster | void | group`
-  (the `clusterMarkerRenderer` set; excludes `famousGalaxy`).
-- **Bulk-catalog categories** — `cluster | supercluster` only (the `.ccat`
-  byte; unchanged by this spec).
+| List | Location | Purpose | Includes `group`? |
+|---|---|---|---|
+| `STRUCTURE_CATEGORIES` | `SettingsPanel.tsx` | per-category UI marker/label toggles | **yes** |
+| marker-bearing set | `clusterMarkerRenderer.ts` (`POI_CATEGORIES_WITH_MARKERS` + records) | which categories draw halo/ring + pick | **yes** |
+| `STRUCTURE_CATEGORIES` | `assetWiring.ts` | gates the **bulk `.ccat` fetch** on visibility | **NO** — groups have no `.ccat` |
+
+The earlier draft proposed merging these into one const; that is **wrong** —
+merging would make toggling group visibility trigger a pointless `.ccat`
+fetch. Instead: add `group` to the UI + marker lists, leave the
+fetch-gating list alone, and **rename `assetWiring.ts`'s `STRUCTURE_CATEGORIES`
+to `BULK_CATALOG_CATEGORIES`** so a future reader can't mistake it for "all
+structure categories" and re-introduce the bug. (The two `STRUCTURE_CATEGORIES`
+consts currently share a name only because their values *happen* to coincide
+while group doesn't exist yet.)
 
 ## 4. Radius mapping — group dynamics onto the two-radius schema
 
@@ -133,7 +149,8 @@ M31): `raHours ≈ 0.71`, `decDeg ≈ +41.3`, `distMpc = 0.43`. This:
 
 Groups are 10–100× less massive than clusters and sit at 0–13 Mpc, so a
 group ring is *small but very near* — a foreground marker. A new `group`
-row in `POI_STYLES` gives it:
+row in `STRUCTURE_POI_STYLES`
+(`src/services/engine/presentation/structurePoiStyles.ts`) gives it:
 
 - **A distinct tint** (proposed: soft green, e.g. `#8FBF8F`) separating
   groups from cluster-yellow / SC-orange / void-cyan. Final hue settled in
@@ -143,6 +160,11 @@ row in `POI_STYLES` gives it:
 - **A low `markerMinApparentRadiusPx`** so a nearby group ring stays
   visible rather than tripping the "too small to read" floor that the bulk
   cluster field uses.
+
+Post-#254 `StructureMarkerStyle.haloColor` is a plain `Vec4` (no longer
+`Vec4 | null`) — voids dropped the null-halo opt-out — so the `group` row
+simply supplies a normal halo tint; groups render halo + ring like clusters,
+with **no per-category skip** in the renderer (unlike the void halo skip).
 
 ## 6. Data — the 16 verified groups (provenance appendix)
 
@@ -181,20 +203,28 @@ seed comment; an alternative is to fold IC 342 + Maffei into a single
 historical "IC 342 / Maffei" complex (15 entries) using the catalogued
 combined values. Resolved during implementation.
 
-## 7. Runtime integration (unchanged paths)
+## 7. Runtime integration — the post-#253 per-type store path
 
 Groups are featured, so they flow through the **synchronous** static-anchor
-path exactly as clusters/SC/voids do:
+path, which #253 routed through `state.data.structures` (the per-type
+`StructureStore`) instead of the old `poiSubsystem`:
 
-- `buildStaticAnchorPois` reads the seed JSON, builds a `group` POI per
-  entry (`id = "group-<seed.id>"`, `featured: true`, `significance: 1`).
-- `wireSlots` pushes them into `poiSubsystem.setPois`; deep-links
-  (`#poi=group-m81`) resolve synchronously, same as `#poi=cluster-virgo-m87`.
-- `produceMarkers` emits halo + ring descriptors for each (group is
-  marker-bearing); `produceLabels` labels them (group is featured).
+- `buildStaticAnchorPois()` reads the bundled seed JSON and returns
+  `StructureRecord[]` — building a `group` record per `"category": "group"`
+  entry (`id = "group-<seed.id>"`, `featured: true`, `significance` omitted
+  → treated as full weight).
+- `wireStructureProjection.ts` installs them synchronously via
+  `state.data.structures.setGroup('anchors', buildStaticAnchorPois())`.
+  Deep-links (`#poi=group-m81`) resolve from this store, same as
+  `#poi=cluster-virgo-m87`.
+- Per frame, `produceStructureMarkers` emits halo + ring descriptors from
+  `structures.all()` (group is marker-bearing) and `produceStructureLabels`
+  emits labels from `structures.byCategory(cat)` (group is featured).
 - Pick: `clusterMarkerRenderer.pickRing` gains a `group` bucket;
-  `resolvePoiFromPick` resolves `Source.Group` hits via
-  `getPoisForCategory('group')`.
+  `resolvePoiFromPick` already dispatches generically on
+  `structures.byCategory(category)`, so a `Source.Group` hit resolves with
+  no edit there — once `Source.Group` decodes to `category: 'group'` in the
+  pick-decode path.
 
 No async loader, no `.ccat`, no R2 sync change (the seed JSON is bundled
 into the shell at build time).
@@ -203,15 +233,15 @@ into the shell at build time).
 
 - `parseClusterSeed` accepts `'group'` and round-trips the new entries;
   rejects a malformed group entry loudly (existing validator extended).
-- `buildStaticAnchorPois` produces 16 `group` POIs with `id` =
-  `group-<seed.id>`, `featured: true`, `significance: 1`, and the correct
-  `worldPos` from `raDecDistToEqCart`.
+- `buildStaticAnchorPois` produces 16 `group` `StructureRecord`s with
+  `id = "group-<seed.id>"`, `featured: true`, `category: 'group'`, and the
+  correct `worldPos` from `raDecDistToEqCart`.
 - `clusterMarkerRenderer` buckets a `group` descriptor into its own run and
-  emits the right instance count (CPU-mode test, mirrors existing
-  cluster/SC/void bucket tests).
-- `resolvePoiFromPick` resolves a `Source.Group` pick to the right POI.
-- `PoiCategory`-derived records (visibility, styles) include `group` —
-  type-level, enforced by the `Record<PoiCategory, …>` totality.
+  emits the right instance count (CPU-mode test, mirrors the existing
+  cluster/SC/void bucket + pick tests).
+- `resolvePoiFromPick` resolves a `group` pick to the right record.
+- `Record<StructureCategory, …>` tables (`STRUCTURE_POI_STYLES`, visibility)
+  include `group` — enforced at the type level by totality.
 
 ## 9. Out of scope / future
 
@@ -221,12 +251,14 @@ into the shell at build time).
 - Groups beyond ~13 Mpc (Dorado, Eridanus, NGC 3115, NGC 2997 …) — real
   but less well-constrained; trivially added later as seed rows.
 
-## 10. Open decisions for review
+## 10. Decisions (resolved 2026-06-04)
 
-1. **Group tint** — soft green (`#8FBF8F`) proposed; confirm or pick another
-   hue that stays distinct from yellow/orange/cyan.
-2. **Maffei** — keep as a separate 16th entry with estimated radii, or fold
-   IC 342 + Maffei into one catalogued "IC 342 / Maffei" complex (15
-   entries)?
-3. **`Source.Group = 15`** — confirm the append slot (the enum has no gaps
-   to reclaim; 15 is the next free POI code).
+1. **Group tint** — soft green `#8FBF8F`. ✅
+2. **Maffei** — kept as the separate 16th entry with estimated radii
+   (flagged in its seed comment), rather than folding into IC 342. ✅
+3. **`Source.Group = 15`** — append at 15 (next free POI code); non-breaking
+   since POI codes aren't persisted to `.bin`. ✅
+4. **Roster size** — ship the 16 verified groups; more added later as seed
+   rows. ✅
+5. **Ring weight** — uniform (`significance` omitted); member count rides in
+   the InfoCard description text. ✅
