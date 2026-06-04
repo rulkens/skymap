@@ -275,9 +275,9 @@ Remove the now-vestigial `PointOfInterest` union and move the remaining shared t
 
 ## Task 9: Behaviour-parity gate
 
-- [ ] **Step 1: Full suite + typecheck + build** — `npm run test && npm run typecheck && npm run build`. Expected: all green; the new producer tests added, the deleted poiSubsystem tests removed.
-- [ ] **Step 2: Manual smoke (dev server)** — confirm in the running dev server, identical to before: cluster/SC/void rings + halos (fade in/out at zoom extremes, significance dimming), featured structure labels + famous-galaxy labels (lifted + anchor line), label declutter in dense regions (Shapley/Virgo) including structure-vs-famous de-collision, cluster marker + label visibility toggles (independent axes), famous-label toggle, click/hover selection of a cluster ring (pick-index resolves the right structure), camera-focus-on-cluster dim. No behaviour change is the success criterion.
-- [ ] **Step 3: Update memory** — mark Spec 3 implemented in `project_data_layer_redesign`; the engine data-layer redesign (all 3 specs) is complete.
+- [x] **Step 1: Full suite + typecheck + build** — `npm run test && npm run typecheck && npm run build`. Expected: all green; the new producer tests added, the deleted poiSubsystem tests removed.
+- [x] **Step 2: Manual smoke (dev server)** — confirm in the running dev server, identical to before: cluster/SC/void rings + halos (fade in/out at zoom extremes, significance dimming), featured structure labels + famous-galaxy labels (lifted + anchor line), label declutter in dense regions (Shapley/Virgo) including structure-vs-famous de-collision, cluster marker + label visibility toggles (independent axes), famous-label toggle, click/hover selection of a cluster ring (pick-index resolves the right structure), camera-focus-on-cluster dim. No behaviour change is the success criterion.
+- [x] **Step 3: Update memory** — mark Spec 3 implemented in `project_data_layer_redesign`; the engine data-layer redesign (all 3 specs) is complete.
 
 ---
 
