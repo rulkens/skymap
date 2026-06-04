@@ -214,10 +214,10 @@ Local Group: `raHours: 0.71`, `decDeg: 41.3`, `distMpc: 0.43`, `physicalRadiusMp
 
 **Files:** none (verification only)
 
-- [ ] **Step 1: Green suite.** Run: `npm test` and `npm run typecheck` — both clean. Fix any regression.
-- [ ] **Step 2: Format touched files.** Run prettier on only the files this plan changed (not repo-wide). 
-- [ ] **Step 3: Visual check (dev server).** With `npm run dev` running + real data linked (`/link-data`), verify: group rings render in soft green near the Local Volume; the **Local Group ring sits around the start camera position** and fades sanely via the existing near/far fade (it's the only marker at the origin — confirm no z-fighting / full-screen wash); group labels show on the featured groups; the Settings panel "Groups" toggle hides/shows group markers + labels independently; clicking a group ring focuses it and opens its InfoCard with the description text. Ask the user to confirm the look (per the project's "ask the user to verify UI" convention).
-- [ ] **Step 4: Update memory** `project_nearby_galaxy_groups` to "implemented" once the user signs off on the visual check.
+- [x] **Step 1: Green suite.** Run: `npm test` and `npm run typecheck` — both clean. Fix any regression. ✓ 2305/2305 green, typecheck + build clean (2026-06-04).
+- [x] **Step 2: Format touched files.** Run prettier on only the files this plan changed (not repo-wide). ✓ prettier on touched files only.
+- [x] **Step 3: Visual check (dev server).** With `npm run dev` running + real data linked (`/link-data`), verify: group rings render in soft green near the Local Volume; the **Local Group ring sits around the start camera position** and fades sanely via the existing near/far fade (it's the only marker at the origin — confirm no z-fighting / full-screen wash); group labels show on the featured groups; the Settings panel "Groups" toggle hides/shows group markers + labels independently; clicking a group ring focuses it and opens its InfoCard with the description text. Ask the user to confirm the look (per the project's "ask the user to verify UI" convention). ✓ verified via HMR with linked data; user iterated the colour ramp → final warm cream, brightness/fade dial-back, focus framing, and the Settings group count, then signed off (→ PR #260).
+- [x] **Step 4: Update memory** `project_nearby_galaxy_groups` to "implemented" once the user signs off on the visual check. ✓ updated to "IMPLEMENTED — PR #260 open".
 
 ---
 
