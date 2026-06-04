@@ -64,10 +64,12 @@ after the image step is identical.
 
 ### 2. Add the seed entry
 
-The seed is `data/famous_galaxies.seed.json`. Each entry needs at minimum
-`id`, `names`, `ra`, `dec`, `distanceMpc`, `diameterKpc`, `type`, `description`;
-`axisRatio` / `positionAngleDeg` / `magB` / `magV` / `magK` are optional but feed
-the disk-deprojection and photometry.
+The seed is `data/famous_galaxies.seed.json`, a JSON array sorted by `id`. Write
+fields in the canonical order used by `expandFamousFromCatalogs.orderEntryFields`
+so a later `expand-famous` run produces a zero diff: `id`, `names`, `ra`, `dec`,
+`distanceMpc`, `diameterKpc`, `type`, `description`, then optional `axisRatio`,
+`positionAngleDeg`, `magB`, `magV`, `magK`. That serializer omits `commonName`,
+so don't add one — the display name falls back to `names[0]`.
 
 - **Messier (M1–110) or Caldwell (C1–109):** run `npm run expand-famous`. It
   walks the M/C tables, pulls distance / diameter / orientation / photometry from
@@ -75,9 +77,50 @@ the disk-deprojection and photometry.
   `description`. It **preserves** `id` / `names` / `description` on existing
   entries and **overwrites** the photometric/size fields from HyperLEDA. Use
   `--dry-run` to preview, `--no-cache` to force a refetch.
-- **Anything else (a nearby irregular, a non-M/C NGC):** hand-author the entry.
-  `expand-famous` only knows the M/C cross-reference tables, so it won't reach a
-  custom galaxy — add the object by hand with all required fields.
+- **Anything else (a non-M/C NGC/IC, e.g. NGC 3166):** hand-author the entry —
+  `expand-famous` only knows the M/C tables, so it won't reach it. Reassurance: a
+  later `expand-famous` run **keeps** your manual entry untouched (it preserves
+  any seed `id` not in its M/C tables — see its "preserved unmatched curated
+  entry" pass). Use a filesystem-safe lowercase `id` like `ngc3166`, and pull the
+  data from HyperLEDA so your values match the rest of the catalog — see 2b.
+
+### 2b. Hand-authoring a custom entry from HyperLEDA
+
+HyperLEDA is the same source `expand-famous` uses, so deriving fields the same
+way keeps the catalog homogeneous. Fetch the record:
+
+```bash
+# leda.univ-lyon1.fr's TLS cert is expired AND it 302-redirects to the
+# atlas.obs-hp.fr mirror. WebFetch refuses the expired cert — use curl:
+#   -k accept the expired cert   -L follow the redirect to the mirror
+curl -skL "http://leda.univ-lyon1.fr/ledacat.cgi?o=NGC3166" -o /tmp/leda.html
+```
+
+Map the parameters with the **exact** formulas from
+`tools/famous/expandFamousFromCatalogs.ts` (so the entry is reproducible and a
+future `expand-famous` wouldn't change it):
+
+| Seed field | HyperLEDA param | Formula |
+|------------|-----------------|---------|
+| `ra` / `dec` | `al2000` (hours), `de2000` (deg) | `ra = al2000 × 15`; `dec = de2000` |
+| `distanceMpc` | `mod0` (if its error < 0.3), else `v3k` | `10^((mod0−25)/5)`, else `v3k/70` — **not** `modbest`/`modz` |
+| `diameterKpc` | `logd25` + `distanceMpc` | `0.1×10^logd25 × (π/180/60) × distanceMpc × 1000` |
+| `axisRatio` | `logr25` | `10^(−logr25)` (keep only if in (0.05, 1]) |
+| `positionAngleDeg` | `pa` | as-is (0–180) |
+| `magB` / `magV` / `magK` | `bt` / `vt` / `kt` | drop any band whose HyperLEDA error > 0.5 mag |
+| `type` | `type` | verbatim string (e.g. `S0-a`, `Sa`) |
+
+Two traps the formulas encode:
+
+- **Use the total magnitudes `bt`/`vt`/`kt`.** Never SIMBAD or aperture mags —
+  they measure a fixed aperture, not the whole galaxy, and disagree badly
+  (NGC 3169's SIMBAD B = 13.46 vs HyperLEDA total `bt` = 11.25).
+- **Drop a band when its HyperLEDA error exceeds 0.5 mag** — the big error bar is
+  HyperLEDA signalling the aggregate is unreliable (e.g. NGC 3169's
+  `vt = 10.90 ± 0.84` is rejected, so that entry has no `magV`).
+
+Take `description` from the galaxy's Wikipedia lead, matching the M/C entries'
+prose style.
 
 ### 3a. CURATED path — hand-tune in the curator, then stop
 
@@ -186,7 +229,9 @@ the hi-res tile.
 | `build-famous` needs survey bins present | It reads `glade-*.bin` / `2mrs.bin` for a dedup pass — run `build-tiers` once first |
 | Merging the PR deploys the shell; `sync-r2-secure` is still manual | Committed webps ride the auto Workers Assets rebuild on merge; bin + meta + hi-res live on R2 and need a manual sync |
 | Don't run `fetch-famous-images` on the curated path | It overwrites the curator's published `famous/<id>.webp` |
-| `expand-famous` only covers M/C | Custom (non-Messier/Caldwell) galaxies need a hand-authored seed entry |
+| `expand-famous` only covers M/C | Custom (non-Messier/Caldwell) galaxies need a hand-authored seed entry (see 2b) — but a later `expand-famous` run preserves them |
+| HyperLEDA's cert is expired and it redirects | `curl -skL` reaches the `atlas.obs-hp.fr` mirror; plain WebFetch refuses the expired TLS cert |
+| Use total `bt`/`vt`/`kt`, drop bands with error > 0.5 | SIMBAD/aperture mags aren't whole-galaxy; HyperLEDA's large error bars flag unreliable aggregates |
 | Stage specific paths | Project rule: never `git add -A`; the famous webps span three dirs |
 | `STARNET_WEIGHTS` must point at the weights | The curator and `build-famous-thumbs` shell out to StarNet — see `reference_starnet_weights` |
 
