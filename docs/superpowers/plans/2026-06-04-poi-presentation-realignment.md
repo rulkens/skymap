@@ -101,7 +101,7 @@ Port `poiSubsystem.produceMarkers` to a standalone function reading `state.data.
 - Create: `src/services/engine/presentation/produceStructureMarkers.ts`
 - Test: `tests/services/engine/presentation/produceStructureMarkers.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // tests/services/engine/presentation/produceStructureMarkers.test.ts
@@ -119,15 +119,15 @@ describe('produceStructureMarkers', () => {
 });
 ```
 
-- [ ] **Step 2: Run it, expect failure** — `npm run test -- tests/services/engine/presentation/produceStructureMarkers.test.ts` → FAIL (module not found).
+- [x] **Step 2: Run it, expect failure** — `npm run test -- tests/services/engine/presentation/produceStructureMarkers.test.ts` → FAIL (module not found).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 `structurePoiStyles.ts`: lift the `cluster`/`supercluster`/`void` rows of `POI_STYLES` (+ the `CategoryStyle` type, `SIG_MIN_ALPHA`, `NON_SELECTED_MARKER_DIM`) into `STRUCTURE_POI_STYLES` keyed by `StructureCategory`. `produceStructureMarkers(state, ctx)`: copy the body of `poiSubsystem.produceMarkers` verbatim, replacing `allPois()` iteration with `state.data.structures.all()` (which is already `anchors → bulk` ordered — same contract), `markerVisibility[cat]` with `state.data.structures.markerVisible(cat)`, and dropping the `famousGalaxy` skip (structures only). Keep the emit-all-then-discard alpha-0 contract and the selection/focus reads off `state.subsystems.selection`. Didactic comment: cite the preserved pick-index alignment.
 
-- [ ] **Step 4: Run it, expect pass.**
+- [x] **Step 4: Run it, expect pass.**
 
-- [ ] **Step 5: Commit** — `feat(engine): produceStructureMarkers reads structureStore`
+- [x] **Step 5: Commit** — `feat(engine): produceStructureMarkers reads structureStore`
 
 ---
 
