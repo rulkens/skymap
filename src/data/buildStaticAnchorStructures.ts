@@ -1,6 +1,6 @@
 /**
  * buildStaticAnchorStructures — assemble the static `StructureRecord[]` list
- * from the curated cluster/supercluster/void seed in
+ * from the curated cluster/supercluster/void/group seed in
  * `data/cluster_anchors.seed.json`.
  *
  * ### Why a separate module?
@@ -33,8 +33,8 @@
  *
  *   - The cluster-only `abell` carry-through: the seed's Abell/ACO
  *     designation lands on the cluster arm alone (the `StructureRecord`
- *     union has no `abell` field on the supercluster/void arms), so the
- *     field never leaks onto a non-cluster anchor.
+ *     union has no `abell` field on the supercluster/void/group arms), so
+ *     the field never leaks onto a non-cluster anchor.
  *
  * ### Why not expose the engine's structure list directly?
  *
@@ -44,10 +44,10 @@
  * callback through EngineCallbacks and re-rendering App on every catalog
  * load.  For the deep-link drain use case, the static subset is
  * sufficient — `#poi=cluster-virgo-m87` / `#poi=supercluster-coma-sc`
- * / `#poi=void-bootes-void` all live in this table.  Famous-galaxy
- * deep-links (`#poi=famous-…`) are a future extension; the drain leaves
- * the pending id set so a future "famous galaxies ready" subscriber can
- * resolve it.
+ * / `#poi=void-bootes-void` / `#poi=group-local-group` all live in this
+ * table.  Famous-galaxy deep-links (`#poi=famous-…`) are a future
+ * extension; the drain leaves the pending id set so a future "famous
+ * galaxies ready" subscriber can resolve it.
  *
  * ### Pure
  *
@@ -75,7 +75,7 @@ import clusterSeedJson from '../../data/cluster_anchors.seed.json';
 type SeedEntry = {
   readonly id: string;
   readonly names: readonly string[];
-  readonly category: 'cluster' | 'supercluster' | 'void';
+  readonly category: 'cluster' | 'supercluster' | 'void' | 'group';
   readonly raHours: number;
   readonly decDeg: number;
   readonly distMpc: number;
@@ -87,12 +87,12 @@ type SeedEntry = {
 
 /**
  * Build one record from a seed entry.  The seed's `category` is the union
- * `'cluster' | 'supercluster' | 'void'`; a single object literal whose
- * `category` is that union does NOT narrow to one arm of the discriminated
- * `StructureRecord`, so we switch on it and let each branch produce a
- * literal whose `category` is a single string — which the arm types accept.
- * The three structure arms share `StructureBase`'s body, so the only
- * difference between branches is the discriminant.
+ * `'cluster' | 'supercluster' | 'void' | 'group'`; a single object
+ * literal whose `category` is that union does NOT narrow to one arm of
+ * the discriminated `StructureRecord`, so we switch on it and let each
+ * branch produce a literal whose `category` is a single string — which
+ * the arm types accept.  The four structure arms share `StructureBase`'s
+ * body, so the only difference between branches is the discriminant.
  */
 function buildAnchorStructure(a: SeedEntry): StructureRecord {
   const common = {
@@ -126,11 +126,13 @@ function buildAnchorStructure(a: SeedEntry): StructureRecord {
       return { ...common, category: 'supercluster' };
     case 'void':
       return { ...common, category: 'void' };
+    case 'group':
+      return { ...common, category: 'group' };
   }
 }
 
 /**
- * Build the static cluster + supercluster + void structure list.
+ * Build the static cluster + supercluster + void + group structure list.
  * Synchronous, deterministic, and reference-stable per call (returns a
  * fresh array each call — callers should memoize at the React boundary so
  * reference identity is preserved across renders).

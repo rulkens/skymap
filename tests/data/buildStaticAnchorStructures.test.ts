@@ -15,9 +15,10 @@
  * default `node` vitest environment with no extra setup.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { buildStaticAnchorStructures } from '../../src/data/buildStaticAnchorStructures';
 import clusterSeedJson from '../../data/cluster_anchors.seed.json';
+import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
 
 describe('buildStaticAnchorStructures', () => {
   it('emits one structure per seed entry across all three categories', () => {
@@ -107,5 +108,60 @@ describe('buildStaticAnchorStructures', () => {
     expect(cats.has('void')).toBe(true);
     // No other categories sneak in.
     expect(cats.size).toBe(3);
+  });
+});
+
+/**
+ * Group-entry mapping — isolated describe block so the vi.doMock + dynamic
+ * import pattern doesn't affect the module cache shared by the tests above.
+ *
+ * No group entries exist in the real seed yet (they land in Task 9), so we
+ * cannot use the same bundled-seed lookup the void tests use.  Instead we
+ * inject a synthetic group entry via vi.doMock before dynamically importing
+ * the module under test — this is the same seam the void test would use if
+ * there were no 'void-bootes-void' in the seed yet.
+ */
+describe('buildStaticAnchorStructures — group seed entry mapping', () => {
+  it('maps a group seed entry to a GroupRecord with the correct id, category, featured, and worldPos', async () => {
+    // Inline fixture — mirrors the shape of a real seed entry.
+    const groupFixture = {
+      id: 'local-group',
+      names: ['Local Group'],
+      category: 'group' as const,
+      raHours: 10.67,
+      decDeg: 41.27,
+      distMpc: 0.78,
+      physicalRadiusMpc: 0.5,
+      apparentRadiusMpc: 1.0,
+    };
+
+    // Inject only our fixture into the seed so the whole output is one entry.
+    // `resetModules` busts the ESM cache so the dynamic import below
+    // re-evaluates `buildStaticAnchorStructures` (already statically imported
+    // at the top of this file) and picks up the mocked seed — `doMock` alone
+    // does not invalidate an already-loaded module.
+    vi.resetModules();
+    vi.doMock('../../data/cluster_anchors.seed.json', () => ({
+      default: [groupFixture],
+    }));
+
+    // Dynamic import after resetModules + doMock so this load sees the mock.
+    const { buildStaticAnchorStructures: buildWithGroupSeed } = await import(
+      '../../src/data/buildStaticAnchorStructures'
+    );
+
+    const pois = buildWithGroupSeed();
+    expect(pois.length).toBe(1);
+    const poi = pois[0]!;
+
+    expect(poi.id).toBe('group-local-group');
+    expect(poi.category).toBe('group');
+    expect(poi.featured).toBe(true);
+    // worldPos must match the independent conversion of the same ra/dec/dist —
+    // asserting this verifies the carry-through wiring, not just the discriminant.
+    expect(poi.worldPos).toEqual(raDecDistToEqCart(groupFixture));
+
+    vi.doUnmock('../../data/cluster_anchors.seed.json');
+    vi.resetModules();
   });
 });
