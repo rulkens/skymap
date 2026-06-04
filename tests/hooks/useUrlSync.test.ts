@@ -12,7 +12,7 @@
 import { describe, it, expect } from 'vitest';
 import { computeDesiredHash, initialPendingFromHash } from '../../src/hooks/useUrlSync';
 import type { GalaxyInfo } from '../../src/@types/engine/GalaxyInfo';
-import type { PointOfInterest } from '../../src/@types/engine/subsystems/PointOfInterest';
+import type { StructureRecord } from '../../src/@types/engine/data/StructureRecord';
 import { Source } from '../../src/data/sources';
 
 function makeGalaxy(): GalaxyInfo {
@@ -22,7 +22,7 @@ function makeGalaxy(): GalaxyInfo {
   } as unknown as GalaxyInfo;
 }
 
-function makePoi(id: string): PointOfInterest {
+function makePoi(id: string): StructureRecord {
   return {
     id,
     name: id,

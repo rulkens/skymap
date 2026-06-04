@@ -21,9 +21,9 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { commitPoiFocus } from '../../../../src/services/engine/helpers/commitPoiFocus';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { PointOfInterest } from '../../../../src/@types/engine/subsystems/PointOfInterest';
+import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
 
-const virgo: PointOfInterest = {
+const virgo: StructureRecord = {
   id: 'virgo-m87',
   name: 'Virgo Cluster',
   category: 'cluster',

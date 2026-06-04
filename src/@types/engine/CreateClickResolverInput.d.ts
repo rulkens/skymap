@@ -1,7 +1,7 @@
 import type { PickRenderer } from '../rendering/PickRenderer';
 import type { ResolveSelection } from './ResolveSelection';
 import type { BuildGalaxyInfo } from './BuildGalaxyInfo';
-import type { PointOfInterest } from './subsystems/PointOfInterest';
+import type { StructureRecord } from './data/StructureRecord';
 import type { PoiCategory } from './data/PoiCategory';
 
 export type CreateClickResolverInput = {
@@ -9,7 +9,7 @@ export type CreateClickResolverInput = {
   resolveSelection: ResolveSelection;
   buildGalaxyInfo: BuildGalaxyInfo;
   /**
-   * Map a POI pick hit `(category, poiIndex)` to its `PointOfInterest`
+   * Map a POI pick hit `(category, poiIndex)` to its `StructureRecord`
    * record.  Optional — when absent, POI hits fall through to
    * `{ kind: 'clear' }` instead of producing a `'poi'` resolution.
    *
@@ -26,5 +26,5 @@ export type CreateClickResolverInput = {
    * That keeps the InfoCard from ever showing a phantom POI card for
    * a pick that decoded successfully but had no backing record.
    */
-  resolvePoi?: (input: { category: PoiCategory; poiIndex: number }) => PointOfInterest | null;
+  resolvePoi?: (input: { category: PoiCategory; poiIndex: number }) => StructureRecord | null;
 };

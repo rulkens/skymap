@@ -37,7 +37,7 @@ import { collectPickTargets } from '../helpers/collectPickTargets';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
-import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfInterest';
+import type { StructureRecord } from '../../../@types/engine/data/StructureRecord';
 
 /**
  * Bootstrap phase 3: pick renderer + camera + orbit controls + click
@@ -84,7 +84,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     },
     buildGalaxyInfo: (cloud, localIdx, src) =>
       buildGalaxyInfo(cloud, localIdx, src, state.data.galaxies.famousMeta),
-    // POI pick hit `(category, poiIndex)` → `PointOfInterest`.  Shared
+    // POI pick hit `(category, poiIndex)` → `StructureRecord`.  Shared
     // with the hover throttler in `runFrame.ts` so the click and hover
     // paths can't drift on the lookup logic; see `resolvePoiFromPick`.
     resolvePoi: (input) => resolvePoiFromPick(state.data.structures, input),
@@ -209,7 +209,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // on every empty-space AND galaxy click so the dblclick path can prefer
   // POI over galaxy when the most-recent single-click was a ring hit (POI
   // wins when both are non-null — see onDoubleClick below).
-  let lastClickedPoi: PointOfInterest | null = null;
+  let lastClickedPoi: StructureRecord | null = null;
 
   // Shared pick body for single-click (dblclick reuses the cached
   // payloads).  Inline rather than module-level because it closes over
@@ -270,7 +270,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
         // Single-click semantics for both kinds: clear / select.
         // Double-click upgrades to focus (tween + URL hash); that path
         // runs via `handle.camera.focusOn` in the dblclick handler.
-        // The resolved `GalaxyInfo` / `PointOfInterest` payload is
+        // The resolved `GalaxyInfo` / `StructureRecord` payload is
         // cached on `lastClickedInfo` / `lastClickedPoi` so the
         // dblclick handler can reuse it without a second pick — see
         // those slots above for the race-condition rationale.

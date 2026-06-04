@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { createClusterFocusSubsystem } from '../../../../src/services/engine/subsystems/clusterFocusSubsystem';
-import type { PointOfInterest } from '../../../../src/@types/engine/subsystems/PointOfInterest';
+import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
 
-function makeCluster(overrides: Record<string, unknown> = {}): PointOfInterest {
+function makeCluster(overrides: Record<string, unknown> = {}): StructureRecord {
   return {
     id: 'virgo',
     name: 'Virgo Cluster',
@@ -11,22 +11,11 @@ function makeCluster(overrides: Record<string, unknown> = {}): PointOfInterest {
     physicalRadiusMpc: 2,
     featured: true,
     ...overrides,
-  } as unknown as PointOfInterest;
+  } as unknown as StructureRecord;
 }
 
-function makeVoid(overrides: Record<string, unknown> = {}): PointOfInterest {
+function makeVoid(overrides: Record<string, unknown> = {}): StructureRecord {
   return makeCluster({ id: 'bootes', name: 'Boötes Void', category: 'void', ...overrides });
-}
-
-function makeFamous(overrides: Record<string, unknown> = {}): PointOfInterest {
-  return {
-    id: 'm31',
-    name: 'Andromeda',
-    category: 'famousGalaxy',
-    worldPos: [1, 2, 3],
-    featured: true,
-    ...overrides,
-  } as unknown as PointOfInterest;
 }
 
 describe('clusterFocusSubsystem', () => {
@@ -69,13 +58,6 @@ describe('clusterFocusSubsystem', () => {
     expect(settled.center).toEqual([1, 2, 3]);
     expect(settled.apparentRadiusMpc).toBe(9);
     expect(settled.physicalRadiusMpc).toBe(9);
-  });
-
-  it('update with a famousGalaxy POI stays inactive (no radius → no focus)', () => {
-    const sub = createClusterFocusSubsystem(0);
-    sub.update(makeFamous(), 0);
-    expect(sub.produceFocusUniforms(500).blend).toBe(0);
-    expect(sub.isAwake(200)).toBe(false);
   });
 
   it('update(null) after a cluster fades blend 1→0 (and stays settling under per-frame calls)', () => {

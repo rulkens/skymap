@@ -1,15 +1,15 @@
 /**
- * buildPoisFromClusterCatalog — assemble the bulk (non-featured)
- * cluster/supercluster POIs from the decoded `.ccat` catalog + its meta
- * sidecar.
+ * clusterCatalogToStructures — assemble the bulk (non-featured)
+ * cluster/supercluster `StructureRecord`s from the decoded `.ccat` catalog +
+ * its meta sidecar.
  *
  * ### Why a separate module
  *
- * Mirrors `buildPoisFromFamousMeta`: a pure producer that the bootstrap
- * (`wireSlots`) merges into `poiSubsystem` once the cluster-catalog slot
- * lands, kept out of `wireSlots` so it's unit-testable without booting the
- * engine.  Unlike the famous producer, every POI here is `featured: false`
- * — these ~375 structures render through the ring/halo marker pass, NOT the
+ * A pure transform that `wireStructureProjection` installs into the structure
+ * store's `bulk` group once the cluster-catalog slot lands, kept out of the
+ * wiring so it's unit-testable without booting the engine.  Every record here
+ * is `featured: false` — these ~375 structures render through the ring/halo
+ * marker pass, NOT the
  * label/thumbnail path, and would flood the label layer if labelled.
  *
  * ### Category byte → arm
@@ -102,7 +102,7 @@ function makeNormaliser(
   return (raw: number) => (transform(raw) - min) / span;
 }
 
-export function buildPoisFromClusterCatalog(payload: ClusterCatalogPayload): StructureRecord[] {
+export function clusterCatalogToStructures(payload: ClusterCatalogPayload): StructureRecord[] {
   const { catalog, meta } = payload;
   if (catalog.count === 0) return [];
 

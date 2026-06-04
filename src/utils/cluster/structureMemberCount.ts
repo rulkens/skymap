@@ -28,11 +28,10 @@
  *
  * ### Null vs zero
  *
- * Returns `null` when there is nothing to count yet — a famous-galaxy POI
- * (no membership sphere) or no visible catalog loaded — so the caller can
- * omit the row entirely rather than flash a misleading "0" during load or
- * for a single galaxy.  A genuine empty sphere over loaded data returns
- * `0` (truthful: e.g. a void at the small tier really may hold no
+ * Returns `null` when there is nothing to count yet — no visible catalog
+ * loaded — so the caller can omit the row entirely rather than flash a
+ * misleading "0" during load.  A genuine empty sphere over loaded data
+ * returns `0` (truthful: e.g. a void at the small tier really may hold no
  * catalogued galaxies).
  */
 
@@ -42,17 +41,13 @@ import { SURVEY_SOURCES, Source } from '../../data/sources';
 import { maskHas } from '../sourceMask';
 import type { GalaxyCatalog } from '../../@types/data/GalaxyCatalog';
 import type { SourceType } from '../../@types/data/SourceType';
-import type { PointOfInterest } from '../../@types/engine/subsystems/PointOfInterest';
+import type { StructureRecord } from '../../@types/engine/data/StructureRecord';
 
 export function structureMemberCount(
-  poi: PointOfInterest,
+  poi: StructureRecord,
   getCloud: (source: SourceType) => GalaxyCatalog | undefined,
   visibleSourceMask: number,
 ): number | null {
-  // Famous-galaxy POIs are point objects, not extended structures — no
-  // sphere to search.  Bail before touching the (absent) radius fields.
-  if (poi.category === 'famousGalaxy') return null;
-
   const radiusMpc = poi.apparentRadiusMpc ?? poi.physicalRadiusMpc;
 
   const catalogs: CatalogWithSource[] = [];

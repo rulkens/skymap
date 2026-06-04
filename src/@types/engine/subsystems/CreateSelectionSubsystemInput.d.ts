@@ -2,7 +2,7 @@ import type { EngineCallbacks } from '../EngineCallbacks';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { SourceType } from '../../data/SourceType';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
-import type { PointOfInterest } from './PointOfInterest';
+import type { StructureRecord } from '../data/StructureRecord';
 
 /**
  * Hooks the subsystem needs from the outside world.  All passed once
@@ -24,5 +24,5 @@ export type CreateSelectionSubsystemInput = {
    * subsystem treats that as "no POI to expand" and fires the
    * callback with null.
    */
-  getPoi: (id: string) => PointOfInterest | null;
+  getPoi: (id: string) => StructureRecord | null;
 };

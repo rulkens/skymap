@@ -10,7 +10,7 @@
  *   - Galaxy variant: setHovered / setSelected resolve through the
  *     cloud + sidecars and fire the callback with a GalaxyInfo.
  *   - POI variant: setHovered / setSelected resolve through getPoi
- *     and fire the callback with the PointOfInterest.
+ *     and fire the callback with the StructureRecord.
  *   - Cross-kind transitions clear the previous slot correctly.
  *   - prebuiltInfo escape hatch on setSelected (selectByAlias race).
  *   - Cloud-missing / out-of-range galaxy lookups fire onChange(null).
@@ -25,7 +25,7 @@ import { createSelectionSubsystem } from '../../../../src/services/engine/subsys
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { GalaxyInfo } from '../../../../src/@types/engine/GalaxyInfo';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
-import type { PointOfInterest } from '../../../../src/@types/engine/subsystems/PointOfInterest';
+import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
 import { Source } from '../../../../src/data/sources';
 
 type Callbacks = EngineCallbacks & {
@@ -62,7 +62,7 @@ function makeCloud(count: number): GalaxyCatalog {
   } as unknown as GalaxyCatalog;
 }
 
-const VIRGO: PointOfInterest = {
+const VIRGO: StructureRecord = {
   id: 'virgo',
   name: 'Virgo Cluster',
   category: 'cluster',
@@ -71,7 +71,7 @@ const VIRGO: PointOfInterest = {
   physicalRadiusMpc: 2,
 };
 
-const FORNAX: PointOfInterest = {
+const FORNAX: StructureRecord = {
   id: 'fornax',
   name: 'Fornax Cluster',
   category: 'cluster',
@@ -82,7 +82,7 @@ const FORNAX: PointOfInterest = {
 
 function makeSub(
   cb: Callbacks,
-  opts: { cloud?: GalaxyCatalog; pois?: readonly PointOfInterest[] } = {},
+  opts: { cloud?: GalaxyCatalog; pois?: readonly StructureRecord[] } = {},
 ) {
   const pois = opts.pois ?? [];
   return createSelectionSubsystem({
@@ -131,7 +131,7 @@ describe('createSelectionSubsystem — galaxy variant', () => {
 });
 
 describe('createSelectionSubsystem — POI variant', () => {
-  it('resolves POI hover through getPoi and fires onHoverChange(PointOfInterest)', () => {
+  it('resolves POI hover through getPoi and fires onHoverChange(StructureRecord)', () => {
     const cb = makeCallbacks();
     const sub = makeSub(cb, { pois: [VIRGO] });
 
@@ -140,7 +140,7 @@ describe('createSelectionSubsystem — POI variant', () => {
     expect(cb.selection.onHoverChange).toHaveBeenCalledWith(VIRGO);
   });
 
-  it('fires onSelectChange(PointOfInterest) when a POI is selected', () => {
+  it('fires onSelectChange(StructureRecord) when a POI is selected', () => {
     const cb = makeCallbacks();
     const sub = makeSub(cb, { pois: [VIRGO] });
 

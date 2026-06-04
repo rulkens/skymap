@@ -5,13 +5,13 @@
  */
 
 import type { ReactNode } from 'react';
-import type { PointOfInterest } from '../../@types/engine/subsystems/PointOfInterest';
+import type { StructureRecord } from '../../@types/engine/data/StructureRecord';
 import { formatDistance } from '../../utils/format/distance';
 import { POI_CATEGORY_INFO } from '../../data/poiCategoryInfo';
 import styles from './CompactPoiCard.module.css';
 
 export type CompactPoiCardProps = {
-  poi: PointOfInterest;
+  poi: StructureRecord;
 };
 
 export function CompactPoiCard({ poi }: CompactPoiCardProps): ReactNode {
@@ -26,9 +26,7 @@ export function CompactPoiCard({ poi }: CompactPoiCardProps): ReactNode {
       <div className={styles.sourceBadge}>{POI_CATEGORY_INFO[poi.category].shortLabel}</div>
       <div className={styles.cardDistLine}>
         {formatDistance(distanceMpc)}
-        {poi.category !== 'famousGalaxy' && (
-          <> &middot; r {formatDistance(poi.physicalRadiusMpc)}</>
-        )}
+        <> &middot; r {formatDistance(poi.physicalRadiusMpc)}</>
       </div>
     </div>
   );

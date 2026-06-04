@@ -4,7 +4,7 @@ import { Source } from '../../../src/data/sources';
 import { ALL_VISIBLE_MASK, maskWith, maskWithout } from '../../../src/utils/sourceMask';
 import type { GalaxyCatalog } from '../../../src/@types/data/GalaxyCatalog';
 import type { SourceType } from '../../../src/@types/data/SourceType';
-import type { PointOfInterest } from '../../../src/@types/engine/subsystems/PointOfInterest';
+import type { StructureRecord } from '../../../src/@types/engine/data/StructureRecord';
 
 /**
  * Minimal GalaxyCatalog from (x,y,z) tuples — only `positions`/`count` are
@@ -40,7 +40,7 @@ function makeCatalog(positions: ReadonlyArray<readonly [number, number, number]>
 }
 
 /** A cluster at the origin with a 10 Mpc core radius. */
-const cluster: PointOfInterest = {
+const cluster: StructureRecord = {
   id: 'test-cluster',
   name: 'Test Cluster',
   category: 'cluster',
@@ -96,18 +96,6 @@ describe('structureMemberCount', () => {
     expect(structureMemberCount(cluster, getCloud, ALL_VISIBLE_MASK)).toBeNull();
   });
 
-  it('returns null for a famous-galaxy POI (no membership sphere)', () => {
-    const famous: PointOfInterest = {
-      id: 'm31',
-      name: 'Andromeda',
-      category: 'famousGalaxy',
-      worldPos: [1, 2, 3],
-      featured: true,
-    } as unknown as PointOfInterest;
-    const getCloud = cloudFrom({ [Source.SDSS]: makeCatalog([[1, 2, 3]]) });
-    expect(structureMemberCount(famous, getCloud, ALL_VISIBLE_MASK)).toBeNull();
-  });
-
   it('returns null when no visible catalog is loaded yet', () => {
     expect(structureMemberCount(cluster, cloudFrom({}), ALL_VISIBLE_MASK)).toBeNull();
   });
@@ -124,7 +112,7 @@ describe('structureMemberCount', () => {
 
   it('prefers apparentRadiusMpc over physicalRadiusMpc for the cone', () => {
     // Galaxy at r=8: outside the 5 Mpc core, inside the 12 Mpc apparent extent.
-    const wide: PointOfInterest = {
+    const wide: StructureRecord = {
       ...cluster,
       physicalRadiusMpc: 5,
       apparentRadiusMpc: 12,

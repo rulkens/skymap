@@ -14,7 +14,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { tweenToPoi } from '../../../../src/services/engine/camera/tweenToPoi';
 import { poiFocusDistance } from '../../../../src/services/engine/camera/poiFocusDistance';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { PointOfInterest } from '../../../../src/@types/engine/subsystems/PointOfInterest';
+import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
 
 function makeState(opts: {
   cam: { target: [number, number, number]; distance: number; yaw: number; pitch: number } | null;
@@ -30,7 +30,7 @@ function makeState(opts: {
   } as unknown as EngineState;
 }
 
-const VIRGO: PointOfInterest = {
+const VIRGO: StructureRecord = {
   id: 'virgo',
   name: 'Virgo Cluster',
   category: 'cluster',

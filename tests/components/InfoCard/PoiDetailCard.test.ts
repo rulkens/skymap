@@ -10,10 +10,10 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import { PoiDetailCard } from '../../../src/components/InfoCard/PoiDetailCard';
-import type { PointOfInterest } from '../../../src/@types/engine/subsystems/PointOfInterest';
+import type { StructureRecord } from '../../../src/@types/engine/data/StructureRecord';
 
 // Coma carries an Abell number ('A1656'); the card should expand it.
-const comaWithAbell: PointOfInterest = {
+const comaWithAbell: StructureRecord = {
   id: 'coma',
   name: 'Coma Cluster',
   category: 'cluster',
@@ -24,7 +24,7 @@ const comaWithAbell: PointOfInterest = {
 };
 
 // Virgo has no Abell designation — the row must be absent.
-const virgoNoAbell: PointOfInterest = {
+const virgoNoAbell: StructureRecord = {
   id: 'virgo-m87',
   name: 'Virgo Cluster',
   category: 'cluster',
@@ -67,17 +67,5 @@ describe('PoiDetailCard', () => {
     render(createElement(PoiDetailCard, { poi: virgoNoAbell, memberCount: 0 }));
     expect(screen.getByText('Galaxies')).toBeInTheDocument();
     expect(screen.getByText('0')).toBeInTheDocument();
-  });
-
-  it('omits the Galaxies row for a famous-galaxy POI even if a count is passed', () => {
-    const famous: PointOfInterest = {
-      id: 'm31',
-      name: 'Andromeda',
-      category: 'famousGalaxy',
-      worldPos: [1, 2, 3],
-      featured: true,
-    } as unknown as PointOfInterest;
-    const { container } = render(createElement(PoiDetailCard, { poi: famous, memberCount: 99 }));
-    expect(container.textContent).not.toMatch(/Galaxies/);
   });
 });

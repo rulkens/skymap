@@ -25,7 +25,7 @@
 
 import { createFadeController } from '../../animation/fadeController';
 import type { ClusterFocusSubsystem } from '../../../@types/engine/subsystems/ClusterFocusSubsystem';
-import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfInterest';
+import type { StructureRecord } from '../../../@types/engine/data/StructureRecord';
 import type { FocusUniformsValue } from '../../../@types/rendering/FocusUniformsValue';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
@@ -62,7 +62,7 @@ export function createClusterFocusSubsystem(
   // The id we are currently fading toward; null = fading out / at rest.
   let focusedId: string | null = null;
 
-  function update(poi: PointOfInterest | null, nowMs: number): void {
+  function update(poi: StructureRecord | null, nowMs: number): void {
     // Narrow to a focus-eligible extended-structure POI. famousGalaxy has
     // no radius, so it (and null) drives a fade-out.
     let next: ActiveFocus | null = null;

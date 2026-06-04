@@ -266,10 +266,10 @@ Remove the now-vestigial `PointOfInterest` union and move the remaining shared t
 - Delete: `src/@types/engine/subsystems/PointOfInterest.d.ts`.
 - Relocate: `PoiCategory` (from `poiSubsystem.ts`, already deleted in T7 — its consumers currently `import type { PoiCategory } from '...poiSubsystem'`) into `src/@types/data/PoiCategory.d.ts` (or fold structure uses into `StructureCategory`).
 
-- [ ] **Step 1:** Grep every `PointOfInterest` and `PoiCategory` importer. For each: if it only ever sees structures, switch to `StructureRecord` / `StructureCategory`; if it genuinely spans the four-category space (`selectionEncoding`, settings toggles), import from the relocated `PoiCategory.d.ts`.
-- [ ] **Step 2:** Delete `PointOfInterest.d.ts`. `npm run typecheck` until green.
-- [ ] **Step 3:** Run the full suite + typecheck.
-- [ ] **Step 4: Commit** — `refactor(engine): drop PointOfInterest union; relocate PoiCategory`
+- [x] **Step 1:** Grep every `PointOfInterest` and `PoiCategory` importer. For each: if it only ever sees structures, switch to `StructureRecord` / `StructureCategory`; if it genuinely spans the four-category space (`selectionEncoding`, settings toggles), import from the relocated `PoiCategory.d.ts`.
+- [x] **Step 2:** Delete `PointOfInterest.d.ts`. `npm run typecheck` until green.
+- [x] **Step 3:** Run the full suite + typecheck.
+- [x] **Step 4: Commit** — `refactor(engine): drop PointOfInterest union; relocate PoiCategory`
 
 ---
 
