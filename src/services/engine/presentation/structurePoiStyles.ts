@@ -1,7 +1,7 @@
 /**
  * structurePoiStyles — per-category visual style table for the extended
- * structures (cluster / supercluster / void) rendered as ring/halo markers
- * and text labels.
+ * structures (cluster / supercluster / void / group) rendered as ring/halo
+ * markers and text labels.
  *
  * The per-`StructureCategory` marker styles travel with the structure
  * presentation producers (`produceStructureMarkers`, `produceStructureLabels`);
@@ -9,8 +9,9 @@
  * styles here lets the producers' per-category math read a single local table
  * rather than a wider union that includes a kind they never emit.
  *
- * `StructureCategory` (cluster | supercluster | void) is the discriminant;
- * every row is keyed by it so the table and the type can't drift.
+ * `StructureCategory` (cluster | supercluster | void | group) is the
+ * discriminant; every row is keyed by it so the table and the type can't
+ * drift.
  */
 
 import type { StructureCategory } from '../../../@types/engine/data/StructureCategory';
@@ -56,8 +57,9 @@ export type StructureMarkerStyle = {
 
 /**
  * Per-category visual style table. Rows are copied verbatim from the former
- * `POI_STYLES` cluster/supercluster/void entries — see the field docs above
- * for semantics and the tuning rationale (e.g. the per-category min-apparent
+ * `POI_STYLES` cluster/supercluster/void entries, with `group` added for the
+ * Local Volume galaxy groups (0–13 Mpc). See the field docs above for
+ * semantics and the tuning rationale (e.g. the per-category min-apparent
  * floors that keep the bulk catalog from papering the sky with sub-readable
  * specks).
  */
@@ -104,6 +106,32 @@ export const STRUCTURE_POI_STYLES = {
     markerMaxApparentFadeBandPx: 400,
     markerMinApparentRadiusPx: 28,
     markerMinApparentFadeBandPx: 20,
+    outlineColor: [0, 0, 0, 0.1],
+    outlineEmFrac: 0.16,
+  },
+  group: {
+    // Soft green — distinct from cluster-yellow / SC-orange / void-cyan.
+    // Groups are small, very near foreground markers (0–13 Mpc); the green
+    // reads as "our cosmic neighbourhood". Final hue tunable in the visual
+    // check (Task 10).
+    labelColor: hexToGl('#8FBF8F'),
+    minPixelSize: 35,
+    maxPixelSize: 150,
+    // Group labels are physically tiny — between famous-galaxy (0.0125) and
+    // cluster (1.25).
+    worldEmMpc: 0.3,
+    pixelWidth: 2,
+    // Soft-green halo with a moderate alpha (mirrors void's translucent halo
+    // pattern) so the near foreground ring is a glow, not a solid disk.
+    haloColor: hexToGl('#8FBF8FA5'),
+    ringColor: hexToGl('#8FBF8F'),
+    markerMaxApparentRadiusPx: 700,
+    markerMaxApparentFadeBandPx: 400,
+    // Cluster-like low floor (not the void/SC floor of 28) so a small *near*
+    // group ring stays visible rather than tripping the "too small to read"
+    // cutoff.
+    markerMinApparentRadiusPx: 5,
+    markerMinApparentFadeBandPx: 4,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
   },
