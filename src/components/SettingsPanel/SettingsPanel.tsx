@@ -87,7 +87,7 @@ import { BiasMode } from '../../data/biasMode';
 import type { BiasMode as BiasModeT } from '../../@types/data/BiasMode';
 import { ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../../@types/data/ToneMapCurve';
-import type { PoiCategory } from '../../services/engine/subsystems/poiSubsystem';
+import type { PoiCategory } from '../../@types/engine/data/PoiCategory';
 import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
@@ -280,10 +280,7 @@ type Props = {
  * picker (the group's own master being OFF means there's nothing to
  * style).
  */
-function deriveCosmicWebStyle(
-  volumesOn: boolean,
-  filamentsOn: boolean,
-): CosmicWebStyle | null {
+function deriveCosmicWebStyle(volumesOn: boolean, filamentsOn: boolean): CosmicWebStyle | null {
   if (volumesOn && filamentsOn) return 'both';
   if (volumesOn) return 'smooth';
   if (filamentsOn) return 'filaments';
@@ -555,9 +552,7 @@ export function SettingsPanel({
                   <label htmlFor={`toggle-source-${s}`}>
                     {SOURCE_REGISTRY[s].label}
                     {count !== undefined && (
-                      <span className={styles.sourceCount}>
-                        {count.toLocaleString()}
-                      </span>
+                      <span className={styles.sourceCount}>{count.toLocaleString()}</span>
                     )}
                   </label>
                   <input
@@ -625,9 +620,7 @@ export function SettingsPanel({
                     <option value={BiasMode.VolumeLimited}>Volume-limited</option>
                     <option value={BiasMode.VMax}>1/V_max</option>
                     <option value={BiasMode.Schechter}>Schechter LF</option>
-                    <option value={BiasMode.AngularReweight}>
-                      Angular re-weight (HEALPix)
-                    </option>
+                    <option value={BiasMode.AngularReweight}>Angular re-weight (HEALPix)</option>
                   </select>
                 </div>
                 {biasMode === BiasMode.VolumeLimited && (
@@ -793,11 +786,7 @@ export function SettingsPanel({
             return (
               <div className={styles.panelRow} key={`marker-${cat}`}>
                 <label htmlFor={`toggle-marker-${cat}`}>
-                  {cat === 'supercluster'
-                    ? 'Superclusters'
-                    : cat === 'void'
-                      ? 'Voids'
-                      : 'Clusters'}
+                  {cat === 'supercluster' ? 'Superclusters' : cat === 'void' ? 'Voids' : 'Clusters'}
                   {count !== undefined && (
                     <span className={styles.sourceCount}>{count.toLocaleString()}</span>
                   )}
@@ -870,9 +859,7 @@ export function SettingsPanel({
               id="tonemap-curve"
               className={styles.modeSelect}
               value={toneMapCurve}
-              onChange={(e) =>
-                onToneMapCurveChange(parseInt(e.target.value, 10) as ToneMapCurveT)
-              }
+              onChange={(e) => onToneMapCurveChange(parseInt(e.target.value, 10) as ToneMapCurveT)}
             >
               {ALL_TONE_MAP_CURVES.map((c) => (
                 <option key={c} value={c}>
@@ -910,9 +897,7 @@ export function SettingsPanel({
               <>
                 <div className={styles.panelRow}>
                   <label htmlFor="slider-spacemouse-sensitivity">Sensitivity</label>
-                  <span className={styles.panelValue}>
-                    {spaceMouseSensitivity.toFixed(2)}×
-                  </span>
+                  <span className={styles.panelValue}>{spaceMouseSensitivity.toFixed(2)}×</span>
                 </div>
                 <div className={styles.panelRow}>
                   <input
@@ -922,9 +907,7 @@ export function SettingsPanel({
                     max={3.0}
                     step={0.05}
                     value={spaceMouseSensitivity}
-                    onChange={(e) =>
-                      onSpaceMouseSensitivityChange(parseFloat(e.target.value))
-                    }
+                    onChange={(e) => onSpaceMouseSensitivityChange(parseFloat(e.target.value))}
                   />
                 </div>
               </>

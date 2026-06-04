@@ -47,7 +47,6 @@ import { createSelectionSubsystem } from '../../src/services/engine/subsystems/s
 import { createBiasCorrectionSubsystem } from '../../src/services/engine/subsystems/biasCorrectionSubsystem';
 import { createYouAreHereSubsystem } from '../../src/services/engine/subsystems/youAreHereSubsystem';
 import { createLabelDirectorSubsystem } from '../../src/services/engine/subsystems/labelDirectorSubsystem';
-import { createPoiSubsystem } from '../../src/services/engine/subsystems/poiSubsystem';
 import { createClusterFocusSubsystem } from '../../src/services/engine/subsystems/clusterFocusSubsystem';
 import { createFadeRegistry } from '../../src/services/animation/fadeRegistry';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
@@ -182,7 +181,6 @@ describe('EngineState type', () => {
         }),
         youAreHere: createYouAreHereSubsystem(),
         labelDirector: createLabelDirectorSubsystem(),
-        pois: createPoiSubsystem(),
         clusterFocus: createClusterFocusSubsystem(),
         clickResolver: null,
         inputBindings: null,
@@ -370,7 +368,6 @@ describe('EngineState type', () => {
         }),
         youAreHere: createYouAreHereSubsystem(),
         labelDirector: createLabelDirectorSubsystem(),
-        pois: createPoiSubsystem(),
         clusterFocus: createClusterFocusSubsystem(),
         clickResolver: null,
         inputBindings: null,

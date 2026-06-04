@@ -1,6 +1,6 @@
 import type { GalaxyInfo } from './GalaxyInfo';
 import type { GalaxySelection } from './subsystems/Selection';
-import type { PointOfInterest } from './subsystems/PointOfInterest';
+import type { StructureRecord } from './data/StructureRecord';
 
 /**
  * Result of resolving a click.  See the module-level docstring of
@@ -24,7 +24,7 @@ import type { PointOfInterest } from './subsystems/PointOfInterest';
  *                  pre-extraction parity rule documented in clickHandler.ts).
  *
  *   - `'poi'`    — a cluster / supercluster / void ring hit that
- *                  resolved to a PointOfInterest record.  The engine's
+ *                  resolved to a StructureRecord record.  The engine's
  *                  ring-pick pipeline encodes one of three categories
  *                  in the high 5 bits of the pick texel; the click
  *                  resolver maps `(category, poiIndex)` through the
@@ -33,7 +33,7 @@ import type { PointOfInterest } from './subsystems/PointOfInterest';
  *                  See `selectionEncoding.ts` for the encoding details
  *                  and Plan 3 §6.2 for the per-category allocation.
  *
- * The 'poi' shape carries the full `PointOfInterest` so callers don't
+ * The 'poi' shape carries the full `StructureRecord` so callers don't
  * have to re-lookup by id — the resolver already did the index → POI
  * walk and there's no reason to throw the result away just to make
  * the engine repeat it.
@@ -45,4 +45,4 @@ export type ClickResolution =
       selection: GalaxySelection;
       info: GalaxyInfo | null;
     }
-  | { kind: 'poi'; poi: PointOfInterest };
+  | { kind: 'poi'; poi: StructureRecord };

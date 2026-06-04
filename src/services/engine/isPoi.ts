@@ -1,10 +1,10 @@
-import type { PointOfInterest } from '../../@types/engine/subsystems/PointOfInterest';
+import type { StructureRecord } from '../../@types/engine/data/StructureRecord';
 import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
 
 /**
  * isPoi — runtime type predicate for FocusableTarget.
  *
- * Uses `'category' in target` as the discriminant because PointOfInterest
+ * Uses `'category' in target` as the discriminant because StructureRecord
  * declares a top-level `category: PoiCategory` field, while GalaxyInfo
  * carries category information only at the nested `galaxyType.category`
  * path.  `'in'` checks the top-level key only, so a GalaxyInfo never
@@ -15,6 +15,6 @@ import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
  * Changing the discriminant later (e.g. adding an explicit `kind` field)
  * is then a single-file change.
  */
-export function isPoi(target: FocusableTarget): target is PointOfInterest {
+export function isPoi(target: FocusableTarget): target is StructureRecord {
   return 'category' in target;
 }

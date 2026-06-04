@@ -52,7 +52,7 @@
 
 import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
-import type { PoiCategory } from '../../services/engine/subsystems/poiSubsystem';
+import type { PoiCategory } from '../engine/data/PoiCategory';
 
 export type EngineSettingsState = {
   /**

@@ -110,7 +110,8 @@ import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsys
 import { createYouAreHereSubsystem } from './subsystems/youAreHereSubsystem';
 import { createLabelDirectorSubsystem } from './subsystems/labelDirectorSubsystem';
 import { registerLabelStyleOverrideWake } from './labelStyleOverride';
-import { createPoiSubsystem } from './subsystems/poiSubsystem';
+import { produceStructureLabels } from './presentation/produceStructureLabels';
+import { produceFamousLabels } from './presentation/produceFamousLabels';
 import { createClusterFocusSubsystem } from './subsystems/clusterFocusSubsystem';
 import { createFpsCounter } from './subsystems/fpsCounter';
 import { HDR_PASSES, UI_PASSES } from './frame/passes';
@@ -490,9 +491,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         cb,
         getCloud: (s) => state.data.galaxies.catalogs.get(s),
         getFamousMeta: () => state.data.galaxies.famousMeta,
-        // Forward-reference: `state.subsystems.pois` is bound later in this
-        // literal, but the closure resolves at call time.
-        getPoi: (id) => state.subsystems.pois.findPoi(id),
+        // POI-kind selections are structure ring hits (cluster / SC / void);
+        // resolve them straight from the structure store. Famous galaxies are
+        // selected via the point path (kind 'galaxy'), never as a POI.
+        getPoi: (id) => state.data.structures.byId(id),
       }),
 
       // ── Bias-correction subsystem ─────────────────────────────────
@@ -514,14 +516,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // fetch.
       youAreHere: createYouAreHereSubsystem(),
 
-      // ── Label director + POI subsystem ───────────────────────────
+      // ── Label director ───────────────────────────────────────────
       // The director owns the `labelRenderer.setLabels` /
-      // `markerLineRenderer.setLines` calls; youAreHere and pois are
-      // `LabelProducer`s it polls and merges each frame.  Renderers are
-      // wired in during initGpu; producer registration happens just after
-      // this literal so the director sees both before the first frame.
+      // `markerLineRenderer.setLines` calls and declutters across all its
+      // `LabelProducer`s (youAreHere + the structure/famous label producers,
+      // registered just after this literal).  Renderers are wired in during
+      // initGpu so the director sees everything before the first frame.
       labelDirector: createLabelDirectorSubsystem(),
-      pois: createPoiSubsystem({}),
 
       // ── Cluster focus-mode subsystem ─────────────────────────────
       // Selection-driven: `runFrame` calls `update(selectedPoi, nowMs)` to
@@ -602,13 +603,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   // ── Register label producers with the director ───────────────────────
   //
-  // Registration order = merged label order (youAreHere first, POIs after).
-  // Both are eager in the state literal, so this is synchronous before any
-  // frame fires.  Register both even when POIs are empty — the director
-  // treats an empty contribution as a no-op.  Structural typing carries it:
-  // `YouAreHereSubsystem` aliases `LabelProducer`, `PoiSubsystem` extends it.
+  // Registration order = merged label order: youAreHere, then the structure
+  // labels, then the famous-galaxy labels.  The director declutters across
+  // all of them by `prominencePx`, so registration order only sets the
+  // tiebreak for equal-prominence collisions (rare).  The structure + famous
+  // producers are pure functions over the stores; wrap each as a LabelProducer
+  // with a stable id.  All eager, so this is synchronous before any frame.
   state.subsystems.labelDirector.registerProducer(state.subsystems.youAreHere);
-  state.subsystems.labelDirector.registerProducer(state.subsystems.pois);
+  state.subsystems.labelDirector.registerProducer({
+    id: 'structureLabels',
+    produceLabels: produceStructureLabels,
+  });
+  state.subsystems.labelDirector.registerProducer({
+    id: 'famousLabels',
+    produceLabels: produceFamousLabels,
+  });
 
   // ── Wake on label-style override edits ────────────────────────────────
   //
@@ -1095,7 +1104,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.biasCorrection.destroy();
     state.subsystems.youAreHere.destroy();
     state.subsystems.labelDirector.destroy();
-    state.subsystems.pois.destroy();
     state.subsystems.clusterFocus.destroy();
     // Impostor teardown order matters: texturedDisks subscribes to
     // galaxyAtlas's eviction handler (destroy it first); hiResFamous
@@ -1242,13 +1250,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setIntensity: (value) => boringSetters.setFilamentIntensity(value),
     },
     labels: {
-      // Two parallel setters, one per independent axis.  Both forward into
-      // the POI subsystem (the canonical record), mirror into
-      // `state.settings`, then echo a fresh copy as an immutable snapshot.
-      // The OTHER axis is never touched — see `poiSubsystem.ts` for the
-      // orthogonality rationale.
+      // Two parallel setters, one per independent visibility axis.  Each
+      // routes to the canonical store — structure categories (cluster / SC /
+      // void) to the structure store, famousGalaxy to the galaxy store —
+      // then mirrors into `state.settings` and echoes a fresh immutable
+      // snapshot.  The OTHER axis is never touched (orthogonal axes).
       setCategoryLabelVisible: (category, visible) => {
-        state.subsystems.pois.setCategoryLabelVisible(category, visible);
+        if (category === 'famousGalaxy') {
+          state.data.galaxies.setFamousLabelsVisible(visible);
+        } else {
+          state.data.structures.setLabelVisible(category, visible);
+        }
         state.settings.labelCategoryVisibility = {
           ...state.settings.labelCategoryVisibility,
           [category]: visible,
@@ -1259,7 +1271,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         state.subsystems.scheduler.requestRender();
       },
       setCategoryMarkerVisible: (category, visible) => {
-        state.subsystems.pois.setCategoryMarkerVisible(category, visible);
+        // Famous galaxies have no ring/halo marker — curated thumbnails do
+        // that job — so a marker-visibility toggle for them is a no-op. Only
+        // structure categories route to the structure store's marker axis.
+        if (category !== 'famousGalaxy') {
+          state.data.structures.setMarkerVisible(category, visible);
+        }
         state.settings.markerCategoryVisibility = {
           ...state.settings.markerCategoryVisibility,
           [category]: visible,

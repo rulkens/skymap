@@ -22,13 +22,13 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { createClickResolver } from '../../../../src/services/engine/interaction/clickHandler';
-import type { PointOfInterest } from '../../../../src/@types/engine/subsystems/PointOfInterest';
+import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
 import type { ClickResolveInput } from '../../../../src/@types/engine/ClickResolveInput';
 import type { createPickRenderer } from '../../../../src/services/gpu/renderers/pickRenderer';
 
 type PickRenderer = ReturnType<typeof createPickRenderer>;
 
-const virgo: PointOfInterest = {
+const virgo: StructureRecord = {
   id: 'virgo-m87',
   name: 'Virgo Cluster',
   category: 'cluster',
@@ -56,7 +56,7 @@ describe('createClickResolver POI variant', () => {
       pickRenderer,
       resolveSelection: vi.fn(),
       buildGalaxyInfo: vi.fn(),
-      // NEW: a callback to map (category, poiIndex) -> PointOfInterest.
+      // NEW: a callback to map (category, poiIndex) -> StructureRecord.
       resolvePoi: ({ category, poiIndex }) => {
         if (category === 'cluster' && poiIndex === 0) return virgo;
         return null;

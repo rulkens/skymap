@@ -14,19 +14,17 @@
 import { vec3 } from 'gl-matrix';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfInterest';
+import type { StructureRecord } from '../../../@types/engine/data/StructureRecord';
 import { FOCUS_TWEEN_MS } from './focusTweenDuration';
 import { poiFocusDistance } from './poiFocusDistance';
 
-export function tweenToPoi(state: EngineState, poi: PointOfInterest): void {
+export function tweenToPoi(state: EngineState, poi: StructureRecord): void {
   const cam = state.cam;
   if (!cam) return;
 
-  // Only the extended-structure arms carry a physical radius.  Famous
-  // galaxies never reach this distance path (poiFocusDistance throws on
-  // 'famousGalaxy'), so they fall to zero radius — which poiFocusDistance
-  // would clamp to the 1 Mpc minimum anyway.
-  const radius = poi.category === 'famousGalaxy' ? 0 : poi.physicalRadiusMpc;
+  // Every structure carries a physical radius (famous galaxies are not
+  // structures and never reach this path).
+  const radius = poi.physicalRadiusMpc;
   state.subsystems.tweens.start({
     startMs: performance.now(),
     durationMs: FOCUS_TWEEN_MS,

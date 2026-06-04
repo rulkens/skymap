@@ -5,7 +5,7 @@
 //
 // Since Task 5 of the unify-focus-clear refactor, InfoCard accepts a single
 // `hovered` and a single `selected` prop — each typed as
-// `GalaxyInfo | PointOfInterest | null` (the `FocusableTarget` union).
+// `GalaxyInfo | StructureRecord | null` (the `FocusableTarget` union).
 // The component dispatches via `isPoi` internally.  The old `hoveredPoi` /
 // `selectedPoi` separate slots are gone.
 //
@@ -23,10 +23,10 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import { InfoCard } from '../../../src/components/InfoCard/InfoCard';
-import type { PointOfInterest } from '../../../src/@types/engine/subsystems/PointOfInterest';
+import type { StructureRecord } from '../../../src/@types/engine/data/StructureRecord';
 import type { GalaxyInfo } from '../../../src/@types/engine/GalaxyInfo';
 
-const virgo: PointOfInterest = {
+const virgo: StructureRecord = {
   id: 'virgo-m87',
   name: 'Virgo Cluster',
   category: 'cluster',
@@ -34,7 +34,7 @@ const virgo: PointOfInterest = {
   featured: true,
   physicalRadiusMpc: 2.2,
 };
-const coma: PointOfInterest = {
+const coma: StructureRecord = {
   id: 'coma',
   name: 'Coma Cluster',
   category: 'cluster',

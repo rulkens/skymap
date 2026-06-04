@@ -11,12 +11,12 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import { CompactPoiCard } from '../../../src/components/InfoCard/CompactPoiCard';
-import type { PointOfInterest } from '../../../src/@types/engine/subsystems/PointOfInterest';
+import type { StructureRecord } from '../../../src/@types/engine/data/StructureRecord';
 
 // Fixture POI ~10 Mpc from origin so the distance formatter renders a
 // readable Mpc value (formatDistance("Mpc / Mly") shape).  physicalRadiusMpc
 // is 2.2 — a real-world Virgo-ish radius.
-const virgo: PointOfInterest = {
+const virgo: StructureRecord = {
   id: 'virgo-m87',
   name: 'Virgo Cluster',
   category: 'cluster',
@@ -51,21 +51,5 @@ describe('CompactPoiCard', () => {
     // "2.2" digits regardless of surrounding decimals so a future
     // formatScalar adjustment doesn't break the assertion.
     expect(screen.getByText(/2\.2/)).toBeInTheDocument();
-  });
-
-  it('omits the radius row for a famous-galaxy POI (no radius arm)', () => {
-    // Famous galaxies are the arm with no radius — the card must not
-    // render a radius row for them.  Catches the regression where a
-    // future refactor unconditionally renders the row with `?? 0`.
-    const galaxy: PointOfInterest = {
-      id: 'famous-m87',
-      name: 'M87',
-      category: 'famousGalaxy',
-      worldPos: [10, 0, 0],
-      featured: true,
-    };
-    const { container } = render(createElement(CompactPoiCard, { poi: galaxy }));
-    expect(container.textContent).not.toMatch(/2\.2/);
-    expect(container.textContent).not.toMatch(/ r /);
   });
 });

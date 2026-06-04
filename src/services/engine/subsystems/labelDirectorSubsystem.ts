@@ -42,6 +42,19 @@ import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { LabelProducer } from '../../../@types/engine/subsystems/LabelProducer';
 import type { LabelDirectorSubsystem } from '../../../@types/engine/subsystems/LabelDirectorSubsystem';
 import { getLabelStyleOverrideVersion } from '../labelStyleOverride';
+import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
+
+/**
+ * Minimum screen-pixel gap between two on-screen label anchors before the
+ * lower-`prominencePx` one is suppressed.  Two labels whose anchors land
+ * within this many pixels in BOTH x and y collide.  Tuned to keep dense
+ * regions (Shapley) readable without over-culling merely-close neighbours.
+ *
+ * The declutter runs in the director (not per producer) so it de-collides
+ * labels ACROSS producers — a structure label vs a famous-galaxy label vs the
+ * you-are-here marker — which a per-producer pass could never see.
+ */
+const DECLUTTER_MARGIN_PX = 48;
 
 export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
   let labelRenderer: LabelRenderer | null = null;
@@ -51,6 +64,10 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
   // first frame.  Empty string is a valid signature (no labels, no lines)
   // and is distinct from null.
   let prevSignature: string | null = null;
+  // One-shot fade-in flag for the 'poi' label layer.  Flips true on the first
+  // frame that flushes a non-empty (decluttered) label set.  Re-homed here
+  // from poiSubsystem when the producers split (Spec 3) so the fade survives.
+  let didFireFadeIn = false;
 
   function attachRenderers(label: LabelRenderer, line: MarkerLineRenderer): void {
     labelRenderer = label;
@@ -102,6 +119,93 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
     return `L:${labels.length}:${lIds};M:${lines.length}:${mIds};O:${getLabelStyleOverrideVersion()}`;
   }
 
+  /**
+   * Greedy screen-space declutter over the merged label set.  Projects each
+   * label's anchor to screen pixels, sorts by `prominencePx` DESC (stable
+   * input-order tiebreak), and accepts a label when its on-screen anchor sits
+   * ≥ DECLUTTER_MARGIN_PX (in x OR y) from every accepted on-screen anchor.
+   * Off-screen labels (behind camera / outside the viewport) are accepted
+   * unconditionally and never block.  Decluttering by apparent size (not a
+   * flat significance) keeps the large structure under the camera while a
+   * small distant label sweeping past during an orbit yields, instead of
+   * culling-then-releasing the structure being inspected (flicker).
+   *
+   * A line whose `ownerLabelId` was culled is dropped with its label so no
+   * anchor stem outlives its text; lines without an owner survive.  Returns
+   * fresh arrays in original input order (deterministic, sort-independent).
+   */
+  function declutter(
+    labels: readonly Label[],
+    lines: readonly MarkerLine[],
+    ctx: ReadyFrameContext,
+  ): { labels: Label[]; lines: MarkerLine[] } {
+    type Projected = {
+      readonly index: number;
+      readonly prominencePx: number;
+      readonly screenX: number;
+      readonly screenY: number;
+      readonly onScreen: boolean;
+    };
+    const m = ctx.vp;
+    const projected: Projected[] = labels.map((label, index) => {
+      // Column-major mat4·vec4 by hand — the lib's vec4.transformMat4
+      // allocates per call.
+      const wx = label.worldPos[0];
+      const wy = label.worldPos[1];
+      const wz = label.worldPos[2];
+      const clipX = m[0]! * wx + m[4]! * wy + m[8]! * wz + m[12]!;
+      const clipY = m[1]! * wx + m[5]! * wy + m[9]! * wz + m[13]!;
+      const clipW = m[3]! * wx + m[7]! * wy + m[11]! * wz + m[15]!;
+      let screenX = 0;
+      let screenY = 0;
+      let onScreen = false;
+      if (clipW > 0) {
+        const ndcX = clipX / clipW;
+        const ndcY = clipY / clipW;
+        screenX = (ndcX * 0.5 + 0.5) * ctx.canvasSize.width;
+        // Flip Y: NDC +Y is up, screen +Y is down.
+        screenY = (1 - (ndcY * 0.5 + 0.5)) * ctx.canvasSize.height;
+        onScreen = ndcX >= -1 && ndcX <= 1 && ndcY >= -1 && ndcY <= 1;
+      }
+      // A label with no prominence (e.g. you-are-here) sinks to lowest
+      // priority rather than beating real structures.
+      return { index, prominencePx: label.prominencePx ?? 0, screenX, screenY, onScreen };
+    });
+
+    const order = projected.map((_, i) => i);
+    order.sort((a, b) => {
+      const d = projected[b]!.prominencePx - projected[a]!.prominencePx;
+      return d !== 0 ? d : a - b;
+    });
+    const accepted: Projected[] = [];
+    for (const i of order) {
+      const c = projected[i]!;
+      if (c.onScreen) {
+        let collides = false;
+        for (const a of accepted) {
+          if (!a.onScreen) continue;
+          if (
+            Math.abs(c.screenX - a.screenX) < DECLUTTER_MARGIN_PX &&
+            Math.abs(c.screenY - a.screenY) < DECLUTTER_MARGIN_PX
+          ) {
+            collides = true;
+            break;
+          }
+        }
+        if (collides) continue;
+      }
+      accepted.push(c);
+    }
+
+    const acceptedIndices = new Set(accepted.map((c) => c.index));
+    const outLabels = labels.filter((_, i) => acceptedIndices.has(i));
+    const acceptedIds = new Set(outLabels.map((l) => l.id));
+    const outLines = lines.filter(
+      (line) => line.ownerLabelId === undefined || acceptedIds.has(line.ownerLabelId),
+    );
+    return { labels: outLabels, lines: outLines };
+  }
+
   function runFrame(state: EngineState, ctx: ReadyFrameContext): void {
     if (!labelRenderer || !lineRenderer) return;
 
@@ -119,10 +223,28 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
       if (out.awake) anyAwake = true;
     }
 
-    const sig = signatureOf(mergedLabels, mergedLines);
+    // Cross-producer declutter — producers emit every candidate (no internal
+    // declutter); the director de-collides them together here.
+    const { labels, lines } = declutter(mergedLabels, mergedLines, ctx);
+
+    // One-shot layer fade-in: the first non-empty (decluttered) label set
+    // fires fadeTo(1) on the POI layer's FadeHandle.  Re-homed from
+    // poiSubsystem (Spec 3) so the producer split doesn't strand it.  The
+    // label renderer doesn't consume the opacity yet — registration is
+    // structural for future tour addressing.
+    if (!didFireFadeIn && labels.length > 0) {
+      didFireFadeIn = true;
+      void state.subsystems.fades.fadeTo(
+        { kind: 'labelLayer', layer: 'poi' },
+        1,
+        FADE_IN_DURATION_MS,
+      );
+    }
+
+    const sig = signatureOf(labels, lines);
     if (sig !== prevSignature) {
-      labelRenderer.setLabels(mergedLabels);
-      lineRenderer.setLines(mergedLines);
+      labelRenderer.setLabels(labels);
+      lineRenderer.setLines(lines);
       prevSignature = sig;
     }
 

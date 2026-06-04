@@ -105,4 +105,14 @@ export type Label = {
    * straddles the ring centre rather than hanging beneath it.
    */
   readonly alignY?: LabelAlignY;
+  /**
+   * On-screen prominence (apparent size, px) used as the declutter sort
+   * key by the `labelDirector` merge: a ring's apparent radius for a
+   * structure, a galaxy's apparent diameter for a famous label.  When two
+   * labels' anchors land within the declutter margin, the higher
+   * `prominencePx` wins.  The label renderer ignores this field — it exists
+   * only to carry the producer's size signal across the director's
+   * cross-producer declutter.  Absent → treated as 0 (lowest priority).
+   */
+  readonly prominencePx?: number;
 };

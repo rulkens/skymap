@@ -13,7 +13,7 @@ import type { SourceType } from '../data/SourceType';
 import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { LoadProgressState } from '../loading/LoadProgressState';
-import type { PoiCategory } from '../../services/engine/subsystems/poiSubsystem';
+import type { PoiCategory } from './data/PoiCategory';
 import type { VolumeFieldRowData } from '../settings/VolumeFieldRowData';
 
 /**
@@ -243,12 +243,8 @@ export type EngineCallbacks = {
    * `setCategoryMarkerVisible(...)` call.
    */
   labels?: {
-    onLabelCategoryVisibilityChange?: (
-      visibility: Readonly<Record<PoiCategory, boolean>>,
-    ) => void;
-    onMarkerCategoryVisibilityChange?: (
-      visibility: Readonly<Record<PoiCategory, boolean>>,
-    ) => void;
+    onLabelCategoryVisibilityChange?: (visibility: Readonly<Record<PoiCategory, boolean>>) => void;
+    onMarkerCategoryVisibilityChange?: (visibility: Readonly<Record<PoiCategory, boolean>>) => void;
   };
 
   /**

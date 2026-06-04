@@ -23,7 +23,7 @@
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfInterest';
+import type { StructureRecord } from '../../../@types/engine/data/StructureRecord';
 import { tweenToPoi } from '../camera/tweenToPoi';
 
 /**
@@ -36,7 +36,7 @@ import { tweenToPoi } from '../camera/tweenToPoi';
  * camera animation begins on a frame where every other state is
  * consistent.
  */
-export function commitPoiFocus(state: EngineState, poi: PointOfInterest): void {
+export function commitPoiFocus(state: EngineState, poi: StructureRecord): void {
   state.subsystems.selection.setSelected({ kind: 'poi', id: poi.id });
   // Latch the focus slot — this is the deliberate focus gesture
   // cluster-focus mode keys off (a bare single-click select does not

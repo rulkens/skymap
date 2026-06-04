@@ -4,7 +4,7 @@ import type { EngineHandle } from './EngineHandle';
 import type { EngineStatus } from './EngineStatus';
 import type { FocusableTarget } from './FocusableTarget';
 import type { FamousMetaEntry } from '../loading/FamousMetaEntry';
-import type { PointOfInterest } from './subsystems/PointOfInterest';
+import type { StructureRecord } from './data/StructureRecord';
 
 /**
  * Combined input for `useUrlSync` — both galaxy-side and POI-side state
@@ -25,6 +25,6 @@ export type UseUrlSyncInput = {
   famousMeta: readonly FamousMetaEntry[];
   aliasMap: ReadonlyMap<bigint, readonly string[]>;
   ready: boolean;
-  pois: readonly PointOfInterest[];
+  pois: readonly StructureRecord[];
   engineHandleRef: RefObject<EngineHandle | null>;
 };

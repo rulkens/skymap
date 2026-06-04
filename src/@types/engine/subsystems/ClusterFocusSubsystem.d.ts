@@ -1,4 +1,4 @@
-import type { PointOfInterest } from './PointOfInterest';
+import type { StructureRecord } from '../data/StructureRecord';
 import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
 import type { Destroyable } from '../../rendering/Destroyable';
 
@@ -38,7 +38,7 @@ export type ClusterFocusSubsystem = {
    *     0, keeping the last center/radius until blend settles at 0.
    *   - unchanged id: no-op (no re-fade).
    */
-  update(focusedPoi: PointOfInterest | null, nowMs: number): void;
+  update(focusedPoi: StructureRecord | null, nowMs: number): void;
 
   /**
    * Pure read: ticks the fade and returns the live uniform value. At

@@ -41,7 +41,7 @@
 import { useState } from 'react';
 import type { BiasMode as BiasModeT } from '../@types/data/BiasMode';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
-import type { PoiCategory } from '../services/engine/subsystems/poiSubsystem';
+import type { PoiCategory } from '../@types/engine/data/PoiCategory';
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_AUTO_ROTATE,

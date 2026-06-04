@@ -7,7 +7,7 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import cx from 'classnames';
-import type { PointOfInterest } from '../../@types/engine/subsystems/PointOfInterest';
+import type { StructureRecord } from '../../@types/engine/data/StructureRecord';
 import { formatDistance } from '../../utils/format/distance';
 import { formatAbellDesignation } from '../../utils/format/formatAbellDesignation';
 import { POI_CATEGORY_INFO } from '../../data/poiCategoryInfo';
@@ -16,7 +16,7 @@ import { CardRow } from './CardRow';
 import styles from './DetailCard.module.css';
 
 export type PoiDetailCardProps = {
-  poi: PointOfInterest;
+  poi: StructureRecord;
   pinned?: boolean;
   /**
    * Catalogued galaxies inside this structure's membership sphere at the
@@ -25,7 +25,7 @@ export type PoiDetailCardProps = {
    * row is omitted rather than flashing a misleading "0".
    */
   memberCount?: number | null;
-  onFocus?: (poi: PointOfInterest) => void;
+  onFocus?: (poi: StructureRecord) => void;
   onClose?: () => void;
 };
 
@@ -54,12 +54,8 @@ export function PoiDetailCard({
 
       <div className={styles.cardSection}>
         <CardRow label="Distance" value={formatDistance(distanceMpc)} />
-        {poi.category !== 'famousGalaxy' && (
-          <CardRow label="Radius" value={formatDistance(poi.physicalRadiusMpc)} />
-        )}
-        {poi.category !== 'famousGalaxy' && memberCount != null && (
-          <CardRow label="Galaxies" value={memberCount.toLocaleString()} />
-        )}
+        <CardRow label="Radius" value={formatDistance(poi.physicalRadiusMpc)} />
+        {memberCount != null && <CardRow label="Galaxies" value={memberCount.toLocaleString()} />}
         {poi.category === 'cluster' && poi.abell !== undefined && (
           <CardRow label="Abell" value={formatAbellDesignation(poi.abell)} />
         )}

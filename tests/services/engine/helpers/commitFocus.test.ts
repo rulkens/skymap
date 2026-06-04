@@ -1,6 +1,6 @@
 /**
  * commitFocus — verifies the union-dispatching entry point routes
- * GalaxyInfo through commitGalaxyFocus and PointOfInterest through
+ * GalaxyInfo through commitGalaxyFocus and StructureRecord through
  * commitPoiFocus, using the isPoi predicate.
  *
  * Mocks both underlying commit helpers and asserts the right one was
@@ -11,7 +11,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { GalaxyInfo } from '../../../../src/@types/engine/GalaxyInfo';
-import type { PointOfInterest } from '../../../../src/@types/engine/subsystems/PointOfInterest';
+import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
 
 const commitGalaxyFocusSpy = vi.fn();
 const commitPoiFocusSpy = vi.fn();
@@ -29,7 +29,7 @@ import { commitFocus } from '../../../../src/services/engine/helpers/commitFocus
 function makeFixtures() {
   const state = {} as unknown as EngineState;
   const galaxy = { index: 0, x: 0, y: 0, z: 0 } as unknown as GalaxyInfo;
-  const poi: PointOfInterest = {
+  const poi: StructureRecord = {
     id: 'virgo-cluster',
     name: 'Virgo Cluster',
     category: 'cluster',
@@ -53,7 +53,7 @@ describe('commitFocus', () => {
     expect(commitPoiFocusSpy).not.toHaveBeenCalled();
   });
 
-  it('routes a PointOfInterest through commitPoiFocus', () => {
+  it('routes a StructureRecord through commitPoiFocus', () => {
     const { state, poi } = makeFixtures();
     commitFocus(state, poi);
     expect(commitPoiFocusSpy).toHaveBeenCalledWith(state, poi);

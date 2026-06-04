@@ -31,7 +31,7 @@
  */
 
 import type { Vec4 } from '../../@types/math/Vec4';
-import type { PoiCategory } from './subsystems/poiSubsystem';
+import type { PoiCategory } from '../../@types/engine/data/PoiCategory';
 
 /**
  * The set of label-emitting categories the override can target.

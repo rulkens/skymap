@@ -1,5 +1,5 @@
 /**
- * buildPoisFromClusterCatalog — tests for the bulk cluster/supercluster
+ * clusterCatalogToStructures — tests for the bulk cluster/supercluster
  * POI producer.
  *
  * The producer turns the decoded `.ccat` + meta sidecar into the
@@ -23,7 +23,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { buildPoisFromClusterCatalog } from '../../../../src/services/engine/phases/buildPoisFromClusterCatalog';
+import { clusterCatalogToStructures } from '../../../../src/services/engine/phases/clusterCatalogToStructures';
 import type { ClusterCatalogPayload } from '../../../../src/@types/loading/ClusterCatalogPayload';
 import type { ClusterMetaEntry } from '../../../../src/@types/loading/ClusterCatalogPayload';
 
@@ -63,11 +63,7 @@ function makePayload(
   };
 }
 
-const meta = (
-  id: string,
-  abell: string | null = null,
-  description = '',
-): ClusterMetaEntry => ({
+const meta = (id: string, abell: string | null = null, description = ''): ClusterMetaEntry => ({
   id,
   names: [id.toUpperCase()],
   abell,
@@ -115,20 +111,20 @@ function mixedPayload(): ClusterCatalogPayload {
   ]);
 }
 
-describe('buildPoisFromClusterCatalog', () => {
+describe('clusterCatalogToStructures', () => {
   it('maps category bytes to cluster/supercluster', () => {
-    const pois = buildPoisFromClusterCatalog(mixedPayload());
+    const pois = clusterCatalogToStructures(mixedPayload());
     expect(pois.filter((p) => p.category === 'cluster')).toHaveLength(2);
     expect(pois.filter((p) => p.category === 'supercluster')).toHaveLength(2);
   });
 
   it('marks every POI not featured', () => {
-    const pois = buildPoisFromClusterCatalog(mixedPayload());
+    const pois = clusterCatalogToStructures(mixedPayload());
     expect(pois.every((p) => p.featured === false)).toBe(true);
   });
 
   it('carries worldPos + radii through from the catalog', () => {
-    const pois = buildPoisFromClusterCatalog(mixedPayload());
+    const pois = clusterCatalogToStructures(mixedPayload());
     const low = pois.find((p) => p.id.includes('low-cluster'))!;
     expect(low.worldPos).toEqual([1, 2, 3]);
     expect(low.category === 'cluster' && low.physicalRadiusMpc).toBe(1.5);
@@ -136,7 +132,7 @@ describe('buildPoisFromClusterCatalog', () => {
   });
 
   it('normalizes significance per-category into [0,1] on independent scales', () => {
-    const pois = buildPoisFromClusterCatalog(mixedPayload());
+    const pois = clusterCatalogToStructures(mixedPayload());
     const sig = (idFrag: string) => {
       const p = pois.find((q) => q.id.includes(idFrag))!;
       // significance lives on the extended-structure arms.
@@ -164,14 +160,14 @@ describe('buildPoisFromClusterCatalog', () => {
   });
 
   it('ids are prefixed bulk and never collide with featured slugs', () => {
-    const pois = buildPoisFromClusterCatalog(mixedPayload());
+    const pois = clusterCatalogToStructures(mixedPayload());
     for (const p of pois) {
       expect(p.id).toMatch(/^(cluster|supercluster)-bulk-/);
     }
   });
 
   it('carries the abell designation from meta onto the cluster arm only', () => {
-    const pois = buildPoisFromClusterCatalog(mixedPayload());
+    const pois = clusterCatalogToStructures(mixedPayload());
     const high = pois.find((p) => p.id.includes('high-cluster'))!;
     expect(high.category).toBe('cluster');
     expect(high.category === 'cluster' && high.abell).toBe('A2670');
@@ -191,7 +187,7 @@ describe('buildPoisFromClusterCatalog', () => {
         meta: meta('described-cluster', 'A1', 'X-ray cluster · M500 = 5.0×10¹⁴ M☉ · z = 0.040'),
       },
     ]);
-    const poi = buildPoisFromClusterCatalog(payload)[0]!;
+    const poi = clusterCatalogToStructures(payload)[0]!;
     expect(poi.description).toBe('X-ray cluster · M500 = 5.0×10¹⁴ M☉ · z = 0.040');
   });
 
@@ -206,12 +202,12 @@ describe('buildPoisFromClusterCatalog', () => {
         meta: meta('no-abell-cluster', null),
       },
     ]);
-    const pois = buildPoisFromClusterCatalog(payload);
+    const pois = clusterCatalogToStructures(payload);
     expect('abell' in pois[0]!).toBe(false);
   });
 
   it('names the POI from meta.names[0]', () => {
-    const pois = buildPoisFromClusterCatalog(mixedPayload());
+    const pois = clusterCatalogToStructures(mixedPayload());
     const high = pois.find((p) => p.id.includes('high-cluster'))!;
     expect(high.name).toBe('HIGH-CLUSTER');
   });
@@ -235,7 +231,7 @@ describe('buildPoisFromClusterCatalog', () => {
         meta: meta('reserved'),
       },
     ]);
-    const pois = buildPoisFromClusterCatalog(payload);
+    const pois = clusterCatalogToStructures(payload);
     expect(pois).toHaveLength(1);
     expect(pois[0]!.id).toContain('ok-cluster');
   });
@@ -252,13 +248,13 @@ describe('buildPoisFromClusterCatalog', () => {
         meta: meta('solo-cluster'),
       },
     ]);
-    const pois = buildPoisFromClusterCatalog(payload);
+    const pois = clusterCatalogToStructures(payload);
     const p = pois[0]!;
     expect(p.category === 'cluster' && p.significance).toBeCloseTo(1);
   });
 
   it('returns an empty list for an empty catalog', () => {
     const payload = makePayload([]);
-    expect(buildPoisFromClusterCatalog(payload)).toEqual([]);
+    expect(clusterCatalogToStructures(payload)).toEqual([]);
   });
 });

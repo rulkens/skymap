@@ -5,7 +5,7 @@ import type { FocusableTarget } from './FocusableTarget';
 import type { ScaleInfo } from './ScaleInfo';
 import type { LoadProgressState } from '../loading/LoadProgressState';
 import type { Tier } from '../data/Tier';
-import type { PoiCategory } from '../../services/engine/subsystems/poiSubsystem';
+import type { PoiCategory } from './data/PoiCategory';
 
 export type UseEngineReturn = {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;

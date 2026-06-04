@@ -54,7 +54,7 @@
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
-import type { PoiCategory } from '../subsystems/poiSubsystem';
+import type { PoiCategory } from '../../../@types/engine/data/PoiCategory';
 import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import { createFilamentSlot } from '../../loading/slots/filamentSlot';
 import { createFamousMetaSlot } from '../../loading/slots/famousMetaSlot';
