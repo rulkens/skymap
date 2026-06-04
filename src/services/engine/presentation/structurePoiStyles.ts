@@ -110,21 +110,23 @@ export const STRUCTURE_POI_STYLES = {
     outlineEmFrac: 0.16,
   },
   group: {
-    // Soft green — distinct from cluster-yellow / SC-orange / void-cyan.
-    // Groups are small, very near foreground markers (0–13 Mpc); the green
-    // reads as "our cosmic neighbourhood". Final hue tunable in the visual
-    // check (Task 10).
-    labelColor: hexToGl('#8FBF8F'),
+    // Green end of the scale-ladder ramp: group (green) → cluster (yellow,
+    // #FFD966) → supercluster (orange, #FFCC80). The bright label matches the
+    // cluster/SC label family; the ring sits in their medium-dark ring family
+    // (cluster #B39947 / SC #996B36) so the three read as one green→yellow→
+    // orange progression up the scale ladder. Void stays cyan — the odd one
+    // out, representing absence rather than a scale rung.
+    labelColor: hexToGl('#8FE08F'),
     minPixelSize: 35,
     maxPixelSize: 150,
     // Group labels are physically tiny — between famous-galaxy (0.0125) and
     // cluster (1.25).
     worldEmMpc: 0.3,
     pixelWidth: 2,
-    // Soft-green halo with a moderate alpha (mirrors void's translucent halo
-    // pattern) so the near foreground ring is a glow, not a solid disk.
-    haloColor: hexToGl('#8FBF8FA5'),
-    ringColor: hexToGl('#8FBF8F'),
+    // Translucent green halo (alpha like void) so the near foreground ring is
+    // a glow, not a solid disk — important for the Local Group at the origin.
+    haloColor: hexToGl('#5CA64DA5'),
+    ringColor: hexToGl('#5CA64D'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
     // Cluster-like low floor (not the void/SC floor of 28) so a small *near*
