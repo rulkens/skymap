@@ -6,9 +6,9 @@ import { poiFocusDistance } from '../../../../src/services/engine/camera/poiFocu
 const FOV60 = (Math.PI / 180) * 60;
 
 // Mirror of the helper's framing law for expectation building:
-//   distance = R / (FOCUS_FILL · tan(fovY / 2)),  FOCUS_FILL = 2.5
+//   distance = R / (FOCUS_FILL · tan(fovY / 2)),  FOCUS_FILL = 2.2
 // Kept here (not imported) so the test pins the contract independently.
-const expectedDistance = (r: number, fovYRad: number): number => r / (2.5 * Math.tan(fovYRad / 2));
+const expectedDistance = (r: number, fovYRad: number): number => r / (2.2 * Math.tan(fovYRad / 2));
 
 describe('poiFocusDistance', () => {
   it('frames the apparent radius to a fixed screen-fill fraction', () => {
