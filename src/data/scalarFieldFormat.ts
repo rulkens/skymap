@@ -29,7 +29,8 @@
  *   4    4   version     = 3
  *   8   12   dims        : uint32 × 3 (Nx, Ny, Nz)
  *  20    1   dtype       : uint8  (0 = f16; only value supported in v3)
- *  21    1   value_kind  : uint8  (0 = pre-normalised [0,1]; 1 reserved)
+ *  21    1   value_kind  : uint8  (0 = pre-normalised scalar [0,1];
+ *                                    1 = velocity + overdensity field)
  *  22    1   channels    : uint8  (1 = r16float single-channel,
  *                                    4 = rgba16float; only these two in v3)
  *  23    1   frame_kind  : uint8  (0 = supergalactic-cartesian,
@@ -38,10 +39,25 @@
  *  24   12   origin      : float32 × 3
  *  36    4   voxel_size  : float32
  *  40   16   rotation    : float32 × 4 (unit quaternion x, y, z, w)
- *  56    4   value_min   : float32
- *  60    4   value_max   : float32
- *  64    4   reserved    : float32 (was: density_scale in v1; zero in v3)
- *  68   28   reserved    : uint8 × 28 (zero-filled)
+ *  56    4   value_min   : float32 (= δ_min  when value_kind = 1)
+ *  60    4   value_max   : float32 (= δ_max  when value_kind = 1)
+ *  64    4   speed_max   : float32 (value_kind = 1; was density_scale in v1)
+ *  68    4   speed_p99   : float32 (value_kind = 1; reserved/zero otherwise)
+ *  72    4   delta_p99   : float32 (value_kind = 1; reserved/zero otherwise)
+ *  76   20   reserved    : uint8 × 20 (zero-filled)
+ *
+ *   ── value_kind = 1 (velocity + overdensity field) ────────────────
+ *   A `channels = 4` cube whose voxels are (vx, vy, vz, δ).  Its renderer
+ *   normalises particle speed and seeding weight from three derived stats
+ *   that a per-channel min/max can't express — velocity magnitude is a
+ *   *cross-channel* quantity, not the range of any single component.  Those
+ *   stats fold into the reserved region (no JSON sidecar) and are discriminated
+ *   by value_kind so a scalar reader never mis-reads stale bytes:
+ *     - value_min / value_max double as the δ (overdensity) range;
+ *     - byte 64 = max velocity magnitude (km/s);
+ *     - byte 68 = 99th-percentile velocity magnitude (km/s);
+ *     - byte 72 = 99th-percentile δ.
+ *   For value_kind = 0 (the original density cubes) bytes 64..95 stay zero.
  *
  *   ── VOXEL ARRAY (Nx*Ny*Nz*channels × 2 bytes) ────────────────────
  *   voxels[i] : f16 (stored as Uint16 raw bits), channels interleaved per cell
@@ -101,12 +117,26 @@ const ID_TO_FRAME_KIND: ReadonlyArray<ScalarFieldFrameKind> = [
  *
  * Throws on a length mismatch between `cube.voxels` and
  * `dims[0]*dims[1]*dims[2]*channels`.
+ *
+ * The `value_kind` byte is *derived*, not passed: it is `1` iff
+ * `cube.velocityStats` is present and `0` otherwise.  Tying the discriminator
+ * to the presence of the stats keeps a single source of truth — there's no way
+ * to produce a header claiming value_kind=1 with no stats, or vice versa.  We
+ * additionally require that `velocityStats` only appears on a 4-channel cube
+ * (the stats describe a velocity vector; a 1-channel scalar has none), and
+ * throw a clear error otherwise rather than writing a self-contradictory
+ * header.
  */
 export function encodeScalarField(cube: ScalarCube): ArrayBuffer {
   const expectedVoxels = cube.dims[0] * cube.dims[1] * cube.dims[2] * cube.channels;
   if (cube.voxels.length !== expectedVoxels) {
     throw new Error(
       `encodeScalarField: voxel count ${cube.voxels.length} does not match Nx*Ny*Nz*channels = ${expectedVoxels}`,
+    );
+  }
+  if (cube.velocityStats !== undefined && cube.channels !== 4) {
+    throw new Error(
+      `encodeScalarField: velocityStats is only valid on a 4-channel velocity field, but channels = ${cube.channels}`,
     );
   }
   const buf = new ArrayBuffer(SCFD_HEADER_BYTES + cube.voxels.byteLength);
@@ -117,7 +147,9 @@ export function encodeScalarField(cube: ScalarCube): ArrayBuffer {
   dv.setUint32(12, cube.dims[1], true);
   dv.setUint32(16, cube.dims[2], true);
   dv.setUint8(20, 0); // dtype = f16 (the only dtype supported in v3)
-  dv.setUint8(21, 0); // value_kind = pre-normalised [0,1]
+  // value_kind: 0 = pre-normalised scalar, 1 = velocity + overdensity field.
+  // Derived from velocityStats presence so the two can never disagree.
+  dv.setUint8(21, cube.velocityStats !== undefined ? 1 : 0);
   dv.setUint8(22, cube.channels); // 1 = r16float, 4 = rgba16float
   dv.setUint8(23, FRAME_KIND_TO_ID[cube.frameKind]);
   dv.setFloat32(24, cube.origin[0], true);
@@ -128,12 +160,21 @@ export function encodeScalarField(cube: ScalarCube): ArrayBuffer {
   dv.setFloat32(44, cube.rotation[1], true);
   dv.setFloat32(48, cube.rotation[2], true);
   dv.setFloat32(52, cube.rotation[3], true);
-  dv.setFloat32(56, cube.valueMin, true);
-  dv.setFloat32(60, cube.valueMax, true);
-  // Bytes 64..67 are intentionally left zero — they held `density_scale`
-  // in v1 and are now reserved (relying on ArrayBuffer's zero-init).
-  // Bytes 68..95 stay zero (reserved — future extensions land here without
-  // bumping the version, as long as decoders skip them unconditionally).
+  dv.setFloat32(56, cube.valueMin, true); // = δ_min when value_kind = 1
+  dv.setFloat32(60, cube.valueMax, true); // = δ_max when value_kind = 1
+  if (cube.velocityStats !== undefined) {
+    // Velocity field: fold the three cross-channel normalisation stats into
+    // the reserved region (offsets 64/68/72).  Byte 64 was `density_scale`
+    // in v1 and reserved since v2; the value_kind discriminator means a
+    // scalar reader still sees zero there and never mis-reads these slots.
+    dv.setFloat32(64, cube.velocityStats.speedKmsMax, true);
+    dv.setFloat32(68, cube.velocityStats.speedKmsP99, true);
+    dv.setFloat32(72, cube.velocityStats.deltaP99, true);
+  }
+  // For value_kind = 0 (scalar density) bytes 64..95 stay zero — relying on
+  // ArrayBuffer's zero-init.  Bytes 76..95 are reserved for both kinds;
+  // future extensions land there without bumping the version, as long as
+  // decoders skip them unconditionally.
 
   // Voxel array follows the header.  Source is Uint16Array of f16 bits
   // — copy bytes directly, no per-element conversion.
@@ -153,7 +194,11 @@ export function encodeScalarField(cube: ScalarCube): ArrayBuffer {
  *     at v3; both transitions are hard breaks by design.
  *   - unknown frame_kind byte
  *   - unsupported channel count (anything other than 1 or 4)
+ *   - unknown value_kind byte (anything other than 0 or 1)
  *   - byte-length mismatch between header dims/channels and actual buffer size
+ *
+ * When value_kind = 1 the decoded cube carries `velocityStats` read from the
+ * reserved region; when value_kind = 0 `velocityStats` is omitted (undefined).
  *
  * Voxels are copied into a freshly-owned `Uint16Array` so the caller can
  * hold it independent of the source ArrayBuffer's lifetime.
@@ -199,9 +244,16 @@ export function decodeScalarField(buf: ArrayBuffer): ScalarCube {
       `decodeScalarField: unsupported channel count ${channelsByte} (v3 supports 1 or 4)`,
     );
   }
-  // Bytes 64..67 (density_scale in v1) stay reserved in v3 — we don't read
-  // them, on purpose.  Producers must write zero; readers must not interpret
-  // the bytes.
+  // value_kind discriminates a plain scalar (0) from a velocity + overdensity
+  // field (1).  It gates whether the reserved region holds velocity stats —
+  // read it before the stat slots so a scalar cube never interprets stale
+  // bytes.  Any other value is out of contract and rejected.
+  const valueKind = dv.getUint8(21);
+  if (valueKind !== 0 && valueKind !== 1) {
+    throw new Error(
+      `decodeScalarField: unknown value_kind ${valueKind} (v3 supports 0 = scalar, 1 = velocity field)`,
+    );
+  }
   const frameKindIdx = dv.getUint8(23);
   const frameKind = ID_TO_FRAME_KIND[frameKindIdx];
   if (frameKind === undefined) {
@@ -221,6 +273,16 @@ export function decodeScalarField(buf: ArrayBuffer): ScalarCube {
   ];
   const valueMin = dv.getFloat32(56, true);
   const valueMax = dv.getFloat32(60, true);
+  // Velocity stats live in the reserved region only when value_kind = 1.
+  // Read them here (not below) so the cube assembly stays a single return.
+  const velocityStats =
+    valueKind === 1
+      ? {
+          speedKmsMax: dv.getFloat32(64, true),
+          speedKmsP99: dv.getFloat32(68, true),
+          deltaP99: dv.getFloat32(72, true),
+        }
+      : undefined;
 
   const expectedVoxels = dims[0] * dims[1] * dims[2] * channels;
   const expectedBytes = SCFD_HEADER_BYTES + expectedVoxels * 2;
@@ -247,5 +309,9 @@ export function decodeScalarField(buf: ArrayBuffer): ScalarCube {
     rotation,
     valueMin,
     valueMax,
+    // Spread conditionally so a scalar cube omits the key entirely rather
+    // than carrying an explicit `undefined` — keeps `'velocityStats' in cube`
+    // an honest presence check, mirroring the encoder's derive-from-presence.
+    ...(velocityStats !== undefined ? { velocityStats } : {}),
   };
 }

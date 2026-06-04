@@ -50,6 +50,30 @@ function makeFourChannelFixture(): ScalarCube {
   };
 }
 
+function makeVelocityFixture(): ScalarCube {
+  // A 2x2x2 velocity + overdensity field: 8 cells × 4 components (vx,vy,vz,δ).
+  // value_kind = 1 territory — it carries velocityStats and reuses
+  // valueMin/valueMax as the δ range.
+  const voxels = new Uint16Array(8 * 4);
+  for (let i = 0; i < voxels.length; i++) voxels[i] = i * 100;
+  return {
+    dims: [2, 2, 2],
+    channels: 4,
+    voxels,
+    frameKind: 'supergalactic-cartesian',
+    origin: [-100, -100, -100],
+    voxelSize: 100,
+    rotation: [0, 0, 0, 1],
+    valueMin: -0.8, // δ_min
+    valueMax: 12.5, // δ_max
+    velocityStats: {
+      speedKmsMax: 1234.5,
+      speedKmsP99: 980.25,
+      deltaP99: 9.75,
+    },
+  };
+}
+
 describe('SCFD v3 binary format', () => {
   it('encode/decode round-trips a channels=1 cube', () => {
     const original = makeFixture();
@@ -78,6 +102,65 @@ describe('SCFD v3 binary format', () => {
     expect(decoded.rotation).toEqual([0, 0, 0, 1]);
     expect(decoded.valueMin).toBe(0);
     expect(decoded.valueMax).toBe(1);
+  });
+
+  it('encode/decode round-trips a channels=4 velocity cube with velocityStats', () => {
+    const original = makeVelocityFixture();
+    const buf = encodeScalarField(original);
+    // value_kind raw byte at offset 21 must be 1 (velocity field).
+    expect(new DataView(buf).getUint8(21)).toBe(1);
+    const decoded = decodeScalarField(buf);
+    expect(decoded.channels).toBe(4);
+    // Voxels byte-identical.
+    expect(Array.from(decoded.voxels)).toEqual(Array.from(original.voxels));
+    // valueMin/valueMax double as the δ range and must survive verbatim
+    // (f32 round-trip — close, not exact, for non-power-of-two values).
+    expect(decoded.valueMin).toBeCloseTo(-0.8, 5);
+    expect(decoded.valueMax).toBeCloseTo(12.5, 5);
+    // The three cross-channel stats, byte-exact modulo f32 rounding.
+    expect(decoded.velocityStats).toBeDefined();
+    expect(decoded.velocityStats?.speedKmsMax).toBeCloseTo(1234.5, 3);
+    expect(decoded.velocityStats?.speedKmsP99).toBeCloseTo(980.25, 3);
+    expect(decoded.velocityStats?.deltaP99).toBeCloseTo(9.75, 3);
+  });
+
+  it('encode writes the velocity stats to the reserved slots (raw bytes)', () => {
+    // Independent of the decoder: read offsets 64/68/72 directly and confirm
+    // they hold the stats the cube carried.
+    const buf = encodeScalarField(makeVelocityFixture());
+    const dv = new DataView(buf);
+    expect(dv.getFloat32(64, true)).toBeCloseTo(1234.5, 3);
+    expect(dv.getFloat32(68, true)).toBeCloseTo(980.25, 3);
+    expect(dv.getFloat32(72, true)).toBeCloseTo(9.75, 3);
+  });
+
+  it('encode writes value_kind=0 and no stats for a channels=1 cube', () => {
+    // A scalar cube has no velocityStats — value_kind must be 0 and the
+    // reserved stat slots must stay zero.
+    const buf = encodeScalarField(makeFixture());
+    const dv = new DataView(buf);
+    expect(dv.getUint8(21)).toBe(0); // value_kind = scalar
+    expect(dv.getFloat32(64, true)).toBe(0);
+    expect(dv.getFloat32(68, true)).toBe(0);
+    expect(dv.getFloat32(72, true)).toBe(0);
+    const decoded = decodeScalarField(buf);
+    expect(decoded.velocityStats).toBeUndefined();
+  });
+
+  it('encode rejects velocityStats on a non-4-channel cube', () => {
+    // The invariant: velocityStats only on a 4-channel velocity field.
+    const bad: ScalarCube = {
+      ...makeFixture(), // channels = 1
+      velocityStats: { speedKmsMax: 1, speedKmsP99: 1, deltaP99: 1 },
+    };
+    expect(() => encodeScalarField(bad)).toThrow(/velocityStats|4-channel/i);
+  });
+
+  it('decodeScalarField rejects an unknown value_kind', () => {
+    // Hand-craft a valid header but stamp byte 21 with value_kind=2.
+    const buf = encodeScalarField(makeFixture());
+    new DataView(buf).setUint8(21, 2);
+    expect(() => decodeScalarField(buf)).toThrow(/value_kind/i);
   });
 
   it('produces the expected byte length', () => {
