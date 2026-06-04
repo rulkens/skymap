@@ -80,13 +80,16 @@ export const STRUCTURE_POI_STYLES = {
     outlineEmFrac: 0.16,
   },
   supercluster: {
-    labelColor: hexToGl('#FFCC80'),
+    // Orange end of the warm ramp — pushed a touch more saturated/orange than
+    // the old #FFCC80 so it reads clearly distinct from the cluster yellow now
+    // that group has joined at the pale end.
+    labelColor: hexToGl('#FFB86B'),
     minPixelSize: 35,
     maxPixelSize: 150,
     worldEmMpc: 5.0,
     pixelWidth: 2,
-    haloColor: hexToGl('#996B3666'),
-    ringColor: hexToGl('#996B3666'),
+    haloColor: hexToGl('#A05F2E66'),
+    ringColor: hexToGl('#A05F2E66'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
     markerMinApparentRadiusPx: 28,
@@ -110,30 +113,35 @@ export const STRUCTURE_POI_STYLES = {
     outlineEmFrac: 0.16,
   },
   group: {
-    // Green end of the scale-ladder ramp: group (green) → cluster (yellow,
-    // #FFD966) → supercluster (orange, #FFCC80). The bright label matches the
-    // cluster/SC label family; the ring sits in their medium-dark ring family
-    // (cluster #B39947 / SC #996B36) so the three read as one green→yellow→
-    // orange progression up the scale ladder. Void stays cyan — the odd one
-    // out, representing absence rather than a scale rung.
-    labelColor: hexToGl('#8FE08F'),
+    // Pale end of the warm scale-ladder ramp: group (soft cream) → cluster
+    // (yellow, #FFD966) → supercluster (orange, #FFB86B). Lightness falls and
+    // hue warms as the structures grow. The cream is held a notch below pure
+    // white so the nearest, smallest rung doesn't out-shout the larger ones —
+    // groups are a Local Volume detail, not the headline. Void stays cyan, the
+    // odd one out representing absence rather than a scale rung.
+    // Dim + translucent so the 16 near-volume groups sit quietly under the
+    // brighter cluster/SC family instead of collectively dominating the Local
+    // Volume. Lower luminance AND alpha on all three (label / ring / halo).
+    labelColor: hexToGl('#C2B488C8'),
     minPixelSize: 35,
     maxPixelSize: 150,
     // Group labels are physically tiny — between famous-galaxy (0.0125) and
     // cluster (1.25).
     worldEmMpc: 0.3,
     pixelWidth: 2,
-    // Translucent green halo (alpha like void) so the near foreground ring is
-    // a glow, not a solid disk — important for the Local Group at the origin.
-    haloColor: hexToGl('#5CA64DA5'),
-    ringColor: hexToGl('#5CA64D'),
+    // Muted pale-gold halo, much fainter than the ring so the near foreground
+    // reads as a soft glow rather than a solid disk — important for the Local
+    // Group at the origin, where the halo is largest.
+    haloColor: hexToGl('#AB9C6E42'),
+    ringColor: hexToGl('#AB9C6E9E'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
-    // Cluster-like low floor (not the void/SC floor of 28) so a small *near*
-    // group ring stays visible rather than tripping the "too small to read"
-    // cutoff.
-    markerMinApparentRadiusPx: 5,
-    markerMinApparentFadeBandPx: 4,
+    // High far-distance floor (well above the void/SC 28) so groups fade out
+    // early with distance: they're a Local Volume feature meant to be read up
+    // close, so once a group ring shrinks past ~44px it smoothsteps away rather
+    // than lingering as a faint speck while you explore larger scales.
+    markerMinApparentRadiusPx: 44,
+    markerMinApparentFadeBandPx: 24,
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
   },
