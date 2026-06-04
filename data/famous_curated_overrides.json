@@ -150,10 +150,10 @@
     },
     "c57": {
       "dir": "famous-curated/c57",
-      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_6822#/media/File:Barnard's_Galaxy.jpg",
-      "license": "CC BY 4.0",
-      "author": "ESO",
-      "processedAt": "2026-05-18T10:59:28.872Z"
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_6822#/media/File:Euclid%E2%80%99s_view_of_irregular_galaxy_NGC_6822_ESA25170768.jpg",
+      "license": "CC BY-SA 3.0 igo",
+      "author": "ESA/Euclid/Euclid Consortium/NASA image processing by J.-C. Cuillandre (CEA Paris-Saclay) G. Anselmi",
+      "processedAt": "2026-06-03T23:52:27.439Z"
     },
     "c60": {
       "dir": "famous-curated/c60",
@@ -328,7 +328,7 @@
       "sourceUrl": "https://en.wikipedia.org/wiki/NGC_55#/media/File:Irregular_Galaxy_NGC_55_(ESO_0914a).jpg",
       "license": "CC BY 4.0",
       "author": "ESO",
-      "processedAt": "2026-05-18T23:25:11.597Z"
+      "processedAt": "2026-06-03T23:51:41.670Z"
     },
     "c23": {
       "dir": "famous-curated/c23",
@@ -349,14 +349,14 @@
       "sourceUrl": "https://en.wikipedia.org/wiki/NGC_5128#/media/File:ESO_Centaurus_A_LABOCA.jpg",
       "license": "CC BY 4.0",
       "author": "ESO/WFI (Optical); MPIfR/ESO/APEX/A.Weiss et al. (Submillimetre); NASA/CXC/CfA/R.Kraft et al. (X-ray)",
-      "processedAt": "2026-05-19T09:45:55.156Z"
+      "processedAt": "2026-06-03T23:51:04.030Z"
     },
     "c83": {
       "dir": "famous-curated/c83",
       "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4945#/media/File:Spiral_Galaxy_NGC_4945.jpg",
       "license": "CC BY 4.0",
       "author": "ESO",
-      "processedAt": "2026-05-19T09:46:28.654Z"
+      "processedAt": "2026-06-03T23:50:15.113Z"
     },
     "m104": {
       "dir": "famous-curated/m104",
@@ -490,6 +490,41 @@
       "license": "CC BY 4.0",
       "author": "ESO",
       "processedAt": "2026-06-03T23:19:47.955Z"
+    },
+    "c62": {
+      "dir": "famous-curated/c62",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_247#/media/File:Wide_Field_Imager_view_of_the_spiral_galaxy_NGC_247.jpg",
+      "license": "CC BY 4.0",
+      "author": "ESO",
+      "processedAt": "2026-06-03T23:48:15.942Z"
+    },
+    "c51": {
+      "dir": "famous-curated/c51",
+      "sourceUrl": "https://en.wikipedia.org/wiki/IC_1613#/media/File:Dwarf_galaxy_IC_1613.jpg",
+      "license": "CC BY 4.0",
+      "author": "ESO",
+      "processedAt": "2026-06-03T23:48:54.775Z"
+    },
+    "ngc3166": {
+      "dir": "famous-curated/ngc3166",
+      "sourceUrl": "https://noirlab.edu/public/images/noao-ngc3166/",
+      "license": "CC BY 4.0",
+      "author": "T.A. Rector (University of Alaska Anchorage) and H. Schweiker (WIYN and NOIRLab/NSF/AURA)",
+      "processedAt": "2026-06-04T00:36:34.693Z"
+    },
+    "ngc3169": {
+      "dir": "famous-curated/ngc3169",
+      "sourceUrl": "https://noirlab.edu/public/images/noao-ngc3166/",
+      "license": "CC BY 4.0",
+      "author": "T.A. Rector (University of Alaska Anchorage) and H. Schweiker (WIYN and NOIRLab/NSF/AURA)",
+      "processedAt": "2026-06-04T00:37:10.436Z"
+    },
+    "ngc5394": {
+      "dir": "famous-curated/ngc5394",
+      "sourceUrl": "https://noirlab.edu/public/images/noirlab1912a/",
+      "license": "CC BY 4.0",
+      "author": "International Gemini Observatory/NOIRLab/NSF/AURA",
+      "processedAt": "2026-06-04T00:55:14.143Z"
     }
   }
 }

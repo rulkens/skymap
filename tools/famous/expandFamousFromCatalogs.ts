@@ -616,7 +616,7 @@ export function buildTargetList(): Target[] {
  * Cmd+K palette + InfoCard.  `NGC 224` is what astronomers say; the
  * zero-padded form is HyperLEDA's internal storage convention.
  */
-function ngcDisplayName(tag: string): string {
+export function ngcDisplayName(tag: string): string {
   const m = /^([A-Z]+)(\d+)([A-Z]*)$/.exec(tag);
   if (!m) return tag;
   const prefix = m[1];

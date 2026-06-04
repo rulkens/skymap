@@ -48,6 +48,7 @@
     "curate-famous": "vite --config tools/famous-curator/vite.config.ts",
     "deploy": "git push origin main && echo 'Pushed.  Cloudflare Workers Assets is rebuilding — watch https://dash.cloudflare.com/?to=/:account/workers-and-pages'",
     "expand-famous": "tsx tools/famous/expandFamousFromCatalogs.ts",
+    "famous-seed-from-leda": "tsx tools/famous/famousSeedFromHyperleda.ts",
     "dev": "vite",
     "fetch-2mass-xsc": "tsx tools/fetch/fetch2massXsc.ts",
     "fetch-cf4": "tsx tools/fetch/fetchCosmicflows4.ts",

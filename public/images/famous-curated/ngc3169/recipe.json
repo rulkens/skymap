@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "ngc3169",
+  "crop": {
+    "x": 2455.5508018085507,
+    "y": 2461.737849147787,
+    "width": 1539.2527054649302,
+    "height": 940.3941647181244,
+    "rotationDeg": 37.951437687942075
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://noirlab.edu/public/images/noao-ngc3166/",
+    "license": "CC BY 4.0",
+    "author": "T.A. Rector (University of Alaska Anchorage) and H. Schweiker (WIYN and NOIRLab/NSF/AURA)"
+  },
+  "processedAt": "2026-06-04T00:37:10.436Z",
+  "source": {
+    "width": 5260,
+    "height": 4500
+  },
+  "disk": {
+    "centerPx": [
+      3225.1771545410156,
+      2931.9349315068494
+    ],
+    "radiusPx": 615.701082185972,
+    "paDeg": 37.951437687942075,
+    "axisRatio": 0.610942024905572,
+    "deproject": true
+  }
+}

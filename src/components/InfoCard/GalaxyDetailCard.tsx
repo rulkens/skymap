@@ -14,6 +14,7 @@ import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
 import { Source } from '../../data/sources';
 import { formatDistance, formatDiameterKpc } from '../../utils/format/distance';
 import { Thumbnail } from './Thumbnail';
+import { famousWikipediaTitle } from './famousWikipediaTitle';
 import { CardHeader } from './CardHeader';
 import { CardRow } from './CardRow';
 import { InfoTip } from '../InfoTip/InfoTip';
@@ -89,9 +90,10 @@ export function GalaxyDetailCard({
             </div>
           )}
           {/*
-            Wikipedia link prefers names[1] (NGC/IC slug) over names[0] (Messier
-            short id).  Short ids like "M51" / "M109" almost always resolve to a
-            disambiguation page or the wrong target (M109 → howitzer).
+            Wikipedia article slug comes from `famousWikipediaTitle`, which
+            prefers the NGC/IC designation: Messier short ids ("M51"/"M109")
+            hit disambiguation pages, and non-M/C aliases (UGC/PGC/KPG) have no
+            article at all.  NED resolves any of the names, so it keeps names[0].
           */}
           <CardRow
             label="Catalogues"
@@ -108,7 +110,7 @@ export function GalaxyDetailCard({
                 {' · '}
                 <a
                   className={styles.externalInline}
-                  href={`https://en.wikipedia.org/wiki/${encodeURIComponent((info.famous.names[1] ?? info.famous.names[0]!).replace(/ /g, '_'))}`}
+                  href={`https://en.wikipedia.org/wiki/${encodeURIComponent(famousWikipediaTitle(info.famous.names).replace(/ /g, '_'))}`}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
