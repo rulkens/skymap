@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "c62",
+  "crop": {
+    "x": 726,
+    "y": 0,
+    "width": 2387,
+    "height": 2387,
+    "rotationDeg": 0
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_247#/media/File:Wide_Field_Imager_view_of_the_spiral_galaxy_NGC_247.jpg",
+    "license": "CC BY 4.0",
+    "author": "ESO"
+  },
+  "processedAt": "2026-06-03T23:48:15.942Z",
+  "source": {
+    "width": 3840,
+    "height": 2387
+  },
+  "disk": {
+    "centerPx": [
+      1856.77734375,
+      1261.173889544025
+    ],
+    "radiusPx": 1262.6738523225856,
+    "paDeg": 8.316897039421264,
+    "axisRatio": 0.28183829312644537,
+    "deproject": false
+  }
+}

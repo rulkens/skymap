@@ -2,11 +2,11 @@
   "version": 1,
   "id": "c77",
   "crop": {
-    "x": -30.829861111111313,
-    "y": 43.17013888888869,
-    "width": 2838.8298611111113,
-    "height": 2838.8298611111113,
-    "rotationDeg": -32.41241100160073
+    "x": 438.41002495877524,
+    "y": 732.8507338258974,
+    "width": 1906.5497106085304,
+    "height": 1490,
+    "rotationDeg": 146.9857325626762
   },
   "starnet": {
     "stride": 256,
@@ -22,5 +22,19 @@
     "license": "CC BY 4.0",
     "author": "ESO/WFI (Optical); MPIfR/ESO/APEX/A.Weiss et al. (Submillimetre); NASA/CXC/CfA/R.Kraft et al. (X-ray)"
   },
-  "processedAt": "2026-05-19T09:45:55.156Z"
+  "processedAt": "2026-06-03T23:51:04.030Z",
+  "source": {
+    "width": 2808,
+    "height": 2957
+  },
+  "disk": {
+    "centerPx": [
+      1429.0520833333333,
+      1515.6565170288086
+    ],
+    "radiusPx": 444.9104122744299,
+    "paDeg": 146.9857325626762,
+    "axisRatio": 0.7816278045883296,
+    "deproject": true
+  }
 }

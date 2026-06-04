@@ -2,11 +2,11 @@
   "version": 1,
   "id": "c72",
   "crop": {
-    "x": -64.61328125,
-    "y": -364.365234375,
-    "width": 4152.549087877716,
-    "height": 4152.549087877716,
-    "rotationDeg": -15.091850240236795
+    "x": 169,
+    "y": 0,
+    "width": 3501,
+    "height": 3501,
+    "rotationDeg": 0
   },
   "starnet": {
     "stride": 256,
@@ -22,5 +22,19 @@
     "license": "CC BY 4.0",
     "author": "ESO"
   },
-  "processedAt": "2026-05-18T23:25:11.597Z"
+  "processedAt": "2026-06-03T23:51:41.670Z",
+  "source": {
+    "width": 3840,
+    "height": 3501
+  },
+  "disk": {
+    "centerPx": [
+      2027.40234375,
+      1672.486549785867
+    ],
+    "radiusPx": 1752.3549040315106,
+    "paDeg": 161.40435915289098,
+    "axisRatio": 0.10209394837076799,
+    "deproject": false
+  }
 }

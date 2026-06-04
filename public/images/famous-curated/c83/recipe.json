@@ -22,5 +22,19 @@
     "license": "CC BY 4.0",
     "author": "ESO"
   },
-  "processedAt": "2026-05-19T09:46:28.654Z"
+  "processedAt": "2026-06-03T23:50:15.113Z",
+  "source": {
+    "width": 3840,
+    "height": 3840
+  },
+  "disk": {
+    "centerPx": [
+      1753.154296875,
+      1781.572265625
+    ],
+    "radiusPx": 1705.8242329514837,
+    "paDeg": 45.13985923282519,
+    "axisRatio": 0.17258378919902034,
+    "deproject": false
+  }
 }

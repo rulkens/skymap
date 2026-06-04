@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "c51",
+  "crop": {
+    "x": 593.5256601818955,
+    "y": 221.85806932946866,
+    "width": 2496.737742136209,
+    "height": 2335.462650852557,
+    "rotationDeg": 161.15243863624218
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/IC_1613#/media/File:Dwarf_galaxy_IC_1613.jpg",
+    "license": "CC BY 4.0",
+    "author": "ESO"
+  },
+  "processedAt": "2026-06-03T23:48:54.775Z",
+  "source": {
+    "width": 3840,
+    "height": 2612
+  },
+  "disk": {
+    "centerPx": [
+      1841.89453125,
+      1389.5893947557472
+    ],
+    "radiusPx": 998.6950968544835,
+    "paDeg": 161.15243863624218,
+    "axisRatio": 0.9354056741475519,
+    "deproject": true
+  }
+}

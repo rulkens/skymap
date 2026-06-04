@@ -2,10 +2,11 @@
   "version": 1,
   "id": "c57",
   "crop": {
-    "x": 306,
-    "y": 0,
-    "width": 5868,
-    "height": 5868
+    "x": 883.6159541533889,
+    "y": 948.9116517560868,
+    "width": 2121.6938729432222,
+    "height": 2044.9501339878263,
+    "rotationDeg": 178.81516194924964
   },
   "starnet": {
     "stride": 256,
@@ -17,9 +18,23 @@
     "gamma": 0.7
   },
   "metadata": {
-    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_6822#/media/File:Barnard's_Galaxy.jpg",
-    "license": "CC BY 4.0",
-    "author": "ESO"
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_6822#/media/File:Euclid%E2%80%99s_view_of_irregular_galaxy_NGC_6822_ESA25170768.jpg",
+    "license": "CC BY-SA 3.0 igo",
+    "author": "ESA/Euclid/Euclid Consortium/NASA image processing by J.-C. Cuillandre (CEA Paris-Saclay) G. Anselmi"
   },
-  "processedAt": "2026-05-18T10:59:28.872Z"
+  "processedAt": "2026-06-03T23:52:27.439Z",
+  "source": {
+    "width": 3840,
+    "height": 3840
+  },
+  "disk": {
+    "centerPx": [
+      1944.462890625,
+      1971.38671875
+    ],
+    "radiusPx": 848.6775491772889,
+    "paDeg": 178.81516194924964,
+    "axisRatio": 0.9638290236239705,
+    "deproject": true
+  }
 }
