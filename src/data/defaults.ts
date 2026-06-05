@@ -55,7 +55,7 @@ import { BiasMode } from './biasMode';
 import type { BiasMode as BiasModeT } from '../@types/data/BiasMode';
 import { ToneMapCurve } from './toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
-import type { FlowMode } from '../@types/data/FlowMode';
+import type { FlowSettings } from '../@types/settings/FlowSettings';
 import { MAX_PARTICLES } from '../services/gpu/renderers/flowFieldConstants';
 
 // ── Rendering knobs ─────────────────────────────────────────────────────────
@@ -257,16 +257,7 @@ export const DEFAULT_VOLUME_PALETTE_ID = 'viridis' as const;
  * defaults to the buffer ceiling (`MAX_PARTICLES`) so the field reads as dense
  * the moment it's enabled; the slider trims downward.
  */
-export const DEFAULT_FLOW: {
-  enabled: boolean;
-  mode: FlowMode;
-  intensity: number;
-  count: number;
-  trail: number;
-  flowSpeed: number;
-  densityBias: number;
-  wander: number;
-} = {
+export const DEFAULT_FLOW: FlowSettings = {
   enabled: false,
   mode: 'advect',
   intensity: 0.7,
