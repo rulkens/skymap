@@ -193,6 +193,11 @@ export const SOURCE_REGISTRY = {
     // small drops SDSS entirely to keep the mobile GPU budget;
     // medium caps at ~156k brightest; large is uncapped (key absent).
     tierTargets: { small: 0, medium: 156_000 },
+    // SDSS wins crossMatch priority over GLADE, so local galaxies inside the
+    // SDSS footprint land in this bucket and the M_abs cap drops nearly all of
+    // them (3,469 local in large → 1 in medium). The g-band flux floor recovers
+    // them. Only affects medium; small is excluded entirely.
+    fluxSupplementMagLimit: 15,
     intensityFloor: 0.02,
     falloffHalfMpc: 1000,
   },
@@ -243,6 +248,11 @@ export const SOURCE_REGISTRY = {
     iauPrefix: 'GLADE',
     // small keeps the brightest 256k; medium ~400k; large uncapped.
     tierTargets: { small: 256_000, medium: 400_000 },
+    // The M_abs cap empties the local volume (36 of ~10,300 galaxies inside
+    // 40 Mpc survive at medium, 0 inside 10 Mpc). The B-band flux floor keeps
+    // the apparently-bright nearby galaxies back, restoring the local volume
+    // shell-free. ~+3,500 local at medium; see selectTierRecords.
+    fluxSupplementMagLimit: 15,
     intensityFloor: 0.02,
     falloffHalfMpc: 1000,
   },

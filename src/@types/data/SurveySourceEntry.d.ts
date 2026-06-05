@@ -69,6 +69,18 @@ export type SurveySourceEntry = SourceEntryBase & {
    */
   readonly tierTargets: Partial<Record<Tier, number>>;
   /**
+   * Apparent-magnitude flux floor for the local-volume supplement, read from
+   * the `magG` slot (the survey's selection-band apparent mag). When set, the
+   * tier build keeps every galaxy brighter than this *in addition to* the
+   * brightest-N-by-M_abs backbone, so the volume-limited cut doesn't empty the
+   * local volume. A flux floor tapers smoothly with distance, so it adds no
+   * shell; it is also z-independent, so it rescues negative-cz Local Group
+   * members the M_abs cut drops. Omit for sources that need no supplement
+   * (2MRS ships uncapped; the others have no local-volume coverage worth
+   * recovering). Only consulted on capped tiers — a no-op when uncapped.
+   */
+  readonly fluxSupplementMagLimit?: number;
+  /**
    * Per-source floor of the points intensity formula
    * `clamp((22 − magnitude) / 8, intensityFloor, 1)`. Plumbed through
    * `SourceUniforms` to `points/vertex.wesl`. Replaces a prior hardcoded

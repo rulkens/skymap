@@ -28,7 +28,14 @@
  *   This module re-exports `crossMatch` so callers (and the test) can
  *   keep importing it from the `buildAllBins` path the plan specifies.
  */
-import { createReadStream, existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import {
+  createReadStream,
+  existsSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { resolve, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
@@ -58,9 +65,13 @@ import { loadCf4CatalogIndex } from '../parsers/cosmicflows4.js';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/galaxyDiameterKpc.js';
 import { Source, SOURCE_REGISTRY } from '../../src/data/sources.js';
 import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog.js';
-import { tierTarget, tierFilenameForSource } from '../../src/data/tierTargets.js';
+import {
+  tierTarget,
+  tierFilenameForSource,
+  fluxSupplementMagLimitFor,
+} from '../../src/data/tierTargets.js';
 import type { Tier } from '../../src/@types/data/Tier.js';
-import { subsampleByAbsMag } from './subsampleByAbsMag.js';
+import { selectTierRecords } from './selectTierRecords.js';
 import { rawDataPath } from '../utils/io/rawDataRegistry.js';
 
 // Re-export so `tests/crossMatch.test.ts` and any other consumer can keep
@@ -590,7 +601,9 @@ async function runCli(): Promise<void> {
   try {
     const seedRaw = readFileSync(rawDataPath('famous.seed'), 'utf8');
     famousPositions = parseFamousSeed(seedRaw).map((e) => ({ ra: e.ra, dec: e.dec }));
-    process.stderr.write(`  famous-seed dedup: ${famousPositions.length} reference positions loaded\n`);
+    process.stderr.write(
+      `  famous-seed dedup: ${famousPositions.length} reference positions loaded\n`,
+    );
   } catch (err) {
     process.stderr.write(
       `  warning: famous seed not loadable (${(err as Error).message}) — skipping famous-vs-catalog dedup\n`,
@@ -676,10 +689,15 @@ async function runCli(): Promise<void> {
       }
       // Milliquas needs no special-cased subsample path now that the
       // class + parent-survey bytes ride on the records themselves —
-      // `subsampleByAbsMag` already preserves per-record fields when
-      // it picks the brightest-N slice.
+      // `selectTierRecords` already preserves per-record fields when
+      // it picks the brightest-N slice. When the source defines a
+      // `fluxSupplementMagLimit` (GLADE, SDSS) the brightest-N backbone
+      // is unioned with an apparent-mag flux supplement to restore the
+      // local volume the M_abs cut empties; otherwise it's the pure cut.
       const slice =
-        target === undefined ? records : subsampleByAbsMag(records, target);
+        target === undefined
+          ? records
+          : selectTierRecords(records, target, fluxSupplementMagLimitFor(source));
 
       const cloud = recordsToCloud(slice, overrides);
       const buf = encodeGalaxyCatalog(cloud);
