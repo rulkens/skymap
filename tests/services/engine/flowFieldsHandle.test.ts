@@ -91,12 +91,15 @@ function makeFlowHandle(
     setEnabled: (enabled) => {
       boringSetters.setFlowEnabled(enabled);
       reevaluateDemand(state);
-      if (enabled) {
-        if (state.data.flow.loaded) {
-          void state.subsystems.fades.fadeTo({ kind: 'flow' }, 1, FADE_IN_DURATION_MS);
-        }
-      } else {
-        void state.subsystems.fades.fadeTo({ kind: 'flow' }, 0, FADE_OUT_DURATION_MS);
+      // Fade only when the cube is resident (loaded ⟹ registered) — mirrors
+      // engine.ts. Guards the unregistered-handle throw for toggles during the
+      // async bootstrap; first-enable fade-in is owned by the slot commit.
+      if (state.data.flow.loaded) {
+        void state.subsystems.fades.fadeTo(
+          { kind: 'flow' },
+          enabled ? 1 : 0,
+          enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+        );
       }
       state.subsystems.scheduler.requestRender();
     },
@@ -147,12 +150,25 @@ describe('flow sub-handle — setEnabled fade design', () => {
     expect(h.fadeTo).toHaveBeenCalledWith({ kind: 'flow' }, 1, FADE_IN_DURATION_MS);
   });
 
-  it('disable: sets enabled false AND fades out to 0', () => {
+  it('disable (cube loaded): sets enabled false AND fades out to 0', () => {
     const h = harness({ loaded: true });
     h.handle.setEnabled(false);
 
     expect(h.state.settings.flow.enabled).toBe(false);
     expect(h.fadeTo).toHaveBeenCalledWith({ kind: 'flow' }, 0, FADE_OUT_DURATION_MS);
+  });
+
+  it('disable (cube NOT loaded): clears enabled but does NOT fade', () => {
+    // Guards the bootstrap window: a returning user skips the splash and can
+    // toggle flow on→off before wireSlots registers the {kind:'flow'} fade.
+    // fadeTo throws on an unregistered handle, and loaded===false proves the
+    // commit (hence registration) has not run — so the handle must NOT fade.
+    const h = harness({ loaded: false });
+    h.handle.setEnabled(false);
+
+    expect(h.state.settings.flow.enabled).toBe(false);
+    expect(h.fadeTo).not.toHaveBeenCalled();
+    expect(h.requestRender).toHaveBeenCalled();
   });
 });
 
