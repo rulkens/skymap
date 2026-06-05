@@ -16,7 +16,7 @@
  * survey is hidden, a settings toggle mid-flight, etc.).
  *
  * Every row's `demand(ctx)` collapses one asset's entire load policy into a
- * single pure predicate over the four `DemandCtx` read surfaces. The demand
+ * single pure predicate over the `DemandCtx` read surfaces. The demand
  * loop re-runs the whole table on any state change, so "is it required?" has
  * exactly one answer per asset, in one place, re-evaluated uniformly.
  *

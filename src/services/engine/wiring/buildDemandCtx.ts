@@ -1,16 +1,16 @@
 /**
- * buildDemandCtx — snapshots the four read surfaces a demand predicate may
+ * buildDemandCtx — snapshots the read surfaces a demand predicate may
  * consult into a single `DemandCtx` (see `@types/loading/DemandCtx.d.ts` for
- * the rationale behind the four surfaces).
+ * the rationale behind each surface).
  *
  * ### Why a builder rather than passing `state` to predicates directly
  *
  * Predicates must be cheap to test and impossible to misuse. Handing them the
  * whole `EngineState` would let a predicate reach into unrelated bags (mutate
  * GPU handles, fire callbacks) and would couple every predicate test to the
- * full engine shape. `DemandCtx` is a narrow read-only facade: four query
+ * full engine shape. `DemandCtx` is a narrow read-only facade: query
  * functions over the slices a load policy legitimately depends on. The builder
- * is the single place that maps `state` → those four queries, so the mapping
+ * is the single place that maps `state` → those queries, so the mapping
  * (drawMask bit, request-flag set, slot-state accessor) lives in one spot.
  *
  * ### Why built once per evaluation cycle, not memoised
@@ -18,7 +18,7 @@
  * `reevaluateDemand` calls this once and shares the result across every row.
  * The closures capture `state` by reference, so reads are always live against
  * the current engine state — there's no stale snapshot. Rebuilding per row
- * would allocate four closures per row for no benefit.
+ * would allocate fresh closures per row for no benefit.
  */
 
 import { maskHas } from '../../../utils/sourceMask';

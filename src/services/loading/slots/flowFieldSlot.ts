@@ -35,6 +35,10 @@ export const createFlowFieldSlot: SlotFactory<ScalarCube, void> = (state, _cb) =
       // then handing the resulting FlowField to the flow renderer's `setField`, once that
       // renderer exists. Phase B proves the demand→fetch→decode→commit path: record the
       // layer as loaded and wake the render loop. The cube is intentionally unused until then.
+      //
+      // Phase C ordering: `setLoaded()` means "committed to the renderer" (see
+      // FlowFieldStore.d.ts), so move it to AFTER the upload + `setField` — don't
+      // leave it firing before the GPU work.
       void cube;
       state.data.flow.setLoaded();
       state.subsystems.scheduler.requestRender();
