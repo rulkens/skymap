@@ -216,6 +216,12 @@ export function createFlowFieldRenderer(init: {
   // Travelling-pulse accumulator for streamline mode; an internal per-frame
   // counter advanced by DT * flowSpeed, kept off the settings store.
   let phase = 0;
+  // Per-frame counter, self-incremented each encodeCompute (mirrors
+  // scalarVolumeRenderer's internal frame counter — there is no engine-level
+  // frame counter to thread). Salts the per-particle RNG so spawn jitter and
+  // wander vary frame to frame. Stored as a u32 (wraps at 2^32 via `>>> 0`);
+  // the WGSL reads it as `Prm.frame: u32`.
+  let frame = 0;
   // Built in setField once the velocity texture view + sampler exist.
   let computeBindGroup: GPUBindGroup | null = null;
 
@@ -276,11 +282,13 @@ export function createFlowFieldRenderer(init: {
       return flow.enabled && hasField;
     },
 
-    encodeCompute(encoder: GPUCommandEncoder, flow: FlowSettings, frame: number): void {
+    encodeCompute(encoder: GPUCommandEncoder, flow: FlowSettings): void {
       if (!hasField || !computeBindGroup) return;
       const n = Math.round(flow.count);
 
-      // Advance the streamline pulse phase (harmless in advect mode).
+      // Advance the internal per-frame counter + the streamline pulse phase
+      // (phase is harmless in advect mode).
+      frame = (frame + 1) >>> 0;
       phase += DT * flow.flowSpeed;
 
       // Write compPrm ONCE — serves both the optional seed pass and the
@@ -293,7 +301,7 @@ export function createFlowFieldRenderer(init: {
       prmF32[1] = flow.trail;
       prmF32[2] = flow.flowSpeed * HEAD_STEP_SCALE;
       prmU32[3] = n;
-      prmU32[4] = frame >>> 0;
+      prmU32[4] = frame;
       prmU32[5] = modeCode(flow);
       prmF32[6] = flow.densityBias;
       prmF32[7] = flow.wander;

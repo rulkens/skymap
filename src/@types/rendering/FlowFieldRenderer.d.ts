@@ -62,11 +62,13 @@ export type FlowFieldRenderer = {
   /**
    * Dispatch the compute work into the per-frame encoder: the `seed` pass when
    * a reseed is pending (then cleared), followed by the `advect` or `streamline`
-   * integrator for `flow.mode`. Reads particle count / motion knobs off `flow`;
-   * `frame` salts the per-particle RNG and advances the streamline pulse phase.
-   * Caller gates on enabled + loaded (see `encodeFlowCompute`).
+   * integrator for `flow.mode`. Reads particle count / motion knobs off `flow`.
+   * An internal frame counter (self-incremented per call, mirroring
+   * `scalarVolumeRenderer`) salts the per-particle RNG and advances the
+   * streamline pulse phase. Caller gates on enabled + loaded (see
+   * `encodeFlowCompute`).
    */
-  encodeCompute(encoder: GPUCommandEncoder, flow: FlowSettings, frame: number): void;
+  encodeCompute(encoder: GPUCommandEncoder, flow: FlowSettings): void;
   /**
    * Additive ribbon draw into the open HDR pass. Packs the `Cam` uniform
    * (mvp = `viewProj`, the cube `model`, aspect from `viewportPx`, the pulse
