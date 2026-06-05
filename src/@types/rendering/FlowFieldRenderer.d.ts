@@ -31,7 +31,7 @@
 
 import type { mat4 } from 'gl-matrix';
 import type { Vec2 } from '../math/Vec2';
-import type { FlowField } from '../data/FlowField';
+import type { ScalarCube } from '../data/ScalarCube';
 import type { FlowSettings } from '../settings/FlowSettings';
 
 export type FlowFieldRenderer = {
@@ -41,12 +41,14 @@ export type FlowFieldRenderer = {
    */
   readonly label: string;
   /**
-   * Receive the loaded velocity cube: bind its texture view + sampler, build
-   * the cube model matrix from `field.meta` (via `buildCubeModelMatrix`), build
-   * the compute + render bind groups, and arm a reseed. Idempotent — disposes a
-   * prior field's texture if re-set.
+   * Receive the decoded velocity cube and commit it: upload it to a 3D texture
+   * (via `flowFieldFromCube`, using the renderer's own device — the device is
+   * never exposed to the caller, mirroring `scalarVolumeRenderer.addField`),
+   * build the cube model matrix from its meta (via `buildCubeModelMatrix`), build
+   * the compute bind group, and arm a reseed. Idempotent — disposes the prior
+   * field's texture if re-set.
    */
-  setField(field: FlowField): void;
+  setField(cube: ScalarCube): void;
   /**
    * Record "encode the `seed` pass on the next `encodeCompute`". Called by the
    * Phase-D handle on enable / mode-switch / count-change. A no-op on steady

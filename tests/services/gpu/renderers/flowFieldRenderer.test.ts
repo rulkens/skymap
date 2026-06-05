@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createFlowFieldRenderer } from '../../../../src/services/gpu/renderers/flowFieldRenderer';
-import type { FlowField } from '../../../../src/@types/data/FlowField';
+import type { ScalarCube } from '../../../../src/@types/data/ScalarCube';
 import type { FlowSettings } from '../../../../src/@types/settings/FlowSettings';
 
 /**
@@ -34,24 +34,25 @@ function mockDevice(): GPUDevice {
   } as unknown as GPUDevice;
 }
 
-/** A mock loaded velocity field — structurally a FlowField, GPU handles stubbed. */
-function mockField(): FlowField {
+/**
+ * A mock decoded velocity cube — a 4-channel `ScalarCube` with `velocityStats`
+ * (the shape `flowFieldMetaFromCube` requires). `setField` uploads it via the
+ * real `flowFieldFromCube` against the mock device, so this also exercises the
+ * meta derivation + model-matrix build.
+ */
+function mockCube(): ScalarCube {
   return {
-    textureView: {},
-    sampler: {},
-    meta: {
-      n: 4,
-      origin: [-100, -100, -100],
-      voxelSizeMpc: 50,
-      frameKind: 'equatorial-cartesian',
-      deltaMin: 0,
-      deltaMax: 1,
-      speedKmsMax: 1,
-      speedKmsP99: 1,
-      deltaP99: 1,
-    },
-    dispose: vi.fn(),
-  } as unknown as FlowField;
+    dims: [4, 4, 4],
+    channels: 4,
+    voxels: new Uint16Array(4 * 4 * 4 * 4),
+    frameKind: 'equatorial-cartesian',
+    origin: [-100, -100, -100],
+    voxelSize: 50,
+    rotation: [0, 0, 0, 1],
+    valueMin: 0,
+    valueMax: 1,
+    velocityStats: { speedKmsMax: 1, speedKmsP99: 1, deltaP99: 1 },
+  } as unknown as ScalarCube;
 }
 
 /** A full FlowSettings with the spike's hand-dialled advect defaults + overrides. */
@@ -85,7 +86,7 @@ describe('createFlowFieldRenderer', () => {
 
   it('isAnimating reflects enabled && loaded', () => {
     const renderer = createFlowFieldRenderer({ device: mockDevice(), hdrFormat: 'rgba16float' });
-    renderer.setField(mockField());
+    renderer.setField(mockCube());
     expect(renderer.isAnimating(flowStub({ enabled: true }))).toBe(true);
     expect(renderer.isAnimating(flowStub({ enabled: false }))).toBe(false);
   });
@@ -95,7 +96,7 @@ describe('createFlowFieldRenderer', () => {
     // here we only assert setField wires the field without throwing and flips
     // the animating gate true (proving the matrix + bind group built).
     const renderer = createFlowFieldRenderer({ device: mockDevice(), hdrFormat: 'rgba16float' });
-    expect(() => renderer.setField(mockField())).not.toThrow();
+    expect(() => renderer.setField(mockCube())).not.toThrow();
     expect(renderer.isAnimating(flowStub({ enabled: true }))).toBe(true);
   });
 });

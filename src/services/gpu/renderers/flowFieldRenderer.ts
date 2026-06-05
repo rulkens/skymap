@@ -50,10 +50,12 @@
 import { mat4 } from 'gl-matrix';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec4 } from '../../../@types/math/Vec4';
+import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import type { FlowField } from '../../../@types/data/FlowField';
 import type { FlowSettings } from '../../../@types/settings/FlowSettings';
 import type { FlowFieldRenderer } from '../../../@types/rendering/FlowFieldRenderer';
 import type { Renderer } from '../../../@types/rendering/Renderer';
+import { flowFieldFromCube } from '../loaders/createFlowField';
 import { buildCubeModelMatrix } from './buildCubeModelMatrix';
 import { createReseedLatch } from './createReseedLatch';
 import { TRAIL, MAX_PARTICLES, DT, HEAD_STEP_SCALE, RIBBON_WIDTH } from './flowFieldConstants';
@@ -232,10 +234,13 @@ export function createFlowFieldRenderer(init: {
   const renderer: FlowFieldRenderer = {
     label: 'flowFieldRenderer',
 
-    setField(next: FlowField): void {
-      // Idempotent re-set: drop the prior field's texture before adopting the
-      // new one.
+    setField(cube: ScalarCube): void {
+      // Upload the decoded cube to a 3D texture via the shared loader, using the
+      // renderer's own device (the device stays encapsulated — the caller hands
+      // us a cube, mirroring scalarVolumeRenderer.addField). Idempotent re-set:
+      // drop the prior field's texture before adopting the new one.
       if (field) field.dispose();
+      const next = flowFieldFromCube(device, cube);
       field = next;
       hasField = true;
 
