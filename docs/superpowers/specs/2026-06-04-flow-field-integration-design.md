@@ -90,20 +90,33 @@ lowering it to halve memory needs no architectural change.
 
 ### 4. Data substrate & world placement
 
+> **Refined during execution (2026-06-04):** the flow cube is **an SCFD file**,
+> not a raw blob + JSON sidecar. It uses the generalized scalar-field format
+> (`channels = 4`); the frame (origin/voxelSize/frameKind/rotation) and the
+> runtime stats both live in the SCFD v3 header (`value_kind = 1`), so there is
+> **one self-describing file** and no sidecar. This replaces the earlier
+> raw-`flowfield.bin` + `flowfield.json` framing throughout. The build is
+> pure-TS (no Python) — see §10.
+
 - One self-contained **128³ RGBA16F** cube: `R=vx, G=vy, B=vz, A=δ` (overdensity),
-  `≈16 MB`, tier-agnostic `public/data/flowfield.bin` + JSON sidecar
-  (both gitignored, like other `public/data/*` artefacts).
+  `≈16 MB`, tier-agnostic `public/data/flowfield.scfd` — a single SCFD file
+  (`channels = 4`, `value_kind = 1`), gitignored like other `public/data/*`
+  artefacts. No JSON sidecar: the frame **and** the velocity stats fold into the
+  SCFD header.
 - δ drives **density-weighted GPU seeding only**; it is never rendered.
 - **Placement reuses the scalar-volume frame machinery**: the cube carries
-  `origin` / `extent` (1000 Mpc/h box) / `frameKind` metadata matching `cf4-density`,
+  `origin` / `voxelSize` (1000 Mpc **physical** box) / `frameKind` metadata
+  matching `cf4-density` in its SCFD header,
   and `flowFieldRenderer` builds its model matrix with `buildCubeModelMatrix` and
   feeds `model`/`invModel` into the compute + render shaders. Result: flow registers
   with the galaxies **and** the existing CF-4 density volume by construction (they
   are the same reconstruction family — the δ array is the same `d_mean_CF4pp` the
   CF-4 density volume already uses).
-- **Work item, not just verification:** cosmic-flow's extractor *deliberately*
+- **Work item, not just verification:** cosmic-flow's spike *deliberately*
   ignored frame alignment ("we label the three array axes z,y,x arbitrarily"). The
-  new extractor must emit the **true SG axis order** + correct `origin`/`extent`/`frameKind`.
+  new pure-TS builder must emit the **true SG axis order** + correct
+  `origin`/`voxelSize`/`frameKind` — it does so by replicating `buildCf4Density.ts`'s
+  already-audited transpose + frame recipe (see §10).
 
 The flow shaders are adapted away from cosmic-flow's baked `[-1,1]` centred cube to
 consume `model`/`invModel` (consistent with `scalarVolumeRenderer`).
@@ -164,34 +177,84 @@ demand-model symmetry with surveys/volumes).
 
 - Store fields: `loaded`, `enabled`, `mode`, `intensity`, `count`, `trail`,
   `flowSpeed`, `densityBias`, `wander`.
-- **Demand-driven loading:** `flowfield.bin` loads on the frame `enabled` first
-  flips true (an asset slot, like surveys/volumes) — not at boot.
+- **Demand-driven loading:** `flowfield.scfd` loads on the frame `enabled` first
+  flips true (an asset slot, like surveys/volumes) — not at boot. The Phase-B
+  loader fetches the one SCFD file, `decodeScalarField`s it to a `ScalarCube`
+  (carrying frame + `velocityStats`), uploads the rgba16float texture via
+  `gpuTextureFormatForChannels(4)`, and derives `FlowFieldMeta` from the decoded
+  cube — **no JSON fetch, no sidecar parse.**
 - `EngineFlowFieldsHandle` setters wrap store mutators + `requestRender()`.
 - The renderer reads the store each frame; GPU **resources** stay on the renderer
   (stores hold status/settings only, never GPU objects).
 - No separate `settings.flow` slice — for a single layer, "master enabled" and
   "layer enabled" are the same flag, owned by the store.
 
-### 9. On-disk format — generalize `scalarFieldFormat` to N channels
+### 9. On-disk format — generalize `scalarFieldFormat` to N channels (flow IS an SCFD)
 
 Add a `channels` field to the scalar-field header; the loader derives the
 `GPUTextureFormat` (`r16float` for `channels=1`, `rgba16float` for `channels=4`).
 Existing single-channel fields become `channels=1`. One shared codec, one shared
-frame header.
+frame header. **Flow is not a parallel raw format — it is an SCFD file**
+(`flowfield.scfd`, `channels = 4`).
 
-- This is a **format version bump**: old `.scfd` headers lack the field, so the
-  loader's "regenerate the .bin" guard fires — re-emit `mcpm` + `cf4-density`
-  alongside the new `flowfield`.
+> **Refined during execution (2026-06-04):** the runtime velocity/seeding stats
+> that earlier lived in a `flowfield.json` sidecar are **folded into the SCFD v3
+> header** — there is no sidecar at all. The header gains a `value_kind` byte
+> (offset 21) that discriminates the cube's semantics, and the reserved region
+> carries the stats when `value_kind = 1`. This keeps the single-self-describing-
+> file property the rest of SCFD already has.
+
+- **`value_kind = 0`** (the original density cubes): pre-normalised scalar in
+  `[0,1]`; bytes 64..95 stay zero.
+- **`value_kind = 1`** (velocity + overdensity field, `channels = 4`, voxels
+  `(vx, vy, vz, δ)`): velocity magnitude and seeding weight derive from
+  *cross-channel* stats a per-channel min/max can't express, so they ride in the
+  header's reserved region, discriminated by `value_kind`:
+
+  | offset | field | meaning when `value_kind = 1` |
+  |---|---|---|
+  | 56 | `value_min` | `deltaMin` (δ overdensity range low) |
+  | 60 | `value_max` | `deltaMax` (δ overdensity range high) |
+  | 64 | `speedKmsMax` | max velocity magnitude (km/s) |
+  | 68 | `speedKmsP99` | 99th-percentile velocity magnitude (km/s) |
+  | 72 | `deltaP99` | 99th-percentile δ |
+  | 76..95 | reserved | zero-filled |
+
+  `ScalarCube` gains an optional `velocityStats?: { speedKmsMax; speedKmsP99;
+  deltaP99 }`; its presence is the single source of truth that drives the
+  `value_kind` byte on encode (and is required to be a 4-channel cube).
+
+- This is a **format version bump** (v2 → v3): old `.scfd` headers lack the
+  channels byte, so the loader's "regenerate" guard fires — re-emit `mcpm` +
+  `cf4-density` alongside the new `flowfield`.
 
 ### 10. Build pipeline — new `tools/flow/`
 
 Flow is its own visualization family (animated, time-based), so it gets its own
 tools dir rather than living under `tools/volumes/`.
 
-- `tools/flow/extractFlowField.py` — Python core (numpy), **frame-correct**
-  extraction (rehomed + fixed from `tools/cosmic-flow/data/convertCf4ppVfield.py`).
-- `tools/flow/buildFlowField.ts` — tsx wrapper (mirrors the `build-mcpm` pattern).
-- npm script **`build-flow-field`**.
+> **Refined during execution (2026-06-04):** **no Python extractor.** Like the
+> CF-4 density pipeline (`buildCf4Density.ts` — "Pure Node/TS, no Python
+> required"), the maintainer extracts the two `.npy` arrays from the upstream
+> npz with `unzip -j CF4pp_mean_std_grids.npz v_mean_CF4pp.npy d_mean_CF4pp.npy
+> -d data/raw/cf4/` (the `.npz` is a plain ZIP of `.npy`), and a **pure-TS**
+> `tools/flow/buildFlowField.ts` does the rest. A previously-committed
+> `tools/flow/extractFlowField.py` was reverted — it no longer exists.
+
+- `tools/flow/buildFlowField.ts` — **pure-TS** builder (no Python). Reads
+  `v_mean_CF4pp.npy` (N,N,N,3) + `d_mean_CF4pp.npy` (N,N,N) via the existing
+  `tools/parsers/npyReader`, computes the speed/δ stats (`speedKmsMax`,
+  `speedKmsP99`, `deltaMax`, `deltaP99`), applies the **same** numpy-C-order →
+  WebGPU-x-fastest transpose + RGBA-f16 pack as `buildCf4Density.ts`, builds a
+  `ScalarCube` (`channels = 4`, `velocityStats` → `value_kind = 1`, frame
+  matching the density cube), and `encodeScalarField`s → `flowfield.scfd`.
+- npm script **`build-flow-field`** (pure tsx, no Python).
+- **Frame recipe** (replicated from `buildCf4Density`): 1000 Mpc **physical**
+  (not Mpc/h) box, 128³; transpose so per-voxel `outputIdx = k*N*N + j*N + i`;
+  observer-centred origin `-voxelSize*(N/2)`; `frameKind:
+  'supergalactic-cartesian'`; velocity components stay in **native SG order**
+  (R=v_SGX, G=v_SGY, B=v_SGZ) — load-bearing, validated by the maintainer's
+  one-time infall eyeball.
 - Raw npz registered in `rawDataRegistry` as `cf4.vfield-npz →
   data/raw/cf4/CF4pp_mean_std_grids.npz` (`source: 'gitignored'`, upstream URL).
   It is the **same** upstream ensemble the CF-4 density pipeline already slices
@@ -200,8 +263,9 @@ tools dir rather than living under `tools/volumes/`.
   appended to the existing `data/raw/cf4/README.md`, preserving single source of
   truth. *(Refined during execution 2026-06-04; the original draft assumed a
   separate `cf4pp/` artifact.)*
-- Output `public/data/flowfield.bin` (+ sidecar) added to the `tools/deploy/syncR2.ts`
-  `ALLOW` filter (tier-agnostic, like `2mrs.bin`/`filaments.bin`).
+- Output `public/data/flowfield.scfd` (single SCFD file, no sidecar) added to the
+  `tools/deploy/syncR2.ts` `ALLOW` filter (tier-agnostic, like
+  `2mrs.bin`/`filaments.bin`).
 
 ### 11. UI
 
@@ -240,17 +304,23 @@ rename avoids confusion with the retired duplicate.
   derived `GPUTextureFormat`.
 - **Store unit tests:** `createFlowFieldStore` getters/mutators, seeded defaults
   (FilamentStore-style).
-- **Extractor frame-correctness:** a known attractor (e.g. Virgo / Great Attractor)
-  lands in the expected voxel after extraction (à la `auditCf4Anchors`).
+- **Build frame-correctness:** a known attractor (e.g. Virgo / Great Attractor)
+  lands in the expected voxel under the cube's emitted frame (à la
+  `auditCf4Anchors`). The frame is replicated from the already-audited
+  `buildCf4Density` transpose, so the anchor evidence transfers.
 - **Visual probe:** headless Playwright + WebGPU `page.screenshot()` (NOT canvas
   readback — the ANGLE-on-Mac quirk returns black) to confirm ribbons render and
   register against structure markers.
 
 ## Risks & watch-items
 
-- **Frame alignment** is the highest-risk item — the extractor's axes were
-  arbitrary; mis-mapping yields a visibly misregistered flow. Guard with the
-  known-attractor voxel test and a visual overlay check against structure markers.
+- **Frame alignment** is the highest-risk item — the cosmic-flow spike's axes
+  were arbitrary; mis-mapping yields a visibly misregistered flow. The pure-TS
+  builder mitigates this by replicating `buildCf4Density`'s audited transpose +
+  frame rather than re-deriving one; the residual unprovable bit is the native-SG
+  velocity-component assumption. Guard with the known-attractor voxel test, a
+  visual overlay check against structure markers, and the maintainer's one-time
+  infall eyeball.
 - **`invModel` ray/vector renormalization** — when `model` has scale, `invModel *`
   a unit world vector is not unit length; renormalize before using lengths as
   distances (a documented project hazard).
@@ -266,9 +336,10 @@ rename avoids confusion with the retired duplicate.
 
 Likely split into multiple plan files:
 
-- **A — Format & build:** generalize `scalarFieldFormat` (channels); `tools/flow/`
-  extractor + `buildFlowField.ts` + npm script + rawDataRegistry + README;
-  `syncR2` ALLOW. Re-emit + verify the existing volumes under the new format.
+- **A — Format & build:** generalize `scalarFieldFormat` (channels + `value_kind`
+  + `velocityStats`); pure-TS `tools/flow/buildFlowField.ts` (reads two `.npy`,
+  emits `flowfield.scfd`) + npm script + rawDataRegistry + README; `syncR2` ALLOW
+  `flowfield.scfd`. Re-emit + verify the existing volumes under the new format.
 - **B — Store, loader, demand:** `FlowFieldStore` + `createEngineData` wiring; the
   flow asset slot + demand-load on enable.
 - **C — Renderer, compute, pass, shaders:** `flowFieldRenderer` (3 pipelines,

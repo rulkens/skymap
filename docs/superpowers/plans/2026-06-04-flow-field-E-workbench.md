@@ -78,7 +78,7 @@ returns black) confirming ribbons render against the workbench backdrop.
 | `tools/flow-workbench/src/visualizations/flowField/` | Duplicated flow class + shaders + constants — superseded by `src/`. |
 | `tools/flow-workbench/src/visualizations/densityVolume/` | Out of scope (the main app has its own volume layer). |
 | `tools/flow-workbench/src/visualizations/registry.ts` + the `Visualization`/`VisualizationFactory` `@types` | The Strategy/registry interface the harness replaces. |
-| `tools/flow-workbench/data/convertCf4ppVfield.py` | Superseded by `tools/flow/extractFlowField.py` (Phase A). |
+| `tools/flow-workbench/data/convertCf4ppVfield.py` | Superseded by the pure-TS `tools/flow/buildFlowField.ts` → `flowfield.scfd` (Phase A). |
 | `tools/flow-workbench/src/field/createVelocityField.ts` | Superseded by `src/services/gpu/loaders/createFlowField.ts` (Phase B). |
 
 ---
@@ -137,7 +137,7 @@ Phase-D handle).
 - [ ] Create `createWorkbenchStore.ts` — re-export / wrap `createFlowFieldStore` from `src/services/engine/data/createFlowFieldStore.ts`.
 - [ ] Create `createFlowHarness.ts` per the contract: device init (reuse `src/services/gpu/device.initGpu`), HDR target + `blit.wesl` tonemap (kept from the old render graph), orbit-camera (`src/services/camera/orbitCamera`), `createFlowField` (Phase B loader) against the workbench's field URL, `createFlowFieldRenderer` + `setField`, the per-frame loop above.
 - [ ] Rewire `engine/createEngine.ts` to construct + return a `createFlowHarness` (or replace `createEngine` entirely with the harness and update `main.tsx`/`Viewport` call site). Delete the `listFactories`/`DRAW_ORDER`/`Visualization` plumbing.
-- [ ] Point the field URLs at the workbench's `public/` (it can curl `flowfield.{bin,json}` from R2 or symlink `public/data/`), matching how the old tool read `cf4pp_vfield.{bin,json}`.
+- [ ] Point the field URL at the workbench's `public/` (it can curl the single `flowfield.scfd` from R2 or symlink `public/data/`) — `createFlowField` takes one `.scfd` URL now, no sidecar (the old tool read `cf4pp_vfield.{bin,json}`).
 - [ ] `npm run typecheck` → clean.
 - [ ] Commit: `feat(flow): createFlowHarness driving the canonical flow renderer`.
 

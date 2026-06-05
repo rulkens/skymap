@@ -18,33 +18,44 @@
 
 ## Goal
 
-The on-disk scalar-field format carries a `channels` header field (1 or 4); the
-codec round-trips both single-channel (`r16float`) and four-channel
-(`rgba16float`) cubes, and the loader derives the `GPUTextureFormat` from it.
-A new `tools/flow/` directory holds a **frame-correct** Python extractor + a tsx
-wrapper that emit `public/data/flowfield.bin` (128³ RGBA16F: vx, vy, vz, δ) plus
-a JSON sidecar, registered in the raw-data registry and the R2 `ALLOW` filter.
-Existing `mcpm` + `cf4-density` cubes re-emit cleanly under the version-bumped
-format.
+The on-disk scalar-field format carries a `channels` header field (1 or 4) **and**
+folds a 4-channel velocity field's runtime stats into the v3 header
+(`value_kind = 1`), so the codec round-trips both single-channel (`r16float`)
+density cubes and four-channel (`rgba16float`) velocity cubes, and the loader
+derives the `GPUTextureFormat` from `channels`. A new `tools/flow/` directory
+holds a **pure-TS** builder that reads the CF4++ velocity + density `.npy`
+arrays and emits a single self-describing `public/data/flowfield.scfd` (128³
+RGBA16F: vx, vy, vz, δ — frame **and** stats in the SCFD header, no sidecar),
+added to the R2 `ALLOW` filter. Existing `mcpm` + `cf4-density` cubes re-emit
+cleanly under the version-bumped format.
 
 ## Architecture
 
-The flow velocity cube is a 4-channel scalar field. Rather than a parallel
-codec, we generalize `src/data/scalarFieldFormat.ts` (currently SCFD v2,
-single-channel f16) with a `channels` byte. The version bumps to v3; the v2
-"regenerate" guard already exists, so old `.scfd` files fail loudly. The flow
-extractor is rehomed and **fixed** from cosmic-flow's `convertCf4ppVfield.py`,
-which deliberately ignored frame alignment ("we label the three array axes
-z,y,x arbitrarily"). The new extractor emits the true supergalactic axis order
-plus `origin`/`extent`/`frameKind` matching `cf4-density`, so flow registers
-with the galaxies and the CF-4 density volume by construction. A
+The flow velocity cube is a 4-channel scalar field, stored in the **same SCFD
+format** as the density volumes — not a parallel raw blob. We generalize
+`src/data/scalarFieldFormat.ts` (was SCFD v2, single-channel f16) with a
+`channels` byte and a `value_kind` discriminator: `value_kind = 0` is a scalar
+density cube; `value_kind = 1` is a velocity+overdensity field that additionally
+carries `velocityStats` (speed/δ percentiles) in the header's reserved region.
+The version bumps to v3; the v2 "regenerate" guard already exists, so old `.scfd`
+files fail loudly.
+
+The flow build is **pure Node/TS — no Python** (matching `buildCf4Density.ts`).
+The CF4++ npz is a zip of `.npy` arrays, so the maintainer extracts
+`v_mean_CF4pp.npy` + `d_mean_CF4pp.npy` with `unzip -j`, and `buildFlowField.ts`
+reads them via the existing `npyReader`, computes the stats, and replicates
+`buildCf4Density.ts`'s already-audited frame recipe (numpy-C-order →
+WebGPU-x-fastest transpose; observer-centred `origin`; physical-Mpc box;
+`supergalactic-cartesian` frame), so flow registers with the galaxies and the
+CF-4 density volume by construction (they share the `d_mean_CF4pp` family). A
 known-attractor voxel test (à la `auditCf4Anchors`) guards the frame.
 
 ## Tech Stack
 
-TypeScript + Node (`tsx`) for the codec, wrapper, and R2 sync. Python + numpy
-for the extractor core (one-off per CF4++ npz release, like the MCPM extractor).
-Vitest for codec round-trip + extractor frame-correctness + ALLOW-filter tests.
+TypeScript + Node (`tsx`) for the codec, the pure-TS builder, and R2 sync. No
+Python — the npz is unzipped to `.npy` and read by `npyReader` (same pattern as
+the CF-4 density build). Vitest for codec round-trip + builder frame-correctness
++ ALLOW-filter tests.
 
 ---
 
@@ -54,23 +65,22 @@ Vitest for codec round-trip + extractor frame-correctness + ALLOW-filter tests.
 
 | File | Responsibility |
 |---|---|
-| `tools/flow/extractFlowField.py` | Frame-correct Python core: read CF4++ npz, emit true-SG-order RGBA16F `.bin` + JSON sidecar (vx,vy,vz,δ). |
-| `tools/flow/buildFlowField.ts` | tsx wrapper around the Python core (mirrors `build-mcpm`); resolves paths via `rawDataPath`, invokes Python, validates output. |
-| `tests/data/scalarFieldFormat.test.ts` (extend) | Codec round-trip for `channels=1` and `channels=4`; derived `GPUTextureFormat`. |
-| `tests/tools/flow/extractFlowFieldFrame.test.ts` | Known-attractor lands in expected voxel under the emitted frame. |
-| `tests/tools/deploy/syncR2.test.ts` (extend) | `ALLOW('flowfield.bin')` is true; sidecar allowed. |
+| `tools/flow/buildFlowField.ts` | Pure-TS builder: read `v_mean_CF4pp.npy` + `d_mean_CF4pp.npy` via `npyReader`, compute stats, transpose + RGBA-f16 pack (à la `buildCf4Density`), `encodeScalarField` → `public/data/flowfield.scfd`. |
+| `tools/flow/flowFieldFrame.ts` | Pure `attractorVoxel(anchor, meta)` helper shared by the builder's frame check and the test. |
+| `tests/tools/flow/flowFieldFrame.test.ts` | Known-attractor (Great Attractor / Virgo) lands inside the cube bounds under the emitted frame. |
+| `tests/tools/deploy/syncR2.test.ts` (extend) | `ALLOW('flowfield.scfd')` is true; tier-suffixed variant rejected. |
 
 **Modified:**
 
 | File | Change |
 |---|---|
-| `src/data/scalarFieldFormat.ts` | Add `channels` header byte; version → 3; derive format; round-trip 1 and 4 channels. |
-| `src/@types/data/ScalarCube.d.ts` | Add `readonly channels: 1 \| 4` field. |
+| `src/data/scalarFieldFormat.ts` | Task 1: add `channels` byte; version → 3; `gpuTextureFormatForChannels`. Task 3: add `value_kind` + `velocityStats` header block. |
+| `src/@types/data/ScalarCube.d.ts` | Task 1: `readonly channels: 1 \| 4`. Task 3: optional `velocityStats`. |
 | `tools/utils/io/rawDataRegistry.ts` | Register `cf4.vfield-npz` — the upstream npz, shared with the density pipeline (see Task 2 deviation note). |
-| `data/raw/cf4/README.md` (extend) | Add a "Velocity field (flow viz)" section documenting the npz keys, box geometry, SG frame, build. |
-| `tools/deploy/syncR2.ts` | Add `flowfield.bin` + sidecar to `ALLOW`. |
-| `tools/volumes/buildMcpmVolume.ts` + `tools/volumes/buildCf4Density.ts` | Set `channels: 1` on the emitted cube (re-emit under v3). |
-| `package.json` | Add `build-flow-field` script. |
+| `data/raw/cf4/README.md` (extend) | Add a "Velocity field (flow viz)" section documenting the npz keys, box geometry, SG frame, the `unzip -j` + pure-TS build. |
+| `tools/deploy/syncR2.ts` | Add `flowfield.scfd` to `ALLOW` (tier-agnostic). |
+| `tools/volumes/buildMcpmVolume.ts` + `tools/volumes/buildCf4Density.ts` | Set `channels: 1` on the emitted cube (done in Task 1, re-emit under v3). |
+| `package.json` | Add `build-flow-field` script (pure tsx, no Python). |
 
 ---
 
@@ -166,109 +176,155 @@ it; the flow extractor is a second consumer of the same file.
 - [x] Extend `data/raw/cf4/README.md` with a "Velocity field (flow viz)" section: the npz keys (`v_mean_CF4pp`, `d_mean_CF4pp`; the full six-array mean/std set printed at run time), the 1000 Mpc/h supergalactic box, the true SG axis order the production extractor assumes (vs the frame-agnostic spike), and the `build-flow-field` build step.
 - [x] (No `.gitignore` change — `!/data/raw/cf4/README.md` already whitelisted.)
 - [x] `npm run typecheck` → clean (registry keys are compile-checked via `RawDataKey`).
-- [ ] Commit: `feat(flow): register CF4++ velocity-field npz + provenance`.
+- [x] Commit: `feat(flow): register CF4++ velocity-field npz + provenance`.
 
-## Task 3: Frame-correct Python extractor
+## Task 3: SCFD v3 `value_kind` + `velocityStats` (fold stats into the header)
 
-**Files:** `tools/flow/extractFlowField.py` (create)
+**Files:** `src/data/scalarFieldFormat.ts` (modify), `src/@types/data/ScalarCube.d.ts` (modify), `tests/data/scalarFieldFormat.test.ts` (modify)
 
-Rehomed and **fixed** from `tools/cosmic-flow/data/convertCf4ppVfield.py`. The
-spike deliberately ignored frame alignment. The new extractor must emit the
-**true SG axis order** and `origin`/`extent`/`frameKind` matching `cf4-density`
-(the same `d_mean_CF4pp` family the CF-4 density volume already uses), so the
-WebGPU `writeTexture` x-fastest upload lands each voxel where the renderer's
-`buildCubeModelMatrix` expects it.
+> **Replaces the original "Frame-correct Python extractor" task (decided 2026-06-04).**
+> Two decisions reshaped Phase A: (1) the flow cube is **an SCFD file**
+> (`channels = 4`), not a raw blob + JSON sidecar; (2) its runtime stats fold
+> into the SCFD v3 header, so there is **no sidecar**. That makes the SCFD
+> encoding a TS concern (`encodeScalarField`), which in turn makes a Python
+> extractor redundant — like `buildCf4Density.ts`, the maintainer `unzip`s the
+> `.npy` arrays and a pure-TS builder does the rest (Task 4). A Python
+> `extractFlowField.py` was briefly committed then reverted. This task is the
+> format half of that reshape.
 
-The packing is RGBA16F C-order `[z][y][x][c]`, R=vx G=vy B=vz A=δ. The
-**fix vs the spike** is the axis mapping: determine the correct
-`(numpy axis → SG axis)` permutation and sign so a known attractor (Great
-Attractor / Virgo) lands at its expected voxel. Use the same percentile-of-anchor
-methodology `tools/volumes/auditCf4Anchors.ts` uses for the density cube — the
-velocity field shares the cube's spatial layout, so the density-derived
-permutation transfers. Document the chosen permutation in the module docstring
-with the anchor evidence.
+The flow cube needs three runtime-normalisation stats the generic scalar header
+can't express (velocity magnitude is a cross-channel quantity). We discriminate
+with the existing `value_kind` byte and fold the stats into the reserved region.
 
-**Sidecar JSON keys** (consumed by the Phase-B loader): `n`, `boxMpcPerH`,
-`origin` (Vec3, SG-cartesian Mpc lower corner), `voxelSizeMpc`, `frameKind`
-(`'supergalactic-cartesian'`), `speedKmsMax`, `speedKmsP99`, `deltaMax`,
-`deltaP99`.
+**Header change (`value_kind` at byte 21; stats in the reserved region):**
 
-- [ ] Create `tools/flow/extractFlowField.py` reading `data/raw/cf4/CF4pp_mean_std_grids.npz` (registered as `cf4.vfield-npz`), writing `public/data/flowfield.bin` + `public/data/flowfield.json`.
-- [ ] Normalise `v_mean_CF4pp` to `(N,N,N,3)` (handle leading- or trailing-component layouts, as the spike does).
-- [ ] Apply the frame-correct axis permutation + sign so SG axes map to numpy axes correctly; document the permutation + the anchor evidence in the docstring.
-- [ ] Pack RGBA16F C-order `[z][y][x][c]`, R/G/B = velocity, A = δ.
-- [ ] Emit the sidecar JSON with the keys above, including `origin`/`voxelSizeMpc`/`frameKind` so the loader can build the model matrix.
-- [ ] Print the speed/δ stats + the chosen permutation for the operator log.
-- [ ] (No automated test for the Python directly — Task 4's TS test loads the emitted `.bin`. Run manually once: `python3 tools/flow/extractFlowField.py` after fetching the npz.)
-- [ ] Commit: `feat(flow): frame-correct CF4++ velocity-field extractor`.
+```
+  21    1   value_kind  : uint8  (0 = pre-normalised scalar [0,1];
+                                    1 = velocity + overdensity field, channels=4)
 
-## Task 4: tsx build wrapper + npm script
+  when value_kind = 1 (else these slots stay zero):
+  56    4   value_min   : float32  = deltaMin   (δ range reuses the value slots)
+  60    4   value_max   : float32  = deltaMax
+  64    4   speedKmsMax : float32
+  68    4   speedKmsP99 : float32
+  72    4   deltaP99    : float32
+  76..95    reserved (zero)
+```
 
-**Files:** `tools/flow/buildFlowField.ts` (create), `package.json` (modify), `tests/tools/flow/extractFlowFieldFrame.test.ts` (create)
+No version bump — v3 is unshipped, so this rides the existing v3.
 
-Mirrors the `build-mcpm` pattern: a thin tsx wrapper resolves paths via
-`rawDataPath`, shells out to the Python core, and validates the emitted
-`.bin`/`.json` (byte length == `n³ * 4 channels * 2 bytes`, sidecar keys
-present). Pure orchestration — the numeric work is in Python.
+**Type contract** — add to `ScalarCube` (inline optional, *not* a new `@types` file):
 
-**Wrapper contract:**
+```ts
+  /** Present only on a 4-channel velocity field (value_kind=1); a plain
+   *  channels===4 cube may omit it. deltaMin/deltaMax ride valueMin/valueMax. */
+  readonly velocityStats?: {
+    readonly speedKmsMax: number;
+    readonly speedKmsP99: number;
+    readonly deltaP99: number;
+  };
+```
+
+- [x] Add the optional `velocityStats` field to `ScalarCube` (inline); update the didactic header to explain `value_kind` and the δ-range reuse.
+- [x] Update the `scalarFieldFormat.ts` byte-table docstring (value_kind=1, the 64/68/72 stat slots, 76..95 reserved).
+- [x] `encodeScalarField`: derive `value_kind` from `velocityStats` presence (1 if present, else 0); write the three stats to 64/68/72 when present; throw if `velocityStats` is set on a non-4-channel cube; scalar cubes leave 64..95 zero.
+- [x] `decodeScalarField`: read `value_kind` at byte 21; if 1, read `velocityStats` from 64/68/72 and return it; if 0, omit the key; reject any other `value_kind` with a clear throw.
+- [x] Tests — extend `tests/data/scalarFieldFormat.test.ts`:
+  - velocity round-trip: `value_kind` raw byte === 1, the three stats round-trip (`toBeCloseTo`), `valueMin/valueMax` (δ range) preserved, voxels byte-identical.
+  - raw-byte assertion on offsets 64/68/72.
+  - scalar cube: `value_kind` === 0, stat slots zero, decoded `velocityStats` undefined.
+  - `encode` rejects `velocityStats` on a 1-channel cube.
+  - `decode` rejects an unknown `value_kind` (e.g. 2).
+- [x] `npm test -- scalarFieldFormat` → all pass. `npm run typecheck` → clean.
+- [x] Commit: `feat(data): fold velocity-field stats into the SCFD v3 header`.
+
+## Task 4: pure-TS `buildFlowField` → `flowfield.scfd` + frame helper + test
+
+**Files:** `tools/flow/buildFlowField.ts` (create), `tools/flow/flowFieldFrame.ts` (create), `tests/tools/flow/flowFieldFrame.test.ts` (create), `package.json` (modify), `data/raw/cf4/README.md` (update build section)
+
+Mirrors `buildCf4Density.ts` — **pure Node/TS, no Python**. The CF4++ npz is a
+zip of `.npy` arrays; the maintainer extracts the two needed arrays once:
+
+```
+unzip -j data/raw/cf4/CF4pp_mean_std_grids.npz \
+  v_mean_CF4pp.npy d_mean_CF4pp.npy -d data/raw/cf4/
+```
+
+`buildFlowField.ts` then reads both via `npyReader`, computes the stats, applies
+the same frame recipe `buildCf4Density.ts` uses, and encodes the SCFD.
+
+**Builder contract:**
 
 ```ts
 // tools/flow/buildFlowField.ts
-export async function buildFlowField(): Promise<void>;
-// Invokes the Python extractor with rawDataPath('cf4.vfield-npz') as input,
-// writes public/data/flowfield.{bin,json}, then asserts the output byte length
-// and sidecar key set. Throws on mismatch. CLI-invokable (import.meta.url guard).
+export async function buildFlowField(args?: {
+  vfieldNpyPath?: string;   // default rawDataPath-relative data/raw/cf4/v_mean_CF4pp.npy
+  densityNpyPath?: string;  // default data/raw/cf4/d_mean_CF4pp.npy
+  outPath?: string;         // default public/data/flowfield.scfd
+}): Promise<void>;
+// Reads v_mean (N,N,N,3) + d_mean (N,N,N); computes speedKmsMax/P99 + deltaMin/Max/P99;
+// applies the buildCf4Density transpose (outputIdx = k*N*N + j*N + i) packing RGBA-f16
+// (R/G/B = native-SG velocity, A = δ); builds a ScalarCube { channels: 4, frameKind:
+// 'supergalactic-cartesian', origin: -voxelSize*N/2, voxelSize: 1000/N, valueMin/Max =
+// δ range, velocityStats }; encodeScalarField → flowfield.scfd. CLI guard (import.meta.url).
 ```
 
-**Frame-correctness test** — `tests/tools/flow/extractFlowFieldFrame.test.ts`.
-The test does NOT run Python (CI has no numpy + no 167 MB npz). Instead it pins
-the **frame contract**: a pure helper that, given the emitted sidecar
-`origin`/`voxelSizeMpc`/`frameKind`, maps a known attractor's RA/Dec/distance to
-the expected voxel index. The assertion mirrors `auditCf4Anchors`: the attractor
-sits inside the cube bounds and at a plausible voxel rank. Factor the
-SG→voxel-index math into a shared pure helper the extractor's TS-side sidecar
-validation and this test both call, so the contract can't drift.
+The **velocity components ride in native SG order** (R=v_SGX, G=v_SGY, B=v_SGZ)
+— the transpose relocates each vector without rotating its basis. This is a
+load-bearing assumption (the npz stores SG-Cartesian velocity aligned with the
+grid position axes); it cannot be proven from committed code, so document it and
+note the maintainer's one-time empirical infall check (flow should converge on
+the Great Attractor / Shapley).
+
+**Frame helper + test** — `tools/flow/flowFieldFrame.ts` + `tests/tools/flow/flowFieldFrame.test.ts`.
+The test does NOT run the build (CI has no `.npy`). It pins the **frame contract**:
+a pure helper mapping a known attractor's RA/Dec/distance to a voxel index from
+the cube's `origin`/`voxelSize`/`n`, asserting the attractor sits inside bounds —
+mirroring `auditCf4Anchors`. The builder's frame check and the test share the
+helper so the contract can't drift. (Note: `flowFieldFrame.ts` is the
+parameterised sibling of `tools/utils/math/coordinates.ts`'s hardcoded
+`sgToVoxelIndex` — keep a comment pointing at it; if a third consumer appears,
+consolidate by parameterising `sgToVoxelIndex` rather than copying again.)
 
 ```ts
-// Pure helper (TS side, e.g. tools/flow/flowFieldFrame.ts):
+// tools/flow/flowFieldFrame.ts
 export function attractorVoxel(
   anchor: { raHours: number; decDeg: number; distMpc: number },
   meta: { origin: Vec3; voxelSizeMpc: number; n: number },
 ): { voxel: Vec3; inBounds: boolean };
+// raDecDistToEqCart(anchor) → eqToSg → (sg - origin)/voxelSizeMpc per axis; inBounds = all in [0,n).
 ```
 
-- [ ] Create `tools/flow/flowFieldFrame.ts` with `attractorVoxel` (reuse `raDecDistToEqCart` + `eqToSg` from the existing tools-math helpers, as `auditCf4Anchors` does).
-- [ ] Add the test `Great Attractor lands inside the flow cube bounds` — feed a fixture `meta` (the production `origin`/`voxelSize`/`n`) + the GA anchor; assert `inBounds === true` and the voxel index is within `[0,n)` on all axes.
+- [ ] Create `tools/flow/flowFieldFrame.ts` with `attractorVoxel` (reuse `raDecDistToEqCart` + `eqToSg` from the existing tools-math helpers, as `auditCf4Anchors` does); parameterise the voxel-index math by `meta`.
+- [ ] Add the test `Great Attractor lands inside the flow cube bounds` — feed a fixture `meta` (production `origin`/`voxelSize`/`n`) + the GA anchor; assert `inBounds === true` and the voxel index is within `[0,n)` on all axes.
 - [ ] Add the test `Virgo lands inside the flow cube bounds` — same shape for Virgo.
-- [ ] Create `tools/flow/buildFlowField.ts` per the contract above; validate output byte length + sidecar keys; CLI guard.
-- [ ] Add `"build-flow-field": "tsx tools/flow/buildFlowField.ts"` to `package.json` scripts.
-- [ ] `npm test -- extractFlowFieldFrame` → pass. `npm run typecheck` → clean.
-- [ ] Commit: `feat(flow): buildFlowField wrapper + build-flow-field script + frame test`.
+- [ ] Create `tools/flow/buildFlowField.ts` per the contract above (pure TS; `npyReader` for both arrays; transpose + pack + `encodeScalarField`; CLI guard). Confirm `npyReader` handles the 4D `(N,N,N,3)` velocity array (or normalise the leading/trailing component layout in the builder).
+- [ ] Add `"build-flow-field": "tsx tools/flow/buildFlowField.ts"` to `package.json` scripts (pure tsx — no Python).
+- [ ] Update the `data/raw/cf4/README.md` "Velocity field" build subsection: the `unzip -j` two-array step + the pure-TS `npm run build-flow-field` → `flowfield.scfd`.
+- [ ] `npm test -- flowFieldFrame` → pass. `npm run typecheck` → clean.
+- [ ] Commit: `feat(flow): pure-TS buildFlowField → flowfield.scfd + frame helper + test`.
 
-## Task 5: Re-emit existing volumes under v3; add to R2 ALLOW
+## Task 5: Add `flowfield.scfd` to R2 ALLOW (+ re-emit note)
 
-**Files:** `tools/volumes/buildMcpmVolume.ts` (modify), `tools/volumes/buildCf4Density.ts` (modify), `tools/deploy/syncR2.ts` (modify), `tests/tools/deploy/syncR2.test.ts` (modify)
+**Files:** `tools/deploy/syncR2.ts` (modify), `tests/tools/deploy/syncR2.test.ts` (modify)
 
-The version bump means the loader's "regenerate" guard fires on the existing
-`mcpm-*.scfd` + `cf4_density.scfd`. Both builders construct a `ScalarCube`
-literal — they must now set `channels: 1`. The flow `.bin` joins the
-tier-agnostic R2 allow-list (like `2mrs.bin` / `filaments.bin`).
+The `channels: 1` edits to `buildMcpmVolume.ts` + `buildCf4Density.ts` were
+already pulled into **Task 1** (so typecheck stayed green on every commit), so
+this task is just the R2 allow-list. The flow `.scfd` joins the tier-agnostic
+allow-list (like `2mrs.bin` / `filaments.bin`).
 
-- [ ] In `buildMcpmVolume.ts` add `channels: 1` to the `ScalarCube` literal (around the `frameKind: 'equatorial-cartesian'` block).
-- [ ] In `buildCf4Density.ts` add `channels: 1` to its `ScalarCube` literal.
-- [ ] In `tools/deploy/syncR2.ts` `ALLOW`: add `name === 'flowfield.bin'` and `name === 'flowfield.json'` with a comment ("CF4++ velocity cube — tier-agnostic, like filaments.bin").
-- [ ] Tests — extend `tests/tools/deploy/syncR2.test.ts`: `ALLOW accepts flowfield.bin` and `ALLOW accepts flowfield.json`; assert a stray `flowfield-large.bin` is rejected (it's tier-agnostic, no tier suffix).
-- [ ] `npm test -- syncR2` → pass. `npm run typecheck` → clean (the `ScalarCube` literals now satisfy the new `channels` field; this clears the Task-1 residual typecheck failures).
-- [ ] (Operator note, not a test step) Re-emit + resync is a deploy action: `npm run build-tiers` (mcpm/cf4 re-bake), `npm run build-flow-field`, then `npm run sync-r2-secure` from the **main** worktree. A partial deploy ships mismatched `.scfd` — call this out in the PR description.
-- [ ] Commit: `feat(flow): re-emit volumes under v3, add flowfield to R2 ALLOW`.
+- [ ] In `tools/deploy/syncR2.ts` `ALLOW`: add `name === 'flowfield.scfd'` with a comment ("CF4++ velocity cube — tier-agnostic, like filaments.bin").
+- [ ] Tests — extend `tests/tools/deploy/syncR2.test.ts`: `ALLOW accepts flowfield.scfd`; assert a stray tier-suffixed `flowfield-large.scfd` is rejected (flow is tier-agnostic, no tier suffix).
+- [ ] `npm test -- syncR2` → pass. `npm run typecheck` → clean.
+- [ ] (Operator note, not a test step) Re-emit + resync is a deploy action: the v3 bump means the loader's "regenerate" guard fires on the existing `mcpm-*.scfd` + `cf4_density.scfd`, so run `npm run build-tiers` (mcpm/cf4 re-bake under v3), `npm run build-flow-field`, then `npm run sync-r2-secure` from the **main** worktree. A partial deploy ships mismatched `.scfd` — call this out in the PR description.
+- [ ] Commit: `feat(flow): add flowfield.scfd to R2 ALLOW`.
 
 ---
 
 ## Spec coverage (Phase A)
 
-- Decision §9 (generalize `scalarFieldFormat` to N channels; version bump; loader derives format) → Tasks 1, 5.
-- Decision §10 (`tools/flow/` extractor + wrapper + npm script + rawDataRegistry + README + syncR2 ALLOW) → Tasks 2, 3, 4, 5.
-- Decision §4 work item (extractor emits true SG order + origin/extent/frameKind) → Task 3.
-- Testing strategy: format codec round-trip (channels 1 & 4) → Task 1; extractor frame-correctness (known attractor voxel) → Task 4.
+- Decision §9 (generalize `scalarFieldFormat` to N channels + fold velocity stats into the v3 header; version bump; loader derives format) → Tasks 1, 3.
+- Decision §10 (`tools/flow/` pure-TS builder + npm script + rawDataRegistry + README + syncR2 ALLOW) → Tasks 2, 4, 5.
+- Decision §4 work item (builder emits true SG order + origin/voxelSize/frameKind, single self-describing `flowfield.scfd`) → Task 4.
+- Testing strategy: format codec round-trip (channels 1 & 4, `velocityStats`) → Tasks 1, 3; builder frame-correctness (known attractor voxel) → Task 4.
 - Risk: format version bump forces re-emit of mcpm + cf4-density + R2 resync → Task 5 operator note.

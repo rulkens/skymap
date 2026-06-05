@@ -6,7 +6,7 @@
 > - [`docs/superpowers/specs/2026-06-04-flow-field-integration-design.md`](../specs/2026-06-04-flow-field-integration-design.md) — the approved design. Source of truth.
 > - [`docs/superpowers/conventions/plan-style.md`](../conventions/plan-style.md) — contract code yes, implementation code no.
 >
-> **Depends on:** Phase A (the generalized `scalarFieldFormat` + the emitted `public/data/flowfield.{bin,json}`). The loader in Task 3 consumes the `flowfield.json` sidecar keys Phase A's extractor produces. You can write the store (Tasks 1–2) without Phase A, but the loader test fixtures assume the Phase-A sidecar shape.
+> **Depends on:** Phase A (the generalized `scalarFieldFormat` with `value_kind`/`velocityStats` + the emitted single `public/data/flowfield.scfd`). The loader in Task 3 `decodeScalarField`s that one SCFD file — frame + stats live in its header, no JSON sidecar. You can write the store (Tasks 1–2) without Phase A, but the loader test fixtures build a `ScalarCube` matching the Phase-A shape.
 >
 > **Conventions** (from `CLAUDE.md` + memory):
 > - Didactic comments; `type` aliases never `interface`; one type per file under `src/@types`; deep relative imports, no barrels.
@@ -21,8 +21,9 @@ A frozen `createFlowFieldStore()` per-type store mirrors `createFilamentStore`
 exactly (getters + named mutation seams), is assembled into `EngineData` by
 `createEngineData`, and is **seeded at construction** for demand-model symmetry.
 A velocity-field loader (ported from cosmic-flow's `createVelocityField`) fetches
-`flowfield.{bin,json}` and uploads the 128³ RGBA16F cube. A demand-driven asset
-slot loads the cube on the frame `enabled` first flips true — not at boot.
+the single `flowfield.scfd`, `decodeScalarField`s it, and uploads the 128³
+RGBA16F cube. A demand-driven asset slot loads the cube on the frame `enabled`
+first flips true — not at boot.
 
 ## Architecture
 
@@ -40,7 +41,7 @@ slot stays idle at boot and lazy-loads when `flow.enabled` flips true.
 TypeScript. Vitest (`node` env) for the store unit tests + the demand-row
 predicate test. The loader's GPU upload is exercised by Phase C's construction
 smoke test (no GPU in `node` vitest), so Phase B tests the loader's pure parts
-(URL building, sidecar parsing) only.
+(URL building, SCFD-decode → `FlowFieldMeta` mapping) only.
 
 ---
 
@@ -53,10 +54,10 @@ smoke test (no GPU in `node` vitest), so Phase B tests the loader's pure parts
 | `src/@types/engine/data/FlowFieldStore.d.ts` | The `FlowFieldStore` type — getters + mutation seams. |
 | `src/@types/data/FlowMode.d.ts` | `FlowMode = 'advect' \| 'streamline'`. |
 | `src/@types/data/FlowField.d.ts` | `FlowField` GPU-handle type (textureView, sampler, meta, dispose). |
-| `src/@types/data/FlowFieldMeta.d.ts` | Decoded sidecar metadata (n, box, origin, voxelSize, frameKind, stats). |
+| `src/@types/data/FlowFieldMeta.d.ts` | Frame + stats derived from the decoded SCFD cube (n, voxelSize, origin, frameKind, velocityStats). |
 | `src/services/engine/data/createFlowFieldStore.ts` | Frozen factory; defaults seeded; named setters. |
-| `src/services/gpu/loaders/createFlowField.ts` | Fetch `.bin`+`.json`, upload 128³ rgba16float texture, return `FlowField`. |
-| `src/services/loading/fetchers/flowFieldFetcher.ts` | Slot fetcher: fetch + decode into a `FlowField` (or its raw inputs). |
+| `src/services/gpu/loaders/createFlowField.ts` | Fetch `flowfield.scfd`, `decodeScalarField`, upload 128³ rgba16float texture via `gpuTextureFormatForChannels(4)`, return `FlowField`. |
+| `src/services/loading/fetchers/flowFieldFetcher.ts` | Slot fetcher: fetch the one `.scfd` ArrayBuffer + decode into a `FlowField`. |
 | `src/services/loading/slots/flowFieldSlot.ts` | Asset slot: on commit, hand the field to `flowFieldRenderer.setField`. |
 | `tests/services/engine/data/createFlowFieldStore.test.ts` | Defaults + each setter, FilamentStore-style. |
 | `tests/services/engine/data/createEngineData.test.ts` (extend or new) | Asserts `data.flow` is present + seeded. |
@@ -177,22 +178,24 @@ export function createFlowFieldStore(): FlowFieldStore;
 **Files:** `src/@types/data/FlowField.d.ts` (create), `src/@types/data/FlowFieldMeta.d.ts` (create), `src/services/gpu/loaders/createFlowField.ts` (create), `tests/services/gpu/loaders/createFlowField.test.ts` (create)
 
 Ported from `tools/cosmic-flow/src/field/createVelocityField.ts`, adapted to the
-Phase-A sidecar (which now carries `origin`/`voxelSizeMpc`/`frameKind` so the
-renderer can build the model matrix). The blob is C-order `[z][y][x][c]` f16
-RGBA, uploaded via `writeTexture` with `bytesPerRow = n*4*2`, `rowsPerImage = n`.
+**SCFD** flow artifact (no JSON sidecar). Phase A emits a single `flowfield.scfd`
+whose header carries the frame **and** the velocity stats; the loader
+`decodeScalarField`s it to a `ScalarCube` and uploads `cube.voxels` (C-order
+`[z][y][x][c]` f16 RGBA) via `writeTexture` with `bytesPerRow = n*4*2`,
+`rowsPerImage = n`, `format: gpuTextureFormatForChannels(cube.channels)`.
 
 ```ts
-// src/@types/data/FlowFieldMeta.d.ts
+// src/@types/data/FlowFieldMeta.d.ts — derived from the decoded SCFD cube
 export type FlowFieldMeta = {
-  readonly n: number;
-  readonly boxMpcPerH: number;
+  readonly n: number;               // cube dims[0] (cube is N³)
   readonly origin: Vec3;            // SG-cartesian Mpc, cube lower corner
   readonly voxelSizeMpc: number;
   readonly frameKind: ScalarFieldFrameKind;
-  readonly speedKmsMax: number;
-  readonly speedKmsP99: number;
-  readonly deltaMax: number;
-  readonly deltaP99: number;
+  readonly deltaMin: number;        // = cube.valueMin
+  readonly deltaMax: number;        // = cube.valueMax
+  readonly speedKmsMax: number;     // ┐
+  readonly speedKmsP99: number;     // ├ from cube.velocityStats
+  readonly deltaP99: number;        // ┘
 };
 ```
 
@@ -210,19 +213,19 @@ export type FlowField = {
 // src/services/gpu/loaders/createFlowField.ts
 export async function createFlowField(
   device: GPUDevice,
-  binUrl: string,
-  jsonUrl: string,
+  scfdUrl: string,            // single .scfd — no sidecar
 ): Promise<FlowField>;
 ```
 
-The pure, GPU-free part worth testing is the **sidecar → `FlowFieldMeta`**
-mapping and the URL/byte-layout invariants. Factor the sidecar parse into a pure
-exported helper `parseFlowFieldMeta(json: unknown): FlowFieldMeta`.
+The pure, GPU-free part worth testing is the **decoded-cube → `FlowFieldMeta`**
+mapping. Factor it into a pure exported helper
+`flowFieldMetaFromCube(cube: ScalarCube): FlowFieldMeta` (throws if the cube
+isn't a velocity field — `channels !== 4` or `velocityStats` absent).
 
 - [ ] Create `FlowFieldMeta` + `FlowField` types (`Vec3` alias, not raw tuple; import `ScalarFieldFrameKind`).
-- [ ] Create `createFlowField` per the contract; reuse the cosmic-flow upload shape (`size: [n,n,n]`, `dimension: '3d'`, `format: 'rgba16float'`); a shared linear sampler; `dispose` destroys the texture.
-- [ ] Factor `parseFlowFieldMeta` out and export it.
-- [ ] Tests — `createFlowField.test.ts` (no GPU): `parseFlowFieldMeta maps every sidecar key` — feed a fixture matching Phase-A's emitted JSON, assert each `FlowFieldMeta` field; `parseFlowFieldMeta throws on a missing key`.
+- [ ] Create `createFlowField` per the contract: `fetch(scfdUrl)` → `decodeScalarField(arrayBuffer)` → upload (`size: [n,n,n]`, `dimension: '3d'`, `format: gpuTextureFormatForChannels(4)`); a shared linear sampler; `dispose` destroys the texture; `meta = flowFieldMetaFromCube(cube)`.
+- [ ] Factor `flowFieldMetaFromCube` out and export it.
+- [ ] Tests — `createFlowField.test.ts` (no GPU): `flowFieldMetaFromCube maps every field` — build a `ScalarCube` fixture (channels=4 + velocityStats) and assert each `FlowFieldMeta` field; `flowFieldMetaFromCube throws on a non-velocity cube` (channels=1, or channels=4 without velocityStats).
 - [ ] `npm test -- createFlowField` → pass. `npm run typecheck` → clean.
 - [ ] Commit: `feat(flow): createFlowField velocity-field loader`.
 
@@ -240,7 +243,7 @@ no-ops, exactly like the volume slots null-check `scalarVolumeRenderer`), flips
 
 > The fetcher must produce the GPU `FlowField`, which needs `state.gpu.device`.
 > The volume slots fetch a CPU `ScalarCube` and upload on commit; mirror that —
-> the **fetcher** returns the raw `{ bin, json }` and the **commit** calls
+> the **fetcher** returns the raw `.scfd` `ArrayBuffer` and the **commit** calls
 > `createFlowField(device, …)`. This keeps the fetch GPU-free (testable) and the
 > upload on the commit thread, matching the volume-slot split.
 
@@ -260,7 +263,7 @@ no-ops, exactly like the volume slots null-check `scalarVolumeRenderer`), flips
 mirroring how `volumeField(...)` exposes volume state.
 
 - [ ] Add `'flow'` to the sidecar `AssetKey` union and a `flow` slot field on `EngineAssetSlots`.
-- [ ] Create `flowFieldFetcher` (returns raw `{ bin: ArrayBuffer, json: unknown }` via `dataUrl('flowfield.bin')` / `dataUrl('flowfield.json')`).
+- [ ] Create `flowFieldFetcher` (returns the raw `.scfd` `ArrayBuffer` via `dataUrl('flowfield.scfd')` — one file, no sidecar).
 - [ ] Create `flowFieldSlot` per the cf4DensitySlot shape: commit calls `createFlowField`, `renderer?.setField(field)` (null-safe), `state.data.flow.setLoaded()`, `requestRender()`.
 - [ ] Extend `buildDemandCtx` + `DemandCtx` with a `flow.enabled` read surface.
 - [ ] Add the `flow` row to `ASSET_WIRING`.
