@@ -90,10 +90,10 @@ function recessionTargetFor(h: FadeHandle): number | undefined {
     case 'volumesMaster': return VOLUME_RECESSION;
     case 'markerLayer':   return MARKER_RECESSION;   // all categories
     case 'labelLayer':
-      // structure labels + famous-galaxy labels recede; the YOU-ARE-HERE pin
-      // and scale bar do not. (Famous label id confirmed in the plan — see
-      // open questions; shown here as 'famous'.)
-      return h.layer === 'poi' || h.layer === 'famous'
+      // structure labels (any category) + famous-galaxy labels recede; the
+      // YOU-ARE-HERE pin and scale bar do not. Famous labels reuse the
+      // 'galaxyNames' handle (see Resolved decisions).
+      return h.layer === 'poi' || h.layer === 'galaxyNames'
         ? LABEL_RECESSION
         : undefined;
     default: return undefined;                        // survey, overlay, …
@@ -129,11 +129,14 @@ export function resolveLayerOpacity(fades: FadeRegistry, h: FadeHandle, blend: n
 }
 ```
 
-The only registry-adjacent change is the `FadeHandle` union gaining the
-descriptor-layer kinds it lacks: **`markerLayer`** (with a `category`
-discriminator, mirroring the renderer's per-category buckets) and a `labelLayer`
-value for **famous** labels. `serializeFadeHandle` gets the matching cases;
-`recessionTargetFor` (in the new module) declares their recession stance.
+The only registry-adjacent change is the `FadeHandle` union gaining
+descriptor-layer granularity it lacks: **`markerLayer`** with a `category`
+discriminator (mirroring the renderer's per-category buckets), and **POI
+`labelLayer` gaining the same `category`** discriminator so each structure-label
+category fades on/off independently — symmetric with markers. Famous labels
+**reuse the existing `galaxyNames`** handle (no new value). `serializeFadeHandle`
+gets the matching cases; `recessionTargetFor` (in the new module) declares their
+recession stance.
 
 `isAnyAnimating` and render-on-demand are untouched — the recession ramp is owned
 by `clusterFocus`, whose `isAwake()` is already in the predicate, so frames keep
@@ -187,22 +190,33 @@ alpha(instance) = opacityOf(handle) × (instance is focused ? 1 : focusRecession
 - `NON_SELECTED_MARKER_DIM` migrates out of `structurePoiStyles` into
   `MARKER_RECESSION` (now smoothly animated, deeper).
 
-**POI labels + famous labels** — the wiring prerequisite first:
-- **Wire the label path to consume opacity.** Labels already carry a per-label
-  `fadeAlpha` (`labels/vertex.wesl`, fed from `label.sizing.w`). The label
-  director multiplies each label's `fadeAlpha` by its layer's *resolved* opacity
-  (`opacityOf(handle) × focusRecession`, with the focused POI label exempt from
-  the recession part) when it finalises the set. No shader/renderer change — the
-  director simply stops discarding the value. This single change makes label-layer
-  load-in fade, category fade, *and* recession all live at once.
-- **Category on/off becomes a fade** the same way markers do (boolean
-  `labelVisible(cat)` skip → category toggle `opacityOf` baked into `fadeAlpha`).
-- The **focused structure's** POI label is exempt from recession per-instance
-  (the producer knows the structure id), so a faded ring never carries a bright
-  label.
-- **Famous-galaxy labels** recede uniformly (no per-member exemption — there's no
-  structure-membership link at the famous producer, and the ask is simply "they
-  recede on focus").
+**POI labels + famous labels** — the wiring prerequisite first. The label
+director merges all producers into one flat set with per-label `fadeAlpha`;
+labels don't carry a layer tag, but each **producer** knows its layer. So
+consumption lives in the producer (symmetric with `produceStructureMarkers`),
+not the director:
+- **Each producer bakes its resolved layer opacity into every label's
+  `fadeAlpha`** — `opacityOf(handle) × focusRecession(handle, blend)`. Labels
+  already carry `fadeAlpha` (`labels/vertex.wesl`, from `label.sizing.w`); the
+  renderer already honours it. No shader/renderer change — the producers simply
+  stop ignoring the registry. This lights up label-layer load-in fade, category
+  fade, *and* recession at once.
+- **POI structure labels** (`produceStructureLabels`) read the **per-category**
+  `labelLayer{layer:'poi', category}` handle: category on/off becomes a fade
+  (boolean `labelVisible(cat)` skip → baked opacity), and the **focused
+  structure's** label is exempt from the recession part (the producer knows the
+  structure id), so a faded ring never carries a bright label.
+- **Famous-galaxy labels** (`produceFamousLabels`) read the reused
+  `labelLayer{layer:'galaxyNames'}` handle and recede uniformly (no per-member
+  exemption — no structure-membership link at the famous producer). **Consequence
+  of the reuse:** `galaxyNames` is registered at opacity 0 today (reserved,
+  unused). Now that it drives visible labels it must start at / fade to 1 —
+  `registerOverlayFades` registers it at 1, and the famous producer (or director)
+  fires its load-in fade like `poi` does. Without this the famous labels would
+  vanish.
+- **The one-shot load-in fade** (today a single `fadeTo(poi, 1)` in the director)
+  becomes **per-category** for POI labels; it moves to the producer, which knows
+  per-category first-appearance. (Director still owns merge + declutter.)
 
 ## Category-visibility fade (markers + POI labels)
 
@@ -231,13 +245,15 @@ selection.focused() ─▶ clusterFocus.update() ─▶ blend (FocusUniformsValu
                                                    │   authoritative home; read as a value
                               runFrame threads `blend` into render settings
                                                    │
-   ┌───────────────┬───────────────┬──────────────┼───────────────┬──────────────┐
-   ▼               ▼               ▼              ▼               ▼
-resolveLayerOpacity  resolveLayer   produceStruct-  labelDirector (POI)   labelDirector (famous)
-(filaments)        Opacity(volumes) Markers         opacityOf×focus-      opacityOf×focusRecession
-   │                  │             opacityOf×focus  Recession, focused    (uniform)
-filamentsPass      volumeUpsample   Recession,       exempt → fadeAlpha
-(GPU uniform)      (GPU uniform)    focused exempt
+   ┌───────────────┬───────────────┬──────────────┬─────────────────────┬──────────────────────┐
+   ▼               ▼               ▼              ▼                     ▼
+resolveLayerOpacity  resolveLayer   produceStruct-  produceStructure-     produceFamousLabels
+(filaments)        Opacity(volumes) Markers         Labels                (galaxyNames handle)
+   │                  │             markerLayer:c   labelLayer{poi,c}     opacityOf×focusRecession
+filamentsPass      volumeUpsample   opacityOf×focus  opacityOf×focus       (uniform) → fadeAlpha
+(GPU uniform)      (GPU uniform)    Recession,       Recession, focused
+                                    focused exempt   exempt → fadeAlpha
+                                    → descriptor α
 
        opacityOf = FadeRegistry (toggle, unchanged)   focusRecession(handle, blend) = pure fn
 ```
@@ -250,20 +266,19 @@ filamentsPass      volumeUpsample   Recession,       exempt → fadeAlpha
 - **Layer/category toggled off** → toggle 0 → `0 × recession = 0`.
 - **Render-on-demand** → covered by the existing `clusterFocus.isAwake()`.
 
-## Open questions for the plan
+## Resolved decisions (were open questions)
 
-- **Descriptor-layer handle granularity.** `markerLayer` clearly keys on
-  `category`. For POI labels, does the existing single `labelLayer:poi` split
-  into per-category handles (to fade category on/off), or does category fade ride
-  a separate per-category sub-fade while `poi` stays the load-in layer? Resolve
-  with the label code open; the spec requires only that category on/off fades and
-  recession folds in.
-- **Famous-label handle identity.** Confirm which `LabelLayerId` the famous
-  producer renders under today and whether it needs its own handle value vs.
-  reusing one.
-- **Marker GPU fade buffer.** `clusterMarkerRenderer` already writes a per-frame
-  fade buffer (`:549`). Confirm whether recession/category opacity belongs in the
-  descriptor alpha (current path) or that uniform — avoid double-applying.
+- **Descriptor-layer handle granularity — per-category.** Both `markerLayer` and
+  POI `labelLayer` key on `category`; each category fades on/off independently
+  (symmetric). The POI-label load-in fade becomes per-category as a result.
+- **Famous-label handle — reuse `galaxyNames`.** No new handle value. Caveat: it
+  is registered at 0 today and must be brought to 1 (see the famous-labels bullet)
+  so existing labels keep showing.
+- **Marker recession/category opacity — per-descriptor alpha.** The renderer's
+  `fadeOpacity` uniform (`:549`) is a single global scalar for *all* markers and
+  cannot express per-category or per-instance opacity; both are baked into the
+  descriptor alpha in `produceStructureMarkers`. The global uniform is unchanged,
+  so there is no double-apply.
 
 ## Testing (TDD)
 
@@ -277,8 +292,9 @@ filamentsPass      volumeUpsample   Recession,       exempt → fadeAlpha
   `focusRecession` at `blend>0`; focused marker and selected-bump unaffected;
   category at toggle 0 emits alpha-0 (alignment preserved); at-rest output
   unchanged from today.
-- **Label director** — each label's `fadeAlpha` is multiplied by its resolved
-  layer opacity; focused POI label exempt from recession; famous labels recede;
+- **Label producers** — `produceStructureLabels` bakes per-category
+  `opacityOf × focusRecession` into `fadeAlpha`, focused POI label exempt;
+  `produceFamousLabels` bakes `galaxyNames` opacity × uniform recession;
   youAreHere / scaleBar never recede.
 - **Category fade** — `setCategoryMarkerVisible(false)` drives the handle toward
   0 over the fade duration rather than dropping instantly.
@@ -288,24 +304,30 @@ filamentsPass      volumeUpsample   Recession,       exempt → fadeAlpha
 
 - `src/services/engine/presentation/focusRecession.ts` — **new** pure module:
   `recessionTargetFor`, `focusRecession`, `resolveLayerOpacity`.
-- `src/@types/animation/FadeHandle.d.ts` — `markerLayer` (+category) and famous
-  `labelLayer` value; docblock.
-- `src/services/animation/fadeRegistry.ts` — new serialization cases only
-  (`markerLayer`, famous label). **No recession, no `setFocusBlend`.**
+- `src/@types/animation/FadeHandle.d.ts` — `markerLayer` (+`category`); add
+  `category` to POI `labelLayer`; docblock. (Famous reuses `galaxyNames` — no new
+  value.)
+- `src/services/animation/fadeRegistry.ts` — new/extended serialization cases only
+  (`markerLayer`, per-category `labelLayer`). **No recession, no `setFocusBlend`.**
 - `src/services/engine/frame/runFrame.ts` — thread `blend` into render settings
   / producer ctx (it's already computed for `settings.focus`).
 - `src/services/engine/frame/passes/filamentsPass.ts`,
   `volumeUpsamplePass.ts` — `opacityOf` → `resolveLayerOpacity(…, blend, …)`.
 - `src/services/engine/presentation/produceStructureMarkers.ts` — category
   `opacityOf` + smooth recession; drop the boolean skip and binary dim.
-- `src/services/engine/presentation/produceStructureLabels.ts` /
-  `produceFamousLabels.ts` — category `opacityOf`; focused-exempt recession.
-- `src/services/engine/subsystems/labelDirectorSubsystem.ts` — bake layer
-  `opacityOf` into per-label `fadeAlpha` (the wiring prerequisite).
+- `src/services/engine/presentation/produceStructureLabels.ts` — per-category
+  `labelLayer{poi}` opacity × focused-exempt recession baked into `fadeAlpha`;
+  per-category load-in fade-fire.
+- `src/services/engine/presentation/produceFamousLabels.ts` — `galaxyNames`
+  opacity × uniform recession baked into `fadeAlpha`; load-in fade-fire.
+- `src/services/engine/subsystems/labelDirectorSubsystem.ts` — drop the
+  director's single `poi` load-in fade (moves per-category to the producer);
+  merge/declutter unchanged.
 - `src/services/engine/presentation/structurePoiStyles.ts` — remove
   `NON_SELECTED_MARKER_DIM`.
-- `src/services/engine/engine.ts` — category visibility setters → `fadeTo`.
-- `src/services/engine/wiring/registerOverlayFades.ts` — register the new
-  marker/famous handles.
-- `tests/` mirrors for `focusRecession`, `produceStructureMarkers`, label
-  director.
+- `src/services/engine/engine.ts` — marker/label category visibility setters →
+  `fadeTo` on the per-category handles.
+- `src/services/engine/wiring/registerOverlayFades.ts` — register per-category
+  marker handles; bump `galaxyNames` initial opacity to 1 (now in use).
+- `tests/` mirrors for `focusRecession`, `produceStructureMarkers`,
+  `produceStructureLabels`, `produceFamousLabels`.
