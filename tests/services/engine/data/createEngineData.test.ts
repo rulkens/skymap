@@ -9,4 +9,10 @@ describe('createEngineData', () => {
     expect(d.volumes.registered()).toEqual([]);
     expect(d.filaments.loaded).toBe(false);
   });
+
+  it('includes a seeded flow store', () => {
+    const d = createEngineData();
+    expect(d.flow.mode).toBe('advect');
+    expect(d.flow.enabled).toBe(false);
+  });
 });
