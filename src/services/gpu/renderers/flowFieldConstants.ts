@@ -35,3 +35,7 @@ export const DT = 0.016; // fixed integration timestep handed to the compute pas
 export const HEAD_STEP_SCALE = 0.012; // flowSpeed -> advect head distance per frame (motion speed)
 export const SPEED_COLOR_MAX = 1200.0; // km/s mapped to the hot end of the speed colour ramp
 export const DENS_SCALE = 1.0; // overdensity delta -> spawn weight (clamped 0..1); seeding selectivity
+// Ribbon half-width in grid units (the spike's advect default `size`). TS-only:
+// it rides the Cam uniform's `width` field, so there is no WESL mirror to keep
+// in sync — only the renderer reads it when packing the uniform.
+export const RIBBON_WIDTH = 0.0012;
