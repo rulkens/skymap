@@ -17,18 +17,31 @@
  *
  * The three overlay handles come first (Milky Way at its settings gate,
  * procedural + textured disks unconditionally at 1), then the volumes-master
- * gate, then the four label-layer handles.  The order within each group
- * matches the order in the source catalog of concerns so diffs are
- * easy to audit.
+ * gate, then the category-less label-layer handles, then the per-category
+ * marker + poi-label handles (one pair per structure category).  The order
+ * within each group matches the order in the source catalog of concerns so
+ * diffs are easy to audit.
  *
  * ### Label-layer opacities
  *
- * youAreHere / poi / galaxyNames start at 0: their subsystem producers fire
- * fadeTo(1) on first non-empty emit.  scaleBar is React-side and
- * tour-addressable but never auto-faded by the engine, so it starts at 1.
+ * youAreHere / poi (category-less) start at 0: their subsystem producers fire
+ * fadeTo(1) on first non-empty emit.  galaxyNames starts at 1 because the
+ * famous-galaxy labels reuse that handle and consume its opacity directly — a
+ * 0 would render them invisible.  scaleBar is React-side and tour-addressable
+ * but never auto-faded by the engine, so it starts at 1.
+ *
+ * ### Per-category marker + poi-label handles
+ *
+ * Every structure category (cluster / supercluster / void / group) gets its
+ * own `markerLayer{category}` and `labelLayer{poi, category}` controller so a
+ * category's rings/labels can recede and fade independently.  Each is
+ * registered at its persisted settings visibility (markerCategoryVisibility /
+ * labelCategoryVisibility) so frame 1 honours what the user last turned off
+ * rather than relying on a producer's first fadeTo.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
+import { STRUCTURE_CATEGORIES } from '../../../data/structureCategories';
 
 /** Register overlay/volume-master/label-layer fade handles. See the module header for the opacity-coherence rationale. */
 export function registerOverlayFades(state: EngineState): void {
@@ -61,12 +74,35 @@ export function registerOverlayFades(state: EngineState): void {
 
   // ── Label-layer handles ──────────────────────────────────────────────
   //
-  // youAreHere / poi / galaxyNames start at 0: fadeTo(1) fires on first
-  // non-empty emit (see youAreHereSubsystem + labelDirectorSubsystem).
-  // scaleBar is React-side — registered at 1 for tour addressability but
-  // never auto-faded by the engine.
+  // youAreHere starts at 0: fadeTo(1) fires on first non-empty emit (see
+  // youAreHereSubsystem).  galaxyNames starts at 1 — famous-galaxy labels
+  // reuse this handle and consume its opacity directly, so a 0 would hide
+  // them.  scaleBar is React-side — registered at 1 for tour addressability
+  // but never auto-faded by the engine.
   state.subsystems.fades.register({ kind: 'labelLayer', layer: 'youAreHere' }, 0);
+  // Category-less poi handle: superseded by the per-category poi handles
+  // registered below, but kept because the label director still fires
+  // fadeTo({labelLayer, layer:'poi'}, 1) (which THROWS on an unregistered
+  // handle).  Removed together with that fadeTo in the label-producer task.
   state.subsystems.fades.register({ kind: 'labelLayer', layer: 'poi' }, 0);
-  state.subsystems.fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 0);
+  state.subsystems.fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
   state.subsystems.fades.register({ kind: 'labelLayer', layer: 'scaleBar' }, 1);
+
+  // ── Per-category marker + poi-label handles ──────────────────────────
+  //
+  // One markerLayer + one poi labelLayer controller per structure category,
+  // each seeded from the session's persisted per-category visibility so a
+  // category the user turned off sits at 0 from frame 1 (no flash before a
+  // producer's fadeTo).  Iterating STRUCTURE_CATEGORIES keeps this the single
+  // runtime source of truth for the category list.
+  for (const category of STRUCTURE_CATEGORIES) {
+    state.subsystems.fades.register(
+      { kind: 'markerLayer', category },
+      state.settings.markerCategoryVisibility[category] ? 1 : 0,
+    );
+    state.subsystems.fades.register(
+      { kind: 'labelLayer', layer: 'poi', category },
+      state.settings.labelCategoryVisibility[category] ? 1 : 0,
+    );
+  }
 }

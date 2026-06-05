@@ -40,15 +40,38 @@ type RegisterCall = [FadeHandle, number | undefined];
  * `state.settings.milkyWay.enabled`, `state.settings.volumes.masterEnabled`,
  * and `state.subsystems.fades.register`.
  */
-function makeState(opts: {
-  milkyWayEnabled?: boolean;
-  volumesMasterEnabled?: boolean;
-} = {}): { state: EngineState; registerSpy: ReturnType<typeof vi.fn> } {
+function makeState(
+  opts: {
+    milkyWayEnabled?: boolean;
+    volumesMasterEnabled?: boolean;
+    markerCategoryVisibility?: Partial<Record<string, boolean>>;
+    labelCategoryVisibility?: Partial<Record<string, boolean>>;
+  } = {},
+): { state: EngineState; registerSpy: ReturnType<typeof vi.fn> } {
   const registerSpy = vi.fn();
+  // Build full per-category visibility records: every structure category
+  // defaults to visible (true) unless the test overrides it.  registerOverlayFades
+  // only reads the four structure categories, so famousGalaxy is irrelevant here.
+  const markerVis: Record<string, boolean> = {
+    cluster: true,
+    supercluster: true,
+    void: true,
+    group: true,
+    ...opts.markerCategoryVisibility,
+  };
+  const labelVis: Record<string, boolean> = {
+    cluster: true,
+    supercluster: true,
+    void: true,
+    group: true,
+    ...opts.labelCategoryVisibility,
+  };
   const state = {
     settings: {
       milkyWay: { enabled: opts.milkyWayEnabled ?? true },
       volumes: { masterEnabled: opts.volumesMasterEnabled ?? true },
+      markerCategoryVisibility: markerVis,
+      labelCategoryVisibility: labelVis,
     },
     subsystems: {
       fades: { register: registerSpy },
@@ -107,13 +130,11 @@ describe('registerOverlayFades', () => {
 
     const procCall = calls(registerSpy).find(
       ([h]) =>
-        h.kind === 'overlay' &&
-        (h as Extract<typeof h, { id: string }>).id === 'proceduralDisks',
+        h.kind === 'overlay' && (h as Extract<typeof h, { id: string }>).id === 'proceduralDisks',
     );
     const textCall = calls(registerSpy).find(
       ([h]) =>
-        h.kind === 'overlay' &&
-        (h as Extract<typeof h, { id: string }>).id === 'texturedDisks',
+        h.kind === 'overlay' && (h as Extract<typeof h, { id: string }>).id === 'texturedDisks',
     );
     expect(procCall).toBeDefined();
     expect(procCall![1]).toBe(1);
@@ -147,22 +168,112 @@ describe('registerOverlayFades', () => {
 
   // ── label-layer handles ──────────────────────────────────────────
 
-  it('registers the four label-layer handles at 0,0,0,1', () => {
-    // youAreHere / poi / galaxyNames start at 0: their subsystem producers
+  it('registers the four category-less label-layer handles at 0,0,1,1', () => {
+    // youAreHere / poi(category-less) start at 0: their subsystem producers
     // fire fadeTo(1) on the first non-empty emit, so a premature 1 would
     // flash empty label layers before any data has landed.
+    // galaxyNames now starts at 1 — famous-galaxy labels reuse that handle
+    // and consume its opacity, so a 0 would make them invisible (Task 2.4).
     // scaleBar is React-side and tour-addressable but never auto-faded by
     // the engine, so it starts at 1.
     const { state, registerSpy } = makeState();
     registerOverlayFades(state);
 
     type LabelCall = [Extract<FadeHandle, { kind: 'labelLayer' }>, number | undefined];
-    const labelCalls = calls(registerSpy).filter(([h]) => h.kind === 'labelLayer') as LabelCall[];
+    // Filter to category-LESS label handles only: there are now multiple poi
+    // labelLayer registrations (the category-less one plus one per structure
+    // category), so collapsing by `layer` alone would be ambiguous for poi.
+    // The category-less handles are exactly youAreHere/poi/galaxyNames/scaleBar.
+    const labelCalls = calls(registerSpy).filter(
+      ([h]) =>
+        h.kind === 'labelLayer' && !(h as Extract<FadeHandle, { kind: 'labelLayer' }>).category,
+    ) as LabelCall[];
     const byLayer = Object.fromEntries(labelCalls.map(([h, op]) => [h.layer, op]));
 
     expect(byLayer['youAreHere']).toBe(0);
     expect(byLayer['poi']).toBe(0);
-    expect(byLayer['galaxyNames']).toBe(0);
+    expect(byLayer['galaxyNames']).toBe(1);
     expect(byLayer['scaleBar']).toBe(1);
+  });
+
+  it('galaxyNames registers at opacity 1', () => {
+    // Famous-galaxy labels reuse the category-less galaxyNames handle and
+    // consume its opacity directly; if it started at 0 they'd never appear.
+    const { state, registerSpy } = makeState();
+    registerOverlayFades(state);
+
+    const galaxyNamesCall = calls(registerSpy).find(
+      ([h]) =>
+        h.kind === 'labelLayer' &&
+        (h as Extract<FadeHandle, { kind: 'labelLayer' }>).layer === 'galaxyNames' &&
+        !(h as Extract<FadeHandle, { kind: 'labelLayer' }>).category,
+    );
+    expect(galaxyNamesCall).toBeDefined();
+    expect(galaxyNamesCall![1]).toBe(1);
+  });
+
+  // ── per-category marker + poi-label handles ──────────────────────
+
+  it('registers a markerLayer handle per structure category', () => {
+    // Each structure category gets its own markerLayer fade controller so its
+    // rings can recede/fade independently of the others.
+    const { state, registerSpy } = makeState();
+    registerOverlayFades(state);
+
+    for (const category of ['cluster', 'supercluster', 'void', 'group'] as const) {
+      const markerCall = calls(registerSpy).find(
+        ([h]) =>
+          h.kind === 'markerLayer' &&
+          (h as Extract<FadeHandle, { kind: 'markerLayer' }>).category === category,
+      );
+      expect(markerCall, `markerLayer{${category}} should be registered`).toBeDefined();
+    }
+  });
+
+  it('registers a per-category poi labelLayer handle per structure category', () => {
+    // Each structure category gets its own poi labelLayer controller so its
+    // labels are addressable independently (Task 2.3 wires the producer).
+    const { state, registerSpy } = makeState();
+    registerOverlayFades(state);
+
+    for (const category of ['cluster', 'supercluster', 'void', 'group'] as const) {
+      const labelCall = calls(registerSpy).find(
+        ([h]) =>
+          h.kind === 'labelLayer' &&
+          (h as Extract<FadeHandle, { kind: 'labelLayer' }>).layer === 'poi' &&
+          (h as Extract<FadeHandle, { kind: 'labelLayer' }>).category === category,
+      );
+      expect(labelCall, `labelLayer{poi,${category}} should be registered`).toBeDefined();
+    }
+  });
+
+  it('disabled categories register at 0, enabled at 1', () => {
+    // The persisted per-category visibility is honoured from frame 1: a
+    // category the user has turned off registers at opacity 0 so its rings
+    // don't flash before a fade fires.
+    const { state, registerSpy } = makeState({
+      markerCategoryVisibility: { cluster: false },
+      labelCategoryVisibility: { supercluster: false },
+    });
+    registerOverlayFades(state);
+
+    const markerOpacity = (category: string) =>
+      calls(registerSpy).find(
+        ([h]) =>
+          h.kind === 'markerLayer' &&
+          (h as Extract<FadeHandle, { kind: 'markerLayer' }>).category === category,
+      )?.[1];
+    const labelOpacity = (category: string) =>
+      calls(registerSpy).find(
+        ([h]) =>
+          h.kind === 'labelLayer' &&
+          (h as Extract<FadeHandle, { kind: 'labelLayer' }>).layer === 'poi' &&
+          (h as Extract<FadeHandle, { kind: 'labelLayer' }>).category === category,
+      )?.[1];
+
+    expect(markerOpacity('cluster')).toBe(0);
+    expect(markerOpacity('void')).toBe(1);
+    expect(labelOpacity('supercluster')).toBe(0);
+    expect(labelOpacity('cluster')).toBe(1);
   });
 });
