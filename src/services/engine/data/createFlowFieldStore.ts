@@ -1,3 +1,4 @@
+import { MAX_PARTICLES } from '../../gpu/renderers/flowFieldConstants';
 import type { FlowFieldStore } from '../../../@types/engine/data/FlowFieldStore';
 
 /**
@@ -14,13 +15,6 @@ import type { FlowFieldStore } from '../../../@types/engine/data/FlowFieldStore'
  * `tools/cosmic-flow/src/state/slices/flowSlice.ts` (`defaultFlowSlice.advect`).
  * They are the look — do not "tidy" them.
  */
-
-// Particle-count ceiling. Phase C will own the authoritative
-// `MAX_PARTICLES = 40000` in `src/services/gpu/renderers/flowFieldConstants.ts`;
-// declaring it module-locally here avoids a forward dependency on a file that
-// does not exist yet.
-// reconciled with flowFieldConstants.ts in Phase C
-const MAX_PARTICLES = 40000;
 
 export function createFlowFieldStore(): FlowFieldStore {
   let loaded = false;
