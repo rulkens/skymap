@@ -258,12 +258,14 @@ is currently unused by the integrator.
 **Tests** (`node`, no GPU — exercise the pure state machine + matrix math; gate
 GPU construction behind a device-presence check that skips in `node`):
 
-- [ ] `maybeReseed sets reseedPending; encodeCompute clears it` — drive a fake/minimal renderer object exposing the flag, or factor the reseed state into a tiny pure helper `createReseedLatch()` and test that directly (record → consume → no-op).
-- [ ] `isAnimating reflects enabled && loaded` — feed store stubs: not-enabled → false; enabled-not-loaded → false; enabled+loaded → true.
-- [ ] `model matrix places the cube origin in world space` — call `buildCubeModelMatrix` with a synthetic `FlowField` meta (origin/voxelSize/frameKind=supergalactic-cartesian) and assert the transformed grid corner `(0,0,0)` lands at `origin` mapped through the SG→world rotation (reuse the existing `buildCubeModelMatrix` test fixtures as a template).
-- [ ] Construct `createFlowFieldRenderer` once under a real device IF available (`navigator.gpu` present), else skip — asserts the three compute pipelines + ribbon pipeline build without a validation error (this is the iOS/Tint compile gate; `createShaderModuleWithDevLog` surfaces the real error).
-- [ ] `npm test -- flowFieldRenderer` → pass. `npm run typecheck` → clean.
-- [ ] Commit: `feat(flow): flowFieldRenderer (3 compute pipelines, explicit BGL, shared buffers)`.
+- [x] `maybeReseed sets reseedPending; encodeCompute clears it` — factored the reseed state into a tiny pure helper `createReseedLatch()` (record → consume → no-op) and tested it directly.
+- [x] `isAnimating reflects enabled && loaded` — feed store stubs: not-enabled → false; enabled-not-loaded → false; enabled+loaded → true.
+- [x] `model matrix places the cube origin in world space` — covered by `buildCubeModelMatrix.test.ts` (the math); the renderer test asserts `setField` wires the matrix + bind group without throwing.
+- [x] Construct `createFlowFieldRenderer` under the mock device — asserts the three compute pipelines + ribbon pipeline + both explicit BGLs build without throwing. (Real-GPU shader-compile validation rides the Phase-D/E visual probe; `navigator.gpu` is absent in `node`.)
+- [x] `npm test -- flowFieldRenderer` → pass. `npm run typecheck` → clean.
+- [x] Commit: `feat(flow): flowFieldRenderer (3 compute pipelines, explicit BGL, shared buffers)`.
+
+> **As-built deviations (singleton refactor + cleanups):** the renderer's per-frame methods take `FlowSettings` (not `FlowFieldStore`) per the singleton-overlay-layer contract; `buildCubeModelMatrix` was generalized to a `CubePlacement` param and moved to its own module (commit `4a7fc3b8`); the speculative `invModel` field was dropped (YAGNI — the integrator works in grid space; the renormalize hazard is kept as a comment for the future world-space-ray case).
 
 ## Task 4: `encodeFlowCompute` + initGpu construction
 
