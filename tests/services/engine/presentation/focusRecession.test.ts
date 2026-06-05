@@ -3,6 +3,7 @@ import {
   FILAMENT_RECESSION,
   LABEL_RECESSION,
   MARKER_RECESSION,
+  VOLUME_RECESSION,
   focusRecession,
   recessionTargetFor,
   resolveLayerOpacity,
@@ -42,6 +43,13 @@ describe('recessionTargetFor', () => {
     for (const category of categories) {
       expect(recessionTargetFor({ kind: 'markerLayer', category })).toBe(MARKER_RECESSION);
     }
+  });
+
+  it('tags filaments and volumesMaster — the diffuse fields the HDR encoders recede', () => {
+    // The two ambient subsystems routed through the HDR encoders / filament
+    // pass at the call site. Both recede to the same diffuse-field target.
+    expect(recessionTargetFor({ kind: 'filaments' })).toBe(FILAMENT_RECESSION);
+    expect(recessionTargetFor({ kind: 'volumesMaster' })).toBe(VOLUME_RECESSION);
   });
 
   it('tags poi and galaxyNames labels but not youAreHere or scaleBar', () => {

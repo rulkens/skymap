@@ -36,6 +36,7 @@ import type { RenderFrameSettings } from '../../../@types/engine/frame/RenderFra
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
 import { HDR_PASSES } from './passes';
 import { encodeVolumes } from './encodeVolumes';
+import { resolveLayerOpacity } from '../presentation/focusRecession';
 
 export function encodeHdrSplit(
   encoder: GPUCommandEncoder,
@@ -73,9 +74,19 @@ export function encodeHdrSplit(
     const nowMs = performance.now();
     const masterOpacity = state.subsystems.fades.opacityOf({ kind: 'volumesMaster' }, nowMs);
     if (settings.volumesEnabled || masterOpacity > 0) {
+      // Focus recession dims the whole volume subsystem in lockstep with the
+      // filament overlay. Applied to the master MULTIPLIER only, not the gate
+      // above: recession ∈ [VOLUME_RECESSION, 1] can never zero the layer, so
+      // the gate keeps reading the pure toggle (matches filamentsPass.enabled).
+      const recessedMaster = resolveLayerOpacity(
+        state.subsystems.fades,
+        { kind: 'volumesMaster' },
+        ctx.focusBlend,
+        nowMs,
+      );
       const fadeOpacityOf = (handle: string) =>
         state.subsystems.fades.opacityOf({ kind: 'scalarField', field: handle }, nowMs) *
-        masterOpacity;
+        recessedMaster;
       if (state.gpu.scalarVolumeRenderer.hasActiveFields(fadeOpacityOf)) {
         encodeVolumes({
           encoder,
