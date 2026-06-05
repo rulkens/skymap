@@ -222,12 +222,12 @@ mapping. Factor it into a pure exported helper
 `flowFieldMetaFromCube(cube: ScalarCube): FlowFieldMeta` (throws if the cube
 isn't a velocity field — `channels !== 4` or `velocityStats` absent).
 
-- [ ] Create `FlowFieldMeta` + `FlowField` types (`Vec3` alias, not raw tuple; import `ScalarFieldFrameKind`).
-- [ ] Create `createFlowField` per the contract: `fetch(scfdUrl)` → `decodeScalarField(arrayBuffer)` → upload (`size: [n,n,n]`, `dimension: '3d'`, `format: gpuTextureFormatForChannels(4)`); a shared linear sampler; `dispose` destroys the texture; `meta = flowFieldMetaFromCube(cube)`.
-- [ ] Factor `flowFieldMetaFromCube` out and export it.
-- [ ] Tests — `createFlowField.test.ts` (no GPU): `flowFieldMetaFromCube maps every field` — build a `ScalarCube` fixture (channels=4 + velocityStats) and assert each `FlowFieldMeta` field; `flowFieldMetaFromCube throws on a non-velocity cube` (channels=1, or channels=4 without velocityStats).
-- [ ] `npm test -- createFlowField` → pass. `npm run typecheck` → clean.
-- [ ] Commit: `feat(flow): createFlowField velocity-field loader`.
+- [x] Create `FlowFieldMeta` + `FlowField` types (`Vec3` alias, not raw tuple; import `ScalarFieldFrameKind`).
+- [x] Create `createFlowField` per the contract: `fetch(scfdUrl)` → `decodeScalarField(arrayBuffer)` → upload (`size: [n,n,n]`, `dimension: '3d'`, `format: gpuTextureFormatForChannels(4)`); a shared linear sampler; `dispose` destroys the texture; `meta = flowFieldMetaFromCube(cube)`.
+- [x] Factor `flowFieldMetaFromCube` out and export it.
+- [x] Tests — `createFlowField.test.ts` (no GPU): `flowFieldMetaFromCube maps every field` — build a `ScalarCube` fixture (channels=4 + velocityStats) and assert each `FlowFieldMeta` field; `flowFieldMetaFromCube throws on a non-velocity cube` (channels=1, or channels=4 without velocityStats).
+- [x] `npm test -- createFlowField` → pass. `npm run typecheck` → clean.
+- [x] Commit: `feat(flow): createFlowField velocity-field loader`.
 
 ## Task 4: Asset slot + demand row
 
