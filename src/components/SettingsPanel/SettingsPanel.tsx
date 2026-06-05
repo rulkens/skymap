@@ -92,7 +92,9 @@ import { POI_CATEGORY_INFO } from '../../data/poiCategoryInfo';
 import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
+import type { FlowMode } from '../../@types/data/FlowMode';
 import { VolumeFieldRow } from './VolumeFieldRow';
+import FlowRow from './FlowRow';
 import { Panel } from '../common/Panel/Panel';
 import Button from '../common/Button/Button';
 import { CollapsibleSection } from './CollapsibleSection';
@@ -238,6 +240,21 @@ type Props = {
   onVolumeFieldExposureChange?: (id: VolumeFieldId, exposure: number) => void;
   onVolumeFieldPaletteChange?: (id: VolumeFieldId, paletteId: ScalarFieldPaletteId) => void;
 
+  // ── Flow group (CF4++ peculiar-velocity overlay) ───────────────────────
+  /**
+   * Flow-overlay state.  App-owned optimistic (no engine echo), exactly
+   * like the filaments props above — the App.tsx onChange handlers update
+   * the React mirror AND forward to `handle.flow.set…`.  The whole group
+   * is gated on its full prop set being present (see `showFlowSection`),
+   * so older / partial call sites render no Flow section.
+   */
+  flowEnabled?: boolean;
+  flowMode?: FlowMode;
+  flowIntensity?: number;
+  onFlowEnabledChange?: (enabled: boolean) => void;
+  onFlowModeChange?: (mode: FlowMode) => void;
+  onFlowIntensityChange?: (intensity: number) => void;
+
   // ── Structures group (cluster / supercluster / void MARKER rings) ──────
   /**
    * Per-category MARKER visibility — drives the per-category checkboxes
@@ -327,6 +344,12 @@ export function SettingsPanel({
   onVolumeFieldTrimChange,
   onVolumeFieldExposureChange,
   onVolumeFieldPaletteChange,
+  flowEnabled,
+  flowMode,
+  flowIntensity,
+  onFlowEnabledChange,
+  onFlowModeChange,
+  onFlowIntensityChange,
   markerCategoryVisibility,
   onSetMarkerCategoryVisibility,
   labelCategoryVisibility,
@@ -366,6 +389,15 @@ export function SettingsPanel({
     absMagLimit !== undefined &&
     onAbsMagLimitChange !== undefined;
   const showToneCurveControls = toneMapCurve !== undefined && onToneMapCurveChange !== undefined;
+  // Flow section needs every value + callback wired (same opt-in idiom as
+  // the other conditional sections) before it can both render and echo.
+  const showFlowSection =
+    flowEnabled !== undefined &&
+    flowMode !== undefined &&
+    flowIntensity !== undefined &&
+    onFlowEnabledChange !== undefined &&
+    onFlowModeChange !== undefined &&
+    onFlowIntensityChange !== undefined;
   const showStructuresGroup =
     markerCategoryVisibility !== undefined && onSetMarkerCategoryVisibility !== undefined;
 
@@ -757,6 +789,29 @@ export function SettingsPanel({
                 ))
               ))}
           </CollapsibleSection>
+        </CollapsibleSection>
+      )}
+
+      {/* ── Flow ────────────────────────────────────────────────────────── */}
+      {/*
+        CF4++ peculiar-velocity overlay.  A sibling of Cosmic web (the
+        diffuse-matter sections), placed right after it.  The section's
+        own enable control is FlowRow's checkbox — no header toggle, same
+        as the Display / SpaceMouse plain sections — so there's no
+        duplicate master.  `!` assertions inside the JSX are safe: the
+        whole block is gated on `showFlowSection`, which proves every
+        prop is defined; TS can't trace that narrow through FlowRow.
+      */}
+      {showFlowSection && (
+        <CollapsibleSection title="Flow">
+          <FlowRow
+            enabled={flowEnabled!}
+            mode={flowMode!}
+            intensity={flowIntensity!}
+            onEnabledChange={onFlowEnabledChange!}
+            onModeChange={onFlowModeChange!}
+            onIntensityChange={onFlowIntensityChange!}
+          />
         </CollapsibleSection>
       )}
 

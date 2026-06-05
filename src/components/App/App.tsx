@@ -54,6 +54,9 @@ export function App(): React.ReactElement {
     setFilamentIntensity,
     setVolumesEnabled,
     setSpaceMouseSensitivity,
+    setFlowEnabled,
+    setFlowMode,
+    setFlowIntensity,
   } = useEngineSettings();
 
   const {
@@ -77,6 +80,9 @@ export function App(): React.ReactElement {
     volumeFields,
     spaceMouseConnected,
     spaceMouseSensitivity,
+    flowEnabled,
+    flowMode,
+    flowIntensity,
   } = settings;
 
   // SettingsPanel's SpaceMouse section appears only when WebHID is
@@ -320,6 +326,24 @@ export function App(): React.ReactElement {
             onVolumeFieldPaletteChange={(fieldId, paletteId) =>
               handleRef.current?.volumes.setPalette(fieldId, paletteId)
             }
+            // Flow has no engine echo — React owns the state, so each
+            // handler updates the optimistic mirror AND forwards to the
+            // engine handle (same pattern as filaments).
+            flowEnabled={flowEnabled}
+            flowMode={flowMode}
+            flowIntensity={flowIntensity}
+            onFlowEnabledChange={(enabled) => {
+              setFlowEnabled(enabled);
+              handleRef.current?.flow.setEnabled(enabled);
+            }}
+            onFlowModeChange={(mode) => {
+              setFlowMode(mode);
+              handleRef.current?.flow.setMode(mode);
+            }}
+            onFlowIntensityChange={(value) => {
+              setFlowIntensity(value);
+              handleRef.current?.flow.setIntensity(value);
+            }}
           />
           <StatsPanel
             defaultOpen={false}

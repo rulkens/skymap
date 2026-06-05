@@ -41,6 +41,7 @@
 import { useState } from 'react';
 import type { BiasMode as BiasModeT } from '../@types/data/BiasMode';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
+import type { FlowMode } from '../@types/data/FlowMode';
 import type { PoiCategory } from '../@types/engine/data/PoiCategory';
 import {
   DEFAULT_ABS_MAG_LIMIT,
@@ -49,6 +50,7 @@ import {
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
+  DEFAULT_FLOW,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
   DEFAULT_MILKY_WAY_ENABLED,
@@ -108,6 +110,20 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   // Scalar-volume master toggle — no echo, same as filamentsEnabled above.
   // No persistence: every session starts from the compile-time default.
   const [volumesEnabled, setVolumesEnabled] = useState<boolean>(DEFAULT_VOLUMES_ENABLED);
+
+  // ── CF4++ flow-field overlay (App-owned optimistic, no echo) ──────────
+  // The engine fires NO echo callback for flow — same as filamentsEnabled —
+  // so React owns every leaf of `settings.flow` directly, seeded from
+  // DEFAULT_FLOW. The SettingsPanel drives `enabled` / `mode` / `intensity`;
+  // the remaining five knobs are exposed for the DebugPanel flow tuning row.
+  const [flowEnabled, setFlowEnabled] = useState<boolean>(DEFAULT_FLOW.enabled);
+  const [flowMode, setFlowMode] = useState<FlowMode>(DEFAULT_FLOW.mode);
+  const [flowIntensity, setFlowIntensity] = useState<number>(DEFAULT_FLOW.intensity);
+  const [flowCount, setFlowCount] = useState<number>(DEFAULT_FLOW.count);
+  const [flowTrail, setFlowTrail] = useState<number>(DEFAULT_FLOW.trail);
+  const [flowSpeed, setFlowSpeed] = useState<number>(DEFAULT_FLOW.flowSpeed);
+  const [flowDensityBias, setFlowDensityBias] = useState<number>(DEFAULT_FLOW.densityBias);
+  const [flowWander, setFlowWander] = useState<number>(DEFAULT_FLOW.wander);
 
   // Per-field row data.  Starts empty (no cubes at startup).  The engine
   // pushes a fresh snapshot through `volumes.onFieldsChanged(fields)`
@@ -200,6 +216,14 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       markerCategoryVisibility,
       spaceMouseConnected,
       spaceMouseSensitivity,
+      flowEnabled,
+      flowMode,
+      flowIntensity,
+      flowCount,
+      flowTrail,
+      flowSpeed,
+      flowDensityBias,
+      flowWander,
     },
     engineCallbacks: {
       // ── Nested sub-bag subscriptions (H5 task 11) ────────────────
@@ -274,5 +298,13 @@ export function useEngineSettings(): UseEngineSettingsReturn {
     setExposure,
     setVolumesEnabled,
     setSpaceMouseSensitivity,
+    setFlowEnabled,
+    setFlowMode,
+    setFlowIntensity,
+    setFlowCount,
+    setFlowTrail,
+    setFlowSpeed,
+    setFlowDensityBias,
+    setFlowWander,
   };
 }

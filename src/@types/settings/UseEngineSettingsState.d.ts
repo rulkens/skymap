@@ -28,6 +28,7 @@
 
 import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
+import type { FlowMode } from '../data/FlowMode';
 import type { VolumeFieldRowData } from './VolumeFieldRowData';
 import type { PoiCategory } from '../engine/data/PoiCategory';
 
@@ -100,4 +101,21 @@ export type UseEngineSettingsState = {
    * (same pattern as `filamentsEnabled` / `volumesEnabled`).
    */
   spaceMouseSensitivity: number;
+  /**
+   * App-owned optimistic mirrors of `settings.flow` (the CF4++
+   * peculiar-velocity overlay).  The engine fires NO echo callback for
+   * flow — same pattern as `filamentsEnabled` — so React owns these
+   * eight leaves directly.  Seeded from `DEFAULT_FLOW`.  Only a subset
+   * (`flowEnabled` / `flowMode` / `flowIntensity`) drives the
+   * SettingsPanel today; the remaining knobs feed the DebugPanel's flow
+   * tuning section.
+   */
+  flowEnabled: boolean;
+  flowMode: FlowMode;
+  flowIntensity: number;
+  flowCount: number;
+  flowTrail: number;
+  flowSpeed: number;
+  flowDensityBias: number;
+  flowWander: number;
 };

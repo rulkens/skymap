@@ -1,0 +1,171 @@
+/*
+ * Flow-field overlay row for the SettingsPanel "Flow" section.  Three
+ * stacked regions: a top line (enable toggle + label + hint), a two-button
+ * segmented mode switch, and a labelled-slider row for intensity.  Shares
+ * the visual language of `VolumeFieldRow.module.css` (same row / topLine /
+ * label / sliderRow idioms) so the two overlay sections read as siblings.
+ */
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 4px);
+  padding: var(--space-3, 8px) 0;
+}
+
+/*
+ * Top line: the enable toggle + "Flow" label on the left, a dimmed
+ * "peculiar velocity" hint pushed to the right via `margin-left: auto`.
+ */
+.topLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 8px);
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 4px);
+  color: var(--color-fg-muted, #aaa);
+  cursor: pointer;
+}
+
+.label input[type='checkbox'] {
+  /* iOS-style pill toggle, matching the per-cube enable checkbox in
+   * `VolumeFieldRow.module.css` so the two overlay sections share one
+   * control family. */
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  width: 28px;
+  height: 16px;
+  margin: 0;
+  border: 1px solid var(--border-control);
+  border-radius: 999px;
+  background: var(--surface-control);
+  accent-color: var(--color-accent-control, #4a9eff);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.label input[type='checkbox']::before {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-fg-muted);
+  transition:
+    transform 0.18s ease,
+    background 0.18s ease;
+}
+
+.label input[type='checkbox']:hover {
+  border-color: var(--border-hover);
+}
+
+.label input[type='checkbox']:checked {
+  background: var(--color-accent-link);
+  border-color: var(--color-accent-link);
+}
+
+.label input[type='checkbox']:checked::before {
+  transform: translateX(12px);
+}
+
+.hint {
+  /* Dimmed parenthetical pushed to the row's right edge. */
+  margin-left: auto;
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-dim);
+}
+
+/*
+ * Mode switch — a two-column segmented control.  Mirrors the cosmic-web
+ * Style picker's `.stylePicker` in `SettingsPanel.module.css`; two columns
+ * here instead of three.
+ */
+.modeToggle {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-2);
+}
+
+.modeButton,
+.modeButtonActive {
+  appearance: none;
+  border: 1px solid var(--border-control);
+  background: var(--surface-control);
+  color: var(--color-fg-muted);
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-mid);
+  text-transform: uppercase;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.modeButton:hover:not(:disabled) {
+  background: var(--surface-control-hover);
+  color: var(--color-fg);
+}
+
+.modeButtonActive {
+  background: var(--surface-control-active);
+  color: var(--color-fg);
+}
+
+.modeButton:disabled,
+.modeButtonActive:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/*
+ * Labelled-slider row: fixed-width label + value columns so the readout
+ * lines up, then the slider stretches to fill.  Tabular numerals keep the
+ * value from shimmying as the user drags.  Same grid as VolumeFieldRow.
+ */
+.sliderRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 4px);
+  font-size: 0.85em;
+  color: var(--color-fg-muted, #aaa);
+}
+
+.sliderLabel {
+  flex: 0 0 4.5em;
+  text-align: left;
+  letter-spacing: 0.02em;
+}
+
+.sliderValue {
+  flex: 0 0 3em;
+  text-align: right;
+  font-feature-settings: 'tnum';
+  color: var(--color-fg, #ddd);
+}
+
+.slider {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--color-accent-control, #4a9eff);
+  cursor: pointer;
+}
+
+.slider:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
