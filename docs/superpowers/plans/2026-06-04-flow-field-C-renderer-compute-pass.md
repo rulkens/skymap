@@ -332,12 +332,12 @@ const stillAnimating =
   (state.data.flow.enabled && state.gpu.flowFieldRenderer?.isAnimating() === true);
 ```
 
-- [ ] Create `flowFieldPass` (`name: 'flow'`), `enabled` gating on `state.data.flow.enabled`, `draw` null-checking `deps.flowFieldRenderer` then drawing. Didactic header: additive, no depth, after filaments (cite §6).
-- [ ] Insert `flowFieldPass` into `HDR_PASSES` immediately after `filamentsPass`; add the matching `export { flowFieldPass } from './flowFieldPass'`. (This auto-acquires a GPU-timing slot + DebugPanel row via `TIMED_SLOT_NAMES`.)
-- [ ] Add the render-on-demand term to the `runFrame` `stillAnimating` predicate.
-- [ ] Test — `flowFieldPass.test.ts`: `enabled is false when flow.enabled is false`; `enabled is true when flow.enabled is true` (use the same state-stub shape the existing pass tests use).
-- [ ] `npm test -- flowFieldPass` → pass. `npm run typecheck` → clean. `npm test` → full suite green.
-- [ ] Commit: `feat(flow): flowFieldPass in HDR_PASSES + render-on-demand term`.
+- [x] Create `flowFieldPass` (`name: 'flow'`), `enabled` gating on `settings.flow.enabled && data.flow.loaded` (the singleton split; the loaded gate also keeps the split-path from opening an empty pass), `draw` null-checking `deps.flowFieldRenderer` then drawing. Didactic header: additive, no depth, after filaments (cite §6).
+- [x] Insert `flowFieldPass` into `HDR_PASSES` immediately after `filamentsPass`; add the matching `export { flowFieldPass } from './flowFieldPass'`. (Auto-acquires a GPU-timing slot + DebugPanel row via `TIMED_SLOT_NAMES`.) Thread `flowFieldRenderer` through `RenderFrameInput` → `PassDeps`.
+- [x] Add the render-on-demand term (`flowFieldRenderer.isAnimating(settings.flow)`) to the `runFrame` `stillAnimating` predicate.
+- [x] Test — `flowFieldPass.test.ts`: enabled false when flow.enabled false; false when not loaded; true when both; draw delegates + null-guard.
+- [x] `npm test -- flowFieldPass` → pass. `npm run typecheck` → clean. `npm test` → full suite green (2344 tests).
+- [x] Commit: `feat(flow): flowFieldPass in HDR_PASSES + render-on-demand term`.
 
 ---
 
