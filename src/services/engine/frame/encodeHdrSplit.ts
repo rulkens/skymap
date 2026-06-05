@@ -36,6 +36,7 @@ import type { RenderFrameSettings } from '../../../@types/engine/frame/RenderFra
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
 import { HDR_PASSES } from './passes';
 import { encodeVolumes } from './encodeVolumes';
+import { encodeFlowCompute } from './encodeFlowCompute';
 
 export function encodeHdrSplit(
   encoder: GPUCommandEncoder,
@@ -87,6 +88,16 @@ export function encodeHdrSplit(
       }
     }
   }
+
+  // ── Flow-field compute pre-pass ───────────────────────────────────
+  // Same pre-HDR compute dispatch as the single-pass branch; runs before
+  // the per-pass HDR loop so the ribbon draw reads freshly-advanced trails.
+  encodeFlowCompute({
+    encoder,
+    flowFieldRenderer: state.gpu.flowFieldRenderer,
+    flow: state.settings.flow,
+    loaded: state.data.flow.loaded,
+  });
 
   // ── HDR sub-passes — one beginRenderPass per enabled pass ─────────
   //

@@ -143,6 +143,10 @@ vi.mock('../../../../src/services/gpu/renderers/scalarVolumeRenderer', () => ({
   createScalarVolumeRenderer: vi.fn(() => makeStub('scalarVolumeRenderer')),
 }));
 
+vi.mock('../../../../src/services/gpu/renderers/flowFieldRenderer', () => ({
+  createFlowFieldRenderer: vi.fn(() => makeStub('flowFieldRenderer')),
+}));
+
 vi.mock('../../../../src/services/gpu/passes/volumeUpsample', () => ({
   createVolumeUpsample: vi.fn(() => makeStub('volumeUpsample')),
 }));
@@ -196,6 +200,7 @@ function makeState(): EngineState {
       milkyWayRenderer: null,
       horizonShellRenderer: null,
       scalarVolumeRenderer: null,
+      flowFieldRenderer: null,
       volumeUpsample: null,
       pickDebugOverlay: null,
       diskRadiusRing: null,

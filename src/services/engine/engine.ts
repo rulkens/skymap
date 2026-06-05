@@ -443,6 +443,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // null until initGpu; excluded from isEngineReady — volumeUpsamplePass
       // null-checks both before hasActiveFields(), so a null state no-ops.
       scalarVolumeRenderer: null,
+      flowFieldRenderer: null,
       volumeUpsample: null,
       // Debug overlays. null until initGpu; the per-frame consumer
       // null-checks each together with its `settings.debug.*` toggle.
@@ -1166,6 +1167,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.horizonShellRenderer = null;
     state.gpu.scalarVolumeRenderer?.destroy();
     state.gpu.scalarVolumeRenderer = null;
+    state.gpu.flowFieldRenderer?.destroy();
+    state.gpu.flowFieldRenderer = null;
     state.gpu.volumeUpsample?.destroy();
     state.gpu.volumeUpsample = null;
     state.gpu.pickDebugOverlay?.destroy();

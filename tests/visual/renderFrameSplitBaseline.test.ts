@@ -359,6 +359,10 @@ describe('renderFrame visual baseline', () => {
           markerLineRenderer,
           selectionRingRenderer: null,
           scalarVolumeRenderer,
+          // Flow's ribbon draw lands in Task 5; here flow stays off (null
+          // renderer + disabled below) so encodeFlowCompute is a no-op and
+          // the recorded single-vs-split sequence is unchanged.
+          flowFieldRenderer: null,
           volumeUpsample,
           clusterMarkerRenderer: null,
           // Shared focus uniform — no-op write (doesn't touch the recorded
@@ -366,6 +370,9 @@ describe('renderFrame visual baseline', () => {
           // single and split paths, so the sequence stays stable.
           focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
         },
+        // encodeFlowCompute (pre-HDR) reads these; default-off → gate returns.
+        settings: { flow: { enabled: false } },
+        data: { flow: { loaded: false } },
         subsystems: {
           proceduralDisks: proceduralDisksSubsystem,
           texturedDisks: texturedDisksSubsystem,

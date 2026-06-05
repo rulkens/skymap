@@ -55,6 +55,7 @@ import { createMarkerLineRenderer } from '../../gpu/renderers/markerLineRenderer
 import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRingRenderer';
 import { createClusterMarkerRenderer } from '../../gpu/renderers/clusterMarkerRenderer';
 import { createScalarVolumeRenderer } from '../../gpu/renderers/scalarVolumeRenderer';
+import { createFlowFieldRenderer } from '../../gpu/renderers/flowFieldRenderer';
 import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
 import { createDiskRadiusRing } from '../../gpu/passes/diskRadiusRing';
@@ -341,6 +342,13 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
       },
     },
   );
+
+  // ── CF4++ flow-field renderer (the engine's first compute renderer) ─
+  //
+  // Built unconditionally; the pipelines are cheap and the velocity cube
+  // arrives later via the demand-loaded flow slot's commit → setField. The
+  // HDR format matches the scalar-volume + upsample targets.
+  state.gpu.flowFieldRenderer = createFlowFieldRenderer({ device, hdrFormat: 'rgba16float' });
 
   // ── Half-res-to-HDR volume upsample pass ──────────────────────────
   //

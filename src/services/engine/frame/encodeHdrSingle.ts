@@ -38,6 +38,7 @@ import type { PassDeps } from '../../../@types/engine/frame/PassDeps';
 import type { RenderFrameSettings } from '../../../@types/engine/frame/RenderFrameSettings';
 import { HDR_PASSES } from './passes';
 import { encodeVolumes } from './encodeVolumes';
+import { encodeFlowCompute } from './encodeFlowCompute';
 
 export function encodeHdrSingle(
   encoder: GPUCommandEncoder,
@@ -84,6 +85,17 @@ export function encodeHdrSingle(
       }
     }
   }
+
+  // ── Flow-field compute pre-pass ───────────────────────────────────────
+  // Encodes the particle seed/integrate compute into this same encoder,
+  // before the HDR mega-pass, so the ribbon draw (flowFieldPass) reads
+  // freshly-advanced trails. Self-gates on enabled + loaded.
+  encodeFlowCompute({
+    encoder,
+    flowFieldRenderer: state.gpu.flowFieldRenderer,
+    flow: state.settings.flow,
+    loaded: state.data.flow.loaded,
+  });
 
   const hdrPass = encoder.beginRenderPass({
     label: 'hdr-pass',
