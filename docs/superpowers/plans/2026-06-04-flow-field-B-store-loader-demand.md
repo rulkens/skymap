@@ -262,14 +262,23 @@ no-ops, exactly like the volume slots null-check `scalarVolumeRenderer`), flips
 `flow: { enabled: boolean }` (or reuse a `data.flow` accessor) to `buildDemandCtx`
 mirroring how `volumeField(...)` exposes volume state.
 
-- [ ] Add `'flow'` to the sidecar `AssetKey` union and a `flow` slot field on `EngineAssetSlots`.
-- [ ] Create `flowFieldFetcher` (returns the raw `.scfd` `ArrayBuffer` via `dataUrl('flowfield.scfd')` — one file, no sidecar).
-- [ ] Create `flowFieldSlot` per the cf4DensitySlot shape: commit calls `createFlowField`, `renderer?.setField(field)` (null-safe), `state.data.flow.setLoaded()`, `requestRender()`.
-- [ ] Extend `buildDemandCtx` + `DemandCtx` with a `flow.enabled` read surface.
-- [ ] Add the `flow` row to `ASSET_WIRING`.
-- [ ] Test — `flowDemand.test.ts`, driving `evaluateRows` with a stub array containing only the flow row (the `reevaluateDemand` module already factors `evaluateRows` for this): `flow slot stays idle when flow.enabled is false`; `flow slot loads when flow.enabled is true`. Use the same stub-row harness the existing demand tests use.
-- [ ] `npm test -- flowDemand` → pass. `npm run typecheck` → clean.
-- [ ] Commit: `feat(flow): flow asset slot + demand-on-enable row`.
+> **As-built note (Option A, decided with user):** the slot mirrors the
+> `cf4Density` fetch/commit split exactly — the **fetcher** decodes to a
+> `ScalarCube` (not a raw `ArrayBuffer`), and the GPU upload + renderer handoff
+> are **deferred to Phase C** (the receiving renderer lands then), so Phase B's
+> commit only marks the layer loaded + requests a render. To let the slot upload
+> the cube it already fetched (without `createFlowField` re-fetching the URL), a
+> synchronous `flowFieldFromCube(device, cube)` was extracted from the loader.
+
+- [x] Add `'flow'` to the sidecar `AssetKey` union and a `flow` slot field on `EngineAssetSlots`.
+- [x] Extract `flowFieldFromCube(device, cube): FlowField` from `createFlowField` (GPU upload, no fetch); `createFlowField` delegates to it.
+- [x] Create `flowFieldFetcher` (`Fetcher<ScalarCube, void>` = `fetchWithProgress(dataUrl('flowfield.scfd')) → decodeScalarField` — one file, no sidecar; mirrors `cf4DensityFetcher`).
+- [x] Create `flowFieldSlot` per the cf4DensitySlot shape: commit marks `state.data.flow.setLoaded()` + `requestRender()`; GPU upload (`flowFieldFromCube` + the renderer's `setField`) deferred to Phase C with a comment.
+- [x] Extend `buildDemandCtx` + `DemandCtx` with a `flow.enabled` read surface.
+- [x] Add the `flow` row to `ASSET_WIRING`.
+- [x] Test — `flowDemand.test.ts`, driving `evaluateRows` with a stub array containing only the flow row (the `reevaluateDemand` module already factors `evaluateRows` for this): `flow slot stays idle when flow.enabled is false`; `flow slot loads when flow.enabled is true`. Use the same stub-row harness the existing demand tests use.
+- [x] `npm test -- flowDemand` → pass. `npm run typecheck` → clean.
+- [x] Commit: `feat(flow): flow asset slot + demand-on-enable row`.
 
 ---
 
