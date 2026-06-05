@@ -190,12 +190,12 @@ the spike:
   (pad to 144)
 ```
 
-- [ ] Create `flowCompute.wesl` with `seed` / `advect` / `streamline` entry points, importing TRAIL/LIFE/DENS_SCALE from `flowConstants` via the `?static` package path. Single-quote any WGSL identifier refs in comments.
-- [ ] Move the spike's `pickSpawn` / `overdensity` / `pcgHash` helpers in unchanged; the `seed` entry point is the spike's `seedFlag==1u` block extracted; `advect`/`streamline` are the spike's steady-frame bodies with the seed branch removed.
-- [ ] Create `flowRender.wesl` with `vsTrail`/`fsTrail`, the `Cam` struct above; replace `gridToWorld`'s baked `[-1,1]` with `model * vec4(voxel,1)`; keep the speed colour ramp + per-mode alpha.
-- [ ] (No standalone shader test — shaders compile in the renderer smoke test, Task 3. Visual verification is the Phase-D/E probe.)
-- [ ] `npm run typecheck` → clean (the `.wesl?static` imports resolve once the renderer imports them in Task 3; this task may leave the shaders unreferenced — that's fine).
-- [ ] Commit: `feat(flow): adapt flow compute + render WESL to model/invModel`.
+- [x] Create `flowCompute.wesl` with `seed` / `advect` / `streamline` entry points, importing TRAIL/LIFE/DENS_SCALE from `flowConstants` via the `?static` package path. Single-quote any WGSL identifier refs in comments.
+- [x] Move the spike's `pickSpawn` / `overdensity` / `pcgHash` helpers in unchanged; the `seed` entry point is the spike's `seedFlag==1u` block extracted; `advect`/`streamline` are the spike's steady-frame bodies with the seed branch removed.
+- [x] Create `flowRender.wesl` with `vsTrail`/`fsTrail`, the `Cam` struct above; replace `gridToWorld`'s baked `[-1,1]` with `model * vec4(voxel,1)`; keep the speed colour ramp + per-mode alpha.
+- [x] (No standalone shader test — shaders compile in the renderer smoke test, Task 3. Visual verification is the Phase-D/E probe.)
+- [x] `npm run typecheck` → clean (the `.wesl?static` imports resolve once the renderer imports them in Task 3; this task may leave the shaders unreferenced — that's fine).
+- [x] Commit: `feat(flow): adapt flow compute + render WESL to model/invModel`.
 
 ## Task 3: `flowFieldRenderer` factory
 
