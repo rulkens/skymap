@@ -164,13 +164,15 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
 
   // ── CF4++ velocity flow field ────────────────────────────────────
   // Default-off, single tier-agnostic .scfd. Loads on first enable
-  // (the flow layer's master gate), like cf4Density. The GPU upload +
+  // (the flow layer's master gate), like cf4Density. Flow is a singleton
+  // overlay layer, so its gate lives in `settings.flow.enabled` alongside
+  // filaments/milkyWay — no bespoke DemandCtx surface. The GPU upload +
   // renderer handoff land in Phase C.
   {
     key: 'flow',
     factory: (deps) => createFlowFieldSlot(deps.state, deps.cb),
     req: () => undefined,
-    demand: (ctx) => ctx.flow.enabled === true,
+    demand: (ctx) => ctx.settings.flow.enabled,
   },
 
   // ── Cluster/supercluster bulk coverage ───────────────────────────

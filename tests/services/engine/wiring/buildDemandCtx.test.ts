@@ -1,7 +1,7 @@
 /**
  * buildDemandCtx — unit tests for the demand-context builder.
  *
- * The builder maps `EngineState` into the four read surfaces a demand
+ * The builder maps `EngineState` into the five read surfaces a demand
  * predicate consults. These tests target the three non-trivial surfaces:
  * `isVisible` (drawMask bit), `slotState` (slot accessor + idle fallback),
  * and `request` (the transient request-flag set). `settings` is a direct
@@ -34,7 +34,6 @@ function makeState(
     requests?: Set<RequestKey>;
     points?: Map<SourceType, AssetSlot<unknown, unknown>>;
     famousMetaState?: LoadState<unknown>['kind'];
-    flowEnabled?: boolean;
   } = {},
 ): EngineState {
   const famousMeta =
@@ -48,7 +47,6 @@ function makeState(
     settings: { marker: 'sentinel' },
     sources: { drawMask: opts.drawMask ?? 0 },
     requests: opts.requests ?? new Set<RequestKey>(),
-    data: { flow: { enabled: opts.flowEnabled ?? false } },
     assetSlots: {
       points: opts.points ?? new Map(),
       famousMeta,
@@ -92,10 +90,5 @@ describe('buildDemandCtx', () => {
 
     const empty = buildDemandCtx(makeState());
     expect(empty.request('paletteOpened')).toBe(false);
-  });
-
-  it('flow reflects the flow store enabled bit', () => {
-    expect(buildDemandCtx(makeState({ flowEnabled: true })).flow.enabled).toBe(true);
-    expect(buildDemandCtx(makeState({ flowEnabled: false })).flow.enabled).toBe(false);
   });
 });

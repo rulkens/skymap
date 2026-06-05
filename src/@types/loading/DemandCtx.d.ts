@@ -50,17 +50,10 @@
  *      this surface provides, without exposing the full `AssetSlot<T>`
  *      internals (value, req object, retry policy) to the predicate.
  *
- *   6. `flow` — a narrow read-only view of the flow layer's enable bit. The
- *      flow field is a default-off, demand-loaded asset like `cf4Density`, but
- *      its enable bit lives on the per-type data store `state.data.flow`, NOT
- *      in `settings` (there is no `settings.flow` slice) and NOT in the volume
- *      store (flow is its own layer, not a scalar-volume field). Neither
- *      `settings` nor `volumeField` can express it, so flow gets a dedicated
- *      surface — exactly as `volumeField` is the dedicated surface for the
- *      volume store. The view is `{ enabled }` only: a narrow read-only object
- *      rather than the whole store, so a predicate can read the gate without
- *      reaching the store's setters (which would violate the readonly
- *      contract).
+ * Singleton overlay layers (filaments, milkyWay, flow) need no surface of
+ * their own: their enable gate lives in `settings.<layer>.enabled`, read
+ * through surface 1. See
+ * `docs/superpowers/conventions/singleton-overlay-layers.md`.
  *
  * ### Readonly contract
  *
@@ -96,10 +89,4 @@ export type DemandCtx = {
    * sibling slot states without exposing the full slot internals.
    */
   slotState: (k: AssetKey) => LoadState<unknown>['kind'];
-  /**
-   * The flow layer's master enable bit (from `state.data.flow`). A narrow
-   * read-only view — not the whole store — so a predicate can't reach the
-   * setters. Mirrors how `volumeField` is the dedicated volume-store surface.
-   */
-  flow: { readonly enabled: boolean };
 };

@@ -126,8 +126,6 @@ function makeState(opts: { drawMask?: number } = {}): MakeStateResult {
     sources: { drawMask, tier: 'medium' },
     requests: new Set<string>(),
     gpu: { renderer: { totalCount: () => 42 } },
-    // `reevaluateDemand` builds a DemandCtx that reads `data.flow.enabled`.
-    data: { flow: { enabled: false } },
     assetSlots: {
       points: slots as unknown as Map<SourceType, AssetSlot<unknown, unknown>>,
     },

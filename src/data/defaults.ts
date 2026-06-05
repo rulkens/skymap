@@ -55,6 +55,8 @@ import { BiasMode } from './biasMode';
 import type { BiasMode as BiasModeT } from '../@types/data/BiasMode';
 import { ToneMapCurve } from './toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
+import type { FlowMode } from '../@types/data/FlowMode';
+import { MAX_PARTICLES } from '../services/gpu/renderers/flowFieldConstants';
 
 // ── Rendering knobs ─────────────────────────────────────────────────────────
 
@@ -234,6 +236,46 @@ export const DEFAULT_VOLUME_FIELD_DENSITY_SCALE = 1.0;
  * to localStorage by the App shell so reloads keep the user's choice.
  */
 export const DEFAULT_VOLUME_PALETTE_ID = 'viridis' as const;
+
+// ── CF4++ flow-field overlay ─────────────────────────────────────────────────
+
+/**
+ * Default state of the CF4++ peculiar-velocity flow-field overlay.
+ *
+ * Flow is a singleton overlay layer (see
+ * `docs/superpowers/conventions/singleton-overlay-layers.md`): every
+ * user-facing value lives in `settings.flow`, so this one object seeds the
+ * whole slice — `enabled` plus the look/motion knobs. The `state.data.flow`
+ * store is status-only and seeds nothing from here.
+ *
+ * `enabled` defaults OFF: the velocity cube is tens of MB and demand-loads on
+ * the first enable, so a fresh session pays nothing until the user asks for it.
+ *
+ * The motion/look values are the spike's hand-dialled advect look, lifted
+ * verbatim from `tools/cosmic-flow/src/state/slices/flowSlice.ts`
+ * (`defaultFlowSlice.advect`). They ARE the look — do not "tidy" them. `count`
+ * defaults to the buffer ceiling (`MAX_PARTICLES`) so the field reads as dense
+ * the moment it's enabled; the slider trims downward.
+ */
+export const DEFAULT_FLOW: {
+  enabled: boolean;
+  mode: FlowMode;
+  intensity: number;
+  count: number;
+  trail: number;
+  flowSpeed: number;
+  densityBias: number;
+  wander: number;
+} = {
+  enabled: false,
+  mode: 'advect',
+  intensity: 0.7,
+  count: MAX_PARTICLES,
+  trail: 0.003,
+  flowSpeed: 0.06,
+  densityBias: 1,
+  wander: 0.15,
+};
 
 // ── Debug overlays ─────────────────────────────────────────────────────────
 

@@ -88,6 +88,7 @@ import {
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
+  DEFAULT_FLOW,
 } from '../../data/defaults';
 import type { GalaxyCatalog } from '../../@types/data/GalaxyCatalog';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
@@ -342,6 +343,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       volumes: {
         masterEnabled: DEFAULT_VOLUMES_ENABLED,
       },
+      // Flow is a singleton overlay layer: all its user-facing state (master
+      // gate + look/motion knobs) lives here, spread from the single
+      // `DEFAULT_FLOW` seed. The `state.data.flow` store stays status-only.
+      flow: { ...DEFAULT_FLOW },
       // Per-category POI visibility — two independent axes (label-text vs
       // marker-glyph), both default-all-on.  Each record is the source of
       // truth for its axis: adding a new POI category means widening

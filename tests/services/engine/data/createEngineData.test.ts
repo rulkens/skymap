@@ -10,9 +10,8 @@ describe('createEngineData', () => {
     expect(d.filaments.loaded).toBe(false);
   });
 
-  it('includes a seeded flow store', () => {
+  it('includes a status-only flow store', () => {
     const d = createEngineData();
-    expect(d.flow.mode).toBe('advect');
-    expect(d.flow.enabled).toBe(false);
+    expect(d.flow.loaded).toBe(false);
   });
 });

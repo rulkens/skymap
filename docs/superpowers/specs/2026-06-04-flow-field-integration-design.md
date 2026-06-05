@@ -170,6 +170,18 @@ render-on-demand.
 
 ### 8. State — `createFlowFieldStore` (consistency with per-type stores)
 
+> ⚠️ **Revised after implementation.** This section's "store owns `enabled` + the
+> tunables, no `settings.flow` slice" decision was reversed. Flow now follows the
+> **singleton-overlay-layer convention**
+> ([`docs/superpowers/conventions/singleton-overlay-layers.md`](../conventions/singleton-overlay-layers.md)):
+> all user-facing state lives in **`settings.flow`** (seeded by `DEFAULT_FLOW`),
+> the `FlowFieldStore` is **status-only** (`{ loaded, setLoaded }`, like
+> `FilamentStore`), and demand reads `ctx.settings.flow.enabled` — no bespoke
+> `DemandCtx` surface. The rationale: keeping flow's toggle consistent with
+> `filaments`/`milkyWay` (the other singleton overlays) instead of inventing a
+> third visibility mechanism. The bullets below are kept for historical context;
+> read the convention for the as-built contract.
+
 Flow params live in a per-type store, mirroring `createFilamentStore` exactly
 (frozen factory, getters + named mutation seams), assembled into `EngineData` by
 `createEngineData`, **seeded at construction** (single fixed layer, but seeded for

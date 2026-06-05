@@ -6,7 +6,21 @@
 > - [`docs/superpowers/specs/2026-06-04-flow-field-integration-design.md`](../specs/2026-06-04-flow-field-integration-design.md) — the approved design. Source of truth.
 > - [`docs/superpowers/conventions/plan-style.md`](../conventions/plan-style.md) — contract code yes, implementation code no.
 >
-> **Depends on:** Phase B (the `FlowFieldStore` + `data.flow`; the `flow` demand row whose predicate the enable setter must re-evaluate) and Phase C (`flowFieldRenderer.maybeReseed()` the mode/count setters call; the renderer reading the store each frame).
+> **Depends on:** Phase B (the `flow` demand row whose predicate the enable setter must re-evaluate) and Phase C (`flowFieldRenderer.maybeReseed()` the mode/count setters call; the renderer reading `settings.flow` each frame).
+>
+> ⚠️ **Architecture below is SUPERSEDED — read this first.** This plan was
+> drafted against an earlier design where flow had no `settings.flow` slice and
+> the store owned `enabled` + the knobs. That decision was reversed: flow now
+> follows the **singleton-overlay-layer convention**
+> ([`docs/superpowers/conventions/singleton-overlay-layers.md`](../conventions/singleton-overlay-layers.md)).
+> The store is status-only; **all flow state lives in `settings.flow`**. Concretely
+> for this phase: the handle setters write `state.settings.flow` leaves (via
+> `settingsTable`, exactly like `filaments`/`milkyWay`), **not** `state.data.flow`;
+> the enable setter re-evaluates demand against `settings.flow.enabled`; the
+> SettingsPanel/DebugPanel read `settings.flow` through the normal settings echo
+> (like `filamentsEnabled`/`filamentIntensity`), **not** a store snapshot. The
+> `settings.flow` slice + `DEFAULT_FLOW` defaults already landed with the
+> singleton refactor — this phase wires the handle + `settingsTable` rows + UI.
 >
 > **Conventions** (from `CLAUDE.md` + memory):
 > - No barrel exports for components — import `.tsx` directly; one component per file; own folder + `.module.css`; `function Name()` + `export default Name`; top-level `.root` class.
@@ -25,16 +39,16 @@ mode switch, intensity slider). The DebugPanel grows a dev tuning subsection
 
 ## Architecture
 
-Decision §8: there is **no separate `settings.flow` slice** — for a single layer,
-"master enabled" and "layer enabled" are the same flag, owned by the store. So
-the handle setters write `state.data.flow` directly (not a settings leaf via
-`settingsTable`), then call `requestRender()` and — for `enabled` — `reevaluateDemand`
+Flow is a singleton overlay layer (see the convention doc linked above), so its
+state lives in the **`settings.flow`** slice alongside `filaments`/`milkyWay` —
+already added with the singleton refactor. The handle setters write
+`state.settings.flow` leaves via `settingsTable` (exactly like the filaments
+handle), then call `requestRender()` and — for `enabled` — `reevaluateDemand`
 (so the first enable triggers the demand-driven load) plus a fade, and — for
 `mode`/`count` — `flowFieldRenderer.maybeReseed()` (the shared buffers reseed on
-switch). This mirrors the `volumes` handle, which also routes through
-store-mutating closures rather than `settingsTable`. The SettingsPanel reads the
-store via a snapshot callback (like the volume-fields snapshot) and the DebugPanel
-adds a sibling section.
+switch). The SettingsPanel/DebugPanel read `settings.flow` through the normal
+settings echo (the same path `filamentsEnabled`/`filamentIntensity` use), not a
+store snapshot.
 
 ## Tech Stack
 
@@ -63,7 +77,9 @@ checks).
 | File | Change |
 |---|---|
 | `src/@types/engine/Engine.d.ts` (or the handle bag type) | Add `readonly flow: EngineFlowFieldsHandle`. |
-| `src/services/engine/engine.ts` | Build the `flow` handle; add a flow snapshot callback. |
+| `src/services/engine/engine.ts` | Build the `flow` handle (writes `settings.flow` leaves). |
+| `src/services/engine/wiring/settingsTable.ts` | Add the `flow` rows + a `['flow', string]` arm to the `SettingPath` union. |
+| `src/@types/settings/UseEngineSettingsState.d.ts` + `src/hooks/useEngineSettings.ts` | Add the flat flow mirrors (`flowEnabled`/`flowMode`/`flowIntensity`/… ) the panels read, fed by the settings echo. |
 | `src/components/SettingsPanel/SettingsPanel.tsx` | Mount `FlowRow`. |
 | `src/components/DebugPanel/DebugPanel.tsx` | Mount `FlowTuningSection`. |
 
@@ -73,11 +89,12 @@ checks).
 
 **Files:** `src/@types/engine/handles/EngineFlowFieldsHandle.d.ts` (create), `src/@types/engine/Engine.d.ts` (modify), `src/services/engine/engine.ts` (modify), `tests/services/engine/flowFieldsHandle.test.ts` (create)
 
-The handle setters wrap store mutators + `requestRender()`. `setEnabled`
-additionally fades (the toggle-fade pattern the filaments/milkyWay handles use)
-and calls `reevaluateDemand` so the first enable triggers the lazy load.
-`setMode` and `setCount` additionally call `flowFieldRenderer?.maybeReseed()`
-(shared buffers reseed on mode-switch / count-change — decision §3, §5).
+The handle setters write `state.settings.flow` leaves + `requestRender()` (the
+same `settingsTable` path the `filaments` handle uses). `setEnabled` additionally
+fades (the toggle-fade pattern the filaments/milkyWay handles use) and calls
+`reevaluateDemand` so the first enable triggers the lazy load. `setMode` and
+`setCount` additionally call `flowFieldRenderer?.maybeReseed()` (shared buffers
+reseed on mode-switch / count-change — decision §3, §5).
 
 ```ts
 // src/@types/engine/handles/EngineFlowFieldsHandle.d.ts
@@ -88,7 +105,8 @@ import type { FlowMode } from '../../data/FlowMode';
  *
  * Default-off, opt-in. `setEnabled(true)` lazy-loads the velocity cube via the
  * demand model. `setMode` / `setCount` reseed the shared particle buffers.
- * Setters with no range note clamp inside the store.
+ * Setters write `settings.flow` leaves (clamp at the write site, as the other
+ * settings setters do).
  */
 export type EngineFlowFieldsHandle = {
   setEnabled: (enabled: boolean) => void;
@@ -105,20 +123,26 @@ export type EngineFlowFieldsHandle = {
 
 **Setter behaviour contract:**
 
-- `setEnabled(v)` → `state.data.flow.setEnabled(v)`; `fades.fadeTo({kind:'flow'}, v?1:0, …)` (register a `'flow'` fade kind if the FadeRegistry needs one — otherwise skip the fade and document why); `reevaluateDemand(state)`; `requestRender()`.
-- `setMode(m)` → `state.data.flow.setMode(m)`; `flowFieldRenderer?.maybeReseed()`; `requestRender()`.
-- `setCount(n)` → `state.data.flow.setCount(n)`; `flowFieldRenderer?.maybeReseed()`; `requestRender()`.
-- `setIntensity` / `setTrail` / `setFlowSpeed` / `setDensityBias` / `setWander` → store mutator + `requestRender()` only (no reseed — they take effect on the next steady frame).
+- `setEnabled(v)` → `state.settings.flow.enabled = v`; `fades.fadeTo({kind:'flow'}, v?1:0, …)` (register a `'flow'` fade kind if the FadeRegistry needs one — otherwise skip the fade and document why); `reevaluateDemand(state)`; `requestRender()`.
+- `setMode(m)` → `state.settings.flow.mode = m`; `flowFieldRenderer?.maybeReseed()`; `requestRender()`.
+- `setCount(n)` → `state.settings.flow.count = n`; `flowFieldRenderer?.maybeReseed()`; `requestRender()`.
+- `setIntensity` / `setTrail` / `setFlowSpeed` / `setDensityBias` / `setWander` → write the matching `settings.flow` leaf + `requestRender()` only (no reseed — they take effect on the next steady frame).
+
+> Wire these through `settingsTable` (the `boringSetters` path the other
+> `settings.*` handles use) where it fits; only the three with side effects
+> (`setEnabled`'s demand-reeval + fade, `setMode`/`setCount`'s reseed) need a
+> hand-written wrapper around the table setter. Add a `['flow', string]` arm to
+> the `SettingPath` union in `settingsTable.ts` so the rows typecheck.
 
 - [ ] Create the handle type file.
 - [ ] Add `readonly flow: EngineFlowFieldsHandle` to the engine handle bag type.
-- [ ] In `engine.ts`, build the `flow` handle (near the `filaments` / `volumes` handle blocks) per the behaviour contract. Add a flow snapshot callback `cb.flow?.onChange?.(snapshot)` if the SettingsPanel needs reactive state (mirror `buildVolumeFieldsSnapshot`).
-- [ ] Tests — `flowFieldsHandle.test.ts` (drive with a state stub exposing `data.flow`, `gpu.flowFieldRenderer` spy, `subsystems.scheduler` spy):
-  - `setEnabled(true) sets the store, re-evaluates demand, requests render`.
-  - `setEnabled(false) clears the store flag`.
+- [ ] In `engine.ts`, build the `flow` handle (near the `filaments` / `volumes` handle blocks) per the behaviour contract, writing `settings.flow` leaves. The SettingsPanel reads flow state through the normal settings echo (mirror `filamentsEnabled`/`filamentIntensity`), so no bespoke snapshot callback is needed.
+- [ ] Tests — `flowFieldsHandle.test.ts` (drive with a state stub exposing `settings.flow`, `gpu.flowFieldRenderer` spy, `subsystems.scheduler` spy):
+  - `setEnabled(true) sets settings.flow.enabled, re-evaluates demand, requests render`.
+  - `setEnabled(false) clears settings.flow.enabled`.
   - `setMode reseeds and requests render`.
   - `setCount reseeds and requests render`.
-  - `setIntensity sets the store and requests render without reseeding` — assert `maybeReseed` NOT called.
+  - `setIntensity sets settings.flow.intensity and requests render without reseeding` — assert `maybeReseed` NOT called.
 - [ ] `npm test -- flowFieldsHandle` → pass. `npm run typecheck` → clean.
 - [ ] Commit: `feat(flow): EngineFlowFieldsHandle + engine wiring`.
 
@@ -148,7 +172,7 @@ export default FlowRow;
 ```
 
 - [ ] Create `FlowRow.tsx` + `FlowRow.module.css`. Mode switch is a two-button segmented control (advect / streamline) disabled when `!enabled`; intensity slider `[0,1]` step `0.01` disabled when `!enabled`.
-- [ ] Mount `FlowRow` in `SettingsPanel.tsx` (a "Flow" section near the Volumes/Filaments sections), wiring its callbacks to `engine.flow.setEnabled` / `.setMode` / `.setIntensity` and reading current values from the flow snapshot (or the store via the panel's state plumbing).
+- [ ] Mount `FlowRow` in `SettingsPanel.tsx` (a "Flow" section near the Volumes/Filaments sections), wiring its callbacks to `engine.flow.setEnabled` / `.setMode` / `.setIntensity` and reading current values from the `useEngineSettings` flow mirrors (the same path `filamentsEnabled`/`filamentIntensity` use).
 - [ ] (Verification) Ask the user to confirm via the running dev server: the Flow row appears, the toggle enables the mode switch + slider, and enabling shows ribbons once the cube loads. No automated React test required if the panel follows the existing manual-verify convention; add one if SettingsPanel already has component tests.
 - [ ] `npm run typecheck` → clean.
 - [ ] Commit: `feat(flow): SettingsPanel Flow row (toggle + mode + intensity)`.

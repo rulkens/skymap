@@ -15,15 +15,25 @@
 > - Tests mirror the `src/` tree under `tests/`. Background subagents can't run npm/git; the main thread runs tests/typecheck/commits. Never `git add -A`.
 > - **Commits:** conventional-commits style (shown per task); use the user's git identity (never `--author=Claude…`); end every commit body with the trailer `Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>`.
 
+> ⚠️ **Superseded in part by the singleton-overlay-layer convention**
+> ([`docs/superpowers/conventions/singleton-overlay-layers.md`](../conventions/singleton-overlay-layers.md)).
+> After this plan was first executed, flow's `enabled` bit + all look/motion
+> knobs moved **out of the store and into `settings.flow`** (seeded by
+> `DEFAULT_FLOW` in `data/defaults.ts`), matching `filaments`/`milkyWay`. The
+> as-built result: `FlowFieldStore` is **status-only** (`{ loaded, setLoaded }`,
+> like `FilamentStore`); the demand row reads `ctx.settings.flow.enabled` — there
+> is **no `DemandCtx.flow` surface** and **no `enabled` on the store**. Wherever
+> the tasks below say the store "carries the tunables" / "is seeded at
+> construction" / demand reads `ctx.flow.enabled`, read the convention instead.
+
 ## Goal
 
 A frozen `createFlowFieldStore()` per-type store mirrors `createFilamentStore`
-exactly (getters + named mutation seams), is assembled into `EngineData` by
-`createEngineData`, and is **seeded at construction** for demand-model symmetry.
-A velocity-field loader (ported from cosmic-flow's `createVelocityField`) fetches
-the single `flowfield.scfd`, `decodeScalarField`s it, and uploads the 128³
-RGBA16F cube. A demand-driven asset slot loads the cube on the frame `enabled`
-first flips true — not at boot.
+exactly (status getter + `setLoaded` seam), is assembled into `EngineData` by
+`createEngineData`. A velocity-field loader (ported from cosmic-flow's
+`createVelocityField`) fetches the single `flowfield.scfd`, `decodeScalarField`s
+it, and uploads the 128³ RGBA16F cube. A demand-driven asset slot loads the cube
+on the frame `settings.flow.enabled` first flips true — not at boot.
 
 ## Architecture
 

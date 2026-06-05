@@ -53,6 +53,7 @@
 import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { PoiCategory } from '../engine/data/PoiCategory';
+import type { FlowMode } from '../data/FlowMode';
 
 export type EngineSettingsState = {
   /**
@@ -131,6 +132,40 @@ export type EngineSettingsState = {
    */
   volumes: {
     masterEnabled: boolean;
+  };
+
+  /**
+   * CF4++ peculiar-velocity flow-field overlay controls.
+   *
+   * Flow is a singleton overlay layer (see
+   * `docs/superpowers/conventions/singleton-overlay-layers.md`): all of its
+   * user-facing state — the master `enabled` gate plus the look/motion knobs —
+   * lives here in `settings`, exactly as `filaments` and `milkyWay` do. The
+   * `state.data.flow` store stays status-only (`loaded`); it carries no user
+   * knobs. The asset-demand predicate reads `settings.flow.enabled`, and the
+   * renderer reads the rest of this slice each frame.
+   *
+   * The tunable defaults are the spike's hand-dialled advect look (lifted from
+   * `tools/cosmic-flow/.../flowSlice.ts` `defaultFlowSlice.advect`) — they are
+   * the look, not arbitrary placeholders; see `data/defaults.ts` `DEFAULT_FLOW`.
+   */
+  flow: {
+    /** Master layer gate (default-off; the cube demand-loads on first enable). */
+    enabled: boolean;
+    /** Active integration mode (default 'advect'). */
+    mode: FlowMode;
+    /** Pre-blend ribbon brightness multiplier, [0, 1]. */
+    intensity: number;
+    /** Particle count actually drawn, [0, MAX_PARTICLES]. */
+    count: number;
+    /** Ring spacing per trail point (world units). */
+    trail: number;
+    /** Advect head distance per frame (motion speed). */
+    flowSpeed: number;
+    /** Density-weighted seeding selectivity, [0, 1]. */
+    densityBias: number;
+    /** Per-step direction jitter (advect only). */
+    wander: number;
   };
 
   /**

@@ -3,14 +3,20 @@
  *
  * Drives the factored-out `evaluateRows(state, rows)` (same harness pattern as
  * `reevaluateDemand.test.ts`) with a single stub `flow` row whose demand reads
- * `ctx.flow.enabled`, against a minimal stub `EngineState` whose
- * `data.flow.enabled` we flip and whose `assetSlots.flow` is a spy slot.
+ * `ctx.settings.flow.enabled`, against a minimal stub `EngineState` whose
+ * `settings.flow.enabled` we flip and whose `assetSlots.flow` is a spy slot.
+ *
+ * Flow is a singleton overlay layer: its master gate lives in `settings.flow`
+ * alongside filaments/milkyWay, so the predicate reads the existing `settings`
+ * surface — no bespoke DemandCtx surface (see
+ * `docs/superpowers/conventions/singleton-overlay-layers.md`).
  *
  * The behaviour under test is the flow layer's lazy / default-off contract:
  * the slot stays idle while flow is disabled and loads the moment it is
  * enabled. We don't exercise the load loop's idle-guard or throw handling here
  * — those are pinned in `reevaluateDemand.test.ts`; this file only proves the
- * `flow.enabled` surface routes through `buildDemandCtx` → the row's demand.
+ * `settings.flow.enabled` surface routes through `buildDemandCtx` → the row's
+ * demand.
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
@@ -40,26 +46,26 @@ function stubSlot(): StubSlot {
 
 /**
  * Build a minimal EngineState carrying the slices the flow demand path reads
- * transitively (via buildDemandCtx + slotFor): `settings`, `sources`,
- * `requests`, `data.flow.enabled`, and `assetSlots.flow` (the named string-key
+ * transitively (via buildDemandCtx + slotFor): `settings.flow.enabled`,
+ * `sources`, `requests`, `data`, and `assetSlots.flow` (the named string-key
  * slot `slotFor('flow')` resolves).
  */
 function makeState(flowEnabled: boolean, slot: AssetSlot<unknown, unknown>): EngineState {
   return {
-    settings: {},
+    settings: { flow: { enabled: flowEnabled } },
     sources: { drawMask: 0, tier: 'medium' },
     requests: new Set(),
-    data: { flow: { enabled: flowEnabled } },
+    data: {},
     assetSlots: { points: new Map(), flow: slot },
   } as unknown as EngineState;
 }
 
-/** The real-shaped flow row: void request, demand gated on `flow.enabled`. */
+/** The real-shaped flow row: void request, demand gated on `settings.flow.enabled`. */
 const flowRow: AssetWiringRow = {
   key: 'flow',
   factory: () => stubSlot(),
   req: () => undefined,
-  demand: (ctx) => ctx.flow.enabled === true,
+  demand: (ctx) => ctx.settings.flow.enabled,
 };
 
 afterEach(() => {
@@ -67,14 +73,14 @@ afterEach(() => {
 });
 
 describe('flow demand', () => {
-  it('flow slot stays idle when flow.enabled is false', () => {
+  it('flow slot stays idle when settings.flow.enabled is false', () => {
     const slot = stubSlot();
     const state = makeState(false, slot);
     evaluateRows(state, [flowRow]);
     expect(slot.load).not.toHaveBeenCalled();
   });
 
-  it('flow slot loads when flow.enabled is true', () => {
+  it('flow slot loads when settings.flow.enabled is true', () => {
     const slot = stubSlot();
     const state = makeState(true, slot);
     evaluateRows(state, [flowRow]);

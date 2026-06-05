@@ -7,7 +7,9 @@
 > - [`docs/superpowers/conventions/renderers.md`](../conventions/renderers.md) — the renderer convention this layer follows (factory + `satisfies Renderer` + GPU resources in closure).
 > - [`docs/superpowers/conventions/plan-style.md`](../conventions/plan-style.md) — contract code yes, implementation code no.
 >
-> **Depends on:** Phase B (the `FlowFieldStore` the renderer reads each frame; the `FlowField` type + `flowFieldSlot.commit` calling `setField`). The renderer's `setField` is the seam the Phase-B slot already calls (null-safe until now).
+> **Depends on:** Phase B (the `FlowField` type + `flowFieldSlot.commit` calling `setField`). The renderer's `setField` is the seam the Phase-B slot already calls (null-safe until now).
+>
+> ⚠️ **Singleton-overlay-layer convention** ([`docs/superpowers/conventions/singleton-overlay-layers.md`](../conventions/singleton-overlay-layers.md)): flow's look/motion knobs live in **`settings.flow`**, not on the store. Where a task says "the renderer reads the `FlowFieldStore` each frame", it reads **`state.settings.flow`** for the tunables; the `data.flow` store only supplies the `loaded` status bit.
 >
 > **Conventions** (from `CLAUDE.md` + memory):
 > - Be **meticulous with WESL/WGSL** — slow down on shader edits; don't claim done without visual verification.

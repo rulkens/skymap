@@ -43,7 +43,6 @@ function makeCtx(over: {
   visible?: Set<SourceType>;
   requests?: Set<RequestKey>;
   slotStates?: Partial<Record<AssetKey, LoadState<unknown>['kind']>>;
-  flowEnabled?: boolean;
 }): DemandCtx {
   return {
     settings: (over.settings ?? {}) as Readonly<EngineSettingsState>,
@@ -53,7 +52,6 @@ function makeCtx(over: {
     isVisible: (s) => over.visible?.has(s) ?? false,
     request: (k) => over.requests?.has(k) ?? false,
     slotState: (k) => over.slotStates?.[k] ?? 'idle',
-    flow: { enabled: over.flowEnabled ?? false },
   };
 }
 
@@ -146,6 +144,14 @@ describe('ASSET_WIRING demand predicates', () => {
     const cf4 = rowFor('cf4Density');
     expect(cf4.demand(makeCtx({ volumeFields: { 'cf4-density': { enabled: true } } }))).toBe(true);
     expect(cf4.demand(makeCtx({ volumeFields: {} }))).toBe(false);
+  });
+
+  it('flow demand follows settings.flow.enabled (singleton overlay layer)', () => {
+    // Flow's master gate lives in settings alongside filaments/milkyWay — no
+    // bespoke DemandCtx surface. See singleton-overlay-layers convention.
+    const flow = rowFor('flow');
+    expect(flow.demand(makeCtx({ settings: { flow: { enabled: true } } }))).toBe(true);
+    expect(flow.demand(makeCtx({ settings: { flow: { enabled: false } } }))).toBe(false);
   });
 
   it('clusterCatalog demand follows structure-category visibility (bug-fix pin)', () => {

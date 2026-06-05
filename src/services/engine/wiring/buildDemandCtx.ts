@@ -44,9 +44,5 @@ export function buildDemandCtx(state: EngineState): DemandCtx {
     // slot has never been asked to load, which is exactly what `idle` means.
     slotState: (k: AssetKey): LoadState<unknown>['kind'] =>
       slotFor(state, k)?.state().kind ?? 'idle',
-    // A value snapshot is fine: the ctx is rebuilt once per `reevaluateDemand`
-    // cycle (synchronous), so it can't go stale within a loop — same liveness
-    // guarantee as the closure-based surfaces above.
-    flow: { enabled: state.data.flow.enabled },
   };
 }

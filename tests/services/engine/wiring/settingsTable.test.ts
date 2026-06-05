@@ -60,6 +60,16 @@ function makeState(): Pick<EngineState, 'settings' | 'bias'> {
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 0.5 },
       volumes: { masterEnabled: false },
+      flow: {
+        enabled: false,
+        mode: 'advect',
+        intensity: 0.7,
+        count: 40000,
+        trail: 0.003,
+        flowSpeed: 0.06,
+        densityBias: 1,
+        wander: 0.15,
+      },
       debug: { showPickBuffer: false, showDiskRadiusRing: false },
       labelCategoryVisibility: {
         cluster: true,
