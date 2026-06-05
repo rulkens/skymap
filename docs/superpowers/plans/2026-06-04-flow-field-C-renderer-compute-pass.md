@@ -123,12 +123,12 @@ const DENS_SCALE: f32 = 1.0;
 const SPEED_COLOR_MAX: f32 = 1200.0;
 ```
 
-- [ ] Create `flowFieldConstants.ts` with the values above (didactic header noting MAX_PARTICLES is buffer-sizing + slider ceiling; do not "tidy").
-- [ ] Create `flowConstants.wesl` mirroring TRAIL/LIFE/FADE/DENS_SCALE/SPEED_COLOR_MAX.
-- [ ] Parity test — model on the cosmic-flow parity test: read the `.wesl` as text, regex `const NAME: type = value;`, assert each equals the TS export of the same name. Assert all five mirrored names are covered.
-- [ ] In `createFlowFieldStore.ts`, import `MAX_PARTICLES` from `flowFieldConstants` and seed `count` from it; delete the Phase-B local default + its reconcile comment.
-- [ ] `npm test -- flowConstants.parity` → pass. `npm test -- createFlowFieldStore` → still green. `npm run typecheck` → clean.
-- [ ] Commit: `feat(flow): flow constants + WESL mirror + parity test`.
+- [x] Create `flowFieldConstants.ts` with the values above (didactic header noting MAX_PARTICLES is buffer-sizing + slider ceiling; do not "tidy").
+- [x] Create `flowConstants.wesl` mirroring TRAIL/LIFE/FADE/DENS_SCALE/SPEED_COLOR_MAX.
+- [x] Parity test — model on the cosmic-flow parity test: read the `.wesl` as text, regex `const NAME: type = value;`, assert each equals the TS export of the same name. Assert all five mirrored names are covered.
+- [x] In `createFlowFieldStore.ts`, import `MAX_PARTICLES` from `flowFieldConstants` and seed `count` from it; delete the Phase-B local default + its reconcile comment.
+- [x] `npm test -- flowConstants.parity` → pass. `npm test -- createFlowFieldStore` → still green. `npm run typecheck` → clean.
+- [x] Commit: `feat(flow): flow constants + WESL mirror + parity test`.
 
 ## Task 2: Adapt the compute + render WESL to `model`/`invModel`
 
