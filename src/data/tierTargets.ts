@@ -31,7 +31,7 @@
  * `-large` suffix because each tier's cut is a different file.
  */
 
-import { Source, SOURCE_REGISTRY } from './sources';
+import { SOURCE_REGISTRY } from './sources';
 import type { Tier } from '../@types/data/Tier';
 import type { SourceType } from '../@types/data/SourceType';
 
@@ -53,6 +53,22 @@ export function tierTarget(source: SourceType, tier: Tier): number | undefined {
   // widening back to the declared shape.
   const targets: Partial<Record<Tier, number>> = entry.tierTargets;
   return targets[tier];
+}
+
+/**
+ * Returns the apparent-magnitude flux floor for a source's local-volume
+ * supplement, or `undefined` for "no supplement" (and for every non-survey
+ * source, which can't be subsampled). Mirrors {@link tierTarget}: a thin,
+ * type-narrowing read of the registry so callers don't reach into the
+ * discriminated union themselves. Tier-independent — the floor is a single
+ * per-source value the build applies to whichever tier is being capped.
+ */
+export function fluxSupplementMagLimitFor(source: SourceType): number | undefined {
+  const entry = SOURCE_REGISTRY[source];
+  if (entry.type !== 'survey') return undefined;
+  // `as const` narrows each entry to its own literal shape, so entries that
+  // omit the optional field don't declare it — `in` narrows to the ones that do.
+  return 'fluxSupplementMagLimit' in entry ? entry.fluxSupplementMagLimit : undefined;
 }
 
 /**

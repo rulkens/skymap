@@ -26,9 +26,9 @@
  *   ⇒ apparentRadiusPx = FOCUS_FILL · (viewportHeight / 2)
  *
  * So one fill factor frames every structure to the same on-screen size. With
- * `FOCUS_FILL = 2.5` the ring overflows the viewport ~2.5:1 — past the fade's
+ * `FOCUS_FILL = 2.2` the ring overflows the viewport ~2.2:1 — past the fade's
  * full-clear point (`markerMaxApparentRadiusPx + markerMaxApparentFadeBandPx`
- * = 1100px) on any viewport taller than ~900px. The close-approach fade
+ * = 1100px) on any viewport taller than ~1000px. The close-approach fade
  * threshold is the SAME for all four structure categories, so a single factor
  * covers cluster / supercluster / void / group — the per-category framing
  * multipliers this helper used to carry are no longer needed.
@@ -40,8 +40,10 @@
  * helpers are deliberately viewport-agnostic (`galaxyFocusDistance` is a flat
  * multiplier; nothing here reads canvas pixels), and the tween path has no
  * viewport handle. `FOCUS_FILL` keeps the framing in that angular, pixel-free
- * world — slightly conservative on very short viewports, which is the safe
- * direction (a touch more faded, never less).
+ * world — slightly conservative on short viewports, which is the safe
+ * direction (a touch more faded, never less). Below ~1000px tall the ring
+ * starts re-entering the fade band; that floor is the trade for backing the
+ * framing off enough that the interior isn't cramped.
  *
  * Famous galaxies are NOT a category here. They route through the galaxy
  * `focusOn` / `selectFamous` chain, which uses `galaxyFocusDistance`.
@@ -61,10 +63,10 @@ import type { PoiCategory } from '../../../@types/engine/data/PoiCategory';
 
 /**
  * Apparent ring radius at focus, as a multiple of the half-viewport-height.
- * 2.5 overflows the viewport ~2.5:1, landing the marker past the close-approach
+ * 2.2 overflows the viewport ~2.2:1, landing the marker past the close-approach
  * fade-out (full-clear ~1100px) on standard viewports. See module header.
  */
-const FOCUS_FILL = 2.5;
+const FOCUS_FILL = 2.2;
 
 const MIN_FRAMING_DISTANCE_MPC = 0.1;
 const MAX_FRAMING_DISTANCE_MPC = 800;
