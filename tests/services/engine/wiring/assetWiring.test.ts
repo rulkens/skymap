@@ -43,6 +43,7 @@ function makeCtx(over: {
   visible?: Set<SourceType>;
   requests?: Set<RequestKey>;
   slotStates?: Partial<Record<AssetKey, LoadState<unknown>['kind']>>;
+  flowEnabled?: boolean;
 }): DemandCtx {
   return {
     settings: (over.settings ?? {}) as Readonly<EngineSettingsState>,
@@ -52,6 +53,7 @@ function makeCtx(over: {
     isVisible: (s) => over.visible?.has(s) ?? false,
     request: (k) => over.requests?.has(k) ?? false,
     slotState: (k) => over.slotStates?.[k] ?? 'idle',
+    flow: { enabled: over.flowEnabled ?? false },
   };
 }
 
@@ -69,6 +71,7 @@ describe('ASSET_WIRING membership', () => {
       'filaments',
       'mcpm',
       'cf4Density',
+      'flow',
       'clusterCatalog',
       'pgcAlias',
     ];

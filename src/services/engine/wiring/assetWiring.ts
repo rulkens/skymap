@@ -60,6 +60,7 @@ import { createFilamentSlot } from '../../loading/slots/filamentSlot';
 import { createFamousMetaSlot } from '../../loading/slots/famousMetaSlot';
 import { createClusterCatalogSlot } from '../../loading/slots/clusterCatalogSlot';
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
+import { createFlowFieldSlot } from '../../loading/slots/flowFieldSlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
 import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
 import type { SourceType } from '../../../@types/data/SourceType';
@@ -159,6 +160,17 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     factory: (deps) => createCf4DensitySlot(deps.state, deps.cb),
     req: () => undefined,
     demand: (ctx) => ctx.volumeField(CF4_FIELD)?.enabled === true,
+  },
+
+  // ── CF4++ velocity flow field ────────────────────────────────────
+  // Default-off, single tier-agnostic .scfd. Loads on first enable
+  // (the flow layer's master gate), like cf4Density. The GPU upload +
+  // renderer handoff land in Phase C.
+  {
+    key: 'flow',
+    factory: (deps) => createFlowFieldSlot(deps.state, deps.cb),
+    req: () => undefined,
+    demand: (ctx) => ctx.flow.enabled === true,
   },
 
   // ── Cluster/supercluster bulk coverage ───────────────────────────

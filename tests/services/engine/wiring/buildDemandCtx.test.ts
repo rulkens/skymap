@@ -34,6 +34,7 @@ function makeState(
     requests?: Set<RequestKey>;
     points?: Map<SourceType, AssetSlot<unknown, unknown>>;
     famousMetaState?: LoadState<unknown>['kind'];
+    flowEnabled?: boolean;
   } = {},
 ): EngineState {
   const famousMeta =
@@ -47,6 +48,7 @@ function makeState(
     settings: { marker: 'sentinel' },
     sources: { drawMask: opts.drawMask ?? 0 },
     requests: opts.requests ?? new Set<RequestKey>(),
+    data: { flow: { enabled: opts.flowEnabled ?? false } },
     assetSlots: {
       points: opts.points ?? new Map(),
       famousMeta,
@@ -90,5 +92,10 @@ describe('buildDemandCtx', () => {
 
     const empty = buildDemandCtx(makeState());
     expect(empty.request('paletteOpened')).toBe(false);
+  });
+
+  it('flow reflects the flow store enabled bit', () => {
+    expect(buildDemandCtx(makeState({ flowEnabled: true })).flow.enabled).toBe(true);
+    expect(buildDemandCtx(makeState({ flowEnabled: false })).flow.enabled).toBe(false);
   });
 });

@@ -53,7 +53,7 @@
  * Centralising each asset's load policy as a predicate avoids spreading
  * conditional `slot.load()` calls across dozens of engine-handle setters —
  * every policy lives here, next to the row it concerns. See `DemandCtx` for
- * the four read surfaces available to predicates.
+ * the read surfaces available to predicates.
  */
 
 import type { AssetKey } from './AssetKey';

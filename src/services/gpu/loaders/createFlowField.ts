@@ -1,19 +1,36 @@
 /**
  * createFlowField — loads the CF4++ velocity flow field asset onto the GPU.
  *
- * Fetches a single self-describing `flowfield.scfd` (SCFD v3, `channels = 4`,
- * `value_kind = 1`), decodes it to a `ScalarCube`, and uploads its voxels as an
- * N³ `rgba16float` 3D texture — rgb = velocity (km/s) in the cube's native
- * frame, a = overdensity δ — then returns the shared `FlowField` handle the
- * engine hands to every flow layer.
+ * Three exports, in increasing scope:
+ *
+ *   - `flowFieldMetaFromCube(cube)` — pure cube → `FlowFieldMeta` mapping
+ *     (no GPU device); unit-testable in isolation.
+ *   - `flowFieldFromCube(device, cube)` — synchronous cube → `FlowField`
+ *     GPU upload (texture + sampler), no fetch.
+ *   - `createFlowField(device, scfdUrl)` — the URL loader: fetch → decode →
+ *     `flowFieldFromCube`.
+ *
+ * Why the cube → GPU upload is factored out of the URL loader: the demand-
+ * driven flow asset slot fetches the `.scfd` itself, through the slot's own
+ * progress/abort machinery (`fetchWithProgress`), then needs to upload the
+ * already-decoded `ScalarCube` without a second network round-trip.  Calling
+ * `createFlowField` from the slot would re-fetch the blob; `flowFieldFromCube`
+ * lets the slot hand its cube straight to the GPU.  Phase E's workbench still
+ * wants the URL form, so `createFlowField` stays and simply delegates.
+ *
+ * Both upload paths fetch a single self-describing `flowfield.scfd` (SCFD v3,
+ * `channels = 4`, `value_kind = 1`) and upload its voxels as an N³
+ * `rgba16float` 3D texture — rgb = velocity (km/s) in the cube's native frame,
+ * a = overdensity δ — then return the shared `FlowField` handle the engine
+ * hands to every flow layer.
  *
  * The earlier cosmic-flow tool (`tools/cosmic-flow/.../createVelocityField.ts`)
  * fetched a `.json` metadata sidecar alongside the `.bin` blob and carried a
  * `boxMpcPerH` box size.  SCFD v3 dissolves that split: the frame (origin,
  * voxel size, frame kind) AND the velocity stats fold into the binary header,
- * so this loader does a single fetch and reads every metadata field straight
- * off the decoded cube.  No second request, no `boxMpcPerH` — the cube already
- * speaks Mpc via `origin` + `voxelSize`.
+ * so the loader reads every metadata field straight off the decoded cube.  No
+ * second request, no `boxMpcPerH` — the cube already speaks Mpc via `origin` +
+ * `voxelSize`.
  *
  * The voxel buffer is C-order `[z][y][x][c]` f16 RGBA (x fastest, z outer),
  * exactly the layout WebGPU's `writeTexture` walks with
@@ -60,9 +77,13 @@ export function flowFieldMetaFromCube(cube: ScalarCube): FlowFieldMeta {
   };
 }
 
-export async function createFlowField(device: GPUDevice, scfdUrl: string): Promise<FlowField> {
-  const buf = await (await fetch(scfdUrl)).arrayBuffer();
-  const cube = decodeScalarField(buf);
+/**
+ * Upload an already-decoded velocity cube to the GPU and return its
+ * `FlowField` handle.  Synchronous — no fetch — so a caller that already holds
+ * the cube (the demand-driven asset slot, which fetched it through its own
+ * progress/abort machinery) can upload without a redundant network round-trip.
+ */
+export function flowFieldFromCube(device: GPUDevice, cube: ScalarCube): FlowField {
   const meta = flowFieldMetaFromCube(cube);
 
   const n = meta.n;
@@ -88,4 +109,10 @@ export async function createFlowField(device: GPUDevice, scfdUrl: string): Promi
     meta,
     dispose: () => texture.destroy(),
   };
+}
+
+export async function createFlowField(device: GPUDevice, scfdUrl: string): Promise<FlowField> {
+  const buf = await (await fetch(scfdUrl)).arrayBuffer();
+  const cube = decodeScalarField(buf);
+  return flowFieldFromCube(device, cube);
 }

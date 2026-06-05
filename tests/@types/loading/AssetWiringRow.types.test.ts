@@ -55,6 +55,7 @@ describe('AssetWiringRow assignability', () => {
       isVisible: (_s: number) => true,
       request: (_k: string) => false,
       slotState: (_k: unknown) => 'idle' as const,
+      flow: { enabled: false },
     };
     const result: boolean = sdssRow.demand(fakeCtx);
     expect(result).toBe(true);

@@ -32,6 +32,12 @@ import type { SourceType } from '../data/SourceType';
  *     minted only under `import.meta.env.DEV`) and are not part of the
  *     demand-driven asset set.
  *
+ *   - `'flow'` — the CF4++ velocity flow field (`flowfield.scfd`), a single
+ *     tier-agnostic asset with its own (Phase C) renderer target. Default-off /
+ *     demand-loaded, like `cf4Density`: it has no point-`Source` code, so its
+ *     slot lives as a named field on `state.assetSlots` and needs a string
+ *     asset key to route through `slotFor`.
+ *
  * The asymmetry cuts both ways: some `Source`s are NOT fetched individually
  * (Cluster / Supercluster / Void all arrive via `'clusterCatalog'`), and the
  * string keys are NOT all `Source`s. "Source" (stable identity code, persisted
@@ -47,4 +53,5 @@ export type AssetKey =
   | 'pgcAlias'
   | 'filaments'
   | 'cf4Density'
-  | 'mcpm';
+  | 'mcpm'
+  | 'flow';

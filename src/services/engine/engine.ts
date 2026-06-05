@@ -577,6 +577,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       cf4Density: null,
       // Tier-aware (unlike cf4Density): setTier reloads on tier change.
       mcpm: null,
+      // Default-off velocity flow field; demand-loaded like cf4Density.
+      flow: null,
     },
     // ── One-shot transient request flags ────────────────────────────────
     //

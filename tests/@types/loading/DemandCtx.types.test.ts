@@ -34,6 +34,7 @@ const ctx: DemandCtx = {
   isVisible: (_s) => true,
   request: (_k) => false,
   slotState: (_k) => 'idle',
+  flow: { enabled: false },
 };
 
 describe('DemandCtx assignability', () => {
@@ -65,5 +66,10 @@ describe('DemandCtx assignability', () => {
   it("slotState accepts a numeric SourceType AssetKey", () => {
     const kind = ctx.slotState(Source.Famous);
     expect(typeof kind).toBe('string');
+  });
+
+  it("flow.enabled is a boolean", () => {
+    const enabled: boolean = ctx.flow.enabled;
+    expect(typeof enabled).toBe('boolean');
   });
 });

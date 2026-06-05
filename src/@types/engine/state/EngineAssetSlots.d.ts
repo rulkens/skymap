@@ -109,6 +109,22 @@ export type EngineAssetSlots = {
    */
   mcpm: AssetSlot<ScalarCube, MCPMReq> | null;
   /**
+   * CF4++ velocity flow field — single tier-agnostic `flowfield.scfd`
+   * (SCFD v3, `channels = 4`: rgb = velocity, a = overdensity δ).
+   *
+   * Default-off, so demand-loaded (mirrors `cf4Density`): the slot stays
+   * idle until the user enables flow (Phase D UI), at which point the
+   * per-frame `reevaluateDemand` fires `flowFieldFetcher` and the commit
+   * marks the layer loaded.  The decoded cube is paid only on opt-in, not
+   * on every page load.
+   *
+   * Null until `wireSlots` mints it (matches `cf4Density` for the same
+   * lifecycle reason).  The commit's GPU upload + flow-renderer handoff
+   * arrive in Phase C — the receiving renderer lands then; Phase B's
+   * commit only proves the fetch → decode → commit path.
+   */
+  flow: AssetSlot<ScalarCube, void> | null;
+  /**
    * Dev-only slots for the synthetic test cubes (Gaussian blob,
    * Cartesian grid, spherical grid).  `undefined` (not the slots being
    * null) in production builds — the `wireSlots` phase only mints
