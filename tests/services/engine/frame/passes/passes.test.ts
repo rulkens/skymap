@@ -121,6 +121,7 @@ function makeDeps(overrides: Partial<PassDeps> = {}): PassDeps {
     proceduralDiskRenderer: { draw: vi.fn() } as any,
     filamentRenderer: null,
     scalarVolumeRenderer: null,
+    flowFieldRenderer: null,
     milkyWayRenderer: { draw: vi.fn() } as any,
     horizonShellRenderer: { draw: vi.fn() } as any,
     catalogs: new Map(),
@@ -158,21 +159,23 @@ const PASS_STUB = {
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 describe('HDR_PASSES registry', () => {
-  it('contains the eight HDR passes in canonical draw order', () => {
+  it('contains the nine HDR passes in canonical draw order', () => {
     // Order is load-bearing for HMR-stability of the encoder record;
     // see passes/index.ts module header. Marker-lines and labels live
     // in UI_PASSES (post-tone-map overlay), not HDR_PASSES, so they
     // escape tone-map curve compression and dodge the OVER-blend
     // coherency issue on tile-based GPUs. The horizon shell draws after
     // the volume upsample (so cosmic-web densities composite over it)
-    // and before cluster-markers (so marker rings pop on top).
-    expect(HDR_PASSES).toHaveLength(8);
+    // and before cluster-markers (so marker rings pop on top). Flow sits
+    // with the structure layers, after filaments.
+    expect(HDR_PASSES).toHaveLength(9);
     expect(HDR_PASSES.map((p) => p.name)).toEqual([
       'point-sprites',
       'procedural-disks',
       'textured-disks',
       'milky-way',
       'filaments',
+      'flow',
       'volume-upsample',
       'horizon-shell',
       'cluster-markers',

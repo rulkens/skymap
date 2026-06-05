@@ -365,6 +365,7 @@ function makeInput(
       horizonShellRenderer,
       filamentRenderer: null,
       scalarVolumeRenderer: null,
+      flowFieldRenderer: null,
       texturedQuadRenderer,
       texturedDiskRenderer,
       proceduralDiskRenderer,

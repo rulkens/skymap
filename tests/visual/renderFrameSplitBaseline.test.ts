@@ -399,6 +399,7 @@ describe('renderFrame visual baseline', () => {
       horizonShellRenderer: horizonShellRenderer as never,
       filamentRenderer: filamentRenderer as never,
       scalarVolumeRenderer: scalarVolumeRenderer as never,
+      flowFieldRenderer: null,
       texturedDiskRenderer: texturedDiskRenderer as never,
       proceduralDiskRenderer: proceduralDiskRenderer as never,
       settings: settings as never,

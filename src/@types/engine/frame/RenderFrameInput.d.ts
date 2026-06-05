@@ -26,6 +26,7 @@ import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
 import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
+import type { FlowFieldRenderer } from '../../rendering/FlowFieldRenderer';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { ReadyFrameContext } from './ReadyFrameContext';
@@ -76,6 +77,12 @@ export type RenderFrameInput = {
    * is invoked.
    */
   scalarVolumeRenderer: ScalarVolumeRenderer | null;
+  /**
+   * Optional CF4++ flow-field renderer.  Null before `initGpu` constructs it.
+   * `encodeFlowCompute` (pre-HDR compute) and `flowFieldPass` both null-check
+   * this handle, so a null state is silently a no-op.
+   */
+  flowFieldRenderer: FlowFieldRenderer | null;
   /**
    * TexturedDiskRenderer reference forwarded straight to the thumbnail
    * subsystem.  The subsystem already `bindAtlas`-bound it at

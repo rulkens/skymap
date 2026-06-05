@@ -32,9 +32,18 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     renderer: { draw: vi.fn() } as any,
-    postProcess: { view: {} as GPUTextureView, draw: vi.fn(), resize: vi.fn(), destroy: vi.fn() } as any,
+    postProcess: {
+      view: {} as GPUTextureView,
+      draw: vi.fn(),
+      resize: vi.fn(),
+      destroy: vi.fn(),
+    } as any,
     volumeOffscreen: { view: {} as GPUTextureView, resize: vi.fn(), destroy: vi.fn() } as any,
-    texturedDisks: { runFrame: vi.fn(), lastOutput: { quads: [], disks: [] }, hasInFlightWork: () => false } as any,
+    texturedDisks: {
+      runFrame: vi.fn(),
+      lastOutput: { quads: [], disks: [] },
+      hasInFlightWork: () => false,
+    } as any,
     ...overrides,
   };
 }
@@ -50,6 +59,7 @@ function makeDeps(): PassDeps {
     proceduralDiskRenderer: { draw: vi.fn() } as any,
     filamentRenderer: null,
     scalarVolumeRenderer: null,
+    flowFieldRenderer: null,
     milkyWayRenderer: { draw: vi.fn() } as any,
     horizonShellRenderer: { draw: vi.fn() } as any,
     catalogs: new Map(),

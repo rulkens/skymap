@@ -56,6 +56,7 @@ function makeDeps(): PassDeps {
     proceduralDiskRenderer: { draw: vi.fn() } as any,
     filamentRenderer: null,
     scalarVolumeRenderer: null,
+    flowFieldRenderer: null,
     milkyWayRenderer: { draw: vi.fn() } as any,
     horizonShellRenderer: { draw: vi.fn() } as any,
     catalogs: new Map(),

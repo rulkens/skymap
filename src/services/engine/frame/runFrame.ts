@@ -270,6 +270,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     horizonShellRenderer: deps.horizonShellRenderer,
     filamentRenderer: deps.filamentRenderer,
     scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
+    flowFieldRenderer: state.gpu.flowFieldRenderer,
     texturedDiskRenderer: deps.texturedDiskRenderer,
     proceduralDiskRenderer: deps.proceduralDiskRenderer,
     milkyWayITimeSec: (performance.now() - deps.milkyWayITimeEpochMs) * 0.001 * 0.25,
@@ -490,6 +491,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   //     filaments included).
   //   - clusterFocus.isAwake(): the member-isolation fade (its own
   //     controller, not in the registry) across the 400 ms ramp.
+  //   - flowFieldRenderer.isAnimating(): the flow layer is enabled + loaded;
+  //     both modes animate (advect drifts, streamline pulses), so the loop
+  //     must keep ticking while flow is on. isAnimating already folds in the
+  //     settings.flow.enabled check.
   //
   // `isEngineReady` consolidates the bootstrap-bag null guard: when ready,
   // all those fields are simultaneously non-null, so we dereference
@@ -505,6 +510,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.subsystems.spaceMouse.hasAxes() ||
     (ready && state.subsystems.texturedDisks.hasInFlightWork()) ||
     state.subsystems.fades.isAnyAnimating(nowMs) ||
-    state.subsystems.clusterFocus.isAwake(nowMs);
+    state.subsystems.clusterFocus.isAwake(nowMs) ||
+    state.gpu.flowFieldRenderer?.isAnimating(state.settings.flow) === true;
   if (stillAnimating) state.subsystems.scheduler.requestRender();
 }

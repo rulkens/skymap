@@ -272,6 +272,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     horizonShellRenderer: horizonShellRenderer as never,
     filamentRenderer: null,
     scalarVolumeRenderer: null,
+    flowFieldRenderer: null,
     texturedDiskRenderer: texturedDiskRenderer as never,
     proceduralDiskRenderer: proceduralDiskRenderer as never,
     settings: settings as never,

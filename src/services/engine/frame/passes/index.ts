@@ -99,6 +99,7 @@ import { pointSpritesPass } from './pointSpritesPass';
 import { proceduralDisksPass } from './proceduralDisksPass';
 import { texturedDisksPass } from './texturedDisksPass';
 import { filamentsPass } from './filamentsPass';
+import { flowFieldPass } from './flowFieldPass';
 import { volumeUpsamplePass } from './volumeUpsamplePass';
 import { milkyWayPass } from './milkyWayPass';
 import { horizonShellPass } from './horizonShellPass';
@@ -108,13 +109,14 @@ import { clusterMarkersPass } from './clusterMarkersPass';
 import { selectionRingPass } from './selectionRingPass';
 import { diskRadiusRingPass } from './diskRadiusRingPass';
 
-/** The seven HDR passes, in deterministic draw order. */
+/** The HDR passes, in deterministic draw order. */
 export const HDR_PASSES: readonly Pass[] = [
   pointSpritesPass,
   proceduralDisksPass,
   texturedDisksPass,
   milkyWayPass,
   filamentsPass,
+  flowFieldPass,
   volumeUpsamplePass,
   horizonShellPass,
   clusterMarkersPass,
@@ -169,6 +171,7 @@ export { pointSpritesPass } from './pointSpritesPass';
 export { proceduralDisksPass } from './proceduralDisksPass';
 export { texturedDisksPass } from './texturedDisksPass';
 export { filamentsPass } from './filamentsPass';
+export { flowFieldPass } from './flowFieldPass';
 export { volumeUpsamplePass } from './volumeUpsamplePass';
 export { milkyWayPass } from './milkyWayPass';
 export { horizonShellPass } from './horizonShellPass';
