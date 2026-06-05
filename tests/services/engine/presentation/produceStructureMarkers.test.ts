@@ -1,34 +1,44 @@
 import { describe, expect, it } from 'vitest';
 import { mat4 } from 'gl-matrix';
 import { produceStructureMarkers } from '../../../../src/services/engine/presentation/produceStructureMarkers';
+import { MARKER_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
+import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
+import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
 
 // Builds a real engineData store (so state.data.structures is the production
-// store) plus a selection stub whose selected()/focused() drive the ring
-// bump + focus dim, then drives the producer.
+// store) + a real FadeRegistry (so per-category marker opacity comes from the
+// production fail-safe path: unregistered markerLayer handles read 1.0) + a
+// selection stub whose selected()/focused() drive the ring bump + recession,
+// then drives the producer. The registry is returned on the state so a test
+// can register/seed a markerLayer handle to exercise the toggle path.
+type TestState = EngineState & { subsystems: { fades: FadeRegistry } };
+
 function makeState(
   selectedPoiId: string | null = null,
   focusedPoiId: string | null = selectedPoiId,
-): EngineState {
+): TestState {
   return {
     data: createEngineData(),
     subsystems: {
+      fades: createFadeRegistry(),
       selection: {
         selected: () => (selectedPoiId !== null ? { kind: 'poi', id: selectedPoiId } : null),
         focused: () => (focusedPoiId !== null ? { kind: 'poi', id: focusedPoiId } : null),
       },
     },
-  } as unknown as EngineState;
+  } as unknown as TestState;
 }
 
-function makeCtx(): ReadyFrameContext {
+function makeCtx(focusBlend = 0): ReadyFrameContext {
   return {
     drawCamPos: [0, 0, 0],
     canvasSize: { width: 1920, height: 1080 },
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
+    focusBlend,
     vp: mat4.create(),
   } as unknown as ReadyFrameContext;
 }
@@ -72,17 +82,37 @@ describe('produceStructureMarkers', () => {
     expect(far.haloColor[3]).toBe(0);
   });
 
-  it('hides a whole category when its marker axis is off', () => {
+  it('a category at toggle 0 emits no markers for that category but preserves alignment', () => {
     const state = makeState();
     state.data.structures.setGroup('bulk', [rec('c1', 'cluster'), rec('v1', 'void')]);
-    state.data.structures.setMarkerVisible('cluster', false);
+    // The producer reads per-category opacity from the FadeRegistry, not the
+    // store's markerVisible flag. Seed the cluster markerLayer handle to 0.
+    state.subsystems.fades.register({ kind: 'markerLayer', category: 'cluster' }, 1);
+    state.subsystems.fades.setImmediate({ kind: 'markerLayer', category: 'cluster' }, 0);
     const markers = produceStructureMarkers(state, makeCtx());
+    // Cluster skipped wholesale; void (unregistered → fail-safe 1.0) still emits.
     expect(markers.map((m) => m.id)).toEqual(['v1']);
   });
 
-  it('applies significance weight, selection 1.5x bump, and focus dim', () => {
+  it('a mid-fade category emits alpha-scaled descriptors (not skipped)', () => {
+    const state = makeState();
+    state.data.structures.setGroup('anchors', [rec('c1', 'cluster', { significance: 0 })]);
+    // No-focus baseline alpha first (cluster handle unregistered → 1.0).
+    const baseMarkers = produceStructureMarkers(state, makeCtx());
+    const base = baseMarkers.find((m) => m.id === 'c1')!;
+    // Now half-fade the cluster category.
+    state.subsystems.fades.register({ kind: 'markerLayer', category: 'cluster' }, 1);
+    state.subsystems.fades.setImmediate({ kind: 'markerLayer', category: 'cluster' }, 0.5);
+    const markers = produceStructureMarkers(state, makeCtx());
+    const half = markers.find((m) => m.id === 'c1')!;
+    // Still emitted (alignment) and ring/halo alpha exactly halved.
+    expect(half.ringColor[3]).toBeCloseTo(base.ringColor[3] * 0.5, 6);
+    expect(half.haloColor[3]).toBeCloseTo(base.haloColor[3] * 0.5, 6);
+  });
+
+  it('applies significance weight and selection 1.5x bump (at rest)', () => {
     // significance 0 → sigWeight 0.25, so the base ring alpha is well under 1
-    // and the ×1.5 selection bump / focus dim are observable.
+    // and the ×1.5 selection bump is observable. No focus (blend 0).
     const sel = makeState('a', 'a'); // 'a' selected AND focused
     sel.data.structures.setGroup('anchors', [
       rec('a', 'cluster', { significance: 0 }),
@@ -94,7 +124,62 @@ describe('produceStructureMarkers', () => {
     // base = ringColor.a(1) × fade(1) × sigWeight(0.25) = 0.25
     // a is selected → min(1, 0.25 × 1.5) = 0.375
     expect(a.ringColor[3]).toBeCloseTo(0.375, 6);
-    // b is non-focused while 'a' is focused → 0.25 × dim(0.25) = 0.0625
-    expect(b.ringColor[3]).toBeCloseTo(0.0625, 6);
+    // b is non-focused but blend 0 → recession 1 → 0.25 × 1 = 0.25
+    expect(b.ringColor[3]).toBeCloseTo(0.25, 6);
+  });
+
+  it('non-focused marker ring AND halo alpha scale by focusRecession at blend > 0', () => {
+    const state = makeState('a', 'a'); // 'a' focused
+    state.data.structures.setGroup('anchors', [rec('a', 'cluster'), rec('b', 'cluster')]);
+    const rest = produceStructureMarkers(state, makeCtx(0));
+    const focused = produceStructureMarkers(state, makeCtx(1));
+    const bRest = rest.find((m) => m.id === 'b')!;
+    const bFoc = focused.find((m) => m.id === 'b')!;
+    // Non-focused 'b' recedes to MARKER_RECESSION of its at-rest alpha at blend 1.
+    expect(bFoc.ringColor[3]).toBeCloseTo(bRest.ringColor[3] * MARKER_RECESSION, 6);
+    expect(bFoc.haloColor[3]).toBeCloseTo(bRest.haloColor[3] * MARKER_RECESSION, 6);
+  });
+
+  it('focused marker is exempt from recession', () => {
+    const state = makeState('a', 'a'); // 'a' focused
+    state.data.structures.setGroup('anchors', [rec('a', 'cluster'), rec('b', 'cluster')]);
+    const rest = produceStructureMarkers(state, makeCtx(0));
+    const focused = produceStructureMarkers(state, makeCtx(1));
+    const aRest = rest.find((m) => m.id === 'a')!;
+    const aFoc = focused.find((m) => m.id === 'a')!;
+    // The focused structure's ring/halo are unchanged across the blend.
+    expect(aFoc.ringColor[3]).toBeCloseTo(aRest.ringColor[3], 6);
+    expect(aFoc.haloColor[3]).toBeCloseTo(aRest.haloColor[3], 6);
+  });
+
+  it('selected ring bump is unaffected by recession', () => {
+    // 'sel' is SELECTED but a DIFFERENT structure 'foc' is FOCUSED, so the
+    // selected-but-not-focused ring would recede if recession leaked into the
+    // selected branch. It must not: the bump stays min(1, base×1.5).
+    const state = makeState('sel', 'foc');
+    state.data.structures.setGroup('anchors', [
+      rec('sel', 'cluster', { significance: 0 }),
+      rec('foc', 'cluster', { significance: 0 }),
+    ]);
+    const focused = produceStructureMarkers(state, makeCtx(1));
+    const sel = focused.find((m) => m.id === 'sel')!;
+    // base = 1 × 1 × 0.25 = 0.25; selected → min(1, 0.25 × 1.5) = 0.375,
+    // recession-free even at blend 1.
+    expect(sel.ringColor[3]).toBeCloseTo(0.375, 6);
+  });
+
+  it('at-rest output is unchanged (blend 0, fail-safe toggles, no focus)', () => {
+    const state = makeState();
+    state.data.structures.setGroup('anchors', [
+      rec('a', 'cluster', { significance: 0 }),
+      rec('v', 'void', { significance: 1 }),
+    ]);
+    const markers = produceStructureMarkers(state, makeCtx(0));
+    const a = markers.find((m) => m.id === 'a')!;
+    const v = markers.find((m) => m.id === 'v')!;
+    // Cluster significance 0 → sigWeight 0.25; ring at-rest alpha 1 → 0.25.
+    expect(a.ringColor[3]).toBeCloseTo(0.25, 6);
+    // Void significance 1 → sigWeight 1; ring tint #73B3D9 (alpha 1) → 1.
+    expect(v.ringColor[3]).toBeCloseTo(1, 6);
   });
 });
