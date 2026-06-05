@@ -139,10 +139,10 @@ see the table in the plan header): `FILAMENT_RECESSION = 0.15`, `VOLUME_RECESSIO
 - `resolveLayerOpacity multiplies opacityOf by focusRecession` — fixture registry with a known `opacityOf`; assert product (e.g. opacity 0.5 × filament target at blend 1).
 - `resolveLayerOpacity returns 0 when the toggle is 0 regardless of blend` — opacity 0 × anything = 0.
 
-- [ ] Write the failing tests above.
-- [ ] Implement `focusRecession.ts` (depends on Task 1.2's union — see NOTE).
-- [ ] `npm test -- focusRecession` → all pass; `npm run typecheck` green.
-- [ ] Commit.
+- [x] Write the failing tests above.
+- [x] Implement `focusRecession.ts` (depends on Task 1.2's union — see NOTE).
+- [x] `npm test -- focusRecession` → all pass; `npm run typecheck` green.
+- [x] Commit.
 
 ### Task 1.2 — Extend `FadeHandle` union + ALL exhaustive switches (one commit)
 
@@ -188,13 +188,13 @@ lines 55–76).
 - `serializeFadeHandle keeps a category-less labelLayer distinct from a per-category one` — `{labelLayer,layer:'poi'}` vs `{labelLayer,layer:'poi',category:'cluster'}` address distinct controllers.
 - `serializeFadeHandle leaves youAreHere label key unchanged` — assert the legacy key still round-trips (register `{labelLayer,layer:'youAreHere'}`, fadeTo, read back).
 
-- [ ] Add the union members + docblock update.
-- [ ] Update `serializeFadeHandle` with both cases.
-- [ ] Add the three serialization tests.
-- [ ] `npm run typecheck` → green (this is where the cascade surfaces; resolve every
+- [x] Add the union members + docblock update.
+- [x] Update `serializeFadeHandle` with both cases.
+- [x] Add the three serialization tests.
+- [x] `npm run typecheck` → green (this is where the cascade surfaces; resolve every
   `switch` the compiler flags, including `recessionTargetFor` if 1.1 already landed).
-- [ ] `npm test -- fadeRegistry` → pass.
-- [ ] Commit.
+- [x] `npm test -- fadeRegistry` → pass.
+- [x] Commit.
 
 ### Task 1.3 — Thread `blend` onto `ReadyFrameContext`
 
@@ -228,11 +228,11 @@ one focused guard if a `runFrame` test harness exists:
   rely on the double-tick being caught by `clusterFocus` ramp tests + manual dev-server
   check; do NOT invent a heavy harness.)
 
-- [ ] Add `focusBlend` to `ReadyFrameContext`.
-- [ ] Move focus-uniform computation early; stash `ctx.focusBlend`; render settings read the captured value.
-- [ ] `npm run typecheck` → green (every `ReadyFrameContext` literal must now set `focusBlend`).
-- [ ] `npm test` → green.
-- [ ] Commit.
+- [x] Add `focusBlend` to `ReadyFrameContext`.
+- [x] Move focus-uniform computation early; stash `ctx.focusBlend`; render settings read the captured value.
+- [x] `npm run typecheck` → green (every `ReadyFrameContext` literal must now set `focusBlend`).
+- [x] `npm test` → green.
+- [x] Commit.
 
 ### Task 1.4 — Filaments + volumes read `resolveLayerOpacity`
 
