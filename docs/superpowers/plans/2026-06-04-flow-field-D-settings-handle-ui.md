@@ -87,6 +87,17 @@ checks).
 
 ## Task 1: `EngineFlowFieldsHandle` type + engine wiring
 
+> **As-built note (fade):** the user confirmed they want a real enable/disable
+> fade, so a `{kind:'flow'}` fade was added (not skipped). It mirrors the
+> filaments fade with one split for flow's demand-loaded lifecycle: the **slot
+> commit** owns the FIRST-enable fade-in (fires `fadeTo(1)` when the cube lands,
+> so the ribbons fade in synced to first-drawable rather than racing the async
+> load), while the **handle** owns re-enable (cube already resident) + fade-out.
+> `flowFieldPass.enabled` stays alive while `opacityOf({kind:'flow'}) > 0`, and
+> `flowFieldRenderer.draw` folds the opacity into the pre-blend intensity (no
+> shader change). This widened Task 1 to also touch `FadeHandle`, `fadeRegistry`,
+> `flowFieldSlot`, `flowFieldPass`, and `flowFieldRenderer`.
+
 **Files:** `src/@types/engine/handles/EngineFlowFieldsHandle.d.ts` (create), `src/@types/engine/Engine.d.ts` (modify), `src/services/engine/engine.ts` (modify), `tests/services/engine/flowFieldsHandle.test.ts` (create)
 
 The handle setters write `state.settings.flow` leaves + `requestRender()` (the
@@ -134,17 +145,17 @@ export type EngineFlowFieldsHandle = {
 > hand-written wrapper around the table setter. Add a `['flow', string]` arm to
 > the `SettingPath` union in `settingsTable.ts` so the rows typecheck.
 
-- [ ] Create the handle type file.
-- [ ] Add `readonly flow: EngineFlowFieldsHandle` to the engine handle bag type.
-- [ ] In `engine.ts`, build the `flow` handle (near the `filaments` / `volumes` handle blocks) per the behaviour contract, writing `settings.flow` leaves. The SettingsPanel reads flow state through the normal settings echo (mirror `filamentsEnabled`/`filamentIntensity`), so no bespoke snapshot callback is needed.
-- [ ] Tests — `flowFieldsHandle.test.ts` (drive with a state stub exposing `settings.flow`, `gpu.flowFieldRenderer` spy, `subsystems.scheduler` spy):
+- [x] Create the handle type file.
+- [x] Add `readonly flow: EngineFlowFieldsHandle` to the engine handle bag type.
+- [x] In `engine.ts`, build the `flow` handle (near the `filaments` / `volumes` handle blocks) per the behaviour contract, writing `settings.flow` leaves. The SettingsPanel reads flow state through the normal settings echo (mirror `filamentsEnabled`/`filamentIntensity`), so no bespoke snapshot callback is needed.
+- [x] Tests — `flowFieldsHandle.test.ts` (drive with a state stub exposing `settings.flow`, `gpu.flowFieldRenderer` spy, `subsystems.scheduler` spy):
   - `setEnabled(true) sets settings.flow.enabled, re-evaluates demand, requests render`.
   - `setEnabled(false) clears settings.flow.enabled`.
   - `setMode reseeds and requests render`.
   - `setCount reseeds and requests render`.
   - `setIntensity sets settings.flow.intensity and requests render without reseeding` — assert `maybeReseed` NOT called.
-- [ ] `npm test -- flowFieldsHandle` → pass. `npm run typecheck` → clean.
-- [ ] Commit: `feat(flow): EngineFlowFieldsHandle + engine wiring`.
+- [x] `npm test -- flowFieldsHandle` → pass. `npm run typecheck` → clean.
+- [x] Commit: `feat(flow): EngineFlowFieldsHandle + engine wiring`.
 
 ## Task 2: SettingsPanel Flow row
 
@@ -171,11 +182,11 @@ function FlowRow(props: FlowRowProps): ReactNode;
 export default FlowRow;
 ```
 
-- [ ] Create `FlowRow.tsx` + `FlowRow.module.css`. Mode switch is a two-button segmented control (advect / streamline) disabled when `!enabled`; intensity slider `[0,1]` step `0.01` disabled when `!enabled`.
-- [ ] Mount `FlowRow` in `SettingsPanel.tsx` (a "Flow" section near the Volumes/Filaments sections), wiring its callbacks to `engine.flow.setEnabled` / `.setMode` / `.setIntensity` and reading current values from the `useEngineSettings` flow mirrors (the same path `filamentsEnabled`/`filamentIntensity` use).
+- [x] Create `FlowRow.tsx` + `FlowRow.module.css`. Mode switch is a two-button segmented control (advect / streamline) disabled when `!enabled`; intensity slider `[0,1]` step `0.01` disabled when `!enabled`.
+- [x] Mount `FlowRow` in `SettingsPanel.tsx` (a "Flow" section near the Volumes/Filaments sections), wiring its callbacks to `engine.flow.setEnabled` / `.setMode` / `.setIntensity` and reading current values from the `useEngineSettings` flow mirrors (the same path `filamentsEnabled`/`filamentIntensity` use).
 - [ ] (Verification) Ask the user to confirm via the running dev server: the Flow row appears, the toggle enables the mode switch + slider, and enabling shows ribbons once the cube loads. No automated React test required if the panel follows the existing manual-verify convention; add one if SettingsPanel already has component tests.
-- [ ] `npm run typecheck` → clean.
-- [ ] Commit: `feat(flow): SettingsPanel Flow row (toggle + mode + intensity)`.
+- [x] `npm run typecheck` → clean.
+- [x] Commit: `feat(flow): SettingsPanel Flow row (toggle + mode + intensity)`.
 
 ## Task 3: DebugPanel dev tuning subsection
 
@@ -206,11 +217,11 @@ function FlowTuningSection(props: FlowTuningSectionProps): ReactNode;
 export default FlowTuningSection;
 ```
 
-- [ ] Create `FlowTuningSection.tsx` — five labelled sliders in a default-closed `<details>` titled "Flow tuning". Cap `count` at `MAX_PARTICLES` (import from `flowFieldConstants`); pick perceptually-useful ranges per the spike defaults.
-- [ ] Mount it in `DebugPanel.tsx` (add the props to `DebugPanelProps`, render the section, thread callbacks to `engine.flow.setCount` / `.setTrail` / `.setFlowSpeed` / `.setDensityBias` / `.setWander`).
+- [x] Create `FlowTuningSection.tsx` — five labelled sliders in a default-closed `<details>` titled "Flow tuning". Cap `count` at `MAX_PARTICLES` (import from `flowFieldConstants`); pick perceptually-useful ranges per the spike defaults.
+- [x] Mount it in `DebugPanel.tsx` (add the props to `DebugPanelProps`, render the section, thread callbacks to `engine.flow.setCount` / `.setTrail` / `.setFlowSpeed` / `.setDensityBias` / `.setWander`).
 - [ ] (Verification) Dev-server check: the section appears under the panel, sliders move the live flow look. Add a React test only if DebugPanel already has component tests.
-- [ ] `npm run typecheck` → clean. `npm test` → full suite green.
-- [ ] Commit: `feat(flow): DebugPanel flow-tuning section`.
+- [x] `npm run typecheck` → clean. `npm test` → full suite green.
+- [x] Commit: `feat(flow): DebugPanel flow-tuning section`.
 
 ---
 
