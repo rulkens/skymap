@@ -132,6 +132,10 @@ export const ALLOW = (name: string): boolean =>
   // (Wilde et al. 2023), tiered downsamples emitted by
   // `npm run build-mcpm` from the .npy tiers in data/raw/mcpm/.
   /^mcpm-(small|medium|large)\.scfd$/.test(name) ||
+  // CF4++ peculiar-velocity field — a single SCFD cube (channels=4,
+  // value_kind=1; frame + velocity/δ stats fold into the header, no sidecar)
+  // emitted by `npm run build-flow-field`.  Tier-agnostic, like filaments.bin.
+  name === 'flowfield.scfd' ||
   // Cluster/supercluster coverage artefacts (MCXC + MSCC + featured seed)
   // emitted by `npm run build-clusters`: the packed point catalog and its
   // per-structure metadata sidecar.  Tier-agnostic, like famous.bin.

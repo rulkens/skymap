@@ -27,6 +27,17 @@ describe('syncR2 ALLOW', () => {
     expect(ALLOW('glade.bin')).toBe(false);
     expect(ALLOW('sdss.bin')).toBe(false);
   });
+
+  it('accepts the tier-agnostic flowfield.scfd', () => {
+    expect(ALLOW('flowfield.scfd')).toBe(true);
+  });
+
+  it('rejects a tier-suffixed flowfield variant', () => {
+    // Flow is a single tier-agnostic cube (like filaments.bin) — there is no
+    // flowfield-large.scfd, so a tier suffix must not slip through the filter.
+    expect(ALLOW('flowfield-large.scfd')).toBe(false);
+    expect(ALLOW('flowfield.bin')).toBe(false);
+  });
 });
 
 describe('syncR2 etagMatches', () => {
