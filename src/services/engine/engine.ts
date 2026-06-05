@@ -131,6 +131,12 @@ import { snapToCameraSnapshot, tweenToCameraSnapshot } from './camera/cameraSnap
 import { MILKY_WAY_CENTER_WORLD, MILKY_WAY_VIEW_DISTANCE_MPC } from '../../data/galacticCenter';
 import { buildVolumeFieldSettings, seedVolumeFields } from '../../data/volumeFieldDefaults';
 import { buildVolumeFieldsSnapshot } from './helpers/buildVolumeFieldsSnapshot';
+import { writeVolumeFieldSetting } from './helpers/writeVolumeFieldSetting';
+import { clampVolumeIntensity } from '../../utils/clampVolumeIntensity';
+import { clampVolumeContrast } from '../../utils/clampVolumeContrast';
+import { clampVolumeDensityScale } from '../../utils/clampVolumeDensityScale';
+import { clampVolumeTrim } from '../../utils/clampVolumeTrim';
+import { clampVolumeExposure } from '../../utils/clampVolumeExposure';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
 
@@ -981,17 +987,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function setVolumeFieldEnabled(fieldId: VolumeFieldId, enabled: boolean): void {
-    // Flip the settings flag: the cf4/mcpm demand predicate reads
-    // `fields[id].enabled`, so `reevaluateDemand` loads them on flip-on
-    // (idle-guarded against re-fetch).  The DEV debug fixtures aren't demand
-    // rows, so they keep a direct lazy load here — a no-op for cf4/mcpm ids,
-    // so the two paths partition cleanly.
-    const curEnabled = state.data.volumes.params(fieldId);
-    if (curEnabled) state.data.volumes.setParams(fieldId, { ...curEnabled, enabled });
+    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, { enabled });
+    if (!next) return;
+    state.settings.volumes.fields = next;
+    // DEV debug fixtures aren't demand rows, so they keep a direct lazy load
+    // here; cf4/mcpm load via reevaluateDemand reading fields[id].enabled, and
+    // this call is a no-op for those ids, so the two load paths partition.
     if (enabled) maybeLazyLoadDebugVolume(fieldId);
-    state.gpu.scalarVolumeRenderer?.setEnabled(fieldId, enabled);
-    // Drive the FadeRegistry alongside the renderer flip; the draw loop's
-    // `(!enabled && opacity <= 0)` skip keeps it rendering through fade-out.
+    // Drive the FadeRegistry: the draw loop's `(!enabled && opacity <= 0)` skip
+    // keeps rendering through fade-out so the blend reaches zero before stopping.
     void state.subsystems.fades.fadeTo(
       { kind: 'scalarField', field: fieldId },
       enabled ? 1 : 0,
@@ -1002,49 +1006,61 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function setVolumeFieldIntensity(fieldId: VolumeFieldId, intensity: number): void {
-    const cur = state.data.volumes.params(fieldId);
-    if (cur) state.data.volumes.setParams(fieldId, { ...cur, intensity });
-    state.gpu.scalarVolumeRenderer?.setIntensity(fieldId, intensity);
+    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+      intensity: clampVolumeIntensity(intensity),
+    });
+    if (!next) return;
+    state.settings.volumes.fields = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldContrast(fieldId: VolumeFieldId, contrast: number): void {
-    const cur = state.data.volumes.params(fieldId);
-    if (cur) state.data.volumes.setParams(fieldId, { ...cur, contrast });
-    state.gpu.scalarVolumeRenderer?.setContrast(fieldId, contrast);
+    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+      contrast: clampVolumeContrast(contrast),
+    });
+    if (!next) return;
+    state.settings.volumes.fields = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldDensityScale(fieldId: VolumeFieldId, value: number): void {
-    const cur = state.data.volumes.params(fieldId);
-    if (cur) state.data.volumes.setParams(fieldId, { ...cur, densityScale: value });
-    state.gpu.scalarVolumeRenderer?.setDensityScale(fieldId, value);
+    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+      densityScale: clampVolumeDensityScale(value),
+    });
+    if (!next) return;
+    state.settings.volumes.fields = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldTrim(fieldId: VolumeFieldId, trim: number): void {
-    const cur = state.data.volumes.params(fieldId);
-    if (cur) state.data.volumes.setParams(fieldId, { ...cur, trim });
-    state.gpu.scalarVolumeRenderer?.setTrim(fieldId, trim);
+    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+      trim: clampVolumeTrim(trim),
+    });
+    if (!next) return;
+    state.settings.volumes.fields = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldExposure(fieldId: VolumeFieldId, exposure: number): void {
-    const cur = state.data.volumes.params(fieldId);
-    if (cur) state.data.volumes.setParams(fieldId, { ...cur, exposure });
-    state.gpu.scalarVolumeRenderer?.setExposure(fieldId, exposure);
+    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+      exposure: clampVolumeExposure(exposure),
+    });
+    if (!next) return;
+    state.settings.volumes.fields = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldPalette(fieldId: VolumeFieldId, id: ScalarFieldPaletteId): void {
-    const cur = state.data.volumes.params(fieldId);
-    if (cur) state.data.volumes.setParams(fieldId, { ...cur, paletteId: id });
-    state.gpu.scalarVolumeRenderer?.setFieldPalette(fieldId, id);
+    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+      paletteId: id,
+    });
+    if (!next) return;
+    state.settings.volumes.fields = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
