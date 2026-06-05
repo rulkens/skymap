@@ -18,6 +18,7 @@ function makeCtx(): ReadyFrameContext {
     canvasSize: { width: 1280, height: 720 },
     drawCamPos: [0, 0, 0] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
+    focusBlend: 0,
     renderer: {} as never,
     postProcess: {} as never,
     volumeOffscreen: {} as never,
@@ -52,7 +53,7 @@ function makeRendererSpy() {
 // Position is the flat Float32Array `positions[localIdx*3 .. +3]`.
 function makeStateWithSelection(selection: GalaxySelection | null): EngineState {
   const positions = new Float32Array([0, 0, 100]); // 100 Mpc away on +z
-  const diameterKpc = new Float32Array([60]);       // 60 kpc galaxy
+  const diameterKpc = new Float32Array([60]); // 60 kpc galaxy
   const catalog = { positions, diameterKpc } as unknown as Parameters<
     EngineState['data']['galaxies']['setCatalog']
   >[1];
@@ -98,9 +99,17 @@ describe('selectionRingPass.enabled', () => {
 describe('selectionRingPass.draw', () => {
   it('computes ringRadiusPx from catalog data and forwards to renderer', () => {
     const state = makeStateWithSelection({ kind: 'galaxy', source: Source.Glade, localIdx: 0 });
-    selectionRingPass.draw(PASS_STUB, makeCtx(), state, makeSettings({ pointSizePx: 4 }), DEPS_STUB);
+    selectionRingPass.draw(
+      PASS_STUB,
+      makeCtx(),
+      state,
+      makeSettings({ pointSizePx: 4 }),
+      DEPS_STUB,
+    );
 
-    const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<typeof makeRendererSpy>;
+    const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
+      typeof makeRendererSpy
+    >;
     expect(rendererSpy.setSelection).toHaveBeenCalledOnce();
     const arg = rendererSpy.setSelection.mock.calls[0]![0]!;
     // worldPos copied straight from catalog.positions[0..3]
@@ -120,8 +129,16 @@ describe('selectionRingPass.draw', () => {
     const cat = state.data.galaxies.catalogs.get(Source.Glade)!;
     (cat as unknown as { positions: Float32Array }).positions = new Float32Array([0, 0, 10]);
 
-    selectionRingPass.draw(PASS_STUB, makeCtx(), state, makeSettings({ pointSizePx: 4 }), DEPS_STUB);
-    const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<typeof makeRendererSpy>;
+    selectionRingPass.draw(
+      PASS_STUB,
+      makeCtx(),
+      state,
+      makeSettings({ pointSizePx: 4 }),
+      DEPS_STUB,
+    );
+    const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
+      typeof makeRendererSpy
+    >;
     const arg = rendererSpy.setSelection.mock.calls[0]![0]!;
     // apparentPxRadius = (60 * 2 / 1000 / 10) * 720 = 8.64
     // apparentPxRadius * 0.5 = 4.32; > pointSizePx (4); * 6 = 25.92
@@ -131,7 +148,9 @@ describe('selectionRingPass.draw', () => {
   it('calls renderer.render() exactly once with viewProj + viewport', () => {
     const state = makeStateWithSelection({ kind: 'galaxy', source: Source.Glade, localIdx: 0 });
     selectionRingPass.draw(PASS_STUB, makeCtx(), state, makeSettings(), DEPS_STUB);
-    const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<typeof makeRendererSpy>;
+    const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
+      typeof makeRendererSpy
+    >;
     expect(rendererSpy.render).toHaveBeenCalledOnce();
     expect(rendererSpy.render.mock.calls[0]![2]).toEqual([1280, 720]);
   });

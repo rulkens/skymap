@@ -31,10 +31,20 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     canvasSize: { width: 1280, height: 720 },
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
+    focusBlend: 0,
     renderer: { draw: vi.fn() } as any,
-    postProcess: { view: {} as GPUTextureView, draw: vi.fn(), resize: vi.fn(), destroy: vi.fn() } as any,
+    postProcess: {
+      view: {} as GPUTextureView,
+      draw: vi.fn(),
+      resize: vi.fn(),
+      destroy: vi.fn(),
+    } as any,
     volumeOffscreen: { view: {} as GPUTextureView, resize: vi.fn(), destroy: vi.fn() } as any,
-    texturedDisks: { runFrame: vi.fn(), lastOutput: { quads: [], disks: [] }, hasInFlightWork: () => false } as any,
+    texturedDisks: {
+      runFrame: vi.fn(),
+      lastOutput: { quads: [], disks: [] },
+      hasInFlightWork: () => false,
+    } as any,
     ...overrides,
   };
 }

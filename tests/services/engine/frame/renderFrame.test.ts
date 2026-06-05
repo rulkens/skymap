@@ -290,6 +290,7 @@ function makeInput(
       [number, number, number]
     >,
     drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
+    focusBlend: 0,
     renderer: pointRenderer,
     postProcess,
     volumeOffscreen,

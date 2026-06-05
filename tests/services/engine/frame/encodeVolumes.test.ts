@@ -48,8 +48,14 @@ function makeCtx(): ReadyFrameContext {
     canvasSize: { width: 1280, height: 720 },
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
+    focusBlend: 0,
     renderer: {} as never,
-    postProcess: { view: {} as GPUTextureView, resize: vi.fn(), draw: vi.fn(), destroy: vi.fn() } as never,
+    postProcess: {
+      view: {} as GPUTextureView,
+      resize: vi.fn(),
+      draw: vi.fn(),
+      destroy: vi.fn(),
+    } as never,
     volumeOffscreen: { view: offscreenView, resize: vi.fn(), destroy: vi.fn() },
     texturedDisks: {} as never,
   };
@@ -68,7 +74,8 @@ describe('encodeVolumes', () => {
       timestampWrites: undefined,
     });
     expect(env.beginRenderPass).toHaveBeenCalledTimes(1);
-    const desc = (env.beginRenderPass as ReturnType<typeof vi.fn>).mock.calls[0]![0] as GPURenderPassDescriptor;
+    const desc = (env.beginRenderPass as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as GPURenderPassDescriptor;
     const att = Array.from(desc.colorAttachments as any)[0] as any;
     expect(att.view).toBe(ctx.volumeOffscreen.view);
     expect(att.loadOp).toBe('clear');
@@ -131,7 +138,8 @@ describe('encodeVolumes', () => {
       fadeOpacityOf: () => 1,
       timestampWrites: tw,
     });
-    const desc = (env.beginRenderPass as ReturnType<typeof vi.fn>).mock.calls[0]![0] as GPURenderPassDescriptor & {
+    const desc = (env.beginRenderPass as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as GPURenderPassDescriptor & {
       timestampWrites?: GPURenderPassTimestampWrites;
     };
     expect(desc.timestampWrites).toBe(tw);
@@ -148,7 +156,8 @@ describe('encodeVolumes', () => {
       fadeOpacityOf: () => 1,
       timestampWrites: undefined,
     });
-    const desc = (env.beginRenderPass as ReturnType<typeof vi.fn>).mock.calls[0]![0] as GPURenderPassDescriptor & {
+    const desc = (env.beginRenderPass as ReturnType<typeof vi.fn>).mock
+      .calls[0]![0] as GPURenderPassDescriptor & {
       timestampWrites?: GPURenderPassTimestampWrites;
     };
     expect(desc.timestampWrites).toBeUndefined();
