@@ -123,9 +123,9 @@ export type FlowFieldStore = {
 };
 ```
 
-- [ ] Create both type files (didactic header on each).
-- [ ] `npm run typecheck` → clean (no consumers yet).
-- [ ] Commit: `feat(flow): FlowFieldStore + FlowMode types`.
+- [x] Create both type files (didactic header on each).
+- [x] `npm run typecheck` → clean (no consumers yet).
+- [x] Commit: `feat(flow): FlowFieldStore + FlowMode types`.
 
 ## Task 2: `createFlowFieldStore` + `createEngineData` wiring
 
@@ -156,22 +156,22 @@ export function createFlowFieldStore(): FlowFieldStore;
 
 **Test assertions** — `createFlowFieldStore.test.ts`:
 
-- [ ] `seeds default values` — `loaded===false`, `enabled===false`, `mode==='advect'`, `intensity` in `(0,1]`, `count > 0`.
-- [ ] `setLoaded flips loaded true`.
-- [ ] `setEnabled toggles enabled` — set true then false.
-- [ ] `setMode switches between advect and streamline`.
-- [ ] `setIntensity clamps to [0,1]` — assert `setIntensity(2)` → `1`, `setIntensity(-1)` → `0`.
-- [ ] `setCount clamps to [0, ceiling]` — assert a huge value clamps to the ceiling, a negative clamps to 0.
-- [ ] `setTrail / setFlowSpeed / setDensityBias / setWander each set their field`.
-- [ ] `store is frozen` — assert `Object.isFrozen(store)`.
+- [x] `seeds default values` — `loaded===false`, `enabled===false`, `mode==='advect'`, `intensity` in `(0,1]`, `count > 0`.
+- [x] `setLoaded flips loaded true`.
+- [x] `setEnabled toggles enabled` — set true then false.
+- [x] `setMode switches between advect and streamline`.
+- [x] `setIntensity clamps to [0,1]` — assert `setIntensity(2)` → `1`, `setIntensity(-1)` → `0`.
+- [x] `setCount clamps to [0, ceiling]` — assert a huge value clamps to the ceiling, a negative clamps to 0.
+- [x] `setTrail / setFlowSpeed / setDensityBias / setWander each set their field`.
+- [x] `store is frozen` — assert `Object.isFrozen(store)`.
 
 **EngineData wiring:**
 
-- [ ] Add `readonly flow: FlowFieldStore` to `EngineData` (import the type).
-- [ ] Add `flow: createFlowFieldStore()` to `createEngineData`'s return.
-- [ ] Test `createEngineData includes a seeded flow store` — assert `data.flow.mode === 'advect'` and `data.flow.enabled === false`.
-- [ ] `npm test -- createFlowFieldStore` and `npm test -- createEngineData` → pass. `npm run typecheck` → clean.
-- [ ] Commit: `feat(flow): createFlowFieldStore + EngineData wiring`.
+- [x] Add `readonly flow: FlowFieldStore` to `EngineData` (import the type).
+- [x] Add `flow: createFlowFieldStore()` to `createEngineData`'s return.
+- [x] Test `createEngineData includes a seeded flow store` — assert `data.flow.mode === 'advect'` and `data.flow.enabled === false`.
+- [x] `npm test -- createFlowFieldStore` and `npm test -- createEngineData` → pass. `npm run typecheck` → clean.
+- [x] Commit: `feat(flow): createFlowFieldStore + EngineData wiring`. **(Spike divergences followed per spec: MAX_PARTICLES=40000 not the spike's 100000; default mode 'advect' not the spike's 'streamline'.)**
 
 ## Task 3: Velocity-field loader (`createFlowField`)
 
