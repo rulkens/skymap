@@ -5,6 +5,12 @@
 - **Deciders:** Alexander Rulkens
 - **Tags:** engine, data-model, loading, rendering, architecture
 
+> **Partially superseded by [ADR 0006](0006-volume-field-settings-in-settings-layer.md)
+> (2026-06-06):** the decision below to make `volumeStore` the authoritative home for
+> per-field volume *settings* was wrong — those are settings, and now live in
+> `state.settings.volumes.fields` (the settings layer). `state.data.volumes` is
+> dissolved. The other three per-type stores, and the rest of this ADR, stand.
+
 ## Context
 
 The engine bootstrap phase `wireSlots` had grown to ~530 lines doing eight
@@ -56,7 +62,9 @@ the payload; depth follows whether the CPU queries the data:
   + bulk catalog), keyed groups, `byId`/`byCategory` lookups, per-category
   visibility. CPU-queried by picking, labels, markers, camera focus, membership.
 - **volumeStore** (thin) — registered field ids + per-field params; voxels live
-  on the GPU.
+  on the GPU. **(Superseded by [ADR 0006](0006-volume-field-settings-in-settings-layer.md):
+  per-field params are settings and move to `state.settings.volumes.fields`; this
+  store is dissolved.)**
 - **filamentStore** (thin) — loaded flag + counts; geometry lives on the GPU.
 
 The renderer is never the source of truth for *status*. "Store per type" is the
