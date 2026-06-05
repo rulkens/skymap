@@ -295,14 +295,14 @@ export function attractorVoxel(
 // raDecDistToEqCart(anchor) → eqToSg → (sg - origin)/voxelSizeMpc per axis; inBounds = all in [0,n).
 ```
 
-- [ ] Create `tools/flow/flowFieldFrame.ts` with `attractorVoxel` (reuse `raDecDistToEqCart` + `eqToSg` from the existing tools-math helpers, as `auditCf4Anchors` does); parameterise the voxel-index math by `meta`.
-- [ ] Add the test `Great Attractor lands inside the flow cube bounds` — feed a fixture `meta` (production `origin`/`voxelSize`/`n`) + the GA anchor; assert `inBounds === true` and the voxel index is within `[0,n)` on all axes.
-- [ ] Add the test `Virgo lands inside the flow cube bounds` — same shape for Virgo.
-- [ ] Create `tools/flow/buildFlowField.ts` per the contract above (pure TS; `npyReader` for both arrays; transpose + pack + `encodeScalarField`; CLI guard). Confirm `npyReader` handles the 4D `(N,N,N,3)` velocity array (or normalise the leading/trailing component layout in the builder).
-- [ ] Add `"build-flow-field": "tsx tools/flow/buildFlowField.ts"` to `package.json` scripts (pure tsx — no Python).
-- [ ] Update the `data/raw/cf4/README.md` "Velocity field" build subsection: the `unzip -j` two-array step + the pure-TS `npm run build-flow-field` → `flowfield.scfd`.
-- [ ] `npm test -- flowFieldFrame` → pass. `npm run typecheck` → clean.
-- [ ] Commit: `feat(flow): pure-TS buildFlowField → flowfield.scfd + frame helper + test`.
+- [x] Create `tools/flow/flowFieldFrame.ts` with `attractorVoxel` (reuse `raDecDistToEqCart` + `eqToSg` from the existing tools-math helpers, as `auditCf4Anchors` does); parameterise the voxel-index math by `meta`.
+- [x] Add the test `Great Attractor lands inside the flow cube bounds` — feed a fixture `meta` (production `origin`/`voxelSize`/`n`) + the GA anchor; assert `inBounds === true` and the voxel index is within `[0,n)` on all axes.
+- [x] Add the test `Virgo lands inside the flow cube bounds` — same shape for Virgo.
+- [x] Create `tools/flow/buildFlowField.ts` per the contract above (pure TS; `npyReader` for both arrays; transpose + pack + `encodeScalarField`; CLI guard). `npyReader` handled the 4D velocity array unchanged; the builder's `asVelocityField` adapter normalises the leading/trailing component layout. Velocity `.npy` default routes through a new `cf4.vfield-mean` registry key.
+- [x] Add `"build-flow-field": "tsx tools/flow/buildFlowField.ts"` to `package.json` scripts (pure tsx — no Python).
+- [x] Update the `data/raw/cf4/README.md` "Velocity field" build subsection: the `unzip -j` two-array step + the pure-TS `npm run build-flow-field` → `flowfield.scfd`. (Landed in the doc-realignment commit.)
+- [x] `npm test -- flowFieldFrame` → pass. `npm run typecheck` → clean.
+- [x] Commit: `feat(flow): pure-TS buildFlowField → flowfield.scfd + frame helper + test`.
 
 ## Task 5: Add `flowfield.scfd` to R2 ALLOW (+ re-emit note)
 
@@ -313,11 +313,11 @@ already pulled into **Task 1** (so typecheck stayed green on every commit), so
 this task is just the R2 allow-list. The flow `.scfd` joins the tier-agnostic
 allow-list (like `2mrs.bin` / `filaments.bin`).
 
-- [ ] In `tools/deploy/syncR2.ts` `ALLOW`: add `name === 'flowfield.scfd'` with a comment ("CF4++ velocity cube — tier-agnostic, like filaments.bin").
-- [ ] Tests — extend `tests/tools/deploy/syncR2.test.ts`: `ALLOW accepts flowfield.scfd`; assert a stray tier-suffixed `flowfield-large.scfd` is rejected (flow is tier-agnostic, no tier suffix).
-- [ ] `npm test -- syncR2` → pass. `npm run typecheck` → clean.
-- [ ] (Operator note, not a test step) Re-emit + resync is a deploy action: the v3 bump means the loader's "regenerate" guard fires on the existing `mcpm-*.scfd` + `cf4_density.scfd`, so run `npm run build-tiers` (mcpm/cf4 re-bake under v3), `npm run build-flow-field`, then `npm run sync-r2-secure` from the **main** worktree. A partial deploy ships mismatched `.scfd` — call this out in the PR description.
-- [ ] Commit: `feat(flow): add flowfield.scfd to R2 ALLOW`.
+- [x] In `tools/deploy/syncR2.ts` `ALLOW`: add `name === 'flowfield.scfd'` with a comment ("CF4++ velocity cube — tier-agnostic, like filaments.bin").
+- [x] Tests — extend `tests/tools/deploy/syncR2.test.ts`: `ALLOW accepts flowfield.scfd`; assert a stray tier-suffixed `flowfield-large.scfd` is rejected (flow is tier-agnostic, no tier suffix).
+- [x] `npm test -- syncR2` → pass. `npm run typecheck` → clean.
+- [x] (Operator note, not a test step) Re-emit + resync is a deploy action: the v3 bump means the loader's "regenerate" guard fires on the existing `mcpm-*.scfd` + `cf4_density.scfd`, so run `npm run build-tiers` (mcpm/cf4 re-bake under v3), `npm run build-flow-field`, then `npm run sync-r2-secure` from the **main** worktree. A partial deploy ships mismatched `.scfd` — call this out in the PR description.
+- [x] Commit: `feat(flow): add flowfield.scfd to R2 ALLOW`.
 
 ---
 
