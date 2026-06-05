@@ -293,13 +293,15 @@ export type EncodeFlowComputeArgs = {
 export function encodeFlowCompute(args: EncodeFlowComputeArgs): void;
 ```
 
-- [ ] Add `flowFieldRenderer: FlowFieldRenderer | null` to `EngineGpuHandles`.
-- [ ] Construct `flowFieldRenderer` in `initGpu` (after the HDR context exists, like `filamentRenderer`/`scalarVolumeRenderer`); write the handle onto `state.gpu`.
-- [ ] Create `encodeFlowCompute` per the contract — gate, then delegate to `renderer.encodeCompute`. Didactic header: explain the no-out-of-band-submit invariant + that seed-vs-steady is which passes encode (cite decision §5).
-- [ ] Wire the call into `runFrame` (or wherever `encodeVolumes` is invoked) **before** the HDR pass loop opens, passing the frame counter.
-- [ ] Test — `encodeFlowCompute.test.ts`: `skips when renderer is null`; `skips when store.enabled is false`; `skips when store.loaded is false`; `delegates to encodeCompute when enabled + loaded` — use a spy renderer object (the function takes the renderer via args, so no GPU needed).
-- [ ] `npm test -- encodeFlowCompute` → pass. `npm run typecheck` → clean.
-- [ ] Commit: `feat(flow): encodeFlowCompute pre-HDR dispatch + initGpu construction`.
+- [x] Add `flowFieldRenderer: FlowFieldRenderer | null` to `EngineGpuHandles`.
+- [x] Construct `flowFieldRenderer` in `initGpu` (alongside `scalarVolumeRenderer`); write the handle onto `state.gpu`; release it in the `engine.ts` destroy chain.
+- [x] Create `encodeFlowCompute` per the contract — gate, then delegate to `renderer.encodeCompute`. Didactic header: explain the no-out-of-band-submit invariant + that seed-vs-steady is which passes encode (cite decision §5).
+- [x] Wire the call into BOTH `encodeHdrSingle` + `encodeHdrSplit` (where `encodeVolumes` is invoked) **before** the HDR pass opens. (No frame counter threaded — the renderer self-manages it.)
+- [x] Test — `encodeFlowCompute.test.ts`: `skips when renderer is null`; `skips when flow.enabled is false`; `skips when not loaded`; `delegates to encodeCompute when enabled + loaded` — spy renderer, no GPU.
+- [x] `npm test -- encodeFlowCompute` → pass. `npm run typecheck` → clean.
+- [x] Commit: `feat(flow): encodeFlowCompute pre-HDR dispatch + initGpu construction`.
+
+> **As-built:** the gate reads `settings.flow.enabled` + `data.flow.loaded` (the singleton split, not the Phase-B `store`); `EncodeFlowComputeArgs` carries `{ encoder, flowFieldRenderer, flow, loaded }`. The flow slot's commit (`flowFieldSlot.ts`) was wired here to `renderer.setField(cube)` — the renderer owns the upload, so no `device` leaks to the slot. Plus a frame-counter self-manage + `setField(cube)` amendment to the Task-3 renderer (commits `3bda1d62`, `344c39e8`).
 
 ## Task 5: `flowFieldPass` in `HDR_PASSES` + render-on-demand
 
