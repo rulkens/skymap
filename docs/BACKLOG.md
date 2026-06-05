@@ -97,6 +97,7 @@ Tracked here so the dependency is visible; no skymap-side work until unblocked.
 
 - **Rhizome SDSS calibration** — in flight in the PolyPhy fork (branch `rhizome-spec`, PR #114). Skymap is read-only on this surface until calibration lands. See memory `project_rhizome_handoff_in_flight`.
 - **HyperLEDA cache backfill** — R2 cache is intentionally partial (52k / ~1.5M PGCs). Do not auto-trigger a re-fetch; promote only if a concrete need surfaces. See memory `project_hyperleda_partial_cache`.
+- **DESI DR1 as a data source** — verified viable and ~90% new data (extends the map in depth), but blocked on rendering capacity: DESI adds ~10× points (~9.75M from LSS alone) and skymap is already at the interactive-render limit. Revisit only after a major engine improvement lifts the point ceiling (~25M+). Full facts + overlap analysis in [`research/2026-06-05-desi-dr1-as-a-data-source.md`](research/2026-06-05-desi-dr1-as-a-data-source.md). See memory `project_desi_deferred`.
 
 ---
 
