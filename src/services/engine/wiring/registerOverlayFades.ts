@@ -17,18 +17,21 @@
  *
  * The three overlay handles come first (Milky Way at its settings gate,
  * procedural + textured disks unconditionally at 1), then the volumes-master
- * gate, then the category-less label-layer handles, then the per-category
- * marker + poi-label handles (one pair per structure category).  The order
- * within each group matches the order in the source catalog of concerns so
- * diffs are easy to audit.
+ * gate, then the category-less label-layer handles (youAreHere / galaxyNames /
+ * scaleBar — poi is per-category only), then the per-category marker +
+ * poi-label handles (one pair per structure category).  The order within each
+ * group matches the order in the source catalog of concerns so diffs are easy
+ * to audit.
  *
  * ### Label-layer opacities
  *
- * youAreHere / poi (category-less) start at 0: their subsystem producers fire
- * fadeTo(1) on first non-empty emit.  galaxyNames starts at 1 because the
- * famous-galaxy labels reuse that handle and consume its opacity directly — a
- * 0 would render them invisible.  scaleBar is React-side and tour-addressable
- * but never auto-faded by the engine, so it starts at 1.
+ * youAreHere starts at 0: its subsystem producer fires fadeTo(1) on first
+ * non-empty emit.  galaxyNames starts at 1 because the famous-galaxy labels
+ * reuse that handle and consume its opacity directly — a 0 would render them
+ * invisible.  scaleBar is React-side and tour-addressable but never auto-faded
+ * by the engine, so it starts at 1.  There is no category-less poi handle:
+ * structure labels use the per-category poi handles below, and
+ * `produceStructureLabels` fires each category's load-in on first emit.
  *
  * ### Per-category marker + poi-label handles
  *
@@ -78,13 +81,9 @@ export function registerOverlayFades(state: EngineState): void {
   // youAreHereSubsystem).  galaxyNames starts at 1 — famous-galaxy labels
   // reuse this handle and consume its opacity directly, so a 0 would hide
   // them.  scaleBar is React-side — registered at 1 for tour addressability
-  // but never auto-faded by the engine.
+  // but never auto-faded by the engine.  poi is per-category only (registered
+  // below); produceStructureLabels fires each category's load-in.
   state.subsystems.fades.register({ kind: 'labelLayer', layer: 'youAreHere' }, 0);
-  // Category-less poi handle: superseded by the per-category poi handles
-  // registered below, but kept because the label director still fires
-  // fadeTo({labelLayer, layer:'poi'}, 1) (which THROWS on an unregistered
-  // handle).  Removed together with that fadeTo in the label-producer task.
-  state.subsystems.fades.register({ kind: 'labelLayer', layer: 'poi' }, 0);
   state.subsystems.fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
   state.subsystems.fades.register({ kind: 'labelLayer', layer: 'scaleBar' }, 1);
 

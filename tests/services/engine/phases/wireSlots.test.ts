@@ -528,7 +528,8 @@ describe('wireSlots', () => {
     expect(hasHandle({ kind: 'overlay', id: 'texturedDisks' })).toBe(true);
     expect(hasHandle({ kind: 'volumesMaster' })).toBe(true);
     expect(hasHandle({ kind: 'labelLayer', layer: 'youAreHere' })).toBe(true);
-    expect(hasHandle({ kind: 'labelLayer', layer: 'poi' })).toBe(true);
+    // No category-less poi handle: structure labels use per-category poi
+    // handles, and produceStructureLabels fires each category's load-in.
     expect(hasHandle({ kind: 'labelLayer', layer: 'galaxyNames' })).toBe(true);
     expect(hasHandle({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(true);
 

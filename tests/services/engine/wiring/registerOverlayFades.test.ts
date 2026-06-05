@@ -168,22 +168,23 @@ describe('registerOverlayFades', () => {
 
   // ── label-layer handles ──────────────────────────────────────────
 
-  it('registers the four category-less label-layer handles at 0,0,1,1', () => {
-    // youAreHere / poi(category-less) start at 0: their subsystem producers
-    // fire fadeTo(1) on the first non-empty emit, so a premature 1 would
-    // flash empty label layers before any data has landed.
-    // galaxyNames now starts at 1 — famous-galaxy labels reuse that handle
-    // and consume its opacity, so a 0 would make them invisible (Task 2.4).
-    // scaleBar is React-side and tour-addressable but never auto-faded by
-    // the engine, so it starts at 1.
+  it('registers the three category-less label-layer handles at 0,1,1', () => {
+    // youAreHere starts at 0: its subsystem producer fires fadeTo(1) on the
+    // first non-empty emit, so a premature 1 would flash an empty layer before
+    // any data has landed.  galaxyNames starts at 1 — famous-galaxy labels
+    // reuse that handle and consume its opacity, so a 0 would make them
+    // invisible (Task 2.4).  scaleBar is React-side and tour-addressable but
+    // never auto-faded by the engine, so it starts at 1.  There is no
+    // category-less poi handle — structure labels use the per-category poi
+    // handles and produceStructureLabels fires each category's load-in.
     const { state, registerSpy } = makeState();
     registerOverlayFades(state);
 
     type LabelCall = [Extract<FadeHandle, { kind: 'labelLayer' }>, number | undefined];
-    // Filter to category-LESS label handles only: there are now multiple poi
-    // labelLayer registrations (the category-less one plus one per structure
-    // category), so collapsing by `layer` alone would be ambiguous for poi.
-    // The category-less handles are exactly youAreHere/poi/galaxyNames/scaleBar.
+    // Filter to category-LESS label handles only: there are multiple poi
+    // labelLayer registrations (one per structure category), so collapsing by
+    // `layer` alone would be ambiguous for poi.  The category-less handles are
+    // exactly youAreHere/galaxyNames/scaleBar.
     const labelCalls = calls(registerSpy).filter(
       ([h]) =>
         h.kind === 'labelLayer' && !(h as Extract<FadeHandle, { kind: 'labelLayer' }>).category,
@@ -191,7 +192,7 @@ describe('registerOverlayFades', () => {
     const byLayer = Object.fromEntries(labelCalls.map(([h, op]) => [h.layer, op]));
 
     expect(byLayer['youAreHere']).toBe(0);
-    expect(byLayer['poi']).toBe(0);
+    expect(byLayer['poi']).toBeUndefined();
     expect(byLayer['galaxyNames']).toBe(1);
     expect(byLayer['scaleBar']).toBe(1);
   });

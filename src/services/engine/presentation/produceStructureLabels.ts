@@ -7,6 +7,25 @@
  * and the ring-centre anchor. Famous-galaxy labels come from
  * `produceFamousLabels` instead.
  *
+ * ### Per-category opacity × focused-exempt recession bakes into fadeAlpha
+ *
+ * Each label's final `fadeAlpha` is the distance fade multiplied by two
+ * composed strands (see `focusRecession.ts`): the per-category toggle's
+ * opacity (`opacityOf({labelLayer, poi, category})`, read from the
+ * FadeRegistry) and the focus recession factor. A category whose opacity is
+ * exactly 0 is skipped wholesale — the only legitimate all-or-nothing skip.
+ * The FOCUSED structure's own label is exempt from recession (factor 1): a
+ * faded ring never carries a bright label, but the thing under inspection
+ * keeps its label. The marker pass (`produceStructureMarkers`) bakes the
+ * mirror of this into each ring's alpha.
+ *
+ * ### This producer owns the per-category load-in fade
+ *
+ * The first time a category emits a (visible) label, the producer fires its
+ * `fadeTo(handle, 1)` once. The director used to fire a single category-less
+ * poi load-in; that moved here so each category ramps in independently,
+ * mirroring how the famous-galaxy layer fires its own load-in on first emit.
+ *
  * ### No declutter here — the director owns it
  *
  * A producer-local screen-space declutter could only de-collide
@@ -25,8 +44,27 @@ import type { Label } from '../../../@types/rendering/Label';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { LabelProducerOutput } from '../../../@types/engine/subsystems/LabelProducerOutput';
+import type { StructureCategory } from '../../../@types/engine/data/StructureCategory';
 import { STRUCTURE_POI_STYLES } from './structurePoiStyles';
 import { getLabelStyleOverride } from '../labelStyleOverride';
+import { focusRecession } from './focusRecession';
+import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
+
+// Per-category load-in latch. The producer is a bare function (not a closure
+// over subsystem state like the director), so the once-per-category one-shot
+// has nowhere to live except module scope. Each category fires its load-in
+// `fadeTo(1)` the first time it emits a visible label. Because the loop reaches
+// this only AFTER the `catOpacity === 0` skip, a disabled category never fires
+// (so a toggled-off category is never wrongly revealed); a visible category
+// registered at 1 ramps `fadeTo(1)` as a no-op, fired for symmetry with the
+// famous-galaxy layer's first-emit load-in. Reset between tests via
+// `__resetStructureLabelLoadIn`.
+const loadInFired = new Set<StructureCategory>();
+
+/** Test-only: clear the module-level load-in latch between unit cases. */
+export function __resetStructureLabelLoadIn(): void {
+  loadInFired.clear();
+}
 
 export function produceStructureLabels(
   state: EngineState,
@@ -47,10 +85,23 @@ export function produceStructureLabels(
   // loop. See `labelStyleOverride.ts`.
   const override = getLabelStyleOverride();
 
+  // Snapshot the registry + clock + focused id once so every category reads
+  // the same instant and the same focus state.
+  const fades = state.subsystems.fades;
+  const now = performance.now();
+  const foc = state.subsystems.selection.focused();
+  const focusedPoiId = foc !== null && foc.kind === 'poi' ? foc.id : null;
+
   const structures = state.data.structures;
   for (const p of structures.all()) {
-    // Label-axis gate (the marker pass consults `markerVisible` separately).
-    if (!structures.labelVisible(p.category)) continue;
+    // Per-category label opacity: the category toggle's fade, read from the
+    // registry (not the store's labelVisible flag). 0 is the all-or-nothing
+    // skip — a disabled category emits no labels and never fires its load-in.
+    const catOpacity = fades.opacityOf(
+      { kind: 'labelLayer', layer: 'poi', category: p.category },
+      now,
+    );
+    if (catOpacity === 0) continue;
     // Featured gate: only the ~25-30 curated anchors earn text; the ~375
     // bulk clusters/SCs still render rings via the marker pass, no label.
     if (!p.featured) continue;
@@ -108,6 +159,31 @@ export function produceStructureLabels(
         if (minFadeOut <= 0) continue;
         fadeAlpha = Math.min(fadeAlpha, minFadeOut);
       }
+    }
+
+    // Bake the resolved layer opacity into fadeAlpha on top of the distance
+    // fade: catOpacity (toggle fade) × recession (focus fade). The focused
+    // structure's own label is exempt from recession — a faded ring never
+    // carries a bright label, but the thing under inspection keeps its label.
+    const recession =
+      p.id === focusedPoiId
+        ? 1
+        : focusRecession(
+            { kind: 'labelLayer', layer: 'poi', category: p.category },
+            ctx.focusBlend,
+          );
+    fadeAlpha *= catOpacity * recession;
+
+    // Per-category load-in: fire the load-in fade once on this category's first
+    // emitted (visible) label. Reached only for enabled categories (the
+    // catOpacity === 0 skip above), so a toggled-off category never fires.
+    if (!loadInFired.has(p.category)) {
+      loadInFired.add(p.category);
+      void fades.fadeTo(
+        { kind: 'labelLayer', layer: 'poi', category: p.category },
+        1,
+        FADE_IN_DURATION_MS,
+      );
     }
 
     // Per-POI override fields: only structures whose category matches the

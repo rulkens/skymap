@@ -1,22 +1,54 @@
-import { describe, expect, it } from 'vitest';
-import { produceStructureLabels } from '../../../../src/services/engine/presentation/produceStructureLabels';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  produceStructureLabels,
+  __resetStructureLabelLoadIn,
+} from '../../../../src/services/engine/presentation/produceStructureLabels';
+import { LABEL_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
+import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
+import { STRUCTURE_CATEGORIES } from '../../../../src/data/structureCategories';
+import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
 
-// produceStructureLabels reads only state.data.structures (no selection / no
-// projection — declutter moved to the director), so a bare engineData stub
-// suffices.
-function makeState(): EngineState {
-  return { data: createEngineData() } as unknown as EngineState;
+// produceStructureLabels now reads `state.data.structures` for the records,
+// `state.subsystems.fades` for the per-category opacity + load-in fire, and
+// `state.subsystems.selection.focused()` for the focused-exempt recession.
+// The fixture supplies all three; `focusedPoiId` selects which poi (if any)
+// the selection subsystem reports as focused.
+function makeState(opts: { focusedPoiId?: string | null; fades?: FadeRegistry } = {}): EngineState {
+  const fades = opts.fades ?? createFadeRegistry();
+  registerAllCategories(fades);
+  const focusedPoiId = opts.focusedPoiId ?? null;
+  return {
+    data: createEngineData(),
+    subsystems: {
+      fades,
+      selection: {
+        focused: () => (focusedPoiId === null ? null : { kind: 'poi', id: focusedPoiId }),
+      },
+    },
+  } as unknown as EngineState;
 }
 
-function makeCtx(): ReadyFrameContext {
+// Register every per-category poi label handle at full opacity so the
+// producer's load-in `fadeTo` (which THROWS on an unregistered handle) is a
+// safe no-op ramp. Individual tests override a handle to 0 where they need a
+// disabled category.
+function registerAllCategories(fades: FadeRegistry): void {
+  for (const category of STRUCTURE_CATEGORIES) {
+    fades.register({ kind: 'labelLayer', layer: 'poi', category }, 1);
+  }
+}
+
+function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
   return {
     drawCamPos: [0, 0, 0],
     canvasSize: { width: 1920, height: 1080 },
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
+    focusBlend: 0,
+    ...over,
   } as unknown as ReadyFrameContext;
 }
 
@@ -32,6 +64,12 @@ const rec = (id: string, over: Partial<StructureRecord> = {}): StructureRecord =
   }) as StructureRecord;
 
 describe('produceStructureLabels', () => {
+  // The module-level load-in Set is a singleton; reset it between cases so a
+  // fired category in one test doesn't suppress the fire in the next.
+  beforeEach(() => {
+    __resetStructureLabelLoadIn();
+  });
+
   it('emits a label only for featured structures', () => {
     const state = makeState();
     state.data.structures.setGroup('bulk', [rec('a'), rec('b', { featured: false })]);
@@ -40,9 +78,14 @@ describe('produceStructureLabels', () => {
   });
 
   it('hides labels for a category whose label axis is off', () => {
-    const state = makeState();
+    // The per-category toggle now lives in the FadeRegistry (not the store's
+    // labelVisible flag): a category whose poi handle reads 0 is skipped
+    // wholesale.
+    const fades = createFadeRegistry();
+    fades.register({ kind: 'labelLayer', layer: 'poi', category: 'cluster' }, 1);
+    fades.setImmediate({ kind: 'labelLayer', layer: 'poi', category: 'cluster' }, 0);
+    const state = makeState({ fades });
     state.data.structures.setGroup('anchors', [rec('c1', { category: 'cluster' })]);
-    state.data.structures.setLabelVisible('cluster', false);
     expect(produceStructureLabels(state, makeCtx()).labels).toEqual([]);
   });
 
@@ -81,5 +124,80 @@ describe('produceStructureLabels', () => {
     const state = makeState();
     state.data.structures.setGroup('anchors', [rec('far', { worldPos: [100000, 0, 0] })]);
     expect(produceStructureLabels(state, makeCtx()).labels).toEqual([]);
+  });
+
+  it('bakes per-category opacityOf into fadeAlpha', () => {
+    // A cluster label at 0.5 category opacity emits half the at-rest fadeAlpha.
+    const atRest = makeState();
+    atRest.data.structures.setGroup('anchors', [rec('a')]);
+    const atRestAlpha = produceStructureLabels(atRest, makeCtx()).labels[0]!.fadeAlpha!;
+
+    const fades = createFadeRegistry();
+    fades.register({ kind: 'labelLayer', layer: 'poi', category: 'cluster' }, 0.5);
+    const dimmed = makeState({ fades });
+    dimmed.data.structures.setGroup('anchors', [rec('a')]);
+    const dimmedAlpha = produceStructureLabels(dimmed, makeCtx()).labels[0]!.fadeAlpha!;
+
+    expect(dimmedAlpha).toBeCloseTo(atRestAlpha * 0.5, 6);
+  });
+
+  it('non-focused label recedes at blend > 0', () => {
+    // No focus, full blend → the label's fadeAlpha is scaled by LABEL_RECESSION.
+    const atRest = makeState();
+    atRest.data.structures.setGroup('anchors', [rec('a')]);
+    const atRestAlpha = produceStructureLabels(atRest, makeCtx()).labels[0]!.fadeAlpha!;
+
+    const focused = makeState();
+    focused.data.structures.setGroup('anchors', [rec('a')]);
+    const recededAlpha = produceStructureLabels(focused, makeCtx({ focusBlend: 1 })).labels[0]!
+      .fadeAlpha!;
+
+    expect(recededAlpha).toBeCloseTo(atRestAlpha * LABEL_RECESSION, 6);
+  });
+
+  it('focused structure label is exempt from recession', () => {
+    // The focused structure's own label stays at its blend-0 value even at
+    // full blend — a faded ring never carries a bright label.
+    const blend0 = makeState({ focusedPoiId: 'a' });
+    blend0.data.structures.setGroup('anchors', [rec('a')]);
+    const blend0Alpha = produceStructureLabels(blend0, makeCtx({ focusBlend: 0 })).labels[0]!
+      .fadeAlpha!;
+
+    const blend1 = makeState({ focusedPoiId: 'a' });
+    blend1.data.structures.setGroup('anchors', [rec('a')]);
+    const blend1Alpha = produceStructureLabels(blend1, makeCtx({ focusBlend: 1 })).labels[0]!
+      .fadeAlpha!;
+
+    expect(blend1Alpha).toBeCloseTo(blend0Alpha, 6);
+  });
+
+  it('at-rest output is unchanged (blend 0, all categories at 1, no focus)', () => {
+    // Golden: at rest the distance-fade fadeAlpha is unscaled (catOpacity 1 ×
+    // recession 1). Two featured anchors at distance 10 Mpc sit in the flat
+    // band of both fades, so fadeAlpha is exactly 1.
+    const state = makeState();
+    state.data.structures.setGroup('anchors', [rec('a'), rec('b')]);
+    const out = produceStructureLabels(state, makeCtx());
+    expect(out.labels.map((l) => l.fadeAlpha)).toEqual([1, 1]);
+  });
+
+  it('fires the per-category load-in fade on first emit, dedupes thereafter', () => {
+    const fades = createFadeRegistry();
+    fades.register({ kind: 'labelLayer', layer: 'poi', category: 'cluster' }, 1);
+    const fadeToSpy = vi.spyOn(fades, 'fadeTo');
+    const state = makeState({ fades });
+    state.data.structures.setGroup('anchors', [rec('a', { category: 'cluster' })]);
+
+    produceStructureLabels(state, makeCtx());
+    expect(fadeToSpy).toHaveBeenCalledTimes(1);
+    expect(fadeToSpy).toHaveBeenCalledWith(
+      { kind: 'labelLayer', layer: 'poi', category: 'cluster' },
+      1,
+      expect.any(Number),
+    );
+
+    // A second producer call must NOT fire again (Set dedupe).
+    produceStructureLabels(state, makeCtx());
+    expect(fadeToSpy).toHaveBeenCalledTimes(1);
   });
 });
