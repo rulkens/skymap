@@ -341,6 +341,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       },
       volumes: {
         masterEnabled: DEFAULT_VOLUMES_ENABLED,
+        fields: seedVolumeFields(),
       },
       // Per-category POI visibility — two independent axes (label-text vs
       // marker-glyph), both default-all-on.  Each record is the source of
@@ -592,18 +593,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // one `Set.has` per pass per frame, noise next to the GPU dispatch.
     debug: { disabledPasses: new Set<string>() },
   };
-
-  // ── Seed the volume store from the shippable volume registry ──────────
-  //
-  // Every shippable volume's on/off bit + tunables must EXIST before any
-  // cube loads, so the demand predicate reads `volumeField(id)?.enabled` as
-  // pure state — symmetric with how `drawMask` seeds survey visibility.
-  // Without it a default-on volume (MCPM) never triggers its initial load.
-  // DEV-only debug fixtures are excluded by `seedVolumeFields`; SettingsPanel
-  // rows still come from the GPU handle list, so seeding adds no premature row.
-  for (const [id, params] of Object.entries(seedVolumeFields())) {
-    state.data.volumes.setParams(id as VolumeFieldId, params!);
-  }
 
   // ── Register label producers with the director ───────────────────────
   //
