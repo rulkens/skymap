@@ -46,7 +46,7 @@
  * `ASSET_WIRING`, but the loop logic is exercised without the full registry.
  */
 
-import { buildDemandCtx } from './demandCtx';
+import { buildDemandCtx } from './buildDemandCtx';
 import { slotFor } from './slotFor';
 import { ASSET_WIRING } from './assetWiring';
 

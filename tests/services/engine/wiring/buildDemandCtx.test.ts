@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { buildDemandCtx } from '../../../../src/services/engine/wiring/demandCtx';
+import { buildDemandCtx } from '../../../../src/services/engine/wiring/buildDemandCtx';
 import { maskWith } from '../../../../src/utils/sourceMask';
 import { Source } from '../../../../src/data/sources';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
