@@ -36,51 +36,51 @@ because the first draft of this spec got them wrong):
 
 ## Goal — one principle
 
-> **Every layer's final opacity comes from `fades.opacityOf(handle)`, and that
-> value already folds in both the user's on/off fade and the focus recession.**
+> **Every layer's final opacity is `opacityOf(handle) × focusRecession(handle,
+> blend)` — two independent strands, composed at the consumer, never braided into
+> one stateful place.**
 
-Concretely:
+The two strands stay in their own homes:
 
-```
-opacityOf(handle) = toggleFade(handle) × focusRecession(handle)
-```
+- **`opacityOf(handle)`** — the FadeRegistry's existing job: the per-handle
+  toggle fade (load-in, tier swap, and — newly — category on/off). **The registry
+  is unchanged by this work.**
+- **`focusRecession(handle, blend)`** — a new *pure* function in its own module:
+  `mix(1, recessionTargetFor(handle) ?? 1, blend)`. No state of its own.
 
-A layer never computes "am I focused-out?" or "is my category off?" on its own
-anymore — it asks the registry for one number. Adding a new layer to the
-recession behaviour is one branch in one function. Removing the marker/label
-"pop" falls out of routing their category on/off through the same fade.
+A small helper `resolveLayerOpacity(fades, handle, blend, now)` multiplies the two
+for the whole-layer consumers; per-instance consumers (markers/labels) take the
+two parts and combine them with their focused-instance exemption.
 
-Out of scope: the galaxy-points member-isolation effect stays as-is. It isolates
-*members of the focused structure* (a per-vertex spatial test), which is a
-different thing from ambient recession and already works.
+### Why not fold recession into `opacityOf`
 
-## The composable opacity model
+The obvious-looking move — have the registry store the blend (`setFocusBlend`) and
+return `toggle × recession` from `opacityOf` — **complects two independent concerns
+and mirrors state**. The blend's authoritative home is `clusterFocusSubsystem`
+(`FocusUniformsValue.blend`); caching it in the registry is a value×place mirror
+(stale-mirror bug class), and it drags the focus concept into a module whose sole
+job is fade controllers. Toggle fade and focus recession vary independently, so
+they are *composed*, not braided. (Radar finding, 2026-06-06 — see
+`docs/superpowers/conventions/simplicity.md` #5, #8.)
 
-A fade handle's opacity stops being a single scalar and becomes a **product of
-two independent sources**:
+`blend` is the **same 0→1 value `clusterFocusSubsystem` already produces** —
+`FocusUniformsValue.blend` (`clusterFocusSubsystem.ts:106`), already computed once
+per frame at `runFrame.ts:296` and threaded into the render settings. Consumers
+read it from there as a **value** (an argument), never from a mirror. It already
+gates render-on-demand via `clusterFocus.isAwake()`, so no wake logic changes.
 
-- **`toggleFade`** — the existing `FadeController`-animated scalar the handle
-  owns (load-in, tier swap, and — newly — category on/off). Default 1.0 for
-  handles with no controller (the existing fail-safe).
-- **`focusRecession`** — `1.0` unless the handle is recession-tagged, in which
-  case `mix(1.0, RECESSION_TARGET, focusBlend)`.
-
-`focusBlend` is the **same 0→1 value `clusterFocusSubsystem` already produces** —
-`FocusUniformsValue.blend`, `clusterFocusSubsystem.ts:106`, surfaced into the
-frame at `runFrame.ts:296`. It ramps over ~400 ms and already gates
-render-on-demand via `clusterFocus.isAwake()`. Nothing new computes "how focused
-are we."
-
-Keeping the two sources orthogonal is what makes unifying through the registry
-correct: recession multiplies *on top of* the toggle fade instead of clobbering
-it. A layer toggled off (0) stays off (`0 × anything = 0`); a half-faded layer
-recedes from where it is.
+Orthogonality also makes the composition correct: recession multiplies *on top of*
+the toggle fade instead of clobbering it. A layer toggled off (0) stays off
+(`0 × anything = 0`); a half-faded layer recedes from where it is. And points
+(survey handles) simply **never call the recession helper**, so they can't
+accidentally recede — the separation is structural, not a defensive switch arm.
 
 ## Recession membership — one exhaustive function
 
 Recession is *selective* (e.g. POI labels recede, the YOU-ARE-HERE pin and scale
-bar must not), so membership is an exhaustive switch over the `FadeHandle` union,
-mirroring `serializeFadeHandle` in the same file:
+bar must not), so membership is an exhaustive switch over the `FadeHandle` union
+in the `focusRecession` module (mirroring `serializeFadeHandle`'s shape, but
+**not** living in `fadeRegistry.ts` — recession policy is its own home):
 
 ```ts
 // undefined ⇒ not recession-tagged (factor 1.0).
@@ -111,42 +111,55 @@ a compile error until it declares its stance — the same discipline
 Per-layer targets (approved): markers/labels dim moderately; the large diffuse
 filament/volume fields recede harder. All tuned live on the dev server.
 
-## Registry API changes
+## The `focusRecession` module (new) + registry handle additions
 
-In `fadeRegistry.ts` / `FadeRegistry.d.ts`:
+**The FadeRegistry keeps its current interface** — no `setFocusBlend`, no change
+to `opacityOf`, no new dependency on focus. The recession concern lives in its own
+small module:
 
-1. **`setFocusBlend(blend: number): void`** — stores the current blend (default
-   0). Called once per frame from `runFrame`, beside the existing
-   `clusterFocus` read.
-2. **`opacityOf` composes recession** — after resolving the toggle scalar
-   (controller `currentOpacity`, or the 1.0 fail-safe), multiply by
-   `mix(1, recessionTargetFor(h) ?? 1, focusBlend)`. Non-tagged handles return
-   the toggle unchanged, so existing GPU-uniform consumers (points/filaments/
-   volumes) are untouched except where we intend the new behaviour.
-3. **`FadeHandle` gains the descriptor-layer kinds** it lacks: `markerLayer`
-   (with a `category` discriminator, mirroring the renderer's per-category
-   buckets) and a `labelLayer` value for famous labels. `serializeFadeHandle`
-   and `recessionTargetFor` get the matching cases.
+```ts
+// services/engine/presentation/focusRecession.ts (pure)
+export function recessionTargetFor(h: FadeHandle): number | undefined { /* switch above */ }
+export function focusRecession(h: FadeHandle, blend: number): number {
+  return mix(1, recessionTargetFor(h) ?? 1, blend);
+}
+// thin composition sugar for whole-layer consumers:
+export function resolveLayerOpacity(fades: FadeRegistry, h: FadeHandle, blend: number, now: number): number {
+  return fades.opacityOf(h, now) * focusRecession(h, blend);
+}
+```
 
-`isAnyAnimating` is untouched — the recession ramp is owned by `clusterFocus`,
-whose `isAwake()` is already in the render-on-demand predicate, so frames keep
+The only registry-adjacent change is the `FadeHandle` union gaining the
+descriptor-layer kinds it lacks: **`markerLayer`** (with a `category`
+discriminator, mirroring the renderer's per-category buckets) and a `labelLayer`
+value for **famous** labels. `serializeFadeHandle` gets the matching cases;
+`recessionTargetFor` (in the new module) declares their recession stance.
+
+`isAnyAnimating` and render-on-demand are untouched — the recession ramp is owned
+by `clusterFocus`, whose `isAwake()` is already in the predicate, so frames keep
 ticking through the ramp both directions.
 
 ## Application by layer class
 
-The single split in this design is *how* a layer turns the `opacityOf` scalar
-into pixels. It follows an existing, principled line — not per-layer whim.
+The single split in this design is *how* a layer turns the opacity strands into
+pixels. It follows an existing, principled line — not per-layer whim.
 
-### Field / point layers — already consistent (just tag)
+### Field / point layers — minimal change
 
-Filaments and volumes already multiply `opacityOf` into a GPU fade uniform.
-They need **no pass changes** — only the `recessionTargetFor` branch:
+Filaments and volumes already multiply `opacityOf` into a GPU fade uniform. They
+swap that lone call for `resolveLayerOpacity(fades, handle, blend, now)` — one
+extra argument (the blend, already in the frame's render settings), no shader
+change:
 
-- **Filaments** — `filamentsPass` already reads `opacityOf({kind:'filaments'})`.
-  "Whichever is shown" is automatic: when off, the toggle is already 0.
-- **Volumes** — `volumeUpsamplePass` already reads `volumesMaster`, which is
-  multiplied into every scalar field. One branch recedes the whole volume
+- **Filaments** — `filamentsPass` reads the resolved opacity for
+  `{kind:'filaments'}`. "Whichever is shown" is automatic: when off, the toggle
+  is already 0.
+- **Volumes** — `volumeUpsamplePass` reads it for `volumesMaster`, which is
+  multiplied into every scalar field. One call recedes the whole volume
   subsystem regardless of active tier/field.
+- **Points** — untouched. Survey handles aren't recession-tagged *and* the points
+  pass keeps calling plain `opacityOf`, so member-isolation stays the only focus
+  effect on galaxies.
 
 ### Descriptor layers — read `opacityOf`, bake into per-instance alpha
 
@@ -154,40 +167,50 @@ POI markers and labels are CPU-built per frame with per-instance alpha, because
 they need per-instance decisions (which one is focused/selected). That's the
 right place for them; the change is *where the cross-cutting opacity comes from*.
 
+Per-instance consumers take the **two parts** — `opacityOf(handle)` (toggle) and
+`focusRecession(handle, blend)` — and combine them, because the focused-instance
+exemption applies to the *recession* part only:
+
+```
+alpha(instance) = opacityOf(handle) × (instance is focused ? 1 : focusRecession(handle, blend))
+```
+
 **POI markers** (`produceStructureMarkers.ts`):
 - Replace the **boolean category skip** (`if (!markerVisible(cat)) continue`)
-  with the category's `opacityOf({kind:'markerLayer', category})`. The file's
-  *emit-all-then-discard* contract already tolerates alpha-0 descriptors, so a
-  mid-fade category emits faded rings and is only skipped once fully at 0 —
+  with the category's toggle `opacityOf({kind:'markerLayer', category})`. The
+  file's *emit-all-then-discard* contract already tolerates alpha-0 descriptors,
+  so a mid-fade category emits faded rings and is only skipped once fully at 0 —
   index alignment holds (the skip stays all-or-nothing per category).
-- Replace the **binary focus dim** with the recession already folded into that
-  same `opacityOf` value. The focused structure is exempt per-instance
-  (`p.id === focusedPoiId` → use 1.0); the selected-ring ×1.5 bump stays.
+- Replace the **binary focus dim** with `focusRecession(handle, blend)`, applied
+  to every non-focused marker (`p.id !== focusedPoiId`); the focused structure
+  gets factor 1; the selected-ring ×1.5 bump stays.
 - `NON_SELECTED_MARKER_DIM` migrates out of `structurePoiStyles` into
   `MARKER_RECESSION` (now smoothly animated, deeper).
 
 **POI labels + famous labels** — the wiring prerequisite first:
-- **Wire the label path to consume `opacityOf`.** Labels already carry a
-  per-label `fadeAlpha` (`labels/vertex.wesl`, fed from `label.sizing.w`). The
-  label director multiplies each label's `fadeAlpha` by its layer's
-  `opacityOf(handle)` when it finalises the set. No shader/renderer change — the
-  director simply stops discarding the registry value. This single change makes
-  label-layer load-in fade, category fade, *and* recession all live at once.
+- **Wire the label path to consume opacity.** Labels already carry a per-label
+  `fadeAlpha` (`labels/vertex.wesl`, fed from `label.sizing.w`). The label
+  director multiplies each label's `fadeAlpha` by its layer's *resolved* opacity
+  (`opacityOf(handle) × focusRecession`, with the focused POI label exempt from
+  the recession part) when it finalises the set. No shader/renderer change — the
+  director simply stops discarding the value. This single change makes label-layer
+  load-in fade, category fade, *and* recession all live at once.
 - **Category on/off becomes a fade** the same way markers do (boolean
-  `labelVisible(cat)` skip → category `opacityOf` baked into `fadeAlpha`).
-- **Recession** comes free once the layer is recession-tagged. The **focused
-  structure's** POI label is exempt per-instance (the producer knows the
-  structure id), so a faded ring never carries a bright label.
-- **Famous-galaxy labels** are tagged to recede uniformly (no per-member
-  exemption — there's no structure-membership link at the famous producer, and
-  the ask is simply "they recede on focus").
+  `labelVisible(cat)` skip → category toggle `opacityOf` baked into `fadeAlpha`).
+- The **focused structure's** POI label is exempt from recession per-instance
+  (the producer knows the structure id), so a faded ring never carries a bright
+  label.
+- **Famous-galaxy labels** recede uniformly (no per-member exemption — there's no
+  structure-membership link at the famous producer, and the ask is simply "they
+  recede on focus").
 
 ## Category-visibility fade (markers + POI labels)
 
-Today both pop. After this change both fade, through the registry:
-`setCategoryMarkerVisible` / `setCategoryLabelVisible` (`engine.ts:1262–1289`)
-call `fades.fadeTo(handle, on ? 1 : 0)` instead of flipping a boolean, and the
-producers read `opacityOf` instead of the boolean gate. One mechanism, no pop.
+Today both pop. After this change both fade, through the **toggle** half of the
+model: `setCategoryMarkerVisible` / `setCategoryLabelVisible`
+(`engine.ts:1262–1289`) call `fades.fadeTo(handle, on ? 1 : 0)` instead of
+flipping a boolean, and the producers read `opacityOf` instead of the boolean
+gate. One mechanism, no pop. (Recession composes on top, unchanged.)
 
 ## Scope decisions (locked)
 
@@ -204,18 +227,19 @@ producers read `opacityOf` instead of the boolean gate. One mechanism, no pop.
 ## Data flow
 
 ```
-selection.focused() ─▶ clusterFocus.update() ─▶ blend (0→1, ~400ms)
-                                                   │
-                              runFrame: fades.setFocusBlend(blend)
+selection.focused() ─▶ clusterFocus.update() ─▶ blend (FocusUniformsValue.blend, 0→1)
+                                                   │   authoritative home; read as a value
+                              runFrame threads `blend` into render settings
                                                    │
    ┌───────────────┬───────────────┬──────────────┼───────────────┬──────────────┐
-   ▼               ▼               ▼              ▼               ▼              ▼
-opacityOf       opacityOf       opacityOf      opacityOf        opacityOf
-(filaments)   (volumesMaster) (markerLayer:c) (labelLayer:poi) (labelLayer:famous)
-   │               │               │              │               │
-filamentsPass  volumeUpsample  produceStruct-  labelDirector ── bakes into per-label
-(GPU uniform)  (GPU uniform)   Markers (alpha) fadeAlpha (alpha; focused exempt)
-                               focused exempt
+   ▼               ▼               ▼              ▼               ▼
+resolveLayerOpacity  resolveLayer   produceStruct-  labelDirector (POI)   labelDirector (famous)
+(filaments)        Opacity(volumes) Markers         opacityOf×focus-      opacityOf×focusRecession
+   │                  │             opacityOf×focus  Recession, focused    (uniform)
+filamentsPass      volumeUpsample   Recession,       exempt → fadeAlpha
+(GPU uniform)      (GPU uniform)    focused exempt
+
+       opacityOf = FadeRegistry (toggle, unchanged)   focusRecession(handle, blend) = pure fn
 ```
 
 ## Edge cases (fall out for free)
@@ -243,30 +267,35 @@ filamentsPass  volumeUpsample  produceStruct-  labelDirector ── bakes into p
 
 ## Testing (TDD)
 
-- **`fadeRegistry` composition** (the core, pure):
-  - `opacityOf` = toggle × recession for tagged handles; = toggle for untagged.
-  - `blend=0` → identity; `blend=1` → exactly the target; intermediate → lerp.
-  - `setFocusBlend` re-composes subsequent reads.
-  - `recessionTargetFor` is exhaustive (a missing kind fails to compile).
-- **`produceStructureMarkers`** — non-focused marker alpha scales by recession at
-  `blend>0`; focused marker and selected-bump unaffected; category at toggle 0
-  emits alpha-0 (alignment preserved); at-rest output unchanged from today.
-- **Label director** — each label's `fadeAlpha` is multiplied by its layer's
-  `opacityOf`; focused POI label exempt from recession; famous labels recede;
+- **`focusRecession` module** (the core, pure — easiest possible to test):
+  - `focusRecession` = 1.0 for untagged handles at any blend.
+  - tagged handles: `blend=0` → 1.0; `blend=1` → exactly the target;
+    intermediate → the lerp.
+  - `recessionTargetFor` is exhaustive (a missing union kind fails to compile).
+  - `resolveLayerOpacity` = `opacityOf × focusRecession`.
+- **`produceStructureMarkers`** — non-focused marker alpha scales by
+  `focusRecession` at `blend>0`; focused marker and selected-bump unaffected;
+  category at toggle 0 emits alpha-0 (alignment preserved); at-rest output
+  unchanged from today.
+- **Label director** — each label's `fadeAlpha` is multiplied by its resolved
+  layer opacity; focused POI label exempt from recession; famous labels recede;
   youAreHere / scaleBar never recede.
 - **Category fade** — `setCategoryMarkerVisible(false)` drives the handle toward
   0 over the fade duration rather than dropping instantly.
-- **Filaments / volumes** — no new test; covered by the registry composition test
-  (they already multiply `opacityOf`).
+- **FadeRegistry** — no new tests; its interface is unchanged.
 
 ## Files touched (anticipated)
 
+- `src/services/engine/presentation/focusRecession.ts` — **new** pure module:
+  `recessionTargetFor`, `focusRecession`, `resolveLayerOpacity`.
 - `src/@types/animation/FadeHandle.d.ts` — `markerLayer` (+category) and famous
   `labelLayer` value; docblock.
-- `src/@types/animation/FadeRegistry.d.ts` — `setFocusBlend`.
-- `src/services/animation/fadeRegistry.ts` — `recessionTargetFor`,
-  `setFocusBlend`, recession in `opacityOf`, new serialization cases.
-- `src/services/engine/frame/runFrame.ts` — `fades.setFocusBlend(blend)`.
+- `src/services/animation/fadeRegistry.ts` — new serialization cases only
+  (`markerLayer`, famous label). **No recession, no `setFocusBlend`.**
+- `src/services/engine/frame/runFrame.ts` — thread `blend` into render settings
+  / producer ctx (it's already computed for `settings.focus`).
+- `src/services/engine/frame/passes/filamentsPass.ts`,
+  `volumeUpsamplePass.ts` — `opacityOf` → `resolveLayerOpacity(…, blend, …)`.
 - `src/services/engine/presentation/produceStructureMarkers.ts` — category
   `opacityOf` + smooth recession; drop the boolean skip and binary dim.
 - `src/services/engine/presentation/produceStructureLabels.ts` /
@@ -278,5 +307,5 @@ filamentsPass  volumeUpsample  produceStruct-  labelDirector ── bakes into p
 - `src/services/engine/engine.ts` — category visibility setters → `fadeTo`.
 - `src/services/engine/wiring/registerOverlayFades.ts` — register the new
   marker/famous handles.
-- `tests/` mirrors for `fadeRegistry`, `produceStructureMarkers`, label director.
-```
+- `tests/` mirrors for `focusRecession`, `produceStructureMarkers`, label
+  director.
