@@ -151,8 +151,22 @@ transpose relocates each vector without rotating its basis.
 
 ### Build
 
-No Python — same pattern as the density cube.  The `.npz` is a ZIP of
-`.npy` arrays, so the maintainer extracts the two needed arrays once:
+No Python — same pattern as the density cube.  The flow build needs **both**
+mean slices (`v_mean` for the velocity RGB, `d_mean` for the δ alpha channel).
+
+**Contributor path (no unzip):** both slices live on R2 — curl them:
+
+```
+curl -L -o data/raw/cf4/v_mean_CF4pp.npy \
+  https://skymap-data.rulkens.com/data/raw/cf4/v_mean_CF4pp.npy
+curl -L -o data/raw/cf4/d_mean_CF4pp.npy \
+  https://skymap-data.rulkens.com/data/raw/cf4/d_mean_CF4pp.npy
+npm run build-flow-field    # pure-TS → public/data/flowfield.scfd
+```
+
+**Maintainer path (run once per upstream release):** the `.npz` is a ZIP of
+`.npy` arrays, so extract the two needed arrays and upload them with
+`npm run sync-r2` (both are tracked in `EXTRA_FILES`):
 
 ```
 unzip -j data/raw/cf4/CF4pp_mean_std_grids.npz \
