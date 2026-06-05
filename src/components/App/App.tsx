@@ -57,6 +57,11 @@ export function App(): React.ReactElement {
     setFlowEnabled,
     setFlowMode,
     setFlowIntensity,
+    setFlowCount,
+    setFlowTrail,
+    setFlowSpeed,
+    setFlowDensityBias,
+    setFlowWander,
   } = useEngineSettings();
 
   const {
@@ -83,6 +88,11 @@ export function App(): React.ReactElement {
     flowEnabled,
     flowMode,
     flowIntensity,
+    flowCount,
+    flowTrail,
+    flowSpeed,
+    flowDensityBias,
+    flowWander,
   } = settings;
 
   // SettingsPanel's SpaceMouse section appears only when WebHID is
@@ -408,6 +418,34 @@ export function App(): React.ReactElement {
             showDiskRadiusRing={showDiskRadiusRing}
             onShowDiskRadiusRingChange={(enabled) => {
               handleRef.current?.debug.setShowDiskRadiusRing(enabled);
+            }}
+            // Flow motion tunables — no engine echo, so each handler
+            // updates the optimistic mirror AND forwards to the handle
+            // (same pattern as the SettingsPanel flow look controls).
+            flowCount={flowCount}
+            flowTrail={flowTrail}
+            flowSpeed={flowSpeed}
+            flowDensityBias={flowDensityBias}
+            flowWander={flowWander}
+            onFlowCountChange={(v) => {
+              setFlowCount(v);
+              handleRef.current?.flow.setCount(v);
+            }}
+            onFlowTrailChange={(v) => {
+              setFlowTrail(v);
+              handleRef.current?.flow.setTrail(v);
+            }}
+            onFlowSpeedChange={(v) => {
+              setFlowSpeed(v);
+              handleRef.current?.flow.setFlowSpeed(v);
+            }}
+            onFlowDensityBiasChange={(v) => {
+              setFlowDensityBias(v);
+              handleRef.current?.flow.setDensityBias(v);
+            }}
+            onFlowWanderChange={(v) => {
+              setFlowWander(v);
+              handleRef.current?.flow.setWander(v);
             }}
           />
         )}
