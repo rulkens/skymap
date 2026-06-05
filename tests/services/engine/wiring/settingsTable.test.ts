@@ -96,7 +96,7 @@ function makeState(): Pick<EngineState, 'settings' | 'bias'> {
 
 describe('settingsTable', () => {
   describe('SETTINGS_TABLE', () => {
-    it('declares the 15 table-candidate setters', () => {
+    it('declares the 23 table-candidate setters', () => {
       // Bespoke setters (`setBiasMode`, `setTier`, `setSourceVisible`,
       // `setSpaceMouseSensitivity`) MUST stay inline in engine.ts.  If
       // this list drifts, either a new boring setter snuck in (good —
@@ -112,6 +112,14 @@ describe('settingsTable', () => {
           'setExposure',
           'setFilamentIntensity',
           'setFilamentsEnabled',
+          'setFlowCount',
+          'setFlowDensityBias',
+          'setFlowEnabled',
+          'setFlowIntensity',
+          'setFlowMode',
+          'setFlowSpeed',
+          'setFlowTrail',
+          'setFlowWander',
           'setGalaxyTexturesEnabled',
           'setHighlightFallback',
           'setMilkyWayEnabled',

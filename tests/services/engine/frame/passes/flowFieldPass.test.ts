@@ -29,11 +29,20 @@ function makeCtx(): ReadyFrameContext {
   };
 }
 
-/** Build an EngineState stub with the flow settings + load status the gate reads. */
-function makeState(over: { enabled?: boolean; loaded?: boolean } = {}): EngineState {
+/**
+ * Build an EngineState stub with the flow settings + load status the gate
+ * reads, plus a fade-registry stub whose `opacityOf` returns a fixed value
+ * (the draw delegation folds it in; the enabled gate reads it for fade-out).
+ */
+function makeState(
+  over: { enabled?: boolean; loaded?: boolean; opacity?: number } = {},
+): EngineState {
   return {
     settings: { flow: { enabled: over.enabled ?? true } },
     data: { flow: { loaded: over.loaded ?? true } },
+    subsystems: {
+      fades: { opacityOf: vi.fn(() => over.opacity ?? 0.42) },
+    },
   } as unknown as EngineState;
 }
 
@@ -45,15 +54,13 @@ const PASS_STUB = {
 } as unknown as GPURenderPassEncoder;
 
 describe('flowFieldPass.enabled', () => {
-  it('returns false when flow.enabled is false', () => {
+  it('returns false when the cube is not loaded (even if enabled)', () => {
     expect(
-      flowFieldPass.enabled(makeState({ enabled: false, loaded: true }), makeCtx(), SETTINGS),
-    ).toBe(false);
-  });
-
-  it('returns false when the cube is not loaded', () => {
-    expect(
-      flowFieldPass.enabled(makeState({ enabled: true, loaded: false }), makeCtx(), SETTINGS),
+      flowFieldPass.enabled(
+        makeState({ enabled: true, loaded: false, opacity: 1 }),
+        makeCtx(),
+        SETTINGS,
+      ),
     ).toBe(false);
   });
 
@@ -62,19 +69,41 @@ describe('flowFieldPass.enabled', () => {
       flowFieldPass.enabled(makeState({ enabled: true, loaded: true }), makeCtx(), SETTINGS),
     ).toBe(true);
   });
+
+  it('returns true when disabled but loaded and fade opacity > 0 (fade-out keep-alive)', () => {
+    expect(
+      flowFieldPass.enabled(
+        makeState({ enabled: false, loaded: true, opacity: 0.3 }),
+        makeCtx(),
+        SETTINGS,
+      ),
+    ).toBe(true);
+  });
+
+  it('returns false when disabled, loaded, and fade opacity is 0', () => {
+    expect(
+      flowFieldPass.enabled(
+        makeState({ enabled: false, loaded: true, opacity: 0 }),
+        makeCtx(),
+        SETTINGS,
+      ),
+    ).toBe(false);
+  });
 });
 
 describe('flowFieldPass.draw', () => {
-  it('delegates to flowFieldRenderer.draw with the pass, vp, viewport, and settings.flow', () => {
+  it('delegates to flowFieldRenderer.draw with the pass, vp, viewport, settings.flow, and fade opacity', () => {
     const drawSpy = vi.fn();
     const deps = { flowFieldRenderer: { draw: drawSpy } } as unknown as PassDeps;
-    const state = makeState();
+    const state = makeState({ opacity: 0.42 });
     flowFieldPass.draw(PASS_STUB, makeCtx(), state, SETTINGS, deps);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const call = drawSpy.mock.calls[0]!;
     expect(call[0]).toBe(PASS_STUB);
     expect(call[2]).toEqual([1280, 720]);
     expect(call[3]).toBe(state.settings.flow);
+    // The layer fade opacity (from fades.opacityOf) is folded in as the 5th arg.
+    expect(call[4]).toBe(0.42);
   });
 
   it('does not throw when flowFieldRenderer is null (defensive null-check)', () => {

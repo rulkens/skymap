@@ -76,8 +76,18 @@ export type FlowFieldRenderer = {
    * (mvp = `viewProj`, the cube `model`, aspect from `viewportPx`, the pulse
    * `phase`, `mode`, and the pre-blend `intensity` from `flow`) and draws
    * `2*TRAIL` vertices × `flow.count` instances. No-op until a field is set.
+   *
+   * `opacity` is the layer fade in [0, 1] (from `fades.opacityOf({kind:'flow'})`
+   * at the call site); it's multiplied into the pre-blend intensity so the
+   * whole overlay fades in/out with the enable/disable toggle.
    */
-  draw(pass: GPURenderPassEncoder, viewProj: mat4, viewportPx: Vec2, flow: FlowSettings): void;
+  draw(
+    pass: GPURenderPassEncoder,
+    viewProj: mat4,
+    viewportPx: Vec2,
+    flow: FlowSettings,
+    opacity: number,
+  ): void;
   /** Release every GPU resource (buffers, pipelines, the velocity texture). */
   destroy(): void;
 };

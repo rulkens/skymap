@@ -22,10 +22,17 @@
 
 import { createAssetSlot } from '../AssetSlot';
 import { flowFieldFetcher } from '../fetchers/flowFieldFetcher';
+import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
 export const createFlowFieldSlot: SlotFactory<ScalarCube, void> = (state, _cb) => {
+  // Register the flow fade handle at opacity 0; the commit's
+  // fadeTo(1, FADE_IN_DURATION_MS) ramps it in once the upload lands. The
+  // handle (engine.ts) owns the re-enable (cube already resident) + fade-out
+  // branches — see the fade design in `EngineFlowFieldsHandle`.
+  state.subsystems.fades.register({ kind: 'flow' }, 0);
+
   const slot = createAssetSlot({
     name: 'flow',
     fetch: flowFieldFetcher,
@@ -35,6 +42,15 @@ export const createFlowFieldSlot: SlotFactory<ScalarCube, void> = (state, _cb) =
       // "committed to the renderer".
       state.gpu.flowFieldRenderer?.setField(cube);
       state.data.flow.setLoaded();
+      // Fade in only if the setting still requests flow visible. A load that
+      // completes after the user toggled off must not visibly render; the
+      // pass.enabled() gate keeps anything with opacity > 0 drawing, so
+      // gating here keeps the fade honest to the user's intent at the moment
+      // the cube lands. This is the FIRST-enable fade-in; the handle owns the
+      // re-enable + fade-out branches.
+      if (state.settings.flow.enabled) {
+        void state.subsystems.fades.fadeTo({ kind: 'flow' }, 1, FADE_IN_DURATION_MS);
+      }
       state.subsystems.scheduler.requestRender();
     },
   });

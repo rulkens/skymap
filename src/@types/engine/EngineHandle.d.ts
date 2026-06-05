@@ -28,6 +28,7 @@ import type { EngineBiasHandle } from './handles/EngineBiasHandle';
 import type { EngineThumbnailsHandle } from './handles/EngineThumbnailsHandle';
 import type { EngineMilkyWayHandle } from './handles/EngineMilkyWayHandle';
 import type { EngineFilamentsHandle } from './handles/EngineFilamentsHandle';
+import type { EngineFlowFieldsHandle } from './handles/EngineFlowFieldsHandle';
 import type { EngineLabelsHandle } from './handles/EngineLabelsHandle';
 import type { EngineVolumesHandle } from './handles/EngineVolumesHandle';
 import type { EngineInputHandle } from './handles/EngineInputHandle';
@@ -51,6 +52,7 @@ export type EngineHandle = {
   thumbnails: EngineThumbnailsHandle;
   milkyWay: EngineMilkyWayHandle;
   filaments: EngineFilamentsHandle;
+  flow: EngineFlowFieldsHandle;
   labels: EngineLabelsHandle;
   volumes: EngineVolumesHandle;
   input: EngineInputHandle;

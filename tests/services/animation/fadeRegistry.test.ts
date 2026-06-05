@@ -64,6 +64,17 @@ describe('createFadeRegistry', () => {
     expect(r.opacityOf(b, 1000)).toBe(0.75);
   });
 
+  it('serializes the flow handle to its own key (distinct from filaments)', () => {
+    const r = createFadeRegistry();
+    const flow: FadeHandle = { kind: 'flow' };
+    const filaments: FadeHandle = { kind: 'filaments' };
+    r.register(flow, 0.3);
+    r.register(filaments, 0.6);
+    // Distinct keys → distinct controllers; neither bleeds into the other.
+    expect(r.opacityOf(flow, 1000)).toBe(0.3);
+    expect(r.opacityOf(filaments, 1000)).toBe(0.6);
+  });
+
   it('fadeTo throws when the handle is not registered', () => {
     const r = createFadeRegistry();
     const h: FadeHandle = { kind: 'filaments' };
@@ -75,7 +86,9 @@ describe('createFadeRegistry', () => {
     const h: FadeHandle = { kind: 'filaments' };
     r.register(h, 0);
     let done = false;
-    r.fadeTo(h, 1, 600, 0).then(() => { done = true; });
+    r.fadeTo(h, 1, 600, 0).then(() => {
+      done = true;
+    });
     expect(r.opacityOf(h, 0)).toBeCloseTo(0, 5);
     expect(r.opacityOf(h, 300)).toBeCloseTo(0.5, 5);
     expect(r.opacityOf(h, 600)).toBeCloseTo(1, 5);

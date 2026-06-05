@@ -333,7 +333,13 @@ export function createFlowFieldRenderer(init: {
       pass.end();
     },
 
-    draw(pass: GPURenderPassEncoder, viewProj: mat4, viewportPx: Vec2, flow: FlowSettings): void {
+    draw(
+      pass: GPURenderPassEncoder,
+      viewProj: mat4,
+      viewportPx: Vec2,
+      flow: FlowSettings,
+      opacity: number,
+    ): void {
       if (!hasField) return;
 
       // Cam uniform byte layout (160-byte buffer; struct uses through byte 148):
@@ -350,7 +356,9 @@ export function createFlowFieldRenderer(init: {
       camF32[33] = viewportPx[0] / viewportPx[1];
       camF32[34] = phase;
       camU32[35] = modeCode(flow);
-      camF32[36] = flow.intensity;
+      // Fold the layer fade opacity into the pre-blend intensity — the vertex
+      // stage already multiplies by cam.intensity, so no shader change.
+      camF32[36] = flow.intensity * opacity;
       device.queue.writeBuffer(camBuf, 0, camF32);
 
       pass.setPipeline(renderPipeline);

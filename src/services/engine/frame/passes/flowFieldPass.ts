@@ -11,11 +11,14 @@
  * ### When it draws
  *
  * Gated on the singleton-overlay-layer contract:
- *   1. `state.settings.flow.enabled` — the user toggle (off by default).
- *   2. `state.data.flow.loaded` — the velocity cube has been committed.
- * Gating on both keeps the split-path from opening an empty render pass while
- * flow is enabled but still loading. The renderer-null check lives in `draw`
- * (the `Pass.enabled` signature has no `deps`), mirroring `filamentsPass`.
+ *   1. `state.data.flow.loaded` — the velocity cube has been committed; with no
+ *      cube there is nothing to draw, even mid-fade.
+ *   2. `state.settings.flow.enabled` OR a non-zero flow fade opacity — the
+ *      setting is the user's intent, a non-zero fade is the visual state. The
+ *      pass stays alive while EITHER is true so a fade-out keeps drawing after
+ *      the user toggles off (until opacity hits 0), mirroring `filamentsPass`.
+ * The renderer-null check lives in `draw` (the `Pass.enabled` signature has no
+ * `deps`), mirroring `filamentsPass`.
  *
  * ### Why after filamentsPass
  *
@@ -32,7 +35,13 @@ export const flowFieldPass: Pass = {
   name: 'flow',
 
   enabled(state) {
-    return state.settings.flow.enabled && state.data.flow.loaded;
+    // No cube committed → nothing to draw, even mid-fade.
+    if (!state.data.flow.loaded) return false;
+    // The setting is the user's intent; a non-zero fade opacity is the visual
+    // state. Render while EITHER is true so a fade-out keeps drawing after the
+    // user toggles off (until opacity hits 0).
+    if (state.settings.flow.enabled) return true;
+    return state.subsystems.fades.opacityOf({ kind: 'flow' }, performance.now()) > 0;
   },
 
   draw(pass, ctx, state, _settings, deps) {
@@ -41,12 +50,15 @@ export const flowFieldPass: Pass = {
     // own `draw` also early-returns until a field is set, so this is belt +
     // suspenders against the bootstrap window.
     if (deps.flowFieldRenderer === null) return;
+    // Hoist nowMs to a single call per draw, matching filamentsPass.
+    const nowMs = performance.now();
     const { vp, canvasSize } = ctx;
     deps.flowFieldRenderer.draw(
       pass,
       vp,
       [canvasSize.width, canvasSize.height],
       state.settings.flow,
+      state.subsystems.fades.opacityOf({ kind: 'flow' }, nowMs),
     );
   },
 };

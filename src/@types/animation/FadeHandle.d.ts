@@ -13,6 +13,9 @@
  *                    on tier swap. Discriminator: `source: Source`.
  *   - filaments    — the single cosmic-web filament skeleton.
  *                    Fades in on first load. No discriminator.
+ *   - flow         — the CF4++ peculiar-velocity flow overlay. Fades in on
+ *                    first load (the slot commit), like filaments/survey;
+ *                    fades out on disable. No discriminator.
  *   - scalarField  — one volumetric scalar field (CF-4, rhizome-small,
  *                    rhizome-medium, rhizome-large). Discriminator:
  *                    `field: ScalarFieldHandle` (the string key the
@@ -48,6 +51,7 @@ import type { OverlayId } from './OverlayId';
 export type FadeHandle =
   | { readonly kind: 'survey'; readonly source: SourceType }
   | { readonly kind: 'filaments' }
+  | { readonly kind: 'flow' }
   | { readonly kind: 'scalarField'; readonly field: ScalarFieldHandle }
   | { readonly kind: 'labelLayer'; readonly layer: LabelLayerId }
   | { readonly kind: 'overlay'; readonly id: OverlayId }

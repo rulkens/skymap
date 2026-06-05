@@ -143,6 +143,7 @@ import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
 // connect/disconnect/sensitivity setters forward straight through.
 import { createSpaceMouseSubsystem } from './subsystems/spaceMouseSubsystem';
 import { buildSettersFromTable } from './wiring/settingsTable';
+import { reevaluateDemand } from './wiring/reevaluateDemand';
 import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
   loadCompanionAssets,
@@ -1262,6 +1263,42 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         state.subsystems.scheduler.requestRender();
       },
       setIntensity: (value) => boringSetters.setFilamentIntensity(value),
+    },
+    flow: {
+      // Arrow-wrap the boringSetters forwarders so the public types stay
+      // narrow (boringSetters.setFlow* are typed `(value: unknown) => void`).
+      setEnabled: (enabled) => {
+        boringSetters.setFlowEnabled(enabled);
+        // Re-evaluate demand so the first enable lazy-loads the velocity cube.
+        reevaluateDemand(state);
+        // Fade design: the slot commit owns the FIRST-enable fade-in (it fires
+        // fadeTo(1) when the cube actually lands), so here we only fade in when
+        // the cube is ALREADY resident (a re-enable). Disable always fades out
+        // (the cube stays resident — reevaluateDemand never unloads).
+        if (enabled) {
+          if (state.data.flow.loaded) {
+            void state.subsystems.fades.fadeTo({ kind: 'flow' }, 1, FADE_IN_DURATION_MS);
+          }
+        } else {
+          void state.subsystems.fades.fadeTo({ kind: 'flow' }, 0, FADE_OUT_DURATION_MS);
+        }
+        state.subsystems.scheduler.requestRender();
+      },
+      setMode: (mode) => {
+        boringSetters.setFlowMode(mode);
+        state.gpu.flowFieldRenderer?.maybeReseed();
+        state.subsystems.scheduler.requestRender();
+      },
+      setIntensity: (value) => boringSetters.setFlowIntensity(value),
+      setCount: (value) => {
+        boringSetters.setFlowCount(value);
+        state.gpu.flowFieldRenderer?.maybeReseed();
+        state.subsystems.scheduler.requestRender();
+      },
+      setTrail: (value) => boringSetters.setFlowTrail(value),
+      setFlowSpeed: (value) => boringSetters.setFlowSpeed(value),
+      setDensityBias: (value) => boringSetters.setFlowDensityBias(value),
+      setWander: (value) => boringSetters.setFlowWander(value),
     },
     labels: {
       // Two parallel setters, one per independent visibility axis.  Each
