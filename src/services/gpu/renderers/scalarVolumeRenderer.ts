@@ -35,7 +35,6 @@
 
 import { mat4 } from 'gl-matrix';
 import type { ScalarCube } from '../../../@types/data/ScalarCube';
-import type { ScalarFieldFrameKind } from '../../../@types/data/ScalarFieldFrameKind';
 import type { ScalarFieldPaletteId } from '../../../@types/data/ScalarFieldPaletteId';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { ScalarFieldHandle } from '../../../@types/rendering/ScalarFieldHandle';
@@ -43,7 +42,7 @@ import type { ScalarVolumeRenderer } from '../../../@types/rendering/ScalarVolum
 import type { FieldEntry } from '../../../@types/rendering/FieldEntry';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../data/scalarFieldPalettes';
-import { SG_TO_EQ_MAT4_COL_MAJOR } from '../../../data/superGalacticTransform';
+import { buildCubeModelMatrix } from './buildCubeModelMatrix';
 import vsCode from '../shaders/scalarVolume/vertex.wesl?static';
 import fsCode from '../shaders/scalarVolume/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
@@ -65,106 +64,31 @@ const UNIFORM_BYTES = 256;
 const FRAME_WRAP = 1_000_000;
 
 const CUBE_CORNERS = new Float32Array([
-  0, 0, 0,
-  1, 0, 0,
-  0, 1, 0,
-  1, 1, 0,
-  0, 0, 1,
-  1, 0, 1,
-  0, 1, 1,
-  1, 1, 1,
+  0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1,
 ]);
 
 const CUBE_INDICES = new Uint16Array([
   // -z face (winding so normal points -z)
-  0, 2, 1,  1, 2, 3,
+  0, 2, 1, 1, 2, 3,
   // +z face
-  4, 5, 6,  5, 7, 6,
+  4, 5, 6, 5, 7, 6,
   // -y face
-  0, 1, 4,  1, 5, 4,
+  0, 1, 4, 1, 5, 4,
   // +y face
-  2, 6, 3,  3, 6, 7,
+  2, 6, 3, 3, 6, 7,
   // -x face
-  0, 4, 2,  2, 4, 6,
+  0, 4, 2, 2, 4, 6,
   // +x face
-  1, 3, 5,  3, 7, 5,
+  1, 3, 5, 3, 7, 5,
 ]);
 
-// Supergalactic→equatorial rotation, J2000.  Imported directly from
-// the canonical column-major export in `superGalacticTransform.ts`
-// (composed from R_GAL_TO_EQ · R_SG_TO_GAL once at module init).
-//
-// Why import the canonical mat4 layout rather than reconstruct from
-// the 3x3 here: every other path that maps SG → EQ in the codebase
-// (cluster labels via `raDecDistToEqCart`, the SCFD header rotation
-// quaternion, future renderers) flows through the same 3x3 → derived
-// form.  Reconstruction in two places means two opportunities for
-// the column-major-vs-row-major transcription to drift; centralising
-// the layout decision in `superGalacticTransform.ts` makes drift
-// impossible (the renderer never sees the 3x3 form, so it can't
-// re-encode it incorrectly).  See that file's docstring on
-// `SG_TO_EQ_MAT4_COL_MAJOR` for the rationale and the historical
-// drift that prompted the consolidation.
-//
-// Cast: gl-matrix's `mat4` is `Float32Array(16)`, and `mat4.fromValues`
-// expects 16 positional args.  `Float32Array.of(...readonly number[])`
-// would work too, but `mat4.fromValues` makes the gl-matrix contract
-// explicit at the call site.
-const SG_TO_EQ_ROT = mat4.fromValues(
-  SG_TO_EQ_MAT4_COL_MAJOR[0]!,  SG_TO_EQ_MAT4_COL_MAJOR[1]!,  SG_TO_EQ_MAT4_COL_MAJOR[2]!,  SG_TO_EQ_MAT4_COL_MAJOR[3]!,
-  SG_TO_EQ_MAT4_COL_MAJOR[4]!,  SG_TO_EQ_MAT4_COL_MAJOR[5]!,  SG_TO_EQ_MAT4_COL_MAJOR[6]!,  SG_TO_EQ_MAT4_COL_MAJOR[7]!,
-  SG_TO_EQ_MAT4_COL_MAJOR[8]!,  SG_TO_EQ_MAT4_COL_MAJOR[9]!,  SG_TO_EQ_MAT4_COL_MAJOR[10]!, SG_TO_EQ_MAT4_COL_MAJOR[11]!,
-  SG_TO_EQ_MAT4_COL_MAJOR[12]!, SG_TO_EQ_MAT4_COL_MAJOR[13]!, SG_TO_EQ_MAT4_COL_MAJOR[14]!, SG_TO_EQ_MAT4_COL_MAJOR[15]!,
-);
-
-const FRAME_TO_WORLD: Record<ScalarFieldFrameKind, mat4> = {
-  'supergalactic-cartesian': SG_TO_EQ_ROT,
-  'equatorial-cartesian': mat4.create(),
-  galactic: mat4.create(),
-};
-
-// ── Pure helper: model matrix builder ───────────────────────────────
-//
-// Maps the unit cube '[0,1]^3' (vertex shader's input space) to the
-// cube's footprint in skymap world space.  Composition order, applied
-// right-to-left to a unit-cube corner v:
-//
-//   1. scale  by (Nx*voxelSize, Ny*voxelSize, Nz*voxelSize) — unit cube
-//      becomes its physical extent (e.g. [0, 1000]^3 for CF-4)
-//   2. translate by the cube's origin in its native frame — shifts the
-//      cube so its corner sits at `origin`, which for an observer-centered
-//      cube means the cube's geometric centre lands at the native frame's
-//      origin
-//   3. rotate by the cube's per-cube quaternion — pivots around the
-//      native frame's origin, which (after step 2) coincides with the
-//      cube's centre.  Order matters: rotating BEFORE the translate
-//      would pivot around the cube's corner instead and offset the
-//      whole volume by `R*origin - origin` in the native frame.  The
-//      synthetic cubes ship identity rotations, so the bug is invisible
-//      there; CF-4 (with the SG→EQ quaternion) exposes it.
-//   4. transform from the native frame into world space
-//
-// The function is exported (rather than locked inside the factory)
-// because steps 1-3 are pure math worth unit-testing without standing
-// up a GPU device.
-export function buildCubeModelMatrix(cube: ScalarCube): mat4 {
-  const out = mat4.create();
-  mat4.copy(out, FRAME_TO_WORLD[cube.frameKind]);
-  const rotMat = mat4.create();
-  mat4.fromQuat(rotMat, [cube.rotation[0], cube.rotation[1], cube.rotation[2], cube.rotation[3]]);
-  mat4.multiply(out, out, rotMat);
-  mat4.translate(out, out, [cube.origin[0], cube.origin[1], cube.origin[2]]);
-  const sx = cube.dims[0] * cube.voxelSize;
-  const sy = cube.dims[1] * cube.voxelSize;
-  const sz = cube.dims[2] * cube.voxelSize;
-  mat4.scale(out, out, [sx, sy, sz]);
-  return out;
-}
+// The cube → world model-matrix math moved to its own module
+// (`./buildCubeModelMatrix`) once the flow field became a second cube
+// consumer — see `CubePlacement` for the shared-helper rationale.
 
 // ── Factory ─────────────────────────────────────────────────────────
 
 // FieldEntry type moved to @types/rendering/FieldEntry.d.ts.
-
 
 export function createScalarVolumeRenderer(
   device: GPUDevice,
@@ -207,10 +131,22 @@ export function createScalarVolumeRenderer(
   const group0Bgl = device.createBindGroupLayout({
     label: 'scalarVolume-bgl-group0',
     entries: [
-      { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
-      { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '3d' } },
+      {
+        binding: 0,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        buffer: { type: 'uniform' },
+      },
+      {
+        binding: 1,
+        visibility: GPUShaderStage.FRAGMENT,
+        texture: { sampleType: 'float', viewDimension: '3d' },
+      },
       { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
-      { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },
+      {
+        binding: 3,
+        visibility: GPUShaderStage.FRAGMENT,
+        texture: { sampleType: 'float', viewDimension: '2d' },
+      },
       { binding: 4, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
     ],
   });
