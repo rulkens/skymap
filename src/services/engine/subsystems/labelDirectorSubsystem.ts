@@ -24,6 +24,14 @@
  * you-are-here fade band crossing); other systems wake the loop on
  * their own.
  *
+ * ### No layer load-in here — each producer owns its own
+ *
+ * The director merges, declutters, and flushes; it does NOT fire any
+ * layer's load-in fade.  Each producer fires its own first-emit load-in
+ * (`produceStructureLabels` per category, the famous/you-are-here
+ * producers per layer), so the fade reacts to the producer's own
+ * visibility decision rather than to the merged, decluttered set.
+ *
  * ### Null-renderer guard
  *
  * Renderers attach asynchronously (after the font atlas fetch); the
@@ -42,7 +50,6 @@ import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { LabelProducer } from '../../../@types/engine/subsystems/LabelProducer';
 import type { LabelDirectorSubsystem } from '../../../@types/engine/subsystems/LabelDirectorSubsystem';
 import { getLabelStyleOverrideVersion } from '../labelStyleOverride';
-import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 
 /**
  * Minimum screen-pixel gap between two on-screen label anchors before the
@@ -64,10 +71,6 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
   // first frame.  Empty string is a valid signature (no labels, no lines)
   // and is distinct from null.
   let prevSignature: string | null = null;
-  // One-shot fade-in flag for the 'poi' label layer.  Flips true on the first
-  // frame that flushes a non-empty (decluttered) label set.  Lives here because
-  // only the director sees the merged, decluttered set the fade should react to.
-  let didFireFadeIn = false;
 
   function attachRenderers(label: LabelRenderer, line: MarkerLineRenderer): void {
     labelRenderer = label;
@@ -226,20 +229,6 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
     // Cross-producer declutter — producers emit every candidate (no internal
     // declutter); the director de-collides them together here.
     const { labels, lines } = declutter(mergedLabels, mergedLines, ctx);
-
-    // One-shot layer fade-in: the first non-empty (decluttered) label set
-    // fires fadeTo(1) on the POI layer's FadeHandle.  It lives here because the
-    // director owns the merged, decluttered set the fade should react to.  The
-    // label renderer doesn't consume the opacity yet — registration is
-    // structural for future tour addressing.
-    if (!didFireFadeIn && labels.length > 0) {
-      didFireFadeIn = true;
-      void state.subsystems.fades.fadeTo(
-        { kind: 'labelLayer', layer: 'poi' },
-        1,
-        FADE_IN_DURATION_MS,
-      );
-    }
 
     const sig = signatureOf(labels, lines);
     if (sig !== prevSignature) {

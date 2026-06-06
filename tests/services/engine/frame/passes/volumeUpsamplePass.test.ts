@@ -43,8 +43,14 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
     canvasSize: { width: 1280, height: 720 },
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
+    focusBlend: 0,
     renderer: {} as never,
-    postProcess: { view: {} as GPUTextureView, resize: vi.fn(), draw: vi.fn(), destroy: vi.fn() } as never,
+    postProcess: {
+      view: {} as GPUTextureView,
+      resize: vi.fn(),
+      draw: vi.fn(),
+      destroy: vi.fn(),
+    } as never,
     volumeOffscreen: { view: offscreenView, resize: vi.fn(), destroy: vi.fn() },
     texturedDisks: {} as never,
   };
@@ -77,7 +83,9 @@ describe('volumeUpsamplePass.enabled', () => {
       // short-circuits to false when both gates miss.
       subsystems: { fades: { opacityOf: () => 0 } },
     } as unknown as EngineState;
-    expect(volumeUpsamplePass.enabled(state, makeCtx(), makeSettings({ volumesEnabled: false }))).toBe(false);
+    expect(
+      volumeUpsamplePass.enabled(state, makeCtx(), makeSettings({ volumesEnabled: false })),
+    ).toBe(false);
   });
 
   it('returns false when no fields are active and no fade-out tail is in flight', () => {

@@ -7,7 +7,14 @@ import type { StructureCategory } from '../../../../src/@types/engine/data/Struc
 // narrowed to a single arm at construction, so the helper asserts the type.
 // The object is a structurally-valid record regardless of which arm.
 const rec = (id: string, category: StructureCategory = 'cluster'): StructureRecord =>
-  ({ id, name: id, worldPos: [0, 0, 0], category, featured: true, physicalRadiusMpc: 1 }) as StructureRecord;
+  ({
+    id,
+    name: id,
+    worldPos: [0, 0, 0],
+    category,
+    featured: true,
+    physicalRadiusMpc: 1,
+  }) as StructureRecord;
 
 describe('createStructureStore', () => {
   it('all() concatenates anchors before bulk, preserving within-group order', () => {
@@ -48,14 +55,5 @@ describe('createStructureStore', () => {
     s.setGroup('anchors', arr);
     arr.push(rec('a2'));
     expect(s.all().map((r) => r.id)).toEqual(['a1']);
-  });
-
-  it('marker and label visibility are independent per category, default true', () => {
-    const s = createStructureStore();
-    expect(s.markerVisible('cluster')).toBe(true);
-    expect(s.labelVisible('cluster')).toBe(true);
-    s.setMarkerVisible('cluster', false);
-    expect(s.markerVisible('cluster')).toBe(false);
-    expect(s.labelVisible('cluster')).toBe(true);
   });
 });

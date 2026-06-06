@@ -140,6 +140,7 @@ import { clampVolumeTrim } from '../../utils/clampVolumeTrim';
 import { clampVolumeExposure } from '../../utils/clampVolumeExposure';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
+import type { PoiCategory } from '../../@types/engine/data/PoiCategory';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -237,6 +238,91 @@ export async function setSourceVisibleImpl(
 
 // Test-only alias matching the import name used in tests.
 export { setSourceVisibleImpl as setSourceVisibleForTest };
+
+// ── Test-accessible category-visibility logic ───────────────────────────────
+//
+// The two per-category visibility setters live at module scope (mirroring
+// `setSourceVisibleImpl`) so tests can drive them against a partial-state stub
+// without a full GPU engine. Each routes to the canonical store (structure
+// categories → the structure store; famousGalaxy → the galaxy store), drives
+// the matching per-category FadeRegistry handle for a smooth ramp, mirrors the
+// flag into `state.settings`, echoes a fresh snapshot via the callback, and
+// requests a render. The `createEngine` literal delegates to these.
+//
+// Why fade the per-category handle here?  The producers (produceStructureMarkers
+// / produceStructureLabels / produceFamousLabels) already read
+// `opacityOf({...})` for their layer alpha; flipping the store boolean alone
+// would pop a category in/out. Firing `fadeTo` on the same handle the producer
+// reads turns the toggle into a smooth fade — exactly as the milkyWay/filaments
+// setters do for their overlay/filaments handles.
+
+function setCategoryLabelVisible(
+  state: Pick<EngineState, 'data' | 'settings' | 'subsystems'>,
+  cb: Pick<EngineCallbacks, 'labels'>,
+  category: PoiCategory,
+  visible: boolean,
+): void {
+  if (category === 'famousGalaxy') {
+    state.data.galaxies.setFamousLabelsVisible(visible);
+    // Famous-galaxy labels reuse the shared `galaxyNames` label layer rather
+    // than minting a per-category handle (see FadeHandle's labelLayer doc).
+    void state.subsystems.fades.fadeTo(
+      { kind: 'labelLayer', layer: 'galaxyNames' },
+      visible ? 1 : 0,
+      visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+    );
+  } else {
+    // `category !== 'famousGalaxy'` narrows PoiCategory to StructureCategory,
+    // which is exactly what the labelLayer/poi handle's `category` field wants.
+    void state.subsystems.fades.fadeTo(
+      { kind: 'labelLayer', layer: 'poi', category },
+      visible ? 1 : 0,
+      visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+    );
+  }
+  state.settings.labelCategoryVisibility = {
+    ...state.settings.labelCategoryVisibility,
+    [category]: visible,
+  };
+  cb.labels?.onLabelCategoryVisibilityChange?.({
+    ...state.settings.labelCategoryVisibility,
+  });
+  state.subsystems.scheduler.requestRender();
+}
+
+function setCategoryMarkerVisible(
+  state: Pick<EngineState, 'data' | 'settings' | 'subsystems'>,
+  cb: Pick<EngineCallbacks, 'labels'>,
+  category: PoiCategory,
+  visible: boolean,
+): void {
+  // Famous galaxies have no ring/halo marker — curated thumbnails do that job —
+  // so a marker-visibility toggle for them is a no-op, AND there is no
+  // `markerLayer` handle to fade (markerLayer handles are keyed by
+  // StructureCategory only). Only structure categories route to the structure
+  // store's marker axis and fire a markerLayer fade. The `category !==
+  // 'famousGalaxy'` guard narrows PoiCategory to StructureCategory, which the
+  // markerLayer handle's `category` field requires.
+  if (category !== 'famousGalaxy') {
+    void state.subsystems.fades.fadeTo(
+      { kind: 'markerLayer', category },
+      visible ? 1 : 0,
+      visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+    );
+  }
+  state.settings.markerCategoryVisibility = {
+    ...state.settings.markerCategoryVisibility,
+    [category]: visible,
+  };
+  cb.labels?.onMarkerCategoryVisibilityChange?.({
+    ...state.settings.markerCategoryVisibility,
+  });
+  state.subsystems.scheduler.requestRender();
+}
+
+// Test-only aliases matching the import names used in tests.
+export const setCategoryLabelVisibleForTest = setCategoryLabelVisible;
+export const setCategoryMarkerVisibleForTest = setCategoryMarkerVisible;
 
 export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): EngineHandle {
   // ── Mutable engine state ─────────────────────────────────────────────────
@@ -1262,37 +1348,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // void) to the structure store, famousGalaxy to the galaxy store —
       // then mirrors into `state.settings` and echoes a fresh immutable
       // snapshot.  The OTHER axis is never touched (orthogonal axes).
-      setCategoryLabelVisible: (category, visible) => {
-        if (category === 'famousGalaxy') {
-          state.data.galaxies.setFamousLabelsVisible(visible);
-        } else {
-          state.data.structures.setLabelVisible(category, visible);
-        }
-        state.settings.labelCategoryVisibility = {
-          ...state.settings.labelCategoryVisibility,
-          [category]: visible,
-        };
-        cb.labels?.onLabelCategoryVisibilityChange?.({
-          ...state.settings.labelCategoryVisibility,
-        });
-        state.subsystems.scheduler.requestRender();
-      },
-      setCategoryMarkerVisible: (category, visible) => {
-        // Famous galaxies have no ring/halo marker — curated thumbnails do
-        // that job — so a marker-visibility toggle for them is a no-op. Only
-        // structure categories route to the structure store's marker axis.
-        if (category !== 'famousGalaxy') {
-          state.data.structures.setMarkerVisible(category, visible);
-        }
-        state.settings.markerCategoryVisibility = {
-          ...state.settings.markerCategoryVisibility,
-          [category]: visible,
-        };
-        cb.labels?.onMarkerCategoryVisibilityChange?.({
-          ...state.settings.markerCategoryVisibility,
-        });
-        state.subsystems.scheduler.requestRender();
-      },
+      setCategoryLabelVisible: (category, visible) =>
+        setCategoryLabelVisible(state, cb, category, visible),
+      setCategoryMarkerVisible: (category, visible) =>
+        setCategoryMarkerVisible(state, cb, category, visible),
     },
     volumes: {
       setMasterEnabled: setVolumesEnabled,

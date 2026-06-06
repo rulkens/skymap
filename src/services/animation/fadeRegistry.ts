@@ -43,12 +43,23 @@ import { createFadeController, FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from 
 
 function serializeFadeHandle(h: FadeHandle): string {
   switch (h.kind) {
-    case 'survey':         return `survey:${h.source}`;
-    case 'filaments':      return 'filaments';
-    case 'scalarField':    return `scalarField:${h.field}`;
-    case 'labelLayer':     return `labelLayer:${h.layer}`;
-    case 'overlay':        return `overlay:${h.id}`;
-    case 'volumesMaster':  return 'volumesMaster';
+    case 'survey':
+      return `survey:${h.source}`;
+    case 'filaments':
+      return 'filaments';
+    case 'scalarField':
+      return `scalarField:${h.field}`;
+    case 'markerLayer':
+      return `markerLayer:${h.category}`;
+    // A category-less POI handle and a per-category one must not collide,
+    // and existing keys (e.g. `labelLayer:youAreHere`) must stay
+    // byte-identical — so the category suffix is appended only when present.
+    case 'labelLayer':
+      return `labelLayer:${h.layer}${h.category ? ':' + h.category : ''}`;
+    case 'overlay':
+      return `overlay:${h.id}`;
+    case 'volumesMaster':
+      return 'volumesMaster';
   }
 }
 
@@ -68,9 +79,7 @@ export function createFadeRegistry(): FadeRegistry {
   function requireController(handle: FadeHandle): FadeController {
     const c = controllers.get(serializeFadeHandle(handle));
     if (!c) {
-      throw new Error(
-        `FadeRegistry: handle not registered: ${serializeFadeHandle(handle)}`,
-      );
+      throw new Error(`FadeRegistry: handle not registered: ${serializeFadeHandle(handle)}`);
     }
     return c;
   }
@@ -83,9 +92,8 @@ export function createFadeRegistry(): FadeRegistry {
   ): Promise<void> {
     const c = requireController(handle);
     const now = nowMs ?? performance.now();
-    const dur = durationMs ?? (
-      target > c.currentOpacity(now) ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS
-    );
+    const dur =
+      durationMs ?? (target > c.currentOpacity(now) ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS);
     return c.fadeTo(target, dur, now);
   }
 
