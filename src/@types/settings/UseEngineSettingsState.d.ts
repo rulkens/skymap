@@ -28,7 +28,7 @@
 
 import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
-import type { FlowMode } from '../data/FlowMode';
+import type { FlowSettings } from './FlowSettings';
 import type { VolumeFieldRowData } from './VolumeFieldRowData';
 import type { PoiCategory } from '../engine/data/PoiCategory';
 
@@ -102,21 +102,13 @@ export type UseEngineSettingsState = {
    */
   spaceMouseSensitivity: number;
   /**
-   * App-owned optimistic mirrors of `settings.flow` (the CF4++
-   * peculiar-velocity overlay).  The engine fires NO echo callback for
-   * flow — same pattern as `filamentsEnabled` — so React owns these
-   * eight leaves directly.  Seeded from `DEFAULT_FLOW`.  Only a subset
-   * (`flowEnabled` / `flowMode` / `flowIntensity`) drives the
-   * SettingsPanel today; the remaining knobs feed the DebugPanel's flow
-   * tuning section.
+   * App-owned optimistic mirror of `settings.flow` (the CF4++
+   * peculiar-velocity overlay).  The engine fires NO echo callback for flow —
+   * same pattern as `filamentsEnabled` — so React owns the whole slice
+   * directly, seeded from `DEFAULT_FLOW`.  One `FlowSettings` object rather
+   * than nine flat fields: the SettingsPanel reads `enabled` / `mode` /
+   * `intensity`, the DebugPanel reads the motion knobs, and both write back
+   * through a `Partial<FlowSettings>` patch.
    */
-  flowEnabled: boolean;
-  flowMode: FlowMode;
-  flowIntensity: number;
-  flowCount: number;
-  flowTrail: number;
-  flowSpeed: number;
-  flowDensityBias: number;
-  flowWander: number;
-  flowBoundaryFadeWidth: number;
+  flow: FlowSettings;
 };

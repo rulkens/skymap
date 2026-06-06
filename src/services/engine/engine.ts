@@ -1354,46 +1354,50 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setIntensity: (value) => boringSetters.setFilamentIntensity(value),
     },
     flow: {
-      // Arrow-wrap the boringSetters forwarders so the public types stay
-      // narrow (boringSetters.setFlow* are typed `(value: unknown) => void`).
-      setEnabled: (enabled) => {
-        boringSetters.setFlowEnabled(enabled);
-        // Re-evaluate demand so the first enable lazy-loads the velocity cube.
-        reevaluateDemand(state);
-        // Fade only when the cube is resident. `loaded === true` implies the
-        // slot already committed, which means it also registered the
-        // {kind:'flow'} fade handle — so fadeTo is provably safe here. When the
-        // cube is NOT loaded there is nothing drawn to fade, AND the handle may
-        // not be registered yet: returning users skip the splash and can toggle
-        // during the async bootstrap, before wireSlots runs, and fadeTo throws
-        // on an unregistered handle. The FIRST-enable fade-in is owned by the
-        // slot commit; this branch handles re-enable + fade-out (the cube stays
-        // resident — reevaluateDemand never unloads).
-        if (state.data.flow.loaded) {
-          void state.subsystems.fades.fadeTo(
-            { kind: 'flow' },
-            enabled ? 1 : 0,
-            enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
-          );
+      // One patch-shaped entry point over the `settings.flow` slice. Each
+      // present leaf is written through its table-driven boringSetter (which
+      // clamps + wakes the scheduler), then the per-leaf side effects fire off
+      // which keys the patch carried. boringSetters.setFlow* are typed
+      // `(value: unknown) => void`; the FlowSettings leaf types narrow them.
+      set: (patch) => {
+        if (patch.enabled !== undefined) boringSetters.setFlowEnabled(patch.enabled);
+        if (patch.mode !== undefined) boringSetters.setFlowMode(patch.mode);
+        if (patch.intensity !== undefined) boringSetters.setFlowIntensity(patch.intensity);
+        if (patch.count !== undefined) boringSetters.setFlowCount(patch.count);
+        if (patch.trail !== undefined) boringSetters.setFlowTrail(patch.trail);
+        if (patch.flowSpeed !== undefined) boringSetters.setFlowSpeed(patch.flowSpeed);
+        if (patch.densityBias !== undefined) boringSetters.setFlowDensityBias(patch.densityBias);
+        if (patch.wander !== undefined) boringSetters.setFlowWander(patch.wander);
+        if (patch.boundaryFadeWidth !== undefined)
+          boringSetters.setFlowBoundaryFadeWidth(patch.boundaryFadeWidth);
+
+        // enabled: re-evaluate demand so the first enable lazy-loads the cube,
+        // then fade — but only when the cube is resident. `loaded === true`
+        // implies the slot committed and registered the {kind:'flow'} fade
+        // handle, so fadeTo is provably safe. When NOT loaded there is nothing
+        // drawn to fade AND the handle may be unregistered: a returning user
+        // skips the splash and can toggle during the async bootstrap (before
+        // wireSlots runs), where fadeTo throws. The FIRST-enable fade-in is
+        // owned by the slot commit; this branch handles re-enable + fade-out
+        // (the cube stays resident — reevaluateDemand never unloads).
+        if (patch.enabled !== undefined) {
+          reevaluateDemand(state);
+          if (state.data.flow.loaded) {
+            void state.subsystems.fades.fadeTo(
+              { kind: 'flow' },
+              patch.enabled ? 1 : 0,
+              patch.enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+            );
+          }
         }
+
+        // mode / count both reseed the shared particle buffers.
+        if (patch.mode !== undefined || patch.count !== undefined) {
+          state.gpu.flowFieldRenderer?.maybeReseed();
+        }
+
         state.subsystems.scheduler.requestRender();
       },
-      setMode: (mode) => {
-        boringSetters.setFlowMode(mode);
-        state.gpu.flowFieldRenderer?.maybeReseed();
-        state.subsystems.scheduler.requestRender();
-      },
-      setIntensity: (value) => boringSetters.setFlowIntensity(value),
-      setCount: (value) => {
-        boringSetters.setFlowCount(value);
-        state.gpu.flowFieldRenderer?.maybeReseed();
-        state.subsystems.scheduler.requestRender();
-      },
-      setTrail: (value) => boringSetters.setFlowTrail(value),
-      setFlowSpeed: (value) => boringSetters.setFlowSpeed(value),
-      setDensityBias: (value) => boringSetters.setFlowDensityBias(value),
-      setWander: (value) => boringSetters.setFlowWander(value),
-      setBoundaryFadeWidth: (value) => boringSetters.setFlowBoundaryFadeWidth(value),
     },
     labels: {
       // Two parallel setters, one per independent visibility axis.  Each

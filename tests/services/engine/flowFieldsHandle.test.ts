@@ -79,9 +79,9 @@ function makeBoringSetters(state: EngineState, requestRender: () => void) {
 }
 
 /**
- * Hand-built `flow` sub-handle closure mirroring the engine.ts object literal.
- * `reevaluateDemand` is injected so the test can spy on the demand re-eval
- * without importing the real (state-walking) implementation.
+ * Hand-built `flow` sub-handle closure mirroring the engine.ts `set(patch)`
+ * literal. `reevaluateDemand` is injected so the test can spy on the demand
+ * re-eval without importing the real (state-walking) implementation.
  */
 function makeFlowHandle(
   state: EngineState,
@@ -89,37 +89,40 @@ function makeFlowHandle(
   reevaluateDemand: (s: EngineState) => void,
 ): EngineFlowFieldsHandle {
   return {
-    setEnabled: (enabled) => {
-      boringSetters.setFlowEnabled(enabled);
-      reevaluateDemand(state);
-      // Fade only when the cube is resident (loaded ⟹ registered) — mirrors
-      // engine.ts. Guards the unregistered-handle throw for toggles during the
-      // async bootstrap; first-enable fade-in is owned by the slot commit.
-      if (state.data.flow.loaded) {
-        void state.subsystems.fades.fadeTo(
-          { kind: 'flow' },
-          enabled ? 1 : 0,
-          enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
-        );
+    set: (patch) => {
+      if (patch.enabled !== undefined) boringSetters.setFlowEnabled(patch.enabled);
+      if (patch.mode !== undefined) boringSetters.setFlowMode(patch.mode);
+      if (patch.intensity !== undefined) boringSetters.setFlowIntensity(patch.intensity);
+      if (patch.count !== undefined) boringSetters.setFlowCount(patch.count);
+      if (patch.trail !== undefined) boringSetters.setFlowTrail(patch.trail);
+      if (patch.flowSpeed !== undefined) boringSetters.setFlowSpeed(patch.flowSpeed);
+      if (patch.densityBias !== undefined) boringSetters.setFlowDensityBias(patch.densityBias);
+      if (patch.wander !== undefined) boringSetters.setFlowWander(patch.wander);
+      if (patch.boundaryFadeWidth !== undefined)
+        boringSetters.setFlowBoundaryFadeWidth(patch.boundaryFadeWidth);
+
+      // enabled: demand re-eval, then fade only when the cube is resident
+      // (loaded ⟹ registered) — mirrors engine.ts. Guards the unregistered-
+      // handle throw for toggles during the async bootstrap; first-enable
+      // fade-in is owned by the slot commit.
+      if (patch.enabled !== undefined) {
+        reevaluateDemand(state);
+        if (state.data.flow.loaded) {
+          void state.subsystems.fades.fadeTo(
+            { kind: 'flow' },
+            patch.enabled ? 1 : 0,
+            patch.enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+          );
+        }
       }
+
+      // mode / count both reseed the shared particle buffers.
+      if (patch.mode !== undefined || patch.count !== undefined) {
+        state.gpu.flowFieldRenderer?.maybeReseed();
+      }
+
       state.subsystems.scheduler.requestRender();
     },
-    setMode: (mode) => {
-      boringSetters.setFlowMode(mode);
-      state.gpu.flowFieldRenderer?.maybeReseed();
-      state.subsystems.scheduler.requestRender();
-    },
-    setIntensity: (value) => boringSetters.setFlowIntensity(value),
-    setCount: (value) => {
-      boringSetters.setFlowCount(value);
-      state.gpu.flowFieldRenderer?.maybeReseed();
-      state.subsystems.scheduler.requestRender();
-    },
-    setTrail: (value) => boringSetters.setFlowTrail(value),
-    setFlowSpeed: (value) => boringSetters.setFlowSpeed(value),
-    setDensityBias: (value) => boringSetters.setFlowDensityBias(value),
-    setWander: (value) => boringSetters.setFlowWander(value),
-    setBoundaryFadeWidth: (value) => boringSetters.setFlowBoundaryFadeWidth(value),
   };
 }
 
@@ -135,7 +138,7 @@ function harness(over: { loaded?: boolean } = {}) {
 describe('flow sub-handle — setEnabled fade design', () => {
   it('first enable (cube NOT loaded): sets enabled, re-evaluates demand, requests render, does NOT fade (slot commit owns it)', () => {
     const h = harness({ loaded: false });
-    h.handle.setEnabled(true);
+    h.handle.set({ enabled: true });
 
     expect(h.state.settings.flow.enabled).toBe(true);
     expect(h.reevaluateDemand).toHaveBeenCalledWith(h.state);
@@ -146,7 +149,7 @@ describe('flow sub-handle — setEnabled fade design', () => {
 
   it('re-enable (cube already loaded): sets enabled AND fades in to 1', () => {
     const h = harness({ loaded: true });
-    h.handle.setEnabled(true);
+    h.handle.set({ enabled: true });
 
     expect(h.state.settings.flow.enabled).toBe(true);
     expect(h.fadeTo).toHaveBeenCalledWith({ kind: 'flow' }, 1, FADE_IN_DURATION_MS);
@@ -154,7 +157,7 @@ describe('flow sub-handle — setEnabled fade design', () => {
 
   it('disable (cube loaded): sets enabled false AND fades out to 0', () => {
     const h = harness({ loaded: true });
-    h.handle.setEnabled(false);
+    h.handle.set({ enabled: false });
 
     expect(h.state.settings.flow.enabled).toBe(false);
     expect(h.fadeTo).toHaveBeenCalledWith({ kind: 'flow' }, 0, FADE_OUT_DURATION_MS);
@@ -166,7 +169,7 @@ describe('flow sub-handle — setEnabled fade design', () => {
     // fadeTo throws on an unregistered handle, and loaded===false proves the
     // commit (hence registration) has not run — so the handle must NOT fade.
     const h = harness({ loaded: false });
-    h.handle.setEnabled(false);
+    h.handle.set({ enabled: false });
 
     expect(h.state.settings.flow.enabled).toBe(false);
     expect(h.fadeTo).not.toHaveBeenCalled();
@@ -177,7 +180,7 @@ describe('flow sub-handle — setEnabled fade design', () => {
 describe('flow sub-handle — reseed wrappers', () => {
   it('setMode sets mode, reseeds, and requests a render', () => {
     const h = harness();
-    h.handle.setMode('streamline');
+    h.handle.set({ mode: 'streamline' });
 
     expect(h.state.settings.flow.mode).toBe('streamline');
     expect(h.reseed).toHaveBeenCalledOnce();
@@ -186,7 +189,7 @@ describe('flow sub-handle — reseed wrappers', () => {
 
   it('setCount sets count, reseeds, and requests a render', () => {
     const h = harness();
-    h.handle.setCount(1000);
+    h.handle.set({ count: 1000 });
 
     expect(h.state.settings.flow.count).toBe(1000);
     expect(h.reseed).toHaveBeenCalledOnce();
@@ -195,7 +198,7 @@ describe('flow sub-handle — reseed wrappers', () => {
 
   it('setIntensity sets intensity and requests a render but does NOT reseed', () => {
     const h = harness();
-    h.handle.setIntensity(0.5);
+    h.handle.set({ intensity: 0.5 });
 
     expect(h.state.settings.flow.intensity).toBe(0.5);
     expect(h.requestRender).toHaveBeenCalled();
@@ -206,25 +209,25 @@ describe('flow sub-handle — reseed wrappers', () => {
 describe('flow sub-handle — clamps (via the real table rows)', () => {
   it('setIntensity clamps above 1 down to 1', () => {
     const h = harness();
-    h.handle.setIntensity(5);
+    h.handle.set({ intensity: 5 });
     expect(h.state.settings.flow.intensity).toBe(1);
   });
 
   it('setCount clamps below 0 up to 0', () => {
     const h = harness();
-    h.handle.setCount(-10);
+    h.handle.set({ count: -10 });
     expect(h.state.settings.flow.count).toBe(0);
   });
 
   it('setCount clamps + rounds above MAX_PARTICLES down to MAX_PARTICLES', () => {
     const h = harness();
-    h.handle.setCount(MAX_PARTICLES + 9999);
+    h.handle.set({ count: MAX_PARTICLES + 9999 });
     expect(h.state.settings.flow.count).toBe(MAX_PARTICLES);
   });
 });
 
 describe('flow table rows exist in SETTINGS_TABLE', () => {
-  it('declares all eight flow setters', () => {
+  it('declares all nine flow setters', () => {
     const names = SETTINGS_TABLE.map((d) => d.name);
     for (const k of [
       'setFlowEnabled',
@@ -235,6 +238,7 @@ describe('flow table rows exist in SETTINGS_TABLE', () => {
       'setFlowSpeed',
       'setFlowDensityBias',
       'setFlowWander',
+      'setFlowBoundaryFadeWidth',
     ] as const) {
       expect(names).toContain(k);
     }

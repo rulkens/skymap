@@ -27,6 +27,7 @@
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { PassOverridesHandle } from '../../@types/engine/handles/EngineDebugHandle';
+import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import { AssetLoadingSection } from './AssetLoadingSection';
 import { GpuTimingsSection } from './GpuTimingsSection';
 import { RenderTogglesSection } from './RenderTogglesSection';
@@ -57,23 +58,14 @@ export type DebugPanelProps = {
   showDiskRadiusRing: boolean;
   onShowDiskRadiusRingChange: (enabled: boolean) => void;
   /**
-   * Dev-only flow-field motion tunables (count / trail / flowSpeed /
-   * densityBias / wander / boundaryFadeWidth).  App-owned and optimistic, like
-   * the other DebugPanel toggles: the handler updates the React mirror AND
-   * forwards to the engine handle.  All required — App always passes them.
+   * Flow overlay slice + its patch callback.  App-owned and optimistic, like
+   * the other DebugPanel toggles: `onFlowChange` applies a `Partial<FlowSettings>`
+   * to both the React mirror and the engine handle.  The dev-only motion knobs
+   * (count / trail / flowSpeed / densityBias / wander / edgeFade) live in
+   * FlowTuningSection, driven from the flow field registry.
    */
-  flowCount: number;
-  flowTrail: number;
-  flowSpeed: number;
-  flowDensityBias: number;
-  flowWander: number;
-  flowBoundaryFadeWidth: number;
-  onFlowCountChange: (v: number) => void;
-  onFlowTrailChange: (v: number) => void;
-  onFlowSpeedChange: (v: number) => void;
-  onFlowDensityBiasChange: (v: number) => void;
-  onFlowWanderChange: (v: number) => void;
-  onFlowBoundaryFadeWidthChange: (v: number) => void;
+  flow: FlowSettings;
+  onFlowChange: (patch: Partial<FlowSettings>) => void;
 };
 
 export function DebugPanel({
@@ -88,18 +80,8 @@ export function DebugPanel({
   onShowPickBufferChange,
   showDiskRadiusRing,
   onShowDiskRadiusRingChange,
-  flowCount,
-  flowTrail,
-  flowSpeed,
-  flowDensityBias,
-  flowWander,
-  flowBoundaryFadeWidth,
-  onFlowCountChange,
-  onFlowTrailChange,
-  onFlowSpeedChange,
-  onFlowDensityBiasChange,
-  onFlowWanderChange,
-  onFlowBoundaryFadeWidthChange,
+  flow,
+  onFlowChange,
 }: DebugPanelProps) {
   return (
     <div
@@ -124,20 +106,7 @@ export function DebugPanel({
       <div style={{ marginTop: 6 }} />
       <RenderTogglesSection passOverrides={passOverrides} />
       <div style={{ marginTop: 6 }} />
-      <FlowTuningSection
-        count={flowCount}
-        trail={flowTrail}
-        flowSpeed={flowSpeed}
-        densityBias={flowDensityBias}
-        wander={flowWander}
-        boundaryFadeWidth={flowBoundaryFadeWidth}
-        onCountChange={onFlowCountChange}
-        onTrailChange={onFlowTrailChange}
-        onFlowSpeedChange={onFlowSpeedChange}
-        onDensityBiasChange={onFlowDensityBiasChange}
-        onWanderChange={onFlowWanderChange}
-        onBoundaryFadeWidthChange={onFlowBoundaryFadeWidthChange}
-      />
+      <FlowTuningSection flow={flow} onChange={onFlowChange} />
       <div style={{ marginTop: 6 }} />
       <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
         <input

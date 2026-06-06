@@ -93,7 +93,7 @@ import { STRUCTURE_CATEGORIES } from '../../data/structureCategories';
 import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
-import type { FlowMode } from '../../@types/data/FlowMode';
+import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import { VolumeFieldRow } from './VolumeFieldRow';
 import FlowRow from './FlowRow';
 import { Panel } from '../common/Panel/Panel';
@@ -232,18 +232,15 @@ type Props = {
 
   // ── Flow group (CF4++ peculiar-velocity overlay) ───────────────────────
   /**
-   * Flow-overlay state.  App-owned optimistic (no engine echo), exactly
-   * like the filaments props above — the App.tsx onChange handlers update
-   * the React mirror AND forward to `handle.flow.set…`.  The whole group
-   * is gated on its full prop set being present (see `showFlowSection`),
-   * so older / partial call sites render no Flow section.
+   * Flow-overlay state.  App-owned optimistic (no engine echo), like the
+   * filaments props above — `onFlowChange` applies a `Partial<FlowSettings>`
+   * to both the React mirror and `handle.flow.set`.  The header toggle reads
+   * `flow.enabled`; FlowRow reads `mode` / `intensity`.  The group is gated on
+   * both props being present (see `showFlowSection`), so older / partial call
+   * sites render no Flow section.
    */
-  flowEnabled?: boolean;
-  flowMode?: FlowMode;
-  flowIntensity?: number;
-  onFlowEnabledChange?: (enabled: boolean) => void;
-  onFlowModeChange?: (mode: FlowMode) => void;
-  onFlowIntensityChange?: (intensity: number) => void;
+  flow?: FlowSettings;
+  onFlowChange?: (patch: Partial<FlowSettings>) => void;
 
   // ── Structures group (cluster / supercluster / void MARKER rings) ──────
   /**
@@ -334,12 +331,8 @@ export function SettingsPanel({
   onVolumeFieldTrimChange,
   onVolumeFieldExposureChange,
   onVolumeFieldPaletteChange,
-  flowEnabled,
-  flowMode,
-  flowIntensity,
-  onFlowEnabledChange,
-  onFlowModeChange,
-  onFlowIntensityChange,
+  flow,
+  onFlowChange,
   markerCategoryVisibility,
   onSetMarkerCategoryVisibility,
   labelCategoryVisibility,
@@ -379,15 +372,9 @@ export function SettingsPanel({
     absMagLimit !== undefined &&
     onAbsMagLimitChange !== undefined;
   const showToneCurveControls = toneMapCurve !== undefined && onToneMapCurveChange !== undefined;
-  // Flow section needs every value + callback wired (same opt-in idiom as
+  // Flow section needs the slice + its patch callback (same opt-in idiom as
   // the other conditional sections) before it can both render and echo.
-  const showFlowSection =
-    flowEnabled !== undefined &&
-    flowMode !== undefined &&
-    flowIntensity !== undefined &&
-    onFlowEnabledChange !== undefined &&
-    onFlowModeChange !== undefined &&
-    onFlowIntensityChange !== undefined;
+  const showFlowSection = flow !== undefined && onFlowChange !== undefined;
   const showStructuresGroup =
     markerCategoryVisibility !== undefined && onSetMarkerCategoryVisibility !== undefined;
 
@@ -796,16 +783,10 @@ export function SettingsPanel({
       {showFlowSection && (
         <CollapsibleSection
           title="Flow"
-          headerToggle={flowEnabled!}
-          onHeaderToggleChange={onFlowEnabledChange!}
+          headerToggle={flow!.enabled}
+          onHeaderToggleChange={(enabled) => onFlowChange!({ enabled })}
         >
-          <FlowRow
-            enabled={flowEnabled!}
-            mode={flowMode!}
-            intensity={flowIntensity!}
-            onModeChange={onFlowModeChange!}
-            onIntensityChange={onFlowIntensityChange!}
-          />
+          <FlowRow flow={flow!} onChange={onFlowChange!} />
         </CollapsibleSection>
       )}
 

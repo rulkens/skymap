@@ -15,7 +15,7 @@
 
 import type { UseEngineSettingsState } from './UseEngineSettingsState';
 import type { EngineSettingsCallbacks } from './EngineSettingsCallbacks';
-import type { FlowMode } from '../data/FlowMode';
+import type { FlowSettings } from './FlowSettings';
 
 export type UseEngineSettingsReturn = {
   settings: UseEngineSettingsState;
@@ -36,18 +36,11 @@ export type UseEngineSettingsReturn = {
    * to keep the React state and the engine state in lock-step.
    */
   setSpaceMouseSensitivity: (v: number) => void;
-  // ── CF4++ flow-field optimistic setters (no engine echo) ───────────────
-  // Flow fires no echo callback — App.tsx calls each setter alongside the
-  // matching `handle.flow.set…` to keep React and engine in lock-step, same
-  // as `setFilamentsEnabled`.  SettingsPanel uses the first three; the rest
-  // back the DebugPanel flow tuning row.
-  setFlowEnabled: (enabled: boolean) => void;
-  setFlowMode: (mode: FlowMode) => void;
-  setFlowIntensity: (v: number) => void;
-  setFlowCount: (v: number) => void;
-  setFlowTrail: (v: number) => void;
-  setFlowSpeed: (v: number) => void;
-  setFlowDensityBias: (v: number) => void;
-  setFlowWander: (v: number) => void;
-  setFlowBoundaryFadeWidth: (v: number) => void;
+  /**
+   * Optimistic merge into the React `flow` mirror (no engine echo). App pairs
+   * this with `handle.flow.set(patch)` so the same `Partial<FlowSettings>`
+   * lands in both React and the engine, same lock-step idiom as
+   * `setFilamentsEnabled`.
+   */
+  updateFlow: (patch: Partial<FlowSettings>) => void;
 };

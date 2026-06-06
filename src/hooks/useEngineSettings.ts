@@ -38,10 +38,10 @@
  * higher-level wiring.
  */
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { BiasMode as BiasModeT } from '../@types/data/BiasMode';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
-import type { FlowMode } from '../@types/data/FlowMode';
+import type { FlowSettings } from '../@types/settings/FlowSettings';
 import type { PoiCategory } from '../@types/engine/data/PoiCategory';
 import {
   DEFAULT_ABS_MAG_LIMIT,
@@ -113,20 +113,17 @@ export function useEngineSettings(): UseEngineSettingsReturn {
 
   // ── CF4++ flow-field overlay (App-owned optimistic, no echo) ──────────
   // The engine fires NO echo callback for flow — same as filamentsEnabled —
-  // so React owns every leaf of `settings.flow` directly, seeded from
-  // DEFAULT_FLOW. The SettingsPanel drives `enabled` / `mode` / `intensity`;
-  // the remaining five knobs are exposed for the DebugPanel flow tuning row.
-  const [flowEnabled, setFlowEnabled] = useState<boolean>(DEFAULT_FLOW.enabled);
-  const [flowMode, setFlowMode] = useState<FlowMode>(DEFAULT_FLOW.mode);
-  const [flowIntensity, setFlowIntensity] = useState<number>(DEFAULT_FLOW.intensity);
-  const [flowCount, setFlowCount] = useState<number>(DEFAULT_FLOW.count);
-  const [flowTrail, setFlowTrail] = useState<number>(DEFAULT_FLOW.trail);
-  const [flowSpeed, setFlowSpeed] = useState<number>(DEFAULT_FLOW.flowSpeed);
-  const [flowDensityBias, setFlowDensityBias] = useState<number>(DEFAULT_FLOW.densityBias);
-  const [flowWander, setFlowWander] = useState<number>(DEFAULT_FLOW.wander);
-  const [flowBoundaryFadeWidth, setFlowBoundaryFadeWidth] = useState<number>(
-    DEFAULT_FLOW.boundaryFadeWidth,
-  );
+  // so React owns the whole `settings.flow` slice directly, seeded from
+  // DEFAULT_FLOW. It's one `FlowSettings` object rather than nine scalar cells:
+  // the panels and the engine handle are both driven by a `Partial<FlowSettings>`
+  // patch (see `updateFlow` and `handle.flow.set`), so a knob change is one
+  // patch on each side and adding a knob doesn't grow this hook.
+  const [flow, setFlow] = useState<FlowSettings>(DEFAULT_FLOW);
+
+  /** Merge an optimistic patch into the React mirror; App pairs it with `handle.flow.set`. */
+  const updateFlow = useCallback((patch: Partial<FlowSettings>) => {
+    setFlow((prev) => ({ ...prev, ...patch }));
+  }, []);
 
   // Per-field row data.  Starts empty (no cubes at startup).  The engine
   // pushes a fresh snapshot through `volumes.onFieldsChanged(fields)`
@@ -219,15 +216,7 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       markerCategoryVisibility,
       spaceMouseConnected,
       spaceMouseSensitivity,
-      flowEnabled,
-      flowMode,
-      flowIntensity,
-      flowCount,
-      flowTrail,
-      flowSpeed,
-      flowDensityBias,
-      flowWander,
-      flowBoundaryFadeWidth,
+      flow,
     },
     engineCallbacks: {
       // ── Nested sub-bag subscriptions (H5 task 11) ────────────────
@@ -302,14 +291,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
     setExposure,
     setVolumesEnabled,
     setSpaceMouseSensitivity,
-    setFlowEnabled,
-    setFlowMode,
-    setFlowIntensity,
-    setFlowCount,
-    setFlowTrail,
-    setFlowSpeed,
-    setFlowDensityBias,
-    setFlowWander,
-    setFlowBoundaryFadeWidth,
+    updateFlow,
   };
 }

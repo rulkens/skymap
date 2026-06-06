@@ -34,15 +34,17 @@
  */
 import type { ReactNode } from 'react';
 import type { FlowMode } from '../../@types/data/FlowMode';
+import type { FlowSettings } from '../../@types/settings/FlowSettings';
+import { FLOW_SLIDER_FIELDS, flowSliderPatch } from '../../data/flowFields';
 import styles from './FlowRow.module.css';
 
 export type FlowRowProps = {
-  enabled: boolean;
-  mode: FlowMode;
-  intensity: number;
-  onModeChange: (mode: FlowMode) => void;
-  onIntensityChange: (intensity: number) => void;
+  flow: FlowSettings;
+  onChange: (patch: Partial<FlowSettings>) => void;
 };
+
+/** The slider knobs that surface in the explorer panel (just intensity today). */
+const PANEL_SLIDERS = FLOW_SLIDER_FIELDS.filter((f) => f.surface === 'panel');
 
 /**
  * The two integration modes, paired with their button labels.  A
@@ -55,8 +57,8 @@ const MODE_OPTIONS: readonly { mode: FlowMode; label: string }[] = [
   { mode: 'streamline', label: 'Streamline' },
 ];
 
-function FlowRow(props: FlowRowProps): ReactNode {
-  const { enabled, mode, intensity, onModeChange, onIntensityChange } = props;
+function FlowRow({ flow, onChange }: FlowRowProps): ReactNode {
+  const { enabled, mode } = flow;
   return (
     <div className={styles.row}>
       {/* Mode switch — a two-button segmented control.  `aria-pressed`
@@ -72,7 +74,7 @@ function FlowRow(props: FlowRowProps): ReactNode {
               aria-pressed={pressed}
               disabled={!enabled}
               className={pressed ? styles.modeButtonActive : styles.modeButton}
-              onClick={() => onModeChange(m)}
+              onClick={() => onChange({ mode: m })}
             >
               {label}
             </button>
@@ -80,24 +82,27 @@ function FlowRow(props: FlowRowProps): ReactNode {
         })}
       </div>
 
-      {/* Intensity — pre-blend ribbon brightness, [0, 1].  Disabled while
-          the layer is off (no visible effect). */}
-      <div className={styles.sliderRow}>
-        <span className={styles.sliderLabel}>Intensity</span>
-        <span className={styles.sliderValue}>{intensity.toFixed(2)}</span>
-        <input
-          className={styles.slider}
-          type="range"
-          min={0}
-          max={1}
-          step={0.01}
-          value={intensity}
-          disabled={!enabled}
-          aria-label="Flow intensity"
-          title="Intensity — pre-blend ribbon brightness multiplier."
-          onChange={(e) => onIntensityChange(Number(e.target.value))}
-        />
-      </div>
+      {/* Panel-surface sliders (intensity today) — driven from the flow field
+          registry so ranges/labels live in one place.  Disabled while the layer
+          is off (no visible effect). */}
+      {PANEL_SLIDERS.map((f) => (
+        <div className={styles.sliderRow} key={f.key}>
+          <span className={styles.sliderLabel}>{f.label}</span>
+          <span className={styles.sliderValue}>{f.format(flow[f.key])}</span>
+          <input
+            className={styles.slider}
+            type="range"
+            min={f.min}
+            max={f.max}
+            step={f.step}
+            value={flow[f.key]}
+            disabled={!enabled}
+            aria-label={`Flow ${f.label.toLowerCase()}`}
+            title={f.title}
+            onChange={(e) => onChange(flowSliderPatch(f.key, Number(e.target.value)))}
+          />
+        </div>
+      ))}
     </div>
   );
 }
