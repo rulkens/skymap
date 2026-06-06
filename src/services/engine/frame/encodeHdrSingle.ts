@@ -37,8 +37,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { PassDeps } from '../../../@types/engine/frame/PassDeps';
 import type { RenderFrameSettings } from '../../../@types/engine/frame/RenderFrameSettings';
 import { HDR_PASSES } from './passes';
-import { encodeVolumes } from './encodeVolumes';
-import { resolveLayerOpacity } from '../presentation/focusRecession';
+import { encodeVolumePrepass } from './encodeVolumePrepass';
 
 export function encodeHdrSingle(
   encoder: GPUCommandEncoder,
@@ -55,46 +54,11 @@ export function encodeHdrSingle(
   // `volumeUpsamplePass` (one of the HDR_PASSES entries) bilinearly samples
   // the half-res target and additively blends into the HDR target.
   //
-  // Gating: `encodeVolumes` carries its own null + hasActiveFields guard
-  // for direct callers, but the call-site gate below makes it unreachable
-  // here by construction.  The duplication is deliberate — gating at the
-  // call site avoids even the function-call overhead, and on tile-based
-  // GPUs an empty `beginRenderPass(loadOp: 'clear')` is still a non-zero
-  // cost (tile-RAM load+store) even when nothing draws inside.  The
-  // downstream `volumeUpsamplePass.enabled` checks the same conditions
-  // on the HDR side; the two layers stay in lockstep.
-  // Master gate: settings boolean OR a non-zero master fade tail.
-  // The fadeOpacityOf closure below multiplies the master opacity
-  // into every per-field lookup so a master fade-out smoothly drags
-  // every field down in lockstep.
-  if (state.gpu.scalarVolumeRenderer !== null) {
-    const nowMs = performance.now();
-    const masterOpacity = state.subsystems.fades.opacityOf({ kind: 'volumesMaster' }, nowMs);
-    if (settings.volumesEnabled || masterOpacity > 0) {
-      // Focus recession dims the whole volume subsystem in lockstep with the
-      // filament overlay. Applied to the master MULTIPLIER only, not the gate
-      // above: recession ∈ [VOLUME_RECESSION, 1] can never zero the layer, so
-      // the gate keeps reading the pure toggle (matches filamentsPass.enabled).
-      const recessedMaster = resolveLayerOpacity(
-        state.subsystems.fades,
-        { kind: 'volumesMaster' },
-        ctx.focusBlend,
-        nowMs,
-      );
-      const fadeOpacityOf = (handle: string) =>
-        state.subsystems.fades.opacityOf({ kind: 'scalarField', field: handle }, nowMs) *
-        recessedMaster;
-      if (state.gpu.scalarVolumeRenderer.hasActiveFields(fadeOpacityOf)) {
-        encodeVolumes({
-          encoder,
-          ctx,
-          scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
-          fadeOpacityOf,
-          timestampWrites: undefined,
-        });
-      }
-    }
-  }
+  // Shared with `encodeHdrSplit` via `encodeVolumePrepass`; this path
+  // passes `null` for the timing service (no per-pass GPU timing in the
+  // production single-pass branch), so the prepass's lazy
+  // `timingService?.descriptorFor(...)` yields `undefined`.
+  encodeVolumePrepass(encoder, ctx, state, settings, null);
 
   const hdrPass = encoder.beginRenderPass({
     label: 'hdr-pass',

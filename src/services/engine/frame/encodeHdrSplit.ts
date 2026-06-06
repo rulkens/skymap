@@ -35,8 +35,7 @@ import type { PassDeps } from '../../../@types/engine/frame/PassDeps';
 import type { RenderFrameSettings } from '../../../@types/engine/frame/RenderFrameSettings';
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
 import { HDR_PASSES } from './passes';
-import { encodeVolumes } from './encodeVolumes';
-import { resolveLayerOpacity } from '../presentation/focusRecession';
+import { encodeVolumePrepass } from './encodeVolumePrepass';
 
 export function encodeHdrSplit(
   encoder: GPUCommandEncoder,
@@ -62,42 +61,14 @@ export function encodeHdrSplit(
 
   // ── Half-resolution scalar-volume pre-pass ────────────────────────
   //
-  // Runs after the clear, before the HDR sub-passes.  Same gate as
-  // `encodeHdrSingle`: skip when no fields are active so we don't open
-  // an empty render pass.  Timestamp billing reuses the legacy
-  // `'scalar-volume'` slot — that's what the DebugPanel's GpuTimings
-  // row reads, and keeping the slot name stable means the row's label
-  // and historical samples line up.
-  // Master gate: settings boolean OR a non-zero master fade tail.
-  // See encodeHdrSingle for the master-opacity multiplier rationale.
-  if (state.gpu.scalarVolumeRenderer !== null) {
-    const nowMs = performance.now();
-    const masterOpacity = state.subsystems.fades.opacityOf({ kind: 'volumesMaster' }, nowMs);
-    if (settings.volumesEnabled || masterOpacity > 0) {
-      // Focus recession dims the whole volume subsystem in lockstep with the
-      // filament overlay. Applied to the master MULTIPLIER only, not the gate
-      // above: recession ∈ [VOLUME_RECESSION, 1] can never zero the layer, so
-      // the gate keeps reading the pure toggle (matches filamentsPass.enabled).
-      const recessedMaster = resolveLayerOpacity(
-        state.subsystems.fades,
-        { kind: 'volumesMaster' },
-        ctx.focusBlend,
-        nowMs,
-      );
-      const fadeOpacityOf = (handle: string) =>
-        state.subsystems.fades.opacityOf({ kind: 'scalarField', field: handle }, nowMs) *
-        recessedMaster;
-      if (state.gpu.scalarVolumeRenderer.hasActiveFields(fadeOpacityOf)) {
-        encodeVolumes({
-          encoder,
-          ctx,
-          scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
-          fadeOpacityOf,
-          timestampWrites: timingService.descriptorFor('scalar-volume'),
-        });
-      }
-    }
-  }
+  // Runs after the clear, before the HDR sub-passes.  Shared with
+  // `encodeHdrSingle` via `encodeVolumePrepass`; the only difference is
+  // the timing service argument.  The prepass resolves the descriptor
+  // lazily (only when the volume pass actually encodes), billing against
+  // the legacy `'scalar-volume'` slot — that's what the DebugPanel's GpuTimings row
+  // reads, and keeping the slot name stable means the row's label and
+  // historical samples line up.
+  encodeVolumePrepass(encoder, ctx, state, settings, timingService);
 
   // ── HDR sub-passes — one beginRenderPass per enabled pass ─────────
   //
