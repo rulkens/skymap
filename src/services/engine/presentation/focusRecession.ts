@@ -57,8 +57,8 @@ import { lerp } from '../../../utils/math/lerp';
 // the real values come from eyeballing the focus animation live.
 export const FILAMENT_RECESSION = 0.15;
 export const VOLUME_RECESSION = 0.15;
-export const MARKER_RECESSION = 0.35;
-export const LABEL_RECESSION = 0.35;
+export const MARKER_RECESSION = 0.25;
+export const LABEL_RECESSION = 0.25;
 
 /**
  * The opacity this handle recedes *to* at full focus, or `undefined` when
