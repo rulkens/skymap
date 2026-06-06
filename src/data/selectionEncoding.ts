@@ -72,50 +72,25 @@ export function packSelection(sourceCode: number, localIdx: number): number {
 }
 
 /**
- * Decoded pick-buffer result. Discriminator `kind` says what the hit was,
- * and the payload shape differs per kind:
- *
- *   - 'galaxy'    — a survey-galaxy hit. Carries the Source enum +
- *                   the per-source local index.
- *   - a structure — a marker-ring hit (cluster / supercluster / void /
- *                   group, the `StructureCategory` union). Carries the POI
- *                   index into that category's anchor table.
- *
- * The discriminated-union shape forces callers to switch on `kind` rather
- * than read a magic source-code number. The structure arm is the
- * `StructureCategory` union, so it widens automatically as the registry
- * gains structure sources — no per-category member to add by hand.
+ * Decoded pick-buffer hit, discriminated by `kind`: a `'galaxy'` (survey source
+ * + local index) or a structure marker-ring (the `StructureCategory` union +
+ * POI index). The structure arm widens with the registry — no per-category
+ * member to add by hand.
  */
 export type PickResult =
   | { readonly kind: 'galaxy'; readonly source: SourceType; readonly localIdx: number }
   | { readonly kind: StructureCategory; readonly poiIndex: number };
 
 /**
- * Decode a raw r32uint pick-buffer value into the canonical
- * {@link PickResult} discriminated union, or `null` for "no hit".
- *
- * The raw value carries the picker's `+ PICK_SENTINEL_OFFSET` (so the
- * cleared-zero background remains distinguishable from a legitimate
- * source=0/localIdx=0 hit); this function reverses both that offset
- * and the (sourceCode << 27) | localIdx layout, then dispatches on the
- * registry entry the code points at. SOURCE_REGISTRY is keyed by source
- * code, so it already holds the code→entry mapping the decode needs:
- *
- *   - `survey`    → galaxy hit (the entry's code + localIdx)
- *   - `structure` → that category's POI hit (the entry's `id` is the category)
- *   - 31          → reserved (all-ones sentinel); return null
- *   - filament / volume / unallocated → not a pickable surface; warn + null
- *
- * Driving the dispatch off the registry's own `type` field means encode and
- * decode read the same source of truth — there's no second hand-maintained
- * code→category table to drift out of sync (the bug class that would surface
- * as "clicking a ring selects the wrong record").
- *
- * The not-pickable branch should never fire at runtime (we don't render any
- * pickable surface with those codes), but a stray frame from an old shader or
- * a misconfigured renderer would otherwise propagate a "ghost" pick result
- * into the focus subsystem. Logging + null keeps the caller's switch
- * exhaustive without crashing.
+ * Decode a raw r32uint pick value into a {@link PickResult}, or `null` for no
+ * hit. Reverses the `+ PICK_SENTINEL_OFFSET` and the `(code << 27) | localIdx`
+ * layout, then dispatches on the registry entry the code points at: `survey` →
+ * galaxy, `structure` → its category. Decoding off the registry's own `type`
+ * means encode and decode share one source of truth — no second code→category
+ * table to drift (which would surface as "clicking a ring selects the wrong
+ * record"). Codes that aren't a pickable surface (filament / volume /
+ * unallocated, and the all-ones sentinel 31) warn + return null rather than
+ * leak a ghost hit into the focus subsystem.
  */
 export function unpackPick(rawPickValue: number): PickResult | null {
   if (rawPickValue === 0) return null;
