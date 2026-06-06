@@ -1,16 +1,20 @@
 /**
  * FlowRow — the explorer-facing controls for the CF4++ peculiar-velocity
- * flow-field overlay, living in the SettingsPanel's "Flow" section.
+ * flow-field overlay, living in the body of the SettingsPanel's "Flow"
+ * section.
  *
- * Layout (three visual regions, mirroring `VolumeFieldRow`):
+ * Layout (two stacked regions, mirroring the Cosmic web body):
  *
- *   [✓] Flow                                  (peculiar velocity)
- *       [ Advect ][ Streamline ]
- *       Intensity   0.70  [━━━━━━━━━━━●━━━━━━]
+ *   [ Advect ][ Streamline ]
+ *   Intensity   0.70  [━━━━━━━━━━━●━━━━━━]
+ *
+ * The enable toggle is NOT here — it lives on the section header as the
+ * `CollapsibleSection`'s `headerToggle`, exactly like the Galaxies / Cosmic
+ * web / Structures / Labels masters, so every section's on/off sits on the
+ * same line. This row renders only the look controls and greys them out when
+ * the layer is off (`enabled === false`).
  *
  * What each control does:
- *   - The enable checkbox is the master gate. Flicking it on demand-loads the
- *     velocity cube (paid only on first enable) and fades the ribbons in.
  *   - The mode switch chooses the integration style: 'advect' (drifting
  *     ribbons — the hero look) vs 'streamline' (static curves with a
  *     travelling pulse). Switching mode reseeds the shared particle buffers,
@@ -25,7 +29,7 @@
  *
  * The remaining flow knobs (count / trail / speed / density bias / wander)
  * are power-user motion tunables and live in the DebugPanel, not here — the
- * explorer surface stays to the three controls that change the look at a
+ * explorer surface stays to the two controls that change the look at a
  * glance.
  */
 import type { ReactNode } from 'react';
@@ -36,7 +40,6 @@ export type FlowRowProps = {
   enabled: boolean;
   mode: FlowMode;
   intensity: number;
-  onEnabledChange: (enabled: boolean) => void;
   onModeChange: (mode: FlowMode) => void;
   onIntensityChange: (intensity: number) => void;
 };
@@ -53,21 +56,9 @@ const MODE_OPTIONS: readonly { mode: FlowMode; label: string }[] = [
 ];
 
 function FlowRow(props: FlowRowProps): ReactNode {
-  const { enabled, mode, intensity, onEnabledChange, onModeChange, onIntensityChange } = props;
+  const { enabled, mode, intensity, onModeChange, onIntensityChange } = props;
   return (
     <div className={styles.row}>
-      <div className={styles.topLine}>
-        <label className={styles.label}>
-          <input
-            type="checkbox"
-            checked={enabled}
-            onChange={(e) => onEnabledChange(e.target.checked)}
-          />
-          <span>Flow</span>
-        </label>
-        <span className={styles.hint}>peculiar velocity</span>
-      </div>
-
       {/* Mode switch — a two-button segmented control.  `aria-pressed`
           rather than radio semantics so screen readers announce a toggled
           state per option, parallel to the cosmic-web style picker. */}

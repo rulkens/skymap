@@ -795,20 +795,24 @@ export function SettingsPanel({
       {/* ── Flow ────────────────────────────────────────────────────────── */}
       {/*
         CF4++ peculiar-velocity overlay.  A sibling of Cosmic web (the
-        diffuse-matter sections), placed right after it.  The section's
-        own enable control is FlowRow's checkbox — no header toggle, same
-        as the Display / SpaceMouse plain sections — so there's no
-        duplicate master.  `!` assertions inside the JSX are safe: the
-        whole block is gated on `showFlowSection`, which proves every
-        prop is defined; TS can't trace that narrow through FlowRow.
+        diffuse-matter sections), placed right after it.  Its enable lives
+        on the section header as `headerToggle` — exactly like the Galaxies
+        / Cosmic web / Structures / Labels masters — so every section's
+        on/off control sits on the same header line.  The body (FlowRow) is
+        the look controls only (mode switch + intensity).  `!` assertions
+        are safe: the whole block is gated on `showFlowSection`, which proves
+        every prop is defined; TS can't trace that narrow.
       */}
       {showFlowSection && (
-        <CollapsibleSection title="Flow">
+        <CollapsibleSection
+          title="Flow"
+          headerToggle={flowEnabled!}
+          onHeaderToggleChange={onFlowEnabledChange!}
+        >
           <FlowRow
             enabled={flowEnabled!}
             mode={flowMode!}
             intensity={flowIntensity!}
-            onEnabledChange={onFlowEnabledChange!}
             onModeChange={onFlowModeChange!}
             onIntensityChange={onFlowIntensityChange!}
           />
