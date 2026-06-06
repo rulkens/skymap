@@ -330,7 +330,7 @@ function makeState(
       thumbnails: { enabled: true },
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 1.0 },
-      volumes: { masterEnabled: true },
+      volumes: { masterEnabled: true, fields: seedVolumeFields() },
       // Structure categories all visible by default ⇒ clusterCatalog demanded.
       // Overridable so a test can hide every category and pin the bug-fix
       // (clusterCatalog must NOT load when nothing structural is visible).

@@ -1,9 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
+import type { mat4 } from 'gl-matrix';
 import {
   buildCubeModelMatrix,
   createScalarVolumeRenderer,
 } from '../../../../src/services/gpu/renderers/scalarVolumeRenderer';
+import { getVolumeFieldDefaults } from '../../../../src/data/volumeFieldDefaults';
 import type { ScalarCube } from '../../../../src/@types/data/ScalarCube';
+import type { VolumeFieldSettings } from '../../../../src/@types/settings/VolumeFieldSettings';
 
 function fixture(overrides: Partial<ScalarCube> = {}): ScalarCube {
   return {
@@ -20,14 +23,15 @@ function fixture(overrides: Partial<ScalarCube> = {}): ScalarCube {
 }
 
 /**
- * Minimal GPUDevice mock for renderer-construction tests.
+ * Minimal GPUDevice mock for renderer construction and draw tests.
  *
  * Vitest runs in Node without a real WebGPU surface; every device call
  * the renderer makes during construction + addField must return a
- * plausibly-shaped stand-in.  The returned objects are never inspected
- * by the renderer itself — we only care that the setter mutates the
- * tracked in-memory state, which is read back via the test-only
- * `__getFieldEntryForTest` accessor.  Modelled after the mock in
+ * plausibly-shaped stand-in.  Draw tests assert on recorded
+ * `device.queue.writeBuffer` / `device.queue.writeTexture` mock calls
+ * — the uniform scratch the renderer packs per field, and the palette
+ * LUT re-uploads it issues when `settingsOf` returns a changed
+ * `paletteId`.  Modelled after the mock in
  * `tests/services/gpu/passes/postProcess.test.ts`.
  */
 function mockDevice(): GPUDevice {
@@ -122,86 +126,162 @@ describe('buildCubeModelMatrix', () => {
   });
 });
 
-describe('createScalarVolumeRenderer setters', () => {
-  // These tests exercise the public setter surface (specifically the
-  // densityScale plumbing introduced for SCFD v2 — see plan
-  // 2026-05-11-scfd-v2-presentation-defaults).  They construct a real
-  // renderer against a mocked GPUDevice and read back the per-field
-  // entry via the test-only `__getFieldEntryForTest` accessor.  No GPU
-  // queue work is asserted because the renderer holds the value on the
-  // CPU until the next `draw` call composes a uniform buffer; the
-  // mutation contract IS the test surface.
+// ── Draw-path helpers ────────────────────────────────────────────────
 
-  it('setDensityScale mutates the field entry for the given handle', () => {
-    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm', {} as never, stubCallbacks());
-    renderer.addField('h', fixture());
-    renderer.setDensityScale('h', 7.5);
-    expect(renderer.__getFieldEntryForTest('h')?.densityScale).toBeCloseTo(7.5, 6);
+function makeFakePass() {
+  return {
+    setPipeline: vi.fn(),
+    setVertexBuffer: vi.fn(),
+    setIndexBuffer: vi.fn(),
+    setBindGroup: vi.fn(),
+    drawIndexed: vi.fn(),
+  } as unknown as GPURenderPassEncoder;
+}
+
+function fullSettings(overrides: Record<string, unknown> = {}): VolumeFieldSettings {
+  return {
+    enabled: true,
+    intensity: 0.9,
+    contrast: 4,
+    densityScale: 2,
+    paletteId: getVolumeFieldDefaults('mcpm').paletteId,
+    trim: 0.1,
+    exposure: 3,
+    ...overrides,
+  } as VolumeFieldSettings;
+}
+
+/**
+ * Extract the length-64 uniform scratch from the writeBuffer mock.
+ * The fade write passes a 16-byte ArrayBuffer — we skip it and find
+ * only the Float32Array(64) that packs the full per-field uniform.
+ */
+function uniformScratch(device: GPUDevice): Float32Array | undefined {
+  const calls = (device.queue.writeBuffer as unknown as { mock: { calls: unknown[][] } }).mock.calls;
+  const hit = calls.find((c) => c[2] instanceof Float32Array && (c[2] as Float32Array).length === 64);
+  return hit?.[2] as Float32Array | undefined;
+}
+
+describe('createScalarVolumeRenderer draw', () => {
+  it('draw reads field values from settingsOf', () => {
+    const device = mockDevice();
+    const r = createScalarVolumeRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
+    r.addField('mcpm', fixture());
+    const pass = makeFakePass();
+    r.draw(
+      pass,
+      new Float32Array(16) as unknown as mat4,
+      [320, 180],
+      [0, 0, 5],
+      () => fullSettings(),
+      () => 1,
+    );
+    const s = uniformScratch(device);
+    expect(s?.[55]).toBeCloseTo(0.9);   // intensity
+    expect(s?.[57]).toBeCloseTo(4);     // contrast
+    expect(s?.[56]).toBeCloseTo(2);     // densityScale
+    expect(s?.[61]).toBeCloseTo(3);     // exposure
+    expect(s?.[62]).toBeCloseTo(0.1);   // trim
   });
 
-  it('setDensityScale clamps negative inputs to 0', () => {
-    // Negative densityScale is meaningless under the alpha-integral
-    // formula and would invert colour mapping.  The renderer collapses
-    // it to 0 (a silent overlay) rather than throwing — same forgiving
-    // pattern as setIntensity / setContrast.
-    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm', {} as never, stubCallbacks());
-    renderer.addField('h', fixture());
-    renderer.setDensityScale('h', -3);
-    expect(renderer.__getFieldEntryForTest('h')?.densityScale).toBe(0);
+  it('draw skips a field with no settings row', () => {
+    // When `settingsOf` returns undefined the renderer has no tunable
+    // state for that field and must not issue any GPU work.
+    const device = mockDevice();
+    const r = createScalarVolumeRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
+    r.addField('mcpm', fixture());
+    const pass = makeFakePass();
+    r.draw(
+      pass,
+      new Float32Array(16) as unknown as mat4,
+      [320, 180],
+      [0, 0, 5],
+      () => undefined,
+      () => 1,
+    );
+    expect(pass.drawIndexed).not.toHaveBeenCalled();
+    expect(uniformScratch(device)).toBeUndefined();
   });
 
-  it('setDensityScale clamps NaN inputs to 0', () => {
-    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm', {} as never, stubCallbacks());
-    renderer.addField('h', fixture());
-    renderer.setDensityScale('h', Number.NaN);
-    expect(renderer.__getFieldEntryForTest('h')?.densityScale).toBe(0);
+  it('addField seeds contrastCenter / envelope from the registry', () => {
+    // Per-cube static config read from the registry once at addField;
+    // user-tunable knobs are absent from the entry and arrive per draw
+    // via settingsOf.
+    const device = mockDevice();
+    const r = createScalarVolumeRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
+    r.addField('mcpm', fixture());
+    r.draw(
+      makeFakePass(),
+      new Float32Array(16) as unknown as mat4,
+      [320, 180],
+      [0, 0, 5],
+      () => fullSettings(),
+      () => 1,
+    );
+    const s = uniformScratch(device);
+    const defs = getVolumeFieldDefaults('mcpm');
+    expect(s?.[58]).toBeCloseTo(defs.contrastCenter);      // contrastCenter
+    expect(s?.[59]).toBeCloseTo(defs.envelope.inner);      // envelopeInner
+    expect(s?.[60]).toBeCloseTo(defs.envelope.outer);      // envelopeOuter
   });
 
-  it('setDensityScale on an unknown handle is a no-op', () => {
-    // Mirrors the existing setContrast / setIntensity contract: a
-    // late-firing settings callback for a removed field must not throw.
-    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm', {} as never, stubCallbacks());
-    expect(() => renderer.setDensityScale('nope', 1.0)).not.toThrow();
+  it('draw re-uploads the LUT once when settingsOf paletteId changes', () => {
+    // First draw with the registry-default palette — no extra upload
+    // (the LUT was already seeded in addField).  Second draw with a
+    // different palette — exactly one writeTexture.  Third draw with
+    // the same changed palette — no further writeTexture (resident
+    // now tracks the new id).
+    const device = mockDevice();
+    const r = createScalarVolumeRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
+    r.addField('mcpm', fixture());
+    const before = (device.queue.writeTexture as unknown as { mock: { calls: unknown[] } }).mock.calls.length;
+    // Draw with the registry-default palette (already resident).
+    r.draw(
+      makeFakePass(),
+      new Float32Array(16) as unknown as mat4,
+      [320, 180],
+      [0, 0, 5],
+      () => fullSettings({ paletteId: getVolumeFieldDefaults('mcpm').paletteId }),
+      () => 1,
+    );
+    expect((device.queue.writeTexture as unknown as { mock: { calls: unknown[] } }).mock.calls.length).toBe(before);
+    // Draw with a different palette — mcpm defaults to 'inferno', so 'viridis' diverges.
+    r.draw(
+      makeFakePass(),
+      new Float32Array(16) as unknown as mat4,
+      [320, 180],
+      [0, 0, 5],
+      () => fullSettings({ paletteId: 'viridis' }),
+      () => 1,
+    );
+    expect((device.queue.writeTexture as unknown as { mock: { calls: unknown[] } }).mock.calls.length).toBe(before + 1);
+    // Draw again with 'viridis' — already resident, no further upload.
+    r.draw(
+      makeFakePass(),
+      new Float32Array(16) as unknown as mat4,
+      [320, 180],
+      [0, 0, 5],
+      () => fullSettings({ paletteId: 'viridis' }),
+      () => 1,
+    );
+    expect((device.queue.writeTexture as unknown as { mock: { calls: unknown[] } }).mock.calls.length).toBe(before + 1);
   });
 
-  it('addField seeds a no-envelope sentinel (both edges past the cube corner)', () => {
-    // The wireSlots commit overwrites envelope via setEnvelope right
-    // after addField returns — but tests that go directly through
-    // addField (and any future production caller that bypasses
-    // wireSlots) should get a visually-identity envelope by default,
-    // not a silently-cropped cube.
-    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm', {} as never, stubCallbacks());
-    renderer.addField('h', fixture());
-    const e = renderer.__getFieldEntryForTest('h');
-    expect(e?.envelopeInner).toBeGreaterThanOrEqual(Math.sqrt(3));
-    expect(e?.envelopeOuter).toBeGreaterThanOrEqual(Math.sqrt(3));
-  });
-
-  it('setEnvelope writes both edges through to the field entry', () => {
-    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm', {} as never, stubCallbacks());
-    renderer.addField('h', fixture());
-    renderer.setEnvelope('h', 0.9, 1.0);
-    const e = renderer.__getFieldEntryForTest('h');
-    expect(e?.envelopeInner).toBeCloseTo(0.9, 6);
-    expect(e?.envelopeOuter).toBeCloseTo(1.0, 6);
-  });
-
-  it('setEnvelope replaces NaN / non-finite inputs with the no-envelope sentinel', () => {
-    // A bad input would otherwise propagate to the uniform buffer and
-    // produce undefined sampling behaviour in the shader.  Safer to
-    // silently fall back to the visual identity (no envelope) than to
-    // render garbage; matches the forgiving pattern of the sibling
-    // setters.
-    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm', {} as never, stubCallbacks());
-    renderer.addField('h', fixture());
-    renderer.setEnvelope('h', Number.NaN, Infinity);
-    const e = renderer.__getFieldEntryForTest('h');
-    expect(e?.envelopeInner).toBeGreaterThanOrEqual(Math.sqrt(3));
-    expect(e?.envelopeOuter).toBeGreaterThanOrEqual(Math.sqrt(3));
-  });
-
-  it('setEnvelope on an unknown handle is a no-op', () => {
-    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm', {} as never, stubCallbacks());
-    expect(() => renderer.setEnvelope('nope', 0.9, 1.0)).not.toThrow();
+  it('draw on a disabled, fully-faded field does not draw', () => {
+    // enabled:false + fadeOpacityOf returning 0 → the field is fully
+    // off; no GPU work should be issued.
+    const device = mockDevice();
+    const r = createScalarVolumeRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
+    r.addField('mcpm', fixture());
+    const pass = makeFakePass();
+    r.draw(
+      pass,
+      new Float32Array(16) as unknown as mat4,
+      [320, 180],
+      [0, 0, 5],
+      () => fullSettings({ enabled: false }),
+      () => 0,
+    );
+    expect(pass.drawIndexed).not.toHaveBeenCalled();
   });
 });

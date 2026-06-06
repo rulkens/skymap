@@ -11,6 +11,7 @@
 import type { ReadyFrameContext } from './ReadyFrameContext';
 import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
 import type { ScalarFieldHandle } from '../../rendering/ScalarFieldHandle';
+import type { VolumeFieldSettings } from '../../settings/VolumeFieldSettings';
 
 export type EncodeVolumesArgs = {
   encoder: GPUCommandEncoder;
@@ -26,6 +27,13 @@ export type EncodeVolumesArgs = {
    * given scalar-field handle so each field fades independently.
    */
   fadeOpacityOf: (handle: ScalarFieldHandle) => number;
+  /**
+   * Per-field settings projection, threaded from `state.settings.volumes.fields`
+   * at the call site. Returns the live VolumeFieldSettings for a scalar-field
+   * handle (or undefined if it has no settings row) so the renderer reads each
+   * field's knobs per frame instead of mirroring them.
+   */
+  settingsOf: (handle: ScalarFieldHandle) => VolumeFieldSettings | undefined;
   /**
    * Optional `RenderPassTimestampWrites` for per-pass GPU timing.  When
    * `undefined` the helper omits the field from the `beginRenderPass`

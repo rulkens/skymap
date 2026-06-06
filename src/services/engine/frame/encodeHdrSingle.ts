@@ -36,6 +36,7 @@ import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameC
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { PassDeps } from '../../../@types/engine/frame/PassDeps';
 import type { RenderFrameSettings } from '../../../@types/engine/frame/RenderFrameSettings';
+import type { VolumeFieldId } from '../../../@types/data/VolumeFieldId';
 import { HDR_PASSES } from './passes';
 import { encodeVolumes } from './encodeVolumes';
 
@@ -73,11 +74,13 @@ export function encodeHdrSingle(
       const fadeOpacityOf = (handle: string) =>
         state.subsystems.fades.opacityOf({ kind: 'scalarField', field: handle }, nowMs) *
         masterOpacity;
-      if (state.gpu.scalarVolumeRenderer.hasActiveFields(fadeOpacityOf)) {
+      const settingsOf = (handle: string) => state.settings.volumes.fields[handle as VolumeFieldId];
+      if (state.gpu.scalarVolumeRenderer.hasActiveFields(settingsOf, fadeOpacityOf)) {
         encodeVolumes({
           encoder,
           ctx,
           scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
+          settingsOf,
           fadeOpacityOf,
           timestampWrites: undefined,
         });
