@@ -184,7 +184,7 @@ export default FlowRow;
 
 - [x] Create `FlowRow.tsx` + `FlowRow.module.css`. Mode switch is a two-button segmented control (advect / streamline) disabled when `!enabled`; intensity slider `[0,1]` step `0.01` disabled when `!enabled`.
 - [x] Mount `FlowRow` in `SettingsPanel.tsx` (a "Flow" section near the Volumes/Filaments sections), wiring its callbacks to `engine.flow.setEnabled` / `.setMode` / `.setIntensity` and reading current values from the `useEngineSettings` flow mirrors (the same path `filamentsEnabled`/`filamentIntensity` use).
-- [ ] (Verification) Ask the user to confirm via the running dev server: the Flow row appears, the toggle enables the mode switch + slider, and enabling shows ribbons once the cube loads. No automated React test required if the panel follows the existing manual-verify convention; add one if SettingsPanel already has component tests.
+- [x] (Verification) Ask the user to confirm via the running dev server: the Flow row appears, the toggle enables the mode switch + slider, and enabling shows ribbons once the cube loads. No automated React test required if the panel follows the existing manual-verify convention; add one if SettingsPanel already has component tests. — confirmed this session; Flow row alignment fixed (CollapsibleSection header toggle), ribbons render on load.
 - [x] `npm run typecheck` → clean.
 - [x] Commit: `feat(flow): SettingsPanel Flow row (toggle + mode + intensity)`.
 
@@ -219,7 +219,7 @@ export default FlowTuningSection;
 
 - [x] Create `FlowTuningSection.tsx` — five labelled sliders in a default-closed `<details>` titled "Flow tuning". Cap `count` at `MAX_PARTICLES` (import from `flowFieldConstants`); pick perceptually-useful ranges per the spike defaults.
 - [x] Mount it in `DebugPanel.tsx` (add the props to `DebugPanelProps`, render the section, thread callbacks to `engine.flow.setCount` / `.setTrail` / `.setFlowSpeed` / `.setDensityBias` / `.setWander`).
-- [ ] (Verification) Dev-server check: the section appears under the panel, sliders move the live flow look. Add a React test only if DebugPanel already has component tests.
+- [x] (Verification) Dev-server check: the section appears under the panel, sliders move the live flow look. Add a React test only if DebugPanel already has component tests. — confirmed this session; FlowTuningSection sliders (trail/flowSpeed/intensity/edgeFade) tune the live look.
 - [x] `npm run typecheck` → clean. `npm test` → full suite green.
 - [x] Commit: `feat(flow): DebugPanel flow-tuning section`.
 
