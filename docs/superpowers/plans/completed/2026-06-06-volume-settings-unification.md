@@ -199,11 +199,11 @@ Import `VolumeFieldSettings`. In the draw loop, `const s = settingsOf(e.handle);
 
 **Delete** value setters `setEnabled`, `setIntensity`, `setContrast`, `setDensityScale`, `setTrim`, `setExposure`, `setEnvelope`, `setContrastCenter`, `setFieldPalette`, `getFieldPalette` from impl + `.d.ts`. **Remove** `__getFieldEntryForTest` from impl + `.d.ts` (tests move to settings + residency assertions — Task 4.1), OR narrow it to residency-only (`residentPaletteId` + matrices) if a residency test still needs it; prefer removal.
 
-- [ ] Update `scalarVolumeRenderer.test.ts`: replace the `createScalarVolumeRenderer setters` block. Add `draw reads field values from settingsOf` — with a fake `settingsOf` returning `{ intensity: 0.9, contrast: 4, … }` for `'h'`, drive `draw` and assert the values reached `device.queue.writeBuffer` (inspect the scratch Float32Array slots: intensity at index 55, densityScale 56, contrast 57, exposure 61, trim 62 — see the layout comment at `:538-555`). Add `draw skips a field with no settings row` (`settingsOf → undefined`). Add `draw re-uploads the LUT once when settingsOf(id).paletteId changes` — first draw with `paletteId 'viridis'`, second with `'inferno'`, assert `writeTexture` called once more on the second draw and `residentPaletteId` tracks (via a residency accessor if retained, else via the `writeTexture` call count). Add `addField seeds contrastCenter / envelope / residentPaletteId from the registry`.
-- [ ] `npm test -- scalarVolumeRenderer` → expected FAIL.
-- [ ] Implement: slim `FieldEntry.d.ts` + its docblocks; new `draw` + `hasActiveFields` signatures in `.d.ts`; delete the listed setters from `.d.ts`; remove/narrow `__getFieldEntryForTest` in `.d.ts`. Then the impl: slim the `addField` seed literal + read static config from the registry; rewrite `draw` to read `settingsOf` + reactive palette; rewrite `hasActiveFields`; delete the setter methods. Update the module header (`:1-34`) and `:51-57` uniform-bytes comment if field names change (bytes don't).
-- [ ] `npm test -- scalarVolumeRenderer` → expected PASS.
-- [ ] Commit: `refactor(renderer): scalarVolume reads settings via draw(settingsOf)`.
+- [x] Update `scalarVolumeRenderer.test.ts`: replace the `createScalarVolumeRenderer setters` block. Add `draw reads field values from settingsOf` — with a fake `settingsOf` returning `{ intensity: 0.9, contrast: 4, … }` for `'h'`, drive `draw` and assert the values reached `device.queue.writeBuffer` (inspect the scratch Float32Array slots: intensity at index 55, densityScale 56, contrast 57, exposure 61, trim 62 — see the layout comment at `:538-555`). Add `draw skips a field with no settings row` (`settingsOf → undefined`). Add `draw re-uploads the LUT once when settingsOf(id).paletteId changes` — first draw with `paletteId 'viridis'`, second with `'inferno'`, assert `writeTexture` called once more on the second draw and `residentPaletteId` tracks (via a residency accessor if retained, else via the `writeTexture` call count). Add `addField seeds contrastCenter / envelope / residentPaletteId from the registry`.
+- [x] `npm test -- scalarVolumeRenderer` → expected FAIL.
+- [x] Implement: slim `FieldEntry.d.ts` + its docblocks; new `draw` + `hasActiveFields` signatures in `.d.ts`; delete the listed setters from `.d.ts`; remove/narrow `__getFieldEntryForTest` in `.d.ts`. Then the impl: slim the `addField` seed literal + read static config from the registry; rewrite `draw` to read `settingsOf` + reactive palette; rewrite `hasActiveFields`; delete the setter methods. Update the module header (`:1-34`) and `:51-57` uniform-bytes comment if field names change (bytes don't).
+- [x] `npm test -- scalarVolumeRenderer` → expected PASS.
+- [x] Commit: `refactor(renderer): scalarVolume reads settings via draw(settingsOf)`.
 
 ### Task 2.6 — Thread `settingsOf` through the frame loop
 
@@ -213,12 +213,12 @@ Import `VolumeFieldSettings`. In the draw loop, `const s = settingsOf(e.handle);
 
 `EncodeVolumesArgs` gains `settingsOf: (handle: ScalarFieldHandle) => VolumeFieldSettings | undefined` (import `VolumeFieldSettings`). `encodeVolumes` forwards it into both `hasActiveFields(settingsOf, fadeOpacityOf)` (`:53`) and `draw(pass, ctx.vp, [vw,vh], camPos, settingsOf, fadeOpacityOf)` (`:78-84`). At the call sites (`encodeHdrSingle.ts:73` and the `encodeHdrSplit` mirror) build `settingsOf` right beside `fadeOpacityOf`: `const settingsOf = (handle: string) => state.settings.volumes.fields[handle as VolumeFieldId];` and pass it through the `hasActiveFields` guard too.
 
-- [ ] Update `encodeVolumes.test.ts`: pass a `settingsOf` in the args bag; assert it's forwarded into `draw` (the test mocks `scalarVolumeRenderer.draw` — assert it received the `settingsOf` arg) and that the `hasActiveFields`-false short-circuit still returns early.
-- [ ] `npm test -- encodeVolumes` → expected FAIL (arg bag lacks `settingsOf`).
-- [ ] Implement the type change + both call sites + `encodeVolumes` forwarding. Update the `:1-36` arg-bag docblock to document `settingsOf` next to `fadeOpacityOf`.
-- [ ] `npm test -- encodeVolumes` → expected PASS.
-- [ ] `npm run typecheck` → expected PASS (renderer + frame loop now agree on the new `draw` / `hasActiveFields` shape).
-- [ ] Commit: `refactor(frame): thread settingsOf into the volume pass`.
+- [x] Update `encodeVolumes.test.ts`: pass a `settingsOf` in the args bag; assert it's forwarded into `draw` (the test mocks `scalarVolumeRenderer.draw` — assert it received the `settingsOf` arg) and that the `hasActiveFields`-false short-circuit still returns early.
+- [x] `npm test -- encodeVolumes` → expected FAIL (arg bag lacks `settingsOf`).
+- [x] Implement the type change + both call sites + `encodeVolumes` forwarding. Update the `:1-36` arg-bag docblock to document `settingsOf` next to `fadeOpacityOf`.
+- [x] `npm test -- encodeVolumes` → expected PASS.
+- [x] `npm run typecheck` → expected PASS (renderer + frame loop now agree on the new `draw` / `hasActiveFields` shape).
+- [x] Commit: `refactor(frame): thread settingsOf into the volume pass`.
 
 ---
 
@@ -234,11 +234,11 @@ The store has no remaining engine/demand/snapshot/renderer readers after Step 2 
 
 Each commit currently: `addField` → seed/preserve store row → read `persisted` → replay 7 renderer setters (+ `setEnvelope`/`setContrastCenter`) → fade kick → snapshot echo. After this task: ensure the **settings** row exists (`addVolumeField`'s construction seed already created it for cf4/mcpm; synthetic fixtures have no construction seed so seed it: `if (!state.settings.volumes.fields[handle]) state.settings.volumes.fields = { ...state.settings.volumes.fields, [handle]: buildVolumeFieldSettings(handle) };`) → `renderer.addField(handle, cube)` (which now seeds static config + palette from the registry itself, Task 2.5) → fade kick from `state.settings.volumes.fields[handle].enabled` → snapshot echo + `requestRender`. Drop the entire `persisted`/`renderer.set*`/`setEnvelope`/`setContrastCenter` block.
 
-- [ ] `npm test -- wireSlots` → run first to capture the current green baseline.
-- [ ] Rewrite all three commits to the slimmed shape. cf4/mcpm read `enabled` from `state.settings.volumes.fields[handle]`; synthetic seeds the settings row first (DEV-only). Remove the now-unused `buildVolumeFieldSettings` import from cf4/mcpm only if the seed-guard is dropped there (keep it in `syntheticVolumeSlots`). Update each commit's docblock to current behaviour.
-- [ ] `npm test -- wireSlots` → expected PASS.
-- [ ] `npm run typecheck` → at this point `state.data.volumes` still exists, so no break yet.
-- [ ] Commit: `refactor(slots): volume commits seed settings, not the store + replay`.
+- [x] `npm test -- wireSlots` → run first to capture the current green baseline.
+- [x] Rewrite all three commits to the slimmed shape. cf4/mcpm read `enabled` from `state.settings.volumes.fields[handle]`; synthetic seeds the settings row first (DEV-only). Remove the now-unused `buildVolumeFieldSettings` import from cf4/mcpm only if the seed-guard is dropped there (keep it in `syntheticVolumeSlots`). Update each commit's docblock to current behaviour.
+- [x] `npm test -- wireSlots` → expected PASS.
+- [x] `npm run typecheck` → at this point `state.data.volumes` still exists, so no break yet.
+- [x] Commit: `refactor(slots): volume commits seed settings, not the store + replay`.
 
 ### Task 3.2 — Delete the volume store
 
@@ -246,13 +246,13 @@ Each commit currently: `addField` → seed/preserve store row → read `persiste
 
 **Files:** delete `src/services/engine/data/createVolumeStore.ts` and `src/@types/engine/data/VolumeStore.d.ts`; modify `src/@types/engine/data/EngineData.d.ts` (`:3,19`), `src/services/engine/data/createEngineData.ts` (`:4,15`); delete `tests/services/engine/data/createVolumeStore.test.ts`; modify `tests/services/engine/data/createEngineData.test.ts`.
 
-- [ ] Remove `volumes` from `EngineData` (`:19`) and drop its `import` (`:3`); update the `EngineData` docblock (`:8-15`) — it currently claims volumes is a thin store and references `state.settings.volumes.fields`; rewrite to the three remaining stores (galaxies, structures, filaments) and note volumes moved to settings (ADR 0006).
-- [ ] Remove `volumes: createVolumeStore()` and its import from `createEngineData.ts`.
-- [ ] Delete `createVolumeStore.ts`, `VolumeStore.d.ts`, and `createVolumeStore.test.ts`.
-- [ ] Update `tests/services/engine/data/createEngineData.test.ts` — drop any `volumes`-store assertion; assert the bag now has exactly `galaxies`/`structures`/`filaments`.
-- [ ] `npm run typecheck` → expected PASS (no remaining `state.data.volumes` reader — verify by searching; if any survives, it's a missed repoint).
-- [ ] `npm test -- createEngineData` → expected PASS.
-- [ ] Commit: `refactor(volumes): dissolve the volume store (ADR 0006)`.
+- [x] Remove `volumes` from `EngineData` (`:19`) and drop its `import` (`:3`); update the `EngineData` docblock (`:8-15`) — it currently claims volumes is a thin store and references `state.settings.volumes.fields`; rewrite to the three remaining stores (galaxies, structures, filaments) and note volumes moved to settings (ADR 0006).
+- [x] Remove `volumes: createVolumeStore()` and its import from `createEngineData.ts`.
+- [x] Delete `createVolumeStore.ts`, `VolumeStore.d.ts`, and `createVolumeStore.test.ts`.
+- [x] Update `tests/services/engine/data/createEngineData.test.ts` — drop any `volumes`-store assertion; assert the bag now has exactly `galaxies`/`structures`/`filaments`.
+- [x] `npm run typecheck` → expected PASS (no remaining `state.data.volumes` reader — verify by searching; if any survives, it's a missed repoint).
+- [x] `npm test -- createEngineData` → expected PASS.
+- [x] Commit: `refactor(volumes): dissolve the volume store (ADR 0006)`.
 
 ---
 
@@ -266,11 +266,11 @@ Each commit currently: `addField` → seed/preserve store row → read `persiste
 
 **Change:** `ids` derives from `Object.keys(state.settings.volumes.fields)` instead of `scalarVolumeRenderer.listHandles()` — killing the split-brain (identity from GPU, values from settings). `listVolumeFields` (`engine.ts:1063`) likewise returns the settings keys, not the renderer handles.
 
-- [ ] Add test `snapshot identity derives from settings keys, not renderer handles` — a state whose `settings.volumes.fields` has `'mcpm'` and `'cf4-density'` but whose renderer `listHandles()` returns only `'mcpm'` (cube not yet loaded) produces **two** rows. This is the intended behaviour change: the panel can show CF-4's toggle before its cube loads.
-- [ ] `npm test -- buildVolumeFieldsSnapshot` → expected FAIL (identity still from the renderer).
-- [ ] Repoint `ids` to the settings keys (cast to `VolumeFieldId[]`); drop the renderer-handle read + its narrowing comment. Repoint `listVolumeFields`. Update the snapshot docblock — identity AND values now from settings; the renderer dependency is gone.
-- [ ] `npm test -- buildVolumeFieldsSnapshot` → expected PASS.
-- [ ] Commit: `refactor(volumes): snapshot identity derives from settings keys`.
+- [x] Add test `snapshot identity derives from settings keys, not renderer handles` — a state whose `settings.volumes.fields` has `'mcpm'` and `'cf4-density'` but whose renderer `listHandles()` returns only `'mcpm'` (cube not yet loaded) produces **two** rows. This is the intended behaviour change: the panel can show CF-4's toggle before its cube loads.
+- [x] `npm test -- buildVolumeFieldsSnapshot` → expected FAIL (identity still from the renderer).
+- [x] Repoint `ids` to the settings keys (cast to `VolumeFieldId[]`); drop the renderer-handle read + its narrowing comment. Repoint `listVolumeFields`. Update the snapshot docblock — identity AND values now from settings; the renderer dependency is gone.
+- [x] `npm test -- buildVolumeFieldsSnapshot` → expected PASS.
+- [x] Commit: `refactor(volumes): snapshot identity derives from settings keys`.
 
 ### Task 4.2 — Docblock sweep + dead-test removal
 
@@ -278,11 +278,11 @@ Each commit currently: `addField` → seed/preserve store row → read `persiste
 
 **Files:** `src/data/volumeFieldDefaults.ts` (modify, `:82-105`), `src/@types/settings/VolumeFieldSettings.d.ts` (modify, `:5-8`), any remaining stale comments surfaced while editing.
 
-- [ ] `volumeFieldDefaults.ts` — `seedVolumeFields`'s docblock (`:82-94`) says "The engine populates the volume store (`state.data.volumes`) …" → "The engine seeds `state.settings.volumes.fields` …". The "Task 11b" reference in `buildVolumeFieldSettings` (`:64`) is a stale history note — drop it (comment-style: no history notes).
-- [ ] `VolumeFieldSettings.d.ts` docblock (`:5-8`) — "Held by the volume store (`state.data.volumes`) …" → "Held in `state.settings.volumes.fields` …". The `paletteId` field comment (`:36-42`) says it "mirrors the renderer's per-field palette" — reword: it's the authoritative palette; the renderer's `residentPaletteId` tracks it.
-- [ ] Grep for any surviving `state.data.volumes` / `volume store` mention in src comments and fix in place (don't gold-plate unrelated files).
-- [ ] `npm run typecheck` + `npm test` → expected PASS (docs-only; no behaviour change).
-- [ ] Commit: `docs(volumes): point docblocks at settings.volumes.fields`.
+- [x] `volumeFieldDefaults.ts` — `seedVolumeFields`'s docblock (`:82-94`) says "The engine populates the volume store (`state.data.volumes`) …" → "The engine seeds `state.settings.volumes.fields` …". The "Task 11b" reference in `buildVolumeFieldSettings` (`:64`) is a stale history note — drop it (comment-style: no history notes).
+- [x] `VolumeFieldSettings.d.ts` docblock (`:5-8`) — "Held by the volume store (`state.data.volumes`) …" → "Held in `state.settings.volumes.fields` …". The `paletteId` field comment (`:36-42`) says it "mirrors the renderer's per-field palette" — reword: it's the authoritative palette; the renderer's `residentPaletteId` tracks it.
+- [x] Grep for any surviving `state.data.volumes` / `volume store` mention in src comments and fix in place (don't gold-plate unrelated files).
+- [x] `npm run typecheck` + `npm test` → expected PASS (docs-only; no behaviour change).
+- [x] Commit: `docs(volumes): point docblocks at settings.volumes.fields`.
 
 ### Task 4.3 — Full-suite verification
 
@@ -290,10 +290,10 @@ Each commit currently: `addField` → seed/preserve store row → read `persiste
 
 **Files:** none (verification gate).
 
-- [ ] `npm run typecheck` → expected PASS (both src + tools tsconfigs).
-- [ ] `npm test` → expected PASS (full single pass; ~590+ tests green; no `createVolumeStore` suite, frozen `SettingsTableKey` still 15).
-- [ ] Confirm via grep that `state.data.volumes`, `VolumeStore`, `createVolumeStore`, and the deleted renderer setters (`setFieldPalette`, `setContrastCenter`, `setEnvelope`, `setEnabled`/`setIntensity`/`setContrast`/`setDensityScale`/`setTrim`/`setExposure` on the volume renderer) have **zero** references in `src/` and `tests/`.
-- [ ] No commit (or a trailing `chore: …` only if a stray fix was needed).
+- [x] `npm run typecheck` → expected PASS (both src + tools tsconfigs).
+- [x] `npm test` → expected PASS (full single pass; ~590+ tests green; no `createVolumeStore` suite, frozen `SettingsTableKey` still 15).
+- [x] Confirm via grep that `state.data.volumes`, `VolumeStore`, `createVolumeStore`, and the deleted renderer setters (`setFieldPalette`, `setContrastCenter`, `setEnvelope`, `setEnabled`/`setIntensity`/`setContrast`/`setDensityScale`/`setTrim`/`setExposure` on the volume renderer) have **zero** references in `src/` and `tests/`.
+- [x] No commit (or a trailing `chore: …` only if a stray fix was needed).
 
 ---
 
