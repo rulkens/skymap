@@ -264,7 +264,7 @@ export const DEFAULT_FLOW: FlowSettings = {
   count: MAX_PARTICLES,
   trail: 0.002,
   flowSpeed: 0.02,
-  densityBias: 1,
+  densityBias: 0.98,
   wander: 0.15,
   // Spherical boundary fade: ribbons ease out over this grid-space band ending
   // at the cube-inscribed sphere (radius 0.5), softening the cube edges into a
