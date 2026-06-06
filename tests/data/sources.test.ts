@@ -6,6 +6,7 @@ import {
   HI_RES_LAYER_COUNT,
   HI_RES_LAYER_SIDE_BY_TIER,
 } from '../../src/data/sources';
+import { STRUCTURE_CATEGORIES } from '../../src/data/structureCategories';
 import { ALL_VISIBLE_MASK, maskHas, maskWith, maskWithout } from '../../src/utils/sourceMask';
 
 describe('Source.FamousGalaxy', () => {
@@ -57,6 +58,17 @@ describe('SOURCE_REGISTRY ids', () => {
     // types (StructureCategory, visibility records, volume handles) derive
     // from it, so a collision would silently merge two sources downstream.
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('STRUCTURE_CATEGORIES covers exactly the poi-source ids', () => {
+    // StructureCategory (the type) derives from the poi rows' ids; the
+    // STRUCTURE_CATEGORIES runtime list still spells them out (its order is
+    // semantic). This parity check keeps that list from drifting out of sync
+    // with the registry — add a poi source and you must list it here too.
+    const poiIds = Object.values(SOURCE_REGISTRY)
+      .filter((e) => e.type === 'poi')
+      .map((e) => e.id);
+    expect(new Set(STRUCTURE_CATEGORIES)).toEqual(new Set(poiIds));
   });
 });
 
