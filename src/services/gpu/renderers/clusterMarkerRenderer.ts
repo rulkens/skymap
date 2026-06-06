@@ -67,8 +67,7 @@ import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { ClusterMarkerRenderer } from '../../../@types/rendering/ClusterMarkerRenderer';
 import type { ClusterMarkerDescriptor } from '../../../@types/rendering/ClusterMarkerDescriptor';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
-import { Source } from '../../../data/sources';
-import { STRUCTURE_CATEGORIES } from '../../../data/structureCategories';
+import { STRUCTURE_CATEGORIES, SOURCE_CODE_BY_CATEGORY } from '../../../data/structureCategories';
 import haloVsCode from '../shaders/clusterMarker/halo.wesl?static';
 import haloFsCode from '../shaders/clusterMarker/halo.wesl?static';
 import ringVsCode from '../shaders/clusterMarker/ring.wesl?static';
@@ -100,16 +99,6 @@ const UNIFORM_BYTES = 80;
 
 /** SourceUniforms = u32 sourceCode + 12 bytes pad = 16 bytes. */
 const SOURCE_UNIFORM_BYTES = 16;
-
-/** Maps each pick-able POI category to its 5-bit source code (allocated by plan 1). */
-const SOURCE_CODE_BY_CATEGORY: Readonly<
-  Record<'cluster' | 'supercluster' | 'void' | 'group', number>
-> = {
-  cluster: Source.Cluster,
-  supercluster: Source.Supercluster,
-  void: Source.Void,
-  group: Source.Group,
-};
 
 export function createClusterMarkerRenderer(
   ctx: GpuContext,
