@@ -182,6 +182,32 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     return;
   }
 
+  // ── Cluster-focus recession (computed ONCE, EARLY) ────────────────
+  //
+  // Focus mode fades non-member galaxies away when a cluster /
+  // supercluster / void / group POI is focused.  Resolve the FOCUSED POI
+  // (a bare single-click select does not count; galaxy / nothing both →
+  // null) and let the subsystem diff it against its focused id to drive
+  // the 400 ms member-isolation fade.
+  //
+  // `produceFocusUniforms(nowMs)` TICKS the focus fade controller, so it
+  // must run EXACTLY ONCE per frame — a second call would double-advance
+  // the ramp (a visible glitch).  We compute it here, before the label
+  // director, marker upload, and render-settings sections, because all of
+  // those (and later per-galaxy presentation producers) consume the blend
+  // via `ctx.focusBlend`.  The single returned `FocusUniformsValue` is
+  // captured in `focusUniforms`; `ctx.focusBlend` and the render
+  // `settings.focus` both read THAT captured value — never a fresh
+  // `produceFocusUniforms` call.
+  const focusSel = state.subsystems.selection.focused();
+  const focusedPoi =
+    focusSel !== null && focusSel.kind === 'poi'
+      ? (state.data.structures.byId(focusSel.id) ?? null)
+      : null;
+  state.subsystems.clusterFocus.update(focusedPoi, nowMs);
+  const focusUniforms = state.subsystems.clusterFocus.produceFocusUniforms(nowMs);
+  ctx.focusBlend = focusUniforms.blend;
+
   // ── Per-frame impostor planners ───────────────────────────────────
   //
   // CPU-side step that populates the LOD subsystems' `lastOutput` arrays,
@@ -247,20 +273,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // against the HDR target, the draws, postProcess.draw, queue.submit)
   // lives in `renderFrame.ts`; every value it reads is forwarded as a
   // field on `RenderFrameInput` so this site stays free of GPU bookkeeping.
-  //
-  // First, cluster focus mode — focus-driven, synced once per frame:
-  // resolve the FOCUSED POI (a bare single-click select does not count;
-  // galaxy / nothing both → null) and let the subsystem diff it against
-  // its focused id to drive the 400 ms member-isolation fade.  Done
-  // before the settings snapshot below so `produceFocusUniforms` reads
-  // this frame's transition on one `nowMs`.
-  const focusSel = state.subsystems.selection.focused();
-  const focusedPoi =
-    focusSel !== null && focusSel.kind === 'poi'
-      ? (state.data.structures.byId(focusSel.id) ?? null)
-      : null;
-  state.subsystems.clusterFocus.update(focusedPoi, nowMs);
-
   renderFrame({
     ctx,
     state,
@@ -292,8 +304,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       pxFadeStartPoints: PROCEDURAL_DISK_FADE_START_PX,
       pxFadeEndPoints: PROCEDURAL_DISK_FADE_END_PX,
       // Live cluster-focus uniform (blend ramps 0↔1 over 400 ms; at rest
-      // blend=0 → shader no-op).  Shares runFrame's nowMs.
-      focus: state.subsystems.clusterFocus.produceFocusUniforms(nowMs),
+      // blend=0 → shader no-op).  Reuses the value computed once at the top
+      // of the frame — NOT a fresh produceFocusUniforms call, which would
+      // double-tick the fade controller.
+      focus: focusUniforms,
       exposure: state.settings.tonemap.exposure,
       toneMapCurve: state.settings.tonemap.curve,
       galaxyTexturesEnabled: state.settings.thumbnails.enabled,

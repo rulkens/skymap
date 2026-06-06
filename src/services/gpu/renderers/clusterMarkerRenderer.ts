@@ -68,6 +68,7 @@ import type { ClusterMarkerRenderer } from '../../../@types/rendering/ClusterMar
 import type { ClusterMarkerDescriptor } from '../../../@types/rendering/ClusterMarkerDescriptor';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import { Source } from '../../../data/sources';
+import { STRUCTURE_CATEGORIES } from '../../../data/structureCategories';
 import haloVsCode from '../shaders/clusterMarker/halo.wesl?static';
 import haloFsCode from '../shaders/clusterMarker/halo.wesl?static';
 import ringVsCode from '../shaders/clusterMarker/ring.wesl?static';
@@ -101,19 +102,14 @@ const UNIFORM_BYTES = 80;
 const SOURCE_UNIFORM_BYTES = 16;
 
 /** Maps each pick-able POI category to its 5-bit source code (allocated by plan 1). */
-const SOURCE_CODE_BY_CATEGORY: Readonly<Record<'cluster' | 'supercluster' | 'void' | 'group', number>> = {
+const SOURCE_CODE_BY_CATEGORY: Readonly<
+  Record<'cluster' | 'supercluster' | 'void' | 'group', number>
+> = {
   cluster: Source.Cluster,
   supercluster: Source.Supercluster,
   void: Source.Void,
   group: Source.Group,
 };
-
-const POI_CATEGORIES_WITH_MARKERS: readonly ('cluster' | 'supercluster' | 'void' | 'group')[] = [
-  'cluster',
-  'supercluster',
-  'void',
-  'group',
-];
 
 export function createClusterMarkerRenderer(
   ctx: GpuContext,
@@ -211,7 +207,10 @@ export function createClusterMarkerRenderer(
     group: null,
   };
   let cameraBindGroup: GPUBindGroup | null = null;
-  const sourceBindGroups: Record<'cluster' | 'supercluster' | 'void' | 'group', GPUBindGroup | null> = {
+  const sourceBindGroups: Record<
+    'cluster' | 'supercluster' | 'void' | 'group',
+    GPUBindGroup | null
+  > = {
     cluster: null,
     supercluster: null,
     void: null,
@@ -227,13 +226,21 @@ export function createClusterMarkerRenderer(
     const cameraBgl = device.createBindGroupLayout({
       label: 'cluster-marker-camera-bgl',
       entries: [
-        { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+        {
+          binding: 0,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          buffer: { type: 'uniform' },
+        },
       ],
     });
     const sourceBgl = device.createBindGroupLayout({
       label: 'cluster-marker-source-bgl',
       entries: [
-        { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+        {
+          binding: 0,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          buffer: { type: 'uniform' },
+        },
       ],
     });
     // @group(1) FadeUniforms slot — the cluster-marker shaders DO NOT
@@ -266,7 +273,7 @@ export function createClusterMarkerRenderer(
         arrayStride: MARKER_INSTANCE_BYTES,
         stepMode: 'instance',
         attributes: [
-          { shaderLocation: 0, offset: 0,  format: 'float32x4' }, // positionAndRadius
+          { shaderLocation: 0, offset: 0, format: 'float32x4' }, // positionAndRadius
           { shaderLocation: 1, offset: 16, format: 'float32x4' }, // haloColorAndAlpha
           { shaderLocation: 2, offset: 32, format: 'float32x4' }, // ringColorAndAlpha
         ],
@@ -343,8 +350,16 @@ export function createClusterMarkerRenderer(
     //     The depth attachment is the same texture the galaxy pick
     //     draws used; we are intentionally a second batch INSIDE the
     //     same pass, not a separate pass.
-    const ringPickVs = createShaderModuleWithDevLog(device, ringPickVsCode, 'clusterMarker.pick.vs');
-    const ringPickFs = createShaderModuleWithDevLog(device, ringPickFsCode, 'clusterMarker.pick.fs');
+    const ringPickVs = createShaderModuleWithDevLog(
+      device,
+      ringPickVsCode,
+      'clusterMarker.pick.vs',
+    );
+    const ringPickFs = createShaderModuleWithDevLog(
+      device,
+      ringPickFsCode,
+      'clusterMarker.pick.fs',
+    );
     ringPickPipeline = device.createRenderPipeline({
       label: 'cluster-marker-ring-pick-pipeline',
       layout: pipelineLayout,
@@ -412,7 +427,7 @@ export function createClusterMarkerRenderer(
     });
 
     // Per-category SourceUniforms — written once at construction.
-    for (const cat of POI_CATEGORIES_WITH_MARKERS) {
+    for (const cat of STRUCTURE_CATEGORIES) {
       const buf = device.createBuffer({
         label: `cluster-marker-source-${cat}`,
         size: SOURCE_UNIFORM_BYTES,
@@ -497,7 +512,13 @@ export function createClusterMarkerRenderer(
     };
     for (let i = 0; i < count; i++) {
       const d = descriptors[i]!;
-      if (d.category !== 'cluster' && d.category !== 'supercluster' && d.category !== 'void' && d.category !== 'group') continue;
+      if (
+        d.category !== 'cluster' &&
+        d.category !== 'supercluster' &&
+        d.category !== 'void' &&
+        d.category !== 'group'
+      )
+        continue;
       const slot = writeCursor[d.category];
       writeCursor[d.category]++;
       const base = slot * MARKER_INSTANCE_FLOATS;
@@ -533,9 +554,16 @@ export function createClusterMarkerRenderer(
     fadeOpacity: number,
   ): void {
     if (
-      !device || !haloPipeline || !ringPipeline || !uniformBuffer ||
-      !instanceBuffer || !cameraBindGroup || !fadeBuffer || !fadeBindGroup
-    ) return;
+      !device ||
+      !haloPipeline ||
+      !ringPipeline ||
+      !uniformBuffer ||
+      !instanceBuffer ||
+      !cameraBindGroup ||
+      !fadeBuffer ||
+      !fadeBindGroup
+    )
+      return;
     if (currentMarkerCount === 0) return;
 
     // Write the 80-byte CameraUniforms prefix.  Same shape as markerLineRenderer.
@@ -574,7 +602,7 @@ export function createClusterMarkerRenderer(
     // the visible draws (their shaders don't read instance_index for
     // visual output); load-bearing for the pick path.
     pass.setPipeline(haloPipeline);
-    for (const cat of POI_CATEGORIES_WITH_MARKERS) {
+    for (const cat of STRUCTURE_CATEGORIES) {
       if (cat === 'void') continue; // explicit skip per spec
       if (bucketCounts[cat] === 0) continue;
       const bg = sourceBindGroups[cat];
@@ -586,7 +614,7 @@ export function createClusterMarkerRenderer(
 
     // Ring passes second (premultiplied OVER — composites over halo).
     pass.setPipeline(ringPipeline);
-    for (const cat of POI_CATEGORIES_WITH_MARKERS) {
+    for (const cat of STRUCTURE_CATEGORIES) {
       if (bucketCounts[cat] === 0) continue;
       const bg = sourceBindGroups[cat];
       if (!bg) continue;
@@ -622,7 +650,7 @@ export function createClusterMarkerRenderer(
     if (currentMarkerCount === 0) return;
     passEncoder.setPipeline(ringPickPipeline);
     passEncoder.setBindGroup(1, pickDummyFadeBindGroup);
-    for (const cat of POI_CATEGORIES_WITH_MARKERS) {
+    for (const cat of STRUCTURE_CATEGORIES) {
       if (bucketCounts[cat] === 0) continue;
       const bg = sourceBindGroups[cat];
       if (!bg) continue;
@@ -641,7 +669,7 @@ export function createClusterMarkerRenderer(
     instanceBuffer?.destroy();
     fadeBuffer?.destroy();
     pickDummyFadeBuffer?.destroy();
-    for (const cat of POI_CATEGORIES_WITH_MARKERS) {
+    for (const cat of STRUCTURE_CATEGORIES) {
       sourceBuffers[cat]?.destroy();
     }
   }

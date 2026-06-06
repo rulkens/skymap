@@ -115,10 +115,7 @@ import { isEngineReady } from '../helpers/engineReady';
  * pre-D.1) plus a 3-element array allocation and a `Math.tan` (which
  * `renderFrame` was already doing).
  */
-export function deriveFrameContext(
-  state: EngineState,
-  canvas: HTMLCanvasElement,
-): FrameContext {
+export function deriveFrameContext(state: EngineState, canvas: HTMLCanvasElement): FrameContext {
   // The bootstrap gate.  Pre-D.1 this lived inline in `runFrame()` as
   // a 5-way `if (!vp || !rendererRef || !camRef || !thumbnailsRef ||
   // !postProcessRef)` check.  D.1 lifted it here; D.4 then routed it
@@ -144,13 +141,18 @@ export function deriveFrameContext(
   // read from `ctx`.
   const canvasSize = { width: canvas.width, height: canvas.height };
   const vp = computeViewProj(cam);
-  const drawCamPos: Readonly<Vec3> = [
-    cam.position[0]!,
-    cam.position[1]!,
-    cam.position[2]!,
-  ];
+  const drawCamPos: Readonly<Vec3> = [cam.position[0]!, cam.position[1]!, cam.position[2]!];
   const drawPxPerRad = canvasSize.height / (2 * Math.tan(cam.fovYRad / 2));
 
+  // `focusBlend` is seeded to 0 (the at-rest, no-recession value) and then
+  // overwritten by `runFrame` with this frame's real blend the moment the
+  // ready gate passes. It can't be derived here: computing it ticks the
+  // clusterFocus fade controller, a side effect that must fire exactly
+  // once per frame — and `deriveFrameContext` is deliberately pure (it may
+  // be called speculatively, and double-ticking would double-advance the
+  // ramp). So the value is a placeholder until `runFrame` fills it in,
+  // before any consumer (label director, marker upload, render settings)
+  // reads it.
   return {
     isReady: true,
     cam,
@@ -158,6 +160,7 @@ export function deriveFrameContext(
     canvasSize,
     drawCamPos,
     drawPxPerRad,
+    focusBlend: 0,
     renderer,
     postProcess,
     volumeOffscreen,

@@ -8,8 +8,9 @@ import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/Read
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
 function makeState(requestRender: () => void = () => {}): EngineState {
-  // The director fires a one-shot 'poi' layer fade on the first non-empty
-  // flush, so the stub state needs a `fades.fadeTo`.
+  // The director no longer fires any layer load-in (each producer owns its
+  // own), but the stub keeps a `fades.fadeTo` spy so tests can assert the
+  // director never calls it.
   return {
     subsystems: { scheduler: { requestRender }, fades: { fadeTo: vi.fn() } },
   } as unknown as EngineState;
@@ -206,6 +207,20 @@ describe('labelDirectorSubsystem', () => {
 
     dir.runFrame(makeState(), makeCtx());
     expect(labelStub.setLabels).toHaveBeenCalledWith([onScreen, offScreen]);
+  });
+
+  it('no longer fires any layer load-in fade on a non-empty flush', () => {
+    // The per-category poi load-in moved to produceStructureLabels; the
+    // director must not call fades.fadeTo on its own anymore.
+    const dir = createLabelDirectorSubsystem();
+    const labelStub = makeLabelStub();
+    const lineStub = makeLineStub();
+    dir.attachRenderers(labelStub as never, lineStub as never);
+    dir.registerProducer(makeProducer('p', [SAMPLE_LABEL], [SAMPLE_LINE]));
+
+    const state = makeState();
+    dir.runFrame(state, makeCtx());
+    expect(state.subsystems.fades.fadeTo as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
   });
 
   it('treats a label with no prominencePx (you-are-here) as prominence 0', () => {
