@@ -113,19 +113,3 @@ export function unpackPick(rawPickValue: number): PickResult | null {
   );
   return null;
 }
-
-/**
- * @deprecated Use `unpackPick` directly; this shim exists for the
- * brief window between the foundations sub-plan (which lands the
- * discriminated-union return) and the pick-dispatch sub-plan (which
- * rewrites consumers to switch on `kind`). Remove when the last
- * caller is migrated.
- */
-export function unpackPickGalaxyOnly(
-  rawPickValue: number,
-): { source: number; localIdx: number } | null {
-  const result = unpackPick(rawPickValue);
-  if (result === null) return null;
-  if (result.kind !== 'galaxy') return null;
-  return { source: result.source, localIdx: result.localIdx };
-}
