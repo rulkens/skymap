@@ -19,6 +19,26 @@
  * own position. The engine's `famousMeta` comes from the bin and never holds
  * pseudo rows, but defending here keeps the join robust to future sources.
  *
+ * ### galaxyNames opacity × uniform focus recession bakes into fadeAlpha
+ *
+ * Each label's final `fadeAlpha` is the apparent-size distance fade multiplied
+ * by two composed strands (see `focusRecession.ts`): the `galaxyNames` toggle's
+ * opacity (`opacityOf({labelLayer, galaxyNames})`, read from the FadeRegistry)
+ * and the focus recession factor. Famous labels reuse the SAME `galaxyNames`
+ * handle and recede UNIFORMLY — there is no structure-membership link at this
+ * producer, so (unlike `produceStructureLabels`) no famous label is exempt from
+ * recession. The layer factor is the same for every famous label, so it's
+ * snapshotted once before the loop and folded into both the label's and its
+ * anchor line's `fadeAlpha` so the connector fades in lockstep with its label.
+ *
+ * ### This producer owns the galaxyNames load-in fade
+ *
+ * The first time the producer emits any famous label, it fires the
+ * `galaxyNames` `fadeTo(1)` once (a module-level latch). Because `galaxyNames`
+ * is registered at opacity 1 (it never toggles off, only recedes under focus),
+ * this ramp is a no-op — fired for SYMMETRY with the per-category POI load-in in
+ * `produceStructureLabels`, not to reveal anything.
+ *
  * ### No declutter here — the director owns it
  *
  * Like `produceStructureLabels`, this emits every surviving candidate tagged
@@ -39,8 +59,23 @@ import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { famousDisplayName } from '../helpers/famousDisplayName';
 import { getLabelStyleOverride } from '../labelStyleOverride';
 import { FAMOUS_LABEL_STYLE } from './famousLabelStyle';
+import { focusRecession } from './focusRecession';
+import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 
 const FAMOUS_MIN_APPARENT_PX = 6;
+
+// Load-in latch for the famous-galaxy (`galaxyNames`) label layer. The producer
+// is a bare function (not a closure over subsystem state), so the once-only
+// one-shot has nowhere to live except module scope. Fires the `galaxyNames`
+// `fadeTo(1)` the first time the producer emits any famous label, mirroring the
+// per-category POI load-in in `produceStructureLabels`. Reset between tests via
+// `__resetFamousLabelLoadIn`.
+let didFireFamousLoadIn = false;
+
+/** Test-only: clear the module-level load-in latch between unit cases. */
+export function __resetFamousLabelLoadIn(): void {
+  didFireFamousLoadIn = false;
+}
 
 /**
  * Minimum vertical lift, in Mpc, applied to a famous-galaxy label. Tiny
@@ -148,6 +183,16 @@ export function produceFamousLabels(
   // loop. See `labelStyleOverride.ts`.
   const override = getLabelStyleOverride();
 
+  // Snapshot the layer opacity × uniform recession ONCE — it's identical for
+  // every famous label (the `galaxyNames` handle is shared, and there is no
+  // per-member focus exemption here). Folded into each label + anchor-line
+  // fadeAlpha below.
+  const fades = state.subsystems.fades;
+  const now = performance.now();
+  const layerAlpha =
+    fades.opacityOf({ kind: 'labelLayer', layer: 'galaxyNames' }, now) *
+    focusRecession({ kind: 'labelLayer', layer: 'galaxyNames' }, ctx.focusBlend);
+
   for (const p of inputs) {
     const dx = p.worldPos[0] - cx;
     const dy = p.worldPos[1] - cy;
@@ -172,6 +217,11 @@ export function produceFamousLabels(
     // camera motion already wakes the loop. Pinning awake mid-band would keep
     // the loop on whenever a galaxy is fading.
 
+    // Fold the layer opacity × recession into the distance fade. The same
+    // `labelAlpha` drives both the label and its anchor line so the connector
+    // fades in lockstep with its label.
+    const labelAlpha = fadeAlpha * layerAlpha;
+
     // Lift the label a static world-space distance above the dot, with a
     // short connecting line from the dot to 75% of the lift. The offset is
     // static world-space (not a per-frame camera-distance conversion) because
@@ -185,7 +235,7 @@ export function produceFamousLabels(
       toWorld: [p.worldPos[0], p.worldPos[1] + offset * 0.75, p.worldPos[2]],
       pixelWidth: style.pixelWidth,
       color: [...style.lineColor],
-      fadeAlpha,
+      fadeAlpha: labelAlpha,
       // Anchor for this label — the director drops the connector if the label
       // loses an overlap during declutter.
       ownerLabelId: p.id,
@@ -208,7 +258,7 @@ export function produceFamousLabels(
       worldEmMpc: p.labelWorldEmMpc,
       minPixelSize: style.minPixelSize,
       maxPixelSize: style.maxPixelSize,
-      fadeAlpha,
+      fadeAlpha: labelAlpha,
       alignX: 'center',
       alignY: 'baseline',
       outlineColor: [...style.outlineColor],
@@ -216,6 +266,16 @@ export function produceFamousLabels(
       prominencePx,
       ...overrideFields,
     });
+  }
+
+  // Galaxy-names load-in: fire the `galaxyNames` fade once on this producer's
+  // first emitted famous label. Because `galaxyNames` is registered at opacity
+  // 1 (it never toggles off, only recedes under focus), this `fadeTo(1)` is a
+  // no-op ramp — fired for SYMMETRY with the per-category POI load-in in
+  // `produceStructureLabels`, not to reveal anything.
+  if (!didFireFamousLoadIn && labels.length > 0) {
+    didFireFamousLoadIn = true;
+    void fades.fadeTo({ kind: 'labelLayer', layer: 'galaxyNames' }, 1, FADE_IN_DURATION_MS);
   }
 
   return { labels, lines, awake: false };
