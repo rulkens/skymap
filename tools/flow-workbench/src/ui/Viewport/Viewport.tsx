@@ -1,21 +1,20 @@
 /**
- * Viewport — owns the <canvas>, boots the Engine, and bridges orbit input.
+ * Viewport — owns the <canvas>, boots the flow harness, and bridges orbit input.
  *
- * On mount it creates the WebGPU Engine against the canvas and starts the loop;
- * on unmount it disposes the engine. Orbit input is bridged into the STORE
- * rather than mutating the engine's camera directly (the engine reads the
- * camera slice each frame): drag dispatches setCameraYawPitch, wheel dispatches
+ * On mount it creates the WebGPU flow harness against the canvas and starts the
+ * loop; on unmount it disposes it. Orbit input is bridged into the STORE rather
+ * than mutating the harness camera directly (the harness reads the camera slice
+ * each frame): drag dispatches setCameraYawPitch, wheel dispatches
  * setCameraDistance. This keeps the store the single source of truth and avoids
- * sharing a mutable camera object across the React/engine boundary.
+ * sharing a mutable camera object across the React/harness boundary.
  *
- * createEngine is async; if it rejects (no WebGPU adapter, field fetch failure)
- * we surface it rather than leaving a silently dead canvas.
+ * createFlowHarness is async; if it rejects (no WebGPU adapter, field fetch
+ * failure) we surface it rather than leaving a silently dead canvas.
  */
 import { useEffect, useRef, type ReactNode } from 'react';
 import type { Store } from '../../../@types/state/Store';
 import type { AppState } from '../../../@types/state/AppState';
-import type { Engine } from '../../../@types/engine/Engine';
-import { createEngine } from '../../engine/createEngine';
+import { createFlowHarness, type FlowHarness } from '../../createFlowHarness';
 import { setCameraDistance, setCameraYawPitch } from '../../state/slices/cameraSlice';
 import styles from './Viewport.module.css';
 
@@ -33,20 +32,20 @@ function Viewport({ store }: ViewportProps): ReactNode {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    let engine: Engine | null = null;
+    let harness: FlowHarness | null = null;
     let disposed = false;
-    createEngine(canvas, store)
-      .then((e) => {
+    createFlowHarness(canvas, store)
+      .then((h) => {
         if (disposed) {
-          e.dispose();
+          h.dispose();
           return;
         }
-        engine = e;
-        e.start();
+        harness = h;
+        h.start();
       })
       .catch((err) => {
         // eslint-disable-next-line no-console
-        console.error('cosmic-flow: engine failed to start', err);
+        console.error('flow-workbench: harness failed to start', err);
       });
 
     // ── Orbit input → store ────────────────────────────────────────────────
@@ -94,7 +93,7 @@ function Viewport({ store }: ViewportProps): ReactNode {
 
     return () => {
       disposed = true;
-      engine?.dispose();
+      harness?.dispose();
       canvas.removeEventListener('pointerdown', onPointerDown);
       canvas.removeEventListener('pointerup', onPointerUp);
       canvas.removeEventListener('pointermove', onPointerMove);

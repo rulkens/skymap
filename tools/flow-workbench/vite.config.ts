@@ -9,13 +9,14 @@
  *    curator's 5200, so all three can run side-by-side during development.
  *  - Its own `root` — this `tools/flow-workbench/` directory — so Vite resolves
  *    `index.html` from here rather than the repo root.
- *  - Its own `publicDir` pointing at `tools/flow-workbench/public/`, where the
- *    workbench reads a single `flowfield.scfd` — the same `.scfd` flow field
- *    the runtime renders. Unlike the curator (which sets `publicDir: false` to
- *    avoid serving the runtime atlas), this tool DOES need a public dir: it
- *    reads that one static field asset and nothing else. There is no API
- *    plugin — the workbench is purely a static-asset reader, with no
- *    server-side state.
+ *  - Its `publicDir` points at the REPO's `public/` (`../../public`), so the
+ *    workbench serves the very same `public/data/flowfield.scfd` the runtime
+ *    fetches — one asset source, no copy to keep in sync. The harness reads it
+ *    at `/data/flowfield.scfd`. Unlike the curator (which sets
+ *    `publicDir: false` to avoid serving the runtime atlas), this tool DOES need
+ *    a public dir, but it points at the shared one rather than a tool-local
+ *    copy. There is no API plugin — the workbench is purely a static-asset
+ *    reader, with no server-side state.
  *
  * The WESL plugin mirrors the main app's setup (`vite.config.ts`): the
  * `staticBuildExtension` resolves `?static` imports by running the WESL linker
@@ -34,7 +35,7 @@ import viteWesl from 'wesl-plugin/vite';
 
 export default defineConfig({
   root: resolve(__dirname),
-  publicDir: resolve(__dirname, 'public'),
+  publicDir: resolve(__dirname, '../../public'),
   server: { port: 5300 },
   plugins: [
     viteWesl({

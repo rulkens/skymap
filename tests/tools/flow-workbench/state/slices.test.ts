@@ -1,19 +1,20 @@
 /**
- * Slice reducers — verifies immutable, surgical updates + spike-parity defaults.
+ * Slice reducers — verifies immutable, surgical updates + canonical defaults.
  *
- * Each reducer must return a NEW slice that changes only the named field and
- * leaves every untouched sub-object referentially identical (so a downstream
- * shallow-equal selector can skip work). The flow defaults are pinned to the
- * exact spike values: the visualization tuning was hand-dialled there and any
- * drift would silently change the look.
+ * The flow slice is now the canonical flat `FlowSettings`. Each reducer must
+ * return a NEW slice that changes only the named field and leaves the rest
+ * untouched, so the store's reference-equality gate sees a real change. The
+ * default is `DEFAULT_FLOW` with `enabled` forced true (the workbench is a
+ * flow-tuning harness, so it shows ribbons immediately).
  */
 import { describe, expect, it } from 'vitest';
 import {
   defaultFlowSlice,
+  setFlowEnabled,
   setFlowMode,
   setFlowParam,
 } from '../../../../tools/flow-workbench/src/state/slices/flowSlice';
-import { defaultViewSlice, toggleLayer } from '../../../../tools/flow-workbench/src/state/slices/viewSlice';
+import { DEFAULT_FLOW } from '../../../../src/data/defaults';
 import {
   defaultCameraSlice,
   setCameraViewProj,
@@ -24,55 +25,29 @@ import {
 import type { Mat4 } from '../../../../src/@types/math/Mat4';
 
 describe('flowSlice', () => {
-  it('defaultFlowSlice matches the spike advect/streamline defaults', () => {
-    expect(defaultFlowSlice).toEqual({
-      mode: 'streamline',
-      advect: {
-        count: 40000,
-        flowSpeed: 0.06,
-        densityBias: 1,
-        wander: 0.15,
-        trail: 0.003,
-        size: 0.0012,
-        exposure: 0.3,
-        contrast: 2.3,
-      },
-      streamline: {
-        count: 40000,
-        flowSpeed: 0.49,
-        densityBias: 1,
-        wander: 0,
-        trail: 0.013,
-        size: 0.001,
-        exposure: 0.22,
-        contrast: 3,
-      },
-    });
+  it('defaultFlowSlice is DEFAULT_FLOW with enabled forced true', () => {
+    expect(defaultFlowSlice).toEqual({ ...DEFAULT_FLOW, enabled: true });
   });
 
-  it('setFlowParam updates only the named param of the active mode, immutably', () => {
-    const result = setFlowParam(defaultFlowSlice, 'advect', 'flowSpeed', 0.1);
-    expect(result.advect.flowSpeed).toBe(0.1);
-    // The other mode's object keeps its reference.
-    expect(result.streamline).toBe(defaultFlowSlice.streamline);
-    // The original slice is untouched.
-    expect(defaultFlowSlice.advect.flowSpeed).toBe(0.06);
+  it('setFlowEnabled flips the master gate immutably', () => {
+    const result = setFlowEnabled(defaultFlowSlice, false);
+    expect(result.enabled).toBe(false);
+    expect(defaultFlowSlice.enabled).toBe(true); // prev untouched
   });
 
-  it('setFlowMode switches mode without touching either mode params', () => {
-    const result = setFlowMode(defaultFlowSlice, 'advect');
-    expect(result.mode).toBe('advect');
-    expect(result.advect).toBe(defaultFlowSlice.advect);
-    expect(result.streamline).toBe(defaultFlowSlice.streamline);
+  it('setFlowMode switches mode without touching other fields', () => {
+    const result = setFlowMode(defaultFlowSlice, 'streamline');
+    expect(result.mode).toBe('streamline');
+    expect(result.intensity).toBe(defaultFlowSlice.intensity);
+    expect(result.count).toBe(defaultFlowSlice.count);
+    expect(defaultFlowSlice.mode).toBe('advect'); // DEFAULT_FLOW mode, prev untouched
   });
-});
 
-describe('viewSlice', () => {
-  it('toggleLayer flips the named view boolean immutably', () => {
-    const result = toggleLayer(defaultViewSlice, 'densityVolume');
-    expect(result.densityVolume).toBe(true);
-    expect(result.flowField).toBe(defaultViewSlice.flowField);
-    expect(defaultViewSlice.densityVolume).toBe(false);
+  it('setFlowParam updates only the named numeric key, immutably', () => {
+    const result = setFlowParam(defaultFlowSlice, 'flowSpeed', 0.1);
+    expect(result.flowSpeed).toBe(0.1);
+    expect(result.trail).toBe(defaultFlowSlice.trail);
+    expect(defaultFlowSlice.flowSpeed).toBe(DEFAULT_FLOW.flowSpeed); // prev untouched
   });
 });
 

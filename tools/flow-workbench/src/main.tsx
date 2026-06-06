@@ -1,15 +1,14 @@
 /**
- * Cosmic Flow — entry point.
+ * Flow Workbench — entry point.
  *
  * Imports the shared skymap design tokens (`src/styles/global.css`) so the tool
- * inherits the main app's palette/typography, then registers the visualization
- * layers (side-effect imports — so `listFactories()` sees them when the engine
- * enumerates the registry) and mounts the React <App> shell. App owns the store,
- * the Viewport boots the WebGPU engine, and the overlays render on top.
+ * inherits the main app's palette/typography, then mounts the React <App> shell.
+ * App owns the store, the Viewport boots the WebGPU flow harness (which drives
+ * the canonical runtime flow renderer), and the overlays render on top. There is
+ * no visualization registry anymore — the harness consumes the one real renderer
+ * directly, so there are no side-effect register imports.
  */
 import '../../../src/styles/global.css';
-import './visualizations/flowField/register';
-import './visualizations/densityVolume/register';
 import { createRoot } from 'react-dom/client';
 import App from './ui/App/App';
 

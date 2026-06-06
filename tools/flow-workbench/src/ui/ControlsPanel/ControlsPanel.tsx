@@ -1,96 +1,92 @@
 /**
- * ControlsPanel — the data-driven control surface, wired to the store.
+ * ControlsPanel — the control surface, wired to the canonical FlowSettings store.
  *
- * It reads the active flow mode and renders THAT mode's slider specs (advect
- * adds wander + uses tighter ranges; streamline omits wander), plus the density
- * intensity slider when the density layer is on. Layer enables, the labels and
- * auto-rotate toggles, and a reset-view button round it out. Every control reads
- * its value from the store via a stable selector and writes back through a slice
- * reducer — the panel itself holds no state.
+ * Phase E flattened the store: the flow slice IS `FlowSettings` now, so the panel
+ * binds directly to its fields rather than a per-mode params object. It renders a
+ * mode segmented control, the flat numeric knobs as sliders, an enable toggle,
+ * the labels + auto-rotate toggles, and a reset-view button. `wander` is
+ * advect-only (the streamline integrator ignores it), so it's hidden in
+ * streamline mode — matching the renderer's behaviour.
+ *
+ * Each slider's value reads from `s.flow` and writes back through `setFlowParam`
+ * (keyed by `NumericFlowKey`, so a number can't land in a non-numeric field).
+ * Slider ranges/steps mirror the main app's DebugPanel FlowTuningSection so the
+ * two tuning surfaces feel the same: count's ceiling is `MAX_PARTICLES` (the
+ * buffer capacity == slider top end). The panel holds no state.
  *
  * Chrome comes from the shared `common/Panel` (glass card + collapsible header)
  * so it matches the main app; the controls are this tool's primitives.
  */
 import type { ReactNode } from 'react';
-import type { FlowModeParams } from '../../../@types/state/slices/FlowModeParams';
-import type { VolumeSlice } from '../../../@types/state/slices/VolumeSlice';
+import type { SliderSpec } from '../../../@types/visualizations/SliderSpec';
+import type { NumericFlowKey } from '../../state/slices/flowSlice';
+import { MAX_PARTICLES } from '../../../../../src/services/gpu/renderers/flowFieldConstants';
 import { Panel } from '../../../../../src/components/common/Panel/Panel';
 import Button from '../../../../../src/components/common/Button/Button';
 import { useStore } from '../../state/useStore';
-import { selectActiveFlowParams } from '../../state/selectors';
-import { setFlowMode, setFlowParam } from '../../state/slices/flowSlice';
-import { toggleLayer } from '../../state/slices/viewSlice';
-import { setVolumeParam } from '../../state/slices/volumeSlice';
+import { setFlowEnabled, setFlowMode, setFlowParam } from '../../state/slices/flowSlice';
 import { setLabelsEnabled } from '../../state/slices/labelsSlice';
 import { setAutoRotate, defaultCameraSlice } from '../../state/slices/cameraSlice';
-import { FLOW_PARAM_SPECS, FLOW_ADVECT_PARAM_SPECS } from '../../visualizations/flowField/params';
-import { VOLUME_PARAM_SPECS } from '../../visualizations/densityVolume/params';
 import { useAppStore } from '../storeContext';
 import Slider from '../Slider/Slider';
 import Toggle from '../Toggle/Toggle';
 import ModeTabs from '../ModeTabs/ModeTabs';
-import LayerToggles from '../LayerToggles/LayerToggles';
 import styles from './ControlsPanel.module.css';
+
+// One spec per numeric FlowSettings knob. `id` is the NumericFlowKey the value
+// is read from and written under — ranges/steps mirror the main app's
+// DebugPanel FlowTuningSection so both tuning surfaces match. `wander` is
+// advect-only (the streamline shader ignores it) and is filtered below.
+type FlowSliderSpec = SliderSpec & { readonly id: NumericFlowKey; readonly advectOnly?: boolean };
+
+const FLOW_SLIDER_SPECS: readonly FlowSliderSpec[] = [
+  { id: 'intensity', label: 'intensity', min: 0, max: 1, step: 0.01 },
+  { id: 'count', label: 'count', min: 0, max: MAX_PARTICLES, step: 1000 },
+  { id: 'trail', label: 'trail', min: 0, max: 0.05, step: 0.001 },
+  { id: 'flowSpeed', label: 'speed', min: 0, max: 0.6, step: 0.005 },
+  { id: 'densityBias', label: 'density bias', min: 0, max: 1, step: 0.01 },
+  { id: 'wander', label: 'wander', min: 0, max: 0.5, step: 0.005, advectOnly: true },
+  { id: 'boundaryFadeWidth', label: 'boundary fade', min: 0, max: 0.5, step: 0.01 },
+];
 
 function ControlsPanel(): ReactNode {
   const store = useAppStore();
-  const mode = useStore(store, (s) => s.flow.mode);
-  const flowParams = useStore(store, selectActiveFlowParams);
-  const view = useStore(store, (s) => s.view);
-  const volume = useStore(store, (s) => s.volume);
+  const flow = useStore(store, (s) => s.flow);
   const labelsOn = useStore(store, (s) => s.labels.enabled);
   const autoRotate = useStore(store, (s) => s.camera.autoRotate);
 
-  const flowSpecs = mode === 'advect' ? FLOW_ADVECT_PARAM_SPECS : FLOW_PARAM_SPECS;
+  const specs = FLOW_SLIDER_SPECS.filter((spec) => !spec.advectOnly || flow.mode === 'advect');
 
   return (
     <div className={styles.panel}>
-      <Panel title="Cosmic Flow">
+      <Panel title="Flow Workbench">
         <div className={styles.body}>
           <ModeTabs
-            mode={mode}
+            mode={flow.mode}
             onSelect={(m) => store.setState((s) => ({ ...s, flow: setFlowMode(s.flow, m) }))}
           />
 
           <div className={styles.sliders}>
-            {flowSpecs.map((spec) => (
+            {specs.map((spec) => (
               <Slider
                 key={spec.id}
                 spec={spec}
-                value={flowParams[spec.id as keyof FlowModeParams]}
+                value={flow[spec.id]}
                 onChange={(v) =>
-                  store.setState((s) => ({
-                    ...s,
-                    flow: setFlowParam(s.flow, s.flow.mode, spec.id as keyof FlowModeParams, v),
-                  }))
+                  store.setState((s) => ({ ...s, flow: setFlowParam(s.flow, spec.id, v) }))
                 }
               />
             ))}
-            {view.densityVolume &&
-              VOLUME_PARAM_SPECS.map((spec) => (
-                <Slider
-                  key={spec.id}
-                  spec={spec}
-                  value={volume[spec.id as keyof VolumeSlice]}
-                  onChange={(v) =>
-                    store.setState((s) => ({
-                      ...s,
-                      volume: setVolumeParam(s.volume, spec.id as keyof VolumeSlice, v),
-                    }))
-                  }
-                />
-              ))}
           </div>
 
-          <LayerToggles
-            flowField={view.flowField}
-            densityVolume={view.densityVolume}
-            onToggle={(layer) =>
-              store.setState((s) => ({ ...s, view: toggleLayer(s.view, layer) }))
-            }
-          />
-
           <div className={styles.row}>
+            <Toggle
+              label="flow"
+              on={flow.enabled}
+              onToggle={() =>
+                store.setState((s) => ({ ...s, flow: setFlowEnabled(s.flow, !s.flow.enabled) }))
+              }
+            />
             <Toggle
               label="labels"
               on={labelsOn}
@@ -117,7 +113,7 @@ function ControlsPanel(): ReactNode {
             onClick={() =>
               store.setState((s) => ({
                 ...s,
-                // reset the orbit pose, keep the engine-written viewProj for this frame
+                // reset the orbit pose, keep the harness-written viewProj for this frame
                 camera: { ...defaultCameraSlice, viewProj: s.camera.viewProj },
               }))
             }

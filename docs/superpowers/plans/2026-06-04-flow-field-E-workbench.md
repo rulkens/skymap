@@ -90,12 +90,12 @@ returns black) confirming ribbons render against the workbench backdrop.
 The rename avoids confusion with the retired duplicate (decision §12). Do this
 first so subsequent tasks edit the final paths.
 
-- [ ] `git mv tools/cosmic-flow tools/flow-workbench` (preserves history; stage the specific path).
-- [ ] In `vite.config.ts`: update `root`/`publicDir` `resolve(__dirname, …)` calls (they're `__dirname`-relative, so the rename mostly carries; confirm the comment text + any hard-coded `cosmic-flow` strings are updated). Keep `server.port: 5300`. Keep the explicit `weslToml`.
-- [ ] In `wesl.toml`: decide between (a) extending `include`/`root` to cover the canonical `src/services/gpu/shaders/flow/**`, or (b) deleting this toml and pointing the Vite config's `weslToml` at the repo-root runtime toml. Prefer (b) if the harness imports the canonical shaders via the same `package::services::gpu::shaders::flow::…` path the runtime uses — one shader source, one linker config. Document the choice in the toml/comment per the wesl-plugin-reads-cwd note.
-- [ ] In `package.json`: rename the `cosmic-flow` script to `flow-workbench`, pointing at `tools/flow-workbench/vite.config.ts`.
-- [ ] `npm run typecheck` → clean (the rename shouldn't change types yet; the duplicated tree still compiles until Task 3 deletes it).
-- [ ] Commit: `refactor(flow): rename cosmic-flow → flow-workbench`.
+- [x] `git mv tools/cosmic-flow tools/flow-workbench` (preserves history; stage the specific path). Also `git mv tests/tools/cosmic-flow tests/tools/flow-workbench` (test tree the plan missed; 29 path fixups).
+- [x] In `vite.config.ts`: update `root`/`publicDir` `resolve(__dirname, …)` calls (they're `__dirname`-relative, so the rename mostly carries; confirm the comment text + any hard-coded `cosmic-flow` strings are updated). Keep `server.port: 5300`. Keep the explicit `weslToml`.
+- [x] In `wesl.toml`: chose **(a)** — kept a workbench toml with `root = "../../src/services/gpu/shaders"` (the canonical flow shaders import `package::flow::flowConstants`, which only resolves at that root) and `include` adding the workbench's one leaf `src/engine/shaders/blit.wesl`. Option (b)/repo-root toml would not cover blit. Documented in the toml comment.
+- [x] In `package.json`: rename the `cosmic-flow` script to `flow-workbench`, pointing at `tools/flow-workbench/vite.config.ts`.
+- [x] `npm run typecheck` → clean (the rename shouldn't change types yet; the duplicated tree still compiles until Task 3 deletes it).
+- [x] Commit: `refactor(flow): rename cosmic-flow → flow-workbench`.
 
 ## Task 2: `createFlowHarness` driving the canonical renderer
 
@@ -134,12 +134,12 @@ store the engine uses. The harness calls `flowFieldRenderer.maybeReseed()` when
 the controls change mode/count (the panel's callbacks do this, mirroring the
 Phase-D handle).
 
-- [ ] Create `createWorkbenchStore.ts` — re-export / wrap `createFlowFieldStore` from `src/services/engine/data/createFlowFieldStore.ts`.
-- [ ] Create `createFlowHarness.ts` per the contract: device init (reuse `src/services/gpu/device.initGpu`), HDR target + `blit.wesl` tonemap (kept from the old render graph), orbit-camera (`src/services/camera/orbitCamera`), `createFlowField` (Phase B loader) against the workbench's field URL, `createFlowFieldRenderer` + `setField`, the per-frame loop above.
-- [ ] Rewire `engine/createEngine.ts` to construct + return a `createFlowHarness` (or replace `createEngine` entirely with the harness and update `main.tsx`/`Viewport` call site). Delete the `listFactories`/`DRAW_ORDER`/`Visualization` plumbing.
-- [ ] Point the field URL at the workbench's `public/` (it can curl the single `flowfield.scfd` from R2 or symlink `public/data/`) — `createFlowField` takes one `.scfd` URL now, no sidecar (the old tool read `cf4pp_vfield.{bin,json}`).
-- [ ] `npm run typecheck` → clean.
-- [ ] Commit: `feat(flow): createFlowHarness driving the canonical flow renderer`.
+- [x] ~~Create `createWorkbenchStore.ts`~~ — DROPPED. The plan's premise (reuse `createFlowFieldStore`) was stale: that store is **status-only** (a `loaded` bit), but `encodeCompute`/`draw` take a flat `FlowSettings`. So the existing `createStore(defaultAppState)` IS the workbench store — its `flow` slice now holds a `FlowSettings`. No extra file (simpler).
+- [x] Create `createFlowHarness.ts` per the contract: `initGpu` → `createRenderGraph` (HDR + `blit.wesl`) → `createFlowFieldRenderer`; orbit-camera; field load via `fetch` → `decodeScalarField` → `setField` (NOT `createFlowField` — `setField` takes the decoded `ScalarCube` and owns the upload); the per-frame loop (store-driven reseed → `encodeFlowCompute` → HDR draw → tonemap).
+- [x] Replaced `engine/createEngine.ts` (deleted) with `createFlowHarness`; `Viewport`/`main.tsx` updated; the `listFactories`/`DRAW_ORDER`/`Visualization` plumbing is gone.
+- [x] Field URL `/data/flowfield.scfd` via `publicDir → ../../public` (serves the repo's `public/data/`, the same `.scfd` the runtime fetches — single asset source, no copy/symlink).
+- [x] `npm run typecheck` → clean. Also verified `vite build` links the canonical shaders + `blit.wesl`, and `npm test` green (2355).
+- [x] Commit: `feat(flow): createFlowHarness driving the canonical flow renderer`.
 
 ## Task 3: Delete the duplicated tree + rewire the controls panel
 
