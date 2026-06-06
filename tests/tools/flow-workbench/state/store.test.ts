@@ -1,7 +1,7 @@
 /**
  * createStore — verifies the snapshot/subscribe/setState contract.
  *
- * The store is the cosmic-flow tool's single source of truth: a closure over a
+ * The store is the flow-workbench tool's single source of truth: a closure over a
  * mutable snapshot plus a listener set. The behaviours that matter are the
  * reference-equality gate (no notification when the update returns the same
  * object, so a no-op setState never wakes React) and immutability of the
@@ -9,7 +9,7 @@
  * These tests pin both, plus subscribe/unsubscribe bookkeeping.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { createStore } from '../../../../tools/cosmic-flow/src/state/createStore';
+import { createStore } from '../../../../tools/flow-workbench/src/state/createStore';
 
 type Counter = { readonly n: number };
 

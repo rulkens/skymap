@@ -11,8 +11,8 @@ import { describe, expect, it } from 'vitest';
 import {
   FLOW_PARAM_SPECS,
   FLOW_ADVECT_PARAM_SPECS,
-} from '../../../../tools/cosmic-flow/src/visualizations/flowField/params';
-import { defaultFlowSlice } from '../../../../tools/cosmic-flow/src/state/slices/flowSlice';
+} from '../../../../tools/flow-workbench/src/visualizations/flowField/params';
+import { defaultFlowSlice } from '../../../../tools/flow-workbench/src/state/slices/flowSlice';
 
 describe('flow params', () => {
   it('every streamline default sits within its FLOW_PARAM_SPECS range', () => {

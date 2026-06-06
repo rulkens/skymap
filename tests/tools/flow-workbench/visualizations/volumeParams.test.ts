@@ -7,8 +7,8 @@
  * (otherwise the UI would render a thumb off the track on first paint).
  */
 import { describe, expect, it } from 'vitest';
-import { VOLUME_PARAM_SPECS } from '../../../../tools/cosmic-flow/src/visualizations/densityVolume/params';
-import { defaultVolumeSlice } from '../../../../tools/cosmic-flow/src/state/slices/volumeSlice';
+import { VOLUME_PARAM_SPECS } from '../../../../tools/flow-workbench/src/visualizations/densityVolume/params';
+import { defaultVolumeSlice } from '../../../../tools/flow-workbench/src/state/slices/volumeSlice';
 
 describe('volume params', () => {
   it('VOLUME_PARAM_SPECS exposes only the intensity slider', () => {

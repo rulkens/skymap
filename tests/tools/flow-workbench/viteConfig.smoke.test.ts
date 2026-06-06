@@ -1,16 +1,16 @@
 /**
  * Smoke test: the Cosmic Flow Vite config loads without throwing and exposes
  * the expected port + plugin list. Mirrors the curator's smoke test — it
- * guards against a typo in the config that would make `npm run cosmic-flow`
+ * guards against a typo in the config that would make `npm run flow-workbench`
  * fail at import time. There is no API plugin here, so (unlike the curator
  * test) we do NOT assert one — but we DO assert the wesl plugin, which is
  * load-bearing: the `?static` shader imports fail to resolve without it.
  */
 import { describe, expect, it } from 'vitest';
 
-describe('tools/cosmic-flow/vite.config.ts', () => {
+describe('tools/flow-workbench/vite.config.ts', () => {
   it('exports a config with port 5300 and a react plugin', async () => {
-    const mod = await import('../../../tools/cosmic-flow/vite.config');
+    const mod = await import('../../../tools/flow-workbench/vite.config');
     const config = mod.default;
     // Vite's `defineConfig` return is a wide union (config object, sync
     // function, async function); narrowing via `typeof === 'function'`

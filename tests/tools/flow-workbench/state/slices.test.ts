@@ -12,15 +12,15 @@ import {
   defaultFlowSlice,
   setFlowMode,
   setFlowParam,
-} from '../../../../tools/cosmic-flow/src/state/slices/flowSlice';
-import { defaultViewSlice, toggleLayer } from '../../../../tools/cosmic-flow/src/state/slices/viewSlice';
+} from '../../../../tools/flow-workbench/src/state/slices/flowSlice';
+import { defaultViewSlice, toggleLayer } from '../../../../tools/flow-workbench/src/state/slices/viewSlice';
 import {
   defaultCameraSlice,
   setCameraViewProj,
   setCameraYawPitch,
   setCameraDistance,
   setAutoRotate,
-} from '../../../../tools/cosmic-flow/src/state/slices/cameraSlice';
+} from '../../../../tools/flow-workbench/src/state/slices/cameraSlice';
 import type { Mat4 } from '../../../../src/@types/math/Mat4';
 
 describe('flowSlice', () => {

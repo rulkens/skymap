@@ -1,25 +1,32 @@
-# WESL linker configuration for the cosmic-flow tool.
+# WESL linker configuration for the Flow Workbench tool.
 #
-# Cosmic Flow is a self-contained Vite sub-app, so it needs its OWN wesl.toml
-# rather than the repo-root one (which only includes the runtime's
-# src/services/gpu/shaders/**). wesl-plugin locates this file from the
-# *explicit* `weslToml` option in tools/cosmic-flow/vite.config.ts — NOT from
-# the Vite `root`. By default the plugin reads `<process.cwd()>/wesl.toml`, and
-# `npm run cosmic-flow` keeps cwd at the repo root, so without the explicit path
-# the plugin would pick up the runtime toml and never see these shaders.
+# The workbench links against the CANONICAL flow shaders — the same
+# src/services/gpu/shaders/flow/*.wesl the runtime renderer uses. There is one
+# shader source, shared between both apps: editing a flow shader changes the
+# runtime AND the workbench. The workbench imports the canonical
+# flowFieldRenderer, which pulls flowCompute.wesl + flowRender.wesl via
+# `?static`, and those shaders import their constants as
+# `package::flow::flowConstants::NAME`.
 #
-# Schema notes (see the repo-root wesl.toml for the long version):
-#   - `root` is resolved relative to THIS file's directory, then re-based on
-#     process.cwd() internally — both stay consistent because this toml lives
-#     under the cwd (the repo root).
-#   - WESL `import` paths use the literal `package::` prefix; segments mirror the
-#     directory tree under `root`. So
-#     src/visualizations/flowField/shaders/flowConstants.wesl is imported as
-#     `package::visualizations::flowField::shaders::flowConstants::NAME`.
-#   - `?static` (wired in vite.config.ts) links at build time to a flat WGSL
-#     string — zero runtime linker dependency, same shape as the old
-#     `import x from './x.wgsl'` string modules it replaces.
+# That `package::flow::…` path only resolves when `root` is the canonical
+# shaders dir — so `flow/flowConstants.wesl` maps to `package::flow::flowConstants`.
+# Hence `root` points up out of this tool, at the runtime's shader tree.
+#
+# The workbench keeps ONE shader of its own: src/engine/shaders/blit.wesl, an
+# HDR→swapchain tonemap imported relatively (`./shaders/blit.wesl?static`). It
+# is a leaf — no internal `import` statements, and nothing imports it via
+# `package::` — so it can sit outside `root` and just be listed in `include`.
+#
+# wesl-plugin locates this file from the *explicit* `weslToml` option in
+# vite.config.ts — NOT from the Vite `root`. By default the plugin reads
+# `<process.cwd()>/wesl.toml`, and `npm run flow-workbench` keeps cwd at the
+# repo root, so without the explicit path the plugin would pick up the runtime
+# toml instead.
+#
+# `?static` (wired in vite.config.ts) links at build time to a flat WGSL string
+# — zero runtime linker dependency, same shape as the `import x from './x.wgsl'`
+# string modules it replaces.
 
 edition = "unstable_2025"
-include = ["src/**/*.wesl"]
-root = "src"
+include = ["../../src/services/gpu/shaders/**/*.wesl", "src/engine/shaders/*.wesl"]
+root = "../../src/services/gpu/shaders"

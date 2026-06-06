@@ -21,7 +21,7 @@ import {
   FADE,
   DENS_SCALE,
   SPEED_COLOR_MAX,
-} from '../../../../tools/cosmic-flow/src/visualizations/flowField/constants';
+} from '../../../../tools/flow-workbench/src/visualizations/flowField/constants';
 
 /**
  * Extract every `const NAME: (u32|f32) = <number>;` from flowConstants.wesl.
@@ -31,7 +31,7 @@ import {
 function parseWeslConstants(): Map<string, number> {
   const path = join(
     process.cwd(),
-    'tools/cosmic-flow/src/visualizations/flowField/shaders/flowConstants.wesl',
+    'tools/flow-workbench/src/visualizations/flowField/shaders/flowConstants.wesl',
   );
   const text = readFileSync(path, 'utf-8');
   const re = /const\s+(\w+)\s*:\s*(?:u32|f32)\s*=\s*([0-9]+(?:\.[0-9]+)?)[uf]?\s*;/g;

@@ -7,7 +7,7 @@
  * those methods, so the fakes exercise the real branching.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { createDisposableTracker } from '../../../../tools/cosmic-flow/src/engine/gpu/createDisposableTracker';
+import { createDisposableTracker } from '../../../../tools/flow-workbench/src/engine/gpu/createDisposableTracker';
 
 describe('createDisposableTracker', () => {
   it('track returns the resource it was given', () => {

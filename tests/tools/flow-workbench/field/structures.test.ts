@@ -7,9 +7,9 @@
  * numeric coordinate transform the running output IS the specification.
  */
 import { describe, expect, it } from 'vitest';
-import { structureWorld } from '../../../../tools/cosmic-flow/src/field/structureWorld';
-import { placeStructures } from '../../../../tools/cosmic-flow/src/field/placeStructures';
-import { STRUCTURE_CATALOG } from '../../../../tools/cosmic-flow/src/field/structureCatalog';
+import { structureWorld } from '../../../../tools/flow-workbench/src/field/structureWorld';
+import { placeStructures } from '../../../../tools/flow-workbench/src/field/placeStructures';
+import { STRUCTURE_CATALOG } from '../../../../tools/flow-workbench/src/field/structureCatalog';
 
 const hypot = (v: readonly number[]) => Math.hypot(v[0]!, v[1]!, v[2]!);
 

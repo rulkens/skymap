@@ -8,14 +8,14 @@
  * fresh objects, so they're for direct getSnapshot() use, never useStore.
  */
 import { describe, expect, it } from 'vitest';
-import { defaultAppState } from '../../../../tools/cosmic-flow/src/state/defaultAppState';
-import { defaultVolumeSlice } from '../../../../tools/cosmic-flow/src/state/slices/volumeSlice';
+import { defaultAppState } from '../../../../tools/flow-workbench/src/state/defaultAppState';
+import { defaultVolumeSlice } from '../../../../tools/flow-workbench/src/state/slices/volumeSlice';
 import {
   selectActiveFlowParams,
   selectEnabledLayers,
   selectFrameParams,
-} from '../../../../tools/cosmic-flow/src/state/selectors';
-import type { AppState } from '../../../../tools/cosmic-flow/@types/state/AppState';
+} from '../../../../tools/flow-workbench/src/state/selectors';
+import type { AppState } from '../../../../tools/flow-workbench/@types/state/AppState';
 
 describe('selectors', () => {
   it('selectActiveFlowParams returns the streamline params when mode is streamline', () => {

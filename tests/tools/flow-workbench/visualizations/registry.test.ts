@@ -2,15 +2,15 @@
  * registry.test — the visualization registry's contract.
  *
  * The registry is a module-level singleton, so these tests deliberately use a
- * UNIQUE id per case (cosmic-flow:test:<case>) to avoid cross-test bleed: a
+ * UNIQUE id per case (flow-workbench:test:<case>) to avoid cross-test bleed: a
  * stale entry from one case must not be visible to another. We assert the three
  * behaviours the engine depends on — registration is observable via
  * `listFactories`, a duplicate id is last-wins (not a throw, not a second
  * entry), and each factory call yields an independent instance.
  */
 import { describe, expect, it } from 'vitest';
-import { register, listFactories } from '../../../../tools/cosmic-flow/src/visualizations/registry';
-import type { Visualization } from '../../../../tools/cosmic-flow/@types/visualizations/Visualization';
+import { register, listFactories } from '../../../../tools/flow-workbench/src/visualizations/registry';
+import type { Visualization } from '../../../../tools/flow-workbench/@types/visualizations/Visualization';
 
 const fakeViz = (id: string): Visualization =>
   ({
@@ -24,13 +24,13 @@ const fakeViz = (id: string): Visualization =>
 
 describe('visualization registry', () => {
   it('register then listFactories returns the registered id', () => {
-    const id = 'cosmic-flow:test:basic';
+    const id = 'flow-workbench:test:basic';
     register(id, () => fakeViz(id));
     expect(listFactories().some((e) => e.id === id)).toBe(true);
   });
 
   it('register is last-wins for a duplicate id', () => {
-    const id = 'cosmic-flow:test:dup';
+    const id = 'flow-workbench:test:dup';
     const first: () => Visualization = () => fakeViz(id);
     const second: () => Visualization = () => fakeViz(id);
     register(id, first);
@@ -42,7 +42,7 @@ describe('visualization registry', () => {
   });
 
   it('listFactories returns factories that produce independent instances', () => {
-    const id = 'cosmic-flow:test:independent';
+    const id = 'flow-workbench:test:independent';
     register(id, () => fakeViz(id));
 
     const entry = listFactories().find((e) => e.id === id);
