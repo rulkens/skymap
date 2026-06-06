@@ -13,6 +13,12 @@
  *
  * The SettingsPanel slider is also bounded to [0, 1], so this clamp is
  * primarily a defensive boundary for programmatic callers.
+ *
+ * No `Number.isFinite` guard is intentional: the original `setIntensity`
+ * setter used a bare `Math.max/min` with no finite check, so `NaN` passed
+ * through — this helper preserves that per-knob behaviour exactly, matching
+ * `clampVolumeContrast` (which has the same origin) rather than the guarded
+ * exposure/trim/densityScale helpers whose originals did NaN-fallback.
  */
 export function clampVolumeIntensity(value: number): number {
   return Math.max(0, Math.min(1, value));

@@ -476,7 +476,12 @@ export function createScalarVolumeRenderer(
         // references the texture view, which stays valid across
         // writeTexture).  Palette is the one knob with a GPU side
         // effect, so it's handled here rather than packed into the
-        // uniform.
+        // uniform.  This check runs BEFORE the skip gate below so that
+        // residency stays in sync even for a disabled or zero-intensity
+        // field whose palette changed while it was off — ensuring the
+        // correct LUT is showing the moment the field is re-enabled.
+        // Moving this block into the skip branch would reintroduce a
+        // stale-LUT-on-re-enable bug.
         if (s.paletteId !== e.residentPaletteId) {
           writePaletteLut(e.paletteTexture, s.paletteId);
           e.residentPaletteId = s.paletteId;
