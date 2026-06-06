@@ -48,7 +48,7 @@ import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps'
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
-import type { VolumeFieldId } from '../../../../src/@types/data/VolumeFieldId';
+
 
 // ── Module mocks ──────────────────────────────────────────────────────
 //
@@ -308,13 +308,7 @@ function makeState(
     famousGalaxy: true,
     group: true,
   };
-  // Seed the volume store the same way the engine does at construction, so the
-  // demand predicate for MCPM (default-on) reads true at boot — parity with the
-  // old imperative boot loop that loaded MCPM unconditionally.
   const data = createEngineData();
-  for (const [id, params] of Object.entries(seedVolumeFields())) {
-    data.volumes.setParams(id as VolumeFieldId, params!);
-  }
   return {
     settings: {
       points: {
@@ -368,15 +362,6 @@ function makeState(
       milkyWayRenderer: null,
       scalarVolumeRenderer: {
         addField: vi.fn(),
-        setIntensity: vi.fn(),
-        setEnabled: vi.fn(),
-        setContrast: vi.fn(),
-        setFieldPalette: vi.fn(),
-        setDensityScale: vi.fn(),
-        setEnvelope: vi.fn(),
-        setContrastCenter: vi.fn(),
-        setExposure: vi.fn(),
-        setTrim: vi.fn(),
       } as never,
     },
     subsystems: {
