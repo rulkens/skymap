@@ -22,6 +22,7 @@ function makeCtx(): ReadyFrameContext {
     canvasSize: { width: 1280, height: 720 },
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
+    focusBlend: 0,
     renderer: {} as never,
     postProcess: {} as never,
     volumeOffscreen: {} as never,

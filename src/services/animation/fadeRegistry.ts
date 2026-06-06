@@ -51,8 +51,13 @@ function serializeFadeHandle(h: FadeHandle): string {
       return 'flow';
     case 'scalarField':
       return `scalarField:${h.field}`;
+    case 'markerLayer':
+      return `markerLayer:${h.category}`;
+    // A category-less POI handle and a per-category one must not collide,
+    // and existing keys (e.g. `labelLayer:youAreHere`) must stay
+    // byte-identical — so the category suffix is appended only when present.
     case 'labelLayer':
-      return `labelLayer:${h.layer}`;
+      return `labelLayer:${h.layer}${h.category ? ':' + h.category : ''}`;
     case 'overlay':
       return `overlay:${h.id}`;
     case 'volumesMaster':

@@ -39,6 +39,7 @@
  */
 
 import type { Pass } from '../../../../@types/engine/frame/Pass';
+import { resolveLayerOpacity } from '../../presentation/focusRecession';
 
 /**
  * Empirically pleasant line halfwidth in screen-space pixels.  The
@@ -93,7 +94,10 @@ export const filamentsPass: Pass = {
       [canvasSize.width, canvasSize.height],
       FILAMENT_LINE_HALFWIDTH_PX,
       settings.filamentIntensity,
-      state.subsystems.fades.opacityOf({ kind: 'filaments' }, nowMs),
+      // Focus recession is applied HERE (on the drawn opacity), not on the
+      // `enabled` gate above: recession ∈ [FILAMENT_RECESSION, 1] can never
+      // zero the layer, so the gate keeps reading the pure toggle opacity.
+      resolveLayerOpacity(state.subsystems.fades, { kind: 'filaments' }, ctx.focusBlend, nowMs),
     );
   },
 };

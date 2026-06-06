@@ -89,6 +89,7 @@ import { ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve'
 import type { ToneMapCurve as ToneMapCurveT } from '../../@types/data/ToneMapCurve';
 import type { PoiCategory } from '../../@types/engine/data/PoiCategory';
 import { POI_CATEGORY_INFO } from '../../data/poiCategoryInfo';
+import { STRUCTURE_CATEGORIES } from '../../data/structureCategories';
 import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
@@ -125,30 +126,19 @@ const TOGGLEABLE_SOURCES: readonly SourceType[] = [
 ];
 
 /**
- * The marker categories the "Structures" master toggle batches over.
- * `famousGalaxy` is intentionally absent — famous galaxies don't have
- * a marker ring (their visualisation is the galaxy point + thumbnail),
- * only a label.  Cluster / supercluster / void / group are the four
- * POI-marker categories that share the structures master.
- */
-const STRUCTURE_CATEGORIES: readonly PoiCategory[] = ['cluster', 'supercluster', 'void', 'group'];
-
-/**
  * The label categories the "Labels" master toggle batches over.  All five
  * PoiCategory values — labels are independent of marker visibility (axis
  * separation landed in PR #160 / audit Q11).
  *
  * `famousGalaxy` is listed first — it's the label set the explorer is
  * most likely to recognise + most likely to toggle (named galaxies vs.
- * astronomer-jargon structure labels), so it gets the top row.
+ * astronomer-jargon structure labels), so it gets the top row.  The
+ * remaining four are spread from the canonical `STRUCTURE_CATEGORIES` so a
+ * future fifth structure category flows through here automatically — the
+ * structures master (which iterates `STRUCTURE_CATEGORIES` directly) and
+ * the labels master can never drift apart.
  */
-const LABEL_CATEGORIES: readonly PoiCategory[] = [
-  'famousGalaxy',
-  'cluster',
-  'supercluster',
-  'void',
-  'group',
-];
+const LABEL_CATEGORIES: readonly PoiCategory[] = ['famousGalaxy', ...STRUCTURE_CATEGORIES];
 
 /**
  * High-level Style picker options for the Cosmic web group.  Derived from

@@ -39,7 +39,7 @@ import type { EncodeVolumesArgs } from '../../../@types/engine/frame/EncodeVolum
 import { VOLUME_RENDER_SCALE_DIVISOR } from '../../gpu/passes/volumeOffscreen';
 
 export function encodeVolumes(args: EncodeVolumesArgs): void {
-  const { encoder, ctx, scalarVolumeRenderer, fadeOpacityOf, timestampWrites } = args;
+  const { encoder, ctx, scalarVolumeRenderer, settingsOf, fadeOpacityOf, timestampWrites } = args;
 
   // Two-part gate:
   //
@@ -50,7 +50,8 @@ export function encodeVolumes(args: EncodeVolumesArgs): void {
   //      the upsample blit is the consumer of whatever we'd write here.
   //      Skipping the pass avoids one tile-RAM round-trip per frame
   //      on M1 for a cleared-but-unused offscreen target.
-  if (scalarVolumeRenderer === null || !scalarVolumeRenderer.hasActiveFields(fadeOpacityOf)) return;
+  if (scalarVolumeRenderer === null || !scalarVolumeRenderer.hasActiveFields(settingsOf, fadeOpacityOf))
+    return;
 
   // Viewport matches `volumeOffscreen`'s texture size, per the shared
   // `VOLUME_RENDER_SCALE_DIVISOR`.  Computed inline (not threaded
@@ -80,6 +81,7 @@ export function encodeVolumes(args: EncodeVolumesArgs): void {
     ctx.vp,
     [vw, vh],
     [ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]],
+    settingsOf,
     fadeOpacityOf,
   );
   pass.end();

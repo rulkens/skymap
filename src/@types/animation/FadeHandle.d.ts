@@ -20,9 +20,19 @@
  *                    rhizome-medium, rhizome-large). Discriminator:
  *                    `field: ScalarFieldHandle` (the string key the
  *                    volume renderer uses internally).
+ *   - markerLayer  — the structure marker rings for one structure
+ *                    category (cluster, supercluster, void, group).
+ *                    Discriminator: `category: StructureCategory`. One
+ *                    controller per category so a category's rings can
+ *                    fade independently of the others.
  *   - labelLayer   — one logical label layer (you-are-here, POI,
  *                    galaxy names, scale bar). Discriminator:
- *                    `layer: LabelLayerId`.
+ *                    `layer: LabelLayerId`. POI labels additionally key
+ *                    on `category: StructureCategory` so each structure
+ *                    category's labels are a distinct controller; the
+ *                    other layers (youAreHere/galaxyNames/scaleBar)
+ *                    carry no category. Famous-galaxy labels reuse the
+ *                    `galaxyNames` layer rather than minting a value.
  *   - overlay      — always-on GPU overlay (Milky Way, procedural
  *                    disks, textured disks). Registered at
  *                    opacity 1.0 via setImmediate. Discriminator:
@@ -43,6 +53,7 @@
  * and must not be mutated after construction.
  */
 
+import type { StructureCategory } from '../engine/data/StructureCategory';
 import type { SourceType } from '../data/SourceType';
 import type { ScalarFieldHandle } from '../rendering/ScalarFieldHandle';
 import type { LabelLayerId } from './LabelLayerId';
@@ -53,6 +64,11 @@ export type FadeHandle =
   | { readonly kind: 'filaments' }
   | { readonly kind: 'flow' }
   | { readonly kind: 'scalarField'; readonly field: ScalarFieldHandle }
-  | { readonly kind: 'labelLayer'; readonly layer: LabelLayerId }
+  | { readonly kind: 'markerLayer'; readonly category: StructureCategory }
+  | {
+      readonly kind: 'labelLayer';
+      readonly layer: LabelLayerId;
+      readonly category?: StructureCategory;
+    }
   | { readonly kind: 'overlay'; readonly id: OverlayId }
   | { readonly kind: 'volumesMaster' };

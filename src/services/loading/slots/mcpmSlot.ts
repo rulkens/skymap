@@ -3,8 +3,10 @@
  *
  * Tier-aware (unlike cf4DensitySlot's void request). On commit, hands
  * the decoded ScalarCube to scalarVolumeRenderer.addField under the
- * handle 'mcpm', preserving any user-tuned intensity/palette across
- * tier reloads (the construction seed already created the entry).
+ * handle 'mcpm'. The renderer reads per-cube static config
+ * (contrastCenter, envelope, palette) from the registry and user-tunable
+ * knobs from `state.settings.volumes.fields` per frame — the commit no
+ * longer replays any renderer setter.
  *
  * Default-on cosmic-web baseline (registry visible:true). Its on/off
  * bit is seeded at engine construction, so the demand predicate
@@ -16,7 +18,6 @@ import { createAssetSlot } from '../AssetSlot';
 import { mcpmFetcher } from '../fetchers/mcpmFetcher';
 import type { MCPMReq } from '../../../@types/loading/MCPMReq';
 import { Source, SOURCE_REGISTRY } from '../../../data/sources';
-import { buildVolumeFieldSettings } from '../../../data/volumeFieldDefaults';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
@@ -29,32 +30,17 @@ export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, cb) => {
     commit: async (cube) => {
       const renderer = state.gpu.scalarVolumeRenderer;
       if (!renderer) return;
-      const defaults = SOURCE_REGISTRY[Source.Mcpm];
-      const handle = defaults.handle;
-      renderer.addField(handle, cube);
-      // Preserve any previously-tuned settings; otherwise seed from the
-      // registry.  The engine's construction seed already created this
-      // entry (MCPM is a shippable volume), so the guard normally takes
-      // the preserve branch — it stays only to cover a handle with no
+      const handle = SOURCE_REGISTRY[Source.Mcpm].handle;
+      // Upload the cube; the renderer reads this field's per-cube static
+      // config (contrastCenter, envelope, palette) from the registry and
+      // its user-tunable knobs from `state.settings.volumes.fields` per
+      // frame, so the commit no longer replays any renderer setter.  MCPM
+      // is a shippable volume, so its settings row already exists from the
       // construction seed.
-      if (!state.data.volumes.params(handle)) {
-        state.data.volumes.setParams(handle, buildVolumeFieldSettings(handle));
-      }
-      const persisted = state.data.volumes.params(handle)!;
-      renderer.setIntensity(handle, persisted.intensity);
-      renderer.setEnabled(handle, persisted.enabled);
-      renderer.setContrast(handle, persisted.contrast);
-      renderer.setFieldPalette(handle, persisted.paletteId);
-      renderer.setDensityScale(handle, persisted.densityScale);
-      renderer.setEnvelope(handle, defaults.envelope.inner, defaults.envelope.outer);
-      renderer.setContrastCenter(handle, defaults.contrastCenter);
-      renderer.setExposure(handle, persisted.exposure);
-      renderer.setTrim(handle, persisted.trim);
-      // Drive the FadeRegistry from the persisted enable bit. The
-      // onFieldAdded callback registered the handle at opacity 0;
-      // here we fade up to 1 only if the user has the field toggled
-      // on (matches the symmetric path in engine.ts addVolumeField).
-      if (persisted.enabled) {
+      renderer.addField(handle, cube);
+      // Fade up only if the user has the field toggled on (matches the
+      // symmetric path in engine.ts addVolumeField).
+      if (state.settings.volumes.fields[handle]?.enabled) {
         void state.subsystems.fades.fadeTo(
           { kind: 'scalarField', field: handle },
           1,

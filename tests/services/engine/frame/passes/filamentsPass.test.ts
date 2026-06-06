@@ -1,0 +1,102 @@
+/**
+ * filamentsPass tests — focus-recession routing of the filament overlay
+ * opacity (task 1.4).
+ *
+ * The pass forwards the filament layer's opacity as the 6th argument to
+ * `filamentRenderer.draw`.  Pre-1.4 that was the bare toggle opacity
+ * (`fades.opacityOf({kind:'filaments'})`).  Post-1.4 it is routed through
+ * `resolveLayerOpacity(..., ctx.focusBlend, ...)` so the layer recedes
+ * under cluster focus.  These tests pin both ends of the blend:
+ *
+ *   - blend 0 → 6th arg equals the bare toggle opacity (no recession).
+ *   - blend 1 → 6th arg equals toggle × FILAMENT_RECESSION.
+ *
+ * They also pin that the `enabled` gate is *unaffected* by recession —
+ * recession ∈ [FILAMENT_RECESSION, 1] can never zero a layer, so the gate
+ * must keep reading the pure toggle alone (a toggled-off, fully-faded
+ * pass dies regardless of blend).
+ *
+ * GPU-typed values are cast stubs; the split between `enabled` and `draw`
+ * (the `Pass` interface) lets us assert behaviour without a real device.
+ */
+import { describe, it, expect, vi } from 'vitest';
+import type { mat4 } from 'gl-matrix';
+import { filamentsPass } from '../../../../../src/services/engine/frame/passes/filamentsPass';
+import { FILAMENT_RECESSION } from '../../../../../src/services/engine/presentation/focusRecession';
+import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
+import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { RenderFrameSettings } from '../../../../../src/@types/engine/frame/RenderFrameSettings';
+import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
+
+function makeCtx(focusBlend: number): ReadyFrameContext {
+  return {
+    isReady: true,
+    cam: {} as never,
+    vp: new Float32Array(16) as unknown as mat4,
+    canvasSize: { width: 1280, height: 720 },
+    drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
+    drawPxPerRad: 720,
+    focusBlend,
+    renderer: {} as never,
+    postProcess: {
+      view: {} as GPUTextureView,
+      resize: vi.fn(),
+      draw: vi.fn(),
+      destroy: vi.fn(),
+    } as never,
+    volumeOffscreen: { view: {} as GPUTextureView, resize: vi.fn(), destroy: vi.fn() } as never,
+    texturedDisks: {} as never,
+  };
+}
+
+function makeSettings(overrides: Partial<RenderFrameSettings> = {}): RenderFrameSettings {
+  return {
+    filamentsEnabled: true,
+    filamentIntensity: 1,
+    ...(overrides as object),
+  } as RenderFrameSettings;
+}
+
+/**
+ * Build a state whose filament fade reports `opacity`.  `opacityOf` is a
+ * single stub returning the same value regardless of handle/now — the
+ * filaments pass only ever asks for the `{kind:'filaments'}` handle, so a
+ * constant stub faithfully models "the filament layer is at `opacity`".
+ */
+function makeState(opacity: number): EngineState {
+  return {
+    subsystems: { fades: { opacityOf: () => opacity } },
+  } as unknown as EngineState;
+}
+
+function makeDeps(drawSpy = vi.fn()): PassDeps {
+  return { filamentRenderer: { draw: drawSpy } } as unknown as PassDeps;
+}
+
+const PASS_STUB = {} as GPURenderPassEncoder;
+
+describe('filamentsPass.draw focus recession', () => {
+  it('passes plain opacityOf at blend 0', () => {
+    const drawSpy = vi.fn();
+    filamentsPass.draw(PASS_STUB, makeCtx(0), makeState(1), makeSettings(), makeDeps(drawSpy));
+    expect(drawSpy).toHaveBeenCalledTimes(1);
+    // Args: (pass, vp, viewport, halfwidth, intensity, opacity).
+    expect(drawSpy.mock.calls[0]![5]).toBe(1);
+  });
+
+  it('passes opacityOf × FILAMENT_RECESSION at blend 1', () => {
+    const drawSpy = vi.fn();
+    filamentsPass.draw(PASS_STUB, makeCtx(1), makeState(1), makeSettings(), makeDeps(drawSpy));
+    expect(drawSpy).toHaveBeenCalledTimes(1);
+    expect(drawSpy.mock.calls[0]![5]).toBeCloseTo(FILAMENT_RECESSION, 6);
+  });
+});
+
+describe('filamentsPass.enabled is unaffected by focus recession', () => {
+  it('returns false when the toggle is off and opacity is 0, regardless of blend', () => {
+    const state = makeState(0);
+    const settings = makeSettings({ filamentsEnabled: false });
+    expect(filamentsPass.enabled(state, makeCtx(0), settings)).toBe(false);
+    expect(filamentsPass.enabled(state, makeCtx(1), settings)).toBe(false);
+  });
+});

@@ -153,9 +153,3 @@ export const STRUCTURE_POI_STYLES = {
  * (significance 1) — low-significance bulk clusters stay dim but visible.
  */
 export const SIG_MIN_ALPHA = 0.25;
-
-/**
- * Alpha scale applied to every NON-focused marker while some structure is
- * focused (cluster-focus mode), dimming the field so the focused ring reads.
- */
-export const NON_SELECTED_MARKER_DIM = 0.25;

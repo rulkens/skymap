@@ -13,17 +13,17 @@ const GROUP_ORDER: readonly StructureGroupId[] = ['anchors', 'bulk'];
 /**
  * createStructureStore — factory for the structure data store.
  *
- * Same factory + closure shape as the other stores: private group map +
- * two visibility maps, read-only query surface, mutation only through the
- * setters. `all()` recomputes the concatenation on demand rather than
- * caching it — the group set changes rarely (slot commits) and the lists
+ * Same factory + closure shape as the other stores: a private group map and a
+ * read-only query surface, mutation only through `setGroup`/`clearGroup`.
+ * Per-category marker/label visibility is NOT held here — it lives in the
+ * FadeRegistry (markerLayer/labelLayer handles), the same animated opacity the
+ * rings fade through. `all()` recomputes the concatenation on demand rather
+ * than caching it — the group set changes rarely (slot commits) and the lists
  * are small (~375 structures total), so a cache would add invalidation
  * complexity for no measurable gain.
  */
 export function createStructureStore(): StructureStore {
   const groups = new Map<StructureGroupId, readonly StructureRecord[]>();
-  const markerVisibility = new Map<StructureCategory, boolean>();
-  const labelVisibility = new Map<StructureCategory, boolean>();
 
   const all = (): readonly StructureRecord[] => GROUP_ORDER.flatMap((id) => groups.get(id) ?? []);
 
@@ -40,18 +40,6 @@ export function createStructureStore(): StructureStore {
     },
     byCategory(category: StructureCategory): readonly StructureRecord[] {
       return all().filter((r) => r.category === category);
-    },
-    markerVisible(category: StructureCategory): boolean {
-      return markerVisibility.get(category) ?? true;
-    },
-    labelVisible(category: StructureCategory): boolean {
-      return labelVisibility.get(category) ?? true;
-    },
-    setMarkerVisible(category: StructureCategory, visible: boolean): void {
-      markerVisibility.set(category, visible);
-    },
-    setLabelVisible(category: StructureCategory, visible: boolean): void {
-      labelVisibility.set(category, visible);
     },
   });
 }

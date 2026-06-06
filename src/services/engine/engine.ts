@@ -132,8 +132,16 @@ import { snapToCameraSnapshot, tweenToCameraSnapshot } from './camera/cameraSnap
 import { MILKY_WAY_CENTER_WORLD, MILKY_WAY_VIEW_DISTANCE_MPC } from '../../data/galacticCenter';
 import { buildVolumeFieldSettings, seedVolumeFields } from '../../data/volumeFieldDefaults';
 import { buildVolumeFieldsSnapshot } from './helpers/buildVolumeFieldsSnapshot';
+import { writeVolumeFieldSetting } from './helpers/writeVolumeFieldSetting';
+import { removeVolumeFieldSetting } from './helpers/removeVolumeFieldSetting';
+import { clampVolumeIntensity } from '../../utils/clampVolumeIntensity';
+import { clampVolumeContrast } from '../../utils/clampVolumeContrast';
+import { clampVolumeDensityScale } from '../../utils/clampVolumeDensityScale';
+import { clampVolumeTrim } from '../../utils/clampVolumeTrim';
+import { clampVolumeExposure } from '../../utils/clampVolumeExposure';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
+import type { PoiCategory } from '../../@types/engine/data/PoiCategory';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -232,6 +240,91 @@ export async function setSourceVisibleImpl(
 
 // Test-only alias matching the import name used in tests.
 export { setSourceVisibleImpl as setSourceVisibleForTest };
+
+// ── Test-accessible category-visibility logic ───────────────────────────────
+//
+// The two per-category visibility setters live at module scope (mirroring
+// `setSourceVisibleImpl`) so tests can drive them against a partial-state stub
+// without a full GPU engine. Each routes to the canonical store (structure
+// categories → the structure store; famousGalaxy → the galaxy store), drives
+// the matching per-category FadeRegistry handle for a smooth ramp, mirrors the
+// flag into `state.settings`, echoes a fresh snapshot via the callback, and
+// requests a render. The `createEngine` literal delegates to these.
+//
+// Why fade the per-category handle here?  The producers (produceStructureMarkers
+// / produceStructureLabels / produceFamousLabels) already read
+// `opacityOf({...})` for their layer alpha; flipping the store boolean alone
+// would pop a category in/out. Firing `fadeTo` on the same handle the producer
+// reads turns the toggle into a smooth fade — exactly as the milkyWay/filaments
+// setters do for their overlay/filaments handles.
+
+function setCategoryLabelVisible(
+  state: Pick<EngineState, 'data' | 'settings' | 'subsystems'>,
+  cb: Pick<EngineCallbacks, 'labels'>,
+  category: PoiCategory,
+  visible: boolean,
+): void {
+  if (category === 'famousGalaxy') {
+    state.data.galaxies.setFamousLabelsVisible(visible);
+    // Famous-galaxy labels reuse the shared `galaxyNames` label layer rather
+    // than minting a per-category handle (see FadeHandle's labelLayer doc).
+    void state.subsystems.fades.fadeTo(
+      { kind: 'labelLayer', layer: 'galaxyNames' },
+      visible ? 1 : 0,
+      visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+    );
+  } else {
+    // `category !== 'famousGalaxy'` narrows PoiCategory to StructureCategory,
+    // which is exactly what the labelLayer/poi handle's `category` field wants.
+    void state.subsystems.fades.fadeTo(
+      { kind: 'labelLayer', layer: 'poi', category },
+      visible ? 1 : 0,
+      visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+    );
+  }
+  state.settings.labelCategoryVisibility = {
+    ...state.settings.labelCategoryVisibility,
+    [category]: visible,
+  };
+  cb.labels?.onLabelCategoryVisibilityChange?.({
+    ...state.settings.labelCategoryVisibility,
+  });
+  state.subsystems.scheduler.requestRender();
+}
+
+function setCategoryMarkerVisible(
+  state: Pick<EngineState, 'data' | 'settings' | 'subsystems'>,
+  cb: Pick<EngineCallbacks, 'labels'>,
+  category: PoiCategory,
+  visible: boolean,
+): void {
+  // Famous galaxies have no ring/halo marker — curated thumbnails do that job —
+  // so a marker-visibility toggle for them is a no-op, AND there is no
+  // `markerLayer` handle to fade (markerLayer handles are keyed by
+  // StructureCategory only). Only structure categories route to the structure
+  // store's marker axis and fire a markerLayer fade. The `category !==
+  // 'famousGalaxy'` guard narrows PoiCategory to StructureCategory, which the
+  // markerLayer handle's `category` field requires.
+  if (category !== 'famousGalaxy') {
+    void state.subsystems.fades.fadeTo(
+      { kind: 'markerLayer', category },
+      visible ? 1 : 0,
+      visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+    );
+  }
+  state.settings.markerCategoryVisibility = {
+    ...state.settings.markerCategoryVisibility,
+    [category]: visible,
+  };
+  cb.labels?.onMarkerCategoryVisibilityChange?.({
+    ...state.settings.markerCategoryVisibility,
+  });
+  state.subsystems.scheduler.requestRender();
+}
+
+// Test-only aliases matching the import names used in tests.
+export const setCategoryLabelVisibleForTest = setCategoryLabelVisible;
+export const setCategoryMarkerVisibleForTest = setCategoryMarkerVisible;
 
 export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): EngineHandle {
   // ── Mutable engine state ─────────────────────────────────────────────────
@@ -343,6 +436,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       },
       volumes: {
         masterEnabled: DEFAULT_VOLUMES_ENABLED,
+        fields: seedVolumeFields(),
       },
       // Flow is a singleton overlay layer: all its user-facing state (master
       // gate + look/motion knobs) lives here, spread from the single
@@ -601,18 +695,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // one `Set.has` per pass per frame, noise next to the GPU dispatch.
     debug: { disabledPasses: new Set<string>() },
   };
-
-  // ── Seed the volume store from the shippable volume registry ──────────
-  //
-  // Every shippable volume's on/off bit + tunables must EXIST before any
-  // cube loads, so the demand predicate reads `volumeField(id)?.enabled` as
-  // pure state — symmetric with how `drawMask` seeds survey visibility.
-  // Without it a default-on volume (MCPM) never triggers its initial load.
-  // DEV-only debug fixtures are excluded by `seedVolumeFields`; SettingsPanel
-  // rows still come from the GPU handle list, so seeding adds no premature row.
-  for (const [id, params] of Object.entries(seedVolumeFields())) {
-    state.data.volumes.setParams(id as VolumeFieldId, params!);
-  }
 
   // ── Register label producers with the director ───────────────────────
   //
@@ -928,31 +1010,23 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function addVolumeField(fieldId: VolumeFieldId, cube: ScalarCube): void {
+    // Ensure a settings row exists before the GPU upload.  Re-registering a
+    // field preserves its previously-tuned values; a brand-new handle seeds
+    // from registry defaults.  Shippable volumes already have a construction
+    // seed, so the guard only fires for a dynamically-added handle.
+    if (!state.settings.volumes.fields[fieldId]) {
+      state.settings.volumes.fields = {
+        ...state.settings.volumes.fields,
+        [fieldId]: buildVolumeFieldSettings(fieldId),
+      };
+    }
     // Upload to the renderer; a silent no-op if it isn't ready yet (re-add
     // once booted).
     state.gpu.scalarVolumeRenderer?.addField(fieldId, cube);
-    // Seed the per-field settings entry from registry defaults if absent —
-    // re-registering preserves previously-tuned values.  Shippable volumes
-    // already have a construction seed, so the guard only matters for a
-    // dynamically-added handle.
-    if (!state.data.volumes.params(fieldId)) {
-      state.data.volumes.setParams(fieldId, buildVolumeFieldSettings(fieldId));
-    }
-    // Forward the current per-field tunables into the renderer so the
-    // new upload inherits whatever the user set before re-registering.
-    const persisted = state.data.volumes.params(fieldId)!;
-    state.gpu.scalarVolumeRenderer?.setIntensity(fieldId, persisted.intensity);
-    state.gpu.scalarVolumeRenderer?.setEnabled(fieldId, persisted.enabled);
-    state.gpu.scalarVolumeRenderer?.setContrast(fieldId, persisted.contrast);
-    state.gpu.scalarVolumeRenderer?.setDensityScale(fieldId, persisted.densityScale);
-    state.gpu.scalarVolumeRenderer?.setFieldPalette(fieldId, persisted.paletteId);
-    state.gpu.scalarVolumeRenderer?.setTrim(fieldId, persisted.trim);
-    state.gpu.scalarVolumeRenderer?.setExposure(fieldId, persisted.exposure);
-    // Drive the FadeRegistry from the persisted enable bit: enabled → fade
-    // to 1; disabled → leave it at the 0 set by onFieldAdded (the draw
-    // loop's `(!enabled && opacity <= 0)` skip keeps it invisible until the
-    // user toggles it on).
-    if (persisted.enabled) {
+    // Drive the FadeRegistry from the settings enable bit: enabled → fade to 1;
+    // disabled → leave it at the 0 set by onFieldAdded (the draw loop's
+    // `(!enabled && opacity <= 0)` skip keeps it invisible until toggled on).
+    if (state.settings.volumes.fields[fieldId]?.enabled) {
       void state.subsystems.fades.fadeTo(
         { kind: 'scalarField', field: fieldId },
         1,
@@ -965,7 +1039,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   function removeVolumeField(fieldId: VolumeFieldId): void {
     state.gpu.scalarVolumeRenderer?.removeField(fieldId);
-    state.data.volumes.remove(fieldId);
+    state.settings.volumes.fields = removeVolumeFieldSetting(
+      state.settings.volumes.fields,
+      fieldId,
+    );
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
@@ -1001,17 +1078,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function setVolumeFieldEnabled(fieldId: VolumeFieldId, enabled: boolean): void {
-    // Flip the settings flag: the cf4/mcpm demand predicate reads
-    // `fields[id].enabled`, so `reevaluateDemand` loads them on flip-on
-    // (idle-guarded against re-fetch).  The DEV debug fixtures aren't demand
-    // rows, so they keep a direct lazy load here — a no-op for cf4/mcpm ids,
-    // so the two paths partition cleanly.
-    const curEnabled = state.data.volumes.params(fieldId);
-    if (curEnabled) state.data.volumes.setParams(fieldId, { ...curEnabled, enabled });
+    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, { enabled });
+    if (!next) return;
+    state.settings.volumes.fields = next;
+    // DEV debug fixtures aren't demand rows, so they keep a direct lazy load
+    // here; cf4/mcpm load via reevaluateDemand reading fields[id].enabled, and
+    // this call is a no-op for those ids, so the two load paths partition.
     if (enabled) maybeLazyLoadDebugVolume(fieldId);
-    state.gpu.scalarVolumeRenderer?.setEnabled(fieldId, enabled);
-    // Drive the FadeRegistry alongside the renderer flip; the draw loop's
-    // `(!enabled && opacity <= 0)` skip keeps it rendering through fade-out.
+    // Drive the FadeRegistry: the draw loop's `(!enabled && opacity <= 0)` skip
+    // keeps rendering through fade-out so the blend reaches zero before stopping.
     void state.subsystems.fades.fadeTo(
       { kind: 'scalarField', field: fieldId },
       enabled ? 1 : 0,
@@ -1022,55 +1097,69 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function setVolumeFieldIntensity(fieldId: VolumeFieldId, intensity: number): void {
-    const cur = state.data.volumes.params(fieldId);
-    if (cur) state.data.volumes.setParams(fieldId, { ...cur, intensity });
-    state.gpu.scalarVolumeRenderer?.setIntensity(fieldId, intensity);
+    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+      intensity: clampVolumeIntensity(intensity),
+    });
+    if (!next) return;
+    state.settings.volumes.fields = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldContrast(fieldId: VolumeFieldId, contrast: number): void {
-    const cur = state.data.volumes.params(fieldId);
-    if (cur) state.data.volumes.setParams(fieldId, { ...cur, contrast });
-    state.gpu.scalarVolumeRenderer?.setContrast(fieldId, contrast);
+    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+      contrast: clampVolumeContrast(contrast),
+    });
+    if (!next) return;
+    state.settings.volumes.fields = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldDensityScale(fieldId: VolumeFieldId, value: number): void {
-    const cur = state.data.volumes.params(fieldId);
-    if (cur) state.data.volumes.setParams(fieldId, { ...cur, densityScale: value });
-    state.gpu.scalarVolumeRenderer?.setDensityScale(fieldId, value);
+    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+      densityScale: clampVolumeDensityScale(value),
+    });
+    if (!next) return;
+    state.settings.volumes.fields = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldTrim(fieldId: VolumeFieldId, trim: number): void {
-    const cur = state.data.volumes.params(fieldId);
-    if (cur) state.data.volumes.setParams(fieldId, { ...cur, trim });
-    state.gpu.scalarVolumeRenderer?.setTrim(fieldId, trim);
+    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+      trim: clampVolumeTrim(trim),
+    });
+    if (!next) return;
+    state.settings.volumes.fields = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldExposure(fieldId: VolumeFieldId, exposure: number): void {
-    const cur = state.data.volumes.params(fieldId);
-    if (cur) state.data.volumes.setParams(fieldId, { ...cur, exposure });
-    state.gpu.scalarVolumeRenderer?.setExposure(fieldId, exposure);
+    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+      exposure: clampVolumeExposure(exposure),
+    });
+    if (!next) return;
+    state.settings.volumes.fields = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldPalette(fieldId: VolumeFieldId, id: ScalarFieldPaletteId): void {
-    const cur = state.data.volumes.params(fieldId);
-    if (cur) state.data.volumes.setParams(fieldId, { ...cur, paletteId: id });
-    state.gpu.scalarVolumeRenderer?.setFieldPalette(fieldId, id);
+    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+      paletteId: id,
+    });
+    if (!next) return;
+    state.settings.volumes.fields = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function listVolumeFields(): VolumeFieldId[] {
-    return (state.gpu.scalarVolumeRenderer?.listHandles() ?? []) as VolumeFieldId[];
+    // Settings keys are the source of truth for which fields exist; mirrors
+    // buildVolumeFieldsSnapshot so both views of identity stay in sync.
+    return Object.keys(state.settings.volumes.fields) as VolumeFieldId[];
   }
 
   function getVolumeFieldsState(): ReadonlyArray<VolumeFieldRowData> {
@@ -1312,37 +1401,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // void) to the structure store, famousGalaxy to the galaxy store —
       // then mirrors into `state.settings` and echoes a fresh immutable
       // snapshot.  The OTHER axis is never touched (orthogonal axes).
-      setCategoryLabelVisible: (category, visible) => {
-        if (category === 'famousGalaxy') {
-          state.data.galaxies.setFamousLabelsVisible(visible);
-        } else {
-          state.data.structures.setLabelVisible(category, visible);
-        }
-        state.settings.labelCategoryVisibility = {
-          ...state.settings.labelCategoryVisibility,
-          [category]: visible,
-        };
-        cb.labels?.onLabelCategoryVisibilityChange?.({
-          ...state.settings.labelCategoryVisibility,
-        });
-        state.subsystems.scheduler.requestRender();
-      },
-      setCategoryMarkerVisible: (category, visible) => {
-        // Famous galaxies have no ring/halo marker — curated thumbnails do
-        // that job — so a marker-visibility toggle for them is a no-op. Only
-        // structure categories route to the structure store's marker axis.
-        if (category !== 'famousGalaxy') {
-          state.data.structures.setMarkerVisible(category, visible);
-        }
-        state.settings.markerCategoryVisibility = {
-          ...state.settings.markerCategoryVisibility,
-          [category]: visible,
-        };
-        cb.labels?.onMarkerCategoryVisibilityChange?.({
-          ...state.settings.markerCategoryVisibility,
-        });
-        state.subsystems.scheduler.requestRender();
-      },
+      setCategoryLabelVisible: (category, visible) =>
+        setCategoryLabelVisible(state, cb, category, visible),
+      setCategoryMarkerVisible: (category, visible) =>
+        setCategoryMarkerVisible(state, cb, category, visible),
     },
     volumes: {
       setMasterEnabled: setVolumesEnabled,

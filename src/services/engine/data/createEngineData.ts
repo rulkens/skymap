@@ -1,19 +1,20 @@
 import type { EngineData } from '../../../@types/engine/data/EngineData';
 import { createGalaxyStore } from './createGalaxyStore';
 import { createStructureStore } from './createStructureStore';
-import { createVolumeStore } from './createVolumeStore';
 import { createFilamentStore } from './createFilamentStore';
 import { createFlowFieldStore } from './createFlowFieldStore';
 
 /**
  * createEngineData — assemble the empty per-type stores into the `EngineData`
- * bag installed on `EngineState` at engine construction.
+ * bag installed on `EngineState` at engine construction. Volume fields have no
+ * data-layer store; their only app-side state is settings, which live in
+ * `state.settings.volumes.fields` (ADR 0006). Flow keeps a status-only store
+ * (its `loaded` bit); its look/motion knobs live in `settings.flow`.
  */
 export function createEngineData(): EngineData {
   return {
     galaxies: createGalaxyStore(),
     structures: createStructureStore(),
-    volumes: createVolumeStore(),
     filaments: createFilamentStore(),
     flow: createFlowFieldStore(),
   };

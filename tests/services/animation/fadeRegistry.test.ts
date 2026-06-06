@@ -120,6 +120,40 @@ describe('createFadeRegistry', () => {
     expect(r.isAnyAnimating(1700)).toBe(false);
   });
 
+  it('serializeFadeHandle keys markerLayer by category', () => {
+    const r = createFadeRegistry();
+    const cluster: FadeHandle = { kind: 'markerLayer', category: 'cluster' };
+    const aVoid: FadeHandle = { kind: 'markerLayer', category: 'void' };
+    r.register(cluster, 0);
+    r.register(aVoid, 0);
+    r.fadeTo(cluster, 0.25, 0, 0);
+    r.fadeTo(aVoid, 0.75, 0, 0);
+    // Distinct categories must address distinct controllers.
+    expect(r.opacityOf(cluster, 0)).toBeCloseTo(0.25, 5);
+    expect(r.opacityOf(aVoid, 0)).toBeCloseTo(0.75, 5);
+  });
+
+  it('serializeFadeHandle keeps a category-less labelLayer distinct from a per-category one', () => {
+    const r = createFadeRegistry();
+    const bare: FadeHandle = { kind: 'labelLayer', layer: 'poi' };
+    const perCategory: FadeHandle = { kind: 'labelLayer', layer: 'poi', category: 'cluster' };
+    r.register(bare, 0);
+    r.register(perCategory, 0);
+    r.fadeTo(bare, 0.2, 0, 0);
+    r.fadeTo(perCategory, 0.8, 0, 0);
+    expect(r.opacityOf(bare, 0)).toBeCloseTo(0.2, 5);
+    expect(r.opacityOf(perCategory, 0)).toBeCloseTo(0.8, 5);
+  });
+
+  it('serializeFadeHandle leaves youAreHere label key unchanged', () => {
+    const r = createFadeRegistry();
+    const h: FadeHandle = { kind: 'labelLayer', layer: 'youAreHere' };
+    r.register(h, 0);
+    r.fadeTo(h, 1, 0, 0);
+    // Legacy category-less label handle behaves exactly as before.
+    expect(r.opacityOf(h, 0)).toBeCloseTo(1, 5);
+  });
+
   it('destroy clears every controller', () => {
     const r = createFadeRegistry();
     const h: FadeHandle = { kind: 'filaments' };

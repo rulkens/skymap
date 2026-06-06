@@ -13,9 +13,10 @@ import type { StructureCategory } from './StructureCategory';
  * preserves the ring pick-path's `instance_index → byCategory(...)[idx]`
  * alignment that pick-index decode requires.
  *
- * Marker and label visibility are two independent per-category axes: a
- * category's ring can be hidden while its label still renders, and vice
- * versa. Both default to visible.
+ * Per-category marker/label VISIBILITY is not a store concern: it lives in the
+ * FadeRegistry as `markerLayer` / `labelLayer` handles, so the producers read
+ * the same animated opacity the rings fade through. The store holds records
+ * only.
  *
  * Famous galaxies are deliberately NOT held here — they are galaxy data
  * (`GalaxyStore`); their label is produced from there.
@@ -31,12 +32,4 @@ export type StructureStore = {
   byId(id: string): StructureRecord | null;
   /** Records of one category, in `all()` order (pick-index alignment). */
   byCategory(category: StructureCategory): readonly StructureRecord[];
-  /** Whether the ring/halo marker for a category is visible (default true). */
-  markerVisible(category: StructureCategory): boolean;
-  /** Whether the text label for a category is visible (default true). */
-  labelVisible(category: StructureCategory): boolean;
-  /** Set the marker visibility for a category. */
-  setMarkerVisible(category: StructureCategory, visible: boolean): void;
-  /** Set the label visibility for a category. */
-  setLabelVisible(category: StructureCategory, visible: boolean): void;
 };

@@ -61,10 +61,9 @@ export function getVolumeFieldDefaults(id: VolumeFieldId): VolumeFieldDefaults {
  * this helper removes.
  *
  * `enabled` comes from the registry `visible` flag so the construction
- * seed (Task 11b) lands the on/off bit in pure state at boot, symmetric
- * with how `drawMask` seeds survey visibility from `visible`. `intensity`
- * falls back to the global default for any field that omits a per-cube
- * override.
+ * seed lands the on/off bit in pure state at boot, symmetric with how
+ * `drawMask` seeds survey visibility from `visible`. `intensity` falls
+ * back to the global default for any field that omits a per-cube override.
  */
 export function buildVolumeFieldSettings(id: VolumeFieldId): VolumeFieldSettings {
   const entry = volumeEntry(id);
@@ -80,8 +79,8 @@ export function buildVolumeFieldSettings(id: VolumeFieldId): VolumeFieldSettings
 }
 
 /**
- * Build the construction-time volume-field seed record. The engine populates
- * the volume store (`state.data.volumes`) from this at construction so every
+ * Build the construction-time volume-field seed record. The engine seeds
+ * `state.settings.volumes.fields` from this at construction so every
  * shippable volume's on/off state (and tunables) EXISTS before any cube
  * loads — the demand predicate `volumeField(id)?.enabled` then reads pure
  * state, fully symmetric with survey `isVisible`. Without this, a

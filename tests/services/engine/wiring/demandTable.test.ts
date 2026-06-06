@@ -34,13 +34,14 @@
  * ### MCPM at boot
  *
  * The demand predicate for `mcpm` reads `ctx.volumeField('mcpm')?.enabled`,
- * sourced from the volume store. The engine seeds the store at construction
- * from the shippable volume registry entries (`seedVolumeFields`), so
- * `mcpm`'s enabled bit is `true` (registry visible:true) at boot, symmetric
+ * sourced from `state.settings.volumes.fields`. The engine seeds that record
+ * at construction from the shippable volume registry entries (`seedVolumeFields`),
+ * so `mcpm`'s enabled bit is `true` (registry visible:true) at boot, symmetric
  * with how `drawMask` seeds survey visibility. MCPM therefore IS in the boot
  * demand set — `cf4-density` is NOT (registry visible:false → seeded
- * enabled:false). `makeState` seeds the store with the same `seedVolumeFields`
- * helper so the test exercises the real defaults rather than a hand-rolled set.
+ * enabled:false). `makeState` injects the same `seedVolumeFields` record into
+ * `settings.volumes.fields` so the test exercises the real defaults rather than
+ * a hand-rolled set.
  *
  * ### Synthetic fallback gate
  *
@@ -57,14 +58,11 @@ import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevalu
 import { Source } from '../../../../src/data/sources';
 import { ALL_VISIBLE_MASK } from '../../../../src/utils/sourceMask';
 import { seedVolumeFields } from '../../../../src/data/volumeFieldDefaults';
-import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { EngineData } from '../../../../src/@types/engine/data/EngineData';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { VolumeFieldId } from '../../../../src/@types/data/VolumeFieldId';
-import type { VolumeFieldSettings } from '../../../../src/@types/settings/VolumeFieldSettings';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 
@@ -118,9 +116,9 @@ type SettingsLeaves = {
 };
 
 /**
- * Volume-field params keyed by id. Demand predicates read these through the
- * volume store (`ctx.volumeField(id)?.enabled`), so `makeState` seeds the
- * store from this record rather than from the settings bag.
+ * Volume-field params keyed by id. Demand predicates read these from
+ * `state.settings.volumes.fields` (`ctx.volumeField(id)?.enabled`), so
+ * `makeState` injects this record directly into the settings bag.
  */
 type VolumeFieldLeaves = Partial<Record<VolumeFieldId, { enabled: boolean }>>;
 
@@ -171,7 +169,7 @@ type NamedSlotOverrides = Partial<{
 type MakeStateOptions = {
   drawMask?: number;
   settings?: SettingsLeaves;
-  /** Volume-field params; seeded into `state.data.volumes`. Defaults to boot. */
+  /** Volume-field params; injected into `settings.volumes.fields`. Defaults to boot. */
   volumeFields?: VolumeFieldLeaves;
   requests?: Set<string>;
   /** Per-source point slots. Defaults to a fresh idle stub for every Source. */
@@ -212,16 +210,14 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     ]),
   );
 
-  // Seed the volume store the demand predicates read through `ctx.volumeField`.
-  // Only `.enabled` is consulted, so partial leaves are cast to the full shape.
-  const data: EngineData = createEngineData();
-  for (const [id, params] of Object.entries(volumeFields)) {
-    if (params) data.volumes.setParams(id as VolumeFieldId, params as VolumeFieldSettings);
-  }
-
   return {
-    settings: settings as unknown as EngineSettingsState,
-    data,
+    // Inject volume fields directly into `settings.volumes.fields` — demand
+    // predicates read `ctx.volumeField(id)?.enabled` from that path via
+    // `state.settings.volumes.fields`.
+    settings: {
+      ...(settings as unknown as EngineSettingsState),
+      volumes: { fields: volumeFields },
+    } as unknown as EngineSettingsState,
     sources: { drawMask, tier: 'medium' },
     requests: requests as Set<import('../../../../src/@types/loading/RequestKey').RequestKey>,
     assetSlots: {

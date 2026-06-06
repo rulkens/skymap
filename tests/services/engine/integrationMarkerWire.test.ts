@@ -25,6 +25,7 @@ import { describe, it, expect } from 'vitest';
 import { produceStructureMarkers } from '../../../src/services/engine/presentation/produceStructureMarkers';
 import { createEngineData } from '../../../src/services/engine/data/createEngineData';
 import { createClusterMarkerRenderer } from '../../../src/services/gpu/renderers/clusterMarkerRenderer';
+import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
 import type { StructureRecord } from '../../../src/@types/engine/data/StructureRecord';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
@@ -79,12 +80,14 @@ describe('produceStructureMarkers → clusterMarkerRenderer.setMarkers', () => {
       data,
       subsystems: {
         selection: { selected: () => null, focused: () => null },
+        fades: createFadeRegistry(),
       },
     } as unknown as EngineState;
     const ctx = {
       drawCamPos: [0, 0, 1000],
       canvasSize: { width: 1024, height: 768 },
       drawPxPerRad: 500,
+      focusBlend: 0,
     } as unknown as ReadyFrameContext;
 
     const markers = produceStructureMarkers(state, ctx);
