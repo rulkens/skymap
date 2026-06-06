@@ -98,11 +98,44 @@ describe('produceFamousLabels', () => {
     expect(out.lines).toEqual([]);
   });
 
-  it('emits nothing when famous labels are hidden', () => {
-    const state = makeState();
+  it('emits nothing when famous labels are hidden AND the fade-out has completed', () => {
+    // The gate is opacity-aware: hidden alone is not enough — the galaxyNames
+    // fade must have reached 0 for the producer to fall silent. Simulate a
+    // completed fade-out by forcing the handle to 0.
+    const fades = createFadeRegistry();
+    fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
+    fades.setImmediate({ kind: 'labelLayer', layer: 'galaxyNames' }, 0);
+    const state = makeState({ fades });
     seed(state, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
     state.data.galaxies.setFamousLabelsVisible(false);
     expect(produceFamousLabels(state, makeCtx()).labels).toEqual([]);
+  });
+
+  it('keeps emitting while the galaxyNames fade-out tail is non-zero (no pop on toggle-out)', () => {
+    // Toggle-off scenario mid-fade: famousLabelsVisible is false but the
+    // galaxyNames opacity is still ramping down (0.5 here). The producer must
+    // KEEP emitting at the reduced alpha so the labels fade out smoothly.
+    const midFade = createFadeRegistry();
+    midFade.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
+    midFade.setImmediate({ kind: 'labelLayer', layer: 'galaxyNames' }, 0.5);
+    const fading = makeState({ fades: midFade });
+    seed(fading, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
+    fading.data.galaxies.setFamousLabelsVisible(false);
+    const out = produceFamousLabels(fading, makeCtx());
+    expect(out.labels.map((l) => l.id)).toEqual(['famous-m31']);
+    // Emitted at the half opacity (full distance-fade alpha here is 1 × 0.5).
+    expect(out.labels[0]!.fadeAlpha).toBeCloseTo(0.5, 6);
+    expect(out.lines[0]!.fadeAlpha).toBeCloseTo(0.5, 6);
+
+    // Once the fade reaches 0, the producer falls silent.
+    __resetFamousLabelLoadIn();
+    const done = createFadeRegistry();
+    done.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
+    done.setImmediate({ kind: 'labelLayer', layer: 'galaxyNames' }, 0);
+    const settled = makeState({ fades: done });
+    seed(settled, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
+    settled.data.galaxies.setFamousLabelsVisible(false);
+    expect(produceFamousLabels(settled, makeCtx()).labels).toEqual([]);
   });
 
   it('emits nothing when the famous catalog is absent or meta is empty', () => {

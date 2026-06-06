@@ -9,6 +9,14 @@
  * positions/diameters ⋈ meta names) happens here, on the galaxy side, and emits
  * the famous labels plus their anchor lines.
  *
+ * ### Opacity-aware visibility gate (fades out, doesn't pop)
+ *
+ * The hidden-state early return is gated on BOTH `famousLabelsVisible` being
+ * false AND the `galaxyNames` opacity having reached 0 — so a toggle-off keeps
+ * emitting at the declining `layerAlpha` until the fade-out ramp completes,
+ * rather than popping the labels instantly (mirrors `filamentsPass.enabled`).
+ * The OTHER early returns (meta/catalog absent — nothing to fade) stay hard.
+ *
  * ### Meta ⋈ catalog alignment
  *
  * `famous.bin` is built in lock-step with `famous_meta.json` (same ordering
@@ -161,8 +169,18 @@ export function produceFamousLabels(
   ctx: ReadyFrameContext,
 ): LabelProducerOutput {
   const galaxies = state.data.galaxies;
+  const fades = state.subsystems.fades;
+  const now = performance.now();
   const empty: LabelProducerOutput = { labels: [], lines: [], awake: false };
-  if (!galaxies.famousLabelsVisible) return empty;
+  // Render while the user wants famous labels OR the `galaxyNames` fade-out
+  // tail is still non-zero — so a toggle-off fades out smoothly instead of
+  // popping (mirrors `filamentsPass.enabled`). Once opacity hits 0 we stop.
+  if (
+    !galaxies.famousLabelsVisible &&
+    fades.opacityOf({ kind: 'labelLayer', layer: 'galaxyNames' }, now) === 0
+  ) {
+    return empty;
+  }
 
   const meta = galaxies.famousMeta;
   const catalog = galaxies.get(Source.Famous);
@@ -186,9 +204,8 @@ export function produceFamousLabels(
   // Snapshot the layer opacity × uniform recession ONCE — it's identical for
   // every famous label (the `galaxyNames` handle is shared, and there is no
   // per-member focus exemption here). Folded into each label + anchor-line
-  // fadeAlpha below.
-  const fades = state.subsystems.fades;
-  const now = performance.now();
+  // fadeAlpha below. `fades`/`now` were snapshotted at the top for the
+  // opacity-aware visibility gate; reuse them rather than re-reading the clock.
   const layerAlpha =
     fades.opacityOf({ kind: 'labelLayer', layer: 'galaxyNames' }, now) *
     focusRecession({ kind: 'labelLayer', layer: 'galaxyNames' }, ctx.focusBlend);
