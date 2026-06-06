@@ -1,21 +1,19 @@
 /**
  * buildVolumeFieldsSnapshot — unit tests for the per-field row builder.
  *
- * The helper maps the renderer's live handle list (identity) onto
- * per-field tunable values from `state.settings.volumes.fields`.
+ * Both identity (which fields appear) and values come from
+ * `state.settings.volumes.fields`.  The renderer's handle list is not
+ * consulted, so a field whose cube hasn't loaded yet still gets a row
+ * as long as its settings entry is present.
+ *
  * These tests verify two axes:
  *
- *   1. Values come from settings, not from the volume store — a stale
- *      or divergent store entry must be silently ignored.
- *   2. Missing settings entries fall back to compile-time defaults from
- *      `volumeFieldDefaults` + the global `DEFAULT_*` constants, so a
- *      field whose settings haven't been written yet still renders a
- *      complete row with sensible values.
+ *   1. Identity derives from settings keys, not the GPU handle list.
+ *   2. Values come from settings, not from the volume store.
  *
  * Fixtures stub only the slices of EngineState that the helper reads:
- * `state.gpu.scalarVolumeRenderer.listHandles()` (identity) and
- * `state.settings.volumes.fields` (values).  Everything else is absent
- * from the stub because the helper doesn't touch it.
+ * `state.settings.volumes.fields`.  The renderer stub is present on some
+ * fixtures to confirm it is NOT consulted for identity.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -23,9 +21,54 @@ import { buildVolumeFieldsSnapshot } from '../../../../src/services/engine/helpe
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
 describe('buildVolumeFieldsSnapshot', () => {
+  it('snapshot identity derives from settings keys, not renderer handles', () => {
+    // settings.volumes.fields has both 'mcpm' and 'cf4-density', but the
+    // renderer only knows about 'mcpm' (its cube is loaded).  The snapshot
+    // must include both — the panel shows CF-4's row before its cube arrives.
+    const state = {
+      gpu: {
+        scalarVolumeRenderer: {
+          listHandles: () => ['mcpm'],
+        },
+      },
+      settings: {
+        volumes: {
+          fields: {
+            mcpm: {
+              enabled: true,
+              intensity: 0.5,
+              contrast: 2,
+              densityScale: 1,
+              paletteId: 'inferno' as const,
+              trim: 0,
+              exposure: 1,
+            },
+            'cf4-density': {
+              enabled: false,
+              intensity: 0.3,
+              contrast: 1.5,
+              densityScale: 0.8,
+              paletteId: 'inferno' as const,
+              trim: 0,
+              exposure: 1,
+            },
+          },
+        },
+      },
+    } as unknown as EngineState;
+
+    const rows = buildVolumeFieldsSnapshot(state);
+
+    // Two rows from settings even though the renderer only lists one handle.
+    expect(rows).toHaveLength(2);
+    const handles = rows.map((r) => r.handle);
+    expect(handles).toContain('mcpm');
+    expect(handles).toContain('cf4-density');
+  });
+
   it('derives field values from state.settings.volumes.fields', () => {
     // The volume store's `params()` returns contrast: 99 — a sentinel
-    // value that must NOT appear in the output once values move to settings.
+    // value that must NOT appear in the output (values come from settings).
     const state = {
       gpu: {
         scalarVolumeRenderer: {
@@ -65,62 +108,15 @@ describe('buildVolumeFieldsSnapshot', () => {
     expect(rows[0]?.intensity).toBe(0.2);
   });
 
-  it('falls back to compile-time defaults when a field has no settings entry', () => {
-    // No entry in `fields` for 'mcpm' — every knob should come from
-    // `getVolumeFieldDefaults` or the global DEFAULT_* constants rather
-    // than undefined / NaN.
+  it('returns an empty array when settings.volumes.fields is empty', () => {
+    // No fields registered in settings — nothing to show in the panel,
+    // regardless of what the renderer might know about.
     const state = {
       gpu: {
         scalarVolumeRenderer: {
           listHandles: () => ['mcpm'],
         },
       },
-      settings: {
-        volumes: {
-          fields: {},
-        },
-      },
-      data: {
-        volumes: {
-          params: () => undefined,
-        },
-      },
-    } as unknown as EngineState;
-
-    const rows = buildVolumeFieldsSnapshot(state);
-
-    expect(rows).toHaveLength(1);
-    // Each field must be a defined, finite number (or boolean) — never
-    // undefined or NaN.  The specific default values are owned by
-    // `volumeFieldDefaults`; this test only asserts they're present.
-    expect(typeof rows[0]?.contrast).toBe('number');
-    expect(Number.isFinite(rows[0]?.contrast)).toBe(true);
-    expect(typeof rows[0]?.intensity).toBe('number');
-    expect(typeof rows[0]?.enabled).toBe('boolean');
-    expect(typeof rows[0]?.paletteId).toBe('string');
-  });
-
-  it('returns an empty array when the renderer has no registered handles', () => {
-    const state = {
-      gpu: {
-        scalarVolumeRenderer: {
-          listHandles: () => [],
-        },
-      },
-      settings: {
-        volumes: {
-          fields: {},
-        },
-      },
-    } as unknown as EngineState;
-
-    expect(buildVolumeFieldsSnapshot(state)).toHaveLength(0);
-  });
-
-  it('returns an empty array when scalarVolumeRenderer is absent', () => {
-    // Renderer not yet initialised at bootstrap; the helper must not throw.
-    const state = {
-      gpu: {},
       settings: {
         volumes: {
           fields: {},

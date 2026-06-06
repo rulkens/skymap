@@ -1062,7 +1062,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function listVolumeFields(): VolumeFieldId[] {
-    return (state.gpu.scalarVolumeRenderer?.listHandles() ?? []) as VolumeFieldId[];
+    // Settings keys are the source of truth for which fields exist; mirrors
+    // buildVolumeFieldsSnapshot so both views of identity stay in sync.
+    return Object.keys(state.settings.volumes.fields) as VolumeFieldId[];
   }
 
   function getVolumeFieldsState(): ReadonlyArray<VolumeFieldRowData> {
