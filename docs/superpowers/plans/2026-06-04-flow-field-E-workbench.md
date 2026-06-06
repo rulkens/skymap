@@ -157,12 +157,12 @@ flowSpeed, densityBias, wander).
 > default param values were migrated into Phase-C/Phase-D — verify they match
 > before deleting `visualizations/flowField/constants.ts`.
 
-- [ ] Grep `tools/flow-workbench/` for imports of each to-be-deleted file; confirm only the now-rewired `createEngine`/`ControlsPanel` referenced them.
-- [ ] Verify the spike's tuned defaults (cosmic-flow `flowSlice.ts` advect/streamline values) are preserved in Phase-C `flowFieldConstants.ts` + the Phase-D UI ranges; reconcile any drift before deleting.
-- [ ] Delete: `src/visualizations/flowField/`, `src/visualizations/densityVolume/`, `src/visualizations/registry.ts`, `@types/visualizations/*`, `data/convertCf4ppVfield.py`, `src/field/createVelocityField.ts` (+ its now-orphaned `@types/field/VelocityField*.d.ts` if unused by the harness — the harness uses `src/`'s `FlowField`).
-- [ ] Rewire `ControlsPanel.tsx` to call the workbench store's setters + `maybeReseed` on mode/count (mirror the Phase-D handle behaviour).
-- [ ] `npm run typecheck` → clean (no dangling imports). `npm test` → full suite green.
-- [ ] Commit: `refactor(flow): delete duplicated visualizations tree; controls drive canonical store`.
+- [x] Grep `tools/flow-workbench/` for imports of each to-be-deleted file (via an Explore dependency sweep); confirmed the viz tree + several `@types` were referenced ONLY by the obsolete viz tests, so those tests are deleted alongside.
+- [x] Verify the spike's tuned defaults are preserved in `flowFieldConstants.ts` + the Phase-D UI ranges. (`MAX_PARTICLES` retuned to 50000 on user request this session.)
+- [x] Deleted: `src/visualizations/**` (incl. the duplicate flow shaders), `registry.ts`, the `Visualization`/`VisualizationFactory` + `EngineContext`/`FrameContext`/`Engine` `@types`, the `FlowSlice`/`FlowModeParams`/`ViewSlice`/`VolumeSlice`/workbench-`FlowMode` `@types` + `view`/`volume` slices, `data/convertCf4ppVfield.py`, `field/createVelocityField.ts` + `VelocityField*` `@types`, `ui/LayerToggles`, and the 3 obsolete viz tests. `ModeTabs` repointed to canonical `src/` `FlowMode`.
+- [x] ControlsPanel rewire landed in Task 2 (the store reshape forced it then). `maybeReseed` on mode/count is store-driven in the harness, mirroring the Phase-D handle.
+- [x] `npm run typecheck` → clean (no dangling imports). `npm test` → full suite green (2348).
+- [x] Commit: `refactor(flow): delete flow-workbench's duplicated visualizations tree`.
 
 ## Task 4: Verify the workbench renders against the canonical renderer
 
@@ -173,10 +173,10 @@ The acceptance criterion is that the workbench renders ribbons via the canonical
 `page.screenshot()` (NOT canvas readback — ANGLE-on-Mac returns black) to confirm
 non-black pixels appear once flow is enabled.
 
-- [ ] If the repo has a Playwright/WebGPU harness, add `flowWorkbench.visual.test.ts`: launch the workbench (`npm run flow-workbench`), enable flow, screenshot, assert a non-trivial fraction of non-black pixels (ribbons rendered). If no such harness exists, this is a **manual** verification step: run `npm run flow-workbench`, enable flow in the controls panel, and confirm visually that ribbons appear and respond to the mode/count/intensity sliders.
-- [ ] Confirm the workbench shares ONE implementation with the main app: editing a `src/services/gpu/shaders/flow/*.wesl` constant changes both the main app and the workbench (no second shader source).
-- [ ] `npm test` → green (or record the manual-verification result in the PR description).
-- [ ] Commit: `test(flow): verify flow-workbench renders via the canonical renderer`.
+- [x] **Manual** verification (no Playwright/WebGPU harness in the repo): ran `npm run flow-workbench`, user confirmed ribbons render via the canonical renderer and respond to the mode/count/intensity sliders. Camera reframed to Mpc scale + count retuned during this check.
+- [x] Confirmed ONE shader source: the duplicate `flowField/shaders/*.wesl` were deleted; the workbench links the canonical `src/services/gpu/shaders/flow/*.wesl` (verified by the `vite build` succeeding against only the canonical set).
+- [x] `npm test` → green (2348); manual-verification result recorded here + for the PR description.
+- [x] No separate commit — verification is the manual check above; the camera/count tuning rode their own commits.
 
 ---
 
