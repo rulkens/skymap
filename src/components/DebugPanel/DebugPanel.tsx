@@ -58,20 +58,22 @@ export type DebugPanelProps = {
   onShowDiskRadiusRingChange: (enabled: boolean) => void;
   /**
    * Dev-only flow-field motion tunables (count / trail / flowSpeed /
-   * densityBias / wander).  App-owned and optimistic, like the other
-   * DebugPanel toggles: the handler updates the React mirror AND forwards to
-   * the engine handle.  All required — App always passes them.
+   * densityBias / wander / boundaryFadeWidth).  App-owned and optimistic, like
+   * the other DebugPanel toggles: the handler updates the React mirror AND
+   * forwards to the engine handle.  All required — App always passes them.
    */
   flowCount: number;
   flowTrail: number;
   flowSpeed: number;
   flowDensityBias: number;
   flowWander: number;
+  flowBoundaryFadeWidth: number;
   onFlowCountChange: (v: number) => void;
   onFlowTrailChange: (v: number) => void;
   onFlowSpeedChange: (v: number) => void;
   onFlowDensityBiasChange: (v: number) => void;
   onFlowWanderChange: (v: number) => void;
+  onFlowBoundaryFadeWidthChange: (v: number) => void;
 };
 
 export function DebugPanel({
@@ -91,11 +93,13 @@ export function DebugPanel({
   flowSpeed,
   flowDensityBias,
   flowWander,
+  flowBoundaryFadeWidth,
   onFlowCountChange,
   onFlowTrailChange,
   onFlowSpeedChange,
   onFlowDensityBiasChange,
   onFlowWanderChange,
+  onFlowBoundaryFadeWidthChange,
 }: DebugPanelProps) {
   return (
     <div
@@ -126,11 +130,13 @@ export function DebugPanel({
         flowSpeed={flowSpeed}
         densityBias={flowDensityBias}
         wander={flowWander}
+        boundaryFadeWidth={flowBoundaryFadeWidth}
         onCountChange={onFlowCountChange}
         onTrailChange={onFlowTrailChange}
         onFlowSpeedChange={onFlowSpeedChange}
         onDensityBiasChange={onFlowDensityBiasChange}
         onWanderChange={onFlowWanderChange}
+        onBoundaryFadeWidthChange={onFlowBoundaryFadeWidthChange}
       />
       <div style={{ marginTop: 6 }} />
       <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>

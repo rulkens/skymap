@@ -49,6 +49,7 @@ function makeFlowSettings() {
     flowSpeed: 0.06,
     densityBias: 1,
     wander: 0.15,
+    boundaryFadeWidth: 0.1,
   };
 }
 
@@ -118,6 +119,7 @@ function makeFlowHandle(
     setFlowSpeed: (value) => boringSetters.setFlowSpeed(value),
     setDensityBias: (value) => boringSetters.setFlowDensityBias(value),
     setWander: (value) => boringSetters.setFlowWander(value),
+    setBoundaryFadeWidth: (value) => boringSetters.setFlowBoundaryFadeWidth(value),
   };
 }
 

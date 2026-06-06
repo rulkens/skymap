@@ -99,6 +99,7 @@ describe('EngineState type', () => {
         flowSpeed: 0.06,
         densityBias: 1,
         wander: 0.15,
+        boundaryFadeWidth: 0.1,
       },
       debug: { showPickBuffer: false, showDiskRadiusRing: false },
       labelCategoryVisibility: {

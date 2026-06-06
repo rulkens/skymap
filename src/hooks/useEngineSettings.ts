@@ -124,6 +124,9 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   const [flowSpeed, setFlowSpeed] = useState<number>(DEFAULT_FLOW.flowSpeed);
   const [flowDensityBias, setFlowDensityBias] = useState<number>(DEFAULT_FLOW.densityBias);
   const [flowWander, setFlowWander] = useState<number>(DEFAULT_FLOW.wander);
+  const [flowBoundaryFadeWidth, setFlowBoundaryFadeWidth] = useState<number>(
+    DEFAULT_FLOW.boundaryFadeWidth,
+  );
 
   // Per-field row data.  Starts empty (no cubes at startup).  The engine
   // pushes a fresh snapshot through `volumes.onFieldsChanged(fields)`
@@ -224,6 +227,7 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       flowSpeed,
       flowDensityBias,
       flowWander,
+      flowBoundaryFadeWidth,
     },
     engineCallbacks: {
       // ── Nested sub-bag subscriptions (H5 task 11) ────────────────
@@ -306,5 +310,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
     setFlowSpeed,
     setFlowDensityBias,
     setFlowWander,
+    setFlowBoundaryFadeWidth,
   };
 }

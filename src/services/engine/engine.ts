@@ -1304,6 +1304,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setFlowSpeed: (value) => boringSetters.setFlowSpeed(value),
       setDensityBias: (value) => boringSetters.setFlowDensityBias(value),
       setWander: (value) => boringSetters.setFlowWander(value),
+      setBoundaryFadeWidth: (value) => boringSetters.setFlowBoundaryFadeWidth(value),
     },
     labels: {
       // Two parallel setters, one per independent visibility axis.  Each

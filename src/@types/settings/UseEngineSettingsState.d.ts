@@ -118,4 +118,5 @@ export type UseEngineSettingsState = {
   flowSpeed: number;
   flowDensityBias: number;
   flowWander: number;
+  flowBoundaryFadeWidth: number;
 };

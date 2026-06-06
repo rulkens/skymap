@@ -26,6 +26,7 @@ function flowStub(over: Partial<FlowSettings> = {}): FlowSettings {
     flowSpeed: 0.06,
     densityBias: 1,
     wander: 0.15,
+    boundaryFadeWidth: 0.1,
     ...over,
   };
 }

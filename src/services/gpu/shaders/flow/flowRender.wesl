@@ -41,13 +41,14 @@
 //
 // Cam uniform byte layout (TS pads the buffer to 160 — see the flow renderer's
 // uniform docblock):
-//   mvp       mat4x4<f32> @ 0    (64 bytes)
-//   model     mat4x4<f32> @ 64   (64 bytes)
-//   width     f32         @ 128
-//   aspect    f32         @ 132
-//   phase     f32         @ 136
-//   mode      u32         @ 140
-//   intensity f32         @ 144
+//   mvp               mat4x4<f32> @ 0    (64 bytes)
+//   model             mat4x4<f32> @ 64   (64 bytes)
+//   width             f32         @ 128
+//   aspect            f32         @ 132
+//   phase             f32         @ 136
+//   mode              u32         @ 140
+//   intensity         f32         @ 144
+//   boundaryFadeWidth f32         @ 148
 
 import package::flow::flowConstants::TRAIL;
 import package::flow::flowConstants::LIFE;
@@ -61,7 +62,7 @@ const PULSE_FLOOR: f32 = 0.12;
 const PULSE_SHARPNESS: f32 = 4.0;
 const TANGENT_EPS = vec2<f32>(1e-6, 0.0);
 
-struct Cam { mvp: mat4x4<f32>, model: mat4x4<f32>, width: f32, aspect: f32, phase: f32, mode: u32, intensity: f32 };
+struct Cam { mvp: mat4x4<f32>, model: mat4x4<f32>, width: f32, aspect: f32, phase: f32, mode: u32, intensity: f32, boundaryFadeWidth: f32 };
 @group(0) @binding(0) var<uniform> cam: Cam;
 @group(0) @binding(1) var<storage, read> trail: array<vec4<f32>>;
 @group(0) @binding(2) var<storage, read> parts: array<vec4<f32>>;
@@ -106,6 +107,19 @@ fn vsTrail(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> 
     let pulse = pow(fract(along - cam.phase + rand01(ii)), PULSE_SHARPNESS);
     alpha = (PULSE_FLOOR + pulse) * smoothstep(0.0, PULSE_FLOOR, along);
   }
+
+  // Spherical boundary fade. 'point.xyz' is the trail sample in grid [0,1]^3,
+  // so its distance from the cube centre (0.5) is the spherical radius. Ribbons
+  // ease to 0 over a 'boundaryFadeWidth' band ending at the cube-inscribed
+  // sphere (radius 0.5), softening the cube faces/corners into a sphere. Every
+  // box-boundary point has a coord at 0 or 1, hence radius >= 0.5, so its alpha
+  // is 0 there — which also masks the particle respawn pop at the wall.
+  // 'min(inner, 0.5 - eps)' keeps the two smoothstep edges distinct when the
+  // width is 0 (no division by zero); width 0 then reads as a hard sphere clip.
+  let r = length(point.xyz - vec3<f32>(0.5));
+  let inner = min(0.5 - cam.boundaryFadeWidth, 0.5 - 1e-4);
+  alpha = alpha * (1.0 - smoothstep(inner, 0.5, r));
+
   out.alpha = alpha;
   return out;
 }

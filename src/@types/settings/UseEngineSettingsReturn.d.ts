@@ -49,4 +49,5 @@ export type UseEngineSettingsReturn = {
   setFlowSpeed: (v: number) => void;
   setFlowDensityBias: (v: number) => void;
   setFlowWander: (v: number) => void;
+  setFlowBoundaryFadeWidth: (v: number) => void;
 };

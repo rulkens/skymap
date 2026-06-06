@@ -69,6 +69,7 @@ function makeState(): Pick<EngineState, 'settings' | 'bias'> {
         flowSpeed: 0.06,
         densityBias: 1,
         wander: 0.15,
+        boundaryFadeWidth: 0.1,
       },
       debug: { showPickBuffer: false, showDiskRadiusRing: false },
       labelCategoryVisibility: {
@@ -96,7 +97,7 @@ function makeState(): Pick<EngineState, 'settings' | 'bias'> {
 
 describe('settingsTable', () => {
   describe('SETTINGS_TABLE', () => {
-    it('declares the 23 table-candidate setters', () => {
+    it('declares the 24 table-candidate setters', () => {
       // Bespoke setters (`setBiasMode`, `setTier`, `setSourceVisible`,
       // `setSpaceMouseSensitivity`) MUST stay inline in engine.ts.  If
       // this list drifts, either a new boring setter snuck in (good —
@@ -120,6 +121,7 @@ describe('settingsTable', () => {
           'setFlowSpeed',
           'setFlowTrail',
           'setFlowWander',
+          'setFlowBoundaryFadeWidth',
           'setGalaxyTexturesEnabled',
           'setHighlightFallback',
           'setMilkyWayEnabled',

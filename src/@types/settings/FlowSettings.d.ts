@@ -36,4 +36,11 @@ export type FlowSettings = {
   densityBias: number;
   /** Per-step direction jitter (advect only). */
   wander: number;
+  /**
+   * Spherical boundary-fade width, in grid units [0, 0.5]. Ribbons fade out
+   * over this band ending at the cube-inscribed sphere (grid radius 0.5), so
+   * the cube edges soften into a sphere and respawns at the boundary are
+   * invisible. 0 ≈ a hard sphere clip; larger pulls the fade further inward.
+   */
+  boundaryFadeWidth: number;
 };

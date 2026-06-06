@@ -62,11 +62,13 @@ export type FlowTuningSectionProps = {
   flowSpeed: number;
   densityBias: number;
   wander: number;
+  boundaryFadeWidth: number;
   onCountChange: (v: number) => void;
   onTrailChange: (v: number) => void;
   onFlowSpeedChange: (v: number) => void;
   onDensityBiasChange: (v: number) => void;
   onWanderChange: (v: number) => void;
+  onBoundaryFadeWidthChange: (v: number) => void;
 };
 
 export function FlowTuningSection({
@@ -75,11 +77,13 @@ export function FlowTuningSection({
   flowSpeed,
   densityBias,
   wander,
+  boundaryFadeWidth,
   onCountChange,
   onTrailChange,
   onFlowSpeedChange,
   onDensityBiasChange,
   onWanderChange,
+  onBoundaryFadeWidthChange,
 }: FlowTuningSectionProps): ReactElement {
   return (
     <details>
@@ -129,6 +133,15 @@ export function FlowTuningSection({
           step={0.005}
           readout={wander.toFixed(3)}
           onChange={onWanderChange}
+        />
+        <Slider
+          label="edgeFade"
+          value={boundaryFadeWidth}
+          min={0}
+          max={0.5}
+          step={0.01}
+          readout={boundaryFadeWidth.toFixed(2)}
+          onChange={onBoundaryFadeWidthChange}
         />
       </div>
     </details>

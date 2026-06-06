@@ -62,6 +62,7 @@ export function App(): React.ReactElement {
     setFlowSpeed,
     setFlowDensityBias,
     setFlowWander,
+    setFlowBoundaryFadeWidth,
   } = useEngineSettings();
 
   const {
@@ -93,6 +94,7 @@ export function App(): React.ReactElement {
     flowSpeed,
     flowDensityBias,
     flowWander,
+    flowBoundaryFadeWidth,
   } = settings;
 
   // SettingsPanel's SpaceMouse section appears only when WebHID is
@@ -427,6 +429,7 @@ export function App(): React.ReactElement {
             flowSpeed={flowSpeed}
             flowDensityBias={flowDensityBias}
             flowWander={flowWander}
+            flowBoundaryFadeWidth={flowBoundaryFadeWidth}
             onFlowCountChange={(v) => {
               setFlowCount(v);
               handleRef.current?.flow.setCount(v);
@@ -446,6 +449,10 @@ export function App(): React.ReactElement {
             onFlowWanderChange={(v) => {
               setFlowWander(v);
               handleRef.current?.flow.setWander(v);
+            }}
+            onFlowBoundaryFadeWidthChange={(v) => {
+              setFlowBoundaryFadeWidth(v);
+              handleRef.current?.flow.setBoundaryFadeWidth(v);
             }}
           />
         )}

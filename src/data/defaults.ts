@@ -251,21 +251,25 @@ export const DEFAULT_VOLUME_PALETTE_ID = 'viridis' as const;
  * `enabled` defaults OFF: the velocity cube is tens of MB and demand-loads on
  * the first enable, so a fresh session pays nothing until the user asks for it.
  *
- * The motion/look values are the spike's hand-dialled advect look, lifted
- * verbatim from `tools/cosmic-flow/src/state/slices/flowSlice.ts`
- * (`defaultFlowSlice.advect`). They ARE the look — do not "tidy" them. `count`
+ * The motion/look values started from the spike's hand-dialled advect look
+ * (`tools/cosmic-flow/src/state/slices/flowSlice.ts`) and were then tuned in
+ * the integrated renderer. They ARE the look — do not "tidy" them. `count`
  * defaults to the buffer ceiling (`MAX_PARTICLES`) so the field reads as dense
  * the moment it's enabled; the slider trims downward.
  */
 export const DEFAULT_FLOW: FlowSettings = {
   enabled: false,
   mode: 'advect',
-  intensity: 0.7,
+  intensity: 0.18,
   count: MAX_PARTICLES,
-  trail: 0.003,
-  flowSpeed: 0.06,
+  trail: 0.002,
+  flowSpeed: 0.02,
   densityBias: 1,
   wander: 0.15,
+  // Spherical boundary fade: ribbons ease out over this grid-space band ending
+  // at the cube-inscribed sphere (radius 0.5), softening the cube edges into a
+  // sphere. See flowRender.wesl.
+  boundaryFadeWidth: 0.1,
 };
 
 // ── Debug overlays ─────────────────────────────────────────────────────────

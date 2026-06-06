@@ -33,6 +33,13 @@ export const LIFE = 8.0; // advect particle lifetime, frame-time units, then it 
 export const FADE = 1.4; // advect alpha fade-in/out window, age units
 export const DT = 0.016; // fixed integration timestep handed to the compute pass
 export const HEAD_STEP_SCALE = 0.012; // flowSpeed -> advect head distance per frame (motion speed)
+// Floor on the advect trail spacing (prm.trailStep). A spacing of exactly 0
+// makes the integrator's per-iteration step collapse to 0 (or go negative once
+// a particle carries leftover arc-length), so the loop never reaches its
+// MIN_TRAVEL break and the compute pass spins forever — a GPU hang that freezes
+// the whole canvas. Flooring the value the renderer hands the shader keeps the
+// loop strictly progressing regardless of the UI slider or a devtools call.
+export const MIN_TRAIL_STEP = 1e-4;
 export const SPEED_COLOR_MAX = 1200.0; // km/s mapped to the hot end of the speed colour ramp
 export const DENS_SCALE = 1.0; // overdensity delta -> spawn weight (clamped 0..1); seeding selectivity
 // Ribbon half-width in grid units (the spike's advect default `size`). TS-only:

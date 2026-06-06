@@ -25,4 +25,5 @@ export type EngineFlowFieldsHandle = {
   setFlowSpeed: (value: number) => void;
   setDensityBias: (value: number) => void; // [0, 1]
   setWander: (value: number) => void;
+  setBoundaryFadeWidth: (value: number) => void; // [0, 0.5]
 };

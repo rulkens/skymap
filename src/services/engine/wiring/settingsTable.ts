@@ -74,7 +74,7 @@
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { SettingsTableKey } from '../../../@types/settings/SettingsTableKey';
-import { MAX_PARTICLES } from '../../gpu/renderers/flowFieldConstants';
+import { MAX_PARTICLES, MIN_TRAIL_STEP } from '../../gpu/renderers/flowFieldConstants';
 
 /**
  * 3-tuple path into `EngineState`: `['settings', <cluster>, <leaf>]`.
@@ -210,10 +210,12 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     clamp: (v) => Math.max(0, Math.min(MAX_PARTICLES, Math.round(v))),
   },
   {
-    // Floor only — the UI slider owns the max (single source of truth).
+    // Floor at MIN_TRAIL_STEP, NOT 0 — a zero trail spacing stalls the advect
+    // integrator loop (GPU hang). The UI slider owns the max (single source of
+    // truth). The renderer also floors at the GPU boundary (defense in depth).
     name: 'setFlowTrail',
     path: ['settings', 'flow', 'trail'],
-    clamp: (v) => Math.max(0, v),
+    clamp: (v) => Math.max(MIN_TRAIL_STEP, v),
   },
   {
     name: 'setFlowSpeed',
@@ -229,6 +231,13 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     name: 'setFlowWander',
     path: ['settings', 'flow', 'wander'],
     clamp: (v) => Math.max(0, v),
+  },
+  {
+    // Spherical boundary-fade band width, grid units. Clamp to [0, 0.5]: 0 is a
+    // hard sphere clip, 0.5 fades from the cube centre outward.
+    name: 'setFlowBoundaryFadeWidth',
+    path: ['settings', 'flow', 'boundaryFadeWidth'],
+    clamp: (v) => Math.max(0, Math.min(0.5, v)),
   },
   {
     name: 'setHighlightFallback',

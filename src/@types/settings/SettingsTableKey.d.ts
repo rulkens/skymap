@@ -1,5 +1,5 @@
 /**
- * SettingsTableKey — the twenty-three names of the engine's "boring"
+ * SettingsTableKey — the twenty-four names of the engine's "boring"
  * table-driven public-handle setters (see
  * `src/services/engine/wiring/settingsTable.ts`).
  *
@@ -30,6 +30,7 @@ export type SettingsTableKey =
   | 'setFlowSpeed'
   | 'setFlowDensityBias'
   | 'setFlowWander'
+  | 'setFlowBoundaryFadeWidth'
   | 'setHighlightFallback'
   | 'setRealOnlyMode'
   | 'setDepthFadeEnabled'
