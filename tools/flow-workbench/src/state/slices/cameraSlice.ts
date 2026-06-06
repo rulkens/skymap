@@ -1,11 +1,13 @@
 /**
  * cameraSlice — default orbit pose + the viewProj-replacing reducer.
  *
- * The default yaw/pitch/distance frame the volume at a pleasant three-quarter
- * angle with idle auto-rotate on. `viewProj` starts as identity (a placeholder
- * the engine overwrites on the first frame once it knows the aspect ratio).
- * `setCameraViewProj` swaps only that matrix, leaving the user-facing pose
- * fields untouched.
+ * Distances are in Mpc (world units): the canonical flow renderer places the
+ * cube at its physical extent via `buildCubeModelMatrix` — the flow field is a
+ * 1000 Mpc box centred on the observer, spanning ±500 Mpc (corner ~866 Mpc out).
+ * The default yaw/pitch/distance frame that whole box at a three-quarter angle
+ * with idle auto-rotate on. `viewProj` starts as identity (a placeholder the
+ * harness overwrites on the first frame once it knows the aspect ratio).
+ * `setCameraViewProj` swaps only that matrix, leaving the pose fields untouched.
  */
 import type { CameraSlice } from '../../../@types/state/slices/CameraSlice';
 import type { Mat4 } from '../../../../../src/@types/math/Mat4';
@@ -15,7 +17,8 @@ const IDENTITY: Mat4 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 export const defaultCameraSlice: CameraSlice = {
   yaw: 0.6,
   pitch: 0.35,
-  distance: 1.7,
+  // ~1500 Mpc frames the ±500 Mpc box with headroom at fov 1.0 rad.
+  distance: 1500,
   autoRotate: true,
   viewProj: IDENTITY,
 };
@@ -24,12 +27,12 @@ export function setCameraViewProj(prev: CameraSlice, viewProj: Mat4): CameraSlic
   return { ...prev, viewProj };
 }
 
-// Orbit-control bounds, mirroring the spike: pitch can't flip past the poles,
-// and distance is held to a range that keeps the cube framed (spike index.html
-// clamped drag pitch to ±1.5 and wheel distance to [0.6, 7]).
+// Orbit-control bounds (Mpc world units): pitch can't flip past the poles, and
+// wheel distance is held to a range that keeps the ±500 Mpc cube framed — from
+// well inside it out to a wide establishing shot.
 const PITCH_LIMIT = 1.5;
-const MIN_DISTANCE = 0.6;
-const MAX_DISTANCE = 7;
+const MIN_DISTANCE = 300;
+const MAX_DISTANCE = 4000;
 
 const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
 

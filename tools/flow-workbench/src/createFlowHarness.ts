@@ -63,10 +63,12 @@ export type FlowHarness = {
 // publicDir points there), so this is the same `.scfd` the runtime fetches.
 const FIELD_URL = '/data/flowfield.scfd';
 
-// Camera projection (spike parity): fov 1.0 rad, near 0.05, far 50.
+// Camera projection. Distances are Mpc (the canonical renderer places the cube
+// at physical extent — a ±500 Mpc box), so near/far bracket that scale with
+// room to orbit from inside the field out to a wide shot.
 const FOV_Y_RAD = 1.0;
-const NEAR = 0.05;
-const FAR = 50;
+const NEAR = 5;
+const FAR = 6000;
 const AUTO_ROTATE_RATE = 0.08; // radians/sec added to yaw while auto-rotating (spike)
 const MAX_DT = 0.05; // clamp so a backgrounded-then-resumed tab can't take a giant step
 

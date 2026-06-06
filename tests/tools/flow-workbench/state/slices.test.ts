@@ -69,10 +69,10 @@ describe('cameraSlice', () => {
     expect(defaultCameraSlice.pitch).toBe(0.35); // prev untouched
   });
 
-  it('setCameraDistance clamps to [0.6, 7]', () => {
-    expect(setCameraDistance(defaultCameraSlice, 100).distance).toBe(7);
-    expect(setCameraDistance(defaultCameraSlice, 0.1).distance).toBe(0.6);
-    expect(setCameraDistance(defaultCameraSlice, 2).distance).toBe(2);
+  it('setCameraDistance clamps to the Mpc range [300, 4000]', () => {
+    expect(setCameraDistance(defaultCameraSlice, 9999).distance).toBe(4000);
+    expect(setCameraDistance(defaultCameraSlice, 10).distance).toBe(300);
+    expect(setCameraDistance(defaultCameraSlice, 1200).distance).toBe(1200);
   });
 
   it('setAutoRotate flips the flag immutably', () => {
