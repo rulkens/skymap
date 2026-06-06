@@ -215,7 +215,7 @@ describe('createTexturedDiskSubsystem', () => {
       decimationFactor: 1,
       hiResFamous,
     });
-    const clouds = new Map([[Source.Famous, makeDenseCloud(2)]]);
+    const clouds = new Map([[Source.FamousGalaxy, makeDenseCloud(2)]]);
 
     sys.runFrame(makeInput(clouds));
     await new Promise((r) => setTimeout(r, 0));
@@ -283,7 +283,7 @@ describe('createTexturedDiskSubsystem', () => {
       decimationFactor: 1,
       hiResFamous: initial,
     });
-    const clouds = new Map([[Source.Famous, makeDenseCloud(1)]]);
+    const clouds = new Map([[Source.FamousGalaxy, makeDenseCloud(1)]]);
     sys.runFrame(makeInput(clouds));
     await new Promise((r) => setTimeout(r, 0));
 

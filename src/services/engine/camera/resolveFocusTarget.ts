@@ -96,7 +96,7 @@ export function resolveFocusTarget(input: ResolverInput): ResolverOutput {
  * Famous cloud is actually loaded.
  *
  * Why no `tier` reason here?  Famous lives in exactly one source
- * (`Source.Famous`), built by a separate `npm run build-famous`
+ * (`Source.FamousGalaxy`), built by a separate `npm run build-famous`
  * pipeline that always emits the full atlas.  Either it's loaded or
  * it isn't; there's no larger tier to nudge the user toward.
  */
@@ -104,9 +104,9 @@ function resolveFamous(id: string, input: ResolverInput): ResolverOutput {
   for (let i = 0; i < input.famousMeta.length; i++) {
     if (input.famousMeta[i]!.id === id) {
       // Found in meta — confirm the cloud is actually loaded.
-      const hasCatalog = input.catalogs.some((c) => c.source === Source.Famous);
+      const hasCatalog = input.catalogs.some((c) => c.source === Source.FamousGalaxy);
       if (!hasCatalog) return { resolved: false, reason: 'unknown' };
-      return { resolved: true, source: Source.Famous, localIdx: i };
+      return { resolved: true, source: Source.FamousGalaxy, localIdx: i };
     }
   }
   return { resolved: false, reason: 'unknown' };
@@ -187,11 +187,7 @@ function resolveSdss(objID: bigint, input: ResolverInput): ResolverOutput {
  * exists at this position" without consulting loaded geometry.  A
  * miss is always `unknown`.
  */
-function resolvePos(
-  raDegT: number,
-  decDegT: number,
-  input: ResolverInput,
-): ResolverOutput {
+function resolvePos(raDegT: number, decDegT: number, input: ResolverInput): ResolverOutput {
   const cosDecT = Math.cos((decDegT * Math.PI) / 180);
   let bestSqArcsec = Infinity;
   let bestSource: SourceType | null = null;

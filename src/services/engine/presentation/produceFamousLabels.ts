@@ -183,7 +183,7 @@ export function produceFamousLabels(
   }
 
   const meta = galaxies.famousMeta;
-  const catalog = galaxies.get(Source.Famous);
+  const catalog = galaxies.get(Source.FamousGalaxy);
   if (meta.length === 0 || catalog === undefined || catalog.count === 0) return empty;
 
   const inputs = deriveFamousLabelInputs(meta, catalog);

@@ -43,7 +43,7 @@ describe('iauName', () => {
   it('uses the Famous prefix when no curated name is available', () => {
     // Famous entries normally render with curated names (e.g. "M31"), but the
     // IAU designation is the fallback when sidecar metadata hasn't loaded yet.
-    expect(iauName(Source.Famous, 188.7365, 1.396)).toBe('Famous J123456.75+012345.5');
+    expect(iauName(Source.FamousGalaxy, 188.7365, 1.396)).toBe('Famous J123456.75+012345.5');
   });
 
   it('always emits a leading + for non-negative declinations', () => {

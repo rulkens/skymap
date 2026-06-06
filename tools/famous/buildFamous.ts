@@ -216,7 +216,7 @@ async function main(): Promise<void> {
   // renderer.  The renderer keys per-source pipelines on this number,
   // so a mismatch would silently misroute Famous draws into the wrong
   // pipeline — better to have it in the build log too.
-  process.stderr.write(`Source.Famous = ${Source.Famous}\n`);
+  process.stderr.write(`Source.FamousGalaxy = ${Source.FamousGalaxy}\n`);
 }
 
 // Allow the script to be both executed (CLI) and imported (tests).

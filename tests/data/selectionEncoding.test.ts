@@ -106,10 +106,7 @@ describe('selectionEncoding TS↔WESL parity', () => {
    * under the Vite/Vitest ESM runner used here.
    */
   function parseWeslConstants(): Map<string, number> {
-    const path = join(
-      process.cwd(),
-      'src/services/gpu/shaders/lib/selectionEncoding.wesl',
-    );
+    const path = join(process.cwd(), 'src/services/gpu/shaders/lib/selectionEncoding.wesl');
     const text = readFileSync(path, 'utf-8');
 
     // Match e.g.  const SELECTION_SOURCE_SHIFT: u32 = 27u;
@@ -121,9 +118,7 @@ describe('selectionEncoding TS↔WESL parity', () => {
     while ((m = re.exec(text)) !== null) {
       const name = m[1]!;
       const literal = m[2]!;
-      const value = literal.startsWith('0x')
-        ? parseInt(literal, 16)
-        : parseInt(literal, 10);
+      const value = literal.startsWith('0x') ? parseInt(literal, 16) : parseInt(literal, 10);
       map.set(name, value);
     }
     return map;
@@ -153,11 +148,13 @@ describe('selectionEncoding TS↔WESL parity', () => {
 
     for (const [name, tsValue] of cases) {
       const weslValue = wesl.get(name);
-      expect(weslValue, `WESL constant ${name} is missing from selectionEncoding.wesl`).toBeDefined();
       expect(
         weslValue,
-        `WESL ${name} (${weslValue}) does not match TS ${name} (${tsValue})`,
-      ).toBe(tsValue);
+        `WESL constant ${name} is missing from selectionEncoding.wesl`,
+      ).toBeDefined();
+      expect(weslValue, `WESL ${name} (${weslValue}) does not match TS ${name} (${tsValue})`).toBe(
+        tsValue,
+      );
     }
   });
 });
@@ -167,7 +164,7 @@ describe('unpackPick — discriminated union for POI categories', () => {
   // for a given (sourceCode, localIdx) pair. The picker offsets by
   // PICK_SENTINEL_OFFSET (+1); unpackPick reverses that.
   function rawFor(sourceCode: number, localIdx: number): number {
-    return ((packSelection(sourceCode, localIdx) + PICK_SENTINEL_OFFSET) >>> 0);
+    return (packSelection(sourceCode, localIdx) + PICK_SENTINEL_OFFSET) >>> 0;
   }
 
   it('returns kind:galaxy for codes 0..4 (survey sources)', () => {
@@ -176,7 +173,7 @@ describe('unpackPick — discriminated union for POI categories', () => {
       [1, Source.SDSS],
       [2, Source.TwoMRS],
       [3, Source.Glade],
-      [4, Source.Famous],
+      [4, Source.FamousGalaxy],
     ];
     for (const [code, sourceEnum] of cases) {
       const result = unpackPick(rawFor(code, 42));

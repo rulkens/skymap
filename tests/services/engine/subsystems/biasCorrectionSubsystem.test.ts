@@ -201,7 +201,7 @@ describe('createBiasCorrectionSubsystem', () => {
     const stub = makeStubRenderer();
     const clouds = new Map<SourceType, GalaxyCatalog>([
       [Source.SDSS, makeCloud(3)],
-      [Source.Famous, makeCloud(2)],
+      [Source.FamousGalaxy, makeCloud(2)],
     ]);
     const { deps } = makeDeps(clouds);
     const bakedSources: SourceType[] = [];
@@ -231,7 +231,7 @@ describe('createBiasCorrectionSubsystem', () => {
     expect(bakedSources.includes(Source.Glade)).toBe(true);
     // No re-bake-all: SDSS and Famous each appear exactly once.
     expect(bakedSources.filter((s) => s === Source.SDSS).length).toBe(1);
-    expect(bakedSources.filter((s) => s === Source.Famous).length).toBe(1);
+    expect(bakedSources.filter((s) => s === Source.FamousGalaxy).length).toBe(1);
   });
 
   it('multi_source_completion_ordering — splice fires in resolution order; one requestRender at end', async () => {
@@ -278,7 +278,8 @@ describe('createBiasCorrectionSubsystem', () => {
     const clouds = new Map<SourceType, GalaxyCatalog>([[Source.SDSS, makeCloud(3)]]);
     const { deps } = makeDeps(clouds);
     const schechterRunner = vi.fn(
-      async (input: { source: SourceType; cloud: GalaxyCatalog }) => new Float32Array(input.cloud.count),
+      async (input: { source: SourceType; cloud: GalaxyCatalog }) =>
+        new Float32Array(input.cloud.count),
     );
 
     const sub = createBiasCorrectionSubsystem({ ...deps, schechterRunner });
@@ -307,7 +308,8 @@ describe('createBiasCorrectionSubsystem', () => {
     ]);
     const { deps } = makeDeps(clouds);
     const schechterRunner = vi.fn(
-      async (input: { source: SourceType; cloud: GalaxyCatalog }) => new Float32Array(input.cloud.count),
+      async (input: { source: SourceType; cloud: GalaxyCatalog }) =>
+        new Float32Array(input.cloud.count),
     );
 
     const sub = createBiasCorrectionSubsystem({ ...deps, schechterRunner });
@@ -327,7 +329,8 @@ describe('createBiasCorrectionSubsystem', () => {
     const clouds = new Map<SourceType, GalaxyCatalog>([[Source.SDSS, makeCloud(3)]]);
     const { deps } = makeDeps(clouds);
     const schechterRunner = vi.fn(
-      async (input: { source: SourceType; cloud: GalaxyCatalog }) => new Float32Array(input.cloud.count),
+      async (input: { source: SourceType; cloud: GalaxyCatalog }) =>
+        new Float32Array(input.cloud.count),
     );
 
     const sub = createBiasCorrectionSubsystem({ ...deps, schechterRunner });

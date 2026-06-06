@@ -57,7 +57,7 @@ export const GALAXY_CATALOG_SOURCE_REGISTRY: readonly GalaxyCatalogSourceConfig[
   { source: Source.TwoMRS, shortName: '2mrs', fetcher: galaxyCatalogFetcher, category: 'survey' },
   { source: Source.Glade, shortName: 'glade', fetcher: galaxyCatalogFetcher, category: 'survey' },
   {
-    source: Source.Famous,
+    source: Source.FamousGalaxy,
     shortName: 'famous',
     fetcher: galaxyCatalogFetcher,
     category: 'curated',

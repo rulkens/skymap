@@ -133,12 +133,12 @@ export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSu
     byFamousIdx.clear();
 
     // Visibility gate.  If the Famous source bit is clear, emit empty.
-    if (((visibleSourceMask >> Source.Famous) & 1) === 0) {
+    if (((visibleSourceMask >> Source.FamousGalaxy) & 1) === 0) {
       lastOutput = { byFamousIdx };
       return lastOutput;
     }
 
-    const cloud = catalogs.get(Source.Famous);
+    const cloud = catalogs.get(Source.FamousGalaxy);
     if (!cloud) {
       lastOutput = { byFamousIdx };
       return lastOutput;
@@ -230,40 +230,42 @@ export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSu
           famousId,
           fetchHiRes: true,
           hiResTargetDim: layerSide,
-        }).then((bitmap) => {
-          inFlight.delete(key);
-          if (destroyed) {
-            bitmap?.close?.();
-            return;
-          }
-          if (bitmap === null) {
-            // Record the failure on the planner-side set BEFORE the
-            // layer-existence check.  The texture-side `markFailed`
-            // call only matters while the slot is still resident; the
-            // sticky-across-eviction policy lives on `failedFamousIds`.
-            failedFamousIds.add(famousId);
+        })
+          .then((bitmap) => {
+            inFlight.delete(key);
+            if (destroyed) {
+              bitmap?.close?.();
+              return;
+            }
+            if (bitmap === null) {
+              // Record the failure on the planner-side set BEFORE the
+              // layer-existence check.  The texture-side `markFailed`
+              // call only matters while the slot is still resident; the
+              // sticky-across-eviction policy lives on `failedFamousIds`.
+              failedFamousIds.add(famousId);
+              // The layer might have been evicted while the fetch was in
+              // flight.  `layerForKey` reflects the current bookkeeping.
+              const layerForFailed = texture.layerForKey(key);
+              if (layerForFailed !== undefined) texture.markFailed(key);
+              return;
+            }
             // The layer might have been evicted while the fetch was in
             // flight.  `layerForKey` reflects the current bookkeeping.
-            const layerForFailed = texture.layerForKey(key);
-            if (layerForFailed !== undefined) texture.markFailed(key);
-            return;
-          }
-          // The layer might have been evicted while the fetch was in
-          // flight.  `layerForKey` reflects the current bookkeeping.
-          const currentLayer = texture.layerForKey(key);
-          if (currentLayer === undefined) {
-            bitmap?.close?.();
-            return;
-          }
-          // Upload into whatever layer the texture currently maps the
-          // key to — `layerIdx` captured in the planner's closure could
-          // be stale if eviction-and-reallocation churned it.
-          texture.uploadBitmap(currentLayer, bitmap);
-          bitmap.close?.();
-          requestRender();
-        }).catch(() => {
-          inFlight.delete(key);
-        });
+            const currentLayer = texture.layerForKey(key);
+            if (currentLayer === undefined) {
+              bitmap?.close?.();
+              return;
+            }
+            // Upload into whatever layer the texture currently maps the
+            // key to — `layerIdx` captured in the planner's closure could
+            // be stale if eviction-and-reallocation churned it.
+            texture.uploadBitmap(currentLayer, bitmap);
+            bitmap.close?.();
+            requestRender();
+          })
+          .catch(() => {
+            inFlight.delete(key);
+          });
         // First-frame-after-allocate: bitmap not yet loaded.  Emit the
         // sentinel so the consumer treats this as atlas-tile-only until
         // upload completes.

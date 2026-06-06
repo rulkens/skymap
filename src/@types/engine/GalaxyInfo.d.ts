@@ -251,7 +251,7 @@ export type GalaxyInfo = {
   diameterProvenance: string;
 
   /**
-   * Famous-galaxy enrichment block, present only when `source === Source.Famous`.
+   * Famous-galaxy enrichment block, present only when `source === Source.FamousGalaxy`.
    *
    * Populated by `galaxyInfoBuilder` from the `famous_meta.json` sidecar loaded
    * at engine startup.  Absent (`undefined`) for SDSS / 2MRS / GLADE / Synthetic

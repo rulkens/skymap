@@ -104,7 +104,7 @@ describe('GALAXY_CATALOG_SOURCE_REGISTRY', () => {
       Source.SDSS,
       Source.TwoMRS,
       Source.Glade,
-      Source.Famous,
+      Source.FamousGalaxy,
       Source.Milliquas,
       Source.Synthetic,
     ]);
@@ -142,7 +142,7 @@ describe('GALAXY_CATALOG_SOURCE_REGISTRY', () => {
       Source.SDSS,
       Source.TwoMRS,
       Source.Glade,
-      Source.Famous,
+      Source.FamousGalaxy,
       Source.Milliquas,
     ]);
   });
@@ -217,7 +217,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     expect(state.subsystems.scheduler.requestRender).toHaveBeenCalled();
   });
 
-  it("commit uploads the cloud to the renderer and writes it into state.sources.catalogs", async () => {
+  it('commit uploads the cloud to the renderer and writes it into state.sources.catalogs', async () => {
     const upload = vi.fn().mockResolvedValue(undefined);
     const state = makeState({ rendererUpload: upload });
     const cloud = fakeCloud(7);

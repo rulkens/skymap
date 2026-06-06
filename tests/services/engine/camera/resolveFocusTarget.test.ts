@@ -23,11 +23,7 @@ import { raDecZToCartesian } from '../../../../src/utils/math/raDecZToCartesian'
  * unused, so we cast through `unknown` rather than filling them with
  * pointless zeros.
  */
-function makeCloud(
-  count: number,
-  objIDs: bigint[],
-  positions: number[],
-): GalaxyCatalog {
+function makeCloud(count: number, objIDs: bigint[], positions: number[]): GalaxyCatalog {
   return {
     count,
     objIDs: BigUint64Array.from(objIDs),
@@ -60,18 +56,18 @@ describe('resolveFocusTarget — famous', () => {
     const famous = makeCloud(2, [0n, 0n], [0, 0, 0, 0, 0, 0]);
     const out = resolveFocusTarget({
       target: { kind: 'famous', id: 'ngc5128' },
-      catalogs: [{ source: Source.Famous, catalog: famous }],
+      catalogs: [{ source: Source.FamousGalaxy, catalog: famous }],
       famousMeta: meta,
       aliasMap: new Map(),
     });
-    expect(out).toEqual({ resolved: true, source: Source.Famous, localIdx: 1 });
+    expect(out).toEqual({ resolved: true, source: Source.FamousGalaxy, localIdx: 1 });
   });
 
   it('returns unknown when the id is not in meta', () => {
     const famous = makeCloud(2, [0n, 0n], [0, 0, 0, 0, 0, 0]);
     const out = resolveFocusTarget({
       target: { kind: 'famous', id: 'nonsense' },
-      catalogs: [{ source: Source.Famous, catalog: famous }],
+      catalogs: [{ source: Source.FamousGalaxy, catalog: famous }],
       famousMeta: meta,
       aliasMap: new Map(),
     });
@@ -265,16 +261,8 @@ describe('resolveFocusTarget — pos', () => {
   });
 
   it('searches across multiple loaded clouds and picks the global closest', () => {
-    const glade = makeCloud(
-      1,
-      [0n],
-      positionsFromSky([{ raDeg: 50 + 20 / 3600, decDeg: 0 }]),
-    );
-    const twoMrs = makeCloud(
-      1,
-      [0n],
-      positionsFromSky([{ raDeg: 50 + 5 / 3600, decDeg: 0 }]),
-    );
+    const glade = makeCloud(1, [0n], positionsFromSky([{ raDeg: 50 + 20 / 3600, decDeg: 0 }]));
+    const twoMrs = makeCloud(1, [0n], positionsFromSky([{ raDeg: 50 + 5 / 3600, decDeg: 0 }]));
     const out = resolveFocusTarget({
       target: { kind: 'pos', raDeg: 50, decDeg: 0 },
       catalogs: [

@@ -63,7 +63,7 @@ export const Source = {
    * survive 2MRS/GLADE's small-z filtering, so they need their own
    * positions rather than just tagging existing rows.
    */
-  Famous: 4,
+  FamousGalaxy: 4,
   /**
    * Galaxy-cluster anchors (Virgo, Coma, Norma, ...). Picks against a
    * cluster's marker ring return source code 5 in the upper 5 bits of
@@ -256,9 +256,9 @@ export const SOURCE_REGISTRY = {
     intensityFloor: 0.02,
     falloffHalfMpc: 1000,
   },
-  [Source.Famous]: {
+  [Source.FamousGalaxy]: {
     type: 'survey',
-    code: Source.Famous,
+    code: Source.FamousGalaxy,
     label: 'Famous',
     binBaseName: 'famous',
     allSky: true, // hand-picked entries from across the sky
@@ -525,7 +525,7 @@ export const HI_RES_LAYER_SIDE_BY_TIER: Readonly<Record<Tier, number>> = {
  */
 export const SURVEY_SOURCES: readonly SourceType[] = [
   Source.Synthetic,
-  Source.Famous,
+  Source.FamousGalaxy,
   Source.TwoMRS,
   Source.SDSS,
   Source.Glade,

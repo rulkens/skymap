@@ -110,7 +110,7 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
   pointRow(Source.TwoMRS),
   pointRow(Source.Glade),
   pointRow(Source.Milliquas),
-  pointRow(Source.Famous),
+  pointRow(Source.FamousGalaxy),
   {
     // Synthetic fallback: loads only when armed by `createSyntheticFallback`,
     // which runs the precise gate (count-aware, hidden-at-boot-aware) at the
@@ -131,7 +131,7 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     key: 'famousMeta',
     factory: (deps) => createFamousMetaSlot(deps.state, deps.cb),
     req: (tier) => ({ tier }),
-    demand: (ctx) => ctx.slotState(Source.Famous) !== 'idle',
+    demand: (ctx) => ctx.slotState(Source.FamousGalaxy) !== 'idle',
   },
 
   // ── Cosmic-web filament skeleton ─────────────────────────────────

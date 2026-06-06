@@ -9,10 +9,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  selectionToFocusId,
-  parseFocusHash,
-} from '../../../src/services/url/focusUrl';
+import { selectionToFocusId, parseFocusHash } from '../../../src/services/url/focusUrl';
 import { Source } from '../../../src/data/sources';
 import type { GalaxyInfo } from '../../../src/@types/engine/GalaxyInfo';
 
@@ -33,7 +30,7 @@ const baseInfo = (overrides: Partial<GalaxyInfo>): GalaxyInfo =>
     ra: 10.123,
     dec: -5.456,
     raSexagesimal: '00h00m00s',
-    decSexagesimal: "+00°00'00\"",
+    decSexagesimal: '+00°00\'00"',
     redshift: 0.01,
     distanceMpc: 40,
     hubbleVelocityKmS: 3000,
@@ -63,7 +60,7 @@ const baseInfo = (overrides: Partial<GalaxyInfo>): GalaxyInfo =>
 describe('selectionToFocusId', () => {
   it('returns the famous seed id when info.famous is present', () => {
     const info = baseInfo({
-      source: Source.Famous,
+      source: Source.FamousGalaxy,
       famous: {
         id: 'm31',
         names: ['M31', 'Andromeda Galaxy'],
@@ -75,23 +72,19 @@ describe('selectionToFocusId', () => {
   });
 
   it('returns pgc-<n> for a non-SDSS source with objID > 0n', () => {
-    expect(
-      selectionToFocusId(baseInfo({ source: Source.Glade, objID: 2789n })),
-    ).toBe('pgc-2789');
+    expect(selectionToFocusId(baseInfo({ source: Source.Glade, objID: 2789n }))).toBe('pgc-2789');
   });
 
   it('returns pgc-<n> for a 2MRS row with a real PGC objID', () => {
-    expect(
-      selectionToFocusId(baseInfo({ source: Source.TwoMRS, objID: 12345n })),
-    ).toBe('pgc-12345');
+    expect(selectionToFocusId(baseInfo({ source: Source.TwoMRS, objID: 12345n }))).toBe(
+      'pgc-12345',
+    );
   });
 
   it('returns sdss-<n> for an SDSS row with a 19-digit bigint objID', () => {
-    expect(
-      selectionToFocusId(
-        baseInfo({ source: Source.SDSS, objID: 1237665128253423687n }),
-      ),
-    ).toBe('sdss-1237665128253423687');
+    expect(selectionToFocusId(baseInfo({ source: Source.SDSS, objID: 1237665128253423687n }))).toBe(
+      'sdss-1237665128253423687',
+    );
   });
 
   it('falls back to pos@ra,dec rounded to 4 decimals when objID is 0n', () => {
@@ -116,9 +109,7 @@ describe('selectionToFocusId', () => {
   });
 
   it('returns null for synthetic-source rows (not link-encodable)', () => {
-    expect(
-      selectionToFocusId(baseInfo({ source: Source.Synthetic })),
-    ).toBeNull();
+    expect(selectionToFocusId(baseInfo({ source: Source.Synthetic }))).toBeNull();
   });
 });
 

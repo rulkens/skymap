@@ -63,7 +63,7 @@ describe('DemandCtx assignability', () => {
   });
 
   it('slotState accepts a numeric SourceType AssetKey', () => {
-    const kind = ctx.slotState(Source.Famous);
+    const kind = ctx.slotState(Source.FamousGalaxy);
     expect(typeof kind).toBe('string');
   });
 });

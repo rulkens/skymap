@@ -49,7 +49,6 @@ import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 
-
 // ── Module mocks ──────────────────────────────────────────────────────
 //
 // Replace every fetcher with a no-op resolved Promise.  None of our
@@ -267,7 +266,7 @@ function bootPointSlots(): Map<SourceType, ReturnType<typeof makeFakeSlot>> {
     [Source.SDSS, makeFakeSlot('sdss-points')],
     [Source.TwoMRS, makeFakeSlot('2mrs-points')],
     [Source.Glade, makeFakeSlot('glade-points')],
-    [Source.Famous, famous],
+    [Source.FamousGalaxy, famous],
   ]);
 }
 
@@ -451,7 +450,7 @@ describe('wireSlots', () => {
       [Source.SDSS, sdssSlot],
       [Source.TwoMRS, twoMrsSlot],
       [Source.Glade, gladeSlot],
-      [Source.Famous, famousSlot],
+      [Source.FamousGalaxy, famousSlot],
     ]);
     const state = makeState({ points });
     const deps = makeDeps();
@@ -632,7 +631,7 @@ describe('wireSlots', () => {
       [Source.SDSS, sdssSlot],
       [Source.TwoMRS, twoMrsSlot],
       [Source.Glade, gladeSlot],
-      [Source.Famous, famousSlot],
+      [Source.FamousGalaxy, famousSlot],
       [Source.Synthetic, synthSlot],
     ]);
     const state = makeState({ points });
@@ -667,7 +666,7 @@ describe('wireSlots', () => {
       [Source.SDSS, sdssSlot],
       [Source.TwoMRS, twoMrsSlot],
       [Source.Glade, gladeSlot],
-      [Source.Famous, famousSlot],
+      [Source.FamousGalaxy, famousSlot],
     ]);
     const state = makeState({ points });
     const deps = makeDeps();

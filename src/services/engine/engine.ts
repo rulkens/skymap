@@ -885,13 +885,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   function selectFamous(id: string): void {
     // Guard: the famous catalog may not be loaded yet (sidecars arrive
     // slightly after the point cloud).  Early return is cosmetically safe.
-    const cloud = state.data.galaxies.catalogs.get(Source.Famous);
+    const cloud = state.data.galaxies.catalogs.get(Source.FamousGalaxy);
     if (!cloud) return;
     const localIdx = state.data.galaxies.famousMeta.findIndex((m) => m.id === id);
     if (localIdx < 0) return;
 
     // Build the GalaxyInfo the picker would, from live sidecars.
-    const info = buildGalaxyInfo(cloud, localIdx, Source.Famous, state.data.galaxies.famousMeta);
+    const info = buildGalaxyInfo(
+      cloud,
+      localIdx,
+      Source.FamousGalaxy,
+      state.data.galaxies.famousMeta,
+    );
     if (!info) return;
 
     // A palette pick is a deliberate focus action, so move the camera too.

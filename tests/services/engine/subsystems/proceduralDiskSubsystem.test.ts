@@ -129,15 +129,33 @@ describe('createProceduralDiskSubsystem', () => {
         // API.  If a future change starts calling these, the test will
         // tell us — and we can decide whether the new call site is
         // appropriate.
-        allocate: () => { throw new Error('atlas.allocate not expected'); },
-        slotUv: () => { throw new Error('atlas.slotUv not expected'); },
-        lastSeenFrame: () => { throw new Error('atlas.lastSeenFrame not expected'); },
-        uploadBitmap: () => { throw new Error('atlas.uploadBitmap not expected'); },
-        enqueueFetch: () => { throw new Error('atlas.enqueueFetch not expected'); },
-        isFailed: () => { throw new Error('atlas.isFailed not expected'); },
-        inFlightCount: () => { throw new Error('atlas.inFlightCount not expected'); },
-        getTextureView: () => { throw new Error('atlas.getTextureView not expected'); },
-        setEvictHandler: () => { throw new Error('atlas.setEvictHandler not expected'); },
+        allocate: () => {
+          throw new Error('atlas.allocate not expected');
+        },
+        slotUv: () => {
+          throw new Error('atlas.slotUv not expected');
+        },
+        lastSeenFrame: () => {
+          throw new Error('atlas.lastSeenFrame not expected');
+        },
+        uploadBitmap: () => {
+          throw new Error('atlas.uploadBitmap not expected');
+        },
+        enqueueFetch: () => {
+          throw new Error('atlas.enqueueFetch not expected');
+        },
+        isFailed: () => {
+          throw new Error('atlas.isFailed not expected');
+        },
+        inFlightCount: () => {
+          throw new Error('atlas.inFlightCount not expected');
+        },
+        getTextureView: () => {
+          throw new Error('atlas.getTextureView not expected');
+        },
+        setEvictHandler: () => {
+          throw new Error('atlas.setEvictHandler not expected');
+        },
         destroy: () => {},
       } as unknown as ProceduralDiskDeps['atlas'];
     }
@@ -147,7 +165,7 @@ describe('createProceduralDiskSubsystem', () => {
       // the new code path doesn't disturb instances when the dep is
       // absent (tests + back-compat).
       const sys = createProceduralDiskSubsystem({ decimationFactor: 1 });
-      const clouds = new Map([[Source.Famous, makeDenseCloud(2)]]);
+      const clouds = new Map([[Source.FamousGalaxy, makeDenseCloud(2)]]);
       const out = sys.runFrame(makeInput(clouds));
       expect(out.instances.length).toBe(2);
       for (const ins of out.instances) expect(ins.procFadeOut).toBe(1.0);
@@ -176,7 +194,7 @@ describe('createProceduralDiskSubsystem', () => {
         decimationFactor: 1,
         atlas: makeStubAtlas(new Set()), // empty set → nothing loaded
       });
-      const clouds = new Map([[Source.Famous, makeDenseCloud(2)]]);
+      const clouds = new Map([[Source.FamousGalaxy, makeDenseCloud(2)]]);
       const out = sys.runFrame(makeInput(clouds));
       expect(out.instances.length).toBe(2);
       for (const ins of out.instances) expect(ins.procFadeOut).toBe(1.0);

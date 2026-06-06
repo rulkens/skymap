@@ -34,21 +34,20 @@ describe('galaxyType', () => {
     ).toBe('green');
   });
 
-  // Diagnostic outcome: Source.Famous *does* run a classifier (u−r via
+  // Diagnostic outcome: Source.FamousGalaxy *does* run a classifier (u−r via
   // galaxyTypeFromColor), so all-zero photometry yields a colour rather
   // than the UNKNOWN fallback.  u−r = 0 ≤ 2.2, so the result is 'blue'.
   // The original spec assumed Famous had no classifier; reality is that
   // the dispatcher reuses the SDSS path because Famous entries borrow
   // SDSS-style optical slots (see comment in galaxyType.ts case body).
-  it('Source.Famous reuses the SDSS u−r classifier (zero photometry → blue)', () => {
+  it('Source.FamousGalaxy reuses the SDSS u−r classifier (zero photometry → blue)', () => {
     expect(
-      galaxyType(Source.Famous, { magU: 0, magG: 0, magR: 0, magI: 0, magZ: 0 }).category,
+      galaxyType(Source.FamousGalaxy, { magU: 0, magG: 0, magR: 0, magI: 0, magZ: 0 }).category,
     ).toBe('blue');
   });
-  it('Source.Famous with NaN photometry falls back to UNKNOWN (green)', () => {
+  it('Source.FamousGalaxy with NaN photometry falls back to UNKNOWN (green)', () => {
     expect(
-      galaxyType(Source.Famous, { magU: NaN, magG: 0, magR: NaN, magI: 0, magZ: 0 })
-        .category,
+      galaxyType(Source.FamousGalaxy, { magU: NaN, magG: 0, magR: NaN, magI: 0, magZ: 0 }).category,
     ).toBe('green');
   });
 });

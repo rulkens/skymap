@@ -59,7 +59,7 @@ function seed(
   diameters: number[],
 ): void {
   state.data.galaxies.setFamousMeta(meta(...entries));
-  state.data.galaxies.setCatalog(Source.Famous, famousCatalog(positions, diameters));
+  state.data.galaxies.setCatalog(Source.FamousGalaxy, famousCatalog(positions, diameters));
 }
 
 describe('produceFamousLabels', () => {
@@ -144,7 +144,7 @@ describe('produceFamousLabels', () => {
     expect(produceFamousLabels(noCatalog, makeCtx()).labels).toEqual([]);
 
     const noMeta = makeState();
-    noMeta.data.galaxies.setCatalog(Source.Famous, famousCatalog([10, 0, 0], [120]));
+    noMeta.data.galaxies.setCatalog(Source.FamousGalaxy, famousCatalog([10, 0, 0], [120]));
     expect(produceFamousLabels(noMeta, makeCtx()).labels).toEqual([]);
   });
 

@@ -19,12 +19,8 @@ describe('sourceClassLabel', () => {
     expect(sourceClassLabel(Source.Milliquas, MILLIQUAS_CLASS_BYTE.Q)).toBe('Quasar');
     expect(sourceClassLabel(Source.Milliquas, MILLIQUAS_CLASS_BYTE.A)).toBe('AGN type-1');
     expect(sourceClassLabel(Source.Milliquas, MILLIQUAS_CLASS_BYTE.B)).toBe('BL Lac');
-    expect(sourceClassLabel(Source.Milliquas, MILLIQUAS_CLASS_BYTE.K)).toBe(
-      'Seyfert-1 narrow',
-    );
-    expect(sourceClassLabel(Source.Milliquas, MILLIQUAS_CLASS_BYTE.N)).toBe(
-      'Seyfert-1 broad',
-    );
+    expect(sourceClassLabel(Source.Milliquas, MILLIQUAS_CLASS_BYTE.K)).toBe('Seyfert-1 narrow');
+    expect(sourceClassLabel(Source.Milliquas, MILLIQUAS_CLASS_BYTE.N)).toBe('Seyfert-1 broad');
     expect(sourceClassLabel(Source.Milliquas, MILLIQUAS_CLASS_BYTE.S)).toBe('Candidate');
   });
 
@@ -37,7 +33,7 @@ describe('sourceClassLabel', () => {
     expect(sourceClassLabel(Source.SDSS, 1)).toBeNull();
     expect(sourceClassLabel(Source.TwoMRS, 5)).toBeNull();
     expect(sourceClassLabel(Source.Glade, 3)).toBeNull();
-    expect(sourceClassLabel(Source.Famous, 2)).toBeNull();
+    expect(sourceClassLabel(Source.FamousGalaxy, 2)).toBeNull();
     expect(sourceClassLabel(Source.Synthetic, 1)).toBeNull();
   });
 

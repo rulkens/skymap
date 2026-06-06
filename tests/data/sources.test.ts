@@ -8,38 +8,38 @@ import {
 } from '../../src/data/sources';
 import { ALL_VISIBLE_MASK, maskHas, maskWith, maskWithout } from '../../src/utils/sourceMask';
 
-describe('Source.Famous', () => {
+describe('Source.FamousGalaxy', () => {
   it('has integer value 4 (next free slot after Glade=3)', () => {
-    expect(Source.Famous).toBe(4);
+    expect(Source.FamousGalaxy).toBe(4);
   });
 
   it('appears in SURVEY_SOURCES', () => {
-    expect(SURVEY_SOURCES).toContain(Source.Famous);
+    expect(SURVEY_SOURCES).toContain(Source.FamousGalaxy);
   });
 
   it('is included in ALL_VISIBLE_MASK', () => {
-    expect(maskHas(ALL_VISIBLE_MASK, Source.Famous)).toBe(true);
+    expect(maskHas(ALL_VISIBLE_MASK, Source.FamousGalaxy)).toBe(true);
   });
 
   it('has a non-empty display label', () => {
-    expect(SOURCE_REGISTRY[Source.Famous].label.length).toBeGreaterThan(0);
+    expect(SOURCE_REGISTRY[Source.FamousGalaxy].label.length).toBeGreaterThan(0);
   });
 
   it('is treated as all-sky (cherry-picked entries from anywhere)', () => {
-    expect(SOURCE_REGISTRY[Source.Famous].allSky).toBe(true);
+    expect(SOURCE_REGISTRY[Source.FamousGalaxy].allSky).toBe(true);
   });
 
   it('has a sensible default max-distance for camera framing', () => {
     // Famous nearby galaxies span M31 (0.78 Mpc) to NGC 4889 (~94 Mpc);
     // pad to 200 Mpc so the camera frames the whole catalog comfortably.
-    expect(SOURCE_REGISTRY[Source.Famous].maxDistMpc).toBeGreaterThanOrEqual(200);
+    expect(SOURCE_REGISTRY[Source.FamousGalaxy].maxDistMpc).toBeGreaterThanOrEqual(200);
   });
 
   it('exposes the SDSS-like band layout (curated metadata uses optical bands)', () => {
     // Curated entries don't carry photometry; the band layout is cosmetic
     // — InfoCard uses it to label colour rows. We mirror SDSS so the
     // existing FullCard markup renders cleanly without a new branch.
-    const entry = SOURCE_REGISTRY[Source.Famous];
+    const entry = SOURCE_REGISTRY[Source.FamousGalaxy];
     expect(entry.type).toBe('survey');
     if (entry.type === 'survey') expect(entry.bandLabels.g).toBeTruthy();
   });

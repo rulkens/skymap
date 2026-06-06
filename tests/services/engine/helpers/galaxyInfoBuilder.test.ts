@@ -412,9 +412,9 @@ describe('buildGalaxyInfo — Famous source', () => {
       },
     ];
 
-    const info = buildGalaxyInfo(cloud, 0, Source.Famous, meta);
+    const info = buildGalaxyInfo(cloud, 0, Source.FamousGalaxy, meta);
 
-    expect(info.source).toBe(Source.Famous);
+    expect(info.source).toBe(Source.FamousGalaxy);
     expect(info.iauName.startsWith('Famous J')).toBe(true);
     // Famous rows prefer the curated, non-deprojected tile; the DSS sky cutout
     // becomes the fallback shown if the curated tile is missing.
@@ -433,7 +433,7 @@ describe('buildGalaxyInfo — Famous source', () => {
     // not crash — the InfoCard simply renders the generic layout for that hover.
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 1, 0, 0);
-    const info = buildGalaxyInfo(cloud, 0, Source.Famous);
+    const info = buildGalaxyInfo(cloud, 0, Source.FamousGalaxy);
     expect(info.famous).toBeUndefined();
   });
 });
