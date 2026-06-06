@@ -8,8 +8,8 @@
  *
  * These tests verify two axes:
  *
- *   1. Identity derives from settings keys, not the GPU handle list.
- *   2. Values come from settings, not from the volume store.
+ *   1. Identity derives from `state.settings.volumes.fields` keys, not the GPU handle list.
+ *   2. Values come from `state.settings.volumes.fields`, not from any GPU-side state.
  *
  * Fixtures stub only the slices of EngineState that the helper reads:
  * `state.settings.volumes.fields`.  The renderer stub is present on some
@@ -67,8 +67,6 @@ describe('buildVolumeFieldsSnapshot', () => {
   });
 
   it('derives field values from state.settings.volumes.fields', () => {
-    // The volume store's `params()` returns contrast: 99 — a sentinel
-    // value that must NOT appear in the output (values come from settings).
     const state = {
       gpu: {
         scalarVolumeRenderer: {
@@ -90,20 +88,13 @@ describe('buildVolumeFieldsSnapshot', () => {
           },
         },
       },
-      // Volume store present but returning divergent values — proves the
-      // helper no longer reads from here for per-field values.
-      data: {
-        volumes: {
-          params: (_id: string) => ({ contrast: 99, intensity: 0.99 }),
-        },
-      },
     } as unknown as EngineState;
 
     const rows = buildVolumeFieldsSnapshot(state);
 
     expect(rows).toHaveLength(1);
     expect(rows[0]?.handle).toBe('mcpm');
-    // These come from settings, not the store's sentinel values.
+    // Values come from settings.volumes.fields, not GPU-side state.
     expect(rows[0]?.contrast).toBe(3);
     expect(rows[0]?.intensity).toBe(0.2);
   });

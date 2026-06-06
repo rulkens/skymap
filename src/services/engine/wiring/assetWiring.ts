@@ -144,7 +144,7 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
 
   // ── MCPM Cosmic Web volume ───────────────────────────────────────
   // Tier-aware. Field id read from the registry; access is optional-chained
-  // because the volume store has no entry for a field until it is seeded.
+  // because `state.settings.volumes.fields` has no entry for a field until it is seeded.
   {
     key: 'mcpm',
     factory: (deps) => createMcpmSlot(deps.state, deps.cb),

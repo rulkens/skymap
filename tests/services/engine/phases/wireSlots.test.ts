@@ -290,8 +290,9 @@ const errorValue = (msg: string): LoadState<unknown> => ({
  * Minimal `EngineState` shaped for wireSlots's body.  Mirrors the
  * post-`initGpu` shape: the GPU renderers are present (so commit
  * subscribers don't NPE), the per-source slot map is empty (the test
- * populates it per-case), and the volume store is seeded (so the MCPM
- * demand predicate reads true at boot, as wireSlots expects).
+ * populates it per-case), and the volume fields are seeded via
+ * `settings.volumes.fields: seedVolumeFields()` (so the MCPM demand
+ * predicate reads true at boot, as wireSlots expects).
  */
 function makeState(
   overrides: Partial<{

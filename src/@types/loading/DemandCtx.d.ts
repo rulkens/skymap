@@ -18,11 +18,11 @@
  *      master-enable toggles (`filaments.enabled`, `volumes.masterEnabled`,
  *      `milkyWay.enabled`).  Most predicates start here.
  *
- *   2. `volumeField` — a per-field volume params accessor reading the volume
- *      store (the authoritative home for `VolumeFieldSettings`).  Volume
- *      demand predicates query this (`volumeField(id)?.enabled`) rather than
- *      `settings`, since the per-field params no longer live on the settings
- *      bag.
+ *   2. `volumeField` — a per-field volume settings accessor reading
+ *      `state.settings.volumes.fields` (the authoritative home for
+ *      `VolumeFieldSettings`).  Volume demand predicates query this
+ *      (`volumeField(id)?.enabled`) rather than the top-level `settings`,
+ *      since per-field params live on the dedicated fields map.
  *
  *   3. `isVisible` — the per-source drawMask bit.  A source-specific asset
  *      should only be loaded if its source is visible; this avoids
@@ -70,8 +70,9 @@ export type DemandCtx = {
   /** Read-only view of the user-facing rendering settings. */
   settings: Readonly<EngineSettingsState>;
   /**
-   * A volume field's params from the volume store, or undefined if not
-   * registered. Volume demand predicates read `volumeField(id)?.enabled`.
+   * A volume field's settings from `state.settings.volumes.fields`, or
+   * undefined if the field has no settings row. Volume demand predicates
+   * read `volumeField(id)?.enabled`.
    */
   volumeField: (id: VolumeFieldId) => VolumeFieldSettings | undefined;
   /** Returns true when the given source's drawMask bit is set. */

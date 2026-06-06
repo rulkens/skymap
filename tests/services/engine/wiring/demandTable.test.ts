@@ -212,8 +212,8 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
 
   return {
     // Inject volume fields directly into `settings.volumes.fields` — demand
-    // predicates read `ctx.volumeField(id)?.enabled` from that path, not from
-    // the volume store.
+    // predicates read `ctx.volumeField(id)?.enabled` from that path via
+    // `state.settings.volumes.fields`.
     settings: {
       ...(settings as unknown as EngineSettingsState),
       volumes: { fields: volumeFields },
