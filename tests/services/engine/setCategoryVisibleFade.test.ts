@@ -3,8 +3,10 @@
  *
  * These drive the extracted module-level setters directly against a minimal
  * state stub (mirroring `setSourceVisibleFade.test.ts`). The setters read only
- * `state.data.{galaxies,structures}`, `state.settings`, and
+ * `state.data.galaxies` (famous-galaxy label branch), `state.settings`, and
  * `state.subsystems.{fades,scheduler}`, so a mock of those surfaces suffices.
+ * Structure-category visibility is now a pure FadeRegistry concern — the
+ * setters fire `fadeTo` and no longer write any structure-store flag.
  *
  * The contract under test: a category toggle drives the SAME per-category fade
  * handle the producers read (`markerLayer{category}` /
@@ -41,10 +43,7 @@ function makeFixture() {
     tick: vi.fn(),
     destroy: vi.fn(),
   };
-  const structures = {
-    setLabelVisible: vi.fn(),
-    setMarkerVisible: vi.fn(),
-  };
+  const structures = {};
   const galaxies = {
     setFamousLabelsVisible: vi.fn(),
   };
@@ -83,11 +82,10 @@ function makeFixture() {
 // ── Marker setter ──────────────────────────────────────────────────────────
 
 describe('setCategoryMarkerVisible — fade orchestration', () => {
-  it('toggle OFF fires fadeTo(markerLayer{cluster}, 0, FADE_OUT) and routes to the store', () => {
+  it('toggle OFF fires fadeTo(markerLayer{cluster}, 0, FADE_OUT)', () => {
     const fx = makeFixture();
     setCategoryMarkerVisibleForTest(fx.state as never, fx.cb as never, 'cluster', false);
 
-    expect(fx.structures.setMarkerVisible).toHaveBeenCalledWith('cluster', false);
     expect(fx.fadeCalls).toEqual([
       {
         handle: { kind: 'markerLayer', category: 'cluster' },
@@ -117,9 +115,8 @@ describe('setCategoryMarkerVisible — fade orchestration', () => {
     const fx = makeFixture();
     setCategoryMarkerVisibleForTest(fx.state as never, fx.cb as never, 'famousGalaxy', false);
 
-    // No ring for famous galaxies → no markerLayer fade and no structure-store write.
+    // No ring for famous galaxies → no markerLayer fade.
     expect(fx.fadeCalls).toEqual([]);
-    expect(fx.structures.setMarkerVisible).not.toHaveBeenCalled();
     // Settings mirror + callback + render still happen.
     expect(fx.state.settings.markerCategoryVisibility.famousGalaxy).toBe(false);
     expect(fx.cb.labels.onMarkerCategoryVisibilityChange).toHaveBeenCalledTimes(1);
@@ -134,7 +131,6 @@ describe('setCategoryLabelVisible — fade orchestration', () => {
     const fx = makeFixture();
     setCategoryLabelVisibleForTest(fx.state as never, fx.cb as never, 'cluster', false);
 
-    expect(fx.structures.setLabelVisible).toHaveBeenCalledWith('cluster', false);
     expect(fx.fadeCalls).toEqual([
       {
         handle: { kind: 'labelLayer', layer: 'poi', category: 'cluster' },
@@ -160,8 +156,6 @@ describe('setCategoryLabelVisible — fade orchestration', () => {
         duration: FADE_OUT_DURATION_MS,
       },
     ]);
-    // Did NOT route to the structure store.
-    expect(fx.structures.setLabelVisible).not.toHaveBeenCalled();
     expect(fx.state.settings.labelCategoryVisibility.famousGalaxy).toBe(false);
   });
 

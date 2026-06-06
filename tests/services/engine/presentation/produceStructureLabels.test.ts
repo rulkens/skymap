@@ -32,13 +32,16 @@ function makeState(opts: { focusedPoiId?: string | null; fades?: FadeRegistry } 
   } as unknown as EngineState;
 }
 
-// Register every per-category poi label handle at full opacity so the
-// producer's load-in `fadeTo` (which THROWS on an unregistered handle) is a
-// safe no-op ramp. Individual tests override a handle to 0 where they need a
-// disabled category.
+// Register every per-category poi label AND ring marker handle at full opacity.
+// The label handle backs the producer's load-in `fadeTo` (which THROWS on an
+// unregistered handle); the marker handle backs the anchor gate, which now reads
+// `opacityOf({markerLayer, category})` so a label fades in lock-step with its
+// ring instead of popping. Individual tests override a handle to 0 (or a
+// mid-fade value) where they need a disabled / fading category.
 function registerAllCategories(fades: FadeRegistry): void {
   for (const category of STRUCTURE_CATEGORIES) {
     fades.register({ kind: 'labelLayer', layer: 'poi', category }, 1);
+    fades.register({ kind: 'markerLayer', category }, 1);
   }
 }
 
@@ -89,11 +92,31 @@ describe('produceStructureLabels', () => {
     expect(produceStructureLabels(state, makeCtx()).labels).toEqual([]);
   });
 
-  it('hides a structure label when its marker (ring anchor) is hidden', () => {
-    const state = makeState();
+  it('hides a structure label when its marker (ring anchor) is fully hidden', () => {
+    // The anchor gate reads the ring's OWN opacity source (the markerLayer fade
+    // handle), not an instant store flag. A category whose ring opacity is
+    // exactly 0 carries no label.
+    const fades = createFadeRegistry();
+    fades.register({ kind: 'labelLayer', layer: 'poi', category: 'cluster' }, 1);
+    fades.register({ kind: 'markerLayer', category: 'cluster' }, 1);
+    fades.setImmediate({ kind: 'markerLayer', category: 'cluster' }, 0);
+    const state = makeState({ fades });
     state.data.structures.setGroup('anchors', [rec('c1', { category: 'cluster' })]);
-    state.data.structures.setMarkerVisible('cluster', false);
     expect(produceStructureLabels(state, makeCtx()).labels).toEqual([]);
+  });
+
+  it('a structure label survives while its ring fades out (anchor gate reads opacityOf, not an instant flag)', () => {
+    // Mid-fade ring (opacity 0.5) must still carry its label — the old instant
+    // markerVisible flag flipped to false the moment the category toggled off,
+    // popping the label while the ring was still visibly fading. Reading the
+    // fade handle keeps them in lock-step.
+    const fades = createFadeRegistry();
+    fades.register({ kind: 'labelLayer', layer: 'poi', category: 'cluster' }, 1);
+    fades.register({ kind: 'markerLayer', category: 'cluster' }, 1);
+    fades.setImmediate({ kind: 'markerLayer', category: 'cluster' }, 0.5);
+    const state = makeState({ fades });
+    state.data.structures.setGroup('anchors', [rec('c1', { category: 'cluster' })]);
+    expect(produceStructureLabels(state, makeCtx()).labels.map((l) => l.id)).toEqual(['c1']);
   });
 
   it('sets prominencePx to the ring apparent radius and never declutters', () => {

@@ -33,6 +33,7 @@ import type { Vec4 } from '../../../@types/math/Vec4';
 import type { ClusterMarkerDescriptor } from '../../../@types/rendering/ClusterMarkerDescriptor';
 import { STRUCTURE_POI_STYLES, SIG_MIN_ALPHA } from './structurePoiStyles';
 import { focusRecession } from './focusRecession';
+import { poiIdOf } from '../helpers/poiIdOf';
 
 export function produceStructureMarkers(
   state: EngineState,
@@ -47,10 +48,8 @@ export function produceStructureMarkers(
   // selected → 1.5× ring bump (highlight what you clicked); focused → the
   // "every OTHER ring recedes" mode (cluster-focus). A galaxy selection
   // leaves the matching id null, so no structure ring is bumped / recedes.
-  const sel = state.subsystems.selection.selected();
-  const selectedPoiId = sel !== null && sel.kind === 'poi' ? sel.id : null;
-  const foc = state.subsystems.selection.focused();
-  const focusedPoiId = foc !== null && foc.kind === 'poi' ? foc.id : null;
+  const selectedPoiId = poiIdOf(state.subsystems.selection.selected());
+  const focusedPoiId = poiIdOf(state.subsystems.selection.focused());
 
   // Per-category marker opacity (the category toggle's fade) lives in the
   // FadeRegistry; unregistered handles fail-safe to 1.0. Snapshot `now` once so
@@ -61,7 +60,7 @@ export function produceStructureMarkers(
   const structures = state.data.structures;
   for (const p of structures.all()) {
     // Per-category marker opacity: the category toggle's fade, read from the
-    // registry (not the store's markerVisible flag). 0 is the ONLY legitimate
+    // registry. 0 is the ONLY legitimate
     // all-or-nothing skip — safe for within-category alignment. A mid-fade
     // value (0<opacity<1) scales the descriptor alpha instead of skipping.
     const catOpacity = fades.opacityOf({ kind: 'markerLayer', category: p.category }, now);

@@ -265,7 +265,6 @@ function setCategoryLabelVisible(
       visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
     );
   } else {
-    state.data.structures.setLabelVisible(category, visible);
     // `category !== 'famousGalaxy'` narrows PoiCategory to StructureCategory,
     // which is exactly what the labelLayer/poi handle's `category` field wants.
     void state.subsystems.fades.fadeTo(
@@ -298,7 +297,6 @@ function setCategoryMarkerVisible(
   // 'famousGalaxy'` guard narrows PoiCategory to StructureCategory, which the
   // markerLayer handle's `category` field requires.
   if (category !== 'famousGalaxy') {
-    state.data.structures.setMarkerVisible(category, visible);
     void state.subsystems.fades.fadeTo(
       { kind: 'markerLayer', category },
       visible ? 1 : 0,

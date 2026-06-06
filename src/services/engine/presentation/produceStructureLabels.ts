@@ -49,6 +49,7 @@ import { STRUCTURE_POI_STYLES } from './structurePoiStyles';
 import { getLabelStyleOverride } from '../labelStyleOverride';
 import { focusRecession } from './focusRecession';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
+import { poiIdOf } from '../helpers/poiIdOf';
 
 // Per-category load-in latch. The producer is a bare function (not a closure
 // over subsystem state like the director), so the once-per-category one-shot
@@ -89,14 +90,13 @@ export function produceStructureLabels(
   // the same instant and the same focus state.
   const fades = state.subsystems.fades;
   const now = performance.now();
-  const foc = state.subsystems.selection.focused();
-  const focusedPoiId = foc !== null && foc.kind === 'poi' ? foc.id : null;
+  const focusedPoiId = poiIdOf(state.subsystems.selection.focused());
 
   const structures = state.data.structures;
   for (const p of structures.all()) {
     // Per-category label opacity: the category toggle's fade, read from the
-    // registry (not the store's labelVisible flag). 0 is the all-or-nothing
-    // skip — a disabled category emits no labels and never fires its load-in.
+    // registry. 0 is the all-or-nothing skip — a disabled category emits no
+    // labels and never fires its load-in.
     const catOpacity = fades.opacityOf(
       { kind: 'labelLayer', layer: 'poi', category: p.category },
       now,
@@ -105,9 +105,11 @@ export function produceStructureLabels(
     // Featured gate: only the ~25-30 curated anchors earn text; the ~375
     // bulk clusters/SCs still render rings via the marker pass, no label.
     if (!p.featured) continue;
-    // Anchor gate: a structure label needs its ring marker as a visual
-    // anchor (a label without a ring reads as orphaned text).
-    if (!structures.markerVisible(p.category)) continue;
+    // Anchor gate: a label needs its ring marker as a visual anchor. Read the
+    // ring's OWN opacity source (the markerLayer fade handle, same as
+    // produceStructureMarkers) so the label fades out in lock-step with the ring
+    // instead of popping when the category toggles off mid-fade.
+    if (fades.opacityOf({ kind: 'markerLayer', category: p.category }, now) === 0) continue;
 
     const style = STRUCTURE_POI_STYLES[p.category];
 
