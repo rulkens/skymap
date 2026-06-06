@@ -151,6 +151,7 @@ export const SOURCE_REGISTRY = {
   [Source.Synthetic]: {
     type: 'survey',
     code: Source.Synthetic,
+    id: 'synthetic',
     label: 'Synthetic',
     binBaseName: null, // generated at runtime; no file
     allSky: true, // uniform-in-sphere by construction
@@ -176,6 +177,7 @@ export const SOURCE_REGISTRY = {
   [Source.SDSS]: {
     type: 'survey',
     code: Source.SDSS,
+    id: 'sdss',
     label: 'SDSS',
     binBaseName: 'sdss',
     allSky: false,
@@ -204,6 +206,7 @@ export const SOURCE_REGISTRY = {
   [Source.TwoMRS]: {
     type: 'survey',
     code: Source.TwoMRS,
+    id: '2mrs',
     label: '2MRS',
     binBaseName: '2mrs',
     allSky: true,
@@ -229,6 +232,7 @@ export const SOURCE_REGISTRY = {
   [Source.Glade]: {
     type: 'survey',
     code: Source.Glade,
+    id: 'glade',
     label: 'GLADE',
     binBaseName: 'glade',
     allSky: true,
@@ -259,6 +263,7 @@ export const SOURCE_REGISTRY = {
   [Source.FamousGalaxy]: {
     type: 'survey',
     code: Source.FamousGalaxy,
+    id: 'famousGalaxy',
     label: 'Famous',
     binBaseName: 'famous',
     allSky: true, // hand-picked entries from across the sky
@@ -286,6 +291,7 @@ export const SOURCE_REGISTRY = {
   [Source.Cluster]: {
     type: 'poi',
     code: Source.Cluster,
+    id: 'cluster',
     label: 'Cluster',
     allSky: true,
     visible: true,
@@ -293,15 +299,31 @@ export const SOURCE_REGISTRY = {
   [Source.Supercluster]: {
     type: 'poi',
     code: Source.Supercluster,
+    id: 'supercluster',
     label: 'Supercluster',
     allSky: true,
     visible: true,
   },
-  [Source.Void]: { type: 'poi', code: Source.Void, label: 'Void', allSky: true, visible: true },
-  [Source.Group]: { type: 'poi', code: Source.Group, label: 'Group', allSky: true, visible: true },
+  [Source.Void]: {
+    type: 'poi',
+    code: Source.Void,
+    id: 'void',
+    label: 'Void',
+    allSky: true,
+    visible: true,
+  },
+  [Source.Group]: {
+    type: 'poi',
+    code: Source.Group,
+    id: 'group',
+    label: 'Group',
+    allSky: true,
+    visible: true,
+  },
   [Source.Milliquas]: {
     type: 'survey',
     code: Source.Milliquas,
+    id: 'milliquas',
     label: 'Milliquas',
     binBaseName: 'milliquas',
     allSky: true,
@@ -355,6 +377,7 @@ export const SOURCE_REGISTRY = {
   [Source.Filaments]: {
     type: 'filament',
     code: Source.Filaments,
+    id: 'filaments',
     label: 'Filaments',
     allSky: true, // full-sky DisPerSE skeleton
     // Off by default — the line geometry overlays the cosmic-web wedge
@@ -369,6 +392,7 @@ export const SOURCE_REGISTRY = {
   [Source.Cf4Density]: {
     type: 'volume',
     code: Source.Cf4Density,
+    id: 'cf4-density',
     label: 'CF-4 DM density',
     allSky: true, // Valade 2024 reconstruction covers the full 256³ box
     // Default-off: the ~32 MB voxel payload is demand-loaded the first
@@ -396,6 +420,7 @@ export const SOURCE_REGISTRY = {
   [Source.Mcpm]: {
     type: 'volume',
     code: Source.Mcpm,
+    id: 'mcpm',
     label: 'MCPM Cosmic Web',
     allSky: true, // SDSS DR17 VAC, full SDSS volume
     // Default-on: this is the headline cosmic-web overlay; the global
@@ -422,6 +447,7 @@ export const SOURCE_REGISTRY = {
   [Source.DebugGaussian]: {
     type: 'volume',
     code: Source.DebugGaussian,
+    id: 'debug-gaussian',
     label: 'Gaussian (debug)',
     allSky: true,
     visible: false,
@@ -442,6 +468,7 @@ export const SOURCE_REGISTRY = {
   [Source.DebugCartesian]: {
     type: 'volume',
     code: Source.DebugCartesian,
+    id: 'debug-cartesian',
     label: 'Cartesian grid (debug)',
     allSky: true,
     visible: false,
@@ -462,6 +489,7 @@ export const SOURCE_REGISTRY = {
   [Source.DebugSpherical]: {
     type: 'volume',
     code: Source.DebugSpherical,
+    id: 'debug-spherical',
     label: 'Spherical grid (debug)',
     allSky: true,
     visible: false,

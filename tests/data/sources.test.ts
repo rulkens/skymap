@@ -45,6 +45,21 @@ describe('Source.FamousGalaxy', () => {
   });
 });
 
+describe('SOURCE_REGISTRY ids', () => {
+  const ids = Object.values(SOURCE_REGISTRY).map((e) => e.id);
+
+  it('every entry carries a non-empty id', () => {
+    expect(ids.every((id) => id.length > 0)).toBe(true);
+  });
+
+  it('ids are unique across the registry', () => {
+    // The id is the single home for each source's readable key — domain
+    // types (StructureCategory, visibility records, volume handles) derive
+    // from it, so a collision would silently merge two sources downstream.
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
 describe('Source enum — POI codes (cluster/supercluster/void)', () => {
   it('appends Cluster=5, Supercluster=6, Void=7 to the enum', () => {
     expect(Source.Cluster).toBe(5);
