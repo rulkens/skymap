@@ -60,15 +60,11 @@ describe('SOURCE_REGISTRY ids', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('STRUCTURE_CATEGORIES covers exactly the poi-source ids', () => {
-    // StructureCategory (the type) derives from the poi rows' ids; the
-    // STRUCTURE_CATEGORIES runtime list still spells them out (its order is
-    // semantic). This parity check keeps that list from drifting out of sync
-    // with the registry — add a poi source and you must list it here too.
-    const structureIds = Object.values(SOURCE_REGISTRY)
-      .filter((e) => e.type === 'structure')
-      .map((e) => e.id);
-    expect(new Set(STRUCTURE_CATEGORIES)).toEqual(new Set(structureIds));
+  it('STRUCTURE_CATEGORIES is exactly the four structure ids', () => {
+    // STRUCTURE_CATEGORIES derives from the registry's type:'structure' rows,
+    // so this pins the registry's structure set — accidentally dropping or
+    // renaming a structure source (or mistyping an id) trips this guard.
+    expect([...STRUCTURE_CATEGORIES].sort()).toEqual(['cluster', 'group', 'supercluster', 'void']);
   });
 });
 
