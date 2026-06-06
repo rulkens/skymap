@@ -7,7 +7,7 @@
  *   'survey'   — per-point galaxy catalogs (SDSS, GLADE, 2MRS, Famous,
  *                Milliquas, Synthetic).  Codes are baked into the `.bin`
  *                point-cloud format and packed into the pick texture.
- *   'poi'      — galaxy-cluster / supercluster / void marker rings.
+ *   'structure'— galaxy-cluster / supercluster / void / group marker rings.
  *                Codes are also packed into the pick texture (upper 5 bits).
  *   'filament' — derived line-strip geometry (DisPerSE skeleton).
  *                Single global asset; no per-record identity.
@@ -289,7 +289,7 @@ export const SOURCE_REGISTRY = {
     falloffHalfMpc: 1000,
   },
   [Source.Cluster]: {
-    type: 'poi',
+    type: 'structure',
     code: Source.Cluster,
     id: 'cluster',
     label: 'Cluster',
@@ -297,7 +297,7 @@ export const SOURCE_REGISTRY = {
     visible: true,
   },
   [Source.Supercluster]: {
-    type: 'poi',
+    type: 'structure',
     code: Source.Supercluster,
     id: 'supercluster',
     label: 'Supercluster',
@@ -305,7 +305,7 @@ export const SOURCE_REGISTRY = {
     visible: true,
   },
   [Source.Void]: {
-    type: 'poi',
+    type: 'structure',
     code: Source.Void,
     id: 'void',
     label: 'Void',
@@ -313,7 +313,7 @@ export const SOURCE_REGISTRY = {
     visible: true,
   },
   [Source.Group]: {
-    type: 'poi',
+    type: 'structure',
     code: Source.Group,
     id: 'group',
     label: 'Group',

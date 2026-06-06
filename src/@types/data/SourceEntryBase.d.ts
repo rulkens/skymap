@@ -1,6 +1,6 @@
 /**
  * Fields shared by every row of the SOURCE_REGISTRY, regardless of kind.
- * Each variant (`SurveySourceEntry`, `PoiSourceEntry`, ...) intersects with
+ * Each variant (`SurveySourceEntry`, `StructureSourceEntry`, ...) intersects with
  * this base and adds its own discriminator (`type: '<kind>'`) plus
  * kind-specific fields.
  */

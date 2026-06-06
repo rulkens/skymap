@@ -65,10 +65,10 @@ describe('SOURCE_REGISTRY ids', () => {
     // STRUCTURE_CATEGORIES runtime list still spells them out (its order is
     // semantic). This parity check keeps that list from drifting out of sync
     // with the registry — add a poi source and you must list it here too.
-    const poiIds = Object.values(SOURCE_REGISTRY)
-      .filter((e) => e.type === 'poi')
+    const structureIds = Object.values(SOURCE_REGISTRY)
+      .filter((e) => e.type === 'structure')
       .map((e) => e.id);
-    expect(new Set(STRUCTURE_CATEGORIES)).toEqual(new Set(poiIds));
+    expect(new Set(STRUCTURE_CATEGORIES)).toEqual(new Set(structureIds));
   });
 });
 
