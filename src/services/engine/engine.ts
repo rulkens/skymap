@@ -88,6 +88,7 @@ import {
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
+  DEFAULT_FLOW,
 } from '../../data/defaults';
 import type { GalaxyCatalog } from '../../@types/data/GalaxyCatalog';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
@@ -150,6 +151,7 @@ import type { PoiCategory } from '../../@types/engine/data/PoiCategory';
 // connect/disconnect/sensitivity setters forward straight through.
 import { createSpaceMouseSubsystem } from './subsystems/spaceMouseSubsystem';
 import { buildSettersFromTable } from './wiring/settingsTable';
+import { reevaluateDemand } from './wiring/reevaluateDemand';
 import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
   loadCompanionAssets,
@@ -436,6 +438,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         masterEnabled: DEFAULT_VOLUMES_ENABLED,
         fields: seedVolumeFields(),
       },
+      // Flow is a singleton overlay layer: all its user-facing state (master
+      // gate + look/motion knobs) lives here, spread from the single
+      // `DEFAULT_FLOW` seed. The `state.data.flow` store stays status-only.
+      flow: { ...DEFAULT_FLOW },
       // Per-category POI visibility — two independent axes (label-text vs
       // marker-glyph), both default-all-on.  Each record is the source of
       // truth for its axis: adding a new POI category means widening
@@ -532,6 +538,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // null until initGpu; excluded from isEngineReady — volumeUpsamplePass
       // null-checks both before hasActiveFields(), so a null state no-ops.
       scalarVolumeRenderer: null,
+      flowFieldRenderer: null,
       volumeUpsample: null,
       // Debug overlays. null until initGpu; the per-frame consumer
       // null-checks each together with its `settings.debug.*` toggle.
@@ -671,6 +678,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       cf4Density: null,
       // Tier-aware (unlike cf4Density): setTier reloads on tier change.
       mcpm: null,
+      // Default-off velocity flow field; demand-loaded like cf4Density.
+      flow: null,
     },
     // ── One-shot transient request flags ────────────────────────────────
     //
@@ -1248,6 +1257,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.horizonShellRenderer = null;
     state.gpu.scalarVolumeRenderer?.destroy();
     state.gpu.scalarVolumeRenderer = null;
+    state.gpu.flowFieldRenderer?.destroy();
+    state.gpu.flowFieldRenderer = null;
     state.gpu.volumeUpsample?.destroy();
     state.gpu.volumeUpsample = null;
     state.gpu.pickDebugOverlay?.destroy();
@@ -1341,6 +1352,52 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         state.subsystems.scheduler.requestRender();
       },
       setIntensity: (value) => boringSetters.setFilamentIntensity(value),
+    },
+    flow: {
+      // One patch-shaped entry point over the `settings.flow` slice. Each
+      // present leaf is written through its table-driven boringSetter (which
+      // clamps + wakes the scheduler), then the per-leaf side effects fire off
+      // which keys the patch carried. boringSetters.setFlow* are typed
+      // `(value: unknown) => void`; the FlowSettings leaf types narrow them.
+      set: (patch) => {
+        if (patch.enabled !== undefined) boringSetters.setFlowEnabled(patch.enabled);
+        if (patch.mode !== undefined) boringSetters.setFlowMode(patch.mode);
+        if (patch.intensity !== undefined) boringSetters.setFlowIntensity(patch.intensity);
+        if (patch.count !== undefined) boringSetters.setFlowCount(patch.count);
+        if (patch.trail !== undefined) boringSetters.setFlowTrail(patch.trail);
+        if (patch.flowSpeed !== undefined) boringSetters.setFlowSpeed(patch.flowSpeed);
+        if (patch.densityBias !== undefined) boringSetters.setFlowDensityBias(patch.densityBias);
+        if (patch.wander !== undefined) boringSetters.setFlowWander(patch.wander);
+        if (patch.boundaryFadeWidth !== undefined)
+          boringSetters.setFlowBoundaryFadeWidth(patch.boundaryFadeWidth);
+
+        // enabled: re-evaluate demand so the first enable lazy-loads the cube,
+        // then fade — but only when the cube is resident. `loaded === true`
+        // implies the slot committed and registered the {kind:'flow'} fade
+        // handle, so fadeTo is provably safe. When NOT loaded there is nothing
+        // drawn to fade AND the handle may be unregistered: a returning user
+        // skips the splash and can toggle during the async bootstrap (before
+        // wireSlots runs), where fadeTo throws. The FIRST-enable fade-in is
+        // owned by the slot commit; this branch handles re-enable + fade-out
+        // (the cube stays resident — reevaluateDemand never unloads).
+        if (patch.enabled !== undefined) {
+          reevaluateDemand(state);
+          if (state.data.flow.loaded) {
+            void state.subsystems.fades.fadeTo(
+              { kind: 'flow' },
+              patch.enabled ? 1 : 0,
+              patch.enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+            );
+          }
+        }
+
+        // mode / count both reseed the shared particle buffers.
+        if (patch.mode !== undefined || patch.count !== undefined) {
+          state.gpu.flowFieldRenderer?.maybeReseed();
+        }
+
+        state.subsystems.scheduler.requestRender();
+      },
     },
     labels: {
       // Two parallel setters, one per independent visibility axis.  Each

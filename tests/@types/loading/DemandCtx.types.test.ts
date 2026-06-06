@@ -51,18 +51,18 @@ describe('DemandCtx assignability', () => {
     expect(typeof result).toBe('boolean');
   });
 
-  it("isVisible accepts a SourceType value", () => {
+  it('isVisible accepts a SourceType value', () => {
     const result: boolean = ctx.isVisible(Source.SDSS);
     expect(typeof result).toBe('boolean');
   });
 
-  it("slotState accepts an AssetKey string and returns a LoadState kind", () => {
+  it('slotState accepts an AssetKey string and returns a LoadState kind', () => {
     const kind = ctx.slotState('clusterCatalog');
     // The return type is LoadState<unknown>['kind'] — a union of string literals.
     expect(typeof kind).toBe('string');
   });
 
-  it("slotState accepts a numeric SourceType AssetKey", () => {
+  it('slotState accepts a numeric SourceType AssetKey', () => {
     const kind = ctx.slotState(Source.Famous);
     expect(typeof kind).toBe('string');
   });

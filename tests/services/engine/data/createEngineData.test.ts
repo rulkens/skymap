@@ -9,4 +9,9 @@ describe('createEngineData', () => {
     expect(d.filaments.loaded).toBe(false);
     expect('volumes' in d).toBe(false);
   });
+
+  it('includes a status-only flow store', () => {
+    const d = createEngineData();
+    expect(d.flow.loaded).toBe(false);
+  });
 });

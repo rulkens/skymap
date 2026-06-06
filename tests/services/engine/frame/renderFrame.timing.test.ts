@@ -245,9 +245,13 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         markerLineRenderer: null,
         selectionRingRenderer: null,
         scalarVolumeRenderer: null,
+        flowFieldRenderer: null,
         clusterMarkerRenderer: null,
         focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
       },
+      // encodeFlowCompute (pre-HDR) reads these; default-off → gate returns.
+      settings: { flow: { enabled: false } },
+      data: { flow: { loaded: false } },
       subsystems: {
         proceduralDisks: null,
         texturedDisks: null,
@@ -268,6 +272,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     horizonShellRenderer: horizonShellRenderer as never,
     filamentRenderer: null,
     scalarVolumeRenderer: null,
+    flowFieldRenderer: null,
     texturedDiskRenderer: texturedDiskRenderer as never,
     proceduralDiskRenderer: proceduralDiskRenderer as never,
     settings: settings as never,
@@ -333,11 +338,7 @@ describe('renderFrame — timing service hookup', () => {
       expect(tw).toBeDefined();
       return (tw!.querySet as unknown as { _stub: TimingSlotName })._stub;
     });
-    expect(stubSlotsOnDescriptors).toEqual([
-      'point-sprites',
-      'milky-way',
-      'ui-overlay',
-    ]);
+    expect(stubSlotsOnDescriptors).toEqual(['point-sprites', 'milky-way', 'ui-overlay']);
 
     // The clear pass at index 0 must have NO timestampWrites field.
     const clearDesc = beginCalls[0]!.desc as GPURenderPassDescriptor & {

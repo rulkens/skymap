@@ -188,6 +188,7 @@ export async function buildCf4Density(args: {
   // ── 5. Build the data-only cube ────────────────────────────────────
   const cube: ScalarCube = {
     dims,
+    channels: 1,
     voxels,
     frameKind: 'supergalactic-cartesian',
     origin,

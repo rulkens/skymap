@@ -35,6 +35,7 @@ import AutoRotateToggle from '../AutoRotateToggle/AutoRotateToggle';
 import Splash from '../Splash/Splash';
 import AboutPill from '../Splash/AboutPill';
 import { MILKY_WAY_ENTRY, MILKY_WAY_ID } from '../../data/milkyWayEntry';
+import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import appStyles from './App.module.css';
 import { useUrlSync } from '../../hooks/useUrlSync';
 import { useFamousMeta } from '../../hooks/useFamousMeta';
@@ -54,6 +55,7 @@ export function App(): React.ReactElement {
     setFilamentIntensity,
     setVolumesEnabled,
     setSpaceMouseSensitivity,
+    updateFlow,
   } = useEngineSettings();
 
   const {
@@ -77,6 +79,7 @@ export function App(): React.ReactElement {
     volumeFields,
     spaceMouseConnected,
     spaceMouseSensitivity,
+    flow,
   } = settings;
 
   // SettingsPanel's SpaceMouse section appears only when WebHID is
@@ -100,6 +103,18 @@ export function App(): React.ReactElement {
     loadProgress,
     currentTier,
   } = useEngine({ extraCallbacks: settingsCallbacks });
+
+  // Flow overlay has no engine echo, so a knob change must land in two homes:
+  // the React mirror (optimistic) and the engine handle. One patch covers both
+  // — `updateFlow` merges it into React, `handle.flow.set` applies it engine-side
+  // (with the per-leaf demand/fade/reseed effects). Both panels share this.
+  const onFlowChange = useCallback(
+    (patch: Partial<FlowSettings>) => {
+      updateFlow(patch);
+      handleRef.current?.flow.set(patch);
+    },
+    [updateFlow, handleRef],
+  );
 
   // Live "N galaxies" figure for a pinned cluster/SC/void card.  Recomputes
   // on selection / tier swap / catalog landing (`sourceCounts`) / survey
@@ -320,6 +335,12 @@ export function App(): React.ReactElement {
             onVolumeFieldPaletteChange={(fieldId, paletteId) =>
               handleRef.current?.volumes.setPalette(fieldId, paletteId)
             }
+            // Flow has no engine echo — React owns the slice, so `onFlowChange`
+            // applies the optimistic patch AND forwards it to the engine handle
+            // (same lock-step idiom as filaments, now one patch instead of nine
+            // per-knob handlers).
+            flow={flow}
+            onFlowChange={onFlowChange}
           />
           <StatsPanel
             defaultOpen={false}
@@ -385,6 +406,11 @@ export function App(): React.ReactElement {
             onShowDiskRadiusRingChange={(enabled) => {
               handleRef.current?.debug.setShowDiskRadiusRing(enabled);
             }}
+            // Flow motion tunables — no engine echo; the shared `onFlowChange`
+            // applies the optimistic patch AND forwards it to the handle (same
+            // path as the SettingsPanel flow look controls).
+            flow={flow}
+            onFlowChange={onFlowChange}
           />
         )}
       </div>

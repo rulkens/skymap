@@ -21,6 +21,7 @@ import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
 import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
+import type { FlowFieldRenderer } from '../../rendering/FlowFieldRenderer';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { SourceType } from '../../data/SourceType';
@@ -50,6 +51,12 @@ export type PassDeps = {
    * (no render pass opened, no draw invoked).
    */
   scalarVolumeRenderer: ScalarVolumeRenderer | null;
+  /**
+   * CF4++ flow-field renderer. Null before GPU init completes; `flowFieldPass`
+   * null-checks this handle in `draw`, and its `enabled` gate already requires
+   * `settings.flow.enabled` + `data.flow.loaded`, so a null state is a no-op.
+   */
+  flowFieldRenderer: FlowFieldRenderer | null;
   /** Procedural Milky Way impostor renderer. */
   milkyWayRenderer: MilkyWayRenderer;
   /** Observable-universe horizon shell renderer. */

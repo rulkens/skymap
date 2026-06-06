@@ -60,6 +60,17 @@ function makeState(): Pick<EngineState, 'settings' | 'bias'> {
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 0.5 },
       volumes: { masterEnabled: false, fields: {} },
+      flow: {
+        enabled: false,
+        mode: 'advect',
+        intensity: 0.7,
+        count: 40000,
+        trail: 0.003,
+        flowSpeed: 0.06,
+        densityBias: 1,
+        wander: 0.15,
+        boundaryFadeWidth: 0.1,
+      },
       debug: { showPickBuffer: false, showDiskRadiusRing: false },
       labelCategoryVisibility: {
         cluster: true,
@@ -86,7 +97,7 @@ function makeState(): Pick<EngineState, 'settings' | 'bias'> {
 
 describe('settingsTable', () => {
   describe('SETTINGS_TABLE', () => {
-    it('declares the 15 table-candidate setters', () => {
+    it('declares the 24 table-candidate setters', () => {
       // Bespoke setters (`setBiasMode`, `setTier`, `setSourceVisible`,
       // `setSpaceMouseSensitivity`) MUST stay inline in engine.ts.  If
       // this list drifts, either a new boring setter snuck in (good —
@@ -102,6 +113,15 @@ describe('settingsTable', () => {
           'setExposure',
           'setFilamentIntensity',
           'setFilamentsEnabled',
+          'setFlowCount',
+          'setFlowDensityBias',
+          'setFlowEnabled',
+          'setFlowIntensity',
+          'setFlowMode',
+          'setFlowSpeed',
+          'setFlowTrail',
+          'setFlowWander',
+          'setFlowBoundaryFadeWidth',
           'setGalaxyTexturesEnabled',
           'setHighlightFallback',
           'setMilkyWayEnabled',

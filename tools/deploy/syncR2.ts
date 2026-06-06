@@ -132,6 +132,10 @@ export const ALLOW = (name: string): boolean =>
   // (Wilde et al. 2023), tiered downsamples emitted by
   // `npm run build-mcpm` from the .npy tiers in data/raw/mcpm/.
   /^mcpm-(small|medium|large)\.scfd$/.test(name) ||
+  // CF4++ peculiar-velocity field — a single SCFD cube (channels=4,
+  // value_kind=1; frame + velocity/δ stats fold into the header, no sidecar)
+  // emitted by `npm run build-flow-field`.  Tier-agnostic, like filaments.bin.
+  name === 'flowfield.scfd' ||
   // Cluster/supercluster coverage artefacts (MCXC + MSCC + featured seed)
   // emitted by `npm run build-clusters`: the packed point catalog and its
   // per-structure metadata sidecar.  Tier-agnostic, like famous.bin.
@@ -223,6 +227,20 @@ const EXTRA_FILES: ExtraFile[] = [
     // the ALLOW filter doesn't see it.
     localPath: RAW_DATA['cf4.density-mean'].path,
     r2Key: RAW_DATA['cf4.density-mean'].path,
+  },
+  {
+    // CF4++ mean *velocity* 128³×3 cube — the `v_mean_CF4pp` array extracted
+    // from the same Courtois 2025 ensemble as `d_mean` above.  The flow-field
+    // build (`npm run build-flow-field`) packs v_mean + d_mean into
+    // `flowfield.scfd`, so a contributor needs BOTH slices, not just the
+    // density one.  Uploaded here (~50 MB) for the same reason as d_mean: so
+    // contributors curl the slice instead of the full 167 MB ensemble.  Same
+    // maintainer extraction, one extra member:
+    //
+    //   unzip -j CF4pp_mean_std_grids.npz v_mean_CF4pp.npy d_mean_CF4pp.npy \
+    //     -d data/raw/cf4/
+    localPath: RAW_DATA['cf4.vfield-mean'].path,
+    r2Key: RAW_DATA['cf4.vfield-mean'].path,
   },
   ...([8, 4, 2] as const).map((factor) => ({
     // MCPM Cosmic Web .npy tier — block-averaged downsample of the SDSS

@@ -53,6 +53,7 @@
 import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { PoiCategory } from '../engine/data/PoiCategory';
+import type { FlowSettings } from './FlowSettings';
 import type { VolumeFieldId } from '../data/VolumeFieldId';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
 
@@ -138,6 +139,20 @@ export type EngineSettingsState = {
     masterEnabled: boolean;
     fields: Partial<Record<VolumeFieldId, VolumeFieldSettings>>;
   };
+
+  /**
+   * CF4++ peculiar-velocity flow-field overlay controls.
+   *
+   * Flow is a singleton overlay layer (see
+   * `docs/superpowers/conventions/singleton-overlay-layers.md`): all of its
+   * user-facing state — the master `enabled` gate plus the look/motion knobs —
+   * lives here in `settings`, exactly as `filaments` and `milkyWay` do. The
+   * `state.data.flow` store stays status-only (`loaded`); it carries no user
+   * knobs. The asset-demand predicate reads `settings.flow.enabled`, and the
+   * renderer reads the rest of this slice each frame. Shape + per-field docs
+   * live on `FlowSettings`.
+   */
+  flow: FlowSettings;
 
   /**
    * Developer-oriented debug overlays.  Diagnostic lenses on top of

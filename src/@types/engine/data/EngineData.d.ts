@@ -1,6 +1,7 @@
 import type { GalaxyStore } from './GalaxyStore';
 import type { StructureStore } from './StructureStore';
 import type { FilamentStore } from './FilamentStore';
+import type { FlowFieldStore } from './FlowFieldStore';
 
 /**
  * EngineData — the per-type data stores sub-bag of `EngineState`.
@@ -18,4 +19,5 @@ export type EngineData = {
   readonly galaxies: GalaxyStore;
   readonly structures: StructureStore;
   readonly filaments: FilamentStore;
+  readonly flow: FlowFieldStore;
 };

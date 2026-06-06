@@ -105,6 +105,84 @@ slice goes up.
 
 ---
 
+## Velocity field (flow viz)
+
+The same `CF4pp_mean_std_grids.npz` ensemble is the source for Skymap's
+animated **flow-field** layer — drifting / streamline ribbons that trace
+the CF4++ peculiar-velocity reconstruction over the galaxy field.  It is
+registered once as `cf4.vfield-npz` (path `data/raw/cf4/CF4pp_mean_std_grids.npz`)
+and consumed by a *second* builder alongside the density slice above:
+one upstream file, two consumers.  Registering it under a parallel
+`cf4pp/` directory would have duplicated the 167 MB download and this
+provenance doc, so it lives here with the rest of the CF4++ ensemble.
+
+### npz keys
+
+The pure-TS builder (`tools/flow/buildFlowField.ts`) packs two of the six
+ensemble arrays:
+
+| npz key | Array | Shape | Units | Role |
+|---------|-------|-------|-------|------|
+| `v_mean_CF4pp` | Cartesian peculiar velocity, posterior mean | `(3,128,128,128)` or `(128,128,128,3)` | km/s | RGB = (vx, vy, vz) |
+| `d_mean_CF4pp` | Overdensity δ, posterior mean | `(128,128,128)` | dimensionless | A = δ (drives density-weighted seeding) |
+
+The full ensemble holds **six** 128³ arrays — posterior **mean and std**
+for density, Cartesian velocity, and radial velocity.  The builder uses
+only the two mean arrays above (the std cubes are the natural future input
+for an uncertainty-aware overlay — a separate plan, same as for the density
+cube).  The `.npz` is a plain ZIP of `.npy` files, so listing its members
+(`unzip -l CF4pp_mean_std_grids.npz`) shows the exact remaining key names.
+
+### Box geometry & frame
+
+128³ grid over a **1000 Mpc** cube (**physical** Mpc, not Mpc/h — matching
+the density build's `CF4PP_VOXEL_SIZE_MPC = 1000/128`; the spike's
+`boxMpcPerH` sidecar key is a misnomer) in **supergalactic Cartesian**
+coordinates.  Unlike the throwaway cosmic-flow spike (which labelled the
+array axes arbitrarily because flow *coherence* is frame-invariant), the
+pure-TS builder replicates the density cube's frame handling: the same
+numpy-C-order → WebGPU-x-fastest memory transpose, the same observer-centred
+`origin` (`-voxelSize · dims/2`), and `frameKind: 'supergalactic-cartesian'`,
+so the flow cube co-registers with the galaxies and the CF-4 density volume
+by construction.  The velocity components ride along in native SG order
+(`v_mean_CF4pp` is SG-Cartesian, aligned with the grid position axes — the
+same axis-0 = SGX convention the density build assumes); the memory
+transpose relocates each vector without rotating its basis.
+
+### Build
+
+No Python — same pattern as the density cube.  The flow build needs **both**
+mean slices (`v_mean` for the velocity RGB, `d_mean` for the δ alpha channel).
+
+**Contributor path (no unzip):** both slices live on R2 — curl them:
+
+```
+curl -L -o data/raw/cf4/v_mean_CF4pp.npy \
+  https://skymap-data.rulkens.com/data/raw/cf4/v_mean_CF4pp.npy
+curl -L -o data/raw/cf4/d_mean_CF4pp.npy \
+  https://skymap-data.rulkens.com/data/raw/cf4/d_mean_CF4pp.npy
+npm run build-flow-field    # pure-TS → public/data/flowfield.scfd
+```
+
+**Maintainer path (run once per upstream release):** the `.npz` is a ZIP of
+`.npy` arrays, so extract the two needed arrays and upload them with
+`npm run sync-r2` (both are tracked in `EXTRA_FILES`):
+
+```
+unzip -j data/raw/cf4/CF4pp_mean_std_grids.npz \
+  v_mean_CF4pp.npy d_mean_CF4pp.npy -d data/raw/cf4/
+npm run build-flow-field    # pure-TS → public/data/flowfield.scfd
+```
+
+`flowfield.scfd` is a 128³ RGBA16F cube (vx, vy, vz, δ) in the v3
+scalar-field format (`channels = 4`, `value_kind = 1`): the frame **and**
+the velocity/δ stats live in the SCFD header, so it is a **single
+self-describing file — no JSON sidecar**.  Like the density `.scfd` it is a
+gitignored build artefact synced to R2, not committed.  Citation is the
+same as the density cube above (Courtois et al. 2025).
+
+---
+
 ## Local-volume distance table (Tully 2023)
 
 Source: CDS Vizier table [J/ApJ/944/94](https://cdsarc.cds.unistra.fr/viz-bin/cat/J/ApJ/944/94),

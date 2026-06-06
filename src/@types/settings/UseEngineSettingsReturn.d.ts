@@ -15,6 +15,7 @@
 
 import type { UseEngineSettingsState } from './UseEngineSettingsState';
 import type { EngineSettingsCallbacks } from './EngineSettingsCallbacks';
+import type { FlowSettings } from './FlowSettings';
 
 export type UseEngineSettingsReturn = {
   settings: UseEngineSettingsState;
@@ -35,4 +36,11 @@ export type UseEngineSettingsReturn = {
    * to keep the React state and the engine state in lock-step.
    */
   setSpaceMouseSensitivity: (v: number) => void;
+  /**
+   * Optimistic merge into the React `flow` mirror (no engine echo). App pairs
+   * this with `handle.flow.set(patch)` so the same `Partial<FlowSettings>`
+   * lands in both React and the engine, same lock-step idiom as
+   * `setFilamentsEnabled`.
+   */
+  updateFlow: (patch: Partial<FlowSettings>) => void;
 };

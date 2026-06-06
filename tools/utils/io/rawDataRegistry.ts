@@ -181,6 +181,32 @@ export const RAW_DATA = {
       'CF-4 mean DM density cube (Float32 .npy). Shipped to R2; downloaded by build-cf4-density.',
     upstream: 'https://edd.ifa.hawaii.edu/CF4calculator/',
   },
+  'cf4.vfield-mean': {
+    // Maintainer slices this out of the npz once per release alongside
+    // d_mean_CF4pp.npy:  `unzip -j CF4pp_mean_std_grids.npz v_mean_CF4pp.npy`.
+    // It is the Cartesian mean-velocity field (km/s) on the same 128^3
+    // supergalactic grid as the density cube; buildFlowField packs the two
+    // into flowfield.scfd.  Gitignored + R2-hosted, same as the density mean.
+    path: 'data/raw/cf4/v_mean_CF4pp.npy',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'CF-4 mean Cartesian velocity field (km/s, .npy). Sliced from CF4pp_mean_std_grids.npz; packed with the density mean into flowfield.scfd by build-flow-field.',
+    upstream: 'https://projets.ip2i.in2p3.fr/cosmicflows/',
+  },
+  'cf4.vfield-npz': {
+    // The same upstream 167 MB ensemble that d_mean_CF4pp.npy is sliced from —
+    // one file, two consumers. The density pipeline slices d_mean_CF4pp; the
+    // flow build slices v_mean_CF4pp + d_mean_CF4pp. Registering it once here
+    // (rather than under a parallel cf4pp/ dir) keeps a single source of truth
+    // for the npz. Maintainer-only: never committed, never synced to R2.
+    path: 'data/raw/cf4/CF4pp_mean_std_grids.npz',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'CF4++ mean/std velocity + density ensemble (Courtois 2025). Six 128^3 arrays over a 1000 Mpc (physical, not Mpc/h) supergalactic box; build-flow-field packs v_mean_CF4pp + d_mean_CF4pp into flowfield.scfd.',
+    upstream: 'https://projets.ip2i.in2p3.fr/cosmicflows/',
+  },
   'cf4.dir': {
     path: 'data/raw/cf4',
     kind: 'directory',

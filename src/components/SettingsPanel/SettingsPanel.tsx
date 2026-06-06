@@ -93,7 +93,9 @@ import { STRUCTURE_CATEGORIES } from '../../data/structureCategories';
 import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
+import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import { VolumeFieldRow } from './VolumeFieldRow';
+import FlowRow from './FlowRow';
 import { Panel } from '../common/Panel/Panel';
 import Button from '../common/Button/Button';
 import { CollapsibleSection } from './CollapsibleSection';
@@ -228,6 +230,18 @@ type Props = {
   onVolumeFieldExposureChange?: (id: VolumeFieldId, exposure: number) => void;
   onVolumeFieldPaletteChange?: (id: VolumeFieldId, paletteId: ScalarFieldPaletteId) => void;
 
+  // ── Flow group (CF4++ peculiar-velocity overlay) ───────────────────────
+  /**
+   * Flow-overlay state.  App-owned optimistic (no engine echo), like the
+   * filaments props above — `onFlowChange` applies a `Partial<FlowSettings>`
+   * to both the React mirror and `handle.flow.set`.  The header toggle reads
+   * `flow.enabled`; FlowRow reads `mode` / `intensity`.  The group is gated on
+   * both props being present (see `showFlowSection`), so older / partial call
+   * sites render no Flow section.
+   */
+  flow?: FlowSettings;
+  onFlowChange?: (patch: Partial<FlowSettings>) => void;
+
   // ── Structures group (cluster / supercluster / void MARKER rings) ──────
   /**
    * Per-category MARKER visibility — drives the per-category checkboxes
@@ -317,6 +331,8 @@ export function SettingsPanel({
   onVolumeFieldTrimChange,
   onVolumeFieldExposureChange,
   onVolumeFieldPaletteChange,
+  flow,
+  onFlowChange,
   markerCategoryVisibility,
   onSetMarkerCategoryVisibility,
   labelCategoryVisibility,
@@ -356,6 +372,9 @@ export function SettingsPanel({
     absMagLimit !== undefined &&
     onAbsMagLimitChange !== undefined;
   const showToneCurveControls = toneMapCurve !== undefined && onToneMapCurveChange !== undefined;
+  // Flow section needs the slice + its patch callback (same opt-in idiom as
+  // the other conditional sections) before it can both render and echo.
+  const showFlowSection = flow !== undefined && onFlowChange !== undefined;
   const showStructuresGroup =
     markerCategoryVisibility !== undefined && onSetMarkerCategoryVisibility !== undefined;
 
@@ -747,6 +766,27 @@ export function SettingsPanel({
                 ))
               ))}
           </CollapsibleSection>
+        </CollapsibleSection>
+      )}
+
+      {/* ── Flow ────────────────────────────────────────────────────────── */}
+      {/*
+        CF4++ peculiar-velocity overlay.  A sibling of Cosmic web (the
+        diffuse-matter sections), placed right after it.  Its enable lives
+        on the section header as `headerToggle` — exactly like the Galaxies
+        / Cosmic web / Structures / Labels masters — so every section's
+        on/off control sits on the same header line.  The body (FlowRow) is
+        the look controls only (mode switch + intensity).  `!` assertions
+        are safe: the whole block is gated on `showFlowSection`, which proves
+        every prop is defined; TS can't trace that narrow.
+      */}
+      {showFlowSection && (
+        <CollapsibleSection
+          title="Flow"
+          headerToggle={flow!.enabled}
+          onHeaderToggleChange={(enabled) => onFlowChange!({ enabled })}
+        >
+          <FlowRow flow={flow!} onChange={onFlowChange!} />
         </CollapsibleSection>
       )}
 

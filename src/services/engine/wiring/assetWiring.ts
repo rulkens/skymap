@@ -16,7 +16,7 @@
  * survey is hidden, a settings toggle mid-flight, etc.).
  *
  * Every row's `demand(ctx)` collapses one asset's entire load policy into a
- * single pure predicate over the four `DemandCtx` read surfaces. The demand
+ * single pure predicate over the `DemandCtx` read surfaces. The demand
  * loop re-runs the whole table on any state change, so "is it required?" has
  * exactly one answer per asset, in one place, re-evaluated uniformly.
  *
@@ -60,6 +60,7 @@ import { createFilamentSlot } from '../../loading/slots/filamentSlot';
 import { createFamousMetaSlot } from '../../loading/slots/famousMetaSlot';
 import { createClusterCatalogSlot } from '../../loading/slots/clusterCatalogSlot';
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
+import { createFlowFieldSlot } from '../../loading/slots/flowFieldSlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
 import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
 import type { SourceType } from '../../../@types/data/SourceType';
@@ -159,6 +160,19 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     factory: (deps) => createCf4DensitySlot(deps.state, deps.cb),
     req: () => undefined,
     demand: (ctx) => ctx.volumeField(CF4_FIELD)?.enabled === true,
+  },
+
+  // ── CF4++ velocity flow field ────────────────────────────────────
+  // Default-off, single tier-agnostic .scfd. Loads on first enable
+  // (the flow layer's master gate), like cf4Density. Flow is a singleton
+  // overlay layer, so its gate lives in `settings.flow.enabled` alongside
+  // filaments/milkyWay — no bespoke DemandCtx surface. The GPU upload +
+  // renderer handoff land in Phase C.
+  {
+    key: 'flow',
+    factory: (deps) => createFlowFieldSlot(deps.state, deps.cb),
+    req: () => undefined,
+    demand: (ctx) => ctx.settings.flow.enabled,
   },
 
   // ── Cluster/supercluster bulk coverage ───────────────────────────

@@ -1,5 +1,5 @@
 /**
- * DemandCtx — the four read surfaces a demand predicate may consult.
+ * DemandCtx — the read surfaces a demand predicate may consult.
  *
  * ### Why demand predicates exist
  *
@@ -49,6 +49,11 @@
  *      Both patterns are predicates over sibling slot states — exactly what
  *      this surface provides, without exposing the full `AssetSlot<T>`
  *      internals (value, req object, retry policy) to the predicate.
+ *
+ * Singleton overlay layers (filaments, milkyWay, flow) need no surface of
+ * their own: their enable gate lives in `settings.<layer>.enabled`, read
+ * through surface 1. See
+ * `docs/superpowers/conventions/singleton-overlay-layers.md`.
  *
  * ### Readonly contract
  *

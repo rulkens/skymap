@@ -27,9 +27,11 @@
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { PassOverridesHandle } from '../../@types/engine/handles/EngineDebugHandle';
+import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import { AssetLoadingSection } from './AssetLoadingSection';
 import { GpuTimingsSection } from './GpuTimingsSection';
 import { RenderTogglesSection } from './RenderTogglesSection';
+import { FlowTuningSection } from './FlowTuningSection';
 import { DataQualitySection } from './DataQualitySection';
 import { LabelEffectsSection } from './LabelEffectsSection';
 
@@ -55,6 +57,15 @@ export type DebugPanelProps = {
    */
   showDiskRadiusRing: boolean;
   onShowDiskRadiusRingChange: (enabled: boolean) => void;
+  /**
+   * Flow overlay slice + its patch callback.  App-owned and optimistic, like
+   * the other DebugPanel toggles: `onFlowChange` applies a `Partial<FlowSettings>`
+   * to both the React mirror and the engine handle.  The dev-only motion knobs
+   * (count / trail / flowSpeed / densityBias / wander / edgeFade) live in
+   * FlowTuningSection, driven from the flow field registry.
+   */
+  flow: FlowSettings;
+  onFlowChange: (patch: Partial<FlowSettings>) => void;
 };
 
 export function DebugPanel({
@@ -69,6 +80,8 @@ export function DebugPanel({
   onShowPickBufferChange,
   showDiskRadiusRing,
   onShowDiskRadiusRingChange,
+  flow,
+  onFlowChange,
 }: DebugPanelProps) {
   return (
     <div
@@ -92,6 +105,8 @@ export function DebugPanel({
       <GpuTimingsSection service={timingService} />
       <div style={{ marginTop: 6 }} />
       <RenderTogglesSection passOverrides={passOverrides} />
+      <div style={{ marginTop: 6 }} />
+      <FlowTuningSection flow={flow} onChange={onFlowChange} />
       <div style={{ marginTop: 6 }} />
       <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
         <input

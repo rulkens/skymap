@@ -74,6 +74,7 @@
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { SettingsTableKey } from '../../../@types/settings/SettingsTableKey';
+import { MAX_PARTICLES, MIN_TRAIL_STEP } from '../../gpu/renderers/flowFieldConstants';
 
 /**
  * 3-tuple path into `EngineState`: `['settings', <cluster>, <leaf>]`.
@@ -87,17 +88,11 @@ type SettingsPath =
   | readonly ['settings', 'tonemap', keyof EngineState['settings']['tonemap']]
   | readonly ['settings', 'camera', keyof EngineState['settings']['camera']]
   | readonly ['settings', 'bias', keyof EngineState['settings']['bias']]
-  | readonly [
-      'settings',
-      'thumbnails',
-      keyof EngineState['settings']['thumbnails'],
-    ]
+  | readonly ['settings', 'thumbnails', keyof EngineState['settings']['thumbnails']]
   | readonly ['settings', 'milkyWay', keyof EngineState['settings']['milkyWay']]
-  | readonly [
-      'settings',
-      'filaments',
-      keyof EngineState['settings']['filaments'],
-    ]
+  | readonly ['settings', 'filaments', keyof EngineState['settings']['filaments']]
+  // Flow overlay (singleton-overlay-layer slice — see FlowSettings).
+  | readonly ['settings', 'flow', keyof EngineState['settings']['flow']]
   | readonly ['settings', 'volumes', 'masterEnabled']
   | readonly ['settings', 'debug', keyof EngineState['settings']['debug']];
 
@@ -189,6 +184,61 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     path: ['settings', 'filaments', 'intensity'],
     clamp: (v) => Math.max(0, Math.min(1, v)),
   },
+  // ── Flow overlay (singleton-overlay-layer slice) ───────────────────
+  // App.tsx owns these optimistically, like the filament rows — no echo
+  // callbacks. The handle wraps setFlowEnabled/setFlowMode/setFlowCount
+  // with side effects (demand re-eval, fade, reseed); the rest forward bare.
+  {
+    name: 'setFlowEnabled',
+    path: ['settings', 'flow', 'enabled'],
+  },
+  {
+    // String union; the setter's `value: unknown` carries it through — no clamp.
+    name: 'setFlowMode',
+    path: ['settings', 'flow', 'mode'],
+  },
+  {
+    name: 'setFlowIntensity',
+    path: ['settings', 'flow', 'intensity'],
+    clamp: (v) => Math.max(0, Math.min(1, v)),
+  },
+  {
+    // Particle count = buffer capacity ceiling; round + clamp to [0, MAX_PARTICLES]
+    // so a fractional or runaway slider can't draw past the allocated buffer.
+    name: 'setFlowCount',
+    path: ['settings', 'flow', 'count'],
+    clamp: (v) => Math.max(0, Math.min(MAX_PARTICLES, Math.round(v))),
+  },
+  {
+    // Floor at MIN_TRAIL_STEP, NOT 0 — a zero trail spacing stalls the advect
+    // integrator loop (GPU hang). The UI slider owns the max (single source of
+    // truth). The renderer also floors at the GPU boundary (defense in depth).
+    name: 'setFlowTrail',
+    path: ['settings', 'flow', 'trail'],
+    clamp: (v) => Math.max(MIN_TRAIL_STEP, v),
+  },
+  {
+    name: 'setFlowSpeed',
+    path: ['settings', 'flow', 'flowSpeed'],
+    clamp: (v) => Math.max(0, v),
+  },
+  {
+    name: 'setFlowDensityBias',
+    path: ['settings', 'flow', 'densityBias'],
+    clamp: (v) => Math.max(0, Math.min(1, v)),
+  },
+  {
+    name: 'setFlowWander',
+    path: ['settings', 'flow', 'wander'],
+    clamp: (v) => Math.max(0, v),
+  },
+  {
+    // Spherical boundary-fade band width, grid units. Clamp to [0, 0.5]: 0 is a
+    // hard sphere clip, 0.5 fades from the cube centre outward.
+    name: 'setFlowBoundaryFadeWidth',
+    path: ['settings', 'flow', 'boundaryFadeWidth'],
+    clamp: (v) => Math.max(0, Math.min(0.5, v)),
+  },
   {
     name: 'setHighlightFallback',
     path: ['settings', 'points', 'highlightFallback'],
@@ -254,15 +304,9 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
  * type at the chosen path; the descriptor table is the runtime
  * guarantor instead.  See the module-level note on type narrowness.
  */
-function setByPath(
-  state: EngineState,
-  path: SettingsPath,
-  value: unknown,
-): void {
+function setByPath(state: EngineState, path: SettingsPath, value: unknown): void {
   const [bag, sub, leaf] = path;
-  const target = (
-    state[bag] as unknown as Record<string, Record<string, unknown>>
-  )[sub as string]!;
+  const target = (state[bag] as unknown as Record<string, Record<string, unknown>>)[sub as string]!;
   target[leaf as string] = value;
 }
 
@@ -306,9 +350,7 @@ export function buildSettersFromTable(
       // cluster or missing method is silently skipped.
       if (callback !== undefined) {
         const [cluster, method] = callback;
-        const sub = (
-          cb as unknown as Record<string, Record<string, unknown> | undefined>
-        )[cluster];
+        const sub = (cb as unknown as Record<string, Record<string, unknown> | undefined>)[cluster];
         const fn = sub?.[method] as ((v: unknown) => void) | undefined;
         fn?.(next);
       }

@@ -47,6 +47,8 @@ function serializeFadeHandle(h: FadeHandle): string {
       return `survey:${h.source}`;
     case 'filaments':
       return 'filaments';
+    case 'flow':
+      return 'flow';
     case 'scalarField':
       return `scalarField:${h.field}`;
     case 'markerLayer':

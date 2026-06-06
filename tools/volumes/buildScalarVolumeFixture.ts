@@ -32,6 +32,7 @@ for (let i = 0; i < voxels.length; i++) voxels[i] = i;
 // fixture stays minimal — header + raw voxel bytes.
 const cube: ScalarCube = {
   dims: [8, 8, 8],
+  channels: 1,
   voxels,
   frameKind: 'equatorial-cartesian',
   origin: [-200, -200, -200],

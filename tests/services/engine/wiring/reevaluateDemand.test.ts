@@ -59,9 +59,7 @@ function stubSlot(initialKind: LoadState<unknown>['kind'] = 'idle'): StubSlot {
  * (via buildDemandCtx + slotFor): `settings`, `sources.{drawMask,tier}`,
  * `requests`, and a `points` map carrying the stub slots.
  */
-function makeState(
-  points: Map<SourceType, AssetSlot<unknown, unknown>>,
-): EngineState {
+function makeState(points: Map<SourceType, AssetSlot<unknown, unknown>>): EngineState {
   return {
     settings: {},
     sources: { drawMask: 0, tier: 'medium' },

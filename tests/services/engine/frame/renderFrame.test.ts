@@ -334,9 +334,14 @@ function makeInput(
           markerLineRenderer: null,
           selectionRingRenderer: null,
           scalarVolumeRenderer: null,
+          flowFieldRenderer: null,
           clusterMarkerRenderer: null,
           focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
         },
+        // encodeFlowCompute (pre-HDR) reads these; flow is default-off so the
+        // gate early-returns once the renderer is null.
+        settings: { flow: { enabled: false } },
+        data: { flow: { loaded: false } },
         // proceduralDisksPass / texturedDisksPass each read their slot
         // off `state.subsystems` in their `enabled()` gate; nulling both
         // references makes the passes skip cleanly.
@@ -361,6 +366,7 @@ function makeInput(
       horizonShellRenderer,
       filamentRenderer: null,
       scalarVolumeRenderer: null,
+      flowFieldRenderer: null,
       texturedQuadRenderer,
       texturedDiskRenderer,
       proceduralDiskRenderer,

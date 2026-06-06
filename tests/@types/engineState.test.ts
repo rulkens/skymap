@@ -38,6 +38,7 @@ import {
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
+  DEFAULT_FLOW,
 } from '../../src/data/defaults';
 import { ALL_VISIBLE_MASK } from '../../src/utils/sourceMask';
 import { createTweenManager } from '../../src/services/engine/camera/tweenManager';
@@ -89,6 +90,17 @@ describe('EngineState type', () => {
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 1 },
       volumes: { masterEnabled: false, fields: {} },
+      flow: {
+        enabled: false,
+        mode: 'advect',
+        intensity: 0.7,
+        count: 40000,
+        trail: 0.003,
+        flowSpeed: 0.06,
+        densityBias: 1,
+        wander: 0.15,
+        boundaryFadeWidth: 0.1,
+      },
       debug: { showPickBuffer: false, showDiskRadiusRing: false },
       labelCategoryVisibility: {
         cluster: true,
@@ -152,6 +164,7 @@ describe('EngineState type', () => {
         milkyWayRenderer: null,
         horizonShellRenderer: null,
         scalarVolumeRenderer: null,
+        flowFieldRenderer: null,
         volumeUpsample: null,
         pickDebugOverlay: null,
         diskRadiusRing: null,
@@ -199,6 +212,7 @@ describe('EngineState type', () => {
         pgcAlias: null,
         cf4Density: null,
         mcpm: null,
+        flow: null,
       },
       requests: new Set(),
       debug: { disabledPasses: new Set<string>() },
@@ -237,6 +251,7 @@ describe('EngineState type', () => {
         intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
       },
       volumes: { masterEnabled: DEFAULT_VOLUMES_ENABLED, fields: {} },
+      flow: { ...DEFAULT_FLOW },
       debug: { showPickBuffer: false, showDiskRadiusRing: false },
       labelCategoryVisibility: {
         cluster: true,
@@ -291,6 +306,7 @@ describe('EngineState type', () => {
         milkyWay: { enabled: true },
         filaments: { enabled: false, intensity: 1 },
         volumes: { masterEnabled: false, fields: {} },
+        flow: { ...DEFAULT_FLOW },
         debug: { showPickBuffer: false, showDiskRadiusRing: false },
         labelCategoryVisibility: {
           cluster: true,
@@ -343,6 +359,7 @@ describe('EngineState type', () => {
         milkyWayRenderer: null,
         horizonShellRenderer: null,
         scalarVolumeRenderer: null,
+        flowFieldRenderer: null,
         volumeUpsample: null,
         pickDebugOverlay: null,
         diskRadiusRing: null,
@@ -390,6 +407,7 @@ describe('EngineState type', () => {
         pgcAlias: null,
         cf4Density: null,
         mcpm: null,
+        flow: null,
       },
       requests: new Set(),
       debug: { disabledPasses: new Set<string>() },

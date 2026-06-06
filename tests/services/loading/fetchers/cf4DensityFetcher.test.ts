@@ -15,6 +15,7 @@ const fetch = useFetchMock();
 function makeTinyCube(): ScalarCube {
   return {
     dims: [2, 2, 2],
+    channels: 1,
     voxels: new Uint16Array([0, 0x3c00, 0x4000, 0x4200, 0x4400, 0x4500, 0x4600, 0x4700]),
     frameKind: 'supergalactic-cartesian',
     origin: [-1, -1, -1],

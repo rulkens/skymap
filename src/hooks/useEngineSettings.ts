@@ -38,9 +38,10 @@
  * higher-level wiring.
  */
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { BiasMode as BiasModeT } from '../@types/data/BiasMode';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
+import type { FlowSettings } from '../@types/settings/FlowSettings';
 import type { PoiCategory } from '../@types/engine/data/PoiCategory';
 import {
   DEFAULT_ABS_MAG_LIMIT,
@@ -49,6 +50,7 @@ import {
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
+  DEFAULT_FLOW,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
   DEFAULT_MILKY_WAY_ENABLED,
@@ -108,6 +110,20 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   // Scalar-volume master toggle — no echo, same as filamentsEnabled above.
   // No persistence: every session starts from the compile-time default.
   const [volumesEnabled, setVolumesEnabled] = useState<boolean>(DEFAULT_VOLUMES_ENABLED);
+
+  // ── CF4++ flow-field overlay (App-owned optimistic, no echo) ──────────
+  // The engine fires NO echo callback for flow — same as filamentsEnabled —
+  // so React owns the whole `settings.flow` slice directly, seeded from
+  // DEFAULT_FLOW. It's one `FlowSettings` object rather than nine scalar cells:
+  // the panels and the engine handle are both driven by a `Partial<FlowSettings>`
+  // patch (see `updateFlow` and `handle.flow.set`), so a knob change is one
+  // patch on each side and adding a knob doesn't grow this hook.
+  const [flow, setFlow] = useState<FlowSettings>(DEFAULT_FLOW);
+
+  /** Merge an optimistic patch into the React mirror; App pairs it with `handle.flow.set`. */
+  const updateFlow = useCallback((patch: Partial<FlowSettings>) => {
+    setFlow((prev) => ({ ...prev, ...patch }));
+  }, []);
 
   // Per-field row data.  Starts empty (no cubes at startup).  The engine
   // pushes a fresh snapshot through `volumes.onFieldsChanged(fields)`
@@ -200,6 +216,7 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       markerCategoryVisibility,
       spaceMouseConnected,
       spaceMouseSensitivity,
+      flow,
     },
     engineCallbacks: {
       // ── Nested sub-bag subscriptions (H5 task 11) ────────────────
@@ -274,5 +291,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
     setExposure,
     setVolumesEnabled,
     setSpaceMouseSensitivity,
+    updateFlow,
   };
 }
