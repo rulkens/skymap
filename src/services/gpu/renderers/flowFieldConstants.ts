@@ -9,13 +9,11 @@
  * HEAD_STEP_SCALE / SPEED_COLOR_MAX / DENS_SCALE map slider values into the
  * integrator and the colour ramp.
  *
- * Ported from the standalone spike's
- * `tools/cosmic-flow/src/visualizations/flowField/constants.ts` with one
- * spec-pinned change: MAX_PARTICLES drops from the spike's 100000 to 40000. The
- * rationale is that the buffer capacity, the particle-slider ceiling, and the
- * default count are one and the same number — so the runtime sizes its storage
- * buffers to exactly the slider's top end rather than over-allocating for a
- * ceiling the UI never exposes.
+ * MAX_PARTICLES is one number serving three roles: the storage-buffer capacity,
+ * the particle-slider ceiling, and the default count. Keeping them identical
+ * means the runtime sizes its buffers to exactly the slider's top end rather
+ * than over-allocating for a ceiling the UI never exposes. At 50000 the trail
+ * buffer (MAX_PARTICLES * TRAIL * 16 B) is ~26 MB — the dominant flow allocation.
  *
  * The shader-side subset (TRAIL, LIFE, FADE, DENS_SCALE, SPEED_COLOR_MAX) is
  * mirrored as plain WESL consts in `../shaders/flow/flowConstants.wesl`; this
@@ -28,7 +26,7 @@
  */
 
 export const TRAIL = 32; // ring length per particle — pathline / streamline points
-export const MAX_PARTICLES = 40000; // buffer capacity = slider ceiling = default count
+export const MAX_PARTICLES = 50000; // buffer capacity = slider ceiling = default count
 export const LIFE = 8.0; // advect particle lifetime, frame-time units, then it recycles
 export const FADE = 1.4; // advect alpha fade-in/out window, age units
 export const DT = 0.016; // fixed integration timestep handed to the compute pass
