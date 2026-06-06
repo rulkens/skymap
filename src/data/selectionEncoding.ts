@@ -33,8 +33,10 @@
  * decode in `unpackPick` reverses the offset.
  */
 
-import { Source } from './sources';
+import { SOURCE_REGISTRY } from './sources';
+import type { SourceEntry } from '../@types/data/SourceEntry';
 import type { SourceType } from '../@types/data/SourceType';
+import type { StructureCategory } from '../@types/engine/data/StructureCategory';
 
 /** Bit shift for the source code in the packed identity. */
 export const SELECTION_SOURCE_SHIFT = 27;
@@ -70,29 +72,23 @@ export function packSelection(sourceCode: number, localIdx: number): number {
 }
 
 /**
- * Decoded pick-buffer result. Discriminator `kind` says which of the
- * six categories the hit was, and the payload shape differs per kind:
+ * Decoded pick-buffer result. Discriminator `kind` says what the hit was,
+ * and the payload shape differs per kind:
  *
- *   - 'galaxy'     — a survey-galaxy hit. Carries the Source enum +
- *                    the per-source local index.
- *   - 'cluster'    — a cluster POI hit. Carries the POI index into
- *                    the cluster anchor table.
- *   - 'supercluster' — same as cluster, but for supercluster anchors.
- *   - 'void'       — same as cluster, but for void anchors.
- *   - 'group'      — same as cluster, but for nearby-galaxy-group anchors.
+ *   - 'galaxy'    — a survey-galaxy hit. Carries the Source enum +
+ *                   the per-source local index.
+ *   - a structure — a marker-ring hit (cluster / supercluster / void /
+ *                   group, the `StructureCategory` union). Carries the POI
+ *                   index into that category's anchor table.
  *
- * The discriminated-union shape forces callers to switch on `kind`
- * (rather than read a magic source-code number) — the type system
- * surfaces every new POI variant at every call site the moment a
- * category is added. See spec §6.2 for the per-category allocation
- * rationale and §7.2 for the call-site impact (`wireInput.ts`).
+ * The discriminated-union shape forces callers to switch on `kind` rather
+ * than read a magic source-code number. The structure arm is the
+ * `StructureCategory` union, so it widens automatically as the registry
+ * gains structure sources — no per-category member to add by hand.
  */
 export type PickResult =
   | { readonly kind: 'galaxy'; readonly source: SourceType; readonly localIdx: number }
-  | { readonly kind: 'cluster'; readonly poiIndex: number }
-  | { readonly kind: 'supercluster'; readonly poiIndex: number }
-  | { readonly kind: 'void'; readonly poiIndex: number }
-  | { readonly kind: 'group'; readonly poiIndex: number };
+  | { readonly kind: StructureCategory; readonly poiIndex: number };
 
 /**
  * Decode a raw r32uint pick-buffer value into the canonical
@@ -101,23 +97,25 @@ export type PickResult =
  * The raw value carries the picker's `+ PICK_SENTINEL_OFFSET` (so the
  * cleared-zero background remains distinguishable from a legitimate
  * source=0/localIdx=0 hit); this function reverses both that offset
- * and the (sourceCode << 27) | localIdx layout, then dispatches on
- * the 5-bit source code:
+ * and the (sourceCode << 27) | localIdx layout, then dispatches on the
+ * registry entry the code points at. SOURCE_REGISTRY is keyed by source
+ * code, so it already holds the code→entry mapping the decode needs:
  *
- *   - 0..4  → galaxy hit (Synthetic, SDSS, TwoMRS, Glade, Famous)
- *   - 5     → cluster POI
- *   - 6     → supercluster POI
- *   - 7     → void POI
- *   - 8     → Milliquas galaxy hit (point-source AGN)
- *   - 15    → group POI (nearby-galaxy-group anchors)
- *   - 9..14, 16..30 → unallocated; log a defensive warning and return null
- *   - 31    → reserved (all-ones sentinel); return null
+ *   - `survey`    → galaxy hit (the entry's code + localIdx)
+ *   - `structure` → that category's POI hit (the entry's `id` is the category)
+ *   - 31          → reserved (all-ones sentinel); return null
+ *   - filament / volume / unallocated → not a pickable surface; warn + null
  *
- * The 9..30 branch should never fire at runtime (we don't render any
- * pickable surface with those codes), but a stray frame from an old
- * shader or a misconfigured renderer would otherwise propagate a
- * "ghost" pick result into the focus subsystem. Logging + null keeps
- * the caller's switch exhaustive without crashing.
+ * Driving the dispatch off the registry's own `type` field means encode and
+ * decode read the same source of truth — there's no second hand-maintained
+ * code→category table to drift out of sync (the bug class that would surface
+ * as "clicking a ring selects the wrong record").
+ *
+ * The not-pickable branch should never fire at runtime (we don't render any
+ * pickable surface with those codes), but a stray frame from an old shader or
+ * a misconfigured renderer would otherwise propagate a "ghost" pick result
+ * into the focus subsystem. Logging + null keeps the caller's switch
+ * exhaustive without crashing.
  */
 export function unpackPick(rawPickValue: number): PickResult | null {
   if (rawPickValue === 0) return null;
@@ -125,17 +123,15 @@ export function unpackPick(rawPickValue: number): PickResult | null {
   // Reserved sentinel band — never a real hit.
   if (sourceCode === 31) return null;
   const localIdx = (rawPickValue & SELECTION_LOCAL_IDX_MASK) - PICK_SENTINEL_OFFSET;
-  if (sourceCode <= 4 || sourceCode === Source.Milliquas) {
-    // Survey-galaxy hit. The contiguous 0..4 band carries the original
-    // surveys (Synthetic, SDSS, TwoMRS, Glade, Famous); code 8 was
-    // appended for Milliquas after the POI codes (5/6/7) were already
-    // allocated, so the test is "low band OR exact match".
+  const entry: SourceEntry | undefined = SOURCE_REGISTRY[sourceCode as SourceType];
+  if (entry?.type === 'survey') {
     return { kind: 'galaxy', source: sourceCode as SourceType, localIdx };
   }
-  if (sourceCode === 5) return { kind: 'cluster', poiIndex: localIdx };
-  if (sourceCode === 6) return { kind: 'supercluster', poiIndex: localIdx };
-  if (sourceCode === 7) return { kind: 'void', poiIndex: localIdx };
-  if (sourceCode === Source.Group) return { kind: 'group', poiIndex: localIdx };
+  if (entry?.type === 'structure') {
+    // A structure entry's id *is* its category (StructureCategory derives from
+    // exactly these ids), so the cast is sound by construction.
+    return { kind: entry.id as StructureCategory, poiIndex: localIdx };
+  }
   console.warn(
     `unpackPick: unexpected source code ${sourceCode} ` +
       `(raw=0x${rawPickValue.toString(16).padStart(8, '0')}); returning null`,

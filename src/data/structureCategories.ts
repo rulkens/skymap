@@ -17,13 +17,15 @@ export const STRUCTURE_CATEGORIES: readonly StructureCategory[] = [
 ];
 
 /**
- * SOURCE_CODE_BY_CATEGORY — each structure category's 5-bit Source code, the
- * forward half of the category↔code bridge. Derived from the registry's
+ * PICK_CODE_BY_CATEGORY — each structure category's 5-bit code, packed into the
+ * pick texture's upper bits when its ring is drawn. Derived from the registry's
  * `type: 'structure'` rows (id → code) rather than hand-listed, so it can't
  * drift from the codes themselves. Sound by construction: StructureCategory
  * *is* the set of structure-row ids, so every key is present exactly once.
+ * (The decode direction needs no companion map — SOURCE_REGISTRY is keyed by
+ * code, so `unpackPick` reads code→entry straight off it.)
  */
-export const SOURCE_CODE_BY_CATEGORY: Readonly<Record<StructureCategory, number>> =
+export const PICK_CODE_BY_CATEGORY: Readonly<Record<StructureCategory, number>> =
   Object.fromEntries(
     Object.values(SOURCE_REGISTRY)
       .filter((e) => e.type === 'structure')

@@ -67,7 +67,7 @@ import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { ClusterMarkerRenderer } from '../../../@types/rendering/ClusterMarkerRenderer';
 import type { ClusterMarkerDescriptor } from '../../../@types/rendering/ClusterMarkerDescriptor';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
-import { STRUCTURE_CATEGORIES, SOURCE_CODE_BY_CATEGORY } from '../../../data/structureCategories';
+import { STRUCTURE_CATEGORIES, PICK_CODE_BY_CATEGORY } from '../../../data/structureCategories';
 import haloVsCode from '../shaders/clusterMarker/halo.wesl?static';
 import haloFsCode from '../shaders/clusterMarker/halo.wesl?static';
 import ringVsCode from '../shaders/clusterMarker/ring.wesl?static';
@@ -424,7 +424,7 @@ export function createClusterMarkerRenderer(
       });
       // Write the 5-bit source code at offset 0; rest stays zero.
       const u32 = new Uint32Array(SOURCE_UNIFORM_BYTES / 4);
-      u32[0] = SOURCE_CODE_BY_CATEGORY[cat];
+      u32[0] = PICK_CODE_BY_CATEGORY[cat];
       device.queue.writeBuffer(buf, 0, u32);
       sourceBuffers[cat] = buf;
       sourceBindGroups[cat] = device.createBindGroup({
