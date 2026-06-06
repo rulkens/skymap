@@ -278,11 +278,11 @@ it — trace the strand before editing.
   multiplied opacity recedes at blend 1, unchanged at blend 0). If no unit harness reaches
   that site, note it and rely on the `focusRecession` unit tests + dev-server check.
 
-- [ ] Write the failing pass tests (or note the harness gap).
-- [ ] Swap filaments `draw` opacity to `resolveLayerOpacity`.
-- [ ] Apply `volumesMaster` recession at its true consumption site.
-- [ ] `npm test` + `npm run typecheck` → green.
-- [ ] Commit.
+- [x] Write the failing pass tests (or note the harness gap).
+- [x] Swap filaments `draw` opacity to `resolveLayerOpacity`.
+- [x] Apply `volumesMaster` recession at its true consumption site.
+- [x] `npm test` + `npm run typecheck` → green.
+- [x] Commit.
 
 ---
 
@@ -336,10 +336,10 @@ per-category/per-instance opacity (spec "Resolved decisions").
 - `at-rest output is unchanged` — blend 0, all category toggles 1, no focus → identical
   descriptors to today (golden assertion on alpha values).
 
-- [ ] Write the failing tests.
-- [ ] Swap category gate + focus dim; remove `NON_SELECTED_MARKER_DIM`.
-- [ ] `npm test -- produceStructureMarkers` + `npm run typecheck` → green.
-- [ ] Commit.
+- [x] Write the failing tests.
+- [x] Swap category gate + focus dim; remove `NON_SELECTED_MARKER_DIM`.
+- [x] `npm test -- produceStructureMarkers` + `npm run typecheck` → green.
+- [x] Commit.
 
 ### Task 2.2 — `registerOverlayFades`: per-category marker handles + `galaxyNames` → 1
 
@@ -370,10 +370,10 @@ per-category/per-instance opacity (spec "Resolved decisions").
 - `disabled categories register at 0` — seed a settings fixture with cluster markers off;
   assert that handle's initial opacity is 0.
 
-- [ ] Write the failing tests.
-- [ ] Register the per-category marker + POI-label handles; bump `galaxyNames`.
-- [ ] `npm test` + `npm run typecheck` → green.
-- [ ] Commit.
+- [x] Write the failing tests.
+- [x] Register the per-category marker + POI-label handles; bump `galaxyNames`.
+- [x] `npm test` + `npm run typecheck` → green.
+- [x] Commit.
 
 ### Task 2.3 — `produceStructureLabels`: per-category opacity × focused-exempt recession + per-category load-in
 
@@ -427,11 +427,11 @@ per-category/per-instance opacity (spec "Resolved decisions").
   owns it now). (If the director test harness can't see producer-side fades, assert the
   director's `didFireFadeIn` path is gone — e.g. it makes no `fadeTo` call.)
 
-- [ ] Write the failing tests.
-- [ ] Producer: per-category opacity × focused-exempt recession into `fadeAlpha`; per-category load-in fire.
-- [ ] Director: remove the single `poi` load-in fade block; keep merge + declutter.
-- [ ] `npm test` + `npm run typecheck` → green.
-- [ ] Commit.
+- [x] Write the failing tests.
+- [x] Producer: per-category opacity × focused-exempt recession into `fadeAlpha`; per-category load-in fire.
+- [x] Director: remove the single `poi` load-in fade block; keep merge + declutter.
+- [x] `npm test` + `npm run typecheck` → green.
+- [x] Commit.
 
 ### Task 2.4 — `produceFamousLabels`: `galaxyNames` opacity × uniform recession + load-in
 
@@ -464,10 +464,10 @@ producer) (spec req D + "Resolved decisions").
 - `anchor lines fade with their labels` — line `fadeAlpha` matches the owning label's.
 - `at-rest output is unchanged` — blend 0, `galaxyNames` opacity 1 → identical to today.
 
-- [ ] Write the failing tests.
-- [ ] Bake `galaxyNames` opacity × recession into label + line `fadeAlpha`; fire load-in.
-- [ ] `npm test` + `npm run typecheck` → green.
-- [ ] Commit.
+- [x] Write the failing tests.
+- [x] Bake `galaxyNames` opacity × recession into label + line `fadeAlpha`; fire load-in.
+- [x] `npm test` + `npm run typecheck` → green.
+- [x] Commit.
 
 ### Task 2.5 — Engine category-visibility setters → `fadeTo`
 
@@ -513,11 +513,11 @@ both markers and POI labels stop popping (spec "Category-visibility fade").
 - `setCategoryLabelVisible(cluster, false) fades the poi cluster handle toward 0`.
 - `setCategoryLabelVisible(famousGalaxy, false) fades galaxyNames toward 0`.
 
-- [ ] Write the failing tests.
-- [ ] Swap both setters to fire `fadeTo` on the per-category / galaxyNames handles.
-- [ ] Reconcile the famous fade-out gate (or flag the pop-on-out if a hard gate must stay).
-- [ ] `npm test` + `npm run typecheck` → green.
-- [ ] Commit.
+- [x] Write the failing tests.
+- [x] Swap both setters to fire `fadeTo` on the per-category / galaxyNames handles.
+- [x] Reconcile the famous fade-out gate (made opacity-aware like filamentsPass.enabled — fades out, no pop).
+- [x] `npm test` + `npm run typecheck` → green.
+- [x] Commit.
 
 ---
 
@@ -527,9 +527,9 @@ both markers and POI labels stop popping (spec "Category-visibility fade").
 
 **Files:** none new — review + targeted fixes only.
 
-- [ ] Run the `entanglement-radar` skill on `git diff main...HEAD` (the full
+- [x] Run the `entanglement-radar` skill on `git diff main...HEAD` (the full
   Plan 1 + Plan 2 diff).
-- [ ] Resolve every finding that is a REAL knot (two independent things braided), per
+- [x] Resolve every finding that is a REAL knot (two independent things braided), per
   `simplicity.md`. Watch specifically for:
   - **A re-braiding regression** — any reintroduction of `setFocusBlend`, a blend cached
     in the registry, or recession folded into `opacityOf` (spec req B). If found, that's a
@@ -543,8 +543,8 @@ both markers and POI labels stop popping (spec "Category-visibility fade").
   - **Repeated `focusedPoiId` resolution** — markers and structure labels both recompute
     the focused/selected POI id (`produceStructureMarkers.ts:42–45`); if the duplication is
     load-bearing, consider a tiny shared helper (generalize repeated fixes).
-- [ ] Re-run `npm test` + `npm run typecheck` → green after any radar-driven edits.
-- [ ] Commit (or note "no significant complecting found" if the radar is clean — a valid
+- [x] Re-run `npm test` + `npm run typecheck` → green after any radar-driven edits.
+- [x] Commit (or note "no significant complecting found" if the radar is clean — a valid
   result per `simplicity.md`).
 
 ---
