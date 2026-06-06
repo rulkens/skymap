@@ -132,6 +132,7 @@ import { MILKY_WAY_CENTER_WORLD, MILKY_WAY_VIEW_DISTANCE_MPC } from '../../data/
 import { buildVolumeFieldSettings, seedVolumeFields } from '../../data/volumeFieldDefaults';
 import { buildVolumeFieldsSnapshot } from './helpers/buildVolumeFieldsSnapshot';
 import { writeVolumeFieldSetting } from './helpers/writeVolumeFieldSetting';
+import { removeVolumeFieldSetting } from './helpers/removeVolumeFieldSetting';
 import { clampVolumeIntensity } from '../../utils/clampVolumeIntensity';
 import { clampVolumeContrast } from '../../utils/clampVolumeContrast';
 import { clampVolumeDensityScale } from '../../utils/clampVolumeDensityScale';
@@ -914,31 +915,23 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function addVolumeField(fieldId: VolumeFieldId, cube: ScalarCube): void {
+    // Ensure a settings row exists before the GPU upload.  Re-registering a
+    // field preserves its previously-tuned values; a brand-new handle seeds
+    // from registry defaults.  Shippable volumes already have a construction
+    // seed, so the guard only fires for a dynamically-added handle.
+    if (!state.settings.volumes.fields[fieldId]) {
+      state.settings.volumes.fields = {
+        ...state.settings.volumes.fields,
+        [fieldId]: buildVolumeFieldSettings(fieldId),
+      };
+    }
     // Upload to the renderer; a silent no-op if it isn't ready yet (re-add
     // once booted).
     state.gpu.scalarVolumeRenderer?.addField(fieldId, cube);
-    // Seed the per-field settings entry from registry defaults if absent —
-    // re-registering preserves previously-tuned values.  Shippable volumes
-    // already have a construction seed, so the guard only matters for a
-    // dynamically-added handle.
-    if (!state.data.volumes.params(fieldId)) {
-      state.data.volumes.setParams(fieldId, buildVolumeFieldSettings(fieldId));
-    }
-    // Forward the current per-field tunables into the renderer so the
-    // new upload inherits whatever the user set before re-registering.
-    const persisted = state.data.volumes.params(fieldId)!;
-    state.gpu.scalarVolumeRenderer?.setIntensity(fieldId, persisted.intensity);
-    state.gpu.scalarVolumeRenderer?.setEnabled(fieldId, persisted.enabled);
-    state.gpu.scalarVolumeRenderer?.setContrast(fieldId, persisted.contrast);
-    state.gpu.scalarVolumeRenderer?.setDensityScale(fieldId, persisted.densityScale);
-    state.gpu.scalarVolumeRenderer?.setFieldPalette(fieldId, persisted.paletteId);
-    state.gpu.scalarVolumeRenderer?.setTrim(fieldId, persisted.trim);
-    state.gpu.scalarVolumeRenderer?.setExposure(fieldId, persisted.exposure);
-    // Drive the FadeRegistry from the persisted enable bit: enabled → fade
-    // to 1; disabled → leave it at the 0 set by onFieldAdded (the draw
-    // loop's `(!enabled && opacity <= 0)` skip keeps it invisible until the
-    // user toggles it on).
-    if (persisted.enabled) {
+    // Drive the FadeRegistry from the settings enable bit: enabled → fade to 1;
+    // disabled → leave it at the 0 set by onFieldAdded (the draw loop's
+    // `(!enabled && opacity <= 0)` skip keeps it invisible until toggled on).
+    if (state.settings.volumes.fields[fieldId]?.enabled) {
       void state.subsystems.fades.fadeTo(
         { kind: 'scalarField', field: fieldId },
         1,
@@ -951,7 +944,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   function removeVolumeField(fieldId: VolumeFieldId): void {
     state.gpu.scalarVolumeRenderer?.removeField(fieldId);
-    state.data.volumes.remove(fieldId);
+    state.settings.volumes.fields = removeVolumeFieldSetting(
+      state.settings.volumes.fields,
+      fieldId,
+    );
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
