@@ -9,11 +9,12 @@
  * previously had to call back into the engine handle via
  * `handle.volumes.getState()` to learn what changed.
  *
- * The snapshot merges the renderer's live handle list (the GPU-side
- * registry) with the per-field tunable bag held in the volume store
- * (`state.data.volumes`).  Missing entries fall back to the compile-time
- * defaults from `volumeFieldDefaults` so a newly-added field that hasn't
- * been mutated yet still produces a complete row.
+ * Both identity and values come from `state.settings.volumes.fields`,
+ * which is registry-seeded at engine construction.  The panel therefore
+ * shows every field's row from boot, before its cube has loaded onto the
+ * GPU.  Missing entries fall back to the compile-time defaults from
+ * `volumeFieldDefaults` so a newly-added field whose settings row
+ * predates a defaults change still produces a complete row.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -28,12 +29,11 @@ import {
 export function buildVolumeFieldsSnapshot(
   state: EngineState,
 ): ReadonlyArray<VolumeFieldRowData> {
-  // The renderer's handle list is typed as `string[]` (GPU layer is
-  // type-agnostic); narrow to `VolumeFieldId` here because only
-  // registry-listed handles can have been registered upstream.
-  const ids = (state.gpu.scalarVolumeRenderer?.listHandles() ?? []) as VolumeFieldId[];
+  // Identity comes from the settings keys, which are seeded from the
+  // registry at engine construction — the GPU handle list is not consulted.
+  const ids = Object.keys(state.settings.volumes.fields) as VolumeFieldId[];
   return ids.map((id) => {
-    const field = state.data.volumes.params(id);
+    const field = state.settings.volumes.fields[id];
     const defaults = getVolumeFieldDefaults(id);
     return {
       handle: id,

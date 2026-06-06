@@ -48,7 +48,7 @@ import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps'
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
-import type { VolumeFieldId } from '../../../../src/@types/data/VolumeFieldId';
+
 
 // ── Module mocks ──────────────────────────────────────────────────────
 //
@@ -290,8 +290,9 @@ const errorValue = (msg: string): LoadState<unknown> => ({
  * Minimal `EngineState` shaped for wireSlots's body.  Mirrors the
  * post-`initGpu` shape: the GPU renderers are present (so commit
  * subscribers don't NPE), the per-source slot map is empty (the test
- * populates it per-case), and the volume store is seeded (so the MCPM
- * demand predicate reads true at boot, as wireSlots expects).
+ * populates it per-case), and the volume fields are seeded via
+ * `settings.volumes.fields: seedVolumeFields()` (so the MCPM demand
+ * predicate reads true at boot, as wireSlots expects).
  */
 function makeState(
   overrides: Partial<{
@@ -308,13 +309,7 @@ function makeState(
     famousGalaxy: true,
     group: true,
   };
-  // Seed the volume store the same way the engine does at construction, so the
-  // demand predicate for MCPM (default-on) reads true at boot — parity with the
-  // old imperative boot loop that loaded MCPM unconditionally.
   const data = createEngineData();
-  for (const [id, params] of Object.entries(seedVolumeFields())) {
-    data.volumes.setParams(id as VolumeFieldId, params!);
-  }
   return {
     settings: {
       points: {
@@ -330,7 +325,7 @@ function makeState(
       thumbnails: { enabled: true },
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 1.0 },
-      volumes: { masterEnabled: true },
+      volumes: { masterEnabled: true, fields: seedVolumeFields() },
       // Structure categories all visible by default ⇒ clusterCatalog demanded.
       // Overridable so a test can hide every category and pin the bug-fix
       // (clusterCatalog must NOT load when nothing structural is visible).
@@ -368,15 +363,6 @@ function makeState(
       milkyWayRenderer: null,
       scalarVolumeRenderer: {
         addField: vi.fn(),
-        setIntensity: vi.fn(),
-        setEnabled: vi.fn(),
-        setContrast: vi.fn(),
-        setFieldPalette: vi.fn(),
-        setDensityScale: vi.fn(),
-        setEnvelope: vi.fn(),
-        setContrastCenter: vi.fn(),
-        setExposure: vi.fn(),
-        setTrim: vi.fn(),
       } as never,
     },
     subsystems: {

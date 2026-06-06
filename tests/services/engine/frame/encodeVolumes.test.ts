@@ -70,6 +70,7 @@ describe('encodeVolumes', () => {
       encoder: env.encoder,
       ctx,
       scalarVolumeRenderer,
+      settingsOf: () => undefined,
       fadeOpacityOf: () => 1,
       timestampWrites: undefined,
     });
@@ -93,6 +94,7 @@ describe('encodeVolumes', () => {
       encoder: env.encoder,
       ctx,
       scalarVolumeRenderer,
+      settingsOf: () => undefined,
       fadeOpacityOf: () => 1,
       timestampWrites: undefined,
     });
@@ -116,6 +118,7 @@ describe('encodeVolumes', () => {
       encoder: env.encoder,
       ctx,
       scalarVolumeRenderer,
+      settingsOf: () => undefined,
       fadeOpacityOf: () => 1,
       timestampWrites: undefined,
     });
@@ -135,6 +138,7 @@ describe('encodeVolumes', () => {
       encoder: env.encoder,
       ctx,
       scalarVolumeRenderer,
+      settingsOf: () => undefined,
       fadeOpacityOf: () => 1,
       timestampWrites: tw,
     });
@@ -153,6 +157,7 @@ describe('encodeVolumes', () => {
       encoder: env.encoder,
       ctx,
       scalarVolumeRenderer,
+      settingsOf: () => undefined,
       fadeOpacityOf: () => 1,
       timestampWrites: undefined,
     });
@@ -170,6 +175,7 @@ describe('encodeVolumes', () => {
       encoder: env.encoder,
       ctx,
       scalarVolumeRenderer: null,
+      settingsOf: () => undefined,
       fadeOpacityOf: () => 1,
       timestampWrites: undefined,
     });
@@ -192,10 +198,55 @@ describe('encodeVolumes', () => {
       encoder: env.encoder,
       ctx,
       scalarVolumeRenderer,
+      settingsOf: () => undefined,
       fadeOpacityOf: () => 1,
       timestampWrites: undefined,
     });
     expect(env.beginRenderPass).not.toHaveBeenCalled();
     expect(drawSpy).not.toHaveBeenCalled();
+  });
+
+  it('forwards settingsOf and fadeOpacityOf into draw', () => {
+    // The renderer reads each field's knobs per frame via the settingsOf
+    // projection and its animated opacity via fadeOpacityOf; both must
+    // reach `draw` by identity (settingsOf at index 4, fadeOpacityOf at 5).
+    const env = makeFakeEncoder();
+    const ctx = makeCtx();
+    const drawSpy = vi.fn();
+    const scalarVolumeRenderer = { draw: drawSpy, hasActiveFields: () => true } as any;
+    const settingsOf = () => undefined;
+    const fadeOpacityOf = () => 1;
+    encodeVolumes({
+      encoder: env.encoder,
+      ctx,
+      scalarVolumeRenderer,
+      settingsOf,
+      fadeOpacityOf,
+      timestampWrites: undefined,
+    });
+    // draw arg order: pass(0), vp(1), viewport(2), camPos(3), settingsOf(4), fadeOpacityOf(5).
+    expect(drawSpy.mock.calls[0]![4]).toBe(settingsOf);
+    expect(drawSpy.mock.calls[0]![5]).toBe(fadeOpacityOf);
+  });
+
+  it('forwards settingsOf and fadeOpacityOf into hasActiveFields', () => {
+    // The per-frame active-fields gate reads the same projection +
+    // opacity, in (settingsOf, fadeOpacityOf) order.
+    const env = makeFakeEncoder();
+    const ctx = makeCtx();
+    const hasSpy = vi.fn((_settingsOf?: unknown, _fadeOpacityOf?: unknown) => true);
+    const scalarVolumeRenderer = { draw: vi.fn((..._args: unknown[]) => {}), hasActiveFields: hasSpy } as any;
+    const settingsOf = () => undefined;
+    const fadeOpacityOf = () => 1;
+    encodeVolumes({
+      encoder: env.encoder,
+      ctx,
+      scalarVolumeRenderer,
+      settingsOf,
+      fadeOpacityOf,
+      timestampWrites: undefined,
+    });
+    expect(hasSpy.mock.calls[0]![0]).toBe(settingsOf);
+    expect(hasSpy.mock.calls[0]![1]).toBe(fadeOpacityOf);
   });
 });

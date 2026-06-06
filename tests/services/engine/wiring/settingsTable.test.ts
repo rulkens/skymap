@@ -59,7 +59,7 @@ function makeState(): Pick<EngineState, 'settings' | 'bias'> {
       thumbnails: { enabled: true },
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 0.5 },
-      volumes: { masterEnabled: false },
+      volumes: { masterEnabled: false, fields: {} },
       debug: { showPickBuffer: false, showDiskRadiusRing: false },
       labelCategoryVisibility: {
         cluster: true,

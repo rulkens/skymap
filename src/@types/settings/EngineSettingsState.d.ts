@@ -53,6 +53,8 @@
 import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { PoiCategory } from '../engine/data/PoiCategory';
+import type { VolumeFieldId } from '../data/VolumeFieldId';
+import type { VolumeFieldSettings } from './VolumeFieldSettings';
 
 export type EngineSettingsState = {
   /**
@@ -123,14 +125,18 @@ export type EngineSettingsState = {
   };
 
   /**
-   * Scalar-volume overlay master gate.  When false,
-   * `volumeUpsamplePass.enabled` short-circuits before consulting the
-   * renderer at zero GPU cost, and `encodeVolumes` never opens its pre-HDR
-   * half-res render pass.  Per-field params (enabled / intensity / palette /
-   * …) live on the volume store (`state.data.volumes`), not here.
+   * Scalar-volume overlay master gate and per-field params.  When
+   * `masterEnabled` is false, `volumeUpsamplePass.enabled` short-circuits
+   * before consulting the renderer at zero GPU cost, and `encodeVolumes`
+   * never opens its pre-HDR half-res render pass.  Per-field params
+   * (enabled / intensity / palette / …) live in `fields` — one settings
+   * row per registry-known volume field, seeded from `SOURCE_REGISTRY` at
+   * construction so the panel can show a field's toggle before its cube
+   * lazy-loads.
    */
   volumes: {
     masterEnabled: boolean;
+    fields: Partial<Record<VolumeFieldId, VolumeFieldSettings>>;
   };
 
   /**

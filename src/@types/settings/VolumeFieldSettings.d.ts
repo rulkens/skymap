@@ -2,10 +2,10 @@
  * VolumeFieldSettings — per-field runtime controls for one registered
  * scalar-volume field.
  *
- * Held by the volume store (`state.data.volumes`) keyed by `VolumeFieldId`.
+ * Held in `state.settings.volumes.fields`, keyed by `VolumeFieldId`.
  * The engine seeds these at construction from the field's SOURCE_REGISTRY
- * entry and keeps them in sync with every per-field setter, so the
- * SettingsPanel can read authoritative state without polling the GPU handle.
+ * entry; the SettingsPanel reads authoritative state directly from settings
+ * without polling the GPU handle.
  */
 
 import type { ScalarFieldPaletteId } from '../data/ScalarFieldPaletteId';
@@ -34,10 +34,10 @@ export type VolumeFieldSettings = {
    */
   densityScale: number;
   /**
-   * Palette LUT id for this field.  Each volume field owns its own LUT
-   * texture (see `scalarVolumeRenderer.ts`); this value mirrors the
-   * renderer's per-field palette so the SettingsPanel dropdown can read
-   * authoritative state without going through the GPU handle.
+   * Palette LUT id for this field.  This is the AUTHORITATIVE palette
+   * setting; the renderer tracks what's currently uploaded via its own
+   * `residentPaletteId` and re-uploads the LUT when this setting diverges
+   * from the resident value.
    */
   paletteId: ScalarFieldPaletteId;
   /**

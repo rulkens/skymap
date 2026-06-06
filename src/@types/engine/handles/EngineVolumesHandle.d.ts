@@ -13,10 +13,9 @@ import type { VolumeFieldId } from '../../data/VolumeFieldId';
  * `list` / `getState` are the read-side methods the SettingsPanel uses
  * to render per-field rows.
  *
- * The spherical-envelope control (`scalarVolumeRenderer.setEnvelope`)
- * is intentionally NOT exposed here — envelopes are registry-driven via
- * `VolumeFieldDefaults` keyed by handle; runtime UI tweaking would be
- * surprising for a content property.
+ * The spherical envelope is per-cube static presentation config, read
+ * once from the registry by the renderer's `addField` — it is not a
+ * user-tunable control and is therefore not exposed here.
  */
 export type EngineVolumesHandle = {
   /** Master gate for the entire scalar-volume overlay. */
