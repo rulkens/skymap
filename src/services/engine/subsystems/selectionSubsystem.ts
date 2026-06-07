@@ -171,6 +171,7 @@ export function createSelectionSubsystem(input: CreateSelectionSubsystemInput): 
   const subsystem: SelectionSubsystem = {
     hovered: () => hovered,
     selected: () => selected,
+    selectedTarget: () => resolveTarget(selected),
     focused: () => focused,
     setHovered,
     setSelected,

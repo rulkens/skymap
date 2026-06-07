@@ -1,4 +1,5 @@
 import type { GalaxyInfo } from '../GalaxyInfo';
+import type { FocusableTarget } from '../FocusableTarget';
 import type { Selection } from './Selection';
 
 export type SelectionSubsystem = {
@@ -6,6 +7,13 @@ export type SelectionSubsystem = {
   hovered(): Selection | null;
   /** Currently-pinned (clicked) entity, or null. */
   selected(): Selection | null;
+  /**
+   * The pinned selection resolved to its `FocusableTarget` (GalaxyInfo |
+   * StructureRecord), or null. Lets the dblclick handler focus the current
+   * selection without re-running the pick or caching a resolved copy — the
+   * selection slot is the authoritative home.
+   */
+  selectedTarget(): FocusableTarget | null;
   /**
    * Currently-focused (double-clicked / `focusOn`) entity, or null.
    * The third attention rung above `selected`: drives the

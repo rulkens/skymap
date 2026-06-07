@@ -67,14 +67,12 @@ export type PickRenderer = {
    *                         the same enum order as `PointRenderer.loadedSources()`.
    *                         The caller is responsible for filtering by visibility
    *                         mask — the picker draws every record it receives.
-   * @returns A discriminated {@link PickResult} carrying the front-most
-   *          fragment's identity — `'galaxy'` (with `source` + `localIdx`)
-   *          for a survey hit, or `'cluster'` / `'supercluster'` / `'void'`
-   *          (with `poiIndex`) for one of the three POI ring categories.
-   *          Returns `null` if the cursor is over background or a pick
-   *          is already in flight.  See `selectionEncoding.ts` for the
-   *          (sourceCode << 27 | localIdx + 1) packing and the per-
-   *          category source-code allocation (5/6/7 for the POI rings).
+   * @returns A {@link PickResult} carrying the front-most fragment's decoded
+   *          identity — its `sourceCode` + per-source `localIdx`. Classifying
+   *          that into a galaxy or a structure ring is `pickToSelection`'s
+   *          job. Returns `null` if the cursor is over background or a pick is
+   *          already in flight. See `selectionEncoding.ts` for the
+   *          (sourceCode << 27 | localIdx + 1) packing.
    */
   pick(
     viewportPx: Vec2,

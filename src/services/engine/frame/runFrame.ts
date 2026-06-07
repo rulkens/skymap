@@ -41,7 +41,7 @@ import { updatePosition } from '../../camera/orbitCamera';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { isEngineReady } from '../helpers/engineReady';
-import { resolvePoiFromPick } from '../helpers/resolvePoiFromPick';
+import { pickToSelection } from '../helpers/pickToSelection';
 import { collectPickTargets } from '../helpers/collectPickTargets';
 import { produceStructureMarkers } from '../presentation/produceStructureMarkers';
 import { deriveFrameContext } from './frameContext';
@@ -440,40 +440,12 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         state.gpu.timingService.descriptorFor('pick'),
       )
       .then((pick) => {
-        // Dispatch the picker's discriminated `PickResult` union to the
-        // right hover sink:
-        //   - null               → clear BOTH galaxy and POI hovers.
-        //   - kind:'galaxy'      → galaxy hover (selection subsystem);
-        //                          POI hover cleared.
-        //   - kind:'cluster' / 'supercluster' / 'void' → POI hover
-        //                          (poi subsystem, which fires
-        //                          onPoiHoverChange internally);
-        //                          galaxy hover cleared.
-        //
-        // The two sinks are mutually exclusive (one pick → one fragment).
-        // Clearing the OTHER sink on every dispatch keeps the InfoCard
-        // from showing stale hover text when the cursor drags from a
-        // galaxy onto a ring (or vice versa).  Each setter equality-
-        // short-circuits, so the repeated clears are O(1) no-ops.
-        if (pick === null) {
-          state.subsystems.selection.setHovered(null);
-        } else if (pick.kind === 'galaxy') {
-          state.subsystems.selection.setHovered({
-            kind: 'galaxy',
-            source: pick.source,
-            localIdx: pick.localIdx,
-          });
-        } else {
-          // POI variants (cluster / supercluster / void) — resolve via
-          // the shared helper so the click and hover paths agree
-          // byte-for-byte on the lookup.  An out-of-bounds index or
-          // missing POI produces null; same as "no hover".
-          const poi = resolvePoiFromPick(state.data.structures, {
-            category: pick.kind,
-            poiIndex: pick.poiIndex,
-          });
-          state.subsystems.selection.setHovered(poi !== null ? { kind: 'poi', id: poi.id } : null);
-        }
+        // Decode the pick to a hover `Selection` (galaxy / POI / null) via the
+        // shared map — the same one the click path uses, so hover and click
+        // can't drift. One slot: setHovered(null) clears, a galaxy or POI hit
+        // replaces; setHovered equality-short-circuits, so a steady hover is a
+        // no-op. The InfoCard reads the resolved target.
+        state.subsystems.selection.setHovered(pickToSelection(pick, state.data.structures));
         // No scheduler.requestRender() here intentionally.
         // The hover state only feeds the React InfoCard text —
         // there is no hover halo in the rendered scene today,
