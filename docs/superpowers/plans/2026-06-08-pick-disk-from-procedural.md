@@ -395,10 +395,10 @@ floor and resolved disks are picked by the procedural pass.
 - [x] `npm run build` → links (the removed varyings must be gone from BOTH the
   vertex output and every fragment input, or the WGSL compiler errors).
 - [x] `npm test` → full suite green.
-- [ ] Final behaviour is visual: with the pick-debug overlay
+- [x] Final behaviour is visual: with the pick-debug overlay
   (`debug.showPickBuffer`) on, the picked region for a resolved galaxy matches the
-  disk-radius ring (`debug.showDiskRadiusRing`). Ask the user to confirm in the
-  running dev server.
+  disk-radius ring (`debug.showDiskRadiusRing`). Confirmed by the user in the
+  running dev server — pick region hugs the ring in size and tilt.
 - [x] Commit.
 
 ---
