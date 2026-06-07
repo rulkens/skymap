@@ -49,7 +49,7 @@ import { STRUCTURE_POI_STYLES } from './structurePoiStyles';
 import { getLabelStyleOverride } from '../labelStyleOverride';
 import { focusRecession } from './focusRecession';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
-import { poiIdOf } from '../helpers/poiIdOf';
+import { structureIdOf } from '../helpers/structureIdOf';
 
 // Per-category load-in latch. The producer is a bare function (not a closure
 // over subsystem state like the director), so the once-per-category one-shot
@@ -90,7 +90,7 @@ export function produceStructureLabels(
   // the same instant and the same focus state.
   const fades = state.subsystems.fades;
   const now = performance.now();
-  const focusedPoiId = poiIdOf(state.subsystems.selection.focused());
+  const focusedStructureId = structureIdOf(state.subsystems.selection.focused());
 
   const structures = state.data.structures;
   for (const p of structures.all()) {
@@ -168,7 +168,7 @@ export function produceStructureLabels(
     // structure's own label is exempt from recession — a faded ring never
     // carries a bright label, but the thing under inspection keeps its label.
     const recession =
-      p.id === focusedPoiId
+      p.id === focusedStructureId
         ? 1
         : focusRecession(
             { kind: 'labelLayer', layer: 'poi', category: p.category },

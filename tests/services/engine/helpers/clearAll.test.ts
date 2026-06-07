@@ -25,7 +25,9 @@ function makeFixtures(opts: { hasSelection?: boolean; hasFocus?: boolean } = {})
   const selected = vi.fn(() =>
     opts.hasSelection ? ({ kind: 'galaxy', source: 0, localIdx: 1 } as const) : null,
   );
-  const focused = vi.fn(() => (opts.hasFocus ? ({ kind: 'poi', id: 'virgo' } as const) : null));
+  const focused = vi.fn(() =>
+    opts.hasFocus ? ({ kind: 'structure', id: 'virgo' } as const) : null,
+  );
   const requestRender = vi.fn();
   const state = {
     subsystems: {

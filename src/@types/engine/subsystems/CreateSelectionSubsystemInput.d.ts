@@ -18,11 +18,11 @@ export type CreateSelectionSubsystemInput = {
   /** Live read of the famous-galaxy meta sidecar (curated names + thumbnail IDs). */
   getFamousMeta: () => readonly FamousMetaEntry[];
   /**
-   * Live read of the POI table.  Closure (not snapshot) so a tier
-   * swap that replaces the POI list lands in subsequent lookups
-   * without re-binding.  Returns null for unknown ids — the
-   * subsystem treats that as "no POI to expand" and fires the
+   * Live read of the structure table.  Closure (not snapshot) so a
+   * tier swap that replaces the structure list lands in subsequent
+   * lookups without re-binding.  Returns null for unknown ids — the
+   * subsystem treats that as "no structure to expand" and fires the
    * callback with null.
    */
-  getPoi: (id: string) => StructureRecord | null;
+  getStructure: (id: string) => StructureRecord | null;
 };

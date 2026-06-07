@@ -1,27 +1,20 @@
 /**
- * commitPoiFocus — direct unit tests for the POI-side focus protocol.
+ * commitStructureFocus — direct unit tests for the structure-side focus
+ * protocol. Parallel to `commitGalaxyFocus.test.ts`:
+ *   - selection + focus go through `setSelected` / `setFocused` with a
+ *     `{kind:'structure', id}` Selection (the setters own `onFocusChange`,
+ *     so the helper takes no `cb`);
+ *   - tween distance comes from `structureFocusDistance`, not the galaxy path.
  *
- * Parallel to `commitGalaxyFocus.test.ts` but tailored to the POI shape:
- *   - Selection update goes through `selection.setSelected` with a
- *     `{kind:'poi', id}` Selection.
- *   - Focus update goes through `selection.setFocused` with the same
- *     Selection — the setter owns the `onFocusChange` fan-out, so the
- *     helper no longer takes a `cb`.
- *   - Tween distance comes from
- *     `poiFocusDistance(category, apparentRadiusMpc, fovYRad)`, NOT the
- *     galaxy `galaxyFocusDistance(diameterKpc)`.
- *
- * Why a separate suite: the helper has its own cam-null contract (only
- * the tween is gated; selection + focus still fire) which differs from
- * `focusOn`'s blanket cam-null guard at the engine.ts call site.  A
- * wrong-direction regression here would silently strand deep-link
- * drains that race bootstrap.
+ * Its own cam-null contract (only the tween is gated; selection + focus
+ * still fire) differs from `focusOn`'s blanket guard — a wrong-direction
+ * regression would silently strand deep-link drains that race bootstrap.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 
-import { commitPoiFocus } from '../../../../src/services/engine/helpers/commitPoiFocus';
-import { poiFocusDistance } from '../../../../src/services/engine/camera/poiFocusDistance';
+import { commitStructureFocus } from '../../../../src/services/engine/helpers/commitStructureFocus';
+import { structureFocusDistance } from '../../../../src/services/engine/camera/structureFocusDistance';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
 
@@ -53,36 +46,36 @@ function makeMockState(): EngineState {
   } as unknown as EngineState;
 }
 
-describe('commitPoiFocus', () => {
-  it('calls selection.setSelected with a poi-variant Selection', () => {
+describe('commitStructureFocus', () => {
+  it('calls selection.setSelected with a structure-variant Selection', () => {
     const state = makeMockState();
 
-    commitPoiFocus(state, virgo);
+    commitStructureFocus(state, virgo);
 
     expect(state.subsystems.selection.setSelected).toHaveBeenCalledWith({
-      kind: 'poi',
+      kind: 'structure',
       id: 'virgo-m87',
     });
   });
 
-  it('latches the focus slot with the same poi-variant Selection', () => {
+  it('latches the focus slot with the same structure-variant Selection', () => {
     const state = makeMockState();
 
-    commitPoiFocus(state, virgo);
+    commitStructureFocus(state, virgo);
 
     // The focus slot — not just the selection slot — drives the
     // cluster-focus member-isolation fade in runFrame (and owns the
     // onFocusChange URL-hash fan-out).  A bare single-click select must
     // NOT set it, but a focus commit must.
     expect(state.subsystems.selection.setFocused).toHaveBeenCalledWith({
-      kind: 'poi',
+      kind: 'structure',
       id: 'virgo-m87',
     });
   });
 
-  it('starts a tween with poiFocusDistance', () => {
+  it('starts a tween with structureFocusDistance', () => {
     const state = makeMockState();
-    commitPoiFocus(state, virgo);
+    commitStructureFocus(state, virgo);
     expect(state.subsystems.tweens.start).toHaveBeenCalledTimes(1);
     const startMock = state.subsystems.tweens.start as ReturnType<typeof vi.fn>;
     const firstCall = startMock.mock.calls[0];
@@ -91,24 +84,24 @@ describe('commitPoiFocus', () => {
     // Virgo has no apparentRadiusMpc → frames the physical core (2 Mpc) at the
     // camera's 60° FOV. Asserts against the helper so the framing law has one
     // source of truth.
-    expect(payload.toDistance).toBe(poiFocusDistance('cluster', 2, FOV60));
+    expect(payload.toDistance).toBe(structureFocusDistance(2, FOV60));
     expect(Array.from(payload.toTarget)).toEqual([10, 0, 0]);
   });
 
   it('skips the tween when state.cam is null, but still updates selection + focus', () => {
     const state = makeMockState();
     (state as unknown as { cam: unknown }).cam = null;
-    commitPoiFocus(state, virgo);
-    // Tween is skipped because cam is null (tweenToPoi absorbs the
+    commitStructureFocus(state, virgo);
+    // Tween is skipped because cam is null (tweenToStructure absorbs the
     // guard), but selection + focus still fire — they can land before
     // the camera is ready, and the deep-link drain depends on that
     // ordering.
     expect(state.subsystems.selection.setSelected).toHaveBeenCalledWith({
-      kind: 'poi',
+      kind: 'structure',
       id: 'virgo-m87',
     });
     expect(state.subsystems.selection.setFocused).toHaveBeenCalledWith({
-      kind: 'poi',
+      kind: 'structure',
       id: 'virgo-m87',
     });
     expect(state.subsystems.tweens.start).not.toHaveBeenCalled();

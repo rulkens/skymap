@@ -2,12 +2,12 @@
  * selectionSubsystem — owns the engine's hover + select + focus state.
  *
  * Three slots, each holding a `Selection` discriminated union
- * (`{kind:'galaxy', source, localIdx}` or `{kind:'poi', id}`) or
+ * (`{kind:'galaxy', source, localIdx}` or `{kind:'structure', id}`) or
  * null, forming the engine's attention ladder: hover → select →
  * focus.  Setters dedupe via `selectionEq` and fan out to
  * `cb.selection.onHoverChange` / `onSelectChange` with the resolved
  * `FocusableTarget` (GalaxyInfo for galaxy variants, StructureRecord
- * for POIs) — callers never have to remember to fire the callback
+ * for structures) — callers never have to remember to fire the callback
  * themselves.
  *
  * ### Why `focused` is a third slot, not a synonym for `selected`
@@ -26,7 +26,7 @@
  *
  * ### Deps are closures, not snapshots
  *
- * `getCloud` / `getFamousMeta` / `getPoi` are accessor functions so
+ * `getCloud` / `getFamousMeta` / `getStructure` are accessor functions so
  * the subsystem reads the LIVE source maps at call time.  Catalogs
  * arrive after engine construction (async GPU init), the sidecar
  * even later, and tier swaps replace whole sources mid-session — a
@@ -65,14 +65,14 @@ function selectionEq(a: Selection | null, b: Selection | null): boolean {
   if (a.kind === 'galaxy' && b.kind === 'galaxy') {
     return a.source === b.source && a.localIdx === b.localIdx;
   }
-  if (a.kind === 'poi' && b.kind === 'poi') {
+  if (a.kind === 'structure' && b.kind === 'structure') {
     return a.id === b.id;
   }
   return false;
 }
 
 export function createSelectionSubsystem(input: CreateSelectionSubsystemInput): SelectionSubsystem {
-  const { cb, getCloud, getFamousMeta, getPoi } = input;
+  const { cb, getCloud, getFamousMeta, getStructure } = input;
 
   // Closure-captured `let`s — genuinely inaccessible from outside.
   // All start null; `hovered`/`selected` populate from the first hover
@@ -104,14 +104,14 @@ export function createSelectionSubsystem(input: CreateSelectionSubsystemInput): 
   /**
    * Resolve a Selection to its expanded `FocusableTarget` (GalaxyInfo
    * | StructureRecord), or null.  Galaxy variant uses the cloud
-   * lookup; POI variant resolves through `getPoi` (which the engine
-   * wires to `state.data.structures.byId`).  Unknown POI ids resolve to
-   * null — fire-the-callback-with-null is the right semantics for a
-   * stale id pick.
+   * lookup; structure variant resolves through `getStructure` (which
+   * the engine wires to `state.data.structures.byId`).  Unknown ids
+   * resolve to null — fire-the-callback-with-null is the right
+   * semantics for a stale id pick.
    */
   function resolveTarget(sel: Selection | null): FocusableTarget | null {
     if (sel === null) return null;
-    return sel.kind === 'galaxy' ? galaxyInfoFor(sel) : getPoi(sel.id);
+    return sel.kind === 'galaxy' ? galaxyInfoFor(sel) : getStructure(sel.id);
   }
 
   function setHovered(sel: Selection | null): void {
@@ -125,8 +125,8 @@ export function createSelectionSubsystem(input: CreateSelectionSubsystemInput): 
     selected = sel;
     // `prebuiltInfo` short-circuits the cloud lookup for the
     // `selectByAlias` race window — see the module header for the
-    // pre-GPU-upload story.  Galaxy-only escape hatch; POI ids
-    // resolve directly through the POI table.
+    // pre-GPU-upload story.  Galaxy-only escape hatch; structure ids
+    // resolve directly through the structure table.
     const target =
       sel !== null && sel.kind === 'galaxy' && prebuiltInfo !== undefined
         ? prebuiltInfo
@@ -141,7 +141,7 @@ export function createSelectionSubsystem(input: CreateSelectionSubsystemInput): 
    * into the `#focus=` / `#poi=` URL hash via the callback.  One
    * setter for both consumers means they can't drift.  `prebuiltInfo`
    * short-circuits the cloud lookup for the `selectByAlias` race —
-   * same escape hatch as `setSelected`; ignored for POI focuses.
+   * same escape hatch as `setSelected`; ignored for structure focuses.
    */
   function setFocused(sel: Selection | null, prebuiltInfo?: GalaxyInfo | null): void {
     if (selectionEq(sel, focused)) return;

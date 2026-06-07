@@ -17,8 +17,8 @@
  *   - `{ kind: 'galaxy', source, localIdx }` — a survey point. Returned
  *     unconditionally; a not-yet-loaded cloud surfaces as
  *     onSelectChange(null) inside `setSelected`, not a dropped selection.
- *   - `{ kind: 'poi', id }` — a structure ring resolved to its record's
- *     stable id.
+ *   - `{ kind: 'structure', id }` — a structure ring resolved to its
+ *     record's stable id.
  *
  * The resolver does NOT call `requestRender()` — that's the engine's job
  * after it updates the selection. Scheduler-free keeps tests stub-free.

@@ -1,6 +1,6 @@
 /**
  * commitGalaxyFocus — the shared "we have decided to focus on this
- * galaxy" protocol.  Parallel to `commitPoiFocus`.
+ * galaxy" protocol.  Parallel to `commitStructureFocus`.
  *
  * Three steps: update the selection slot, latch the focus slot (which
  * owns the `onFocusChange` URL-hash fan-out), then start the camera

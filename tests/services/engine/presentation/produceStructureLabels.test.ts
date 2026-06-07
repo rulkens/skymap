@@ -15,18 +15,21 @@ import type { StructureRecord } from '../../../../src/@types/engine/data/Structu
 // produceStructureLabels now reads `state.data.structures` for the records,
 // `state.subsystems.fades` for the per-category opacity + load-in fire, and
 // `state.subsystems.selection.focused()` for the focused-exempt recession.
-// The fixture supplies all three; `focusedPoiId` selects which poi (if any)
-// the selection subsystem reports as focused.
-function makeState(opts: { focusedPoiId?: string | null; fades?: FadeRegistry } = {}): EngineState {
+// The fixture supplies all three; `focusedStructureId` selects which structure
+// (if any) the selection subsystem reports as focused.
+function makeState(
+  opts: { focusedStructureId?: string | null; fades?: FadeRegistry } = {},
+): EngineState {
   const fades = opts.fades ?? createFadeRegistry();
   registerAllCategories(fades);
-  const focusedPoiId = opts.focusedPoiId ?? null;
+  const focusedStructureId = opts.focusedStructureId ?? null;
   return {
     data: createEngineData(),
     subsystems: {
       fades,
       selection: {
-        focused: () => (focusedPoiId === null ? null : { kind: 'poi', id: focusedPoiId }),
+        focused: () =>
+          focusedStructureId === null ? null : { kind: 'structure', id: focusedStructureId },
       },
     },
   } as unknown as EngineState;
@@ -181,12 +184,12 @@ describe('produceStructureLabels', () => {
   it('focused structure label is exempt from recession', () => {
     // The focused structure's own label stays at its blend-0 value even at
     // full blend — a faded ring never carries a bright label.
-    const blend0 = makeState({ focusedPoiId: 'a' });
+    const blend0 = makeState({ focusedStructureId: 'a' });
     blend0.data.structures.setGroup('anchors', [rec('a')]);
     const blend0Alpha = produceStructureLabels(blend0, makeCtx({ focusBlend: 0 })).labels[0]!
       .fadeAlpha!;
 
-    const blend1 = makeState({ focusedPoiId: 'a' });
+    const blend1 = makeState({ focusedStructureId: 'a' });
     blend1.data.structures.setGroup('anchors', [rec('a')]);
     const blend1Alpha = produceStructureLabels(blend1, makeCtx({ focusBlend: 1 })).labels[0]!
       .fadeAlpha!;

@@ -18,16 +18,18 @@ import type { StructureRecord } from '../../../../src/@types/engine/data/Structu
 type TestState = EngineState & { subsystems: { fades: FadeRegistry } };
 
 function makeState(
-  selectedPoiId: string | null = null,
-  focusedPoiId: string | null = selectedPoiId,
+  selectedStructureId: string | null = null,
+  focusedStructureId: string | null = selectedStructureId,
 ): TestState {
   return {
     data: createEngineData(),
     subsystems: {
       fades: createFadeRegistry(),
       selection: {
-        selected: () => (selectedPoiId !== null ? { kind: 'poi', id: selectedPoiId } : null),
-        focused: () => (focusedPoiId !== null ? { kind: 'poi', id: focusedPoiId } : null),
+        selected: () =>
+          selectedStructureId !== null ? { kind: 'structure', id: selectedStructureId } : null,
+        focused: () =>
+          focusedStructureId !== null ? { kind: 'structure', id: focusedStructureId } : null,
       },
     },
   } as unknown as TestState;

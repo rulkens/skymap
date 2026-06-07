@@ -7,7 +7,7 @@
  *
  *   1. A picker miss (`null`) returns null.
  *   2. A survey hit returns its galaxy `Selection`.
- *   3. A structure hit resolves through the injected store to a POI id.
+ *   3. A structure hit resolves through the injected store to its id.
  *   4. The picker is called with the exact (viewport, x, y, sources)
  *      values supplied by the engine — no transformation.
  */
@@ -70,12 +70,12 @@ describe('createClickResolver', () => {
     });
   });
 
-  it('resolves a structure hit through the store to a POI Selection', async () => {
+  it('resolves a structure hit through the store to a structure Selection', async () => {
     const r = createClickResolver({
       pickRenderer: makePicker({ sourceCode: Source.Cluster, localIdx: 0 }),
       structures,
     });
-    expect(await r.resolveClick(dummyArgs)).toEqual({ kind: 'poi', id: virgo.id });
+    expect(await r.resolveClick(dummyArgs)).toEqual({ kind: 'structure', id: virgo.id });
   });
 
   it('forwards the click args to pickRenderer.pick verbatim', async () => {
