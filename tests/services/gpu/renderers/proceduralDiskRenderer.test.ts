@@ -20,6 +20,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createProceduralDiskRenderer } from '../../../../src/services/gpu/renderers/proceduralDiskRenderer';
 import { FLOATS_PER_INSTANCE } from '../../../../src/services/gpu/renderers/instancedQuadRenderer';
+import { packSelection } from '../../../../src/data/selectionEncoding';
 import type { ProceduralDiskInstance } from '../../../../src/@types/rendering/ProceduralDiskInstance';
 
 function makeStubInit() {
@@ -35,9 +36,9 @@ function makeStubInit() {
     createBindGroup: vi.fn(() => ({})),
     createSampler: vi.fn(() => ({})),
     queue: {
-      // The renderer's instance upload is the second writeBuffer call
-      // (uniforms first, instance bytes second). We snapshot every call
-      // and let the assertion pick out the instance payload.
+      // Three writeBuffer calls per frame: uniforms [0], visual instances [1],
+      // pick-buffer mirror [2]. We snapshot every call so assertions can
+      // address each by index.
       writeBuffer: vi.fn(
         (
           _buf: GPUBuffer,
@@ -95,6 +96,39 @@ function fakeProceduralInstance(overrides: Partial<ProceduralDiskInstance> = {})
   };
 }
 
+describe('proceduralDiskRenderer pack loop (Task R2)', () => {
+  it('pack writes the packed pick id into slot 6 as u32 bits', () => {
+    // 1_000_000 exercises the float-vs-bits distinction: Math.fround(1_000_000)
+    // === 1_000_000, but a non-round value like 0x07fffffe would not round-trip
+    // as f32 and would corrupt the id if written via packed[o+6] = value.
+    const { init, writeBufferCalls } = makeStubInit();
+    const renderer = createProceduralDiskRenderer(init);
+
+    const pass = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      setVertexBuffer: vi.fn(),
+      draw: vi.fn(),
+    } as unknown as GPURenderPassEncoder;
+
+    const instances: ProceduralDiskInstance[] = [
+      fakeProceduralInstance({ sourceCode: 1, localIdx: 7 }),
+      fakeProceduralInstance({ sourceCode: 3, localIdx: 1_000_000 }),
+    ];
+
+    renderer.draw(pass, new Float32Array(16), [800, 600], [0, 0, 0], 100, FOCUS_BIND_GROUP, instances);
+
+    // Visual instance payload is always writeBufferCalls[1] (uniforms first,
+    // visual instances second, pick mirror third).
+    const visualPayload = writeBufferCalls[1]!.data;
+    // Reinterpret the same bytes as u32 to inspect the bitcast-written slot 6.
+    const u32 = new Uint32Array(visualPayload.buffer);
+
+    expect(u32[6]).toBe(packSelection(1, 7));
+    expect(u32[FLOATS_PER_INSTANCE + 6]).toBe(packSelection(3, 1_000_000));
+  });
+});
+
 describe('proceduralDiskRenderer pack loop (Task R1)', () => {
   it('pack writes 16 floats per instance — last 4 are zero (procedural shader does not read them)', () => {
     const { init, writeBufferCalls } = makeStubInit();
@@ -114,9 +148,10 @@ describe('proceduralDiskRenderer pack loop (Task R1)', () => {
 
     renderer.draw(pass, new Float32Array(16), [800, 600], [0, 0, 0], 100, FOCUS_BIND_GROUP, instances);
 
-    // The factory calls writeBuffer twice per draw: uniforms first, then
-    // the instance payload. The instance payload is the one we need.
-    expect(writeBufferCalls.length).toBe(2);
+    // draw emits three writeBuffer calls per frame: uniforms first, then
+    // the visual instance payload, then the pick instance buffer mirror.
+    // The visual instance payload is always at index 1.
+    expect(writeBufferCalls.length).toBe(3);
     const instancePayload = writeBufferCalls[1]!.data;
 
     // 16 floats per instance × 2 instances = 32 floats.

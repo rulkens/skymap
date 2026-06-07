@@ -42,7 +42,8 @@ import type { ProceduralDiskRenderer } from '../../../@types/rendering/Procedura
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
-import { FLOATS_PER_INSTANCE, createInstancedQuadRenderer } from './instancedQuadRenderer';
+import { FLOATS_PER_INSTANCE, BYTES_PER_INSTANCE, createInstancedQuadRenderer } from './instancedQuadRenderer';
+import { packSelection } from '../../../data/selectionEncoding';
 
 type Init = {
   device: GPUDevice;
@@ -71,6 +72,22 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     uniformVisibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
   });
 
+  // Pick instance buffer — owned by this renderer, separate from the
+  // visual instance buffer inside 'inner' (which is private to the
+  // factory). Task 4 will add the 'pickDisks' method that binds this
+  // buffer to the pick pipeline. For now we allocate, grow, fill, and
+  // record the count so the infrastructure is ready without leaking any
+  // pick-pipeline scope into this task's diff.
+  //
+  // Why a second buffer rather than reusing the visual one: the visual
+  // buffer is private to instancedQuadRenderer and not exposed. Unlike
+  // structureMarkerRenderer, which rebinds one shared buffer across its
+  // visible and pick pipelines, this renderer must allocate a second,
+  // byte-identical buffer — the factory gives us no other handle.
+  let pickInstanceBuffer: GPUBuffer | null = null;
+  let pickInstanceBufferCapacity = 0; // measured in instances
+  let lastPickInstanceCount = 0;
+
   function draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
@@ -86,6 +103,13 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     // procedural pass is a few KB; GC churn isn't load-bearing today.
     // A reusable scratch buffer can be added if profiling flags it.
     const packed = new Float32Array(instances.length * FLOATS_PER_INSTANCE);
+    // Alias the same ArrayBuffer as u32 so we can write pick ids into
+    // float slots without float-precision loss. localIdx can exceed 2^24,
+    // which isn't exactly representable as f32; writing the raw u32 bits
+    // preserves all 27 localIdx bits. The shader reads them back with
+    // bitcast<u32>. The alternative — storing localIdx as a plain f32 —
+    // would silently corrupt ids above ~16 M.
+    const packedU32 = new Uint32Array(packed.buffer);
     for (let i = 0; i < instances.length; i++) {
       const o = i * FLOATS_PER_INSTANCE;
       const ins = instances[i]!;
@@ -95,7 +119,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
       packed[o + 3] = ins.sizeWorldMpc;
       packed[o + 4] = ins.axisRatio;
       packed[o + 5] = ins.positionAngleDeg;
-      packed[o + 6] = 0;
+      packedU32[o + 6] = packSelection(ins.sourceCode, ins.localIdx);
       packed[o + 7] = 0;
       packed[o + 8] = ins.colourIndex;
       packed[o + 9] = ins.crossfadeAlpha;
@@ -122,6 +146,29 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
       pxPerRad,
       focusBindGroup,
     });
+
+    // ── Pick instance buffer (mirror of the visual upload) ─────────────
+    //
+    // We own a second GPU buffer holding the same byte-identical packed
+    // data. Task 4 will bind this to the pick pipeline's vertex slot;
+    // allocated and grown here so the infrastructure exists without
+    // requiring Task 4's pipeline code in this diff.
+    //
+    // Why VERTEX | COPY_DST: instance buffers consumed by a draw call
+    // must carry VERTEX; COPY_DST is required by writeBuffer. Mirrors
+    // the usage flags on the visual instance buffer inside
+    // instancedQuadRenderer (see its grow block).
+    if (pickInstanceBuffer === null || pickInstanceBufferCapacity < instances.length) {
+      pickInstanceBuffer?.destroy();
+      pickInstanceBuffer = init.device.createBuffer({
+        label: 'proceduralDisks-pick-instances',
+        size: instances.length * BYTES_PER_INSTANCE,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      });
+      pickInstanceBufferCapacity = instances.length;
+    }
+    init.device.queue.writeBuffer(pickInstanceBuffer, 0, packed);
+    lastPickInstanceCount = instances.length; // consumed by the pick pass to issue the instanced draw
   }
 
   const renderer: ProceduralDiskRenderer = {
