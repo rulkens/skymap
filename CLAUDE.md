@@ -114,11 +114,11 @@ Re-run order when CF4 raw data changes:
 3. `npm run sync-r2-secure` — from the main worktree only (see project memory `project_worktree_data_isolation`).
 
 Re-run order when cluster/supercluster data changes:
-1. `npm run fetch-clusters` — downloads `data/raw/{mcxc,mscc}/{*.dat,ReadMe}` from CDS VizieR and verifies against the committed `.sha256` sidecars. Same pattern as `npm run fetch-cf4`.
-2. `npm run build-clusters` — parses the raw tables + the featured seed, emits `public/data/clusters.ccat` + `public/data/clusters_meta.json`. Run after `npm run build-tiers`.
+1. `npm run fetch-structures` — downloads `data/raw/{mcxc,mscc}/{*.dat,ReadMe}` from CDS VizieR and verifies against the committed `.sha256` sidecars. Same pattern as `npm run fetch-cf4`.
+2. `npm run build-structures` — parses the raw tables + the featured seed, emits `public/data/structures.ccat` + `public/data/structures_meta.json`. Run after `npm run build-tiers`.
 3. `npm run sync-r2-secure` — uploads the new artefacts to R2.
 
-The `.ccat` + `clusters_meta.json` artefacts are gitignored (build outputs, like the `.bin` files). The raw `.dat`/`ReadMe` files are also gitignored; only the provenance `README.md` + `.dat.sha256` sidecars are committed.
+The `.ccat` + `structures_meta.json` artefacts are gitignored (build outputs, like the `.bin` files). The raw `.dat`/`ReadMe` files are also gitignored; only the provenance `README.md` + `.dat.sha256` sidecars are committed.
 
 ### Deploy workflow (Cloudflare Workers Assets + R2)
 
@@ -132,14 +132,14 @@ A full data-refreshing deploy is therefore:
 
 1. `npm run build-tiers` — regenerates all `public/data/*.bin`.
 2. `npm run build-filaments` (only if filaments need rebuilding — rare).
-3. `npm run sync-r2-secure` — uploads regenerated `.bin` files (and `famous_*.json` sidecars, plus the cluster `clusters.ccat` + `clusters_meta.json`) to R2, then purges the matching URLs from the Cloudflare CDN edge cache. Idempotent; full bucket replacement on every run. The `-secure` wrapper loads `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ZONE_ID` from the OS secrets store (macOS Keychain, Linux libsecret) so the credentials never live in a dotfile; the bare `npm run sync-r2` is a fallback for environments without bash where the env vars are already injected (CI, Windows-without-WSL). Without the credentials the purge step is skipped and the CDN keeps serving stale bytes until the per-object TTL expires — use the secure wrapper.
+3. `npm run sync-r2-secure` — uploads regenerated `.bin` files (and `famous_*.json` sidecars, plus the cluster `structures.ccat` + `structures_meta.json`) to R2, then purges the matching URLs from the Cloudflare CDN edge cache. Idempotent; full bucket replacement on every run. The `-secure` wrapper loads `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ZONE_ID` from the OS secrets store (macOS Keychain, Linux libsecret) so the credentials never live in a dotfile; the bare `npm run sync-r2` is a fallback for environments without bash where the env vars are already injected (CI, Windows-without-WSL). Without the credentials the purge step is skipped and the CDN keeps serving stale bytes until the per-object TTL expires — use the secure wrapper.
 4. `npm run deploy` — pushes `main`. The Cloudflare GitHub integration takes over and rebuilds the shell.
 
 If you only changed code and not catalog bytes, **step 4 alone is enough**. The most common loop is "edit, push, watch the Workers build", which finishes in ~30 s.
 
 The `.bin` files are intentionally **not** in git (`public/data/*.bin` is gitignored). They are pure build artefacts: deterministic outputs of `tools/catalog/buildAllBins.ts` against the raw catalog files in `data/raw/`. Checking them in would inflate every clone by ~150 MB for no informational gain — the same bytes can always be rebuilt from source on demand. Keeping them out also avoids accidental drift between `tools/catalog/buildAllBins.ts` settings (tier targets, abs-mag thresholds) and a stale committed binary; the R2 sync ships a fresh build on demand, so what's hosted is always in sync with the current pipeline code.
 
-The runtime `cloudLoader` requests `<source>-<tier>.bin` per source as the user switches tiers; the `dataUrl()` helper prefixes each path with `VITE_DATA_BASE_URL`, which is set in the committed `.env.production` (the rest of `.env*` is gitignored — see the .gitignore docblock for the rationale). Vite inlines that value into the production bundle at build time. Dev runs with no `.env.development` present, so `dataUrl()` falls back to the empty string and Vite serves `public/data/*` at the relative `/data/` path. A complete R2 sync must include every variant the runtime might request: `sdss-medium.bin`, `sdss-large.bin`, `glade-small.bin`, `glade-medium.bin`, `glade-large.bin`, plus the tier-agnostic `2mrs.bin`, `famous.bin`, `filaments.bin`, `clusters.ccat`, and `clusters_meta.json`. The `tools/deploy/syncR2.ts` ALLOW filter encodes that set.
+The runtime `cloudLoader` requests `<source>-<tier>.bin` per source as the user switches tiers; the `dataUrl()` helper prefixes each path with `VITE_DATA_BASE_URL`, which is set in the committed `.env.production` (the rest of `.env*` is gitignored — see the .gitignore docblock for the rationale). Vite inlines that value into the production bundle at build time. Dev runs with no `.env.development` present, so `dataUrl()` falls back to the empty string and Vite serves `public/data/*` at the relative `/data/` path. A complete R2 sync must include every variant the runtime might request: `sdss-medium.bin`, `sdss-large.bin`, `glade-small.bin`, `glade-medium.bin`, `glade-large.bin`, plus the tier-agnostic `2mrs.bin`, `famous.bin`, `filaments.bin`, `structures.ccat`, and `structures_meta.json`. The `tools/deploy/syncR2.ts` ALLOW filter encodes that set.
 
 ### MCPM Cosmic Web volume
 

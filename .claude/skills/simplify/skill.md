@@ -61,7 +61,15 @@ Either is fine — the skill adapts:
 3. **Trace before editing.** Follow the actual call graph of what depends on the strand
    you're pulling; verify the blast radius rather than assuming it. A "this only touches
    one file" guess is how a mirror reappears somewhere you didn't look.
-4. **Apply the un-braided shape, in project idiom.** The replacement should read like the
+4. **Apply the un-braided shape, in project idiom — prefer to delegate the edits to a
+   subagent.** Once you've scoped the un-braiding (step 1) and traced the blast radius
+   (step 3), hand the actual file edits to a subagent rather than hand-editing on the main
+   thread, especially for a sizeable refactor (a rename can touch hundreds of refs across
+   dozens of files). Front-load the dispatch with the exact edit list — token
+   replacements, `git mv` renames, and the precise boundary of what to touch vs. leave —
+   because you can't message a running subagent mid-flight. The main thread keeps the
+   orchestration role: it runs `npm test`/`typecheck`, prettiers the touched files, and
+   commits/opens the PR (subagents can't run npm). The replacement should read like the
    surrounding code:
    - registry row / discriminated union over a second `switch`/`if` branch on the same
      discriminant (the second branch _is_ the signal to consolidate);
