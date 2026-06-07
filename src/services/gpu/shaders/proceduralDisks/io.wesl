@@ -75,7 +75,7 @@ struct Uniforms {
 
 struct InstanceIn {
   @location(0) posSize: vec4<f32>,         // x, y, z, sizeWorldMpc
-  @location(1) orientation: vec4<f32>,     // axisRatio, positionAngleDeg, _, _
+  @location(1) orientation: vec4<f32>,     // axisRatio, positionAngleDeg, pickIdBits, _
   @location(2) extras: vec4<f32>,          // colourIndex, crossfadeAlpha, procFadeOut, _
 };
 
@@ -106,4 +106,10 @@ struct VsOut {
   // focused POI (and for everything at rest), 0.08 for non-members, ramped
   // by the focus blend. Computed once per instance in the vertex stage.
   @location(4) @interpolate(flat) focusDim: f32,
+  // CPU-packed pick identity: '(sourceCode << 27) | localIdx', stored as
+  // raw bits in instance slot 6 (orientation.z) and recovered here via
+  // bitcast. Flat because every fragment of one quad shares the same galaxy
+  // identity. Only the pick fragment declares and reads 'pickId'; the visual
+  // fragment does not, so the value is simply ignored there.
+  @location(5) @interpolate(flat) pickId: u32,
 };
