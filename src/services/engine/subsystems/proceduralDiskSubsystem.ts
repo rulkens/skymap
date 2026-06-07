@@ -74,6 +74,8 @@ export function maybeEmitProceduralDisk(
   colourIndex: number,
   fadeStartPx: number,
   fadeEndPx: number,
+  sourceCode: SourceType,
+  localIdx: number,
 ): ProceduralDiskInstance | null {
   if (px <= fadeStartPx) return null;
   if (!Number.isFinite(ar) || !Number.isFinite(pa)) return null;
@@ -89,6 +91,8 @@ export function maybeEmitProceduralDisk(
     colourIndex,
     crossfadeAlpha,
     procFadeOut: 1.0,
+    sourceCode,
+    localIdx,
   };
 }
 
@@ -213,6 +217,8 @@ export function createProceduralDiskSubsystem(
           colourIndex,
           PROCEDURAL_DISK_FADE_START_PX,
           PROCEDURAL_DISK_FADE_END_PX,
+          cloudSource,
+          i,
         );
         if (emitted) {
           // Famous-WebP crossfade-OUT.  For Famous-source galaxies

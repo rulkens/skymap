@@ -47,6 +47,8 @@ describe('maybeEmitProceduralDisk', () => {
       base.colourIndex,
       base.fadeStartPx,
       base.fadeEndPx,
+      0,
+      0,
     );
     expect(r).toBeNull();
   });
@@ -66,6 +68,8 @@ describe('maybeEmitProceduralDisk', () => {
       base.colourIndex,
       base.fadeStartPx,
       base.fadeEndPx,
+      0,
+      0,
     );
     expect(r).toBeNull();
   });
@@ -82,6 +86,8 @@ describe('maybeEmitProceduralDisk', () => {
       base.colourIndex,
       base.fadeStartPx,
       base.fadeEndPx,
+      0,
+      0,
     );
     expect(r).toBeNull();
   });
@@ -98,6 +104,8 @@ describe('maybeEmitProceduralDisk', () => {
       base.colourIndex,
       base.fadeStartPx,
       base.fadeEndPx,
+      0,
+      0,
     );
     expect(r).toBeNull();
   });
@@ -114,6 +122,8 @@ describe('maybeEmitProceduralDisk', () => {
       base.colourIndex,
       base.fadeStartPx,
       base.fadeEndPx,
+      0,
+      0,
     );
     expect(r).not.toBeNull();
     expect(r!.crossfadeAlpha).toBeCloseTo(0, 3);
@@ -131,6 +141,8 @@ describe('maybeEmitProceduralDisk', () => {
       base.colourIndex,
       base.fadeStartPx,
       base.fadeEndPx,
+      0,
+      0,
     );
     expect(atEnd!.crossfadeAlpha).toBeCloseTo(1, 6);
 
@@ -146,6 +158,8 @@ describe('maybeEmitProceduralDisk', () => {
       base.colourIndex,
       base.fadeStartPx,
       base.fadeEndPx,
+      0,
+      0,
     );
     expect(farPast!.crossfadeAlpha).toBeCloseTo(1, 6);
   });
@@ -167,6 +181,8 @@ describe('maybeEmitProceduralDisk', () => {
       base.colourIndex,
       base.fadeStartPx,
       base.fadeEndPx,
+      0,
+      0,
     );
     expect(r!.crossfadeAlpha).toBeCloseTo(0.5, 6);
   });
@@ -186,6 +202,8 @@ describe('maybeEmitProceduralDisk', () => {
       base.colourIndex,
       base.fadeStartPx,
       base.fadeEndPx,
+      0,
+      0,
     );
     expect(r!.crossfadeAlpha).toBeCloseTo(0.15625, 6);
   });
@@ -202,6 +220,8 @@ describe('maybeEmitProceduralDisk', () => {
       1.7,
       base.fadeStartPx,
       base.fadeEndPx,
+      0,
+      0,
     );
     expect(r).not.toBeNull();
     expect(r!.x).toBe(11);
@@ -230,6 +250,8 @@ describe('maybeEmitProceduralDisk', () => {
       base.colourIndex,
       base.fadeStartPx,
       base.fadeEndPx,
+      0,
+      0,
     );
     expect(r!.procFadeOut).toBe(1.0);
   });

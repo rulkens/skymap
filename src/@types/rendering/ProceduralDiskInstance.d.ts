@@ -1,3 +1,5 @@
+import type { SourceType } from '../data/SourceType';
+
 /**
  * ProceduralDiskInstance — one entry in the procedural-disk pass's
  * per-instance vertex buffer.  Mirrors the texture-based `DiskInstance`
@@ -66,4 +68,12 @@ export type ProceduralDiskInstance = {
    * docblock above. Default 1.0 (no fade-out).
    */
   procFadeOut: number;
+  /**
+   * Source + row identity of the galaxy this disk represents. CPU-only:
+   * these two fields are not in the nine-float vertex layout above — a
+   * later step packs them into a dedicated pick vertex slot.
+   */
+  sourceCode: SourceType;
+  /** Per-source catalog row index — the localIdx half of the packed pick id. */
+  localIdx: number;
 };

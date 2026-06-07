@@ -27,6 +27,13 @@ export type ProceduralDiskRenderer = {
     focusBindGroup: GPUBindGroup,
     instances: ReadonlyArray<ProceduralDiskInstance>,
   ): void;
+  /**
+   * Draw the retained procedural-disk instances into the active pick
+   * render pass using the r32uint pick pipeline. No-op until 'draw' has
+   * uploaded at least one instance this frame. Caller (pickRenderer) has
+   * already bound the shared camera + focus state on the pick pass.
+   */
+  pickDisks(pass: GPURenderPassEncoder): void;
   /** Release the uniform + per-instance vertex buffers. */
   destroy(): void;
 };

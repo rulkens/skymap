@@ -163,9 +163,9 @@ export type EngineSettingsState = {
    *   - `showPickBuffer` — colour-maps the r32uint pick texture and
    *     composites it over the tone-mapped frame.  Lets a developer
    *     see which billboard the hover/click resolver actually claims
-   *     at each pixel (including the +PICK_PADDING_PX boost and the
-   *     1.5× forgiveness ellipse/circle baked into pickFragment.wesl).
-   *     Gated behind the DebugPanel.
+   *     at each pixel.  Point billboards show a `pointSizePx`-clamped
+   *     dot; resolved galaxy disks are picked by the procedural-disk
+   *     pass at the disk edge.  Gated behind the DebugPanel.
    *   - `showDiskRadiusRing` — outlines each famous-galaxy thumbnail's
    *     disk-radius footprint so the developer can calibrate the
    *     placement against the underlying billboard.  Gated behind the
