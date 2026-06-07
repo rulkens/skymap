@@ -24,6 +24,8 @@ import { sourceClassLabel, milliquasParentSurveyPrefix } from '../../../data/sou
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import { famousDisplayName } from './famousDisplayName';
 import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';
+import { formatMorphology } from '../../../utils/format/formatMorphology';
+import { famousWikipediaTitle } from '../../../utils/format/famousWikipediaTitle';
 import type { SourceType } from '../../../@types/data/SourceType';
 import {
   cartesianToRaDecZ,
@@ -246,9 +248,12 @@ export function buildGalaxyInfo(
   // key off the same entry.  Undefined for non-famous rows or before the
   // sidecar resolves (the InfoCard then renders the generic survey layout).
   const famousEntry = source === Source.FamousGalaxy && famousMeta ? famousMeta[idx] : undefined;
-  let catalogUrl: string | null;
+  // The primary catalogue link, labelled at the same point its URL is chosen so
+  // the label can never drift from the page it points at.  `null` when the row
+  // has no resolvable catalogue page.
+  let primaryCatalogue: { label: string; href: string } | null;
   if (isSdss && objID > 0n) {
-    catalogUrl = sdssExplorerUrl(objID);
+    primaryCatalogue = { label: 'SDSS Explorer', href: sdssExplorerUrl(objID) };
   } else if (source === Source.TwoMRS) {
     // 2MRS rows are routed through NED's near-position search rather
     // than a 2MASX byname lookup.  Reason: NED's name index has
@@ -260,18 +265,33 @@ export function buildGalaxyInfo(
     // regardless of which name NED indexes it under; the one-extra-
     // click on the results page is preferable to a "not recognized"
     // dead-end.
-    catalogUrl = nedNearPositionUrl(ra, dec);
+    primaryCatalogue = { label: 'NED', href: nedNearPositionUrl(ra, dec) };
   } else if (source === Source.Glade) {
-    catalogUrl = objID > 0n ? nedByNameUrl(`PGC ${objID}`) : nedNearPositionUrl(ra, dec);
+    primaryCatalogue = {
+      label: 'NED',
+      href: objID > 0n ? nedByNameUrl(`PGC ${objID}`) : nedNearPositionUrl(ra, dec),
+    };
   } else if (famousEntry) {
-    catalogUrl = nedByNameUrl(famousEntry.names[0]!);
+    primaryCatalogue = { label: 'NED', href: nedByNameUrl(famousEntry.names[0]!) };
   } else if (source === Source.SDSS) {
     // SDSS row with objID = 0n (synthetic-style test fixture).  Falling
     // back to coord search keeps the link non-null in tests so the UI
     // path is exercised, while pointing somewhere real-ish.
-    catalogUrl = nedNearPositionUrl(ra, dec);
+    primaryCatalogue = { label: 'NED', href: nedNearPositionUrl(ra, dec) };
   } else {
-    catalogUrl = null;
+    primaryCatalogue = null;
+  }
+  // Assemble the display-ready "Catalogues" row: the primary page plus, for
+  // curated famous galaxies, a Wikipedia link resolved from the curated names.
+  const catalogues: GalaxyInfo['catalogues'] = [];
+  if (primaryCatalogue) catalogues.push(primaryCatalogue);
+  if (famousEntry) {
+    catalogues.push({
+      label: 'Wikipedia',
+      href: `https://en.wikipedia.org/wiki/${encodeURIComponent(
+        famousWikipediaTitle(famousEntry.names).replace(/ /g, '_'),
+      )}`,
+    });
   }
   // Size the cutout to the galaxy's angular extent so a nearby giant and a
   // distant dwarf both roughly fill the frame, instead of a fixed FOV that
@@ -398,6 +418,14 @@ export function buildGalaxyInfo(
     };
   }
 
+  // A curated famous row carries a real morphological (Hubble) type ('SBb',
+  // 'E') — the only reliable classification for entries that lack the
+  // photometry the colour classifier needs.  Kept in its own `morphology`
+  // field rather than overwriting `galaxyType.description`: morphology and
+  // colour class are independent facts, and the card prefers morphology when
+  // present (`morphology ?? galaxyType.description`).
+  const morphology = famousEntry?.type ? formatMorphology(famousEntry.type) : undefined;
+
   return {
     index: idx,
     objID: cloud.objIDs[idx]!,
@@ -431,6 +459,7 @@ export function buildGalaxyInfo(
     // Derived quantities.
     absoluteMagG: absoluteMagnitude(magG, distanceMpc),
     galaxyType: galaxyType(source, { magU, magG, magR, magI, magZ }),
+    morphology,
     iauName: iauName(source, ra, dec),
 
     // Best human-readable headline for this row.  Treats the choice
@@ -478,8 +507,9 @@ export function buildGalaxyInfo(
     // doesn't define one (every non-Milliquas row today).
     agnClass,
 
-    // External URLs — chosen above based on `source` (and PGC for GLADE).
-    catalogUrl,
+    // External catalogue links — pre-labelled above based on `source`
+    // (and PGC for GLADE), plus Wikipedia for curated famous galaxies.
+    catalogues,
     thumbnailUrl,
     ...(thumbnailFallbackUrl !== undefined ? { thumbnailFallbackUrl } : {}),
 

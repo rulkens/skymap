@@ -1,19 +1,18 @@
 /**
- * GalaxyDetailCard — rich panel for a focused galaxy: thumbnail, cosmology
- * summary, coordinates, expandable details, external link.
+ * GalaxyDetailCard — rich panel for a focused galaxy: name + survey badge,
+ * curated description (famous only), catalogue links, thumbnail + cosmology
+ * summary, and an expandable block of reference figures.
  *
  * The outer wrapper's tag + className stays stable across galaxy hover ↔ pin
  * transitions so the native `<details>` "More details" open state survives
  * via DOM identity (no React-state lifting needed).
  */
 
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import cx from 'classnames';
 import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
-import { Source } from '../../data/sources';
 import { formatDistance, formatDiameterKpc } from '../../utils/format/distance';
 import { Thumbnail } from './Thumbnail';
-import { famousWikipediaTitle } from './famousWikipediaTitle';
 import { CardHeader } from './CardHeader';
 import { CardRow } from './CardRow';
 import { DescriptionBlock } from './DescriptionBlock';
@@ -47,50 +46,22 @@ export function GalaxyDetailCard({
         onClose={pinned ? onClose : undefined}
       />
 
-      <div className={styles.cardHeadline}>
-        {info.displayName}
-        {famousAliases.map((alias) => (
-          <span key={alias} className={styles.headlineAlias}>
-            {' · '}
-            {alias}
-          </span>
-        ))}
+      <div className={styles.headlineRow}>
+        <div className={styles.cardHeadline}>
+          {info.displayName}
+          {famousAliases.map((alias) => (
+            <span key={alias} className={styles.headlineAlias}>
+              {' · '}
+              {alias}
+            </span>
+          ))}
+        </div>
+        <span className={styles.sourceBadge}>{info.sourceLabel}</span>
       </div>
-      <div className={styles.sourceBadge}>{info.sourceLabel}</div>
 
-      {info.famous && (
+      {info.famous?.description && (
         <div className={styles.cardSection}>
-          {info.famous.description && <DescriptionBlock text={info.famous.description} />}
-          {/*
-            Wikipedia article slug comes from `famousWikipediaTitle`, which
-            prefers the NGC/IC designation: Messier short ids ("M51"/"M109")
-            hit disambiguation pages, and non-M/C aliases (UGC/PGC/KPG) have no
-            article at all.  NED resolves any of the names, so it keeps names[0].
-          */}
-          <CardRow
-            label="Catalogues"
-            value={
-              <>
-                <a
-                  className={styles.externalInline}
-                  href={`https://ned.ipac.caltech.edu/byname?objname=${encodeURIComponent(info.famous.names[0]!)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  NED
-                </a>
-                {' · '}
-                <a
-                  className={styles.externalInline}
-                  href={`https://en.wikipedia.org/wiki/${encodeURIComponent(famousWikipediaTitle(info.famous.names).replace(/ /g, '_'))}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Wikipedia
-                </a>
-              </>
-            }
-          />
+          <DescriptionBlock text={info.famous.description} />
         </div>
       )}
 
@@ -115,35 +86,57 @@ export function GalaxyDetailCard({
               {Math.round(info.hubbleVelocityKmS).toLocaleString()} km/s away
             </InfoTip>
           </div>
-          <div className={styles.cardTypeLine}>{info.galaxyType.description}</div>
+          <div className={styles.cardTypeLine}>
+            {info.morphology ?? info.galaxyType.description}
+          </div>
         </div>
       </div>
 
       <div className={styles.cardSection}>
         <CardRow
-          label={<InfoTip {...TIPS.ra!}>RA</InfoTip>}
+          label="Catalogues"
           value={
-            <>
-              {info.raSexagesimal}&nbsp;&nbsp;/&nbsp;&nbsp;{info.ra.toFixed(4)}&deg;
-            </>
+            info.catalogues.length > 0 ? (
+              info.catalogues.map((link, idx) => (
+                <Fragment key={link.label}>
+                  {idx > 0 && ' · '}
+                  <a
+                    className={styles.externalInline}
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {link.label}
+                  </a>
+                </Fragment>
+              ))
+            ) : (
+              <span className={styles.catalogueNone}>Not catalogued</span>
+            )
           }
         />
-        <CardRow
-          label={<InfoTip {...TIPS.dec!}>Dec</InfoTip>}
-          value={
-            <>
-              {info.decSexagesimal}&nbsp;&nbsp;/&nbsp;&nbsp;{info.dec.toFixed(4)}&deg;
-            </>
-          }
-        />
+      </div>
+
+      {/*
+        Above-fold "lean hero": only the two figures a casual reader cares about
+        after the cosmology summary — how far back the redshift puts the galaxy,
+        and how physically large it is.  Coordinates, magnitudes, colour, and
+        orientation are reference data for the curious and live below the fold.
+      */}
+      <div className={styles.cardSection}>
         <CardRow
           label={<InfoTip {...TIPS.redshift!}>Redshift z</InfoTip>}
           value={info.redshift.toFixed(4)}
         />
-        {/* Source-aware band label: 2MRS puts J in the g-slot, GLADE puts B. */}
         <CardRow
-          label={<InfoTip {...TIPS.apparentMag!}>{`Apparent mag (${info.bands.g})`}</InfoTip>}
-          value={Number.isFinite(info.magG) ? info.magG.toFixed(2) : 'N/A'}
+          label={<InfoTip {...TIPS.diameter!}>Diameter</InfoTip>}
+          value={
+            <>
+              {formatDiameterKpc(info.diameterKpc)}
+              <br />
+              <span style={{ opacity: 0.7, fontSize: '0.85em' }}>{info.diameterProvenance}</span>
+            </>
+          }
         />
       </div>
 
@@ -151,6 +144,27 @@ export function GalaxyDetailCard({
         <summary className={styles.detailsSummary}>More details</summary>
 
         <div className={styles.cardSection}>
+          <CardRow
+            label={<InfoTip {...TIPS.ra!}>RA</InfoTip>}
+            value={
+              <>
+                {info.raSexagesimal}&nbsp;&nbsp;/&nbsp;&nbsp;{info.ra.toFixed(4)}&deg;
+              </>
+            }
+          />
+          <CardRow
+            label={<InfoTip {...TIPS.dec!}>Dec</InfoTip>}
+            value={
+              <>
+                {info.decSexagesimal}&nbsp;&nbsp;/&nbsp;&nbsp;{info.dec.toFixed(4)}&deg;
+              </>
+            }
+          />
+          {/* Source-aware band label: 2MRS puts J in the g-slot, GLADE puts B. */}
+          <CardRow
+            label={<InfoTip {...TIPS.apparentMag!}>{`Apparent mag (${info.bands.g})`}</InfoTip>}
+            value={Number.isFinite(info.magG) ? info.magG.toFixed(2) : 'N/A'}
+          />
           <CardRow
             label={<InfoTip {...TIPS.absoluteMag!}>{`Absolute mag (${info.bands.g})`}</InfoTip>}
             value={Number.isFinite(info.absoluteMagG) ? info.absoluteMagG.toFixed(2) : 'N/A'}
@@ -180,32 +194,11 @@ export function GalaxyDetailCard({
             }
           />
           <CardRow
-            label={<InfoTip {...TIPS.diameter!}>Diameter</InfoTip>}
-            value={
-              <>
-                {formatDiameterKpc(info.diameterKpc)}
-                <br />
-                <span style={{ opacity: 0.7, fontSize: '0.85em' }}>{info.diameterProvenance}</span>
-              </>
-            }
-          />
-          <CardRow
             label="ObjID"
             value={<code className={styles.cardObjid}>{String(info.objID)}</code>}
           />
         </div>
       </details>
-
-      {info.catalogUrl ? (
-        <a className={styles.externalLink} href={info.catalogUrl} target="_blank" rel="noopener">
-          {info.source === Source.SDSS ? 'View in SDSS Explorer' : 'View on NED'}
-          {' →'}
-        </a>
-      ) : (
-        <div className={cx(styles.externalLink, styles.externalLinkDisabled)}>
-          No catalogue page for {info.sourceLabel}
-        </div>
-      )}
     </div>
   );
 }

@@ -1,22 +1,22 @@
 // @vitest-environment jsdom
 //
-// InfoCard unified hovered/selected props — routing tests covering the POI
-// hover preview branch and its suppression rule.
+// InfoCard unified hovered/selected props — routing tests covering the
+// structure hover preview branch and its suppression rule.
 //
 // Since Task 5 of the unify-focus-clear refactor, InfoCard accepts a single
 // `hovered` and a single `selected` prop — each typed as
 // `GalaxyInfo | StructureRecord | null` (the `FocusableTarget` union).
-// The component dispatches via `isPoi` internally.  The old `hoveredPoi` /
-// `selectedPoi` separate slots are gone.
+// The component dispatches via `isPoi` internally.  The old `hoveredStructure`
+// / `selectedStructure` separate slots are gone.
 //
 // We assert on user-visible text rather than CSS-modules class fragments
 // because the CSS-modules-mangled class names aren't stable across
 // renames; rendered text is the stable contract for the user.
 //
-// The "suppressed when same POI is pinned" case looks at the rendered
-// DOM structure: the pinned FullCard shows "Pinned" in its title row, and
+// The "suppressed when same structure is pinned" case looks at the rendered
+// DOM structure: the pinned full card shows "Pinned" in its title row, and
 // the compact hover preview's title row says "Hover".  We count the
-// "Hover" occurrences — when the same POI is pinned, the suppression
+// "Hover" occurrences — when the same structure is pinned, the suppression
 // rule should keep that count at zero.
 
 import { describe, it, expect } from 'vitest';
@@ -44,10 +44,9 @@ const coma: StructureRecord = {
 };
 
 // Minimal GalaxyInfo stub for the "stack alongside pinned galaxy" case.
-// FullCard / CompactCard read several fields; we only need enough for
-// the FullCard's galaxy branch to render without throwing.  Cast away
-// the precise type because populating every field would obscure the
-// test's intent.
+// GalaxyDetailCard / CompactCard read several fields; we only need enough for
+// the galaxy branch to render without throwing.  Cast away the precise type
+// because populating every field would obscure the test's intent.
 const galaxyStub = {
   index: 42,
   displayName: 'NGC 1234',
@@ -56,8 +55,8 @@ const galaxyStub = {
   earthEra: 'Modern',
   distanceMpc: 100,
   galaxyType: { description: 'Spiral', category: 'spiral' },
-  // Minimal fields needed by FullCard's galaxy branch — most are read
-  // and rendered; supplying zero / empty values keeps it from crashing.
+  // Minimal fields needed by the galaxy branch — most are read and
+  // rendered; supplying zero / empty values keeps it from crashing.
   objID: 0n,
   x: 0,
   y: 0,
@@ -78,15 +77,15 @@ const galaxyStub = {
   absoluteMagG: 0,
   iauName: 'IAU NGC 1234',
   source: 0,
-  catalogUrl: null,
+  catalogues: [],
   diameterKpc: 30,
   diameterProvenance: 'fallback (30 kpc)',
   orientation: { axisRatio: 1, positionAngleDeg: 0, provenance: 'fallback' },
   thumbnailUrl: '',
 } as unknown as GalaxyInfo;
 
-describe('InfoCard hoveredPoi prop', () => {
-  it('renders the POI hover preview when only hoveredPoi is set', () => {
+describe('InfoCard hovered structure', () => {
+  it('renders the structure hover preview when only a hovered structure is set', () => {
     render(
       createElement(InfoCard, {
         hovered: virgo,
@@ -100,7 +99,7 @@ describe('InfoCard hoveredPoi prop', () => {
     expect(screen.getByText('Hover')).toBeInTheDocument();
   });
 
-  it('suppresses the POI hover preview when the SAME POI is already pinned', () => {
+  it('suppresses the structure hover preview when the SAME structure is already pinned', () => {
     render(
       createElement(InfoCard, {
         hovered: virgo,
@@ -113,11 +112,11 @@ describe('InfoCard hoveredPoi prop', () => {
     const matches = screen.getAllByText('Virgo Cluster');
     expect(matches).toHaveLength(1);
     // And the suppression rule means no "Hover" eyebrow anywhere — the
-    // full POI card uses a "POI" eyebrow, not "Hover".
+    // full structure card uses a "Structure" eyebrow, not "Hover".
     expect(screen.queryByText('Hover')).not.toBeInTheDocument();
   });
 
-  it('shows the POI hover preview alongside a pinned DIFFERENT POI', () => {
+  it('shows the structure hover preview alongside a pinned DIFFERENT structure', () => {
     render(
       createElement(InfoCard, {
         hovered: virgo,
@@ -130,15 +129,15 @@ describe('InfoCard hoveredPoi prop', () => {
     expect(screen.getByText('Virgo Cluster')).toBeInTheDocument();
   });
 
-  it('shows the POI hover preview alongside a pinned galaxy', () => {
+  it('shows the structure hover preview alongside a pinned galaxy', () => {
     render(
       createElement(InfoCard, {
         hovered: virgo,
         selected: galaxyStub,
       }),
     );
-    // Virgo's name appears in the compact POI preview, stacked below the
-    // pinned galaxy's full card.
+    // Virgo's name appears in the compact structure preview, stacked below
+    // the pinned galaxy's full card.
     expect(screen.getByText('Virgo Cluster')).toBeInTheDocument();
     expect(screen.getByText('NGC 1234')).toBeInTheDocument();
   });

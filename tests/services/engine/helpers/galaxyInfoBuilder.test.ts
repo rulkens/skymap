@@ -187,11 +187,11 @@ describe('buildGalaxyInfo — SDSS source', () => {
     // SDSS prefix on the IAU name; coords match the rounded-down truncation.
     expect(info.iauName.startsWith('SDSS J')).toBe(true);
 
-    // catalogUrl points to the SDSS Quick Look page for SDSS rows with a
-    // valid objID (> 0n).
-    expect(info.catalogUrl).not.toBeNull();
-    expect(info.catalogUrl).toContain('skyserver.sdss.org');
-    expect(info.catalogUrl).toContain('objId=1');
+    // The primary catalogue link points to the SDSS Quick Look page, labelled
+    // "SDSS Explorer", for SDSS rows with a valid objID (> 0n).
+    expect(info.catalogues[0]!.label).toBe('SDSS Explorer');
+    expect(info.catalogues[0]!.href).toContain('skyserver.sdss.org');
+    expect(info.catalogues[0]!.href).toContain('objId=1');
 
     // SDSS rows use the SDSS thumbnail URL (not DSS).
     expect(info.thumbnailUrl).toContain('skyserver.sdss.org');
@@ -225,9 +225,9 @@ describe('buildGalaxyInfo — SDSS source', () => {
     cloud.objIDs[0] = 0n;
     setPosition(cloud, 0, 100, 0, 0);
     const info = buildGalaxyInfo(cloud, 0, Source.SDSS);
-    expect(info.catalogUrl).not.toBeNull();
-    expect(info.catalogUrl).toContain('ned.ipac.caltech.edu');
-    expect(info.catalogUrl).toContain('Near+Position+Search');
+    expect(info.catalogues[0]!.label).toBe('NED');
+    expect(info.catalogues[0]!.href).toContain('ned.ipac.caltech.edu');
+    expect(info.catalogues[0]!.href).toContain('Near+Position+Search');
   });
 
   it('flags orientation provenance as "deterministic fallback" when ar/pa match the hash', () => {
@@ -268,9 +268,9 @@ describe('buildGalaxyInfo — TwoMRS source', () => {
     // 2MASX byname lookup — NED's name index has coverage gaps for
     // 2MASX even when the underlying object is present in NED under a
     // different catalogue name.  See galaxyInfoBuilder.ts for why.
-    expect(info.catalogUrl).not.toBeNull();
-    expect(info.catalogUrl).toContain('ned.ipac.caltech.edu');
-    expect(info.catalogUrl).toContain('Near+Position+Search');
+    expect(info.catalogues[0]!.label).toBe('NED');
+    expect(info.catalogues[0]!.href).toContain('ned.ipac.caltech.edu');
+    expect(info.catalogues[0]!.href).toContain('Near+Position+Search');
 
     // Thumbnail comes from the CDS hips2fits DSS proxy, not SDSS ImgCutout.
     expect(info.thumbnailUrl).toContain('alasky.cds.unistra.fr');
@@ -336,9 +336,9 @@ describe('buildGalaxyInfo — Glade source', () => {
     expect(info.sourceLabel).toBe('GLADE');
     expect(info.iauName.startsWith('GLADE J')).toBe(true);
     // GLADE row with PGC = 0n → NED coord-search URL.
-    expect(info.catalogUrl).not.toBeNull();
-    expect(info.catalogUrl).toContain('ned.ipac.caltech.edu');
-    expect(info.catalogUrl).toContain('Near+Position+Search');
+    expect(info.catalogues[0]!.label).toBe('NED');
+    expect(info.catalogues[0]!.href).toContain('ned.ipac.caltech.edu');
+    expect(info.catalogues[0]!.href).toContain('Near+Position+Search');
     expect(info.thumbnailUrl).toContain('alasky.cds.unistra.fr');
 
     expect(info.bands).toEqual({ u: '—', g: 'B', r: 'J', i: 'H', z: 'K' });
@@ -359,8 +359,9 @@ describe('buildGalaxyInfo — Glade source', () => {
     setPosition(cloud, 0, 0, 0, 200);
     cloud.objIDs[0] = 12345n;
     const info = buildGalaxyInfo(cloud, 0, Source.Glade);
-    expect(info.catalogUrl).toContain('ned.ipac.caltech.edu/byname');
-    expect(info.catalogUrl).toContain('PGC+12345');
+    expect(info.catalogues[0]!.label).toBe('NED');
+    expect(info.catalogues[0]!.href).toContain('ned.ipac.caltech.edu/byname');
+    expect(info.catalogues[0]!.href).toContain('PGC+12345');
   });
 });
 
@@ -388,7 +389,7 @@ describe('buildGalaxyInfo — Synthetic source', () => {
     expect(info.source).toBe(Source.Synthetic);
     expect(info.sourceLabel).toBe('Synthetic');
     expect(info.iauName.startsWith('Synth J')).toBe(true);
-    expect(info.catalogUrl).toBeNull();
+    expect(info.catalogues).toEqual([]);
     expect(info.thumbnailUrl).toContain('alasky.cds.unistra.fr');
     expect(info.orientation.provenance).toBe('deterministic fallback');
   });
@@ -426,6 +427,13 @@ describe('buildGalaxyInfo — Famous source', () => {
     expect(info.famous!.id).toBe('m31');
     expect(info.famous!.names).toEqual(['M31', 'Andromeda Galaxy']);
     expect(info.famous!.description).toBe('Nearest large spiral.');
+
+    // The curated morphology is exposed on its own field (the colour
+    // classifier yields "Unknown galaxy type" for a row with no photometry).
+    expect(info.morphology).toBe('Barred spiral (SBb)');
+
+    // Famous rows carry a NED + Wikipedia catalogue pair.
+    expect(info.catalogues.map((c) => c.label)).toEqual(['NED', 'Wikipedia']);
   });
 
   it('omits the famous block when the sidecar is undefined (graceful degradation)', () => {

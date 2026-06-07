@@ -1,5 +1,5 @@
 /*
- * CompactPoiCard.module.css — POI variant of the slim hover-preview card.
+ * CompactStructureCard.module.css — structure variant of the slim hover-preview card.
  *
  * Visual weight is identical to the galaxy CompactCard — only the
  * content differs.  Rather than copy-pasting the chrome rules from
@@ -27,6 +27,10 @@
 
 .cardTitle {
   composes: cardTitle from './CompactCard.module.css';
+}
+
+.headlineRow {
+  composes: headlineRow from './CompactCard.module.css';
 }
 
 .cardHeadline {

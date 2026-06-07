@@ -1,6 +1,6 @@
 /**
  * Unit tests for `sdssExplorerUrl` — pure URL builder for the SDSS DR18
- * Quick Look page.
+ * Quick Look (`quickobj`) page.
  *
  * The function takes a 64-bit `bigint` objID and interpolates it into a
  * canonical URL.  Tests verify the URL shape and that bigint values
@@ -12,7 +12,7 @@ import { describe, it, expect } from 'vitest';
 import { sdssExplorerUrl } from '../../../src/utils/math/sdssExplorerUrl';
 
 describe('sdssExplorerUrl', () => {
-  it('produces a DR18 quickobj URL for a small objID', () => {
+  it('produces a DR18 Quick Look URL for a small objID', () => {
     // Spot-check the literal URL template in the source.  Any change to the
     // path or the query-param name would break this.
     expect(sdssExplorerUrl(42n)).toBe(
