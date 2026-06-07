@@ -1,7 +1,7 @@
 /**
  * commitGalaxyFocus — invariants for the galaxy focus-commit protocol.
  *
- * Parallel to `commitPoiFocus.test.ts`.  The helper is the shared
+ * Parallel to `commitStructureFocus.test.ts`.  The helper is the shared
  * 3-call tail of `focusOn` / `selectFamous` / `selectByAlias`:
  *   1. setSelected(`{kind:'galaxy', source, localIdx}`, info)
  *   2. setFocused(`{kind:'galaxy', source, localIdx}`, info)

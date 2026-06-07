@@ -35,7 +35,7 @@ export function pickToSelection(
       category: entry.id as StructureCategory,
       poiIndex: pick.localIdx,
     });
-    return record ? { kind: 'poi', id: record.id } : null;
+    return record ? { kind: 'structure', id: record.id } : null;
   }
   console.warn(`pickToSelection: source code ${pick.sourceCode} is not a pickable surface`);
   return null;

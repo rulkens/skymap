@@ -1,6 +1,6 @@
 /**
  * galaxyFocusDistance — camera framing-distance derivation for galaxy
- * focus tweens.  Companion to `poiFocusDistance.ts`; tween duration
+ * focus tweens.  Companion to `structureFocusDistance.ts`; tween duration
  * lives in `focusTweenDuration.ts`.
  *
  * The galaxy's physical diameter drives the framing.  v4 binary format

@@ -200,11 +200,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // `settings.focus` both read THAT captured value — never a fresh
   // `produceFocusUniforms` call.
   const focusSel = state.subsystems.selection.focused();
-  const focusedPoi =
-    focusSel !== null && focusSel.kind === 'poi'
+  const focusedStructure =
+    focusSel !== null && focusSel.kind === 'structure'
       ? (state.data.structures.byId(focusSel.id) ?? null)
       : null;
-  state.subsystems.clusterFocus.update(focusedPoi, nowMs);
+  state.subsystems.clusterFocus.update(focusedStructure, nowMs);
   const focusUniforms = state.subsystems.clusterFocus.produceFocusUniforms(nowMs);
   ctx.focusBlend = focusUniforms.blend;
 

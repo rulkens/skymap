@@ -27,7 +27,7 @@
  * modules so this file can stay focused on the imperative orchestration:
  *
  *   Pure helpers:
- *   - `galaxyFocusDistance.ts` / `poiFocusDistance.ts` — framing-distance helpers
+ *   - `galaxyFocusDistance.ts` / `structureFocusDistance.ts` — framing-distance helpers
  *   - `galaxyInfoBuilder.ts`   — buildGalaxyInfo / maxAbsCoord / niceRound
  *   - `cloudLoader.ts`         — parallel /data/{sdss,2mrs,glade}.bin fetch + synthetic fallback
  *   - `cameraFraming.ts`       — bbox + FOV → initial camera snapshot
@@ -596,10 +596,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         cb,
         getCloud: (s) => state.data.galaxies.catalogs.get(s),
         getFamousMeta: () => state.data.galaxies.famousMeta,
-        // POI-kind selections are structure ring hits (cluster / SC / void);
-        // resolve them straight from the structure store. Famous galaxies are
-        // selected via the point path (kind 'galaxy'), never as a POI.
-        getPoi: (id) => state.data.structures.byId(id),
+        // Structure-kind selections are ring hits (cluster / SC / void /
+        // group); resolve them straight from the structure store. Famous
+        // galaxies are selected via the point path (kind 'galaxy'), never here.
+        getStructure: (id) => state.data.structures.byId(id),
       }),
 
       // ── Bias-correction subsystem ─────────────────────────────────
@@ -830,9 +830,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // (different tween shapes, cam-null gating, callbacks).  See commitFocus.
     //
     // The galaxy branch keeps the cam-null guard: without it a focus during
-    // bootstrap would set `#focus=…` while the camera stays put.  The POI
-    // branch skips the guard so deep-link drains can land POI state
-    // pre-camera (see commitPoiFocus).
+    // bootstrap would set `#focus=…` while the camera stays put.  The
+    // structure branch skips the guard so deep-link drains can land
+    // structure state pre-camera (see commitStructureFocus).
     if (!isPoi(target) && !state.cam) return;
     commitFocus(state, target);
   }

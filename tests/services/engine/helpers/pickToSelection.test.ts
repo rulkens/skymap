@@ -4,7 +4,7 @@
  *
  *   - null pick → null.
  *   - survey code → a galaxy Selection (no store touch).
- *   - structure code → a POI Selection carrying the record's id (via byCategory).
+ *   - structure code → a structure Selection carrying the record's id (via byCategory).
  *   - structure code with no backing record → null.
  *   - not-a-pickable-surface code → warn + null (never a ghost hit).
  */
@@ -43,9 +43,9 @@ describe('pickToSelection', () => {
     });
   });
 
-  it('maps a structure code to a POI Selection carrying the record id', () => {
+  it('maps a structure code to a structure Selection carrying the record id', () => {
     expect(pickToSelection({ sourceCode: Source.Cluster, localIdx: 0 }, structures)).toEqual({
-      kind: 'poi',
+      kind: 'structure',
       id: virgo.id,
     });
   });

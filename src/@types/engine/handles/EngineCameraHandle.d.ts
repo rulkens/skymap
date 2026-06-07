@@ -18,8 +18,8 @@ export type EngineCameraHandle = {
    * Smoothly tween the camera so the given target becomes the new orbit
    * focus.  Dispatches by type:
    *   - GalaxyInfo → the galaxy focus path (commitFocus + onFocusChange).
-   *   - StructureRecord → the POI focus path (commitPoiFocus, framing
-   *     distance derived from the POI category + onPoiFocusChange).
+   *   - StructureRecord → the structure focus path (commitStructureFocus,
+   *     framing distance derived from the category + onPoiFocusChange).
    *
    * Discrimination uses the `isPoi` predicate from `services/engine/isPoi.ts`.
    * See `services/engine/helpers/dispatchFocusOn.ts` for the dispatcher

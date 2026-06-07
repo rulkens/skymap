@@ -1,12 +1,11 @@
 /**
  * commitFocus — verifies the union-dispatching entry point routes
  * GalaxyInfo through commitGalaxyFocus and StructureRecord through
- * commitPoiFocus, using the isPoi predicate.
+ * commitStructureFocus, using the isPoi predicate.
  *
  * Mocks both underlying commit helpers and asserts the right one was
- * called.  Stays at the dispatcher's contract; deeper coverage of
- * tween + callback fan-out lives in commitGalaxyFocus.test.ts /
- * commitPoiFocus.test.ts.
+ * called. Deeper coverage lives in commitGalaxyFocus.test.ts /
+ * commitStructureFocus.test.ts.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -14,13 +13,13 @@ import type { GalaxyInfo } from '../../../../src/@types/engine/GalaxyInfo';
 import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
 
 const commitGalaxyFocusSpy = vi.fn();
-const commitPoiFocusSpy = vi.fn();
+const commitStructureFocusSpy = vi.fn();
 
 vi.mock('../../../../src/services/engine/helpers/commitGalaxyFocus', () => ({
   commitGalaxyFocus: (...args: unknown[]) => commitGalaxyFocusSpy(...args),
 }));
-vi.mock('../../../../src/services/engine/helpers/commitPoiFocus', () => ({
-  commitPoiFocus: (...args: unknown[]) => commitPoiFocusSpy(...args),
+vi.mock('../../../../src/services/engine/helpers/commitStructureFocus', () => ({
+  commitStructureFocus: (...args: unknown[]) => commitStructureFocusSpy(...args),
 }));
 
 // Imported AFTER the mocks so commitFocus picks them up.
@@ -43,20 +42,20 @@ function makeFixtures() {
 describe('commitFocus', () => {
   beforeEach(() => {
     commitGalaxyFocusSpy.mockClear();
-    commitPoiFocusSpy.mockClear();
+    commitStructureFocusSpy.mockClear();
   });
 
   it('routes a GalaxyInfo through commitGalaxyFocus', () => {
     const { state, galaxy } = makeFixtures();
     commitFocus(state, galaxy);
     expect(commitGalaxyFocusSpy).toHaveBeenCalledWith(state, galaxy);
-    expect(commitPoiFocusSpy).not.toHaveBeenCalled();
+    expect(commitStructureFocusSpy).not.toHaveBeenCalled();
   });
 
-  it('routes a StructureRecord through commitPoiFocus', () => {
+  it('routes a StructureRecord through commitStructureFocus', () => {
     const { state, poi } = makeFixtures();
     commitFocus(state, poi);
-    expect(commitPoiFocusSpy).toHaveBeenCalledWith(state, poi);
+    expect(commitStructureFocusSpy).toHaveBeenCalledWith(state, poi);
     expect(commitGalaxyFocusSpy).not.toHaveBeenCalled();
   });
 });

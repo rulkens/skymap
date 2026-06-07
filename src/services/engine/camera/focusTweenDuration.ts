@@ -1,6 +1,6 @@
 /**
  * Tween duration for focus / home camera moves, in milliseconds.
- * Shared by `tweenToGalaxy` and `tweenToPoi` so both kinds of focus
+ * Shared by `tweenToGalaxy` and `tweenToStructure` so both kinds of focus
  * commitment animate at the same speed.
  *
  * 600 ms is the sweet spot the UI explored: long enough that the user

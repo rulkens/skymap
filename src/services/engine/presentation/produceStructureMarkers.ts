@@ -33,7 +33,7 @@ import type { Vec4 } from '../../../@types/math/Vec4';
 import type { ClusterMarkerDescriptor } from '../../../@types/rendering/ClusterMarkerDescriptor';
 import { STRUCTURE_POI_STYLES, SIG_MIN_ALPHA } from './structurePoiStyles';
 import { focusRecession } from './focusRecession';
-import { poiIdOf } from '../helpers/poiIdOf';
+import { structureIdOf } from '../helpers/structureIdOf';
 
 export function produceStructureMarkers(
   state: EngineState,
@@ -48,8 +48,8 @@ export function produceStructureMarkers(
   // selected → 1.5× ring bump (highlight what you clicked); focused → the
   // "every OTHER ring recedes" mode (cluster-focus). A galaxy selection
   // leaves the matching id null, so no structure ring is bumped / recedes.
-  const selectedPoiId = poiIdOf(state.subsystems.selection.selected());
-  const focusedPoiId = poiIdOf(state.subsystems.selection.focused());
+  const selectedStructureId = structureIdOf(state.subsystems.selection.selected());
+  const focusedStructureId = structureIdOf(state.subsystems.selection.focused());
 
   // Per-category marker opacity (the category toggle's fade) lives in the
   // FadeRegistry; unregistered handles fail-safe to 1.0. Snapshot `now` once so
@@ -124,9 +124,9 @@ export function produceStructureMarkers(
     // smoothly recedes toward MARKER_RECESSION as ctx.focusBlend ramps 0→1. The
     // focused structure is exempt (factor 1) — a faded ring never carries a
     // bright label/marker. A bare select does NOT recede. At rest (blend 0): 1.
-    const isSelected = p.id === selectedPoiId;
+    const isSelected = p.id === selectedStructureId;
     const recession =
-      p.id === focusedPoiId
+      p.id === focusedStructureId
         ? 1
         : focusRecession({ kind: 'markerLayer', category: p.category }, ctx.focusBlend);
 

@@ -1,19 +1,18 @@
 /**
- * tweenToPoi — unit tests for the POI-side camera tween helper.
+ * tweenToStructure — unit tests for the structure-side camera tween helper.
  *
- * Mirrors tweenToGalaxy.test.ts; the helper is the POI sibling of
- * tweenToGalaxy and shares the same plumbing contract (build a
- * CameraTween from a target, hand it to the tween manager, kick the
- * scheduler).  Differs only in where toDistance comes from
- * (`poiFocusDistance(category, apparentRadiusMpc, fovYRad)` instead of
- * the galaxy version).  We assert the plumbing here — including the
- * apparent-radius fallback to the physical core — and leave the
- * framing-math coverage to `poiFocusDistance.test.ts`.
+ * Mirrors tweenToGalaxy.test.ts and shares the same plumbing contract (build
+ * a CameraTween from a target, hand it to the tween manager, kick the
+ * scheduler). Differs only in where toDistance comes from
+ * (`structureFocusDistance(apparentRadiusMpc, fovYRad)` instead of the galaxy
+ * version). We assert the plumbing here — including the apparent-radius
+ * fallback to the physical core — and leave framing-math coverage to
+ * `structureFocusDistance.test.ts`.
  */
 import { describe, it, expect, vi } from 'vitest';
 
-import { tweenToPoi } from '../../../../src/services/engine/camera/tweenToPoi';
-import { poiFocusDistance } from '../../../../src/services/engine/camera/poiFocusDistance';
+import { tweenToStructure } from '../../../../src/services/engine/camera/tweenToStructure';
+import { structureFocusDistance } from '../../../../src/services/engine/camera/structureFocusDistance';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
 
@@ -46,8 +45,8 @@ const VIRGO: StructureRecord = {
   physicalRadiusMpc: 2,
 };
 
-describe('tweenToPoi', () => {
-  it('starts a CameraTween framed via poiFocusDistance and requests a render', () => {
+describe('tweenToStructure', () => {
+  it('starts a CameraTween framed via structureFocusDistance and requests a render', () => {
     const start = vi.fn();
     const requestRender = vi.fn();
     const cam = {
@@ -59,14 +58,14 @@ describe('tweenToPoi', () => {
     };
     const state = makeState({ cam, start, requestRender });
 
-    tweenToPoi(state, VIRGO);
+    tweenToStructure(state, VIRGO);
 
     expect(start).toHaveBeenCalledOnce();
     const tween = start.mock.calls[0]![0];
     expect(Array.from(tween.toTarget as ArrayLike<number>)).toEqual([10, 20, 30]);
     // VIRGO has no apparentRadiusMpc → the helper frames the physical core
     // (2 Mpc), passing the camera's live fovY.
-    expect(tween.toDistance).toBe(poiFocusDistance('cluster', 2, cam.fovYRad));
+    expect(tween.toDistance).toBe(structureFocusDistance(2, cam.fovYRad));
     expect(requestRender).toHaveBeenCalledOnce();
   });
 
@@ -85,10 +84,10 @@ describe('tweenToPoi', () => {
     // Apparent extent (6 Mpc) is wider than the physical core (2 Mpc); the
     // fade reads the apparent radius, so the framing must too.
     const withApparent: StructureRecord = { ...VIRGO, apparentRadiusMpc: 6 };
-    tweenToPoi(state, withApparent);
+    tweenToStructure(state, withApparent);
 
     const tween = start.mock.calls[0]![0];
-    expect(tween.toDistance).toBe(poiFocusDistance('cluster', 6, cam.fovYRad));
+    expect(tween.toDistance).toBe(structureFocusDistance(6, cam.fovYRad));
   });
 
   it('is a no-op when cam is null', () => {
@@ -96,7 +95,7 @@ describe('tweenToPoi', () => {
     const requestRender = vi.fn();
     const state = makeState({ cam: null, start, requestRender });
 
-    tweenToPoi(state, VIRGO);
+    tweenToStructure(state, VIRGO);
 
     expect(start).not.toHaveBeenCalled();
     expect(requestRender).not.toHaveBeenCalled();
