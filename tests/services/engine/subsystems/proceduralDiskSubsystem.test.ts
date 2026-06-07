@@ -117,6 +117,25 @@ describe('createProceduralDiskSubsystem', () => {
     expect(sys.lastOutput.instances.length).toBe(2);
   });
 
+  it('emits the (source, localIdx) identity for each instance', () => {
+    // decimationFactor:1 visits all rows in a single frame.
+    // The 4-row cloud uses the same camera/size setup as the existing
+    // 'emits one ProceduralDiskInstance per galaxy above 8 px' test —
+    // known to produce 4 emitted instances.
+    const sys = createProceduralDiskSubsystem({ decimationFactor: 1 });
+    const clouds = new Map([[Source.SDSS, makeDenseCloud(4)]]);
+    const out = sys.runFrame(makeInput(clouds));
+    expect(out.instances.length).toBe(4);
+    // Every instance must carry the SDSS source code.
+    for (const ins of out.instances) {
+      expect(ins.sourceCode).toBe(Source.SDSS);
+    }
+    // Back-to-front sort reorders instances, so check the SET of localIdx
+    // values rather than positional order.
+    const localIdxSet = new Set(out.instances.map((ins) => ins.localIdx));
+    expect(localIdxSet).toEqual(new Set([0, 1, 2, 3]));
+  });
+
   describe('famous-WebP crossfade (procFadeOut override)', () => {
     /**
      * Minimal atlas stub. The subsystem only ever calls `isLoaded(key)` on

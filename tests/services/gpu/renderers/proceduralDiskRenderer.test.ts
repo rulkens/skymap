@@ -89,6 +89,8 @@ function fakeProceduralInstance(overrides: Partial<ProceduralDiskInstance> = {})
     colourIndex: 0.7,
     crossfadeAlpha: 0.5,
     procFadeOut: 1,
+    sourceCode: 0,
+    localIdx: 0,
     ...overrides,
   };
 }
