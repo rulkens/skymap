@@ -34,6 +34,7 @@ import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl'
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
 import type { StructureMarkerRenderer } from '../../../@types/rendering/StructureMarkerRenderer';
+import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
 import {
   POINT_STRIDE,
   POINT_VERTEX_ATTRIBUTES,
@@ -81,6 +82,12 @@ export function createPickRenderer(
   // Optional so tests can construct the picker in isolation; passing
   // `undefined` yields a galaxy-only pick pass.
   structureMarkerRenderer?: StructureMarkerRenderer,
+  // Optional procedural-disk pick provider.  When present, the pick
+  // pass calls `proceduralDiskRenderer.pickDisks(pass)` so resolved
+  // galaxies (in the 8 px+ band) are pickable via their disk surface
+  // rather than only their companion point billboard.  Optional so
+  // tests and pre-init paths can omit it.
+  proceduralDiskRenderer?: ProceduralDiskRenderer,
 ): PickRenderer {
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'pick.vertex');
   const fsModule = createShaderModuleWithDevLog(device, pickFsCode, 'pick.pickFragment');
@@ -335,6 +342,13 @@ export function createPickRenderer(
     // galaxy select the galaxy.  Skipped when no marker renderer.
     if (structureMarkerRenderer) {
       structureMarkerRenderer.pickRing(pass);
+    }
+
+    // Procedural-disk pick: shared depth means a closer point dot or
+    // disk claims the pixel; the disk and its companion point carry the
+    // SAME packed id, so overlap is harmless.
+    if (proceduralDiskRenderer) {
+      proceduralDiskRenderer.pickDisks(pass);
     }
 
     pass.end();

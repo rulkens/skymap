@@ -61,6 +61,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // of a focused structure from hit-testing (vertex shader culls them).
     state.gpu.focusUniform!.bindGroup,
     state.gpu.structureMarkerRenderer ?? undefined,
+    state.gpu.proceduralDiskRenderer ?? undefined,
   );
   state.gpu.pickRenderer = pickRenderer;
   // The resolver hands back the freshly-decoded `(source, localIdx)`

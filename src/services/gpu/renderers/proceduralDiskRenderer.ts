@@ -37,13 +37,15 @@
 
 import vsCode from '../shaders/proceduralDisks/vertex.wesl?static';
 import fsCode from '../shaders/proceduralDisks/fragment.wesl?static';
+import pickFsCode from '../shaders/proceduralDisks/pickFragment.wesl?static';
 import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
 import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
-import { FLOATS_PER_INSTANCE, BYTES_PER_INSTANCE, createInstancedQuadRenderer } from './instancedQuadRenderer';
+import { FLOATS_PER_INSTANCE, BYTES_PER_INSTANCE, UNIFORM_BYTES, createInstancedQuadRenderer } from './instancedQuadRenderer';
 import { packSelection } from '../../../data/selectionEncoding';
+import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 type Init = {
   device: GPUDevice;
@@ -72,21 +74,129 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     uniformVisibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
   });
 
+  // ── Pick pipeline ────────────────────────────────────────────────────
+  //
+  // The visual pipeline is owned by the instancedQuadRenderer factory and
+  // its BGL is NOT exposed. We own a SECOND pipeline (and its own camera
+  // BGL + uniform buffer) for the pick pass — same "own-everything"
+  // pattern as structureMarkerRenderer.
+  //
+  // Pipeline layout:
+  //   @group(0) — own camera uniform (viewProj + viewport + camPos +
+  //               pxPerRad), same 96-byte shape as the visual pipeline's
+  //               @group(0). Visibility VERTEX | FRAGMENT matches the
+  //               `uniformVisibility` flag passed to the visual pipeline
+  //               above (see the module-header rationale for widening to
+  //               FRAGMENT even though the vertex stage is the only reader).
+  //   @group(1) — focusBgl (shared with the visual pipeline; identical
+  //               layout identity).
+  //
+  // The vertex source is the SAME 'vertex.wesl' the visual pipeline uses
+  // (same @group declarations), but compiled into a SEPARATE
+  // GPUShaderModule so `layout:'auto'` isolation is never an issue. The
+  // fragment source is the new 'pickFragment.wesl' (entry 'fsPick').
+  const pickCameraBgl = init.device.createBindGroupLayout({
+    label: 'proceduralDisks-pick-camera-bgl',
+    entries: [
+      {
+        binding: 0,
+        // VERTEX | FRAGMENT mirrors the visual pipeline's uniformVisibility
+        // setting — keeps BGL identity stable if anyone ever compares the
+        // two for compatibility. The pick fragment doesn't read 'u', but
+        // the declaration must match what the vertex module declares.
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        buffer: { type: 'uniform' },
+      },
+    ],
+  });
+
+  const pickUniformBuffer = init.device.createBuffer({
+    label: 'proceduralDisks-pick-uniforms',
+    size: UNIFORM_BYTES,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+
+  const pickUniformBindGroup = init.device.createBindGroup({
+    label: 'proceduralDisks-pick-camera-bg',
+    layout: pickCameraBgl,
+    entries: [{ binding: 0, resource: { buffer: pickUniformBuffer } }],
+  });
+
+  const pickVsModule = createShaderModuleWithDevLog(
+    init.device,
+    vsCode,
+    'proceduralDisks.pick.vs',
+  );
+  const pickFsModule = createShaderModuleWithDevLog(
+    init.device,
+    pickFsCode,
+    'proceduralDisks.pick.fs',
+  );
+
+  const pickPipeline = init.device.createRenderPipeline({
+    label: 'proceduralDisks-pick-pipeline',
+    layout: init.device.createPipelineLayout({
+      label: 'proceduralDisks-pick-pipeline-layout',
+      bindGroupLayouts: [pickCameraBgl, init.focusBgl],
+    }),
+    vertex: {
+      module: pickVsModule,
+      entryPoint: 'vs',
+      // Exact same 64-byte / 16-float instance layout the visual pipeline
+      // uses. The pick pipeline reads the same per-instance data from the
+      // owned pick instance buffer.
+      buffers: [
+        {
+          arrayStride: BYTES_PER_INSTANCE,
+          stepMode: 'instance',
+          attributes: [
+            { shaderLocation: 0, offset: 0, format: 'float32x4' },
+            { shaderLocation: 1, offset: 16, format: 'float32x4' },
+            { shaderLocation: 2, offset: 32, format: 'float32x4' },
+            { shaderLocation: 3, offset: 48, format: 'float32x4' },
+          ],
+        },
+      ],
+    },
+    fragment: {
+      module: pickFsModule,
+      entryPoint: 'fsPick',
+      // r32uint: no blend — integer formats don't support blending.
+      targets: [{ format: 'r32uint' }],
+    },
+    primitive: { topology: 'triangle-list' },
+    // Depth test matches the galaxy and ring pick pipelines: front-most
+    // wins, depth write enabled. The depth attachment is shared across
+    // all pick draws in the same pass encoder.
+    depthStencil: {
+      format: 'depth24plus',
+      depthWriteEnabled: true,
+      depthCompare: 'less',
+    },
+  });
+
+  // Reusable pick uniform scratch — same shape as the visual pipeline's
+  // uniformScratch in instancedQuadRenderer.
+  const pickUniformScratch = new Float32Array(UNIFORM_BYTES / 4);
+
   // Pick instance buffer — owned by this renderer, separate from the
   // visual instance buffer inside 'inner' (which is private to the
-  // factory). Task 4 will add the 'pickDisks' method that binds this
-  // buffer to the pick pipeline. For now we allocate, grow, fill, and
-  // record the count so the infrastructure is ready without leaking any
-  // pick-pipeline scope into this task's diff.
-  //
-  // Why a second buffer rather than reusing the visual one: the visual
-  // buffer is private to instancedQuadRenderer and not exposed. Unlike
-  // structureMarkerRenderer, which rebinds one shared buffer across its
-  // visible and pick pipelines, this renderer must allocate a second,
-  // byte-identical buffer — the factory gives us no other handle.
+  // factory). Unlike structureMarkerRenderer, which rebinds one shared
+  // buffer across its visible and pick pipelines, this renderer must
+  // allocate a second, byte-identical buffer — the factory gives us no
+  // other handle.
   let pickInstanceBuffer: GPUBuffer | null = null;
   let pickInstanceBufferCapacity = 0; // measured in instances
   let lastPickInstanceCount = 0;
+
+  // Cached camera values from the last draw() call. The pick pass runs
+  // AFTER draw() in the same frame, so these are always the current
+  // frame's camera state when pickDisks() is called.
+  let cachedViewProj: Float32Array = new Float32Array(16);
+  let cachedViewport: [number, number] = [0, 0];
+  let cachedCamPosWorld: Readonly<Vec3> = [0, 0, 0];
+  let cachedPxPerRad = 0;
+  let cachedFocusBindGroup: GPUBindGroup | null = null;
 
   function draw(
     pass: GPURenderPassEncoder,
@@ -97,7 +207,14 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     focusBindGroup: GPUBindGroup,
     instances: ReadonlyArray<ProceduralDiskInstance>,
   ): void {
-    if (instances.length === 0) return;
+    if (instances.length === 0) {
+      // Zero the cached count so pickDisks() no-ops — it replays
+      // lastPickInstanceCount from the previous frame, so a frame that
+      // drops to 0 disks must clear it or pickDisks() would re-draw the
+      // prior frame's disks into the pick texture.
+      lastPickInstanceCount = 0;
+      return;
+    }
 
     // Fresh allocation per frame. The typical-frame size for the
     // procedural pass is a few KB; GC churn isn't load-bearing today.
@@ -147,12 +264,20 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
       focusBindGroup,
     });
 
+    // Cache camera state for pickDisks() — the pick pass runs after this
+    // draw() in the same frame; caching here avoids re-passing arguments.
+    cachedViewProj = viewProj;
+    cachedViewport = viewport;
+    cachedCamPosWorld = camPosWorld;
+    cachedPxPerRad = pxPerRad;
+    cachedFocusBindGroup = focusBindGroup;
+
     // ── Pick instance buffer (mirror of the visual upload) ─────────────
     //
     // We own a second GPU buffer holding the same byte-identical packed
-    // data. Task 4 will bind this to the pick pipeline's vertex slot;
-    // allocated and grown here so the infrastructure exists without
-    // requiring Task 4's pipeline code in this diff.
+    // data. The pickDisks() method binds this to the pick pipeline's
+    // vertex slot. Separate from the visual buffer because the factory
+    // keeps its instance buffer private.
     //
     // Why VERTEX | COPY_DST: instance buffers consumed by a draw call
     // must carry VERTEX; COPY_DST is required by writeBuffer. Mirrors
@@ -168,13 +293,53 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
       pickInstanceBufferCapacity = instances.length;
     }
     init.device.queue.writeBuffer(pickInstanceBuffer, 0, packed);
-    lastPickInstanceCount = instances.length; // consumed by the pick pass to issue the instanced draw
+    lastPickInstanceCount = instances.length; // consumed by pickDisks() to issue the instanced draw
+  }
+
+  function pickDisks(pass: GPURenderPassEncoder): void {
+    // No-op until draw() has uploaded at least one instance this frame
+    // (so we have live camera values + a populated pick instance buffer).
+    if (lastPickInstanceCount === 0 || pickInstanceBuffer === null) return;
+    if (cachedFocusBindGroup === null) return;
+
+    // Write the pick uniform buffer with this frame's camera values.
+    // Same 96-byte layout as the visual pipeline's uniformScratch:
+    //   f32[ 0..15] viewProj  f32[16..17] viewport  f32[18..19] reserved
+    //   f32[20..22] camPosWorld  f32[23] pxPerRad
+    pickUniformScratch.set(cachedViewProj, 0);
+    pickUniformScratch[16] = cachedViewport[0];
+    pickUniformScratch[17] = cachedViewport[1];
+    pickUniformScratch[18] = 0;
+    pickUniformScratch[19] = 0;
+    pickUniformScratch[20] = cachedCamPosWorld[0];
+    pickUniformScratch[21] = cachedCamPosWorld[1];
+    pickUniformScratch[22] = cachedCamPosWorld[2];
+    pickUniformScratch[23] = cachedPxPerRad;
+    init.device.queue.writeBuffer(pickUniformBuffer, 0, pickUniformScratch);
+
+    pass.setPipeline(pickPipeline);
+    // @group(0): own pick camera uniforms (viewProj / viewport / camPos / pxPerRad).
+    pass.setBindGroup(0, pickUniformBindGroup);
+    // @group(1): shared focus uniform. Shared depth state means a closer
+    // point dot or disk claims the pixel; the disk and its companion point
+    // carry the SAME packed id, so overlap is harmless.
+    pass.setBindGroup(1, cachedFocusBindGroup);
+    pass.setVertexBuffer(0, pickInstanceBuffer);
+    pass.draw(6, lastPickInstanceCount);
+  }
+
+  function destroy(): void {
+    inner.destroy();
+    pickUniformBuffer.destroy();
+    pickInstanceBuffer?.destroy();
+    pickInstanceBuffer = null;
   }
 
   const renderer: ProceduralDiskRenderer = {
     label: 'proceduralDiskRenderer',
     draw,
-    destroy: inner.destroy,
+    pickDisks,
+    destroy,
   };
   // 'satisfies Renderer' confirms the shared label+destroy contract
   // without widening the static type seen by consumers.
