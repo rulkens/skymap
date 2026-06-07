@@ -3,22 +3,22 @@
  * response to a canvas click. Returns the `Selection` the click hit, or
  * null for background.
  *
- * The resolver is deliberately thin: pick → decode → `Selection`. It does
- * NOT resolve the target (GalaxyInfo / StructureRecord) — `setSelected`
- * owns that, resolving once for the InfoCard and again-free for the
- * dblclick focus via `selectedTarget()`. Keeping resolution in the
- * subsystem means the click path holds no resolved copy to drift.
+ * The resolver is deliberately thin: pick → `pickToSelection` → `Selection`.
+ * It does NOT resolve the target (GalaxyInfo / StructureRecord) — `setSelected`
+ * owns that, resolving once for the InfoCard and again-free for the dblclick
+ * focus via `selectedTarget()`. Keeping resolution in the subsystem means the
+ * click path holds no resolved copy to drift. The decode → Selection map is
+ * shared with the hover path so the two can't diverge.
  *
- * ### What the resolver returns
+ * ### What the resolver returns (see `pickToSelection`)
  *
- *   - `null` — background, or another pick was already in flight.
- *     Engine calls `setSelected(null)`.
+ *   - `null` — background, another pick in flight, or a structure ring with
+ *     no backing record. Engine calls `setSelected(null)`.
  *   - `{ kind: 'galaxy', source, localIdx }` — a survey point. Returned
  *     unconditionally; a not-yet-loaded cloud surfaces as
  *     onSelectChange(null) inside `setSelected`, not a dropped selection.
- *   - `{ kind: 'poi', id }` — a structure ring; `resolvePoi` maps the
- *     decoded `(category, poiIndex)` to the record's stable id. A missing
- *     resolver or unallocated index → null (no phantom POI card).
+ *   - `{ kind: 'poi', id }` — a structure ring resolved to its record's
+ *     stable id.
  *
  * The resolver does NOT call `requestRender()` — that's the engine's job
  * after it updates the selection. Scheduler-free keeps tests stub-free.
@@ -35,9 +35,10 @@ import type { ClickResolveInput } from '../../../@types/engine/ClickResolveInput
 import type { ClickResolver } from '../../../@types/engine/ClickResolver';
 import type { CreateClickResolverInput } from '../../../@types/engine/CreateClickResolverInput';
 import type { Selection } from '../../../@types/engine/subsystems/Selection';
+import { pickToSelection } from '../helpers/pickToSelection';
 
 export function createClickResolver(input: CreateClickResolverInput): ClickResolver {
-  const { pickRenderer, resolvePoi } = input;
+  const { pickRenderer, structures } = input;
 
   // Built as a `const` (rather than returned inline) so we can attach
   // the `satisfies Destroyable` latch — the click resolver is one of
@@ -45,7 +46,7 @@ export function createClickResolver(input: CreateClickResolverInput): ClickResol
   // engine.destroy() iterate uniformly across the bag.
   const resolver: ClickResolver = {
     async resolveClick(args: ClickResolveInput): Promise<Selection | null> {
-      const result = await pickRenderer.pick(
+      const pick = await pickRenderer.pick(
         args.viewportPx,
         args.pickXPx,
         args.pickYPx,
@@ -59,24 +60,9 @@ export function createClickResolver(input: CreateClickResolverInput): ClickResol
         // PickRenderer.pick JSDoc.
         args.timingDescriptor,
       );
-      if (result === null) return null;
-
-      // Structure variant from the discriminated `PickResult`: a
-      // cluster / supercluster / void / group ring claimed the pixel (any
-      // non-galaxy kind). Resolve `(category, poiIndex)` to the record to
-      // carry its stable `id` — null when the caller passed no resolver or
-      // the index is unallocated (an old shader frame), so the InfoCard
-      // never shows a phantom POI card.
-      if (result.kind !== 'galaxy') {
-        const poi = resolvePoi?.({ category: result.kind, poiIndex: result.poiIndex });
-        return poi ? { kind: 'poi', id: poi.id } : null;
-      }
-
-      // Galaxy variant — the only remaining `kind`. The selection is
-      // returned unconditionally; `setSelected` resolves the GalaxyInfo and
-      // tolerates a not-yet-loaded cloud by firing onSelectChange(null),
-      // preserving the pre-extraction "select regardless" behaviour.
-      return { kind: 'galaxy', source: result.source, localIdx: result.localIdx };
+      // Decode → Selection via the shared map (same one the hover path
+      // uses), so click and hover can't drift on how a pixel resolves.
+      return pickToSelection(pick, structures);
     },
     destroy(): void {
       // Intentionally empty — see the type-level docstring for why.

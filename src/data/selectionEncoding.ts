@@ -33,10 +33,7 @@
  * decode in `unpackPick` reverses the offset.
  */
 
-import { SOURCE_REGISTRY } from './sources';
-import type { SourceEntry } from '../@types/data/SourceEntry';
 import type { SourceType } from '../@types/data/SourceType';
-import type { StructureCategory } from '../@types/engine/data/StructureCategory';
 
 /** Bit shift for the source code in the packed identity. */
 export const SELECTION_SOURCE_SHIFT = 27;
@@ -72,25 +69,19 @@ export function packSelection(sourceCode: number, localIdx: number): number {
 }
 
 /**
- * Decoded pick-buffer hit, discriminated by `kind`: a `'galaxy'` (survey source
- * + local index) or a structure marker-ring (the `StructureCategory` union +
- * POI index). The structure arm widens with the registry — no per-category
- * member to add by hand.
+ * Decoded pick-buffer hit: the source code + per-source local index, the pure
+ * identity the bits carry. Classifying it (survey galaxy vs structure ring) is
+ * a registry read done downstream by `pickToSelection` — the decode itself
+ * stays store-free and dispatch-free.
  */
-export type PickResult =
-  | { readonly kind: 'galaxy'; readonly source: SourceType; readonly localIdx: number }
-  | { readonly kind: StructureCategory; readonly poiIndex: number };
+export type PickResult = { readonly sourceCode: SourceType; readonly localIdx: number };
 
 /**
  * Decode a raw r32uint pick value into a {@link PickResult}, or `null` for no
  * hit. Reverses the `+ PICK_SENTINEL_OFFSET` and the `(code << 27) | localIdx`
- * layout, then dispatches on the registry entry the code points at: `survey` →
- * galaxy, `structure` → its category. Decoding off the registry's own `type`
- * means encode and decode share one source of truth — no second code→category
- * table to drift (which would surface as "clicking a ring selects the wrong
- * record"). Codes that aren't a pickable surface (filament / volume /
- * unallocated, and the all-ones sentinel 31) warn + return null rather than
- * leak a ghost hit into the focus subsystem.
+ * layout. `0` is the cleared-texture background; source code 31 is the reserved
+ * all-ones sentinel band — both return null. Whether the decoded code is a
+ * pickable surface is `pickToSelection`'s call.
  */
 export function unpackPick(rawPickValue: number): PickResult | null {
   if (rawPickValue === 0) return null;
@@ -98,18 +89,5 @@ export function unpackPick(rawPickValue: number): PickResult | null {
   // Reserved sentinel band — never a real hit.
   if (sourceCode === 31) return null;
   const localIdx = (rawPickValue & SELECTION_LOCAL_IDX_MASK) - PICK_SENTINEL_OFFSET;
-  const entry: SourceEntry | undefined = SOURCE_REGISTRY[sourceCode as SourceType];
-  if (entry?.type === 'survey') {
-    return { kind: 'galaxy', source: sourceCode as SourceType, localIdx };
-  }
-  if (entry?.type === 'structure') {
-    // A structure entry's id *is* its category (StructureCategory derives from
-    // exactly these ids), so the cast is sound by construction.
-    return { kind: entry.id as StructureCategory, poiIndex: localIdx };
-  }
-  console.warn(
-    `unpackPick: unexpected source code ${sourceCode} ` +
-      `(raw=0x${rawPickValue.toString(16).padStart(8, '0')}); returning null`,
-  );
-  return null;
+  return { sourceCode: sourceCode as SourceType, localIdx };
 }

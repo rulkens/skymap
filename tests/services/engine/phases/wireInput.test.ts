@@ -98,6 +98,9 @@ function makeState(): EngineState {
       tier: 'medium',
     },
     picking: { latestMouseCss: null, pointerDown: false } as never,
+    // createClickResolver captures the structure store for pickToSelection;
+    // an empty store is enough — these tests don't exercise a POI pick.
+    data: { structures: { byCategory: () => [] } } as never,
     gpu: {
       renderer: {
         totalCount: () => 0,

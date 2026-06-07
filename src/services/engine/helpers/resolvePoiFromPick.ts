@@ -36,30 +36,23 @@
  *
  * ### Why a narrowed `structures` param rather than the full `EngineState`
  *
- * The helper only needs `byCategory`.  Narrowing the param shape (a
- * one-method object type — `StoreForPickResolve` below) keeps the test stubs
- * trivial (no need to construct a full `EngineState` to assert a pure lookup)
- * and avoids coupling this module to the full `StructureStore` import.
+ * The helper only needs `byCategory`.  The narrowed param shape
+ * (`PickStructureStore`) keeps the test stubs trivial (no need to construct a
+ * full `EngineState` to assert a pure lookup) and avoids coupling this module
+ * to the full `StructureStore` import.
  */
 
 import type { StructureRecord } from '../../../@types/engine/data/StructureRecord';
-import type { StructureCategory } from '../../../@types/engine/data/StructureCategory';
 import type { PoiCategory } from '../../../@types/engine/data/PoiCategory';
+import type { PickStructureStore } from '../../../@types/engine/data/PickStructureStore';
 
 export type PickPoiInput = {
   readonly category: PoiCategory;
   readonly poiIndex: number;
 };
 
-// Minimal projection of the structure store the helper uses.  Narrower than
-// the full `StructureStore` so tests can stub with a one-method object
-// literal — see `tests/services/engine/helpers/resolvePoiFromPick.test.ts`.
-type StoreForPickResolve = {
-  byCategory(category: StructureCategory): readonly StructureRecord[];
-};
-
 export function resolvePoiFromPick(
-  structures: StoreForPickResolve,
+  structures: PickStructureStore,
   input: PickPoiInput,
 ): StructureRecord | null {
   // Rings are structure-only; a famousGalaxy hit can't come from the ring

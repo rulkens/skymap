@@ -6,7 +6,7 @@
  * parity test lives at the bottom and is added in a later task.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import type { SourceType } from '../../src/@types/data/SourceType';
 import {
   SELECTION_SOURCE_SHIFT,
@@ -40,14 +40,12 @@ describe('selectionEncoding', () => {
     expect(packSelection(0, 0)).toBe(0);
   });
 
-  it('unpacks a real pick value back to (source, localIdx)', () => {
+  it('unpacks a real pick value back to (sourceCode, localIdx)', () => {
     // Picker writes `packed + 1`. So a real hit of source=3, localIdx=42
-    // arrives as 0x1800002b. unpackPick subtracts 1 from the bottom 27 bits.
-    // Source code 3 is Source.Glade (a survey source ≤ 4), so the decoded
-    // result is the `kind: 'galaxy'` variant of the discriminated union.
+    // arrives as 0x1800002b. unpackPick subtracts 1 from the bottom 27 bits
+    // and returns the decoded identity (classification is downstream).
     expect(unpackPick(0x1800002b)).toEqual({
-      kind: 'galaxy',
-      source: Source.Glade,
+      sourceCode: Source.Glade,
       localIdx: 42,
     });
   });
@@ -56,10 +54,9 @@ describe('selectionEncoding', () => {
     expect(unpackPick(0)).toBeNull();
   });
 
-  it('round-trips pack → +1 → unpackPick for survey-source identities', () => {
-    // Survey sources only — codes 0..4. POI codes (5/6/7) round-trip
-    // through their own variant tests below; code 31 deliberately
-    // returns null per the sentinel rule.
+  it('round-trips pack → +1 → unpackPick for any source identity', () => {
+    // Codes 0..30 are allocated; 31 deliberately returns null per the
+    // sentinel rule. unpackPick decodes them all uniformly.
     const cases: Array<[number, number]> = [
       [0, 1],
       [0, 0x07fffffe],
@@ -71,8 +68,7 @@ describe('selectionEncoding', () => {
       const packed = packSelection(source, localIdx);
       const rawPick = (packed + PICK_SENTINEL_OFFSET) >>> 0;
       expect(unpackPick(rawPick)).toEqual({
-        kind: 'galaxy',
-        source: source as SourceType,
+        sourceCode: source as SourceType,
         localIdx,
       });
     }
@@ -159,7 +155,7 @@ describe('selectionEncoding TS↔WESL parity', () => {
   });
 });
 
-describe('unpackPick — discriminated union for POI categories', () => {
+describe('unpackPick — decode to (sourceCode, localIdx)', () => {
   // Helper: produce the raw pick texture value the picker would write
   // for a given (sourceCode, localIdx) pair. The picker offsets by
   // PICK_SENTINEL_OFFSET (+1); unpackPick reverses that.
@@ -167,45 +163,28 @@ describe('unpackPick — discriminated union for POI categories', () => {
     return (packSelection(sourceCode, localIdx) + PICK_SENTINEL_OFFSET) >>> 0;
   }
 
-  it('returns kind:galaxy for codes 0..4 (survey sources)', () => {
-    const cases: Array<[number, SourceType]> = [
-      [0, Source.Synthetic],
-      [1, Source.SDSS],
-      [2, Source.TwoMRS],
-      [3, Source.Glade],
-      [4, Source.FamousGalaxy],
+  it('decodes the source code and local index for any allocated code', () => {
+    // unpackPick is pure bit-decode now — classifying the code (survey vs
+    // structure vs not-pickable) is pickToSelection's job. Every allocated
+    // code round-trips as { sourceCode, localIdx }, regardless of category.
+    const codes: SourceType[] = [
+      Source.Synthetic,
+      Source.SDSS,
+      Source.Cluster,
+      Source.Void,
+      Source.Group,
+      Source.Milliquas,
     ];
-    for (const [code, sourceEnum] of cases) {
-      const result = unpackPick(rawFor(code, 42));
-      expect(result).toEqual<PickResult>({
-        kind: 'galaxy',
-        source: sourceEnum,
-        localIdx: 42,
-      });
+    for (const code of codes) {
+      expect(unpackPick(rawFor(code, 42))).toEqual<PickResult>({ sourceCode: code, localIdx: 42 });
     }
   });
 
-  it('returns kind:cluster for code 5', () => {
-    const result = unpackPick(rawFor(5, 7));
-    expect(result).toEqual<PickResult>({ kind: 'cluster', poiIndex: 7 });
-  });
-
-  it('returns kind:supercluster for code 6', () => {
-    const result = unpackPick(rawFor(6, 0));
-    expect(result).toEqual<PickResult>({ kind: 'supercluster', poiIndex: 0 });
-  });
-
-  it('returns kind:void for code 7', () => {
-    const result = unpackPick(rawFor(7, 2));
-    expect(result).toEqual<PickResult>({ kind: 'void', poiIndex: 2 });
-  });
-
-  it('returns kind:group for Source.Group (code 15)', () => {
-    // Source.Group = 15, appended after the 0..8 survey/POI band.
-    // The pick fragment writes packSelection(15, idx) + PICK_SENTINEL_OFFSET;
-    // unpackPick must reverse the offset and return the group variant.
-    const result = unpackPick(rawFor(Source.Group, 3));
-    expect(result).toEqual<PickResult>({ kind: 'group', poiIndex: 3 });
+  it('reverses the +PICK_SENTINEL_OFFSET so localIdx 0 round-trips', () => {
+    expect(unpackPick(rawFor(Source.Cluster, 0))).toEqual<PickResult>({
+      sourceCode: Source.Cluster,
+      localIdx: 0,
+    });
   });
 
   it('returns null for raw==0 (cleared pick texture)', () => {
@@ -216,26 +195,12 @@ describe('unpackPick — discriminated union for POI categories', () => {
     expect(unpackPick(0xffffffff)).toBeNull();
   });
 
-  it('returns kind:galaxy for code 8 (Milliquas — appended after POI band)', () => {
-    const result = unpackPick(rawFor(Source.Milliquas, 99));
-    expect(result).toEqual<PickResult>({
-      kind: 'galaxy',
-      source: Source.Milliquas,
-      localIdx: 99,
+  it('decodes even unallocated codes — classification is downstream', () => {
+    // No warn here any more (that moved to pickToSelection); unpackPick
+    // doesn't know which codes are pickable. It just reverses the bits.
+    expect(unpackPick(rawFor(14, 5))).toEqual<PickResult>({
+      sourceCode: 14 as SourceType,
+      localIdx: 5,
     });
-  });
-
-  it('logs a warning and returns null for unallocated codes (9..14, 16..30)', () => {
-    // Code 15 (Source.Group) is now allocated — use 14 and 16 instead.
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    try {
-      for (const code of [9, 14, 16, 30]) {
-        const result = unpackPick(rawFor(code, 0));
-        expect(result).toBeNull();
-      }
-      expect(warn).toHaveBeenCalled();
-    } finally {
-      warn.mockRestore();
-    }
   });
 });
