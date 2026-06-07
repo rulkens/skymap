@@ -60,7 +60,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // The live shared focus buffer — so the pick pass excludes non-members
     // of a focused structure from hit-testing (vertex shader culls them).
     state.gpu.focusUniform!.bindGroup,
-    state.gpu.clusterMarkerRenderer ?? undefined,
+    state.gpu.structureMarkerRenderer ?? undefined,
   );
   state.gpu.pickRenderer = pickRenderer;
   // The resolver hands back the freshly-decoded `(source, localIdx)`
@@ -201,7 +201,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     const { visibleSources, hasAny } = collectPickTargets(
       r,
       state.sources.pickMask,
-      state.gpu.clusterMarkerRenderer,
+      state.gpu.structureMarkerRenderer,
     );
     if (!hasAny) return null;
 

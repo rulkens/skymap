@@ -30,7 +30,7 @@
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Vec4 } from '../../../@types/math/Vec4';
-import type { ClusterMarkerDescriptor } from '../../../@types/rendering/ClusterMarkerDescriptor';
+import type { StructureMarkerDescriptor } from '../../../@types/rendering/StructureMarkerDescriptor';
 import { STRUCTURE_POI_STYLES, SIG_MIN_ALPHA } from './structurePoiStyles';
 import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
@@ -38,8 +38,8 @@ import { structureIdOf } from '../helpers/structureIdOf';
 export function produceStructureMarkers(
   state: EngineState,
   ctx: ReadyFrameContext,
-): readonly ClusterMarkerDescriptor[] {
-  const out: ClusterMarkerDescriptor[] = [];
+): readonly StructureMarkerDescriptor[] {
+  const out: StructureMarkerDescriptor[] = [];
   const halfH = ctx.canvasSize.height * 0.5;
   const fovYRad = 2 * Math.atan(halfH / ctx.drawPxPerRad);
   const pxPerRad = (ctx.canvasSize.height * 0.5) / Math.tan(fovYRad * 0.5);

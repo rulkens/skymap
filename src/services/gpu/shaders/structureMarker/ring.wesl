@@ -1,6 +1,6 @@
-// clusterMarker/ring.wesl — screen-anti-aliased ring at world radius.
+// structureMarker/ring.wesl — screen-anti-aliased ring at world radius.
 //
-// One instance per POI.  Vertex stage: identical to halo.wesl's
+// One instance per structure marker.  Vertex stage: identical to halo.wesl's
 // world-sized billboard expansion — same shared 'expandBillboardWorld'
 // helper from lib/billboard.wesl (screen-aligned, no shear under
 // orbit, see that file's "Screen-aligned vs view-aligned" subsection
@@ -30,9 +30,9 @@
 // We smuggle 'sizePx' through the VsOut.camDistMpc slot rather than
 // adding a dedicated varying — see the slot comment below.
 
-import package::clusterMarker::io::Uniforms;
-import package::clusterMarker::io::VsIn;
-import package::clusterMarker::io::VsOut;
+import package::structureMarker::io::Uniforms;
+import package::structureMarker::io::VsIn;
+import package::structureMarker::io::VsOut;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardWorld;

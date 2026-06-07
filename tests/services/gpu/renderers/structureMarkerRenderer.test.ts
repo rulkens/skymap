@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createClusterMarkerRenderer } from '../../../../src/services/gpu/renderers/clusterMarkerRenderer';
-import type { ClusterMarkerDescriptor } from '../../../../src/@types/rendering/ClusterMarkerDescriptor';
+import { createStructureMarkerRenderer } from '../../../../src/services/gpu/renderers/structureMarkerRenderer';
+import type { StructureMarkerDescriptor } from '../../../../src/@types/rendering/StructureMarkerDescriptor';
 import type { FadeUniformsBgl } from '../../../../src/@types/rendering/FadeUniformsBgl';
 
 // Null-device pattern, mirrors markerLineRenderer.test.ts.
@@ -11,7 +11,7 @@ const newRenderer = (initialCapacity?: number) => {
     format: 'rgba16float' as GPUTextureFormat,
     canvas: null as unknown as HTMLCanvasElement,
   };
-  return createClusterMarkerRenderer(
+  return createStructureMarkerRenderer(
     ctx,
     'rgba16float',
     null as unknown as FadeUniformsBgl,
@@ -19,7 +19,7 @@ const newRenderer = (initialCapacity?: number) => {
   );
 };
 
-const cluster = (id: number): ClusterMarkerDescriptor => ({
+const cluster = (id: number): StructureMarkerDescriptor => ({
   // `id` is CPU-side metadata used by the selection / pick paths;
   // the renderer ignores it when packing the instance buffer, but
   // the type requires it.  Synthesize a stable per-fixture id.
@@ -32,7 +32,7 @@ const cluster = (id: number): ClusterMarkerDescriptor => ({
 });
 
 // `void` is a JS reserved word; use void_ to avoid a syntax error.
-const void_ = (id: number): ClusterMarkerDescriptor => ({
+const void_ = (id: number): StructureMarkerDescriptor => ({
   id: `test-void-${id}`,
   category: 'void',
   worldPos: [id, 0, 0],
@@ -41,7 +41,7 @@ const void_ = (id: number): ClusterMarkerDescriptor => ({
   ringColor: [0, 0.9, 0.9, 1],
 });
 
-const group = (id: number): ClusterMarkerDescriptor => ({
+const group = (id: number): StructureMarkerDescriptor => ({
   id: `test-group-${id}`,
   category: 'group',
   worldPos: [id, 0, 0],
@@ -50,7 +50,7 @@ const group = (id: number): ClusterMarkerDescriptor => ({
   ringColor: [0.5, 0.9, 0.6, 1],
 });
 
-describe('ClusterMarkerRenderer (CPU state)', () => {
+describe('StructureMarkerRenderer (CPU state)', () => {
   it('starts with zero markers', () => {
     const r = newRenderer();
     expect(r.markerCount()).toBe(0);
@@ -81,7 +81,7 @@ describe('ClusterMarkerRenderer (CPU state)', () => {
 
   it('label is stable', () => {
     const r = newRenderer();
-    expect(r.label).toBe('clusterMarkerRenderer');
+    expect(r.label).toBe('structureMarkerRenderer');
   });
 
   it('counts group descriptors alongside cluster / void', () => {

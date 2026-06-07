@@ -2,7 +2,7 @@
  * collectPickTargets — the unified "what's pickable this frame" gate.
  *
  * The regression that motivated the helper: clusters draw into the pick
- * texture via clusterMarkerRenderer.pickRing but are NOT galaxy surveys,
+ * texture via structureMarkerRenderer.pickRing but are NOT galaxy surveys,
  * so a gate that bailed on "no visible galaxy sources" made clusters
  * unpickable (and the pick-debug overlay black) whenever every galaxy
  * survey was toggled off.  The `hasAny` flag must stay true on a
@@ -12,7 +12,7 @@
 import { describe, it, expect } from 'vitest';
 import { collectPickTargets } from '../../../../src/services/engine/helpers/collectPickTargets';
 import type { PointRenderer } from '../../../../src/@types/rendering/PointRenderer';
-import type { ClusterMarkerRenderer } from '../../../../src/@types/rendering/ClusterMarkerRenderer';
+import type { StructureMarkerRenderer } from '../../../../src/@types/rendering/StructureMarkerRenderer';
 import type { PickSourceDraw } from '../../../../src/@types/rendering/PickSourceDraw';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import { Source } from '../../../../src/data/sources';
@@ -37,8 +37,8 @@ function makeRenderer(sources: readonly SourceType[]): PointRenderer {
   } as unknown as PointRenderer;
 }
 
-function makeClusterRenderer(markerCount: number): ClusterMarkerRenderer {
-  return { markerCount: () => markerCount } as unknown as ClusterMarkerRenderer;
+function makeClusterRenderer(markerCount: number): StructureMarkerRenderer {
+  return { markerCount: () => markerCount } as unknown as StructureMarkerRenderer;
 }
 
 // pickMask bit for a source code.

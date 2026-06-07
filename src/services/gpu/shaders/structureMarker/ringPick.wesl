@@ -1,9 +1,9 @@
-// clusterMarker/ringPick.wesl — offscreen r32uint picking fragment for
-// cluster / supercluster / void POI rings.
+// structureMarker/ringPick.wesl — offscreen r32uint picking fragment for
+// structure rings (cluster / supercluster / void / group).
 //
-// Sister to clusterMarker/ring.wesl (the visible-ring fragment). Both
+// Sister to structureMarker/ring.wesl (the visible-ring fragment). Both
 // consume the same VsOut produced by the shared vertex stage in
-// ring.wesl; this one writes the packed POI identity into the pick
+// ring.wesl; this one writes the packed structure identity into the pick
 // texture instead of the visible-ring colour.
 //
 // ## Why a separate pick fragment
@@ -33,8 +33,8 @@
 //
 // Same '(sourceCode << 27) | (poiIndex + PICK_SENTINEL_OFFSET)' packing
 // the galaxy path uses.  The per-category SourceUniforms block carries
-// the source code (5/6/7 for cluster/supercluster/void — see sources.ts
-// and lib/selectionEncoding.wesl).  'poiIndex' is the
+// the source code (5/6/7/15 for cluster/supercluster/void/group — see
+// sources.ts and lib/selectionEncoding.wesl).  'poiIndex' is the
 // @builtin(instance_index) of this draw, populated in the vertex stage
 // (ring.wesl) and forwarded through VsOut.poiIndex — flat-interpolated
 // so the integer arrives unchanged across all six vertices of the
@@ -42,19 +42,19 @@
 //
 // ## Why import VsOut from io.wesl rather than from ring.wesl
 //
-// The struct itself lives in clusterMarker/io.wesl (the shared-struct
+// The struct itself lives in structureMarker/io.wesl (the shared-struct
 // module both halo + ring import from).  ring.wesl declares the
 // @vertex fn that produces it but does NOT re-export the struct; the
 // canonical path is the io module.
 
-import package::clusterMarker::io::VsOut;
+import package::structureMarker::io::VsOut;
 import package::lib::sourceUniforms::SourceUniforms;
 import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
 
 // Re-declare the per-source binding here so this module is self-
 // contained.  WESL has no global state — '@group(N) @binding(M)' is
 // module-local and cannot be exported.  The same layout numbers are
-// declared in clusterMarker/ring.wesl (visible-ring path); WGSL is
+// declared in structureMarker/ring.wesl (visible-ring path); WGSL is
 // fine with multiple modules declaring the same binding so long as
 // the layout matches, and the SourceUniforms struct is imported from
 // the single lib authority so the byte layout cannot drift across

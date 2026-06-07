@@ -335,7 +335,7 @@ function makeInput(
           selectionRingRenderer: null,
           scalarVolumeRenderer: null,
           flowFieldRenderer: null,
-          clusterMarkerRenderer: null,
+          structureMarkerRenderer: null,
           focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
         },
         // encodeFlowCompute (pre-HDR) reads these; flow is default-off so the

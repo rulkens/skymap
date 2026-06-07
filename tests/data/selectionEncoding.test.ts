@@ -133,7 +133,7 @@ describe('selectionEncoding TS↔WESL parity', () => {
       ['PICK_SENTINEL_OFFSET', PICK_SENTINEL_OFFSET],
       // POI category source codes — mirror of TS Source.Cluster /
       // Source.Supercluster / Source.Void / Source.Group. These appear
-      // at the WESL side so the future cluster-marker pick fragment can
+      // at the WESL side so the future structure-marker pick fragment can
       // refer to them by name instead of inlining a magic 5u/6u/7u/15u
       // literal.
       ['SOURCE_CODE_CLUSTER', Source.Cluster],

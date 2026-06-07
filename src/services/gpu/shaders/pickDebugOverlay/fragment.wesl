@@ -30,7 +30,7 @@
 // Drawn via OVER blend ('srcFactor: one, dstFactor: one-minus-src-
 // alpha') so the overlay sits on top of the tone-mapped frame.
 // Pre-multiplying RGB by alpha at the fragment matches the rest of
-// the UI overlay stack (markerLines, labels, clusterMarker).
+// the UI overlay stack (markerLines, labels, structureMarker).
 
 import package::pickDebugOverlay::io::VSOut;
 import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;

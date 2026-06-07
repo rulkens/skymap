@@ -47,7 +47,7 @@ import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { LabelRenderer } from '../../rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
 import type { SelectionRingRenderer } from '../../rendering/SelectionRingRenderer';
-import type { ClusterMarkerRenderer } from '../../rendering/ClusterMarkerRenderer';
+import type { StructureMarkerRenderer } from '../../rendering/StructureMarkerRenderer';
 import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
 import type { FlowFieldRenderer } from '../../rendering/FlowFieldRenderer';
 import type { VolumeUpsample } from '../../rendering/VolumeUpsample';
@@ -153,16 +153,16 @@ export type EngineGpuHandles = {
    */
   selectionRingRenderer: SelectionRingRenderer | null;
   /**
-   * Cluster-marker renderer — draws halo + ring overlays for POI clusters
-   * (one renderer for all POI source categories; per-source bind groups
-   * live inside the renderer).  Null until `initGpu` constructs it.
+   * Structure-marker renderer — draws halo + ring overlays for every
+   * structure category (cluster / supercluster / void / group; per-source
+   * bind groups live inside the renderer).  Null until `initGpu` constructs it.
    * Excluded from the `isEngineReady` predicate for the same reason as
    * `markerLineRenderer` — null-checked at point of use by the
-   * cluster-marker frame pass.  Stored here so `destroy()` can release
+   * structure-marker frame pass.  Stored here so `destroy()` can release
    * the renderer's GPU buffers (per-category bind groups + per-instance
    * buffer + corner VBO).
    */
-  clusterMarkerRenderer: ClusterMarkerRenderer | null;
+  structureMarkerRenderer: StructureMarkerRenderer | null;
   /**
    * Atlas-bound 3D-oriented disk renderer for large galaxy thumbnails
    * (close-approach view).  Null until `initGpu` constructs it from a

@@ -1,17 +1,17 @@
 /**
- * Public handle returned by `createClusterMarkerRenderer`.  Mirrors
+ * Public handle returned by `createStructureMarkerRenderer`.  Mirrors
  * `MarkerLineRenderer`'s shape: typed methods, no internals leaked.
  *
- * One renderer draws halos + rings for ALL POI categories.  Per-category
- * source-code differentiation happens inside the renderer (three
- * pre-built per-source bind groups) so plan 3's pick path inherits the
- * correct (sourceCode << 27) | poiIndex packing without further
- * scaffolding.
+ * One renderer draws halos + rings for ALL structure categories
+ * (cluster / supercluster / void / group).  Per-category source-code
+ * differentiation happens inside the renderer (one pre-built per-source
+ * bind group each) so the pick path gets the correct
+ * (sourceCode << 27) | poiIndex packing for free.
  */
 
-import type { ClusterMarkerDescriptor } from './ClusterMarkerDescriptor';
+import type { StructureMarkerDescriptor } from './StructureMarkerDescriptor';
 
-export type ClusterMarkerRenderer = {
+export type StructureMarkerRenderer = {
   /** Human-readable identifier. */
   readonly label: string;
   /**
@@ -21,19 +21,18 @@ export type ClusterMarkerRenderer = {
    * each bound to that category's SourceUniforms.
    *
    * Designed to be called by `runFrame.ts` once per frame from the
-   * output of `state.subsystems.pois.produceMarkers(state, ctx)`.
+   * output of `produceStructureMarkers(state, ctx)`.
    */
-  setMarkers(descriptors: readonly ClusterMarkerDescriptor[]): void;
+  setMarkers(descriptors: readonly StructureMarkerDescriptor[]): void;
   /**
    * Issue the draws inside an in-flight render pass against the HDR target.
    *
    * `fadeOpacity` is the per-frame opacity scalar for the entire marker
    * layer.  Folded into the alpha output via the shared
    * `lib::fadeUniforms::applyFade` helper — same contract as
-   * `filamentRenderer.draw(... fadeOpacity)`.  At v1 the pass file
-   * passes a constant 1.0; a future FadeRegistry handle for cluster
-   * markers (e.g. for layer-toggle animations) can substitute its
-   * per-frame value here.
+   * `filamentRenderer.draw(... fadeOpacity)`.  The pass file passes a
+   * constant 1.0; a FadeRegistry handle for structure markers (e.g. for
+   * layer-toggle animations) can substitute its per-frame value here.
    */
   render(
     pass: GPURenderPassEncoder,
@@ -44,13 +43,13 @@ export type ClusterMarkerRenderer = {
   /** Number of markers last passed to setMarkers.  Used by the pass `enabled()` check. */
   markerCount(): number;
   /**
-   * Issue one ring-pick draw per POI category (cluster / supercluster /
-   * void) into the caller-supplied render pass.  The pass MUST already
-   * have:
+   * Issue one ring-pick draw per structure category (cluster /
+   * supercluster / void / group) into the caller-supplied render pass.
+   * The pass MUST already have:
    *
    *   - The pick-pass colour attachment (r32uint pick texture) bound.
    *   - A `depth24plus` depth attachment bound (this pipeline writes +
-   *     tests depth so a galaxy in front of a POI ring claims the pixel).
+   *     tests depth so a galaxy in front of a ring claims the pixel).
    *   - `@group(0)` (CameraUniforms) already set by the caller —
    *     `pickRing` deliberately does NOT bind it.  The galaxy pick draws
    *     bind the same canonical `@group(0)` immediately beforehand and

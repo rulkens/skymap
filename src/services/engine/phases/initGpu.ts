@@ -53,7 +53,7 @@ import { createFilamentRenderer } from '../../gpu/renderers/filamentRenderer';
 import { createLabelRenderer } from '../../gpu/renderers/labelRenderer';
 import { createMarkerLineRenderer } from '../../gpu/renderers/markerLineRenderer';
 import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRingRenderer';
-import { createClusterMarkerRenderer } from '../../gpu/renderers/clusterMarkerRenderer';
+import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarkerRenderer';
 import { createScalarVolumeRenderer } from '../../gpu/renderers/scalarVolumeRenderer';
 import { createFlowFieldRenderer } from '../../gpu/renderers/flowFieldRenderer';
 import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
@@ -197,7 +197,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // swap chain.  The fadeBgl placeholder at @group(1) must match what the
   // other HDR passes (filaments) bind at the same slot on the shared
   // RenderPassEncoder; see the renderer's pipeline-layout comment.
-  state.gpu.clusterMarkerRenderer = createClusterMarkerRenderer(
+  state.gpu.structureMarkerRenderer = createStructureMarkerRenderer(
     uiCtx,
     'rgba16float',
     state.gpu.fadeBgl!,

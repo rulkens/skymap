@@ -190,7 +190,7 @@ export type EngineSettingsState = {
   /**
    * Per-category visibility for the POI MARKER overlay — the ring +
    * halo glyph drawn at the POI's world anchor by
-   * `clusterMarkerRenderer`.  Symmetric to `labelCategoryVisibility`;
+   * `structureMarkerRenderer`.  Symmetric to `labelCategoryVisibility`;
    * the two records are deliberately independent so the SettingsPanel
    * can offer separate master toggles for "Labels" (text) and
    * "Structures" (markers).  Defaults to every category visible.

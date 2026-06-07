@@ -77,7 +77,7 @@ describe('Source enum — POI codes (cluster/supercluster/void)', () => {
 
   it('keeps POI codes OUT of SURVEY_SOURCES (POIs are not survey sources)', () => {
     // The points-pipeline visibility bitmask iterates SURVEY_SOURCES. POIs
-    // render through their own renderer (future clusterMarkerRenderer)
+    // render through their own renderer (future structureMarkerRenderer)
     // with its own per-category visibility logic, so listing them here
     // would muddy the meaning of "this bitmask filters survey galaxies."
     expect(SURVEY_SOURCES).not.toContain(Source.Cluster);

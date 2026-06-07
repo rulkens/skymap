@@ -158,7 +158,7 @@ plugin), Vitest (`node` env). No build-time additions.
   `EngineSettingsState` and `requestRender()`. The projection picks
   them up next frame.
 - `src/services/gpu/renderers/filamentRenderer.ts`,
-  `pointRenderer.ts`, `clusterMarkerRenderer.ts` — drop their own
+  `pointRenderer.ts`, `structureMarkerRenderer.ts` — drop their own
   `fadeBuffer` / `fadeBindGroup` per-instance fields; ask the registry
   for the bind group at bind time.
 - `src/services/gpu/renderers/labelRenderer*.ts` — same (only if their
@@ -457,12 +457,12 @@ Per ADR 0001 §Decision items 3.
 
 **Files:**
 - Modify: `filamentRenderer.ts`, `pointRenderer.ts`,
-  `clusterMarkerRenderer.ts`, and the label renderers if applicable.
+  `structureMarkerRenderer.ts`, and the label renderers if applicable.
 
 Mechanical repeat of T9. Per ADR 0001 §Implementation Notes item 1,
 order is lowest-risk first:
 
-- [ ] **Step 1: `clusterMarkerRenderer`** (smallest surface, fewest
+- [ ] **Step 1: `structureMarkerRenderer`** (smallest surface, fewest
   tests touched). Follow T9's Step 1–4 shape: failing buffer-spy test
   → migrate → strip from type → green.
 - [ ] **Step 2: `filamentRenderer`.** Same shape.

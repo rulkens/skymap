@@ -1,32 +1,32 @@
 /**
- * clusterMarkerRenderer — instanced halo + ring overlay for cluster /
- * supercluster / void POIs.
+ * structureMarkerRenderer — instanced halo + ring overlay for every
+ * `type:'structure'` category: cluster, supercluster, void, and group.
+ * The producer (`produceStructureMarkers`) feeds it descriptors; the
+ * store it visualises is `state.data.structures`.
  *
- * ### Why one renderer for two pipelines?
+ * ### Why one renderer for three pipelines?
  *
- * Halos and rings share the same per-POI instance data (position,
- * radius, tints, alphas) and the same camera uniform; only the
- * fragment math differs (additive radial gradient vs. screen-AA ring).
- * One renderer that owns both pipelines + one shared instance vertex
- * buffer lets `setMarkers` upload once per frame and dispatch two
- * draws — versus two factory call sites maintaining two parallel
- * instance buffers.
+ * Halo, ring, and ringPick share the same per-instance data (position,
+ * radius, tints, alphas) and the same camera uniform; only the fragment
+ * math differs (additive radial gradient vs. screen-AA ring vs. pick
+ * encode).  One renderer owning all three pipelines + one shared
+ * instance buffer lets `setMarkers` upload once per frame, versus
+ * parallel instance buffers per pipeline.
  *
- * ### Why one draw per category (cluster / supercluster / void)?
+ * ### One draw per category
  *
- * The marker renderer pre-architects for plan 3's pick fragment.
- * Plan 3 will add a `ringPick.wesl` whose fragment composes
- * `(source.sourceCode << 27) | poiIndex + PICK_SENTINEL_OFFSET` from
- * a per-source uniform — identical to `pointRenderer`'s per-survey
- * uniform pattern.  Issuing one draw per category here (with the
- * per-category SourceUniforms bound at `@group(2)`) means plan 3
- * adds the pick pipeline without re-shaping how descriptors are
- * batched.
+ * `render`/`pickRing` partition descriptors by category and issue one
+ * instanced draw per non-empty bucket, binding that category's
+ * SourceUniforms at `@group(2)`.  The uniform carries the category's
+ * 5-bit `sourceCode`, which the ringPick fragment composes into
+ * `(sourceCode << 27) | poiIndex + PICK_SENTINEL_OFFSET` — the same
+ * per-source pattern `pointRenderer` uses per survey.  Buckets are
+ * data-driven from `STRUCTURE_CATEGORIES`, so a new structure source
+ * needs no change here.
  *
- * Voids skip the halo draw entirely (per the spec — a halo would
- * imply matter where the structure is defined by absence).  The
- * descriptor's `haloAlpha === 0` is the gate; descriptors flow into
- * the partition but the halo draw for the void bucket is skipped.
+ * Voids skip the halo draw — a halo implies matter where the structure
+ * is defined by absence.  The descriptor's `haloColor` alpha 0 is the
+ * gate; the descriptor still flows into the partition for ring + pick.
  *
  * ### CPU-only mode
  *
@@ -35,52 +35,37 @@
  * CPU scratch buffer + bumps the counter without touching the GPU.
  * Mirrors `markerLineRenderer.ts`'s null-device pattern.
  *
- * ### Pipeline shape (Task 7)
+ * ### Pipeline layout
  *
- * Two pipelines built from one module each (never share GPUShaderModule
- * across pipelines — WebGPU layout: 'auto' bites otherwise; see the
- * MEMORY note `feedback_webgpu_auto_layout_trap.md`):
- *
- *   - Halo:  additive blend (one, one), vertex 'vs' + fragment 'fs'
- *            from halo.wesl
- *   - Ring:  premultiplied-OVER blend, vertex 'vs' + fragment 'fs'
- *            from ring.wesl
- *
- * Both pipelines share an EXPLICIT pipeline layout — not 'auto' —
- * built from one CameraUniforms BGL (`@group(0)`) and one
- * SourceUniforms BGL (`@group(2)`).  An explicit shared layout means
- * one `device.createBindGroup(...)` is valid against both pipelines
- * (which `layout: 'auto'` does NOT guarantee).
- *
- * ### Per-category source uniforms (pre-architects pick path)
- *
- * Three pre-built SourceUniforms buffers (one each for cluster=5,
- * supercluster=6, void=7).  The `render` method partitions descriptors
- * by category, binds the matching SourceUniforms, and issues one
- * instanced draw per non-empty bucket.  Plan 3's pick pipeline will
- * reuse this same per-category dispatch — its ringPick fragment reads
- * `source.sourceCode` to compose `(sourceCode << 27) | poiIndex + 1`.
+ * Each pipeline gets its own GPUShaderModule (never share one across
+ * pipelines — WebGPU `layout:'auto'` bites otherwise; see the MEMORY
+ * note `feedback_webgpu_auto_layout_trap.md`).  All share an EXPLICIT
+ * pipeline layout — CameraUniforms BGL at `@group(0)`, a placeholder
+ * FadeUniforms BGL at `@group(1)` (unused by these shaders but it must
+ * match whatever a prior HDR pass left bound at slot 1), SourceUniforms
+ * BGL at `@group(2)` — so one `device.createBindGroup(...)` is valid
+ * against every pipeline (which `layout:'auto'` does NOT guarantee).
  */
 
 import type { GpuContext } from '../../../@types/rendering/GpuContext';
 import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { ClusterMarkerRenderer } from '../../../@types/rendering/ClusterMarkerRenderer';
-import type { ClusterMarkerDescriptor } from '../../../@types/rendering/ClusterMarkerDescriptor';
+import type { StructureMarkerRenderer } from '../../../@types/rendering/StructureMarkerRenderer';
+import type { StructureMarkerDescriptor } from '../../../@types/rendering/StructureMarkerDescriptor';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import { STRUCTURE_CATEGORIES, STRUCTURE_CATEGORY_CODES } from '../../../data/structureCategories';
 import type { StructureCategory } from '../../../@types/engine/data/StructureCategory';
-import haloVsCode from '../shaders/clusterMarker/halo.wesl?static';
-import haloFsCode from '../shaders/clusterMarker/halo.wesl?static';
-import ringVsCode from '../shaders/clusterMarker/ring.wesl?static';
-import ringFsCode from '../shaders/clusterMarker/ring.wesl?static';
-import ringPickVsCode from '../shaders/clusterMarker/ring.wesl?static';
-import ringPickFsCode from '../shaders/clusterMarker/ringPick.wesl?static';
+import haloVsCode from '../shaders/structureMarker/halo.wesl?static';
+import haloFsCode from '../shaders/structureMarker/halo.wesl?static';
+import ringVsCode from '../shaders/structureMarker/ring.wesl?static';
+import ringFsCode from '../shaders/structureMarker/ring.wesl?static';
+import ringPickVsCode from '../shaders/structureMarker/ring.wesl?static';
+import ringPickFsCode from '../shaders/structureMarker/ringPick.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 /**
  * 12 floats per instance × 4 bytes = 48 bytes/instance.
  *
- * Layout (matches VsIn in clusterMarker/io.wesl):
+ * Layout (matches VsIn in structureMarker/io.wesl):
  *   [0..2]   position.xyz       — world-space centre
  *   [3]      radiusMpc          — world-space half-extent (ring + halo)
  *   [4..7]   haloColor.rgba     — additive halo tint + final alpha
@@ -109,7 +94,7 @@ function byCategory<T>(init: T): Record<StructureCategory, T> {
   >;
 }
 
-export function createClusterMarkerRenderer(
+export function createStructureMarkerRenderer(
   ctx: GpuContext,
   /**
    * The colour-attachment format the halo + ring pipelines write into.
@@ -136,7 +121,7 @@ export function createClusterMarkerRenderer(
    */
   fadeBgl: FadeUniformsBgl,
   initialCapacity = 64,
-): ClusterMarkerRenderer {
+): StructureMarkerRenderer {
   const device = ctx.device as GPUDevice | null;
   const format = hdrFormat;
 
@@ -199,7 +184,7 @@ export function createClusterMarkerRenderer(
 
   if (device) {
     const cameraBgl = device.createBindGroupLayout({
-      label: 'cluster-marker-camera-bgl',
+      label: 'structure-marker-camera-bgl',
       entries: [
         {
           binding: 0,
@@ -209,7 +194,7 @@ export function createClusterMarkerRenderer(
       ],
     });
     const sourceBgl = device.createBindGroupLayout({
-      label: 'cluster-marker-source-bgl',
+      label: 'structure-marker-source-bgl',
       entries: [
         {
           binding: 0,
@@ -218,7 +203,7 @@ export function createClusterMarkerRenderer(
         },
       ],
     });
-    // @group(1) FadeUniforms slot — the cluster-marker shaders DO NOT
+    // @group(1) FadeUniforms slot — the structure-marker shaders DO NOT
     // reference this slot (alpha rides on the per-descriptor fields the
     // CPU bakes in produceMarkers), but we MUST list the canonical
     // shared fadeBgl in the layout at slot 1.
@@ -234,14 +219,14 @@ export function createClusterMarkerRenderer(
     // the pipeline layout-compatible with whatever the prior pass
     // bound.  We never create a BindGroup against it ourselves.
     const pipelineLayout = device.createPipelineLayout({
-      label: 'cluster-marker-pipeline-layout',
+      label: 'structure-marker-pipeline-layout',
       bindGroupLayouts: [cameraBgl, fadeBgl, sourceBgl],
     });
 
-    const haloVs = createShaderModuleWithDevLog(device, haloVsCode, 'clusterMarker.halo.vs');
-    const haloFs = createShaderModuleWithDevLog(device, haloFsCode, 'clusterMarker.halo.fs');
-    const ringVs = createShaderModuleWithDevLog(device, ringVsCode, 'clusterMarker.ring.vs');
-    const ringFs = createShaderModuleWithDevLog(device, ringFsCode, 'clusterMarker.ring.fs');
+    const haloVs = createShaderModuleWithDevLog(device, haloVsCode, 'structureMarker.halo.vs');
+    const haloFs = createShaderModuleWithDevLog(device, haloFsCode, 'structureMarker.halo.fs');
+    const ringVs = createShaderModuleWithDevLog(device, ringVsCode, 'structureMarker.ring.vs');
+    const ringFs = createShaderModuleWithDevLog(device, ringFsCode, 'structureMarker.ring.fs');
 
     const vertexBuffers: GPUVertexBufferLayout[] = [
       {
@@ -256,7 +241,7 @@ export function createClusterMarkerRenderer(
     ];
 
     haloPipeline = device.createRenderPipeline({
-      label: 'cluster-marker-halo-pipeline',
+      label: 'structure-marker-halo-pipeline',
       layout: pipelineLayout,
       vertex: { module: haloVs, entryPoint: 'vs', buffers: vertexBuffers },
       fragment: {
@@ -278,7 +263,7 @@ export function createClusterMarkerRenderer(
     });
 
     ringPipeline = device.createRenderPipeline({
-      label: 'cluster-marker-ring-pipeline',
+      label: 'structure-marker-ring-pipeline',
       layout: pipelineLayout,
       vertex: { module: ringVs, entryPoint: 'vs', buffers: vertexBuffers },
       fragment: {
@@ -328,15 +313,15 @@ export function createClusterMarkerRenderer(
     const ringPickVs = createShaderModuleWithDevLog(
       device,
       ringPickVsCode,
-      'clusterMarker.pick.vs',
+      'structureMarker.pick.vs',
     );
     const ringPickFs = createShaderModuleWithDevLog(
       device,
       ringPickFsCode,
-      'clusterMarker.pick.fs',
+      'structureMarker.pick.fs',
     );
     ringPickPipeline = device.createRenderPipeline({
-      label: 'cluster-marker-ring-pick-pipeline',
+      label: 'structure-marker-ring-pick-pipeline',
       layout: pipelineLayout,
       vertex: { module: ringPickVs, entryPoint: 'vs', buffers: vertexBuffers },
       fragment: {
@@ -359,30 +344,30 @@ export function createClusterMarkerRenderer(
     // UNIFORM only (no COPY_DST): we never write to it, the default-
     // zero contents are what we want.
     pickDummyFadeBuffer = device.createBuffer({
-      label: 'cluster-marker-pick-fade-dummy',
+      label: 'structure-marker-pick-fade-dummy',
       size: 16,
       usage: GPUBufferUsage.UNIFORM,
     });
     pickDummyFadeBindGroup = device.createBindGroup({
-      label: 'cluster-marker-pick-fade-bg-dummy',
+      label: 'structure-marker-pick-fade-bg-dummy',
       layout: fadeBgl,
       entries: [{ binding: 0, resource: { buffer: pickDummyFadeBuffer } }],
     });
 
     uniformBuffer = device.createBuffer({
-      label: 'cluster-marker-uniforms',
+      label: 'structure-marker-uniforms',
       size: UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
     instanceBuffer = device.createBuffer({
-      label: 'cluster-marker-instances',
+      label: 'structure-marker-instances',
       size: capacity * MARKER_INSTANCE_BYTES,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
 
     cameraBindGroup = device.createBindGroup({
-      label: 'cluster-marker-camera-bg',
+      label: 'structure-marker-camera-bg',
       layout: cameraBgl,
       entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
     });
@@ -391,12 +376,12 @@ export function createClusterMarkerRenderer(
     // fade.opacity scalar into the first 4 bytes each frame.  Bind
     // group lives forever; only the buffer contents change.
     fadeBuffer = device.createBuffer({
-      label: 'cluster-marker-fade-uniform',
+      label: 'structure-marker-fade-uniform',
       size: 16,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     fadeBindGroup = device.createBindGroup({
-      label: 'cluster-marker-fade-bg',
+      label: 'structure-marker-fade-bg',
       layout: fadeBgl,
       entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
     });
@@ -404,7 +389,7 @@ export function createClusterMarkerRenderer(
     // Per-category SourceUniforms — written once at construction.
     for (const cat of STRUCTURE_CATEGORIES) {
       const buf = device.createBuffer({
-        label: `cluster-marker-source-${cat}`,
+        label: `structure-marker-source-${cat}`,
         size: SOURCE_UNIFORM_BYTES,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
       });
@@ -414,7 +399,7 @@ export function createClusterMarkerRenderer(
       device.queue.writeBuffer(buf, 0, u32);
       sourceBuffers[cat] = buf;
       sourceBindGroups[cat] = device.createBindGroup({
-        label: `cluster-marker-source-bg-${cat}`,
+        label: `structure-marker-source-bg-${cat}`,
         layout: sourceBgl,
         entries: [{ binding: 0, resource: { buffer: buf } }],
       });
@@ -440,17 +425,17 @@ export function createClusterMarkerRenderer(
     if (device) {
       instanceBuffer?.destroy();
       instanceBuffer = device.createBuffer({
-        label: 'cluster-marker-instances',
+        label: 'structure-marker-instances',
         size: capacity * MARKER_INSTANCE_BYTES,
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
       });
     }
   }
 
-  function setMarkers(descriptors: readonly ClusterMarkerDescriptor[]): void {
+  function setMarkers(descriptors: readonly StructureMarkerDescriptor[]): void {
     // Partition descriptors by category — preserves order within each
-    // category and keeps the instance buffer cache-friendly.  Three
-    // categories means three passes over the input is fine.
+    // category and keeps the instance buffer cache-friendly.  A handful
+    // of categories means a few passes over the input is fine.
     currentMarkerCount = 0;
     for (const c of STRUCTURE_CATEGORIES) bucketCounts[c] = 0;
 
@@ -590,7 +575,7 @@ export function createClusterMarkerRenderer(
 
   /**
    * Issue per-category POI ring pick draws into the caller-supplied
-   * render pass.  See the docstring on ClusterMarkerRenderer.pickRing
+   * render pass.  See the docstring on StructureMarkerRenderer.pickRing
    * for the binding contract — short version: caller bound @group(0),
    * we bind @group(1) (dummy fade) + @group(2) (per-category source)
    * and emit one `draw(6, count)` per non-empty bucket.
@@ -634,8 +619,8 @@ export function createClusterMarkerRenderer(
     }
   }
 
-  const renderer: ClusterMarkerRenderer = {
-    label: 'clusterMarkerRenderer',
+  const renderer: StructureMarkerRenderer = {
+    label: 'structureMarkerRenderer',
     setMarkers,
     render,
     markerCount,

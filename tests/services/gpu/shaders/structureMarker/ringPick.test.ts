@@ -1,5 +1,5 @@
 /**
- * Parity test for clusterMarker/ringPick.wesl.
+ * Parity test for structureMarker/ringPick.wesl.
  *
  * ### Why we test the shader as text
  *
@@ -20,7 +20,7 @@
 
 import { describe, it, expect } from 'vitest';
 // eslint-disable-next-line import/no-unresolved -- ?raw is a Vite query suffix
-import ringPickCode from '../../../../../src/services/gpu/shaders/clusterMarker/ringPick.wesl?raw';
+import ringPickCode from '../../../../../src/services/gpu/shaders/structureMarker/ringPick.wesl?raw';
 import { PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
 
 describe('ringPick.wesl', () => {

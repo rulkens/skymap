@@ -24,7 +24,7 @@
  * `draw` and handed to the renderer; both reads use the frame-frozen
  * `ctx.drawCamPos`, so they agree.
  *
- * ### Why drawn after `volume-upsample` and before `cluster-markers`
+ * ### Why drawn after `volume-upsample` and before `structure-markers`
  *
  * The shell is a background contributor — drawing it after the volume
  * passes means the cosmic-web densities composite over it cleanly,

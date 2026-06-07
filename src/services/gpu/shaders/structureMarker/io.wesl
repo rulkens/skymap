@@ -1,4 +1,4 @@
-// clusterMarker/io.wesl — shared struct definitions for the halo + ring pipelines.
+// structureMarker/io.wesl — shared struct definitions for the halo + ring pipelines.
 //
 // Both pipelines (halo, ring) read the same CameraUniforms prefix and
 // the same per-category SourceUniforms.  Co-locating the structs here
@@ -20,7 +20,7 @@
 //
 // The 80-byte CameraUniforms prefix carries viewProj + viewportPx +
 // two pads.  No renderer-specific tail at v1.  The CPU-side write site
-// in clusterMarkerRenderer.ts allocates 80 bytes and writes the same
+// in structureMarkerRenderer.ts allocates 80 bytes and writes the same
 // shape as markerLineRenderer.ts.
 //
 // ## Why no per-vertex attribute struct
@@ -40,8 +40,8 @@ struct Uniforms {
 
 // ── per-instance attributes ───────────────────────────────────────
 //
-// One instance per cluster marker.  The CPU writer in
-// clusterMarkerRenderer.ts packs each instance into 48 bytes
+// One instance per structure marker.  The CPU writer in
+// structureMarkerRenderer.ts packs each instance into 48 bytes
 // (12 f32 slots) laid out as:
 //
 //   [0..15]  positionAndRadius   vec4<f32>  (centreWorld.xyz, physicalRadiusMpc)

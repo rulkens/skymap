@@ -364,7 +364,7 @@ describe('renderFrame visual baseline', () => {
           // the recorded single-vs-split sequence is unchanged.
           flowFieldRenderer: null,
           volumeUpsample,
-          clusterMarkerRenderer: null,
+          structureMarkerRenderer: null,
           // Shared focus uniform — no-op write (doesn't touch the recorded
           // encoder); its bind group is bound identically in both the
           // single and split paths, so the sequence stays stable.

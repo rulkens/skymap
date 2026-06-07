@@ -261,10 +261,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // Like the label flush above: produceStructureMarkers walks the structure
   // store, applies fade math, and hands descriptors to the renderer.  Must run
   // BEFORE the GPU dispatch so the instance buffer is uploaded before
-  // clusterMarkersPass reads it.  Null-checked for the pre-initGpu window.
-  if (state.gpu.clusterMarkerRenderer !== null) {
+  // structureMarkersPass reads it.  Null-checked for the pre-initGpu window.
+  if (state.gpu.structureMarkerRenderer !== null) {
     const markers = produceStructureMarkers(state, ctx);
-    state.gpu.clusterMarkerRenderer.setMarkers(markers);
+    state.gpu.structureMarkerRenderer.setMarkers(markers);
   }
 
   // ── GPU dispatch ──────────────────────────────────────────────────
@@ -341,7 +341,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     const { visibleSources: overlaySources, hasAny } = collectPickTargets(
       ctx.renderer,
       state.sources.pickMask,
-      state.gpu.clusterMarkerRenderer,
+      state.gpu.structureMarkerRenderer,
     );
     if (hasAny) {
       const pickTex = state.gpu.pickRenderer.renderForDebug(
@@ -408,11 +408,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     const { visibleSources, hasAny } = collectPickTargets(
       ctx.renderer,
       state.sources.pickMask,
-      state.gpu.clusterMarkerRenderer,
+      state.gpu.structureMarkerRenderer,
     );
     if (!hasAny) {
       // Nothing pickable (every survey off AND no cluster ring visible).
-      // Let the loop sleep — the next setSourceVisible / cluster-marker
+      // Let the loop sleep — the next setSourceVisible / structure-marker
       // change wakes it.  This `return` skips the keep-rendering predicate
       // at the tail, which is correct: with nothing pickable there's
       // nothing to animate, so the predicate would return false anyway.

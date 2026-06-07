@@ -1,30 +1,20 @@
-// clusterMarker/halo.wesl — additive radial-gradient billboard for
-// cluster / supercluster halos.
+// structureMarker/halo.wesl — additive radial-gradient billboard for
+// structure halos (clusters / superclusters; voids opt out).
 //
-// One instance per POI.  The vertex stage projects the POI's
-// world-space centre to clip space, then expands a unit quad whose
-// world-space half-extent equals physicalRadiusMpc using the shared
-// 'expandBillboardWorld' helper in lib/billboard.wesl — screen-axis-
-// aligned (no shear under orbit), world-sized (grows naturally as the
-// camera approaches), zero extra uniforms.
+// One instance per structure marker.  The vertex stage projects the
+// marker's world-space centre to clip space, then expands a unit quad
+// whose world-space half-extent equals physicalRadiusMpc using the
+// shared 'expandBillboardWorld' helper in lib/billboard.wesl —
+// screen-axis-aligned (no shear under orbit), world-sized (grows
+// naturally as the camera approaches), zero extra uniforms.  See
+// lib/billboard.wesl's "Screen-aligned vs view-aligned" subsection.
 //
 // The fragment stage emits an additive radial gradient: centre alpha
 // full, edge alpha zero, smoothstep falloff across the quad.
-//
-// ## History
-//
-// v1 of this shader derived the billboard basis by projecting
-// 'worldPos + (radiusMpc, 0, 0)' and 'worldPos + (0, radiusMpc, 0)'
-// and taking per-axis max — fixed world axes, not camera-aligned, so
-// the halo visibly sheared as the user orbited. The current
-// 'expandBillboardWorld' helper uses clip.w as a depth proxy and
-// expands along screen axes, fixing the shear with no extra
-// CameraUniforms fields. See lib/billboard.wesl's "Screen-aligned vs
-// view-aligned" subsection for the full reasoning.
 
-import package::clusterMarker::io::Uniforms;
-import package::clusterMarker::io::VsIn;
-import package::clusterMarker::io::VsOut;
+import package::structureMarker::io::Uniforms;
+import package::structureMarker::io::VsIn;
+import package::structureMarker::io::VsOut;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardWorld;

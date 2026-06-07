@@ -1,6 +1,6 @@
 /**
  * One per-structure marker descriptor produced by `produceStructureMarkers`
- * and consumed by `clusterMarkerRenderer.setMarkers`.
+ * and consumed by `structureMarkerRenderer.setMarkers`.
  *
  * Why a separate descriptor type instead of reusing `StructureRecord`?
  * Separation of concerns: a descriptor carries only what the renderer
@@ -14,7 +14,7 @@ import type { Vec3 } from '../math/Vec3';
 import type { Vec4 } from '../math/Vec4';
 import type { PoiCategory } from '../engine/data/PoiCategory';
 
-export type ClusterMarkerDescriptor = {
+export type StructureMarkerDescriptor = {
   /**
    * Stable structure id (mirrors `StructureRecord.id`).  CPU-side metadata
    * only — the renderer ignores this field when packing the GPU

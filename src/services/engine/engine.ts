@@ -526,7 +526,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       markerLineRenderer: null,
       // null until initGpu; excluded from isEngineReady, null-checked at use.
       selectionRingRenderer: null,
-      clusterMarkerRenderer: null,
+      structureMarkerRenderer: null,
       // texturedDiskRenderer / proceduralDiskRenderer / milkyWayRenderer:
       // null until initGpu constructs them.  The frame body reads them via
       // RunFrameDeps; they live here so `destroy()` can reach them and so
@@ -1250,8 +1250,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.markerLineRenderer = null;
     state.gpu.selectionRingRenderer?.destroy();
     state.gpu.selectionRingRenderer = null;
-    state.gpu.clusterMarkerRenderer?.destroy();
-    state.gpu.clusterMarkerRenderer = null;
+    state.gpu.structureMarkerRenderer?.destroy();
+    state.gpu.structureMarkerRenderer = null;
     state.gpu.texturedDiskRenderer?.destroy();
     state.gpu.texturedDiskRenderer = null;
     state.gpu.proceduralDiskRenderer?.destroy();
