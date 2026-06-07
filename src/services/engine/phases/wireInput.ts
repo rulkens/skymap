@@ -30,7 +30,6 @@ import { attachEngineInputs } from '../interaction/inputBindings';
 import { computeInitialCamera } from '../camera/cameraFraming';
 import { seedSettingsCallbacks } from '../wiring/seedSettingsCallbacks';
 import { cssToTexPx } from '../helpers/cssToTexPx';
-import { resolvePoiFromPick } from '../helpers/resolvePoiFromPick';
 import { collectPickTargets } from '../helpers/collectPickTargets';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -73,10 +72,9 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // GalaxyInfo for a callback fan-out.
   state.subsystems.clickResolver = createClickResolver({
     pickRenderer,
-    // POI pick hit `(category, poiIndex)` → `StructureRecord`.  Shared
-    // with the hover throttler in `runFrame.ts` so the click and hover
-    // paths can't drift on the lookup logic; see `resolvePoiFromPick`.
-    resolvePoi: (input) => resolvePoiFromPick(state.data.structures, input),
+    // The structure store the resolver reads to turn a ring hit into a
+    // POI selection (via `pickToSelection`, shared with the hover path).
+    structures: state.data.structures,
   });
 
   // ── Camera auto-framing ──────────────────────────────────────────────

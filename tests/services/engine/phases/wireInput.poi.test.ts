@@ -30,8 +30,8 @@ const wireInputPath = resolve(__dirname, '../../../../src/services/engine/phases
 describe('wireInput POI wiring', () => {
   const src = readFileSync(wireInputPath, 'utf8');
 
-  it('passes a resolvePoi callback to createClickResolver', () => {
-    expect(src).toContain('resolvePoi');
+  it('passes the structure store to createClickResolver', () => {
+    expect(src).toContain('structures: state.data.structures');
   });
 
   it('reads the authoritative selection slot for the dblclick focus', () => {

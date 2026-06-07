@@ -2,40 +2,48 @@
  * clickHandler — unit tests for the click → Selection resolver.
  *
  * The resolver is a small async wrapper around `pickRenderer.pick` that
- * decodes the hit into a `Selection` (or null). It does NOT resolve the
- * target — `setSelected` owns that — so the tests stub only the picker
- * and verify:
+ * delegates the decode to `pickToSelection` (covered exhaustively in
+ * `pickToSelection.test.ts`). These tests verify the wrapper itself:
  *
  *   1. A picker miss (`null`) returns null.
- *   2. A galaxy hit returns `{ kind: 'galaxy', source, localIdx }`.
- *   3. The picker is called with the exact (viewport, x, y, sources)
+ *   2. A survey hit returns its galaxy `Selection`.
+ *   3. A structure hit resolves through the injected store to a POI id.
+ *   4. The picker is called with the exact (viewport, x, y, sources)
  *      values supplied by the engine — no transformation.
- *
- * The POI arm is covered in `clickHandler.poi.test.ts`.
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import type { SourceType } from '../../../../src/@types/data/SourceType';
 
 import { createClickResolver } from '../../../../src/services/engine/interaction/clickHandler';
 import type { ClickResolveInput } from '../../../../src/@types/engine/ClickResolveInput';
+import type { PickStructureStore } from '../../../../src/@types/engine/data/PickStructureStore';
+import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
 import { Source } from '../../../../src/data/sources';
 import type { createPickRenderer } from '../../../../src/services/gpu/renderers/pickRenderer';
 import type { PickResult } from '../../../../src/data/selectionEncoding';
 
 type PickRenderer = ReturnType<typeof createPickRenderer>;
 
-// `pickRenderer.pick` returns the discriminated `PickResult` union
-// (galaxy | structure category). Helper accepts a galaxy-shaped selection
-// for ergonomic setup and wraps it into the `{ kind: 'galaxy', ... }` shape.
-function makePicker(result: { source: SourceType; localIdx: number } | null): PickRenderer {
-  const wrapped: PickResult | null =
-    result === null ? null : { kind: 'galaxy', source: result.source, localIdx: result.localIdx };
+// `pickRenderer.pick` returns the decoded `PickResult` (sourceCode + localIdx).
+function makePicker(pick: PickResult | null): PickRenderer {
   return {
-    pick: vi.fn(async () => wrapped),
+    pick: vi.fn(async () => pick),
     destroy: vi.fn(),
   } as unknown as PickRenderer;
 }
+
+const virgo: StructureRecord = {
+  id: 'virgo',
+  name: 'Virgo Cluster',
+  category: 'cluster',
+  worldPos: [10, 0, 0],
+  featured: true,
+  physicalRadiusMpc: 2,
+};
+
+const structures: PickStructureStore = {
+  byCategory: (cat) => (cat === 'cluster' ? [virgo] : []),
+};
 
 const dummyArgs: ClickResolveInput = {
   pickXPx: 10,
@@ -46,29 +54,33 @@ const dummyArgs: ClickResolveInput = {
 
 describe('createClickResolver', () => {
   it('returns null when the picker reports background (null)', async () => {
-    const r = createClickResolver({ pickRenderer: makePicker(null) });
+    const r = createClickResolver({ pickRenderer: makePicker(null), structures });
     expect(await r.resolveClick(dummyArgs)).toBeNull();
   });
 
   it('returns a galaxy Selection on a survey hit', async () => {
-    const sel = { source: Source.SDSS, localIdx: 7 };
-    const r = createClickResolver({ pickRenderer: makePicker(sel) });
-    expect(await r.resolveClick(dummyArgs)).toEqual({ kind: 'galaxy', ...sel });
+    const r = createClickResolver({
+      pickRenderer: makePicker({ sourceCode: Source.SDSS, localIdx: 7 }),
+      structures,
+    });
+    expect(await r.resolveClick(dummyArgs)).toEqual({
+      kind: 'galaxy',
+      source: Source.SDSS,
+      localIdx: 7,
+    });
   });
 
-  it('returns the galaxy Selection regardless of cloud-loaded state', async () => {
-    // No resolveSelection/buildGalaxyInfo to consult — the resolver always
-    // hands back the (source, localIdx); setSelected tolerates an
-    // unloaded cloud by firing onSelectChange(null). Parity with the
-    // pre-extraction "select regardless" behaviour.
-    const sel = { source: Source.Glade, localIdx: 99 };
-    const r = createClickResolver({ pickRenderer: makePicker(sel) });
-    expect(await r.resolveClick(dummyArgs)).toEqual({ kind: 'galaxy', ...sel });
+  it('resolves a structure hit through the store to a POI Selection', async () => {
+    const r = createClickResolver({
+      pickRenderer: makePicker({ sourceCode: Source.Cluster, localIdx: 0 }),
+      structures,
+    });
+    expect(await r.resolveClick(dummyArgs)).toEqual({ kind: 'poi', id: virgo.id });
   });
 
   it('forwards the click args to pickRenderer.pick verbatim', async () => {
-    const picker = makePicker({ source: Source.SDSS, localIdx: 0 });
-    const r = createClickResolver({ pickRenderer: picker });
+    const picker = makePicker({ sourceCode: Source.SDSS, localIdx: 0 });
+    const r = createClickResolver({ pickRenderer: picker, structures });
     const sources: ClickResolveInput['visibleSources'] = [];
     await r.resolveClick({
       pickXPx: 11,
