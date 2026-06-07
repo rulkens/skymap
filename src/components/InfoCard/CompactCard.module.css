@@ -67,23 +67,30 @@
   text-transform: uppercase;
 }
 
+/* Name on the left, source badge top-right — mirrors the FullCard header. */
+.headlineRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
 /* SDSS name headline */
 .cardHeadline {
+  flex: 1;
+  min-width: 0;
   font-size: var(--font-size-xl);
   color: var(--color-fg);
-  margin-bottom: var(--space-2);
   letter-spacing: var(--letter-spacing-tight);
   word-break: break-all;
 }
 
-/*
- * Compact variant of the FullCard source badge.  Slightly tighter padding
- * and a smaller bottom margin to fit the slim preview format.
- */
+/* Compact variant of the FullCard source badge — slightly tighter padding. */
 .sourceBadge {
   display: inline-block;
+  flex-shrink: 0;
   padding: 0 5px;
-  margin: 0 0 var(--space-3) 0;
   border-radius: var(--radius-sm);
   background: var(--surface-badge);
   border: 1px solid var(--border-control);

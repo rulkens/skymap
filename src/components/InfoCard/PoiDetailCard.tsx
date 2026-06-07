@@ -49,8 +49,10 @@ export function PoiDetailCard({
         onClose={pinned ? onClose : undefined}
       />
 
-      <div className={styles.cardHeadline}>{poi.name}</div>
-      <div className={styles.sourceBadge}>{POI_CATEGORY_INFO[poi.category].label}</div>
+      <div className={styles.headlineRow}>
+        <div className={styles.cardHeadline}>{poi.name}</div>
+        <span className={styles.sourceBadge}>{POI_CATEGORY_INFO[poi.category].label}</span>
+      </div>
 
       <div className={styles.cardSection}>
         <CardRow

@@ -78,7 +78,7 @@ const galaxyStub = {
   absoluteMagG: 0,
   iauName: 'IAU NGC 1234',
   source: 0,
-  catalogUrl: null,
+  catalogues: [],
   diameterKpc: 30,
   diameterProvenance: 'fallback (30 kpc)',
   orientation: { axisRatio: 1, positionAngleDeg: 0, provenance: 'fallback' },

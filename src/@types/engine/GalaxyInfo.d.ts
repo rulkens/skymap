@@ -127,6 +127,18 @@ export type GalaxyInfo = {
    * string shown in the info card (e.g. "Red, quiescent galaxy").
    */
   galaxyType: GalaxyTypeInfo;
+
+  /**
+   * Curated morphological (Hubble) type, pre-formatted for display
+   * (e.g. "Barred spiral (SBb)"), or `undefined` when none is known.
+   *
+   * Only curated famous galaxies carry a morphology; it's an independent fact
+   * from the colour-derived `galaxyType` (morphology says nothing about
+   * red-sequence vs blue-cloud membership), so it lives in its own field rather
+   * than overwriting `galaxyType.description`.  The info card prefers it over
+   * the colour description when present: `morphology ?? galaxyType.description`.
+   */
+  morphology?: string;
   /**
    * Survey-aware IAU designation, e.g. "SDSS J123456.75+012345.5",
    * "GLADE J234500.00-104500.5", "2MASX J...".  Built from RA/Dec via
@@ -199,27 +211,29 @@ export type GalaxyInfo = {
   /** @group External URLs */
 
   /**
-   * URL of an external catalogue page for this object (opens in a new tab).
+   * External-catalogue links for this object, pre-labelled and ready to render
+   * as the InfoCard's "Catalogues" row (each opens in a new tab).  Empty when
+   * the row has no resolvable catalogue page (e.g. Synthetic).
    *
-   * Picked per-source so every real galaxy gets a useful link:
+   * The builder picks both the URL and its label per-source so the label can't
+   * drift from the page it points at:
    *
-   *   - SDSS rows with a valid objID → SDSS DR18 Quick Look (skyserver)
-   *   - 2MRS rows → NED near-position search at the row's RA/Dec.  We
+   *   - SDSS rows with a valid objID → "SDSS Explorer" → SDSS DR18 Quick Look
+   *   - 2MRS rows → "NED" → near-position search at the row's RA/Dec.  We
    *     deliberately don't use 2MASX byname here: NED's name index has
    *     coverage gaps for the 2MASX prefix (verified empirically), so a
-   *     position search lands more reliably even when one extra click
-   *     is required to drill into the object page.
-   *   - GLADE rows with a real PGC → NED byname `PGC <n>` (the PGC is
+   *     position search lands more reliably even when one extra click is
+   *     required to drill into the object page.
+   *   - GLADE rows with a real PGC → "NED" → byname `PGC <n>` (the PGC is
    *     persisted in `objID` — see `tools/parsers/glade.ts`)
-   *   - GLADE rows with no PGC → NED near-position search at the row's RA/Dec
-   *   - Famous rows → NED byname using the primary curated name
-   *     (M31, NGC 224, …) from the famous catalog sidecar
-   *   - Synthetic rows → `null` (no real coords to look up)
+   *   - GLADE rows with no PGC → "NED" → near-position search at the row's RA/Dec
+   *   - Famous rows → "NED" (byname on the primary curated name) plus a
+   *     "Wikipedia" link resolved from the curated names.
    *
-   * The InfoCard component picks an appropriate link label off `source`
-   * (e.g. "View in SDSS Explorer" for SDSS, "View on NED" otherwise).
+   * Pre-resolving here keeps the card presentational — it just maps over the
+   * array — and is the single place that knows which page each label points at.
    */
-  catalogUrl: string | null;
+  catalogues: Array<{ label: string; href: string }>;
 
   /** @group Physical size */
 

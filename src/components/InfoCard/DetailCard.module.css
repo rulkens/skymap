@@ -131,15 +131,15 @@
 /* ── Source attribution badge ─────────────────────────────────────────────── */
 
 /*
- * Small uppercase chip rendered just under the SDSS-name headline.  Its
- * job is to tell the user *which survey* the data in this card came from
- * (SDSS, 2MRS, GLADE, Synthetic) — the headline name itself is a
- * coordinate-derived label used across all surveys.
+ * Small uppercase chip telling the user *which survey* the data came from
+ * (SDSS, 2MRS, GLADE, Famous, Synthetic).  Sits on the same row as the name
+ * headline, pinned to the top-right via the flex .headlineRow below — the
+ * survey is metadata about the name, so reading them together is natural.
  */
 .sourceBadge {
   display: inline-block;
+  flex-shrink: 0; /* never squeeze the chip when a long name competes for width */
   padding: 1px var(--space-3);
-  margin: var(--space-2) 0 var(--space-3) 0;
   border-radius: var(--radius-sm);
   background: var(--surface-badge);
   border: 1px solid var(--border-control);
@@ -151,10 +151,20 @@
 
 /* ── SDSS designation headline ────────────────────────────────────────────── */
 
+/* Name (+ trailing aliases) on the left, source badge top-right. */
+.headlineRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
 .cardHeadline {
+  flex: 1;
+  min-width: 0; /* let long names wrap/break inside the flex row */
   font-size: var(--font-size-xl);
   color: var(--color-fg);
-  margin-bottom: var(--space-4);
   letter-spacing: var(--letter-spacing-tight);
   word-break: break-all; /* long names like "SDSS J..." don't overflow the card */
 }
@@ -272,41 +282,6 @@ details:not([open]) > .detailsSummary::before {
   content: '▸ ';
 }
 
-/* ── External link ────────────────────────────────────────────────────────── */
-
-.externalLink {
-  display: block;
-  margin-top: var(--space-5);
-  text-align: right;
-  font-size: var(--font-size-md);
-  color: var(--color-accent-link);
-  text-decoration: none;
-  letter-spacing: var(--letter-spacing-mid);
-  transition: var(--transition-color);
-}
-.externalLink:hover {
-  color: var(--color-accent);
-  /*
-   * Soft cosmic-blue glow on hover — only place in the UI that uses a
-   * text-shadow.  Kept inline because it's a unique signature for the
-   * "this is a hyperlink to an external catalogue" affordance.
-   */
-  text-shadow: 0 0 8px rgba(120, 180, 255, 0.4);
-}
-
-/*
- * Disabled-looking variant of the external link, used when the active row
- * has no per-object catalogue page (i.e. non-SDSS sources).  We deliberately
- * reuse `.externalLink` for spacing/alignment so the visual rhythm of the
- * card stays identical between the link and the placeholder — only the
- * styling shifts to "muted, italic, not clickable".
- */
-.externalLinkDisabled {
-  opacity: 0.45;
-  font-style: italic;
-  text-decoration: none;
-}
-
 /*
  * Description-clamp helpers.  Wikipedia summaries can be paragraphs long
  * and would push the structured-data rows below the fold of even a
@@ -384,6 +359,12 @@ details:not([open]) > .detailsSummary::before {
 .externalInline:hover {
   color: var(--color-accent);
   text-decoration: underline;
+}
+
+/* Muted placeholder when a row has no resolvable catalogue page at all. */
+.catalogueNone {
+  opacity: 0.45;
+  font-style: italic;
 }
 
 /* ── Focus button (only visible when the card is pinned) ──────────────────── */

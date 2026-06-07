@@ -22,8 +22,10 @@ export function CompactPoiCard({ poi }: CompactPoiCardProps): ReactNode {
       <div className={styles.cardTitle}>
         <span>Hover</span>
       </div>
-      <div className={styles.cardHeadline}>{poi.name}</div>
-      <div className={styles.sourceBadge}>{POI_CATEGORY_INFO[poi.category].shortLabel}</div>
+      <div className={styles.headlineRow}>
+        <div className={styles.cardHeadline}>{poi.name}</div>
+        <span className={styles.sourceBadge}>{POI_CATEGORY_INFO[poi.category].shortLabel}</span>
+      </div>
       <div className={styles.cardDistLine}>
         {formatDistance(distanceMpc)}
         <> &middot; r {formatDistance(poi.physicalRadiusMpc)}</>

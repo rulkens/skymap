@@ -19,14 +19,16 @@ export function CompactCard({ info }: CompactCardProps): ReactNode {
       <div className={styles.cardTitle}>
         <span>Hover</span>
       </div>
-      <div className={styles.cardHeadline}>{info.displayName}</div>
-      <div className={styles.sourceBadge}>{info.sourceLabel}</div>
+      <div className={styles.headlineRow}>
+        <div className={styles.cardHeadline}>{info.displayName}</div>
+        <span className={styles.sourceBadge}>{info.sourceLabel}</span>
+      </div>
       <div className={styles.cardLookbackLine}>
         Light left {info.lookbackGyr.toFixed(1)} Gyr ago
       </div>
       <div className={styles.cardLookbackEra}>— {info.earthEra}</div>
       <div className={styles.cardDistLine}>
-        {formatDistance(info.distanceMpc)} &middot; {info.galaxyType.description}
+        {formatDistance(info.distanceMpc)} &middot; {info.morphology ?? info.galaxyType.description}
       </div>
     </div>
   );

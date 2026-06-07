@@ -29,6 +29,10 @@
   composes: cardTitle from './CompactCard.module.css';
 }
 
+.headlineRow {
+  composes: headlineRow from './CompactCard.module.css';
+}
+
 .cardHeadline {
   composes: cardHeadline from './CompactCard.module.css';
 }

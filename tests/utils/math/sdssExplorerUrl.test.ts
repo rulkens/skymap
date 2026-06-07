@@ -1,6 +1,6 @@
 /**
  * Unit tests for `sdssExplorerUrl` — pure URL builder for the SDSS DR18
- * Quick Look page.
+ * Explore-tool Summary page.
  *
  * The function takes a 64-bit `bigint` objID and interpolates it into a
  * canonical URL.  Tests verify the URL shape and that bigint values
@@ -12,11 +12,11 @@ import { describe, it, expect } from 'vitest';
 import { sdssExplorerUrl } from '../../../src/utils/math/sdssExplorerUrl';
 
 describe('sdssExplorerUrl', () => {
-  it('produces a DR18 quickobj URL for a small objID', () => {
+  it('produces a DR18 Explore Summary URL for a small objID', () => {
     // Spot-check the literal URL template in the source.  Any change to the
     // path or the query-param name would break this.
     expect(sdssExplorerUrl(42n)).toBe(
-      'https://skyserver.sdss.org/dr18/VisualTools/quickobj?objId=42',
+      'https://skyserver.sdss.org/dr18/VisualTools/explore/summary?objId=42',
     );
   });
 
@@ -34,7 +34,7 @@ describe('sdssExplorerUrl', () => {
     // GalaxyInfo layer, but the URL builder itself is permissive and just
     // string-interpolates the value.
     expect(sdssExplorerUrl(0n)).toBe(
-      'https://skyserver.sdss.org/dr18/VisualTools/quickobj?objId=0',
+      'https://skyserver.sdss.org/dr18/VisualTools/explore/summary?objId=0',
     );
   });
 });
