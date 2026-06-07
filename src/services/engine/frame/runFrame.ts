@@ -38,6 +38,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 
 import { updatePosition } from '../../camera/orbitCamera';
+import { runCameraDrivers } from '../camera/cameraDrivers';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { isEngineReady } from '../helpers/engineReady';
@@ -125,48 +126,30 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     deps.cb.camera?.onCameraChange?.(snap);
   }
 
-  // ── Focus / home tween ────────────────────────────────────────────
+  // ── Camera drivers ────────────────────────────────────────────────
   //
-  // `advance` mutates the camera and calls updatePosition internally, so
-  // by the auto-rotate block below the camera is at the eased
-  // intermediate.  The manager auto-clears when the tween finishes, so
-  // later frames skip this via `isActive()`.
+  // One camera-write site per frame, behind the camera-driver-authority
+  // model.  Every mover that wants to write the camera (raw input, an
+  // in-flight tween, idle auto-rotate) is a `CameraDriver` with a numeric
+  // `priority`; `runCameraDrivers` scans the list, picks the single
+  // highest-priority driver that declares itself active, and runs ONLY
+  // that one's `apply`.  Precedence is therefore data (priority), not
+  // statement order, and there is no blending — a frame is authored by one
+  // driver or by none.
   //
-  // Tween / SpaceMouse / auto-rotate all run *before* the
-  // `deriveFrameContext` gate so a camera-only-ready frame still makes
-  // motion progress before we early-return for missing GPU handles.
+  // Auto-rotate is suppressed-by-tween purely through priority: the tween
+  // driver outranks auto-rotate, so when a tween is active it wins and
+  // auto-rotate never fires.  The old explicit `!tweens.isActive()` guard
+  // that encoded the same rule is gone — the resolver subsumes it.
+  //
+  // This runs *before* `deriveFrameContext` so a camera-only-ready frame
+  // still makes motion progress before we early-return for missing GPU
+  // handles.  Cancellation (raw input cancelling an in-flight tween) is
+  // unchanged and does NOT live here: the SpaceMouse subsystem fires its
+  // `cancelTween` callback as part of `applyToCamera`.  The resolver only
+  // arbitrates the same-frame race for who gets to write the camera.
   if (state.cam) {
-    state.subsystems.tweens.advance(state.cam, performance.now());
-  }
-
-  // ── SpaceMouse per-frame application ──────────────────────────────
-  //
-  // The subsystem owns the whole "if puck deflected, apply axes
-  // scaled by wall-clock dt, otherwise reset the dt baseline"
-  // dance — including the `tweens.cancel()` precedence rule (it
-  // calls back into the engine via the `cancelTween` callback we
-  // wired up at construction).  Calling unconditionally is fine:
-  // on a resting puck it's a single hasAnyAxis read + a null
-  // assignment to the dt baseline.
-  if (state.cam) {
-    state.subsystems.spaceMouse.applyToCamera(state.cam, performance.now());
-  }
-
-  // ── Auto-rotate yaw ───────────────────────────────────────────────
-  //
-  // Advance yaw by a fixed per-frame delta (~3°/sec at 60 Hz → 0.000873
-  // rad/frame).  Fixed delta, not wall-clock: at 120 Hz it's smoother but
-  // twice as fast — acceptable for a gentle ambient effect, no timer
-  // bookkeeping.
-  //
-  // Skipped while a tween is active: focus / focusOnHome tweens drive
-  // `cam.yaw` toward a target, and `tweens.advance()` already set the
-  // eased intermediate this frame.  Adding the auto-rotate delta on top
-  // would overshoot the target (and drift forever after), so gating on
-  // `!tweens.isActive()` lets the home tween land exactly.
-  if (state.settings.camera.autoRotate && state.cam && !state.subsystems.tweens.isActive()) {
-    state.cam.yaw += 0.000873;
-    updatePosition(state.cam);
+    runCameraDrivers(deps.drivers, state.cam, nowMs);
   }
 
   // ── Per-frame derived snapshot ────────────────────────────────────
@@ -465,9 +448,12 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // frame each.
   //
   // Predicate breakdown:
-  //   - autoRotate: continuous yaw advancement.
-  //   - tweens.isActive(): camera tween in progress.
-  //   - spaceMouse.hasAxes(): puck deflected; apply per-frame velocity.
+  //   - camera drivers active: any camera mover (raw input, an in-flight
+  //     tween, or idle auto-rotate) declares itself active this frame, via
+  //     the same driver registry the per-frame camera write resolves
+  //     through.  `.some(d => d.isActive(nowMs))` IS the boolean OR of
+  //     those movers, so it tracks the resolver exactly — one place decides
+  //     "is the camera moving" for both the write and the keep-ticking gate.
   //   - texturedDisks.hasInFlightWork(): a thumbnail fetch is racing the
   //     network OR a landed bitmap is in its 400 ms load-fade window.  The
   //     onResult calls requestRender(), but we keep a frame queued anyway
@@ -491,9 +477,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // fade-out in setSourceVisible / tier-swap commit would hang forever.
   state.subsystems.fades.tick(nowMs);
   const stillAnimating =
-    state.settings.camera.autoRotate ||
-    state.subsystems.tweens.isActive() ||
-    state.subsystems.spaceMouse.hasAxes() ||
+    deps.drivers.some((d) => d.isActive(nowMs)) ||
     (ready && state.subsystems.texturedDisks.hasInFlightWork()) ||
     state.subsystems.fades.isAnyAnimating(nowMs) ||
     state.subsystems.structureFocus.isAwake(nowMs) ||
