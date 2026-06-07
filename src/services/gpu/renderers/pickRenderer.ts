@@ -14,8 +14,8 @@
  * The pick pipeline reads `PointRenderer`'s vertex + uniform buffers
  * directly — callers must run the visual pass first so this frame's
  * viewProj/viewport/etc are already written when `pick()` fires.
- * `pickFragment.wesl`'s 1.5× forgiveness radius makes each pick
- * billboard a bit larger than its visible disk.
+ * Point billboards pick a `pointSizePx`-clamped dot; resolved galaxy
+ * disks are picked by the procedural-disk pass at the disk edge.
  *
  * @module
  */

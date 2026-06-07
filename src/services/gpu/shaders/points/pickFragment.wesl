@@ -9,19 +9,22 @@
 //
 // ## What the pick pass does
 //
-// We re-render the scene into a tiny offscreen 'r32uint' texture where
-// each fragment writes the *1-based* packed identity of the billboard
-// covering it. The JS side reads back a single pixel from this texture
-// under the cursor and decodes the packed value into '(source, localIdx)'.
+// Re-renders the scene into a tiny offscreen 'r32uint' texture where
+// each fragment writes the packed identity of the billboard covering it.
+// JS reads back the texel under the cursor and decodes it; 0 is the
+// cleared-background sentinel.
 //
-// Why offset by 1: the texture is cleared to 0 before the pass. If we
-// wrote 'instanceIdx' directly, instance 0 with sourceCode 0 would be
-// indistinguishable from cleared background. Adding 1 keeps 0 as the
-// unambiguous 'no hit' sentinel.
+// ## Why this fragment is a plain dot
+//
+// The point pick is clamped to 'u.pointSizePx' (the dot floor) in the
+// vertex stage — the procedural-disk pass now owns resolved-galaxy
+// picking at the disk edge, so inflating the billboard to the apparent-
+// size circle would create a large invisible click area on top of the
+// disk. A plain unit-circle test is correct and cheap.
 //
 // ## Why this fragment declares NO bindings
 //
-// 'fsPick' only reads VSOut fields (in.uv + in.instanceIdx) — no
+// 'fsPick' only reads VSOut fields ('in.uv' + 'in.instanceIdx') — no
 // uniforms touched here. The SHARED vertex stage in 'vertex.wesl'
 // declares '@group(0)' (per-frame Uniforms) and '@group(2)' (per-
 // source SourceUniforms); the pick pipeline binds those plus a
@@ -38,39 +41,11 @@ import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
 // 'r32uint' render target declared on the JS side. No blend state on
 // the pipeline because integer formats can't be blended; depth test
 // resolves overlapping points instead.
-//
-// Mask choice is set by 'in.isDiskHandoff' (see io.wesl::VSOut):
-//   - 0u: circular mask in raw UV (far-field dot regime).
-//   - 1u: projected ellipse from the vertex stage's world-space disk
-//     basis ('pickMajorBillboard' / 'pickMinorBillboard'), matching
-//     the procedural-disk renderer's shape on screen for any camera
-//     pose.  An earlier screen-aligned PA rotation gave the wrong
-//     orientation whenever the camera wasn't on the Earth-origin axis.
-// Both masks discard at r² > 2.25 — a 1.5× forgiveness margin on the
-// visual fs's r² > 1.0 cutoff.
 
 @fragment
 fn fsPick(in: VSOut) -> @location(0) vec4<u32> {
-  var r2 = dot(in.uv, in.uv);
-
-  if (in.isDiskHandoff == 1u) {
-    // M = [major | minor] maps disk-local coords (a, b) — where the
-    // visible ellipse is the unit circle a² + b² ≤ 1 — into the
-    // billboard's UV space.  Inverting and applying to 'uv' recovers
-    // (a, b); we test that against the 1.5× forgiveness margin.
-    // safeAB clamps cosI at 0.05 so the basis isn't singular.
-    let major = in.pickMajorBillboard;
-    let minor = in.pickMinorBillboard;
-    let det = major.x * minor.y - major.y * minor.x;
-    let invDet = 1.0 / det;
-    let local = vec2<f32>(
-      ( minor.y * in.uv.x - minor.x * in.uv.y) * invDet,
-      (-major.y * in.uv.x + major.x * in.uv.y) * invDet,
-    );
-    r2 = dot(local, local);
-  }
-
-  if (r2 > 2.25) { discard; }
+  // Plain dot: discard fragments outside the unit circle.
+  if (dot(in.uv, in.uv) > 1.0) { discard; }
 
   // Write '(sourceCode << 27 | instance_index) + 1' so background
   // pixels (cleared to 0) are distinguishable from a real hit. The +1
@@ -81,7 +56,7 @@ fn fsPick(in: VSOut) -> @location(0) vec4<u32> {
   // 'in.instanceIdx' was assembled in the vertex stage from
   // '(source.sourceCode << 27u) | @builtin(instance_index)'. The
   // packing gives every survey a structurally-disjoint identity range
-  // (top 5 bits = source code, bottom 27 = local index ≤ 134M), so
+  // (top 5 bits = source code, bottom 27 = local index <= 134M), so
   // two galaxies in different surveys can never collide on the same
   // pick value.
   //
