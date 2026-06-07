@@ -1,22 +1,16 @@
 /**
  * clickHandler — POI variant tests.
  *
- * Companion to `clickHandler.test.ts` (the galaxy-variant suite). This
- * file exercises the post-Plan-3 wiring where `pickRenderer.pick()`
- * returns the full discriminated `PickResult` union (galaxy | cluster
- * | supercluster | void), and the resolver routes cluster / SC / void
- * hits through an optional `resolvePoi` callback into a new
- * `{ kind: 'poi', poi }` resolution shape.
+ * Companion to `clickHandler.test.ts` (the galaxy-variant suite). A
+ * structure-ring pick routes the decoded `(category, poiIndex)` through
+ * the optional `resolvePoi` callback and carries the record's stable id
+ * as a `{ kind: 'poi', id }` Selection.
  *
  * Tests:
  *
- *   1. A `cluster` pick result with a successful `resolvePoi` lookup
- *      → `{ kind: 'poi', poi }`.
- *   2. A `void` pick result with NO matching POI (resolver returns null)
- *      → `{ kind: 'clear' }` — never silently shows a phantom card.
- *
- * The galaxy path stays covered by the sibling suite; we don't repeat
- * those cases here.
+ *   1. A `cluster` pick with a successful `resolvePoi` → `{ kind: 'poi', id }`.
+ *   2. A `void` pick with no matching record (resolver → null) → null.
+ *   3. `resolvePoi` omitted entirely → null (never a phantom card).
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -46,7 +40,7 @@ const dummyArgs: ClickResolveInput = {
 };
 
 describe('createClickResolver POI variant', () => {
-  it('returns kind: "poi" with the resolved POI when picker hits a cluster ring', async () => {
+  it('returns a poi Selection carrying the record id when picker hits a cluster ring', async () => {
     const pickRenderer = {
       pick: vi.fn(async () => ({ kind: 'cluster' as const, poiIndex: 0 })),
       destroy: vi.fn(),
@@ -54,47 +48,29 @@ describe('createClickResolver POI variant', () => {
 
     const resolver = createClickResolver({
       pickRenderer,
-      resolveSelection: vi.fn(),
-      buildGalaxyInfo: vi.fn(),
-      // NEW: a callback to map (category, poiIndex) -> StructureRecord.
-      resolvePoi: ({ category, poiIndex }) => {
-        if (category === 'cluster' && poiIndex === 0) return virgo;
-        return null;
-      },
+      resolvePoi: ({ category, poiIndex }) =>
+        category === 'cluster' && poiIndex === 0 ? virgo : null,
     });
-    const result = await resolver.resolveClick(dummyArgs);
-    expect(result).toEqual({ kind: 'poi', poi: virgo });
+    expect(await resolver.resolveClick(dummyArgs)).toEqual({ kind: 'poi', id: virgo.id });
   });
 
-  it('returns kind: "clear" when picker resolves to a void poiIndex with no matching POI', async () => {
+  it('returns null when picker resolves to a void poiIndex with no matching record', async () => {
     const pickRenderer = {
       pick: vi.fn(async () => ({ kind: 'void' as const, poiIndex: 99 })),
       destroy: vi.fn(),
     } as unknown as PickRenderer;
 
-    const resolver = createClickResolver({
-      pickRenderer,
-      resolveSelection: vi.fn(),
-      buildGalaxyInfo: vi.fn(),
-      resolvePoi: () => null,
-    });
-    const result = await resolver.resolveClick(dummyArgs);
-    expect(result).toEqual({ kind: 'clear' });
+    const resolver = createClickResolver({ pickRenderer, resolvePoi: () => null });
+    expect(await resolver.resolveClick(dummyArgs)).toBeNull();
   });
 
-  it('returns kind: "clear" when resolvePoi is omitted entirely (POI hits fall through)', async () => {
+  it('returns null when resolvePoi is omitted entirely (POI hits fall through)', async () => {
     const pickRenderer = {
       pick: vi.fn(async () => ({ kind: 'supercluster' as const, poiIndex: 3 })),
       destroy: vi.fn(),
     } as unknown as PickRenderer;
 
-    const resolver = createClickResolver({
-      pickRenderer,
-      resolveSelection: vi.fn(),
-      buildGalaxyInfo: vi.fn(),
-      // resolvePoi intentionally omitted.
-    });
-    const result = await resolver.resolveClick(dummyArgs);
-    expect(result).toEqual({ kind: 'clear' });
+    const resolver = createClickResolver({ pickRenderer });
+    expect(await resolver.resolveClick(dummyArgs)).toBeNull();
   });
 });

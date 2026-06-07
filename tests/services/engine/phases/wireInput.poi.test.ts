@@ -1,22 +1,21 @@
 /**
  * wireInput.poi — structural assertion that the wireInput phase wires
- * POI clicks through to `commitPoiFocus` via the click resolver's
- * `resolvePoi` callback.
+ * POI clicks through the click resolver's `resolvePoi` callback and
+ * upgrades the pinned selection to a focus on dblclick.
  *
  * ### Why a source-string assertion
  *
  * The click flow is hard to unit-test in isolation: it requires a real
  * pickRenderer (GPU device), real orbit controls, and a real mouse
- * device.  The plan accepts a crude source-string guard here — it
- * regresses loudly if a future refactor inadvertently drops the
- * `resolvePoi` callback or stops importing `commitPoiFocus`.  The
- * end-to-end behaviour (single-click opens InfoCard, double-click
- * tweens camera) is verified by the manual smoke step in Task 15.
+ * device.  This is a crude source-string guard — it regresses loudly if
+ * a future refactor drops the `resolvePoi` callback or stops reading the
+ * authoritative selection slot for the dblclick focus. End-to-end
+ * behaviour (single-click opens InfoCard, double-click tweens camera) is
+ * verified by manual smoke.
  *
- * If this test ever feels too fragile (e.g. someone renames the
- * symbol but keeps the contract), promote it to a stub-based test
- * that exercises the actual `onClick` callback against a mocked
- * `runPickAtCss` returning a `'poi'` resolution.
+ * If this ever feels too fragile, promote it to a stub-based test that
+ * exercises the actual `onClick` / `onDoubleClick` callbacks against a
+ * mocked `runPickAtCss`.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -35,20 +34,18 @@ describe('wireInput POI wiring', () => {
     expect(src).toContain('resolvePoi');
   });
 
-  it('imports commitPoiFocus for the POI single-click branch', () => {
-    expect(src).toContain('commitPoiFocus');
+  it('reads the authoritative selection slot for the dblclick focus', () => {
+    // The dblclick handler resolves the pinned selection to its target via
+    // the subsystem rather than caching a resolved copy — the selection
+    // slot is the single source of truth (galaxy OR POI).
+    expect(src).toContain('selection.selectedTarget()');
   });
 
-  it('caches the most-recent POI hit for the dblclick handler', () => {
-    expect(src).toContain('lastClickedPoi');
-  });
-
-  it('routes double-click on a cached POI through camera.focusOn', () => {
+  it('routes double-click on the selection through camera.focusOn', () => {
     // The unified focusOn takes either a GalaxyInfo or a StructureRecord
-    // and dispatches internally.  The dblclick handler passes
-    // `lastClickedPoi` — a StructureRecord — through the same method the
-    // single-click galaxy path uses.
-    expect(src).toContain('focusOn(lastClickedPoi)');
+    // and dispatches internally; the dblclick handler hands it the
+    // resolved target regardless of category.
+    expect(src).toContain('focusOn(target)');
   });
 
   it('releases focus on an empty-space double-click', () => {
