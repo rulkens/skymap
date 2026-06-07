@@ -3,7 +3,7 @@
  *
  * Confirms that every variant of `AssetKey` is accepted: a concrete numeric
  * `Source` value (covering `SourceType`), and each of the auxiliary string
- * keys (`'clusterCatalog'`, `'famousMeta'`, `'pgcAlias'`, `'filaments'`,
+ * keys (`'structureCatalog'`, `'famousMeta'`, `'pgcAlias'`, `'filaments'`,
  * `'cf4Density'`, `'mcpm'`).
  *
  * These are purely compile-time assertions. If `AssetKey` drifts from its
@@ -21,9 +21,9 @@ describe('AssetKey assignability', () => {
     expect(k).toBe(Source.SDSS);
   });
 
-  it("accepts 'clusterCatalog'", () => {
-    const k: AssetKey = 'clusterCatalog';
-    expect(k).toBe('clusterCatalog');
+  it("accepts 'structureCatalog'", () => {
+    const k: AssetKey = 'structureCatalog';
+    expect(k).toBe('structureCatalog');
   });
 
   it("accepts 'famousMeta'", () => {

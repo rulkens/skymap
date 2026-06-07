@@ -113,7 +113,7 @@ import { createLabelDirectorSubsystem } from './subsystems/labelDirectorSubsyste
 import { registerLabelStyleOverrideWake } from './labelStyleOverride';
 import { produceStructureLabels } from './presentation/produceStructureLabels';
 import { produceFamousLabels } from './presentation/produceFamousLabels';
-import { createClusterFocusSubsystem } from './subsystems/clusterFocusSubsystem';
+import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createFpsCounter } from './subsystems/fpsCounter';
 import { HDR_PASSES, UI_PASSES } from './frame/passes';
 import { buildGalaxyInfo } from './helpers/galaxyInfoBuilder';
@@ -526,7 +526,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       markerLineRenderer: null,
       // null until initGpu; excluded from isEngineReady, null-checked at use.
       selectionRingRenderer: null,
-      clusterMarkerRenderer: null,
+      structureMarkerRenderer: null,
       // texturedDiskRenderer / proceduralDiskRenderer / milkyWayRenderer:
       // null until initGpu constructs them.  The frame body reads them via
       // RunFrameDeps; they live here so `destroy()` can reach them and so
@@ -633,7 +633,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Selection-driven: `runFrame` calls `update(selectedPoi, nowMs)` to
       // drive the 400 ms member-isolation fade and threads
       // `produceFocusUniforms` into the points draw.  Eager, no GPU dep.
-      clusterFocus: createClusterFocusSubsystem(),
+      structureFocus: createStructureFocusSubsystem(),
 
       // ── Render scheduler — eager, capture-safe ────────────────────
       // Created here (not a deferred shim): its `onFrame` closes over the
@@ -673,7 +673,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       points: new Map(),
       filaments: null,
       famousMeta: null,
-      clusterCatalog: null,
+      structureCatalog: null,
       pgcAlias: null,
       cf4Density: null,
       // Tier-aware (unlike cf4Density): setTier reloads on tier change.
@@ -1211,7 +1211,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.biasCorrection.destroy();
     state.subsystems.youAreHere.destroy();
     state.subsystems.labelDirector.destroy();
-    state.subsystems.clusterFocus.destroy();
+    state.subsystems.structureFocus.destroy();
     // Impostor teardown order matters: texturedDisks subscribes to
     // galaxyAtlas's eviction handler (destroy it first); hiResFamous
     // subscribes to its texture's evict handler (destroy the planner before
@@ -1250,8 +1250,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.markerLineRenderer = null;
     state.gpu.selectionRingRenderer?.destroy();
     state.gpu.selectionRingRenderer = null;
-    state.gpu.clusterMarkerRenderer?.destroy();
-    state.gpu.clusterMarkerRenderer = null;
+    state.gpu.structureMarkerRenderer?.destroy();
+    state.gpu.structureMarkerRenderer = null;
     state.gpu.texturedDiskRenderer?.destroy();
     state.gpu.texturedDiskRenderer = null;
     state.gpu.proceduralDiskRenderer?.destroy();

@@ -49,8 +49,7 @@ export const RAW_DATA = {
     path: 'data/raw/2mrs/J_ApJS_199_26_ReadMe',
     kind: 'file',
     source: 'committed',
-    description:
-      'VizieR ReadMe for 2MRS — byte-offset specs the table-3 parser relies on.',
+    description: 'VizieR ReadMe for 2MRS — byte-offset specs the table-3 parser relies on.',
   },
   '2mrs.xsc-pa': {
     path: 'data/raw/2mrs/2mass_xsc_pa.csv',
@@ -131,12 +130,12 @@ export const RAW_DATA = {
 
   // ─── Clusters (curated featured structures) ───────────────────────────
 
-  'clusters.seed': {
-    path: 'data/cluster_anchors.seed.json',
+  'structures.seed': {
+    path: 'data/structure_anchors.seed.json',
     kind: 'file',
     source: 'committed',
     description:
-      'Hand-authored seed list of featured galaxy clusters, superclusters, and voids. Drives the cluster-coverage POI build.',
+      'Hand-authored seed list of featured galaxy clusters, superclusters, and voids. Drives the structure-coverage POI build.',
   },
 
   // ─── Famous (curated catalog) ──────────────────────────────────────────
@@ -298,7 +297,7 @@ export const RAW_DATA = {
     description:
       'MCXC Meta-Catalogue X-ray galaxy Clusters — 1743 clusters with RA/Dec, z, L500, M500, R500. Fixed-width ASCII, 323 bytes/row.',
     upstream: 'https://cdsarc.cds.unistra.fr/ftp/J/A+A/534/A109/mcxc.dat',
-    fetcher: 'tools/fetch/fetchClusterCatalogs.ts',
+    fetcher: 'tools/fetch/fetchStructureCatalogs.ts',
     readme: 'mcxc.readme',
   },
   'mcxc.readme': {
@@ -308,7 +307,7 @@ export const RAW_DATA = {
     description:
       'VizieR ReadMe for J/A+A/534/A109 — byte-offset spec for mcxc.dat. Downloaded alongside the table.',
     upstream: 'https://cdsarc.cds.unistra.fr/ftp/J/A+A/534/A109/ReadMe',
-    fetcher: 'tools/fetch/fetchClusterCatalogs.ts',
+    fetcher: 'tools/fetch/fetchStructureCatalogs.ts',
   },
   'mcxc.sha256': {
     path: 'data/raw/mcxc/mcxc.dat.sha256',
@@ -316,7 +315,7 @@ export const RAW_DATA = {
     source: 'committed',
     description:
       'SHA-256 sidecar for mcxc.dat — committed so the parser can detect truncated or stale downloads.',
-    fetcher: 'tools/fetch/fetchClusterCatalogs.ts',
+    fetcher: 'tools/fetch/fetchStructureCatalogs.ts',
   },
 
   // ─── MSCC — Main SuperCluster Catalogue (Chow-Martinez+ 2014) ─────────
@@ -328,7 +327,7 @@ export const RAW_DATA = {
     description:
       'MSCC Main SuperCluster Catalogue — 601 superclusters with RA/Dec, z, max separation, member cluster list. Fixed-width ASCII, 324 bytes/row.',
     upstream: 'https://cdsarc.cds.unistra.fr/ftp/J/MNRAS/445/4073/mscc.dat',
-    fetcher: 'tools/fetch/fetchClusterCatalogs.ts',
+    fetcher: 'tools/fetch/fetchStructureCatalogs.ts',
     readme: 'mscc.readme',
   },
   'mscc.readme': {
@@ -338,7 +337,7 @@ export const RAW_DATA = {
     description:
       'VizieR ReadMe for J/MNRAS/445/4073 — byte-offset spec for mscc.dat. Downloaded alongside the table.',
     upstream: 'https://cdsarc.cds.unistra.fr/ftp/J/MNRAS/445/4073/ReadMe',
-    fetcher: 'tools/fetch/fetchClusterCatalogs.ts',
+    fetcher: 'tools/fetch/fetchStructureCatalogs.ts',
   },
   'mscc.sha256': {
     path: 'data/raw/mscc/mscc.dat.sha256',
@@ -346,7 +345,7 @@ export const RAW_DATA = {
     source: 'committed',
     description:
       'SHA-256 sidecar for mscc.dat — committed so the parser can detect truncated or stale downloads.',
-    fetcher: 'tools/fetch/fetchClusterCatalogs.ts',
+    fetcher: 'tools/fetch/fetchStructureCatalogs.ts',
   },
 
   // ─── StarNet++ weights (famous-galaxy curator) ────────────────────────

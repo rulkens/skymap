@@ -28,7 +28,7 @@ import type { SelectionSubsystem } from '../subsystems/SelectionSubsystem';
 import type { BiasCorrectionSubsystem } from '../subsystems/BiasCorrectionSubsystem';
 import type { YouAreHereSubsystem } from '../subsystems/YouAreHereSubsystem';
 import type { LabelDirectorSubsystem } from '../subsystems/LabelDirectorSubsystem';
-import type { ClusterFocusSubsystem } from '../subsystems/ClusterFocusSubsystem';
+import type { StructureFocusSubsystem } from '../subsystems/StructureFocusSubsystem';
 import type { TweenManager } from '../../camera/TweenManager';
 import type { ClickResolver } from '../ClickResolver';
 import type { InputBindings } from '../../input/InputBindings';
@@ -116,7 +116,7 @@ export type EngineSubsystemHandles = {
    * `produceFocusUniforms(nowMs)` into the points draw. Constructed
    * eagerly; no GPU dep, non-null from t=0.
    */
-  clusterFocus: ClusterFocusSubsystem;
+  structureFocus: StructureFocusSubsystem;
   /**
    * Per-engine download-progress emitter — instantiated inside the GPU
    * init IIFE so `cb.onLoadProgress` and the slot registry are in scope.

@@ -88,7 +88,7 @@ pnpm-debug.log*
 
 # Exception: hand-curated catalog seed files (small, hand-authored, tracked).
 !/data/famous_galaxies.seed.json
-!/data/cluster_anchors.seed.json
+!/data/structure_anchors.seed.json
 
 # Exception: hand-curated override index produced by the famous-galaxy
 # curator (tools/famous-curator).  Small JSON (~75 entries × ~150 B) that
@@ -118,7 +118,7 @@ pnpm-debug.log*
 
 # Exception: MCXC + MSCC cluster/supercluster raw-data READMEs + sha256
 # sidecars.  The .dat tables and VizieR ReadMes stay gitignored (fetched
-# on demand via `npm run fetch-clusters`), but the READMEs document
+# on demand via `npm run fetch-structures`), but the READMEs document
 # provenance and the .sha256 files let the parser detect truncated
 # downloads — both must be in git.
 !/data/raw/mcxc/README.md

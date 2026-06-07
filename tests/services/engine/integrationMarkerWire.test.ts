@@ -1,5 +1,5 @@
 /**
- * Integration test — produceStructureMarkers → clusterMarkerRenderer round-trip.
+ * Integration test — produceStructureMarkers → structureMarkerRenderer round-trip.
  *
  * The point of this test is NOT to exercise either side in isolation (their
  * dedicated unit suites already do that), but to assert the contract BETWEEN
@@ -8,14 +8,14 @@
  * producer chose to emit.
  *
  * Why this matters: produceStructureMarkers and setMarkers were authored
- * against the same ClusterMarkerDescriptor type, but TypeScript only catches
+ * against the same StructureMarkerDescriptor type, but TypeScript only catches
  * shape mismatches at the boundary if both call sites are wired in the same
  * translation unit.  This test is the smallest possible end-to-end smoke check
  * that catches drift — e.g. a renamed field on the descriptor type would
  * compile in both modules' unit tests but still mismatch at runtime.
  *
  * The "null device" pattern is the standard renderer test idiom in this repo:
- * createClusterMarkerRenderer's GPU allocations are all guarded by `if
+ * createStructureMarkerRenderer's GPU allocations are all guarded by `if
  * (device)`, so the renderer is safe to construct with `null` cast to
  * GPUDevice — setMarkers/markerCount run their CPU-side bookkeeping without
  * touching the GPU.
@@ -24,16 +24,16 @@
 import { describe, it, expect } from 'vitest';
 import { produceStructureMarkers } from '../../../src/services/engine/presentation/produceStructureMarkers';
 import { createEngineData } from '../../../src/services/engine/data/createEngineData';
-import { createClusterMarkerRenderer } from '../../../src/services/gpu/renderers/clusterMarkerRenderer';
+import { createStructureMarkerRenderer } from '../../../src/services/gpu/renderers/structureMarkerRenderer';
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
 import type { StructureRecord } from '../../../src/@types/engine/data/StructureRecord';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { FadeUniformsBgl } from '../../../src/@types/rendering/FadeUniformsBgl';
 
-describe('produceStructureMarkers → clusterMarkerRenderer.setMarkers', () => {
+describe('produceStructureMarkers → structureMarkerRenderer.setMarkers', () => {
   it('the renderer reports the same marker count the producer emitted', () => {
-    const renderer = createClusterMarkerRenderer(
+    const renderer = createStructureMarkerRenderer(
       {
         device: null as unknown as GPUDevice,
         context: null as unknown as GPUCanvasContext,

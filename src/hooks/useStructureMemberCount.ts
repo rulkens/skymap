@@ -18,7 +18,7 @@
 
 import { useMemo } from 'react';
 import { isPoi } from '../services/engine/isPoi';
-import { structureMemberCount } from '../utils/cluster/structureMemberCount';
+import { structureMemberCount } from '../utils/structure/structureMemberCount';
 import type { UseStructureMemberCountInput } from '../@types/engine/UseStructureMemberCountInput';
 
 export function useStructureMemberCount({

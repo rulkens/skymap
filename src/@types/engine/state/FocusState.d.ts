@@ -42,7 +42,7 @@ export type FocusState = {
   readonly category: 'cluster' | 'supercluster' | 'void';
 
   /**
-   * Packed-identity members from `clusterMembership(...)`. CPU-side
+   * Packed-identity members from `structureMembership(...)`. CPU-side
    * consumers (InfoCard count text, tour iterator, etc.) read this
    * directly; the shader's membership test recomputes per-vertex from
    * `(center, radiusMpc)` rather than uploading this array.

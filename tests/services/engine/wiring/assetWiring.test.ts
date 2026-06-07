@@ -9,7 +9,7 @@
  *
  * Two of the predicates are bug-fix pins (see the module docstring on
  * `assetWiring.ts`): `filaments` follows `settings.filaments.enabled`, and
- * `clusterCatalog` follows structure-category visibility (the plan's stale
+ * `structureCatalog` follows structure-category visibility (the plan's stale
  * `structures.enabled` flag does not exist).
  */
 
@@ -70,7 +70,7 @@ describe('ASSET_WIRING membership', () => {
       'mcpm',
       'cf4Density',
       'flow',
-      'clusterCatalog',
+      'structureCatalog',
       'pgcAlias',
     ];
     expect(new Set(keys)).toEqual(new Set(expected));
@@ -158,8 +158,8 @@ describe('ASSET_WIRING demand predicates', () => {
     expect(flow.demand(makeCtx({ settings: { flow: { enabled: false } } }))).toBe(false);
   });
 
-  it('clusterCatalog demand follows structure-category visibility (bug-fix pin)', () => {
-    const cluster = rowFor('clusterCatalog');
+  it('structureCatalog demand follows structure-category visibility (bug-fix pin)', () => {
+    const cluster = rowFor('structureCatalog');
     const allHidden = {
       markerCategoryVisibility: {
         cluster: false,
@@ -243,8 +243,8 @@ describe('ASSET_WIRING req builders', () => {
     expect(rowFor('mcpm').req('large')).toEqual({ tier: 'large' });
   });
 
-  it('clusterCatalog req is the empty request', () => {
-    expect(rowFor('clusterCatalog').req('medium')).toEqual({});
+  it('structureCatalog req is the empty request', () => {
+    expect(rowFor('structureCatalog').req('medium')).toEqual({});
   });
 
   it('void-request sidecars (cf4Density, pgcAlias) return undefined', () => {

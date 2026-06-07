@@ -56,7 +56,7 @@ function makeState(): EngineState {
       points,
       filaments: stubSlot('filaments'),
       famousMeta: stubSlot('famous-meta'),
-      clusterCatalog: stubSlot('cluster-catalog'),
+      structureCatalog: stubSlot('structure-catalog'),
       pgcAlias: stubSlot('pgc-aliases'),
       cf4Density: stubSlot('cf4Density'),
       mcpm: stubSlot('mcpm'),
@@ -98,7 +98,7 @@ describe('installLoadProgress', () => {
     expect(names.has('2mrs-points')).toBe(true);
     expect(names.has('filaments')).toBe(true);
     expect(names.has('famous-meta')).toBe(true);
-    expect(names.has('cluster-catalog')).toBe(true);
+    expect(names.has('structure-catalog')).toBe(true);
     expect(names.has('pgc-aliases')).toBe(true);
     expect(names.has('cf4Density')).toBe(true);
     expect(names.has('mcpm')).toBe(true);

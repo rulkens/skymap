@@ -5,13 +5,13 @@
  *
  * ### Contract (inherited from the cluster-viz plan-3 pick path)
  *
- * `clusterMarkerRenderer.pickRing` issues one instanced draw per
+ * `structureMarkerRenderer.pickRing` issues one instanced draw per
  * category (cluster / supercluster / void) with `firstInstance` set to
  * that category's bucket offset; the fragment packs
  * `@builtin(instance_index) - bucketOffset` worth of slot info into the
  * pick texture as `poiIndex`.  `unpackPick` already returns the
  * per-category-local 0-based index (see `selectionEncoding.ts` and the
- * dispatch comment in `clusterMarkerRenderer.pickRing`), so the array
+ * dispatch comment in `structureMarkerRenderer.pickRing`), so the array
  * `structures.byCategory(cat)` is the canonical lookup.
  *
  * ### Why the array lookup is safe

@@ -1,7 +1,7 @@
 /**
  * SkyCoord — RA hours, declination degrees, distance Mpc.
  *
- * Base shape used by `data/cluster_anchors.seed.json` entries and
+ * Base shape used by `data/structure_anchors.seed.json` entries and
  * their CF-4 audit consumers.  RA in HOURS (not degrees) follows the
  * astronomical convention for catalogue tables; the standard
  * `raHours * 15 * π/180` conversion to radians lives in

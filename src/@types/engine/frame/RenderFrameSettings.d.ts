@@ -47,7 +47,7 @@ export type RenderFrameSettings = {
   pxFadeEndPoints: number;
   /**
    * Cluster focus-mode uniform for the points pass's @group(3) binding.
-   * Produced once per frame by `clusterFocusSubsystem.produceFocusUniforms`
+   * Produced once per frame by `structureFocusSubsystem.produceFocusUniforms`
    * in `runFrame` (so it shares the frame's single `nowMs`). At rest
    * (`blend: 0`) the shader's per-vertex multiplier collapses to 1.0.
    */

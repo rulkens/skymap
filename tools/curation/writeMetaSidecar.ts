@@ -2,7 +2,7 @@
  * `writeMetaSidecar` — write a per-localIdx id→strings sidecar JSON file.
  *
  * Why a shared helper instead of inline `writeFileSync`?  Two build scripts
- * (`buildFamous`, `buildClusters`) emit the same artefact shape: an ordered
+ * (`buildFamous`, `buildStructures`) emit the same artefact shape: an ordered
  * JSON array where position == localIdx in the matching `.bin`.  Centralising
  * the write step means one place controls the formatting (2-space pretty-print)
  * and both callers stay in sync without each hard-coding the `JSON.stringify`
@@ -25,7 +25,7 @@ export type MetaSidecarEntry = {
   names: string[];
   description: string;
   [key: string]: unknown; // domain-specific extras (famous type/commonName,
-                          // cluster blurb) pass through untouched
+  // cluster blurb) pass through untouched
 };
 
 /**

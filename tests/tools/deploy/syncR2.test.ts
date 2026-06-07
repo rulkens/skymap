@@ -16,9 +16,9 @@ import { describe, expect, it } from 'vitest';
 import { ALLOW, etagMatches } from '../../../tools/deploy/syncR2';
 
 describe('syncR2 ALLOW', () => {
-  it('accepts clusters.ccat and clusters_meta.json', () => {
-    expect(ALLOW('clusters.ccat')).toBe(true);
-    expect(ALLOW('clusters_meta.json')).toBe(true);
+  it('accepts structures.ccat and structures_meta.json', () => {
+    expect(ALLOW('structures.ccat')).toBe(true);
+    expect(ALLOW('structures_meta.json')).toBe(true);
   });
 
   it('still rejects glade.bin / sdss.bin', () => {

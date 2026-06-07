@@ -182,7 +182,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     return;
   }
 
-  // ── Cluster-focus recession (computed ONCE, EARLY) ────────────────
+  // ── Structure-focus recession (computed ONCE, EARLY) ────────────────
   //
   // Focus mode fades non-member galaxies away when a cluster /
   // supercluster / void / group POI is focused.  Resolve the FOCUSED POI
@@ -204,8 +204,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     focusSel !== null && focusSel.kind === 'structure'
       ? (state.data.structures.byId(focusSel.id) ?? null)
       : null;
-  state.subsystems.clusterFocus.update(focusedStructure, nowMs);
-  const focusUniforms = state.subsystems.clusterFocus.produceFocusUniforms(nowMs);
+  state.subsystems.structureFocus.update(focusedStructure, nowMs);
+  const focusUniforms = state.subsystems.structureFocus.produceFocusUniforms(nowMs);
   ctx.focusBlend = focusUniforms.blend;
 
   // ── Per-frame impostor planners ───────────────────────────────────
@@ -261,10 +261,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // Like the label flush above: produceStructureMarkers walks the structure
   // store, applies fade math, and hands descriptors to the renderer.  Must run
   // BEFORE the GPU dispatch so the instance buffer is uploaded before
-  // clusterMarkersPass reads it.  Null-checked for the pre-initGpu window.
-  if (state.gpu.clusterMarkerRenderer !== null) {
+  // structureMarkersPass reads it.  Null-checked for the pre-initGpu window.
+  if (state.gpu.structureMarkerRenderer !== null) {
     const markers = produceStructureMarkers(state, ctx);
-    state.gpu.clusterMarkerRenderer.setMarkers(markers);
+    state.gpu.structureMarkerRenderer.setMarkers(markers);
   }
 
   // ── GPU dispatch ──────────────────────────────────────────────────
@@ -341,7 +341,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     const { visibleSources: overlaySources, hasAny } = collectPickTargets(
       ctx.renderer,
       state.sources.pickMask,
-      state.gpu.clusterMarkerRenderer,
+      state.gpu.structureMarkerRenderer,
     );
     if (hasAny) {
       const pickTex = state.gpu.pickRenderer.renderForDebug(
@@ -408,11 +408,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     const { visibleSources, hasAny } = collectPickTargets(
       ctx.renderer,
       state.sources.pickMask,
-      state.gpu.clusterMarkerRenderer,
+      state.gpu.structureMarkerRenderer,
     );
     if (!hasAny) {
       // Nothing pickable (every survey off AND no cluster ring visible).
-      // Let the loop sleep — the next setSourceVisible / cluster-marker
+      // Let the loop sleep — the next setSourceVisible / structure-marker
       // change wakes it.  This `return` skips the keep-rendering predicate
       // at the tail, which is correct: with nothing pickable there's
       // nothing to animate, so the predicate would return false anyway.
@@ -475,7 +475,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   //   - fades.isAnyAnimating(): a survey / filament handle is ramping its
   //     opacity from a recent upload (the FadeRegistry owns every clock,
   //     filaments included).
-  //   - clusterFocus.isAwake(): the member-isolation fade (its own
+  //   - structureFocus.isAwake(): the member-isolation fade (its own
   //     controller, not in the registry) across the 400 ms ramp.
   //   - flowFieldRenderer.isAnimating(): the flow layer is enabled + loaded;
   //     both modes animate (advect drifts, streamline pulses), so the loop
@@ -496,7 +496,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.subsystems.spaceMouse.hasAxes() ||
     (ready && state.subsystems.texturedDisks.hasInFlightWork()) ||
     state.subsystems.fades.isAnyAnimating(nowMs) ||
-    state.subsystems.clusterFocus.isAwake(nowMs) ||
+    state.subsystems.structureFocus.isAwake(nowMs) ||
     state.gpu.flowFieldRenderer?.isAnimating(state.settings.flow) === true;
   if (stillAnimating) state.subsystems.scheduler.requestRender();
 }

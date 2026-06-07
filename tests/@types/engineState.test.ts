@@ -48,7 +48,7 @@ import { createSelectionSubsystem } from '../../src/services/engine/subsystems/s
 import { createBiasCorrectionSubsystem } from '../../src/services/engine/subsystems/biasCorrectionSubsystem';
 import { createYouAreHereSubsystem } from '../../src/services/engine/subsystems/youAreHereSubsystem';
 import { createLabelDirectorSubsystem } from '../../src/services/engine/subsystems/labelDirectorSubsystem';
-import { createClusterFocusSubsystem } from '../../src/services/engine/subsystems/clusterFocusSubsystem';
+import { createStructureFocusSubsystem } from '../../src/services/engine/subsystems/structureFocusSubsystem';
 import { createFadeRegistry } from '../../src/services/animation/fadeRegistry';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
 import type { EngineCallbacks } from '../../src/@types/engine/EngineCallbacks';
@@ -158,7 +158,7 @@ describe('EngineState type', () => {
         labelRenderer: null,
         markerLineRenderer: null,
         selectionRingRenderer: null,
-        clusterMarkerRenderer: null,
+        structureMarkerRenderer: null,
         texturedDiskRenderer: null,
         proceduralDiskRenderer: null,
         milkyWayRenderer: null,
@@ -196,7 +196,7 @@ describe('EngineState type', () => {
         }),
         youAreHere: createYouAreHereSubsystem(),
         labelDirector: createLabelDirectorSubsystem(),
-        clusterFocus: createClusterFocusSubsystem(),
+        structureFocus: createStructureFocusSubsystem(),
         clickResolver: null,
         inputBindings: null,
         scheduler: createRenderScheduler({ onFrame: () => {}, rafImpl: noopRaf, cafImpl: noopCaf }),
@@ -208,7 +208,7 @@ describe('EngineState type', () => {
         points: new Map(),
         filaments: null,
         famousMeta: null,
-        clusterCatalog: null,
+        structureCatalog: null,
         pgcAlias: null,
         cf4Density: null,
         mcpm: null,
@@ -353,7 +353,7 @@ describe('EngineState type', () => {
         labelRenderer: null,
         markerLineRenderer: null,
         selectionRingRenderer: null,
-        clusterMarkerRenderer: null,
+        structureMarkerRenderer: null,
         texturedDiskRenderer: null,
         proceduralDiskRenderer: null,
         milkyWayRenderer: null,
@@ -391,7 +391,7 @@ describe('EngineState type', () => {
         }),
         youAreHere: createYouAreHereSubsystem(),
         labelDirector: createLabelDirectorSubsystem(),
-        clusterFocus: createClusterFocusSubsystem(),
+        structureFocus: createStructureFocusSubsystem(),
         clickResolver: null,
         inputBindings: null,
         scheduler: createRenderScheduler({ onFrame: () => {}, rafImpl: noopRaf, cafImpl: noopCaf }),
@@ -403,7 +403,7 @@ describe('EngineState type', () => {
         points: new Map(),
         filaments: null,
         famousMeta: null,
-        clusterCatalog: null,
+        structureCatalog: null,
         pgcAlias: null,
         cf4Density: null,
         mcpm: null,

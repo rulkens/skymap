@@ -85,21 +85,21 @@ errors guide you to the totality sites.
 | 4 | Pick decode | `src/data/selectionEncoding.ts` (`PickResult` kind + `unpackPick`) | ⚠️ **silent** inverse map |
 | 4b | WESL pick parity | `src/services/gpu/shaders/lib/selectionEncoding.wesl` (`SOURCE_CODE_X`) | ⚠️ parity test only |
 | 5 | Click guard | `src/services/engine/interaction/clickHandler.ts` (`\|\| kind === 'X'`) | ⚠️ **silent** |
-| 6 | Seed parser | `tools/parsers/parseClusterSeed.ts` (`VALID_CATEGORIES`) | ⚠️ **silent** |
+| 6 | Seed parser | `tools/parsers/parseStructureSeed.ts` (`VALID_CATEGORIES`) | ⚠️ **silent** |
 | 7 | Marker style row | `src/services/engine/presentation/structurePoiStyles.ts` | ✅ totality Record |
 | 8 | Build records | `src/data/buildStaticAnchorStructures.ts` (`SeedEntry.category` + switch) | ✅ switch exhaustiveness |
-| 9 | Marker renderer | `src/services/gpu/renderers/clusterMarkerRenderer.ts` (**~11 sites**, below) | mixed |
+| 9 | Marker renderer | `src/services/gpu/renderers/structureMarkerRenderer.ts` (**~11 sites**, below) | mixed |
 | 10 | UI naming | `src/data/poiCategoryInfo.ts` (`label` / `shortLabel` / `plural`) | ✅ totality Record |
 | 11 | Settings lists | `src/components/SettingsPanel/SettingsPanel.tsx` (`STRUCTURE_CATEGORIES`, `LABEL_CATEGORIES`) | ⚠️ **silent** arrays |
 | 12 | Bulk-fetch gate | `src/services/engine/wiring/assetWiring.ts` (`BULK_CATALOG_CATEGORIES`) | ⚠️ include **only if** it has a `.ccat` |
-| 13 | Focus predicate | `src/services/engine/subsystems/clusterFocusSubsystem.ts` (`\|\| category === 'X'`) | ⚠️ **silent** |
+| 13 | Focus predicate | `src/services/engine/subsystems/structureFocusSubsystem.ts` (`\|\| category === 'X'`) | ⚠️ **silent** |
 | 14 | Settings count | `src/services/engine/wiring/wireStructureProjection.ts` (`emitCounts`) | ⚠️ **silent** — no count shown if missed |
 | 15 | Visibility defaults | `useEngineSettings.ts` ×2, `engine.ts` ×2, **+ test fixtures** | ⚠️ **copy-paste ×8** |
 | 16 | Debug panel | `src/components/DebugPanel/LabelEffectsSection.tsx` (`CATEGORIES`) | ⚠️ **silent** |
-| 17 | Seed data | `data/cluster_anchors.seed.json` (**gitignored — `git add -f`**) | — |
+| 17 | Seed data | `data/structure_anchors.seed.json` (**gitignored — `git add -f`**) | — |
 | 18 | Runtime enumeration tests | `tests/data/poiCategories.test.ts` (key counts, "N-category" titles) | ⚠️ **silent** — assert the new total |
 
-`clusterMarkerRenderer.ts` is the densest — the ~11 sites: `SOURCE_CODE_BY_CATEGORY`,
+`structureMarkerRenderer.ts` is the densest — the ~11 sites: `SOURCE_CODE_BY_CATEGORY`,
 `POI_CATEGORIES_WITH_MARKERS`, the per-category `Record` literals
 (`bucketOffsets` / `bucketCounts` / `sourceBuffers` / `sourceBindGroups` /
 `writeCursor`), the `setMarkers` reset / count-guard / write-guard, and the

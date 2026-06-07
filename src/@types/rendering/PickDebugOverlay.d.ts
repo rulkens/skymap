@@ -19,7 +19,7 @@
  *
  * Premultiplied OVER ('srcFactor: "one", dstFactor: "one-minus-src-
  * alpha"') against the swap chain.  Matches the marker-lines / labels /
- * clusterMarker overlay convention so future composite changes only
+ * structureMarker overlay convention so future composite changes only
  * have to consider one blend mode.
  *
  * ### Why no resize method

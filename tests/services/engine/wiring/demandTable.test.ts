@@ -160,7 +160,7 @@ type PointSlotOverrides = Partial<Record<SourceType, StubSlot>>;
 type NamedSlotOverrides = Partial<{
   famousMeta: StubSlot;
   filaments: StubSlot;
-  clusterCatalog: StubSlot;
+  structureCatalog: StubSlot;
   pgcAlias: StubSlot;
   cf4Density: StubSlot;
   mcpm: StubSlot;
@@ -224,7 +224,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
       points,
       filaments: (namedSlots.filaments ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
       famousMeta: (namedSlots.famousMeta ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
-      clusterCatalog: (namedSlots.clusterCatalog ?? stubSlot()) as AssetSlot<
+      structureCatalog: (namedSlots.structureCatalog ?? stubSlot()) as AssetSlot<
         unknown,
         unknown
       > as never,
@@ -259,7 +259,7 @@ function firedKeys(state: EngineState): Set<AssetKey> {
   const namedKeys = [
     'famousMeta',
     'filaments',
-    'clusterCatalog',
+    'structureCatalog',
     'pgcAlias',
     'cf4Density',
     'mcpm',
@@ -283,13 +283,13 @@ describe('reevaluateDemand demand-table regression', () => {
    * Boot defaults: SDSS/2MRS/GLADE/Famous/Milliquas all visible (every survey
    * ships on in SOURCE_REGISTRY). Famous slot is modelled as 'loading' (it was
    * just triggered by its own demand row before famousMeta's row evaluates), so
-   * famousMeta is also demanded. clusterCatalog loads because every structure
+   * famousMeta is also demanded. structureCatalog loads because every structure
    * category is visible by default. mcpm IS demanded: the predicate checks
    * `ctx.volumeField('mcpm')?.enabled`, which the construction seed lands as
    * true (registry visible:true). cf4Density is NOT (seeded enabled:false).
    * filaments: off. pgcAlias: no request. Synthetic: surveys not errored.
    */
-  it('boot defaults: SDSS + 2MRS + GLADE + Famous + Milliquas + famousMeta + clusterCatalog + mcpm', () => {
+  it('boot defaults: SDSS + 2MRS + GLADE + Famous + Milliquas + famousMeta + structureCatalog + mcpm', () => {
     // Famous starts idle: its point row loads it (idle-guard passes), flipping
     // the stub to 'loading', so the later famousMeta row sees Famous non-idle
     // and demands. This is the honest two-phase boot model.
@@ -305,7 +305,7 @@ describe('reevaluateDemand demand-table regression', () => {
         Source.FamousGalaxy,
         Source.Milliquas,
         'famousMeta',
-        'clusterCatalog',
+        'structureCatalog',
         'mcpm',
       ]),
     );
@@ -332,7 +332,7 @@ describe('reevaluateDemand demand-table regression', () => {
         Source.FamousGalaxy,
         Source.Milliquas,
         'famousMeta',
-        'clusterCatalog',
+        'structureCatalog',
         'mcpm',
         'filaments',
       ]),
@@ -342,14 +342,14 @@ describe('reevaluateDemand demand-table regression', () => {
   /**
    * Structures all hidden: every category set to false in BOTH
    * markerCategoryVisibility and labelCategoryVisibility.
-   * Bug-fix pin: clusterCatalog must NOT appear. This verifies the
+   * Bug-fix pin: structureCatalog must NOT appear. This verifies the
    * consolidated predicate rather than the stale 'structures.enabled' flag.
    *
    * Famous starts idle and is in the drawMask, so its point row loads it and
    * famousMeta follows (the two-phase boot). The pin under test is the cluster
    * predicate, asserted independently below.
    */
-  it('structures all hidden: no clusterCatalog (bug-fix pin)', () => {
+  it('structures all hidden: no structureCatalog (bug-fix pin)', () => {
     const settings: SettingsLeaves = {
       ...BOOT_SETTINGS,
       markerCategoryVisibility: {
@@ -369,8 +369,8 @@ describe('reevaluateDemand demand-table regression', () => {
 
     const fired = firedKeys(state);
 
-    // clusterCatalog must be absent.
-    expect(fired.has('clusterCatalog')).toBe(false);
+    // structureCatalog must be absent.
+    expect(fired.has('structureCatalog')).toBe(false);
     // The three visible surveys are still demanded.
     expect(fired.has(Source.SDSS)).toBe(true);
     expect(fired.has(Source.TwoMRS)).toBe(true);
@@ -397,7 +397,7 @@ describe('reevaluateDemand demand-table regression', () => {
         Source.FamousGalaxy,
         Source.Milliquas,
         'famousMeta',
-        'clusterCatalog',
+        'structureCatalog',
         'mcpm',
         'pgcAlias',
       ]),
@@ -415,7 +415,7 @@ describe('reevaluateDemand demand-table regression', () => {
    * contrast, are NOT re-loaded: the idle-guard skips non-idle slots, which is
    * the desired no-retry-storm behaviour (a re-eval must not abort + re-fetch
    * failed surveys). famousMeta still demands because Famous slot !== 'idle';
-   * clusterCatalog is still demanded (categories visible).
+   * structureCatalog is still demanded (categories visible).
    */
   it('synthetic fallback armed: Synthetic loads, errored surveys are not retried', () => {
     const pointSlots: PointSlotOverrides = {
@@ -436,8 +436,8 @@ describe('reevaluateDemand demand-table regression', () => {
     expect(fired.has(Source.Synthetic)).toBe(true);
     // famousMeta is demanded (Famous slot !== 'idle').
     expect(fired.has('famousMeta')).toBe(true);
-    // clusterCatalog still demanded (structure visibility unchanged).
-    expect(fired.has('clusterCatalog')).toBe(true);
+    // structureCatalog still demanded (structure visibility unchanged).
+    expect(fired.has('structureCatalog')).toBe(true);
     // The errored survey point rows are demanded (still visible) but NOT idle,
     // so the idle-guard leaves them alone — no retry storm on re-evaluation.
     expect(fired.has(Source.SDSS)).toBe(false);
@@ -473,7 +473,7 @@ describe('reevaluateDemand demand-table regression', () => {
         Source.FamousGalaxy,
         Source.Milliquas,
         'famousMeta',
-        'clusterCatalog',
+        'structureCatalog',
         'mcpm',
         'cf4Density',
       ]),
@@ -493,7 +493,7 @@ describe('reevaluateDemand demand-table regression', () => {
   it('famous-only visible: one pass loads Famous + famousMeta together', () => {
     const settings: SettingsLeaves = {
       ...BOOT_SETTINGS,
-      // Hide every structure category so clusterCatalog stays out of the set
+      // Hide every structure category so structureCatalog stays out of the set
       // and the assertion is purely the Famous companion join.
       markerCategoryVisibility: {
         cluster: false,

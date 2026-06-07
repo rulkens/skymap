@@ -33,7 +33,7 @@
  *   5. filaments           — cosmic-web skeleton overlay
  *   6. volume-upsample     — upsamples the half-res volume offscreen target
  *                            into the HDR target (when active fields exist)
- *   7. cluster-markers     — at-rest halo + ring for cluster / SC / void POIs
+ *   7. structure-markers     — at-rest halo + ring for cluster / SC / void POIs
  *
  * `textured-disks` is what remains of the briefly-split (and never-shipped)
  * `textured-quads` + `textured-disks` pair from 2026-05-18.  The quad
@@ -105,7 +105,7 @@ import { milkyWayPass } from './milkyWayPass';
 import { horizonShellPass } from './horizonShellPass';
 import { markerLinesPass } from './markerLinesPass';
 import { labelsPass } from './labelsPass';
-import { clusterMarkersPass } from './clusterMarkersPass';
+import { structureMarkersPass } from './structureMarkersPass';
 import { selectionRingPass } from './selectionRingPass';
 import { diskRadiusRingPass } from './diskRadiusRingPass';
 
@@ -119,7 +119,7 @@ export const HDR_PASSES: readonly Pass[] = [
   flowFieldPass,
   volumeUpsamplePass,
   horizonShellPass,
-  clusterMarkersPass,
+  structureMarkersPass,
 ];
 
 /**
@@ -177,6 +177,6 @@ export { milkyWayPass } from './milkyWayPass';
 export { horizonShellPass } from './horizonShellPass';
 export { markerLinesPass } from './markerLinesPass';
 export { labelsPass } from './labelsPass';
-export { clusterMarkersPass } from './clusterMarkersPass';
+export { structureMarkersPass } from './structureMarkersPass';
 export { selectionRingPass } from './selectionRingPass';
 export { diskRadiusRingPass } from './diskRadiusRingPass';

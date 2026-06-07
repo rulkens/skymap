@@ -68,7 +68,7 @@ Large diffuse fields (filaments/volumes) recede harder; markers/labels dim moder
 
 `blend` is `FocusUniformsValue.blend`, produced once per frame by
 `state.subsystems.clusterFocus.produceFocusUniforms(nowMs)`
-(`clusterFocusSubsystem.ts:104`). That call **ticks the fade controller**, so it must
+(`structureFocusSubsystem.ts:104`). That call **ticks the fade controller**, so it must
 run **exactly once per frame** — calling it twice double-advances the ramp.
 
 Today it's computed late, at `runFrame.ts:262–296`, after the label director

@@ -8,7 +8,7 @@
  *   - `anchors` — hand-curated cluster/SC/void anchors from
  *     `buildStaticAnchorStructures`.  Published synchronously at boot so the
  *     Structures panel has counts from frame 1.
- *   - `bulk` — built from the cluster-catalog slot's ready value when it
+ *   - `bulk` — built from the structure-catalog slot's ready value when it
  *     lands (a single subscription).  A slot error clears the group
  *     (graceful degradation — bulk structures don't appear but the engine
  *     continues normally).
@@ -29,7 +29,7 @@
  */
 
 import { buildStaticAnchorStructures } from '../../../data/buildStaticAnchorStructures';
-import { clusterCatalogToStructures } from '../phases/clusterCatalogToStructures';
+import { structureCatalogToStructures } from '../phases/structureCatalogToStructures';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
@@ -37,7 +37,7 @@ import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
 /**
  * Wire the structure groups into the `structureStore`.
  *
- * Precondition: `state.assetSlots.clusterCatalog` is minted by `wireSlots`
+ * Precondition: `state.assetSlots.structureCatalog` is minted by `wireSlots`
  * before this function is called.
  */
 export function wireStructureProjection(state: EngineState, cb: EngineCallbacks): void {
@@ -68,12 +68,12 @@ export function wireStructureProjection(state: EngineState, cb: EngineCallbacks)
 
   // ── Group 2: bulk clusters/superclusters ─────────────────────────────
   //
-  // The bulk records come straight off the cluster-catalog slot's ready
+  // The bulk records come straight off the structure-catalog slot's ready
   // value.  A slot error clears the group (graceful degradation — bulk
   // structures don't appear but the engine continues normally).
-  state.assetSlots.clusterCatalog?.subscribe((s) => {
+  state.assetSlots.structureCatalog?.subscribe((s) => {
     if (s.kind === 'ready') {
-      state.data.structures.setGroup('bulk', clusterCatalogToStructures(s.value));
+      state.data.structures.setGroup('bulk', structureCatalogToStructures(s.value));
     } else if (s.kind === 'error') {
       state.data.structures.clearGroup('bulk');
     }

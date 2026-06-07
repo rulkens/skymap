@@ -26,7 +26,7 @@
  *      subsystem is assigned onto `state.subsystems.*`, every overlay /
  *      volume-master / label-layer fade handle is registered at its frame-1
  *      opacity, and the structures-visibility predicate threads through to the
- *      demand loop (clusterCatalog loads at the visible default, skips when all
+ *      demand loop (structureCatalog loads at the visible default, skips when all
  *      structure categories are hidden).
  *
  * Mocking strategy: real `AssetSlot` instances are kept (pure CPU state
@@ -82,12 +82,12 @@ vi.mock('../../../../src/services/loading/fetchers/famousMetaFetcher', () => ({
   famousMetaFetcher: vi.fn(async () => ({ meta: [] })),
 }));
 
-// The cluster-catalog slot fires `.load({})` at boot; mock its fetcher so
+// The structure-catalog slot fires `.load({})` at boot; mock its fetcher so
 // the test doesn't network.  An empty catalog is enough by default — the
 // merge test overrides this mock with a populated payload so wireStructureProjection
 // builds bulk records from the slot's ready value.
-vi.mock('../../../../src/services/loading/fetchers/clusterCatalogFetcher', () => ({
-  clusterCatalogFetcher: vi.fn(async () => ({
+vi.mock('../../../../src/services/loading/fetchers/structureCatalogFetcher', () => ({
+  structureCatalogFetcher: vi.fn(async () => ({
     catalog: {
       count: 0,
       positions: new Float32Array(0),
@@ -203,7 +203,7 @@ vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () 
 // Imported AFTER the mocks so wireSlots picks them up.
 import { wireSlots } from '../../../../src/services/engine/phases/wireSlots';
 import { famousMetaFetcher } from '../../../../src/services/loading/fetchers/famousMetaFetcher';
-import { clusterCatalogFetcher } from '../../../../src/services/loading/fetchers/clusterCatalogFetcher';
+import { structureCatalogFetcher } from '../../../../src/services/loading/fetchers/structureCatalogFetcher';
 import { mcpmFetcher } from '../../../../src/services/loading/fetchers/mcpmFetcher';
 import { filamentFetcher } from '../../../../src/services/loading/fetchers/filamentFetcher';
 import { cf4DensityFetcher } from '../../../../src/services/loading/fetchers/cf4DensityFetcher';
@@ -325,9 +325,9 @@ function makeState(
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 1.0 },
       volumes: { masterEnabled: true, fields: seedVolumeFields() },
-      // Structure categories all visible by default ⇒ clusterCatalog demanded.
+      // Structure categories all visible by default ⇒ structureCatalog demanded.
       // Overridable so a test can hide every category and pin the bug-fix
-      // (clusterCatalog must NOT load when nothing structural is visible).
+      // (structureCatalog must NOT load when nothing structural is visible).
       markerCategoryVisibility: overrides.markerCategoryVisibility ?? allVisible,
       labelCategoryVisibility: overrides.labelCategoryVisibility ?? allVisible,
     },
@@ -395,7 +395,7 @@ function makeState(
       points: points as Map<SourceType, never>,
       filaments: null,
       famousMeta: null,
-      clusterCatalog: null,
+      structureCatalog: null,
       pgcAlias: null,
       cf4Density: null,
       mcpm: null,
@@ -530,7 +530,7 @@ describe('wireSlots', () => {
     expect(opacityFor({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(1);
   });
 
-  it('demand loop loads the default boot sidecar set (mcpm + clusterCatalog + famousMeta) and not the off-by-default ones', async () => {
+  it('demand loop loads the default boot sidecar set (mcpm + structureCatalog + famousMeta) and not the off-by-default ones', async () => {
     // Boot parity: the old imperative boot loop loaded MCPM (default-on volume)
     // + the cluster catalog (structures visible) + famous-meta but left
     // filaments (off), CF-4 density (off) and the lazy PGC alias idle.  After
@@ -539,7 +539,7 @@ describe('wireSlots', () => {
     // observable through its (mocked) fetcher; clear them first since the
     // module-scoped mocks persist across tests.
     vi.mocked(mcpmFetcher).mockClear();
-    vi.mocked(clusterCatalogFetcher).mockClear();
+    vi.mocked(structureCatalogFetcher).mockClear();
     vi.mocked(famousMetaFetcher).mockClear();
     vi.mocked(filamentFetcher).mockClear();
     vi.mocked(cf4DensityFetcher).mockClear();
@@ -552,7 +552,7 @@ describe('wireSlots', () => {
 
     // Default-on / structures-visible / famous-loading ⇒ fetched.
     expect(mcpmFetcher).toHaveBeenCalled();
-    expect(clusterCatalogFetcher).toHaveBeenCalled();
+    expect(structureCatalogFetcher).toHaveBeenCalled();
     expect(famousMetaFetcher).toHaveBeenCalled();
     // Default-off / lazy ⇒ never fetched at boot.
     expect(filamentFetcher).not.toHaveBeenCalled();
@@ -560,14 +560,14 @@ describe('wireSlots', () => {
     expect(pgcAliasFetcher).not.toHaveBeenCalled();
   });
 
-  it('does not load clusterCatalog when every structure category is hidden (bug-fix integration pin)', async () => {
+  it('does not load structureCatalog when every structure category is hidden (bug-fix integration pin)', async () => {
     // demandTable.test.ts pins the cluster predicate in isolation; this pins
     // that wireSlots actually threads the visibility records THROUGH to the
     // demand loop end-to-end.  Old code loaded the .ccat unconditionally; the
     // fix gates it on any structure category being visible.  With both marker
     // and label visibility all-false the predicate is false, so the boot
-    // demand pass must skip clusterCatalog entirely.
-    vi.mocked(clusterCatalogFetcher).mockClear();
+    // demand pass must skip structureCatalog entirely.
+    vi.mocked(structureCatalogFetcher).mockClear();
 
     const allHidden = { cluster: false, supercluster: false, void: false, famousGalaxy: false };
     const state = makeState({
@@ -579,7 +579,7 @@ describe('wireSlots', () => {
 
     await wireSlots(state, deps);
 
-    expect(clusterCatalogFetcher).not.toHaveBeenCalled();
+    expect(structureCatalogFetcher).not.toHaveBeenCalled();
   });
 
   it('fires `ready` status with a running total each time a survey arrives', async () => {
@@ -692,7 +692,7 @@ describe('wireSlots', () => {
     expect(names.has('famous-points')).toBe(true);
     expect(names.has('filaments')).toBe(true);
     expect(names.has('famous-meta')).toBe(true);
-    expect(names.has('cluster-catalog')).toBe(true);
+    expect(names.has('structure-catalog')).toBe(true);
     expect(names.has('pgc-aliases')).toBe(true);
   });
 
@@ -712,14 +712,14 @@ describe('wireSlots', () => {
   });
 
   it('lands bulk clusters + superclusters in the structure store, keeping anchors', async () => {
-    // The cluster-catalog slot's boot load resolves with one cluster + one
+    // The structure-catalog slot's boot load resolves with one cluster + one
     // supercluster; wireStructureProjection builds bulk records (via the real
-    // clusterCatalogToStructures) and writes them to the structure store's
+    // structureCatalogToStructures) and writes them to the structure store's
     // 'bulk' group, alongside the static-anchor group from boot.
     delete (globalThis as { location?: unknown }).location;
     (globalThis as { location: { search: string } }).location = { search: '' };
 
-    vi.mocked(clusterCatalogFetcher).mockResolvedValueOnce({
+    vi.mocked(structureCatalogFetcher).mockResolvedValueOnce({
       catalog: {
         count: 2,
         positions: new Float32Array([1, 2, 3, 4, 5, 6]),
@@ -738,7 +738,7 @@ describe('wireSlots', () => {
     const state = makeState({ points: bootPointSlots() });
     const deps = makeDeps();
     await wireSlots(state, deps);
-    // Let the async cluster-catalog fetch + its subscriber settle.
+    // Let the async structure-catalog fetch + its subscriber settle.
     await new Promise((r) => setTimeout(r, 0));
 
     // Bulk records land in the structure store.
@@ -757,7 +757,7 @@ describe('wireSlots', () => {
     delete (globalThis as { location?: unknown }).location;
     (globalThis as { location: { search: string } }).location = { search: '' };
 
-    vi.mocked(clusterCatalogFetcher).mockResolvedValueOnce({
+    vi.mocked(structureCatalogFetcher).mockResolvedValueOnce({
       catalog: {
         count: 2,
         positions: new Float32Array([1, 2, 3, 4, 5, 6]),
@@ -773,7 +773,7 @@ describe('wireSlots', () => {
     } as never);
 
     // Idle survey fakes keep the synthetic gate waiting so demand runs once —
-    // a double-run would re-trigger the (non-idempotent) cluster-catalog load
+    // a double-run would re-trigger the (non-idempotent) structure-catalog load
     // and race the mock once-value against its empty default.
     const state = makeState({ points: bootPointSlots() });
     const deps = makeDeps();

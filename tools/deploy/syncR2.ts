@@ -137,10 +137,10 @@ export const ALLOW = (name: string): boolean =>
   // emitted by `npm run build-flow-field`.  Tier-agnostic, like filaments.bin.
   name === 'flowfield.scfd' ||
   // Cluster/supercluster coverage artefacts (MCXC + MSCC + featured seed)
-  // emitted by `npm run build-clusters`: the packed point catalog and its
+  // emitted by `npm run build-structures`: the packed point catalog and its
   // per-structure metadata sidecar.  Tier-agnostic, like famous.bin.
-  name === 'clusters.ccat' ||
-  name === 'clusters_meta.json';
+  name === 'structures.ccat' ||
+  name === 'structures_meta.json';
 
 /**
  * Decide whether a local file is byte-identical to the object already in R2,

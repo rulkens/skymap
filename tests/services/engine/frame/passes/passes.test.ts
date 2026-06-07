@@ -167,7 +167,7 @@ describe('HDR_PASSES registry', () => {
     // escape tone-map curve compression and dodge the OVER-blend
     // coherency issue on tile-based GPUs. The horizon shell draws after
     // the volume upsample (so cosmic-web densities composite over it)
-    // and before cluster-markers (so marker rings pop on top). Flow sits
+    // and before structure-markers (so marker rings pop on top). Flow sits
     // with the structure layers, after filaments.
     expect(HDR_PASSES).toHaveLength(9);
     expect(HDR_PASSES.map((p) => p.name)).toEqual([
@@ -179,7 +179,7 @@ describe('HDR_PASSES registry', () => {
       'flow',
       'volume-upsample',
       'horizon-shell',
-      'cluster-markers',
+      'structure-markers',
     ]);
   });
 });
@@ -196,8 +196,8 @@ describe('TIMED_SLOT_NAMES registry', () => {
       'ui-overlay',
       'pick',
     ]);
-    // cluster-markers is present purely by virtue of being in HDR_PASSES.
-    expect(TIMED_SLOT_NAMES).toContain('cluster-markers');
+    // structure-markers is present purely by virtue of being in HDR_PASSES.
+    expect(TIMED_SLOT_NAMES).toContain('structure-markers');
   });
 
   it('has unique slot names (no index-pair collisions downstream)', () => {

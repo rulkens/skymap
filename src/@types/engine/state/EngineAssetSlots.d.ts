@@ -31,8 +31,8 @@ import type { ScalarCube } from '../../data/ScalarCube';
 import type { SyntheticVolumeReq } from '../../loading/SyntheticVolumeReq';
 import type { MCPMReq } from '../../loading/MCPMReq';
 import type { CompanionAssetReq } from '../../loading/CompanionAssetReq';
-import type { ClusterCatalogPayload } from '../../loading/ClusterCatalogPayload';
-import type { ClusterCatalogReq } from '../../loading/ClusterCatalogReq';
+import type { StructureCatalogPayload } from '../../loading/StructureCatalogPayload';
+import type { StructureCatalogReq } from '../../loading/StructureCatalogReq';
 import type { SourceType } from '../../data/SourceType';
 
 export type EngineAssetSlots = {
@@ -58,7 +58,7 @@ export type EngineAssetSlots = {
    */
   famousMeta: AssetSlot<FamousPayload, CompanionAssetReq> | null;
   /**
-   * Cluster/supercluster coverage layer (`clusters.ccat` + `clusters_meta.json`)
+   * Cluster/supercluster coverage layer (`structures.ccat` + `structures_meta.json`)
    * routed through a slot for parity with the other CPU-side sidecars.  Loaded
    * eagerly at engine boot; the payload is small.
    *
@@ -67,7 +67,7 @@ export type EngineAssetSlots = {
    * written into the structure store.  Null until the IIFE mints it
    * (matches `famousMeta` for the same lifecycle reason).
    */
-  clusterCatalog: AssetSlot<ClusterCatalogPayload, ClusterCatalogReq> | null;
+  structureCatalog: AssetSlot<StructureCatalogPayload, StructureCatalogReq> | null;
   /**
    * PGC → human-name alias map (`pgc_aliases.json`, ~1.7 MB).  Lazy:
    * the engine never auto-loads it; the public-handle's

@@ -60,7 +60,7 @@ export function createPickDebugOverlay(
         {
           format: swapChainFormat,
           // Premultiplied OVER — same convention as markerLines,
-          // labels, clusterMarker.  Fragment shader emits
+          // labels, structureMarker.  Fragment shader emits
           // 'vec4<f32>(col * alpha, alpha)' so this blend produces
           // the standard "src on top of dst" composite.  Background
           // pixels emit alpha = 0, which evaluates to a no-op blend

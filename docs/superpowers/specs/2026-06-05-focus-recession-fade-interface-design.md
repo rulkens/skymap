@@ -56,15 +56,15 @@ two parts and combine them with their focused-instance exemption.
 
 The obvious-looking move — have the registry store the blend (`setFocusBlend`) and
 return `toggle × recession` from `opacityOf` — **complects two independent concerns
-and mirrors state**. The blend's authoritative home is `clusterFocusSubsystem`
+and mirrors state**. The blend's authoritative home is `structureFocusSubsystem`
 (`FocusUniformsValue.blend`); caching it in the registry is a value×place mirror
 (stale-mirror bug class), and it drags the focus concept into a module whose sole
 job is fade controllers. Toggle fade and focus recession vary independently, so
 they are *composed*, not braided. (Radar finding, 2026-06-06 — see
 `docs/superpowers/conventions/simplicity.md` #5, #8.)
 
-`blend` is the **same 0→1 value `clusterFocusSubsystem` already produces** —
-`FocusUniformsValue.blend` (`clusterFocusSubsystem.ts:106`), already computed once
+`blend` is the **same 0→1 value `structureFocusSubsystem` already produces** —
+`FocusUniformsValue.blend` (`structureFocusSubsystem.ts:106`), already computed once
 per frame at `runFrame.ts:296` and threaded into the render settings. Consumers
 read it from there as a **value** (an argument), never from a mirror. It already
 gates render-on-demand via `clusterFocus.isAwake()`, so no wake logic changes.

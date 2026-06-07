@@ -33,7 +33,7 @@ import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
-import type { ClusterMarkerRenderer } from '../../../@types/rendering/ClusterMarkerRenderer';
+import type { StructureMarkerRenderer } from '../../../@types/rendering/StructureMarkerRenderer';
 import {
   POINT_STRIDE,
   POINT_VERTEX_ATTRIBUTES,
@@ -74,13 +74,13 @@ export function createPickRenderer(
   // shader can cull non-members of a focused structure from hit-testing.
   focusBindGroup: GPUBindGroup,
   // Optional POI-ring pick provider.  When present, the pick pass
-  // calls `clusterMarkerRenderer.pickRing(pass)` after the galaxy
+  // calls `structureMarkerRenderer.pickRing(pass)` after the galaxy
   // draws so cluster / supercluster / void ring hits land in the same
   // texture.  Shared depth state means a foreground galaxy still
   // claims the pixel — clicks through a ring select the galaxy.
   // Optional so tests can construct the picker in isolation; passing
   // `undefined` yields a galaxy-only pick pass.
-  clusterMarkerRenderer?: ClusterMarkerRenderer,
+  structureMarkerRenderer?: StructureMarkerRenderer,
 ): PickRenderer {
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'pick.vertex');
   const fsModule = createShaderModuleWithDevLog(device, pickFsCode, 'pick.pickFragment');
@@ -95,7 +95,11 @@ export function createPickRenderer(
       device.createBindGroupLayout({
         label: 'pick-bgl-group0',
         entries: [
-          { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+          {
+            binding: 0,
+            visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+            buffer: { type: 'uniform' },
+          },
         ],
       }),
       fadeBgl,
@@ -329,8 +333,8 @@ export function createPickRenderer(
     // POI ring picks share depth state with the galaxy draws, so a
     // foreground galaxy claims the pixel — clicks through a ring at a
     // galaxy select the galaxy.  Skipped when no marker renderer.
-    if (clusterMarkerRenderer) {
-      clusterMarkerRenderer.pickRing(pass);
+    if (structureMarkerRenderer) {
+      structureMarkerRenderer.pickRing(pass);
     }
 
     pass.end();
@@ -339,15 +343,15 @@ export function createPickRenderer(
 
   // Whether this pick pass has anything to draw — galaxy sources OR
   // cluster / SC / void ring markers (drawn by
-  // `clusterMarkerRenderer.pickRing` inside `recordPickPass`).  Shared
+  // `structureMarkerRenderer.pickRing` inside `recordPickPass`).  Shared
   // by `pick` and `renderForDebug` so a galaxy-empty scene with visible
   // rings still picks (and the pick-debug texture isn't black when every
   // survey is toggled off).  `markerCount() > 0` mirrors
-  // `clusterMarkersPass`'s enable gate (0 when the category is hidden or
+  // `structureMarkersPass`'s enable gate (0 when the category is hidden or
   // every ring has faded out).
   const hasAnyPickTarget = (sourceList: readonly PickSourceDraw[]): boolean =>
     sourceList.length > 0 ||
-    (clusterMarkerRenderer !== undefined && clusterMarkerRenderer.markerCount() > 0);
+    (structureMarkerRenderer !== undefined && structureMarkerRenderer.markerCount() > 0);
 
   async function pick(
     viewportPx: Vec2,
