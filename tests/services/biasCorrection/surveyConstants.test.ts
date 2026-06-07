@@ -27,7 +27,7 @@ const SOURCE_NAME: Record<SurveySource, string> = {
   [Source.SDSS]: 'SDSS',
   [Source.TwoMRS]: 'TwoMRS',
   [Source.Glade]: 'Glade',
-  [Source.Famous]: 'Famous',
+  [Source.FamousGalaxy]: 'Famous',
   [Source.Milliquas]: 'Milliquas',
 };
 
@@ -37,7 +37,7 @@ describe('surveyConstants table', () => {
     Source.SDSS,
     Source.TwoMRS,
     Source.Glade,
-    Source.Famous,
+    Source.FamousGalaxy,
   ]) {
     it(`Source.${SOURCE_NAME[src]} — schechter, mLim, nRef match live primitives`, () => {
       const c = surveyConstants(src);

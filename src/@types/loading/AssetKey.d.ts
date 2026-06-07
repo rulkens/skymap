@@ -15,7 +15,7 @@ import type { SourceType } from '../data/SourceType';
  *   - `'famousMeta'` — the `famous_meta.json` sidecar that accompanies the
  *     `Famous` `.bin`. It is a distinct network request from the binary, so it
  *     needs its own key in the wiring registry even though its identity source
- *     is `Source.Famous`.
+ *     is `Source.FamousGalaxy`.
  *
  *   - `'pgcAlias'` — the PGC-alias lookup JSON. It is consumed across survey
  *     sources (primarily 2MRS and GLADE) and has no unique `Source` code.

@@ -34,11 +34,7 @@ import { Source } from '../../../data/sources';
 import { pickColourIndex } from '../../../data/colourIndex';
 import { paddedRadiusMpc } from '../../../utils/galaxySize';
 import { cartesianToRaDec } from '../../../utils/math';
-import {
-  APPARENT_SIZE_THRESHOLD_PX,
-  FADE_BAND_PX,
-  galaxyCacheKey,
-} from './texturedDiskSubsystem';
+import { APPARENT_SIZE_THRESHOLD_PX, FADE_BAND_PX, galaxyCacheKey } from './texturedDiskSubsystem';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { GalaxyAtlasSubsystem } from '../../../@types/engine/subsystems/GalaxyAtlasSubsystem';
 import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
@@ -233,14 +229,11 @@ export function createProceduralDiskSubsystem(
           // Non-famous galaxies and famous galaxies without a loaded
           // bitmap keep the default 1.0 — no behaviour change.
           let final = emitted;
-          if (atlas && cloudSource === Source.Famous) {
+          if (atlas && cloudSource === Source.FamousGalaxy) {
             const [ra, dec] = cartesianToRaDec(x, y, z);
             const key = galaxyCacheKey(ra, dec);
             if (atlas.isLoaded(key)) {
-              const t = Math.min(
-                1,
-                Math.max(0, (px - APPARENT_SIZE_THRESHOLD_PX) / FADE_BAND_PX),
-              );
+              const t = Math.min(1, Math.max(0, (px - APPARENT_SIZE_THRESHOLD_PX) / FADE_BAND_PX));
               const fadeIn = t * t * (3 - 2 * t);
               final = { ...emitted, procFadeOut: 1 - fadeIn };
             }

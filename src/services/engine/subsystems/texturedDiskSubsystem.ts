@@ -185,7 +185,7 @@ export function createTexturedDiskSubsystem(
         const camDist = Math.sqrt(camDistSq);
         const px = (dMpcRow / camDist) * pxPerRad;
 
-        if (cloudSource !== Source.Famous && px < APPARENT_SIZE_THRESHOLD_PX) continue;
+        if (cloudSource !== Source.FamousGalaxy && px < APPARENT_SIZE_THRESHOLD_PX) continue;
 
         // posSize.w stores the FULL quad extent (vertex stage halves it
         // at corner expansion), so double the shared radius helper.
@@ -200,7 +200,7 @@ export function createTexturedDiskSubsystem(
         // them as the corrupted-bin guard, not the render values.  An
         // absent calibration (the common case) leaves every emitted value
         // bit-identical to the catalog path.
-        const cal = cloudSource === Source.Famous ? famousMeta[i]?.calibration : undefined;
+        const cal = cloudSource === Source.FamousGalaxy ? famousMeta[i]?.calibration : undefined;
         let sizeForInstance = sizeWorldMpc;
         let axisRatioForInstance = ar;
         let paForInstance = pa;
@@ -229,7 +229,7 @@ export function createTexturedDiskSubsystem(
             priority: px,
             fetcher: () => {
               const fId =
-                sourceForFetch === Source.Famous ? famousMeta[idxForFetch]?.id : undefined;
+                sourceForFetch === Source.FamousGalaxy ? famousMeta[idxForFetch]?.id : undefined;
               return fetcher({ ra, dec, famousId: fId });
             },
             onResult: (bitmap) => {
@@ -267,12 +267,12 @@ export function createTexturedDiskSubsystem(
           // Famous galaxies only). Non-Famous sources emit the sentinel
           // -1 / 0 unconditionally — the shader's `hiResLayerIdx >= 0`
           // gate makes those rows skip the hi-res sample entirely.
-          // `i` is the per-cloud local index, which for `Source.Famous`
+          // `i` is the per-cloud local index, which for `Source.FamousGalaxy`
           // matches the Famous-source-local key contract on
           // `HiResFamousFrameOutput.byFamousIdx` (a numeric map).
           let hiResLayerIdx = -1;
           let hiResCrossfadeAlpha = 0;
-          if (cloudSource === Source.Famous && hiResFamous !== undefined) {
+          if (cloudSource === Source.FamousGalaxy && hiResFamous !== undefined) {
             const s = hiResFamous.lastOutput.byFamousIdx.get(i);
             if (s !== undefined) {
               hiResLayerIdx = s.hiResLayerIdx;

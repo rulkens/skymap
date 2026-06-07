@@ -63,7 +63,7 @@ describe('ASSET_WIRING membership', () => {
       Source.TwoMRS,
       Source.Glade,
       Source.Milliquas,
-      Source.Famous,
+      Source.FamousGalaxy,
       Source.Synthetic,
       'famousMeta',
       'filaments',
@@ -93,7 +93,7 @@ describe('ASSET_WIRING membership', () => {
       Source.TwoMRS,
       Source.Glade,
       Source.Milliquas,
-      Source.Famous,
+      Source.FamousGalaxy,
       Source.Synthetic,
     ];
     for (const k of pointKeys) {
@@ -123,8 +123,12 @@ describe('ASSET_WIRING demand predicates', () => {
 
   it('famousMeta demands when the Famous slot is not idle', () => {
     const famousMeta = rowFor('famousMeta');
-    expect(famousMeta.demand(makeCtx({ slotStates: { [Source.Famous]: 'loading' } }))).toBe(true);
-    expect(famousMeta.demand(makeCtx({ slotStates: { [Source.Famous]: 'idle' } }))).toBe(false);
+    expect(famousMeta.demand(makeCtx({ slotStates: { [Source.FamousGalaxy]: 'loading' } }))).toBe(
+      true,
+    );
+    expect(famousMeta.demand(makeCtx({ slotStates: { [Source.FamousGalaxy]: 'idle' } }))).toBe(
+      false,
+    );
   });
 
   it('filaments demand follows settings.filaments.enabled (bug-fix pin)', () => {

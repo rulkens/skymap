@@ -1,10 +1,12 @@
 /**
  * Fields shared by every row of the SOURCE_REGISTRY, regardless of kind.
- * Each variant (`SurveySourceEntry`, `PoiSourceEntry`, ...) intersects with
+ * Each variant (`SurveySourceEntry`, `StructureSourceEntry`, ...) intersects with
  * this base and adds its own discriminator (`type: '<kind>'`) plus
  * kind-specific fields.
  */
 export type SourceEntryBase = {
+  /** Unique readable key — string twin of the numeric `Source` code (e.g. `'sdss'`, `'cluster'`). */
+  readonly id: string;
   /** Display name shown in the UI (e.g. `'SDSS'`, `'GLADE'`, `'Cluster'`). */
   readonly label: string;
   /**

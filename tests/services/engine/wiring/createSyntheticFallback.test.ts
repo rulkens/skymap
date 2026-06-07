@@ -102,7 +102,7 @@ function makeState(opts: { drawMask?: number } = {}): MakeStateResult {
     Source.TwoMRS,
     Source.Glade,
     Source.Milliquas,
-    Source.Famous,
+    Source.FamousGalaxy,
   ].reduce((m, s) => maskWith(m, s), 0);
   const drawMask = opts.drawMask ?? everyVisible;
 
@@ -112,7 +112,7 @@ function makeState(opts: { drawMask?: number } = {}): MakeStateResult {
     Source.TwoMRS,
     Source.Glade,
     Source.Milliquas,
-    Source.Famous,
+    Source.FamousGalaxy,
     Source.Synthetic,
   ]) {
     slots.set(src, stubSlot());
@@ -194,10 +194,12 @@ describe('createSyntheticFallback', () => {
   it('counts a hidden-at-boot survey as already settled', () => {
     // Hide SDSS in the drawMask: its slot never transitions, but the gate must
     // not wait on it. Driving the OTHER three surveys to error then arms.
-    const everyButSdss = [Source.TwoMRS, Source.Glade, Source.Milliquas, Source.Famous].reduce(
-      (m, s) => maskWith(m, s),
-      0,
-    );
+    const everyButSdss = [
+      Source.TwoMRS,
+      Source.Glade,
+      Source.Milliquas,
+      Source.FamousGalaxy,
+    ].reduce((m, s) => maskWith(m, s), 0);
     const { state, slots, cb } = makeState({ drawMask: everyButSdss });
     createSyntheticFallback(state, cb);
 

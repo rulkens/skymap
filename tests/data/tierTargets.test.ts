@@ -24,7 +24,7 @@ describe('tierTarget', () => {
 
   it('small tier keeps 2MRS and Famous uncapped (returns undefined)', () => {
     expect(tierTarget(Source.TwoMRS, 'small')).toBeUndefined();
-    expect(tierTarget(Source.Famous, 'small')).toBeUndefined();
+    expect(tierTarget(Source.FamousGalaxy, 'small')).toBeUndefined();
   });
 
   it('medium tier caps SDSS at ~156k and GLADE at ~400k', () => {
@@ -56,7 +56,7 @@ describe('tierFilenameForSource', () => {
   it('emits the shared filename for tier-agnostic sources (2MRS, Famous)', () => {
     expect(tierFilenameForSource(Source.TwoMRS, 'small')).toBe('2mrs.bin');
     expect(tierFilenameForSource(Source.TwoMRS, 'large')).toBe('2mrs.bin');
-    expect(tierFilenameForSource(Source.Famous, 'medium')).toBe('famous.bin');
+    expect(tierFilenameForSource(Source.FamousGalaxy, 'medium')).toBe('famous.bin');
   });
 });
 

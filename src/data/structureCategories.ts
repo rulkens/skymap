@@ -1,16 +1,25 @@
 import type { StructureCategory } from '../@types/engine/data/StructureCategory';
+import { SOURCE_ENTRIES } from './sourceEntries';
+
+// The registry's structure rows, in source-code (registry iteration) order —
+// the one place both the category list and the pick-code map are read from.
+const STRUCTURE_ENTRIES = SOURCE_ENTRIES.filter((e) => e.type === 'structure');
 
 /**
- * STRUCTURE_CATEGORIES — the canonical ordered list of the four extended-
- * structure categories (cluster / supercluster / void / group). The single
- * runtime source of truth: per-category fade-handle registration, settings
- * iteration, and the marker renderer's bucket order all derive from this list
- * rather than re-inlining the literal. Order matches the warm→cool scale
- * ladder used in the SettingsPanel and style table.
+ * STRUCTURE_CATEGORIES — the runtime companion to StructureCategory, for
+ * iterating (fade registration, settings rows, marker buckets). Order is
+ * registry source-code order; it's purely iteration order, since per-category
+ * visuals come from the keyed style table, not list position.
  */
-export const STRUCTURE_CATEGORIES: readonly StructureCategory[] = [
-  'cluster',
-  'supercluster',
-  'void',
-  'group',
-];
+export const STRUCTURE_CATEGORIES = STRUCTURE_ENTRIES.map((e) => e.id);
+
+/**
+ * STRUCTURE_CATEGORY_CODES — each category's 5-bit code, packed into the pick
+ * texture when its ring is drawn. The encode-side map; decode needs no inverse,
+ * since SOURCE_REGISTRY is already keyed by code (see `unpackPick`).
+ */
+export const STRUCTURE_CATEGORY_CODES: Readonly<Record<StructureCategory, number>> =
+  Object.fromEntries(STRUCTURE_ENTRIES.map((e) => [e.id, e.code])) as Record<
+    StructureCategory,
+    number
+  >;

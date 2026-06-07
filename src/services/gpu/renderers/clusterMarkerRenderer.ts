@@ -67,8 +67,8 @@ import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { ClusterMarkerRenderer } from '../../../@types/rendering/ClusterMarkerRenderer';
 import type { ClusterMarkerDescriptor } from '../../../@types/rendering/ClusterMarkerDescriptor';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
-import { Source } from '../../../data/sources';
-import { STRUCTURE_CATEGORIES } from '../../../data/structureCategories';
+import { STRUCTURE_CATEGORIES, STRUCTURE_CATEGORY_CODES } from '../../../data/structureCategories';
+import type { StructureCategory } from '../../../@types/engine/data/StructureCategory';
 import haloVsCode from '../shaders/clusterMarker/halo.wesl?static';
 import haloFsCode from '../shaders/clusterMarker/halo.wesl?static';
 import ringVsCode from '../shaders/clusterMarker/ring.wesl?static';
@@ -101,15 +101,13 @@ const UNIFORM_BYTES = 80;
 /** SourceUniforms = u32 sourceCode + 12 bytes pad = 16 bytes. */
 const SOURCE_UNIFORM_BYTES = 16;
 
-/** Maps each pick-able POI category to its 5-bit source code (allocated by plan 1). */
-const SOURCE_CODE_BY_CATEGORY: Readonly<
-  Record<'cluster' | 'supercluster' | 'void' | 'group', number>
-> = {
-  cluster: Source.Cluster,
-  supercluster: Source.Supercluster,
-  void: Source.Void,
-  group: Source.Group,
-};
+/** A per-category bag seeded to `init` — a new structure source can't leave a bucket unset. */
+function byCategory<T>(init: T): Record<StructureCategory, T> {
+  return Object.fromEntries(STRUCTURE_CATEGORIES.map((c) => [c, init])) as Record<
+    StructureCategory,
+    T
+  >;
+}
 
 export function createClusterMarkerRenderer(
   ctx: GpuContext,
@@ -164,18 +162,8 @@ export function createClusterMarkerRenderer(
   // Per-category bucket bookkeeping: where each category's run begins
   // in the instance buffer + how many descriptors it owns.  Reset at
   // the start of every setMarkers call.
-  const bucketOffsets: Record<'cluster' | 'supercluster' | 'void' | 'group', number> = {
-    cluster: 0,
-    supercluster: 0,
-    void: 0,
-    group: 0,
-  };
-  const bucketCounts: Record<'cluster' | 'supercluster' | 'void' | 'group', number> = {
-    cluster: 0,
-    supercluster: 0,
-    void: 0,
-    group: 0,
-  };
+  const bucketOffsets = byCategory(0);
+  const bucketCounts = byCategory(0);
 
   // GPU resources — null when device is null.
   let haloPipeline: GPURenderPipeline | null = null;
@@ -200,22 +188,9 @@ export function createClusterMarkerRenderer(
   // groups remain layout-compatible across the encoder boundary.
   let pickDummyFadeBuffer: GPUBuffer | null = null;
   let pickDummyFadeBindGroup: GPUBindGroup | null = null;
-  const sourceBuffers: Record<'cluster' | 'supercluster' | 'void' | 'group', GPUBuffer | null> = {
-    cluster: null,
-    supercluster: null,
-    void: null,
-    group: null,
-  };
+  const sourceBuffers = byCategory<GPUBuffer | null>(null);
   let cameraBindGroup: GPUBindGroup | null = null;
-  const sourceBindGroups: Record<
-    'cluster' | 'supercluster' | 'void' | 'group',
-    GPUBindGroup | null
-  > = {
-    cluster: null,
-    supercluster: null,
-    void: null,
-    group: null,
-  };
+  const sourceBindGroups = byCategory<GPUBindGroup | null>(null);
   // Scratch arrays for the per-frame fade.opacity write.  Same shape
   // as filamentRenderer's fadeScratchF32: a single f32 sliced into the
   // 16-byte fade uniform buffer at offset 0.
@@ -435,7 +410,7 @@ export function createClusterMarkerRenderer(
       });
       // Write the 5-bit source code at offset 0; rest stays zero.
       const u32 = new Uint32Array(SOURCE_UNIFORM_BYTES / 4);
-      u32[0] = SOURCE_CODE_BY_CATEGORY[cat];
+      u32[0] = STRUCTURE_CATEGORY_CODES[cat];
       device.queue.writeBuffer(buf, 0, u32);
       sourceBuffers[cat] = buf;
       sourceBindGroups[cat] = device.createBindGroup({
@@ -477,10 +452,7 @@ export function createClusterMarkerRenderer(
     // category and keeps the instance buffer cache-friendly.  Three
     // categories means three passes over the input is fine.
     currentMarkerCount = 0;
-    bucketCounts.cluster = 0;
-    bucketCounts.supercluster = 0;
-    bucketCounts.void = 0;
-    bucketCounts.group = 0;
+    for (const c of STRUCTURE_CATEGORIES) bucketCounts[c] = 0;
 
     // Grow to fit the full descriptor set — no truncation.  See growTo
     // and the `capacity` docstring for why a cap here was a correctness
@@ -492,33 +464,21 @@ export function createClusterMarkerRenderer(
     const count = descriptors.length;
     for (let i = 0; i < count; i++) {
       const d = descriptors[i]!;
-      if (d.category === 'cluster') bucketCounts.cluster++;
-      else if (d.category === 'supercluster') bucketCounts.supercluster++;
-      else if (d.category === 'void') bucketCounts.void++;
-      else if (d.category === 'group') bucketCounts.group++;
-      // famousGalaxy and any future label-only category have no markers; skip.
+      // famousGalaxy (label-only) has no markers; skip.
+      if (d.category !== 'famousGalaxy') bucketCounts[d.category]++;
     }
-    bucketOffsets.cluster = 0;
-    bucketOffsets.supercluster = bucketOffsets.cluster + bucketCounts.cluster;
-    bucketOffsets.void = bucketOffsets.supercluster + bucketCounts.supercluster;
-    bucketOffsets.group = bucketOffsets.void + bucketCounts.void;
+    // Prefix-sum the counts into per-category run offsets.
+    let acc = 0;
+    for (const c of STRUCTURE_CATEGORIES) {
+      bucketOffsets[c] = acc;
+      acc += bucketCounts[c];
+    }
 
     // Second pass: pack into the instance buffer in category-ordered runs.
-    const writeCursor: Record<'cluster' | 'supercluster' | 'void' | 'group', number> = {
-      cluster: bucketOffsets.cluster,
-      supercluster: bucketOffsets.supercluster,
-      void: bucketOffsets.void,
-      group: bucketOffsets.group,
-    };
+    const writeCursor: Record<StructureCategory, number> = { ...bucketOffsets };
     for (let i = 0; i < count; i++) {
       const d = descriptors[i]!;
-      if (
-        d.category !== 'cluster' &&
-        d.category !== 'supercluster' &&
-        d.category !== 'void' &&
-        d.category !== 'group'
-      )
-        continue;
+      if (d.category === 'famousGalaxy') continue;
       const slot = writeCursor[d.category];
       writeCursor[d.category]++;
       const base = slot * MARKER_INSTANCE_FLOATS;

@@ -49,7 +49,7 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
       const jk = mags.magG - mags.magI;
       return Number.isFinite(jk) ? galaxyTypeFromJminusK(jk) : UNKNOWN;
     }
-    case Source.Famous: {
+    case Source.FamousGalaxy: {
       // Famous entries use SDSS-style optical slots (see BAND_LABELS in
       // sources.ts).  Fall back to u−r like SDSS; most curated entries
       // won't carry photometry so UNKNOWN is the usual outcome — that's

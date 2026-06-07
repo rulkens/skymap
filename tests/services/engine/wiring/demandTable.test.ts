@@ -187,7 +187,7 @@ const ALL_POINT_SOURCES: readonly SourceType[] = [
   Source.TwoMRS,
   Source.Glade,
   Source.Milliquas,
-  Source.Famous,
+  Source.FamousGalaxy,
   Source.Synthetic,
 ];
 
@@ -302,7 +302,7 @@ describe('reevaluateDemand demand-table regression', () => {
         Source.SDSS,
         Source.TwoMRS,
         Source.Glade,
-        Source.Famous,
+        Source.FamousGalaxy,
         Source.Milliquas,
         'famousMeta',
         'clusterCatalog',
@@ -329,7 +329,7 @@ describe('reevaluateDemand demand-table regression', () => {
         Source.SDSS,
         Source.TwoMRS,
         Source.Glade,
-        Source.Famous,
+        Source.FamousGalaxy,
         Source.Milliquas,
         'famousMeta',
         'clusterCatalog',
@@ -375,7 +375,7 @@ describe('reevaluateDemand demand-table regression', () => {
     expect(fired.has(Source.SDSS)).toBe(true);
     expect(fired.has(Source.TwoMRS)).toBe(true);
     expect(fired.has(Source.Glade)).toBe(true);
-    expect(fired.has(Source.Famous)).toBe(true);
+    expect(fired.has(Source.FamousGalaxy)).toBe(true);
   });
 
   /**
@@ -394,7 +394,7 @@ describe('reevaluateDemand demand-table regression', () => {
         Source.SDSS,
         Source.TwoMRS,
         Source.Glade,
-        Source.Famous,
+        Source.FamousGalaxy,
         Source.Milliquas,
         'famousMeta',
         'clusterCatalog',
@@ -425,7 +425,7 @@ describe('reevaluateDemand demand-table regression', () => {
       [Source.Milliquas]: stubSlot('error'),
       // Famous errored too — but it's curated, not a SURVEY_POINT_SOURCE.
       // famousMeta demands because Famous slot !== 'idle'.
-      [Source.Famous]: stubSlot('error'),
+      [Source.FamousGalaxy]: stubSlot('error'),
     };
     const namedSlots: NamedSlotOverrides = {};
     const state = makeState({ requests: new Set(['syntheticFallback']), pointSlots, namedSlots });
@@ -447,7 +447,7 @@ describe('reevaluateDemand demand-table regression', () => {
     // surveys, so the idle-guard skips it too — no retry storm.
     expect(fired.has(Source.Milliquas)).toBe(false);
     // Famous's point row is demanded but errored (non-idle) — not re-loaded.
-    expect(fired.has(Source.Famous)).toBe(false);
+    expect(fired.has(Source.FamousGalaxy)).toBe(false);
   });
 
   /**
@@ -470,7 +470,7 @@ describe('reevaluateDemand demand-table regression', () => {
         Source.SDSS,
         Source.TwoMRS,
         Source.Glade,
-        Source.Famous,
+        Source.FamousGalaxy,
         Source.Milliquas,
         'famousMeta',
         'clusterCatalog',
@@ -510,10 +510,10 @@ describe('reevaluateDemand demand-table regression', () => {
     };
     // Disable mcpm too so the fired set is exactly the join under test.
     const volumeFields: VolumeFieldLeaves = { ...BOOT_VOLUME_FIELDS, mcpm: { enabled: false } };
-    const state = makeState({ settings, volumeFields, drawMask: 1 << Source.Famous });
+    const state = makeState({ settings, volumeFields, drawMask: 1 << Source.FamousGalaxy });
 
     const fired = firedKeys(state);
 
-    expect(fired).toEqual(new Set<AssetKey>([Source.Famous, 'famousMeta']));
+    expect(fired).toEqual(new Set<AssetKey>([Source.FamousGalaxy, 'famousMeta']));
   });
 });

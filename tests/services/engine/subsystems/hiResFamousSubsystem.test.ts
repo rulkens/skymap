@@ -138,10 +138,14 @@ function makeFamousMeta(count: number, idPrefix = 'fg-'): FamousMetaEntry[] {
 describe('createHiResFamousSubsystem', () => {
   it('runFrame emits hiResLayerIdx -1 for famous galaxies below the trigger band', () => {
     const device = makeFakeDevice();
-    const texture = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
+    const texture = createHiResFamousTexture({
+      device,
+      layerSide: LAYER_SIDE,
+      layerCount: LAYER_COUNT,
+    });
     const fetcher = vi.fn(async () => makeFakeBitmap());
     const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
-    const clouds = new Map([[Source.Famous, makeFamousCloud(1)]]);
+    const clouds = new Map([[Source.FamousGalaxy, makeFamousCloud(1)]]);
     // Camera far enough to put apparent size well below 120 px.
     const out = sys.runFrame(makeInput(clouds, camDistFor(50), makeFamousMeta(1)));
     expect(out.byFamousIdx.get(0)?.hiResLayerIdx ?? -1).toBe(-1);
@@ -152,12 +156,16 @@ describe('createHiResFamousSubsystem', () => {
 
   it('runFrame allocates a layer and emits the smoothstep alpha mid-band', async () => {
     const device = makeFakeDevice();
-    const texture = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
+    const texture = createHiResFamousTexture({
+      device,
+      layerSide: LAYER_SIDE,
+      layerCount: LAYER_COUNT,
+    });
     texture.initTexture();
     const bitmap = makeFakeBitmap();
     const fetcher = vi.fn(async () => bitmap);
     const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
-    const clouds = new Map([[Source.Famous, makeFamousCloud(1)]]);
+    const clouds = new Map([[Source.FamousGalaxy, makeFamousCloud(1)]]);
     const meta = makeFamousMeta(1);
     const input = makeInput(clouds, camDistFor(140), meta);
 
@@ -190,14 +198,18 @@ describe('createHiResFamousSubsystem', () => {
      */
     async function alphaAtPx(targetPx: number): Promise<number> {
       const device = makeFakeDevice();
-      const texture = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
+      const texture = createHiResFamousTexture({
+        device,
+        layerSide: LAYER_SIDE,
+        layerCount: LAYER_COUNT,
+      });
       texture.initTexture();
       // Pre-load the layer so the planner doesn't have to wait for a fetch.
       texture.allocate('0', targetPx);
       texture.uploadBitmap(0, makeFakeBitmap());
       const fetcher = vi.fn(async () => makeFakeBitmap());
       const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
-      const clouds = new Map([[Source.Famous, makeFamousCloud(1)]]);
+      const clouds = new Map([[Source.FamousGalaxy, makeFamousCloud(1)]]);
       // Nudge camDist a hair closer so the FP roundtrip `targetPx →
       // camDist → px_observed` lands at-or-just-above the target.  The
       // smoothstep is steep enough at the boundaries that 0.01 px of
@@ -228,7 +240,11 @@ describe('createHiResFamousSubsystem', () => {
 
   it('runFrame ignores non-Famous sources', () => {
     const device = makeFakeDevice();
-    const texture = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
+    const texture = createHiResFamousTexture({
+      device,
+      layerSide: LAYER_SIDE,
+      layerCount: LAYER_COUNT,
+    });
     const fetcher = vi.fn(async () => makeFakeBitmap());
     const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
     // SDSS-source cloud, camera close enough that any planner that walked
@@ -242,7 +258,11 @@ describe('createHiResFamousSubsystem', () => {
 
   it('N=9 distinct famous galaxies in the band evict the smallest-recent layer', async () => {
     const device = makeFakeDevice();
-    const texture = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
+    const texture = createHiResFamousTexture({
+      device,
+      layerSide: LAYER_SIDE,
+      layerCount: LAYER_COUNT,
+    });
     texture.initTexture();
     // Resolve every fetch synchronously with the same bitmap — the LRU
     // behaviour we're pinning is on the texture's allocator, not on the
@@ -284,7 +304,7 @@ describe('createHiResFamousSubsystem', () => {
       parentSurveyByte: new Uint8Array(count),
       spectroscopicZ: new Float32Array(count),
     };
-    const clouds = new Map([[Source.Famous, cloud]]);
+    const clouds = new Map([[Source.FamousGalaxy, cloud]]);
     const meta = makeFamousMeta(count);
     // Camera close enough that every galaxy clears the 120 px gate —
     // pin to the smallest galaxy (i=0, diameter 220 kpc): cam distance
@@ -294,7 +314,7 @@ describe('createHiResFamousSubsystem', () => {
     sys.runFrame(makeInput(clouds, camDist, meta));
 
     expect(texture.layerForKey('0')).toBeUndefined(); // evicted
-    expect(texture.layerForKey('8')).toBeDefined();   // new resident
+    expect(texture.layerForKey('8')).toBeDefined(); // new resident
     for (let i = 1; i <= 7; i++) {
       expect(texture.layerForKey(String(i))).toBeDefined();
     }
@@ -303,12 +323,16 @@ describe('createHiResFamousSubsystem', () => {
 
   it('fetcher null result calls markFailed and skips re-enqueue', async () => {
     const device = makeFakeDevice();
-    const texture = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
+    const texture = createHiResFamousTexture({
+      device,
+      layerSide: LAYER_SIDE,
+      layerCount: LAYER_COUNT,
+    });
     texture.initTexture();
     const markFailedSpy = vi.spyOn(texture, 'markFailed');
     const fetcher = vi.fn(async () => null);
     const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
-    const clouds = new Map([[Source.Famous, makeFamousCloud(1)]]);
+    const clouds = new Map([[Source.FamousGalaxy, makeFamousCloud(1)]]);
     const meta = makeFamousMeta(1);
     const input = makeInput(clouds, camDistFor(230), meta);
 
@@ -331,11 +355,15 @@ describe('createHiResFamousSubsystem', () => {
     // curated asset id, so a galaxy whose `full.webp` is missing does
     // not re-dispatch a fetch every frame after its slot is evicted.
     const device = makeFakeDevice();
-    const texture = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
+    const texture = createHiResFamousTexture({
+      device,
+      layerSide: LAYER_SIDE,
+      layerCount: LAYER_COUNT,
+    });
     texture.initTexture();
     const fetcher = vi.fn(async () => null);
     const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
-    const clouds = new Map([[Source.Famous, makeFamousCloud(1)]]);
+    const clouds = new Map([[Source.FamousGalaxy, makeFamousCloud(1)]]);
     const meta = makeFamousMeta(1);
     const input = makeInput(clouds, camDistFor(230), meta);
 
@@ -368,13 +396,18 @@ describe('createHiResFamousSubsystem', () => {
     // famousId would silently fall through to SDSS/DSS and pollute the
     // texture array with mis-scaled tiles.
     const device = makeFakeDevice();
-    const texture = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
+    const texture = createHiResFamousTexture({
+      device,
+      layerSide: LAYER_SIDE,
+      layerCount: LAYER_COUNT,
+    });
     texture.initTexture();
     // Typed signature on the mock so `fetcher.mock.calls[*][0]` carries
     // the argument shape (rather than being inferred as never[]).
     const fetcher = vi.fn(
-      async (_args: import('../../../../src/@types/loading/FetchGalaxyBitmapInput').FetchGalaxyBitmapInput) =>
-        makeFakeBitmap(),
+      async (
+        _args: import('../../../../src/@types/loading/FetchGalaxyBitmapInput').FetchGalaxyBitmapInput,
+      ) => makeFakeBitmap(),
     );
     const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
 
@@ -383,7 +416,7 @@ describe('createHiResFamousSubsystem', () => {
     // Spread them so each picks up a unique row index.
     cloud.positions[1 * 3 + 1] = 0.001;
     cloud.positions[2 * 3 + 1] = 0.002;
-    const clouds = new Map([[Source.Famous, cloud]]);
+    const clouds = new Map([[Source.FamousGalaxy, cloud]]);
     const meta = makeFamousMeta(3);
     sys.runFrame(makeInput(clouds, camDistFor(230), meta));
 
@@ -399,7 +432,11 @@ describe('createHiResFamousSubsystem', () => {
 
   it('destroy clears the texture evict handler subscription', () => {
     const device = makeFakeDevice();
-    const texture = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
+    const texture = createHiResFamousTexture({
+      device,
+      layerSide: LAYER_SIDE,
+      layerCount: LAYER_COUNT,
+    });
     const setEvictHandlerSpy = vi.spyOn(texture, 'setEvictHandler');
     const sys = createHiResFamousSubsystem({ texture, requestRender: () => {} });
     // Constructor wires the handler.
@@ -413,11 +450,15 @@ describe('createHiResFamousSubsystem', () => {
 
   it('lastOutput mirrors the most recent runFrame return', () => {
     const device = makeFakeDevice();
-    const texture = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
+    const texture = createHiResFamousTexture({
+      device,
+      layerSide: LAYER_SIDE,
+      layerCount: LAYER_COUNT,
+    });
     const fetcher = vi.fn(async () => makeFakeBitmap());
     const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
     expect(sys.lastOutput.byFamousIdx.size).toBe(0);
-    const clouds = new Map([[Source.Famous, makeFamousCloud(1)]]);
+    const clouds = new Map([[Source.FamousGalaxy, makeFamousCloud(1)]]);
     const out = sys.runFrame(makeInput(clouds, camDistFor(230), makeFamousMeta(1)));
     expect(sys.lastOutput).toBe(out);
     expect(sys.lastOutput.byFamousIdx.size).toBe(1);

@@ -118,7 +118,7 @@ import type { SourceType } from '../../@types/data/SourceType';
  * reason about what each toggle adds in size.
  */
 const TOGGLEABLE_SOURCES: readonly SourceType[] = [
-  Source.Famous,
+  Source.FamousGalaxy,
   Source.TwoMRS,
   Source.SDSS,
   Source.Glade,

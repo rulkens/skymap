@@ -6,42 +6,65 @@ import {
   HI_RES_LAYER_COUNT,
   HI_RES_LAYER_SIDE_BY_TIER,
 } from '../../src/data/sources';
+import { STRUCTURE_CATEGORIES } from '../../src/data/structureCategories';
 import { ALL_VISIBLE_MASK, maskHas, maskWith, maskWithout } from '../../src/utils/sourceMask';
 
-describe('Source.Famous', () => {
+describe('Source.FamousGalaxy', () => {
   it('has integer value 4 (next free slot after Glade=3)', () => {
-    expect(Source.Famous).toBe(4);
+    expect(Source.FamousGalaxy).toBe(4);
   });
 
   it('appears in SURVEY_SOURCES', () => {
-    expect(SURVEY_SOURCES).toContain(Source.Famous);
+    expect(SURVEY_SOURCES).toContain(Source.FamousGalaxy);
   });
 
   it('is included in ALL_VISIBLE_MASK', () => {
-    expect(maskHas(ALL_VISIBLE_MASK, Source.Famous)).toBe(true);
+    expect(maskHas(ALL_VISIBLE_MASK, Source.FamousGalaxy)).toBe(true);
   });
 
   it('has a non-empty display label', () => {
-    expect(SOURCE_REGISTRY[Source.Famous].label.length).toBeGreaterThan(0);
+    expect(SOURCE_REGISTRY[Source.FamousGalaxy].label.length).toBeGreaterThan(0);
   });
 
   it('is treated as all-sky (cherry-picked entries from anywhere)', () => {
-    expect(SOURCE_REGISTRY[Source.Famous].allSky).toBe(true);
+    expect(SOURCE_REGISTRY[Source.FamousGalaxy].allSky).toBe(true);
   });
 
   it('has a sensible default max-distance for camera framing', () => {
     // Famous nearby galaxies span M31 (0.78 Mpc) to NGC 4889 (~94 Mpc);
     // pad to 200 Mpc so the camera frames the whole catalog comfortably.
-    expect(SOURCE_REGISTRY[Source.Famous].maxDistMpc).toBeGreaterThanOrEqual(200);
+    expect(SOURCE_REGISTRY[Source.FamousGalaxy].maxDistMpc).toBeGreaterThanOrEqual(200);
   });
 
   it('exposes the SDSS-like band layout (curated metadata uses optical bands)', () => {
     // Curated entries don't carry photometry; the band layout is cosmetic
     // — InfoCard uses it to label colour rows. We mirror SDSS so the
     // existing FullCard markup renders cleanly without a new branch.
-    const entry = SOURCE_REGISTRY[Source.Famous];
+    const entry = SOURCE_REGISTRY[Source.FamousGalaxy];
     expect(entry.type).toBe('survey');
     if (entry.type === 'survey') expect(entry.bandLabels.g).toBeTruthy();
+  });
+});
+
+describe('SOURCE_REGISTRY ids', () => {
+  const ids = Object.values(SOURCE_REGISTRY).map((e) => e.id);
+
+  it('every entry carries a non-empty id', () => {
+    expect(ids.every((id) => id.length > 0)).toBe(true);
+  });
+
+  it('ids are unique across the registry', () => {
+    // The id is the single home for each source's readable key — domain
+    // types (StructureCategory, visibility records, volume handles) derive
+    // from it, so a collision would silently merge two sources downstream.
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('STRUCTURE_CATEGORIES is exactly the four structure ids', () => {
+    // STRUCTURE_CATEGORIES derives from the registry's type:'structure' rows,
+    // so this pins the registry's structure set — accidentally dropping or
+    // renaming a structure source (or mistyping an id) trips this guard.
+    expect([...STRUCTURE_CATEGORIES].sort()).toEqual(['cluster', 'group', 'supercluster', 'void']);
   });
 });
 

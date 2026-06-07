@@ -112,7 +112,7 @@ export function niceRound(x: number): number {
  *
  * The optional `famousMeta` argument is the sidecar loaded at engine startup
  * by the `famousMeta` AssetSlot (`famousMetaFetcher`).  It is only consulted
- * when `source === Source.Famous`, so passing it for SDSS / 2MRS / GLADE rows
+ * when `source === Source.FamousGalaxy`, so passing it for SDSS / 2MRS / GLADE rows
  * is harmless.  If the sidecar hasn't arrived yet (fetch still in flight when
  * the user first hovers a famous galaxy), the arg will be empty / undefined
  * and we silently omit the `famous` block — the InfoCard falls back to its
@@ -245,7 +245,7 @@ export function buildGalaxyInfo(
   // the catalogue link, the curated thumbnail, and the famous block below all
   // key off the same entry.  Undefined for non-famous rows or before the
   // sidecar resolves (the InfoCard then renders the generic survey layout).
-  const famousEntry = source === Source.Famous && famousMeta ? famousMeta[idx] : undefined;
+  const famousEntry = source === Source.FamousGalaxy && famousMeta ? famousMeta[idx] : undefined;
   let catalogUrl: string | null;
   if (isSdss && objID > 0n) {
     catalogUrl = sdssExplorerUrl(objID);
@@ -495,7 +495,7 @@ export function buildGalaxyInfo(
       provenance,
     },
 
-    // Famous enrichment — present only for Source.Famous rows.  `undefined`
+    // Famous enrichment — present only for Source.FamousGalaxy rows.  `undefined`
     // for all survey rows so the InfoCard's `info.famous &&` guard works
     // without an explicit `?? null` at each consumer.
     famous,
