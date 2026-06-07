@@ -142,19 +142,19 @@ object. The subsystem inner loop passes `cloudSource` and `i`. The famous-WebP
 override site (`{ ...emitted, procFadeOut: ... }`) already spreads `emitted`, so
 the new fields flow through unchanged.
 
-- [ ] Add a test `emits the (source, localIdx) identity for each instance`:
+- [x] Add a test `emits the (source, localIdx) identity for each instance`:
   build a 4-row `makeDenseCloud` under `Source.SDSS` with `decimationFactor: 1`,
   run one frame, and assert every emitted instance has `sourceCode === Source.SDSS`
   and that the set of `localIdx` values equals `{0,1,2,3}`. (Note: the back-to-front
   sort reorders instances, so assert on the set, not positional order.)
-- [ ] Run it (`npm test -- proceduralDiskSubsystem`) — fails (fields absent).
-- [ ] Extend `maybeEmitProceduralDisk` + the call site + the type.
-- [ ] Update the existing `fakeProceduralInstance` factory in
+- [x] Run it (`npm test -- proceduralDiskSubsystem`) — fails (fields absent).
+- [x] Extend `maybeEmitProceduralDisk` + the call site + the type.
+- [x] Update the existing `fakeProceduralInstance` factory in
   `tests/services/gpu/renderers/proceduralDiskRenderer.test.ts` to include the two
   new fields (so its `ProceduralDiskInstance` literal still type-checks).
-- [ ] `npm test -- proceduralDiskSubsystem` → new + existing tests pass.
-- [ ] `npm run typecheck` clean.
-- [ ] Commit.
+- [x] `npm test -- proceduralDiskSubsystem` → new + existing tests pass.
+- [x] `npm run typecheck` clean.
+- [x] Commit.
 
 ---
 
@@ -183,23 +183,23 @@ the same `packed` bytes into it inside `draw`, and records the instance count.
 `pickDisks` (Task 4) draws from this owned buffer. Keep it byte-identical to the
 visual buffer so the shared vertex stage reads the same data.
 
-- [ ] Add a test `pack writes the packed pick id into slot 6 as u32 bits`:
+- [x] Add a test `pack writes the packed pick id into slot 6 as u32 bits`:
   construct the renderer with the stub device, draw two instances with distinct
   `sourceCode`/`localIdx` (e.g. `{sourceCode: 1, localIdx: 7}` and
   `{sourceCode: 3, localIdx: 1_000_000}`), grab the instance `writeBuffer` payload,
   reinterpret it as `Uint32Array` (via `new Uint32Array(payload.buffer)`), and
   assert `u32[6] === packSelection(1, 7)` and `u32[16 + 6] === packSelection(3, 1_000_000)`.
   Import `packSelection` from `src/data/selectionEncoding`.
-- [ ] Note in the test that `1_000_000` proves the float-vs-bits distinction
+- [x] Note in the test that `1_000_000` proves the float-vs-bits distinction
   matters (`1_000_000` IS f32-representable but a value like `0x07ffffff` would
   not round-trip if stored as a float — keep the assertion on the exact bits).
-- [ ] Run it — fails (slot 6 is zero).
-- [ ] Implement the `Uint32Array`-view pack + the owned pick instance buffer.
-- [ ] Keep the existing "slots 12..15 are zero pad" test green (slot 6 is no
+- [x] Run it — fails (slot 6 is zero).
+- [x] Implement the `Uint32Array`-view pack + the owned pick instance buffer.
+- [x] Keep the existing "slots 12..15 are zero pad" test green (slot 6 is no
   longer asserted-zero there; if that test asserts slot 6 == 0, update it to the
   new packed expectation rather than deleting the assertion).
-- [ ] `npm test -- proceduralDiskRenderer` → green.
-- [ ] Commit.
+- [x] `npm test -- proceduralDiskRenderer` → green.
+- [x] Commit.
 
 ---
 
@@ -243,12 +243,12 @@ pick edge is the disk edge), then writes the offset packed id:
 - Declare NO bindings (the fragment reads only `VsOut` fields) — same rationale as
   the existing `proceduralDisks/fragment.wesl` header.
 
-- [ ] Add the three shader edits / file.
-- [ ] `npm run build` → `tsc --noEmit` + vite build succeed (the wesl-plugin
+- [x] Add the three shader edits / file.
+- [x] `npm run build` → `tsc --noEmit` + vite build succeed (the wesl-plugin
   links `pickFragment.wesl`; a parse error or unresolved `package::` import fails
   here). This is the acceptance gate for the task — there is no runtime test for
   shader source.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -313,20 +313,20 @@ fragment from the new `pickFragment.wesl`):
 **Test contract** (mirror the type-level style of `pickRenderer.poi.test.ts`,
 which can't stand up a live `GPUDevice`):
 
-- [ ] Add a test asserting `createPickRenderer`'s 8th positional
+- [x] Add a test asserting `createPickRenderer`'s 8th positional
   (`proceduralDiskRenderer`, index 7) exists and is assignable from `undefined`
   (optional), in the same `Parameters<typeof createPickRenderer>` style as the
   existing POI test. This pins the append-not-reorder contract.
-- [ ] Add a renderer-level unit test (stub-device style from
+- [x] Add a renderer-level unit test (stub-device style from
   `proceduralDiskRenderer.test.ts`): after a `draw` with N instances, calling
   `pickDisks(stubPass)` issues `stubPass.draw` with vertex count 6 and instance
   count N; and calling `pickDisks` on a fresh renderer (no prior `draw`) is a
   no-op (no `setPipeline`/`draw`).
-- [ ] Run the new tests — fail.
-- [ ] Implement the pipeline + method + wiring + type field.
-- [ ] `npm test -- proceduralDiskRenderer pickRenderer` and `npm run typecheck`
+- [x] Run the new tests — fail.
+- [x] Implement the pipeline + method + wiring + type field.
+- [x] `npm test -- proceduralDiskRenderer pickRenderer` and `npm run typecheck`
   → green. `npm run build` → links.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -387,19 +387,19 @@ floor and resolved disks are picked by the procedural pass.
 
 **Tests:**
 
-- [ ] Search `tests/` for any assertion referencing `isDiskHandoff`,
+- [x] Search `tests/` for any assertion referencing `isDiskHandoff`,
   `pickMajorBillboard`, `pickMinorBillboard`, or the `2.25` forgiveness constant.
   If present, update those tests to the plain-dot contract; if absent, note that
   point-pick shape is verified visually (no unit test stands up the GPU pick
   pass). The acceptance is `npm run build` (shader links) + `npm test` green.
-- [ ] `npm run build` → links (the removed varyings must be gone from BOTH the
+- [x] `npm run build` → links (the removed varyings must be gone from BOTH the
   vertex output and every fragment input, or the WGSL compiler errors).
-- [ ] `npm test` → full suite green.
+- [x] `npm test` → full suite green.
 - [ ] Final behaviour is visual: with the pick-debug overlay
   (`debug.showPickBuffer`) on, the picked region for a resolved galaxy matches the
   disk-radius ring (`debug.showDiskRadiusRing`). Ask the user to confirm in the
   running dev server.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -411,14 +411,17 @@ The project bakes a simplicity review into every plan. The de-complecting claim 
 **"the point pass picks dots; the procedural pass picks disks"** — confirm the diff
 delivers it without introducing a new knot.
 
-- [ ] Run the `entanglement-radar` skill over the full diff of this branch.
-- [ ] Specifically verify: no shader branches on a galaxy's LOD regime in the pick
+- [x] Run the `entanglement-radar` skill over the full diff of this branch.
+- [x] Specifically verify: no shader branches on a galaxy's LOD regime in the pick
   path anymore; the packed-id slot choice (slot 6) is documented at both the pack
   site and the shader read; the procedural renderer's owned pick instance buffer is
   not a stale mirror of the factory's visual buffer (it is re-uploaded every frame
   from the same `packed` bytes, so there is no second source of truth).
-- [ ] Address any knot it names, or record why it's acceptable, in the review
-  output (no new file — report inline).
+- [x] Address any knot it names, or record why it's acceptable, in the review
+  output (no new file — report inline). Radar verdict: de-complecting holds (no
+  regime branches in the pick path; pick buffer is fresh-not-mirror; cached camera
+  is legitimate same-frame replay). One small finding — slot-6 pack site lacked a
+  shader cross-reference — fixed in 3c19576c.
 
 ---
 
