@@ -343,10 +343,13 @@ export const SOURCE_REGISTRY = {
     // wavelength to SDSS g among the empty slots) and Rmag into magR.
     bandLabels: { u: '—', g: 'B', r: 'R', i: '—', z: '—' },
     // B−R is the natural quasar colour: blue quasars sit near 0; red /
-    // dust-obscured AGN extend to ≳ 2. kPerZ is non-zero because the
-    // observed-frame band sweeps through the Lyα forest at high z, but
-    // kept modest until the bias-correction subsystem wires Milliquas in.
-    colourSpec: { slotA: 'g', slotB: 'r', rangeMin: 0.0, rangeMax: 2.0, kPerZ: 0.5 },
+    // dust-obscured AGN extend to ≳ 2. kPerZ is 0: the K-correction is
+    // expressed in ramp-position units over a span of only 2.0, but
+    // Milliquas redshifts run z ≈ 1–7, so any non-zero coefficient
+    // subtracts most of the range and clamps the whole catalog to the
+    // blue floor. The correction stays off until a quasar-specific
+    // bias-correction subsystem wires Milliquas in with its own QLF.
+    colourSpec: { slotA: 'g', slotB: 'r', rangeMin: 0.0, rangeMax: 2.0, kPerZ: 0.0 },
     // Milliquas's quasar-completeness limit varies wildly by parent
     // survey (SDSS DR16Q reaches r ~ 22, DESI EDR ~ 23, bright optical/
     // X-ray-selected subsamples cut at ~18). We use a permissive limit
