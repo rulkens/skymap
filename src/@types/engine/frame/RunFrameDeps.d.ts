@@ -17,6 +17,7 @@ import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer'
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { FpsCounter } from '../subsystems/FpsCounter';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
+import type { CameraDriver } from '../camera/CameraDriver';
 
 export type RunFrameDeps = {
   /** createEngine arg — for resize + viewport reads. */
@@ -58,4 +59,12 @@ export type RunFrameDeps = {
    * `renderFrame` via `RenderFrameInput.timingService`.
    */
   timingService: GpuTimingService;
+  /**
+   * Camera-control drivers, built once at loop start. The resolver
+   * (`runCameraDrivers`) picks the single highest-priority active winner
+   * each frame and is also the source of truth for "is the camera
+   * animating" (render-on-demand gate). Order in this array is not
+   * significant — `priority` decides.
+   */
+  readonly drivers: readonly CameraDriver[];
 };

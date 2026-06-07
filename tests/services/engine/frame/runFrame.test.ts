@@ -157,6 +157,7 @@ function makeDeps(opts: {
     milkyWayITimeEpochMs: 0,
     // Disabled stub matches production's "no `?gpuTimings`" path.
     timingService: createDisabledGpuTimingService(),
+    drivers: [],
   };
 }
 
