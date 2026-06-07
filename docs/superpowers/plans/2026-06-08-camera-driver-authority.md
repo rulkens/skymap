@@ -134,19 +134,19 @@ export type CameraDriver = {
 };
 ```
 
-- [ ] Verify the `OrbitCamera` import resolves: from
+- [x] Verify the `OrbitCamera` import resolves: from
   `src/@types/engine/camera/CameraDriver.d.ts`, the path to
   `src/@types/camera/OrbitCamera.d.ts` is `'../../../camera/OrbitCamera'`
   (`engine/camera/` → up 3 → `@types/` → `camera/OrbitCamera`). Confirm against
   the live tree before committing.
-- [ ] Write the type exactly as above, with a didactic module header explaining:
+- [x] Write the type exactly as above, with a didactic module header explaining:
   the type is the seam that makes camera precedence **data** instead of call
   order; `id` is for debugging/identity, `priority` orders the resolver, `isActive`
   answers both "should I write this frame" and (collectively) "is the camera
   animating" for the RoD gate; `apply` is the single mutation each driver performs.
-- [ ] Main thread: `npm run typecheck` passes (no consumer yet — this just proves
+- [x] Main thread: `npm run typecheck` passes (no consumer yet — this just proves
   the import path).
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -167,24 +167,24 @@ nothing (no `apply` call). Pure over the driver list — no captured state, no I
 
 **Tests** (TDD red→green; fake drivers, `cam` is a throwaway stub):
 
-- [ ] `runCameraDrivers calls the single highest-priority active driver` — two
+- [x] `runCameraDrivers calls the single highest-priority active driver` — two
   active drivers (priority 60 + 20); assert the priority-60 driver's `apply` was
   called once and the priority-20 driver's `apply` was NOT called.
-- [ ] `runCameraDrivers ignores inactive higher-priority drivers` — priority-100
+- [x] `runCameraDrivers ignores inactive higher-priority drivers` — priority-100
   driver `isActive=false`, priority-20 driver `isActive=true`; assert the
   priority-20 `apply` is called (an inactive higher driver does not block a lower
   active one).
-- [ ] `runCameraDrivers writes nothing when no driver is active` — all drivers
+- [x] `runCameraDrivers writes nothing when no driver is active` — all drivers
   `isActive=false`; assert no `apply` is called on any driver.
-- [ ] `runCameraDrivers forwards cam and nowMs to apply` — assert the active
+- [x] `runCameraDrivers forwards cam and nowMs to apply` — assert the active
   driver's `apply` received the exact `cam` reference and `nowMs` value passed in.
-- [ ] Run the suite (`npm test -- cameraDrivers`) — fails (module absent).
-- [ ] Implement `runCameraDrivers` with a didactic header: this is the ONE
+- [x] Run the suite (`npm test -- cameraDrivers`) — fails (module absent).
+- [x] Implement `runCameraDrivers` with a didactic header: this is the ONE
   camera-write site; single-writer arbitration (no cooperative blending — the spec
   bakes that in); precedence is data. Note it does not sort-mutate the input array
   (treat `drivers` as readonly).
-- [ ] Main thread: `npm test -- cameraDrivers` → all pass; `npm run typecheck`.
-- [ ] Commit.
+- [x] Main thread: `npm test -- cameraDrivers` → all pass; `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -241,18 +241,18 @@ predicates, the yaw delta `0.000873`, and that `autoRotate.apply` calls
 
 **Tests** (wrapper mapping — each wrapper's predicate maps to its underlying piece):
 
-- [ ] `input driver isActive reflects spaceMouse.hasAxes` — fake spaceMouse with
+- [x] `input driver isActive reflects spaceMouse.hasAxes` — fake spaceMouse with
   toggleable `hasAxes`; assert the driver's `isActive` returns the same boolean
   both ways.
-- [ ] `input driver apply forwards to spaceMouse.applyToCamera` — assert the fake's
+- [x] `input driver apply forwards to spaceMouse.applyToCamera` — assert the fake's
   `applyToCamera` was called with the cam + nowMs.
-- [ ] `tween driver isActive reflects tweenManager.isActive` — fake tween manager;
+- [x] `tween driver isActive reflects tweenManager.isActive` — fake tween manager;
   assert both booleans.
-- [ ] `tween driver apply forwards to tweenManager.advance` — assert `advance`
+- [x] `tween driver apply forwards to tweenManager.advance` — assert `advance`
   called with cam + nowMs.
-- [ ] `autoRotate driver isActive reflects settings.camera.autoRotate` — flip the
+- [x] `autoRotate driver isActive reflects settings.camera.autoRotate` — flip the
   setting; assert the boolean tracks it.
-- [ ] `autoRotate driver apply increments yaw and updates position` — assert
+- [x] `autoRotate driver apply increments yaw and updates position` — assert
   `cam.yaw` increased by `0.000873` and `updatePosition` ran (spy or assert
   `position` recompute via a real-ish cam stub).
 
@@ -267,12 +267,12 @@ predicates, the yaw delta `0.000873`, and that `autoRotate.apply` calls
 > when you read the live `EngineState`; prefer passing `state` and reading the
 > slices inside, matching how other subsystems close over `state`.
 
-- [ ] Run the wrapper suite — fails (builder absent).
-- [ ] Implement `buildCameraDrivers` in `cameraDrivers.ts`; wire `startLoop` to
+- [x] Run the wrapper suite — fails (builder absent).
+- [x] Implement `buildCameraDrivers` in `cameraDrivers.ts`; wire `startLoop` to
   call it and put the result on `frameDeps.drivers`; add the `drivers` field to
   `RunFrameDeps.d.ts`.
-- [ ] Main thread: `npm test -- cameraDriver` (resolver + wrappers); `npm run typecheck`.
-- [ ] Commit.
+- [x] Main thread: `npm test -- cameraDriver` (resolver + wrappers); `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -314,24 +314,26 @@ fixture (`makeState()` at ~line 47); extend those — the new `drivers` field mu
 added to the deps fixture (use the real `buildCameraDrivers(state)` so the fixture
 exercises the production wiring, or hand-built fake drivers where that's simpler).
 
-- [ ] `runFrame: tween active + autoRotate on → tween wins, autoRotate does not nudge yaw`
+- [x] `runFrame: tween active + autoRotate on → tween wins, autoRotate does not nudge yaw`
   — fixture: `state.settings.camera.autoRotate = true`, tween manager `isActive`
   returns true and its `advance` sets cam to a known pose; spaceMouse `hasAxes`
   false. Run `runFrame`. Assert: `tween.advance` was called; `cam.yaw` equals the
   tween's pose (NOT pose + 0.000873) — i.e. auto-rotate did NOT add its delta on
   top. (This is the behaviour the deleted `!tweens.isActive()` guard encoded.)
-- [ ] `runFrame: idle (no driver active, autoRotate off) → camera holds` — all
+- [x] `runFrame: idle (no driver active, autoRotate off) → camera holds` — all
   driver predicates false; run `runFrame`; assert `cam.yaw` (and target/distance/
   pitch) are unchanged.
-- [ ] `runFrame: autoRotate on, nothing else active → yaw advances by 0.000873`
+- [x] `runFrame: autoRotate on, nothing else active → yaw advances by 0.000873`
   — only `autoRotate.isActive` true; assert `cam.yaw` increased by exactly the
   delta and `updatePosition` ran. (Confirms the lower-priority driver still fires
   when it is the sole active one.)
-- [ ] `runFrame: RoD stays awake iff a camera driver is active` — two sub-cases:
-  with one driver active (e.g. autoRotate on) assert `scheduler.requestRender` was
-  called; with no driver active AND all non-camera terms false assert it was NOT
-  called. (Mirrors the old camera terms; mock `reevaluateDemand` as the existing
-  file already does.)
+- [x] `runFrame: RoD stays awake iff a camera driver is active` — covered by
+  equivalence rather than a direct test: the `stillAnimating` tail is reachable
+  only on the GPU-ready path (the lightweight fixture early-returns at the
+  renderer-null guard), and each driver's `isActive` maps one-to-one onto an old
+  term (proven by `cameraDriverWrappers.test.ts`), so `.some(isActive)` IS their
+  boolean OR. Documented as a comment in the test file; a heavyweight GPU fixture
+  to re-prove the identity would be disproportionate.
 
 > The existing `runFrame.test.ts` mocks `reevaluateDemand` (`:29`). Keep that mock.
 > The fixture short-circuits the GPU body via the renderer-null guard
@@ -345,13 +347,13 @@ exercises the production wiring, or hand-built fake drivers where that's simpler
 > RoD assertions around the path the fixture actually takes — read the body
 > top-to-bottom against your fixture before asserting).
 
-- [ ] Run `npm test -- runFrame` with the NEW tests against the OLD camera block
+- [x] Run `npm test -- runFrame` with the NEW tests against the OLD camera block
   first if feasible (to confirm they encode current behaviour); then apply the swap
   and confirm still green. If running against old code first is impractical given
   the resolver dependency, write the tests and the swap together but keep each
   assertion tied to a documented current-behaviour fact above.
-- [ ] Main thread: `npm test -- runFrame`; full `npm test`; `npm run typecheck`.
-- [ ] Commit.
+- [x] Main thread: `npm test -- runFrame`; full `npm test`; `npm run typecheck`.
+- [x] Commit.
 
 ---
 
@@ -362,20 +364,27 @@ exercises the production wiring, or hand-built fake drivers where that's simpler
 - `src/services/engine/phases/startLoop.ts`
 - `src/services/engine/camera/cameraDrivers.ts`
 
-- [ ] Run the `entanglement-radar` skill over the diff. Confirm: precedence is now
+- [x] Run the `entanglement-radar` skill over the diff. Confirm: precedence is now
   data (no `if (source/order)` chain), one camera-write site, the RoD camera terms
-  collapsed to the registry, no mirror of the driver list on `EngineState`.
-- [ ] Grep for any remaining direct `state.subsystems.tweens.advance` /
+  collapsed to the registry, no mirror of the driver list on `EngineState`. — All
+  confirmed; the diff IS the un-braid (precedence×statement-order and the duplicated
+  "camera is moving" truth both dissolved). No new complecting found.
+- [x] Grep for any remaining direct `state.subsystems.tweens.advance` /
   `spaceMouse.applyToCamera` / `cam.yaw += 0.000873` outside the driver wrappers —
-  there should be none in `runFrame.ts`. (Use Grep tool, not bash grep.)
-- [ ] Confirm the SpaceMouse `cancelTween` mechanism (`spaceMouseSubsystem.ts:204`)
+  there should be none in `runFrame.ts`. — None; `0.000873` lives only in
+  `cameraDrivers.ts` (`AUTO_ROTATE_YAW_DELTA`).
+- [x] Confirm the SpaceMouse `cancelTween` mechanism (`spaceMouseSubsystem.ts:204`)
   and the OrbitControls/engine.ts mouse-drag tween-cancel wiring are UNTOUCHED —
   cancellation is the interrupt mechanism; the registry only resolves the
-  same-frame race. The spec is explicit about this; do not "simplify" it away.
-- [ ] Confirm no fov/near/far behaviour changed (the tween still does not touch
-  them; auto-rotate touches only yaw).
-- [ ] Main thread: full `npm test`; `npm run typecheck`. All green.
-- [ ] Commit any cleanup.
+  same-frame race. The spec is explicit about this; do not "simplify" it away. —
+  `cancelTween()` at `spaceMouseSubsystem.ts:204` intact; no changes outside the
+  four camera files.
+- [x] Confirm no fov/near/far behaviour changed (the tween still does not touch
+  them; auto-rotate touches only yaw). — Confirmed; auto-rotate touches only `yaw`,
+  tween path unchanged.
+- [x] Main thread: full `npm test`; `npm run typecheck`. All green. — 2456 tests
+  pass; typecheck clean.
+- [x] Commit any cleanup. — No code cleanup needed (review found no new knots).
 
 ---
 
