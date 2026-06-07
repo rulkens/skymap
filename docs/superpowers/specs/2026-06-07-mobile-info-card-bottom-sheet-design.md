@@ -25,7 +25,7 @@ captured as a gated fast-follow (see the last section).
 - The scale bar no longer sits under the card.
 - **Desktop (≥ 768 px) is byte-for-byte unchanged** — same top-right card, same
   panels, same behaviour.
-- Reuse the existing `GalaxyDetailCard` / `PoiDetailCard` bodies; don't fork a
+- Reuse the existing `GalaxyDetailCard` / `StructureDetailCard` bodies; don't fork a
   parallel mobile card with its own drifting content.
 
 ## Non-goals
@@ -79,7 +79,7 @@ adds no new state — only a reset. (If we ever want *zero* JS, the fallback is 
 ### Hover on mobile
 
 Touch has no hover, so on mobile the sheet renders **only `selected`**. The
-compact hover preview (`CompactCard` / `CompactPoiCard`) and the stacked-pair
+compact hover preview (`CompactCard` / `CompactStructureCard`) and the stacked-pair
 layout are desktop-only and are suppressed below the breakpoint. `InfoCard`
 already returns null when nothing is selected; the mobile branch simply ignores
 `hovered`.
@@ -97,7 +97,7 @@ height. No new state, no JS measurement.
 
 - **`InfoCard.tsx`** — add a mobile branch. Above the breakpoint: today's
   stack, unchanged. Below it: a `MobileSheet` wrapper around the single
-  `GalaxyDetailCard` / `PoiDetailCard` for `selected`, with `hovered` ignored.
+  `GalaxyDetailCard` / `StructureDetailCard` for `selected`, with `hovered` ignored.
   Layout switches via CSS media queries wherever possible; JS reads the
   breakpoint (via `matchMedia`) only for what CSS can't do — choosing the
   mobile render branch and the scroll-reset. The plan decides whether that read
@@ -124,7 +124,7 @@ No changes to `GalaxyInfo`, `galaxyInfoBuilder`, the engine, or any data path.
   badge, the single distance line) is present and that "More details" reference
   rows are in the DOM (the scroll-snap reveal is CSS — we assert content
   presence, not pixel position, matching the existing
-  `InfoCard.poiHover.test.ts` philosophy of testing rendered text, not class
+  `InfoCard.structureHover.test.ts` philosophy of testing rendered text, not class
   fragments).
 - **Reset effect:** changing the `selected` target calls `scrollTo` on the
   container ref (spy).
