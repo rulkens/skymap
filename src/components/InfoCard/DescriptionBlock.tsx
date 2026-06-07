@@ -3,12 +3,12 @@
  * toggle, stacked as a column so the toggle sits underneath the text rather
  * than floating to its right.
  *
- * Shared by GalaxyDetailCard (the famous-galaxy blurb) and PoiDetailCard (the
- * cluster / supercluster / void / group blurb). Both cards used to inline this
- * markup, but each chose a different wrapper — the galaxy card stacked it in a
- * column while the POI card borrowed the label/value CardRow shape, so the
- * "show more" affordance landed in a different place in each. Extracting it
- * here means the two cards read identically.
+ * Shared by GalaxyDetailCard (the famous-galaxy blurb) and StructureDetailCard
+ * (the cluster / supercluster / void / group blurb). Both cards used to inline
+ * this markup, but each chose a different wrapper — the galaxy card stacked it
+ * in a column while the structure card borrowed the label/value CardRow shape,
+ * so the "show more" affordance landed in a different place in each. Extracting
+ * it here means the two cards read identically.
  *
  * Owns its own collapse state: each card mounts one block per description and
  * the expanded/collapsed flag is local UI, never lifted. The 5-line clamp and

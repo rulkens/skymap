@@ -56,14 +56,14 @@
 }
 
 /*
- * POI variant — short content (name + category + distance + radius) would
+ * Structure variant — short content (name + category + distance + radius) would
  * otherwise collapse the card to its 240 px min-width, making it visually
  * narrower than the galaxy card which naturally fills to ~320 px from its
  * cosmology block.  Pinning min-width to --card-max-width keeps the chrome
- * width identical across galaxy↔POI swaps, so the user reads the swap as
+ * width identical across galaxy↔structure swaps, so the user reads the swap as
  * "different content, same panel" instead of "the panel shrank".
  */
-.poi {
+.structure {
   min-width: var(--card-max-width);
 }
 

@@ -1,5 +1,5 @@
 /**
- * PoiDetailCard — rich panel for a focused cluster / supercluster / void.
+ * StructureDetailCard — rich panel for a focused cluster / supercluster / void.
  * Shows name, category, distance from observer, physical radius, and — for
  * clusters carrying one — the Abell/ACO designation.
  */
@@ -16,42 +16,46 @@ import { InfoTip } from '../InfoTip/InfoTip';
 import { TIPS } from './tooltips';
 import styles from './DetailCard.module.css';
 
-export type PoiDetailCardProps = {
-  poi: StructureRecord;
+export type StructureDetailCardProps = {
+  structure: StructureRecord;
   pinned?: boolean;
   /**
    * Catalogued galaxies inside this structure's membership sphere at the
    * current tier + survey visibility, or null/undefined when not countable
-   * (famous-galaxy POI, or catalogs not loaded yet) — in which case the
+   * (famous-galaxy structure, or catalogs not loaded yet) — in which case the
    * row is omitted rather than flashing a misleading "0".
    */
   memberCount?: number | null;
-  onFocus?: (poi: StructureRecord) => void;
+  onFocus?: (structure: StructureRecord) => void;
   onClose?: () => void;
 };
 
-export function PoiDetailCard({
-  poi,
+export function StructureDetailCard({
+  structure,
   pinned = false,
   memberCount,
   onFocus,
   onClose,
-}: PoiDetailCardProps): ReactNode {
-  const distanceMpc = Math.hypot(poi.worldPos[0], poi.worldPos[1], poi.worldPos[2]);
-  const outerClass = `${styles.infoCardFull} ${styles.poi}${pinned ? ` ${styles.pinned}` : ''}`;
+}: StructureDetailCardProps): ReactNode {
+  const distanceMpc = Math.hypot(
+    structure.worldPos[0],
+    structure.worldPos[1],
+    structure.worldPos[2],
+  );
+  const outerClass = `${styles.infoCardFull} ${styles.structure}${pinned ? ` ${styles.pinned}` : ''}`;
 
   return (
     <div className={outerClass} role="status" aria-live="polite">
       <CardHeader
-        eyebrow="POI"
-        onFocus={pinned && onFocus ? () => onFocus(poi) : undefined}
-        focusAriaLabel={`Focus camera on ${poi.name}`}
+        eyebrow="Structure"
+        onFocus={pinned && onFocus ? () => onFocus(structure) : undefined}
+        focusAriaLabel={`Focus camera on ${structure.name}`}
         onClose={pinned ? onClose : undefined}
       />
 
       <div className={styles.headlineRow}>
-        <div className={styles.cardHeadline}>{poi.name}</div>
-        <span className={styles.sourceBadge}>{POI_CATEGORY_INFO[poi.category].label}</span>
+        <div className={styles.cardHeadline}>{structure.name}</div>
+        <span className={styles.sourceBadge}>{POI_CATEGORY_INFO[structure.category].label}</span>
       </div>
 
       <div className={styles.cardSection}>
@@ -61,7 +65,7 @@ export function PoiDetailCard({
         />
         <CardRow
           label={<InfoTip {...TIPS.structureRadius!}>Radius</InfoTip>}
-          value={formatDistance(poi.physicalRadiusMpc)}
+          value={formatDistance(structure.physicalRadiusMpc)}
         />
         {memberCount != null && (
           <CardRow
@@ -69,17 +73,17 @@ export function PoiDetailCard({
             value={memberCount.toLocaleString()}
           />
         )}
-        {poi.category === 'cluster' && poi.abell !== undefined && (
+        {structure.category === 'cluster' && structure.abell !== undefined && (
           <CardRow
             label={<InfoTip {...TIPS.abell!}>Abell</InfoTip>}
-            value={formatAbellDesignation(poi.abell)}
+            value={formatAbellDesignation(structure.abell)}
           />
         )}
-        {poi.description && (
+        {structure.description && (
           // Curated Wikipedia-lead blurb (featured anchors) or the build's
           // auto one-liner (bulk entries).  Shares DescriptionBlock with
           // GalaxyDetailCard so the show-more toggle sits in the same place.
-          <DescriptionBlock text={poi.description} />
+          <DescriptionBlock text={structure.description} />
         )}
       </div>
     </div>

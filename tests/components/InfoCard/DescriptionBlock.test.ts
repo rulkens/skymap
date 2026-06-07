@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 //
 // DescriptionBlock — the collapsible prose + show-more/less toggle shared by
-// GalaxyDetailCard and PoiDetailCard. Verifies the toggle round-trips the
+// GalaxyDetailCard and StructureDetailCard. Verifies the toggle round-trips the
 // collapse state and that the prose text is always rendered.
 //
 // jsdom env + @testing-library/react + createElement so the file stays .ts and

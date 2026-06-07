@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 //
-// CompactPoiCard — rendering tests for the POI hover preview card.
+// CompactStructureCard — rendering tests for the structure hover preview card.
 //
 // Mirrors the convention established by the other component tests in
 // this folder (jsdom env + @testing-library/react + createElement so
@@ -10,10 +10,10 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
-import { CompactPoiCard } from '../../../src/components/InfoCard/CompactPoiCard';
+import { CompactStructureCard } from '../../../src/components/InfoCard/CompactStructureCard';
 import type { StructureRecord } from '../../../src/@types/engine/data/StructureRecord';
 
-// Fixture POI ~10 Mpc from origin so the distance formatter renders a
+// Fixture structure ~10 Mpc from origin so the distance formatter renders a
 // readable Mpc value (formatDistance("Mpc / Mly") shape).  physicalRadiusMpc
 // is 2.2 — a real-world Virgo-ish radius.
 const virgo: StructureRecord = {
@@ -25,9 +25,9 @@ const virgo: StructureRecord = {
   physicalRadiusMpc: 2.2,
 };
 
-describe('CompactPoiCard', () => {
-  it('renders the POI name and category label', () => {
-    render(createElement(CompactPoiCard, { poi: virgo }));
+describe('CompactStructureCard', () => {
+  it('renders the structure name and category label', () => {
+    render(createElement(CompactStructureCard, { structure: virgo }));
     expect(screen.getByText('Virgo Cluster')).toBeInTheDocument();
     // Category badge — exact-match "Cluster" with title-case from the
     // inlined poiCategoryLabel helper.  Exact match (not /cluster/i)
@@ -37,7 +37,7 @@ describe('CompactPoiCard', () => {
   });
 
   it('renders a distance row derived from |worldPos|', () => {
-    render(createElement(CompactPoiCard, { poi: virgo }));
+    render(createElement(CompactStructureCard, { structure: virgo }));
     // |[10, 0, 0]| = 10 Mpc.  formatDistance renders "10.0 Mpc / 32.6 Mly"
     // (formatScalar uses one decimal between 10 and 100); assert on the
     // "Mpc" unit token so the test survives a future tweak to the
@@ -46,7 +46,7 @@ describe('CompactPoiCard', () => {
   });
 
   it('renders the physical radius when present', () => {
-    render(createElement(CompactPoiCard, { poi: virgo }));
+    render(createElement(CompactStructureCard, { structure: virgo }));
     // formatDistance(2.2) → "2.20 Mpc / 7.18 Mly".  Match on the leading
     // "2.2" digits regardless of surrounding decimals so a future
     // formatScalar adjustment doesn't break the assertion.

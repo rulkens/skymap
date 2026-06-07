@@ -11,7 +11,7 @@
  * (`GalaxyInfo | StructureRecord`).  App.tsx merges POI and galaxy state
  * before handing them here — POI wins when both are present.  InfoCard then
  * dispatches via `isPoi` into typed sub-slots and picks the right detail-card
- * variant (`GalaxyDetailCard` vs `PoiDetailCard`).
+ * variant (`GalaxyDetailCard` vs `StructureDetailCard`).
  */
 
 import type { ReactNode } from 'react';
@@ -20,22 +20,22 @@ import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
 import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
 import { isPoi } from '../../services/engine/isPoi';
 import { GalaxyDetailCard } from './GalaxyDetailCard';
-import { PoiDetailCard } from './PoiDetailCard';
+import { StructureDetailCard } from './StructureDetailCard';
 import { CompactCard } from './CompactCard';
-import { CompactPoiCard } from './CompactPoiCard';
+import { CompactStructureCard } from './CompactStructureCard';
 import styles from './InfoCard.module.css';
 
 export type InfoCardProps = {
   /**
    * The point currently under the cursor, or null when the cursor is on empty
-   * sky.  Can be either a galaxy or a POI — InfoCard dispatches via `isPoi`
-   * to render the appropriate hover variant.
+   * sky.  Can be either a galaxy or a structure — InfoCard dispatches via
+   * `isPoi` to render the appropriate hover variant.
    */
   hovered: FocusableTarget | null;
   /**
    * The pinned/selected target, or null when nothing is pinned.  Same dispatch
    * as `hovered`.  When both `hovered` and `selected` are non-null and of the
-   * same kind (galaxy/galaxy or poi/poi), the stacked-pair layout applies;
+   * same kind (galaxy/galaxy or structure/structure), the stacked-pair layout applies;
    * when they're different kinds (e.g. galaxy pinned, POI hovered), both render
    * in their respective slots.
    */
@@ -43,7 +43,7 @@ export type InfoCardProps = {
   /**
    * Catalogued galaxy count for the pinned structure (cluster / supercluster
    * / void), or null/undefined when not applicable.  Forwarded to
-   * PoiDetailCard, which renders it as the "Galaxies" row.  Ignored for
+   * StructureDetailCard, which renders it as the "Galaxies" row.  Ignored for
    * galaxy selections (GalaxyDetailCard has no such row).
    */
   selectedMemberCount?: number | null;
@@ -74,30 +74,31 @@ export function InfoCard({
   // Dispatch via isPoi into typed sub-slots.  A StructureRecord is identified
   // by a top-level `category` field; GalaxyInfo carries category only at
   // `galaxyType.category`.  See isPoi.ts for the discriminant rationale.
-  const selectedPoi = selected && isPoi(selected) ? selected : null;
+  const selectedStructure = selected && isPoi(selected) ? selected : null;
   const selectedGalaxy = selected && !isPoi(selected) ? (selected as GalaxyInfo) : null;
-  const hoveredPoi = hovered && isPoi(hovered) ? hovered : null;
+  const hoveredStructure = hovered && isPoi(hovered) ? hovered : null;
   const hoveredGalaxy = hovered && !isPoi(hovered) ? (hovered as GalaxyInfo) : null;
 
-  // POI hover wins over galaxy hover when both are non-null (a transient
+  // Structure hover wins over galaxy hover when both are non-null (a transient
   // cross-render race; the engine's hover throttler normally clears the
-  // "other" sink).  POI hover is also suppressed when the SAME POI is
-  // already pinned — PoiDetailCard above already shows that content.
-  const showPoiHover = hoveredPoi != null && hoveredPoi.id !== selectedPoi?.id;
-  const showGalaxyHover = hoveredGalaxy != null && !showPoiHover;
+  // "other" sink).  Structure hover is also suppressed when the SAME structure
+  // is already pinned — StructureDetailCard above already shows that content.
+  const showStructureHover =
+    hoveredStructure != null && hoveredStructure.id !== selectedStructure?.id;
+  const showGalaxyHover = hoveredGalaxy != null && !showStructureHover;
 
-  if (selectedPoi) {
+  if (selectedStructure) {
     return (
       <div className={cx(styles.infoCardStack, 'infoCardStack')}>
-        <PoiDetailCard
-          poi={selectedPoi}
+        <StructureDetailCard
+          structure={selectedStructure}
           pinned
           memberCount={selectedMemberCount}
           onFocus={onFocus}
           onClose={onClose}
         />
         {showGalaxyHover && <CompactCard info={hoveredGalaxy!} />}
-        {showPoiHover && <CompactPoiCard poi={hoveredPoi!} />}
+        {showStructureHover && <CompactStructureCard structure={hoveredStructure!} />}
       </div>
     );
   }
@@ -122,7 +123,7 @@ export function InfoCard({
         />
       )}
       {isStacked && <CompactCard info={hoveredGalaxy!} />}
-      {showPoiHover && <CompactPoiCard poi={hoveredPoi!} />}
+      {showStructureHover && <CompactStructureCard structure={hoveredStructure!} />}
     </div>
   );
 }
