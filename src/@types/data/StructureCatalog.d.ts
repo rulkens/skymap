@@ -1,5 +1,5 @@
 /**
- * ClusterCatalog — the runtime decoded shape of a `.ccat` binary file.
+ * StructureCatalog — the runtime decoded shape of a `.ccat` binary file.
  *
  * Mirrors the SoA layout of `GalaxyCatalog`: separate typed arrays for each
  * field so the renderer can pass them straight to `device.queue.writeBuffer`
@@ -34,13 +34,13 @@
  */
 
 /** Cluster (0) vs. supercluster (1) marker; higher values reserved. */
-export type ClusterCategoryByte = 0 | 1;
+export type StructureCategoryByte = 0 | 1;
 
 /**
  * Cluster / supercluster catalog in renderer-ready layout — a struct of
  * arrays rather than an array of objects.  Parallel to `GalaxyCatalog`.
  */
-export type ClusterCatalog = {
+export type StructureCatalog = {
   /** Number of structures. All typed arrays derive their length from this. */
   readonly count: number;
 

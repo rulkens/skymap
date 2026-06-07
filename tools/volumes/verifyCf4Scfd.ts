@@ -19,14 +19,10 @@
  */
 import { readFileSync } from 'node:fs';
 import { decodeScalarField } from '../../src/data/scalarFieldFormat';
-import { parseClusterSeed } from '../parsers/parseClusterSeed';
+import { parseStructureSeed } from '../parsers/parseStructureSeed';
 import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
 import type { Vec3 } from '../../src/@types/math/Vec3';
-import {
-  eqToSg,
-  eqCartToRaDecDist,
-  voxelToEqCart,
-} from '../utils/math/coordinates';
+import { eqToSg, eqCartToRaDecDist, voxelToEqCart } from '../utils/math/coordinates';
 import { f16BitsToFloat } from '../utils/math/floatHalf';
 import { percentileOf } from '../utils/math/percentile';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
@@ -34,7 +30,7 @@ import { rawDataPath } from '../utils/io/rawDataRegistry';
 /**
  * Minimal shape needed by `sampleAtAnchor` — raHours/decDeg/distMpc for the
  * position conversion + names[0] for the display label.  Matches the fields
- * present on ClusterSeedEntry.
+ * present on StructureSeedEntry.
  */
 type NamedAnchor = {
   names: string[];
@@ -88,7 +84,7 @@ function main(): void {
   sorted.sort();
 
   // Load seed once; split by category for the three verification passes.
-  const allSeed = parseClusterSeed(readFileSync(rawDataPath('clusters.seed'), 'utf-8'));
+  const allSeed = parseStructureSeed(readFileSync(rawDataPath('structures.seed'), 'utf-8'));
   const CLUSTER_ENTRIES = allSeed.filter((e) => e.category === 'cluster');
   const SUPERCLUSTER_ENTRIES = allSeed.filter((e) => e.category === 'supercluster');
   const VOID_ENTRIES = allSeed.filter((e) => e.category === 'void');

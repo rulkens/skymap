@@ -36,7 +36,7 @@ import { nonCommentLines, slot } from './common.js';
 const MIN_LINE_LEN = 204;
 
 /**
- * A single parsed MCXC cluster row, carrying the fields the cluster-coverage
+ * A single parsed MCXC cluster row, carrying the fields the structure-coverage
  * pipeline consumes.  String fields are trimmed; blank columns become `''`.
  */
 export type McxcRow = {

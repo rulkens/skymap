@@ -3,7 +3,7 @@ import type { Vec3 } from '../math/Vec3';
 /**
  * FocusUniformsValue — CPU mirror of the 32-byte FocusUniforms block
  * (see src/services/gpu/shaders/lib/focusUniforms.wesl for the WGSL
- * byte layout). Produced each frame by clusterFocusSubsystem and packed
+ * byte layout). Produced each frame by structureFocusSubsystem and packed
  * into the points pipeline's singleton focus buffer.
  *
  * At rest (no POI focused) every field is zero — `blend: 0` makes the

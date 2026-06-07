@@ -17,13 +17,13 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { buildStaticAnchorStructures } from '../../src/data/buildStaticAnchorStructures';
-import clusterSeedJson from '../../data/cluster_anchors.seed.json';
+import structureSeedJson from '../../data/structure_anchors.seed.json';
 import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
 
 describe('buildStaticAnchorStructures', () => {
   it('emits one structure per seed entry across all four categories', () => {
     const pois = buildStaticAnchorStructures();
-    expect(pois.length).toBe(clusterSeedJson.length);
+    expect(pois.length).toBe(structureSeedJson.length);
   });
 
   it('produces URL-safe ids by prefixing the category to the seed id field', () => {
@@ -62,7 +62,7 @@ describe('buildStaticAnchorStructures', () => {
     // Assert against the seed's own value (not a hardcoded string) so the
     // test stays green when the curated blurbs are rewritten — it verifies
     // the carry-through wiring, not the prose.
-    const seedVirgo = (clusterSeedJson as readonly { id: string; description?: string }[]).find(
+    const seedVirgo = (structureSeedJson as readonly { id: string; description?: string }[]).find(
       (e) => e.id === 'virgo-m87',
     )!;
     const virgo = pois.find((p) => p.id === 'cluster-virgo-m87')!;
@@ -141,14 +141,13 @@ describe('buildStaticAnchorStructures — group seed entry mapping', () => {
     // at the top of this file) and picks up the mocked seed — `doMock` alone
     // does not invalidate an already-loaded module.
     vi.resetModules();
-    vi.doMock('../../data/cluster_anchors.seed.json', () => ({
+    vi.doMock('../../data/structure_anchors.seed.json', () => ({
       default: [groupFixture],
     }));
 
     // Dynamic import after resetModules + doMock so this load sees the mock.
-    const { buildStaticAnchorStructures: buildWithGroupSeed } = await import(
-      '../../src/data/buildStaticAnchorStructures'
-    );
+    const { buildStaticAnchorStructures: buildWithGroupSeed } =
+      await import('../../src/data/buildStaticAnchorStructures');
 
     const pois = buildWithGroupSeed();
     expect(pois.length).toBe(1);
@@ -161,7 +160,7 @@ describe('buildStaticAnchorStructures — group seed entry mapping', () => {
     // asserting this verifies the carry-through wiring, not just the discriminant.
     expect(poi.worldPos).toEqual(raDecDistToEqCart(groupFixture));
 
-    vi.doUnmock('../../data/cluster_anchors.seed.json');
+    vi.doUnmock('../../data/structure_anchors.seed.json');
     vi.resetModules();
   });
 });

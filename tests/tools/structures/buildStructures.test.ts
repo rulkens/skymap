@@ -1,11 +1,11 @@
 /**
- * Tests for `buildClusters.ts` exported pure functions.
+ * Tests for `buildStructures.ts` exported pure functions.
  *
  * All disk-touching logic lives in `main`; the two exported functions
  * (`extractAbell`, `buildClusterEntries`) operate on in-memory data so
  * unit tests here never touch the filesystem or the real MCXC/MSCC tables.
  *
- * Fixture strategy: hand-crafted McxcRow/MsccRow/ClusterSeedEntry objects
+ * Fixture strategy: hand-crafted McxcRow/MsccRow/StructureSeedEntry objects
  * supply the minimum fields each test cares about.  Only the fields under
  * test need valid values — others are set to innocuous defaults.  This keeps
  * each test small and the failure messages unambiguous.
@@ -16,11 +16,11 @@ import { resolve } from 'node:path';
 import {
   extractAbell,
   buildClusterEntries,
-} from '../../../tools/clusters/buildClusters';
-import { parseClusterSeed } from '../../../tools/parsers/parseClusterSeed';
+} from '../../../tools/structures/buildStructures';
+import { parseStructureSeed } from '../../../tools/parsers/parseStructureSeed';
 import type { McxcRow } from '../../../tools/parsers/parseMcxc';
 import type { MsccRow } from '../../../tools/parsers/parseMscc';
-import type { ClusterSeedEntry } from '../../../tools/parsers/parseClusterSeed';
+import type { StructureSeedEntry } from '../../../tools/parsers/parseStructureSeed';
 import { H0_KM_S_MPC } from '../../../src/utils/math/constants';
 
 // ── Shared fixtures ──────────────────────────────────────────────────────────
@@ -67,7 +67,7 @@ function makeMsccRow(overrides: Partial<MsccRow> = {}): MsccRow {
 }
 
 /** An empty featured seed (no curated anchors → no dedup suppression). */
-const NO_SEED: readonly ClusterSeedEntry[] = [];
+const NO_SEED: readonly StructureSeedEntry[] = [];
 
 // ── extractAbell ─────────────────────────────────────────────────────────────
 
@@ -206,8 +206,8 @@ describe('buildClusterEntries drops a bulk entry near a featured seed anchor', (
     // Read Coma's real seed coordinates.  Using the real file means the test
     // stays honest — if the seed changes the test fails rather than silently
     // diverging from reality.
-    const seedJson = readFileSync(resolve('data/cluster_anchors.seed.json'), 'utf8');
-    const seed = parseClusterSeed(seedJson);
+    const seedJson = readFileSync(resolve('data/structure_anchors.seed.json'), 'utf8');
+    const seed = parseStructureSeed(seedJson);
     const coma = seed.find((e) => e.id === 'coma-a1656')!;
     expect(coma).toBeDefined();
 

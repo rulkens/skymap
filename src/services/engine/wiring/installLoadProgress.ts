@@ -39,7 +39,7 @@ export function installLoadProgress(state: EngineState, deps: BootstrapDeps): vo
   const sidecars = [
     state.assetSlots.filaments,
     state.assetSlots.famousMeta,
-    state.assetSlots.clusterCatalog,
+    state.assetSlots.structureCatalog,
     state.assetSlots.pgcAlias,
     state.assetSlots.cf4Density,
     state.assetSlots.mcpm,

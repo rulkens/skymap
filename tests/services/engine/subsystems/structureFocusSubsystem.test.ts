@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createClusterFocusSubsystem } from '../../../../src/services/engine/subsystems/clusterFocusSubsystem';
+import { createStructureFocusSubsystem } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
 
 function makeCluster(overrides: Record<string, unknown> = {}): StructureRecord {
@@ -18,15 +18,15 @@ function makeVoid(overrides: Record<string, unknown> = {}): StructureRecord {
   return makeCluster({ id: 'bootes', name: 'Boötes Void', category: 'void', ...overrides });
 }
 
-describe('clusterFocusSubsystem', () => {
+describe('structureFocusSubsystem', () => {
   it('starts inactive with blend=0', () => {
-    const sub = createClusterFocusSubsystem(0);
+    const sub = createStructureFocusSubsystem(0);
     expect(sub.produceFocusUniforms(0).blend).toBe(0);
     expect(sub.isAwake(0)).toBe(false);
   });
 
   it('update with a cluster POI fades blend 0→1 with correct center/radii', () => {
-    const sub = createClusterFocusSubsystem(0);
+    const sub = createStructureFocusSubsystem(0);
     sub.update(makeCluster({ worldPos: [3, 4, 5], physicalRadiusMpc: 7 }), 0);
     const mid = sub.produceFocusUniforms(200);
     expect(mid.blend).toBeGreaterThan(0);
@@ -40,7 +40,7 @@ describe('clusterFocusSubsystem', () => {
   });
 
   it('emits apparent (fade outer edge) and physical (core) radii independently', () => {
-    const sub = createClusterFocusSubsystem(0);
+    const sub = createStructureFocusSubsystem(0);
     sub.update(makeCluster({ physicalRadiusMpc: 2, apparentRadiusMpc: 5 }), 0);
     const settled = sub.produceFocusUniforms(500);
     expect(settled.apparentRadiusMpc).toBe(5);
@@ -51,7 +51,7 @@ describe('clusterFocusSubsystem', () => {
     // Voids share the cluster rule: galaxies inside the void's radius are
     // members (stay bright), everything else fades.  The uniform carries
     // no per-category bit — just center + the two radii + blend.
-    const sub = createClusterFocusSubsystem(0);
+    const sub = createStructureFocusSubsystem(0);
     sub.update(makeVoid({ worldPos: [1, 2, 3], physicalRadiusMpc: 9 }), 0);
     const settled = sub.produceFocusUniforms(500);
     expect(settled.blend).toBe(1);
@@ -61,7 +61,7 @@ describe('clusterFocusSubsystem', () => {
   });
 
   it('update(null) after a cluster fades blend 1→0 (and stays settling under per-frame calls)', () => {
-    const sub = createClusterFocusSubsystem(0);
+    const sub = createStructureFocusSubsystem(0);
     sub.update(makeCluster(), 0);
     sub.produceFocusUniforms(500); // settle at 1
     sub.update(null, 500);
@@ -74,7 +74,7 @@ describe('clusterFocusSubsystem', () => {
   });
 
   it('update with the same POI id is idempotent across frames (no re-fade restart)', () => {
-    const sub = createClusterFocusSubsystem(0);
+    const sub = createStructureFocusSubsystem(0);
     const poi = makeCluster();
     sub.update(poi, 0);
     sub.produceFocusUniforms(100); // mid fade-in
@@ -85,7 +85,7 @@ describe('clusterFocusSubsystem', () => {
   });
 
   it('replacing the focused POI does not pass through blend 0', () => {
-    const sub = createClusterFocusSubsystem(0);
+    const sub = createStructureFocusSubsystem(0);
     sub.update(makeCluster({ id: 'virgo', worldPos: [10, 0, 0] }), 0);
     sub.produceFocusUniforms(500); // settle at 1
     sub.update(makeCluster({ id: 'coma', worldPos: [-10, 0, 0] }), 600);
@@ -96,7 +96,7 @@ describe('clusterFocusSubsystem', () => {
   });
 
   it('isAwake is true mid-fade and false at rest', () => {
-    const sub = createClusterFocusSubsystem(0);
+    const sub = createStructureFocusSubsystem(0);
     expect(sub.isAwake(0)).toBe(false);
     sub.update(makeCluster(), 0);
     expect(sub.isAwake(200)).toBe(true);

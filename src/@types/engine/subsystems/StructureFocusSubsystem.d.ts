@@ -3,7 +3,7 @@ import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
 import type { Destroyable } from '../../rendering/Destroyable';
 
 /**
- * ClusterFocusSubsystem — owns cluster "focus mode": when a cluster /
+ * StructureFocusSubsystem — owns cluster "focus mode": when a cluster /
  * supercluster / void POI is focused, non-member galaxies fade to ~8%
  * alpha over ~400 ms so the structure's membership pops out. All three
  * categories behave identically (the focused structure's interior
@@ -23,11 +23,11 @@ import type { Destroyable } from '../../rendering/Destroyable';
  * The points vertex shader re-derives `distance(p.position, center) <
  * radius` per-vertex, so this subsystem never computes a CPU member list
  * — it only supplies center, radius, and the smoothstep blend. (The pure
- * `clusterMembership` fn stays available if a future feature needs an
+ * `structureMembership` fn stays available if a future feature needs an
  * explicit count/list.)
  */
-export type ClusterFocusSubsystem = {
-  readonly id: 'clusterFocus';
+export type StructureFocusSubsystem = {
+  readonly id: 'structureFocus';
 
   /**
    * Per-frame state sync. Diffs `focusedPoi?.id` against the currently

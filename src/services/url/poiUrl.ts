@@ -14,7 +14,7 @@
  *
  * The id is the literal `StructureRecord.id` (e.g. `virgo-m87`,
  * `hercules-sc`, `bootes-void`).  POI ids are curated and stable across
- * rebuilds (they live in `data/cluster_anchors.seed.json`), so encoding
+ * rebuilds (they live in `data/structure_anchors.seed.json`), so encoding
  * them directly is safe — unlike galaxies, there's no priority ladder to
  * navigate (no `famous > pgc > sdss > pos` cascade).
  *

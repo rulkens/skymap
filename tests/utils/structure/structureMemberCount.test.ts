@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { structureMemberCount } from '../../../src/utils/cluster/structureMemberCount';
+import { structureMemberCount } from '../../../src/utils/structure/structureMemberCount';
 import { Source } from '../../../src/data/sources';
 import { ALL_VISIBLE_MASK, maskWith, maskWithout } from '../../../src/utils/sourceMask';
 import type { GalaxyCatalog } from '../../../src/@types/data/GalaxyCatalog';
@@ -9,7 +9,7 @@ import type { StructureRecord } from '../../../src/@types/engine/data/StructureR
 /**
  * Minimal GalaxyCatalog from (x,y,z) tuples — only `positions`/`count` are
  * read by the cone search; the rest are zero-filled to satisfy the shape.
- * Mirrors the helper in clusterMembership.test.ts.
+ * Mirrors the helper in structureMembership.test.ts.
  */
 function makeCatalog(positions: ReadonlyArray<readonly [number, number, number]>): GalaxyCatalog {
   const count = positions.length;

@@ -1,15 +1,16 @@
 /**
- * Binary on-disk format for a `ClusterCatalog` — version 1 (CCAT).
+ * Binary on-disk format for a `StructureCatalog` — version 1 (CCAT).
  *
- * Encodes the MCXC cluster + MSCC supercluster catalog into a compact
- * fixed-record binary so the browser can fetch and decode it in a single
+ * Encodes the featured-structure catalog (clusters, superclusters, voids,
+ * groups) into a compact fixed-record binary so the browser can fetch and
+ * decode it in a single
  * pass without JSON parsing overhead.  The approach mirrors
  * `galaxyCatalogFormat.ts` exactly: a 16-byte magic+version header
  * followed by fixed-size per-record blocks decoded into struct-of-arrays
  * output.
  *
  * Why a new format rather than extending `galaxyCatalogFormat`?
- *   Clusters and superclusters have fundamentally different fields (two
+ *   Structures have fundamentally different fields from galaxies (two
  *   radii, a mass/richness proxy, a category byte) and are drawn by a
  *   separate renderer pass — co-opting the galaxy record layout would
  *   waste most of its 64 bytes and couple two unrelated catalog shapes.
@@ -40,7 +41,7 @@
  * the single source of truth for "do I understand this file?".
  */
 
-import type { ClusterCatalog } from '../@types/data/ClusterCatalog';
+import type { StructureCatalog } from '../@types/data/StructureCatalog';
 
 // "CCAT" as a little-endian uint32:
 //   bytes in memory order: C=0x43, C=0x43, A=0x41, T=0x54
@@ -55,7 +56,7 @@ const BYTES_PER_RECORD = 28;
 // record start — indexed as f+0 … f+5 in the loop bodies below.
 const OFF_CAT = 24;
 
-export function encodeClusterCatalog(catalog: ClusterCatalog): ArrayBuffer {
+export function encodeStructureCatalog(catalog: StructureCatalog): ArrayBuffer {
   const { count, positions, physicalRadiusMpc, apparentRadiusMpc, significance, category } =
     catalog;
 
@@ -105,19 +106,19 @@ export function encodeClusterCatalog(catalog: ClusterCatalog): ArrayBuffer {
   return buf;
 }
 
-export function decodeClusterCatalog(buf: ArrayBuffer): ClusterCatalog {
+export function decodeStructureCatalog(buf: ArrayBuffer): StructureCatalog {
   const dv = new DataView(buf);
 
   if (dv.getUint32(0, true) !== MAGIC) throw new Error('bad magic — not a CCAT file');
 
   // Version mismatch surfaces as the documented "regenerate" error.
   // Stale .ccat files (built before this format version) trigger this on
-  // every load until `npm run build-clusters` is re-run.  Keep the
+  // every load until `npm run build-structures` is re-run.  Keep the
   // message instructive — it is the cure.
   const version = dv.getUint32(4, true);
   if (version !== VERSION) {
     throw new Error(
-      `unsupported cluster-catalog version: ${version} — please regenerate the .ccat via "npm run build-clusters"`,
+      `unsupported structure-catalog version: ${version} — please regenerate the .ccat via "npm run build-structures"`,
     );
   }
 
@@ -159,7 +160,7 @@ export function decodeClusterCatalog(buf: ArrayBuffer): ClusterCatalog {
   return { count, positions, physicalRadiusMpc, apparentRadiusMpc, significance, category };
 }
 
-export function emptyClusterCatalog(): ClusterCatalog {
+export function emptyStructureCatalog(): StructureCatalog {
   return {
     count: 0,
     positions: new Float32Array(0),

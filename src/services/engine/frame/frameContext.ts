@@ -147,7 +147,7 @@ export function deriveFrameContext(state: EngineState, canvas: HTMLCanvasElement
   // `focusBlend` is seeded to 0 (the at-rest, no-recession value) and then
   // overwritten by `runFrame` with this frame's real blend the moment the
   // ready gate passes. It can't be derived here: computing it ticks the
-  // clusterFocus fade controller, a side effect that must fire exactly
+  // structureFocus fade controller, a side effect that must fire exactly
   // once per frame — and `deriveFrameContext` is deliberately pure (it may
   // be called speculatively, and double-ticking would double-advance the
   // ramp). So the value is a placeholder until `runFrame` fills it in,

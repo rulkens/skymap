@@ -1,5 +1,5 @@
 /**
- * clusterMembership — pure cone-search over loaded galaxy catalogs.
+ * structureMembership — pure cone-search over loaded galaxy catalogs.
  *
  * Given a set of in-memory catalogs, a 3D center, and a radius in Mpc,
  * returns the packed (sourceCode << 27 | localIdx) identities of every
@@ -51,12 +51,12 @@ export type CatalogWithSource = {
 };
 
 /**
- * The return value of {@link clusterMembership}. `packedIds` carries
+ * The return value of {@link structureMembership}. `packedIds` carries
  * the matched galaxies in catalog-array-order, then local-index order;
  * `count` is its length, exposed redundantly so callers (e.g. the
  * InfoCard "N member galaxies" text) don't have to read `.length`.
  */
-export type ClusterMembershipResult = {
+export type StructureMembershipResult = {
   readonly count: number;
   readonly packedIds: readonly number[];
 };
@@ -75,11 +75,11 @@ export type ClusterMembershipResult = {
  * `Object.freeze` if they want defensive immutability; we don't
  * freeze it here to keep the hot path allocation-free.
  */
-export function clusterMembership(
+export function structureMembership(
   catalogs: readonly CatalogWithSource[],
   centerMpc: Vec3,
   radiusMpc: number,
-): ClusterMembershipResult {
+): StructureMembershipResult {
   const cx = centerMpc[0];
   const cy = centerMpc[1];
   const cz = centerMpc[2];

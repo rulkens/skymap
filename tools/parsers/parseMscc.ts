@@ -11,7 +11,7 @@
  * this parser handles `mscc.dat` only.
  *
  * Why MSCC in this pipeline?  Together with the MCXC X-ray cluster catalogue,
- * it supplies the ~375-structure cluster-coverage feature with large-scale
+ * it supplies the ~375-structure structure-coverage feature with large-scale
  * supercluster envelopes.  MCXC gives physically calibrated R500 radii for
  * individual X-ray clusters; MSCC gives the Friend-of-Friends extent (`dmax`)
  * for supercluster complexes, letting the renderer draw an outer coverage halo
@@ -40,7 +40,7 @@
  * no sexagesimal fallback to parse — the decimal form is the only option.
  *
  * The SCLs field (bytes 6–21, A16) is the Einasto et al. 2001 cross-reference;
- * it is not consumed by the cluster-coverage pipeline and is intentionally
+ * it is not consumed by the structure-coverage pipeline and is intentionally
  * skipped here to keep the output type minimal.
  *
  * The trailing `memCl` field (bytes 53–324, A272) is a comma-separated list of
@@ -64,7 +64,7 @@
  * `dmax` is stored in raw h70^-1 Mpc as published.  The conversion to physical
  * Mpc (divide by h70 = 0.7) and the halving to a radius (dmax is a diameter:
  * the maximum *pair* separation, not the centroid-to-edge distance) both happen
- * in the `buildClusters` pipeline step (Task 10), not here.  The parser is a
+ * in the `buildStructures` pipeline step (Task 10), not here.  The parser is a
  * faithful column reader; it does not interpret units.
  */
 
@@ -75,7 +75,7 @@ const MIN_LINE_LEN = 51;
 
 /**
  * A single parsed MSCC supercluster row, carrying the fields consumed by the
- * cluster-coverage pipeline.  Numeric fields are trimmed and `parseFloat`'d;
+ * structure-coverage pipeline.  Numeric fields are trimmed and `parseFloat`'d;
  * no unit conversions are applied.
  */
 export type MsccRow = {
@@ -93,7 +93,7 @@ export type MsccRow = {
    * Maximum separation of a member-cluster pair, in **raw h70^-1 Mpc**
    * (as published).  Do NOT interpret as a radius — `dmax` is the diameter
    * of the tightest enclosing sphere.  The h70→Mpc conversion and the
-   * halving to a centroid radius live in `buildClusters` (Task 10).
+   * halving to a centroid radius live in `buildStructures` (Task 10).
    */
   dmaxMpc: number;
 };

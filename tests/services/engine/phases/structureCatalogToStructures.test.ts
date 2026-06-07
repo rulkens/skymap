@@ -1,5 +1,5 @@
 /**
- * clusterCatalogToStructures — tests for the bulk cluster/supercluster
+ * structureCatalogToStructures — tests for the bulk cluster/supercluster
  * POI producer.
  *
  * The producer turns the decoded `.ccat` + meta sidecar into the
@@ -18,14 +18,14 @@
  *      featured `${category}-${seed.id}` anchors and are recognisably
  *      non-deep-linkable.
  *
- * Fixtures are hand-built `ClusterCatalogPayload`s — the producer is a
+ * Fixtures are hand-built `StructureCatalogPayload`s — the producer is a
  * pure function over typed arrays, so no engine boot is needed.
  */
 
 import { describe, it, expect } from 'vitest';
-import { clusterCatalogToStructures } from '../../../../src/services/engine/phases/clusterCatalogToStructures';
-import type { ClusterCatalogPayload } from '../../../../src/@types/loading/ClusterCatalogPayload';
-import type { ClusterMetaEntry } from '../../../../src/@types/loading/ClusterCatalogPayload';
+import { structureCatalogToStructures } from '../../../../src/services/engine/phases/structureCatalogToStructures';
+import type { StructureCatalogPayload } from '../../../../src/@types/loading/StructureCatalogPayload';
+import type { StructureMetaEntry } from '../../../../src/@types/loading/StructureCatalogPayload';
 
 /**
  * Build a payload from per-record specs.  `significance` is the RAW
@@ -39,9 +39,9 @@ function makePayload(
     apparentRadiusMpc: number;
     significance: number;
     category: number;
-    meta: ClusterMetaEntry;
+    meta: StructureMetaEntry;
   }>,
-): ClusterCatalogPayload {
+): StructureCatalogPayload {
   const count = records.length;
   const positions = new Float32Array(count * 3);
   const physicalRadiusMpc = new Float32Array(count);
@@ -63,7 +63,7 @@ function makePayload(
   };
 }
 
-const meta = (id: string, abell: string | null = null, description = ''): ClusterMetaEntry => ({
+const meta = (id: string, abell: string | null = null, description = ''): StructureMetaEntry => ({
   id,
   names: [id.toUpperCase()],
   abell,
@@ -74,7 +74,7 @@ const meta = (id: string, abell: string | null = null, description = ''): Cluste
 // superclusters (byte 1) of differing N_m.  The cluster M500 values are
 // orders of magnitude larger than the SC member counts, which is the
 // whole point of normalising the two categories independently.
-function mixedPayload(): ClusterCatalogPayload {
+function mixedPayload(): StructureCatalogPayload {
   return makePayload([
     {
       pos: [1, 2, 3],
@@ -111,20 +111,20 @@ function mixedPayload(): ClusterCatalogPayload {
   ]);
 }
 
-describe('clusterCatalogToStructures', () => {
+describe('structureCatalogToStructures', () => {
   it('maps category bytes to cluster/supercluster', () => {
-    const pois = clusterCatalogToStructures(mixedPayload());
+    const pois = structureCatalogToStructures(mixedPayload());
     expect(pois.filter((p) => p.category === 'cluster')).toHaveLength(2);
     expect(pois.filter((p) => p.category === 'supercluster')).toHaveLength(2);
   });
 
   it('marks every POI not featured', () => {
-    const pois = clusterCatalogToStructures(mixedPayload());
+    const pois = structureCatalogToStructures(mixedPayload());
     expect(pois.every((p) => p.featured === false)).toBe(true);
   });
 
   it('carries worldPos + radii through from the catalog', () => {
-    const pois = clusterCatalogToStructures(mixedPayload());
+    const pois = structureCatalogToStructures(mixedPayload());
     const low = pois.find((p) => p.id.includes('low-cluster'))!;
     expect(low.worldPos).toEqual([1, 2, 3]);
     expect(low.category === 'cluster' && low.physicalRadiusMpc).toBe(1.5);
@@ -132,7 +132,7 @@ describe('clusterCatalogToStructures', () => {
   });
 
   it('normalizes significance per-category into [0,1] on independent scales', () => {
-    const pois = clusterCatalogToStructures(mixedPayload());
+    const pois = structureCatalogToStructures(mixedPayload());
     const sig = (idFrag: string) => {
       const p = pois.find((q) => q.id.includes(idFrag))!;
       // significance lives on the extended-structure arms.
@@ -160,14 +160,14 @@ describe('clusterCatalogToStructures', () => {
   });
 
   it('ids are prefixed bulk and never collide with featured slugs', () => {
-    const pois = clusterCatalogToStructures(mixedPayload());
+    const pois = structureCatalogToStructures(mixedPayload());
     for (const p of pois) {
       expect(p.id).toMatch(/^(cluster|supercluster)-bulk-/);
     }
   });
 
   it('carries the abell designation from meta onto the cluster arm only', () => {
-    const pois = clusterCatalogToStructures(mixedPayload());
+    const pois = structureCatalogToStructures(mixedPayload());
     const high = pois.find((p) => p.id.includes('high-cluster'))!;
     expect(high.category).toBe('cluster');
     expect(high.category === 'cluster' && high.abell).toBe('A2670');
@@ -187,7 +187,7 @@ describe('clusterCatalogToStructures', () => {
         meta: meta('described-cluster', 'A1', 'X-ray cluster · M500 = 5.0×10¹⁴ M☉ · z = 0.040'),
       },
     ]);
-    const poi = clusterCatalogToStructures(payload)[0]!;
+    const poi = structureCatalogToStructures(payload)[0]!;
     expect(poi.description).toBe('X-ray cluster · M500 = 5.0×10¹⁴ M☉ · z = 0.040');
   });
 
@@ -202,12 +202,12 @@ describe('clusterCatalogToStructures', () => {
         meta: meta('no-abell-cluster', null),
       },
     ]);
-    const pois = clusterCatalogToStructures(payload);
+    const pois = structureCatalogToStructures(payload);
     expect('abell' in pois[0]!).toBe(false);
   });
 
   it('names the POI from meta.names[0]', () => {
-    const pois = clusterCatalogToStructures(mixedPayload());
+    const pois = structureCatalogToStructures(mixedPayload());
     const high = pois.find((p) => p.id.includes('high-cluster'))!;
     expect(high.name).toBe('HIGH-CLUSTER');
   });
@@ -231,7 +231,7 @@ describe('clusterCatalogToStructures', () => {
         meta: meta('reserved'),
       },
     ]);
-    const pois = clusterCatalogToStructures(payload);
+    const pois = structureCatalogToStructures(payload);
     expect(pois).toHaveLength(1);
     expect(pois[0]!.id).toContain('ok-cluster');
   });
@@ -248,13 +248,13 @@ describe('clusterCatalogToStructures', () => {
         meta: meta('solo-cluster'),
       },
     ]);
-    const pois = clusterCatalogToStructures(payload);
+    const pois = structureCatalogToStructures(payload);
     const p = pois[0]!;
     expect(p.category === 'cluster' && p.significance).toBeCloseTo(1);
   });
 
   it('returns an empty list for an empty catalog', () => {
     const payload = makePayload([]);
-    expect(clusterCatalogToStructures(payload)).toEqual([]);
+    expect(structureCatalogToStructures(payload)).toEqual([]);
   });
 });

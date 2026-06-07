@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { clusterMembership } from '../../../src/utils/cluster/clusterMembership';
+import { structureMembership } from '../../../src/utils/structure/structureMembership';
 import { Source } from '../../../src/data/sources';
 import { packSelection } from '../../../src/data/selectionEncoding';
 import type { GalaxyCatalog } from '../../../src/@types/data/GalaxyCatalog';
 
 /**
  * Build a minimal GalaxyCatalog from a list of (x,y,z) tuples.
- * Only the `positions` + `count` fields are read by clusterMembership;
+ * Only the `positions` + `count` fields are read by structureMembership;
  * the other Float32Array slots are filled with zeros via `new
  * Float32Array(count)` so the type's required-field shape is satisfied
  * without polluting the test fixture with irrelevant data.
@@ -32,14 +32,14 @@ function makeCatalog(positions: ReadonlyArray<readonly [number, number, number]>
   };
 }
 
-describe('clusterMembership — pure cone search', () => {
+describe('structureMembership — pure cone search', () => {
   it('classifies one inside, one boundary, one outside galaxy', () => {
     const catalog = makeCatalog([
       [5, 0, 0],
       [10, 0, 0],
       [20, 0, 0],
     ]);
-    const result = clusterMembership(
+    const result = structureMembership(
       [{ source: Source.SDSS, catalog }],
       [0, 0, 0],
       10,
@@ -50,7 +50,7 @@ describe('clusterMembership — pure cone search', () => {
 
   it('uses strict less-than (galaxy on boundary excluded)', () => {
     const catalog = makeCatalog([[0, 0, 10]]);
-    const result = clusterMembership(
+    const result = structureMembership(
       [{ source: Source.TwoMRS, catalog }],
       [0, 0, 0],
       10,
@@ -70,7 +70,7 @@ describe('clusterMembership — pure cone search', () => {
       [0, 2, 0],   // inside
       [0, 100, 0], // outside
     ]);
-    const result = clusterMembership(
+    const result = structureMembership(
       [
         { source: Source.SDSS, catalog: sdss },
         { source: Source.TwoMRS, catalog: twomrs },
@@ -88,14 +88,14 @@ describe('clusterMembership — pure cone search', () => {
   });
 
   it('returns {count: 0, packedIds: []} for empty catalogs', () => {
-    const result = clusterMembership([], [0, 0, 0], 10);
+    const result = structureMembership([], [0, 0, 0], 10);
     expect(result.count).toBe(0);
     expect(result.packedIds).toEqual([]);
   });
 
   it('returns {count: 0, packedIds: []} when every input catalog is empty', () => {
     const empty = makeCatalog([]);
-    const result = clusterMembership(
+    const result = structureMembership(
       [
         { source: Source.SDSS, catalog: empty },
         { source: Source.TwoMRS, catalog: empty },
@@ -113,16 +113,16 @@ describe('clusterMembership — pure cone search', () => {
       [2, 0, 0],
       [3, 0, 0],
     ]);
-    const r1 = clusterMembership([{ source: Source.SDSS, catalog }], [0, 0, 0], 5);
-    const r2 = clusterMembership([{ source: Source.SDSS, catalog }], [0, 0, 0], 5);
+    const r1 = structureMembership([{ source: Source.SDSS, catalog }], [0, 0, 0], 5);
+    const r2 = structureMembership([{ source: Source.SDSS, catalog }], [0, 0, 0], 5);
     expect(r1.count).toBe(r2.count);
     expect(r1.packedIds).toEqual(r2.packedIds);
   });
 
   it('does not internally cache (each call returns a fresh array)', () => {
     const catalog = makeCatalog([[1, 0, 0]]);
-    const r1 = clusterMembership([{ source: Source.SDSS, catalog }], [0, 0, 0], 5);
-    const r2 = clusterMembership([{ source: Source.SDSS, catalog }], [0, 0, 0], 5);
+    const r1 = structureMembership([{ source: Source.SDSS, catalog }], [0, 0, 0], 5);
+    const r2 = structureMembership([{ source: Source.SDSS, catalog }], [0, 0, 0], 5);
     expect(r1.packedIds).not.toBe(r2.packedIds); // distinct array references
     expect(r1.packedIds).toEqual(r2.packedIds);   // but equal contents
   });

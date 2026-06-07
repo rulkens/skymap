@@ -1,5 +1,5 @@
 /**
- * clusterFocusSubsystem — focus-driven cluster "focus mode".
+ * structureFocusSubsystem — focus-driven structure "focus mode".
  *
  * When a cluster / supercluster / void / group POI is focused, non-member
  * galaxies fade to ~8% alpha over ~400 ms (the shader does the
@@ -7,7 +7,7 @@
  * radius, and the smoothstep blend). All four categories behave
  * identically — the focused structure's interior galaxies stay bright;
  * voids are just an underdense case of the same rule. See
- * `ClusterFocusSubsystem.d.ts` for the rationale (focus as single
+ * `StructureFocusSubsystem.d.ts` for the rationale (focus as single
  * source of truth; GPU re-derivation instead of a CPU member list).
  *
  * ### Why a `focusedId` separate from the display target
@@ -24,7 +24,7 @@
  */
 
 import { createFadeController } from '../../animation/fadeController';
-import type { ClusterFocusSubsystem } from '../../../@types/engine/subsystems/ClusterFocusSubsystem';
+import type { StructureFocusSubsystem } from '../../../@types/engine/subsystems/StructureFocusSubsystem';
 import type { StructureRecord } from '../../../@types/engine/data/StructureRecord';
 import type { FocusUniformsValue } from '../../../@types/rendering/FocusUniformsValue';
 import type { Vec3 } from '../../../@types/math/Vec3';
@@ -53,9 +53,9 @@ type ActiveFocus = {
   readonly physicalRadiusMpc: number;
 };
 
-export function createClusterFocusSubsystem(
+export function createStructureFocusSubsystem(
   initialNowMs: number = performance.now(),
-): ClusterFocusSubsystem {
+): StructureFocusSubsystem {
   const fade = createFadeController(0, initialNowMs);
   // The POI we emit centre/radius for. Latched through fade-out.
   let active: ActiveFocus | null = null;
@@ -121,7 +121,7 @@ export function createClusterFocusSubsystem(
   }
 
   return {
-    id: 'clusterFocus',
+    id: 'structureFocus',
     update,
     produceFocusUniforms,
     isAwake,

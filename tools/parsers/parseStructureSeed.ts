@@ -1,5 +1,5 @@
 /**
- * parseClusterSeed — parse + validate `data/cluster_anchors.seed.json`.
+ * parseStructureSeed — parse + validate `data/structure_anchors.seed.json`.
  *
  * The seed file is the single source of truth for which galaxy clusters,
  * superclusters, voids, and nearby galaxy groups appear as featured labelled
@@ -22,7 +22,7 @@
 const VALID_CATEGORIES = ['cluster', 'supercluster', 'void', 'group'] as const;
 
 /**
- * One featured structure from `cluster_anchors.seed.json`.
+ * One featured structure from `structure_anchors.seed.json`.
  *
  * Coordinates follow the `SkyCoord` convention: RA in hours [0, 24),
  * Dec in degrees [-90, 90], distances in Mpc.
@@ -35,7 +35,7 @@ const VALID_CATEGORIES = ['cluster', 'supercluster', 'void', 'group'] as const;
  * superclusters and voids it matches physR.  Drives ring sizing and
  * cone-search membership.
  */
-export type ClusterSeedEntry = {
+export type StructureSeedEntry = {
   /** URL-safe lower-kebab id, unique within the file (no category prefix). */
   id: string;
   /** Ordered names; primary first.  The first name drives the POI label. */
@@ -70,45 +70,45 @@ export type ClusterSeedEntry = {
  * Validate a single entry.  Throws with a message naming the offending id
  * on any malformed field.  Returns the entry unchanged so callers can chain.
  */
-export function validateClusterSeedEntry(e: ClusterSeedEntry): ClusterSeedEntry {
+export function validateStructureSeedEntry(e: StructureSeedEntry): StructureSeedEntry {
   if (typeof e.id !== 'string' || e.id.length === 0) {
-    throw new Error(`cluster seed: missing id on entry ${JSON.stringify(e).slice(0, 60)}`);
+    throw new Error(`structure seed: missing id on entry ${JSON.stringify(e).slice(0, 60)}`);
   }
   if (!Array.isArray(e.names) || e.names.length === 0) {
-    throw new Error(`cluster seed: ${e.id} has empty names array`);
+    throw new Error(`structure seed: ${e.id} has empty names array`);
   }
   if (!VALID_CATEGORIES.includes(e.category as (typeof VALID_CATEGORIES)[number])) {
     throw new Error(
-      `cluster seed: ${e.id} has unknown category ${JSON.stringify(e.category)} (expected 'cluster' | 'supercluster' | 'void' | 'group')`,
+      `structure seed: ${e.id} has unknown category ${JSON.stringify(e.category)} (expected 'cluster' | 'supercluster' | 'void' | 'group')`,
     );
   }
   if (!Number.isFinite(e.raHours) || e.raHours < 0 || e.raHours >= 24) {
-    throw new Error(`cluster seed: ${e.id} has out-of-range raHours ${e.raHours} (expected [0, 24))`);
+    throw new Error(`structure seed: ${e.id} has out-of-range raHours ${e.raHours} (expected [0, 24))`);
   }
   if (!Number.isFinite(e.decDeg) || e.decDeg < -90 || e.decDeg > 90) {
-    throw new Error(`cluster seed: ${e.id} has out-of-range decDeg ${e.decDeg} (expected [-90, 90])`);
+    throw new Error(`structure seed: ${e.id} has out-of-range decDeg ${e.decDeg} (expected [-90, 90])`);
   }
   if (!Number.isFinite(e.distMpc) || e.distMpc <= 0) {
-    throw new Error(`cluster seed: ${e.id} has non-positive distMpc ${e.distMpc}`);
+    throw new Error(`structure seed: ${e.id} has non-positive distMpc ${e.distMpc}`);
   }
   if (!Number.isFinite(e.physicalRadiusMpc) || e.physicalRadiusMpc <= 0) {
     throw new Error(
-      `cluster seed: ${e.id} has non-positive physicalRadiusMpc ${e.physicalRadiusMpc}`,
+      `structure seed: ${e.id} has non-positive physicalRadiusMpc ${e.physicalRadiusMpc}`,
     );
   }
   if (!Number.isFinite(e.apparentRadiusMpc) || e.apparentRadiusMpc <= 0) {
     throw new Error(
-      `cluster seed: ${e.id} has non-positive apparentRadiusMpc ${e.apparentRadiusMpc}`,
+      `structure seed: ${e.id} has non-positive apparentRadiusMpc ${e.apparentRadiusMpc}`,
     );
   }
   if (typeof e.description !== 'string' || e.description.trim().length === 0) {
-    throw new Error(`cluster seed: ${e.id} missing description`);
+    throw new Error(`structure seed: ${e.id} missing description`);
   }
   if (e.commonName !== undefined && (typeof e.commonName !== 'string' || e.commonName.length === 0)) {
-    throw new Error(`cluster seed: ${e.id} has invalid commonName (must be a non-empty string)`);
+    throw new Error(`structure seed: ${e.id} has invalid commonName (must be a non-empty string)`);
   }
   if (e.abell !== undefined && (typeof e.abell !== 'string' || e.abell.length === 0)) {
-    throw new Error(`cluster seed: ${e.id} has invalid abell (must be a non-empty string)`);
+    throw new Error(`structure seed: ${e.id} has invalid abell (must be a non-empty string)`);
   }
   return e;
 }
@@ -117,17 +117,17 @@ export function validateClusterSeedEntry(e: ClusterSeedEntry): ClusterSeedEntry 
  * Parse and validate the entire seed JSON.  Throws on any per-entry problem
  * and on duplicate ids across the file.
  */
-export function parseClusterSeed(rawJson: string): ClusterSeedEntry[] {
+export function parseStructureSeed(rawJson: string): StructureSeedEntry[] {
   const parsed = JSON.parse(rawJson);
   if (!Array.isArray(parsed)) {
-    throw new Error('cluster seed: root must be an array');
+    throw new Error('structure seed: root must be an array');
   }
   const seen = new Set<string>();
-  const out: ClusterSeedEntry[] = [];
+  const out: StructureSeedEntry[] = [];
   for (const e of parsed) {
-    const validated = validateClusterSeedEntry(e as ClusterSeedEntry);
+    const validated = validateStructureSeedEntry(e as StructureSeedEntry);
     if (seen.has(validated.id)) {
-      throw new Error(`cluster seed: duplicate id "${validated.id}"`);
+      throw new Error(`structure seed: duplicate id "${validated.id}"`);
     }
     seen.add(validated.id);
     out.push(validated);

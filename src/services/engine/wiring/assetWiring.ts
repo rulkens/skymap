@@ -24,7 +24,7 @@
  *
  *   - **filaments** gates on `settings.filaments.enabled` — the real master
  *     toggle, so a disabled filament overlay never fetches the skeleton.
- *   - **clusterCatalog** gates on structure-category visibility: it loads when
+ *   - **structureCatalog** gates on structure-category visibility: it loads when
  *     ANY of the cluster / supercluster / void categories is visible in either
  *     the marker or the label overlay. There is no `settings.structures.enabled`
  *     flag — structures are controlled per-category via the two visibility
@@ -36,7 +36,7 @@
  * ### What is NOT a row here
  *
  *   - **Cluster / Supercluster / Void** `Source`s — they have no individual
- *     fetch; their geometry arrives via the single `'clusterCatalog'` row.
+ *     fetch; their geometry arrives via the single `'structureCatalog'` row.
  *   - **DEV synthetic volumes** (`debug-gaussian` / `-cartesian` / `-spherical`)
  *     — minted only under `import.meta.env.DEV` via `createSyntheticVolumeSlots`
  *     and triggered there. Keeping them out of the production table lets Vite
@@ -58,7 +58,7 @@ import type { PoiCategory } from '../../../@types/engine/data/PoiCategory';
 import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import { createFilamentSlot } from '../../loading/slots/filamentSlot';
 import { createFamousMetaSlot } from '../../loading/slots/famousMetaSlot';
-import { createClusterCatalogSlot } from '../../loading/slots/clusterCatalogSlot';
+import { createStructureCatalogSlot } from '../../loading/slots/structureCatalogSlot';
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
 import { createFlowFieldSlot } from '../../loading/slots/flowFieldSlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
@@ -67,7 +67,7 @@ import type { SourceType } from '../../../@types/data/SourceType';
 
 /**
  * The categories backed by the bulk `.ccat` catalog — their visibility
- * gates the cluster-catalog fetch. `famousGalaxy` is excluded (Famous
+ * gates the structure-catalog fetch. `famousGalaxy` is excluded (Famous
  * `.bin` + meta sidecar), and `group` is excluded (seed-only, no `.ccat`
  * — adding it here would trigger a pointless fetch when group visibility
  * toggles). Spelled as `PoiCategory` members so a type error surfaces
@@ -180,8 +180,8 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
   // category is visible in either the marker or label overlay. Empty
   // request — the .ccat is a standalone boot asset.
   {
-    key: 'clusterCatalog',
-    factory: (deps) => createClusterCatalogSlot(deps.state, deps.cb),
+    key: 'structureCatalog',
+    factory: (deps) => createStructureCatalogSlot(deps.state, deps.cb),
     req: () => ({}),
     demand: (ctx) =>
       BULK_CATALOG_CATEGORIES.some(

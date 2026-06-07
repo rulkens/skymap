@@ -2,7 +2,7 @@
  * structureMemberCount — how many currently-rendered galaxies fall inside
  * a cluster / supercluster / void's membership sphere.
  *
- * This is the InfoCard-facing consumer the `clusterMembership` cone-search
+ * This is the InfoCard-facing consumer the `structureMembership` cone-search
  * was written for.  It assembles the catalog set the way the renderer
  * draws it — visible survey sources only, Synthetic excluded — so the
  * number agrees with both the on-screen points and the focus-mode fade
@@ -22,7 +22,7 @@
  * ### Membership radius
  *
  * Uses `apparentRadiusMpc ?? physicalRadiusMpc` — the same cone the
- * GPU focus fade tests against (see `clusterFocusSubsystem`).  Counting
+ * GPU focus fade tests against (see `structureFocusSubsystem`).  Counting
  * against the named/visual extent rather than the tighter core radius is
  * what makes "N galaxies" match the set the user sees stay lit on focus.
  *
@@ -35,8 +35,8 @@
  * catalogued galaxies).
  */
 
-import { clusterMembership } from './clusterMembership';
-import type { CatalogWithSource } from './clusterMembership';
+import { structureMembership } from './structureMembership';
+import type { CatalogWithSource } from './structureMembership';
 import { SURVEY_SOURCES, Source } from '../../data/sources';
 import { maskHas } from '../sourceMask';
 import type { GalaxyCatalog } from '../../@types/data/GalaxyCatalog';
@@ -61,5 +61,5 @@ export function structureMemberCount(
   // Nothing loaded/visible to search — "not computable yet", not zero.
   if (catalogs.length === 0) return null;
 
-  return clusterMembership(catalogs, poi.worldPos, radiusMpc).count;
+  return structureMembership(catalogs, poi.worldPos, radiusMpc).count;
 }

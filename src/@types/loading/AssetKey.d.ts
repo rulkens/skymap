@@ -7,9 +7,9 @@ import type { SourceType } from '../data/SourceType';
  * a set of auxiliary string keys for assets that don't map one-to-one to a
  * single `Source`:
  *
- *   - `'clusterCatalog'` — the `.ccat` seed shared by Cluster, Supercluster,
+ *   - `'structureCatalog'` — the `.ccat` seed shared by Cluster, Supercluster,
  *     and Void POIs. All three `Source` codes pull their geometry from one file,
- *     so a per-source fetch key would be wrong: there is no `clusterCatalog`
+ *     so a per-source fetch key would be wrong: there is no `structureCatalog`
  *     `Source`, and a single fetch must not trigger three loads.
  *
  *   - `'famousMeta'` — the `famous_meta.json` sidecar that accompanies the
@@ -39,7 +39,7 @@ import type { SourceType } from '../data/SourceType';
  *     asset key to route through `slotFor`.
  *
  * The asymmetry cuts both ways: some `Source`s are NOT fetched individually
- * (Cluster / Supercluster / Void all arrive via `'clusterCatalog'`), and the
+ * (Cluster / Supercluster / Void all arrive via `'structureCatalog'`), and the
  * string keys are NOT all `Source`s. "Source" (stable identity code, persisted
  * to `.bin` + GPU buffers) and "Asset" (fetchable network resource) are
  * different sets; this type is the asset set.
@@ -48,7 +48,7 @@ import type { SourceType } from '../data/SourceType';
  */
 export type AssetKey =
   | SourceType
-  | 'clusterCatalog'
+  | 'structureCatalog'
   | 'famousMeta'
   | 'pgcAlias'
   | 'filaments'

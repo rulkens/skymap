@@ -182,7 +182,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     return;
   }
 
-  // ── Cluster-focus recession (computed ONCE, EARLY) ────────────────
+  // ── Structure-focus recession (computed ONCE, EARLY) ────────────────
   //
   // Focus mode fades non-member galaxies away when a cluster /
   // supercluster / void / group POI is focused.  Resolve the FOCUSED POI
@@ -204,8 +204,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     focusSel !== null && focusSel.kind === 'structure'
       ? (state.data.structures.byId(focusSel.id) ?? null)
       : null;
-  state.subsystems.clusterFocus.update(focusedStructure, nowMs);
-  const focusUniforms = state.subsystems.clusterFocus.produceFocusUniforms(nowMs);
+  state.subsystems.structureFocus.update(focusedStructure, nowMs);
+  const focusUniforms = state.subsystems.structureFocus.produceFocusUniforms(nowMs);
   ctx.focusBlend = focusUniforms.blend;
 
   // ── Per-frame impostor planners ───────────────────────────────────
@@ -475,7 +475,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   //   - fades.isAnyAnimating(): a survey / filament handle is ramping its
   //     opacity from a recent upload (the FadeRegistry owns every clock,
   //     filaments included).
-  //   - clusterFocus.isAwake(): the member-isolation fade (its own
+  //   - structureFocus.isAwake(): the member-isolation fade (its own
   //     controller, not in the registry) across the 400 ms ramp.
   //   - flowFieldRenderer.isAnimating(): the flow layer is enabled + loaded;
   //     both modes animate (advect drifts, streamline pulses), so the loop
@@ -496,7 +496,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.subsystems.spaceMouse.hasAxes() ||
     (ready && state.subsystems.texturedDisks.hasInFlightWork()) ||
     state.subsystems.fades.isAnyAnimating(nowMs) ||
-    state.subsystems.clusterFocus.isAwake(nowMs) ||
+    state.subsystems.structureFocus.isAwake(nowMs) ||
     state.gpu.flowFieldRenderer?.isAnimating(state.settings.flow) === true;
   if (stillAnimating) state.subsystems.scheduler.requestRender();
 }

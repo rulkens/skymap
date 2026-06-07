@@ -1,16 +1,16 @@
 /**
- * clusterCatalogFetcher — fetches the cluster/supercluster coverage layer and
+ * structureCatalogFetcher — fetches the cluster/supercluster coverage layer and
  * returns a `{ catalog, meta }` payload.
  *
  * The layer ships as two index-parallel artefacts:
- *   - `clusters.ccat`       — the numeric `ClusterCatalog` binary (positions,
+ *   - `structures.ccat`       — the numeric `StructureCatalog` binary (positions,
  *                             radii, significance, category).
- *   - `clusters_meta.json`  — the string sidecar (id, names, abell, description)
+ *   - `structures_meta.json`  — the string sidecar (id, names, abell, description)
  *                             keyed by the same localIdx.
  *
  * This fetcher pulls BOTH and pairs them so the later merge has names +
  * descriptions to hang off each record. The two are built in lock-step by
- * `tools/clusters/buildClusters.ts`, so a `count !== meta.length` mismatch
+ * `tools/structures/buildStructures.ts`, so a `count !== meta.length` mismatch
  * means a stale artefact slipped through — we fail loud rather than silently
  * decode a half-mismatched layer.
  *
@@ -30,30 +30,30 @@
  * honors the abort signal.
  */
 import type { Fetcher } from '../../../@types/loading/Fetcher';
-import type { ClusterCatalogReq } from '../../../@types/loading/ClusterCatalogReq';
+import type { StructureCatalogReq } from '../../../@types/loading/StructureCatalogReq';
 import type {
-  ClusterCatalogPayload,
-  ClusterMetaEntry,
-} from '../../../@types/loading/ClusterCatalogPayload';
-import { decodeClusterCatalog } from '../../../data/clusterCatalogFormat';
+  StructureCatalogPayload,
+  StructureMetaEntry,
+} from '../../../@types/loading/StructureCatalogPayload';
+import { decodeStructureCatalog } from '../../../data/structureCatalogFormat';
 import { HttpError, dataUrl } from '../fetchWithProgress';
 
 /**
- * Parse `clusters_meta.json` content. Throws on a non-array root. Public so it
+ * Parse `structures_meta.json` content. Throws on a non-array root. Public so it
  * can be unit-tested without hitting the network.
  */
-export function parseClusterMeta(rawJson: string): ClusterMetaEntry[] {
+export function parseStructureMeta(rawJson: string): StructureMetaEntry[] {
   const parsed = JSON.parse(rawJson);
   if (!Array.isArray(parsed)) {
-    throw new Error('clusters_meta.json: root must be an array');
+    throw new Error('structures_meta.json: root must be an array');
   }
-  return parsed as ClusterMetaEntry[];
+  return parsed as StructureMetaEntry[];
 }
 
-const CCAT_FILE = 'clusters.ccat';
-const META_FILE = 'clusters_meta.json';
+const CCAT_FILE = 'structures.ccat';
+const META_FILE = 'structures_meta.json';
 
-export const clusterCatalogFetcher: Fetcher<ClusterCatalogPayload, ClusterCatalogReq> = async (
+export const structureCatalogFetcher: Fetcher<StructureCatalogPayload, StructureCatalogReq> = async (
   _req,
   signal,
 ) => {
@@ -70,17 +70,17 @@ export const clusterCatalogFetcher: Fetcher<ClusterCatalogPayload, ClusterCatalo
   if (!ccatRes.ok) throw new HttpError(ccatRes.status, ccatUrl);
   if (!metaRes.ok) throw new HttpError(metaRes.status, metaUrl);
 
-  const catalog = decodeClusterCatalog(await ccatRes.arrayBuffer());
-  const meta = parseClusterMeta(await metaRes.text());
+  const catalog = decodeStructureCatalog(await ccatRes.arrayBuffer());
+  const meta = parseStructureMeta(await metaRes.text());
 
-  // The two artefacts are emitted index-parallel by buildClusters. A length
+  // The two artefacts are emitted index-parallel by buildStructures. A length
   // mismatch can only mean one of them is stale — fail loud so the operator
-  // re-runs `npm run build-clusters` rather than shipping a layer where
+  // re-runs `npm run build-structures` rather than shipping a layer where
   // localIdx lookups silently point at the wrong (or no) metadata.
   if (catalog.count !== meta.length) {
     throw new Error(
       `cluster catalog/meta length mismatch: .ccat has ${catalog.count} records but ` +
-        `clusters_meta.json has ${meta.length} entries — regenerate via "npm run build-clusters"`,
+        `structures_meta.json has ${meta.length} entries — regenerate via "npm run build-structures"`,
     );
   }
 

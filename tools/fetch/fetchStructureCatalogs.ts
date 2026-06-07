@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * fetchClusterCatalogs — download MCXC and MSCC from CDS VizieR FTP to
+ * fetchStructureCatalogs — download MCXC and MSCC from CDS VizieR FTP to
  * data/raw/{mcxc,mscc}/.
  *
  * Both catalogs are plain uncompressed fixed-width ASCII; the fetch is a
@@ -76,7 +76,7 @@ async function fetchCatalog(opts: {
 }): Promise<void> {
   const { label, tableUrl, readmeUrl, tablePath, readmePath, sha256Path } = opts;
 
-  process.stderr.write(`\nfetchClusterCatalogs: ${label}\n`);
+  process.stderr.write(`\nfetchStructureCatalogs: ${label}\n`);
 
   // ReadMe first — tiny (~5 KB) and the parser needs it for column-offset verification.
   const readmeResult = await downloadWithResume(readmeUrl, readmePath);
@@ -133,7 +133,7 @@ async function main(): Promise<void> {
     sha256Path: MSCC_SHA256_PATH,
   });
 
-  process.stderr.write('\nfetchClusterCatalogs: done\n');
+  process.stderr.write('\nfetchStructureCatalogs: done\n');
 }
 
 const invokedDirectly = process.argv[1] === fileURLToPath(import.meta.url);

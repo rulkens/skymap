@@ -7,7 +7,7 @@
  *   1. Static anchors publish synchronously into the structure store — no
  *      async arrival needed; `byCategory('cluster')` is non-empty after the
  *      call so the Structures panel has counts from frame 1.
- *   2. The bulk cluster group lands in the store when the cluster-catalog
+ *   2. The bulk cluster group lands in the store when the structure-catalog
  *      slot fires, without clobbering the anchors group.
  *   3. `onStructureCountsChange` fires after any group change with fresh
  *      per-category counts.
@@ -19,7 +19,7 @@
  * ### Mocking strategy
  *
  * `buildStaticAnchorStructures` is mocked to a deterministic minimal list so tests
- * don't depend on the curated JSON.  `clusterCatalogToStructures` is mocked to
+ * don't depend on the curated JSON.  `structureCatalogToStructures` is mocked to
  * one record per meta entry.  The structure store is a real `createEngineData`
  * instance so `setGroup` / `byCategory` behave exactly as production.  The
  * cluster slot is a light fake with a `fire` helper.
@@ -31,7 +31,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
-import type { ClusterCatalogPayload } from '../../../../src/@types/loading/ClusterCatalogPayload';
+import type { StructureCatalogPayload } from '../../../../src/@types/loading/StructureCatalogPayload';
 
 // ── Module mocks ───────────────────────────────────────────────────────
 
@@ -73,10 +73,10 @@ vi.mock('../../../../src/data/buildStaticAnchorStructures', () => ({
   ]),
 }));
 
-// clusterCatalogToStructures: one record per entry in payload.meta.
-vi.mock('../../../../src/services/engine/phases/clusterCatalogToStructures', () => ({
-  clusterCatalogToStructures: vi.fn(
-    (payload: ClusterCatalogPayload): StructureRecord[] =>
+// structureCatalogToStructures: one record per entry in payload.meta.
+vi.mock('../../../../src/services/engine/phases/structureCatalogToStructures', () => ({
+  structureCatalogToStructures: vi.fn(
+    (payload: StructureCatalogPayload): StructureRecord[] =>
       payload.meta.map((m) => ({
         id: `cluster-bulk-${m.id}`,
         name: m.names[0],
@@ -119,14 +119,17 @@ function readyState<V>(value: V): LoadState<V> {
 
 // ── State builder ──────────────────────────────────────────────────────
 
-function makeState(): { state: EngineState; clusterCatalogSlot: FakeSlot<ClusterCatalogPayload> } {
-  const clusterCatalogSlot = makeSlot<ClusterCatalogPayload>();
+function makeState(): {
+  state: EngineState;
+  structureCatalogSlot: FakeSlot<StructureCatalogPayload>;
+} {
+  const structureCatalogSlot = makeSlot<StructureCatalogPayload>();
   const state = {
     data: createEngineData(),
     assetSlots: {
-      clusterCatalog: {
-        name: 'cluster-catalog',
-        subscribe: clusterCatalogSlot.subscribe,
+      structureCatalog: {
+        name: 'structure-catalog',
+        subscribe: structureCatalogSlot.subscribe,
         load: vi.fn(),
         state: () => ({ kind: 'idle' }),
         current: () => null,
@@ -135,7 +138,7 @@ function makeState(): { state: EngineState; clusterCatalogSlot: FakeSlot<Cluster
       },
     },
   } as unknown as EngineState;
-  return { state, clusterCatalogSlot };
+  return { state, structureCatalogSlot };
 }
 
 function makeCb(): { cb: EngineCallbacks; countsSpy: ReturnType<typeof vi.fn> } {
@@ -144,7 +147,7 @@ function makeCb(): { cb: EngineCallbacks; countsSpy: ReturnType<typeof vi.fn> } 
   return { cb, countsSpy };
 }
 
-const clusterPayload: ClusterCatalogPayload = {
+const clusterPayload: StructureCatalogPayload = {
   catalog: {
     count: 1,
     positions: new Float32Array([1, 2, 3]),
@@ -176,11 +179,11 @@ describe('wireStructureProjection', () => {
   });
 
   it('lands the bulk cluster group when the slot fires, keeping the anchors', () => {
-    const { state, clusterCatalogSlot } = makeState();
+    const { state, structureCatalogSlot } = makeState();
     const { cb } = makeCb();
 
     wireStructureProjection(state, cb);
-    clusterCatalogSlot.fire(readyState(clusterPayload));
+    structureCatalogSlot.fire(readyState(clusterPayload));
 
     expect(state.data.structures.byId('cluster-bulk-coma')?.id).toBe('cluster-bulk-coma');
     // Anchors survive the bulk write (separate group).
@@ -188,15 +191,15 @@ describe('wireStructureProjection', () => {
   });
 
   it('clears the bulk group and re-emits counts on a slot error', () => {
-    const { state, clusterCatalogSlot } = makeState();
+    const { state, structureCatalogSlot } = makeState();
     const { cb, countsSpy } = makeCb();
 
     wireStructureProjection(state, cb);
-    clusterCatalogSlot.fire(readyState(clusterPayload));
+    structureCatalogSlot.fire(readyState(clusterPayload));
     expect(state.data.structures.byId('cluster-bulk-coma')).not.toBeNull();
 
     countsSpy.mockClear();
-    clusterCatalogSlot.fire({
+    structureCatalogSlot.fire({
       kind: 'error',
       req: {},
       error: new Error('fetch failed'),
@@ -207,7 +210,7 @@ describe('wireStructureProjection', () => {
   });
 
   it('emits onStructureCountsChange with per-category counts after a group change', () => {
-    const { state, clusterCatalogSlot } = makeState();
+    const { state, structureCatalogSlot } = makeState();
     const { cb, countsSpy } = makeCb();
 
     wireStructureProjection(state, cb);
@@ -222,7 +225,7 @@ describe('wireStructureProjection', () => {
     // Settings panel renders its toggle with no count.
     expect(bootCounts.group).toBe(1);
 
-    clusterCatalogSlot.fire(readyState(clusterPayload));
+    structureCatalogSlot.fire(readyState(clusterPayload));
 
     expect(countsSpy).toHaveBeenCalledTimes(2);
     const afterCluster = countsSpy.mock.calls[1]![0] as Record<string, number>;

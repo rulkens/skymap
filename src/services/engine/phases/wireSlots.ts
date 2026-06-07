@@ -34,7 +34,7 @@
  *
  * ### State writes
  *
- *   - `state.assetSlots.{filaments,famousMeta,clusterCatalog,pgcAlias,
+ *   - `state.assetSlots.{filaments,famousMeta,structureCatalog,pgcAlias,
  *     cf4Density,mcpm}` (via `installSlots`) + `.syntheticVolumes` (DEV).
  *   - `state.subsystems.{loadProgress, pois}` + the impostor subsystem handles.
  *   - `state.requests` may gain `'syntheticFallback'` (via the gate).

@@ -24,7 +24,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { readNpy } from '../parsers/npyReader';
-import { parseClusterSeed } from '../parsers/parseClusterSeed';
+import { parseStructureSeed } from '../parsers/parseStructureSeed';
 import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import { eqToSg, sgToVoxelIndex } from '../utils/math/coordinates';
@@ -94,13 +94,13 @@ function main(): void {
 
   // Load the seed and filter to clusters — the audit checks overdensities
   // at well-known cluster positions, not at supercluster or void centres.
-  const clusterEntries = parseClusterSeed(
-    readFileSync(rawDataPath('clusters.seed'), 'utf-8'),
+  const clusterEntries = parseStructureSeed(
+    readFileSync(rawDataPath('structures.seed'), 'utf-8'),
   ).filter((e) => e.category === 'cluster');
 
   // Pre-compute each anchor's continuous voxel index from RA/Dec/distance.
   // The numpy axis order is what we vary below — the SG coords are fixed.
-  // ClusterSeedEntry has raHours/decDeg/distMpc (a superset of SkyCoord),
+  // StructureSeedEntry has raHours/decDeg/distMpc (a superset of SkyCoord),
   // so each entry passes straight into raDecDistToEqCart.
   const anchorSgIdx: { name: string; sgIdx: [number, number, number] }[] = clusterEntries.map(
     (a) => {

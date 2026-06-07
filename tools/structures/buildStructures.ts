@@ -1,23 +1,23 @@
 #!/usr/bin/env node
 /**
- * buildClusters — assemble the cluster/supercluster coverage layer.
+ * buildStructures — assemble the featured-structure coverage layer.
  *
  * Reads:
  *   - `data/raw/mcxc/mcxc.dat`             (MCXC X-ray cluster catalog)
  *   - `data/raw/mscc/mscc.dat`             (MSCC supercluster catalog)
- *   - `data/cluster_anchors.seed.json`     (featured curated anchors)
+ *   - `data/structure_anchors.seed.json`     (featured curated anchors)
  *
  * Writes:
- *   - `public/data/clusters.ccat`          (ClusterCatalog binary, renderer input)
- *   - `public/data/clusters_meta.json`     (per-localIdx id/names/abell/description)
+ *   - `public/data/structures.ccat`          (StructureCatalog binary, renderer input)
+ *   - `public/data/structures_meta.json`     (per-localIdx id/names/abell/description)
  *
  * The two artefacts are index-parallel: record i in the .ccat corresponds
  * to entry i in the meta JSON, allowing the runtime to look up human-readable
  * metadata by the localIdx the pick-renderer returns.
  *
- * Run order: after `npm run build-tiers` (the cluster build is independent of
+ * Run order: after `npm run build-tiers` (the structure build is independent of
  * the galaxy .bin files but shares the same `public/data/` output directory).
- * The npm script is `build-clusters`.
+ * The npm script is `build-structures`.
  *
  * ## Filtering strategy
  *
@@ -39,16 +39,16 @@ import { fileURLToPath } from 'node:url';
 
 import { parseMcxc, type McxcRow } from '../parsers/parseMcxc.js';
 import { parseMscc, type MsccRow } from '../parsers/parseMscc.js';
-import { parseClusterSeed, type ClusterSeedEntry } from '../parsers/parseClusterSeed.js';
-import { encodeClusterCatalog } from '../../src/data/clusterCatalogFormat.js';
+import { parseStructureSeed, type StructureSeedEntry } from '../parsers/parseStructureSeed.js';
+import { encodeStructureCatalog } from '../../src/data/structureCatalogFormat.js';
 import { rawDataPath } from '../utils/io/rawDataRegistry.js';
 import { writeMetaSidecar } from '../curation/writeMetaSidecar.js';
 import { dedupeByProximity } from '../curation/dedupeByProximity.js';
 import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart.js';
 import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc.js';
 import { H0_KM_S_MPC } from '../../src/utils/math/constants.js';
-import type { ClusterCatalog } from '../../src/@types/data/ClusterCatalog.js';
-import type { ClusterCategoryByte } from '../../src/@types/data/ClusterCatalog.js';
+import type { StructureCatalog } from '../../src/@types/data/StructureCatalog.js';
+import type { StructureCategoryByte } from '../../src/@types/data/StructureCatalog.js';
 import type { Vec3 } from '../../src/@types/math/Vec3.js';
 
 // ── Tunable threshold constants ───────────────────────────────────────────────
@@ -132,7 +132,7 @@ const H70 = H0_KM_S_MPC / 70;
  * metadata alongside the numeric fields so callers can build the meta JSON
  * from the same objects, guaranteeing index alignment.
  */
-export type ClusterBuildEntry = {
+export type StructureBuildEntry = {
   /** URL-safe slug of names[0] — becomes the localIdx lookup key at runtime. */
   id: string;
   /** Equatorial-Cartesian world position in Mpc. */
@@ -144,7 +144,7 @@ export type ClusterBuildEntry = {
   /** Raw mass proxy: M500 (10^14 M☉) for clusters, Nm for superclusters. */
   significance: number;
   /** 0 = cluster (MCXC), 1 = supercluster (MSCC). */
-  category: ClusterCategoryByte;
+  category: StructureCategoryByte;
   /** Display names; names[0] is the primary label shown in the UI. */
   names: string[];
   /** Normalized Abell/ACO designation, e.g. 'A2670' or 'S0805', or null. */
@@ -242,7 +242,7 @@ export function extractAbell(oName: string, aName: string): string | null {
 }
 
 /**
- * Build the intermediate `ClusterBuildEntry[]` from raw MCXC rows, raw MSCC
+ * Build the intermediate `StructureBuildEntry[]` from raw MCXC rows, raw MSCC
  * rows, and a curated featured-anchor seed.
  *
  * Steps:
@@ -255,10 +255,10 @@ export function extractAbell(oName: string, aName: string): string | null {
 export function buildClusterEntries(
   mcxc: readonly McxcRow[],
   mscc: readonly MsccRow[],
-  featuredSeed: readonly ClusterSeedEntry[],
-): ClusterBuildEntry[] {
+  featuredSeed: readonly StructureSeedEntry[],
+): StructureBuildEntry[] {
   // ── Step 1: MCXC → cluster entries ────────────────────────────────────────
-  const clusterEntries: ClusterBuildEntry[] = [];
+  const clusterEntries: StructureBuildEntry[] = [];
   for (const row of mcxc) {
     if (row.z > Z_MAX || row.m500 < MCXC_M500_MIN) continue;
 
@@ -295,7 +295,7 @@ export function buildClusterEntries(
   }
 
   // ── Step 2: MSCC → supercluster entries ───────────────────────────────────
-  const scEntries: ClusterBuildEntry[] = [];
+  const scEntries: StructureBuildEntry[] = [];
   for (const row of mscc) {
     if (row.z > Z_MAX || row.nm < MSCC_NM_MIN) continue;
 
@@ -334,14 +334,14 @@ export function buildClusterEntries(
 
 // ── Meta sidecar type ─────────────────────────────────────────────────────────
 
-type ClusterMetaEntry = {
+type StructureMetaEntry = {
   id: string;
   names: string[];
   abell: string | null;
   description: string;
 };
 
-function toMeta(e: ClusterBuildEntry): ClusterMetaEntry {
+function toMeta(e: StructureBuildEntry): StructureMetaEntry {
   return { id: e.id, names: e.names, abell: e.abell, description: e.description };
 }
 
@@ -362,8 +362,8 @@ async function main(): Promise<void> {
   process.stderr.write(`  parsed ${msccRows.length} MSCC rows\n`);
 
   process.stderr.write('parsing cluster seed…\n');
-  const seedRaw = readFileSync(rawDataPath('clusters.seed'), 'utf8');
-  const seed = parseClusterSeed(seedRaw);
+  const seedRaw = readFileSync(rawDataPath('structures.seed'), 'utf8');
+  const seed = parseStructureSeed(seedRaw);
   process.stderr.write(`  loaded ${seed.length} featured seed entries\n`);
 
   // ── Build entries ──────────────────────────────────────────────────────────
@@ -394,7 +394,7 @@ async function main(): Promise<void> {
     category[i] = e.category;
   }
 
-  const catalog: ClusterCatalog = {
+  const catalog: StructureCatalog = {
     count,
     positions,
     physicalRadiusMpc,
@@ -403,13 +403,13 @@ async function main(): Promise<void> {
     category,
   };
 
-  const buf = encodeClusterCatalog(catalog);
-  writeFileSync(resolve(outDir, 'clusters.ccat'), Buffer.from(buf));
-  process.stderr.write(`wrote clusters.ccat (${buf.byteLength} bytes, ${count} records)\n`);
+  const buf = encodeStructureCatalog(catalog);
+  writeFileSync(resolve(outDir, 'structures.ccat'), Buffer.from(buf));
+  process.stderr.write(`wrote structures.ccat (${buf.byteLength} bytes, ${count} records)\n`);
 
   // ── Write meta sidecar ─────────────────────────────────────────────────────
-  writeMetaSidecar(entries.map(toMeta), resolve(outDir, 'clusters_meta.json'));
-  process.stderr.write('wrote clusters_meta.json\n');
+  writeMetaSidecar(entries.map(toMeta), resolve(outDir, 'structures_meta.json'));
+  process.stderr.write('wrote structures_meta.json\n');
 }
 
 // Allow the script to be both executed (CLI) and imported (tests).

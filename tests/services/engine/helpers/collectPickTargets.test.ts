@@ -37,7 +37,7 @@ function makeRenderer(sources: readonly SourceType[]): PointRenderer {
   } as unknown as PointRenderer;
 }
 
-function makeClusterRenderer(markerCount: number): StructureMarkerRenderer {
+function makeStructureMarkerRenderer(markerCount: number): StructureMarkerRenderer {
   return { markerCount: () => markerCount } as unknown as StructureMarkerRenderer;
 }
 
@@ -70,7 +70,7 @@ describe('collectPickTargets', () => {
     const { visibleSources, hasAny } = collectPickTargets(
       renderer,
       mask(), // every survey toggled off
-      makeClusterRenderer(42), // 42 cluster rings queued
+      makeStructureMarkerRenderer(42), // 42 structure rings queued
     );
     expect(visibleSources).toHaveLength(0);
     expect(hasAny).toBe(true);
@@ -78,13 +78,17 @@ describe('collectPickTargets', () => {
 
   it('hasAny is false when the cluster renderer exists but has zero markers (category hidden / all faded)', () => {
     const renderer = makeRenderer([Source.SDSS]);
-    const { hasAny } = collectPickTargets(renderer, mask(), makeClusterRenderer(0));
+    const { hasAny } = collectPickTargets(renderer, mask(), makeStructureMarkerRenderer(0));
     expect(hasAny).toBe(false);
   });
 
   it('hasAny is true when both galaxy surveys and cluster markers are present', () => {
     const renderer = makeRenderer([Source.SDSS]);
-    const { hasAny } = collectPickTargets(renderer, mask(Source.SDSS), makeClusterRenderer(5));
+    const { hasAny } = collectPickTargets(
+      renderer,
+      mask(Source.SDSS),
+      makeStructureMarkerRenderer(5),
+    );
     expect(hasAny).toBe(true);
   });
 });

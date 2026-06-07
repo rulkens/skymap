@@ -68,7 +68,7 @@ export type ReadyFrameContext = {
   drawCamPos: Readonly<Vec3>;
   /** `canvasSize.height / (2·tan(fovY/2))` — pinhole radian→pixel conversion. */
   drawPxPerRad: number;
-  /** Cluster-focus recession blend 0→1, from clusterFocus.produceFocusUniforms (ticked once/frame). */
+  /** Structure-focus recession blend 0→1, from structureFocus.produceFocusUniforms (ticked once/frame). */
   focusBlend: number;
   /**
    * Non-null GPU + subsystem handles, narrowed across the bootstrap

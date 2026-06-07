@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
-  clusterCatalogFetcher,
-  parseClusterMeta,
-} from '../../../../src/services/loading/fetchers/clusterCatalogFetcher';
-import { encodeClusterCatalog } from '../../../../src/data/clusterCatalogFormat';
-import type { ClusterCatalog } from '../../../../src/@types/data/ClusterCatalog';
-import type { ClusterMetaEntry } from '../../../../src/@types/loading/ClusterCatalogPayload';
+  structureCatalogFetcher,
+  parseStructureMeta,
+} from '../../../../src/services/loading/fetchers/structureCatalogFetcher';
+import { encodeStructureCatalog } from '../../../../src/data/structureCatalogFormat';
+import type { StructureCatalog } from '../../../../src/@types/data/StructureCatalog';
+import type { StructureMetaEntry } from '../../../../src/@types/loading/StructureCatalogPayload';
 import { useFetchMock } from '../../../setup/fetchMock';
 
 /** Build a tiny well-formed catalog of `count` records for fixtures. */
-const makeCatalog = (count: number): ClusterCatalog => ({
+const makeCatalog = (count: number): StructureCatalog => ({
   count,
   positions: new Float32Array(count * 3).map((_, i) => i),
   physicalRadiusMpc: new Float32Array(count).fill(1),
@@ -18,7 +18,7 @@ const makeCatalog = (count: number): ClusterCatalog => ({
   category: new Uint8Array(count),
 });
 
-const makeMeta = (count: number): ClusterMetaEntry[] =>
+const makeMeta = (count: number): StructureMetaEntry[] =>
   Array.from({ length: count }, (_, i) => ({
     id: `c${i}`,
     names: [`Cluster ${i}`],
@@ -44,9 +44,9 @@ const routeByUrl = (
   });
 };
 
-describe('parseClusterMeta', () => {
+describe('parseStructureMeta', () => {
   it('parses a valid array', () => {
-    const parsed = parseClusterMeta(
+    const parsed = parseStructureMeta(
       '[{"id":"a","names":["A"],"abell":null,"description":""}]',
     );
     expect(parsed).toHaveLength(1);
@@ -54,18 +54,18 @@ describe('parseClusterMeta', () => {
   });
 
   it('rejects a non-array root', () => {
-    expect(() => parseClusterMeta('{}')).toThrow();
+    expect(() => parseStructureMeta('{}')).toThrow();
   });
 });
 
-describe('clusterCatalogFetcher', () => {
+describe('structureCatalogFetcher', () => {
   const fetch = useFetchMock();
 
   it('decodes the ccat and pairs it with meta', async () => {
-    const ccat = encodeClusterCatalog(makeCatalog(2));
+    const ccat = encodeStructureCatalog(makeCatalog(2));
     routeByUrl(fetch.mock, ccat, JSON.stringify(makeMeta(2)));
 
-    const payload = await clusterCatalogFetcher(
+    const payload = await structureCatalogFetcher(
       {},
       new AbortController().signal,
       () => {},
@@ -87,12 +87,12 @@ describe('clusterCatalogFetcher', () => {
     });
 
     await expect(
-      clusterCatalogFetcher({}, new AbortController().signal, () => {}),
+      structureCatalogFetcher({}, new AbortController().signal, () => {}),
     ).rejects.toThrow();
   });
 
   it('throws HttpError on a 404 from the meta fetch', async () => {
-    const ccat = encodeClusterCatalog(makeCatalog(2));
+    const ccat = encodeStructureCatalog(makeCatalog(2));
     fetch.mock.mockImplementation((url: string) => {
       if (String(url).endsWith('.ccat')) {
         return Promise.resolve(new Response(ccat, { status: 200 }));
@@ -101,21 +101,21 @@ describe('clusterCatalogFetcher', () => {
     });
 
     await expect(
-      clusterCatalogFetcher({}, new AbortController().signal, () => {}),
+      structureCatalogFetcher({}, new AbortController().signal, () => {}),
     ).rejects.toThrow();
   });
 
   it('throws on a count/meta-length mismatch', async () => {
-    const ccat = encodeClusterCatalog(makeCatalog(2));
+    const ccat = encodeStructureCatalog(makeCatalog(2));
     routeByUrl(fetch.mock, ccat, JSON.stringify(makeMeta(1)));
 
     await expect(
-      clusterCatalogFetcher({}, new AbortController().signal, () => {}),
+      structureCatalogFetcher({}, new AbortController().signal, () => {}),
     ).rejects.toThrow(/mismatch/i);
   });
 
   it('passes the abort signal to both fetches', async () => {
-    const ccat = encodeClusterCatalog(makeCatalog(1));
+    const ccat = encodeStructureCatalog(makeCatalog(1));
     fetch.mock.mockImplementation((_url: string, init?: RequestInit) => {
       if (init?.signal?.aborted) {
         return Promise.reject(new DOMException('aborted', 'AbortError'));
@@ -129,7 +129,7 @@ describe('clusterCatalogFetcher', () => {
     const controller = new AbortController();
     controller.abort();
     await expect(
-      clusterCatalogFetcher({}, controller.signal, () => {}),
+      structureCatalogFetcher({}, controller.signal, () => {}),
     ).rejects.toThrow();
   });
 });

@@ -1,8 +1,8 @@
 /**
  * Tests for `raDecDistToEqCart` and the cluster seed content.
  *
- * The seed data lives in `data/cluster_anchors.seed.json`, parsed by
- * `tools/parsers/parseClusterSeed.ts`; the coordinate helper lives at
+ * The seed data lives in `data/structure_anchors.seed.json`, parsed by
+ * `tools/parsers/parseStructureSeed.ts`; the coordinate helper lives at
  * `src/utils/math/raDecDistToEqCart.ts`.
  *
  * The id invariants that matter for deep-link stability are covered in
@@ -14,11 +14,11 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
-import { parseClusterSeed } from '../../tools/parsers/parseClusterSeed';
-import type { ClusterSeedEntry } from '../../tools/parsers/parseClusterSeed';
+import { parseStructureSeed } from '../../tools/parsers/parseStructureSeed';
+import type { StructureSeedEntry } from '../../tools/parsers/parseStructureSeed';
 
-const SEED_PATH = resolve(__dirname, '../../data/cluster_anchors.seed.json');
-const allEntries = parseClusterSeed(readFileSync(SEED_PATH, 'utf-8'));
+const SEED_PATH = resolve(__dirname, '../../data/structure_anchors.seed.json');
+const allEntries = parseStructureSeed(readFileSync(SEED_PATH, 'utf-8'));
 
 const CLUSTER_ENTRIES = allEntries.filter((e) => e.category === 'cluster');
 const SUPERCLUSTER_ENTRIES = allEntries.filter((e) => e.category === 'supercluster');
@@ -142,7 +142,7 @@ describe('cluster seed — void entries', () => {
 
 describe('cluster seed — physicalRadiusMpc population', () => {
   it('uses the literature-grounded radii from the spec', () => {
-    const byPrimaryName = (list: readonly ClusterSeedEntry[], n: string) =>
+    const byPrimaryName = (list: readonly StructureSeedEntry[], n: string) =>
       list.find((a) => a.names[0]?.startsWith(n));
 
     expect(byPrimaryName(CLUSTER_ENTRIES, 'Virgo')?.physicalRadiusMpc).toBe(2.2);

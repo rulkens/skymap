@@ -1,7 +1,7 @@
 /**
  * buildStaticAnchorStructures — assemble the static `StructureRecord[]` list
  * from the curated cluster/supercluster/void/group seed in
- * `data/cluster_anchors.seed.json`.
+ * `data/structure_anchors.seed.json`.
  *
  * ### Why a separate module?
  *
@@ -19,7 +19,7 @@
  * Keeping a single helper here means both call sites agree on:
  *
  *   - The id rule: `${category}-${seed.id}`, where `seed.id` is the
- *     curated identifier in `cluster_anchors.seed.json`.  Using the seed
+ *     curated identifier in `structure_anchors.seed.json`.  Using the seed
  *     field directly means the deep-link hash is the single canonical
  *     identity — no slug-function drift for names that contain non-ASCII
  *     characters or punctuation.
@@ -61,14 +61,14 @@ import type { StructureRecord } from '../@types/engine/data/StructureRecord';
 // Vite resolves JSON imports at build time; TypeScript narrows the type
 // via `resolveJsonModule: true`.  We cast to the fields we consume so
 // new seed columns don't require a type update here.  The JSON's shape is
-// validated at build time by `tools/parsers/parseClusterSeed.ts` (run via
-// `buildClusters.ts`), so this module trusts the cast and skips a runtime
+// validated at build time by `tools/parsers/parseStructureSeed.ts` (run via
+// `buildStructures.ts`), so this module trusts the cast and skips a runtime
 // re-validator.
-import clusterSeedJson from '../../data/cluster_anchors.seed.json';
+import structureSeedJson from '../../data/structure_anchors.seed.json';
 
 /**
  * Minimal shape we need from each seed entry — a strict subset of
- * ClusterSeedEntry from `tools/parsers/parseClusterSeed.ts`.  Defined
+ * StructureSeedEntry from `tools/parsers/parseStructureSeed.ts`.  Defined
  * locally so the src/ tsconfig (which excludes tools/) doesn't need to
  * reach across the boundary for a runtime-erased type.
  */
@@ -138,5 +138,5 @@ function buildAnchorStructure(a: SeedEntry): StructureRecord {
  * reference identity is preserved across renders).
  */
 export function buildStaticAnchorStructures(): StructureRecord[] {
-  return (clusterSeedJson as SeedEntry[]).map(buildAnchorStructure);
+  return (structureSeedJson as SeedEntry[]).map(buildAnchorStructure);
 }

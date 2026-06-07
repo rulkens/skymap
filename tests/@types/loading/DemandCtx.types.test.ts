@@ -5,7 +5,7 @@
  *   - A literal object with all fields satisfies `DemandCtx`.
  *   - `request('paletteOpened')` typechecks (i.e. `'paletteOpened'` is a
  *     valid `RequestKey` and the return type is `boolean`).
- *   - `slotState('clusterCatalog')` typechecks with the `LoadState['kind']`
+ *   - `slotState('structureCatalog')` typechecks with the `LoadState['kind']`
  *     return type.
  *   - `volumeField('mcpm')` typechecks (returns the params or undefined).
  *
@@ -57,7 +57,7 @@ describe('DemandCtx assignability', () => {
   });
 
   it('slotState accepts an AssetKey string and returns a LoadState kind', () => {
-    const kind = ctx.slotState('clusterCatalog');
+    const kind = ctx.slotState('structureCatalog');
     // The return type is LoadState<unknown>['kind'] — a union of string literals.
     expect(typeof kind).toBe('string');
   });

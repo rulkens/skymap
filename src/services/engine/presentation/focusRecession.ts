@@ -15,7 +15,7 @@
  * factor lives HERE, as a stateless function of the handle and the focus
  * `blend`. We deliberately do NOT fold recession into the registry
  * (no `setFocusBlend`, no `toggle × recession` baked into `opacityOf`):
- * the blend's authoritative home is `clusterFocusSubsystem`
+ * the blend's authoritative home is `structureFocusSubsystem`
  * (`FocusUniformsValue.blend`), and caching it in the registry would be a
  * value×place mirror (the stale-mirror bug class). Toggle fade and focus
  * recession vary independently, so they are *composed* at the consumer,

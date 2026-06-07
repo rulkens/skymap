@@ -1,12 +1,12 @@
 /**
- * clusterCatalogToStructures — assemble the bulk (non-featured)
+ * structureCatalogToStructures — assemble the bulk (non-featured)
  * cluster/supercluster `StructureRecord`s from the decoded `.ccat` catalog +
  * its meta sidecar.
  *
  * ### Why a separate module
  *
  * A pure transform that `wireStructureProjection` installs into the structure
- * store's `bulk` group once the cluster-catalog slot lands, kept out of the
+ * store's `bulk` group once the structure-catalog slot lands, kept out of the
  * wiring so it's unit-testable without booting the engine.  Every record here
  * is `featured: false` — these ~375 structures render through the ring/halo
  * marker pass, NOT the
@@ -50,7 +50,7 @@
  * them as non-deep-linkable (the URL drain only resolves featured ids).
  */
 
-import type { ClusterCatalogPayload } from '../../../@types/loading/ClusterCatalogPayload';
+import type { StructureCatalogPayload } from '../../../@types/loading/StructureCatalogPayload';
 import type { StructureRecord } from '../../../@types/engine/data/StructureRecord';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
@@ -102,7 +102,7 @@ function makeNormaliser(
   return (raw: number) => (transform(raw) - min) / span;
 }
 
-export function clusterCatalogToStructures(payload: ClusterCatalogPayload): StructureRecord[] {
+export function structureCatalogToStructures(payload: StructureCatalogPayload): StructureRecord[] {
   const { catalog, meta } = payload;
   if (catalog.count === 0) return [];
 

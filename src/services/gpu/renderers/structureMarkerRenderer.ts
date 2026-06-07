@@ -448,9 +448,7 @@ export function createStructureMarkerRenderer(
     // First pass: count per category to compute offsets.
     const count = descriptors.length;
     for (let i = 0; i < count; i++) {
-      const d = descriptors[i]!;
-      // famousGalaxy (label-only) has no markers; skip.
-      if (d.category !== 'famousGalaxy') bucketCounts[d.category]++;
+      bucketCounts[descriptors[i]!.category]++;
     }
     // Prefix-sum the counts into per-category run offsets.
     let acc = 0;
@@ -463,7 +461,6 @@ export function createStructureMarkerRenderer(
     const writeCursor: Record<StructureCategory, number> = { ...bucketOffsets };
     for (let i = 0; i < count; i++) {
       const d = descriptors[i]!;
-      if (d.category === 'famousGalaxy') continue;
       const slot = writeCursor[d.category];
       writeCursor[d.category]++;
       const base = slot * MARKER_INSTANCE_FLOATS;

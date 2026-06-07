@@ -38,7 +38,7 @@ function makeState(): EngineState {
       points,
       filaments: null,
       famousMeta: null,
-      clusterCatalog: null,
+      structureCatalog: null,
       pgcAlias: null,
       cf4Density: null,
       mcpm: null,
@@ -51,14 +51,14 @@ describe('installSlots', () => {
     const state = makeState();
     const filaments = stubSlot('filaments');
     const famousMeta = stubSlot('famous-meta');
-    const clusterCatalog = stubSlot('cluster-catalog');
+    const structureCatalog = stubSlot('structure-catalog');
     const pgcAlias = stubSlot('pgc-aliases');
     const cf4Density = stubSlot('cf4Density');
     const mcpm = stubSlot('mcpm');
     const slots = new Map<AssetKey, AssetSlot<unknown, unknown>>([
       ['filaments', filaments],
       ['famousMeta', famousMeta],
-      ['clusterCatalog', clusterCatalog],
+      ['structureCatalog', structureCatalog],
       ['pgcAlias', pgcAlias],
       ['cf4Density', cf4Density],
       ['mcpm', mcpm],
@@ -68,7 +68,7 @@ describe('installSlots', () => {
 
     expect(state.assetSlots.filaments).toBe(filaments);
     expect(state.assetSlots.famousMeta).toBe(famousMeta);
-    expect(state.assetSlots.clusterCatalog).toBe(clusterCatalog);
+    expect(state.assetSlots.structureCatalog).toBe(structureCatalog);
     expect(state.assetSlots.pgcAlias).toBe(pgcAlias);
     expect(state.assetSlots.cf4Density).toBe(cf4Density);
     expect(state.assetSlots.mcpm).toBe(mcpm);

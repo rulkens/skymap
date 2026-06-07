@@ -1,5 +1,5 @@
 /**
- * Format-level tests for the v1 cluster-catalog binary (CCAT).
+ * Format-level tests for the v1 structure-catalog binary (CCAT).
  *
  * Six contracts under test:
  *
@@ -10,10 +10,10 @@
  *   3. A buffer with the wrong magic is rejected with an error containing
  *      'CCAT' so the caller knows which format was expected.
  *   4. A buffer with an unsupported version is rejected with a message that
- *      contains 'build-clusters' so the caller knows how to regenerate.
+ *      contains 'build-structures' so the caller knows how to regenerate.
  *   5. A truncated buffer (byteLength < header + count*28) is rejected with
  *      a message containing 'truncated' rather than silently decoding zeros.
- *   6. emptyClusterCatalog() returns a count-0 catalog with zero-length arrays.
+ *   6. emptyStructureCatalog() returns a count-0 catalog with zero-length arrays.
  *
  * Float values in round-trip tests use exactly representable f32 literals
  * (integers, powers of two, half-integers) so the Float32 truncation in
@@ -21,14 +21,14 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
-  encodeClusterCatalog,
-  decodeClusterCatalog,
-  emptyClusterCatalog,
-} from '../../src/data/clusterCatalogFormat';
-import type { ClusterCatalog } from '../../src/@types/data/ClusterCatalog';
+  encodeStructureCatalog,
+  decodeStructureCatalog,
+  emptyStructureCatalog,
+} from '../../src/data/structureCatalogFormat';
+import type { StructureCatalog } from '../../src/@types/data/StructureCatalog';
 
 /** Build a two-record test catalog with known field values. */
-function makeCatalog(): ClusterCatalog {
+function makeCatalog(): StructureCatalog {
   return {
     count: 2,
     // Record 0: a cluster; record 1: a supercluster
@@ -48,8 +48,8 @@ function makeCatalog(): ClusterCatalog {
 describe('encode/decode cluster catalog v1 (CCAT)', () => {
   it('round-trips positions, radii, significance, and category for a 2-record catalog', () => {
     const cat = makeCatalog();
-    const buf = encodeClusterCatalog(cat);
-    const out = decodeClusterCatalog(buf);
+    const buf = encodeStructureCatalog(cat);
+    const out = decodeStructureCatalog(buf);
 
     expect(out.count).toBe(2);
 
@@ -74,14 +74,14 @@ describe('encode/decode cluster catalog v1 (CCAT)', () => {
   });
 
   it('encoded file size is 16 + count*28', () => {
-    const buf = encodeClusterCatalog(makeCatalog());
+    const buf = encodeStructureCatalog(makeCatalog());
     // 16-byte header + 2 records × 28 bytes
     expect(buf.byteLength).toBe(16 + 2 * 28);
   });
 
   it('encoded file size for count=0 is exactly 16 bytes', () => {
-    const empty = emptyClusterCatalog();
-    const buf = encodeClusterCatalog(empty);
+    const empty = emptyStructureCatalog();
+    const buf = encodeStructureCatalog(empty);
     expect(buf.byteLength).toBe(16);
   });
 
@@ -89,7 +89,7 @@ describe('encode/decode cluster catalog v1 (CCAT)', () => {
     // Direct byte inspection so we catch a stride regression independently
     // of the decode path.
     const cat = makeCatalog();
-    const buf = encodeClusterCatalog(cat);
+    const buf = encodeStructureCatalog(cat);
     const bytes = new Uint8Array(buf);
 
     // Record 0: category=0 at header(16) + rec(0)*28 + offset(24) = 40
@@ -115,29 +115,29 @@ describe('encode/decode cluster catalog v1 (CCAT)', () => {
     dv.setUint32(8, 0, true); // count 0
     dv.setUint32(12, 0, true); // reserved
 
-    expect(() => decodeClusterCatalog(buf)).toThrow(/CCAT/);
+    expect(() => decodeStructureCatalog(buf)).toThrow(/CCAT/);
   });
 
-  it('rejects wrong version with an error containing "build-clusters"', () => {
+  it('rejects wrong version with an error containing "build-structures"', () => {
     // Encode a valid catalog, then patch the version field to 2
-    const buf = encodeClusterCatalog(makeCatalog());
+    const buf = encodeStructureCatalog(makeCatalog());
     new DataView(buf).setUint32(4, 2, true);
 
-    expect(() => decodeClusterCatalog(buf)).toThrow(/build-clusters/);
+    expect(() => decodeStructureCatalog(buf)).toThrow(/build-structures/);
   });
 
   it('decode rejects a truncated buffer', () => {
     // Encode a valid 2-record catalog, then lop off the last 4 bytes so the
     // second record is incomplete.  Decode must throw rather than silently
     // reading zeros from beyond the buffer end.
-    const buf = encodeClusterCatalog(makeCatalog());
+    const buf = encodeStructureCatalog(makeCatalog());
     const truncated = buf.slice(0, buf.byteLength - 4);
-    expect(() => decodeClusterCatalog(truncated)).toThrow(/truncated/);
+    expect(() => decodeStructureCatalog(truncated)).toThrow(/truncated/);
   });
 
-  it('encodeClusterCatalog rejects mismatched array lengths', () => {
+  it('encodeStructureCatalog rejects mismatched array lengths', () => {
     // count=2 but physicalRadiusMpc has only 1 element — encoder must throw.
-    const bad: ClusterCatalog = {
+    const bad: StructureCatalog = {
       count: 2,
       positions: new Float32Array([1, 2, 3, 4, 5, 6]),
       physicalRadiusMpc: new Float32Array([1]), // wrong: should be length 2
@@ -145,11 +145,11 @@ describe('encode/decode cluster catalog v1 (CCAT)', () => {
       significance: new Float32Array([5e14, 64]),
       category: new Uint8Array([0, 1]),
     };
-    expect(() => encodeClusterCatalog(bad)).toThrow('physicalRadiusMpc length mismatch');
+    expect(() => encodeStructureCatalog(bad)).toThrow('physicalRadiusMpc length mismatch');
   });
 
-  it('emptyClusterCatalog has count 0 and zero-length typed arrays', () => {
-    const empty = emptyClusterCatalog();
+  it('emptyStructureCatalog has count 0 and zero-length typed arrays', () => {
+    const empty = emptyStructureCatalog();
     expect(empty.count).toBe(0);
     expect(empty.positions.length).toBe(0);
     expect(empty.physicalRadiusMpc.length).toBe(0);

@@ -1,5 +1,5 @@
 /**
- * clusterCatalogSlot — verifies the slot wakes the renderer on a successful
+ * structureCatalogSlot — verifies the slot wakes the renderer on a successful
  * load and degrades gracefully on fetch failure.
  *
  * The slot has no GPU commit and owns no state — `wireStructureProjection`
@@ -9,7 +9,7 @@
  * deterministic ready/error transition without touching the network.
  */
 import { describe, expect, it, vi } from 'vitest';
-import type { ClusterCatalogPayload } from '../../../../src/@types/loading/ClusterCatalogPayload';
+import type { StructureCatalogPayload } from '../../../../src/@types/loading/StructureCatalogPayload';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import { HttpError } from '../../../../src/services/loading/fetchWithProgress';
@@ -17,13 +17,13 @@ import { HttpError } from '../../../../src/services/loading/fetchWithProgress';
 // Hoisted mock target — `vi.mock` runs before imports, so the fetcher
 // reference has to live in a hoisted block the factory closure can see.
 const { mockFetch } = vi.hoisted(() => ({ mockFetch: vi.fn() }));
-vi.mock('../../../../src/services/loading/fetchers/clusterCatalogFetcher', () => ({
-  clusterCatalogFetcher: mockFetch,
+vi.mock('../../../../src/services/loading/fetchers/structureCatalogFetcher', () => ({
+  structureCatalogFetcher: mockFetch,
 }));
 
-import { createClusterCatalogSlot } from '../../../../src/services/loading/slots/clusterCatalogSlot';
+import { createStructureCatalogSlot } from '../../../../src/services/loading/slots/structureCatalogSlot';
 
-function fakePayload(): ClusterCatalogPayload {
+function fakePayload(): StructureCatalogPayload {
   return {
     catalog: {
       count: 1,
@@ -51,13 +51,13 @@ function fakeState(): { state: EngineState; requestRender: ReturnType<typeof vi.
 
 const noopCb = {} as EngineCallbacks;
 
-describe('createClusterCatalogSlot', () => {
+describe('createStructureCatalogSlot', () => {
   it('wakes the renderer on ready', async () => {
     const payload = fakePayload();
     mockFetch.mockResolvedValue(payload);
     const { state, requestRender } = fakeState();
 
-    const slot = createClusterCatalogSlot(state, noopCb);
+    const slot = createStructureCatalogSlot(state, noopCb);
     slot.load({});
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
@@ -66,18 +66,18 @@ describe('createClusterCatalogSlot', () => {
     expect(requestRender).toHaveBeenCalled();
     // Construction purity: the factory RETURNS the slot and does NOT
     // self-install it — `installSlots` (the orchestrator) owns the write.
-    expect(slot.name).toBe('cluster-catalog');
-    expect(state.assetSlots.clusterCatalog).toBeUndefined();
+    expect(slot.name).toBe('structure-catalog');
+    expect(state.assetSlots.structureCatalog).toBeUndefined();
   });
 
   it('warns on error', async () => {
     // A 404 is a permanent failure under defaultRetryPolicy → give-up
     // immediately (no slow backoff), so the slot reaches 'error' at once.
-    mockFetch.mockRejectedValue(new HttpError(404, 'clusters.ccat'));
+    mockFetch.mockRejectedValue(new HttpError(404, 'structures.ccat'));
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const { state } = fakeState();
 
-    const slot = createClusterCatalogSlot(state, noopCb);
+    const slot = createStructureCatalogSlot(state, noopCb);
     slot.load({});
     await vi.waitFor(() => expect(slot.state().kind).toBe('error'));
 
