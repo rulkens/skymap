@@ -28,16 +28,13 @@ import { createPickRenderer } from '../../gpu/renderers/pickRenderer';
 import { createClickResolver } from '../interaction/clickHandler';
 import { attachEngineInputs } from '../interaction/inputBindings';
 import { computeInitialCamera } from '../camera/cameraFraming';
-import { buildGalaxyInfo } from '../helpers/galaxyInfoBuilder';
 import { seedSettingsCallbacks } from '../wiring/seedSettingsCallbacks';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { resolvePoiFromPick } from '../helpers/resolvePoiFromPick';
 import { collectPickTargets } from '../helpers/collectPickTargets';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
-import type { StructureRecord } from '../../../@types/engine/data/StructureRecord';
 
 /**
  * Bootstrap phase 3: pick renderer + camera + orbit controls + click
@@ -76,14 +73,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // GalaxyInfo for a callback fan-out.
   state.subsystems.clickResolver = createClickResolver({
     pickRenderer,
-    resolveSelection: (sel) => {
-      const cloud = state.data.galaxies.catalogs.get(sel.source);
-      if (!cloud) return null;
-      if (sel.localIdx < 0 || sel.localIdx >= cloud.count) return null;
-      return { source: sel.source, localIdx: sel.localIdx, cloud };
-    },
-    buildGalaxyInfo: (cloud, localIdx, src) =>
-      buildGalaxyInfo(cloud, localIdx, src, state.data.galaxies.famousMeta),
     // POI pick hit `(category, poiIndex)` → `StructureRecord`.  Shared
     // with the hover throttler in `runFrame.ts` so the click and hover
     // paths can't drift on the lookup logic; see `resolvePoiFromPick`.
@@ -196,24 +185,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // option. A "click" fires only when pointerup is within 4 CSS pixels of
   // pointerdown — pure drags (orbit gestures) are suppressed.
 
-  // Cache of the most-recent successful click pick.  The double-click
-  // handler reads from this rather than running a second pick: two
-  // readbacks racing on shared GPU resources resolve out of order (the
-  // dblclick read returns `clear` while the click resolves later with the
-  // real hit).  Stored as the full GalaxyInfo so `handle.focusOn` can pull
-  // `x/y/z` + `diameterKpc` without a second cloud-lookup.  Cleared on
-  // empty-space clicks so a dblclick there doesn't trigger a stale focus.
-  let lastClickedInfo: GalaxyInfo | null = null;
-
-  // POI sister cache to `lastClickedInfo`, same race rationale.  Cleared
-  // on every empty-space AND galaxy click so the dblclick path can prefer
-  // POI over galaxy when the most-recent single-click was a ring hit (POI
-  // wins when both are non-null — see onDoubleClick below).
-  let lastClickedPoi: StructureRecord | null = null;
-
-  // Shared pick body for single-click (dblclick reuses the cached
-  // payloads).  Inline rather than module-level because it closes over
-  // `state` and `canvas`.
+  // Shared pick body for single-click.  Inline rather than module-level
+  // because it closes over `state` and `canvas`.
   const runPickAtCss = (
     xCss: number,
     yCss: number,
@@ -266,81 +239,32 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       // want an immediate, synchronous-feeling response.
       const pick = runPickAtCss(xCss, yCss);
       if (!pick) return;
-      pick.then((result) => {
-        // Single-click semantics for both kinds: clear / select.
-        // Double-click upgrades to focus (tween + URL hash); that path
-        // runs via `handle.camera.focusOn` in the dblclick handler.
-        // The resolved `GalaxyInfo` / `StructureRecord` payload is
-        // cached on `lastClickedInfo` / `lastClickedPoi` so the
-        // dblclick handler can reuse it without a second pick — see
-        // those slots above for the race-condition rationale.
-        switch (result.kind) {
-          case 'clear':
-            // Unified slot: setSelected(null) clears whatever was
-            // there (galaxy or POI) and fires both onSelectChange(null)
-            // and onPoiFocusChange(null) so the URL hash drops in
-            // lock-step regardless of which body was showing.
-            state.subsystems.selection.setSelected(null);
-            lastClickedInfo = null;
-            lastClickedPoi = null;
-            break;
-          case 'select':
-            // Galaxy variant — replaces any prior POI selection in
-            // the same slot; selectionSubsystem fires onPoiFocusChange(null)
-            // alongside onSelectChange(info) so the React InfoCard
-            // swaps bodies cleanly.
-            state.subsystems.selection.setSelected(result.selection);
-            lastClickedInfo = result.info;
-            lastClickedPoi = null;
-            break;
-          case 'poi':
-            // POI variant — single-click is pure selection (parallel
-            // to the galaxy single-click above): just update the
-            // unified selection slot.  The dblclick handler will run
-            // commitPoiFocus via `focusOn` if the user upgrades the
-            // gesture, which is where onFocusChange + tween fire.
-            state.subsystems.selection.setSelected({ kind: 'poi', id: result.poi.id });
-            lastClickedInfo = null;
-            lastClickedPoi = result.poi;
-            break;
-        }
-        // Selection changed — render so the highlight halo
-        // updates on the next frame.
+      pick.then((sel) => {
+        // Single-click is pure selection (null clears) for both galaxy and
+        // POI hits. setSelected resolves the target internally and fires
+        // onSelectChange so the React InfoCard swaps bodies; the dblclick
+        // handler reads `selectedTarget()` to upgrade to focus.
+        state.subsystems.selection.setSelected(sel);
+        // Selection changed — render so the highlight halo updates next frame.
         state.subsystems.scheduler.requestRender();
       });
     },
     onDoubleClick: () => {
-      // Native dblclick fires AFTER the two preceding click events, which
-      // have already populated `lastClickedInfo` / `lastClickedPoi`.  We
-      // reuse those rather than running a second pick (the racing readbacks
-      // resolve out of order); same coordinates + camera state, since
-      // dblclick fires before any frame can shift the scene.
-      //
-      // POI takes priority over galaxy: the single-click handler clears
-      // `lastClickedPoi` on every galaxy / empty-space resolution, so a
-      // non-null value means the most-recent click was a ring hit.  Without
-      // the priority a galaxy behind the ring would steal the dblclick.
+      // Upgrade the current selection to a focus. The preceding single-clicks
+      // already pinned it, so we read the authoritative selection slot rather
+      // than running a second pick (racing readbacks resolve out of order) or
+      // caching a resolved copy. A null target means empty-space: release the
+      // focus slot so the cluster-focus fade lifts. `handle` is resolved
+      // lazily through `deps.handleRef`, non-null by the time a user can
+      // dblclick.
       const handle = deps.handleRef.current;
-      if (lastClickedPoi) {
-        handle?.camera.focusOn(lastClickedPoi);
+      const target = state.subsystems.selection.selectedTarget();
+      if (target) {
+        handle?.camera.focusOn(target);
         return;
       }
-      // Empty-space dblclick: both caches were cleared by the preceding
-      // single-clicks, so this is a deliberate "release focus" gesture —
-      // the inverse of double-clicking a structure to focus it.  Drop the
-      // focus slot so the cluster-focus fade lifts and every galaxy +
-      // structure returns to full visibility.  The camera stays put
-      // (flying home is the separate reset gesture); `setFocused(null)`
-      // fires `onFocusChange(null)`, and we wake the loop so the fade-out
-      // animates.
-      if (!lastClickedInfo) {
-        state.subsystems.selection.setFocused(null);
-        state.subsystems.scheduler.requestRender();
-        return;
-      }
-      // `handle` is constructed after the bootstrap IIFE; resolved lazily
-      // through `deps.handleRef`, non-null by the time a user can dblclick.
-      handle?.camera.focusOn(lastClickedInfo);
+      state.subsystems.selection.setFocused(null);
+      state.subsystems.scheduler.requestRender();
     },
   });
 

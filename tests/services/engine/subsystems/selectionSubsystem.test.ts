@@ -170,6 +170,32 @@ describe('createSelectionSubsystem — POI variant', () => {
   });
 });
 
+describe('createSelectionSubsystem — selectedTarget', () => {
+  it('returns null when nothing is pinned', () => {
+    expect(makeSub(makeCallbacks()).selectedTarget()).toBeNull();
+  });
+
+  it('resolves a pinned POI selection to its StructureRecord', () => {
+    const sub = makeSub(makeCallbacks(), { pois: [VIRGO] });
+    sub.setSelected({ kind: 'poi', id: 'virgo' });
+    expect(sub.selectedTarget()).toBe(VIRGO);
+  });
+
+  it('resolves a pinned galaxy selection to a GalaxyInfo', () => {
+    const sub = makeSub(makeCallbacks(), { cloud: makeCloud(10) });
+    sub.setSelected({ kind: 'galaxy', source: Source.SDSS, localIdx: 3 });
+    // The dblclick focus reads this — a loaded cloud yields a real target.
+    expect(sub.selectedTarget()).not.toBeNull();
+  });
+
+  it('returns null for a pinned galaxy whose cloud is not loaded', () => {
+    const sub = makeSub(makeCallbacks()); // no cloud
+    sub.setSelected({ kind: 'galaxy', source: Source.SDSS, localIdx: 3 });
+    // Empty-space behaviour at dblclick: an unresolvable target releases focus.
+    expect(sub.selectedTarget()).toBeNull();
+  });
+});
+
 describe('createSelectionSubsystem — cross-kind transitions', () => {
   it('galaxy → POI selection fires onSelectChange once with the POI', () => {
     const cb = makeCallbacks();
