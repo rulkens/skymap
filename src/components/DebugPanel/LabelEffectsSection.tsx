@@ -2,7 +2,7 @@
  * LabelEffectsSection — live-tuning controls for the label outline.
  *
  * Pick a target category, tune outline colour + width, then bake the
- * values into `POI_STYLES.<cat>` or `youAreHereSubsystem.ts`.  The
+ * values into `STRUCTURE_MARKER_STYLES.<cat>` or `youAreHereSubsystem.ts`.  The
  * override is a temporary hook, not a storage location.
  *
  * `setLabelStyleOverride` runs in `useEffect`, not during render —

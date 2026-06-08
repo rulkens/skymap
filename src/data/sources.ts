@@ -29,7 +29,7 @@ import type { Tier } from '../@types/data/Tier';
 
 /**
  * Stable numeric tag for every data source. Used as a `.bin` byte for
- * survey rows, packed into the pick texture for survey + POI hits, and
+ * survey rows, packed into the pick texture for survey + structure hits, and
  * as a registry key for filament + volume assets.
  *
  * IMPORTANT: integer values 0..8 are persisted in the `.bin` point-cloud
@@ -67,7 +67,7 @@ export const Source = {
   /**
    * Galaxy-cluster anchors (Virgo, Coma, Norma, ...). Picks against a
    * cluster's marker ring return source code 5 in the upper 5 bits of
-   * the packed identity; the 27-bit `localIdx` carries the POI's index
+   * the packed identity; the 27-bit `localIdx` carries the structure's index
    * into the cluster table. See `selectionEncoding.ts` for the layout.
    */
   Cluster: 5,
@@ -79,7 +79,7 @@ export const Source = {
    * Milliquas v8 (Flesch 2023) — the Million Quasars compilation. AGN
    * point sources (QSOs, BL Lacs, type-1 Seyferts, Seyfert-1 cores,
    * candidate quasars) rendered alongside the galaxy surveys for the
-   * optically-bright AGN sky. Slot 8 — slots 5/6/7 belong to the POI
+   * optically-bright AGN sky. Slot 8 — slots 5/6/7 belong to the structure
    * codes above, so the next survey integer is 8.
    */
   Milliquas: 8,
@@ -115,7 +115,7 @@ export const Source = {
   /**
    * Nearby galaxy-group anchors (Local Group, M81, Cen A, ...). Picks
    * against a group's marker ring return source code 15 in the upper 5
-   * bits of the packed identity; the 27-bit `localIdx` carries the POI's
+   * bits of the packed identity; the 27-bit `localIdx` carries the structure's
    * index into the structure store. Same encoding as Cluster/Supercluster/
    * Void. Seed-only (no bulk catalog), like Void. Appended at 15 — NEVER
    * renumber the survey codes 0–8 below it.
@@ -127,7 +127,7 @@ export const Source = {
 
 /**
  * Per-source metadata, keyed by every `Source`. Discriminated by `type`;
- * see the `SurveyEntry` / `PoiEntry` definitions for the field shapes.
+ * see the `SurveyEntry` / `StructureEntry` definitions for the field shapes.
  *
  * `as const satisfies Readonly<Record<Source, SourceEntry>>` preserves each
  * entry's literal `type`, so `SOURCE_REGISTRY[Source.SDSS]` narrows to

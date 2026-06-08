@@ -1,9 +1,9 @@
 /**
- * EngineLabelsHandle — public-handle sub-bag for the POI overlay
+ * EngineLabelsHandle — public-handle sub-bag for the structure overlay
  * (clusters / superclusters / voids / famous galaxies).
  *
  * Despite the name "labels", this handle exposes setters for BOTH the
- * text-label axis AND the marker (ring + halo) axis of POI rendering.
+ * text-label axis AND the marker (ring + halo) axis of structure rendering.
  * The two axes are deliberately independent: a category's marker can be
  * hidden while its text label still renders, and vice versa.
  */
@@ -15,7 +15,7 @@ export type EngineLabelsHandle = {
   /**
    * Show/hide the TEXT LABEL for every source in the given label
    * category.  Forwards to
-   * `state.subsystems.pois.setCategoryLabelVisible(category, visible)`.
+   * `state.subsystems.structures.setCategoryLabelVisible(category, visible)`.
    * Echoes back via `onLabelCategoryVisibilityChange` with the full
    * label-visibility record so the React shell can keep its checkboxes
    * in sync from one callback.
@@ -28,7 +28,7 @@ export type EngineLabelsHandle = {
    * Show/hide the MARKER (ring + halo) for every structure in the given
    * category.  Keyed by `StructureCategory` only: famous galaxies bear
    * no ring marker.  Forwards to
-   * `state.subsystems.pois.setCategoryMarkerVisible(category, visible)`.
+   * `state.subsystems.structures.setCategoryMarkerVisible(category, visible)`.
    * Echoes back via `onMarkerCategoryVisibilityChange` with the full
    * marker-visibility record.
    *

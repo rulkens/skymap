@@ -11,7 +11,7 @@
  *     `uiOverlay` inside one render pass against the swap-chain view.
  *
  * The two registries share the `Pass` interface so a future overlay
- * (e.g. POI labels, debug HUD elements) just adds itself to whichever
+ * (e.g. structure labels, debug HUD elements) just adds itself to whichever
  * registry matches its blend semantics.  The DebugPanel's
  * `DISPLAY_SLOT_ORDER` derives from HDR_PASSES (timing-instrumented
  * per-pass) plus three trailing slots: `tone-map`, `ui-overlay` (the
@@ -33,7 +33,7 @@
  *   5. filaments           — cosmic-web skeleton overlay
  *   6. volume-upsample     — upsamples the half-res volume offscreen target
  *                            into the HDR target (when active fields exist)
- *   7. structure-markers     — at-rest halo + ring for cluster / SC / void POIs
+ *   7. structure-markers     — at-rest halo + ring for cluster / SC / void structures
  *
  * `textured-disks` is what remains of the briefly-split (and never-shipped)
  * `textured-quads` + `textured-disks` pair from 2026-05-18.  The quad

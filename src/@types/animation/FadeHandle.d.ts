@@ -25,9 +25,9 @@
  *                    Discriminator: `category: StructureCategory`. One
  *                    controller per category so a category's rings can
  *                    fade independently of the others.
- *   - labelLayer   — one logical label layer (you-are-here, POI,
+ *   - labelLayer   — one logical label layer (you-are-here, structure,
  *                    galaxy names, scale bar). Discriminator:
- *                    `layer: LabelLayerId`. POI labels additionally key
+ *                    `layer: LabelLayerId`. Structure labels additionally key
  *                    on `category: StructureCategory` so each structure
  *                    category's labels are a distinct controller; the
  *                    other layers (youAreHere/galaxyNames/scaleBar)

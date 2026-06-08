@@ -68,7 +68,7 @@ describe('commitGalaxyFocus', () => {
 
   it('latches the focus slot so a galaxy focus supersedes a prior cluster focus', () => {
     // Focusing a galaxy must set the focus slot to the galaxy variant —
-    // runFrame resolves that to a null POI, collapsing any active
+    // runFrame resolves that to a null structure, collapsing any active
     // cluster-focus fade.  Leaving the slot on a stale cluster would
     // keep the structure faded after flying to a member galaxy.
     const { state, info, setFocused } = makeFixtures();

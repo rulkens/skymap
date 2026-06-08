@@ -48,7 +48,7 @@ export function pickColourIndex(
 ): number {
   const entry = SOURCE_REGISTRY[source];
   // The points pipeline only routes survey sources here; any other
-  // kind (POI, filament, volume) hitting this path means a
+  // kind (structure, filament, volume) hitting this path means a
   // picker/dispatch bug upstream.
   if (entry.type !== 'survey') {
     throw new Error(`pickColourIndex: non-survey source ${source} has no colour index`);

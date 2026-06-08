@@ -1,4 +1,4 @@
-// lib/focusUniforms.wesl — shared 'which POI is focused' uniform, written
+// lib/focusUniforms.wesl — shared 'which structure is focused' uniform, written
 // once per frame from structureFocusSubsystem state. blend=0 collapses the
 // per-vertex multiplier to 1.0 (no effect); when active, galaxies in the
 // focused structure's core (within physicalRadiusMpc) keep alpha 1.0, and

@@ -187,7 +187,7 @@ export function produceStructureLabels(
       );
     }
 
-    // Per-POI override fields: only structures whose category matches the
+    // Per-structure override fields: only structures whose category matches the
     // override's target adopt the outline values; others keep the default.
     const overrideFields =
       override.targetCategory === p.category

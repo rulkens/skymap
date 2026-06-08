@@ -5,7 +5,7 @@
  * `bootstrap.test.ts` mocks this phase at module scope, so the orchestrator's
  * observable effects otherwise have no direct asserts — yet they gate "loading
  * screen ⇒ stars on canvas". The phase's internals (the synthetic-fallback
- * gate, the POI projection, the demand loop) each have their own unit tests
+ * gate, the structure projection, the demand loop) each have their own unit tests
  * (`createSyntheticFallback.test.ts`, `wireStructureProjection.test.ts`,
  * `reevaluateDemand.test.ts` / `demandTable.test.ts`); this file pins that
  * wireSlots composes them into the right boot behaviour:
@@ -513,7 +513,7 @@ describe('wireSlots', () => {
     expect(hasHandle({ kind: 'overlay', id: 'texturedDisks' })).toBe(true);
     expect(hasHandle({ kind: 'volumesMaster' })).toBe(true);
     expect(hasHandle({ kind: 'labelLayer', layer: 'youAreHere' })).toBe(true);
-    // No category-less poi handle: structure labels use per-category poi
+    // No category-less structure handle: structure labels use per-category
     // handles, and produceStructureLabels fires each category's load-in.
     expect(hasHandle({ kind: 'labelLayer', layer: 'galaxyNames' })).toBe(true);
     expect(hasHandle({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(true);
@@ -750,7 +750,7 @@ describe('wireSlots', () => {
 
   it('emits per-category structure counts that grow when the bulk catalog lands', async () => {
     // The Structures panel reads these counts to annotate its toggles.
-    // rebuildAllPois fires onStructureCountsChange on every merge: once at
+    // rebuildAllStructures fires onStructureCountsChange on every merge: once at
     // boot (static anchors only) and again when the bulk .ccat resolves.
     // Asserting the DELTA (one extra cluster + one extra SC, voids
     // unchanged) keeps the test robust to seed-anchor count changes.

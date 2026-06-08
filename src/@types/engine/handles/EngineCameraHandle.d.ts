@@ -19,7 +19,7 @@ export type EngineCameraHandle = {
    * focus.  Dispatches by type:
    *   - GalaxyInfo → the galaxy focus path (commitFocus + onFocusChange).
    *   - StructureRecord → the structure focus path (commitStructureFocus,
-   *     framing distance derived from the category + onPoiFocusChange).
+   *     framing distance derived from the category + onStructureFocusChange).
    *
    * Discrimination uses the `isStructure` predicate from `services/engine/isStructure.ts`.
    * See `services/engine/helpers/dispatchFocusOn.ts` for the dispatcher

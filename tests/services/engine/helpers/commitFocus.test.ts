@@ -28,7 +28,7 @@ import { commitFocus } from '../../../../src/services/engine/helpers/commitFocus
 function makeFixtures() {
   const state = {} as unknown as EngineState;
   const galaxy = { index: 0, x: 0, y: 0, z: 0 } as unknown as GalaxyInfo;
-  const poi: StructureRecord = {
+  const structure: StructureRecord = {
     id: 'virgo-cluster',
     name: 'Virgo Cluster',
     category: 'cluster',
@@ -36,7 +36,7 @@ function makeFixtures() {
     featured: true,
     physicalRadiusMpc: 2,
   };
-  return { state, galaxy, poi };
+  return { state, galaxy, structure };
 }
 
 describe('commitFocus', () => {
@@ -53,9 +53,9 @@ describe('commitFocus', () => {
   });
 
   it('routes a StructureRecord through commitStructureFocus', () => {
-    const { state, poi } = makeFixtures();
-    commitFocus(state, poi);
-    expect(commitStructureFocusSpy).toHaveBeenCalledWith(state, poi);
+    const { state, structure } = makeFixtures();
+    commitFocus(state, structure);
+    expect(commitStructureFocusSpy).toHaveBeenCalledWith(state, structure);
     expect(commitGalaxyFocusSpy).not.toHaveBeenCalled();
   });
 });

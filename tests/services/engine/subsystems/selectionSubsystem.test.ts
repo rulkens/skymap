@@ -2,7 +2,7 @@
  * selectionSubsystem — unit tests for the hover/select façade.
  *
  * Pure JS — no GPU, no DOM, no async.  Drives the subsystem with
- * synthetic clouds + a POI lookup stub and vi-mocked callbacks.
+ * synthetic clouds + a structure lookup stub and vi-mocked callbacks.
  *
  * Coverage:
  *   - Dedup: redundant setHovered / setSelected calls fan out only on
@@ -140,7 +140,7 @@ describe('createSelectionSubsystem — structure variant', () => {
     expect(cb.selection.onHoverChange).toHaveBeenCalledWith(VIRGO);
   });
 
-  it('fires onSelectChange(StructureRecord) when a POI is selected', () => {
+  it('fires onSelectChange(StructureRecord) when a structure is selected', () => {
     const cb = makeCallbacks();
     const sub = makeSub(cb, { structures: [VIRGO] });
 
@@ -149,7 +149,7 @@ describe('createSelectionSubsystem — structure variant', () => {
     expect(cb.selection.onSelectChange).toHaveBeenCalledWith(VIRGO);
   });
 
-  it('fires onChange(null) for an unknown POI id (deep-link race defense)', () => {
+  it('fires onChange(null) for an unknown structure id (deep-link race defense)', () => {
     const cb = makeCallbacks();
     const sub = makeSub(cb, { structures: [VIRGO] });
 
@@ -158,7 +158,7 @@ describe('createSelectionSubsystem — structure variant', () => {
     expect(cb.selection.onSelectChange).toHaveBeenCalledWith(null);
   });
 
-  it('dedupes same-POI sets — fires only on real transitions', () => {
+  it('dedupes same-structure sets — fires only on real transitions', () => {
     const cb = makeCallbacks();
     const sub = makeSub(cb, { structures: [VIRGO, FORNAX] });
 
@@ -175,7 +175,7 @@ describe('createSelectionSubsystem — selectedTarget', () => {
     expect(makeSub(makeCallbacks()).selectedTarget()).toBeNull();
   });
 
-  it('resolves a pinned POI selection to its StructureRecord', () => {
+  it('resolves a pinned structure selection to its StructureRecord', () => {
     const sub = makeSub(makeCallbacks(), { structures: [VIRGO] });
     sub.setSelected({ kind: 'structure', id: 'virgo' });
     expect(sub.selectedTarget()).toBe(VIRGO);
@@ -197,7 +197,7 @@ describe('createSelectionSubsystem — selectedTarget', () => {
 });
 
 describe('createSelectionSubsystem — cross-kind transitions', () => {
-  it('galaxy → POI selection fires onSelectChange once with the POI', () => {
+  it('galaxy → structure selection fires onSelectChange once with the structure', () => {
     const cb = makeCallbacks();
     const sub = makeSub(cb, { cloud: makeCloud(10), structures: [VIRGO] });
 
@@ -209,7 +209,7 @@ describe('createSelectionSubsystem — cross-kind transitions', () => {
     expect(cb.selection.onSelectChange).toHaveBeenLastCalledWith(VIRGO);
   });
 
-  it('POI → galaxy hover fires onHoverChange with the GalaxyInfo path', () => {
+  it('structure → galaxy hover fires onHoverChange with the GalaxyInfo path', () => {
     const cb = makeCallbacks();
     const cloud = makeCloud(10);
     const sub = makeSub(cb, { cloud, structures: [VIRGO] });

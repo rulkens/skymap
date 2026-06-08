@@ -87,7 +87,7 @@ struct VsOut {
   @location(3) @interpolate(flat) hiResLayerIdx:           i32,
   @location(4)                    hiResCrossfadeAlpha:     f32,
   // Per-instance cluster-focus dim in [0.08, 1.0]: 1.0 for members of the
-  // focused POI (and at rest), 0.08 for non-members, ramped by the focus
+  // focused structure (and at rest), 0.08 for non-members, ramped by the focus
   // blend. Computed once per instance in the vertex stage; flat because it
   // is constant across the quad.
   @location(5) @interpolate(flat) focusDim:                f32,

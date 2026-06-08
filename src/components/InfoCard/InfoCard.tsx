@@ -1,5 +1,5 @@
 /**
- * InfoCard — routes hovered/selected galaxy + POI state into the detail and
+ * InfoCard — routes hovered/selected galaxy + structure state into the detail and
  * preview cards.  Renders nothing when both slots are null.
  *
  * Always renders the same outer wrapper across all states.  An earlier version

@@ -120,8 +120,8 @@ fn vs(
 @fragment
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
   // Faded-out instances arrive at alpha 0.  produceMarkers now emits one
-  // instance per marker-bearing POI regardless of fade (to keep the ring
-  // pick instance_index aligned with the CPU getPoisForCategory list), so
+  // instance per marker-bearing structure regardless of fade (to keep the ring
+  // pick instance_index aligned with the CPU getStructuresForCategory list), so
   // most of the ~hundreds of per-frame instances may be alpha 0.  An
   // alpha-0 ring already contributes nothing under the premultiplied OVER
   // blend; discarding early skips the band + AA math for those fragments.

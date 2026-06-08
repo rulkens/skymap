@@ -8,7 +8,7 @@ import type { SourceType } from '../data/SourceType';
  * single `Source`:
  *
  *   - `'structureCatalog'` — the `.ccat` seed shared by Cluster, Supercluster,
- *     and Void POIs. All three `Source` codes pull their geometry from one file,
+ *     and Void structures. All three `Source` codes pull their geometry from one file,
  *     so a per-source fetch key would be wrong: there is no `structureCatalog`
  *     `Source`, and a single fetch must not trigger three loads.
  *

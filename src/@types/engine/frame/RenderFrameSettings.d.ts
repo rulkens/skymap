@@ -20,7 +20,7 @@ export type RenderFrameSettings = {
    * Selected entity, or `null` when nothing is selected.  Galaxy
    * variants are translated inside `pointSpritesPass` to the packed
    * u32 `(source << 27) | localIdx` (or the `0xFFFFFFFF` "no selection"
-   * sentinel) the shader's halo path expects.  POI variants don't
+   * sentinel) the shader's halo path expects.  Structure variants don't
    * drive the halo and are treated as "no galaxy selected" by the pass.
    */
   selected: Selection | null;

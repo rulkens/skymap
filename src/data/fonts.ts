@@ -88,11 +88,9 @@ export const ATLAS_FONT_SIZE = 42;
 /**
  * ASCII printable: space (32) through tilde (126) — 95 characters.
  * Covers every Latin letter, digit, and punctuation mark we currently
- * render in labels (`'You are here'`, POI names, etc.).
+ * render in labels (`'You are here'`, structure names, etc.).
  */
-const ASCII_PRINTABLE = Array.from({ length: 95 }, (_, i) =>
-  String.fromCodePoint(32 + i),
-).join('');
+const ASCII_PRINTABLE = Array.from({ length: 95 }, (_, i) => String.fromCodePoint(32 + i)).join('');
 
 /**
  * Extended unit symbols used in scale-bar / coordinate labels:

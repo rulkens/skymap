@@ -76,7 +76,7 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
     case Source.DebugGaussian:
     case Source.DebugCartesian:
     case Source.DebugSpherical:
-      // Non-survey sources (POI markers, filaments, volumes) have no
+      // Non-survey sources (structure markers, filaments, volumes) have no
       // per-record photometry and no galaxy type. Reaching this branch
       // indicates the InfoCard is rendering a galaxy row for a
       // non-survey pick / handle; route those through their own info

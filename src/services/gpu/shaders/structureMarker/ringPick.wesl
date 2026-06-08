@@ -86,9 +86,9 @@ fn fsRingPick(in: VsOut) -> @location(0) vec4<u32> {
   // Faded / invisible rings must not be pickable.  'in.alpha' carries
   // ringAlpha (the vertex stage in ring.wesl selects ringColorAndAlpha.w
   // into VsOut.alpha).  produceMarkers emits one instance per marker-
-  // bearing POI regardless of fade — faded ones at alpha 0 — so the
-  // CPU descriptor list stays index-aligned with getPoisForCategory and
-  // the @builtin(instance_index) packed below resolves to the right POI.
+  // bearing structure regardless of fade — faded ones at alpha 0 — so the
+  // CPU descriptor list stays index-aligned with getStructuresForCategory and
+  // the @builtin(instance_index) packed below resolves to the right structure.
   // We discard the alpha-0 instances here so those invisible rings don't
   // become pick targets while still occupying their instance slot.
   if (in.alpha <= 0.0) { discard; }

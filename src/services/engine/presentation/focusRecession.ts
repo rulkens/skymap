@@ -29,7 +29,7 @@
  *
  * ### Recession membership is an exhaustive switch
  *
- * Recession is *selective*: POI / galaxy-name labels and the diffuse
+ * Recession is *selective*: structure / galaxy-name labels and the diffuse
  * filament/volume fields recede under focus, but the YOU-ARE-HERE pin and
  * the scale bar must not. `recessionTargetFor` expresses that membership
  * as an exhaustive `switch (h.kind)` with NO `default` arm — every union

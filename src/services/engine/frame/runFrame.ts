@@ -185,7 +185,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // ── Structure-focus recession (computed ONCE, EARLY) ────────────────
   //
   // Focus mode fades non-member galaxies away when a cluster /
-  // supercluster / void / group POI is focused.  Resolve the FOCUSED POI
+  // supercluster / void / group structure is focused.  Resolve the focused structure
   // (a bare single-click select does not count; galaxy / nothing both →
   // null) and let the subsystem diff it against its focused id to drive
   // the 400 ms member-isolation fade.
@@ -251,7 +251,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // Runs BEFORE the GPU dispatch so `labelRenderer.setLabels` /
   // `markerLineRenderer.setLines` are uploaded before `renderFrame` reads
   // those buffers.  The director polls every registered `LabelProducer`
-  // (youAreHere, pois, ...), merges, change-detects via signature hash,
+  // (youAreHere, structures, ...), merges, change-detects via signature hash,
   // and flushes once; it null-checks its renderers, so this is safe before
   // the atlas load completes.
   state.subsystems.labelDirector.runFrame(state, ctx);
@@ -440,9 +440,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         state.gpu.timingService.descriptorFor('pick'),
       )
       .then((pick) => {
-        // Decode the pick to a hover `Selection` (galaxy / POI / null) via the
+        // Decode the pick to a hover `Selection` (galaxy / structure / null) via the
         // shared map — the same one the click path uses, so hover and click
-        // can't drift. One slot: setHovered(null) clears, a galaxy or POI hit
+        // can't drift. One slot: setHovered(null) clears, a galaxy or structure hit
         // replaces; setHovered equality-short-circuits, so a steady hover is a
         // no-op. The InfoCard reads the resolved target.
         state.subsystems.selection.setHovered(pickToSelection(pick, state.data.structures));

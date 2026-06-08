@@ -165,7 +165,7 @@ type Props = {
   sourceCounts?: Partial<Record<SourceType, number>>;
 
   /**
-   * Per-marker-category POI counts (cluster / supercluster / void) for
+   * Per-marker-category structure counts (cluster / supercluster / void) for
    * the Structures section, shown beside each toggle the same way
    * `sourceCounts` annotates the Surveys rows.  A category absent from
    * the map (or the whole prop undefined, before the bulk `.ccat`

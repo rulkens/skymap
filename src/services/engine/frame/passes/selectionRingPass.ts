@@ -45,7 +45,7 @@ export const selectionRingPass: Pass = {
   enabled(state, _ctx, _settings) {
     if (state.gpu.selectionRingRenderer === null) return false;
     const sel = state.subsystems.selection.selected();
-    // Galaxy selections drive the halo; POI selections render through
+    // Galaxy selections drive the halo; structure selections render through
     // the cluster marker pass instead.
     return sel !== null && sel.kind === 'galaxy';
   },

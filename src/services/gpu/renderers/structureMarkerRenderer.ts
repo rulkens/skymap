@@ -130,12 +130,12 @@ export function createStructureMarkerRenderer(
   // buffer (see growTo) to fit whatever descriptor count it's handed.
   //
   // Why grow rather than cap: produceMarkers emits one descriptor per
-  // marker-bearing POI of a visible category EVERY frame — including
+  // marker-bearing structure of a visible category EVERY frame — including
   // fully-faded ones (the emit-all-then-discard contract that keeps the
-  // ring-pick instance_index aligned with getPoisForCategory).  So the
+  // ring-pick instance_index aligned with getStructuresForCategory).  So the
   // count is data-driven (~660 with the M500 ≥ 1.0 cluster cut, more if
   // the catalog grows).  A fixed cap silently truncated the tail in
-  // `pois` order, which both dropped whole categories off-screen
+  // structure order, which both dropped whole categories off-screen
   // (clusters saturated the buffer, so superclusters and voids never got
   // packed — visible only when clusters were toggled off) AND desynced
   // the per-category pick index.  Growing keeps the renderer correct for
@@ -156,7 +156,7 @@ export function createStructureMarkerRenderer(
   // Ring-pick pipeline — same vertex source as ringPipeline, fragment
   // swapped to ringPick.wesl's fsRingPick + colour target swapped to
   // r32uint + depth24plus added.  See the pick pipeline build below for
-  // the full rationale; in short, this is the POI sibling of the
+  // the full rationale; in short, this is the structure-marker sibling of the
   // galaxy pick path in pickRenderer.ts.  The engine's pick pass will
   // call `pickRing(pass)` immediately after the per-source galaxy
   // draws, reusing the caller's @group(0) (CameraUniforms) binding.
@@ -306,7 +306,7 @@ export function createStructureMarkerRenderer(
     //   - No blend descriptor — integer formats don't support blending.
     //   - depthStencil enabled with `depth24plus` + `less`+writeEnabled
     //     so a closer galaxy pick fragment (running just before us in
-    //     the same pass) wins the pixel over an occluded POI ring.
+    //     the same pass) wins the pixel over an occluded structure ring.
     //     The depth attachment is the same texture the galaxy pick
     //     draws used; we are intentionally a second batch INSIDE the
     //     same pass, not a separate pass.
@@ -571,7 +571,7 @@ export function createStructureMarkerRenderer(
   }
 
   /**
-   * Issue per-category POI ring pick draws into the caller-supplied
+   * Issue per-category structure ring pick draws into the caller-supplied
    * render pass.  See the docstring on StructureMarkerRenderer.pickRing
    * for the binding contract — short version: caller bound @group(0),
    * we bind @group(1) (dummy fade) + @group(2) (per-category source)

@@ -11,7 +11,7 @@ export type SourceEntryBase = {
   readonly label: string;
   /**
    * True if the source covers (approximately) the full celestial sphere.
-   * For surveys this is the footprint flag; for POIs it's trivially true
+   * For surveys this is the footprint flag; for structures it's trivially true
    * (anchors are individual points, not survey patches), so the renderer's
    * coverage-mask logic stays well-behaved across both kinds.
    */
@@ -48,7 +48,7 @@ export type SourceEntryBase = {
   readonly labelLayer?: 'galaxyNames' | 'structure';
   /**
    * Long-form label for detail surfaces (e.g. 'Galaxy Cluster', 'Famous Galaxy').
-   * Present iff bearsLabel. Replaces the old POI_CATEGORY_INFO.label field.
+   * Present iff bearsLabel.
    */
   readonly detailLabel?: string;
   /**
@@ -60,7 +60,7 @@ export type SourceEntryBase = {
   readonly shortLabel?: string;
   /**
    * Plural label for list and toggle headers (e.g. 'Clusters', 'Famous Galaxies').
-   * Present iff bearsLabel. Replaces the old POI_CATEGORY_INFO.plural field.
+   * Present iff bearsLabel.
    */
   readonly plural?: string;
 };

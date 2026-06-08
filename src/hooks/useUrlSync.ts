@@ -53,15 +53,15 @@
  *      "not yet" and the effect re-fires on data dep changes.
  *
  *   4. Structure drain — resolves `pendingStructureId` against the
- *      `pois` table and dispatches via `camera.focusOn(structure)` (the
+ *      `structures` table and dispatches via `camera.focusOn(structure)` (the
  *      unified method, which accepts both GalaxyInfo and
  *      StructureRecord).  Clears pending only on successful resolve;
- *      missing-id leaves pending set so a future `pois` change (e.g.
+ *      missing-id leaves pending set so a future `structures` change (e.g.
  *      famous-meta load) re-fires the drain.
  *
  *   5. Galaxy supersede — collapses `pendingTarget` once `focused`
  *      lands (deep-link wins vs casual click race).  No structure
- *      supersede because the `pois` table is synchronous.
+ *      supersede because the `structures` table is synchronous.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -125,7 +125,7 @@ export type InitialPending =
 /**
  * Pure parse-on-mount helper.  Runs the single `#focus=` codec and routes
  * its result: a `structure` FocusTarget becomes a structure pending slot
- * (resolved synchronously against the `pois` table), any galaxy kind
+ * (resolved synchronously against the `structures` table), any galaxy kind
  * becomes a galaxy pending slot (resolved async against loaded catalogs),
  * and a null parse becomes `kind: null`.
  */
@@ -139,8 +139,16 @@ export function initialPendingFromHash(hash: string): InitialPending {
 // ── React hook ─────────────────────────────────────────────────────────────
 
 export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
-  const { focused, status, sourceCounts, famousMeta, aliasMap, ready, pois, engineHandleRef } =
-    input;
+  const {
+    focused,
+    status,
+    sourceCounts,
+    famousMeta,
+    aliasMap,
+    ready,
+    structures,
+    engineHandleRef,
+  } = input;
 
   const [pendingTarget, setPendingTarget] = useState<FocusTarget | null>(null);
   const [pendingStructureId, setPendingStructureId] = useState<string | null>(null);
@@ -273,10 +281,10 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
   }, [pendingTarget, status, sourceCounts, famousMeta, aliasMap, engineHandleRef]);
 
   // ── Effect 4: structure drain ─────────────────────────────────────────
-  // Resolve `pendingStructureId` against the `pois` table once the
+  // Resolve `pendingStructureId` against the `structures` table once the
   // engine is ready.  We deliberately do NOT clear pending when the id
   // isn't found — a tier swap or async famous-meta load can add entries
-  // later, and re-firing the drain on `pois` changes will pick them
+  // later, and re-firing the drain on `structures` changes will pick them
   // up.  Clearing only on a successful resolve preserves the
   // "deep-link arrival waits as long as it takes" contract.
   //
@@ -285,14 +293,14 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
   useEffect(() => {
     if (!pendingStructureId) return;
     if (!ready) return;
-    if (pois.length === 0) return;
+    if (structures.length === 0) return;
     const handle = engineHandleRef.current;
     if (!handle) return;
-    const structure = pois.find((p) => p.id === pendingStructureId);
-    if (!structure) return; // Leave pending set — re-fires when `pois` grows.
+    const structure = structures.find((p) => p.id === pendingStructureId);
+    if (!structure) return; // Leave pending set — re-fires when `structures` grows.
     handle.camera.focusOn(structure); // The unified focusOn.
     setPendingStructureId(null);
-  }, [pendingStructureId, ready, pois, engineHandleRef]);
+  }, [pendingStructureId, ready, structures, engineHandleRef]);
 
   // ── Effect 5: galaxy supersede ────────────────────────────────────────
   // The trigger is a FOCUS change, not a pendingTarget change.  Why
@@ -308,7 +316,7 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
   // Bare canvas clicks set `selected` but NOT `focused`, so they don't
   // pre-empt a still-resolving deep link — the deep-link wins, which
   // matches the user's URL-pasted intent.  Structure deep links resolve
-  // on first paint (synchronous `pois` table), so no structure supersede
+  // on first paint (synchronous `structures` table), so no structure supersede
   // is needed.
   useEffect(() => {
     if (focused !== null) setPendingTarget(null);

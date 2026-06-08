@@ -100,7 +100,7 @@ export type EngineSubsystemHandles = {
    * Label director — owns `labelRenderer.setLabels` /
    * `markerLineRenderer.setLines`, polls every registered `LabelProducer`
    * each frame, merges outputs, and flushes once. Lets multiple overlays
-   * (you-are-here pin, cluster POIs, future galaxy/void labels) coexist
+   * (you-are-here pin, cluster structures, future galaxy/void labels) coexist
    * without stomping each other's full-set replacements.
    *
    * Constructed eagerly; the two renderers are wired during

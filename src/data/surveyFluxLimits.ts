@@ -1,7 +1,7 @@
 /**
  * Per-survey flux limits and Schechter luminosity-function parameters —
  * thin accessors over `SOURCE_REGISTRY`. The actual numbers live on each
- * survey entry (see `sources.ts`); this module only adds the POI throw
+ * survey entry (see `sources.ts`); this module only adds the non-survey throw
  * guard so callers that hand us a raw `Source` get a loud error rather
  * than silently reading `undefined`.
  */
@@ -14,7 +14,7 @@ import type { SourceType } from '../@types/data/SourceType';
 export function surveyFluxLimit(source: SourceType): number {
   const entry = SOURCE_REGISTRY[source];
   if (entry.type !== 'survey') {
-    throw new Error(`surveyFluxLimit: POI source ${source} has no flux limit`);
+    throw new Error(`surveyFluxLimit: non-survey source ${source} has no flux limit`);
   }
   return entry.mLim;
 }
@@ -23,7 +23,7 @@ export function surveyFluxLimit(source: SourceType): number {
 export function surveySchechter(source: SourceType): SchechterTriple {
   const entry = SOURCE_REGISTRY[source];
   if (entry.type !== 'survey') {
-    throw new Error(`surveySchechter: POI source ${source} has no Schechter triple`);
+    throw new Error(`surveySchechter: non-survey source ${source} has no Schechter triple`);
   }
   return entry.schechter;
 }

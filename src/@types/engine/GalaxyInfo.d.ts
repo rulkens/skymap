@@ -277,7 +277,7 @@ export type GalaxyInfo = {
     /**
      * Curated human-friendly display name when one is set on the seed entry
      * (e.g. `"Andromeda Galaxy"` for M31).  When present, both the InfoCard
-     * headline and the POI label prefer this over `names[0]`; the rest of
+     * headline and the structure label prefer this over `names[0]`; the rest of
      * `names` appears as "Also known as" aliases.  Absent for most entries —
      * the seed only sets commonName for galaxies whose widely-recognised
      * name differs meaningfully from the catalog identifier.

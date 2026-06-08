@@ -4,7 +4,7 @@
  *
  * Derived from the SOURCE_REGISTRY rows that carry `bearsLabel: true`,
  * which are the canonical home of per-category copy since A1.  Consumers
- * previously reached into the standalone `POI_CATEGORY_INFO` table; this
+ * read from `SOURCE_REGISTRY` rows via this accessor so the copy
  * module replaces that table with a registry-derived accessor so the copy
  * lives in exactly one place and new label-bearing sources gain display info
  * automatically from their registry row.

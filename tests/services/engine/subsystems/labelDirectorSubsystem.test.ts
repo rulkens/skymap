@@ -210,7 +210,7 @@ describe('labelDirectorSubsystem', () => {
   });
 
   it('no longer fires any layer load-in fade on a non-empty flush', () => {
-    // The per-category poi load-in moved to produceStructureLabels; the
+    // The per-category structure load-in moved to produceStructureLabels; the
     // director must not call fades.fadeTo on its own anymore.
     const dir = createLabelDirectorSubsystem();
     const labelStub = makeLabelStub();

@@ -30,7 +30,7 @@ describe('CompactStructureCard', () => {
     render(createElement(CompactStructureCard, { structure: virgo }));
     expect(screen.getByText('Virgo Cluster')).toBeInTheDocument();
     // Category badge — exact-match "Cluster" with title-case from the
-    // inlined poiCategoryLabel helper.  Exact match (not /cluster/i)
+    // inlined category-label helper.  Exact match (not /cluster/i)
     // so the headline "Virgo Cluster" doesn't also satisfy this
     // assertion — the badge is the load-bearing surface here.
     expect(screen.getByText('Cluster')).toBeInTheDocument();

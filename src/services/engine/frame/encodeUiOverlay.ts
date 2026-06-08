@@ -1,6 +1,6 @@
 /**
  * encodeUiOverlay — composites the UI overlay layers (marker-lines, labels,
- * future POI labels, …) onto the tone-mapped swap-chain image after
+ * future structure labels, …) onto the tone-mapped swap-chain image after
  * the HDR pipeline.
  *
  * ### Why post-tone-map (vs. inside HDR_PASSES)

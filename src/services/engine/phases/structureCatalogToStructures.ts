@@ -24,7 +24,7 @@
  * ### Significance normalisation — PER CATEGORY
  *
  * `catalog.significance` holds the RAW source proxy: M500 (in 1e14 M☉) for
- * clusters, N_m member count for superclusters.  A POI's `significance`
+ * clusters, N_m member count for superclusters.  A structure's `significance`
  * field is a NORMALISED [0,1] weight (Task 6 maps it to ring alpha), so we
  * normalise here — but separately per category, because a 30-member
  * supercluster and a 1e14-M☉ cluster live on incomparable raw scales and a
@@ -107,7 +107,7 @@ export function structureCatalogToStructures(payload: StructureCatalogPayload): 
   if (catalog.count === 0) return [];
 
   // First pass: gather the raw significance per category so the
-  // normalisers see the full subset before we emit any POI.  Clusters
+  // normalisers see the full subset before we emit any structure.  Clusters
   // normalise log10(M500); superclusters normalise N_m linearly.
   const clusterRaw: number[] = [];
   const superclusterRaw: number[] = [];
@@ -137,7 +137,7 @@ export function structureCatalogToStructures(payload: StructureCatalogPayload): 
       category === 'cluster' ? normaliseCluster(raw) : normaliseSupercluster(raw);
     const common = {
       // `-bulk-` infix: distinct from the featured `${category}-${seed.id}`
-      // anchors and flags the POI as non-deep-linkable.
+      // anchors and flags the structure as non-deep-linkable.
       id: `${category}-bulk-${m.id}`,
       name: m.names[0]!,
       worldPos,

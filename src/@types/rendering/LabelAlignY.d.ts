@@ -7,7 +7,7 @@
  *                            the typographic convention every Y offset
  *                            in the atlas is measured against.
  *   `'center'`             — visual centre of the glyph bounding box
- *                            sits on the anchor.  Used by POI labels
+ *                            sits on the anchor.  Used by structure labels
  *                            (cluster / supercluster / void) that
  *                            anchor on a ring centre and want the
  *                            label text symmetrically straddled

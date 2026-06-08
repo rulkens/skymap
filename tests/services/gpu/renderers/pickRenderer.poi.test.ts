@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest';
 import { createPickRenderer } from '../../../../src/services/gpu/renderers/pickRenderer';
 
-describe('createPickRenderer POI integration', () => {
+describe('createPickRenderer structure integration', () => {
   it('keeps structureMarkerRenderer optional as the 7th positional', () => {
     // Compile-time check: the 7th parameter must exist and must be
     // assignable from `undefined` (i.e. declared with `?`).  If a

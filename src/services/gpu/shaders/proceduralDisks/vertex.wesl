@@ -60,7 +60,7 @@ import package::lib::focusUniforms::focusAlphaMultiplier;
 @group(0) @binding(0) var<uniform> u: Uniforms;
 // @group(1) cluster-focus uniform — the impostor pipelines have no fade /
 // source groups, so focus takes the first free slot (the points pipeline
-// parks it at @group(3)). Single shared binding: one POI focused at a time.
+// parks it at @group(3)). Single shared binding: one structure focused at a time.
 @group(1) @binding(0) var<uniform> focus: FocusUniforms;
 
 @vertex

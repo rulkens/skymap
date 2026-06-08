@@ -20,7 +20,7 @@ export type StructureMetaEntry = {
   names: string[];
   /** Normalized Abell/ACO designation (e.g. 'A2670'), or null. */
   abell: string | null;
-  /** One-liner shown in the POI info panel. */
+  /** One-liner shown in the structure info panel. */
   description: string;
 };
 

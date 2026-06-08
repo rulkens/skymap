@@ -3,8 +3,8 @@ import type { StructureRecord } from './data/StructureRecord';
 
 /**
  * FocusableTarget — discriminated union of the two things the camera can
- * focus on: a single galaxy point or a point-of-interest anchor (cluster,
- * supercluster, void, famous-galaxy POI).
+ * focus on: a single galaxy point or a structure anchor (cluster,
+ * supercluster, void, famous-galaxy).
  *
  * Used by the public `camera.focusOn(target)` handle (which dispatches via
  * the `isStructure` predicate in `services/engine/isStructure.ts`) and by InfoCard's

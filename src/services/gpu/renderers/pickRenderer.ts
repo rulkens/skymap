@@ -73,7 +73,7 @@ export function createPickRenderer(
   // sees the same focus state the visual pass does and the shared vertex
   // shader can cull non-members of a focused structure from hit-testing.
   focusBindGroup: GPUBindGroup,
-  // Optional POI-ring pick provider.  When present, the pick pass
+  // Optional structure-ring pick provider.  When present, the pick pass
   // calls `structureMarkerRenderer.pickRing(pass)` after the galaxy
   // draws so cluster / supercluster / void ring hits land in the same
   // texture.  Shared depth state means a foreground galaxy still
@@ -239,7 +239,7 @@ export function createPickRenderer(
   /**
    * Record the shared per-source pick pass into `encoder`.  Both
    * `pick()` and `renderForDebug()` use this for the common middle —
-   * uniform overrides, bind groups, draw loop, POI ring picks.  The
+   * uniform overrides, bind groups, draw loop, structure ring picks.  The
    * two callers diverge only on the tail (readback vs return-texture).
    *
    * Reads `sharedUniformBuffer` lazily so a future PointRenderer
@@ -330,7 +330,7 @@ export function createPickRenderer(
       pass.draw(6, src.count);
     }
 
-    // POI ring picks share depth state with the galaxy draws, so a
+    // Structure ring picks share depth state with the galaxy draws, so a
     // foreground galaxy claims the pixel — clicks through a ring at a
     // galaxy select the galaxy.  Skipped when no marker renderer.
     if (structureMarkerRenderer) {

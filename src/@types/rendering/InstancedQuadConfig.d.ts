@@ -33,7 +33,7 @@ export type InstancedQuadConfig = {
    *  HDR offscreen `'rgba16float'`. */
   format: GPUTextureFormat;
   /** Canonical cluster-focus bind-group layout, bound at `@group(1)`.
-   *  The focus dim (non-members of a focused POI fade to 8%) is computed
+   *  The focus dim (non-members of a focused structure fade to 8%) is computed
    *  per instance in each consumer's vertex stage via
    *  `focusAlphaMultiplier`; the same shared layout serves every impostor
    *  pipeline so the points pass and the disks fade in lockstep. */

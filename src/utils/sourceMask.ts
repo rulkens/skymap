@@ -14,7 +14,7 @@ import type { SourceType } from '../@types/data/SourceType';
 
 /**
  * Startup visibility mask — `1` for every survey source whose registry
- * entry has `visible: true`. POI codes never participate (their bits
+ * entry has `visible: true`. Structure codes never participate (their bits
  * stay clear). Drives the engine's initial `drawMask`/`pickMask`.
  */
 export const ALL_VISIBLE_MASK: number = SURVEY_SOURCES.reduce<number>(

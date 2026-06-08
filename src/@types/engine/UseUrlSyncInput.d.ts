@@ -17,13 +17,13 @@ import type { StructureRecord } from './data/StructureRecord';
  * not retrigger this hook on assignment.
  */
 export type UseUrlSyncInput = {
-  /** Camera-focus target — galaxy or POI; drives the URL hash. */
+  /** Camera-focus target — galaxy or structure; drives the URL hash. */
   focused: FocusableTarget | null;
   status: EngineStatus;
   sourceCounts: Partial<Record<SourceType, number>>;
   famousMeta: readonly FamousMetaEntry[];
   aliasMap: ReadonlyMap<bigint, readonly string[]>;
   ready: boolean;
-  pois: readonly StructureRecord[];
+  structures: readonly StructureRecord[];
   engineHandleRef: RefObject<EngineHandle | null>;
 };

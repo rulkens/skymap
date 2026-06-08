@@ -118,7 +118,7 @@ export function App(): React.ReactElement {
 
   // Live "N galaxies" figure for a pinned cluster/SC/void card.  Recomputes
   // on selection / tier swap / catalog landing (`sourceCounts`) / survey
-  // toggle — null for galaxy selections and famous-galaxy POIs.
+  // toggle — null for galaxy selections and famous-galaxy structures.
   const selectedMemberCount = useStructureMemberCount({
     selected,
     engineHandleRef: handleRef,
@@ -186,7 +186,7 @@ export function App(): React.ReactElement {
     famousMeta,
     aliasMap,
     ready: status.kind === 'ready',
-    pois: staticStructures,
+    structures: staticStructures,
     engineHandleRef: handleRef,
   });
 

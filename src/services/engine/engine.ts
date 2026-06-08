@@ -790,7 +790,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // reference each by name — no forward references, no `!` assertions.
 
   function clearSelection(): void {
-    // Unified teardown — clears galaxy/POI selection AND the focus slot
+    // Unified teardown — clears galaxy/structure selection AND the focus slot
     // (so the cluster-focus fade collapses) in one call.  The branching
     // + render-scheduling lives in `clearAll` so the engine.ts closure
     // stays a thin wrapper.  See clearAll.ts for the dismiss-vs-deselect
