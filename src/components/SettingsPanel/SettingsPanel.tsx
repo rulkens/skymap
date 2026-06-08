@@ -88,7 +88,7 @@ import type { BiasMode as BiasModeT } from '../../@types/data/BiasMode';
 import { ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../../@types/data/ToneMapCurve';
 import type { PoiCategory } from '../../@types/engine/data/PoiCategory';
-import { POI_CATEGORY_INFO } from '../../data/poiCategoryInfo';
+import { CATEGORY_DISPLAY_INFO } from '../../data/categoryDisplayInfo';
 import { STRUCTURE_CATEGORIES } from '../../data/structureCategories';
 import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
@@ -818,7 +818,7 @@ export function SettingsPanel({
             return (
               <div className={styles.panelRow} key={`marker-${cat}`}>
                 <label htmlFor={`toggle-marker-${cat}`}>
-                  {POI_CATEGORY_INFO[cat].plural}
+                  {CATEGORY_DISPLAY_INFO[cat].plural}
                   {count !== undefined && (
                     <span className={styles.sourceCount}>{count.toLocaleString()}</span>
                   )}
@@ -856,7 +856,7 @@ export function SettingsPanel({
             useful). */}
         {LABEL_CATEGORIES.map((cat) => (
           <div className={styles.panelRow} key={`label-${cat}`}>
-            <label htmlFor={`toggle-label-${cat}`}>{POI_CATEGORY_INFO[cat].plural}</label>
+            <label htmlFor={`toggle-label-${cat}`}>{CATEGORY_DISPLAY_INFO[cat].plural}</label>
             <input
               id={`toggle-label-${cat}`}
               type="checkbox"
