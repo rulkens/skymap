@@ -120,7 +120,7 @@ export type EngineCallbacks = {
      * casual click doesn't pollute browser history with hash entries —
      * only deliberate focus actions do.  The `FocusableTarget` union
      * means one callback covers both galaxy and POI focus; consumers
-     * branch on the discriminant (use `isPoi`).
+     * branch on the discriminant (use `isStructure`).
      */
     onFocusChange?: (target: FocusableTarget | null) => void;
     /**

@@ -21,10 +21,10 @@ export type EngineCameraHandle = {
    *   - StructureRecord → the structure focus path (commitStructureFocus,
    *     framing distance derived from the category + onPoiFocusChange).
    *
-   * Discrimination uses the `isPoi` predicate from `services/engine/isPoi.ts`.
+   * Discrimination uses the `isStructure` predicate from `services/engine/isStructure.ts`.
    * See `services/engine/helpers/dispatchFocusOn.ts` for the dispatcher
    * implementation.  Pre-bootstrap behaviour mirrors the per-kind paths:
-   * galaxy focus is a no-op when `state.cam` is null; POI focus still
+   * galaxy focus is a no-op when `state.cam` is null; structure focus still
    * fires the subsystem flag + React-side callback even with no camera
    * (deep-link drains that race bootstrap rely on that).
    */

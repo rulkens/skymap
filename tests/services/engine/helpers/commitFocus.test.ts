@@ -1,7 +1,7 @@
 /**
  * commitFocus — verifies the union-dispatching entry point routes
  * GalaxyInfo through commitGalaxyFocus and StructureRecord through
- * commitStructureFocus, using the isPoi predicate.
+ * commitStructureFocus, using the isStructure predicate.
  *
  * Mocks both underlying commit helpers and asserts the right one was
  * called. Deeper coverage lives in commitGalaxyFocus.test.ts /

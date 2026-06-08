@@ -8,9 +8,9 @@
  * which lost the native `<details>` "More details" open state on every hover.
  *
  * Both `hovered` and `selected` accept the full `FocusableTarget` union
- * (`GalaxyInfo | StructureRecord`).  App.tsx merges POI and galaxy state
- * before handing them here — POI wins when both are present.  InfoCard then
- * dispatches via `isPoi` into typed sub-slots and picks the right detail-card
+ * (`GalaxyInfo | StructureRecord`).  App.tsx merges structure and galaxy state
+ * before handing them here — structure wins when both are present.  InfoCard then
+ * dispatches via `isStructure` into typed sub-slots and picks the right detail-card
  * variant (`GalaxyDetailCard` vs `StructureDetailCard`).
  */
 
@@ -18,7 +18,7 @@ import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
 import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
-import { isPoi } from '../../services/engine/isPoi';
+import { isStructure } from '../../services/engine/isStructure';
 import { GalaxyDetailCard } from './GalaxyDetailCard';
 import { StructureDetailCard } from './StructureDetailCard';
 import { CompactCard } from './CompactCard';
@@ -29,14 +29,14 @@ export type InfoCardProps = {
   /**
    * The point currently under the cursor, or null when the cursor is on empty
    * sky.  Can be either a galaxy or a structure — InfoCard dispatches via
-   * `isPoi` to render the appropriate hover variant.
+   * `isStructure` to render the appropriate hover variant.
    */
   hovered: FocusableTarget | null;
   /**
    * The pinned/selected target, or null when nothing is pinned.  Same dispatch
    * as `hovered`.  When both `hovered` and `selected` are non-null and of the
    * same kind (galaxy/galaxy or structure/structure), the stacked-pair layout applies;
-   * when they're different kinds (e.g. galaxy pinned, POI hovered), both render
+   * when they're different kinds (e.g. galaxy pinned, structure hovered), both render
    * in their respective slots.
    */
   selected: FocusableTarget | null;
@@ -49,14 +49,14 @@ export type InfoCardProps = {
   selectedMemberCount?: number | null;
   /**
    * Optional callback fired when the user clicks "Focus" (galaxy) or "Fly here"
-   * (POI) on the pinned card.  Caller routes to the unified handle method
+   * (structure) on the pinned card.  Caller routes to the unified handle method
    * `handle.camera.focusOn(target)`.
    */
   onFocus?: (target: FocusableTarget) => void;
   /**
    * Optional callback fired when the user clicks the Close (×) button on the
    * pinned card.  Same effect as pressing Esc — clears the selection.  Caller
-   * routes to `handle.selection.clear()` which tears down both galaxy AND POI
+   * routes to `handle.selection.clear()` which tears down both galaxy AND structure
    * selection in one call.
    */
   onClose?: () => void;
@@ -71,13 +71,13 @@ export function InfoCard({
 }: InfoCardProps): ReactNode {
   if (!hovered && !selected) return null;
 
-  // Dispatch via isPoi into typed sub-slots.  A StructureRecord is identified
+  // Dispatch via isStructure into typed sub-slots.  A StructureRecord is identified
   // by a top-level `category` field; GalaxyInfo carries category only at
-  // `galaxyType.category`.  See isPoi.ts for the discriminant rationale.
-  const selectedStructure = selected && isPoi(selected) ? selected : null;
-  const selectedGalaxy = selected && !isPoi(selected) ? (selected as GalaxyInfo) : null;
-  const hoveredStructure = hovered && isPoi(hovered) ? hovered : null;
-  const hoveredGalaxy = hovered && !isPoi(hovered) ? (hovered as GalaxyInfo) : null;
+  // `galaxyType.category`.  See isStructure.ts for the discriminant rationale.
+  const selectedStructure = selected && isStructure(selected) ? selected : null;
+  const selectedGalaxy = selected && !isStructure(selected) ? (selected as GalaxyInfo) : null;
+  const hoveredStructure = hovered && isStructure(hovered) ? hovered : null;
+  const hoveredGalaxy = hovered && !isStructure(hovered) ? (hovered as GalaxyInfo) : null;
 
   // Structure hover wins over galaxy hover when both are non-null (a transient
   // cross-render race; the engine's hover throttler normally clears the

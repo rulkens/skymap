@@ -70,7 +70,7 @@ import type { UrlSyncReturn } from '../@types/engine/UrlSyncReturn';
 import type { FocusableTarget } from '../@types/engine/FocusableTarget';
 import type { GalaxyCatalog } from '../@types/data/GalaxyCatalog';
 import type { FocusTarget } from '../@types/camera/FocusTarget';
-import { isPoi } from '../services/engine/isPoi';
+import { isStructure } from '../services/engine/isStructure';
 import { parseFocusHash, selectionToFocusId } from '../services/url/focusUrl';
 import { resolveFocusTarget } from '../services/engine/camera/resolveFocusTarget';
 import { SURVEY_SOURCES, Source } from '../data/sources';
@@ -104,7 +104,7 @@ export type DesiredHashOutput = {
 export function computeDesiredHash(input: DesiredHashInput): DesiredHashOutput {
   let desiredHashBody = '';
   if (input.focused !== null) {
-    if (isPoi(input.focused)) {
+    if (isStructure(input.focused)) {
       desiredHashBody = `focus=${input.focused.id}`;
     } else {
       const id = selectionToFocusId(input.focused);

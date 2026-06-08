@@ -31,12 +31,12 @@
 //
 // ## Pick encoding
 //
-// Same '(sourceCode << 27) | (poiIndex + PICK_SENTINEL_OFFSET)' packing
+// Same '(sourceCode << 27) | (structureIndex + PICK_SENTINEL_OFFSET)' packing
 // the galaxy path uses.  The per-category SourceUniforms block carries
 // the source code (5/6/7/15 for cluster/supercluster/void/group — see
-// sources.ts and lib/selectionEncoding.wesl).  'poiIndex' is the
+// sources.ts and lib/selectionEncoding.wesl).  'structureIndex' is the
 // @builtin(instance_index) of this draw, populated in the vertex stage
-// (ring.wesl) and forwarded through VsOut.poiIndex — flat-interpolated
+// (ring.wesl) and forwarded through VsOut.structureIndex — flat-interpolated
 // so the integer arrives unchanged across all six vertices of the
 // instance.
 //
@@ -93,10 +93,10 @@ fn fsRingPick(in: VsOut) -> @location(0) vec4<u32> {
   // become pick targets while still occupying their instance slot.
   if (in.alpha <= 0.0) { discard; }
 
-  // 'in.poiIndex' was assembled in the vertex stage as
+  // 'in.structureIndex' was assembled in the vertex stage as
   // 'u32(@builtin(instance_index))'.  The shared VsOut carries it so
   // both the visible-ring fragment (which doesn't use it) and this
   // pick fragment can read from one interpolant set.
-  let packed: u32 = (source.sourceCode << 27u) | (in.poiIndex + PICK_SENTINEL_OFFSET);
+  let packed: u32 = (source.sourceCode << 27u) | (in.structureIndex + PICK_SENTINEL_OFFSET);
   return vec4<u32>(packed, 0u, 0u, 0u);
 }

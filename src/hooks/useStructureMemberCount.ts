@@ -11,13 +11,13 @@
  * frame.
  *
  * Returns `null` (caller omits the row) when nothing is countable: no
- * structure selected, a famous-galaxy POI, or the engine handle / catalogs
+ * structure selected, a famous-galaxy selection, or the engine handle / catalogs
  * aren't ready.  `getCloud` reads the engine's live catalog map, so a
  * stale tier never lingers — the next catalog landing re-fires the memo.
  */
 
 import { useMemo } from 'react';
-import { isPoi } from '../services/engine/isPoi';
+import { isStructure } from '../services/engine/isStructure';
 import { structureMemberCount } from '../utils/structure/structureMemberCount';
 import type { UseStructureMemberCountInput } from '../@types/engine/UseStructureMemberCountInput';
 
@@ -29,7 +29,7 @@ export function useStructureMemberCount({
   visibleSourceMask,
 }: UseStructureMemberCountInput): number | null {
   return useMemo(() => {
-    if (selected === null || !isPoi(selected)) return null;
+    if (selected === null || !isStructure(selected)) return null;
     const handle = engineHandleRef.current;
     if (handle === null) return null;
     return structureMemberCount(

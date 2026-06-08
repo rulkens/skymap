@@ -30,9 +30,7 @@ describe('ringPick.wesl', () => {
     // A separate parity test already proves the lib constant matches the
     // TS constant — so if this shader imports from the lib, the value
     // is guaranteed correct.
-    expect(ringPickCode).toContain(
-      'import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET',
-    );
+    expect(ringPickCode).toContain('import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET');
     // Sanity: the TS constant is the value downstream readers subtract.
     // If this ever changes, both this shader and the lib will need to
     // update in lock-step.
@@ -46,7 +44,7 @@ describe('ringPick.wesl', () => {
   });
 
   it('emits the canonical pick packing in the fragment body', () => {
-    // (source.sourceCode << 27u) | (poiIndex + PICK_SENTINEL_OFFSET)
+    // (source.sourceCode << 27u) | (structureIndex + PICK_SENTINEL_OFFSET)
     expect(ringPickCode).toContain('source.sourceCode << 27u');
     expect(ringPickCode).toContain('PICK_SENTINEL_OFFSET');
   });

@@ -121,7 +121,7 @@ import { clearAll } from './helpers/clearAll';
 import { commitFocus } from './helpers/commitFocus';
 import { commitGalaxyFocus } from './helpers/commitGalaxyFocus';
 import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
-import { isPoi } from './isPoi';
+import { isStructure } from './isStructure';
 import { logCameraState } from './helpers/logCameraState';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
@@ -827,7 +827,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // bootstrap would set `#focus=…` while the camera stays put.  The
     // structure branch skips the guard so deep-link drains can land
     // structure state pre-camera (see commitStructureFocus).
-    if (!isPoi(target) && !state.cam) return;
+    if (!isStructure(target) && !state.cam) return;
     commitFocus(state, target);
   }
 

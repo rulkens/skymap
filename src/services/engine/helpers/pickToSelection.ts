@@ -13,7 +13,7 @@
  */
 
 import { SOURCE_REGISTRY } from '../../../data/sources';
-import { resolvePoiFromPick } from './resolvePoiFromPick';
+import { resolveStructureFromPick } from './resolveStructureFromPick';
 import type { PickResult } from '../../../data/selectionEncoding';
 import type { Selection } from '../../../@types/engine/subsystems/Selection';
 import type { StructureCategory } from '../../../@types/engine/data/StructureCategory';
@@ -31,9 +31,9 @@ export function pickToSelection(
   if (entry?.type === 'structure') {
     // A structure entry's id *is* its category (StructureCategory derives from
     // exactly these ids), so the cast is sound by construction.
-    const record = resolvePoiFromPick(structures, {
+    const record = resolveStructureFromPick(structures, {
       category: entry.id as StructureCategory,
-      poiIndex: pick.localIdx,
+      structureIndex: pick.localIdx,
     });
     return record ? { kind: 'structure', id: record.id } : null;
   }

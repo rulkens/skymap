@@ -3,7 +3,7 @@ import type { StructureCategory } from './StructureCategory';
 
 /**
  * Minimal projection of the structure store the pick path reads — just the
- * per-category lookup `pickToSelection` / `resolvePoiFromPick` need. Narrower
+ * per-category lookup `pickToSelection` / `resolveStructureFromPick` need. Narrower
  * than the full `StructureStore` so tests stub a one-method object literal.
  */
 export type PickStructureStore = {

@@ -7,7 +7,7 @@
  * on manual smoke testing for the effect plumbing.
  *
  * `focused` is a FocusableTarget union (galaxy | structure | null); the
- * body shape is decided by isPoi() inside the helper.
+ * body shape is decided by isStructure() inside the helper.
  */
 import { describe, it, expect } from 'vitest';
 import { computeDesiredHash, initialPendingFromHash } from '../../src/hooks/useUrlSync';

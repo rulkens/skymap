@@ -19,7 +19,7 @@
  * instanced draw per non-empty bucket, binding that category's
  * SourceUniforms at `@group(2)`.  The uniform carries the category's
  * 5-bit `sourceCode`, which the ringPick fragment composes into
- * `(sourceCode << 27) | poiIndex + PICK_SENTINEL_OFFSET` — the same
+ * `(sourceCode << 27) | structureIndex + PICK_SENTINEL_OFFSET` — the same
  * per-source pattern `pointRenderer` uses per survey.  Buckets are
  * data-driven from `STRUCTURE_CATEGORIES`, so a new structure source
  * needs no change here.
@@ -540,7 +540,7 @@ export function createStructureMarkerRenderer(
     // slide setVertexBuffer's byte-offset to the bucket start and
     // draw with firstInstance=0.  That way instance_index runs 0..count-1
     // per category — the index the CPU-side pick resolver expects when
-    // it does `categoryPois[poiIndex]`.  Functionally identical for
+    // it does `categoryStructures[structureIndex]`.  Functionally identical for
     // the visible draws (their shaders don't read instance_index for
     // visual output); load-bearing for the pick path.
     pass.setPipeline(haloPipeline);
@@ -599,8 +599,8 @@ export function createStructureMarkerRenderer(
       passEncoder.setBindGroup(2, bg);
       // Per-category instance_index via vertex-buffer offset (NOT
       // firstInstance).  See the visible-draw block above for the
-      // rationale — keeps poiIndex 0..count-1 per category so the
-      // CPU-side resolver can do `categoryPois[poiIndex]` directly.
+      // rationale — keeps structureIndex 0..count-1 per category so the
+      // CPU-side resolver can do `categoryStructures[structureIndex]` directly.
       passEncoder.setVertexBuffer(0, instanceBuffer, bucketOffsets[cat] * MARKER_INSTANCE_BYTES);
       passEncoder.draw(6, bucketCounts[cat], 0, 0);
     }

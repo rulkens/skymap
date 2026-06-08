@@ -20,7 +20,7 @@
  * fully-faded ones, which emit alpha-0 colours the fragment discards. This
  * keeps each category's run index-aligned with `structureStore.byCategory(cat)`:
  * the ring pick path packs `@builtin(instance_index)` as the per-category-local
- * index and `resolvePoiFromPick` resolves it through `byCategory(cat)[poiIndex]`.
+ * index and `resolveStructureFromPick` resolves it through `byCategory(cat)[structureIndex]`.
  * Omitting a faded structure would index-shift that lookup. The only legitimate
  * skip is all-or-nothing-per-category — a category whose toggle opacity is
  * exactly 0 — which never perturbs within-category alignment. A mid-fade
