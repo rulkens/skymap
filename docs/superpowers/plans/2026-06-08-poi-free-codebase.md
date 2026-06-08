@@ -172,13 +172,13 @@ export type FocusTarget =
 - `parseFocusHash`: a `focus=` body whose id starts with `cluster-` / `supercluster-` / `void-` / `group-` → `{ kind: 'structure', id }`; the existing pgc/sdss/pos/famous ladder is otherwise unchanged. Derive the prefix set from `STRUCTURE_CATEGORIES` (no hardcoded list).
 - `selectionToFocusId(info: GalaxyInfo)` is galaxy-only; add a sibling path so a structure selection encodes to its `id` verbatim. (Check how `computeDesiredHash` calls it in B3 — the structure branch may bypass `selectionToFocusId` and use `record.id` directly. Pick whichever keeps the codec galaxy/structure split clean.)
 
-- [ ] Add tests: `parseFocusHash routes cluster-virgo-m87 to kind structure`; one per category prefix; `a famous id without a structure prefix still routes to kind famous`; `pgc-/sdss-/pos@ ladder unchanged` (regression).
-- [ ] Run: `npm test -- focusUrl` → FAIL.
-- [ ] Implement the variant + prefix routing.
-- [ ] Run → PASS + `npm run typecheck`.
-- [ ] Commit.
+- [x] Add tests: `parseFocusHash routes cluster-virgo-m87 to kind structure`; one per category prefix; `a famous id without a structure prefix still routes to kind famous`; `pgc-/sdss-/pos@ ladder unchanged` (regression).
+- [x] Run: `npm test -- focusUrl` → FAIL.
+- [x] Implement the variant + prefix routing.
+- [x] Run → PASS + `npm run typecheck`.
+- [x] Commit.
 
-### Task B2: Drop `#poi=` from `hasDeepLink`
+ Drop `#poi=` from `hasDeepLink`
 
 **Files:**
 
@@ -212,13 +212,13 @@ export type InitialPending =
 - Rename state slot `pendingPoiId` → `pendingStructureId` (and its setter); update the popstate handler + effect 4 (the structure drain) + the `UrlSyncReturn` shape (`@types/engine/UrlSyncReturn.d.ts`).
 - Keep BOTH pending slots and both drains — the resolution sources differ (async catalogs vs synchronous structure table); do not merge them.
 
-- [ ] Update tests: `initialPendingFromHash routes #focus=cluster-... to kind structure`; `computeDesiredHash writes focus=<id> for a structure target`; `galaxy hashes unchanged`; rename existing `poi`-named cases.
-- [ ] Run: `npm test -- useUrlSync` → FAIL.
-- [ ] Apply the changes (the `camera.focusOn` drain already accepts structures — no logic change there, just the slot/parse rename).
-- [ ] Run → PASS + `npm run typecheck`.
-- [ ] Commit.
+- [x] Update tests: `initialPendingFromHash routes #focus=cluster-... to kind structure`; `computeDesiredHash writes focus=<id> for a structure target`; `galaxy hashes unchanged`; rename existing `poi`-named cases.
+- [x] Run: `npm test -- useUrlSync` → FAIL.
+- [x] Apply the changes (the `camera.focusOn` drain already accepts structures — no logic change there, just the slot/parse rename).
+- [x] Run → PASS + `npm run typecheck`.
+- [x] Commit.
 
-### Task B4: Delete the `poiUrl` codec
+ Delete the `poiUrl` codec
 
 **Files:**
 
