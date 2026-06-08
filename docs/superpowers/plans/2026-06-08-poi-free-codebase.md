@@ -33,17 +33,21 @@ readonly bearsMarker: boolean;
 readonly labelLayer?: 'galaxyNames' | 'structure';
 /** Long form for detail surfaces ("Galaxy Cluster"). Present iff bearsLabel. */
 readonly detailLabel?: string;
+/** Compact form for chips/previews ("Cluster"). Present iff bearsLabel. */
+readonly shortLabel?: string;
 /** Plural for list/toggle headers ("Clusters"). Present iff bearsLabel. */
 readonly plural?: string;
 ```
 
+These three display fields are **explicit** on each label-bearing row — deliberately NOT derived from the source `label`, because the famous-galaxy _source_ label (`'Famous'`) differs from the _category_ display copy. Decoupling them is what keeps the source name and the category name independent.
+
 Per-row values (see spec §A1/§A2 table):
 
-- `famousGalaxy`: `bearsLabel: true, bearsMarker: false, labelLayer: 'galaxyNames', detailLabel: 'Famous Galaxy', plural: 'Famous galaxies'`. (Keep its existing `label: 'Famous'`; the old display table's short form was `'Galaxy'` — see judgement note at end of plan.)
-- `cluster/supercluster/void/group`: `bearsLabel: true, bearsMarker: true, labelLayer: 'structure'`, with `detailLabel`/`plural` copied from the old `POI_CATEGORY_INFO` rows (`src/data/poiCategoryInfo.ts:24-50`).
-- `sdss/glade/2mrs/milliquas/synthetic`: `bearsLabel: false, bearsMarker: false` (omit `labelLayer`/`detailLabel`/`plural`).
+- `famousGalaxy`: `bearsLabel: true, bearsMarker: false, labelLayer: 'galaxyNames', detailLabel: 'Famous Galaxy', shortLabel: 'Galaxy', plural: 'Famous Galaxies'`. (Keep its existing source `label: 'Famous'` unchanged — only the category display fields are added.)
+- `cluster/supercluster/void/group`: `bearsLabel: true, bearsMarker: true, labelLayer: 'structure'`, with `detailLabel`/`shortLabel`/`plural` copied verbatim from the old `POI_CATEGORY_INFO` rows (`src/data/poiCategoryInfo.ts:24-50`).
+- `sdss/glade/2mrs/milliquas/synthetic`: `bearsLabel: false, bearsMarker: false` (omit `labelLayer`/`detailLabel`/`shortLabel`/`plural`).
 
-- [ ] Add tests: `famousGalaxy row bears a label but no marker` (assert `bearsLabel` true, `bearsMarker` false, `labelLayer === 'galaxyNames'`); `structure rows bear both a label and a marker` (loop cluster/supercluster/void/group); `bulk survey rows bear neither` (assert sdss/glade false/false).
+- [ ] Add tests: `famousGalaxy row bears a label but no marker` (assert `bearsLabel` true, `bearsMarker` false, `labelLayer === 'galaxyNames'`); `famousGalaxy category copy is detail 'Famous Galaxy' / short 'Galaxy' / plural 'Famous Galaxies'`; `structure rows bear both a label and a marker` (loop cluster/supercluster/void/group); `bulk survey rows bear neither` (assert sdss/glade false/false).
 - [ ] Run: `npm test -- sources` → new tests FAIL (fields absent).
 - [ ] Add the five fields to `SourceEntryBase`; populate every row in `sources.ts`.
 - [ ] Run: `npm test -- sources` and `npm run typecheck` → PASS.
@@ -88,9 +92,9 @@ export type CategoryDisplayInfo = { label: string; shortLabel: string; readonly 
 export const CATEGORY_DISPLAY_INFO: Readonly<Record<LabelCategory, CategoryDisplayInfo>>;
 ```
 
-Mapping: `shortLabel ← row.label`; `label ← row.detailLabel`; `plural ← row.plural`.
+Mapping: `label ← row.detailLabel`; `shortLabel ← row.shortLabel`; `plural ← row.plural` (all explicit registry fields — see A1).
 
-- [ ] Add tests: `CATEGORY_DISPLAY_INFO has a row per LabelCategory`; `cluster renders 'Galaxy Cluster' / 'Cluster' / 'Clusters'`; `famousGalaxy renders the famous display copy`.
+- [ ] Add tests: `CATEGORY_DISPLAY_INFO has a row per LabelCategory`; `cluster renders 'Galaxy Cluster' / 'Cluster' / 'Clusters'`; `famousGalaxy renders 'Famous Galaxy' / 'Galaxy' / 'Famous Galaxies'`.
 - [ ] Run → FAIL.
 - [ ] Implement `categoryDisplayInfo.ts` deriving from the registry; repoint every `POI_CATEGORY_INFO[x]` read to `CATEGORY_DISPLAY_INFO[x]`; delete `poiCategoryInfo.ts`.
 - [ ] Run the touched tests + `npm run typecheck` → PASS. Confirm `rg 'POI_CATEGORY_INFO|poiCategoryInfo' src` is empty.
@@ -333,6 +337,6 @@ readonly category: StructureCategory;  // was 'cluster' | 'supercluster' | 'void
 
 **Judgement calls (flag for review):**
 
-1. **`famousGalaxy` display copy:** the old table had `shortLabel: 'Galaxy'` but the registry `label` is `'Famous'`. A3 maps `shortLabel ← row.label`, so the famous chip short form would read `'Famous'`, not `'Galaxy'`. If the UI must keep `'Galaxy'`, set the famousGalaxy row's `label` to `'Galaxy'` in A1 (and check no other consumer of that row's `label` regresses) — confirm during A1.
+1. **`famousGalaxy` display copy — RESOLVED (2026-06-08):** the category display fields are explicit on the row (not derived from the source `label`), so the famous _source_ keeps `label: 'Famous'` while the _category_ reads detail `'Famous Galaxy'` / short `'Galaxy'` / plural **`'Famous Galaxies'`** (user's call: toggle/header shows "Famous Galaxies"). Baked into A1/A3 above.
 2. **`tests/data/poiCategories.test.ts` fate:** the spec suggested re-scoping it to the derived sets, but it currently tests the _style table_. This plan instead renames it to `structureMarkerStyles.test.ts` (C3, style assertions) and creates a fresh `labelCategories.test.ts` (A2, derived sets). Two clear tests beats one re-scoped one.
 3. **`resolveStructureFromPick` defensive guard:** the `famousGalaxy` early-return may become dead once the caller passes `StructureCategory` (C2). Drop it only if the caller's type genuinely narrows; otherwise keep it.
