@@ -111,12 +111,12 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
     // We deliberately DON'T include world positions or colours — the
     // glyph layout in `labelRenderer.setLabels` is the expensive
     // step we're protecting; static-position producers (youAreHere,
-    // pois) keep their positions stable and benefit from the skip.
+    // structures) keep their positions stable and benefit from the skip.
     //
     // Edge case: a producer mutating a label's `text` while keeping
     // the same `id` will NOT trigger re-upload.  No current producer
-    // does this — youAreHere has constant text; pois derive text
-    // from POI name which is part of the id space.
+    // does this — youAreHere has constant text; structures derive text
+    // from the structure name which is part of the id space.
     const lIds = labels.map((l) => `${l.id}:${l.fadeAlpha ?? 1}`).join('|');
     const mIds = lines.map((m) => `${m.id}:${m.fadeAlpha ?? 1}`).join('|');
     return `L:${labels.length}:${lIds};M:${lines.length}:${mIds};O:${getLabelStyleOverrideVersion()}`;

@@ -68,16 +68,16 @@ describe('SOURCE_REGISTRY ids', () => {
   });
 });
 
-describe('Source enum — POI codes (cluster/supercluster/void)', () => {
+describe('Source enum — structure codes (cluster/supercluster/void)', () => {
   it('appends Cluster=5, Supercluster=6, Void=7 to the enum', () => {
     expect(Source.Cluster).toBe(5);
     expect(Source.Supercluster).toBe(6);
     expect(Source.Void).toBe(7);
   });
 
-  it('keeps POI codes OUT of SURVEY_SOURCES (POIs are not survey sources)', () => {
-    // The points-pipeline visibility bitmask iterates SURVEY_SOURCES. POIs
-    // render through their own renderer (future structureMarkerRenderer)
+  it('keeps structure codes OUT of SURVEY_SOURCES (structures are not survey sources)', () => {
+    // The points-pipeline visibility bitmask iterates SURVEY_SOURCES. Structures
+    // render through their own renderer (structureMarkerRenderer)
     // with its own per-category visibility logic, so listing them here
     // would muddy the meaning of "this bitmask filters survey galaxies."
     expect(SURVEY_SOURCES).not.toContain(Source.Cluster);
@@ -85,10 +85,10 @@ describe('Source enum — POI codes (cluster/supercluster/void)', () => {
     expect(SURVEY_SOURCES).not.toContain(Source.Void);
   });
 
-  it('ALL_VISIBLE_MASK covers default-visible survey sources only (no POI bits)', () => {
+  it('ALL_VISIBLE_MASK covers default-visible survey sources only (no structure bits)', () => {
     // Default-visible survey bits: 0 (Synthetic), 1 (SDSS), 2 (2MRS),
     // 3 (Glade), 4 (Famous), 8 (Milliquas) = 0b100011111.  Milliquas ships
-    // on by default now that the quasar source is stable.  POI codes 5/6/7
+    // on by default now that the quasar source is stable.  Structure codes 5/6/7
     // stay clear so the survey draw loop doesn't accidentally gate on them.
     expect(ALL_VISIBLE_MASK).toBe(0b100011111);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Milliquas)).toBe(true);
@@ -102,6 +102,42 @@ describe('Source enum — POI codes (cluster/supercluster/void)', () => {
     // new enum members that don't participate in the mask.
     expect(maskHas(maskWith(0, Source.SDSS), Source.SDSS)).toBe(true);
     expect(maskHas(maskWithout(ALL_VISIBLE_MASK, Source.Glade), Source.Glade)).toBe(false);
+  });
+});
+
+describe('Registry capability flags — bearsLabel / bearsMarker', () => {
+  it('famousGalaxy row bears a label but no marker', () => {
+    const entry = SOURCE_REGISTRY[Source.FamousGalaxy];
+    expect(entry.bearsLabel).toBe(true);
+    expect(entry.bearsMarker).toBe(false);
+    expect(entry.labelLayer).toBe('galaxyNames');
+  });
+
+  it('famousGalaxy category copy is detail "Famous Galaxy" / short "Galaxy" / plural "Famous Galaxies"', () => {
+    const entry = SOURCE_REGISTRY[Source.FamousGalaxy];
+    expect(entry.detailLabel).toBe('Famous Galaxy');
+    expect(entry.shortLabel).toBe('Galaxy');
+    expect(entry.plural).toBe('Famous Galaxies');
+  });
+
+  it('structure rows bear both a label and a marker', () => {
+    // The four structure source ids — verified correct in STRUCTURE_CATEGORIES test above.
+    const structureIds = [Source.Cluster, Source.Supercluster, Source.Void, Source.Group] as const;
+    for (const id of structureIds) {
+      const entry = SOURCE_REGISTRY[id];
+      expect(entry.bearsLabel).toBe(true);
+      expect(entry.bearsMarker).toBe(true);
+      expect(entry.labelLayer).toBe('structure');
+    }
+  });
+
+  it('bulk survey rows bear neither a label nor a marker', () => {
+    const surveyIds = [Source.SDSS, Source.Glade] as const;
+    for (const id of surveyIds) {
+      const entry = SOURCE_REGISTRY[id];
+      expect(entry.bearsLabel).toBe(false);
+      expect(entry.bearsMarker).toBe(false);
+    }
   });
 });
 

@@ -20,7 +20,7 @@ import type { SurveySource } from '../../../src/@types/data/SurveySource';
 // Reverse-lookup name from a Source value.  TS's old numeric enum
 // auto-generated this map; the `as const` replacement does not, so we
 // derive it locally for the test labels below. Keyed by `SurveySource`
-// — POI codes (Cluster/Supercluster/Void) have no flux limit or
+// — structure codes (Cluster/Supercluster/Void) have no flux limit or
 // Schechter triple, so this test never iterates them.
 const SOURCE_NAME: Record<SurveySource, string> = {
   [Source.Synthetic]: 'Synthetic',

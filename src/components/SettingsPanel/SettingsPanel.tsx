@@ -87,8 +87,10 @@ import { BiasMode } from '../../data/biasMode';
 import type { BiasMode as BiasModeT } from '../../@types/data/BiasMode';
 import { ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../../@types/data/ToneMapCurve';
-import type { PoiCategory } from '../../@types/engine/data/PoiCategory';
-import { POI_CATEGORY_INFO } from '../../data/poiCategoryInfo';
+import type { LabelCategory } from '../../@types/engine/data/LabelCategory';
+import type { StructureCategory } from '../../@types/engine/data/StructureCategory';
+import { CATEGORY_DISPLAY_INFO } from '../../data/categoryDisplayInfo';
+import { LABEL_CATEGORIES } from '../../data/labelCategories';
 import { STRUCTURE_CATEGORIES } from '../../data/structureCategories';
 import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
@@ -124,21 +126,6 @@ const TOGGLEABLE_SOURCES: readonly SourceType[] = [
   Source.Glade,
   Source.Milliquas,
 ];
-
-/**
- * The label categories the "Labels" master toggle batches over.  All five
- * PoiCategory values — labels are independent of marker visibility (axis
- * separation landed in PR #160 / audit Q11).
- *
- * `famousGalaxy` is listed first — it's the label set the explorer is
- * most likely to recognise + most likely to toggle (named galaxies vs.
- * astronomer-jargon structure labels), so it gets the top row.  The
- * remaining four are spread from the canonical `STRUCTURE_CATEGORIES` so a
- * future fifth structure category flows through here automatically — the
- * structures master (which iterates `STRUCTURE_CATEGORIES` directly) and
- * the labels master can never drift apart.
- */
-const LABEL_CATEGORIES: readonly PoiCategory[] = ['famousGalaxy', ...STRUCTURE_CATEGORIES];
 
 /**
  * High-level Style picker options for the Cosmic web group.  Derived from
@@ -178,13 +165,13 @@ type Props = {
   sourceCounts?: Partial<Record<SourceType, number>>;
 
   /**
-   * Per-marker-category POI counts (cluster / supercluster / void) for
+   * Per-marker-category structure counts (cluster / supercluster / void) for
    * the Structures section, shown beside each toggle the same way
    * `sourceCounts` annotates the Surveys rows.  A category absent from
    * the map (or the whole prop undefined, before the bulk `.ccat`
    * lands) renders the toggle without a count rather than "0".
    */
-  structureCounts?: Partial<Record<PoiCategory, number>>;
+  structureCounts?: Partial<Record<StructureCategory, number>>;
 
   /** Current point size in pixels.  Lives under Galaxies → Advanced. */
   pointSize: number;
@@ -249,13 +236,13 @@ type Props = {
    * toggle.  Wires to `handle.labels.setCategoryMarkerVisible` (added by
    * PR #160).
    */
-  markerCategoryVisibility?: Readonly<Record<PoiCategory, boolean>>;
-  onSetMarkerCategoryVisibility?: (category: PoiCategory, visible: boolean) => void;
+  markerCategoryVisibility?: Readonly<Record<StructureCategory, boolean>>;
+  onSetMarkerCategoryVisibility?: (category: StructureCategory, visible: boolean) => void;
 
   // ── Labels group (ALL text annotations) ────────────────────────────────
   /** Per-category LABEL visibility — independent of marker visibility. */
-  labelCategoryVisibility: Readonly<Record<PoiCategory, boolean>>;
-  onSetLabelCategoryVisibility: (category: PoiCategory, visible: boolean) => void;
+  labelCategoryVisibility: Readonly<Record<LabelCategory, boolean>>;
+  onSetLabelCategoryVisibility: (category: LabelCategory, visible: boolean) => void;
 
   // ── Display group (power-user disclosure) ──────────────────────────────
   /** Currently-selected tone-mapping curve. */
@@ -485,7 +472,7 @@ export function SettingsPanel({
       })()
     : null;
 
-  // ── Labels master (over all four PoiCategory entries) ───────────────────
+  // ── Labels master (over every LABEL_CATEGORIES entry) ───────────────────
   const labelsMaster = (() => {
     const enabledCount = LABEL_CATEGORIES.reduce<number>(
       (n, cat) => (labelCategoryVisibility[cat] ? n + 1 : n),
@@ -818,7 +805,7 @@ export function SettingsPanel({
             return (
               <div className={styles.panelRow} key={`marker-${cat}`}>
                 <label htmlFor={`toggle-marker-${cat}`}>
-                  {POI_CATEGORY_INFO[cat].plural}
+                  {CATEGORY_DISPLAY_INFO[cat].plural}
                   {count !== undefined && (
                     <span className={styles.sourceCount}>{count.toLocaleString()}</span>
                   )}
@@ -856,7 +843,7 @@ export function SettingsPanel({
             useful). */}
         {LABEL_CATEGORIES.map((cat) => (
           <div className={styles.panelRow} key={`label-${cat}`}>
-            <label htmlFor={`toggle-label-${cat}`}>{POI_CATEGORY_INFO[cat].plural}</label>
+            <label htmlFor={`toggle-label-${cat}`}>{CATEGORY_DISPLAY_INFO[cat].plural}</label>
             <input
               id={`toggle-label-${cat}`}
               type="checkbox"

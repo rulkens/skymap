@@ -11,7 +11,7 @@
  *       bootstrap writes these into the structure store so the label/ring
  *       overlays know where to draw.
  *
- *   2.  `hooks/useUrlSync.ts` — the React-side `#poi=<id>` deep-link drain
+ *   2.  `hooks/useUrlSync.ts` — the React-side `#focus=<id>` deep-link drain
  *       needs a `StructureRecord` to feed `camera.focusOn`, but App.tsx has
  *       no public read-side accessor for the engine's structure table (the
  *       store owns the list).
@@ -43,9 +43,9 @@
  * snapshot as a reactive React state slice would mean threading a new
  * callback through EngineCallbacks and re-rendering App on every catalog
  * load.  For the deep-link drain use case, the static subset is
- * sufficient — `#poi=cluster-virgo-m87` / `#poi=supercluster-coma-sc`
- * / `#poi=void-bootes-void` / `#poi=group-local-group` all live in this
- * table.  Famous-galaxy deep-links (`#poi=famous-…`) are a future
+ * sufficient — `#focus=cluster-virgo-m87` / `#focus=supercluster-coma-sc`
+ * / `#focus=void-bootes-void` / `#focus=group-local-group` all live in this
+ * table.  Famous-galaxy deep-links (`#focus=famous-…`) are a future
  * extension; the drain leaves the pending id set so a future "famous
  * galaxies ready" subscriber can resolve it.
  *

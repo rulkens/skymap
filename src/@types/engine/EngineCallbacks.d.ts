@@ -13,7 +13,8 @@ import type { SourceType } from '../data/SourceType';
 import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { LoadProgressState } from '../loading/LoadProgressState';
-import type { PoiCategory } from './data/PoiCategory';
+import type { LabelCategory } from './data/LabelCategory';
+import type { StructureCategory } from './data/StructureCategory';
 import type { VolumeFieldRowData } from '../settings/VolumeFieldRowData';
 
 /**
@@ -81,7 +82,7 @@ export type EngineCallbacks = {
 
   /**
    * Selection-state callbacks.  Carry the resolved `FocusableTarget`
-   * (galaxy or POI) so consumers don't need to branch on a separate
+   * (galaxy or structure) so consumers don't need to branch on a separate
    * id callback — they receive the full GalaxyInfo / StructureRecord
    * directly.  Both required: every engine consumer needs hover /
    * select fan-out (InfoCard text, halo, hover preview).
@@ -105,7 +106,7 @@ export type EngineCallbacks = {
     onAutoRotateChange?: (enabled: boolean) => void;
     /**
      * Fired when the camera-focus target changes — i.e. the engine has
-     * started a tween toward (or away from) a specific galaxy or POI.
+     * started a tween toward (or away from) a specific galaxy or structure.
      *
      * Selection (`onSelectChange`) and focus are separate concepts:
      *   - Selection is the pin state — InfoCard, halo highlight.  A bare
@@ -118,8 +119,8 @@ export type EngineCallbacks = {
      * The deep-link URL hook subscribes to focus, not selection, so a
      * casual click doesn't pollute browser history with hash entries —
      * only deliberate focus actions do.  The `FocusableTarget` union
-     * means one callback covers both galaxy and POI focus; consumers
-     * branch on the discriminant (use `isPoi`).
+     * means one callback covers both galaxy and structure focus; consumers
+     * branch on the discriminant (use `isStructure`).
      */
     onFocusChange?: (target: FocusableTarget | null) => void;
     /**
@@ -178,9 +179,9 @@ export type EngineCallbacks = {
    * `onLoadProgress` aggregates byte counts across in-flight slots;
    * `null` means "no fetches in flight" (the UI fades the bar out).
    *
-   * `onStructureCountsChange` reports the number of POIs published per
-   * marker category (cluster / supercluster / void) after each
-   * `rebuildAllPois` merge — the structure analogue of the per-survey
+   * `onStructureCountsChange` reports the number of structures published per
+   * marker category (cluster / supercluster / void) after each structure
+   * rebuild — the structure analogue of the per-survey
    * `onCatalogReady` count, so the Structures panel can show "Clusters
    * 573" the way the Surveys panel shows "SDSS 1,234,567".  Fired with
    * the full snapshot (not a delta) because the three groups settle
@@ -191,7 +192,7 @@ export type EngineCallbacks = {
     onTierChange?: (tier: Tier) => void;
     onCatalogReady?: (source: SourceType, count: number) => void;
     onLoadProgress?: (progress: LoadProgressState | null) => void;
-    onStructureCountsChange?: (counts: Partial<Record<PoiCategory, number>>) => void;
+    onStructureCountsChange?: (counts: Partial<Record<StructureCategory, number>>) => void;
   };
 
   /**
@@ -231,7 +232,7 @@ export type EngineCallbacks = {
   filaments?: { onReady?: (stripCount: number, vertexCount: number) => void };
 
   /**
-   * Echoes for the two independent POI visibility axes
+   * Echoes for the two independent structure visibility axes
    * (label-text vs marker-glyph).  The two records are deliberately
    * separate — flipping one does NOT fire the other.  Label-text and
    * marker-glyph visibility are independent because a category's ring
@@ -243,8 +244,12 @@ export type EngineCallbacks = {
    * `setCategoryMarkerVisible(...)` call.
    */
   labels?: {
-    onLabelCategoryVisibilityChange?: (visibility: Readonly<Record<PoiCategory, boolean>>) => void;
-    onMarkerCategoryVisibilityChange?: (visibility: Readonly<Record<PoiCategory, boolean>>) => void;
+    onLabelCategoryVisibilityChange?: (
+      visibility: Readonly<Record<LabelCategory, boolean>>,
+    ) => void;
+    onMarkerCategoryVisibilityChange?: (
+      visibility: Readonly<Record<StructureCategory, boolean>>,
+    ) => void;
   };
 
   /**

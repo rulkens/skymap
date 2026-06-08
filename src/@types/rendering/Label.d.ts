@@ -101,7 +101,7 @@ export type Label = {
   /**
    * Vertical alignment of the text relative to `worldPos`.
    * Default 'baseline' (anchor sits on the text baseline; descenders
-   * hang below).  POI rings use 'center' so the label visually
+   * hang below).  Structure rings use 'center' so the label visually
    * straddles the ring centre rather than hanging beneath it.
    */
   readonly alignY?: LabelAlignY;

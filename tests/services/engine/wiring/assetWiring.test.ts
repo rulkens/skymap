@@ -78,7 +78,7 @@ describe('ASSET_WIRING membership', () => {
     expect(keys.length).toBe(expected.length);
   });
 
-  it('does NOT include the non-fetched POI sources (Cluster/Supercluster/Void)', () => {
+  it('does NOT include the non-fetched structure sources (Cluster/Supercluster/Void)', () => {
     const keys = new Set<AssetKey>(ASSET_WIRING.map((r) => r.key));
     expect(keys.has(Source.Cluster)).toBe(false);
     expect(keys.has(Source.Supercluster)).toBe(false);

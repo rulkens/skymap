@@ -11,11 +11,11 @@
  *   - youAreHere — the "YOU ARE HERE" Milky Way pin (a single label +
  *                  marker line). Fades in when the camera reaches the
  *                  band where the marker is meaningful.
- *   - poi        — cluster + named-anchor labels emitted by
+ *   - structure  — cluster + named-anchor labels emitted by
  *                  `produceStructureLabels`.
  *   - galaxyNames — per-galaxy name labels (currently unused but
  *                   reserved; see future plans for hover-name overlay).
  *   - scaleBar   — the on-screen scale-bar HUD. Constructed by React,
  *                  not a GPU layer; reserved for tour integration.
  */
-export type LabelLayerId = 'youAreHere' | 'poi' | 'galaxyNames' | 'scaleBar';
+export type LabelLayerId = 'youAreHere' | 'structure' | 'galaxyNames' | 'scaleBar';

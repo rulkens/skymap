@@ -135,8 +135,8 @@ describe('createFadeRegistry', () => {
 
   it('serializeFadeHandle keeps a category-less labelLayer distinct from a per-category one', () => {
     const r = createFadeRegistry();
-    const bare: FadeHandle = { kind: 'labelLayer', layer: 'poi' };
-    const perCategory: FadeHandle = { kind: 'labelLayer', layer: 'poi', category: 'cluster' };
+    const bare: FadeHandle = { kind: 'labelLayer', layer: 'structure' };
+    const perCategory: FadeHandle = { kind: 'labelLayer', layer: 'structure', category: 'cluster' };
     r.register(bare, 0);
     r.register(perCategory, 0);
     r.fadeTo(bare, 0.2, 0, 0);

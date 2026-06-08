@@ -47,8 +47,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   const renderer = state.gpu.renderer;
   if (!renderer) return;
   // Thread the cluster marker renderer through so the pick pass can
-  // append POI ring draws after the galaxy per-source loop — see the POI
-  // ring block inside `pick()` for the depth-ordering rationale.  Normalise
+  // append structure ring draws after the galaxy per-source loop — see the
+  // structure ring block inside `pick()` for the depth-ordering rationale.  Normalise
   // `null` → `undefined` so the renderer's param type stays `| undefined`
   // and the optional-vs-null distinction stays internal to the handle bag.
   const pickRenderer = createPickRenderer(
@@ -74,7 +74,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   state.subsystems.clickResolver = createClickResolver({
     pickRenderer,
     // The structure store the resolver reads to turn a ring hit into a
-    // POI selection (via `pickToSelection`, shared with the hover path).
+    // structure selection (via `pickToSelection`, shared with the hover path).
     structures: state.data.structures,
   });
 
@@ -240,7 +240,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       if (!pick) return;
       pick.then((sel) => {
         // Single-click is pure selection (null clears) for both galaxy and
-        // POI hits. setSelected resolves the target internally and fires
+        // structure hits. setSelected resolves the target internally and fires
         // onSelectChange so the React InfoCard swaps bodies; the dblclick
         // handler reads `selectedTarget()` to upgrade to focus.
         state.subsystems.selection.setSelected(sel);

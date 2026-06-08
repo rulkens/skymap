@@ -1,14 +1,14 @@
 /**
  * structureCatalogToStructures — tests for the bulk cluster/supercluster
- * POI producer.
+ * structure producer.
  *
  * The producer turns the decoded `.ccat` + meta sidecar into the
- * non-featured POIs that render through the ring/halo marker pass. Four
+ * non-featured structures that render through the ring/halo marker pass. Four
  * invariants are load-bearing and easy to break:
  *
  *   1. The `category` byte → arm mapping (0 → cluster, 1 → supercluster),
  *      with unknown bytes skipped rather than crashed on.
- *   2. Every bulk POI is `featured: false` — featured gates labels +
+ *   2. Every bulk structure is `featured: false` — featured gates labels +
  *      deep-link eligibility, and a bulk catalog of ~375 structures must
  *      not flood the label layer.
  *   3. Significance normalises PER CATEGORY into [0,1] — clusters
@@ -113,33 +113,33 @@ function mixedPayload(): StructureCatalogPayload {
 
 describe('structureCatalogToStructures', () => {
   it('maps category bytes to cluster/supercluster', () => {
-    const pois = structureCatalogToStructures(mixedPayload());
-    expect(pois.filter((p) => p.category === 'cluster')).toHaveLength(2);
-    expect(pois.filter((p) => p.category === 'supercluster')).toHaveLength(2);
+    const structures = structureCatalogToStructures(mixedPayload());
+    expect(structures.filter((p) => p.category === 'cluster')).toHaveLength(2);
+    expect(structures.filter((p) => p.category === 'supercluster')).toHaveLength(2);
   });
 
-  it('marks every POI not featured', () => {
-    const pois = structureCatalogToStructures(mixedPayload());
-    expect(pois.every((p) => p.featured === false)).toBe(true);
+  it('marks every structure not featured', () => {
+    const structures = structureCatalogToStructures(mixedPayload());
+    expect(structures.every((p) => p.featured === false)).toBe(true);
   });
 
   it('carries worldPos + radii through from the catalog', () => {
-    const pois = structureCatalogToStructures(mixedPayload());
-    const low = pois.find((p) => p.id.includes('low-cluster'))!;
+    const structures = structureCatalogToStructures(mixedPayload());
+    const low = structures.find((p) => p.id.includes('low-cluster'))!;
     expect(low.worldPos).toEqual([1, 2, 3]);
     expect(low.category === 'cluster' && low.physicalRadiusMpc).toBe(1.5);
     expect(low.category === 'cluster' && low.apparentRadiusMpc).toBe(3);
   });
 
   it('normalizes significance per-category into [0,1] on independent scales', () => {
-    const pois = structureCatalogToStructures(mixedPayload());
+    const structures = structureCatalogToStructures(mixedPayload());
     const sig = (idFrag: string) => {
-      const p = pois.find((q) => q.id.includes(idFrag))!;
+      const p = structures.find((q) => q.id.includes(idFrag))!;
       // significance lives on the extended-structure arms.
       return p.category === 'cluster' || p.category === 'supercluster' ? p.significance : undefined;
     };
     // All normalized values within [0,1].
-    for (const p of pois) {
+    for (const p of structures) {
       const s = p.category === 'cluster' || p.category === 'supercluster' ? p.significance : 1;
       expect(s).toBeGreaterThanOrEqual(0);
       expect(s).toBeLessThanOrEqual(1);
@@ -160,23 +160,23 @@ describe('structureCatalogToStructures', () => {
   });
 
   it('ids are prefixed bulk and never collide with featured slugs', () => {
-    const pois = structureCatalogToStructures(mixedPayload());
-    for (const p of pois) {
+    const structures = structureCatalogToStructures(mixedPayload());
+    for (const p of structures) {
       expect(p.id).toMatch(/^(cluster|supercluster)-bulk-/);
     }
   });
 
   it('carries the abell designation from meta onto the cluster arm only', () => {
-    const pois = structureCatalogToStructures(mixedPayload());
-    const high = pois.find((p) => p.id.includes('high-cluster'))!;
+    const structures = structureCatalogToStructures(mixedPayload());
+    const high = structures.find((p) => p.id.includes('high-cluster'))!;
     expect(high.category).toBe('cluster');
     expect(high.category === 'cluster' && high.abell).toBe('A2670');
     // Superclusters never carry abell.
-    const sc = pois.find((p) => p.id.includes('rich-sc'))!;
+    const sc = structures.find((p) => p.id.includes('rich-sc'))!;
     expect('abell' in sc).toBe(false);
   });
 
-  it('carries the meta description through onto every bulk POI', () => {
+  it('carries the meta description through onto every bulk structure', () => {
     const payload = makePayload([
       {
         pos: [0, 0, 0],
@@ -187,8 +187,8 @@ describe('structureCatalogToStructures', () => {
         meta: meta('described-cluster', 'A1', 'X-ray cluster · M500 = 5.0×10¹⁴ M☉ · z = 0.040'),
       },
     ]);
-    const poi = structureCatalogToStructures(payload)[0]!;
-    expect(poi.description).toBe('X-ray cluster · M500 = 5.0×10¹⁴ M☉ · z = 0.040');
+    const structure = structureCatalogToStructures(payload)[0]!;
+    expect(structure.description).toBe('X-ray cluster · M500 = 5.0×10¹⁴ M☉ · z = 0.040');
   });
 
   it('omits abell when the meta entry has null (key absent, not undefined)', () => {
@@ -202,13 +202,13 @@ describe('structureCatalogToStructures', () => {
         meta: meta('no-abell-cluster', null),
       },
     ]);
-    const pois = structureCatalogToStructures(payload);
-    expect('abell' in pois[0]!).toBe(false);
+    const structures = structureCatalogToStructures(payload);
+    expect('abell' in structures[0]!).toBe(false);
   });
 
-  it('names the POI from meta.names[0]', () => {
-    const pois = structureCatalogToStructures(mixedPayload());
-    const high = pois.find((p) => p.id.includes('high-cluster'))!;
+  it('names the structure from meta.names[0]', () => {
+    const structures = structureCatalogToStructures(mixedPayload());
+    const high = structures.find((p) => p.id.includes('high-cluster'))!;
     expect(high.name).toBe('HIGH-CLUSTER');
   });
 
@@ -231,9 +231,9 @@ describe('structureCatalogToStructures', () => {
         meta: meta('reserved'),
       },
     ]);
-    const pois = structureCatalogToStructures(payload);
-    expect(pois).toHaveLength(1);
-    expect(pois[0]!.id).toContain('ok-cluster');
+    const structures = structureCatalogToStructures(payload);
+    expect(structures).toHaveLength(1);
+    expect(structures[0]!.id).toContain('ok-cluster');
   });
 
   it('maps a single-member subset to full weight (no divide-by-zero)', () => {
@@ -248,8 +248,8 @@ describe('structureCatalogToStructures', () => {
         meta: meta('solo-cluster'),
       },
     ]);
-    const pois = structureCatalogToStructures(payload);
-    const p = pois[0]!;
+    const structures = structureCatalogToStructures(payload);
+    const p = structures[0]!;
     expect(p.category === 'cluster' && p.significance).toBeCloseTo(1);
   });
 

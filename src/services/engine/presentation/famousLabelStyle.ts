@@ -4,8 +4,8 @@
  * Unlike the structure styles, the famous-galaxy presentation is label-only —
  * curated thumbnails handle the close-approach detail, so there is no ring or
  * halo and none of the marker apparent-radius fade fields. Famous galaxies
- * instead carry a per-POI apparent-size gate (`minApparentSizePx`) with a
- * `fadeBandPx` smoothstep, a connecting anchor `lineColor`, and a per-POI
+ * instead carry a per-entry apparent-size gate (`minApparentSizePx`) with a
+ * `fadeBandPx` smoothstep, a connecting anchor `lineColor`, and a per-entry
  * `worldEmMpc` override (computed from the galaxy's diameter) — see
  * `produceFamousLabels`.
  */
@@ -23,12 +23,12 @@ export type FamousLabelStyle = {
   readonly minPixelSize: number;
   /** Ceiling clamp on projected em height in screen pixels. */
   readonly maxPixelSize: number;
-  /** Default label world-space em height (Mpc); per-POI override usually wins. */
+  /** Default label world-space em height (Mpc); per-entry override usually wins. */
   readonly worldEmMpc: number;
   /** Anchor-line stroke width in pixels. */
   readonly pixelWidth: number;
   /**
-   * Smoothstep fade-band width (px) above the per-POI `minApparentSizePx`.
+   * Smoothstep fade-band width (px) above the per-entry `minApparentSizePx`.
    * A galaxy whose apparent size lands inside `[min, min + fadeBandPx]` fades
    * in via smoothstep instead of popping; below the band it is skipped.
    */
@@ -39,7 +39,7 @@ export type FamousLabelStyle = {
   readonly outlineEmFrac: number;
 };
 
-/** The single famous-galaxy label style (copied verbatim from POI_STYLES). */
+/** The single famous-galaxy label style (copied verbatim from STRUCTURE_MARKER_STYLES). */
 export const FAMOUS_LABEL_STYLE: FamousLabelStyle = {
   labelColor: hexToGl('#FFF2CC'),
   lineColor: hexToGl('#E6D9B3'),

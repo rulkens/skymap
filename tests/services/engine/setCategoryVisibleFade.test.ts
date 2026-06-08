@@ -10,7 +10,7 @@
  *
  * The contract under test: a category toggle drives the SAME per-category fade
  * handle the producers read (`markerLayer{category}` /
- * `labelLayer{poi,category}` / `labelLayer{galaxyNames}`), so on/off is a smooth
+ * `labelLayer{structure,category}` / `labelLayer{galaxyNames}`), so on/off is a smooth
  * fade instead of a pop. famousGalaxy has no ring marker, so a marker toggle for
  * it fires NO markerLayer fade — but still mirrors settings + requests a render.
  */
@@ -62,7 +62,6 @@ function makeFixture() {
         supercluster: true,
         void: true,
         group: true,
-        famousGalaxy: true,
       },
     },
     subsystems: {
@@ -110,30 +109,18 @@ describe('setCategoryMarkerVisible — fade orchestration', () => {
       },
     ]);
   });
-
-  it('famousGalaxy marker toggle fires NO markerLayer fade (no ring) but still mirrors + requests render', () => {
-    const fx = makeFixture();
-    setCategoryMarkerVisibleForTest(fx.state as never, fx.cb as never, 'famousGalaxy', false);
-
-    // No ring for famous galaxies → no markerLayer fade.
-    expect(fx.fadeCalls).toEqual([]);
-    // Settings mirror + callback + render still happen.
-    expect(fx.state.settings.markerCategoryVisibility.famousGalaxy).toBe(false);
-    expect(fx.cb.labels.onMarkerCategoryVisibilityChange).toHaveBeenCalledTimes(1);
-    expect(fx.state.subsystems.scheduler.requestRender).toHaveBeenCalledTimes(1);
-  });
 });
 
 // ── Label setter ───────────────────────────────────────────────────────────
 
 describe('setCategoryLabelVisible — fade orchestration', () => {
-  it('toggle OFF on a structure category fires fadeTo(labelLayer{poi,cluster}, 0, FADE_OUT)', () => {
+  it('toggle OFF on a structure category fires fadeTo(labelLayer{structure,cluster}, 0, FADE_OUT)', () => {
     const fx = makeFixture();
     setCategoryLabelVisibleForTest(fx.state as never, fx.cb as never, 'cluster', false);
 
     expect(fx.fadeCalls).toEqual([
       {
-        handle: { kind: 'labelLayer', layer: 'poi', category: 'cluster' },
+        handle: { kind: 'labelLayer', layer: 'structure', category: 'cluster' },
         target: 0,
         duration: FADE_OUT_DURATION_MS,
       },

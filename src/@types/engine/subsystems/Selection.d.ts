@@ -14,7 +14,7 @@ import type { SourceType } from '../../data/SourceType';
  * The structure variant is structure-only by construction: famous
  * galaxies are picked through the galaxy point path (so they arrive as
  * `kind: 'galaxy'`), and the ring pick decode never yields a famous
- * category.  The wider `PoiCategory` superset (which does include
+ * category.  The wider `LabelCategory` superset (which does include
  * `famousGalaxy`) belongs to the settings / label layers, not here.
  *
  * The two variants share one slot inside `selectionSubsystem` because

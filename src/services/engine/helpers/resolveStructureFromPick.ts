@@ -1,5 +1,5 @@
 /**
- * resolvePoiFromPick — map a structure pick hit `(category, poiIndex)` back
+ * resolveStructureFromPick — map a structure pick hit `(category, structureIndex)` back
  * to its `StructureRecord` by indexing into the structure store's
  * per-category table.
  *
@@ -9,7 +9,7 @@
  * category (cluster / supercluster / void) with `firstInstance` set to
  * that category's bucket offset; the fragment packs
  * `@builtin(instance_index) - bucketOffset` worth of slot info into the
- * pick texture as `poiIndex`.  `unpackPick` already returns the
+ * pick texture as `structureIndex`.  `unpackPick` already returns the
  * per-category-local 0-based index (see `selectionEncoding.ts` and the
  * dispatch comment in `structureMarkerRenderer.pickRing`), so the array
  * `structures.byCategory(cat)` is the canonical lookup.
@@ -22,17 +22,15 @@
  * and are discarded in-fragment rather than being omitted.  `setMarkers`
  * then re-groups by category preserving within-group order.  Because no
  * faded structure is dropped, the i-th descriptor of a category is the i-th
- * `byCategory(cat)` entry regardless of fade, so `byCategory(cat)[poiIndex]`
+ * `byCategory(cat)` entry regardless of fade, so `byCategory(cat)[structureIndex]`
  * resolves the pick hit's structure correctly.
  *
  * ### Why structures only
  *
  * Rings are a structure-only affordance (cluster / supercluster / void);
  * famous galaxies are picked through the point path, never the ring path.
- * A `famousGalaxy` category therefore can't arrive here from a ring pick —
- * the guard returns null defensively rather than indexing a store that
- * doesn't hold famous galaxies (and narrows `category` to a
- * `StructureCategory` for the `byCategory` lookup).
+ * The input `category` is therefore typed `StructureCategory` — a famous
+ * category can't reach this lookup by construction.
  *
  * ### Why a narrowed `structures` param rather than the full `EngineState`
  *
@@ -43,21 +41,18 @@
  */
 
 import type { StructureRecord } from '../../../@types/engine/data/StructureRecord';
-import type { PoiCategory } from '../../../@types/engine/data/PoiCategory';
+import type { StructureCategory } from '../../../@types/engine/data/StructureCategory';
 import type { PickStructureStore } from '../../../@types/engine/data/PickStructureStore';
 
-export type PickPoiInput = {
-  readonly category: PoiCategory;
-  readonly poiIndex: number;
+export type PickStructureInput = {
+  readonly category: StructureCategory;
+  readonly structureIndex: number;
 };
 
-export function resolvePoiFromPick(
+export function resolveStructureFromPick(
   structures: PickStructureStore,
-  input: PickPoiInput,
+  input: PickStructureInput,
 ): StructureRecord | null {
-  // Rings are structure-only; a famousGalaxy hit can't come from the ring
-  // pick path. The check also narrows `category` to `StructureCategory`.
-  if (input.category === 'famousGalaxy') return null;
   const records = structures.byCategory(input.category);
-  return records[input.poiIndex] ?? null;
+  return records[input.structureIndex] ?? null;
 }

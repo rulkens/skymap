@@ -2,7 +2,7 @@
  * LabelEffectsSection — live-tuning controls for the label outline.
  *
  * Pick a target category, tune outline colour + width, then bake the
- * values into `POI_STYLES.<cat>` or `youAreHereSubsystem.ts`.  The
+ * values into `STRUCTURE_MARKER_STYLES.<cat>` or `youAreHereSubsystem.ts`.  The
  * override is a temporary hook, not a storage location.
  *
  * `setLabelStyleOverride` runs in `useEffect`, not during render —
@@ -15,16 +15,13 @@ import {
   clearLabelStyleOverride,
   type LabelStyleOverrideTarget,
 } from '../../services/engine/labelStyleOverride';
+import { LABEL_CATEGORIES } from '../../data/labelCategories';
 import type { Vec4 } from '../../@types/math/Vec4';
 
-const CATEGORIES: readonly LabelStyleOverrideTarget[] = [
-  'youAreHere',
-  'cluster',
-  'supercluster',
-  'famousGalaxy',
-  'void',
-  'group',
-];
+// `LabelStyleOverrideTarget` is `'youAreHere' | LabelCategory`, so the dropdown
+// is exactly the registry's label-bearing categories plus the you-are-here pin.
+// 'youAreHere' leads so it stays first in the dropdown.
+const CATEGORIES: readonly LabelStyleOverrideTarget[] = ['youAreHere', ...LABEL_CATEGORIES];
 
 function hexToRgb(hex: string): [number, number, number] {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex);

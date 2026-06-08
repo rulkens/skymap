@@ -54,7 +54,7 @@
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
-import type { PoiCategory } from '../../../@types/engine/data/PoiCategory';
+import type { StructureCategory } from '../../../@types/engine/data/StructureCategory';
 import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import { createFilamentSlot } from '../../loading/slots/filamentSlot';
 import { createFamousMetaSlot } from '../../loading/slots/famousMetaSlot';
@@ -70,10 +70,10 @@ import type { SourceType } from '../../../@types/data/SourceType';
  * gates the structure-catalog fetch. `famousGalaxy` is excluded (Famous
  * `.bin` + meta sidecar), and `group` is excluded (seed-only, no `.ccat`
  * — adding it here would trigger a pointless fetch when group visibility
- * toggles). Spelled as `PoiCategory` members so a type error surfaces
- * here rather than silently skipping a category on rename.
+ * toggles). Spelled as `StructureCategory` members so a type error
+ * surfaces here rather than silently skipping a category on rename.
  */
-const BULK_CATALOG_CATEGORIES: readonly PoiCategory[] = ['cluster', 'supercluster', 'void'];
+const BULK_CATALOG_CATEGORIES: readonly StructureCategory[] = ['cluster', 'supercluster', 'void'];
 
 /**
  * Volume-field handle ids, read from the registry rather than re-spelled, so

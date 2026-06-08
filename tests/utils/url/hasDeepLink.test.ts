@@ -6,12 +6,18 @@ describe('hasDeepLink', () => {
     expect(hasDeepLink({ hash: '', search: '' })).toBe(false);
   });
 
-  it('detects #focus= in the hash', () => {
+  it('detects #focus= for a galaxy in the hash', () => {
     expect(hasDeepLink({ hash: '#focus=ngc224', search: '' })).toBe(true);
   });
 
-  it('detects #poi= in the hash', () => {
-    expect(hasDeepLink({ hash: '#poi=virgo-cluster', search: '' })).toBe(true);
+  it('detects #focus= for a structure in the hash', () => {
+    // Structures (clusters, superclusters) ride #focus= since #poi= was dropped.
+    expect(hasDeepLink({ hash: '#focus=cluster-virgo-m87', search: '' })).toBe(true);
+  });
+
+  it('#poi= is NOT a deep link — structures now use #focus=', () => {
+    // #poi= has been removed; old links with this prefix do not suppress the splash.
+    expect(hasDeepLink({ hash: '#poi=cluster-virgo-m87', search: '' })).toBe(false);
   });
 
   it('detects ?tour= in the search', () => {

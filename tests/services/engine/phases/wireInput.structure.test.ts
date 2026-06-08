@@ -1,14 +1,14 @@
 /**
- * wireInput.poi — structural assertion that the wireInput phase wires
- * POI clicks through the click resolver's `resolvePoi` callback and
- * upgrades the pinned selection to a focus on dblclick.
+ * wireInput.structure — structural assertion that the wireInput phase wires
+ * structure clicks through the click resolver and upgrades the pinned
+ * selection to a focus on dblclick.
  *
  * ### Why a source-string assertion
  *
  * The click flow is hard to unit-test in isolation: it requires a real
  * pickRenderer (GPU device), real orbit controls, and a real mouse
  * device.  This is a crude source-string guard — it regresses loudly if
- * a future refactor drops the `resolvePoi` callback or stops reading the
+ * a future refactor drops the structure-click wiring or stops reading the
  * authoritative selection slot for the dblclick focus. End-to-end
  * behaviour (single-click opens InfoCard, double-click tweens camera) is
  * verified by manual smoke.
@@ -27,7 +27,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const wireInputPath = resolve(__dirname, '../../../../src/services/engine/phases/wireInput.ts');
 
-describe('wireInput POI wiring', () => {
+describe('wireInput structure wiring', () => {
   const src = readFileSync(wireInputPath, 'utf8');
 
   it('passes the structure store to createClickResolver', () => {
@@ -37,7 +37,7 @@ describe('wireInput POI wiring', () => {
   it('reads the authoritative selection slot for the dblclick focus', () => {
     // The dblclick handler resolves the pinned selection to its target via
     // the subsystem rather than caching a resolved copy — the selection
-    // slot is the single source of truth (galaxy OR POI).
+    // slot is the single source of truth (galaxy OR structure).
     expect(src).toContain('selection.selectedTarget()');
   });
 
@@ -49,7 +49,7 @@ describe('wireInput POI wiring', () => {
   });
 
   it('releases focus on an empty-space double-click', () => {
-    // Double-clicking the background (no cached galaxy/POI hit) is the
+    // Double-clicking the background (no cached galaxy/structure hit) is the
     // inverse of double-clicking a structure: it drops the focus slot so
     // the cluster-focus fade lifts and everything returns to full
     // visibility.  Guards against a refactor that turns the empty-space

@@ -7,7 +7,7 @@
 import type { ReactNode } from 'react';
 import type { StructureRecord } from '../../@types/engine/data/StructureRecord';
 import { formatDistance } from '../../utils/format/distance';
-import { POI_CATEGORY_INFO } from '../../data/poiCategoryInfo';
+import { CATEGORY_DISPLAY_INFO } from '../../data/categoryDisplayInfo';
 import styles from './CompactStructureCard.module.css';
 
 export type CompactStructureCardProps = {
@@ -28,7 +28,9 @@ export function CompactStructureCard({ structure }: CompactStructureCardProps): 
       </div>
       <div className={styles.headlineRow}>
         <div className={styles.cardHeadline}>{structure.name}</div>
-        <span className={styles.sourceBadge}>{POI_CATEGORY_INFO[structure.category].shortLabel}</span>
+        <span className={styles.sourceBadge}>
+          {CATEGORY_DISPLAY_INFO[structure.category].shortLabel}
+        </span>
       </div>
       <div className={styles.cardDistLine}>
         {formatDistance(distanceMpc)}

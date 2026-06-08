@@ -1,5 +1,5 @@
 /**
- * pickRenderer.poi.test — type-level contract that `createPickRenderer`
+ * pickRenderer.structure.test — type-level contract that `createPickRenderer`
  * keeps `structureMarkerRenderer` as its OPTIONAL tail positional argument
  * (the 7th, index 6, after the required `focusBgl` at index 4 and the
  * required shared `focusBindGroup` at index 5).
@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest';
 import { createPickRenderer } from '../../../../src/services/gpu/renderers/pickRenderer';
 
-describe('createPickRenderer POI integration', () => {
+describe('createPickRenderer structure integration', () => {
   it('keeps structureMarkerRenderer optional as the 7th positional', () => {
     // Compile-time check: the 7th parameter must exist and must be
     // assignable from `undefined` (i.e. declared with `?`).  If a

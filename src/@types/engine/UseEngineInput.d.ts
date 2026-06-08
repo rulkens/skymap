@@ -7,7 +7,7 @@ import type { EngineCallbacks } from './EngineCallbacks';
  * into a fully-populated `EngineCallbacks` object via spread (e.g.
  * `selection: { onHoverChange: setHovered, onSelectChange: setSelected,
  * ...extraSelection }`), so a caller that wants to subscribe to *just*
- * one method in a required bag (like `selection.onPoiHoverChange`)
+ * one method in a required bag (like `selection.onStructureHoverChange`)
  * shouldn't be forced to also re-supply the required ones the hook
  * already wires up.
  */
@@ -23,7 +23,7 @@ export type UseEngineInput = {
    * practice this is the `engineCallbacks` slice from
    * `useEngineSettings` — settings echoes that drive React-side
    * SettingsPanel state — plus App-level subscriptions to specific
-   * methods like `selection.onPoiHoverChange` for the POI hover preview.
+   * methods like `selection.onStructureHoverChange` for the structure hover preview.
    * Captured at first render; do not expect subsequent changes to take
    * effect.
    */

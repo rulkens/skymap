@@ -15,7 +15,7 @@
  *                Each volume carries its own presentation defaults
  *                (palette, contrast, exposure, …).
  *
- * Only `'survey'` and `'poi'` codes are persisted to disk / packed into
+ * Only `'survey'` and `'structure'` codes are persisted to disk / packed into
  * GPU buffers; `'filament'` and `'volume'` codes exist solely so every
  * data source has one place to look. The visibility-bitmask helpers in
  * `utils/sourceMask` operate on survey codes only.
@@ -29,7 +29,7 @@ import type { Tier } from '../@types/data/Tier';
 
 /**
  * Stable numeric tag for every data source. Used as a `.bin` byte for
- * survey rows, packed into the pick texture for survey + POI hits, and
+ * survey rows, packed into the pick texture for survey + structure hits, and
  * as a registry key for filament + volume assets.
  *
  * IMPORTANT: integer values 0..8 are persisted in the `.bin` point-cloud
@@ -67,7 +67,7 @@ export const Source = {
   /**
    * Galaxy-cluster anchors (Virgo, Coma, Norma, ...). Picks against a
    * cluster's marker ring return source code 5 in the upper 5 bits of
-   * the packed identity; the 27-bit `localIdx` carries the POI's index
+   * the packed identity; the 27-bit `localIdx` carries the structure's index
    * into the cluster table. See `selectionEncoding.ts` for the layout.
    */
   Cluster: 5,
@@ -79,7 +79,7 @@ export const Source = {
    * Milliquas v8 (Flesch 2023) — the Million Quasars compilation. AGN
    * point sources (QSOs, BL Lacs, type-1 Seyferts, Seyfert-1 cores,
    * candidate quasars) rendered alongside the galaxy surveys for the
-   * optically-bright AGN sky. Slot 8 — slots 5/6/7 belong to the POI
+   * optically-bright AGN sky. Slot 8 — slots 5/6/7 belong to the structure
    * codes above, so the next survey integer is 8.
    */
   Milliquas: 8,
@@ -115,7 +115,7 @@ export const Source = {
   /**
    * Nearby galaxy-group anchors (Local Group, M81, Cen A, ...). Picks
    * against a group's marker ring return source code 15 in the upper 5
-   * bits of the packed identity; the 27-bit `localIdx` carries the POI's
+   * bits of the packed identity; the 27-bit `localIdx` carries the structure's
    * index into the structure store. Same encoding as Cluster/Supercluster/
    * Void. Seed-only (no bulk catalog), like Void. Appended at 15 — NEVER
    * renumber the survey codes 0–8 below it.
@@ -127,7 +127,7 @@ export const Source = {
 
 /**
  * Per-source metadata, keyed by every `Source`. Discriminated by `type`;
- * see the `SurveyEntry` / `PoiEntry` definitions for the field shapes.
+ * see the `SurveyEntry` / `StructureEntry` definitions for the field shapes.
  *
  * `as const satisfies Readonly<Record<Source, SourceEntry>>` preserves each
  * entry's literal `type`, so `SOURCE_REGISTRY[Source.SDSS]` narrows to
@@ -156,6 +156,8 @@ export const SOURCE_REGISTRY = {
     binBaseName: null, // generated at runtime; no file
     allSky: true, // uniform-in-sphere by construction
     visible: true,
+    bearsLabel: false,
+    bearsMarker: false,
     maxDistMpc: 1000, // matches the radius in synthetic.ts
     bandLabels: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
     colourSpec: { slotA: 'u', slotB: 'g', rangeMin: 0.5, rangeMax: 2.0, kPerZ: 3.0 },
@@ -182,6 +184,8 @@ export const SOURCE_REGISTRY = {
     binBaseName: 'sdss',
     allSky: false,
     visible: true,
+    bearsLabel: false,
+    bearsMarker: false,
     // Main galaxy sample reaches z ~ 0.7+ for luminous red galaxies;
     // rounded up generously.
     maxDistMpc: 3000,
@@ -211,6 +215,8 @@ export const SOURCE_REGISTRY = {
     binBaseName: '2mrs',
     allSky: true,
     visible: true,
+    bearsLabel: false,
+    bearsMarker: false,
     // Flux-limited at K_s ≈ 11.75; effective z ≲ 0.06.
     maxDistMpc: 250,
     bandLabels: { u: '—', g: 'J', r: 'H', i: 'K', z: '—' },
@@ -237,6 +243,8 @@ export const SOURCE_REGISTRY = {
     binBaseName: 'glade',
     allSky: true,
     visible: true,
+    bearsLabel: false,
+    bearsMarker: false,
     // Covers most of the GLADE distance distribution. GLADE has a long
     // sparse tail past 1 Gpc that the default framing deliberately clips.
     maxDistMpc: 1500,
@@ -268,6 +276,12 @@ export const SOURCE_REGISTRY = {
     binBaseName: 'famous',
     allSky: true, // hand-picked entries from across the sky
     visible: true,
+    bearsLabel: true,
+    bearsMarker: false,
+    labelLayer: 'galaxyNames',
+    detailLabel: 'Famous Galaxy',
+    shortLabel: 'Galaxy',
+    plural: 'Famous Galaxies',
     maxDistMpc: 200, // covers the curated set: M31 → NGC 4889
     // Famous entries don't carry per-row photometry — the source survey
     // already measured it. The SDSS-mirroring labels are cosmetic so the
@@ -295,6 +309,12 @@ export const SOURCE_REGISTRY = {
     label: 'Cluster',
     allSky: true,
     visible: true,
+    bearsLabel: true,
+    bearsMarker: true,
+    labelLayer: 'structure',
+    detailLabel: 'Galaxy Cluster',
+    shortLabel: 'Cluster',
+    plural: 'Clusters',
   },
   [Source.Supercluster]: {
     type: 'structure',
@@ -303,6 +323,12 @@ export const SOURCE_REGISTRY = {
     label: 'Supercluster',
     allSky: true,
     visible: true,
+    bearsLabel: true,
+    bearsMarker: true,
+    labelLayer: 'structure',
+    detailLabel: 'Supercluster',
+    shortLabel: 'Supercluster',
+    plural: 'Superclusters',
   },
   [Source.Void]: {
     type: 'structure',
@@ -311,6 +337,12 @@ export const SOURCE_REGISTRY = {
     label: 'Void',
     allSky: true,
     visible: true,
+    bearsLabel: true,
+    bearsMarker: true,
+    labelLayer: 'structure',
+    detailLabel: 'Cosmic Void',
+    shortLabel: 'Void',
+    plural: 'Voids',
   },
   [Source.Group]: {
     type: 'structure',
@@ -319,6 +351,12 @@ export const SOURCE_REGISTRY = {
     label: 'Group',
     allSky: true,
     visible: true,
+    bearsLabel: true,
+    bearsMarker: true,
+    labelLayer: 'structure',
+    detailLabel: 'Galaxy Group',
+    shortLabel: 'Group',
+    plural: 'Groups',
   },
   [Source.Milliquas]: {
     type: 'survey',
@@ -327,6 +365,8 @@ export const SOURCE_REGISTRY = {
     label: 'Milliquas',
     binBaseName: 'milliquas',
     allSky: true,
+    bearsLabel: false,
+    bearsMarker: false,
     // Visible by default: the quasar source is stable enough to ship on.
     // It renders with the shared galaxy-billboard path (no quasar-specific
     // visuals yet), which is acceptable for the bright low-z tail the
@@ -387,6 +427,8 @@ export const SOURCE_REGISTRY = {
     // and most users want the points-only view first. They can flip it
     // on in the SettingsPanel.
     visible: false,
+    bearsLabel: false,
+    bearsMarker: false,
     binBaseName: 'filaments',
     // 1.0 is the unit baseline; user scales it down for a subtler overlay
     // or up for emphasis via the (future) Filaments slider.
@@ -401,6 +443,8 @@ export const SOURCE_REGISTRY = {
     // Default-off: the ~32 MB voxel payload is demand-loaded the first
     // time the user enables the field in the Volumes panel — not at boot.
     visible: false,
+    bearsLabel: false,
+    bearsMarker: false,
     handle: 'cf4-density',
     // Underscore in the filename for legacy reasons; `handle` mirrors it
     // in kebab-case for UI / settings keys.
@@ -429,6 +473,8 @@ export const SOURCE_REGISTRY = {
     // Default-on: this is the headline cosmic-web overlay; the global
     // intensity of 1.0 (set on this entry) gives it presence on first paint.
     visible: true,
+    bearsLabel: false,
+    bearsMarker: false,
     handle: 'mcpm',
     binBaseName: 'mcpm',
     tiered: true, // small / medium / large `.scfd` variants
@@ -454,6 +500,8 @@ export const SOURCE_REGISTRY = {
     label: 'Gaussian (debug)',
     allSky: true,
     visible: false,
+    bearsLabel: false,
+    bearsMarker: false,
     handle: 'debug-gaussian',
     binBaseName: null,
     tiered: false,
@@ -475,6 +523,8 @@ export const SOURCE_REGISTRY = {
     label: 'Cartesian grid (debug)',
     allSky: true,
     visible: false,
+    bearsLabel: false,
+    bearsMarker: false,
     handle: 'debug-cartesian',
     binBaseName: null,
     tiered: false,
@@ -496,6 +546,8 @@ export const SOURCE_REGISTRY = {
     label: 'Spherical grid (debug)',
     allSky: true,
     visible: false,
+    bearsLabel: false,
+    bearsMarker: false,
     handle: 'debug-spherical',
     binBaseName: null,
     tiered: false,

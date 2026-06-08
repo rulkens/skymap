@@ -20,7 +20,7 @@
  * fully-faded ones, which emit alpha-0 colours the fragment discards. This
  * keeps each category's run index-aligned with `structureStore.byCategory(cat)`:
  * the ring pick path packs `@builtin(instance_index)` as the per-category-local
- * index and `resolvePoiFromPick` resolves it through `byCategory(cat)[poiIndex]`.
+ * index and `resolveStructureFromPick` resolves it through `byCategory(cat)[structureIndex]`.
  * Omitting a faded structure would index-shift that lookup. The only legitimate
  * skip is all-or-nothing-per-category — a category whose toggle opacity is
  * exactly 0 — which never perturbs within-category alignment. A mid-fade
@@ -31,7 +31,7 @@ import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameC
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Vec4 } from '../../../@types/math/Vec4';
 import type { StructureMarkerDescriptor } from '../../../@types/rendering/StructureMarkerDescriptor';
-import { STRUCTURE_POI_STYLES, SIG_MIN_ALPHA } from './structurePoiStyles';
+import { STRUCTURE_MARKER_STYLES, SIG_MIN_ALPHA } from './structureMarkerStyles';
 import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
 
@@ -68,7 +68,7 @@ export function produceStructureMarkers(
     // Render at the WIDER apparent extent, falling back to the core for
     // structures that only set physicalRadiusMpc.
     const radiusMpc = p.apparentRadiusMpc ?? p.physicalRadiusMpc;
-    const style = STRUCTURE_POI_STYLES[p.category];
+    const style = STRUCTURE_MARKER_STYLES[p.category];
 
     const dx = p.worldPos[0] - cx;
     const dy = p.worldPos[1] - cy;

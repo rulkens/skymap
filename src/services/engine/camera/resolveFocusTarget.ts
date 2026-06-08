@@ -86,6 +86,13 @@ export function resolveFocusTarget(input: ResolverInput): ResolverOutput {
       return resolveSdss(target.objID, input);
     case 'pos':
       return resolvePos(target.raDeg, target.decDeg, input);
+    case 'structure':
+      // Structures resolve through the structure-table drain in useUrlSync, not
+      // the galaxy cloud scan — a structure target never reaches the galaxy
+      // resolver in practice. Report unknown defensively so the switch is
+      // exhaustive and a stray structure target clears cleanly rather than
+      // falling through.
+      return { resolved: false, reason: 'unknown' };
   }
 }
 

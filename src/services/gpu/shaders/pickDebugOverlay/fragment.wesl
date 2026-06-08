@@ -19,7 +19,7 @@
 //
 // The whole point of the overlay is to answer "what would a click
 // here hit?".  Distinct colours per survey make it obvious whether
-// the cursor is over an SDSS billboard, a 2MRS billboard, or a POI
+// the cursor is over an SDSS billboard, a 2MRS billboard, or a structure
 // ring.  The localIdx-hash brightness modulation keeps two adjacent
 // galaxies of the same survey from blurring into a single coloured
 // patch — they read as discrete instances with slightly different
@@ -58,7 +58,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
   // Per-source debug palette.  Indexed by 'Source.*' enum value.
   // Codes ≥ 9 (Filaments, Cf4Density, Mcpm) never appear in the pick
-  // texture — picking is galaxy/POI only — so the palette stops at
+  // texture — picking is galaxy/structure only — so the palette stops at
   // Milliquas (8).  An out-of-range code falls back to neutral grey
   // so a future enum widening surfaces visually rather than
   // silently rendering black.

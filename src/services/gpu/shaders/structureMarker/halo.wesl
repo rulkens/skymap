@@ -52,19 +52,19 @@ fn vs(
   // computes its own distance because halo and ring share the VsOut
   // struct.
   out.camDistMpc = 0.0;
-  // poiIndex is consumed only by the ringPick fragment.  Halo doesn't
+  // structureIndex is consumed only by the ringPick fragment.  Halo doesn't
   // need it but WGSL requires every field of a returned struct to be
   // initialised, so we pass 0u.  All six vertices of one instance share
   // the same value (flat-interpolated in io.wesl); never read here.
-  out.poiIndex = 0u;
+  out.structureIndex = 0u;
   return out;
 }
 
 @fragment
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
   // Faded-out instances arrive at alpha 0.  produceMarkers now emits one
-  // instance per marker-bearing POI regardless of fade (to keep the ring
-  // pick instance_index aligned with the CPU getPoisForCategory list), so
+  // instance per marker-bearing structure regardless of fade (to keep the ring
+  // pick instance_index aligned with the CPU getStructuresForCategory list), so
   // most of the ~hundreds of per-frame instances may be alpha 0.  An
   // alpha-0 halo already adds nothing under the additive (one, one) blend;
   // discarding early skips the gradient math for those fragments.

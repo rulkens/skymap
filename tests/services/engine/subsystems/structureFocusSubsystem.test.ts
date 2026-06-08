@@ -25,7 +25,7 @@ describe('structureFocusSubsystem', () => {
     expect(sub.isAwake(0)).toBe(false);
   });
 
-  it('update with a cluster POI fades blend 0→1 with correct center/radii', () => {
+  it('update with a cluster structure fades blend 0→1 with correct center/radii', () => {
     const sub = createStructureFocusSubsystem(0);
     sub.update(makeCluster({ worldPos: [3, 4, 5], physicalRadiusMpc: 7 }), 0);
     const mid = sub.produceFocusUniforms(200);
@@ -47,7 +47,7 @@ describe('structureFocusSubsystem', () => {
     expect(settled.physicalRadiusMpc).toBe(2);
   });
 
-  it('update with a void POI focuses it exactly like a cluster (no inversion)', () => {
+  it('update with a void structure focuses it exactly like a cluster (no inversion)', () => {
     // Voids share the cluster rule: galaxies inside the void's radius are
     // members (stay bright), everything else fades.  The uniform carries
     // no per-category bit — just center + the two radii + blend.
@@ -73,18 +73,18 @@ describe('structureFocusSubsystem', () => {
     expect(sub.produceFocusUniforms(900).blend).toBe(0);
   });
 
-  it('update with the same POI id is idempotent across frames (no re-fade restart)', () => {
+  it('update with the same structure id is idempotent across frames (no re-fade restart)', () => {
     const sub = createStructureFocusSubsystem(0);
-    const poi = makeCluster();
-    sub.update(poi, 0);
+    const structure = makeCluster();
+    sub.update(structure, 0);
     sub.produceFocusUniforms(100); // mid fade-in
     // Same selection re-observed each frame must not reset the ramp.
-    sub.update(poi, 100);
-    sub.update(poi, 200);
+    sub.update(structure, 100);
+    sub.update(structure, 200);
     expect(sub.produceFocusUniforms(500).blend).toBe(1);
   });
 
-  it('replacing the focused POI does not pass through blend 0', () => {
+  it('replacing the focused structure does not pass through blend 0', () => {
     const sub = createStructureFocusSubsystem(0);
     sub.update(makeCluster({ id: 'virgo', worldPos: [10, 0, 0] }), 0);
     sub.produceFocusUniforms(500); // settle at 1

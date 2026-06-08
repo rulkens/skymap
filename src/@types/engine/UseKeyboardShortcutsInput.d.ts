@@ -3,7 +3,7 @@ import type { EngineHandle } from './EngineHandle';
 import type { FocusableTarget } from './FocusableTarget';
 
 export type UseKeyboardShortcutsInput = {
-  /** The currently-pinned target (galaxy or POI).  `f` is a no-op when null. */
+  /** The currently-pinned target (galaxy or structure).  `f` is a no-op when null. */
   selected: FocusableTarget | null;
   /** Used to gate the `/` shortcut so the palette doesn't reopen on top of itself. */
   paletteOpen: boolean;

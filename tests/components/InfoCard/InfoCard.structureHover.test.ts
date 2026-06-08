@@ -6,7 +6,7 @@
 // Since Task 5 of the unify-focus-clear refactor, InfoCard accepts a single
 // `hovered` and a single `selected` prop — each typed as
 // `GalaxyInfo | StructureRecord | null` (the `FocusableTarget` union).
-// The component dispatches via `isPoi` internally.  The old `hoveredStructure`
+// The component dispatches via `isStructure` internally.  The old `hoveredStructure`
 // / `selectedStructure` separate slots are gone.
 //
 // We assert on user-visible text rather than CSS-modules class fragments

@@ -12,7 +12,7 @@ import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/Read
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
 function makeState(requestRender: () => void = () => {}): EngineState {
-  // The director fires a one-shot 'poi' layer fade on the first non-empty
+  // The director fires a one-shot 'structure' layer fade on the first non-empty
   // flush, so the stub state needs a `fades.fadeTo`.
   return {
     subsystems: { scheduler: { requestRender }, fades: { fadeTo: vi.fn() } },

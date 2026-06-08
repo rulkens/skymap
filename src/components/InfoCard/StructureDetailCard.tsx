@@ -8,7 +8,7 @@ import type { ReactNode } from 'react';
 import type { StructureRecord } from '../../@types/engine/data/StructureRecord';
 import { formatDistance } from '../../utils/format/distance';
 import { formatAbellDesignation } from '../../utils/format/formatAbellDesignation';
-import { POI_CATEGORY_INFO } from '../../data/poiCategoryInfo';
+import { CATEGORY_DISPLAY_INFO } from '../../data/categoryDisplayInfo';
 import { CardHeader } from './CardHeader';
 import { CardRow } from './CardRow';
 import { DescriptionBlock } from './DescriptionBlock';
@@ -55,7 +55,9 @@ export function StructureDetailCard({
 
       <div className={styles.headlineRow}>
         <div className={styles.cardHeadline}>{structure.name}</div>
-        <span className={styles.sourceBadge}>{POI_CATEGORY_INFO[structure.category].label}</span>
+        <span className={styles.sourceBadge}>
+          {CATEGORY_DISPLAY_INFO[structure.category].label}
+        </span>
       </div>
 
       <div className={styles.cardSection}>

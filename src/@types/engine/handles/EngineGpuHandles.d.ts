@@ -89,7 +89,7 @@ export type EngineGpuHandles = {
   focusBgl: FocusUniformsBgl | null;
   /**
    * The single shared cluster-focus uniform (buffer + bind group + packer).
-   * Only one POI is focused at a time, so one buffer serves the whole
+   * Only one structure is focused at a time, so one buffer serves the whole
    * engine: written once per frame in `renderFrame`, and its bind group —
    * built against `focusBgl` — is bound by every focus-aware pipeline at
    * its own group slot (a bind group is tied to a layout, not a group

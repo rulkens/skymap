@@ -118,7 +118,7 @@ export function App(): React.ReactElement {
 
   // Live "N galaxies" figure for a pinned cluster/SC/void card.  Recomputes
   // on selection / tier swap / catalog landing (`sourceCounts`) / survey
-  // toggle — null for galaxy selections and famous-galaxy POIs.
+  // toggle — null for galaxy selections and famous-galaxy structures.
   const selectedMemberCount = useStructureMemberCount({
     selected,
     engineHandleRef: handleRef,
@@ -175,7 +175,7 @@ export function App(): React.ReactElement {
   // Static structure table for the URL drain.  The engine owns the merged
   // list (static anchors + the async bulk cluster catalog), but threading
   // that as a reactive React slice would re-render App on every catalog load.
-  // Deep-link arrivals only need the static subset (`#poi=cluster-…` /
+  // Deep-link arrivals only need the static subset (`#focus=cluster-…` /
   // `supercluster-…` / `void-…`).  `useMemo([])` so the drain effect
   // doesn't re-fire on every render.
   const staticStructures = useMemo(() => buildStaticAnchorStructures(), []);
@@ -186,7 +186,7 @@ export function App(): React.ReactElement {
     famousMeta,
     aliasMap,
     ready: status.kind === 'ready',
-    pois: staticStructures,
+    structures: staticStructures,
     engineHandleRef: handleRef,
   });
 

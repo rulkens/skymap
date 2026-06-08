@@ -37,7 +37,7 @@
  *
  * ### Deep-link bypass
  *
- * A URL with `#focus=`, `#poi=`, or `?tour=` (see `hasDeepLink`) skips
+ * A URL with `#focus=` or `?tour=` (see `hasDeepLink`) skips
  * the splash on first arrival and never auto-shows it.  About pill
  * `reopen()` still works.  Power-user gates (`?debug`, etc.) do NOT
  * count as deep links.

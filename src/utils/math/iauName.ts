@@ -29,15 +29,15 @@ import type { SourceType } from '../../@types/data/SourceType';
  * Survey-aware IAU designation.  Returns "<prefix> J<RA><Dec>" where the
  * prefix matches the source's canonical short name.
  *
- * Throws for POI sources (Cluster/Supercluster/Void) — those markers
+ * Throws for structure sources (Cluster/Supercluster/Void) — those markers
  * carry curated names (e.g. "Virgo Cluster") and have no IAU coordinate
- * designation. Reaching the throw means a POI pick is being formatted by
- * galaxy-headline code; route POI picks through their dedicated info path.
+ * designation. Reaching the throw means a structure pick is being formatted by
+ * galaxy-headline code; route structure picks through their dedicated info path.
  */
 export function iauName(source: SourceType, raDeg: number, decDeg: number): string {
   const entry = SOURCE_REGISTRY[source];
   if (entry.type !== 'survey') {
-    throw new Error(`iauName: POI source ${source} has no IAU designation`);
+    throw new Error(`iauName: structure source ${source} has no IAU designation`);
   }
   return `${entry.iauPrefix} ${iauRaDecSuffix(raDeg, decDeg)}`;
 }

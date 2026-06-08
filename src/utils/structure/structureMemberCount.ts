@@ -44,11 +44,11 @@ import type { SourceType } from '../../@types/data/SourceType';
 import type { StructureRecord } from '../../@types/engine/data/StructureRecord';
 
 export function structureMemberCount(
-  poi: StructureRecord,
+  structure: StructureRecord,
   getCloud: (source: SourceType) => GalaxyCatalog | undefined,
   visibleSourceMask: number,
 ): number | null {
-  const radiusMpc = poi.apparentRadiusMpc ?? poi.physicalRadiusMpc;
+  const radiusMpc = structure.apparentRadiusMpc ?? structure.physicalRadiusMpc;
 
   const catalogs: CatalogWithSource[] = [];
   for (const source of SURVEY_SOURCES) {
@@ -61,5 +61,5 @@ export function structureMemberCount(
   // Nothing loaded/visible to search — "not computable yet", not zero.
   if (catalogs.length === 0) return null;
 
-  return structureMembership(catalogs, poi.worldPos, radiusMpc).count;
+  return structureMembership(catalogs, structure.worldPos, radiusMpc).count;
 }

@@ -8,7 +8,7 @@
  * member galaxies, the local field. The ring + label are navigational chrome;
  * once you've arrived they're in the way. So we frame the structure large
  * enough that its marker has *just* crossed the close-approach fade-out
- * (`structurePoiStyles`' `markerMaxApparentRadiusPx`), leaving the interior
+ * (`structureMarkerStyles`' `markerMaxApparentRadiusPx`), leaving the interior
  * unobscured. The same fade governs the label, so label and ring disappear
  * together and the view is clean.
  *

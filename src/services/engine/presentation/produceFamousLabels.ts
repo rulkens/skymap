@@ -44,7 +44,7 @@
  * The first time the producer emits any famous label, it fires the
  * `galaxyNames` `fadeTo(1)` once (a module-level latch). Because `galaxyNames`
  * is registered at opacity 1 (it never toggles off, only recedes under focus),
- * this ramp is a no-op — fired for SYMMETRY with the per-category POI load-in in
+ * this ramp is a no-op — fired for SYMMETRY with the per-category structure load-in in
  * `produceStructureLabels`, not to reveal anything.
  *
  * ### No declutter here — the director owns it
@@ -76,7 +76,7 @@ const FAMOUS_MIN_APPARENT_PX = 6;
 // is a bare function (not a closure over subsystem state), so the once-only
 // one-shot has nowhere to live except module scope. Fires the `galaxyNames`
 // `fadeTo(1)` the first time the producer emits any famous label, mirroring the
-// per-category POI load-in in `produceStructureLabels`. Reset between tests via
+// per-category structure load-in in `produceStructureLabels`. Reset between tests via
 // `__resetFamousLabelLoadIn`.
 let didFireFamousLoadIn = false;
 
@@ -258,7 +258,7 @@ export function produceFamousLabels(
       ownerLabelId: p.id,
     });
 
-    // Per-POI override fields apply only when the override targets the famous
+    // Per-structure override fields apply only when the override targets the famous
     // category; otherwise the category-default outline is kept.
     const overrideFields =
       override.targetCategory === 'famousGalaxy'
@@ -288,7 +288,7 @@ export function produceFamousLabels(
   // Galaxy-names load-in: fire the `galaxyNames` fade once on this producer's
   // first emitted famous label. Because `galaxyNames` is registered at opacity
   // 1 (it never toggles off, only recedes under focus), this `fadeTo(1)` is a
-  // no-op ramp — fired for SYMMETRY with the per-category POI load-in in
+  // no-op ramp — fired for SYMMETRY with the per-category structure load-in in
   // `produceStructureLabels`, not to reveal anything.
   if (!didFireFamousLoadIn && labels.length > 0) {
     didFireFamousLoadIn = true;

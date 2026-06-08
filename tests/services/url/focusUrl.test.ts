@@ -179,4 +179,60 @@ describe('parseFocusHash', () => {
     // and returns null so a half-copied URL doesn't crash the app.
     expect(parseFocusHash('#focus=%E0%A4%A')).toBeNull();
   });
+
+  // ── Structure prefix routing ────────────────────────────────────────
+
+  it("routes 'focus=cluster-virgo-m87' to kind structure with the full id", () => {
+    expect(parseFocusHash('#focus=cluster-virgo-m87')).toEqual({
+      kind: 'structure',
+      id: 'cluster-virgo-m87',
+    });
+  });
+
+  it('routes a supercluster id to kind structure', () => {
+    expect(parseFocusHash('#focus=supercluster-coma-sc')).toEqual({
+      kind: 'structure',
+      id: 'supercluster-coma-sc',
+    });
+  });
+
+  it('routes a void id to kind structure', () => {
+    expect(parseFocusHash('#focus=void-bootes-void')).toEqual({
+      kind: 'structure',
+      id: 'void-bootes-void',
+    });
+  });
+
+  it('routes a group id to kind structure', () => {
+    expect(parseFocusHash('#focus=group-local-group')).toEqual({
+      kind: 'structure',
+      id: 'group-local-group',
+    });
+  });
+
+  // Regression: bare famous ids must not be swallowed by the structure branch
+  it("still routes a bare famous id (e.g. 'm31') to kind famous", () => {
+    expect(parseFocusHash('#focus=m31')).toEqual({ kind: 'famous', id: 'm31' });
+  });
+
+  // Regressions: pgc/sdss/pos@ must be unchanged (existing tests cover them;
+  // the assertions below confirm the structure branch doesn't interfere)
+  it('leaves pgc- decoding unchanged when a structure category prefix is absent', () => {
+    expect(parseFocusHash('#focus=pgc-2789')).toEqual({ kind: 'pgc', pgc: 2789n });
+  });
+
+  it('leaves sdss- decoding unchanged when a structure category prefix is absent', () => {
+    expect(parseFocusHash('#focus=sdss-1237665128253423687')).toEqual({
+      kind: 'sdss',
+      objID: 1237665128253423687n,
+    });
+  });
+
+  it('leaves pos@ decoding unchanged when a structure category prefix is absent', () => {
+    expect(parseFocusHash('#focus=pos@10.1235,-5.4567')).toEqual({
+      kind: 'pos',
+      raDeg: 10.1235,
+      decDeg: -5.4567,
+    });
+  });
 });

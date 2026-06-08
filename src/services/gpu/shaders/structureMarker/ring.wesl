@@ -60,12 +60,12 @@ const RING_QUAD_MARGIN: f32 = 1.1;
 @vertex
 fn vs(
   @builtin(vertex_index) vi: u32,
-  // ii (instance_index) is forwarded into VsOut.poiIndex so the
+  // ii (instance_index) is forwarded into VsOut.structureIndex so the
   // companion ringPick.wesl pick fragment can pack it into the pick
   // texture identity.  The visual ring fragment ignores the field;
   // it costs one flat-interpolated u32 per vertex output and lets
   // both pipelines share one VsOut struct (see io.wesl's docstring
-  // on the poiIndex slot).
+  // on the structureIndex slot).
   @builtin(instance_index) ii: u32,
   input: VsIn,
 ) -> VsOut {
@@ -110,18 +110,18 @@ fn vs(
   // pixel widths to UV widths.  Cheaper than adding another VsOut
   // slot for one scalar.  Rename when a second use appears.
   out.camDistMpc = sizePx;
-  // Per-instance POI index forwarded for the ringPick fragment.  The
+  // Per-instance structure index forwarded for the ringPick fragment.  The
   // visual fragment doesn't read it; the cost is one flat-interpolated
   // u32 per vertex output.
-  out.poiIndex = ii;
+  out.structureIndex = ii;
   return out;
 }
 
 @fragment
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
   // Faded-out instances arrive at alpha 0.  produceMarkers now emits one
-  // instance per marker-bearing POI regardless of fade (to keep the ring
-  // pick instance_index aligned with the CPU getPoisForCategory list), so
+  // instance per marker-bearing structure regardless of fade (to keep the ring
+  // pick instance_index aligned with the CPU getStructuresForCategory list), so
   // most of the ~hundreds of per-frame instances may be alpha 0.  An
   // alpha-0 ring already contributes nothing under the premultiplied OVER
   // blend; discarding early skips the band + AA math for those fragments.

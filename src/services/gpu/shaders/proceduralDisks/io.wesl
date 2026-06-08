@@ -103,7 +103,7 @@ struct VsOut {
   // See 'ProceduralDiskInstance.d.ts' for the full semantic.
   @location(3) @interpolate(flat) procFadeOut: f32,
   // Per-instance cluster-focus dim in [0.08, 1.0]: 1.0 for members of the
-  // focused POI (and for everything at rest), 0.08 for non-members, ramped
+  // focused structure (and for everything at rest), 0.08 for non-members, ramped
   // by the focus blend. Computed once per instance in the vertex stage.
   @location(4) @interpolate(flat) focusDim: f32,
   // CPU-packed pick identity: '(sourceCode << 27) | localIdx', stored as

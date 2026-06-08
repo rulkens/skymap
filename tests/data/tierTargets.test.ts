@@ -38,7 +38,7 @@ describe('tierTarget', () => {
     expect(tierTarget(Source.Milliquas, 'large')).toBeUndefined();
   });
 
-  it('returns undefined for non-survey sources (POIs cannot be subsampled)', () => {
+  it('returns undefined for non-survey sources (structures cannot be subsampled)', () => {
     expect(tierTarget(Source.Cluster, 'medium')).toBeUndefined();
     expect(tierTarget(Source.Supercluster, 'small')).toBeUndefined();
     expect(tierTarget(Source.Void, 'large')).toBeUndefined();

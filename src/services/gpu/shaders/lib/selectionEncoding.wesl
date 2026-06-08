@@ -32,16 +32,16 @@ const SELECTION_NONE_SENTINEL: u32 = 0xffffffffu;
 /** Offset the pick fragment adds before writing into the r32uint texture. */
 const PICK_SENTINEL_OFFSET: u32 = 1u;
 
-/** Source code for cluster POIs — see TS Source.Cluster. */
+/** Source code for cluster structures — see TS Source.Cluster. */
 const SOURCE_CODE_CLUSTER: u32 = 5u;
 
-/** Source code for supercluster POIs — see TS Source.Supercluster. */
+/** Source code for supercluster structures — see TS Source.Supercluster. */
 const SOURCE_CODE_SUPERCLUSTER: u32 = 6u;
 
-/** Source code for void POIs — see TS Source.Void. */
+/** Source code for void structures — see TS Source.Void. */
 const SOURCE_CODE_VOID: u32 = 7u;
 
-/** Source code for nearby-galaxy-group POIs — see TS Source.Group (= 15). */
+/** Source code for nearby-galaxy-group structures — see TS Source.Group (= 15). */
 const SOURCE_CODE_GROUP: u32 = 15u;
 
 /** Pack a (sourceCode, localIdx) pair into the canonical u32 layout. */

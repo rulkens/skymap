@@ -9,7 +9,7 @@
  *
  * The expensive bit is the cone search itself (one vec3 subtract + one
  * dot product per galaxy, ~2.5M ops for the full loaded catalog).
- * Memoising against `(poiId, dataRev)` belongs to the subsystem that
+ * Memoising against `(structureId, dataRev)` belongs to the subsystem that
  * owns the focus state — see spec §4.3 — because cache invalidation
  * needs to know when a tier swap has bumped `dataRev`, which this pure
  * function has no concept of. Keeping the function cache-free makes it

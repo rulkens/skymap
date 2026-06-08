@@ -42,7 +42,7 @@ export function commitGalaxyFocus(state: EngineState, info: GalaxyInfo): void {
   state.subsystems.selection.setSelected(selection, info);
   // Latch the focus slot too — focusing a galaxy is a focus gesture, so
   // it supersedes any prior cluster focus: `runFrame` resolves a galaxy
-  // focus to a null POI, collapsing the member-isolation fade.
+  // focus to a null structure, collapsing the member-isolation fade.
   // `setFocused` owns the `onFocusChange` fan-out (URL hash); the
   // prebuilt `info` rides through the same race defense as setSelected.
   state.subsystems.selection.setFocused(selection, info);

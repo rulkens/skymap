@@ -15,7 +15,7 @@
  *
  * ### Why a single slot, not a per-category record?
  *
- * The workflow is "select category, tune, bake into POI_STYLES, move
+ * The workflow is "select category, tune, bake into the structure marker styles, move
  * to next category".  A per-category record would invite the user to
  * leave overrides stale across category switches; the single slot
  * makes the active target unambiguous.
@@ -31,13 +31,13 @@
  */
 
 import type { Vec4 } from '../../@types/math/Vec4';
-import type { PoiCategory } from '../../@types/engine/data/PoiCategory';
+import type { LabelCategory } from '../../@types/engine/data/LabelCategory';
 
 /**
  * The set of label-emitting categories the override can target.
  * Mirrors the dropdown in `LabelEffectsSection.tsx` — keep in sync.
  */
-export type LabelStyleOverrideTarget = 'youAreHere' | PoiCategory;
+export type LabelStyleOverrideTarget = 'youAreHere' | LabelCategory;
 
 /**
  * Read-only snapshot of the current override.  `targetCategory` is

@@ -28,7 +28,7 @@ export type SelectionSubsystem = {
    * actual change.  Optional `prebuiltInfo` lets callers (e.g.
    * `selectByAlias`) pass the GalaxyInfo directly when the GPU upload
    * hasn't settled yet (the catalog is in `state.sources.catalogs` but the
-   * renderer hasn't received it).  Ignored for POI selections.
+   * renderer hasn't received it).  Ignored for structure selections.
    */
   setSelected(sel: Selection | null, prebuiltInfo?: GalaxyInfo | null): void;
   /**
@@ -36,7 +36,7 @@ export type SelectionSubsystem = {
    * actual change.  Symmetric with `setSelected`: the cluster-focus
    * fade reads `focused()` in `runFrame`, React mirrors the same
    * target into the URL hash.  Optional `prebuiltInfo` short-circuits
-   * the cloud lookup for the `selectByAlias` race; ignored for POI
+   * the cloud lookup for the `selectByAlias` race; ignored for structure
    * focuses.
    */
   setFocused(sel: Selection | null, prebuiltInfo?: GalaxyInfo | null): void;

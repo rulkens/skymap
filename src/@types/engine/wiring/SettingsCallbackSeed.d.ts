@@ -13,7 +13,8 @@
 
 import type { BiasMode } from '../../data/BiasMode';
 import type { ToneMapCurve } from '../../data/ToneMapCurve';
-import type { PoiCategory } from '../data/PoiCategory';
+import type { LabelCategory } from '../data/LabelCategory';
+import type { StructureCategory } from '../data/StructureCategory';
 
 export type SettingsCallbackSeed = {
   pointSize: number;
@@ -31,15 +32,17 @@ export type SettingsCallbackSeed = {
   exposure: number;
   visibleSourceMask: number;
   /**
-   * Initial per-category POI label visibility — fired through
+   * Initial per-category label visibility — fired through
    * `cb.labels?.onLabelCategoryVisibilityChange?.(...)` so the React
    * shell seeds its label checkboxes from engine truth on startup.
    */
-  labelCategoryVisibility: Readonly<Record<PoiCategory, boolean>>;
+  labelCategoryVisibility: Readonly<Record<LabelCategory, boolean>>;
   /**
-   * Initial per-category POI MARKER visibility — fired through
-   * `cb.labels?.onMarkerCategoryVisibilityChange?.(...)`.  Independent
-   * axis from the label record; defaults to every category visible.
+   * Initial per-category MARKER visibility — fired through
+   * `cb.labels?.onMarkerCategoryVisibilityChange?.(...)`.  Keyed by
+   * `StructureCategory` only (no ring marker for famous galaxies);
+   * independent axis from the label record; defaults to every category
+   * visible.
    */
-  markerCategoryVisibility: Readonly<Record<PoiCategory, boolean>>;
+  markerCategoryVisibility: Readonly<Record<StructureCategory, boolean>>;
 };

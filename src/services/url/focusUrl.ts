@@ -40,6 +40,7 @@
 import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
 import type { FocusTarget } from '../../@types/camera/FocusTarget';
 import { Source } from '../../data/sources';
+import { STRUCTURE_CATEGORIES } from '../../data/structureCategories';
 
 /**
  * Build the `#focus=<id>` payload (the bit after `=`) for the given
@@ -66,9 +67,7 @@ export function selectionToFocusId(info: GalaxyInfo): string | null {
   // number (the GLADE parser writes PGC into objID, and the 2MRS
   // cross-match copies it across).
   if (info.objID > 0n) {
-    return info.source === Source.SDSS
-      ? `sdss-${info.objID}`
-      : `pgc-${info.objID}`;
+    return info.source === Source.SDSS ? `sdss-${info.objID}` : `pgc-${info.objID}`;
   }
 
   // Last resort: 4-decimal RA/Dec.  No URL-encoding needed — the
@@ -137,12 +136,25 @@ export function parseFocusHash(hash: string): FocusTarget | null {
     return { kind: 'pos', raDeg, decDeg };
   }
 
+  // Structure ids: `${category}-${seed.id}` where `category` is one of
+  // STRUCTURE_CATEGORIES ('cluster', 'supercluster', 'void', 'group').
+  // Must be checked before the famous-id fallback below — `cluster-virgo-m87`
+  // passes the `[a-z0-9_-]+` class and would otherwise route to `famous`.
+  // We derive the prefix set from the registry so adding a new structure
+  // category automatically extends the codec without touching this file.
+  for (const cat of STRUCTURE_CATEGORIES) {
+    if (raw.startsWith(`${cat}-`)) {
+      if (/^[a-z0-9_-]+$/i.test(raw)) return { kind: 'structure', id: raw };
+      return null;
+    }
+  }
+
   // Anything else: treat as a famous-id token.  Famous ids in the seed
   // JSON use lowercase letters, digits, `_`, and `-`; restricting to
   // that character class keeps the codec from accepting wild input
   // (e.g. raw spaces, query separators) that would never resolve
-  // anyway.  The downstream resolver (Task 2) is the authority on
-  // whether the id actually exists.
+  // anyway.  The downstream resolver is the authority on whether the
+  // id actually exists.
   if (/^[a-z0-9_-]+$/i.test(raw)) return { kind: 'famous', id: raw };
   return null;
 }

@@ -7,7 +7,7 @@ export type FamousMetaEntry = {
   /**
    * Curated human-friendly display name (e.g. `"Andromeda Galaxy"`).
    * Mirrors the optional field on the seed entry.  Absent for most
-   * entries — the POI label producer falls back to `names`/`id`.
+   * entries — the famous-label producer falls back to `names`/`id`.
    */
   commonName?: string;
   description: string;

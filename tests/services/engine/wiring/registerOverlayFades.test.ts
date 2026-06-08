@@ -14,7 +14,7 @@
  *      so a default-off session sits at 0 until toggled, and a default-on
  *      session starts drawing volumes from the first frame.
  *
- *   3. The four label-layer handles (youAreHere, poi, galaxyNames, scaleBar)
+ *   3. The four label-layer handles (youAreHere, structure, galaxyNames, scaleBar)
  *      are registered with the correct initial opacities: the first three at
  *      0 (their producers fire fadeTo(1) on first non-empty emit), scaleBar
  *      at 1 (React-side, tour-addressable but never auto-faded by the engine).
@@ -175,15 +175,15 @@ describe('registerOverlayFades', () => {
     // reuse that handle and consume its opacity, so a 0 would make them
     // invisible (Task 2.4).  scaleBar is React-side and tour-addressable but
     // never auto-faded by the engine, so it starts at 1.  There is no
-    // category-less poi handle — structure labels use the per-category poi
-    // handles and produceStructureLabels fires each category's load-in.
+    // category-less structure handle — structure labels use the per-category
+    // structure handles and produceStructureLabels fires each category's load-in.
     const { state, registerSpy } = makeState();
     registerOverlayFades(state);
 
     type LabelCall = [Extract<FadeHandle, { kind: 'labelLayer' }>, number | undefined];
-    // Filter to category-LESS label handles only: there are multiple poi
+    // Filter to category-LESS label handles only: there are multiple structure
     // labelLayer registrations (one per structure category), so collapsing by
-    // `layer` alone would be ambiguous for poi.  The category-less handles are
+    // `layer` alone would be ambiguous for structure.  The category-less handles are
     // exactly youAreHere/galaxyNames/scaleBar.
     const labelCalls = calls(registerSpy).filter(
       ([h]) =>
@@ -192,7 +192,7 @@ describe('registerOverlayFades', () => {
     const byLayer = Object.fromEntries(labelCalls.map(([h, op]) => [h.layer, op]));
 
     expect(byLayer['youAreHere']).toBe(0);
-    expect(byLayer['poi']).toBeUndefined();
+    expect(byLayer['structure']).toBeUndefined();
     expect(byLayer['galaxyNames']).toBe(1);
     expect(byLayer['scaleBar']).toBe(1);
   });
@@ -213,7 +213,7 @@ describe('registerOverlayFades', () => {
     expect(galaxyNamesCall![1]).toBe(1);
   });
 
-  // ── per-category marker + poi-label handles ──────────────────────
+  // ── per-category marker + structure-label handles ──────────────────────
 
   it('registers a markerLayer handle per structure category', () => {
     // Each structure category gets its own markerLayer fade controller so its
@@ -231,8 +231,8 @@ describe('registerOverlayFades', () => {
     }
   });
 
-  it('registers a per-category poi labelLayer handle per structure category', () => {
-    // Each structure category gets its own poi labelLayer controller so its
+  it('registers a per-category structure labelLayer handle per structure category', () => {
+    // Each structure category gets its own structure labelLayer controller so its
     // labels are addressable independently (Task 2.3 wires the producer).
     const { state, registerSpy } = makeState();
     registerOverlayFades(state);
@@ -241,10 +241,10 @@ describe('registerOverlayFades', () => {
       const labelCall = calls(registerSpy).find(
         ([h]) =>
           h.kind === 'labelLayer' &&
-          (h as Extract<FadeHandle, { kind: 'labelLayer' }>).layer === 'poi' &&
+          (h as Extract<FadeHandle, { kind: 'labelLayer' }>).layer === 'structure' &&
           (h as Extract<FadeHandle, { kind: 'labelLayer' }>).category === category,
       );
-      expect(labelCall, `labelLayer{poi,${category}} should be registered`).toBeDefined();
+      expect(labelCall, `labelLayer{structure,${category}} should be registered`).toBeDefined();
     }
   });
 
@@ -268,7 +268,7 @@ describe('registerOverlayFades', () => {
       calls(registerSpy).find(
         ([h]) =>
           h.kind === 'labelLayer' &&
-          (h as Extract<FadeHandle, { kind: 'labelLayer' }>).layer === 'poi' &&
+          (h as Extract<FadeHandle, { kind: 'labelLayer' }>).layer === 'structure' &&
           (h as Extract<FadeHandle, { kind: 'labelLayer' }>).category === category,
       )?.[1];
 

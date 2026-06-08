@@ -1,12 +1,12 @@
 /**
- * useUrlSync — single owner of `window.location.hash`, handles both
- * `#focus=<galaxyId>` (galaxy commit) and `#poi=<poiId>` (POI commit)
- * segments in one place.
+ * useUrlSync — single owner of `window.location.hash`, encoding both
+ * galaxy and structure commits in one `#focus=<id>` segment (the codec
+ * distinguishes them by id shape).
  *
  * One owner can't race itself, so there are no "is the hash someone
  * else's segment?" prefix guards — the write effect just computes the
  * canonical body from whichever state slot is set.  Galaxy wins the mutex tiebreak
- * (matches engine click-handler precedence: POI clicks clear galaxy
+ * (matches engine click-handler precedence: structure clicks clear galaxy
  * selection at the engine level today, so "both set" is only ever a
  * transient cross-render race, and we resolve it deterministically
  * here as a belt-and-braces guarantee).
@@ -21,8 +21,8 @@
  * ──────────────────────────────────────────────────────────────────────
  * Why `pushState` (not `replaceState`)
  * ──────────────────────────────────────────────────────────────────────
- * Pinning a galaxy OR focusing a POI is a navigational act — Back
- * should return to the previous selection (galaxy ↔ POI ↔ empty).
+ * Pinning a galaxy OR focusing a structure is a navigational act — Back
+ * should return to the previous selection (galaxy ↔ structure ↔ empty).
  * popstate translates browser-driven hash changes into the same
  * pending-slot mechanism the initial mount uses.
  *
@@ -39,7 +39,7 @@
  *      disambiguates the URL on popstate via `initialPendingFromHash`,
  *      routes into the right pending slot, and clears stale pending
  *      from the other slot.  An empty hash on popstate calls
- *      `selection.clear()`, which tears down both galaxy and POI
+ *      `selection.clear()`, which tears down both galaxy and structure
  *      selection in one call.
  *
  *   2. State → URL — derives the canonical body via `computeDesiredHash`
@@ -52,16 +52,16 @@
  *      catalogs.  Resolution is monotonic: `unknown` is treated as
  *      "not yet" and the effect re-fires on data dep changes.
  *
- *   4. POI drain — resolves `pendingPoiId` against the POI table and
- *      dispatches via `camera.focusOn(poi)` (the unified method,
- *      which accepts both GalaxyInfo and StructureRecord).  Clears
- *      pending only on successful resolve; missing-id leaves pending
- *      set so a future `pois` change (e.g. famous-meta load) re-fires
- *      the drain.
+ *   4. Structure drain — resolves `pendingStructureId` against the
+ *      `structures` table and dispatches via `camera.focusOn(structure)` (the
+ *      unified method, which accepts both GalaxyInfo and
+ *      StructureRecord).  Clears pending only on successful resolve;
+ *      missing-id leaves pending set so a future `structures` change (e.g.
+ *      famous-meta load) re-fires the drain.
  *
  *   5. Galaxy supersede — collapses `pendingTarget` once `focused`
- *      lands (deep-link wins vs casual click race).  No POI supersede
- *      because the POI table is synchronous.
+ *      lands (deep-link wins vs casual click race).  No structure
+ *      supersede because the `structures` table is synchronous.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -70,9 +70,8 @@ import type { UrlSyncReturn } from '../@types/engine/UrlSyncReturn';
 import type { FocusableTarget } from '../@types/engine/FocusableTarget';
 import type { GalaxyCatalog } from '../@types/data/GalaxyCatalog';
 import type { FocusTarget } from '../@types/camera/FocusTarget';
-import { isPoi } from '../services/engine/isPoi';
+import { isStructure } from '../services/engine/isStructure';
 import { parseFocusHash, selectionToFocusId } from '../services/url/focusUrl';
-import { parsePoiHash, poiIdToHash } from '../services/url/poiUrl';
 import { resolveFocusTarget } from '../services/engine/camera/resolveFocusTarget';
 import { SURVEY_SOURCES, Source } from '../data/sources';
 import type { SourceType } from '../@types/data/SourceType';
@@ -94,10 +93,10 @@ export type DesiredHashOutput = {
  * hash, what should the URL's hash *body* be, and does it already agree?
  *
  * Body shape:
- *   1. focused is a galaxy → `focus=<id>` (or `''` if non-encodable,
+ *   1. focused is a galaxy    → `focus=<id>` (or `''` if non-encodable,
  *      e.g. Synthetic source).
- *   2. focused is a POI    → `poi=<id>`.
- *   3. focused is null     → `''`.
+ *   2. focused is a structure → `focus=<id>`.
+ *   3. focused is null        → `''`.
  *
  * `matches` is the strip-leading-#-and-compare result, used by the write
  * effect to skip no-op `pushState` calls.
@@ -105,8 +104,8 @@ export type DesiredHashOutput = {
 export function computeDesiredHash(input: DesiredHashInput): DesiredHashOutput {
   let desiredHashBody = '';
   if (input.focused !== null) {
-    if (isPoi(input.focused)) {
-      desiredHashBody = poiIdToHash(input.focused.id);
+    if (isStructure(input.focused)) {
+      desiredHashBody = `focus=${input.focused.id}`;
     } else {
       const id = selectionToFocusId(input.focused);
       if (id) desiredHashBody = `focus=${id}`;
@@ -120,31 +119,39 @@ export function computeDesiredHash(input: DesiredHashInput): DesiredHashOutput {
 
 export type InitialPending =
   | { kind: 'galaxy'; target: FocusTarget }
-  | { kind: 'poi'; poiId: string }
+  | { kind: 'structure'; id: string }
   | { kind: null };
 
 /**
- * Pure parse-on-mount helper.  Tries the galaxy parser first, then the
- * POI parser, then returns `kind: null` for everything else.  Each
- * parser returns null for hashes that don't match its scheme, so
- * disambiguation is just "first match wins."
+ * Pure parse-on-mount helper.  Runs the single `#focus=` codec and routes
+ * its result: a `structure` FocusTarget becomes a structure pending slot
+ * (resolved synchronously against the `structures` table), any galaxy kind
+ * becomes a galaxy pending slot (resolved async against loaded catalogs),
+ * and a null parse becomes `kind: null`.
  */
 export function initialPendingFromHash(hash: string): InitialPending {
-  const galaxy = parseFocusHash(hash);
-  if (galaxy) return { kind: 'galaxy', target: galaxy };
-  const poi = parsePoiHash(hash);
-  if (poi) return { kind: 'poi', poiId: poi };
-  return { kind: null };
+  const target = parseFocusHash(hash);
+  if (!target) return { kind: null };
+  if (target.kind === 'structure') return { kind: 'structure', id: target.id };
+  return { kind: 'galaxy', target };
 }
 
 // ── React hook ─────────────────────────────────────────────────────────────
 
 export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
-  const { focused, status, sourceCounts, famousMeta, aliasMap, ready, pois, engineHandleRef } =
-    input;
+  const {
+    focused,
+    status,
+    sourceCounts,
+    famousMeta,
+    aliasMap,
+    ready,
+    structures,
+    engineHandleRef,
+  } = input;
 
   const [pendingTarget, setPendingTarget] = useState<FocusTarget | null>(null);
-  const [pendingPoiId, setPendingPoiId] = useState<string | null>(null);
+  const [pendingStructureId, setPendingStructureId] = useState<string | null>(null);
 
   // ── Effect 1: mount + popstate ────────────────────────────────────────
   // Parse the URL once on mount; install a `popstate` listener so
@@ -152,7 +159,7 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
   // resolution paths.  A single handler disambiguates via
   // `initialPendingFromHash` and clears the stale slot from the other
   // kind — we are the sole owner of the hash, so a switch in hash
-  // kind (e.g. back-nav from `#focus=m31` to `#poi=virgo`) is just
+  // kind (e.g. back-nav from `#focus=m31` to `#focus=cluster-virgo`) is just
   // "set the new slot, clear the old one."
   const mountedRef = useRef(false);
   useEffect(() => {
@@ -166,15 +173,15 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
 
     const initial = initialPendingFromHash(window.location.hash);
     if (initial.kind === 'galaxy') setPendingTarget(initial.target);
-    else if (initial.kind === 'poi') setPendingPoiId(initial.poiId);
+    else if (initial.kind === 'structure') setPendingStructureId(initial.id);
 
     const onPopState = () => {
       const next = initialPendingFromHash(window.location.hash);
       if (next.kind === 'galaxy') {
         setPendingTarget(next.target);
-        setPendingPoiId(null);
-      } else if (next.kind === 'poi') {
-        setPendingPoiId(next.poiId);
+        setPendingStructureId(null);
+      } else if (next.kind === 'structure') {
+        setPendingStructureId(next.id);
         setPendingTarget(null);
       } else {
         // Back-step to empty hash — clear any stale pending AND tell
@@ -182,7 +189,7 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
         // both).  Without this, the next render would write the previous
         // body back over the empty one.
         setPendingTarget(null);
-        setPendingPoiId(null);
+        setPendingStructureId(null);
         engineHandleRef.current?.selection.clear();
       }
     };
@@ -194,7 +201,7 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
 
   // ── Effect 2: state → URL ─────────────────────────────────────────────
   // Write the hash to match the selection.  Two guards:
-  //   - `pendingTarget !== null || pendingPoiId !== null`: don't fight
+  //   - `pendingTarget !== null || pendingStructureId !== null`: don't fight
   //     either pending slot.  If we wrote the desired body while a deep
   //     link is still resolving we'd clobber the URL that drove the
   //     pending state in the first place.  The write opens once both
@@ -210,7 +217,7 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     // Don't fight a still-resolving deep link on either side.
-    if (pendingTarget !== null || pendingPoiId !== null) return;
+    if (pendingTarget !== null || pendingStructureId !== null) return;
     const { desiredHashBody, matches } = computeDesiredHash({
       focused,
       currentHash: window.location.hash,
@@ -219,7 +226,7 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
     const base = window.location.pathname + window.location.search;
     const next = desiredHashBody ? `${base}#${desiredHashBody}` : base;
     window.history.pushState(null, '', next);
-  }, [focused, pendingTarget, pendingPoiId]);
+  }, [focused, pendingTarget, pendingStructureId]);
 
   // ── Effect 3: galaxy drain ────────────────────────────────────────────
   // Resolve pendingTarget against the engine's currently loaded data
@@ -273,27 +280,27 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
     // eventual banner; `unknown` simply waits for more data.
   }, [pendingTarget, status, sourceCounts, famousMeta, aliasMap, engineHandleRef]);
 
-  // ── Effect 4: POI drain ───────────────────────────────────────────────
-  // Resolve `pendingPoiId` against the POI table once the engine is
-  // ready.  We deliberately do NOT clear pending when the id isn't
-  // found — a tier swap or async famous-meta load can add entries
-  // later, and re-firing the drain on `pois` changes will pick them
+  // ── Effect 4: structure drain ─────────────────────────────────────────
+  // Resolve `pendingStructureId` against the `structures` table once the
+  // engine is ready.  We deliberately do NOT clear pending when the id
+  // isn't found — a tier swap or async famous-meta load can add entries
+  // later, and re-firing the drain on `structures` changes will pick them
   // up.  Clearing only on a successful resolve preserves the
   // "deep-link arrival waits as long as it takes" contract.
   //
   // `camera.focusOn` is the unified method that accepts both GalaxyInfo
   // and StructureRecord, routing each to its own commit path internally.
   useEffect(() => {
-    if (!pendingPoiId) return;
+    if (!pendingStructureId) return;
     if (!ready) return;
-    if (pois.length === 0) return;
+    if (structures.length === 0) return;
     const handle = engineHandleRef.current;
     if (!handle) return;
-    const poi = pois.find((p) => p.id === pendingPoiId);
-    if (!poi) return; // Leave pending set — re-fires when `pois` grows.
-    handle.camera.focusOn(poi); // The unified focusOn.
-    setPendingPoiId(null);
-  }, [pendingPoiId, ready, pois, engineHandleRef]);
+    const structure = structures.find((p) => p.id === pendingStructureId);
+    if (!structure) return; // Leave pending set — re-fires when `structures` grows.
+    handle.camera.focusOn(structure); // The unified focusOn.
+    setPendingStructureId(null);
+  }, [pendingStructureId, ready, structures, engineHandleRef]);
 
   // ── Effect 5: galaxy supersede ────────────────────────────────────────
   // The trigger is a FOCUS change, not a pendingTarget change.  Why
@@ -308,11 +315,12 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
   //
   // Bare canvas clicks set `selected` but NOT `focused`, so they don't
   // pre-empt a still-resolving deep link — the deep-link wins, which
-  // matches the user's URL-pasted intent.  POI deep links resolve on
-  // first paint (synchronous POI table), so no POI supersede is needed.
+  // matches the user's URL-pasted intent.  Structure deep links resolve
+  // on first paint (synchronous `structures` table), so no structure supersede
+  // is needed.
   useEffect(() => {
     if (focused !== null) setPendingTarget(null);
   }, [focused]);
 
-  return { pendingTarget, pendingPoiId };
+  return { pendingTarget, pendingStructureId };
 }

@@ -28,14 +28,8 @@ import { useEffect } from 'react';
 import type { UseKeyboardShortcutsInput } from '../@types/engine/UseKeyboardShortcutsInput';
 
 export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
-  const {
-    selected,
-    paletteOpen,
-    engineHandleRef,
-    setPaletteOpen,
-    setUiHidden,
-    setDebugPanelOpen,
-  } = input;
+  const { selected, paletteOpen, engineHandleRef, setPaletteOpen, setUiHidden, setDebugPanelOpen } =
+    input;
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -65,8 +59,8 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
       }
 
       // ── Esc — universal "close the card" gesture ──────────────
-      // `selection.clear()` tears down both galaxy selection AND POI
-      // focus in one call (unified 2026-05-19), so this single line
+      // `selection.clear()` tears down both galaxy selection AND structure
+      // focus in one call, so this single line
       // collapses whichever card variant is on screen.
       if (e.key === 'Escape') {
         engineHandleRef.current?.selection.clear();

@@ -1,7 +1,7 @@
 /**
  * structureFocusSubsystem — focus-driven structure "focus mode".
  *
- * When a cluster / supercluster / void / group POI is focused, non-member
+ * When a cluster / supercluster / void / group structure is focused, non-member
  * galaxies fade to ~8% alpha over ~400 ms (the shader does the
  * per-vertex membership test; this subsystem only supplies the centre,
  * radius, and the smoothstep blend). All four categories behave
@@ -12,7 +12,7 @@
  *
  * ### Why a `focusedId` separate from the display target
  *
- * `update` runs every frame with the live focused POI. The fade-in and
+ * `update` runs every frame with the live focused structure. The fade-in and
  * fade-out must each fire once, on the transition — re-calling
  * `fade.fadeTo` every frame would reset the ramp's clock and the blend
  * would never advance. `focusedId` records the id we are fading *toward*
@@ -57,36 +57,36 @@ export function createStructureFocusSubsystem(
   initialNowMs: number = performance.now(),
 ): StructureFocusSubsystem {
   const fade = createFadeController(0, initialNowMs);
-  // The POI we emit centre/radius for. Latched through fade-out.
+  // The structure we emit centre/radius for. Latched through fade-out.
   let active: ActiveFocus | null = null;
   // The id we are currently fading toward; null = fading out / at rest.
   let focusedId: string | null = null;
 
-  function update(poi: StructureRecord | null, nowMs: number): void {
-    // Narrow to a focus-eligible extended-structure POI. famousGalaxy has
+  function update(structure: StructureRecord | null, nowMs: number): void {
+    // Narrow to a focus-eligible extended structure. famousGalaxy has
     // no radius, so it (and null) drives a fade-out. Groups share the
     // same fade band mechanic as clusters — R0 > Rh gives a real band.
     let next: ActiveFocus | null = null;
     if (
-      poi !== null &&
-      (poi.category === 'cluster' ||
-        poi.category === 'supercluster' ||
-        poi.category === 'void' ||
-        poi.category === 'group')
+      structure !== null &&
+      (structure.category === 'cluster' ||
+        structure.category === 'supercluster' ||
+        structure.category === 'void' ||
+        structure.category === 'group')
     ) {
       // Pass the structure's two real radii; the shader ramps the fade
       // across the [physical, apparent] band (and supplies a soft band of
       // its own when the two are equal — SC/void have no wider extent).
       next = {
-        id: poi.id,
-        center: [poi.worldPos[0], poi.worldPos[1], poi.worldPos[2]],
-        apparentRadiusMpc: poi.apparentRadiusMpc ?? poi.physicalRadiusMpc,
-        physicalRadiusMpc: poi.physicalRadiusMpc,
+        id: structure.id,
+        center: [structure.worldPos[0], structure.worldPos[1], structure.worldPos[2]],
+        apparentRadiusMpc: structure.apparentRadiusMpc ?? structure.physicalRadiusMpc,
+        physicalRadiusMpc: structure.physicalRadiusMpc,
       };
     }
 
     const targetId = next?.id ?? null;
-    // No transition → no re-fade (covers same focused POI every frame AND
+    // No transition → no re-fade (covers same focused structure every frame AND
     // an already-in-flight fade-out being re-observed every frame).
     if (targetId === focusedId) return;
 

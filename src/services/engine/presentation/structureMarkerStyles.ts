@@ -1,5 +1,5 @@
 /**
- * structurePoiStyles — per-category visual style table for the extended
+ * structureMarkerStyles — per-category visual style table for the extended
  * structures (cluster / supercluster / void / group) rendered as ring/halo
  * markers and text labels.
  *
@@ -56,14 +56,14 @@ export type StructureMarkerStyle = {
 };
 
 /**
- * Per-category visual style table. Rows are copied verbatim from the former
- * `POI_STYLES` cluster/supercluster/void entries, with `group` added for the
+ * Per-category visual style table. Covers cluster/supercluster/void entries,
+ * with `group` added for the
  * Local Volume galaxy groups (0–13 Mpc). See the field docs above for
  * semantics and the tuning rationale (e.g. the per-category min-apparent
  * floors that keep the bulk catalog from papering the sky with sub-readable
  * specks).
  */
-export const STRUCTURE_POI_STYLES = {
+export const STRUCTURE_MARKER_STYLES = {
   cluster: {
     labelColor: hexToGl('#FFD966'),
     minPixelSize: 35,
