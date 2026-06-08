@@ -4,6 +4,8 @@
  * this base and adds its own discriminator (`type: '<kind>'`) plus
  * kind-specific fields.
  */
+import type { CategoryLabelLayer } from '../animation/CategoryLabelLayer';
+
 export type SourceEntryBase = {
   /** Unique readable key — string twin of the numeric `Source` code (e.g. `'sdss'`, `'cluster'`). */
   readonly id: string;
@@ -45,7 +47,7 @@ export type SourceEntryBase = {
    *   - 'structure'   — the per-structure-category label layer
    * Absent on non-label-bearing rows (bearsLabel === false).
    */
-  readonly labelLayer?: 'galaxyNames' | 'structure';
+  readonly labelLayer?: CategoryLabelLayer;
   /**
    * Long-form label for detail surfaces (e.g. 'Galaxy Cluster', 'Famous Galaxy').
    * Present iff bearsLabel.
