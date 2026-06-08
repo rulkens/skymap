@@ -23,3 +23,13 @@ export const STRUCTURE_CATEGORY_CODES: Readonly<Record<StructureCategory, number
     StructureCategory,
     number
   >;
+
+/**
+ * Narrow a label-bearing category id to StructureCategory. Lets data-driven
+ * callers (e.g. the label-visibility setter) route on a registry field rather
+ * than a literal `=== 'famousGalaxy'` compare while keeping the type narrowed
+ * for the structure-only fade handles.
+ */
+export function isStructureCategory(id: string): id is StructureCategory {
+  return (STRUCTURE_CATEGORIES as readonly string[]).includes(id);
+}

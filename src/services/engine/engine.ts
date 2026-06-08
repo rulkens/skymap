@@ -143,8 +143,8 @@ import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowDat
 import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
 import type { LabelCategory } from '../../@types/engine/data/LabelCategory';
 import type { StructureCategory } from '../../@types/engine/data/StructureCategory';
-import { LABEL_CATEGORIES } from '../../data/labelCategories';
-import { STRUCTURE_CATEGORIES } from '../../data/structureCategories';
+import { LABEL_CATEGORIES, LABEL_LAYER_BY_CATEGORY } from '../../data/labelCategories';
+import { STRUCTURE_CATEGORIES, isStructureCategory } from '../../data/structureCategories';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -267,22 +267,27 @@ function setCategoryLabelVisible(
   category: LabelCategory,
   visible: boolean,
 ): void {
-  if (category === 'famousGalaxy') {
+  // Routing comes from the registry row's `labelLayer` field, not a literal
+  // category compare: 'galaxyNames' rows (the curated atlas) drive the galaxy
+  // store + shared galaxyNames fade layer; 'structure' rows fade their
+  // per-category handle on the shared `poi` label layer.
+  const durationMs = visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS;
+  if (LABEL_LAYER_BY_CATEGORY[category] === 'galaxyNames') {
     state.data.galaxies.setFamousLabelsVisible(visible);
     // Famous-galaxy labels reuse the shared `galaxyNames` label layer rather
     // than minting a per-category handle (see FadeHandle's labelLayer doc).
     void state.subsystems.fades.fadeTo(
       { kind: 'labelLayer', layer: 'galaxyNames' },
       visible ? 1 : 0,
-      visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+      durationMs,
     );
-  } else {
-    // The `!== 'famousGalaxy'` branch narrows to StructureCategory, which is
-    // exactly what the labelLayer/poi handle's `category` field wants.
+  } else if (isStructureCategory(category)) {
+    // The 'structure' rows narrow to StructureCategory, which is exactly what
+    // the labelLayer/poi handle's `category` field wants.
     void state.subsystems.fades.fadeTo(
       { kind: 'labelLayer', layer: 'poi', category },
       visible ? 1 : 0,
-      visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+      durationMs,
     );
   }
   state.settings.labelCategoryVisibility = {

@@ -15,16 +15,13 @@ import {
   clearLabelStyleOverride,
   type LabelStyleOverrideTarget,
 } from '../../services/engine/labelStyleOverride';
+import { LABEL_CATEGORIES } from '../../data/labelCategories';
 import type { Vec4 } from '../../@types/math/Vec4';
 
-const CATEGORIES: readonly LabelStyleOverrideTarget[] = [
-  'youAreHere',
-  'cluster',
-  'supercluster',
-  'famousGalaxy',
-  'void',
-  'group',
-];
+// `LabelStyleOverrideTarget` is `'youAreHere' | LabelCategory`, so the dropdown
+// is exactly the registry's label-bearing categories plus the you-are-here pin.
+// 'youAreHere' leads so it stays first in the dropdown.
+const CATEGORIES: readonly LabelStyleOverrideTarget[] = ['youAreHere', ...LABEL_CATEGORIES];
 
 function hexToRgb(hex: string): [number, number, number] {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex);
