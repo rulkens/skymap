@@ -274,11 +274,11 @@ Note: the input `category` can narrow to `StructureCategory` now (the `famousGal
 
 **Contract:** export `STRUCTURE_MARKER_STYLES` (type `StructureMarkerStyle` keeps its name); `SIG_MIN_ALPHA` unchanged.
 
-- [ ] `git mv` both; rename the export + consumers; in the test, drop the `PoiCategory` import (use `StructureCategory`) and rename the `describe`.
-- [ ] Run `npm test -- structureMarkerStyles` + `npm run typecheck` → PASS. `rg 'STRUCTURE_POI_STYLES|structurePoiStyles' src tests` empty.
-- [ ] Commit.
+- [x] `git mv` both; rename the export + consumers; in the test, drop the `PoiCategory` import (use `StructureCategory`) and rename the `describe`.
+- [x] Run `npm test -- structureMarkerStyles` + `npm run typecheck` → PASS. `rg 'STRUCTURE_POI_STYLES|structurePoiStyles' src tests` empty.
+- [x] Commit.
 
-### Task C4: `poiIndex` → `structureIndex` in the marker/pick path
+ `poiIndex` → `structureIndex` in the marker/pick path
 
 **Files (sites not covered by C2):** `src/services/gpu/renderers/structureMarkerRenderer.ts`, `src/@types/rendering/StructureMarkerRenderer.d.ts`, `src/services/engine/presentation/produceStructureMarkers.ts`, `src/@types/engine/CreateClickResolverInput.d.ts`; mirrored tests (`structureMarkerRenderer.*.test.ts`, `ringPick.test.ts`).
 
