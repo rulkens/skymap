@@ -1,5 +1,5 @@
 /**
- * pickRenderer.poi.test — type-level contract that `createPickRenderer`
+ * pickRenderer.structure.test — type-level contract that `createPickRenderer`
  * keeps `structureMarkerRenderer` as its OPTIONAL tail positional argument
  * (the 7th, index 6, after the required `focusBgl` at index 4 and the
  * required shared `focusBindGroup` at index 5).

@@ -1,5 +1,5 @@
 /**
- * wireInput.poi — structural assertion that the wireInput phase wires
+ * wireInput.structure — structural assertion that the wireInput phase wires
  * structure clicks through the click resolver and upgrades the pinned
  * selection to a focus on dblclick.
  *

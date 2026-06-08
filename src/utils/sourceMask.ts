@@ -9,7 +9,7 @@
  * far more than the four currently tracked.
  */
 
-import { SOURCE_REGISTRY, SURVEY_SOURCES, Source } from '../data/sources';
+import { SOURCE_REGISTRY, SURVEY_SOURCES } from '../data/sources';
 import type { SourceType } from '../@types/data/SourceType';
 
 /**
