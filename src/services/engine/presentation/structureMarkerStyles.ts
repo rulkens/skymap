@@ -1,5 +1,5 @@
 /**
- * structurePoiStyles — per-category visual style table for the extended
+ * structureMarkerStyles — per-category visual style table for the extended
  * structures (cluster / supercluster / void / group) rendered as ring/halo
  * markers and text labels.
  *
@@ -63,7 +63,7 @@ export type StructureMarkerStyle = {
  * floors that keep the bulk catalog from papering the sky with sub-readable
  * specks).
  */
-export const STRUCTURE_POI_STYLES = {
+export const STRUCTURE_MARKER_STYLES = {
   cluster: {
     labelColor: hexToGl('#FFD966'),
     minPixelSize: 35,

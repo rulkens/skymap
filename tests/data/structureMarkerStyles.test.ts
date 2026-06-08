@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { STRUCTURE_POI_STYLES } from '../../src/services/engine/presentation/structurePoiStyles';
+import { STRUCTURE_MARKER_STYLES } from '../../src/services/engine/presentation/structureMarkerStyles';
 import { FAMOUS_LABEL_STYLE } from '../../src/services/engine/presentation/famousLabelStyle';
 import type { LabelCategory } from '../../src/@types/engine/data/LabelCategory';
 
-describe('POI category styles (split into structure + famous tables)', () => {
-  it('STRUCTURE_POI_STYLES exposes the four structure category keys', () => {
-    expect(Object.keys(STRUCTURE_POI_STYLES).sort()).toEqual(
+describe('structure marker styles (per-category ring/halo/label style table)', () => {
+  it('STRUCTURE_MARKER_STYLES exposes the four structure category keys', () => {
+    expect(Object.keys(STRUCTURE_MARKER_STYLES).sort()).toEqual(
       ['cluster', 'supercluster', 'void', 'group'].sort(),
     );
   });
 
   it('every structure style entry has the required fields', () => {
-    for (const [key, style] of Object.entries(STRUCTURE_POI_STYLES)) {
+    for (const [key, style] of Object.entries(STRUCTURE_MARKER_STYLES)) {
       expect(style.labelColor, `${key}.labelColor`).toHaveLength(4);
       expect(style.minPixelSize, `${key}.minPixelSize`).toBeGreaterThan(0);
       expect(style.maxPixelSize, `${key}.maxPixelSize`).toBeGreaterThan(style.minPixelSize);

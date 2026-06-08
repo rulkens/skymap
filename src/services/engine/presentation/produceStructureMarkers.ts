@@ -31,7 +31,7 @@ import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameC
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Vec4 } from '../../../@types/math/Vec4';
 import type { StructureMarkerDescriptor } from '../../../@types/rendering/StructureMarkerDescriptor';
-import { STRUCTURE_POI_STYLES, SIG_MIN_ALPHA } from './structurePoiStyles';
+import { STRUCTURE_MARKER_STYLES, SIG_MIN_ALPHA } from './structureMarkerStyles';
 import { focusRecession } from './focusRecession';
 import { structureIdOf } from '../helpers/structureIdOf';
 
@@ -68,7 +68,7 @@ export function produceStructureMarkers(
     // Render at the WIDER apparent extent, falling back to the core for
     // structures that only set physicalRadiusMpc.
     const radiusMpc = p.apparentRadiusMpc ?? p.physicalRadiusMpc;
-    const style = STRUCTURE_POI_STYLES[p.category];
+    const style = STRUCTURE_MARKER_STYLES[p.category];
 
     const dx = p.worldPos[0] - cx;
     const dy = p.worldPos[1] - cy;

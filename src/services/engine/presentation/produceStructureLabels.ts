@@ -45,7 +45,7 @@ import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameC
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { LabelProducerOutput } from '../../../@types/engine/subsystems/LabelProducerOutput';
 import type { StructureCategory } from '../../../@types/engine/data/StructureCategory';
-import { STRUCTURE_POI_STYLES } from './structurePoiStyles';
+import { STRUCTURE_MARKER_STYLES } from './structureMarkerStyles';
 import { getLabelStyleOverride } from '../labelStyleOverride';
 import { focusRecession } from './focusRecession';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
@@ -111,7 +111,7 @@ export function produceStructureLabels(
     // instead of popping when the category toggles off mid-fade.
     if (fades.opacityOf({ kind: 'markerLayer', category: p.category }, now) === 0) continue;
 
-    const style = STRUCTURE_POI_STYLES[p.category];
+    const style = STRUCTURE_MARKER_STYLES[p.category];
 
     // Camera distance — for the marker close-approach / far-distance fades.
     const dx = p.worldPos[0] - cx;

@@ -9,7 +9,7 @@
  * lives in exactly one place and new label-bearing sources gain display info
  * automatically from their registry row.
  *
- * Distinct from the presentation style tables (`structurePoiStyles.ts` +
+ * Distinct from the presentation style tables (`structureMarkerStyles.ts` +
  * `famousLabelStyle.ts`) — those own *rendering* config (halo/ring colors,
  * pixel sizes, fade bands).  This owns *display* metadata (human labels).
  */
