@@ -52,7 +52,8 @@
 
 import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
-import type { PoiCategory } from '../engine/data/PoiCategory';
+import type { LabelCategory } from '../engine/data/LabelCategory';
+import type { StructureCategory } from '../engine/data/StructureCategory';
 import type { FlowSettings } from './FlowSettings';
 import type { VolumeFieldId } from '../data/VolumeFieldId';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
@@ -177,23 +178,24 @@ export type EngineSettingsState = {
   };
 
   /**
-   * Per-category visibility for the POI TEXT LABEL overlay.  Keyed by
-   * the canonical `PoiCategory` union (`@types/engine/data/PoiCategory`).
-   * Defaults to every category visible.
+   * Per-category visibility for the TEXT LABEL overlay.  Keyed by
+   * `LabelCategory` — the label-bearing sources (`famousGalaxy` plus the
+   * structure categories).  Defaults to every category visible.
    *
    * This is one of two orthogonal records — see `markerCategoryVisibility`
    * for the marker (ring + halo) counterpart.  Label-text and marker
    * visibility are independent so a category's ring can be hidden while
    * its label still renders, and vice versa.
    */
-  labelCategoryVisibility: Record<PoiCategory, boolean>;
+  labelCategoryVisibility: Record<LabelCategory, boolean>;
   /**
-   * Per-category visibility for the POI MARKER overlay — the ring +
-   * halo glyph drawn at the POI's world anchor by
-   * `structureMarkerRenderer`.  Symmetric to `labelCategoryVisibility`;
-   * the two records are deliberately independent so the SettingsPanel
-   * can offer separate master toggles for "Labels" (text) and
-   * "Structures" (markers).  Defaults to every category visible.
+   * Per-category visibility for the MARKER overlay — the ring + halo glyph
+   * drawn at the structure's world anchor by `structureMarkerRenderer`.
+   * Keyed by `StructureCategory` only: famous galaxies bear no ring marker.
+   * Symmetric to `labelCategoryVisibility`; the two records are deliberately
+   * independent so the SettingsPanel can offer separate master toggles for
+   * "Labels" (text) and "Structures" (markers).  Defaults to every category
+   * visible.
    */
-  markerCategoryVisibility: Record<PoiCategory, boolean>;
+  markerCategoryVisibility: Record<StructureCategory, boolean>;
 };

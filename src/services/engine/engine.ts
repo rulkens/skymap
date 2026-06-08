@@ -141,7 +141,10 @@ import { clampVolumeTrim } from '../../utils/clampVolumeTrim';
 import { clampVolumeExposure } from '../../utils/clampVolumeExposure';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
-import type { PoiCategory } from '../../@types/engine/data/PoiCategory';
+import type { LabelCategory } from '../../@types/engine/data/LabelCategory';
+import type { StructureCategory } from '../../@types/engine/data/StructureCategory';
+import { LABEL_CATEGORIES } from '../../data/labelCategories';
+import { STRUCTURE_CATEGORIES } from '../../data/structureCategories';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -261,7 +264,7 @@ export { setSourceVisibleImpl as setSourceVisibleForTest };
 function setCategoryLabelVisible(
   state: Pick<EngineState, 'data' | 'settings' | 'subsystems'>,
   cb: Pick<EngineCallbacks, 'labels'>,
-  category: PoiCategory,
+  category: LabelCategory,
   visible: boolean,
 ): void {
   if (category === 'famousGalaxy') {
@@ -274,8 +277,8 @@ function setCategoryLabelVisible(
       visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
     );
   } else {
-    // `category !== 'famousGalaxy'` narrows PoiCategory to StructureCategory,
-    // which is exactly what the labelLayer/poi handle's `category` field wants.
+    // The `!== 'famousGalaxy'` branch narrows to StructureCategory, which is
+    // exactly what the labelLayer/poi handle's `category` field wants.
     void state.subsystems.fades.fadeTo(
       { kind: 'labelLayer', layer: 'poi', category },
       visible ? 1 : 0,
@@ -295,23 +298,17 @@ function setCategoryLabelVisible(
 function setCategoryMarkerVisible(
   state: Pick<EngineState, 'data' | 'settings' | 'subsystems'>,
   cb: Pick<EngineCallbacks, 'labels'>,
-  category: PoiCategory,
+  category: StructureCategory,
   visible: boolean,
 ): void {
-  // Famous galaxies have no ring/halo marker — curated thumbnails do that job —
-  // so a marker-visibility toggle for them is a no-op, AND there is no
-  // `markerLayer` handle to fade (markerLayer handles are keyed by
-  // StructureCategory only). Only structure categories route to the structure
-  // store's marker axis and fire a markerLayer fade. The `category !==
-  // 'famousGalaxy'` guard narrows PoiCategory to StructureCategory, which the
-  // markerLayer handle's `category` field requires.
-  if (category !== 'famousGalaxy') {
-    void state.subsystems.fades.fadeTo(
-      { kind: 'markerLayer', category },
-      visible ? 1 : 0,
-      visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
-    );
-  }
+  // Only structure categories bear a ring/halo marker, so the marker axis is
+  // keyed by StructureCategory — every category here routes to the structure
+  // store's marker axis and fires a markerLayer fade.
+  void state.subsystems.fades.fadeTo(
+    { kind: 'markerLayer', category },
+    visible ? 1 : 0,
+    visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+  );
   state.settings.markerCategoryVisibility = {
     ...state.settings.markerCategoryVisibility,
     [category]: visible,
@@ -442,30 +439,22 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // gate + look/motion knobs) lives here, spread from the single
       // `DEFAULT_FLOW` seed. The `state.data.flow` store stays status-only.
       flow: { ...DEFAULT_FLOW },
-      // Per-category POI visibility — two independent axes (label-text vs
-      // marker-glyph), both default-all-on.  Each record is the source of
-      // truth for its axis: adding a new POI category means widening
-      // `STRUCTURE_POI_STYLES` AND adding the row to BOTH records here.
-      // `group` is the fifth category, added alongside the nearby-galaxy-
-      // groups feature.
-      labelCategoryVisibility: {
-        cluster: true,
-        supercluster: true,
-        famousGalaxy: true,
-        void: true,
-        group: true,
-      },
+      // Per-category visibility — two independent axes (label-text vs
+      // marker-glyph), both default-all-on.  Each record's keys are DERIVED
+      // from its category set so the defaults can't drift from the union:
+      // labels span `LABEL_CATEGORIES` (famousGalaxy + structures), markers
+      // span `STRUCTURE_CATEGORIES` only (famous galaxies bear no ring).
+      labelCategoryVisibility: Object.fromEntries(LABEL_CATEGORIES.map((c) => [c, true])) as Record<
+        LabelCategory,
+        boolean
+      >,
       debug: {
         showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
         showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
       },
-      markerCategoryVisibility: {
-        cluster: true,
-        supercluster: true,
-        famousGalaxy: true,
-        void: true,
-        group: true,
-      },
+      markerCategoryVisibility: Object.fromEntries(
+        STRUCTURE_CATEGORIES.map((c) => [c, true]),
+      ) as Record<StructureCategory, boolean>,
     },
     bias: {
       // Bake-only sentinels — overwritten before the shader's mode-2/3/4

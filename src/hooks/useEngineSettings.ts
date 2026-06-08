@@ -42,7 +42,10 @@ import { useCallback, useState } from 'react';
 import type { BiasMode as BiasModeT } from '../@types/data/BiasMode';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
 import type { FlowSettings } from '../@types/settings/FlowSettings';
-import type { PoiCategory } from '../@types/engine/data/PoiCategory';
+import type { LabelCategory } from '../@types/engine/data/LabelCategory';
+import type { StructureCategory } from '../@types/engine/data/StructureCategory';
+import { LABEL_CATEGORIES } from '../data/labelCategories';
+import { STRUCTURE_CATEGORIES } from '../data/structureCategories';
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_AUTO_ROTATE,
@@ -164,31 +167,30 @@ export function useEngineSettings(): UseEngineSettingsReturn {
     DEFAULT_SPACE_MOUSE_SENSITIVITY,
   );
 
-  // ── POI per-category visibility (two independent axes) ──────────────
-  // Engine echoes the full Record<PoiCategory, boolean> per axis on
-  // every matching setter call (plus once at init via
-  // seedSettingsCallbacks).  Label and marker visibility are kept as two
-  // separate records on purpose: conflating them into one axis lets a
-  // category hidden on one axis silently suppress it on the other.  Both
-  // seed to "all categories on" so first paint matches the engine default.
+  // ── Per-category visibility (two independent axes) ──────────────────
+  // Engine echoes the full per-axis record on every matching setter call
+  // (plus once at init via seedSettingsCallbacks).  Label and marker
+  // visibility are kept as two separate records on purpose: conflating
+  // them into one axis lets a category hidden on one axis silently
+  // suppress it on the other.  Both seed to "all categories on" so first
+  // paint matches the engine default.  The keys are DERIVED from each
+  // axis's category set — labels span `LABEL_CATEGORIES` (famousGalaxy +
+  // structures), markers span `STRUCTURE_CATEGORIES` only (no famous ring).
   const [labelCategoryVisibility, setLabelCategoryVisibility] = useState<
-    Record<PoiCategory, boolean>
-  >({
-    cluster: true,
-    supercluster: true,
-    famousGalaxy: true,
-    void: true,
-    group: true,
-  });
+    Record<LabelCategory, boolean>
+  >(
+    () =>
+      Object.fromEntries(LABEL_CATEGORIES.map((c) => [c, true])) as Record<LabelCategory, boolean>,
+  );
   const [markerCategoryVisibility, setMarkerCategoryVisibility] = useState<
-    Record<PoiCategory, boolean>
-  >({
-    cluster: true,
-    supercluster: true,
-    famousGalaxy: true,
-    void: true,
-    group: true,
-  });
+    Record<StructureCategory, boolean>
+  >(
+    () =>
+      Object.fromEntries(STRUCTURE_CATEGORIES.map((c) => [c, true])) as Record<
+        StructureCategory,
+        boolean
+      >,
+  );
 
   return {
     settings: {

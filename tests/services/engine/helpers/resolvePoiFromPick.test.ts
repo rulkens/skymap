@@ -64,10 +64,4 @@ describe('resolvePoiFromPick', () => {
   it('returns null for a category with no entries', () => {
     expect(resolvePoiFromPick(structures, { category: 'supercluster', poiIndex: 0 })).toBe(null);
   });
-
-  it('returns null for a famousGalaxy category (rings are structure-only)', () => {
-    // famousGalaxy can never come from a ring pick; the guard returns null
-    // rather than indexing the structure store.
-    expect(resolvePoiFromPick(structures, { category: 'famousGalaxy', poiIndex: 0 })).toBe(null);
-  });
 });

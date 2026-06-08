@@ -30,7 +30,8 @@ import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { FlowSettings } from './FlowSettings';
 import type { VolumeFieldRowData } from './VolumeFieldRowData';
-import type { PoiCategory } from '../engine/data/PoiCategory';
+import type { LabelCategory } from '../engine/data/LabelCategory';
+import type { StructureCategory } from '../engine/data/StructureCategory';
 
 export type UseEngineSettingsState = {
   pointSize: number;
@@ -68,25 +69,24 @@ export type UseEngineSettingsState = {
    */
   volumeFields: ReadonlyArray<VolumeFieldRowData>;
   /**
-   * Per-category visibility for the POI TEXT LABEL overlay.  Mirrors
-   * the engine-side `EngineSettingsState.labelCategoryVisibility`; the
+   * Per-category visibility for the TEXT LABEL overlay.  Mirrors the
+   * engine-side `EngineSettingsState.labelCategoryVisibility`; the
    * SettingsPanel reads from this record to render the per-category
    * label checkboxes.  Engine echoes the whole record on every
    * `handle.labels.setCategoryLabelVisible(cat, visible)` call so the
    * UI stays in sync from a single subscription.
    */
-  labelCategoryVisibility: Record<PoiCategory, boolean>;
+  labelCategoryVisibility: Record<LabelCategory, boolean>;
   /**
-   * Per-category visibility for the POI MARKER overlay (ring + halo).
-   * Mirrors the engine-side
+   * Per-category visibility for the MARKER overlay (ring + halo), keyed
+   * by `StructureCategory` only.  Mirrors the engine-side
    * `EngineSettingsState.markerCategoryVisibility`.  Today there is no
    * per-category marker UI — every entry stays `true` unless the
-   * Structures master toggle (Task #6 of the 2026-05-19 audit) flips
-   * them as a batch.  Kept in state regardless so the React shell can
-   * present a snapshot and so the upcoming Structures toggle has a
-   * stable mirror to subscribe to.
+   * Structures master toggle flips them as a batch.  Kept in state
+   * regardless so the React shell can present a snapshot and so the
+   * Structures toggle has a stable mirror to subscribe to.
    */
-  markerCategoryVisibility: Record<PoiCategory, boolean>;
+  markerCategoryVisibility: Record<StructureCategory, boolean>;
   /**
    * Whether a 3Dconnexion SpaceMouse is currently paired and feeding
    * input reports.  Engine echoes this through

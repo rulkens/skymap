@@ -13,7 +13,8 @@ import type { SourceType } from '../data/SourceType';
 import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { LoadProgressState } from '../loading/LoadProgressState';
-import type { PoiCategory } from './data/PoiCategory';
+import type { LabelCategory } from './data/LabelCategory';
+import type { StructureCategory } from './data/StructureCategory';
 import type { VolumeFieldRowData } from '../settings/VolumeFieldRowData';
 
 /**
@@ -191,7 +192,7 @@ export type EngineCallbacks = {
     onTierChange?: (tier: Tier) => void;
     onCatalogReady?: (source: SourceType, count: number) => void;
     onLoadProgress?: (progress: LoadProgressState | null) => void;
-    onStructureCountsChange?: (counts: Partial<Record<PoiCategory, number>>) => void;
+    onStructureCountsChange?: (counts: Partial<Record<StructureCategory, number>>) => void;
   };
 
   /**
@@ -243,8 +244,12 @@ export type EngineCallbacks = {
    * `setCategoryMarkerVisible(...)` call.
    */
   labels?: {
-    onLabelCategoryVisibilityChange?: (visibility: Readonly<Record<PoiCategory, boolean>>) => void;
-    onMarkerCategoryVisibilityChange?: (visibility: Readonly<Record<PoiCategory, boolean>>) => void;
+    onLabelCategoryVisibilityChange?: (
+      visibility: Readonly<Record<LabelCategory, boolean>>,
+    ) => void;
+    onMarkerCategoryVisibilityChange?: (
+      visibility: Readonly<Record<StructureCategory, boolean>>,
+    ) => void;
   };
 
   /**

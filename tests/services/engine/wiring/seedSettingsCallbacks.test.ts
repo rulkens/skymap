@@ -47,7 +47,6 @@ function makeSnapshot(): SettingsCallbackSeed {
     markerCategoryVisibility: {
       cluster: true,
       supercluster: true,
-      famousGalaxy: true,
       void: true,
       group: true,
     },

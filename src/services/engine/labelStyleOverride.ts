@@ -31,13 +31,13 @@
  */
 
 import type { Vec4 } from '../../@types/math/Vec4';
-import type { PoiCategory } from '../../@types/engine/data/PoiCategory';
+import type { LabelCategory } from '../../@types/engine/data/LabelCategory';
 
 /**
  * The set of label-emitting categories the override can target.
  * Mirrors the dropdown in `LabelEffectsSection.tsx` — keep in sync.
  */
-export type LabelStyleOverrideTarget = 'youAreHere' | PoiCategory;
+export type LabelStyleOverrideTarget = 'youAreHere' | LabelCategory;
 
 /**
  * Read-only snapshot of the current override.  `targetCategory` is

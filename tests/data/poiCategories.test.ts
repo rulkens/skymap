@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { STRUCTURE_POI_STYLES } from '../../src/services/engine/presentation/structurePoiStyles';
 import { FAMOUS_LABEL_STYLE } from '../../src/services/engine/presentation/famousLabelStyle';
-import type { PoiCategory } from '../../src/@types/engine/data/PoiCategory';
+import type { LabelCategory } from '../../src/@types/engine/data/LabelCategory';
 
 describe('POI category styles (split into structure + famous tables)', () => {
   it('STRUCTURE_POI_STYLES exposes the four structure category keys', () => {
@@ -33,12 +33,12 @@ describe('POI category styles (split into structure + famous tables)', () => {
     expect(FAMOUS_LABEL_STYLE.fadeBandPx).toBeGreaterThan(0);
   });
 
-  it('PoiCategory is the five-category union (compile-time check)', () => {
-    const c1: PoiCategory = 'cluster';
-    const c2: PoiCategory = 'supercluster';
-    const c3: PoiCategory = 'famousGalaxy';
-    const c4: PoiCategory = 'void';
-    const c5: PoiCategory = 'group';
+  it('LabelCategory is the five-category union (compile-time check)', () => {
+    const c1: LabelCategory = 'cluster';
+    const c2: LabelCategory = 'supercluster';
+    const c3: LabelCategory = 'famousGalaxy';
+    const c4: LabelCategory = 'void';
+    const c5: LabelCategory = 'group';
     expect([c1, c2, c3, c4, c5]).toEqual([
       'cluster',
       'supercluster',

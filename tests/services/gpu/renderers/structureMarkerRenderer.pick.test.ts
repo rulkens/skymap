@@ -24,7 +24,7 @@ describe('StructureMarkerRenderer pick API', () => {
   });
 
   it('StructureMarkerDescriptor accepts category group (type gate)', () => {
-    // Compile-time guard: ensures `'group'` is a valid PoiCategory on
+    // Compile-time guard: ensures `'group'` is a valid StructureCategory on
     // StructureMarkerDescriptor so group descriptors can reach pickRing.
     // If the category union loses 'group' this assignment is a type error.
     const d: StructureMarkerDescriptor = {

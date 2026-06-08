@@ -62,7 +62,6 @@ function makeFixture() {
         supercluster: true,
         void: true,
         group: true,
-        famousGalaxy: true,
       },
     },
     subsystems: {
@@ -109,18 +108,6 @@ describe('setCategoryMarkerVisible — fade orchestration', () => {
         duration: FADE_IN_DURATION_MS,
       },
     ]);
-  });
-
-  it('famousGalaxy marker toggle fires NO markerLayer fade (no ring) but still mirrors + requests render', () => {
-    const fx = makeFixture();
-    setCategoryMarkerVisibleForTest(fx.state as never, fx.cb as never, 'famousGalaxy', false);
-
-    // No ring for famous galaxies → no markerLayer fade.
-    expect(fx.fadeCalls).toEqual([]);
-    // Settings mirror + callback + render still happen.
-    expect(fx.state.settings.markerCategoryVisibility.famousGalaxy).toBe(false);
-    expect(fx.cb.labels.onMarkerCategoryVisibilityChange).toHaveBeenCalledTimes(1);
-    expect(fx.state.subsystems.scheduler.requestRender).toHaveBeenCalledTimes(1);
   });
 });
 

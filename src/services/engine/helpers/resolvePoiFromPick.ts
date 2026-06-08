@@ -29,10 +29,8 @@
  *
  * Rings are a structure-only affordance (cluster / supercluster / void);
  * famous galaxies are picked through the point path, never the ring path.
- * A `famousGalaxy` category therefore can't arrive here from a ring pick —
- * the guard returns null defensively rather than indexing a store that
- * doesn't hold famous galaxies (and narrows `category` to a
- * `StructureCategory` for the `byCategory` lookup).
+ * The input `category` is therefore typed `StructureCategory` — a famous
+ * category can't reach this lookup by construction.
  *
  * ### Why a narrowed `structures` param rather than the full `EngineState`
  *
@@ -43,11 +41,11 @@
  */
 
 import type { StructureRecord } from '../../../@types/engine/data/StructureRecord';
-import type { PoiCategory } from '../../../@types/engine/data/PoiCategory';
+import type { StructureCategory } from '../../../@types/engine/data/StructureCategory';
 import type { PickStructureStore } from '../../../@types/engine/data/PickStructureStore';
 
 export type PickPoiInput = {
-  readonly category: PoiCategory;
+  readonly category: StructureCategory;
   readonly poiIndex: number;
 };
 
@@ -55,9 +53,6 @@ export function resolvePoiFromPick(
   structures: PickStructureStore,
   input: PickPoiInput,
 ): StructureRecord | null {
-  // Rings are structure-only; a famousGalaxy hit can't come from the ring
-  // pick path. The check also narrows `category` to `StructureCategory`.
-  if (input.category === 'famousGalaxy') return null;
   const records = structures.byCategory(input.category);
   return records[input.poiIndex] ?? null;
 }

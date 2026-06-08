@@ -55,7 +55,7 @@ import type { UseEngineInput } from '../@types/engine/UseEngineInput';
 import type { UseEngineReturn } from '../@types/engine/UseEngineReturn';
 import { initialTierFromViewport } from '../utils/initialTierFromViewport';
 import type { SourceType } from '../@types/data/SourceType';
-import type { PoiCategory } from '../@types/engine/data/PoiCategory';
+import type { StructureCategory } from '../@types/engine/data/StructureCategory';
 
 /**
  * Initial scale-bar value that renders something sensible before the
@@ -86,7 +86,9 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
   const [scale, setScale] = useState<ScaleInfo>(INITIAL_SCALE);
   const [fps, setFps] = useState<number>(0);
   const [sourceCounts, setSourceCounts] = useState<Partial<Record<SourceType, number>>>({});
-  const [structureCounts, setStructureCounts] = useState<Partial<Record<PoiCategory, number>>>({});
+  const [structureCounts, setStructureCounts] = useState<
+    Partial<Record<StructureCategory, number>>
+  >({});
   const [loadProgress, setLoadProgress] = useState<LoadProgressState | null>(null);
   // Lazy-init from viewport — `window` is guarded for SSR / unit-test
   // hosts.  Echoed by the engine via `onTierChange`, so this state

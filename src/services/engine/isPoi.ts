@@ -5,7 +5,7 @@ import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
  * isPoi — runtime type predicate for FocusableTarget.
  *
  * Uses `'category' in target` as the discriminant because StructureRecord
- * declares a top-level `category: PoiCategory` field, while GalaxyInfo
+ * declares a top-level `category: StructureCategory` field, while GalaxyInfo
  * carries category information only at the nested `galaxyType.category`
  * path.  `'in'` checks the top-level key only, so a GalaxyInfo never
  * widens into the POI branch by accident.

@@ -112,7 +112,6 @@ describe('EngineState type', () => {
       markerCategoryVisibility: {
         cluster: true,
         supercluster: true,
-        famousGalaxy: true,
         void: true,
         group: true,
       },
@@ -263,7 +262,6 @@ describe('EngineState type', () => {
       markerCategoryVisibility: {
         cluster: true,
         supercluster: true,
-        famousGalaxy: true,
         void: true,
         group: true,
       },
@@ -318,7 +316,6 @@ describe('EngineState type', () => {
         markerCategoryVisibility: {
           cluster: true,
           supercluster: true,
-          famousGalaxy: true,
           void: true,
           group: true,
         },
