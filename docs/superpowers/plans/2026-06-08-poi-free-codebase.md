@@ -80,7 +80,7 @@ export type LabelCategory = (typeof LABEL_CATEGORIES)[number];
 
 **Files:**
 
-- Create: `src/data/categoryDisplayInfo.ts` (derived `CATEGORY_DISPLAY_INFO` keyed by `LabelCategory`, fields `{ label, shortLabel, plural }` sourced from the registry rows' `detailLabel`/`label`/`plural`)
+- Create: `src/data/categoryDisplayInfo.ts` (derived `CATEGORY_DISPLAY_INFO` keyed by `LabelCategory`, fields `{ label, shortLabel, plural }` sourced from the registry rows' `detailLabel`/`shortLabel`/`plural`)
 - Modify: every `POI_CATEGORY_INFO` consumer (enumerate with `rg -l 'POI_CATEGORY_INFO|poiCategoryInfo|PoiCategoryInfo' src` — expect InfoCard / SettingsPanel family)
 - Delete: `src/data/poiCategoryInfo.ts`
 - Test: `tests/data/categoryDisplayInfo.test.ts` (rename from any `poiCategoryInfo` test if one exists; else new)
