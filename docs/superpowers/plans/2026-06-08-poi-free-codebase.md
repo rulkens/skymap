@@ -323,11 +323,11 @@ readonly category: StructureCategory;  // was 'cluster' | 'supercluster' | 'void
 
 **Files:** `git mv tests/services/engine/phases/wireInput.poi.test.ts → wireInput.structure.test.ts`; `git mv tests/services/gpu/renderers/pickRenderer.poi.test.ts → pickRenderer.structure.test.ts`; `git mv tests/@types/engine/EngineCameraHandle.poi.test.ts → EngineCameraHandle.structure.test.ts`. Update each `describe`/imports if they reference renamed symbols.
 
-- [ ] `git mv` the three files; fix any internal `poi` references.
-- [ ] **Entanglement-radar verification:** run the `entanglement-radar` lens over `git diff main...HEAD` — confirm the spec's un-braided choices survived: `PoiCategory` gone (not re-spelled), marker record narrowed (no phantom `famousGalaxy`), the two URL resolution paths NOT merged, the famousGalaxy `if`-branches dissolved into `labelLayer` data. Note any regressions and fix before finishing.
-- [ ] **Full sweep:** `find src tests -iname '*poi*'` empty; `rg 'poi|POI' src tests -g '*.ts' -g '*.tsx' -g '*.wesl' | rg -iv 'point|poisson|poison'` empty.
-- [ ] Run full `npm test` + `npm run typecheck` + `npm run build` → all green.
-- [ ] Prettier all touched files; commit.
+- [x] `git mv` the three files; fix any internal `poi` references.
+- [x] **Entanglement-radar verification:** run the `entanglement-radar` lens over `git diff main...HEAD` — confirm the spec's un-braided choices survived: `PoiCategory` gone (not re-spelled), marker record narrowed (no phantom `famousGalaxy`), the two URL resolution paths NOT merged, the famousGalaxy `if`-branches dissolved into `labelLayer` data. Note any regressions and fix before finishing.
+- [x] **Full sweep:** `find src tests -iname '*poi*'` empty; `rg 'poi|POI' src tests -g '*.ts' -g '*.tsx' -g '*.wesl' | rg -iv 'point|poisson|poison'` empty.
+- [x] Run full `npm test` + `npm run typecheck` + `npm run build` → all green.
+- [x] Prettier all touched files; commit.
 
 ---
 
