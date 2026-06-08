@@ -306,11 +306,11 @@ readonly category: StructureCategory;  // was 'cluster' | 'supercluster' | 'void
 
 **Files:** `rg -ln 'selectedPoi' src` → `src/services/engine/frame/passes/selectionRingPass.ts`, `src/@types/engine/handles/EngineSubsystemHandles.d.ts`, `src/services/engine/engine.ts` (mostly param names + comments).
 
-- [ ] Rename the param/comment occurrences to `selectedStructure`.
-- [ ] Run `npm run typecheck` + `npm test -- selectionRingPass` → PASS.
-- [ ] Commit.
+- [x] Rename the param/comment occurrences to `selectedStructure`.
+- [x] Run `npm run typecheck` + `npm test -- selectionRingPass` → PASS.
+- [x] Commit.
 
-### Task C7: Doc-comment + remaining-token sweep
+ Doc-comment + remaining-token sweep
 
 **Files:** every `poi`/`POI` left in comments. Enumerate: `rg -n 'poi|POI' src tests -g '*.ts' -g '*.tsx' -g '*.wesl' | rg -iv 'point|poisson|poison'`.
 
