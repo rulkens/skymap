@@ -1,5 +1,7 @@
 # Make the codebase `poi`-free — Implementation Plan
 
+> **Completed 2026-06-08** (PR #288). All three phases shipped; codebase is `poi`-free apart from the deliberate `#poi= is NOT a deep link` regression test. Follow-up shipped in the same PR: `CategoryLabelLayer` names the `'galaxyNames' | 'structure'` label-layer subset (was a raw literal union in five places). DoD audit: tests + typecheck + build green, no new TODOs, test parity improved.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Remove all `poi`/`Poi`/`POI` vocabulary from `src/` + mirrored `tests/`, dissolving the two distinct concepts it hid (the label/marker category superset, and "structure") into honest, registry-derived names.
@@ -76,7 +78,7 @@ export type LabelCategory = (typeof LABEL_CATEGORIES)[number];
 - [x] Run: `npm test -- labelCategories` + `npm run typecheck` → PASS.
 - [x] Commit.
 
- Fold the display table into a registry-derived accessor
+### Task A3: Fold the display table into a registry-derived accessor
 
 **Files:**
 
@@ -94,11 +96,11 @@ export const CATEGORY_DISPLAY_INFO: Readonly<Record<LabelCategory, CategoryDispl
 
 Mapping: `label ← row.detailLabel`; `shortLabel ← row.shortLabel`; `plural ← row.plural` (all explicit registry fields — see A1).
 
-- [ ] Add tests: `CATEGORY_DISPLAY_INFO has a row per LabelCategory`; `cluster renders 'Galaxy Cluster' / 'Cluster' / 'Clusters'`; `famousGalaxy renders 'Famous Galaxy' / 'Galaxy' / 'Famous Galaxies'`.
-- [ ] Run → FAIL.
-- [ ] Implement `categoryDisplayInfo.ts` deriving from the registry; repoint every `POI_CATEGORY_INFO[x]` read to `CATEGORY_DISPLAY_INFO[x]`; delete `poiCategoryInfo.ts`.
-- [ ] Run the touched tests + `npm run typecheck` → PASS. Confirm `rg 'POI_CATEGORY_INFO|poiCategoryInfo' src` is empty.
-- [ ] Commit.
+- [x] Add tests: `CATEGORY_DISPLAY_INFO has a row per LabelCategory`; `cluster renders 'Galaxy Cluster' / 'Cluster' / 'Clusters'`; `famousGalaxy renders 'Famous Galaxy' / 'Galaxy' / 'Famous Galaxies'`.
+- [x] Run → FAIL.
+- [x] Implement `categoryDisplayInfo.ts` deriving from the registry; repoint every `POI_CATEGORY_INFO[x]` read to `CATEGORY_DISPLAY_INFO[x]`; delete `poiCategoryInfo.ts`.
+- [x] Run the touched tests + `npm run typecheck` → PASS. Confirm `rg 'POI_CATEGORY_INFO|poiCategoryInfo' src` is empty.
+- [x] Commit.
 
 ### Task A4: Rename `PoiCategory` → `LabelCategory`; retype the visibility records
 
@@ -123,7 +125,7 @@ Default-visibility literals (`engine.ts:451-465`, `useEngineSettings.ts:174-188`
 - [x] Run `npm run typecheck` + the touched tests → PASS. `rg 'PoiCategory' src tests` empty.
 - [x] Commit.
 
- De-special-case the visibility setters
+### Task A5: De-special-case the visibility setters
 
 **Files:**
 
@@ -140,11 +142,11 @@ function setCategoryLabelVisible(state, cb, category: LabelCategory, visible: bo
 - `setCategoryMarkerVisible`: drop the `if (category !== 'famousGalaxy')` guard entirely — every `StructureCategory` fires a `markerLayer` fade.
 - `setCategoryLabelVisible`: replace the `if (category === 'famousGalaxy')` branch with a dispatch on the row's `labelLayer` field — `'galaxyNames'` fires the `galaxyNames` labelLayer fade (+ `setFamousLabelsVisible`); `'structure'` fires the structure labelLayer fade keyed by `category`.
 
-- [ ] Update tests: `setCategoryMarkerVisible fires a markerLayer fade for every structure category`; `setCategoryLabelVisible routes famousGalaxy to the galaxyNames layer`; `...routes a structure category to the structure label layer`.
-- [ ] Run → FAIL (guards still present / wrong signatures).
-- [ ] Rewrite both setters per the contract.
-- [ ] Run the two test files + `npm run typecheck` → PASS.
-- [ ] Commit.
+- [x] Update tests: `setCategoryMarkerVisible fires a markerLayer fade for every structure category`; `setCategoryLabelVisible routes famousGalaxy to the galaxyNames layer`; `...routes a structure category to the structure label layer`.
+- [x] Run → FAIL (guards still present / wrong signatures).
+- [x] Rewrite both setters per the contract.
+- [x] Run the two test files + `npm run typecheck` → PASS.
+- [x] Commit.
 
 ---
 
@@ -178,18 +180,18 @@ export type FocusTarget =
 - [x] Run → PASS + `npm run typecheck`.
 - [x] Commit.
 
- Drop `#poi=` from `hasDeepLink`
+### Task B2: Drop `#poi=` from `hasDeepLink`
 
 **Files:**
 
 - Modify: `src/utils/url/hasDeepLink.ts:44-58`
 - Test: `tests/utils/url/hasDeepLink.test.ts`
 
-- [ ] Add/adjust tests: `#focus=cluster-virgo-m87 is a deep link`; `#poi=... is NOT a deep link` (documents the intentional break); `#focus=m31` regression still true.
-- [ ] Run → the `#poi=` test FAILs (still treated as deep link).
-- [ ] Remove the `#poi=` branch (`hasDeepLink.ts:48`); update the docblock (drop the `#poi=` bullet).
-- [ ] Run → PASS.
-- [ ] Commit.
+- [x] Add/adjust tests: `#focus=cluster-virgo-m87 is a deep link`; `#poi=... is NOT a deep link` (documents the intentional break); `#focus=m31` regression still true.
+- [x] Run → the `#poi=` test FAILs (still treated as deep link).
+- [x] Remove the `#poi=` branch (`hasDeepLink.ts:48`); update the docblock (drop the `#poi=` bullet).
+- [x] Run → PASS.
+- [x] Commit.
 
 ### Task B3: Route structures through the single focus codec in `useUrlSync`
 
@@ -218,16 +220,16 @@ export type InitialPending =
 - [x] Run → PASS + `npm run typecheck`.
 - [x] Commit.
 
- Delete the `poiUrl` codec
+### Task B4: Delete the `poiUrl` codec
 
 **Files:**
 
 - Delete: `src/services/url/poiUrl.ts`, `tests/services/url/poiUrl.test.ts`
 
-- [ ] Confirm `rg 'poiUrl|parsePoiHash|poiIdToHash' src tests` shows only the files to delete (B1/B3 removed all consumers).
-- [ ] Delete both files.
-- [ ] Run `npm run typecheck` + `npm test -- url` → PASS.
-- [ ] Commit (`git rm` the two paths).
+- [x] Confirm `rg 'poiUrl|parsePoiHash|poiIdToHash' src tests` shows only the files to delete (B1/B3 removed all consumers).
+- [x] Delete both files.
+- [x] Run `npm run typecheck` + `npm test -- url` → PASS.
+- [x] Commit (`git rm` the two paths).
 
 ---
 
@@ -245,7 +247,7 @@ export type InitialPending =
 - [x] Run `npm test -- isStructure` + `npm run typecheck` → PASS. `rg '\bisPoi\b' src tests` empty.
 - [x] Commit.
 
- `resolvePoiFromPick` → `resolveStructureFromPick`
+### Task C2: `resolvePoiFromPick` → `resolveStructureFromPick`
 
 **Files:** `git mv src/services/engine/helpers/resolvePoiFromPick.ts → resolveStructureFromPick.ts`; `git mv` its test; modify `src/services/engine/helpers/pickToSelection.ts` (consumer).
 
@@ -264,9 +266,9 @@ export function resolveStructureFromPick(
 
 Note: the input `category` can narrow to `StructureCategory` now (the `famousGalaxy` early-return guard at `resolvePoiFromPick.ts:60` becomes unnecessary once the caller passes a `StructureCategory` — verify the caller's type; keep a defensive guard only if the caller still supplies a wider type).
 
-- [ ] Rename file + fn + type + the `poiIndex` field → `structureIndex`; update `pickToSelection.ts` + the test.
-- [ ] Run the test + `npm run typecheck` → PASS.
-- [ ] Commit.
+- [x] Rename file + fn + type + the `poiIndex` field → `structureIndex`; update `pickToSelection.ts` + the test.
+- [x] Run the test + `npm run typecheck` → PASS.
+- [x] Commit.
 
 ### Task C3: `structurePoiStyles` → `structureMarkerStyles`
 
@@ -278,7 +280,7 @@ Note: the input `category` can narrow to `StructureCategory` now (the `famousGal
 - [x] Run `npm test -- structureMarkerStyles` + `npm run typecheck` → PASS. `rg 'STRUCTURE_POI_STYLES|structurePoiStyles' src tests` empty.
 - [x] Commit.
 
- `poiIndex` → `structureIndex` in the marker/pick path
+### Task C4: `poiIndex` → `structureIndex` in the marker/pick path
 
 **Files (sites not covered by C2):** `src/services/gpu/renderers/structureMarkerRenderer.ts`, `src/@types/rendering/StructureMarkerRenderer.d.ts`, `src/services/engine/presentation/produceStructureMarkers.ts`, `src/@types/engine/CreateClickResolverInput.d.ts`; mirrored tests (`structureMarkerRenderer.*.test.ts`, `ringPick.test.ts`).
 
@@ -286,7 +288,7 @@ Note: the input `category` can narrow to `StructureCategory` now (the `famousGal
 - [x] Run the affected renderer tests + `npm run typecheck` → PASS. `rg '\bpoiIndex\b' src tests` empty.
 - [x] Commit.
 
- `FocusState.poiId` → `structureId`; widen `category`
+### Task C5: `FocusState.poiId` → `structureId`; widen `category`
 
 **Files:** `src/@types/engine/state/FocusState.d.ts`; consumers via `rg -l 'poiId' src` (expect `structureFocusSubsystem`, `commitStructureFocus`, `structureMembership`, the membership-cache key); mirrored tests.
 
@@ -297,10 +299,10 @@ readonly structureId: string;          // was poiId
 readonly category: StructureCategory;  // was 'cluster' | 'supercluster' | 'void'  (now includes group)
 ```
 
-- [ ] Update tests asserting `FocusState` shape / the membership cache key first.
-- [ ] Rename `poiId` → `structureId` everywhere; widen `category` to `StructureCategory`; check the membership-cache key string (`structureMembership.ts:12`) and any focus-framing switch handles `group` (it should, since group is already a focusable structure).
-- [ ] Run the focus/membership tests + `npm run typecheck` → PASS.
-- [ ] Commit.
+- [x] Update tests asserting `FocusState` shape / the membership cache key first.
+- [x] Rename `poiId` → `structureId` everywhere; widen `category` to `StructureCategory`; check the membership-cache key string (`structureMembership.ts:12`) and any focus-framing switch handles `group` (it should, since group is already a focusable structure).
+- [x] Run the focus/membership tests + `npm run typecheck` → PASS.
+- [x] Commit.
 
 ### Task C6: `selectedPoi` → `selectedStructure`
 
@@ -310,14 +312,14 @@ readonly category: StructureCategory;  // was 'cluster' | 'supercluster' | 'void
 - [x] Run `npm run typecheck` + `npm test -- selectionRingPass` → PASS.
 - [x] Commit.
 
- Doc-comment + remaining-token sweep
+### Task C7: Doc-comment + remaining-token sweep
 
 **Files:** every `poi`/`POI` left in comments. Enumerate: `rg -n 'poi|POI' src tests -g '*.ts' -g '*.tsx' -g '*.wesl' | rg -iv 'point|poisson|poison'`.
 
-- [ ] For each remaining hit (docblocks in `commitGalaxyFocus`, `commitStructureFocus`, `clearAll`, `selectionSubsystem`, `buildStaticAnchorStructures`, `assetWiring`, `useUrlSync`, `useSplash`, `App.tsx`, etc.) reword "POI"/"poi" to "structure" (or "deep link" where it described the URL generically). Follow `feedback_comment_style` — timeless + terse, no history notes.
-- [ ] `rg 'poi|POI' src tests -g '*.ts' -g '*.tsx' -g '*.wesl' | rg -iv 'point|poisson|poison'` → empty.
-- [ ] Run `npm run typecheck` → PASS.
-- [ ] Commit.
+- [x] For each remaining hit (docblocks in `commitGalaxyFocus`, `commitStructureFocus`, `clearAll`, `selectionSubsystem`, `buildStaticAnchorStructures`, `assetWiring`, `useUrlSync`, `useSplash`, `App.tsx`, etc.) reword "POI"/"poi" to "structure" (or "deep link" where it described the URL generically). Follow `feedback_comment_style` — timeless + terse, no history notes.
+- [x] `rg 'poi|POI' src tests -g '*.ts' -g '*.tsx' -g '*.wesl' | rg -iv 'point|poisson|poison'` → empty.
+- [x] Run `npm run typecheck` → PASS.
+- [x] Commit.
 
 ### Task C8: Rename the remaining `*.poi.test.ts` files + final verification
 
