@@ -624,7 +624,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       labelDirector: createLabelDirectorSubsystem(),
 
       // ── Cluster focus-mode subsystem ─────────────────────────────
-      // Selection-driven: `runFrame` calls `update(selectedPoi, nowMs)` to
+      // Selection-driven: `runFrame` calls `update(selectedStructure, nowMs)` to
       // drive the 400 ms member-isolation fade and threads
       // `produceFocusUniforms` into the points draw.  Eager, no GPU dep.
       structureFocus: createStructureFocusSubsystem(),

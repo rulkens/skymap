@@ -21,9 +21,9 @@
  * galaxies.  The `max(diameterKpc, 30)` floor handles the synthetic-
  * fallback source and any pre-v4-format galaxy without a measured size.
  *
- * Decoupling the formula from the renderer leaves room for a POI
- * fold-in: `else if (selectedPoi !== null) { ... }` here picks up the
- * POI's visual radius without touching the renderer or shaders.
+ * Decoupling the formula from the renderer leaves room for a structure
+ * fold-in: `else if (selectedStructure !== null) { ... }` here picks up the
+ * structure's visual radius without touching the renderer or shaders.
  *
  * ## Why one writeBuffer is fine
  *
@@ -87,10 +87,9 @@ export const selectionRingPass: Pass = {
     const ringRadiusPx = sizePx * RING_SIZE_SCALE;
 
     state.gpu.selectionRingRenderer!.setSelection({ worldPos, ringRadiusPx });
-    state.gpu.selectionRingRenderer!.render(
-      pass,
-      ctx.vp as Float32Array,
-      [ctx.canvasSize.width, ctx.canvasSize.height],
-    );
+    state.gpu.selectionRingRenderer!.render(pass, ctx.vp as Float32Array, [
+      ctx.canvasSize.width,
+      ctx.canvasSize.height,
+    ]);
   },
 };

@@ -112,7 +112,7 @@ export type EngineSubsystemHandles = {
   /**
    * Cluster focus-mode subsystem — drives the "dim non-members of the
    * selected cluster/SC/void" effect. Selection-driven: `runFrame` calls
-   * `update(selectedPoi, nowMs)` each frame and threads
+   * `update(selectedStructure, nowMs)` each frame and threads
    * `produceFocusUniforms(nowMs)` into the points draw. Constructed
    * eagerly; no GPU dep, non-null from t=0.
    */
