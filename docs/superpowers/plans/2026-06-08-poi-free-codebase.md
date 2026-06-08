@@ -241,11 +241,11 @@ export type InitialPending =
 
 **Contract:** `export function isStructure(target: FocusableTarget): target is StructureRecord`
 
-- [ ] `git mv` both files; rename the function + all call sites + the test `describe`/imports.
-- [ ] Run `npm test -- isStructure` + `npm run typecheck` → PASS. `rg '\bisPoi\b' src tests` empty.
-- [ ] Commit.
+- [x] `git mv` both files; rename the function + all call sites + the test `describe`/imports.
+- [x] Run `npm test -- isStructure` + `npm run typecheck` → PASS. `rg '\bisPoi\b' src tests` empty.
+- [x] Commit.
 
-### Task C2: `resolvePoiFromPick` → `resolveStructureFromPick`
+ `resolvePoiFromPick` → `resolveStructureFromPick`
 
 **Files:** `git mv src/services/engine/helpers/resolvePoiFromPick.ts → resolveStructureFromPick.ts`; `git mv` its test; modify `src/services/engine/helpers/pickToSelection.ts` (consumer).
 
@@ -282,11 +282,11 @@ Note: the input `category` can narrow to `StructureCategory` now (the `famousGal
 
 **Files (sites not covered by C2):** `src/services/gpu/renderers/structureMarkerRenderer.ts`, `src/@types/rendering/StructureMarkerRenderer.d.ts`, `src/services/engine/presentation/produceStructureMarkers.ts`, `src/@types/engine/CreateClickResolverInput.d.ts`; mirrored tests (`structureMarkerRenderer.*.test.ts`, `ringPick.test.ts`).
 
-- [ ] `rg -n '\bpoiIndex\b' src tests` → rename every remaining occurrence to `structureIndex` (field names, locals, comments).
-- [ ] Run the affected renderer tests + `npm run typecheck` → PASS. `rg '\bpoiIndex\b' src tests` empty.
-- [ ] Commit.
+- [x] `rg -n '\bpoiIndex\b' src tests` → rename every remaining occurrence to `structureIndex` (field names, locals, comments).
+- [x] Run the affected renderer tests + `npm run typecheck` → PASS. `rg '\bpoiIndex\b' src tests` empty.
+- [x] Commit.
 
-### Task C5: `FocusState.poiId` → `structureId`; widen `category`
+ `FocusState.poiId` → `structureId`; widen `category`
 
 **Files:** `src/@types/engine/state/FocusState.d.ts`; consumers via `rg -l 'poiId' src` (expect `structureFocusSubsystem`, `commitStructureFocus`, `structureMembership`, the membership-cache key); mirrored tests.
 
