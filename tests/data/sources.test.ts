@@ -105,6 +105,42 @@ describe('Source enum — POI codes (cluster/supercluster/void)', () => {
   });
 });
 
+describe('Registry capability flags — bearsLabel / bearsMarker', () => {
+  it('famousGalaxy row bears a label but no marker', () => {
+    const entry = SOURCE_REGISTRY[Source.FamousGalaxy];
+    expect(entry.bearsLabel).toBe(true);
+    expect(entry.bearsMarker).toBe(false);
+    expect(entry.labelLayer).toBe('galaxyNames');
+  });
+
+  it('famousGalaxy category copy is detail "Famous Galaxy" / short "Galaxy" / plural "Famous Galaxies"', () => {
+    const entry = SOURCE_REGISTRY[Source.FamousGalaxy];
+    expect(entry.detailLabel).toBe('Famous Galaxy');
+    expect(entry.shortLabel).toBe('Galaxy');
+    expect(entry.plural).toBe('Famous Galaxies');
+  });
+
+  it('structure rows bear both a label and a marker', () => {
+    // The four structure source ids — verified correct in STRUCTURE_CATEGORIES test above.
+    const structureIds = [Source.Cluster, Source.Supercluster, Source.Void, Source.Group] as const;
+    for (const id of structureIds) {
+      const entry = SOURCE_REGISTRY[id];
+      expect(entry.bearsLabel).toBe(true);
+      expect(entry.bearsMarker).toBe(true);
+      expect(entry.labelLayer).toBe('structure');
+    }
+  });
+
+  it('bulk survey rows bear neither a label nor a marker', () => {
+    const surveyIds = [Source.SDSS, Source.Glade] as const;
+    for (const id of surveyIds) {
+      const entry = SOURCE_REGISTRY[id];
+      expect(entry.bearsLabel).toBe(false);
+      expect(entry.bearsMarker).toBe(false);
+    }
+  });
+});
+
 describe('Famous-galaxy hi-res LOD constants', () => {
   it('HI_RES_LAYER_SIDE_BY_TIER pegs small to 512 and medium/large to 1024', () => {
     // Mobile (small) halves the layer dim to keep the GPU footprint at
