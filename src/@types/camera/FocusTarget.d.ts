@@ -20,10 +20,15 @@
  *   sdss-<objID>     — SDSS row whose objID is the canonical handle
  *                      (19-digit bigint, exceeds JS Number safe range)
  *   pos@<ra>,<dec>   — fallback for 2MRS/GLADE rows without a PGC
+ *   cluster-virgo-m87  — structure record id: `${category}-${seed.id}`
+ *                        (category from STRUCTURE_CATEGORIES; stable
+ *                        across rebuilds because the seed id is curated)
  */
 
 export type FocusTarget =
   | { kind: 'famous'; id: string }
   | { kind: 'pgc'; pgc: bigint }
   | { kind: 'sdss'; objID: bigint }
-  | { kind: 'pos'; raDeg: number; decDeg: number };
+  | { kind: 'pos'; raDeg: number; decDeg: number }
+  /** A galaxy cluster, supercluster, void, or group anchor from the structure store. */
+  | { kind: 'structure'; id: string };
