@@ -47,11 +47,11 @@ Per-row values (see spec §A1/§A2 table):
 - `cluster/supercluster/void/group`: `bearsLabel: true, bearsMarker: true, labelLayer: 'structure'`, with `detailLabel`/`shortLabel`/`plural` copied verbatim from the old `POI_CATEGORY_INFO` rows (`src/data/poiCategoryInfo.ts:24-50`).
 - `sdss/glade/2mrs/milliquas/synthetic`: `bearsLabel: false, bearsMarker: false` (omit `labelLayer`/`detailLabel`/`shortLabel`/`plural`).
 
-- [ ] Add tests: `famousGalaxy row bears a label but no marker` (assert `bearsLabel` true, `bearsMarker` false, `labelLayer === 'galaxyNames'`); `famousGalaxy category copy is detail 'Famous Galaxy' / short 'Galaxy' / plural 'Famous Galaxies'`; `structure rows bear both a label and a marker` (loop cluster/supercluster/void/group); `bulk survey rows bear neither` (assert sdss/glade false/false).
-- [ ] Run: `npm test -- sources` → new tests FAIL (fields absent).
-- [ ] Add the five fields to `SourceEntryBase`; populate every row in `sources.ts`.
-- [ ] Run: `npm test -- sources` and `npm run typecheck` → PASS.
-- [ ] Commit (`git add src/@types/data/SourceEntryBase.d.ts src/data/sources.ts tests/data/sources.test.ts`).
+- [x] Add tests: `famousGalaxy row bears a label but no marker` (assert `bearsLabel` true, `bearsMarker` false, `labelLayer === 'galaxyNames'`); `famousGalaxy category copy is detail 'Famous Galaxy' / short 'Galaxy' / plural 'Famous Galaxies'`; `structure rows bear both a label and a marker` (loop cluster/supercluster/void/group); `bulk survey rows bear neither` (assert sdss/glade false/false).
+- [x] Run: `npm test -- sources` → new tests FAIL (fields absent).
+- [x] Add the five fields to `SourceEntryBase`; populate every row in `sources.ts`.
+- [x] Run: `npm test -- sources` and `npm run typecheck` → PASS.
+- [x] Commit (`git add src/@types/data/SourceEntryBase.d.ts src/data/sources.ts tests/data/sources.test.ts`).
 
 ### Task A2: Derive `LABEL_CATEGORIES` + `LabelCategory` from the registry
 
@@ -70,13 +70,13 @@ export const LABEL_CATEGORIES = /* SOURCE_ENTRIES filtered by bearsLabel, mapped
 export type LabelCategory = (typeof LABEL_CATEGORIES)[number];
 ```
 
-- [ ] Add tests in `tests/data/labelCategories.test.ts`: `LABEL_CATEGORIES contains famousGalaxy and the four structure categories` (assert sorted equals `['cluster','famousGalaxy','group','supercluster','void']`); `LABEL_CATEGORIES is a superset of STRUCTURE_CATEGORIES`; `LABEL_CATEGORIES excludes bulk surveys` (no `'sdss'`/`'glade'`).
-- [ ] Run: `npm test -- labelCategories` → FAIL (module absent).
-- [ ] Implement `labelCategories.ts` (filter `SOURCE_ENTRIES` by `bearsLabel`) and the `LabelCategory` type alias.
-- [ ] Run: `npm test -- labelCategories` + `npm run typecheck` → PASS.
-- [ ] Commit.
+- [x] Add tests in `tests/data/labelCategories.test.ts`: `LABEL_CATEGORIES contains famousGalaxy and the four structure categories` (assert sorted equals `['cluster','famousGalaxy','group','supercluster','void']`); `LABEL_CATEGORIES is a superset of STRUCTURE_CATEGORIES`; `LABEL_CATEGORIES excludes bulk surveys` (no `'sdss'`/`'glade'`).
+- [x] Run: `npm test -- labelCategories` → FAIL (module absent).
+- [x] Implement `labelCategories.ts` (filter `SOURCE_ENTRIES` by `bearsLabel`) and the `LabelCategory` type alias.
+- [x] Run: `npm test -- labelCategories` + `npm run typecheck` → PASS.
+- [x] Commit.
 
-### Task A3: Fold the display table into a registry-derived accessor
+ Fold the display table into a registry-derived accessor
 
 **Files:**
 
@@ -117,13 +117,13 @@ export type LabelStyleOverrideTarget = 'youAreHere' | LabelCategory;
 
 Default-visibility literals (`engine.ts:451-465`, `useEngineSettings.ts:174-188`) derive from `LABEL_CATEGORIES` / `STRUCTURE_CATEGORIES` instead of hand-listed `{ famousGalaxy: true, cluster: true, ... }`.
 
-- [ ] Update/add fixture + type tests first where assertions exist (`tests/@types/engineSettingsState.labelCategoryVisibility.test.ts`): assert `markerCategoryVisibility` has no `famousGalaxy` key and `labelCategoryVisibility` does.
-- [ ] Run → FAIL.
-- [ ] Replace `PoiCategory` with `LabelCategory` import-by-import; narrow the marker record key type to `StructureCategory`; derive the default literals from the category sets; delete `PoiCategory.d.ts`.
-- [ ] Run `npm run typecheck` + the touched tests → PASS. `rg 'PoiCategory' src tests` empty.
-- [ ] Commit.
+- [x] Update/add fixture + type tests first where assertions exist (`tests/@types/engineSettingsState.labelCategoryVisibility.test.ts`): assert `markerCategoryVisibility` has no `famousGalaxy` key and `labelCategoryVisibility` does.
+- [x] Run → FAIL.
+- [x] Replace `PoiCategory` with `LabelCategory` import-by-import; narrow the marker record key type to `StructureCategory`; derive the default literals from the category sets; delete `PoiCategory.d.ts`.
+- [x] Run `npm run typecheck` + the touched tests → PASS. `rg 'PoiCategory' src tests` empty.
+- [x] Commit.
 
-### Task A5: De-special-case the visibility setters
+ De-special-case the visibility setters
 
 **Files:**
 
