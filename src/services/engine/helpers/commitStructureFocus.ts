@@ -4,7 +4,7 @@
  *
  * The setters carry no cam dependency, so they land even when `state.cam`
  * is null (pre-bootstrap / post-destroy) — a deep-link drain resolving
- * `#poi=…` before the camera is live still establishes state. Only the
+ * `#focus=…` before the camera is live still establishes state. Only the
  * tween is cam-gated, and `tweenToStructure` absorbs that internally. No
  * `cb`: the selection subsystem owns the callbacks both setters fire.
  */

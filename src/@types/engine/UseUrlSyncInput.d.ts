@@ -7,10 +7,9 @@ import type { FamousMetaEntry } from '../loading/FamousMetaEntry';
 import type { StructureRecord } from './data/StructureRecord';
 
 /**
- * Combined input for `useUrlSync` — both galaxy-side and POI-side state
+ * Combined input for `useUrlSync` — both galaxy-side and structure-side state
  * the hook needs to keep `location.hash` in lock-step with engine
- * selection.  Merge of the two legacy inputs (`UseFocusUrlInput` +
- * `UsePoiUrlSyncInput`) into one bag.
+ * selection.
  *
  * The reactive fields drive their respective drain effects' re-runs
  * as data lands; `engineHandleRef` is a mutable ref because the engine

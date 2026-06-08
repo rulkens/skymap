@@ -10,7 +10,7 @@
  *
  * The contract under test: a category toggle drives the SAME per-category fade
  * handle the producers read (`markerLayer{category}` /
- * `labelLayer{poi,category}` / `labelLayer{galaxyNames}`), so on/off is a smooth
+ * `labelLayer{structure,category}` / `labelLayer{galaxyNames}`), so on/off is a smooth
  * fade instead of a pop. famousGalaxy has no ring marker, so a marker toggle for
  * it fires NO markerLayer fade — but still mirrors settings + requests a render.
  */
@@ -114,13 +114,13 @@ describe('setCategoryMarkerVisible — fade orchestration', () => {
 // ── Label setter ───────────────────────────────────────────────────────────
 
 describe('setCategoryLabelVisible — fade orchestration', () => {
-  it('toggle OFF on a structure category fires fadeTo(labelLayer{poi,cluster}, 0, FADE_OUT)', () => {
+  it('toggle OFF on a structure category fires fadeTo(labelLayer{structure,cluster}, 0, FADE_OUT)', () => {
     const fx = makeFixture();
     setCategoryLabelVisibleForTest(fx.state as never, fx.cb as never, 'cluster', false);
 
     expect(fx.fadeCalls).toEqual([
       {
-        handle: { kind: 'labelLayer', layer: 'poi', category: 'cluster' },
+        handle: { kind: 'labelLayer', layer: 'structure', category: 'cluster' },
         target: 0,
         duration: FADE_OUT_DURATION_MS,
       },

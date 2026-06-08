@@ -52,8 +52,8 @@ describe('recessionTargetFor', () => {
     expect(recessionTargetFor({ kind: 'volumesMaster' })).toBe(VOLUME_RECESSION);
   });
 
-  it('tags poi and galaxyNames labels but not youAreHere or scaleBar', () => {
-    expect(recessionTargetFor({ kind: 'labelLayer', layer: 'poi' })).toBe(LABEL_RECESSION);
+  it('tags structure and galaxyNames labels but not youAreHere or scaleBar', () => {
+    expect(recessionTargetFor({ kind: 'labelLayer', layer: 'structure' })).toBe(LABEL_RECESSION);
     expect(recessionTargetFor({ kind: 'labelLayer', layer: 'galaxyNames' })).toBe(LABEL_RECESSION);
     expect(recessionTargetFor({ kind: 'labelLayer', layer: 'youAreHere' })).toBeUndefined();
     expect(recessionTargetFor({ kind: 'labelLayer', layer: 'scaleBar' })).toBeUndefined();

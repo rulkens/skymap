@@ -62,26 +62,26 @@ export function createStructureFocusSubsystem(
   // The id we are currently fading toward; null = fading out / at rest.
   let focusedId: string | null = null;
 
-  function update(poi: StructureRecord | null, nowMs: number): void {
+  function update(structure: StructureRecord | null, nowMs: number): void {
     // Narrow to a focus-eligible extended-structure POI. famousGalaxy has
     // no radius, so it (and null) drives a fade-out. Groups share the
     // same fade band mechanic as clusters — R0 > Rh gives a real band.
     let next: ActiveFocus | null = null;
     if (
-      poi !== null &&
-      (poi.category === 'cluster' ||
-        poi.category === 'supercluster' ||
-        poi.category === 'void' ||
-        poi.category === 'group')
+      structure !== null &&
+      (structure.category === 'cluster' ||
+        structure.category === 'supercluster' ||
+        structure.category === 'void' ||
+        structure.category === 'group')
     ) {
       // Pass the structure's two real radii; the shader ramps the fade
       // across the [physical, apparent] band (and supplies a soft band of
       // its own when the two are equal — SC/void have no wider extent).
       next = {
-        id: poi.id,
-        center: [poi.worldPos[0], poi.worldPos[1], poi.worldPos[2]],
-        apparentRadiusMpc: poi.apparentRadiusMpc ?? poi.physicalRadiusMpc,
-        physicalRadiusMpc: poi.physicalRadiusMpc,
+        id: structure.id,
+        center: [structure.worldPos[0], structure.worldPos[1], structure.worldPos[2]],
+        apparentRadiusMpc: structure.apparentRadiusMpc ?? structure.physicalRadiusMpc,
+        physicalRadiusMpc: structure.physicalRadiusMpc,
       };
     }
 

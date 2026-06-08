@@ -53,7 +53,7 @@
  *      "not yet" and the effect re-fires on data dep changes.
  *
  *   4. Structure drain — resolves `pendingStructureId` against the
- *      `pois` table and dispatches via `camera.focusOn(poi)` (the
+ *      `pois` table and dispatches via `camera.focusOn(structure)` (the
  *      unified method, which accepts both GalaxyInfo and
  *      StructureRecord).  Clears pending only on successful resolve;
  *      missing-id leaves pending set so a future `pois` change (e.g.
@@ -288,9 +288,9 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
     if (pois.length === 0) return;
     const handle = engineHandleRef.current;
     if (!handle) return;
-    const poi = pois.find((p) => p.id === pendingStructureId);
-    if (!poi) return; // Leave pending set — re-fires when `pois` grows.
-    handle.camera.focusOn(poi); // The unified focusOn.
+    const structure = pois.find((p) => p.id === pendingStructureId);
+    if (!structure) return; // Leave pending set — re-fires when `pois` grows.
+    handle.camera.focusOn(structure); // The unified focusOn.
     setPendingStructureId(null);
   }, [pendingStructureId, ready, pois, engineHandleRef]);
 

@@ -44,8 +44,7 @@ const DEEP_LINK_QUERY_KEYS = new Set(['tour']);
 export function hasDeepLink({ hash, search }: DeepLinkInput): boolean {
   // Hash: look for the #focus= prefix anywhere in the body.
   // (The hash always starts with `#` if present, so a prefix check is safe.)
-  // Both galaxies and structures share this prefix — structures no longer
-  // use a separate #poi= prefix.
+  // Both galaxies and structures share this prefix.
   if (hash.includes('#focus=') || hash.startsWith('#focus=')) return true;
 
   // Search: parse and look for known deep-link keys.  We strip a leading

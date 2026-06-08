@@ -469,7 +469,7 @@ export function buildGalaxyInfo(
     //
     //   1. Famous → curated `commonName` then `names[0]`.  Routed
     //      through the shared `famousDisplayName` helper so the
-    //      InfoCard headline and the POI label can't drift.
+    //      InfoCard headline and the structure label can't drift.
     //   2. Milliquas → "<PARENT> J<RA><Dec>" reconstructed from the
     //      per-record `parentSurveyByte` slot in the .bin (e.g.
     //      "SDSS J012345.67+891234.5", "2MASX J…").  When the byte is

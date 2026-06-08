@@ -270,7 +270,7 @@ function setCategoryLabelVisible(
   // Routing comes from the registry row's `labelLayer` field, not a literal
   // category compare: 'galaxyNames' rows (the curated atlas) drive the galaxy
   // store + shared galaxyNames fade layer; 'structure' rows fade their
-  // per-category handle on the shared `poi` label layer.
+  // per-category handle on the shared `structure` label layer.
   const durationMs = visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS;
   if (LABEL_LAYER_BY_CATEGORY[category] === 'galaxyNames') {
     state.data.galaxies.setFamousLabelsVisible(visible);
@@ -283,9 +283,9 @@ function setCategoryLabelVisible(
     );
   } else if (isStructureCategory(category)) {
     // The 'structure' rows narrow to StructureCategory, which is exactly what
-    // the labelLayer/poi handle's `category` field wants.
+    // the labelLayer/structure handle's `category` field wants.
     void state.subsystems.fades.fadeTo(
-      { kind: 'labelLayer', layer: 'poi', category },
+      { kind: 'labelLayer', layer: 'structure', category },
       visible ? 1 : 0,
       durationMs,
     );

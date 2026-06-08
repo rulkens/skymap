@@ -18,8 +18,8 @@
  * The three overlay handles come first (Milky Way at its settings gate,
  * procedural + textured disks unconditionally at 1), then the volumes-master
  * gate, then the category-less label-layer handles (youAreHere / galaxyNames /
- * scaleBar — poi is per-category only), then the per-category marker +
- * poi-label handles (one pair per structure category).  The order within each
+ * scaleBar — structure is per-category only), then the per-category marker +
+ * structure-label handles (one pair per structure category).  The order within each
  * group matches the order in the source catalog of concerns so diffs are easy
  * to audit.
  *
@@ -29,14 +29,14 @@
  * non-empty emit.  galaxyNames starts at 1 because the famous-galaxy labels
  * reuse that handle and consume its opacity directly — a 0 would render them
  * invisible.  scaleBar is React-side and tour-addressable but never auto-faded
- * by the engine, so it starts at 1.  There is no category-less poi handle:
- * structure labels use the per-category poi handles below, and
+ * by the engine, so it starts at 1.  There is no category-less structure handle:
+ * structure labels use the per-category structure handles below, and
  * `produceStructureLabels` fires each category's load-in on first emit.
  *
- * ### Per-category marker + poi-label handles
+ * ### Per-category marker + structure-label handles
  *
  * Every structure category (cluster / supercluster / void / group) gets its
- * own `markerLayer{category}` and `labelLayer{poi, category}` controller so a
+ * own `markerLayer{category}` and `labelLayer{structure, category}` controller so a
  * category's rings/labels can recede and fade independently.  Each is
  * registered at its persisted settings visibility (markerCategoryVisibility /
  * labelCategoryVisibility) so frame 1 honours what the user last turned off
@@ -81,15 +81,15 @@ export function registerOverlayFades(state: EngineState): void {
   // youAreHereSubsystem).  galaxyNames starts at 1 — famous-galaxy labels
   // reuse this handle and consume its opacity directly, so a 0 would hide
   // them.  scaleBar is React-side — registered at 1 for tour addressability
-  // but never auto-faded by the engine.  poi is per-category only (registered
+  // but never auto-faded by the engine.  structure is per-category only (registered
   // below); produceStructureLabels fires each category's load-in.
   state.subsystems.fades.register({ kind: 'labelLayer', layer: 'youAreHere' }, 0);
   state.subsystems.fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
   state.subsystems.fades.register({ kind: 'labelLayer', layer: 'scaleBar' }, 1);
 
-  // ── Per-category marker + poi-label handles ──────────────────────────
+  // ── Per-category marker + structure-label handles ──────────────────────────
   //
-  // One markerLayer + one poi labelLayer controller per structure category,
+  // One markerLayer + one structure labelLayer controller per structure category,
   // each seeded from the session's persisted per-category visibility so a
   // category the user turned off sits at 0 from frame 1 (no flash before a
   // producer's fadeTo).  Iterating STRUCTURE_CATEGORIES keeps this the single
@@ -100,7 +100,7 @@ export function registerOverlayFades(state: EngineState): void {
       state.settings.markerCategoryVisibility[category] ? 1 : 0,
     );
     state.subsystems.fades.register(
-      { kind: 'labelLayer', layer: 'poi', category },
+      { kind: 'labelLayer', layer: 'structure', category },
       state.settings.labelCategoryVisibility[category] ? 1 : 0,
     );
   }

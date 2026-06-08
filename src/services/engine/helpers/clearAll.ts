@@ -5,7 +5,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
  * method, wired to the deliberate "dismiss" gestures: the InfoCard ×
  * button and Esc.  Drops BOTH the selection slot and the focus slot,
  * so dismissing also collapses the cluster-focus member-isolation fade
- * (and clears the `#focus=` / `#poi=` URL hash via `onFocusChange`).
+ * (and clears the `#focus=` URL hash via `onFocusChange`).
  *
  * Each setter owns its own callback fan-out: `setSelected(null)` fires
  * `onSelectChange(null)`, `setFocused(null)` fires `onFocusChange(null)`.

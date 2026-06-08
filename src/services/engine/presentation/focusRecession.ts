@@ -41,7 +41,7 @@
  * A function beats a flat string-keyed table here because some kinds
  * recede across *all* their discriminator values (`markerLayer` for every
  * category) while others recede for *some* (`labelLayer` for
- * `poi`/`galaxyNames` only). The switch says exactly that without
+ * `structure`/`galaxyNames` only). The switch says exactly that without
  * repetition.
  */
 
@@ -79,7 +79,7 @@ export function recessionTargetFor(h: FadeHandle): number | undefined {
       // Structure labels (any category) and famous-galaxy labels recede;
       // famous labels reuse the 'galaxyNames' handle. The YOU-ARE-HERE
       // pin ('youAreHere') and scale bar ('scaleBar') do not.
-      return h.layer === 'poi' || h.layer === 'galaxyNames' ? LABEL_RECESSION : undefined;
+      return h.layer === 'structure' || h.layer === 'galaxyNames' ? LABEL_RECESSION : undefined;
     // Non-recessing kinds — explicit so a new union member can't silently
     // skip declaring its stance.
     case 'survey':

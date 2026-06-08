@@ -15,7 +15,7 @@
  *                Each volume carries its own presentation defaults
  *                (palette, contrast, exposure, …).
  *
- * Only `'survey'` and `'poi'` codes are persisted to disk / packed into
+ * Only `'survey'` and `'structure'` codes are persisted to disk / packed into
  * GPU buffers; `'filament'` and `'volume'` codes exist solely so every
  * data source has one place to look. The visibility-bitmask helpers in
  * `utils/sourceMask` operate on survey codes only.

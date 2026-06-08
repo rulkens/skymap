@@ -11,7 +11,7 @@
  *
  * Each label's final `fadeAlpha` is the distance fade multiplied by two
  * composed strands (see `focusRecession.ts`): the per-category toggle's
- * opacity (`opacityOf({labelLayer, poi, category})`, read from the
+ * opacity (`opacityOf({labelLayer, structure, category})`, read from the
  * FadeRegistry) and the focus recession factor. A category whose opacity is
  * exactly 0 is skipped wholesale — the only legitimate all-or-nothing skip.
  * The FOCUSED structure's own label is exempt from recession (factor 1): a
@@ -22,8 +22,7 @@
  * ### This producer owns the per-category load-in fade
  *
  * The first time a category emits a (visible) label, the producer fires its
- * `fadeTo(handle, 1)` once. The director used to fire a single category-less
- * poi load-in; that moved here so each category ramps in independently,
+ * `fadeTo(handle, 1)` once. Each category fires its load-in independently,
  * mirroring how the famous-galaxy layer fires its own load-in on first emit.
  *
  * ### No declutter here — the director owns it
@@ -98,7 +97,7 @@ export function produceStructureLabels(
     // registry. 0 is the all-or-nothing skip — a disabled category emits no
     // labels and never fires its load-in.
     const catOpacity = fades.opacityOf(
-      { kind: 'labelLayer', layer: 'poi', category: p.category },
+      { kind: 'labelLayer', layer: 'structure', category: p.category },
       now,
     );
     if (catOpacity === 0) continue;
@@ -171,7 +170,7 @@ export function produceStructureLabels(
       p.id === focusedStructureId
         ? 1
         : focusRecession(
-            { kind: 'labelLayer', layer: 'poi', category: p.category },
+            { kind: 'labelLayer', layer: 'structure', category: p.category },
             ctx.focusBlend,
           );
     fadeAlpha *= catOpacity * recession;
@@ -182,7 +181,7 @@ export function produceStructureLabels(
     if (!loadInFired.has(p.category)) {
       loadInFired.add(p.category);
       void fades.fadeTo(
-        { kind: 'labelLayer', layer: 'poi', category: p.category },
+        { kind: 'labelLayer', layer: 'structure', category: p.category },
         1,
         FADE_IN_DURATION_MS,
       );

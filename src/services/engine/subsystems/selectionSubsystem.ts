@@ -138,7 +138,7 @@ export function createSelectionSubsystem(input: CreateSelectionSubsystemInput): 
    * Update the focus slot and fan out `cb.camera.onFocusChange`.
    * Symmetric with `setSelected`: the cluster-focus fade reads
    * `focused()` in `runFrame`, while React mirrors the same target
-   * into the `#focus=` / `#poi=` URL hash via the callback.  One
+   * into the `#focus=` URL hash via the callback.  One
    * setter for both consumers means they can't drift.  `prebuiltInfo`
    * short-circuits the cloud lookup for the `selectByAlias` race —
    * same escape hatch as `setSelected`; ignored for structure focuses.

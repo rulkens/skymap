@@ -15,7 +15,7 @@
  *
  * ### Why a single slot, not a per-category record?
  *
- * The workflow is "select category, tune, bake into POI_STYLES, move
+ * The workflow is "select category, tune, bake into the structure marker styles, move
  * to next category".  A per-category record would invite the user to
  * leave overrides stale across category switches; the single slot
  * makes the active target unambiguous.
