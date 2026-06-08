@@ -9,5 +9,5 @@ import type { FocusTarget } from '../camera/FocusTarget';
  */
 export type UrlSyncReturn = {
   pendingTarget: FocusTarget | null;
-  pendingPoiId: string | null;
+  pendingStructureId: string | null;
 };

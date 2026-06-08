@@ -6,8 +6,8 @@
  * directly — `computeDesiredHash` and `initialPendingFromHash` — and rely
  * on manual smoke testing for the effect plumbing.
  *
- * `focused` is a FocusableTarget union (galaxy | POI | null); the body
- * shape is decided by isPoi() inside the helper.
+ * `focused` is a FocusableTarget union (galaxy | structure | null); the
+ * body shape is decided by isPoi() inside the helper.
  */
 import { describe, it, expect } from 'vitest';
 import { computeDesiredHash, initialPendingFromHash } from '../../src/hooks/useUrlSync';
@@ -22,7 +22,7 @@ function makeGalaxy(): GalaxyInfo {
   } as unknown as GalaxyInfo;
 }
 
-function makePoi(id: string): StructureRecord {
+function makeStructure(id: string): StructureRecord {
   return {
     id,
     name: id,
@@ -46,19 +46,19 @@ describe('computeDesiredHash (unified)', () => {
     expect(out.matches).toBe(false);
   });
 
-  it('returns poi=<id> when focused is a POI', () => {
+  it('writes focus=<id> when focused is a structure', () => {
     const out = computeDesiredHash({
-      focused: makePoi('virgo-cluster'),
+      focused: makeStructure('cluster-virgo-m87'),
       currentHash: '',
     });
-    expect(out.desiredHashBody).toBe('poi=virgo-cluster');
+    expect(out.desiredHashBody).toBe('focus=cluster-virgo-m87');
     expect(out.matches).toBe(false);
   });
 
-  it('short-circuits when currentHash already matches a poi body', () => {
+  it('short-circuits when currentHash already matches a structure body', () => {
     const out = computeDesiredHash({
-      focused: makePoi('virgo-cluster'),
-      currentHash: '#poi=virgo-cluster',
+      focused: makeStructure('cluster-virgo-m87'),
+      currentHash: '#focus=cluster-virgo-m87',
     });
     expect(out.matches).toBe(true);
   });
@@ -78,10 +78,10 @@ describe('initialPendingFromHash', () => {
     if (out.kind === 'galaxy') expect(out.target).not.toBeNull();
   });
 
-  it('parses #poi=… into a poi pending id', () => {
-    const out = initialPendingFromHash('#poi=virgo-cluster');
-    expect(out.kind).toBe('poi');
-    if (out.kind === 'poi') expect(out.poiId).toBe('virgo-cluster');
+  it('routes #focus=cluster-virgo-m87 to kind structure with the id', () => {
+    const out = initialPendingFromHash('#focus=cluster-virgo-m87');
+    expect(out.kind).toBe('structure');
+    if (out.kind === 'structure') expect(out.id).toBe('cluster-virgo-m87');
   });
 
   it('returns kind=null for an empty hash', () => {
