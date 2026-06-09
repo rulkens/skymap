@@ -62,7 +62,7 @@ tests/                Vitest suite — mirrors src/ tree
 - **Dev server stays running**: `npm run dev` is left running in the background for HMR visual checks. Don't kill it. To verify a UI change, ask the user to look (or describe what they should see).
 - **TDD via plans**: substantial features get a plan in `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` with bite-sized TDD tasks. Plans are executed via the `subagent-driven-development` workflow (fresh subagent per task + spec + quality reviews). Plans follow [`docs/superpowers/conventions/plan-style.md`](docs/superpowers/conventions/plan-style.md) — **contract code yes, implementation code no** (overrides the upstream `writing-plans` skill's "complete code in every step" default).
 - **Plans coexist**: multiple in-flight plans is normal. Check the file list before starting new work to avoid stomping on something else.
-- **Simplicity over ease**: judge a design by the artifact (what runs and gets changed), not the keystrokes; un-braid concerns that could vary independently. Principles + the known-entanglements backlog live in [`docs/superpowers/conventions/simplicity.md`](docs/superpowers/conventions/simplicity.md) (Rich Hickey's *Simple Made Easy*, applied to skymap). Run the `entanglement-radar` skill to review a diff/module for complecting.
+- **Simplicity over ease**: judge a design by the artifact (what runs and gets changed), not the keystrokes; un-braid concerns that could vary independently. Principles + the known-entanglements backlog live in [`docs/superpowers/conventions/simplicity.md`](docs/superpowers/conventions/simplicity.md) (Rich Hickey's _Simple Made Easy_, applied to skymap). Run the `entanglement-radar` skill to review a diff/module — **and at design time over a spec/plan**: a section that exists to teach handling of an "asymmetry"/"subtlety"/"special-case" is a STOP-and-un-braid signal (classify essential vs accidental), not a note to write more carefully.
 
 ## Commands
 
@@ -109,11 +109,13 @@ For galaxies inside `CUTOFF_MPC = 30` the build pipeline replaces the cz-derived
 Coverage: ~2,030 of CF4's 2,159 local-volume PGCs are reachable via the direct GLADE-by-PGC path; 2MRS rows pick up CF4 distances via the existing `2MASX → PGC` patching step in `buildAllBins`. Famous-galaxy and SDSS rows without PGCs fall through to the cz path.
 
 Re-run order when CF4 raw data changes:
+
 1. `npm run fetch-cf4` — refreshes `data/raw/cf4/table2.dat`.
 2. `npm run build-tiers` — re-bakes `2mrs.bin` and `glade-*.bin` with the new distances.
 3. `npm run sync-r2-secure` — from the main worktree only (see project memory `project_worktree_data_isolation`).
 
 Re-run order when cluster/supercluster data changes:
+
 1. `npm run fetch-structures` — downloads `data/raw/{mcxc,mscc}/{*.dat,ReadMe}` from CDS VizieR and verifies against the committed `.sha256` sidecars. Same pattern as `npm run fetch-cf4`.
 2. `npm run build-structures` — parses the raw tables + the featured seed, emits `public/data/structures.ccat` + `public/data/structures_meta.json`. Run after `npm run build-tiers`.
 3. `npm run sync-r2-secure` — uploads the new artefacts to R2.
@@ -212,7 +214,7 @@ A new fetcher script that mirrors `tools/fetch/fetchHyperLeda.ts` or `tools/fetc
 - **CORS on DSS thumbnails**: ESO's DSS endpoint blocks browsers. Use CDS hips2fits (`https://alasky.cds.unistra.fr/hips-image-services/hips2fits`).
 - **Retry storms on failed thumbnails**: the engine has BOTH a `bitmapReady` and `bitmapFailed` Set — the per-frame gate must check both. The image queue's `enqueue` is idempotent for in-flight keys.
 - **`<details>` element collapsing on hover**: keep the InfoCard's outer wrapper element identical across renders so React doesn't remount and reset the `open` state.
-- **iOS WebGPU is stricter than Chrome's Tint — a bad shader freezes the *whole* canvas**: `texture_1d` sampling (`textureSampleLevel` has no 1D overload) is one example WebKit rejects but Chrome accepts. Because all HDR passes share one command encoder, an invalid pipeline makes `encoder.finish()` produce an invalid command buffer and `queue.submit()` silently drops the *entire* frame — the loop ticks and the camera moves, but nothing ever presents. Symptom: navigation/toggles do nothing on iOS while the React UI updates fine, no thrown errors. Diagnosis: `createShaderModuleWithDevLog` (in `shaderCompileLogger.ts`) prints the real `getCompilationInfo()` error + offending line. Store 1D LUTs as N×1 `texture_2d`.
+- **iOS WebGPU is stricter than Chrome's Tint — a bad shader freezes the _whole_ canvas**: `texture_1d` sampling (`textureSampleLevel` has no 1D overload) is one example WebKit rejects but Chrome accepts. Because all HDR passes share one command encoder, an invalid pipeline makes `encoder.finish()` produce an invalid command buffer and `queue.submit()` silently drops the _entire_ frame — the loop ticks and the camera moves, but nothing ever presents. Symptom: navigation/toggles do nothing on iOS while the React UI updates fine, no thrown errors. Diagnosis: `createShaderModuleWithDevLog` (in `shaderCompileLogger.ts`) prints the real `getCompilationInfo()` error + offending line. Store 1D LUTs as N×1 `texture_2d`.
 
 ## Memory
 
