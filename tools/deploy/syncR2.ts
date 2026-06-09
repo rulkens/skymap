@@ -44,7 +44,9 @@
  *
  * The ALLOW filter mirrors the runtime fetch surface: tier-suffixed
  * SDSS/GLADE bins, the unsuffixed 2mrs.bin / famous.bin / filaments.bin,
- * the famous JSON sidecar, and the pgc_aliases.json palette-search sidecar.
+ * and the famous JSON sidecar.  (The pgc_aliases.json palette-search map is
+ * also runtime-fetched but ships via EXTRA_FILES — it's a committed data/
+ * source artefact, not a public/data build output.)
  * The legacy un-tiered glade.bin / sdss.bin
  * are deliberately skipped — they're pre-tier-system build artefacts only
  * used by the offline DisPerSE pipeline, never fetched from the browser.
@@ -119,11 +121,9 @@ export const ALLOW = (name: string): boolean =>
   // cloudLoader.filamentFilenameForTier().
   name === 'filaments-small.bin' ||
   name === 'famous_meta.json' ||
-  // PGC→names sidecar for the Cmd+K palette's alias search. Lazily
-  // fetched via dataUrl('pgc_aliases.json') on first palette open, so a
-  // missing R2 object only surfaces as a console error when the user
-  // opens search — not at boot. Built by `npm run build-pgc-aliases`.
-  name === 'pgc_aliases.json' ||
+  // NB: pgc_aliases.json is NOT here — it's a committed source artefact in
+  // data/ (an expensive HyperLEDA pull, not a local build output), so it
+  // ships via EXTRA_FILES below, same as the data/raw/ enrichment files.
   // Valade 2024 CF-4 HAMLET 256³ DM density cube, written as SCFD by
   // `npm run build-cf4-density` from the maintainer-produced .npy.
   // See data/raw/cf4/README.md for the maintainer + contributor paths.
@@ -198,6 +198,16 @@ const EXTRA_FILES: ExtraFile[] = [
     // from the host root.  Source file is checked in at tools/deploy/r2-static/.
     localPath: 'tools/deploy/r2-static/robots.txt',
     r2Key: 'robots.txt',
+  },
+  {
+    // PGC→names map for the Cmd+K palette's alias search.  A committed source
+    // artefact in data/ (an expensive HyperLEDA designations pull — see
+    // tools/fetch/buildPgcAliases.ts), NOT a public/data build output, so it
+    // rides EXTRA_FILES like the data/raw/ enrichment files rather than the
+    // ALLOW scan.  The r2Key matches dataUrl('pgc_aliases.json') ===
+    // <base>/data/pgc_aliases.json, lazily fetched on first palette open.
+    localPath: 'data/pgc_aliases.json',
+    r2Key: 'data/pgc_aliases.json',
   },
   {
     // HyperLEDA position-angle + isophotal-diameter cache.

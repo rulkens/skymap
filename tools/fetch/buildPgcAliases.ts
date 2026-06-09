@@ -225,7 +225,13 @@ export function parseDesignationsCsv(text: string): DesignationRow[] {
 
 const CHUNK_WIDTH = 100_000;
 const RAW_DIR = rawDataPath('hyperleda.designations-dir');
-const OUT_PATH = resolve('public/data/pgc_aliases.json');
+// Committed source artefact, not a build output: `pgc_aliases.json` is an
+// expensive HyperLEDA pull (the partial designation cache + a slow chunked
+// fetch — see the header), so it lives in `data/` alongside the famous seed
+// and ships to R2 via syncR2's EXTRA_FILES, NOT the gitignored public/data/
+// output dir.  `npm run predev` stages a copy into public/data/ for the dev
+// server, where the browser fetches it at the relative /data/ path.
+const OUT_PATH = resolve('data/pgc_aliases.json');
 
 function chunkCachePath(chunkStart: number): string {
   return `${RAW_DIR}/hyperleda_designations_chunk_${chunkStart}.csv`;
