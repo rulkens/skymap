@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "smc",
+  "crop": {
+    "x": -266.3465112330225,
+    "y": 205.79603053508936,
+    "width": 3306.50640988998,
+    "height": 2807.2990522110717,
+    "rotationDeg": 50.76941460242202
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_292#/media/File:Small_Magellanic_Cloud_(Digitized_Sky_Survey_2).jpg",
+    "license": "CC BY 4.0",
+    "author": "ESA/Hubble and Digitized Sky Survey 2"
+  },
+  "processedAt": "2026-06-09T21:37:37.137Z",
+  "source": {
+    "width": 3840,
+    "height": 3992
+  },
+  "disk": {
+    "centerPx": [
+      1386.9066937119676,
+      1609.4455566406252
+    ],
+    "radiusPx": 1322.602563955992,
+    "paDeg": 50.76941460242202,
+    "axisRatio": 0.8490227158835241,
+    "deproject": true
+  }
+}
