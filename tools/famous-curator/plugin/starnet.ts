@@ -16,7 +16,7 @@
  * installed in CI.
  */
 import { copyFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 
 export type StarnetConfig =
@@ -61,6 +61,16 @@ const defaultSpawner: Spawner = (bin, args, opts) =>
  * mode if STARNET_WEIGHTS is missing (the binary refuses to run without
  * a weights path; we surface the install-hint at server boot rather
  * than per-request).
+ *
+ * The weights path is resolved to absolute here, against the server's
+ * launch cwd (the project root under `npm run curate-famous`).  This is
+ * load-bearing: runStarnet spawns the binary with cwd = the input's
+ * directory (a session tmpdir, to keep starnet2's mask.jpg out of the
+ * repo), so a *relative* STARNET_WEIGHTS would resolve against that
+ * tmpdir at spawn time and fail with 'Could not find the checkpoint
+ * file!' / 'starnet2 exited 255'.  Pinning it absolute at config time —
+ * before the cwd switch — lets the documented relative env value
+ * (`STARNET_WEIGHTS=data/starnet/StarNet2_weights.pt`) keep working.
  */
 export function resolveStarnetConfig(env: Record<string, string | undefined>): StarnetConfig {
   if (env.MOCK_STARNET === '1') return { mock: true };
@@ -71,7 +81,7 @@ export function resolveStarnetConfig(env: Record<string, string | undefined>): S
         'or set MOCK_STARNET=1 to run with a copy-input shim.',
     );
   }
-  return { mock: false, bin: env.STARNET_BIN ?? 'starnet2', weights };
+  return { mock: false, bin: env.STARNET_BIN ?? 'starnet2', weights: resolve(weights) };
 }
 
 export async function runStarnet(opts: {

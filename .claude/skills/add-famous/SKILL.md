@@ -175,8 +175,14 @@ against the wrong instance while the maintainer watches the first. Only launch i
 none is running:
 
 ```bash
-STARNET_WEIGHTS=data/starnet/StarNet2_weights.pt npm run curate-famous
+STARNET_WEIGHTS="$(pwd)/data/starnet/StarNet2_weights.pt" npm run curate-famous
 ```
+
+The path is given absolute on purpose: the curator runs `starnet2` from a
+session tmpdir, so it pins `STARNET_WEIGHTS` to an absolute path at boot
+(`resolveStarnetConfig`) — a relative value would otherwise resolve against the
+tmpdir and fail with `starnet2 exited 255: Failed`. The `$(pwd)/…` form is
+robust regardless of where you launch from.
 
 This opens the curator UI at `http://localhost:5200`. **Stop here and hand off
 to the human** — print:

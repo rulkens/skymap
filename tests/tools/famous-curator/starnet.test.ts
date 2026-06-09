@@ -14,7 +14,7 @@
 import { describe, expect, it } from 'vitest';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
 import {
   resolveStarnetConfig,
   runStarnet,
@@ -34,6 +34,17 @@ describe('resolveStarnetConfig', () => {
   it('defaults bin to starnet2 when STARNET_BIN is unset', () => {
     const cfg = resolveStarnetConfig({ STARNET_WEIGHTS: '/w.pt' });
     if (!cfg.mock) expect(cfg.bin).toBe('starnet2');
+  });
+
+  it('resolves a relative STARNET_WEIGHTS to an absolute path', () => {
+    // runStarnet spawns the binary with cwd = a session tmpdir, so a
+    // relative weights path must be pinned absolute at config time or the
+    // binary fails with 'Could not find the checkpoint file!'.
+    const cfg = resolveStarnetConfig({ STARNET_WEIGHTS: 'data/starnet/w.pt' });
+    if (!cfg.mock) {
+      expect(isAbsolute(cfg.weights)).toBe(true);
+      expect(cfg.weights).toBe(resolve('data/starnet/w.pt'));
+    }
   });
 
   it('throws when STARNET_WEIGHTS is missing in real mode', () => {
