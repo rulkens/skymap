@@ -90,6 +90,15 @@ pnpm-debug.log*
 !/data/famous_galaxies.seed.json
 !/data/structure_anchors.seed.json
 
+# Exception: PGC→names map for the Cmd+K palette's alias search.  Unlike the
+# deterministic .bin outputs (regenerated in seconds), this is an expensive,
+# externally-sourced artefact — a slow chunked HyperLEDA designations pull
+# (tools/fetch/buildPgcAliases.ts) backed by a partial cache — so it's
+# committed as source under data/ rather than left as a public/data build
+# output.  `npm run predev` stages it into public/data/ for the dev server;
+# syncR2's EXTRA_FILES ships it to R2 for prod.
+!/data/pgc_aliases.json
+
 # Exception: hand-curated override index produced by the famous-galaxy
 # curator (tools/famous-curator).  Small JSON (~75 entries × ~150 B) that
 # overrides the auto-fetched Wikipedia/DESI thumbnails per-galaxy; must

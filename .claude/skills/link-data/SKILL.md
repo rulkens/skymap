@@ -34,10 +34,12 @@ there before a sync-r2). So the cheapest path is to symlink the worktree's
 3. **Inspect worktree's `public/data`** — branch on the four possible states:
    - **Missing** → just create the symlink.
    - **Directory with stale / unique bins** → check whether anything inside
-     is newer than main's corresponding file or doesn't exist on main. The
-     three files committed before the gitignore rule (`famous.bin`,
-     `famous_meta.json`, `pgc_aliases.json`) are known-stale and safe to
-     drop; anything else is unique. If the worktree has unique content,
+     is newer than main's corresponding file or doesn't exist on main.
+     `famous.bin` / `famous_meta.json` (local `build-famous` outputs) and
+     `pgc_aliases.json` (staged into `public/data/` by `npm run predev` from
+     the committed `data/` source) are known-stale and safe to drop — they're
+     all reproducible and also present on main; anything else is unique. If
+     the worktree has unique content,
      **ask the user** before clobbering (could be a deliberate per-worktree
      rebuild for testing a format change). Otherwise rename to
      `public/data.stale.<timestamp>/` as a one-step-back safety, then symlink.
@@ -92,10 +94,11 @@ there before a sync-r2). So the cheapest path is to symlink the worktree's
   This skill is about reusing the output. The raw catalog files live in
   the main checkout via the raw-data registry already
   (`feedback_raw_data_registry`).
-- **Don't** auto-run `/link-data` on every worktree creation. Some
+- **Don't** *silently* auto-run `/link-data` on worktree creation. Some
   sessions are pure doc / planning work, some are explicitly rebuilding
-  the data pipeline, and some are inspecting stale data on purpose. Wait
-  for the user to ask.
+  the data pipeline, and some are inspecting stale data on purpose. `/wt`
+  may **offer** to run it (a fresh worktree has no `public/data/` at all),
+  but the user confirms — never link without asking.
 - **Don't** kill the dev server before symlinking. Vite watches the
   filesystem and will pick up the new contents at the next HTTP request
   (the browser may need a hard refresh, but the server doesn't).
@@ -143,8 +146,8 @@ if [ -L public/data ]; then
   rm -f public/data
 elif [ -d public/data ]; then
   # A real directory. Decide unique-vs-stale:
-  #   - The three files committed BEFORE the gitignore rule
-  #     (famous.bin, famous_meta.json, pgc_aliases.json) are NOT unique —
+  #   - famous.bin / famous_meta.json (build-famous outputs) and
+  #     pgc_aliases.json (predev-staged from data/) are NOT unique —
   #     they exist on main and are safe to drop.
   #   - Anything else (a freshly built *.bin / *.scfd that is newer than
   #     or absent from main) is UNIQUE — ASK the user before clobbering.
@@ -170,7 +173,9 @@ if [ "$(readlink public/data)" != "$MAIN_ROOT/public/data" ]; then
   exit 1
 fi
 
-# Step 6 — silence git-status noise (see "Git noise housekeeping" below)
+# Step 6 — silence git-status noise (see "Git noise housekeeping" below).
+# No files under public/data are tracked, so this is a defensive guard that
+# normally finds nothing.
 TRACKED=$(git ls-files public/data/ 2>/dev/null)
 if [ -n "$TRACKED" ]; then
   echo "$TRACKED" | xargs git update-index --skip-worktree
@@ -197,19 +202,16 @@ ask-user branches need actual user prompts, not exit codes).
 
 `/public/data/` (trailing slash) in `.gitignore` matches the directory
 but NOT a symlink at the same path, so a fresh symlink shows as `??
-public/data` in `git status`. Additionally, four files (`famous.bin`,
-`famous_meta.json`, `famous_xrefs.json`, `pgc_aliases.json`) were
-committed BEFORE the gitignore rule was added; they're still tracked
-by the index, so `rm -rf public/data` flags them as `D` deletions.
-None of this affects runtime — Vite serves real bytes through the
-symlink — but a noisy `git status` is annoying and risks accidentally
-committing the deletions.
+public/data` in `git status`. Nothing under `public/data/` is tracked, so
+`rm -rf public/data` produces no spurious `D` deletions — the `??` symlink
+line is the only cosmetic noise. Vite serves real bytes through the symlink
+regardless.
 
-The skill fixes both:
+The skill silences it:
 
-- **`git update-index --skip-worktree`** on the tracked files tells
-  git "don't track changes to these in this worktree." Local-only,
-  no index history change, reversible with `--no-skip-worktree`.
+- **`git update-index --skip-worktree`** — a defensive guard that finds no
+  tracked files under `public/data/` in a current worktree; harmless and
+  reversible with `--no-skip-worktree`.
 - **A `/public/data` line in `$GIT_DIR/info/exclude`** silences the
   symlink itself. For git 2.36+, `$GIT_DIR` for a linked worktree is
   the per-worktree `<main>/.git/worktrees/<name>/`, so this exclusion
