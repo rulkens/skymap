@@ -525,6 +525,20 @@
       "license": "CC BY 4.0",
       "author": "International Gemini Observatory/NOIRLab/NSF/AURA",
       "processedAt": "2026-06-04T00:55:14.143Z"
+    },
+    "smc": {
+      "dir": "famous-curated/smc",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_292#/media/File:Small_Magellanic_Cloud_(Digitized_Sky_Survey_2).jpg",
+      "license": "CC BY 4.0",
+      "author": "ESA/Hubble and Digitized Sky Survey 2",
+      "processedAt": "2026-06-09T21:37:37.137Z"
+    },
+    "lmc": {
+      "dir": "famous-curated/lmc",
+      "sourceUrl": "https://en.wikipedia.org/wiki/PGC_17223#/media/File:Large_Magellanic_Cloud_rendered_from_Gaia_EDR3.png",
+      "license": "CC BY-SA 4.0",
+      "author": "Kevinmloch",
+      "processedAt": "2026-06-09T21:38:12.402Z"
     }
   }
 }

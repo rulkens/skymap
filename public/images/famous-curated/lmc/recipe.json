@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "lmc",
+  "crop": {
+    "x": 537.3592070822235,
+    "y": 764.9136497355039,
+    "width": 3124.168304585553,
+    "height": 2659.098481778992,
+    "rotationDeg": 77.87024990134472
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/PGC_17223#/media/File:Large_Magellanic_Cloud_rendered_from_Gaia_EDR3.png",
+    "license": "CC BY-SA 4.0",
+    "author": "Kevinmloch"
+  },
+  "processedAt": "2026-06-09T21:38:12.402Z",
+  "source": {
+    "width": 3840,
+    "height": 3840
+  },
+  "disk": {
+    "centerPx": [
+      2099.443359375,
+      2094.462890625
+    ],
+    "radiusPx": 1249.6673218342212,
+    "paDeg": 77.87024990134472,
+    "axisRatio": 0.8511380382023764,
+    "deproject": true
+  }
+}

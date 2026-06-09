@@ -646,6 +646,23 @@
     "magK": 4.49
   },
   {
+    "id": "lmc",
+    "names": [
+      "LMC",
+      "ESO 56-115",
+      "PGC 17223",
+      "Large Magellanic Cloud"
+    ],
+    "ra": 80.8941495,
+    "dec": -69.756104,
+    "distanceMpc": 0.05028054772806394,
+    "diameterKpc": 9.443350672216868,
+    "type": "SBm",
+    "description": "The Large Magellanic Cloud (LMC) is a dwarf galaxy and the most massive satellite of the Milky Way. At a distance of about 50 kiloparsecs (163,000 light-years) it is one of the closest galaxies to our own, and at roughly 10 billion solar masses it is about one-hundredth the mass of the Milky Way. Classified as a Magellanic spiral (SBm), it shows a prominent off-centre bar and a single ragged spiral arm — a morphology attributed to tidal interaction with the Milky Way and the Small Magellanic Cloud. It is the fourth-largest galaxy in the Local Group. Spanning roughly 10° of sky across the constellations Dorado and Mensa, it is easily visible to the naked eye as a faint detached cloud, and was recorded by Persian and Arab astronomers centuries before Magellan's 1519 voyage lent it his name.",
+    "axisRatio": 0.8511380382023764,
+    "positionAngleDeg": 170
+  },
+  {
     "id": "m100",
     "names": [
       "M100",
@@ -1429,5 +1446,24 @@
     "magB": 13.567,
     "magV": 12.942,
     "magK": 10.143
+  },
+  {
+    "id": "smc",
+    "names": [
+      "SMC",
+      "NGC 292",
+      "PGC 3085",
+      "Small Magellanic Cloud"
+    ],
+    "ra": 13.158310499999999,
+    "dec": -72.8002266,
+    "distanceMpc": 0.06223002851691592,
+    "diameterKpc": 5.4290784495698,
+    "type": "SBm",
+    "description": "The Small Magellanic Cloud (SMC), also catalogued as NGC 292, is a dwarf irregular galaxy and satellite of the Milky Way. Lying about 62 kiloparsecs (200,000 light-years) away in the constellation Tucana, it holds several hundred million stars within a span of roughly 7,000 light-years and a total mass near 7 billion solar masses. A central bar betrays its origin as a small barred spiral that was disrupted by tidal forces from the Milky Way and its larger companion, the Large Magellanic Cloud, to which it is linked by a bridge of gas and the trailing Magellanic Stream. One of the most distant objects visible to the unaided eye, it appears as a hazy patch about 3° across in the southern sky.",
+    "axisRatio": 0.5997910762555094,
+    "positionAngleDeg": 45,
+    "magB": 2.747,
+    "magV": 2.297
   }
 ]
