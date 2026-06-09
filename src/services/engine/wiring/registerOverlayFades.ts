@@ -38,9 +38,10 @@
  * Every structure category (cluster / supercluster / void / group) gets its
  * own `markerLayer{category}` and `labelLayer{structure, category}` controller so a
  * category's rings/labels can recede and fade independently.  Each is
- * registered at its persisted settings visibility (markerCategoryVisibility /
- * labelCategoryVisibility) so frame 1 honours what the user last turned off
- * rather than relying on a producer's first fadeTo.
+ * registered at its persisted per-category visibility — the ring axis from
+ * `structures.items[cat].enabled`, the label axis from
+ * `structures.items[cat].labelEnabled` — so frame 1 honours what the user last
+ * turned off rather than relying on a producer's first fadeTo.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -97,11 +98,11 @@ export function registerOverlayFades(state: EngineState): void {
   for (const category of STRUCTURE_CATEGORIES) {
     state.subsystems.fades.register(
       { kind: 'markerLayer', category },
-      state.settings.markerCategoryVisibility[category] ? 1 : 0,
+      state.settings.structures.items[category].enabled ? 1 : 0,
     );
     state.subsystems.fades.register(
       { kind: 'labelLayer', layer: 'structure', category },
-      state.settings.labelCategoryVisibility[category] ? 1 : 0,
+      state.settings.structures.items[category].labelEnabled ? 1 : 0,
     );
   }
 }

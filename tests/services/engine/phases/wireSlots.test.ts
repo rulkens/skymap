@@ -301,13 +301,22 @@ function makeState(
   }> = {},
 ): EngineState {
   const points = overrides.points ?? new Map();
-  const allVisible = {
+  const allVisible: Record<string, boolean> = {
     cluster: true,
     supercluster: true,
     void: true,
     famousGalaxy: true,
     group: true,
   };
+  // Translate the per-axis override maps into the per-category item rows the
+  // structureCatalog demand predicate reads (ring axis = `enabled`, label axis
+  // = `labelEnabled`). Defaults all-visible ⇒ structureCatalog demanded.
+  const markerVis = overrides.markerCategoryVisibility ?? allVisible;
+  const labelVis = overrides.labelCategoryVisibility ?? allVisible;
+  const structureItems: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
+  for (const cat of ['cluster', 'supercluster', 'void', 'group']) {
+    structureItems[cat] = { enabled: markerVis[cat] ?? true, labelEnabled: labelVis[cat] ?? true };
+  }
   const data = createEngineData();
   return {
     settings: {
@@ -325,11 +334,9 @@ function makeState(
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 1.0 },
       volumes: { enabled: true, items: seedVolumeFields() },
-      // Structure categories all visible by default ⇒ structureCatalog demanded.
       // Overridable so a test can hide every category and pin the bug-fix
       // (structureCatalog must NOT load when nothing structural is visible).
-      markerCategoryVisibility: overrides.markerCategoryVisibility ?? allVisible,
-      labelCategoryVisibility: overrides.labelCategoryVisibility ?? allVisible,
+      structures: { enabled: true, items: structureItems },
     },
     bias: {} as never,
     // The synthetic-fallback gate writes `state.requests.add('syntheticFallback')`

@@ -69,22 +69,22 @@ export type UseEngineSettingsState = {
    */
   volumeFields: ReadonlyArray<VolumeFieldRowData>;
   /**
-   * Per-category visibility for the TEXT LABEL overlay.  Mirrors the
-   * engine-side `EngineSettingsState.labelCategoryVisibility`; the
-   * SettingsPanel reads from this record to render the per-category
-   * label checkboxes.  Engine echoes the whole record on every
-   * `handle.labels.setCategoryLabelVisible(cat, visible)` call so the
-   * UI stays in sync from a single subscription.
+   * Per-category visibility for the TEXT LABEL overlay.  A React-side mirror
+   * of the engine's derived label-visibility record (structure categories
+   * from `structures.items[cat].labelEnabled`, famousGalaxy from the engine's
+   * flat label record); the SettingsPanel reads from it to render the
+   * per-category label checkboxes.  Engine echoes the whole record on every
+   * label toggle so the UI stays in sync from a single subscription.
    */
   labelCategoryVisibility: Record<LabelCategory, boolean>;
   /**
    * Per-category visibility for the MARKER overlay (ring + halo), keyed
-   * by `StructureCategory` only.  Mirrors the engine-side
-   * `EngineSettingsState.markerCategoryVisibility`.  Today there is no
-   * per-category marker UI — every entry stays `true` unless the
-   * Structures master toggle flips them as a batch.  Kept in state
-   * regardless so the React shell can present a snapshot and so the
-   * Structures toggle has a stable mirror to subscribe to.
+   * by `StructureCategory` only.  A React-side mirror of the engine's derived
+   * marker-visibility record (each entry from `structures.items[cat].enabled`).
+   * Today there is no per-category marker UI — every entry stays `true` unless
+   * the Structures master toggle flips them as a batch.  Kept in state
+   * regardless so the React shell can present a snapshot and so the Structures
+   * toggle has a stable mirror to subscribe to.
    */
   markerCategoryVisibility: Record<StructureCategory, boolean>;
   /**

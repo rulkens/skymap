@@ -49,9 +49,9 @@ function makeState(
   } = {},
 ): { state: EngineState; registerSpy: ReturnType<typeof vi.fn> } {
   const registerSpy = vi.fn();
-  // Build full per-category visibility records: every structure category
-  // defaults to visible (true) unless the test overrides it.  registerOverlayFades
-  // only reads the four structure categories, so famousGalaxy is irrelevant here.
+  // Build the per-category item rows: every structure category defaults to
+  // ring + label visible (true) unless the test overrides one axis. The marker
+  // override flips `enabled`; the label override flips `labelEnabled`.
   const markerVis: Record<string, boolean> = {
     cluster: true,
     supercluster: true,
@@ -66,12 +66,15 @@ function makeState(
     group: true,
     ...opts.labelCategoryVisibility,
   };
+  const items: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
+  for (const cat of ['cluster', 'supercluster', 'void', 'group']) {
+    items[cat] = { enabled: markerVis[cat]!, labelEnabled: labelVis[cat]! };
+  }
   const state = {
     settings: {
       milkyWay: { enabled: opts.milkyWayEnabled ?? true },
       volumes: { enabled: opts.volumesMasterEnabled ?? true },
-      markerCategoryVisibility: markerVis,
-      labelCategoryVisibility: labelVis,
+      structures: { enabled: true, items },
     },
     subsystems: {
       fades: { register: registerSpy },

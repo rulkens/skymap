@@ -29,6 +29,8 @@ import { createClickResolver } from '../interaction/clickHandler';
 import { attachEngineInputs } from '../interaction/inputBindings';
 import { computeInitialCamera } from '../camera/cameraFraming';
 import { seedSettingsCallbacks } from '../wiring/seedSettingsCallbacks';
+import { deriveMarkerCategoryVisibility } from '../helpers/deriveMarkerCategoryVisibility';
+import { deriveLabelCategoryVisibility } from '../helpers/deriveLabelCategoryVisibility';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { collectPickTargets } from '../helpers/collectPickTargets';
 
@@ -292,7 +294,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // bootstrap, but drawMask tracks what the user actually sees, which is
     // the semantics the UI is built against.
     visibleSourceMask: state.sources.drawMask,
-    labelCategoryVisibility: state.settings.labelCategoryVisibility,
-    markerCategoryVisibility: state.settings.markerCategoryVisibility,
+    labelCategoryVisibility: deriveLabelCategoryVisibility(state),
+    markerCategoryVisibility: deriveMarkerCategoryVisibility(state),
   });
 }

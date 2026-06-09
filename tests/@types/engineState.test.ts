@@ -109,11 +109,14 @@ describe('EngineState type', () => {
         void: true,
         group: true,
       },
-      markerCategoryVisibility: {
-        cluster: true,
-        supercluster: true,
-        void: true,
-        group: true,
+      structures: {
+        enabled: true,
+        items: {
+          cluster: { enabled: true, labelEnabled: true },
+          supercluster: { enabled: true, labelEnabled: true },
+          void: { enabled: true, labelEnabled: true },
+          group: { enabled: true, labelEnabled: true },
+        },
       },
     };
     const bias: EngineBiasState = {
@@ -259,11 +262,14 @@ describe('EngineState type', () => {
         void: true,
         group: true,
       },
-      markerCategoryVisibility: {
-        cluster: true,
-        supercluster: true,
-        void: true,
-        group: true,
+      structures: {
+        enabled: true,
+        items: {
+          cluster: { enabled: true, labelEnabled: true },
+          supercluster: { enabled: true, labelEnabled: true },
+          void: { enabled: true, labelEnabled: true },
+          group: { enabled: true, labelEnabled: true },
+        },
       },
     };
     const bias: EngineBiasState = {
@@ -313,11 +319,14 @@ describe('EngineState type', () => {
           void: true,
           group: true,
         },
-        markerCategoryVisibility: {
-          cluster: true,
-          supercluster: true,
-          void: true,
-          group: true,
+        structures: {
+          enabled: true,
+          items: {
+            cluster: { enabled: true, labelEnabled: true },
+            supercluster: { enabled: true, labelEnabled: true },
+            void: { enabled: true, labelEnabled: true },
+            group: { enabled: true, labelEnabled: true },
+          },
         },
       },
       bias: {

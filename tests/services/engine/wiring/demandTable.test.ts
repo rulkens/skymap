@@ -111,8 +111,10 @@ function stubSlot(kind: LoadState<unknown>['kind'] = 'idle'): StubSlot {
  */
 type SettingsLeaves = {
   filaments?: { enabled: boolean };
-  markerCategoryVisibility?: Record<string, boolean>;
-  labelCategoryVisibility?: Record<string, boolean>;
+  structures?: {
+    enabled: boolean;
+    items: Record<string, { enabled: boolean; labelEnabled: boolean }>;
+  };
 };
 
 /**
@@ -131,19 +133,14 @@ type VolumeFieldLeaves = Partial<Record<VolumeFieldId, { enabled: boolean }>>;
  */
 const BOOT_SETTINGS: SettingsLeaves = {
   filaments: { enabled: false },
-  markerCategoryVisibility: {
-    cluster: true,
-    supercluster: true,
-    void: true,
-    famousGalaxy: true,
-    group: true,
-  },
-  labelCategoryVisibility: {
-    cluster: true,
-    supercluster: true,
-    void: true,
-    famousGalaxy: true,
-    group: true,
+  structures: {
+    enabled: true,
+    items: {
+      cluster: { enabled: true, labelEnabled: true },
+      supercluster: { enabled: true, labelEnabled: true },
+      void: { enabled: true, labelEnabled: true },
+      group: { enabled: true, labelEnabled: true },
+    },
   },
 };
 
@@ -340,10 +337,9 @@ describe('reevaluateDemand demand-table regression', () => {
   });
 
   /**
-   * Structures all hidden: every category set to false in BOTH
-   * markerCategoryVisibility and labelCategoryVisibility.
-   * Bug-fix pin: structureCatalog must NOT appear. This verifies the
-   * consolidated predicate rather than the stale 'structures.enabled' flag.
+   * Structures all hidden: every category's ring AND label set to false in
+   * `structures.items`. Bug-fix pin: structureCatalog must NOT appear. This
+   * verifies the consolidated predicate reading the per-category item rows.
    *
    * Famous starts idle and is in the drawMask, so its point row loads it and
    * famousMeta follows (the two-phase boot). The pin under test is the cluster
@@ -352,17 +348,14 @@ describe('reevaluateDemand demand-table regression', () => {
   it('structures all hidden: no structureCatalog (bug-fix pin)', () => {
     const settings: SettingsLeaves = {
       ...BOOT_SETTINGS,
-      markerCategoryVisibility: {
-        cluster: false,
-        supercluster: false,
-        void: false,
-        famousGalaxy: false,
-      },
-      labelCategoryVisibility: {
-        cluster: false,
-        supercluster: false,
-        void: false,
-        famousGalaxy: false,
+      structures: {
+        enabled: true,
+        items: {
+          cluster: { enabled: false, labelEnabled: false },
+          supercluster: { enabled: false, labelEnabled: false },
+          void: { enabled: false, labelEnabled: false },
+          group: { enabled: false, labelEnabled: false },
+        },
       },
     };
     const state = makeState({ settings });
@@ -495,17 +488,14 @@ describe('reevaluateDemand demand-table regression', () => {
       ...BOOT_SETTINGS,
       // Hide every structure category so structureCatalog stays out of the set
       // and the assertion is purely the Famous companion join.
-      markerCategoryVisibility: {
-        cluster: false,
-        supercluster: false,
-        void: false,
-        famousGalaxy: false,
-      },
-      labelCategoryVisibility: {
-        cluster: false,
-        supercluster: false,
-        void: false,
-        famousGalaxy: false,
+      structures: {
+        enabled: true,
+        items: {
+          cluster: { enabled: false, labelEnabled: false },
+          supercluster: { enabled: false, labelEnabled: false },
+          void: { enabled: false, labelEnabled: false },
+          group: { enabled: false, labelEnabled: false },
+        },
       },
     };
     // Disable mcpm too so the fired set is exactly the join under test.

@@ -30,6 +30,7 @@ import type { EngineMilkyWayHandle } from './handles/EngineMilkyWayHandle';
 import type { EngineFilamentsHandle } from './handles/EngineFilamentsHandle';
 import type { EngineFlowFieldsHandle } from './handles/EngineFlowFieldsHandle';
 import type { EngineLabelsHandle } from './handles/EngineLabelsHandle';
+import type { EngineStructuresHandle } from './handles/EngineStructuresHandle';
 import type { EngineVolumesHandle } from './handles/EngineVolumesHandle';
 import type { EngineInputHandle } from './handles/EngineInputHandle';
 import type { EngineDebugHandle } from './handles/EngineDebugHandle';
@@ -54,6 +55,7 @@ export type EngineHandle = {
   filaments: EngineFilamentsHandle;
   flow: EngineFlowFieldsHandle;
   labels: EngineLabelsHandle;
+  structures: EngineStructuresHandle;
   volumes: EngineVolumesHandle;
   input: EngineInputHandle;
   debug: EngineDebugHandle;

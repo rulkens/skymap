@@ -1,41 +1,23 @@
 /**
- * EngineLabelsHandle — public-handle sub-bag for the structure overlay
- * (clusters / superclusters / voids / famous galaxies).
+ * EngineLabelsHandle — public-handle sub-bag for the famous-galaxy text label.
  *
- * Despite the name "labels", this handle exposes setters for BOTH the
- * text-label axis AND the marker (ring + halo) axis of structure rendering.
- * The two axes are deliberately independent: a category's marker can be
- * hidden while its text label still renders, and vice versa.
+ * Structure rings and structure labels live on `EngineStructuresHandle`; what
+ * remains here is the curated-atlas label axis. The setter is keyed by
+ * `LabelCategory` (rather than narrowing to `'famousGalaxy'`) so the call stays
+ * registry-driven: it routes by the source's `labelLayer` row, and a structure
+ * category passed in still resolves to the structure label axis. In practice
+ * the panel routes structure label rows to `EngineStructuresHandle` directly,
+ * so the only live caller here is the famous-galaxy toggle.
  */
 
 import type { LabelCategory } from '../data/LabelCategory';
-import type { StructureCategory } from '../data/StructureCategory';
 
 export type EngineLabelsHandle = {
   /**
-   * Show/hide the TEXT LABEL for every source in the given label
-   * category.  Forwards to
-   * `state.subsystems.structures.setCategoryLabelVisible(category, visible)`.
-   * Echoes back via `onLabelCategoryVisibilityChange` with the full
-   * label-visibility record so the React shell can keep its checkboxes
-   * in sync from one callback.
-   *
-   * Marker (ring + halo) visibility for the same category is untouched
-   * — use `setCategoryMarkerVisible` for that axis.
+   * Show/hide the TEXT LABEL for the given label category. Drives the
+   * famous-galaxy `galaxyNames` layer (the curated atlas), echoing back via
+   * `onLabelCategoryVisibilityChange` with the full label-visibility record so
+   * the React shell keeps its checkboxes in sync from one callback.
    */
   setCategoryLabelVisible(category: LabelCategory, visible: boolean): void;
-  /**
-   * Show/hide the MARKER (ring + halo) for every structure in the given
-   * category.  Keyed by `StructureCategory` only: famous galaxies bear
-   * no ring marker.  Forwards to
-   * `state.subsystems.structures.setCategoryMarkerVisible(category, visible)`.
-   * Echoes back via `onMarkerCategoryVisibilityChange` with the full
-   * marker-visibility record.
-   *
-   * Today the Structures master toggle is the only intended consumer;
-   * there is currently no per-category marker UI.  Label visibility for
-   * the same category is untouched — use `setCategoryLabelVisible` for
-   * that axis.
-   */
-  setCategoryMarkerVisible(category: StructureCategory, visible: boolean): void;
 };

@@ -239,9 +239,12 @@ export type EngineCallbacks = {
    * can be hidden while its label still renders, and vice versa.
    *
    * The engine fires each callback once at init (with the default
-   * record — all categories visible) and once per matching
-   * `handle.labels.setCategoryLabelVisible(...)` /
-   * `setCategoryMarkerVisible(...)` call.
+   * record — all categories visible) and once per matching structure
+   * toggle (`handle.structures.setItemEnabled(...)` /
+   * `setLabelEnabled(...)`) or famous-label toggle
+   * (`handle.labels.setCategoryLabelVisible(...)`). The records are
+   * derived projections of `settings.structures.items`, so each echo
+   * carries the freshly-derived view.
    */
   labels?: {
     onLabelCategoryVisibilityChange?: (

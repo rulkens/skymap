@@ -87,6 +87,22 @@ function makeState(): EngineState {
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 1.0 },
       volumes: { enabled: true },
+      structures: {
+        enabled: true,
+        items: {
+          cluster: { enabled: true, labelEnabled: true },
+          supercluster: { enabled: true, labelEnabled: true },
+          void: { enabled: true, labelEnabled: true },
+          group: { enabled: true, labelEnabled: true },
+        },
+      },
+      labelCategoryVisibility: {
+        famousGalaxy: true,
+        cluster: true,
+        supercluster: true,
+        void: true,
+        group: true,
+      },
       debug: { showPickBuffer: false, showDiskRadiusRing: false },
     },
     bias: {} as never,

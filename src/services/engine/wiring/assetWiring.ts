@@ -25,13 +25,13 @@
  *   - **filaments** gates on `settings.filaments.enabled` — the real master
  *     toggle, so a disabled filament overlay never fetches the skeleton.
  *   - **structureCatalog** gates on structure-category visibility: it loads when
- *     ANY of the cluster / supercluster / void categories is visible in either
- *     the marker or the label overlay. There is no `settings.structures.enabled`
- *     flag — structures are controlled per-category via the two visibility
- *     records (`markerCategoryVisibility` / `labelCategoryVisibility`). With
- *     every category visible by default, the catalog still loads at boot
- *     (behaviour-preserving); only a user who hides every structure category in
- *     both overlays skips the fetch. This is the structures-enabled proxy.
+ *     ANY of the cluster / supercluster / void categories has its ring OR label
+ *     enabled, read from the per-category item rows
+ *     (`structures.items[cat].enabled` / `.labelEnabled`) — the single home for
+ *     both axes. With every category visible by default, the catalog still
+ *     loads at boot (behaviour-preserving); only a user who hides every
+ *     structure category's ring AND label skips the fetch. This is the
+ *     structures-enabled proxy.
  *
  * ### What is NOT a row here
  *
@@ -186,7 +186,8 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     demand: (ctx) =>
       BULK_CATALOG_CATEGORIES.some(
         (cat) =>
-          ctx.settings.markerCategoryVisibility[cat] || ctx.settings.labelCategoryVisibility[cat],
+          ctx.settings.structures.items[cat].enabled ||
+          ctx.settings.structures.items[cat].labelEnabled,
       ),
   },
 

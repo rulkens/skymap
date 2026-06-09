@@ -4,15 +4,17 @@ import type { LabelCategory } from '../../src/@types/engine/data/LabelCategory';
 import type { StructureCategory } from '../../src/@types/engine/data/StructureCategory';
 
 /**
- * Type-level checks on the two independent visibility axes:
- *   - `labelCategoryVisibility` is keyed by `LabelCategory` (famousGalaxy +
- *     structures);
- *   - `markerCategoryVisibility` is keyed by `StructureCategory` only — famous
- *     galaxies bear no ring marker, so a `famousGalaxy` key is a type error.
+ * Type-level checks on the structure visibility homes:
+ *   - `labelCategoryVisibility` is keyed by `LabelCategory` but only the
+ *     `famousGalaxy` entry is live (structure label visibility moved to
+ *     `structures.items[cat].labelEnabled`);
+ *   - `structures.items` is keyed by `StructureCategory`, each row carrying the
+ *     ring axis (`enabled`) + the label axis (`labelEnabled`) — famous galaxies
+ *     bear no ring, so a `famousGalaxy` key here is a type error.
  * If either union drifts from its record shape, these assignments stop
  * compiling.
  */
-describe('EngineSettingsState visibility records', () => {
+describe('EngineSettingsState structure visibility', () => {
   it('labelCategoryVisibility is a Record keyed by LabelCategory (includes famousGalaxy)', () => {
     const v: EngineSettingsState['labelCategoryVisibility'] = {
       cluster: true,
@@ -25,15 +27,16 @@ describe('EngineSettingsState visibility records', () => {
     expect(v[c]).toBe(true);
   });
 
-  it('markerCategoryVisibility is a Record keyed by StructureCategory (no famousGalaxy key)', () => {
-    const v: EngineSettingsState['markerCategoryVisibility'] = {
-      cluster: true,
-      supercluster: true,
-      void: true,
-      group: true,
+  it('structures.items is a Record keyed by StructureCategory (no famousGalaxy key)', () => {
+    const v: EngineSettingsState['structures']['items'] = {
+      cluster: { enabled: true, labelEnabled: true },
+      supercluster: { enabled: true, labelEnabled: true },
+      void: { enabled: true, labelEnabled: true },
+      group: { enabled: true, labelEnabled: true },
     };
     const c: StructureCategory = 'cluster';
-    expect(v[c]).toBe(true);
+    expect(v[c].enabled).toBe(true);
+    expect(v[c].labelEnabled).toBe(true);
     // 'famousGalaxy' is not a StructureCategory, so it is absent from the record.
     expect('famousGalaxy' in v).toBe(false);
   });

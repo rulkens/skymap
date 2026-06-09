@@ -57,6 +57,7 @@ import type { StructureCategory } from '../engine/data/StructureCategory';
 import type { FlowSettings } from './FlowSettings';
 import type { VolumeFieldId } from '../data/VolumeFieldId';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
+import type { StructureItemSettings } from './StructureItemSettings';
 
 export type EngineSettingsState = {
   /**
@@ -179,24 +180,31 @@ export type EngineSettingsState = {
   };
 
   /**
-   * Per-category visibility for the TEXT LABEL overlay.  Keyed by
-   * `LabelCategory` — the label-bearing sources (`famousGalaxy` plus the
-   * structure categories).  Defaults to every category visible.
-   *
-   * This is one of two orthogonal records — see `markerCategoryVisibility`
-   * for the marker (ring + halo) counterpart.  Label-text and marker
-   * visibility are independent so a category's ring can be hidden while
-   * its label still renders, and vice versa.
+   * Per-category visibility for the famous-galaxy TEXT LABEL.  Keyed by
+   * `LabelCategory` for shape compatibility with the React mirror, but only
+   * the `famousGalaxy` entry is live: the structure categories read their
+   * label visibility from `structures.items[cat].labelEnabled` instead.  The
+   * famous entry stays here because famous galaxies are a point-layer concern
+   * (the curated atlas), not a structure ring — they have no `structures.items`
+   * row.  Defaults to every category visible.
    */
   labelCategoryVisibility: Record<LabelCategory, boolean>;
+
   /**
-   * Per-category visibility for the MARKER overlay — the ring + halo glyph
-   * drawn at the structure's world anchor by `structureMarkerRenderer`.
-   * Keyed by `StructureCategory` only: famous galaxies bear no ring marker.
-   * Symmetric to `labelCategoryVisibility`; the two records are deliberately
-   * independent so the SettingsPanel can offer separate master toggles for
-   * "Labels" (text) and "Structures" (markers).  Defaults to every category
-   * visible.
+   * Structure-overlay master gate and per-category settings.  `enabled` is
+   * the coarse "hide all structures" gate (symmetric with `volumes.enabled`).
+   * Per-category state lives in `items` — one row per `StructureCategory`,
+   * each carrying the ring/marker axis (`enabled`) and the text-label axis
+   * (`labelEnabled`).  Co-locating both axes on one row replaces the two
+   * parallel root records that previously held the same booleans in different
+   * shapes: a reader walks one `items[cat]` entry to learn everything about a
+   * category's visibility instead of cross-indexing two records by the same
+   * key.  `items` is the same per-item accessor surveys and volumes expose, so
+   * all three source-type clusters share one shape.  Defaults to every
+   * category fully visible.
    */
-  markerCategoryVisibility: Record<StructureCategory, boolean>;
+  structures: {
+    enabled: boolean;
+    items: Record<StructureCategory, StructureItemSettings>;
+  };
 };

@@ -145,6 +145,9 @@ import type { LabelCategory } from '../../@types/engine/data/LabelCategory';
 import type { StructureCategory } from '../../@types/engine/data/StructureCategory';
 import { LABEL_CATEGORIES, LABEL_LAYER_BY_CATEGORY } from '../../data/labelCategories';
 import { STRUCTURE_CATEGORIES, isStructureCategory } from '../../data/structureCategories';
+import { deriveMarkerCategoryVisibility } from './helpers/deriveMarkerCategoryVisibility';
+import { deriveLabelCategoryVisibility } from './helpers/deriveLabelCategoryVisibility';
+import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -246,20 +249,57 @@ export { setSourceVisibleImpl as setSourceVisibleForTest };
 
 // ── Test-accessible category-visibility logic ───────────────────────────────
 //
-// The two per-category visibility setters live at module scope (mirroring
+// The per-category visibility setters live at module scope (mirroring
 // `setSourceVisibleImpl`) so tests can drive them against a partial-state stub
-// without a full GPU engine. Each routes to the canonical store (structure
-// categories → the structure store; famousGalaxy → the galaxy store), drives
-// the matching per-category FadeRegistry handle for a smooth ramp, mirrors the
-// flag into `state.settings`, echoes a fresh snapshot via the callback, and
-// requests a render. The `createEngine` literal delegates to these.
+// without a full GPU engine. Each writes the authoritative settings leaf,
+// drives the matching per-category FadeRegistry handle for a smooth ramp,
+// echoes a fresh DERIVED record via the callback, and requests a render. The
+// `createEngine` literal delegates to these.
 //
 // Why fade the per-category handle here?  The producers (produceStructureMarkers
 // / produceStructureLabels / produceFamousLabels) already read
-// `opacityOf({...})` for their layer alpha; flipping the store boolean alone
-// would pop a category in/out. Firing `fadeTo` on the same handle the producer
-// reads turns the toggle into a smooth fade — exactly as the milkyWay/filaments
-// setters do for their overlay/filaments handles.
+// `opacityOf({...})` for their layer alpha; flipping the boolean alone would pop
+// a category in/out. Firing `fadeTo` on the same handle the producer reads turns
+// the toggle into a smooth fade — exactly as the milkyWay/filaments setters do
+// for their overlay/filaments handles. The boolean is the authoritative gate
+// (the producer draws while enabled OR still fading out); the fade opacity is
+// only the cosmetic alpha.
+
+function setStructureItemEnabled(
+  state: Pick<EngineState, 'settings' | 'subsystems'>,
+  cb: Pick<EngineCallbacks, 'labels'>,
+  category: StructureCategory,
+  visible: boolean,
+): void {
+  // Ring/marker axis. Only structures bear a ring, so this is keyed by
+  // StructureCategory and fires a markerLayer fade.
+  void state.subsystems.fades.fadeTo(
+    { kind: 'markerLayer', category },
+    visible ? 1 : 0,
+    visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+  );
+  state.settings.structures.items[category].enabled = visible;
+  cb.labels?.onMarkerCategoryVisibilityChange?.(deriveMarkerCategoryVisibility(state));
+  state.subsystems.scheduler.requestRender();
+}
+
+function setStructureLabelEnabled(
+  state: Pick<EngineState, 'settings' | 'subsystems'>,
+  cb: Pick<EngineCallbacks, 'labels'>,
+  category: StructureCategory,
+  visible: boolean,
+): void {
+  // Text axis. Structure labels fade their per-category handle on the shared
+  // `structure` label layer.
+  void state.subsystems.fades.fadeTo(
+    { kind: 'labelLayer', layer: 'structure', category },
+    visible ? 1 : 0,
+    visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+  );
+  state.settings.structures.items[category].labelEnabled = visible;
+  cb.labels?.onLabelCategoryVisibilityChange?.(deriveLabelCategoryVisibility(state));
+  state.subsystems.scheduler.requestRender();
+}
 
 function setCategoryLabelVisible(
   state: Pick<EngineState, 'data' | 'settings' | 'subsystems'>,
@@ -268,10 +308,11 @@ function setCategoryLabelVisible(
   visible: boolean,
 ): void {
   // Routing comes from the registry row's `labelLayer` field, not a literal
-  // category compare: 'galaxyNames' rows (the curated atlas) drive the galaxy
-  // store + shared galaxyNames fade layer; 'structure' rows fade their
-  // per-category handle on the shared `structure` label layer.
-  const durationMs = visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS;
+  // category compare. The famous-galaxy ('galaxyNames') rows drive the galaxy
+  // store + shared galaxyNames fade layer and write the still-live flat
+  // `labelCategoryVisibility` record. A structure category passed here delegates
+  // to the structure label axis so a stray call still routes correctly — though
+  // the panel routes structure labels to the structures handle directly.
   if (LABEL_LAYER_BY_CATEGORY[category] === 'galaxyNames') {
     state.data.galaxies.setFamousLabelsVisible(visible);
     // Famous-galaxy labels reuse the shared `galaxyNames` label layer rather
@@ -279,54 +320,25 @@ function setCategoryLabelVisible(
     void state.subsystems.fades.fadeTo(
       { kind: 'labelLayer', layer: 'galaxyNames' },
       visible ? 1 : 0,
-      durationMs,
+      visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
     );
-  } else if (isStructureCategory(category)) {
-    // The 'structure' rows narrow to StructureCategory, which is exactly what
-    // the labelLayer/structure handle's `category` field wants.
-    void state.subsystems.fades.fadeTo(
-      { kind: 'labelLayer', layer: 'structure', category },
-      visible ? 1 : 0,
-      durationMs,
-    );
+    state.settings.labelCategoryVisibility = {
+      ...state.settings.labelCategoryVisibility,
+      [category]: visible,
+    };
+    cb.labels?.onLabelCategoryVisibilityChange?.(deriveLabelCategoryVisibility(state));
+    state.subsystems.scheduler.requestRender();
+    return;
   }
-  state.settings.labelCategoryVisibility = {
-    ...state.settings.labelCategoryVisibility,
-    [category]: visible,
-  };
-  cb.labels?.onLabelCategoryVisibilityChange?.({
-    ...state.settings.labelCategoryVisibility,
-  });
-  state.subsystems.scheduler.requestRender();
-}
-
-function setCategoryMarkerVisible(
-  state: Pick<EngineState, 'data' | 'settings' | 'subsystems'>,
-  cb: Pick<EngineCallbacks, 'labels'>,
-  category: StructureCategory,
-  visible: boolean,
-): void {
-  // Only structure categories bear a ring/halo marker, so the marker axis is
-  // keyed by StructureCategory — every category here routes to the structure
-  // store's marker axis and fires a markerLayer fade.
-  void state.subsystems.fades.fadeTo(
-    { kind: 'markerLayer', category },
-    visible ? 1 : 0,
-    visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
-  );
-  state.settings.markerCategoryVisibility = {
-    ...state.settings.markerCategoryVisibility,
-    [category]: visible,
-  };
-  cb.labels?.onMarkerCategoryVisibilityChange?.({
-    ...state.settings.markerCategoryVisibility,
-  });
-  state.subsystems.scheduler.requestRender();
+  if (isStructureCategory(category)) {
+    setStructureLabelEnabled(state, cb, category, visible);
+  }
 }
 
 // Test-only aliases matching the import names used in tests.
 export const setCategoryLabelVisibleForTest = setCategoryLabelVisible;
-export const setCategoryMarkerVisibleForTest = setCategoryMarkerVisible;
+export const setStructureItemEnabledForTest = setStructureItemEnabled;
+export const setStructureLabelEnabledForTest = setStructureLabelEnabled;
 
 export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): EngineHandle {
   // ── Mutable engine state ─────────────────────────────────────────────────
@@ -444,11 +456,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // gate + look/motion knobs) lives here, spread from the single
       // `DEFAULT_FLOW` seed. The `state.data.flow` store stays status-only.
       flow: { ...DEFAULT_FLOW },
-      // Per-category visibility — two independent axes (label-text vs
-      // marker-glyph), both default-all-on.  Each record's keys are DERIVED
-      // from its category set so the defaults can't drift from the union:
-      // labels span `LABEL_CATEGORIES` (famousGalaxy + structures), markers
-      // span `STRUCTURE_CATEGORIES` only (famous galaxies bear no ring).
+      // Famous-galaxy label visibility, default-all-on. Keyed by
+      // `LABEL_CATEGORIES` for shape compatibility with the React mirror, but
+      // only the `famousGalaxy` entry is read — structure categories take their
+      // label visibility from `structures.items` below. The keys are DERIVED
+      // from the category set so the default can't drift from the union.
       labelCategoryVisibility: Object.fromEntries(LABEL_CATEGORIES.map((c) => [c, true])) as Record<
         LabelCategory,
         boolean
@@ -457,9 +469,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
         showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
       },
-      markerCategoryVisibility: Object.fromEntries(
-        STRUCTURE_CATEGORIES.map((c) => [c, true]),
-      ) as Record<StructureCategory, boolean>,
+      // Structure overlay: master gate on + one item row per category, each
+      // ring + label default-on. Keys are DERIVED from `STRUCTURE_CATEGORIES`
+      // so the seed can't drift from the category set (famous galaxies bear no
+      // ring and so have no row here).
+      structures: {
+        enabled: true,
+        items: Object.fromEntries(
+          STRUCTURE_CATEGORIES.map((c) => [c, { enabled: true, labelEnabled: true }]),
+        ) as Record<StructureCategory, StructureItemSettings>,
+      },
     },
     bias: {
       // Bake-only sentinels — overwritten before the shader's mode-2/3/4
@@ -1399,15 +1418,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       },
     },
     labels: {
-      // Two parallel setters, one per independent visibility axis.  Each
-      // routes to the canonical store — structure categories (cluster / SC /
-      // void) to the structure store, famousGalaxy to the galaxy store —
-      // then mirrors into `state.settings` and echoes a fresh immutable
-      // snapshot.  The OTHER axis is never touched (orthogonal axes).
+      // Famous-galaxy text-label axis only. Structure ring + label axes live on
+      // the `structures` sub-handle below; this routes the curated-atlas label
+      // (and any stray structure-label call) by registry layer.
       setCategoryLabelVisible: (category, visible) =>
         setCategoryLabelVisible(state, cb, category, visible),
-      setCategoryMarkerVisible: (category, visible) =>
-        setCategoryMarkerVisible(state, cb, category, visible),
+    },
+    structures: {
+      // Two setters, one per independent structure visibility axis. Each writes
+      // the authoritative `settings.structures.items[category]` row, fades the
+      // matching FadeRegistry handle, and echoes a fresh derived record.
+      setItemEnabled: (category, visible) =>
+        setStructureItemEnabled(state, cb, category, visible),
+      setLabelEnabled: (category, visible) =>
+        setStructureLabelEnabled(state, cb, category, visible),
     },
     volumes: {
       setMasterEnabled: setVolumesEnabled,

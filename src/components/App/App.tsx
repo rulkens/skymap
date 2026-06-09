@@ -44,6 +44,7 @@ import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useEngineSettings } from '../../hooks/useEngineSettings';
 import { useSpaceMouseDevicePresence } from '../../hooks/useSpaceMouseDevicePresence';
 import { buildStaticAnchorStructures } from '../../data/buildStaticAnchorStructures';
+import { isStructureCategory } from '../../data/structureCategories';
 import { DebugPanel } from '../DebugPanel/DebugPanel';
 import { isWebHIDSupported } from '../../services/input/spaceMouse';
 
@@ -240,10 +241,19 @@ export function App(): React.ReactElement {
             labelCategoryVisibility={labelCategoryVisibility}
             markerCategoryVisibility={markerCategoryVisibility}
             onSetMarkerCategoryVisibility={(category, visible) => {
-              handleRef.current?.labels.setCategoryMarkerVisible(category, visible);
+              // Marker rows are keyed by StructureCategory — drive the ring axis
+              // on the structures handle.
+              handleRef.current?.structures.setItemEnabled(category, visible);
             }}
             onSetLabelCategoryVisibility={(category, visible) => {
-              handleRef.current?.labels.setCategoryLabelVisible(category, visible);
+              // Label rows span famousGalaxy + structures; route by registry so
+              // structure labels drive the structures handle while the curated
+              // atlas keeps its galaxyNames path on the labels handle.
+              if (isStructureCategory(category)) {
+                handleRef.current?.structures.setLabelEnabled(category, visible);
+              } else {
+                handleRef.current?.labels.setCategoryLabelVisible(category, visible);
+              }
             }}
             // Filaments has no engine echo — React owns the state, so
             // the handler updates locally AND forwards to the engine.

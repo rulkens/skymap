@@ -13,10 +13,12 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
 
 // produceStructureLabels now reads `state.data.structures` for the records,
+// `state.settings.structures.items` for the authoritative per-category gate,
 // `state.subsystems.fades` for the per-category opacity + load-in fire, and
 // `state.subsystems.selection.focused()` for the focused-exempt recession.
-// The fixture supplies all three; `focusedStructureId` selects which structure
-// (if any) the selection subsystem reports as focused.
+// The fixture supplies all four; `focusedStructureId` selects which structure
+// (if any) the selection subsystem reports as focused. The items bag defaults
+// all-enabled; tests flip an entry to drive the disabled path.
 function makeState(
   opts: { focusedStructureId?: string | null; fades?: FadeRegistry } = {},
 ): EngineState {
@@ -25,6 +27,7 @@ function makeState(
   const focusedStructureId = opts.focusedStructureId ?? null;
   return {
     data: createEngineData(),
+    settings: { structures: { enabled: true, items: makeStructureItems() } },
     subsystems: {
       fades,
       selection: {
@@ -33,6 +36,14 @@ function makeState(
       },
     },
   } as unknown as EngineState;
+}
+
+// All-enabled structure items bag — the authoritative ring/label gate the
+// producer reads alongside the fade opacity.
+function makeStructureItems(): EngineState['settings']['structures']['items'] {
+  return Object.fromEntries(
+    STRUCTURE_CATEGORIES.map((c) => [c, { enabled: true, labelEnabled: true }]),
+  ) as EngineState['settings']['structures']['items'];
 }
 
 // Register every per-category structure label AND ring marker handle at full opacity.
@@ -83,27 +94,62 @@ describe('produceStructureLabels', () => {
     expect(out.labels.map((l) => l.id)).toEqual(['a']);
   });
 
-  it('hides labels for a category whose label axis is off', () => {
-    // The per-category toggle now lives in the FadeRegistry (not the store's
-    // labelVisible flag): a category whose structure handle reads 0 is skipped
-    // wholesale.
+  it('skips a label category that is disabled AND fully faded', () => {
+    // Both halves of the all-or-nothing skip: the authoritative `labelEnabled`
+    // boolean is false AND the labelLayer fade reached 0.
     const fades = createFadeRegistry();
     fades.register({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 1);
     fades.setImmediate({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 0);
     const state = makeState({ fades });
+    state.settings.structures.items.cluster.labelEnabled = false;
     state.data.structures.setGroup('anchors', [rec('c1', { category: 'cluster' })]);
     expect(produceStructureLabels(state, makeCtx()).labels).toEqual([]);
   });
 
-  it('hides a structure label when its marker (ring anchor) is fully hidden', () => {
-    // The anchor gate reads the ring's OWN opacity source (the markerLayer fade
-    // handle), not an instant store flag. A category whose ring opacity is
-    // exactly 0 carries no label.
+  it('emits a label whose labelEnabled is false but whose labelLayer opacity is still > 0 (fade-out tail)', () => {
+    // Authoritative gate OFF, but the fade hasn't reached 0: the fade-out tail
+    // must still emit so the label ramps down to invisible instead of popping.
+    const fades = createFadeRegistry();
+    fades.register({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 1);
+    fades.register({ kind: 'markerLayer', category: 'cluster' }, 1);
+    fades.setImmediate({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 0.5);
+    const state = makeState({ fades });
+    state.settings.structures.items.cluster.labelEnabled = false;
+    state.data.structures.setGroup('anchors', [rec('c1', { category: 'cluster' })]);
+    expect(produceStructureLabels(state, makeCtx()).labels.map((l) => l.id)).toEqual(['c1']);
+  });
+
+  it('does NOT re-fire the load-in for a disabled category still fading out', () => {
+    // A category fading OUT (labelEnabled false, opacity > 0) passes the draw
+    // gate but must never re-fire its load-in `fadeTo(handle, 1)` — that would
+    // pop it back to full visibility mid-fade.
+    const fades = createFadeRegistry();
+    fades.register({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 1);
+    fades.register({ kind: 'markerLayer', category: 'cluster' }, 1);
+    fades.setImmediate({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 0.5);
+    const fadeToSpy = vi.spyOn(fades, 'fadeTo');
+    const state = makeState({ fades });
+    state.settings.structures.items.cluster.labelEnabled = false;
+    state.data.structures.setGroup('anchors', [rec('c1', { category: 'cluster' })]);
+
+    produceStructureLabels(state, makeCtx());
+    // The label still emits (fade-out tail), but no fadeTo(handle, 1) load-in.
+    expect(fadeToSpy).not.toHaveBeenCalledWith(
+      { kind: 'labelLayer', layer: 'structure', category: 'cluster' },
+      1,
+      expect.any(Number),
+    );
+  });
+
+  it('hides a structure label when its marker (ring anchor) is disabled and fully hidden', () => {
+    // The anchor gate skips only when the ring is BOTH disabled (`enabled`
+    // false) AND its markerLayer opacity is exactly 0.
     const fades = createFadeRegistry();
     fades.register({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 1);
     fades.register({ kind: 'markerLayer', category: 'cluster' }, 1);
     fades.setImmediate({ kind: 'markerLayer', category: 'cluster' }, 0);
     const state = makeState({ fades });
+    state.settings.structures.items.cluster.enabled = false;
     state.data.structures.setGroup('anchors', [rec('c1', { category: 'cluster' })]);
     expect(produceStructureLabels(state, makeCtx()).labels).toEqual([]);
   });

@@ -9,8 +9,9 @@
  *
  * Two of the predicates are bug-fix pins (see the module docstring on
  * `assetWiring.ts`): `filaments` follows `settings.filaments.enabled`, and
- * `structureCatalog` follows structure-category visibility (the plan's stale
- * `structures.enabled` flag does not exist).
+ * `structureCatalog` follows structure-category visibility — it loads when any
+ * category has its ring (`structures.items[cat].enabled`) OR its label
+ * (`.labelEnabled`) on.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -160,29 +161,32 @@ describe('ASSET_WIRING demand predicates', () => {
 
   it('structureCatalog demand follows structure-category visibility (bug-fix pin)', () => {
     const cluster = rowFor('structureCatalog');
+    // Every category's ring + label off — both axes read from the item rows.
     const allHidden = {
-      markerCategoryVisibility: {
-        cluster: false,
-        supercluster: false,
-        void: false,
-        famousGalaxy: false,
-      },
-      labelCategoryVisibility: {
-        cluster: false,
-        supercluster: false,
-        void: false,
-        famousGalaxy: false,
+      structures: {
+        enabled: true,
+        items: {
+          cluster: { enabled: false, labelEnabled: false },
+          supercluster: { enabled: false, labelEnabled: false },
+          void: { enabled: false, labelEnabled: false },
+          group: { enabled: false, labelEnabled: false },
+        },
       },
     };
     expect(cluster.demand(makeCtx({ settings: allHidden }))).toBe(false);
 
-    // Any single structure category visible in EITHER markers or labels ⇒ true.
+    // Any single structure category visible in EITHER its ring or its label ⇒ true.
     expect(
       cluster.demand(
         makeCtx({
           settings: {
-            markerCategoryVisibility: { ...allHidden.markerCategoryVisibility, cluster: true },
-            labelCategoryVisibility: allHidden.labelCategoryVisibility,
+            structures: {
+              enabled: true,
+              items: {
+                ...allHidden.structures.items,
+                cluster: { enabled: true, labelEnabled: false },
+              },
+            },
           },
         }),
       ),
@@ -191,8 +195,13 @@ describe('ASSET_WIRING demand predicates', () => {
       cluster.demand(
         makeCtx({
           settings: {
-            markerCategoryVisibility: allHidden.markerCategoryVisibility,
-            labelCategoryVisibility: { ...allHidden.labelCategoryVisibility, void: true },
+            structures: {
+              enabled: true,
+              items: {
+                ...allHidden.structures.items,
+                void: { enabled: false, labelEnabled: true },
+              },
+            },
           },
         }),
       ),
