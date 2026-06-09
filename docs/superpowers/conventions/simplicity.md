@@ -263,8 +263,16 @@ Working rules:
   can and bring its comments to current state. Don't gold-plate unrelated knots.
 - **Land de-complecting as its own small PRs** (branch + PR, squash-merge). A refactor PR
   that also adds behaviour hides the strand you were pulling.
-- **Run the radar.** Use the `entanglement-radar` skill on the diff before you call a refactor
-  done; it names the complecting in these terms and proposes the un-braided shape.
+- **Run the radar — at design time too, not only on the diff.** Use the `entanglement-radar`
+  skill on the diff before you call a refactor done; it names the complecting and proposes the
+  un-braided shape. But the cheapest moment to un-braid is _while writing the spec/plan_, before
+  the shape is in code — so run the lens then as well.
+- **Asymmetry-language is a STOP signal.** When you catch yourself writing a section to teach how
+  to _handle_ an "asymmetry" / "the subtlety" / "special-case" / "must remember to", that prose
+  is the confession, not the diligence: documenting a knot well is not removing it. Ask one
+  question — is the difference **essential** (any reasonable implementation of the domain has it)
+  or **accidental** (an artifact of how state is stored)? Test against a sibling. Un-braid the
+  accidental before the plan locks it in; document only the essential.
 - **Escalate, don't hack.** If a clean de-complecting is blocked by something structural, stop
   and surface it rather than re-braiding around it.
 
@@ -302,6 +310,11 @@ A quick pass for review and refactor (the `entanglement-radar` skill runs this a
 - Is this a **value or a place**? Same input → same output?
 - Is this **information wrapped** in a class / method? Leave it as data.
 - One **canonical home**, or a mirror copy that can drift?
+- Can I name the **single reader and single writer** of this state, and do they agree? A field
+  written by one path but read-for-truth by another is a mirror (often a dead one) — fold to one home.
+- Does this spec/plan section exist to **teach handling of an asymmetry / exception / special-case**?
+  Classify essential (any implementation has it) vs accidental (an artifact of storage); un-braid
+  the accidental at design time rather than documenting it.
 - Does this **switch / conditional** on a discriminant belong in a registry or a union?
 - Is the **interface** as small as it could be? Are subcomponents injected, not hardwired?
 - Is **what** separated from **how**? Does the abstraction leak _how_?
