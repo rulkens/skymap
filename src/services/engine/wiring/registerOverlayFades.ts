@@ -72,7 +72,7 @@ export function registerOverlayFades(state: EngineState): void {
   // FADE_IN_DURATION_MS).
   state.subsystems.fades.register(
     { kind: 'volumesMaster' },
-    state.settings.volumes.masterEnabled ? 1 : 0,
+    state.settings.volumes.enabled ? 1 : 0,
   );
 
   // ── Label-layer handles ──────────────────────────────────────────────

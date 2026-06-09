@@ -127,18 +127,19 @@ export type EngineSettingsState = {
   };
 
   /**
-   * Scalar-volume overlay master gate and per-field params.  When
-   * `masterEnabled` is false, `volumeUpsamplePass.enabled` short-circuits
+   * Scalar-volume overlay master gate and per-item params.  When
+   * `enabled` is false, `volumeUpsamplePass.enabled` short-circuits
    * before consulting the renderer at zero GPU cost, and `encodeVolumes`
    * never opens its pre-HDR half-res render pass.  Per-field params
-   * (enabled / intensity / palette / …) live in `fields` — one settings
+   * (enabled / intensity / palette / …) live in `items` — one settings
    * row per registry-known volume field, seeded from `SOURCE_REGISTRY` at
    * construction so the panel can show a field's toggle before its cube
-   * lazy-loads.
+   * lazy-loads.  `items` is the same per-item accessor that surveys and
+   * structures expose, so all three source-type clusters share one shape.
    */
   volumes: {
-    masterEnabled: boolean;
-    fields: Partial<Record<VolumeFieldId, VolumeFieldSettings>>;
+    enabled: boolean;
+    items: Partial<Record<VolumeFieldId, VolumeFieldSettings>>;
   };
 
   /**

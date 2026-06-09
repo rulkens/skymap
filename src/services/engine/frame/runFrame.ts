@@ -298,7 +298,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       milkyWayEnabled: state.settings.milkyWay.enabled,
       filamentsEnabled: state.settings.filaments.enabled,
       filamentIntensity: state.settings.filaments.intensity,
-      volumesEnabled: state.settings.volumes.masterEnabled,
+      volumesEnabled: state.settings.volumes.enabled,
     },
     famousMeta: state.data.galaxies.famousMeta,
     catalogs: state.data.galaxies.catalogs,

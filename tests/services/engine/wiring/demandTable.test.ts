@@ -34,13 +34,13 @@
  * ### MCPM at boot
  *
  * The demand predicate for `mcpm` reads `ctx.volumeField('mcpm')?.enabled`,
- * sourced from `state.settings.volumes.fields`. The engine seeds that record
+ * sourced from `state.settings.volumes.items`. The engine seeds that record
  * at construction from the shippable volume registry entries (`seedVolumeFields`),
  * so `mcpm`'s enabled bit is `true` (registry visible:true) at boot, symmetric
  * with how `drawMask` seeds survey visibility. MCPM therefore IS in the boot
  * demand set — `cf4-density` is NOT (registry visible:false → seeded
  * enabled:false). `makeState` injects the same `seedVolumeFields` record into
- * `settings.volumes.fields` so the test exercises the real defaults rather than
+ * `settings.volumes.items` so the test exercises the real defaults rather than
  * a hand-rolled set.
  *
  * ### Synthetic fallback gate
@@ -117,7 +117,7 @@ type SettingsLeaves = {
 
 /**
  * Volume-field params keyed by id. Demand predicates read these from
- * `state.settings.volumes.fields` (`ctx.volumeField(id)?.enabled`), so
+ * `state.settings.volumes.items` (`ctx.volumeField(id)?.enabled`), so
  * `makeState` injects this record directly into the settings bag.
  */
 type VolumeFieldLeaves = Partial<Record<VolumeFieldId, { enabled: boolean }>>;
@@ -169,7 +169,7 @@ type NamedSlotOverrides = Partial<{
 type MakeStateOptions = {
   drawMask?: number;
   settings?: SettingsLeaves;
-  /** Volume-field params; injected into `settings.volumes.fields`. Defaults to boot. */
+  /** Volume-field params; injected into `settings.volumes.items`. Defaults to boot. */
   volumeFields?: VolumeFieldLeaves;
   requests?: Set<string>;
   /** Per-source point slots. Defaults to a fresh idle stub for every Source. */
@@ -211,12 +211,12 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
   );
 
   return {
-    // Inject volume fields directly into `settings.volumes.fields` — demand
+    // Inject volume fields directly into `settings.volumes.items` — demand
     // predicates read `ctx.volumeField(id)?.enabled` from that path via
-    // `state.settings.volumes.fields`.
+    // `state.settings.volumes.items`.
     settings: {
       ...(settings as unknown as EngineSettingsState),
-      volumes: { fields: volumeFields },
+      volumes: { items: volumeFields },
     } as unknown as EngineSettingsState,
     sources: { drawMask, tier: 'medium' },
     requests: requests as Set<import('../../../../src/@types/loading/RequestKey').RequestKey>,

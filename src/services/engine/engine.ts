@@ -437,8 +437,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
       },
       volumes: {
-        masterEnabled: DEFAULT_VOLUMES_ENABLED,
-        fields: seedVolumeFields(),
+        enabled: DEFAULT_VOLUMES_ENABLED,
+        items: seedVolumeFields(),
       },
       // Flow is a singleton overlay layer: all its user-facing state (master
       // gate + look/motion knobs) lives here, spread from the single
@@ -995,11 +995,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // Master toggle — mutate the settings bag so the per-frame volume gates
     // see it next frame.  No echo callback: the React layer owns this value
     // optimistically.
-    state.settings.volumes.masterEnabled = enabled;
+    state.settings.volumes.enabled = enabled;
     // Drive the FadeRegistry on the volumesMaster handle.  The encodeHdr*
     // sites multiply this master opacity into every per-field fade, so the
     // whole subsystem ramps in lockstep.  The pass-enabled gate accepts
-    // masterEnabled OR opacity > 0, so it keeps blitting through fade-out.
+    // the master enable bit OR opacity > 0, so it keeps blitting through fade-out.
     void state.subsystems.fades.fadeTo(
       { kind: 'volumesMaster' },
       enabled ? 1 : 0,
@@ -1013,9 +1013,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // field preserves its previously-tuned values; a brand-new handle seeds
     // from registry defaults.  Shippable volumes already have a construction
     // seed, so the guard only fires for a dynamically-added handle.
-    if (!state.settings.volumes.fields[fieldId]) {
-      state.settings.volumes.fields = {
-        ...state.settings.volumes.fields,
+    if (!state.settings.volumes.items[fieldId]) {
+      state.settings.volumes.items = {
+        ...state.settings.volumes.items,
         [fieldId]: buildVolumeFieldSettings(fieldId),
       };
     }
@@ -1025,7 +1025,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // Drive the FadeRegistry from the settings enable bit: enabled → fade to 1;
     // disabled → leave it at the 0 set by onFieldAdded (the draw loop's
     // `(!enabled && opacity <= 0)` skip keeps it invisible until toggled on).
-    if (state.settings.volumes.fields[fieldId]?.enabled) {
+    if (state.settings.volumes.items[fieldId]?.enabled) {
       void state.subsystems.fades.fadeTo(
         { kind: 'scalarField', field: fieldId },
         1,
@@ -1038,8 +1038,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   function removeVolumeField(fieldId: VolumeFieldId): void {
     state.gpu.scalarVolumeRenderer?.removeField(fieldId);
-    state.settings.volumes.fields = removeVolumeFieldSetting(
-      state.settings.volumes.fields,
+    state.settings.volumes.items = removeVolumeFieldSetting(
+      state.settings.volumes.items,
       fieldId,
     );
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
@@ -1049,7 +1049,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   /**
    * Lazy-load the DEV-only debug volume slot backing a field if it's `idle`.
    * The shippable volumes (CF-4, MCPM) load via `reevaluateDemand` instead
-   * (their demand reads `fields[id].enabled`); the debug fixtures are
+   * (their demand reads `items[id].enabled`); the debug fixtures are
    * excluded from the registry, so they keep a direct lazy-load.
    *
    * Idempotent (a non-idle slot no-ops, so off-then-on doesn't re-fetch),
@@ -1077,11 +1077,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function setVolumeFieldEnabled(fieldId: VolumeFieldId, enabled: boolean): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, { enabled });
+    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, { enabled });
     if (!next) return;
-    state.settings.volumes.fields = next;
+    state.settings.volumes.items = next;
     // DEV debug fixtures aren't demand rows, so they keep a direct lazy load
-    // here; cf4/mcpm load via reevaluateDemand reading fields[id].enabled, and
+    // here; cf4/mcpm load via reevaluateDemand reading items[id].enabled, and
     // this call is a no-op for those ids, so the two load paths partition.
     if (enabled) maybeLazyLoadDebugVolume(fieldId);
     // Drive the FadeRegistry: the draw loop's `(!enabled && opacity <= 0)` skip
@@ -1096,61 +1096,61 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function setVolumeFieldIntensity(fieldId: VolumeFieldId, intensity: number): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
       intensity: clampVolumeIntensity(intensity),
     });
     if (!next) return;
-    state.settings.volumes.fields = next;
+    state.settings.volumes.items = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldContrast(fieldId: VolumeFieldId, contrast: number): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
       contrast: clampVolumeContrast(contrast),
     });
     if (!next) return;
-    state.settings.volumes.fields = next;
+    state.settings.volumes.items = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldDensityScale(fieldId: VolumeFieldId, value: number): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
       densityScale: clampVolumeDensityScale(value),
     });
     if (!next) return;
-    state.settings.volumes.fields = next;
+    state.settings.volumes.items = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldTrim(fieldId: VolumeFieldId, trim: number): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
       trim: clampVolumeTrim(trim),
     });
     if (!next) return;
-    state.settings.volumes.fields = next;
+    state.settings.volumes.items = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldExposure(fieldId: VolumeFieldId, exposure: number): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
       exposure: clampVolumeExposure(exposure),
     });
     if (!next) return;
-    state.settings.volumes.fields = next;
+    state.settings.volumes.items = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldPalette(fieldId: VolumeFieldId, id: ScalarFieldPaletteId): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
       paletteId: id,
     });
     if (!next) return;
-    state.settings.volumes.fields = next;
+    state.settings.volumes.items = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
@@ -1158,7 +1158,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   function listVolumeFields(): VolumeFieldId[] {
     // Settings keys are the source of truth for which fields exist; mirrors
     // buildVolumeFieldsSnapshot so both views of identity stay in sync.
-    return Object.keys(state.settings.volumes.fields) as VolumeFieldId[];
+    return Object.keys(state.settings.volumes.items) as VolumeFieldId[];
   }
 
   function getVolumeFieldsState(): ReadonlyArray<VolumeFieldRowData> {

@@ -290,7 +290,7 @@ const errorValue = (msg: string): LoadState<unknown> => ({
  * post-`initGpu` shape: the GPU renderers are present (so commit
  * subscribers don't NPE), the per-source slot map is empty (the test
  * populates it per-case), and the volume fields are seeded via
- * `settings.volumes.fields: seedVolumeFields()` (so the MCPM demand
+ * `settings.volumes.items: seedVolumeFields()` (so the MCPM demand
  * predicate reads true at boot, as wireSlots expects).
  */
 function makeState(
@@ -324,7 +324,7 @@ function makeState(
       thumbnails: { enabled: true },
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 1.0 },
-      volumes: { masterEnabled: true, fields: seedVolumeFields() },
+      volumes: { enabled: true, items: seedVolumeFields() },
       // Structure categories all visible by default ⇒ structureCatalog demanded.
       // Overridable so a test can hide every category and pin the bug-fix
       // (structureCatalog must NOT load when nothing structural is visible).

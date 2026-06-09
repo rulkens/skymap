@@ -12,7 +12,7 @@ import type { FlowFieldStore } from './FlowFieldStore';
  * GPU-resident; the store tracks status only.
  *
  * Volumes have no store here: their only app-side state is per-field settings,
- * which live in `state.settings.volumes.fields` (ADR 0006 superseded the
+ * which live in `state.settings.volumes.items` (ADR 0006 superseded the
  * volumeStore that ADR 0005 originally proposed for that type).
  */
 export type EngineData = {

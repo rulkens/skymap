@@ -93,7 +93,7 @@ type SettingsPath =
   | readonly ['settings', 'filaments', keyof EngineState['settings']['filaments']]
   // Flow overlay (singleton-overlay-layer slice — see FlowSettings).
   | readonly ['settings', 'flow', keyof EngineState['settings']['flow']]
-  | readonly ['settings', 'volumes', 'masterEnabled']
+  | readonly ['settings', 'volumes', 'enabled']
   | readonly ['settings', 'debug', keyof EngineState['settings']['debug']];
 
 /**

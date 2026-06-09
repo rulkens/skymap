@@ -3,7 +3,7 @@
  *
  * Spec 2 moved every per-type data location off its pre-store home onto
  * `state.data.{ galaxies, structures, filaments }`. Volume per-field settings
- * are the exception: ADR 0006 placed them in `state.settings.volumes.fields`,
+ * are the exception: ADR 0006 placed them in `state.settings.volumes.items`,
  * not a data-layer store. This sweep is the structural guard that no consumer
  * still reads the OLD locations: a stray `state.sources.catalogs` left behind
  * would compile (the field is gone, but a string-literal access in a comment
@@ -18,7 +18,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-// Volume per-field settings live in state.settings.volumes.fields (ADR 0006) — not swept.
+// Volume per-field settings live in state.settings.volumes.items (ADR 0006) — not swept.
 const FORBIDDEN = [
   'sources.catalogs',
   'sources.famousMeta',

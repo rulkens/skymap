@@ -31,7 +31,7 @@
  * (contrastCenter, envelope) + a `residentPaletteId` GPU-residency fact.
  * The user-tunable knobs (enabled, intensity, contrast, densityScale,
  * palette, trim, exposure) are NOT mirrored on the entry — they live in
- * 'state.settings.volumes.fields' and are read per frame in 'draw' via
+ * 'state.settings.volumes.items' and are read per frame in 'draw' via
  * the 'settingsOf' projection, so there is exactly one source of truth.
  * Sharing the pipeline across all fields keeps the layout-'auto' trap
  * from biting: one pipeline → one auto-derived bind-group layout → all

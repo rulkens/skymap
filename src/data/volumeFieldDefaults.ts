@@ -80,7 +80,7 @@ export function buildVolumeFieldSettings(id: VolumeFieldId): VolumeFieldSettings
 
 /**
  * Build the construction-time volume-field seed record. The engine seeds
- * `state.settings.volumes.fields` from this at construction so every
+ * `state.settings.volumes.items` from this at construction so every
  * shippable volume's on/off state (and tunables) EXISTS before any cube
  * loads — the demand predicate `volumeField(id)?.enabled` then reads pure
  * state, fully symmetric with survey `isVisible`. Without this, a

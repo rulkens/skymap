@@ -10,7 +10,7 @@
  *      stored setting so a default-off session doesn't flash the Milky Way
  *      on frame 1.
  *
- *   2. The volumesMaster handle is registered at settings.volumes.masterEnabled
+ *   2. The volumesMaster handle is registered at settings.volumes.enabled
  *      so a default-off session sits at 0 until toggled, and a default-on
  *      session starts drawing volumes from the first frame.
  *
@@ -37,7 +37,7 @@ type RegisterCall = [FadeHandle, number | undefined];
 
 /**
  * Build a minimal EngineState with only the fields registerOverlayFades reads:
- * `state.settings.milkyWay.enabled`, `state.settings.volumes.masterEnabled`,
+ * `state.settings.milkyWay.enabled`, `state.settings.volumes.enabled`,
  * and `state.subsystems.fades.register`.
  */
 function makeState(
@@ -69,7 +69,7 @@ function makeState(
   const state = {
     settings: {
       milkyWay: { enabled: opts.milkyWayEnabled ?? true },
-      volumes: { masterEnabled: opts.volumesMasterEnabled ?? true },
+      volumes: { enabled: opts.volumesMasterEnabled ?? true },
       markerCategoryVisibility: markerVis,
       labelCategoryVisibility: labelVis,
     },
@@ -144,7 +144,7 @@ describe('registerOverlayFades', () => {
 
   // ── volumesMaster gating ─────────────────────────────────────────
 
-  it('registers volumesMaster at 1 when settings.volumes.masterEnabled', () => {
+  it('registers volumesMaster at 1 when settings.volumes.enabled', () => {
     // A default-on session needs opacity 1 from frame 1 so the
     // encodeHdr* volume multipliers don't accidentally suppress rendering.
     const { state, registerSpy } = makeState({ volumesMasterEnabled: true });
@@ -155,7 +155,7 @@ describe('registerOverlayFades', () => {
     expect(masterCall![1]).toBe(1);
   });
 
-  it('registers volumesMaster at 0 when settings.volumes.masterEnabled is false', () => {
+  it('registers volumesMaster at 0 when settings.volumes.enabled is false', () => {
     // A default-off session sits at 0; setVolumesEnabled fires fadeTo(1)
     // when the user toggles the master switch.
     const { state, registerSpy } = makeState({ volumesMasterEnabled: false });

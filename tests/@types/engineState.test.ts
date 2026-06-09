@@ -89,7 +89,7 @@ describe('EngineState type', () => {
       thumbnails: { enabled: true },
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 1 },
-      volumes: { masterEnabled: false, fields: {} },
+      volumes: { enabled: false, items: {} },
       flow: {
         enabled: false,
         mode: 'advect',
@@ -249,7 +249,7 @@ describe('EngineState type', () => {
         enabled: SOURCE_REGISTRY[Source.Filaments].visible,
         intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
       },
-      volumes: { masterEnabled: DEFAULT_VOLUMES_ENABLED, fields: {} },
+      volumes: { enabled: DEFAULT_VOLUMES_ENABLED, items: {} },
       flow: { ...DEFAULT_FLOW },
       debug: { showPickBuffer: false, showDiskRadiusRing: false },
       labelCategoryVisibility: {
@@ -303,7 +303,7 @@ describe('EngineState type', () => {
         thumbnails: { enabled: true },
         milkyWay: { enabled: true },
         filaments: { enabled: false, intensity: 1 },
-        volumes: { masterEnabled: false, fields: {} },
+        volumes: { enabled: false, items: {} },
         flow: { ...DEFAULT_FLOW },
         debug: { showPickBuffer: false, showDiskRadiusRing: false },
         labelCategoryVisibility: {

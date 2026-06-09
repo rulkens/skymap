@@ -2,7 +2,7 @@
  * VolumeFieldSettings — per-field runtime controls for one registered
  * scalar-volume field.
  *
- * Held in `state.settings.volumes.fields`, keyed by `VolumeFieldId`.
+ * Held in `state.settings.volumes.items`, keyed by `VolumeFieldId`.
  * The engine seeds these at construction from the field's SOURCE_REGISTRY
  * entry; the SettingsPanel reads authoritative state directly from settings
  * without polling the GPU handle.
