@@ -39,10 +39,10 @@ If omitted, ask which galaxy.
 ```
 CURATED (default)
   seed entry  →  curate-famous [HANDOFF: crop + disk + Commit in UI]
-    →  build-famous  →  commit (specific paths)  →  PR + merge  →  sync-r2-secure
+    →  build-famous + build-tiers  →  commit (specific paths)  →  PR + merge  →  sync-r2-secure
 
 FAST (no star-removal / no deproject)
-  seed entry  →  fetch-famous-images  →  build-famous
+  seed entry  →  fetch-famous-images  →  build-famous + build-tiers
     →  commit (specific paths)  →  PR + merge  →  sync-r2-secure
 ```
 
@@ -58,7 +58,10 @@ after the image step is identical.
   `public/data/` (see CLAUDE.md "worktree data isolation"); the build + R2 sync
   must happen where the real bins live.
 - Confirm the survey bins exist: `ls public/data/glade-*.bin public/data/2mrs.bin`.
-  `build-famous` reads them for its dedup pass — if they're absent, run
+  `build-famous` reads **only** the seed; the famous-vs-survey dedup lives in
+  `build-tiers` (`buildAllBins` → `dropFamousMatches`), which drops survey rows
+  within 30″ of a famous-seed position. So the survey bins must exist **and be
+  rebuilt after the seed changes** (step 4b). If they're absent, run
   `npm run build-tiers` once first.
 - Branch + PR, never a direct push to `main` (project rule).
 
@@ -212,8 +215,29 @@ npm run build-famous
 
 Reads the updated seed + any `recipe.json` calibration and regenerates
 `public/data/famous.bin` (positions/sizes/orientation) and
-`public/data/famous_meta.json` (names/description/calibration). Must run **after**
-the survey bins exist (step 1).
+`public/data/famous_meta.json` (names/description/calibration). `build-famous`
+reads **only** the seed — it has no dedup pass and never touches the survey bins.
+
+### 4b. Re-dedup the survey bins — required when the galaxy is also in a survey
+
+Almost every famous galaxy is *also* catalogued in GLADE / 2MRS / SDSS, and the
+renderer draws each source as its own billboard layer — so without dedup the new
+galaxy renders **twice** (once from the survey layer, once from the famous
+layer), and the local-volume distance override drags the two on top of each
+other. The dedup that prevents this lives in `build-tiers` (`buildAllBins` →
+`dropFamousMatches`), which drops survey rows within 30″ of a famous-seed
+position. It only takes effect on a survey-bin rebuild **after** the seed entry
+exists:
+
+```bash
+npm run build-tiers   # re-runs dropFamousMatches against the updated seed
+```
+
+Skip this only when the galaxy is genuinely absent from every survey catalog
+(rare — e.g. the LMC, which GLADE and 2MRS both omit; the SMC, by contrast, is
+GLADE PGC 3085 and *does* need the rebuild). When unsure, rebuild — it's
+idempotent. Verify by confirming the rebuilt `glade-*.bin` / `2mrs.bin` no
+longer carry a row at the new galaxy's position.
 
 ### 5. Commit — specific paths only
 
@@ -250,11 +274,13 @@ surfaces, but only one is a manual step:
 ```bash
 git switch main && git pull   # pick up the merged seed + tiles
 npm run build-famous          # regenerate famous.bin + famous_meta.json from merged seed
-npm run sync-r2-secure        # upload famous.bin + famous_meta.json + famous-hires/ to R2
+npm run build-tiers           # re-dedup the survey bins against the merged seed (skip only if the galaxy is in no survey)
+npm run sync-r2-secure        # upload famous.bin + meta + hi-res + the rebuilt glade-*/2mrs bins to R2
 ```
 
-A new entry changes all three R2 artefacts, so `sync-r2-secure` **is** required —
-this is the common case, not the exception. The only time you can skip R2 is an
+A new entry changes `famous.bin`, `famous_meta.json`, the hi-res tile, **and**
+(via the dedup) the survey bins, so `sync-r2-secure` **is** required — this is
+the common case, not the exception. The only time you can skip R2 is an
 image-only re-tune that changes a committed webp without touching the catalog or
 the hi-res tile.
 
@@ -273,7 +299,7 @@ the hi-res tile.
 | Gotcha | Why it matters |
 |--------|----------------|
 | Run from the main checkout | Worktree `public/data/` is throwaway; build + R2 sync must use the real bins |
-| `build-famous` needs survey bins present | It reads `glade-*.bin` / `2mrs.bin` for a dedup pass — run `build-tiers` once first |
+| Re-run `build-tiers` after the seed changes | The famous-vs-survey dedup lives in `build-tiers` (`dropFamousMatches`), not `build-famous`; skip it and a galaxy that's also in GLADE/2MRS renders twice |
 | Merging the PR deploys the shell; `sync-r2-secure` is still manual | Committed webps ride the auto Workers Assets rebuild on merge; bin + meta + hi-res live on R2 and need a manual sync |
 | Don't run `fetch-famous-images` on the curated path | It overwrites the curator's published `famous/<id>.webp` |
 | `expand-famous` only covers M/C | Custom (non-Messier/Caldwell) galaxies need a hand-authored seed entry (see 2b) — but a later `expand-famous` run preserves them |
@@ -289,6 +315,8 @@ the hi-res tile.
 - About to `git add -A` / `git add .` → stop; stage the specific famous paths.
 - About to skip `sync-r2-secure` after adding a new galaxy → stop; the catalog
   and hi-res LOD won't reach prod, and the renderer will 404 the new tile.
+- Ran `build-famous` but not `build-tiers` for a galaxy that's also in a survey
+  → stop; the survey row isn't deduped and the galaxy renders twice (see 4b).
 - Running the build or R2 sync from a worktree → stop; switch to the main
   checkout first.
 - About to commit `mask.jpg` or a `.tmp/` dir → stop; those are gitignored
