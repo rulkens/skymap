@@ -275,9 +275,9 @@ Same pattern, for `milkyWay.enabled`. **Preserve the fade:** the handle setter
 `fades.fadeTo({kind:'overlay', id:'milkyWay'}, …)`. Migrating: the boringSetter's
 write becomes the action; the `fadeTo` stays (it's the cosmetic ramp, upstream-
 unaffected). Echo `milkyWay.onEnabledChange`, cell `milkyWayEnabled`.
-- [ ] Reducer `setMilkyWayEnabled` + selector + tests → implement → action +
-  keep `fadeTo` → delete echo + cell + seed line → switch SettingsPanel read →
-  full suite (milkyWay fade test, if any, unaffected) → commit.
+- [x] Reducer `setMilkyWayEnabled` + selector + tests → implement → action +
+  keep `fadeTo` → delete echo + cell + seed line → (no SettingsPanel read to
+  switch — value has no React consumer) → full suite → commit.
 
 ### Task 2.7: debug
 

@@ -10,23 +10,25 @@
  *   1. React seeds an initial value from `data/defaults.ts` so the
  *      SettingsPanel renders a useful first paint before the engine's
  *      first echo lands.
- *   2. The engine fires an echo callback (e.g. `milkyWay.onEnabledChange`)
+ *   2. The engine fires an echo callback (e.g. `debug.onShowPickBufferChange`)
  *      both at engine init AND on every matching setter call, so the
  *      React copy always reflects the engine's authoritative value.
- *   3. The SettingsPanel onChange handler in App.tsx forwards user
+ *   3. The DebugPanel onChange handler in App.tsx forwards user
  *      input to the engine handle (e.g.
- *      `handleRef.current?.milkyWay.setEnabled(v)`) and the engine echoes
+ *      `handleRef.current?.setShowPickBuffer(v)`) and the engine echoes
  *      it right back, so no optimistic local update is needed — except for the
  *      exceptions below.
  *
  * The surveys cluster (pointSize / brightness / depthFade /
  * highlightFallback / realOnly / the derived source mask), the tonemap cluster
  * (exposure / curve), the camera auto-rotate flag, the bias cluster (mode /
- * absMagLimit), and the galaxy-thumbnail master toggle have LEFT this pattern:
- * they live in the engine-owned settings store. The store-backed values App
- * still surfaces are read via `useSettingsStore` selectors instead of a mirror
- * cell here; the thumbnail toggle has no React consumer at all (the panel
- * surface was evicted — the engine reads it each frame). The tonemap migration
+ * absMagLimit), the galaxy-thumbnail master toggle, and the Milky-Way disk
+ * toggle have LEFT this pattern: they live in the engine-owned settings store.
+ * The store-backed values App still surfaces are read via `useSettingsStore`
+ * selectors instead of a mirror cell here; the thumbnail and milkyWay toggles
+ * have no React consumer at all (the thumbnail panel surface was evicted, the
+ * engine reads it each frame; milkyWay's handle setter has no panel caller).
+ * The tonemap migration
  * also dissolved the `exposure` hybrid: the store write notifies synchronously,
  * so the slider thumb tracks without an optimistic local cell.
  *
@@ -54,7 +56,6 @@ import { LABEL_CATEGORIES } from '../data/labelCategories';
 import { STRUCTURE_CATEGORIES } from '../data/structureCategories';
 import {
   DEFAULT_FLOW,
-  DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_SHOW_PICK_BUFFER,
   DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_SPACE_MOUSE_SENSITIVITY,
@@ -72,11 +73,11 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   // and on every setter call, so these values always reflect engine truth.
   // Surveys-cluster settings (pointSize, brightness, depthFade,
   // highlightFallback, realOnly, and the derived visibleSourceMask), the
-  // tonemap cluster (exposure, curve), camera auto-rotate, and the
-  // galaxy-thumbnail master toggle moved to the engine-owned settings store —
-  // the thumbnail toggle has no React consumer (the panel surface was evicted;
-  // the engine reads it each frame), so no mirror cell or echo lives here.
-  const [milkyWayEnabled, setMilkyWayEnabled] = useState<boolean>(DEFAULT_MILKY_WAY_ENABLED);
+  // tonemap cluster (exposure, curve), camera auto-rotate, the galaxy-thumbnail
+  // master toggle, and the Milky-Way disk toggle moved to the engine-owned
+  // settings store — the thumbnail and milkyWay toggles have no React consumer
+  // (the thumbnail panel surface was evicted; milkyWay's handle setter has no
+  // panel caller), so no mirror cell or echo lives here.
   const [showPickBuffer, setShowPickBuffer] = useState<boolean>(DEFAULT_SHOW_PICK_BUFFER);
   const [showDiskRadiusRing, setShowDiskRadiusRing] = useState<boolean>(
     DEFAULT_SHOW_DISK_RADIUS_RING,
@@ -177,7 +178,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
 
   return {
     settings: {
-      milkyWayEnabled,
       filamentsEnabled,
       filamentIntensity,
       filamentCounts,
@@ -197,15 +197,12 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       // no-echo cases (filaments enabled/intensity, volumes master)
       // are App-owned with no wiring here.
       // The surveys + sources + tonemap echo sub-bags are gone, and so are the
-      // camera auto-rotate echo, the bias (mode / absMagLimit) echoes, and the
-      // thumbnails echo — those clusters live in the engine-owned store (the
-      // thumbnail toggle has no React consumer at all), so there's no mirror to
-      // keep in sync from a callback. (Camera EVENTS —
-      // focus / camera / scale — are not settings and are wired by `useEngine`,
-      // not here.)
-      milkyWay: {
-        onEnabledChange: setMilkyWayEnabled,
-      },
+      // camera auto-rotate echo, the bias (mode / absMagLimit) echoes, the
+      // thumbnails echo, and the milkyWay echo — those clusters live in the
+      // engine-owned store (the thumbnail + milkyWay toggles have no React
+      // consumer at all), so there's no mirror to keep in sync from a callback.
+      // (Camera EVENTS — focus / camera / scale — are not settings and are
+      // wired by `useEngine`, not here.)
       debug: {
         onShowPickBufferChange: setShowPickBuffer,
         onShowDiskRadiusRingChange: setShowDiskRadiusRing,

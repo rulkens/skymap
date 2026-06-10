@@ -84,6 +84,7 @@ describe('seedSettingsCallbacks', () => {
       onAutoRotateChange: vi.fn(),
     };
     const thumbnails = { onEnabledChange: vi.fn() };
+    const milkyWay = { onEnabledChange: vi.fn() };
     const debug = {
       onShowPickBufferChange: vi.fn(),
       onShowDiskRadiusRingChange: vi.fn(),
@@ -106,6 +107,7 @@ describe('seedSettingsCallbacks', () => {
       tonemap,
       camera,
       thumbnails,
+      milkyWay,
       debug,
       bias,
       sources,
@@ -133,6 +135,9 @@ describe('seedSettingsCallbacks', () => {
     expect(bias.onModeChange).not.toHaveBeenCalled();
     expect(bias.onAbsMagLimitChange).not.toHaveBeenCalled();
     expect(thumbnails.onEnabledChange).not.toHaveBeenCalled();
+    // The Milky-Way disk toggle migrated to the engine-owned store too; the seed
+    // never fired its echo (the toggle has no React consumer), so it stays unrung.
+    expect(milkyWay.onEnabledChange).not.toHaveBeenCalled();
     // The debug echoes still seed (no migration) — exercised below as the
     // lone-present echo in the per-callback-skip test.
     expect(debug.onShowPickBufferChange).toHaveBeenCalledExactlyOnceWith(snap.showPickBuffer);

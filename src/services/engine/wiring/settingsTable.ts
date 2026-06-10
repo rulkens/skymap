@@ -84,18 +84,19 @@ import { setToneMapCurveAction } from '../settingsStore/actions/setToneMapCurveA
 import { setAutoRotateAction } from '../settingsStore/actions/setAutoRotateAction';
 import { setAbsMagLimitAction } from '../settingsStore/actions/setAbsMagLimitAction';
 import { setThumbnailsEnabledAction } from '../settingsStore/actions/setThumbnailsEnabledAction';
+import { setMilkyWayEnabledAction } from '../settingsStore/actions/setMilkyWayEnabledAction';
 
 /**
  * 3-tuple path into `EngineState`: `['settings', <cluster>, <leaf>]`.
  *
- * Every current row writes into one of the eight `state.settings`
- * sub-bags.  Widening the union is the way to admit a future setter
- * that touches (say) `state.picking.*` without changing the helper.
+ * Every current row writes into one of the `state.settings` sub-bags
+ * still on this legacy in-place path.  Widening the union is the way to
+ * admit a future setter that touches (say) `state.picking.*` without
+ * changing the helper.
  */
 type SettingsPath =
   | readonly ['settings', 'surveys', keyof EngineState['settings']['surveys']]
   | readonly ['settings', 'tonemap', keyof EngineState['settings']['tonemap']]
-  | readonly ['settings', 'milkyWay', keyof EngineState['settings']['milkyWay']]
   | readonly ['settings', 'filaments', keyof EngineState['settings']['filaments']]
   // Flow overlay (singleton-overlay-layer slice — see FlowSettings).
   | readonly ['settings', 'flow', keyof EngineState['settings']['flow']]
@@ -105,16 +106,14 @@ type SettingsPath =
 /**
  * Nested callback address: `[cluster, method]`.  The cluster names
  * line up 1:1 with the optional sub-bags on `EngineCallbacks`
- * (`surveys`, `tonemap`, `milkyWay`, `filaments`, `volumes`,
- * `sources`).  Method names are kept as plain
- * `string` here because they vary per cluster and adding a full nested
- * union would duplicate the EngineCallbacks shape — the runtime
- * optional-chaining safely handles a missing method.
+ * (`surveys`, `tonemap`, `filaments`, `volumes`, `sources`).  Method
+ * names are kept as plain `string` here because they vary per cluster
+ * and adding a full nested union would duplicate the EngineCallbacks
+ * shape — the runtime optional-chaining safely handles a missing method.
  */
 type NestedCallbackKey =
   | readonly ['surveys', string]
   | readonly ['tonemap', string]
-  | readonly ['milkyWay', string]
   | readonly ['filaments', string]
   | readonly ['volumes', string]
   | readonly ['sources', string]
@@ -192,9 +191,13 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     action: setThumbnailsEnabledAction,
   },
   {
+    // milkyWay cluster (migrated to the engine-owned store). Dispatches the
+    // copy-on-write action; React reads via `selectMilkyWayEnabled`, so no echo
+    // is wired. The cosmetic fade ramp stays in the handle setter alongside this
+    // action (see the `milkyWay.setEnabled` wrapper in engine.ts). The wrapper
+    // still calls `requestRender`.
     name: 'setMilkyWayEnabled',
-    path: ['settings', 'milkyWay', 'enabled'],
-    callback: ['milkyWay', 'onEnabledChange'],
+    action: setMilkyWayEnabledAction,
   },
   {
     // App.tsx owns this boolean optimistically; no echo callback wired.

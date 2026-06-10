@@ -6,7 +6,7 @@
  *
  * The engine-side `EngineSettingsState` (see
  * `./EngineSettingsState.d.ts`) is the canonical mutable bag living
- * inside the engine closure, organised by *cluster* (`points`,
+ * inside the engine closure, organised by *cluster* (`surveys`,
  * `tonemap`, `camera`, `bias`, `thumbnails`, `milkyWay`, `filaments`,
  * `volumes`) so every cluster mirrors a sub-handle namespace 1:1.
  *
@@ -38,8 +38,9 @@ export type UseEngineSettingsState = {
   // here — App.tsx reads them off the engine-owned store via `useSettingsStore`
   // selectors. The galaxy-thumbnail master toggle also moved to the store but
   // has no React consumer (the panel surface was evicted), so it isn't surfaced
-  // here at all.
-  milkyWayEnabled: boolean;
+  // here at all. The Milky-Way disk toggle likewise moved to the store and has
+  // no React consumer (its handle setter has no panel caller), so it isn't
+  // surfaced here either.
   filamentsEnabled: boolean;
   filamentIntensity: number;
   filamentCounts: { stripCount: number; vertexCount: number } | null;
