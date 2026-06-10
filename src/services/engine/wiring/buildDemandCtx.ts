@@ -27,7 +27,6 @@ import { slotFor } from './slotFor';
 import type { DemandCtx } from '../../../@types/loading/DemandCtx';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { VolumeFieldId } from '../../../@types/data/VolumeFieldId';
 import type { RequestKey } from '../../../@types/loading/RequestKey';
 import type { AssetKey } from '../../../@types/loading/AssetKey';
 import type { LoadState } from '../../../@types/loading/LoadState';
@@ -35,10 +34,6 @@ import type { LoadState } from '../../../@types/loading/LoadState';
 export function buildDemandCtx(state: EngineState): DemandCtx {
   return {
     settings: state.settings,
-    // Volume field settings live on `state.settings.volumes.items`; the
-    // closure captures `state` by reference so reads are always live against
-    // the current settings.
-    volumeField: (id: VolumeFieldId) => state.settings.volumes.items[id],
     isVisible: (s: SourceType) => maskHas(state.sources.drawMask, s),
     request: (k: RequestKey) => state.requests.has(k),
     // `?? 'idle'` covers the not-yet-minted slot: an absent (null/undefined)

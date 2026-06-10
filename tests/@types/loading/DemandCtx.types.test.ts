@@ -7,7 +7,6 @@
  *     valid `RequestKey` and the return type is `boolean`).
  *   - `slotState('structureCatalog')` typechecks with the `LoadState['kind']`
  *     return type.
- *   - `volumeField('mcpm')` typechecks (returns the params or undefined).
  *
  * These are purely compile-time assertions: the `it` bodies just prove
  * that TypeScript accepted the expression — the runtime `expect` calls are
@@ -30,7 +29,6 @@ const fakeSettings = {} as unknown as EngineSettingsState;
 
 const ctx: DemandCtx = {
   settings: fakeSettings,
-  volumeField: (_id) => undefined,
   isVisible: (_s) => true,
   request: (_k) => false,
   slotState: (_k) => 'idle',
@@ -39,11 +37,6 @@ const ctx: DemandCtx = {
 describe('DemandCtx assignability', () => {
   it('accepts a literal object with all fields', () => {
     expect(ctx).toBeDefined();
-  });
-
-  it("volumeField('mcpm') returns the params or undefined", () => {
-    const result = ctx.volumeField('mcpm');
-    expect(result).toBeUndefined();
   });
 
   it("request('paletteOpened') returns boolean", () => {

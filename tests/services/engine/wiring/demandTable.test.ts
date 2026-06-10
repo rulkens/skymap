@@ -33,8 +33,8 @@
  *
  * ### MCPM at boot
  *
- * The demand predicate for `mcpm` reads `ctx.volumeField('mcpm')?.enabled`,
- * sourced from `state.settings.volumes.items`. The engine seeds that record
+ * The demand predicate for `mcpm` reads
+ * `ctx.settings.volumes.items.mcpm?.enabled`. The engine seeds that record
  * at construction from the shippable volume registry entries (`seedVolumeFields`),
  * so `mcpm`'s enabled bit is `true` (registry visible:true) at boot, symmetric
  * with how `drawMask` seeds survey visibility. MCPM therefore IS in the boot
@@ -118,9 +118,9 @@ type SettingsLeaves = {
 };
 
 /**
- * Volume-field params keyed by id. Demand predicates read these from
- * `state.settings.volumes.items` (`ctx.volumeField(id)?.enabled`), so
- * `makeState` injects this record directly into the settings bag.
+ * Volume-field params keyed by id. Demand predicates read
+ * `ctx.settings.volumes.items[id]?.enabled`, so `makeState` injects this
+ * record directly into the settings bag.
  */
 type VolumeFieldLeaves = Partial<Record<VolumeFieldId, { enabled: boolean }>>;
 
@@ -209,8 +209,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
 
   return {
     // Inject volume fields directly into `settings.volumes.items` — demand
-    // predicates read `ctx.volumeField(id)?.enabled` from that path via
-    // `state.settings.volumes.items`.
+    // predicates read `ctx.settings.volumes.items[id]?.enabled` from that path.
     settings: {
       ...(settings as unknown as EngineSettingsState),
       volumes: { items: volumeFields },
@@ -282,7 +281,7 @@ describe('reevaluateDemand demand-table regression', () => {
    * just triggered by its own demand row before famousMeta's row evaluates), so
    * famousMeta is also demanded. structureCatalog loads because every structure
    * category is visible by default. mcpm IS demanded: the predicate checks
-   * `ctx.volumeField('mcpm')?.enabled`, which the construction seed lands as
+   * `ctx.settings.volumes.items.mcpm?.enabled`, which the construction seed lands as
    * true (registry visible:true). cf4Density is NOT (seeded enabled:false).
    * filaments: off. pgcAlias: no request. Synthetic: surveys not errored.
    */
