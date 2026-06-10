@@ -26,7 +26,7 @@ import {
   FADE_IN_DURATION_MS,
   FADE_OUT_DURATION_MS,
 } from '../../../src/services/animation/fadeController';
-import { setSourceVisibleForTest } from '../../../src/services/engine/engine';
+import { setSourceVisibleForTest } from '../../../src/services/engine/handles/setSourceVisible';
 
 // ── Minimal fixture factory ───────────────────────────────────────────────
 

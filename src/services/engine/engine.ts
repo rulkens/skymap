@@ -70,7 +70,7 @@
  */
 
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
-import { ALL_VISIBLE_MASK, maskHas, maskWith, maskWithout } from '../../utils/sourceMask';
+import { ALL_VISIBLE_MASK, maskHas } from '../../utils/sourceMask';
 import type { SourceType } from '../../@types/data/SourceType';
 import {
   DEFAULT_ABS_MAG_LIMIT,
@@ -105,7 +105,6 @@ import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
 import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../animation/fadeController';
-import type { FadeHandle } from '../../@types/animation/FadeHandle';
 import { createSelectionSubsystem } from './subsystems/selectionSubsystem';
 import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
 import { createYouAreHereSubsystem } from './subsystems/youAreHereSubsystem';
@@ -143,11 +142,8 @@ import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowDat
 import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
 import type { StructureCategory } from '../../@types/engine/data/StructureCategory';
 import type { SurveyId } from '../../@types/engine/data/SurveyId';
-import { SOURCE_ENTRIES } from '../../data/sourceEntries';
 import { SURVEY_IDS } from '../../data/surveyIds';
 import { STRUCTURE_CATEGORIES } from '../../data/structureCategories';
-import { deriveMarkerCategoryVisibility } from './helpers/deriveMarkerCategoryVisibility';
-import { deriveLabelCategoryVisibility } from './helpers/deriveLabelCategoryVisibility';
 import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
 import type { SurveyItemSettings } from '../../@types/settings/SurveyItemSettings';
 
@@ -169,6 +165,10 @@ import { runBootstrapPhases } from './phases/bootstrap';
 import { rebuildHiResFamousForTier } from './helpers/rebuildHiResFamousForTier';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
 import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
+import { setSourceVisibleImpl } from './handles/setSourceVisible';
+import { setStructureItemEnabled } from './handles/setStructureItemEnabled';
+import { setStructureLabelEnabled } from './handles/setStructureLabelEnabled';
+import { setSurveyLabelEnabled } from './handles/setSurveyLabelEnabled';
 
 /**
  * Start the WebGPU engine on `canvas`.
@@ -188,149 +188,6 @@ import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
  *
  * @throws Never — errors are reported via `onStatusChange({ kind: 'error' })`.
  */
-
-// ── Test-accessible setSourceVisible logic ──────────────────────────────────
-//
-// `setSourceVisible`'s logic lives at module scope so tests can drive it
-// against a partial-state stub without a full GPU engine; the `createEngine`
-// closure delegates here.  The `Pick` keeps the signature narrow while still
-// accepting the full `EngineState`.
-//
-// Does NOT trigger loading: it flips `drawMask`/`pickMask` and calls
-// `requestRender`.  The render loop's `reevaluateDemand` reads the flipped
-// drawMask and loads the now-visible survey (and companions) next frame, so
-// visibility and loading stay decoupled.
-export async function setSourceVisibleImpl(
-  state: Pick<
-    import('../../@types/engine/state/EngineState').EngineState,
-    'sources' | 'subsystems'
-  >,
-  opts: { cb: Pick<EngineCallbacks, 'sources'> },
-  source: SourceType,
-  visible: boolean,
-): Promise<void> {
-  const { cb } = opts;
-
-  const handle: FadeHandle = { kind: 'survey', source };
-  const targetMask = visible
-    ? maskWith(state.sources.pickMask, source)
-    : maskWithout(state.sources.pickMask, source);
-  if (targetMask === state.sources.pickMask && targetMask === state.sources.drawMask) return;
-
-  // pickMask flips IMMEDIATELY — a fading-out layer must not be clickable.
-  state.sources.pickMask = targetMask;
-  // Notify the UI of the (immediate) state change so the checkbox reflects.
-  cb.sources?.onMaskChange?.(targetMask);
-  state.subsystems.scheduler.requestRender();
-
-  if (visible) {
-    // Flip drawMask, then fade in.  `reevaluateDemand` reads the now-set
-    // bit and loads the idle survey (plus companions); the idle-guard keeps
-    // a loaded survey from re-fetching, so re-toggling is cheap.
-    state.sources.drawMask = targetMask;
-    await state.subsystems.fades.fadeTo(handle, 1, FADE_IN_DURATION_MS);
-  } else {
-    await state.subsystems.fades.fadeTo(handle, 0, FADE_OUT_DURATION_MS);
-    // Re-read opacity rather than closing over `visible`: a concurrent
-    // off→on toggle within the fade-out window may have reversed the fade.
-    // Last-issued fade wins — if a fade-in started while we awaited, opacity
-    // is > 0 and we leave the drawMask bit set so the renderer keeps
-    // drawing through the ramp-up.
-    const finalOpacity = state.subsystems.fades.opacityOf(handle);
-    if (finalOpacity === 0) {
-      state.sources.drawMask = maskWithout(state.sources.drawMask, source);
-    } else {
-      state.sources.drawMask = maskWith(state.sources.drawMask, source);
-    }
-  }
-  state.subsystems.scheduler.requestRender();
-}
-
-// Test-only alias matching the import name used in tests.
-export { setSourceVisibleImpl as setSourceVisibleForTest };
-
-// ── Test-accessible category-visibility logic ───────────────────────────────
-//
-// The per-category visibility setters live at module scope (mirroring
-// `setSourceVisibleImpl`) so tests can drive them against a partial-state stub
-// without a full GPU engine. Each writes the authoritative settings leaf,
-// drives the matching per-category FadeRegistry handle for a smooth ramp,
-// echoes a fresh DERIVED record via the callback, and requests a render. The
-// `createEngine` literal delegates to these.
-//
-// Why fade the per-category handle here?  The producers (produceStructureMarkers
-// / produceStructureLabels / produceFamousLabels) already read
-// `opacityOf({...})` for their layer alpha; flipping the boolean alone would pop
-// a category in/out. Firing `fadeTo` on the same handle the producer reads turns
-// the toggle into a smooth fade — exactly as the milkyWay/filaments setters do
-// for their overlay/filaments handles. The boolean is the authoritative gate
-// (the producer draws while enabled OR still fading out); the fade opacity is
-// only the cosmetic alpha.
-
-function setStructureItemEnabled(
-  state: Pick<EngineState, 'settings' | 'subsystems'>,
-  cb: Pick<EngineCallbacks, 'labels'>,
-  category: StructureCategory,
-  visible: boolean,
-): void {
-  // Ring/marker axis. Only structures bear a ring, so this is keyed by
-  // StructureCategory and fires a markerLayer fade.
-  void state.subsystems.fades.fadeTo(
-    { kind: 'markerLayer', category },
-    visible ? 1 : 0,
-    visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
-  );
-  state.settings.structures.items[category].enabled = visible;
-  cb.labels?.onMarkerCategoryVisibilityChange?.(deriveMarkerCategoryVisibility(state));
-  state.subsystems.scheduler.requestRender();
-}
-
-function setStructureLabelEnabled(
-  state: Pick<EngineState, 'settings' | 'subsystems'>,
-  cb: Pick<EngineCallbacks, 'labels'>,
-  category: StructureCategory,
-  visible: boolean,
-): void {
-  // Text axis. Structure labels fade their per-category handle on the shared
-  // `structure` label layer.
-  void state.subsystems.fades.fadeTo(
-    { kind: 'labelLayer', layer: 'structure', category },
-    visible ? 1 : 0,
-    visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
-  );
-  state.settings.structures.items[category].labelEnabled = visible;
-  cb.labels?.onLabelCategoryVisibilityChange?.(deriveLabelCategoryVisibility(state));
-  state.subsystems.scheduler.requestRender();
-}
-
-function setSurveyLabelEnabled(
-  state: Pick<EngineState, 'settings' | 'subsystems'>,
-  cb: Pick<EngineCallbacks, 'labels'>,
-  survey: SurveyId,
-  enabled: boolean,
-): void {
-  // Single source of truth for survey label visibility: the survey's item row.
-  state.settings.surveys.items[survey].labelEnabled = enabled;
-  // Fire the survey's label fade IF it bears one — registry-driven: famous
-  // carries labelLayer 'galaxyNames', the other surveys carry none, so a
-  // labelEnabled toggle on a label-free survey just writes the (inert) flag.
-  const entry = SOURCE_ENTRIES.find((e) => e.id === survey);
-  const layer = entry && 'labelLayer' in entry ? entry.labelLayer : undefined;
-  if (layer) {
-    void state.subsystems.fades.fadeTo(
-      { kind: 'labelLayer', layer },
-      enabled ? 1 : 0,
-      enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
-    );
-  }
-  cb.labels?.onLabelCategoryVisibilityChange?.(deriveLabelCategoryVisibility(state));
-  state.subsystems.scheduler.requestRender();
-}
-
-// Test-only aliases matching the import names used in tests.
-export const setSurveyLabelEnabledForTest = setSurveyLabelEnabled;
-export const setStructureItemEnabledForTest = setStructureItemEnabled;
-export const setStructureLabelEnabledForTest = setStructureLabelEnabled;
 
 export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): EngineHandle {
   // ── Mutable engine state ─────────────────────────────────────────────────

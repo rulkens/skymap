@@ -23,11 +23,9 @@ import {
   FADE_OUT_DURATION_MS,
 } from '../../../src/services/animation/fadeController';
 import type { FadeHandle } from '../../../src/@types/animation/FadeHandle';
-import {
-  setSurveyLabelEnabledForTest,
-  setStructureItemEnabledForTest,
-  setStructureLabelEnabledForTest,
-} from '../../../src/services/engine/engine';
+import { setStructureItemEnabledForTest } from '../../../src/services/engine/handles/setStructureItemEnabled';
+import { setStructureLabelEnabledForTest } from '../../../src/services/engine/handles/setStructureLabelEnabled';
+import { setSurveyLabelEnabledForTest } from '../../../src/services/engine/handles/setSurveyLabelEnabled';
 
 // ── Minimal fixture factory ───────────────────────────────────────────────
 
