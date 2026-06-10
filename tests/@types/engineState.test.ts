@@ -185,7 +185,7 @@ describe('EngineState type', () => {
           onConnectionChange: () => {},
           onAxes: () => {},
         }),
-        tweens: createTweenManager(),
+        tweens: createTweenManager({ requestRender: () => {} }),
         selection: createSelectionSubsystem({
           cb: noopCb,
           getCloud: () => undefined,
@@ -378,7 +378,7 @@ describe('EngineState type', () => {
           onConnectionChange: () => {},
           onAxes: () => {},
         }),
-        tweens: createTweenManager(),
+        tweens: createTweenManager({ requestRender: () => {} }),
         selection: createSelectionSubsystem({
           cb: noopCb,
           getCloud: () => undefined,

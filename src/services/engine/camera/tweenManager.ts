@@ -27,12 +27,12 @@
  *                       just finished so the caller can choose to
  *                       schedule additional follow-on work (none today).
  *
- * The manager is intentionally *passive* — it does not schedule
- * renders or call updatePosition itself.  The engine still owns the
- * scheduler wake-up after `start()` (via `scheduler.requestRender()`),
- * because the tween manager has no opinion about the engine's render
- * loop.  Keeping that coupling explicit at the call site means the
- * manager stays trivially testable without a render scheduler stub.
+ * `start()` wakes the render scheduler directly — callers never follow
+ * up with a separate `requestRender`.  `cancel()` and `advance()` stay
+ * wake-free: every cancel site (pointerdown, SpaceMouse puck deflect) is
+ * already an input mouth that is awake, and `advance` runs inside a
+ * frame by definition.  The `deps.requestRender` parameter is required
+ * so a forgotten wake source is a compile error, not a silent gap.
  *
  * ### Why a factory rather than a class?
  *
@@ -49,7 +49,9 @@ import type { CameraTween } from '../../../@types/camera/CameraTween';
 import type { TweenManager } from '../../../@types/camera/TweenManager';
 import { advanceCameraTween } from '../../camera/cameraTween';
 
-export function createTweenManager(): TweenManager {
+export function createTweenManager(deps: {
+  readonly requestRender: () => void;
+}): TweenManager {
   // The single tween reference, owned privately by this closure.  All
   // mutation goes through the methods below — no external caller can
   // reach this binding.
@@ -66,6 +68,7 @@ export function createTweenManager(): TweenManager {
   const manager: TweenManager = {
     start(tween: CameraTween): void {
       currentTween = tween;
+      deps.requestRender();
     },
     cancel,
     isActive(): boolean {

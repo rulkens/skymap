@@ -14,12 +14,18 @@
  *   - `cancel()` mid-flight makes subsequent `advance()` calls a no-op.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { vec3 } from 'gl-matrix';
 
 import { createOrbitCamera } from '../../../../src/services/camera/orbitCamera';
 import type { CameraTween } from '../../../../src/@types/camera/CameraTween';
 import { createTweenManager } from '../../../../src/services/engine/camera/tweenManager';
+
+// Convenience factory: constructs a manager with a no-op wake stub so tests
+// that don't care about scheduling don't repeat the deps literal.
+function makeTweenManager() {
+  return createTweenManager({ requestRender: () => {} });
+}
 
 function makeCam() {
   return createOrbitCamera({
@@ -51,12 +57,12 @@ function makeTween(startMs: number, durationMs: number): CameraTween {
 
 describe('createTweenManager', () => {
   it('reports inactive on a fresh manager', () => {
-    const tm = createTweenManager();
+    const tm = makeTweenManager();
     expect(tm.isActive()).toBe(false);
   });
 
   it('flips active after start and inactive after cancel', () => {
-    const tm = createTweenManager();
+    const tm = makeTweenManager();
     tm.start(makeTween(1000, 600));
     expect(tm.isActive()).toBe(true);
     tm.cancel();
@@ -64,7 +70,7 @@ describe('createTweenManager', () => {
   });
 
   it('start replaces (not queues) the running tween', () => {
-    const tm = createTweenManager();
+    const tm = makeTweenManager();
     const cam = makeCam();
     // First tween targets x=10
     tm.start(makeTween(0, 600));
@@ -80,7 +86,7 @@ describe('createTweenManager', () => {
   });
 
   it('advance returns false and is a no-op when no tween is active', () => {
-    const tm = createTweenManager();
+    const tm = makeTweenManager();
     const cam = makeCam();
     const finished = tm.advance(cam, 1000);
     expect(finished).toBe(false);
@@ -89,7 +95,7 @@ describe('createTweenManager', () => {
   });
 
   it('advance mutates the camera while in flight and returns false', () => {
-    const tm = createTweenManager();
+    const tm = makeTweenManager();
     const cam = makeCam();
     tm.start(makeTween(1000, 600));
     const finished = tm.advance(cam, 1300); // halfway-ish
@@ -101,7 +107,7 @@ describe('createTweenManager', () => {
   });
 
   it('advance returns true once at completion and auto-clears the reference', () => {
-    const tm = createTweenManager();
+    const tm = makeTweenManager();
     const cam = makeCam();
     tm.start(makeTween(1000, 600));
     const finished = tm.advance(cam, 1600);
@@ -111,7 +117,7 @@ describe('createTweenManager', () => {
   });
 
   it('cancel mid-flight stops further advances from mutating the camera', () => {
-    const tm = createTweenManager();
+    const tm = makeTweenManager();
     const cam = makeCam();
     tm.start(makeTween(1000, 600));
     tm.advance(cam, 1100); // partway
@@ -122,5 +128,23 @@ describe('createTweenManager', () => {
     tm.advance(cam, 9999);
     expect(cam.target[0]).toBeCloseTo(xAfterFirst, 6);
     expect(tm.isActive()).toBe(false);
+  });
+
+  it('start wakes the scheduler', () => {
+    const requestRender = vi.fn();
+    const tm = createTweenManager({ requestRender });
+    tm.start(makeTween(0, 600));
+    expect(requestRender).toHaveBeenCalledTimes(1);
+  });
+
+  it('cancel and advance do not wake', () => {
+    const requestRender = vi.fn();
+    const tm = createTweenManager({ requestRender });
+    tm.start(makeTween(0, 600));
+    requestRender.mockClear();
+    const cam = makeCam();
+    tm.cancel();
+    tm.advance(cam, 0);
+    expect(requestRender).not.toHaveBeenCalled();
   });
 });

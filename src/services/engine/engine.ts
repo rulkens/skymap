@@ -560,7 +560,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       //   - pointerdown handler                (cancel on user grab),
       //   - SpaceMouse per-frame block         (cancel on puck deflect),
       //   - per-frame frame() loop             (advance + auto-clear).
-      tweens: createTweenManager(),
+      tweens: createTweenManager({
+        requestRender: () => state.subsystems.scheduler.requestRender(),
+      }),
 
       // ── SpaceMouse subsystem ──────────────────────────────────
       // All puck state lives inside the subsystem.  We hand it three
