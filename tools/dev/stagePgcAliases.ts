@@ -9,7 +9,7 @@
  * palette's alias search.  It's an *expensive, externally-sourced* artefact (a
  * slow chunked HyperLEDA pull — see `tools/fetch/buildPgcAliases.ts`), so
  * unlike the deterministic `.bin` outputs it's committed to git as a source
- * file under `data/` (next to `famous_galaxies.seed.json`).
+ * file under the `data/` root (the curated seeds live in `data/seeds/`).
  *
  * Production reads it straight from R2 (`syncR2`'s EXTRA_FILES uploads
  * `data/pgc_aliases.json` -> `r2://.../data/pgc_aliases.json`).  But the dev

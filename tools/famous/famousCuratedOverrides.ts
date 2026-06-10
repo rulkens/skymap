@@ -1,6 +1,6 @@
 /**
  * famousCuratedOverrides — read-side wrapper around
- * data/famous_curated_overrides.json.
+ * data/seeds/famous_curated_overrides.json.
  *
  * Mirrors the OverrideIndex type from
  * tools/famous-curator/plugin/overrideIndex.ts but lives in the famous/

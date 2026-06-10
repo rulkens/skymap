@@ -47,7 +47,7 @@ async function seedSession(): Promise<{ tmpId: string; sessionDir: string }> {
 /** Minimal fake repoRoot with the override-index parent dir present. */
 function fakeRepoRoot(): string {
   const root = mkdtempSync(join(tmpdir(), 'curator-disk-repo-'));
-  mkdirSync(resolve(root, 'data'), { recursive: true });
+  mkdirSync(resolve(root, 'data/seeds'), { recursive: true });
   mkdirSync(resolve(root, 'public/images/famous-curated'), { recursive: true });
   return root;
 }

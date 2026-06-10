@@ -76,16 +76,18 @@ pnpm-debug.log*
 # Everything under data/ is gitignored — raw catalog dumps, fetched
 # intermediates, and model weights, all large or rebuildable (~880 MB),
 # reproducible by re-running the parsers under tools/. Re-include only the
-# committed *sources*: curated seeds + the pgc_aliases map, and each catalog's
-# provenance README + checksum sidecar. Why each is committed lives in the
-# catalog's own data/raw/<catalog>/README.md, not here.
+# committed *sources*: the curated seeds under data/seeds/, the pgc_aliases map
+# at the data/ root, and each catalog's provenance README + checksum sidecar.
+# Why each is committed lives in the catalog's own data/raw/<catalog>/README.md,
+# not here.
 #
 # Anchored (/data/, not data/) so it never matches src/data or tests/data — an
 # unanchored rule would silently swallow TypeScript source and test fixtures
 # (the colour-index plan's Task 1 hit exactly that trap).
 /data/**
 !/data/**/
-!/data/*.json
+!/data/seeds/*.json
+!/data/pgc_aliases.json
 !/data/raw/**/README.md
 !/data/raw/**/*.sha256
 !/data/raw/fonts/*.ttf

@@ -206,7 +206,7 @@ describe('buildClusterEntries drops a bulk entry near a featured seed anchor', (
     // Read Coma's real seed coordinates.  Using the real file means the test
     // stays honest — if the seed changes the test fails rather than silently
     // diverging from reality.
-    const seedJson = readFileSync(resolve('data/structure_anchors.seed.json'), 'utf8');
+    const seedJson = readFileSync(resolve('data/seeds/structure_anchors.seed.json'), 'utf8');
     const seed = parseStructureSeed(seedJson);
     const coma = seed.find((e) => e.id === 'coma-a1656')!;
     expect(coma).toBeDefined();

@@ -47,7 +47,7 @@ async function seedSession(
 
 function fakeRepoRoot(): string {
   const root = mkdtempSync(join(tmpdir(), 'curator-export-repo-'));
-  mkdirSync(resolve(root, 'data'), { recursive: true });
+  mkdirSync(resolve(root, 'data/seeds'), { recursive: true });
   mkdirSync(resolve(root, 'public/images/famous-curated'), { recursive: true });
   return root;
 }
@@ -141,7 +141,7 @@ describe('handleExport', () => {
       sessionDirOverride: sess.sessionDir,
     });
     const idx = JSON.parse(
-      readFileSync(resolve(repo, 'data/famous_curated_overrides.json'), 'utf8'),
+      readFileSync(resolve(repo, 'data/seeds/famous_curated_overrides.json'), 'utf8'),
     );
     expect(idx.entries.m31.author).toBe('Alice');
     expect(idx.entries.m31.dir).toBe('famous-curated/m31');

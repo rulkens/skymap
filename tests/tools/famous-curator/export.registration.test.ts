@@ -47,7 +47,7 @@ async function seedDeprojectedSession(): Promise<{ tmpId: string; sessionDir: st
 
 function fakeRepoRoot(): string {
   const root = mkdtempSync(join(tmpdir(), 'curator-registration-repo-'));
-  mkdirSync(resolve(root, 'data'), { recursive: true });
+  mkdirSync(resolve(root, 'data/seeds'), { recursive: true });
   mkdirSync(resolve(root, 'public/images/famous-curated'), { recursive: true });
   return root;
 }

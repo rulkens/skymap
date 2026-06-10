@@ -44,7 +44,7 @@ async function seedSession(): Promise<{ tmpId: string; sessionDir: string }> {
 
 function fakeRepoRoot(): string {
   const root = mkdtempSync(join(tmpdir(), 'curator-thumb-repo-'));
-  mkdirSync(resolve(root, 'data'), { recursive: true });
+  mkdirSync(resolve(root, 'data/seeds'), { recursive: true });
   mkdirSync(resolve(root, 'public/images/famous-curated'), { recursive: true });
   return root;
 }

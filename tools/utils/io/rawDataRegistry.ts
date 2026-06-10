@@ -131,7 +131,7 @@ export const RAW_DATA = {
   // ─── Clusters (curated featured structures) ───────────────────────────
 
   'structures.seed': {
-    path: 'data/structure_anchors.seed.json',
+    path: 'data/seeds/structure_anchors.seed.json',
     kind: 'file',
     source: 'committed',
     description:
@@ -141,14 +141,14 @@ export const RAW_DATA = {
   // ─── Famous (curated catalog) ──────────────────────────────────────────
 
   'famous.seed': {
-    path: 'data/famous_galaxies.seed.json',
+    path: 'data/seeds/famous_galaxies.seed.json',
     kind: 'file',
     source: 'committed',
     description:
       'Hand-authored seed list of well-known galaxies (M31, M33, NGC 253, …). Drives the famous-galaxy build + image fetcher.',
   },
   'famous.curated': {
-    path: 'data/famous_curated_overrides.json',
+    path: 'data/seeds/famous_curated_overrides.json',
     kind: 'file',
     source: 'committed',
     description:
