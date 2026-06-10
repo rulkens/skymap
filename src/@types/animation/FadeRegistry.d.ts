@@ -34,7 +34,8 @@ export type FadeRegistry = Destroyable & {
 
   /**
    * Start (or retarget) the fade for a handle. Forwards to the
-   * controller's `fadeTo`. Returns the controller's Promise.
+   * controller's `fadeTo`. Returns the controller's Promise. Also wakes
+   * the render scheduler — callers never follow up with `requestRender`.
    *
    * If the handle is not registered, throws — slots and renderers
    * MUST register before fading, and a quiet no-op would hide bugs

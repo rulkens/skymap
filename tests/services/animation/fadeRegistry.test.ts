@@ -81,10 +81,12 @@ describe('createFadeRegistry', () => {
     expect(r.opacityOf(filaments, 1000)).toBe(0.6);
   });
 
-  it('fadeTo throws when the handle is not registered', () => {
-    const r = makeRegistry();
+  it('fadeTo throws when the handle is not registered and does not wake', () => {
+    const requestRender = vi.fn();
+    const r = createFadeRegistry({ requestRender });
     const h: FadeHandle = { kind: 'filaments' };
     expect(() => r.fadeTo(h, 1, 600)).toThrow();
+    expect(requestRender).not.toHaveBeenCalled();
   });
 
   it('fadeTo ramps opacity and resolves via tick', async () => {
@@ -178,7 +180,7 @@ describe('createFadeRegistry', () => {
     expect(requestRender).toHaveBeenCalledTimes(1);
   });
 
-  it('register, setImmediate, tick and opacityOf do not wake', () => {
+  it('register, unregister, setImmediate, tick and opacityOf do not wake', () => {
     const requestRender = vi.fn();
     const r = createFadeRegistry({ requestRender });
     const h: FadeHandle = { kind: 'filaments' };
@@ -186,6 +188,7 @@ describe('createFadeRegistry', () => {
     r.setImmediate(h, 0.5);
     r.tick(100);
     r.opacityOf(h, 100);
+    r.unregister(h);
     expect(requestRender).not.toHaveBeenCalled();
   });
 });
