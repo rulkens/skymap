@@ -286,22 +286,32 @@ const state: EngineState = {
 };
 ```
 
-- [ ] Add `settingsStore` to `EngineHandle.d.ts` with the contract above.
-- [ ] In `engine.ts`, build the seed object (the existing `settings` literal
+- [x] Add `settingsStore` to `EngineHandle.d.ts` with the contract above.
+- [x] In `engine.ts`, build the seed object (the existing `settings` literal
   body, unchanged) and pass it to `createSettingsStore`. Replace the literal
   `settings:` field with the getter delegating to `settingsStore.getState()`.
-- [ ] Add `settingsStore` to the handle literal (`engine.ts:1165` region).
-- [ ] **Escalation check:** if making `settings` a getter trips a type error
+- [x] Add `settingsStore` to the handle literal (`engine.ts:1165` region).
+- [x] **Escalation check:** if making `settings` a getter trips a type error
   because `EngineState.settings` is declared non-`Readonly` and a write site
   assigns `state.settings.X = v` (the in-place mutators that Plan 02 will
   convert), confirm those writes still compile against the getter (they read a
   mutable object today). If a write site CANNOT be left untouched in Phase 1
   (e.g. it reassigns `state.settings = …`), STOP and report — do not add a
   setter that re-introduces a second write path.
-- [ ] Construction test: `createEngine exposes a settingsStore seeded from
+  → No whole-object `state.settings = …` reassignment exists (re-confirmed via
+  grep); all writes are nested `state.settings.X.y = …`, which read the getter
+  then mutate the held object in place. Getter is safe; no setter added.
+- [x] Construction test: `createEngine exposes a settingsStore seeded from
   defaults` — assert `handle.settingsStore.getState().surveys.sizePx ===
   DEFAULT_POINT_SIZE_PX` and `.tonemap.exposure === DEFAULT_EXPOSURE`.
-- [ ] Construction test: `state.settings reads through the store` — drive an
+  → **GPU-harness limit hit:** `createEngine` needs a real GPUDevice and can't
+  run headless in Node (same reason `flowFieldsHandle.test.ts` tests the halves,
+  not `createEngine`). Per the escalation gate, asserted the seam at the level
+  it IS testable: the seed (mirrored by `makeSettingsFixture`, which tracks the
+  engine literal field-for-field) flows through `createSettingsStore` and
+  surfaces `DEFAULT_POINT_SIZE_PX` / `DEFAULT_EXPOSURE` via `getState()`. No GPU
+  mock built.
+- [x] Construction test: `state.settings reads through the store` — drive an
   existing setter (whichever already has a construction-level test) and assert
   the change is visible via `handle.settingsStore.getState()`. (Plan 02 makes the
   setters write the store; in Phase 1 the in-place mutation of the object the
@@ -310,6 +320,9 @@ const state: EngineState = {
   `getState` subscribers, note it: that's expected, and Plan 02's actions fix it
   by going copy-on-write. Phase 1 only needs `getState()` reads to reflect the
   current values, which they do.)
+  → Verified: mutating the held object the getter returns surfaces through a
+  later `getState()` (added `reflects in-place nested mutation … through
+  getState`). Same Node-level model as above (no headless `createEngine`).
 - [ ] MAIN: `npm test` (full engine suite stays green — behaviour unchanged) +
   `npm run typecheck`.
 - [ ] Commit `engine.ts`, `EngineHandle.d.ts`, the test.

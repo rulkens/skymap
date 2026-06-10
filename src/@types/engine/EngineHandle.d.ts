@@ -16,7 +16,10 @@
  * wiring stays cluster-shaped.
  */
 
+import type { StoreApi } from 'zustand/vanilla';
+
 import type { AssetSlot } from '../loading/AssetSlot';
+import type { EngineSettingsState } from '../settings/EngineSettingsState';
 
 import type { EngineSurveysHandle } from './handles/EngineSurveysHandle';
 import type { EngineTonemapHandle } from './handles/EngineTonemapHandle';
@@ -56,6 +59,19 @@ export type EngineHandle = {
   volumes: EngineVolumesHandle;
   input: EngineInputHandle;
   debug: EngineDebugHandle;
+
+  /**
+   * The engine-owned settings store. React subscribes via `useStore`; the
+   * engine reads it each frame (through the `state.settings` getter that
+   * delegates to `getState()`) and writes it through the sub-handle setters'
+   * actions. One home for every render setting, so React no longer keeps a
+   * parallel mirror that can drift from the authoritative value.
+   *
+   * Lives at the root rather than a sub-handle because it's the single
+   * subscription seam for the whole settings tree, not one cluster's knob —
+   * the imperative writes still flow through the topical sub-handles.
+   */
+  settingsStore: StoreApi<EngineSettingsState>;
 
   /**
    * Stop the render loop, release GPU resources, and detach all event

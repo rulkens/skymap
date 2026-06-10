@@ -101,6 +101,7 @@ import type { Tier } from '../../@types/data/Tier';
 import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 
 import { createTweenManager } from './camera/tweenManager';
+import { createSettingsStore } from './settingsStore/createSettingsStore';
 import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
@@ -256,78 +257,95 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // across the module boundary.
   const lastReportedFps: { current: number | null } = { current: null };
 
+  // ── Settings — the user-facing SettingsPanel sub-bags ──────────
+  //
+  // Every settings field lives under a named cluster (survey billboard
+  // knobs under `surveys`, HDR controls under `tonemap`, etc.). Defaults
+  // flow from `data/defaults.ts`; see `EngineSettingsState.d.ts` for the
+  // type-level map.
+  //
+  // We seed a zustand vanilla store (engine-owned, no React dependency in
+  // the core) with this literal rather than parking it directly on
+  // `state.settings`. `state.settings` then becomes a getter delegating to
+  // `settingsStore.getState()`, so React can subscribe to settings changes
+  // via `useStore` instead of keeping a parallel mirror that drifts. The
+  // dozens of `state.settings.X` read sites stay byte-identical — the getter
+  // hands back the held object directly.
+  const settingsStore = createSettingsStore({
+    // Survey layer: master gate on + shared billboard appearance knobs +
+    // one item row per survey, each layer + label default-on. Keys are
+    // DERIVED from `SURVEY_IDS` so the seed can't drift from the survey set.
+    // `labelEnabled` is inert for every survey except famousGalaxy (the only
+    // one that renders a name label) — seeded uniformly true.
+    surveys: {
+      enabled: true,
+      sizePx: DEFAULT_POINT_SIZE_PX,
+      brightness: DEFAULT_BRIGHTNESS,
+      depthFade: DEFAULT_DEPTH_FADE_ENABLED,
+      highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
+      realOnly: DEFAULT_REAL_ONLY_MODE,
+      items: Object.fromEntries(
+        SURVEY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+      ) as Record<SurveyId, SurveyItemSettings>,
+    },
+    tonemap: {
+      exposure: DEFAULT_EXPOSURE,
+      curve: DEFAULT_TONE_MAP_CURVE,
+    },
+    camera: {
+      autoRotate: DEFAULT_AUTO_ROTATE,
+    },
+    // Bias's user-tunable subset.  Bake-derived fields live on
+    // `state.bias` (worker outputs, not settings).  The -19 default is
+    // roughly where the SDSS spectroscopic main sample is volume-complete
+    // out to the survey's flux limit — bright enough that nearly every
+    // catalog galaxy has a spectrum, dim enough to keep plenty of structure.
+    bias: {
+      mode: DEFAULT_BIAS_MODE,
+      absMagLimit: DEFAULT_ABS_MAG_LIMIT,
+    },
+    thumbnails: {
+      enabled: DEFAULT_GALAXY_TEXTURES_ENABLED,
+    },
+    milkyWay: {
+      enabled: DEFAULT_MILKY_WAY_ENABLED,
+    },
+    filaments: {
+      enabled: SOURCE_REGISTRY[Source.Filaments].visible,
+      intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
+    },
+    volumes: {
+      enabled: DEFAULT_VOLUMES_ENABLED,
+      items: seedVolumeFields(),
+    },
+    // Flow is a singleton overlay layer: all its user-facing state (master
+    // gate + look/motion knobs) lives here, spread from the single
+    // `DEFAULT_FLOW` seed. The `state.data.flow` store stays status-only.
+    flow: { ...DEFAULT_FLOW },
+    debug: {
+      showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
+      showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
+    },
+    // Structure overlay: master gate on + one item row per category, each
+    // ring + label default-on. Keys are DERIVED from `STRUCTURE_CATEGORIES`
+    // so the seed can't drift from the category set (famous galaxies bear no
+    // ring and so have no row here).
+    structures: {
+      enabled: true,
+      items: Object.fromEntries(
+        STRUCTURE_CATEGORIES.map((c) => [c, { enabled: true, labelEnabled: true }]),
+      ) as Record<StructureCategory, StructureItemSettings>,
+    },
+  });
+
   const state: EngineState = {
-    // ── Settings — the user-facing SettingsPanel sub-bags ──────────
-    //
-    // Every settings field lives under a named cluster (survey billboard
-    // knobs under `surveys`, HDR controls under `tonemap`, etc.).
-    // Defaults flow from `data/defaults.ts`; see
-    // `EngineSettingsState.d.ts` for the type-level map.
-    settings: {
-      // Survey layer: master gate on + shared billboard appearance knobs +
-      // one item row per survey, each layer + label default-on. Keys are
-      // DERIVED from `SURVEY_IDS` so the seed can't drift from the survey set.
-      // `labelEnabled` is inert for every survey except famousGalaxy (the only
-      // one that renders a name label) — seeded uniformly true.
-      surveys: {
-        enabled: true,
-        sizePx: DEFAULT_POINT_SIZE_PX,
-        brightness: DEFAULT_BRIGHTNESS,
-        depthFade: DEFAULT_DEPTH_FADE_ENABLED,
-        highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
-        realOnly: DEFAULT_REAL_ONLY_MODE,
-        items: Object.fromEntries(
-          SURVEY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
-        ) as Record<SurveyId, SurveyItemSettings>,
-      },
-      tonemap: {
-        exposure: DEFAULT_EXPOSURE,
-        curve: DEFAULT_TONE_MAP_CURVE,
-      },
-      camera: {
-        autoRotate: DEFAULT_AUTO_ROTATE,
-      },
-      // Bias's user-tunable subset.  Bake-derived fields live on
-      // `state.bias` (worker outputs, not settings).  The -19 default is
-      // roughly where the SDSS spectroscopic main sample is volume-complete
-      // out to the survey's flux limit — bright enough that nearly every
-      // catalog galaxy has a spectrum, dim enough to keep plenty of structure.
-      bias: {
-        mode: DEFAULT_BIAS_MODE,
-        absMagLimit: DEFAULT_ABS_MAG_LIMIT,
-      },
-      thumbnails: {
-        enabled: DEFAULT_GALAXY_TEXTURES_ENABLED,
-      },
-      milkyWay: {
-        enabled: DEFAULT_MILKY_WAY_ENABLED,
-      },
-      filaments: {
-        enabled: SOURCE_REGISTRY[Source.Filaments].visible,
-        intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
-      },
-      volumes: {
-        enabled: DEFAULT_VOLUMES_ENABLED,
-        items: seedVolumeFields(),
-      },
-      // Flow is a singleton overlay layer: all its user-facing state (master
-      // gate + look/motion knobs) lives here, spread from the single
-      // `DEFAULT_FLOW` seed. The `state.data.flow` store stays status-only.
-      flow: { ...DEFAULT_FLOW },
-      debug: {
-        showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
-        showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
-      },
-      // Structure overlay: master gate on + one item row per category, each
-      // ring + label default-on. Keys are DERIVED from `STRUCTURE_CATEGORIES`
-      // so the seed can't drift from the category set (famous galaxies bear no
-      // ring and so have no row here).
-      structures: {
-        enabled: true,
-        items: Object.fromEntries(
-          STRUCTURE_CATEGORIES.map((c) => [c, { enabled: true, labelEnabled: true }]),
-        ) as Record<StructureCategory, StructureItemSettings>,
-      },
+    // `state.settings` delegates to the engine-owned store. Copy-on-write
+    // writes (Plan 02's actions) change the ref only on user-driven changes,
+    // so per-frame reads see a stable object; the in-place nested mutators
+    // still alive in Phase 1 mutate that held object directly, which the
+    // getter surfaces unchanged.
+    get settings() {
+      return settingsStore.getState();
     },
     bias: {
       // Bake-only sentinels — overwritten before the shader's mode-2/3/4
@@ -1334,6 +1352,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setShowPickBuffer: (enabled: boolean) => boringSetters.setShowPickBuffer(enabled),
       setShowDiskRadiusRing: (enabled: boolean) => boringSetters.setShowDiskRadiusRing(enabled),
     },
+
+    // The engine-owned settings store. React subscribes via `useStore`; the
+    // engine reads it each frame through the `state.settings` getter. Phase 1
+    // exposes it alongside the still-live React mirror — Plan 02 migrates
+    // consumers and deletes the mirror.
+    settingsStore,
 
     destroy,
 
