@@ -46,6 +46,7 @@ import { pickToSelection } from '../helpers/pickToSelection';
 import { collectPickTargets } from '../helpers/collectPickTargets';
 import { produceStructureMarkers } from '../presentation/produceStructureMarkers';
 import { deriveFrameContext } from './frameContext';
+import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
 import {
@@ -88,6 +89,12 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // already loading/ready/error asset is a cheap no-op on steady-state
   // frames.  (Boot loads are kicked from wireSlots, and the
   // synthetic-fallback gate kicks its backstop directly.)
+  //
+  // Recompute the survey draw/pick masks from settings + live fade opacity at
+  // the top of every frame, before any reader (demand or render pass) touches
+  // them — so the masks are always a fresh derivation of the single source of
+  // truth, never a hand-maintained mirror.
+  deriveSourceMasks(state);
   reevaluateDemand(state);
 
   // ── Resize the swap-chain if the canvas element changed size ──────
@@ -270,18 +277,18 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     proceduralDiskRenderer: deps.proceduralDiskRenderer,
     milkyWayITimeSec: (performance.now() - deps.milkyWayITimeEpochMs) * 0.001 * 0.25,
     settings: {
-      pointSizePx: state.settings.points.sizePx,
-      brightness: state.settings.points.brightness,
+      pointSizePx: state.settings.surveys.sizePx,
+      brightness: state.settings.surveys.brightness,
       selected: state.subsystems.selection.selected(),
       visibleSourceMask: state.sources.drawMask,
-      highlightFallback: state.settings.points.highlightFallback,
-      realOnlyMode: state.settings.points.realOnly,
+      highlightFallback: state.settings.surveys.highlightFallback,
+      realOnlyMode: state.settings.surveys.realOnly,
       biasMode: state.settings.bias.mode,
       absMagLimit: state.settings.bias.absMagLimit,
       apparentMagLimit: state.bias.apparentMagLimit,
       schechterMStar: state.bias.schechterMStar,
       schechterAlpha: state.bias.schechterAlpha,
-      depthFadeEnabled: state.settings.points.depthFade,
+      depthFadeEnabled: state.settings.surveys.depthFade,
       // Same crossfade band the procedural-disk pass fades IN over, so the
       // two passes blend cleanly without a double-bright donut.  Constants
       // are the single source of truth in `proceduralDiskSubsystem.ts`.
@@ -298,7 +305,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       milkyWayEnabled: state.settings.milkyWay.enabled,
       filamentsEnabled: state.settings.filaments.enabled,
       filamentIntensity: state.settings.filaments.intensity,
-      volumesEnabled: state.settings.volumes.masterEnabled,
+      volumesEnabled: state.settings.volumes.enabled,
     },
     famousMeta: state.data.galaxies.famousMeta,
     catalogs: state.data.galaxies.catalogs,
@@ -330,7 +337,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       const pickTex = state.gpu.pickRenderer.renderForDebug(
         [deps.canvas.width, deps.canvas.height],
         overlaySources,
-        state.settings.points.sizePx,
+        state.settings.surveys.sizePx,
       );
       if (pickTex !== null) {
         const overlayEncoder = deps.device.createCommandEncoder({
@@ -415,7 +422,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         visibleSources,
         // Boost the picking floor for easier hover targets — see
         // PICK_PADDING_PX in pickRenderer.ts.
-        state.settings.points.sizePx,
+        state.settings.surveys.sizePx,
         // Optional GPU-timing descriptor for the hover-pick pass.
         // Undefined unless `?gpuTimings` is set; the click path in
         // clickHandler.ts wires this the same way.  Slot (18, 19) is

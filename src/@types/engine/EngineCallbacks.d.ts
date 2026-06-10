@@ -145,10 +145,10 @@ export type EngineCallbacks = {
   };
 
   /**
-   * Point-render style echoes.  Drive the SettingsPanel controls so
+   * Survey point-render style echoes.  Drive the SettingsPanel controls so
    * the UI mirrors engine truth on every clamp / re-seed.
    */
-  points?: {
+  surveys?: {
     onSizeChange?: (sizePx: number) => void;
     onBrightnessChange?: (value: number) => void;
     onDepthFadeChange?: (enabled: boolean) => void;
@@ -237,9 +237,12 @@ export type EngineCallbacks = {
    * can be hidden while its label still renders, and vice versa.
    *
    * The engine fires each callback once at init (with the default
-   * record — all categories visible) and once per matching
-   * `handle.labels.setCategoryLabelVisible(...)` /
-   * `setCategoryMarkerVisible(...)` call.
+   * record — all categories visible) and once per matching structure
+   * toggle (`handle.structures.setItemEnabled(...)` /
+   * `setLabelEnabled(...)`) or famous-label toggle
+   * (`handle.surveys.setLabelEnabled('famousGalaxy', ...)`). The records are
+   * derived projections of `settings.structures.items`, so each echo
+   * carries the freshly-derived view.
    */
   labels?: {
     onLabelCategoryVisibilityChange?: (

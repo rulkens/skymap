@@ -213,7 +213,7 @@ describe('parseFamousSeed', () => {
     // (CI, fresh clones, contributors' machines), not just on the
     // project author's laptop.  vitest sets process.cwd() to the
     // package root by default.
-    const seedPath = path.join(process.cwd(), 'data', 'famous_galaxies.seed.json');
+    const seedPath = path.join(process.cwd(), 'data', 'seeds', 'famous_galaxies.seed.json');
     const raw = fs.readFileSync(seedPath, 'utf8');
     const entries = parseFamousSeed(raw);
     // Sanity: at least 20 Messier seeds; every entry has a name and an RA.

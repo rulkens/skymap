@@ -4,15 +4,16 @@
  * its `famousMeta` sidecar).
  *
  * Famous galaxies are galaxy data, not structures — their anchor is the galaxy
- * point itself, they emit no ring/halo marker, and their visibility lives on
- * `galaxyStore.famousLabelsVisible`. The two-asset join (catalog
- * positions/diameters ⋈ meta names) happens here, on the galaxy side, and emits
- * the famous labels plus their anchor lines.
+ * point itself, they emit no ring/halo marker, and their label visibility lives
+ * on `settings.surveys.items.famousGalaxy.labelEnabled` (famous is a survey
+ * source). The two-asset join (catalog positions/diameters ⋈ meta names) happens
+ * here, on the galaxy side, and emits the famous labels plus their anchor lines.
  *
  * ### Opacity-aware visibility gate (fades out, doesn't pop)
  *
- * The hidden-state early return is gated on BOTH `famousLabelsVisible` being
- * false AND the `galaxyNames` opacity having reached 0 — so a toggle-off keeps
+ * The hidden-state early return is gated on BOTH the famous-survey
+ * `labelEnabled` being false AND the `galaxyNames` opacity having reached 0 — so
+ * a toggle-off keeps
  * emitting at the declining `layerAlpha` until the fade-out ramp completes,
  * rather than popping the labels instantly (mirrors `filamentsPass.enabled`).
  * The OTHER early returns (meta/catalog absent — nothing to fade) stay hard.
@@ -176,7 +177,7 @@ export function produceFamousLabels(
   // tail is still non-zero — so a toggle-off fades out smoothly instead of
   // popping (mirrors `filamentsPass.enabled`). Once opacity hits 0 we stop.
   if (
-    !galaxies.famousLabelsVisible &&
+    !state.settings.surveys.items.famousGalaxy.labelEnabled &&
     fades.opacityOf({ kind: 'labelLayer', layer: 'galaxyNames' }, now) === 0
   ) {
     return empty;

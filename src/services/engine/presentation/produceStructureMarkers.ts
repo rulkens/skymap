@@ -22,9 +22,11 @@
  * the ring pick path packs `@builtin(instance_index)` as the per-category-local
  * index and `resolveStructureFromPick` resolves it through `byCategory(cat)[structureIndex]`.
  * Omitting a faded structure would index-shift that lookup. The only legitimate
- * skip is all-or-nothing-per-category — a category whose toggle opacity is
- * exactly 0 — which never perturbs within-category alignment. A mid-fade
- * category (0 < opacity < 1) emits alpha-scaled descriptors, NOT skips.
+ * skip is all-or-nothing-per-category — a category that is both DISABLED (its
+ * `structures.items[cat].enabled` boolean is false, the authoritative gate) AND
+ * fully faded (toggle opacity exactly 0) — which never perturbs within-category
+ * alignment. A still-fading category (disabled but opacity > 0) keeps emitting
+ * alpha-scaled descriptors so the fade-out tail draws to completion.
  */
 
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
@@ -60,11 +62,14 @@ export function produceStructureMarkers(
   const structures = state.data.structures;
   for (const p of structures.all()) {
     // Per-category marker opacity: the category toggle's fade, read from the
-    // registry. 0 is the ONLY legitimate
-    // all-or-nothing skip — safe for within-category alignment. A mid-fade
-    // value (0<opacity<1) scales the descriptor alpha instead of skipping.
+    // registry. The authoritative gate is the boolean — draw while the category
+    // is enabled OR still fading out. Only when it's both disabled AND fully
+    // faded do we skip (the all-or-nothing case, safe for within-category
+    // alignment). A mid-fade value scales the descriptor alpha; catOpacity is
+    // still multiplied into `weightedFade` below.
     const catOpacity = fades.opacityOf({ kind: 'markerLayer', category: p.category }, now);
-    if (catOpacity === 0) continue;
+    const enabled = state.settings.structures.items[p.category].enabled;
+    if (!enabled && catOpacity === 0) continue;
     // Render at the WIDER apparent extent, falling back to the core for
     // structures that only set physicalRadiusMpc.
     const radiusMpc = p.apparentRadiusMpc ?? p.physicalRadiusMpc;

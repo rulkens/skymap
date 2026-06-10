@@ -44,6 +44,7 @@ import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useEngineSettings } from '../../hooks/useEngineSettings';
 import { useSpaceMouseDevicePresence } from '../../hooks/useSpaceMouseDevicePresence';
 import { buildStaticAnchorStructures } from '../../data/buildStaticAnchorStructures';
+import { isStructureCategory } from '../../data/structureCategories';
 import { DebugPanel } from '../DebugPanel/DebugPanel';
 import { isWebHIDSupported } from '../../services/input/spaceMouse';
 
@@ -236,14 +237,24 @@ export function App(): React.ReactElement {
           <SettingsPanel
             defaultOpen={initialPanelsOpen}
             pointSize={pointSize}
-            onPointSizeChange={(size) => handleRef.current?.points.setSize(size)}
+            onPointSizeChange={(size) => handleRef.current?.surveys.setSize(size)}
             labelCategoryVisibility={labelCategoryVisibility}
             markerCategoryVisibility={markerCategoryVisibility}
             onSetMarkerCategoryVisibility={(category, visible) => {
-              handleRef.current?.labels.setCategoryMarkerVisible(category, visible);
+              // Marker rows are keyed by StructureCategory — drive the ring axis
+              // on the structures handle.
+              handleRef.current?.structures.setItemEnabled(category, visible);
             }}
             onSetLabelCategoryVisibility={(category, visible) => {
-              handleRef.current?.labels.setCategoryLabelVisible(category, visible);
+              // Label rows span famousGalaxy + structures; route by registry so
+              // structure labels drive the structures handle while the curated
+              // atlas (famousGalaxy, a survey source) routes through the surveys
+              // handle's label axis.
+              if (isStructureCategory(category)) {
+                handleRef.current?.structures.setLabelEnabled(category, visible);
+              } else {
+                handleRef.current?.surveys.setLabelEnabled(category, visible);
+              }
             }}
             // Filaments has no engine echo — React owns the state, so
             // the handler updates locally AND forwards to the engine.
@@ -259,7 +270,7 @@ export function App(): React.ReactElement {
             }}
             depthFadeEnabled={depthFadeEnabled}
             onDepthFadeEnabledChange={(enabled) => {
-              handleRef.current?.points.setDepthFade(enabled);
+              handleRef.current?.surveys.setDepthFade(enabled);
             }}
             onResetCamera={() => handleRef.current?.camera.focusOnHome()}
             // Tier swap is owned end-to-end by the engine: it cancels
@@ -267,16 +278,16 @@ export function App(): React.ReactElement {
             // then echoes the new tier back through `onTierChange`.
             tier={currentTier}
             onTierChange={(tier) => handleRef.current?.sources.setTier(tier)}
-            // `setSourceVisible` fires `onMaskChange` synchronously so
-            // React state lands before this handler returns; no
-            // optimistic update needed.  `setVisible` is async (drawMask
-            // flips after the fade), hence fire-and-forget.
             visibleSourceMask={visibleSourceMask}
             sourceCounts={sourceCounts}
             structureCounts={structureCounts}
-            onToggleSource={(source, visible) => {
-              void handleRef.current?.sources.setVisible(source, visible);
-            }}
+            // `setVisible` is synchronous: it flips the survey's `enabled`
+            // flag (single source of truth) and echoes the derived mask back
+            // via `onMaskChange` before this handler returns, so the React
+            // checkbox stays engine-driven — no optimistic update needed.
+            onToggleSource={(source, visible) =>
+              handleRef.current?.sources.setVisible(source, visible)
+            }
             spaceMouseSupported={spaceMouseSectionVisible}
             spaceMouseConnected={spaceMouseConnected}
             onConnectSpaceMouse={() => {
@@ -387,16 +398,16 @@ export function App(): React.ReactElement {
             slots={handleRef.current.assetSlots}
             timingService={handleRef.current.debug.timingService}
             passOverrides={handleRef.current.debug.passOverrides}
-            // Orientation-fallback diagnostic toggles — `points`
+            // Orientation-fallback diagnostic toggles — `surveys`
             // setters echo synchronously, so React mirrors engine
             // truth without an optimistic update.
             highlightFallback={highlightFallback}
             realOnlyMode={realOnlyMode}
             onHighlightFallbackChange={(enabled) => {
-              handleRef.current?.points.setHighlightFallback(enabled);
+              handleRef.current?.surveys.setHighlightFallback(enabled);
             }}
             onRealOnlyModeChange={(enabled) => {
-              handleRef.current?.points.setRealOnly(enabled);
+              handleRef.current?.surveys.setRealOnly(enabled);
             }}
             showPickBuffer={showPickBuffer}
             onShowPickBufferChange={(enabled) => {

@@ -55,8 +55,9 @@ work (memory `feedback_seed_data_early`). Order: type union → parser/seed →
 
 1. Follow **CLAUDE.md → "Adding a new raw data source"** for the file plumbing:
    `data/raw/<catalog>/` subdir, register every file in
-   `tools/utils/io/rawDataRegistry.ts`, `.gitignore` exception + provenance
-   `README.md`, a fetcher mirroring `tools/fetch/fetchHyperLeda.ts`.
+   `tools/utils/io/rawDataRegistry.ts`, provenance `README.md` (auto-tracked by
+   the `data/raw/**/README.md` glob — no gitignore edit), a fetcher mirroring
+   `tools/fetch/fetchHyperLeda.ts`.
 2. Write the parser in `tools/parsers/` (consult the VizieR ReadMe for byte
    offsets — they live next to the data file).
 3. Add a `Source` enum member + `SOURCE_REGISTRY` row (see Path B step 3 — the
@@ -96,7 +97,7 @@ errors guide you to the totality sites.
 | 14 | Settings count | `src/services/engine/wiring/wireStructureProjection.ts` (`emitCounts`) | ⚠️ **silent** — no count shown if missed |
 | 15 | Visibility defaults | `useEngineSettings.ts` ×2, `engine.ts` ×2, **+ test fixtures** | ⚠️ **copy-paste ×8** |
 | 16 | Debug panel | `src/components/DebugPanel/LabelEffectsSection.tsx` (`CATEGORIES`) | ⚠️ **silent** |
-| 17 | Seed data | `data/structure_anchors.seed.json` (**gitignored — `git add -f`**) | — |
+| 17 | Seed data | `data/seeds/structure_anchors.seed.json` (re-included by `!/data/seeds/*.json`; plain `git add`) | — |
 | 18 | Runtime enumeration tests | `tests/data/poiCategories.test.ts` (key counts, "N-category" titles) | ⚠️ **silent** — assert the new total |
 
 `structureMarkerRenderer.ts` is the densest — the ~11 sites: `SOURCE_CODE_BY_CATEGORY`,

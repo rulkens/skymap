@@ -5,7 +5,7 @@
  * predicate consults. These tests target the four non-trivial surfaces:
  * `isVisible` (drawMask bit), `slotState` (slot accessor + idle fallback),
  * `request` (the transient request-flag set), and `volumeField` (per-field
- * settings from `state.settings.volumes.fields`). `settings` is a direct
+ * settings from `state.settings.volumes.items`). `settings` is a direct
  * passthrough and needs no behaviour test.
  *
  * Mocking strategy: inject a minimal `state` carrying only the slices the
@@ -29,7 +29,7 @@ import type { VolumeFieldSettings } from '../../../../src/@types/settings/Volume
  * Build a minimal EngineState with only the fields buildDemandCtx reads.
  * `drawMask` defaults to 0 (nothing visible), `requests` to empty, and the
  * slot maps/fields to empty so `slotState` falls back to 'idle' unless a test
- * supplies a slot. `volumeFields` populates `settings.volumes.fields` for
+ * supplies a slot. `volumeFields` populates `settings.volumes.items` for
  * tests that exercise the volumeField surface.
  */
 function makeState(
@@ -51,7 +51,7 @@ function makeState(
   return {
     settings: {
       marker: 'sentinel',
-      volumes: { fields: opts.volumeFields ?? {} },
+      volumes: { items: opts.volumeFields ?? {} },
     },
     sources: { drawMask: opts.drawMask ?? 0 },
     requests: opts.requests ?? new Set<RequestKey>(),
@@ -100,7 +100,7 @@ describe('buildDemandCtx', () => {
     expect(empty.request('paletteOpened')).toBe(false);
   });
 
-  it('volumeField reads field settings from state.settings.volumes.fields', () => {
+  it('volumeField reads field settings from state.settings.volumes.items', () => {
     // Known field present with enabled: true → predicate reads the live value.
     const state = makeState({ volumeFields: { mcpm: { enabled: true } } });
     const ctx = buildDemandCtx(state);
@@ -108,7 +108,7 @@ describe('buildDemandCtx', () => {
 
     // Mutate the settings bag in place (the closure captures `state` by
     // reference, so the predicate always reflects the current value).
-    (state.settings as { volumes: { fields: Record<string, { enabled: boolean }> } }).volumes.fields[
+    (state.settings as { volumes: { items: Record<string, { enabled: boolean }> } }).volumes.items[
       'mcpm'
     ]!.enabled = false;
     expect(ctx.volumeField('mcpm')?.enabled).toBe(false);

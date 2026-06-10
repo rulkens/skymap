@@ -17,7 +17,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { buildStaticAnchorStructures } from '../../src/data/buildStaticAnchorStructures';
-import structureSeedJson from '../../data/structure_anchors.seed.json';
+import structureSeedJson from '../../data/seeds/structure_anchors.seed.json';
 import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
 
 describe('buildStaticAnchorStructures', () => {
@@ -141,7 +141,7 @@ describe('buildStaticAnchorStructures — group seed entry mapping', () => {
     // at the top of this file) and picks up the mocked seed — `doMock` alone
     // does not invalidate an already-loaded module.
     vi.resetModules();
-    vi.doMock('../../data/structure_anchors.seed.json', () => ({
+    vi.doMock('../../data/seeds/structure_anchors.seed.json', () => ({
       default: [groupFixture],
     }));
 
@@ -160,7 +160,7 @@ describe('buildStaticAnchorStructures — group seed entry mapping', () => {
     // asserting this verifies the carry-through wiring, not just the discriminant.
     expect(structure.worldPos).toEqual(raDecDistToEqCart(groupFixture));
 
-    vi.doUnmock('../../data/structure_anchors.seed.json');
+    vi.doUnmock('../../data/seeds/structure_anchors.seed.json');
     vi.resetModules();
   });
 });

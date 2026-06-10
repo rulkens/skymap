@@ -233,8 +233,8 @@ type Props = {
   /**
    * Per-category MARKER visibility — drives the per-category checkboxes
    * inside Structures → Advanced and the derived tri-state of the master
-   * toggle.  Wires to `handle.labels.setCategoryMarkerVisible` (added by
-   * PR #160).
+   * toggle.  Wires through `onSetMarkerCategoryVisibility`, which App routes
+   * to `handle.structures.setItemEnabled`.
    */
   markerCategoryVisibility?: Readonly<Record<StructureCategory, boolean>>;
   onSetMarkerCategoryVisibility?: (category: StructureCategory, visible: boolean) => void;

@@ -225,7 +225,7 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       // Every echo the engine emits lands at its nested address; the
       // no-echo cases (filaments enabled/intensity, volumes master)
       // are App-owned with no wiring here.
-      points: {
+      surveys: {
         onSizeChange: setPointSize,
         onBrightnessChange: setBrightness,
         onDepthFadeChange: setDepthFadeEnabled,

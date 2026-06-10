@@ -23,7 +23,7 @@
  * Every settings field lives under exactly one named cluster — no flat
  * root fields (a flat duplicate invites split-brain reads/writes).  The
  * clusters mirror EngineHandle's sub-handle namespaces 1:1 — a setter
- * on `handle.points` writes into `state.settings.points`, a setter on
+ * on `handle.surveys` writes into `state.settings.surveys`, a setter on
  * `handle.tonemap` writes into `state.settings.tonemap`, etc.  This
  * shape makes the engine's per-frame snapshot and the React-facing
  * setters trivially derivable from each other.
@@ -47,23 +47,35 @@
 
 import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
-import type { LabelCategory } from '../engine/data/LabelCategory';
 import type { StructureCategory } from '../engine/data/StructureCategory';
+import type { SurveyId } from '../engine/data/SurveyId';
 import type { FlowSettings } from './FlowSettings';
 import type { VolumeFieldId } from '../data/VolumeFieldId';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
+import type { StructureItemSettings } from './StructureItemSettings';
+import type { SurveyItemSettings } from './SurveyItemSettings';
 
 export type EngineSettingsState = {
   /**
-   * Point-billboard rendering controls — every setting that influences
-   * `points.wgsl` or the per-instance attribute bake.
+   * Survey point-billboard controls — the shared appearance knobs that
+   * influence every survey's `points.wgsl` draw — plus the survey-layer
+   * master gate and per-survey items. `enabled` is the coarse "hide all
+   * surveys" gate (symmetric with `volumes.enabled` / `structures.enabled`).
+   * Per-survey state lives in `items` — one row per `SurveyId`, each carrying
+   * the layer-visibility axis (`enabled`) and the text-label axis
+   * (`labelEnabled`). Only the famous-galaxy survey actually renders a label;
+   * the other surveys carry `labelEnabled` inertly so all three source-type
+   * clusters share the one per-item shape (surveys / structures / volumes all
+   * expose `items[id].enabled`).
    */
-  points: {
+  surveys: {
+    enabled: boolean;
     sizePx: number;
     brightness: number;
     depthFade: boolean;
     highlightFallback: boolean;
     realOnly: boolean;
+    items: Record<SurveyId, SurveyItemSettings>;
   };
 
   /**
@@ -121,18 +133,19 @@ export type EngineSettingsState = {
   };
 
   /**
-   * Scalar-volume overlay master gate and per-field params.  When
-   * `masterEnabled` is false, `volumeUpsamplePass.enabled` short-circuits
+   * Scalar-volume overlay master gate and per-item params.  When
+   * `enabled` is false, `volumeUpsamplePass.enabled` short-circuits
    * before consulting the renderer at zero GPU cost, and `encodeVolumes`
    * never opens its pre-HDR half-res render pass.  Per-field params
-   * (enabled / intensity / palette / …) live in `fields` — one settings
+   * (enabled / intensity / palette / …) live in `items` — one settings
    * row per registry-known volume field, seeded from `SOURCE_REGISTRY` at
    * construction so the panel can show a field's toggle before its cube
-   * lazy-loads.
+   * lazy-loads.  `items` is the same per-item accessor that surveys and
+   * structures expose, so all three source-type clusters share one shape.
    */
   volumes: {
-    masterEnabled: boolean;
-    fields: Partial<Record<VolumeFieldId, VolumeFieldSettings>>;
+    enabled: boolean;
+    items: Partial<Record<VolumeFieldId, VolumeFieldSettings>>;
   };
 
   /**
@@ -172,24 +185,20 @@ export type EngineSettingsState = {
   };
 
   /**
-   * Per-category visibility for the TEXT LABEL overlay.  Keyed by
-   * `LabelCategory` — the label-bearing sources (`famousGalaxy` plus the
-   * structure categories).  Defaults to every category visible.
-   *
-   * This is one of two orthogonal records — see `markerCategoryVisibility`
-   * for the marker (ring + halo) counterpart.  Label-text and marker
-   * visibility are independent so a category's ring can be hidden while
-   * its label still renders, and vice versa.
+   * Structure-overlay master gate and per-category settings.  `enabled` is
+   * the coarse "hide all structures" gate (symmetric with `volumes.enabled`).
+   * Per-category state lives in `items` — one row per `StructureCategory`,
+   * each carrying the ring/marker axis (`enabled`) and the text-label axis
+   * (`labelEnabled`).  Co-locating both axes on one row replaces the two
+   * parallel root records that previously held the same booleans in different
+   * shapes: a reader walks one `items[cat]` entry to learn everything about a
+   * category's visibility instead of cross-indexing two records by the same
+   * key.  `items` is the same per-item accessor surveys and volumes expose, so
+   * all three source-type clusters share one shape.  Defaults to every
+   * category fully visible.
    */
-  labelCategoryVisibility: Record<LabelCategory, boolean>;
-  /**
-   * Per-category visibility for the MARKER overlay — the ring + halo glyph
-   * drawn at the structure's world anchor by `structureMarkerRenderer`.
-   * Keyed by `StructureCategory` only: famous galaxies bear no ring marker.
-   * Symmetric to `labelCategoryVisibility`; the two records are deliberately
-   * independent so the SettingsPanel can offer separate master toggles for
-   * "Labels" (text) and "Structures" (markers).  Defaults to every category
-   * visible.
-   */
-  markerCategoryVisibility: Record<StructureCategory, boolean>;
+  structures: {
+    enabled: boolean;
+    items: Record<StructureCategory, StructureItemSettings>;
+  };
 };

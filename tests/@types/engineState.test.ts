@@ -76,12 +76,21 @@ describe('EngineState type', () => {
     // an explicit update here — easier to spot than in a single
     // 30-line literal.
     const settings: EngineSettingsState = {
-      points: {
+      surveys: {
+        enabled: true,
         sizePx: 2.5,
         brightness: 1.0,
         depthFade: true,
         highlightFallback: false,
         realOnly: false,
+        items: {
+          synthetic: { enabled: true, labelEnabled: true },
+          sdss: { enabled: true, labelEnabled: true },
+          '2mrs': { enabled: true, labelEnabled: true },
+          glade: { enabled: true, labelEnabled: true },
+          famousGalaxy: { enabled: true, labelEnabled: true },
+          milliquas: { enabled: true, labelEnabled: true },
+        },
       },
       tonemap: { exposure: 3.0, curve: DEFAULT_TONE_MAP_CURVE },
       camera: { autoRotate: false },
@@ -89,7 +98,7 @@ describe('EngineState type', () => {
       thumbnails: { enabled: true },
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 1 },
-      volumes: { masterEnabled: false, fields: {} },
+      volumes: { enabled: false, items: {} },
       flow: {
         enabled: false,
         mode: 'advect',
@@ -102,18 +111,14 @@ describe('EngineState type', () => {
         boundaryFadeWidth: 0.1,
       },
       debug: { showPickBuffer: false, showDiskRadiusRing: false },
-      labelCategoryVisibility: {
-        cluster: true,
-        supercluster: true,
-        famousGalaxy: true,
-        void: true,
-        group: true,
-      },
-      markerCategoryVisibility: {
-        cluster: true,
-        supercluster: true,
-        void: true,
-        group: true,
+      structures: {
+        enabled: true,
+        items: {
+          cluster: { enabled: true, labelEnabled: true },
+          supercluster: { enabled: true, labelEnabled: true },
+          void: { enabled: true, labelEnabled: true },
+          group: { enabled: true, labelEnabled: true },
+        },
       },
     };
     const bias: EngineBiasState = {
@@ -218,7 +223,10 @@ describe('EngineState type', () => {
     };
     stateRef.current = state;
 
-    expect(state.settings.points.sizePx).toBe(2.5);
+    expect(state.settings.surveys.sizePx).toBe(2.5);
+    expect(state.settings.surveys.enabled).toBe(true);
+    expect(state.settings.surveys.items.sdss.enabled).toBe(true);
+    expect(state.settings.surveys.items.famousGalaxy.labelEnabled).toBe(true);
     expect(state.settings.bias.mode).toBe(DEFAULT_BIAS_MODE);
     expect(state.sources.pickMask).toBe(ALL_VISIBLE_MASK);
     expect(state.sources.drawMask).toBe(ALL_VISIBLE_MASK);
@@ -233,12 +241,21 @@ describe('EngineState type', () => {
     // drifts (e.g. `DEFAULT_BIAS_MODE` becomes a string), this fails to
     // compile here rather than inside engine.ts.
     const settings: EngineSettingsState = {
-      points: {
+      surveys: {
+        enabled: true,
         sizePx: DEFAULT_POINT_SIZE_PX,
         brightness: DEFAULT_BRIGHTNESS,
         depthFade: DEFAULT_DEPTH_FADE_ENABLED,
         highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
         realOnly: DEFAULT_REAL_ONLY_MODE,
+        items: {
+          synthetic: { enabled: true, labelEnabled: true },
+          sdss: { enabled: true, labelEnabled: true },
+          '2mrs': { enabled: true, labelEnabled: true },
+          glade: { enabled: true, labelEnabled: true },
+          famousGalaxy: { enabled: true, labelEnabled: true },
+          milliquas: { enabled: true, labelEnabled: true },
+        },
       },
       tonemap: { exposure: DEFAULT_EXPOSURE, curve: DEFAULT_TONE_MAP_CURVE },
       camera: { autoRotate: DEFAULT_AUTO_ROTATE },
@@ -249,21 +266,17 @@ describe('EngineState type', () => {
         enabled: SOURCE_REGISTRY[Source.Filaments].visible,
         intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
       },
-      volumes: { masterEnabled: DEFAULT_VOLUMES_ENABLED, fields: {} },
+      volumes: { enabled: DEFAULT_VOLUMES_ENABLED, items: {} },
       flow: { ...DEFAULT_FLOW },
       debug: { showPickBuffer: false, showDiskRadiusRing: false },
-      labelCategoryVisibility: {
-        cluster: true,
-        supercluster: true,
-        famousGalaxy: true,
-        void: true,
-        group: true,
-      },
-      markerCategoryVisibility: {
-        cluster: true,
-        supercluster: true,
-        void: true,
-        group: true,
+      structures: {
+        enabled: true,
+        items: {
+          cluster: { enabled: true, labelEnabled: true },
+          supercluster: { enabled: true, labelEnabled: true },
+          void: { enabled: true, labelEnabled: true },
+          group: { enabled: true, labelEnabled: true },
+        },
       },
     };
     const bias: EngineBiasState = {
@@ -276,7 +289,7 @@ describe('EngineState type', () => {
       drawMask: ALL_VISIBLE_MASK,
     };
 
-    expect(settings.points.sizePx).toBe(DEFAULT_POINT_SIZE_PX);
+    expect(settings.surveys.sizePx).toBe(DEFAULT_POINT_SIZE_PX);
     expect(settings.bias.absMagLimit).toBe(DEFAULT_ABS_MAG_LIMIT);
     expect(bias.apparentMagLimit).toBe(0);
     expect(sources.pickMask).toBe(ALL_VISIBLE_MASK);
@@ -284,18 +297,27 @@ describe('EngineState type', () => {
 
   it('allows in-place mutation of every sub-bag field', () => {
     // The engine mutates fields directly (e.g.
-    // `state.settings.points.brightness = v`), so the type must NOT be
+    // `state.settings.surveys.brightness = v`), so the type must NOT be
     // Readonly. Exercise one representative mutation per bag.
     // eslint-disable-next-line prefer-const
     let stateRef: { current: EngineState | null } = { current: null };
     const state: EngineState = {
       settings: {
-        points: {
+        surveys: {
+          enabled: true,
           sizePx: 1,
           brightness: 1,
           depthFade: true,
           highlightFallback: false,
           realOnly: false,
+          items: {
+            synthetic: { enabled: true, labelEnabled: true },
+            sdss: { enabled: true, labelEnabled: true },
+            '2mrs': { enabled: true, labelEnabled: true },
+            glade: { enabled: true, labelEnabled: true },
+            famousGalaxy: { enabled: true, labelEnabled: true },
+            milliquas: { enabled: true, labelEnabled: true },
+          },
         },
         tonemap: { exposure: 1, curve: DEFAULT_TONE_MAP_CURVE },
         camera: { autoRotate: false },
@@ -303,21 +325,17 @@ describe('EngineState type', () => {
         thumbnails: { enabled: true },
         milkyWay: { enabled: true },
         filaments: { enabled: false, intensity: 1 },
-        volumes: { masterEnabled: false, fields: {} },
+        volumes: { enabled: false, items: {} },
         flow: { ...DEFAULT_FLOW },
         debug: { showPickBuffer: false, showDiskRadiusRing: false },
-        labelCategoryVisibility: {
-          cluster: true,
-          supercluster: true,
-          famousGalaxy: true,
-          void: true,
-          group: true,
-        },
-        markerCategoryVisibility: {
-          cluster: true,
-          supercluster: true,
-          void: true,
-          group: true,
+        structures: {
+          enabled: true,
+          items: {
+            cluster: { enabled: true, labelEnabled: true },
+            supercluster: { enabled: true, labelEnabled: true },
+            void: { enabled: true, labelEnabled: true },
+            group: { enabled: true, labelEnabled: true },
+          },
         },
       },
       bias: {
@@ -411,7 +429,7 @@ describe('EngineState type', () => {
     };
     stateRef.current = state;
 
-    state.settings.points.brightness = 2.5;
+    state.settings.surveys.brightness = 2.5;
     state.settings.bias.absMagLimit = -20;
     state.sources.pickMask = 0xff;
     state.sources.drawMask = 0xff;
@@ -423,7 +441,7 @@ describe('EngineState type', () => {
     });
     state.picking.pickInFlight = true;
 
-    expect(state.settings.points.brightness).toBe(2.5);
+    expect(state.settings.surveys.brightness).toBe(2.5);
     expect(state.settings.bias.absMagLimit).toBe(-20);
     expect(state.sources.pickMask).toBe(0xff);
     expect(state.sources.drawMask).toBe(0xff);

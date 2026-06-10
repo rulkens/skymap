@@ -2,17 +2,17 @@
  * buildVolumeFieldsSnapshot — unit tests for the per-field row builder.
  *
  * Both identity (which fields appear) and values come from
- * `state.settings.volumes.fields`.  The renderer's handle list is not
+ * `state.settings.volumes.items`.  The renderer's handle list is not
  * consulted, so a field whose cube hasn't loaded yet still gets a row
  * as long as its settings entry is present.
  *
  * These tests verify two axes:
  *
- *   1. Identity derives from `state.settings.volumes.fields` keys, not the GPU handle list.
- *   2. Values come from `state.settings.volumes.fields`, not from any GPU-side state.
+ *   1. Identity derives from `state.settings.volumes.items` keys, not the GPU handle list.
+ *   2. Values come from `state.settings.volumes.items`, not from any GPU-side state.
  *
  * Fixtures stub only the slices of EngineState that the helper reads:
- * `state.settings.volumes.fields`.  The renderer stub is present on some
+ * `state.settings.volumes.items`.  The renderer stub is present on some
  * fixtures to confirm it is NOT consulted for identity.
  */
 
@@ -22,7 +22,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 
 describe('buildVolumeFieldsSnapshot', () => {
   it('snapshot identity derives from settings keys, not renderer handles', () => {
-    // settings.volumes.fields has both 'mcpm' and 'cf4-density', but the
+    // settings.volumes.items has both 'mcpm' and 'cf4-density', but the
     // renderer only knows about 'mcpm' (its cube is loaded).  The snapshot
     // must include both — the panel shows CF-4's row before its cube arrives.
     const state = {
@@ -33,7 +33,7 @@ describe('buildVolumeFieldsSnapshot', () => {
       },
       settings: {
         volumes: {
-          fields: {
+          items: {
             mcpm: {
               enabled: true,
               intensity: 0.5,
@@ -66,7 +66,7 @@ describe('buildVolumeFieldsSnapshot', () => {
     expect(handles).toContain('cf4-density');
   });
 
-  it('derives field values from state.settings.volumes.fields', () => {
+  it('derives field values from state.settings.volumes.items', () => {
     const state = {
       gpu: {
         scalarVolumeRenderer: {
@@ -75,7 +75,7 @@ describe('buildVolumeFieldsSnapshot', () => {
       },
       settings: {
         volumes: {
-          fields: {
+          items: {
             mcpm: {
               enabled: true,
               intensity: 0.2,
@@ -94,12 +94,12 @@ describe('buildVolumeFieldsSnapshot', () => {
 
     expect(rows).toHaveLength(1);
     expect(rows[0]?.handle).toBe('mcpm');
-    // Values come from settings.volumes.fields, not GPU-side state.
+    // Values come from settings.volumes.items, not GPU-side state.
     expect(rows[0]?.contrast).toBe(3);
     expect(rows[0]?.intensity).toBe(0.2);
   });
 
-  it('returns an empty array when settings.volumes.fields is empty', () => {
+  it('returns an empty array when settings.volumes.items is empty', () => {
     // No fields registered in settings — nothing to show in the panel,
     // regardless of what the renderer might know about.
     const state = {
@@ -110,7 +110,7 @@ describe('buildVolumeFieldsSnapshot', () => {
       },
       settings: {
         volumes: {
-          fields: {},
+          items: {},
         },
       },
     } as unknown as EngineState;

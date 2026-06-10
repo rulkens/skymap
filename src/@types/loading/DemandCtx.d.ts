@@ -15,11 +15,11 @@
  * ### The read surfaces (ADR 0005 §3)
  *
  *   1. `settings` — the `EngineSettingsState` (read-only view).  Covers
- *      master-enable toggles (`filaments.enabled`, `volumes.masterEnabled`,
+ *      master-enable toggles (`filaments.enabled`, `volumes.enabled`,
  *      `milkyWay.enabled`).  Most predicates start here.
  *
  *   2. `volumeField` — a per-field volume settings accessor reading
- *      `state.settings.volumes.fields` (the authoritative home for
+ *      `state.settings.volumes.items` (the authoritative home for
  *      `VolumeFieldSettings`).  Volume demand predicates query this
  *      (`volumeField(id)?.enabled`) rather than the top-level `settings`,
  *      since per-field params live on the dedicated fields map.
@@ -75,7 +75,7 @@ export type DemandCtx = {
   /** Read-only view of the user-facing rendering settings. */
   settings: Readonly<EngineSettingsState>;
   /**
-   * A volume field's settings from `state.settings.volumes.fields`, or
+   * A volume field's settings from `state.settings.volumes.items`, or
    * undefined if the field has no settings row. Volume demand predicates
    * read `volumeField(id)?.enabled`.
    */

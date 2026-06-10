@@ -45,13 +45,13 @@ export function seedSettingsCallbacks(cb: EngineCallbacks, snapshot: SettingsCal
   // consumers (subscribed via `useEngineSettings`) observe the
   // engine-truth defaults exactly once at startup; optional-chaining
   // keeps every fire safe when a consumer doesn't subscribe to that bag.
-  cb.points?.onSizeChange?.(snapshot.pointSize);
-  cb.points?.onBrightnessChange?.(snapshot.brightness);
+  cb.surveys?.onSizeChange?.(snapshot.pointSize);
+  cb.surveys?.onBrightnessChange?.(snapshot.brightness);
   cb.camera?.onAutoRotateChange?.(snapshot.autoRotate);
   cb.thumbnails?.onEnabledChange?.(snapshot.galaxyTexturesEnabled);
-  cb.points?.onHighlightFallbackChange?.(snapshot.highlightFallback);
-  cb.points?.onRealOnlyChange?.(snapshot.realOnlyMode);
-  cb.points?.onDepthFadeChange?.(snapshot.depthFadeEnabled);
+  cb.surveys?.onHighlightFallbackChange?.(snapshot.highlightFallback);
+  cb.surveys?.onRealOnlyChange?.(snapshot.realOnlyMode);
+  cb.surveys?.onDepthFadeChange?.(snapshot.depthFadeEnabled);
   cb.debug?.onShowPickBufferChange?.(snapshot.showPickBuffer);
   cb.debug?.onShowDiskRadiusRingChange?.(snapshot.showDiskRadiusRing);
   cb.bias?.onModeChange?.(snapshot.biasMode);
@@ -59,10 +59,11 @@ export function seedSettingsCallbacks(cb: EngineCallbacks, snapshot: SettingsCal
   cb.tonemap?.onCurveChange?.(snapshot.toneMapCurve);
   cb.tonemap?.onExposureChange?.(snapshot.exposure);
   cb.sources?.onMaskChange?.(snapshot.visibleSourceMask);
-  // Fresh copies of each record so subscribers can treat every
-  // emission as an immutable snapshot — same idiom as the live setter
-  // echoes.  Label and marker visibility are independent axes; both
-  // seed at init.
+  // Fresh copies of each record so subscribers can treat every emission as an
+  // immutable snapshot — same idiom as the live setter echoes. Label and marker
+  // visibility are independent axes; the seed records are already derived from
+  // `structures.items` (see deriveMarker/LabelCategoryVisibility), so both seed
+  // the React mirror at init.
   cb.labels?.onLabelCategoryVisibilityChange?.({ ...snapshot.labelCategoryVisibility });
   cb.labels?.onMarkerCategoryVisibilityChange?.({ ...snapshot.markerCategoryVisibility });
 }

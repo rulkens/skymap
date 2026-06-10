@@ -72,7 +72,7 @@ export function encodeVolumePrepass(
       const fadeOpacityOf = (handle: string) =>
         state.subsystems.fades.opacityOf({ kind: 'scalarField', field: handle }, nowMs) *
         recessedMaster;
-      const settingsOf = (handle: string) => state.settings.volumes.fields[handle as VolumeFieldId];
+      const settingsOf = (handle: string) => state.settings.volumes.items[handle as VolumeFieldId];
       if (state.gpu.scalarVolumeRenderer.hasActiveFields(settingsOf, fadeOpacityOf)) {
         encodeVolumes({
           encoder,

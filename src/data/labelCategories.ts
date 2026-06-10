@@ -1,5 +1,3 @@
-import type { LabelCategory } from '../@types/engine/data/LabelCategory';
-import type { CategoryLabelLayer } from '../@types/animation/CategoryLabelLayer';
 import { SOURCE_ENTRIES } from './sourceEntries';
 
 /**
@@ -21,30 +19,3 @@ import { SOURCE_ENTRIES } from './sourceEntries';
  * marker producer).
  */
 export const LABEL_CATEGORIES = SOURCE_ENTRIES.filter((e) => e.bearsLabel).map((e) => e.id);
-
-/**
- * LABEL_LAYER_BY_CATEGORY — which fade layer each label-bearing category's
- * labels live on, keyed by category id.
- *
- * Routes the per-category label-visibility setter without a `=== 'famousGalaxy'`
- * special-case: the registry row's `labelLayer` field ('galaxyNames' for the
- * curated atlas, 'structure' for cluster/supercluster/void/group) is the single
- * source of truth, so a new label-bearing source picks its layer from its row.
- */
-function buildLabelLayers(): Readonly<Record<LabelCategory, CategoryLabelLayer>> {
-  const result = {} as Record<LabelCategory, CategoryLabelLayer>;
-  for (const entry of SOURCE_ENTRIES.filter((e) => e.bearsLabel)) {
-    const { id, labelLayer } = entry;
-    if (labelLayer === undefined) {
-      throw new Error(
-        `Source '${id}' has bearsLabel:true but no labelLayer — add 'galaxyNames' or ` +
-          "'structure' to its SOURCE_REGISTRY row.",
-      );
-    }
-    result[id as LabelCategory] = labelLayer;
-  }
-  return result as Readonly<Record<LabelCategory, CategoryLabelLayer>>;
-}
-
-export const LABEL_LAYER_BY_CATEGORY: Readonly<Record<LabelCategory, CategoryLabelLayer>> =
-  buildLabelLayers();

@@ -8,7 +8,7 @@ import { createFlowFieldStore } from './createFlowFieldStore';
  * createEngineData — assemble the empty per-type stores into the `EngineData`
  * bag installed on `EngineState` at engine construction. Volume fields have no
  * data-layer store; their only app-side state is settings, which live in
- * `state.settings.volumes.fields` (ADR 0006). Flow keeps a status-only store
+ * `state.settings.volumes.items` (ADR 0006). Flow keeps a status-only store
  * (its `loaded` bit); its look/motion knobs live in `settings.flow`.
  */
 export function createEngineData(): EngineData {

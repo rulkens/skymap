@@ -5,7 +5,7 @@
  * `scalarVolumeRenderer.addField` under the handle `'cf4-density'`.
  * The renderer reads per-cube static config (contrastCenter, envelope,
  * paletteId) from the registry and user-tunable knobs from
- * `state.settings.volumes.fields` per frame — the commit replays no
+ * `state.settings.volumes.items` per frame — the commit replays no
  * renderer setter.
  *
  * **Lazy fetch.**  CF-4 is registry-visible:false, so its construction
@@ -15,7 +15,7 @@
  * boot bandwidth budget.
  *
  * **Settings row.**  CF-4 is a shippable volume, so the construction
- * seed already created the entry in `state.settings.volumes.fields`
+ * seed already created the entry in `state.settings.volumes.items`
  * before this commit fires.
  */
 
@@ -37,14 +37,14 @@ export const createCf4DensitySlot: SlotFactory<ScalarCube, void> = (state, cb) =
       const handle = SOURCE_REGISTRY[Source.Cf4Density].handle;
       // Upload the cube; the renderer reads this field's per-cube static
       // config (contrastCenter, envelope, palette) from the registry and
-      // its user-tunable knobs from `state.settings.volumes.fields` per
+      // its user-tunable knobs from `state.settings.volumes.items` per
       // frame, so the commit replays no renderer setter.  CF-4 is a
       // shippable volume, so its settings row already exists from the
       // construction seed.
       renderer.addField(handle, cube);
       // Fade up only if the user has the field toggled on (matches the
       // symmetric path in engine.ts addVolumeField).
-      if (state.settings.volumes.fields[handle]?.enabled) {
+      if (state.settings.volumes.items[handle]?.enabled) {
         void state.subsystems.fades.fadeTo(
           { kind: 'scalarField', field: handle },
           1,

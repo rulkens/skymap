@@ -33,9 +33,7 @@ type VolumeEntry = Extract<SourceEntry, { type: 'volume' }>;
  * — every value in the union has a registry entry.
  */
 function volumeEntry(id: VolumeFieldId): VolumeEntry {
-  const entry = Object.values(SOURCE_REGISTRY).find(
-    (e) => e.type === 'volume' && e.handle === id,
-  );
+  const entry = Object.values(SOURCE_REGISTRY).find((e) => e.type === 'volume' && e.handle === id);
   // The `VolumeFieldId` union is derived from SOURCE_REGISTRY entries,
   // so a missing entry would mean the registry has drifted from the
   // type — surface that loudly rather than papering over it.
@@ -80,7 +78,7 @@ export function buildVolumeFieldSettings(id: VolumeFieldId): VolumeFieldSettings
 
 /**
  * Build the construction-time volume-field seed record. The engine seeds
- * `state.settings.volumes.fields` from this at construction so every
+ * `state.settings.volumes.items` from this at construction so every
  * shippable volume's on/off state (and tunables) EXISTS before any cube
  * loads — the demand predicate `volumeField(id)?.enabled` then reads pure
  * state, fully symmetric with survey `isVisible`. Without this, a

@@ -73,12 +73,16 @@ import { wireInput } from '../../../../src/services/engine/phases/wireInput';
 function makeState(): EngineState {
   return {
     settings: {
-      points: {
+      surveys: {
+        enabled: true,
         sizePx: 2.5,
         brightness: 1.0,
         depthFade: true,
         highlightFallback: true,
         realOnly: false,
+        items: {
+          famousGalaxy: { enabled: true, labelEnabled: true },
+        },
       },
       tonemap: { exposure: 1.0, curve: 'reinhard' },
       camera: { autoRotate: false },
@@ -86,7 +90,16 @@ function makeState(): EngineState {
       thumbnails: { enabled: true },
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 1.0 },
-      volumes: { masterEnabled: true },
+      volumes: { enabled: true },
+      structures: {
+        enabled: true,
+        items: {
+          cluster: { enabled: true, labelEnabled: true },
+          supercluster: { enabled: true, labelEnabled: true },
+          void: { enabled: true, labelEnabled: true },
+          group: { enabled: true, labelEnabled: true },
+        },
+      },
       debug: { showPickBuffer: false, showDiskRadiusRing: false },
     },
     bias: {} as never,

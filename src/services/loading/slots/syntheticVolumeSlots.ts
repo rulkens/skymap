@@ -19,7 +19,7 @@
  * first load only), calls `addField`, and drives the fade from the
  * settings enable bit — mirroring what `engine.ts addVolumeField` does.
  * The renderer reads per-cube static config from the registry and
- * user-tunable knobs from `state.settings.volumes.fields` per frame;
+ * user-tunable knobs from `state.settings.volumes.items` per frame;
  * no renderer setters are replayed here.  Accessing `state` directly
  * (the same pattern the `filamentSlot` commit uses) is safe: `state` is
  * fully initialised before any slot commit runs.
@@ -84,13 +84,13 @@ export function createSyntheticVolumeSlots(
         // renderer reads the per-cube static config from the registry and
         // the user knobs from settings per frame, so no renderer setter is
         // replayed here.
-        if (!state.settings.volumes.fields[handle]) {
-          state.settings.volumes.fields = {
-            ...state.settings.volumes.fields,
+        if (!state.settings.volumes.items[handle]) {
+          state.settings.volumes.items = {
+            ...state.settings.volumes.items,
             [handle]: buildVolumeFieldSettings(handle),
           };
         }
-        if (state.settings.volumes.fields[handle]?.enabled) {
+        if (state.settings.volumes.items[handle]?.enabled) {
           void state.subsystems.fades.fadeTo(
             { kind: 'scalarField', field: handle },
             1,

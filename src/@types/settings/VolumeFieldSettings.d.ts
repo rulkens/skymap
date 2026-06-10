@@ -2,17 +2,22 @@
  * VolumeFieldSettings — per-field runtime controls for one registered
  * scalar-volume field.
  *
- * Held in `state.settings.volumes.fields`, keyed by `VolumeFieldId`.
+ * Held in `state.settings.volumes.items`, keyed by `VolumeFieldId`.
  * The engine seeds these at construction from the field's SOURCE_REGISTRY
  * entry; the SettingsPanel reads authoritative state directly from settings
  * without polling the GPU handle.
+ *
+ * Extends `DataItemSettings` so a volume field's on/off lives in the same
+ * `enabled` field every other data item uses (`scalarVolumeRenderer.setEnabled`
+ * reads it when false). The per-field render knobs below ride on top — they're
+ * what makes a scalar-volume field richer than a survey or structure item,
+ * which carry only visibility (and an optional label axis).
  */
 
+import type { DataItemSettings } from './DataItemSettings';
 import type { ScalarFieldPaletteId } from '../data/ScalarFieldPaletteId';
 
-export type VolumeFieldSettings = {
-  /** When false, `scalarVolumeRenderer.setEnabled(id, false)` silences this field. */
-  enabled: boolean;
+export type VolumeFieldSettings = DataItemSettings & {
   /** Linear mix-in weight in [0, 1].  Seeded from `DEFAULT_VOLUME_FIELD_INTENSITY`. */
   intensity: number;
   /**
