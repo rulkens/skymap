@@ -26,10 +26,7 @@ describe('EngineHandle — namespace sub-handles', () => {
       'input',
       'debug',
     ];
-    const expectedRoot: ReadonlyArray<keyof EngineHandle> = [
-      'destroy',
-      'assetSlots',
-    ];
+    const expectedRoot: ReadonlyArray<keyof EngineHandle> = ['destroy', 'assetSlots'];
     expect(expectedSubHandles).toHaveLength(14);
     expect(expectedRoot).toHaveLength(2);
   });

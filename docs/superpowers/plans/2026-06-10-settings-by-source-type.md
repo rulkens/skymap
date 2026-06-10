@@ -122,17 +122,17 @@ export type StructureItemSettings = DataItemSettings & { labelEnabled: boolean }
 — drop the inline `enabled` field (now inherited from the base), keep every
 other knob and its doc verbatim (`VolumeFieldSettings.d.ts:13-58`).
 
-- [ ] Add type-smoke test `DataItemSettings/SurveyItemSettings/StructureItemSettings
+- [x] Add type-smoke test `DataItemSettings/SurveyItemSettings/StructureItemSettings
   carry enabled (+ labelEnabled)` constructing each literal via `satisfies` and a
   trivial runtime `expect`.
-- [ ] Add `VolumeFieldSettings extends DataItemSettings` assertion (a value of
+- [x] Add `VolumeFieldSettings extends DataItemSettings` assertion (a value of
   `VolumeFieldSettings` is assignable to `DataItemSettings`).
-- [ ] Run fails (types absent).
-- [ ] Create the three new types with didactic headers (why a shared base: the
+- [x] Run fails (types absent).
+- [x] Create the three new types with didactic headers (why a shared base: the
   universal visibility axis; why label-bearing types add `labelEnabled` rather
   than a separate record). Refactor `VolumeFieldSettings` to extend the base.
-- [ ] Run passes.
-- [ ] Commit.
+- [x] Run passes.
+- [x] Commit.
 
 ### Task A2 — volumes slice (one green commit)
 
@@ -174,14 +174,14 @@ the handle type + every `handle.volumes.setMasterEnabled` call site (`App.tsx`)
 commit body; if the design's symmetry is judged to warrant the handle rename too,
 do it, but it is not required for the settings reshape.
 
-- [ ] Update the engineState type-smoke test: `volumes.enabled` exists,
+- [x] Update the engineState type-smoke test: `volumes.enabled` exists,
   `volumes.items` exists, `volumes.masterEnabled` / `volumes.fields` absent.
-- [ ] Run fails (or typecheck flags the renamed leaves).
-- [ ] Rename the type leaf + seed + every reader/writer; update the cluster's
+- [x] Run fails (or typecheck flags the renamed leaves).
+- [x] Rename the type leaf + seed + every reader/writer; update the cluster's
   didactic comment (volumes' `items` joins the uniform per-item shape). Keep the
   handle method name per the decision above.
-- [ ] Run typecheck → GREEN. Run the suite → GREEN.
-- [ ] Commit (one cohesive volumes slice).
+- [x] Run typecheck → GREEN. Run the suite → GREEN.
+- [x] Commit (one cohesive volumes slice).
 
 ### Task A3 — structures slice (one green commit)
 
@@ -274,23 +274,24 @@ the React mirror's `markerCategoryVisibility` / `labelCategoryVisibility` record
 state (`useEngineSettings.ts:179-193`) stays the panel's prop contract. Least
 React churn; the settings shape changes, the React-facing record does not.
 
-- [ ] engineState type-smoke: `structures.enabled` + `structures.items[cat]`
+- [x] engineState type-smoke: `structures.enabled` + `structures.items[cat]`
   present; `markerCategoryVisibility` absent.
-- [ ] Structure-producer tests: `produceStructureMarkers draws a category whose
+- [x] Structure-producer tests: `produceStructureMarkers draws a category whose
   enabled is false but whose fade opacity is still > 0` (fade-out tail);
   `produceStructureMarkers skips a category that is disabled AND fully faded`;
-  mirror both for `produceStructureLabels` against `labelEnabled`.
-- [ ] Handle-setter test: the marker + structure-label setters write the new
+  mirror both for `produceStructureLabels` against `labelEnabled`; plus the
+  load-in-not-refired guard test.
+- [x] Handle-setter test: the marker + structure-label setters write the new
   `structures.items` leaf and fire the same fade handle as before.
-- [ ] Run fails.
-- [ ] Implement: add the cluster + seed; create `EngineStructuresHandle`; rewrite
+- [x] Run fails.
+- [x] Implement: add the cluster + seed; create `EngineStructuresHandle`; rewrite
   the marker setter + the structure half of the label setter; the un-braid in
-  both producers; the fade seed, demand gate (structure half), echo derivation,
+  both producers; the fade seed, demand gate (BOTH halves), echo derivation,
   React rows; DELETE `markerCategoryVisibility` (type + seed + every ref).
   Didactic headers: why structures own both axes (independent ring vs text); why
   the boolean is the gate and opacity only the alpha.
-- [ ] Run typecheck → GREEN. Run the suite → GREEN.
-- [ ] Commit (one cohesive structures slice; `markerCategoryVisibility` gone).
+- [x] Run typecheck → GREEN. Run the suite → GREEN.
+- [x] Commit (one cohesive structures slice; `markerCategoryVisibility` gone).
 
 ### Task A4 — surveys slice (one green commit; folds famous label to settings)
 
@@ -396,32 +397,32 @@ setLabelEnabled(survey: SurveyId, enabled: boolean): void;   // famousGalaxy tod
 EngineSurveysHandle`. The `structures` namespace (A3) already owns the structure
 axes — after A4 the old `labels` namespace is empty and deleted.
 
-- [ ] engineState type-smoke: `surveys.enabled` + `surveys.items[id]` (with
+- [x] engineState type-smoke: `surveys.enabled` + `surveys.items[id]` (with
   `labelEnabled`) present; `points` + `labelCategoryVisibility` absent.
-- [ ] Construction test: `state.settings.surveys.items.sdss.enabled === true`,
+- [x] Construction test: `state.settings.surveys.items.sdss.enabled === true`,
   `…surveys.items.famousGalaxy.labelEnabled === true`, `surveys.enabled === true`.
-- [ ] FAMOUS tests rewritten per the footprint list above (store test dropped,
+- [x] FAMOUS tests rewritten per the footprint list above (store test dropped,
   fade-setter test asserts the settings write, producer test drives the settings
   flag).
-- [ ] Surveys handle-setter test: `handle.surveys.setLabelEnabled('famousGalaxy',
+- [x] Surveys handle-setter test: `handle.surveys.setLabelEnabled('famousGalaxy',
   false)` writes `surveys.items.famousGalaxy.labelEnabled` + fires the
   `galaxyNames` fade.
-- [ ] Run fails.
-- [ ] Implement: rename cluster + handle; add `SurveyId` + the survey master +
+- [x] Run fails.
+- [x] Implement: rename cluster + handle; add `SurveyId` + the survey master +
   `items` seed; fold the galaxyNames label branch into the surveys setter and
   REMOVE the store flag everywhere per the footprint; re-point the demand gate's
   label half, the React appearance knobs + famous-label row; DELETE
   `labelCategoryVisibility`, `EngineLabelsHandle`, the `labels`/`points` handle
   namespaces. Didactic headers: why famous's label lives under surveys (it's a
   survey, not a structure); why a tight `SurveyId` over loose `SourceId`.
-- [ ] Run typecheck → GREEN. Run the suite → GREEN.
-- [ ] Commit (one cohesive surveys slice; store flag + flat label record gone).
+- [x] Run typecheck → GREEN. Run the suite → GREEN.
+- [x] Commit (one cohesive surveys slice; store flag + flat label record gone).
 
 ### Task A5 — Phase A entanglement spot-check
 
 **Files:** none (review only).
 
-- [ ] Quick `entanglement-radar` pass over the Phase A diff: confirm no flat
+- [x] Quick `entanglement-radar` pass over the Phase A diff: confirm no flat
   visibility records remain (`labelCategoryVisibility` / `markerCategoryVisibility`
   both gone), the handle is split (`surveys` / `structures`, no `labels`
   namespace owning two axes), the structure producers gate on the boolean (not
@@ -429,6 +430,11 @@ axes — after A4 the old `labels` namespace is empty and deleted.
   = `surveys.items.famousGalaxy.labelEnabled`), and no `=== 'famousGalaxy'`
   literal crept in (registry-driven routing preserved). Record findings for the
   final A+B radar (Task B5).
+  - **Result:** all five invariants PASS. Two accidental residuals found and
+    fixed in commit `171ac649`: (a) dead export `LABEL_LAYER_BY_CATEGORY`
+    (orphaned when A4 folded its consumer into the registry-driven survey label
+    setter); (b) over-broad `Pick<…, 'data'|…>` on `setSurveyLabelEnabled` (never
+    reads `state.data`). No braids remain in Phase A; carry nothing to B5.
 
 ---
 
@@ -488,8 +494,29 @@ setter collapse, vs. touching 6 read sites. The drawMask/pickMask fields stay on
 `EngineSourceState` but their doc is rewritten: "derived output, recomputed each
 frame from `settings.surveys.items` + survey fades; never written by a setter."
 
-- [ ] Record the verified reader map (names + files) and the chosen strategy in
+- [x] Record the verified reader map (names + files) and the chosen strategy in
   the PR description. No code in this task.
+
+**Verified reader/writer map (as of execution):**
+- `drawMask` readers: `runFrame.ts:204,217,226,276` (`visibleSourceMask` ×4),
+  `buildDemandCtx.ts:42` (`isVisible`), `createSyntheticFallback.ts:80`
+  (`hiddenAtBoot`), `wireInput.ts:296` (UI seed), **`engine.ts:968` (`setTier`
+  reload loop — non-frame, beyond the plan's original list)**.
+- `pickMask` readers: `runFrame.ts:326,393` (via `collectPickTargets`),
+  `collectPickTargets.ts:50`, `wireInput.ts:206` (click-resolver closure — reads
+  LIVE at click time, NOT captured at bootstrap).
+- Writers (to remove): `setSourceVisibleImpl` (`engine.ts:216-243`, the immediate
+  pickMask flip + post-fade drawMask flips) + the construction seed
+  (`engine.ts:494-495`). No `setTier` mask WRITE (it only reads).
+
+**Strategy — Option 2, refined:** one `deriveSourceMasks(state)` is the sole
+writer, called (a) at `runFrame` top before any mask read, AND (b) synchronously
+inside `setSourceVisible` after the `enabled` flip, before `reevaluateDemand` —
+so `setTier`/demand/pick readers are correct without a frame delay. Construction
+seed STAYS `ALL_VISIBLE_MASK` (not `0`): the bootstrap demand eval reads
+`drawMask` before frame 1, so `0` would load nothing at boot
+(see [[feedback_lifecycle_vs_teardown_invariants]]); all-enabled defaults derive
+to `ALL_VISIBLE_MASK` regardless, and the per-frame derive owns it from frame 1.
 
 ### Task B2 — `deriveSourceMasks` per-frame derivation step
 
@@ -516,18 +543,19 @@ through `SOURCE_ENTRIES`). Pack with `maskWith` starting from `0` (NOT
 bits are irrelevant to the consumers, which they are: every consumer filters by
 survey source).
 
-- [ ] Add test `deriveSourceMasks sets draw+pick bits for an enabled survey`.
-- [ ] Add test `deriveSourceMasks keeps the draw bit but clears the pick bit for
+- [x] Add test `deriveSourceMasks sets draw+pick bits for an enabled survey`.
+- [x] Add test `deriveSourceMasks keeps the draw bit but clears the pick bit for
   a disabled survey still fading out (opacity > 0)` — the core derivation
   invariant (drawn-while-fading, unclickable-on-hide).
-- [ ] Add test `deriveSourceMasks clears both bits for a disabled, fully-faded survey`.
-- [ ] Run fails.
-- [ ] Implement; call from `runFrame` before the first mask read. Didactic
-  header: why a single per-frame derivation (the design's "settings is the
-  single truth; the bitmask is a derived output, never a parallel mutable
-  mirror"); why draw uses `enabled || opacity>0` but pick uses `enabled` only.
-- [ ] Run passes.
-- [ ] Commit.
+- [x] Add test `deriveSourceMasks clears both bits for a disabled, fully-faded survey`
+  (+ `derives exactly ALL_VISIBLE_MASK when every survey enabled`).
+- [x] Run fails.
+- [x] Implement the helper. **NOTE:** the `runFrame` wiring is DEFERRED to B3 —
+  wiring it while the old setter still mutates masks (and never flips `enabled`)
+  would break toggling. B2 is the additive helper + unit test only. Didactic
+  header explains single-writer + draw/pick divergence.
+- [x] Run passes.
+- [x] Commit.
 
 ### Task B3 — collapse `setSourceVisibleImpl` into the synchronous survey idiom
 
@@ -563,11 +591,14 @@ Rename the export/test-alias `setSourceVisibleForTest` accordingly; rename
 `sources.setVisible`'s return to `void`. Update `EngineSourcesHandle.setVisible`
 doc (no longer returns a Promise; callers drop the `void` fire-and-forget).
 
-- [ ] (test rewrite in B4) Run typecheck after the impl edit; fix call sites that
+- [x] (test rewrite in B4) Run typecheck after the impl edit; fix call sites that
   awaited `setVisible` (grep for `await …setVisible` / `.setVisible(`).
-- [ ] Implement the synchronous setter + seed + handle changes.
-- [ ] Commit (with B4's test rewrite if they must land together to stay green —
-  see B4).
+- [x] Implement the synchronous setter + seed + handle changes. **NOTE:** the
+  setter ALSO calls `deriveSourceMasks(state)` synchronously (not just runFrame) so
+  a same-tick reader — `setTier`, the demand eval, the `onMaskChange` echo — sees
+  fresh masks; `runFrame` calls it before `reevaluateDemand`. Construction seed kept
+  `ALL_VISIBLE_MASK` (boot value).
+- [x] Commit (B3+B4 landed together as one green commit `422fd221`).
 
 ### Task B4 — rewrite `setSourceVisibleFade.test.ts` to the new model
 
@@ -577,17 +608,16 @@ doc (no longer returns a Promise; callers drop the `void` fire-and-forget).
 These tests pin the OLD async ordering (pickMask-immediate, await fade-out, clear
 drawMask, last-issued-wins). That model is gone — the tests are **rewritten to
 the new behaviour, not preserved verbatim**. New assertions:
-- [ ] `setSourceVisible flips surveys.items[id].enabled synchronously` (no await).
-- [ ] `setSourceVisible fires fadeTo(0, FADE_OUT) on hide` / `fadeTo(1, FADE_IN) on show`.
-- [ ] `a hidden survey still fading out is DRAWN via deriveSourceMasks` — drive
+- [x] `setSourceVisible flips surveys.items[id].enabled synchronously` (no await).
+- [x] `setSourceVisible fires fadeTo(0, FADE_OUT) on hide` / `fadeTo(1, FADE_IN) on show`.
+- [x] `a hidden survey still fading out is DRAWN via deriveSourceMasks` — drive
   `enabled:false` + `opacityOf:()=>0.5`, run `deriveSourceMasks`, assert the draw
   bit is set and the pick bit is clear (clickability off on hide).
-- [ ] `re-show mid-fade sets enabled=true and keeps drawing` — replaces the old
+- [x] `re-show mid-fade sets enabled=true and keeps drawing` — replaces the old
   "last-issued wins drawMask" case: toggle off then on; assert
   `items[id].enabled === true` and (after `deriveSourceMasks`) both bits set. No
   await, no re-read.
-- [ ] Run passes (paired with B3 — if B3's impl and B4's rewrite can't land
-  green separately, land them in ONE commit and say so in the commit body).
+- [x] Run passes (landed paired with B3 in one green commit; +`onMaskChange` echo case).
 
 > `src/utils/sourceMask.ts` helpers (`maskWith`/`maskWithout`/`maskHas`/
 > `ALL_VISIBLE_MASK`) are KEPT — `deriveSourceMasks` uses them to PACK the
@@ -598,18 +628,25 @@ the new behaviour, not preserved verbatim**. New assertions:
 
 **Files:** none (review only).
 
-- [ ] Run the `entanglement-radar` skill over the full PR diff. Confirm:
+- [x] Run the `entanglement-radar` skill over the full PR diff. Confirm:
   - every per-entity visibility is `settings.<type>.items[id].enabled`; no flat
-    root visibility records remain.
+    root visibility records remain. ✅
   - `drawMask`/`pickMask` are written by exactly ONE site (`deriveSourceMasks`),
-    a pure function of settings + fades; no setter mutates them.
-  - the structure producers gate on the settings boolean, not opacity-as-gate.
+    a pure function of settings + fades; no setter mutates them. ✅ (only writes
+    are `deriveSourceMasks.ts:56-57`; `engine.ts:350-351` is the boot seed;
+    setters don't import `maskWith`/`maskWithout`.)
+  - the structure producers gate on the settings boolean, not opacity-as-gate. ✅
   - the handle is split (surveys / structures), no `labels` namespace owning two
-    axes; routing stays registry-driven (no `=== 'famousGalaxy'` literals).
+    axes; routing stays registry-driven (no `=== 'famousGalaxy'` literals). ✅
   - any residual second-write-path or knot is NAMED in the PR description, not
     hidden.
-- [ ] Record the result (clean pass or named residuals) for the downstream
+- [x] Record the result (clean pass or named residuals) for the downstream
   snapshot/restore-seam plan to build on.
+  - **Result: CLEAN PASS, no residuals.** Phase-A's two accidental residuals
+    (dead `LABEL_LAYER_BY_CATEGORY`, over-broad `Pick`) were fixed in A5
+    (`171ac649`). Bonus decomplection: the handle setters were extracted from the
+    1487-line `engine.ts` into `services/engine/handles/` (one file each), so the
+    orchestrator no longer owns them.
 
 ---
 

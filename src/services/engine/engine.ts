@@ -905,10 +905,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   function removeVolumeField(fieldId: VolumeFieldId): void {
     state.gpu.scalarVolumeRenderer?.removeField(fieldId);
-    state.settings.volumes.items = removeVolumeFieldSetting(
-      state.settings.volumes.items,
-      fieldId,
-    );
+    state.settings.volumes.items = removeVolumeFieldSetting(state.settings.volumes.items, fieldId);
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
@@ -1270,8 +1267,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Two setters, one per independent structure visibility axis. Each writes
       // the authoritative `settings.structures.items[category]` row, fades the
       // matching FadeRegistry handle, and echoes a fresh derived record.
-      setItemEnabled: (category, visible) =>
-        setStructureItemEnabled(state, cb, category, visible),
+      setItemEnabled: (category, visible) => setStructureItemEnabled(state, cb, category, visible),
       setLabelEnabled: (category, visible) =>
         setStructureLabelEnabled(state, cb, category, visible),
     },

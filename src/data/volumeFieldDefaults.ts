@@ -33,9 +33,7 @@ type VolumeEntry = Extract<SourceEntry, { type: 'volume' }>;
  * — every value in the union has a registry entry.
  */
 function volumeEntry(id: VolumeFieldId): VolumeEntry {
-  const entry = Object.values(SOURCE_REGISTRY).find(
-    (e) => e.type === 'volume' && e.handle === id,
-  );
+  const entry = Object.values(SOURCE_REGISTRY).find((e) => e.type === 'volume' && e.handle === id);
   // The `VolumeFieldId` union is derived from SOURCE_REGISTRY entries,
   // so a missing entry would mean the registry has drifted from the
   // type — surface that loudly rather than papering over it.

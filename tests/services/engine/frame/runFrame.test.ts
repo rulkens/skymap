@@ -73,10 +73,7 @@ function makeState(): EngineState {
         // items[id].enabled, so a partial record would throw on the first
         // missing id. Seed them all enabled.
         items: Object.fromEntries(
-          SURVEY_SOURCES.map((s) => [
-            SOURCE_REGISTRY[s].id,
-            { enabled: true, labelEnabled: true },
-          ]),
+          SURVEY_SOURCES.map((s) => [SOURCE_REGISTRY[s].id, { enabled: true, labelEnabled: true }]),
         ),
       },
       tonemap: { exposure: 1, curve: 'linear' },

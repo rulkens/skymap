@@ -78,35 +78,27 @@ const UNIFORM_BYTES = 256;
 const FRAME_WRAP = 1_000_000;
 
 const CUBE_CORNERS = new Float32Array([
-  0, 0, 0,
-  1, 0, 0,
-  0, 1, 0,
-  1, 1, 0,
-  0, 0, 1,
-  1, 0, 1,
-  0, 1, 1,
-  1, 1, 1,
+  0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1,
 ]);
 
 const CUBE_INDICES = new Uint16Array([
   // -z face (winding so normal points -z)
-  0, 2, 1,  1, 2, 3,
+  0, 2, 1, 1, 2, 3,
   // +z face
-  4, 5, 6,  5, 7, 6,
+  4, 5, 6, 5, 7, 6,
   // -y face
-  0, 1, 4,  1, 5, 4,
+  0, 1, 4, 1, 5, 4,
   // +y face
-  2, 6, 3,  3, 6, 7,
+  2, 6, 3, 3, 6, 7,
   // -x face
-  0, 4, 2,  2, 4, 6,
+  0, 4, 2, 2, 4, 6,
   // +x face
-  1, 3, 5,  3, 7, 5,
+  1, 3, 5, 3, 7, 5,
 ]);
 
 // ── Factory ─────────────────────────────────────────────────────────
 
 // FieldEntry type moved to @types/rendering/FieldEntry.d.ts.
-
 
 export function createScalarVolumeRenderer(
   device: GPUDevice,
@@ -149,10 +141,22 @@ export function createScalarVolumeRenderer(
   const group0Bgl = device.createBindGroupLayout({
     label: 'scalarVolume-bgl-group0',
     entries: [
-      { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
-      { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '3d' } },
+      {
+        binding: 0,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        buffer: { type: 'uniform' },
+      },
+      {
+        binding: 1,
+        visibility: GPUShaderStage.FRAGMENT,
+        texture: { sampleType: 'float', viewDimension: '3d' },
+      },
       { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
-      { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },
+      {
+        binding: 3,
+        visibility: GPUShaderStage.FRAGMENT,
+        texture: { sampleType: 'float', viewDimension: '2d' },
+      },
       { binding: 4, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
     ],
   });

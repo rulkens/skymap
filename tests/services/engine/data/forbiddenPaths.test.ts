@@ -19,11 +19,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 // Volume per-field settings live in state.settings.volumes.items (ADR 0006) — not swept.
-const FORBIDDEN = [
-  'sources.catalogs',
-  'sources.famousMeta',
-  'sources.clusterBulk',
-];
+const FORBIDDEN = ['sources.catalogs', 'sources.famousMeta', 'sources.clusterBulk'];
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {

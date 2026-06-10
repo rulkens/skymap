@@ -21,14 +21,9 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { VolumeFieldRowData } from '../../../@types/settings/VolumeFieldRowData';
 import type { VolumeFieldId } from '../../../@types/data/VolumeFieldId';
 import { getVolumeFieldDefaults } from '../../../data/volumeFieldDefaults';
-import {
-  DEFAULT_VOLUME_FIELD_INTENSITY,
-  DEFAULT_VOLUME_PALETTE_ID,
-} from '../../../data/defaults';
+import { DEFAULT_VOLUME_FIELD_INTENSITY, DEFAULT_VOLUME_PALETTE_ID } from '../../../data/defaults';
 
-export function buildVolumeFieldsSnapshot(
-  state: EngineState,
-): ReadonlyArray<VolumeFieldRowData> {
+export function buildVolumeFieldsSnapshot(state: EngineState): ReadonlyArray<VolumeFieldRowData> {
   // Identity comes from the settings keys, which are seeded from the
   // registry at engine construction — the GPU handle list is not consulted.
   const ids = Object.keys(state.settings.volumes.items) as VolumeFieldId[];
