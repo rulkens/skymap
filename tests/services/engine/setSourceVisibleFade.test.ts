@@ -116,4 +116,36 @@ describe('setSourceVisible — fade orchestration', () => {
     // so the bit must remain set even though p1's fade-out also resolved.
     expect((fx.state.sources.drawMask >> Source.SDSS) & 1).toBe(1);
   });
+
+  it('setSourceVisible wakes after the fade completes (final drawMask write lands on a rendered frame)', async () => {
+    // This test pins the post-fade requestRender at engine.ts ~:241.
+    // That wake is essential: the final drawMask write happens in a microtask
+    // after the fade promise resolves, so no channel wake (fadeTo or otherwise)
+    // covers it.  Without this call the renderer serves one stale frame after
+    // the fade completes — the last frame with opacity > 0 for a fade-out, or
+    // the first frame with the cleared bit not yet read.
+    const fx = makeFixture(0b11111);
+
+    const schedulerSpy = fx.state.subsystems.scheduler.requestRender as ReturnType<typeof vi.fn>;
+    schedulerSpy.mockClear();
+
+    await setSourceVisibleForTest(fx.state as never, { cb: {} } as never, Source.SDSS, false);
+
+    // fadeTo must have been called:
+    expect(fx.fades.fadeTo).toHaveBeenCalledOnce();
+
+    // The scheduler's LAST call must come AFTER the fadeTo call — i.e. after
+    // the fade resolved (post-fade wake), not only before it (the immediate
+    // pickMask wake).  invocationCallOrder is a monotonically-increasing
+    // integer Vitest assigns to every mock call globally; a higher value means
+    // "called later".
+    const fadeOrder = (fx.fades.fadeTo as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0]!;
+    const calls = schedulerSpy.mock.invocationCallOrder;
+    const lastSchedulerOrder = calls[calls.length - 1]!;
+
+    expect(lastSchedulerOrder).toBeGreaterThan(fadeOrder);
+
+    // And the drawMask bit must have been cleared (opacityOf returns 0):
+    expect((fx.state.sources.drawMask >> Source.SDSS) & 1).toBe(0);
+  });
 });

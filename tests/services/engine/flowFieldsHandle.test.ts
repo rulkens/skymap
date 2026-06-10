@@ -121,7 +121,9 @@ function makeFlowHandle(
         state.gpu.flowFieldRenderer?.maybeReseed();
       }
 
-      state.subsystems.scheduler.requestRender();
+      // Each present leaf already woke the scheduler via its boringSetter;
+      // an enabled patch with a loaded cube also woke via fadeTo.
+      // An empty patch changes nothing — no wake needed on that path.
     },
   };
 }

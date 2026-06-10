@@ -321,20 +321,20 @@ inside frames: `runFrame` can early-return at `:402` (nothing pickable) and
 skip the `stillAnimating` tail — a fade started in that frame would otherwise
 strand mid-ramp until some unrelated event woke the loop.
 
-- [ ] Add the test `update wakes the scheduler on focus transition` — fake
+- [x] Add the test `update wakes the scheduler on focus transition` — fake
   `StructureRecord` (cluster), `update(rec, 0)`, assert one wake; then
   `update(null, 100)` (fade-out transition), assert a second.
-- [ ] Add the test `steady focused frames do not re-wake` — `update(rec, 0)`,
+- [x] Add the test `steady focused frames do not re-wake` — `update(rec, 0)`,
   clear spy, `update(rec, 16)` × a few frames, assert zero calls.
-- [ ] Run the suite → fails (signature).
-- [ ] Implement; extend the module header: the subsystem's fade controller is
+- [x] Run the suite → fails (signature).
+- [x] Implement; extend the module header: the subsystem's fade controller is
   private (not in the FadeRegistry), so the registry's fadeTo wake cannot cover
   it — the transition is this channel's mouth.
-- [ ] Update constructions: `engine.ts:630` →
+- [x] Update constructions: `engine.ts:630` →
   `createStructureFocusSubsystem({ requestRender: () => state.subsystems.scheduler.requestRender() })`;
   test fixtures pass a spy (keep `initialNowMs` second where used).
-- [ ] Main thread: `npm test`; `npm run typecheck`.
-- [ ] Commit `feat(engine): structureFocus wakes on focus transition` — stage
+- [x] Main thread: `npm test`; `npm run typecheck`.
+- [x] Commit `feat(engine): structureFocus wakes on focus transition` — stage
   the touched paths.
 
 ---

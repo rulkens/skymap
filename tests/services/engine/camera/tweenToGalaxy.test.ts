@@ -3,9 +3,9 @@
  *
  * Three public-handle methods (`focusOn`, `selectFamous`, `selectByAlias`)
  * each open-coded the same five-line "build a CameraTween from a galaxy's
- * world-space position + diameter, hand it to the tween manager, kick the
- * scheduler" block.  `tweenToGalaxy` reifies that block as a single
- * helper.  These tests exercise it without spinning up the full engine:
+ * world-space position + diameter, hand it to the tween manager" block.
+ * `tweenToGalaxy` reifies that block as a single helper.  These tests
+ * exercise it without spinning up the full engine:
  *
  *   - happy path: the tween descriptor lands in `tweens.start` with
  *     to-target = (info.x, info.y, info.z), to-distance derived from
@@ -18,6 +18,10 @@
  * We intentionally do NOT re-test `galaxyFocusDistance` here — its own
  * test suite covers the diameter-to-distance math.  This test only
  * verifies the *plumbing* between the helper and the tween manager.
+ *
+ * The scheduler wake is NOT asserted here. `tweens.start` owns the wake
+ * (via its `deps.requestRender`), and the real tween manager is not
+ * instantiated in this fixture — wake coverage lives in tweenManager.test.ts.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -28,37 +32,33 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 
 /**
  * Build a minimal `EngineState`-shaped fixture that exposes only the
- * fields `tweenToGalaxy` reads: `cam`, `subsystems.tweens.start`, and
- * `subsystems.scheduler.requestRender`.  Casting through `unknown` keeps
- * the test honest — if the helper ever reaches for a field outside this
- * trio, the test will surface it as a runtime undefined rather than a
- * silently-passing stub.
+ * fields `tweenToGalaxy` reads: `cam` and `subsystems.tweens.start`.
+ * Casting through `unknown` keeps the test honest — if the helper ever
+ * reaches for a field outside this pair, the test will surface it as a
+ * runtime undefined rather than a silently-passing stub.
  */
 function makeState(opts: {
   cam: { target: [number, number, number]; distance: number; yaw: number; pitch: number } | null;
   start: ReturnType<typeof vi.fn>;
-  requestRender: ReturnType<typeof vi.fn>;
 }): EngineState {
   return {
     cam: opts.cam,
     subsystems: {
       tweens: { start: opts.start },
-      scheduler: { requestRender: opts.requestRender },
     },
   } as unknown as EngineState;
 }
 
 describe('tweenToGalaxy', () => {
-  it('starts a CameraTween toward (info.x, info.y, info.z) with galaxyFocusDistance(diameterKpc) and requests a render', () => {
+  it('starts a CameraTween toward (info.x, info.y, info.z) with galaxyFocusDistance(diameterKpc)', () => {
     const start = vi.fn();
-    const requestRender = vi.fn();
     const cam = {
       target: [1, 2, 3] as [number, number, number],
       distance: 50,
       yaw: 0.25,
       pitch: -0.1,
     };
-    const state = makeState({ cam, start, requestRender });
+    const state = makeState({ cam, start });
 
     tweenToGalaxy(state, { x: 100, y: 200, z: 300, diameterKpc: 25 });
 
@@ -82,20 +82,17 @@ describe('tweenToGalaxy', () => {
     // startMs is `performance.now()`-shaped — finite, non-negative.
     expect(Number.isFinite(tween.startMs)).toBe(true);
     expect(tween.startMs).toBeGreaterThanOrEqual(0);
-
-    expect(requestRender).toHaveBeenCalledOnce();
   });
 
   it('clones cam.target so later mutation of cam.target does not corrupt the tween snapshot', () => {
     const start = vi.fn();
-    const requestRender = vi.fn();
     const cam = {
       target: [1, 2, 3] as [number, number, number],
       distance: 10,
       yaw: 0,
       pitch: 0,
     };
-    const state = makeState({ cam, start, requestRender });
+    const state = makeState({ cam, start });
 
     tweenToGalaxy(state, { x: 0, y: 0, z: 0, diameterKpc: 30 });
 
@@ -110,12 +107,10 @@ describe('tweenToGalaxy', () => {
 
   it('is a no-op when state.cam is null (post-destroy / pre-startLoop race window)', () => {
     const start = vi.fn();
-    const requestRender = vi.fn();
-    const state = makeState({ cam: null, start, requestRender });
+    const state = makeState({ cam: null, start });
 
     tweenToGalaxy(state, { x: 100, y: 200, z: 300, diameterKpc: 25 });
 
     expect(start).not.toHaveBeenCalled();
-    expect(requestRender).not.toHaveBeenCalled();
   });
 });

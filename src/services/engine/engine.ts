@@ -216,7 +216,8 @@ export async function setSourceVisibleImpl(
   state.sources.pickMask = targetMask;
   // Notify the UI of the (immediate) state change so the checkbox reflects.
   cb.sources?.onMaskChange?.(targetMask);
-  state.subsystems.scheduler.requestRender();
+  // fadeTo fires synchronously on every non-early-return path below, and
+  // fadeTo wakes the scheduler — no explicit requestRender needed here.
 
   if (visible) {
     // Flip drawMask, then fade in.  `reevaluateDemand` reads the now-set
@@ -238,6 +239,10 @@ export async function setSourceVisibleImpl(
       state.sources.drawMask = maskWith(state.sources.drawMask, source);
     }
   }
+  // Essential wake — the final drawMask write happens in a microtask after
+  // the last fade frame's stillAnimating evaluation (the fade promise resolves
+  // from fades.tick inside the frame body), so no channel wake covers it;
+  // without this the final frame renders with the stale mask.
   state.subsystems.scheduler.requestRender();
 }
 
@@ -1006,12 +1011,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // sites multiply this master opacity into every per-field fade, so the
     // whole subsystem ramps in lockstep.  The pass-enabled gate accepts
     // masterEnabled OR opacity > 0, so it keeps blitting through fade-out.
+    // fadeTo wakes the scheduler unconditionally.
     void state.subsystems.fades.fadeTo(
       { kind: 'volumesMaster' },
       enabled ? 1 : 0,
       enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
     );
-    state.subsystems.scheduler.requestRender();
   }
 
   function addVolumeField(fieldId: VolumeFieldId, cube: ScalarCube): void {
@@ -1333,6 +1338,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Drive the FadeRegistry alongside the boolean flip for a smooth ramp.
       // milkyWayPass.enabled accepts the boolean OR a non-zero opacity, so
       // the gate keeps the pass alive through fade-out.
+      // boringSetters.setMilkyWayEnabled wakes the scheduler; fadeTo also
+      // wakes it — no extra requestRender needed.
       setEnabled: (enabled) => {
         boringSetters.setMilkyWayEnabled(enabled);
         void state.subsystems.fades.fadeTo(
@@ -1340,13 +1347,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           enabled ? 1 : 0,
           enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
         );
-        state.subsystems.scheduler.requestRender();
       },
     },
     filaments: {
       // Same fade-on-toggle pattern as milkyWay: filamentsPass.enabled
       // accepts the boolean OR a non-zero opacity, keeping the pass alive
       // through fade-out.
+      // boringSetters.setFilamentsEnabled wakes the scheduler; fadeTo also
+      // wakes it — no extra requestRender needed.
       setEnabled: (enabled) => {
         boringSetters.setFilamentsEnabled(enabled);
         void state.subsystems.fades.fadeTo(
@@ -1354,7 +1362,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           enabled ? 1 : 0,
           enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
         );
-        state.subsystems.scheduler.requestRender();
       },
       setIntensity: (value) => boringSetters.setFilamentIntensity(value),
     },
@@ -1401,7 +1408,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           state.gpu.flowFieldRenderer?.maybeReseed();
         }
 
-        state.subsystems.scheduler.requestRender();
+        // Each present leaf already woke the scheduler via its boringSetter;
+        // an enabled patch with a loaded cube also woke via fadeTo.
+        // An empty patch changes nothing — no wake needed on that path.
       },
     },
     labels: {
