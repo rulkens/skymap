@@ -406,17 +406,17 @@ handled by the `state.assetSlots.points` loop above), reading
 unchanged). The DEV-synthetic block stays as-is (those are deliberately not
 wiring rows; see `assetWiring.ts:40-43`).
 
-- [ ] Extend the existing test fixture's `assetSlots` with
+- [x] Extend the existing test fixture's `assetSlots` with
   `flow: stubSlot('flow')` and add the assertion `names.has('flow')` to
   `populates allSlots from point + sidecar + synthetic slots by name` (or add a
   sibling test `includes every ASSET_WIRING sidecar — flow included`). Run →
   fails.
-- [ ] Implement the derivation; update the module header (the "Why one shared
+- [x] Implement the derivation; update the module header (the "Why one shared
   Map" section gains: the enumeration comes from `ASSET_WIRING` so the registry
   and the wiring table cannot disagree about what exists).
-- [ ] Main thread: `npm test -- installLoadProgress`; full `npm test`;
+- [x] Main thread: `npm test -- installLoadProgress`; full `npm test`;
   `npm run typecheck`.
-- [ ] Commit
+- [x] Commit
   `fix(engine): derive allSlots sidecars from ASSET_WIRING (restores missing flow slot)`
   — stage the two paths.
 
@@ -453,7 +453,7 @@ commit makes this sufficient even for slots whose old wake sat at the commit
 tail; and a note that `slot.cancel()`'s rollback can re-notify a `ready` state
 — the extra coalesced wake is harmless.
 
-- [ ] Write the tests (stub-slot style of `installLoadProgress.test.ts` —
+- [x] Write the tests (stub-slot style of `installLoadProgress.test.ts` —
   stub `subscribe` to capture the callback):
   - `wakes the scheduler when any slot transitions to ready` — two stub slots;
     fire one captured callback with `{ kind: 'ready', value: {} }`; assert one
@@ -463,13 +463,13 @@ tail; and a note that `slot.cancel()`'s rollback can re-notify a `ready` state
     assert zero calls.
   - `subscribes every slot in the registry` — assert each stub's `subscribe`
     was called exactly once.
-- [ ] Run → fails (module absent).
-- [ ] Implement the module; wire the call into `wireSlots.ts` after
+- [x] Run → fails (module absent).
+- [x] Implement the module; wire the call into `wireSlots.ts` after
   `installLoadProgress` and extend the phase docblock's numbered list (and its
   stale "State writes" sidecar enumeration, which also predates the flow slot).
-- [ ] Main thread: `npm test -- installSlotReadyWake`; full `npm test`;
+- [x] Main thread: `npm test -- installSlotReadyWake`; full `npm test`;
   `npm run typecheck`.
-- [ ] Commit `feat(engine): one generic slot-ready render wake over allSlots`
+- [x] Commit `feat(engine): one generic slot-ready render wake over allSlots`
   — stage the three paths.
 
 ---
@@ -486,7 +486,7 @@ tail; and a note that `slot.cancel()`'s rollback can re-notify a `ready` state
 
 The generic wake (Task 6) now covers all eight. Two removal shapes:
 
-- [ ] **Subscriber-located** — delete only the `requestRender` line, keep the
+- [x] **Subscriber-located** — delete only the `requestRender` line, keep the
   slimmer subscription:
   - `famousMetaSlot.ts:33` (ready branch keeps `setFamousMeta`; error branch
     untouched);
@@ -500,18 +500,18 @@ The generic wake (Task 6) now covers all eight. Two removal shapes:
     subscriber's only job is to wake the renderer" (now: only warns on
     failure; the render wake is the wiring layer's generic slot-ready
     subscription).
-- [ ] **Commit-tail-located** — delete the trailing
+- [x] **Commit-tail-located** — delete the trailing
   `state.subsystems.scheduler.requestRender();` from each commit body:
   `flowFieldSlot.ts:54`, `mcpmSlot.ts:51`, `cf4DensitySlot.ts:55`,
   `syntheticVolumeSlots.ts:101`. Where a docblock mentions "then the render
   loop wakes" (e.g. `flowFieldSlot.ts:15-17`), repoint it at the generic
   ready-wake.
-- [ ] Update each touched module header so no comment still claims the slot
+- [x] Update each touched module header so no comment still claims the slot
   wakes the renderer itself; one line each pointing at `installSlotReadyWake`.
-- [ ] Update any slot tests asserting the direct wake (assert the domain
+- [x] Update any slot tests asserting the direct wake (assert the domain
   effects only; the wake is covered by `installSlotReadyWake.test.ts`).
-- [ ] Main thread: full `npm test`; `npm run typecheck`.
-- [ ] Commit `refactor(loading): drop per-slot render wakes (generic ready wake owns them)`
+- [x] Main thread: full `npm test`; `npm run typecheck`.
+- [x] Commit `refactor(loading): drop per-slot render wakes (generic ready wake owns them)`
   — stage the eight src files + touched tests.
 
 ---
@@ -544,31 +544,31 @@ state write + callback fan-out, ONLY when the dedupe guard passed (a no-op set
 stays wake-free — that preserves clearAll-on-empty-scene as a true idle no-op).
 `setHovered` unchanged.
 
-- [ ] Add contract tests (selection test file, spy deps):
+- [x] Add contract tests (selection test file, spy deps):
   - `setSelected wakes the scheduler on actual change` — one call.
   - `setSelected does not wake when the selection is unchanged` — set the same
     selection twice; one call total.
   - `setFocused wakes on change and not on no-op` — same shape.
   - `setHovered never wakes` — zero calls.
-- [ ] Run → fails (deps field absent).
-- [ ] Implement: add the field, the two wakes, and a short module-header
+- [x] Run → fails (deps field absent).
+- [x] Implement: add the field, the two wakes, and a short module-header
   addition (selection is a change channel; its mouth owns the wake — the
   click/dblclick handlers and `clearAll` no longer follow up).
-- [ ] Update constructions: `engine.ts:589-597` gains
+- [x] Update constructions: `engine.ts:589-597` gains
   `requestRender: () => state.subsystems.scheduler.requestRender()`; test
   fixtures gain a spy/noop.
-- [ ] Remove the now-redundant wakes: `wireInput.ts:247-248` (and its
+- [x] Remove the now-redundant wakes: `wireInput.ts:247-248` (and its
   "Selection changed — render…" comment) and `wireInput.ts:266`. The orbit
   `onCameraChange` wake at `wireInput.ts:233` STAYS untouched.
-- [ ] Rewrite `clearAll.ts`: drop the `scheduler.requestRender()` at `:32` and
+- [x] Rewrite `clearAll.ts`: drop the `scheduler.requestRender()` at `:32` and
   the `if (… !== null)` guard at `:28-31` (it existed only to suppress that
   wake; the setters dedupe internally, and they now also own the wake — so an
   Esc on an empty scene is still wake-free, now by the setters' guard). Body
   becomes the two setter calls; update the docblock (`:26-27` comment included)
   to name the new wake owner.
-- [ ] Update clearAll/wireInput tests asserting the old direct wakes.
-- [ ] Main thread: full `npm test`; `npm run typecheck`.
-- [ ] Commit `feat(engine): selection subsystem owns its render wake` — stage
+- [x] Update clearAll/wireInput tests asserting the old direct wakes.
+- [x] Main thread: full `npm test`; `npm run typecheck`.
+- [x] Commit `feat(engine): selection subsystem owns its render wake` — stage
   the six src paths + touched tests.
 
 ---
@@ -577,10 +577,10 @@ stays wake-free — that preserves clearAll-on-empty-scene as a true idle no-op)
 
 **Files:** review across `src/`; small edits where listed.
 
-- [ ] Grep `requestRender` across `src/` (definitions in
+- [x] Grep `requestRender` across `src/` (definitions in
   `renderScheduler.ts` / type files excluded). Produce the survivor census in
   the task notes.
-- [ ] Assert every survivor is on the **approved-residue list**:
+- [x] Assert every survivor is on the **approved-residue list**:
   1. `startLoop.ts:158` — bootstrap kick;
   2. `runFrame.ts:164` (not-ready re-poll) + `runFrame.ts:485`
      (stillAnimating tail);
@@ -597,7 +597,7 @@ stays wake-free — that preserves clearAll-on-empty-scene as a true idle no-op)
      tweenManager, structureFocus, selection) + the pre-existing
      biasCorrection injected dep (`engine.ts:608` construction; the subsystem's
      own internal call sites).
-- [ ] Every survivor that lacks one gets a one-to-three-line didactic comment
+- [x] Every survivor that lacks one gets a one-to-three-line didactic comment
   stating why it is an *essential* wake (which channel it is the mouth of, or
   why no channel covers it). The input mouths (`wireInput.ts:233`,
   `engine.ts:578-580`) and the loop sites are mostly commented already —
@@ -605,7 +605,7 @@ stays wake-free — that preserves clearAll-on-empty-scene as a true idle no-op)
   sharpen where they don't (e.g. `runFrame.ts:447`'s "event handlers and
   engine handle setters call scheduler.requestRender()" now reads "channel
   mouths — input, fades/tweens, slot arrivals, selection — wake it").
-- [ ] **Decision rule for unlisted survivors** (apply, don't punt): if every
+- [x] **Decision rule for unlisted survivors** (apply, don't punt): if every
   mutating path through the function provably triggers a channel wake
   (an unconditional `fadeTo`, a boringSetter, a slot ready, a selection set),
   REMOVE the trailing wake; otherwise KEEP it with a justification comment.
@@ -618,9 +618,9 @@ stays wake-free — that preserves clearAll-on-empty-scene as a true idle no-op)
     exhaustive, else keep + comment;
   - any wake in `addVolumeField` / `setVolumeFieldEnabled` / `setTier` /
     `destroy` paths the census surfaces — same rule.
-- [ ] Update any tests invalidated by rule-driven removals.
-- [ ] Main thread: full `npm test`; `npm run typecheck`.
-- [ ] Commit `docs(engine): annotate essential render-wake sites; sweep stragglers`
+- [x] Update any tests invalidated by rule-driven removals.
+- [x] Main thread: full `npm test`; `npm run typecheck`.
+- [x] Commit `docs(engine): annotate essential render-wake sites; sweep stragglers`
   — stage exactly the touched files.
 
 ---
@@ -629,20 +629,22 @@ stays wake-free — that preserves clearAll-on-empty-scene as a true idle no-op)
 
 **Files:** review only; small edits if found.
 
-- [ ] Run the `entanglement-radar` skill over the full branch diff. Confirm
+- [x] Run the `entanglement-radar` skill over the full branch diff. Confirm
   the un-braid landed: "domain change" and "wake policy" are no longer
   complected at call sites; the wake policy has exactly one home per channel;
   no new mirror state (the drivers/allSlots registries were reused, not
   duplicated); the slot enumeration has one source (`ASSET_WIRING`).
-- [ ] Confirm the two MUST-KEEP sites (`engine.ts:241`, `cameraSnapshot.ts:95`)
+- [x] Confirm the two MUST-KEEP sites (`engine.ts:241`, `cameraSnapshot.ts:95`)
   survived with their comments, and the Task 4 post-fade contract test exists
   and passes.
-- [ ] Confirm Channel 4 is untouched: no edits to `runCameraDrivers`,
+- [x] Confirm Channel 4 is untouched: no edits to `runCameraDrivers`,
   `cameraDrivers.ts`, or the `runFrame` camera block beyond comments.
-- [ ] Grep `requestRender` one final time; the census must match Task 9's
+- [x] Grep `requestRender` one final time; the census must match Task 9's
   approved list exactly.
-- [ ] Main thread: full `npm test`; `npm run typecheck`.
-- [ ] Commit any cleanup (specific paths only); otherwise no-op.
+- [x] Main thread: full `npm test`; `npm run typecheck`.
+- [x] Commit any cleanup (specific paths only); otherwise no-op. (Radar
+  findings F1-F3 fixed in `d412f610`; F4 — the volume knob setters — is
+  handed to the in-flight settings-by-source-type reshape.)
 
 ---
 
