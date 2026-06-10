@@ -21,7 +21,10 @@
  *      survey settles without data.
  *   6. `installLoadProgress` — the flat `allSlots` registry + load-progress
  *      emitter, over both point + sidecar slots.
- *   7. `reevaluateDemand` — the single place loads start. It walks every wiring
+ *   7. `installSlotReadyWake` — one subscription per slot; wakes the render
+ *      scheduler whenever any slot transitions to `ready`.  The single
+ *      channel-mouth enforcement point: no per-slot wake obligation.
+ *   8. `reevaluateDemand` — the single place loads start. It walks every wiring
  *      row and triggers each demanded slot with its tier-derived request,
  *      replacing the old imperative boot loop. The same loop re-runs on every
  *      state change, so "is this asset required?" has one answer in one place.
@@ -35,10 +38,12 @@
  * ### State writes
  *
  *   - `state.assetSlots.{filaments,famousMeta,structureCatalog,pgcAlias,
- *     cf4Density,mcpm}` (via `installSlots`) + `.syntheticVolumes` (DEV).
+ *     cf4Density,mcpm,flow}` (via `installSlots`) + `.syntheticVolumes` (DEV).
  *   - `state.subsystems.{loadProgress, structures}` + the impostor subsystem handles.
  *   - `state.requests` may gain `'syntheticFallback'` (via the gate).
  *   - `cb.onStatusChange({ kind: 'loading' })` synchronously.
+ *   - Each slot in `deps.allSlots` gains one subscriber (via `installSlotReadyWake`)
+ *     that wakes `state.subsystems.scheduler` on `ready`.
  *
  * ### Side effects on `deps`
  *
@@ -49,6 +54,7 @@ import { ASSET_WIRING } from '../wiring/assetWiring';
 import { buildSlotsFromRegistry } from '../wiring/buildSlotsFromRegistry';
 import { installSlots } from '../wiring/installSlots';
 import { installLoadProgress } from '../wiring/installLoadProgress';
+import { installSlotReadyWake } from '../wiring/installSlotReadyWake';
 import { createSyntheticVolumeSlots } from '../../loading/slots/syntheticVolumeSlots';
 import { wireImpostorSubsystems } from '../wiring/wireImpostorSubsystems';
 import { registerOverlayFades } from '../wiring/registerOverlayFades';
@@ -107,6 +113,13 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // Build the flat `allSlots` registry + load-progress emitter over every
   // installed slot (point + sidecar + DEV synthetic).
   installLoadProgress(state, deps);
+
+  // Wire the channel-mouth render wake: one subscription per slot that calls
+  // scheduler.requestRender() when the slot reaches 'ready'.  Runs after
+  // installLoadProgress so deps.allSlots is fully populated (point + sidecar
+  // + DEV synthetic), and before reevaluateDemand so no slot can arrive
+  // 'ready' before the subscription is in place.
+  installSlotReadyWake(state, deps.allSlots);
 
   // Signal loading state immediately so the user sees progress before the
   // (potentially multi-second) fetches complete.
