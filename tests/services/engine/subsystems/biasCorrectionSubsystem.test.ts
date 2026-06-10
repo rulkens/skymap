@@ -269,8 +269,9 @@ describe('createBiasCorrectionSubsystem', () => {
 
     const splices = stub.calls.filter((c) => c.kind === 'schechter');
     expect(splices.map((s) => s.source)).toEqual([Source.Glade, Source.TwoMRS, Source.SDSS]);
-    // Exactly one requestRender call after all three splices.
-    expect(requestRender).toHaveBeenCalledTimes(1);
+    // Two requestRender calls: one on-entry (immediate mode-gate flip) and
+    // one post-bake (after all three splices land).
+    expect(requestRender).toHaveBeenCalledTimes(2);
   });
 
   it('attach_before_setMode — setMode without attachRenderer; splice fires at attach time', async () => {
@@ -340,6 +341,29 @@ describe('createBiasCorrectionSubsystem', () => {
 
     sub.onSourceUnloaded(Source.SDSS);
     expect(sub.state().sourcesWithSchechter).not.toContain(Source.SDSS);
+  });
+
+  it('setMode wakes on entry; no-op on same mode (no dedupe exists, but the mode write precedes the wake)', async () => {
+    // The subsystem calls requestRender() immediately on entry so the shader's
+    // integer mode gate flips on the very next frame — even for identity modes
+    // that fire no bake (None, VolumeLimited, VMax).  This mirrors the contract
+    // fadeTo / tweens.start follow (wake at the point of state change, not later).
+    const stub = makeStubRenderer();
+    const { deps, requestRender } = makeDeps(new Map());
+    const sub = createBiasCorrectionSubsystem(deps);
+    sub.attachRenderer(stub.renderer);
+
+    await sub.setMode(BiasMode.None);
+    // On-entry wake fires for identity mode.
+    expect(requestRender).toHaveBeenCalledTimes(1);
+
+    requestRender.mockClear();
+    await sub.setMode(BiasMode.VolumeLimited);
+    expect(requestRender).toHaveBeenCalledTimes(1);
+
+    requestRender.mockClear();
+    await sub.setMode(BiasMode.VMax);
+    expect(requestRender).toHaveBeenCalledTimes(1);
   });
 
   it('attachRenderer wires the upload/unload callbacks on the renderer', () => {

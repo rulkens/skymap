@@ -31,21 +31,20 @@
  *
  * ### Ready-after-commit makes this sufficient
  *
- * `AssetSlot` dispatches `ready` only AFTER its commit body finishes: the
- * `dispatch({ kind: 'committed', ... })` call (AssetSlot.ts lines 213–216)
- * runs outside the `try/finally` commit block, after `resolveMine()` has
- * already released the next queued commit. Subscribers receive the `ready`
- * state in the same synchronous tick as that dispatch. The GPU upload
- * (if any) is therefore complete before the wake fires, so the frame the
- * scheduler queues will see fresh vertex data.
+ * `AssetSlot` dispatches `ready` only AFTER its commit body resolves: the
+ * `dispatch({ kind: 'committed', ... })` call runs outside the
+ * `try/finally` commit block, after `resolveMine()` has already released
+ * the next queued commit. Subscribers receive the `ready` state in the
+ * same synchronous tick as that dispatch. The GPU upload (if any) is
+ * therefore complete before the wake fires, so the frame the scheduler
+ * queues will see fresh vertex data.
  *
  * ### cancel() rollback is harmless
  *
- * `slot.cancel()` can roll back to a previous `ready` state and
- * re-notify all subscribers with it (AssetSlot.ts lines 244–249). This
- * subscription will call `requestRender()` again on that re-notification.
- * The scheduler coalesces redundant wakes into a single queued frame, so
- * the extra call costs nothing.
+ * `slot.cancel()` rolls back to the last ready state and re-notifies all
+ * subscribers with it. This subscription will call `requestRender()` again
+ * on that re-notification. The scheduler coalesces redundant wakes into a
+ * single queued frame, so the extra call costs nothing.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';

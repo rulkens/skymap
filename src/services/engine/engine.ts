@@ -144,7 +144,7 @@ import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
 import type { LabelCategory } from '../../@types/engine/data/LabelCategory';
 import type { StructureCategory } from '../../@types/engine/data/StructureCategory';
 import { LABEL_CATEGORIES, LABEL_LAYER_BY_CATEGORY } from '../../data/labelCategories';
-import { STRUCTURE_CATEGORIES, isStructureCategory } from '../../data/structureCategories';
+import { STRUCTURE_CATEGORIES } from '../../data/structureCategories';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -277,24 +277,38 @@ function setCategoryLabelVisible(
   // category compare: 'galaxyNames' rows (the curated atlas) drive the galaxy
   // store + shared galaxyNames fade layer; 'structure' rows fade their
   // per-category handle on the shared `structure` label layer.
+  //
+  // The switch is exhaustive over `CategoryLabelLayer` ('galaxyNames' |
+  // 'structure'). Every arm calls `fadeTo`, which wakes the scheduler —
+  // no bare `requestRender` is needed here. The `default` never-check
+  // enforces at compile time that a new `CategoryLabelLayer` variant
+  // can't fall through silently.
   const durationMs = visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS;
-  if (LABEL_LAYER_BY_CATEGORY[category] === 'galaxyNames') {
-    state.data.galaxies.setFamousLabelsVisible(visible);
-    // Famous-galaxy labels reuse the shared `galaxyNames` label layer rather
-    // than minting a per-category handle (see FadeHandle's labelLayer doc).
-    void state.subsystems.fades.fadeTo(
-      { kind: 'labelLayer', layer: 'galaxyNames' },
-      visible ? 1 : 0,
-      durationMs,
-    );
-  } else if (isStructureCategory(category)) {
-    // The 'structure' rows narrow to StructureCategory, which is exactly what
-    // the labelLayer/structure handle's `category` field wants.
-    void state.subsystems.fades.fadeTo(
-      { kind: 'labelLayer', layer: 'structure', category },
-      visible ? 1 : 0,
-      durationMs,
-    );
+  const layer = LABEL_LAYER_BY_CATEGORY[category];
+  switch (layer) {
+    case 'galaxyNames':
+      // Famous-galaxy labels reuse the shared `galaxyNames` label layer rather
+      // than minting a per-category handle (see FadeHandle's labelLayer doc).
+      state.data.galaxies.setFamousLabelsVisible(visible);
+      void state.subsystems.fades.fadeTo(
+        { kind: 'labelLayer', layer: 'galaxyNames' },
+        visible ? 1 : 0,
+        durationMs,
+      );
+      break;
+    case 'structure':
+      // The 'structure' rows narrow to StructureCategory, which is exactly what
+      // the labelLayer/structure handle's `category` field wants.
+      void state.subsystems.fades.fadeTo(
+        { kind: 'labelLayer', layer: 'structure', category: category as StructureCategory },
+        visible ? 1 : 0,
+        durationMs,
+      );
+      break;
+    default: {
+      const _exhaustive: never = layer;
+      throw new Error(`setCategoryLabelVisible: unhandled label layer "${String(_exhaustive)}"`);
+    }
   }
   state.settings.labelCategoryVisibility = {
     ...state.settings.labelCategoryVisibility,
@@ -303,9 +317,6 @@ function setCategoryLabelVisible(
   cb.labels?.onLabelCategoryVisibilityChange?.({
     ...state.settings.labelCategoryVisibility,
   });
-  // No requestRender: the routing above is exhaustive over LabelCategory
-  // (every label-bearing registry row is either labelLayer 'galaxyNames' or a
-  // structure row), so every call lands in a fadeTo — which wakes the scheduler.
 }
 
 function setCategoryMarkerVisible(
@@ -820,16 +831,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // so flipping it takes effect next frame with no pipeline rebuild.  We
     // always fire the echo (even when unchanged) so the UI seeds on first
     // call.  Routes through `biasCorrectionSubsystem`, which owns the cached
-    // ratios/weights + worker runners and calls requestRender itself as each
-    // per-source splice resolves, so visuals update progressively.  The
-    // `void` discards the Promise — engine.ts doesn't await.
+    // ratios/weights + worker runners and calls requestRender on entry (for
+    // the immediate mode-gate flip) and again after per-source splices land
+    // (for bake modes).  The `void` discards the Promise — engine.ts doesn't await.
     state.settings.bias.mode = mode;
     cb.bias?.onModeChange?.(mode);
     void state.subsystems.biasCorrection.setMode(mode);
-    // Essential wake — the subsystem wakes only AFTER its async bakes resolve
-    // (and not at all for the identity modes), but the shader's mode gate flips
-    // on the next frame; without this wake the mode change sits invisible.
-    state.subsystems.scheduler.requestRender();
   }
 
   function resetCamera(): void {

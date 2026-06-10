@@ -70,6 +70,16 @@
  * two parallel: every existing reader (URL hash, InfoCard,
  * SettingsPanel echo) continues to work unchanged.
  *
+ * ### Wake contract
+ *
+ * `setMode` calls `requestRender()` on entry (after the mode write, before
+ * any bake) so the shader's integer mode gate flips on the very next frame —
+ * mirroring the contract `fadeTo` and `tweens.start` follow.  For bake modes
+ * (Schechter, AngularReweight) it calls `requestRender()` again once all
+ * per-source splices land (no-op if a newer `setMode` has since superseded
+ * this one).  The engine.ts caller therefore needs no trailing
+ * `requestRender()` of its own.
+ *
  * ### Production wiring (Spec E phase E.4 — cut-over)
  *
  * Phase E.4 routed `handle.setBiasMode` through this subsystem and
@@ -79,9 +89,8 @@
  * matching the pre-extraction behaviour bit-for-bit.  Same observable
  * behaviour as pre-E.4: the renderer keeps reading
  * `state.settings.bias.mode` per-frame for the uniform write; this
- * subsystem owns the splice
- * pipeline that lays per-galaxy ratios/weights into the per-source
- * vertex buffers.
+ * subsystem owns the splice pipeline that lays per-galaxy ratios/weights
+ * into the per-source vertex buffers.
  *
  * @module
  */
@@ -258,6 +267,11 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     generation += 1;
     const myGen = generation;
     mode = next;
+    // Wake immediately so the shader's mode gate flips on the very next frame.
+    // The post-bake wakes below are separate: they fire when per-source splices
+    // land and the frame should show updated ratios/weights.  Identity modes
+    // (None, VolumeLimited, VMax) only ever need this one wake.
+    requestRender();
 
     if (next === BiasMode.None || next === BiasMode.VolumeLimited || next === BiasMode.VMax) {
       // Identity-only modes.  The shader's gate ignores the per-galaxy
@@ -274,7 +288,9 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
       // Per-source independence: each bake is a separate Promise, splice
       // fires when each resolves.  Tests assert this ordering invariant
       // via the multi_source_completion_ordering case.
-      await Promise.all(pairs.map(({ source, catalog }) => bakeSchechterFor(source, catalog, myGen)));
+      await Promise.all(
+        pairs.map(({ source, catalog }) => bakeSchechterFor(source, catalog, myGen)),
+      );
       // Wake the loop ONCE after every splice has landed.  If `myGen`
       // is stale (a newer setMode bumped it mid-Promise.all), skip the
       // wake — the newer setMode will fire its own.
