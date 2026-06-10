@@ -121,12 +121,12 @@ describe('seedSettingsCallbacks', () => {
     expect(sources.onMaskChange).not.toHaveBeenCalled();
     expect(tonemap.onCurveChange).not.toHaveBeenCalled();
     expect(tonemap.onExposureChange).not.toHaveBeenCalled();
-    // Camera auto-rotate migrated to the engine-owned store too; the seed no
-    // longer fires its echo.
+    // Camera auto-rotate and the bias cluster (mode / absMagLimit) migrated to
+    // the engine-owned store too; the seed no longer fires their echoes.
     expect(camera.onAutoRotateChange).not.toHaveBeenCalled();
+    expect(bias.onModeChange).not.toHaveBeenCalled();
+    expect(bias.onAbsMagLimitChange).not.toHaveBeenCalled();
     expect(thumbnails.onEnabledChange).toHaveBeenCalledExactlyOnceWith(snap.galaxyTexturesEnabled);
-    expect(bias.onModeChange).toHaveBeenCalledExactlyOnceWith(snap.biasMode);
-    expect(bias.onAbsMagLimitChange).toHaveBeenCalledExactlyOnceWith(snap.absMagLimit);
     // Each echo carries a fresh copy of the record, not the literal
     // reference — assert by value so the freshness contract stays
     // load-bearing.  Label and marker visibility are two independent

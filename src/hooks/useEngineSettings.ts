@@ -10,21 +10,23 @@
  *   1. React seeds an initial value from `data/defaults.ts` so the
  *      SettingsPanel renders a useful first paint before the engine's
  *      first echo lands.
- *   2. The engine fires an echo callback (e.g. `bias.onModeChange`)
+ *   2. The engine fires an echo callback (e.g. `thumbnails.onEnabledChange`)
  *      both at engine init AND on every matching setter call, so the
  *      React copy always reflects the engine's authoritative value.
  *   3. The SettingsPanel onChange handler in App.tsx forwards user
- *      input to the engine handle (e.g. `handleRef.current?.bias.setMode(v)`)
- *      and the engine echoes it right back, so no optimistic local
- *      update is needed — except for the exceptions below.
+ *      input to the engine handle (e.g.
+ *      `handleRef.current?.setGalaxyTexturesEnabled(v)`) and the engine echoes
+ *      it right back, so no optimistic local update is needed — except for the
+ *      exceptions below.
  *
  * The surveys cluster (pointSize / brightness / depthFade /
- * highlightFallback / realOnly / the derived source mask) and the tonemap
- * cluster (exposure / curve) have LEFT this pattern: they live in the
- * engine-owned settings store, and App.tsx reads them via `useSettingsStore`
- * selectors instead of a mirror cell here. The tonemap migration also dissolved
- * the `exposure` hybrid: the store write notifies synchronously, so the slider
- * thumb tracks without an optimistic local cell.
+ * highlightFallback / realOnly / the derived source mask), the tonemap cluster
+ * (exposure / curve), the camera auto-rotate flag, and the bias cluster (mode /
+ * absMagLimit) have LEFT this pattern: they live in the engine-owned settings
+ * store, and App.tsx reads them via `useSettingsStore` selectors instead of a
+ * mirror cell here. The tonemap migration also dissolved the `exposure` hybrid:
+ * the store write notifies synchronously, so the slider thumb tracks without an
+ * optimistic local cell.
  *
  * ──────────────────────────────────────────────────────────────────────
  * The App-owned exceptions
@@ -43,15 +45,12 @@
  */
 
 import { useCallback, useState } from 'react';
-import type { BiasMode as BiasModeT } from '../@types/data/BiasMode';
 import type { FlowSettings } from '../@types/settings/FlowSettings';
 import type { LabelCategory } from '../@types/engine/data/LabelCategory';
 import type { StructureCategory } from '../@types/engine/data/StructureCategory';
 import { LABEL_CATEGORIES } from '../data/labelCategories';
 import { STRUCTURE_CATEGORIES } from '../data/structureCategories';
 import {
-  DEFAULT_ABS_MAG_LIMIT,
-  DEFAULT_BIAS_MODE,
   DEFAULT_FLOW,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
@@ -83,8 +82,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   const [showDiskRadiusRing, setShowDiskRadiusRing] = useState<boolean>(
     DEFAULT_SHOW_DISK_RADIUS_RING,
   );
-  const [biasMode, setBiasMode] = useState<BiasModeT>(DEFAULT_BIAS_MODE);
-  const [absMagLimit, setAbsMagLimit] = useState<number>(DEFAULT_ABS_MAG_LIMIT);
 
   // ── App-owned optimistic values (no engine echo) ─────────────────────
   // The engine does NOT fire echo callbacks for filaments or volumes state,
@@ -188,8 +185,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       filamentCounts,
       showPickBuffer,
       showDiskRadiusRing,
-      biasMode,
-      absMagLimit,
       volumesEnabled,
       volumeFields,
       labelCategoryVisibility,
@@ -203,15 +198,12 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       // Every echo the engine emits lands at its nested address; the
       // no-echo cases (filaments enabled/intensity, volumes master)
       // are App-owned with no wiring here.
-      // The surveys + sources + tonemap echo sub-bags are gone, and so is the
-      // camera auto-rotate echo — those clusters read the engine-owned store via
-      // `useSettingsStore` selectors, so there's no mirror to keep in sync from a
-      // callback. (Camera EVENTS — focus / camera / scale — are not settings and
-      // are wired by `useEngine`, not here.)
-      bias: {
-        onModeChange: setBiasMode,
-        onAbsMagLimitChange: setAbsMagLimit,
-      },
+      // The surveys + sources + tonemap echo sub-bags are gone, and so are the
+      // camera auto-rotate echo and the bias (mode / absMagLimit) echoes — those
+      // clusters read the engine-owned store via `useSettingsStore` selectors, so
+      // there's no mirror to keep in sync from a callback. (Camera EVENTS —
+      // focus / camera / scale — are not settings and are wired by `useEngine`,
+      // not here.)
       thumbnails: {
         onEnabledChange: setGalaxyTexturesEnabled,
       },

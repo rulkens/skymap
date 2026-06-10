@@ -51,6 +51,8 @@ import { selectRealOnly } from '../../services/engine/settingsStore/selectors/se
 import { selectVisibleSourceMask } from '../../services/engine/settingsStore/selectors/selectVisibleSourceMask';
 import { selectToneMapCurve } from '../../services/engine/settingsStore/selectors/selectToneMapCurve';
 import { selectAutoRotate } from '../../services/engine/settingsStore/selectors/selectAutoRotate';
+import { selectBiasMode } from '../../services/engine/settingsStore/selectors/selectBiasMode';
+import { selectAbsMagLimit } from '../../services/engine/settingsStore/selectors/selectAbsMagLimit';
 import {
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_DEPTH_FADE_ENABLED,
@@ -58,6 +60,8 @@ import {
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_AUTO_ROTATE,
+  DEFAULT_BIAS_MODE,
+  DEFAULT_ABS_MAG_LIMIT,
 } from '../../data/defaults';
 import { ALL_VISIBLE_MASK } from '../../utils/sourceMask';
 import { buildStaticAnchorStructures } from '../../data/buildStaticAnchorStructures';
@@ -84,8 +88,6 @@ export function App(): React.ReactElement {
     filamentCounts,
     showPickBuffer,
     showDiskRadiusRing,
-    biasMode,
-    absMagLimit,
     volumesEnabled,
     volumeFields,
     spaceMouseConnected,
@@ -141,6 +143,14 @@ export function App(): React.ReactElement {
   // which notifies synchronously, so the play/pause icon tracks without an
   // optimistic cell. Fallback is the same `data/defaults.ts` seed.
   const autoRotate = useSettingsStore(handleRef, selectAutoRotate, DEFAULT_AUTO_ROTATE);
+
+  // Bias mode + absolute-magnitude limit read live off the engine-owned store.
+  // The mode radio dispatches through `handle.bias.setMode` (which also kicks
+  // the async worker re-bake) and the slider through `handle.setAbsMagLimit`;
+  // both notify synchronously, so the controls track without an optimistic
+  // cell. Fallback is the same `data/defaults.ts` seed.
+  const biasMode = useSettingsStore(handleRef, selectBiasMode, DEFAULT_BIAS_MODE);
+  const absMagLimit = useSettingsStore(handleRef, selectAbsMagLimit, DEFAULT_ABS_MAG_LIMIT);
 
   // Flow overlay has no engine echo, so a knob change must land in two homes:
   // the React mirror (optimistic) and the engine handle. One patch covers both
@@ -340,11 +350,12 @@ export function App(): React.ReactElement {
               setSpaceMouseSensitivity(value);
               handleRef.current?.input.spaceMouse.setSensitivity(value);
             }}
-            // Bias setters echo synchronously — `setBiasMode` / `setAbsMagLimit`
-            // fire their echo callback inside the call, so no optimistic update
-            // needed. The tone-map curve reads off the engine-owned store
-            // (`selectToneMapCurve`); `setCurve` dispatches the store action,
-            // which notifies synchronously, so the dropdown stays in sync.
+            // Bias mode + absMagLimit read off the engine-owned store
+            // (`selectBiasMode` / `selectAbsMagLimit`); the handle setters
+            // dispatch the store action (and `setMode` also re-bakes the worker),
+            // which notifies synchronously, so the controls stay in sync without
+            // an optimistic update. The tone-map curve reads off the store too
+            // (`selectToneMapCurve`); `setCurve` dispatches its action likewise.
             biasMode={biasMode}
             onBiasModeChange={(mode) => handleRef.current?.bias.setMode(mode)}
             absMagLimit={absMagLimit}

@@ -249,12 +249,12 @@ writes `bias.mode`; the bespoke `setBiasMode` keeps its `void
 biasCorrection.setMode(mode)` side effect (that's a real event-driven action, not
 a mirror) and drops the `cb.bias?.onModeChange?.` echo. `setAbsMagLimit` is a
 boringSetter (`settingsTable.ts:258`).
-- [ ] Reducers `setBiasMode`, `setAbsMagLimit` + selectors + tests.
-- [ ] Run-fails → implement → `setBiasMode` writes via action then calls
+- [x] Reducers `setBiasMode`, `setAbsMagLimit` + selectors + tests.
+- [x] Run-fails → implement → `setBiasMode` writes via action then calls
   `biasCorrection.setMode` (no echo); `setAbsMagLimit` boringSetter → action →
   delete `bias` echoes + cells (`biasMode`, `absMagLimit`) + seed lines → switch
   SettingsPanel reads.
-- [ ] Run-passes (the `biasCorrection` bake still fires — assert via the existing
+- [x] Run-passes (the `biasCorrection` bake still fires — assert via the existing
   bias test if one exists) → commit.
 
 ### Task 2.5: thumbnails

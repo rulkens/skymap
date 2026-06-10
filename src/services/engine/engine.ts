@@ -102,6 +102,7 @@ import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 
 import { createTweenManager } from './camera/tweenManager';
 import { createSettingsStore } from './settingsStore/createSettingsStore';
+import { setBiasModeAction } from './settingsStore/actions/setBiasModeAction';
 import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
@@ -695,13 +696,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   function setBiasMode(mode: BiasMode): void {
     // Shader branches on the integer mode (0 = none, 1 = volume-limited, …),
-    // so flipping it takes effect next frame with no pipeline rebuild.  We
-    // always fire the echo (even when unchanged) so the UI seeds on first
-    // call.  Routes through `biasCorrectionSubsystem`, which owns the cached
-    // ratios/weights + worker runners and the render wakes (entry +
-    // post-splice).  The `void` discards the Promise — engine.ts doesn't await.
-    state.settings.bias.mode = mode;
-    cb.bias?.onModeChange?.(mode);
+    // so flipping it takes effect next frame with no pipeline rebuild.  The
+    // store action owns the (copy-on-write) write; React reads via
+    // `selectBiasMode`, so no echo is wired.  The worker re-bake is a separate
+    // event-driven action: it routes through `biasCorrectionSubsystem`, which
+    // owns the cached ratios/weights + worker runners and the render wakes
+    // (entry + post-splice).  The `void` discards the Promise — engine.ts
+    // doesn't await.
+    setBiasModeAction(settingsStore, mode);
     void state.subsystems.biasCorrection.setMode(mode);
   }
 
