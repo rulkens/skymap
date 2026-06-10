@@ -99,6 +99,7 @@
 import vsCode from '../shaders/toneMap/vertex.wesl?static';
 import fsCode from '../shaders/toneMap/fragment.wesl?static';
 import { ToneMapCurve } from '../../../data/toneMapCurve';
+import { clampExposure } from './clampExposure';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import type { Size } from '../../../@types/rendering/Size';
 import type { PostProcess } from '../../../@types/rendering/PostProcess';
@@ -258,7 +259,9 @@ export function createPostProcess(
       allocateHdr(s);
     },
     draw(encoder, swapView, exposure, curve, timingDescriptor): void {
-      uniformF32[0] = exposure;
+      // Clamp at point of use: the store holds raw intent, this pass owns the
+      // HDR-buffer / black-frame limits (see clampExposure).
+      uniformF32[0] = clampExposure(exposure);
       uniformF32[1] = DEFAULT_WHITEPOINT * DEFAULT_WHITEPOINT;
       uniformF32[2] = DEFAULT_ASINH_SOFTNESS;
       uniformU32[3] = curve >>> 0;

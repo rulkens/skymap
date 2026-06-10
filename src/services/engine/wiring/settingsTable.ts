@@ -248,14 +248,10 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     callback: ['bias', 'onAbsMagLimitChange'],
   },
   {
-    // Clamps to [0.05, 16] before mutation/echo — a runaway slider or
-    // devtools `setExposure(1e9)` must NOT blow out the float buffer
-    // (upper) or zero-multiply the HDR signal into a black frame
-    // (lower).  The echo fires the *clamped* value so React's slider
-    // displays what the shader actually used.
+    // Stores raw intent; the post-process pass clamps to its HDR-safe range
+    // at point of use (clampExposure). The echo fires the stored value.
     name: 'setExposure',
     path: ['settings', 'tonemap', 'exposure'],
-    clamp: (v) => Math.max(0.05, Math.min(16, v)),
     callback: ['tonemap', 'onExposureChange'],
   },
   {

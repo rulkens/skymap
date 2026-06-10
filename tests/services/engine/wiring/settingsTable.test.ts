@@ -169,9 +169,10 @@ describe('settingsTable', () => {
     });
 
     it('applies clamps before mutation and callback echo', () => {
-      // setExposure clamps to [0.05, 16] and echoes the clamped value
-      // via the nested `tonemap.onExposureChange` address;
-      // setFilamentIntensity clamps to [0, 1] but has no callback.
+      // setExposure stores raw intent — clamping moved to the post-process
+      // pass (clampExposure), so an out-of-range value passes through to
+      // state and echoes unchanged via `tonemap.onExposureChange`;
+      // setFilamentIntensity still clamps to [0, 1] but has no callback.
       const state = makeState();
       const onExposureChange = vi.fn();
       const cb: Partial<EngineCallbacks> = {
@@ -185,15 +186,14 @@ describe('settingsTable', () => {
         requestRender,
       );
 
-      // Above the cap.
+      // Raw passthrough: the setter no longer clamps; intent is stored as-is.
       setters.setExposure(1e9);
-      expect(state.settings.tonemap.exposure).toBe(16);
-      expect(onExposureChange).toHaveBeenLastCalledWith(16);
+      expect(state.settings.tonemap.exposure).toBe(1e9);
+      expect(onExposureChange).toHaveBeenLastCalledWith(1e9);
 
-      // Below the floor.
       setters.setExposure(-1);
-      expect(state.settings.tonemap.exposure).toBe(0.05);
-      expect(onExposureChange).toHaveBeenLastCalledWith(0.05);
+      expect(state.settings.tonemap.exposure).toBe(-1);
+      expect(onExposureChange).toHaveBeenLastCalledWith(-1);
 
       // Filament intensity clamps without an echo callback.
       setters.setFilamentIntensity(2);

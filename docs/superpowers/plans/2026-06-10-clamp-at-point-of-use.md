@@ -109,9 +109,9 @@ Bounds (reuse `MAX_PARTICLES` / `MIN_TRAIL_STEP` from `flowFieldConstants.ts`):
 
 **Signature:** `export function clampExposure(exposure: number): number;` → `[0.05, 16]`.
 
-- [ ] Tests: `clampExposure clamps the upper bound to 16` (float-buffer guard),
+- [x] Tests: `clampExposure clamps the upper bound to 16` (float-buffer guard),
   `clampExposure clamps the lower bound to 0.05` (black-frame guard).
-- [ ] Run-fails → implement helper + wire at `postProcess.ts:261` (use
+- [x] Run-fails → implement helper + wire at `postProcess.ts:261` (use
   `clampExposure(exposure)`) + remove the table clamp → run-passes (full suite;
   the post-process / tonemap visual tests green) → commit.
 
