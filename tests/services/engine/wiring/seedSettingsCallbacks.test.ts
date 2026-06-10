@@ -109,20 +109,21 @@ describe('seedSettingsCallbacks', () => {
 
     seedSettingsCallbacks(cb, snap);
 
-    expect(surveys.onSizeChange).toHaveBeenCalledExactlyOnceWith(snap.pointSize);
-    expect(surveys.onBrightnessChange).toHaveBeenCalledExactlyOnceWith(snap.brightness);
+    // The surveys cluster + the derived source mask migrated to the
+    // engine-owned store; the seed no longer fires their echoes (React reads
+    // them via `useSettingsStore` selectors, seeded from the same defaults).
+    expect(surveys.onSizeChange).not.toHaveBeenCalled();
+    expect(surveys.onBrightnessChange).not.toHaveBeenCalled();
+    expect(surveys.onHighlightFallbackChange).not.toHaveBeenCalled();
+    expect(surveys.onRealOnlyChange).not.toHaveBeenCalled();
+    expect(surveys.onDepthFadeChange).not.toHaveBeenCalled();
+    expect(sources.onMaskChange).not.toHaveBeenCalled();
     expect(camera.onAutoRotateChange).toHaveBeenCalledExactlyOnceWith(snap.autoRotate);
     expect(thumbnails.onEnabledChange).toHaveBeenCalledExactlyOnceWith(snap.galaxyTexturesEnabled);
-    expect(surveys.onHighlightFallbackChange).toHaveBeenCalledExactlyOnceWith(
-      snap.highlightFallback,
-    );
-    expect(surveys.onRealOnlyChange).toHaveBeenCalledExactlyOnceWith(snap.realOnlyMode);
-    expect(surveys.onDepthFadeChange).toHaveBeenCalledExactlyOnceWith(snap.depthFadeEnabled);
     expect(bias.onModeChange).toHaveBeenCalledExactlyOnceWith(snap.biasMode);
     expect(bias.onAbsMagLimitChange).toHaveBeenCalledExactlyOnceWith(snap.absMagLimit);
     expect(tonemap.onCurveChange).toHaveBeenCalledExactlyOnceWith(snap.toneMapCurve);
     expect(tonemap.onExposureChange).toHaveBeenCalledExactlyOnceWith(snap.exposure);
-    expect(sources.onMaskChange).toHaveBeenCalledExactlyOnceWith(snap.visibleSourceMask);
     // Each echo carries a fresh copy of the record, not the literal
     // reference — assert by value so the freshness contract stays
     // load-bearing.  Label and marker visibility are two independent

@@ -42,7 +42,20 @@ import { useFamousMeta } from '../../hooks/useFamousMeta';
 import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useEngineSettings } from '../../hooks/useEngineSettings';
+import { useSettingsStore } from '../../hooks/useSettingsStore';
 import { useSpaceMouseDevicePresence } from '../../hooks/useSpaceMouseDevicePresence';
+import { selectSurveySize } from '../../services/engine/settingsStore/selectors/selectSurveySize';
+import { selectDepthFade } from '../../services/engine/settingsStore/selectors/selectDepthFade';
+import { selectHighlightFallback } from '../../services/engine/settingsStore/selectors/selectHighlightFallback';
+import { selectRealOnly } from '../../services/engine/settingsStore/selectors/selectRealOnly';
+import { selectVisibleSourceMask } from '../../services/engine/settingsStore/selectors/selectVisibleSourceMask';
+import {
+  DEFAULT_POINT_SIZE_PX,
+  DEFAULT_DEPTH_FADE_ENABLED,
+  DEFAULT_HIGHLIGHT_FALLBACK,
+  DEFAULT_REAL_ONLY_MODE,
+} from '../../data/defaults';
+import { ALL_VISIBLE_MASK } from '../../utils/sourceMask';
 import { buildStaticAnchorStructures } from '../../data/buildStaticAnchorStructures';
 import { isStructureCategory } from '../../data/structureCategories';
 import { DebugPanel } from '../DebugPanel/DebugPanel';
@@ -60,19 +73,14 @@ export function App(): React.ReactElement {
   } = useEngineSettings();
 
   const {
-    pointSize,
     autoRotate,
     labelCategoryVisibility,
     markerCategoryVisibility,
     filamentsEnabled,
     filamentIntensity,
     filamentCounts,
-    highlightFallback,
-    realOnlyMode,
-    depthFadeEnabled,
     showPickBuffer,
     showDiskRadiusRing,
-    visibleSourceMask,
     biasMode,
     absMagLimit,
     toneMapCurve,
@@ -104,6 +112,21 @@ export function App(): React.ReactElement {
     loadProgress,
     currentTier,
   } = useEngine({ extraCallbacks: settingsCallbacks });
+
+  // Surveys-cluster settings read live off the engine-owned store (no React
+  // mirror). Each fallback is the same `data/defaults.ts` seed the store is
+  // constructed from, so the first paint (before `handleRef` lands) matches
+  // engine truth. `visibleSourceMask` is a pure projection of the per-survey
+  // `enabled` bits — `ALL_VISIBLE_MASK` is the all-on startup default.
+  const pointSize = useSettingsStore(handleRef, selectSurveySize, DEFAULT_POINT_SIZE_PX);
+  const depthFadeEnabled = useSettingsStore(handleRef, selectDepthFade, DEFAULT_DEPTH_FADE_ENABLED);
+  const highlightFallback = useSettingsStore(
+    handleRef,
+    selectHighlightFallback,
+    DEFAULT_HIGHLIGHT_FALLBACK,
+  );
+  const realOnlyMode = useSettingsStore(handleRef, selectRealOnly, DEFAULT_REAL_ONLY_MODE);
+  const visibleSourceMask = useSettingsStore(handleRef, selectVisibleSourceMask, ALL_VISIBLE_MASK);
 
   // Flow overlay has no engine echo, so a knob change must land in two homes:
   // the React mirror (optimistic) and the engine handle. One patch covers both

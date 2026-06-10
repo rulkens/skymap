@@ -45,20 +45,18 @@ export function seedSettingsCallbacks(cb: EngineCallbacks, snapshot: SettingsCal
   // consumers (subscribed via `useEngineSettings`) observe the
   // engine-truth defaults exactly once at startup; optional-chaining
   // keeps every fire safe when a consumer doesn't subscribe to that bag.
-  cb.surveys?.onSizeChange?.(snapshot.pointSize);
-  cb.surveys?.onBrightnessChange?.(snapshot.brightness);
+  // The surveys cluster (size / brightness / highlightFallback / realOnly /
+  // depthFade) and the derived source mask no longer seed through echoes —
+  // React reads them off the engine-owned store via `useSettingsStore`
+  // selectors, which start from the same `data/defaults.ts` seed.
   cb.camera?.onAutoRotateChange?.(snapshot.autoRotate);
   cb.thumbnails?.onEnabledChange?.(snapshot.galaxyTexturesEnabled);
-  cb.surveys?.onHighlightFallbackChange?.(snapshot.highlightFallback);
-  cb.surveys?.onRealOnlyChange?.(snapshot.realOnlyMode);
-  cb.surveys?.onDepthFadeChange?.(snapshot.depthFadeEnabled);
   cb.debug?.onShowPickBufferChange?.(snapshot.showPickBuffer);
   cb.debug?.onShowDiskRadiusRingChange?.(snapshot.showDiskRadiusRing);
   cb.bias?.onModeChange?.(snapshot.biasMode);
   cb.bias?.onAbsMagLimitChange?.(snapshot.absMagLimit);
   cb.tonemap?.onCurveChange?.(snapshot.toneMapCurve);
   cb.tonemap?.onExposureChange?.(snapshot.exposure);
-  cb.sources?.onMaskChange?.(snapshot.visibleSourceMask);
   // Fresh copies of each record so subscribers can treat every emission as an
   // immutable snapshot — same idiom as the live setter echoes. Label and marker
   // visibility are independent axes; the seed records are already derived from

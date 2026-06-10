@@ -31,6 +31,8 @@ import {
   buildSettersFromTable,
   SETTINGS_TABLE,
 } from '../../../../src/services/engine/wiring/settingsTable';
+import { createSettingsStore } from '../../../../src/services/engine/settingsStore/createSettingsStore';
+import type { SettingsStore } from '../../../../src/services/engine/settingsStore/createSettingsStore';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import { BiasMode } from '../../../../src/data/biasMode';
@@ -98,6 +100,16 @@ function makeState(): Pick<EngineState, 'settings' | 'bias'> {
   };
 }
 
+/**
+ * Seed an engine-owned settings store from the same settings literal.  The
+ * migrated surveys rows write through the store (copy-on-write), so their
+ * assertions read `store.getState().surveys.*`; the un-migrated rows still
+ * mutate `state.settings.*` in place, so those keep reading `state`.
+ */
+function makeStore(state: Pick<EngineState, 'settings'>): SettingsStore {
+  return createSettingsStore(state.settings);
+}
+
 describe('settingsTable', () => {
   describe('SETTINGS_TABLE', () => {
     it('declares the 24 table-candidate setters', () => {
@@ -139,10 +151,13 @@ describe('settingsTable', () => {
   });
 
   describe('buildSettersFromTable', () => {
-    it('mutates state, fires the nested echo callback, and requests a render', () => {
+    it('writes a migrated surveys row through the store action (no echo) and requests a render', () => {
       const state = makeState();
-      // Callbacks live at their nested sub-bag addresses
-      // (`surveys.onSizeChange`, `surveys.onBrightnessChange`).
+      const store = makeStore(state);
+      // The surveys cluster has migrated to the store: `setPointSize` /
+      // `setBrightness` dispatch store actions and fire NO echo (React reads
+      // via `selectSurveySize` / `selectBrightness`). Any callback wired here
+      // must stay untouched.
       const onSizeChange = vi.fn();
       const onBrightnessChange = vi.fn();
       const cb: Partial<EngineCallbacks> = {
@@ -154,16 +169,18 @@ describe('settingsTable', () => {
         state as EngineState,
         cb as EngineCallbacks,
         requestRender,
+        store,
       );
 
       setters.setPointSize(4.2);
-      expect(state.settings.surveys.sizePx).toBe(4.2);
-      expect(onSizeChange).toHaveBeenCalledExactlyOnceWith(4.2);
+      // Copy-on-write landed in the store; no echo fired.
+      expect(store.getState().surveys.sizePx).toBe(4.2);
+      expect(onSizeChange).not.toHaveBeenCalled();
       expect(requestRender).toHaveBeenCalledOnce();
 
       setters.setBrightness(2.0);
-      expect(state.settings.surveys.brightness).toBe(2.0);
-      expect(onBrightnessChange).toHaveBeenCalledExactlyOnceWith(2.0);
+      expect(store.getState().surveys.brightness).toBe(2.0);
+      expect(onBrightnessChange).not.toHaveBeenCalled();
       expect(requestRender).toHaveBeenCalledTimes(2);
     });
 
@@ -174,6 +191,7 @@ describe('settingsTable', () => {
       // through to state unchanged; setExposure echoes via
       // `tonemap.onExposureChange`, setFilamentIntensity has no callback.
       const state = makeState();
+      const store = makeStore(state);
       const onExposureChange = vi.fn();
       const cb: Partial<EngineCallbacks> = {
         tonemap: { onExposureChange },
@@ -184,6 +202,7 @@ describe('settingsTable', () => {
         state as EngineState,
         cb as EngineCallbacks,
         requestRender,
+        store,
       );
 
       // Raw passthrough: the setter no longer clamps; intent is stored as-is.
@@ -209,6 +228,7 @@ describe('settingsTable', () => {
       // the EngineCallbacks bag must not throw — same shape as the
       // hand-rolled setters' `cb.onXChange?.(v)`.
       const state = makeState();
+      const store = makeStore(state);
       const cb: Partial<EngineCallbacks> = {}; // every callback undefined
       const requestRender = vi.fn();
 
@@ -216,16 +236,17 @@ describe('settingsTable', () => {
         state as EngineState,
         cb as EngineCallbacks,
         requestRender,
+        store,
       );
 
       expect(() => setters.setFilamentsEnabled(true)).not.toThrow();
       expect(state.settings.filaments.enabled).toBe(true);
       expect(requestRender).toHaveBeenCalledOnce();
 
-      // Same tolerance for setters whose callback is "declared" via the
-      // descriptor but happens to be undefined on the cb bag.
+      // A migrated surveys row needs no echo at all — it writes through the
+      // store action and still wakes the scheduler.
       expect(() => setters.setBrightness(0.7)).not.toThrow();
-      expect(state.settings.surveys.brightness).toBe(0.7);
+      expect(store.getState().surveys.brightness).toBe(0.7);
       expect(requestRender).toHaveBeenCalledTimes(2);
     });
   });

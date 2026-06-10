@@ -671,8 +671,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // bakes, subsystem forwards, multi-field mutations) are local functions
   // below.  The handle literal at the end stitches both into the public
   // sub-handle clusters.
-  const boringSetters = buildSettersFromTable(state, cb, () =>
-    state.subsystems.scheduler.requestRender(),
+  const boringSetters = buildSettersFromTable(
+    state,
+    cb,
+    () => state.subsystems.scheduler.requestRender(),
+    settingsStore,
   ) satisfies Record<SettingsTableKey, (value: unknown) => void>;
 
   // ── Bespoke methods (don't fit the settingsTable shape) ────────────
@@ -826,7 +829,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   function setSourceVisible(source: SourceType, visible: boolean): void {
     // Delegate to the module-scope helper (testable without a GPU engine).
-    setSourceVisibleImpl(state, { cb }, source, visible);
+    // The per-survey `enabled` flag is written through the settings store so
+    // React's `useSettingsStore(selectVisibleSourceMask)` subscriber wakes.
+    setSourceVisibleImpl(state, settingsStore, source, visible);
   }
 
   function setTier(tier: Tier): void {

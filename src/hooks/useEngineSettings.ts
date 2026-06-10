@@ -10,13 +10,18 @@
  *   1. React seeds an initial value from `data/defaults.ts` so the
  *      SettingsPanel renders a useful first paint before the engine's
  *      first echo lands.
- *   2. The engine fires an echo callback (e.g. `onPointSizeChange`)
- *      both at engine init AND on every `setPointSize` call, so the
+ *   2. The engine fires an echo callback (e.g. `tonemap.onCurveChange`)
+ *      both at engine init AND on every matching setter call, so the
  *      React copy always reflects the engine's authoritative value.
  *   3. The SettingsPanel onChange handler in App.tsx forwards user
- *      input to the engine handle (e.g. `handleRef.current?.setPointSize(v)`)
+ *      input to the engine handle (e.g. `handleRef.current?.tonemap.setCurve(v)`)
  *      and the engine echoes it right back, so no optimistic local
  *      update is needed — except for the three exceptions below.
+ *
+ * The surveys cluster (pointSize / brightness / depthFade /
+ * highlightFallback / realOnly / the derived source mask) has LEFT this
+ * pattern: it lives in the engine-owned settings store, and App.tsx reads
+ * it via `useSettingsStore` selectors instead of a mirror cell here.
  *
  * ──────────────────────────────────────────────────────────────────────
  * The three App-owned exceptions
@@ -50,15 +55,10 @@ import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_AUTO_ROTATE,
   DEFAULT_BIAS_MODE,
-  DEFAULT_BRIGHTNESS,
-  DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
   DEFAULT_FLOW,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
-  DEFAULT_HIGHLIGHT_FALLBACK,
   DEFAULT_MILKY_WAY_ENABLED,
-  DEFAULT_POINT_SIZE_PX,
-  DEFAULT_REAL_ONLY_MODE,
   DEFAULT_SHOW_PICK_BUFFER,
   DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_SPACE_MOUSE_SENSITIVITY,
@@ -66,7 +66,6 @@ import {
   DEFAULT_VOLUMES_ENABLED,
 } from '../data/defaults';
 import { Source, SOURCE_REGISTRY } from '../data/sources';
-import { ALL_VISIBLE_MASK } from '../utils/sourceMask';
 import type { VolumeFieldRowData } from '../@types/settings/VolumeFieldRowData';
 import type { UseEngineSettingsReturn } from '../@types/settings/UseEngineSettingsReturn';
 
@@ -76,24 +75,19 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   // renders a correct first frame before the engine's init echo arrives.
   // The engine fires each echo callback both at startup (initial seed)
   // and on every setter call, so these values always reflect engine truth.
-  const [pointSize, setPointSize] = useState<number>(DEFAULT_POINT_SIZE_PX);
-  const [brightness, setBrightness] = useState<number>(DEFAULT_BRIGHTNESS);
+  // Surveys-cluster settings (pointSize, brightness, depthFade,
+  // highlightFallback, realOnly, and the derived visibleSourceMask) moved to
+  // the engine-owned settings store — App.tsx reads them via `useSettingsStore`
+  // selectors, so no React mirror cell or echo subscription lives here.
   const [autoRotate, setAutoRotate] = useState<boolean>(DEFAULT_AUTO_ROTATE);
   const [galaxyTexturesEnabled, setGalaxyTexturesEnabled] = useState<boolean>(
     DEFAULT_GALAXY_TEXTURES_ENABLED,
   );
   const [milkyWayEnabled, setMilkyWayEnabled] = useState<boolean>(DEFAULT_MILKY_WAY_ENABLED);
-  const [highlightFallback, setHighlightFallback] = useState<boolean>(DEFAULT_HIGHLIGHT_FALLBACK);
-  const [realOnlyMode, setRealOnlyMode] = useState<boolean>(DEFAULT_REAL_ONLY_MODE);
-  const [depthFadeEnabled, setDepthFadeEnabled] = useState<boolean>(DEFAULT_DEPTH_FADE_ENABLED);
   const [showPickBuffer, setShowPickBuffer] = useState<boolean>(DEFAULT_SHOW_PICK_BUFFER);
   const [showDiskRadiusRing, setShowDiskRadiusRing] = useState<boolean>(
     DEFAULT_SHOW_DISK_RADIUS_RING,
   );
-  // `visibleSourceMask` is a 32-bit bitmask: bit `n` set means "draw points
-  // from source n". Seeded with ALL_VISIBLE_MASK so the first paint matches
-  // the engine's startup default.
-  const [visibleSourceMask, setVisibleSourceMask] = useState<number>(ALL_VISIBLE_MASK);
   const [biasMode, setBiasMode] = useState<BiasModeT>(DEFAULT_BIAS_MODE);
   const [absMagLimit, setAbsMagLimit] = useState<number>(DEFAULT_ABS_MAG_LIMIT);
   const [toneMapCurve, setToneMapCurve] = useState<ToneMapCurveT>(DEFAULT_TONE_MAP_CURVE);
@@ -194,20 +188,14 @@ export function useEngineSettings(): UseEngineSettingsReturn {
 
   return {
     settings: {
-      pointSize,
-      brightness,
       autoRotate,
       galaxyTexturesEnabled,
       milkyWayEnabled,
       filamentsEnabled,
       filamentIntensity,
       filamentCounts,
-      highlightFallback,
-      realOnlyMode,
-      depthFadeEnabled,
       showPickBuffer,
       showDiskRadiusRing,
-      visibleSourceMask,
       biasMode,
       absMagLimit,
       toneMapCurve,
@@ -225,22 +213,15 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       // Every echo the engine emits lands at its nested address; the
       // no-echo cases (filaments enabled/intensity, volumes master)
       // are App-owned with no wiring here.
-      surveys: {
-        onSizeChange: setPointSize,
-        onBrightnessChange: setBrightness,
-        onDepthFadeChange: setDepthFadeEnabled,
-        onHighlightFallbackChange: setHighlightFallback,
-        onRealOnlyChange: setRealOnlyMode,
-      },
+      // The surveys + sources echo sub-bags are gone — that cluster reads the
+      // engine-owned store via `useSettingsStore` selectors, so there's no
+      // mirror to keep in sync from a callback.
       tonemap: {
         onExposureChange: setExposure,
         onCurveChange: setToneMapCurve,
       },
       camera: {
         onAutoRotateChange: setAutoRotate,
-      },
-      sources: {
-        onMaskChange: setVisibleSourceMask,
       },
       bias: {
         onModeChange: setBiasMode,

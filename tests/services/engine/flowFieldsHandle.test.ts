@@ -26,6 +26,8 @@ import {
   buildSettersFromTable,
   SETTINGS_TABLE,
 } from '../../../src/services/engine/wiring/settingsTable';
+import { createSettingsStore } from '../../../src/services/engine/settingsStore/createSettingsStore';
+import { makeSettingsFixture } from './settingsStore/makeSettingsFixture';
 import { MAX_PARTICLES } from '../../../src/services/gpu/renderers/flowFieldConstants';
 import {
   FADE_IN_DURATION_MS,
@@ -76,7 +78,12 @@ function makeState(over: { loaded?: boolean } = {}) {
  * same builder `engine.ts` uses, so the flow rows + clamps are the real ones.
  */
 function makeBoringSetters(state: EngineState, requestRender: () => void) {
-  return buildSettersFromTable(state, {} as EngineCallbacks, requestRender);
+  return buildSettersFromTable(
+    state,
+    {} as EngineCallbacks,
+    requestRender,
+    createSettingsStore(makeSettingsFixture()),
+  );
 }
 
 /**

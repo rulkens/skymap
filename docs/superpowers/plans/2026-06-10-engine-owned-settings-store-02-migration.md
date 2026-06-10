@@ -177,31 +177,31 @@ once a few clusters are migrated, the table is reduced to "action + requestRende
 and a reducer-registry would express it more directly, **raise it in the Phase 4
 radar** rather than refactoring mid-migration.
 
-- [ ] Pure reducer tests (one per leaf), copy-on-write asserted (touched cluster
+- [x] Pure reducer tests (one per leaf), copy-on-write asserted (touched cluster
   new ref, siblings same ref), e.g. `setBrightness copies-on-write the surveys
   cluster`, `setSurveyVisible flips items[id].enabled and leaves siblings`.
-- [ ] Selector tests: `selectBrightness returns surveys.brightness`, …, and
+- [x] Selector tests: `selectBrightness returns surveys.brightness`, …, and
   `selectVisibleSourceMask packs the enabled bits to the deriveSourceMasks
   bitmask` (assert bit-identical to `deriveSourceMasks` output for a known
   enabled-set).
-- [ ] `useSettingsStore` test: returns the defaults value when the handle ref is
+- [x] `useSettingsStore` test: returns the defaults value when the handle ref is
   null; returns the live store value once a store is supplied (drive with a real
   `createSettingsStore`). Use the project's React-testing-library setup if one
   exists; otherwise test the null-fallback branch as a pure function and the
   live branch via the store directly — escalate if no RTL harness exists and the
   hook can't be unit-tested.
-- [ ] Run-fails. MAIN: `npm test -- settingsStore` (+ the hook test path).
-- [ ] Implement reducers/selectors/actions/hook.
-- [ ] Point `setSourceVisibleImpl` + the surveys boringSetters at the actions;
+- [x] Run-fails. MAIN: `npm test -- settingsStore` (+ the hook test path).
+- [x] Implement reducers/selectors/actions/hook.
+- [x] Point `setSourceVisibleImpl` + the surveys boringSetters at the actions;
   delete the surveys echoes (fire sites) and the `onMaskChange` fire.
-- [ ] Switch App.tsx / SettingsPanel / DebugPanel surveys reads to
+- [x] Switch App.tsx / SettingsPanel / DebugPanel surveys reads to
   `useSettingsStore(handleRef, selectX)`.
-- [ ] Delete the surveys `useState` cells + their `engineCallbacks.surveys` /
+- [x] Delete the surveys `useState` cells + their `engineCallbacks.surveys` /
   `sources.onMaskChange` subscriptions + their `seedSettingsCallbacks` lines
   (`pointSize`, `brightness`, `highlightFallback`, `realOnlyMode`,
   `depthFadeEnabled`, `visibleSourceMask`). Leave the `EngineCallbacks` *type*
   sub-bags for Phase 3.
-- [ ] Run-passes. MAIN: full `npm test` (the surveys panel + `setSourceVisible`
+- [x] Run-passes. MAIN: full `npm test` (the surveys panel + `setSourceVisible`
   behaviour preserved; `setSourceVisibleFade` test unaffected — it asserts the
   fade, upstream of the store) + `npm run typecheck`.
 - [ ] Commit the slice.

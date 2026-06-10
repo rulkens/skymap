@@ -34,22 +34,19 @@ import type { LabelCategory } from '../engine/data/LabelCategory';
 import type { StructureCategory } from '../engine/data/StructureCategory';
 
 export type UseEngineSettingsState = {
-  pointSize: number;
-  brightness: number;
+  // The surveys cluster (pointSize, brightness, depthFade, highlightFallback,
+  // realOnly, visibleSourceMask) is no longer mirrored here — App.tsx reads it
+  // off the engine-owned store via `useSettingsStore` selectors.
   autoRotate: boolean;
   galaxyTexturesEnabled: boolean;
   milkyWayEnabled: boolean;
   filamentsEnabled: boolean;
   filamentIntensity: number;
   filamentCounts: { stripCount: number; vertexCount: number } | null;
-  highlightFallback: boolean;
-  realOnlyMode: boolean;
-  depthFadeEnabled: boolean;
   /** Mirrors `EngineSettingsState.debug.showPickBuffer`. */
   showPickBuffer: boolean;
   /** Mirrors `EngineSettingsState.debug.showDiskRadiusRing`. */
   showDiskRadiusRing: boolean;
-  visibleSourceMask: number;
   biasMode: BiasMode;
   absMagLimit: number;
   toneMapCurve: ToneMapCurve;

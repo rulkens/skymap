@@ -73,6 +73,12 @@
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { SettingsTableKey } from '../../../@types/settings/SettingsTableKey';
+import type { SettingsStore } from '../settingsStore/createSettingsStore';
+import { setSurveySizeAction } from '../settingsStore/actions/setSurveySizeAction';
+import { setBrightnessAction } from '../settingsStore/actions/setBrightnessAction';
+import { setDepthFadeAction } from '../settingsStore/actions/setDepthFadeAction';
+import { setHighlightFallbackAction } from '../settingsStore/actions/setHighlightFallbackAction';
+import { setRealOnlyAction } from '../settingsStore/actions/setRealOnlyAction';
 
 /**
  * 3-tuple path into `EngineState`: `['settings', <cluster>, <leaf>]`.
@@ -116,21 +122,40 @@ type NestedCallbackKey =
   | readonly ['debug', string];
 
 /**
- * One row of the descriptor table.
+ * A store-action write: `(store, value) => void`.  Used by descriptors whose
+ * cluster has migrated to the engine-owned settings store — the row dispatches
+ * a pure copy-on-write action instead of mutating `state.settings` in place +
+ * firing an echo.  The wrapper still calls `requestRender()` (the store action
+ * does NOT wake the scheduler), so the "every setter wakes the loop" audit
+ * stays in one place.  `value: unknown` matches the builder's widened setter
+ * signature; the action's own typed reducer is the runtime guarantor.
+ */
+type SettingsAction = (store: SettingsStore, value: never) => void;
+
+/**
+ * One row of the descriptor table.  A row is EITHER store-backed (`action`) or
+ * legacy echo-mirror (`path` + optional `callback`) — never both:
  *
  *   - `name` is the table-key identity of this descriptor (used as the
  *     Record key on the builder output so sub-handle forwarders can
  *     resolve a forwarder by name).
- *   - `path` is the 3-tuple state path the value lands in.
- *   - `callback` (optional) is the `[cluster, method]` address fired
- *     after mutation.  Omit when no echo is wired (App.tsx owns the
- *     boolean optimistically — see `setFilamentsEnabled`).
+ *   - `action` (migrated clusters) dispatches a store action; the row carries
+ *     no `path`/`callback` because the action owns the (copy-on-write) write
+ *     and React reads via a selector rather than an echo.
+ *   - `path` (un-migrated clusters) is the 3-tuple state path the value lands
+ *     in via in-place mutation.
+ *   - `callback` (optional, un-migrated only) is the `[cluster, method]`
+ *     address fired after mutation.  Omit when no echo is wired (App.tsx owns
+ *     the boolean optimistically — see `setFilamentsEnabled`).
  */
-type SettingsDescriptor = {
-  name: SettingsTableKey;
-  path: SettingsPath;
-  callback?: NestedCallbackKey;
-};
+type SettingsDescriptor =
+  | { name: SettingsTableKey; action: SettingsAction; path?: undefined; callback?: undefined }
+  | {
+      name: SettingsTableKey;
+      path: SettingsPath;
+      callback?: NestedCallbackKey;
+      action?: undefined;
+    };
 
 /**
  * The actual table.  Adding a row here automatically extends the
@@ -138,15 +163,19 @@ type SettingsDescriptor = {
  * the new forwarder from the `boringSetters` record by name.
  */
 export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
+  // ── Surveys cluster (migrated to the engine-owned store) ───────────
+  // These five rows dispatch store actions (copy-on-write reducers) rather
+  // than mutating `state.settings.surveys` in place + echoing. React reads
+  // each via a `useStore` selector (`selectSurveySize`, `selectBrightness`,
+  // `selectDepthFade`, `selectHighlightFallback`, `selectRealOnly`), so no
+  // echo is wired. The wrapper still calls `requestRender`.
   {
     name: 'setPointSize',
-    path: ['settings', 'surveys', 'sizePx'],
-    callback: ['surveys', 'onSizeChange'],
+    action: setSurveySizeAction,
   },
   {
     name: 'setBrightness',
-    path: ['settings', 'surveys', 'brightness'],
-    callback: ['surveys', 'onBrightnessChange'],
+    action: setBrightnessAction,
   },
   {
     name: 'setAutoRotate',
@@ -223,18 +252,15 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
   },
   {
     name: 'setHighlightFallback',
-    path: ['settings', 'surveys', 'highlightFallback'],
-    callback: ['surveys', 'onHighlightFallbackChange'],
+    action: setHighlightFallbackAction,
   },
   {
     name: 'setRealOnlyMode',
-    path: ['settings', 'surveys', 'realOnly'],
-    callback: ['surveys', 'onRealOnlyChange'],
+    action: setRealOnlyAction,
   },
   {
     name: 'setDepthFadeEnabled',
-    path: ['settings', 'surveys', 'depthFade'],
-    callback: ['surveys', 'onDepthFadeChange'],
+    action: setDepthFadeAction,
   },
   {
     name: 'setAbsMagLimit',
@@ -289,14 +315,19 @@ function setByPath(state: EngineState, path: SettingsPath, value: unknown): void
 }
 
 /**
- * Build the thirteen setters from the descriptor table.  Returns a
- * record keyed by setter name; the consumer (`engine.ts`'s sub-handle
- * wiring) resolves forwarders by name from the result.
+ * Build the setters from the descriptor table.  Returns a record keyed by
+ * setter name; the consumer (`engine.ts`'s sub-handle wiring) resolves
+ * forwarders by name from the result.
  *
- * Each emitted setter:
- *   1. writes the value into `state` at `path`;
- *   2. fires the nested echo callback (if declared) with that value;
- *   3. calls `requestRender()` so the next frame picks up the change.
+ * Each emitted setter wakes the scheduler via `requestRender()` — the single
+ * audit point the table exists for — and writes its value one of two ways
+ * depending on the descriptor:
+ *
+ *   - **store-backed** (`action`): dispatch the cluster's copy-on-write store
+ *     action.  No echo — React reads via a `useStore` selector.
+ *   - **legacy echo-mirror** (`path` + optional `callback`): mutate
+ *     `state.settings` in place, then fire the nested echo callback (if
+ *     declared) so the React mirror tracks the engine value.
  *
  * The return type is widened to `(value: unknown) => void` per
  * descriptor; the EngineHandle public-API surface is the place where
@@ -308,10 +339,22 @@ export function buildSettersFromTable(
   state: EngineState,
   cb: EngineCallbacks,
   requestRender: () => void,
+  store: SettingsStore,
 ): Record<SettingsTableKey, (value: unknown) => void> {
   const out = {} as Record<SettingsTableKey, (value: unknown) => void>;
 
   for (const descriptor of SETTINGS_TABLE) {
+    // Store-backed rows: dispatch the action, then wake. The action owns the
+    // (copy-on-write) write; React reads the value through a selector.
+    if (descriptor.action !== undefined) {
+      const { name, action } = descriptor;
+      out[name] = (value: unknown) => {
+        action(store, value as never);
+        requestRender();
+      };
+      continue;
+    }
+
     const { name, path, callback } = descriptor;
 
     out[name] = (value: unknown) => {
