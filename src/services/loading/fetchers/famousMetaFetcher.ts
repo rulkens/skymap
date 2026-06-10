@@ -2,11 +2,11 @@
  * famousMetaFetcher — fetches the famous-galaxy `famous_meta.json` sidecar
  * and returns a `{ meta }` payload.
  *
- * ### Why throw on 404 here, when the old loader returned empty?
+ * ### Why throw on 404?
  *
- * The old `loadFamousSidecars` swallowed 404s into empty values to keep
- * the engine running on developer clones without `npm run build-famous`.
- * The new design pushes that decision up: the slot subscriber maps
+ * The rejected alternative — swallow 404s into empty values so the
+ * engine keeps running on developer clones without `npm run
+ * build-famous` — belongs a layer up: the slot subscriber maps
  * `kind: 'error'` → "feature off" by writing an empty array. Keeping
  * the fetcher honest about HTTP status lets the retry policy distinguish
  * "really gone" (404, give up) from "transient flake" (5xx, retry).

@@ -196,8 +196,8 @@ describe('state reducer', () => {
       { type: 'setSource', tmpId: 't', width: 100, height: 100, previewUrl: '/p' },
     ]);
     expect(canCommit(noMeta)).toBe(false);
-    // Crop being dirty (or starnet, or not-yet-processed) no longer
-    // blocks Commit — the handler re-processes when needed.
+    // Crop being dirty (or starnet, or not-yet-processed) does not
+    // block Commit — the handler re-processes when needed.
     const cropDirty = apply([
       { type: 'setSource', tmpId: 't', width: 100, height: 100, previewUrl: '/p' },
       { type: 'setMetadata', metadata: { sourceUrl: 'https://a', license: 'CC-BY', author: 'A' } },

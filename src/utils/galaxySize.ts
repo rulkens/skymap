@@ -6,11 +6,11 @@
  * ## Why a shared helper
  *
  * The points bake, proceduralDiskSubsystem, and texturedDiskSubsystem
- * each used to compute the same '(diameterKpc * 2) / 1000' algebra
- * inline — three sites, one constant 4× padding factor + one 30-kpc
- * synthetic-fallback floor. A change to either (e.g. tightening the
- * padding) had to be replicated three times in lockstep; a missed edit
- * created a visible size mismatch at the load-fade crossfade boundary.
+ * all need the same algebra — one constant 4× padding factor + one
+ * 30-kpc synthetic-fallback floor. Computed inline at three sites, a
+ * change to either (e.g. tightening the padding) must be replicated in
+ * lockstep; a missed edit creates a visible size mismatch at the
+ * load-fade crossfade boundary.
  *
  * Centralising the math also documents *what the 4× means*: each
  * renderer's quad expands to the same world-space footprint, so the

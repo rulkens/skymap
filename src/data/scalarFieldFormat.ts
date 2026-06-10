@@ -3,12 +3,12 @@
  * per file.  Carries enough metadata that the renderer never needs
  * a sidecar JSON.
  *
- * **Breaking change vs v2:** the binary now carries a `channels` byte
+ * **Breaking change vs v2:** the binary carries a `channels` byte
  * (1 = single-channel `r16float`, 4 = `rgba16float`).  It reuses byte 22 —
  * the slot that held `palette_id` in v1 and was `reserved` in v2.  This
  * generalises the format from scalar-only density cubes to also carry
  * 4-component vector cubes (e.g. a flow / velocity field) without forking a
- * second cube type.  The voxel-array length is now channel-aware:
+ * second cube type.  The voxel-array length is channel-aware:
  * `Nx*Ny*Nz*channels` f16 values.
  *
  * **Breaking change vs v1 (still in force):** the binary no longer carries
@@ -189,9 +189,9 @@ export function encodeScalarField(cube: ScalarCube): ArrayBuffer {
  *   - bad magic (not an SCFD file)
  *   - unsupported version (with a "regenerate" hint, matching the filament
  *     decoder's style so operators know what command to run).  In
- *     particular, v1 and v2 files are rejected outright — palette and
- *     densityScale migrated out of the binary, and the channels byte landed
- *     at v3; both transitions are hard breaks by design.
+ *     particular, v1 and v2 files are rejected outright — v3 dropped the
+ *     palette/densityScale bytes and added the channels byte; both are
+ *     hard breaks by design.
  *   - unknown frame_kind byte
  *   - unsupported channel count (anything other than 1 or 4)
  *   - unknown value_kind byte (anything other than 0 or 1)

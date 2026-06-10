@@ -129,7 +129,7 @@ describe('awaitSlotReady', () => {
     transition({ kind: 'ready', req: undefined, value: 'A', loadedAtMs: 1 });
     await expect(promise).resolves.toBe('A');
     const callsAfterResolve = subscriberSpy.mock.calls.length;
-    // Drive a further transition the helper SHOULD no longer hear.
+    // Drive a further transition the helper must not hear.
     // If `unsub()` ran before `resolve(...)` (the documented contract),
     // the subscriberSpy stays at the same call count; if a regression
     // resolves first and unsubscribes second, this transition would

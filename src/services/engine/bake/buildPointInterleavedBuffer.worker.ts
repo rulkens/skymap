@@ -3,34 +3,30 @@
  *
  * ### Why this file exists
  *
- * `pointRenderer.upload()` used to bake a 12-slot interleaved vertex buffer
- * for every loaded survey on the main thread.  With three real catalogs
- * loaded (~3.5 M galaxies total) the bake took roughly 10 seconds — and it
- * happened right when the user expected the UI to come alive.  The freeze
- * was *the* worst-felt latency in the app.
+ * Baking the interleaved vertex buffer for every loaded survey costs
+ * roughly 10 seconds of CPU at full deck (~3.5 M galaxies) — right when
+ * the user expects the UI to come alive.  On the main thread that would
+ * be *the* worst-felt freeze in the app, so the bake runs here,
+ * off-thread.  Vite's `?worker` import suffix produces a class whose
+ * instances run a fresh JS context; `postMessage` carries inputs and
+ * outputs via structured clone (with an optional Transferable list to
+ * avoid the copy).
  *
- * The fix is structural: ship the same code off-thread.  Vite's `?worker`
- * import suffix produces a class whose instances run a fresh JS context;
- * `postMessage` carries inputs and outputs via structured clone (with an
- * optional Transferable list to avoid the copy).
+ * ### Why Transferable for both directions
  *
- * ### Why Transferable for both directions (post-2026-05-04 fix)
+ * BigInt typed arrays (the cloud's `BigUint64Array` of object IDs) are
+ * not on the Transferable allowlist — but the typed-array *wrapper*
+ * doesn't need to be transferable, only its underlying `ArrayBuffer`
+ * does, and ArrayBuffer IS on the allowlist.  Structured clone correctly
+ * serialises typed-array views over transferred buffers (HTML spec
+ * §StructuredSerialize step "If value has [[ArrayBufferData]]…").
  *
- * Originally we shipped the cloud via plain structured clone, on the
- * mistaken assumption that the cloud's `BigUint64Array` of object IDs
- * couldn't be transferred (BigInt typed arrays themselves are not on the
- * Transferable allowlist).  That assumption was wrong: the typed-array
- * *wrapper* doesn't need to be transferable — only its underlying
- * `ArrayBuffer` does, and ArrayBuffer IS on the allowlist.  Structured
- * clone correctly serialises typed-array views over transferred buffers
- * (HTML spec §StructuredSerialize step "If value has [[ArrayBufferData]]…").
- *
- * The structured-clone-without-transfer path froze the main thread for
- * ~5 s on a 100 MB SDSS+GLADE upload, blocking `onCatalogReady` from
- * firing.  The caller (`pointRenderer.defaultWorkerRunner`) now slices
- * each typed array's buffer to produce an owned copy and transfers
- * those slices via the `postMessage` transfer list — a one-shot ~50 ms
- * memcpy instead of a multi-second structured clone.
+ * Cloning without transferring freezes the main thread for ~5 s on a
+ * 100 MB SDSS+GLADE upload, blocking `onCatalogReady` from firing.  The
+ * caller (`pointRenderer.defaultWorkerRunner`) therefore slices each
+ * typed array's buffer to produce an owned copy and transfers those
+ * slices via the `postMessage` transfer list — a one-shot ~50 ms memcpy
+ * instead of a multi-second structured clone.
  *
  * On the way back the result's `interleaved` and `isFallbackArr`
  * ArrayBuffers are transferred — the worker has no further use for

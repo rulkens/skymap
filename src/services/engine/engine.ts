@@ -877,7 +877,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   function addVolumeField(fieldId: VolumeFieldId, cube: ScalarCube): void {
     // Ensure a settings row exists before the GPU upload.  Re-registering a
-    // field preserves its previously-tuned values; a brand-new handle seeds
+    // field preserves its tuned values; a brand-new handle seeds
     // from registry defaults.  Shippable volumes already have a construction
     // seed, so the guard only fires for a dynamically-added handle.
     if (!state.settings.volumes.items[fieldId]) {

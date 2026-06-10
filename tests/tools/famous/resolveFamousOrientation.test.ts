@@ -4,17 +4,16 @@
  *
  * The seed often carries a real `axisRatio` (HyperLEDA logR25) but NO
  * `positionAngleDeg` — PA is genuinely unmeasured for face-on disks, which is
- * most of the famous showpieces.  The OLD build rule was all-or-nothing: it
- * baked real orientation only when BOTH fields were present, otherwise it
- * fabricated BOTH from `fallbackOrientation()` (a position hash).  That threw
- * away a correct axis ratio (e.g. M101's 0.96) and replaced it with a random
- * ~0.53 / 58° tilt.
+ * most of the famous showpieces.  Each field therefore resolves INDEPENDENTLY:
+ * every real measurement is kept, and only the genuinely-missing field falls
+ * back to `fallbackOrientation()` (a position hash).  An all-or-nothing rule
+ * would discard a correct axis ratio (e.g. M101's 0.96) whenever PA is missing
+ * and fabricate a random tilt instead.
  *
- * The fix resolves each field INDEPENDENTLY: keep every real measurement, fall
- * back only the genuinely-missing one.  The renderer's "is this a fallback
- * row?" detector keys on BOTH fields equalling the hash, so a real-axisRatio +
- * fallback-PA row is correctly treated as real (and a near-face-on disk's
- * arbitrary PA is visually irrelevant).
+ * The renderer's "is this a fallback row?" detector keys on BOTH fields
+ * equalling the hash, so a real-axisRatio + fallback-PA row is correctly
+ * treated as real (and a near-face-on disk's arbitrary PA is visually
+ * irrelevant).
  */
 
 import { describe, it, expect } from 'vitest';

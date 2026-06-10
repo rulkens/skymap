@@ -58,8 +58,8 @@ describe('deprojectDisk', () => {
   });
 
   it('still deprojects a very edge-on disk (axisRatio=0.2) when forced', async () => {
-    // The old hard floor (DEPROJECT_MIN_AXIS_RATIO=0.3) is now advisory: a
-    // tilted, valid disk (0 < b/a < 1) always stretches.  paDeg=0, axisRatio=0.2
+    // DEPROJECT_MIN_AXIS_RATIO (0.3) is advisory, not a hard floor: a tilted,
+    // valid disk (0 < b/a < 1) always stretches.  paDeg=0, axisRatio=0.2
     // → s = 1/0.2 = 5, so M = [[1,0],[0,5]] — height grows ~5×, width unchanged.
     const src = makeSrc();
     const result = deprojectDisk(src, { paDeg: 0, axisRatio: 0.2 });

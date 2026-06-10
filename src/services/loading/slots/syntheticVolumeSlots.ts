@@ -67,8 +67,8 @@ export function createSyntheticVolumeSlots(
   // ride along on the slot).  Three sibling slots share this helper;
   // refactoring to a Map of three would lose the per-handle commit
   // closure that's the whole point.  The default-enabled bit comes from
-  // each fixture's registry `visible` flag (all three are false), so it
-  // no longer needs threading through as a separate argument.
+  // each fixture's registry `visible` flag (all three are false), so
+  // there's no separate argument to thread through.
   const mintSyntheticVolumeSlot = (
     handle: SyntheticVolumeHandle,
   ): AssetSlot<ScalarCube, SyntheticVolumeReq> =>

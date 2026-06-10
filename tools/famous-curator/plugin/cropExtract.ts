@@ -1,7 +1,7 @@
 /**
  * cropExtract — shared helper for rotated / out-of-image crops.
  *
- * Wraps `sharp().extract(...)` with two relaxations the UI now exposes:
+ * Wraps `sharp().extract(...)` with two relaxations the UI exposes:
  *
  *   1. Rotation: the crop rect has a `rotationDeg` field.  To get pixels
  *      along the rotated rect's local axes, we rotate the source by the
@@ -15,10 +15,9 @@
  *      the (possibly rotated) image bounds.  Resulting bytes have alpha=0
  *      in those regions.
  *
- * Rotation === 0 is the existing happy path — no rotation step, only
- * padding if the crop is out of bounds.  Callers that previously hit
- * `sharp().extract({left,top,width,height})` get behaviour equivalent
- * to that call when the crop is in-bounds and unrotated.
+ * Rotation === 0 is the happy path — no rotation step, only padding if
+ * the crop is out of bounds.  For an in-bounds, unrotated crop the
+ * result is identical to a bare `sharp().extract({left,top,width,height})`.
  */
 import sharp from 'sharp';
 import type { Sharp } from 'sharp';
@@ -96,9 +95,9 @@ export async function rotatedExtract(
  * Sharp's `.extract()` runs against the INPUT image, ignoring earlier
  * operations in the pipeline.  We can't chain `.extend(...).extract(...)`
  * — the extract would slice the pre-extend image and the padding would
- * be appended afterward (the bug we hit in the v1 tests).  So when
- * padding is needed we materialise the extended bytes to a buffer
- * first, then start a fresh sharp pipeline for the extract.
+ * be appended afterward.  So when padding is needed we materialise the
+ * extended bytes to a buffer first, then start a fresh sharp pipeline
+ * for the extract.
  */
 async function padExtract(
   s: Sharp,

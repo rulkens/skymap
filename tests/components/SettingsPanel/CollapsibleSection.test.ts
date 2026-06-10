@@ -44,9 +44,9 @@ describe('CollapsibleSection', () => {
 
   it('honors the headerToggleIndeterminate prop on the master checkbox', () => {
     // The DOM IDL for HTMLInputElement.indeterminate is settable but
-    // not reflected as an attribute, so pre-jsdom (renderToStaticMarkup)
-    // this couldn't be tested.  The component sets it imperatively in
-    // useEffect against a ref; a real DOM exercises that effect.
+    // not reflected as an attribute, so it only shows up in a real DOM.
+    // The component sets it imperatively in useEffect against a ref;
+    // jsdom exercises that effect.
     //
     // The master checkbox only renders when BOTH headerToggle and
     // onHeaderToggleChange are supplied, so this test wires both.
@@ -88,8 +88,7 @@ describe('CollapsibleSection', () => {
   it('keeps collapse independent of the master checkbox click', async () => {
     // The component stops propagation on the checkbox events so a click
     // on the checkbox doesn't bubble to the surrounding header <button>
-    // and toggle the section open/closed.  Pre-jsdom this couldn't be
-    // verified — there was no event bubble to interrupt.
+    // and toggle the section open/closed.
     const user = userEvent.setup();
     render(
       createElement(CollapsibleSection, {

@@ -4,10 +4,9 @@
  * `EngineState`.  Written by `initGpu`; read by `wireSlots`,
  * `wireInput`, and `startLoop`.
  *
- * `device` and `context` remain on this bag because they don't have a
- * `state.gpu.*` home today.  Moving them would mean adding them to
- * `EngineGpuHandles` (the shape behind `state.gpu`); out of scope for
- * M1, but tracked as a follow-up in the 2026-05-11 audit.
+ * `device` and `context` live on this bag because they have no
+ * `state.gpu.*` home; giving them one would mean widening
+ * `EngineGpuHandles` (the shape behind `state.gpu`).
  */
 export type PhaseLocals = {
   device: GPUDevice;

@@ -4,21 +4,15 @@
  *
  * ### Why this lives in its own module
  *
- * Until 2026-05-04 the bake happened inline inside `pointRenderer.upload()`.
- * For a fully-loaded SDSS + 2MRS + GLADE deck (~3.5 M galaxies total) that
- * loop ran a Schechter integral, a 1/V_max weight, a fallback-orientation
- * hash, a K-correction lookup, and a colour-index pickup *per row*.  Total
- * cost ≈ 10 seconds of main-thread work, all of it spent during `.bin`
- * arrival — the UI froze right when the user expected it to come alive.
- *
- * The fix was structural, not algorithmic: move the same code off the main
- * thread.  To do that cleanly we needed a *pure* function — no `this`, no
- * `device`, no DOM globals, no module-level mutable state — so it can be
- * imported from a Web Worker bundle and run identically off-thread or on.
- *
- * Visual output is bit-identical to the inline version: same magnitudes get
- * baked, same colour indices, same K coefficients, same vMax weights, same
- * Schechter ratios.  Only the thread changed.
+ * For a fully-loaded SDSS + 2MRS + GLADE deck (~3.5 M galaxies total) the
+ * bake runs a Schechter integral, a 1/V_max weight, a fallback-orientation
+ * hash, a K-correction lookup, and a colour-index pickup *per row* —
+ * roughly 10 seconds of CPU work, all of it during `.bin` arrival, right
+ * when the user expects the UI to come alive.  Doing that on the main
+ * thread would freeze the page, so the bake ships to a Web Worker.  That
+ * requires a *pure* function — no `this`, no `device`, no DOM globals, no
+ * module-level mutable state — so it can be imported from a Web Worker
+ * bundle and run identically off-thread or on.
  *
  * ### Why each upload spawns a fresh worker
  *
@@ -70,7 +64,7 @@ import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/B
  * `pointRenderer.ts` (which pulls in WebGPU globals via `?raw` shaders) from
  * landing in the worker bundle — the worker should only need pure math.
  *
- * ### Layout (post (source, localIdx) packing refactor)
+ * ### Layout
  *
  *   slot 0,1,2 — position xyz (f32)
  *   slot 3     — magnitude (f32)
@@ -82,18 +76,17 @@ import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/B
  *   slot 9     — schechterRatio (f32)
  *   slot 10    — angularDensityWeight (f32)
  *
- * Total: 11 × 4 = 44 bytes per point.  The previous kPerZ slot moved
- * to the per-survey `SourceUniforms` uniform (k is constant per
- * survey, so paying for it per-row was waste).  Earlier still, a
- * 4-byte `globalInstanceIdx u32` slot was also dropped when the picker
- * switched to per-draw `(sourceCode << 27) | localIdx + 1` packing.
+ * Total: 11 × 4 = 44 bytes per point.  Per-survey constants stay out of
+ * the per-row layout: the K-correction kPerZ lives in the per-survey
+ * `SourceUniforms` uniform (k is constant per survey, so paying for it
+ * per-row would be waste), and instance identity is composed per draw
+ * as `(sourceCode << 27) | localIdx + 1` rather than baked per-vertex.
  *
- * The fallback-orientation flag (formerly the high bit of
- * `globalInstanceIdx`) now rides on the sign bit of `axisRatio`.  Real
- * measurements have axisRatio in (0, 1]; we negate the value when the
- * row was classified as fallback so the shader can recover both the
+ * The fallback-orientation flag rides on the sign bit of `axisRatio`.
+ * Real measurements have axisRatio in (0, 1]; we negate the value when
+ * the row was classified as fallback so the shader can recover both the
  * mask shape (`abs(axisRatio)`) and the flag (`axisRatio < 0`) in one
- * read.  See the slot 6 comment in the writer loop below.
+ * read.  See the slot 5 comment in the writer loop below.
  *
  * Slot 10 (`angularDensityWeight`) is left at 1.0 (multiplicative identity)
  * by every default upload.  Mode 4 of the Malmquist-bias correction —
@@ -111,17 +104,12 @@ const D_REF_MPC = 750;
 /** Target post-shift mean magnitude for the per-survey magG normalisation. */
 const SDSS_TARGET_MEAN_MAG = 18;
 
-// Type declarations moved to @types/engine/BuildPointInterleavedBuffer*.d.ts.
-
 /**
  * Bake one point cloud's per-vertex GPU bytes.  Pure: no `this`, no DOM, no
  * module-level state.  Safe to call from a Worker.
  *
- * The body is a near-verbatim lift of the loop that used to live inside
- * `pointRenderer.upload()`; the inline-version comments have been preserved
- * because they document non-obvious decisions (per-survey magG offset,
- * dim-only Schechter clamp, NaN handling).  Modify both sides if you change
- * one.
+ * The per-slot comments in the loop document non-obvious decisions
+ * (per-survey magG offset, dim-only Schechter clamp, NaN handling).
  */
 export function buildPointInterleavedBuffer(
   input: BuildPointInterleavedBufferInput,
@@ -135,7 +123,7 @@ export function buildPointInterleavedBuffer(
 
   // Allocate a CPU-side ArrayBuffer for the interleaved data.  Every slot is
   // an f32 from the GPU's perspective; the single bit of "is this row a
-  // fallback orientation?" rides on the sign bit of `axisRatio` (slot 6) —
+  // fallback orientation?" rides on the sign bit of `axisRatio` (slot 5) —
   // see that slot's writer below for the encoding.
   const arrayBuffer = new ArrayBuffer(cloud.count * SLOTS_PER_POINT * 4);
   const interleaved = new Float32Array(arrayBuffer);
@@ -176,10 +164,9 @@ export function buildPointInterleavedBuffer(
   // ── Schechter LF parameters + central-density normaliser ────────────────
   //
   // Pre-compute the central detectable density `N_ref = n(d = 10 Mpc)` for
-  // this survey's Schechter triple.  The shader's mode-3 alpha modulator
-  // divides this by the per-fragment density `n(d)` to compute the
-  // brightness ratio — but in this post-bake refactor the division now
-  // happens per-row right here.
+  // this survey's Schechter triple.  The mode-3 brightness ratio divides
+  // this by the per-row density `n(d)` — computed here at bake time, not
+  // per-fragment in the shader.
   //
   // We always compute the triple + nRef so the result still carries them
   // back to the renderer (the bookkeeping needs them for cache key purposes
@@ -322,4 +309,3 @@ export function buildPointInterleavedBuffer(
     nRef,
   };
 }
-

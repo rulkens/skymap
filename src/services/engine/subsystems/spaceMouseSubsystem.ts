@@ -1,39 +1,27 @@
 /**
  * spaceMouseSubsystem — owns the entire 6DOF puck input pipeline.
  *
- * Before this module existed, the engine kept four closure variables
- * for SpaceMouse state:
- *
- *   - `spaceMouseInput`        — lazily-allocated `SpaceMouseInput`
- *   - `latestSpaceMouseAxes`   — last decoded report (mutated by HID)
- *   - `lastSpaceMouseFrameMs`  — wall-clock delta tracker
- *   - `spaceMouseSensitivity`  — user-facing scalar
- *
- * …plus a per-frame block inside `frame()` that ran `applyAxesToCamera`,
- * cancelled the running tween if any axis was non-zero, and reset the
- * dt baseline whenever the puck went back to rest.  The SettingsPanel
- * setters in the public handle also poked directly at these closure
- * variables.  Six call sites for one cohesive responsibility.
- *
- * Pulling all of that into a single subsystem mirrors the pattern
- * already established by `thumbnailSubsystem.ts`: a factory returning
- * a typed handle, internal state in closure, explicit per-frame
- * `applyToCamera()` seam.
+ * All SpaceMouse state lives here in closure — the lazily-allocated
+ * `SpaceMouseInput`, the last decoded HID report, the wall-clock dt
+ * baseline, and the user-facing sensitivity scalar — behind the same
+ * shape as `thumbnailSubsystem.ts`: a factory returning a typed handle,
+ * internal state in closure, explicit per-frame `applyToCamera()` seam.
+ * The alternative (engine closure variables poked from `frame()` and
+ * the SettingsPanel setters) scatters one cohesive responsibility
+ * across half a dozen call sites.
  *
  * ### Critical: the subsystem does NOT own the tween reference
  *
- * The Phase 2a subagent flagged this as the trickiest piece of the
- * SpaceMouse extraction.  The old per-frame block did `currentTween =
- * null` whenever an axis was deflected — but the tween reference was
- * an engine concern (the manager that owns it lives in
- * `tweenManager.ts`).  Coupling the SpaceMouse code to a closure
- * variable from a sibling subsystem would have re-introduced exactly
- * the kind of cross-cutting knot Phase 2 is unpicking.
+ * Axis deflection must cancel a running camera tween, but the tween is
+ * an engine concern (its manager lives in `tweenManager.ts`).  Reaching
+ * into a sibling subsystem's closure variable would couple the two with
+ * exactly the kind of cross-cutting knot the subsystem split exists to
+ * avoid.
  *
- * Solution: the subsystem accepts a `cancelTween` callback at
+ * Instead the subsystem accepts a `cancelTween` callback at
  * construction.  When `applyToCamera()` sees non-zero axes it calls
  * the callback before mutating `cam`.  The engine wires this to
- * `tweens.cancel()`.  The coupling is now explicit, single-purpose,
+ * `tweens.cancel()`.  The coupling is explicit, single-purpose,
  * and trivially mockable in unit tests.
  *
  * ### onAxes wake vs. applyToCamera wake
@@ -52,8 +40,6 @@
  *      keeps the loop ticking on its own.
  *
  * ### dt clamp + reset semantics
- *
- * Same behaviour as the pre-extraction inline block:
  *
  *   - dt is computed against the previous SpaceMouse-active frame
  *     (not the previous render frame), so a long stretch of zero

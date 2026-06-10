@@ -1,11 +1,9 @@
 /**
  * proceduralDiskSubsystem — LOD-1 per-frame planner.
  *
- * Extracted from `thumbnailSubsystem.ts` lines 547-906 as part of the
- * 2026-05-12 impostor-subsystem split.  Owns the catalog walk,
- * apparent-size + finite-orientation gating, stride decimation,
- * per-source sticky map, back-to-front sort, and the
- * `ProceduralDiskInstance[]` output array.
+ * Owns the catalog walk, apparent-size + finite-orientation gating,
+ * stride decimation, per-source sticky map, back-to-front sort, and
+ * the `ProceduralDiskInstance[]` output array.
  *
  * No GPU work.  Subsystem reads catalog buffers and emits a sorted
  * array; `proceduralDisksPass` consumes the array next frame.
@@ -21,13 +19,12 @@
  * would just be an outer loop wrapping two independent inner bodies —
  * recreating the kitchen-sink concern the split exists to eliminate.
  *
- * ### Tunables re-exported
+ * ### Tunables
  *
  * `PROCEDURAL_DISK_FADE_START_PX` / `PROCEDURAL_DISK_FADE_END_PX` and
- * `maybeEmitProceduralDisk` are re-exported here.  The points-pass
- * settings wiring in `runFrame.ts` imports them from this module
- * (post-Task-11) — same source of truth as the legacy import path,
- * just a more LOD-aligned home.
+ * `maybeEmitProceduralDisk` live here — the LOD-aligned source of
+ * truth.  The points-pass settings wiring in `runFrame.ts` imports
+ * them from this module.
  */
 
 import { Source } from '../../../data/sources';
@@ -45,18 +42,21 @@ import type {
   ProceduralDiskSubsystem,
 } from '../../../@types/engine/subsystems/ProceduralDiskSubsystem';
 
-/** See thumbnailSubsystem.ts lines 88-119 for the picking rationale. */
+/**
+ * Point-sprite → procedural-disk crossfade band (px of apparent size).
+ * Below the start the sprite carries fully and the disk is skipped;
+ * the disk smoothsteps in across the band.
+ */
 export const PROCEDURAL_DISK_FADE_START_PX = 8;
 export const PROCEDURAL_DISK_FADE_END_PX = 14;
 
-/** See thumbnailSubsystem.ts line 146 for the rationale. */
+/** Squared-distance early-out bound — no real galaxy exceeds this. */
 const MAX_PLAUSIBLE_DIAMETER_KPC = 200;
 
 /**
  * Decide whether (and how) to emit a per-frame ProceduralDiskInstance.
- * Lifted verbatim from `thumbnailSubsystem.ts:207-243`.  See that
- * docstring for the smoothstep-shape rationale and why this is a pure
- * helper rather than inline branching.
+ * Pure helper (no captured state) so the gate + smoothstep crossfade
+ * are unit-testable without a planner.
  *
  * `procFadeOut` defaults to 1.0 (no fade-out against the textured-disk
  * pass). The caller in `runFrame` overrides it for famous galaxies
@@ -106,7 +106,7 @@ export type ProceduralDiskDeps = {
    * pattern crossfades out under the textured-disk pass.  When omitted
    * (e.g. tests that don't care about the famous-WebP crossfade),
    * `procFadeOut` stays at its 1.0 default for every emitted instance
-   * — preserving the pre-2026-05-28 behavior exactly.
+   * — the procedural pattern renders at full strength.
    */
   readonly atlas?: GalaxyAtlasSubsystem;
 };
@@ -253,8 +253,8 @@ export function createProceduralDiskSubsystem(
       for (const p of stickyProcDisks.values()) proceduralDisks.push(p);
     }
 
-    // Back-to-front sort for correct alpha compositing.  See
-    // thumbnailSubsystem.ts:928-953 for the rationale.
+    // Back-to-front sort for correct alpha compositing — same idiom
+    // as texturedDiskSubsystem's disk sort.
     const camPosX = cam.position[0];
     const camPosY = cam.position[1];
     const camPosZ = cam.position[2];

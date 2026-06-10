@@ -76,12 +76,11 @@ describe('buildCf4Density (smoke)', () => {
     expect(cube.origin[0]).toBeCloseTo(expectedCorner, 3);
     expect(cube.origin[1]).toBeCloseTo(expectedCorner, 3);
     expect(cube.origin[2]).toBeCloseTo(expectedCorner, 3);
-    // Rotation is IDENTITY — the renderer's buildCubeModelMatrix already
+    // Rotation must be IDENTITY — the renderer's buildCubeModelMatrix already
     // applies the SG→EQ rotation via FRAME_TO_WORLD['supergalactic-cartesian']
-    // for any cube whose frameKind is supergalactic.  An earlier draft wrote
-    // SG_TO_EQ_QUATERNION here, which compounded the rotation: cube features
-    // landed at SG_TO_EQ²·X in world space instead of SG_TO_EQ·X.  This
-    // assertion is the regression anchor.
+    // for any cube whose frameKind is supergalactic.  Regression: baking
+    // SG_TO_EQ_QUATERNION here compounds the rotation (features land at
+    // SG_TO_EQ²·X in world space instead of SG_TO_EQ·X).
     expect(cube.rotation[0]).toBeCloseTo(0, 6);
     expect(cube.rotation[1]).toBeCloseTo(0, 6);
     expect(cube.rotation[2]).toBeCloseTo(0, 6);
@@ -94,10 +93,10 @@ describe('buildCf4Density (smoke)', () => {
     expect(cube.valueMax).toBeCloseTo(1, 4);
     expect(cube.voxels).toBeInstanceOf(Uint16Array);
     expect(cube.voxels.length).toBe(512);
-    // Palette + densityScale are no longer encoded in the binary — they
-    // live in `src/data/volumeFieldDefaults.ts` keyed by the `'cf4-density'`
-    // handle.  See `tests/data/volumeFieldDefaults.test.ts` for the
-    // registry-side coverage.
+    // Palette + densityScale are not encoded in the binary — they live in
+    // `src/data/volumeFieldDefaults.ts` keyed by the `'cf4-density'` handle.
+    // See `tests/data/volumeFieldDefaults.test.ts` for the registry-side
+    // coverage.
 
     // Verify symmetric normalisation: input ran linearly from -1 to +1
     // (so half-range = 1), giving (v + 1) / 2 → first voxel → 0, last
@@ -108,16 +107,13 @@ describe('buildCf4Density (smoke)', () => {
     const last = f16BitsToFloat(cube.voxels[cube.voxels.length - 1]!);
     expect(first).toBeCloseTo(0, 3);
     expect(last).toBeCloseTo(1, 3);
-    // NOTE: an earlier version of this test asserted that voxels[255]
-    // and voxels[256] decode to ~0.5 (the near-zero middle of the
-    // -1..+1 ramp).  Those positional assertions were correct under
-    // the old straight-copy build but no longer hold once the build
-    // transposes numpy axes 0↔2 into WebGPU x-fastest layout — the
-    // input values that USED to live at flat indices 255/256 now sit
-    // elsewhere in the output.  The first/last assertions above still
-    // hold because corner cells (npy[0,0,0] and npy[N-1,N-1,N-1]) are
-    // invariant under the X↔Z transpose.  The axis-ordering contract
-    // is now verified by the two axis-aware tests below.
+    // Interior positional assertions (e.g. voxels[255]/voxels[256] ≈ 0.5)
+    // don't hold here: the build transposes numpy axes 0↔2 into WebGPU
+    // x-fastest layout, relocating interior cells.  The first/last
+    // assertions are safe because corner cells (npy[0,0,0] and
+    // npy[N-1,N-1,N-1]) are invariant under the X↔Z transpose.  The
+    // axis-ordering contract is verified by the two axis-aware tests
+    // below.
   });
 
   it('transposes numpy axes 0↔2 into WebGPU x-fastest layout', async () => {
@@ -166,7 +162,7 @@ describe('buildCf4Density (smoke)', () => {
       // — i.e. local-z = 1, which the renderer would interpret as +SGZ
       // direction, NOT +SGX).
       const offMarker = 0 * Ny * Nx + 0 * Nx + 1; // tex (1, 0, 0) — expected
-      const offSwapped = 1 * Ny * Nx + 0 * Nx + 0; // tex (0, 0, 1) — old buggy site
+      const offSwapped = 1 * Ny * Nx + 0 * Nx + 0; // tex (0, 0, 1) — straight-copy site
       expect(f16BitsToFloat(cube.voxels[offMarker]!)).toBeCloseTo(1.0, 2);
       expect(f16BitsToFloat(cube.voxels[offSwapped]!)).toBeCloseTo(0.5, 2);
 

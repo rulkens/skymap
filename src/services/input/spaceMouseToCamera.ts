@@ -18,15 +18,14 @@
  *   rz (puck turn left/right) → yaw (orbit camera around target)
  *
  * This follows 3Dconnexion's canonical "Target Camera Mode" convention used
- * by Blender, Fusion 360, Maya, and SolidWorks.  Previous mapping had
- * tz=zoom and ty=vertical-pan, which caused an unintended coupling: natural
- * twist gestures (pressing down while rotating) bled into the zoom channel
- * because the puck's downward force activates tz simultaneously with rz.
- * Restoring ty=zoom decouples them — the thumbs-down press that accompanies
- * a twist now goes to tz (vertical pan) instead of zoom.
+ * by Blender, Fusion 360, Maya, and SolidWorks.  The rejected alternative
+ * (tz=zoom, ty=vertical-pan) couples twist to zoom: the puck's downward
+ * force during a natural twist gesture activates tz simultaneously with rz,
+ * so pressing down while rotating bleeds into the zoom channel.  With
+ * ty=zoom, the thumbs-down press that accompanies a twist goes to tz
+ * (vertical pan) instead.
  *
- * `ry` was previously ignored because the orbit camera had no roll channel.
- * Now that `OrbitCamera.roll` exists, ry drives it, completing all 6 DOF.
+ * `ry` drives `OrbitCamera.roll`, completing all 6 DOF.
  *
  * ### Why exponential zoom?
  *

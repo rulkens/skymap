@@ -1,30 +1,28 @@
 /**
  * flowFieldRenderer — the CF4++ peculiar-velocity flow layer, and the engine's
- * FIRST compute renderer. It owns the velocity `texture_3d` (via the held
+ * lone compute renderer. It owns the velocity `texture_3d` (via the held
  * `FlowField`), one shared particle buffer set (`part` / `trail` / `acc`), three
  * compute pipelines (`seed` / `advect` / `streamline`) behind one explicit
  * bind-group layout, and the additive ribbon render pipeline. See
  * `FlowFieldRenderer.d.ts` for the public contract and
  * `docs/superpowers/specs/2026-06-04-flow-field-integration-design.md` for the
- * design (§1, §3, §5). It is ported from the standalone cosmic-flow spike
- * (`tools/cosmic-flow/.../FlowFieldVisualization.ts`), transformed by three
- * load-bearing deltas:
+ * design (§1, §3, §5). Three load-bearing design choices:
  *
- * ### Delta 1 — ONE shared buffer set, not two
+ * ### ONE shared buffer set, not two
  *
- * The spike kept advect and streamline in entirely separate `{part,trail,acc}`
- * triples so switching modes just showed the other field. We share a single
- * triple across both modes. That is only safe because switching mode (or
- * changing `count`) reseeds — the modes never read each other's stale state
- * because the latch (Delta 3) overwrites the buffers before the first integrate.
- * Sharing halves the buffer footprint (the larger tiers are not cheap) and
- * removes the per-mode bookkeeping the spike carried.
+ * The rejected alternative keeps advect and streamline in entirely separate
+ * `{part,trail,acc}` triples so switching modes just shows the other field. We
+ * share a single triple across both modes. That is only safe because switching
+ * mode (or changing `count`) reseeds — the modes never read each other's stale
+ * state because the latch (third choice below) overwrites the buffers before
+ * the first integrate. Sharing halves the buffer footprint (the larger tiers
+ * are not cheap) and avoids per-mode bookkeeping.
  *
- * ### Delta 2 — ONE explicit compute bind-group layout, never layout:'auto'
+ * ### ONE explicit compute bind-group layout, never layout:'auto'
  *
- * The spike used `layout:'auto'`, whose auto-derived layouts are pipeline-
- * SPECIFIC even when the binding declarations are identical (a known WebGPU
- * trap — see project memory). With one shared buffer set we want ONE bind group
+ * `layout:'auto'` is out: auto-derived layouts are pipeline-SPECIFIC even when
+ * the binding declarations are identical (a known WebGPU trap — see project
+ * memory). With one shared buffer set we want ONE bind group
  * reused across all three compute pipelines, so we build an explicit
  * `GPUBindGroupLayout` + `GPUPipelineLayout` and create all three pipelines off
  * it. The `acc` buffer at @5 is advect-only state, but the WESL declares it for
@@ -33,18 +31,18 @@
  * render side gets its own explicit layout (VERTEX-only visibility, because the
  * ribbon shader folds `intensity` into the vertex stage — see flowRender.wesl).
  *
- * ### Delta 3 — dedicated `seed` pass; ONE compPrm write serves seed + integrate
+ * ### Dedicated `seed` pass; ONE compPrm write serves seed + integrate
  *
- * The spike dodged the writeBuffer/submit race with a mutable `seedFlag` uniform
- * and a separate out-of-band submit. We don't. The WESL now has a dedicated
- * `seed` entry point reading only the `Prm` subset it shares with the
- * integrators (`n` / `frame` / `bias` — NOT trailStep/headStep/mode/wander). So
- * `encodeCompute` writes `compPrm` ONCE from the live `FlowSettings`, then
+ * The rejected alternative dodges the writeBuffer/submit race with a mutable
+ * `seedFlag` uniform and a separate out-of-band submit. Instead, the WESL has
+ * a dedicated `seed` entry point reading only the `Prm` subset it shares with
+ * the integrators (`n` / `frame` / `bias` — NOT trailStep/headStep/mode/wander).
+ * So `encodeCompute` writes `compPrm` ONCE from the live `FlowSettings`, then
  * encodes the `seed` pass (when the latch yields) AND the integrate pass into
  * the SAME frame encoder. WebGPU inserts the storage barrier between the two
  * compute passes; no out-of-band submit, no second writeBuffer. That single-
- * write-serves-both is the whole point — reintroducing a per-pass uniform write
- * would resurrect the race.
+ * write-serves-both is the whole point — a per-pass uniform write would
+ * resurrect the race.
  */
 
 import { mat4 } from 'gl-matrix';
@@ -89,7 +87,7 @@ export function createFlowFieldRenderer(init: {
 }): FlowFieldRenderer {
   const { device, hdrFormat } = init;
 
-  // ── One shared particle buffer set (Delta 1) ──────────────────────────────
+  // ── One shared particle buffer set (see module header) ────────────────────
   // part:  xyz + age, one vec4 per particle.            STORAGE | COPY_DST
   // trail: ring of (xyz, speed), TRAIL vec4 per particle. STORAGE
   // acc:   advect carried distance, one f32 per particle. STORAGE (unused by streamline)
@@ -124,7 +122,7 @@ export function createFlowFieldRenderer(init: {
   const computeModule = createShaderModuleWithDevLog(device, flowComputeWgsl, 'flow.compute');
   const renderModule = createShaderModuleWithDevLog(device, flowRenderWgsl, 'flow.render');
 
-  // ── One explicit compute BGL + three pipelines off it (Delta 2) ───────────
+  // ── One explicit compute BGL + three pipelines off it ─────────────────────
   // Visibility COMPUTE on every entry; bindings mirror flowCompute.wesl @group(0).
   const computeBgl = device.createBindGroupLayout({
     label: 'flow-compute-bgl',
@@ -161,7 +159,7 @@ export function createFlowFieldRenderer(init: {
     compute: { module: computeModule, entryPoint: 'streamline' },
   });
 
-  // ── Explicit render BGL + pipeline (Delta 2) ──────────────────────────────
+  // ── Explicit render BGL + pipeline ────────────────────────────────────────
   // Cam is referenced only from the vertex stage (intensity folded there), so
   // every entry is VERTEX-only — see the flowRender.wesl module header.
   const renderBgl = device.createBindGroupLayout({
@@ -262,7 +260,7 @@ export function createFlowFieldRenderer(init: {
       });
       // No invModel is kept: the integrator works entirely in grid [0,1]³ space
       // (the velocity texture's native space), so the inverse model matrix is
-      // never needed today. IF a future change samples the field along a
+      // never needed. IF a future change samples the field along a
       // WORLD-space ray, build invModel there — and note `invModel * unitWorldDir`
       // is NOT unit length when the model has scale, so it MUST be renormalised
       // before its length is used as a distance (a documented project hazard).
@@ -304,7 +302,7 @@ export function createFlowFieldRenderer(init: {
       phase += DT * flow.flowSpeed;
 
       // Write compPrm ONCE — serves both the optional seed pass and the
-      // integrate pass (Delta 3). The seed kernel reads only n / frame / bias;
+      // integrate pass (see module header). The seed kernel reads only n / frame / bias;
       // the integrators read the rest. streamline ignores headStep / wander
       // in-shader, so always packing them is harmless.
       //   dt f32@0, trailStep f32@4, headStep f32@8, n u32@12, frame u32@16,

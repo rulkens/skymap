@@ -70,10 +70,9 @@ describe('StructureMarkerRenderer (CPU state)', () => {
   });
 
   it('grows past the initial capacity instead of truncating', () => {
-    // Regression: a fixed cap dropped descriptors in insertion order, so
-    // clusters saturated the buffer and superclusters/voids never packed
-    // (visible only when clusters were toggled off).  The buffer must
-    // grow to hold the full set.
+    // Regression: the buffer must grow to hold the full set — a fixed cap
+    // drops descriptors in insertion order (clusters saturate the buffer
+    // and superclusters/voids never pack).
     const r = newRenderer(2);
     r.setMarkers([cluster(1), cluster(2), cluster(3), cluster(4), cluster(5)]);
     expect(r.markerCount()).toBe(5);

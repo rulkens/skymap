@@ -5,8 +5,8 @@
  * `scalarVolumeRenderer.addField` under the handle `'cf4-density'`.
  * The renderer reads per-cube static config (contrastCenter, envelope,
  * paletteId) from the registry and user-tunable knobs from
- * `state.settings.volumes.items` per frame — the commit no longer
- * replays any renderer setter.
+ * `state.settings.volumes.items` per frame — the commit replays no
+ * renderer setter.
  *
  * **Lazy fetch.**  CF-4 is registry-visible:false, so its construction
  * seed lands `enabled: false` and the slot stays idle at boot.
@@ -38,8 +38,8 @@ export const createCf4DensitySlot: SlotFactory<ScalarCube, void> = (state, cb) =
       // Upload the cube; the renderer reads this field's per-cube static
       // config (contrastCenter, envelope, palette) from the registry and
       // its user-tunable knobs from `state.settings.volumes.items` per
-      // frame, so the commit no longer replays any renderer setter.  CF-4
-      // is a shippable volume, so its settings row already exists from the
+      // frame, so the commit replays no renderer setter.  CF-4 is a
+      // shippable volume, so its settings row already exists from the
       // construction seed.
       renderer.addField(handle, cube);
       // Fade up only if the user has the field toggled on (matches the

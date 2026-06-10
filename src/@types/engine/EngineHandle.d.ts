@@ -1,20 +1,19 @@
 /**
  * EngineHandle — the public API surface returned by createEngine.
  *
- * After the H5 namespace restructure (2026-05-11), the handle is a thin
- * cluster of named sub-handles plus two root-level affordances (`destroy`
- * and `assetSlots`).  Every imperative knob — set point size, focus a
- * galaxy, register a volume field — lives on a topical sub-handle so the
- * React layer can subscribe to just the namespace it cares about without
- * pulling in the whole engine surface.
+ * The handle is a thin cluster of named sub-handles plus two root-level
+ * affordances (`destroy` and `assetSlots`).  Every imperative knob — set
+ * point size, focus a galaxy, register a volume field — lives on a
+ * topical sub-handle so the React layer can subscribe to just the
+ * namespace it cares about without pulling in the whole engine surface.
  *
- * Why the split: the previous flat shape had ~50 optional methods at the
- * root.  Adding a new feature meant another optional `setX` line and a
- * test for "is it wired?"; the type told you nothing about which methods
- * belong together.  The sub-handles group related methods (all camera
- * controls under `camera`, all volume controls under `volumes`) so the
- * type telegraphs intent and the engine's internal wiring stays
- * cluster-shaped.  See `docs/superpowers/plans/` for the H5 plan.
+ * Why the split: a flat shape would put ~50 optional methods at the
+ * root.  Adding a new feature would mean another optional `setX` line
+ * and a test for "is it wired?", and the type would say nothing about
+ * which methods belong together.  The sub-handles group related methods
+ * (all camera controls under `camera`, all volume controls under
+ * `volumes`) so the type telegraphs intent and the engine's internal
+ * wiring stays cluster-shaped.
  */
 
 import type { AssetSlot } from '../loading/AssetSlot';

@@ -10,22 +10,20 @@
 //      foreshortened wrong, there is exactly one definition of
 //      'worldToClip' to blame.
 //   2. Reuse the same byte layout across renderers, so a future
-//      "shared per-frame camera UBO bound at @group(2)" refactor (out
-//      of scope for Task 4 but plausible later) only has to touch the
-//      CPU-side uploader, not the WGSL.
+//      "shared per-frame camera UBO bound at @group(2)" refactor only
+//      has to touch the CPU-side uploader, not the WGSL.
 //   3. Give human reviewers a hook: any new renderer should import
 //      from here rather than rolling its own viewProj wiring.
 //
 // ## Why this is so MINIMAL
 //
-// An earlier draft (see plan 2026-05-07-wesl-conversion.md, Task 4)
-// proposed a much wider CameraUniforms with separate 'view' + 'proj'
-// matrices, plus 'kPerZ', 'dpr', 'timeSec', etc. Reading the actual
-// renderer Uniforms structs revealed:
+// The rejected alternative was a much wider CameraUniforms with
+// separate 'view' + 'proj' matrices, plus 'kPerZ', 'dpr', 'timeSec',
+// etc. The actual renderer Uniforms structs argue against it:
 //
 //   - None of the seven renderers uses 'view' or 'proj' separately;
 //     all of them only need the combined 'viewProj'.
-//   - 'kPerZ' and 'dpr' are not in any uniform struct today.
+//   - 'kPerZ' and 'dpr' are not in any uniform struct.
 //   - 'cameraPos' (under various spellings: 'camPosWorld',
 //     'cameraPosWorld', 'camPos') lives at WILDLY different byte
 //     offsets across renderers — points puts six other f32/u32
@@ -34,10 +32,10 @@
 //     pad those slots out with explicit '_pad0/_pad1'. Forcing all
 //     of them onto the same prefix would mean rewriting the
 //     points/milkyWayImpostor uniform layouts purely to satisfy a
-//     shared struct, with no functional benefit. The plan's
-//     guardrail ('fields used by only one renderer stay
-//     renderer-specific') applies a fortiori when the placement of
-//     a field varies between renderers.
+//     shared struct, with no functional benefit. The guardrail
+//     'fields used by only one renderer stay renderer-specific'
+//     applies a fortiori when the placement of a field varies
+//     between renderers.
 //   - 'filaments' has no camera position at all — its quads only
 //     need 'viewProj' for endpoint projection.
 //
@@ -114,11 +112,10 @@ fn worldToClip(cam: CameraUniforms, p: vec3<f32>) -> vec4<f32> {
 // vectors with different w and then divide — the result is gibberish
 // in NDC).
 //
-// We split this out as a named helper because every renderer that
-// does screen-space-aligned billboard math has historically rolled
-// its own 'clip.xy / clip.w' line and called the result something
-// different ('aNdc', 'centerNdc', 'upNdc'). One name + one
-// definition keeps the post-projection step searchable.
+// A named helper because every renderer doing screen-space-aligned
+// billboard math would otherwise roll its own 'clip.xy / clip.w'
+// line under a different name ('aNdc', 'centerNdc', 'upNdc'). One
+// name + one definition keeps the post-projection step searchable.
 //
 // Note we drop the z component: NDC z is the depth used for the
 // depth test, not for screen layout. Callers who need it should use

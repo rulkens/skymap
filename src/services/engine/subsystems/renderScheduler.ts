@@ -3,15 +3,14 @@
  *
  * ### Why a dedicated module
  *
- * The engine's render loop used to perpetually re-schedule itself,
- * burning CPU on every frame even when nothing had changed. Switching
- * to render-on-demand requires a single source of truth that knows
- * "is a frame already queued?" — otherwise multiple event handlers
- * firing in the same tick (e.g. pointermove + wheel + resize) would
- * each queue their own rAF, defeating the purpose.
+ * A perpetually self-rescheduling render loop burns CPU on every frame
+ * even when nothing has changed. Render-on-demand avoids that, but it
+ * requires a single source of truth that knows "is a frame already
+ * queued?" — otherwise multiple event handlers firing in the same tick
+ * (e.g. pointermove + wheel + resize) would each queue their own rAF,
+ * defeating the purpose.
  *
- * Extracting the boolean + token bookkeeping into a tiny module gives
- * us:
+ * Keeping the token bookkeeping in a tiny module gives us:
  *
  *   1. Vitest coverage of the contract (one frame per dirty-mark, no
  *      duplicates, sleeps when no one calls `requestRender`).  No

@@ -10,12 +10,10 @@
  * SettingsPanel.  Both copies must agree on the *initial* value so the
  * first paint isn't visibly out of sync with the panel's controls.
  *
- * Before this module existed, those initial values were duplicated by
- * hand at two sites — every time a default changed (e.g., the recent
- * `exposure: 1.0 → 1.5` bump after the depth-fade landed), both files
- * needed parallel edits or the panel would briefly flash the old value
- * before the engine's first echo callback synced React state.  This
- * module collapses both to one.
+ * A single shared module keeps them in agreement: duplicating the
+ * values by hand at both sites means every default change needs
+ * parallel edits, or the panel briefly flashes a stale value before
+ * the engine's first echo callback syncs React state.
  *
  * ### What's in scope
  *
@@ -124,14 +122,10 @@ export const DEFAULT_MILKY_WAY_ENABLED = true;
 export const DEFAULT_TONE_MAP_CURVE: ToneMapCurveT = ToneMapCurve.Reinhard;
 
 /**
- * Default exposure multiplier applied before the tone-map curve.  Iterated
- * upward over time as the rendering stack matured:
- *   - 1.0  initial.
- *   - 1.5  after the depth fade landed (fade dims overall brightness; this
- *          compensated so the un-faded foreground looked right).
- *   - 3.0  current.  Visual judgment after the user reported 1.5 still felt
- *          flat with the depth fade on at typical zoom levels.
- * Range exposed to the user is 0.1–4.0; bump the slider's `max` if a future
+ * Default exposure multiplier applied before the tone-map curve.  3.0 is
+ * a visual judgment: the depth fade dims overall brightness, and lower
+ * values read flat at typical zoom levels with the fade on.  Range
+ * exposed to the user is 0.1–4.0; bump the slider's `max` if a future
  * default exceeds it.
  */
 export const DEFAULT_EXPOSURE = 3.0;
@@ -202,7 +196,7 @@ export const DEFAULT_VOLUME_FIELD_INTENSITY = 0.5;
 
 /**
  * Default trim (low-end deadband cutoff) for volume fields that don't
- * specify one.  0 = no trim — preserves pre-existing behaviour.
+ * specify one.  0 = no trim — the neutral identity.
  */
 export const DEFAULT_VOLUME_FIELD_TRIM = 0.0;
 
@@ -210,10 +204,9 @@ export const DEFAULT_VOLUME_FIELD_TRIM = 0.0;
  * Default per-field contrast (gamma-style LUT-coordinate remap around
  * the 0.5 pivot, see `VolumeFieldSettings.contrast` and the
  * scalar-volume fragment shader).  1.0 is identity — the value at
- * which the slider has no effect, matching the user's intuition that
- * "default" should produce the same visual as before the slider
- * existed.  Cubes are encoded for that baseline; the user dials
- * upward to expose structure or downward to flatten.
+ * which the slider has no effect.  Cubes are encoded for that
+ * baseline; the user dials upward to expose structure or downward
+ * to flatten.
  */
 export const DEFAULT_VOLUME_FIELD_CONTRAST = 1.0;
 
@@ -251,11 +244,10 @@ export const DEFAULT_VOLUME_PALETTE_ID = 'viridis' as const;
  * `enabled` defaults OFF: the velocity cube is tens of MB and demand-loads on
  * the first enable, so a fresh session pays nothing until the user asks for it.
  *
- * The motion/look values started from the spike's hand-dialled advect look
- * (`tools/cosmic-flow/src/state/slices/flowSlice.ts`) and were then tuned in
- * the integrated renderer. They ARE the look — do not "tidy" them. `count`
- * defaults to the buffer ceiling (`MAX_PARTICLES`) so the field reads as dense
- * the moment it's enabled; the slider trims downward.
+ * The motion/look values are hand-dialled in the renderer.  They ARE the
+ * look — do not "tidy" them. `count` defaults to the buffer ceiling
+ * (`MAX_PARTICLES`) so the field reads as dense the moment it's enabled; the
+ * slider trims downward.
  */
 export const DEFAULT_FLOW: FlowSettings = {
   enabled: false,

@@ -13,17 +13,13 @@
  * removes a per-lookup `Number(bigint)` conversion that would otherwise
  * fire millions of times during the post-load join.
  *
- * ### Why throw on 404 here, when the old loader returned an empty Map?
+ * ### Why throw on 404?
  *
- * Same reasoning as famousMetaFetcher: the new design pushes the
- * "absent sidecar = feature off" mapping up to the slot subscriber. The
- * fetcher reports HTTP truth; the slot's error handler maps it to an
- * empty Map so the palette's famous-only search still works. This also
+ * Same reasoning as famousMetaFetcher: the "absent sidecar = feature
+ * off" mapping lives a layer up, in the slot subscriber. The fetcher
+ * reports HTTP truth; the slot's error handler maps it to an empty
+ * Map so the palette's famous-only search still works. This also
  * makes retry policy honest — a 5xx flake retries, a 404 gives up.
- *
- * Parser preserved verbatim from the existing pgcAliasLoader.ts; bigint
- * keys remain because the most-common downstream use is direct lookup
- * against `BigUint64Array` objIDs.
  */
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { PgcAliasJsonShape } from '../../../@types/loading/PgcAliasJsonShape';

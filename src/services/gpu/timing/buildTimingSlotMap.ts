@@ -5,7 +5,7 @@
  *
  * ### Why this is a function, not a static const
  *
- * The set of timed passes is no longer compile-time-fixed: it's DERIVED
+ * The set of timed passes is data-driven, not compile-time-fixed: it's DERIVED
  * from the render-pass registry (`TIMED_SLOT_NAMES` in
  * `services/engine/frame/passes/index.ts`).  Adding a renderer to
  * `HDR_PASSES` is the only edit needed — its timing slot is allocated

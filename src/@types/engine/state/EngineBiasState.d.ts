@@ -31,9 +31,8 @@
  * The fields here are worker *outputs* — derived values the shader
  * consumes after the bake resolves.  Keeping them on a sibling sub-bag
  * makes the dataflow obvious: settings → setBiasMode → biasCorrection
- * subsystem → state.bias outputs → shader.  Before H5 (2026-05-11) the
- * mode + absMagLimit lived here too and the type was the mixed bag;
- * Task 12 of the H5 plan separated input-from-output.
+ * subsystem → state.bias outputs → shader.  Mixing inputs and outputs
+ * in one bag would blur who writes what.
  */
 
 export type EngineBiasState = {

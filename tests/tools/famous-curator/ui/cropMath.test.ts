@@ -308,7 +308,7 @@ describe('fitCropToSource', () => {
 
   it('scales an oversized crop down to fit and keeps it within bounds', () => {
     // The real m77 case: a 3774² crop authored on a ~3774px source, resumed
-    // against a 1718×1716 re-fetch — must no longer overflow.
+    // against a 1718×1716 re-fetch — must not overflow.
     const c: Crop = { x: 0, y: 176.49, width: 3774, height: 3774, rotationDeg: 0 };
     const b = { width: 1718, height: 1716 };
     const out = fitCropToSource(c, b);

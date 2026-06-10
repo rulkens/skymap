@@ -13,21 +13,15 @@
  * famous galaxy renders TWICE (once from the catalog layer, once from the
  * famous layer).
  *
- * Pre-CF4-override the duplication was visually hidden: the catalog
- * billboard sat at the cz-mirrored position (e.g. M31 at ~3 Mpc on the
- * anti-Andromeda side, blueshifted) while the famous-seed billboard sat
- * at the curated literature distance (~0.78 Mpc). They were Mpc apart on
- * the screen, so the user never saw two M31s.
+ * The duplicates overlap visually: the local-volume distance override
+ * puts the catalog billboard at the CF4 measured distance (~0.747 Mpc
+ * for M31), only ~0.03 Mpc from the famous billboard at the curated
+ * literature distance (~0.78 Mpc) — the user sees two M31s.
  *
- * Once the local-volume distance override fires, the catalog billboard
- * moves to the CF4 measured distance (~0.747 Mpc for M31), only 0.03 Mpc
- * from the famous billboard. The two now overlap visually and the user
- * sees an obvious duplicate.
- *
- * The clean fix is to drop the catalog row entirely whenever it falls
- * within `thresholdArcsec` of a famous-seed entry. The famous layer
- * becomes the single source of truth for those galaxies; the catalog
- * layer renders everything else.
+ * So we drop the catalog row entirely whenever it falls within
+ * `thresholdArcsec` of a famous-seed entry. The famous layer is the
+ * single source of truth for those galaxies; the catalog layer renders
+ * everything else.
  *
  * ## Algorithm
  *

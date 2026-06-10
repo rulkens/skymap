@@ -207,14 +207,13 @@ export const SG_TO_EQ_QUATERNION: Readonly<Vec4> = matrixToQuaternion(SG_TO_EQ_M
  *
  * ### Why a separate export and not "build it in the renderer"
  *
- * The scalar-volume renderer previously kept a private hardcoded
- * mat4 of the SG→EQ rotation, with element values that diverged from
- * the canonical 3x3 by ~1.9 magnitude in places.  Cluster labels
- * (which use `raDecDistToEqCart` → canonical 3x3) ended up at
- * different world positions from the cube's voxels (which used the
- * renderer's local hardcoded mat4).  This export is the canonical
- * column-major form derived from `SG_TO_EQ_MATRIX` once, at module
- * init; every consumer must import it rather than reconstruct.
+ * A renderer-private hardcoded mat4 of the SG→EQ rotation can drift
+ * from the canonical 3x3 — and any drift puts cluster labels (which
+ * use `raDecDistToEqCart` → canonical 3x3) at different world
+ * positions from the cube's voxels (which would use the renderer's
+ * local copy).  This export is the canonical column-major form
+ * derived from `SG_TO_EQ_MATRIX` once, at module init; every
+ * consumer must import it rather than reconstruct.
  *
  * Column-major layout (matches gl-matrix and WebGPU mat4x4):
  *   index    0  4  8 12   col 0   col 1   col 2   col 3

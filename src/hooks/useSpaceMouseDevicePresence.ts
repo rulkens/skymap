@@ -5,14 +5,12 @@
  * ──────────────────────────────────────────────────────────────────────
  * Why this exists
  * ──────────────────────────────────────────────────────────────────────
- * Before the 2026-05-19 SettingsPanel UX audit (see Q16f in
- * `docs/grill-sessions/settings-panel-audit-2026-05-19.md`), App.tsx
- * hard-coded `spaceMouseSupported={false}` because surfacing the
- * Connect / Sensitivity controls to every Chromium user was confusing
- * for the ~99 % without a 3Dconnexion device.  The audit decided to
- * restore the section but gate it on actual device presence — so a
- * SpaceMouse owner opens Settings and the section is *there*, ready,
- * while everybody else sees nothing.
+ * Surfacing the Connect / Sensitivity controls to every Chromium user
+ * confuses the ~99 % without a 3Dconnexion device, so the SettingsPanel
+ * section is gated on actual device presence — a SpaceMouse owner opens
+ * Settings and the section is *there*, ready, while everybody else sees
+ * nothing.  (Decision trail: Q16f in
+ * `docs/grill-sessions/settings-panel-audit-2026-05-19.md`.)
  *
  * ──────────────────────────────────────────────────────────────────────
  * What "present" means here
@@ -22,13 +20,13 @@
  * permission prompt and does NOT include unpaired devices, even when
  * they're physically plugged in.  So our predicate is really "has the
  * user previously paired a SpaceMouse on this site?" — which is exactly
- * the audit's intent (the 1 % who own one have paired once; everybody
- * else hasn't).
+ * the intent (the 1 % who own one have paired once; everybody else
+ * hasn't).
  *
  * First-time SpaceMouse users see no section until they pair once via
  * some other path (currently: the engine handle's `connect()` method,
  * which a dev can fire from the console, or a future `?spacemouse=1`
- * URL gate).  The audit captures this as an acceptable trade-off.
+ * URL gate).  An accepted trade-off.
  *
  * ──────────────────────────────────────────────────────────────────────
  * Why we also listen for `connect` events
