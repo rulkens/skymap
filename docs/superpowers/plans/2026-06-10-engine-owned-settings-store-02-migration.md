@@ -159,22 +159,23 @@ drawMask).
 - Create reducer/selector tests mirroring the `setSurveySize` template.
 
 **settingsTable disposition (read carefully — the spec asks whether the table is
-absorbed or stays):** `settingsTable.ts` is the existing declarative write-path
-(mutate leaf → echo → `requestRender`). Its three jobs split cleanly under the
-store: the **mutate** becomes the reducer, the **echo** is deleted, the
-**`requestRender`** must be preserved (the store action does not wake the
-scheduler). **Pin this:** keep `settingsTable` as the wake-and-clamp wrapper but
-swap its body from `setByPath(state, …) + cb echo` to `action(store, clamped)` —
-i.e. the descriptor's `path`/`clamp` stay, the `callback` tuple is removed, and
-`setByPath` is replaced by a call to the cluster action. The action runs the pure
-reducer (copy-on-write); the wrapper still clamps and still calls
+absorbed or stays):** `settingsTable.ts` is the existing declarative write-path.
+As of the clamp-at-point-of-use PR (#301) it carries **no clamps** — each row is
+`{ name, path, callback? }` and the builder does mutate (`setByPath`) → echo →
+`requestRender`. Its two remaining jobs split cleanly under the store: the
+**mutate** becomes the store action (a pure copy-on-write reducer), the **echo**
+is deleted, and the **`requestRender`** must be preserved (the store action does
+NOT wake the scheduler). **Pin this:** keep `settingsTable` as the wake wrapper
+but swap its body from `setByPath(state, …) + cb echo` to `action(store, value)`
+— the descriptor's `path` stays, the `callback` tuple is removed, `setByPath` is
+replaced by a call to the cluster action, and the wrapper still calls
 `requestRender()`. This keeps the "every setter wakes the scheduler" audit in one
 place (the table's reason to exist) while moving the *write* into the store.
 **Do NOT** dissolve `settingsTable` into per-setter inline code — that would
 scatter the requestRender audit the table consolidates (simplicity.md #8). If,
-once surveys + a few clusters are migrated, the table is reduced to "clamp +
-action + requestRender" and a reducer-registry would express it more directly,
-**raise it in the Phase 4 radar** rather than refactoring mid-migration.
+once a few clusters are migrated, the table is reduced to "action + requestRender"
+and a reducer-registry would express it more directly, **raise it in the Phase 4
+radar** rather than refactoring mid-migration.
 
 - [ ] Pure reducer tests (one per leaf), copy-on-write asserted (touched cluster
   new ref, siblings same ref), e.g. `setBrightness copies-on-write the surveys
@@ -208,8 +209,8 @@ action + requestRender" and a reducer-registry would express it more directly,
 ### Task 2.2: tonemap
 
 Same pattern as surveys, for the `tonemap` cluster:
-- Leaves: `tonemap.exposure` (`setExposure`, clamp `[0.05, 16]`
-  (`settingsTable.ts:270`), echo `tonemap.onExposureChange`, cell `exposure` —
+- Leaves: `tonemap.exposure` (`setExposure`, echo `tonemap.onExposureChange`,
+  cell `exposure` —
   note the **hybrid** case: App.tsx also nudges `exposure` locally for snappy
   thumb tracking via `setExposure` from the hook (`useEngineSettings.ts:100` +
   `UseEngineSettingsReturn`). Migrating it removes the hybrid: the slider writes
@@ -217,11 +218,11 @@ Same pattern as surveys, for the `tonemap` cluster:
   return-value setter delete). `tonemap.curve` (`setToneMapCurve`, echo
   `onCurveChange`, cell `toneMapCurve`).
 - Reducers `setExposure`, `setToneMapCurve`; selectors `selectExposure`,
-  `selectToneMapCurve`. Clamp stays in the `settingsTable` wrapper (preserve
-  `[0.05, 16]`).
-- [ ] Reducer + selector tests (copy-on-write; clamp lives in the wrapper, NOT
-  the reducer — assert the reducer stores whatever it's given, and that the
-  wrapper clamps).
+  `selectToneMapCurve`. No clamp in the settings path — exposure's `[0.05, 16]`
+  range already lives at the post-process pass (`clampExposure`, #301); the
+  reducer stores the raw value.
+- [ ] Reducer + selector tests (copy-on-write; the reducer stores the raw value
+  verbatim — no clamp).
 - [ ] Run-fails → implement → point setters at actions → delete tonemap echoes +
   cells + `setExposure` optimistic setter + `seedSettingsCallbacks` lines →
   switch App.tsx reads.
@@ -292,11 +293,13 @@ Same pattern, for `debug.showPickBuffer` + `debug.showDiskRadiusRing`
 `setFilamentsEnabled` + `handle.filaments.setEnabled` (`App.tsx:262-270`)).
 Migrating removes the asymmetry: the values become uniform store reads; App.tsx
 drops the optimistic `setFilamentsEnabled` / `setFilamentIntensity` and just
-calls the handle. **Preserve the fade** (`engine.ts:1224` `fadeTo({kind:'filaments'})`)
-and the intensity clamp (`[0,1]`, `settingsTable.ts:185`).
+calls the handle. **Preserve the fade** (`engine.ts:1224` `fadeTo({kind:'filaments'})`).
+Intensity's `[0,1]` clamp already lives at the filament renderer
+(`clampFilamentIntensity`, #301) — not the settings path.
 - [ ] Reducers `setFilamentsEnabled`, `setFilamentIntensity` + selectors + tests
-  → implement → point boringSetters at actions (keep clamp in wrapper + fade in
-  handle) → delete the `setFilamentsEnabled`/`setFilamentIntensity` optimistic
+  → implement → point boringSetters at actions (fade stays in the handle; no
+  clamp — it's at the renderer) → delete the
+  `setFilamentsEnabled`/`setFilamentIntensity` optimistic
   setters from `useEngineSettings` + the `filamentsEnabled`/`filamentIntensity`
   cells → switch App.tsx + StatsPanel reads to `useStore`; App.tsx's
   `onFilamentsChange`/`onFilamentIntensityChange` now call only the handle.
@@ -341,16 +344,16 @@ projection (drop the `debug-*` filter on the React side, as today —
 `settings.flow` (`FlowSettings` — `enabled` + 8 motion/look knobs) is App-owned
 optimistic today (no echo; App.tsx dual-writes via `updateFlow` +
 `handle.flow.set(patch)` — `App.tsx:112-118`). The flow boringSetters
-(`setFlowEnabled`…`setFlowBoundaryFadeWidth`, `settingsTable.ts:191-241`) clamp
-each leaf; `handle.flow.set` applies per-leaf side effects (demand re-eval, fade,
-reseed — `engine.ts:1240-1279`).
+(`settingsTable.ts:191-241`) no longer clamp — the knob clamps moved to
+`clampFlowParams` at the flow renderer (#301); `handle.flow.set` applies per-leaf
+side effects (demand re-eval, fade, reseed — `engine.ts:1240-1279`).
 
 **Migration shape:** add a `setFlow` reducer that copy-on-writes a
-`Partial<FlowSettings>` patch into `settings.flow`, and an action. The flow
-boringSetters' clamps move into the reducer OR stay in the per-leaf wrappers
-(pin: keep the per-leaf clamp wrappers so `MAX_PARTICLES` / `MIN_TRAIL_STEP`
-bounds stay co-located with their constants — the reducer takes already-clamped
-values). `handle.flow.set` keeps its demand/fade/reseed side effects but routes
+`Partial<FlowSettings>` patch into `settings.flow`, and an action. There are no
+flow clamps left in the settings path — the reducer stores the raw patch;
+`clampFlowParams` at the renderer is the single home for the GPU-safe bounds
+(`MAX_PARTICLES` / `MIN_TRAIL_STEP`). `handle.flow.set` keeps its
+demand/fade/reseed side effects but routes
 the writes through the action instead of the boringSetters. React drops the
 `flow` cell + `updateFlow`; reads become `useStore(handleRef, selectFlow)`;
 `onFlowChange` in App.tsx calls only `handle.flow.set(patch)`.
@@ -358,7 +361,7 @@ the writes through the action instead of the boringSetters. React drops the
   `selectFlow` + tests (copy-on-write; a partial patch merges, untouched leaves
   keep prior values).
 - [ ] Run-fails → implement → route `handle.flow.set` writes through the action
-  (keep clamps in the leaf wrappers + the demand/fade/reseed effects) → delete
+  (keep the demand/fade/reseed effects; no clamps — they're at the renderer) → delete
   `flow` cell + `updateFlow` + `UseEngineSettingsReturn.updateFlow` → switch
   App.tsx + DebugPanel flow reads to `useStore`; `onFlowChange` calls only the
   handle.
@@ -444,10 +447,10 @@ unreferenced).
   structure setters' `cb` param, etc.) once nothing fires.
 - Modify `src/services/engine/wiring/settingsTable.ts` — the `callback` field +
   `NestedCallbackKey` type are now unused (every row's write goes through an
-  action). Remove them; the descriptor is `{ name, path, clamp? }` and the
-  wrapper is clamp + action + `requestRender`. (If the radar in 3.2 / Phase 4
-  finds the table is now a thin reducer-registry, note it — don't over-refactor
-  here.)
+  action). Remove them; the descriptor is `{ name, path }` and the wrapper is
+  action + `requestRender` (the `clamp?` field was already removed by #301). (If
+  the radar in Phase 4 finds the table is now a thin reducer-registry, note it —
+  don't over-refactor here.)
 
 **Explicit DO-NOT-DELETE list (so the implementer doesn't over-delete):**
 - The EVENT callbacks listed above.
@@ -497,7 +500,7 @@ this slice; otherwise record findings and stop.
     the input state (the reducer tests already assert this; the radar confirms no
     reducer slipped a side effect).
   - **`settingsTable` disposition** — confirm it's still the single
-    requestRender-audit home (clamp + action + wake) and hasn't fractured into
+    requestRender-audit home (action + wake) and hasn't fractured into
     scattered inline setters; note if a reducer-registry would be a cleaner
     follow-up (do NOT do it here — out of scope).
 - [ ] Confirm the OUT-OF-SCOPE `scalarVolumeRenderer` mirror was NOT touched.

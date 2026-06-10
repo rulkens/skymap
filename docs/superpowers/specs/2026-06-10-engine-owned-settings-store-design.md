@@ -162,8 +162,9 @@ unaffected.
 
 ## Scope guards (non-goals)
 
-- **No** behaviour change — the same settings, same clamps, same render output.
-  This is a state-home move, observable behaviour preserved.
+- **No** behaviour change — the same settings, same render output. This is a
+  state-home move, observable behaviour preserved. (Clamps already live at the
+  consuming renderers as of #301 — out of this PR's path entirely.)
 - **No** moving engine internals (GPU/fades/demand/selection) into the store — it
   holds settings only.
 - **No** `sources.tier` reorganisation, **no** mask→registry migration (out of scope

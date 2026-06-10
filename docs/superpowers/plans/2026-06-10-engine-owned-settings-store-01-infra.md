@@ -19,7 +19,7 @@ home** for every render setting, observable by React via a zustand vanilla store
 the engine owns. Delete the React-side mirror (`useEngineSettings`'s ~24 cells)
 and the engine's ~13 settings echo callbacks, replacing both with `useStore`
 selectors over the engine-owned store. Behaviour-preserving: same settings, same
-clamps, same render output.
+render output (clamps already live at the renderers as of #301).
 
 ## Architecture
 
