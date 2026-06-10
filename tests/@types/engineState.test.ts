@@ -191,6 +191,7 @@ describe('EngineState type', () => {
           getCloud: () => undefined,
           getFamousMeta: () => [],
           getStructure: () => null,
+          requestRender: () => {},
         }),
         biasCorrection: createBiasCorrectionSubsystem({
           getMode: () => stateRef.current!.settings.bias.mode,
@@ -384,6 +385,7 @@ describe('EngineState type', () => {
           getCloud: () => undefined,
           getFamousMeta: () => [],
           getStructure: () => null,
+          requestRender: () => {},
         }),
         biasCorrection: createBiasCorrectionSubsystem({
           getMode: () => stateRef.current!.settings.bias.mode,

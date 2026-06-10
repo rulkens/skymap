@@ -601,6 +601,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // group); resolve them straight from the structure store. Famous
         // galaxies are selected via the point path (kind 'galaxy'), never here.
         getStructure: (id) => state.data.structures.byId(id),
+        requestRender: () => state.subsystems.scheduler.requestRender(),
       }),
 
       // ── Bias-correction subsystem ─────────────────────────────────

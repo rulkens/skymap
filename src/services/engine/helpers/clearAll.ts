@@ -9,8 +9,10 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
  *
  * Each setter owns its own callback fan-out: `setSelected(null)` fires
  * `onSelectChange(null)`, `setFocused(null)` fires `onFocusChange(null)`.
- * Both dedupe internally, so calling them when the slot is already null
- * is a silent no-op — no spurious React churn.
+ * Both dedupe internally — calling them when the slot is already null
+ * is a silent no-op (no spurious React churn, no render wake).  The
+ * render wake is owned by the setters themselves, so Esc on an empty
+ * scene is still wake-free.
  *
  * ### Dismiss clears focus; a bare empty-space click does not
  *
@@ -22,12 +24,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
  * something else.
  */
 export function clearAll(state: EngineState): void {
-  const { selection, scheduler } = state.subsystems;
-  // Fire only when something actually changes, so an Esc on an empty
-  // scene stays an idle no-op (no needless render wake).
-  if (selection.selected() !== null || selection.focused() !== null) {
-    selection.setSelected(null);
-    selection.setFocused(null);
-  }
-  scheduler.requestRender();
+  const { selection } = state.subsystems;
+  selection.setSelected(null);
+  selection.setFocused(null);
 }

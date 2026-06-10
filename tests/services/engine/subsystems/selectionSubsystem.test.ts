@@ -16,6 +16,8 @@
  *   - Cloud-missing / out-of-range galaxy lookups fire onChange(null).
  *   - Focus slot: setFocused is independent of setSelected, dedupes,
  *     and fires onFocusChange (not the selection callbacks).
+ *   - Render wake: setSelected/setFocused wake on actual change; no-ops
+ *     and setHovered stay wake-free.
  *   - destroy() clears state.
  */
 
@@ -82,7 +84,11 @@ const FORNAX: StructureRecord = {
 
 function makeSub(
   cb: Callbacks,
-  opts: { cloud?: GalaxyCatalog; structures?: readonly StructureRecord[] } = {},
+  opts: {
+    cloud?: GalaxyCatalog;
+    structures?: readonly StructureRecord[];
+    requestRender?: () => void;
+  } = {},
 ) {
   const structures = opts.structures ?? [];
   return createSelectionSubsystem({
@@ -90,6 +96,7 @@ function makeSub(
     getCloud: () => opts.cloud,
     getFamousMeta: () => [],
     getStructure: (id) => structures.find((s) => s.id === id) ?? null,
+    requestRender: opts.requestRender ?? (() => {}),
   });
 }
 
@@ -288,6 +295,54 @@ describe('createSelectionSubsystem — focus slot', () => {
     sub.setFocused({ kind: 'structure', id: 'virgo' });
     sub.setFocused(null);
     expect(sub.focused()).toBeNull();
+  });
+});
+
+describe('createSelectionSubsystem — render wake', () => {
+  it('setSelected wakes the scheduler on actual change', () => {
+    const cb = makeCallbacks();
+    const requestRender = vi.fn<() => void>();
+    const sub = makeSub(cb, { structures: [VIRGO], requestRender });
+
+    sub.setSelected({ kind: 'structure', id: 'virgo' });
+
+    expect(requestRender).toHaveBeenCalledTimes(1);
+  });
+
+  it('setSelected does not wake when the selection is unchanged', () => {
+    const cb = makeCallbacks();
+    const requestRender = vi.fn<() => void>();
+    const sub = makeSub(cb, { structures: [VIRGO], requestRender });
+
+    sub.setSelected({ kind: 'structure', id: 'virgo' });
+    sub.setSelected({ kind: 'structure', id: 'virgo' }); // dup — dedupe guard fires
+
+    // Only the first set is an actual change; the second is a no-op.
+    expect(requestRender).toHaveBeenCalledTimes(1);
+  });
+
+  it('setFocused wakes on change and not on no-op', () => {
+    const cb = makeCallbacks();
+    const requestRender = vi.fn<() => void>();
+    const sub = makeSub(cb, { structures: [VIRGO], requestRender });
+
+    sub.setFocused({ kind: 'structure', id: 'virgo' });
+    sub.setFocused({ kind: 'structure', id: 'virgo' }); // dup — no extra wake
+
+    expect(requestRender).toHaveBeenCalledTimes(1);
+  });
+
+  it('setHovered never wakes the scheduler', () => {
+    const cb = makeCallbacks();
+    const requestRender = vi.fn<() => void>();
+    const sub = makeSub(cb, { structures: [VIRGO], requestRender });
+
+    // Several distinct hover transitions — none should wake.
+    sub.setHovered({ kind: 'structure', id: 'virgo' });
+    sub.setHovered(null);
+    sub.setHovered({ kind: 'structure', id: 'virgo' });
+
+    expect(requestRender).not.toHaveBeenCalled();
   });
 });
 

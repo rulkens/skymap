@@ -240,12 +240,10 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       if (!pick) return;
       pick.then((sel) => {
         // Single-click is pure selection (null clears) for both galaxy and
-        // structure hits. setSelected resolves the target internally and fires
-        // onSelectChange so the React InfoCard swaps bodies; the dblclick
-        // handler reads `selectedTarget()` to upgrade to focus.
+        // structure hits. setSelected resolves the target internally, fires
+        // onSelectChange so the React InfoCard swaps bodies, and wakes the
+        // render loop — callers don't follow up.
         state.subsystems.selection.setSelected(sel);
-        // Selection changed — render so the highlight halo updates next frame.
-        state.subsystems.scheduler.requestRender();
       });
     },
     onDoubleClick: () => {
@@ -262,8 +260,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
         handle?.camera.focusOn(target);
         return;
       }
+      // setFocused owns the wake when the slot actually changes.
       state.subsystems.selection.setFocused(null);
-      state.subsystems.scheduler.requestRender();
     },
   });
 
