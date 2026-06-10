@@ -176,12 +176,11 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     path: ['settings', 'filaments', 'enabled'],
   },
   {
-    // Filament-overlay intensity scale; clamps to [0, 1] same as the
-    // hand-rolled setter did.  No callback for the same App-owns-state
+    // Stores raw intent; the filament renderer clamps to [0, 1] at point of
+    // use (clampFilamentIntensity). No callback for the same App-owns-state
     // reason as `setFilamentsEnabled`.
     name: 'setFilamentIntensity',
     path: ['settings', 'filaments', 'intensity'],
-    clamp: (v) => Math.max(0, Math.min(1, v)),
   },
   // ── Flow overlay (singleton-overlay-layer slice) ───────────────────
   // App.tsx owns these optimistically, like the filament rows — no echo

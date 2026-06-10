@@ -127,9 +127,9 @@ Bounds (reuse `MAX_PARTICLES` / `MIN_TRAIL_STEP` from `flowFieldConstants.ts`):
 
 **Signature:** `export function clampFilamentIntensity(intensity: number): number;` → `[0, 1]`.
 
-- [ ] Tests: `clampFilamentIntensity bounds to [0,1]` (assert a negative input →
+- [x] Tests: `clampFilamentIntensity bounds to [0,1]` (assert a negative input →
   0, the undefined-blend guard; `>1` → 1).
-- [ ] Run-fails → implement + wire at `filamentRenderer.ts:299` + remove the table
+- [x] Run-fails → implement + wire at `filamentRenderer.ts:299` + remove the table
   clamp → run-passes (full suite) → commit.
 
 ## Task 4: strip the dead `clamp` machinery from `settingsTable`
