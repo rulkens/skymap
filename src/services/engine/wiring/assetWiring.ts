@@ -64,6 +64,7 @@ import { createFlowFieldSlot } from '../../loading/slots/flowFieldSlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
 import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
 import type { SourceType } from '../../../@types/data/SourceType';
+import type { SurveyId } from '../../../@types/engine/data/SurveyId';
 
 /**
  * The categories backed by the bulk `.ccat` catalog — their visibility
@@ -95,12 +96,17 @@ const externalFactory = (): never => {
 
 /** One demand+req row for a point source, marked as externally built. */
 function pointRow(source: SourceType): AssetWiringRow {
+  // The source → survey-id registry mapping is resolved once at row
+  // construction, like the volume-field handles above. The items record is
+  // keyed by SurveyId but the cast comes from the broader SourceType, so the
+  // optional chain is the runtime guard for a non-survey code.
+  const id = SOURCE_REGISTRY[source].id as SurveyId;
   return {
     key: source,
     built: 'external',
     factory: externalFactory,
     req: (tier) => ({ source, tier }),
-    demand: (ctx) => ctx.isVisible(source),
+    demand: (ctx) => ctx.settings.surveys.items[id]?.enabled === true,
   };
 }
 

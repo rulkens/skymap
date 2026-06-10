@@ -29,7 +29,6 @@ const fakeSettings = {} as unknown as EngineSettingsState;
 
 const ctx: DemandCtx = {
   settings: fakeSettings,
-  isVisible: (_s) => true,
   request: (_k) => false,
   slotState: (_k) => 'idle',
 };
@@ -41,11 +40,6 @@ describe('DemandCtx assignability', () => {
 
   it("request('paletteOpened') returns boolean", () => {
     const result: boolean = ctx.request('paletteOpened');
-    expect(typeof result).toBe('boolean');
-  });
-
-  it('isVisible accepts a SourceType value', () => {
-    const result: boolean = ctx.isVisible(Source.SDSS);
     expect(typeof result).toBe('boolean');
   });
 

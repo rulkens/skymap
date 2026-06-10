@@ -19,25 +19,21 @@
  *      `milkyWay.enabled`).  Most predicates start here.  Per-item gates
  *      read the type's items map directly — volumes via
  *      `settings.volumes.items[id]?.enabled`, structures via
- *      `settings.structures.items[cat].enabled`.
- *
- *   2. `isVisible` — answers "does the user want this survey on?": the
- *      survey's `settings.surveys.items[id].enabled` bit (intent, the same
- *      field `setSourceVisible` writes), keyed by `SourceType` code so
- *      wiring rows don't repeat the source → survey-id registry mapping.
- *      Demand follows intent uniformly across row types — surveys gate on
- *      `enabled` exactly as volumes, structures, and overlay layers do.
- *      The fade-tail drawMask is a render-side projection (`enabled ||
+ *      `settings.structures.items[cat].enabled`, surveys via
+ *      `settings.surveys.items[id].enabled` (wiring rows hoist the
+ *      source → survey-id registry mapping at construction).  The survey
+ *      bit is intent — the same field `setSourceVisible` writes; the
+ *      fade-tail drawMask is a render-side projection (`enabled ||
  *      fadeOpacity > 0`) and is not consulted: a just-disabled survey
  *      stops demanding immediately while it fades out.
  *
- *   3. `request` — one-shot transient flags (see `RequestKey`).  Covers
+ *   2. `request` — one-shot transient flags (see `RequestKey`).  Covers
  *      discrete UI events that have no persistent settings counterpart —
  *      opening the palette picker, requesting a lazy PGC-alias load, etc.
  *      The flag is never cleared; the demand loop's idle-guard stops the
  *      already-loaded slot from re-fetching, so a set-and-leave flag is safe.
  *
- *   4. `slotState` — the `LoadStateKind` of any slot in the registry.
+ *   3. `slotState` — the `LoadStateKind` of any slot in the registry.
  *      Used for two patterns described in ADR 0005 §3:
  *
  *        - *Companion join*: an asset that should only start loading after
@@ -62,12 +58,11 @@
  *
  * `DemandCtx` is consumed inside `shouldLoad` callbacks; those callbacks
  * must not mutate engine state.  The surfaces are read-only by construction:
- * `settings` is a `Readonly<EngineSettingsState>`, `isVisible`/`request`/
- * `slotState` are query functions that return read-only values.
+ * `settings` is a `Readonly<EngineSettingsState>`, `request`/`slotState` are
+ * query functions that return read-only values.
  */
 
 import type { EngineSettingsState } from '../settings/EngineSettingsState';
-import type { SourceType } from '../data/SourceType';
 import type { AssetKey } from './AssetKey';
 import type { LoadState } from './LoadState';
 import type { RequestKey } from './RequestKey';
@@ -75,8 +70,6 @@ import type { RequestKey } from './RequestKey';
 export type DemandCtx = {
   /** Read-only view of the user-facing rendering settings. */
   settings: Readonly<EngineSettingsState>;
-  /** Returns true when the given survey source is enabled (intent, not fade-tail visibility). */
-  isVisible: (s: SourceType) => boolean;
   /** Returns true when the given one-shot request flag is pending. */
   request: (k: RequestKey) => boolean;
   /**

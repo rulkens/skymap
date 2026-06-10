@@ -30,7 +30,7 @@ const sdssRow: AssetWiringRow<GalaxyCatalog, GalaxyCatalogReq> = {
   key: Source.SDSS,
   factory: (_deps: SlotDeps) => stubSlot,
   req: (tier) => ({ source: Source.SDSS, tier }),
-  demand: (ctx) => ctx.isVisible(Source.SDSS),
+  demand: (ctx) => ctx.settings.surveys.items.sdss?.enabled === true,
 };
 
 describe('AssetWiringRow assignability', () => {
@@ -48,10 +48,9 @@ describe('AssetWiringRow assignability', () => {
     expect(r.tier).toBe('medium');
   });
 
-  it('demand returns a boolean from ctx.isVisible', () => {
+  it('demand returns a boolean from the settings surveys read', () => {
     const fakeCtx = {
-      settings: {} as never,
-      isVisible: (_s: number) => true,
+      settings: { surveys: { items: { sdss: { enabled: true } } } } as never,
       request: (_k: string) => false,
       slotState: (_k: unknown) => 'idle' as const,
     };
