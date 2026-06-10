@@ -124,26 +124,45 @@ describe('setSourceVisible — fade orchestration', () => {
     // covers it.  Without this call the renderer serves one stale frame after
     // the fade completes — the last frame with opacity > 0 for a fade-out, or
     // the first frame with the cleared bit not yet read.
+    //
+    // We use a manually-controlled deferred rather than an instantly-resolving
+    // mock so the assertion cannot be fooled by a regression of the form
+    //   const p = fadeTo(...); requestRender(); await p;
+    // which would call requestRender before the fade resolves and still pass an
+    // invocationCallOrder-based check.
     const fx = makeFixture(0b11111);
 
+    let resolveFade!: () => void;
+    const fadePromise = new Promise<void>((r) => {
+      resolveFade = r;
+    });
+    (fx.fades.fadeTo as ReturnType<typeof vi.fn>).mockReturnValue(fadePromise);
+
     const schedulerSpy = fx.state.subsystems.scheduler.requestRender as ReturnType<typeof vi.fn>;
-    schedulerSpy.mockClear();
 
-    await setSourceVisibleForTest(fx.state as never, { cb: {} } as never, Source.SDSS, false);
+    // Start the toggle without awaiting — the fade is now suspended.
+    const done = setSourceVisibleForTest(
+      fx.state as never,
+      { cb: {} } as never,
+      Source.SDSS,
+      false,
+    );
 
-    // fadeTo must have been called:
-    expect(fx.fades.fadeTo).toHaveBeenCalledOnce();
+    // Flush microtasks so any synchronous-path wakes have already landed.
+    // Baseline: the fixture produces no pre-fade requestRender calls, so the
+    // count should be 0 here.  The comment below guards against a reintroduced
+    // pre-fade wake, not against the fixture's known state.
+    await Promise.resolve();
+    const callsBeforeFadeResolves = schedulerSpy.mock.calls.length;
+    // No post-fade wake should have arrived yet — the fade is still pending.
+    expect(callsBeforeFadeResolves).toBe(0);
 
-    // The scheduler's LAST call must come AFTER the fadeTo call — i.e. after
-    // the fade resolved (post-fade wake), not only before it (the immediate
-    // pickMask wake).  invocationCallOrder is a monotonically-increasing
-    // integer Vitest assigns to every mock call globally; a higher value means
-    // "called later".
-    const fadeOrder = (fx.fades.fadeTo as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0]!;
-    const calls = schedulerSpy.mock.invocationCallOrder;
-    const lastSchedulerOrder = calls[calls.length - 1]!;
+    // Resolve the deferred fade and let the continuation run.
+    resolveFade();
+    await done;
 
-    expect(lastSchedulerOrder).toBeGreaterThan(fadeOrder);
+    // Exactly one additional wake must have arrived after the fade resolved.
+    expect(schedulerSpy.mock.calls.length).toBe(callsBeforeFadeResolves + 1);
 
     // And the drawMask bit must have been cleared (opacityOf returns 0):
     expect((fx.state.sources.drawMask >> Source.SDSS) & 1).toBe(0);

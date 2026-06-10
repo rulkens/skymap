@@ -351,7 +351,7 @@ strand mid-ramp until some unrelated event woke the loop.
 Every removal below has its replacement wake landed (Tasks 1-2). Re-verify
 each line before editing.
 
-- [ ] **Contract test first (the MUST-KEEP guarantee):** in the
+- [x] **Contract test first (the MUST-KEEP guarantee):** in the
   setSourceVisible test file, add
   `setSourceVisible wakes after the fade completes (final drawMask write lands on a rendered frame)`
   — fades stub with `fadeTo: vi.fn().mockResolvedValue(undefined)` and
@@ -360,27 +360,27 @@ each line before editing.
   `mock.invocationCallOrder`) and the drawMask bit is cleared. This pins
   `engine.ts:241` so a future "cleanup" can't silently drop it. Run it — it
   should pass against the current tree (it encodes current behaviour).
-- [ ] Remove the redundant wakes (and their now-stale "wake the render loop"
+- [x] Remove the redundant wakes (and their now-stale "wake the render loop"
   comments): `tweenToGalaxy.ts:113-115`, `tweenToStructure.ts:47-49`,
   `cameraSnapshot.ts:137` (also fix the module-header mention of "the trailing
   `requestRender`" at `:21-22` — `tweens.start` now owns the wake),
   `engine.ts:1337`, `engine.ts:1351`, `engine.ts:1398`, `engine.ts:1008`,
   `engine.ts:219`.
-- [ ] Add the didactic KEEP comment at `engine.ts:241`: *essential wake — the
+- [x] Add the didactic KEEP comment at `engine.ts:241`: *essential wake — the
   final `drawMask` write happens in a microtask after the last fade frame's
   `stillAnimating` evaluation (the fade promise resolves from `fades.tick`
   inside the frame body), so no channel wake covers it; without this the final
   frame renders with the stale mask.*
-- [ ] Add the didactic KEEP comment at `cameraSnapshot.ts:95`: *essential wake
+- [x] Add the didactic KEEP comment at `cameraSnapshot.ts:95`: *essential wake
   — an instant programmatic camera write; camera drivers only run inside
   frames, and no fade/tween/slot/selection fires here, so the snap is its own
   channel mouth.*
-- [ ] Grep `tests/` for assertions that the removed sites woke the scheduler
+- [x] Grep `tests/` for assertions that the removed sites woke the scheduler
   (e.g. milkyWay/filaments/volumes setter tests asserting `requestRender`);
   update them to assert the new truth (wake arrives via fadeTo / boringSetter,
   or simply drop the direct-call assertion).
-- [ ] Main thread: `npm test`; `npm run typecheck`.
-- [ ] Commit
+- [x] Main thread: `npm test`; `npm run typecheck`.
+- [x] Commit
   `refactor(engine): channel-1 owners wake the scheduler; drop caller-side wakes`
   — stage the five src files + touched test files.
 
