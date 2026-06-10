@@ -60,7 +60,11 @@ import { selectFilamentIntensity } from '../../services/engine/settingsStore/sel
 import { selectVolumesEnabled } from '../../services/engine/settingsStore/selectors/selectVolumesEnabled';
 import { selectVolumeFieldItems } from '../../services/engine/settingsStore/selectors/selectVolumeFieldItems';
 import { selectFlow } from '../../services/engine/settingsStore/selectors/selectFlow';
+import { selectStructureItems } from '../../services/engine/settingsStore/selectors/selectStructureItems';
+import { selectSurveyItems } from '../../services/engine/settingsStore/selectors/selectSurveyItems';
 import { projectVolumeFieldRows } from '../../services/engine/settingsStore/projectVolumeFieldRows';
+import { projectMarkerCategoryVisibility } from '../../services/engine/settingsStore/projectMarkerCategoryVisibility';
+import { projectLabelCategoryVisibility } from '../../services/engine/settingsStore/projectLabelCategoryVisibility';
 import { seedVolumeFields } from '../../data/volumeFieldDefaults';
 import {
   DEFAULT_POINT_SIZE_PX,
@@ -79,7 +83,12 @@ import {
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
 import { ALL_VISIBLE_MASK } from '../../utils/sourceMask';
 import { buildStaticAnchorStructures } from '../../data/buildStaticAnchorStructures';
-import { isStructureCategory } from '../../data/structureCategories';
+import { isStructureCategory, STRUCTURE_CATEGORIES } from '../../data/structureCategories';
+import { SURVEY_IDS } from '../../data/surveyIds';
+import type { StructureCategory } from '../../@types/engine/data/StructureCategory';
+import type { SurveyId } from '../../@types/engine/data/SurveyId';
+import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
+import type { SurveyItemSettings } from '../../@types/settings/SurveyItemSettings';
 import { DebugPanel } from '../DebugPanel/DebugPanel';
 import { isWebHIDSupported } from '../../services/input/spaceMouse';
 
@@ -94,6 +103,23 @@ import { isWebHIDSupported } from '../../services/input/spaceMouse';
  */
 const VOLUME_FIELD_ITEMS_DEFAULT = seedVolumeFields();
 
+/**
+ * Stable fallbacks for the structure / survey item selectors during the
+ * null-store window (before `handleRef` lands). Same rationale as
+ * `VOLUME_FIELD_ITEMS_DEFAULT`: `useSettingsStore` keys a `useCallback` on the
+ * fallback, so it MUST be a single stable reference — building either record
+ * inline would mint a fresh object each render and re-fire the subscription.
+ * Both seed every item to fully visible (`enabled` + `labelEnabled` true),
+ * matching the engine's construction default so the first paint of the panel
+ * checkboxes matches engine truth.
+ */
+const STRUCTURE_ITEMS_DEFAULT = Object.fromEntries(
+  STRUCTURE_CATEGORIES.map((c) => [c, { enabled: true, labelEnabled: true }]),
+) as Record<StructureCategory, StructureItemSettings>;
+const SURVEY_ITEMS_DEFAULT = Object.fromEntries(
+  SURVEY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+) as Record<SurveyId, SurveyItemSettings>;
+
 export function App(): React.ReactElement {
   const {
     settings,
@@ -101,13 +127,7 @@ export function App(): React.ReactElement {
     setSpaceMouseSensitivity,
   } = useEngineSettings();
 
-  const {
-    labelCategoryVisibility,
-    markerCategoryVisibility,
-    filamentCounts,
-    spaceMouseConnected,
-    spaceMouseSensitivity,
-  } = settings;
+  const { filamentCounts, spaceMouseConnected, spaceMouseSensitivity } = settings;
 
   // SettingsPanel's SpaceMouse section appears only when WebHID is
   // available AND a previously-authorised puck is attached.  The other
@@ -223,6 +243,31 @@ export function App(): React.ReactElement {
     // science volumes (the dev console + handle.volumes.getState() still see them).
     () => projectVolumeFieldRows(volumeFieldItems).filter((f) => !f.handle.startsWith('debug-')),
     [volumeFieldItems],
+  );
+
+  // Structure / label visibility reads live off the engine-owned store, through
+  // the same STABLE-ref pattern as the volume rows. The two flat
+  // `Record<Category, boolean>` views the panel renders are DERIVED records, so a
+  // selector that built them per call would mint a fresh object each
+  // `getSnapshot` and break `useSyncExternalStore`'s stability contract. Instead
+  // the selectors return the underlying item Records verbatim
+  // (`selectStructureItems` / `selectSurveyItems` — stable under copy-on-write,
+  // changing only when a category/survey row actually changes), and the `useMemo`
+  // projections build the marker + label records keyed on those stable refs. The
+  // marker axis spans structure categories only; the label axis spans structure
+  // categories PLUS the `famousGalaxy` survey (its label lives on the survey item
+  // row), so its projection takes both Records. Fallbacks are the all-visible
+  // construction seeds, so first paint matches engine truth before the handle
+  // lands.
+  const structureItems = useSettingsStore(handleRef, selectStructureItems, STRUCTURE_ITEMS_DEFAULT);
+  const surveyItems = useSettingsStore(handleRef, selectSurveyItems, SURVEY_ITEMS_DEFAULT);
+  const markerCategoryVisibility = useMemo(
+    () => projectMarkerCategoryVisibility(structureItems),
+    [structureItems],
+  );
+  const labelCategoryVisibility = useMemo(
+    () => projectLabelCategoryVisibility(structureItems, surveyItems),
+    [structureItems, surveyItems],
   );
 
   // Flow overlay reads live off the engine-owned store. `selectFlow` returns the

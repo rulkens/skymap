@@ -1171,7 +1171,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setDepthFade: (enabled) => boringSetters.setDepthFadeEnabled(enabled),
       setHighlightFallback: (enabled) => boringSetters.setHighlightFallback(enabled),
       setRealOnly: (enabled) => boringSetters.setRealOnlyMode(enabled),
-      setLabelEnabled: (survey, enabled) => setSurveyLabelEnabled(state, cb, survey, enabled),
+      setLabelEnabled: (survey, enabled) =>
+        setSurveyLabelEnabled(state, settingsStore, survey, enabled),
     },
     tonemap: {
       setExposure: (value) => boringSetters.setExposure(value),
@@ -1274,11 +1275,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
     structures: {
       // Two setters, one per independent structure visibility axis. Each writes
-      // the authoritative `settings.structures.items[category]` row, fades the
-      // matching FadeRegistry handle, and echoes a fresh derived record.
-      setItemEnabled: (category, visible) => setStructureItemEnabled(state, cb, category, visible),
+      // the authoritative `settings.structures.items[category]` row THROUGH the
+      // store (so React's `selectStructureItems` subscriber wakes) and fades the
+      // matching FadeRegistry handle.
+      setItemEnabled: (category, visible) =>
+        setStructureItemEnabled(state, settingsStore, category, visible),
       setLabelEnabled: (category, visible) =>
-        setStructureLabelEnabled(state, cb, category, visible),
+        setStructureLabelEnabled(state, settingsStore, category, visible),
     },
     volumes: {
       setMasterEnabled: setVolumesEnabled,

@@ -51,10 +51,6 @@
  */
 
 import { useState } from 'react';
-import type { LabelCategory } from '../@types/engine/data/LabelCategory';
-import type { StructureCategory } from '../@types/engine/data/StructureCategory';
-import { LABEL_CATEGORIES } from '../data/labelCategories';
-import { STRUCTURE_CATEGORIES } from '../data/structureCategories';
 import { DEFAULT_SPACE_MOUSE_SENSITIVITY } from '../data/defaults';
 import type { UseEngineSettingsReturn } from '../@types/settings/UseEngineSettingsReturn';
 
@@ -68,12 +64,15 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   // highlightFallback, realOnly, and the derived visibleSourceMask), the
   // tonemap cluster (exposure, curve), camera auto-rotate, the galaxy-thumbnail
   // master toggle, the Milky-Way disk toggle, the filaments cluster (enabled,
-  // intensity), the flow overlay slice, and the debug overlays (showPickBuffer,
-  // showDiskRadiusRing) moved to the engine-owned settings store — the thumbnail
-  // and milkyWay toggles have no React consumer (the thumbnail panel surface was
-  // evicted; milkyWay's handle setter has no panel caller); App reads the
-  // filaments cluster, the flow slice (via `selectFlow`), and the debug toggles
-  // via `useSettingsStore` selectors, so no mirror cell or echo lives here.
+  // intensity), the flow overlay slice, the debug overlays (showPickBuffer,
+  // showDiskRadiusRing), and the structures / labels cluster (per-category
+  // marker + label visibility) moved to the engine-owned settings store — the
+  // thumbnail and milkyWay toggles have no React consumer (the thumbnail panel
+  // surface was evicted; milkyWay's handle setter has no panel caller); App reads
+  // the filaments cluster, the flow slice (via `selectFlow`), the debug toggles,
+  // and the structure/survey item records (via `selectStructureItems` /
+  // `selectSurveyItems` + `useMemo` projections) via `useSettingsStore`
+  // selectors, so no mirror cell or echo lives here.
 
   // ── App-owned optimistic values (no engine echo) ─────────────────────
 
@@ -109,36 +108,9 @@ export function useEngineSettings(): UseEngineSettingsReturn {
     DEFAULT_SPACE_MOUSE_SENSITIVITY,
   );
 
-  // ── Per-category visibility (two independent axes) ──────────────────
-  // Engine echoes the full per-axis record on every matching setter call
-  // (plus once at init via seedSettingsCallbacks).  Label and marker
-  // visibility are kept as two separate records on purpose: conflating
-  // them into one axis lets a category hidden on one axis silently
-  // suppress it on the other.  Both seed to "all categories on" so first
-  // paint matches the engine default.  The keys are DERIVED from each
-  // axis's category set — labels span `LABEL_CATEGORIES` (famousGalaxy +
-  // structures), markers span `STRUCTURE_CATEGORIES` only (no famous ring).
-  const [labelCategoryVisibility, setLabelCategoryVisibility] = useState<
-    Record<LabelCategory, boolean>
-  >(
-    () =>
-      Object.fromEntries(LABEL_CATEGORIES.map((c) => [c, true])) as Record<LabelCategory, boolean>,
-  );
-  const [markerCategoryVisibility, setMarkerCategoryVisibility] = useState<
-    Record<StructureCategory, boolean>
-  >(
-    () =>
-      Object.fromEntries(STRUCTURE_CATEGORIES.map((c) => [c, true])) as Record<
-        StructureCategory,
-        boolean
-      >,
-  );
-
   return {
     settings: {
       filamentCounts,
-      labelCategoryVisibility,
-      markerCategoryVisibility,
       spaceMouseConnected,
       spaceMouseSensitivity,
     },
@@ -148,30 +120,23 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       // The surveys + sources + tonemap echo sub-bags are gone, and so are the
       // camera auto-rotate echo, the bias (mode / absMagLimit) echoes, the
       // thumbnails echo, the milkyWay echo, the filaments enabled/intensity
-      // echoes, the debug echoes (showPickBuffer / showDiskRadiusRing), and the
-      // volumes echo (master + per-field) — those clusters live in the
-      // engine-owned store (the thumbnail + milkyWay toggles have no React
-      // consumer at all; App reads the filaments cluster + debug toggles via
-      // `useSettingsStore` selectors, the volumes master via `selectVolumesEnabled`
-      // and the per-field rows via `selectVolumeFieldItems` + a `useMemo`
-      // projection), so there's no mirror to keep in sync from a callback.
-      // (Camera EVENTS — focus / camera / scale — are not settings and are wired
-      // by `useEngine`, not here.)
+      // echoes, the debug echoes (showPickBuffer / showDiskRadiusRing), the
+      // volumes echo (master + per-field), and the labels echoes (per-category
+      // marker + label visibility) — those clusters live in the engine-owned
+      // store (the thumbnail + milkyWay toggles have no React consumer at all;
+      // App reads the filaments cluster + debug toggles via `useSettingsStore`
+      // selectors, the volumes master via `selectVolumesEnabled` and the
+      // per-field rows via `selectVolumeFieldItems` + a `useMemo` projection, and
+      // the marker/label records via `selectStructureItems` / `selectSurveyItems`
+      // + `useMemo` projections), so there's no mirror to keep in sync from a
+      // callback. (Camera EVENTS — focus / camera / scale — are not settings and
+      // are wired by `useEngine`, not here.)
       filaments: {
         // `onReady` is an EVENT, not a settings mirror: the engine fires it once
         // with the strip/vertex counts after `filaments.bin` lands. The toggle +
         // intensity SETTINGS migrated to the store; this count payload has no
         // store home, so the subscription stays.
         onReady: (stripCount, vertexCount) => setFilamentCounts({ stripCount, vertexCount }),
-      },
-      labels: {
-        // Engine echoes the full record on every toggle; setting React
-        // state to the same shape keeps the checkboxes in sync from a
-        // single subscription.  Spread to drop the readonly wrapper
-        // for React's mutable useState slot.  Two echoes for the two
-        // independent axes — flipping one does NOT re-emit the other.
-        onLabelCategoryVisibilityChange: (v) => setLabelCategoryVisibility({ ...v }),
-        onMarkerCategoryVisibilityChange: (v) => setMarkerCategoryVisibility({ ...v }),
       },
       input: {
         // SpaceMouse connection echo — fires for pair / explicit

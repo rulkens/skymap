@@ -1,16 +1,12 @@
 /**
  * seedSettingsCallbacks — unit tests for the settings-callback fan-out.
  *
- * The helper is a pure dispatch with no engine state, so we can exercise
- * it with a stub `EngineCallbacks` populated with vi.fn() spies and
- * assert per-callback call count + argument.  We also verify the
- * optional-chaining behaviour: callbacks left undefined are silently
- * skipped (i.e. no exception, no call).
- *
- * H5 task 11: every echo lives on its nested sub-bag address now —
- * `cb.surveys?.onSizeChange?.(…)` not `cb.onPointSizeChange?.(…)`.
- * The test fixtures mirror that namespacing so a regression in either
- * the dispatch or the nested name shows up here.
+ * The helper is a pure dispatch with no engine state. Every settings cluster
+ * has migrated to the engine-owned store, so the fan-out is now an inert husk:
+ * it fires NOTHING. The tests assert that contract — no optional callback rings,
+ * no required callback rings, and the call never throws — so a regression that
+ * reintroduces an echo (or breaks the optional-chaining safety) shows up here.
+ * Phase 3 deletes the helper + its `SettingsCallbackSeed` argument together.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -37,19 +33,6 @@ function makeSnapshot(): SettingsCallbackSeed {
     toneMapCurve: ToneMapCurve.Reinhard,
     exposure: 1.2,
     visibleSourceMask: 0b111,
-    labelCategoryVisibility: {
-      cluster: true,
-      supercluster: true,
-      famousGalaxy: true,
-      void: true,
-      group: true,
-    },
-    markerCategoryVisibility: {
-      cluster: true,
-      supercluster: true,
-      void: true,
-      group: true,
-    },
   };
 }
 
@@ -67,8 +50,7 @@ function makeRequiredCallbacks(): EngineCallbacks {
 }
 
 describe('seedSettingsCallbacks', () => {
-  it('fires every optional callback exactly once with its snapshot value', () => {
-    const snap = makeSnapshot();
+  it('fires NO optional settings callback — every cluster lives in the store', () => {
     const surveys = {
       onSizeChange: vi.fn(),
       onBrightnessChange: vi.fn(),
@@ -80,9 +62,7 @@ describe('seedSettingsCallbacks', () => {
       onExposureChange: vi.fn(),
       onCurveChange: vi.fn(),
     };
-    const camera = {
-      onAutoRotateChange: vi.fn(),
-    };
+    const camera = { onAutoRotateChange: vi.fn() };
     const thumbnails = { onEnabledChange: vi.fn() };
     const milkyWay = { onEnabledChange: vi.fn() };
     const debug = {
@@ -93,9 +73,7 @@ describe('seedSettingsCallbacks', () => {
       onModeChange: vi.fn(),
       onAbsMagLimitChange: vi.fn(),
     };
-    const sources = {
-      onMaskChange: vi.fn(),
-    };
+    const sources = { onMaskChange: vi.fn() };
     const labels = {
       onLabelCategoryVisibilityChange: vi.fn(),
       onMarkerCategoryVisibilityChange: vi.fn(),
@@ -114,45 +92,33 @@ describe('seedSettingsCallbacks', () => {
       labels,
     };
 
-    seedSettingsCallbacks(cb, snap);
+    seedSettingsCallbacks(cb, makeSnapshot());
 
-    // The surveys cluster + the derived source mask, and the tonemap cluster
-    // (curve / exposure), migrated to the engine-owned store; the seed no longer
-    // fires their echoes (React reads them via `useSettingsStore` selectors,
-    // seeded from the same defaults).
-    expect(surveys.onSizeChange).not.toHaveBeenCalled();
-    expect(surveys.onBrightnessChange).not.toHaveBeenCalled();
-    expect(surveys.onHighlightFallbackChange).not.toHaveBeenCalled();
-    expect(surveys.onRealOnlyChange).not.toHaveBeenCalled();
-    expect(surveys.onDepthFadeChange).not.toHaveBeenCalled();
-    expect(sources.onMaskChange).not.toHaveBeenCalled();
-    expect(tonemap.onCurveChange).not.toHaveBeenCalled();
-    expect(tonemap.onExposureChange).not.toHaveBeenCalled();
-    // Camera auto-rotate, the bias cluster (mode / absMagLimit), and the
-    // galaxy-thumbnail toggle migrated to the engine-owned store too; the seed
-    // no longer fires their echoes.
-    expect(camera.onAutoRotateChange).not.toHaveBeenCalled();
-    expect(bias.onModeChange).not.toHaveBeenCalled();
-    expect(bias.onAbsMagLimitChange).not.toHaveBeenCalled();
-    expect(thumbnails.onEnabledChange).not.toHaveBeenCalled();
-    // The Milky-Way disk toggle migrated to the engine-owned store too; the seed
-    // never fired its echo (the toggle has no React consumer), so it stays unrung.
-    expect(milkyWay.onEnabledChange).not.toHaveBeenCalled();
-    // The debug overlays (showPickBuffer / showDiskRadiusRing) migrated to the
-    // engine-owned store too; the seed no longer fires their echoes (the
-    // DebugPanel reads them via `useSettingsStore` selectors).
-    expect(debug.onShowPickBufferChange).not.toHaveBeenCalled();
-    expect(debug.onShowDiskRadiusRingChange).not.toHaveBeenCalled();
-    // Each echo carries a fresh copy of the record, not the literal
-    // reference — assert by value so the freshness contract stays
-    // load-bearing.  Label and marker visibility are two independent
-    // axes (split 2026-05-19, audit Q11); both fire at seed.
-    expect(labels.onLabelCategoryVisibilityChange).toHaveBeenCalledExactlyOnceWith(
-      snap.labelCategoryVisibility,
-    );
-    expect(labels.onMarkerCategoryVisibilityChange).toHaveBeenCalledExactlyOnceWith(
-      snap.markerCategoryVisibility,
-    );
+    // Every echo migrated to the engine-owned store (React reads each cluster
+    // via `useSettingsStore` selectors, seeded from the same defaults), so the
+    // seed rings nothing. The labels cluster was the last holdout; its
+    // per-category marker + label records are now projected on read.
+    for (const spy of [
+      surveys.onSizeChange,
+      surveys.onBrightnessChange,
+      surveys.onDepthFadeChange,
+      surveys.onHighlightFallbackChange,
+      surveys.onRealOnlyChange,
+      tonemap.onExposureChange,
+      tonemap.onCurveChange,
+      camera.onAutoRotateChange,
+      thumbnails.onEnabledChange,
+      milkyWay.onEnabledChange,
+      debug.onShowPickBufferChange,
+      debug.onShowDiskRadiusRingChange,
+      bias.onModeChange,
+      bias.onAbsMagLimitChange,
+      sources.onMaskChange,
+      labels.onLabelCategoryVisibilityChange,
+      labels.onMarkerCategoryVisibilityChange,
+    ]) {
+      expect(spy).not.toHaveBeenCalled();
+    }
   });
 
   it('does not fire required callbacks (status/hover/select) — those have separate lifecycles', () => {
@@ -167,27 +133,7 @@ describe('seedSettingsCallbacks', () => {
 
   it('silently no-ops when optional callbacks are undefined', () => {
     const cb: EngineCallbacks = makeRequiredCallbacks();
-    // Call should not throw — optional-chaining covers the undefined case.
+    // Call should not throw — the husk touches no callback.
     expect(() => seedSettingsCallbacks(cb, makeSnapshot())).not.toThrow();
-  });
-
-  it('skips undefined callbacks individually without affecting siblings', () => {
-    // Mix: one optional callback present, the rest undefined.  Verifies
-    // the present one fires while the absent ones don't throw.  Uses a
-    // still-firing settings echo (`labels.onMarkerCategoryVisibilityChange`) —
-    // the debug toggles migrated to the store and no longer seed through an
-    // echo.
-    const snap = makeSnapshot();
-    const onMarkerCategoryVisibilityChange = vi.fn();
-    const cb: EngineCallbacks = {
-      ...makeRequiredCallbacks(),
-      labels: { onMarkerCategoryVisibilityChange },
-    };
-
-    seedSettingsCallbacks(cb, snap);
-
-    expect(onMarkerCategoryVisibilityChange).toHaveBeenCalledExactlyOnceWith(
-      snap.markerCategoryVisibility,
-    );
   });
 });

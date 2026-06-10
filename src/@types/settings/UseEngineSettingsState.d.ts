@@ -26,9 +26,6 @@
  * canonical name unchanged.
  */
 
-import type { LabelCategory } from '../engine/data/LabelCategory';
-import type { StructureCategory } from '../engine/data/StructureCategory';
-
 export type UseEngineSettingsState = {
   // The surveys cluster (pointSize, brightness, depthFade, highlightFallback,
   // realOnly, visibleSourceMask), the tonemap cluster (exposure, curve), camera
@@ -47,7 +44,11 @@ export type UseEngineSettingsState = {
   // cluster (master `enabled` + per-field `items`) also moved to the store;
   // App.tsx reads the master via `selectVolumesEnabled` and the per-field rows
   // via `selectVolumeFieldItems` + a `useMemo` projection, so neither is
-  // mirrored here.
+  // mirrored here. The structures / labels cluster (per-category marker + label
+  // visibility, plus the famousGalaxy survey label) also moved to the store;
+  // App.tsx reads the marker record via `selectStructureItems` + a projection
+  // and the label record via `selectStructureItems` + `selectSurveyItems` + a
+  // projection, so neither derived record is mirrored here.
   /**
    * Strip + vertex counts from the cosmic-web `filaments.bin`, or `null` until
    * the engine fires `filaments.onReady` (once, after the optional file lands).
@@ -56,25 +57,6 @@ export type UseEngineSettingsState = {
    * migrated to the engine-owned store.
    */
   filamentCounts: { stripCount: number; vertexCount: number } | null;
-  /**
-   * Per-category visibility for the TEXT LABEL overlay.  A React-side mirror
-   * of the engine's derived label-visibility record (structure categories
-   * from `structures.items[cat].labelEnabled`, famousGalaxy from the engine's
-   * flat label record); the SettingsPanel reads from it to render the
-   * per-category label checkboxes.  Engine echoes the whole record on every
-   * label toggle so the UI stays in sync from a single subscription.
-   */
-  labelCategoryVisibility: Record<LabelCategory, boolean>;
-  /**
-   * Per-category visibility for the MARKER overlay (ring + halo), keyed
-   * by `StructureCategory` only.  A React-side mirror of the engine's derived
-   * marker-visibility record (each entry from `structures.items[cat].enabled`).
-   * Today there is no per-category marker UI — every entry stays `true` unless
-   * the Structures master toggle flips them as a batch.  Kept in state
-   * regardless so the React shell can present a snapshot and so the Structures
-   * toggle has a stable mirror to subscribe to.
-   */
-  markerCategoryVisibility: Record<StructureCategory, boolean>;
   /**
    * Whether a 3Dconnexion SpaceMouse is currently paired and feeding
    * input reports.  Engine echoes this through

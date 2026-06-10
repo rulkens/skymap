@@ -230,19 +230,12 @@ export type EngineCallbacks = {
   filaments?: { onReady?: (stripCount: number, vertexCount: number) => void };
 
   /**
-   * Echoes for the two independent structure visibility axes
-   * (label-text vs marker-glyph).  The two records are deliberately
-   * separate — flipping one does NOT fire the other.  Label-text and
-   * marker-glyph visibility are independent because a category's ring
-   * can be hidden while its label still renders, and vice versa.
-   *
-   * The engine fires each callback once at init (with the default
-   * record — all categories visible) and once per matching structure
-   * toggle (`handle.structures.setItemEnabled(...)` /
-   * `setLabelEnabled(...)`) or famous-label toggle
-   * (`handle.surveys.setLabelEnabled('famousGalaxy', ...)`). The records are
-   * derived projections of `settings.structures.items`, so each echo
-   * carries the freshly-derived view.
+   * Echoes for the two independent structure visibility axes (label-text vs
+   * marker-glyph). INERT: the structures / labels cluster moved to the
+   * engine-owned settings store, so nothing fires these any more — React reads
+   * the per-category records via `selectStructureItems` / `selectSurveyItems` +
+   * `useMemo` projections. The address is kept as a husk so a stray subscriber
+   * still typechecks; Phase 3 deletes it.
    */
   labels?: {
     onLabelCategoryVisibilityChange?: (

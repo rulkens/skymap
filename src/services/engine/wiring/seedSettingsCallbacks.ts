@@ -40,24 +40,13 @@ import type { SettingsCallbackSeed } from '../../../@types/engine/wiring/Setting
  *
  * Order is cosmetic — subscribers must not depend on it.
  */
-export function seedSettingsCallbacks(cb: EngineCallbacks, snapshot: SettingsCallbackSeed): void {
-  // Each echo lands on its `EngineCallbacks` sub-bag address so React
-  // consumers (subscribed via `useEngineSettings`) observe the
-  // engine-truth defaults exactly once at startup; optional-chaining
-  // keeps every fire safe when a consumer doesn't subscribe to that bag.
-  // The surveys cluster (size / brightness / highlightFallback / realOnly /
-  // depthFade) + the derived source mask, the tonemap cluster (exposure /
-  // curve), camera auto-rotate, the bias cluster (mode / absMagLimit), the
-  // galaxy-thumbnail toggle, and the debug overlays (showPickBuffer /
-  // showDiskRadiusRing) no longer seed through echoes — those clusters live in
-  // the engine-owned store (the thumbnail toggle has no React consumer at all;
-  // the DebugPanel reads the debug toggles via `useSettingsStore` selectors),
-  // which starts from the same `data/defaults.ts` seed.
-  // Fresh copies of each record so subscribers can treat every emission as an
-  // immutable snapshot — same idiom as the live setter echoes. Label and marker
-  // visibility are independent axes; the seed records are already derived from
-  // `structures.items` (see deriveMarker/LabelCategoryVisibility), so both seed
-  // the React mirror at init.
-  cb.labels?.onLabelCategoryVisibilityChange?.({ ...snapshot.labelCategoryVisibility });
-  cb.labels?.onMarkerCategoryVisibilityChange?.({ ...snapshot.markerCategoryVisibility });
+export function seedSettingsCallbacks(_cb: EngineCallbacks, _snapshot: SettingsCallbackSeed): void {
+  // Every settings cluster now lives in the engine-owned store, seeded from the
+  // same `data/defaults.ts` values React reads through `useSettingsStore`
+  // selectors — so there is no echo left to fire at startup. The structures /
+  // labels cluster was the last holdout; its per-category marker + label
+  // visibility records are now projected on read (`selectStructureItems` /
+  // `selectSurveyItems` + the `useMemo` projections), not seeded through a
+  // `cb.labels` echo. The helper + its `SettingsCallbackSeed` argument are kept
+  // as an inert husk for one migration step; Phase 3 deletes them together.
 }

@@ -412,20 +412,23 @@ per-category `fadeTo` — markerLayer / labelLayer — the cosmetic ramp, upstre
 unaffected). The echoes delete; React reads `useStore(handleRef,
 selectMarker/LabelCategoryVisibility)`.
 
-- [ ] Reducer tests: `setStructureItemEnabled` flips `items[cat].enabled`
+- [x] Reducer tests: `setStructureItemEnabled` flips `items[cat].enabled`
       copy-on-write; `setStructureLabelEnabled` flips `items[cat].labelEnabled`;
       `setSurveyLabelEnabled` flips `surveys.items[id].labelEnabled`.
-- [ ] Selector tests: `selectMarkerCategoryVisibility` reproduces
-      `deriveMarkerCategoryVisibility` for a known items state;
-      `selectLabelCategoryVisibility` reproduces `deriveLabelCategoryVisibility`
-      (structure + famousGalaxy partition). Assert against the OLD helpers' output
-      before deleting them (parity).
-- [ ] Run-fails → implement selectors + actions → point the three setters at the
-      actions (keep the `fadeTo` calls; drop the `cb.labels?.…` echoes) → delete the
-      `markerCategoryVisibility` / `labelCategoryVisibility` cells + the
-      `engineCallbacks.labels` subscriptions + the two `seedSettingsCallbacks` lines
-      → switch App.tsx structure/label reads to `useStore`.
-- [ ] Run-passes (full suite — `setCategoryVisibleFade` test unaffected) → commit.
+- [x] Selector + projection tests (stable-ref pattern, per the volumes precedent):
+      `selectStructureItems` / `selectSurveyItems` return the raw item Records
+      (stable-ref contract); `projectMarkerCategoryVisibility` reproduces
+      `deriveMarkerCategoryVisibility` for a known items state, and
+      `projectLabelCategoryVisibility` reproduces `deriveLabelCategoryVisibility`
+      (structure + famousGalaxy partition) — both assert against the OLD helpers'
+      output (parity, Phase-3-disposable) AND have self-contained cases that
+      survive the helper deletion.
+- [x] Run-fails → implement selectors + projections + reducers + actions → point
+      the three setters at the actions (keep the `fadeTo` calls; drop the
+      `cb.labels?.…` echoes) → delete the `markerCategoryVisibility` /
+      `labelCategoryVisibility` cells + the `engineCallbacks.labels` subscriptions + the two `seedSettingsCallbacks` lines → switch App.tsx structure/label
+      reads to `useSettingsStore` (stable-items selectors + `useMemo` projections).
+- [x] Run-passes (full suite — `setCategoryVisibleFade` test unaffected) → commit.
 
 ---
 
