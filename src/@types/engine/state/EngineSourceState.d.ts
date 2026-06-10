@@ -4,16 +4,14 @@
  *
  * ### What this sub-bag owns
  *
- *   - `pickMask` — 32-bit per-source bitmask that the picker reads.  Flipped
- *                   IMMEDIATELY when the user toggles a survey off — a fading-
- *                   out layer must not be clickable even while it's still
- *                   visually present.
- *   - `drawMask` — 32-bit per-source bitmask that the renderer's per-frame
- *                   draw loop reads.  Flipped AFTER fade-out completes (kept
- *                   set during fade-out so the layer keeps drawing with
- *                   falling opacity) or AT the START of fade-in (so the
- *                   renderer begins drawing the layer even though opacity is
- *                   currently 0).  Updated by `setSourceVisible`.
+ *   - `pickMask` / `drawMask` — 32-bit per-source bitmasks read by the picker
+ *                   and the renderer's per-frame draw loop.  Both are DERIVED
+ *                   OUTPUTS: `deriveSourceMasks` recomputes them every frame
+ *                   (and synchronously inside `setSourceVisible` on a toggle)
+ *                   from each survey's `settings.surveys.items[id].enabled`
+ *                   flag + that survey's live fade opacity.  No setter writes
+ *                   them directly — the settings record is the single source
+ *                   of truth, and these masks are a compiled projection of it.
  *
  * ### Why a separate type
  *
@@ -28,17 +26,18 @@ import type { Tier } from '../../data/Tier';
 
 export type EngineSourceState = {
   /**
-   * pickMask — clicked layer is non-clickable IMMEDIATELY on toggle off.
-   * The picker reads this mask; a fading-out layer is excluded from
-   * the pick output even while it's still visually fading. Flipped
-   * synchronously in setSourceVisible.
+   * pickMask — derived output, packed from `enabled` alone (= intent). The
+   * picker reads this mask; a survey toggled off is non-clickable the
+   * instant it's toggled, even while still visibly fading. Recomputed by
+   * `deriveSourceMasks`, never assigned by a setter.
    */
   pickMask: number;
   /**
-   * drawMask — read by the renderer's per-source draw loop. Flipped
-   * AFTER the fade-out smoothstep completes (or AT the start of
-   * fade-in). A layer with its drawMask bit clear is skipped from
-   * the draw entirely — saves a writeBuffer + draw call.
+   * drawMask — derived output, packed from `enabled || opacity > 0`. The
+   * renderer's per-source draw loop reads it; a just-hidden survey keeps
+   * its draw bit through the fade-out tail (so it ramps down smoothly) and
+   * loses it only once opacity resolves to 0. Recomputed by
+   * `deriveSourceMasks`, never assigned by a setter.
    */
   drawMask: number;
   /**

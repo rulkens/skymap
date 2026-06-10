@@ -7,7 +7,7 @@
  * shipped WebP frames its disk arbitrarily: the disk may fill only part
  * of the frame (`diskRadiusFrac < 1`), the nucleus may sit off-centre
  * (`center != [0.5, 0.5]`), and the image may have been deprojected to
- * face-on (so the catalog's measured inclination no longer applies).
+ * face-on (so the catalog's measured inclination doesn't apply to it).
  *
  * These three helpers translate the curated calibration into the disk's
  * render frame.  They are deliberately pure (no GPU, no state) so they

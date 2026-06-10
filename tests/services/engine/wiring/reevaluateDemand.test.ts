@@ -56,13 +56,13 @@ function stubSlot(initialKind: LoadState<unknown>['kind'] = 'idle'): StubSlot {
 
 /**
  * Build a minimal EngineState with the slices evaluateRows reads transitively
- * (via buildDemandCtx + slotFor): `settings`, `sources.{drawMask,tier}`,
- * `requests`, and a `points` map carrying the stub slots.
+ * (via buildDemandCtx + slotFor): `settings`, `sources.tier`, `requests`, and
+ * a `points` map carrying the stub slots.
  */
 function makeState(points: Map<SourceType, AssetSlot<unknown, unknown>>): EngineState {
   return {
     settings: {},
-    sources: { drawMask: 0, tier: 'medium' },
+    sources: { tier: 'medium' },
     requests: new Set(),
     assetSlots: { points },
   } as unknown as EngineState;

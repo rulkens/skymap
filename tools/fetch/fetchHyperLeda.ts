@@ -7,23 +7,21 @@
  * referenced in GLADE v2.3.
  *
  * We grab logd25/e_logd25 alongside the orientation columns even though
- * the current build pipeline doesn't read them yet — it's the same
- * upstream request, the same multi-hour fetch, and a future Phase-2 plan
- * (real GLADE diameters from HyperLEDA, not Tully size-luminosity) would
- * otherwise force a full re-fetch. Caching them now is essentially free.
+ * the build pipeline doesn't read them — it's the same upstream request,
+ * the same multi-hour fetch, and a later switch to real GLADE diameters
+ * from HyperLEDA (rather than Tully size-luminosity) would otherwise
+ * force a full re-fetch. Caching them is essentially free.
  *
- * Adds `mod0`/`e_mod0` (HyperLEDA's redshift-independent distance
- * modulus + uncertainty) so the local-volume distance override (see
- * docs/superpowers/specs/2026-05-27-local-volume-distances.md) can use
- * HyperLEDA as a fallback for galaxies that CF4 doesn't list.
- *
- * The mod0 column is sparsely populated — most rows have NaN — but
- * fetching it now is essentially free (same HTTP request, same parse)
- * and avoids a second sweep of the ~52k cached PGCs later. Per the
- * project memory `project_hyperleda_partial_cache`, the cache is
- * intentionally partial and must NOT be auto-refetched; the schema
- * bump from 5 → 7 columns forces operators to deliberately delete +
- * regenerate when they want the new field for cached PGCs.
+ * `mod0`/`e_mod0` (HyperLEDA's redshift-independent distance modulus +
+ * uncertainty) feed the local-volume distance override (see
+ * docs/superpowers/specs/2026-05-27-local-volume-distances.md) as a
+ * fallback for galaxies that CF4 doesn't list. The mod0 column is
+ * sparsely populated — most rows have NaN — but fetching it is
+ * essentially free (same HTTP request, same parse). Per the project
+ * memory `project_hyperleda_partial_cache`, the cache is intentionally
+ * partial and must NOT be auto-refetched; the header check below makes
+ * operators deliberately delete + regenerate a cache whose column shape
+ * doesn't match the current schema.
  *
  * HyperLEDA's modern API:
  *
@@ -85,14 +83,14 @@ type HyperLedaRow = {
    * weighted-mean per HyperLEDA's compilation. NaN when HyperLEDA
    * has no redshift-independent distance for this PGC.
    *
-   * d_Mpc = 10^((mod0 - 25) / 5). See catalogDistanceFor in
-   * sub-plan 02 of the local-volume-distances plan for the conversion.
+   * d_Mpc = 10^((mod0 - 25) / 5) — see `catalogDistanceFor` for the
+   * conversion.
    */
   mod0: number;
   /**
-   * e_mod0: 1-σ uncertainty on mod0 in magnitudes. Carried so a
-   * future InfoCard surfaces ± values; today we just keep it in the
-   * cache so we don't need a re-fetch later.
+   * e_mod0: 1-σ uncertainty on mod0 in magnitudes. Cached so an
+   * InfoCard that surfaces ± values won't need a re-fetch; nothing
+   * reads it yet.
    */
   e_mod0: number;
 };
@@ -175,11 +173,12 @@ async function main(): Promise<void> {
   // Resume support: read existing cache; skip every PGC we've already queried.
   // First run: file doesn't exist, set is empty, write the header. Subsequent
   // runs: append to the existing file (header already in place).
-  // The cache header is the schema marker — if the existing file has
-  // the old 3-column shape, the new run would interleave 3-col and
-  // 5-col rows, which the consumer can't disambiguate. Refuse to mix
-  // and tell the user to delete the file. (On a fresh run there's no
-  // file at all, so the check is skipped.)
+  // The cache header is the schema marker — if the existing file has a
+  // different column shape (caches from earlier schema versions exist
+  // on operators' disks), appending would interleave row shapes the
+  // consumer can't disambiguate. Refuse to mix and tell the user to
+  // delete the file. (On a fresh run there's no file, so the check is
+  // skipped.)
   const expectedHeader = 'pgc,pa,logr25,logd25,e_logd25,mod0,e_mod0';
   if (existsSync(outPath)) {
     const firstLine = readFileSync(outPath, 'utf8').split(/\r?\n/, 1)[0] ?? '';
@@ -230,9 +229,9 @@ async function main(): Promise<void> {
         }
       } catch (e) {
         // Network blip / TLS failure — DO NOT write a cache row; resume will
-        // retry next run. We do count + log failures here, because the
-        // previous "silent catch" hid an expired-cert outage that wiped out
-        // an entire run with no visible error.
+        // retry next run. Count + log failures: a silent catch would let an
+        // outage (e.g. an expired upstream cert) wipe out an entire run
+        // with no visible error.
         failed++;
         const msg = (e as Error).message;
         const cause = (e as { cause?: { code?: string; message?: string } }).cause;

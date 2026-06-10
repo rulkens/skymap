@@ -73,9 +73,9 @@ import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
  *
  * Halo and ring carry independent RGB tints so voids — which opt out
  * of the additive halo entirely (haloAlpha = 0) — can still display
- * their cyan ring without falling back to halo's (0, 0, 0).  v1
- * shared halo's RGB across both pipelines as a stride-saving
- * approximation; the void colour mismatch forced the split.
+ * their cyan ring without falling back to halo's (0, 0, 0).  Sharing
+ * halo's RGB across both pipelines would save stride but can't
+ * express that void colour split.
  */
 const MARKER_INSTANCE_FLOATS = 12;
 const MARKER_INSTANCE_BYTES = MARKER_INSTANCE_FLOATS * 4;
@@ -134,11 +134,11 @@ export function createStructureMarkerRenderer(
   // fully-faded ones (the emit-all-then-discard contract that keeps the
   // ring-pick instance_index aligned with getStructuresForCategory).  So the
   // count is data-driven (~660 with the M500 ≥ 1.0 cluster cut, more if
-  // the catalog grows).  A fixed cap silently truncated the tail in
-  // structure order, which both dropped whole categories off-screen
-  // (clusters saturated the buffer, so superclusters and voids never got
-  // packed — visible only when clusters were toggled off) AND desynced
-  // the per-category pick index.  Growing keeps the renderer correct for
+  // the catalog grows).  A fixed cap would silently truncate the tail in
+  // structure order, both dropping whole categories off-screen (clusters
+  // saturate the buffer first, so superclusters and voids never get
+  // packed — visible only with clusters toggled off) AND desyncing the
+  // per-category pick index.  Growing keeps the renderer correct for
   // any catalog size; the buffer is tiny (660 × 48 B ≈ 31 KB).
   let capacity = initialCapacity;
   let instanceBuf = new Float32Array(capacity * MARKER_INSTANCE_FLOATS);
@@ -165,8 +165,8 @@ export function createStructureMarkerRenderer(
   let instanceBuffer: GPUBuffer | null = null;
   let fadeBuffer: GPUBuffer | null = null;
   let fadeBindGroup: GPUBindGroup | null = null;
-  // Dummy zeroed FadeUniforms for the pick pipeline.  Pattern lifted
-  // verbatim from pickRenderer.ts lines 197-206: the pick fragment
+  // Dummy zeroed FadeUniforms for the pick pipeline.  Same pattern as
+  // pickRenderer.ts's dummy fade group: the pick fragment
   // doesn't read fade.opacity (the pick texture is integer + has no
   // observable alpha), but the pipeline layout still declares the
   // canonical fadeBgl at @group(1) so other passes' bound fade
@@ -284,10 +284,10 @@ export function createStructureMarkerRenderer(
       primitive: { topology: 'triangle-list' },
     });
 
-    // ── Ring-pick pipeline (plan 3 task 2) ────────────────────────────
+    // ── Ring-pick pipeline ────────────────────────────────────────────
     //
     // Compiles a SEPARATE GPUShaderModule pair from the same vertex
-    // source as the visible-ring pipeline + the new ringPick fragment.
+    // source as the visible-ring pipeline + the ringPick fragment.
     // We deliberately do NOT reuse the visible-ring modules — sharing
     // a GPUShaderModule across pipelines silently breaks `layout:'auto'`
     // bind-group reuse (see feedback_webgpu_auto_layout_trap.md).  Our
@@ -440,9 +440,9 @@ export function createStructureMarkerRenderer(
     for (const c of STRUCTURE_CATEGORIES) bucketCounts[c] = 0;
 
     // Grow to fit the full descriptor set — no truncation.  See growTo
-    // and the `capacity` docstring for why a cap here was a correctness
-    // bug (dropped categories + desynced pick index), not just a visual
-    // budget knob.
+    // and the `capacity` docstring for why a cap here would be a
+    // correctness bug (dropped categories + desynced pick index), not
+    // just a visual budget knob.
     growTo(descriptors.length);
 
     // First pass: count per category to compute offsets.
@@ -532,7 +532,7 @@ export function createStructureMarkerRenderer(
     // multiplied by 0 → no observable contribution.  For voids the
     // descriptor sets haloAlpha = 0 (set by produceMarkers), so the
     // draw is a no-op visually.  Keep the per-category dispatch
-    // explicit anyway — plan 3 branches on category for pick.
+    // explicit anyway — the pick path branches on category.
     //
     // Per-category instance_index: rather than draw with
     // firstInstance=bucketOffset (which would make the GPU's

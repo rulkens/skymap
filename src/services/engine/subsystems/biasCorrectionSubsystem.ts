@@ -3,14 +3,11 @@
  * mode flags, cached per-source ratios/weights, the async bake state
  * machine, and the worker-runner registry.
  *
- * Pre-Spec-E this state machine lived inside `PointRenderer` (~400 lines
- * of code that had no rendering reason to be on the renderer).  Spec E
- * extracts it into a sibling subsystem under `services/engine/subsystems/`,
- * leaving the renderer as a clean instanced-billboard drawer.  See the
- * spec for the full design rationale (uni-directional split, "renderer
- * doesn't observe subsystem"), the *Race behaviour — preserve exactly*
- * section for the three named races this subsystem must handle, and the
- * *Subsystem shape* section for the public API.
+ * This state machine has no rendering reason to live on `PointRenderer`;
+ * keeping it in a sibling subsystem leaves the renderer as a clean
+ * instanced-billboard drawer.  The split is uni-directional — the
+ * renderer doesn't observe the subsystem; the subsystem reaches in via
+ * the renderer's callback setters and splice methods.
  *
  * ### Why a closure-returning factory rather than a class?
  *
@@ -26,10 +23,9 @@
  *
  * Each `setMode` increments `generation`.  Each per-source bake captures
  * the generation at start; on resolve, drops the result if the captured
- * generation no longer equals `generation`.  This is the same shape
- * Spec A's `AssetSlot` uses for tier-swap race fixes — proven correct
- * in production, transplanted here.  The `fast_toggle_race` test in the
- * test file is the regression-suite anchor for this fix.
+ * generation no longer equals `generation`.  Same shape as `AssetSlot`'s
+ * tier-swap generation counter.  The `fast_toggle_race` test is the
+ * regression-suite anchor.
  *
  * ### Why the renderer ref is null at construction
  *
@@ -46,18 +42,16 @@
  *   - `onSourceUploaded(...)` no-ops — the renderer's upload callback
  *     can't have fired yet (the renderer doesn't exist).
  *
- * The "no-op when no renderer" pre-attach behaviour matches Spec A's
- * eager-construction rule: any consumer capturing
+ * The "no-op when no renderer" pre-attach behaviour is what eager
+ * construction requires: any consumer capturing
  * `state.subsystems.biasCorrection` from t=0 onwards gets the live
  * subsystem.
  *
  * ### Why the worker runner is a factory parameter
  *
- * Test injection.  Pre-Spec-E the runner was a `private static` on
- * `PointRenderer` mutated via `setSchechterRatioRunner(...)` — a
- * mutable global is a smell, and made the renderer's surface area
- * carry an injection seam that wasn't part of its rendering concern.
- * Spec E moves the seam onto this subsystem's factory parameter:
+ * Test injection.  The alternative — a mutable static setter on the
+ * subsystem or renderer — is a global smell and hangs an injection
+ * seam off a surface that isn't its concern.  As a factory parameter,
  * tests pass an in-process stub at construction; production omits
  * the param and gets the default Vite `?worker` runner declared as
  * `defaultSchechterRunner` / `defaultAngularRunner` in this module.
@@ -66,9 +60,8 @@
  *
  * The subsystem mirrors `state.settings.bias.mode` internally (`mode`
  * field here) but doesn't own it.  The UI-facing knob bag stays on
- * `EngineState`.  See the spec's *State* section for why we keep the
- * two parallel: every existing reader (URL hash, InfoCard,
- * SettingsPanel echo) continues to work unchanged.
+ * `EngineState` so every reader (URL hash, InfoCard, SettingsPanel
+ * echo) reads the one canonical place.
  *
  * ### Wake contract
  *
@@ -80,17 +73,12 @@
  * this one).  The engine.ts caller therefore needs no trailing
  * `requestRender()` of its own.
  *
- * ### Production wiring (Spec E phase E.4 — cut-over)
+ * ### Production wiring
  *
- * Phase E.4 routed `handle.setBiasMode` through this subsystem and
- * deleted the renderer's old bias-mode methods.  The Vite `?worker`
- * imports moved here too — `defaultSchechterRunner` /
- * `defaultAngularRunner` (see below) spawn one worker per call,
- * matching the pre-extraction behaviour bit-for-bit.  Same observable
- * behaviour as pre-E.4: the renderer keeps reading
- * `state.settings.bias.mode` per-frame for the uniform write; this
- * subsystem owns the splice pipeline that lays per-galaxy ratios/weights
- * into the per-source vertex buffers.
+ * `handle.setBiasMode` routes through this subsystem.  The renderer
+ * reads `state.settings.bias.mode` per-frame for the uniform write;
+ * this subsystem owns the splice pipeline that lays per-galaxy
+ * ratios/weights into the per-source vertex buffers.
  *
  * @module
  */
@@ -112,9 +100,7 @@ import type { SourceType } from '../../../@types/data/SourceType';
 // `?worker` is a Vite-specific import suffix.  It instructs the bundler
 // to emit each `.worker.ts` file as its own worker chunk and hand back a
 // default-exported class whose `new`-instantiation spawns a Worker
-// running that bundle.  Pre-Spec-E these `?worker` imports lived inside
-// `pointRenderer.ts` because the bake state machine was a method on
-// `PointRenderer`; Spec E.4 moved them here alongside the bake state
+// running that bundle.  The imports live here alongside the bake state
 // machine so the renderer owns rendering and only rendering.
 //
 // In Node-only test environments the `?worker` suffix isn't resolvable;
@@ -131,11 +117,6 @@ import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
  * `?worker` chunk per call, ships a copied (slice-then-transfer) cloud,
  * waits for the resulting `Float32Array`, and terminates the worker.
  *
- * Pre-Spec-E this lived as `defaultSchechterWorkerRunner` inside
- * `pointRenderer.ts` (the renderer owned the bake state machine).
- * Spec E.4 moved it here alongside the `?worker` import so the
- * renderer's surface is only "draw instanced billboards".
- *
  * ### Why one worker per call?
  *
  * Parallel survey fetches resolve in unpredictable order, so SDSS can
@@ -151,8 +132,8 @@ import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
  * in place via `Transferable[]`.  `slice(0)` mints owned copies whose
  * underlying ArrayBuffers we *can* transfer, leaving the engine's
  * authoritative cloud completely intact.  Cost: ~50 ms memcpy at full
- * deck (much cheaper than the multi-second structured clone the
- * pre-Transferable revision paid).
+ * deck — versus a multi-second structured clone if the buffers were
+ * shipped without a transfer list.
  */
 function defaultSchechterRunner(input: ComputeSchechterRatiosInput): Promise<Float32Array> {
   const { copy, transfer } = cloneGalaxyCatalogForTransfer(input.cloud);
@@ -207,8 +188,8 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
    * Generation counter — incremented on every `setMode`.  Each per-source
    * bake captures the generation at start and drops its result if the
    * captured generation no longer matches `generation` on resolve.  This
-   * is the structural fix for the fast-toggle race documented in the
-   * spec's R1 mitigation; mirrors AssetSlot's tier-swap race counter.
+   * is the structural fix for the fast-toggle race; mirrors AssetSlot's
+   * tier-swap race counter.
    */
   let generation = 0;
 

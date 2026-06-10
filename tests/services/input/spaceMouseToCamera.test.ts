@@ -55,7 +55,7 @@ describe('applyAxesToCamera', () => {
     expect(cam.pitch).toBeCloseTo(-Math.PI / 2 + 0.001, 4);
   });
 
-  // ── Zoom (now on ty, not tz) ───────────────────────────────────────────────
+  // ── Zoom (on ty, not tz) ───────────────────────────────────────────────────
 
   it('positive ty (push forward) zooms IN (distance shrinks)', () => {
     // 3Dconnexion canonical: push forward = zoom in.
@@ -84,7 +84,7 @@ describe('applyAxesToCamera', () => {
   });
 
   it('tz does NOT zoom (tz only pans vertically now)', () => {
-    // Regression: tz used to be zoom; it must not affect distance anymore.
+    // Regression: tz must not affect distance (zoom is on ty).
     const cam = makeCam();
     const distBefore = cam.distance;
     applyAxesToCamera(cam, { ...ZERO, tz: 1 }, 100);
@@ -92,7 +92,7 @@ describe('applyAxesToCamera', () => {
   });
 
   it('ty does NOT pan the target (ty only zooms now)', () => {
-    // Regression: ty used to pan up/down; it must not move the target anymore.
+    // Regression: ty must not move the target (vertical pan is on tz).
     const cam = makeCam();
     applyAxesToCamera(cam, { ...ZERO, ty: 1 }, 100);
     expect(cam.target[0]).toBeCloseTo(0, 6);
@@ -110,7 +110,7 @@ describe('applyAxesToCamera', () => {
     expect(cam.target[2]).toBeCloseTo(0, 6);
   });
 
-  // ── Pan vertical (now on tz, not ty) ──────────────────────────────────────
+  // ── Pan vertical (on tz, not ty) ───────────────────────────────────────────
 
   it('positive tz (lift puck) pans the target along world +Y at pitch=0', () => {
     // 3Dconnexion canonical: lift = pan up. At pitch=0 the up vector is (0,1,0).
@@ -142,10 +142,10 @@ describe('applyAxesToCamera', () => {
     expect(camFar.target[0] / camNear.target[0]).toBeCloseTo(100, 1);
   });
 
-  // ── Roll (now on ry) ───────────────────────────────────────────────────────
+  // ── Roll (on ry) ───────────────────────────────────────────────────────────
 
   it('positive ry (tilt right) changes cam.roll', () => {
-    // ry should now drive roll — it must no longer be silently ignored.
+    // ry drives roll — it must not be silently ignored.
     const cam = makeCam();
     applyAxesToCamera(cam, { ...ZERO, ry: 1 }, 100);
     // roll should have changed from its undefined/0 starting point.

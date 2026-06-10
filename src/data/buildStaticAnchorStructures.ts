@@ -1,7 +1,7 @@
 /**
  * buildStaticAnchorStructures — assemble the static `StructureRecord[]` list
  * from the curated cluster/supercluster/void/group seed in
- * `data/structure_anchors.seed.json`.
+ * `data/seeds/structure_anchors.seed.json`.
  *
  * ### Why a separate module?
  *
@@ -64,7 +64,7 @@ import type { StructureRecord } from '../@types/engine/data/StructureRecord';
 // validated at build time by `tools/parsers/parseStructureSeed.ts` (run via
 // `buildStructures.ts`), so this module trusts the cast and skips a runtime
 // re-validator.
-import structureSeedJson from '../../data/structure_anchors.seed.json';
+import structureSeedJson from '../../data/seeds/structure_anchors.seed.json';
 
 /**
  * Minimal shape we need from each seed entry — a strict subset of

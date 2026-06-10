@@ -1,6 +1,6 @@
 /**
  * overrideIndex — read-modify-write helper for
- * data/famous_curated_overrides.json.
+ * data/seeds/famous_curated_overrides.json.
  *
  * Tests drive an in-memory fixture path.  Verifies:
  *   - loadOverrideIndex returns an empty index when the file is absent

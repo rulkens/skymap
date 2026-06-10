@@ -6,17 +6,15 @@
  * options block so the engine can fire echoes that drive React's
  * settings state.
  *
- * H5 task 11: only the nested sub-bag names survive — every flat
- * sibling on `EngineCallbacks` was deleted in lockstep with the
- * engine-side fire-site migration.  Filament counts now ride the
- * `filaments.onReady` address (no flat survivor).
+ * `EngineCallbacks` is nested-only, so the Pick selects whole
+ * sub-bags; filament counts ride the `filaments.onReady` address.
  */
 
 import type { EngineCallbacks } from '../engine/EngineCallbacks';
 
 export type EngineSettingsCallbacks = Pick<
   EngineCallbacks,
-  | 'points'
+  | 'surveys'
   | 'tonemap'
   | 'camera'
   | 'sources'

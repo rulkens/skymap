@@ -1,170 +1,167 @@
 /**
- * setSourceVisible — fade orchestration integration tests.
+ * setSourceVisible — synchronous toggle integration tests.
  *
- * These tests drive `setSourceVisibleForTest` directly against a minimal
- * state stub rather than instantiating a full GPU engine.  The exported
- * helper reads only `state.sources` / `state.subsystems.fades` /
- * `state.subsystems.scheduler`, so a mock of those surfaces is sufficient.
+ * These drive `setSourceVisibleForTest` directly against a minimal state stub
+ * rather than instantiating a full GPU engine.  The helper reads only
+ * `state.settings.surveys.items`, `state.sources`, and
+ * `state.subsystems.{fades,scheduler}`, so a mock of those surfaces suffices.
  *
- * Loading is NOT the helper's concern — it flips `pickMask`/`drawMask` and
- * fades. The per-frame `reevaluateDemand` in the render loop reads the
- * flipped drawMask and loads the now-visible survey on the next frame; the
- * demand-table net (`wiring/demandTable.test.ts`) proves that load policy.
- * Here we only pin the mask + fade orchestration.
+ * ### Model under test
  *
- * Cases:
- *   1. Toggle OFF  — pickMask clears immediately; fadeTo(0, FADE_OUT)
- *      called; drawMask clears after the await.
- *   2. Toggle ON   — drawMask sets before the fade; fadeTo(1, FADE_IN) called.
- *   3. Rapid off → on — by the time the fade-out promise resolves,
- *      opacityOf returns 1 (the re-toggle won); drawMask must stay set.
+ * `setVisible` is SYNCHRONOUS and does ONE authoritative thing: it flips the
+ * survey's `settings.surveys.items[id].enabled` — the single source of truth
+ * for on/off.  It then fires the fade (fire-and-forget) and recomputes the
+ * masks via `deriveSourceMasks`, which it calls internally.  It does NOT write
+ * `drawMask`/`pickMask` itself; those are derived outputs:
+ *
+ *   - draw = `enabled || opacity > 0` — a just-hidden survey keeps its draw
+ *     bit through the fade-out tail, so it ramps down smoothly.
+ *   - pick = `enabled` — non-clickable the instant it's toggled off.
+ *
+ * Because the derive runs inside the setter, the masks are already fresh after
+ * the call returns — no `await`, no manual derive needed.  Loading is NOT the
+ * helper's concern; the per-frame `reevaluateDemand` reads the derived
+ * drawMask and loads the now-visible survey next frame.
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { Source } from '../../../src/data/sources';
+import { Source, SURVEY_SOURCES, SOURCE_REGISTRY } from '../../../src/data/sources';
+import type { SurveyId } from '../../../src/@types/engine/data/SurveyId';
 import {
   FADE_IN_DURATION_MS,
   FADE_OUT_DURATION_MS,
 } from '../../../src/services/animation/fadeController';
-import { setSourceVisibleForTest } from '../../../src/services/engine/engine';
+import { setSourceVisibleForTest } from '../../../src/services/engine/handles/setSourceVisible';
+import { deriveSourceMasks } from '../../../src/services/engine/frame/deriveSourceMasks';
+import { maskHas } from '../../../src/utils/sourceMask';
 
 // ── Minimal fixture factory ───────────────────────────────────────────────
+//
+// `opacityFor` lets a case control the simulated fade opacity per survey
+// `handle.source` — the input deriveSourceMasks reads for the draw bit's
+// fade-out tail.  Default: every survey at opacity 0 (no fade in flight).
 
-function makeFixture(initialMask: number) {
+function makeFixture(opacityFor: (source: number) => number = () => 0) {
   const fadeCalls: Array<{ target: number; duration: number }> = [];
   const fades = {
     label: 'fadeRegistry',
     register: vi.fn(),
     unregister: vi.fn(),
-    fadeTo: vi.fn(async (_h: unknown, target: number, duration: number) => {
+    fadeTo: vi.fn((_h: unknown, target: number, duration: number) => {
       fadeCalls.push({ target, duration });
     }),
     setImmediate: vi.fn(),
-    opacityOf: vi.fn(() => 0),
+    opacityOf: vi.fn((h: { source: number }) => opacityFor(h.source)),
     isAnyAnimating: vi.fn(() => false),
     tick: vi.fn(),
     destroy: vi.fn(),
   };
+  // deriveSourceMasks (called inside the setter) packs bits for EVERY survey
+  // source, so every survey id must have an items row or it would read
+  // `undefined.enabled`.  Seed them all enabled; cases override the one under
+  // test.
+  const items = Object.fromEntries(
+    SURVEY_SOURCES.map((s) => [
+      SOURCE_REGISTRY[s].id as SurveyId,
+      { enabled: true, labelEnabled: true },
+    ]),
+  );
   const state = {
+    settings: {
+      surveys: { items },
+    },
     sources: {
-      pickMask: initialMask,
-      drawMask: initialMask,
+      pickMask: 0,
+      drawMask: 0,
       tier: 'medium' as const,
     },
     subsystems: {
       fades,
       scheduler: { requestRender: vi.fn() },
     },
-    // The impl never touches assetSlots — loading is the render loop's
-    // per-frame reevaluateDemand. Kept as an empty bag so any future read
-    // short-circuits harmlessly.
-    assetSlots: {
-      points: new Map(),
-    },
   };
-  return { state, fades, fadeCalls };
+  const onMaskChange = vi.fn();
+  const cb = { sources: { onMaskChange } };
+  // Seed the masks to match the all-enabled initial settings so a no-op
+  // toggle (same `enabled`) is a true no-op against a consistent baseline.
+  deriveSourceMasks(state as never);
+  return { state, fades, fadeCalls, cb, onMaskChange };
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────
 
-describe('setSourceVisible — fade orchestration', () => {
-  it('toggle OFF flips pickMask immediately, awaits FADE_OUT_DURATION_MS, then clears drawMask', async () => {
-    const fx = makeFixture(0b11111);
-    // The fixture default opacityOf returns 0, matching the post-fade
-    // state — no reassignment needed for this case (the rapid-toggle
-    // case below DOES override to simulate the concurrent fade-in).
+describe('setSourceVisible — synchronous toggle', () => {
+  it('flips surveys.items[id].enabled synchronously', () => {
+    const fx = makeFixture();
+    const sdss = fx.state.settings.surveys.items.sdss!;
+    expect(sdss.enabled).toBe(true);
 
-    await setSourceVisibleForTest(fx.state as never, { cb: {} } as never, Source.SDSS, false);
+    setSourceVisibleForTest(fx.state as never, { cb: fx.cb } as never, Source.SDSS, false);
 
-    // pickMask bit cleared synchronously before fadeTo:
-    expect((fx.state.sources.pickMask >> Source.SDSS) & 1).toBe(0);
-    // fadeTo called with target=0 and the fade-out duration:
-    expect(fx.fadeCalls).toEqual([{ target: 0, duration: FADE_OUT_DURATION_MS }]);
-    // drawMask bit cleared after the await (opacityOf returned 0):
-    expect((fx.state.sources.drawMask >> Source.SDSS) & 1).toBe(0);
+    expect(sdss.enabled).toBe(false);
   });
 
-  it('toggle ON sets drawMask before the fade, then awaits FADE_IN_DURATION_MS', async () => {
-    const fx = makeFixture(0); // every bit off
+  it('fires fadeTo(0, FADE_OUT_DURATION_MS) on hide and fadeTo(1, FADE_IN_DURATION_MS) on show', () => {
+    // Hide: start enabled, toggle off.
+    const hide = makeFixture();
+    setSourceVisibleForTest(hide.state as never, { cb: hide.cb } as never, Source.SDSS, false);
+    expect(hide.fadeCalls).toEqual([{ target: 0, duration: FADE_OUT_DURATION_MS }]);
 
-    await setSourceVisibleForTest(fx.state as never, { cb: {} } as never, Source.SDSS, true);
-
-    // pickMask bit set:
-    expect((fx.state.sources.pickMask >> Source.SDSS) & 1).toBe(1);
-    // drawMask bit set before the fade starts (so the renderer starts
-    // drawing this frame at opacity 0 and fades in). The per-frame
-    // reevaluateDemand reads this bit and loads the survey next frame.
-    expect((fx.state.sources.drawMask >> Source.SDSS) & 1).toBe(1);
-    // fadeTo called with target=1 and the fade-in duration:
-    expect(fx.fadeCalls).toEqual([{ target: 1, duration: FADE_IN_DURATION_MS }]);
+    // Show: start with SDSS disabled, toggle on.
+    const show = makeFixture();
+    show.state.settings.surveys.items.sdss!.enabled = false;
+    setSourceVisibleForTest(show.state as never, { cb: show.cb } as never, Source.SDSS, true);
+    expect(show.fadeCalls).toEqual([{ target: 1, duration: FADE_IN_DURATION_MS }]);
   });
 
-  it('rapid toggle off → on within fade-out leaves drawMask set (last-issued wins)', async () => {
-    const fx = makeFixture(0b11111);
+  it('a hidden survey still fading out is DRAWN but not pickable', () => {
+    // Simulate a fade-out still in flight: opacity 0.5 for SDSS.
+    const fx = makeFixture((source) => (source === Source.SDSS ? 0.5 : 0));
 
-    // First toggle off — pickMask clears, fadeTo(0, FADE_OUT_DURATION_MS) starts.
-    const p1 = setSourceVisibleForTest(fx.state as never, { cb: {} } as never, Source.SDSS, false);
+    setSourceVisibleForTest(fx.state as never, { cb: fx.cb } as never, Source.SDSS, false);
 
-    // Immediately toggle on — pickMask sets, fadeTo(1, FADE_IN_DURATION_MS) starts.
-    // By the time p1 resolves, opacityOf returns 1 (the re-toggle won).
-    fx.fades.opacityOf = vi.fn(() => 1);
-    const p2 = setSourceVisibleForTest(fx.state as never, { cb: {} } as never, Source.SDSS, true);
-
-    await Promise.all([p1, p2]);
-
-    // The final drawMask state reflects the last-issued fade (opacity > 0),
-    // so the bit must remain set even though p1's fade-out also resolved.
-    expect((fx.state.sources.drawMask >> Source.SDSS) & 1).toBe(1);
+    // enabled is false, but opacity > 0 keeps the draw bit set (fade-out tail);
+    // pick follows intent and is cleared immediately.
+    expect(fx.state.settings.surveys.items.sdss!.enabled).toBe(false);
+    expect(maskHas(fx.state.sources.drawMask, Source.SDSS)).toBe(true);
+    expect(maskHas(fx.state.sources.pickMask, Source.SDSS)).toBe(false);
   });
 
-  it('setSourceVisible wakes after the fade completes (final drawMask write lands on a rendered frame)', async () => {
-    // This test pins the post-fade requestRender at engine.ts ~:241.
-    // That wake is essential: the final drawMask write happens in a microtask
-    // after the fade promise resolves, so no channel wake (fadeTo or otherwise)
-    // covers it.  Without this call the renderer serves one stale frame after
-    // the fade completes — the last frame with opacity > 0 for a fade-out, or
-    // the first frame with the cleared bit not yet read.
-    //
-    // We use a manually-controlled deferred rather than an instantly-resolving
-    // mock so the assertion cannot be fooled by a regression of the form
-    //   const p = fadeTo(...); requestRender(); await p;
-    // which would call requestRender before the fade resolves and still pass an
-    // invocationCallOrder-based check.
-    const fx = makeFixture(0b11111);
+  it('re-show mid-fade sets enabled=true and keeps drawing', () => {
+    const fx = makeFixture();
 
-    let resolveFade!: () => void;
-    const fadePromise = new Promise<void>((r) => {
-      resolveFade = r;
-    });
-    (fx.fades.fadeTo as ReturnType<typeof vi.fn>).mockReturnValue(fadePromise);
+    // Hide, then immediately re-show (two sync calls, no await).
+    setSourceVisibleForTest(fx.state as never, { cb: fx.cb } as never, Source.SDSS, false);
+    setSourceVisibleForTest(fx.state as never, { cb: fx.cb } as never, Source.SDSS, true);
 
-    const schedulerSpy = fx.state.subsystems.scheduler.requestRender as ReturnType<typeof vi.fn>;
+    // The last toggle won: enabled is true, so both masks carry the bit.
+    expect(fx.state.settings.surveys.items.sdss!.enabled).toBe(true);
+    expect(maskHas(fx.state.sources.drawMask, Source.SDSS)).toBe(true);
+    expect(maskHas(fx.state.sources.pickMask, Source.SDSS)).toBe(true);
+  });
 
-    // Start the toggle without awaiting — the fade is now suspended.
-    const done = setSourceVisibleForTest(
-      fx.state as never,
-      { cb: {} } as never,
-      Source.SDSS,
-      false,
-    );
+  it('echoes the intent mask via onMaskChange with the SDSS pick bit cleared on hide', () => {
+    const fx = makeFixture();
 
-    // Flush microtasks so any synchronous-path wakes have already landed.
-    // Baseline: the fixture produces no pre-fade requestRender calls, so the
-    // count should be 0 here.  The comment below guards against a reintroduced
-    // pre-fade wake, not against the fixture's known state.
-    await Promise.resolve();
-    const callsBeforeFadeResolves = schedulerSpy.mock.calls.length;
-    // No post-fade wake should have arrived yet — the fade is still pending.
-    expect(callsBeforeFadeResolves).toBe(0);
+    setSourceVisibleForTest(fx.state as never, { cb: fx.cb } as never, Source.SDSS, false);
 
-    // Resolve the deferred fade and let the continuation run.
-    resolveFade();
-    await done;
+    expect(fx.onMaskChange).toHaveBeenCalledTimes(1);
+    const echoed = fx.onMaskChange.mock.calls[0]![0] as number;
+    expect(maskHas(echoed, Source.SDSS)).toBe(false);
+  });
 
-    // Exactly one additional wake must have arrived after the fade resolved.
-    expect(schedulerSpy.mock.calls.length).toBe(callsBeforeFadeResolves + 1);
+  it('never calls requestRender itself — fadeTo owns the wake', () => {
+    // Wake contract: every non-no-op path through the setter fires fadeTo,
+    // and the real FadeRegistry wakes the scheduler internally.  The masks
+    // are derived per frame (deriveSourceMasks), so there is no post-fade
+    // mask write left for a caller wake to cover.  A no-op toggle (same
+    // `enabled`) early-returns and must stay wake-free too.
+    const fx = makeFixture();
 
-    // And the drawMask bit must have been cleared (opacityOf returns 0):
-    expect((fx.state.sources.drawMask >> Source.SDSS) & 1).toBe(0);
+    setSourceVisibleForTest(fx.state as never, { cb: fx.cb } as never, Source.SDSS, false);
+    setSourceVisibleForTest(fx.state as never, { cb: fx.cb } as never, Source.SDSS, false); // no-op
+
+    expect(fx.fades.fadeTo).toHaveBeenCalledTimes(1);
+    expect(fx.state.subsystems.scheduler.requestRender).not.toHaveBeenCalled();
   });
 });

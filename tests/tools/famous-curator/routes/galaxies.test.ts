@@ -33,7 +33,7 @@ function writeRecipe(repoRoot: string, id: string, disk: { deproject: boolean } 
 
 function seedFixture(): string {
   const root = mkdtempSync(join(tmpdir(), 'curator-galaxies-'));
-  mkdirSync(resolve(root, 'data'), { recursive: true });
+  mkdirSync(resolve(root, 'data/seeds'), { recursive: true });
   const entries = [
     {
       id: 'm31',
@@ -66,7 +66,7 @@ function seedFixture(): string {
       description: 'C',
     },
   ];
-  writeFileSync(resolve(root, 'data/famous_galaxies.seed.json'), JSON.stringify(entries));
+  writeFileSync(resolve(root, 'data/seeds/famous_galaxies.seed.json'), JSON.stringify(entries));
   return root;
 }
 
@@ -82,7 +82,7 @@ describe('handleGalaxies', () => {
   it('flips curated=true for ids present in the override index', async () => {
     const repo = seedFixture();
     writeFileSync(
-      resolve(repo, 'data/famous_curated_overrides.json'),
+      resolve(repo, 'data/seeds/famous_curated_overrides.json'),
       JSON.stringify({
         version: 1,
         entries: {
@@ -106,7 +106,7 @@ describe('handleGalaxies', () => {
   it('flags hasDisk per the committed recipe', async () => {
     const repo = seedFixture();
     writeFileSync(
-      resolve(repo, 'data/famous_curated_overrides.json'),
+      resolve(repo, 'data/seeds/famous_curated_overrides.json'),
       JSON.stringify({
         version: 1,
         entries: {
@@ -144,7 +144,7 @@ describe('handleGalaxies', () => {
   it('reports diskDeproject=false for a flat committed disk', async () => {
     const repo = seedFixture();
     writeFileSync(
-      resolve(repo, 'data/famous_curated_overrides.json'),
+      resolve(repo, 'data/seeds/famous_curated_overrides.json'),
       JSON.stringify({
         version: 1,
         entries: {

@@ -70,7 +70,7 @@
  */
 
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
-import { ALL_VISIBLE_MASK, maskHas, maskWith, maskWithout } from '../../utils/sourceMask';
+import { ALL_VISIBLE_MASK, maskHas } from '../../utils/sourceMask';
 import type { SourceType } from '../../@types/data/SourceType';
 import {
   DEFAULT_ABS_MAG_LIMIT,
@@ -105,7 +105,6 @@ import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
 import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../animation/fadeController';
-import type { FadeHandle } from '../../@types/animation/FadeHandle';
 import { createSelectionSubsystem } from './subsystems/selectionSubsystem';
 import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
 import { createYouAreHereSubsystem } from './subsystems/youAreHereSubsystem';
@@ -141,10 +140,12 @@ import { clampVolumeTrim } from '../../utils/clampVolumeTrim';
 import { clampVolumeExposure } from '../../utils/clampVolumeExposure';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
-import type { LabelCategory } from '../../@types/engine/data/LabelCategory';
 import type { StructureCategory } from '../../@types/engine/data/StructureCategory';
-import { LABEL_CATEGORIES, LABEL_LAYER_BY_CATEGORY } from '../../data/labelCategories';
+import type { SurveyId } from '../../@types/engine/data/SurveyId';
+import { SURVEY_IDS } from '../../data/surveyIds';
 import { STRUCTURE_CATEGORIES } from '../../data/structureCategories';
+import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
+import type { SurveyItemSettings } from '../../@types/settings/SurveyItemSettings';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -164,6 +165,10 @@ import { runBootstrapPhases } from './phases/bootstrap';
 import { rebuildHiResFamousForTier } from './helpers/rebuildHiResFamousForTier';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
 import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
+import { setSourceVisibleImpl } from './handles/setSourceVisible';
+import { setStructureItemEnabled } from './handles/setStructureItemEnabled';
+import { setStructureLabelEnabled } from './handles/setStructureLabelEnabled';
+import { setSurveyLabelEnabled } from './handles/setSurveyLabelEnabled';
 
 /**
  * Start the WebGPU engine on `canvas`.
@@ -183,169 +188,6 @@ import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
  *
  * @throws Never — errors are reported via `onStatusChange({ kind: 'error' })`.
  */
-
-// ── Test-accessible setSourceVisible logic ──────────────────────────────────
-//
-// `setSourceVisible`'s logic lives at module scope so tests can drive it
-// against a partial-state stub without a full GPU engine; the `createEngine`
-// closure delegates here.  The `Pick` keeps the signature narrow while still
-// accepting the full `EngineState`.
-//
-// Does NOT trigger loading: it flips `drawMask`/`pickMask` and calls
-// `requestRender`.  The render loop's `reevaluateDemand` reads the flipped
-// drawMask and loads the now-visible survey (and companions) next frame, so
-// visibility and loading stay decoupled.
-export async function setSourceVisibleImpl(
-  state: Pick<
-    import('../../@types/engine/state/EngineState').EngineState,
-    'sources' | 'subsystems'
-  >,
-  opts: { cb: Pick<EngineCallbacks, 'sources'> },
-  source: SourceType,
-  visible: boolean,
-): Promise<void> {
-  const { cb } = opts;
-
-  const handle: FadeHandle = { kind: 'survey', source };
-  const targetMask = visible
-    ? maskWith(state.sources.pickMask, source)
-    : maskWithout(state.sources.pickMask, source);
-  if (targetMask === state.sources.pickMask && targetMask === state.sources.drawMask) return;
-
-  // pickMask flips IMMEDIATELY — a fading-out layer must not be clickable.
-  state.sources.pickMask = targetMask;
-  // Notify the UI of the (immediate) state change so the checkbox reflects.
-  cb.sources?.onMaskChange?.(targetMask);
-  // fadeTo fires synchronously on every non-early-return path below, and
-  // fadeTo wakes the scheduler — no explicit requestRender needed here.
-
-  if (visible) {
-    // Flip drawMask, then fade in.  `reevaluateDemand` reads the now-set
-    // bit and loads the idle survey (plus companions); the idle-guard keeps
-    // a loaded survey from re-fetching, so re-toggling is cheap.
-    state.sources.drawMask = targetMask;
-    await state.subsystems.fades.fadeTo(handle, 1, FADE_IN_DURATION_MS);
-  } else {
-    await state.subsystems.fades.fadeTo(handle, 0, FADE_OUT_DURATION_MS);
-    // Re-read opacity rather than closing over `visible`: a concurrent
-    // off→on toggle within the fade-out window may have reversed the fade.
-    // Last-issued fade wins — if a fade-in started while we awaited, opacity
-    // is > 0 and we leave the drawMask bit set so the renderer keeps
-    // drawing through the ramp-up.
-    const finalOpacity = state.subsystems.fades.opacityOf(handle);
-    if (finalOpacity === 0) {
-      state.sources.drawMask = maskWithout(state.sources.drawMask, source);
-    } else {
-      state.sources.drawMask = maskWith(state.sources.drawMask, source);
-    }
-  }
-  // Essential wake — the final drawMask write happens in a microtask after
-  // the last fade frame's stillAnimating evaluation (the fade promise resolves
-  // from fades.tick inside the frame body), so no channel wake covers it;
-  // without this the final frame renders with the stale mask.
-  state.subsystems.scheduler.requestRender();
-}
-
-// Test-only alias matching the import name used in tests.
-export { setSourceVisibleImpl as setSourceVisibleForTest };
-
-// ── Test-accessible category-visibility logic ───────────────────────────────
-//
-// The two per-category visibility setters live at module scope (mirroring
-// `setSourceVisibleImpl`) so tests can drive them against a partial-state stub
-// without a full GPU engine. Each routes to the canonical store (structure
-// categories → the structure store; famousGalaxy → the galaxy store), drives
-// the matching per-category FadeRegistry handle for a smooth ramp, mirrors the
-// flag into `state.settings`, and echoes a fresh snapshot via the callback.
-// fadeTo owns the render wake, so neither setter calls requestRender itself.
-// The `createEngine` literal delegates to these.
-//
-// Why fade the per-category handle here?  The producers (produceStructureMarkers
-// / produceStructureLabels / produceFamousLabels) already read
-// `opacityOf({...})` for their layer alpha; flipping the store boolean alone
-// would pop a category in/out. Firing `fadeTo` on the same handle the producer
-// reads turns the toggle into a smooth fade — exactly as the milkyWay/filaments
-// setters do for their overlay/filaments handles.
-
-function setCategoryLabelVisible(
-  state: Pick<EngineState, 'data' | 'settings' | 'subsystems'>,
-  cb: Pick<EngineCallbacks, 'labels'>,
-  category: LabelCategory,
-  visible: boolean,
-): void {
-  // Routing comes from the registry row's `labelLayer` field, not a literal
-  // category compare: 'galaxyNames' rows (the curated atlas) drive the galaxy
-  // store + shared galaxyNames fade layer; 'structure' rows fade their
-  // per-category handle on the shared `structure` label layer.
-  //
-  // The switch is exhaustive over `CategoryLabelLayer` ('galaxyNames' |
-  // 'structure'). Every arm calls `fadeTo`, which wakes the scheduler —
-  // no bare `requestRender` is needed here. The `default` never-check
-  // enforces at compile time that a new `CategoryLabelLayer` variant
-  // can't fall through silently.
-  const durationMs = visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS;
-  const layer = LABEL_LAYER_BY_CATEGORY[category];
-  switch (layer) {
-    case 'galaxyNames':
-      // Famous-galaxy labels reuse the shared `galaxyNames` label layer rather
-      // than minting a per-category handle (see FadeHandle's labelLayer doc).
-      state.data.galaxies.setFamousLabelsVisible(visible);
-      void state.subsystems.fades.fadeTo(
-        { kind: 'labelLayer', layer: 'galaxyNames' },
-        visible ? 1 : 0,
-        durationMs,
-      );
-      break;
-    case 'structure':
-      // The 'structure' rows narrow to StructureCategory, which is exactly what
-      // the labelLayer/structure handle's `category` field wants.
-      void state.subsystems.fades.fadeTo(
-        { kind: 'labelLayer', layer: 'structure', category: category as StructureCategory },
-        visible ? 1 : 0,
-        durationMs,
-      );
-      break;
-    default: {
-      const _exhaustive: never = layer;
-      throw new Error(`setCategoryLabelVisible: unhandled label layer "${String(_exhaustive)}"`);
-    }
-  }
-  state.settings.labelCategoryVisibility = {
-    ...state.settings.labelCategoryVisibility,
-    [category]: visible,
-  };
-  cb.labels?.onLabelCategoryVisibilityChange?.({
-    ...state.settings.labelCategoryVisibility,
-  });
-}
-
-function setCategoryMarkerVisible(
-  state: Pick<EngineState, 'data' | 'settings' | 'subsystems'>,
-  cb: Pick<EngineCallbacks, 'labels'>,
-  category: StructureCategory,
-  visible: boolean,
-): void {
-  // Only structure categories bear a ring/halo marker, so the marker axis is
-  // keyed by StructureCategory — every category here routes to the structure
-  // store's marker axis and fires a markerLayer fade.
-  void state.subsystems.fades.fadeTo(
-    { kind: 'markerLayer', category },
-    visible ? 1 : 0,
-    visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
-  );
-  state.settings.markerCategoryVisibility = {
-    ...state.settings.markerCategoryVisibility,
-    [category]: visible,
-  };
-  cb.labels?.onMarkerCategoryVisibilityChange?.({
-    ...state.settings.markerCategoryVisibility,
-  });
-  // No requestRender: the unconditional fadeTo above wakes the scheduler.
-}
-
-// Test-only aliases matching the import names used in tests.
-export const setCategoryLabelVisibleForTest = setCategoryLabelVisible;
-export const setCategoryMarkerVisibleForTest = setCategoryMarkerVisible;
 
 export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): EngineHandle {
   // ── Mutable engine state ─────────────────────────────────────────────────
@@ -417,17 +259,26 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   const state: EngineState = {
     // ── Settings — the user-facing SettingsPanel sub-bags ──────────
     //
-    // Every settings field lives under a named cluster (point billboard
-    // knobs under `points`, HDR controls under `tonemap`, etc.).
+    // Every settings field lives under a named cluster (survey billboard
+    // knobs under `surveys`, HDR controls under `tonemap`, etc.).
     // Defaults flow from `data/defaults.ts`; see
     // `EngineSettingsState.d.ts` for the type-level map.
     settings: {
-      points: {
+      // Survey layer: master gate on + shared billboard appearance knobs +
+      // one item row per survey, each layer + label default-on. Keys are
+      // DERIVED from `SURVEY_IDS` so the seed can't drift from the survey set.
+      // `labelEnabled` is inert for every survey except famousGalaxy (the only
+      // one that renders a name label) — seeded uniformly true.
+      surveys: {
+        enabled: true,
         sizePx: DEFAULT_POINT_SIZE_PX,
         brightness: DEFAULT_BRIGHTNESS,
         depthFade: DEFAULT_DEPTH_FADE_ENABLED,
         highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
         realOnly: DEFAULT_REAL_ONLY_MODE,
+        items: Object.fromEntries(
+          SURVEY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+        ) as Record<SurveyId, SurveyItemSettings>,
       },
       tonemap: {
         exposure: DEFAULT_EXPOSURE,
@@ -456,29 +307,27 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
       },
       volumes: {
-        masterEnabled: DEFAULT_VOLUMES_ENABLED,
-        fields: seedVolumeFields(),
+        enabled: DEFAULT_VOLUMES_ENABLED,
+        items: seedVolumeFields(),
       },
       // Flow is a singleton overlay layer: all its user-facing state (master
       // gate + look/motion knobs) lives here, spread from the single
       // `DEFAULT_FLOW` seed. The `state.data.flow` store stays status-only.
       flow: { ...DEFAULT_FLOW },
-      // Per-category visibility — two independent axes (label-text vs
-      // marker-glyph), both default-all-on.  Each record's keys are DERIVED
-      // from its category set so the defaults can't drift from the union:
-      // labels span `LABEL_CATEGORIES` (famousGalaxy + structures), markers
-      // span `STRUCTURE_CATEGORIES` only (famous galaxies bear no ring).
-      labelCategoryVisibility: Object.fromEntries(LABEL_CATEGORIES.map((c) => [c, true])) as Record<
-        LabelCategory,
-        boolean
-      >,
       debug: {
         showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
         showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
       },
-      markerCategoryVisibility: Object.fromEntries(
-        STRUCTURE_CATEGORIES.map((c) => [c, true]),
-      ) as Record<StructureCategory, boolean>,
+      // Structure overlay: master gate on + one item row per category, each
+      // ring + label default-on. Keys are DERIVED from `STRUCTURE_CATEGORIES`
+      // so the seed can't drift from the category set (famous galaxies bear no
+      // ring and so have no row here).
+      structures: {
+        enabled: true,
+        items: Object.fromEntries(
+          STRUCTURE_CATEGORIES.map((c) => [c, { enabled: true, labelEnabled: true }]),
+        ) as Record<StructureCategory, StructureItemSettings>,
+      },
     },
     bias: {
       // Bake-only sentinels — overwritten before the shader's mode-2/3/4
@@ -489,16 +338,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       schechterAlpha: 0,
     },
     sources: {
-      // Two 32-bit bitmasks, one bit per `Source` enum value.
+      // Two 32-bit bitmasks, one bit per `Source` enum value — DERIVED
+      // outputs, not authoritative state.  From frame 1 onward
+      // `deriveSourceMasks` owns them, recomputing both from each survey's
+      // `settings.surveys.items[id].enabled` + live fade opacity.
       //
-      // pickMask — flipped IMMEDIATELY when the user toggles a survey,
-      // so a fading-out layer is not clickable even while still visible.
-      //
-      // drawMask — flipped AFTER fade-out (or AT the start of fade-in).
-      // The renderer iterates `loadedSources()` and skips any whose bit
-      // is clear.  Both default to ALL_VISIBLE_MASK so "draw everything
-      // that is loaded" holds until the user toggles a single source
-      // in the settings panel.
+      // ALL_VISIBLE_MASK matches what frame 1 derives (every survey seeds
+      // enabled), so pre-frame readers — the synthetic-fallback hiddenAtBoot
+      // check, the UI visibility seed — see the same mask the loop will
+      // compute.
       pickMask: ALL_VISIBLE_MASK,
       drawMask: ALL_VISIBLE_MASK,
       // Currently-loaded data tier, seeded from `cb.initialTier`; 'medium'
@@ -961,9 +809,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     return awaitSlotReady(state.assetSlots.pgcAlias, new Map() as PgcAliasMap);
   }
 
-  async function setSourceVisible(source: SourceType, visible: boolean): Promise<void> {
+  function setSourceVisible(source: SourceType, visible: boolean): void {
     // Delegate to the module-scope helper (testable without a GPU engine).
-    return setSourceVisibleImpl(state, { cb }, source, visible);
+    setSourceVisibleImpl(state, { cb }, source, visible);
   }
 
   function setTier(tier: Tier): void {
@@ -1022,12 +870,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // Master toggle — mutate the settings bag so the per-frame volume gates
     // see it next frame.  No echo callback: the React layer owns this value
     // optimistically.
-    state.settings.volumes.masterEnabled = enabled;
+    state.settings.volumes.enabled = enabled;
     // Drive the FadeRegistry on the volumesMaster handle.  The encodeHdr*
     // sites multiply this master opacity into every per-field fade, so the
     // whole subsystem ramps in lockstep.  The pass-enabled gate accepts
-    // masterEnabled OR opacity > 0, so it keeps blitting through fade-out.
-    // fadeTo wakes the scheduler unconditionally.
+    // the master enable bit OR opacity > 0, so it keeps blitting through fade-out.
+    // fadeTo wakes the scheduler unconditionally — no bare requestRender needed.
     void state.subsystems.fades.fadeTo(
       { kind: 'volumesMaster' },
       enabled ? 1 : 0,
@@ -1037,12 +885,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   function addVolumeField(fieldId: VolumeFieldId, cube: ScalarCube): void {
     // Ensure a settings row exists before the GPU upload.  Re-registering a
-    // field preserves its previously-tuned values; a brand-new handle seeds
+    // field preserves its tuned values; a brand-new handle seeds
     // from registry defaults.  Shippable volumes already have a construction
     // seed, so the guard only fires for a dynamically-added handle.
-    if (!state.settings.volumes.fields[fieldId]) {
-      state.settings.volumes.fields = {
-        ...state.settings.volumes.fields,
+    if (!state.settings.volumes.items[fieldId]) {
+      state.settings.volumes.items = {
+        ...state.settings.volumes.items,
         [fieldId]: buildVolumeFieldSettings(fieldId),
       };
     }
@@ -1052,7 +900,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // Drive the FadeRegistry from the settings enable bit: enabled → fade to 1;
     // disabled → leave it at the 0 set by onFieldAdded (the draw loop's
     // `(!enabled && opacity <= 0)` skip keeps it invisible until toggled on).
-    if (state.settings.volumes.fields[fieldId]?.enabled) {
+    if (state.settings.volumes.items[fieldId]?.enabled) {
       void state.subsystems.fades.fadeTo(
         { kind: 'scalarField', field: fieldId },
         1,
@@ -1068,10 +916,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   function removeVolumeField(fieldId: VolumeFieldId): void {
     state.gpu.scalarVolumeRenderer?.removeField(fieldId);
-    state.settings.volumes.fields = removeVolumeFieldSetting(
-      state.settings.volumes.fields,
-      fieldId,
-    );
+    state.settings.volumes.items = removeVolumeFieldSetting(state.settings.volumes.items, fieldId);
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     // Essential wake — removal fires no fade (the field vanishes outright),
     // so no channel covers making the disappearance visible.
@@ -1081,7 +926,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   /**
    * Lazy-load the DEV-only debug volume slot backing a field if it's `idle`.
    * The shippable volumes (CF-4, MCPM) load via `reevaluateDemand` instead
-   * (their demand reads `fields[id].enabled`); the debug fixtures are
+   * (their demand reads `items[id].enabled`); the debug fixtures are
    * excluded from the registry, so they keep a direct lazy-load.
    *
    * Idempotent (a non-idle slot no-ops, so off-then-on doesn't re-fetch),
@@ -1109,11 +954,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function setVolumeFieldEnabled(fieldId: VolumeFieldId, enabled: boolean): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, { enabled });
+    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, { enabled });
     if (!next) return;
-    state.settings.volumes.fields = next;
+    state.settings.volumes.items = next;
     // DEV debug fixtures aren't demand rows, so they keep a direct lazy load
-    // here; cf4/mcpm load via reevaluateDemand reading fields[id].enabled, and
+    // here; cf4/mcpm load via reevaluateDemand reading items[id].enabled, and
     // this call is a no-op for those ids, so the two load paths partition.
     if (enabled) maybeLazyLoadDebugVolume(fieldId);
     // Drive the FadeRegistry: the draw loop's `(!enabled && opacity <= 0)` skip
@@ -1129,67 +974,67 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // enabled bit for the shippable cf4/mcpm rows).
   }
 
-  // The per-field knob setters below write `state.settings.volumes.fields`
+  // The per-field knob setters below write `state.settings.volumes.items`
   // directly — no boringSetter, no fade — so no channel wake fires for them.
   // Each keeps an explicit requestRender so the raymarch pass re-renders with
   // the new uniform value.
 
   function setVolumeFieldIntensity(fieldId: VolumeFieldId, intensity: number): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
       intensity: clampVolumeIntensity(intensity),
     });
     if (!next) return;
-    state.settings.volumes.fields = next;
+    state.settings.volumes.items = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldContrast(fieldId: VolumeFieldId, contrast: number): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
       contrast: clampVolumeContrast(contrast),
     });
     if (!next) return;
-    state.settings.volumes.fields = next;
+    state.settings.volumes.items = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldDensityScale(fieldId: VolumeFieldId, value: number): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
       densityScale: clampVolumeDensityScale(value),
     });
     if (!next) return;
-    state.settings.volumes.fields = next;
+    state.settings.volumes.items = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldTrim(fieldId: VolumeFieldId, trim: number): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
       trim: clampVolumeTrim(trim),
     });
     if (!next) return;
-    state.settings.volumes.fields = next;
+    state.settings.volumes.items = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldExposure(fieldId: VolumeFieldId, exposure: number): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
       exposure: clampVolumeExposure(exposure),
     });
     if (!next) return;
-    state.settings.volumes.fields = next;
+    state.settings.volumes.items = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldPalette(fieldId: VolumeFieldId, id: ScalarFieldPaletteId): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
+    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
       paletteId: id,
     });
     if (!next) return;
-    state.settings.volumes.fields = next;
+    state.settings.volumes.items = next;
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
@@ -1197,7 +1042,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   function listVolumeFields(): VolumeFieldId[] {
     // Settings keys are the source of truth for which fields exist; mirrors
     // buildVolumeFieldsSnapshot so both views of identity stay in sync.
-    return Object.keys(state.settings.volumes.fields) as VolumeFieldId[];
+    return Object.keys(state.settings.volumes.items) as VolumeFieldId[];
   }
 
   function getVolumeFieldsState(): ReadonlyArray<VolumeFieldRowData> {
@@ -1327,12 +1172,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // Each sub-handle is a thin forwarder onto a local function or a
   // `boringSetters` entry.  This literal is the only public surface.
   const handle: EngineHandle = {
-    points: {
+    surveys: {
       setSize: (sizePx) => boringSetters.setPointSize(sizePx),
       setBrightness: (value) => boringSetters.setBrightness(value),
       setDepthFade: (enabled) => boringSetters.setDepthFadeEnabled(enabled),
       setHighlightFallback: (enabled) => boringSetters.setHighlightFallback(enabled),
       setRealOnly: (enabled) => boringSetters.setRealOnlyMode(enabled),
+      setLabelEnabled: (survey, enabled) => setSurveyLabelEnabled(state, cb, survey, enabled),
     },
     tonemap: {
       setExposure: (value) => boringSetters.setExposure(value),
@@ -1444,16 +1290,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // An empty patch changes nothing — no wake needed on that path.
       },
     },
-    labels: {
-      // Two parallel setters, one per independent visibility axis.  Each
-      // routes to the canonical store — structure categories (cluster / SC /
-      // void) to the structure store, famousGalaxy to the galaxy store —
-      // then mirrors into `state.settings` and echoes a fresh immutable
-      // snapshot.  The OTHER axis is never touched (orthogonal axes).
-      setCategoryLabelVisible: (category, visible) =>
-        setCategoryLabelVisible(state, cb, category, visible),
-      setCategoryMarkerVisible: (category, visible) =>
-        setCategoryMarkerVisible(state, cb, category, visible),
+    structures: {
+      // Two setters, one per independent structure visibility axis. Each writes
+      // the authoritative `settings.structures.items[category]` row, fades the
+      // matching FadeRegistry handle, and echoes a fresh derived record.
+      setItemEnabled: (category, visible) => setStructureItemEnabled(state, cb, category, visible),
+      setLabelEnabled: (category, visible) =>
+        setStructureLabelEnabled(state, cb, category, visible),
     },
     volumes: {
       setMasterEnabled: setVolumesEnabled,

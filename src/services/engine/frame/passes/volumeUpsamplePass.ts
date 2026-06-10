@@ -49,7 +49,7 @@ export const volumeUpsamplePass: Pass = {
     const masterOpacity = state.subsystems.fades.opacityOf({ kind: 'volumesMaster' }, now);
     if (!settings.volumesEnabled && masterOpacity <= 0) return false;
     // Per-field gate: active fields OR fade-out tails in flight.
-    const settingsOf = (handle: string) => state.settings.volumes.fields[handle as VolumeFieldId];
+    const settingsOf = (handle: string) => state.settings.volumes.items[handle as VolumeFieldId];
     if (state.gpu.scalarVolumeRenderer.hasActiveFields(settingsOf)) return true;
     for (const handle of state.gpu.scalarVolumeRenderer.listHandles()) {
       if (state.subsystems.fades.opacityOf({ kind: 'scalarField', field: handle }, now) > 0) {

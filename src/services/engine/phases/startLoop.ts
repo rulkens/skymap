@@ -14,9 +14,9 @@
  *     it captures no per-engine state.  See `runFrame.ts`'s module
  *     header for the dep-vs-state rationale.  Hover/select callbacks
  *     fan out from `state.subsystems.selection` rather than being
- *     threaded through deps (Spec D.3).  Scale-bar derivation moved
- *     to React (it's a pure function of cam + viewport CSS height) —
- *     `cb.onCameraChange` emissions from `runFrame` drive that work.
+ *     threaded through deps.  Scale-bar derivation lives React-side
+ *     (it's a pure function of cam + viewport CSS height) —
+ *     `cb.onCameraChange` emissions from `runFrame` drive it.
  *   - Replaces the no-op `frameRef.current` stub with the real frame
  *     body — a one-line closure that calls `runFrame(state, frameDeps,
  *     performance.now())`.  The scheduler in
@@ -72,11 +72,10 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
  */
 export async function startLoop(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const phaseLocals = deps.phaseLocals!;
-  // Renderers are owned by `state.gpu.*` (written by `initGpu`).  Pre-M1
-  // (2026-05-11 audit) we read them off `phaseLocals` with a `!` bang
-  // that silently assumed phase ordering; the explicit null-checks
-  // here turn that assumption into a typed runtime error if `initGpu`
-  // is ever skipped/reordered.
+  // Renderers are owned by `state.gpu.*` (written by `initGpu`).  The
+  // explicit null-checks turn the phase-ordering assumption into a
+  // typed runtime error if `initGpu` is ever skipped/reordered — a `!`
+  // bang would assume the ordering silently.
   const milkyWayRenderer = state.gpu.milkyWayRenderer;
   const horizonShellRenderer = state.gpu.horizonShellRenderer;
   const texturedDiskRenderer = state.gpu.texturedDiskRenderer;
@@ -110,9 +109,9 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   // is stable across frames: `lastReportedFps` rides as a `{current}`
   // ref so the body's writes round-trip back into engine.ts; the GPU-
   // side renderers (`milkyWayRenderer`, `texturedQuadRenderer`, …) are
-  // read off `state.gpu.*` directly (M1, 2026-05-11) — they used to
-  // ride on `phaseLocals` too, but that mirror was redundant.  See
-  // runFrame.ts's module header for the dep-vs-state rationale.
+  // read off `state.gpu.*` directly — mirroring them on `phaseLocals`
+  // would be redundant state.  See runFrame.ts's module header for
+  // the dep-vs-state rationale.
   const frameDeps: RunFrameDeps = {
     canvas: deps.canvas,
     cb: deps.cb,

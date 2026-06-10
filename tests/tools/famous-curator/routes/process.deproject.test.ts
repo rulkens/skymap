@@ -53,8 +53,8 @@ describe('handleProcess — deprojection', () => {
   it('deprojected cropped.png is square', async () => {
     // paDeg=0 → major axis vertical; deprojectDisk stretches image-Y by 1/0.5=2×.
     // squareDeprojectCrop snaps the 64×64 crop to 64×32 (b/a) before extraction,
-    // so the ×2 stretch returns cropped.png to an exact 64×64 square — the new
-    // observable contract (deproject no longer grows a taller rectangle).
+    // so the ×2 stretch returns cropped.png to an exact 64×64 square — the
+    // observable contract (deproject yields a square, not a taller rectangle).
     const disk: RecipeDisk = {
       centerPx: [64, 64],
       radiusPx: 24,

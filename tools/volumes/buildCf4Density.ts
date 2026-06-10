@@ -18,9 +18,7 @@
  *
  * Cosmology / grid constants are hard-coded below (the CF4++ release
  * doesn't ship a sidecar; the constants come from the paper / the
- * accompanying `retrieve_CF4pp_grid_values.py` loader).  Older drafts of
- * this script read a `.meta.json` sidecar; we dropped it once the data
- * source stabilised on CF4++ — one less file to keep in sync.
+ * accompanying `retrieve_CF4pp_grid_values.py` loader).
  *
  * Pure Node/TS — no Python required.  Mirrors the conventions of the
  * existing build scripts in tools/ (idempotent, prints what it generated,
@@ -57,11 +55,11 @@ const CF4PP_VOXEL_SIZE_MPC = 1000 / 128;
  *
  * SCFD v2 is data-only: palette and `densityScale` are presentation
  * concerns and live in `src/data/volumeFieldDefaults.ts` keyed by the
- * `'cf4-density'` handle (coolwarm + 5.0).  This builder no longer
- * accepts a `--palette` override — to ship a magma variant for a paper
- * or similar one-off, point the runtime's wireSlots commit at a
- * different registry entry, or call `setFieldPalette` after the field
- * registers.  The binary itself stays purely descriptive.
+ * `'cf4-density'` handle (coolwarm + 5.0), so this builder deliberately
+ * takes no `--palette` flag.  To ship a magma variant for a paper or
+ * similar one-off, point the runtime's wireSlots commit at a different
+ * registry entry, or call `setFieldPalette` after the field registers.
+ * The binary itself stays purely descriptive.
  *
  * @param args.npyPath        Path to the f32 .npy file (3D, C-order).
  * @param args.outPath        Destination .scfd path (created or overwritten).
@@ -78,11 +76,10 @@ export async function buildCf4Density(args: {
   const voxelSize = args.voxelSizeMpc ?? CF4PP_VOXEL_SIZE_MPC;
 
   // ── 1. Load .npy ─────────────────────────────────────────────────
-  // CF4++ ships `d_mean_CF4pp` as f64; older catalog fixtures and our
-  // smoke tests use f32.  Accept either, narrow to a single Float64Array
-  // for the f16-packing loop below — JS numbers are f64 internally, so
-  // upcasting f32 → f64 here is a no-op for precision and lets the
-  // packing loop stay a single code path.
+  // CF4++ ships `d_mean_CF4pp` as f64; our smoke-test fixtures use f32.
+  // Accept either — JS numbers are f64 internally, so upcasting f32 → f64
+  // is a no-op for precision and lets the packing loop stay a single
+  // code path.
   const npyBuf = readFileSync(npyPath);
   const npy = readNpy(
     npyBuf.buffer.slice(npyBuf.byteOffset, npyBuf.byteOffset + npyBuf.byteLength),
@@ -123,8 +120,8 @@ export async function buildCf4Density(args: {
   // This guarantees 0 → 0.5 (transparent for divergent palettes), and
   // the more-extreme tail saturates at one end while the less-extreme
   // tail does NOT reach the opposite end.  For sequential palettes
-  // (viridis / magma / blue-purple / yellow-green) the effect is the
-  // same as before for the high tail; the low tail now starts at 0.5
+  // (viridis / magma / blue-purple / yellow-green) the high tail
+  // saturates as a min-max remap would; the low tail starts at 0.5
   // rather than 0, which crushes void contrast a bit but lets users
   // who want to see the FULL signed dynamic range flip to coolwarm
   // without re-encoding.
@@ -150,9 +147,9 @@ export async function buildCf4Density(args: {
   // place numpy axis 2 (SGZ) into WebGPU's x-axis and numpy axis 0
   // (SGX) into WebGPU's z-axis — visually swapping the cube's X and Z
   // directions vs. the model matrix's assumption that local-x = SGX.
-  // Empirically caught: cluster labels rendered via raDecDistToEqCart
-  // sit at known cluster positions, but the rendered density blobs
-  // appear at completely different locations.
+  // The symptom: cluster labels rendered via raDecDistToEqCart sit at
+  // the known cluster positions while the density blobs appear at
+  // completely different locations.
   //
   // Fix: transpose axes 0 ↔ 2 at pack time so the WebGPU x-fastest
   // layout carries SGX data in its fastest axis.  For each input cell
@@ -197,15 +194,13 @@ export async function buildCf4Density(args: {
     // `buildCubeModelMatrix` already applies the SG→EQ rotation via
     // `FRAME_TO_WORLD[supergalactic-cartesian]` for any cube whose
     // `frameKind` is supergalactic; this `rotation` field is composed
-    // ON TOP of that, so it must be identity for vanilla SG cubes.  An
-    // earlier draft wrote `SG_TO_EQ_QUATERNION` here, which compounded
-    // the rotation and visually placed cube features at SG_TO_EQ²·X
-    // instead of SG_TO_EQ·X — the cluster labels (which use the
-    // canonical eq-Cartesian) ended up rotated away from their cube
-    // overdensities even after the axis-transpose fix.  The
-    // `rotation` field is reserved for per-cube TILT offsets (e.g.
-    // align a cube manually to a survey ROI); vanilla cubes ship
-    // identity.
+    // ON TOP of that, so it must be identity for vanilla SG cubes.
+    // Writing `SG_TO_EQ_QUATERNION` here would compound the rotation
+    // and place cube features at SG_TO_EQ²·X instead of SG_TO_EQ·X —
+    // cluster labels (which use the canonical eq-Cartesian) end up
+    // rotated away from their cube overdensities.  The `rotation`
+    // field is reserved for per-cube TILT offsets (e.g. align a cube
+    // manually to a survey ROI); vanilla cubes ship identity.
     rotation: [0, 0, 0, 1],
     valueMin,
     valueMax,

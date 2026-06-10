@@ -1,7 +1,7 @@
 # Singleton overlay layers
 
-> **Audience.** You're adding (or touching) a renderer overlay that is *one
-> global layer* the user toggles on and off — filaments, the Milky-Way
+> **Audience.** You're adding (or touching) a renderer overlay that is _one
+> global layer_ the user toggles on and off — filaments, the Milky-Way
 > impostor, the flow field — not a per-point survey and not a per-field volume.
 >
 > **Status.** Skymap convention. It names the pattern those layers already
@@ -26,15 +26,17 @@ One global on/off layer drawn over the scene, with at most a handful of scalar
 It is **not**:
 
 - A **per-point survey source** (SDSS, GLADE, 2MRS, Famous, Milliquas).
-  Those are gated by the per-source `drawMask` — a 32-bit bitmask with
-  ~600M lookups/sec in the hot path. drawMask exists for that per-point
-  performance; do not extend it to singleton layers, and do not fold
-  singleton layers' visibility into it.
+  Those carry per-survey `enabled` rows in `settings.surveys.items` (which
+  demand reads via `settings.surveys.items[id]?.enabled`), and the _render_
+  hot path is gated by the per-source `drawMask` — a 32-bit bitmask, derived
+  from those settings + fade opacity, with ~600M lookups/sec. drawMask
+  exists for that per-point performance; do not extend it to singleton
+  layers, and do not fold singleton layers' visibility into it.
 - A **per-field scalar volume** (CF-4 density, MCPM). Those carry per-field
-  params (`enabled` / `intensity` / `palette` / …) on the volume store and are
-  gated through the `volumeField(id)?.enabled` `DemandCtx` surface. A singleton
-  layer has exactly one instance, so it needs neither a per-field record nor a
-  field-id key.
+  params (`enabled` / `intensity` / `palette` / …) in `settings.volumes.items`
+  and are gated by the direct settings read
+  `settings.volumes.items[id]?.enabled`. A singleton layer has exactly one
+  instance, so it needs neither a per-field record nor a field-id key.
 
 If the thing you're adding is one of those two, follow their pattern instead.
 
@@ -68,18 +70,19 @@ If the thing you're adding is one of those two, follow their pattern instead.
 
 Before this convention, singleton-layer toggles were expressed three different
 ways: `settings.X.enabled` (filaments, milkyWay), a per-field
-`volumeField().enabled` (volumes — correct *for volumes*, which are per-field),
-and, briefly, a bespoke one-off `DemandCtx.flow` surface backed by an `enabled`
-bit on the data store. The third put the same value in two places (store +
-ctx) and added a read surface that only one row used. Rule 1 + rule 3 collapse
-that: one home for the value, read through the surface that already exists.
+`settings.volumes.items[id]?.enabled` read (volumes — correct _for volumes_,
+which are per-field), and, briefly, a bespoke one-off `DemandCtx.flow` surface
+backed by an `enabled` bit on the data store. The third put the same value in
+two places (store + ctx) and added a read surface that only one row used. Rule
+1 + rule 3 collapse that: one home for the value, read through the surface
+that already exists.
 
 ## Worked reference — flow
 
 Flow is the canonical example as of its integration:
 
 - `settings.flow = { enabled, mode, intensity, count, trail, flowSpeed,
-  densityBias, wander }` — see `@types/settings/EngineSettingsState.d.ts`,
+densityBias, wander }` — see `@types/settings/EngineSettingsState.d.ts`,
   seeded from `DEFAULT_FLOW` in `data/defaults.ts`.
 - `FlowFieldStore = { loaded, setLoaded() }` — status-only, mirrors
   `FilamentStore`. See `@types/engine/data/FlowFieldStore.d.ts`.

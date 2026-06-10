@@ -82,14 +82,11 @@ import package::lib::util::galacticToShader;
 // ray-sphere has radius 0.125.  Multiplying those by this constant
 // gives the world-space extent of those features.
 //
-// History: an earlier version used 0.015.  That made the visible
-// disk fade at ~10 kpc radius (l=0.7 × 15 kpc) — much smaller than
-// D_25, and visibly tiny next to peer spirals like M31 (whose
-// procedural-disk pass renders its body at ~D_25 ≈ 46 kpc).
-//
-// Current value: 0.030 ⇒ visible disk fades around l=0.7 × 30 kpc =
-// 21 kpc radius (42 kpc diameter, matching the apparent body of M31
-// in the procedural pass).
+// 0.030 ⇒ visible disk fades around l=0.7 × 30 kpc = 21 kpc radius
+// (42 kpc diameter, matching the apparent body of M31 in the
+// procedural pass).  Smaller values (e.g. 0.015) fade the disk well
+// inside D_25 — visibly tiny next to peer spirals like M31, whose
+// procedural-disk pass renders its body at ~D_25 ≈ 46 kpc.
 //
 // The companion MILKY_WAY_HALFEXTENT_MPC (lives in vertex.wesl) bounds
 // the impostor billboard quad at 0.120 Mpc — 240 kpc total span,
@@ -157,11 +154,10 @@ const COL_DISC_HALO = vec3<f32>(0.95, 0.92, 0.88);
 
 // ── Ported helpers (see Task 0 of the plan for the original GLSL) ────
 //
-// 'rot2', 'sabs', 'toPolar', 'toRect' previously lived inline in this
-// file. They've moved to lib/math.wesl since the same primitives are
-// useful in any shader doing radial domain warps or smooth-distance
-// fields. The semantics are unchanged; the only rename is GLSL's
-// 'rot()' → 'rot2()' (see lib/math.wesl docblock for the why).
+// 'rot2', 'sabs', 'toPolar', 'toRect' live in lib/math.wesl — the
+// same primitives are useful in any shader doing radial domain warps
+// or smooth-distance fields. The only rename from the original GLSL
+// is 'rot()' → 'rot2()' (see lib/math.wesl docblock for the why).
 
 const TWIRLY: f32 = 2.5;
 
@@ -185,9 +181,9 @@ fn mod2(p_in: vec2<f32>, size: vec2<f32>) -> Mod2Out {
   return out;
 }
 
-// 'valueNoise2' (formerly 'noise1') and 'hash21' (formerly 'rand') now
-// live in lib/util.wesl. 'raySphere' moved with them. See that file's
-// docblock for the rename rationale.
+// 'valueNoise2' ('noise1' in the original GLSL), 'hash21' ('rand'),
+// and 'raySphere' live in lib/util.wesl. See that file's docblock for
+// the rename rationale.
 
 fn twirl(p_in: vec2<f32>, a: f32, z: f32) -> vec2<f32> {
   var pp = toPolar(p_in);
@@ -274,21 +270,20 @@ fn shadeGalaxyDisk(p_in: vec2<f32>, ro: vec3<f32>, rd: vec3<f32>, d: f32, tm: f3
   //   - The dust integral inside this function adds ~tiny dust haze
   //     when h ≈ 0 makes ddust ≈ d.
   //
-  // Multiplying the final result by 'exp(-5.5*l²)' (an earlier
-  // attempt) wasn't enough — NaN times anything is still NaN, and
-  // any value the GPU lifts to the HDR target via additive blending
-  // can wash out catalog points behind the impostor's quad.  The
-  // user reported a 'tilted black rectangle' with catalog points
-  // missing inside the impostor's screen-space footprint; toggling
-  // the impostor off restored them.
+  // Merely multiplying the final result by 'exp(-5.5*l²)' is not
+  // enough — NaN times anything is still NaN, and any value the GPU
+  // lifts to the HDR target via additive blending can wash out
+  // catalog points behind the impostor's quad (symptom: a tilted
+  // black rectangle the shape of the quad, with catalog points
+  // missing inside it).
   //
   // The bulletproof fix: return a hard zero outside l = 0.95.  This
   // is INSIDE the disk's natural brightness floor — at l = 0.95,
-  // exp(-5.5*0.9) = 4.9e-3 (already pretty dim), and the user
-  // reported a 'black ring' at l ≈ 1.0–1.2 caused by NaN propagation
-  // from the dim-tail terms (pow(0, near-zero), 1/s.x when s.x ≈ 0).
-  // Cutting at 0.95 trades a slightly more abrupt outer disk edge
-  // for guaranteed-zero output in the NaN-risk zone.
+  // exp(-5.5*0.9) = 4.9e-3 (already pretty dim) — while the NaN-risk
+  // zone at l ≈ 1.0–1.2 (pow(0, near-zero), 1/s.x when s.x ≈ 0;
+  // symptom: a black ring) lies entirely past the cut.  Cutting at
+  // 0.95 trades a slightly more abrupt outer disk edge for
+  // guaranteed-zero output in the NaN-risk zone.
   let p_check = rot2(p_in, 0.5 * tm);
   let l_check = length(p_check);
   if (l_check > 0.95) { return vec3<f32>(0.0); }
@@ -335,12 +330,11 @@ fn shadeGalaxyDisk(p_in: vec2<f32>, ro: vec3<f32>, rd: vec3<f32>, d: f32, tm: f3
 
   // ── Disk-extent envelope ─────────────────────────────────────────
   //
-  // The original ShaderToy was written for a hard-coded camera that
-  // ALWAYS framed the galaxy with disk-plane intersections inside l ≈
-  // 1 shader unit.  In that regime, every term in this function
-  // either naturally fades with 'h' (which carries 'exp(-5.5*l*l)')
-  // or never reaches a fragment outside the disk extent in the first
-  // place.
+  // The original ShaderToy's hard-coded camera ALWAYS framed the
+  // galaxy with disk-plane intersections inside l ≈ 1 shader unit.
+  // In that regime, every term in this function either naturally
+  // fades with 'h' (which carries 'exp(-5.5*l*l)') or never reaches
+  // a fragment outside the disk extent in the first place.
   //
   // Our world-anchored impostor breaks that invariant — corner
   // fragments of the impostor quad cast rays whose disk-plane
@@ -359,19 +353,17 @@ fn shadeGalaxyDisk(p_in: vec2<f32>, ro: vec3<f32>, rd: vec3<f32>, d: f32, tm: f3
   //      every fragment when h ≈ 0 makes ddust ≈ d − ε.
   //
   // With pure additive blending, those tiny per-fragment
-  // contributions add up across the impostor's full quad coverage —
-  // the user sees a uniform haze across the impostor's screen-space
-  // footprint that, after tone-mapping, washes out catalog points
-  // sitting behind it.  The screenshot was a tilted black rectangle
-  // exactly the impostor's quad shape; toggling the impostor off
-  // restored the catalog underneath.
+  // contributions add up across the impostor's full quad coverage
+  // into a uniform haze that, after tone-mapping, washes out catalog
+  // points sitting behind it — a tilted dark rectangle exactly the
+  // impostor's quad shape.
   //
   // Fix: multiply the entire output by 'exp(-5.5*l*l)' — the same
   // disk-extent factor 'height' already uses internally.  Inside the
   // disk (l ≤ 1) the multiplier is ~1 (unchanged); outside (l > 1)
   // it falls off rapidly so off-disk haze contributes effectively
-  // zero.  Edges of the impostor's quad are now invisible, only the
-  // actual galaxy renders.
+  // zero.  The impostor quad's edges stay invisible; only the actual
+  // galaxy renders.
   let extentEnvelope = exp(-5.5 * l * l);
   return col * extentEnvelope;
 }
@@ -499,12 +491,11 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   // ── Synthetic camera driven by the user's REAL camera ───────────
   //
   // The original ShaderToy hard-coded a fixed 'ro = vec3(0, 0.7, 2)
-  // * 0.75' and a synthesised perspective FOV via '2.5 * ww'.  That
-  // produced a frozen vantage regardless of where the user's orbit
-  // camera actually was — the user reported 'the galaxy is not moving
-  // around when the camera is moving' precisely because of this.
+  // * 0.75' and a synthesised perspective FOV via '2.5 * ww' — a
+  // frozen vantage regardless of where the user's orbit camera
+  // actually is (the galaxy would not move as the camera moves).
   //
-  // Replace it with a real-world ray:
+  // We cast a real-world ray instead:
   //   - 'ro_world' is the user's camera position (already in skymap
   //     world coordinates, equatorial-cartesian).
   //   - 'rd_world' is the per-fragment ray from the camera through

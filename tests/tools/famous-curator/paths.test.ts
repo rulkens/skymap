@@ -30,8 +30,8 @@ describe('curator paths', () => {
     expect(curatedTmpDir(root, 'm31')).toBe('/repo/public/images/famous-curated/m31/.tmp');
   });
 
-  it('overrideIndexPath resolves to data/famous_curated_overrides.json', () => {
-    expect(overrideIndexPath(root)).toBe('/repo/data/famous_curated_overrides.json');
+  it('overrideIndexPath resolves to data/seeds/famous_curated_overrides.json', () => {
+    expect(overrideIndexPath(root)).toBe('/repo/data/seeds/famous_curated_overrides.json');
   });
 
   it('atlasOutputPath returns the existing atlas slot path', () => {

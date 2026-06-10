@@ -48,7 +48,6 @@ import type { EngineHandle } from '../@types/engine/EngineHandle';
 import type { EngineStatus } from '../@types/engine/EngineStatus';
 import type { FocusableTarget } from '../@types/engine/FocusableTarget';
 import type { ScaleInfo } from '../@types/engine/ScaleInfo';
-import type { EngineCallbacks } from '../@types/engine/EngineCallbacks';
 import type { LoadProgressState } from '../@types/loading/LoadProgressState';
 import type { Tier } from '../@types/data/Tier';
 import type { UseEngineInput } from '../@types/engine/UseEngineInput';
@@ -138,7 +137,7 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
     // defined).  `initialTier` rides through as a non-callback option.
     const {
       lifecycle: extraLifecycle,
-      points: extraPoints,
+      surveys: extraSurveys,
       tonemap: extraTonemap,
       camera: extraCamera,
       selection: extraSelection,
@@ -192,7 +191,7 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
       // them through unconditionally so the optional-chain in engine
       // code resolves to the actual function (or stays undefined if
       // the consumer didn't subscribe).
-      points: extraPoints,
+      surveys: extraSurveys,
       tonemap: extraTonemap,
       bias: extraBias,
       thumbnails: extraThumbnails,

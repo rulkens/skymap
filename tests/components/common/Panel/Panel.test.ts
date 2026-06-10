@@ -7,9 +7,8 @@
  * in both states.  Because CSS-modules class names don't actually
  * carry styles in jsdom, we assert against ARIA attributes — the
  * stable, intent-level contract — rather than CSS-modules-mangled
- * class fragments like `_bodyWrapperOpen_`.  Pre-jsdom that fragment
- * was the only signal available; the new tests survive any benign
- * rename of the SCSS file.
+ * class fragments like `_bodyWrapperOpen_`, so the tests survive any
+ * benign rename of the SCSS file.
  */
 
 import { describe, expect, it } from 'vitest';

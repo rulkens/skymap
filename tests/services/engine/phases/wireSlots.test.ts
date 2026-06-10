@@ -40,6 +40,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/sources';
+import { SURVEY_IDS } from '../../../../src/data/surveyIds';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { seedVolumeFields } from '../../../../src/data/volumeFieldDefaults';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
@@ -289,8 +290,11 @@ const errorValue = (msg: string): LoadState<unknown> => ({
  * Minimal `EngineState` shaped for wireSlots's body.  Mirrors the
  * post-`initGpu` shape: the GPU renderers are present (so commit
  * subscribers don't NPE), the per-source slot map is empty (the test
- * populates it per-case), and the volume fields are seeded via
- * `settings.volumes.fields: seedVolumeFields()` (so the MCPM demand
+ * populates it per-case), the surveys are seeded all-enabled via
+ * `SURVEY_IDS` exactly like the engine's boot seed (so the demand loop —
+ * which reads `settings.surveys.items[id].enabled` — demands
+ * every survey at boot), and the volume fields are seeded via
+ * `settings.volumes.items: seedVolumeFields()` (so the MCPM demand
  * predicate reads true at boot, as wireSlots expects).
  */
 function makeState(
@@ -301,22 +305,38 @@ function makeState(
   }> = {},
 ): EngineState {
   const points = overrides.points ?? new Map();
-  const allVisible = {
+  const allVisible: Record<string, boolean> = {
     cluster: true,
     supercluster: true,
     void: true,
     famousGalaxy: true,
     group: true,
   };
+  // Translate the per-axis override maps into the per-category item rows the
+  // structureCatalog demand predicate reads (ring axis = `enabled`, label axis
+  // = `labelEnabled`). Defaults all-visible ⇒ structureCatalog demanded.
+  const markerVis = overrides.markerCategoryVisibility ?? allVisible;
+  const labelVis = overrides.labelCategoryVisibility ?? allVisible;
+  const structureItems: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
+  for (const cat of ['cluster', 'supercluster', 'void', 'group']) {
+    structureItems[cat] = { enabled: markerVis[cat] ?? true, labelEnabled: labelVis[cat] ?? true };
+  }
   const data = createEngineData();
   return {
     settings: {
-      points: {
+      surveys: {
+        enabled: true,
         sizePx: 2.5,
         brightness: 1.0,
         depthFade: true,
         highlightFallback: true,
         realOnly: false,
+        // All surveys enabled, mirroring the engine's boot seed — survey
+        // demand reads these `enabled` bits (not `sources.drawMask`),
+        // so the boot-load expectations for sdss/2mrs/glade hang off this seed.
+        items: Object.fromEntries(
+          SURVEY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+        ),
       },
       tonemap: { exposure: 1.0, curve: 'reinhard' },
       camera: { autoRotate: false },
@@ -324,12 +344,10 @@ function makeState(
       thumbnails: { enabled: true },
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 1.0 },
-      volumes: { masterEnabled: true, fields: seedVolumeFields() },
-      // Structure categories all visible by default ⇒ structureCatalog demanded.
+      volumes: { enabled: true, items: seedVolumeFields() },
       // Overridable so a test can hide every category and pin the bug-fix
       // (structureCatalog must NOT load when nothing structural is visible).
-      markerCategoryVisibility: overrides.markerCategoryVisibility ?? allVisible,
-      labelCategoryVisibility: overrides.labelCategoryVisibility ?? allVisible,
+      structures: { enabled: true, items: structureItems },
     },
     bias: {} as never,
     // The synthetic-fallback gate writes `state.requests.add('syntheticFallback')`

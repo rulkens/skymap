@@ -10,7 +10,7 @@
  *
  *   public/images/famous-curated/<id>/   — final, atomic-renamed
  *   public/images/famous-curated/<id>/.tmp/  — staging dir before rename
- *   data/famous_curated_overrides.json   — committed override index
+ *   data/seeds/famous_curated_overrides.json   — committed override index
  *   public/images/famous/<id>.webp       — existing atlas slot, owned
  *                                          by fetchFamousImages.ts but
  *                                          referenced here so Plan D

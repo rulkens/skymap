@@ -1,12 +1,10 @@
 /**
  * handleExport — hi-res / low-res registration (no double-deproject).
  *
- * Reproduces the bug where the committed thumbnail diverged from the 512²
- * preview: `process.ts` deprojects the crop BEFORE StarNet, so the cached
- * `cropped.png` (with stars) and `starless.png` are ALREADY in the face-on
- * frame.  The old export re-ran deprojectDisk on `starless.png`, stretching
- * it a second time — so `full.webp`/`atlas.webp` were doubly foreshortened
- * while the preview (single deproject) was not.
+ * Regression: export must not re-run deprojectDisk.  `process.ts` deprojects
+ * the crop BEFORE StarNet, so the cached `cropped.png` (with stars) and
+ * `starless.png` are ALREADY in the face-on frame — a second stretch would
+ * doubly foreshorten `full.webp`/`atlas.webp` relative to the preview.
  *
  * The contract this pins: export is a faithful DOWNSCALE of the full-res
  * buffers process already produced.  It applies no geometry of its own, so
@@ -47,7 +45,7 @@ async function seedDeprojectedSession(): Promise<{ tmpId: string; sessionDir: st
 
 function fakeRepoRoot(): string {
   const root = mkdtempSync(join(tmpdir(), 'curator-registration-repo-'));
-  mkdirSync(resolve(root, 'data'), { recursive: true });
+  mkdirSync(resolve(root, 'data/seeds'), { recursive: true });
   mkdirSync(resolve(root, 'public/images/famous-curated'), { recursive: true });
   return root;
 }
@@ -78,7 +76,7 @@ describe('handleExport — hi-res / low-res registration', () => {
     const full = await sharp(res.paths.full).metadata();
 
     // Square cropped/starless in ⇒ square out: a second deproject would
-    // Y-stretch starless/full into a tall rectangle (the shipped bug).
+    // Y-stretch starless/full into a tall rectangle.
     expect(starless.width).toBe(starless.height);
     expect(full.width).toBe(full.height);
 

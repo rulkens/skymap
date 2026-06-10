@@ -5,37 +5,30 @@
  *
  * ### Why a per-frame derived context exists
  *
- * Pre-D.1, the per-frame body opened with five free-standing snapshot
- * locals — `camRef`, `vp`, `rendererRef`, `thumbnailsRef`,
- * `postProcessRef` — followed by a 5-way null check that bailed out
- * if *any* of them was unset.  The same body then forwarded each of
- * those snapshots, plus two more derived scalars (`drawCamPos`,
- * `drawPxPerRad`), into `renderFrame()` as separate `RenderFrameInput`
- * fields.  `renderFrame()` itself recomputed `drawCamPos` and
- * `drawPxPerRad` from `cam` because the caller hadn't bothered passing
- * the derived values along.
+ * The alternative is free-standing snapshot locals at the top of the
+ * frame body — camera, view-proj, renderer, post-process handles —
+ * followed by an n-way null check, with each snapshot (plus derived
+ * scalars like `drawCamPos` / `drawPxPerRad`) forwarded into
+ * `renderFrame()` as separate fields and possibly recomputed there.
+ * That arrangement has three legibility problems:
  *
- * That arrangement had three legibility problems:
- *
- *   1. The "is the engine bootstrapped?" question had no single answer
- *      site — every frame redid the 5-way check, and any future call
- *      site that wanted to ask the same question would have to copy-
- *      paste it.
- *   2. `drawPxPerRad` and `drawCamPos` were derived twice on consecutive
- *      lines of execution (runFrame → renderFrame), in different files,
- *      with no link between the two derivations.  Drift was a latent
- *      bug — a future "well, runFrame uses 0.5 fovY/2 because of a
- *      tween" tweak could silently desync the two passes.
- *   3. Type narrowing didn't flow.  Each consumer needed its own
+ *   1. The "is the engine bootstrapped?" question has no single answer
+ *      site — every frame redoes the n-way check, and any call site
+ *      that wants to ask the same question has to copy-paste it.
+ *   2. Derived scalars get computed twice (runFrame → renderFrame), in
+ *      different files, with no link between the two derivations.
+ *      Drift is a latent bug — a "runFrame uses 0.5 fovY/2 because of
+ *      a tween" tweak could silently desync the two passes.
+ *   3. Type narrowing doesn't flow.  Each consumer needs its own
  *      `state.cam!.position` non-null assertion or local guard, even
- *      though the engine was provably-ready by the time the GPU
- *      dispatch ran.
+ *      though the engine is provably-ready by the time the GPU
+ *      dispatch runs.
  *
- * The fix is one named struct, derived once at the top of the frame
+ * Instead: one named struct, derived once at the top of the frame
  * body and consumed by every downstream site that asks "what's the
  * camera doing this frame?".  Adding a new derived per-frame quantity
  * (e.g. frustum planes for culling, or a cached camera-distance scalar)
- * becomes a one-line addition to `ReadyFrameContext`, not a 4-snapshot
+ * is a one-line addition to `ReadyFrameContext`, not a multi-snapshot
  * scatter across two files.
  *
  * ### Why the discriminated union (isReady: true | false)
@@ -51,11 +44,10 @@
  *
  *   if (!ctx) return;                    // what does "not ctx" mean?
  *
- * The discriminated union also lets future contributors define helper
- * functions whose argument type is `ReadyFrameContext` instead of
- * `FrameContext`, encoding "this code only runs after the bootstrap
- * gate passed" directly in the type system.  Spec D's later migrations
- * (the `Pass` abstraction, D.2) lean on this — `Pass.draw` takes
+ * The discriminated union also lets helper functions take
+ * `ReadyFrameContext` instead of `FrameContext`, encoding "this code
+ * only runs after the bootstrap gate passed" directly in the type
+ * system.  The `Pass` abstraction leans on this — `Pass.draw` takes
  * `ReadyFrameContext`, so the type checker proves the engine was ready
  * when the pass fired without re-asserting the precondition.
  *
@@ -111,18 +103,14 @@ import { isEngineReady } from '../helpers/engineReady';
  * fully-populated ready shape.
  *
  * Pure: takes inputs, returns a value, no side effects.  Safe to call
- * on every frame; the cost is a single `computeViewProj` (already paid
- * pre-D.1) plus a 3-element array allocation and a `Math.tan` (which
- * `renderFrame` was already doing).
+ * on every frame; the cost is a single `computeViewProj` plus a
+ * 3-element array allocation and a `Math.tan`.
  */
 export function deriveFrameContext(state: EngineState, canvas: HTMLCanvasElement): FrameContext {
-  // The bootstrap gate.  Pre-D.1 this lived inline in `runFrame()` as
-  // a 5-way `if (!vp || !rendererRef || !camRef || !thumbnailsRef ||
-  // !postProcessRef)` check.  D.1 lifted it here; D.4 then routed it
-  // through `isEngineReady` so every site that asks "is the engine
+  // The bootstrap gate.  Every site that asks "is the engine
   // bootstrapped?" — per-frame, slot-commit, public-handle — funnels
-  // through one predicate.  When MSDF labels (or any future
-  // bootstrap-only handle) lands, only `isEngineReady` and
+  // through the one `isEngineReady` predicate.  When a new
+  // bootstrap-only handle lands, only `isEngineReady` and
   // `ReadyFrameContext`'s field list need updating; this gate stays
   // the same.
   if (!isEngineReady(state)) {
@@ -135,10 +123,8 @@ export function deriveFrameContext(state: EngineState, canvas: HTMLCanvasElement
   const texturedDisks = state.subsystems.texturedDisks;
 
   // Snapshot-derive everything the caller would otherwise compute
-  // locally.  `computeViewProj` was previously called in `runFrame`;
-  // the `drawCamPos` / `drawPxPerRad` pair was previously computed at
-  // the top of `renderFrame` (lines 286-297 pre-D.1).  Both sites now
-  // read from `ctx`.
+  // locally.  `runFrame` and `renderFrame` both read these off `ctx`,
+  // so the two derivations can't drift.
   const canvasSize = { width: canvas.width, height: canvas.height };
   const vp = computeViewProj(cam);
   const drawCamPos: Readonly<Vec3> = [cam.position[0]!, cam.position[1]!, cam.position[2]!];

@@ -34,7 +34,7 @@ test('curator happy path: select → fetch → process → export', async ({ pag
   // clean baseline.  resolve() is relative to CWD at test-runner start,
   // which Playwright sets to the project root.
   const outDir = resolve(process.cwd(), 'public/images/famous-curated', TEST_ID);
-  const overrides = resolve(process.cwd(), 'data/famous_curated_overrides.json');
+  const overrides = resolve(process.cwd(), 'data/seeds/famous_curated_overrides.json');
   if (existsSync(outDir)) rmSync(outDir, { recursive: true, force: true });
   if (existsSync(overrides)) rmSync(overrides);
 

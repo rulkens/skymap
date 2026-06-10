@@ -82,6 +82,17 @@ describe('produceStructureMarkers → structureMarkerRenderer.setMarkers', () =>
 
     const state = {
       data,
+      settings: {
+        structures: {
+          enabled: true,
+          items: {
+            cluster: { enabled: true, labelEnabled: true },
+            supercluster: { enabled: true, labelEnabled: true },
+            void: { enabled: true, labelEnabled: true },
+            group: { enabled: true, labelEnabled: true },
+          },
+        },
+      },
       subsystems: {
         selection: { selected: () => null, focused: () => null },
         fades: makeRegistry(),

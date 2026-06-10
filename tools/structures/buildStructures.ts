@@ -5,7 +5,7 @@
  * Reads:
  *   - `data/raw/mcxc/mcxc.dat`             (MCXC X-ray cluster catalog)
  *   - `data/raw/mscc/mscc.dat`             (MSCC supercluster catalog)
- *   - `data/structure_anchors.seed.json`     (featured curated anchors)
+ *   - `data/seeds/structure_anchors.seed.json`     (featured curated anchors)
  *
  * Writes:
  *   - `public/data/structures.ccat`          (StructureCatalog binary, renderer input)

@@ -7,8 +7,7 @@
  * promoted to bespoke, or vice versa) fails loudly rather than
  * silently.
  *
- * These names are no longer part of `EngineHandle` (the H5 task 12
- * cleanup deleted the flat methods) — they're kept as the internal
+ * These names are not part of `EngineHandle` — they're the internal
  * identity of each descriptor row, used as Record keys so the
  * sub-handle forwarders in `engine.ts` can resolve a forwarder by
  * name (`boringSetters.setPointSize`).

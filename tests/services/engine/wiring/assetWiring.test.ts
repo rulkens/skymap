@@ -9,8 +9,9 @@
  *
  * Two of the predicates are bug-fix pins (see the module docstring on
  * `assetWiring.ts`): `filaments` follows `settings.filaments.enabled`, and
- * `structureCatalog` follows structure-category visibility (the plan's stale
- * `structures.enabled` flag does not exist).
+ * `structureCatalog` follows structure-category visibility — it loads when any
+ * category has its ring (`structures.items[cat].enabled`) OR its label
+ * (`.labelEnabled`) on.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -21,7 +22,6 @@ import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
-import type { VolumeFieldSettings } from '../../../../src/@types/settings/VolumeFieldSettings';
 import type { RequestKey } from '../../../../src/@types/loading/RequestKey';
 
 /** Find the single row for an asset key (throws if absent — keeps tests crisp). */
@@ -39,17 +39,11 @@ function rowFor(key: AssetKey) {
  */
 function makeCtx(over: {
   settings?: unknown;
-  volumeFields?: Record<string, { enabled: boolean }>;
-  visible?: Set<SourceType>;
   requests?: Set<RequestKey>;
   slotStates?: Partial<Record<AssetKey, LoadState<unknown>['kind']>>;
 }): DemandCtx {
   return {
     settings: (over.settings ?? {}) as Readonly<EngineSettingsState>,
-    // Volume demand predicates read `volumeField(id)?.enabled`; the stub only
-    // needs the `.enabled` leaf, so partial records are cast to the full shape.
-    volumeField: (id) => over.volumeFields?.[id] as VolumeFieldSettings | undefined,
-    isVisible: (s) => over.visible?.has(s) ?? false,
     request: (k) => over.requests?.has(k) ?? false,
     slotState: (k) => over.slotStates?.[k] ?? 'idle',
   };
@@ -115,10 +109,13 @@ describe('ASSET_WIRING membership', () => {
 });
 
 describe('ASSET_WIRING demand predicates', () => {
-  it('survey rows demand source visibility', () => {
+  it("survey rows demand the survey's enabled settings bit", () => {
     const sdss = rowFor(Source.SDSS);
-    expect(sdss.demand(makeCtx({ visible: new Set([Source.SDSS]) }))).toBe(true);
-    expect(sdss.demand(makeCtx({ visible: new Set() }))).toBe(false);
+    expect(
+      sdss.demand(makeCtx({ settings: { surveys: { items: { sdss: { enabled: true } } } } })),
+    ).toBe(true);
+    // Absent items row (or disabled bit) ⇒ not demanded.
+    expect(sdss.demand(makeCtx({ settings: { surveys: { items: {} } } }))).toBe(false);
   });
 
   it('famousMeta demands when the Famous slot is not idle', () => {
@@ -139,15 +136,21 @@ describe('ASSET_WIRING demand predicates', () => {
 
   it('mcpm demand follows its field-enabled flag', () => {
     const mcpm = rowFor('mcpm');
-    expect(mcpm.demand(makeCtx({ volumeFields: { mcpm: { enabled: true } } }))).toBe(true);
+    expect(
+      mcpm.demand(makeCtx({ settings: { volumes: { items: { mcpm: { enabled: true } } } } })),
+    ).toBe(true);
     // Default-off (field absent) ⇒ false.
-    expect(mcpm.demand(makeCtx({ volumeFields: {} }))).toBe(false);
+    expect(mcpm.demand(makeCtx({ settings: { volumes: { items: {} } } }))).toBe(false);
   });
 
   it('cf4Density demand follows its field-enabled flag (default-off ⇒ false)', () => {
     const cf4 = rowFor('cf4Density');
-    expect(cf4.demand(makeCtx({ volumeFields: { 'cf4-density': { enabled: true } } }))).toBe(true);
-    expect(cf4.demand(makeCtx({ volumeFields: {} }))).toBe(false);
+    expect(
+      cf4.demand(
+        makeCtx({ settings: { volumes: { items: { 'cf4-density': { enabled: true } } } } }),
+      ),
+    ).toBe(true);
+    expect(cf4.demand(makeCtx({ settings: { volumes: { items: {} } } }))).toBe(false);
   });
 
   it('flow demand follows settings.flow.enabled (singleton overlay layer)', () => {
@@ -160,29 +163,32 @@ describe('ASSET_WIRING demand predicates', () => {
 
   it('structureCatalog demand follows structure-category visibility (bug-fix pin)', () => {
     const cluster = rowFor('structureCatalog');
+    // Every category's ring + label off — both axes read from the item rows.
     const allHidden = {
-      markerCategoryVisibility: {
-        cluster: false,
-        supercluster: false,
-        void: false,
-        famousGalaxy: false,
-      },
-      labelCategoryVisibility: {
-        cluster: false,
-        supercluster: false,
-        void: false,
-        famousGalaxy: false,
+      structures: {
+        enabled: true,
+        items: {
+          cluster: { enabled: false, labelEnabled: false },
+          supercluster: { enabled: false, labelEnabled: false },
+          void: { enabled: false, labelEnabled: false },
+          group: { enabled: false, labelEnabled: false },
+        },
       },
     };
     expect(cluster.demand(makeCtx({ settings: allHidden }))).toBe(false);
 
-    // Any single structure category visible in EITHER markers or labels ⇒ true.
+    // Any single structure category visible in EITHER its ring or its label ⇒ true.
     expect(
       cluster.demand(
         makeCtx({
           settings: {
-            markerCategoryVisibility: { ...allHidden.markerCategoryVisibility, cluster: true },
-            labelCategoryVisibility: allHidden.labelCategoryVisibility,
+            structures: {
+              enabled: true,
+              items: {
+                ...allHidden.structures.items,
+                cluster: { enabled: true, labelEnabled: false },
+              },
+            },
           },
         }),
       ),
@@ -191,8 +197,13 @@ describe('ASSET_WIRING demand predicates', () => {
       cluster.demand(
         makeCtx({
           settings: {
-            markerCategoryVisibility: allHidden.markerCategoryVisibility,
-            labelCategoryVisibility: { ...allHidden.labelCategoryVisibility, void: true },
+            structures: {
+              enabled: true,
+              items: {
+                ...allHidden.structures.items,
+                void: { enabled: false, labelEnabled: true },
+              },
+            },
           },
         }),
       ),

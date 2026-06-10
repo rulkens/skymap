@@ -4,9 +4,9 @@
  * Turns a raw SDSS SkyServer CSV blob into an array of canonical
  * `ParsedRecord`s (see `common.ts`). This module knows nothing about the
  * binary point-cloud format, file I/O, or downstream merging — it just
- * decodes one specific CSV layout. That separation is what lets the
- * future `buildAllBins.ts` tool reuse this same function alongside parsers
- * for 2MRS, 2MPZ, and 6dFGS.
+ * decodes one specific CSV layout. That separation is what lets
+ * `buildAllBins.ts` reuse this same function alongside the other survey
+ * parsers.
  *
  * The expected SDSS CSV (downloaded from
  * https://skyserver.sdss.org/dr18/SearchTools/sql) carries a header row
@@ -168,14 +168,14 @@ export function parseSdssCsv(rawText: string): SdssCsvResult {
   /**
    * Find the 0-based column index for an optional column.  Returns -1
    * when the column is absent — the caller branches on this so the parser
-   * stays compatible with older SDSS CSVs that pre-date the new
+   * stays compatible with older SDSS CSVs that pre-date the
    * `petroR50_r` / `petroR90_r` columns.
    */
   const optionalColumn = (name: string): number => headers.indexOf(name.toLowerCase());
 
   const COL_PETRO_R50 = optionalColumn('petroR50_r');
-  // We read petroR90 too so a future Phase-2 plan can refine the visual
-  // diameter approximation without re-touching the parser API.
+  // We look up petroR90 too so a refined visual-diameter approximation
+  // can use it without re-touching the parser API.
   const _COL_PETRO_R90 = optionalColumn('petroR90_r');
 
   // ─── Row parsing ────────────────────────────────────────────────────
@@ -263,8 +263,8 @@ export function parseSdssCsv(rawText: string): SdssCsvResult {
     // i.e. treat 3× the half-light DIAMETER as a stand-in for D_25.  This
     // brackets the true visual diameter within ±20 % across the SDSS
     // main-sample magnitude range — enough for a renderer footprint.  A
-    // future plan can refine using petroR90 (closer to the visual edge)
-    // or a per-galaxy sersic-index calibration; the parser exposes
+    // refinement could use petroR90 (closer to the visual edge) or a
+    // per-galaxy sersic-index calibration; the parser exposes
     // diameterKpc as a single number to avoid leaking that decision.
     let diameterKpc: number | null = null;
     if (COL_PETRO_R50 !== -1) {
@@ -295,7 +295,7 @@ export function parseSdssCsv(rawText: string): SdssCsvResult {
       axisRatio: shape ? shape.axisRatio : null,
       positionAngleDeg: shape ? shape.positionAngleDeg : null,
       diameterKpc,
-      // SDSS rows have no AGN class signal yet and never a Milliquas
+      // SDSS rows carry no AGN class signal and never a Milliquas
       // parent-survey prefix; both bytes stay 0 here (see
       // `src/data/sourceClass.ts` for the lookup contract).
       classByte: 0,

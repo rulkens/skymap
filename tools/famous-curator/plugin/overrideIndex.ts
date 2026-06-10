@@ -1,6 +1,6 @@
 /**
  * overrideIndex — read-modify-write helper for the curator's override
- * JSON (`data/famous_curated_overrides.json`).
+ * JSON (`data/seeds/famous_curated_overrides.json`).
  *
  * Write strategy: load the current index (or {} if missing), mutate the
  * `entries[id]` slot, write to `<path>.tmp`, then `rename(<path>.tmp,

@@ -1,9 +1,9 @@
 /**
  * writeVolumeFieldSetting — the single copy-on-write write-path for one
- * field's settings entry in `state.settings.volumes.fields`.
+ * field's settings entry in `state.settings.volumes.items`.
  *
  * Returns a NEW fields map with the patched row so callers can replace
- * `state.settings.volumes.fields` with the return value without touching
+ * `state.settings.volumes.items` with the return value without touching
  * the original object (never mutates input).  Returns `null` when `id`
  * has no row — an unknown or unregistered field id is a silent no-op at
  * the call site, which is the right posture because future tasks may

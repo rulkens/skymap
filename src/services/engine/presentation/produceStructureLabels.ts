@@ -12,18 +12,24 @@
  * Each label's final `fadeAlpha` is the distance fade multiplied by two
  * composed strands (see `focusRecession.ts`): the per-category toggle's
  * opacity (`opacityOf({labelLayer, structure, category})`, read from the
- * FadeRegistry) and the focus recession factor. A category whose opacity is
- * exactly 0 is skipped wholesale — the only legitimate all-or-nothing skip.
- * The FOCUSED structure's own label is exempt from recession (factor 1): a
- * faded ring never carries a bright label, but the thing under inspection
- * keeps its label. The marker pass (`produceStructureMarkers`) bakes the
- * mirror of this into each ring's alpha.
+ * FadeRegistry) and the focus recession factor. The authoritative gate is the
+ * `structures.items[cat].labelEnabled` boolean: a category that is both
+ * DISABLED and fully faded (opacity 0) is skipped wholesale — the only
+ * legitimate all-or-nothing skip — while a still-fading disabled category keeps
+ * emitting so its fade-out tail draws to completion. The FOCUSED structure's
+ * own label is exempt from recession (factor 1): a faded ring never carries a
+ * bright label, but the thing under inspection keeps its label. The marker pass
+ * (`produceStructureMarkers`) bakes the mirror of this into each ring's alpha.
  *
  * ### This producer owns the per-category load-in fade
  *
- * The first time a category emits a (visible) label, the producer fires its
- * `fadeTo(handle, 1)` once. Each category fires its load-in independently,
- * mirroring how the famous-galaxy layer fires its own load-in on first emit.
+ * The first time a category emits a label while INTENDED-VISIBLE
+ * (`labelEnabled` true), the producer fires its `fadeTo(handle, 1)` once. Each
+ * category fires its load-in independently, mirroring how the famous-galaxy
+ * layer fires its own load-in on first emit. The load-in is gated on the
+ * boolean (not merely on reaching this line): a disabled category fading OUT
+ * still passes the draw gate, but must never re-fire its load-in and pop back
+ * to 1.
  *
  * ### No declutter here — the director owns it
  *
@@ -53,12 +59,12 @@ import { structureIdOf } from '../helpers/structureIdOf';
 // Per-category load-in latch. The producer is a bare function (not a closure
 // over subsystem state like the director), so the once-per-category one-shot
 // has nowhere to live except module scope. Each category fires its load-in
-// `fadeTo(1)` the first time it emits a visible label. Because the loop reaches
-// this only AFTER the `catOpacity === 0` skip, a disabled category never fires
-// (so a toggled-off category is never wrongly revealed); a visible category
-// registered at 1 ramps `fadeTo(1)` as a no-op, fired for symmetry with the
-// famous-galaxy layer's first-emit load-in. Reset between tests via
-// `__resetStructureLabelLoadIn`.
+// `fadeTo(1)` the first time it emits a label while INTENDED-VISIBLE. The fire
+// is gated on `labelEnabled`, not merely on reaching the line: a disabled
+// category fading OUT still passes the draw gate, so an ungated load-in would
+// pop it back to 1 mid-fade. A visible category registered at 1 ramps
+// `fadeTo(1)` as a no-op, fired for symmetry with the famous-galaxy layer's
+// first-emit load-in. Reset between tests via `__resetStructureLabelLoadIn`.
 const loadInFired = new Set<StructureCategory>();
 
 /** Test-only: clear the module-level load-in latch between unit cases. */
@@ -94,21 +100,27 @@ export function produceStructureLabels(
   const structures = state.data.structures;
   for (const p of structures.all()) {
     // Per-category label opacity: the category toggle's fade, read from the
-    // registry. 0 is the all-or-nothing skip — a disabled category emits no
-    // labels and never fires its load-in.
+    // registry. The authoritative gate is the boolean — emit while the
+    // category's label is enabled OR still fading out. Skip only when it's both
+    // disabled AND fully faded (the all-or-nothing case).
     const catOpacity = fades.opacityOf(
       { kind: 'labelLayer', layer: 'structure', category: p.category },
       now,
     );
-    if (catOpacity === 0) continue;
+    const labelEnabled = state.settings.structures.items[p.category].labelEnabled;
+    if (!labelEnabled && catOpacity === 0) continue;
     // Featured gate: only the ~25-30 curated anchors earn text; the ~375
     // bulk clusters/SCs still render rings via the marker pass, no label.
     if (!p.featured) continue;
     // Anchor gate: a label needs its ring marker as a visual anchor. Read the
-    // ring's OWN opacity source (the markerLayer fade handle, same as
+    // ring's OWN gate (the `enabled` boolean + markerLayer fade handle, same as
     // produceStructureMarkers) so the label fades out in lock-step with the ring
     // instead of popping when the category toggles off mid-fade.
-    if (fades.opacityOf({ kind: 'markerLayer', category: p.category }, now) === 0) continue;
+    if (
+      !state.settings.structures.items[p.category].enabled &&
+      fades.opacityOf({ kind: 'markerLayer', category: p.category }, now) === 0
+    )
+      continue;
 
     const style = STRUCTURE_MARKER_STYLES[p.category];
 
@@ -176,9 +188,12 @@ export function produceStructureLabels(
     fadeAlpha *= catOpacity * recession;
 
     // Per-category load-in: fire the load-in fade once on this category's first
-    // emitted (visible) label. Reached only for enabled categories (the
-    // catOpacity === 0 skip above), so a toggled-off category never fires.
-    if (!loadInFired.has(p.category)) {
+    // emitted label while INTENDED-VISIBLE. The `labelEnabled` guard is
+    // load-bearing: a disabled category fading OUT still reaches here (its
+    // opacity > 0 passed the draw gate), and an ungated fire would re-ramp it
+    // to 1 mid-fade. Gating on the boolean keeps the load-in to the visible
+    // first-emit only.
+    if (labelEnabled && !loadInFired.has(p.category)) {
       loadInFired.add(p.category);
       void fades.fadeTo(
         { kind: 'labelLayer', layer: 'structure', category: p.category },

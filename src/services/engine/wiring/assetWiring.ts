@@ -25,13 +25,13 @@
  *   - **filaments** gates on `settings.filaments.enabled` — the real master
  *     toggle, so a disabled filament overlay never fetches the skeleton.
  *   - **structureCatalog** gates on structure-category visibility: it loads when
- *     ANY of the cluster / supercluster / void categories is visible in either
- *     the marker or the label overlay. There is no `settings.structures.enabled`
- *     flag — structures are controlled per-category via the two visibility
- *     records (`markerCategoryVisibility` / `labelCategoryVisibility`). With
- *     every category visible by default, the catalog still loads at boot
- *     (behaviour-preserving); only a user who hides every structure category in
- *     both overlays skips the fetch. This is the structures-enabled proxy.
+ *     ANY of the cluster / supercluster / void categories has its ring OR label
+ *     enabled, read from the per-category item rows
+ *     (`structures.items[cat].enabled` / `.labelEnabled`) — the single home for
+ *     both axes. With every category visible by default, the catalog still
+ *     loads at boot (behaviour-preserving); only a user who hides every
+ *     structure category's ring AND label skips the fetch. This is the
+ *     structures-enabled proxy.
  *
  * ### What is NOT a row here
  *
@@ -64,6 +64,7 @@ import { createFlowFieldSlot } from '../../loading/slots/flowFieldSlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
 import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
 import type { SourceType } from '../../../@types/data/SourceType';
+import type { SurveyId } from '../../../@types/engine/data/SurveyId';
 
 /**
  * The categories backed by the bulk `.ccat` catalog — their visibility
@@ -95,12 +96,17 @@ const externalFactory = (): never => {
 
 /** One demand+req row for a point source, marked as externally built. */
 function pointRow(source: SourceType): AssetWiringRow {
+  // The source → survey-id registry mapping is resolved once at row
+  // construction, like the volume-field handles above. The items record is
+  // keyed by SurveyId but the cast comes from the broader SourceType, so the
+  // optional chain is the runtime guard for a non-survey code.
+  const id = SOURCE_REGISTRY[source].id as SurveyId;
   return {
     key: source,
     built: 'external',
     factory: externalFactory,
     req: (tier) => ({ source, tier }),
-    demand: (ctx) => ctx.isVisible(source),
+    demand: (ctx) => ctx.settings.surveys.items[id]?.enabled === true,
   };
 }
 
@@ -145,12 +151,12 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
 
   // ── MCPM Cosmic Web volume ───────────────────────────────────────
   // Tier-aware. Field id read from the registry; access is optional-chained
-  // because `state.settings.volumes.fields` has no entry for a field until it is seeded.
+  // because `state.settings.volumes.items` has no entry for a field until it is seeded.
   {
     key: 'mcpm',
     factory: (deps) => createMcpmSlot(deps.state, deps.cb),
     req: (tier) => ({ tier }),
-    demand: (ctx) => ctx.volumeField(MCPM_FIELD)?.enabled === true,
+    demand: (ctx) => ctx.settings.volumes.items[MCPM_FIELD]?.enabled === true,
   },
 
   // ── CF-4 DM density volume ───────────────────────────────────────
@@ -159,7 +165,7 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     key: 'cf4Density',
     factory: (deps) => createCf4DensitySlot(deps.state, deps.cb),
     req: () => undefined,
-    demand: (ctx) => ctx.volumeField(CF4_FIELD)?.enabled === true,
+    demand: (ctx) => ctx.settings.volumes.items[CF4_FIELD]?.enabled === true,
   },
 
   // ── CF4++ velocity flow field ────────────────────────────────────
@@ -186,7 +192,8 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     demand: (ctx) =>
       BULK_CATALOG_CATEGORIES.some(
         (cat) =>
-          ctx.settings.markerCategoryVisibility[cat] || ctx.settings.labelCategoryVisibility[cat],
+          ctx.settings.structures.items[cat].enabled ||
+          ctx.settings.structures.items[cat].labelEnabled,
       ),
   },
 

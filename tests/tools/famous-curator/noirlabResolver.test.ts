@@ -19,9 +19,9 @@ const FIXTURE_PATH = join(__dirname, 'fixtures', 'noirlab-noao-m94.html');
 const PAGE_URL = 'https://noirlab.edu/public/images/noao-m94/';
 
 /**
- * Helper: drop the first substring matching `re` from `html`.  Used to
- * carve the fallback variants out of the base fixture — making the
- * mutation a one-liner keeps each test's intent legible.
+ * Helper: drop the first substring matching `re` from `html`.  Carves the
+ * fallback variants out of the base fixture — making the mutation a
+ * one-liner keeps each test's intent legible.
  */
 function removeFirstMatching(html: string, re: RegExp): string {
   return html.replace(re, '');

@@ -12,9 +12,9 @@ import type { ScalarCube } from '../../src/@types/data/ScalarCube';
 function makeFixture(): ScalarCube {
   // Tiny 2x2x2 single-channel cube — 8 voxels — for quick round-trip checks.
   //
-  // SCFD v3 cubes are data-only: palette and densityScale moved out of
-  // the binary into the per-handle `volumeFieldDefaults` registry, so
-  // they're no longer fields on the `ScalarCube` type.
+  // SCFD v3 cubes are data-only: palette and densityScale live in the
+  // per-handle `volumeFieldDefaults` registry, not in the binary, and
+  // are not fields on the `ScalarCube` type.
   const voxels = new Uint16Array(8);
   for (let i = 0; i < 8; i++) voxels[i] = i * 1000;
   return {
@@ -200,7 +200,7 @@ describe('SCFD v3 binary format', () => {
   });
 
   it('round-trips a cube without palette/densityScale on the decoded cube', () => {
-    // The decoded ScalarCube no longer carries palette/densityScale —
+    // The decoded ScalarCube does not carry palette/densityScale —
     // those are presentation concerns supplied by volumeFieldDefaults.
     const cube = makeFixture();
     const decoded = decodeScalarField(encodeScalarField(cube));
@@ -313,7 +313,6 @@ describe('SCFD v3 — baked fixture round-trip', () => {
       writeFileSync(FIXTURE_PATH, Buffer.from(buf));
     }
   });
-
 
   it('decodes the checked-in tiny-8x8x8 fixture with expected metadata', () => {
     const bytes = readFileSync(FIXTURE_PATH);

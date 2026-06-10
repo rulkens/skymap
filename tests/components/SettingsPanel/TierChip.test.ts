@@ -2,11 +2,8 @@
 /**
  * Tests for TierChip.
  *
- * TierChip is the compact dropdown that replaced the three-button
- * TierSelector during the 2026-05-19 SettingsPanel UX restructure
- * (see `docs/grill-sessions/settings-panel-audit-2026-05-19.md`).
- * It now lives in the panel header strip via the new
- * `Panel.headerExtra` slot.
+ * TierChip is the compact tier dropdown that lives in the panel header
+ * strip via the `Panel.headerExtra` slot.
  *
  * The native <select> handles keyboard nav / a11y / popup chrome on
  * its own; we just verify the contract this component owns: the
@@ -51,8 +48,8 @@ describe('TierChip', () => {
   });
 
   // Native <select> doesn't fire onChange when the user re-picks the
-  // already-selected option, so the old TierSelector's explicit guard
-  // against pointless re-fetches isn't needed here — the browser
-  // handles it for us.  No test for that behaviour since it's a
-  // platform invariant, not this component's responsibility.
+  // already-selected option, so no explicit guard against pointless
+  // re-fetches is needed — the browser handles it.  No test for that
+  // behaviour since it's a platform invariant, not this component's
+  // responsibility.
 });

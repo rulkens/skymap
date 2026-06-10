@@ -33,9 +33,7 @@ type VolumeEntry = Extract<SourceEntry, { type: 'volume' }>;
  * — every value in the union has a registry entry.
  */
 function volumeEntry(id: VolumeFieldId): VolumeEntry {
-  const entry = Object.values(SOURCE_REGISTRY).find(
-    (e) => e.type === 'volume' && e.handle === id,
-  );
+  const entry = Object.values(SOURCE_REGISTRY).find((e) => e.type === 'volume' && e.handle === id);
   // The `VolumeFieldId` union is derived from SOURCE_REGISTRY entries,
   // so a missing entry would mean the registry has drifted from the
   // type — surface that loudly rather than papering over it.
@@ -61,9 +59,10 @@ export function getVolumeFieldDefaults(id: VolumeFieldId): VolumeFieldDefaults {
  * this helper removes.
  *
  * `enabled` comes from the registry `visible` flag so the construction
- * seed lands the on/off bit in pure state at boot, symmetric with how
- * `drawMask` seeds survey visibility from `visible`. `intensity` falls
- * back to the global default for any field that omits a per-cube override.
+ * seed lands the on/off bit in pure state at boot, symmetric with how the
+ * construction seed lands each survey's `surveys.items[id].enabled`.
+ * `intensity` falls back to the global default for any field that omits a
+ * per-cube override.
  */
 export function buildVolumeFieldSettings(id: VolumeFieldId): VolumeFieldSettings {
   const entry = volumeEntry(id);
@@ -80,10 +79,11 @@ export function buildVolumeFieldSettings(id: VolumeFieldId): VolumeFieldSettings
 
 /**
  * Build the construction-time volume-field seed record. The engine seeds
- * `state.settings.volumes.fields` from this at construction so every
+ * `state.settings.volumes.items` from this at construction so every
  * shippable volume's on/off state (and tunables) EXISTS before any cube
- * loads — the demand predicate `volumeField(id)?.enabled` then reads pure
- * state, fully symmetric with survey `isVisible`. Without this, a
+ * loads — the demand predicate `settings.volumes.items[id]?.enabled` then
+ * reads pure state, fully symmetric with the survey items read
+ * (`settings.surveys.items[id]?.enabled`). Without this, a
  * default-on volume (MCPM) never triggers its initial demand-driven
  * load because its field entry didn't exist yet.
  *

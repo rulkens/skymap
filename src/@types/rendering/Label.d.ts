@@ -29,13 +29,11 @@ export type Label = {
   /** Registered FontId from `src/data/fonts.ts`.  Required — no default. */
   readonly font: FontId;
   /**
-   * @deprecated Legacy buffer slot — the shader no longer reads this.
-   * The em height is now driven by `worldEmMpc` projected through
-   * perspective (see `shaders/labels/vertex.wesl`).  Field is kept
-   * in the type so existing call sites compile; it is written to the
-   * GPU buffer but silently ignored by the sizing math.  Set to `0`
-   * on new call sites; will be removed in a future cleanup once all
-   * producers have migrated to `worldEmMpc`.
+   * @deprecated Unread buffer slot — sizing is driven by `worldEmMpc`
+   * projected through perspective (see `shaders/labels/vertex.wesl`).
+   * The value is written to the GPU buffer but ignored by the sizing
+   * math.  Set to `0` on new call sites.  Transitional: producers are
+   * migrating to `worldEmMpc`.
    */
   readonly pixelSize: number;
   /**
@@ -50,8 +48,7 @@ export type Label = {
    * therefore never have to think about premultiplication.
    *
    * The outline/glow colour fields below follow the same straight-RGBA
-   * convention — uniformity across the colour API surface is the whole
-   * point of carrying out this migration alongside the effects work.
+   * convention, so the colour API surface is uniform.
    */
   readonly color?: Vec4;
   /**

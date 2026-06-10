@@ -24,14 +24,13 @@ import type { VolumeFieldRowData } from '../settings/VolumeFieldRowData';
  * except where noted. They are called only when the value actually changes,
  * so React's `setState` can be passed in directly.
  *
- * ### Nested-only shape (H5 task 11)
+ * ### Nested-only shape
  *
  * Each sub-bag groups its callbacks by the engine sub-system they
  * concern (lifecycle / selection / camera / sources / bias / points /
  * tonemap / thumbnails / milkyWay / filaments / volumes / input).
- * Pre-task-11 the type also exposed flat siblings (`onStatusChange`,
- * `onPointSizeChange`, …); the migration is complete now and every
- * fire site lives at its nested address.
+ * There are no flat siblings — every fire site lives at its nested
+ * address.
  *
  * Why namespacing at all (rather than 26 sibling lambdas)?  The
  * grouping mirrors the engine's *internal* `EngineState` sub-bags so
@@ -124,8 +123,7 @@ export type EngineCallbacks = {
      */
     onFocusChange?: (target: FocusableTarget | null) => void;
     /**
-     * Reserved for the legacy engine-derived scale-bar emission.
-     * Scale-bar derivation now happens React-side from
+     * Reserved.  Scale-bar derivation happens React-side from
      * `onCameraChange` snapshots; the slot stays for future overlays
      * that want a typed `ScaleInfo` echo.
      */
@@ -147,10 +145,10 @@ export type EngineCallbacks = {
   };
 
   /**
-   * Point-render style echoes.  Drive the SettingsPanel controls so
+   * Survey point-render style echoes.  Drive the SettingsPanel controls so
    * the UI mirrors engine truth on every clamp / re-seed.
    */
-  points?: {
+  surveys?: {
     onSizeChange?: (sizePx: number) => void;
     onBrightnessChange?: (value: number) => void;
     onDepthFadeChange?: (enabled: boolean) => void;
@@ -206,9 +204,9 @@ export type EngineCallbacks = {
   };
 
   /**
-   * Galaxy-thumbnail render-pass on/off echo.  Mirrors the
-   * `setGalaxyTexturesEnabled` flag (gated inside the per-frame loop,
-   * so flipping it stops new fetches and quad emissions immediately).
+   * Galaxy-thumbnail render-pass on/off echo.  Mirrors
+   * `thumbnails.setEnabled` (gated inside the per-frame loop, so
+   * flipping it stops new fetches and quad emissions immediately).
    */
   thumbnails?: { onEnabledChange?: (enabled: boolean) => void };
 
@@ -239,9 +237,12 @@ export type EngineCallbacks = {
    * can be hidden while its label still renders, and vice versa.
    *
    * The engine fires each callback once at init (with the default
-   * record — all categories visible) and once per matching
-   * `handle.labels.setCategoryLabelVisible(...)` /
-   * `setCategoryMarkerVisible(...)` call.
+   * record — all categories visible) and once per matching structure
+   * toggle (`handle.structures.setItemEnabled(...)` /
+   * `setLabelEnabled(...)`) or famous-label toggle
+   * (`handle.surveys.setLabelEnabled('famousGalaxy', ...)`). The records are
+   * derived projections of `settings.structures.items`, so each echo
+   * carries the freshly-derived view.
    */
   labels?: {
     onLabelCategoryVisibilityChange?: (

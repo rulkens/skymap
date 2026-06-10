@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * buildAllBins — cross-match three real catalogues and write one v2 .bin per source.
+ * buildAllBins — cross-match three real catalogues and write one .bin per source.
  *
  * Usage:
  *   npm run build-all -- \
@@ -26,7 +26,7 @@
  *   `tools/crossMatch.ts` (Node-free) lets `tests/crossMatch.test.ts`
  *   exercise it without dragging Node types into the browser-side build.
  *   This module re-exports `crossMatch` so callers (and the test) can
- *   keep importing it from the `buildAllBins` path the plan specifies.
+ *   import it from the `buildAllBins` path.
  */
 import {
   createReadStream,
@@ -107,8 +107,8 @@ export type LocalVolumeOverrides = {
  * catalogued spectroscopic z stays on `cloud.spectroscopicZ` regardless,
  * so the InfoCard displays the published value even when the override
  * fires (e.g. M31's z = −0.001 stays visible while the position sits at
- * 0.78 Mpc). When `overrides` is null the legacy cz-only path runs for
- * every record — used by unit tests that exercise the SoA fill loop in
+ * 0.78 Mpc). When `overrides` is null the cz-only path runs for every
+ * record — used by unit tests that exercise the SoA fill loop in
  * isolation.
  */
 export function recordsToCloud(
@@ -186,11 +186,10 @@ export function recordsToCloud(
     //
     // Why apply the fallback here rather than inside each parser?  Three
     // reasons: (1) a single source-of-truth for the default value, (2)
-    // future Phase-2 plans (HyperLEDA logd25) can swap the fallback to a
-    // pgc-keyed lookup without touching every parser, and (3) the
-    // null/finite distinction at the parser boundary doubles as the
-    // provenance signal for the InfoCard's "real / Tully / fallback"
-    // chip in Task 14.
+    // swapping the fallback to a pgc-keyed lookup (e.g. HyperLEDA logd25)
+    // wouldn't touch every parser, and (3) the null/finite distinction at
+    // the parser boundary doubles as the provenance signal for the
+    // InfoCard's "real / Tully / fallback" chip.
     cloud.diameterKpc[i] =
       r.diameterKpc !== null && r.diameterKpc > 0 ? r.diameterKpc : DEFAULT_GALAXY_DIAMETER_KPC;
     // Per-source classification byte (e.g. Milliquas AGN class
@@ -228,10 +227,9 @@ type ParserFn = (raw: string) => { records: ParsedRecord[]; skipped: number };
  * SkyServer's web export names every download with a timestamped filename
  * (e.g. `Skyserver_CrossID5_3_2026 7_59_27 PM.csv`), so when the user
  * downloads a new pull the previous one stays on disk under a different
- * name.  Hard-coding any single filename in `package.json`'s `build-all`
- * script meant new downloads were silently ignored unless someone updated
- * the script — exactly the regression that put 30 kpc fallbacks on every
- * SDSS row even though `petroR50_r` was right there.
+ * name.  A hard-coded filename in `package.json`'s `build-all` script
+ * would silently ignore every new download until someone updated the
+ * script — building stale data with no warning.
  *
  * Strategy: glob `Skyserver_*.csv`, sort by mtime descending, return the
  * first entry's path.  Returns undefined when the directory has no match,
@@ -554,9 +552,8 @@ async function runCli(): Promise<void> {
   let twoMrsPatched = 0;
   for (let i = 0; i < twoMrs.length; i++) {
     const r = twoMrs[i]!;
-    // r.massId is undefined when the 2MRS parser was called from a
-    // codepath that didn't set the field (e.g. older tests pre-dating
-    // this cross-match) — defensive check, not load-bearing in the
+    // r.massId can be absent on records built outside parseTwoMrs
+    // (e.g. test fixtures) — defensive check, not load-bearing in the
     // CLI path where parseTwoMrs always populates it.
     if (!r.massId) continue;
     const pgc = pgcByMassId.get(r.massId);
@@ -589,14 +586,13 @@ async function runCli(): Promise<void> {
   // entries for ~75 well-known galaxies with their own positions,
   // thumbnails, and metadata. Without this dedup each famous galaxy
   // renders twice — once from the catalog layer, once from the famous
-  // layer. Pre-local-volume-override the duplication was visually hidden
-  // (cz-mirrored catalog position vs curated famous position were Mpc
-  // apart); the CF4 override moves them ~0.03 Mpc apart, making the
-  // duplication visible.
+  // layer — and because the local-volume distance override puts the
+  // catalog row at the same measured distance as the curated entry
+  // (~0.03 Mpc apart for M31), the two billboards overlap on screen.
   //
   // Threshold: 30 arcsec — same scale used by the rest of the build for
   // catalog cross-matches; close enough to catch the local-volume
-  // duplication M31/NGC 147/NGC 185 exhibited post-CF4 override.
+  // duplicates (M31 / NGC 147 / NGC 185).
   let famousPositions: ReadonlyArray<FamousSkyPosition> = [];
   try {
     const seedRaw = readFileSync(rawDataPath('famous.seed'), 'utf8');
@@ -687,10 +683,10 @@ async function runCli(): Promise<void> {
         );
         continue;
       }
-      // Milliquas needs no special-cased subsample path now that the
-      // class + parent-survey bytes ride on the records themselves —
-      // `selectTierRecords` already preserves per-record fields when
-      // it picks the brightest-N slice. When the source defines a
+      // Milliquas needs no special-cased subsample path: the class +
+      // parent-survey bytes ride on the records themselves, and
+      // `selectTierRecords` preserves per-record fields when it picks
+      // the brightest-N slice. When the source defines a
       // `fluxSupplementMagLimit` (GLADE, SDSS) the brightest-N backbone
       // is unioned with an apparent-mag flux supplement to restore the
       // local volume the M_abs cut empties; otherwise it's the pure cut.

@@ -25,9 +25,9 @@
  *      scheduler whenever any slot transitions to `ready`.  The single
  *      channel-mouth enforcement point: no per-slot wake obligation.
  *   8. `reevaluateDemand` — the single place loads start. It walks every wiring
- *      row and triggers each demanded slot with its tier-derived request,
- *      replacing the old imperative boot loop. The same loop re-runs on every
- *      state change, so "is this asset required?" has one answer in one place.
+ *      row and triggers each demanded slot with its tier-derived request. The
+ *      same loop re-runs on every state change, so "is this asset required?"
+ *      has one answer in one place.
  *
  * The phase does not block on data arrival: `cb.onStatusChange({ kind:
  * 'loading' })` fires synchronously and `wireInput`/`startLoop` run immediately

@@ -4,7 +4,7 @@
  * ### Why one-shot flags need a separate axis
  *
  * Most asset-demand predicates are driven by persistent state: the user
- * enables filaments (settings toggle), a survey becomes visible (drawMask
+ * enables filaments (settings toggle), a survey is enabled (settings items
  * bit), or a companion asset is ready (slot state).  Those are level-
  * triggered — the predicate stays true as long as the condition holds.
  *

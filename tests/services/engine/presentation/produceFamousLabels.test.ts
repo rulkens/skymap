@@ -18,17 +18,20 @@ function makeRegistry(): FadeRegistry {
   return createFadeRegistry({ requestRender: () => {} });
 }
 
-// produceFamousLabels reads `state.data.galaxies` for the records and
-// `state.subsystems.fades` for the `galaxyNames` opacity + load-in fire. The
-// fixture supplies both; the `galaxyNames` handle is registered at 1 so the
-// load-in `fadeTo` (which THROWS on an unregistered handle) is a safe no-op
-// ramp and the at-rest opacity is 1.
+// produceFamousLabels reads `state.data.galaxies` for the records,
+// `state.subsystems.fades` for the `galaxyNames` opacity + load-in fire, and
+// `state.settings.surveys.items.famousGalaxy.labelEnabled` for the
+// visibility gate. The fixture supplies all three; the `galaxyNames` handle is
+// registered at 1 so the load-in `fadeTo` (which THROWS on an unregistered
+// handle) is a safe no-op ramp and the at-rest opacity is 1. The famous label
+// gate defaults visible.
 function makeState(opts: { fades?: FadeRegistry } = {}): EngineState {
   const fades = opts.fades ?? makeRegistry();
   fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
   return {
     data: createEngineData(),
     subsystems: { fades },
+    settings: { surveys: { items: { famousGalaxy: { enabled: true, labelEnabled: true } } } },
   } as unknown as EngineState;
 }
 
@@ -112,12 +115,12 @@ describe('produceFamousLabels', () => {
     fades.setImmediate({ kind: 'labelLayer', layer: 'galaxyNames' }, 0);
     const state = makeState({ fades });
     seed(state, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-    state.data.galaxies.setFamousLabelsVisible(false);
+    state.settings.surveys.items.famousGalaxy.labelEnabled = false;
     expect(produceFamousLabels(state, makeCtx()).labels).toEqual([]);
   });
 
   it('keeps emitting while the galaxyNames fade-out tail is non-zero (no pop on toggle-out)', () => {
-    // Toggle-off scenario mid-fade: famousLabelsVisible is false but the
+    // Toggle-off scenario mid-fade: the famous label gate is false but the
     // galaxyNames opacity is still ramping down (0.5 here). The producer must
     // KEEP emitting at the reduced alpha so the labels fade out smoothly.
     const midFade = makeRegistry();
@@ -125,7 +128,7 @@ describe('produceFamousLabels', () => {
     midFade.setImmediate({ kind: 'labelLayer', layer: 'galaxyNames' }, 0.5);
     const fading = makeState({ fades: midFade });
     seed(fading, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-    fading.data.galaxies.setFamousLabelsVisible(false);
+    fading.settings.surveys.items.famousGalaxy.labelEnabled = false;
     const out = produceFamousLabels(fading, makeCtx());
     expect(out.labels.map((l) => l.id)).toEqual(['famous-m31']);
     // Emitted at the half opacity (full distance-fade alpha here is 1 × 0.5).
@@ -139,7 +142,7 @@ describe('produceFamousLabels', () => {
     done.setImmediate({ kind: 'labelLayer', layer: 'galaxyNames' }, 0);
     const settled = makeState({ fades: done });
     seed(settled, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-    settled.data.galaxies.setFamousLabelsVisible(false);
+    settled.settings.surveys.items.famousGalaxy.labelEnabled = false;
     expect(produceFamousLabels(settled, makeCtx()).labels).toEqual([]);
   });
 

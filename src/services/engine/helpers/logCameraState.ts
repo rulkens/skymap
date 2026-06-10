@@ -7,11 +7,9 @@
  * per call — a structured object for human reading, and a flat
  * one-liner for fast paste-into-source.
  *
- * Pre-extraction this lived as a method body inside the public
- * `EngineHandle` literal in `engine.ts`.  Lifting it out trades nothing
- * (the method still exists, it just delegates) for one small gain: the
- * orchestrator file no longer carries 30 lines of console.log
- * formatting that it has no other reason to know about.
+ * The public `EngineHandle` method delegates here so the orchestrator
+ * file doesn't carry console.log formatting it has no other reason to
+ * know about.
  *
  * Why accept `OrbitCamera | null` rather than `EngineState`: the only
  * datum the function needs is the camera, so widening the parameter

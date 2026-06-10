@@ -127,9 +127,9 @@ describe('proceduralDiskRenderer.pickDisks', () => {
   });
 
   it('is a no-op after draw() is called with an empty instances array', () => {
-    // Regression: draw() with 0 instances must zero lastPickInstanceCount.
-    // Without the fix, the prior frame's count persists and pickDisks()
-    // re-draws the previous frame's disks into the pick texture.
+    // Regression: draw() with 0 instances must zero lastPickInstanceCount
+    // (a stale prior-frame count would make pickDisks() re-draw the
+    // previous frame's disks into the pick texture).
     const { init } = makePickStubInit();
     const renderer = createProceduralDiskRenderer(init);
 

@@ -106,10 +106,10 @@ export function isWebHIDSupported(): boolean {
  * Returns `false` on Firefox/Safari (no WebHID), on a permission
  * lookup error, and (importantly) for first-time SpaceMouse owners
  * until they've completed the one-time pairing flow.  The first-time
- * pairing path is currently surfaced via the engine handle's
+ * pairing path is surfaced via the engine handle's
  * `input.spaceMouse.connect()` method — for example, a dev opening
- * Settings with `?spacemouse=1` in the URL.  See the audit transcript
- * at `docs/grill-sessions/settings-panel-audit-2026-05-19.md` (Q16f)
+ * Settings with `?spacemouse=1` in the URL.  See
+ * `docs/grill-sessions/settings-panel-audit-2026-05-19.md` (Q16f)
  * for the design rationale.
  */
 export async function hasGrantedSpaceMouseDevice(): Promise<boolean> {

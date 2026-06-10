@@ -6,7 +6,7 @@
  * path) and `encodeHdrSingle` (the default production path).  The only
  * difference between the two call sites is the `timingService` argument
  * — `encodeHdrSplit` passes its non-null service so the raymarch bills
- * against the legacy `'scalar-volume'` timing slot, `encodeHdrSingle`
+ * against the `'scalar-volume'` timing slot, `encodeHdrSingle`
  * passes `null` (no timing).  The rest — the renderer null guard, the
  * master-opacity gate, the focus-recession `recessedMaster` multiplier,
  * the per-field `fadeOpacityOf` closure, the `hasActiveFields` check, and
@@ -14,11 +14,10 @@
  *
  * The timing descriptor is resolved LAZILY: `descriptorFor('scalar-volume')`
  * is only called once control reaches the `encodeVolumes` call (i.e. after
- * every gate passes), so per-pass GPU timing is billed exactly as it was
- * before this block was extracted — the slot isn't touched on frames where
- * the volume pass is skipped.
+ * every gate passes), so the slot isn't touched on frames where the volume
+ * pass is skipped.
  *
- * Extracting it here keeps the two encoders in lockstep: a change to the
+ * Sharing the block keeps the two encoders in lockstep: a change to the
  * gate, the recession composition, or the volume draw can only land in one
  * place, so the split and single paths can never silently diverge.
  *
@@ -73,7 +72,7 @@ export function encodeVolumePrepass(
       const fadeOpacityOf = (handle: string) =>
         state.subsystems.fades.opacityOf({ kind: 'scalarField', field: handle }, nowMs) *
         recessedMaster;
-      const settingsOf = (handle: string) => state.settings.volumes.fields[handle as VolumeFieldId];
+      const settingsOf = (handle: string) => state.settings.volumes.items[handle as VolumeFieldId];
       if (state.gpu.scalarVolumeRenderer.hasActiveFields(settingsOf, fadeOpacityOf)) {
         encodeVolumes({
           encoder,
@@ -81,11 +80,10 @@ export function encodeVolumePrepass(
           scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
           settingsOf,
           fadeOpacityOf,
-          // Resolve the timing descriptor lazily, inside every gate: this
-          // is the only point the original (pre-extraction) code called
-          // `descriptorFor`, so the slot is touched exactly when the volume
-          // pass actually encodes. `null` service (the single/no-timing
-          // path) yields `undefined`, matching the original.
+          // Resolve the timing descriptor lazily, inside every gate, so
+          // the slot is touched exactly when the volume pass actually
+          // encodes. A `null` service (the single/no-timing path) yields
+          // `undefined`.
           timestampWrites: timingService?.descriptorFor('scalar-volume'),
         });
       }

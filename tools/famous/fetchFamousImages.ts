@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * fetchFamousImages — for every entry in `data/famous_galaxies.seed.json`,
+ * fetchFamousImages — for every entry in `data/seeds/famous_galaxies.seed.json`,
  * obtain a 256×256 WebP thumbnail at `public/images/famous/<id>.webp`.
  *
  * ── Why Wikipedia is the *primary* source (and DESI is the fallback) ────
@@ -238,7 +238,7 @@ export function chooseWikipediaImageUrl(s: WikipediaSummary): string | undefined
  * Public for unit testing — see fetchFamousImages.curated.test.ts.
  *
  * Throws when the source atlas.webp is missing.  That should only
- * happen if `data/famous_curated_overrides.json` has an entry but the
+ * happen if `data/seeds/famous_curated_overrides.json` has an entry but the
  * corresponding `public/images/famous-curated/<id>/` directory was
  * deleted manually — surfacing it loud is correct.
  */

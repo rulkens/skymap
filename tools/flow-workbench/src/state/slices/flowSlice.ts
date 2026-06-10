@@ -2,21 +2,21 @@
  * flowSlice — the workbench's flow settings default + its reducers.
  *
  * The slice IS the canonical `FlowSettings` (the flat type the runtime flow
- * renderer reads every frame), not a workbench-local struct. Phase E rewires
- * the workbench to drive the one real renderer, so the store must hold exactly
- * what `encodeCompute`/`draw` take — no translation.
+ * renderer reads every frame), not a workbench-local struct. The workbench
+ * drives the one real renderer, so the store must hold exactly what
+ * `encodeCompute`/`draw` take — no translation.
  *
- * Why flat, and what the old per-mode shape dropped:
- *   - The spike kept an `advect` and a `streamline` object, each carrying
- *     `count/flowSpeed/densityBias/wander/trail/size/exposure/contrast`.
- *     Switching mode just showed the other field. The canonical renderer shares
- *     ONE buffer set across both modes and reseeds on switch, so there is only
- *     ever one live param set — a single flat object, with `mode` as a field.
- *   - `size` is gone: the renderer pins ribbon half-width to the `RIBBON_WIDTH`
- *     constant (the spike's advect default), so it's no longer a tunable.
- *   - `exposure`/`contrast` are gone: those were the spike's per-mode tonemap
- *     knobs. The canonical renderer has no tonemap — the workbench's HDR blit
- *     uses fixed exposure/contrast and `intensity` is the brightness control.
+ * Why flat rather than per-mode:
+ *   - A per-mode shape (separate `advect` / `streamline` objects each carrying
+ *     `count/flowSpeed/densityBias/wander/trail/…`) would imply two
+ *     independently live param sets. The canonical renderer shares ONE buffer
+ *     set across both modes and reseeds on switch, so there is only ever one
+ *     live param set — a single flat object, with `mode` as a field.
+ *   - No `size` knob: the renderer pins ribbon half-width to the
+ *     `RIBBON_WIDTH` constant, so it isn't a tunable.
+ *   - No `exposure`/`contrast` knobs: the canonical renderer has no tonemap —
+ *     the workbench's HDR blit uses fixed exposure/contrast and `intensity`
+ *     is the brightness control.
  *
  * The default is `DEFAULT_FLOW` with `enabled` forced true: the workbench is a
  * flow-tuning harness, so it should show ribbons the instant it boots rather

@@ -8,7 +8,7 @@
  * skipped (i.e. no exception, no call).
  *
  * H5 task 11: every echo lives on its nested sub-bag address now —
- * `cb.points?.onSizeChange?.(…)` not `cb.onPointSizeChange?.(…)`.
+ * `cb.surveys?.onSizeChange?.(…)` not `cb.onPointSizeChange?.(…)`.
  * The test fixtures mirror that namespacing so a regression in either
  * the dispatch or the nested name shows up here.
  */
@@ -69,7 +69,7 @@ function makeRequiredCallbacks(): EngineCallbacks {
 describe('seedSettingsCallbacks', () => {
   it('fires every optional callback exactly once with its snapshot value', () => {
     const snap = makeSnapshot();
-    const points = {
+    const surveys = {
       onSizeChange: vi.fn(),
       onBrightnessChange: vi.fn(),
       onDepthFadeChange: vi.fn(),
@@ -98,7 +98,7 @@ describe('seedSettingsCallbacks', () => {
 
     const cb: EngineCallbacks = {
       ...makeRequiredCallbacks(),
-      points,
+      surveys,
       tonemap,
       camera,
       thumbnails,
@@ -109,15 +109,15 @@ describe('seedSettingsCallbacks', () => {
 
     seedSettingsCallbacks(cb, snap);
 
-    expect(points.onSizeChange).toHaveBeenCalledExactlyOnceWith(snap.pointSize);
-    expect(points.onBrightnessChange).toHaveBeenCalledExactlyOnceWith(snap.brightness);
+    expect(surveys.onSizeChange).toHaveBeenCalledExactlyOnceWith(snap.pointSize);
+    expect(surveys.onBrightnessChange).toHaveBeenCalledExactlyOnceWith(snap.brightness);
     expect(camera.onAutoRotateChange).toHaveBeenCalledExactlyOnceWith(snap.autoRotate);
     expect(thumbnails.onEnabledChange).toHaveBeenCalledExactlyOnceWith(snap.galaxyTexturesEnabled);
-    expect(points.onHighlightFallbackChange).toHaveBeenCalledExactlyOnceWith(
+    expect(surveys.onHighlightFallbackChange).toHaveBeenCalledExactlyOnceWith(
       snap.highlightFallback,
     );
-    expect(points.onRealOnlyChange).toHaveBeenCalledExactlyOnceWith(snap.realOnlyMode);
-    expect(points.onDepthFadeChange).toHaveBeenCalledExactlyOnceWith(snap.depthFadeEnabled);
+    expect(surveys.onRealOnlyChange).toHaveBeenCalledExactlyOnceWith(snap.realOnlyMode);
+    expect(surveys.onDepthFadeChange).toHaveBeenCalledExactlyOnceWith(snap.depthFadeEnabled);
     expect(bias.onModeChange).toHaveBeenCalledExactlyOnceWith(snap.biasMode);
     expect(bias.onAbsMagLimitChange).toHaveBeenCalledExactlyOnceWith(snap.absMagLimit);
     expect(tonemap.onCurveChange).toHaveBeenCalledExactlyOnceWith(snap.toneMapCurve);
