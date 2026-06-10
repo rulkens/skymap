@@ -82,7 +82,8 @@ export function buildVolumeFieldSettings(id: VolumeFieldId): VolumeFieldSettings
  * `state.settings.volumes.items` from this at construction so every
  * shippable volume's on/off state (and tunables) EXISTS before any cube
  * loads — the demand predicate `settings.volumes.items[id]?.enabled` then
- * reads pure state, fully symmetric with survey `isVisible`. Without this, a
+ * reads pure state, fully symmetric with the survey items read
+ * (`settings.surveys.items[id]?.enabled`). Without this, a
  * default-on volume (MCPM) never triggers its initial demand-driven
  * load because its field entry didn't exist yet.
  *

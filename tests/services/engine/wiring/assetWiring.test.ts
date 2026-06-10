@@ -39,13 +39,11 @@ function rowFor(key: AssetKey) {
  */
 function makeCtx(over: {
   settings?: unknown;
-  visible?: Set<SourceType>;
   requests?: Set<RequestKey>;
   slotStates?: Partial<Record<AssetKey, LoadState<unknown>['kind']>>;
 }): DemandCtx {
   return {
     settings: (over.settings ?? {}) as Readonly<EngineSettingsState>,
-    isVisible: (s) => over.visible?.has(s) ?? false,
     request: (k) => over.requests?.has(k) ?? false,
     slotState: (k) => over.slotStates?.[k] ?? 'idle',
   };
@@ -111,10 +109,13 @@ describe('ASSET_WIRING membership', () => {
 });
 
 describe('ASSET_WIRING demand predicates', () => {
-  it('survey rows demand source visibility', () => {
+  it("survey rows demand the survey's enabled settings bit", () => {
     const sdss = rowFor(Source.SDSS);
-    expect(sdss.demand(makeCtx({ visible: new Set([Source.SDSS]) }))).toBe(true);
-    expect(sdss.demand(makeCtx({ visible: new Set() }))).toBe(false);
+    expect(
+      sdss.demand(makeCtx({ settings: { surveys: { items: { sdss: { enabled: true } } } } })),
+    ).toBe(true);
+    // Absent items row (or disabled bit) ⇒ not demanded.
+    expect(sdss.demand(makeCtx({ settings: { surveys: { items: {} } } }))).toBe(false);
   });
 
   it('famousMeta demands when the Famous slot is not idle', () => {

@@ -291,8 +291,8 @@ const errorValue = (msg: string): LoadState<unknown> => ({
  * post-`initGpu` shape: the GPU renderers are present (so commit
  * subscribers don't NPE), the per-source slot map is empty (the test
  * populates it per-case), the surveys are seeded all-enabled via
- * `SURVEY_IDS` exactly like the engine's boot seed (so the demand loop's
- * `isVisible` — which reads `settings.surveys.items[id].enabled` — demands
+ * `SURVEY_IDS` exactly like the engine's boot seed (so the demand loop —
+ * which reads `settings.surveys.items[id].enabled` — demands
  * every survey at boot), and the volume fields are seeded via
  * `settings.volumes.items: seedVolumeFields()` (so the MCPM demand
  * predicate reads true at boot, as wireSlots expects).
@@ -331,8 +331,8 @@ function makeState(
         depthFade: true,
         highlightFallback: true,
         realOnly: false,
-        // All surveys enabled, mirroring the engine's boot seed — the demand
-        // loop's `isVisible` reads these `enabled` bits (not `sources.drawMask`),
+        // All surveys enabled, mirroring the engine's boot seed — survey
+        // demand reads these `enabled` bits (not `sources.drawMask`),
         // so the boot-load expectations for sdss/2mrs/glade hang off this seed.
         items: Object.fromEntries(
           SURVEY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),

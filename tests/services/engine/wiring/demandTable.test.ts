@@ -13,7 +13,7 @@
  * `buildDemandCtx(state)` reads:
  *   - `state.settings`             — predicate leaf values, including each
  *                                    survey's `surveys.items[id].enabled`
- *                                    (the intent bit `isVisible` reads)
+ *                                    (the intent bit survey demand reads)
  *   - `state.sources.tier`         — passed to `req(tier)`
  *   - `state.requests`             — `Set<RequestKey>`
  *   - `state.assetSlots`           — `slotFor` dispatch target
@@ -127,8 +127,8 @@ type SettingsLeaves = {
 type VolumeFieldLeaves = Partial<Record<VolumeFieldId, { enabled: boolean }>>;
 
 /**
- * Per-survey visibility keyed by survey id. Survey demand (`isVisible`)
- * reads `ctx.settings.surveys.items[id]?.enabled` — intent, the same field
+ * Per-survey visibility keyed by survey id. Survey demand reads
+ * `ctx.settings.surveys.items[id]?.enabled` — intent, the same field
  * `setSourceVisible` writes — so `makeState` injects this record into
  * `settings.surveys.items`. An absent row reads as not enabled.
  */
@@ -233,8 +233,8 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
 
   return {
     // Inject survey + volume items directly into the settings bag — demand
-    // predicates read `ctx.settings.surveys.items[id]?.enabled` (via
-    // `isVisible`) and `ctx.settings.volumes.items[id]?.enabled` from there.
+    // predicates read `ctx.settings.surveys.items[id]?.enabled` and
+    // `ctx.settings.volumes.items[id]?.enabled` from there.
     settings: {
       ...(settings as unknown as EngineSettingsState),
       surveys: { items: surveyItems },
