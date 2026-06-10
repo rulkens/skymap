@@ -8,17 +8,11 @@
  *
  * ### Wake contract: fadeTo wakes the scheduler; callers do not
  *
- * Starting a fade means frames are needed — the registry calls
- * `deps.requestRender()` unconditionally inside `fadeTo` so every
- * caller is absolved of the obligation. The frame-tail `isAnyAnimating`
- * predicate keeps the render loop alive after that first wake.
- *
- * `register`, `setImmediate`, `opacityOf`, and `tick` do NOT wake:
- * - `register` / `setImmediate` are called from settings paths that
- *   already wake via the settings table, or from construction-time
- *   seeding that precedes the first frame.
- * - `opacityOf` and `tick` are frame-internal reads — the frame is
- *   already executing, no external wake is needed.
+ * `fadeTo` calls `deps.requestRender()` unconditionally, absolving every
+ * caller; the frame-tail `isAnyAnimating` predicate keeps the loop alive
+ * after that first wake. The other methods do NOT wake: `register` /
+ * `setImmediate` run from already-awake settings paths or pre-frame
+ * seeding, and `opacityOf` / `tick` are frame-internal reads.
  *
  * ### Why a string-keyed map (not WeakMap<FadeHandle, …>)
  *

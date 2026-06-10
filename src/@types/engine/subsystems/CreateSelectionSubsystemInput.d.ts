@@ -26,11 +26,8 @@ export type CreateSelectionSubsystemInput = {
    */
   getStructure: (id: string) => StructureRecord | null;
   /**
-   * Wake the render loop one frame. setSelected/setFocused call this after an
-   * actual change so the halo / focus fade update without callers having to
-   * remember a follow-up wake. setHovered deliberately does NOT — hover feeds
-   * only the React InfoCard (no scene-side halo), and hover picks resolve
-   * inside frames anyway.
+   * Wake the render loop one frame. setSelected/setFocused call this on
+   * actual change; setHovered does not (see the module header's wake contract).
    */
   requestRender: () => void;
 };

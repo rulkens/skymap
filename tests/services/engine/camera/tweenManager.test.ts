@@ -23,8 +23,7 @@ import { createOrbitCamera } from '../../../../src/services/camera/orbitCamera';
 import type { CameraTween } from '../../../../src/@types/camera/CameraTween';
 import { createTweenManager } from '../../../../src/services/engine/camera/tweenManager';
 
-// Convenience factory: constructs a manager with a no-op wake stub so tests
-// that don't care about scheduling don't repeat the deps literal.
+// No-op wake stub for tests that don't care about scheduling.
 function makeTweenManager() {
   return createTweenManager({ requestRender: () => {} });
 }
@@ -145,9 +144,8 @@ describe('createTweenManager', () => {
     tm.start(makeTween(0, 600));
     requestRender.mockClear();
     const cam = makeCam();
-    // Exercise advance on the live tween (mid-flight, then completion)
-    // before cancelling — ensures the spy stays silent through both paths,
-    // not just the no-tween early-return.
+    // Advance the live tween (mid-flight, then completion) before cancelling —
+    // the spy must stay silent through both, not just the no-tween early-return.
     tm.advance(cam, 300); // mid-flight
     tm.advance(cam, 600); // completion — manager auto-clears the reference
     tm.cancel(); // no-op on already-cleared reference

@@ -8,11 +8,10 @@
  * `cb.selection.onHoverChange` / `onSelectChange` with the resolved
  * `FocusableTarget` (GalaxyInfo for galaxy variants, StructureRecord
  * for structures) — callers never have to remember to fire the callback
- * themselves.  `setSelected` and `setFocused` also own the render
- * wake: callers (click handlers, clearAll) don't follow up with a
- * `requestRender` — the mouth of the change channel does.  `setHovered`
- * is wake-free: it feeds only the React InfoCard (no scene-side halo),
- * and hover picks resolve inside frames anyway.
+ * themselves.  `setSelected` and `setFocused` also own the render wake —
+ * callers never follow up with `requestRender`.  `setHovered` is
+ * wake-free: it feeds only the React InfoCard (no scene-side halo), and
+ * hover picks resolve inside frames anyway.
  *
  * ### Why `focused` is a third slot, not a synonym for `selected`
  *
@@ -136,8 +135,7 @@ export function createSelectionSubsystem(input: CreateSelectionSubsystemInput): 
         ? prebuiltInfo
         : resolveTarget(sel);
     cb.selection?.onSelectChange?.(target);
-    // Selection is a change channel — the mouth of the channel owns the
-    // wake; callers never follow up with their own requestRender.
+    // Channel mouth owns the wake (see module header).
     requestRender();
   }
 
@@ -158,8 +156,7 @@ export function createSelectionSubsystem(input: CreateSelectionSubsystemInput): 
         ? prebuiltInfo
         : resolveTarget(sel);
     cb.camera?.onFocusChange?.(target);
-    // Focus change drives the cluster-isolation fade — wake one frame so
-    // it updates.  Same channel-mouth ownership as setSelected.
+    // Wake — the focus change drives the cluster-isolation fade.
     requestRender();
   }
 

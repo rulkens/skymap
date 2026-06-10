@@ -27,13 +27,11 @@
  *                       just finished so the caller can choose to
  *                       schedule additional follow-on work (none today).
  *
- * `start()` wakes the render scheduler directly — callers never follow
- * up with a separate `requestRender`.  `cancel()` and `advance()` stay
- * wake-free: cancel sites are either input mouths (pointerdown) or
- * frame-internal (the SpaceMouse cancel runs inside the frame), both
- * already awake, and teardown needs no frame.  `advance` runs inside a
- * frame by definition.  The `deps.requestRender` parameter is required
- * so a forgotten wake source is a compile error, not a silent gap.
+ * Wake contract: `start()` wakes the render scheduler — callers never
+ * follow up with `requestRender`.  `cancel()` and `advance()` stay
+ * wake-free: their call sites (input mouths, frame internals) are already
+ * awake.  `deps.requestRender` is required, so a forgotten wake source is
+ * a compile error, not a silent gap.
  *
  * ### Why a factory rather than a class?
  *

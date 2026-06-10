@@ -5,9 +5,8 @@
  *
  *   1. constructs the `AssetSlot` via `createAssetSlot`,
  *   2. wires `slot.subscribe` for any side effects (logs, store writes,
- *      callbacks).  Render-on-demand wakes are NOT a factory concern —
- *      they are handled generically by the wiring layer's
- *      `installSlotReadyWake`.
+ *      callbacks).  Render wakes are NOT a factory concern — the wiring
+ *      layer's `installSlotReadyWake` handles them generically.
  *   3. RETURNS the slot.
  *
  * It does NOT write `state.assetSlots.<name>` and does NOT call

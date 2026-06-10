@@ -4,47 +4,21 @@
  *
  * ### The channel-mouth principle
  *
- * Without this module, each slot's commit path must independently call
- * `scheduler.requestRender()` — an obligation scattered across every slot
- * factory and registry. Any new slot added without knowing the convention
- * causes a silent missed-wake. One subscription here absorbs the obligation
- * for all slots at once.
+ * The alternative — each slot's commit path calling
+ * `scheduler.requestRender()` itself — scatters the obligation across every
+ * slot factory, and any new slot added without knowing the convention is a
+ * silent missed-wake. One subscription here absorbs it for all slots, and
+ * keeps the loading layer (`AssetSlot`, slot factories) engine-agnostic.
  *
- * The loading layer (`AssetSlot`, individual slot factories) stays
- * engine-agnostic: it knows nothing about schedulers or renderers. The
- * obligation belongs at the channel mouth — the single enumeration where
- * every slot is visible.
+ * It lives at `allSlots` because that Map IS the complete enumeration
+ * (points + sidecars + DEV synthetics, built by `installLoadProgress`):
+ * "if it shows in the loading bar, it wakes the renderer" — one invariant,
+ * one enforcement site.
  *
- * ### Why here rather than inside `createAssetSlot`
- *
- * `createAssetSlot` is the loading layer's factory. It deliberately has no
- * dependency on the engine; it works in isolation in tests without a GPU
- * device or scheduler in sight. Injecting a `requestRender` callback into
- * `createAssetSlot` would couple the loading layer to the engine, reversing
- * that separation.
- *
- * `allSlots` is the right home because it IS the complete enumeration —
- * every slot that shows in the loading bar is in this Map, built by
- * `installLoadProgress` from points + sidecars + DEV synthetics. "If it
- * shows in the loading bar, it wakes the renderer" is a single invariant
- * with a single enforcement site.
- *
- * ### Ready-after-commit makes this sufficient
- *
- * `AssetSlot` dispatches `ready` only AFTER its commit body resolves: the
- * `dispatch({ kind: 'committed', ... })` call runs outside the
- * `try/finally` commit block, after `resolveMine()` has already released
- * the next queued commit. Subscribers receive the `ready` state in the
- * same synchronous tick as that dispatch. The GPU upload (if any) is
- * therefore complete before the wake fires, so the frame the scheduler
- * queues will see fresh vertex data.
- *
- * ### cancel() rollback is harmless
- *
- * `slot.cancel()` rolls back to the last ready state and re-notifies all
- * subscribers with it. This subscription will call `requestRender()` again
- * on that re-notification. The scheduler coalesces redundant wakes into a
- * single queued frame, so the extra call costs nothing.
+ * This is sufficient because `AssetSlot` dispatches `ready` only after its
+ * commit body resolves, so any GPU upload is complete before the wake fires.
+ * `slot.cancel()` re-notifies subscribers with the last ready state, firing
+ * an extra wake — harmless, the scheduler coalesces redundant wakes.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';

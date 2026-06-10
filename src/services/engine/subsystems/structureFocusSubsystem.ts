@@ -22,22 +22,14 @@
  * `produceFocusUniforms` keeps emitting the correct centre/radius until
  * the blend reaches 0; only then is it dropped.
  *
- * ### Why `update` wakes the scheduler
+ * ### Wake contract
  *
- * This subsystem's fade controller is private (`createFadeController`, not
- * the shared `FadeRegistry`), so the registry's `fadeTo` wake path does not
- * cover it — the transition inside `update` is the sole mouth for this
- * channel. `update` therefore calls `deps.requestRender()` exactly when a
- * transition starts (both fade-in toward a new id and fade-out toward null).
- *
- * The scheduler is also needed here because `runFrame` can early-return at
- * the "nothing pickable" guard before reaching the `stillAnimating` tail.
- * A focus-transition that fires in such a frame would otherwise strand the
- * fade mid-ramp until an unrelated event woke the loop again.
- *
- * Steady frames (same `targetId === focusedId`) hit the early-return above
- * and do not wake — `isAwake` / `isAnyAnimating` keep the loop alive through
- * the ramp without re-waking from `update`.
+ * The fade controller here is private (`createFadeController`, not the
+ * shared `FadeRegistry`), so `update` is this channel's sole mouth: it
+ * wakes the scheduler when a transition starts, in either direction —
+ * runFrame can early-return before the `stillAnimating` tail, which would
+ * otherwise strand the ramp. Steady frames hit the early-return and rely
+ * on `isAwake` to keep the loop alive.
  */
 
 import { createFadeController } from '../../animation/fadeController';
@@ -117,9 +109,7 @@ export function createStructureFocusSubsystem(
       // until blend settles at 0 (dropped lazily in produceFocusUniforms).
       void fade.fadeTo(0, FOCUS_FADE_DURATION_MS, nowMs);
     }
-    // Wake the loop: this channel's fade controller is private (not covered by
-    // the shared FadeRegistry wake), and runFrame can early-return before the
-    // stillAnimating tail — without this wake the ramp would strand.
+    // Essential wake: private fade controller — no FadeRegistry wake covers it.
     deps.requestRender();
   }
 

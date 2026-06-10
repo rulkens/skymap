@@ -261,9 +261,8 @@ export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSu
             // be stale if eviction-and-reallocation churned it.
             texture.uploadBitmap(currentLayer, bitmap);
             bitmap.close?.();
-            // Essential wake — a hi-res bitmap landing is an async arrival
-            // outside any frame (and outside the AssetSlot ready channel),
-            // so the upload wakes the loop itself to start the crossfade.
+            // Essential wake: an async arrival outside any frame or slot
+            // channel — start the crossfade.
             requestRender();
           })
           .catch(() => {

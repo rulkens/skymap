@@ -13,8 +13,8 @@
  * `flowFieldFromCube` against its own device — the device never leaks to this
  * slot, mirroring `cf4Density → scalarVolumeRenderer.addField`).  `setLoaded()`
  * means "committed to the renderer" (see `FlowFieldStore`), so it fires AFTER
- * `setField`.  The render wake is handled generically by `installSlotReadyWake`
- * in the wiring layer.  A null renderer (pre-bootstrap) is a silent no-op.
+ * `setField`.  The render wake is `installSlotReadyWake`'s job, not the
+ * factory's.  A null renderer (pre-bootstrap) is a silent no-op.
  *
  * Construction-pure: builds + subscribes + RETURNS the slot.  The orchestrator
  * (`installSlots`) owns the write to `state.assetSlots`.

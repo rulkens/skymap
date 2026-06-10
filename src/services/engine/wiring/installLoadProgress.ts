@@ -16,10 +16,9 @@
  * agreement on what counts as "in flight"; per-subset `attachSlot` calls would
  * risk the two views drifting.
  *
- * The sidecar enumeration is derived from `ASSET_WIRING` (filtering to string
- * keys — point-source rows carry numeric `Source` keys and are already handled
- * above), so the registry and the wiring table cannot disagree about what exists.
- * A new sidecar row added to `ASSET_WIRING` lands in `allSlots` automatically.
+ * The sidecar enumeration derives from `ASSET_WIRING`, so a new sidecar row
+ * lands in `allSlots` automatically — the registry and the wiring table
+ * cannot drift.
  *
  * The `unknown` type-erasure is benign — `aggregateRegistry` reads only the
  * `slot.state()` discriminator + byte counts, never the payload type.
@@ -40,14 +39,11 @@ export function installLoadProgress(state: EngineState, deps: BootstrapDeps): vo
     allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
   }
 
-  // Named sidecar slots (installed by installSlots). Derived from ASSET_WIRING
-  // rows whose key is a string — point rows carry numeric Source keys and are
-  // already included above. pgcAlias is lazy but still registered so its
-  // eventual load shows in the bar + dev panel.
-  //
-  // The absence of a cast IS the drift protection: a wiring row whose key has
-  // no matching field in assetSlots fails to compile, so ASSET_WIRING and
-  // EngineAssetSlots cannot silently disagree.
+  // Named sidecar slots (installed by installSlots): the ASSET_WIRING rows
+  // with string keys (point rows carry numeric Source keys, included above).
+  // pgcAlias is lazy but still registered so its eventual load shows in the
+  // bar + dev panel.  The absence of a cast IS the drift protection: a row
+  // key with no matching assetSlots field fails to compile.
   for (const row of ASSET_WIRING) {
     if (typeof row.key !== 'string') continue;
     const slot = state.assetSlots[row.key];

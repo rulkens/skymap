@@ -21,9 +21,8 @@
  *      survey settles without data.
  *   6. `installLoadProgress` — the flat `allSlots` registry + load-progress
  *      emitter, over both point + sidecar slots.
- *   7. `installSlotReadyWake` — one subscription per slot; wakes the render
- *      scheduler whenever any slot transitions to `ready`.  The single
- *      channel-mouth enforcement point: no per-slot wake obligation.
+ *   7. `installSlotReadyWake` — one subscription per slot wakes the render
+ *      scheduler on `ready`; the single channel-mouth enforcement point.
  *   8. `reevaluateDemand` — the single place loads start. It walks every wiring
  *      row and triggers each demanded slot with its tier-derived request. The
  *      same loop re-runs on every state change, so "is this asset required?"
@@ -42,8 +41,7 @@
  *   - `state.subsystems.{loadProgress, structures}` + the impostor subsystem handles.
  *   - `state.requests` may gain `'syntheticFallback'` (via the gate).
  *   - `cb.onStatusChange({ kind: 'loading' })` synchronously.
- *   - Each slot in `deps.allSlots` gains one subscriber (via `installSlotReadyWake`)
- *     that wakes `state.subsystems.scheduler` on `ready`.
+ *   - Each slot in `deps.allSlots` gains an `installSlotReadyWake` subscriber.
  *
  * ### Side effects on `deps`
  *
@@ -114,11 +112,8 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // installed slot (point + sidecar + DEV synthetic).
   installLoadProgress(state, deps);
 
-  // Wire the channel-mouth render wake: one subscription per slot that calls
-  // scheduler.requestRender() when the slot reaches 'ready'.  Runs after
-  // installLoadProgress so deps.allSlots is fully populated (point + sidecar
-  // + DEV synthetic), and before reevaluateDemand so no slot can arrive
-  // 'ready' before the subscription is in place.
+  // Channel-mouth render wake.  After installLoadProgress (allSlots fully
+  // populated), before reevaluateDemand (no slot can reach 'ready' unsubscribed).
   installSlotReadyWake(state, deps.allSlots);
 
   // Signal loading state immediately so the user sees progress before the

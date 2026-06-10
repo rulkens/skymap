@@ -94,9 +94,8 @@ export type TexturedDiskDeps = {
 export function createTexturedDiskSubsystem(
   deps: TexturedDiskDeps,
 ): TexturedDiskSubsystemWithTestSeam {
-  // No requestRender dep: this planner runs inside frames and its async
-  // arrivals (bitmap fetch results) wake the loop via the atlas subsystem's
-  // own onResult wake — the planner itself never needs to wake anything.
+  // No requestRender dep: the planner runs inside frames, and async bitmap
+  // arrivals wake the loop via the atlas subsystem's onResult.
   const { atlas } = deps;
   const fetcher = deps.fetcher ?? fetchGalaxyBitmap;
   const decimationFactor = Math.max(1, Math.floor(deps.decimationFactor ?? 8));

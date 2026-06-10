@@ -53,9 +53,8 @@ describe('AssetSlot — happy path', () => {
 
 describe('AssetSlot — ready-after-commit ordering', () => {
   it('subscribers do not observe ready until the async commit body resolves', async () => {
-    // Guards the invariant that installSlotReadyWake relies on: the 'ready'
-    // notification arrives only AFTER the commit body has completed (so a
-    // GPU-upload commit finishes writing vertex data before the wake fires).
+    // Guards the invariant installSlotReadyWake relies on: 'ready' arrives
+    // only after the commit body resolves (GPU upload done before the wake).
     const fetchResult = 'payload';
     const commitGate = deferred<void>();
     const fetch: Fetcher<string, void> = vi.fn().mockResolvedValue(fetchResult);

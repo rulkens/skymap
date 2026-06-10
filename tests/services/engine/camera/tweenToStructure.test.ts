@@ -8,9 +8,8 @@
  * including the apparent-radius fallback to the physical core — and leave
  * framing-math coverage to `structureFocusDistance.test.ts`.
  *
- * The scheduler wake is NOT asserted here. `tweens.start` owns the wake
- * (via its `deps.requestRender`), and the real tween manager is not
- * instantiated in this fixture — wake coverage lives in tweenManager.test.ts.
+ * The scheduler wake is NOT asserted here — `tweens.start` owns it, and
+ * wake coverage lives in tweenManager.test.ts.
  */
 import { describe, it, expect, vi } from 'vitest';
 

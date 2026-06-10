@@ -10,9 +10,9 @@
  *
  * Coverage focus areas:
  *   1. Each event maps to its expected callback.
- *   2. Wake ownership: events with no covering change channel fire
+ *   2. Wake ownership: channel-uncovered events fire
  *      `scheduler.requestRender()` exactly once; Escape stays wake-free
- *      (the selection setters it routes into own the wake).
+ *      (the selection setters own that wake).
  *   3. `pointercancel` (a defensive corner case) fires `onPointerUp`.
  *   4. A non-Escape keydown does NOT fire `onEscape`.
  *   5. `detach()` removes every listener it added — a synthetic event
@@ -195,8 +195,7 @@ describe('attachEngineInputs', () => {
     expect(onEscape).not.toHaveBeenCalled();
     windowRecorder.fire('keydown', { key: 'Escape' });
     expect(onEscape).toHaveBeenCalledTimes(1);
-    // Escape is wake-free here: onEscape routes into the selection
-    // setters, which own the render wake when a slot actually changes.
+    // Escape is wake-free: the selection setters own that wake.
     expect(scheduler.requestRender).not.toHaveBeenCalled();
   });
 

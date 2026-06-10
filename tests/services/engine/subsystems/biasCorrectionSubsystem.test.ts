@@ -344,10 +344,8 @@ describe('createBiasCorrectionSubsystem', () => {
   });
 
   it('setMode wakes on entry; no-op on same mode (no dedupe exists, but the mode write precedes the wake)', async () => {
-    // The subsystem calls requestRender() immediately on entry so the shader's
-    // integer mode gate flips on the very next frame — even for identity modes
-    // that fire no bake (None, VolumeLimited, VMax).  This mirrors the contract
-    // fadeTo / tweens.start follow (wake at the point of state change, not later).
+    // Entry wake: the mode gate must flip next frame even for identity modes
+    // (None, VolumeLimited, VMax), which fire no bake.
     const stub = makeStubRenderer();
     const { deps, requestRender } = makeDeps(new Map());
     const sub = createBiasCorrectionSubsystem(deps);

@@ -9,9 +9,9 @@
  * same slot and converts the ready value into `StructureRecord`s, writing them
  * to `structureStore`. Mirrors `famousMetaSlot` in shape.
  *
- * This subscriber's only job is to warn on failure. The render wake is handled
- * generically by `installSlotReadyWake` in the wiring layer. It does not own
- * any state — the data flows through the slot's ready value.
+ * This subscriber's only job is to warn on failure (the render wake is
+ * `installSlotReadyWake`'s job). It owns no state — the data flows through
+ * the slot's ready value.
  *
  * **Graceful degradation on error.** A failed fetch (404 / network) maps to
  * "feature off": the subscriber warns and `wireStructureProjection` clears the

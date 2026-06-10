@@ -443,9 +443,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           // echo directly.
           cb.input?.spaceMouse?.onConnectedChange?.(connected);
           // Wake one frame so the still-animating predicate sees the
-          // freshly-zeroed axes and lets the loop sleep cleanly.  This is
-          // the ONLY wake on the disconnect path — handle.disconnect relies
-          // on it rather than waking separately.
+          // freshly-zeroed axes and lets the loop sleep cleanly — the only
+          // wake on the disconnect path (handle.disconnect relies on it).
           state.subsystems.scheduler.requestRender();
         },
         onAxes: () => state.subsystems.scheduler.requestRender(),
@@ -679,9 +678,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // so flipping it takes effect next frame with no pipeline rebuild.  We
     // always fire the echo (even when unchanged) so the UI seeds on first
     // call.  Routes through `biasCorrectionSubsystem`, which owns the cached
-    // ratios/weights + worker runners and calls requestRender on entry (for
-    // the immediate mode-gate flip) and again after per-source splices land
-    // (for bake modes).  The `void` discards the Promise — engine.ts doesn't await.
+    // ratios/weights + worker runners and the render wakes (entry +
+    // post-splice).  The `void` discards the Promise — engine.ts doesn't await.
     state.settings.bias.mode = mode;
     cb.bias?.onModeChange?.(mode);
     void state.subsystems.biasCorrection.setMode(mode);
@@ -875,7 +873,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // sites multiply this master opacity into every per-field fade, so the
     // whole subsystem ramps in lockstep.  The pass-enabled gate accepts
     // the master enable bit OR opacity > 0, so it keeps blitting through fade-out.
-    // fadeTo wakes the scheduler unconditionally — no bare requestRender needed.
+    // fadeTo owns the render wake.
     void state.subsystems.fades.fadeTo(
       { kind: 'volumesMaster' },
       enabled ? 1 : 0,
@@ -908,9 +906,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       );
     }
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
-    // Essential wake — the fadeTo above is conditional on the field being
-    // enabled, so a disabled add would otherwise mutate the renderer's field
-    // set and the settings row with no channel wake covering it.
+    // Essential wake: the fadeTo above is conditional — a disabled add still
+    // changes the renderer's field set and settings row.
     state.subsystems.scheduler.requestRender();
   }
 
@@ -918,8 +915,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.scalarVolumeRenderer?.removeField(fieldId);
     state.settings.volumes.items = removeVolumeFieldSetting(state.settings.volumes.items, fieldId);
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
-    // Essential wake — removal fires no fade (the field vanishes outright),
-    // so no channel covers making the disappearance visible.
+    // Essential wake: removal fires no fade — the field vanishes outright.
     state.subsystems.scheduler.requestRender();
   }
 
@@ -969,15 +965,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
     );
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
-    // No requestRender: the unconditional fadeTo above wakes the scheduler
-    // (and the frame it wakes runs reevaluateDemand, which sees the flipped
-    // enabled bit for the shippable cf4/mcpm rows).
+    // No requestRender: fadeTo wakes, and that frame's reevaluateDemand sees
+    // the flipped enabled bit for the shippable cf4/mcpm rows.
   }
 
   // The per-field knob setters below write `state.settings.volumes.items`
-  // directly — no boringSetter, no fade — so no channel wake fires for them.
-  // Each keeps an explicit requestRender so the raymarch pass re-renders with
-  // the new uniform value.
+  // directly — no boringSetter, no fade, so no channel wakes for them.  Each
+  // keeps an explicit requestRender to re-render the raymarch pass.
 
   function setVolumeFieldIntensity(fieldId: VolumeFieldId, intensity: number): void {
     const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
@@ -1055,10 +1049,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function disconnectSpaceMouse(): void {
-    // No requestRender: when a device is actually open, the underlying
-    // SpaceMouseInput.disconnect() fires onConnectionChange, whose engine
-    // wiring wakes the scheduler; with no device open nothing observable
-    // changes, so no frame is needed.
+    // No requestRender: a real disconnect fires onConnectionChange (which
+    // wakes); with no device open nothing observable changes.
     state.subsystems.spaceMouse.disconnect();
   }
 
@@ -1214,9 +1206,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     milkyWay: {
       // Drive the FadeRegistry alongside the boolean flip for a smooth ramp.
       // milkyWayPass.enabled accepts the boolean OR a non-zero opacity, so
-      // the gate keeps the pass alive through fade-out.
-      // boringSetters.setMilkyWayEnabled wakes the scheduler; fadeTo also
-      // wakes it — no extra requestRender needed.
+      // the gate keeps the pass alive through fade-out.  The boringSetter and
+      // fadeTo both wake the scheduler — no extra requestRender.
       setEnabled: (enabled) => {
         boringSetters.setMilkyWayEnabled(enabled);
         void state.subsystems.fades.fadeTo(
@@ -1229,9 +1220,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     filaments: {
       // Same fade-on-toggle pattern as milkyWay: filamentsPass.enabled
       // accepts the boolean OR a non-zero opacity, keeping the pass alive
-      // through fade-out.
-      // boringSetters.setFilamentsEnabled wakes the scheduler; fadeTo also
-      // wakes it — no extra requestRender needed.
+      // through fade-out.  The boringSetter and fadeTo both wake the
+      // scheduler — no extra requestRender.
       setEnabled: (enabled) => {
         boringSetters.setFilamentsEnabled(enabled);
         void state.subsystems.fades.fadeTo(
@@ -1285,9 +1275,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           state.gpu.flowFieldRenderer?.maybeReseed();
         }
 
-        // Each present leaf already woke the scheduler via its boringSetter;
-        // an enabled patch with a loaded cube also woke via fadeTo.
-        // An empty patch changes nothing — no wake needed on that path.
+        // No wake needed: each present leaf woke via its boringSetter (and
+        // fadeTo above); an empty patch changes nothing.
       },
     },
     structures: {

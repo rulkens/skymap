@@ -125,9 +125,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // engine cares about lives in one module.  Each callback below
   // is the *semantic* engine action — the inputBindings module
   // already converts `e.clientX/Y` to a CSS-pixel record and owns
-  // the requestRender wake for events no change channel covers
-  // (Escape stays wake-free there: it routes into the selection
-  // setters below, which own their wake).
+  // the requestRender wake for channel-uncovered events (see its
+  // module header for the contract).
   state.subsystems.inputBindings = attachEngineInputs({
     canvas,
     // Scheduler by reference — created eagerly in the state literal (the
@@ -244,8 +243,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       pick.then((sel) => {
         // Single-click is pure selection (null clears) for both galaxy and
         // structure hits. setSelected resolves the target internally, fires
-        // onSelectChange so the React InfoCard swaps bodies, and wakes the
-        // render loop — callers don't follow up.
+        // onSelectChange so the React InfoCard swaps bodies, and owns the
+        // render wake.
         state.subsystems.selection.setSelected(sel);
       });
     },

@@ -3,8 +3,7 @@ import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry
 import { Source } from '../../../src/data/sources';
 import type { FadeHandle } from '../../../src/@types/animation/FadeHandle';
 
-// Convenience factory — every test that doesn't care about the wake spy can
-// call makeRegistry() without repeating the deps literal.
+// No-op wake stub for tests that don't care about the wake.
 function makeRegistry() {
   return createFadeRegistry({ requestRender: () => {} });
 }

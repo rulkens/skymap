@@ -55,8 +55,8 @@ export const createFilamentSlot: SlotFactory<FilamentCloud, FilamentReq> = (stat
   slot.subscribe((s) => {
     // Loading-bar plumbing is owned by aggregateRegistry; this subscriber
     // fires the app-visible side effects (counts echo + store write + UI
-    // callback) on the `ready` transition. The render wake is handled
-    // generically by `installSlotReadyWake` in the wiring layer.
+    // callback) on the `ready` transition. The render wake is
+    // installSlotReadyWake's job, not the factory's.
     if (s.kind === 'ready') {
       console.log(`[engine] filaments: ${s.value.stripCount} strips, ${s.value.vertexCount} verts`);
       // Record the durable load status on the filament store (the authoritative

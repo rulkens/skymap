@@ -151,11 +151,9 @@ describe('setSourceVisible — synchronous toggle', () => {
   });
 
   it('never calls requestRender itself — fadeTo owns the wake', () => {
-    // Wake contract: every non-no-op path through the setter fires fadeTo,
-    // and the real FadeRegistry wakes the scheduler internally.  The masks
-    // are derived per frame (deriveSourceMasks), so there is no post-fade
-    // mask write left for a caller wake to cover.  A no-op toggle (same
-    // `enabled`) early-returns and must stay wake-free too.
+    // Every non-no-op path fires fadeTo (which wakes), and the masks are
+    // derived per frame — no caller wake left to cover.  The no-op second
+    // toggle early-returns and must stay wake-free too.
     const fx = makeFixture();
 
     setSourceVisibleForTest(fx.state as never, { cb: fx.cb } as never, Source.SDSS, false);

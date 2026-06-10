@@ -4,8 +4,7 @@
 // `setSourceVisibleImpl`) so tests can drive it against a partial-state stub
 // without a full GPU engine. It writes the authoritative settings leaf, drives
 // the matching per-category FadeRegistry handle for a smooth ramp, and echoes
-// a fresh DERIVED record via the callback. fadeTo owns the render wake, so the
-// setter never calls requestRender itself. The `createEngine` literal
+// a fresh DERIVED record via the callback. The `createEngine` literal
 // delegates here.
 //
 // Fading the per-category handle keeps the toggle smooth: the producer

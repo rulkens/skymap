@@ -65,13 +65,10 @@
  *
  * ### Wake contract
  *
- * `setMode` calls `requestRender()` on entry (after the mode write, before
- * any bake) so the shader's integer mode gate flips on the very next frame —
- * mirroring the contract `fadeTo` and `tweens.start` follow.  For bake modes
- * (Schechter, AngularReweight) it calls `requestRender()` again once all
- * per-source splices land (no-op if a newer `setMode` has since superseded
- * this one).  The engine.ts caller therefore needs no trailing
- * `requestRender()` of its own.
+ * `setMode` wakes the scheduler on entry (so the shader's mode gate flips
+ * next frame) and, for bake modes, again once every per-source splice lands
+ * (skipped if a newer `setMode` superseded it).  Callers need no trailing
+ * `requestRender()`.
  *
  * ### Production wiring
  *
@@ -248,10 +245,8 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     generation += 1;
     const myGen = generation;
     mode = next;
-    // Wake immediately so the shader's mode gate flips on the very next frame.
-    // The post-bake wakes below are separate: they fire when per-source splices
-    // land and the frame should show updated ratios/weights.  Identity modes
-    // (None, VolumeLimited, VMax) only ever need this one wake.
+    // Entry wake — flips the mode gate next frame; the only wake identity
+    // modes need (bake modes wake again post-splice below).
     requestRender();
 
     if (next === BiasMode.None || next === BiasMode.VolumeLimited || next === BiasMode.VMax) {

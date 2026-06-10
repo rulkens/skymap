@@ -3,9 +3,8 @@
  * `attachEngineInputs`.  Each callback below is the *semantic* engine
  * action (pointer moved, pointer left, etc.) — the inputBindings
  * module already converts `e.clientX/Y` to a CSS-pixel record and
- * owns the `scheduler.requestRender()` wake for events no change
- * channel covers (Escape stays wake-free: it routes into the
- * selection setters, which own their wake).
+ * owns the `scheduler.requestRender()` wake for channel-uncovered
+ * events (see its module header for the contract).
  */
 
 import type { RenderScheduler } from '../../services/engine/subsystems/renderScheduler';

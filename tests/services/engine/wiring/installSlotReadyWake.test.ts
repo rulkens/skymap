@@ -2,14 +2,10 @@
  * installSlotReadyWake — unit tests.
  *
  * Three invariants:
- *
- *   - Every slot in the registry gets exactly one `subscribe` call; the
- *     channel-mouth contract requires the subscription to be registered
- *     once and reused for all future arrivals.
- *   - A `ready` transition calls `requestRender` — one call per slot that
- *     fires `ready`.
- *   - Non-ready transitions (`loading`, `error`, `idle`, `committing`) do NOT
- *     call `requestRender`; the scheduler wakes only when new data is present.
+ *   - every slot gets exactly one `subscribe` call;
+ *   - each `ready` transition calls `requestRender` once;
+ *   - non-ready transitions (`loading`, `error`, `idle`, `committing`)
+ *     never wake — new data only.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';

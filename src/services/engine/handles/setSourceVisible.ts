@@ -52,9 +52,8 @@ export function setSourceVisibleImpl(
   // Echo INTENT (pickMask = enabled bits, not the fade-tail drawMask) so the
   // React checkbox reflects on/off the instant the user toggles.
   cb.sources?.onMaskChange?.(state.sources.pickMask);
-  // No requestRender: the unconditional fadeTo above wakes the scheduler, and
-  // the per-frame deriveSourceMasks keeps the masks tracking the fade — there
-  // is no post-fade mask write left for a caller wake to cover.
+  // No requestRender: fadeTo owns the wake, and the per-frame
+  // deriveSourceMasks keeps the masks tracking the fade.
 }
 
 // Test-only alias matching the import name used in tests.

@@ -5,8 +5,8 @@
  *
  * No `commit` step: there's nothing GPU-side to upload — the payload is
  * pure metadata consumed by the InfoCard via `galaxyStore.famousMeta`.
- * The subscriber writes the field; the render wake is handled generically
- * by `installSlotReadyWake` in the wiring layer (all slots, one subscription).
+ * The subscriber writes the field; the render wake is `installSlotReadyWake`'s
+ * job, not the factory's.
  *
  * **Graceful degradation on error.**  The fetcher throws on HTTP failure
  * (so the retry policy distinguishes "really gone" from "transient flake"),
