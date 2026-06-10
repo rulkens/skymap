@@ -27,7 +27,6 @@
  */
 
 import type { FlowSettings } from './FlowSettings';
-import type { VolumeFieldRowData } from './VolumeFieldRowData';
 import type { LabelCategory } from '../engine/data/LabelCategory';
 import type { StructureCategory } from '../engine/data/StructureCategory';
 
@@ -45,7 +44,11 @@ export type UseEngineSettingsState = {
   // so neither leaf is mirrored here — but `filamentCounts` below stays (it's an
   // EVENT payload, not a settings mirror). The debug overlays (showPickBuffer /
   // showDiskRadiusRing) also moved to the store; the DebugPanel reads them via
-  // `useSettingsStore` selectors, so they aren't mirrored here.
+  // `useSettingsStore` selectors, so they aren't mirrored here. The volumes
+  // cluster (master `enabled` + per-field `items`) also moved to the store;
+  // App.tsx reads the master via `selectVolumesEnabled` and the per-field rows
+  // via `selectVolumeFieldItems` + a `useMemo` projection, so neither is
+  // mirrored here.
   /**
    * Strip + vertex counts from the cosmic-web `filaments.bin`, or `null` until
    * the engine fires `filaments.onReady` (once, after the optional file lands).
@@ -54,20 +57,6 @@ export type UseEngineSettingsState = {
    * migrated to the engine-owned store.
    */
   filamentCounts: { stripCount: number; vertexCount: number } | null;
-  /**
-   * Master toggle for the scalar-volume overlay.  Mirrors
-   * `EngineSettingsState.volumesEnabled` on the engine side.  No echo
-   * callback — React owns it optimistically, same as `filamentsEnabled`.
-   */
-  volumesEnabled: boolean;
-  /**
-   * Snapshot of every registered field's UI state — mirrored from the
-   * engine via the `volumes.onFieldsChanged(fields)` callback after
-   * every mutation.  Synthetic-fixture handles (`debug-*`) are filtered
-   * inside the hook so consumers only see real science volumes.  Starts
-   * empty (no cubes are registered at startup).
-   */
-  volumeFields: ReadonlyArray<VolumeFieldRowData>;
   /**
    * Per-category visibility for the TEXT LABEL overlay.  A React-side mirror
    * of the engine's derived label-visibility record (structure categories

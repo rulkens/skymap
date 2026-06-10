@@ -103,6 +103,10 @@ import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 import { createTweenManager } from './camera/tweenManager';
 import { createSettingsStore } from './settingsStore/createSettingsStore';
 import { setBiasModeAction } from './settingsStore/actions/setBiasModeAction';
+import { setVolumesEnabledAction } from './settingsStore/actions/setVolumesEnabledAction';
+import { writeVolumeFieldAction } from './settingsStore/actions/writeVolumeFieldAction';
+import { addVolumeFieldAction } from './settingsStore/actions/addVolumeFieldAction';
+import { removeVolumeFieldAction } from './settingsStore/actions/removeVolumeFieldAction';
 import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
@@ -131,10 +135,8 @@ import { awaitSlotReady } from '../loading/awaitSlotReady';
 import { tierTarget } from '../../data/tierTargets';
 import { snapToCameraSnapshot, tweenToCameraSnapshot } from './camera/cameraSnapshot';
 import { MILKY_WAY_CENTER_WORLD, MILKY_WAY_VIEW_DISTANCE_MPC } from '../../data/galacticCenter';
-import { buildVolumeFieldSettings, seedVolumeFields } from '../../data/volumeFieldDefaults';
+import { seedVolumeFields } from '../../data/volumeFieldDefaults';
 import { buildVolumeFieldsSnapshot } from './helpers/buildVolumeFieldsSnapshot';
-import { writeVolumeFieldSetting } from './helpers/writeVolumeFieldSetting';
-import { removeVolumeFieldSetting } from './helpers/removeVolumeFieldSetting';
 import { clampVolumeIntensity } from '../../utils/clampVolumeIntensity';
 import { clampVolumeContrast } from '../../utils/clampVolumeContrast';
 import { clampVolumeDensityScale } from '../../utils/clampVolumeDensityScale';
@@ -889,10 +891,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function setVolumesEnabled(enabled: boolean): void {
-    // Master toggle — mutate the settings bag so the per-frame volume gates
-    // see it next frame.  No echo callback: the React layer owns this value
-    // optimistically.
-    state.settings.volumes.enabled = enabled;
+    // Master toggle — dispatch the copy-on-write store action so the per-frame
+    // volume gates see it next frame.  No echo: React reads via
+    // `selectVolumesEnabled`.
+    setVolumesEnabledAction(settingsStore, enabled);
     // Drive the FadeRegistry on the volumesMaster handle.  The encodeHdr*
     // sites multiply this master opacity into every per-field fade, so the
     // whole subsystem ramps in lockstep.  The pass-enabled gate accepts
@@ -907,15 +909,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   function addVolumeField(fieldId: VolumeFieldId, cube: ScalarCube): void {
     // Ensure a settings row exists before the GPU upload.  Re-registering a
-    // field preserves its tuned values; a brand-new handle seeds
-    // from registry defaults.  Shippable volumes already have a construction
-    // seed, so the guard only fires for a dynamically-added handle.
-    if (!state.settings.volumes.items[fieldId]) {
-      state.settings.volumes.items = {
-        ...state.settings.volumes.items,
-        [fieldId]: buildVolumeFieldSettings(fieldId),
-      };
-    }
+    // field preserves its tuned values (identity no-op in the reducer); a
+    // brand-new handle seeds from registry defaults.  Shippable volumes already
+    // have a construction seed, so this only seeds for a dynamically-added
+    // handle.  React reads the per-field rows via `selectVolumeFieldItems`.
+    addVolumeFieldAction(settingsStore, fieldId);
     // Upload to the renderer; a silent no-op if it isn't ready yet (re-add
     // once booted).
     state.gpu.scalarVolumeRenderer?.addField(fieldId, cube);
@@ -929,7 +927,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         FADE_IN_DURATION_MS,
       );
     }
-    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     // Essential wake: the fadeTo above is conditional — a disabled add still
     // changes the renderer's field set and settings row.
     state.subsystems.scheduler.requestRender();
@@ -937,8 +934,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   function removeVolumeField(fieldId: VolumeFieldId): void {
     state.gpu.scalarVolumeRenderer?.removeField(fieldId);
-    state.settings.volumes.items = removeVolumeFieldSetting(state.settings.volumes.items, fieldId);
-    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
+    removeVolumeFieldAction(settingsStore, fieldId);
     // Essential wake: removal fires no fade — the field vanishes outright.
     state.subsystems.scheduler.requestRender();
   }
@@ -974,9 +970,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function setVolumeFieldEnabled(fieldId: VolumeFieldId, enabled: boolean): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, { enabled });
-    if (!next) return;
-    state.settings.volumes.items = next;
+    // Dispatch the copy-on-write store action; React reads via
+    // `selectVolumeFieldItems`.  An unknown id lands an identity write (no-op).
+    writeVolumeFieldAction(settingsStore, fieldId, { enabled });
     // DEV debug fixtures aren't demand rows, so they keep a direct lazy load
     // here; cf4/mcpm load via reevaluateDemand reading items[id].enabled, and
     // this call is a no-op for those ids, so the two load paths partition.
@@ -988,72 +984,54 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       enabled ? 1 : 0,
       enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
     );
-    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     // No requestRender: fadeTo wakes, and that frame's reevaluateDemand sees
     // the flipped enabled bit for the shippable cf4/mcpm rows.
   }
 
-  // The per-field knob setters below write `state.settings.volumes.items`
-  // directly — no boringSetter, no fade, so no channel wakes for them.  Each
-  // keeps an explicit requestRender to re-render the raymarch pass.
+  // The per-field knob setters below dispatch the copy-on-write store action —
+  // no boringSetter, no fade, so no channel wakes for them.  Each keeps an
+  // explicit requestRender to re-render the raymarch pass.  Each clamps raw
+  // intent before the write; React reads via `selectVolumeFieldItems`.
 
   function setVolumeFieldIntensity(fieldId: VolumeFieldId, intensity: number): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
+    writeVolumeFieldAction(settingsStore, fieldId, {
       intensity: clampVolumeIntensity(intensity),
     });
-    if (!next) return;
-    state.settings.volumes.items = next;
-    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldContrast(fieldId: VolumeFieldId, contrast: number): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
+    writeVolumeFieldAction(settingsStore, fieldId, {
       contrast: clampVolumeContrast(contrast),
     });
-    if (!next) return;
-    state.settings.volumes.items = next;
-    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldDensityScale(fieldId: VolumeFieldId, value: number): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
+    writeVolumeFieldAction(settingsStore, fieldId, {
       densityScale: clampVolumeDensityScale(value),
     });
-    if (!next) return;
-    state.settings.volumes.items = next;
-    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldTrim(fieldId: VolumeFieldId, trim: number): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
+    writeVolumeFieldAction(settingsStore, fieldId, {
       trim: clampVolumeTrim(trim),
     });
-    if (!next) return;
-    state.settings.volumes.items = next;
-    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldExposure(fieldId: VolumeFieldId, exposure: number): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
+    writeVolumeFieldAction(settingsStore, fieldId, {
       exposure: clampVolumeExposure(exposure),
     });
-    if (!next) return;
-    state.settings.volumes.items = next;
-    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldPalette(fieldId: VolumeFieldId, id: ScalarFieldPaletteId): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
+    writeVolumeFieldAction(settingsStore, fieldId, {
       paletteId: id,
     });
-    if (!next) return;
-    state.settings.volumes.items = next;
-    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 

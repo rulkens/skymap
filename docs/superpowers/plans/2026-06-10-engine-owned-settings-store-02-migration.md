@@ -328,19 +328,25 @@ each to a store reducer/action wrapping the SAME helper, and replace the
 projection (drop the `debug-*` filter on the React side, as today —
 `useEngineSettings.ts:269`). The React `volumeFields` cell becomes
 `useStore(handleRef, selectVolumeFieldRows)`.
-- [ ] Reducer/selector tests: master `setVolumesEnabled` + per-field
-  `setVolumeFieldEnabled`/etc. (copy-on-write of `volumes.items`), and
-  `selectVolumeFieldRows` projects the rows the panel shows (debug-filtered).
-- [ ] Run-fails → implement: master toggle → action (keep the `volumesMaster`
-  fade, `engine.ts:876`); per-field setters → actions wrapping
+- [x] Reducer/selector tests: master `setVolumesEnabled` + per-field
+  `writeVolumeField`/`addVolumeField`/`removeVolumeField` (copy-on-write of
+  `volumes.items`), the stable-ref `selectVolumeFieldItems` contract, and
+  `projectVolumeFieldRows` projects the rows the panel shows (debug-filtered by
+  the consumer).
+- [x] Run-fails → implement: master toggle → action (keeps the `volumesMaster`
+  fade); per-field setters → actions wrapping
   `writeVolumeFieldSetting`/`removeVolumeFieldSetting` (keep the per-field
   `fadeTo` + `requestRender` side effects + the debug-volume lazy-load —
-  `maybeLazyLoadDebugVolume`); delete the `onFieldsChanged` echoes.
-- [ ] Delete `setVolumesEnabled` optimistic setter + `volumesEnabled` /
+  `maybeLazyLoadDebugVolume`); delete the `onFieldsChanged` echoes from the
+  engine setters. (Rows read via the stable `selectVolumeFieldItems` Record +
+  a `useMemo` projection rather than a fresh-array selector, so
+  `useSyncExternalStore`'s getSnapshot stays referentially stable.)
+- [x] Delete `setVolumesEnabled` optimistic setter + `volumesEnabled` /
   `volumeFields` cells + the `volumes.onFieldsChanged` subscription; switch
-  App.tsx volumes reads to `useStore`. **Keep** `handle.volumes.getState()` /
-  `list()` (they read the store too — confirm they project the same rows).
-- [ ] Run-passes (full suite — volume fade/upsample tests unaffected) → commit.
+  App.tsx volumes reads to `useSettingsStore`. **Kept** `handle.volumes.getState()`
+  / `list()` — they read `state.settings.volumes.items` (store-backed) and
+  project the same rows.
+- [x] Run-passes (full suite — volume fade/upsample tests unaffected) → commit.
 
 ### Task 2.10: flow (removes the last App-owned-optimistic asymmetry)
 

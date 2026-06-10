@@ -38,9 +38,8 @@
  * ──────────────────────────────────────────────────────────────────────
  * The App-owned exceptions
  * ──────────────────────────────────────────────────────────────────────
- *   - `volumesEnabled` — engine has no echo callback for the master
- *     toggle; React owns it optimistically via `setVolumesEnabled`.
- *   - `spaceMouseSensitivity` / `flow` — same no-echo pattern.
+ *   - `spaceMouseSensitivity` / `flow` — no-echo: React owns the value
+ *     optimistically and dual-writes to the engine handle.
  *
  * ──────────────────────────────────────────────────────────────────────
  * Why bundle into one hook?
@@ -57,12 +56,7 @@ import type { LabelCategory } from '../@types/engine/data/LabelCategory';
 import type { StructureCategory } from '../@types/engine/data/StructureCategory';
 import { LABEL_CATEGORIES } from '../data/labelCategories';
 import { STRUCTURE_CATEGORIES } from '../data/structureCategories';
-import {
-  DEFAULT_FLOW,
-  DEFAULT_SPACE_MOUSE_SENSITIVITY,
-  DEFAULT_VOLUMES_ENABLED,
-} from '../data/defaults';
-import type { VolumeFieldRowData } from '../@types/settings/VolumeFieldRowData';
+import { DEFAULT_FLOW, DEFAULT_SPACE_MOUSE_SENSITIVITY } from '../data/defaults';
 import type { UseEngineSettingsReturn } from '../@types/settings/UseEngineSettingsReturn';
 
 export function useEngineSettings(): UseEngineSettingsReturn {
@@ -83,13 +77,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   // mirror cell or echo lives here.
 
   // ── App-owned optimistic values (no engine echo) ─────────────────────
-  // The engine does NOT fire echo callbacks for the volumes master state,
-  // so React owns it optimistically. The SettingsPanel onChange handler
-  // updates this directly AND forwards to the engine handle.
-
-  // Scalar-volume master toggle — no echo. No persistence: every session
-  // starts from the compile-time default.
-  const [volumesEnabled, setVolumesEnabled] = useState<boolean>(DEFAULT_VOLUMES_ENABLED);
 
   // ── CF4++ flow-field overlay (App-owned optimistic, no echo) ──────────
   // The engine fires NO echo callback for flow — same as filamentsEnabled —
@@ -104,13 +91,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   const updateFlow = useCallback((patch: Partial<FlowSettings>) => {
     setFlow((prev) => ({ ...prev, ...patch }));
   }, []);
-
-  // Per-field row data.  Starts empty (no cubes at startup).  The engine
-  // pushes a fresh snapshot through `volumes.onFieldsChanged(fields)`
-  // after every add / remove / tunable mutation; the callback is wired
-  // a few lines down and drops `debug-*` fixture handles on the way in
-  // so the panel only sees real science volumes.
-  const [volumeFields, setVolumeFields] = useState<ReadonlyArray<VolumeFieldRowData>>([]);
 
   // ── One-shot from engine: filament strip + vertex counts ─────────────
   // Stays null until the engine fires `onFilamentsReady` (once, after the
@@ -172,8 +152,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   return {
     settings: {
       filamentCounts,
-      volumesEnabled,
-      volumeFields,
       labelCategoryVisibility,
       markerCategoryVisibility,
       spaceMouseConnected,
@@ -182,32 +160,25 @@ export function useEngineSettings(): UseEngineSettingsReturn {
     },
     engineCallbacks: {
       // ── Nested sub-bag subscriptions ─────────────────────────────
-      // Every echo the engine emits lands at its nested address; the
-      // no-echo cases (volumes master) are App-owned with no wiring here.
+      // Every echo the engine emits lands at its nested address.
       // The surveys + sources + tonemap echo sub-bags are gone, and so are the
       // camera auto-rotate echo, the bias (mode / absMagLimit) echoes, the
       // thumbnails echo, the milkyWay echo, the filaments enabled/intensity
-      // echoes, and the debug echoes (showPickBuffer / showDiskRadiusRing) —
-      // those clusters live in the engine-owned store (the thumbnail + milkyWay
-      // toggles have no React consumer at all; App reads the filaments cluster
-      // and the debug toggles via `useSettingsStore` selectors), so there's no
-      // mirror to keep in sync from a callback. (Camera EVENTS — focus / camera
-      // / scale — are not settings and are wired by `useEngine`, not here.)
+      // echoes, the debug echoes (showPickBuffer / showDiskRadiusRing), and the
+      // volumes echo (master + per-field) — those clusters live in the
+      // engine-owned store (the thumbnail + milkyWay toggles have no React
+      // consumer at all; App reads the filaments cluster + debug toggles via
+      // `useSettingsStore` selectors, the volumes master via `selectVolumesEnabled`
+      // and the per-field rows via `selectVolumeFieldItems` + a `useMemo`
+      // projection), so there's no mirror to keep in sync from a callback.
+      // (Camera EVENTS — focus / camera / scale — are not settings and are wired
+      // by `useEngine`, not here.)
       filaments: {
         // `onReady` is an EVENT, not a settings mirror: the engine fires it once
         // with the strip/vertex counts after `filaments.bin` lands. The toggle +
         // intensity SETTINGS migrated to the store; this count payload has no
         // store home, so the subscription stays.
         onReady: (stripCount, vertexCount) => setFilamentCounts({ stripCount, vertexCount }),
-      },
-      volumes: {
-        // Engine pushes the fresh snapshot in its argument, so the
-        // mirror is a one-line setter.  Synthetic-fixture handles
-        // (`debug-*`) are dropped here — the SettingsPanel only shows
-        // real science volumes, but the engine's registry still holds
-        // them for dev-console toggling.
-        onFieldsChanged: (fields) =>
-          setVolumeFields(fields.filter((f) => !f.handle.startsWith('debug-'))),
       },
       labels: {
         // Engine echoes the full record on every toggle; setting React
@@ -227,7 +198,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
         },
       },
     },
-    setVolumesEnabled,
     setSpaceMouseSensitivity,
     updateFlow,
   };

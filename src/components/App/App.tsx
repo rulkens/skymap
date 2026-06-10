@@ -57,6 +57,10 @@ import { selectShowPickBuffer } from '../../services/engine/settingsStore/select
 import { selectShowDiskRadiusRing } from '../../services/engine/settingsStore/selectors/selectShowDiskRadiusRing';
 import { selectFilamentsEnabled } from '../../services/engine/settingsStore/selectors/selectFilamentsEnabled';
 import { selectFilamentIntensity } from '../../services/engine/settingsStore/selectors/selectFilamentIntensity';
+import { selectVolumesEnabled } from '../../services/engine/settingsStore/selectors/selectVolumesEnabled';
+import { selectVolumeFieldItems } from '../../services/engine/settingsStore/selectors/selectVolumeFieldItems';
+import { projectVolumeFieldRows } from '../../services/engine/settingsStore/projectVolumeFieldRows';
+import { seedVolumeFields } from '../../data/volumeFieldDefaults';
 import {
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_DEPTH_FADE_ENABLED,
@@ -68,6 +72,7 @@ import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_SHOW_PICK_BUFFER,
   DEFAULT_SHOW_DISK_RADIUS_RING,
+  DEFAULT_VOLUMES_ENABLED,
 } from '../../data/defaults';
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
 import { ALL_VISIBLE_MASK } from '../../utils/sourceMask';
@@ -76,11 +81,21 @@ import { isStructureCategory } from '../../data/structureCategories';
 import { DebugPanel } from '../DebugPanel/DebugPanel';
 import { isWebHIDSupported } from '../../services/input/spaceMouse';
 
+/**
+ * Stable fallback for the volume-field items selector during the null-store
+ * window (before `handleRef` lands). `useSettingsStore` feeds this into
+ * `getSnapshot` and keys a `useCallback` on it, so it MUST be a single stable
+ * reference — calling `seedVolumeFields()` inline would mint a fresh object each
+ * render and re-fire the subscription. Hoisted to module scope; it's the same
+ * construction seed the store starts from, so the first paint matches engine
+ * truth.
+ */
+const VOLUME_FIELD_ITEMS_DEFAULT = seedVolumeFields();
+
 export function App(): React.ReactElement {
   const {
     settings,
     engineCallbacks: settingsCallbacks,
-    setVolumesEnabled,
     setSpaceMouseSensitivity,
     updateFlow,
   } = useEngineSettings();
@@ -89,8 +104,6 @@ export function App(): React.ReactElement {
     labelCategoryVisibility,
     markerCategoryVisibility,
     filamentCounts,
-    volumesEnabled,
-    volumeFields,
     spaceMouseConnected,
     spaceMouseSensitivity,
     flow,
@@ -185,6 +198,31 @@ export function App(): React.ReactElement {
     handleRef,
     selectFilamentIntensity,
     SOURCE_REGISTRY[Source.Filaments].intensity,
+  );
+
+  // Volumes cluster reads live off the engine-owned store. The master toggle is
+  // a primitive boolean (`selectVolumesEnabled`), dispatched by the handle setter
+  // alongside the master fade. The per-field rows go through a STABLE-ref read:
+  // `selectVolumeFieldItems` returns the underlying `volumes.items` Record (only
+  // changes when a field actually changes, unaffected by a master-toggle flip),
+  // and the `useMemo` projects it to the debug-filtered `VolumeFieldRowData[]`
+  // the panel renders. Building the array inside the selector would mint a fresh
+  // array per `getSnapshot`, breaking `useSyncExternalStore`'s stability contract
+  // — keying the `useMemo` on the stable `items` ref is what keeps it cheap. The
+  // master fallback is the same `data/defaults.ts` seed; the items fallback is
+  // the construction seed (`seedVolumeFields()`), so first paint (before
+  // `handleRef` lands) matches engine truth.
+  const volumesEnabled = useSettingsStore(handleRef, selectVolumesEnabled, DEFAULT_VOLUMES_ENABLED);
+  const volumeFieldItems = useSettingsStore(
+    handleRef,
+    selectVolumeFieldItems,
+    VOLUME_FIELD_ITEMS_DEFAULT,
+  );
+  const volumeFields = useMemo(
+    // `debug-*` synthetic fixtures are dropped here so the panel only shows real
+    // science volumes (the dev console + handle.volumes.getState() still see them).
+    () => projectVolumeFieldRows(volumeFieldItems).filter((f) => !f.handle.startsWith('debug-')),
+    [volumeFieldItems],
   );
 
   // Flow overlay has no engine echo, so a knob change must land in two homes:
@@ -395,17 +433,17 @@ export function App(): React.ReactElement {
             onAbsMagLimitChange={(M) => handleRef.current?.bias.setAbsMagLimit(M)}
             toneMapCurve={toneMapCurve}
             onToneMapCurveChange={(curve) => handleRef.current?.tonemap.setCurve(curve)}
-            // `volumesEnabled` is the master toggle — no engine echo,
-            // owned optimistically in React state (the dual-write idiom).
-            // The per-field setters forward straight to the engine; the
-            // engine fires `volumes.onFieldsChanged(snapshot)` after
-            // every mutation, and `useEngineSettings` mirrors the
-            // snapshot back into React.
+            // `volumesEnabled` reads off the engine-owned store
+            // (`selectVolumesEnabled`); the handle setter dispatches the
+            // action (which notifies synchronously) and drives the master
+            // fade, so the toggle tracks without an optimistic cell. The
+            // per-field rows read via `selectVolumeFieldItems` + the `useMemo`
+            // projection; each per-field setter forwards straight to the
+            // engine, whose store write wakes the rows subscription.
             volumesEnabled={volumesEnabled}
-            onVolumesEnabledChange={(enabled) => {
-              setVolumesEnabled(enabled);
-              handleRef.current?.volumes.setMasterEnabled(enabled);
-            }}
+            onVolumesEnabledChange={(enabled) =>
+              handleRef.current?.volumes.setMasterEnabled(enabled)
+            }
             volumeFields={volumeFields}
             onVolumeFieldEnabledChange={(fieldId, enabled) =>
               handleRef.current?.volumes.setEnabled(fieldId, enabled)
