@@ -3,8 +3,9 @@
  * `attachEngineInputs`.  Each callback below is the *semantic* engine
  * action (pointer moved, pointer left, etc.) — the inputBindings
  * module already converts `e.clientX/Y` to a CSS-pixel record and
- * calls `scheduler.requestRender()` after every event so consumers
- * don't repeat that wake-up at every site.
+ * owns the `scheduler.requestRender()` wake for events no change
+ * channel covers (Escape stays wake-free: it routes into the
+ * selection setters, which own their wake).
  */
 
 import type { RenderScheduler } from '../../services/engine/subsystems/renderScheduler';
@@ -13,7 +14,7 @@ import type { CssPx } from './CssPx';
 export type AttachEngineInputsOptions = {
   /** The canvas element pointer listeners attach to. */
   canvas: HTMLCanvasElement;
-  /** Render scheduler — wakes the loop after each event. */
+  /** Render scheduler — wakes the loop for channel-uncovered events. */
   scheduler: RenderScheduler;
   /** Pointer moved over the canvas; arg is the CSS-pixel position. */
   onPointerMove: (cssPx: CssPx) => void;

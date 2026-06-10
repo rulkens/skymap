@@ -256,8 +256,9 @@ export { setSourceVisibleImpl as setSourceVisibleForTest };
 // without a full GPU engine. Each routes to the canonical store (structure
 // categories → the structure store; famousGalaxy → the galaxy store), drives
 // the matching per-category FadeRegistry handle for a smooth ramp, mirrors the
-// flag into `state.settings`, echoes a fresh snapshot via the callback, and
-// requests a render. The `createEngine` literal delegates to these.
+// flag into `state.settings`, and echoes a fresh snapshot via the callback.
+// fadeTo owns the render wake, so neither setter calls requestRender itself.
+// The `createEngine` literal delegates to these.
 //
 // Why fade the per-category handle here?  The producers (produceStructureMarkers
 // / produceStructureLabels / produceFamousLabels) already read
@@ -302,7 +303,9 @@ function setCategoryLabelVisible(
   cb.labels?.onLabelCategoryVisibilityChange?.({
     ...state.settings.labelCategoryVisibility,
   });
-  state.subsystems.scheduler.requestRender();
+  // No requestRender: the routing above is exhaustive over LabelCategory
+  // (every label-bearing registry row is either labelLayer 'galaxyNames' or a
+  // structure row), so every call lands in a fadeTo — which wakes the scheduler.
 }
 
 function setCategoryMarkerVisible(
@@ -326,7 +329,7 @@ function setCategoryMarkerVisible(
   cb.labels?.onMarkerCategoryVisibilityChange?.({
     ...state.settings.markerCategoryVisibility,
   });
-  state.subsystems.scheduler.requestRender();
+  // No requestRender: the unconditional fadeTo above wakes the scheduler.
 }
 
 // Test-only aliases matching the import names used in tests.
@@ -581,7 +584,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           // echo directly.
           cb.input?.spaceMouse?.onConnectedChange?.(connected);
           // Wake one frame so the still-animating predicate sees the
-          // freshly-zeroed axes and lets the loop sleep cleanly.
+          // freshly-zeroed axes and lets the loop sleep cleanly.  This is
+          // the ONLY wake on the disconnect path — handle.disconnect relies
+          // on it rather than waking separately.
           state.subsystems.scheduler.requestRender();
         },
         onAxes: () => state.subsystems.scheduler.requestRender(),
@@ -821,6 +826,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.settings.bias.mode = mode;
     cb.bias?.onModeChange?.(mode);
     void state.subsystems.biasCorrection.setMode(mode);
+    // Essential wake — the subsystem wakes only AFTER its async bakes resolve
+    // (and not at all for the identity modes), but the shader's mode gate flips
+    // on the next frame; without this wake the mode change sits invisible.
     state.subsystems.scheduler.requestRender();
   }
 
@@ -1045,6 +1053,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       );
     }
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
+    // Essential wake — the fadeTo above is conditional on the field being
+    // enabled, so a disabled add would otherwise mutate the renderer's field
+    // set and the settings row with no channel wake covering it.
     state.subsystems.scheduler.requestRender();
   }
 
@@ -1055,6 +1066,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       fieldId,
     );
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
+    // Essential wake — removal fires no fade (the field vanishes outright),
+    // so no channel covers making the disappearance visible.
     state.subsystems.scheduler.requestRender();
   }
 
@@ -1104,8 +1117,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
     );
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
-    state.subsystems.scheduler.requestRender();
+    // No requestRender: the unconditional fadeTo above wakes the scheduler
+    // (and the frame it wakes runs reevaluateDemand, which sees the flipped
+    // enabled bit for the shippable cf4/mcpm rows).
   }
+
+  // The per-field knob setters below write `state.settings.volumes.fields`
+  // directly — no boringSetter, no fade — so no channel wake fires for them.
+  // Each keeps an explicit requestRender so the raymarch pass re-renders with
+  // the new uniform value.
 
   function setVolumeFieldIntensity(fieldId: VolumeFieldId, intensity: number): void {
     const next = writeVolumeFieldSetting(state.settings.volumes.fields, fieldId, {
@@ -1183,8 +1203,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function disconnectSpaceMouse(): void {
+    // No requestRender: when a device is actually open, the underlying
+    // SpaceMouseInput.disconnect() fires onConnectionChange, whose engine
+    // wiring wakes the scheduler; with no device open nothing observable
+    // changes, so no frame is needed.
     state.subsystems.spaceMouse.disconnect();
-    state.subsystems.scheduler.requestRender();
   }
 
   function isSpaceMouseConnected(): boolean {

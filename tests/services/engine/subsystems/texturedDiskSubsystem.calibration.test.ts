@@ -131,7 +131,6 @@ async function emitOne(source: SourceType, cloud: GalaxyCatalog, famousMeta: Fam
   const sys = createTexturedDiskSubsystem({
     device,
     atlas,
-    requestRender: () => {},
     fetcher,
     decimationFactor: 1,
   });

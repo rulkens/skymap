@@ -122,9 +122,10 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // Centralised in `inputBindings.ts` so every DOM listener the
   // engine cares about lives in one module.  Each callback below
   // is the *semantic* engine action — the inputBindings module
-  // already converts `e.clientX/Y` to a CSS-pixel record and
-  // calls `scheduler.requestRender()` after every event so we
-  // don't repeat that wake-up at every site.
+  // already converts `e.clientX/Y` to a CSS-pixel record and owns
+  // the requestRender wake for events no change channel covers
+  // (Escape stays wake-free there: it routes into the selection
+  // setters below, which own their wake).
   state.subsystems.inputBindings = attachEngineInputs({
     canvas,
     // Scheduler by reference — created eagerly in the state literal (the

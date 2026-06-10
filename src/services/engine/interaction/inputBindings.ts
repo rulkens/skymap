@@ -57,10 +57,13 @@
  *   - window  keydown (Escape only)                  — onEscape.
  *   - window  resize                                 — onResize.
  *
- * Each listener also calls `scheduler.requestRender()` after
- * dispatching so the engine's render-on-demand loop wakes for the
- * next frame.  Centralising the wake-up calls here means engine.ts's
- * setters / per-frame body don't have to think about it.
+ * This module is the pointer-input mouth of the render-on-demand wake
+ * model: listeners whose effects no change channel covers (pointermove
+ * feeding the hover pick, pointerdown's drag bookkeeping, resize) call
+ * `scheduler.requestRender()` themselves.  Listeners whose effects DO
+ * route through a channel mouth stay wake-free — Escape lands in the
+ * selection setters (which own their wake), and pointerup only flips a
+ * flag the next frame reads.
  */
 
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
@@ -121,7 +124,9 @@ export function attachEngineInputs(options: AttachEngineInputsOptions): InputBin
 
   // When the pointer leaves the canvas the engine clears hover state.
   // If a point is selected the card stays visible (showing the pinned
-  // point) — that's an engine concern, not ours.
+  // point) — that's an engine concern, not ours.  setHovered is
+  // wake-free (hover feeds only the React InfoCard), so no channel
+  // covers this event; keep the input-mouth wake.
   addCanvasListener('pointerleave', () => {
     onPointerLeave();
     scheduler.requestRender();
@@ -133,6 +138,9 @@ export function attachEngineInputs(options: AttachEngineInputsOptions): InputBin
   // even when `setPointerCapture` has routed events back to the canvas
   // via the orbit-controls module.
 
+  // Essential wake — onPointerDown cancels any in-flight tween via
+  // `tweens.cancel()`, which is wake-free by contract BECAUSE this
+  // input mouth is already awake (see tweenManager's module header).
   addCanvasListener('pointerdown', () => {
     onPointerDown();
     scheduler.requestRender();
@@ -151,11 +159,12 @@ export function attachEngineInputs(options: AttachEngineInputsOptions): InputBin
   // The engine owns this because Esc acts on engine state
   // (`selectedIndex`).  App.tsx also has a `useEffect` that forwards
   // Esc through the engine handle's `clearSelection()` method — same
-  // result, both paths are fine.
+  // result, both paths are fine.  No wake here: onEscape routes into
+  // the selection setters, which own the render wake when a slot
+  // actually changes — Esc on an empty scene stays wake-free.
   addWindowListener('keydown', (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       onEscape();
-      scheduler.requestRender();
     }
   });
 

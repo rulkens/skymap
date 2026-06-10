@@ -11,8 +11,9 @@
  * The contract under test: a category toggle drives the SAME per-category fade
  * handle the producers read (`markerLayer{category}` /
  * `labelLayer{structure,category}` / `labelLayer{galaxyNames}`), so on/off is a smooth
- * fade instead of a pop. famousGalaxy has no ring marker, so a marker toggle for
- * it fires NO markerLayer fade — but still mirrors settings + requests a render.
+ * fade instead of a pop. fadeTo owns the render wake (the real FadeRegistry
+ * wakes the scheduler internally), so the setters never call requestRender —
+ * asserted via the untouched scheduler stub.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -94,7 +95,8 @@ describe('setCategoryMarkerVisible — fade orchestration', () => {
     ]);
     expect(fx.state.settings.markerCategoryVisibility.cluster).toBe(false);
     expect(fx.cb.labels.onMarkerCategoryVisibilityChange).toHaveBeenCalledTimes(1);
-    expect(fx.state.subsystems.scheduler.requestRender).toHaveBeenCalledTimes(1);
+    // fadeTo owns the wake — the setter must not call requestRender itself.
+    expect(fx.state.subsystems.scheduler.requestRender).not.toHaveBeenCalled();
   });
 
   it('toggle ON fires fadeTo(markerLayer{cluster}, 1, FADE_IN)', () => {
@@ -127,7 +129,8 @@ describe('setCategoryLabelVisible — fade orchestration', () => {
     ]);
     expect(fx.state.settings.labelCategoryVisibility.cluster).toBe(false);
     expect(fx.cb.labels.onLabelCategoryVisibilityChange).toHaveBeenCalledTimes(1);
-    expect(fx.state.subsystems.scheduler.requestRender).toHaveBeenCalledTimes(1);
+    // fadeTo owns the wake — the setter must not call requestRender itself.
+    expect(fx.state.subsystems.scheduler.requestRender).not.toHaveBeenCalled();
   });
 
   it('famousGalaxy label toggle OFF fires fadeTo(labelLayer{galaxyNames}, 0) AND sets famous visibility', () => {

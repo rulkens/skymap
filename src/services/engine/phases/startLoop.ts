@@ -24,9 +24,9 @@
  *     `onFrame: () => frameRef.current()`, so this assignment makes
  *     every subsequent rAF tick run the real body.
  *   - Fires `state.subsystems.scheduler.requestRender()` to queue the
- *     first rAF.  After that single frame, the loop sleeps until an
- *     event handler or a setter calls `scheduler.requestRender()`
- *     again.
+ *     first rAF.  After that single frame, the loop sleeps until a
+ *     channel mouth (input, a fade or tween start, a slot reaching
+ *     ready, a selection change, a settings write) wakes it again.
  *
  * ### Why this runs last
  *
@@ -153,7 +153,7 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   // synchronously in the state literal — this just tells it to queue
   // one rAF.  The `onFrame: () => frameRef.current()` closure picks up
   // the just-assigned real frame body.  After that single frame, the
-  // loop sleeps until an event handler or a setter calls
-  // scheduler.requestRender().
+  // loop sleeps until a channel mouth (input, fades/tweens, slot
+  // arrivals, selection, settings writes) wakes it.
   state.subsystems.scheduler.requestRender();
 }

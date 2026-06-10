@@ -137,7 +137,7 @@ export function createSelectionSubsystem(input: CreateSelectionSubsystemInput): 
         : resolveTarget(sel);
     cb.selection?.onSelectChange?.(target);
     // Selection is a change channel — the mouth of the channel owns the
-    // wake.  Click handlers and clearAll no longer follow up.
+    // wake; callers never follow up with their own requestRender.
     requestRender();
   }
 
