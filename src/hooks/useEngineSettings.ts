@@ -51,7 +51,6 @@ import { LABEL_CATEGORIES } from '../data/labelCategories';
 import { STRUCTURE_CATEGORIES } from '../data/structureCategories';
 import {
   DEFAULT_ABS_MAG_LIMIT,
-  DEFAULT_AUTO_ROTATE,
   DEFAULT_BIAS_MODE,
   DEFAULT_FLOW,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
@@ -72,10 +71,10 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   // The engine fires each echo callback both at startup (initial seed)
   // and on every setter call, so these values always reflect engine truth.
   // Surveys-cluster settings (pointSize, brightness, depthFade,
-  // highlightFallback, realOnly, and the derived visibleSourceMask) moved to
-  // the engine-owned settings store — App.tsx reads them via `useSettingsStore`
+  // highlightFallback, realOnly, and the derived visibleSourceMask), the
+  // tonemap cluster (exposure, curve), and camera auto-rotate moved to the
+  // engine-owned settings store — App.tsx reads them via `useSettingsStore`
   // selectors, so no React mirror cell or echo subscription lives here.
-  const [autoRotate, setAutoRotate] = useState<boolean>(DEFAULT_AUTO_ROTATE);
   const [galaxyTexturesEnabled, setGalaxyTexturesEnabled] = useState<boolean>(
     DEFAULT_GALAXY_TEXTURES_ENABLED,
   );
@@ -182,7 +181,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
 
   return {
     settings: {
-      autoRotate,
       galaxyTexturesEnabled,
       milkyWayEnabled,
       filamentsEnabled,
@@ -205,12 +203,11 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       // Every echo the engine emits lands at its nested address; the
       // no-echo cases (filaments enabled/intensity, volumes master)
       // are App-owned with no wiring here.
-      // The surveys + sources + tonemap echo sub-bags are gone — those clusters
-      // read the engine-owned store via `useSettingsStore` selectors, so there's
-      // no mirror to keep in sync from a callback.
-      camera: {
-        onAutoRotateChange: setAutoRotate,
-      },
+      // The surveys + sources + tonemap echo sub-bags are gone, and so is the
+      // camera auto-rotate echo — those clusters read the engine-owned store via
+      // `useSettingsStore` selectors, so there's no mirror to keep in sync from a
+      // callback. (Camera EVENTS — focus / camera / scale — are not settings and
+      // are wired by `useEngine`, not here.)
       bias: {
         onModeChange: setBiasMode,
         onAbsMagLimitChange: setAbsMagLimit,

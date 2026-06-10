@@ -50,12 +50,14 @@ import { selectHighlightFallback } from '../../services/engine/settingsStore/sel
 import { selectRealOnly } from '../../services/engine/settingsStore/selectors/selectRealOnly';
 import { selectVisibleSourceMask } from '../../services/engine/settingsStore/selectors/selectVisibleSourceMask';
 import { selectToneMapCurve } from '../../services/engine/settingsStore/selectors/selectToneMapCurve';
+import { selectAutoRotate } from '../../services/engine/settingsStore/selectors/selectAutoRotate';
 import {
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_TONE_MAP_CURVE,
+  DEFAULT_AUTO_ROTATE,
 } from '../../data/defaults';
 import { ALL_VISIBLE_MASK } from '../../utils/sourceMask';
 import { buildStaticAnchorStructures } from '../../data/buildStaticAnchorStructures';
@@ -75,7 +77,6 @@ export function App(): React.ReactElement {
   } = useEngineSettings();
 
   const {
-    autoRotate,
     labelCategoryVisibility,
     markerCategoryVisibility,
     filamentsEnabled,
@@ -134,6 +135,12 @@ export function App(): React.ReactElement {
   // reads here; the store write notifies synchronously, so `setCurve` tracks
   // without an optimistic cell. Fallback is the same `data/defaults.ts` seed.
   const toneMapCurve = useSettingsStore(handleRef, selectToneMapCurve, DEFAULT_TONE_MAP_CURVE);
+
+  // Camera auto-rotate reads live off the engine-owned store too. The toggle's
+  // handler dispatches the store action through `handle.camera.setAutoRotate`,
+  // which notifies synchronously, so the play/pause icon tracks without an
+  // optimistic cell. Fallback is the same `data/defaults.ts` seed.
+  const autoRotate = useSettingsStore(handleRef, selectAutoRotate, DEFAULT_AUTO_ROTATE);
 
   // Flow overlay has no engine echo, so a knob change must land in two homes:
   // the React mirror (optimistic) and the engine handle. One patch covers both

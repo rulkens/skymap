@@ -34,10 +34,9 @@ import type { StructureCategory } from '../engine/data/StructureCategory';
 
 export type UseEngineSettingsState = {
   // The surveys cluster (pointSize, brightness, depthFade, highlightFallback,
-  // realOnly, visibleSourceMask) and the tonemap cluster (exposure, curve) are
-  // no longer mirrored here — App.tsx reads them off the engine-owned store via
-  // `useSettingsStore` selectors.
-  autoRotate: boolean;
+  // realOnly, visibleSourceMask), the tonemap cluster (exposure, curve), and
+  // camera auto-rotate are no longer mirrored here — App.tsx reads them off the
+  // engine-owned store via `useSettingsStore` selectors.
   galaxyTexturesEnabled: boolean;
   milkyWayEnabled: boolean;
   filamentsEnabled: boolean;

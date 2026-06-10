@@ -121,7 +121,9 @@ describe('seedSettingsCallbacks', () => {
     expect(sources.onMaskChange).not.toHaveBeenCalled();
     expect(tonemap.onCurveChange).not.toHaveBeenCalled();
     expect(tonemap.onExposureChange).not.toHaveBeenCalled();
-    expect(camera.onAutoRotateChange).toHaveBeenCalledExactlyOnceWith(snap.autoRotate);
+    // Camera auto-rotate migrated to the engine-owned store too; the seed no
+    // longer fires its echo.
+    expect(camera.onAutoRotateChange).not.toHaveBeenCalled();
     expect(thumbnails.onEnabledChange).toHaveBeenCalledExactlyOnceWith(snap.galaxyTexturesEnabled);
     expect(bias.onModeChange).toHaveBeenCalledExactlyOnceWith(snap.biasMode);
     expect(bias.onAbsMagLimitChange).toHaveBeenCalledExactlyOnceWith(snap.absMagLimit);
@@ -155,15 +157,17 @@ describe('seedSettingsCallbacks', () => {
 
   it('skips undefined callbacks individually without affecting siblings', () => {
     // Mix: one optional callback present, the rest undefined.  Verifies
-    // the present one fires while the absent ones don't throw.
-    const onAutoRotateChange = vi.fn();
+    // the present one fires while the absent ones don't throw.  Uses a
+    // still-firing settings echo (`thumbnails.onEnabledChange`) — camera
+    // auto-rotate migrated to the store and no longer seeds through an echo.
+    const onEnabledChange = vi.fn();
     const cb: EngineCallbacks = {
       ...makeRequiredCallbacks(),
-      camera: { onAutoRotateChange },
+      thumbnails: { onEnabledChange },
     };
 
     seedSettingsCallbacks(cb, makeSnapshot());
 
-    expect(onAutoRotateChange).toHaveBeenCalledExactlyOnceWith(false);
+    expect(onEnabledChange).toHaveBeenCalledExactlyOnceWith(true);
   });
 });

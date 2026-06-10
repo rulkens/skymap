@@ -14,16 +14,9 @@ import type { EngineCallbacks } from '../engine/EngineCallbacks';
 
 export type EngineSettingsCallbacks = Pick<
   EngineCallbacks,
-  // `surveys` + `sources` + `tonemap` dropped: those clusters read the
-  // engine-owned store via `useSettingsStore` selectors, so the hook subscribes
-  // to no surveys/tonemap echo.
-  | 'camera'
-  | 'bias'
-  | 'thumbnails'
-  | 'milkyWay'
-  | 'debug'
-  | 'filaments'
-  | 'volumes'
-  | 'labels'
-  | 'input'
+  // `surveys` + `sources` + `tonemap` + `camera` dropped: those clusters read
+  // the engine-owned store via `useSettingsStore` selectors, so the hook
+  // subscribes to no surveys/tonemap/auto-rotate echo. (Camera EVENTS — focus /
+  // camera / scale — are not settings; `useEngine` wires those, not this hook.)
+  'bias' | 'thumbnails' | 'milkyWay' | 'debug' | 'filaments' | 'volumes' | 'labels' | 'input'
 >;

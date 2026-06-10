@@ -234,11 +234,11 @@ Same pattern, for `camera.autoRotate` (`setAutoRotate`, echo
 `camera.onAutoRotateChange`, cell `autoRotate`). **Keep** the OTHER `camera`
 callbacks — `onFocusChange`, `onCameraChange`, `onScaleChange` are EVENTS, not
 settings; they stay (spec "what stays").
-- [ ] Reducer `setAutoRotate` + selector `selectAutoRotate` + tests.
-- [ ] Run-fails → implement → point `setAutoRotate` boringSetter at the action →
+- [x] Reducer `setAutoRotate` + selector `selectAutoRotate` + tests.
+- [x] Run-fails → implement → point `setAutoRotate` boringSetter at the action →
   delete the `onAutoRotateChange` echo + `autoRotate` cell + its seed line →
   switch App.tsx `AutoRotateToggle` read to `useStore`.
-- [ ] Run-passes → commit.
+- [x] Run-passes → commit.
 
 ### Task 2.4: bias
 

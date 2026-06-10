@@ -81,6 +81,7 @@ import { setHighlightFallbackAction } from '../settingsStore/actions/setHighligh
 import { setRealOnlyAction } from '../settingsStore/actions/setRealOnlyAction';
 import { setExposureAction } from '../settingsStore/actions/setExposureAction';
 import { setToneMapCurveAction } from '../settingsStore/actions/setToneMapCurveAction';
+import { setAutoRotateAction } from '../settingsStore/actions/setAutoRotateAction';
 
 /**
  * 3-tuple path into `EngineState`: `['settings', <cluster>, <leaf>]`.
@@ -92,7 +93,6 @@ import { setToneMapCurveAction } from '../settingsStore/actions/setToneMapCurveA
 type SettingsPath =
   | readonly ['settings', 'surveys', keyof EngineState['settings']['surveys']]
   | readonly ['settings', 'tonemap', keyof EngineState['settings']['tonemap']]
-  | readonly ['settings', 'camera', keyof EngineState['settings']['camera']]
   | readonly ['settings', 'bias', keyof EngineState['settings']['bias']]
   | readonly ['settings', 'thumbnails', keyof EngineState['settings']['thumbnails']]
   | readonly ['settings', 'milkyWay', keyof EngineState['settings']['milkyWay']]
@@ -105,7 +105,7 @@ type SettingsPath =
 /**
  * Nested callback address: `[cluster, method]`.  The cluster names
  * line up 1:1 with the optional sub-bags on `EngineCallbacks`
- * (`surveys`, `tonemap`, `camera`, `bias`, `thumbnails`, `milkyWay`,
+ * (`surveys`, `tonemap`, `bias`, `thumbnails`, `milkyWay`,
  * `filaments`, `volumes`, `sources`).  Method names are kept as plain
  * `string` here because they vary per cluster and adding a full nested
  * union would duplicate the EngineCallbacks shape — the runtime
@@ -114,7 +114,6 @@ type SettingsPath =
 type NestedCallbackKey =
   | readonly ['surveys', string]
   | readonly ['tonemap', string]
-  | readonly ['camera', string]
   | readonly ['bias', string]
   | readonly ['thumbnails', string]
   | readonly ['milkyWay', string]
@@ -180,9 +179,11 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     action: setBrightnessAction,
   },
   {
+    // Camera cluster (migrated to the engine-owned store). Dispatches the
+    // copy-on-write action; React reads via `selectAutoRotate`, so no echo is
+    // wired. The wrapper still calls `requestRender`.
     name: 'setAutoRotate',
-    path: ['settings', 'camera', 'autoRotate'],
-    callback: ['camera', 'onAutoRotateChange'],
+    action: setAutoRotateAction,
   },
   {
     name: 'setGalaxyTexturesEnabled',
