@@ -22,7 +22,6 @@ import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
-import type { VolumeFieldSettings } from '../../../../src/@types/settings/VolumeFieldSettings';
 import type { RequestKey } from '../../../../src/@types/loading/RequestKey';
 
 /** Find the single row for an asset key (throws if absent — keeps tests crisp). */
@@ -40,16 +39,12 @@ function rowFor(key: AssetKey) {
  */
 function makeCtx(over: {
   settings?: unknown;
-  volumeFields?: Record<string, { enabled: boolean }>;
   visible?: Set<SourceType>;
   requests?: Set<RequestKey>;
   slotStates?: Partial<Record<AssetKey, LoadState<unknown>['kind']>>;
 }): DemandCtx {
   return {
     settings: (over.settings ?? {}) as Readonly<EngineSettingsState>,
-    // Volume demand predicates read `volumeField(id)?.enabled`; the stub only
-    // needs the `.enabled` leaf, so partial records are cast to the full shape.
-    volumeField: (id) => over.volumeFields?.[id] as VolumeFieldSettings | undefined,
     isVisible: (s) => over.visible?.has(s) ?? false,
     request: (k) => over.requests?.has(k) ?? false,
     slotState: (k) => over.slotStates?.[k] ?? 'idle',
@@ -140,15 +135,21 @@ describe('ASSET_WIRING demand predicates', () => {
 
   it('mcpm demand follows its field-enabled flag', () => {
     const mcpm = rowFor('mcpm');
-    expect(mcpm.demand(makeCtx({ volumeFields: { mcpm: { enabled: true } } }))).toBe(true);
+    expect(
+      mcpm.demand(makeCtx({ settings: { volumes: { items: { mcpm: { enabled: true } } } } })),
+    ).toBe(true);
     // Default-off (field absent) ⇒ false.
-    expect(mcpm.demand(makeCtx({ volumeFields: {} }))).toBe(false);
+    expect(mcpm.demand(makeCtx({ settings: { volumes: { items: {} } } }))).toBe(false);
   });
 
   it('cf4Density demand follows its field-enabled flag (default-off ⇒ false)', () => {
     const cf4 = rowFor('cf4Density');
-    expect(cf4.demand(makeCtx({ volumeFields: { 'cf4-density': { enabled: true } } }))).toBe(true);
-    expect(cf4.demand(makeCtx({ volumeFields: {} }))).toBe(false);
+    expect(
+      cf4.demand(
+        makeCtx({ settings: { volumes: { items: { 'cf4-density': { enabled: true } } } } }),
+      ),
+    ).toBe(true);
+    expect(cf4.demand(makeCtx({ settings: { volumes: { items: {} } } }))).toBe(false);
   });
 
   it('flow demand follows settings.flow.enabled (singleton overlay layer)', () => {

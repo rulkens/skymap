@@ -150,7 +150,7 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     key: 'mcpm',
     factory: (deps) => createMcpmSlot(deps.state, deps.cb),
     req: (tier) => ({ tier }),
-    demand: (ctx) => ctx.volumeField(MCPM_FIELD)?.enabled === true,
+    demand: (ctx) => ctx.settings.volumes.items[MCPM_FIELD]?.enabled === true,
   },
 
   // ── CF-4 DM density volume ───────────────────────────────────────
@@ -159,7 +159,7 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     key: 'cf4Density',
     factory: (deps) => createCf4DensitySlot(deps.state, deps.cb),
     req: () => undefined,
-    demand: (ctx) => ctx.volumeField(CF4_FIELD)?.enabled === true,
+    demand: (ctx) => ctx.settings.volumes.items[CF4_FIELD]?.enabled === true,
   },
 
   // ── CF4++ velocity flow field ────────────────────────────────────
