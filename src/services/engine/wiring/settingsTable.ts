@@ -74,7 +74,6 @@
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { SettingsTableKey } from '../../../@types/settings/SettingsTableKey';
-import { MAX_PARTICLES, MIN_TRAIL_STEP } from '../../gpu/renderers/flowFieldConstants';
 
 /**
  * 3-tuple path into `EngineState`: `['settings', <cluster>, <leaf>]`.
@@ -198,46 +197,35 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     path: ['settings', 'flow', 'mode'],
   },
   {
+    // Look/motion knobs store raw intent; the flow renderer clamps each to its
+    // GPU-safe bound at point of use (clampFlowParams) — including the
+    // load-bearing count (buffer capacity) and trail (compute-loop) guards.
     name: 'setFlowIntensity',
     path: ['settings', 'flow', 'intensity'],
-    clamp: (v) => Math.max(0, Math.min(1, v)),
   },
   {
-    // Particle count = buffer capacity ceiling; round + clamp to [0, MAX_PARTICLES]
-    // so a fractional or runaway slider can't draw past the allocated buffer.
     name: 'setFlowCount',
     path: ['settings', 'flow', 'count'],
-    clamp: (v) => Math.max(0, Math.min(MAX_PARTICLES, Math.round(v))),
   },
   {
-    // Floor at MIN_TRAIL_STEP, NOT 0 — a zero trail spacing stalls the advect
-    // integrator loop (GPU hang). The UI slider owns the max (single source of
-    // truth). The renderer also floors at the GPU boundary (defense in depth).
     name: 'setFlowTrail',
     path: ['settings', 'flow', 'trail'],
-    clamp: (v) => Math.max(MIN_TRAIL_STEP, v),
   },
   {
     name: 'setFlowSpeed',
     path: ['settings', 'flow', 'flowSpeed'],
-    clamp: (v) => Math.max(0, v),
   },
   {
     name: 'setFlowDensityBias',
     path: ['settings', 'flow', 'densityBias'],
-    clamp: (v) => Math.max(0, Math.min(1, v)),
   },
   {
     name: 'setFlowWander',
     path: ['settings', 'flow', 'wander'],
-    clamp: (v) => Math.max(0, v),
   },
   {
-    // Spherical boundary-fade band width, grid units. Clamp to [0, 0.5]: 0 is a
-    // hard sphere clip, 0.5 fades from the cube centre outward.
     name: 'setFlowBoundaryFadeWidth',
     path: ['settings', 'flow', 'boundaryFadeWidth'],
-    clamp: (v) => Math.max(0, Math.min(0.5, v)),
   },
   {
     name: 'setHighlightFallback',

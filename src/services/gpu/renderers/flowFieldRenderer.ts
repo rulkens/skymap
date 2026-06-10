@@ -55,15 +55,9 @@ import type { FlowFieldRenderer } from '../../../@types/rendering/FlowFieldRende
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import { flowFieldFromCube } from '../loaders/createFlowField';
 import { buildCubeModelMatrix } from './buildCubeModelMatrix';
+import { clampFlowParams } from './clampFlowParams';
 import { createReseedLatch } from './createReseedLatch';
-import {
-  TRAIL,
-  MAX_PARTICLES,
-  DT,
-  HEAD_STEP_SCALE,
-  RIBBON_WIDTH,
-  MIN_TRAIL_STEP,
-} from './flowFieldConstants';
+import { TRAIL, MAX_PARTICLES, DT, HEAD_STEP_SCALE, RIBBON_WIDTH } from './flowFieldConstants';
 import flowComputeWgsl from '../shaders/flow/flowCompute.wesl?static';
 import flowRenderWgsl from '../shaders/flow/flowRender.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
@@ -294,12 +288,15 @@ export function createFlowFieldRenderer(init: {
 
     encodeCompute(encoder: GPUCommandEncoder, flow: FlowSettings): void {
       if (!hasField || !computeBindGroup) return;
-      const n = Math.round(flow.count);
+      // Clamp every knob to its GPU-safe bound once, at the point of use — the
+      // store holds raw intent; this renderer owns its buffer + loop limits.
+      const f = clampFlowParams(flow);
+      const n = f.count;
 
       // Advance the internal per-frame counter + the streamline pulse phase
       // (phase is harmless in advect mode).
       frame = (frame + 1) >>> 0;
-      phase += DT * flow.flowSpeed;
+      phase += DT * f.flowSpeed;
 
       // Write compPrm ONCE — serves both the optional seed pass and the
       // integrate pass (see module header). The seed kernel reads only n / frame / bias;
@@ -308,17 +305,15 @@ export function createFlowFieldRenderer(init: {
       //   dt f32@0, trailStep f32@4, headStep f32@8, n u32@12, frame u32@16,
       //   mode u32@20, bias f32@24, wander f32@28 (buffer padded to 48 bytes).
       prmF32[0] = DT;
-      // Floor the trail spacing: a literal 0 stalls the advect integrator loop
-      // (GPU hang). See MIN_TRAIL_STEP. This is the GPU-boundary guard — the
-      // settingsTable clamp floors the stored value too, but a devtools call
-      // or future caller could still hand a raw 0, so guard at the write site.
-      prmF32[1] = Math.max(MIN_TRAIL_STEP, flow.trail);
-      prmF32[2] = flow.flowSpeed * HEAD_STEP_SCALE;
+      // trailStep is already floored at MIN_TRAIL_STEP by clampFlowParams — the
+      // single home of the GPU-hang guard.
+      prmF32[1] = f.trail;
+      prmF32[2] = f.flowSpeed * HEAD_STEP_SCALE;
       prmU32[3] = n;
       prmU32[4] = frame;
-      prmU32[5] = modeCode(flow);
-      prmF32[6] = flow.densityBias;
-      prmF32[7] = flow.wander;
+      prmU32[5] = modeCode(f);
+      prmF32[6] = f.densityBias;
+      prmF32[7] = f.wander;
       device.queue.writeBuffer(compPrm, 0, prmF32);
 
       const dispatchCount = Math.ceil(n / WORKGROUP_SIZE);
@@ -334,7 +329,7 @@ export function createFlowFieldRenderer(init: {
       }
 
       // Integrate pass — advect or streamline per flow.mode.
-      const integrate = flow.mode === 'streamline' ? streamlinePipeline : advectPipeline;
+      const integrate = f.mode === 'streamline' ? streamlinePipeline : advectPipeline;
       const pass = encoder.beginComputePass();
       pass.setPipeline(integrate);
       pass.setBindGroup(0, computeBindGroup);
@@ -350,6 +345,9 @@ export function createFlowFieldRenderer(init: {
       opacity: number,
     ): void {
       if (!hasField) return;
+      // Clamp at point of use (see encodeCompute) — the draw instance count must
+      // never exceed the fixed MAX_PARTICLES-sized buffer.
+      const f = clampFlowParams(flow);
 
       // Cam uniform byte layout (160-byte buffer; struct uses through byte 152):
       //   mvp              mat4 @ 0   (floats 0..15)  = viewProj
@@ -365,16 +363,16 @@ export function createFlowFieldRenderer(init: {
       camF32[32] = RIBBON_WIDTH;
       camF32[33] = viewportPx[0] / viewportPx[1];
       camF32[34] = phase;
-      camU32[35] = modeCode(flow);
+      camU32[35] = modeCode(f);
       // Fold the layer fade opacity into the pre-blend intensity — the vertex
       // stage already multiplies by cam.intensity, so no shader change.
-      camF32[36] = flow.intensity * opacity;
-      camF32[37] = flow.boundaryFadeWidth;
+      camF32[36] = f.intensity * opacity;
+      camF32[37] = f.boundaryFadeWidth;
       device.queue.writeBuffer(camBuf, 0, camF32);
 
       pass.setPipeline(renderPipeline);
       pass.setBindGroup(0, renderBindGroup);
-      pass.draw(2 * TRAIL, Math.round(flow.count));
+      pass.draw(2 * TRAIL, f.count);
     },
 
     destroy(): void {

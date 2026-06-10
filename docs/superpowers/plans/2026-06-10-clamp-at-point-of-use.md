@@ -78,20 +78,24 @@ Bounds (reuse `MAX_PARTICLES` / `MIN_TRAIL_STEP` from `flowFieldConstants.ts`):
 `intensity → [0,1]`, `densityBias → [0,1]`, `wander → Math.max(0, v)`,
 `boundaryFadeWidth → [0, 0.5]`.
 
-- [ ] Tests: `clampFlowParams caps count at MAX_PARTICLES and rounds`,
+- [x] Tests: `clampFlowParams caps count at MAX_PARTICLES and rounds`,
   `…floors trail at MIN_TRAIL_STEP` (assert a 0 input → `MIN_TRAIL_STEP`, the
   GPU-hang guard), `…floors speed/wander at 0`, `…bounds intensity/densityBias to
   [0,1]`, `…bounds boundaryFadeWidth to [0,0.5]`, `…passes enabled/mode through`.
-- [ ] Run-fails (MAIN: `npm test -- clampFlowParams`).
-- [ ] Implement the helper. Implement the wiring: at the top of the flow
+- [x] Run-fails (MAIN: `npm test -- clampFlowParams`).
+- [x] Implement the helper. Implement the wiring: at the top of the flow
   renderer's compute-encode and draw paths, derive `const f = clampFlowParams(flow)`
   and read every knob from `f` (replacing the inline `Math.round(flow.count)` at
   `:297/:377`, the `Math.max(MIN_TRAIL_STEP, flow.trail)` at `:315`, the
   `flow.flowSpeed`/`densityBias`/`wander`/`intensity`/`boundaryFadeWidth` reads).
   Remove the seven `clamp` entries from the flow rows in `settingsTable.ts`.
-- [ ] Run-passes. MAIN: full `npm test` (flow behaviour preserved — the renderer
-  still uploads clamped values; flow tests + parity tests green) + `npm run typecheck`.
-- [ ] Commit the slice.
+- [x] Also: flip `tests/services/engine/flowFieldsHandle.test.ts`'s "clamps (via
+  the real table rows)" block to **raw-passthrough** (the handle now stores intent;
+  clamping moved to `clampFlowParams`). And remove the now-dead
+  `MAX_PARTICLES`/`MIN_TRAIL_STEP` import from `settingsTable.ts` — the flow rows
+  were their only consumers, so Task 4 no longer needs to.
+- [x] Run-passes. MAIN: full `npm test` (2502 green) + `npm run typecheck` clean.
+- [x] Commit the slice.
 
 ## Task 2: `clampExposure` + wire post-process; drop the exposure clamp
 
