@@ -20,6 +20,7 @@ export type TweenManager = {
    * Start a new tween.  Replaces any running one (the previous tween
    * descriptor is GC'd; `cameraTween` is a frozen plan, not a stateful
    * object that needs disposal).
+   * Also wakes the render scheduler — callers never follow up with `requestRender`.
    */
   start(tween: CameraTween): void;
   /** Cancel the running tween, if any.  No-op when no tween is active. */

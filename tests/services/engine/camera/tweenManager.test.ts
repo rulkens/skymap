@@ -12,6 +12,8 @@
  *     up `isActive()` returns false (no manual cancel needed).
  *   - `advance()` returns `false` when no tween is in flight.
  *   - `cancel()` mid-flight makes subsequent `advance()` calls a no-op.
+ *   - Wake contract: `start()` wakes the injected scheduler; `cancel()`
+ *     and `advance()` never do.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -143,8 +145,12 @@ describe('createTweenManager', () => {
     tm.start(makeTween(0, 600));
     requestRender.mockClear();
     const cam = makeCam();
-    tm.cancel();
-    tm.advance(cam, 0);
+    // Exercise advance on the live tween (mid-flight, then completion)
+    // before cancelling — ensures the spy stays silent through both paths,
+    // not just the no-tween early-return.
+    tm.advance(cam, 300); // mid-flight
+    tm.advance(cam, 600); // completion — manager auto-clears the reference
+    tm.cancel(); // no-op on already-cleared reference
     expect(requestRender).not.toHaveBeenCalled();
   });
 });

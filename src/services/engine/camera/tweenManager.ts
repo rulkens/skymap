@@ -29,8 +29,9 @@
  *
  * `start()` wakes the render scheduler directly — callers never follow
  * up with a separate `requestRender`.  `cancel()` and `advance()` stay
- * wake-free: every cancel site (pointerdown, SpaceMouse puck deflect) is
- * already an input mouth that is awake, and `advance` runs inside a
+ * wake-free: cancel sites are either input mouths (pointerdown) or
+ * frame-internal (the SpaceMouse cancel runs inside the frame), both
+ * already awake, and teardown needs no frame.  `advance` runs inside a
  * frame by definition.  The `deps.requestRender` parameter is required
  * so a forgotten wake source is a compile error, not a silent gap.
  *
@@ -49,9 +50,7 @@ import type { CameraTween } from '../../../@types/camera/CameraTween';
 import type { TweenManager } from '../../../@types/camera/TweenManager';
 import { advanceCameraTween } from '../../camera/cameraTween';
 
-export function createTweenManager(deps: {
-  readonly requestRender: () => void;
-}): TweenManager {
+export function createTweenManager(deps: { readonly requestRender: () => void }): TweenManager {
   // The single tween reference, owned privately by this closure.  All
   // mutation goes through the methods below — no external caller can
   // reach this binding.

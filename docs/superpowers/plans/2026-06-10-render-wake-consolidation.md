@@ -274,12 +274,12 @@ export function createTweenManager(deps: {
 input mouth; the SpaceMouse cancel fires inside `applyToCamera` during a
 frame), and `advance` runs inside frames by definition.
 
-- [ ] Add the test `start wakes the scheduler` — spy deps, `start(fakeTween)`,
+- [x] Add the test `start wakes the scheduler` — spy deps, `start(fakeTween)`,
   assert one call.
-- [ ] Add the test `cancel and advance do not wake` — after `start`, clear the
+- [x] Add the test `cancel and advance do not wake` — after `start`, clear the
   spy, call `cancel()` and `advance(camStub, 0)`, assert zero calls.
-- [ ] Run the tween-manager suite → fails.
-- [ ] Implement the wake in `start`. **Rewrite the module-header paragraph at
+- [x] Run the tween-manager suite → fails.
+- [x] Implement the wake in `start`. **Rewrite the module-header paragraph at
   `tweenManager.ts:30-35`** — it documents the opposite contract ("manager is
   intentionally passive … engine owns the wake"). New contract text to carry:
   *starting a tween ensures frames render — `start()` wakes the scheduler
@@ -287,11 +287,11 @@ frame), and `advance` runs inside frames by definition.
   up with a wake; `cancel`/`advance` stay wake-free because their call sites
   are frames or input mouths that are awake already.* Keep it timeless (no
   "previously" framing).
-- [ ] Update construction sites: `engine.ts:563` →
+- [x] Update construction sites: `engine.ts:563` →
   `createTweenManager({ requestRender: () => state.subsystems.scheduler.requestRender() })`;
   test fixtures get a spy/noop.
-- [ ] Main thread: `npm test`; `npm run typecheck`.
-- [ ] Commit `feat(engine): tween manager wakes the scheduler on start` —
+- [x] Main thread: `npm test`; `npm run typecheck`.
+- [x] Commit `feat(engine): tween manager wakes the scheduler on start` —
   stage the three touched paths (+ any extra construction sites found).
 
 ---
