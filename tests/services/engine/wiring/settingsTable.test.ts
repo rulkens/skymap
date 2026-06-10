@@ -5,7 +5,7 @@
  * (`setPointSize`, `setBrightness`, …) all share the same shape:
  *
  *   1. Mutate one field on `state.settings.<cluster>.<leaf>`.
- *   2. Optionally fire a nested echo callback with the (post-clamp) value.
+ *   2. Optionally fire a nested echo callback with the stored value.
  *   3. Call `requestRender()` so the next frame picks up the change.
  *
  * `buildSettersFromTable` reifies that shape as a declarative descriptor
@@ -17,9 +17,8 @@
  * What we cover here:
  *   - happy-path: mutation + callback + render-request all fire in the
  *     right order with the right value;
- *   - clamps: when a descriptor declares a clamp, the *clamped* value
- *     lands in state AND in the echo callback (mirrors the engine's
- *     `setExposure` shape);
+ *   - raw intent: no table row clamps — out-of-range values land in state
+ *     (and echo) unchanged; clamping lives at each renderer's point of use;
  *   - missing-callback tolerance: descriptors without a `callback` key
  *     (or with the slot left undefined on the EngineCallbacks bag) skip
  *     the echo silently — same optional-chaining shape every other
@@ -168,10 +167,12 @@ describe('settingsTable', () => {
       expect(requestRender).toHaveBeenCalledTimes(2);
     });
 
-    it('applies clamps before mutation and callback echo', () => {
-      // setExposure clamps to [0.05, 16] and echoes the clamped value
-      // via the nested `tonemap.onExposureChange` address;
-      // setFilamentIntensity clamps to [0, 1] but has no callback.
+    it('stores raw intent and echoes it (clamping moved to point of use)', () => {
+      // No table row clamps anymore: setExposure's clamp moved to the
+      // post-process pass (clampExposure) and setFilamentIntensity's to the
+      // filament renderer (clampFilamentIntensity). Out-of-range values pass
+      // through to state unchanged; setExposure echoes via
+      // `tonemap.onExposureChange`, setFilamentIntensity has no callback.
       const state = makeState();
       const onExposureChange = vi.fn();
       const cb: Partial<EngineCallbacks> = {
@@ -185,21 +186,20 @@ describe('settingsTable', () => {
         requestRender,
       );
 
-      // Above the cap.
+      // Raw passthrough: the setter no longer clamps; intent is stored as-is.
       setters.setExposure(1e9);
-      expect(state.settings.tonemap.exposure).toBe(16);
-      expect(onExposureChange).toHaveBeenLastCalledWith(16);
+      expect(state.settings.tonemap.exposure).toBe(1e9);
+      expect(onExposureChange).toHaveBeenLastCalledWith(1e9);
 
-      // Below the floor.
       setters.setExposure(-1);
-      expect(state.settings.tonemap.exposure).toBe(0.05);
-      expect(onExposureChange).toHaveBeenLastCalledWith(0.05);
+      expect(state.settings.tonemap.exposure).toBe(-1);
+      expect(onExposureChange).toHaveBeenLastCalledWith(-1);
 
-      // Filament intensity clamps without an echo callback.
-      setters.setFilamentIntensity(2);
-      expect(state.settings.filaments.intensity).toBe(1);
-      setters.setFilamentIntensity(-3);
-      expect(state.settings.filaments.intensity).toBe(0);
+      // Filament intensity stores raw intent (no clamp, no echo callback).
+      setters.setFilamentIntensity(5);
+      expect(state.settings.filaments.intensity).toBe(5);
+      setters.setFilamentIntensity(-1);
+      expect(state.settings.filaments.intensity).toBe(-1);
     });
 
     it('tolerates a missing echo callback (optional-chaining contract)', () => {

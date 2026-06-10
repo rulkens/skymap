@@ -45,6 +45,7 @@ import type { FilamentRenderer } from '../../../@types/rendering/FilamentRendere
 import type { mat4 } from 'gl-matrix';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import { clampFilamentIntensity } from './clampFilamentIntensity';
 
 const FLOATS_PER_SEGMENT = 8; // startxyz + startD + endxyz + endD
 
@@ -296,7 +297,9 @@ export function createFilamentRenderer(
     f32[16] = viewportPx[0];
     f32[17] = viewportPx[1];
     f32[20] = halfWidthPx;
-    f32[21] = intensityScale;
+    // Clamp to [0,1] at point of use: a negative value would drive a negative
+    // additive-blend alpha (undefined). The store holds raw intent.
+    f32[21] = clampFilamentIntensity(intensityScale);
     device.queue.writeBuffer(uniformBuffer, 0, buf);
 
     // Write the per-frame fade.opacity from the registry-supplied value.

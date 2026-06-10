@@ -6,9 +6,10 @@
  * real GPUDevice, so we can't instantiate it in Node. Instead we test the two
  * halves the handle is composed of, exactly as `engine.ts` composes them:
  *
- *   1. The CLAMPS — owned by the table-driven `boringSetters`. We build those
- *      from the real `SETTINGS_TABLE` via `buildSettersFromTable` against a
- *      state stub and assert the [0,1] / [0,MAX_PARTICLES] bounds.
+ *   1. The RAW STORE — the table-driven `boringSetters` store requested intent
+ *      verbatim. We build those from the real `SETTINGS_TABLE` via
+ *      `buildSettersFromTable` against a state stub and assert the stored value
+ *      is the raw request (clamping lives in `clampFlowParams`, tested there).
  *
  *   2. The SIDE-EFFECT WRAPPERS — the demand re-eval, the split fade-in/out,
  *      and the reseed-on-mode/count. We hand-build a `flow` closure that mirrors
@@ -207,23 +208,23 @@ describe('flow sub-handle — reseed wrappers', () => {
   });
 });
 
-describe('flow sub-handle — clamps (via the real table rows)', () => {
-  it('setIntensity clamps above 1 down to 1', () => {
+describe('flow sub-handle — stores raw intent (clamping moved to clampFlowParams)', () => {
+  it('setIntensity stores a raw out-of-range value (clamping moved to clampFlowParams)', () => {
     const h = harness();
     h.handle.set({ intensity: 5 });
-    expect(h.state.settings.flow.intensity).toBe(1);
+    expect(h.state.settings.flow.intensity).toBe(5);
   });
 
-  it('setCount clamps below 0 up to 0', () => {
+  it('setCount stores a raw negative value', () => {
     const h = harness();
     h.handle.set({ count: -10 });
-    expect(h.state.settings.flow.count).toBe(0);
+    expect(h.state.settings.flow.count).toBe(-10);
   });
 
-  it('setCount clamps + rounds above MAX_PARTICLES down to MAX_PARTICLES', () => {
+  it('setCount stores a raw value above MAX_PARTICLES', () => {
     const h = harness();
     h.handle.set({ count: MAX_PARTICLES + 9999 });
-    expect(h.state.settings.flow.count).toBe(MAX_PARTICLES);
+    expect(h.state.settings.flow.count).toBe(MAX_PARTICLES + 9999);
   });
 });
 

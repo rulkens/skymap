@@ -14,17 +14,16 @@
  *
  * Spelled out one-by-one in `engine.ts`'s public-handle object literal,
  * those thirteen setters consumed ~180 lines of nearly-identical code
- * with the only variation being the path tuple, the callback name, and
- * occasionally a clamp.  The repetition is hard to scan ("did we
- * remember to call requestRender in *all* of them?") and easy to
- * silently regress when a new setting gets added without one of the
- * three steps.
+ * with the only variation being the path tuple and the callback name.
+ * The repetition is hard to scan ("did we remember to call requestRender
+ * in *all* of them?") and easy to silently regress when a new setting
+ * gets added without one of the three steps.
  *
  * Reifying the shape as a descriptor table — name, state path, optional
- * callback key, optional clamp — and emitting the setter functions from
- * a single builder collapses the surface to one tested helper plus a
- * handful of lines per descriptor.  Auditing "every setting wakes the
- * scheduler" is now a one-line read of the builder.
+ * callback key — and emitting the setter functions from a single builder
+ * collapses the surface to one tested helper plus a handful of lines per
+ * descriptor.  Auditing "every setting wakes the scheduler" is now a
+ * one-line read of the builder.
  *
  * ### Why bespoke setters stay inline
  *
@@ -74,7 +73,6 @@
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { SettingsTableKey } from '../../../@types/settings/SettingsTableKey';
-import { MAX_PARTICLES, MIN_TRAIL_STEP } from '../../gpu/renderers/flowFieldConstants';
 
 /**
  * 3-tuple path into `EngineState`: `['settings', <cluster>, <leaf>]`.
@@ -124,9 +122,6 @@ type NestedCallbackKey =
  *     Record key on the builder output so sub-handle forwarders can
  *     resolve a forwarder by name).
  *   - `path` is the 3-tuple state path the value lands in.
- *   - `clamp` (optional) wraps the incoming value before it hits state
- *     AND the callback echo.  Returns the post-clamp number.  Used by
- *     `setExposure` and `setFilamentIntensity`.
  *   - `callback` (optional) is the `[cluster, method]` address fired
  *     after mutation.  Omit when no echo is wired (App.tsx owns the
  *     boolean optimistically — see `setFilamentsEnabled`).
@@ -134,7 +129,6 @@ type NestedCallbackKey =
 type SettingsDescriptor = {
   name: SettingsTableKey;
   path: SettingsPath;
-  clamp?: (value: number) => number;
   callback?: NestedCallbackKey;
 };
 
@@ -177,12 +171,11 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     path: ['settings', 'filaments', 'enabled'],
   },
   {
-    // Filament-overlay intensity scale; clamps to [0, 1] same as the
-    // hand-rolled setter did.  No callback for the same App-owns-state
+    // Stores raw intent; the filament renderer clamps to [0, 1] at point of
+    // use (clampFilamentIntensity). No callback for the same App-owns-state
     // reason as `setFilamentsEnabled`.
     name: 'setFilamentIntensity',
     path: ['settings', 'filaments', 'intensity'],
-    clamp: (v) => Math.max(0, Math.min(1, v)),
   },
   // ── Flow overlay (singleton-overlay-layer slice) ───────────────────
   // App.tsx owns these optimistically, like the filament rows — no echo
@@ -193,51 +186,40 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     path: ['settings', 'flow', 'enabled'],
   },
   {
-    // String union; the setter's `value: unknown` carries it through — no clamp.
+    // String union; the setter's `value: unknown` carries it through.
     name: 'setFlowMode',
     path: ['settings', 'flow', 'mode'],
   },
   {
+    // Look/motion knobs store raw intent; the flow renderer clamps each to its
+    // GPU-safe bound at point of use (clampFlowParams) — including the
+    // load-bearing count (buffer capacity) and trail (compute-loop) guards.
     name: 'setFlowIntensity',
     path: ['settings', 'flow', 'intensity'],
-    clamp: (v) => Math.max(0, Math.min(1, v)),
   },
   {
-    // Particle count = buffer capacity ceiling; round + clamp to [0, MAX_PARTICLES]
-    // so a fractional or runaway slider can't draw past the allocated buffer.
     name: 'setFlowCount',
     path: ['settings', 'flow', 'count'],
-    clamp: (v) => Math.max(0, Math.min(MAX_PARTICLES, Math.round(v))),
   },
   {
-    // Floor at MIN_TRAIL_STEP, NOT 0 — a zero trail spacing stalls the advect
-    // integrator loop (GPU hang). The UI slider owns the max (single source of
-    // truth). The renderer also floors at the GPU boundary (defense in depth).
     name: 'setFlowTrail',
     path: ['settings', 'flow', 'trail'],
-    clamp: (v) => Math.max(MIN_TRAIL_STEP, v),
   },
   {
     name: 'setFlowSpeed',
     path: ['settings', 'flow', 'flowSpeed'],
-    clamp: (v) => Math.max(0, v),
   },
   {
     name: 'setFlowDensityBias',
     path: ['settings', 'flow', 'densityBias'],
-    clamp: (v) => Math.max(0, Math.min(1, v)),
   },
   {
     name: 'setFlowWander',
     path: ['settings', 'flow', 'wander'],
-    clamp: (v) => Math.max(0, v),
   },
   {
-    // Spherical boundary-fade band width, grid units. Clamp to [0, 0.5]: 0 is a
-    // hard sphere clip, 0.5 fades from the cube centre outward.
     name: 'setFlowBoundaryFadeWidth',
     path: ['settings', 'flow', 'boundaryFadeWidth'],
-    clamp: (v) => Math.max(0, Math.min(0.5, v)),
   },
   {
     name: 'setHighlightFallback',
@@ -260,14 +242,10 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     callback: ['bias', 'onAbsMagLimitChange'],
   },
   {
-    // Clamps to [0.05, 16] before mutation/echo — a runaway slider or
-    // devtools `setExposure(1e9)` must NOT blow out the float buffer
-    // (upper) or zero-multiply the HDR signal into a black frame
-    // (lower).  The echo fires the *clamped* value so React's slider
-    // displays what the shader actually used.
+    // Stores raw intent; the post-process pass clamps to its HDR-safe range
+    // at point of use (clampExposure). The echo fires the stored value.
     name: 'setExposure',
     path: ['settings', 'tonemap', 'exposure'],
-    clamp: (v) => Math.max(0.05, Math.min(16, v)),
     callback: ['tonemap', 'onExposureChange'],
   },
   {
@@ -316,11 +294,9 @@ function setByPath(state: EngineState, path: SettingsPath, value: unknown): void
  * wiring) resolves forwarders by name from the result.
  *
  * Each emitted setter:
- *   1. clamps the incoming value (if a clamp is declared);
- *   2. writes the (possibly clamped) value into `state` at `path`;
- *   3. fires the nested echo callback (if declared) with the
- *      post-clamp value;
- *   4. calls `requestRender()` so the next frame picks up the change.
+ *   1. writes the value into `state` at `path`;
+ *   2. fires the nested echo callback (if declared) with that value;
+ *   3. calls `requestRender()` so the next frame picks up the change.
  *
  * The return type is widened to `(value: unknown) => void` per
  * descriptor; the EngineHandle public-API surface is the place where
@@ -336,15 +312,10 @@ export function buildSettersFromTable(
   const out = {} as Record<SettingsTableKey, (value: unknown) => void>;
 
   for (const descriptor of SETTINGS_TABLE) {
-    const { name, path, clamp, callback } = descriptor;
+    const { name, path, callback } = descriptor;
 
     out[name] = (value: unknown) => {
-      // Clamps only ever apply to numeric fields; descriptors that
-      // declare a clamp are by definition number-typed.  The cast
-      // here mirrors the runtime guarantee.
-      const next = clamp !== undefined ? clamp(value as number) : value;
-
-      setByPath(state, path, next);
+      setByPath(state, path, value);
 
       // Nested-only callback fire.  Optional-chain shape so a missing
       // cluster or missing method is silently skipped.
@@ -352,7 +323,7 @@ export function buildSettersFromTable(
         const [cluster, method] = callback;
         const sub = (cb as unknown as Record<string, Record<string, unknown> | undefined>)[cluster];
         const fn = sub?.[method] as ((v: unknown) => void) | undefined;
-        fn?.(next);
+        fn?.(value);
       }
 
       requestRender();
