@@ -21,16 +21,15 @@
  * an extra wake — harmless, the scheduler coalesces redundant wakes.
  */
 
-import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 
 export function installSlotReadyWake(
-  state: EngineState,
+  requestRender: () => void,
   allSlots: ReadonlyMap<string, AssetSlot<unknown, unknown>>,
 ): void {
   for (const [, slot] of allSlots) {
     slot.subscribe((s) => {
-      if (s.kind === 'ready') state.subsystems.scheduler.requestRender();
+      if (s.kind === 'ready') requestRender();
     });
   }
 }

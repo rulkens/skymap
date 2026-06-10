@@ -666,11 +666,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   function clearSelection(): void {
     // Unified teardown — clears galaxy/structure selection AND the focus slot
-    // (so the cluster-focus fade collapses) in one call.  The branching
-    // + render-scheduling lives in `clearAll` so the engine.ts closure
-    // stays a thin wrapper.  See clearAll.ts for the dismiss-vs-deselect
-    // rationale and the order-of-firing guarantee.
-    clearAll(state);
+    // (so the cluster-focus fade collapses) in one call.  Each setter owns
+    // its own dedupe and render wake; clearAll just pairs the two calls.
+    // See clearAll.ts for the dismiss-vs-deselect rationale.
+    clearAll(state.subsystems.selection);
   }
 
   function setBiasMode(mode: BiasMode): void {

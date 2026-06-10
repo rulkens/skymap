@@ -114,7 +114,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
 
   // Channel-mouth render wake.  After installLoadProgress (allSlots fully
   // populated), before reevaluateDemand (no slot can reach 'ready' unsubscribed).
-  installSlotReadyWake(state, deps.allSlots);
+  installSlotReadyWake(() => state.subsystems.scheduler.requestRender(), deps.allSlots);
 
   // Signal loading state immediately so the user sees progress before the
   // (potentially multi-second) fetches complete.

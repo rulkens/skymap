@@ -1,4 +1,4 @@
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { SelectionSubsystem } from '../../../@types/engine/subsystems/SelectionSubsystem';
 
 /**
  * clearAll — unified teardown for the public `selection.clear()` handle
@@ -20,8 +20,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
  * also clears on `focusOnHome` / `focusOnMilkyWay` and on focusing
  * something else.
  */
-export function clearAll(state: EngineState): void {
-  const { selection } = state.subsystems;
+export function clearAll(selection: SelectionSubsystem): void {
   selection.setSelected(null);
   selection.setFocused(null);
 }

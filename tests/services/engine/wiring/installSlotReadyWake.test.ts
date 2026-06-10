@@ -11,7 +11,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
-import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import { installSlotReadyWake } from '../../../../src/services/engine/wiring/installSlotReadyWake';
 
 // Stub slot that captures the subscriber passed to `subscribe`.
@@ -39,14 +38,6 @@ function stubSlot(name: string): AssetSlot<unknown, unknown> & {
   };
 }
 
-function makeState(requestRenderFn: () => void): EngineState {
-  return {
-    subsystems: {
-      scheduler: { requestRender: requestRenderFn },
-    },
-  } as unknown as EngineState;
-}
-
 describe('installSlotReadyWake', () => {
   let requestRender: ReturnType<typeof vi.fn<() => void>>;
 
@@ -61,9 +52,8 @@ describe('installSlotReadyWake', () => {
       ['slot-a', slotA],
       ['slot-b', slotB],
     ]);
-    const state = makeState(requestRender);
 
-    installSlotReadyWake(state, allSlots);
+    installSlotReadyWake(requestRender, allSlots);
 
     expect(slotA.subscribeSpy).toHaveBeenCalledTimes(1);
     expect(slotB.subscribeSpy).toHaveBeenCalledTimes(1);
@@ -76,9 +66,8 @@ describe('installSlotReadyWake', () => {
       ['slot-a', slotA],
       ['slot-b', slotB],
     ]);
-    const state = makeState(requestRender);
 
-    installSlotReadyWake(state, allSlots);
+    installSlotReadyWake(requestRender, allSlots);
     expect(requestRender).toHaveBeenCalledTimes(0);
 
     slotA._fire({ kind: 'ready', req: {}, value: {}, loadedAtMs: 0 });
@@ -91,9 +80,8 @@ describe('installSlotReadyWake', () => {
   it('does not wake on non-ready transitions', () => {
     const slot = stubSlot('slot-a');
     const allSlots = new Map<string, AssetSlot<unknown, unknown>>([['slot-a', slot]]);
-    const state = makeState(requestRender);
 
-    installSlotReadyWake(state, allSlots);
+    installSlotReadyWake(requestRender, allSlots);
 
     slot._fire({ kind: 'loading', req: {}, loaded: 0, total: 100, attempt: 0 });
     slot._fire({ kind: 'error', req: {}, error: new Error('boom'), finalAttempt: 3 });
