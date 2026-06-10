@@ -278,16 +278,16 @@ export function App(): React.ReactElement {
             // then echoes the new tier back through `onTierChange`.
             tier={currentTier}
             onTierChange={(tier) => handleRef.current?.sources.setTier(tier)}
+            visibleSourceMask={visibleSourceMask}
+            sourceCounts={sourceCounts}
+            structureCounts={structureCounts}
             // `setVisible` is synchronous: it flips the survey's `enabled`
             // flag (single source of truth) and echoes the derived mask back
             // via `onMaskChange` before this handler returns, so the React
             // checkbox stays engine-driven — no optimistic update needed.
-            visibleSourceMask={visibleSourceMask}
-            sourceCounts={sourceCounts}
-            structureCounts={structureCounts}
-            onToggleSource={(source, visible) => {
-              handleRef.current?.sources.setVisible(source, visible);
-            }}
+            onToggleSource={(source, visible) =>
+              handleRef.current?.sources.setVisible(source, visible)
+            }
             spaceMouseSupported={spaceMouseSectionVisible}
             spaceMouseConnected={spaceMouseConnected}
             onConnectSpaceMouse={() => {
