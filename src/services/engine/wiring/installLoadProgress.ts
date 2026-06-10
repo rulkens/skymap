@@ -44,15 +44,14 @@ export function installLoadProgress(state: EngineState, deps: BootstrapDeps): vo
   // rows whose key is a string — point rows carry numeric Source keys and are
   // already included above. pgcAlias is lazy but still registered so its
   // eventual load shows in the bar + dev panel.
+  //
+  // The absence of a cast IS the drift protection: a wiring row whose key has
+  // no matching field in assetSlots fails to compile, so ASSET_WIRING and
+  // EngineAssetSlots cannot silently disagree.
   for (const row of ASSET_WIRING) {
     if (typeof row.key !== 'string') continue;
-    const slot = state.assetSlots[row.key as keyof typeof state.assetSlots];
-    if (slot && typeof slot === 'object' && 'name' in slot) {
-      allSlots.set(
-        (slot as AssetSlot<unknown, unknown>).name,
-        slot as unknown as AssetSlot<unknown, unknown>,
-      );
-    }
+    const slot = state.assetSlots[row.key];
+    if (slot) allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
   }
 
   // DEV synthetic-volume fixtures (present only in dev builds).

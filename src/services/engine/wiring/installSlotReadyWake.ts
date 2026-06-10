@@ -4,19 +4,16 @@
  *
  * ### The channel-mouth principle
  *
- * Asset arrival is one channel: every slot eventually emits exactly one
- * `ready` state when its data lands. Before this module existed, the wake
- * call lived at the tail of each slot's `commit` body — eight separate
- * `scheduler.requestRender()` calls scattered across
- * `src/services/loading/slots/*.ts` and `galaxyCatalogSourceRegistry.ts`.
- * That is eight places that must independently "remember to" wake the
- * renderer; adding a ninth slot means a silent missed-wake bug unless the
- * author knows about the convention.
+ * Without this module, each slot's commit path must independently call
+ * `scheduler.requestRender()` — an obligation scattered across every slot
+ * factory and registry. Any new slot added without knowing the convention
+ * causes a silent missed-wake. One subscription here absorbs the obligation
+ * for all slots at once.
  *
- * One subscription here replaces that per-slot obligation. The loading layer
- * (`AssetSlot`, individual slot factories) stays engine-agnostic: it knows
- * nothing about schedulers or renderers. The obligation belongs at the
- * channel mouth — the single enumeration where every slot is visible.
+ * The loading layer (`AssetSlot`, individual slot factories) stays
+ * engine-agnostic: it knows nothing about schedulers or renderers. The
+ * obligation belongs at the channel mouth — the single enumeration where
+ * every slot is visible.
  *
  * ### Why here rather than inside `createAssetSlot`
  *

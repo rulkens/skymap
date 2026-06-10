@@ -8,8 +8,8 @@
  *     once and reused for all future arrivals.
  *   - A `ready` transition calls `requestRender` — one call per slot that
  *     fires `ready`.
- *   - Non-ready transitions (`loading`, `error`) do NOT call
- *     `requestRender`; the scheduler wakes only when new data is present.
+ *   - Non-ready transitions (`loading`, `error`, `idle`, `committing`) do NOT
+ *     call `requestRender`; the scheduler wakes only when new data is present.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
