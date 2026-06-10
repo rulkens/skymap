@@ -79,9 +79,7 @@ function serializeFadeHandle(h: FadeHandle): string {
   }
 }
 
-export function createFadeRegistry(deps: {
-  readonly requestRender: () => void;
-}): FadeRegistry {
+export function createFadeRegistry(deps: { readonly requestRender: () => void }): FadeRegistry {
   const controllers = new Map<string, FadeController>();
 
   function register(handle: FadeHandle, initialOpacity: number = 0): void {

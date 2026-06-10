@@ -226,27 +226,27 @@ channels (settings writes via `settingsTable`, draws inside frames). The deps
 param is REQUIRED, not optional — a new construction site that forgets the wake
 source must be a compile error, not a silently sleeping fade.
 
-- [ ] Add the test `fadeTo wakes the scheduler` — build with
+- [x] Add the test `fadeTo wakes the scheduler` — build with
   `createFadeRegistry({ requestRender: spy })`, `register` a handle, call
   `fadeTo(h, 1, 600, 0)`, assert `spy` called exactly once.
-- [ ] Add the test `register, setImmediate, tick and opacityOf do not wake` —
+- [x] Add the test `register, setImmediate, tick and opacityOf do not wake` —
   drive each, assert the spy was never called.
-- [ ] Run `npm test -- fadeRegistry` → the two new tests fail (factory takes no
+- [x] Run `npm test -- fadeRegistry` → the two new tests fail (factory takes no
   deps yet); existing tests also fail to compile once the signature changes —
   expected.
-- [ ] Implement: add the deps param; wake inside `fadeTo`. Extend the module
+- [x] Implement: add the deps param; wake inside `fadeTo`. Extend the module
   header with the new contract: *starting a fade ensures frames render —
   callers never wake the scheduler* — and why `setImmediate` does not wake
   (its callers are settings paths that wake via the settings table, and
   construction-time seeding precedes the first frame).
-- [ ] Update every `createFadeRegistry(` construction site: grep `src/` +
+- [x] Update every `createFadeRegistry(` construction site: grep `src/` +
   `tests/` — production is `engine.ts:643`
   (`createFadeRegistry({ requestRender: () => state.subsystems.scheduler.requestRender() })`,
   matching the biasCorrection DI shape at `engine.ts:605-609`); tests pass a
   `vi.fn()` or `() => {}` (a tiny local `makeRegistry()` helper in the test
   file keeps the churn to one line).
-- [ ] Main thread: `npm test`; `npm run typecheck`.
-- [ ] Commit `feat(engine): fadeRegistry wakes the scheduler on fadeTo` —
+- [x] Main thread: `npm test`; `npm run typecheck`.
+- [x] Commit `feat(engine): fadeRegistry wakes the scheduler on fadeTo` —
   stage `src/services/animation/fadeRegistry.ts`,
   `tests/services/animation/fadeRegistry.test.ts`,
   `src/services/engine/engine.ts`, plus any other construction-site files the
