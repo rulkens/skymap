@@ -171,12 +171,10 @@ becomes the **single** seed for both sides.
 
 **Files:** `package.json` (modify — MAIN thread runs the install)
 
-- [ ] MAIN thread runs `npm install zustand` (React 19.2.5 — zustand v5 supports
-  React 19; confirm the resolved version is v5.x).
-- [ ] Confirm `zustand` lands in `dependencies` (not `devDependencies` — it ships
-  in both the engine bundle and the React bundle).
-- [ ] `npm run typecheck` → still green (no usage yet).
-- [ ] Commit `package.json` + lockfile.
+- [x] MAIN thread runs `npm install zustand` → resolved **zustand 5.0.14** (React 19-compatible).
+- [x] Confirm `zustand` lands in `dependencies` (not `devDependencies`).
+- [x] `npm run typecheck` → still green (no usage yet).
+- [x] Commit `package.json` + lockfile.
 
 ---
 
