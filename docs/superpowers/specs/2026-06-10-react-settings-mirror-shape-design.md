@@ -1,6 +1,13 @@
 # React settings mirror shape — design (follow-up)
 
-> Status: **agreed design, DEFERRED to its own PR.** Surfaced during the
+> Status: **SUPERSEDED (2026-06-10) by
+> `2026-06-10-engine-owned-settings-store-design.md`.** This spec only *reshaped*
+> the React mirror so its copy matched the engine's `items[id]` shape. The
+> engine-owned settings-store decomplection removes the mirror (and the whole
+> echo protocol) entirely, so reshaping the copy is moot — there is no copy to
+> reshape. Kept for context; do not implement.
+>
+> _Original status:_ agreed design, deferred to its own PR. Surfaced during the
 > settings-by-source-type PR (#295) review: now that the engine clusters
 > settings by source-type with per-entity `items[id]`, the React mirror in
 > `useEngineSettings` still carries the *old* flat category records, bridged by
