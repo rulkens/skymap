@@ -59,9 +59,10 @@ export function getVolumeFieldDefaults(id: VolumeFieldId): VolumeFieldDefaults {
  * this helper removes.
  *
  * `enabled` comes from the registry `visible` flag so the construction
- * seed lands the on/off bit in pure state at boot, symmetric with how
- * `drawMask` seeds survey visibility from `visible`. `intensity` falls
- * back to the global default for any field that omits a per-cube override.
+ * seed lands the on/off bit in pure state at boot, symmetric with how the
+ * construction seed lands each survey's `surveys.items[id].enabled`.
+ * `intensity` falls back to the global default for any field that omits a
+ * per-cube override.
  */
 export function buildVolumeFieldSettings(id: VolumeFieldId): VolumeFieldSettings {
   const entry = volumeEntry(id);

@@ -11,7 +11,8 @@
  * full engine shape. `DemandCtx` is a narrow read-only facade: query
  * functions over the slices a load policy legitimately depends on. The builder
  * is the single place that maps `state` → those queries, so the mapping
- * (drawMask bit, request-flag set, slot-state accessor) lives in one spot.
+ * (survey enabled bit, request-flag set, slot-state accessor) lives in one
+ * spot.
  *
  * ### Why built once per evaluation cycle, not memoised
  *
@@ -21,12 +22,13 @@
  * would allocate fresh closures per row for no benefit.
  */
 
-import { maskHas } from '../../../utils/sourceMask';
+import { SOURCE_REGISTRY } from '../../../data/sources';
 import { slotFor } from './slotFor';
 
 import type { DemandCtx } from '../../../@types/loading/DemandCtx';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { SourceType } from '../../../@types/data/SourceType';
+import type { SurveyId } from '../../../@types/engine/data/SurveyId';
 import type { RequestKey } from '../../../@types/loading/RequestKey';
 import type { AssetKey } from '../../../@types/loading/AssetKey';
 import type { LoadState } from '../../../@types/loading/LoadState';
@@ -34,7 +36,16 @@ import type { LoadState } from '../../../@types/loading/LoadState';
 export function buildDemandCtx(state: EngineState): DemandCtx {
   return {
     settings: state.settings,
-    isVisible: (s: SourceType) => maskHas(state.sources.drawMask, s),
+    // Demand follows intent — the survey's `enabled` bit, the same field
+    // `setSourceVisible` writes — uniformly with every other row type
+    // (volumes/structures/overlays all gate on their settings `enabled`).
+    // NOT the fade-tail drawMask: a just-disabled survey stops demanding
+    // immediately while it fades out, and boot demand needs no mask seed.
+    // `s` is a SourceType code; the registry maps it to the survey id that
+    // keys the items record. A non-survey code's registry id is not a survey
+    // id, so the lookup yields undefined — hence `=== true`.
+    isVisible: (s: SourceType) =>
+      state.settings.surveys.items[SOURCE_REGISTRY[s].id as SurveyId]?.enabled === true,
     request: (k: RequestKey) => state.requests.has(k),
     // `?? 'idle'` covers the not-yet-minted slot: an absent (null/undefined)
     // slot has never been asked to load, which is exactly what `idle` means.

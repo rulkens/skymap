@@ -16,8 +16,9 @@
 // per-frame derive together handle a rapid concurrent toggle.
 //
 // Does NOT trigger loading: the render loop's `reevaluateDemand` reads the
-// freshly-derived drawMask and loads the now-visible survey (and companions)
-// next frame, so visibility and loading stay decoupled.
+// survey's `enabled` bit (the flag flipped here) and loads the now-visible
+// survey (and companions) next frame, so visibility and loading stay
+// decoupled.
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';

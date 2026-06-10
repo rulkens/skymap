@@ -81,7 +81,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   //
   // Re-derive what should be loading from current state, every frame.
   // The single seam that turns any state change into the right loads: a
-  // handle setter flips its demand-gating state (a survey's drawMask bit,
+  // handle setter flips its demand-gating state (a survey's enabled bit,
   // filaments.enabled, a structure category's visibility) and calls
   // requestRender, which wakes the loop, which runs this.  No setter has
   // to remember to trigger loading — requestRender is the universal
@@ -91,9 +91,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // synthetic-fallback gate kicks its backstop directly.)
   //
   // Recompute the survey draw/pick masks from settings + live fade opacity at
-  // the top of every frame, before any reader (demand or render pass) touches
+  // the top of every frame, before any reader (render or pick pass) touches
   // them — so the masks are always a fresh derivation of the single source of
-  // truth, never a hand-maintained mirror.
+  // truth, never a hand-maintained mirror.  Demand itself reads settings
+  // directly, not the masks.
   deriveSourceMasks(state);
   reevaluateDemand(state);
 

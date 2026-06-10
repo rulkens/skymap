@@ -11,8 +11,9 @@
  * ### Stub-state shape
  *
  * `buildDemandCtx(state)` reads:
- *   - `state.settings`             — predicate leaf values
- *   - `state.sources.drawMask`     — `maskHas` per source
+ *   - `state.settings`             — predicate leaf values, including each
+ *                                    survey's `surveys.items[id].enabled`
+ *                                    (the intent bit `isVisible` reads)
  *   - `state.sources.tier`         — passed to `req(tier)`
  *   - `state.requests`             — `Set<RequestKey>`
  *   - `state.assetSlots`           — `slotFor` dispatch target
@@ -23,7 +24,7 @@
  * ### famousMeta boot-case modelling
  *
  * `famousMeta.demand(ctx)` is true when `slotState(Famous) !== 'idle'`. At boot
- * the Famous POINT row evaluates first (Famous is in the drawMask), finds the
+ * the Famous POINT row evaluates first (Famous is enabled), finds the
  * slot idle, and loads it; the loop's idle-guard then leaves it alone, but the
  * stub's `load()` flips its reported kind idle → 'loading'. The later
  * famousMeta row sees `slotState(Famous) === 'loading'` and demands. The stub
@@ -36,8 +37,9 @@
  * The demand predicate for `mcpm` reads
  * `ctx.settings.volumes.items.mcpm?.enabled`. The engine seeds that record
  * at construction from the shippable volume registry entries (`seedVolumeFields`),
- * so `mcpm`'s enabled bit is `true` (registry visible:true) at boot, symmetric
- * with how `drawMask` seeds survey visibility. MCPM therefore IS in the boot
+ * so `mcpm`'s enabled bit is `true` (registry visible:true) at boot — symmetric
+ * with the `surveys.items[id].enabled` seed that survey demand reads.
+ * MCPM therefore IS in the boot
  * demand set — `cf4-density` is NOT (registry visible:false → seeded
  * enabled:false). `makeState` injects the same `seedVolumeFields` record into
  * `settings.volumes.items` so the test exercises the real defaults rather than
@@ -56,13 +58,13 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { Source } from '../../../../src/data/sources';
-import { ALL_VISIBLE_MASK } from '../../../../src/utils/sourceMask';
 import { seedVolumeFields } from '../../../../src/data/volumeFieldDefaults';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { VolumeFieldId } from '../../../../src/@types/data/VolumeFieldId';
+import type { SurveyId } from '../../../../src/@types/engine/data/SurveyId';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 
@@ -125,6 +127,14 @@ type SettingsLeaves = {
 type VolumeFieldLeaves = Partial<Record<VolumeFieldId, { enabled: boolean }>>;
 
 /**
+ * Per-survey visibility keyed by survey id. Survey demand (`isVisible`)
+ * reads `ctx.settings.surveys.items[id]?.enabled` — intent, the same field
+ * `setSourceVisible` writes — so `makeState` injects this record into
+ * `settings.surveys.items`. An absent row reads as not enabled.
+ */
+type SurveyItemLeaves = Partial<Record<SurveyId, { enabled: boolean }>>;
+
+/**
  * Default-at-boot settings: all structure categories visible, filaments off,
  * Synthetic fallback visible.
  *
@@ -151,6 +161,19 @@ const BOOT_SETTINGS: SettingsLeaves = {
  */
 const BOOT_VOLUME_FIELDS: VolumeFieldLeaves = seedVolumeFields();
 
+/**
+ * Default-at-boot survey items: every survey enabled, matching the engine's
+ * construction seed (one `enabled: true` row per `SURVEY_IDS` entry).
+ */
+const BOOT_SURVEY_ITEMS: SurveyItemLeaves = {
+  synthetic: { enabled: true },
+  sdss: { enabled: true },
+  '2mrs': { enabled: true },
+  glade: { enabled: true },
+  famousGalaxy: { enabled: true },
+  milliquas: { enabled: true },
+};
+
 // ── Stub state builder ───────────────────────────────────────────────────────
 
 type PointSlotOverrides = Partial<Record<SourceType, StubSlot>>;
@@ -164,8 +187,9 @@ type NamedSlotOverrides = Partial<{
 }>;
 
 type MakeStateOptions = {
-  drawMask?: number;
   settings?: SettingsLeaves;
+  /** Per-survey enabled bits; injected into `settings.surveys.items`. Defaults to boot (all enabled). */
+  surveyItems?: SurveyItemLeaves;
   /** Volume-field params; injected into `settings.volumes.items`. Defaults to boot. */
   volumeFields?: VolumeFieldLeaves;
   requests?: Set<string>;
@@ -190,8 +214,8 @@ const ALL_POINT_SOURCES: readonly SourceType[] = [
 
 function makeState(opts: MakeStateOptions = {}): EngineState {
   const {
-    drawMask = ALL_VISIBLE_MASK,
     settings = BOOT_SETTINGS,
+    surveyItems = BOOT_SURVEY_ITEMS,
     volumeFields = BOOT_VOLUME_FIELDS,
     requests = new Set(),
     pointSlots = {},
@@ -208,13 +232,17 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
   );
 
   return {
-    // Inject volume fields directly into `settings.volumes.items` — demand
-    // predicates read `ctx.settings.volumes.items[id]?.enabled` from that path.
+    // Inject survey + volume items directly into the settings bag — demand
+    // predicates read `ctx.settings.surveys.items[id]?.enabled` (via
+    // `isVisible`) and `ctx.settings.volumes.items[id]?.enabled` from there.
     settings: {
       ...(settings as unknown as EngineSettingsState),
+      surveys: { items: surveyItems },
       volumes: { items: volumeFields },
     } as unknown as EngineSettingsState,
-    sources: { drawMask, tier: 'medium' },
+    // tier feeds `req(tier)`; the masks are render/pick projections that
+    // demand never reads, so no drawMask is stubbed here.
+    sources: { tier: 'medium' },
     requests: requests as Set<import('../../../../src/@types/loading/RequestKey').RequestKey>,
     assetSlots: {
       points,
@@ -340,7 +368,7 @@ describe('reevaluateDemand demand-table regression', () => {
    * `structures.items`. Bug-fix pin: structureCatalog must NOT appear. This
    * verifies the consolidated predicate reading the per-category item rows.
    *
-   * Famous starts idle and is in the drawMask, so its point row loads it and
+   * Famous starts idle and is enabled, so its point row loads it and
    * famousMeta follows (the two-phase boot). The pin under test is the cluster
    * predicate, asserted independently below.
    */
@@ -435,8 +463,8 @@ describe('reevaluateDemand demand-table regression', () => {
     expect(fired.has(Source.SDSS)).toBe(false);
     expect(fired.has(Source.TwoMRS)).toBe(false);
     expect(fired.has(Source.Glade)).toBe(false);
-    // Milliquas is visible (in drawMask) but errored (non-idle) like the other
-    // surveys, so the idle-guard skips it too — no retry storm.
+    // Milliquas is visible (enabled in settings) but errored (non-idle) like
+    // the other surveys, so the idle-guard skips it too — no retry storm.
     expect(fired.has(Source.Milliquas)).toBe(false);
     // Famous's point row is demanded but errored (non-idle) — not re-loaded.
     expect(fired.has(Source.FamousGalaxy)).toBe(false);
@@ -473,9 +501,10 @@ describe('reevaluateDemand demand-table regression', () => {
   });
 
   /**
-   * Companion join in a single pass: when ONLY Famous is visible (its
-   * drawMask bit set, all other categories hidden), one `reevaluateDemand`
-   * loads BOTH the Famous point slot AND famousMeta. The Famous point row
+   * Companion join in a single pass: when ONLY Famous is enabled (its
+   * survey items row set, all other surveys + categories off), one
+   * `reevaluateDemand` loads BOTH the Famous point slot AND famousMeta.
+   * The Famous point row
    * evaluates first, finds the slot idle, and loads it — which synchronously
    * flips the stub to 'loading' (mirroring the real slot's load-started
    * dispatch). The later famousMeta row then reads `slotState(Famous) ===
@@ -499,7 +528,13 @@ describe('reevaluateDemand demand-table regression', () => {
     };
     // Disable mcpm too so the fired set is exactly the join under test.
     const volumeFields: VolumeFieldLeaves = { ...BOOT_VOLUME_FIELDS, mcpm: { enabled: false } };
-    const state = makeState({ settings, volumeFields, drawMask: 1 << Source.FamousGalaxy });
+    // Only Famous carries an enabled row — every other survey is absent and
+    // reads as not enabled.
+    const state = makeState({
+      settings,
+      volumeFields,
+      surveyItems: { famousGalaxy: { enabled: true } },
+    });
 
     const fired = firedKeys(state);
 

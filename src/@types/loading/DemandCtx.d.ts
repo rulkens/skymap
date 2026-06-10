@@ -21,9 +21,15 @@
  *      `settings.volumes.items[id]?.enabled`, structures via
  *      `settings.structures.items[cat].enabled`.
  *
- *   2. `isVisible` — the per-source drawMask bit.  A source-specific asset
- *      should only be loaded if its source is visible; this avoids
- *      background-loading a survey the user has toggled off.
+ *   2. `isVisible` — answers "does the user want this survey on?": the
+ *      survey's `settings.surveys.items[id].enabled` bit (intent, the same
+ *      field `setSourceVisible` writes), keyed by `SourceType` code so
+ *      wiring rows don't repeat the source → survey-id registry mapping.
+ *      Demand follows intent uniformly across row types — surveys gate on
+ *      `enabled` exactly as volumes, structures, and overlay layers do.
+ *      The fade-tail drawMask is a render-side projection (`enabled ||
+ *      fadeOpacity > 0`) and is not consulted: a just-disabled survey
+ *      stops demanding immediately while it fades out.
  *
  *   3. `request` — one-shot transient flags (see `RequestKey`).  Covers
  *      discrete UI events that have no persistent settings counterpart —
@@ -69,7 +75,7 @@ import type { RequestKey } from './RequestKey';
 export type DemandCtx = {
   /** Read-only view of the user-facing rendering settings. */
   settings: Readonly<EngineSettingsState>;
-  /** Returns true when the given source's drawMask bit is set. */
+  /** Returns true when the given survey source is enabled (intent, not fade-tail visibility). */
   isVisible: (s: SourceType) => boolean;
   /** Returns true when the given one-shot request flag is pending. */
   request: (k: RequestKey) => boolean;
