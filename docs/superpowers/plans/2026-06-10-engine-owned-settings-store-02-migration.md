@@ -221,12 +221,12 @@ Same pattern as surveys, for the `tonemap` cluster:
   `selectToneMapCurve`. No clamp in the settings path — exposure's `[0.05, 16]`
   range already lives at the post-process pass (`clampExposure`, #301); the
   reducer stores the raw value.
-- [ ] Reducer + selector tests (copy-on-write; the reducer stores the raw value
+- [x] Reducer + selector tests (copy-on-write; the reducer stores the raw value
   verbatim — no clamp).
-- [ ] Run-fails → implement → point setters at actions → delete tonemap echoes +
+- [x] Run-fails → implement → point setters at actions → delete tonemap echoes +
   cells + `setExposure` optimistic setter + `seedSettingsCallbacks` lines →
   switch App.tsx reads.
-- [ ] Run-passes (full suite) → commit.
+- [x] Run-passes (full suite) → commit.
 
 ### Task 2.3: camera (autoRotate)
 

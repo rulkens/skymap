@@ -109,21 +109,22 @@ describe('seedSettingsCallbacks', () => {
 
     seedSettingsCallbacks(cb, snap);
 
-    // The surveys cluster + the derived source mask migrated to the
-    // engine-owned store; the seed no longer fires their echoes (React reads
-    // them via `useSettingsStore` selectors, seeded from the same defaults).
+    // The surveys cluster + the derived source mask, and the tonemap cluster
+    // (curve / exposure), migrated to the engine-owned store; the seed no longer
+    // fires their echoes (React reads them via `useSettingsStore` selectors,
+    // seeded from the same defaults).
     expect(surveys.onSizeChange).not.toHaveBeenCalled();
     expect(surveys.onBrightnessChange).not.toHaveBeenCalled();
     expect(surveys.onHighlightFallbackChange).not.toHaveBeenCalled();
     expect(surveys.onRealOnlyChange).not.toHaveBeenCalled();
     expect(surveys.onDepthFadeChange).not.toHaveBeenCalled();
     expect(sources.onMaskChange).not.toHaveBeenCalled();
+    expect(tonemap.onCurveChange).not.toHaveBeenCalled();
+    expect(tonemap.onExposureChange).not.toHaveBeenCalled();
     expect(camera.onAutoRotateChange).toHaveBeenCalledExactlyOnceWith(snap.autoRotate);
     expect(thumbnails.onEnabledChange).toHaveBeenCalledExactlyOnceWith(snap.galaxyTexturesEnabled);
     expect(bias.onModeChange).toHaveBeenCalledExactlyOnceWith(snap.biasMode);
     expect(bias.onAbsMagLimitChange).toHaveBeenCalledExactlyOnceWith(snap.absMagLimit);
-    expect(tonemap.onCurveChange).toHaveBeenCalledExactlyOnceWith(snap.toneMapCurve);
-    expect(tonemap.onExposureChange).toHaveBeenCalledExactlyOnceWith(snap.exposure);
     // Each echo carries a fresh copy of the record, not the literal
     // reference — assert by value so the freshness contract stays
     // load-bearing.  Label and marker visibility are two independent
@@ -155,14 +156,14 @@ describe('seedSettingsCallbacks', () => {
   it('skips undefined callbacks individually without affecting siblings', () => {
     // Mix: one optional callback present, the rest undefined.  Verifies
     // the present one fires while the absent ones don't throw.
-    const onExposureChange = vi.fn();
+    const onAutoRotateChange = vi.fn();
     const cb: EngineCallbacks = {
       ...makeRequiredCallbacks(),
-      tonemap: { onExposureChange },
+      camera: { onAutoRotateChange },
     };
 
     seedSettingsCallbacks(cb, makeSnapshot());
 
-    expect(onExposureChange).toHaveBeenCalledExactlyOnceWith(1.2);
+    expect(onAutoRotateChange).toHaveBeenCalledExactlyOnceWith(false);
   });
 });

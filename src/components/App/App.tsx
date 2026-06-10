@@ -49,11 +49,13 @@ import { selectDepthFade } from '../../services/engine/settingsStore/selectors/s
 import { selectHighlightFallback } from '../../services/engine/settingsStore/selectors/selectHighlightFallback';
 import { selectRealOnly } from '../../services/engine/settingsStore/selectors/selectRealOnly';
 import { selectVisibleSourceMask } from '../../services/engine/settingsStore/selectors/selectVisibleSourceMask';
+import { selectToneMapCurve } from '../../services/engine/settingsStore/selectors/selectToneMapCurve';
 import {
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
   DEFAULT_REAL_ONLY_MODE,
+  DEFAULT_TONE_MAP_CURVE,
 } from '../../data/defaults';
 import { ALL_VISIBLE_MASK } from '../../utils/sourceMask';
 import { buildStaticAnchorStructures } from '../../data/buildStaticAnchorStructures';
@@ -83,7 +85,6 @@ export function App(): React.ReactElement {
     showDiskRadiusRing,
     biasMode,
     absMagLimit,
-    toneMapCurve,
     volumesEnabled,
     volumeFields,
     spaceMouseConnected,
@@ -127,6 +128,12 @@ export function App(): React.ReactElement {
   );
   const realOnlyMode = useSettingsStore(handleRef, selectRealOnly, DEFAULT_REAL_ONLY_MODE);
   const visibleSourceMask = useSettingsStore(handleRef, selectVisibleSourceMask, ALL_VISIBLE_MASK);
+
+  // Tonemap cluster reads live off the engine-owned store too. Exposure has no
+  // React consumer today (no slider in the panels), so only the curve dropdown
+  // reads here; the store write notifies synchronously, so `setCurve` tracks
+  // without an optimistic cell. Fallback is the same `data/defaults.ts` seed.
+  const toneMapCurve = useSettingsStore(handleRef, selectToneMapCurve, DEFAULT_TONE_MAP_CURVE);
 
   // Flow overlay has no engine echo, so a knob change must land in two homes:
   // the React mirror (optimistic) and the engine handle. One patch covers both
@@ -326,9 +333,11 @@ export function App(): React.ReactElement {
               setSpaceMouseSensitivity(value);
               handleRef.current?.input.spaceMouse.setSensitivity(value);
             }}
-            // Bias and tone-map setters echo synchronously — `setBiasMode`
-            // / `setAbsMagLimit` / `setToneMapCurve` all fire their echo
-            // callback inside the call, so no optimistic update needed.
+            // Bias setters echo synchronously — `setBiasMode` / `setAbsMagLimit`
+            // fire their echo callback inside the call, so no optimistic update
+            // needed. The tone-map curve reads off the engine-owned store
+            // (`selectToneMapCurve`); `setCurve` dispatches the store action,
+            // which notifies synchronously, so the dropdown stays in sync.
             biasMode={biasMode}
             onBiasModeChange={(mode) => handleRef.current?.bias.setMode(mode)}
             absMagLimit={absMagLimit}

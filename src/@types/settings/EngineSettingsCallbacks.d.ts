@@ -14,9 +14,9 @@ import type { EngineCallbacks } from '../engine/EngineCallbacks';
 
 export type EngineSettingsCallbacks = Pick<
   EngineCallbacks,
-  // `surveys` + `sources` dropped: that cluster reads the engine-owned store
-  // via `useSettingsStore` selectors, so the hook subscribes to no surveys echo.
-  | 'tonemap'
+  // `surveys` + `sources` + `tonemap` dropped: those clusters read the
+  // engine-owned store via `useSettingsStore` selectors, so the hook subscribes
+  // to no surveys/tonemap echo.
   | 'camera'
   | 'bias'
   | 'thumbnails'

@@ -6,9 +6,8 @@
  * EngineCallbacks slice the engine echoes mutations into, spread by
  * App.tsx into the `createEngine` options block.
  *
- * The four optimistic setters (`setFilamentsEnabled`,
- * `setFilamentIntensity`, `setExposure`, `setVolumesEnabled`,
- * `setSpaceMouseSensitivity`) are the no-echo / partial-echo
+ * The optimistic setters (`setFilamentsEnabled`, `setFilamentIntensity`,
+ * `setVolumesEnabled`, `setSpaceMouseSensitivity`) are the no-echo
  * exceptions — see the doc comments inside `useEngineSettings.ts`
  * for the rationale per setter.
  */
@@ -20,10 +19,9 @@ import type { FlowSettings } from './FlowSettings';
 export type UseEngineSettingsReturn = {
   settings: UseEngineSettingsState;
   engineCallbacks: EngineSettingsCallbacks;
-  // App-owned optimistic setters for the no-echo / partial-echo cases
+  // App-owned optimistic setters for the no-echo cases
   setFilamentsEnabled: (v: boolean) => void;
   setFilamentIntensity: (v: number) => void;
-  setExposure: (v: number) => void;
   /**
    * Master on/off for the scalar-volume overlay.  No engine echo — React
    * owns it optimistically, same as `setFilamentsEnabled`.

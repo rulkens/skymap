@@ -27,7 +27,6 @@
  */
 
 import type { BiasMode } from '../data/BiasMode';
-import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { FlowSettings } from './FlowSettings';
 import type { VolumeFieldRowData } from './VolumeFieldRowData';
 import type { LabelCategory } from '../engine/data/LabelCategory';
@@ -35,8 +34,9 @@ import type { StructureCategory } from '../engine/data/StructureCategory';
 
 export type UseEngineSettingsState = {
   // The surveys cluster (pointSize, brightness, depthFade, highlightFallback,
-  // realOnly, visibleSourceMask) is no longer mirrored here — App.tsx reads it
-  // off the engine-owned store via `useSettingsStore` selectors.
+  // realOnly, visibleSourceMask) and the tonemap cluster (exposure, curve) are
+  // no longer mirrored here — App.tsx reads them off the engine-owned store via
+  // `useSettingsStore` selectors.
   autoRotate: boolean;
   galaxyTexturesEnabled: boolean;
   milkyWayEnabled: boolean;
@@ -49,8 +49,6 @@ export type UseEngineSettingsState = {
   showDiskRadiusRing: boolean;
   biasMode: BiasMode;
   absMagLimit: number;
-  toneMapCurve: ToneMapCurve;
-  exposure: number;
   /**
    * Master toggle for the scalar-volume overlay.  Mirrors
    * `EngineSettingsState.volumesEnabled` on the engine side.  No echo

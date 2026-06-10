@@ -79,6 +79,8 @@ import { setBrightnessAction } from '../settingsStore/actions/setBrightnessActio
 import { setDepthFadeAction } from '../settingsStore/actions/setDepthFadeAction';
 import { setHighlightFallbackAction } from '../settingsStore/actions/setHighlightFallbackAction';
 import { setRealOnlyAction } from '../settingsStore/actions/setRealOnlyAction';
+import { setExposureAction } from '../settingsStore/actions/setExposureAction';
+import { setToneMapCurveAction } from '../settingsStore/actions/setToneMapCurveAction';
 
 /**
  * 3-tuple path into `EngineState`: `['settings', <cluster>, <leaf>]`.
@@ -267,17 +269,19 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     path: ['settings', 'bias', 'absMagLimit'],
     callback: ['bias', 'onAbsMagLimitChange'],
   },
+  // ── Tonemap cluster (migrated to the engine-owned store) ───────────
+  // Both rows dispatch store actions (copy-on-write reducers) rather than
+  // mutating `state.settings.tonemap` in place + echoing. React reads each
+  // via a `useStore` selector (`selectExposure`, `selectToneMapCurve`), so
+  // no echo is wired. Exposure stores raw intent — the post-process pass
+  // clamps to its HDR-safe range at point of use (clampExposure).
   {
-    // Stores raw intent; the post-process pass clamps to its HDR-safe range
-    // at point of use (clampExposure). The echo fires the stored value.
     name: 'setExposure',
-    path: ['settings', 'tonemap', 'exposure'],
-    callback: ['tonemap', 'onExposureChange'],
+    action: setExposureAction,
   },
   {
     name: 'setToneMapCurve',
-    path: ['settings', 'tonemap', 'curve'],
-    callback: ['tonemap', 'onCurveChange'],
+    action: setToneMapCurveAction,
   },
   {
     // Pick-buffer debug overlay master toggle.  Off by default; gated

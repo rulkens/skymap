@@ -46,17 +46,16 @@ export function seedSettingsCallbacks(cb: EngineCallbacks, snapshot: SettingsCal
   // engine-truth defaults exactly once at startup; optional-chaining
   // keeps every fire safe when a consumer doesn't subscribe to that bag.
   // The surveys cluster (size / brightness / highlightFallback / realOnly /
-  // depthFade) and the derived source mask no longer seed through echoes —
-  // React reads them off the engine-owned store via `useSettingsStore`
-  // selectors, which start from the same `data/defaults.ts` seed.
+  // depthFade) + the derived source mask, and the tonemap cluster (exposure /
+  // curve), no longer seed through echoes — React reads them off the
+  // engine-owned store via `useSettingsStore` selectors, which start from the
+  // same `data/defaults.ts` seed.
   cb.camera?.onAutoRotateChange?.(snapshot.autoRotate);
   cb.thumbnails?.onEnabledChange?.(snapshot.galaxyTexturesEnabled);
   cb.debug?.onShowPickBufferChange?.(snapshot.showPickBuffer);
   cb.debug?.onShowDiskRadiusRingChange?.(snapshot.showDiskRadiusRing);
   cb.bias?.onModeChange?.(snapshot.biasMode);
   cb.bias?.onAbsMagLimitChange?.(snapshot.absMagLimit);
-  cb.tonemap?.onCurveChange?.(snapshot.toneMapCurve);
-  cb.tonemap?.onExposureChange?.(snapshot.exposure);
   // Fresh copies of each record so subscribers can treat every emission as an
   // immutable snapshot — same idiom as the live setter echoes. Label and marker
   // visibility are independent axes; the seed records are already derived from

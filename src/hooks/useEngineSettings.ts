@@ -10,29 +10,28 @@
  *   1. React seeds an initial value from `data/defaults.ts` so the
  *      SettingsPanel renders a useful first paint before the engine's
  *      first echo lands.
- *   2. The engine fires an echo callback (e.g. `tonemap.onCurveChange`)
+ *   2. The engine fires an echo callback (e.g. `bias.onModeChange`)
  *      both at engine init AND on every matching setter call, so the
  *      React copy always reflects the engine's authoritative value.
  *   3. The SettingsPanel onChange handler in App.tsx forwards user
- *      input to the engine handle (e.g. `handleRef.current?.tonemap.setCurve(v)`)
+ *      input to the engine handle (e.g. `handleRef.current?.bias.setMode(v)`)
  *      and the engine echoes it right back, so no optimistic local
- *      update is needed — except for the three exceptions below.
+ *      update is needed — except for the exceptions below.
  *
  * The surveys cluster (pointSize / brightness / depthFade /
- * highlightFallback / realOnly / the derived source mask) has LEFT this
- * pattern: it lives in the engine-owned settings store, and App.tsx reads
- * it via `useSettingsStore` selectors instead of a mirror cell here.
+ * highlightFallback / realOnly / the derived source mask) and the tonemap
+ * cluster (exposure / curve) have LEFT this pattern: they live in the
+ * engine-owned settings store, and App.tsx reads them via `useSettingsStore`
+ * selectors instead of a mirror cell here. The tonemap migration also dissolved
+ * the `exposure` hybrid: the store write notifies synchronously, so the slider
+ * thumb tracks without an optimistic local cell.
  *
  * ──────────────────────────────────────────────────────────────────────
- * The three App-owned exceptions
+ * The App-owned exceptions
  * ──────────────────────────────────────────────────────────────────────
  *   - `filamentsEnabled` — engine has no echo callback for this; React
  *     owns it optimistically.  The hook exposes `setFilamentsEnabled`.
  *   - `filamentIntensity` — same as above.
- *   - `exposure` — engine echoes via `onExposureChange`, but the
- *     SettingsPanel's slider also nudges it locally for snappy thumb
- *     tracking (the engine's echo lands a frame later).  Exposed
- *     setter lets the App-side onChange handler do that.
  *
  * ──────────────────────────────────────────────────────────────────────
  * Why bundle into one hook?
@@ -45,7 +44,6 @@
 
 import { useCallback, useState } from 'react';
 import type { BiasMode as BiasModeT } from '../@types/data/BiasMode';
-import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
 import type { FlowSettings } from '../@types/settings/FlowSettings';
 import type { LabelCategory } from '../@types/engine/data/LabelCategory';
 import type { StructureCategory } from '../@types/engine/data/StructureCategory';
@@ -55,14 +53,12 @@ import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_AUTO_ROTATE,
   DEFAULT_BIAS_MODE,
-  DEFAULT_EXPOSURE,
   DEFAULT_FLOW,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_SHOW_PICK_BUFFER,
   DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_SPACE_MOUSE_SENSITIVITY,
-  DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
 } from '../data/defaults';
 import { Source, SOURCE_REGISTRY } from '../data/sources';
@@ -90,8 +86,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   );
   const [biasMode, setBiasMode] = useState<BiasModeT>(DEFAULT_BIAS_MODE);
   const [absMagLimit, setAbsMagLimit] = useState<number>(DEFAULT_ABS_MAG_LIMIT);
-  const [toneMapCurve, setToneMapCurve] = useState<ToneMapCurveT>(DEFAULT_TONE_MAP_CURVE);
-  const [exposure, setExposure] = useState<number>(DEFAULT_EXPOSURE);
 
   // ── App-owned optimistic values (no engine echo) ─────────────────────
   // The engine does NOT fire echo callbacks for filaments or volumes state,
@@ -198,8 +192,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       showDiskRadiusRing,
       biasMode,
       absMagLimit,
-      toneMapCurve,
-      exposure,
       volumesEnabled,
       volumeFields,
       labelCategoryVisibility,
@@ -213,13 +205,9 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       // Every echo the engine emits lands at its nested address; the
       // no-echo cases (filaments enabled/intensity, volumes master)
       // are App-owned with no wiring here.
-      // The surveys + sources echo sub-bags are gone — that cluster reads the
-      // engine-owned store via `useSettingsStore` selectors, so there's no
-      // mirror to keep in sync from a callback.
-      tonemap: {
-        onExposureChange: setExposure,
-        onCurveChange: setToneMapCurve,
-      },
+      // The surveys + sources + tonemap echo sub-bags are gone — those clusters
+      // read the engine-owned store via `useSettingsStore` selectors, so there's
+      // no mirror to keep in sync from a callback.
       camera: {
         onAutoRotateChange: setAutoRotate,
       },
@@ -269,7 +257,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
     },
     setFilamentsEnabled,
     setFilamentIntensity,
-    setExposure,
     setVolumesEnabled,
     setSpaceMouseSensitivity,
     updateFlow,

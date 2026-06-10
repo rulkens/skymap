@@ -184,12 +184,13 @@ describe('settingsTable', () => {
       expect(requestRender).toHaveBeenCalledTimes(2);
     });
 
-    it('stores raw intent and echoes it (clamping moved to point of use)', () => {
+    it('stores raw intent (clamping moved to point of use)', () => {
       // No table row clamps anymore: setExposure's clamp moved to the
       // post-process pass (clampExposure) and setFilamentIntensity's to the
       // filament renderer (clampFilamentIntensity). Out-of-range values pass
-      // through to state unchanged; setExposure echoes via
-      // `tonemap.onExposureChange`, setFilamentIntensity has no callback.
+      // through unchanged. `setExposure` has migrated to the store: it dispatches
+      // a copy-on-write action (no echo — React reads via `selectExposure`),
+      // while `setFilamentIntensity` still mutates `state.settings` in place.
       const state = makeState();
       const store = makeStore(state);
       const onExposureChange = vi.fn();
@@ -205,14 +206,14 @@ describe('settingsTable', () => {
         store,
       );
 
-      // Raw passthrough: the setter no longer clamps; intent is stored as-is.
+      // Raw passthrough through the store; no echo fired.
       setters.setExposure(1e9);
-      expect(state.settings.tonemap.exposure).toBe(1e9);
-      expect(onExposureChange).toHaveBeenLastCalledWith(1e9);
+      expect(store.getState().tonemap.exposure).toBe(1e9);
+      expect(onExposureChange).not.toHaveBeenCalled();
 
       setters.setExposure(-1);
-      expect(state.settings.tonemap.exposure).toBe(-1);
-      expect(onExposureChange).toHaveBeenLastCalledWith(-1);
+      expect(store.getState().tonemap.exposure).toBe(-1);
+      expect(onExposureChange).not.toHaveBeenCalled();
 
       // Filament intensity stores raw intent (no clamp, no echo callback).
       setters.setFilamentIntensity(5);
