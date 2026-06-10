@@ -299,7 +299,7 @@ drops the optimistic `setFilamentsEnabled` / `setFilamentIntensity` and just
 calls the handle. **Preserve the fade** (`engine.ts:1224` `fadeTo({kind:'filaments'})`).
 Intensity's `[0,1]` clamp already lives at the filament renderer
 (`clampFilamentIntensity`, #301) — not the settings path.
-- [ ] Reducers `setFilamentsEnabled`, `setFilamentIntensity` + selectors + tests
+- [x] Reducers `setFilamentsEnabled`, `setFilamentIntensity` + selectors + tests
   → implement → point boringSetters at actions (fade stays in the handle; no
   clamp — it's at the renderer) → delete the
   `setFilamentsEnabled`/`setFilamentIntensity` optimistic
@@ -308,7 +308,7 @@ Intensity's `[0,1]` clamp already lives at the filament renderer
   `onFilamentsChange`/`onFilamentIntensityChange` now call only the handle.
   **Keep** `filamentCounts` cell + `filaments.onReady` callback (that's an EVENT
   — spec "what stays").
-- [ ] Run-passes (full suite) → commit.
+- [x] Run-passes (full suite) → commit.
 
 ### Task 2.9: volumes (master + per-field items)
 

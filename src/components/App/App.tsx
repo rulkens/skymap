@@ -55,6 +55,8 @@ import { selectBiasMode } from '../../services/engine/settingsStore/selectors/se
 import { selectAbsMagLimit } from '../../services/engine/settingsStore/selectors/selectAbsMagLimit';
 import { selectShowPickBuffer } from '../../services/engine/settingsStore/selectors/selectShowPickBuffer';
 import { selectShowDiskRadiusRing } from '../../services/engine/settingsStore/selectors/selectShowDiskRadiusRing';
+import { selectFilamentsEnabled } from '../../services/engine/settingsStore/selectors/selectFilamentsEnabled';
+import { selectFilamentIntensity } from '../../services/engine/settingsStore/selectors/selectFilamentIntensity';
 import {
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_DEPTH_FADE_ENABLED,
@@ -67,6 +69,7 @@ import {
   DEFAULT_SHOW_PICK_BUFFER,
   DEFAULT_SHOW_DISK_RADIUS_RING,
 } from '../../data/defaults';
+import { Source, SOURCE_REGISTRY } from '../../data/sources';
 import { ALL_VISIBLE_MASK } from '../../utils/sourceMask';
 import { buildStaticAnchorStructures } from '../../data/buildStaticAnchorStructures';
 import { isStructureCategory } from '../../data/structureCategories';
@@ -77,8 +80,6 @@ export function App(): React.ReactElement {
   const {
     settings,
     engineCallbacks: settingsCallbacks,
-    setFilamentsEnabled,
-    setFilamentIntensity,
     setVolumesEnabled,
     setSpaceMouseSensitivity,
     updateFlow,
@@ -87,8 +88,6 @@ export function App(): React.ReactElement {
   const {
     labelCategoryVisibility,
     markerCategoryVisibility,
-    filamentsEnabled,
-    filamentIntensity,
     filamentCounts,
     volumesEnabled,
     volumeFields,
@@ -168,6 +167,24 @@ export function App(): React.ReactElement {
     handleRef,
     selectShowDiskRadiusRing,
     DEFAULT_SHOW_DISK_RADIUS_RING,
+  );
+
+  // Filaments cluster (toggle + intensity) reads live off the engine-owned
+  // store. The SettingsPanel handlers dispatch through `handle.filaments.setEnabled`
+  // / `setIntensity` (action-backed; `setEnabled` also drives the fade ramp),
+  // which notify synchronously, so the controls track without an optimistic
+  // cell. The StatsPanel reads `filamentsEnabled` too. Fallbacks match the
+  // store's seed (`SOURCE_REGISTRY[Source.Filaments]`), so first paint (before
+  // `handleRef` lands) matches engine truth.
+  const filamentsEnabled = useSettingsStore(
+    handleRef,
+    selectFilamentsEnabled,
+    SOURCE_REGISTRY[Source.Filaments].visible,
+  );
+  const filamentIntensity = useSettingsStore(
+    handleRef,
+    selectFilamentIntensity,
+    SOURCE_REGISTRY[Source.Filaments].intensity,
   );
 
   // Flow overlay has no engine echo, so a knob change must land in two homes:
@@ -321,18 +338,15 @@ export function App(): React.ReactElement {
                 handleRef.current?.surveys.setLabelEnabled(category, visible);
               }
             }}
-            // Filaments has no engine echo — React owns the state, so
-            // the handler updates locally AND forwards to the engine.
+            // Filaments reads off the engine-owned store (`selectFilamentsEnabled`
+            // / `selectFilamentIntensity`); the handle setters dispatch the store
+            // action (and `setEnabled` also drives the fade ramp), which notifies
+            // synchronously, so the controls stay in sync without an optimistic
+            // update.
             filamentsEnabled={filamentsEnabled}
-            onFilamentsChange={(enabled) => {
-              setFilamentsEnabled(enabled);
-              handleRef.current?.filaments.setEnabled(enabled);
-            }}
+            onFilamentsChange={(enabled) => handleRef.current?.filaments.setEnabled(enabled)}
             filamentIntensity={filamentIntensity}
-            onFilamentIntensityChange={(value) => {
-              setFilamentIntensity(value);
-              handleRef.current?.filaments.setIntensity(value);
-            }}
+            onFilamentIntensityChange={(value) => handleRef.current?.filaments.setIntensity(value)}
             depthFadeEnabled={depthFadeEnabled}
             onDepthFadeEnabledChange={(enabled) => {
               handleRef.current?.surveys.setDepthFade(enabled);
@@ -382,7 +396,7 @@ export function App(): React.ReactElement {
             toneMapCurve={toneMapCurve}
             onToneMapCurveChange={(curve) => handleRef.current?.tonemap.setCurve(curve)}
             // `volumesEnabled` is the master toggle — no engine echo,
-            // owned in React state (same pattern as filamentsEnabled).
+            // owned optimistically in React state (the dual-write idiom).
             // The per-field setters forward straight to the engine; the
             // engine fires `volumes.onFieldsChanged(snapshot)` after
             // every mutation, and `useEngineSettings` mirrors the

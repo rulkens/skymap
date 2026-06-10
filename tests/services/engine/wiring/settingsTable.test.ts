@@ -215,11 +215,12 @@ describe('settingsTable', () => {
       expect(store.getState().tonemap.exposure).toBe(-1);
       expect(onExposureChange).not.toHaveBeenCalled();
 
-      // Filament intensity stores raw intent (no clamp, no echo callback).
+      // Filament intensity stores raw intent (no clamp, no echo callback);
+      // it writes through the store like exposure.
       setters.setFilamentIntensity(5);
-      expect(state.settings.filaments.intensity).toBe(5);
+      expect(store.getState().filaments.intensity).toBe(5);
       setters.setFilamentIntensity(-1);
-      expect(state.settings.filaments.intensity).toBe(-1);
+      expect(store.getState().filaments.intensity).toBe(-1);
     });
 
     it('tolerates a missing echo callback (optional-chaining contract)', () => {
@@ -241,7 +242,7 @@ describe('settingsTable', () => {
       );
 
       expect(() => setters.setFilamentsEnabled(true)).not.toThrow();
-      expect(state.settings.filaments.enabled).toBe(true);
+      expect(store.getState().filaments.enabled).toBe(true);
       expect(requestRender).toHaveBeenCalledOnce();
 
       // A migrated surveys row needs no echo at all — it writes through the

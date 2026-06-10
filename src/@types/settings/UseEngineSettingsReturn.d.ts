@@ -6,10 +6,9 @@
  * EngineCallbacks slice the engine echoes mutations into, spread by
  * App.tsx into the `createEngine` options block.
  *
- * The optimistic setters (`setFilamentsEnabled`, `setFilamentIntensity`,
- * `setVolumesEnabled`, `setSpaceMouseSensitivity`) are the no-echo
- * exceptions — see the doc comments inside `useEngineSettings.ts`
- * for the rationale per setter.
+ * The optimistic setters (`setVolumesEnabled`, `setSpaceMouseSensitivity`,
+ * `updateFlow`) are the no-echo exceptions — see the doc comments inside
+ * `useEngineSettings.ts` for the rationale per setter.
  */
 
 import type { UseEngineSettingsState } from './UseEngineSettingsState';
@@ -20,11 +19,9 @@ export type UseEngineSettingsReturn = {
   settings: UseEngineSettingsState;
   engineCallbacks: EngineSettingsCallbacks;
   // App-owned optimistic setters for the no-echo cases
-  setFilamentsEnabled: (v: boolean) => void;
-  setFilamentIntensity: (v: number) => void;
   /**
    * Master on/off for the scalar-volume overlay.  No engine echo — React
-   * owns it optimistically, same as `setFilamentsEnabled`.
+   * owns it optimistically.
    */
   setVolumesEnabled: (v: boolean) => void;
   /**
@@ -38,7 +35,7 @@ export type UseEngineSettingsReturn = {
    * Optimistic merge into the React `flow` mirror (no engine echo). App pairs
    * this with `handle.flow.set(patch)` so the same `Partial<FlowSettings>`
    * lands in both React and the engine, same lock-step idiom as
-   * `setFilamentsEnabled`.
+   * `setVolumesEnabled`.
    */
   updateFlow: (patch: Partial<FlowSettings>) => void;
 };

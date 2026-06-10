@@ -85,6 +85,8 @@ import { setAutoRotateAction } from '../settingsStore/actions/setAutoRotateActio
 import { setAbsMagLimitAction } from '../settingsStore/actions/setAbsMagLimitAction';
 import { setThumbnailsEnabledAction } from '../settingsStore/actions/setThumbnailsEnabledAction';
 import { setMilkyWayEnabledAction } from '../settingsStore/actions/setMilkyWayEnabledAction';
+import { setFilamentsEnabledAction } from '../settingsStore/actions/setFilamentsEnabledAction';
+import { setFilamentIntensityAction } from '../settingsStore/actions/setFilamentIntensityAction';
 import { setShowPickBufferAction } from '../settingsStore/actions/setShowPickBufferAction';
 import { setShowDiskRadiusRingAction } from '../settingsStore/actions/setShowDiskRadiusRingAction';
 
@@ -99,7 +101,6 @@ import { setShowDiskRadiusRingAction } from '../settingsStore/actions/setShowDis
 type SettingsPath =
   | readonly ['settings', 'surveys', keyof EngineState['settings']['surveys']]
   | readonly ['settings', 'tonemap', keyof EngineState['settings']['tonemap']]
-  | readonly ['settings', 'filaments', keyof EngineState['settings']['filaments']]
   // Flow overlay (singleton-overlay-layer slice — see FlowSettings).
   | readonly ['settings', 'flow', keyof EngineState['settings']['flow']]
   | readonly ['settings', 'volumes', 'enabled'];
@@ -107,7 +108,7 @@ type SettingsPath =
 /**
  * Nested callback address: `[cluster, method]`.  The cluster names
  * line up 1:1 with the optional sub-bags on `EngineCallbacks`
- * (`surveys`, `tonemap`, `filaments`, `volumes`, `sources`).  Method
+ * (`surveys`, `tonemap`, `volumes`, `sources`).  Method
  * names are kept as plain `string` here because they vary per cluster
  * and adding a full nested union would duplicate the EngineCallbacks
  * shape — the runtime optional-chaining safely handles a missing method.
@@ -115,7 +116,6 @@ type SettingsPath =
 type NestedCallbackKey =
   | readonly ['surveys', string]
   | readonly ['tonemap', string]
-  | readonly ['filaments', string]
   | readonly ['volumes', string]
   | readonly ['sources', string];
 
@@ -144,7 +144,7 @@ type SettingsAction = (store: SettingsStore, value: never) => void;
  *     in via in-place mutation.
  *   - `callback` (optional, un-migrated only) is the `[cluster, method]`
  *     address fired after mutation.  Omit when no echo is wired (App.tsx owns
- *     the boolean optimistically — see `setFilamentsEnabled`).
+ *     the value optimistically — see the flow-overlay rows).
  */
 type SettingsDescriptor =
   | { name: SettingsTableKey; action: SettingsAction; path?: undefined; callback?: undefined }
@@ -200,18 +200,22 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     action: setMilkyWayEnabledAction,
   },
   {
-    // App.tsx owns this boolean optimistically; no echo callback wired.
-    // Asymmetry vs. galaxyTextures/milkyWay is deliberate — see the
-    // long comment in the original `setFilamentsEnabled`.
+    // filaments cluster (migrated to the engine-owned store). Dispatches the
+    // copy-on-write action; React reads via `selectFilamentsEnabled`, so no echo
+    // is wired. The cosmetic fade ramp stays in the handle setter alongside this
+    // action (see the `filaments.setEnabled` wrapper in engine.ts). The wrapper
+    // still calls `requestRender`.
     name: 'setFilamentsEnabled',
-    path: ['settings', 'filaments', 'enabled'],
+    action: setFilamentsEnabledAction,
   },
   {
-    // Stores raw intent; the filament renderer clamps to [0, 1] at point of
-    // use (clampFilamentIntensity). No callback for the same App-owns-state
-    // reason as `setFilamentsEnabled`.
+    // filaments cluster (migrated to the engine-owned store). Dispatches the
+    // copy-on-write action; React reads via `selectFilamentIntensity`, so no
+    // echo is wired. Stores raw intent — the filament renderer clamps to [0, 1]
+    // at point of use (clampFilamentIntensity). The wrapper still calls
+    // `requestRender`.
     name: 'setFilamentIntensity',
-    path: ['settings', 'filaments', 'intensity'],
+    action: setFilamentIntensityAction,
   },
   // ── Flow overlay (singleton-overlay-layer slice) ───────────────────
   // App.tsx owns these optimistically, like the filament rows — no echo

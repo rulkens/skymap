@@ -38,9 +38,9 @@
  * ──────────────────────────────────────────────────────────────────────
  * The App-owned exceptions
  * ──────────────────────────────────────────────────────────────────────
- *   - `filamentsEnabled` — engine has no echo callback for this; React
- *     owns it optimistically.  The hook exposes `setFilamentsEnabled`.
- *   - `filamentIntensity` — same as above.
+ *   - `volumesEnabled` — engine has no echo callback for the master
+ *     toggle; React owns it optimistically via `setVolumesEnabled`.
+ *   - `spaceMouseSensitivity` / `flow` — same no-echo pattern.
  *
  * ──────────────────────────────────────────────────────────────────────
  * Why bundle into one hook?
@@ -62,7 +62,6 @@ import {
   DEFAULT_SPACE_MOUSE_SENSITIVITY,
   DEFAULT_VOLUMES_ENABLED,
 } from '../data/defaults';
-import { Source, SOURCE_REGISTRY } from '../data/sources';
 import type { VolumeFieldRowData } from '../@types/settings/VolumeFieldRowData';
 import type { UseEngineSettingsReturn } from '../@types/settings/UseEngineSettingsReturn';
 
@@ -75,26 +74,21 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   // Surveys-cluster settings (pointSize, brightness, depthFade,
   // highlightFallback, realOnly, and the derived visibleSourceMask), the
   // tonemap cluster (exposure, curve), camera auto-rotate, the galaxy-thumbnail
-  // master toggle, the Milky-Way disk toggle, and the debug overlays
-  // (showPickBuffer, showDiskRadiusRing) moved to the engine-owned settings
-  // store — the thumbnail and milkyWay toggles have no React consumer (the
-  // thumbnail panel surface was evicted; milkyWay's handle setter has no panel
-  // caller); the DebugPanel reads the debug toggles via `useSettingsStore`
-  // selectors, so no mirror cell or echo lives here.
+  // master toggle, the Milky-Way disk toggle, the filaments cluster (enabled,
+  // intensity), and the debug overlays (showPickBuffer, showDiskRadiusRing)
+  // moved to the engine-owned settings store — the thumbnail and milkyWay
+  // toggles have no React consumer (the thumbnail panel surface was evicted;
+  // milkyWay's handle setter has no panel caller); App reads the filaments
+  // cluster and the debug toggles via `useSettingsStore` selectors, so no
+  // mirror cell or echo lives here.
 
   // ── App-owned optimistic values (no engine echo) ─────────────────────
-  // The engine does NOT fire echo callbacks for filaments or volumes state,
-  // so React owns these optimistically. The SettingsPanel onChange handler
-  // updates these directly AND forwards to the engine handle.
-  const [filamentsEnabled, setFilamentsEnabled] = useState<boolean>(
-    SOURCE_REGISTRY[Source.Filaments].visible,
-  );
-  const [filamentIntensity, setFilamentIntensity] = useState<number>(
-    SOURCE_REGISTRY[Source.Filaments].intensity,
-  );
+  // The engine does NOT fire echo callbacks for the volumes master state,
+  // so React owns it optimistically. The SettingsPanel onChange handler
+  // updates this directly AND forwards to the engine handle.
 
-  // Scalar-volume master toggle — no echo, same as filamentsEnabled above.
-  // No persistence: every session starts from the compile-time default.
+  // Scalar-volume master toggle — no echo. No persistence: every session
+  // starts from the compile-time default.
   const [volumesEnabled, setVolumesEnabled] = useState<boolean>(DEFAULT_VOLUMES_ENABLED);
 
   // ── CF4++ flow-field overlay (App-owned optimistic, no echo) ──────────
@@ -177,8 +171,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
 
   return {
     settings: {
-      filamentsEnabled,
-      filamentIntensity,
       filamentCounts,
       volumesEnabled,
       volumeFields,
@@ -191,18 +183,21 @@ export function useEngineSettings(): UseEngineSettingsReturn {
     engineCallbacks: {
       // ── Nested sub-bag subscriptions ─────────────────────────────
       // Every echo the engine emits lands at its nested address; the
-      // no-echo cases (filaments enabled/intensity, volumes master)
-      // are App-owned with no wiring here.
+      // no-echo cases (volumes master) are App-owned with no wiring here.
       // The surveys + sources + tonemap echo sub-bags are gone, and so are the
       // camera auto-rotate echo, the bias (mode / absMagLimit) echoes, the
-      // thumbnails echo, the milkyWay echo, and the debug echoes (showPickBuffer
-      // / showDiskRadiusRing) — those clusters live in the engine-owned store
-      // (the thumbnail + milkyWay toggles have no React consumer at all; the
-      // DebugPanel reads the debug toggles via `useSettingsStore` selectors), so
-      // there's no mirror to keep in sync from a callback. (Camera EVENTS —
-      // focus / camera / scale — are not settings and are wired by `useEngine`,
-      // not here.)
+      // thumbnails echo, the milkyWay echo, the filaments enabled/intensity
+      // echoes, and the debug echoes (showPickBuffer / showDiskRadiusRing) —
+      // those clusters live in the engine-owned store (the thumbnail + milkyWay
+      // toggles have no React consumer at all; App reads the filaments cluster
+      // and the debug toggles via `useSettingsStore` selectors), so there's no
+      // mirror to keep in sync from a callback. (Camera EVENTS — focus / camera
+      // / scale — are not settings and are wired by `useEngine`, not here.)
       filaments: {
+        // `onReady` is an EVENT, not a settings mirror: the engine fires it once
+        // with the strip/vertex counts after `filaments.bin` lands. The toggle +
+        // intensity SETTINGS migrated to the store; this count payload has no
+        // store home, so the subscription stays.
         onReady: (stripCount, vertexCount) => setFilamentCounts({ stripCount, vertexCount }),
       },
       volumes: {
@@ -232,8 +227,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
         },
       },
     },
-    setFilamentsEnabled,
-    setFilamentIntensity,
     setVolumesEnabled,
     setSpaceMouseSensitivity,
     updateFlow,

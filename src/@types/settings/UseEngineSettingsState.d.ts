@@ -40,11 +40,19 @@ export type UseEngineSettingsState = {
   // has no React consumer (the panel surface was evicted), so it isn't surfaced
   // here at all. The Milky-Way disk toggle likewise moved to the store and has
   // no React consumer (its handle setter has no panel caller), so it isn't
-  // surfaced here either. The debug overlays (showPickBuffer / showDiskRadiusRing)
-  // also moved to the store; the DebugPanel reads them via `useSettingsStore`
-  // selectors, so they aren't mirrored here.
-  filamentsEnabled: boolean;
-  filamentIntensity: number;
+  // surfaced here either. The filaments cluster (enabled / intensity) also moved
+  // to the store; App.tsx + StatsPanel read it via `useSettingsStore` selectors,
+  // so neither leaf is mirrored here — but `filamentCounts` below stays (it's an
+  // EVENT payload, not a settings mirror). The debug overlays (showPickBuffer /
+  // showDiskRadiusRing) also moved to the store; the DebugPanel reads them via
+  // `useSettingsStore` selectors, so they aren't mirrored here.
+  /**
+   * Strip + vertex counts from the cosmic-web `filaments.bin`, or `null` until
+   * the engine fires `filaments.onReady` (once, after the optional file lands).
+   * This is an EVENT payload, not a settings leaf — there is no store home for
+   * it — so it stays a mirror cell even though the filaments TOGGLE + INTENSITY
+   * migrated to the engine-owned store.
+   */
   filamentCounts: { stripCount: number; vertexCount: number } | null;
   /**
    * Master toggle for the scalar-volume overlay.  Mirrors
