@@ -26,10 +26,12 @@ One global on/off layer drawn over the scene, with at most a handful of scalar
 It is **not**:
 
 - A **per-point survey source** (SDSS, GLADE, 2MRS, Famous, Milliquas).
-  Those are gated by the per-source `drawMask` — a 32-bit bitmask with
-  ~600M lookups/sec in the hot path. drawMask exists for that per-point
-  performance; do not extend it to singleton layers, and do not fold
-  singleton layers' visibility into it.
+  Those carry per-survey `enabled` rows in `settings.surveys.items` (which
+  demand reads via `DemandCtx.isVisible`), and the _render_ hot path is
+  gated by the per-source `drawMask` — a 32-bit bitmask, derived from those
+  settings + fade opacity, with ~600M lookups/sec. drawMask exists for that
+  per-point performance; do not extend it to singleton layers, and do not
+  fold singleton layers' visibility into it.
 - A **per-field scalar volume** (CF-4 density, MCPM). Those carry per-field
   params (`enabled` / `intensity` / `palette` / …) in `settings.volumes.items`
   and are gated by the direct settings read

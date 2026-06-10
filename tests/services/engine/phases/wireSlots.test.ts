@@ -40,6 +40,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/sources';
+import { SURVEY_IDS } from '../../../../src/data/surveyIds';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { seedVolumeFields } from '../../../../src/data/volumeFieldDefaults';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
@@ -289,7 +290,10 @@ const errorValue = (msg: string): LoadState<unknown> => ({
  * Minimal `EngineState` shaped for wireSlots's body.  Mirrors the
  * post-`initGpu` shape: the GPU renderers are present (so commit
  * subscribers don't NPE), the per-source slot map is empty (the test
- * populates it per-case), and the volume fields are seeded via
+ * populates it per-case), the surveys are seeded all-enabled via
+ * `SURVEY_IDS` exactly like the engine's boot seed (so the demand loop's
+ * `isVisible` — which reads `settings.surveys.items[id].enabled` — demands
+ * every survey at boot), and the volume fields are seeded via
  * `settings.volumes.items: seedVolumeFields()` (so the MCPM demand
  * predicate reads true at boot, as wireSlots expects).
  */
@@ -327,7 +331,12 @@ function makeState(
         depthFade: true,
         highlightFallback: true,
         realOnly: false,
-        items: { famousGalaxy: { enabled: true, labelEnabled: true } },
+        // All surveys enabled, mirroring the engine's boot seed — the demand
+        // loop's `isVisible` reads these `enabled` bits (not `sources.drawMask`),
+        // so the boot-load expectations for sdss/2mrs/glade hang off this seed.
+        items: Object.fromEntries(
+          SURVEY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+        ),
       },
       tonemap: { exposure: 1.0, curve: 'reinhard' },
       camera: { autoRotate: false },

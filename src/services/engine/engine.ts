@@ -343,10 +343,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // `deriveSourceMasks` owns them, recomputing both from each survey's
       // `settings.surveys.items[id].enabled` + live fade opacity.
       //
-      // ALL_VISIBLE_MASK is the correct BOOT value: every survey seeds
-      // enabled, which derives to exactly this mask, and the bootstrap
-      // demand eval reads drawMask before frame 1 — a 0 seed would load
-      // nothing at boot.
+      // ALL_VISIBLE_MASK matches what frame 1 derives (every survey seeds
+      // enabled), so pre-frame readers — the synthetic-fallback hiddenAtBoot
+      // check, the UI visibility seed — see the same mask the loop will
+      // compute.
       pickMask: ALL_VISIBLE_MASK,
       drawMask: ALL_VISIBLE_MASK,
       // Currently-loaded data tier, seeded from `cb.initialTier`; 'medium'
