@@ -1,5 +1,5 @@
 /**
- * parseStructureSeed — parse + validate `data/structure_anchors.seed.json`.
+ * parseStructureSeed — parse + validate `data/seeds/structure_anchors.seed.json`.
  *
  * The seed file is the single source of truth for which galaxy clusters,
  * superclusters, voids, and nearby galaxy groups appear as featured labelled

@@ -3,7 +3,7 @@
  * buildFamous — assemble the curated `Famous` source layer.
  *
  * Reads:
- *   - `data/famous_galaxies.seed.json`           (curated entries)
+ *   - `data/seeds/famous_galaxies.seed.json`           (curated entries)
  *
  * Writes:
  *   - `public/data/famous.bin`         (GalaxyCatalog, normal renderer input)
