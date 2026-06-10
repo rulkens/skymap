@@ -51,6 +51,10 @@ import { createLabelDirectorSubsystem } from '../../src/services/engine/subsyste
 import { createStructureFocusSubsystem } from '../../src/services/engine/subsystems/structureFocusSubsystem';
 import { createFadeRegistry } from '../../src/services/animation/fadeRegistry';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
+
+function makeRegistry() {
+  return createFadeRegistry({ requestRender: () => {} });
+}
 import type { EngineCallbacks } from '../../src/@types/engine/EngineCallbacks';
 import { Source, SOURCE_REGISTRY } from '../../src/data/sources';
 
@@ -199,7 +203,7 @@ describe('EngineState type', () => {
         clickResolver: null,
         inputBindings: null,
         scheduler: createRenderScheduler({ onFrame: () => {}, rafImpl: noopRaf, cafImpl: noopCaf }),
-        fades: createFadeRegistry(),
+        fades: makeRegistry(),
       },
       cam: null,
       initialCamSnapshot: null,
@@ -392,7 +396,7 @@ describe('EngineState type', () => {
         clickResolver: null,
         inputBindings: null,
         scheduler: createRenderScheduler({ onFrame: () => {}, rafImpl: noopRaf, cafImpl: noopCaf }),
-        fades: createFadeRegistry(),
+        fades: makeRegistry(),
       },
       cam: null,
       initialCamSnapshot: null,

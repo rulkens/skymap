@@ -10,6 +10,10 @@ import {
 } from '../../../../src/services/engine/presentation/focusRecession';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
 import { lerp } from '../../../../src/utils/math/lerp';
+
+function makeRegistry() {
+  return createFadeRegistry({ requestRender: () => {} });
+}
 import { Source } from '../../../../src/data/sources';
 import type { StructureCategory } from '../../../../src/@types/engine/data/StructureCategory';
 
@@ -62,7 +66,7 @@ describe('recessionTargetFor', () => {
 
 describe('resolveLayerOpacity', () => {
   it('multiplies opacityOf by focusRecession', () => {
-    const fades = createFadeRegistry();
+    const fades = makeRegistry();
     const handle = { kind: 'filaments' } as const;
     // Register at 0 then snap to a known toggle opacity at now=0. fadeTo with
     // duration 0 lands the controller exactly on the target immediately.
@@ -74,7 +78,7 @@ describe('resolveLayerOpacity', () => {
   });
 
   it('returns 0 when the toggle is 0 regardless of blend', () => {
-    const fades = createFadeRegistry();
+    const fades = makeRegistry();
     const handle = { kind: 'filaments' } as const;
     fades.register(handle, 0); // toggle opacity 0
 

@@ -640,7 +640,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // ── Fade registry ──────────────────────────────────────────
       // Eager so initGpu can register handles without a null-check. Pure
       // CPU — no GPU device at construction.
-      fades: createFadeRegistry(),
+      fades: createFadeRegistry({
+        requestRender: () => state.subsystems.scheduler.requestRender(),
+      }),
 
       // The rest land later in the IIFE once their deps (GPU device,
       // pickRenderer, scheduler) exist.

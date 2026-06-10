@@ -6,6 +6,20 @@
  * the registry; renderers read `opacityOf(handle, now)` per frame and
  * write the value into their per-handle GPU fade buffer.
  *
+ * ### Wake contract: fadeTo wakes the scheduler; callers do not
+ *
+ * Starting a fade means frames are needed — the registry calls
+ * `deps.requestRender()` unconditionally inside `fadeTo` so every
+ * caller is absolved of the obligation. The frame-tail `isAnyAnimating`
+ * predicate keeps the render loop alive after that first wake.
+ *
+ * `register`, `setImmediate`, `opacityOf`, and `tick` do NOT wake:
+ * - `register` / `setImmediate` are called from settings paths that
+ *   already wake via the settings table, or from construction-time
+ *   seeding that precedes the first frame.
+ * - `opacityOf` and `tick` are frame-internal reads — the frame is
+ *   already executing, no external wake is needed.
+ *
  * ### Why a string-keyed map (not WeakMap<FadeHandle, …>)
  *
  * Handles are value-typed records (`{ kind: 'survey', source: 1 }`),
@@ -65,7 +79,9 @@ function serializeFadeHandle(h: FadeHandle): string {
   }
 }
 
-export function createFadeRegistry(): FadeRegistry {
+export function createFadeRegistry(deps: {
+  readonly requestRender: () => void;
+}): FadeRegistry {
   const controllers = new Map<string, FadeController>();
 
   function register(handle: FadeHandle, initialOpacity: number = 0): void {
@@ -96,7 +112,9 @@ export function createFadeRegistry(): FadeRegistry {
     const now = nowMs ?? performance.now();
     const dur =
       durationMs ?? (target > c.currentOpacity(now) ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS);
-    return c.fadeTo(target, dur, now);
+    const promise = c.fadeTo(target, dur, now);
+    deps.requestRender();
+    return promise;
   }
 
   function setImmediate(handle: FadeHandle, value: number): void {
