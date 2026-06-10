@@ -38,10 +38,9 @@ describe('SearchTrigger', () => {
   });
 
   it('reflects the hidden=true state via aria-hidden, not a class fragment', () => {
-    // Pre-jsdom-switch this test asserted on the CSS-modules-mangled
-    // class fragment "hidden", which broke if the SCSS file was
-    // renamed.  ARIA attributes are the stable contract — let assistive
-    // tech (and our tests) read them.
+    // Asserting on aria-hidden rather than a CSS-modules-mangled class
+    // fragment keeps the test stable across stylesheet renames — ARIA
+    // attributes are the contract assistive tech (and this test) reads.
     render(createElement(SearchTrigger, { onClick: () => {}, hidden: true }));
     const btn = screen.getByRole('button', { hidden: true });
     expect(btn).toHaveAttribute('aria-hidden', 'true');

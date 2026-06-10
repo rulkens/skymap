@@ -221,11 +221,10 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       flow,
     },
     engineCallbacks: {
-      // ── Nested sub-bag subscriptions (H5 task 11) ────────────────
-      // Every echo the engine emits lands at its nested address now;
-      // flat callbacks are gone.  The `partial-echo` cases (filaments
-      // enabled/intensity, volumes master) remain App-owned with no
-      // echo wiring, just as before.
+      // ── Nested sub-bag subscriptions ─────────────────────────────
+      // Every echo the engine emits lands at its nested address; the
+      // no-echo cases (filaments enabled/intensity, volumes master)
+      // are App-owned with no wiring here.
       points: {
         onSizeChange: setPointSize,
         onBrightnessChange: setBrightness,
@@ -274,8 +273,7 @@ export function useEngineSettings(): UseEngineSettingsReturn {
         // state to the same shape keeps the checkboxes in sync from a
         // single subscription.  Spread to drop the readonly wrapper
         // for React's mutable useState slot.  Two echoes for the two
-        // independent axes (split by the 2026-05-19 settings-panel
-        // audit, Q11) — flipping one does NOT re-emit the other.
+        // independent axes — flipping one does NOT re-emit the other.
         onLabelCategoryVisibilityChange: (v) => setLabelCategoryVisibility({ ...v }),
         onMarkerCategoryVisibilityChange: (v) => setMarkerCategoryVisibility({ ...v }),
       },

@@ -183,7 +183,7 @@ describe('texturedDiskSubsystem famous calibration', () => {
     // deprojected → the face-on texture re-projects on the galaxy's real
     // plane, so the emitted disk carries the CATALOG ar/pa (here 0.7 / 45),
     // identical to the procedural and uncalibrated paths.  The calibration
-    // no longer contributes any orientation.
+    // contributes no orientation.
     const cal: FamousCalibration = {
       center: [0.5, 0.5],
       diskRadiusFrac: 1,

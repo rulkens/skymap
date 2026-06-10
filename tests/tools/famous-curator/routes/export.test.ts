@@ -78,9 +78,9 @@ describe('handleExport', () => {
   });
 
   it('publishes BOTH runtime tiers (low-res atlas + hi-res full)', async () => {
-    // Regression: Commit used to publish only the low-res atlas tile; the
-    // gitignored hi-res slot was left stale until a manual build-famous-hires.
-    // handleExport now publishes both via publishFamousRuntimeImages.
+    // Regression: handleExport must publish both runtime tiers via
+    // publishFamousRuntimeImages (an atlas-only publish leaves the gitignored
+    // hi-res slot stale).
     const sess = await seedSession();
     const repo = fakeRepoRoot();
     await handleExport({
@@ -219,7 +219,7 @@ describe('deproject square output', () => {
     expect(atlas.width).toBe(atlas.height);
     // ...and the baked calibration is flagged deprojected, so the runtime
     // places the face-on texture on the catalog's real 3D plane.  Orientation
-    // is no longer carried on the calibration (no PA / axisRatio fields).
+    // is not carried on the calibration (no PA / axisRatio fields).
     expect(res.calibration?.deprojected).toBe(true);
   });
 

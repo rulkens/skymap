@@ -56,9 +56,8 @@ export type StructureMarkerStyle = {
 };
 
 /**
- * Per-category visual style table. Covers cluster/supercluster/void entries,
- * with `group` added for the
- * Local Volume galaxy groups (0–13 Mpc). See the field docs above for
+ * Per-category visual style table: cluster / supercluster / void / group
+ * (the Local Volume galaxy groups, 0–13 Mpc). See the field docs above for
  * semantics and the tuning rationale (e.g. the per-category min-apparent
  * floors that keep the bulk catalog from papering the sky with sub-readable
  * specks).
@@ -80,9 +79,8 @@ export const STRUCTURE_MARKER_STYLES = {
     outlineEmFrac: 0.16,
   },
   supercluster: {
-    // Orange end of the warm ramp — pushed a touch more saturated/orange than
-    // the old #FFCC80 so it reads clearly distinct from the cluster yellow now
-    // that group has joined at the pale end.
+    // Orange end of the warm ramp — saturated enough to read clearly
+    // distinct from the cluster yellow, with group holding the pale end.
     labelColor: hexToGl('#FFB86B'),
     minPixelSize: 35,
     maxPixelSize: 150,

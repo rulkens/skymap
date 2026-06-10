@@ -12,8 +12,8 @@
  * the engine fires each `onXChange` callback *once* at init with its
  * actual default.
  *
- * That used to be ~14 hand-rolled `cb.onPointSizeChange?.(pointSizePx)`
- * lines at the bottom of the async IIFE.  Pulling them into one helper:
+ * Centralising the fan-out in one helper (instead of hand-rolled
+ * `cb.onXChange?.(value)` lines in the startup IIFE):
  *
  *   - Lets every callback fire from a single audited code path, so
  *     adding a new setting is a one-line edit to `Snapshot` + the
@@ -38,15 +38,12 @@ import type { SettingsCallbackSeed } from '../../../@types/engine/wiring/Setting
  * silently skipped — the optional-chaining keeps each fan-out a no-op
  * when the React layer doesn't need that particular echo.
  *
- * Order is mostly cosmetic (subscribers shouldn't depend on it) but we
- * preserve the original engine.ts order so a behavioural diff against
- * the pre-refactor codebase shows zero call-order changes.
+ * Order is cosmetic — subscribers must not depend on it.
  */
 export function seedSettingsCallbacks(cb: EngineCallbacks, snapshot: SettingsCallbackSeed): void {
-  // H5 task 11: nested-only fires.  Each echo lands on its `EngineCallbacks`
-  // sub-bag address so React consumers (subscribed via `useEngineSettings`)
-  // observe the engine-truth defaults exactly once at startup.  The flat
-  // siblings were deleted alongside this conversion; optional-chaining
+  // Each echo lands on its `EngineCallbacks` sub-bag address so React
+  // consumers (subscribed via `useEngineSettings`) observe the
+  // engine-truth defaults exactly once at startup; optional-chaining
   // keeps every fire safe when a consumer doesn't subscribe to that bag.
   cb.points?.onSizeChange?.(snapshot.pointSize);
   cb.points?.onBrightnessChange?.(snapshot.brightness);
@@ -64,8 +61,8 @@ export function seedSettingsCallbacks(cb: EngineCallbacks, snapshot: SettingsCal
   cb.sources?.onMaskChange?.(snapshot.visibleSourceMask);
   // Fresh copies of each record so subscribers can treat every
   // emission as an immutable snapshot — same idiom as the live setter
-  // echoes.  Label and marker visibility are independent axes (split
-  // by the 2026-05-19 settings-panel audit, Q11); both seed at init.
+  // echoes.  Label and marker visibility are independent axes; both
+  // seed at init.
   cb.labels?.onLabelCategoryVisibilityChange?.({ ...snapshot.labelCategoryVisibility });
   cb.labels?.onMarkerCategoryVisibilityChange?.({ ...snapshot.markerCategoryVisibility });
 }

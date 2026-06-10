@@ -9,11 +9,9 @@
  * shortcut in App.tsx but forgets the cheatsheet, this surface is
  * what catches it.
  *
- * Pre-jsdom this used `>Esc<` substring matches over SSR markup to
- * pin Esc to a left-column key cell rather than picking up the letter
- * "E" inside random labels.  jsdom + getByText with a regex anchored
- * to a single-token string fills the same role with a more readable
- * selector.
+ * getByText with a regex anchored to a single-token string pins Esc
+ * to a left-column key cell rather than picking up the letter "E"
+ * inside random labels.
  */
 
 import { describe, expect, it } from 'vitest';

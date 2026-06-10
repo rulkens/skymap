@@ -47,8 +47,8 @@ describe('synthetic Gaussian cube', () => {
 
 describe('cartesian grid cube', () => {
   it('produces the requested dims', () => {
-    // Palette + densityScale are no longer cube properties — they live
-    // in `volumeFieldDefaults.ts` keyed by the renderer's handle.  The
+    // Palette + densityScale are not cube properties — they live in
+    // `volumeFieldDefaults.ts` keyed by the renderer's handle.  The
     // generator's job here is purely to produce a valid voxel grid.
     const cube = makeCartesianGridCube({ dims: 8 });
     expect(cube.dims).toEqual([8, 8, 8]);
@@ -95,7 +95,7 @@ describe('cartesian grid cube', () => {
 
 describe('spherical grid cube', () => {
   it('produces the requested dims', () => {
-    // Palette + densityScale are no longer cube properties; see the
+    // Palette + densityScale are not cube properties; see the
     // companion comment on the cartesian generator's test above.
     const cube = makeSphericalGridCube({ dims: 8 });
     expect(cube.dims).toEqual([8, 8, 8]);

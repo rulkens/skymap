@@ -230,9 +230,8 @@ export function buildGalaxyInfo(
   //     clicks through; one extra click vs. a direct hit, but always
   //     resolves to *some* page that describes the row.
   //   - Famous rows → NED byname using the curated primary name (M31,
-  //     NGC 224, …).  The famous-block in the InfoCard previously
-  //     inlined the same URL; now the field is centralised here so
-  //     every renderer of the card sees a consistent value.
+  //     NGC 224, …).  The field is centralised here so every renderer
+  //     of the card sees a consistent value.
   //   - Synthetic rows → null.  The coords are randomly drawn and
   //     don't correspond to any real object, so a real-catalogue link
   //     would be misleading.
@@ -370,7 +369,7 @@ export function buildGalaxyInfo(
     diameterProvenance = 'fallback (30 kpc)';
   }
 
-  // ── Per-record metadata bytes (v5 format) ──────────────────────────────────
+  // ── Per-record metadata bytes ──────────────────────────────────────────────
   //
   // Both bytes are zero-default across every non-Milliquas source;
   // sourceClassLabel + milliquasParentSurveyPrefix gate on `source`

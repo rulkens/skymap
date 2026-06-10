@@ -2,12 +2,12 @@
  * buildVolumeFieldsSnapshot — produces the per-field row data the
  * SettingsPanel consumes.
  *
- * Extracted from engine.ts so the load-slots (`cf4DensitySlot`,
- * `mcpmSlot`, `syntheticVolumeSlots`) can build the same snapshot when
- * they fire `cb.volumes?.onFieldsChanged?.(snapshot)` — passing the
- * fresh state through the callback removes the App.tsx ref-dance that
- * previously had to call back into the engine handle via
- * `handle.volumes.getState()` to learn what changed.
+ * Shared by engine.ts and the load-slots (`cf4DensitySlot`, `mcpmSlot`,
+ * `syntheticVolumeSlots`), which fire
+ * `cb.volumes?.onFieldsChanged?.(snapshot)` — passing the fresh state
+ * through the callback means App.tsx never has to ref-dance back into
+ * the engine handle via `handle.volumes.getState()` to learn what
+ * changed.
  *
  * Both identity and values come from `state.settings.volumes.fields`,
  * which is registry-seeded at engine construction.  The panel therefore

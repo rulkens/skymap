@@ -4,9 +4,9 @@
  *
  * ### Why this type lives apart from EngineState
  *
- * Phase 4 of the engine refactor pulled ~30 scattered `let` bindings
- * inside `createEngine`'s closure into a single `state` object grouped
- * by concern.  This sub-bag holds every value the SettingsPanel surfaces
+ * `createEngine` keeps its mutable state in a single `state` object
+ * grouped by concern rather than scattered closure `let` bindings.
+ * This sub-bag holds every value the SettingsPanel surfaces
  * — point size, brightness, the toggle flags, the tone-map curve / exposure
  * — plus the underlying flags the engine forwards into the per-frame
  * uniform buffer.
@@ -18,20 +18,15 @@
  * the seed-callbacks and render-frame helpers already accept named
  * bags rather than the whole engine state.
  *
- * ### Shape (post-H5)
+ * ### Shape
  *
- * Every settings field lives under one of eight named clusters.  The
+ * Every settings field lives under exactly one named cluster — no flat
+ * root fields (a flat duplicate invites split-brain reads/writes).  The
  * clusters mirror EngineHandle's sub-handle namespaces 1:1 — a setter
  * on `handle.points` writes into `state.settings.points`, a setter on
  * `handle.tonemap` writes into `state.settings.tonemap`, etc.  This
  * shape makes the engine's per-frame snapshot and the React-facing
  * setters trivially derivable from each other.
- *
- * Prior to H5 (2026-05-11) this type carried ~14 flat fields at the
- * root in addition to the cluster sub-bags; settingsTable wrote to
- * both, and consumers read from whichever they were wired to.  Task
- * 12 of the H5 plan deleted the flat half once every reader had
- * migrated.
  *
  * ### Mutation contract
  *
@@ -101,9 +96,8 @@ export type EngineSettingsState = {
   };
 
   /**
-   * Galaxy-thumbnail overlay master toggle.  The underlying feature is
-   * "per-galaxy thumbnail quads on close approach"; `thumbnails.enabled`
-   * reads more cleanly at call sites than the old `galaxyTexturesEnabled`.
+   * Galaxy-thumbnail overlay master toggle — per-galaxy thumbnail
+   * quads on close approach.
    */
   thumbnails: {
     enabled: boolean;

@@ -3,11 +3,10 @@
 // InfoCard unified hovered/selected props — routing tests covering the
 // structure hover preview branch and its suppression rule.
 //
-// Since Task 5 of the unify-focus-clear refactor, InfoCard accepts a single
-// `hovered` and a single `selected` prop — each typed as
-// `GalaxyInfo | StructureRecord | null` (the `FocusableTarget` union).
-// The component dispatches via `isStructure` internally.  The old `hoveredStructure`
-// / `selectedStructure` separate slots are gone.
+// InfoCard accepts a single `hovered` and a single `selected` prop — each
+// typed as `GalaxyInfo | StructureRecord | null` (the `FocusableTarget`
+// union).  The component dispatches via `isStructure` internally; there are
+// no separate structure slots.
 //
 // We assert on user-visible text rather than CSS-modules class fragments
 // because the CSS-modules-mangled class names aren't stable across

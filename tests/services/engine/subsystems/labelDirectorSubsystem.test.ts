@@ -8,9 +8,9 @@ import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/Read
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
 function makeState(requestRender: () => void = () => {}): EngineState {
-  // The director no longer fires any layer load-in (each producer owns its
-  // own), but the stub keeps a `fades.fadeTo` spy so tests can assert the
-  // director never calls it.
+  // The director fires no layer load-in (each producer owns its own), but
+  // the stub keeps a `fades.fadeTo` spy so tests can assert the director
+  // never calls it.
   return {
     subsystems: { scheduler: { requestRender }, fades: { fadeTo: vi.fn() } },
   } as unknown as EngineState;
@@ -210,8 +210,8 @@ describe('labelDirectorSubsystem', () => {
   });
 
   it('no longer fires any layer load-in fade on a non-empty flush', () => {
-    // The per-category structure load-in moved to produceStructureLabels; the
-    // director must not call fades.fadeTo on its own anymore.
+    // The per-category structure load-in lives in produceStructureLabels;
+    // the director must not call fades.fadeTo on its own.
     const dir = createLabelDirectorSubsystem();
     const labelStub = makeLabelStub();
     const lineStub = makeLineStub();

@@ -1,8 +1,7 @@
 /**
  * galaxyCatalogFetcher — `Fetcher<GalaxyCatalog, GalaxyCatalogReq>`.
  *
- * The first concrete fetcher for the asset-loading subsystem.  Encodes
- * one piece of policy that previously lived in `cloudLoader.ts`:
+ * Encodes one piece of fetch policy:
  *
  *   "If the configured target for (source, tier) is 0, do not fetch
  *    anything — return a count=0 GalaxyCatalog."

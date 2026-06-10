@@ -35,8 +35,8 @@ describe('cf4DensityFetcher (success path)', () => {
   it('fetches and decodes a SCFD into a ScalarCube', async () => {
     // The fetcher's contract is: HTTP GET + decodeScalarField — the
     // returned cube should round-trip the data-side fields (dims,
-    // frame, voxelSize).  Palette is no longer the fetcher's concern;
-    // see `src/data/volumeFieldDefaults.ts`.
+    // frame, voxelSize).  Palette is not the fetcher's concern; see
+    // `src/data/volumeFieldDefaults.ts`.
     const buf = encodeScalarField(makeTinyCube());
     fetch.mock.mockResolvedValue(new Response(buf, { status: 200 }));
     const cube = await cf4DensityFetcher(

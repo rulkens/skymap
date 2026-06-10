@@ -5,8 +5,8 @@
  * state stub (mirroring `setSourceVisibleFade.test.ts`). The setters read only
  * `state.data.galaxies` (famous-galaxy label branch), `state.settings`, and
  * `state.subsystems.{fades,scheduler}`, so a mock of those surfaces suffices.
- * Structure-category visibility is now a pure FadeRegistry concern — the
- * setters fire `fadeTo` and no longer write any structure-store flag.
+ * Structure-category visibility is a pure FadeRegistry concern — the
+ * setters fire `fadeTo` and write no structure-store flag.
  *
  * The contract under test: a category toggle drives the SAME per-category fade
  * handle the producers read (`markerLayer{category}` /

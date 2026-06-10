@@ -65,8 +65,8 @@ import { buildCubeModelMatrix } from './buildCubeModelMatrix';
 // + 4 (densityScale) + 4 (contrast) + 4 (contrastCenter) + 4 (envelopeInner)
 // + 4 (envelopeOuter) + 4 (exposure) + 4 (trim) + 4 (frame) = 256
 // exactly.  The WGSL struct contains mat4x4 (alignment 16), so total
-// must be a multiple of 16 — 256 lands cleanly.  Frame took the last
-// reserved scratch slot (scratch[63]); the next per-field uniform will
+// must be a multiple of 16 — 256 lands cleanly.  Frame occupies the
+// last scratch slot (scratch[63]); the next per-field uniform will
 // have to bump UNIFORM_BYTES to the next 16-byte boundary (272).
 const UNIFORM_BYTES = 256;
 
@@ -104,9 +104,6 @@ const CUBE_INDICES = new Uint16Array([
 ]);
 
 // ── Factory ─────────────────────────────────────────────────────────
-
-// FieldEntry type moved to @types/rendering/FieldEntry.d.ts.
-
 
 export function createScalarVolumeRenderer(
   device: GPUDevice,
@@ -340,7 +337,7 @@ export function createScalarVolumeRenderer(
       // Fire the callback BEFORE destroying GPU resources so any
       // future callback body that needs to read the entry (debug log,
       // pre-destroy fade-out path, etc.) operates on a still-valid
-      // entry. Today onFieldRemoved only calls fades.unregister, which
+      // entry. onFieldRemoved only calls fades.unregister, which
       // doesn't touch the renderer, but the order is the more
       // defensible default.
       callbacks.onFieldRemoved(handle);
@@ -388,10 +385,10 @@ export function createScalarVolumeRenderer(
       // 252..255  frame            (f32; per-draw temporal seed for
       //                            the shader's jitter hash — wraps
       //                            at FRAME_WRAP, see top of file)
-      // The byte offsets are fixed; only the SOURCE of the user-tunable
-      // values changed — intensity/densityScale/contrast/exposure/trim
-      // now come from `settingsOf` per frame, while contrastCenter and
-      // the envelope edges stay per-cube static on the entry.
+      // The byte offsets are fixed; intensity/densityScale/contrast/
+      // exposure/trim come from `settingsOf` per frame, while
+      // contrastCenter and the envelope edges are per-cube static on
+      // the entry.
       const scratch = new Float32Array(UNIFORM_BYTES / 4);
       frame = (frame + 1) % FRAME_WRAP;
       for (const e of fields.values()) {
@@ -408,7 +405,7 @@ export function createScalarVolumeRenderer(
         // residency stays in sync even for a disabled or zero-intensity
         // field whose palette changed while it was off — ensuring the
         // correct LUT is showing the moment the field is re-enabled.
-        // Moving this block into the skip branch would reintroduce a
+        // Moving this block into the skip branch would introduce a
         // stale-LUT-on-re-enable bug.
         if (s.paletteId !== e.residentPaletteId) {
           writePaletteLut(e.paletteTexture, s.paletteId);

@@ -5,14 +5,13 @@
  *
  * ## Why a registry instead of one TS module per font?
  *
- * Before this file, the bake step (`tools/buildFontAtlas.ts`) and the
- * runtime loader (`src/services/gpu/labels/loadFontAtlas.ts`) each
- * hard-coded the font name in their own constants — `FONT_INPUT` on
- * the bake side, `FONT_BASE` on the runtime side.  Adding a second
- * font required editing both, getting the order right by hand, and
- * hoping the atlas envelope (size, distance range, font size) stayed
- * in sync between bake and load.  Encoding the registry once, here,
- * and re-importing on both sides makes drift structurally impossible
+ * The bake step (`tools/buildFontAtlas.ts`) and the runtime loader
+ * (`src/services/gpu/labels/loadFontAtlas.ts`) both need the font
+ * list.  Per-side constants would mean adding a font requires
+ * parallel edits, getting the order right by hand, and hoping the
+ * atlas envelope (size, distance range, font size) stays in sync
+ * between bake and load.  Encoding the registry once, here, and
+ * re-importing on both sides makes drift structurally impossible
  * — the two callers literally read the same array.
  *
  * ## Why `as const` + `keyof typeof FONTS` rather than an enum?
@@ -68,9 +67,9 @@ export const ATLAS_PX = 512;
  * on each side) keeps ~25% margin past the worst-case effect extent
  * while still fitting the 95-glyph charset into the 512² atlas.
  *
- * The previous value 4 (msdf-bmfont-xml's default) was sized only
- * for the smoothstep body-fill band and clamped the soft glow tail
- * to a hard step a couple of pixels past the contour.  Shader-side
+ * msdf-bmfont-xml's default of 4 is sized only for the smoothstep
+ * body-fill band and clamps the soft glow tail to a hard step a
+ * couple of pixels past the contour.  Shader-side
  * SDF-units math (e.g. `widthInSdfUnits = (emFrac * ATLAS_EM_PX) /
  * DISTANCE_RANGE_PX`) bakes this constant in too, so changing it
  * requires regenerating the atlas via `npm run build-fonts`.

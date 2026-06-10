@@ -1,12 +1,11 @@
 /**
  * labelProducer — runtime module placeholder.
  *
- * The type contract used to live here as two `export type` declarations
- * (`LabelProducer` and `LabelProducerOutput`).  The PR-8 types
- * consolidation moved both to `@types/engine/subsystems/`; consumers
- * now deep-import from those files directly.  See the type files'
- * docblocks for the design rationale (why a shared contract, why
- * `awake`, why outputs are readonly).
+ * The label-producer contract is type-only: `LabelProducer` and
+ * `LabelProducerOutput` live in `@types/engine/subsystems/`, and
+ * consumers deep-import those files directly.  See their docblocks for
+ * the design rationale (why a shared contract, why `awake`, why
+ * outputs are readonly).
  */
 
 export {};

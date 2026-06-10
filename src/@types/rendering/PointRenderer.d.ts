@@ -1,16 +1,12 @@
 /**
  * PointRenderer — public surface of the point renderer.
  *
- * Mirrors the methods the pre-Spec-F.3 `class PointRenderer` exposed.
- * The only structural change is that the `uniformBuffer` getter
- * collapses to a bare property because the captured buffer is never
- * reassigned over the renderer's lifetime, and `loadedSources` is a
- * function returning a fresh generator on each call (preserving the
- * pre-factory call shape `r.loadedSources()`).
- *
- * Consumers (engine, frame body, picker, bias-correction subsystem)
- * see the identical shape; the only call-site change is
- * `new PointRenderer(...)` → `createPointRenderer(...)`.
+ * Produced by the closure factory `createPointRenderer`.
+ * `uniformBuffer` is a bare property rather than a getter because the
+ * captured buffer is never reassigned over the renderer's lifetime;
+ * `loadedSources` is a function returning a fresh generator on each
+ * call.  Consumers: engine, frame body, picker, bias-correction
+ * subsystem.
  */
 
 import type { mat4 } from 'gl-matrix';
@@ -82,11 +78,6 @@ export type PointRenderer = {
    * matrix the visual frame just wrote.  Engine code MUST NOT consume
    * this; the coupling is bound at PickRenderer construction time and
    * threaded internally.
-   *
-   * Pre-Spec-F.3 this was a getter on the class; here it's a bare
-   * property because the closure-captured buffer is never reassigned.
-   * The semantics are observationally identical from the consumer
-   * side — `pointRenderer.uniformBuffer` returns the same GPUBuffer.
    */
   uniformBuffer: GPUBuffer;
   /** Issue one instanced draw call per visible source. */

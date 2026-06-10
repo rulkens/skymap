@@ -1,27 +1,18 @@
 /**
  * inputBindings — collects the engine's pointer / keyboard / resize
  * listener attachments into one place, plus the listener-bookkeeping
- * helpers that were previously inline in engine.ts.
+ * helpers and cleanup arrays.
  *
- * Before this module existed engine.ts had:
- *
- *   - two arrays (`windowListeners` / `canvasListeners`) for cleanup,
- *   - two helpers (`addWindowListener` / `addCanvasListener`) that
- *     pushed onto those arrays,
- *   - five separate sections of `addCanvasListener(...)` /
- *     `addWindowListener(...)` calls scattered across ~140 lines of
- *     the IIFE body, each pulling on closure variables for
- *     pointerDown / latestMouseCss / setHovered etc.,
- *   - and a `destroy()` block that walked both arrays detaching.
- *
- * Pulling all of that into a single module gives us:
+ * The alternative — attachment calls scattered across the engine's
+ * IIFE body, each pulling on closure variables — costs three things
+ * this module buys back:
  *
  *   1. A single place to read what events the engine listens to and
- *      what they do.  Previously you had to grep for `addCanvasListener`
- *      and `addWindowListener` to find the full surface area.
+ *      what they do, instead of grepping for `addCanvasListener` /
+ *      `addWindowListener` to find the full surface area.
  *
  *   2. A single `destroy()` cleanup the engine's `destroy()` calls
- *      once.  No more two-array dance.
+ *      once.  No two-array dance at the call site.
  *
  *   3. Easier unit testing: each callback in the input bag is the
  *      semantic action ("pointer moved to (x, y) in CSS px"), not a
@@ -79,8 +70,8 @@ export function attachEngineInputs(options: AttachEngineInputsOptions): InputBin
     onResize,
   } = options;
 
-  // Listener bookkeeping — same pattern as the pre-extraction engine,
-  // collected here so `detach()` can walk both arrays in one place.
+  // Listener bookkeeping — collected here so `destroy()` can walk both
+  // arrays in one place.
   const windowListeners: Array<[keyof WindowEventMap, EventListener]> = [];
   const canvasListeners: Array<[string, EventListener]> = [];
 

@@ -13,7 +13,7 @@ import { readNpy } from '../../tools/parsers/npyReader';
 /**
  * Write a NumPy v1.0 .npy file representing a flat f64 array.  Same
  * structure as `writeF32Npy` below, but with dtype `<f8` and 8-byte
- * elements.  Used to exercise the f64 path the CF4++ release lives on.
+ * elements.  Exercises the f64 path (the CF4++ release dtype).
  */
 function writeF64Npy(values: number[], shape: readonly number[]): ArrayBuffer {
   const headerDict = `{'descr': '<f8', 'fortran_order': False, 'shape': (${shape.join(', ')}${shape.length === 1 ? ',' : ''}), }`;

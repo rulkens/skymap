@@ -61,8 +61,8 @@ export type ExportBody = {
   disk?: RecipeDisk;
   /**
    * Catalog-derived axis ratio (b/a) for this galaxy — consumed by the
-   * calibration-derivation step (later task) to compute a face-on
-   * correction factor.  Has no effect on the written recipe.
+   * calibration-derivation step to compute a face-on correction
+   * factor.  Has no effect on the written recipe.
    */
   catalogAxisRatio?: number;
 };
@@ -271,10 +271,9 @@ export async function handleExport(opts: {
   //    the 256² atlas → public/images/famous/<id>.webp (low-res slot) and the
   //    1024² full → public/data/images/famous-hires/<id>.webp (hi-res slot).
   //    publishFamousRuntimeImages is the single source of truth for that layout
-  //    (the bulk copyHiResToPublic step uses the same primitive).  Skipping the
-  //    hi-res half here is the bug this consolidates away: a Commit used to
-  //    refresh only the low-res tile, so close-up views kept the stale render
-  //    until a manual `build-famous-hires`.
+  //    (the bulk copyHiResToPublic step uses the same primitive).  A Commit must
+  //    refresh both tiers: refreshing only the low-res tile would leave close-up
+  //    views serving a stale hi-res render until a manual `build-famous-hires`.
   publishFamousRuntimeImages({ repoRoot, id: body.id });
 
   // 10. Update the override index so the build pipeline picks this

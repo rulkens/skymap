@@ -11,7 +11,7 @@
  * endpoint returns ONLY content images (the things mediaviewer would
  * paginate through) — the action API also returns every infobox icon,
  * license badge, Commons logo, and OOjs sprite used on the page, which
- * gave a useless picker full of generic Wikipedia chrome.  The REST
+ * fills the picker with generic Wikipedia chrome.  The REST
  * endpoint also follows redirects by default, so "M31" still resolves
  * to the Andromeda Galaxy article's images.
  */

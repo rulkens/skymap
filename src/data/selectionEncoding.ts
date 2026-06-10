@@ -8,8 +8,8 @@
  * so the GPU pick texture (r32uint) can carry it as a single fragment
  * write. The encoding's magic numbers (the 27-bit shift, the 0x07ffffff
  * localIdx mask, the 0xFFFFFFFF "no selection" sentinel, the +1 pick
- * offset) used to be open-coded across three TS files and two WESL
- * files. That left no compile-time or test-time guard against drift
+ * offset) are consumed from both TS and WESL. Open-coding them at each
+ * use site leaves no compile-time or test-time guard against drift
  * between the two languages — bump the shift on the TS side, forget
  * the matching WESL change, and the symptom is "the wrong galaxy
  * highlights when you click".

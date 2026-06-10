@@ -32,21 +32,21 @@
  *
  * Once a slot transitions to `ready`, it stays there until the next
  * `load()` (which always re-fetches via a transient `loading` →
- * `committing` → `ready`).  Critically, `subscribe()` only fires on transitions —
- * a subscription registered against an already-`ready` slot will
- * never fire on its own.  Without the synchronous fast-path read,
- * repeat callers (the palette opens twice, the React strict-mode
- * double-mount, anything else that hits the same lazy slot more than
- * once after first success) would hang forever on a subscription
- * waiting for an event that already happened.  The fast-path is the
- * fix; the subscribe path is the cold-cache case.
+ * `committing` → `ready`).  Critically, `subscribe()` only fires on
+ * transitions — a subscription registered against an already-`ready`
+ * slot will never fire on its own.  Without the synchronous fast-path
+ * read, repeat callers (the palette opens twice, the React
+ * strict-mode double-mount, anything else that hits the same lazy
+ * slot more than once after first success) hang forever on a
+ * subscription waiting for an event that already happened.  The
+ * fast-path serves the warm cache; the subscribe path is the
+ * cold-cache case.
  *
  * ### Why `error` resolves with the fallback rather than rejecting
  *
- * This matches the existing graceful-degradation contract that the
- * extracted `loadPgcAliases` codified: the palette's alias index is
- * an enrichment, not a hard dependency, and the famous-only search
- * still works against an empty Map.  Forcing every consumer to
+ * Graceful degradation: the palette's alias index is an enrichment,
+ * not a hard dependency, and the famous-only search still works
+ * against an empty Map.  Forcing every consumer to
  * `try`/`catch` around the helper would just push noise into call
  * sites that have no useful error-recovery action — they'd all
  * funnel back to the same fallback anyway.  If a future caller

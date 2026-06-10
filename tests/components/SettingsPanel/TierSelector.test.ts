@@ -34,8 +34,7 @@ describe('TierSelector', () => {
 
   it('does not fire onTierChange when the active tier is re-clicked', async () => {
     // The component guards against pointless re-fetches by short-circuiting
-    // when the click target matches the current tier.  Pre-jsdom we
-    // couldn't exercise this branch.
+    // when the click target matches the current tier.
     const onTierChange = vi.fn();
     const user = userEvent.setup();
     render(

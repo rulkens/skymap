@@ -85,7 +85,7 @@ export type TexturedDiskDeps = {
    * Famous-source galaxy (keyed by per-cloud local index) and folds
    * `hiResLayerIdx` + `hiResCrossfadeAlpha` into the emitted
    * `DiskInstance`. When omitted, both default to -1 / 0 for every
-   * instance — preserving pre-hi-res behaviour exactly. The shader
+   * instance and the hi-res path is fully disabled. The shader
    * already gates the hi-res sample on `hiResLayerIdx >= 0`, so the
    * sentinel reliably disables the LOD-3 path with no extra branching.
    */
