@@ -212,26 +212,26 @@ export function setSurveySize(state: EngineSettingsState, sizePx: number): Engin
 export function selectSurveySize(state: EngineSettingsState): number;
 ```
 
-- [ ] Reducer test `setSurveySize copies-on-write the surveys cluster`:
+- [x] Reducer test `setSurveySize copies-on-write the surveys cluster`:
   given a state, `next = setSurveySize(state, 4)` asserts `next.surveys.sizePx === 4`,
   `next.surveys !== state.surveys` (touched cluster is a NEW ref), and
   `next.tonemap === state.tonemap` (sibling clusters are the SAME ref).
-- [ ] Reducer test `setSurveySize leaves the input state unmutated` asserts the
+- [x] Reducer test `setSurveySize leaves the input state unmutated` asserts the
   original `state.surveys.sizePx` is unchanged after the call.
-- [ ] Selector test `selectSurveySize returns the survey point size` asserts it
+- [x] Selector test `selectSurveySize returns the survey point size` asserts it
   reads `surveys.sizePx`.
-- [ ] Store test `createSettingsStore seeds getState from the initial value`
+- [x] Store test `createSettingsStore seeds getState from the initial value`
   asserts `store.getState()` deep-equals the passed-in `EngineSettingsState`.
-- [ ] Store test `setState with a reducer notifies subscribers and reflects in
+- [x] Store test `setState with a reducer notifies subscribers and reflects in
   getState`: subscribe a spy, call `store.setState((s) => setSurveySize(s, 4))`,
   assert the spy fired and `selectSurveySize(store.getState()) === 4`.
-- [ ] Run-fails (tests red, modules absent). MAIN thread runs `npm test -- settingsStore`.
-- [ ] Implement the three modules. Build the test-fixture `EngineSettingsState`
+- [x] Run-fails (tests red, modules absent). MAIN thread runs `npm test -- settingsStore`.
+- [x] Implement the three modules. Build the test-fixture `EngineSettingsState`
   by reusing the construction pattern in `engine.ts:266-330` (defaults from
   `src/data/defaults.ts`); factor a tiny test helper if it'll be reused across
   reducer tests — do NOT duplicate the literal in every test file.
-- [ ] Run-passes. MAIN: `npm test -- settingsStore` → green; `npm run typecheck`.
-- [ ] Commit the six files.
+- [x] Run-passes. MAIN: `npm test -- settingsStore` → green; `npm run typecheck`.
+- [x] Commit the six files.
 
 ### Task 1.2: Construct + seed the store in `createEngine`; expose on the handle
 
