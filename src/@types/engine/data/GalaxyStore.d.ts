@@ -24,15 +24,6 @@ export type GalaxyStore = {
   readonly catalogs: ReadonlyMap<SourceType, GalaxyCatalog>;
   /** Famous-catalog metadata sidecar; empty until the fetch resolves. */
   readonly famousMeta: readonly FamousMetaEntry[];
-  /**
-   * Whether famous-galaxy text labels are visible (default true). Famous
-   * galaxies have no ring/halo marker (curated thumbnails do that job on
-   * close approach), so they carry only this single label-visibility axis —
-   * the structure stores' marker/label split has no analogue here. Read by
-   * `produceFamousLabels`; toggled by the SettingsPanel's "Famous" label
-   * checkbox.
-   */
-  readonly famousLabelsVisible: boolean;
   /** Install (or replace) the catalog for a source. */
   setCatalog(source: SourceType, catalog: GalaxyCatalog): void;
   /** Drop a source's catalog (e.g. on tier reload). */
@@ -41,6 +32,4 @@ export type GalaxyStore = {
   get(source: SourceType): GalaxyCatalog | undefined;
   /** Replace the famous-meta sidecar wholesale. */
   setFamousMeta(meta: readonly FamousMetaEntry[]): void;
-  /** Set famous-galaxy label visibility. */
-  setFamousLabelsVisible(visible: boolean): void;
 };

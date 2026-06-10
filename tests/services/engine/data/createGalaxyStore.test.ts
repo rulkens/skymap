@@ -28,13 +28,4 @@ describe('createGalaxyStore', () => {
     s.setFamousMeta([{ id: 'm31' } as never]);
     expect(s.famousMeta.map((e) => e.id)).toEqual(['m31']);
   });
-
-  it('famousLabelsVisible defaults true and the setter flips it', () => {
-    const s = createGalaxyStore();
-    expect(s.famousLabelsVisible).toBe(true);
-    s.setFamousLabelsVisible(false);
-    expect(s.famousLabelsVisible).toBe(false);
-    s.setFamousLabelsVisible(true);
-    expect(s.famousLabelsVisible).toBe(true);
-  });
 });

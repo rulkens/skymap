@@ -28,7 +28,7 @@ export type EncodeVolumesArgs = {
    */
   fadeOpacityOf: (handle: ScalarFieldHandle) => number;
   /**
-   * Per-field settings projection, threaded from `state.settings.volumes.fields`
+   * Per-field settings projection, threaded from `state.settings.volumes.items`
    * at the call site. Returns the live VolumeFieldSettings for a scalar-field
    * handle (or undefined if it has no settings row) so the renderer reads each
    * field's knobs per frame instead of mirroring them.

@@ -8,14 +8,25 @@ import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
+import { STRUCTURE_CATEGORIES } from '../../../../src/data/structureCategories';
 
 // Builds a real engineData store (so state.data.structures is the production
 // store) + a real FadeRegistry (so per-category marker opacity comes from the
 // production fail-safe path: unregistered markerLayer handles read 1.0) + a
-// selection stub whose selected()/focused() drive the ring bump + recession,
-// then drives the producer. The registry is returned on the state so a test
-// can register/seed a markerLayer handle to exercise the toggle path.
+// selection stub whose selected()/focused() drive the ring bump + recession +
+// a settings.structures.items bag (the authoritative per-category gate, all
+// enabled by default), then drives the producer. The registry is returned on
+// the state so a test can register/seed a markerLayer handle to exercise the
+// toggle path.
 type TestState = EngineState & { subsystems: { fades: FadeRegistry } };
+
+// All-enabled structure items bag — the authoritative ring/label gate the
+// producer reads. Tests flip an entry to false to drive the disabled path.
+function makeStructureItems(): EngineState['settings']['structures']['items'] {
+  return Object.fromEntries(
+    STRUCTURE_CATEGORIES.map((c) => [c, { enabled: true, labelEnabled: true }]),
+  ) as EngineState['settings']['structures']['items'];
+}
 
 function makeState(
   selectedStructureId: string | null = null,
@@ -23,6 +34,7 @@ function makeState(
 ): TestState {
   return {
     data: createEngineData(),
+    settings: { structures: { enabled: true, items: makeStructureItems() } },
     subsystems: {
       fades: createFadeRegistry(),
       selection: {
@@ -84,16 +96,31 @@ describe('produceStructureMarkers', () => {
     expect(far.haloColor[3]).toBe(0);
   });
 
-  it('a category at toggle 0 emits no markers for that category but preserves alignment', () => {
+  it('skips a category that is disabled AND fully faded (opacity 0)', () => {
     const state = makeState();
     state.data.structures.setGroup('bulk', [rec('c1', 'cluster'), rec('v1', 'void')]);
-    // The producer reads per-category opacity from the FadeRegistry, not the
-    // store's markerVisible flag. Seed the cluster markerLayer handle to 0.
+    // Both halves of the all-or-nothing skip: the authoritative `enabled`
+    // boolean is false AND the markerLayer fade has reached 0.
+    state.settings.structures.items.cluster.enabled = false;
     state.subsystems.fades.register({ kind: 'markerLayer', category: 'cluster' }, 1);
     state.subsystems.fades.setImmediate({ kind: 'markerLayer', category: 'cluster' }, 0);
     const markers = produceStructureMarkers(state, makeCtx());
-    // Cluster skipped wholesale; void (unregistered → fail-safe 1.0) still emits.
+    // Cluster skipped wholesale; void (enabled, unregistered → fail-safe 1.0) emits.
     expect(markers.map((m) => m.id)).toEqual(['v1']);
+  });
+
+  it('draws a disabled category whose markerLayer opacity is still > 0 (fade-out tail)', () => {
+    const state = makeState();
+    state.data.structures.setGroup('bulk', [rec('c1', 'cluster', { significance: 0 })]);
+    // Authoritative gate is OFF but the fade hasn't reached 0 yet: the fade-out
+    // tail must still emit alpha-scaled descriptors, NOT skip.
+    state.settings.structures.items.cluster.enabled = false;
+    state.subsystems.fades.register({ kind: 'markerLayer', category: 'cluster' }, 1);
+    state.subsystems.fades.setImmediate({ kind: 'markerLayer', category: 'cluster' }, 0.5);
+    const markers = produceStructureMarkers(state, makeCtx());
+    const c1 = markers.find((m) => m.id === 'c1')!;
+    // Emitted, with alpha scaled by the 0.5 fade opacity (× sigWeight 0.25).
+    expect(c1.ringColor[3]).toBeCloseTo(1 * 0.25 * 0.5, 6);
   });
 
   it('a mid-fade category emits alpha-scaled descriptors (not skipped)', () => {

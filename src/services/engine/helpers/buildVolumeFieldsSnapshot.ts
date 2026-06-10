@@ -9,7 +9,7 @@
  * previously had to call back into the engine handle via
  * `handle.volumes.getState()` to learn what changed.
  *
- * Both identity and values come from `state.settings.volumes.fields`,
+ * Both identity and values come from `state.settings.volumes.items`,
  * which is registry-seeded at engine construction.  The panel therefore
  * shows every field's row from boot, before its cube has loaded onto the
  * GPU.  Missing entries fall back to the compile-time defaults from
@@ -21,19 +21,14 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { VolumeFieldRowData } from '../../../@types/settings/VolumeFieldRowData';
 import type { VolumeFieldId } from '../../../@types/data/VolumeFieldId';
 import { getVolumeFieldDefaults } from '../../../data/volumeFieldDefaults';
-import {
-  DEFAULT_VOLUME_FIELD_INTENSITY,
-  DEFAULT_VOLUME_PALETTE_ID,
-} from '../../../data/defaults';
+import { DEFAULT_VOLUME_FIELD_INTENSITY, DEFAULT_VOLUME_PALETTE_ID } from '../../../data/defaults';
 
-export function buildVolumeFieldsSnapshot(
-  state: EngineState,
-): ReadonlyArray<VolumeFieldRowData> {
+export function buildVolumeFieldsSnapshot(state: EngineState): ReadonlyArray<VolumeFieldRowData> {
   // Identity comes from the settings keys, which are seeded from the
   // registry at engine construction — the GPU handle list is not consulted.
-  const ids = Object.keys(state.settings.volumes.fields) as VolumeFieldId[];
+  const ids = Object.keys(state.settings.volumes.items) as VolumeFieldId[];
   return ids.map((id) => {
-    const field = state.settings.volumes.fields[id];
+    const field = state.settings.volumes.items[id];
     const defaults = getVolumeFieldDefaults(id);
     return {
       handle: id,

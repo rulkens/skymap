@@ -46,12 +46,21 @@ import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 function makeState(): Pick<EngineState, 'settings' | 'bias'> {
   return {
     settings: {
-      points: {
+      surveys: {
+        enabled: true,
         sizePx: 2.5,
         brightness: 1.0,
         depthFade: true,
         highlightFallback: true,
         realOnly: false,
+        items: {
+          synthetic: { enabled: true, labelEnabled: true },
+          sdss: { enabled: true, labelEnabled: true },
+          '2mrs': { enabled: true, labelEnabled: true },
+          glade: { enabled: true, labelEnabled: true },
+          famousGalaxy: { enabled: true, labelEnabled: true },
+          milliquas: { enabled: true, labelEnabled: true },
+        },
       },
       tonemap: { exposure: 1.0, curve: ToneMapCurve.Reinhard },
       camera: { autoRotate: false },
@@ -59,7 +68,7 @@ function makeState(): Pick<EngineState, 'settings' | 'bias'> {
       thumbnails: { enabled: true },
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 0.5 },
-      volumes: { masterEnabled: false, fields: {} },
+      volumes: { enabled: false, items: {} },
       flow: {
         enabled: false,
         mode: 'advect',
@@ -72,18 +81,14 @@ function makeState(): Pick<EngineState, 'settings' | 'bias'> {
         boundaryFadeWidth: 0.1,
       },
       debug: { showPickBuffer: false, showDiskRadiusRing: false },
-      labelCategoryVisibility: {
-        cluster: true,
-        supercluster: true,
-        famousGalaxy: true,
-        void: true,
-        group: true,
-      },
-      markerCategoryVisibility: {
-        cluster: true,
-        supercluster: true,
-        void: true,
-        group: true,
+      structures: {
+        enabled: true,
+        items: {
+          cluster: { enabled: true, labelEnabled: true },
+          supercluster: { enabled: true, labelEnabled: true },
+          void: { enabled: true, labelEnabled: true },
+          group: { enabled: true, labelEnabled: true },
+        },
       },
     },
     bias: {
@@ -138,11 +143,11 @@ describe('settingsTable', () => {
     it('mutates state, fires the nested echo callback, and requests a render', () => {
       const state = makeState();
       // Callbacks live at their nested sub-bag addresses
-      // (`points.onSizeChange`, `points.onBrightnessChange`).
+      // (`surveys.onSizeChange`, `surveys.onBrightnessChange`).
       const onSizeChange = vi.fn();
       const onBrightnessChange = vi.fn();
       const cb: Partial<EngineCallbacks> = {
-        points: { onSizeChange, onBrightnessChange },
+        surveys: { onSizeChange, onBrightnessChange },
       };
       const requestRender = vi.fn();
 
@@ -153,12 +158,12 @@ describe('settingsTable', () => {
       );
 
       setters.setPointSize(4.2);
-      expect(state.settings.points.sizePx).toBe(4.2);
+      expect(state.settings.surveys.sizePx).toBe(4.2);
       expect(onSizeChange).toHaveBeenCalledExactlyOnceWith(4.2);
       expect(requestRender).toHaveBeenCalledOnce();
 
       setters.setBrightness(2.0);
-      expect(state.settings.points.brightness).toBe(2.0);
+      expect(state.settings.surveys.brightness).toBe(2.0);
       expect(onBrightnessChange).toHaveBeenCalledExactlyOnceWith(2.0);
       expect(requestRender).toHaveBeenCalledTimes(2);
     });
@@ -220,7 +225,7 @@ describe('settingsTable', () => {
       // Same tolerance for setters whose callback is "declared" via the
       // descriptor but happens to be undefined on the cb bag.
       expect(() => setters.setBrightness(0.7)).not.toThrow();
-      expect(state.settings.points.brightness).toBe(0.7);
+      expect(state.settings.surveys.brightness).toBe(0.7);
       expect(requestRender).toHaveBeenCalledTimes(2);
     });
   });

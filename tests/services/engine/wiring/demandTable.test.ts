@@ -34,13 +34,13 @@
  * ### MCPM at boot
  *
  * The demand predicate for `mcpm` reads `ctx.volumeField('mcpm')?.enabled`,
- * sourced from `state.settings.volumes.fields`. The engine seeds that record
+ * sourced from `state.settings.volumes.items`. The engine seeds that record
  * at construction from the shippable volume registry entries (`seedVolumeFields`),
  * so `mcpm`'s enabled bit is `true` (registry visible:true) at boot, symmetric
  * with how `drawMask` seeds survey visibility. MCPM therefore IS in the boot
  * demand set — `cf4-density` is NOT (registry visible:false → seeded
  * enabled:false). `makeState` injects the same `seedVolumeFields` record into
- * `settings.volumes.fields` so the test exercises the real defaults rather than
+ * `settings.volumes.items` so the test exercises the real defaults rather than
  * a hand-rolled set.
  *
  * ### Synthetic fallback gate
@@ -111,13 +111,15 @@ function stubSlot(kind: LoadState<unknown>['kind'] = 'idle'): StubSlot {
  */
 type SettingsLeaves = {
   filaments?: { enabled: boolean };
-  markerCategoryVisibility?: Record<string, boolean>;
-  labelCategoryVisibility?: Record<string, boolean>;
+  structures?: {
+    enabled: boolean;
+    items: Record<string, { enabled: boolean; labelEnabled: boolean }>;
+  };
 };
 
 /**
  * Volume-field params keyed by id. Demand predicates read these from
- * `state.settings.volumes.fields` (`ctx.volumeField(id)?.enabled`), so
+ * `state.settings.volumes.items` (`ctx.volumeField(id)?.enabled`), so
  * `makeState` injects this record directly into the settings bag.
  */
 type VolumeFieldLeaves = Partial<Record<VolumeFieldId, { enabled: boolean }>>;
@@ -131,19 +133,14 @@ type VolumeFieldLeaves = Partial<Record<VolumeFieldId, { enabled: boolean }>>;
  */
 const BOOT_SETTINGS: SettingsLeaves = {
   filaments: { enabled: false },
-  markerCategoryVisibility: {
-    cluster: true,
-    supercluster: true,
-    void: true,
-    famousGalaxy: true,
-    group: true,
-  },
-  labelCategoryVisibility: {
-    cluster: true,
-    supercluster: true,
-    void: true,
-    famousGalaxy: true,
-    group: true,
+  structures: {
+    enabled: true,
+    items: {
+      cluster: { enabled: true, labelEnabled: true },
+      supercluster: { enabled: true, labelEnabled: true },
+      void: { enabled: true, labelEnabled: true },
+      group: { enabled: true, labelEnabled: true },
+    },
   },
 };
 
@@ -169,7 +166,7 @@ type NamedSlotOverrides = Partial<{
 type MakeStateOptions = {
   drawMask?: number;
   settings?: SettingsLeaves;
-  /** Volume-field params; injected into `settings.volumes.fields`. Defaults to boot. */
+  /** Volume-field params; injected into `settings.volumes.items`. Defaults to boot. */
   volumeFields?: VolumeFieldLeaves;
   requests?: Set<string>;
   /** Per-source point slots. Defaults to a fresh idle stub for every Source. */
@@ -211,12 +208,12 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
   );
 
   return {
-    // Inject volume fields directly into `settings.volumes.fields` — demand
+    // Inject volume fields directly into `settings.volumes.items` — demand
     // predicates read `ctx.volumeField(id)?.enabled` from that path via
-    // `state.settings.volumes.fields`.
+    // `state.settings.volumes.items`.
     settings: {
       ...(settings as unknown as EngineSettingsState),
-      volumes: { fields: volumeFields },
+      volumes: { items: volumeFields },
     } as unknown as EngineSettingsState,
     sources: { drawMask, tier: 'medium' },
     requests: requests as Set<import('../../../../src/@types/loading/RequestKey').RequestKey>,
@@ -340,10 +337,9 @@ describe('reevaluateDemand demand-table regression', () => {
   });
 
   /**
-   * Structures all hidden: every category set to false in BOTH
-   * markerCategoryVisibility and labelCategoryVisibility.
-   * Bug-fix pin: structureCatalog must NOT appear. This verifies the
-   * consolidated predicate rather than the stale 'structures.enabled' flag.
+   * Structures all hidden: every category's ring AND label set to false in
+   * `structures.items`. Bug-fix pin: structureCatalog must NOT appear. This
+   * verifies the consolidated predicate reading the per-category item rows.
    *
    * Famous starts idle and is in the drawMask, so its point row loads it and
    * famousMeta follows (the two-phase boot). The pin under test is the cluster
@@ -352,17 +348,14 @@ describe('reevaluateDemand demand-table regression', () => {
   it('structures all hidden: no structureCatalog (bug-fix pin)', () => {
     const settings: SettingsLeaves = {
       ...BOOT_SETTINGS,
-      markerCategoryVisibility: {
-        cluster: false,
-        supercluster: false,
-        void: false,
-        famousGalaxy: false,
-      },
-      labelCategoryVisibility: {
-        cluster: false,
-        supercluster: false,
-        void: false,
-        famousGalaxy: false,
+      structures: {
+        enabled: true,
+        items: {
+          cluster: { enabled: false, labelEnabled: false },
+          supercluster: { enabled: false, labelEnabled: false },
+          void: { enabled: false, labelEnabled: false },
+          group: { enabled: false, labelEnabled: false },
+        },
       },
     };
     const state = makeState({ settings });
@@ -495,17 +488,14 @@ describe('reevaluateDemand demand-table regression', () => {
       ...BOOT_SETTINGS,
       // Hide every structure category so structureCatalog stays out of the set
       // and the assertion is purely the Famous companion join.
-      markerCategoryVisibility: {
-        cluster: false,
-        supercluster: false,
-        void: false,
-        famousGalaxy: false,
-      },
-      labelCategoryVisibility: {
-        cluster: false,
-        supercluster: false,
-        void: false,
-        famousGalaxy: false,
+      structures: {
+        enabled: true,
+        items: {
+          cluster: { enabled: false, labelEnabled: false },
+          supercluster: { enabled: false, labelEnabled: false },
+          void: { enabled: false, labelEnabled: false },
+          group: { enabled: false, labelEnabled: false },
+        },
       },
     };
     // Disable mcpm too so the fired set is exactly the join under test.
