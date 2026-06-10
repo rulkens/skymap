@@ -16,11 +16,17 @@
  * agreement on what counts as "in flight"; per-subset `attachSlot` calls would
  * risk the two views drifting.
  *
+ * The sidecar enumeration is derived from `ASSET_WIRING` (filtering to string
+ * keys — point-source rows carry numeric `Source` keys and are already handled
+ * above), so the registry and the wiring table cannot disagree about what exists.
+ * A new sidecar row added to `ASSET_WIRING` lands in `allSlots` automatically.
+ *
  * The `unknown` type-erasure is benign — `aggregateRegistry` reads only the
  * `slot.state()` discriminator + byte counts, never the payload type.
  */
 
 import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';
+import { ASSET_WIRING } from './assetWiring';
 
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -34,18 +40,19 @@ export function installLoadProgress(state: EngineState, deps: BootstrapDeps): vo
     allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
   }
 
-  // Named sidecar slots (installed by installSlots). pgcAlias is lazy but
-  // still registered so its eventual load shows in the bar + dev panel.
-  const sidecars = [
-    state.assetSlots.filaments,
-    state.assetSlots.famousMeta,
-    state.assetSlots.structureCatalog,
-    state.assetSlots.pgcAlias,
-    state.assetSlots.cf4Density,
-    state.assetSlots.mcpm,
-  ];
-  for (const slot of sidecars) {
-    if (slot) allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
+  // Named sidecar slots (installed by installSlots). Derived from ASSET_WIRING
+  // rows whose key is a string — point rows carry numeric Source keys and are
+  // already included above. pgcAlias is lazy but still registered so its
+  // eventual load shows in the bar + dev panel.
+  for (const row of ASSET_WIRING) {
+    if (typeof row.key !== 'string') continue;
+    const slot = state.assetSlots[row.key as keyof typeof state.assetSlots];
+    if (slot && typeof slot === 'object' && 'name' in slot) {
+      allSlots.set(
+        (slot as AssetSlot<unknown, unknown>).name,
+        slot as unknown as AssetSlot<unknown, unknown>,
+      );
+    }
   }
 
   // DEV synthetic-volume fixtures (present only in dev builds).
