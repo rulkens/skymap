@@ -60,12 +60,14 @@ function makeState(): EngineState {
   return {
     // Post-H5 nested-only settings shape.
     settings: {
-      points: {
+      surveys: {
+        enabled: true,
         sizePx: 2,
         brightness: 0.5,
         depthFade: false,
         highlightFallback: false,
         realOnly: false,
+        items: { famousGalaxy: { enabled: true, labelEnabled: true } },
       },
       tonemap: { exposure: 1, curve: 'linear' },
       camera: { autoRotate: false },

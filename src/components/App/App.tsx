@@ -237,7 +237,7 @@ export function App(): React.ReactElement {
           <SettingsPanel
             defaultOpen={initialPanelsOpen}
             pointSize={pointSize}
-            onPointSizeChange={(size) => handleRef.current?.points.setSize(size)}
+            onPointSizeChange={(size) => handleRef.current?.surveys.setSize(size)}
             labelCategoryVisibility={labelCategoryVisibility}
             markerCategoryVisibility={markerCategoryVisibility}
             onSetMarkerCategoryVisibility={(category, visible) => {
@@ -248,11 +248,12 @@ export function App(): React.ReactElement {
             onSetLabelCategoryVisibility={(category, visible) => {
               // Label rows span famousGalaxy + structures; route by registry so
               // structure labels drive the structures handle while the curated
-              // atlas keeps its galaxyNames path on the labels handle.
+              // atlas (famousGalaxy, a survey source) routes through the surveys
+              // handle's label axis.
               if (isStructureCategory(category)) {
                 handleRef.current?.structures.setLabelEnabled(category, visible);
               } else {
-                handleRef.current?.labels.setCategoryLabelVisible(category, visible);
+                handleRef.current?.surveys.setLabelEnabled(category, visible);
               }
             }}
             // Filaments has no engine echo — React owns the state, so
@@ -269,7 +270,7 @@ export function App(): React.ReactElement {
             }}
             depthFadeEnabled={depthFadeEnabled}
             onDepthFadeEnabledChange={(enabled) => {
-              handleRef.current?.points.setDepthFade(enabled);
+              handleRef.current?.surveys.setDepthFade(enabled);
             }}
             onResetCamera={() => handleRef.current?.camera.focusOnHome()}
             // Tier swap is owned end-to-end by the engine: it cancels
@@ -397,16 +398,16 @@ export function App(): React.ReactElement {
             slots={handleRef.current.assetSlots}
             timingService={handleRef.current.debug.timingService}
             passOverrides={handleRef.current.debug.passOverrides}
-            // Orientation-fallback diagnostic toggles — `points`
+            // Orientation-fallback diagnostic toggles — `surveys`
             // setters echo synchronously, so React mirrors engine
             // truth without an optimistic update.
             highlightFallback={highlightFallback}
             realOnlyMode={realOnlyMode}
             onHighlightFallbackChange={(enabled) => {
-              handleRef.current?.points.setHighlightFallback(enabled);
+              handleRef.current?.surveys.setHighlightFallback(enabled);
             }}
             onRealOnlyModeChange={(enabled) => {
-              handleRef.current?.points.setRealOnly(enabled);
+              handleRef.current?.surveys.setRealOnly(enabled);
             }}
             showPickBuffer={showPickBuffer}
             onShowPickBufferChange={(enabled) => {

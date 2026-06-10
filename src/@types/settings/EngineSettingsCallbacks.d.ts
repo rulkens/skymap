@@ -16,7 +16,7 @@ import type { EngineCallbacks } from '../engine/EngineCallbacks';
 
 export type EngineSettingsCallbacks = Pick<
   EngineCallbacks,
-  | 'points'
+  | 'surveys'
   | 'tonemap'
   | 'camera'
   | 'sources'

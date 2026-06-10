@@ -270,18 +270,18 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     proceduralDiskRenderer: deps.proceduralDiskRenderer,
     milkyWayITimeSec: (performance.now() - deps.milkyWayITimeEpochMs) * 0.001 * 0.25,
     settings: {
-      pointSizePx: state.settings.points.sizePx,
-      brightness: state.settings.points.brightness,
+      pointSizePx: state.settings.surveys.sizePx,
+      brightness: state.settings.surveys.brightness,
       selected: state.subsystems.selection.selected(),
       visibleSourceMask: state.sources.drawMask,
-      highlightFallback: state.settings.points.highlightFallback,
-      realOnlyMode: state.settings.points.realOnly,
+      highlightFallback: state.settings.surveys.highlightFallback,
+      realOnlyMode: state.settings.surveys.realOnly,
       biasMode: state.settings.bias.mode,
       absMagLimit: state.settings.bias.absMagLimit,
       apparentMagLimit: state.bias.apparentMagLimit,
       schechterMStar: state.bias.schechterMStar,
       schechterAlpha: state.bias.schechterAlpha,
-      depthFadeEnabled: state.settings.points.depthFade,
+      depthFadeEnabled: state.settings.surveys.depthFade,
       // Same crossfade band the procedural-disk pass fades IN over, so the
       // two passes blend cleanly without a double-bright donut.  Constants
       // are the single source of truth in `proceduralDiskSubsystem.ts`.
@@ -330,7 +330,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       const pickTex = state.gpu.pickRenderer.renderForDebug(
         [deps.canvas.width, deps.canvas.height],
         overlaySources,
-        state.settings.points.sizePx,
+        state.settings.surveys.sizePx,
       );
       if (pickTex !== null) {
         const overlayEncoder = deps.device.createCommandEncoder({
@@ -415,7 +415,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         visibleSources,
         // Boost the picking floor for easier hover targets — see
         // PICK_PADDING_PX in pickRenderer.ts.
-        state.settings.points.sizePx,
+        state.settings.surveys.sizePx,
         // Optional GPU-timing descriptor for the hover-pick pass.
         // Undefined unless `?gpuTimings` is set; the click path in
         // clickHandler.ts wires this the same way.  Slot (18, 19) is

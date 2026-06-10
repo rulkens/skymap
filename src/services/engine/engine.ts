@@ -141,13 +141,15 @@ import { clampVolumeTrim } from '../../utils/clampVolumeTrim';
 import { clampVolumeExposure } from '../../utils/clampVolumeExposure';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
-import type { LabelCategory } from '../../@types/engine/data/LabelCategory';
 import type { StructureCategory } from '../../@types/engine/data/StructureCategory';
-import { LABEL_CATEGORIES, LABEL_LAYER_BY_CATEGORY } from '../../data/labelCategories';
-import { STRUCTURE_CATEGORIES, isStructureCategory } from '../../data/structureCategories';
+import type { SurveyId } from '../../@types/engine/data/SurveyId';
+import { SOURCE_ENTRIES } from '../../data/sourceEntries';
+import { SURVEY_IDS } from '../../data/surveyIds';
+import { STRUCTURE_CATEGORIES } from '../../data/structureCategories';
 import { deriveMarkerCategoryVisibility } from './helpers/deriveMarkerCategoryVisibility';
 import { deriveLabelCategoryVisibility } from './helpers/deriveLabelCategoryVisibility';
 import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
+import type { SurveyItemSettings } from '../../@types/settings/SurveyItemSettings';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -301,42 +303,32 @@ function setStructureLabelEnabled(
   state.subsystems.scheduler.requestRender();
 }
 
-function setCategoryLabelVisible(
+function setSurveyLabelEnabled(
   state: Pick<EngineState, 'data' | 'settings' | 'subsystems'>,
   cb: Pick<EngineCallbacks, 'labels'>,
-  category: LabelCategory,
-  visible: boolean,
+  survey: SurveyId,
+  enabled: boolean,
 ): void {
-  // Routing comes from the registry row's `labelLayer` field, not a literal
-  // category compare. The famous-galaxy ('galaxyNames') rows drive the galaxy
-  // store + shared galaxyNames fade layer and write the still-live flat
-  // `labelCategoryVisibility` record. A structure category passed here delegates
-  // to the structure label axis so a stray call still routes correctly — though
-  // the panel routes structure labels to the structures handle directly.
-  if (LABEL_LAYER_BY_CATEGORY[category] === 'galaxyNames') {
-    state.data.galaxies.setFamousLabelsVisible(visible);
-    // Famous-galaxy labels reuse the shared `galaxyNames` label layer rather
-    // than minting a per-category handle (see FadeHandle's labelLayer doc).
+  // Single source of truth for survey label visibility: the survey's item row.
+  state.settings.surveys.items[survey].labelEnabled = enabled;
+  // Fire the survey's label fade IF it bears one — registry-driven: famous
+  // carries labelLayer 'galaxyNames', the other surveys carry none, so a
+  // labelEnabled toggle on a label-free survey just writes the (inert) flag.
+  const entry = SOURCE_ENTRIES.find((e) => e.id === survey);
+  const layer = entry && 'labelLayer' in entry ? entry.labelLayer : undefined;
+  if (layer) {
     void state.subsystems.fades.fadeTo(
-      { kind: 'labelLayer', layer: 'galaxyNames' },
-      visible ? 1 : 0,
-      visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+      { kind: 'labelLayer', layer },
+      enabled ? 1 : 0,
+      enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
     );
-    state.settings.labelCategoryVisibility = {
-      ...state.settings.labelCategoryVisibility,
-      [category]: visible,
-    };
-    cb.labels?.onLabelCategoryVisibilityChange?.(deriveLabelCategoryVisibility(state));
-    state.subsystems.scheduler.requestRender();
-    return;
   }
-  if (isStructureCategory(category)) {
-    setStructureLabelEnabled(state, cb, category, visible);
-  }
+  cb.labels?.onLabelCategoryVisibilityChange?.(deriveLabelCategoryVisibility(state));
+  state.subsystems.scheduler.requestRender();
 }
 
 // Test-only aliases matching the import names used in tests.
-export const setCategoryLabelVisibleForTest = setCategoryLabelVisible;
+export const setSurveyLabelEnabledForTest = setSurveyLabelEnabled;
 export const setStructureItemEnabledForTest = setStructureItemEnabled;
 export const setStructureLabelEnabledForTest = setStructureLabelEnabled;
 
@@ -410,17 +402,26 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   const state: EngineState = {
     // ── Settings — the user-facing SettingsPanel sub-bags ──────────
     //
-    // Every settings field lives under a named cluster (point billboard
-    // knobs under `points`, HDR controls under `tonemap`, etc.).
+    // Every settings field lives under a named cluster (survey billboard
+    // knobs under `surveys`, HDR controls under `tonemap`, etc.).
     // Defaults flow from `data/defaults.ts`; see
     // `EngineSettingsState.d.ts` for the type-level map.
     settings: {
-      points: {
+      // Survey layer: master gate on + shared billboard appearance knobs +
+      // one item row per survey, each layer + label default-on. Keys are
+      // DERIVED from `SURVEY_IDS` so the seed can't drift from the survey set.
+      // `labelEnabled` is inert for every survey except famousGalaxy (the only
+      // one that renders a name label) — seeded uniformly true.
+      surveys: {
+        enabled: true,
         sizePx: DEFAULT_POINT_SIZE_PX,
         brightness: DEFAULT_BRIGHTNESS,
         depthFade: DEFAULT_DEPTH_FADE_ENABLED,
         highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
         realOnly: DEFAULT_REAL_ONLY_MODE,
+        items: Object.fromEntries(
+          SURVEY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+        ) as Record<SurveyId, SurveyItemSettings>,
       },
       tonemap: {
         exposure: DEFAULT_EXPOSURE,
@@ -456,15 +457,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // gate + look/motion knobs) lives here, spread from the single
       // `DEFAULT_FLOW` seed. The `state.data.flow` store stays status-only.
       flow: { ...DEFAULT_FLOW },
-      // Famous-galaxy label visibility, default-all-on. Keyed by
-      // `LABEL_CATEGORIES` for shape compatibility with the React mirror, but
-      // only the `famousGalaxy` entry is read — structure categories take their
-      // label visibility from `structures.items` below. The keys are DERIVED
-      // from the category set so the default can't drift from the union.
-      labelCategoryVisibility: Object.fromEntries(LABEL_CATEGORIES.map((c) => [c, true])) as Record<
-        LabelCategory,
-        boolean
-      >,
       debug: {
         showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
         showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
@@ -1304,12 +1296,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // Each sub-handle is a thin forwarder onto a local function or a
   // `boringSetters` entry.  This literal is the only public surface.
   const handle: EngineHandle = {
-    points: {
+    surveys: {
       setSize: (sizePx) => boringSetters.setPointSize(sizePx),
       setBrightness: (value) => boringSetters.setBrightness(value),
       setDepthFade: (enabled) => boringSetters.setDepthFadeEnabled(enabled),
       setHighlightFallback: (enabled) => boringSetters.setHighlightFallback(enabled),
       setRealOnly: (enabled) => boringSetters.setRealOnlyMode(enabled),
+      setLabelEnabled: (survey, enabled) => setSurveyLabelEnabled(state, cb, survey, enabled),
     },
     tonemap: {
       setExposure: (value) => boringSetters.setExposure(value),
@@ -1416,13 +1409,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
         state.subsystems.scheduler.requestRender();
       },
-    },
-    labels: {
-      // Famous-galaxy text-label axis only. Structure ring + label axes live on
-      // the `structures` sub-handle below; this routes the curated-atlas label
-      // (and any stray structure-label call) by registry layer.
-      setCategoryLabelVisible: (category, visible) =>
-        setCategoryLabelVisible(state, cb, category, visible),
     },
     structures: {
       // Two setters, one per independent structure visibility axis. Each writes

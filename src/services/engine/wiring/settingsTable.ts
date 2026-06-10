@@ -51,9 +51,9 @@
  * ### Why nested `path` tuples
  *
  * Every descriptor writes to `state.settings.<cluster>.<leaf>`.  A flat
- * `key: 'settings.points.sizePx'` shape would force the builder to
+ * `key: 'settings.surveys.sizePx'` shape would force the builder to
  * parse strings at runtime; a typed 3-tuple
- * (`['settings', 'points', 'sizePx']`) lets the descriptor still read
+ * (`['settings', 'surveys', 'sizePx']`) lets the descriptor still read
  * like a path while leaving runtime traversal as three indexed reads.
  * The tuple shape also leaves the door open for a future setter that
  * touches a non-`settings` sub-bag without changing the descriptor
@@ -84,7 +84,7 @@ import { MAX_PARTICLES, MIN_TRAIL_STEP } from '../../gpu/renderers/flowFieldCons
  * that touches (say) `state.picking.*` without changing the helper.
  */
 type SettingsPath =
-  | readonly ['settings', 'points', keyof EngineState['settings']['points']]
+  | readonly ['settings', 'surveys', keyof EngineState['settings']['surveys']]
   | readonly ['settings', 'tonemap', keyof EngineState['settings']['tonemap']]
   | readonly ['settings', 'camera', keyof EngineState['settings']['camera']]
   | readonly ['settings', 'bias', keyof EngineState['settings']['bias']]
@@ -99,14 +99,14 @@ type SettingsPath =
 /**
  * Nested callback address: `[cluster, method]`.  The cluster names
  * line up 1:1 with the optional sub-bags on `EngineCallbacks`
- * (`points`, `tonemap`, `camera`, `bias`, `thumbnails`, `milkyWay`,
+ * (`surveys`, `tonemap`, `camera`, `bias`, `thumbnails`, `milkyWay`,
  * `filaments`, `volumes`, `sources`).  Method names are kept as plain
  * `string` here because they vary per cluster and adding a full nested
  * union would duplicate the EngineCallbacks shape — the runtime
  * optional-chaining safely handles a missing method.
  */
 type NestedCallbackKey =
-  | readonly ['points', string]
+  | readonly ['surveys', string]
   | readonly ['tonemap', string]
   | readonly ['camera', string]
   | readonly ['bias', string]
@@ -146,13 +146,13 @@ type SettingsDescriptor = {
 export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
   {
     name: 'setPointSize',
-    path: ['settings', 'points', 'sizePx'],
-    callback: ['points', 'onSizeChange'],
+    path: ['settings', 'surveys', 'sizePx'],
+    callback: ['surveys', 'onSizeChange'],
   },
   {
     name: 'setBrightness',
-    path: ['settings', 'points', 'brightness'],
-    callback: ['points', 'onBrightnessChange'],
+    path: ['settings', 'surveys', 'brightness'],
+    callback: ['surveys', 'onBrightnessChange'],
   },
   {
     name: 'setAutoRotate',
@@ -241,18 +241,18 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
   },
   {
     name: 'setHighlightFallback',
-    path: ['settings', 'points', 'highlightFallback'],
-    callback: ['points', 'onHighlightFallbackChange'],
+    path: ['settings', 'surveys', 'highlightFallback'],
+    callback: ['surveys', 'onHighlightFallbackChange'],
   },
   {
     name: 'setRealOnlyMode',
-    path: ['settings', 'points', 'realOnly'],
-    callback: ['points', 'onRealOnlyChange'],
+    path: ['settings', 'surveys', 'realOnly'],
+    callback: ['surveys', 'onRealOnlyChange'],
   },
   {
     name: 'setDepthFadeEnabled',
-    path: ['settings', 'points', 'depthFade'],
-    callback: ['points', 'onDepthFadeChange'],
+    path: ['settings', 'surveys', 'depthFade'],
+    callback: ['surveys', 'onDepthFadeChange'],
   },
   {
     name: 'setAbsMagLimit',

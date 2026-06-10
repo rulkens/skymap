@@ -226,7 +226,7 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       // flat callbacks are gone.  The `partial-echo` cases (filaments
       // enabled/intensity, volumes master) remain App-owned with no
       // echo wiring, just as before.
-      points: {
+      surveys: {
         onSizeChange: setPointSize,
         onBrightnessChange: setBrightness,
         onDepthFadeChange: setDepthFadeEnabled,

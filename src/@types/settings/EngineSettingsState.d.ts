@@ -22,7 +22,7 @@
  *
  * Every settings field lives under one of eight named clusters.  The
  * clusters mirror EngineHandle's sub-handle namespaces 1:1 — a setter
- * on `handle.points` writes into `state.settings.points`, a setter on
+ * on `handle.surveys` writes into `state.settings.surveys`, a setter on
  * `handle.tonemap` writes into `state.settings.tonemap`, etc.  This
  * shape makes the engine's per-frame snapshot and the React-facing
  * setters trivially derivable from each other.
@@ -52,24 +52,35 @@
 
 import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
-import type { LabelCategory } from '../engine/data/LabelCategory';
 import type { StructureCategory } from '../engine/data/StructureCategory';
+import type { SurveyId } from '../engine/data/SurveyId';
 import type { FlowSettings } from './FlowSettings';
 import type { VolumeFieldId } from '../data/VolumeFieldId';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
 import type { StructureItemSettings } from './StructureItemSettings';
+import type { SurveyItemSettings } from './SurveyItemSettings';
 
 export type EngineSettingsState = {
   /**
-   * Point-billboard rendering controls — every setting that influences
-   * `points.wgsl` or the per-instance attribute bake.
+   * Survey point-billboard controls — the shared appearance knobs that
+   * influence every survey's `points.wgsl` draw — plus the survey-layer
+   * master gate and per-survey items. `enabled` is the coarse "hide all
+   * surveys" gate (symmetric with `volumes.enabled` / `structures.enabled`).
+   * Per-survey state lives in `items` — one row per `SurveyId`, each carrying
+   * the layer-visibility axis (`enabled`) and the text-label axis
+   * (`labelEnabled`). Only the famous-galaxy survey actually renders a label;
+   * the other surveys carry `labelEnabled` inertly so all three source-type
+   * clusters share the one per-item shape (surveys / structures / volumes all
+   * expose `items[id].enabled`).
    */
-  points: {
+  surveys: {
+    enabled: boolean;
     sizePx: number;
     brightness: number;
     depthFade: boolean;
     highlightFallback: boolean;
     realOnly: boolean;
+    items: Record<SurveyId, SurveyItemSettings>;
   };
 
   /**
@@ -178,17 +189,6 @@ export type EngineSettingsState = {
     showPickBuffer: boolean;
     showDiskRadiusRing: boolean;
   };
-
-  /**
-   * Per-category visibility for the famous-galaxy TEXT LABEL.  Keyed by
-   * `LabelCategory` for shape compatibility with the React mirror, but only
-   * the `famousGalaxy` entry is live: the structure categories read their
-   * label visibility from `structures.items[cat].labelEnabled` instead.  The
-   * famous entry stays here because famous galaxies are a point-layer concern
-   * (the curated atlas), not a structure ring — they have no `structures.items`
-   * row.  Defaults to every category visible.
-   */
-  labelCategoryVisibility: Record<LabelCategory, boolean>;
 
   /**
    * Structure-overlay master gate and per-category settings.  `enabled` is

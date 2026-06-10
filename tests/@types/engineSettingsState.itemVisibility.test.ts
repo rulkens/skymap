@@ -2,29 +2,31 @@ import { describe, expect, it } from 'vitest';
 import type { EngineSettingsState } from '../../src/@types/settings/EngineSettingsState';
 import type { LabelCategory } from '../../src/@types/engine/data/LabelCategory';
 import type { StructureCategory } from '../../src/@types/engine/data/StructureCategory';
+import type { SurveyId } from '../../src/@types/engine/data/SurveyId';
 
 /**
- * Type-level checks on the structure visibility homes:
- *   - `labelCategoryVisibility` is keyed by `LabelCategory` but only the
- *     `famousGalaxy` entry is live (structure label visibility moved to
- *     `structures.items[cat].labelEnabled`);
+ * Type-level checks on the per-item visibility homes:
+ *   - `surveys.items` is keyed by `SurveyId`, each row carrying the survey
+ *     layer axis (`enabled`) + the text-label axis (`labelEnabled`) — the
+ *     famous-galaxy survey is where the curated-atlas name visibility lives;
  *   - `structures.items` is keyed by `StructureCategory`, each row carrying the
  *     ring axis (`enabled`) + the label axis (`labelEnabled`) — famous galaxies
  *     bear no ring, so a `famousGalaxy` key here is a type error.
  * If either union drifts from its record shape, these assignments stop
  * compiling.
  */
-describe('EngineSettingsState structure visibility', () => {
-  it('labelCategoryVisibility is a Record keyed by LabelCategory (includes famousGalaxy)', () => {
-    const v: EngineSettingsState['labelCategoryVisibility'] = {
-      cluster: true,
-      supercluster: true,
-      famousGalaxy: true,
-      void: true,
-      group: true,
+describe('EngineSettingsState item visibility', () => {
+  it('surveys.items carries the famous-galaxy label axis', () => {
+    const v: EngineSettingsState['surveys']['items'] = {
+      synthetic: { enabled: true, labelEnabled: true },
+      sdss: { enabled: true, labelEnabled: true },
+      '2mrs': { enabled: true, labelEnabled: true },
+      glade: { enabled: true, labelEnabled: true },
+      famousGalaxy: { enabled: true, labelEnabled: true },
+      milliquas: { enabled: true, labelEnabled: true },
     };
-    const c: LabelCategory = 'famousGalaxy';
-    expect(v[c]).toBe(true);
+    const c: SurveyId = 'famousGalaxy';
+    expect(v[c].labelEnabled).toBe(true);
   });
 
   it('structures.items is a Record keyed by StructureCategory (no famousGalaxy key)', () => {

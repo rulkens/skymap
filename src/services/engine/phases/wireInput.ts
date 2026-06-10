@@ -215,7 +215,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       visibleSources,
       // Threaded through so the pick pass can boost its floor size
       // for easier click targets — see PICK_PADDING_PX in pickRenderer.ts.
-      pointSizePx: state.settings.points.sizePx,
+      pointSizePx: state.settings.surveys.sizePx,
       // Per-pass GPU timing.  Resolves to `undefined` when the
       // timing service isn't active on this adapter (no
       // `timestamp-query` feature) — in that case the pick render
@@ -277,13 +277,13 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // if any default drifts between engine and component.  The fan-out lives
   // in `seedSettingsCallbacks.ts`.
   seedSettingsCallbacks(cb, {
-    pointSize: state.settings.points.sizePx,
-    brightness: state.settings.points.brightness,
+    pointSize: state.settings.surveys.sizePx,
+    brightness: state.settings.surveys.brightness,
     autoRotate: state.settings.camera.autoRotate,
     galaxyTexturesEnabled: state.settings.thumbnails.enabled,
-    highlightFallback: state.settings.points.highlightFallback,
-    realOnlyMode: state.settings.points.realOnly,
-    depthFadeEnabled: state.settings.points.depthFade,
+    highlightFallback: state.settings.surveys.highlightFallback,
+    realOnlyMode: state.settings.surveys.realOnly,
+    depthFadeEnabled: state.settings.surveys.depthFade,
     showPickBuffer: state.settings.debug.showPickBuffer,
     showDiskRadiusRing: state.settings.debug.showDiskRadiusRing,
     biasMode: state.settings.bias.mode,

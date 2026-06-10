@@ -48,13 +48,13 @@ export function seedSettingsCallbacks(cb: EngineCallbacks, snapshot: SettingsCal
   // observe the engine-truth defaults exactly once at startup.  The flat
   // siblings were deleted alongside this conversion; optional-chaining
   // keeps every fire safe when a consumer doesn't subscribe to that bag.
-  cb.points?.onSizeChange?.(snapshot.pointSize);
-  cb.points?.onBrightnessChange?.(snapshot.brightness);
+  cb.surveys?.onSizeChange?.(snapshot.pointSize);
+  cb.surveys?.onBrightnessChange?.(snapshot.brightness);
   cb.camera?.onAutoRotateChange?.(snapshot.autoRotate);
   cb.thumbnails?.onEnabledChange?.(snapshot.galaxyTexturesEnabled);
-  cb.points?.onHighlightFallbackChange?.(snapshot.highlightFallback);
-  cb.points?.onRealOnlyChange?.(snapshot.realOnlyMode);
-  cb.points?.onDepthFadeChange?.(snapshot.depthFadeEnabled);
+  cb.surveys?.onHighlightFallbackChange?.(snapshot.highlightFallback);
+  cb.surveys?.onRealOnlyChange?.(snapshot.realOnlyMode);
+  cb.surveys?.onDepthFadeChange?.(snapshot.depthFadeEnabled);
   cb.debug?.onShowPickBufferChange?.(snapshot.showPickBuffer);
   cb.debug?.onShowDiskRadiusRingChange?.(snapshot.showDiskRadiusRing);
   cb.bias?.onModeChange?.(snapshot.biasMode);

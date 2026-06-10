@@ -320,12 +320,14 @@ function makeState(
   const data = createEngineData();
   return {
     settings: {
-      points: {
+      surveys: {
+        enabled: true,
         sizePx: 2.5,
         brightness: 1.0,
         depthFade: true,
         highlightFallback: true,
         realOnly: false,
+        items: { famousGalaxy: { enabled: true, labelEnabled: true } },
       },
       tonemap: { exposure: 1.0, curve: 'reinhard' },
       camera: { autoRotate: false },
