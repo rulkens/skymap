@@ -51,6 +51,10 @@ import { createLabelDirectorSubsystem } from '../../src/services/engine/subsyste
 import { createStructureFocusSubsystem } from '../../src/services/engine/subsystems/structureFocusSubsystem';
 import { createFadeRegistry } from '../../src/services/animation/fadeRegistry';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
+
+function makeRegistry() {
+  return createFadeRegistry({ requestRender: () => {} });
+}
 import type { EngineCallbacks } from '../../src/@types/engine/EngineCallbacks';
 import { Source, SOURCE_REGISTRY } from '../../src/data/sources';
 
@@ -186,12 +190,13 @@ describe('EngineState type', () => {
           onConnectionChange: () => {},
           onAxes: () => {},
         }),
-        tweens: createTweenManager(),
+        tweens: createTweenManager({ requestRender: () => {} }),
         selection: createSelectionSubsystem({
           cb: noopCb,
           getCloud: () => undefined,
           getFamousMeta: () => [],
           getStructure: () => null,
+          requestRender: () => {},
         }),
         biasCorrection: createBiasCorrectionSubsystem({
           getMode: () => stateRef.current!.settings.bias.mode,
@@ -200,11 +205,11 @@ describe('EngineState type', () => {
         }),
         youAreHere: createYouAreHereSubsystem(),
         labelDirector: createLabelDirectorSubsystem(),
-        structureFocus: createStructureFocusSubsystem(),
+        structureFocus: createStructureFocusSubsystem({ requestRender: () => {} }),
         clickResolver: null,
         inputBindings: null,
         scheduler: createRenderScheduler({ onFrame: () => {}, rafImpl: noopRaf, cafImpl: noopCaf }),
-        fades: createFadeRegistry(),
+        fades: makeRegistry(),
       },
       cam: null,
       initialCamSnapshot: null,
@@ -392,12 +397,13 @@ describe('EngineState type', () => {
           onConnectionChange: () => {},
           onAxes: () => {},
         }),
-        tweens: createTweenManager(),
+        tweens: createTweenManager({ requestRender: () => {} }),
         selection: createSelectionSubsystem({
           cb: noopCb,
           getCloud: () => undefined,
           getFamousMeta: () => [],
           getStructure: () => null,
+          requestRender: () => {},
         }),
         biasCorrection: createBiasCorrectionSubsystem({
           getMode: () => stateRef.current!.settings.bias.mode,
@@ -406,11 +412,11 @@ describe('EngineState type', () => {
         }),
         youAreHere: createYouAreHereSubsystem(),
         labelDirector: createLabelDirectorSubsystem(),
-        structureFocus: createStructureFocusSubsystem(),
+        structureFocus: createStructureFocusSubsystem({ requestRender: () => {} }),
         clickResolver: null,
         inputBindings: null,
         scheduler: createRenderScheduler({ onFrame: () => {}, rafImpl: noopRaf, cafImpl: noopCaf }),
-        fades: createFadeRegistry(),
+        fades: makeRegistry(),
       },
       cam: null,
       initialCamSnapshot: null,

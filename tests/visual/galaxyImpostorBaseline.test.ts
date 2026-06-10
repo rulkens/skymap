@@ -114,7 +114,6 @@ describe('galaxy-impostor visual baseline', () => {
       const texSys = createTexturedDiskSubsystem({
         device,
         atlas,
-        requestRender: () => {},
         fetcher: async () =>
           ({ width: 128, height: 128, close: () => {} }) as unknown as ImageBitmap,
         decimationFactor: 1,

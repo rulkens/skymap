@@ -87,7 +87,6 @@ export function wireImpostorSubsystems(state: EngineState, deps: BootstrapDeps):
   const texturedDisks = createTexturedDiskSubsystem({
     device,
     atlas: galaxyAtlas,
-    requestRender: () => state.subsystems.scheduler.requestRender(),
     hiResFamous,
   });
 

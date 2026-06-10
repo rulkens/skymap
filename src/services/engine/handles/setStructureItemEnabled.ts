@@ -3,9 +3,9 @@
 // The per-category visibility setters live at module scope (mirroring
 // `setSourceVisibleImpl`) so tests can drive them against a partial-state stub
 // without a full GPU engine. Each writes the authoritative settings leaf,
-// drives the matching per-category FadeRegistry handle for a smooth ramp,
-// echoes a fresh DERIVED record via the callback, and requests a render. The
-// `createEngine` literal delegates to these.
+// drives the matching per-category FadeRegistry handle for a smooth ramp, and
+// echoes a fresh DERIVED record via the callback. The `createEngine` literal
+// delegates to these.
 //
 // Why fade the per-category handle here?  The producers (produceStructureMarkers
 // / produceStructureLabels / produceFamousLabels) already read
@@ -37,7 +37,7 @@ export function setStructureItemEnabled(
   );
   state.settings.structures.items[category].enabled = visible;
   cb.labels?.onMarkerCategoryVisibilityChange?.(deriveMarkerCategoryVisibility(state));
-  state.subsystems.scheduler.requestRender();
+  // No requestRender: the unconditional fadeTo above wakes the scheduler.
 }
 
 // Test-only alias matching the import name used in tests.

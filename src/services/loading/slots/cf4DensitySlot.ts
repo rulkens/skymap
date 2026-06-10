@@ -52,7 +52,6 @@ export const createCf4DensitySlot: SlotFactory<ScalarCube, void> = (state, cb) =
         );
       }
       cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
-      state.subsystems.scheduler.requestRender();
     },
   });
   slot.subscribe((s) => {

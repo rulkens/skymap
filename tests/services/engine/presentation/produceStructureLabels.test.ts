@@ -12,6 +12,11 @@ import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/Read
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
 
+// Convenience factory used wherever the test doesn't care about wake behavior.
+function makeRegistry(): FadeRegistry {
+  return createFadeRegistry({ requestRender: () => {} });
+}
+
 // produceStructureLabels now reads `state.data.structures` for the records,
 // `state.settings.structures.items` for the authoritative per-category gate,
 // `state.subsystems.fades` for the per-category opacity + load-in fire, and
@@ -22,7 +27,7 @@ import type { StructureRecord } from '../../../../src/@types/engine/data/Structu
 function makeState(
   opts: { focusedStructureId?: string | null; fades?: FadeRegistry } = {},
 ): EngineState {
-  const fades = opts.fades ?? createFadeRegistry();
+  const fades = opts.fades ?? makeRegistry();
   registerAllCategories(fades);
   const focusedStructureId = opts.focusedStructureId ?? null;
   return {
@@ -97,7 +102,7 @@ describe('produceStructureLabels', () => {
   it('skips a label category that is disabled AND fully faded', () => {
     // Both halves of the all-or-nothing skip: the authoritative `labelEnabled`
     // boolean is false AND the labelLayer fade reached 0.
-    const fades = createFadeRegistry();
+    const fades = makeRegistry();
     fades.register({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 1);
     fades.setImmediate({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 0);
     const state = makeState({ fades });
@@ -109,7 +114,7 @@ describe('produceStructureLabels', () => {
   it('emits a label whose labelEnabled is false but whose labelLayer opacity is still > 0 (fade-out tail)', () => {
     // Authoritative gate OFF, but the fade hasn't reached 0: the fade-out tail
     // must still emit so the label ramps down to invisible instead of popping.
-    const fades = createFadeRegistry();
+    const fades = makeRegistry();
     fades.register({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 1);
     fades.register({ kind: 'markerLayer', category: 'cluster' }, 1);
     fades.setImmediate({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 0.5);
@@ -123,7 +128,7 @@ describe('produceStructureLabels', () => {
     // A category fading OUT (labelEnabled false, opacity > 0) passes the draw
     // gate but must never re-fire its load-in `fadeTo(handle, 1)` — that would
     // pop it back to full visibility mid-fade.
-    const fades = createFadeRegistry();
+    const fades = makeRegistry();
     fades.register({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 1);
     fades.register({ kind: 'markerLayer', category: 'cluster' }, 1);
     fades.setImmediate({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 0.5);
@@ -144,7 +149,7 @@ describe('produceStructureLabels', () => {
   it('hides a structure label when its marker (ring anchor) is disabled and fully hidden', () => {
     // The anchor gate skips only when the ring is BOTH disabled (`enabled`
     // false) AND its markerLayer opacity is exactly 0.
-    const fades = createFadeRegistry();
+    const fades = makeRegistry();
     fades.register({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 1);
     fades.register({ kind: 'markerLayer', category: 'cluster' }, 1);
     fades.setImmediate({ kind: 'markerLayer', category: 'cluster' }, 0);
@@ -159,7 +164,7 @@ describe('produceStructureLabels', () => {
     // markerVisible flag flipped to false the moment the category toggled off,
     // popping the label while the ring was still visibly fading. Reading the
     // fade handle keeps them in lock-step.
-    const fades = createFadeRegistry();
+    const fades = makeRegistry();
     fades.register({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 1);
     fades.register({ kind: 'markerLayer', category: 'cluster' }, 1);
     fades.setImmediate({ kind: 'markerLayer', category: 'cluster' }, 0.5);
@@ -204,7 +209,7 @@ describe('produceStructureLabels', () => {
     atRest.data.structures.setGroup('anchors', [rec('a')]);
     const atRestAlpha = produceStructureLabels(atRest, makeCtx()).labels[0]!.fadeAlpha!;
 
-    const fades = createFadeRegistry();
+    const fades = makeRegistry();
     fades.register({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 0.5);
     const dimmed = makeState({ fades });
     dimmed.data.structures.setGroup('anchors', [rec('a')]);
@@ -254,7 +259,7 @@ describe('produceStructureLabels', () => {
   });
 
   it('fires the per-category load-in fade on first emit, dedupes thereafter', () => {
-    const fades = createFadeRegistry();
+    const fades = makeRegistry();
     fades.register({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 1);
     const fadeToSpy = vi.spyOn(fades, 'fadeTo');
     const state = makeState({ fades });

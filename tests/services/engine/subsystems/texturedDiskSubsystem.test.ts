@@ -106,7 +106,6 @@ describe('createTexturedDiskSubsystem', () => {
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
-      requestRender: () => {},
       fetcher,
       decimationFactor: 1,
     });
@@ -127,7 +126,6 @@ describe('createTexturedDiskSubsystem', () => {
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
-      requestRender: () => {},
       fetcher,
       decimationFactor: 1,
     });
@@ -145,7 +143,6 @@ describe('createTexturedDiskSubsystem', () => {
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
-      requestRender: () => {},
       fetcher,
       decimationFactor: 1,
     });
@@ -185,7 +182,6 @@ describe('createTexturedDiskSubsystem', () => {
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
-      requestRender: () => {},
       fetcher,
       decimationFactor: 1,
     });
@@ -210,7 +206,6 @@ describe('createTexturedDiskSubsystem', () => {
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
-      requestRender: () => {},
       fetcher,
       decimationFactor: 1,
       hiResFamous,
@@ -245,7 +240,6 @@ describe('createTexturedDiskSubsystem', () => {
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
-      requestRender: () => {},
       fetcher,
       decimationFactor: 1,
       hiResFamous,
@@ -278,7 +272,6 @@ describe('createTexturedDiskSubsystem', () => {
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
-      requestRender: () => {},
       fetcher,
       decimationFactor: 1,
       hiResFamous: initial,
@@ -315,7 +308,6 @@ describe('createTexturedDiskSubsystem', () => {
     const sys = createTexturedDiskSubsystem({
       device,
       atlas,
-      requestRender: () => {},
       fetcher,
       decimationFactor: 1,
     });

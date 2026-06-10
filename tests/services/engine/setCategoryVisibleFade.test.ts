@@ -14,7 +14,9 @@
  * writes the authoritative item leaf (`structures.items[cat].enabled` /
  * `.labelEnabled`, `surveys.items[survey].labelEnabled`). The survey-label fade
  * fires only when the survey's registry row carries a `labelLayer` (famous
- * carries `galaxyNames`).
+ * carries `galaxyNames`). fadeTo owns the render wake (the real FadeRegistry
+ * wakes the scheduler internally), so the setters never call requestRender —
+ * asserted via the untouched scheduler stub.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -99,7 +101,8 @@ describe('setStructureItemEnabled — fade orchestration', () => {
     expect(fx.cb.labels.onMarkerCategoryVisibilityChange).toHaveBeenCalledWith(
       expect.objectContaining({ cluster: false }),
     );
-    expect(fx.state.subsystems.scheduler.requestRender).toHaveBeenCalledTimes(1);
+    // fadeTo owns the wake — the setter must not call requestRender itself.
+    expect(fx.state.subsystems.scheduler.requestRender).not.toHaveBeenCalled();
   });
 
   it('toggle ON fires fadeTo(markerLayer{cluster}, 1, FADE_IN)', () => {
@@ -137,7 +140,8 @@ describe('setStructureLabelEnabled — fade orchestration', () => {
     expect(fx.cb.labels.onLabelCategoryVisibilityChange).toHaveBeenCalledWith(
       expect.objectContaining({ cluster: false }),
     );
-    expect(fx.state.subsystems.scheduler.requestRender).toHaveBeenCalledTimes(1);
+    // fadeTo owns the wake — the setter must not call requestRender itself.
+    expect(fx.state.subsystems.scheduler.requestRender).not.toHaveBeenCalled();
   });
 });
 
@@ -160,7 +164,8 @@ describe('setSurveyLabelEnabled — famous-galaxy survey', () => {
     // Single source of truth: the survey item row's labelEnabled flag.
     expect(fx.state.settings.surveys.items.famousGalaxy.labelEnabled).toBe(false);
     expect(fx.cb.labels.onLabelCategoryVisibilityChange).toHaveBeenCalledTimes(1);
-    expect(fx.state.subsystems.scheduler.requestRender).toHaveBeenCalledTimes(1);
+    // fadeTo owns the wake — the setter must not call requestRender itself.
+    expect(fx.state.subsystems.scheduler.requestRender).not.toHaveBeenCalled();
   });
 
   it('famousGalaxy label toggle ON fires fadeTo(labelLayer{galaxyNames}, 1, FADE_IN)', () => {

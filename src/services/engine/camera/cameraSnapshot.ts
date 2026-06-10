@@ -18,10 +18,11 @@
  *
  * The two methods diverge in motion mechanism (snap vs tween) but
  * agree on every other detail: which snapshot to read, which fields
- * to copy, the cam-null guard, and the trailing `requestRender`.  Two
- * tiny helpers here capture that shared scaffolding so both call
- * sites collapse to one line.  Future home-target changes (e.g. an
- * "instant teleport home" hotkey, or a hard-cut version for
+ * to copy, and the cam-null guard.  Two tiny helpers here capture that
+ * shared scaffolding so both call sites collapse to one line.  The snap
+ * wakes the scheduler itself (no channel covers an instant write); the
+ * tween relies on `tweens.start`'s wake.  Future home-target changes
+ * (e.g. an "instant teleport home" hotkey, or a hard-cut version for
  * benchmarks) plug into the same pair without re-spelling either
  * branch.
  *
@@ -92,6 +93,7 @@ export function snapToCameraSnapshot(state: EngineState, snapshot: InitialCam): 
   cam.yaw = snapshot.yaw;
   cam.pitch = snapshot.pitch;
   updatePosition(cam);
+  // Essential wake: instant programmatic write — no channel covers it.
   state.subsystems.scheduler.requestRender();
 }
 
@@ -134,5 +136,5 @@ export function tweenToCameraSnapshot(state: EngineState, snapshot: InitialCam):
     fromPitch: cam.pitch,
     toPitch: snapshot.pitch,
   });
-  state.subsystems.scheduler.requestRender();
+  // tweens.start wakes the scheduler; no follow-up requestRender needed.
 }

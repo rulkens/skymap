@@ -9,9 +9,9 @@
  * same slot and converts the ready value into `StructureRecord`s, writing them
  * to `structureStore`. Mirrors `famousMetaSlot` in shape.
  *
- * This subscriber's only job is to wake the renderer once the layer lands so
- * the freshly-added bulk markers get drawn, and to warn on failure. It does
- * not own any state — the data flows through the slot's ready value.
+ * This subscriber's only job is to warn on failure (the render wake is
+ * `installSlotReadyWake`'s job). It owns no state — the data flows through
+ * the slot's ready value.
  *
  * **Graceful degradation on error.** A failed fetch (404 / network) maps to
  * "feature off": the subscriber warns and `wireStructureProjection` clears the
@@ -26,18 +26,15 @@ import type { StructureCatalogPayload } from '../../../@types/loading/StructureC
 import type { StructureCatalogReq } from '../../../@types/loading/StructureCatalogReq';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
-export const createStructureCatalogSlot: SlotFactory<StructureCatalogPayload, StructureCatalogReq> = (
-  state,
-  _cb,
-) => {
+export const createStructureCatalogSlot: SlotFactory<
+  StructureCatalogPayload,
+  StructureCatalogReq
+> = (_state, _cb) => {
   const slot = createAssetSlot({
     name: 'structure-catalog',
     fetch: structureCatalogFetcher,
   });
   slot.subscribe((s) => {
-    if (s.kind === 'ready') {
-      state.subsystems.scheduler.requestRender();
-    }
     if (s.kind === 'error') {
       console.warn('[engine] cluster catalog failed to load:', s.error);
     }

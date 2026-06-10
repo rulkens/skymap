@@ -3,67 +3,46 @@
  * clearAll — unified dismiss helper (InfoCard × / Esc).
  *
  * Asserts:
- *   1. setSelected(null) + setFocused(null) both fire when something
- *      was selected or focused (each setter owns its own callback
- *      fan-out — onSelectChange / onFocusChange — so this helper just
- *      kicks both slots).
- *   2. The focus slot is cleared too, so dismissing collapses the
- *      cluster-focus fade (distinct from a bare empty-space click,
- *      which only deselects).
- *   3. Idempotent: skips both setters when nothing was selected OR
- *      focused.
- *   4. requestRender is called so the cleared frame paints.
+ *   1. setSelected(null) + setFocused(null) always fire (setters own
+ *      their own dedupe and render wake — callers don't guard).
+ *   2. Focus is cleared so dismissing collapses the cluster-focus fade
+ *      (distinct from a bare empty-space click, which only deselects).
  */
 
 import { describe, it, expect, vi } from 'vitest';
 import { clearAll } from '../../../../src/services/engine/helpers/clearAll';
-import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { SelectionSubsystem } from '../../../../src/@types/engine/subsystems/SelectionSubsystem';
+import type { Selection } from '../../../../src/@types/engine/subsystems/Selection';
+import type { GalaxyInfo } from '../../../../src/@types/engine/GalaxyInfo';
 
-function makeFixtures(opts: { hasSelection?: boolean; hasFocus?: boolean } = {}) {
-  const setSelected = vi.fn();
-  const setFocused = vi.fn();
-  const selected = vi.fn(() =>
-    opts.hasSelection ? ({ kind: 'galaxy', source: 0, localIdx: 1 } as const) : null,
-  );
-  const focused = vi.fn(() =>
-    opts.hasFocus ? ({ kind: 'structure', id: 'virgo' } as const) : null,
-  );
-  const requestRender = vi.fn();
-  const state = {
-    subsystems: {
-      selection: { selected, focused, setSelected, setFocused },
-      scheduler: { requestRender },
-    },
-  } as unknown as EngineState;
-  return { state, setSelected, setFocused, requestRender };
+function makeSelection(): Pick<SelectionSubsystem, 'setSelected' | 'setFocused'> & {
+  setSelected: ReturnType<
+    typeof vi.fn<(sel: Selection | null, prebuiltInfo?: GalaxyInfo | null) => void>
+  >;
+  setFocused: ReturnType<
+    typeof vi.fn<(sel: Selection | null, prebuiltInfo?: GalaxyInfo | null) => void>
+  >;
+} {
+  return {
+    setSelected: vi.fn<(sel: Selection | null, prebuiltInfo?: GalaxyInfo | null) => void>(),
+    setFocused: vi.fn<(sel: Selection | null, prebuiltInfo?: GalaxyInfo | null) => void>(),
+  };
 }
 
 describe('clearAll', () => {
-  it('clears both the selection and focus slots when something was selected', () => {
-    const f = makeFixtures({ hasSelection: true });
-    clearAll(f.state);
-    expect(f.setSelected).toHaveBeenCalledWith(null);
-    expect(f.setFocused).toHaveBeenCalledWith(null);
+  it('always calls setSelected(null) and setFocused(null)', () => {
+    // Both setters own their own dedupe — callers pass null unconditionally.
+    const sel = makeSelection();
+    clearAll(sel as unknown as SelectionSubsystem);
+    expect(sel.setSelected).toHaveBeenCalledWith(null);
+    expect(sel.setFocused).toHaveBeenCalledWith(null);
   });
 
-  it('clears focus even when only the focus slot was set (no live selection)', () => {
-    // Empty-space click earlier dropped the selection but left the fade
-    // up; a subsequent Esc / × must still collapse it.
-    const f = makeFixtures({ hasSelection: false, hasFocus: true });
-    clearAll(f.state);
-    expect(f.setFocused).toHaveBeenCalledWith(null);
-  });
-
-  it('skips both setters when nothing was selected or focused', () => {
-    const f = makeFixtures({ hasSelection: false, hasFocus: false });
-    clearAll(f.state);
-    expect(f.setSelected).not.toHaveBeenCalled();
-    expect(f.setFocused).not.toHaveBeenCalled();
-  });
-
-  it('calls requestRender so the cleared frame paints', () => {
-    const f = makeFixtures({ hasSelection: true });
-    clearAll(f.state);
-    expect(f.requestRender).toHaveBeenCalled();
+  it('calls both setters so focus collapses alongside selection', () => {
+    // Dismissing must clear the cluster-fade focus slot, not just deselect.
+    const sel = makeSelection();
+    clearAll(sel as unknown as SelectionSubsystem);
+    expect(sel.setSelected).toHaveBeenCalledTimes(1);
+    expect(sel.setFocused).toHaveBeenCalledTimes(1);
   });
 });

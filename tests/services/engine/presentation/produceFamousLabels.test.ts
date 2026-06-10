@@ -13,6 +13,11 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
 
+// Convenience factory used wherever the test doesn't care about wake behavior.
+function makeRegistry(): FadeRegistry {
+  return createFadeRegistry({ requestRender: () => {} });
+}
+
 // produceFamousLabels reads `state.data.galaxies` for the records,
 // `state.subsystems.fades` for the `galaxyNames` opacity + load-in fire, and
 // `state.settings.surveys.items.famousGalaxy.labelEnabled` for the
@@ -21,7 +26,7 @@ import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaE
 // handle) is a safe no-op ramp and the at-rest opacity is 1. The famous label
 // gate defaults visible.
 function makeState(opts: { fades?: FadeRegistry } = {}): EngineState {
-  const fades = opts.fades ?? createFadeRegistry();
+  const fades = opts.fades ?? makeRegistry();
   fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
   return {
     data: createEngineData(),
@@ -105,7 +110,7 @@ describe('produceFamousLabels', () => {
     // The gate is opacity-aware: hidden alone is not enough — the galaxyNames
     // fade must have reached 0 for the producer to fall silent. Simulate a
     // completed fade-out by forcing the handle to 0.
-    const fades = createFadeRegistry();
+    const fades = makeRegistry();
     fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
     fades.setImmediate({ kind: 'labelLayer', layer: 'galaxyNames' }, 0);
     const state = makeState({ fades });
@@ -118,7 +123,7 @@ describe('produceFamousLabels', () => {
     // Toggle-off scenario mid-fade: the famous label gate is false but the
     // galaxyNames opacity is still ramping down (0.5 here). The producer must
     // KEEP emitting at the reduced alpha so the labels fade out smoothly.
-    const midFade = createFadeRegistry();
+    const midFade = makeRegistry();
     midFade.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
     midFade.setImmediate({ kind: 'labelLayer', layer: 'galaxyNames' }, 0.5);
     const fading = makeState({ fades: midFade });
@@ -132,7 +137,7 @@ describe('produceFamousLabels', () => {
 
     // Once the fade reaches 0, the producer falls silent.
     __resetFamousLabelLoadIn();
-    const done = createFadeRegistry();
+    const done = makeRegistry();
     done.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
     done.setImmediate({ kind: 'labelLayer', layer: 'galaxyNames' }, 0);
     const settled = makeState({ fades: done });
@@ -182,7 +187,7 @@ describe('produceFamousLabels', () => {
     const atRestAlpha = produceFamousLabels(atRest, makeCtx()).labels[0]!.fadeAlpha!;
 
     // galaxyNames at 0.5 → half the at-rest alpha for label AND its anchor line.
-    const fades = createFadeRegistry();
+    const fades = makeRegistry();
     fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
     fades.setImmediate({ kind: 'labelLayer', layer: 'galaxyNames' }, 0.5);
     const dimmed = makeState({ fades });
@@ -211,7 +216,7 @@ describe('produceFamousLabels', () => {
   it('anchor lines fade with their labels', () => {
     // The connector carries the same × layerAlpha factor as its label, at both
     // a dimmed opacity and under recession.
-    const fades = createFadeRegistry();
+    const fades = makeRegistry();
     fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
     fades.setImmediate({ kind: 'labelLayer', layer: 'galaxyNames' }, 0.5);
     const state = makeState({ fades });
@@ -222,7 +227,7 @@ describe('produceFamousLabels', () => {
   });
 
   it('fires the galaxyNames load-in once then dedupes', () => {
-    const fades = createFadeRegistry();
+    const fades = makeRegistry();
     fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
     const fadeToSpy = vi.spyOn(fades, 'fadeTo');
     const state = makeState({ fades });

@@ -8,7 +8,10 @@
  * `cb.selection.onHoverChange` / `onSelectChange` with the resolved
  * `FocusableTarget` (GalaxyInfo for galaxy variants, StructureRecord
  * for structures) — callers never have to remember to fire the callback
- * themselves.
+ * themselves.  `setSelected` and `setFocused` also own the render wake —
+ * callers never follow up with `requestRender`.  `setHovered` is
+ * wake-free: it feeds only the React InfoCard (no scene-side halo), and
+ * hover picks resolve inside frames anyway.
  *
  * ### Why `focused` is a third slot, not a synonym for `selected`
  *
@@ -72,7 +75,7 @@ function selectionEq(a: Selection | null, b: Selection | null): boolean {
 }
 
 export function createSelectionSubsystem(input: CreateSelectionSubsystemInput): SelectionSubsystem {
-  const { cb, getCloud, getFamousMeta, getStructure } = input;
+  const { cb, getCloud, getFamousMeta, getStructure, requestRender } = input;
 
   // Closure-captured `let`s — genuinely inaccessible from outside.
   // All start null; `hovered`/`selected` populate from the first hover
@@ -132,6 +135,8 @@ export function createSelectionSubsystem(input: CreateSelectionSubsystemInput): 
         ? prebuiltInfo
         : resolveTarget(sel);
     cb.selection?.onSelectChange?.(target);
+    // Channel mouth owns the wake (see module header).
+    requestRender();
   }
 
   /**
@@ -151,6 +156,8 @@ export function createSelectionSubsystem(input: CreateSelectionSubsystemInput): 
         ? prebuiltInfo
         : resolveTarget(sel);
     cb.camera?.onFocusChange?.(target);
+    // Wake — the focus change drives the cluster-isolation fade.
+    requestRender();
   }
 
   function destroy(): void {

@@ -27,6 +27,10 @@ import { createEngineData } from '../../../src/services/engine/data/createEngine
 import { createStructureMarkerRenderer } from '../../../src/services/gpu/renderers/structureMarkerRenderer';
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
 import type { StructureRecord } from '../../../src/@types/engine/data/StructureRecord';
+
+function makeRegistry() {
+  return createFadeRegistry({ requestRender: () => {} });
+}
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { FadeUniformsBgl } from '../../../src/@types/rendering/FadeUniformsBgl';
@@ -91,7 +95,7 @@ describe('produceStructureMarkers → structureMarkerRenderer.setMarkers', () =>
       },
       subsystems: {
         selection: { selected: () => null, focused: () => null },
-        fades: createFadeRegistry(),
+        fades: makeRegistry(),
       },
     } as unknown as EngineState;
     const ctx = {

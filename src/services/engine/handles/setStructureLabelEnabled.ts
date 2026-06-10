@@ -3,9 +3,9 @@
 // A per-category visibility setter living at module scope (mirroring
 // `setSourceVisibleImpl`) so tests can drive it against a partial-state stub
 // without a full GPU engine. It writes the authoritative settings leaf, drives
-// the matching per-category FadeRegistry handle for a smooth ramp, echoes a
-// fresh DERIVED record via the callback, and requests a render. The
-// `createEngine` literal delegates here.
+// the matching per-category FadeRegistry handle for a smooth ramp, and echoes
+// a fresh DERIVED record via the callback. The `createEngine` literal
+// delegates here.
 //
 // Fading the per-category handle keeps the toggle smooth: the producer
 // (produceStructureLabels) reads `opacityOf({...})` for its layer alpha, so
@@ -34,7 +34,7 @@ export function setStructureLabelEnabled(
   );
   state.settings.structures.items[category].labelEnabled = visible;
   cb.labels?.onLabelCategoryVisibilityChange?.(deriveLabelCategoryVisibility(state));
-  state.subsystems.scheduler.requestRender();
+  // No requestRender: the unconditional fadeTo above wakes the scheduler.
 }
 
 // Test-only alias matching the import name used in tests.

@@ -427,7 +427,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       //   - pointerdown handler                (cancel on user grab),
       //   - SpaceMouse per-frame block         (cancel on puck deflect),
       //   - per-frame frame() loop             (advance + auto-clear).
-      tweens: createTweenManager(),
+      tweens: createTweenManager({
+        requestRender: () => state.subsystems.scheduler.requestRender(),
+      }),
 
       // ── SpaceMouse subsystem ──────────────────────────────────
       // All puck state lives inside the subsystem.  We hand it three
@@ -441,7 +443,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           // echo directly.
           cb.input?.spaceMouse?.onConnectedChange?.(connected);
           // Wake one frame so the still-animating predicate sees the
-          // freshly-zeroed axes and lets the loop sleep cleanly.
+          // freshly-zeroed axes and lets the loop sleep cleanly — the only
+          // wake on the disconnect path (handle.disconnect relies on it).
           state.subsystems.scheduler.requestRender();
         },
         onAxes: () => state.subsystems.scheduler.requestRender(),
@@ -461,6 +464,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // group); resolve them straight from the structure store. Famous
         // galaxies are selected via the point path (kind 'galaxy'), never here.
         getStructure: (id) => state.data.structures.byId(id),
+        requestRender: () => state.subsystems.scheduler.requestRender(),
       }),
 
       // ── Bias-correction subsystem ─────────────────────────────────
@@ -494,7 +498,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Selection-driven: `runFrame` calls `update(selectedStructure, nowMs)` to
       // drive the 400 ms member-isolation fade and threads
       // `produceFocusUniforms` into the points draw.  Eager, no GPU dep.
-      structureFocus: createStructureFocusSubsystem(),
+      structureFocus: createStructureFocusSubsystem({
+        requestRender: () => state.subsystems.scheduler.requestRender(),
+      }),
 
       // ── Render scheduler — eager, capture-safe ────────────────────
       // Created here (not a deferred shim): its `onFrame` closes over the
@@ -507,7 +513,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // ── Fade registry ──────────────────────────────────────────
       // Eager so initGpu can register handles without a null-check. Pure
       // CPU — no GPU device at construction.
-      fades: createFadeRegistry(),
+      fades: createFadeRegistry({
+        requestRender: () => state.subsystems.scheduler.requestRender(),
+      }),
 
       // The rest land later in the IIFE once their deps (GPU device,
       // pickRenderer, scheduler) exist.
@@ -658,11 +666,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   function clearSelection(): void {
     // Unified teardown — clears galaxy/structure selection AND the focus slot
-    // (so the cluster-focus fade collapses) in one call.  The branching
-    // + render-scheduling lives in `clearAll` so the engine.ts closure
-    // stays a thin wrapper.  See clearAll.ts for the dismiss-vs-deselect
-    // rationale and the order-of-firing guarantee.
-    clearAll(state);
+    // (so the cluster-focus fade collapses) in one call.  Each setter owns
+    // its own dedupe and render wake; clearAll just pairs the two calls.
+    // See clearAll.ts for the dismiss-vs-deselect rationale.
+    clearAll(state.subsystems.selection);
   }
 
   function setBiasMode(mode: BiasMode): void {
@@ -670,13 +677,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // so flipping it takes effect next frame with no pipeline rebuild.  We
     // always fire the echo (even when unchanged) so the UI seeds on first
     // call.  Routes through `biasCorrectionSubsystem`, which owns the cached
-    // ratios/weights + worker runners and calls requestRender itself as each
-    // per-source splice resolves, so visuals update progressively.  The
-    // `void` discards the Promise — engine.ts doesn't await.
+    // ratios/weights + worker runners and the render wakes (entry +
+    // post-splice).  The `void` discards the Promise — engine.ts doesn't await.
     state.settings.bias.mode = mode;
     cb.bias?.onModeChange?.(mode);
     void state.subsystems.biasCorrection.setMode(mode);
-    state.subsystems.scheduler.requestRender();
   }
 
   function resetCamera(): void {
@@ -867,12 +872,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // sites multiply this master opacity into every per-field fade, so the
     // whole subsystem ramps in lockstep.  The pass-enabled gate accepts
     // the master enable bit OR opacity > 0, so it keeps blitting through fade-out.
+    // fadeTo owns the render wake.
     void state.subsystems.fades.fadeTo(
       { kind: 'volumesMaster' },
       enabled ? 1 : 0,
       enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
     );
-    state.subsystems.scheduler.requestRender();
   }
 
   function addVolumeField(fieldId: VolumeFieldId, cube: ScalarCube): void {
@@ -900,6 +905,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       );
     }
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
+    // Essential wake: the fadeTo above is conditional — a disabled add still
+    // changes the renderer's field set and settings row.
     state.subsystems.scheduler.requestRender();
   }
 
@@ -907,6 +914,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.scalarVolumeRenderer?.removeField(fieldId);
     state.settings.volumes.items = removeVolumeFieldSetting(state.settings.volumes.items, fieldId);
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
+    // Essential wake: removal fires no fade — the field vanishes outright.
     state.subsystems.scheduler.requestRender();
   }
 
@@ -956,8 +964,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
     );
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
-    state.subsystems.scheduler.requestRender();
+    // No requestRender: fadeTo wakes, and that frame's reevaluateDemand sees
+    // the flipped enabled bit for the shippable cf4/mcpm rows.
   }
+
+  // The per-field knob setters below write `state.settings.volumes.items`
+  // directly — no boringSetter, no fade, so no channel wakes for them.  Each
+  // keeps an explicit requestRender to re-render the raymarch pass.
 
   function setVolumeFieldIntensity(fieldId: VolumeFieldId, intensity: number): void {
     const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
@@ -1035,8 +1048,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function disconnectSpaceMouse(): void {
+    // No requestRender: a real disconnect fires onConnectionChange (which
+    // wakes); with no device open nothing observable changes.
     state.subsystems.spaceMouse.disconnect();
-    state.subsystems.scheduler.requestRender();
   }
 
   function isSpaceMouseConnected(): boolean {
@@ -1191,7 +1205,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     milkyWay: {
       // Drive the FadeRegistry alongside the boolean flip for a smooth ramp.
       // milkyWayPass.enabled accepts the boolean OR a non-zero opacity, so
-      // the gate keeps the pass alive through fade-out.
+      // the gate keeps the pass alive through fade-out.  The boringSetter and
+      // fadeTo both wake the scheduler — no extra requestRender.
       setEnabled: (enabled) => {
         boringSetters.setMilkyWayEnabled(enabled);
         void state.subsystems.fades.fadeTo(
@@ -1199,13 +1214,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           enabled ? 1 : 0,
           enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
         );
-        state.subsystems.scheduler.requestRender();
       },
     },
     filaments: {
       // Same fade-on-toggle pattern as milkyWay: filamentsPass.enabled
       // accepts the boolean OR a non-zero opacity, keeping the pass alive
-      // through fade-out.
+      // through fade-out.  The boringSetter and fadeTo both wake the
+      // scheduler — no extra requestRender.
       setEnabled: (enabled) => {
         boringSetters.setFilamentsEnabled(enabled);
         void state.subsystems.fades.fadeTo(
@@ -1213,7 +1228,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           enabled ? 1 : 0,
           enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
         );
-        state.subsystems.scheduler.requestRender();
       },
       setIntensity: (value) => boringSetters.setFilamentIntensity(value),
     },
@@ -1260,7 +1274,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           state.gpu.flowFieldRenderer?.maybeReseed();
         }
 
-        state.subsystems.scheduler.requestRender();
+        // No wake needed: each present leaf woke via its boringSetter (and
+        // fadeTo above); an empty patch changes nothing.
       },
     },
     structures: {

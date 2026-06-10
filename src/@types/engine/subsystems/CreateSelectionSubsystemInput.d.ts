@@ -25,4 +25,9 @@ export type CreateSelectionSubsystemInput = {
    * callback with null.
    */
   getStructure: (id: string) => StructureRecord | null;
+  /**
+   * Wake the render loop one frame. setSelected/setFocused call this on
+   * actual change; setHovered does not (see the module header's wake contract).
+   */
+  requestRender: () => void;
 };

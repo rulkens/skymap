@@ -121,7 +121,8 @@ function makeFlowHandle(
         state.gpu.flowFieldRenderer?.maybeReseed();
       }
 
-      state.subsystems.scheduler.requestRender();
+      // No wake needed: each present leaf woke via its boringSetter (and
+      // fadeTo above); an empty patch changes nothing.
     },
   };
 }

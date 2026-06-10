@@ -5,9 +5,8 @@
  *
  * No `commit` step: there's nothing GPU-side to upload — the payload is
  * pure metadata consumed by the InfoCard via `galaxyStore.famousMeta`.
- * The subscriber writes the field and wakes one frame so the famous-
- * galaxy thumbnails become enqueueable from the per-frame loop without
- * the user having to nudge the camera.
+ * The subscriber writes the field; the render wake is `installSlotReadyWake`'s
+ * job, not the factory's.
  *
  * **Graceful degradation on error.**  The fetcher throws on HTTP failure
  * (so the retry policy distinguishes "really gone" from "transient flake"),
@@ -30,7 +29,6 @@ export const createFamousMetaSlot: SlotFactory<FamousPayload, CompanionAssetReq>
   slot.subscribe((s) => {
     if (s.kind === 'ready') {
       state.data.galaxies.setFamousMeta(s.value.meta);
-      state.subsystems.scheduler.requestRender();
     }
     if (s.kind === 'error') {
       // Defensive — the field defaults to `[]` already, but writing it

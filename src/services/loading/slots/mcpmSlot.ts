@@ -48,7 +48,6 @@ export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, cb) => {
         );
       }
       cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
-      state.subsystems.scheduler.requestRender();
     },
   });
   slot.subscribe((s) => {

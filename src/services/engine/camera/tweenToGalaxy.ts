@@ -110,7 +110,5 @@ export function tweenToGalaxy(state: EngineState, target: TweenTarget): void {
     fromPitch: cam.pitch,
     toPitch: cam.pitch,
   });
-  // Wake the render loop — the tween's per-frame advance keeps it
-  // ticking via the still-animating predicate until completion.
-  state.subsystems.scheduler.requestRender();
+  // tweens.start wakes the scheduler; no follow-up requestRender needed.
 }

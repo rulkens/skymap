@@ -1,12 +1,13 @@
 /**
- * structureCatalogSlot — verifies the slot wakes the renderer on a successful
- * load and degrades gracefully on fetch failure.
+ * structureCatalogSlot — verifies the slot transitions correctly and degrades
+ * gracefully on fetch failure.
  *
  * The slot has no GPU commit and owns no state — `wireStructureProjection`
- * subscribes to the same slot and consumes the ready value.  So the only
- * observable behaviour here is a `requestRender()` wake on ready and a warn
- * on error.  We mock the fetcher module so `slot.load()` drives a
- * deterministic ready/error transition without touching the network.
+ * subscribes to the same slot and consumes the ready value. The render wake
+ * is handled generically by `installSlotReadyWake` in the wiring layer, so
+ * the only observable slot-level behaviour is a `console.warn` on error.
+ * We mock the fetcher module so `slot.load()` drives a deterministic
+ * ready/error transition without touching the network.
  */
 import { describe, expect, it, vi } from 'vitest';
 import type { StructureCatalogPayload } from '../../../../src/@types/loading/StructureCatalogPayload';
@@ -37,33 +38,26 @@ function fakePayload(): StructureCatalogPayload {
   };
 }
 
-// Minimal fake state — the slot only touches
-// `subsystems.scheduler.requestRender`. `as never` lets us hand the factory
-// a stub without modelling the whole EngineState tree.
-function fakeState(): { state: EngineState; requestRender: ReturnType<typeof vi.fn> } {
-  const requestRender = vi.fn();
-  const state = {
-    subsystems: { scheduler: { requestRender } },
+// Minimal fake state — the slot subscriber only warns on error; no state
+// fields are touched on the ready path.
+function fakeState(): EngineState {
+  return {
     assetSlots: {},
   } as unknown as EngineState;
-  return { state, requestRender };
 }
 
 const noopCb = {} as EngineCallbacks;
 
 describe('createStructureCatalogSlot', () => {
-  it('wakes the renderer on ready', async () => {
+  it('transitions to ready and returns a correctly-named slot', async () => {
     const payload = fakePayload();
     mockFetch.mockResolvedValue(payload);
-    const { state, requestRender } = fakeState();
+    const state = fakeState();
 
     const slot = createStructureCatalogSlot(state, noopCb);
     slot.load({});
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
-    // The slot owns no state — it only wakes the renderer so the bulk
-    // markers (fed by wireStructureProjection from the same ready value) get drawn.
-    expect(requestRender).toHaveBeenCalled();
     // Construction purity: the factory RETURNS the slot and does NOT
     // self-install it — `installSlots` (the orchestrator) owns the write.
     expect(slot.name).toBe('structure-catalog');
@@ -75,7 +69,7 @@ describe('createStructureCatalogSlot', () => {
     // immediately (no slow backoff), so the slot reaches 'error' at once.
     mockFetch.mockRejectedValue(new HttpError(404, 'structures.ccat'));
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const { state } = fakeState();
+    const state = fakeState();
 
     const slot = createStructureCatalogSlot(state, noopCb);
     slot.load({});

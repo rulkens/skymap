@@ -72,7 +72,6 @@ export function galaxyCacheKey(ra: number, dec: number): string {
 export type TexturedDiskDeps = {
   readonly device: GPUDevice;
   readonly atlas: GalaxyAtlasSubsystem;
-  readonly requestRender: () => void;
   /** For tests.  Defaults to fetchGalaxyBitmap. */
   readonly fetcher?: (args: {
     ra: number;
@@ -95,7 +94,9 @@ export type TexturedDiskDeps = {
 export function createTexturedDiskSubsystem(
   deps: TexturedDiskDeps,
 ): TexturedDiskSubsystemWithTestSeam {
-  const { atlas, requestRender } = deps;
+  // No requestRender dep: the planner runs inside frames, and async bitmap
+  // arrivals wake the loop via the atlas subsystem's onResult.
+  const { atlas } = deps;
   const fetcher = deps.fetcher ?? fetchGalaxyBitmap;
   const decimationFactor = Math.max(1, Math.floor(deps.decimationFactor ?? 8));
   // Mutable binding rather than `const` so `setHiResFamous(...)` can

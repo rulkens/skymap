@@ -149,4 +149,17 @@ describe('setSourceVisible — synchronous toggle', () => {
     const echoed = fx.onMaskChange.mock.calls[0]![0] as number;
     expect(maskHas(echoed, Source.SDSS)).toBe(false);
   });
+
+  it('never calls requestRender itself — fadeTo owns the wake', () => {
+    // Every non-no-op path fires fadeTo (which wakes), and the masks are
+    // derived per frame — no caller wake left to cover.  The no-op second
+    // toggle early-returns and must stay wake-free too.
+    const fx = makeFixture();
+
+    setSourceVisibleForTest(fx.state as never, { cb: fx.cb } as never, Source.SDSS, false);
+    setSourceVisibleForTest(fx.state as never, { cb: fx.cb } as never, Source.SDSS, false); // no-op
+
+    expect(fx.fades.fadeTo).toHaveBeenCalledTimes(1);
+    expect(fx.state.subsystems.scheduler.requestRender).not.toHaveBeenCalled();
+  });
 });

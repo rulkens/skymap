@@ -169,6 +169,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // cam + GPU handles populate together, it's never taken again.
   const ctx = deriveFrameContext(state, deps.canvas);
   if (!ctx.isReady) {
+    // Essential wake: bootstrap populates cam/GPU handles without waking
+    // any channel — keep re-polling until the gate opens.
     state.subsystems.scheduler.requestRender();
     return;
   }
@@ -451,9 +453,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   }
 
   // ── Render-on-demand: continue ticking ONLY if motion or async
-  // work is in flight.  Otherwise the loop sleeps; event handlers and
-  // engine handle setters call scheduler.requestRender() to wake it one
-  // frame each.
+  // work is in flight.  Otherwise the loop sleeps until a channel mouth
+  // wakes it: input, a fade or tween start, a slot reaching ready, a
+  // selection/focus change, or a settings write.
   //
   // Predicate breakdown:
   //   - camera drivers active: any camera mover (raw input, an in-flight

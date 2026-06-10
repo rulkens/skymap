@@ -1,36 +1,41 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
 import { Source } from '../../../src/data/sources';
 import type { FadeHandle } from '../../../src/@types/animation/FadeHandle';
 
+// No-op wake stub for tests that don't care about the wake.
+function makeRegistry() {
+  return createFadeRegistry({ requestRender: () => {} });
+}
+
 describe('createFadeRegistry', () => {
   it('exposes the conventional label property', () => {
-    const r = createFadeRegistry();
+    const r = makeRegistry();
     expect(r.label).toBe('fadeRegistry');
   });
 
   it('opacityOf returns 1.0 for unregistered handles (fail-safe)', () => {
-    const r = createFadeRegistry();
+    const r = makeRegistry();
     const h: FadeHandle = { kind: 'survey', source: Source.SDSS };
     expect(r.opacityOf(h, 1000)).toBe(1.0);
   });
 
   it('register defaults initial opacity to 0', () => {
-    const r = createFadeRegistry();
+    const r = makeRegistry();
     const h: FadeHandle = { kind: 'survey', source: Source.SDSS };
     r.register(h);
     expect(r.opacityOf(h, 1000)).toBe(0);
   });
 
   it('register honors a provided initial opacity', () => {
-    const r = createFadeRegistry();
+    const r = makeRegistry();
     const h: FadeHandle = { kind: 'overlay', id: 'milkyWay' };
     r.register(h, 0.75);
     expect(r.opacityOf(h, 1000)).toBe(0.75);
   });
 
   it('register is idempotent', () => {
-    const r = createFadeRegistry();
+    const r = makeRegistry();
     const h: FadeHandle = { kind: 'filaments' };
     r.register(h, 0.5);
     r.register(h, 0.0); // second call is a no-op; the existing controller is preserved.
@@ -38,7 +43,7 @@ describe('createFadeRegistry', () => {
   });
 
   it('unregister drops the controller; opacityOf reverts to fail-safe 1.0', () => {
-    const r = createFadeRegistry();
+    const r = makeRegistry();
     const h: FadeHandle = { kind: 'filaments' };
     r.register(h, 0);
     r.unregister(h);
@@ -46,7 +51,7 @@ describe('createFadeRegistry', () => {
   });
 
   it('serialization is stable across handle equality', () => {
-    const r = createFadeRegistry();
+    const r = makeRegistry();
     const h1: FadeHandle = { kind: 'survey', source: Source.SDSS };
     const h2: FadeHandle = { kind: 'survey', source: Source.SDSS };
     r.register(h1, 0.5);
@@ -55,7 +60,7 @@ describe('createFadeRegistry', () => {
   });
 
   it('different discriminator values produce different keys', () => {
-    const r = createFadeRegistry();
+    const r = makeRegistry();
     const a: FadeHandle = { kind: 'survey', source: Source.SDSS };
     const b: FadeHandle = { kind: 'survey', source: Source.Glade };
     r.register(a, 0.25);
@@ -65,7 +70,7 @@ describe('createFadeRegistry', () => {
   });
 
   it('serializes the flow handle to its own key (distinct from filaments)', () => {
-    const r = createFadeRegistry();
+    const r = makeRegistry();
     const flow: FadeHandle = { kind: 'flow' };
     const filaments: FadeHandle = { kind: 'filaments' };
     r.register(flow, 0.3);
@@ -75,14 +80,16 @@ describe('createFadeRegistry', () => {
     expect(r.opacityOf(filaments, 1000)).toBe(0.6);
   });
 
-  it('fadeTo throws when the handle is not registered', () => {
-    const r = createFadeRegistry();
+  it('fadeTo throws when the handle is not registered and does not wake', () => {
+    const requestRender = vi.fn();
+    const r = createFadeRegistry({ requestRender });
     const h: FadeHandle = { kind: 'filaments' };
     expect(() => r.fadeTo(h, 1, 600)).toThrow();
+    expect(requestRender).not.toHaveBeenCalled();
   });
 
   it('fadeTo ramps opacity and resolves via tick', async () => {
-    const r = createFadeRegistry();
+    const r = makeRegistry();
     const h: FadeHandle = { kind: 'filaments' };
     r.register(h, 0);
     let done = false;
@@ -98,7 +105,7 @@ describe('createFadeRegistry', () => {
   });
 
   it('setImmediate skips animation', () => {
-    const r = createFadeRegistry();
+    const r = makeRegistry();
     const h: FadeHandle = { kind: 'overlay', id: 'milkyWay' };
     r.register(h, 0);
     r.setImmediate(h, 1);
@@ -107,7 +114,7 @@ describe('createFadeRegistry', () => {
   });
 
   it('isAnyAnimating aggregates across multiple controllers', () => {
-    const r = createFadeRegistry();
+    const r = makeRegistry();
     const a: FadeHandle = { kind: 'survey', source: Source.SDSS };
     const b: FadeHandle = { kind: 'filaments' };
     r.register(a, 0);
@@ -121,7 +128,7 @@ describe('createFadeRegistry', () => {
   });
 
   it('serializeFadeHandle keys markerLayer by category', () => {
-    const r = createFadeRegistry();
+    const r = makeRegistry();
     const cluster: FadeHandle = { kind: 'markerLayer', category: 'cluster' };
     const aVoid: FadeHandle = { kind: 'markerLayer', category: 'void' };
     r.register(cluster, 0);
@@ -134,7 +141,7 @@ describe('createFadeRegistry', () => {
   });
 
   it('serializeFadeHandle keeps a category-less labelLayer distinct from a per-category one', () => {
-    const r = createFadeRegistry();
+    const r = makeRegistry();
     const bare: FadeHandle = { kind: 'labelLayer', layer: 'structure' };
     const perCategory: FadeHandle = { kind: 'labelLayer', layer: 'structure', category: 'cluster' };
     r.register(bare, 0);
@@ -146,7 +153,7 @@ describe('createFadeRegistry', () => {
   });
 
   it('serializeFadeHandle leaves youAreHere label key unchanged', () => {
-    const r = createFadeRegistry();
+    const r = makeRegistry();
     const h: FadeHandle = { kind: 'labelLayer', layer: 'youAreHere' };
     r.register(h, 0);
     r.fadeTo(h, 1, 0, 0);
@@ -155,11 +162,32 @@ describe('createFadeRegistry', () => {
   });
 
   it('destroy clears every controller', () => {
-    const r = createFadeRegistry();
+    const r = makeRegistry();
     const h: FadeHandle = { kind: 'filaments' };
     r.register(h, 0.5);
     r.destroy();
     expect(r.opacityOf(h, 0)).toBe(1.0);
     expect(r.isAnyAnimating(0)).toBe(false);
+  });
+
+  it('fadeTo wakes the scheduler', () => {
+    const requestRender = vi.fn();
+    const r = createFadeRegistry({ requestRender });
+    const h: FadeHandle = { kind: 'filaments' };
+    r.register(h, 0);
+    r.fadeTo(h, 1, 600, 0);
+    expect(requestRender).toHaveBeenCalledTimes(1);
+  });
+
+  it('register, unregister, setImmediate, tick and opacityOf do not wake', () => {
+    const requestRender = vi.fn();
+    const r = createFadeRegistry({ requestRender });
+    const h: FadeHandle = { kind: 'filaments' };
+    r.register(h, 0);
+    r.setImmediate(h, 0.5);
+    r.tick(100);
+    r.opacityOf(h, 100);
+    r.unregister(h);
+    expect(requestRender).not.toHaveBeenCalled();
   });
 });

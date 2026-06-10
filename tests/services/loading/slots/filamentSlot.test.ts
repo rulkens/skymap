@@ -4,8 +4,9 @@
  *
  * The slot's observable effects on `ready` are: the GPU upload, a
  * `filaments.setLoaded(strip, vert)` write to the store (the authoritative
- * status home), the `onReady` UI echo, and a `requestRender()` wake. We mock
- * the fetcher so `slot.load()` drives a deterministic ready transition without
+ * status home), and the `onReady` UI echo. The render wake is handled
+ * generically by `installSlotReadyWake` in the wiring layer. We mock the
+ * fetcher so `slot.load()` drives a deterministic ready transition without
  * touching the network.
  */
 import { describe, expect, it, vi } from 'vitest';
@@ -33,21 +34,18 @@ function fakeCloud(): FilamentCloud {
 }
 
 // Minimal fake state — the slot touches the fade registry, the filament
-// renderer, the filament store, and the scheduler. `as never` lets us hand the
-// factory a stub without modelling the whole EngineState tree.
-function fakeState(): { state: EngineState; requestRender: ReturnType<typeof vi.fn> } {
-  const requestRender = vi.fn();
-  const state = {
+// renderer, and the filament store. `as never` lets us hand the factory a stub
+// without modelling the whole EngineState tree.
+function fakeState(): EngineState {
+  return {
     settings: { filaments: { enabled: true, intensity: 1 } },
     data: createEngineData(),
     subsystems: {
       fades: { register: vi.fn(), fadeTo: vi.fn(async () => {}) },
-      scheduler: { requestRender },
     },
     gpu: { filamentRenderer: { upload: vi.fn() } },
     assetSlots: {},
   } as unknown as EngineState;
-  return { state, requestRender };
 }
 
 const noopCb = {} as EngineCallbacks;
@@ -56,7 +54,7 @@ describe('createFilamentSlot', () => {
   it('records load status on the filament store on ready', async () => {
     const cloud = fakeCloud();
     mockFetch.mockResolvedValue(cloud);
-    const { state, requestRender } = fakeState();
+    const state = fakeState();
 
     const slot = createFilamentSlot(state, noopCb);
     slot.load({ tier: 'medium' } as never);
@@ -66,7 +64,6 @@ describe('createFilamentSlot', () => {
     expect(state.data.filaments.loaded).toBe(true);
     expect(state.data.filaments.stripCount).toBe(12);
     expect(state.data.filaments.vertexCount).toBe(3400);
-    expect(requestRender).toHaveBeenCalled();
     // Construction purity: the factory RETURNS the slot and does NOT
     // self-install it — `installSlots` (the orchestrator) owns the write.
     expect(slot.name).toBe('filaments');
@@ -76,7 +73,7 @@ describe('createFilamentSlot', () => {
   it('echoes the parsed counts to the UI callback', async () => {
     const cloud = fakeCloud();
     mockFetch.mockResolvedValue(cloud);
-    const { state } = fakeState();
+    const state = fakeState();
     const onReady = vi.fn();
     const cb = { filaments: { onReady } } as unknown as EngineCallbacks;
 

@@ -5,6 +5,10 @@ import { MARKER_RECESSION } from '../../../../src/services/engine/presentation/f
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
 import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry';
+
+function makeRegistry(): FadeRegistry {
+  return createFadeRegistry({ requestRender: () => {} });
+}
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
@@ -36,7 +40,7 @@ function makeState(
     data: createEngineData(),
     settings: { structures: { enabled: true, items: makeStructureItems() } },
     subsystems: {
-      fades: createFadeRegistry(),
+      fades: makeRegistry(),
       selection: {
         selected: () =>
           selectedStructureId !== null ? { kind: 'structure', id: selectedStructureId } : null,

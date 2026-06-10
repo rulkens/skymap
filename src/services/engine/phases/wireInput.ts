@@ -124,9 +124,9 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // Centralised in `inputBindings.ts` so every DOM listener the
   // engine cares about lives in one module.  Each callback below
   // is the *semantic* engine action — the inputBindings module
-  // already converts `e.clientX/Y` to a CSS-pixel record and
-  // calls `scheduler.requestRender()` after every event so we
-  // don't repeat that wake-up at every site.
+  // already converts `e.clientX/Y` to a CSS-pixel record and owns
+  // the requestRender wake for channel-uncovered events (see its
+  // module header for the contract).
   state.subsystems.inputBindings = attachEngineInputs({
     canvas,
     // Scheduler by reference — created eagerly in the state literal (the
@@ -242,12 +242,10 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       if (!pick) return;
       pick.then((sel) => {
         // Single-click is pure selection (null clears) for both galaxy and
-        // structure hits. setSelected resolves the target internally and fires
-        // onSelectChange so the React InfoCard swaps bodies; the dblclick
-        // handler reads `selectedTarget()` to upgrade to focus.
+        // structure hits. setSelected resolves the target internally, fires
+        // onSelectChange so the React InfoCard swaps bodies, and owns the
+        // render wake.
         state.subsystems.selection.setSelected(sel);
-        // Selection changed — render so the highlight halo updates next frame.
-        state.subsystems.scheduler.requestRender();
       });
     },
     onDoubleClick: () => {
@@ -264,8 +262,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
         handle?.camera.focusOn(target);
         return;
       }
+      // setFocused owns the wake when the slot actually changes.
       state.subsystems.selection.setFocused(null);
-      state.subsystems.scheduler.requestRender();
     },
   });
 

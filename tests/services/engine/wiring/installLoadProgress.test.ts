@@ -60,6 +60,7 @@ function makeState(): EngineState {
       pgcAlias: stubSlot('pgc-aliases'),
       cf4Density: stubSlot('cf4Density'),
       mcpm: stubSlot('mcpm'),
+      flow: stubSlot('flow'),
       syntheticVolumes: {
         'debug-gaussian': stubSlot('syntheticVolume:debug-gaussian'),
       },
@@ -102,6 +103,7 @@ describe('installLoadProgress', () => {
     expect(names.has('pgc-aliases')).toBe(true);
     expect(names.has('cf4Density')).toBe(true);
     expect(names.has('mcpm')).toBe(true);
+    expect(names.has('flow')).toBe(true);
     expect(names.has('syntheticVolume:debug-gaussian')).toBe(true);
   });
 

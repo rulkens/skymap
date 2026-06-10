@@ -63,6 +63,13 @@
  * `EngineState` so every reader (URL hash, InfoCard, SettingsPanel
  * echo) reads the one canonical place.
  *
+ * ### Wake contract
+ *
+ * `setMode` wakes the scheduler on entry (so the shader's mode gate flips
+ * next frame) and, for bake modes, again once every per-source splice lands
+ * (skipped if a newer `setMode` superseded it).  Callers need no trailing
+ * `requestRender()`.
+ *
  * ### Production wiring
  *
  * `handle.setBiasMode` routes through this subsystem.  The renderer
@@ -238,6 +245,9 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     generation += 1;
     const myGen = generation;
     mode = next;
+    // Entry wake — flips the mode gate next frame; the only wake identity
+    // modes need (bake modes wake again post-splice below).
+    requestRender();
 
     if (next === BiasMode.None || next === BiasMode.VolumeLimited || next === BiasMode.VMax) {
       // Identity-only modes.  The shader's gate ignores the per-galaxy
@@ -254,7 +264,9 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
       // Per-source independence: each bake is a separate Promise, splice
       // fires when each resolves.  Tests assert this ordering invariant
       // via the multi_source_completion_ordering case.
-      await Promise.all(pairs.map(({ source, catalog }) => bakeSchechterFor(source, catalog, myGen)));
+      await Promise.all(
+        pairs.map(({ source, catalog }) => bakeSchechterFor(source, catalog, myGen)),
+      );
       // Wake the loop ONCE after every splice has landed.  If `myGen`
       // is stale (a newer setMode bumped it mid-Promise.all), skip the
       // wake — the newer setMode will fire its own.

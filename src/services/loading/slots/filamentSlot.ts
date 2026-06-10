@@ -54,19 +54,17 @@ export const createFilamentSlot: SlotFactory<FilamentCloud, FilamentReq> = (stat
   });
   slot.subscribe((s) => {
     // Loading-bar plumbing is owned by aggregateRegistry; this subscriber
-    // only fires the app-visible side effects (counts echo + render wake)
-    // on the `ready` transition.
+    // fires the app-visible side effects (counts echo + store write + UI
+    // callback) on the `ready` transition. The render wake is
+    // installSlotReadyWake's job, not the factory's.
     if (s.kind === 'ready') {
-      console.log(
-        `[engine] filaments: ${s.value.stripCount} strips, ${s.value.vertexCount} verts`,
-      );
+      console.log(`[engine] filaments: ${s.value.stripCount} strips, ${s.value.vertexCount} verts`);
       // Record the durable load status on the filament store (the authoritative
       // home), then push the parsed counts up to the UI layer.  See
       // `EngineCallbacks.filaments.onReady` for the lifecycle rationale —
       // one-shot, fires only when the optional binary actually loaded.
       state.data.filaments.setLoaded(s.value.stripCount, s.value.vertexCount);
       cb.filaments?.onReady?.(s.value.stripCount, s.value.vertexCount);
-      state.subsystems.scheduler.requestRender();
     }
   });
   return slot;

@@ -5,7 +5,11 @@ import type { RetryPolicy } from '../../../src/@types/loading/RetryPolicy';
 
 const noRetry: RetryPolicy = () => 'give-up';
 
-function deferred<T>(): { promise: Promise<T>; resolve: (v: T) => void; reject: (e: Error) => void } {
+function deferred<T>(): {
+  promise: Promise<T>;
+  resolve: (v: T) => void;
+  reject: (e: Error) => void;
+} {
   let resolve!: (v: T) => void;
   let reject!: (e: Error) => void;
   const promise = new Promise<T>((res, rej) => {
@@ -47,6 +51,35 @@ describe('AssetSlot — happy path', () => {
   });
 });
 
+describe('AssetSlot — ready-after-commit ordering', () => {
+  it('subscribers do not observe ready until the async commit body resolves', async () => {
+    // Guards the invariant installSlotReadyWake relies on: 'ready' arrives
+    // only after the commit body resolves (GPU upload done before the wake).
+    const fetchResult = 'payload';
+    const commitGate = deferred<void>();
+    const fetch: Fetcher<string, void> = vi.fn().mockResolvedValue(fetchResult);
+    const commit = vi.fn(() => commitGate.promise);
+    const slot = createAssetSlot<string, void>({ name: 'test', fetch, commit, retry: noRetry });
+
+    const observed: string[] = [];
+    slot.subscribe((s) => observed.push(s.kind));
+
+    slot.load();
+    // Let the fetch resolve and the commit start.
+    await vi.waitFor(() => expect(slot.state().kind).toBe('committing'));
+    // The commit body is still pending — no 'ready' yet.
+    expect(observed).not.toContain('ready');
+
+    // Unblock the commit body.
+    commitGate.resolve();
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    // 'ready' arrives only after resolve.
+    expect(observed).toContain('ready');
+    // And the commit ran exactly once.
+    expect(commit).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('AssetSlot — race-fix (the structural bug from the existing cloudLoader)', () => {
   it('drops superseded fetch result before commit (race window 1)', async () => {
     const fetchA = deferred<string>();
@@ -59,9 +92,9 @@ describe('AssetSlot — race-fix (the structural bug from the existing cloudLoad
     const commit = vi.fn().mockResolvedValue(undefined);
     const slot = createAssetSlot<string, number>({ name: 'test', fetch, commit, retry: noRetry });
 
-    slot.load(1);            // starts fetch A
-    slot.load(2);            // starts fetch B; A's controller aborts
-    fetchA.resolve('A');     // A's resolution arrives — must NOT commit
+    slot.load(1); // starts fetch A
+    slot.load(2); // starts fetch B; A's controller aborts
+    fetchA.resolve('A'); // A's resolution arrives — must NOT commit
     fetchB.resolve('B');
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
@@ -91,8 +124,8 @@ describe('AssetSlot — race-fix (the structural bug from the existing cloudLoad
     fetchA.resolve('A');
     await vi.waitFor(() => expect(slot.state().kind).toBe('committing'));
 
-    slot.load(2);            // mid-commit-A: starts fetch B, increments generation
-    commitA.resolve();       // commit A finishes — must NOT mark slot ready with A
+    slot.load(2); // mid-commit-A: starts fetch B, increments generation
+    commitA.resolve(); // commit A finishes — must NOT mark slot ready with A
     fetchB.resolve('B');
     commitB.resolve();
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
@@ -107,14 +140,16 @@ describe('AssetSlot — race-fix (the structural bug from the existing cloudLoad
     const fetch: Fetcher<string, number> = vi.fn((_req, signal) => {
       calls += 1;
       const d = calls === 1 ? fetchA : fetchB;
-      signal.addEventListener('abort', () => d.reject(Object.assign(new Error('aborted'), { name: 'AbortError' })));
+      signal.addEventListener('abort', () =>
+        d.reject(Object.assign(new Error('aborted'), { name: 'AbortError' })),
+      );
       return d.promise;
     });
     const commit = vi.fn().mockResolvedValue(undefined);
     const slot = createAssetSlot<string, number>({ name: 'test', fetch, commit, retry: noRetry });
 
     slot.load(1);
-    slot.load(2);            // aborts A's controller
+    slot.load(2); // aborts A's controller
     fetchB.resolve('B');
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 

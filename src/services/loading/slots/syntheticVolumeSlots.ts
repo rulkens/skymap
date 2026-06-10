@@ -98,7 +98,6 @@ export function createSyntheticVolumeSlots(
           );
         }
         cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
-        state.subsystems.scheduler.requestRender();
       },
     });
 

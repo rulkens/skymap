@@ -48,10 +48,10 @@
  *   - window  keydown (Escape only)                  — onEscape.
  *   - window  resize                                 — onResize.
  *
- * Each listener also calls `scheduler.requestRender()` after
- * dispatching so the engine's render-on-demand loop wakes for the
- * next frame.  Centralising the wake-up calls here means engine.ts's
- * setters / per-frame body don't have to think about it.
+ * Wake contract: listeners whose effects no change channel covers
+ * (pointermove, pointerdown, resize) call `scheduler.requestRender()`
+ * themselves; Escape stays wake-free (the selection setters own that
+ * wake) and pointerup only flips a flag the next frame reads.
  */
 
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
@@ -112,7 +112,8 @@ export function attachEngineInputs(options: AttachEngineInputsOptions): InputBin
 
   // When the pointer leaves the canvas the engine clears hover state.
   // If a point is selected the card stays visible (showing the pinned
-  // point) — that's an engine concern, not ours.
+  // point) — that's an engine concern, not ours.  setHovered is
+  // wake-free, so this input mouth keeps the wake.
   addCanvasListener('pointerleave', () => {
     onPointerLeave();
     scheduler.requestRender();
@@ -124,6 +125,8 @@ export function attachEngineInputs(options: AttachEngineInputsOptions): InputBin
   // even when `setPointerCapture` has routed events back to the canvas
   // via the orbit-controls module.
 
+  // Essential wake: tweens.cancel() (fired via onPointerDown) is wake-free
+  // by contract because this input mouth is already awake.
   addCanvasListener('pointerdown', () => {
     onPointerDown();
     scheduler.requestRender();
@@ -142,11 +145,11 @@ export function attachEngineInputs(options: AttachEngineInputsOptions): InputBin
   // The engine owns this because Esc acts on engine state
   // (`selectedIndex`).  App.tsx also has a `useEffect` that forwards
   // Esc through the engine handle's `clearSelection()` method — same
-  // result, both paths are fine.
+  // result, both paths are fine.  No wake: the selection setters own
+  // it, so Esc on an empty scene stays wake-free.
   addWindowListener('keydown', (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       onEscape();
-      scheduler.requestRender();
     }
   });
 

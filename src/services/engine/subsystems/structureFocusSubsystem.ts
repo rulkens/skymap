@@ -21,6 +21,15 @@
  * The display target (`active`) stays latched through the fade-out so
  * `produceFocusUniforms` keeps emitting the correct centre/radius until
  * the blend reaches 0; only then is it dropped.
+ *
+ * ### Wake contract
+ *
+ * The fade controller here is private (`createFadeController`, not the
+ * shared `FadeRegistry`), so `update` is this channel's sole mouth: it
+ * wakes the scheduler when a transition starts, in either direction —
+ * runFrame can early-return before the `stillAnimating` tail, which would
+ * otherwise strand the ramp. Steady frames hit the early-return and rely
+ * on `isAwake` to keep the loop alive.
  */
 
 import { createFadeController } from '../../animation/fadeController';
@@ -54,6 +63,7 @@ type ActiveFocus = {
 };
 
 export function createStructureFocusSubsystem(
+  deps: { readonly requestRender: () => void },
   initialNowMs: number = performance.now(),
 ): StructureFocusSubsystem {
   const fade = createFadeController(0, initialNowMs);
@@ -99,6 +109,8 @@ export function createStructureFocusSubsystem(
       // until blend settles at 0 (dropped lazily in produceFocusUniforms).
       void fade.fadeTo(0, FOCUS_FADE_DURATION_MS, nowMs);
     }
+    // Essential wake: private fade controller — no FadeRegistry wake covers it.
+    deps.requestRender();
   }
 
   function produceFocusUniforms(nowMs: number): FocusUniformsValue {
