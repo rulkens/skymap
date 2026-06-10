@@ -629,7 +629,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Selection-driven: `runFrame` calls `update(selectedStructure, nowMs)` to
       // drive the 400 ms member-isolation fade and threads
       // `produceFocusUniforms` into the points draw.  Eager, no GPU dep.
-      structureFocus: createStructureFocusSubsystem(),
+      structureFocus: createStructureFocusSubsystem({
+        requestRender: () => state.subsystems.scheduler.requestRender(),
+      }),
 
       // ── Render scheduler — eager, capture-safe ────────────────────
       // Created here (not a deferred shim): its `onFrame` closes over the

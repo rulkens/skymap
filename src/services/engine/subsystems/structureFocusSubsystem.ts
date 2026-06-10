@@ -21,6 +21,23 @@
  * The display target (`active`) stays latched through the fade-out so
  * `produceFocusUniforms` keeps emitting the correct centre/radius until
  * the blend reaches 0; only then is it dropped.
+ *
+ * ### Why `update` wakes the scheduler
+ *
+ * This subsystem's fade controller is private (`createFadeController`, not
+ * the shared `FadeRegistry`), so the registry's `fadeTo` wake path does not
+ * cover it — the transition inside `update` is the sole mouth for this
+ * channel. `update` therefore calls `deps.requestRender()` exactly when a
+ * transition starts (both fade-in toward a new id and fade-out toward null).
+ *
+ * The scheduler is also needed here because `runFrame` can early-return at
+ * the "nothing pickable" guard before reaching the `stillAnimating` tail.
+ * A focus-transition that fires in such a frame would otherwise strand the
+ * fade mid-ramp until an unrelated event woke the loop again.
+ *
+ * Steady frames (same `targetId === focusedId`) hit the early-return above
+ * and do not wake — `isAwake` / `isAnyAnimating` keep the loop alive through
+ * the ramp without re-waking from `update`.
  */
 
 import { createFadeController } from '../../animation/fadeController';
@@ -54,6 +71,7 @@ type ActiveFocus = {
 };
 
 export function createStructureFocusSubsystem(
+  deps: { readonly requestRender: () => void },
   initialNowMs: number = performance.now(),
 ): StructureFocusSubsystem {
   const fade = createFadeController(0, initialNowMs);
@@ -99,6 +117,10 @@ export function createStructureFocusSubsystem(
       // until blend settles at 0 (dropped lazily in produceFocusUniforms).
       void fade.fadeTo(0, FOCUS_FADE_DURATION_MS, nowMs);
     }
+    // Wake the loop: this channel's fade controller is private (not covered by
+    // the shared FadeRegistry wake), and runFrame can early-return before the
+    // stillAnimating tail — without this wake the ramp would strand.
+    deps.requestRender();
   }
 
   function produceFocusUniforms(nowMs: number): FocusUniformsValue {

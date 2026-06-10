@@ -37,6 +37,9 @@ export type StructureFocusSubsystem = {
    *   - changed to null OR a non-eligible structure (famousGalaxy): fade toward
    *     0, keeping the last center/radius until blend settles at 0.
    *   - unchanged id: no-op (no re-fade).
+   *
+   * Also wakes the render scheduler on any transition — callers never follow
+   * up with `requestRender`.
    */
   update(focusedStructure: StructureRecord | null, nowMs: number): void;
 
