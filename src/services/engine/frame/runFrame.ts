@@ -46,6 +46,7 @@ import { pickToSelection } from '../helpers/pickToSelection';
 import { collectPickTargets } from '../helpers/collectPickTargets';
 import { produceStructureMarkers } from '../presentation/produceStructureMarkers';
 import { deriveFrameContext } from './frameContext';
+import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
 import {
@@ -88,6 +89,12 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // already loading/ready/error asset is a cheap no-op on steady-state
   // frames.  (Boot loads are kicked from wireSlots, and the
   // synthetic-fallback gate kicks its backstop directly.)
+  //
+  // Recompute the survey draw/pick masks from settings + live fade opacity at
+  // the top of every frame, before any reader (demand or render pass) touches
+  // them — so the masks are always a fresh derivation of the single source of
+  // truth, never a hand-maintained mirror.
+  deriveSourceMasks(state);
   reevaluateDemand(state);
 
   // ── Resize the swap-chain if the canvas element changed size ──────

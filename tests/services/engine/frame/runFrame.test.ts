@@ -47,6 +47,7 @@ import { createDisabledGpuTimingService } from '../../../../src/services/gpu/tim
 import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import { SURVEY_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
 
 /**
  * Build a minimal `EngineState`-shaped fixture that lets `runFrame`
@@ -67,7 +68,16 @@ function makeState(): EngineState {
         depthFade: false,
         highlightFallback: false,
         realOnly: false,
-        items: { famousGalaxy: { enabled: true, labelEnabled: true } },
+        // deriveSourceMasks (called at the top of runFrame, before the
+        // renderer-null bail-out) iterates EVERY SURVEY_SOURCES code and reads
+        // items[id].enabled, so a partial record would throw on the first
+        // missing id. Seed them all enabled.
+        items: Object.fromEntries(
+          SURVEY_SOURCES.map((s) => [
+            SOURCE_REGISTRY[s].id,
+            { enabled: true, labelEnabled: true },
+          ]),
+        ),
       },
       tonemap: { exposure: 1, curve: 'linear' },
       camera: { autoRotate: false },
@@ -105,6 +115,10 @@ function makeState(): EngineState {
       tweens: { advance: vi.fn(), isActive: () => false },
       spaceMouse: { applyToCamera: vi.fn(), hasAxes: () => false },
       scheduler: { requestRender: vi.fn() },
+      // deriveSourceMasks reads opacityOf({kind:'survey', source}) for every
+      // survey to compute the fade-out draw tail; 0 everywhere (no fade in
+      // flight) is the right baseline for these fixtures.
+      fades: { opacityOf: () => 0 },
       // Minimal selection-subsystem stub.  The runFrame body reads
       // `focused()` (cluster-focus fade) + `selected()` (halo) for the
       // renderFrame settings bag; the renderer-null guard short-circuits

@@ -338,16 +338,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       schechterAlpha: 0,
     },
     sources: {
-      // Two 32-bit bitmasks, one bit per `Source` enum value.
+      // Two 32-bit bitmasks, one bit per `Source` enum value — DERIVED
+      // outputs, not authoritative state.  From frame 1 onward
+      // `deriveSourceMasks` owns them, recomputing both from each survey's
+      // `settings.surveys.items[id].enabled` + live fade opacity.
       //
-      // pickMask — flipped IMMEDIATELY when the user toggles a survey,
-      // so a fading-out layer is not clickable even while still visible.
-      //
-      // drawMask — flipped AFTER fade-out (or AT the start of fade-in).
-      // The renderer iterates `loadedSources()` and skips any whose bit
-      // is clear.  Both default to ALL_VISIBLE_MASK so "draw everything
-      // that is loaded" holds until the user toggles a single source
-      // in the settings panel.
+      // ALL_VISIBLE_MASK is the correct BOOT value: every survey seeds
+      // enabled, which derives to exactly this mask, and the bootstrap
+      // demand eval reads drawMask before frame 1 — a 0 seed would load
+      // nothing at boot.
       pickMask: ALL_VISIBLE_MASK,
       drawMask: ALL_VISIBLE_MASK,
       // Currently-loaded data tier, seeded from `cb.initialTier`; 'medium'
@@ -802,9 +801,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     return awaitSlotReady(state.assetSlots.pgcAlias, new Map() as PgcAliasMap);
   }
 
-  async function setSourceVisible(source: SourceType, visible: boolean): Promise<void> {
+  function setSourceVisible(source: SourceType, visible: boolean): void {
     // Delegate to the module-scope helper (testable without a GPU engine).
-    return setSourceVisibleImpl(state, { cb }, source, visible);
+    setSourceVisibleImpl(state, { cb }, source, visible);
   }
 
   function setTier(tier: Tier): void {

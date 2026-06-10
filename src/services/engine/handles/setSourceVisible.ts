@@ -5,60 +5,52 @@
 // closure delegates here.  The `Pick` keeps the signature narrow while still
 // accepting the full `EngineState`.
 //
-// Does NOT trigger loading: it flips `drawMask`/`pickMask` and calls
-// `requestRender`.  The render loop's `reevaluateDemand` reads the flipped
-// drawMask and loads the now-visible survey (and companions) next frame, so
-// visibility and loading stay decoupled.
+// The setter does ONE authoritative thing: it flips the survey's
+// `settings.surveys.items[id].enabled` — the single source of truth for
+// on/off.  It then fires the fade (fire-and-forget) and recomputes the masks
+// via `deriveSourceMasks`.  It does NOT mutate `drawMask`/`pickMask` itself:
+// those are derived outputs that `deriveSourceMasks` owns, packed from
+// `enabled` + live fade opacity.  Recompute-from-truth replaces the old
+// remember-to-flip-the-mask dance, which is why there's no await and no
+// last-issued-wins re-read here — the fade registry's last-issued fade and the
+// per-frame derive together handle a rapid concurrent toggle.
+//
+// Does NOT trigger loading: the render loop's `reevaluateDemand` reads the
+// freshly-derived drawMask and loads the now-visible survey (and companions)
+// next frame, so visibility and loading stay decoupled.
 
-import { maskWith, maskWithout } from '../../../utils/sourceMask';
-import type { SourceType } from '../../../@types/data/SourceType';
-import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
-import type { FadeHandle } from '../../../@types/animation/FadeHandle';
+import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
+import type { SourceType } from '../../../@types/data/SourceType';
+import type { SurveyId } from '../../../@types/engine/data/SurveyId';
+import { SOURCE_REGISTRY } from '../../../data/sources';
+import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
+import { deriveSourceMasks } from '../frame/deriveSourceMasks';
 
-export async function setSourceVisibleImpl(
-  state: Pick<
-    import('../../../@types/engine/state/EngineState').EngineState,
-    'sources' | 'subsystems'
-  >,
+export function setSourceVisibleImpl(
+  state: Pick<EngineState, 'sources' | 'settings' | 'subsystems'>,
   opts: { cb: Pick<EngineCallbacks, 'sources'> },
   source: SourceType,
   visible: boolean,
-): Promise<void> {
+): void {
   const { cb } = opts;
-
-  const handle: FadeHandle = { kind: 'survey', source };
-  const targetMask = visible
-    ? maskWith(state.sources.pickMask, source)
-    : maskWithout(state.sources.pickMask, source);
-  if (targetMask === state.sources.pickMask && targetMask === state.sources.drawMask) return;
-
-  // pickMask flips IMMEDIATELY — a fading-out layer must not be clickable.
-  state.sources.pickMask = targetMask;
-  // Notify the UI of the (immediate) state change so the checkbox reflects.
-  cb.sources?.onMaskChange?.(targetMask);
-  state.subsystems.scheduler.requestRender();
-
-  if (visible) {
-    // Flip drawMask, then fade in.  `reevaluateDemand` reads the now-set
-    // bit and loads the idle survey (plus companions); the idle-guard keeps
-    // a loaded survey from re-fetching, so re-toggling is cheap.
-    state.sources.drawMask = targetMask;
-    await state.subsystems.fades.fadeTo(handle, 1, FADE_IN_DURATION_MS);
-  } else {
-    await state.subsystems.fades.fadeTo(handle, 0, FADE_OUT_DURATION_MS);
-    // Re-read opacity rather than closing over `visible`: a concurrent
-    // off→on toggle within the fade-out window may have reversed the fade.
-    // Last-issued fade wins — if a fade-in started while we awaited, opacity
-    // is > 0 and we leave the drawMask bit set so the renderer keeps
-    // drawing through the ramp-up.
-    const finalOpacity = state.subsystems.fades.opacityOf(handle);
-    if (finalOpacity === 0) {
-      state.sources.drawMask = maskWithout(state.sources.drawMask, source);
-    } else {
-      state.sources.drawMask = maskWith(state.sources.drawMask, source);
-    }
-  }
+  const id = SOURCE_REGISTRY[source].id as SurveyId;
+  if (state.settings.surveys.items[id].enabled === visible) return; // no-op
+  // Single source of truth: flip the survey's enabled flag.
+  state.settings.surveys.items[id].enabled = visible;
+  // Fire the fade (fire-and-forget; last-issued wins inside the registry, and
+  // deriveSourceMasks keeps the draw bit set while opacity > 0).
+  void state.subsystems.fades.fadeTo(
+    { kind: 'survey', source },
+    visible ? 1 : 0,
+    visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+  );
+  // Recompute the masks NOW so the echo + any synchronous reader (e.g. a tier
+  // change in the same tick) see fresh intent; the frame loop re-derives anyway.
+  deriveSourceMasks(state);
+  // Echo INTENT (pickMask = enabled bits, not the fade-tail drawMask) so the
+  // React checkbox reflects on/off the instant the user toggles.
+  cb.sources?.onMaskChange?.(state.sources.pickMask);
   state.subsystems.scheduler.requestRender();
 }
 
