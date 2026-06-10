@@ -53,13 +53,13 @@ Each cluster slice does the same four moves, in one commit, staying green:
 3. **Switch the React consumer to a `useStore` selector.** App.tsx /
    SettingsPanel / DebugPanel stop reading the cluster's value from
    `useEngineSettings().settings.*` and read `useStore(handle.settingsStore,
-   selectX)` instead. (See "React subscription seam" below for the handle-ref
+selectX)` instead. (See "React subscription seam" below for the handle-ref
    timing.)
 4. **Delete that cluster's echo + mirror cell** — its `EngineCallbacks` entry's
-   *fire site* (the `settingsTable` `callback` tuple or the bespoke `cb.X?.(…)`
+   _fire site_ (the `settingsTable` `callback` tuple or the bespoke `cb.X?.(…)`
    line), its `useEngineSettings` `useState` cell, its `engineCallbacks`
    subscription, and its `seedSettingsCallbacks` line. Leave the now-unused
-   `EngineCallbacks` *type* sub-bag until Phase 3 (deleting it mid-phase would
+   `EngineCallbacks` _type_ sub-bag until Phase 3 (deleting it mid-phase would
    ripple through `SettingsCallbackSeed` and the seed test — batch that in the
    husk pass).
 
@@ -90,6 +90,7 @@ two-axis derived records) to last so the pattern is fully proven first:
 **surveys → tonemap → camera → bias → thumbnails → milkyWay → debug → filaments → volumes → flow → structures/labels**
 
 Rationale for the tail:
+
 - `filaments` / `volumes` master / `flow` are today **App-owned optimistic** (no
   echo) — migrating them removes the asymmetry (they become uniform store reads,
   and App.tsx drops its optimistic `setX` + dual-write).
@@ -110,6 +111,7 @@ This task spells out every move so 2.2+ can be terse. The surveys cluster covers
 master `enabled` + per-survey `items[id].enabled`/`labelEnabled`.
 
 **Settings leaves & their current echoes/mirrors:**
+
 - `surveys.sizePx` — `setPointSize` (`settingsTable.ts:147`), echo
   `surveys.onSizeChange`, cell `pointSize`.
 - `surveys.brightness` — `setBrightness` (`settingsTable.ts:152`), echo
@@ -124,20 +126,22 @@ master `enabled` + per-survey `items[id].enabled`/`labelEnabled`.
   echo `sources.onMaskChange`, cell `visibleSourceMask` (a derived bitmask, see
   note below).
 
-**Note on `visibleSourceMask`:** the React cell is a *derived projection* of the
+**Note on `visibleSourceMask`:** the React cell is a _derived projection_ of the
 per-survey `enabled` bits (`deriveSourceMasks` packs `sources.pickMask`). The
 clean migration is a **selector** `selectVisibleSourceMask(state)` that derives
 the mask from `state.surveys.items[id].enabled` (the authoritative bits) — NOT a
 new stored field. `setSourceVisibleImpl` already writes `items[id].enabled` as
 the single source of truth (`setSourceVisible.ts:39-41`); the `onMaskChange` echo
-+ `deriveSourceMasks`-of-`pickMask` becomes a pure store selector. Confirm the
-selector reproduces the exact bitmask `deriveSourceMasks` emits
-(`frame/deriveSourceMasks.ts`) so the panel checkboxes are bit-identical.
-**Escalate** if the mask depends on fade-tail state the store doesn't hold (it
-should not — the echo sends `pickMask` = intent bits, not the fade-tail
-drawMask).
+
+- `deriveSourceMasks`-of-`pickMask` becomes a pure store selector. Confirm the
+  selector reproduces the exact bitmask `deriveSourceMasks` emits
+  (`frame/deriveSourceMasks.ts`) so the panel checkboxes are bit-identical.
+  **Escalate** if the mask depends on fade-tail state the store doesn't hold (it
+  should not — the echo sends `pickMask` = intent bits, not the fade-tail
+  drawMask).
 
 **Files:**
+
 - Create reducers: `setSurveySizeAction` already exists (Plan 01); add
   `reducers/setBrightness.ts`, `setDepthFade.ts`, `setHighlightFallback.ts`,
   `setRealOnly.ts`, `setSurveyVisible.ts` + matching actions under `actions/`.
@@ -170,7 +174,7 @@ but swap its body from `setByPath(state, …) + cb echo` to `action(store, value
 — the descriptor's `path` stays, the `callback` tuple is removed, `setByPath` is
 replaced by a call to the cluster action, and the wrapper still calls
 `requestRender()`. This keeps the "every setter wakes the scheduler" audit in one
-place (the table's reason to exist) while moving the *write* into the store.
+place (the table's reason to exist) while moving the _write_ into the store.
 **Do NOT** dissolve `settingsTable` into per-setter inline code — that would
 scatter the requestRender audit the table consolidates (simplicity.md #8). If,
 once a few clusters are migrated, the table is reduced to "action + requestRender"
@@ -178,37 +182,38 @@ and a reducer-registry would express it more directly, **raise it in the Phase 4
 radar** rather than refactoring mid-migration.
 
 - [x] Pure reducer tests (one per leaf), copy-on-write asserted (touched cluster
-  new ref, siblings same ref), e.g. `setBrightness copies-on-write the surveys
-  cluster`, `setSurveyVisible flips items[id].enabled and leaves siblings`.
+      new ref, siblings same ref), e.g. `setBrightness copies-on-write the surveys
+cluster`, `setSurveyVisible flips items[id].enabled and leaves siblings`.
 - [x] Selector tests: `selectBrightness returns surveys.brightness`, …, and
-  `selectVisibleSourceMask packs the enabled bits to the deriveSourceMasks
-  bitmask` (assert bit-identical to `deriveSourceMasks` output for a known
-  enabled-set).
+      `selectVisibleSourceMask packs the enabled bits to the deriveSourceMasks
+bitmask` (assert bit-identical to `deriveSourceMasks` output for a known
+      enabled-set).
 - [x] `useSettingsStore` test: returns the defaults value when the handle ref is
-  null; returns the live store value once a store is supplied (drive with a real
-  `createSettingsStore`). Use the project's React-testing-library setup if one
-  exists; otherwise test the null-fallback branch as a pure function and the
-  live branch via the store directly — escalate if no RTL harness exists and the
-  hook can't be unit-tested.
+      null; returns the live store value once a store is supplied (drive with a real
+      `createSettingsStore`). Use the project's React-testing-library setup if one
+      exists; otherwise test the null-fallback branch as a pure function and the
+      live branch via the store directly — escalate if no RTL harness exists and the
+      hook can't be unit-tested.
 - [x] Run-fails. MAIN: `npm test -- settingsStore` (+ the hook test path).
 - [x] Implement reducers/selectors/actions/hook.
 - [x] Point `setSourceVisibleImpl` + the surveys boringSetters at the actions;
-  delete the surveys echoes (fire sites) and the `onMaskChange` fire.
+      delete the surveys echoes (fire sites) and the `onMaskChange` fire.
 - [x] Switch App.tsx / SettingsPanel / DebugPanel surveys reads to
-  `useSettingsStore(handleRef, selectX)`.
+      `useSettingsStore(handleRef, selectX)`.
 - [x] Delete the surveys `useState` cells + their `engineCallbacks.surveys` /
-  `sources.onMaskChange` subscriptions + their `seedSettingsCallbacks` lines
-  (`pointSize`, `brightness`, `highlightFallback`, `realOnlyMode`,
-  `depthFadeEnabled`, `visibleSourceMask`). Leave the `EngineCallbacks` *type*
-  sub-bags for Phase 3.
+      `sources.onMaskChange` subscriptions + their `seedSettingsCallbacks` lines
+      (`pointSize`, `brightness`, `highlightFallback`, `realOnlyMode`,
+      `depthFadeEnabled`, `visibleSourceMask`). Leave the `EngineCallbacks` _type_
+      sub-bags for Phase 3.
 - [x] Run-passes. MAIN: full `npm test` (the surveys panel + `setSourceVisible`
-  behaviour preserved; `setSourceVisibleFade` test unaffected — it asserts the
-  fade, upstream of the store) + `npm run typecheck`.
+      behaviour preserved; `setSourceVisibleFade` test unaffected — it asserts the
+      fade, upstream of the store) + `npm run typecheck`.
 - [ ] Commit the slice.
 
 ### Task 2.2: tonemap
 
 Same pattern as surveys, for the `tonemap` cluster:
+
 - Leaves: `tonemap.exposure` (`setExposure`, echo `tonemap.onExposureChange`,
   cell `exposure` —
   note the **hybrid** case: App.tsx also nudges `exposure` locally for snappy
@@ -222,10 +227,10 @@ Same pattern as surveys, for the `tonemap` cluster:
   range already lives at the post-process pass (`clampExposure`, #301); the
   reducer stores the raw value.
 - [x] Reducer + selector tests (copy-on-write; the reducer stores the raw value
-  verbatim — no clamp).
+      verbatim — no clamp).
 - [x] Run-fails → implement → point setters at actions → delete tonemap echoes +
-  cells + `setExposure` optimistic setter + `seedSettingsCallbacks` lines →
-  switch App.tsx reads.
+      cells + `setExposure` optimistic setter + `seedSettingsCallbacks` lines →
+      switch App.tsx reads.
 - [x] Run-passes (full suite) → commit.
 
 ### Task 2.3: camera (autoRotate)
@@ -234,10 +239,11 @@ Same pattern, for `camera.autoRotate` (`setAutoRotate`, echo
 `camera.onAutoRotateChange`, cell `autoRotate`). **Keep** the OTHER `camera`
 callbacks — `onFocusChange`, `onCameraChange`, `onScaleChange` are EVENTS, not
 settings; they stay (spec "what stays").
+
 - [x] Reducer `setAutoRotate` + selector `selectAutoRotate` + tests.
 - [x] Run-fails → implement → point `setAutoRotate` boringSetter at the action →
-  delete the `onAutoRotateChange` echo + `autoRotate` cell + its seed line →
-  switch App.tsx `AutoRotateToggle` read to `useStore`.
+      delete the `onAutoRotateChange` echo + `autoRotate` cell + its seed line →
+      switch App.tsx `AutoRotateToggle` read to `useStore`.
 - [x] Run-passes → commit.
 
 ### Task 2.4: bias
@@ -249,13 +255,14 @@ writes `bias.mode`; the bespoke `setBiasMode` keeps its `void
 biasCorrection.setMode(mode)` side effect (that's a real event-driven action, not
 a mirror) and drops the `cb.bias?.onModeChange?.` echo. `setAbsMagLimit` is a
 boringSetter (`settingsTable.ts:258`).
+
 - [x] Reducers `setBiasMode`, `setAbsMagLimit` + selectors + tests.
 - [x] Run-fails → implement → `setBiasMode` writes via action then calls
-  `biasCorrection.setMode` (no echo); `setAbsMagLimit` boringSetter → action →
-  delete `bias` echoes + cells (`biasMode`, `absMagLimit`) + seed lines → switch
-  SettingsPanel reads.
+      `biasCorrection.setMode` (no echo); `setAbsMagLimit` boringSetter → action →
+      delete `bias` echoes + cells (`biasMode`, `absMagLimit`) + seed lines → switch
+      SettingsPanel reads.
 - [x] Run-passes (the `biasCorrection` bake still fires — assert via the existing
-  bias test if one exists) → commit.
+      bias test if one exists) → commit.
 
 ### Task 2.5: thumbnails
 
@@ -264,9 +271,10 @@ Same pattern, for `thumbnails.enabled` (`setGalaxyTexturesEnabled`, echo
 toggle was already evicted upstream, so the value has **no React consumer** —
 there's no SettingsPanel read to switch; the dead mirror cell + echo are simply
 deleted.
+
 - [x] Reducer `setThumbnailsEnabled` + selector + tests → implement → point
-  boringSetter at action → delete echo + cell + seed line → (no SettingsPanel
-  read to switch — value has no React consumer) → full suite → commit.
+      boringSetter at action → delete echo + cell + seed line → (no SettingsPanel
+      read to switch — value has no React consumer) → full suite → commit.
 
 ### Task 2.6: milkyWay
 
@@ -275,9 +283,10 @@ Same pattern, for `milkyWay.enabled`. **Preserve the fade:** the handle setter
 `fades.fadeTo({kind:'overlay', id:'milkyWay'}, …)`. Migrating: the boringSetter's
 write becomes the action; the `fadeTo` stays (it's the cosmetic ramp, upstream-
 unaffected). Echo `milkyWay.onEnabledChange`, cell `milkyWayEnabled`.
+
 - [x] Reducer `setMilkyWayEnabled` + selector + tests → implement → action +
-  keep `fadeTo` → delete echo + cell + seed line → (no SettingsPanel read to
-  switch — value has no React consumer) → full suite → commit.
+      keep `fadeTo` → delete echo + cell + seed line → (no SettingsPanel read to
+      switch — value has no React consumer) → full suite → commit.
 
 ### Task 2.7: debug
 
@@ -285,9 +294,10 @@ Same pattern, for `debug.showPickBuffer` + `debug.showDiskRadiusRing`
 (`setShowPickBuffer` / `setShowDiskRadiusRing` boringSetters, echoes
 `debug.onShowPickBufferChange` / `onShowDiskRadiusRingChange`, cells
 `showPickBuffer` / `showDiskRadiusRing`). Consumer is DebugPanel.
+
 - [x] Reducers + selectors + tests → implement → point boringSetters at actions
-  → delete echoes + cells + seed lines → switch DebugPanel reads → full suite →
-  commit.
+      → delete echoes + cells + seed lines → switch DebugPanel reads → full suite →
+      commit.
 
 ### Task 2.8: filaments (removes an App-owned-optimistic asymmetry)
 
@@ -299,15 +309,16 @@ drops the optimistic `setFilamentsEnabled` / `setFilamentIntensity` and just
 calls the handle. **Preserve the fade** (`engine.ts:1224` `fadeTo({kind:'filaments'})`).
 Intensity's `[0,1]` clamp already lives at the filament renderer
 (`clampFilamentIntensity`, #301) — not the settings path.
+
 - [x] Reducers `setFilamentsEnabled`, `setFilamentIntensity` + selectors + tests
-  → implement → point boringSetters at actions (fade stays in the handle; no
-  clamp — it's at the renderer) → delete the
-  `setFilamentsEnabled`/`setFilamentIntensity` optimistic
-  setters from `useEngineSettings` + the `filamentsEnabled`/`filamentIntensity`
-  cells → switch App.tsx + StatsPanel reads to `useStore`; App.tsx's
-  `onFilamentsChange`/`onFilamentIntensityChange` now call only the handle.
-  **Keep** `filamentCounts` cell + `filaments.onReady` callback (that's an EVENT
-  — spec "what stays").
+      → implement → point boringSetters at actions (fade stays in the handle; no
+      clamp — it's at the renderer) → delete the
+      `setFilamentsEnabled`/`setFilamentIntensity` optimistic
+      setters from `useEngineSettings` + the `filamentsEnabled`/`filamentIntensity`
+      cells → switch App.tsx + StatsPanel reads to `useStore`; App.tsx's
+      `onFilamentsChange`/`onFilamentIntensityChange` now call only the handle.
+      **Keep** `filamentCounts` cell + `filaments.onReady` callback (that's an EVENT
+      — spec "what stays").
 - [x] Run-passes (full suite) → commit.
 
 ### Task 2.9: volumes (master + per-field items)
@@ -328,24 +339,25 @@ each to a store reducer/action wrapping the SAME helper, and replace the
 projection (drop the `debug-*` filter on the React side, as today —
 `useEngineSettings.ts:269`). The React `volumeFields` cell becomes
 `useStore(handleRef, selectVolumeFieldRows)`.
+
 - [x] Reducer/selector tests: master `setVolumesEnabled` + per-field
-  `writeVolumeField`/`addVolumeField`/`removeVolumeField` (copy-on-write of
-  `volumes.items`), the stable-ref `selectVolumeFieldItems` contract, and
-  `projectVolumeFieldRows` projects the rows the panel shows (debug-filtered by
-  the consumer).
+      `writeVolumeField`/`addVolumeField`/`removeVolumeField` (copy-on-write of
+      `volumes.items`), the stable-ref `selectVolumeFieldItems` contract, and
+      `projectVolumeFieldRows` projects the rows the panel shows (debug-filtered by
+      the consumer).
 - [x] Run-fails → implement: master toggle → action (keeps the `volumesMaster`
-  fade); per-field setters → actions wrapping
-  `writeVolumeFieldSetting`/`removeVolumeFieldSetting` (keep the per-field
-  `fadeTo` + `requestRender` side effects + the debug-volume lazy-load —
-  `maybeLazyLoadDebugVolume`); delete the `onFieldsChanged` echoes from the
-  engine setters. (Rows read via the stable `selectVolumeFieldItems` Record +
-  a `useMemo` projection rather than a fresh-array selector, so
-  `useSyncExternalStore`'s getSnapshot stays referentially stable.)
+      fade); per-field setters → actions wrapping
+      `writeVolumeFieldSetting`/`removeVolumeFieldSetting` (keep the per-field
+      `fadeTo` + `requestRender` side effects + the debug-volume lazy-load —
+      `maybeLazyLoadDebugVolume`); delete the `onFieldsChanged` echoes from the
+      engine setters. (Rows read via the stable `selectVolumeFieldItems` Record +
+      a `useMemo` projection rather than a fresh-array selector, so
+      `useSyncExternalStore`'s getSnapshot stays referentially stable.)
 - [x] Delete `setVolumesEnabled` optimistic setter + `volumesEnabled` /
-  `volumeFields` cells + the `volumes.onFieldsChanged` subscription; switch
-  App.tsx volumes reads to `useSettingsStore`. **Kept** `handle.volumes.getState()`
-  / `list()` — they read `state.settings.volumes.items` (store-backed) and
-  project the same rows.
+      `volumeFields` cells + the `volumes.onFieldsChanged` subscription; switch
+      App.tsx volumes reads to `useSettingsStore`. **Kept** `handle.volumes.getState()`
+      / `list()` — they read `state.settings.volumes.items` (store-backed) and
+      project the same rows.
 - [x] Run-passes (full suite — volume fade/upsample tests unaffected) → commit.
 
 ### Task 2.10: flow (removes the last App-owned-optimistic asymmetry)
@@ -366,16 +378,17 @@ demand/fade/reseed side effects but routes
 the writes through the action instead of the boringSetters. React drops the
 `flow` cell + `updateFlow`; reads become `useStore(handleRef, selectFlow)`;
 `onFlowChange` in App.tsx calls only `handle.flow.set(patch)`.
-- [ ] Reducer `setFlow(state, patch: Partial<FlowSettings>)` + selector
-  `selectFlow` + tests (copy-on-write; a partial patch merges, untouched leaves
-  keep prior values).
-- [ ] Run-fails → implement → route `handle.flow.set` writes through the action
-  (keep the demand/fade/reseed effects; no clamps — they're at the renderer) → delete
-  `flow` cell + `updateFlow` + `UseEngineSettingsReturn.updateFlow` → switch
-  App.tsx + DebugPanel flow reads to `useStore`; `onFlowChange` calls only the
-  handle.
-- [ ] Run-passes (full suite — `flowFieldsHandle` test unaffected; it's upstream
-  of the store) → commit.
+
+- [x] Reducer `setFlow(state, patch: Partial<FlowSettings>)` + selector
+      `selectFlow` + tests (copy-on-write; a partial patch merges, untouched leaves
+      keep prior values).
+- [x] Run-fails → implement → route `handle.flow.set` writes through the action
+      (keep the demand/fade/reseed effects; no clamps — they're at the renderer) → delete
+      `flow` cell + `updateFlow` + `UseEngineSettingsReturn.updateFlow` → switch
+      App.tsx + DebugPanel flow reads to `useStore`; `onFlowChange` calls only the
+      handle.
+- [x] Run-passes (full suite — `flowFieldsHandle` test unaffected; it's upstream
+      of the store) → commit.
 
 ### Task 2.11: structures / labels (the two-axis derived-record cluster)
 
@@ -398,19 +411,20 @@ write `items[…].enabled`/`labelEnabled` via store actions (keep each setter's
 per-category `fadeTo` — markerLayer / labelLayer — the cosmetic ramp, upstream-
 unaffected). The echoes delete; React reads `useStore(handleRef,
 selectMarker/LabelCategoryVisibility)`.
+
 - [ ] Reducer tests: `setStructureItemEnabled` flips `items[cat].enabled`
-  copy-on-write; `setStructureLabelEnabled` flips `items[cat].labelEnabled`;
-  `setSurveyLabelEnabled` flips `surveys.items[id].labelEnabled`.
+      copy-on-write; `setStructureLabelEnabled` flips `items[cat].labelEnabled`;
+      `setSurveyLabelEnabled` flips `surveys.items[id].labelEnabled`.
 - [ ] Selector tests: `selectMarkerCategoryVisibility` reproduces
-  `deriveMarkerCategoryVisibility` for a known items state;
-  `selectLabelCategoryVisibility` reproduces `deriveLabelCategoryVisibility`
-  (structure + famousGalaxy partition). Assert against the OLD helpers' output
-  before deleting them (parity).
+      `deriveMarkerCategoryVisibility` for a known items state;
+      `selectLabelCategoryVisibility` reproduces `deriveLabelCategoryVisibility`
+      (structure + famousGalaxy partition). Assert against the OLD helpers' output
+      before deleting them (parity).
 - [ ] Run-fails → implement selectors + actions → point the three setters at the
-  actions (keep the `fadeTo` calls; drop the `cb.labels?.…` echoes) → delete the
-  `markerCategoryVisibility` / `labelCategoryVisibility` cells + the
-  `engineCallbacks.labels` subscriptions + the two `seedSettingsCallbacks` lines
-  → switch App.tsx structure/label reads to `useStore`.
+      actions (keep the `fadeTo` calls; drop the `cb.labels?.…` echoes) → delete the
+      `markerCategoryVisibility` / `labelCategoryVisibility` cells + the
+      `engineCallbacks.labels` subscriptions + the two `seedSettingsCallbacks` lines
+      → switch App.tsx structure/label reads to `useStore`.
 - [ ] Run-passes (full suite — `setCategoryVisibleFade` test unaffected) → commit.
 
 ---
@@ -424,6 +438,7 @@ unreferenced).
 ### Task 3.1: delete the settings echoes + derive helpers + seed husk
 
 **Files:**
+
 - Modify `src/@types/engine/EngineCallbacks.d.ts` — delete the **settings** echo
   sub-bags: `surveys?`, `tonemap?`, `bias?`, `thumbnails?`, `milkyWay?`,
   `debug?`, `labels?`, `volumes?`, `camera.onAutoRotateChange`,
@@ -462,6 +477,7 @@ unreferenced).
   don't over-refactor here.)
 
 **Explicit DO-NOT-DELETE list (so the implementer doesn't over-delete):**
+
 - The EVENT callbacks listed above.
 - `filamentCounts`, `spaceMouseConnected` cells (event-fed).
 - `spaceMouseSensitivity` (out-of-`EngineSettingsState` setting — stays React
@@ -469,15 +485,15 @@ unreferenced).
 
 - [ ] Delete the settings echo sub-bags from `EngineCallbacks.d.ts`; KEEP events.
 - [ ] Delete `seedSettingsCallbacks` (+ test + `SettingsCallbackSeed` + call
-  site).
+      site).
 - [ ] Delete the two derive helpers + their tests.
 - [ ] Trim `useEngineSettings` to the event cells (or fold into `useEngine`);
-  update the return types.
+      update the return types.
 - [ ] Drop dead `cb` echo params from migrated engine setters; remove
-  `settingsTable`'s `callback`/`NestedCallbackKey`.
+      `settingsTable`'s `callback`/`NestedCallbackKey`.
 - [ ] MAIN: full `npm test` + `npm run typecheck` — green (the deletions are of
-  now-unreferenced code; any red means a consumer wasn't migrated — fix forward,
-  do not re-add an echo).
+      now-unreferenced code; any red means a consumer wasn't migrated — fix forward,
+      do not re-add an echo).
 - [ ] Commit the husk-deletion slice (stage the specific deleted/modified paths).
 
 ---
@@ -494,7 +510,7 @@ quick un-braid that's clearly in-scope (e.g. a stray surviving mirror), fix it i
 this slice; otherwise record findings and stop.
 
 - [ ] MAIN thread runs the `entanglement-radar` skill (or `/entanglement-radar`)
-  over the full branch diff (`git diff main...engine-settings-store`).
+      over the full branch diff (`git diff main...engine-settings-store`).
 - [ ] Confirm and record, as a short note in this task's checkbox or a comment:
   - **One home for every settings value** — no surviving React mirror cell that
     duplicates an `EngineSettingsState` leaf; `grep` `useEngineSettings` shows

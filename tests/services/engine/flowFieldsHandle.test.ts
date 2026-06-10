@@ -2,14 +2,14 @@
  * flowFieldsHandle — unit tests for the engine's `flow` sub-handle behaviour.
  *
  * The handle itself is built inline inside `createEngine` (it closes over
- * `state` + `boringSetters` + `reevaluateDemand`), and `createEngine` needs a
+ * `state` + the settings store + `reevaluateDemand`), and `createEngine` needs a
  * real GPUDevice, so we can't instantiate it in Node. Instead we test the two
  * halves the handle is composed of, exactly as `engine.ts` composes them:
  *
- *   1. The RAW STORE — the table-driven `boringSetters` store requested intent
- *      verbatim. We build those from the real `SETTINGS_TABLE` via
- *      `buildSettersFromTable` against a state stub and assert the stored value
- *      is the raw request (clamping lives in `clampFlowParams`, tested there).
+ *   1. The STORE WRITE — the whole `Partial<FlowSettings>` patch is dispatched
+ *      through `setFlowAction` (copy-on-write into `settings.flow`). The store
+ *      stores the raw request verbatim; clamping lives in `clampFlowParams`,
+ *      tested there.
  *
  *   2. The SIDE-EFFECT WRAPPERS — the demand re-eval, the split fade-in/out,
  *      and the reseed-on-mode/count. We hand-build a `flow` closure that mirrors
@@ -22,39 +22,17 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import {
-  buildSettersFromTable,
-  SETTINGS_TABLE,
-} from '../../../src/services/engine/wiring/settingsTable';
+import { setFlowAction } from '../../../src/services/engine/settingsStore/actions/setFlowAction';
 import { createSettingsStore } from '../../../src/services/engine/settingsStore/createSettingsStore';
+import type { SettingsStore } from '../../../src/services/engine/settingsStore/createSettingsStore';
 import { makeSettingsFixture } from './settingsStore/makeSettingsFixture';
 import { MAX_PARTICLES } from '../../../src/services/gpu/renderers/flowFieldConstants';
 import {
   FADE_IN_DURATION_MS,
   FADE_OUT_DURATION_MS,
 } from '../../../src/services/animation/fadeController';
-import type { EngineCallbacks } from '../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
-import type { FlowMode } from '../../../src/@types/data/FlowMode';
 import type { EngineFlowFieldsHandle } from '../../../src/@types/engine/handles/EngineFlowFieldsHandle';
-
-/**
- * Default flow settings slice — the spike's hand-dialled advect look.
- * `enabled` / `loaded` are overridden per test.
- */
-function makeFlowSettings() {
-  return {
-    enabled: false,
-    mode: 'advect' as FlowMode,
-    intensity: 0.7,
-    count: 40000,
-    trail: 0.003,
-    flowSpeed: 0.06,
-    densityBias: 1,
-    wander: 0.15,
-    boundaryFadeWidth: 0.1,
-  };
-}
 
 /** Mutable state stub exposing exactly the slices the flow handle reads. */
 function makeState(over: { loaded?: boolean } = {}) {
@@ -62,7 +40,6 @@ function makeState(over: { loaded?: boolean } = {}) {
   const requestRender = vi.fn();
   const fadeTo = vi.fn(async () => {});
   const state = {
-    settings: { flow: makeFlowSettings() },
     data: { flow: { loaded: over.loaded ?? false } },
     gpu: { flowFieldRenderer: { maybeReseed: reseed } },
     subsystems: {
@@ -74,40 +51,21 @@ function makeState(over: { loaded?: boolean } = {}) {
 }
 
 /**
- * Build the table-driven `boringSetters` against the given state stub — the
- * same builder `engine.ts` uses, so the flow rows + clamps are the real ones.
- */
-function makeBoringSetters(state: EngineState, requestRender: () => void) {
-  return buildSettersFromTable(
-    state,
-    {} as EngineCallbacks,
-    requestRender,
-    createSettingsStore(makeSettingsFixture()),
-  );
-}
-
-/**
  * Hand-built `flow` sub-handle closure mirroring the engine.ts `set(patch)`
  * literal. `reevaluateDemand` is injected so the test can spy on the demand
- * re-eval without importing the real (state-walking) implementation.
+ * re-eval without importing the real (state-walking) implementation. The store
+ * is the real settings store — the whole patch lands through `setFlowAction`,
+ * exactly as the engine routes it.
  */
 function makeFlowHandle(
   state: EngineState,
-  boringSetters: ReturnType<typeof makeBoringSetters>,
+  store: SettingsStore,
   reevaluateDemand: (s: EngineState) => void,
 ): EngineFlowFieldsHandle {
   return {
     set: (patch) => {
-      if (patch.enabled !== undefined) boringSetters.setFlowEnabled(patch.enabled);
-      if (patch.mode !== undefined) boringSetters.setFlowMode(patch.mode);
-      if (patch.intensity !== undefined) boringSetters.setFlowIntensity(patch.intensity);
-      if (patch.count !== undefined) boringSetters.setFlowCount(patch.count);
-      if (patch.trail !== undefined) boringSetters.setFlowTrail(patch.trail);
-      if (patch.flowSpeed !== undefined) boringSetters.setFlowSpeed(patch.flowSpeed);
-      if (patch.densityBias !== undefined) boringSetters.setFlowDensityBias(patch.densityBias);
-      if (patch.wander !== undefined) boringSetters.setFlowWander(patch.wander);
-      if (patch.boundaryFadeWidth !== undefined)
-        boringSetters.setFlowBoundaryFadeWidth(patch.boundaryFadeWidth);
+      setFlowAction(store, patch);
+      state.subsystems.scheduler.requestRender();
 
       // enabled: demand re-eval, then fade only when the cube is resident
       // (loaded ⟹ registered) — mirrors engine.ts. Guards the unregistered-
@@ -128,20 +86,17 @@ function makeFlowHandle(
       if (patch.mode !== undefined || patch.count !== undefined) {
         state.gpu.flowFieldRenderer?.maybeReseed();
       }
-
-      // No wake needed: each present leaf woke via its boringSetter (and
-      // fadeTo above); an empty patch changes nothing.
     },
   };
 }
 
-/** Convenience: assemble state + setters + a spy-able demand + the handle. */
+/** Convenience: assemble state + store + a spy-able demand + the handle. */
 function harness(over: { loaded?: boolean } = {}) {
   const ctx = makeState(over);
+  const store = createSettingsStore(makeSettingsFixture());
   const reevaluateDemand = vi.fn();
-  const boringSetters = makeBoringSetters(ctx.state, ctx.requestRender);
-  const handle = makeFlowHandle(ctx.state, boringSetters, reevaluateDemand);
-  return { ...ctx, reevaluateDemand, handle };
+  const handle = makeFlowHandle(ctx.state, store, reevaluateDemand);
+  return { ...ctx, store, reevaluateDemand, handle };
 }
 
 describe('flow sub-handle — setEnabled fade design', () => {
@@ -149,7 +104,7 @@ describe('flow sub-handle — setEnabled fade design', () => {
     const h = harness({ loaded: false });
     h.handle.set({ enabled: true });
 
-    expect(h.state.settings.flow.enabled).toBe(true);
+    expect(h.store.getState().flow.enabled).toBe(true);
     expect(h.reevaluateDemand).toHaveBeenCalledWith(h.state);
     expect(h.requestRender).toHaveBeenCalled();
     // The slot commit owns the first-enable fade-in; the handle must not.
@@ -160,7 +115,7 @@ describe('flow sub-handle — setEnabled fade design', () => {
     const h = harness({ loaded: true });
     h.handle.set({ enabled: true });
 
-    expect(h.state.settings.flow.enabled).toBe(true);
+    expect(h.store.getState().flow.enabled).toBe(true);
     expect(h.fadeTo).toHaveBeenCalledWith({ kind: 'flow' }, 1, FADE_IN_DURATION_MS);
   });
 
@@ -168,7 +123,7 @@ describe('flow sub-handle — setEnabled fade design', () => {
     const h = harness({ loaded: true });
     h.handle.set({ enabled: false });
 
-    expect(h.state.settings.flow.enabled).toBe(false);
+    expect(h.store.getState().flow.enabled).toBe(false);
     expect(h.fadeTo).toHaveBeenCalledWith({ kind: 'flow' }, 0, FADE_OUT_DURATION_MS);
   });
 
@@ -180,7 +135,7 @@ describe('flow sub-handle — setEnabled fade design', () => {
     const h = harness({ loaded: false });
     h.handle.set({ enabled: false });
 
-    expect(h.state.settings.flow.enabled).toBe(false);
+    expect(h.store.getState().flow.enabled).toBe(false);
     expect(h.fadeTo).not.toHaveBeenCalled();
     expect(h.requestRender).toHaveBeenCalled();
   });
@@ -191,7 +146,7 @@ describe('flow sub-handle — reseed wrappers', () => {
     const h = harness();
     h.handle.set({ mode: 'streamline' });
 
-    expect(h.state.settings.flow.mode).toBe('streamline');
+    expect(h.store.getState().flow.mode).toBe('streamline');
     expect(h.reseed).toHaveBeenCalledOnce();
     expect(h.requestRender).toHaveBeenCalled();
   });
@@ -200,7 +155,7 @@ describe('flow sub-handle — reseed wrappers', () => {
     const h = harness();
     h.handle.set({ count: 1000 });
 
-    expect(h.state.settings.flow.count).toBe(1000);
+    expect(h.store.getState().flow.count).toBe(1000);
     expect(h.reseed).toHaveBeenCalledOnce();
     expect(h.requestRender).toHaveBeenCalled();
   });
@@ -209,7 +164,7 @@ describe('flow sub-handle — reseed wrappers', () => {
     const h = harness();
     h.handle.set({ intensity: 0.5 });
 
-    expect(h.state.settings.flow.intensity).toBe(0.5);
+    expect(h.store.getState().flow.intensity).toBe(0.5);
     expect(h.requestRender).toHaveBeenCalled();
     expect(h.reseed).not.toHaveBeenCalled();
   });
@@ -219,37 +174,18 @@ describe('flow sub-handle — stores raw intent (clamping moved to clampFlowPara
   it('setIntensity stores a raw out-of-range value (clamping moved to clampFlowParams)', () => {
     const h = harness();
     h.handle.set({ intensity: 5 });
-    expect(h.state.settings.flow.intensity).toBe(5);
+    expect(h.store.getState().flow.intensity).toBe(5);
   });
 
   it('setCount stores a raw negative value', () => {
     const h = harness();
     h.handle.set({ count: -10 });
-    expect(h.state.settings.flow.count).toBe(-10);
+    expect(h.store.getState().flow.count).toBe(-10);
   });
 
   it('setCount stores a raw value above MAX_PARTICLES', () => {
     const h = harness();
     h.handle.set({ count: MAX_PARTICLES + 9999 });
-    expect(h.state.settings.flow.count).toBe(MAX_PARTICLES + 9999);
-  });
-});
-
-describe('flow table rows exist in SETTINGS_TABLE', () => {
-  it('declares all nine flow setters', () => {
-    const names = SETTINGS_TABLE.map((d) => d.name);
-    for (const k of [
-      'setFlowEnabled',
-      'setFlowMode',
-      'setFlowIntensity',
-      'setFlowCount',
-      'setFlowTrail',
-      'setFlowSpeed',
-      'setFlowDensityBias',
-      'setFlowWander',
-      'setFlowBoundaryFadeWidth',
-    ] as const) {
-      expect(names).toContain(k);
-    }
+    expect(h.store.getState().flow.count).toBe(MAX_PARTICLES + 9999);
   });
 });

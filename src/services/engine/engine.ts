@@ -104,6 +104,7 @@ import { createTweenManager } from './camera/tweenManager';
 import { createSettingsStore } from './settingsStore/createSettingsStore';
 import { setBiasModeAction } from './settingsStore/actions/setBiasModeAction';
 import { setVolumesEnabledAction } from './settingsStore/actions/setVolumesEnabledAction';
+import { setFlowAction } from './settingsStore/actions/setFlowAction';
 import { writeVolumeFieldAction } from './settingsStore/actions/writeVolumeFieldAction';
 import { addVolumeFieldAction } from './settingsStore/actions/addVolumeFieldAction';
 import { removeVolumeFieldAction } from './settingsStore/actions/removeVolumeFieldAction';
@@ -675,8 +676,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // below.  The handle literal at the end stitches both into the public
   // sub-handle clusters.
   const boringSetters = buildSettersFromTable(
-    state,
-    cb,
     () => state.subsystems.scheduler.requestRender(),
     settingsStore,
   ) satisfies Record<SettingsTableKey, (value: unknown) => void>;
@@ -1235,22 +1234,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setIntensity: (value) => boringSetters.setFilamentIntensity(value),
     },
     flow: {
-      // One patch-shaped entry point over the `settings.flow` slice. Each
-      // present leaf is written through its table-driven boringSetter (which
-      // clamps + wakes the scheduler), then the per-leaf side effects fire off
-      // which keys the patch carried. boringSetters.setFlow* are typed
-      // `(value: unknown) => void`; the FlowSettings leaf types narrow them.
+      // One patch-shaped entry point over the `settings.flow` slice. The WHOLE
+      // patch lands through the copy-on-write store action (React reads via
+      // `selectFlow`); the raw intent is stored verbatim — the GPU-safe clamps
+      // live in `clampFlowParams` at the flow renderer. Then the per-leaf side
+      // effects fire off which keys the patch carried.
       set: (patch) => {
-        if (patch.enabled !== undefined) boringSetters.setFlowEnabled(patch.enabled);
-        if (patch.mode !== undefined) boringSetters.setFlowMode(patch.mode);
-        if (patch.intensity !== undefined) boringSetters.setFlowIntensity(patch.intensity);
-        if (patch.count !== undefined) boringSetters.setFlowCount(patch.count);
-        if (patch.trail !== undefined) boringSetters.setFlowTrail(patch.trail);
-        if (patch.flowSpeed !== undefined) boringSetters.setFlowSpeed(patch.flowSpeed);
-        if (patch.densityBias !== undefined) boringSetters.setFlowDensityBias(patch.densityBias);
-        if (patch.wander !== undefined) boringSetters.setFlowWander(patch.wander);
-        if (patch.boundaryFadeWidth !== undefined)
-          boringSetters.setFlowBoundaryFadeWidth(patch.boundaryFadeWidth);
+        setFlowAction(settingsStore, patch);
+        // Wake the loop so the renderer picks up the new params next frame —
+        // the action does NOT wake; fadeTo below wakes on its own, but the
+        // knob-only patches (intensity / trail / …) need this explicit nudge.
+        state.subsystems.scheduler.requestRender();
 
         // enabled: re-evaluate demand so the first enable lazy-loads the cube,
         // then fade — but only when the cube is resident. `loaded === true`
@@ -1276,9 +1270,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         if (patch.mode !== undefined || patch.count !== undefined) {
           state.gpu.flowFieldRenderer?.maybeReseed();
         }
-
-        // No wake needed: each present leaf woke via its boringSetter (and
-        // fadeTo above); an empty patch changes nothing.
       },
     },
     structures: {

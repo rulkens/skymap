@@ -59,6 +59,7 @@ import { selectFilamentsEnabled } from '../../services/engine/settingsStore/sele
 import { selectFilamentIntensity } from '../../services/engine/settingsStore/selectors/selectFilamentIntensity';
 import { selectVolumesEnabled } from '../../services/engine/settingsStore/selectors/selectVolumesEnabled';
 import { selectVolumeFieldItems } from '../../services/engine/settingsStore/selectors/selectVolumeFieldItems';
+import { selectFlow } from '../../services/engine/settingsStore/selectors/selectFlow';
 import { projectVolumeFieldRows } from '../../services/engine/settingsStore/projectVolumeFieldRows';
 import { seedVolumeFields } from '../../data/volumeFieldDefaults';
 import {
@@ -73,6 +74,7 @@ import {
   DEFAULT_SHOW_PICK_BUFFER,
   DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_VOLUMES_ENABLED,
+  DEFAULT_FLOW,
 } from '../../data/defaults';
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
 import { ALL_VISIBLE_MASK } from '../../utils/sourceMask';
@@ -97,7 +99,6 @@ export function App(): React.ReactElement {
     settings,
     engineCallbacks: settingsCallbacks,
     setSpaceMouseSensitivity,
-    updateFlow,
   } = useEngineSettings();
 
   const {
@@ -106,7 +107,6 @@ export function App(): React.ReactElement {
     filamentCounts,
     spaceMouseConnected,
     spaceMouseSensitivity,
-    flow,
   } = settings;
 
   // SettingsPanel's SpaceMouse section appears only when WebHID is
@@ -225,16 +225,21 @@ export function App(): React.ReactElement {
     [volumeFieldItems],
   );
 
-  // Flow overlay has no engine echo, so a knob change must land in two homes:
-  // the React mirror (optimistic) and the engine handle. One patch covers both
-  // — `updateFlow` merges it into React, `handle.flow.set` applies it engine-side
-  // (with the per-leaf demand/fade/reseed effects). Both panels share this.
+  // Flow overlay reads live off the engine-owned store. `selectFlow` returns the
+  // stored `settings.flow` object verbatim — referentially stable under
+  // copy-on-write, so `getSnapshot` needs no memo. A knob change goes through the
+  // handle alone: `handle.flow.set(patch)` dispatches the copy-on-write action
+  // (which the store notifies synchronously) AND runs the per-leaf
+  // demand/fade/reseed effects, so the controls track without an optimistic cell.
+  // Both panels share this. Fallback is the same `DEFAULT_FLOW` seed the store is
+  // constructed from, so first paint (before `handleRef` lands) matches engine
+  // truth.
+  const flow = useSettingsStore(handleRef, selectFlow, DEFAULT_FLOW);
   const onFlowChange = useCallback(
     (patch: Partial<FlowSettings>) => {
-      updateFlow(patch);
       handleRef.current?.flow.set(patch);
     },
-    [updateFlow, handleRef],
+    [handleRef],
   );
 
   // Live "N galaxies" figure for a pinned cluster/SC/void card.  Recomputes

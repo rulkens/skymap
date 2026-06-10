@@ -6,19 +6,18 @@
  * EngineCallbacks slice the engine echoes mutations into, spread by
  * App.tsx into the `createEngine` options block.
  *
- * The optimistic setters (`setSpaceMouseSensitivity`, `updateFlow`) are the
- * no-echo exceptions — see the doc comments inside `useEngineSettings.ts` for
- * the rationale per setter.
+ * The optimistic setter (`setSpaceMouseSensitivity`) is the sole no-echo
+ * exception — see the doc comment inside `useEngineSettings.ts` for the
+ * rationale.
  */
 
 import type { UseEngineSettingsState } from './UseEngineSettingsState';
 import type { EngineSettingsCallbacks } from './EngineSettingsCallbacks';
-import type { FlowSettings } from './FlowSettings';
 
 export type UseEngineSettingsReturn = {
   settings: UseEngineSettingsState;
   engineCallbacks: EngineSettingsCallbacks;
-  // App-owned optimistic setters for the no-echo cases
+  // App-owned optimistic setter for the no-echo case
   /**
    * Optimistic setter for the SpaceMouse sensitivity slider.  No engine
    * echo (the subsystem's `setSensitivity` is fire-and-forget), so
@@ -26,11 +25,4 @@ export type UseEngineSettingsReturn = {
    * to keep the React state and the engine state in lock-step.
    */
   setSpaceMouseSensitivity: (v: number) => void;
-  /**
-   * Optimistic merge into the React `flow` mirror (no engine echo). App pairs
-   * this with `handle.flow.set(patch)` so the same `Partial<FlowSettings>`
-   * lands in both React and the engine, same lock-step idiom as
-   * `setSpaceMouseSensitivity`.
-   */
-  updateFlow: (patch: Partial<FlowSettings>) => void;
 };

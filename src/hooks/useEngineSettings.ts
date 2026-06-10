@@ -38,7 +38,7 @@
  * ──────────────────────────────────────────────────────────────────────
  * The App-owned exceptions
  * ──────────────────────────────────────────────────────────────────────
- *   - `spaceMouseSensitivity` / `flow` — no-echo: React owns the value
+ *   - `spaceMouseSensitivity` — no-echo: React owns the value
  *     optimistically and dual-writes to the engine handle.
  *
  * ──────────────────────────────────────────────────────────────────────
@@ -50,13 +50,12 @@
  * higher-level wiring.
  */
 
-import { useCallback, useState } from 'react';
-import type { FlowSettings } from '../@types/settings/FlowSettings';
+import { useState } from 'react';
 import type { LabelCategory } from '../@types/engine/data/LabelCategory';
 import type { StructureCategory } from '../@types/engine/data/StructureCategory';
 import { LABEL_CATEGORIES } from '../data/labelCategories';
 import { STRUCTURE_CATEGORIES } from '../data/structureCategories';
-import { DEFAULT_FLOW, DEFAULT_SPACE_MOUSE_SENSITIVITY } from '../data/defaults';
+import { DEFAULT_SPACE_MOUSE_SENSITIVITY } from '../data/defaults';
 import type { UseEngineSettingsReturn } from '../@types/settings/UseEngineSettingsReturn';
 
 export function useEngineSettings(): UseEngineSettingsReturn {
@@ -69,28 +68,14 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   // highlightFallback, realOnly, and the derived visibleSourceMask), the
   // tonemap cluster (exposure, curve), camera auto-rotate, the galaxy-thumbnail
   // master toggle, the Milky-Way disk toggle, the filaments cluster (enabled,
-  // intensity), and the debug overlays (showPickBuffer, showDiskRadiusRing)
-  // moved to the engine-owned settings store — the thumbnail and milkyWay
-  // toggles have no React consumer (the thumbnail panel surface was evicted;
-  // milkyWay's handle setter has no panel caller); App reads the filaments
-  // cluster and the debug toggles via `useSettingsStore` selectors, so no
-  // mirror cell or echo lives here.
+  // intensity), the flow overlay slice, and the debug overlays (showPickBuffer,
+  // showDiskRadiusRing) moved to the engine-owned settings store — the thumbnail
+  // and milkyWay toggles have no React consumer (the thumbnail panel surface was
+  // evicted; milkyWay's handle setter has no panel caller); App reads the
+  // filaments cluster, the flow slice (via `selectFlow`), and the debug toggles
+  // via `useSettingsStore` selectors, so no mirror cell or echo lives here.
 
   // ── App-owned optimistic values (no engine echo) ─────────────────────
-
-  // ── CF4++ flow-field overlay (App-owned optimistic, no echo) ──────────
-  // The engine fires NO echo callback for flow — same as filamentsEnabled —
-  // so React owns the whole `settings.flow` slice directly, seeded from
-  // DEFAULT_FLOW. It's one `FlowSettings` object rather than nine scalar cells:
-  // the panels and the engine handle are both driven by a `Partial<FlowSettings>`
-  // patch (see `updateFlow` and `handle.flow.set`), so a knob change is one
-  // patch on each side and adding a knob doesn't grow this hook.
-  const [flow, setFlow] = useState<FlowSettings>(DEFAULT_FLOW);
-
-  /** Merge an optimistic patch into the React mirror; App pairs it with `handle.flow.set`. */
-  const updateFlow = useCallback((patch: Partial<FlowSettings>) => {
-    setFlow((prev) => ({ ...prev, ...patch }));
-  }, []);
 
   // ── One-shot from engine: filament strip + vertex counts ─────────────
   // Stays null until the engine fires `onFilamentsReady` (once, after the
@@ -156,7 +141,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       markerCategoryVisibility,
       spaceMouseConnected,
       spaceMouseSensitivity,
-      flow,
     },
     engineCallbacks: {
       // ── Nested sub-bag subscriptions ─────────────────────────────
@@ -199,6 +183,5 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       },
     },
     setSpaceMouseSensitivity,
-    updateFlow,
   };
 }

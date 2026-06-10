@@ -26,7 +26,6 @@
  * canonical name unchanged.
  */
 
-import type { FlowSettings } from './FlowSettings';
 import type { LabelCategory } from '../engine/data/LabelCategory';
 import type { StructureCategory } from '../engine/data/StructureCategory';
 
@@ -90,14 +89,4 @@ export type UseEngineSettingsState = {
    * (same pattern as `filamentsEnabled` / `volumesEnabled`).
    */
   spaceMouseSensitivity: number;
-  /**
-   * App-owned optimistic mirror of `settings.flow` (the CF4++
-   * peculiar-velocity overlay).  The engine fires NO echo callback for flow —
-   * same pattern as `filamentsEnabled` — so React owns the whole slice
-   * directly, seeded from `DEFAULT_FLOW`.  One `FlowSettings` object rather
-   * than nine flat fields: the SettingsPanel reads `enabled` / `mode` /
-   * `intensity`, the DebugPanel reads the motion knobs, and both write back
-   * through a `Partial<FlowSettings>` patch.
-   */
-  flow: FlowSettings;
 };
