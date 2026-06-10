@@ -13,8 +13,8 @@
  * `flowFieldFromCube` against its own device — the device never leaks to this
  * slot, mirroring `cf4Density → scalarVolumeRenderer.addField`).  `setLoaded()`
  * means "committed to the renderer" (see `FlowFieldStore`), so it fires AFTER
- * `setField`, then the render loop wakes.  A null renderer (pre-bootstrap) is a
- * silent no-op.
+ * `setField`.  The render wake is handled generically by `installSlotReadyWake`
+ * in the wiring layer.  A null renderer (pre-bootstrap) is a silent no-op.
  *
  * Construction-pure: builds + subscribes + RETURNS the slot.  The orchestrator
  * (`installSlots`) owns the write to `state.assetSlots`.
@@ -51,7 +51,6 @@ export const createFlowFieldSlot: SlotFactory<ScalarCube, void> = (state, _cb) =
       if (state.settings.flow.enabled) {
         void state.subsystems.fades.fadeTo({ kind: 'flow' }, 1, FADE_IN_DURATION_MS);
       }
-      state.subsystems.scheduler.requestRender();
     },
   });
   slot.subscribe((s) => {

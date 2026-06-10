@@ -4,19 +4,20 @@
  *
  * The galaxy-catalog source slots (SDSS, 2MRS, GLADE, Famous,
  * Milliquas, Synthetic) all share one slot construction shape:
- * name = `${shortName}-points`, upload-on-commit, requestRender +
- * `onCatalogReady` echo on the `ready` transition.  The per-source
- * variance lives in a declarative `GALAXY_CATALOG_SOURCE_REGISTRY`;
- * `wireGalaxyCatalogSourceSlot` is called once per row.
+ * name = `${shortName}-points`, upload-on-commit, `onCatalogReady`
+ * echo on the `ready` transition.  The per-source variance lives in a
+ * declarative `GALAXY_CATALOG_SOURCE_REGISTRY`; `wireGalaxyCatalogSourceSlot`
+ * is called once per row.
  *
  * These tests verify the helper's contract without spinning up the
  * full engine:
  *   - each `wireGalaxyCatalogSourceSlot` call mints a slot, subscribes
  *     to it, and stores it in `state.assetSlots.points` keyed by
  *     `Source`;
- *   - the subscriber fires `cb.onCatalogReady(source, count)` and
- *     `requestRender()` on the `ready` transition, and is silent on
- *     the loading / committing / error transitions;
+ *   - the subscriber fires `cb.onCatalogReady(source, count)` on the
+ *     `ready` transition, and is silent on the loading / committing /
+ *     error transitions (the render wake is covered generically by
+ *     `installSlotReadyWake.test.ts`);
  *   - the commit step uploads to the renderer and mutates
  *     `state.sources.catalogs`;
  *   - multiple sources wired in succession produce independent slots
@@ -70,7 +71,6 @@ function makeState(opts: {
     },
     data: createEngineData(),
     subsystems: {
-      scheduler: { requestRender: vi.fn() },
       fades: opts.fadesStub ?? {
         register: vi.fn(),
         unregister: vi.fn(),
@@ -184,7 +184,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     expect(gladeSlot!.name).toBe('glade-points');
   });
 
-  it('subscribes a handler that fires onCatalogReady(source, count) and requestRender on the ready transition', async () => {
+  it('subscribes a handler that fires onCatalogReady(source, count) on the ready transition', async () => {
     const upload = vi.fn().mockResolvedValue(undefined);
     const state = makeState({ rendererUpload: upload });
     const onCatalogReady = vi.fn();
@@ -213,8 +213,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
 
     expect(onCatalogReady).toHaveBeenCalledOnce();
     expect(onCatalogReady).toHaveBeenCalledWith(Source.SDSS, 42);
-    // requestRender fires once on the ready transition.
-    expect(state.subsystems.scheduler.requestRender).toHaveBeenCalled();
+    // The render wake is covered generically by installSlotReadyWake.test.ts.
   });
 
   it('commit uploads the cloud to the renderer and writes it into state.sources.catalogs', async () => {

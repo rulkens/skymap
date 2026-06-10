@@ -208,7 +208,6 @@ export function wireGalaxyCatalogSourceSlot(
   slot.subscribe((s) => {
     if (s.kind === 'ready') {
       cb.sources?.onCatalogReady?.(source, s.value.count);
-      state.subsystems.scheduler.requestRender();
     }
   });
 
