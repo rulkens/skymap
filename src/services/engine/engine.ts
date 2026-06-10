@@ -304,7 +304,7 @@ function setStructureLabelEnabled(
 }
 
 function setSurveyLabelEnabled(
-  state: Pick<EngineState, 'data' | 'settings' | 'subsystems'>,
+  state: Pick<EngineState, 'settings' | 'subsystems'>,
   cb: Pick<EngineCallbacks, 'labels'>,
   survey: SurveyId,
   enabled: boolean,
