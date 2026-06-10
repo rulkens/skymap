@@ -14,17 +14,16 @@
  *
  * Spelled out one-by-one in `engine.ts`'s public-handle object literal,
  * those thirteen setters consumed ~180 lines of nearly-identical code
- * with the only variation being the path tuple, the callback name, and
- * occasionally a clamp.  The repetition is hard to scan ("did we
- * remember to call requestRender in *all* of them?") and easy to
- * silently regress when a new setting gets added without one of the
- * three steps.
+ * with the only variation being the path tuple and the callback name.
+ * The repetition is hard to scan ("did we remember to call requestRender
+ * in *all* of them?") and easy to silently regress when a new setting
+ * gets added without one of the three steps.
  *
  * Reifying the shape as a descriptor table — name, state path, optional
- * callback key, optional clamp — and emitting the setter functions from
- * a single builder collapses the surface to one tested helper plus a
- * handful of lines per descriptor.  Auditing "every setting wakes the
- * scheduler" is now a one-line read of the builder.
+ * callback key — and emitting the setter functions from a single builder
+ * collapses the surface to one tested helper plus a handful of lines per
+ * descriptor.  Auditing "every setting wakes the scheduler" is now a
+ * one-line read of the builder.
  *
  * ### Why bespoke setters stay inline
  *
@@ -123,9 +122,6 @@ type NestedCallbackKey =
  *     Record key on the builder output so sub-handle forwarders can
  *     resolve a forwarder by name).
  *   - `path` is the 3-tuple state path the value lands in.
- *   - `clamp` (optional) wraps the incoming value before it hits state
- *     AND the callback echo.  Returns the post-clamp number.  Used by
- *     `setExposure` and `setFilamentIntensity`.
  *   - `callback` (optional) is the `[cluster, method]` address fired
  *     after mutation.  Omit when no echo is wired (App.tsx owns the
  *     boolean optimistically — see `setFilamentsEnabled`).
@@ -133,7 +129,6 @@ type NestedCallbackKey =
 type SettingsDescriptor = {
   name: SettingsTableKey;
   path: SettingsPath;
-  clamp?: (value: number) => number;
   callback?: NestedCallbackKey;
 };
 
@@ -191,7 +186,7 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     path: ['settings', 'flow', 'enabled'],
   },
   {
-    // String union; the setter's `value: unknown` carries it through — no clamp.
+    // String union; the setter's `value: unknown` carries it through.
     name: 'setFlowMode',
     path: ['settings', 'flow', 'mode'],
   },
@@ -299,11 +294,9 @@ function setByPath(state: EngineState, path: SettingsPath, value: unknown): void
  * wiring) resolves forwarders by name from the result.
  *
  * Each emitted setter:
- *   1. clamps the incoming value (if a clamp is declared);
- *   2. writes the (possibly clamped) value into `state` at `path`;
- *   3. fires the nested echo callback (if declared) with the
- *      post-clamp value;
- *   4. calls `requestRender()` so the next frame picks up the change.
+ *   1. writes the value into `state` at `path`;
+ *   2. fires the nested echo callback (if declared) with that value;
+ *   3. calls `requestRender()` so the next frame picks up the change.
  *
  * The return type is widened to `(value: unknown) => void` per
  * descriptor; the EngineHandle public-API surface is the place where
@@ -319,15 +312,10 @@ export function buildSettersFromTable(
   const out = {} as Record<SettingsTableKey, (value: unknown) => void>;
 
   for (const descriptor of SETTINGS_TABLE) {
-    const { name, path, clamp, callback } = descriptor;
+    const { name, path, callback } = descriptor;
 
     out[name] = (value: unknown) => {
-      // Clamps only ever apply to numeric fields; descriptors that
-      // declare a clamp are by definition number-typed.  The cast
-      // here mirrors the runtime guarantee.
-      const next = clamp !== undefined ? clamp(value as number) : value;
-
-      setByPath(state, path, next);
+      setByPath(state, path, value);
 
       // Nested-only callback fire.  Optional-chain shape so a missing
       // cluster or missing method is silently skipped.
@@ -335,7 +323,7 @@ export function buildSettersFromTable(
         const [cluster, method] = callback;
         const sub = (cb as unknown as Record<string, Record<string, unknown> | undefined>)[cluster];
         const fn = sub?.[method] as ((v: unknown) => void) | undefined;
-        fn?.(next);
+        fn?.(value);
       }
 
       requestRender();

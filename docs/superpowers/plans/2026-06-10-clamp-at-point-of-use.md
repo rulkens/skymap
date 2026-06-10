@@ -138,17 +138,17 @@ By now no row carries a `clamp`. Remove the now-unused machinery.
 
 **Files:**
 - Modify `src/services/engine/wiring/settingsTable.ts` — delete the `clamp?` field
-  from `SettingsDescriptor` (`:134-139`), the `clamp(value)` application in
-  `buildSettersFromTable` (`:341-345`), and the now-unused `MAX_PARTICLES` /
-  `MIN_TRAIL_STEP` imports (`:77`). Tidy the module docblock (`:128-133` describes
-  `clamp`) to current state — timeless and terse.
-- Modify the `settingsTable` test(s) — find them (`tests/services/engine/wiring/`
-  or similar) and flip any clamp assertions to **raw-passthrough**: e.g.
-  `setExposure(1e9)` leaves `settings.tonemap.exposure === 1e9` (the setter no
-  longer clamps; intent is stored raw).
+  from `SettingsDescriptor`, drop the `clamp` from the `buildSettersFromTable`
+  destructure and its `clamp(value)` application (setter now writes the raw value),
+  and tidy the module + descriptor + builder docblocks to current state (timeless,
+  terse). The `MAX_PARTICLES` / `MIN_TRAIL_STEP` imports were already removed in
+  Task 1.
+- The `settingsTable` test (`tests/services/engine/wiring/settingsTable.test.ts`)
+  was already flipped to raw-passthrough in Tasks 2-3 — verify it carries no
+  `clamp` descriptor reference (would now be a type error).
 
-- [ ] Update the table + its tests (raw-passthrough assertions).
-- [ ] Run-fails/passes as the tests flip. MAIN: full `npm test` + `npm run typecheck`.
+- [x] Update the table + its tests (raw-passthrough assertions).
+- [x] Run-fails/passes as the tests flip. MAIN: full `npm test` + `npm run typecheck`.
 - [ ] Commit.
 
 ## Task 5: entanglement-radar pass + behaviour-preservation gate
