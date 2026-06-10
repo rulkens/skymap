@@ -29,7 +29,7 @@ import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 export const createStructureCatalogSlot: SlotFactory<
   StructureCatalogPayload,
   StructureCatalogReq
-> = (state, _cb) => {
+> = (_state, _cb) => {
   const slot = createAssetSlot({
     name: 'structure-catalog',
     fetch: structureCatalogFetcher,

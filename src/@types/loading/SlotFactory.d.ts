@@ -4,8 +4,10 @@
  * Each factory is a pure builder:
  *
  *   1. constructs the `AssetSlot` via `createAssetSlot`,
- *   2. wires `slot.subscribe` for any side effects (logs, callbacks,
- *      render-on-demand wakes),
+ *   2. wires `slot.subscribe` for any side effects (logs, store writes,
+ *      callbacks).  Render-on-demand wakes are NOT a factory concern —
+ *      they are handled generically by the wiring layer's
+ *      `installSlotReadyWake`.
  *   3. RETURNS the slot.
  *
  * It does NOT write `state.assetSlots.<name>` and does NOT call
