@@ -83,6 +83,7 @@ import { setExposureAction } from '../settingsStore/actions/setExposureAction';
 import { setToneMapCurveAction } from '../settingsStore/actions/setToneMapCurveAction';
 import { setAutoRotateAction } from '../settingsStore/actions/setAutoRotateAction';
 import { setAbsMagLimitAction } from '../settingsStore/actions/setAbsMagLimitAction';
+import { setThumbnailsEnabledAction } from '../settingsStore/actions/setThumbnailsEnabledAction';
 
 /**
  * 3-tuple path into `EngineState`: `['settings', <cluster>, <leaf>]`.
@@ -94,7 +95,6 @@ import { setAbsMagLimitAction } from '../settingsStore/actions/setAbsMagLimitAct
 type SettingsPath =
   | readonly ['settings', 'surveys', keyof EngineState['settings']['surveys']]
   | readonly ['settings', 'tonemap', keyof EngineState['settings']['tonemap']]
-  | readonly ['settings', 'thumbnails', keyof EngineState['settings']['thumbnails']]
   | readonly ['settings', 'milkyWay', keyof EngineState['settings']['milkyWay']]
   | readonly ['settings', 'filaments', keyof EngineState['settings']['filaments']]
   // Flow overlay (singleton-overlay-layer slice — see FlowSettings).
@@ -105,8 +105,8 @@ type SettingsPath =
 /**
  * Nested callback address: `[cluster, method]`.  The cluster names
  * line up 1:1 with the optional sub-bags on `EngineCallbacks`
- * (`surveys`, `tonemap`, `thumbnails`, `milkyWay`, `filaments`,
- * `volumes`, `sources`).  Method names are kept as plain
+ * (`surveys`, `tonemap`, `milkyWay`, `filaments`, `volumes`,
+ * `sources`).  Method names are kept as plain
  * `string` here because they vary per cluster and adding a full nested
  * union would duplicate the EngineCallbacks shape — the runtime
  * optional-chaining safely handles a missing method.
@@ -114,7 +114,6 @@ type SettingsPath =
 type NestedCallbackKey =
   | readonly ['surveys', string]
   | readonly ['tonemap', string]
-  | readonly ['thumbnails', string]
   | readonly ['milkyWay', string]
   | readonly ['filaments', string]
   | readonly ['volumes', string]
@@ -185,9 +184,12 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     action: setAutoRotateAction,
   },
   {
+    // Thumbnails cluster (migrated to the engine-owned store). Dispatches the
+    // copy-on-write action; the value has no React mirror (the panel toggle was
+    // evicted — the engine reads it each frame via `state.settings.thumbnails`),
+    // so no echo is wired. The wrapper still calls `requestRender`.
     name: 'setGalaxyTexturesEnabled',
-    path: ['settings', 'thumbnails', 'enabled'],
-    callback: ['thumbnails', 'onEnabledChange'],
+    action: setThumbnailsEnabledAction,
   },
   {
     name: 'setMilkyWayEnabled',

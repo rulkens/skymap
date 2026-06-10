@@ -10,23 +10,25 @@
  *   1. React seeds an initial value from `data/defaults.ts` so the
  *      SettingsPanel renders a useful first paint before the engine's
  *      first echo lands.
- *   2. The engine fires an echo callback (e.g. `thumbnails.onEnabledChange`)
+ *   2. The engine fires an echo callback (e.g. `milkyWay.onEnabledChange`)
  *      both at engine init AND on every matching setter call, so the
  *      React copy always reflects the engine's authoritative value.
  *   3. The SettingsPanel onChange handler in App.tsx forwards user
  *      input to the engine handle (e.g.
- *      `handleRef.current?.setGalaxyTexturesEnabled(v)`) and the engine echoes
+ *      `handleRef.current?.milkyWay.setEnabled(v)`) and the engine echoes
  *      it right back, so no optimistic local update is needed — except for the
  *      exceptions below.
  *
  * The surveys cluster (pointSize / brightness / depthFade /
  * highlightFallback / realOnly / the derived source mask), the tonemap cluster
- * (exposure / curve), the camera auto-rotate flag, and the bias cluster (mode /
- * absMagLimit) have LEFT this pattern: they live in the engine-owned settings
- * store, and App.tsx reads them via `useSettingsStore` selectors instead of a
- * mirror cell here. The tonemap migration also dissolved the `exposure` hybrid:
- * the store write notifies synchronously, so the slider thumb tracks without an
- * optimistic local cell.
+ * (exposure / curve), the camera auto-rotate flag, the bias cluster (mode /
+ * absMagLimit), and the galaxy-thumbnail master toggle have LEFT this pattern:
+ * they live in the engine-owned settings store. The store-backed values App
+ * still surfaces are read via `useSettingsStore` selectors instead of a mirror
+ * cell here; the thumbnail toggle has no React consumer at all (the panel
+ * surface was evicted — the engine reads it each frame). The tonemap migration
+ * also dissolved the `exposure` hybrid: the store write notifies synchronously,
+ * so the slider thumb tracks without an optimistic local cell.
  *
  * ──────────────────────────────────────────────────────────────────────
  * The App-owned exceptions
@@ -52,7 +54,6 @@ import { LABEL_CATEGORIES } from '../data/labelCategories';
 import { STRUCTURE_CATEGORIES } from '../data/structureCategories';
 import {
   DEFAULT_FLOW,
-  DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_SHOW_PICK_BUFFER,
   DEFAULT_SHOW_DISK_RADIUS_RING,
@@ -71,12 +72,10 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   // and on every setter call, so these values always reflect engine truth.
   // Surveys-cluster settings (pointSize, brightness, depthFade,
   // highlightFallback, realOnly, and the derived visibleSourceMask), the
-  // tonemap cluster (exposure, curve), and camera auto-rotate moved to the
-  // engine-owned settings store — App.tsx reads them via `useSettingsStore`
-  // selectors, so no React mirror cell or echo subscription lives here.
-  const [galaxyTexturesEnabled, setGalaxyTexturesEnabled] = useState<boolean>(
-    DEFAULT_GALAXY_TEXTURES_ENABLED,
-  );
+  // tonemap cluster (exposure, curve), camera auto-rotate, and the
+  // galaxy-thumbnail master toggle moved to the engine-owned settings store —
+  // the thumbnail toggle has no React consumer (the panel surface was evicted;
+  // the engine reads it each frame), so no mirror cell or echo lives here.
   const [milkyWayEnabled, setMilkyWayEnabled] = useState<boolean>(DEFAULT_MILKY_WAY_ENABLED);
   const [showPickBuffer, setShowPickBuffer] = useState<boolean>(DEFAULT_SHOW_PICK_BUFFER);
   const [showDiskRadiusRing, setShowDiskRadiusRing] = useState<boolean>(
@@ -178,7 +177,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
 
   return {
     settings: {
-      galaxyTexturesEnabled,
       milkyWayEnabled,
       filamentsEnabled,
       filamentIntensity,
@@ -199,14 +197,12 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       // no-echo cases (filaments enabled/intensity, volumes master)
       // are App-owned with no wiring here.
       // The surveys + sources + tonemap echo sub-bags are gone, and so are the
-      // camera auto-rotate echo and the bias (mode / absMagLimit) echoes — those
-      // clusters read the engine-owned store via `useSettingsStore` selectors, so
-      // there's no mirror to keep in sync from a callback. (Camera EVENTS —
+      // camera auto-rotate echo, the bias (mode / absMagLimit) echoes, and the
+      // thumbnails echo — those clusters live in the engine-owned store (the
+      // thumbnail toggle has no React consumer at all), so there's no mirror to
+      // keep in sync from a callback. (Camera EVENTS —
       // focus / camera / scale — are not settings and are wired by `useEngine`,
       // not here.)
-      thumbnails: {
-        onEnabledChange: setGalaxyTexturesEnabled,
-      },
       milkyWay: {
         onEnabledChange: setMilkyWayEnabled,
       },

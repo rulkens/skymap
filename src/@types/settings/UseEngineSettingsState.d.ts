@@ -36,8 +36,9 @@ export type UseEngineSettingsState = {
   // realOnly, visibleSourceMask), the tonemap cluster (exposure, curve), camera
   // auto-rotate, and the bias cluster (mode, absMagLimit) are no longer mirrored
   // here — App.tsx reads them off the engine-owned store via `useSettingsStore`
-  // selectors.
-  galaxyTexturesEnabled: boolean;
+  // selectors. The galaxy-thumbnail master toggle also moved to the store but
+  // has no React consumer (the panel surface was evicted), so it isn't surfaced
+  // here at all.
   milkyWayEnabled: boolean;
   filamentsEnabled: boolean;
   filamentIntensity: number;

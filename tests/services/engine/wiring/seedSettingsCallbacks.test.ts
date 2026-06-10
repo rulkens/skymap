@@ -84,6 +84,10 @@ describe('seedSettingsCallbacks', () => {
       onAutoRotateChange: vi.fn(),
     };
     const thumbnails = { onEnabledChange: vi.fn() };
+    const debug = {
+      onShowPickBufferChange: vi.fn(),
+      onShowDiskRadiusRingChange: vi.fn(),
+    };
     const bias = {
       onModeChange: vi.fn(),
       onAbsMagLimitChange: vi.fn(),
@@ -102,6 +106,7 @@ describe('seedSettingsCallbacks', () => {
       tonemap,
       camera,
       thumbnails,
+      debug,
       bias,
       sources,
       labels,
@@ -121,12 +126,16 @@ describe('seedSettingsCallbacks', () => {
     expect(sources.onMaskChange).not.toHaveBeenCalled();
     expect(tonemap.onCurveChange).not.toHaveBeenCalled();
     expect(tonemap.onExposureChange).not.toHaveBeenCalled();
-    // Camera auto-rotate and the bias cluster (mode / absMagLimit) migrated to
-    // the engine-owned store too; the seed no longer fires their echoes.
+    // Camera auto-rotate, the bias cluster (mode / absMagLimit), and the
+    // galaxy-thumbnail toggle migrated to the engine-owned store too; the seed
+    // no longer fires their echoes.
     expect(camera.onAutoRotateChange).not.toHaveBeenCalled();
     expect(bias.onModeChange).not.toHaveBeenCalled();
     expect(bias.onAbsMagLimitChange).not.toHaveBeenCalled();
-    expect(thumbnails.onEnabledChange).toHaveBeenCalledExactlyOnceWith(snap.galaxyTexturesEnabled);
+    expect(thumbnails.onEnabledChange).not.toHaveBeenCalled();
+    // The debug echoes still seed (no migration) — exercised below as the
+    // lone-present echo in the per-callback-skip test.
+    expect(debug.onShowPickBufferChange).toHaveBeenCalledExactlyOnceWith(snap.showPickBuffer);
     // Each echo carries a fresh copy of the record, not the literal
     // reference — assert by value so the freshness contract stays
     // load-bearing.  Label and marker visibility are two independent
@@ -158,16 +167,17 @@ describe('seedSettingsCallbacks', () => {
   it('skips undefined callbacks individually without affecting siblings', () => {
     // Mix: one optional callback present, the rest undefined.  Verifies
     // the present one fires while the absent ones don't throw.  Uses a
-    // still-firing settings echo (`thumbnails.onEnabledChange`) — camera
-    // auto-rotate migrated to the store and no longer seeds through an echo.
-    const onEnabledChange = vi.fn();
+    // still-firing settings echo (`debug.onShowPickBufferChange`) — the
+    // thumbnail toggle migrated to the store and no longer seeds through an
+    // echo.
+    const onShowPickBufferChange = vi.fn();
     const cb: EngineCallbacks = {
       ...makeRequiredCallbacks(),
-      thumbnails: { onEnabledChange },
+      debug: { onShowPickBufferChange },
     };
 
     seedSettingsCallbacks(cb, makeSnapshot());
 
-    expect(onEnabledChange).toHaveBeenCalledExactlyOnceWith(true);
+    expect(onShowPickBufferChange).toHaveBeenCalledExactlyOnceWith(false);
   });
 });

@@ -260,10 +260,13 @@ boringSetter (`settingsTable.ts:258`).
 ### Task 2.5: thumbnails
 
 Same pattern, for `thumbnails.enabled` (`setGalaxyTexturesEnabled`, echo
-`thumbnails.onEnabledChange`, cell `galaxyTexturesEnabled`).
-- [ ] Reducer `setThumbnailsEnabled` + selector + tests → implement → point
-  boringSetter at action → delete echo + cell + seed line → switch SettingsPanel
-  read → full suite → commit.
+`thumbnails.onEnabledChange`, cell `galaxyTexturesEnabled`). NOTE: the panel
+toggle was already evicted upstream, so the value has **no React consumer** —
+there's no SettingsPanel read to switch; the dead mirror cell + echo are simply
+deleted.
+- [x] Reducer `setThumbnailsEnabled` + selector + tests → implement → point
+  boringSetter at action → delete echo + cell + seed line → (no SettingsPanel
+  read to switch — value has no React consumer) → full suite → commit.
 
 ### Task 2.6: milkyWay
 

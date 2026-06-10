@@ -47,11 +47,10 @@ export function seedSettingsCallbacks(cb: EngineCallbacks, snapshot: SettingsCal
   // keeps every fire safe when a consumer doesn't subscribe to that bag.
   // The surveys cluster (size / brightness / highlightFallback / realOnly /
   // depthFade) + the derived source mask, the tonemap cluster (exposure /
-  // curve), camera auto-rotate, and the bias cluster (mode / absMagLimit) no
-  // longer seed through echoes — React reads them off the engine-owned store
-  // via `useSettingsStore` selectors, which start from the same
-  // `data/defaults.ts` seed.
-  cb.thumbnails?.onEnabledChange?.(snapshot.galaxyTexturesEnabled);
+  // curve), camera auto-rotate, the bias cluster (mode / absMagLimit), and the
+  // galaxy-thumbnail toggle no longer seed through echoes — those clusters live
+  // in the engine-owned store (the thumbnail toggle has no React consumer at
+  // all), which starts from the same `data/defaults.ts` seed.
   cb.debug?.onShowPickBufferChange?.(snapshot.showPickBuffer);
   cb.debug?.onShowDiskRadiusRingChange?.(snapshot.showDiskRadiusRing);
   // Fresh copies of each record so subscribers can treat every emission as an
