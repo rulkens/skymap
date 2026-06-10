@@ -346,13 +346,13 @@ export function setSurveySizeAction(store: SettingsStore, sizePx: number): void;
 // body: store.setState((s) => setSurveySize(s, sizePx));
 ```
 
-- [ ] Action test `setSurveySizeAction writes the size through the reducer`:
+- [x] Action test `setSurveySizeAction writes the size through the reducer`:
   create a store, call the action, assert `selectSurveySize(store.getState())`
   reflects it and the surveys cluster ref changed (copy-on-write through the
   reducer).
-- [ ] Run-fails. MAIN runs `npm test -- settingsStore`.
-- [ ] Implement.
-- [ ] Run-passes. MAIN: `npm test -- settingsStore` + `npm run typecheck`.
+- [x] Run-fails. MAIN runs `npm test -- settingsStore`.
+- [x] Implement.
+- [x] Run-passes. MAIN: `npm test -- settingsStore` + `npm run typecheck`.
 - [ ] Commit both files.
 
 ---
