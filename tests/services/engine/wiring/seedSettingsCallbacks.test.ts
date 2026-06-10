@@ -138,9 +138,11 @@ describe('seedSettingsCallbacks', () => {
     // The Milky-Way disk toggle migrated to the engine-owned store too; the seed
     // never fired its echo (the toggle has no React consumer), so it stays unrung.
     expect(milkyWay.onEnabledChange).not.toHaveBeenCalled();
-    // The debug echoes still seed (no migration) — exercised below as the
-    // lone-present echo in the per-callback-skip test.
-    expect(debug.onShowPickBufferChange).toHaveBeenCalledExactlyOnceWith(snap.showPickBuffer);
+    // The debug overlays (showPickBuffer / showDiskRadiusRing) migrated to the
+    // engine-owned store too; the seed no longer fires their echoes (the
+    // DebugPanel reads them via `useSettingsStore` selectors).
+    expect(debug.onShowPickBufferChange).not.toHaveBeenCalled();
+    expect(debug.onShowDiskRadiusRingChange).not.toHaveBeenCalled();
     // Each echo carries a fresh copy of the record, not the literal
     // reference — assert by value so the freshness contract stays
     // load-bearing.  Label and marker visibility are two independent
@@ -172,17 +174,20 @@ describe('seedSettingsCallbacks', () => {
   it('skips undefined callbacks individually without affecting siblings', () => {
     // Mix: one optional callback present, the rest undefined.  Verifies
     // the present one fires while the absent ones don't throw.  Uses a
-    // still-firing settings echo (`debug.onShowPickBufferChange`) — the
-    // thumbnail toggle migrated to the store and no longer seeds through an
+    // still-firing settings echo (`labels.onMarkerCategoryVisibilityChange`) —
+    // the debug toggles migrated to the store and no longer seed through an
     // echo.
-    const onShowPickBufferChange = vi.fn();
+    const snap = makeSnapshot();
+    const onMarkerCategoryVisibilityChange = vi.fn();
     const cb: EngineCallbacks = {
       ...makeRequiredCallbacks(),
-      debug: { onShowPickBufferChange },
+      labels: { onMarkerCategoryVisibilityChange },
     };
 
-    seedSettingsCallbacks(cb, makeSnapshot());
+    seedSettingsCallbacks(cb, snap);
 
-    expect(onShowPickBufferChange).toHaveBeenCalledExactlyOnceWith(false);
+    expect(onMarkerCategoryVisibilityChange).toHaveBeenCalledExactlyOnceWith(
+      snap.markerCategoryVisibility,
+    );
   });
 });

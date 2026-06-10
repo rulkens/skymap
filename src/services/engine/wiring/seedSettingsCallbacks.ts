@@ -47,12 +47,12 @@ export function seedSettingsCallbacks(cb: EngineCallbacks, snapshot: SettingsCal
   // keeps every fire safe when a consumer doesn't subscribe to that bag.
   // The surveys cluster (size / brightness / highlightFallback / realOnly /
   // depthFade) + the derived source mask, the tonemap cluster (exposure /
-  // curve), camera auto-rotate, the bias cluster (mode / absMagLimit), and the
-  // galaxy-thumbnail toggle no longer seed through echoes — those clusters live
-  // in the engine-owned store (the thumbnail toggle has no React consumer at
-  // all), which starts from the same `data/defaults.ts` seed.
-  cb.debug?.onShowPickBufferChange?.(snapshot.showPickBuffer);
-  cb.debug?.onShowDiskRadiusRingChange?.(snapshot.showDiskRadiusRing);
+  // curve), camera auto-rotate, the bias cluster (mode / absMagLimit), the
+  // galaxy-thumbnail toggle, and the debug overlays (showPickBuffer /
+  // showDiskRadiusRing) no longer seed through echoes — those clusters live in
+  // the engine-owned store (the thumbnail toggle has no React consumer at all;
+  // the DebugPanel reads the debug toggles via `useSettingsStore` selectors),
+  // which starts from the same `data/defaults.ts` seed.
   // Fresh copies of each record so subscribers can treat every emission as an
   // immutable snapshot — same idiom as the live setter echoes. Label and marker
   // visibility are independent axes; the seed records are already derived from

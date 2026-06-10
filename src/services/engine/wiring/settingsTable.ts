@@ -85,6 +85,8 @@ import { setAutoRotateAction } from '../settingsStore/actions/setAutoRotateActio
 import { setAbsMagLimitAction } from '../settingsStore/actions/setAbsMagLimitAction';
 import { setThumbnailsEnabledAction } from '../settingsStore/actions/setThumbnailsEnabledAction';
 import { setMilkyWayEnabledAction } from '../settingsStore/actions/setMilkyWayEnabledAction';
+import { setShowPickBufferAction } from '../settingsStore/actions/setShowPickBufferAction';
+import { setShowDiskRadiusRingAction } from '../settingsStore/actions/setShowDiskRadiusRingAction';
 
 /**
  * 3-tuple path into `EngineState`: `['settings', <cluster>, <leaf>]`.
@@ -100,8 +102,7 @@ type SettingsPath =
   | readonly ['settings', 'filaments', keyof EngineState['settings']['filaments']]
   // Flow overlay (singleton-overlay-layer slice — see FlowSettings).
   | readonly ['settings', 'flow', keyof EngineState['settings']['flow']]
-  | readonly ['settings', 'volumes', 'enabled']
-  | readonly ['settings', 'debug', keyof EngineState['settings']['debug']];
+  | readonly ['settings', 'volumes', 'enabled'];
 
 /**
  * Nested callback address: `[cluster, method]`.  The cluster names
@@ -116,8 +117,7 @@ type NestedCallbackKey =
   | readonly ['tonemap', string]
   | readonly ['filaments', string]
   | readonly ['volumes', string]
-  | readonly ['sources', string]
-  | readonly ['debug', string];
+  | readonly ['sources', string];
 
 /**
  * A store-action write: `(store, value) => void`.  Used by descriptors whose
@@ -291,21 +291,20 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     action: setToneMapCurveAction,
   },
   {
-    // Pick-buffer debug overlay master toggle.  Off by default; gated
-    // behind the SettingsPanel's Debug section.  Echoes through the
-    // 'debug' callback cluster so deep-links or keyboard shortcuts can
-    // flip the bit without going through React.
+    // Debug cluster (migrated to the engine-owned store). Pick-buffer overlay
+    // master toggle, off by default and gated behind the DebugPanel. Dispatches
+    // the copy-on-write action; React reads via `selectShowPickBuffer`, so no
+    // echo is wired. The wrapper still calls `requestRender`.
     name: 'setShowPickBuffer',
-    path: ['settings', 'debug', 'showPickBuffer'],
-    callback: ['debug', 'onShowPickBufferChange'],
+    action: setShowPickBufferAction,
   },
   {
-    // Disk-radius debug ring master toggle.  Off by default; gated
-    // behind the SettingsPanel's Debug section.  Echoes through the
-    // 'debug' callback cluster, same shape as the pick-buffer toggle.
+    // Debug cluster (migrated to the engine-owned store). Disk-radius debug-ring
+    // master toggle, off by default and gated behind the DebugPanel. Dispatches
+    // the copy-on-write action; React reads via `selectShowDiskRadiusRing`, so
+    // no echo is wired. The wrapper still calls `requestRender`.
     name: 'setShowDiskRadiusRing',
-    path: ['settings', 'debug', 'showDiskRadiusRing'],
-    callback: ['debug', 'onShowDiskRadiusRingChange'],
+    action: setShowDiskRadiusRingAction,
   },
 ];
 

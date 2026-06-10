@@ -72,14 +72,16 @@ export type EngineDebugHandle = {
   readonly passOverrides: PassOverridesHandle;
   /**
    * Toggle the pick-buffer debug overlay (see
-   * `EngineSettingsState.debug.showPickBuffer`).  Echoes through
-   * `EngineCallbacks.debug.onShowPickBufferChange`.
+   * `EngineSettingsState.debug.showPickBuffer`).  Dispatches the engine-owned
+   * store action; the DebugPanel reads the value back via
+   * `selectShowPickBuffer`, so there is no echo callback.
    */
   setShowPickBuffer(enabled: boolean): void;
   /**
    * Toggle the disk-radius debug ring (see
-   * `EngineSettingsState.debug.showDiskRadiusRing`).  Echoes through
-   * `EngineCallbacks.debug.onShowDiskRadiusRingChange`.
+   * `EngineSettingsState.debug.showDiskRadiusRing`).  Dispatches the engine-owned
+   * store action; the DebugPanel reads the value back via
+   * `selectShowDiskRadiusRing`, so there is no echo callback.
    */
   setShowDiskRadiusRing(enabled: boolean): void;
 };

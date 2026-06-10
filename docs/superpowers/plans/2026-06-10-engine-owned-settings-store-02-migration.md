@@ -285,7 +285,7 @@ Same pattern, for `debug.showPickBuffer` + `debug.showDiskRadiusRing`
 (`setShowPickBuffer` / `setShowDiskRadiusRing` boringSetters, echoes
 `debug.onShowPickBufferChange` / `onShowDiskRadiusRingChange`, cells
 `showPickBuffer` / `showDiskRadiusRing`). Consumer is DebugPanel.
-- [ ] Reducers + selectors + tests → implement → point boringSetters at actions
+- [x] Reducers + selectors + tests → implement → point boringSetters at actions
   → delete echoes + cells + seed lines → switch DebugPanel reads → full suite →
   commit.
 

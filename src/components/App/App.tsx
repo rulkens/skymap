@@ -53,6 +53,8 @@ import { selectToneMapCurve } from '../../services/engine/settingsStore/selector
 import { selectAutoRotate } from '../../services/engine/settingsStore/selectors/selectAutoRotate';
 import { selectBiasMode } from '../../services/engine/settingsStore/selectors/selectBiasMode';
 import { selectAbsMagLimit } from '../../services/engine/settingsStore/selectors/selectAbsMagLimit';
+import { selectShowPickBuffer } from '../../services/engine/settingsStore/selectors/selectShowPickBuffer';
+import { selectShowDiskRadiusRing } from '../../services/engine/settingsStore/selectors/selectShowDiskRadiusRing';
 import {
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_DEPTH_FADE_ENABLED,
@@ -62,6 +64,8 @@ import {
   DEFAULT_AUTO_ROTATE,
   DEFAULT_BIAS_MODE,
   DEFAULT_ABS_MAG_LIMIT,
+  DEFAULT_SHOW_PICK_BUFFER,
+  DEFAULT_SHOW_DISK_RADIUS_RING,
 } from '../../data/defaults';
 import { ALL_VISIBLE_MASK } from '../../utils/sourceMask';
 import { buildStaticAnchorStructures } from '../../data/buildStaticAnchorStructures';
@@ -86,8 +90,6 @@ export function App(): React.ReactElement {
     filamentsEnabled,
     filamentIntensity,
     filamentCounts,
-    showPickBuffer,
-    showDiskRadiusRing,
     volumesEnabled,
     volumeFields,
     spaceMouseConnected,
@@ -151,6 +153,22 @@ export function App(): React.ReactElement {
   // cell. Fallback is the same `data/defaults.ts` seed.
   const biasMode = useSettingsStore(handleRef, selectBiasMode, DEFAULT_BIAS_MODE);
   const absMagLimit = useSettingsStore(handleRef, selectAbsMagLimit, DEFAULT_ABS_MAG_LIMIT);
+
+  // Debug-overlay toggles (pick buffer + disk-radius ring) read live off the
+  // engine-owned store. The DebugPanel checkboxes dispatch through
+  // `handle.debug.setShowPickBuffer` / `setShowDiskRadiusRing` (action-backed),
+  // which notify synchronously, so the checkbox tracks without an optimistic
+  // cell. Fallback is the same `data/defaults.ts` seed the store is built from.
+  const showPickBuffer = useSettingsStore(
+    handleRef,
+    selectShowPickBuffer,
+    DEFAULT_SHOW_PICK_BUFFER,
+  );
+  const showDiskRadiusRing = useSettingsStore(
+    handleRef,
+    selectShowDiskRadiusRing,
+    DEFAULT_SHOW_DISK_RADIUS_RING,
+  );
 
   // Flow overlay has no engine echo, so a knob change must land in two homes:
   // the React mirror (optimistic) and the engine handle. One patch covers both

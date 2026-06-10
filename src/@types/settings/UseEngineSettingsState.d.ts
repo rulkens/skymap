@@ -40,14 +40,12 @@ export type UseEngineSettingsState = {
   // has no React consumer (the panel surface was evicted), so it isn't surfaced
   // here at all. The Milky-Way disk toggle likewise moved to the store and has
   // no React consumer (its handle setter has no panel caller), so it isn't
-  // surfaced here either.
+  // surfaced here either. The debug overlays (showPickBuffer / showDiskRadiusRing)
+  // also moved to the store; the DebugPanel reads them via `useSettingsStore`
+  // selectors, so they aren't mirrored here.
   filamentsEnabled: boolean;
   filamentIntensity: number;
   filamentCounts: { stripCount: number; vertexCount: number } | null;
-  /** Mirrors `EngineSettingsState.debug.showPickBuffer`. */
-  showPickBuffer: boolean;
-  /** Mirrors `EngineSettingsState.debug.showDiskRadiusRing`. */
-  showDiskRadiusRing: boolean;
   /**
    * Master toggle for the scalar-volume overlay.  Mirrors
    * `EngineSettingsState.volumesEnabled` on the engine side.  No echo
