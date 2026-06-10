@@ -149,20 +149,27 @@ By now no row carries a `clamp`. Remove the now-unused machinery.
 
 - [x] Update the table + its tests (raw-passthrough assertions).
 - [x] Run-fails/passes as the tests flip. MAIN: full `npm test` + `npm run typecheck`.
-- [ ] Commit.
+- [x] Commit. (`55584897`)
 
 ## Task 5: entanglement-radar pass + behaviour-preservation gate
 
 **Files:** none by default (review).
 
-- [ ] MAIN runs the `entanglement-radar` skill over `git diff main...clamp-at-point-of-use`.
-- [ ] Confirm + record: every clamp has exactly **one** home (the consumer
-  helper); no write-time clamp survives in `settingsTable`; `flow.trail` is no
-  longer clamped twice; the store-side value is raw intent; the GPU boundary is
-  still protected (the three helpers are the single guards).
-- [ ] Confirm no WESL was touched.
-- [ ] MAIN: final full `npm test` + `npm run typecheck` green.
-- [ ] Commit the radar note.
+- [x] MAIN runs the `entanglement-radar` skill over `git diff origin/main...HEAD`.
+- [x] Confirm + record: **CLEAN, 7/7 checks pass.** Every clamp has exactly one
+  home (`clampFlowParams` / `clampExposure` / `clampFilamentIntensity`); no
+  write-time clamp survives in `settingsTable` (only prose row comments); `flow.trail`
+  is no longer clamped twice (the renderer's inline `Math.max` is gone, the helper
+  is the single floor); the store holds raw intent (setters + handle/table tests
+  assert raw-passthrough); the GPU boundary is still guarded (the three helpers are
+  called at every upload site — `flowFieldRenderer` encodeCompute + draw both clamp,
+  `postProcess.draw`, `filamentRenderer`); helpers are pure copy-on-write.
+- [x] Confirm no WESL was touched (`git diff --stat` is `.ts`-only).
+- [x] Fixed the one residual nit the radar flagged: stale `(post-clamp) value` →
+  `stored value` in `settingsTable.test.ts`'s docblock. (Pre-existing unused
+  `ToneMapCurve` import in `postProcess.ts` confirmed on origin/main — out of scope.)
+- [x] MAIN: final full `npm test` + `npm run typecheck` green.
+- [x] Commit the radar note + open the PR.
 
 ---
 

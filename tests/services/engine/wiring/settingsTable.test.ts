@@ -5,7 +5,7 @@
  * (`setPointSize`, `setBrightness`, …) all share the same shape:
  *
  *   1. Mutate one field on `state.settings.<cluster>.<leaf>`.
- *   2. Optionally fire a nested echo callback with the (post-clamp) value.
+ *   2. Optionally fire a nested echo callback with the stored value.
  *   3. Call `requestRender()` so the next frame picks up the change.
  *
  * `buildSettersFromTable` reifies that shape as a declarative descriptor
