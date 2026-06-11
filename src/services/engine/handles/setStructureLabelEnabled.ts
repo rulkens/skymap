@@ -2,10 +2,13 @@
 //
 // A per-category visibility setter living at module scope (mirroring
 // `setSourceVisibleImpl`) so tests can drive it against a partial-state stub
-// without a full GPU engine. It writes the authoritative settings leaf, drives
-// the matching per-category FadeRegistry handle for a smooth ramp, and echoes
-// a fresh DERIVED record via the callback. The `createEngine` literal
-// delegates here.
+// without a full GPU engine. It writes the authoritative settings leaf THROUGH
+// the engine-owned store (the `setStructureLabelEnabledAction` copy-on-write
+// reducer) rather than mutating the held object in place: the store write is
+// what NOTIFIES React's `useSettingsStore(selectStructureItems)` subscriber so
+// the panel checkbox re-renders. It then drives the matching per-category
+// FadeRegistry handle for a smooth ramp. The `createEngine` literal delegates
+// here.
 //
 // Fading the per-category handle keeps the toggle smooth: the producer
 // (produceStructureLabels) reads `opacityOf({...})` for its layer alpha, so
@@ -13,15 +16,15 @@
 // authoritative gate (the producer draws while enabled OR still fading out);
 // the fade opacity is only the cosmetic alpha.
 
-import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
 import type { StructureCategory } from '../../../@types/engine/data/StructureCategory';
-import { deriveLabelCategoryVisibility } from '../helpers/deriveLabelCategoryVisibility';
+import type { SettingsStore } from '../settingsStore/createSettingsStore';
+import { setStructureLabelEnabledAction } from '../settingsStore/actions/setStructureLabelEnabledAction';
 
 export function setStructureLabelEnabled(
   state: Pick<EngineState, 'settings' | 'subsystems'>,
-  cb: Pick<EngineCallbacks, 'labels'>,
+  store: SettingsStore,
   category: StructureCategory,
   visible: boolean,
 ): void {
@@ -32,9 +35,11 @@ export function setStructureLabelEnabled(
     visible ? 1 : 0,
     visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
   );
-  state.settings.structures.items[category].labelEnabled = visible;
-  cb.labels?.onLabelCategoryVisibilityChange?.(deriveLabelCategoryVisibility(state));
+  // Single source of truth: flip the category's labelEnabled flag THROUGH the
+  // store so the copy-on-write write notifies React's selector subscriber.
+  setStructureLabelEnabledAction(store, category, visible);
   // No requestRender: the unconditional fadeTo above wakes the scheduler.
+  // No echo: React reads the record via `selectStructureItems` + a projection.
 }
 
 // Test-only alias matching the import name used in tests.

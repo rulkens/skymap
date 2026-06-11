@@ -9,16 +9,15 @@
  * SettingsPanel ("panel" surface) and the DebugPanel ("debug" surface) both
  * *iterate* this list instead of re-spelling each knob's range by hand.
  *
- * Why a registry: before this existed, the field list leaked across ~12 sites
- * (the React `useState` bag, the engine handle, both panels' prop lists, the
- * App.tsx dual-call handlers). Adding `boundaryFadeWidth` touched fourteen
- * files. With the list reified here and the React/handle/UI layers driven by a
- * single `Partial<FlowSettings>` patch, a new slider knob is one row here plus
- * its `FlowSettings` leaf + clamp — the panels pick it up for free.
+ * Why a registry: without it the field list would leak across many sites (both
+ * panels' prop lists, the slider rows, the engine handle). Reifying the list
+ * here and driving the React/handle/UI layers from a single
+ * `Partial<FlowSettings>` patch means a new slider knob is one row here plus its
+ * `FlowSettings` leaf + renderer clamp — the panels pick it up for free.
  *
  * The UI slider owns its `max` (single source of truth for the visible range);
- * the engine-side `settingsTable` clamp is floor-only defence-in-depth. See the
- * `setFlowTrail` row in `services/engine/wiring/settingsTable.ts`.
+ * the flow renderer's `clampFlowParams` is floor-only defence-in-depth at the
+ * single point of use (the GPU-safe `MAX_PARTICLES` / `MIN_TRAIL_STEP` bounds).
  *
  * `enabled` / `mode` are deliberately NOT here: a boolean toggle and a string
  * union aren't sliders, and forcing them into a slider row would complect the

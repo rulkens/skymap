@@ -4,133 +4,97 @@
  *
  * ### Why a table?
  *
- * Thirteen of the setters on `EngineHandle` (`setPointSize`,
- * `setBrightness`, `setExposure`, …) all share the same three-step shape:
+ * Many of the setters on `EngineHandle` (`setPointSize`, `setBrightness`,
+ * `setExposure`, …) all share the same two-step shape:
  *
- *   1. mutate one field in `state.settings.<cluster>.<leaf>`,
- *   2. fire an optional nested echo callback so subscribed React state
- *      mirrors the engine truth,
- *   3. call `requestRender()` to wake the render-on-demand scheduler.
+ *   1. dispatch one cluster's copy-on-write store action, then
+ *   2. call `requestRender()` to wake the render-on-demand scheduler.
  *
  * Spelled out one-by-one in `engine.ts`'s public-handle object literal,
- * those thirteen setters consumed ~180 lines of nearly-identical code
- * with the only variation being the path tuple and the callback name.
- * The repetition is hard to scan ("did we remember to call requestRender
- * in *all* of them?") and easy to silently regress when a new setting
- * gets added without one of the three steps.
+ * those setters consumed ~180 lines of nearly-identical code with the only
+ * variation being which action to dispatch.  The repetition is hard to scan
+ * ("did we remember to call requestRender in *all* of them?") and easy to
+ * silently regress when a new setting gets added without the wake.
  *
- * Reifying the shape as a descriptor table — name, state path, optional
- * callback key — and emitting the setter functions from a single builder
- * collapses the surface to one tested helper plus a handful of lines per
- * descriptor.  Auditing "every setting wakes the scheduler" is now a
- * one-line read of the builder.
+ * Reifying the shape as a descriptor table — name + action — and emitting the
+ * setter functions from a single builder collapses the surface to one tested
+ * helper plus one line per descriptor.  Auditing "every setting wakes the
+ * scheduler" is now a one-line read of the builder.
  *
  * ### Why bespoke setters stay inline
  *
- * Five setters do NOT slot into the table:
+ * Several setters do NOT slot into the table:
  *
  *   - `setBiasMode` — kicks an async per-galaxy bake on the renderer
  *     and chains a follow-up `requestRender` to the resolve handler.
- *     The descriptor's `state[path] = v; cb?.(v); requestRender()`
- *     shape can't express that.
+ *     The descriptor's `action(store, v); requestRender()` shape can't
+ *     express that.
  *   - `setTier` — orchestrates per-source asset-slot reloads via
  *     `cloudLoader.reloadSource`, with abort-controller plumbing.
  *   - `setSourceVisible` — touches the visible-source mask with a
  *     fade animation, not just one boolean.
  *   - `setSpaceMouseSensitivity` — forwards into the SpaceMouse
- *     subsystem rather than mutating engine state directly.
+ *     subsystem rather than dispatching a store action.
+ *   - `flow.set` — dispatches the whole-patch `setFlowAction` then runs
+ *     per-leaf demand/fade/reseed side effects keyed off which keys the
+ *     patch carried.
  *
- * Each does work that goes beyond "mutate + echo + render".  Trying to
- * express them through the table would either bloat the descriptor
- * (subsystem refs, async hooks, follow-up actions) until the table is
- * really a switch statement in disguise, or split their logic across
- * the descriptor and a custom path until neither half is readable.
- * Bespoke stays bespoke; the table only owns the simple cases.
- *
- * ### Why nested `path` tuples
- *
- * Every descriptor writes to `state.settings.<cluster>.<leaf>`.  A flat
- * `key: 'settings.surveys.sizePx'` shape would force the builder to
- * parse strings at runtime; a typed 3-tuple
- * (`['settings', 'surveys', 'sizePx']`) lets the descriptor still read
- * like a path while leaving runtime traversal as three indexed reads.
- * The tuple shape also leaves the door open for a future setter that
- * touches a non-`settings` sub-bag without changing the descriptor
- * type — just widen the union.
+ * Each does work that goes beyond "dispatch + render".  Trying to express
+ * them through the table would either bloat the descriptor (subsystem refs,
+ * async hooks, follow-up actions) until the table is really a switch
+ * statement in disguise, or split their logic across the descriptor and a
+ * custom path until neither half is readable.  Bespoke stays bespoke; the
+ * table only owns the simple cases.
  *
  * ### Type-narrowness tradeoff
  *
  * The builder returns `Record<TableKey, (value: unknown) => void>`
  * because preserving per-method narrow types
  * (`setPointSize: (n: number) => void`, `setAutoRotate:
- * (b: boolean) => void`, …) would require thirteen conditional
- * branches in the return type.  Production callers go through
- * `EngineHandle`'s declared signatures (and the sub-handle forwarders
- * inside `engine.ts`), so the narrowness loss inside the builder is
- * invisible at the API edge.
+ * (b: boolean) => void`, …) would require one conditional branch per row
+ * in the return type.  Production callers go through `EngineHandle`'s
+ * declared signatures (and the sub-handle forwarders inside `engine.ts`),
+ * so the narrowness loss inside the builder is invisible at the API edge.
  */
 
-import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
-import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { SettingsTableKey } from '../../../@types/settings/SettingsTableKey';
+import type { SettingsStore } from '../settingsStore/createSettingsStore';
+import { setSurveySizeAction } from '../settingsStore/actions/setSurveySizeAction';
+import { setBrightnessAction } from '../settingsStore/actions/setBrightnessAction';
+import { setDepthFadeAction } from '../settingsStore/actions/setDepthFadeAction';
+import { setHighlightFallbackAction } from '../settingsStore/actions/setHighlightFallbackAction';
+import { setRealOnlyAction } from '../settingsStore/actions/setRealOnlyAction';
+import { setExposureAction } from '../settingsStore/actions/setExposureAction';
+import { setToneMapCurveAction } from '../settingsStore/actions/setToneMapCurveAction';
+import { setAutoRotateAction } from '../settingsStore/actions/setAutoRotateAction';
+import { setAbsMagLimitAction } from '../settingsStore/actions/setAbsMagLimitAction';
+import { setThumbnailsEnabledAction } from '../settingsStore/actions/setThumbnailsEnabledAction';
+import { setMilkyWayEnabledAction } from '../settingsStore/actions/setMilkyWayEnabledAction';
+import { setFilamentsEnabledAction } from '../settingsStore/actions/setFilamentsEnabledAction';
+import { setFilamentIntensityAction } from '../settingsStore/actions/setFilamentIntensityAction';
+import { setShowPickBufferAction } from '../settingsStore/actions/setShowPickBufferAction';
+import { setShowDiskRadiusRingAction } from '../settingsStore/actions/setShowDiskRadiusRingAction';
 
 /**
- * 3-tuple path into `EngineState`: `['settings', <cluster>, <leaf>]`.
- *
- * Every current row writes into one of the eight `state.settings`
- * sub-bags.  Widening the union is the way to admit a future setter
- * that touches (say) `state.picking.*` without changing the helper.
+ * A store-action write: `(store, value) => void`.  Every descriptor's cluster
+ * has migrated to the engine-owned settings store, so a row dispatches a pure
+ * copy-on-write action.  The wrapper still calls `requestRender()` (the store
+ * action does NOT wake the scheduler), so the "every setter wakes the loop"
+ * audit stays in one place.  `value: unknown` matches the builder's widened
+ * setter signature; the action's own typed reducer is the runtime guarantor.
  */
-type SettingsPath =
-  | readonly ['settings', 'surveys', keyof EngineState['settings']['surveys']]
-  | readonly ['settings', 'tonemap', keyof EngineState['settings']['tonemap']]
-  | readonly ['settings', 'camera', keyof EngineState['settings']['camera']]
-  | readonly ['settings', 'bias', keyof EngineState['settings']['bias']]
-  | readonly ['settings', 'thumbnails', keyof EngineState['settings']['thumbnails']]
-  | readonly ['settings', 'milkyWay', keyof EngineState['settings']['milkyWay']]
-  | readonly ['settings', 'filaments', keyof EngineState['settings']['filaments']]
-  // Flow overlay (singleton-overlay-layer slice — see FlowSettings).
-  | readonly ['settings', 'flow', keyof EngineState['settings']['flow']]
-  | readonly ['settings', 'volumes', 'enabled']
-  | readonly ['settings', 'debug', keyof EngineState['settings']['debug']];
+type SettingsAction = (store: SettingsStore, value: never) => void;
 
 /**
- * Nested callback address: `[cluster, method]`.  The cluster names
- * line up 1:1 with the optional sub-bags on `EngineCallbacks`
- * (`surveys`, `tonemap`, `camera`, `bias`, `thumbnails`, `milkyWay`,
- * `filaments`, `volumes`, `sources`).  Method names are kept as plain
- * `string` here because they vary per cluster and adding a full nested
- * union would duplicate the EngineCallbacks shape — the runtime
- * optional-chaining safely handles a missing method.
- */
-type NestedCallbackKey =
-  | readonly ['surveys', string]
-  | readonly ['tonemap', string]
-  | readonly ['camera', string]
-  | readonly ['bias', string]
-  | readonly ['thumbnails', string]
-  | readonly ['milkyWay', string]
-  | readonly ['filaments', string]
-  | readonly ['volumes', string]
-  | readonly ['sources', string]
-  | readonly ['debug', string];
-
-/**
- * One row of the descriptor table.
+ * One row of the descriptor table:
  *
  *   - `name` is the table-key identity of this descriptor (used as the
  *     Record key on the builder output so sub-handle forwarders can
  *     resolve a forwarder by name).
- *   - `path` is the 3-tuple state path the value lands in.
- *   - `callback` (optional) is the `[cluster, method]` address fired
- *     after mutation.  Omit when no echo is wired (App.tsx owns the
- *     boolean optimistically — see `setFilamentsEnabled`).
+ *   - `action` dispatches the cluster's copy-on-write store action; React reads
+ *     the value back via a `useStore` selector rather than an echo.
  */
-type SettingsDescriptor = {
-  name: SettingsTableKey;
-  path: SettingsPath;
-  callback?: NestedCallbackKey;
-};
+type SettingsDescriptor = { name: SettingsTableKey; action: SettingsAction };
 
 /**
  * The actual table.  Adding a row here automatically extends the
@@ -138,165 +102,122 @@ type SettingsDescriptor = {
  * the new forwarder from the `boringSetters` record by name.
  */
 export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
+  // ── Surveys cluster (migrated to the engine-owned store) ───────────
+  // These five rows dispatch store actions (copy-on-write reducers) rather
+  // than mutating `state.settings.surveys` in place + echoing. React reads
+  // each via a `useStore` selector (`selectSurveySize`, `selectBrightness`,
+  // `selectDepthFade`, `selectHighlightFallback`, `selectRealOnly`), so no
+  // echo is wired. The wrapper still calls `requestRender`.
   {
     name: 'setPointSize',
-    path: ['settings', 'surveys', 'sizePx'],
-    callback: ['surveys', 'onSizeChange'],
+    action: setSurveySizeAction,
   },
   {
     name: 'setBrightness',
-    path: ['settings', 'surveys', 'brightness'],
-    callback: ['surveys', 'onBrightnessChange'],
+    action: setBrightnessAction,
   },
   {
+    // Camera cluster (migrated to the engine-owned store). Dispatches the
+    // copy-on-write action; React reads via `selectAutoRotate`, so no echo is
+    // wired. The wrapper still calls `requestRender`.
     name: 'setAutoRotate',
-    path: ['settings', 'camera', 'autoRotate'],
-    callback: ['camera', 'onAutoRotateChange'],
+    action: setAutoRotateAction,
   },
   {
+    // Thumbnails cluster (migrated to the engine-owned store). Dispatches the
+    // copy-on-write action; the value has no React mirror (the panel toggle was
+    // evicted — the engine reads it each frame via `state.settings.thumbnails`),
+    // so no echo is wired. The wrapper still calls `requestRender`.
     name: 'setGalaxyTexturesEnabled',
-    path: ['settings', 'thumbnails', 'enabled'],
-    callback: ['thumbnails', 'onEnabledChange'],
+    action: setThumbnailsEnabledAction,
   },
   {
+    // milkyWay cluster (migrated to the engine-owned store). Dispatches the
+    // copy-on-write action; React reads via `selectMilkyWayEnabled`, so no echo
+    // is wired. The cosmetic fade ramp stays in the handle setter alongside this
+    // action (see the `milkyWay.setEnabled` wrapper in engine.ts). The wrapper
+    // still calls `requestRender`.
     name: 'setMilkyWayEnabled',
-    path: ['settings', 'milkyWay', 'enabled'],
-    callback: ['milkyWay', 'onEnabledChange'],
+    action: setMilkyWayEnabledAction,
   },
   {
-    // App.tsx owns this boolean optimistically; no echo callback wired.
-    // Asymmetry vs. galaxyTextures/milkyWay is deliberate — see the
-    // long comment in the original `setFilamentsEnabled`.
+    // filaments cluster (migrated to the engine-owned store). Dispatches the
+    // copy-on-write action; React reads via `selectFilamentsEnabled`, so no echo
+    // is wired. The cosmetic fade ramp stays in the handle setter alongside this
+    // action (see the `filaments.setEnabled` wrapper in engine.ts). The wrapper
+    // still calls `requestRender`.
     name: 'setFilamentsEnabled',
-    path: ['settings', 'filaments', 'enabled'],
+    action: setFilamentsEnabledAction,
   },
   {
-    // Stores raw intent; the filament renderer clamps to [0, 1] at point of
-    // use (clampFilamentIntensity). No callback for the same App-owns-state
-    // reason as `setFilamentsEnabled`.
+    // filaments cluster (migrated to the engine-owned store). Dispatches the
+    // copy-on-write action; React reads via `selectFilamentIntensity`, so no
+    // echo is wired. Stores raw intent — the filament renderer clamps to [0, 1]
+    // at point of use (clampFilamentIntensity). The wrapper still calls
+    // `requestRender`.
     name: 'setFilamentIntensity',
-    path: ['settings', 'filaments', 'intensity'],
-  },
-  // ── Flow overlay (singleton-overlay-layer slice) ───────────────────
-  // App.tsx owns these optimistically, like the filament rows — no echo
-  // callbacks. The handle wraps setFlowEnabled/setFlowMode/setFlowCount
-  // with side effects (demand re-eval, fade, reseed); the rest forward bare.
-  {
-    name: 'setFlowEnabled',
-    path: ['settings', 'flow', 'enabled'],
-  },
-  {
-    // String union; the setter's `value: unknown` carries it through.
-    name: 'setFlowMode',
-    path: ['settings', 'flow', 'mode'],
-  },
-  {
-    // Look/motion knobs store raw intent; the flow renderer clamps each to its
-    // GPU-safe bound at point of use (clampFlowParams) — including the
-    // load-bearing count (buffer capacity) and trail (compute-loop) guards.
-    name: 'setFlowIntensity',
-    path: ['settings', 'flow', 'intensity'],
-  },
-  {
-    name: 'setFlowCount',
-    path: ['settings', 'flow', 'count'],
-  },
-  {
-    name: 'setFlowTrail',
-    path: ['settings', 'flow', 'trail'],
-  },
-  {
-    name: 'setFlowSpeed',
-    path: ['settings', 'flow', 'flowSpeed'],
-  },
-  {
-    name: 'setFlowDensityBias',
-    path: ['settings', 'flow', 'densityBias'],
-  },
-  {
-    name: 'setFlowWander',
-    path: ['settings', 'flow', 'wander'],
-  },
-  {
-    name: 'setFlowBoundaryFadeWidth',
-    path: ['settings', 'flow', 'boundaryFadeWidth'],
+    action: setFilamentIntensityAction,
   },
   {
     name: 'setHighlightFallback',
-    path: ['settings', 'surveys', 'highlightFallback'],
-    callback: ['surveys', 'onHighlightFallbackChange'],
+    action: setHighlightFallbackAction,
   },
   {
     name: 'setRealOnlyMode',
-    path: ['settings', 'surveys', 'realOnly'],
-    callback: ['surveys', 'onRealOnlyChange'],
+    action: setRealOnlyAction,
   },
   {
     name: 'setDepthFadeEnabled',
-    path: ['settings', 'surveys', 'depthFade'],
-    callback: ['surveys', 'onDepthFadeChange'],
+    action: setDepthFadeAction,
   },
   {
+    // Bias cluster (migrated to the engine-owned store). Dispatches the
+    // copy-on-write action; React reads via `selectAbsMagLimit`, so no echo is
+    // wired. The wrapper still calls `requestRender`.
     name: 'setAbsMagLimit',
-    path: ['settings', 'bias', 'absMagLimit'],
-    callback: ['bias', 'onAbsMagLimitChange'],
+    action: setAbsMagLimitAction,
   },
+  // ── Tonemap cluster (migrated to the engine-owned store) ───────────
+  // Both rows dispatch store actions (copy-on-write reducers) rather than
+  // mutating `state.settings.tonemap` in place + echoing. React reads each
+  // via a `useStore` selector (`selectExposure`, `selectToneMapCurve`), so
+  // no echo is wired. Exposure stores raw intent — the post-process pass
+  // clamps to its HDR-safe range at point of use (clampExposure).
   {
-    // Stores raw intent; the post-process pass clamps to its HDR-safe range
-    // at point of use (clampExposure). The echo fires the stored value.
     name: 'setExposure',
-    path: ['settings', 'tonemap', 'exposure'],
-    callback: ['tonemap', 'onExposureChange'],
+    action: setExposureAction,
   },
   {
     name: 'setToneMapCurve',
-    path: ['settings', 'tonemap', 'curve'],
-    callback: ['tonemap', 'onCurveChange'],
+    action: setToneMapCurveAction,
   },
   {
-    // Pick-buffer debug overlay master toggle.  Off by default; gated
-    // behind the SettingsPanel's Debug section.  Echoes through the
-    // 'debug' callback cluster so deep-links or keyboard shortcuts can
-    // flip the bit without going through React.
+    // Debug cluster (migrated to the engine-owned store). Pick-buffer overlay
+    // master toggle, off by default and gated behind the DebugPanel. Dispatches
+    // the copy-on-write action; React reads via `selectShowPickBuffer`, so no
+    // echo is wired. The wrapper still calls `requestRender`.
     name: 'setShowPickBuffer',
-    path: ['settings', 'debug', 'showPickBuffer'],
-    callback: ['debug', 'onShowPickBufferChange'],
+    action: setShowPickBufferAction,
   },
   {
-    // Disk-radius debug ring master toggle.  Off by default; gated
-    // behind the SettingsPanel's Debug section.  Echoes through the
-    // 'debug' callback cluster, same shape as the pick-buffer toggle.
+    // Debug cluster (migrated to the engine-owned store). Disk-radius debug-ring
+    // master toggle, off by default and gated behind the DebugPanel. Dispatches
+    // the copy-on-write action; React reads via `selectShowDiskRadiusRing`, so
+    // no echo is wired. The wrapper still calls `requestRender`.
     name: 'setShowDiskRadiusRing',
-    path: ['settings', 'debug', 'showDiskRadiusRing'],
-    callback: ['debug', 'onShowDiskRadiusRingChange'],
+    action: setShowDiskRadiusRingAction,
   },
 ];
 
 /**
- * Apply a value to `state` at the given 3-tuple path.  Kept as a
- * standalone helper rather than inlined in the builder so the
- * unsafe-but-bounded cast lives in one place.
+ * Build the setters from the descriptor table.  Returns a record keyed by
+ * setter name; the consumer (`engine.ts`'s sub-handle wiring) resolves
+ * forwarders by name from the result.
  *
- * The casts are needed because the union over `SettingsPath` means
- * TypeScript can't statically prove that `value` matches the leaf
- * type at the chosen path; the descriptor table is the runtime
- * guarantor instead.  See the module-level note on type narrowness.
- */
-function setByPath(state: EngineState, path: SettingsPath, value: unknown): void {
-  const [bag, sub, leaf] = path;
-  const target = (state[bag] as unknown as Record<string, Record<string, unknown>>)[sub as string]!;
-  target[leaf as string] = value;
-}
-
-/**
- * Build the thirteen setters from the descriptor table.  Returns a
- * record keyed by setter name; the consumer (`engine.ts`'s sub-handle
- * wiring) resolves forwarders by name from the result.
- *
- * Each emitted setter:
- *   1. writes the value into `state` at `path`;
- *   2. fires the nested echo callback (if declared) with that value;
- *   3. calls `requestRender()` so the next frame picks up the change.
+ * Each emitted setter dispatches its cluster's copy-on-write store action, then
+ * wakes the scheduler via `requestRender()` — the single audit point the table
+ * exists for (the store action does NOT wake on its own).  React reads each
+ * value back through a `useStore` selector.
  *
  * The return type is widened to `(value: unknown) => void` per
  * descriptor; the EngineHandle public-API surface is the place where
@@ -305,27 +226,14 @@ function setByPath(state: EngineState, path: SettingsPath, value: unknown): void
  * here.
  */
 export function buildSettersFromTable(
-  state: EngineState,
-  cb: EngineCallbacks,
   requestRender: () => void,
+  store: SettingsStore,
 ): Record<SettingsTableKey, (value: unknown) => void> {
   const out = {} as Record<SettingsTableKey, (value: unknown) => void>;
 
-  for (const descriptor of SETTINGS_TABLE) {
-    const { name, path, callback } = descriptor;
-
+  for (const { name, action } of SETTINGS_TABLE) {
     out[name] = (value: unknown) => {
-      setByPath(state, path, value);
-
-      // Nested-only callback fire.  Optional-chain shape so a missing
-      // cluster or missing method is silently skipped.
-      if (callback !== undefined) {
-        const [cluster, method] = callback;
-        const sub = (cb as unknown as Record<string, Record<string, unknown> | undefined>)[cluster];
-        const fn = sub?.[method] as ((v: unknown) => void) | undefined;
-        fn?.(value);
-      }
-
+      action(store, value as never);
       requestRender();
     };
   }

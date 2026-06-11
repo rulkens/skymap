@@ -1,7 +1,7 @@
 /**
  * wireInput — bootstrap phase that wires the pick renderer, the orbit
- * camera, click + double-click handlers, the input-bindings listener
- * bag, and the initial settings-callback fan-out.
+ * camera, click + double-click handlers, and the input-bindings listener
+ * bag.
  *
  * Runs without waiting on any survey load: the camera framing uses pure
  * constants from `cameraFraming.ts`, so the orbit camera and the loop
@@ -9,12 +9,16 @@
  * `ready` status emission lives in `wireSlots` as a per-arrival
  * subscriber.
  *
+ * No settings seed runs here: every settings cluster lives in the
+ * engine-owned store (seeded at construction from the same
+ * `data/defaults.ts` values React reads through `useStore` selectors),
+ * so there is no startup echo to fan out.
+ *
  * ### State writes
  *
  *   - `state.cam`, `state.initialCamSnapshot`.
  *   - `state.gpu.pickRenderer`.
  *   - `state.subsystems.clickResolver`, `state.subsystems.inputBindings`.
- *   - Fans out via `seedSettingsCallbacks` to every echoed `cb.on*Change`.
  *
  * ### Side effects on `deps`
  *
@@ -28,9 +32,6 @@ import { createPickRenderer } from '../../gpu/renderers/pickRenderer';
 import { createClickResolver } from '../interaction/clickHandler';
 import { attachEngineInputs } from '../interaction/inputBindings';
 import { computeInitialCamera } from '../camera/cameraFraming';
-import { seedSettingsCallbacks } from '../wiring/seedSettingsCallbacks';
-import { deriveMarkerCategoryVisibility } from '../helpers/deriveMarkerCategoryVisibility';
-import { deriveLabelCategoryVisibility } from '../helpers/deriveLabelCategoryVisibility';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { collectPickTargets } from '../helpers/collectPickTargets';
 
@@ -42,7 +43,7 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
  * handlers + input bindings + status-ready + settings seed.
  */
 export async function wireInput(state: EngineState, deps: BootstrapDeps): Promise<void> {
-  const { canvas, cb } = deps;
+  const { canvas } = deps;
 
   // Build the pick renderer. It shares the same vertex/uniform buffers as
   // the visual renderer — no extra GPU memory for point data.
@@ -265,34 +266,5 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       // setFocused owns the wake when the slot actually changes.
       state.subsystems.selection.setFocused(null);
     },
-  });
-
-  // ── Seed settings callbacks ───────────────────────────────────────────
-  //
-  // Fire each optional settings callback once with the engine's default so
-  // React's initial state matches the engine truth.  Without this, App.tsx
-  // would only update on the first user interaction, showing stale values
-  // if any default drifts between engine and component.  The fan-out lives
-  // in `seedSettingsCallbacks.ts`.
-  seedSettingsCallbacks(cb, {
-    pointSize: state.settings.surveys.sizePx,
-    brightness: state.settings.surveys.brightness,
-    autoRotate: state.settings.camera.autoRotate,
-    galaxyTexturesEnabled: state.settings.thumbnails.enabled,
-    highlightFallback: state.settings.surveys.highlightFallback,
-    realOnlyMode: state.settings.surveys.realOnly,
-    depthFadeEnabled: state.settings.surveys.depthFade,
-    showPickBuffer: state.settings.debug.showPickBuffer,
-    showDiskRadiusRing: state.settings.debug.showDiskRadiusRing,
-    biasMode: state.settings.bias.mode,
-    absMagLimit: state.settings.bias.absMagLimit,
-    toneMapCurve: state.settings.tonemap.curve,
-    exposure: state.settings.tonemap.exposure,
-    // drawMask (not pickMask) for the UI seed — they're identical at
-    // bootstrap, but drawMask tracks what the user actually sees, which is
-    // the semantics the UI is built against.
-    visibleSourceMask: state.sources.drawMask,
-    labelCategoryVisibility: deriveLabelCategoryVisibility(state),
-    markerCategoryVisibility: deriveMarkerCategoryVisibility(state),
   });
 }

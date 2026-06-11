@@ -24,10 +24,13 @@
  * ──────────────────────────────────────────────────────────────────────
  * What this hook does NOT own
  * ──────────────────────────────────────────────────────────────────────
- * Settings echoes (point size, brightness, etc.) live in
- * `useEngineSettings`.  The caller passes that hook's
- * `engineCallbacks` slice in via `extraCallbacks`, and we spread it
- * into the createEngine options block alongside our session callbacks.
+ * Settings values (point size, brightness, etc.) live in the
+ * engine-owned settings store; React reads them via `useSettingsStore`
+ * selectors, not through this hook.  The only thing the caller layers in
+ * via `extraCallbacks` is extra EVENT subscriptions — App-level event
+ * wiring plus the `filaments.onReady` / SpaceMouse-connect events
+ * `useEngineSettings` owns — which we spread into the createEngine
+ * options block alongside our session callbacks.
  *
  * ──────────────────────────────────────────────────────────────────────
  * Why empty `useEffect` deps?
@@ -36,9 +39,10 @@
  * a one-shot side effect tied to the canvas's lifetime.  No inputs
  * should cause it to restart.  `extraCallbacks` is captured at first
  * render and held for the life of the engine — this is intentional
- * because the engine's echo callbacks are setState references, which
- * are stable for the component's lifetime.  Listing extraCallbacks in
- * the dep array would re-create the engine on every render.
+ * because its members are stable event subscriptions (setState
+ * references and the like) for the component's lifetime.  Listing
+ * extraCallbacks in the dep array would re-create the engine on every
+ * render.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -101,9 +105,9 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
     if (!canvas) return;
 
     // Stable refs to the React setters wired into the nested sub-bag
-    // entries below.  H5 task 11 deleted the flat callback shape from
-    // `EngineCallbacks`; every subscriber now lives inside its cluster
-    // (`lifecycle`, `selection`, `camera`, `sources`, …).
+    // entries below.  `EngineCallbacks` is nested-only: every subscriber
+    // lives inside its event cluster (`lifecycle`, `selection`,
+    // `camera`, `sources`).
     const onCatalogReadyImpl = (source: SourceType, count: number) =>
       setSourceCounts((prev) => ({ ...prev, [source]: count }));
     const onCameraChangeImpl = (snapshot: { distance: number; fovYRad: number }) => {
@@ -127,28 +131,25 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
       );
     };
 
-    // H5 Task 11: only nested sub-bags survive in `EngineCallbacks`.
-    // Each bag here merges this hook's session-level subscriptions
-    // (status / hover / select / focus / camera / fps / cloud / tier /
-    // load progress) with whatever `extraCallbacks` from
-    // `useEngineSettings` declares for that cluster.  Spread order
-    // puts the extra-callback entries LAST so the settings hook's
-    // echoes win where both define the same method (rare but well-
-    // defined).  `initialTier` rides through as a non-callback option.
+    // `EngineCallbacks` is EVENT-only: lifecycle / selection / camera /
+    // sources events, plus the one-shot `filaments.onReady` and the
+    // SpaceMouse connect echo.  Each bag here merges this hook's
+    // session-level subscriptions (status / hover / select / focus /
+    // camera / fps / catalog / tier / load progress) with whatever
+    // `extraCallbacks` declares for that cluster — App-level event
+    // subscriptions (e.g. `selection.onStructureHoverChange`) plus the
+    // `filaments`/`input` events `useEngineSettings` owns.  Spread order
+    // puts the extra-callback entries LAST so the caller wins where both
+    // define the same method.  Settings VALUES do not flow through here:
+    // they live in the engine-owned store and React reads them via
+    // `useSettingsStore` selectors, so there is no echo to merge.
+    // `initialTier` rides through as a non-callback option.
     const {
       lifecycle: extraLifecycle,
-      surveys: extraSurveys,
-      tonemap: extraTonemap,
       camera: extraCamera,
       selection: extraSelection,
       sources: extraSources,
-      bias: extraBias,
-      thumbnails: extraThumbnails,
-      milkyWay: extraMilkyWay,
-      debug: extraDebug,
       filaments: extraFilaments,
-      labels: extraLabels,
-      volumes: extraVolumes,
       input: extraInput,
     } = extraCallbacks ?? {};
 
@@ -185,21 +186,12 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
         onStructureCountsChange: setStructureCounts,
         ...extraSources,
       },
-      // The remaining bags have no session-level subscription here —
-      // they're owned entirely by `extraCallbacks` (settings echoes
-      // plus the volumes-changed dispatcher from App.tsx).  We pass
-      // them through unconditionally so the optional-chain in engine
-      // code resolves to the actual function (or stays undefined if
-      // the consumer didn't subscribe).
-      surveys: extraSurveys,
-      tonemap: extraTonemap,
-      bias: extraBias,
-      thumbnails: extraThumbnails,
-      milkyWay: extraMilkyWay,
-      debug: extraDebug,
+      // The filaments-ready and SpaceMouse-connect events have no
+      // session-level subscription here — `useEngineSettings` owns them.
+      // Pass them through unconditionally so the optional-chain in engine
+      // code resolves to the actual function (or stays undefined if the
+      // consumer didn't subscribe).
       filaments: extraFilaments,
-      labels: extraLabels,
-      volumes: extraVolumes,
       input: extraInput,
     });
 

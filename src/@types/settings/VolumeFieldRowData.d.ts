@@ -2,11 +2,12 @@
  * VolumeFieldRowData — the data the SettingsPanel needs to render a
  * single volume-field row.
  *
- * Pushed in the `volumes.onFieldsChanged(fields)` callback whenever a
- * field is added, removed, or mutated; `useEngineSettings` mirrors the
- * snapshot into React state so the panel always reflects the live field
- * registry.  Also returned by `engineHandle.volumes.getState()` for
- * one-shot reads (dev console, tests).
+ * Projected from `state.settings.volumes.items` by `projectVolumeFieldRows`
+ * (and its `EngineState` adapter `buildVolumeFieldsSnapshot`).  App reads the
+ * items Record off the engine-owned store via `selectVolumeFieldItems` and runs
+ * that projection in a `useMemo`, so the panel always reflects the live field
+ * registry.  Also returned by `engineHandle.volumes.getState()` for one-shot
+ * reads (dev console, tests).
  *
  * The `label` field defaults to the `handle` string when the field was
  * registered without an explicit human-readable name.  A future
@@ -16,10 +17,10 @@
  * ### Why this lives in @types rather than the component folder
  *
  * The `.tsx` carve-out (component-only types stay co-located with
- * their `.tsx`) does NOT apply here because `useEngineSettings.ts`
- * — outside `components/` — also consumes this type.  Moving it into
- * `@types/settings/` lets both the SettingsPanel and the hook
- * deep-import a single source of truth.
+ * their `.tsx`) does NOT apply here because `projectVolumeFieldRows`
+ * — outside `components/` — also produces this type.  Living in
+ * `@types/settings/` lets the SettingsPanel, the projection, and the
+ * engine snapshot deep-import a single source of truth.
  */
 
 import type { ScalarFieldPaletteId } from '../data/ScalarFieldPaletteId';

@@ -2,17 +2,21 @@
  * setSourceVisible — synchronous toggle integration tests.
  *
  * These drive `setSourceVisibleForTest` directly against a minimal state stub
- * rather than instantiating a full GPU engine.  The helper reads only
- * `state.settings.surveys.items`, `state.sources`, and
- * `state.subsystems.{fades,scheduler}`, so a mock of those surfaces suffices.
+ * rather than instantiating a full GPU engine.  The helper reads `state.sources`
+ * and `state.subsystems.{fades,scheduler}` and writes the survey's `enabled`
+ * flag through a real engine-owned settings store (the fixture backs
+ * `state.settings` with `createSettingsStore` and a getter, mirroring the
+ * engine's delegation), so a mock of those surfaces suffices.
  *
  * ### Model under test
  *
  * `setVisible` is SYNCHRONOUS and does ONE authoritative thing: it flips the
  * survey's `settings.surveys.items[id].enabled` — the single source of truth
- * for on/off.  It then fires the fade (fire-and-forget) and recomputes the
- * masks via `deriveSourceMasks`, which it calls internally.  It does NOT write
- * `drawMask`/`pickMask` itself; those are derived outputs:
+ * for on/off — THROUGH the store's copy-on-write action, so React's
+ * `useSettingsStore(selectVisibleSourceMask)` subscriber wakes.  It then fires
+ * the fade (fire-and-forget) and recomputes the masks via `deriveSourceMasks`,
+ * which it calls internally.  It does NOT write `drawMask`/`pickMask` itself;
+ * those are derived outputs:
  *
  *   - draw = `enabled || opacity > 0` — a just-hidden survey keeps its draw
  *     bit through the fade-out tail, so it ramps down smoothly.
@@ -33,7 +37,9 @@ import {
 } from '../../../src/services/animation/fadeController';
 import { setSourceVisibleForTest } from '../../../src/services/engine/handles/setSourceVisible';
 import { deriveSourceMasks } from '../../../src/services/engine/frame/deriveSourceMasks';
+import { createSettingsStore } from '../../../src/services/engine/settingsStore/createSettingsStore';
 import { maskHas } from '../../../src/utils/sourceMask';
+import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 
 // ── Minimal fixture factory ───────────────────────────────────────────────
 //
@@ -66,9 +72,15 @@ function makeFixture(opacityFor: (source: number) => number = () => 0) {
       { enabled: true, labelEnabled: true },
     ]),
   );
+  // The setter writes the `enabled` flag THROUGH the engine-owned store (the
+  // copy-on-write action), so the fixture backs `state.settings` with a real
+  // store and exposes it via a getter — exactly the engine's `state.settings`
+  // delegation. After the action runs, the getter hands back the fresh copy,
+  // which is what `deriveSourceMasks` and the assertions read.
+  const store = createSettingsStore({ surveys: { items } } as unknown as EngineSettingsState);
   const state = {
-    settings: {
-      surveys: { items },
+    get settings() {
+      return store.getState();
     },
     sources: {
       pickMask: 0,
@@ -80,37 +92,36 @@ function makeFixture(opacityFor: (source: number) => number = () => 0) {
       scheduler: { requestRender: vi.fn() },
     },
   };
-  const onMaskChange = vi.fn();
-  const cb = { sources: { onMaskChange } };
   // Seed the masks to match the all-enabled initial settings so a no-op
   // toggle (same `enabled`) is a true no-op against a consistent baseline.
   deriveSourceMasks(state as never);
-  return { state, fades, fadeCalls, cb, onMaskChange };
+  return { state, store, fades, fadeCalls };
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────
 
 describe('setSourceVisible — synchronous toggle', () => {
-  it('flips surveys.items[id].enabled synchronously', () => {
+  it('flips surveys.items[id].enabled synchronously (through the store)', () => {
     const fx = makeFixture();
-    const sdss = fx.state.settings.surveys.items.sdss!;
-    expect(sdss.enabled).toBe(true);
+    expect(fx.store.getState().surveys.items.sdss!.enabled).toBe(true);
 
-    setSourceVisibleForTest(fx.state as never, { cb: fx.cb } as never, Source.SDSS, false);
+    setSourceVisibleForTest(fx.state as never, fx.store, Source.SDSS, false);
 
-    expect(sdss.enabled).toBe(false);
+    // Re-read through the store: the write is copy-on-write, so the row is a
+    // fresh object — reading the live state, not a captured reference.
+    expect(fx.store.getState().surveys.items.sdss!.enabled).toBe(false);
   });
 
   it('fires fadeTo(0, FADE_OUT_DURATION_MS) on hide and fadeTo(1, FADE_IN_DURATION_MS) on show', () => {
     // Hide: start enabled, toggle off.
     const hide = makeFixture();
-    setSourceVisibleForTest(hide.state as never, { cb: hide.cb } as never, Source.SDSS, false);
+    setSourceVisibleForTest(hide.state as never, hide.store, Source.SDSS, false);
     expect(hide.fadeCalls).toEqual([{ target: 0, duration: FADE_OUT_DURATION_MS }]);
 
     // Show: start with SDSS disabled, toggle on.
     const show = makeFixture();
-    show.state.settings.surveys.items.sdss!.enabled = false;
-    setSourceVisibleForTest(show.state as never, { cb: show.cb } as never, Source.SDSS, true);
+    show.store.getState().surveys.items.sdss!.enabled = false;
+    setSourceVisibleForTest(show.state as never, show.store, Source.SDSS, true);
     expect(show.fadeCalls).toEqual([{ target: 1, duration: FADE_IN_DURATION_MS }]);
   });
 
@@ -118,11 +129,11 @@ describe('setSourceVisible — synchronous toggle', () => {
     // Simulate a fade-out still in flight: opacity 0.5 for SDSS.
     const fx = makeFixture((source) => (source === Source.SDSS ? 0.5 : 0));
 
-    setSourceVisibleForTest(fx.state as never, { cb: fx.cb } as never, Source.SDSS, false);
+    setSourceVisibleForTest(fx.state as never, fx.store, Source.SDSS, false);
 
     // enabled is false, but opacity > 0 keeps the draw bit set (fade-out tail);
     // pick follows intent and is cleared immediately.
-    expect(fx.state.settings.surveys.items.sdss!.enabled).toBe(false);
+    expect(fx.store.getState().surveys.items.sdss!.enabled).toBe(false);
     expect(maskHas(fx.state.sources.drawMask, Source.SDSS)).toBe(true);
     expect(maskHas(fx.state.sources.pickMask, Source.SDSS)).toBe(false);
   });
@@ -131,23 +142,24 @@ describe('setSourceVisible — synchronous toggle', () => {
     const fx = makeFixture();
 
     // Hide, then immediately re-show (two sync calls, no await).
-    setSourceVisibleForTest(fx.state as never, { cb: fx.cb } as never, Source.SDSS, false);
-    setSourceVisibleForTest(fx.state as never, { cb: fx.cb } as never, Source.SDSS, true);
+    setSourceVisibleForTest(fx.state as never, fx.store, Source.SDSS, false);
+    setSourceVisibleForTest(fx.state as never, fx.store, Source.SDSS, true);
 
     // The last toggle won: enabled is true, so both masks carry the bit.
-    expect(fx.state.settings.surveys.items.sdss!.enabled).toBe(true);
+    expect(fx.store.getState().surveys.items.sdss!.enabled).toBe(true);
     expect(maskHas(fx.state.sources.drawMask, Source.SDSS)).toBe(true);
     expect(maskHas(fx.state.sources.pickMask, Source.SDSS)).toBe(true);
   });
 
-  it('echoes the intent mask via onMaskChange with the SDSS pick bit cleared on hide', () => {
+  it('clears the SDSS pick bit on hide (read off the derived mask, not an echo)', () => {
     const fx = makeFixture();
 
-    setSourceVisibleForTest(fx.state as never, { cb: fx.cb } as never, Source.SDSS, false);
+    setSourceVisibleForTest(fx.state as never, fx.store, Source.SDSS, false);
 
-    expect(fx.onMaskChange).toHaveBeenCalledTimes(1);
-    const echoed = fx.onMaskChange.mock.calls[0]![0] as number;
-    expect(maskHas(echoed, Source.SDSS)).toBe(false);
+    // The setter no longer fires an echo — React reads visibility via
+    // `selectVisibleSourceMask` over the authoritative `enabled` bits. The
+    // derived pick mask still drops the toggled-off survey's bit.
+    expect(maskHas(fx.state.sources.pickMask, Source.SDSS)).toBe(false);
   });
 
   it('never calls requestRender itself — fadeTo owns the wake', () => {
@@ -156,8 +168,8 @@ describe('setSourceVisible — synchronous toggle', () => {
     // toggle early-returns and must stay wake-free too.
     const fx = makeFixture();
 
-    setSourceVisibleForTest(fx.state as never, { cb: fx.cb } as never, Source.SDSS, false);
-    setSourceVisibleForTest(fx.state as never, { cb: fx.cb } as never, Source.SDSS, false); // no-op
+    setSourceVisibleForTest(fx.state as never, fx.store, Source.SDSS, false);
+    setSourceVisibleForTest(fx.state as never, fx.store, Source.SDSS, false); // no-op
 
     expect(fx.fades.fadeTo).toHaveBeenCalledTimes(1);
     expect(fx.state.subsystems.scheduler.requestRender).not.toHaveBeenCalled();

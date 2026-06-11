@@ -7,13 +7,25 @@
 //
 // The setter does ONE authoritative thing: it flips the survey's
 // `settings.surveys.items[id].enabled` — the single source of truth for
-// on/off.  It then fires the fade (fire-and-forget) and recomputes the masks
-// via `deriveSourceMasks`.  It does NOT mutate `drawMask`/`pickMask` itself:
-// those are derived outputs that `deriveSourceMasks` owns, packed from
-// `enabled` + live fade opacity.  Recompute-from-truth replaces the old
+// on/off.  It writes that flag THROUGH the engine-owned settings store (the
+// `setSurveyVisible` action's copy-on-write reducer) rather than mutating the
+// held object in place: the store write is what NOTIFIES React's
+// `useSettingsStore(selectVisibleSourceMask)` subscriber so the panel checkbox
+// re-renders.  An in-place mutation would update the value but never wake the
+// subscription — that's exactly the mirror-drift the echo used to paper over.
+//
+// It then fires the fade (fire-and-forget) and recomputes the masks via
+// `deriveSourceMasks`.  It does NOT mutate `drawMask`/`pickMask` itself: those
+// are derived outputs that `deriveSourceMasks` owns, packed from `enabled` +
+// live fade opacity.  Recompute-from-truth replaces the old
 // remember-to-flip-the-mask dance, which is why there's no await and no
 // last-issued-wins re-read here — the fade registry's last-issued fade and the
 // per-frame derive together handle a rapid concurrent toggle.
+//
+// React no longer learns the mask through an echo: the SettingsPanel reads
+// `selectVisibleSourceMask(store.getState())`, a pure projection of the same
+// `enabled` bits the store action writes. One source of truth, projected on
+// read, so there is no mirror to keep in step (no `onMaskChange` fire here).
 //
 // Does NOT trigger loading: the render loop's `reevaluateDemand` reads the
 // survey's `enabled` bit (the flag flipped here) and loads the now-visible
@@ -21,24 +33,25 @@
 // decoupled.
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { SurveyId } from '../../../@types/engine/data/SurveyId';
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
 import { deriveSourceMasks } from '../frame/deriveSourceMasks';
+import type { SettingsStore } from '../settingsStore/createSettingsStore';
+import { setSurveyVisibleAction } from '../settingsStore/actions/setSurveyVisibleAction';
 
 export function setSourceVisibleImpl(
   state: Pick<EngineState, 'sources' | 'settings' | 'subsystems'>,
-  opts: { cb: Pick<EngineCallbacks, 'sources'> },
+  store: SettingsStore,
   source: SourceType,
   visible: boolean,
 ): void {
-  const { cb } = opts;
   const id = SOURCE_REGISTRY[source].id as SurveyId;
   if (state.settings.surveys.items[id].enabled === visible) return; // no-op
-  // Single source of truth: flip the survey's enabled flag.
-  state.settings.surveys.items[id].enabled = visible;
+  // Single source of truth: flip the survey's enabled flag THROUGH the store
+  // so the copy-on-write write notifies React's selector subscriber.
+  setSurveyVisibleAction(store, id, visible);
   // Fire the fade (fire-and-forget; last-issued wins inside the registry, and
   // deriveSourceMasks keeps the draw bit set while opacity > 0).
   void state.subsystems.fades.fadeTo(
@@ -46,13 +59,11 @@ export function setSourceVisibleImpl(
     visible ? 1 : 0,
     visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
   );
-  // Recompute the masks NOW so the echo + any synchronous reader (e.g. a tier
-  // change in the same tick) see fresh intent; the frame loop re-derives anyway.
+  // Recompute the masks NOW so any synchronous reader (e.g. a tier change in
+  // the same tick) sees fresh intent; the frame loop re-derives anyway.
   deriveSourceMasks(state);
-  // Echo INTENT (pickMask = enabled bits, not the fade-tail drawMask) so the
-  // React checkbox reflects on/off the instant the user toggles.
-  cb.sources?.onMaskChange?.(state.sources.pickMask);
-  // No requestRender: fadeTo owns the wake, and the per-frame
+  // No echo and no requestRender: React reads the mask via
+  // `selectVisibleSourceMask`, fadeTo owns the wake, and the per-frame
   // deriveSourceMasks keeps the masks tracking the fade.
 }
 

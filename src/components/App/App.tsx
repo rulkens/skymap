@@ -42,46 +42,92 @@ import { useFamousMeta } from '../../hooks/useFamousMeta';
 import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useEngineSettings } from '../../hooks/useEngineSettings';
+import { useSettingsStore } from '../../hooks/useSettingsStore';
 import { useSpaceMouseDevicePresence } from '../../hooks/useSpaceMouseDevicePresence';
+import { selectSurveySize } from '../../services/engine/settingsStore/selectors/selectSurveySize';
+import { selectDepthFade } from '../../services/engine/settingsStore/selectors/selectDepthFade';
+import { selectHighlightFallback } from '../../services/engine/settingsStore/selectors/selectHighlightFallback';
+import { selectRealOnly } from '../../services/engine/settingsStore/selectors/selectRealOnly';
+import { selectVisibleSourceMask } from '../../services/engine/settingsStore/selectors/selectVisibleSourceMask';
+import { selectToneMapCurve } from '../../services/engine/settingsStore/selectors/selectToneMapCurve';
+import { selectAutoRotate } from '../../services/engine/settingsStore/selectors/selectAutoRotate';
+import { selectBiasMode } from '../../services/engine/settingsStore/selectors/selectBiasMode';
+import { selectAbsMagLimit } from '../../services/engine/settingsStore/selectors/selectAbsMagLimit';
+import { selectShowPickBuffer } from '../../services/engine/settingsStore/selectors/selectShowPickBuffer';
+import { selectShowDiskRadiusRing } from '../../services/engine/settingsStore/selectors/selectShowDiskRadiusRing';
+import { selectFilamentsEnabled } from '../../services/engine/settingsStore/selectors/selectFilamentsEnabled';
+import { selectFilamentIntensity } from '../../services/engine/settingsStore/selectors/selectFilamentIntensity';
+import { selectVolumesEnabled } from '../../services/engine/settingsStore/selectors/selectVolumesEnabled';
+import { selectVolumeFieldItems } from '../../services/engine/settingsStore/selectors/selectVolumeFieldItems';
+import { selectFlow } from '../../services/engine/settingsStore/selectors/selectFlow';
+import { selectStructureItems } from '../../services/engine/settingsStore/selectors/selectStructureItems';
+import { selectSurveyItems } from '../../services/engine/settingsStore/selectors/selectSurveyItems';
+import { projectVolumeFieldRows } from '../../services/engine/settingsStore/projectVolumeFieldRows';
+import { projectMarkerCategoryVisibility } from '../../services/engine/settingsStore/projectMarkerCategoryVisibility';
+import { projectLabelCategoryVisibility } from '../../services/engine/settingsStore/projectLabelCategoryVisibility';
+import { seedVolumeFields } from '../../data/volumeFieldDefaults';
+import {
+  DEFAULT_POINT_SIZE_PX,
+  DEFAULT_DEPTH_FADE_ENABLED,
+  DEFAULT_HIGHLIGHT_FALLBACK,
+  DEFAULT_REAL_ONLY_MODE,
+  DEFAULT_TONE_MAP_CURVE,
+  DEFAULT_AUTO_ROTATE,
+  DEFAULT_BIAS_MODE,
+  DEFAULT_ABS_MAG_LIMIT,
+  DEFAULT_SHOW_PICK_BUFFER,
+  DEFAULT_SHOW_DISK_RADIUS_RING,
+  DEFAULT_VOLUMES_ENABLED,
+  DEFAULT_FLOW,
+} from '../../data/defaults';
+import { Source, SOURCE_REGISTRY } from '../../data/sources';
+import { ALL_VISIBLE_MASK } from '../../utils/sourceMask';
 import { buildStaticAnchorStructures } from '../../data/buildStaticAnchorStructures';
-import { isStructureCategory } from '../../data/structureCategories';
+import { isStructureCategory, STRUCTURE_CATEGORIES } from '../../data/structureCategories';
+import { SURVEY_IDS } from '../../data/surveyIds';
+import type { StructureCategory } from '../../@types/engine/data/StructureCategory';
+import type { SurveyId } from '../../@types/engine/data/SurveyId';
+import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
+import type { SurveyItemSettings } from '../../@types/settings/SurveyItemSettings';
 import { DebugPanel } from '../DebugPanel/DebugPanel';
 import { isWebHIDSupported } from '../../services/input/spaceMouse';
+
+/**
+ * Stable fallback for the volume-field items selector during the null-store
+ * window (before `handleRef` lands). `useSettingsStore` feeds this into
+ * `getSnapshot` and keys a `useCallback` on it, so it MUST be a single stable
+ * reference — calling `seedVolumeFields()` inline would mint a fresh object each
+ * render and re-fire the subscription. Hoisted to module scope; it's the same
+ * construction seed the store starts from, so the first paint matches engine
+ * truth.
+ */
+const VOLUME_FIELD_ITEMS_DEFAULT = seedVolumeFields();
+
+/**
+ * Stable fallbacks for the structure / survey item selectors during the
+ * null-store window (before `handleRef` lands). Same rationale as
+ * `VOLUME_FIELD_ITEMS_DEFAULT`: `useSettingsStore` keys a `useCallback` on the
+ * fallback, so it MUST be a single stable reference — building either record
+ * inline would mint a fresh object each render and re-fire the subscription.
+ * Both seed every item to fully visible (`enabled` + `labelEnabled` true),
+ * matching the engine's construction default so the first paint of the panel
+ * checkboxes matches engine truth.
+ */
+const STRUCTURE_ITEMS_DEFAULT = Object.fromEntries(
+  STRUCTURE_CATEGORIES.map((c) => [c, { enabled: true, labelEnabled: true }]),
+) as Record<StructureCategory, StructureItemSettings>;
+const SURVEY_ITEMS_DEFAULT = Object.fromEntries(
+  SURVEY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+) as Record<SurveyId, SurveyItemSettings>;
 
 export function App(): React.ReactElement {
   const {
     settings,
     engineCallbacks: settingsCallbacks,
-    setFilamentsEnabled,
-    setFilamentIntensity,
-    setVolumesEnabled,
     setSpaceMouseSensitivity,
-    updateFlow,
   } = useEngineSettings();
 
-  const {
-    pointSize,
-    autoRotate,
-    labelCategoryVisibility,
-    markerCategoryVisibility,
-    filamentsEnabled,
-    filamentIntensity,
-    filamentCounts,
-    highlightFallback,
-    realOnlyMode,
-    depthFadeEnabled,
-    showPickBuffer,
-    showDiskRadiusRing,
-    visibleSourceMask,
-    biasMode,
-    absMagLimit,
-    toneMapCurve,
-    volumesEnabled,
-    volumeFields,
-    spaceMouseConnected,
-    spaceMouseSensitivity,
-    flow,
-  } = settings;
+  const { filamentCounts, spaceMouseConnected, spaceMouseSensitivity } = settings;
 
   // SettingsPanel's SpaceMouse section appears only when WebHID is
   // available AND a previously-authorised puck is attached.  The other
@@ -105,16 +151,140 @@ export function App(): React.ReactElement {
     currentTier,
   } = useEngine({ extraCallbacks: settingsCallbacks });
 
-  // Flow overlay has no engine echo, so a knob change must land in two homes:
-  // the React mirror (optimistic) and the engine handle. One patch covers both
-  // — `updateFlow` merges it into React, `handle.flow.set` applies it engine-side
-  // (with the per-leaf demand/fade/reseed effects). Both panels share this.
+  // Surveys-cluster settings read live off the engine-owned store (no React
+  // mirror). Each fallback is the same `data/defaults.ts` seed the store is
+  // constructed from, so the first paint (before `handleRef` lands) matches
+  // engine truth. `visibleSourceMask` is a pure projection of the per-survey
+  // `enabled` bits — `ALL_VISIBLE_MASK` is the all-on startup default.
+  const pointSize = useSettingsStore(handleRef, selectSurveySize, DEFAULT_POINT_SIZE_PX);
+  const depthFadeEnabled = useSettingsStore(handleRef, selectDepthFade, DEFAULT_DEPTH_FADE_ENABLED);
+  const highlightFallback = useSettingsStore(
+    handleRef,
+    selectHighlightFallback,
+    DEFAULT_HIGHLIGHT_FALLBACK,
+  );
+  const realOnlyMode = useSettingsStore(handleRef, selectRealOnly, DEFAULT_REAL_ONLY_MODE);
+  const visibleSourceMask = useSettingsStore(handleRef, selectVisibleSourceMask, ALL_VISIBLE_MASK);
+
+  // Tonemap cluster reads live off the engine-owned store too. Exposure has no
+  // React consumer today (no slider in the panels), so only the curve dropdown
+  // reads here; the store write notifies synchronously, so `setCurve` tracks
+  // without an optimistic cell. Fallback is the same `data/defaults.ts` seed.
+  const toneMapCurve = useSettingsStore(handleRef, selectToneMapCurve, DEFAULT_TONE_MAP_CURVE);
+
+  // Camera auto-rotate reads live off the engine-owned store too. The toggle's
+  // handler dispatches the store action through `handle.camera.setAutoRotate`,
+  // which notifies synchronously, so the play/pause icon tracks without an
+  // optimistic cell. Fallback is the same `data/defaults.ts` seed.
+  const autoRotate = useSettingsStore(handleRef, selectAutoRotate, DEFAULT_AUTO_ROTATE);
+
+  // Bias mode + absolute-magnitude limit read live off the engine-owned store.
+  // The mode radio dispatches through `handle.bias.setMode` (which also kicks
+  // the async worker re-bake) and the slider through `handle.setAbsMagLimit`;
+  // both notify synchronously, so the controls track without an optimistic
+  // cell. Fallback is the same `data/defaults.ts` seed.
+  const biasMode = useSettingsStore(handleRef, selectBiasMode, DEFAULT_BIAS_MODE);
+  const absMagLimit = useSettingsStore(handleRef, selectAbsMagLimit, DEFAULT_ABS_MAG_LIMIT);
+
+  // Debug-overlay toggles (pick buffer + disk-radius ring) read live off the
+  // engine-owned store. The DebugPanel checkboxes dispatch through
+  // `handle.debug.setShowPickBuffer` / `setShowDiskRadiusRing` (action-backed),
+  // which notify synchronously, so the checkbox tracks without an optimistic
+  // cell. Fallback is the same `data/defaults.ts` seed the store is built from.
+  const showPickBuffer = useSettingsStore(
+    handleRef,
+    selectShowPickBuffer,
+    DEFAULT_SHOW_PICK_BUFFER,
+  );
+  const showDiskRadiusRing = useSettingsStore(
+    handleRef,
+    selectShowDiskRadiusRing,
+    DEFAULT_SHOW_DISK_RADIUS_RING,
+  );
+
+  // Filaments cluster (toggle + intensity) reads live off the engine-owned
+  // store. The SettingsPanel handlers dispatch through `handle.filaments.setEnabled`
+  // / `setIntensity` (action-backed; `setEnabled` also drives the fade ramp),
+  // which notify synchronously, so the controls track without an optimistic
+  // cell. The StatsPanel reads `filamentsEnabled` too. Fallbacks match the
+  // store's seed (`SOURCE_REGISTRY[Source.Filaments]`), so first paint (before
+  // `handleRef` lands) matches engine truth.
+  const filamentsEnabled = useSettingsStore(
+    handleRef,
+    selectFilamentsEnabled,
+    SOURCE_REGISTRY[Source.Filaments].visible,
+  );
+  const filamentIntensity = useSettingsStore(
+    handleRef,
+    selectFilamentIntensity,
+    SOURCE_REGISTRY[Source.Filaments].intensity,
+  );
+
+  // Volumes cluster reads live off the engine-owned store. The master toggle is
+  // a primitive boolean (`selectVolumesEnabled`), dispatched by the handle setter
+  // alongside the master fade. The per-field rows go through a STABLE-ref read:
+  // `selectVolumeFieldItems` returns the underlying `volumes.items` Record (only
+  // changes when a field actually changes, unaffected by a master-toggle flip),
+  // and the `useMemo` projects it to the debug-filtered `VolumeFieldRowData[]`
+  // the panel renders. Building the array inside the selector would mint a fresh
+  // array per `getSnapshot`, breaking `useSyncExternalStore`'s stability contract
+  // — keying the `useMemo` on the stable `items` ref is what keeps it cheap. The
+  // master fallback is the same `data/defaults.ts` seed; the items fallback is
+  // the construction seed (`seedVolumeFields()`), so first paint (before
+  // `handleRef` lands) matches engine truth.
+  const volumesEnabled = useSettingsStore(handleRef, selectVolumesEnabled, DEFAULT_VOLUMES_ENABLED);
+  const volumeFieldItems = useSettingsStore(
+    handleRef,
+    selectVolumeFieldItems,
+    VOLUME_FIELD_ITEMS_DEFAULT,
+  );
+  const volumeFields = useMemo(
+    // `debug-*` synthetic fixtures are dropped here so the panel only shows real
+    // science volumes (the dev console + handle.volumes.getState() still see them).
+    () => projectVolumeFieldRows(volumeFieldItems).filter((f) => !f.handle.startsWith('debug-')),
+    [volumeFieldItems],
+  );
+
+  // Structure / label visibility reads live off the engine-owned store, through
+  // the same STABLE-ref pattern as the volume rows. The two flat
+  // `Record<Category, boolean>` views the panel renders are DERIVED records, so a
+  // selector that built them per call would mint a fresh object each
+  // `getSnapshot` and break `useSyncExternalStore`'s stability contract. Instead
+  // the selectors return the underlying item Records verbatim
+  // (`selectStructureItems` / `selectSurveyItems` — stable under copy-on-write,
+  // changing only when a category/survey row actually changes), and the `useMemo`
+  // projections build the marker + label records keyed on those stable refs. The
+  // marker axis spans structure categories only; the label axis spans structure
+  // categories PLUS the `famousGalaxy` survey (its label lives on the survey item
+  // row), so its projection takes both Records. Fallbacks are the all-visible
+  // construction seeds, so first paint matches engine truth before the handle
+  // lands.
+  const structureItems = useSettingsStore(handleRef, selectStructureItems, STRUCTURE_ITEMS_DEFAULT);
+  const surveyItems = useSettingsStore(handleRef, selectSurveyItems, SURVEY_ITEMS_DEFAULT);
+  const markerCategoryVisibility = useMemo(
+    () => projectMarkerCategoryVisibility(structureItems),
+    [structureItems],
+  );
+  const labelCategoryVisibility = useMemo(
+    () => projectLabelCategoryVisibility(structureItems, surveyItems),
+    [structureItems, surveyItems],
+  );
+
+  // Flow overlay reads live off the engine-owned store. `selectFlow` returns the
+  // stored `settings.flow` object verbatim — referentially stable under
+  // copy-on-write, so `getSnapshot` needs no memo. A knob change goes through the
+  // handle alone: `handle.flow.set(patch)` dispatches the copy-on-write action
+  // (which the store notifies synchronously) AND runs the per-leaf
+  // demand/fade/reseed effects, so the controls track without an optimistic cell.
+  // Both panels share this. Fallback is the same `DEFAULT_FLOW` seed the store is
+  // constructed from, so first paint (before `handleRef` lands) matches engine
+  // truth.
+  const flow = useSettingsStore(handleRef, selectFlow, DEFAULT_FLOW);
   const onFlowChange = useCallback(
     (patch: Partial<FlowSettings>) => {
-      updateFlow(patch);
       handleRef.current?.flow.set(patch);
     },
-    [updateFlow, handleRef],
+    [handleRef],
   );
 
   // Live "N galaxies" figure for a pinned cluster/SC/void card.  Recomputes
@@ -256,18 +426,15 @@ export function App(): React.ReactElement {
                 handleRef.current?.surveys.setLabelEnabled(category, visible);
               }
             }}
-            // Filaments has no engine echo — React owns the state, so
-            // the handler updates locally AND forwards to the engine.
+            // Filaments reads off the engine-owned store (`selectFilamentsEnabled`
+            // / `selectFilamentIntensity`); the handle setters dispatch the store
+            // action (and `setEnabled` also drives the fade ramp), which notifies
+            // synchronously, so the controls stay in sync without an optimistic
+            // update.
             filamentsEnabled={filamentsEnabled}
-            onFilamentsChange={(enabled) => {
-              setFilamentsEnabled(enabled);
-              handleRef.current?.filaments.setEnabled(enabled);
-            }}
+            onFilamentsChange={(enabled) => handleRef.current?.filaments.setEnabled(enabled)}
             filamentIntensity={filamentIntensity}
-            onFilamentIntensityChange={(value) => {
-              setFilamentIntensity(value);
-              handleRef.current?.filaments.setIntensity(value);
-            }}
+            onFilamentIntensityChange={(value) => handleRef.current?.filaments.setIntensity(value)}
             depthFadeEnabled={depthFadeEnabled}
             onDepthFadeEnabledChange={(enabled) => {
               handleRef.current?.surveys.setDepthFade(enabled);
@@ -303,9 +470,12 @@ export function App(): React.ReactElement {
               setSpaceMouseSensitivity(value);
               handleRef.current?.input.spaceMouse.setSensitivity(value);
             }}
-            // Bias and tone-map setters echo synchronously — `setBiasMode`
-            // / `setAbsMagLimit` / `setToneMapCurve` all fire their echo
-            // callback inside the call, so no optimistic update needed.
+            // Bias mode + absMagLimit read off the engine-owned store
+            // (`selectBiasMode` / `selectAbsMagLimit`); the handle setters
+            // dispatch the store action (and `setMode` also re-bakes the worker),
+            // which notifies synchronously, so the controls stay in sync without
+            // an optimistic update. The tone-map curve reads off the store too
+            // (`selectToneMapCurve`); `setCurve` dispatches its action likewise.
             biasMode={biasMode}
             onBiasModeChange={(mode) => handleRef.current?.bias.setMode(mode)}
             absMagLimit={absMagLimit}
@@ -313,17 +483,17 @@ export function App(): React.ReactElement {
             onAbsMagLimitChange={(M) => handleRef.current?.bias.setAbsMagLimit(M)}
             toneMapCurve={toneMapCurve}
             onToneMapCurveChange={(curve) => handleRef.current?.tonemap.setCurve(curve)}
-            // `volumesEnabled` is the master toggle — no engine echo,
-            // owned in React state (same pattern as filamentsEnabled).
-            // The per-field setters forward straight to the engine; the
-            // engine fires `volumes.onFieldsChanged(snapshot)` after
-            // every mutation, and `useEngineSettings` mirrors the
-            // snapshot back into React.
+            // `volumesEnabled` reads off the engine-owned store
+            // (`selectVolumesEnabled`); the handle setter dispatches the
+            // action (which notifies synchronously) and drives the master
+            // fade, so the toggle tracks without an optimistic cell. The
+            // per-field rows read via `selectVolumeFieldItems` + the `useMemo`
+            // projection; each per-field setter forwards straight to the
+            // engine, whose store write wakes the rows subscription.
             volumesEnabled={volumesEnabled}
-            onVolumesEnabledChange={(enabled) => {
-              setVolumesEnabled(enabled);
-              handleRef.current?.volumes.setMasterEnabled(enabled);
-            }}
+            onVolumesEnabledChange={(enabled) =>
+              handleRef.current?.volumes.setMasterEnabled(enabled)
+            }
             volumeFields={volumeFields}
             onVolumeFieldEnabledChange={(fieldId, enabled) =>
               handleRef.current?.volumes.setEnabled(fieldId, enabled)

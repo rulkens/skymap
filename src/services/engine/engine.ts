@@ -31,7 +31,6 @@
  *   - `galaxyInfoBuilder.ts`   — buildGalaxyInfo / maxAbsCoord / niceRound
  *   - `cloudLoader.ts`         — parallel /data/{sdss,2mrs,glade}.bin fetch + synthetic fallback
  *   - `cameraFraming.ts`       — bbox + FOV → initial camera snapshot
- *   - `seedSettingsCallbacks.ts` — fan-out of default settings to optional cb hooks
  *   - `scaleBar.ts`            — pure scale-bar tick selection + label formatting (consumed by React)
  *
  *   Subsystems (closure-returning factories with internal state):
@@ -101,6 +100,13 @@ import type { Tier } from '../../@types/data/Tier';
 import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 
 import { createTweenManager } from './camera/tweenManager';
+import { createSettingsStore } from './settingsStore/createSettingsStore';
+import { setBiasModeAction } from './settingsStore/actions/setBiasModeAction';
+import { setVolumesEnabledAction } from './settingsStore/actions/setVolumesEnabledAction';
+import { setFlowAction } from './settingsStore/actions/setFlowAction';
+import { writeVolumeFieldAction } from './settingsStore/actions/writeVolumeFieldAction';
+import { addVolumeFieldAction } from './settingsStore/actions/addVolumeFieldAction';
+import { removeVolumeFieldAction } from './settingsStore/actions/removeVolumeFieldAction';
 import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
@@ -129,10 +135,8 @@ import { awaitSlotReady } from '../loading/awaitSlotReady';
 import { tierTarget } from '../../data/tierTargets';
 import { snapToCameraSnapshot, tweenToCameraSnapshot } from './camera/cameraSnapshot';
 import { MILKY_WAY_CENTER_WORLD, MILKY_WAY_VIEW_DISTANCE_MPC } from '../../data/galacticCenter';
-import { buildVolumeFieldSettings, seedVolumeFields } from '../../data/volumeFieldDefaults';
+import { seedVolumeFields } from '../../data/volumeFieldDefaults';
 import { buildVolumeFieldsSnapshot } from './helpers/buildVolumeFieldsSnapshot';
-import { writeVolumeFieldSetting } from './helpers/writeVolumeFieldSetting';
-import { removeVolumeFieldSetting } from './helpers/removeVolumeFieldSetting';
 import { clampVolumeIntensity } from '../../utils/clampVolumeIntensity';
 import { clampVolumeContrast } from '../../utils/clampVolumeContrast';
 import { clampVolumeDensityScale } from '../../utils/clampVolumeDensityScale';
@@ -256,78 +260,95 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // across the module boundary.
   const lastReportedFps: { current: number | null } = { current: null };
 
+  // ── Settings — the user-facing SettingsPanel sub-bags ──────────
+  //
+  // Every settings field lives under a named cluster (survey billboard
+  // knobs under `surveys`, HDR controls under `tonemap`, etc.). Defaults
+  // flow from `data/defaults.ts`; see `EngineSettingsState.d.ts` for the
+  // type-level map.
+  //
+  // We seed a zustand vanilla store (engine-owned, no React dependency in
+  // the core) with this literal rather than parking it directly on
+  // `state.settings`. `state.settings` then becomes a getter delegating to
+  // `settingsStore.getState()`, so React can subscribe to settings changes
+  // via `useStore` instead of keeping a parallel mirror that drifts. The
+  // dozens of `state.settings.X` read sites stay byte-identical — the getter
+  // hands back the held object directly.
+  const settingsStore = createSettingsStore({
+    // Survey layer: master gate on + shared billboard appearance knobs +
+    // one item row per survey, each layer + label default-on. Keys are
+    // DERIVED from `SURVEY_IDS` so the seed can't drift from the survey set.
+    // `labelEnabled` is inert for every survey except famousGalaxy (the only
+    // one that renders a name label) — seeded uniformly true.
+    surveys: {
+      enabled: true,
+      sizePx: DEFAULT_POINT_SIZE_PX,
+      brightness: DEFAULT_BRIGHTNESS,
+      depthFade: DEFAULT_DEPTH_FADE_ENABLED,
+      highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
+      realOnly: DEFAULT_REAL_ONLY_MODE,
+      items: Object.fromEntries(
+        SURVEY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+      ) as Record<SurveyId, SurveyItemSettings>,
+    },
+    tonemap: {
+      exposure: DEFAULT_EXPOSURE,
+      curve: DEFAULT_TONE_MAP_CURVE,
+    },
+    camera: {
+      autoRotate: DEFAULT_AUTO_ROTATE,
+    },
+    // Bias's user-tunable subset.  Bake-derived fields live on
+    // `state.bias` (worker outputs, not settings).  The -19 default is
+    // roughly where the SDSS spectroscopic main sample is volume-complete
+    // out to the survey's flux limit — bright enough that nearly every
+    // catalog galaxy has a spectrum, dim enough to keep plenty of structure.
+    bias: {
+      mode: DEFAULT_BIAS_MODE,
+      absMagLimit: DEFAULT_ABS_MAG_LIMIT,
+    },
+    thumbnails: {
+      enabled: DEFAULT_GALAXY_TEXTURES_ENABLED,
+    },
+    milkyWay: {
+      enabled: DEFAULT_MILKY_WAY_ENABLED,
+    },
+    filaments: {
+      enabled: SOURCE_REGISTRY[Source.Filaments].visible,
+      intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
+    },
+    volumes: {
+      enabled: DEFAULT_VOLUMES_ENABLED,
+      items: seedVolumeFields(),
+    },
+    // Flow is a singleton overlay layer: all its user-facing state (master
+    // gate + look/motion knobs) lives here, spread from the single
+    // `DEFAULT_FLOW` seed. The `state.data.flow` store stays status-only.
+    flow: { ...DEFAULT_FLOW },
+    debug: {
+      showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
+      showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
+    },
+    // Structure overlay: master gate on + one item row per category, each
+    // ring + label default-on. Keys are DERIVED from `STRUCTURE_CATEGORIES`
+    // so the seed can't drift from the category set (famous galaxies bear no
+    // ring and so have no row here).
+    structures: {
+      enabled: true,
+      items: Object.fromEntries(
+        STRUCTURE_CATEGORIES.map((c) => [c, { enabled: true, labelEnabled: true }]),
+      ) as Record<StructureCategory, StructureItemSettings>,
+    },
+  });
+
   const state: EngineState = {
-    // ── Settings — the user-facing SettingsPanel sub-bags ──────────
-    //
-    // Every settings field lives under a named cluster (survey billboard
-    // knobs under `surveys`, HDR controls under `tonemap`, etc.).
-    // Defaults flow from `data/defaults.ts`; see
-    // `EngineSettingsState.d.ts` for the type-level map.
-    settings: {
-      // Survey layer: master gate on + shared billboard appearance knobs +
-      // one item row per survey, each layer + label default-on. Keys are
-      // DERIVED from `SURVEY_IDS` so the seed can't drift from the survey set.
-      // `labelEnabled` is inert for every survey except famousGalaxy (the only
-      // one that renders a name label) — seeded uniformly true.
-      surveys: {
-        enabled: true,
-        sizePx: DEFAULT_POINT_SIZE_PX,
-        brightness: DEFAULT_BRIGHTNESS,
-        depthFade: DEFAULT_DEPTH_FADE_ENABLED,
-        highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
-        realOnly: DEFAULT_REAL_ONLY_MODE,
-        items: Object.fromEntries(
-          SURVEY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
-        ) as Record<SurveyId, SurveyItemSettings>,
-      },
-      tonemap: {
-        exposure: DEFAULT_EXPOSURE,
-        curve: DEFAULT_TONE_MAP_CURVE,
-      },
-      camera: {
-        autoRotate: DEFAULT_AUTO_ROTATE,
-      },
-      // Bias's user-tunable subset.  Bake-derived fields live on
-      // `state.bias` (worker outputs, not settings).  The -19 default is
-      // roughly where the SDSS spectroscopic main sample is volume-complete
-      // out to the survey's flux limit — bright enough that nearly every
-      // catalog galaxy has a spectrum, dim enough to keep plenty of structure.
-      bias: {
-        mode: DEFAULT_BIAS_MODE,
-        absMagLimit: DEFAULT_ABS_MAG_LIMIT,
-      },
-      thumbnails: {
-        enabled: DEFAULT_GALAXY_TEXTURES_ENABLED,
-      },
-      milkyWay: {
-        enabled: DEFAULT_MILKY_WAY_ENABLED,
-      },
-      filaments: {
-        enabled: SOURCE_REGISTRY[Source.Filaments].visible,
-        intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
-      },
-      volumes: {
-        enabled: DEFAULT_VOLUMES_ENABLED,
-        items: seedVolumeFields(),
-      },
-      // Flow is a singleton overlay layer: all its user-facing state (master
-      // gate + look/motion knobs) lives here, spread from the single
-      // `DEFAULT_FLOW` seed. The `state.data.flow` store stays status-only.
-      flow: { ...DEFAULT_FLOW },
-      debug: {
-        showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
-        showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
-      },
-      // Structure overlay: master gate on + one item row per category, each
-      // ring + label default-on. Keys are DERIVED from `STRUCTURE_CATEGORIES`
-      // so the seed can't drift from the category set (famous galaxies bear no
-      // ring and so have no row here).
-      structures: {
-        enabled: true,
-        items: Object.fromEntries(
-          STRUCTURE_CATEGORIES.map((c) => [c, { enabled: true, labelEnabled: true }]),
-        ) as Record<StructureCategory, StructureItemSettings>,
-      },
+    // `state.settings` delegates to the engine-owned store. Copy-on-write
+    // writes (Plan 02's actions) change the ref only on user-driven changes,
+    // so per-frame reads see a stable object; the in-place nested mutators
+    // still alive in Phase 1 mutate that held object directly, which the
+    // getter surfaces unchanged.
+    get settings() {
+      return settingsStore.getState();
     },
     bias: {
       // Bake-only sentinels — overwritten before the shader's mode-2/3/4
@@ -653,8 +674,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // bakes, subsystem forwards, multi-field mutations) are local functions
   // below.  The handle literal at the end stitches both into the public
   // sub-handle clusters.
-  const boringSetters = buildSettersFromTable(state, cb, () =>
-    state.subsystems.scheduler.requestRender(),
+  const boringSetters = buildSettersFromTable(
+    () => state.subsystems.scheduler.requestRender(),
+    settingsStore,
   ) satisfies Record<SettingsTableKey, (value: unknown) => void>;
 
   // ── Bespoke methods (don't fit the settingsTable shape) ────────────
@@ -674,13 +696,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   function setBiasMode(mode: BiasMode): void {
     // Shader branches on the integer mode (0 = none, 1 = volume-limited, …),
-    // so flipping it takes effect next frame with no pipeline rebuild.  We
-    // always fire the echo (even when unchanged) so the UI seeds on first
-    // call.  Routes through `biasCorrectionSubsystem`, which owns the cached
-    // ratios/weights + worker runners and the render wakes (entry +
-    // post-splice).  The `void` discards the Promise — engine.ts doesn't await.
-    state.settings.bias.mode = mode;
-    cb.bias?.onModeChange?.(mode);
+    // so flipping it takes effect next frame with no pipeline rebuild.  The
+    // store action owns the (copy-on-write) write; React reads via
+    // `selectBiasMode`, so no echo is wired.  The worker re-bake is a separate
+    // event-driven action: it routes through `biasCorrectionSubsystem`, which
+    // owns the cached ratios/weights + worker runners and the render wakes
+    // (entry + post-splice).  The `void` discards the Promise — engine.ts
+    // doesn't await.
+    setBiasModeAction(settingsStore, mode);
     void state.subsystems.biasCorrection.setMode(mode);
   }
 
@@ -808,7 +831,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   function setSourceVisible(source: SourceType, visible: boolean): void {
     // Delegate to the module-scope helper (testable without a GPU engine).
-    setSourceVisibleImpl(state, { cb }, source, visible);
+    // The per-survey `enabled` flag is written through the settings store so
+    // React's `useSettingsStore(selectVisibleSourceMask)` subscriber wakes.
+    setSourceVisibleImpl(state, settingsStore, source, visible);
   }
 
   function setTier(tier: Tier): void {
@@ -864,10 +889,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function setVolumesEnabled(enabled: boolean): void {
-    // Master toggle — mutate the settings bag so the per-frame volume gates
-    // see it next frame.  No echo callback: the React layer owns this value
-    // optimistically.
-    state.settings.volumes.enabled = enabled;
+    // Master toggle — dispatch the copy-on-write store action so the per-frame
+    // volume gates see it next frame.  No echo: React reads via
+    // `selectVolumesEnabled`.
+    setVolumesEnabledAction(settingsStore, enabled);
     // Drive the FadeRegistry on the volumesMaster handle.  The encodeHdr*
     // sites multiply this master opacity into every per-field fade, so the
     // whole subsystem ramps in lockstep.  The pass-enabled gate accepts
@@ -882,15 +907,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   function addVolumeField(fieldId: VolumeFieldId, cube: ScalarCube): void {
     // Ensure a settings row exists before the GPU upload.  Re-registering a
-    // field preserves its tuned values; a brand-new handle seeds
-    // from registry defaults.  Shippable volumes already have a construction
-    // seed, so the guard only fires for a dynamically-added handle.
-    if (!state.settings.volumes.items[fieldId]) {
-      state.settings.volumes.items = {
-        ...state.settings.volumes.items,
-        [fieldId]: buildVolumeFieldSettings(fieldId),
-      };
-    }
+    // field preserves its tuned values (identity no-op in the reducer); a
+    // brand-new handle seeds from registry defaults.  Shippable volumes already
+    // have a construction seed, so this only seeds for a dynamically-added
+    // handle.  React reads the per-field rows via `selectVolumeFieldItems`.
+    addVolumeFieldAction(settingsStore, fieldId);
     // Upload to the renderer; a silent no-op if it isn't ready yet (re-add
     // once booted).
     state.gpu.scalarVolumeRenderer?.addField(fieldId, cube);
@@ -904,7 +925,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         FADE_IN_DURATION_MS,
       );
     }
-    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     // Essential wake: the fadeTo above is conditional — a disabled add still
     // changes the renderer's field set and settings row.
     state.subsystems.scheduler.requestRender();
@@ -912,8 +932,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   function removeVolumeField(fieldId: VolumeFieldId): void {
     state.gpu.scalarVolumeRenderer?.removeField(fieldId);
-    state.settings.volumes.items = removeVolumeFieldSetting(state.settings.volumes.items, fieldId);
-    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
+    removeVolumeFieldAction(settingsStore, fieldId);
     // Essential wake: removal fires no fade — the field vanishes outright.
     state.subsystems.scheduler.requestRender();
   }
@@ -949,9 +968,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function setVolumeFieldEnabled(fieldId: VolumeFieldId, enabled: boolean): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, { enabled });
-    if (!next) return;
-    state.settings.volumes.items = next;
+    // Dispatch the copy-on-write store action; React reads via
+    // `selectVolumeFieldItems`.  An unknown id lands an identity write (no-op).
+    writeVolumeFieldAction(settingsStore, fieldId, { enabled });
     // DEV debug fixtures aren't demand rows, so they keep a direct lazy load
     // here; cf4/mcpm load via reevaluateDemand reading items[id].enabled, and
     // this call is a no-op for those ids, so the two load paths partition.
@@ -963,72 +982,54 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       enabled ? 1 : 0,
       enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
     );
-    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     // No requestRender: fadeTo wakes, and that frame's reevaluateDemand sees
     // the flipped enabled bit for the shippable cf4/mcpm rows.
   }
 
-  // The per-field knob setters below write `state.settings.volumes.items`
-  // directly — no boringSetter, no fade, so no channel wakes for them.  Each
-  // keeps an explicit requestRender to re-render the raymarch pass.
+  // The per-field knob setters below dispatch the copy-on-write store action —
+  // no boringSetter, no fade, so no channel wakes for them.  Each keeps an
+  // explicit requestRender to re-render the raymarch pass.  Each clamps raw
+  // intent before the write; React reads via `selectVolumeFieldItems`.
 
   function setVolumeFieldIntensity(fieldId: VolumeFieldId, intensity: number): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
+    writeVolumeFieldAction(settingsStore, fieldId, {
       intensity: clampVolumeIntensity(intensity),
     });
-    if (!next) return;
-    state.settings.volumes.items = next;
-    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldContrast(fieldId: VolumeFieldId, contrast: number): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
+    writeVolumeFieldAction(settingsStore, fieldId, {
       contrast: clampVolumeContrast(contrast),
     });
-    if (!next) return;
-    state.settings.volumes.items = next;
-    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldDensityScale(fieldId: VolumeFieldId, value: number): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
+    writeVolumeFieldAction(settingsStore, fieldId, {
       densityScale: clampVolumeDensityScale(value),
     });
-    if (!next) return;
-    state.settings.volumes.items = next;
-    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldTrim(fieldId: VolumeFieldId, trim: number): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
+    writeVolumeFieldAction(settingsStore, fieldId, {
       trim: clampVolumeTrim(trim),
     });
-    if (!next) return;
-    state.settings.volumes.items = next;
-    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldExposure(fieldId: VolumeFieldId, exposure: number): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
+    writeVolumeFieldAction(settingsStore, fieldId, {
       exposure: clampVolumeExposure(exposure),
     });
-    if (!next) return;
-    state.settings.volumes.items = next;
-    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function setVolumeFieldPalette(fieldId: VolumeFieldId, id: ScalarFieldPaletteId): void {
-    const next = writeVolumeFieldSetting(state.settings.volumes.items, fieldId, {
+    writeVolumeFieldAction(settingsStore, fieldId, {
       paletteId: id,
     });
-    if (!next) return;
-    state.settings.volumes.items = next;
-    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
@@ -1169,7 +1170,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setDepthFade: (enabled) => boringSetters.setDepthFadeEnabled(enabled),
       setHighlightFallback: (enabled) => boringSetters.setHighlightFallback(enabled),
       setRealOnly: (enabled) => boringSetters.setRealOnlyMode(enabled),
-      setLabelEnabled: (survey, enabled) => setSurveyLabelEnabled(state, cb, survey, enabled),
+      setLabelEnabled: (survey, enabled) =>
+        setSurveyLabelEnabled(state, settingsStore, survey, enabled),
     },
     tonemap: {
       setExposure: (value) => boringSetters.setExposure(value),
@@ -1232,22 +1234,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setIntensity: (value) => boringSetters.setFilamentIntensity(value),
     },
     flow: {
-      // One patch-shaped entry point over the `settings.flow` slice. Each
-      // present leaf is written through its table-driven boringSetter (which
-      // clamps + wakes the scheduler), then the per-leaf side effects fire off
-      // which keys the patch carried. boringSetters.setFlow* are typed
-      // `(value: unknown) => void`; the FlowSettings leaf types narrow them.
+      // One patch-shaped entry point over the `settings.flow` slice. The WHOLE
+      // patch lands through the copy-on-write store action (React reads via
+      // `selectFlow`); the raw intent is stored verbatim — the GPU-safe clamps
+      // live in `clampFlowParams` at the flow renderer. Then the per-leaf side
+      // effects fire off which keys the patch carried.
       set: (patch) => {
-        if (patch.enabled !== undefined) boringSetters.setFlowEnabled(patch.enabled);
-        if (patch.mode !== undefined) boringSetters.setFlowMode(patch.mode);
-        if (patch.intensity !== undefined) boringSetters.setFlowIntensity(patch.intensity);
-        if (patch.count !== undefined) boringSetters.setFlowCount(patch.count);
-        if (patch.trail !== undefined) boringSetters.setFlowTrail(patch.trail);
-        if (patch.flowSpeed !== undefined) boringSetters.setFlowSpeed(patch.flowSpeed);
-        if (patch.densityBias !== undefined) boringSetters.setFlowDensityBias(patch.densityBias);
-        if (patch.wander !== undefined) boringSetters.setFlowWander(patch.wander);
-        if (patch.boundaryFadeWidth !== undefined)
-          boringSetters.setFlowBoundaryFadeWidth(patch.boundaryFadeWidth);
+        setFlowAction(settingsStore, patch);
+        // Wake the loop so the renderer picks up the new params next frame —
+        // the action does NOT wake; fadeTo below wakes on its own, but the
+        // knob-only patches (intensity / trail / …) need this explicit nudge.
+        state.subsystems.scheduler.requestRender();
 
         // enabled: re-evaluate demand so the first enable lazy-loads the cube,
         // then fade — but only when the cube is resident. `loaded === true`
@@ -1273,18 +1270,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         if (patch.mode !== undefined || patch.count !== undefined) {
           state.gpu.flowFieldRenderer?.maybeReseed();
         }
-
-        // No wake needed: each present leaf woke via its boringSetter (and
-        // fadeTo above); an empty patch changes nothing.
       },
     },
     structures: {
       // Two setters, one per independent structure visibility axis. Each writes
-      // the authoritative `settings.structures.items[category]` row, fades the
-      // matching FadeRegistry handle, and echoes a fresh derived record.
-      setItemEnabled: (category, visible) => setStructureItemEnabled(state, cb, category, visible),
+      // the authoritative `settings.structures.items[category]` row THROUGH the
+      // store (so React's `selectStructureItems` subscriber wakes) and fades the
+      // matching FadeRegistry handle.
+      setItemEnabled: (category, visible) =>
+        setStructureItemEnabled(state, settingsStore, category, visible),
       setLabelEnabled: (category, visible) =>
-        setStructureLabelEnabled(state, cb, category, visible),
+        setStructureLabelEnabled(state, settingsStore, category, visible),
     },
     volumes: {
       setMasterEnabled: setVolumesEnabled,
@@ -1334,6 +1330,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setShowPickBuffer: (enabled: boolean) => boringSetters.setShowPickBuffer(enabled),
       setShowDiskRadiusRing: (enabled: boolean) => boringSetters.setShowDiskRadiusRing(enabled),
     },
+
+    // The engine-owned settings store. React subscribes via `useStore`; the
+    // engine reads it each frame through the `state.settings` getter. Phase 1
+    // exposes it alongside the still-live React mirror — Plan 02 migrates
+    // consumers and deletes the mirror.
+    settingsStore,
 
     destroy,
 

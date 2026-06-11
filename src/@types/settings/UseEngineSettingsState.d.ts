@@ -6,7 +6,7 @@
  *
  * The engine-side `EngineSettingsState` (see
  * `./EngineSettingsState.d.ts`) is the canonical mutable bag living
- * inside the engine closure, organised by *cluster* (`points`,
+ * inside the engine closure, organised by *cluster* (`surveys`,
  * `tonemap`, `camera`, `bias`, `thumbnails`, `milkyWay`, `filaments`,
  * `volumes`) so every cluster mirrors a sub-handle namespace 1:1.
  *
@@ -26,67 +26,20 @@
  * canonical name unchanged.
  */
 
-import type { BiasMode } from '../data/BiasMode';
-import type { ToneMapCurve } from '../data/ToneMapCurve';
-import type { FlowSettings } from './FlowSettings';
-import type { VolumeFieldRowData } from './VolumeFieldRowData';
-import type { LabelCategory } from '../engine/data/LabelCategory';
-import type { StructureCategory } from '../engine/data/StructureCategory';
-
 export type UseEngineSettingsState = {
-  pointSize: number;
-  brightness: number;
-  autoRotate: boolean;
-  galaxyTexturesEnabled: boolean;
-  milkyWayEnabled: boolean;
-  filamentsEnabled: boolean;
-  filamentIntensity: number;
+  // Every SETTING moved to the engine-owned store and is read React-side via
+  // `useSettingsStore` selectors, so no settings leaf is mirrored here. The
+  // three fields below are the non-settings remainder: `filamentCounts` is an
+  // EVENT payload (no store home), and the two SpaceMouse fields are the input
+  // subsystem's React-owned state.
+  /**
+   * Strip + vertex counts from the cosmic-web `filaments.bin`, or `null` until
+   * the engine fires `filaments.onReady` (once, after the optional file lands).
+   * This is an EVENT payload, not a settings leaf — there is no store home for
+   * it — so it stays a mirror cell even though the filaments TOGGLE + INTENSITY
+   * migrated to the engine-owned store.
+   */
   filamentCounts: { stripCount: number; vertexCount: number } | null;
-  highlightFallback: boolean;
-  realOnlyMode: boolean;
-  depthFadeEnabled: boolean;
-  /** Mirrors `EngineSettingsState.debug.showPickBuffer`. */
-  showPickBuffer: boolean;
-  /** Mirrors `EngineSettingsState.debug.showDiskRadiusRing`. */
-  showDiskRadiusRing: boolean;
-  visibleSourceMask: number;
-  biasMode: BiasMode;
-  absMagLimit: number;
-  toneMapCurve: ToneMapCurve;
-  exposure: number;
-  /**
-   * Master toggle for the scalar-volume overlay.  Mirrors
-   * `EngineSettingsState.volumesEnabled` on the engine side.  No echo
-   * callback — React owns it optimistically, same as `filamentsEnabled`.
-   */
-  volumesEnabled: boolean;
-  /**
-   * Snapshot of every registered field's UI state — mirrored from the
-   * engine via the `volumes.onFieldsChanged(fields)` callback after
-   * every mutation.  Synthetic-fixture handles (`debug-*`) are filtered
-   * inside the hook so consumers only see real science volumes.  Starts
-   * empty (no cubes are registered at startup).
-   */
-  volumeFields: ReadonlyArray<VolumeFieldRowData>;
-  /**
-   * Per-category visibility for the TEXT LABEL overlay.  A React-side mirror
-   * of the engine's derived label-visibility record (structure categories
-   * from `structures.items[cat].labelEnabled`, famousGalaxy from the engine's
-   * flat label record); the SettingsPanel reads from it to render the
-   * per-category label checkboxes.  Engine echoes the whole record on every
-   * label toggle so the UI stays in sync from a single subscription.
-   */
-  labelCategoryVisibility: Record<LabelCategory, boolean>;
-  /**
-   * Per-category visibility for the MARKER overlay (ring + halo), keyed
-   * by `StructureCategory` only.  A React-side mirror of the engine's derived
-   * marker-visibility record (each entry from `structures.items[cat].enabled`).
-   * Today there is no per-category marker UI — every entry stays `true` unless
-   * the Structures master toggle flips them as a batch.  Kept in state
-   * regardless so the React shell can present a snapshot and so the Structures
-   * toggle has a stable mirror to subscribe to.
-   */
-  markerCategoryVisibility: Record<StructureCategory, boolean>;
   /**
    * Whether a 3Dconnexion SpaceMouse is currently paired and feeding
    * input reports.  Engine echoes this through
@@ -97,18 +50,8 @@ export type UseEngineSettingsState = {
   /**
    * Current SpaceMouse global sensitivity multiplier (applied AFTER the
    * cube response curve).  App-owned optimistic state — the engine has
-   * no echo callback for sensitivity, so React is the source of truth
-   * (same pattern as `filamentsEnabled` / `volumesEnabled`).
+   * no echo callback for sensitivity, so React is the source of truth.
+   * It is NOT in `EngineSettingsState`, so it does not move to the store.
    */
   spaceMouseSensitivity: number;
-  /**
-   * App-owned optimistic mirror of `settings.flow` (the CF4++
-   * peculiar-velocity overlay).  The engine fires NO echo callback for flow —
-   * same pattern as `filamentsEnabled` — so React owns the whole slice
-   * directly, seeded from `DEFAULT_FLOW`.  One `FlowSettings` object rather
-   * than nine flat fields: the SettingsPanel reads `enabled` / `mode` /
-   * `intensity`, the DebugPanel reads the motion knobs, and both write back
-   * through a `Partial<FlowSettings>` patch.
-   */
-  flow: FlowSettings;
 };

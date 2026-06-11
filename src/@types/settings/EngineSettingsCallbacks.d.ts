@@ -14,16 +14,12 @@ import type { EngineCallbacks } from '../engine/EngineCallbacks';
 
 export type EngineSettingsCallbacks = Pick<
   EngineCallbacks,
-  | 'surveys'
-  | 'tonemap'
-  | 'camera'
-  | 'sources'
-  | 'bias'
-  | 'thumbnails'
-  | 'milkyWay'
-  | 'debug'
-  | 'filaments'
-  | 'volumes'
-  | 'labels'
-  | 'input'
+  // Every settings echo is gone — those clusters live in the engine-owned store
+  // and React reads each via a `useStore` selector, so there is no settings
+  // mirror to keep in sync from a callback. What remains the hook subscribes to
+  // here is EVENT-shaped: `filaments.onReady` (the one-shot strip/vertex count
+  // payload after `filaments.bin` lands) and `input.spaceMouse.onConnectedChange`
+  // (puck connect / disconnect). Camera EVENTS — focus / camera / scale — are
+  // also not settings, but `useEngine` wires those, not this hook.
+  'filaments' | 'input'
 >;

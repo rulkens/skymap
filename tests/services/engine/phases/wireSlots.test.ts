@@ -426,11 +426,10 @@ function makeDeps(): BootstrapDeps {
   const cb: EngineCallbacks = {
     lifecycle: { onStatusChange: vi.fn() },
     selection: { onSelectionChange: vi.fn() } as never,
-    // wireSlots fires `cb.filaments?.onReady` and `cb.volumes?.onFieldsChanged`
-    // when those slots resolve; both are optional so absence is fine, but
-    // including them lets the test inspect call counts if needed.
+    // wireSlots fires `cb.filaments?.onReady` when that slot resolves; it's
+    // optional so absence is fine, but including it lets the test inspect call
+    // counts if needed.
     filaments: { onReady: vi.fn() } as never,
-    volumes: { onFieldsChanged: vi.fn() } as never,
     sources: { onCatalogReady: vi.fn(), onLoadProgress: vi.fn() } as never,
   } as unknown as EngineCallbacks;
   return {

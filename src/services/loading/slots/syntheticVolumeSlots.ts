@@ -34,7 +34,6 @@ import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
-import { buildVolumeFieldsSnapshot } from '../../engine/helpers/buildVolumeFieldsSnapshot';
 
 type SyntheticVolumeHandle = 'debug-gaussian' | 'debug-cartesian' | 'debug-spherical';
 
@@ -59,7 +58,7 @@ type SyntheticVolumeSlotRecord = Record<
  */
 export function createSyntheticVolumeSlots(
   state: EngineState,
-  cb: EngineCallbacks,
+  _cb: EngineCallbacks,
 ): SyntheticVolumeSlotRecord {
   // Helper that mints one synthetic-volume slot.  The handle is baked
   // into a closure (the AssetSlot commit signature only sees the
@@ -97,7 +96,9 @@ export function createSyntheticVolumeSlots(
             FADE_IN_DURATION_MS,
           );
         }
-        cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
+        // No echo: React reads the per-field rows via `selectVolumeFieldItems` +
+        // a `useMemo` projection off the engine-owned settings store, so the
+        // commit's settings-row seed needs no callback fan-out.
       },
     });
 

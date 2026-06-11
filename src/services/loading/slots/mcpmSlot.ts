@@ -21,9 +21,8 @@ import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
-import { buildVolumeFieldsSnapshot } from '../../engine/helpers/buildVolumeFieldsSnapshot';
 
-export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, cb) => {
+export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, _cb) => {
   const slot = createAssetSlot({
     name: 'mcpm',
     fetch: mcpmFetcher,
@@ -47,7 +46,9 @@ export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, cb) => {
           FADE_IN_DURATION_MS,
         );
       }
-      cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
+      // No echo: React reads the per-field rows via `selectVolumeFieldItems` +
+      // a `useMemo` projection off the engine-owned settings store, so the
+      // commit's settings-row seed needs no callback fan-out.
     },
   });
   slot.subscribe((s) => {
