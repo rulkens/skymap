@@ -208,7 +208,7 @@ bitmask` (assert bit-identical to `deriveSourceMasks` output for a known
 - [x] Run-passes. MAIN: full `npm test` (the surveys panel + `setSourceVisible`
       behaviour preserved; `setSourceVisibleFade` test unaffected — it asserts the
       fade, upstream of the store) + `npm run typecheck`.
-- [ ] Commit the slice.
+- [x] Commit the slice.
 
 ### Task 2.2: tonemap
 

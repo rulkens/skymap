@@ -323,9 +323,9 @@ const state: EngineState = {
   → Verified: mutating the held object the getter returns surfaces through a
   later `getState()` (added `reflects in-place nested mutation … through
   getState`). Same Node-level model as above (no headless `createEngine`).
-- [ ] MAIN: `npm test` (full engine suite stays green — behaviour unchanged) +
+- [x] MAIN: `npm test` (full engine suite stays green — behaviour unchanged) +
   `npm run typecheck`.
-- [ ] Commit `engine.ts`, `EngineHandle.d.ts`, the test.
+- [x] Commit `engine.ts`, `EngineHandle.d.ts`, the test.
 
 ### Task 1.3: Establish the action pattern (no consumer migrated)
 
@@ -353,7 +353,7 @@ export function setSurveySizeAction(store: SettingsStore, sizePx: number): void;
 - [x] Run-fails. MAIN runs `npm test -- settingsStore`.
 - [x] Implement.
 - [x] Run-passes. MAIN: `npm test -- settingsStore` + `npm run typecheck`.
-- [ ] Commit both files.
+- [x] Commit both files.
 
 ---
 
