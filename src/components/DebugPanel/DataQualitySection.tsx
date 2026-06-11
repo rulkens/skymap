@@ -35,9 +35,8 @@
  *
  * Unlike RenderTogglesSection, which mirrors a `PassOverridesHandle`'s
  * set of disabled-by-name passes, the orientation flags are owned by
- * App.tsx's `useEngineSettings` state — they round-trip through the
- * engine's `points.setHighlightFallback` / `points.setRealOnly`
- * setters and echo back via the seeded settings callbacks.  Receiving
+ * the engine-owned settings store — App.tsx reads them via
+ * `useSettingsStore` selectors and passes them down here.  Receiving
  * them as plain props keeps this section a pure function of its
  * inputs (mirrors how SettingsPanel hosted the same two checkboxes
  * before the move) and lets the parent DebugPanel decide the wiring.

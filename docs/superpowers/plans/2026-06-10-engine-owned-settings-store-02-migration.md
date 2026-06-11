@@ -526,28 +526,38 @@ and the user's explicit request.
 quick un-braid that's clearly in-scope (e.g. a stray surviving mirror), fix it in
 this slice; otherwise record findings and stop.
 
-- [ ] MAIN thread runs the `entanglement-radar` skill (or `/entanglement-radar`)
+- [x] MAIN thread runs the `entanglement-radar` skill (or `/entanglement-radar`)
       over the full branch diff (`git diff main...engine-settings-store`).
-- [ ] Confirm and record, as a short note in this task's checkbox or a comment:
-  - **One home for every settings value** — no surviving React mirror cell that
-    duplicates an `EngineSettingsState` leaf; `grep` `useEngineSettings` shows
-    only event-fed cells + `spaceMouseSensitivity`.
-  - **settings → store / events → callbacks boundary is clean** — every remaining
-    `EngineCallbacks` member is a genuine event (status / selection / focus /
-    camera-snapshot / catalog / load-progress / structure-counts /
-    filaments-ready / spaceMouse-connected), none is a settings echo.
-  - **No new switch-on-discriminant** that should be a registry (check the
-    flow/volumes patch dispatch and the `settingsTable` wrapper).
-  - **Reducers are pure** — copy-on-write, no engine/GPU import, no mutation of
-    the input state (the reducer tests already assert this; the radar confirms no
-    reducer slipped a side effect).
-  - **`settingsTable` disposition** — confirm it's still the single
-    requestRender-audit home (action + wake) and hasn't fractured into
-    scattered inline setters; note if a reducer-registry would be a cleaner
-    follow-up (do NOT do it here — out of scope).
-- [ ] Confirm the OUT-OF-SCOPE `scalarVolumeRenderer` mirror was NOT touched.
-- [ ] MAIN: final full `npm test` + `npm run typecheck` green.
-- [ ] Commit the radar note (and any in-scope fix).
+- [x] Confirm and record. **Radar result (3 parallel read-only reviewers): CLEAN
+      — no significant complecting found.**
+  - **One home for every settings value** — CLEAN. `useEngineSettings` holds only
+    the three event-fed cells (`filamentCounts`, `spaceMouseConnected`,
+    `spaceMouseSensitivity`); zero surviving mirror of any `EngineSettingsState`
+    leaf.
+  - **settings → store / events → callbacks boundary is clean** — CLEAN. Every
+    remaining `EngineCallbacks` member is a genuine event; no `onXChange` settings
+    echo survived. `EngineSettingsCallbacks` is now `Pick<…, 'filaments' | 'input'>`.
+  - **No new switch-on-discriminant** — CLEAN. `handle.flow.set`'s guards are
+    leaf-presence checks (which patch keys fire which side effect), not a
+    discriminant-value switch; volume per-field setters + structure/survey setters
+    are keyed-by-id Record writes, not switches.
+  - **Reducers are pure** — CLEAN. All 24 reducers copy-on-write, no input
+    mutation, no engine/GPU import, no side effect; 24 actions are thin
+    `setState((s) => reducer(s, payload))`. Selectors pure; the four object
+    selectors return the stored ref verbatim with `useMemo` projections in App.tsx
+    (stable `getSnapshot`).
+  - **`settingsTable` disposition** — CLEAN single requestRender-audit home; the
+    builder wraps each action with `requestRender()`, bespoke setters correctly out
+    with rationale. _Follow-up note (out of scope, do NOT do here):_ the descriptor
+    is now `{ name, action }`, so the array-of-pairs could be a `Record<name,
+action>` — zero-stakes cosmetic, leave for an incidental touch.
+- [x] Confirm the OUT-OF-SCOPE `scalarVolumeRenderer` mirror was NOT touched —
+      CONFIRMED untouched (known `renderers.md` outlier, respected).
+- [x] In-scope fix: refreshed one stale source-of-truth comment in
+      `DataQualitySection.tsx` (the only radar finding — prose drift, wiring was
+      already correct).
+- [x] MAIN: final full `npm test` + `npm run typecheck` green.
+- [x] Commit the radar note (and the in-scope comment fix).
 
 ---
 
