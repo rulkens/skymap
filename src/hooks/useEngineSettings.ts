@@ -1,53 +1,35 @@
 /**
- * `useEngineSettings` — the bulk of App.tsx's render-pass settings
- * state and the engine-callback slice that keeps it in sync.
+ * `useEngineSettings` — the thin React holder for the few engine-driven
+ * values that are NOT settings.
  *
  * ──────────────────────────────────────────────────────────────────────
- * The pattern this consolidates
+ * Why this is now tiny
  * ──────────────────────────────────────────────────────────────────────
- * Most fields here follow the same lifecycle:
+ * Every actual SETTING (point size, brightness, exposure, auto-rotate,
+ * the bias / thumbnail / milkyWay / filaments / debug / volumes /
+ * structures-labels clusters, …) lives in the engine-owned settings
+ * store. React reads each one via a `useStore` selector through
+ * `useSettingsStore`, so there is no mirror cell and no echo-mirror
+ * protocol to keep in sync here. The store is seeded at construction
+ * from the same `data/defaults.ts` values, so the first paint matches
+ * engine truth before `handleRef` lands.
  *
- *   1. React seeds an initial value from `data/defaults.ts` so the
- *      SettingsPanel renders a useful first paint before the engine's
- *      first echo lands.
- *   2. The engine fires an echo callback (e.g.
- *      `labels.onMarkerCategoryVisibilityChange`) both at engine init AND on
- *      every matching setter call, so the React copy always reflects the
- *      engine's authoritative value.
- *   3. The SettingsPanel onChange handler in App.tsx forwards user
- *      input to the engine handle (e.g.
- *      `handleRef.current?.structures.setItemEnabled(cat, v)`) and the engine
- *      echoes it right back, so no optimistic local update is needed — except
- *      for the exceptions below.
+ * What's left is EVENT-shaped — things the engine *did* that have no
+ * store home:
  *
- * The surveys cluster (pointSize / brightness / depthFade /
- * highlightFallback / realOnly / the derived source mask), the tonemap cluster
- * (exposure / curve), the camera auto-rotate flag, the bias cluster (mode /
- * absMagLimit), the galaxy-thumbnail master toggle, the Milky-Way disk toggle,
- * and the debug overlays (showPickBuffer / showDiskRadiusRing) have LEFT this
- * pattern: they live in the engine-owned settings store. The store-backed
- * values App still surfaces are read via `useSettingsStore` selectors instead
- * of a mirror cell here (the DebugPanel reads the debug toggles this way); the
- * thumbnail and milkyWay toggles have no React consumer at all (the thumbnail
- * panel surface was evicted, the engine reads it each frame; milkyWay's handle
- * setter has no panel caller).
- * The tonemap migration
- * also dissolved the `exposure` hybrid: the store write notifies synchronously,
- * so the slider thumb tracks without an optimistic local cell.
+ *   - `filamentCounts` — the one-shot strip/vertex count payload the
+ *     engine fires through `filaments.onReady` after `filaments.bin`
+ *     lands. A property of the file, not a settings leaf.
+ *   - `spaceMouseConnected` — the puck connect/disconnect echo
+ *     (`input.spaceMouse.onConnectedChange`).
+ *   - `spaceMouseSensitivity` — App-owned optimistic state: the
+ *     SpaceMouse subsystem has no echo callback for it, so React owns
+ *     the value and dual-writes to the engine handle. It is NOT in
+ *     `EngineSettingsState`, so it does not move to the store in this
+ *     effort.
  *
- * ──────────────────────────────────────────────────────────────────────
- * The App-owned exceptions
- * ──────────────────────────────────────────────────────────────────────
- *   - `spaceMouseSensitivity` — no-echo: React owns the value
- *     optimistically and dual-writes to the engine handle.
- *
- * ──────────────────────────────────────────────────────────────────────
- * Why bundle into one hook?
- * ──────────────────────────────────────────────────────────────────────
- * Each individual setting is trivial; the win is collecting ~150 lines
- * of `useState` declarations + their inline rationale into one place
- * the SettingsPanel can read from.  App.tsx is freed to focus on the
- * higher-level wiring.
+ * Hook order in App.tsx matters: this runs first so its
+ * `engineCallbacks` exist when `useEngine` constructs the engine.
  */
 
 import { useState } from 'react';
@@ -55,26 +37,9 @@ import { DEFAULT_SPACE_MOUSE_SENSITIVITY } from '../data/defaults';
 import type { UseEngineSettingsReturn } from '../@types/settings/UseEngineSettingsReturn';
 
 export function useEngineSettings(): UseEngineSettingsReturn {
-  // ── Engine-echoed values ─────────────────────────────────────────────
-  // Each of these is seeded from `data/defaults.ts` so the SettingsPanel
-  // renders a correct first frame before the engine's init echo arrives.
-  // The engine fires each echo callback both at startup (initial seed)
-  // and on every setter call, so these values always reflect engine truth.
-  // Surveys-cluster settings (pointSize, brightness, depthFade,
-  // highlightFallback, realOnly, and the derived visibleSourceMask), the
-  // tonemap cluster (exposure, curve), camera auto-rotate, the galaxy-thumbnail
-  // master toggle, the Milky-Way disk toggle, the filaments cluster (enabled,
-  // intensity), the flow overlay slice, the debug overlays (showPickBuffer,
-  // showDiskRadiusRing), and the structures / labels cluster (per-category
-  // marker + label visibility) moved to the engine-owned settings store — the
-  // thumbnail and milkyWay toggles have no React consumer (the thumbnail panel
-  // surface was evicted; milkyWay's handle setter has no panel caller); App reads
-  // the filaments cluster, the flow slice (via `selectFlow`), the debug toggles,
-  // and the structure/survey item records (via `selectStructureItems` /
-  // `selectSurveyItems` + `useMemo` projections) via `useSettingsStore`
-  // selectors, so no mirror cell or echo lives here.
-
-  // ── App-owned optimistic values (no engine echo) ─────────────────────
+  // Every SETTING lives in the engine-owned store and is read React-side via
+  // `useSettingsStore` selectors — no mirror cell here. The three cells below
+  // are the non-settings remainder (see the module header).
 
   // ── One-shot from engine: filament strip + vertex counts ─────────────
   // Stays null until the engine fires `onFilamentsReady` (once, after the
@@ -101,9 +66,9 @@ export function useEngineSettings(): UseEngineSettingsReturn {
 
   // Sensitivity is App-owned optimistic state: the engine has no echo
   // callback for it (the subsystem's setSensitivity is fire-and-forget),
-  // matching the filaments / volumes pattern.  Seeded from
-  // `DEFAULT_SPACE_MOUSE_SENSITIVITY` so the slider thumb has a sensible
-  // position before the user touches it.
+  // and it is not in `EngineSettingsState`, so it does not move to the
+  // store. Seeded from `DEFAULT_SPACE_MOUSE_SENSITIVITY` so the slider thumb
+  // has a sensible position before the user touches it.
   const [spaceMouseSensitivity, setSpaceMouseSensitivity] = useState<number>(
     DEFAULT_SPACE_MOUSE_SENSITIVITY,
   );
@@ -115,22 +80,10 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       spaceMouseSensitivity,
     },
     engineCallbacks: {
-      // ── Nested sub-bag subscriptions ─────────────────────────────
-      // Every echo the engine emits lands at its nested address.
-      // The surveys + sources + tonemap echo sub-bags are gone, and so are the
-      // camera auto-rotate echo, the bias (mode / absMagLimit) echoes, the
-      // thumbnails echo, the milkyWay echo, the filaments enabled/intensity
-      // echoes, the debug echoes (showPickBuffer / showDiskRadiusRing), the
-      // volumes echo (master + per-field), and the labels echoes (per-category
-      // marker + label visibility) — those clusters live in the engine-owned
-      // store (the thumbnail + milkyWay toggles have no React consumer at all;
-      // App reads the filaments cluster + debug toggles via `useSettingsStore`
-      // selectors, the volumes master via `selectVolumesEnabled` and the
-      // per-field rows via `selectVolumeFieldItems` + a `useMemo` projection, and
-      // the marker/label records via `selectStructureItems` / `selectSurveyItems`
-      // + `useMemo` projections), so there's no mirror to keep in sync from a
-      // callback. (Camera EVENTS — focus / camera / scale — are not settings and
-      // are wired by `useEngine`, not here.)
+      // Only EVENT subscriptions live here — every settings echo is gone (the
+      // clusters moved to the engine-owned store; React reads them via
+      // `useSettingsStore` selectors). Camera EVENTS — focus / camera / scale —
+      // are wired by `useEngine`, not here.
       filaments: {
         // `onReady` is an EVENT, not a settings mirror: the engine fires it once
         // with the strip/vertex counts after `filaments.bin` lands. The toggle +

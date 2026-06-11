@@ -5,17 +5,12 @@
  */
 
 import type { EngineStatus } from './EngineStatus';
-import type { GalaxyInfo } from './GalaxyInfo';
 import type { FocusableTarget } from './FocusableTarget';
 import type { Tier } from '../data/Tier';
 import type { ScaleInfo } from './ScaleInfo';
 import type { SourceType } from '../data/SourceType';
-import type { BiasMode } from '../data/BiasMode';
-import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { LoadProgressState } from '../loading/LoadProgressState';
-import type { LabelCategory } from './data/LabelCategory';
 import type { StructureCategory } from './data/StructureCategory';
-import type { VolumeFieldRowData } from '../settings/VolumeFieldRowData';
 
 /**
  * Callbacks the engine uses to push state changes into the UI layer.
@@ -24,27 +19,35 @@ import type { VolumeFieldRowData } from '../settings/VolumeFieldRowData';
  * except where noted. They are called only when the value actually changes,
  * so React's `setState` can be passed in directly.
  *
+ * ### Events only
+ *
+ * Every member here is an EVENT — something the engine *did* that the
+ * UI must learn about (a status transition, a selection change, a
+ * camera-snapshot tick, a catalog arrival, a load-progress update, the
+ * one-shot filaments-ready, a SpaceMouse connect). Settings VALUES do
+ * NOT live here: they're owned by the engine settings store and read
+ * React-side via `useStore` selectors, so there is no echo-mirror
+ * protocol to maintain.
+ *
  * ### Nested-only shape
  *
  * Each sub-bag groups its callbacks by the engine sub-system they
- * concern (lifecycle / selection / camera / sources / bias / points /
- * tonemap / thumbnails / milkyWay / filaments / volumes / input).
- * There are no flat siblings — every fire site lives at its nested
- * address.
+ * concern (lifecycle / selection / camera / sources / filaments /
+ * input). There are no flat siblings — every fire site lives at its
+ * nested address.
  *
- * Why namespacing at all (rather than 26 sibling lambdas)?  The
- * grouping mirrors the engine's *internal* `EngineState` sub-bags so
- * the public callback surface reads as a parallel projection of the
- * state tree.  Consumers can destructure a cluster at a time
- * (`const { points, camera } = ...`), and adding a new echo lands
- * in the cluster it belongs to instead of further bloating a flat
- * record.
+ * Why namespacing at all (rather than sibling lambdas)?  The grouping
+ * mirrors the engine's *internal* `EngineState` sub-bags so the public
+ * callback surface reads as a parallel projection of the state tree.
+ * Consumers can destructure a cluster at a time
+ * (`const { camera } = ...`), and adding a new event lands in the
+ * cluster it belongs to instead of bloating a flat record.
  *
  * Required-ness rules: sub-bags whose members include any required
  * callback are themselves required (`lifecycle`, `selection`).
- * Bags that are entirely optional callbacks (`points`, `tonemap`, …)
- * keep their `?:` marker so subscribers can omit them without
- * needing to declare an empty object.
+ * Bags that are entirely optional (`camera`, `sources`, …) keep their
+ * `?:` marker so subscribers can omit them without needing to declare
+ * an empty object.
  */
 export type EngineCallbacks = {
   /**
@@ -99,11 +102,6 @@ export type EngineCallbacks = {
    */
   camera?: {
     /**
-     * Fired when auto-rotate is toggled (either from `setAutoRotate`
-     * or at engine init so React knows the initial off state).
-     */
-    onAutoRotateChange?: (enabled: boolean) => void;
-    /**
      * Fired when the camera-focus target changes — i.e. the engine has
      * started a tween toward (or away from) a specific galaxy or structure.
      *
@@ -145,26 +143,8 @@ export type EngineCallbacks = {
   };
 
   /**
-   * Survey point-render style echoes.  Drive the SettingsPanel controls so
-   * the UI mirrors engine truth on every clamp / re-seed.
-   */
-  surveys?: {
-    onSizeChange?: (sizePx: number) => void;
-    onBrightnessChange?: (value: number) => void;
-    onDepthFadeChange?: (enabled: boolean) => void;
-    onHighlightFallbackChange?: (enabled: boolean) => void;
-    onRealOnlyChange?: (enabled: boolean) => void;
-  };
-
-  /** HDR tone-mapping echoes (curve + exposure). */
-  tonemap?: {
-    onExposureChange?: (value: number) => void;
-    onCurveChange?: (curve: ToneMapCurve) => void;
-  };
-
-  /**
-   * Source-state callbacks — visibility mask, tier, per-source
-   * readiness, and aggregated load progress.
+   * Source-state callbacks — tier, per-source readiness, and aggregated
+   * load progress.
    *
    * `onCatalogReady` is granular per-source because the three .bin
    * files run as parallel fetches with very different sizes (2MRS
@@ -186,37 +166,10 @@ export type EngineCallbacks = {
    * together when the bulk `.ccat` lands.
    */
   sources?: {
-    onMaskChange?: (mask: number) => void;
     onTierChange?: (tier: Tier) => void;
     onCatalogReady?: (source: SourceType, count: number) => void;
     onLoadProgress?: (progress: LoadProgressState | null) => void;
     onStructureCountsChange?: (counts: Partial<Record<StructureCategory, number>>) => void;
-  };
-
-  /**
-   * Malmquist-bias mode + per-volume absolute-magnitude limit echoes.
-   * Mirrored back so the SettingsPanel renders the right radio /
-   * slider on first paint and after every clamp.
-   */
-  bias?: {
-    onModeChange?: (mode: BiasMode) => void;
-    onAbsMagLimitChange?: (absMag: number) => void;
-  };
-
-  /**
-   * Galaxy-thumbnail render-pass on/off echo.  Mirrors
-   * `thumbnails.setEnabled` (gated inside the per-frame loop, so
-   * flipping it stops new fetches and quad emissions immediately).
-   */
-  thumbnails?: { onEnabledChange?: (enabled: boolean) => void };
-
-  /** Milky Way impostor on/off echo. */
-  milkyWay?: { onEnabledChange?: (enabled: boolean) => void };
-
-  /** Debug-overlay echoes.  See `EngineSettingsState.debug` for the cluster's role. */
-  debug?: {
-    onShowPickBufferChange?: (enabled: boolean) => void;
-    onShowDiskRadiusRingChange?: (enabled: boolean) => void;
   };
 
   /**
@@ -228,34 +181,6 @@ export type EngineCallbacks = {
    * skipped on fresh clones (before `npm run build-filaments`).
    */
   filaments?: { onReady?: (stripCount: number, vertexCount: number) => void };
-
-  /**
-   * Echoes for the two independent structure visibility axes (label-text vs
-   * marker-glyph). INERT: the structures / labels cluster moved to the
-   * engine-owned settings store, so nothing fires these any more — React reads
-   * the per-category records via `selectStructureItems` / `selectSurveyItems` +
-   * `useMemo` projections. The address is kept as a husk so a stray subscriber
-   * still typechecks; Phase 3 deletes it.
-   */
-  labels?: {
-    onLabelCategoryVisibilityChange?: (
-      visibility: Readonly<Record<LabelCategory, boolean>>,
-    ) => void;
-    onMarkerCategoryVisibilityChange?: (
-      visibility: Readonly<Record<StructureCategory, boolean>>,
-    ) => void;
-  };
-
-  /**
-   * Fired after every volume-field mutation — add, remove, or in-place
-   * tunable change (enabled / intensity / contrast / densityScale /
-   * trim / exposure / palette).  The fresh snapshot is passed as the
-   * argument so consumers don't need to call back into the engine
-   * handle to learn what changed.
-   */
-  volumes?: {
-    onFieldsChanged?: (fields: ReadonlyArray<VolumeFieldRowData>) => void;
-  };
 
   /**
    * SpaceMouse connection-state echo.  Fires for both successful

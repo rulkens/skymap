@@ -486,18 +486,32 @@ unreferenced).
 - `spaceMouseSensitivity` (out-of-`EngineSettingsState` setting — stays React
   state for now; the spec defers folding it into the store).
 
-- [ ] Delete the settings echo sub-bags from `EngineCallbacks.d.ts`; KEEP events.
-- [ ] Delete `seedSettingsCallbacks` (+ test + `SettingsCallbackSeed` + call
+- [x] Delete the settings echo sub-bags from `EngineCallbacks.d.ts`; KEEP events.
+- [x] Delete `seedSettingsCallbacks` (+ test + `SettingsCallbackSeed` + call
       site).
-- [ ] Delete the two derive helpers + their tests.
-- [ ] Trim `useEngineSettings` to the event cells (or fold into `useEngine`);
-      update the return types.
-- [ ] Drop dead `cb` echo params from migrated engine setters; remove
-      `settingsTable`'s `callback`/`NestedCallbackKey`.
-- [ ] MAIN: full `npm test` + `npm run typecheck` — green (the deletions are of
+- [x] Delete the two derive helpers + their tests. (No dedicated helper tests
+      existed — only the parity `describe` blocks in the project\*Visibility tests,
+      now removed along with the dead helper imports.)
+- [x] Trim `useEngineSettings` to the event cells. KEPT the hook (not folded into
+      `useEngine`): App.tsx consumes its `engineCallbacks` slice + the three cells,
+      so folding would ripple through the `extraCallbacks` plumbing — keeping the
+      thin event-cell holder is the smaller, ripple-free diff. Return types
+      (`UseEngineSettingsReturn` / `UseEngineSettingsState` / `EngineSettingsCallbacks`)
+      already matched the surviving shape; only stale doc comments were tidied.
+- [x] Drop dead `cb` echo params from migrated engine setters. NONE remained in
+      `engine.ts` / the handles — the cluster slices already removed them; `cb` in
+      `engine.ts` now carries only EVENTS (status / hover / select / camera /
+      tier / load-progress / spaceMouse-connected). `settingsTable`'s
+      `callback`/`NestedCallbackKey` were already gone (flow slice). FIX-FORWARD:
+      three volume LOAD SLOTS (`cf4DensitySlot` / `mcpmSlot` / `syntheticVolumeSlots`)
+      still fired the now-subscriber-less `cb.volumes?.onFieldsChanged?.(...)` echo —
+      removed those fire sites (+ the `buildVolumeFieldsSnapshot` import in each;
+      the helper itself stays for `handle.volumes.list()`), so the `volumes?` sub-bag
+      deletion is valid. `cb` → `_cb` in those factories.
+- [x] MAIN: full `npm test` + `npm run typecheck` — green (the deletions are of
       now-unreferenced code; any red means a consumer wasn't migrated — fix forward,
       do not re-add an echo).
-- [ ] Commit the husk-deletion slice (stage the specific deleted/modified paths).
+- [x] Commit the husk-deletion slice (stage the specific deleted/modified paths).
 
 ---
 

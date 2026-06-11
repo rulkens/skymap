@@ -27,28 +27,11 @@
  */
 
 export type UseEngineSettingsState = {
-  // The surveys cluster (pointSize, brightness, depthFade, highlightFallback,
-  // realOnly, visibleSourceMask), the tonemap cluster (exposure, curve), camera
-  // auto-rotate, and the bias cluster (mode, absMagLimit) are no longer mirrored
-  // here — App.tsx reads them off the engine-owned store via `useSettingsStore`
-  // selectors. The galaxy-thumbnail master toggle also moved to the store but
-  // has no React consumer (the panel surface was evicted), so it isn't surfaced
-  // here at all. The Milky-Way disk toggle likewise moved to the store and has
-  // no React consumer (its handle setter has no panel caller), so it isn't
-  // surfaced here either. The filaments cluster (enabled / intensity) also moved
-  // to the store; App.tsx + StatsPanel read it via `useSettingsStore` selectors,
-  // so neither leaf is mirrored here — but `filamentCounts` below stays (it's an
-  // EVENT payload, not a settings mirror). The debug overlays (showPickBuffer /
-  // showDiskRadiusRing) also moved to the store; the DebugPanel reads them via
-  // `useSettingsStore` selectors, so they aren't mirrored here. The volumes
-  // cluster (master `enabled` + per-field `items`) also moved to the store;
-  // App.tsx reads the master via `selectVolumesEnabled` and the per-field rows
-  // via `selectVolumeFieldItems` + a `useMemo` projection, so neither is
-  // mirrored here. The structures / labels cluster (per-category marker + label
-  // visibility, plus the famousGalaxy survey label) also moved to the store;
-  // App.tsx reads the marker record via `selectStructureItems` + a projection
-  // and the label record via `selectStructureItems` + `selectSurveyItems` + a
-  // projection, so neither derived record is mirrored here.
+  // Every SETTING moved to the engine-owned store and is read React-side via
+  // `useSettingsStore` selectors, so no settings leaf is mirrored here. The
+  // three fields below are the non-settings remainder: `filamentCounts` is an
+  // EVENT payload (no store home), and the two SpaceMouse fields are the input
+  // subsystem's React-owned state.
   /**
    * Strip + vertex counts from the cosmic-web `filaments.bin`, or `null` until
    * the engine fires `filaments.onReady` (once, after the optional file lands).
@@ -67,8 +50,8 @@ export type UseEngineSettingsState = {
   /**
    * Current SpaceMouse global sensitivity multiplier (applied AFTER the
    * cube response curve).  App-owned optimistic state — the engine has
-   * no echo callback for sensitivity, so React is the source of truth
-   * (same pattern as `filamentsEnabled` / `volumesEnabled`).
+   * no echo callback for sensitivity, so React is the source of truth.
+   * It is NOT in `EngineSettingsState`, so it does not move to the store.
    */
   spaceMouseSensitivity: number;
 };

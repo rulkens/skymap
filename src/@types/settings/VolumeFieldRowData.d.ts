@@ -7,8 +7,7 @@
  * items Record off the engine-owned store via `selectVolumeFieldItems` and runs
  * that projection in a `useMemo`, so the panel always reflects the live field
  * registry.  Also returned by `engineHandle.volumes.getState()` for one-shot
- * reads (dev console, tests), and built by the load slots for their
- * `cb.volumes?.onFieldsChanged?.(...)` echo.
+ * reads (dev console, tests).
  *
  * The `label` field defaults to the `handle` string when the field was
  * registered without an explicit human-readable name.  A future

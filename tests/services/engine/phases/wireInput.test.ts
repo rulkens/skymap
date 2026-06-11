@@ -61,10 +61,6 @@ vi.mock('../../../../src/services/engine/interaction/inputBindings', () => ({
   attachEngineInputs: vi.fn(() => ({ detach: vi.fn() })),
 }));
 
-vi.mock('../../../../src/services/engine/wiring/seedSettingsCallbacks', () => ({
-  seedSettingsCallbacks: vi.fn(),
-}));
-
 // Imported AFTER the mocks so wireInput picks them up.
 import { wireInput } from '../../../../src/services/engine/phases/wireInput';
 

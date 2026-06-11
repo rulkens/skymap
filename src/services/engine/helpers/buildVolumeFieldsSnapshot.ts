@@ -6,8 +6,7 @@
  * `state.settings.volumes.items` and hands it to the shared projection, so the
  * engine snapshot and the React-side `useMemo` projection are one
  * implementation. Used by `handle.volumes.getState()` for one-shot reads (dev
- * console, tests) and by the load slots' `cb.volumes?.onFieldsChanged?.(...)`
- * echoes.
+ * console, tests).
  *
  * Identity and values come entirely from the items Record (registry-seeded at
  * construction) — the GPU handle list is not consulted — so the rows are

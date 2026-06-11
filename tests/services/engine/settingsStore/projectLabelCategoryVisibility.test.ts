@@ -1,44 +1,19 @@
 /**
  * projectLabelCategoryVisibility — projection tests.
  *
- * Two flavours:
- *   - Parity: the projection reproduces the legacy `deriveLabelCategoryVisibility`
- *     (the structure / famousGalaxy partition) for a known items state. This
- *     imports the SOON-TO-BE-DELETED derive helper and is Phase-3-disposable —
- *     when Phase 3 removes the helper, delete this `describe`. The self-contained
- *     cases below survive that deletion.
- *   - Self-contained: known structure + survey items Records → a known concrete
- *     record, exercising BOTH partition arms (structure category from
- *     `structures.items[cat].labelEnabled`, famousGalaxy from
- *     `surveys.items.famousGalaxy.labelEnabled`).
+ * Known structure + survey items Records → a known concrete record, exercising
+ * BOTH partition arms (structure category from `structures.items[cat].labelEnabled`,
+ * famousGalaxy from `surveys.items.famousGalaxy.labelEnabled`).
  */
 
 import { describe, it, expect } from 'vitest';
 
 import { projectLabelCategoryVisibility } from '../../../../src/services/engine/settingsStore/projectLabelCategoryVisibility';
-import { deriveLabelCategoryVisibility } from '../../../../src/services/engine/helpers/deriveLabelCategoryVisibility';
 import { LABEL_CATEGORIES } from '../../../../src/data/labelCategories';
 import { isStructureCategory } from '../../../../src/data/structureCategories';
 import { makeSettingsFixture } from './makeSettingsFixture';
 
-describe('projectLabelCategoryVisibility — parity with deriveLabelCategoryVisibility', () => {
-  it('reproduces the legacy derive helper, including the famousGalaxy partition', () => {
-    const state = makeSettingsFixture();
-    // Hide one structure label AND the famous-galaxy label so both partition
-    // arms differ from the all-on default.
-    const firstStructure = LABEL_CATEGORIES.find(isStructureCategory)!;
-    state.structures.items[firstStructure].labelEnabled = false;
-    state.surveys.items.famousGalaxy.labelEnabled = false;
-
-    // The legacy helper reads `state.settings.…`, so wrap the bare settings
-    // fixture in the `{ settings }` shape it expects.
-    expect(projectLabelCategoryVisibility(state.structures.items, state.surveys.items)).toEqual(
-      deriveLabelCategoryVisibility({ settings: state }),
-    );
-  });
-});
-
-describe('projectLabelCategoryVisibility — self-contained', () => {
+describe('projectLabelCategoryVisibility', () => {
   it('reads structure labels from structures.items and famousGalaxy from surveys.items', () => {
     const state = makeSettingsFixture();
     const firstStructure = LABEL_CATEGORIES.find(isStructureCategory)!;
