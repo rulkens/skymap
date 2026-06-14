@@ -48,7 +48,7 @@ export type FlowFieldRenderer = {
    * the compute bind group, and arm a reseed. Idempotent — disposes the prior
    * field's texture if re-set.
    */
-  setField(cube: ScalarCube): void;
+  upload(cube: ScalarCube): void;
   /**
    * Record "encode the `seed` pass on the next `encodeCompute`". Called by the
    * Phase-D handle on enable / mode-switch / count-change. A no-op on steady

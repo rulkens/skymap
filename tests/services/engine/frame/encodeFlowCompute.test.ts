@@ -7,7 +7,7 @@ import type { FlowSettings } from '../../../../src/@types/settings/FlowSettings'
 function spyRenderer(): FlowFieldRenderer & { encodeCompute: ReturnType<typeof vi.fn> } {
   return {
     label: 'flowFieldRenderer',
-    setField: vi.fn(),
+    upload: vi.fn(),
     maybeReseed: vi.fn(),
     isAnimating: vi.fn(() => false),
     encodeCompute: vi.fn(),

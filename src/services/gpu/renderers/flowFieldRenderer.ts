@@ -223,7 +223,7 @@ export function createFlowFieldRenderer(init: {
   // wander vary frame to frame. Stored as a u32 (wraps at 2^32 via `>>> 0`);
   // the WGSL reads it as `Prm.frame: u32`.
   let frame = 0;
-  // Built in setField once the velocity texture view + sampler exist.
+  // Built in upload once the velocity texture view + sampler exist.
   let computeBindGroup: GPUBindGroup | null = null;
 
   function modeCode(flow: FlowSettings): number {
@@ -233,7 +233,7 @@ export function createFlowFieldRenderer(init: {
   const renderer: FlowFieldRenderer = {
     label: 'flowFieldRenderer',
 
-    setField(cube: ScalarCube): void {
+    upload(cube: ScalarCube): void {
       // Upload the decoded cube to a 3D texture via the shared loader, using the
       // renderer's own device (the device stays encapsulated — the caller hands
       // us a cube, mirroring scalarVolumeRenderer.addField). Idempotent re-set:
