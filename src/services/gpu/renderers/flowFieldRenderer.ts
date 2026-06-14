@@ -35,7 +35,7 @@
  *
  * The rejected alternative dodges the writeBuffer/submit race with a mutable
  * `seedFlag` uniform and a separate out-of-band submit. Instead, the WESL has
- * a dedicated `seed` entry point reading only the `Prm` subset it shares with
+ * a dedicated `seed` entry point reading only the `IntegratorParams` subset it shares with
  * the integrators (`n` / `frame` / `bias` — NOT trailStep/headStep/mode/wander).
  * So `encodeCompute` writes `compPrm` ONCE from the live `FlowSettings`, then
  * encodes the `seed` pass (when the latch yields) AND the integrate pass into
@@ -71,12 +71,12 @@ import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 const WORKGROUP_SIZE = 64;
 
-// Mode codes shared with the WESL `Prm.mode` / `Cam.mode` u32 fields.
+// Mode codes shared with the WESL `IntegratorParams.mode` / `Cam.mode` u32 fields.
 const MODE_ADVECT = 0;
 const MODE_STREAMLINE = 1;
 
 // Byte sizes of the two uniform buffers. compPrm uses the first 32 bytes of a
-// 48-byte buffer (tail padded — see the Prm byte-layout in flow/compute.wesl);
+// 48-byte buffer (tail padded — see the IntegratorParams byte-layout in flow/compute.wesl);
 // camBuf is 160 bytes (the Cam struct uses through byte 148, padded to a
 // 16-byte multiple). The reused scratch arrays mirror these exactly.
 const COMP_PRM_BYTES = 48;
