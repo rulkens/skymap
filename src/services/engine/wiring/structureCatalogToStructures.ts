@@ -6,8 +6,8 @@
  * ### Why a separate module
  *
  * A pure transform that `wireStructureProjection` installs into the structure
- * store's `bulk` group once the structure-catalog slot lands, kept out of the
- * wiring so it's unit-testable without booting the engine.  Every record here
+ * store's `bulk` group once the structure-catalog slot lands.  A standalone
+ * module so it's unit-testable without booting the engine.  Every record here
  * is `featured: false` — these ~375 structures render through the ring/halo
  * marker pass, NOT the
  * label/thumbnail path, and would flood the label layer if labelled.
@@ -53,6 +53,8 @@
 import type { StructureCatalogPayload } from '../../../@types/loading/StructureCatalogPayload';
 import type { StructureRecord } from '../../../@types/engine/data/StructureRecord';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import { minOf } from '../../../utils/math/minOf';
+import { makeMinMaxNormaliser } from '../../../utils/math/makeMinMaxNormaliser';
 
 /** The two renderable category bytes; everything else is skipped. */
 type KnownCategory = 'cluster' | 'supercluster';
@@ -61,45 +63,6 @@ function categoryFromByte(byte: number): KnownCategory | null {
   if (byte === 0) return 'cluster';
   if (byte === 1) return 'supercluster';
   return null; // reserved / void — not yet a renderable arm
-}
-
-/**
- * Spread-free minimum over a numeric subset, returning `fallback` for an
- * empty input.  Avoids `Math.min(...values)`, whose argument-spread trips
- * the engine's call-argument limit on large arrays — the same reason
- * `makeNormaliser` walks its min/max by hand.
- */
-function minOf(values: readonly number[], fallback: number): number {
-  let min = fallback;
-  for (let i = 0; i < values.length; i++) {
-    const v = values[i]!;
-    if (i === 0 || v < min) min = v;
-  }
-  return min;
-}
-
-/**
- * Per-category significance normaliser.  Returns a function mapping a raw
- * value to [0,1].  `transform` lets clusters normalise in log space while
- * superclusters stay linear; both share the min-max + degenerate-subset
- * handling.
- */
-function makeNormaliser(
-  rawValues: readonly number[],
-  transform: (raw: number) => number,
-): (raw: number) => number {
-  if (rawValues.length === 0) return () => 1;
-  const transformed = rawValues.map(transform);
-  let min = transformed[0]!;
-  let max = transformed[0]!;
-  for (const v of transformed) {
-    if (v < min) min = v;
-    if (v > max) max = v;
-  }
-  // Single member or all-equal: full weight, no divide-by-zero.
-  if (max === min) return () => 1;
-  const span = max - min;
-  return (raw: number) => (transform(raw) - min) / span;
 }
 
 export function structureCatalogToStructures(payload: StructureCatalogPayload): StructureRecord[] {
@@ -119,8 +82,8 @@ export function structureCatalogToStructures(payload: StructureCatalogPayload): 
   // Guard M500 ≤ 0 before log10 (defensive — the build filters M500 ≥ 2.0).
   const clusterMinRaw = minOf(clusterRaw, 1);
   const safeLog = (raw: number) => Math.log10(raw > 0 ? raw : clusterMinRaw);
-  const normaliseCluster = makeNormaliser(clusterRaw, safeLog);
-  const normaliseSupercluster = makeNormaliser(superclusterRaw, (raw) => raw);
+  const normaliseCluster = makeMinMaxNormaliser(clusterRaw, safeLog);
+  const normaliseSupercluster = makeMinMaxNormaliser(superclusterRaw, (raw) => raw);
 
   const out: StructureRecord[] = [];
   for (let i = 0; i < catalog.count; i++) {

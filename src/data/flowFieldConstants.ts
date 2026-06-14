@@ -17,9 +17,9 @@
  *
  * The shader-side subset (TRAIL, LIFE, FADE, DENS_SCALE, SPEED_COLOR_MAX) is
  * mirrored as plain WESL consts in
- * `src/services/gpu/shaders/flow/flowConstants.wesl`; this
+ * `src/services/gpu/shaders/flow/constants.wesl`; this
  * module stays authoritative and a parity test
- * (`tests/services/gpu/shaders/flowConstants.parity.test.ts`) reads that `.wesl`
+ * (`tests/services/gpu/shaders/constants.parity.test.ts`) reads that `.wesl`
  * file and asserts each value matches the export of the same name, so the two
  * cannot drift — `?static` WESL linking is pure build-time linking with NO
  * value injection. DT / MAX_PARTICLES / HEAD_STEP_SCALE are TS-only (buffer

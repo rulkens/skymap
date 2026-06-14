@@ -260,7 +260,7 @@ export const DEFAULT_FLOW: FlowSettings = {
   wander: 0.15,
   // Spherical boundary fade: ribbons ease out over this grid-space band ending
   // at the cube-inscribed sphere (radius 0.5), softening the cube edges into a
-  // sphere. See flowRender.wesl.
+  // sphere. See flow/vertex.wesl.
   boundaryFadeWidth: 0.1,
 };
 

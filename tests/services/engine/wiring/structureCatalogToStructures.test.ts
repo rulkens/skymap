@@ -23,7 +23,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { structureCatalogToStructures } from '../../../../src/services/engine/phases/structureCatalogToStructures';
+import { structureCatalogToStructures } from '../../../../src/services/engine/wiring/structureCatalogToStructures';
 import type { StructureCatalogPayload } from '../../../../src/@types/loading/StructureCatalogPayload';
 import type { StructureMetaEntry } from '../../../../src/@types/loading/StructureCatalogPayload';
 

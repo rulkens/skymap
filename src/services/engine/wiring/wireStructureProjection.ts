@@ -29,7 +29,7 @@
  */
 
 import { buildStaticAnchorStructures } from '../../../data/buildStaticAnchorStructures';
-import { structureCatalogToStructures } from '../phases/structureCatalogToStructures';
+import { structureCatalogToStructures } from './structureCatalogToStructures';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
