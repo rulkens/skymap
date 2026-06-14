@@ -13,13 +13,19 @@
 // derivatives), so passing the sampler through a function boundary raises no
 // uniformity concern.
 //
-// The salts these functions read (PARTICLE_SALT, FRAME_SALT, SEED_TRIES) move
-// with them. The parity-guarded field tunables (TRAIL, DENS_SCALE, ...) stay in
-// 'flow/constants.wesl' and arrive as parameters ('densScale' below) so this
-// module needs no import.
+// This module also owns the flow RNG salts — the shader-private magic numbers
+// that decorrelate the per-particle hash. Two (PARTICLE_SALT, FRAME_SALT) feed
+// randomStream here; the other two (AGE_SALT, WANDER_SALT) are consumed by the
+// compute entry points, which import them — kept together so the whole salt set
+// lives in one place. The parity-guarded field tunables (TRAIL, DENS_SCALE, ...)
+// stay in 'flow/constants.wesl' and arrive as parameters ('densScale' below).
 
+// RNG stream salts — decorrelate the per-particle hash across uses.
 const PARTICLE_SALT: u32 = 8u;
 const FRAME_SALT: u32 = 9781u;
+const AGE_SALT: u32 = 100u;
+const WANDER_SALT: u32 = 257u;
+// Density-rejection tries for a spawn point (pickSpawn).
 const SEED_TRIES: u32 = 16u;
 
 // pcgHash — u32 -> u32 avalanche. The de-facto GPU integer hash; far better

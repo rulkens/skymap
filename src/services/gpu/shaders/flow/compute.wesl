@@ -33,11 +33,13 @@ import package::lib::flow::rand01;
 import package::lib::flow::randomStream;
 import package::lib::flow::insideBox;
 import package::lib::flow::pickSpawn;
+import package::lib::flow::AGE_SALT;
+import package::lib::flow::WANDER_SALT;
 
+// Integration epsilons, local to the kernels: DIR_EPS keeps a zero velocity
+// from NaN-ing the direction normalize; MIN_TRAVEL ends the march loop.
 const DIR_EPS = vec3<f32>(1e-6);
 const MIN_TRAVEL: f32 = 1e-9;
-const AGE_SALT: u32 = 100u;
-const WANDER_SALT: u32 = 257u;
 
 // Per-dispatch integration parameters (48 bytes; TS pads the tail):
 //   dt        f32 @ 0
