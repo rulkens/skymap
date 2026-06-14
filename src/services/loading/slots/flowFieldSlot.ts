@@ -9,11 +9,11 @@
  * never on every page load.
  *
  * **GPU upload.**  The commit hands the decoded cube to the flow renderer's
- * `setField`, which owns the upload (it builds the 3D velocity texture via
- * `flowFieldFromCube` against its own device — the device never leaks to this
- * slot, mirroring `cf4Density → scalarVolumeRenderer.addField`).  `setLoaded()`
- * means "committed to the renderer" (see `FlowFieldStore`), so it fires AFTER
- * `setField`.  The render wake is `installSlotReadyWake`'s job, not the
+ * `upload`, which builds the 3D velocity texture via `flowFieldFromCube` against
+ * its own device — the device never leaks to this slot, mirroring
+ * `cf4Density → scalarVolumeRenderer.addField`.  `setLoaded()` means "committed
+ * to the renderer" (see `FlowFieldStore`), so it fires AFTER
+ * `upload`.  The render wake is `installSlotReadyWake`'s job, not the
  * factory's.  A null renderer (pre-bootstrap) is a silent no-op.
  *
  * Construction-pure: builds + subscribes + RETURNS the slot.  The orchestrator
@@ -38,9 +38,9 @@ export const createFlowFieldSlot: SlotFactory<ScalarCube, void> = (state, _cb) =
     fetch: flowFieldFetcher,
     commit: async (cube) => {
       // Hand the cube to the renderer, which uploads it to the GPU and binds
-      // it. setLoaded() runs AFTER setField so "loaded" truthfully means
+      // it. setLoaded() runs AFTER upload so "loaded" truthfully means
       // "committed to the renderer".
-      state.gpu.flowFieldRenderer?.setField(cube);
+      state.gpu.flowFieldRenderer?.upload(cube);
       state.data.flow.setLoaded();
       // Fade in only if the setting still requests flow visible. A load that
       // completes after the user toggled off must not visibly render; the

@@ -7,7 +7,7 @@
  * registry. Now it composes — the host owns only what a flow-tuning harness
  * needs (device, HDR graph, orbit camera, the per-frame loop, the store bridge)
  * and DELEGATES every flow concern to `createFlowFieldRenderer` from `src/`. The
- * renderer's `setField`/`encodeCompute`/`draw`/`maybeReseed` are exactly the
+ * renderer's `upload`/`encodeCompute`/`draw`/`maybeReseed` are exactly the
  * surface the runtime engine drives, so the look the workbench shows IS the look
  * the app ships. We do not reimplement; we drive.
  *
@@ -87,10 +87,10 @@ export async function createFlowHarness(
 
   // Fetch → decode → hand the cube to the renderer (which uploads it to a 3D
   // texture internally and arms the first reseed). We pass the decoded
-  // ScalarCube, not an uploaded FlowField — setField owns the upload.
+  // ScalarCube, not an uploaded FlowField — upload owns the GPU upload.
   let loaded = false;
   const buf = await (await fetch(FIELD_URL)).arrayBuffer();
-  renderer.setField(decodeScalarField(buf));
+  renderer.upload(decodeScalarField(buf));
   loaded = true;
 
   const initial = store.getSnapshot();

@@ -7,7 +7,7 @@ import type { FlowSettings } from '../../../../src/@types/settings/FlowSettings'
  * Minimal GPUDevice mock for renderer-construction tests.
  *
  * Vitest runs in Node without a real WebGPU surface; every device call the flow
- * renderer makes during construction + setField must return a plausibly-shaped
+ * renderer makes during construction + upload must return a plausibly-shaped
  * stand-in. The objects are never inspected by the renderer — we only assert
  * that construction wires the 3 compute pipelines + render pipeline + BGLs
  * without throwing, and that `isAnimating` reflects the field/enabled gate.
@@ -36,7 +36,7 @@ function mockDevice(): GPUDevice {
 
 /**
  * A mock decoded velocity cube — a 4-channel `ScalarCube` with `velocityStats`
- * (the shape `flowFieldMetaFromCube` requires). `setField` uploads it via the
+ * (the shape `flowFieldMetaFromCube` requires). `upload` uploads it via the
  * real `flowFieldFromCube` against the mock device, so this also exercises the
  * meta derivation + model-matrix build.
  */
@@ -87,17 +87,17 @@ describe('createFlowFieldRenderer', () => {
 
   it('isAnimating reflects enabled && loaded', () => {
     const renderer = createFlowFieldRenderer({ device: mockDevice(), hdrFormat: 'rgba16float' });
-    renderer.setField(mockCube());
+    renderer.upload(mockCube());
     expect(renderer.isAnimating(flowStub({ enabled: true }))).toBe(true);
     expect(renderer.isAnimating(flowStub({ enabled: false }))).toBe(false);
   });
 
-  it('setField builds a model matrix placing the cube origin in world space', () => {
+  it('upload builds a model matrix placing the cube origin in world space', () => {
     // The model-matrix math itself is covered by buildCubeModelMatrix.test.ts;
-    // here we only assert setField wires the field without throwing and flips
+    // here we only assert upload wires the field without throwing and flips
     // the animating gate true (proving the matrix + bind group built).
     const renderer = createFlowFieldRenderer({ device: mockDevice(), hdrFormat: 'rgba16float' });
-    expect(() => renderer.setField(mockCube())).not.toThrow();
+    expect(() => renderer.upload(mockCube())).not.toThrow();
     expect(renderer.isAnimating(flowStub({ enabled: true }))).toBe(true);
   });
 });

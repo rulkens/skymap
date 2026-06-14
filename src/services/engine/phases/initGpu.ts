@@ -346,7 +346,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // ── CF4++ flow-field renderer (the engine's first compute renderer) ─
   //
   // Built unconditionally; the pipelines are cheap and the velocity cube
-  // arrives later via the demand-loaded flow slot's commit → setField. The
+  // arrives later via the demand-loaded flow slot's commit → upload. The
   // HDR format matches the scalar-volume + upsample targets.
   state.gpu.flowFieldRenderer = createFlowFieldRenderer({ device, hdrFormat: 'rgba16float' });
 
