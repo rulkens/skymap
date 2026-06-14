@@ -21,7 +21,7 @@ import {
   FADE,
   DENS_SCALE,
   SPEED_COLOR_MAX,
-} from '../../../../src/services/gpu/renderers/flowFieldConstants';
+} from '../../../../src/data/flowFieldConstants';
 
 /**
  * Extract every `const NAME: (u32|f32) = <number>;` from flowConstants.wesl.

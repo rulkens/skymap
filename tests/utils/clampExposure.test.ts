@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { clampExposure } from '../../../../src/services/gpu/passes/clampExposure';
+import { clampExposure } from '../../src/utils/clampExposure';
 
 describe('clampExposure', () => {
   it('clampExposure clamps the upper bound to 16', () => {

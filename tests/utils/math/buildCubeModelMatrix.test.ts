@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { buildCubeModelMatrix } from '../../../../src/services/gpu/renderers/buildCubeModelMatrix';
-import type { CubePlacement } from '../../../../src/@types/rendering/CubePlacement';
+import { buildCubeModelMatrix } from '../../../src/utils/math/buildCubeModelMatrix';
+import type { CubePlacement } from '../../../src/@types/rendering/CubePlacement';
 
 // A CubePlacement fixture — the narrow geometry the builder reads. A ScalarCube
 // satisfies this same shape (plus voxels), which is exactly the point: one

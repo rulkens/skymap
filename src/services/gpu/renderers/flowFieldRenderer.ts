@@ -54,10 +54,16 @@ import type { FlowSettings } from '../../../@types/settings/FlowSettings';
 import type { FlowFieldRenderer } from '../../../@types/rendering/FlowFieldRenderer';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import { flowFieldFromCube } from '../loaders/createFlowField';
-import { buildCubeModelMatrix } from './buildCubeModelMatrix';
-import { clampFlowParams } from './clampFlowParams';
-import { createReseedLatch } from './createReseedLatch';
-import { TRAIL, MAX_PARTICLES, DT, HEAD_STEP_SCALE, RIBBON_WIDTH } from './flowFieldConstants';
+import { buildCubeModelMatrix } from '../../../utils/math/buildCubeModelMatrix';
+import { clampFlowParams } from '../../../utils/clampFlowParams';
+import { createReseedLatch } from '../../../utils/createReseedLatch';
+import {
+  TRAIL,
+  MAX_PARTICLES,
+  DT,
+  HEAD_STEP_SCALE,
+  RIBBON_WIDTH,
+} from '../../../data/flowFieldConstants';
 import flowComputeWgsl from '../shaders/flow/flowCompute.wesl?static';
 import flowRenderWgsl from '../shaders/flow/flowRender.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';

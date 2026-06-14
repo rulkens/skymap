@@ -70,7 +70,7 @@ import {
 import { createFadeUniformsBgl } from '../../gpu/bindGroupLayouts/fadeUniforms';
 import { createSourceUniformsBgl } from '../../gpu/bindGroupLayouts/sourceUniforms';
 import { createFocusUniformsBgl } from '../../gpu/bindGroupLayouts/focusUniforms';
-import { createFocusUniformBuffer } from '../../gpu/renderers/createFocusUniformBuffer';
+import { createFocusUniformBuffer } from '../../gpu/resources/createFocusUniformBuffer';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';

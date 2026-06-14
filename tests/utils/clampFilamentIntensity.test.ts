@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { clampFilamentIntensity } from '../../../../src/services/gpu/renderers/clampFilamentIntensity';
+import { clampFilamentIntensity } from '../../src/utils/clampFilamentIntensity';
 
 describe('clampFilamentIntensity', () => {
   it('clampFilamentIntensity bounds a negative value to 0', () => {

@@ -45,7 +45,7 @@ import type { FilamentRenderer } from '../../../@types/rendering/FilamentRendere
 import type { mat4 } from 'gl-matrix';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { clampFilamentIntensity } from './clampFilamentIntensity';
+import { clampFilamentIntensity } from '../../../utils/clampFilamentIntensity';
 
 const FLOATS_PER_SEGMENT = 8; // startxyz + startD + endxyz + endD
 

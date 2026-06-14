@@ -26,7 +26,7 @@ import { setFlowAction } from '../../../src/services/engine/settingsStore/action
 import { createSettingsStore } from '../../../src/services/engine/settingsStore/createSettingsStore';
 import type { SettingsStore } from '../../../src/services/engine/settingsStore/createSettingsStore';
 import { makeSettingsFixture } from './settingsStore/makeSettingsFixture';
-import { MAX_PARTICLES } from '../../../src/services/gpu/renderers/flowFieldConstants';
+import { MAX_PARTICLES } from '../../../src/data/flowFieldConstants';
 import {
   FADE_IN_DURATION_MS,
   FADE_OUT_DURATION_MS,

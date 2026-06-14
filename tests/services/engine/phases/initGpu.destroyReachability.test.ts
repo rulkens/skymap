@@ -79,7 +79,7 @@ vi.mock('../../../../src/services/gpu/bindGroupLayouts/focusUniforms', () => ({
 
 // The shared focus uniform allocates a real GPU buffer; the minimal device
 // stub here has no createBuffer, so mock the factory to a no-op handle.
-vi.mock('../../../../src/services/gpu/renderers/createFocusUniformBuffer', () => ({
+vi.mock('../../../../src/services/gpu/resources/createFocusUniformBuffer', () => ({
   createFocusUniformBuffer: vi.fn(() => ({
     bindGroup: { __mockFocusBindGroup: true },
     write: () => {},

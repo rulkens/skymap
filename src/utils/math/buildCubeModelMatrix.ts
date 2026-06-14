@@ -14,9 +14,9 @@
  * an identity rotation. See `CubePlacement` for that rationale.
  */
 import { mat4 } from 'gl-matrix';
-import { SG_TO_EQ_MAT4_COL_MAJOR } from '../../../data/superGalacticTransform';
-import type { ScalarFieldFrameKind } from '../../../@types/data/ScalarFieldFrameKind';
-import type { CubePlacement } from '../../../@types/rendering/CubePlacement';
+import { SG_TO_EQ_MAT4_COL_MAJOR } from '../../data/superGalacticTransform';
+import type { ScalarFieldFrameKind } from '../../@types/data/ScalarFieldFrameKind';
+import type { CubePlacement } from '../../@types/rendering/CubePlacement';
 
 // Supergalactic→equatorial rotation, J2000.  Imported directly from
 // the canonical column-major export in `superGalacticTransform.ts`
@@ -81,7 +81,7 @@ const FRAME_TO_WORLD: Record<ScalarFieldFrameKind, mat4> = {
 //   4. transform from the native frame into world space
 //
 // Pure math, no GPU device — unit-testable on its own (see
-// `tests/services/gpu/renderers/buildCubeModelMatrix.test.ts`).
+// `tests/utils/math/buildCubeModelMatrix.test.ts`).
 export function buildCubeModelMatrix(cube: CubePlacement): mat4 {
   const out = mat4.create();
   mat4.copy(out, FRAME_TO_WORLD[cube.frameKind]);
