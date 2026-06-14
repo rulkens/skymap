@@ -15,8 +15,8 @@
  * cube already speaks Mpc via `origin` + `voxelSize`.
  */
 
-import type { FlowFieldMeta } from '../../../@types/data/FlowFieldMeta';
-import type { ScalarCube } from '../../../@types/data/ScalarCube';
+import type { FlowFieldMeta } from '../@types/data/FlowFieldMeta';
+import type { ScalarCube } from '../@types/data/ScalarCube';
 
 export function flowFieldMetaFromCube(cube: ScalarCube): FlowFieldMeta {
   if (cube.channels !== 4 || cube.velocityStats === undefined) {
