@@ -1,10 +1,10 @@
-// flowConstants.wesl — the shader-side mirror of the shared flow-field tunables.
+// flow/constants.wesl — the shader-side mirror of the shared flow-field tunables.
 //
-// Hand-written mirror of the subset both flow shaders read from the
+// Hand-written mirror of the subset both flow passes read from the
 // AUTHORITATIVE TS source of truth, 'src/data/flowFieldConstants.ts'
 // (which also sizes the TS-side buffer geometry). This module re-declares only
 // that subset as plain WESL consts the linker can inline. The
-// 'tests/services/gpu/shaders/flowConstants.parity.test.ts' parity test reads
+// 'tests/services/gpu/shaders/constants.parity.test.ts' parity test reads
 // this file as text, regex-extracts each 'const NAME: type = value;' line, and
 // asserts numerical equality with the TS export of the same name — so the two
 // cannot drift, because '?static' WESL linking does build-time linking with NO

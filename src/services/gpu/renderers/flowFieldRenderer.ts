@@ -29,7 +29,7 @@
  * all three entry points (an unused module-scope binding is legal), so one
  * layout — and one bind group — drives `seed`, `advect`, and `streamline`. The
  * render side gets its own explicit layout (VERTEX-only visibility, because the
- * ribbon shader folds `intensity` into the vertex stage — see flowRender.wesl).
+ * ribbon shader folds `intensity` into the vertex stage — see flow/vertex.wesl).
  *
  * ### Dedicated `seed` pass; ONE compPrm write serves seed + integrate
  *
@@ -64,8 +64,9 @@ import {
   HEAD_STEP_SCALE,
   RIBBON_WIDTH,
 } from '../../../data/flowFieldConstants';
-import flowComputeWgsl from '../shaders/flow/flowCompute.wesl?static';
-import flowRenderWgsl from '../shaders/flow/flowRender.wesl?static';
+import flowComputeWgsl from '../shaders/flow/compute.wesl?static';
+import flowVertexWgsl from '../shaders/flow/vertex.wesl?static';
+import flowFragmentWgsl from '../shaders/flow/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 const WORKGROUP_SIZE = 64;
@@ -75,7 +76,7 @@ const MODE_ADVECT = 0;
 const MODE_STREAMLINE = 1;
 
 // Byte sizes of the two uniform buffers. compPrm uses the first 32 bytes of a
-// 48-byte buffer (tail padded — see the Prm byte-layout in flowCompute.wesl);
+// 48-byte buffer (tail padded — see the Prm byte-layout in flow/compute.wesl);
 // camBuf is 160 bytes (the Cam struct uses through byte 148, padded to a
 // 16-byte multiple). The reused scratch arrays mirror these exactly.
 const COMP_PRM_BYTES = 48;
@@ -120,10 +121,11 @@ export function createFlowFieldRenderer(init: {
 
   // ── Shader modules ────────────────────────────────────────────────────────
   const computeModule = createShaderModuleWithDevLog(device, flowComputeWgsl, 'flow.compute');
-  const renderModule = createShaderModuleWithDevLog(device, flowRenderWgsl, 'flow.render');
+  const vertexModule = createShaderModuleWithDevLog(device, flowVertexWgsl, 'flow.vertex');
+  const fragmentModule = createShaderModuleWithDevLog(device, flowFragmentWgsl, 'flow.fragment');
 
   // ── One explicit compute BGL + three pipelines off it ─────────────────────
-  // Visibility COMPUTE on every entry; bindings mirror flowCompute.wesl @group(0).
+  // Visibility COMPUTE on every entry; bindings mirror flow/compute.wesl @group(0).
   const computeBgl = device.createBindGroupLayout({
     label: 'flow-compute-bgl',
     entries: [
@@ -161,7 +163,7 @@ export function createFlowFieldRenderer(init: {
 
   // ── Explicit render BGL + pipeline ────────────────────────────────────────
   // Cam is referenced only from the vertex stage (intensity folded there), so
-  // every entry is VERTEX-only — see the flowRender.wesl module header.
+  // every entry is VERTEX-only — see the flow/vertex.wesl module header.
   const renderBgl = device.createBindGroupLayout({
     label: 'flow-render-bgl',
     entries: [
@@ -177,9 +179,9 @@ export function createFlowFieldRenderer(init: {
   const renderPipeline = device.createRenderPipeline({
     label: 'flow-render',
     layout: renderPipelineLayout,
-    vertex: { module: renderModule, entryPoint: 'vsTrail' },
+    vertex: { module: vertexModule, entryPoint: 'vsTrail' },
     fragment: {
-      module: renderModule,
+      module: fragmentModule,
       entryPoint: 'fsTrail',
       targets: [
         {
