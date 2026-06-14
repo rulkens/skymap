@@ -8,8 +8,8 @@
  * the `GPUTexture` itself — only a `GPUTextureView` for binding — so `dispose`
  * is the one escape hatch back to the underlying resource for teardown.
  *
- * Shape pinned here so the loader (`createFlowField`) and the consuming layer
- * agree on the handle without a barrel; both deep-import this file.
+ * Shape pinned here so the uploader (`flowFieldFromCube`) and the consuming
+ * layer agree on the handle without a barrel; both deep-import this file.
  */
 
 import type { FlowFieldMeta } from './FlowFieldMeta';

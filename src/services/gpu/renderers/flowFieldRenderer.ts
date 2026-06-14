@@ -53,7 +53,7 @@ import type { FlowField } from '../../../@types/data/FlowField';
 import type { FlowSettings } from '../../../@types/settings/FlowSettings';
 import type { FlowFieldRenderer } from '../../../@types/rendering/FlowFieldRenderer';
 import type { Renderer } from '../../../@types/rendering/Renderer';
-import { flowFieldFromCube } from '../resources/createFlowField';
+import { flowFieldFromCube } from '../resources/flowFieldFromCube';
 import { buildCubeModelMatrix } from '../../../utils/math/buildCubeModelMatrix';
 import { clampFlowParams } from '../../../utils/clampFlowParams';
 import { createReseedLatch } from '../../../utils/createReseedLatch';

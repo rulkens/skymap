@@ -1,6 +1,6 @@
 /**
  * Unit tests for `flowFieldMetaFromCube` — the pure cube → meta mapping that
- * `createFlowField` runs before the GPU upload.
+ * `flowFieldFromCube` runs before the GPU upload.
  *
  * Only the pure helper is exercised here; the upload path needs a real
  * `GPUDevice` and is covered by Phase C's construction smoke test.  These tests
@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { ScalarCube } from '../../../../src/@types/data/ScalarCube';
-import { flowFieldMetaFromCube } from '../../../../src/services/gpu/resources/createFlowField';
+import { flowFieldMetaFromCube } from '../../../../src/services/gpu/resources/flowFieldMetaFromCube';
 
 /** A 4-channel velocity cube fixture with known, distinct field values. */
 function velocityCube(overrides: Partial<ScalarCube> = {}): ScalarCube {
