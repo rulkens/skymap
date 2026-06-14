@@ -1,5 +1,12 @@
 # Settings snapshot/restore seam — reconciled design
 
+> **Folded into
+> [`2026-06-15-fade-ownership-visibility-seam-merged-design.md`](2026-06-15-fade-ownership-visibility-seam-merged-design.md)
+> as Plan B.** The merged design builds `VISIBILITY_LAYERS` as the intent-bearing
+> subset of the one fade manifest (so it isn't defined twice). This doc remains the
+> **detailed reference** for the seam's shape (snapshot type, the per-row registry
+> table, round-trip test) that Plan B implements.
+>
 > **Status:** approved (Option A — full consolidation).
 > **Supersedes** §2 ("Settings snapshot/restore seam") of
 > `docs/superpowers/specs/2026-06-08-pre-tour-decomplection-design.md`, which was
