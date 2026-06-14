@@ -57,6 +57,8 @@ struct Prm { dt:f32, trailStep:f32, headStep:f32, n:u32, frame:u32, mode:u32, bi
 @group(0) @binding(4) var<storage, read_write> trail: array<vec4<f32>>;   // ring of (xyz, speed) per particle
 @group(0) @binding(5) var<storage, read_write> acc: array<f32>;           // advect only; bound for all three
 
+// ── seed ───────────────────────────────────────────────────────────────
+//
 // One-time (and on-reseed) initializer shared by both modes: density-weighted
 // spawn, staggered age, trail-ring collapse onto the spawn point, acc reset.
 @compute @workgroup_size(64)
@@ -72,6 +74,7 @@ fn seed(@builtin(global_invocation_id) gid: vec3<u32>) {
   acc[i] = 0.0;
 }
 
+// ── advect ─────────────────────────────────────────────────────────────
 @compute @workgroup_size(64)
 fn advect(@builtin(global_invocation_id) gid: vec3<u32>) {
   let i = gid.x;
@@ -114,6 +117,7 @@ fn advect(@builtin(global_invocation_id) gid: vec3<u32>) {
   acc[i] = carried;
 }
 
+// ── streamline ─────────────────────────────────────────────────────────
 @compute @workgroup_size(64)
 fn streamline(@builtin(global_invocation_id) gid: vec3<u32>) {
   let i = gid.x;
