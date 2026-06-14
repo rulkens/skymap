@@ -94,12 +94,11 @@ export function flowFieldFromCube(device: GPUDevice, cube: ScalarCube): FlowFiel
     usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
   });
   // bytesPerRow = n voxels * 4 channels * 2 bytes (f16); rowsPerImage = n.
-  device.queue.writeTexture(
-    { texture },
-    cube.voxels,
-    { bytesPerRow: n * 4 * 2, rowsPerImage: n },
-    [n, n, n],
-  );
+  device.queue.writeTexture({ texture }, cube.voxels, { bytesPerRow: n * 4 * 2, rowsPerImage: n }, [
+    n,
+    n,
+    n,
+  ]);
 
   const sampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
 

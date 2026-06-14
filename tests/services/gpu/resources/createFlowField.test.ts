@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { ScalarCube } from '../../../../src/@types/data/ScalarCube';
-import { flowFieldMetaFromCube } from '../../../../src/services/gpu/loaders/createFlowField';
+import { flowFieldMetaFromCube } from '../../../../src/services/gpu/resources/createFlowField';
 
 /** A 4-channel velocity cube fixture with known, distinct field values. */
 function velocityCube(overrides: Partial<ScalarCube> = {}): ScalarCube {
