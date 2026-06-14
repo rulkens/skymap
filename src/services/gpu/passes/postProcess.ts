@@ -99,7 +99,7 @@
 import vsCode from '../shaders/toneMap/vertex.wesl?static';
 import fsCode from '../shaders/toneMap/fragment.wesl?static';
 import { ToneMapCurve } from '../../../data/toneMapCurve';
-import { clampExposure } from './clampExposure';
+import { clampExposure } from '../../../utils/clampExposure';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import type { Size } from '../../../@types/rendering/Size';
 import type { PostProcess } from '../../../@types/rendering/PostProcess';

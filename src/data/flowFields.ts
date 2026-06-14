@@ -27,7 +27,7 @@
  * knob can't silently skip the panels.
  */
 import type { FlowSettings } from '../@types/settings/FlowSettings';
-import { MAX_PARTICLES } from '../services/gpu/renderers/flowFieldConstants';
+import { MAX_PARTICLES } from './flowFieldConstants';
 
 /** Keys of `FlowSettings` that surface as numeric sliders (everything but `enabled`/`mode`). */
 export type FlowSliderKey = Exclude<keyof FlowSettings, 'enabled' | 'mode'>;

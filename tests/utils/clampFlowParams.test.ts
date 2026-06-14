@@ -1,11 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { clampFlowParams } from '../../../../src/services/gpu/renderers/clampFlowParams';
-import {
-  MAX_PARTICLES,
-  MIN_TRAIL_STEP,
-} from '../../../../src/services/gpu/renderers/flowFieldConstants';
-import { DEFAULT_FLOW } from '../../../../src/data/defaults';
-import type { FlowSettings } from '../../../../src/@types/settings/FlowSettings';
+import { clampFlowParams } from '../../src/utils/clampFlowParams';
+import { MAX_PARTICLES, MIN_TRAIL_STEP } from '../../src/data/flowFieldConstants';
+import { DEFAULT_FLOW } from '../../src/data/defaults';
+import type { FlowSettings } from '../../src/@types/settings/FlowSettings';
 
 // Build a full FlowSettings from the seed + overrides so the test never
 // hand-maintains the whole shape.

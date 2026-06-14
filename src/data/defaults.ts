@@ -54,7 +54,7 @@ import type { BiasMode as BiasModeT } from '../@types/data/BiasMode';
 import { ToneMapCurve } from './toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
 import type { FlowSettings } from '../@types/settings/FlowSettings';
-import { MAX_PARTICLES } from '../services/gpu/renderers/flowFieldConstants';
+import { MAX_PARTICLES } from './flowFieldConstants';
 
 // ── Rendering knobs ─────────────────────────────────────────────────────────
 

@@ -59,7 +59,7 @@ import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../data/scalarFieldPale
 import vsCode from '../shaders/scalarVolume/vertex.wesl?static';
 import fsCode from '../shaders/scalarVolume/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { buildCubeModelMatrix } from './buildCubeModelMatrix';
+import { buildCubeModelMatrix } from '../../../utils/math/buildCubeModelMatrix';
 
 // 80 (cam) + 64 (model) + 64 (invModel) + 12 (camPos) + 4 (intensity)
 // + 4 (densityScale) + 4 (contrast) + 4 (contrastCenter) + 4 (envelopeInner)
