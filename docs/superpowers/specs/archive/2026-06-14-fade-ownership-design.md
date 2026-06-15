@@ -1,7 +1,7 @@
 # Fade ownership + stateless renderers (braid #2) — design
 
 > **Superseded for execution by
-> [`2026-06-15-fade-ownership-visibility-seam-merged-design.md`](2026-06-15-fade-ownership-visibility-seam-merged-design.md),**
+> [`2026-06-15-fade-ownership-visibility-seam-merged-design.md`](../2026-06-15-fade-ownership-visibility-seam-merged-design.md),**
 > which resolves the four Open decisions below and merges this braid with the #38
 > visibility seam so the fade manifest has one home. This doc remains the
 > background/rationale; the merged design is the source of truth for the plans.
