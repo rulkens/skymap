@@ -4,7 +4,7 @@ import type { SourceEntryBase } from '../SourceEntryBase';
  * Structure-typed SOURCE_REGISTRY row — the marker-ring codes (Cluster,
  * Supercluster, Void, Group). No `.bin`, bands, or depth, so it just adds
  * `code` to the base. The `'structure'` discriminator covers exactly the
- * marker-ring set: famousGalaxy is also clickable but rides the `survey`
+ * marker-ring set: famousGalaxy is also clickable but rides the `galaxyCatalog`
  * entry, so it does not appear here.
  */
 export type StructureSourceEntry = SourceEntryBase & {

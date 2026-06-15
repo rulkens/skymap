@@ -4,18 +4,18 @@
  * The single registry of every data source skymap loads. Four kinds,
  * discriminated by `type`:
  *
- *   'survey'   — per-point galaxy catalogs (SDSS, GLADE, 2MRS, Famous,
- *                Milliquas, Synthetic).  Codes are baked into the `.bin`
- *                point-cloud format and packed into the pick texture.
- *   'structure'— galaxy-cluster / supercluster / void / group marker rings.
- *                Codes are also packed into the pick texture (upper 5 bits).
- *   'filament' — derived line-strip geometry (DisPerSE skeleton).
- *                Single global asset; no per-record identity.
- *   'volume'   — scalar-field cubes (CF-4 DM density, MCPM cosmic web).
- *                Each volume carries its own presentation defaults
- *                (palette, contrast, exposure, …).
+ *   'galaxyCatalog' — per-point galaxy catalogs (SDSS, GLADE, 2MRS, Famous,
+ *                     Milliquas, Synthetic).  Codes are baked into the `.bin`
+ *                     point-cloud format and packed into the pick texture.
+ *   'structure'     — galaxy-cluster / supercluster / void / group marker rings.
+ *                     Codes are also packed into the pick texture (upper 5 bits).
+ *   'filament'      — derived line-strip geometry (DisPerSE skeleton).
+ *                     Single global asset; no per-record identity.
+ *   'volume'        — scalar-field cubes (CF-4 DM density, MCPM cosmic web).
+ *                     Each volume carries its own presentation defaults
+ *                     (palette, contrast, exposure, …).
  *
- * Only `'survey'` and `'structure'` codes are persisted to disk / packed into
+ * Only `'galaxyCatalog'` and `'structure'` codes are persisted to disk / packed into
  * GPU buffers; `'filament'` and `'volume'` codes exist solely so every
  * data source has one place to look. The visibility-bitmask helpers
  * (`utils/maskHas`, `utils/maskWith`, `utils/maskWithout`) operate on
@@ -57,7 +57,7 @@ export { Source } from './source';
 
 /**
  * Per-source metadata, keyed by every `Source`. Discriminated by `type`;
- * see the `GalaxyCatalogEntry` / `StructureEntry` definitions for the field shapes.
+ * see the `GalaxyCatalogSourceEntry` / `StructureSourceEntry` definitions for the field shapes.
  *
  * `as const satisfies Readonly<Record<Source, SourceEntry>>` preserves each
  * entry's literal `type`, so `SOURCE_REGISTRY[Source.SDSS]` narrows to

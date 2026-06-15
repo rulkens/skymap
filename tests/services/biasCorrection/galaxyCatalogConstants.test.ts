@@ -18,14 +18,14 @@ import {
 } from '../../../src/data/galaxyCatalog/galaxyCatalogFluxLimits';
 import { expectedNumberDensity } from '../../../src/utils/math/expectedNumberDensity';
 import { Source } from '../../../src/data/sources';
-import type { GalaxyCatalogSource } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalogSource';
+import type { GalaxyCatalogSourceType } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 
 // Reverse-lookup name from a Source value.  TS's old numeric enum
 // auto-generated this map; the `as const` replacement does not, so we
-// derive it locally for the test labels below. Keyed by `GalaxyCatalogSource`
+// derive it locally for the test labels below. Keyed by `GalaxyCatalogSourceType`
 // — structure codes (Cluster/Supercluster/Void) have no flux limit or
 // Schechter triple, so this test never iterates them.
-const SOURCE_NAME: Record<GalaxyCatalogSource, string> = {
+const SOURCE_NAME: Record<GalaxyCatalogSourceType, string> = {
   [Source.Synthetic]: 'Synthetic',
   [Source.SDSS]: 'SDSS',
   [Source.TwoMRS]: 'TwoMRS',
