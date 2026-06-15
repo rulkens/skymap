@@ -8,17 +8,16 @@
  * ## CPU-side ringRadiusPx
  *
  * The renderer is renderer-type-agnostic: its uniform carries a
- * pre-computed `ringRadiusPx`, not a galaxy diameter.  This pass owns
- * picking the per-target characteristic radius (catalog diameter vs the
- * Milky Way disc), then defers the apparent-px math to the shared
- * `selectionRingRadiusPx` helper — the SAME call the Milky-Way pick
- * billboard uses to size its hit target, so ring and click area can't
- * drift.  The `max(diameterKpc, 30)` floor here handles the synthetic-
- * fallback source and any pre-v4-format galaxy without a measured size.
- *
- * Decoupling the formula from the renderer leaves room for a structure
- * fold-in: `else if (selectedStructure !== null) { ... }` here picks up the
- * structure's visual radius without touching the renderer or shaders.
+ * pre-computed `ringRadiusPx`, not a galaxy diameter.  The per-target
+ * characteristic radius (Mpc) and the world position to centre on both come
+ * from the `SELECTION_HALO` table, keyed on the target's union tag — a galaxy
+ * yields its catalog diameter, the Milky Way its disc radius, a structure
+ * `null` (it renders its ring through the cluster marker pass).  This pass
+ * then defers the apparent-px math to the shared `selectionRingRadiusPx`
+ * helper.  Because a structure is already a table row returning null, no
+ * per-kind branch is needed here: a new halo-bearing kind is one `SELECTION_HALO`
+ * row, and the descriptor carries the position so the pass never re-narrows
+ * the union to read coordinates.
  *
  * ## Why one writeBuffer is fine
  *
@@ -29,7 +28,7 @@
  */
 
 import type { Pass } from '../../../../@types/engine/frame/Pass';
-import { MILKY_WAY_DISC_RADIUS_KPC } from '../../../../data/milkyWay/galacticCenter';
+import { SELECTION_HALO } from '../../helpers/selectionHaloTable';
 import { selectionRingRadiusPx } from '../../helpers/selectionRingRadiusPx';
 
 export const selectionRingPass: Pass = {
@@ -38,28 +37,21 @@ export const selectionRingPass: Pass = {
   enabled(state, _ctx, _settings) {
     if (state.gpu.selectionRingRenderer === null) return false;
     const sel = state.subsystems.selection.selected();
-    // Galaxy and Milky Way targets drive the halo; structure targets render
-    // through the cluster marker pass instead.
-    return sel !== null && (sel.type === 'galaxyCatalog' || sel.type === 'milkyWay');
+    // A target drives the halo iff the table yields a descriptor for its kind.
+    return sel !== null && SELECTION_HALO[sel.type](sel) !== null;
   },
 
   draw(pass, ctx, state, settings, _deps) {
     const sel = state.subsystems.selection.selected();
-    // `enabled()` proved sel is a galaxy or Milky Way target.
-    if (sel === null || (sel.type !== 'galaxyCatalog' && sel.type !== 'milkyWay')) return;
+    if (sel === null) return;
+    // A null descriptor is the structure arm (it renders its ring through the
+    // cluster marker pass).  The descriptor carries both the radius and the
+    // world position, so there's no union re-narrow and no catalog re-index —
+    // each kind's position (galaxy/MW flat `x/y/z`) is resolved in the table.
+    const halo = SELECTION_HALO[sel.type](sel);
+    if (halo === null) return;
+    const { radiusMpc, worldPos } = halo;
 
-    // Both arms carry their own resolved world position (built + bounds-checked
-    // at pick time / static for the MW), so there's no catalog re-index here —
-    // no tier-swap race to guard either.  The characteristic radius differs:
-    // a galaxy uses its catalog diameter; the Milky Way uses its disc radius.
-    const worldPos: [number, number, number] = [sel.x, sel.y, sel.z];
-    const radiusMpc =
-      sel.type === 'milkyWay'
-        ? MILKY_WAY_DISC_RADIUS_KPC / 1000
-        : ((sel.diameterKpc > 0 ? sel.diameterKpc : 30) * 2) / 1000;
-
-    // Compute the on-screen halo radius via the shared helper (the
-    // Milky-Way pick billboard sizes its hit target with the same call).
     const dx = worldPos[0] - ctx.drawCamPos[0];
     const dy = worldPos[1] - ctx.drawCamPos[1];
     const dz = worldPos[2] - ctx.drawCamPos[2];

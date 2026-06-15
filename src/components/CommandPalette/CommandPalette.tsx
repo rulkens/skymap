@@ -20,11 +20,13 @@
  * FocusableTarget rather than a catalog object, so it carries no id or
  * alias tuple and renders a glyph instead of an atlas thumbnail.
  *
- * Selection: the row's onClick / Enter handler dispatches by row kind —
- * `onSelect(id)` (famous), `onSelectAlias({ source, localIdx })` (alias),
- * or `onSelectMilkyWay()` (Milky Way).  App.tsx routes those to
- * engine.selection.selectFamous / selectByAlias / camera.focusOn(MILKY_WAY_INFO)
- * respectively.
+ * Selection: the row's onClick / Enter handler routes through the `SELECT_ROW`
+ * table dispatch (keyed on row kind) — `onSelect(id)` (famous),
+ * `onSelectAlias({ source, localIdx })` (alias), or `onSelectMilkyWay()` (Milky
+ * Way).  App.tsx routes those to engine.selection.selectFamous / selectByAlias /
+ * camera.focusOn(MILKY_WAY_INFO) respectively.  Rendering is likewise
+ * table-driven: `ROW_VIEW[kind]` supplies each row's leading visual + text into
+ * one shared <li>.
  *
  * Why not a third-party command-palette library?  Same reasoning as
  * the original famous-only iteration: ~120 lines of UI logic, no
@@ -121,21 +123,21 @@ const MAX_ALIAS_RESULTS = 50;
  * crash the palette.
  */
 const FEATURED_IDS: readonly string[] = [
-  'm31',  // Andromeda
-  'm51',  // Whirlpool
+  'm31', // Andromeda
+  'm51', // Whirlpool
   'm104', // Sombrero
-  'm87',  // EHT first-image
-  'c77',  // Centaurus A (NGC 5128)
-  'm82',  // Cigar
-  'm81',  // Bode's
+  'm87', // EHT first-image
+  'c77', // Centaurus A (NGC 5128)
+  'm82', // Cigar
+  'm81', // Bode's
   'm101', // Pinwheel
-  'm33',  // Triangulum
-  'm64',  // Black Eye
-  'm83',  // Southern Pinwheel
-  'm74',  // Phantom (Webb 2022)
-  'm77',  // Cetus A / Seyfert prototype
-  'c45',  // NGC 7331 (Andromeda's twin)
-  'c12',  // Fireworks Galaxy (NGC 6946)
+  'm33', // Triangulum
+  'm64', // Black Eye
+  'm83', // Southern Pinwheel
+  'm74', // Phantom (Webb 2022)
+  'm77', // Cetus A / Seyfert prototype
+  'c45', // NGC 7331 (Andromeda's twin)
+  'c12', // Fireworks Galaxy (NGC 6946)
 ];
 
 /**
@@ -183,18 +185,123 @@ export type CommandPaletteProps = {
  * what renders in the row.
  */
 const MILKY_WAY_PRIMARY_NAME = 'Milky Way';
-const MILKY_WAY_NAMES: readonly string[] = [MILKY_WAY_PRIMARY_NAME, 'Galaxy', 'Home'];
+// `as const` (readonly tuple, not `readonly string[]`) so `MILKY_WAY_NAMES[0]`
+// and `[0][0]` are `string` under `noUncheckedIndexedAccess` — the row view
+// indexes them directly.
+const MILKY_WAY_NAMES = [MILKY_WAY_PRIMARY_NAME, 'Galaxy', 'Home'] as const;
 
 /**
  * One scored row, ready to render.  `kind` discriminates the three payload
- * shapes; the renderer + `dispatchSelection` switch on it to pick the right
- * handler and the right primary/secondary text.  `milkyWay` carries no
+ * shapes; the `ROW_VIEW` / `SELECT_ROW` tables dispatch on it to pick the right
+ * primary/secondary text and the right handler.  `milkyWay` carries no
  * payload — it's the singleton FocusableTarget, resolved by App.
  */
 type ScoredRow =
   | { kind: 'famous'; entry: FamousMetaEntry; score: number }
   | { kind: 'alias'; entry: AliasIndexEntry; score: number }
   | { kind: 'milkyWay'; score: number };
+
+/** What InfoCard's row renderer needs, computed per row kind. */
+type RowView = {
+  readonly key: string;
+  readonly testid?: string;
+  readonly leading: ReactNode;
+  readonly primary: ReactNode;
+  readonly secondary: ReactNode;
+};
+
+const EMPTY_ROW_VIEW: RowView = { key: '', leading: null, primary: null, secondary: null };
+
+/**
+ * ROW_VIEW — table dispatch from a ScoredRow kind to its rendered parts, keyed
+ * on `m.kind`. The list renderer wraps every row in one identical <li> (active
+ * styling, hover, click → dispatchSelection); this table only supplies the
+ * kind-specific leading visual + primary/secondary text. Each row narrows `m`
+ * on `kind` (the fallback RowView is unreachable — the table is indexed by the
+ * row's own tag). A new row kind is one entry here, not a new render branch.
+ */
+const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
+  famous: (m) =>
+    m.kind === 'famous'
+      ? {
+          key: `famous:${m.entry.id}`,
+          leading: (
+            <img
+              className={styles.thumb}
+              src={`/images/famous/${m.entry.id}.webp`}
+              alt=""
+              loading="lazy"
+            />
+          ),
+          primary: m.entry.names[0],
+          secondary:
+            m.entry.names.length > 1 ? (
+              <span className={styles.secondary}>{m.entry.names.slice(1).join(' · ')}</span>
+            ) : null,
+        }
+      : EMPTY_ROW_VIEW,
+  // The Milky Way is a procedural backdrop with no atlas WebP, so it renders a
+  // first-letter glyph like an alias row, but it is its own row kind.
+  milkyWay: () => ({
+    key: 'milkyWay',
+    testid: 'milky-way-row',
+    leading: (
+      <span className={styles.aliasGlyph} aria-hidden="true">
+        {MILKY_WAY_NAMES[0][0]}
+      </span>
+    ),
+    primary: MILKY_WAY_NAMES[0],
+    secondary: <span className={styles.secondary}>{MILKY_WAY_NAMES.slice(1).join(' · ')}</span>,
+  }),
+  // Alias row — no thumbnail (we don't pre-render NGC galaxies); letter-glyph
+  // placeholder + source-label chip so GLADE vs 2MRS reads at a glance.
+  alias: (m) => {
+    if (m.kind !== 'alias') return EMPTY_ROW_VIEW;
+    const primary = m.entry.names[0] ?? '(unnamed)';
+    const remaining = m.entry.names.slice(1);
+    return {
+      key: `alias:${m.entry.source}:${m.entry.localIdx}`,
+      testid: `alias-row-${m.entry.localIdx}`,
+      leading: (
+        <span className={styles.aliasGlyph} aria-hidden="true">
+          {primary[0] ?? '·'}
+        </span>
+      ),
+      primary,
+      secondary: (
+        <>
+          {remaining.length > 0 && (
+            <span className={styles.secondary}>{remaining.join(' · ')}</span>
+          )}
+          <span className={styles.aliasSource}>{SOURCE_REGISTRY[m.entry.source].label}</span>
+        </>
+      ),
+    };
+  },
+};
+
+/** Handlers a selected row routes to, threaded into the SELECT_ROW table. */
+type PaletteHandlers = {
+  onSelect: (id: string) => void;
+  onSelectAlias?: (target: { source: SourceType; localIdx: number }) => void;
+  onSelectMilkyWay?: () => void;
+};
+
+/**
+ * SELECT_ROW — table dispatch from a row kind to its parent handler, keyed on
+ * `m.kind`. Centralises the click/keyboard select path so they can't drift; a
+ * new row kind is one row here. Each entry narrows `m` on `kind` (no cast).
+ */
+const SELECT_ROW: Record<ScoredRow['kind'], (m: ScoredRow, h: PaletteHandlers) => void> = {
+  famous: (m, h) => {
+    if (m.kind === 'famous') h.onSelect(m.entry.id);
+  },
+  alias: (m, h) => {
+    if (m.kind === 'alias')
+      h.onSelectAlias?.({ source: m.entry.source, localIdx: m.entry.localIdx });
+  },
+  milkyWay: (_m, h) => h.onSelectMilkyWay?.(),
+};
 
 export function CommandPalette({
   entries,
@@ -239,7 +346,9 @@ export function CommandPalette({
       .map<ScoredRow>((entry) => ({
         kind: 'famous',
         entry,
-        score: scoreFamousMatch(entry, query) + (scoreFamousMatch(entry, query) > 0 ? FAMOUS_TIEBREAK : 0),
+        score:
+          scoreFamousMatch(entry, query) +
+          (scoreFamousMatch(entry, query) > 0 ? FAMOUS_TIEBREAK : 0),
       }))
       .filter((s) => s.score > 0);
     famousScored.sort((a, b) => b.score - a.score);
@@ -279,21 +388,10 @@ export function CommandPalette({
   /**
    * Dispatch the selected row to the matching parent handler, then
    * close.  Centralised so the click and keyboard paths can't drift
-   * apart silently.
+   * apart silently — `SELECT_ROW` is the table that routes each kind.
    */
   const dispatchSelection = (m: ScoredRow): void => {
-    // Switch on the row tag — three kinds, three handlers, no per-id checks.
-    switch (m.kind) {
-      case 'famous':
-        onSelect(m.entry.id);
-        break;
-      case 'alias':
-        onSelectAlias?.({ source: m.entry.source, localIdx: m.entry.localIdx });
-        break;
-      case 'milkyWay':
-        onSelectMilkyWay?.();
-        break;
-    }
+    SELECT_ROW[m.kind](m, { onSelect, onSelectAlias, onSelectMilkyWay });
     onClose();
   };
 
@@ -400,82 +498,20 @@ export function CommandPalette({
         ) : (
           <ul className={styles.results}>
             {matches.map((m, i) => {
+              const view = ROW_VIEW[m.kind](m);
               const isActive = i === activeIdx;
-              const className = `${styles.result} ${isActive ? styles.resultActive : ''}`;
-              if (m.kind === 'famous') {
-                return (
-                  <li
-                    key={`famous:${m.entry.id}`}
-                    className={className}
-                    onMouseEnter={() => setActiveIdx(i)}
-                    onClick={() => dispatchSelection(m)}
-                  >
-                    <img
-                      className={styles.thumb}
-                      src={`/images/famous/${m.entry.id}.webp`}
-                      alt=""
-                      loading="lazy"
-                    />
-                    <span>
-                      <span className={styles.primary}>{m.entry.names[0]}</span>
-                      {m.entry.names.length > 1 && (
-                        <span className={styles.secondary}>
-                          {m.entry.names.slice(1).join(' · ')}
-                        </span>
-                      )}
-                    </span>
-                  </li>
-                );
-              }
-              if (m.kind === 'milkyWay') {
-                // The Milky Way is a procedural backdrop with no atlas WebP,
-                // so it renders a first-letter glyph like an alias row, but
-                // it is its own row kind (a first-class FocusableTarget),
-                // not a famous catalog entry.
-                return (
-                  <li
-                    key="milkyWay"
-                    className={className}
-                    onMouseEnter={() => setActiveIdx(i)}
-                    onClick={() => dispatchSelection(m)}
-                    data-testid="milky-way-row"
-                  >
-                    <span className={styles.aliasGlyph} aria-hidden="true">
-                      {MILKY_WAY_PRIMARY_NAME[0]}
-                    </span>
-                    <span>
-                      <span className={styles.primary}>{MILKY_WAY_PRIMARY_NAME}</span>
-                      <span className={styles.secondary}>
-                        {MILKY_WAY_NAMES.slice(1).join(' · ')}
-                      </span>
-                    </span>
-                  </li>
-                );
-              }
-              // Alias row — distinct visual treatment: no thumbnail (we
-              // don't pre-render NGC galaxies), small letter-glyph
-              // placeholder + source-label chip on the secondary line so
-              // the user can tell GLADE rows from 2MRS rows at a glance.
-              const aliasEntry = m.entry;
-              const primary = aliasEntry.names[0] ?? '(unnamed)';
-              const remaining = aliasEntry.names.slice(1);
               return (
                 <li
-                  key={`alias:${aliasEntry.source}:${aliasEntry.localIdx}`}
-                  className={className}
+                  key={view.key}
+                  className={`${styles.result} ${isActive ? styles.resultActive : ''}`}
                   onMouseEnter={() => setActiveIdx(i)}
                   onClick={() => dispatchSelection(m)}
-                  data-testid={`alias-row-${aliasEntry.localIdx}`}
+                  data-testid={view.testid}
                 >
-                  <span className={styles.aliasGlyph} aria-hidden="true">
-                    {primary[0] ?? '·'}
-                  </span>
+                  {view.leading}
                   <span>
-                    <span className={styles.primary}>{primary}</span>
-                    {remaining.length > 0 && (
-                      <span className={styles.secondary}>{remaining.join(' · ')}</span>
-                    )}
-                    <span className={styles.aliasSource}>{SOURCE_REGISTRY[aliasEntry.source].label}</span>
+                    <span className={styles.primary}>{view.primary}</span>
+                    {view.secondary}
                   </span>
                 </li>
               );
