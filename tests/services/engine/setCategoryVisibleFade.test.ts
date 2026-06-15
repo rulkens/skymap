@@ -30,6 +30,7 @@ import type { FadeId } from '../../../src/@types/animation/FadeId';
 import { setStructureItemEnabledForTest } from '../../../src/services/engine/handles/setStructureItemEnabled';
 import { setStructureLabelEnabledForTest } from '../../../src/services/engine/handles/setStructureLabelEnabled';
 import { setGalaxyCatalogLabelEnabledForTest } from '../../../src/services/engine/handles/setGalaxyCatalogLabelEnabled';
+import { setMilkyWayLabelEnabledForTest } from '../../../src/services/engine/handles/setMilkyWayLabelEnabled';
 import { createSettingsStore } from '../../../src/services/engine/settingsStore/createSettingsStore';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 
@@ -71,6 +72,7 @@ function makeFixture() {
         group: { enabled: true, labelEnabled: true },
       },
     },
+    milkyWay: { enabled: true, labelEnabled: true },
   } as unknown as EngineSettingsState);
   const state = {
     get settings() {
@@ -187,5 +189,46 @@ describe('setGalaxyCatalogLabelEnabled — famous-galaxy catalog', () => {
       },
     ]);
     expect(fx.store.getState().galaxyCatalogs.items.famousGalaxy.labelEnabled).toBe(true);
+  });
+});
+
+// ── Milky-Way label axis (setMilkyWayLabelEnabled) ───────────────────────────
+
+describe('setMilkyWayLabelEnabled — singleton milkyWay layer', () => {
+  it('label toggle OFF fires fadeTo(labelLayer{milkyWay}, 0) AND writes milkyWay.labelEnabled', () => {
+    const fx = makeFixture();
+    setMilkyWayLabelEnabledForTest(fx.state as never, fx.store, false);
+
+    // milkyWay is a singleton overlay: its label lives on the shared milkyWay
+    // label layer (no per-category key).
+    expect(fx.fadeCalls).toEqual([
+      {
+        id: { kind: 'labelLayer', layer: 'milkyWay' },
+        target: 0,
+        duration: FADE_OUT_DURATION_MS,
+      },
+    ]);
+    // Single source of truth: the milkyWay cluster's labelEnabled flag.
+    expect(fx.store.getState().milkyWay.labelEnabled).toBe(false);
+    // The disk axis is untouched.
+    expect(fx.store.getState().milkyWay.enabled).toBe(true);
+    // fadeTo owns the wake — the setter must not call requestRender itself.
+    expect(fx.state.subsystems.scheduler.requestRender).not.toHaveBeenCalled();
+  });
+
+  it('label toggle ON fires fadeTo(labelLayer{milkyWay}, 1, FADE_IN)', () => {
+    const fx = makeFixture();
+    setMilkyWayLabelEnabledForTest(fx.state as never, fx.store, false);
+    fx.fadeCalls.length = 0;
+    setMilkyWayLabelEnabledForTest(fx.state as never, fx.store, true);
+
+    expect(fx.fadeCalls).toEqual([
+      {
+        id: { kind: 'labelLayer', layer: 'milkyWay' },
+        target: 1,
+        duration: FADE_IN_DURATION_MS,
+      },
+    ]);
+    expect(fx.store.getState().milkyWay.labelEnabled).toBe(true);
   });
 });

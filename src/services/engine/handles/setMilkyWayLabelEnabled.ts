@@ -39,3 +39,6 @@ export function setMilkyWayLabelEnabled(
   // copy-on-write write notifies React's selector subscriber.
   setMilkyWayLabelEnabledAction(store, visible);
 }
+
+// Test-only alias matching the import name used in tests.
+export { setMilkyWayLabelEnabled as setMilkyWayLabelEnabledForTest };
