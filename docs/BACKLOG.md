@@ -19,7 +19,7 @@ Curated list of pickup-able work and surfaced issues. Living document — update
 
 | ADR | Status | Executed by |
 |---|---|---|
-| [0001 — Fade ownership](adrs/0001-fade-ownership.md) | Accepted 2026-05-27 | [renderer-interface-extraction plan](superpowers/plans/2026-05-27-renderer-interface-extraction.md) — not started |
+| [0001 — Fade ownership](adrs/0001-fade-ownership.md) | Accepted 2026-05-27 | Original executor ([renderer-interface-extraction plan](superpowers/plans/archive/2026-05-27-renderer-interface-extraction.md)) **archived/superseded**; the `bindGroupFor`/`flushGpu` mechanism is reworked by the live [fade-ownership merged design](superpowers/specs/2026-06-15-fade-ownership-visibility-seam-merged-design.md) (designed, awaiting plan) |
 
 ---
 
@@ -27,7 +27,6 @@ Curated list of pickup-able work and surfaced issues. Living document — update
 
 Plans live in `docs/superpowers/plans/`. All have TDD task lists with checkboxes; pick one and run it via `superpowers:subagent-driven-development` or `superpowers:executing-plans`.
 
-- **[2026-05-27 Renderer interface extraction](superpowers/plans/2026-05-27-renderer-interface-extraction.md)** — executes ADR 0001 + closes the "Option C" outlier in the renderer conventions doc. 14 tasks. `FieldEntry` 12 → 5 props; per-slot setter cascade collapses to one `applySettings`; fade GPU resources move to `FadeRegistry`.
 - **[2026-05-20 Splash screen — Part 2 (tour)](superpowers/plans/2026-05-20-splash-screen-02-stub-tour.md)** — replaces Part 1's no-op Tour button with a six-beat camera tour. Re-architected 2026-06-04 from a throwaway React stub into an **engine-side seed**: `engine.tour` handle + `tourSubsystem` (frame-driven, in the RoD gate) + `TourBeat`/`TourFocus`/`TourEffect` data model, so the cinematic tour extends it. Part 1 shipped (PR #178); Tour CTA currently dismisses without running. Resolves the cinematic spec's decision 4.
 
 ---
@@ -44,7 +43,7 @@ Design is captured; an implementer or `superpowers:writing-plans` needs to turn 
 
 Scoped out of a parent plan or ADR with explicit rationale; needs its own ADR or plan when picked up.
 
-From [renderer-interface-extraction plan §Out of scope](superpowers/plans/2026-05-27-renderer-interface-extraction.md):
+From [renderer-interface-extraction plan §Out of scope](superpowers/plans/archive/2026-05-27-renderer-interface-extraction.md) (plan archived/superseded; these deferred items remain independently valid):
 - **Source-registry factory** — auto-generate fetcher + slot + UI rows from a single `SOURCE_REGISTRY` entry.
 - **Render-graph / frame-graph restructuring** of `runFrame.ts` and the pass DAG.
 - **Settings schema with auto-generated UI** for `VolumeFieldRow`'s seven sliders.

@@ -307,10 +307,6 @@ when you're already editing the file.
 - **Positional factory args.** `createPointRenderer`, `createPickRenderer`,
   `createFilamentRenderer`, `createScalarVolumeRenderer` take `(device, format)`
   instead of a context bag. Convert when you next need to add a constructor arg.
-- **`scalarVolumeRenderer` mirror state.** Per-field enablement, intensity, contrast,
-  palette etc. are duplicated inside each `FieldEntry`. Being addressed by the queued
-  "Option C" work — `EngineState` becomes the single source of truth and the
-  renderer reads from it via the per-frame settings projection.
 - **`pickRenderer` shares `pointRenderer.uniformBuffer`.** This is load-bearing
   (selection encoding has to round-trip through the same buffer the visual pass
   sees) but it's the only cross-renderer shared mutable resource in the codebase.
