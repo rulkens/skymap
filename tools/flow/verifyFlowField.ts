@@ -38,7 +38,7 @@
 
 import { readFileSync } from 'node:fs';
 import { decodeScalarField } from '../../src/data/scalarFieldFormat';
-import { f16BitsToFloat } from '../utils/math/floatHalf';
+import { f16BitsToFloat } from '../utils/math/f16BitsToFloat';
 import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
 import { eqToSg } from '../utils/math/coordinates';
 import type { Vec3 } from '../../src/@types/math/Vec3';

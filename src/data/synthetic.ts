@@ -29,6 +29,7 @@
 
 import type { GalaxyCatalog } from '../@types/data/GalaxyCatalog';
 import { mulberry32 } from '../utils/random/mulberry32';
+import { uniformInSphere } from '../utils/random/uniformInSphere';
 
 // ─── Cloud generator ─────────────────────────────────────────────────────────
 
@@ -125,24 +126,12 @@ export function generateSyntheticCloud(count: number, seed = 42): GalaxyCatalog 
     objIDs[i] = BigInt(i);
 
     // ── Rejection-sample a uniform-in-sphere position ──────────────────────
-    let x: number, y: number, z: number, r2: number;
-
-    do {
-      // Map three [0,1) samples to the cube [−1, +1]³.
-      x = rand() * 2 - 1;
-      y = rand() * 2 - 1;
-      z = rand() * 2 - 1;
-
-      // Squared distance from origin. We compare against 1 (not sqrt against
-      // 1.0) to avoid a square root in the hot loop — squaring the threshold
-      // is equivalent and cheaper.
-      r2 = x * x + y * y + z * z;
-    } while (r2 > 1); // reject points outside the unit sphere
-
-    // Scale from the unit ball to the desired physical radius.
-    positions[i * 3 + 0] = x * radius;
-    positions[i * 3 + 1] = y * radius;
-    positions[i * 3 + 2] = z * radius;
+    // `uniformInSphere` returns a point in the unit ball; scale it to the
+    // desired physical radius here.
+    const [ux, uy, uz] = uniformInSphere(rand);
+    positions[i * 3 + 0] = ux * radius;
+    positions[i * 3 + 1] = uy * radius;
+    positions[i * 3 + 2] = uz * radius;
 
     // ── Five-band photometry ───────────────────────────────────────────────
     // We generate the bands via sequential color differences so the simulated

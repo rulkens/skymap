@@ -1,16 +1,14 @@
 /**
- * IEEE-754 f32 ↔ f16 raw-bit-pattern converters.
+ * f32ToF16Bits — convert one IEEE-754 f32 value to its 16-bit f16 raw
+ * bit pattern.
  *
- * Used offline by the SCFD volume builders (`buildCf4Density`,
- * `buildMcpmVolume`) to pack f32 source arrays into Uint16 f16 voxel
- * arrays for on-disk storage, and by the verifier (`verifyCf4Scfd`) to
- * decode them back for comparison against known cosmography.
+ * Used offline by the SCFD volume / flow builders (`buildCf4Density`,
+ * `buildMcpmVolume`, `buildFlowField`) to pack f32 source arrays into
+ * Uint16 f16 voxel arrays for on-disk storage.
  *
  * Why hand-roll instead of importing a library?  This is fundamentally
- * bit twiddling on a Uint32 view of a Float32Array — adding a dependency
- * for ~30 lines of arithmetic would dwarf the saved code.  Both
- * directions live in one file so the inverse relationship is locally
- * verifiable (see the round-trip tests).
+ * bit twiddling on a Uint32 view of a Float32Array — a dependency for
+ * ~30 lines of arithmetic would dwarf the saved code.
  *
  * Layout reminder:
  *   f32: 1 sign + 8 exp + 23 mant  (bias 127)
@@ -19,10 +17,11 @@
  * Edge handling: NaN preserves the signal bit, ±Inf overflows, subnormal
  * underflow shifts the mantissa into the f16 subnormal field, and the
  * normal range uses round-to-nearest-even via the guard bit at
- * mantissa[12].
+ * mantissa[12].  This rounding contract intentionally differs from the
+ * browser-side `src/utils/math/floatToF16` (which is rough for [0,1]
+ * cubes); keep the two separate.
  */
 
-/** Convert one IEEE-754 f32 value to its 16-bit f16 raw bit pattern. */
 export function f32ToF16Bits(value: number): number {
   const f32 = new Float32Array(1);
   f32[0] = value;
@@ -53,14 +52,4 @@ export function f32ToF16Bits(value: number): number {
     }
   }
   return sign | (exp << 10) | (mant >>> 13);
-}
-
-/** Decode a single f16 raw bit pattern back into a JS number. */
-export function f16BitsToFloat(bits: number): number {
-  const sign = (bits & 0x8000) >> 15;
-  const exp = (bits & 0x7c00) >> 10;
-  const mant = bits & 0x03ff;
-  if (exp === 0) return (sign ? -1 : 1) * (mant / 1024) * Math.pow(2, -14);
-  if (exp === 31) return mant === 0 ? (sign ? -Infinity : Infinity) : NaN;
-  return (sign ? -1 : 1) * (1 + mant / 1024) * Math.pow(2, exp - 15);
 }

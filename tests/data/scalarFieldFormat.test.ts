@@ -4,7 +4,6 @@ import { join, dirname } from 'node:path';
 import {
   encodeScalarField,
   decodeScalarField,
-  gpuTextureFormatForChannels,
   SCFD_HEADER_BYTES,
 } from '../../src/data/scalarFieldFormat';
 import type { ScalarCube } from '../../src/@types/data/ScalarCube';
@@ -194,9 +193,9 @@ describe('SCFD v3 binary format', () => {
     const cube = makeFixture();
     const buf = encodeScalarField(cube);
     const dv = new DataView(buf);
-    expect(dv.getUint32(4, true)).toBe(3);    // version byte = 3
-    expect(dv.getUint8(22)).toBe(1);           // channels = 1 (single-channel)
-    expect(dv.getFloat32(64, true)).toBe(0);   // density_scale slot → reserved/zero
+    expect(dv.getUint32(4, true)).toBe(3); // version byte = 3
+    expect(dv.getUint8(22)).toBe(1); // channels = 1 (single-channel)
+    expect(dv.getFloat32(64, true)).toBe(0); // density_scale slot → reserved/zero
   });
 
   it('round-trips a cube without palette/densityScale on the decoded cube', () => {
@@ -215,15 +214,6 @@ describe('SCFD v3 binary format', () => {
     const buf = encodeScalarField(makeFixture());
     new DataView(buf).setUint8(22, 3);
     expect(() => decodeScalarField(buf)).toThrow(/channel/i);
-  });
-
-  it('gpuTextureFormatForChannels maps 1→r16float and 4→rgba16float', () => {
-    expect(gpuTextureFormatForChannels(1)).toBe('r16float');
-    expect(gpuTextureFormatForChannels(4)).toBe('rgba16float');
-    // Out-of-contract values throw — the helper is the single source of
-    // truth, so a bad channel count must fail loudly here, not downstream.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect(() => gpuTextureFormatForChannels(2 as any)).toThrow(/channel/i);
   });
 
   it('decodeScalarField rejects a v2 header with a regenerate-hint error', () => {
@@ -249,11 +239,11 @@ function makeV2HeaderForRejectTest(): ArrayBuffer {
   const buf = new ArrayBuffer(HEADER_BYTES + 2);
   const dv = new DataView(buf);
   dv.setUint32(0, 0x44464353, true); // magic 'SCFD'
-  dv.setUint32(4, 2, true);           // version 2
-  dv.setUint32(8, 1, true);           // dims.x
-  dv.setUint32(12, 1, true);          // dims.y
-  dv.setUint32(16, 1, true);          // dims.z
-  dv.setUint8(20, 0);                 // dtype = f16
+  dv.setUint32(4, 2, true); // version 2
+  dv.setUint32(8, 1, true); // dims.x
+  dv.setUint32(12, 1, true); // dims.y
+  dv.setUint32(16, 1, true); // dims.z
+  dv.setUint8(20, 0); // dtype = f16
   return buf;
 }
 

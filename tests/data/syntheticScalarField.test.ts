@@ -3,8 +3,8 @@ import {
   makeSyntheticGaussianCube,
   makeCartesianGridCube,
   makeSphericalGridCube,
-  f16ToFloat,
 } from '../../src/data/syntheticScalarField';
+import { f16ToFloat } from '../../src/utils/math/f16ToFloat';
 
 // Helper: index into the x-fastest, y-medium, z-slowest voxel array.
 function idx(x: number, y: number, z: number, dims: number): number {
@@ -39,7 +39,11 @@ describe('synthetic Gaussian cube', () => {
   });
 
   it('is centred at the world origin by construction', () => {
-    const cube = makeSyntheticGaussianCube({ dims: 8, frameKind: 'equatorial-cartesian', boxSizeMpc: 200 });
+    const cube = makeSyntheticGaussianCube({
+      dims: 8,
+      frameKind: 'equatorial-cartesian',
+      boxSizeMpc: 200,
+    });
     expect(cube.origin).toEqual([-100, -100, -100]);
     expect(cube.voxelSize).toBe(200 / 8);
   });

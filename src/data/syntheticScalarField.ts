@@ -28,10 +28,10 @@
  */
 
 import type { ScalarCube } from '../@types/data/ScalarCube';
-import type { ScalarFieldFrameKind } from '../@types/data/ScalarFieldFrameKind';
 import type { SyntheticGaussianOptions } from '../@types/data/SyntheticGaussianOptions';
 import type { CartesianGridOptions } from '../@types/data/CartesianGridOptions';
 import type { SphericalGridOptions } from '../@types/data/SphericalGridOptions';
+import { floatToF16 } from '../utils/math/floatToF16';
 
 export function makeSyntheticGaussianCube(opts: SyntheticGaussianOptions = {}): ScalarCube {
   const dims = opts.dims ?? 64;
@@ -233,58 +233,4 @@ export function makeSphericalGridCube(opts: SphericalGridOptions = {}): ScalarCu
     valueMin: 0,
     valueMax: 1,
   };
-}
-
-// ── f16 conversion helpers ──────────────────────────────────────────
-//
-// JS has no native f16, so we keep cube voxels as Uint16 holding the
-// raw IEEE 754 binary16 bits.  These two helpers convert between f32
-// and that representation.  Used here for the Gaussian generator and
-// exposed for tests; the renderer uploads the Uint16 directly to a
-// WebGPU `r16float` texture (which understands the same bit layout).
-//
-// Implementation borrowed from the standard "Float16Array shim" trick:
-// a 1-element Float32Array view into the same buffer as a Uint32Array
-// gives us bit-level access to the f32 representation, which we then
-// re-encode into f16.
-
-const f32Buf = new ArrayBuffer(4);
-const f32View = new Float32Array(f32Buf);
-const u32View = new Uint32Array(f32Buf);
-
-export function floatToF16(value: number): number {
-  f32View[0] = value;
-  const x = u32View[0]!;
-  const sign = (x >> 31) & 0x1;
-  let exp = (x >> 23) & 0xff;
-  let mant = x & 0x7fffff;
-  // Handle special values + denormals roughly — adequate for cubes that
-  // ship values in [0, 1] (no NaN/Inf, no negatives expected).
-  if (exp === 0xff) {
-    return (sign << 15) | 0x7c00 | (mant ? 1 : 0);
-  }
-  exp = exp - 127 + 15;
-  if (exp >= 0x1f) return (sign << 15) | 0x7c00; // Inf
-  if (exp <= 0) {
-    if (exp < -10) return sign << 15; // underflow → 0
-    mant = (mant | 0x800000) >> (1 - exp);
-    return (sign << 15) | (mant >> 13);
-  }
-  return (sign << 15) | (exp << 10) | (mant >> 13);
-}
-
-export function f16ToFloat(bits: number): number {
-  const sign = (bits >> 15) & 0x1;
-  const exp = (bits >> 10) & 0x1f;
-  const mant = bits & 0x3ff;
-  if (exp === 0) {
-    if (mant === 0) return sign ? -0 : 0;
-    // Denormal — rebuild as f32.
-    const value = mant / 1024 / 16384;
-    return sign ? -value : value;
-  }
-  if (exp === 0x1f) return mant ? NaN : sign ? -Infinity : Infinity;
-  const e = exp - 15;
-  const value = (1 + mant / 1024) * Math.pow(2, e);
-  return sign ? -value : value;
 }

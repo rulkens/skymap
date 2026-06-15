@@ -40,6 +40,7 @@
  */
 
 import type { ScalarFieldPaletteId } from '../@types/data/ScalarFieldPaletteId';
+import { rampLut } from '../utils/color/rampLut';
 
 export const PALETTE_LUT_SIZE = 256;
 
@@ -62,21 +63,27 @@ export const PALETTE_IDS: readonly ScalarFieldPaletteId[] = [
 export function buildPaletteLut(id: ScalarFieldPaletteId): Uint8Array {
   switch (id) {
     case 'viridis':
-      return rampLut([
-        [0.0, 68, 1, 84],
-        [0.25, 59, 82, 139],
-        [0.5, 33, 144, 141],
-        [0.75, 94, 201, 98],
-        [1.0, 253, 231, 37],
-      ]);
+      return rampLut(
+        [
+          [0.0, 68, 1, 84],
+          [0.25, 59, 82, 139],
+          [0.5, 33, 144, 141],
+          [0.75, 94, 201, 98],
+          [1.0, 253, 231, 37],
+        ],
+        PALETTE_LUT_SIZE,
+      );
     case 'magma':
-      return rampLut([
-        [0.0, 0, 0, 4],
-        [0.25, 80, 18, 123],
-        [0.5, 182, 54, 121],
-        [0.75, 252, 137, 97],
-        [1.0, 252, 253, 191],
-      ]);
+      return rampLut(
+        [
+          [0.0, 0, 0, 4],
+          [0.25, 80, 18, 123],
+          [0.5, 182, 54, 121],
+          [0.75, 252, 137, 97],
+          [1.0, 252, 253, 191],
+        ],
+        PALETTE_LUT_SIZE,
+      );
     case 'inferno':
       // Matplotlib's `inferno` perceptually-uniform palette: dark
       // purple → red → orange → pale yellow on a near-black floor.
@@ -85,27 +92,36 @@ export function buildPaletteLut(id: ScalarFieldPaletteId): Uint8Array {
       // visualisations (Polyphorm, MCPM, plasma family). Anchor RGB
       // values match matplotlib's `_cm_listed.py` inferno entries
       // sampled at t = {0, 0.25, 0.5, 0.75, 1.0}.
-      return rampLut([
-        [0.0, 0, 0, 4],
-        [0.25, 87, 16, 110],
-        [0.5, 188, 55, 84],
-        [0.75, 249, 142, 9],
-        [1.0, 252, 255, 164],
-      ]);
+      return rampLut(
+        [
+          [0.0, 0, 0, 4],
+          [0.25, 87, 16, 110],
+          [0.5, 188, 55, 84],
+          [0.75, 249, 142, 9],
+          [1.0, 252, 255, 164],
+        ],
+        PALETTE_LUT_SIZE,
+      );
     case 'blue-purple':
-      return rampLut([
-        [0.0, 5, 5, 30],
-        [0.4, 60, 30, 150],
-        [0.7, 140, 80, 200],
-        [1.0, 220, 180, 255],
-      ]);
+      return rampLut(
+        [
+          [0.0, 5, 5, 30],
+          [0.4, 60, 30, 150],
+          [0.7, 140, 80, 200],
+          [1.0, 220, 180, 255],
+        ],
+        PALETTE_LUT_SIZE,
+      );
     case 'yellow-green':
-      return rampLut([
-        [0.0, 5, 20, 5],
-        [0.4, 80, 130, 30],
-        [0.7, 180, 220, 60],
-        [1.0, 255, 255, 180],
-      ]);
+      return rampLut(
+        [
+          [0.0, 5, 20, 5],
+          [0.4, 80, 130, 30],
+          [0.7, 180, 220, 60],
+          [1.0, 255, 255, 180],
+        ],
+        PALETTE_LUT_SIZE,
+      );
     case 'coolwarm':
       // Divergent palette with explicit per-anchor alpha (the optional
       // 5th element).  Voids (t=0) and clusters (t=1) are both visible;
@@ -116,96 +132,19 @@ export function buildPaletteLut(id: ScalarFieldPaletteId): Uint8Array {
       // neutral midpoint shifted slightly warm (245, 245, 240) so it
       // doesn't clash with the skymap UI's near-white background when
       // alpha leaks at the seams.
-      return rampLut([
-        [0.0, 20, 60, 180, 220],   // deep void: saturated blue, mostly opaque
-        [0.25, 90, 140, 230, 130], // cool blue, half-transparent
-        [0.5, 245, 245, 240, 0],   // cosmic mean: neutral, fully transparent
-        [0.75, 230, 130, 90, 130], // warm orange, half-transparent
-        [1.0, 180, 30, 30, 240],   // cluster core: saturated red, near-opaque
-      ]);
+      return rampLut(
+        [
+          [0.0, 20, 60, 180, 220], // deep void: saturated blue, mostly opaque
+          [0.25, 90, 140, 230, 130], // cool blue, half-transparent
+          [0.5, 245, 245, 240, 0], // cosmic mean: neutral, fully transparent
+          [0.75, 230, 130, 90, 130], // warm orange, half-transparent
+          [1.0, 180, 30, 30, 240], // cluster core: saturated red, near-opaque
+        ],
+        PALETTE_LUT_SIZE,
+      );
     default: {
       const _exhaustive: never = id;
       throw new Error(`buildPaletteLut: unknown palette id "${String(_exhaustive)}"`);
     }
   }
-}
-
-/**
- * Anchor for `rampLut`: either `[t, r, g, b]` (alpha = linear ramp from
- * t) or `[t, r, g, b, a]` (alpha taken from the anchor).  The two
- * shapes can be mixed within a palette's anchor list — any anchor with
- * an explicit alpha switches the *whole* LUT to per-anchor alpha
- * interpolation; otherwise the default linear-ramp behaviour applies.
- *
- * Why the union rather than always-explicit-alpha: the four sequential
- * palettes (viridis, magma, blue-purple, yellow-green) shipped before
- * coolwarm existed and would all need explicit alpha specified at every
- * anchor — noise that obscures their colour-only intent.  Keeping
- * `[t, r, g, b]` as the default makes the sequential cases concise and
- * forces divergent palettes (which need V-shaped alpha) to declare it.
- */
-type RampAnchor =
-  | readonly [t: number, r: number, g: number, b: number]
-  | readonly [t: number, r: number, g: number, b: number, a: number];
-
-/**
- * Interpolate a set of colour anchors into a PALETTE_LUT_SIZE×4 Uint8Array.
- *
- * Each anchor is `[t, r, g, b]` or `[t, r, g, b, a]` where t ∈ [0, 1] is
- * the normalised position along the LUT.  If every anchor omits the
- * alpha field, the alpha channel falls back to a linear ramp from t —
- * the original sequential-palette behaviour (low values fully
- * transparent, high values fully opaque).  If *any* anchor includes
- * alpha, all anchors are interpolated for alpha just like for RGB,
- * which lets divergent palettes specify the V-shaped opacity they
- * need (visible at both ends, transparent at the centre).
- *
- * Why linear alpha as the default rather than always per-anchor: the
- * opacity ramp is a global artistic choice for sequential palettes — we
- * want all four (viridis, magma, blue-purple, yellow-green) to behave
- * the same way so users can switch palettes without recalibrating the
- * opacity slider.  A uniform linear ramp is also the easiest contract
- * for the WGSL sampler to reason about.  Divergent palettes break that
- * symmetry by design, hence the per-anchor override.
- */
-// Preconditions: anchors length >= 2, sorted ascending by t, with
-// anchors[0][0] === 0 and anchors[anchors.length-1][0] === 1.  All
-// current call sites satisfy this; the function does not validate it
-// because adding runtime guards for an internal helper would be noise.
-function rampLut(anchors: ReadonlyArray<RampAnchor>): Uint8Array {
-  const out = new Uint8Array(PALETTE_LUT_SIZE * 4);
-  // If any anchor specifies an explicit alpha, interpolate alpha across
-  // all anchors instead of using the linear-from-t fallback.  Mixing
-  // explicit and implicit alpha within one palette would be ambiguous
-  // (what's the implicit value at an anchor where alpha was omitted?),
-  // so we treat the per-anchor mode as all-or-nothing: callers either
-  // declare alpha at every anchor or at no anchor.  The single check
-  // here enforces that distinction at LUT-build time rather than via
-  // type gymnastics.
-  const useExplicitAlpha = anchors.some((a) => a.length === 5);
-  for (let i = 0; i < PALETTE_LUT_SIZE; i++) {
-    const t = i / (PALETTE_LUT_SIZE - 1);
-    let aIdx = 0;
-    for (let j = 0; j < anchors.length - 1; j++) {
-      if (t >= anchors[j]![0] && t <= anchors[j + 1]![0]) {
-        aIdx = j;
-        break;
-      }
-    }
-    const a = anchors[aIdx]!;
-    const b = anchors[aIdx + 1] ?? a;
-    const span = b[0] - a[0];
-    const u = span > 0 ? (t - a[0]) / span : 0;
-    out[i * 4 + 0] = Math.round(a[1] + (b[1] - a[1]) * u);
-    out[i * 4 + 1] = Math.round(a[2] + (b[2] - a[2]) * u);
-    out[i * 4 + 2] = Math.round(a[3] + (b[3] - a[3]) * u);
-    if (useExplicitAlpha) {
-      const aAlpha = a[4] ?? 0;
-      const bAlpha = b[4] ?? 0;
-      out[i * 4 + 3] = Math.round(aAlpha + (bAlpha - aAlpha) * u);
-    } else {
-      out[i * 4 + 3] = Math.round(t * 255);
-    }
-  }
-  return out;
 }

@@ -78,23 +78,6 @@ const MAGIC = 0x44464353; // "SCFD" little-endian
 const VERSION = 3;
 export const SCFD_HEADER_BYTES = 96;
 
-/**
- * Map a cube's channel count to the WebGPU texture format the renderer must
- * allocate.  Single source of truth shared by the loader and the tests — the
- * decoder deliberately derives *nothing* about the GPU format itself, so the
- * 1↔r16float / 4↔rgba16float mapping lives here rather than being re-derived
- * (and risking drift) at each call site.  Throws on any other value so an
- * out-of-contract channel count fails loudly at the boundary rather than
- * silently picking a wrong format.
- */
-export function gpuTextureFormatForChannels(channels: 1 | 4): GPUTextureFormat {
-  if (channels === 1) return 'r16float';
-  if (channels === 4) return 'rgba16float';
-  throw new Error(
-    `gpuTextureFormatForChannels: unsupported channel count ${channels} (expected 1 or 4)`,
-  );
-}
-
 const FRAME_KIND_TO_ID: Record<ScalarFieldFrameKind, number> = {
   'supergalactic-cartesian': 0,
   'equatorial-cartesian': 1,
@@ -220,11 +203,7 @@ export function decodeScalarField(buf: ArrayBuffer): ScalarCube {
       `decodeScalarField: unsupported version ${version} (expected ${VERSION}); regenerate the cube via the dataset's build pipeline`,
     );
   }
-  const dims: Vec3 = [
-    dv.getUint32(8, true),
-    dv.getUint32(12, true),
-    dv.getUint32(16, true),
-  ];
+  const dims: Vec3 = [dv.getUint32(8, true), dv.getUint32(12, true), dv.getUint32(16, true)];
   const dtype = dv.getUint8(20);
   if (dtype !== 0) {
     throw new Error(`decodeScalarField: unsupported dtype ${dtype} (v3 supports f16 only)`);
@@ -259,11 +238,7 @@ export function decodeScalarField(buf: ArrayBuffer): ScalarCube {
   if (frameKind === undefined) {
     throw new Error(`decodeScalarField: unknown frameKind id ${frameKindIdx}`);
   }
-  const origin: Vec3 = [
-    dv.getFloat32(24, true),
-    dv.getFloat32(28, true),
-    dv.getFloat32(32, true),
-  ];
+  const origin: Vec3 = [dv.getFloat32(24, true), dv.getFloat32(28, true), dv.getFloat32(32, true)];
   const voxelSize = dv.getFloat32(36, true);
   const rotation: Vec4 = [
     dv.getFloat32(40, true),

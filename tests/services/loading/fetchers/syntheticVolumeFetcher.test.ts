@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { syntheticVolumeFetcher } from '../../../../src/services/loading/fetchers/syntheticVolumeFetcher';
-import { f16ToFloat } from '../../../../src/data/syntheticScalarField';
+import { f16ToFloat } from '../../../../src/utils/math/f16ToFloat';
 
 describe('syntheticVolumeFetcher', () => {
   it('resolves to a ScalarCube of the requested dims', async () => {

@@ -23,7 +23,7 @@ import { parseStructureSeed } from '../parsers/parseStructureSeed';
 import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import { eqToSg, eqCartToRaDecDist, voxelToEqCart } from '../utils/math/coordinates';
-import { f16BitsToFloat } from '../utils/math/floatHalf';
+import { f16BitsToFloat } from '../utils/math/f16BitsToFloat';
 import { percentileOf } from '../utils/math/percentile';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
