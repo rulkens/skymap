@@ -778,19 +778,22 @@ Run the simplicity lens over the diff, then the full gate.
 
 **Files:** none (review + verification).
 
-- [ ] Run the `entanglement-radar` skill over the full branch diff. Focus
-  points:
+- [x] Run the `entanglement-radar` skill over the full branch diff. Result:
+  **no significant complecting found** — the branch un-braids the youAreHere
+  subsystem into the standard label machinery. Focus points verified:
   - The label axis's three homes (structure items / galaxy-catalog items /
     `settings.milkyWay.labelEnabled`) — confirm the projector is a pure view,
     not a fourth copy, and that no synthetic `items` row was introduced to force
     false uniformity (this is the spec's essential asymmetry: singleton overlay
-    vs per-record items — keep it un-braided).
+    vs per-record items — keep it un-braided). ✓ pure `Object.fromEntries` view,
+    milkyWay kept a scalar.
   - The distance fade staying a producer concern (`milkyWayLabelAlpha` inside
     `produceMilkyWayLabel`) — confirm it composes with `layerOpacity('milkyWay')`
-    rather than the layer machinery learning a Milky-Way special case.
+    rather than the layer machinery learning a Milky-Way special case. ✓
+    `distAlpha × layerOpacity`, no special case.
   - The module-level load-in latch — confirm it mirrors the structure
     producer's pattern (boolean here vs `Set<Category>` there is the essential
-    single-vs-many difference, not accidental).
+    single-vs-many difference, not accidental). ✓
   - Confirm no `youAreHere` **camelCase identifier** survives in `src/` or
     `tests/` (grep `youAreHere` case-sensitive — this catches the deleted
     `youAreHereSubsystem`, the renamed `youAreHereVisibility`/`youAreHereAlpha`,
@@ -802,13 +805,17 @@ Run the simplicity lens over the diff, then the full gate.
     `'you-are-here'`); any remaining `'you-are-here'` literals are arbitrary
     label-director test fixtures (sample labels for dedup/prominence tests, not
     the real producer) and may stay.
-- [ ] Apply any small un-braiding the radar surfaces (or record "no significant
-  complecting found").
-- [ ] `npm run typecheck` (both src + tools tsconfigs) — green.
-- [ ] `npm test` — full suite green (≥ the current 590+ tests, with the
-  youAreHere tests replaced by milkyWay equivalents).
-- [ ] `npm run format` on touched files only.
-- [ ] Commit any review fixups.
+- [x] Apply any small un-braiding the radar surfaces (or record "no significant
+  complecting found"). → No significant complecting found; nothing to un-braid.
+  Only `youAreHere` refs remaining are 4 generic director-declutter fixtures in
+  `labelDirectorSubsystem.test.ts` (a sample label + comments, not deleted-symbol
+  references) — explicitly allowed; no `'youAreHere'` string literal remains.
+- [x] `npm run typecheck` (both src + tools tsconfigs) — green.
+- [x] `npm test` — full suite green (2729 passed; youAreHere tests replaced by
+  milkyWay equivalents).
+- [x] `npm run format` on touched files only. (Each task's touched files were
+  prettier-formatted at commit time.)
+- [x] Commit any review fixups. (None needed — radar clean.)
 
 ---
 
