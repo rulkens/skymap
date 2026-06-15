@@ -333,15 +333,15 @@ otherwise `buildGalaxyInfo(cloud, localIdx, source, famousMeta)`. The guard is t
 tier-swap-race defence — keep the docblock explaining it (cite the existing comment).
 Pure: no closures, all deps as args.
 
-- [ ] Test `returns null when the cloud is undefined`.
-- [ ] Test `returns null for a negative localIdx`.
-- [ ] Test `returns null when localIdx >= cloud.count` (the tier-swap race guard).
-- [ ] Test `delegates to buildGalaxyInfo for an in-range index` — assert the returned
+- [x] Test `returns null when the cloud is undefined`.
+- [x] Test `returns null for a negative localIdx`.
+- [x] Test `returns null when localIdx >= cloud.count` (the tier-swap race guard).
+- [x] Test `delegates to buildGalaxyInfo for an in-range index` — assert the returned
       `GalaxyInfo.index === localIdx`, `.source === source`, `.type === 'galaxyCatalog'`
       against a small fixture cloud (reuse the cloud-fixture shape in
       `tests/services/engine/helpers/galaxyInfoBuilder.test.ts`).
-- [ ] Implement; wrap `buildGalaxyInfo` (`galaxyInfoBuilder.ts:126`).
-- [ ] `npm test -- resolveGalaxyInfo` green. Commit.
+- [x] Implement; wrap `buildGalaxyInfo` (`galaxyInfoBuilder.ts:126`).
+- [x] `npm test -- resolveGalaxyInfo` green. Commit.
 
 ---
 
@@ -360,13 +360,13 @@ fields: galaxy (`type === 'galaxyCatalog'`) → `source` + `index`; structure
 (`type === 'structure'`) → `id`. Dispatch on `a.type` after the null + equal-type
 guard (type-safe narrowing, no `as`).
 
-- [ ] Test `both null are equal`.
-- [ ] Test `null vs non-null are not equal` (both directions).
-- [ ] Test `galaxy vs structure are not equal`.
-- [ ] Test `same galaxy (source + index) is equal; differing index is not`.
-- [ ] Test `same structure id is equal; differing id is not`.
-- [ ] Implement by narrowing on `type`.
-- [ ] `npm test -- targetEq` green. Commit.
+- [x] Test `both null are equal`.
+- [x] Test `null vs non-null are not equal` (both directions).
+- [x] Test `galaxy vs structure are not equal`.
+- [x] Test `same galaxy (source + index) is equal; differing index is not`.
+- [x] Test `same structure id is equal; differing id is not`.
+- [x] Implement by narrowing on `type`.
+- [x] `npm test -- targetEq` green. Commit.
 
 ---
 
