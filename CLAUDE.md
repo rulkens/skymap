@@ -50,7 +50,10 @@ data/
                       `tools/utils/io/rawDataRegistry.ts`.
 docs/BACKLOG.md           Ground-truth list of what's next — pickup-able plans,
                       specs awaiting plans, deferred items, surfaced issues
-docs/superpowers/plans/   Active and historical implementation plans (TDD task lists)
+docs/superpowers/plans/   Active implementation plans (TDD task lists); shipped
+                      plans move to plans/completed/ via the /feature-done audit
+docs/superpowers/specs/   Design specs; shipped specs move to specs/completed/
+                      alongside their plan when the feature ships
 tests/                Vitest suite — mirrors src/ tree
 ```
 
@@ -61,7 +64,7 @@ tests/                Vitest suite — mirrors src/ tree
 - **No barrel exports for components**: import React components directly from their `.tsx`. No `index.ts` re-export files in component folders.
 - **One symbol per file in `utils/` and `@types/`**: every file in `src/utils/` (and `tools/utils/`) exports exactly **one function**; every file in `src/@types/` exports exactly **one type**. Filename = the exported symbol's name (kebab/camel as the symbol dictates). No multi-export helper grab-bags — if a "data" file grows a generic pure helper, extract it to its own `utils/<area>/<fn>.ts` (math/format/color/random/gpu/…) with a focused test. Deep relative imports, no barrels.
 - **Dev server stays running**: `npm run dev` is left running in the background for HMR visual checks. Don't kill it. To verify a UI change, ask the user to look (or describe what they should see).
-- **TDD via plans**: substantial features get a plan in `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` with bite-sized TDD tasks. Plans are executed via the `subagent-driven-development` workflow (fresh subagent per task + spec + quality reviews). Plans follow [`docs/superpowers/conventions/plan-style.md`](docs/superpowers/conventions/plan-style.md) — **contract code yes, implementation code no** (overrides the upstream `writing-plans` skill's "complete code in every step" default).
+- **TDD via plans**: substantial features get a plan in `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` with bite-sized TDD tasks. Plans are executed via the `subagent-driven-development` workflow (fresh subagent per task + spec + quality reviews). Plans follow [`docs/superpowers/conventions/plan-style.md`](docs/superpowers/conventions/plan-style.md) — **contract code yes, implementation code no** (overrides the upstream `writing-plans` skill's "complete code in every step" default). When a plan ships, run the `/feature-done` audit: it gates on the DoD then relocates the plan + its spec to `plans/completed/` + `specs/completed/`.
 - **Plans coexist**: multiple in-flight plans is normal. Check the file list before starting new work to avoid stomping on something else.
 - **Simplicity over ease**: judge a design by the artifact (what runs and gets changed), not the keystrokes; un-braid concerns that could vary independently. Principles + the known-entanglements backlog live in [`docs/superpowers/conventions/simplicity.md`](docs/superpowers/conventions/simplicity.md) (Rich Hickey's _Simple Made Easy_, applied to skymap). Run the `entanglement-radar` skill to review a diff/module — **and at design time over a spec/plan**: a section that exists to teach handling of an "asymmetry"/"subtlety"/"special-case" is a STOP-and-un-braid signal (classify essential vs accidental), not a note to write more carefully.
 
