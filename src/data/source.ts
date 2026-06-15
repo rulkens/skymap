@@ -1,0 +1,97 @@
+// ─── The enum itself ────────────────────────────────────────────────────────
+
+/**
+ * Stable numeric tag for every data source. Used as a `.bin` byte for
+ * galaxy catalog rows, packed into the pick texture for galaxy catalog + structure hits, and
+ * as a registry key for filament + volume assets.
+ *
+ * IMPORTANT: integer values 0..8 are persisted in the `.bin` point-cloud
+ * file format AND packed into the pick texture's upper 5 bits. Treat
+ * them like API version numbers — append, never renumber. Recycling a
+ * code silently breaks every `.bin` ever written and every saved
+ * selection URL.
+ *
+ * Codes ≥ 9 (filaments, volumes) are not persisted anywhere, but the
+ * same "append, never renumber" discipline applies for consistency.
+ */
+export const Source = {
+  /** Procedurally-generated stand-in cloud (no real photometry). */
+  Synthetic: 0,
+  /** Sloan Digital Sky Galaxy catalog — deep optical spectroscopic galaxy catalog. */
+  SDSS: 1,
+  /** 2MASS Redshift Galaxy catalog — near-IR all-sky redshift catalog. */
+  TwoMRS: 2,
+  /**
+   * Galaxy List for the Advanced Detector Era (GLADE v2.3) — an all-sky
+   * compilation that pre-merges HyperLEDA, GWGC, 2MASS XSC, 2MPZ, 6dFGS,
+   * and SDSS-DR12Q with cross-match dedup. Acts as the "deep all-sky"
+   * baseline so the merger doesn't have to re-dedup those parent catalogs.
+   */
+  Glade: 3,
+  /**
+   * Curated atlas of well-known galaxies (Messier + NGC greatest-hits).
+   * Distinct from galaxy-catalog-derived sources because entries are hand-picked,
+   * carry curated descriptions, and ship with high-quality processed
+   * thumbnails. Many entries (M31, M33, M81, NGC 253) sit too close to
+   * survive 2MRS/GLADE's small-z filtering, so they need their own
+   * positions rather than just tagging existing rows.
+   */
+  FamousGalaxy: 4,
+  /**
+   * Galaxy-cluster anchors (Virgo, Coma, Norma, ...). Picks against a
+   * cluster's marker ring return source code 5 in the upper 5 bits of
+   * the packed identity; the 27-bit `localIdx` carries the structure's index
+   * into the cluster table. See `selectionEncoding.ts` for the layout.
+   */
+  Cluster: 5,
+  /** Supercluster anchors (Hydra Wall, Hercules SC, ...). Same encoding as Cluster. */
+  Supercluster: 6,
+  /** Void anchors (Sculptor Void, Local Void, Boötes Void). Same encoding as Cluster. */
+  Void: 7,
+  /**
+   * Milliquas v8 (Flesch 2023) — the Million Quasars compilation. AGN
+   * point sources (QSOs, BL Lacs, type-1 Seyferts, Seyfert-1 cores,
+   * candidate quasars) rendered alongside the galaxy catalogs for the
+   * optically-bright AGN sky. Slot 8 — slots 5/6/7 belong to the structure
+   * codes above, so the next galaxy catalog integer is 8.
+   */
+  Milliquas: 8,
+  /**
+   * Cosmic-web filament skeleton (DisPerSE on a 2MRS + GLADE density
+   * field). Single global asset, not per-record; the registry entry
+   * carries the default-enabled flag + intensity multiplier.
+   */
+  Filaments: 9,
+  /**
+   * Cosmicflows-4 dark-matter density volume (Valade 2024 HAMLET cube,
+   * 256³). Default-off scalar field; the registry entry carries its
+   * presentation defaults (palette, contrast, exposure, …).
+   */
+  Cf4Density: 10,
+  /**
+   * MCPM ("Cosmic Slime" / rhizome) cosmic-web density volume — SDSS DR17
+   * VAC, tier-aware. Default-on scalar field; the registry entry carries
+   * its presentation defaults.
+   */
+  Mcpm: 11,
+  /**
+   * DEV-only synthetic Gaussian-blob volume — verifies "is anything
+   * visible at the cube origin?". Procedurally generated; no on-disk
+   * payload. Bundled out of production builds via `import.meta.env.DEV`
+   * gating at the slot-registration site.
+   */
+  DebugGaussian: 12,
+  /** DEV-only Cartesian-grid volume for axis-alignment verification. */
+  DebugCartesian: 13,
+  /** DEV-only spherical-shell-and-spoke volume for radial-symmetry verification. */
+  DebugSpherical: 14,
+  /**
+   * Nearby galaxy-group anchors (Local Group, M81, Cen A, ...). Picks
+   * against a group's marker ring return source code 15 in the upper 5
+   * bits of the packed identity; the 27-bit `localIdx` carries the structure's
+   * index into the structure store. Same encoding as Cluster/Supercluster/
+   * Void. Seed-only (no bulk catalog), like Void. Appended at 15 — NEVER
+   * renumber the galaxy catalog codes 0–8 below it.
+   */
+  Group: 15,
+} as const;
