@@ -19,6 +19,7 @@ import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
 import type { FocusableTargetType } from '../../../@types/engine/FocusableTargetType';
 import { commitGalaxyFocus } from './commitGalaxyFocus';
 import { commitStructureFocus } from './commitStructureFocus';
+import { commitMilkyWayFocus } from './commitMilkyWayFocus';
 
 export const COMMIT_FOCUS: Record<
   FocusableTargetType,
@@ -29,5 +30,10 @@ export const COMMIT_FOCUS: Record<
   },
   structure: (state, target) => {
     if (target.type === 'structure') commitStructureFocus(state, target);
+  },
+  // The Milky Way is a singleton — the target carries no per-instance data, so
+  // the helper takes only `state` (it focuses MILKY_WAY_INFO unconditionally).
+  milkyWay: (state, target) => {
+    if (target.type === 'milkyWay') commitMilkyWayFocus(state);
   },
 };

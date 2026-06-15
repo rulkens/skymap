@@ -14,6 +14,7 @@ import type { StructureInfo } from '../../../../src/@types/data/structure/Struct
 
 const commitGalaxyFocusSpy = vi.fn();
 const commitStructureFocusSpy = vi.fn();
+const commitMilkyWayFocusSpy = vi.fn();
 
 vi.mock('../../../../src/services/engine/helpers/commitGalaxyFocus', () => ({
   commitGalaxyFocus: (...args: unknown[]) => commitGalaxyFocusSpy(...args),
@@ -21,9 +22,13 @@ vi.mock('../../../../src/services/engine/helpers/commitGalaxyFocus', () => ({
 vi.mock('../../../../src/services/engine/helpers/commitStructureFocus', () => ({
   commitStructureFocus: (...args: unknown[]) => commitStructureFocusSpy(...args),
 }));
+vi.mock('../../../../src/services/engine/helpers/commitMilkyWayFocus', () => ({
+  commitMilkyWayFocus: (...args: unknown[]) => commitMilkyWayFocusSpy(...args),
+}));
 
 // Imported AFTER the mocks so commitFocus picks them up.
 import { commitFocus } from '../../../../src/services/engine/helpers/commitFocus';
+import { MILKY_WAY_INFO } from '../../../../src/data/milkyWay/milkyWayInfo';
 
 function makeFixtures() {
   const state = {} as unknown as EngineState;
@@ -50,6 +55,7 @@ describe('commitFocus', () => {
   beforeEach(() => {
     commitGalaxyFocusSpy.mockClear();
     commitStructureFocusSpy.mockClear();
+    commitMilkyWayFocusSpy.mockClear();
   });
 
   it('routes a GalaxyInfo through commitGalaxyFocus', () => {
@@ -64,5 +70,14 @@ describe('commitFocus', () => {
     commitFocus(state, structure);
     expect(commitStructureFocusSpy).toHaveBeenCalledWith(state, structure);
     expect(commitGalaxyFocusSpy).not.toHaveBeenCalled();
+  });
+
+  it('routes a milkyWay target to the milkyWay focus path', () => {
+    const { state } = makeFixtures();
+    commitFocus(state, MILKY_WAY_INFO);
+    // The MW helper takes only `state` (singleton — no per-instance data).
+    expect(commitMilkyWayFocusSpy).toHaveBeenCalledWith(state);
+    expect(commitGalaxyFocusSpy).not.toHaveBeenCalled();
+    expect(commitStructureFocusSpy).not.toHaveBeenCalled();
   });
 });

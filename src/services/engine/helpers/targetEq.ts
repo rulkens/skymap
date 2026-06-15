@@ -27,5 +27,10 @@ export function targetEq(a: FocusableTarget | null, b: FocusableTarget | null): 
   if (a.type === 'structure' && b.type === 'structure') {
     return a.id === b.id;
   }
+  if (a.type === 'milkyWay' && b.type === 'milkyWay') {
+    // The Milky Way is a singleton — two milkyWay targets always name the same
+    // thing.  Compare on the tag (not reference) so dedup holds by contract.
+    return true;
+  }
   return false;
 }

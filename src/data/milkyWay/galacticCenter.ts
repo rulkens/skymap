@@ -78,3 +78,12 @@ export const MILKY_WAY_CENTER_WORLD: Vec3 = raDecDistToCartesian(
  * up "near home".
  */
 export const MILKY_WAY_VIEW_DISTANCE_MPC = 0.15;
+
+/**
+ * Physical radius (kpc) of the Milky Way's stellar disc, used to size the
+ * selection ring when the Milky Way is the selected target.  ~25 kpc is the
+ * conventional figure for the visible disc edge; the selection ring borrows it
+ * the way the galaxy branch borrows a catalog `diameterKpc`, so the ring scales
+ * with the disc's apparent on-screen size.
+ */
+export const MILKY_WAY_DISC_RADIUS_KPC = 25;

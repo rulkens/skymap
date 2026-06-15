@@ -8,6 +8,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { targetEq } from '../../../../src/services/engine/helpers/targetEq';
+import { MILKY_WAY_INFO } from '../../../../src/data/milkyWay/milkyWayInfo';
 import type { GalaxyInfo } from '../../../../src/@types/engine/GalaxyInfo';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import { Source } from '../../../../src/data/sources';
@@ -47,5 +48,17 @@ describe('targetEq', () => {
   it('same structure id is equal; differing id is not', () => {
     expect(targetEq(makeStructure('virgo'), makeStructure('virgo'))).toBe(true);
     expect(targetEq(makeStructure('virgo'), makeStructure('coma'))).toBe(false);
+  });
+
+  it('true for two milkyWay targets (singleton self-equality)', () => {
+    expect(targetEq(MILKY_WAY_INFO, MILKY_WAY_INFO)).toBe(true);
+  });
+
+  it('false for milkyWay vs a galaxy', () => {
+    expect(targetEq(MILKY_WAY_INFO, makeGalaxy(Source.SDSS, 0))).toBe(false);
+  });
+
+  it('false for milkyWay vs a structure', () => {
+    expect(targetEq(MILKY_WAY_INFO, makeStructure('virgo'))).toBe(false);
   });
 });

@@ -9,6 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { DETAIL_CARD } from '../../../src/components/InfoCard/detailCardTable';
+import { MILKY_WAY_INFO } from '../../../src/data/milkyWay/milkyWayInfo';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { GalaxyInfo } from '../../../src/@types/engine/GalaxyInfo';
 
@@ -94,6 +95,22 @@ describe('DETAIL_CARD', () => {
   it('structure.Compact renders the structure hover preview', () => {
     render(<>{DETAIL_CARD.structure.Compact({ target: structure })}</>);
     expect(screen.getByText('Virgo Cluster')).toBeInTheDocument();
+    expect(screen.getByText('Hover')).toBeInTheDocument();
+  });
+
+  it('milkyWay.Detail renders the Milky Way detail card', () => {
+    const { container } = render(
+      <>{DETAIL_CARD.milkyWay.Detail({ target: MILKY_WAY_INFO, pinned: true })}</>,
+    );
+    expect(screen.getByText('Milky Way')).toBeInTheDocument();
+    expect(screen.getByText(MILKY_WAY_INFO.description)).toBeInTheDocument();
+    // No thumbnail — the image slot is a glyph.
+    expect(container.querySelector('img')).toBeNull();
+  });
+
+  it('milkyWay.Compact renders the Milky Way hover preview', () => {
+    render(<>{DETAIL_CARD.milkyWay.Compact({ target: MILKY_WAY_INFO })}</>);
+    expect(screen.getByText('Milky Way')).toBeInTheDocument();
     expect(screen.getByText('Hover')).toBeInTheDocument();
   });
 });

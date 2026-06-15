@@ -23,4 +23,8 @@ export const URL_HASH_FOR: Record<FocusableTargetType, (t: FocusableTarget) => s
   galaxyCatalog: (t) => (t.type === 'galaxyCatalog' ? selectionToFocusId(t) : null),
   // A structure's own id is already the stable `${category}-${seed}` token.
   structure: (t) => (t.type === 'structure' ? t.id : null),
+  // No MW deep-link yet (a `#focus=milkyway` round-trip would need the
+  // FocusTarget parser to grow a milkyWay kind — deferred).  Returning null
+  // clears `#focus=`, matching the old behaviour where a MW focus held no hash.
+  milkyWay: () => null,
 };

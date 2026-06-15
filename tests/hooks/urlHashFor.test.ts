@@ -7,6 +7,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { URL_HASH_FOR } from '../../src/hooks/urlHashFor';
+import { MILKY_WAY_INFO } from '../../src/data/milkyWay/milkyWayInfo';
 import { selectionToFocusId } from '../../src/services/url/focusUrl';
 import type { GalaxyInfo } from '../../src/@types/engine/GalaxyInfo';
 import type { StructureInfo } from '../../src/@types/data/structure/StructureInfo';
@@ -49,5 +50,9 @@ describe('URL_HASH_FOR', () => {
 
   it('structure row returns the structure id', () => {
     expect(URL_HASH_FOR.structure(makeStructure('cluster-virgo-m87'))).toBe('cluster-virgo-m87');
+  });
+
+  it('milkyWay row returns null (no deep-link; clears #focus=)', () => {
+    expect(URL_HASH_FOR.milkyWay(MILKY_WAY_INFO)).toBeNull();
   });
 });

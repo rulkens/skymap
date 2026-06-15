@@ -8,16 +8,17 @@
  * which lost the native `<details>` "More details" open state on every hover.
  *
  * Both `hovered` and `selected` accept the full `FocusableTarget` union
- * (`GalaxyInfo | StructureInfo`).  App.tsx merges structure and galaxy state
- * before handing them here — structure wins when both are present.  InfoCard then
- * dispatches via the `DETAIL_CARD` table (keyed on `target.type`) to pick the
- * right detail-card and compact-preview variant for each slot, so adding a new
- * focusable kind is a new table row rather than a new branch here.
+ * (`GalaxyInfo | StructureInfo | MilkyWayInfo`).  Dispatch is entirely
+ * table-driven: `DETAIL_CARD[target.type]` picks the detail + compact card for
+ * whichever target lands in each slot, so there is no per-kind branching and a
+ * new focusable kind is one table row.  The only logic here is slot precedence —
+ * pinned target → detail, a different hovered target → compact preview.
  */
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
+import { targetEq } from '../../services/engine/helpers/targetEq';
 import { DETAIL_CARD } from './detailCardTable';
 import styles from './InfoCard.module.css';
 
@@ -29,11 +30,10 @@ export type InfoCardProps = {
    */
   hovered: FocusableTarget | null;
   /**
-   * The pinned/selected target, or null when nothing is pinned.  Same dispatch
-   * as `hovered`.  When both `hovered` and `selected` are non-null and of the
-   * same kind (galaxy/galaxy or structure/structure), the stacked-pair layout applies;
-   * when they're different kinds (e.g. galaxy pinned, structure hovered), both render
-   * in their respective slots.
+   * The pinned/selected target, or null when nothing is pinned.  Owns the detail
+   * slot; a hovered target naming a different thing renders beneath as a compact
+   * preview.  When `hovered` and `selected` are the same thing, the preview is
+   * suppressed (the detail card already shows it).
    */
   selected: FocusableTarget | null;
   /**
@@ -67,61 +67,24 @@ export function InfoCard({
 }: InfoCardProps): ReactNode {
   if (!hovered && !selected) return null;
 
-  // Split each slot into its concrete arm by the union tag (`type`) rather than
-  // a structural sniff.  These narrowed locals drive the id/index comparisons
-  // below; the cards themselves are picked from the DETAIL_CARD table.
-  const selectedStructure = selected?.type === 'structure' ? selected : null;
-  const selectedGalaxy = selected?.type === 'galaxyCatalog' ? selected : null;
-  const hoveredStructure = hovered?.type === 'structure' ? hovered : null;
-  const hoveredGalaxyAny = hovered?.type === 'galaxyCatalog' ? hovered : null;
+  // Two slots, both dispatched by the target's union tag through DETAIL_CARD —
+  // no per-kind branching.  The selected target owns the detail card; a hovered
+  // target naming a *different* thing shows beneath it as a compact preview
+  // (`targetEq` suppresses the redundant preview of an already-pinned target).
+  // Adding a focusable kind is a DETAIL_CARD row, never a branch here.
+  const compactTarget = hovered !== null && !targetEq(hovered, selected) ? hovered : null;
 
-  // Structure hover wins over galaxy hover when both are non-null (a transient
-  // cross-render race; the engine's hover throttler normally clears the
-  // "other" sink).  Structure hover is also suppressed when the SAME structure
-  // is already pinned — the pinned detail card above already shows that content.
-  const showStructureHover =
-    hoveredStructure != null && hoveredStructure.id !== selectedStructure?.id;
-  const showGalaxyHover = hoveredGalaxyAny != null && !showStructureHover;
-  const hoveredGalaxy = showGalaxyHover ? hoveredGalaxyAny : null;
-
-  // Pinned structure path: structure detail card on top, then any galaxy /
-  // structure hover preview below.
-  if (selectedStructure) {
-    return (
-      <div className={cx(styles.infoCardStack, 'infoCardStack')}>
-        {DETAIL_CARD.structure.Detail({
-          target: selectedStructure,
+  return (
+    <div className={cx(styles.infoCardStack, 'infoCardStack')}>
+      {selected &&
+        DETAIL_CARD[selected.type].Detail({
+          target: selected,
           pinned: true,
           selectedMemberCount,
           onFocus,
           onClose,
         })}
-        {hoveredGalaxy && DETAIL_CARD.galaxyCatalog.Compact({ target: hoveredGalaxy })}
-        {showStructureHover && DETAIL_CARD.structure.Compact({ target: hoveredStructure })}
-      </div>
-    );
-  }
-
-  // Galaxy path: the detail slot shows the pinned galaxy (stacked over a
-  // hovered second galaxy) or, with nothing pinned, the hovered galaxy itself.
-  const isStacked =
-    hoveredGalaxy != null && selectedGalaxy != null && hoveredGalaxy.index !== selectedGalaxy.index;
-  const detailTarget: FocusableTarget | null = isStacked
-    ? selectedGalaxy
-    : (hoveredGalaxy ?? selectedGalaxy);
-  const detailPinned = isStacked ? true : hoveredGalaxy == null;
-
-  return (
-    <div className={cx(styles.infoCardStack, 'infoCardStack')}>
-      {detailTarget &&
-        DETAIL_CARD.galaxyCatalog.Detail({
-          target: detailTarget,
-          pinned: detailPinned,
-          onFocus,
-          onClose,
-        })}
-      {isStacked && hoveredGalaxy && DETAIL_CARD.galaxyCatalog.Compact({ target: hoveredGalaxy })}
-      {showStructureHover && DETAIL_CARD.structure.Compact({ target: hoveredStructure })}
+      {compactTarget && DETAIL_CARD[compactTarget.type].Compact({ target: compactTarget })}
     </div>
   );
 }

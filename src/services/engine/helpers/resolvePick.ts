@@ -16,6 +16,7 @@
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import { resolveGalaxyInfo } from './resolveGalaxyInfo';
 import { resolveStructureFromPick } from './resolveStructureFromPick';
+import { MILKY_WAY_INFO } from '../../../data/milkyWay/milkyWayInfo';
 import type { PickResult } from '../../../@types/data/PickResult';
 import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
@@ -42,6 +43,11 @@ export function resolvePick(
       category: entry.id as StructureId,
       structureIndex: pick.localIdx,
     });
+  }
+  if (entry?.type === 'milkyWay') {
+    // The Milky Way is a singleton: no (source, localIdx) re-index, no store
+    // lookup — the pick resolves straight to the static const.
+    return MILKY_WAY_INFO;
   }
   console.warn(`resolvePick: source code ${pick.sourceCode} is not a pickable surface`);
   return null;
