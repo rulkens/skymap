@@ -5,10 +5,10 @@
 // closure delegates here.  The `Pick` keeps the signature narrow while still
 // accepting the full `EngineState`.
 //
-// The setter does ONE authoritative thing: it flips the survey's
-// `settings.surveys.items[id].enabled` — the single source of truth for
+// The setter does ONE authoritative thing: it flips the galaxy catalog's
+// `settings.galaxyCatalogs.items[id].enabled` — the single source of truth for
 // on/off.  It writes that flag THROUGH the engine-owned settings store (the
-// `setSurveyVisible` action's copy-on-write reducer) rather than mutating the
+// `setGalaxyCatalogVisible` action's copy-on-write reducer) rather than mutating the
 // held object in place: the store write is what NOTIFIES React's
 // `useSettingsStore(selectVisibleSourceMask)` subscriber so the panel checkbox
 // re-renders.  An in-place mutation would update the value but never wake the
@@ -28,18 +28,18 @@
 // read, so there is no mirror to keep in step (no `onMaskChange` fire here).
 //
 // Does NOT trigger loading: the render loop's `reevaluateDemand` reads the
-// survey's `enabled` bit (the flag flipped here) and loads the now-visible
-// survey (and companions) next frame, so visibility and loading stay
+// galaxy catalog's `enabled` bit (the flag flipped here) and loads the now-visible
+// galaxy catalog (and companions) next frame, so visibility and loading stay
 // decoupled.
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { SurveyId } from '../../../@types/engine/data/SurveyId';
+import type { GalaxyCatalogId } from '../../../@types/engine/data/GalaxyCatalogId';
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
 import { deriveSourceMasks } from '../frame/deriveSourceMasks';
 import type { SettingsStore } from '../settingsStore/createSettingsStore';
-import { setSurveyVisibleAction } from '../settingsStore/actions/setSurveyVisibleAction';
+import { setGalaxyCatalogVisibleAction } from '../settingsStore/actions/setGalaxyCatalogVisibleAction';
 
 export function setSourceVisibleImpl(
   state: Pick<EngineState, 'sources' | 'settings' | 'subsystems'>,
@@ -47,15 +47,15 @@ export function setSourceVisibleImpl(
   source: SourceType,
   visible: boolean,
 ): void {
-  const id = SOURCE_REGISTRY[source].id as SurveyId;
-  if (state.settings.surveys.items[id].enabled === visible) return; // no-op
-  // Single source of truth: flip the survey's enabled flag THROUGH the store
+  const id = SOURCE_REGISTRY[source].id as GalaxyCatalogId;
+  if (state.settings.galaxyCatalogs.items[id].enabled === visible) return; // no-op
+  // Single source of truth: flip the galaxy catalog's enabled flag THROUGH the store
   // so the copy-on-write write notifies React's selector subscriber.
-  setSurveyVisibleAction(store, id, visible);
+  setGalaxyCatalogVisibleAction(store, id, visible);
   // Fire the fade (fire-and-forget; last-issued wins inside the registry, and
   // deriveSourceMasks keeps the draw bit set while opacity > 0).
   void state.subsystems.fades.fadeTo(
-    { kind: 'survey', source },
+    { kind: 'galaxyCatalog', source },
     visible ? 1 : 0,
     visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
   );

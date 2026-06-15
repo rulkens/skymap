@@ -8,13 +8,13 @@
  * ad-hoc string.
  *
  * Kinds:
- *   - survey       — one of SDSS, 2MRS, GLADE, Famous, Synthetic.
+ *   - galaxy catalog       — one of SDSS, 2MRS, GLADE, Famous, Synthetic.
  *                    Fades in on first load; fades out → upload → in
  *                    on tier swap. Discriminator: `source: Source`.
  *   - filaments    — the single cosmic-web filament skeleton.
  *                    Fades in on first load. No discriminator.
  *   - flow         — the CF4++ peculiar-velocity flow overlay. Fades in on
- *                    first load (the slot commit), like filaments/survey;
+ *                    first load (the slot commit), like filaments/galaxy catalog;
  *                    fades out on disable. No discriminator.
  *   - scalarField  — one volumetric scalar field (CF-4, rhizome-small,
  *                    rhizome-medium, rhizome-large). Discriminator:
@@ -45,7 +45,7 @@
  *                    so a master fade-out drags every field down with
  *                    it. No discriminator.
  *
- * Future kinds (e.g. `surveyChunk` for chunked galaxy loading) extend
+ * Future kinds (e.g. `galaxyCatalogChunk` for chunked galaxy loading) extend
  * the union without breaking existing consumers because every consumer
  * matches on `kind` exhaustively.
  *
@@ -60,7 +60,7 @@ import type { LabelLayerId } from './LabelLayerId';
 import type { OverlayId } from './OverlayId';
 
 export type FadeId =
-  | { readonly kind: 'survey'; readonly source: SourceType }
+  | { readonly kind: 'galaxyCatalog'; readonly source: SourceType }
   | { readonly kind: 'filaments' }
   | { readonly kind: 'flow' }
   | { readonly kind: 'scalarField'; readonly field: VolumeFieldId }

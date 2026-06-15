@@ -12,7 +12,7 @@ describe('setVolumesEnabled', () => {
     // The touched cluster is a NEW reference …
     expect(next.volumes).not.toBe(state.volumes);
     // … but a sibling cluster keeps its existing reference (structural sharing).
-    expect(next.surveys).toBe(state.surveys);
+    expect(next.galaxyCatalogs).toBe(state.galaxyCatalogs);
   });
 
   it('preserves the sibling items Record ref on the shared cluster', () => {

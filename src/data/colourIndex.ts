@@ -1,8 +1,8 @@
 /**
  * Per-source colour-index computation.
  *
- * Each survey carries different photometric bands in its five `magU/G/R/I/Z`
- * slots. Forcing every survey through SDSS-style u−g would clamp non-SDSS
+ * Each galaxy catalog carries different photometric bands in its five `magU/G/R/I/Z`
+ * slots. Forcing every galaxy catalog through SDSS-style u−g would clamp non-SDSS
  * colours to the unknown-colour sentinel and lose all galaxy-type
  * information. The per-source recipe lives on each entry's `colourSpec`
  * field in `SOURCE_REGISTRY`; this module normalises the result onto the
@@ -47,11 +47,11 @@ export function pickColourIndex(
   dMpcFromOrigin: number,
 ): number {
   const entry = SOURCE_REGISTRY[source];
-  // The points pipeline only routes survey sources here; any other
+  // The points pipeline only routes galaxy catalog sources here; any other
   // kind (structure, filament, volume) hitting this path means a
   // picker/dispatch bug upstream.
-  if (entry.type !== 'survey') {
-    throw new Error(`pickColourIndex: non-survey source ${source} has no colour index`);
+  if (entry.type !== 'galaxyCatalog') {
+    throw new Error(`pickColourIndex: non-galaxy catalog source ${source} has no colour index`);
   }
   const spec = entry.colourSpec;
   const slotMap = { u: magU, g: magG, r: magR, i: magI, z: magZ };

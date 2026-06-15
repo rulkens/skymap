@@ -64,7 +64,7 @@ describe('computeSchechterRatios', () => {
   });
 
   it('produces ratios that monotonically increase with distance', () => {
-    // Across a survey, n(d) drops monotonically with distance (the
+    // Across a galaxy catalog, n(d) drops monotonically with distance (the
     // integration window narrows as the apparent-mag flux limit translates
     // to a brighter absolute-mag cutoff).  Since `ratio = sqrt(n_mid/n(d))`,
     // a falling n(d) produces a rising ratio — far-field above 1, near-

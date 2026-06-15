@@ -5,7 +5,7 @@ import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
 /**
  * GalaxyStore — the authoritative app-side home for galaxy data.
  *
- * Galaxies arrive as decoded `GalaxyCatalog`s (one per survey `Source`)
+ * Galaxies arrive as decoded `GalaxyCatalog`s (one per galaxy catalog `Source`)
  * plus the optional `famousMeta` sidecar that enriches the Famous
  * catalog's InfoCard text. Before per-type stores these lived on
  * `state.sources.catalogs` / `state.sources.famousMeta`; consolidating
@@ -20,7 +20,7 @@ import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
  * favours, without paying for per-frame copies on the GPU hot path.
  */
 export type GalaxyStore = {
-  /** CPU-side mirror of every uploaded catalog, keyed by survey `Source`. */
+  /** CPU-side mirror of every uploaded catalog, keyed by galaxy catalog `Source`. */
   readonly catalogs: ReadonlyMap<SourceType, GalaxyCatalog>;
   /** Famous-catalog metadata sidecar; empty until the fetch resolves. */
   readonly famousMeta: readonly FamousMetaEntry[];

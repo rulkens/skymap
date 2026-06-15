@@ -80,7 +80,7 @@ export async function fetchGalaxyBitmap(
   }
 
   // Try SDSS first.  ~70% of galaxies in the visible cloud will be in the
-  // SDSS footprint when SDSS is the loaded source; for non-SDSS surveys
+  // SDSS footprint when SDSS is the loaded source; for non-SDSS galaxy catalogs
   // (2MRS, GLADE) the SDSS attempt will fail more often, but it's cheap
   // and worth trying because SDSS images are sharper than DSS.
   const sdssBlob = await tryFetch(sdssThumbnailUrl(ra, dec, SLOT_SIDE), signal);

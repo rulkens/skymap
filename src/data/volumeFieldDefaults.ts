@@ -60,7 +60,7 @@ export function getVolumeFieldDefaults(id: VolumeFieldId): VolumeFieldDefaults {
  *
  * `enabled` comes from the registry `visible` flag so the construction
  * seed lands the on/off bit in pure state at boot, symmetric with how the
- * construction seed lands each survey's `surveys.items[id].enabled`.
+ * construction seed lands each galaxy catalog's `galaxyCatalogs.items[id].enabled`.
  * `intensity` falls back to the global default for any field that omits a
  * per-cube override.
  */
@@ -82,8 +82,8 @@ export function buildVolumeFieldSettings(id: VolumeFieldId): VolumeFieldSettings
  * `state.settings.volumes.items` from this at construction so every
  * shippable volume's on/off state (and tunables) EXISTS before any cube
  * loads — the demand predicate `settings.volumes.items[id]?.enabled` then
- * reads pure state, fully symmetric with the survey items read
- * (`settings.surveys.items[id]?.enabled`). Without this, a
+ * reads pure state, fully symmetric with the galaxy catalog items read
+ * (`settings.galaxyCatalogs.items[id]?.enabled`). Without this, a
  * default-on volume (MCPM) never triggers its initial demand-driven
  * load because its field entry didn't exist yet.
  *

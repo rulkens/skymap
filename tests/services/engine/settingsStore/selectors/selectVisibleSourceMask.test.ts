@@ -27,7 +27,7 @@ function deriveMasks(
 
 describe('selectVisibleSourceMask', () => {
   it('packs the enabled bits to the deriveSourceMasks pick bitmask (all enabled)', () => {
-    const settings = makeSettingsFixture(); // every survey enabled
+    const settings = makeSettingsFixture(); // every galaxy catalog enabled
     const { pickMask } = deriveMasks(settings);
 
     expect(selectVisibleSourceMask(settings)).toBe(pickMask);
@@ -36,9 +36,9 @@ describe('selectVisibleSourceMask', () => {
   it('packs the enabled bits to the deriveSourceMasks pick bitmask (one disabled)', () => {
     const base = makeSettingsFixture();
     const settings = makeSettingsFixture({
-      surveys: {
-        ...base.surveys,
-        items: { ...base.surveys.items, sdss: { ...base.surveys.items.sdss, enabled: false } },
+      galaxyCatalogs: {
+        ...base.galaxyCatalogs,
+        items: { ...base.galaxyCatalogs.items, sdss: { ...base.galaxyCatalogs.items.sdss, enabled: false } },
       },
     });
     const { pickMask } = deriveMasks(settings);
@@ -46,12 +46,12 @@ describe('selectVisibleSourceMask', () => {
     expect(selectVisibleSourceMask(settings)).toBe(pickMask);
   });
 
-  it('follows intent only — a disabled survey still fading out is not in the mask', () => {
+  it('follows intent only — a disabled galaxy catalog still fading out is not in the mask', () => {
     const base = makeSettingsFixture();
     const settings = makeSettingsFixture({
-      surveys: {
-        ...base.surveys,
-        items: { ...base.surveys.items, sdss: { ...base.surveys.items.sdss, enabled: false } },
+      galaxyCatalogs: {
+        ...base.galaxyCatalogs,
+        items: { ...base.galaxyCatalogs.items, sdss: { ...base.galaxyCatalogs.items.sdss, enabled: false } },
       },
     });
     // SDSS hidden but still fading out (opacity 0.5): drawMask keeps the bit,

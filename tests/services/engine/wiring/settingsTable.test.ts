@@ -67,11 +67,11 @@ describe('settingsTable', () => {
       const setters = buildSettersFromTable(requestRender, store);
 
       setters.setPointSize(4.2);
-      expect(store.getState().surveys.sizePx).toBe(4.2);
+      expect(store.getState().galaxyCatalogs.sizePx).toBe(4.2);
       expect(requestRender).toHaveBeenCalledOnce();
 
       setters.setBrightness(2.0);
-      expect(store.getState().surveys.brightness).toBe(2.0);
+      expect(store.getState().galaxyCatalogs.brightness).toBe(2.0);
       expect(requestRender).toHaveBeenCalledTimes(2);
     });
 

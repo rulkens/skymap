@@ -5,7 +5,7 @@ import type { SourceEntryBase } from './SourceEntryBase';
  * built from the DisPerSE skeleton of a 2MRS + GLADE density field.
  *
  * Single global asset; no per-record identity or per-vertex source code,
- * unlike survey rows. The entry exists so every data source skymap loads
+ * unlike galaxy catalog rows. The entry exists so every data source skymap loads
  * has one place to look — visibility default + intensity multiplier come
  * from here, the .bin lives on disk under `binBaseName`.
  */

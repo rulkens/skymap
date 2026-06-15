@@ -1,5 +1,5 @@
 /**
- * setBrightnessAction — the thin imperative bridge for the shared survey
+ * setBrightnessAction — the thin imperative bridge for the shared galaxy catalog
  * billboard brightness.
  *
  * Actions are the seam the engine's handle setters delegate to: they run a pure

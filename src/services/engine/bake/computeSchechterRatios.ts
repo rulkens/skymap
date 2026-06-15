@@ -30,14 +30,14 @@
  * Returns a `Float32Array` of length `cloud.count` carrying a *symmetric
  * rebalancing* Schechter density correction.  The intent is to compensate
  * for Malmquist bias in the visualisation: at each distance we observe
- * only galaxies brighter than the survey's apparent-mag flux limit, so
+ * only galaxies brighter than the galaxy catalog's apparent-mag flux limit, so
  * the far-field is artificially sparse and the near-field is artificially
  * dense.  The correction reshuffles alpha *between* near and far without
  * changing the total — additive blending across ~3 M visible galaxies
  * over-saturates with even modest pure-boost factors, so any version that
  * pushes ratios uniformly above 1 blows out the rendered brightness.
  *
- * **Algorithm.** For each galaxy compute the survey's predicted observable
+ * **Algorithm.** For each galaxy compute the galaxy catalog's predicted observable
  * number density `n(d)` at its distance.  Take the cloud's median `n(d)`
  * as the reference `n_mid`.  The per-galaxy ratio is then
  *
@@ -70,7 +70,7 @@
  */
 
 import type { ComputeSchechterRatiosInput } from '../../../@types/engine/ComputeSchechterRatiosInput';
-import { surveyFluxLimit, surveySchechter } from '../../../data/surveyFluxLimits';
+import { galaxyCatalogFluxLimit, galaxyCatalogSchechter } from '../../../data/galaxyCatalogFluxLimits';
 import { expectedNumberDensity } from '../../../utils/math';
 
 /**
@@ -89,9 +89,9 @@ export function computeSchechterRatios(input: ComputeSchechterRatiosInput): Floa
   const { cloud, source } = input;
 
   // Hoist constants outside the per-galaxy loop — these depend only on the
-  // survey, not on any individual row.
-  const mLim = surveyFluxLimit(source);
-  const schechter = surveySchechter(source);
+  // galaxy catalog, not on any individual row.
+  const mLim = galaxyCatalogFluxLimit(source);
+  const schechter = galaxyCatalogSchechter(source);
 
   // Pass 1 — compute n(d) for every galaxy.  We need the full distribution
   // before we can pick the reference (the median across the cloud), so the

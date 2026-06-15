@@ -4,7 +4,7 @@
  *
  * ### What is Malmquist bias and why a sub-bag?
  *
- * Catalog galaxies are flux-limited — anything fainter than the survey's
+ * Catalog galaxies are flux-limited — anything fainter than the galaxy catalog's
  * apparent-magnitude limit at a given distance is missing entirely.  The
  * net result is a sample skewed toward intrinsically bright galaxies at
  * large distances, which makes raw counts unsuitable for cosmological

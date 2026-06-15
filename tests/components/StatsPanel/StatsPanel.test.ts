@@ -92,7 +92,7 @@ describe('StatsPanel', () => {
     expect(html).toContain('Galaxies');
     // 220,453 + 44,000 + 2,400,000 = 2,664,453
     expect(html).toContain('2,664,453');
-    // No per-survey rows render any more — the rollup replaces them.
+    // No per-galaxy-catalog rows render any more — the rollup replaces them.
     expect(html).not.toContain('SDSS');
     expect(html).not.toContain('GLADE');
     expect(html).not.toContain('2MRS');
@@ -139,7 +139,7 @@ describe('StatsPanel', () => {
     expect(html).not.toContain('100,050');
   });
 
-  it('renders a Galaxies total of 0 when all surveys are toggled off', () => {
+  it('renders a Galaxies total of 0 when all galaxy catalogs are toggled off', () => {
     const html = renderToStaticMarkup(
       createElement(StatsPanel, {
         fps: 0,

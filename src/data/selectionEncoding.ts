@@ -70,7 +70,7 @@ export function packSelection(sourceCode: number, localIdx: number): number {
 
 /**
  * Decoded pick-buffer hit: the source code + per-source local index, the pure
- * identity the bits carry. Classifying it (survey galaxy vs structure ring) is
+ * identity the bits carry. Classifying it (galaxy catalog galaxy vs structure ring) is
  * a registry read done downstream by `pickToSelection` — the decode itself
  * stays store-free and dispatch-free.
  */

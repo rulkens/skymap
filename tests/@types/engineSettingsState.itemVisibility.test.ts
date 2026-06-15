@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 import type { EngineSettingsState } from '../../src/@types/settings/EngineSettingsState';
 import type { LabelCategory } from '../../src/@types/engine/data/LabelCategory';
 import type { StructureCategory } from '../../src/@types/engine/data/StructureCategory';
-import type { SurveyId } from '../../src/@types/engine/data/SurveyId';
+import type { GalaxyCatalogId } from '../../src/@types/engine/data/GalaxyCatalogId';
 
 /**
  * Type-level checks on the per-item visibility homes:
- *   - `surveys.items` is keyed by `SurveyId`, each row carrying the survey
+ *   - `galaxyCatalogs.items` is keyed by `GalaxyCatalogId`, each row carrying the galaxy catalog
  *     layer axis (`enabled`) + the text-label axis (`labelEnabled`) — the
- *     famous-galaxy survey is where the curated-atlas name visibility lives;
+ *     famous-galaxy catalog is where the curated-atlas name visibility lives;
  *   - `structures.items` is keyed by `StructureCategory`, each row carrying the
  *     ring axis (`enabled`) + the label axis (`labelEnabled`) — famous galaxies
  *     bear no ring, so a `famousGalaxy` key here is a type error.
@@ -16,8 +16,8 @@ import type { SurveyId } from '../../src/@types/engine/data/SurveyId';
  * compiling.
  */
 describe('EngineSettingsState item visibility', () => {
-  it('surveys.items carries the famous-galaxy label axis', () => {
-    const v: EngineSettingsState['surveys']['items'] = {
+  it('galaxyCatalogs.items carries the famous-galaxy label axis', () => {
+    const v: EngineSettingsState['galaxyCatalogs']['items'] = {
       synthetic: { enabled: true, labelEnabled: true },
       sdss: { enabled: true, labelEnabled: true },
       '2mrs': { enabled: true, labelEnabled: true },
@@ -25,7 +25,7 @@ describe('EngineSettingsState item visibility', () => {
       famousGalaxy: { enabled: true, labelEnabled: true },
       milliquas: { enabled: true, labelEnabled: true },
     };
-    const c: SurveyId = 'famousGalaxy';
+    const c: GalaxyCatalogId = 'famousGalaxy';
     expect(v[c].labelEnabled).toBe(true);
   });
 

@@ -35,7 +35,7 @@ export function absoluteFromApparent(m: number, dMpc: number): number {
 /**
  * Inverse: compute apparent `m` from absolute `M` and distance in Mpc.
  * Used by `vMaxWeight` to derive the maximum distance at which a galaxy
- * of intrinsic magnitude `M` would still hit the survey's flux limit.
+ * of intrinsic magnitude `M` would still hit the galaxy catalog's flux limit.
  */
 export function apparentFromAbsolute(M: number, dMpc: number): number {
   if (dMpc <= 0) return NaN;
@@ -44,7 +44,7 @@ export function apparentFromAbsolute(M: number, dMpc: number): number {
 
 /**
  * Maximum distance (Mpc) at which a galaxy of absolute magnitude `M`
- * hits the survey's apparent flux limit `m_lim`.  Used by `vMaxWeight`.
+ * hits the galaxy catalog's apparent flux limit `m_lim`.  Used by `vMaxWeight`.
  *
  *     m_lim = M + 5·log₁₀(d_max_Mpc) + 25
  *     d_max_Mpc = 10^((m_lim − M − 25) / 5)

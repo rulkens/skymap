@@ -4,9 +4,9 @@ import { selectRealOnly } from '../../../../../src/services/engine/settingsStore
 import { makeSettingsFixture } from '../makeSettingsFixture';
 
 describe('selectRealOnly', () => {
-  it('returns surveys.realOnly', () => {
+  it('returns galaxy catalogs.realOnly', () => {
     const state = makeSettingsFixture({
-      surveys: { ...makeSettingsFixture().surveys, realOnly: true },
+      galaxyCatalogs: { ...makeSettingsFixture().galaxyCatalogs, realOnly: true },
     });
 
     expect(selectRealOnly(state)).toBe(true);

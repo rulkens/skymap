@@ -8,12 +8,12 @@ import { makeSettingsFixture } from '../makeSettingsFixture';
 describe('setDepthFadeAction', () => {
   it('writes the depth-fade flag through the reducer', () => {
     const store = createSettingsStore(makeSettingsFixture());
-    const before = store.getState().surveys;
+    const before = store.getState().galaxyCatalogs;
     const next = !before.depthFade;
 
     setDepthFadeAction(store, next);
 
     expect(selectDepthFade(store.getState())).toBe(next);
-    expect(store.getState().surveys).not.toBe(before);
+    expect(store.getState().galaxyCatalogs).not.toBe(before);
   });
 });

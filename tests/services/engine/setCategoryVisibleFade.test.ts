@@ -1,5 +1,5 @@
 /**
- * setStructureItemEnabled / setStructureLabelEnabled / setSurveyLabelEnabled —
+ * setStructureItemEnabled / setStructureLabelEnabled / setGalaxyCatalogLabelEnabled —
  * fade orchestration + store-write unit tests.
  *
  * These drive the extracted module-level setters directly against a minimal
@@ -13,8 +13,8 @@
  * producers read (`markerLayer{category}` / `labelLayer{structure,category}` /
  * `labelLayer{galaxyNames}`), so on/off is a smooth fade instead of a pop, AND
  * writes the authoritative item leaf (`structures.items[cat].enabled` /
- * `.labelEnabled`, `surveys.items[survey].labelEnabled`) through the store. The
- * survey-label fade fires only when the survey's registry row carries a
+ * `.labelEnabled`, `galaxyCatalogs.items[galaxy catalog].labelEnabled`) through the store. The
+ * galaxy-catalog-label fade fires only when the galaxy catalog's registry row carries a
  * `labelLayer` (famous carries `galaxyNames`). fadeTo owns the render wake (the
  * real FadeRegistry wakes the scheduler internally), so the setters never call
  * requestRender — asserted via the untouched scheduler stub. There is no echo
@@ -29,7 +29,7 @@ import {
 import type { FadeId } from '../../../src/@types/animation/FadeId';
 import { setStructureItemEnabledForTest } from '../../../src/services/engine/handles/setStructureItemEnabled';
 import { setStructureLabelEnabledForTest } from '../../../src/services/engine/handles/setStructureLabelEnabled';
-import { setSurveyLabelEnabledForTest } from '../../../src/services/engine/handles/setSurveyLabelEnabled';
+import { setGalaxyCatalogLabelEnabledForTest } from '../../../src/services/engine/handles/setGalaxyCatalogLabelEnabled';
 import { createSettingsStore } from '../../../src/services/engine/settingsStore/createSettingsStore';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 
@@ -56,7 +56,7 @@ function makeFixture() {
   // delegation. After the action runs, the getter hands back the fresh copy,
   // which is what the assertions read.
   const store = createSettingsStore({
-    surveys: {
+    galaxyCatalogs: {
       enabled: true,
       items: {
         famousGalaxy: { enabled: true, labelEnabled: true },
@@ -151,12 +151,12 @@ describe('setStructureLabelEnabled — fade orchestration', () => {
   });
 });
 
-// ── Survey label axis (setSurveyLabelEnabled) ────────────────────────────────
+// ── Galaxy catalog label axis (setGalaxyCatalogLabelEnabled) ────────────────────────────────
 
-describe('setSurveyLabelEnabled — famous-galaxy survey', () => {
-  it('famousGalaxy label toggle OFF fires fadeTo(labelLayer{galaxyNames}, 0) AND writes the survey item row', () => {
+describe('setGalaxyCatalogLabelEnabled — famous-galaxy catalog', () => {
+  it('famousGalaxy label toggle OFF fires fadeTo(labelLayer{galaxyNames}, 0) AND writes the galaxy catalog item row', () => {
     const fx = makeFixture();
-    setSurveyLabelEnabledForTest(fx.state as never, fx.store, 'famousGalaxy', false);
+    setGalaxyCatalogLabelEnabledForTest(fx.state as never, fx.store, 'famousGalaxy', false);
 
     // famousGalaxy labels live on the shared galaxyNames layer (its registry
     // row's labelLayer), so a toggle fires that handle (no per-category key).
@@ -167,17 +167,17 @@ describe('setSurveyLabelEnabled — famous-galaxy survey', () => {
         duration: FADE_OUT_DURATION_MS,
       },
     ]);
-    // Single source of truth: the survey item row's labelEnabled flag.
-    expect(fx.store.getState().surveys.items.famousGalaxy.labelEnabled).toBe(false);
+    // Single source of truth: the galaxy catalog item row's labelEnabled flag.
+    expect(fx.store.getState().galaxyCatalogs.items.famousGalaxy.labelEnabled).toBe(false);
     // fadeTo owns the wake — the setter must not call requestRender itself.
     expect(fx.state.subsystems.scheduler.requestRender).not.toHaveBeenCalled();
   });
 
   it('famousGalaxy label toggle ON fires fadeTo(labelLayer{galaxyNames}, 1, FADE_IN)', () => {
     const fx = makeFixture();
-    setSurveyLabelEnabledForTest(fx.state as never, fx.store, 'famousGalaxy', false);
+    setGalaxyCatalogLabelEnabledForTest(fx.state as never, fx.store, 'famousGalaxy', false);
     fx.fadeCalls.length = 0;
-    setSurveyLabelEnabledForTest(fx.state as never, fx.store, 'famousGalaxy', true);
+    setGalaxyCatalogLabelEnabledForTest(fx.state as never, fx.store, 'famousGalaxy', true);
 
     expect(fx.fadeCalls).toEqual([
       {
@@ -186,6 +186,6 @@ describe('setSurveyLabelEnabled — famous-galaxy survey', () => {
         duration: FADE_IN_DURATION_MS,
       },
     ]);
-    expect(fx.store.getState().surveys.items.famousGalaxy.labelEnabled).toBe(true);
+    expect(fx.store.getState().galaxyCatalogs.items.famousGalaxy.labelEnabled).toBe(true);
   });
 });

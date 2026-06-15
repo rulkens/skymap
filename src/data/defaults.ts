@@ -28,7 +28,7 @@
  *
  * - Per-source astrophysics constants (Schechter triples, flux limits,
  *   colour ramps).  Those live in `data/sources.ts`,
- *   `data/surveyFluxLimits.ts`, `data/colourIndex.ts` — domain-specific
+ *   `data/galaxyCatalogFluxLimits.ts`, `data/colourIndex.ts` — domain-specific
  *   data, not user-configurable settings.
  * - Internal sentinel values that get overwritten before any frame
  *   renders (`apparentMagLimit`, `schechterMStar`, `schechterAlpha`
@@ -133,7 +133,7 @@ export const DEFAULT_EXPOSURE = 3.0;
 // ── Malmquist-bias correction ────────────────────────────────────────────────
 
 /**
- * Default density-correction mode — `AngularReweight` (per-survey HEALPix).
+ * Default density-correction mode — `AngularReweight` (per-galaxy-catalog HEALPix).
  *
  * Why on by default:  GLADE's parent-catalogue coverage is non-uniform on
  * the sky, which produces visible "pencil-beam jets" radiating from
@@ -149,13 +149,13 @@ export const DEFAULT_EXPOSURE = 3.0;
  * Per-cloud, never global, so SDSS's wedge footprint can't contaminate
  * GLADE's correction (and vice-versa).  See
  * `services/engine/computeAngularWeights.ts` for the algorithm and the
- * survey-isolation rationale.
+ * galaxy-catalog-isolation rationale.
  *
  * Off-mode (`None`) is still the right choice for screenshots that need
  * to show raw catalogue density, or when comparing against a reference
  * paper that uses no correction.  `VolumeLimited`, `VMax`, and `Schechter`
  * remain available in the dropdown — they correct different aspects of
- * the survey selection function (radial completeness vs. angular
+ * the galaxy catalog selection function (radial completeness vs. angular
  * completeness) and aren't mutually exclusive in principle, but the UI
  * exposes them as one-of-five for simplicity.
  */

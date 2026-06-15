@@ -6,7 +6,7 @@
  * glyph drawn at its world anchor, and the floating text label. The two
  * setters here drive those axes onto the authoritative `settings.structures.items`
  * row — keyed by `StructureCategory` because only structures bear rings (famous
- * galaxies, which bear labels but no ring, route through `EngineSurveysHandle`).
+ * galaxies, which bear labels but no ring, route through `EngineGalaxyCatalogsHandle`).
  * Each setter echoes back a fresh derived visibility record so the React shell
  * keeps its checkboxes in sync from one callback.
  */

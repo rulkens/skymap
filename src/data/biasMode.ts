@@ -5,7 +5,7 @@
  * ### What is the Malmquist bias?
  *
  * Astronomers call the "we see brighter galaxies further away" effect the
- * Malmquist bias.  At a fixed flux limit (the survey's faint cut-off), only
+ * Malmquist bias.  At a fixed flux limit (the galaxy catalog's faint cut-off), only
  * the intrinsically luminous galaxies in the back of the volume make it into
  * the catalog — so any naive count-as-density rendering overweights nearby
  * faint galaxies and undercounts the volume in a way that distorts the
@@ -27,7 +27,7 @@
  *   - `Schechter` (3):      reweight by the expected Schechter luminosity
  *                           function so the rendered density tracks the
  *                           predicted galaxy density.  Reserved for Task 4.
- *   - `AngularReweight` (4): per-survey HEALPix angular re-weighting.
+ *   - `AngularReweight` (4): per-galaxy-catalog HEALPix angular re-weighting.
  *                           Bins each cloud's galaxies into (HEALPix cell,
  *                           log-distance shell) pairs and modulates alpha
  *                           by the ratio of median-cell density to local

@@ -21,7 +21,7 @@ export type StructureDetailCardProps = {
   pinned?: boolean;
   /**
    * Catalogued galaxies inside this structure's membership sphere at the
-   * current tier + survey visibility, or null/undefined when not countable
+   * current tier + galaxy catalog visibility, or null/undefined when not countable
    * (famous-galaxy structure, or catalogs not loaded yet) — in which case the
    * row is omitted rather than flashing a misleading "0".
    */

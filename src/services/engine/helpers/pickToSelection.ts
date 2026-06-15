@@ -25,7 +25,7 @@ export function pickToSelection(
 ): Selection | null {
   if (pick === null) return null;
   const entry = SOURCE_REGISTRY[pick.sourceCode];
-  if (entry?.type === 'survey') {
+  if (entry?.type === 'galaxyCatalog') {
     return { kind: 'galaxy', source: pick.sourceCode, localIdx: pick.localIdx };
   }
   if (entry?.type === 'structure') {

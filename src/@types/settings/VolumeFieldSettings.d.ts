@@ -10,7 +10,7 @@
  * Extends `DataItemSettings` so a volume field's on/off lives in the same
  * `enabled` field every other data item uses (`volumeFieldRenderer.setEnabled`
  * reads it when false). The per-field render knobs below ride on top — they're
- * what makes a scalar-volume field richer than a survey or structure item,
+ * what makes a scalar-volume field richer than a galaxy catalog or structure item,
  * which carry only visibility (and an optional label axis).
  */
 

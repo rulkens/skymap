@@ -105,7 +105,7 @@ export const pointSpritesPass: Pass = {
       // timestamp. The registry returns 1.0 for unregistered handles —
       // a safe fallback so a source that hasn't registered yet renders
       // at full opacity rather than disappearing.
-      fadeOpacityOf: (source) => fades.opacityOf({ kind: 'survey', source }, nowMs),
+      fadeOpacityOf: (source) => fades.opacityOf({ kind: 'galaxyCatalog', source }, nowMs),
     });
   },
 };

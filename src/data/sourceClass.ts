@@ -7,7 +7,7 @@
  *   - `classByte` (uint8) — source-interpreted classification.
  *     Today only Milliquas populates it (AGN class letter →
  *     enum 1..6).  Every other source stores 0 and
- *     `sourceClassLabel` returns null.  Future per-survey class
+ *     `sourceClassLabel` returns null.  Future per-galaxy-catalog class
  *     signals (e.g. GLADE morphology) add a new branch here
  *     without touching the .bin format.
  *
@@ -18,9 +18,9 @@
  *     display name from the bin without a sidecar JSON.
  *
  * Why a separate module rather than members on `sources.ts`?
- * `sources.ts` is the canonical "what's a survey?" file and is
+ * `sources.ts` is the canonical "what's a galaxy catalog?" file and is
  * imported almost everywhere; growing it with per-row interpretation
- * tables would blur the boundary between "survey identity" and "row
+ * tables would blur the boundary between "galaxy catalog identity" and "row
  * payload semantics".  Splitting them lets each module say one thing
  * cleanly.
  *

@@ -160,7 +160,7 @@ export function buildGalaxyInfo(
 
   // Galaxy-type classification dispatches by source: SDSS / Synthetic still
   // use the canonical u−r red-sequence / blue-cloud split (Strateva et al.
-  // 2001), GLADE switches to B−J, and 2MRS uses J−K.  Each survey's
+  // 2001), GLADE switches to B−J, and 2MRS uses J−K.  Each galaxy catalog's
   // classifier returns the same GalaxyTypeInfo shape so the InfoCard
   // renders "Red, quiescent" / "Blue, star-forming" / etc. uniformly
   // regardless of which colour pair fed the decision.
@@ -169,19 +169,19 @@ export function buildGalaxyInfo(
   //
   // Look up which actual photometric bands occupy each mag slot for this
   // source, then build the list of colour indices that make sense given
-  // those bands.  Non-SDSS surveys don't carry u-band, so the canonical
+  // those bands.  Non-SDSS galaxy catalogs don't carry u-band, so the canonical
   // u−g colour is replaced with whatever bluest-band colour they DO have
   // (e.g. B−J for GLADE).  Slots marked '—' are skipped.
   //
   // The `colours` array is what the InfoCard renders in its "Colour" row;
   // pre-computing it here keeps the React layer presentational and avoids
   // sprinkling per-source band-pair logic throughout the components.
-  // Only survey rows carry photometry. The picker only routes survey
+  // Only galaxy catalog rows carry photometry. The picker only routes galaxy catalog
   // sources into the points pipeline, so any other kind (POI, filament,
   // volume) reaching here is a bug upstream.
   const entry = SOURCE_REGISTRY[source];
-  if (entry.type !== 'survey') {
-    throw new Error(`buildGalaxyInfo: non-survey source ${source} has no photometric bands`);
+  if (entry.type !== 'galaxyCatalog') {
+    throw new Error(`buildGalaxyInfo: non-galaxy catalog source ${source} has no photometric bands`);
   }
   const bands = entry.bandLabels;
 
@@ -245,7 +245,7 @@ export function buildGalaxyInfo(
   // Single source of truth for "is this a famous row with loaded metadata?":
   // the catalogue link, the curated thumbnail, and the famous block below all
   // key off the same entry.  Undefined for non-famous rows or before the
-  // sidecar resolves (the InfoCard then renders the generic survey layout).
+  // sidecar resolves (the InfoCard then renders the generic galaxy catalog layout).
   const famousEntry = source === Source.FamousGalaxy && famousMeta ? famousMeta[idx] : undefined;
   // The primary catalogue link, labelled at the same point its URL is chosen so
   // the label can never drift from the page it points at.  `null` when the row
@@ -300,8 +300,8 @@ export function buildGalaxyInfo(
     ? sdssThumbnailUrl(ra, dec, 200, fovArcmin)
     : dssThumbnailUrl(ra, dec, fovArcmin);
   // Famous galaxies have a curated, non-deprojected tile committed at
-  // /images/famous-thumb/<id>.webp — prefer it, since the survey cutout is
-  // generic and lower quality.  The survey cutout becomes the fallback for the
+  // /images/famous-thumb/<id>.webp — prefer it, since the galaxy catalog cutout is
+  // generic and lower quality.  The galaxy catalog cutout becomes the fallback for the
   // few famous rows whose source couldn't be re-fetched (no curated tile);
   // Thumbnail swaps to it on the curated tile's 404.
   const thumbnailUrl = famousEntry
@@ -400,7 +400,7 @@ export function buildGalaxyInfo(
   // Look up the curated sidecar metadata only for Famous rows.  For every other
   // source this block is a no-op: we never index into `famousMeta` and the
   // returned `GalaxyInfo` carries no `famous` key, which is exactly what the
-  // InfoCard expects for a plain survey row.
+  // InfoCard expects for a plain galaxy catalog row.
   //
   // Graceful degradation: if the sidecar fetch hasn't resolved yet (empty
   // arrays / undefined), `famousMeta[idx]` is undefined and we skip the block
@@ -464,7 +464,7 @@ export function buildGalaxyInfo(
     // Best human-readable headline for this row.  Treats the choice
     // as a priority-ordered list of candidates with a single "first
     // non-empty wins" selection rule (matching `famousDisplayName`'s
-    // strategy, just with extra survey-row candidates appended):
+    // strategy, just with extra galaxy-catalog-row candidates appended):
     //
     //   1. Famous → curated `commonName` then `names[0]`.  Routed
     //      through the shared `famousDisplayName` helper so the
@@ -475,7 +475,7 @@ export function buildGalaxyInfo(
     //      0 (literature designation) or otherwise unrecognised the
     //      candidate is undefined and we fall through to the IAU
     //      fallback below, which produces "MQ J<RA><Dec>".
-    //   3. Survey row with a real PGC in objID → `PGC <n>`.  Applies
+    //   3. Galaxy catalog row with a real PGC in objID → `PGC <n>`.  Applies
     //      to BOTH 2MRS (PGC populated by the build-time GLADE→2MRS
     //      cross-match) and GLADE (PGC inherited directly from the
     //      source line).  PGC is widely indexed by NED / SIMBAD,
@@ -525,7 +525,7 @@ export function buildGalaxyInfo(
     },
 
     // Famous enrichment — present only for Source.FamousGalaxy rows.  `undefined`
-    // for all survey rows so the InfoCard's `info.famous &&` guard works
+    // for all galaxy catalog rows so the InfoCard's `info.famous &&` guard works
     // without an explicit `?? null` at each consumer.
     famous,
   };

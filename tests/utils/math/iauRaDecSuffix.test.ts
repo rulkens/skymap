@@ -1,6 +1,6 @@
 /**
  * Regression test for `iauRaDecSuffix` — the coordinate-only portion of
- * an IAU designation, factored out of `iauName` so any survey prefix
+ * an IAU designation, factored out of `iauName` so any galaxy catalog prefix
  * (including the Milliquas parent-survey prefixes reconstructed from the
  * bin's parentSurveyByte) can share the same exact coord-string emitter.
  *

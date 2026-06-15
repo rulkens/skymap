@@ -23,7 +23,7 @@
  * Every settings field lives under exactly one named cluster — no flat
  * root fields (a flat duplicate invites split-brain reads/writes).  The
  * clusters mirror EngineHandle's sub-handle namespaces 1:1 — a setter
- * on `handle.surveys` writes into `state.settings.surveys`, a setter on
+ * on `handle.galaxyCatalogs` writes into `state.settings.galaxyCatalogs`, a setter on
  * `handle.tonemap` writes into `state.settings.tonemap`, etc.  This
  * shape makes the engine's per-frame snapshot and the React-facing
  * setters trivially derivable from each other.
@@ -48,34 +48,34 @@
 import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { StructureCategory } from '../engine/data/StructureCategory';
-import type { SurveyId } from '../engine/data/SurveyId';
+import type { GalaxyCatalogId } from '../engine/data/GalaxyCatalogId';
 import type { FlowSettings } from './FlowSettings';
 import type { VolumeFieldId } from '../data/VolumeFieldId';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
 import type { StructureItemSettings } from './StructureItemSettings';
-import type { SurveyItemSettings } from './SurveyItemSettings';
+import type { GalaxyCatalogItemSettings } from './GalaxyCatalogItemSettings';
 
 export type EngineSettingsState = {
   /**
-   * Survey point-billboard controls — the shared appearance knobs that
-   * influence every survey's `points.wgsl` draw — plus the survey-layer
-   * master gate and per-survey items. `enabled` is the coarse "hide all
-   * surveys" gate (symmetric with `volumes.enabled` / `structures.enabled`).
-   * Per-survey state lives in `items` — one row per `SurveyId`, each carrying
+   * Galaxy catalog point-billboard controls — the shared appearance knobs that
+   * influence every galaxy catalog's `points.wgsl` draw — plus the galaxy-catalog-layer
+   * master gate and per-galaxy-catalog items. `enabled` is the coarse "hide all
+   * galaxy catalogs" gate (symmetric with `volumes.enabled` / `structures.enabled`).
+   * Per-galaxy catalog state lives in `items` — one row per `GalaxyCatalogId`, each carrying
    * the layer-visibility axis (`enabled`) and the text-label axis
-   * (`labelEnabled`). Only the famous-galaxy survey actually renders a label;
-   * the other surveys carry `labelEnabled` inertly so all three source-type
-   * clusters share the one per-item shape (surveys / structures / volumes all
+   * (`labelEnabled`). Only the famous-galaxy catalog actually renders a label;
+   * the other galaxy catalogs carry `labelEnabled` inertly so all three source-type
+   * clusters share the one per-item shape (galaxy catalogs / structures / volumes all
    * expose `items[id].enabled`).
    */
-  surveys: {
+  galaxyCatalogs: {
     enabled: boolean;
     sizePx: number;
     brightness: number;
     depthFade: boolean;
     highlightFallback: boolean;
     realOnly: boolean;
-    items: Record<SurveyId, SurveyItemSettings>;
+    items: Record<GalaxyCatalogId, GalaxyCatalogItemSettings>;
   };
 
   /**
@@ -140,7 +140,7 @@ export type EngineSettingsState = {
    * (enabled / intensity / palette / …) live in `items` — one settings
    * row per registry-known volume field, seeded from `SOURCE_REGISTRY` at
    * construction so the panel can show a field's toggle before its cube
-   * lazy-loads.  `items` is the same per-item accessor that surveys and
+   * lazy-loads.  `items` is the same per-item accessor that galaxy catalogs and
    * structures expose, so all three source-type clusters share one shape.
    */
   volumes: {
@@ -194,7 +194,7 @@ export type EngineSettingsState = {
    * parallel root records that previously held the same booleans in different
    * shapes: a reader walks one `items[cat]` entry to learn everything about a
    * category's visibility instead of cross-indexing two records by the same
-   * key.  `items` is the same per-item accessor surveys and volumes expose, so
+   * key.  `items` is the same per-item accessor galaxy catalogs and volumes expose, so
    * all three source-type clusters share one shape.  Defaults to every
    * category fully visible.
    */

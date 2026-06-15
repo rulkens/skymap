@@ -1,9 +1,9 @@
 /**
  * projectLabelCategoryVisibility — projection tests.
  *
- * Known structure + survey items Records → a known concrete record, exercising
+ * Known structure + galaxy catalog items Records → a known concrete record, exercising
  * BOTH partition arms (structure category from `structures.items[cat].labelEnabled`,
- * famousGalaxy from `surveys.items.famousGalaxy.labelEnabled`).
+ * famousGalaxy from `galaxyCatalogs.items.famousGalaxy.labelEnabled`).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -14,20 +14,20 @@ import { isStructureCategory } from '../../../../src/data/structureCategories';
 import { makeSettingsFixture } from './makeSettingsFixture';
 
 describe('projectLabelCategoryVisibility', () => {
-  it('reads structure labels from structures.items and famousGalaxy from surveys.items', () => {
+  it('reads structure labels from structures.items and famousGalaxy from galaxy catalogs.items', () => {
     const state = makeSettingsFixture();
     const firstStructure = LABEL_CATEGORIES.find(isStructureCategory)!;
     // Distinguish the two partition arms: structure label off, famous label on.
     state.structures.items[firstStructure].labelEnabled = false;
-    state.surveys.items.famousGalaxy.labelEnabled = true;
+    state.galaxyCatalogs.items.famousGalaxy.labelEnabled = true;
 
-    const record = projectLabelCategoryVisibility(state.structures.items, state.surveys.items);
+    const record = projectLabelCategoryVisibility(state.structures.items, state.galaxyCatalogs.items);
 
     // Keyed by exactly the label categories (structures + famousGalaxy).
     expect(Object.keys(record).sort()).toEqual([...LABEL_CATEGORIES].sort());
     // The structure arm: hidden category reads false.
     expect(record[firstStructure]).toBe(false);
-    // The survey arm: famousGalaxy reads its survey-row labelEnabled (true).
+    // The galaxy catalog arm: famousGalaxy reads its galaxy-catalog-row labelEnabled (true).
     expect(record.famousGalaxy).toBe(true);
     // Every other structure label stays at its all-on default.
     for (const cat of LABEL_CATEGORIES) {
@@ -38,9 +38,9 @@ describe('projectLabelCategoryVisibility', () => {
 
   it('reflects a famousGalaxy label toggle independently of structure labels', () => {
     const state = makeSettingsFixture();
-    state.surveys.items.famousGalaxy.labelEnabled = false;
+    state.galaxyCatalogs.items.famousGalaxy.labelEnabled = false;
 
-    const record = projectLabelCategoryVisibility(state.structures.items, state.surveys.items);
+    const record = projectLabelCategoryVisibility(state.structures.items, state.galaxyCatalogs.items);
 
     expect(record.famousGalaxy).toBe(false);
     // Structure labels untouched.

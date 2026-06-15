@@ -140,7 +140,7 @@ export type GalaxyInfo = {
    */
   morphology?: string;
   /**
-   * Survey-aware IAU designation, e.g. "SDSS J123456.75+012345.5",
+   * Galaxy catalog-aware IAU designation, e.g. "SDSS J123456.75+012345.5",
    * "GLADE J234500.00-104500.5", "2MASX J...".  Built from RA/Dec via
    * `iauName(source, ra, dec)` so the prefix matches the row's actual
    * catalog and the user isn't lied to by an SDSS-shaped name on a
@@ -195,7 +195,7 @@ export type GalaxyInfo = {
   /** @group Source attribution */
 
   /**
-   * Which survey this galaxy came from.  Drives the per-source UI badge and
+   * Which galaxy catalog this galaxy came from.  Drives the per-source UI badge and
    * decides whether SDSS-specific affordances (Explorer link, SDSS image
    * cutout) are shown for this point.
    */
@@ -204,7 +204,7 @@ export type GalaxyInfo = {
   /**
    * Display label for the source (e.g. "SDSS", "2MRS", "GLADE").  Pre-resolved
    * from `sourceLabel(source)` in the engine so the React layer never has to
-   * import the survey-metadata table.
+   * import the galaxy-catalog-metadata table.
    */
   sourceLabel: string;
 
@@ -318,7 +318,7 @@ export type GalaxyInfo = {
    * Image cutout URL for this galaxy's thumbnail.
    *
    * Famous galaxies use their curated, non-deprojected tile at
-   * `/images/famous-thumb/<id>.webp`.  Survey rows use a sky cutout sized to
+   * `/images/famous-thumb/<id>.webp`.  Galaxy catalog rows use a sky cutout sized to
    * the galaxy's angular extent: SDSS DR18 ImgCutout for SDSS-sourced rows,
    * and the all-sky DSS colour composite via `dssThumbnailUrl` for 2MRS /
    * GLADE / Synthetic (SDSS only covers ~1/3 of the sky).
@@ -327,9 +327,9 @@ export type GalaxyInfo = {
 
   /**
    * Fallback cutout URL, shown if `thumbnailUrl` fails to load.  Set only for
-   * famous galaxies — the survey sky cutout, used when a curated tile is
+   * famous galaxies — the galaxy catalog sky cutout, used when a curated tile is
    * absent (e.g. a source that couldn't be re-fetched for the thumb backfill).
-   * Absent for survey rows, whose `thumbnailUrl` is already the cutout.
+   * Absent for galaxy catalog rows, whose `thumbnailUrl` is already the cutout.
    */
   thumbnailFallbackUrl?: string;
 };

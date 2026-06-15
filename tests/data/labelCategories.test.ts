@@ -19,7 +19,7 @@ describe('LABEL_CATEGORIES', () => {
     }
   });
 
-  it('excludes bulk surveys', () => {
+  it('excludes bulk galaxy catalogs', () => {
     expect(LABEL_CATEGORIES).not.toContain('sdss');
     expect(LABEL_CATEGORIES).not.toContain('glade');
   });

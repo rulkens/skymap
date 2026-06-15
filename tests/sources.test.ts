@@ -32,7 +32,7 @@ describe('source coverage metadata', () => {
     expect(SOURCE_REGISTRY[Source.Glade].allSky).toBe(true);
     expect(SOURCE_REGISTRY[Source.SDSS].allSky).toBe(false);
   });
-  it('reports approximate maximum distance per survey in Mpc', () => {
+  it('reports approximate maximum distance per galaxy catalog in Mpc', () => {
     expect(SOURCE_REGISTRY[Source.TwoMRS].maxDistMpc).toBeLessThan(300);
     // GLADE's distance distribution has a long tail past 1 Gpc; we choose
     // a generous band-edge here so the auto-LOD heuristic includes it in

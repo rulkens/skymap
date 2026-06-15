@@ -66,7 +66,7 @@ describe('expectedNumberDensity (Schechter LF integrated to flux limit)', () => 
     // φ* is a multiplicative factor in front of the integrand, so
     // doubling it must double the output.  This verifies the integration
     // is correctly factoring out the global normalisation — useful
-    // because a future caller might pass through a survey-specific φ*
+    // because a future caller might pass through a galaxy-catalog-specific φ*
     // and we want to be sure the rest of the math is φ*-agnostic.
     const a = expectedNumberDensity({ ...sdss, phiStar: 0.0093, dMpc: 200 });
     const b = expectedNumberDensity({ ...sdss, phiStar: 0.0186, dMpc: 200 });
@@ -74,9 +74,9 @@ describe('expectedNumberDensity (Schechter LF integrated to flux limit)', () => 
   });
 
   it('brighter flux limit (smaller mLim) yields lower density', () => {
-    // A brighter survey limit (e.g. 2MRS at K_s=11.75) sees only the
+    // A brighter galaxy catalog limit (e.g. 2MRS at K_s=11.75) sees only the
     // brightest galaxies — the integration window shrinks at any
-    // distance, so n(d) drops compared to a deeper survey (SDSS at 17.77).
+    // distance, so n(d) drops compared to a deeper galaxy catalog (SDSS at 17.77).
     // The same Schechter LF parameters are used to isolate the mLim
     // effect.  A 6-magnitude difference in mLim is 250× fainter
     // detection threshold; the density ratio at d=200 Mpc should be
@@ -105,11 +105,11 @@ describe('expectedNumberDensity (Schechter LF integrated to flux limit)', () => 
   });
 
   it('matches expected SDSS vs 2MRS density ordering at d=100 Mpc', () => {
-    // Cross-survey sanity: at d=100 Mpc, SDSS (deeper r-band, mLim=17.77)
+    // Cross-galaxy catalog sanity: at d=100 Mpc, SDSS (deeper r-band, mLim=17.77)
     // detects more galaxies per Mpc³ than 2MRS (shallow K_s, mLim=11.75).
     // The exact ratio depends on the band-specific LF (2MRS's brighter
     // M*=−24.2 partially compensates for the shallower flux limit), so
-    // we assert direction only — the cross-survey *ordering* is the
+    // we assert direction only — the cross-galaxy catalog *ordering* is the
     // physically-meaningful invariant; the magnitude is sensitive to LF
     // parameter choices that may evolve as the catalogues are revisited.
     const sdssN = expectedNumberDensity({ ...sdss, dMpc: 100 });
@@ -119,7 +119,7 @@ describe('expectedNumberDensity (Schechter LF integrated to flux limit)', () => 
 
   // ── Numerical stability ──────────────────────────────────────────────────
 
-  it('produces finite results across the full SDSS survey distance range', () => {
+  it('produces finite results across the full SDSS galaxy catalog distance range', () => {
     // Guard against silent NaN / Infinity sneaking in at the integration
     // edges.  Sweeps the SDSS distance range used by the visualisation
     // and asserts every single sample is a finite, non-negative number.

@@ -146,11 +146,11 @@ import { clampVolumeExposure } from '../../utils/clampVolumeExposure';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
 import type { StructureCategory } from '../../@types/engine/data/StructureCategory';
-import type { SurveyId } from '../../@types/engine/data/SurveyId';
-import { SURVEY_IDS } from '../../data/surveyIds';
+import type { GalaxyCatalogId } from '../../@types/engine/data/GalaxyCatalogId';
+import { GALAXY_CATALOG_IDS } from '../../data/galaxyCatalogIds';
 import { STRUCTURE_CATEGORIES } from '../../data/structureCategories';
 import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
-import type { SurveyItemSettings } from '../../@types/settings/SurveyItemSettings';
+import type { GalaxyCatalogItemSettings } from '../../@types/settings/GalaxyCatalogItemSettings';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -173,7 +173,7 @@ import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
 import { setSourceVisibleImpl } from './handles/setSourceVisible';
 import { setStructureItemEnabled } from './handles/setStructureItemEnabled';
 import { setStructureLabelEnabled } from './handles/setStructureLabelEnabled';
-import { setSurveyLabelEnabled } from './handles/setSurveyLabelEnabled';
+import { setGalaxyCatalogLabelEnabled } from './handles/setGalaxyCatalogLabelEnabled';
 
 /**
  * Start the WebGPU engine on `canvas`.
@@ -263,8 +263,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   // ── Settings — the user-facing SettingsPanel sub-bags ──────────
   //
-  // Every settings field lives under a named cluster (survey billboard
-  // knobs under `surveys`, HDR controls under `tonemap`, etc.). Defaults
+  // Every settings field lives under a named cluster (galaxy catalog billboard
+  // knobs under `galaxyCatalogs`, HDR controls under `tonemap`, etc.). Defaults
   // flow from `data/defaults.ts`; see `EngineSettingsState.d.ts` for the
   // type-level map.
   //
@@ -276,12 +276,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // dozens of `state.settings.X` read sites stay byte-identical — the getter
   // hands back the held object directly.
   const settingsStore = createSettingsStore({
-    // Survey layer: master gate on + shared billboard appearance knobs +
-    // one item row per survey, each layer + label default-on. Keys are
-    // DERIVED from `SURVEY_IDS` so the seed can't drift from the survey set.
-    // `labelEnabled` is inert for every survey except famousGalaxy (the only
+    // Galaxy catalog layer: master gate on + shared billboard appearance knobs +
+    // one item row per galaxy catalog, each layer + label default-on. Keys are
+    // DERIVED from `GALAXY_CATALOG_IDS` so the seed can't drift from the galaxy catalog set.
+    // `labelEnabled` is inert for every galaxy catalog except famousGalaxy (the only
     // one that renders a name label) — seeded uniformly true.
-    surveys: {
+    galaxyCatalogs: {
       enabled: true,
       sizePx: DEFAULT_POINT_SIZE_PX,
       brightness: DEFAULT_BRIGHTNESS,
@@ -289,8 +289,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
       realOnly: DEFAULT_REAL_ONLY_MODE,
       items: Object.fromEntries(
-        SURVEY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
-      ) as Record<SurveyId, SurveyItemSettings>,
+        GALAXY_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+      ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
     },
     tonemap: {
       exposure: DEFAULT_EXPOSURE,
@@ -302,7 +302,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // Bias's user-tunable subset.  Bake-derived fields live on
     // `state.bias` (worker outputs, not settings).  The -19 default is
     // roughly where the SDSS spectroscopic main sample is volume-complete
-    // out to the survey's flux limit — bright enough that nearly every
+    // out to the galaxy catalog's flux limit — bright enough that nearly every
     // catalog galaxy has a spectrum, dim enough to keep plenty of structure.
     bias: {
       mode: DEFAULT_BIAS_MODE,
@@ -363,10 +363,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     sources: {
       // Two 32-bit bitmasks, one bit per `Source` enum value — DERIVED
       // outputs, not authoritative state.  From frame 1 onward
-      // `deriveSourceMasks` owns them, recomputing both from each survey's
-      // `settings.surveys.items[id].enabled` + live fade opacity.
+      // `deriveSourceMasks` owns them, recomputing both from each galaxy catalog's
+      // `settings.galaxyCatalogs.items[id].enabled` + live fade opacity.
       //
-      // ALL_VISIBLE_MASK matches what frame 1 derives (every survey seeds
+      // ALL_VISIBLE_MASK matches what frame 1 derives (every galaxy catalog seeds
       // enabled), so pre-frame readers — the synthetic-fallback hiddenAtBoot
       // check, the UI visibility seed — see the same mask the loop will
       // compute.
@@ -833,7 +833,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   function setSourceVisible(source: SourceType, visible: boolean): void {
     // Delegate to the module-scope helper (testable without a GPU engine).
-    // The per-survey `enabled` flag is written through the settings store so
+    // The per-galaxy-catalog `enabled` flag is written through the settings store so
     // React's `useSettingsStore(selectVisibleSourceMask)` subscriber wakes.
     setSourceVisibleImpl(state, settingsStore, source, visible);
   }
@@ -1166,14 +1166,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // Each sub-handle is a thin forwarder onto a local function or a
   // `boringSetters` entry.  This literal is the only public surface.
   const handle: EngineHandle = {
-    surveys: {
+    galaxyCatalogs: {
       setSize: (sizePx) => boringSetters.setPointSize(sizePx),
       setBrightness: (value) => boringSetters.setBrightness(value),
       setDepthFade: (enabled) => boringSetters.setDepthFadeEnabled(enabled),
       setHighlightFallback: (enabled) => boringSetters.setHighlightFallback(enabled),
       setRealOnly: (enabled) => boringSetters.setRealOnlyMode(enabled),
-      setLabelEnabled: (survey, enabled) =>
-        setSurveyLabelEnabled(state, settingsStore, survey, enabled),
+      setLabelEnabled: (galaxyCatalog, enabled) =>
+        setGalaxyCatalogLabelEnabled(state, settingsStore, galaxyCatalog, enabled),
     },
     tonemap: {
       setExposure: (value) => boringSetters.setExposure(value),

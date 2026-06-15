@@ -1,6 +1,6 @@
 /**
  * Expected number density of detectable galaxies at distance `dMpc`,
- * given a Schechter luminosity function `(α, M*, φ*)` and a survey
+ * given a Schechter luminosity function `(α, M*, φ*)` and a galaxy catalog
  * flux limit `mLim`.
  *
  * The Schechter LF is
@@ -11,7 +11,7 @@
  * the distance modulus and M_min is a deep cut (we use −30 mag, well
  * past the brightest known galaxies; any Schechter density at M=−30
  * is negligible).  Beyond `M_lim − μ(d)` the galaxy is fainter than
- * the survey can see, so it contributes 0 to the *detectable* density.
+ * the galaxy catalog can see, so it contributes 0 to the *detectable* density.
  *
  * We integrate by simple trapezoidal rule with 200 steps — fast, accurate
  * to 1% for our purposes, no external numerical-integration dependency.

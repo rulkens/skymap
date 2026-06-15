@@ -117,7 +117,7 @@ export const TIPS: Record<string, TipContent> = {
     title: 'Physical diameter',
     body: (
       <>
-        The galaxy's size in physical units (kpc / kly, matching decades). For surveys without a
+        The galaxy's size in physical units (kpc / kly, matching decades). For galaxy catalogs without a
         measured isophotal diameter, we estimate it from the absolute B-magnitude via the Tully
         size–luminosity relation. The provenance line below the value says which source we used for
         this row.
@@ -161,7 +161,7 @@ export const TIPS: Record<string, TipContent> = {
     body: (
       <>
         How many catalogued galaxies fall inside this structure's sphere at your current tier and
-        survey selection. It rises as you load larger tiers or enable more surveys — read it as "how
+        galaxy catalog selection. It rises as you load larger tiers or enable more galaxy catalogs — read it as "how
         many we can show", not the true population.
       </>
     ),

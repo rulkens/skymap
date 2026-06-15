@@ -18,7 +18,7 @@
  * Only `'survey'` and `'structure'` codes are persisted to disk / packed into
  * GPU buffers; `'filament'` and `'volume'` codes exist solely so every
  * data source has one place to look. The visibility-bitmask helpers in
- * `utils/sourceMask` operate on survey codes only.
+ * `utils/sourceMask` operate on galaxy catalog codes only.
  */
 
 import type { SourceEntry } from '../@types/data/SourceEntry';
@@ -29,7 +29,7 @@ import type { Tier } from '../@types/data/Tier';
 
 /**
  * Stable numeric tag for every data source. Used as a `.bin` byte for
- * survey rows, packed into the pick texture for survey + structure hits, and
+ * galaxy catalog rows, packed into the pick texture for galaxy catalog + structure hits, and
  * as a registry key for filament + volume assets.
  *
  * IMPORTANT: integer values 0..8 are persisted in the `.bin` point-cloud
@@ -44,9 +44,9 @@ import type { Tier } from '../@types/data/Tier';
 export const Source = {
   /** Procedurally-generated stand-in cloud (no real photometry). */
   Synthetic: 0,
-  /** Sloan Digital Sky Survey — deep optical spectroscopic survey. */
+  /** Sloan Digital Sky Galaxy catalog — deep optical spectroscopic galaxy catalog. */
   SDSS: 1,
-  /** 2MASS Redshift Survey — near-IR all-sky redshift catalog. */
+  /** 2MASS Redshift Galaxy catalog — near-IR all-sky redshift catalog. */
   TwoMRS: 2,
   /**
    * Galaxy List for the Advanced Detector Era (GLADE v2.3) — an all-sky
@@ -57,7 +57,7 @@ export const Source = {
   Glade: 3,
   /**
    * Curated atlas of well-known galaxies (Messier + NGC greatest-hits).
-   * Distinct from survey-derived sources because entries are hand-picked,
+   * Distinct from galaxy-catalog-derived sources because entries are hand-picked,
    * carry curated descriptions, and ship with high-quality processed
    * thumbnails. Many entries (M31, M33, M81, NGC 253) sit too close to
    * survive 2MRS/GLADE's small-z filtering, so they need their own
@@ -78,9 +78,9 @@ export const Source = {
   /**
    * Milliquas v8 (Flesch 2023) — the Million Quasars compilation. AGN
    * point sources (QSOs, BL Lacs, type-1 Seyferts, Seyfert-1 cores,
-   * candidate quasars) rendered alongside the galaxy surveys for the
+   * candidate quasars) rendered alongside the galaxy catalogs for the
    * optically-bright AGN sky. Slot 8 — slots 5/6/7 belong to the structure
-   * codes above, so the next survey integer is 8.
+   * codes above, so the next galaxy catalog integer is 8.
    */
   Milliquas: 8,
   /**
@@ -118,7 +118,7 @@ export const Source = {
    * bits of the packed identity; the 27-bit `localIdx` carries the structure's
    * index into the structure store. Same encoding as Cluster/Supercluster/
    * Void. Seed-only (no bulk catalog), like Void. Appended at 15 — NEVER
-   * renumber the survey codes 0–8 below it.
+   * renumber the galaxy catalog codes 0–8 below it.
    */
   Group: 15,
 } as const;
@@ -127,15 +127,15 @@ export const Source = {
 
 /**
  * Per-source metadata, keyed by every `Source`. Discriminated by `type`;
- * see the `SurveyEntry` / `StructureEntry` definitions for the field shapes.
+ * see the `GalaxyCatalogEntry` / `StructureEntry` definitions for the field shapes.
  *
  * `as const satisfies Readonly<Record<Source, SourceEntry>>` preserves each
  * entry's literal `type`, so `SOURCE_REGISTRY[Source.SDSS]` narrows to
- * `SurveyEntry` at use sites without manual casts.
+ * `GalaxyCatalogEntry` at use sites without manual casts.
  *
  * Convention notes that aren't expressed by the types:
  *
- * - **`label`** follows survey-team capitalisation (`'2MRS'` no space,
+ * - **`label`** follows galaxy-catalog-team capitalisation (`'2MRS'` no space,
  *   `'GLADE'` uppercase). Match these in any new UI strings.
  * - **`binBaseName`** is `null` only for runtime-generated sources
  *   (currently just Synthetic). Tier-aware filenames are assembled in
@@ -149,7 +149,7 @@ export const Source = {
  */
 export const SOURCE_REGISTRY = {
   [Source.Synthetic]: {
-    type: 'survey',
+    type: 'galaxyCatalog',
     code: Source.Synthetic,
     id: 'synthetic',
     label: 'Synthetic',
@@ -161,7 +161,7 @@ export const SOURCE_REGISTRY = {
     maxDistMpc: 1000, // matches the radius in synthetic.ts
     bandLabels: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
     colourSpec: { slotA: 'u', slotB: 'g', rangeMin: 0.5, rangeMax: 2.0, kPerZ: 3.0 },
-    // Synthetic has no real survey selection function; fall back to the
+    // Synthetic has no real galaxy catalog selection function; fall back to the
     // SDSS calibration so the bias-correction pathway has a total
     // `Record<Source, ...>` shape without inventing values.
     mLim: 17.77,
@@ -170,14 +170,14 @@ export const SOURCE_REGISTRY = {
     tierTargets: {}, // no caps anywhere — synthetic is procedurally sized
     // Synthetic is the "no real data, show *something*" fallback — must be
     // aggressively visible.  Match Milliquas: higher floor + no depth fade.
-    // Bulk-survey defaults (floor=0.02 / falloff=1000) at radius 1000 Mpc
+    // Bulk-galaxy catalog defaults (floor=0.02 / falloff=1000) at radius 1000 Mpc
     // attenuate the cloud to a near-black haze against the additive HDR
     // target — the symptom the fallback exists to prevent in the first place.
     intensityFloor: 0.15,
     falloffHalfMpc: 1e30,
   },
   [Source.SDSS]: {
-    type: 'survey',
+    type: 'galaxyCatalog',
     code: Source.SDSS,
     id: 'sdss',
     label: 'SDSS',
@@ -208,7 +208,7 @@ export const SOURCE_REGISTRY = {
     falloffHalfMpc: 1000,
   },
   [Source.TwoMRS]: {
-    type: 'survey',
+    type: 'galaxyCatalog',
     code: Source.TwoMRS,
     id: '2mrs',
     label: '2MRS',
@@ -222,7 +222,7 @@ export const SOURCE_REGISTRY = {
     bandLabels: { u: '—', g: 'J', r: 'H', i: 'K', z: '—' },
     // 2MRS has no u/z slots — fall back to J−K (the widest NIR colour
     // pair) for galaxy-type information. K-correction is negligible at
-    // the survey's effective z ≲ 0.06.
+    // the galaxy catalog's effective z ≲ 0.06.
     colourSpec: { slotA: 'g', slotB: 'i', rangeMin: 0.7, rangeMax: 1.1, kPerZ: 0.0 },
     // Huchra et al. 2012 — K_s ≤ 11.75.
     mLim: 11.75,
@@ -236,7 +236,7 @@ export const SOURCE_REGISTRY = {
     falloffHalfMpc: 1000,
   },
   [Source.Glade]: {
-    type: 'survey',
+    type: 'galaxyCatalog',
     code: Source.Glade,
     id: 'glade',
     label: 'GLADE',
@@ -269,7 +269,7 @@ export const SOURCE_REGISTRY = {
     falloffHalfMpc: 1000,
   },
   [Source.FamousGalaxy]: {
-    type: 'survey',
+    type: 'galaxyCatalog',
     code: Source.FamousGalaxy,
     id: 'famousGalaxy',
     label: 'Famous',
@@ -283,7 +283,7 @@ export const SOURCE_REGISTRY = {
     shortLabel: 'Galaxy',
     plural: 'Famous Galaxies',
     maxDistMpc: 200, // covers the curated set: M31 → NGC 4889
-    // Famous entries don't carry per-row photometry — the source survey
+    // Famous entries don't carry per-row photometry — the source galaxy catalog
     // already measured it. The SDSS-mirroring labels are cosmetic so the
     // InfoCard renders generic "(g)" tags without a new branch; the
     // stored mag values are NaN, which FullCard renders as "N/A".
@@ -359,7 +359,7 @@ export const SOURCE_REGISTRY = {
     plural: 'Groups',
   },
   [Source.Milliquas]: {
-    type: 'survey',
+    type: 'galaxyCatalog',
     code: Source.Milliquas,
     id: 'milliquas',
     label: 'Milliquas',
@@ -391,7 +391,7 @@ export const SOURCE_REGISTRY = {
     // bias-correction subsystem wires Milliquas in with its own QLF.
     colourSpec: { slotA: 'g', slotB: 'r', rangeMin: 0.0, rangeMax: 2.0, kPerZ: 0.0 },
     // Milliquas's quasar-completeness limit varies wildly by parent
-    // survey (SDSS DR16Q reaches r ~ 22, DESI EDR ~ 23, bright optical/
+    // galaxy catalog (SDSS DR16Q reaches r ~ 22, DESI EDR ~ 23, bright optical/
     // X-ray-selected subsamples cut at ~18). We use a permissive limit
     // so vMaxWeight short-circuits rather than upweighting an unphysical
     // volume — a per-parent-survey breakdown would belong in its own pass.
@@ -407,7 +407,7 @@ export const SOURCE_REGISTRY = {
     // small drops Milliquas entirely (mobile GPU budget); medium caps at
     // ~200k brightest; large is uncapped.
     tierTargets: { small: 0, medium: 200_000 },
-    // Quasars sit at apparent mag 18–22+; with the bulk-survey floor of
+    // Quasars sit at apparent mag 18–22+; with the bulk-galaxy catalog floor of
     // 0.02 most rows would pin to it and look identical. A higher floor
     // (0.15) keeps the faint tail distinguishable. The 1000-Mpc fade
     // half-distance attenuates the catalog to ~0.04 at d=5 Gpc — kills
@@ -593,7 +593,7 @@ export const HI_RES_LAYER_SIDE_BY_TIER: Readonly<Record<Tier, number>> = {
 // ─── Iteration order ────────────────────────────────────────────────────────
 
 /**
- * Survey sources in UI presentation order — smallest catalogue → largest
+ * Galaxy catalog sources in UI presentation order — smallest catalogue → largest
  * (Famous → 2MRS → SDSS → GLADE, ~20 → 38 k → 500 k → 2 M rows). Synthetic
  * leads as the procedural-fallback cloud, hidden from user-facing lists.
  *
@@ -601,7 +601,7 @@ export const HI_RES_LAYER_SIDE_BY_TIER: Readonly<Record<Tier, number>> = {
  * to the file-format enum doesn't silently promote it into the UI and the
  * visibility bitmask.
  */
-export const SURVEY_SOURCES: readonly SourceType[] = [
+export const GALAXY_CATALOG_SOURCES: readonly SourceType[] = [
   Source.Synthetic,
   Source.FamousGalaxy,
   Source.TwoMRS,

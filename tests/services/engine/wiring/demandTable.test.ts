@@ -12,8 +12,8 @@
  *
  * `buildDemandCtx(state)` reads:
  *   - `state.settings`             — predicate leaf values, including each
- *                                    survey's `surveys.items[id].enabled`
- *                                    (the intent bit survey demand reads)
+ *                                    galaxy catalog's `galaxyCatalogs.items[id].enabled`
+ *                                    (the intent bit galaxy catalog demand reads)
  *   - `state.sources.tier`         — passed to `req(tier)`
  *   - `state.requests`             — `Set<RequestKey>`
  *   - `state.assetSlots`           — `slotFor` dispatch target
@@ -38,7 +38,7 @@
  * `ctx.settings.volumes.items.mcpm?.enabled`. The engine seeds that record
  * at construction from the shippable volume registry entries (`seedVolumeFields`),
  * so `mcpm`'s enabled bit is `true` (registry visible:true) at boot — symmetric
- * with the `surveys.items[id].enabled` seed that survey demand reads.
+ * with the `galaxyCatalogs.items[id].enabled` seed that galaxy catalog demand reads.
  * MCPM therefore IS in the boot
  * demand set — `cf4-density` is NOT (registry visible:false → seeded
  * enabled:false). `makeState` injects the same `seedVolumeFields` record into
@@ -51,7 +51,7 @@
  * read. The precise gate (count-aware, hidden-at-boot-aware) lives in
  * `createSyntheticFallback` and trips that flag; this regression net only
  * models the armed state by seeding the request set. Synthetic starts idle, so
- * the loop's idle-guard lets it load when armed; the errored survey slots that
+ * the loop's idle-guard lets it load when armed; the errored galaxy catalog slots that
  * triggered the fallback stay non-idle and are deliberately NOT re-loaded.
  */
 
@@ -64,7 +64,7 @@ import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { VolumeFieldId } from '../../../../src/@types/data/VolumeFieldId';
-import type { SurveyId } from '../../../../src/@types/engine/data/SurveyId';
+import type { GalaxyCatalogId } from '../../../../src/@types/engine/data/GalaxyCatalogId';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 
@@ -127,12 +127,12 @@ type SettingsLeaves = {
 type VolumeFieldLeaves = Partial<Record<VolumeFieldId, { enabled: boolean }>>;
 
 /**
- * Per-survey visibility keyed by survey id. Survey demand reads
- * `ctx.settings.surveys.items[id]?.enabled` — intent, the same field
+ * Per-galaxy catalog visibility keyed by galaxy catalog id. Galaxy catalog demand reads
+ * `ctx.settings.galaxyCatalogs.items[id]?.enabled` — intent, the same field
  * `setSourceVisible` writes — so `makeState` injects this record into
- * `settings.surveys.items`. An absent row reads as not enabled.
+ * `settings.galaxyCatalogs.items`. An absent row reads as not enabled.
  */
-type SurveyItemLeaves = Partial<Record<SurveyId, { enabled: boolean }>>;
+type GalaxyCatalogItemLeaves = Partial<Record<GalaxyCatalogId, { enabled: boolean }>>;
 
 /**
  * Default-at-boot settings: all structure categories visible, filaments off,
@@ -162,10 +162,10 @@ const BOOT_SETTINGS: SettingsLeaves = {
 const BOOT_VOLUME_FIELDS: VolumeFieldLeaves = seedVolumeFields();
 
 /**
- * Default-at-boot survey items: every survey enabled, matching the engine's
- * construction seed (one `enabled: true` row per `SURVEY_IDS` entry).
+ * Default-at-boot galaxy catalog items: every galaxy catalog enabled, matching the engine's
+ * construction seed (one `enabled: true` row per `GALAXY_CATALOG_IDS` entry).
  */
-const BOOT_SURVEY_ITEMS: SurveyItemLeaves = {
+const BOOT_GALAXY_CATALOG_ITEMS: GalaxyCatalogItemLeaves = {
   synthetic: { enabled: true },
   sdss: { enabled: true },
   '2mrs': { enabled: true },
@@ -188,8 +188,8 @@ type NamedSlotOverrides = Partial<{
 
 type MakeStateOptions = {
   settings?: SettingsLeaves;
-  /** Per-survey enabled bits; injected into `settings.surveys.items`. Defaults to boot (all enabled). */
-  surveyItems?: SurveyItemLeaves;
+  /** Per-galaxy catalog enabled bits; injected into `settings.galaxyCatalogs.items`. Defaults to boot (all enabled). */
+  galaxyCatalogItems?: GalaxyCatalogItemLeaves;
   /** Volume-field params; injected into `settings.volumes.items`. Defaults to boot. */
   volumeFields?: VolumeFieldLeaves;
   requests?: Set<string>;
@@ -200,7 +200,7 @@ type MakeStateOptions = {
 };
 
 /**
- * All source codes that appear in ASSET_WIRING as point rows — surveys +
+ * All source codes that appear in ASSET_WIRING as point rows — galaxy catalogs +
  * Synthetic. Ensures every expected-key slot is reachable via `slotFor`.
  */
 const ALL_POINT_SOURCES: readonly SourceType[] = [
@@ -215,7 +215,7 @@ const ALL_POINT_SOURCES: readonly SourceType[] = [
 function makeState(opts: MakeStateOptions = {}): EngineState {
   const {
     settings = BOOT_SETTINGS,
-    surveyItems = BOOT_SURVEY_ITEMS,
+    galaxyCatalogItems = BOOT_GALAXY_CATALOG_ITEMS,
     volumeFields = BOOT_VOLUME_FIELDS,
     requests = new Set(),
     pointSlots = {},
@@ -232,12 +232,12 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
   );
 
   return {
-    // Inject survey + volume items directly into the settings bag — demand
-    // predicates read `ctx.settings.surveys.items[id]?.enabled` and
+    // Inject galaxy catalog + volume items directly into the settings bag — demand
+    // predicates read `ctx.settings.galaxyCatalogs.items[id]?.enabled` and
     // `ctx.settings.volumes.items[id]?.enabled` from there.
     settings: {
       ...(settings as unknown as EngineSettingsState),
-      surveys: { items: surveyItems },
+      galaxyCatalogs: { items: galaxyCatalogItems },
       volumes: { items: volumeFields },
     } as unknown as EngineSettingsState,
     // tier feeds `req(tier)`; the masks are render/pick projections that
@@ -304,14 +304,14 @@ afterEach(() => {
 
 describe('reevaluateDemand demand-table regression', () => {
   /**
-   * Boot defaults: SDSS/2MRS/GLADE/Famous/Milliquas all visible (every survey
+   * Boot defaults: SDSS/2MRS/GLADE/Famous/Milliquas all visible (every galaxy catalog
    * ships on in SOURCE_REGISTRY). Famous slot is modelled as 'loading' (it was
    * just triggered by its own demand row before famousMeta's row evaluates), so
    * famousMeta is also demanded. structureCatalog loads because every structure
    * category is visible by default. mcpm IS demanded: the predicate checks
    * `ctx.settings.volumes.items.mcpm?.enabled`, which the construction seed lands as
    * true (registry visible:true). cf4Density is NOT (seeded enabled:false).
-   * filaments: off. pgcAlias: no request. Synthetic: surveys not errored.
+   * filaments: off. pgcAlias: no request. Synthetic: galaxy catalogs not errored.
    */
   it('boot defaults: SDSS + 2MRS + GLADE + Famous + Milliquas + famousMeta + structureCatalog + mcpm', () => {
     // Famous starts idle: its point row loads it (idle-guard passes), flipping
@@ -391,7 +391,7 @@ describe('reevaluateDemand demand-table regression', () => {
 
     // structureCatalog must be absent.
     expect(fired.has('structureCatalog')).toBe(false);
-    // The three visible surveys are still demanded.
+    // The three visible galaxy catalogs are still demanded.
     expect(fired.has(Source.SDSS)).toBe(true);
     expect(fired.has(Source.TwoMRS)).toBe(true);
     expect(fired.has(Source.Glade)).toBe(true);
@@ -429,21 +429,21 @@ describe('reevaluateDemand demand-table regression', () => {
    * (the precise gate in createSyntheticFallback owns the decision to arm it;
    * here we just model the armed state), so the Synthetic row is demanded.
    *
-   * The survey slots are driven to 'error' to mirror a realistic all-failed
+   * The galaxy catalog slots are driven to 'error' to mirror a realistic all-failed
    * boot. Synthetic starts idle (never loaded), so the idle-guard lets it load
-   * when armed — exactly the recovery path. The errored survey rows, by
+   * when armed — exactly the recovery path. The errored galaxy catalog rows, by
    * contrast, are NOT re-loaded: the idle-guard skips non-idle slots, which is
    * the desired no-retry-storm behaviour (a re-eval must not abort + re-fetch
-   * failed surveys). famousMeta still demands because Famous slot !== 'idle';
+   * failed galaxy catalogs). famousMeta still demands because Famous slot !== 'idle';
    * structureCatalog is still demanded (categories visible).
    */
-  it('synthetic fallback armed: Synthetic loads, errored surveys are not retried', () => {
+  it('synthetic fallback armed: Synthetic loads, errored galaxy catalogs are not retried', () => {
     const pointSlots: PointSlotOverrides = {
       [Source.SDSS]: stubSlot('error'),
       [Source.TwoMRS]: stubSlot('error'),
       [Source.Glade]: stubSlot('error'),
       [Source.Milliquas]: stubSlot('error'),
-      // Famous errored too — but it's curated, not a SURVEY_POINT_SOURCE.
+      // Famous errored too — but it's curated, not a GALAXY_CATALOG_POINT_SOURCE.
       // famousMeta demands because Famous slot !== 'idle'.
       [Source.FamousGalaxy]: stubSlot('error'),
     };
@@ -458,13 +458,13 @@ describe('reevaluateDemand demand-table regression', () => {
     expect(fired.has('famousMeta')).toBe(true);
     // structureCatalog still demanded (structure visibility unchanged).
     expect(fired.has('structureCatalog')).toBe(true);
-    // The errored survey point rows are demanded (still visible) but NOT idle,
+    // The errored galaxy catalog point rows are demanded (still visible) but NOT idle,
     // so the idle-guard leaves them alone — no retry storm on re-evaluation.
     expect(fired.has(Source.SDSS)).toBe(false);
     expect(fired.has(Source.TwoMRS)).toBe(false);
     expect(fired.has(Source.Glade)).toBe(false);
     // Milliquas is visible (enabled in settings) but errored (non-idle) like
-    // the other surveys, so the idle-guard skips it too — no retry storm.
+    // the other galaxy catalogs, so the idle-guard skips it too — no retry storm.
     expect(fired.has(Source.Milliquas)).toBe(false);
     // Famous's point row is demanded but errored (non-idle) — not re-loaded.
     expect(fired.has(Source.FamousGalaxy)).toBe(false);
@@ -502,7 +502,7 @@ describe('reevaluateDemand demand-table regression', () => {
 
   /**
    * Companion join in a single pass: when ONLY Famous is enabled (its
-   * survey items row set, all other surveys + categories off), one
+   * galaxy catalog items row set, all other galaxy catalogs + categories off), one
    * `reevaluateDemand` loads BOTH the Famous point slot AND famousMeta.
    * The Famous point row
    * evaluates first, finds the slot idle, and loads it — which synchronously
@@ -528,12 +528,12 @@ describe('reevaluateDemand demand-table regression', () => {
     };
     // Disable mcpm too so the fired set is exactly the join under test.
     const volumeFields: VolumeFieldLeaves = { ...BOOT_VOLUME_FIELDS, mcpm: { enabled: false } };
-    // Only Famous carries an enabled row — every other survey is absent and
+    // Only Famous carries an enabled row — every other galaxy catalog is absent and
     // reads as not enabled.
     const state = makeState({
       settings,
       volumeFields,
-      surveyItems: { famousGalaxy: { enabled: true } },
+      galaxyCatalogItems: { famousGalaxy: { enabled: true } },
     });
 
     const fired = firedKeys(state);

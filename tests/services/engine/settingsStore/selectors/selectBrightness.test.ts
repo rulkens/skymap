@@ -4,9 +4,9 @@ import { selectBrightness } from '../../../../../src/services/engine/settingsSto
 import { makeSettingsFixture } from '../makeSettingsFixture';
 
 describe('selectBrightness', () => {
-  it('returns surveys.brightness', () => {
+  it('returns galaxy catalogs.brightness', () => {
     const state = makeSettingsFixture({
-      surveys: { ...makeSettingsFixture().surveys, brightness: 3.25 },
+      galaxyCatalogs: { ...makeSettingsFixture().galaxyCatalogs, brightness: 3.25 },
     });
 
     expect(selectBrightness(state)).toBe(3.25);

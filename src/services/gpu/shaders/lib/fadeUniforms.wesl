@@ -1,6 +1,6 @@
 // lib/fadeUniforms.wesl — shared per-handle opacity uniform.
 //
-// Every fadeable layer (point survey, filament, scalar volume, label
+// Every fadeable layer (point galaxy catalog, filament, scalar volume, label
 // layer, always-on overlay) has a tiny 16-byte uniform buffer at
 // '@group(1) @binding(0)' carrying the per-frame opacity value the
 // FadeRegistry computed. The CPU side that owns the buffer + bind

@@ -476,7 +476,7 @@ export function attachOrbitControls(
     // `clampDistance` enforces the global zoom envelope (see orbitCamera.ts):
     // a hard floor prevents the camera from flipping through the target into
     // an inverted scene; a hard ceiling prevents drifting off into the void
-    // beyond the deepest survey, where the cloud collapses to a dot.
+    // beyond the deepest galaxy catalog, where the cloud collapses to a dot.
     const factor = Math.exp(e.deltaY * 0.001);
     cam.distance = clampDistance(cam.distance * factor);
     updatePosition(cam);

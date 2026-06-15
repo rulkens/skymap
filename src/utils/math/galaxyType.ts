@@ -1,11 +1,11 @@
 /**
  * Source-aware galaxy-type dispatcher.
  *
- * Each survey carries different photometric bands; using the same colour
+ * Each galaxy catalog carries different photometric bands; using the same colour
  * thresholds for every source would mis-classify non-SDSS rows. This
  * function picks the right classifier based on the source enum, so the
  * InfoCard's "Red, quiescent" / "Blue, star-forming" tag actually reflects
- * the data the survey provides.
+ * the data the galaxy catalog provides.
  *
  * The dispatch table here mirrors (but does not import) the band-slot
  * mapping in `src/data/sources.ts`'s `BAND_LABELS`. Keeping the two in sync
@@ -76,11 +76,11 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
     case Source.DebugGaussian:
     case Source.DebugCartesian:
     case Source.DebugSpherical:
-      // Non-survey sources (structure markers, filaments, volumes) have no
+      // Non-galaxy catalog sources (structure markers, filaments, volumes) have no
       // per-record photometry and no galaxy type. Reaching this branch
       // indicates the InfoCard is rendering a galaxy row for a
-      // non-survey pick / handle; route those through their own info
+      // non-galaxy catalog pick / handle; route those through their own info
       // panel instead.
-      throw new Error(`galaxyType: non-survey source ${source} has no galaxy classification`);
+      throw new Error(`galaxyType: non-galaxy catalog source ${source} has no galaxy classification`);
   }
 }

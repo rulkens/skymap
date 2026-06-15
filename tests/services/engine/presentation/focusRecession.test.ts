@@ -19,12 +19,12 @@ import type { StructureCategory } from '../../../../src/@types/engine/data/Struc
 
 describe('focusRecession', () => {
   it('returns 1.0 for an untagged handle at blend 0', () => {
-    expect(focusRecession({ kind: 'survey', source: Source.SDSS }, 0)).toBe(1);
+    expect(focusRecession({ kind: 'galaxyCatalog', source: Source.SDSS }, 0)).toBe(1);
   });
 
   it('returns 1.0 for an untagged handle at blend 1', () => {
-    // Survey handles have no recession target — they never recede, at any blend.
-    expect(focusRecession({ kind: 'survey', source: Source.SDSS }, 1)).toBe(1);
+    // Galaxy catalog handles have no recession target — they never recede, at any blend.
+    expect(focusRecession({ kind: 'galaxyCatalog', source: Source.SDSS }, 1)).toBe(1);
   });
 
   it('returns 1.0 for a tagged handle at blend 0', () => {

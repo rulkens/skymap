@@ -26,9 +26,9 @@
  * function's docblock for the full rationale.
  *
  * Spawning a fresh worker per call keeps each bake free of any shared
- * state; parallel survey fetches can race-resolve in any order without
+ * state; parallel galaxy catalog fetches can race-resolve in any order without
  * the worker pool needing per-source coordination — the picker's
- * (sourceCode, localIdx) packing means each survey's instance IDs land
+ * (sourceCode, localIdx) packing means each galaxy catalog's instance IDs land
  * in a structurally-disjoint range without any global running-sum bake.
  *
  * ### Layout invariants
@@ -44,7 +44,7 @@
 import { pickColourIndex } from '../../../data/colourIndex';
 import { paddedRadiusMpc } from '../../../utils/galaxySize';
 import { Source } from '../../../data/sources';
-import { surveyFluxLimit, surveySchechter } from '../../../data/surveyFluxLimits';
+import { galaxyCatalogFluxLimit, galaxyCatalogSchechter } from '../../../data/galaxyCatalogFluxLimits';
 import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';
 import {
   absoluteFromApparent,
@@ -76,9 +76,9 @@ import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/B
  *   slot 9     — schechterRatio (f32)
  *   slot 10    — angularDensityWeight (f32)
  *
- * Total: 11 × 4 = 44 bytes per point.  Per-survey constants stay out of
- * the per-row layout: the K-correction kPerZ lives in the per-survey
- * `SourceUniforms` uniform (k is constant per survey, so paying for it
+ * Total: 11 × 4 = 44 bytes per point.  Per-galaxy catalog constants stay out of
+ * the per-row layout: the K-correction kPerZ lives in the per-galaxy-catalog
+ * `SourceUniforms` uniform (k is constant per galaxy catalog, so paying for it
  * per-row would be waste), and instance identity is composed per draw
  * as `(sourceCode << 27) | localIdx + 1` rather than baked per-vertex.
  *
@@ -101,7 +101,7 @@ const SLOTS_PER_POINT = 11;
 /** Reference distance used to normalise the per-galaxy 1/V_max weight. */
 const D_REF_MPC = 750;
 
-/** Target post-shift mean magnitude for the per-survey magG normalisation. */
+/** Target post-shift mean magnitude for the per-galaxy-catalog magG normalisation. */
 const SDSS_TARGET_MEAN_MAG = 18;
 
 /**
@@ -109,7 +109,7 @@ const SDSS_TARGET_MEAN_MAG = 18;
  * module-level state.  Safe to call from a Worker.
  *
  * The per-slot comments in the loop document non-obvious decisions
- * (per-survey magG offset, dim-only Schechter clamp, NaN handling).
+ * (per-galaxy-catalog magG offset, dim-only Schechter clamp, NaN handling).
  */
 export function buildPointInterleavedBuffer(
   input: BuildPointInterleavedBufferInput,
@@ -128,7 +128,7 @@ export function buildPointInterleavedBuffer(
   const arrayBuffer = new ArrayBuffer(cloud.count * SLOTS_PER_POINT * 4);
   const interleaved = new Float32Array(arrayBuffer);
 
-  // ── Per-survey magnitude normalisation ───────────────────────────────────
+  // ── Per-galaxy catalog magnitude normalisation ───────────────────────────────────
   //
   // The shader's intensity formula `clamp((22 - mag) / 8, 0.05, 1.0)` is
   // tuned for SDSS-g where the typical apparent magnitude range is 14–22.
@@ -155,16 +155,16 @@ export function buildPointInterleavedBuffer(
 
   // ── Malmquist 1/V_max weight inputs ──────────────────────────────────────
   //
-  // Pull the survey's apparent-magnitude flux limit once (m_lim) and pick
+  // Pull the galaxy catalog's apparent-magnitude flux limit once (m_lim) and pick
   // a reference distance for the per-galaxy weight normalisation.  Both
   // are constants over the whole upload, so we hoist them out of the
   // per-galaxy loop.
-  const surveyMLim = surveyFluxLimit(source);
+  const galaxyCatalogMLim = galaxyCatalogFluxLimit(source);
 
   // ── Schechter LF parameters + central-density normaliser ────────────────
   //
   // Pre-compute the central detectable density `N_ref = n(d = 10 Mpc)` for
-  // this survey's Schechter triple.  The mode-3 brightness ratio divides
+  // this galaxy catalog's Schechter triple.  The mode-3 brightness ratio divides
   // this by the per-row density `n(d)` — computed here at bake time, not
   // per-fragment in the shader.
   //
@@ -172,10 +172,10 @@ export function buildPointInterleavedBuffer(
   // back to the renderer (the bookkeeping needs them for cache key purposes
   // even in fast mode).  The expensive step — the per-row N(d) integral —
   // is what we actually skip below.
-  const schechter = surveySchechter(source);
+  const schechter = galaxyCatalogSchechter(source);
   const nRef = expectedNumberDensity({
     ...schechter,
-    mLim: surveyMLim,
+    mLim: galaxyCatalogMLim,
     dMpc: 10,
   });
 
@@ -231,7 +231,7 @@ export function buildPointInterleavedBuffer(
     const dz = cloud.positions[i * 3 + 2]!;
     const dMpc = Math.hypot(dx, dy, dz);
 
-    // Apply the per-survey mag offset.  NaN-G galaxies snap to the post-
+    // Apply the per-galaxy-catalog mag offset.  NaN-G galaxies snap to the post-
     // shift target so they render at average intensity instead of vanishing.
     interleaved[o + 3] = Number.isFinite(g) ? g + magOffset : SDSS_TARGET_MEAN_MAG;
     interleaved[o + 4] = pickColourIndex(
@@ -271,14 +271,14 @@ export function buildPointInterleavedBuffer(
     interleaved[o + 7] = paddedRadiusMpc(cloud.diameterKpc[i]!);
 
     // Slot 8 — per-galaxy 1/V_max weight.  Computed from the *raw*
-    // apparent magnitude (NOT `g + magOffset` — the per-survey
+    // apparent magnitude (NOT `g + magOffset` — the per-galaxy-catalog
     // normalisation is a visualisation cosmetic, not a physical change to
     // the photometry) plus Cartesian distance (already hoisted above).
     // vMaxWeight handles NaN inputs by returning 0.
     const absMag = absoluteFromApparent(g, dMpc);
     interleaved[o + 8] = vMaxWeight({
       absMag,
-      mLim: surveyMLim,
+      mLim: galaxyCatalogMLim,
       dRefMpc: D_REF_MPC,
     });
 
@@ -305,7 +305,7 @@ export function buildPointInterleavedBuffer(
     interleaved,
     isFallbackArr,
     schechter,
-    mLim: surveyMLim,
+    mLim: galaxyCatalogMLim,
     nRef,
   };
 }

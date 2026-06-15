@@ -9,15 +9,15 @@
  * far more than the four currently tracked.
  */
 
-import { SOURCE_REGISTRY, SURVEY_SOURCES } from '../data/sources';
+import { SOURCE_REGISTRY, GALAXY_CATALOG_SOURCES } from '../data/sources';
 import type { SourceType } from '../@types/data/SourceType';
 
 /**
- * Startup visibility mask — `1` for every survey source whose registry
+ * Startup visibility mask — `1` for every galaxy catalog source whose registry
  * entry has `visible: true`. Structure codes never participate (their bits
  * stay clear). Drives the engine's initial `drawMask`/`pickMask`.
  */
-export const ALL_VISIBLE_MASK: number = SURVEY_SOURCES.reduce<number>(
+export const ALL_VISIBLE_MASK: number = GALAXY_CATALOG_SOURCES.reduce<number>(
   (mask, src) => (SOURCE_REGISTRY[src].visible ? mask | (1 << src) : mask),
   0,
 );

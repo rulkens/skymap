@@ -155,7 +155,7 @@ describe('startLoop', () => {
 
   it('starts the loop unconditionally even with no catalogs loaded', async () => {
     // Progressive disclosure: the loop must start so the Milky Way is
-    // visible on first frame; surveys fade in as they arrive.
+    // visible on first frame; galaxy catalogs fade in as they arrive.
     const state = makeState({ cloudCount: 0 });
     const deps = makeDeps();
     const originalFrameBody = deps.frameRef.current;

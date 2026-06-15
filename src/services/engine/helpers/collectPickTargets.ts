@@ -5,7 +5,7 @@
  * Three call sites need the same answer: the per-frame hover throttle
  * and the pick-debug overlay (`runFrame.ts`), and the click resolver
  * (`wireInput.ts`).  Each one (a) filters the renderer's loaded galaxy
- * surveys by the live pick mask — a fading-out layer clears its bit
+ * catalogs by the live pick mask — a fading-out layer clears its bit
  * immediately so it stops claiming hits — and (b) decides whether to run
  * a pick pass at all.
  *
@@ -13,10 +13,10 @@
  *
  * Structure markers are independently pickable: `structureMarkerRenderer.pickRing`
  * draws cluster / supercluster / void / group rings into the SAME pick
- * texture, but they are NOT galaxy surveys and never appear in
+ * texture, but they are NOT galaxy catalogs and never appear in
  * `loadedSources()`.  A naive "visibleSources is non-empty" gate would
  * make every structure ring unpickable — and the pick-debug overlay
- * black — the instant all galaxy surveys are toggled off.  Folding both
+ * black — the instant all galaxy catalogs are toggled off.  Folding both
  * parts into one helper keeps the "is anything pickable" rule in exactly
  * one place: a future pickable layer is added here once and all callers
  * inherit it.
@@ -32,11 +32,11 @@ import type { PickSourceDraw } from '../../../@types/rendering/PickSourceDraw';
 import type { StructureMarkerRenderer } from '../../../@types/rendering/StructureMarkerRenderer';
 
 export type PickTargets = {
-  /** Loaded galaxy surveys whose pick-mask bit is set, in `Source` enum order. */
+  /** Loaded galaxy catalogs whose pick-mask bit is set, in `Source` enum order. */
   readonly visibleSources: readonly PickSourceDraw[];
   /**
    * Whether a pick pass should run this frame: at least one visible
-   * galaxy survey OR at least one cluster / SC / void ring marker queued.
+   * galaxy catalog OR at least one cluster / SC / void ring marker queued.
    */
   readonly hasAny: boolean;
 };

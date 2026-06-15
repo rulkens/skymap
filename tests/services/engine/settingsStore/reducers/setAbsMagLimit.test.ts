@@ -12,7 +12,7 @@ describe('setAbsMagLimit', () => {
     // The touched cluster is a NEW reference …
     expect(next.bias).not.toBe(state.bias);
     // … but a sibling cluster keeps its existing reference (structural sharing).
-    expect(next.surveys).toBe(state.surveys);
+    expect(next.galaxyCatalogs).toBe(state.galaxyCatalogs);
   });
 
   it('preserves the sibling mode leaf', () => {

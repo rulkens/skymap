@@ -5,13 +5,13 @@
  *
  * Famous galaxies are galaxy data, not structures — their anchor is the galaxy
  * point itself, they emit no ring/halo marker, and their label visibility lives
- * on `settings.surveys.items.famousGalaxy.labelEnabled` (famous is a survey
+ * on `settings.galaxyCatalogs.items.famousGalaxy.labelEnabled` (famous is a galaxy catalog
  * source). The two-asset join (catalog positions/diameters ⋈ meta names) happens
  * here, on the galaxy side, and emits the famous labels plus their anchor lines.
  *
  * ### Opacity-aware visibility gate (fades out, doesn't pop)
  *
- * The hidden-state early return is gated on BOTH the famous-survey
+ * The hidden-state early return is gated on BOTH the famous-galaxy catalog
  * `labelEnabled` being false AND the `galaxyNames` opacity having reached 0 — so
  * a toggle-off keeps
  * emitting at the declining `layerAlpha` until the fade-out ramp completes,
@@ -177,7 +177,7 @@ export function produceFamousLabels(
   // tail is still non-zero — so a toggle-off fades out smoothly instead of
   // popping (mirrors `filamentsPass.enabled`). Once opacity hits 0 we stop.
   if (
-    !state.settings.surveys.items.famousGalaxy.labelEnabled &&
+    !state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled &&
     fades.opacityOf({ kind: 'labelLayer', layer: 'galaxyNames' }, now) === 0
   ) {
     return empty;

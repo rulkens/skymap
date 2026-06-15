@@ -1,5 +1,5 @@
 /**
- * GalaxyDetailCard — rich panel for a focused galaxy: name + survey badge,
+ * GalaxyDetailCard — rich panel for a focused galaxy: name + galaxy catalog badge,
  * curated description (famous only), catalogue links, thumbnail + cosmology
  * summary, and an expandable block of reference figures.
  *

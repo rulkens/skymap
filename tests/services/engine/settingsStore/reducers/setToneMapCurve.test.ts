@@ -13,7 +13,7 @@ describe('setToneMapCurve', () => {
     // The touched cluster is a NEW reference …
     expect(next.tonemap).not.toBe(state.tonemap);
     // … but a sibling cluster keeps its existing reference (structural sharing).
-    expect(next.surveys).toBe(state.surveys);
+    expect(next.galaxyCatalogs).toBe(state.galaxyCatalogs);
   });
 
   it('leaves the input state unmutated', () => {

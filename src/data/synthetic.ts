@@ -77,7 +77,7 @@ import { mulberry32 } from '../utils/random/mulberry32';
  *
  * - `magG` ∈ [14, 22]: the g-band is the primary brightness proxy.
  *     14 ≈ brightest main-sample galaxy (roughly L* at z ≈ 0.01),
- *     22 ≈ faint limit of the SDSS spectroscopic survey.
+ *     22 ≈ faint limit of the SDSS spectroscopic galaxy catalog.
  *
  * - `u − g` ∈ [0.5, 2.5]: blue star-forming galaxies cluster around 0.8–1.2;
  *     red quiescent ellipticals around 1.6–2.2. Our range [0.5, 2.5] spans
@@ -209,7 +209,7 @@ export function generateSyntheticCloud(count: number, seed = 42): GalaxyCatalog 
     positionAngleDeg,
     diameterKpc,
     // Synthetic galaxies have no AGN class and no Milliquas parent
-    // survey; both bytes stay 0 (`Uint8Array` default-fills with 0).
+    // galaxy catalog; both bytes stay 0 (`Uint8Array` default-fills with 0).
     classByte: new Uint8Array(count),
     parentSurveyByte: new Uint8Array(count),
     spectroscopicZ: new Float32Array(count),

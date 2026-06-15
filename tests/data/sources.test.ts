@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   Source,
   SOURCE_REGISTRY,
-  SURVEY_SOURCES,
+  GALAXY_CATALOG_SOURCES,
   HI_RES_LAYER_COUNT,
   HI_RES_LAYER_SIDE_BY_TIER,
 } from '../../src/data/sources';
@@ -14,8 +14,8 @@ describe('Source.FamousGalaxy', () => {
     expect(Source.FamousGalaxy).toBe(4);
   });
 
-  it('appears in SURVEY_SOURCES', () => {
-    expect(SURVEY_SOURCES).toContain(Source.FamousGalaxy);
+  it('appears in GALAXY_CATALOG_SOURCES', () => {
+    expect(GALAXY_CATALOG_SOURCES).toContain(Source.FamousGalaxy);
   });
 
   it('is included in ALL_VISIBLE_MASK', () => {
@@ -41,8 +41,8 @@ describe('Source.FamousGalaxy', () => {
     // — InfoCard uses it to label colour rows. We mirror SDSS so the
     // existing FullCard markup renders cleanly without a new branch.
     const entry = SOURCE_REGISTRY[Source.FamousGalaxy];
-    expect(entry.type).toBe('survey');
-    if (entry.type === 'survey') expect(entry.bandLabels.g).toBeTruthy();
+    expect(entry.type).toBe('galaxyCatalog');
+    if (entry.type === 'galaxyCatalog') expect(entry.bandLabels.g).toBeTruthy();
   });
 });
 
@@ -75,21 +75,21 @@ describe('Source enum — structure codes (cluster/supercluster/void)', () => {
     expect(Source.Void).toBe(7);
   });
 
-  it('keeps structure codes OUT of SURVEY_SOURCES (structures are not survey sources)', () => {
-    // The points-pipeline visibility bitmask iterates SURVEY_SOURCES. Structures
+  it('keeps structure codes OUT of GALAXY_CATALOG_SOURCES (structures are not galaxy catalog sources)', () => {
+    // The points-pipeline visibility bitmask iterates GALAXY_CATALOG_SOURCES. Structures
     // render through their own renderer (structureMarkerRenderer)
     // with its own per-category visibility logic, so listing them here
-    // would muddy the meaning of "this bitmask filters survey galaxies."
-    expect(SURVEY_SOURCES).not.toContain(Source.Cluster);
-    expect(SURVEY_SOURCES).not.toContain(Source.Supercluster);
-    expect(SURVEY_SOURCES).not.toContain(Source.Void);
+    // would muddy the meaning of "this bitmask filters galaxy catalog galaxies."
+    expect(GALAXY_CATALOG_SOURCES).not.toContain(Source.Cluster);
+    expect(GALAXY_CATALOG_SOURCES).not.toContain(Source.Supercluster);
+    expect(GALAXY_CATALOG_SOURCES).not.toContain(Source.Void);
   });
 
-  it('ALL_VISIBLE_MASK covers default-visible survey sources only (no structure bits)', () => {
-    // Default-visible survey bits: 0 (Synthetic), 1 (SDSS), 2 (2MRS),
+  it('ALL_VISIBLE_MASK covers default-visible galaxy catalog sources only (no structure bits)', () => {
+    // Default-visible galaxy catalog bits: 0 (Synthetic), 1 (SDSS), 2 (2MRS),
     // 3 (Glade), 4 (Famous), 8 (Milliquas) = 0b100011111.  Milliquas ships
     // on by default now that the quasar source is stable.  Structure codes 5/6/7
-    // stay clear so the survey draw loop doesn't accidentally gate on them.
+    // stay clear so the galaxy catalog draw loop doesn't accidentally gate on them.
     expect(ALL_VISIBLE_MASK).toBe(0b100011111);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Milliquas)).toBe(true);
     expect(maskHas(ALL_VISIBLE_MASK, Source.Cluster)).toBe(false);
@@ -97,7 +97,7 @@ describe('Source enum — structure codes (cluster/supercluster/void)', () => {
     expect(maskHas(ALL_VISIBLE_MASK, Source.Void)).toBe(false);
   });
 
-  it('bitmask helpers still operate correctly on survey-source bits', () => {
+  it('bitmask helpers still operate correctly on galaxy-catalog-source bits', () => {
     // Sanity: the bitmask infrastructure isn't disturbed by appending
     // new enum members that don't participate in the mask.
     expect(maskHas(maskWith(0, Source.SDSS), Source.SDSS)).toBe(true);
@@ -131,9 +131,9 @@ describe('Registry capability flags — bearsLabel / bearsMarker', () => {
     }
   });
 
-  it('bulk survey rows bear neither a label nor a marker', () => {
-    const surveyIds = [Source.SDSS, Source.Glade] as const;
-    for (const id of surveyIds) {
+  it('bulk galaxy catalog rows bear neither a label nor a marker', () => {
+    const galaxyCatalogIds = [Source.SDSS, Source.Glade] as const;
+    for (const id of galaxyCatalogIds) {
       const entry = SOURCE_REGISTRY[id];
       expect(entry.bearsLabel).toBe(false);
       expect(entry.bearsMarker).toBe(false);

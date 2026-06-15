@@ -8,12 +8,12 @@ import { makeSettingsFixture } from '../makeSettingsFixture';
 describe('setRealOnlyAction', () => {
   it('writes the real-only flag through the reducer', () => {
     const store = createSettingsStore(makeSettingsFixture());
-    const before = store.getState().surveys;
+    const before = store.getState().galaxyCatalogs;
     const next = !before.realOnly;
 
     setRealOnlyAction(store, next);
 
     expect(selectRealOnly(store.getState())).toBe(next);
-    expect(store.getState().surveys).not.toBe(before);
+    expect(store.getState().galaxyCatalogs).not.toBe(before);
   });
 });

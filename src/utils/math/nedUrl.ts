@@ -3,7 +3,7 @@
  *
  * NED is the canonical public-facing extragalactic catalogue: it
  * indexes basically every galaxy that's been mentioned in a paper or
- * detected by a major survey, and aggregates redshifts, photometry,
+ * detected by a major galaxy catalog, and aggregates redshifts, photometry,
  * morphology, and references onto a single page per object.  We use
  * it as the universal "catalogue page" target for non-SDSS rows in
  * the InfoCard.

@@ -12,7 +12,7 @@ describe('setMilkyWayEnabled', () => {
     // The touched cluster is a NEW reference …
     expect(next.milkyWay).not.toBe(state.milkyWay);
     // … but a sibling cluster keeps its existing reference (structural sharing).
-    expect(next.surveys).toBe(state.surveys);
+    expect(next.galaxyCatalogs).toBe(state.galaxyCatalogs);
   });
 
   it('stores the boolean verbatim in either direction', () => {

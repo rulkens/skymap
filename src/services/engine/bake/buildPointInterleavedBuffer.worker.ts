@@ -3,7 +3,7 @@
  *
  * ### Why this file exists
  *
- * Baking the interleaved vertex buffer for every loaded survey costs
+ * Baking the interleaved vertex buffer for every loaded galaxy catalog costs
  * roughly 10 seconds of CPU at full deck (~3.5 M galaxies) — right when
  * the user expects the UI to come alive.  On the main thread that would
  * be *the* worst-felt freeze in the app, so the bake runs here,

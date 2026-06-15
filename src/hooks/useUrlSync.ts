@@ -73,7 +73,7 @@ import type { FocusTarget } from '../@types/camera/FocusTarget';
 import { isStructure } from '../services/engine/isStructure';
 import { parseFocusHash, selectionToFocusId } from '../services/url/focusUrl';
 import { resolveFocusTarget } from '../services/engine/camera/resolveFocusTarget';
-import { SURVEY_SOURCES, Source } from '../data/sources';
+import { GALAXY_CATALOG_SOURCES, Source } from '../data/sources';
 import type { SourceType } from '../@types/data/SourceType';
 
 // ── Pure helpers (re-exported for unit tests) ──────────────────────────────
@@ -251,7 +251,7 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
     // low PGCs, and keeping it out of the input saves a pass over the
     // large `pos@` branch.
     const catalogs: { source: SourceType; catalog: GalaxyCatalog }[] = [];
-    for (const source of SURVEY_SOURCES) {
+    for (const source of GALAXY_CATALOG_SOURCES) {
       if (source === Source.Synthetic) continue;
       const catalog = handle.sources.getCloud(source);
       if (catalog) catalogs.push({ source, catalog });

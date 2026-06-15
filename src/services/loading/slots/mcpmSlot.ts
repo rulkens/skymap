@@ -11,7 +11,7 @@
  * Default-on cosmic-web baseline (registry visible:true). Its on/off
  * bit is seeded at engine construction, so the demand predicate
  * `items['mcpm'].enabled` reads true at boot — symmetric with how a
- * default-on survey reads its seeded `surveys.items[id].enabled`, with
+ * default-on galaxy catalog reads its seeded `galaxyCatalogs.items[id].enabled`, with
  * no field-state dependency on the cube having loaded first.
  */
 import { createAssetSlot } from '../AssetSlot';

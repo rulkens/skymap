@@ -17,11 +17,11 @@ import type { SourceType } from '../data/SourceType';
  *     needs its own key in the wiring registry even though its identity source
  *     is `Source.FamousGalaxy`.
  *
- *   - `'pgcAlias'` — the PGC-alias lookup JSON. It is consumed across survey
+ *   - `'pgcAlias'` — the PGC-alias lookup JSON. It is consumed across galaxy catalog
  *     sources (primarily 2MRS and GLADE) and has no unique `Source` code.
  *
  *   - `'filaments'` — the cosmic-web skeleton (`filaments.bin`). A derived
- *     global asset with its own renderer target; no per-survey `Source`.
+ *     global asset with its own renderer target; no per-galaxy-catalog `Source`.
  *
  *   - `'cf4Density'`, `'mcpm'` — the two production scalar-volume cubes. These
  *     DO have `Source` codes (`Source.Cf4Density`, `Source.Mcpm`) for identity,

@@ -1,7 +1,7 @@
 /**
  * tierTargets — per-tier subsampling and filename helpers.
  *
- * The actual per-(source, tier) caps live on each `SurveySourceEntry`'s
+ * The actual per-(source, tier) caps live on each `GalaxyCatalogSourceEntry`'s
  * `tierTargets` field (see `src/data/sources.ts`); this module only
  * exposes the two helpers that read it.
  *
@@ -25,9 +25,9 @@
  *
  * ### Why filename suffixes for subsampled sources only
  *
- * Tier-agnostic surveys (2MRS, Famous) keep their bare filenames
+ * Tier-agnostic galaxy catalogs (2MRS, Famous) keep their bare filenames
  * (`2mrs.bin`, `famous.bin`) and live in one place on the static host.
- * Tiered surveys (SDSS, GLADE, Milliquas) get a `-small`, `-medium`,
+ * Tiered galaxy catalogs (SDSS, GLADE, Milliquas) get a `-small`, `-medium`,
  * `-large` suffix because each tier's cut is a different file.
  */
 
@@ -37,7 +37,7 @@ import type { SourceType } from '../@types/data/SourceType';
 
 /**
  * Returns the per-tier point-count cap for a source, or `undefined` for
- * "no cap" (and for non-survey sources, which can never be subsampled).
+ * "no cap" (and for non-galaxy catalog sources, which can never be subsampled).
  *
  * Caller semantics:
  *   undefined  → ship the full source.
@@ -46,7 +46,7 @@ import type { SourceType } from '../@types/data/SourceType';
  */
 export function tierTarget(source: SourceType, tier: Tier): number | undefined {
   const entry = SOURCE_REGISTRY[source];
-  if (entry.type !== 'survey') return undefined;
+  if (entry.type !== 'galaxyCatalog') return undefined;
   // The `as const` on SOURCE_REGISTRY narrows each entry's `tierTargets`
   // to its own literal shape (e.g. `{ small: 0, medium: 156_000 }`),
   // so the union here can't be indexed by a generic `Tier` without
@@ -57,7 +57,7 @@ export function tierTarget(source: SourceType, tier: Tier): number | undefined {
 
 /**
  * Returns the apparent-magnitude flux floor for a source's local-volume
- * supplement, or `undefined` for "no supplement" (and for every non-survey
+ * supplement, or `undefined` for "no supplement" (and for every non-galaxy catalog
  * source, which can't be subsampled). Mirrors {@link tierTarget}: a thin,
  * type-narrowing read of the registry so callers don't reach into the
  * discriminated union themselves. Tier-independent — the floor is a single
@@ -65,7 +65,7 @@ export function tierTarget(source: SourceType, tier: Tier): number | undefined {
  */
 export function fluxSupplementMagLimitFor(source: SourceType): number | undefined {
   const entry = SOURCE_REGISTRY[source];
-  if (entry.type !== 'survey') return undefined;
+  if (entry.type !== 'galaxyCatalog') return undefined;
   // `as const` narrows each entry to its own literal shape, so entries that
   // omit the optional field don't declare it — `in` narrows to the ones that do.
   return 'fluxSupplementMagLimit' in entry ? entry.fluxSupplementMagLimit : undefined;
@@ -74,7 +74,7 @@ export function fluxSupplementMagLimitFor(source: SourceType): number | undefine
 /**
  * Returns the on-disk filename for a (source, tier) pair.
  *
- * A survey is "tiered" — i.e. ships per-tier `.bin` variants — iff it
+ * A galaxy catalog is "tiered" — i.e. ships per-tier `.bin` variants — iff it
  * carries any per-tier cap.  Sources with an empty `tierTargets` (2MRS,
  * Famous) reuse a single file across every tier and get the bare name.
  *
@@ -84,7 +84,7 @@ export function fluxSupplementMagLimitFor(source: SourceType): number | undefine
  */
 export function tierFilenameForSource(source: SourceType, tier: Tier): string {
   const entry = SOURCE_REGISTRY[source];
-  if (entry.type !== 'survey' || entry.binBaseName === null) {
+  if (entry.type !== 'galaxyCatalog' || entry.binBaseName === null) {
     throw new Error(`tierFilenameForSource: no base filename for source ${source}`);
   }
   const targets: Partial<Record<Tier, number>> = entry.tierTargets;

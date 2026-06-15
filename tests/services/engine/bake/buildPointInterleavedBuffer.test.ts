@@ -24,7 +24,7 @@
  *   slot 9     — schechterRatio
  *   slot 10    — angularDensityWeight
  *
- * 11 slots × 4 bytes = 44 bytes per point.  kPerZ moved to per-survey
+ * 11 slots × 4 bytes = 44 bytes per point.  kPerZ moved to per-galaxy-catalog
  * `SourceUniforms`; the picker reads instance identity from a per-source
  * uniform + the GPU's `@builtin(instance_index)`.
  */
@@ -71,7 +71,7 @@ describe('buildPointInterleavedBuffer', () => {
   it('writes positions into slots 0..2 of each vertex record', () => {
     const cloud = makeCloud(2);
     cloud.positions.set([10, 20, 30, -5, -10, -15]);
-    cloud.magG.set([18, 18]); // identical so per-survey shift is zero
+    cloud.magG.set([18, 18]); // identical so per-galaxy-catalog shift is zero
     const { interleaved } = buildPointInterleavedBuffer({
       cloud,
       source: Source.SDSS,
@@ -111,7 +111,7 @@ describe('buildPointInterleavedBuffer', () => {
     }
   });
 
-  it('returns the survey schechter triple, mLim and central density nRef', () => {
+  it('returns the galaxy catalog schechter triple, mLim and central density nRef', () => {
     const cloud = makeCloud(1);
     const result = buildPointInterleavedBuffer({
       cloud,
@@ -119,7 +119,7 @@ describe('buildPointInterleavedBuffer', () => {
     });
     // mLim must be a finite positive magnitude — the SDSS spec value sits
     // around 17.77 but we don't assert the exact number here (that's the
-    // surveyFluxLimits module's responsibility).
+    // galaxyCatalogFluxLimits module's responsibility).
     expect(Number.isFinite(result.mLim)).toBe(true);
     expect(result.mLim).toBeGreaterThan(10);
     expect(result.mLim).toBeLessThan(25);
@@ -209,7 +209,7 @@ describe('buildPointInterleavedBuffer', () => {
     }
   });
 
-  it('shifts the per-survey magG mean toward the SDSS target (≈18)', () => {
+  it('shifts the per-galaxy-catalog magG mean toward the SDSS target (≈18)', () => {
     // Build a cloud whose mean magG is far from 18 — verify the bake's
     // output mean (slot 3 across all rows) lands close to 18.
     const cloud = makeCloud(3);

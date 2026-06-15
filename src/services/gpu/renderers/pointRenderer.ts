@@ -7,7 +7,7 @@
  * colour index, axis ratio + PA, padded radius, three bias weights —
  * see `POINT_VERTEX_ATTRIBUTES`).
  *
- * One vertex buffer per loaded survey; an engine-supplied bitmask
+ * One vertex buffer per loaded galaxy catalog; an engine-supplied bitmask
  * decides which sources draw each frame.  Each source's `@group(2)`
  * SourceUniforms carries a 5-bit `sourceCode` that the vertex stage
  * composes with `@builtin(instance_index)` into the fragment's packed
@@ -24,7 +24,7 @@ import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { PointDrawSettings } from '../../../@types/rendering/PointDrawSettings';
 import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
 import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
-import { SURVEY_SOURCES, SOURCE_REGISTRY } from '../../../data/sources';
+import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../data/sources';
 import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
 import type { SourceType } from '../../../@types/data/SourceType';
@@ -85,7 +85,7 @@ const POSITION_ANGLE_BYTE_OFFSET = 24;
  */
 const RADIUS_MPC_BYTE_OFFSET = 28;
 
-/** Slot 8: per-galaxy 1/V_max multiplier (Malmquist mode 2).  Baked from m, distance, and the survey flux limit. */
+/** Slot 8: per-galaxy 1/V_max multiplier (Malmquist mode 2).  Baked from m, distance, and the galaxy catalog flux limit. */
 const VMAX_WEIGHT_BYTE_OFFSET = 32;
 
 /** Slot 9: Schechter density-correction ratio (Malmquist mode 3).  Default 1.0; real values spliced in lazily when the user picks mode 3. */
@@ -201,7 +201,7 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  * The trailing u32 padding words round the struct out to a 16-byte
  * boundary so a future vec3/vec4 append doesn't fall into mis-alignment.
  * The four `schechter*` slots are written PER SOURCE in `draw()` between
- * per-source draw calls — each survey has its own M*, α, m_lim, and
+ * per-source draw calls — each galaxy catalog has its own M*, α, m_lim, and
  * pre-computed central-density normaliser.
  */
 const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4 + 4 * 4; // 176 bytes
@@ -211,7 +211,7 @@ const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4 + 4 * 4; //
  * cloud via `postMessage` with a transferable list, and terminates the
  * worker on result.
  *
- * One worker per call (rather than long-lived) because parallel survey
+ * One worker per call (rather than long-lived) because parallel galaxy catalog
  * fetches resolve in unpredictable order; per-call workers run
  * concurrently at the OS level with zero shared state.  Spawn cost (a
  * few ms) is dwarfed by the 1–4 s bake.
@@ -380,7 +380,7 @@ export function createPointRenderer(
   const fadeScratchBuffer = new ArrayBuffer(16);
   const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
 
-  // Loaded survey buffers keyed by SourceType.  Map preserves insert
+  // Loaded galaxy catalog buffers keyed by SourceType.  Map preserves insert
   // order and dodges the prototype-chain ambiguity of a numeric-keyed
   // object literal.
   const clouds = new Map<SourceType, LoadedSource>();
@@ -468,7 +468,7 @@ export function createPointRenderer(
     // per-source falloffHalfMpc + 4 B pad.  Written once here; the
     // values are constant per source so per-frame writes would be
     // wasted bytes.  See lib/sourceUniforms.wesl for the struct layout
-    // and SurveySourceEntry.d.ts for the per-source value rationale.
+    // and GalaxyCatalogSourceEntry.d.ts for the per-source value rationale.
     const sourceBuffer = device.createBuffer({
       label: `points-source-uniform-${source}`,
       size: 16,
@@ -478,12 +478,12 @@ export function createPointRenderer(
     const sourceU32 = new Uint32Array(sourceScratch);
     const sourceF32 = new Float32Array(sourceScratch);
     const entry = SOURCE_REGISTRY[source];
-    // PointRenderer only handles survey sources (POI / volume / filament
+    // PointRenderer only handles galaxy catalog sources (POI / volume / filament
     // entries never reach this code path), but SOURCE_REGISTRY's union
     // type doesn't know that — narrow defensively so the per-source
     // floor + falloff reads are type-checked.
-    if (entry.type !== 'survey') {
-      throw new Error(`PointRenderer cannot upload non-survey source ${source} (type=${entry.type})`);
+    if (entry.type !== 'galaxyCatalog') {
+      throw new Error(`PointRenderer cannot upload non-galaxy catalog source ${source} (type=${entry.type})`);
     }
     sourceU32[0] = source >>> 0;
     sourceF32[1] = entry.intensityFloor;
@@ -606,7 +606,7 @@ export function createPointRenderer(
   }
 
   /**
-   * Iterate loaded sources in SURVEY_SOURCES order.  Fresh iterator
+   * Iterate loaded sources in GALAXY_CATALOG_SOURCES order.  Fresh iterator
    * per call so the caller may `unload()` between iterations without
    * affecting the snapshot.
    */
@@ -616,7 +616,7 @@ export function createPointRenderer(
     count: number;
     sourceBuffer: GPUBuffer;
   }> {
-    for (const source of SURVEY_SOURCES) {
+    for (const source of GALAXY_CATALOG_SOURCES) {
       const entry = clouds.get(source);
       if (!entry) continue;
       yield {
@@ -722,13 +722,13 @@ export function createPointRenderer(
     // before the per-source loop, not per source like fade/source.
     pass.setBindGroup(3, focusBindGroup);
 
-    for (const source of SURVEY_SOURCES) {
+    for (const source of GALAXY_CATALOG_SOURCES) {
       const entry = clouds.get(source);
       if (!entry) continue;
       // Inlined `maskHas(visibleSourceMask, source)` — hot path.
       if (((visibleSourceMask >> source) & 1) === 0) continue;
 
-      // One 16-byte fade writeBuffer per visible survey per frame.
+      // One 16-byte fade writeBuffer per visible galaxy catalog per frame.
       fadeScratchF32[0] = settings.fadeOpacityOf(source);
       device.queue.writeBuffer(entry.fadeBuffer, 0, fadeScratchBuffer);
 

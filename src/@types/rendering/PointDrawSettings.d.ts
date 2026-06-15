@@ -57,7 +57,7 @@ export type PointDrawSettings = {
    * once per visible source per frame from the points draw loop;
    * the renderer writes the returned value into the per-source
    * fadeBuffer. Closure-captured by the pointSpritesPass around
-   * `state.subsystems.fades.opacityOf({ kind: 'survey', source }, now)`.
+   * `state.subsystems.fades.opacityOf({ kind: 'galaxyCatalog', source }, now)`.
    */
   readonly fadeOpacityOf: (source: SourceType) => number;
 };

@@ -21,7 +21,7 @@ import type { StoreApi } from 'zustand/vanilla';
 import type { AssetSlot } from '../loading/AssetSlot';
 import type { EngineSettingsState } from '../settings/EngineSettingsState';
 
-import type { EngineSurveysHandle } from './handles/EngineSurveysHandle';
+import type { EngineGalaxyCatalogsHandle } from './handles/EngineGalaxyCatalogsHandle';
 import type { EngineTonemapHandle } from './handles/EngineTonemapHandle';
 import type { EngineCameraHandle } from './handles/EngineCameraHandle';
 import type { EngineSelectionHandle } from './handles/EngineSelectionHandle';
@@ -45,7 +45,7 @@ export type EngineHandle = {
   //
   // Each cluster's public surface lives in its own type alias so the
   // React shell can subscribe to just the namespace it cares about.
-  surveys: EngineSurveysHandle;
+  galaxyCatalogs: EngineGalaxyCatalogsHandle;
   tonemap: EngineTonemapHandle;
   camera: EngineCameraHandle;
   selection: EngineSelectionHandle;

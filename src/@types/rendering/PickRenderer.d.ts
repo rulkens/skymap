@@ -63,7 +63,7 @@ export type PickRenderer = {
    *                         pixels (post-DPR, as in `canvas.width`/`canvas.height`).
    * @param pickXPx          X coordinate in texture-space pixels (clientX × DPR).
    * @param pickYPx          Y coordinate in texture-space pixels (clientY × DPR).
-   * @param sources          Per-source draw records, one per visible survey, in
+   * @param sources          Per-source draw records, one per visible galaxy catalog, in
    *                         the same enum order as `PointRenderer.loadedSources()`.
    *                         The caller is responsible for filtering by visibility
    *                         mask — the picker draws every record it receives.

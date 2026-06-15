@@ -8,7 +8,7 @@
  *     E(z)  = √(Ω_m · (1 + z)³ + Ω_Λ)
  *
  * Compared to the linear-Hubble approximation `d = c · z / H₀`, this matters
- * for any survey that reaches beyond z ≈ 0.3 — Milliquas (quasars to z ≈ 7),
+ * for any galaxy catalog that reaches beyond z ≈ 0.3 — Milliquas (quasars to z ≈ 7),
  * the SDSS/BOSS LRG sample, and the deep tail of GLADE all live in the regime
  * where the linear formula is wrong by tens of percent.
  *

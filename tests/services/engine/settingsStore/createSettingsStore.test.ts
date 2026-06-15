@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { createSettingsStore } from '../../../../src/services/engine/settingsStore/createSettingsStore';
-import { setSurveySize } from '../../../../src/services/engine/settingsStore/reducers/setSurveySize';
-import { selectSurveySize } from '../../../../src/services/engine/settingsStore/selectors/selectSurveySize';
+import { setGalaxyCatalogSize } from '../../../../src/services/engine/settingsStore/reducers/setGalaxyCatalogSize';
+import { selectGalaxyCatalogSize } from '../../../../src/services/engine/settingsStore/selectors/selectGalaxyCatalogSize';
 import { makeSettingsFixture } from './makeSettingsFixture';
 import { DEFAULT_POINT_SIZE_PX, DEFAULT_EXPOSURE } from '../../../../src/data/defaults';
 
@@ -19,10 +19,10 @@ describe('createSettingsStore', () => {
     const spy = vi.fn();
     store.subscribe(spy);
 
-    store.setState((s) => setSurveySize(s, 4));
+    store.setState((s) => setGalaxyCatalogSize(s, 4));
 
     expect(spy).toHaveBeenCalled();
-    expect(selectSurveySize(store.getState())).toBe(4);
+    expect(selectGalaxyCatalogSize(store.getState())).toBe(4);
   });
 
   // ── Bootstrap-seam contract ────────────────────────────────────────────
@@ -35,16 +35,16 @@ describe('createSettingsStore', () => {
   // testable in Node: the exact seed object (mirrored by `makeSettingsFixture`,
   // which tracks the engine's literal field-for-field) flows through the store
   // and surfaces the right defaults via `getState()`.
-  it('seeds the survey size and tonemap exposure from defaults', () => {
+  it('seeds the galaxy catalog size and tonemap exposure from defaults', () => {
     const store = createSettingsStore(makeSettingsFixture());
 
-    expect(store.getState().surveys.sizePx).toBe(DEFAULT_POINT_SIZE_PX);
+    expect(store.getState().galaxyCatalogs.sizePx).toBe(DEFAULT_POINT_SIZE_PX);
     expect(store.getState().tonemap.exposure).toBe(DEFAULT_EXPOSURE);
   });
 
   // The `state.settings` getter returns the store's held object by reference,
   // so the in-place nested mutators still live in Phase 1 (e.g.
-  // `state.settings.surveys.brightness = v`) surface through `getState()`
+  // `state.settings.galaxyCatalogs.brightness = v`) surface through `getState()`
   // without any echo. Modelled here on the held object the getter returns.
   it('reflects in-place nested mutation of the held state through getState', () => {
     const store = createSettingsStore(makeSettingsFixture());
@@ -52,8 +52,8 @@ describe('createSettingsStore', () => {
     // Stand in for the engine's `state.settings` getter — it hands back the
     // exact object `getState()` holds.
     const settings = store.getState();
-    settings.surveys.brightness = 2.5;
+    settings.galaxyCatalogs.brightness = 2.5;
 
-    expect(store.getState().surveys.brightness).toBe(2.5);
+    expect(store.getState().galaxyCatalogs.brightness).toBe(2.5);
   });
 });

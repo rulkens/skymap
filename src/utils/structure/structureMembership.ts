@@ -39,9 +39,9 @@ import type { SourceType } from '../../@types/data/SourceType';
 import type { Vec3 } from '../../@types/math/Vec3';
 
 /**
- * One catalog tagged with its survey source. The source is needed at
+ * One catalog tagged with its galaxy catalog source. The source is needed at
  * the call boundary because the catalog itself is source-agnostic —
- * it's the same `GalaxyCatalog` shape regardless of which survey
+ * it's the same `GalaxyCatalog` shape regardless of which galaxy catalog
  * produced it. The caller assembles the list from the engine's
  * `galaxyStore` catalogs map.
  */

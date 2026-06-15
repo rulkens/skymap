@@ -3,7 +3,7 @@
  * and hover paths. Tests the registry-driven classification:
  *
  *   - null pick → null.
- *   - survey code → a galaxy Selection (no store touch).
+ *   - galaxy catalog code → a galaxy Selection (no store touch).
  *   - structure code → a structure Selection carrying the record's id (via byCategory).
  *   - structure code with no backing record → null.
  *   - not-a-pickable-surface code → warn + null (never a ghost hit).
@@ -35,7 +35,7 @@ describe('pickToSelection', () => {
     expect(pickToSelection(null, structures)).toBeNull();
   });
 
-  it('maps a survey code to a galaxy Selection', () => {
+  it('maps a galaxy catalog code to a galaxy Selection', () => {
     expect(pickToSelection({ sourceCode: Source.SDSS, localIdx: 7 }, structures)).toEqual({
       kind: 'galaxy',
       source: Source.SDSS,
@@ -58,7 +58,7 @@ describe('pickToSelection', () => {
   it('warns and returns null for a code that is not a pickable surface', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
-      // 14 is unallocated — no registry entry, so not survey nor structure.
+      // 14 is unallocated — no registry entry, so not galaxy catalog nor structure.
       expect(pickToSelection({ sourceCode: 14 as SourceType, localIdx: 0 }, structures)).toBeNull();
       expect(warn).toHaveBeenCalled();
     } finally {

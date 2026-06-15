@@ -1,10 +1,10 @@
 /**
  * DataItemSettings — the shared base for every per-item entry under a
- * source-type settings cluster (`settings.surveys.items`,
+ * source-type settings cluster (`settings.galaxyCatalogs.items`,
  * `settings.structures.items`, `settings.volumes.items`).
  *
  * Visibility is the ONE axis every data item has, regardless of whether
- * it's a survey point layer, a structure ring, or a scalar-volume field —
+ * it's a galaxy catalog point layer, a structure ring, or a scalar-volume field —
  * so the base IS that single boolean rather than a wrapper around it. This
  * is what lets the whole settings tree expose a uniform
  * `settings.<sourceType>.items[id].enabled` accessor: the demand gate, the
@@ -12,7 +12,7 @@
  * no matter which cluster they're walking.
  *
  * Anything beyond visibility belongs to the specific item type: label-bearing
- * items add `labelEnabled` (see `SurveyItemSettings` / `StructureItemSettings`),
+ * items add `labelEnabled` (see `GalaxyCatalogItemSettings` / `StructureItemSettings`),
  * and volume fields stack their per-field render knobs on top via
  * `VolumeFieldSettings extends DataItemSettings`. Keeping the base this thin
  * avoids the alternative — a fat union or a grab-bag of optional fields — that
@@ -24,6 +24,6 @@
  */
 
 export type DataItemSettings = {
-  /** The item's PRIMARY visibility — survey layer on, structure ring shown, volume field mixed in. */
+  /** The item's PRIMARY visibility — galaxy catalog layer on, structure ring shown, volume field mixed in. */
   enabled: boolean;
 };

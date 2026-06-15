@@ -24,7 +24,7 @@
  * Orthogonality also makes the composition correct: recession multiplies
  * *on top of* the toggle fade. A layer toggled off (0) stays off
  * (`0 × anything = 0`); a half-faded layer recedes from where it is. And
- * survey ("points") ids simply never get a recession target — the
+ * galaxy catalog ("points") ids simply never get a recession target — the
  * separation is structural, not a defensive runtime guard.
  *
  * ### Recession membership is an exhaustive switch
@@ -82,7 +82,7 @@ export function recessionTargetFor(h: FadeId): number | undefined {
       return h.layer === 'structure' || h.layer === 'galaxyNames' ? LABEL_RECESSION : undefined;
     // Non-recessing kinds — explicit so a new union member can't silently
     // skip declaring its stance.
-    case 'survey':
+    case 'galaxyCatalog':
       return undefined;
     case 'scalarField':
       return undefined;

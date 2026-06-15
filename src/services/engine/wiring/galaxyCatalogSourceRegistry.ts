@@ -7,7 +7,7 @@
  *   - `GALAXY_CATALOG_SOURCE_REGISTRY` — one row per source: short
  *     name, fetcher, category (`survey` | `curated` | `synthetic`),
  *     optional companion sidecars.  Pure data.
- *   - `SURVEY_POINT_SOURCES` / `TIER_FETCHED_POINT_SOURCES` — derived
+ *   - `GALAXY_CATALOG_POINT_SOURCES` / `TIER_FETCHED_POINT_SOURCES` — derived
  *     iteration lists for the synthetic-fallback gate: which sources
  *     count toward "real data arrived", and which slots it watches.
  *   - `wireGalaxyCatalogSourceSlot` — uniform slot-construction
@@ -27,7 +27,7 @@
  * Non-point sidecars (filaments, pgc-aliases, cf4/mcpm volumes, the
  * cluster catalog) live only in `ASSET_WIRING`.
  *
- * A new survey adds one row here AND one point row in `ASSET_WIRING`.
+ * A new galaxy catalog adds one row here AND one point row in `ASSET_WIRING`.
  * A new companion type adds one `GalaxyCatalogCompanionRef` member plus
  * one slot minted on `state.assetSlots` with a matching key.
  */
@@ -94,17 +94,17 @@ const SHORT_NAME_BY_SOURCE: ReadonlyMap<SourceType, string> = new Map(
 
 /**
  * Sources in the `survey` category — counted toward the
- * synthetic-fallback ready gate.  Hidden surveys count as already
+ * synthetic-fallback ready gate.  Hidden galaxy catalogs count as already
  * settled (see `createSyntheticFallback`).
  */
-export const SURVEY_POINT_SOURCES: readonly SourceType[] = GALAXY_CATALOG_SOURCE_REGISTRY.filter(
+export const GALAXY_CATALOG_POINT_SOURCES: readonly SourceType[] = GALAXY_CATALOG_SOURCE_REGISTRY.filter(
   (c) => c.category === 'survey',
 ).map((c) => c.source);
 
 /**
- * Every tier-fetched catalog source — surveys + curated.  Iterated by
+ * Every tier-fetched catalog source — galaxy catalogs + curated.  Iterated by
  * the synthetic-fallback gate, which subscribes to each to learn when
- * every real survey has settled.
+ * every real galaxy catalog has settled.
  */
 export const TIER_FETCHED_POINT_SOURCES: readonly SourceType[] =
   GALAXY_CATALOG_SOURCE_REGISTRY.filter((c) => c.category !== 'synthetic').map((c) => c.source);
@@ -151,7 +151,7 @@ export function wireGalaxyCatalogSourceSlot(
   // `fadeOpacityOf` lookup always finds it, even on the first frame
   // before any upload lands.  The commit drives the fadeTo lifecycle
   // from there.
-  state.subsystems.fades.register({ kind: 'survey', source }, 0);
+  state.subsystems.fades.register({ kind: 'galaxyCatalog', source }, 0);
 
   const slot = createAssetSlot<GalaxyCatalog, GalaxyCatalogReq>({
     name: slotName,
@@ -167,7 +167,7 @@ export function wireGalaxyCatalogSourceSlot(
       // populated later in bootstrap (pickRenderer, cam), and would
       // reject this upload during the legitimate wireSlots window.
       if (state.gpu.renderer === null) return;
-      const id: FadeId = { kind: 'survey', source };
+      const id: FadeId = { kind: 'galaxyCatalog', source };
       const fades = state.subsystems.fades;
 
       // Tier swap: fade the old buffer out before the new one lands so

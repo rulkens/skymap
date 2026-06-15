@@ -6,7 +6,7 @@ import type { PhaseLocals } from './PhaseLocals';
 
 /**
  * Closure captures the bootstrap phases rely on.  Every entry was a
- * free reference in the original `engine.ts` IIFE; the survey done in
+ * free reference in the original `engine.ts` IIFE; the galaxy catalog done in
  * Phase 5 Task 5.1 enumerated each one and confirmed read-only vs.
  * mutated.  Mutated bindings (`frame`, `detachControls`, `handle`) are
  * boxed as `{current}` refs so writes round-trip back into createEngine's

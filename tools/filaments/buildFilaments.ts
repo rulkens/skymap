@@ -76,7 +76,7 @@ import { parseNDskl, skeletonToFilamentCloud } from '../parsers/ndskl.js';
 import { encodeFilaments } from '../../src/data/filamentBinaryFormat.js';
 import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog.js';
 import { Source } from '../../src/data/sources.js';
-import { surveyFluxLimit } from '../../src/data/surveyFluxLimits.js';
+import { galaxyCatalogFluxLimit } from '../../src/data/galaxyCatalogFluxLimits.js';
 import { absoluteFromApparent, dMaxFromAbsolute } from '../../src/utils/math/distanceModulus.js';
 import { mulberry32 } from '../../src/utils/random/mulberry32.js';
 import { computeAngularWeights } from '../../src/services/engine/bake/computeAngularWeights.js';
@@ -457,7 +457,7 @@ type TaggedPositions = {
 /**
  * Master list of survey `.bin` files this orchestrator knows how to
  * read.  Each entry pairs the on-disk filename with the `Source` enum
- * value used downstream (for HEALPix angular weights and surveyFluxLimit
+ * value used downstream (for HEALPix angular weights and galaxyCatalogFluxLimit
  * lookups) and the lowercase canonical CLI key the `--sources` flag
  * accepts.  Adding a fourth survey would mean appending one row here
  * plus extending `VALID_SOURCE_KEYS` and `SourceKey`.
@@ -505,13 +505,13 @@ const ALL_SOURCE_FILES = [
 function readMergedPositions(activeSources: ReadonlySet<SourceKey>): TaggedPositions {
   // Per-source: which `.bin` to read, and which Source enum value to
   // tag every surviving galaxy with.  The tag drives the right
-  // surveyFluxLimit() lookup in the Malmquist pass — m_lim is in the
+  // galaxyCatalogFluxLimit() lookup in the Malmquist pass — m_lim is in the
   // K_s band for 2MRS (11.75), B band for GLADE (18.0), r band for
   // SDSS (17.77).  Mixing them up would silently mis-amplify entire
   // surveys.
   //
   // CLAUDE.md note on the 2MRS J/K mismatch: the parser puts J → magG
-  // even though surveyFluxLimit(2MRS) is documented as the K-band
+  // even though galaxyCatalogFluxLimit(2MRS) is documented as the K-band
   // limit.  This is a pre-existing inconsistency in the project
   // (render-time vMaxWeight inherits the same convention).  We don't
   // fix it here — matching the existing convention keeps build-time
@@ -695,7 +695,7 @@ function applyMalmquistDuplication(input: TaggedPositions): Float32Array {
     const z = input.positions[i * 3 + 2]!;
     const D = Math.sqrt(x * x + y * y + z * z);
     const magG = input.magG[i]!;
-    const mLim = surveyFluxLimit(input.sources[i]! as SourceType);
+    const mLim = galaxyCatalogFluxLimit(input.sources[i]! as SourceType);
 
     // Compute the uncapped V_max raw weight first.  Bail safely to
     // raw = 1 if any input is NaN/inf (e.g. a galaxy with missing

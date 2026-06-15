@@ -7,7 +7,7 @@
  *
  *   - "Highlight fallback" tints galaxies without measured b/a +
  *     position-angle magenta in the fragment shader, so the user can
- *     scan which surveys have real photometric orientation coverage.
+ *     scan which galaxy catalogs have real photometric orientation coverage.
  *   - "Show only real" goes further and discards fallback-orientation
  *     fragments entirely, leaving only galaxies with measured b/a + PA.
  *

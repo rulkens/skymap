@@ -4,7 +4,7 @@
  *
  * Mirrors `cf4DensityFetcher`'s shape: one URL, no per-request branching,
  * decode via the format module. The request payload is `void` — there is
- * one and only one CF4++ velocity cube. Unlike the survey catalogs (and
+ * one and only one CF4++ velocity cube. Unlike the galaxy catalog catalogs (and
  * unlike MCPM), the flow field is NOT tier-gated: it ships as a single
  * self-describing `.scfd` with no per-tier variants and no JSON sidecar
  * (SCFD v3 folds the frame + velocity stats into the binary header), so a

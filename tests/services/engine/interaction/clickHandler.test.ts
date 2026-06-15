@@ -6,7 +6,7 @@
  * `pickToSelection.test.ts`). These tests verify the wrapper itself:
  *
  *   1. A picker miss (`null`) returns null.
- *   2. A survey hit returns its galaxy `Selection`.
+ *   2. A galaxy catalog hit returns its galaxy `Selection`.
  *   3. A structure hit resolves through the injected store to its id.
  *   4. The picker is called with the exact (viewport, x, y, sources)
  *      values supplied by the engine — no transformation.
@@ -58,7 +58,7 @@ describe('createClickResolver', () => {
     expect(await r.resolveClick(dummyArgs)).toBeNull();
   });
 
-  it('returns a galaxy Selection on a survey hit', async () => {
+  it('returns a galaxy Selection on a galaxy catalog hit', async () => {
     const r = createClickResolver({
       pickRenderer: makePicker({ sourceCode: Source.SDSS, localIdx: 7 }),
       structures,

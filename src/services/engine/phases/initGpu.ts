@@ -174,7 +174,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // overlay renderers in one block, sequenced after the PointRenderer but
   // before the GALAXY_CATALOG_SOURCE_REGISTRY loop.  Awaiting the atlas
   // fetch here keeps the loop below from racing ahead of it; in practice
-  // the ~120 KB atlas resolves well before the much larger per-survey
+  // the ~120 KB atlas resolves well before the much larger per-galaxy-catalog
   // `.bin` fetches.  All renderers share the `{ device, context, format,
   // canvas }` GpuContext shape, so building them here keeps GPU-resource
   // allocation at one site.
@@ -216,7 +216,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
 
   // ── Per-source asset slots ───────────────────────────────────────────
   //
-  // Every survey flows through `createAssetSlot`: one cell of mutable
+  // Every galaxy catalog flows through `createAssetSlot`: one cell of mutable
   // LoadState behind a race-checked fetch→commit façade (see
   // `AssetSlot.ts` for the race-check points that fix the tier-swap
   // stomping bug).

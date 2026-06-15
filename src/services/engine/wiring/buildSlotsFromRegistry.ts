@@ -9,7 +9,7 @@
  *
  * ### Why `built: 'external'` rows are skipped
  *
- * The six point slots (5 surveys + Synthetic) are minted in `initGpu` by
+ * The six point slots (5 galaxy catalogs + Synthetic) are minted in `initGpu` by
  * `wireGalaxyCatalogSourceSlot`, alongside the renderer their commit uploads
  * into — they self-install into `state.assetSlots.points` before this phase
  * runs. Building them here would double-register their commit subscriber and

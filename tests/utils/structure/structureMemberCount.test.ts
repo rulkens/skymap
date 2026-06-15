@@ -55,7 +55,7 @@ function cloudFrom(map: Partial<Record<SourceType, GalaxyCatalog>>) {
 }
 
 describe('structureMemberCount', () => {
-  it('counts galaxies inside the sphere across visible surveys', () => {
+  it('counts galaxies inside the sphere across visible galaxy catalogs', () => {
     const getCloud = cloudFrom({
       [Source.SDSS]: makeCatalog([
         [1, 0, 0],
@@ -70,7 +70,7 @@ describe('structureMemberCount', () => {
     expect(structureMemberCount(cluster, getCloud, ALL_VISIBLE_MASK)).toBe(3);
   });
 
-  it('excludes surveys toggled off in the visibility mask', () => {
+  it('excludes galaxy catalogs toggled off in the visibility mask', () => {
     const getCloud = cloudFrom({
       [Source.SDSS]: makeCatalog([
         [1, 0, 0],
@@ -129,7 +129,7 @@ describe('structureMemberCount', () => {
     ).toBe(0);
   });
 
-  it('drops a single hidden survey from the count without disturbing the rest', () => {
+  it('drops a single hidden galaxy catalog from the count without disturbing the rest', () => {
     const getCloud = cloudFrom({
       [Source.SDSS]: makeCatalog([[1, 0, 0]]),
       [Source.Glade]: makeCatalog([[0, 1, 0]]),

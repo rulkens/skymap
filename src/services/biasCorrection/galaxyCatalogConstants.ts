@@ -1,11 +1,11 @@
 /**
- * Survey constants — pure-functions-of-Source, eagerly cached.
+ * Galaxy catalog constants — pure-functions-of-Source, eagerly cached.
  *
  * Three values per `Source` are constant for the lifetime of the runtime:
  *
  *   - `schechter` — the LF triple `(M*, α, φ*)` for the band that defines
- *     the survey's flux limit (SDSS r-band, 2MRS K-band, GLADE B-band, …).
- *   - `mLim` — the survey's apparent-magnitude flux limit (e.g. SDSS = 17.77).
+ *     the galaxy catalog's flux limit (SDSS r-band, 2MRS K-band, GLADE B-band, …).
+ *   - `mLim` — the galaxy catalog's apparent-magnitude flux limit (e.g. SDSS = 17.77).
  *   - `nRef` — the central-density normaliser
  *     `expectedNumberDensity({...schechter, mLim, dMpc: 10})`, the
  *     reference-point density at d = 10 Mpc.
@@ -23,7 +23,7 @@
  *
  * Five sources × one `expectedNumberDensity` call each ≈ a few
  * milliseconds at module-init time.  The table is a top-level `const`
- * so consumers can rely on `surveyConstants(source)` returning the
+ * so consumers can rely on `galaxyCatalogConstants(source)` returning the
  * SAME object identity across calls — useful both as a cheap cache key
  * (the subsystem can compare references when deciding whether bake
  * inputs changed) and as a clear lifecycle signal (no "first call is
@@ -44,15 +44,15 @@
  * @module
  */
 
-import { Source, SURVEY_SOURCES } from '../../data/sources';
-import { surveyFluxLimit, surveySchechter } from '../../data/surveyFluxLimits';
+import { Source, GALAXY_CATALOG_SOURCES } from '../../data/sources';
+import { galaxyCatalogFluxLimit, galaxyCatalogSchechter } from '../../data/galaxyCatalogFluxLimits';
 import { expectedNumberDensity } from '../../utils/math/schechterDensity';
-import type { SurveyConstants } from '../../@types/math/SurveyConstants';
+import type { GalaxyCatalogConstants } from '../../@types/math/GalaxyCatalogConstants';
 import type { SourceType } from '../../@types/data/SourceType';
 
-function buildOne(source: SourceType): SurveyConstants {
-  const schechter = surveySchechter(source);
-  const mLim = surveyFluxLimit(source);
+function buildOne(source: SourceType): GalaxyCatalogConstants {
+  const schechter = galaxyCatalogSchechter(source);
+  const mLim = galaxyCatalogFluxLimit(source);
   const nRef = expectedNumberDensity({
     ...schechter,
     mLim,
@@ -65,18 +65,18 @@ function buildOne(source: SourceType): SurveyConstants {
 // makes the misuse "subsystem mutates a constants record" impossible —
 // the entries are shared across the subsystem, the renderer (post-E.2
 // reads), and any future consumer.
-const TABLE: Record<SourceType, SurveyConstants> = SURVEY_SOURCES.reduce(
+const TABLE: Record<SourceType, GalaxyCatalogConstants> = GALAXY_CATALOG_SOURCES.reduce(
   (acc, src) => {
     acc[src] = Object.freeze(buildOne(src));
     return acc;
   },
-  {} as Record<SourceType, SurveyConstants>,
+  {} as Record<SourceType, GalaxyCatalogConstants>,
 );
 
 /**
- * Look up the cached `SurveyConstants` for a source.  Identity-stable
+ * Look up the cached `GalaxyCatalogConstants` for a source.  Identity-stable
  * across calls; safe to use as a Map key.
  */
-export function surveyConstants(source: SourceType): SurveyConstants {
+export function galaxyCatalogConstants(source: SourceType): GalaxyCatalogConstants {
   return TABLE[source];
 }

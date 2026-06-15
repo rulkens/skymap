@@ -13,7 +13,7 @@
  * pair gated the synthetic fallback. The same question — *should this asset
  * be loading, given the current state?* — was answered in a dozen scattered
  * places, each easy to forget when a new edge appeared (tier flip while a
- * survey is hidden, a settings toggle mid-flight, etc.).
+ * galaxy catalog is hidden, a settings toggle mid-flight, etc.).
  *
  * Every row's `demand(ctx)` collapses one asset's entire load policy into a
  * single pure predicate over the `DemandCtx` read surfaces. The demand
@@ -44,7 +44,7 @@
  *
  * ### Point-source rows are `built: 'external'`
  *
- * The six point slots (5 surveys + Synthetic) are minted in `initGpu` by
+ * The six point slots (5 galaxy catalogs + Synthetic) are minted in `initGpu` by
  * `wireGalaxyCatalogSourceSlot`, alongside the renderer their commit uploads
  * into. They appear here ONLY so the demand loop can trigger their
  * already-minted slots with the right `req(tier)`; the slot-construction pass
@@ -64,7 +64,7 @@ import { createFlowFieldSlot } from '../../loading/slots/flowFieldSlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
 import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { SurveyId } from '../../../@types/engine/data/SurveyId';
+import type { GalaxyCatalogId } from '../../../@types/engine/data/GalaxyCatalogId';
 
 /**
  * The categories backed by the bulk `.ccat` catalog — their visibility
@@ -96,17 +96,17 @@ const externalFactory = (): never => {
 
 /** One demand+req row for a point source, marked as externally built. */
 function pointRow(source: SourceType): AssetWiringRow {
-  // The source → survey-id registry mapping is resolved once at row
+  // The source → galaxy-catalog-id registry mapping is resolved once at row
   // construction, like the volume-field handles above. The items record is
-  // keyed by SurveyId but the cast comes from the broader SourceType, so the
-  // optional chain is the runtime guard for a non-survey code.
-  const id = SOURCE_REGISTRY[source].id as SurveyId;
+  // keyed by GalaxyCatalogId but the cast comes from the broader SourceType, so the
+  // optional chain is the runtime guard for a non-galaxy catalog code.
+  const id = SOURCE_REGISTRY[source].id as GalaxyCatalogId;
   return {
     key: source,
     built: 'external',
     factory: externalFactory,
     req: (tier) => ({ source, tier }),
-    demand: (ctx) => ctx.settings.surveys.items[id]?.enabled === true,
+    demand: (ctx) => ctx.settings.galaxyCatalogs.items[id]?.enabled === true,
   };
 }
 

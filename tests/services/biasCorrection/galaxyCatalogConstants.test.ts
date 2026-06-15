@@ -1,5 +1,5 @@
 /**
- * Survey constants table — table-vs-live-call round-trip.
+ * Galaxy catalog constants table — table-vs-live-call round-trip.
  *
  * The table caches three pure-functions-of-Source values (Schechter
  * triple, flux limit, central-density normaliser) so the bias-correction
@@ -11,18 +11,18 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { surveyConstants } from '../../../src/services/biasCorrection/surveyConstants';
-import { surveyFluxLimit, surveySchechter } from '../../../src/data/surveyFluxLimits';
+import { galaxyCatalogConstants } from '../../../src/services/biasCorrection/galaxyCatalogConstants';
+import { galaxyCatalogFluxLimit, galaxyCatalogSchechter } from '../../../src/data/galaxyCatalogFluxLimits';
 import { expectedNumberDensity } from '../../../src/utils/math/schechterDensity';
 import { Source } from '../../../src/data/sources';
-import type { SurveySource } from '../../../src/@types/data/SurveySource';
+import type { GalaxyCatalogSource } from '../../../src/@types/data/GalaxyCatalogSource';
 
 // Reverse-lookup name from a Source value.  TS's old numeric enum
 // auto-generated this map; the `as const` replacement does not, so we
-// derive it locally for the test labels below. Keyed by `SurveySource`
+// derive it locally for the test labels below. Keyed by `GalaxyCatalogSource`
 // — structure codes (Cluster/Supercluster/Void) have no flux limit or
 // Schechter triple, so this test never iterates them.
-const SOURCE_NAME: Record<SurveySource, string> = {
+const SOURCE_NAME: Record<GalaxyCatalogSource, string> = {
   [Source.Synthetic]: 'Synthetic',
   [Source.SDSS]: 'SDSS',
   [Source.TwoMRS]: 'TwoMRS',
@@ -31,7 +31,7 @@ const SOURCE_NAME: Record<SurveySource, string> = {
   [Source.Milliquas]: 'Milliquas',
 };
 
-describe('surveyConstants table', () => {
+describe('galaxyCatalogConstants table', () => {
   for (const src of [
     Source.Synthetic,
     Source.SDSS,
@@ -40,12 +40,12 @@ describe('surveyConstants table', () => {
     Source.FamousGalaxy,
   ]) {
     it(`Source.${SOURCE_NAME[src]} — schechter, mLim, nRef match live primitives`, () => {
-      const c = surveyConstants(src);
-      expect(c.schechter).toEqual(surveySchechter(src));
-      expect(c.mLim).toBe(surveyFluxLimit(src));
+      const c = galaxyCatalogConstants(src);
+      expect(c.schechter).toEqual(galaxyCatalogSchechter(src));
+      expect(c.mLim).toBe(galaxyCatalogFluxLimit(src));
       const liveNRef = expectedNumberDensity({
-        ...surveySchechter(src),
-        mLim: surveyFluxLimit(src),
+        ...galaxyCatalogSchechter(src),
+        mLim: galaxyCatalogFluxLimit(src),
         dMpc: 10,
       });
       // Table value must match the live computation byte-for-byte —
@@ -59,8 +59,8 @@ describe('surveyConstants table', () => {
   it('returns the same object across calls (eager-build identity is stable)', () => {
     // Eager-built table: identity should be stable across calls so
     // consumers can use it as a cheap cache key without copying.
-    const a = surveyConstants(Source.SDSS);
-    const b = surveyConstants(Source.SDSS);
+    const a = galaxyCatalogConstants(Source.SDSS);
+    const b = galaxyCatalogConstants(Source.SDSS);
     expect(a).toBe(b);
   });
 });

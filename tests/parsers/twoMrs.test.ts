@@ -80,7 +80,7 @@ describe('parseTwoMrs', () => {
     expect(records).toHaveLength(3);
 
     // Every record carries the 2MRS source tag — the merger needs this to
-    // apply per-survey priority later, and it's the cheapest assertion to
+    // apply per-galaxy-catalog priority later, and it's the cheapest assertion to
     // guard against a future copy-paste bug that left, say, Source.SDSS.
     for (const r of records) {
       expect(r.source).toBe(Source.TwoMRS);

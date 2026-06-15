@@ -2,7 +2,7 @@
  * PickSourceDraw — one per-source draw record passed to
  * `PickRenderer.pick()`.
  *
- * Multi-survey rendering issues one instanced draw per loaded survey; the
+ * Multi-galaxy catalog rendering issues one instanced draw per loaded galaxy catalog; the
  * picker mirrors that so its packed-identity space lines up with the
  * visual pass.  `sourceBuffer` carries this source's SourceUniforms
  * GPU buffer — the vertex stage reads `source.sourceCode` from it to

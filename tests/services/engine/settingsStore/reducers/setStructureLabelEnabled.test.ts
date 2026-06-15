@@ -16,7 +16,7 @@ describe('setStructureLabelEnabled', () => {
     // … but a sibling category row keeps its existing reference …
     expect(next.structures.items.supercluster).toBe(state.structures.items.supercluster);
     // … and a sibling cluster is untouched.
-    expect(next.surveys).toBe(state.surveys);
+    expect(next.galaxyCatalogs).toBe(state.galaxyCatalogs);
   });
 
   it('preserves the category ring axis when flipping the label', () => {

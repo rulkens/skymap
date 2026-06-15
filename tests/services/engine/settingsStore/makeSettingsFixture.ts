@@ -7,9 +7,9 @@
  * file (where it would drift the moment a cluster gains a field), they all
  * build it here. The body mirrors the engine's startup construction
  * (`engine.ts` settings literal) so the fixture stays a true shape: defaults
- * from `data/defaults.ts`, item rows DERIVED from `SURVEY_IDS` /
+ * from `data/defaults.ts`, item rows DERIVED from `GALAXY_CATALOG_IDS` /
  * `STRUCTURE_CATEGORIES`, volume items from `seedVolumeFields()`. Deriving the
- * item keys (rather than hand-listing them) means adding a survey or category
+ * item keys (rather than hand-listing them) means adding a galaxy catalog or category
  * can't silently leave the fixture stale.
  *
  * `overrides` is a shallow top-level merge for the rare test that wants one
@@ -18,7 +18,7 @@
  */
 
 import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
-import { SURVEY_IDS } from '../../../../src/data/surveyIds';
+import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalogIds';
 import { STRUCTURE_CATEGORIES } from '../../../../src/data/structureCategories';
 import { seedVolumeFields } from '../../../../src/data/volumeFieldDefaults';
 import {
@@ -41,16 +41,16 @@ import {
 } from '../../../../src/data/defaults';
 
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
-import type { SurveyId } from '../../../../src/@types/engine/data/SurveyId';
+import type { GalaxyCatalogId } from '../../../../src/@types/engine/data/GalaxyCatalogId';
 import type { StructureCategory } from '../../../../src/@types/engine/data/StructureCategory';
-import type { SurveyItemSettings } from '../../../../src/@types/settings/SurveyItemSettings';
+import type { GalaxyCatalogItemSettings } from '../../../../src/@types/settings/GalaxyCatalogItemSettings';
 import type { StructureItemSettings } from '../../../../src/@types/settings/StructureItemSettings';
 
 export function makeSettingsFixture(
   overrides: Partial<EngineSettingsState> = {},
 ): EngineSettingsState {
   return {
-    surveys: {
+    galaxyCatalogs: {
       enabled: true,
       sizePx: DEFAULT_POINT_SIZE_PX,
       brightness: DEFAULT_BRIGHTNESS,
@@ -58,8 +58,8 @@ export function makeSettingsFixture(
       highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
       realOnly: DEFAULT_REAL_ONLY_MODE,
       items: Object.fromEntries(
-        SURVEY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
-      ) as Record<SurveyId, SurveyItemSettings>,
+        GALAXY_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+      ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
     },
     tonemap: { exposure: DEFAULT_EXPOSURE, curve: DEFAULT_TONE_MAP_CURVE },
     camera: { autoRotate: DEFAULT_AUTO_ROTATE },

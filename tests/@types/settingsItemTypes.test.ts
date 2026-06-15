@@ -14,18 +14,18 @@
 
 import { describe, it, expect } from 'vitest';
 import type { DataItemSettings } from '../../src/@types/settings/DataItemSettings';
-import type { SurveyItemSettings } from '../../src/@types/settings/SurveyItemSettings';
+import type { GalaxyCatalogItemSettings } from '../../src/@types/settings/GalaxyCatalogItemSettings';
 import type { StructureItemSettings } from '../../src/@types/settings/StructureItemSettings';
 import type { VolumeFieldSettings } from '../../src/@types/settings/VolumeFieldSettings';
 
 describe('settings item types', () => {
-  it('DataItemSettings / SurveyItemSettings / StructureItemSettings carry enabled (+ labelEnabled)', () => {
+  it('DataItemSettings / GalaxyCatalogItemSettings / StructureItemSettings carry enabled (+ labelEnabled)', () => {
     const base = { enabled: true } satisfies DataItemSettings;
-    const survey = { enabled: true, labelEnabled: false } satisfies SurveyItemSettings;
+    const galaxyCatalog = { enabled: true, labelEnabled: false } satisfies GalaxyCatalogItemSettings;
     const structure = { enabled: false, labelEnabled: true } satisfies StructureItemSettings;
 
     expect(base.enabled).toBe(true);
-    expect(survey.labelEnabled).toBe(false);
+    expect(galaxyCatalog.labelEnabled).toBe(false);
     expect(structure.enabled).toBe(false);
     expect(structure.labelEnabled).toBe(true);
   });

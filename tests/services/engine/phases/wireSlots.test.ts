@@ -10,13 +10,13 @@
  * `reevaluateDemand.test.ts` / `demandTable.test.ts`); this file pins that
  * wireSlots composes them into the right boot behaviour:
  *
- *   1. wireSlots returns synchronously (no await on survey arrivals) and fires
+ *   1. wireSlots returns synchronously (no await on galaxy catalog arrivals) and fires
  *      `onStatusChange({ kind: 'loading' })` once.
  *
- *   2. The demand loop loads the default boot set — the visible surveys load
+ *   2. The demand loop loads the default boot set — the visible galaxy catalogs load
  *      via their point rows; per-arrival `ready` echoes still fire (via the
  *      synthetic-fallback gate's status subscriber), and the synthetic backstop
- *      still loads when every real survey errors.
+ *      still loads when every real galaxy catalog errors.
  *
  *   3. The loadProgress emitter is wired against EVERY installed slot.
  *      `deps.allSlots` is the single registry both the loading bar AND the dev
@@ -40,7 +40,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/sources';
-import { SURVEY_IDS } from '../../../../src/data/surveyIds';
+import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalogIds';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { seedVolumeFields } from '../../../../src/data/volumeFieldDefaults';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
@@ -254,10 +254,10 @@ function makeFakeSlot(name: string): FakeSlot {
 }
 
 /**
- * Build a boot-shaped points map: SDSS/2MRS/GLADE survey fakes left idle
+ * Build a boot-shaped points map: SDSS/2MRS/GLADE galaxy catalog fakes left idle
  * (still "loading" — they never fire), plus a Famous fake pre-fired to
  * `loading` so the famous-meta demand predicate (`slotState(Famous) !== 'idle'`)
- * reads true.  Idle survey fakes keep the synthetic-fallback gate waiting
+ * reads true.  Idle galaxy catalog fakes keep the synthetic-fallback gate waiting
  * rather than arming + re-running demand — the live-boot shape.
  */
 function bootPointSlots(): Map<SourceType, ReturnType<typeof makeFakeSlot>> {
@@ -290,10 +290,10 @@ const errorValue = (msg: string): LoadState<unknown> => ({
  * Minimal `EngineState` shaped for wireSlots's body.  Mirrors the
  * post-`initGpu` shape: the GPU renderers are present (so commit
  * subscribers don't NPE), the per-source slot map is empty (the test
- * populates it per-case), the surveys are seeded all-enabled via
- * `SURVEY_IDS` exactly like the engine's boot seed (so the demand loop —
- * which reads `settings.surveys.items[id].enabled` — demands
- * every survey at boot), and the volume fields are seeded via
+ * populates it per-case), the galaxy catalogs are seeded all-enabled via
+ * `GALAXY_CATALOG_IDS` exactly like the engine's boot seed (so the demand loop —
+ * which reads `settings.galaxyCatalogs.items[id].enabled` — demands
+ * every galaxy catalog at boot), and the volume fields are seeded via
  * `settings.volumes.items: seedVolumeFields()` (so the MCPM demand
  * predicate reads true at boot, as wireSlots expects).
  */
@@ -324,18 +324,18 @@ function makeState(
   const data = createEngineData();
   return {
     settings: {
-      surveys: {
+      galaxyCatalogs: {
         enabled: true,
         sizePx: 2.5,
         brightness: 1.0,
         depthFade: true,
         highlightFallback: true,
         realOnly: false,
-        // All surveys enabled, mirroring the engine's boot seed — survey
+        // All galaxy catalogs enabled, mirroring the engine's boot seed — galaxy catalog
         // demand reads these `enabled` bits (not `sources.drawMask`),
         // so the boot-load expectations for sdss/2mrs/glade hang off this seed.
         items: Object.fromEntries(
-          SURVEY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+          GALAXY_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
         ),
       },
       tonemap: { exposure: 1.0, curve: 'reinhard' },
@@ -455,7 +455,7 @@ describe('wireSlots', () => {
     emitterSpy.mockClear();
   });
 
-  it('returns synchronously (does not wait on survey arrivals) and fires `loading` status', async () => {
+  it('returns synchronously (does not wait on galaxy catalog arrivals) and fires `loading` status', async () => {
     // Progressive disclosure: wireSlots mints + kicks off loads then
     // returns. Per-arrival `ready` emissions happen later via the
     // subscribers it registered, not by awaiting in this body.
@@ -599,7 +599,7 @@ describe('wireSlots', () => {
     expect(structureCatalogFetcher).not.toHaveBeenCalled();
   });
 
-  it('fires `ready` status with a running total each time a survey arrives', async () => {
+  it('fires `ready` status with a running total each time a galaxy catalog arrives', async () => {
     // Semantic (b): on each per-source `ready` with count > 0, emit
     // `kind: 'ready'` with the running total from renderer.totalCount().
     // The status bar's job here is "the data is appearing" — not "boot
@@ -632,7 +632,7 @@ describe('wireSlots', () => {
     expect(readyCalls[1]![0]).toMatchObject({ kind: 'ready', count: 30000 });
   });
 
-  it('synthetic-fallback path fires `load(...)` on the synthetic slot when every real survey errors', async () => {
+  it('synthetic-fallback path fires `load(...)` on the synthetic slot when every real galaxy catalog errors', async () => {
     // The fallback condition: SDSS, 2MRS, Glade all settle with no
     // `ready` + `count > 0`. Famous is curated and doesn't count
     // either way. With the progressive-disclosure refactor the
@@ -751,7 +751,7 @@ describe('wireSlots', () => {
       ],
     } as never);
 
-    // Idle survey fakes keep the synthetic gate waiting so demand runs once.
+    // Idle galaxy catalog fakes keep the synthetic gate waiting so demand runs once.
     const state = makeState({ points: bootPointSlots() });
     const deps = makeDeps();
     await wireSlots(state, deps);
@@ -789,7 +789,7 @@ describe('wireSlots', () => {
       ],
     } as never);
 
-    // Idle survey fakes keep the synthetic gate waiting so demand runs once —
+    // Idle galaxy catalog fakes keep the synthetic gate waiting so demand runs once —
     // a double-run would re-trigger the (non-idempotent) structure-catalog load
     // and race the mock once-value against its empty default.
     const state = makeState({ points: bootPointSlots() });

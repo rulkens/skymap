@@ -21,11 +21,11 @@ export type GalaxyCatalogCompanionRef = 'famousMeta';
  *
  *  - `survey`    — a large-N tier-fetched catalog (SDSS, 2MRS, GLADE,
  *                  Milliquas).  Reloads on tier change.  Counts toward
- *                  the "real survey ready" signal that gates the
+ *                  the "real galaxy catalog ready" signal that gates the
  *                  synthetic-data fallback at boot.
  *  - `curated`   — a hand-picked auxiliary set whose absence is
  *                  acceptable (Famous).  Reloads on tier change but
- *                  does NOT count toward the survey-ready gate.
+ *                  does NOT count toward the galaxy-catalog-ready gate.
  *  - `synthetic` — the procedural fallback (Synthetic).  Loaded only
  *                  when no `survey` row reaches a ready state.
  */
@@ -47,7 +47,7 @@ export type GalaxyCatalogSourceConfig = {
   shortName: string;
   /**
    * Fetcher used to materialise the slot's request into a GalaxyCatalog.
-   * The real surveys + Famous share `galaxyCatalogFetcher` (which
+   * The real galaxy catalogs + Famous share `galaxyCatalogFetcher` (which
    * dispatches on `req.source` to pick the right .bin URL); Synthetic
    * uses `syntheticPointFetcher` (procedural, ignores `req.tier`).
    */

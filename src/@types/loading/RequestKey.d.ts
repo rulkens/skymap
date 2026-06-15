@@ -4,7 +4,7 @@
  * ### Why one-shot flags need a separate axis
  *
  * Most asset-demand predicates are driven by persistent state: the user
- * enables filaments (settings toggle), a survey is enabled (settings items
+ * enables filaments (settings toggle), a galaxy catalog is enabled (settings items
  * bit), or a companion asset is ready (slot state).  Those are level-
  * triggered — the predicate stays true as long as the condition holds.
  *
@@ -32,10 +32,10 @@
  *     Triggers an eager prefetch of the full palette manifest so the
  *     palette thumbnails are available before the popover finishes
  *     animating in.
- *   - `'syntheticFallback'` — every real survey settled without a
+ *   - `'syntheticFallback'` — every real galaxy catalog settled without a
  *     successful ready+count>0, so the synthetic backstop cloud should
  *     load.  Armed by `createSyntheticFallback`, which runs the precise
- *     gate at the slot-subscription level (it needs each survey's loaded
+ *     gate at the slot-subscription level (it needs each galaxy catalog's loaded
  *     `count`, which `DemandCtx.slotState` cannot expose) and then trips
  *     this flag for the demand loop to pick up.
  *

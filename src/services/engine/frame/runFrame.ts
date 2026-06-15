@@ -81,7 +81,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   //
   // Re-derive what should be loading from current state, every frame.
   // The single seam that turns any state change into the right loads: a
-  // handle setter flips its demand-gating state (a survey's enabled bit,
+  // handle setter flips its demand-gating state (a galaxy catalog's enabled bit,
   // filaments.enabled, a structure category's visibility) and calls
   // requestRender, which wakes the loop, which runs this.  No setter has
   // to remember to trigger loading — requestRender is the universal
@@ -90,7 +90,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // frames.  (Boot loads are kicked from wireSlots, and the
   // synthetic-fallback gate kicks its backstop directly.)
   //
-  // Recompute the survey draw/pick masks from settings + live fade opacity at
+  // Recompute the galaxy catalog draw/pick masks from settings + live fade opacity at
   // the top of every frame, before any reader (render or pick pass) touches
   // them — so the masks are always a fresh derivation of the single source of
   // truth, never a hand-maintained mirror.  Demand itself reads settings
@@ -280,18 +280,18 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     proceduralDiskRenderer: deps.proceduralDiskRenderer,
     milkyWayITimeSec: (performance.now() - deps.milkyWayITimeEpochMs) * 0.001 * 0.25,
     settings: {
-      pointSizePx: state.settings.surveys.sizePx,
-      brightness: state.settings.surveys.brightness,
+      pointSizePx: state.settings.galaxyCatalogs.sizePx,
+      brightness: state.settings.galaxyCatalogs.brightness,
       selected: state.subsystems.selection.selected(),
       visibleSourceMask: state.sources.drawMask,
-      highlightFallback: state.settings.surveys.highlightFallback,
-      realOnlyMode: state.settings.surveys.realOnly,
+      highlightFallback: state.settings.galaxyCatalogs.highlightFallback,
+      realOnlyMode: state.settings.galaxyCatalogs.realOnly,
       biasMode: state.settings.bias.mode,
       absMagLimit: state.settings.bias.absMagLimit,
       apparentMagLimit: state.bias.apparentMagLimit,
       schechterMStar: state.bias.schechterMStar,
       schechterAlpha: state.bias.schechterAlpha,
-      depthFadeEnabled: state.settings.surveys.depthFade,
+      depthFadeEnabled: state.settings.galaxyCatalogs.depthFade,
       // Same crossfade band the procedural-disk pass fades IN over, so the
       // two passes blend cleanly without a double-bright donut.  Constants
       // are the single source of truth in `proceduralDiskSubsystem.ts`.
@@ -340,7 +340,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       const pickTex = state.gpu.pickRenderer.renderForDebug(
         [deps.canvas.width, deps.canvas.height],
         overlaySources,
-        state.settings.surveys.sizePx,
+        state.settings.galaxyCatalogs.sizePx,
       );
       if (pickTex !== null) {
         const overlayEncoder = deps.device.createCommandEncoder({
@@ -393,7 +393,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     // bootstrap, nulled together in destroy).
     isEngineReady(state)
   ) {
-    // Snapshot what's pickable this frame — visible galaxy surveys
+    // Snapshot what's pickable this frame — visible galaxy catalogs
     // (filtered by the pick mask, same rule as the click handler) plus
     // whether any cluster ring is on screen.  Single source of truth so
     // the hover gate, the pick-debug overlay, and the click resolver all
@@ -404,7 +404,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       state.gpu.structureMarkerRenderer,
     );
     if (!hasAny) {
-      // Nothing pickable (every survey off AND no cluster ring visible).
+      // Nothing pickable (every galaxy catalog off AND no cluster ring visible).
       // Let the loop sleep — the next setSourceVisible / structure-marker
       // change wakes it.  This `return` skips the keep-rendering predicate
       // at the tail, which is correct: with nothing pickable there's
@@ -425,7 +425,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         visibleSources,
         // Boost the picking floor for easier hover targets — see
         // PICK_PADDING_PX in pickRenderer.ts.
-        state.settings.surveys.sizePx,
+        state.settings.galaxyCatalogs.sizePx,
         // Optional GPU-timing descriptor for the hover-pick pass.
         // Undefined unless `?gpuTimings` is set; the click path in
         // clickHandler.ts wires this the same way.  Slot (18, 19) is
@@ -468,7 +468,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   //     network OR a landed bitmap is in its 400 ms load-fade window.  The
   //     onResult calls requestRender(), but we keep a frame queued anyway
   //     so the fade lerp ramps smoothly.
-  //   - fades.isAnyAnimating(): a survey / filament handle is ramping its
+  //   - fades.isAnyAnimating(): a galaxy catalog / filament handle is ramping its
   //     opacity from a recent upload (the FadeRegistry owns every clock,
   //     filaments included).
   //   - structureFocus.isAwake(): the member-isolation fade (its own

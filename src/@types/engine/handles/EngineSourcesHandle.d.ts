@@ -3,17 +3,17 @@ import type { Tier } from '../../data/Tier';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 
 /**
- * EngineSourcesHandle — survey lifecycle: visibility, tier, raw catalog access.
+ * EngineSourcesHandle — galaxy catalog lifecycle: visibility, tier, raw catalog access.
  *
- * `setVisible` toggles one survey on/off with a fade animation.  `setTier`
- * hot-swaps the active data tier across all surveys with per-source re-fetch.
+ * `setVisible` toggles one galaxy catalog on/off with a fade animation.  `setTier`
+ * hot-swaps the active data tier across all galaxy catalogs with per-source re-fetch.
  * `getCloud`/`getCloudObjIds` expose the in-memory GalaxyCatalog for
  * deep-link / alias-index consumers.
  */
 export type EngineSourcesHandle = {
   /**
-   * Toggle visibility of one survey.  Synchronous: flips the survey's
-   * `settings.surveys.items[id].enabled` (the single source of truth) and
+   * Toggle visibility of one galaxy catalog.  Synchronous: flips the galaxy catalog's
+   * `settings.galaxyCatalogs.items[id].enabled` (the single source of truth) and
    * fires the fade.  The draw/pick masks are DERIVED from that flag (by
    * `deriveSourceMasks`), not written here.  Call it plainly:
    * `handle.sources.setVisible(s, v)`.

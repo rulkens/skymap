@@ -183,7 +183,7 @@ describe('PointRenderer.totalCount', () => {
 });
 
 describe('PointRenderer.loadedSources', () => {
-  it('iterates clouds in `SURVEY_SOURCES` order regardless of upload order', async () => {
+  it('iterates clouds in `GALAXY_CATALOG_SOURCES` order regardless of upload order', async () => {
     const renderer = createPointRenderer(
       makeStubDevice(),
       'bgra8unorm',
@@ -192,7 +192,7 @@ describe('PointRenderer.loadedSources', () => {
       makeStubFocusBgl(),
     );
     // Upload in non-iteration order on purpose — the renderer must re-sort.
-    // SURVEY_SOURCES is ordered smallest-catalogue → largest:
+    // GALAXY_CATALOG_SOURCES is ordered smallest-catalogue → largest:
     //   [Synthetic, Famous, TwoMRS, SDSS, Glade]
     // so TwoMRS comes before SDSS.
     await renderer.upload(Source.SDSS, makeCloud(100));
@@ -426,7 +426,7 @@ describe('PointRenderer.upload — regression: parallel-upload rebake race', () 
 // Before this refactor, the renderer baked a per-instance running-sum
 // `globalInstanceIdx` into each vertex buffer.  Parallel uploads at boot
 // could leave a source's `bakedPriorCount` permanently stale; after all
-// surveys settled, two galaxies in different sources ended up with the
+// galaxy catalogs settled, two galaxies in different sources ended up with the
 // same baked global ID and clicking either fired the halo on both —
 // the picking-collision bug we're fixing.
 //

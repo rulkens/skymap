@@ -11,7 +11,7 @@ import { SOURCE_ENTRIES } from './sourceEntries';
  *     carries a name on the 'structure' label layer.
  *
  * This is the label-visibility axis: settings toggles, fade registration, and
- * the SettingsPanel label-on/off rows all iterate this set. Bulk surveys
+ * the SettingsPanel label-on/off rows all iterate this set. Bulk galaxy catalogs
  * (SDSS, GLADE, 2MRS, Milliquas) do not bear labels and are excluded.
  *
  * Companion to STRUCTURE_CATEGORIES, which is the narrower structure-only axis
