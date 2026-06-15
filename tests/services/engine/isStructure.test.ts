@@ -16,6 +16,7 @@ import type { StructureRecord } from '../../../src/@types/data/structure/Structu
 describe('isStructure', () => {
   it('returns true for a StructureRecord', () => {
     const structure: StructureRecord = {
+      type: 'structure',
       id: 'virgo-cluster',
       name: 'Virgo Cluster',
       category: 'cluster',

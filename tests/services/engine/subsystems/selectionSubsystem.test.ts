@@ -65,6 +65,7 @@ function makeCloud(count: number): GalaxyCatalog {
 }
 
 const VIRGO: StructureRecord = {
+  type: 'structure',
   id: 'virgo',
   name: 'Virgo Cluster',
   category: 'cluster',
@@ -74,6 +75,7 @@ const VIRGO: StructureRecord = {
 };
 
 const FORNAX: StructureRecord = {
+  type: 'structure',
   id: 'fornax',
   name: 'Fornax Cluster',
   category: 'cluster',

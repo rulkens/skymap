@@ -43,6 +43,7 @@ function makeCatalog(positions: ReadonlyArray<readonly [number, number, number]>
 
 /** A cluster at the origin with a 10 Mpc core radius. */
 const cluster: StructureRecord = {
+  type: 'structure',
   id: 'test-cluster',
   name: 'Test Cluster',
   category: 'cluster',

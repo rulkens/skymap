@@ -29,6 +29,7 @@ function makeFixtures() {
   const state = {} as unknown as EngineState;
   const galaxy = { index: 0, x: 0, y: 0, z: 0 } as unknown as GalaxyInfo;
   const structure: StructureRecord = {
+    type: 'structure',
     id: 'virgo-cluster',
     name: 'Virgo Cluster',
     category: 'cluster',

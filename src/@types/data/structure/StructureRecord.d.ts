@@ -19,10 +19,16 @@
 import type { Vec3 } from '../../math/Vec3';
 
 /**
- * Fields every structure record carries regardless of category.  `category`
- * is added per-arm below so each arm's literal pins a single discriminant.
+ * Fields every structure record carries regardless of category.  Two distinct
+ * axes live here: `type` is the focusable-union tag (the parallel of a galaxy's
+ * `'galaxyCatalog'` tag) and is the same for every arm; `category` is the
+ * structure sub-kind (cluster / supercluster / void / group, the parallel of a
+ * `GalaxyCatalogId`) and is added per-arm below so each arm's literal pins a
+ * single discriminant.
  */
 type StructureBase = {
+  /** Union discriminant — mirrors SOURCE_REGISTRY's 'structure' type. */
+  readonly type: 'structure';
   readonly id: string;
   readonly name: string;
   readonly worldPos: Vec3;

@@ -24,6 +24,7 @@ function makeGalaxy(): GalaxyInfo {
 
 function makeStructure(id: string): StructureRecord {
   return {
+    type: 'structure',
     id,
     name: id,
     category: 'cluster',

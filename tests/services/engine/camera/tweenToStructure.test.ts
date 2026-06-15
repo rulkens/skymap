@@ -37,6 +37,7 @@ function makeState(opts: {
 }
 
 const VIRGO: StructureRecord = {
+  type: 'structure',
   id: 'virgo',
   name: 'Virgo Cluster',
   category: 'cluster',

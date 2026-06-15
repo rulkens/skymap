@@ -33,6 +33,7 @@ function makePicker(pick: PickResult | null): PickRenderer {
 }
 
 const virgo: StructureRecord = {
+  type: 'structure',
   id: 'virgo',
   name: 'Virgo Cluster',
   category: 'cluster',

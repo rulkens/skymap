@@ -139,17 +139,17 @@ the `isStructure` predicate is being retired in this plan (cite Task 10).
   `type: 'structure'`.
 
 **Tests:**
-- [ ] In `tests/@types/engine/data/structureRecord.types.test.ts` (or the nearest
+- [x] In `tests/@types/engine/data/structureRecord.types.test.ts` (or the nearest
       type test), add a compile-time assertion that `StructureInfo['type']` is
       `'structure'` and `GalaxyInfo['type']` is `'galaxyCatalog'` (a `satisfies` /
       assignment check). (File renamed in Task 2 — leave it where it is now.)
-- [ ] Grep the test tree for fixture builders of `GalaxyInfo` and structure literals
+- [x] Grep the test tree for fixture builders of `GalaxyInfo` and structure literals
       (`tests/.../galaxyInfoBuilder.test.ts`, `buildStaticAnchorStructures.test.ts`,
       `structureCatalogToStructures` test, `createStructureStore.test.ts`, any
       `as GalaxyInfo` / `as StructureRecord` fixtures) and add the `type` field so
       they typecheck. Assert one existing test still asserts `.source` / `.category`
       to prove no behaviour change.
-- [ ] `npm run typecheck` clean (the new required field surfaces every construction
+- [x] `npm run typecheck` clean (the new required field surfaces every construction
       site at compile time — that's the point). `npm test` green. Commit.
 
 ---

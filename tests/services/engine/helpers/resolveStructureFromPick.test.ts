@@ -7,6 +7,7 @@ import type { StructureCategory } from '../../../../src/@types/data/structure/St
 // Minimal structure fixtures.  The helper only indexes the returned array by
 // identity, so each record needs only the fields that satisfy `StructureRecord`.
 const virgo: StructureRecord = {
+  type: 'structure',
   id: 'virgo-m87',
   name: 'Virgo Cluster',
   category: 'cluster',
@@ -15,6 +16,7 @@ const virgo: StructureRecord = {
   physicalRadiusMpc: 2.2,
 };
 const coma: StructureRecord = {
+  type: 'structure',
   id: 'coma',
   name: 'Coma Cluster',
   category: 'cluster',
@@ -23,6 +25,7 @@ const coma: StructureRecord = {
   physicalRadiusMpc: 6,
 };
 const bootes: StructureRecord = {
+  type: 'structure',
   id: 'bootes-void',
   name: 'Boötes Void',
   category: 'void',

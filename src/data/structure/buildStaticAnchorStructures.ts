@@ -96,6 +96,7 @@ type SeedEntry = {
  */
 function buildAnchorStructure(a: SeedEntry): StructureRecord {
   const common = {
+    type: 'structure',
     // `${category}-${seed.id}` is the canonical structure id — the seed's
     // curated `id` field is the single source of truth, so deep-link
     // hashes never diverge from the stored ids regardless of punctuation

@@ -21,6 +21,7 @@ import type { StructureRecord } from '../../../../src/@types/data/structure/Stru
 const FOV60 = (Math.PI / 180) * 60;
 
 const virgo: StructureRecord = {
+  type: 'structure',
   id: 'virgo-m87',
   name: 'Virgo Cluster',
   category: 'cluster',

@@ -26,6 +26,7 @@ import type { StructureRecord } from '../../../src/@types/data/structure/Structu
 import type { GalaxyInfo } from '../../../src/@types/engine/GalaxyInfo';
 
 const virgo: StructureRecord = {
+  type: 'structure',
   id: 'virgo-m87',
   name: 'Virgo Cluster',
   category: 'cluster',
@@ -34,6 +35,7 @@ const virgo: StructureRecord = {
   physicalRadiusMpc: 2.2,
 };
 const coma: StructureRecord = {
+  type: 'structure',
   id: 'coma',
   name: 'Coma Cluster',
   category: 'cluster',

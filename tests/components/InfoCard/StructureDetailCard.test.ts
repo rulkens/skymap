@@ -14,6 +14,7 @@ import type { StructureRecord } from '../../../src/@types/data/structure/Structu
 
 // Coma carries an Abell number ('A1656'); the card should expand it.
 const comaWithAbell: StructureRecord = {
+  type: 'structure',
   id: 'coma',
   name: 'Coma Cluster',
   category: 'cluster',
@@ -25,6 +26,7 @@ const comaWithAbell: StructureRecord = {
 
 // Virgo has no Abell designation — the row must be absent.
 const virgoNoAbell: StructureRecord = {
+  type: 'structure',
   id: 'virgo-m87',
   name: 'Virgo Cluster',
   category: 'cluster',

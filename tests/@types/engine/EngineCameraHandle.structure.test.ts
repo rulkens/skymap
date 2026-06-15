@@ -9,6 +9,7 @@ describe('EngineCameraHandle.focusOn (structure)', () => {
     // pins the structure half of that contract; the galaxy half is implicit
     // in every existing handle consumer.
     const structure: StructureRecord = {
+      type: 'structure',
       id: 'virgo-cluster',
       name: 'Virgo Cluster',
       category: 'cluster',

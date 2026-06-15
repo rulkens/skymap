@@ -17,6 +17,7 @@ import type { StructureRecord } from '../../../src/@types/data/structure/Structu
 // readable Mpc value (formatDistance("Mpc / Mly") shape).  physicalRadiusMpc
 // is 2.2 — a real-world Virgo-ish radius.
 const virgo: StructureRecord = {
+  type: 'structure',
   id: 'virgo-m87',
   name: 'Virgo Cluster',
   category: 'cluster',

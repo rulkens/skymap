@@ -18,6 +18,7 @@ import type { PickStructureStore } from '../../../../src/@types/engine/data/Pick
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 
 const virgo: StructureRecord = {
+  type: 'structure',
   id: 'virgo',
   name: 'Virgo Cluster',
   category: 'cluster',

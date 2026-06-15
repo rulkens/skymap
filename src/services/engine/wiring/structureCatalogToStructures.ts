@@ -99,6 +99,7 @@ export function structureCatalogToStructures(payload: StructureCatalogPayload): 
     const significance =
       category === 'cluster' ? normaliseCluster(raw) : normaliseSupercluster(raw);
     const common = {
+      type: 'structure',
       // `-bulk-` infix: distinct from the featured `${category}-${seed.id}`
       // anchors and flags the structure as non-deep-linkable.
       id: `${category}-bulk-${m.id}`,
