@@ -3,12 +3,28 @@
 > **Depends on** `docs/superpowers/plans/2026-06-15-selection-target-unification.md`
 > (Part 0) **and** `docs/superpowers/plans/2026-06-15-fade-source-naming-consistency.md`
 > (Part 1). **Execute this plan only after both have landed.** This plan assumes the
-> post-Part-0 world (the `Selection` union is gone; the selection slots hold
-> `FocusableTarget | null`; `resolvePick(pick, deps): FocusableTarget | null` is the
-> pure pick resolver) and the post-Part-1 world (the MW disk fade is
-> `{ kind: 'milkyWay' }`, not `{ kind: 'overlay', id: 'milkyWay' }`; `StructureId`
-> has replaced `StructureCategory`). Cite the current files — do not trust this plan's
-> snapshots over what Part 0 / Part 1 left in the tree.
+> **tagged-union + table-dispatch world** Part 0 leaves behind:
+>
+> - The `Selection` union is gone; the selection slots hold `FocusableTarget | null`.
+> - `FocusableTarget` is a **tagged** discriminated union keyed on a `type` field
+>   (`type: FocusableTargetType`), with `FocusableTargetType = 'galaxyCatalog' |
+>   'structure' | 'milkyWay'` mirroring the `SOURCE_REGISTRY` row `type`.
+> - `StructureRecord` has been **renamed `StructureInfo`** (Part 0). `FocusableTarget =
+>   GalaxyInfo | StructureInfo (| MilkyWayInfo, this plan)`.
+> - Dispatch is **table lookup keyed on `target.type`**, not an `isStructure` ternary:
+>   `DETAIL_CARD[target.type]`, `URL_HASH_FOR[target.type]`, `COMMIT_FOCUS[target.type]`.
+>   The structural `isStructure` sniff is retired; simple guards narrow on
+>   `target.type === 'structure'`.
+> - `resolvePick(pick, deps): FocusableTarget | null` is the pure pick resolver,
+>   dispatching on `SOURCE_REGISTRY[code].type`.
+> - The MW disk fade is `{ kind: 'milkyWay' }` (Part 1), not `{ kind: 'overlay', id:
+>   'milkyWay' }`; `StructureId` has replaced `StructureCategory`.
+>
+> **Cite the current files — do not trust this plan's snapshots over what Part 0 / Part 1
+> left in the tree.** Because Part 0 delivered a properly tagged union, the MW is a **new
+> arm + one table row per dispatch** — there is **no `Selection` variant to add, no
+> `isMilkyWay` predicate, no `as`-cast site audit, and no `selectionRingPass` stopgap**.
+> The tagged union narrows safely; the tables make the MW a one-row add.
 
 **Feature:** Promote the Milky Way to a fully selectable first-class source — clickable
 in-scene (a pick-only invisible billboard), an InfoCard, and the standard
@@ -23,26 +39,39 @@ between tasks. The main thread runs `npm test` / `npm run typecheck` and commits
 
 After this plan, the Milky Way's identity / selection / focus flow through the exact
 same plumbing as every other source. A single resolved-target value, `MILKY_WAY_INFO`
-(`MilkyWayInfo` variant of `FocusableTarget`), is the one thing held in the selection
-slots, rendered by the InfoCard, ringed by `selectionRingPass`, and focused by
-`commitFocus`. There is **no MW-specific public method** — `camera.focusOn(MILKY_WAY_INFO)`
-is the only entry point. The procedural-disk renderer stays bespoke by design; only the
-identity axis is unified.
+(`MilkyWayInfo` arm of the tagged `FocusableTarget` union, `type: 'milkyWay'`), is the
+one thing held in the selection slots, rendered by the InfoCard (via the
+`DETAIL_CARD['milkyWay']` table row), ringed by `selectionRingPass`, and focused by
+`commitFocus` (via `COMMIT_FOCUS['milkyWay']`). There is **no MW-specific public
+method** — `camera.focusOn(MILKY_WAY_INFO)` is the only entry point. The
+procedural-disk renderer stays bespoke by design; only the identity axis is unified.
 
 ## Architecture
 
-- `MilkyWayInfo` is a third arm of the `FocusableTarget` discriminated union, carried
-  as a single static const `MILKY_WAY_INFO`. Its discriminant (`kind: 'milkyWay'`) keeps
-  the union discriminable and keeps `isStructure` returning `false` for it (the structure
-  predicate keys on `'category' in target`, which `MilkyWayInfo` deliberately lacks).
+- `MilkyWayInfo` is a third arm of the tagged `FocusableTarget` union, carried as a
+  single static const `MILKY_WAY_INFO`. Its tag is `type: 'milkyWay'` — the **union
+  discriminant**, mirroring its `SOURCE_REGISTRY` row's `type`, NOT a bespoke
+  discriminant and NOT "the arm with no `category` field". The tag is what every table
+  and every `target.type === ...` guard keys on, so the union narrows safely with no
+  `as` casts.
+- The MW slots into the Part 0 tables by **adding one row each** — no edits to the
+  existing dispatch logic:
+  - `DETAIL_CARD['milkyWay'] = MilkyWayDetailCard`
+  - `URL_HASH_FOR['milkyWay'] = () => null` (clears the focus hash — deep-linking deferred)
+  - `COMMIT_FOCUS['milkyWay'] = commitMilkyWayFocus`
 - A new pick provider — a tiny screen-size-clamped billboard at `MILKY_WAY_CENTER_WORLD`
   — stamps `packSelection(Source.MilkyWay, 0) + PICK_SENTINEL_OFFSET` into the r32uint
   pick texture, mirroring `structureMarkerRenderer.pickRing`. It is gated on MW disk
   visibility (the `{ kind: 'milkyWay' }` fade opacity > 0) so the MW is never pickable
-  once the disk has faded out. The decode (`unpackPick`) is unchanged — code 16 round-trips.
+  once the disk has faded out. The decode (`unpackPick`) is unchanged — code 16
+  round-trips.
 - `resolvePick` grows a `type === 'milkyWay'` branch returning `MILKY_WAY_INFO`.
-- `selectionRingPass` and `commitFocus` grow a `milkyWay` branch each, reading
-  `MILKY_WAY_CENTER_WORLD` off the target and tweening to `MILKY_WAY_VIEW_DISTANCE_MPC`.
+- `targetEq` grows a `milkyWay` arm (singleton self-equality).
+- `selectionRingPass` grows a `milkyWay` branch reading `MILKY_WAY_CENTER_WORLD` off the
+  target; its `enabled()` covers `type === 'galaxyCatalog' || type === 'milkyWay'`.
+- `commitMilkyWayFocus` tweens to `MILKY_WAY_VIEW_DISTANCE_MPC` at
+  `MILKY_WAY_CENTER_WORLD`, wired via the `COMMIT_FOCUS` table row; the bespoke
+  `focusOnMilkyWay` camera method is retired.
 - The palette gets a typed first-class MW command whose select action calls
   `camera.focusOn(MILKY_WAY_INFO)`; the sentinel pseudo-entry + onSelect special-case
   are deleted.
@@ -66,22 +95,24 @@ task only adds the type + const + their tests, and must stay green standalone.
 - `src/data/milkyWay/milkyWayInfo.ts` (new — one const)
 - `tests/data/milkyWay/milkyWayInfo.test.ts` (new)
 
-**Type shape** (`MilkyWayInfo.d.ts`) — the discriminant is `kind`, and it carries
-`x/y/z` so ring/focus readers treat it uniformly. It must NOT have a top-level
-`category` field (that would make `isStructure` misclassify it). Cite `MILKY_WAY_CENTER_WORLD`
+**Type shape** (`MilkyWayInfo.d.ts`) — the discriminant is `type: 'milkyWay'` (the
+union tag, mirroring the `SOURCE_REGISTRY` row at `src/data/sources/milky-way.ts`). It
+carries `x/y/z` so ring/focus readers treat it uniformly. Cite `MILKY_WAY_CENTER_WORLD`
 in `src/data/milkyWay/galacticCenter.ts:56` for the world coords; cite the
-`isStructure` discriminant at `src/services/engine/isStructure.ts:18-20`.
+`FocusableTargetType` definition Part 0 added (`src/@types/engine/FocusableTargetType.d.ts`)
+for the `'milkyWay'` member this arm pins.
 
 ```ts
 export type MilkyWayInfo = {
-  /** Discriminant — keeps FocusableTarget discriminable and isStructure() false. */
-  readonly kind: 'milkyWay';
+  /** Union tag — mirrors the SOURCE_REGISTRY 'milkyWay' row type; what every
+   *  FocusableTarget table / guard keys on. */
+  readonly type: 'milkyWay';
   /** Headline shown in the InfoCard / palette row. */
   readonly displayName: string;          // "Milky Way"
   /** One-line blurb for the card. */
   readonly description: string;          // "Our home galaxy — you are here"
   /** Morphological type for the card's type row. */
-  readonly type: string;                 // barred-spiral, e.g. "Barred spiral (SBbc)"
+  readonly typeString: string;           // barred-spiral, e.g. "Barred spiral (SBbc)"
   /** Distance note for the card (we are inside it; ≈ 8 kpc to the centre). */
   readonly distanceNote: string;
   /** World-space position of the galactic centre (Sgr A*), from MILKY_WAY_CENTER_WORLD. */
@@ -91,91 +122,59 @@ export type MilkyWayInfo = {
 };
 ```
 
+> The morphological-type field is named `typeString` (not `type`) to avoid colliding
+> with the `type` union tag — `type` is reserved for the discriminant across every
+> `FocusableTarget` arm. The InfoCard's "type" row reads `typeString`.
+
 **Const** (`milkyWayInfo.ts`): `export const MILKY_WAY_INFO: MilkyWayInfo = { ... }`
 with `x/y/z` spread from `MILKY_WAY_CENTER_WORLD`. Didactic header explaining it is a
-static const (not a catalog row) and why the discriminant is `kind`, not `category`.
+static const (not a catalog row) and why the discriminant is `type` (the union tag
+shared with the registry row), keeping it on the same table-dispatch path as galaxies
+and structures.
 
-- [ ] Add test `MILKY_WAY_INFO carries kind 'milkyWay'` asserting `MILKY_WAY_INFO.kind === 'milkyWay'`.
-- [ ] Add test `MILKY_WAY_INFO has no top-level category field` asserting
-  `!('category' in MILKY_WAY_INFO)` (guards the `isStructure` contract).
+- [ ] Add test `MILKY_WAY_INFO carries the 'milkyWay' tag` asserting `MILKY_WAY_INFO.type === 'milkyWay'`.
 - [ ] Add test `MILKY_WAY_INFO x/y/z match MILKY_WAY_CENTER_WORLD` asserting the triple
   equals `MILKY_WAY_CENTER_WORLD`.
 - [ ] Add test `MILKY_WAY_INFO displayName is "Milky Way"`.
 - [ ] `npm test -- milkyWayInfo` → all pass; `npm run typecheck` clean.
 - [ ] Commit.
 
-### Task 2: Widen `FocusableTarget`; add `isMilkyWay`; harden the three-way discrimination
+### Task 2: Widen `FocusableTarget` + `FocusableTargetType` with the milkyWay arm
+
+A pure type widen — add the third arm and its tag member. Because Part 0's union is
+tagged and dispatch is table-driven, **no predicate, no cast-site audit, and no pass
+stopgaps are needed**: typecheck will flag any genuinely non-exhaustive table or
+`switch`, and the existing `target.type === 'structure'` guards already exclude the MW
+from the galaxy and structure branches by construction.
 
 **Files:**
-- `src/@types/engine/FocusableTarget.d.ts:17` (modify the union)
-- `src/services/engine/isStructure.ts` (verify / extend docblock; no logic change)
-- `src/services/engine/isMilkyWay.ts` (new — one fn per file)
-- `src/services/engine/frame/passes/pointSpritesPass.ts` (modify — exclude MW from the point highlight)
-- `src/services/engine/frame/passes/diskRadiusRingPass.ts` (modify — exclude MW from the debug ring)
-- `tests/services/engine/isStructure.test.ts` (modify)
-- `tests/services/engine/isMilkyWay.test.ts` (new)
-- `tests/services/engine/frame/passes/pointSpritesPass.test.ts` (modify)
-- `tests/services/engine/frame/passes/diskRadiusRingPass.test.ts` (modify)
+- `src/@types/engine/FocusableTarget.d.ts` (modify — add the third arm)
+- `src/@types/engine/FocusableTargetType.d.ts` (verify it already lists `'milkyWay'`;
+  Part 0 added it per the spec — if absent, add it here)
+- `tests/@types/...` only if Part 0 established a union-shape test to extend (otherwise
+  this task is exercised transitively by Tasks 3+; keep it green via typecheck)
 
-**Before/after** (`FocusableTarget.d.ts:17`):
+**Before/after** (`FocusableTarget.d.ts`):
 
 ```ts
-// before
-export type FocusableTarget = GalaxyInfo | StructureRecord;
+// before (post-Part-0)
+export type FocusableTarget = GalaxyInfo | StructureInfo;
 // after
-export type FocusableTarget = GalaxyInfo | StructureRecord | MilkyWayInfo;
+export type FocusableTarget = GalaxyInfo | StructureInfo | MilkyWayInfo;
 ```
 
-Add the `MilkyWayInfo` import; update the union's docblock to name the three arms.
-`isStructure` keys on `'category' in target` (`isStructure.ts:18-20`); `MilkyWayInfo`
-has no `category`, so it already returns `false` — confirm with a test, and refresh the
-docblock to mention the milkyWay arm so a future reader knows it was considered.
+Add the `MilkyWayInfo` import; update the union's docblock to name the three arms and
+note that dispatch goes through the `type`-keyed tables. Confirm `FocusableTargetType`
+is `'galaxyCatalog' | 'structure' | 'milkyWay'`.
 
-**The structural-cast hazard (why this task does more than widen the union).** Several
-slot consumers branch `isStructure(t) ? structure : (t as GalaxyInfo)` — the `as GalaxyInfo`
-cast SUPPRESSES the type error, so typecheck will NOT flag them when `MilkyWayInfo` joins
-the union. A `MilkyWayInfo` would silently flow into the galaxy branch. Introduce an
-explicit predicate and make every "not a structure ⇒ galaxy" site a three-way:
-
-**`isMilkyWay`** (`isMilkyWay.ts`): `export function isMilkyWay(target: FocusableTarget):
-target is MilkyWayInfo` returning `'kind' in target && target.kind === 'milkyWay'`
-(`GalaxyInfo` / `StructureRecord` carry no top-level `kind`). Didactic header mirroring
-`isStructure.ts`.
-
-Sites to fix in THIS task (the render-side galaxy-assumers — verify each reads the slot
-post-Part-0):
-- `pointSpritesPass` — the selected-point highlight reads `selected.source` / `selected.index`
-  (Part 0 pointed it at `GalaxyInfo`). A `MilkyWayInfo` has neither. Gate the highlight on
-  "galaxy only": skip when `isStructure(selected) || isMilkyWay(selected)` (the MW is not a
-  catalog point, so it highlights nothing here — its halo is `selectionRingPass`, Task 7).
-- `diskRadiusRingPass` — same shape; it re-indexes the catalog by `selected.source`/`.index`.
-  Gate it to galaxy-only (`!isStructure && !isMilkyWay`).
-- `selectionRingPass` — **typecheck-breaks here, not latently:** Part 0 set its `enabled()`
-  to `!isStructure(sel)` and its `draw()` reads `sel.diameterKpc` off `GalaxyInfo`.
-  `MilkyWayInfo` has no `diameterKpc`, so the union widen makes `draw()` fail to compile.
-  Add a STOPGAP `if (isMilkyWay(sel)) return;` at the top of `draw()` (and keep the
-  `enabled()` as-is — a no-draw frame is harmless). **Task 7 replaces this early-return with
-  the real MW ring branch.** Without the stopgap this task isn't green.
-
-The `InfoCard` galaxy-cast sites (`InfoCard.tsx:78,80`, `as GalaxyInfo`) and the
-`useUrlSync` focus-hash site stay GREEN at this task (the `as` cast / structural branch hide
-the type error) but are latently wrong; they're fixed in Task 11 and Task 8 respectively.
-Because the MW can't enter the slots until the pick is wired (Task 6), no runtime path hits
-those latent sites before their owning task — but do not rely on that; fix them as scheduled.
-
-- [ ] Add test `isStructure returns false for MILKY_WAY_INFO`.
-- [ ] Add test `isMilkyWay returns true for MILKY_WAY_INFO and false for a galaxy / structure`.
-- [ ] Add test `pointSpritesPass does not highlight a point when the Milky Way is selected`
-  (inject `MILKY_WAY_INFO` into the selection slot; assert no `packSelection`/highlight for a
-  real point — mirror the existing selected-point assertion).
-- [ ] Add test `diskRadiusRingPass is disabled when the Milky Way is selected`.
-- [ ] `npm run typecheck` clean (any remaining non-exhaustive `switch` on `FocusableTarget`
-  belongs to a later task — add its `kind === 'milkyWay'` arm or defer to that task; NEVER a
-  silent `default` that swallows the milkyWay case).
-- [ ] `npm test -- isStructure isMilkyWay pointSpritesPass diskRadiusRingPass` → passes.
+- [ ] `npm run typecheck` clean. Any table or `switch` that becomes non-exhaustive on
+  `FocusableTarget` / `FocusableTargetType` here belongs to a later task (its
+  `'milkyWay'` row is added there) — if typecheck surfaces one early, add the row in its
+  owning task, NEVER a silent `default` that swallows the milkyWay case.
+- [ ] `npm test` → green (no behaviour change).
 - [ ] Commit.
 
-### Task 3: `resolvePick` milkyWay branch (code 16 → `MILKY_WAY_INFO`)
+### Task 3: `resolvePick` milkyWay row (code 16 → `MILKY_WAY_INFO`)
 
 `resolvePick` (Part 0, `src/services/engine/helpers/resolvePick.ts`) dispatches on
 `SOURCE_REGISTRY[code].type`. Add the `'milkyWay'` arm. The MW carries no
@@ -185,9 +184,9 @@ those latent sites before their owning task — but do not rely on that; fix the
 - `src/services/engine/helpers/resolvePick.ts` (modify)
 - `tests/services/engine/helpers/resolvePick.test.ts` (modify)
 
-Cite the registry-dispatch shape that Part 0 lifted from `pickToSelection.ts:26-41`
-(galaxyCatalog / structure / fall-through-null). Add: `if (entry?.type === 'milkyWay')
-return MILKY_WAY_INFO;`. `Source.MilkyWay` is code 16 (`src/data/source.ts:102`), and
+Cite the registry-dispatch shape Part 0 established (galaxyCatalog / structure /
+fall-through-null). Add: `if (entry?.type === 'milkyWay') return MILKY_WAY_INFO;`.
+`Source.MilkyWay` is code 16 (`src/data/source.ts:102`), and
 `SOURCE_REGISTRY[16].type === 'milkyWay'` (`src/data/sources/milky-way.ts`).
 
 - [ ] Add test `resolvePick resolves a milkyWay code to MILKY_WAY_INFO` asserting
@@ -198,21 +197,22 @@ return MILKY_WAY_INFO;`. `Source.MilkyWay` is code 16 (`src/data/source.ts:102`)
 - [ ] `npm run typecheck` clean.
 - [ ] Commit.
 
-### Task 4: `targetEq` milkyWay self-equality
+### Task 4: `targetEq` milkyWay row (singleton self-equality)
 
 Part 0's `targetEq` (the dedup comparator for the selection slots) compares identity
-fields per arm. Add a milkyWay arm: two milkyWay targets are always equal (it's a
-singleton), and a milkyWay never equals a galaxy or structure.
+fields per arm, keyed on `type`. Add a milkyWay arm: two milkyWay targets are always
+equal (it's a singleton), and a milkyWay never equals a galaxy or structure (the
+`type`-key mismatch already yields `false`, so the new arm is just `type === 'milkyWay'
+on both → true`).
 
 **Files:**
-- `src/services/engine/helpers/targetEq.ts` (modify — Part 0 created this; cite its current
-  per-arm comparison)
+- `src/services/engine/helpers/targetEq.ts` (modify — cite Part 0's per-arm comparison)
 - `tests/services/engine/helpers/targetEq.test.ts` (modify)
 
-**Behaviour:** `targetEq(a, b)` returns `true` when both are `kind: 'milkyWay'`; `false`
-when exactly one is. Since `MILKY_WAY_INFO` is a singleton, reference equality also holds,
-but compare on the discriminant so a future second MW value (there won't be one) wouldn't
-silently break dedup.
+**Behaviour:** `targetEq(a, b)` returns `true` when both have `type: 'milkyWay'`;
+`false` when their `type` tags differ. Compare on the `type` tag (not reference
+equality) so the dedup is robust by contract, not by the singleton happening to be the
+same object.
 
 - [ ] Add test `targetEq is true for two milkyWay targets` asserting
   `targetEq(MILKY_WAY_INFO, MILKY_WAY_INFO) === true`.
@@ -339,35 +339,34 @@ still runs a pick pass.
 ### Task 7: `selectionRingPass` milkyWay branch
 
 `selectionRingPass` reads the selected target (post-Part-0) and computes `worldPos` +
-`ringRadiusPx`. The renderer is target-agnostic (`{ worldPos, ringRadiusPx }`). Add a
-milkyWay branch: `enabled()` true for galaxy OR milkyWay targets; `worldPos =
-MILKY_WAY_CENTER_WORLD`; `ringRadiusPx` from the disk's apparent on-screen size
-(disk radius ≈ 25 kpc / camDist × pxPerRad), clamped to a min.
+`ringRadiusPx`. The renderer is target-agnostic (`{ worldPos, ringRadiusPx }`). Extend
+its `enabled()` to cover `type === 'galaxyCatalog' || type === 'milkyWay'`, and add a
+milkyWay branch in `draw()`: `worldPos = MILKY_WAY_CENTER_WORLD`; `ringRadiusPx` from the
+disk's apparent on-screen size (disk radius ≈ 25 kpc / camDist × pxPerRad), clamped to a
+min.
 
 **Files:**
 - `src/services/engine/frame/passes/selectionRingPass.ts` (modify)
+- `src/data/milkyWay/galacticCenter.ts` (modify — add `MILKY_WAY_DISC_RADIUS_KPC = 25`)
 - `tests/services/engine/frame/passes/selectionRingPass.test.ts` (modify)
 
 Post-Part-0, the pass reads `state.subsystems.selection.selected(): FocusableTarget | null`
 and the galaxy branch reads `worldPos`/`diameterKpc` off the target (no catalog re-index).
-**Replace the Task-2 stopgap `if (isMilkyWay(sel)) return;` in `draw()` with the real MW
-branch below** (the early-return must not survive — the MW now draws a ring).
-Add an `isStructure`-false discriminant split: a milkyWay target (`sel.kind === 'milkyWay'`)
-takes `worldPos = [sel.x, sel.y, sel.z]` and sizes the ring from a 25 kpc disk radius
-using the SAME `apparentPxRadius` formula already in the pass (cite
-`selectionRingPass.ts:80-87`), with the `RING_SIZE_SCALE` factor reused. Use the
-project's MW disc radius — there's no existing exported constant for 25 kpc, so introduce
-one (`MILKY_WAY_DISC_RADIUS_KPC = 25`) next to the other MW constants in
-`src/data/milkyWay/galacticCenter.ts` rather than open-coding `25` in the pass.
+Add a `type`-keyed split: a milkyWay target (`sel.type === 'milkyWay'`) takes `worldPos =
+[sel.x, sel.y, sel.z]` and sizes the ring from a 25 kpc disk radius using the SAME
+`apparentPxRadius` formula already in the pass (cite `selectionRingPass.ts:80-87`), with
+the `RING_SIZE_SCALE` factor reused. Introduce `MILKY_WAY_DISC_RADIUS_KPC = 25` next to
+the other MW constants in `src/data/milkyWay/galacticCenter.ts` rather than open-coding
+`25` in the pass.
 
-**Enable contract:**
+**Enable contract** — explicit two-tag check (not "not a structure", so the third arm is
+named rather than implied):
 
 ```ts
-// enabled(): true when a galaxy OR milkyWay target is selected.
+// enabled(): true when a galaxyCatalog OR milkyWay target is selected.
 const sel = state.subsystems.selection.selected();
-return sel !== null && (!isStructure(sel) /* galaxy or milkyWay */);
-// NOTE: structures still render their halo via the marker pass, not here —
-// so the gate is "selected and not a structure", which covers galaxy + milkyWay.
+return sel !== null && (sel.type === 'galaxyCatalog' || sel.type === 'milkyWay');
+// Structures render their halo via the marker pass, not here.
 ```
 
 - [ ] Add test `selectionRingPass enabled() is true when the Milky Way is selected`
@@ -377,85 +376,100 @@ return sel !== null && (!isStructure(sel) /* galaxy or milkyWay */);
   `worldPos` passed equals `MILKY_WAY_CENTER_WORLD` and `ringRadiusPx` is finite/positive.
 - [ ] Add test `selectionRingPass enabled() stays false for a structure selection`
   (regression — the structure path is unchanged).
+- [ ] Add test `selectionRingPass enabled() stays true for a galaxy selection` (regression).
 - [ ] `npm test -- selectionRingPass` → passes; `npm run typecheck` clean.
 - [ ] Commit.
 
-### Task 8: `commitFocus` milkyWay branch; retire `focusOnMilkyWay`
+### Task 8: `commitMilkyWayFocus` + `COMMIT_FOCUS['milkyWay']` row; retire `focusOnMilkyWay`
 
-`commitFocus` (`src/services/engine/helpers/commitFocus.ts`) dispatches on the target
-kind. Add a milkyWay branch that tweens to `MILKY_WAY_VIEW_DISTANCE_MPC` at
+`commitFocus` (`src/services/engine/helpers/commitFocus.ts`) is the Part 0
+`COMMIT_FOCUS[target.type]` table lookup. Add a milkyWay row pointing at a new
+`commitMilkyWayFocus` that tweens to `MILKY_WAY_VIEW_DISTANCE_MPC` at
 `MILKY_WAY_CENTER_WORLD`, setting BOTH the select and focus slots. Move the framing logic
-out of `engine.ts`'s `focusOnMilkyWay` (`engine.ts:749-773`) into this branch, then delete
-`focusOnMilkyWay` and remove it from the camera handle.
+out of `engine.ts`'s `focusOnMilkyWay` (`engine.ts:749-773`) into the new helper, then
+delete `focusOnMilkyWay` and remove it from the camera handle.
 
 **Files:**
-- `src/services/engine/helpers/commitFocus.ts` (modify — three-way dispatch)
+- `src/services/engine/helpers/commitFocusTable.ts` (modify — add the `COMMIT_FOCUS['milkyWay']`
+  row; this is the Part 0 table home — verify the exact path in the tree)
 - `src/services/engine/helpers/commitMilkyWayFocus.ts` (new — one fn per file)
 - `src/services/engine/engine.ts` (modify — delete `focusOnMilkyWay`; remove from the
   returned handle at `engine.ts:1188-1189`)
 - `src/@types/engine/handles/EngineCameraHandle.d.ts` (modify — remove the
   `focusOnMilkyWay` member + its docline; refresh the type's header comment which currently
   lists "focus-on-milkyway")
-- `src/hooks/useUrlSync.ts` (modify — handle a `MilkyWayInfo` focus, see below)
 - `tests/services/engine/helpers/commitFocus.test.ts` (modify)
+- `tests/services/engine/helpers/commitMilkyWayFocus.test.ts` (new)
 - `tests/services/engine/engine.test.ts` (modify — drop any `focusOnMilkyWay` coverage)
-- `tests/hooks/useUrlSync.test.ts` (modify)
 
-**The third cast hazard — `useUrlSync.ts:107`.** Setting the focus slot to `MILKY_WAY_INFO`
-fires `onFocusChange(MILKY_WAY_INFO)`, which `useUrlSync` consumes at line 107 with
-`if (isStructure(input.focused)) { …structure hash… } else { …galaxy hash… }`. A
-`MilkyWayInfo` has no `source`/objID/PGC, so the galaxy branch would emit a broken
-`#focus=` hash. Add a `isMilkyWay(input.focused)` branch FIRST that **clears the focus hash**
-(no deep-link) — this matches the pre-existing behavior (the old `focusOnMilkyWay` set the
-focus slot to `null`, so there was never a MW hash) and avoids touching the URL `FocusTarget`
-parser. MW deep-linking (`#focus=milkyway` round-trip) is explicitly deferred (see the spec's
-out-of-scope).
-
-**Dispatch contract** (`commitFocus.ts`) — currently a two-way `isStructure(target) ?
-commitStructureFocus : commitGalaxyFocus` (cite `commitFocus.ts:15-21`). Make it:
+**Table row** (`commitFocusTable.ts`) — the dispatch table is keyed on `target.type` (Part 0);
+add one entry, no edit to the lookup logic:
 
 ```ts
-if (isStructure(target)) commitStructureFocus(state, target);
-else if (target.kind === 'milkyWay') commitMilkyWayFocus(state, target);
-else commitGalaxyFocus(state, target);
+COMMIT_FOCUS['milkyWay'] = commitMilkyWayFocus;
 ```
 
-`commitMilkyWayFocus` carries the framing logic lifted from `focusOnMilkyWay`
-(`engine.ts:756-772`): guard on `state.cam`, set BOTH slots
+`commitMilkyWayFocus(state, target)` carries the framing logic lifted from
+`focusOnMilkyWay` (`engine.ts:756-772`): guard on `state.cam`, set BOTH slots
 (`setSelected(MILKY_WAY_INFO)` so the InfoCard pins + `setFocused(MILKY_WAY_INFO)` so
 focus state matches — note the OLD method dropped focus to null because there was no MW
 target; with `MilkyWayInfo` we now set it), then `tweenToCameraSnapshot` to
-`MILKY_WAY_VIEW_DISTANCE_MPC` at `MILKY_WAY_CENTER_WORLD` preserving yaw/pitch/fov.
-Put it in its own file `src/services/engine/helpers/commitMilkyWayFocus.ts` (one fn per
-file), mirroring `commitGalaxyFocus.ts` / `commitStructureFocus.ts`.
+`MILKY_WAY_VIEW_DISTANCE_MPC` at `MILKY_WAY_CENTER_WORLD` preserving yaw/pitch/fov. Mirror
+`commitGalaxyFocus.ts` / `commitStructureFocus.ts` (the other `COMMIT_FOCUS` row impls).
 
-**Focus-fade collapse:** `runFrame`'s member-isolation fade keys on `isStructure(focused())`
-(post-Part-0). A milkyWay focus is non-structure, so the fade collapses exactly as a galaxy
-focus does — confirm by reading the current `runFrame` focus-fade gate; no change should be
-needed, but assert it in a test.
+**Focus-fade collapse:** `runFrame`'s member-isolation fade keys on
+`focused()?.type === 'structure'` (post-Part-0). A milkyWay focus is non-structure, so
+the fade collapses exactly as a galaxy focus does — confirm by reading the current
+`runFrame` focus-fade gate; no change should be needed, but assert it in a test.
 
 `focusOnHome` (`engine.ts:734-747`) is **unchanged** — a different gesture (the wide bbox
 reset).
 
+- [ ] Add test `COMMIT_FOCUS['milkyWay'] resolves to commitMilkyWayFocus` (table-row
+  assertion, mirroring the Part 0 `COMMIT_FOCUS` table tests).
 - [ ] Add test `commitFocus routes a milkyWay target to the milkyWay focus path` —
-  assert `commitMilkyWayFocus` is reached (or, more robustly, assert the observable: both
-  slots end up `MILKY_WAY_INFO` and a tween to `MILKY_WAY_VIEW_DISTANCE_MPC` /
-  `MILKY_WAY_CENTER_WORLD` is enqueued).
+  assert the observable: both slots end up `MILKY_WAY_INFO` and a tween to
+  `MILKY_WAY_VIEW_DISTANCE_MPC` / `MILKY_WAY_CENTER_WORLD` is enqueued.
 - [ ] Add test `commitMilkyWayFocus sets both the select and focus slots to MILKY_WAY_INFO`.
 - [ ] Add test `commitMilkyWayFocus is a no-op when state.cam is null` (mirrors the old
   guard at `engine.ts:756-757`).
 - [ ] Add test `a milkyWay focus collapses the structure member-isolation fade`
-  (`isStructure(focused())` is false) — or assert via the `runFrame` gate if that's where
-  the existing galaxy-focus equivalent is tested.
-- [ ] Add test `useUrlSync clears the focus hash for a Milky Way focus` (drive
-  `onFocusChange(MILKY_WAY_INFO)`; assert no `#focus=` is written / it is cleared, and the
-  galaxy branch is NOT taken).
-- [ ] `npm test -- commitFocus commitMilkyWayFocus engine useUrlSync` → passes;
-  `npm run typecheck` clean (the `EngineCameraHandle` removal must surface no stray callers
-  — fix any).
+  (`focused()?.type === 'structure'` is false) — or assert via the `runFrame` gate if
+  that's where the existing galaxy-focus equivalent is tested.
+- [ ] `npm test -- commitFocus commitMilkyWayFocus engine` → passes;
+  `npm run typecheck` clean (the `EngineCameraHandle` removal must surface no stray
+  callers — fix any).
 - [ ] Commit.
 
-### Task 9: Typed palette MW command; delete the sentinel + onSelect special-case
+### Task 9: `URL_HASH_FOR['milkyWay']` row (clears the focus hash)
+
+The URL hash resolver is the Part 0 `URL_HASH_FOR[target.type]` table. A MW focus has no
+deep-link (deferred per the spec's out-of-scope), so its row returns `null` — which the
+consumer already treats as "clear the focus hash". One row, no edit to the resolver logic
+or the `FocusTarget` parser.
+
+**Files:**
+- `src/hooks/urlHashFor.ts` (modify — add the row; this is the Part 0 table home — verify
+  the exact path in the tree)
+- `tests/...` the Part 0 `URL_HASH_FOR` table test (modify)
+
+```ts
+URL_HASH_FOR['milkyWay'] = () => null; // no MW deep-link; clears #focus= (deferred)
+```
+
+This matches pre-existing behavior: the old `focusOnMilkyWay` set the focus slot to
+`null`, so there was never a MW hash. MW deep-linking (`#focus=milkyway` round-trip) is
+explicitly deferred (see the spec's out-of-scope) and would need the `FocusTarget` parser
+to grow a milkyWay kind — not touched here.
+
+- [ ] Add test `URL_HASH_FOR['milkyWay'] returns null` (table-row assertion).
+- [ ] Add test `a Milky Way focus clears the focus hash` driving the consumer
+  (`onFocusChange(MILKY_WAY_INFO)` → resolver → no `#focus=` written / it is cleared),
+  mirroring the existing per-`type` hash test.
+- [ ] `npm test` (URL hash + useUrlSync suites) → passes; `npm run typecheck` clean.
+- [ ] Commit.
+
+### Task 10: Typed palette MW command; delete the sentinel + onSelect special-case
 
 Replace the `__milky-way__` pseudo-entry plumbing with a first-class typed palette command
 that calls `camera.focusOn(MILKY_WAY_INFO)`.
@@ -468,7 +482,7 @@ that calls `camera.focusOn(MILKY_WAY_INFO)`.
   `onSelect` `id === MILKY_WAY_ID` interception at `App.tsx:571-581`; add the typed MW
   command)
 - `src/components/CommandPalette/CommandPalette.tsx` (modify — accept the typed MW command;
-  see the `pseudo`/glyph investigation in Task 10)
+  see the `pseudo`/glyph investigation in Task 11)
 - `tests/...` palette / App tests as they exist (modify)
 
 **Design of the typed command:** the palette today scores `FamousMetaEntry[]` rows and
@@ -500,11 +514,11 @@ path every other target uses. No sentinel id, no `selectFamous` fallthrough, no 
 - [ ] `npm test` (palette + App suites) → passes; `npm run typecheck` clean.
 - [ ] Commit.
 
-### Task 10: Retire `FamousMetaEntry.pseudo` + the glyph-fallback path iff MW was its only user
+### Task 11: Retire `FamousMetaEntry.pseudo` + the glyph-fallback path iff MW was its only user
 
 The `pseudo` flag (`src/@types/loading/FamousMetaEntry.d.ts:33`) and the palette's
 glyph-fallback branch (`CommandPalette.tsx:362-387`, the `isPseudo` block) exist solely
-for the MW pseudo-entry. After Task 9 the MW no longer flows through `FamousMetaEntry`, so
+for the MW pseudo-entry. After Task 10 the MW no longer flows through `FamousMetaEntry`, so
 verify nothing else sets `pseudo: true` and remove the dead path.
 
 **Files:**
@@ -522,46 +536,51 @@ verify nothing else sets `pseudo: true` and remove the dead path.
 - [ ] `npm test` → passes; `npm run typecheck` clean.
 - [ ] Commit.
 
-### Task 11: InfoCard milkyWay branch
+### Task 12: `MilkyWayDetailCard` + `CompactMilkyWayCard` + `DETAIL_CARD['milkyWay']` row
 
-The InfoCard dispatches via `isStructure` into galaxy / structure detail cards
-(`InfoCard.tsx:77-128`). Add a small branch keyed on the `MilkyWayInfo` discriminant:
-no thumbnail, a glyph in the image slot, headline + description + type + distance note.
+The InfoCard renders the card returned by the Part 0 `DETAIL_CARD[target.type]` table
+lookup. The Part 0 `DetailCardEntry` shape is `{ Detail, Compact }` (the `Compact`
+variant is the hover preview), so the MW row needs **both** — the MW is hoverable
+(the pick provider stamps the pick texture, the hover path resolves it to
+`MILKY_WAY_INFO` → the compact card). Add one `DETAIL_CARD['milkyWay']` row pointing at
+the new pair — no `isStructure`/`kind` branch is edited in `InfoCard.tsx`; the table
+already dispatches by `type`.
 
 **Files:**
-- `src/components/InfoCard/InfoCard.tsx` (modify — add the milkyWay dispatch)
 - `src/components/InfoCard/MilkyWayDetailCard.tsx` (new — mirror `StructureDetailCard.tsx`'s
-  shape; a glyph in the image slot, the four `MilkyWayInfo` string fields, and a "Fly here"
-  button wired to `onFocus(MILKY_WAY_INFO)`)
+  shape; a glyph in the image slot, the `MilkyWayInfo` string fields — `displayName`,
+  `description`, `typeString`, `distanceNote` — and a "Fly here" button wired to
+  `onFocus(MILKY_WAY_INFO)`)
+- `src/components/InfoCard/CompactMilkyWayCard.tsx` (new — the hover variant; mirror
+  `CompactStructureCard.tsx`; glyph + `displayName` + a short line, no thumbnail)
 - `src/components/InfoCard/MilkyWayDetailCard.module.css` (new, if styling is needed beyond
   reuse)
+- `src/components/InfoCard/detailCardTable.ts` (modify — add `DETAIL_CARD['milkyWay'] =
+  { Detail: MilkyWayDetailCard, Compact: CompactMilkyWayCard }`; this is the Part 0 table
+  home — verify the exact path + `DetailCardEntry` shape in the tree)
 - `tests/components/InfoCard/*` (modify / new as the existing InfoCard tests are structured)
 
-**Dispatch contract** (`InfoCard.tsx`): the current split is `isStructure(selected)` →
-structure vs galaxy. Add a milkyWay check FIRST among the non-structure branch (a
-milkyWay is non-structure, so it must be distinguished from galaxy before the
-`as GalaxyInfo` cast at `InfoCard.tsx:78,80`):
+**Card contract** (`MilkyWayDetailCard.tsx` / `CompactMilkyWayCard.tsx`): props mirror the
+other cards (`{ target: MilkyWayInfo; onFocus?: (t: FocusableTarget) => void }` for the
+detail, `{ target: MilkyWayInfo }` for the compact — match the `DetailCardEntry` prop
+types Part 0 established). Detail: glyph in the image slot (no `<img>` thumbnail),
+`displayName` headline, `description`, `typeString` in the type row, `distanceNote`, and a
+"Fly here" button calling `onFocus?.(MILKY_WAY_INFO)`. Compact: glyph + `displayName` + a
+short line. The outer wrapper stays owned by `InfoCard` (the `<details>`-remount hazard at
+`InfoCard.tsx:5-9`), satisfied by the table dispatch rendering inside the existing stable
+wrapper.
 
-```ts
-const selectedMilkyWay = selected?.kind === 'milkyWay' ? selected : null;
-const selectedStructure = selected && isStructure(selected) ? selected : null;
-const selectedGalaxy =
-  selected && !isStructure(selected) && selected.kind !== 'milkyWay'
-    ? (selected as GalaxyInfo)
-    : null;
-// (same three-way narrowing for `hovered`)
-```
-
-Render `MilkyWayDetailCard` when `selectedMilkyWay` is set, inside the same stable outer
-wrapper (cite the `<details>`-remount hazard in `InfoCard.tsx:5-9` — keep the wrapper
-element identical across renders). The "Fly here" button calls `onFocus?.(MILKY_WAY_INFO)`.
-
+- [ ] Add test `DETAIL_CARD['milkyWay'] resolves to the Milky Way detail + compact cards`
+  (table-row assertion, mirroring the Part 0 `DETAIL_CARD` table tests — both `Detail` and
+  `Compact`).
 - [ ] Add test `InfoCard renders the Milky Way card for a milkyWay selection` asserting
   the headline "Milky Way" + the description text appear and no `<img>` thumbnail is
   rendered (glyph instead).
 - [ ] Add test `the Milky Way card's Fly here button calls onFocus with MILKY_WAY_INFO`.
-- [ ] Add test `a galaxy selection still renders the galaxy card` (regression — the
-  three-way narrowing didn't mis-route galaxies).
+- [ ] Add test `InfoCard renders the compact Milky Way card on hover` (a milkyWay hover →
+  the compact variant, glyph + name, no thumbnail).
+- [ ] Add test `a galaxy selection still renders the galaxy card` (regression — the table
+  dispatch didn't mis-route galaxies).
 - [ ] `npm test` (InfoCard suite) → passes; `npm run typecheck` clean.
 - [ ] Commit.
 
@@ -573,21 +592,22 @@ element identical across renders). The "Fly here" button calls `onFocus?.(MILKY_
   Task 5, if the harness is null-device-only).
 - [ ] `npm run typecheck` is clean for both `src` and `tools` tsconfigs.
 - [ ] `npm run build` succeeds.
-- [ ] The Milky Way is **clickable in-scene** → selecting it shows the **InfoCard**, draws
-  the **selection ring**, and **double-click / palette / "Fly here"** all **focus** (tween)
-  it — every step on the standard `FocusableTarget` path, no MW-specific method.
+- [ ] The Milky Way is **clickable in-scene** → selecting it shows the **InfoCard** (via
+  `DETAIL_CARD['milkyWay']`), draws the **selection ring**, and **double-click / palette /
+  "Fly here"** all **focus** (tween) it (via `COMMIT_FOCUS['milkyWay']`) — every step on
+  the standard tagged `FocusableTarget` path through the dispatch tables, no MW-specific
+  method or predicate.
 - [ ] `camera.focusOn(MILKY_WAY_INFO)` is the only focus entry point; `focusOnMilkyWay` is
   gone from `engine.ts` AND `EngineCameraHandle` (grep returns zero matches).
 - [ ] The `__milky-way__` sentinel + `src/data/milkyWay/milkyWayEntry.ts` + the `App.tsx`
   `onSelect` MW special-case are deleted (grep for `MILKY_WAY_ID` / `__milky-way__` /
   `milkyWayEntry` returns zero matches; the surviving `MILKY_WAY_ENTRY` in
   `src/data/sources/milky-way.ts` is the source-registry row, intentionally kept).
-- [ ] `FamousMetaEntry.pseudo` + the palette glyph-fallback path are removed (Task 10) OR
+- [ ] `FamousMetaEntry.pseudo` + the palette glyph-fallback path are removed (Task 11) OR
   a documented note records why a non-MW user kept them.
-- [ ] Every `!isStructure(...) ⇒ galaxy` site is now a guarded three-way (`isMilkyWay`
-  checked): `pointSpritesPass`, `diskRadiusRingPass`, `InfoCard`, `useUrlSync` — a
-  `MilkyWayInfo` selection/focus never mis-routes into a galaxy branch (grep `as GalaxyInfo`
-  and confirm each is preceded by an `isMilkyWay` exclusion).
+- [ ] The MW is present as exactly **one row per dispatch table** (`DETAIL_CARD`,
+  `URL_HASH_FOR`, `COMMIT_FOCUS`) plus the `resolvePick` / `targetEq` / `selectionRingPass`
+  arms — no dispatch *logic* was edited to special-case it.
 - [ ] No new `TODO` / `FIXME` comments introduced by this plan.
 - [ ] **Manual smoke test** (dev server, real data — ask the user to look, per the
   no-kill-dev-server convention): fly near the Milky Way until the disk is visible; click
