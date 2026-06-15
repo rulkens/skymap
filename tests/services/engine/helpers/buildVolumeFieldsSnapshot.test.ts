@@ -61,9 +61,9 @@ describe('buildVolumeFieldsSnapshot', () => {
 
     // Two rows from settings even though the renderer only lists one handle.
     expect(rows).toHaveLength(2);
-    const handles = rows.map((r) => r.handle);
-    expect(handles).toContain('mcpm');
-    expect(handles).toContain('cf4-density');
+    const ids = rows.map((r) => r.id);
+    expect(ids).toContain('mcpm');
+    expect(ids).toContain('cf4-density');
   });
 
   it('derives field values from state.settings.volumes.items', () => {
@@ -93,7 +93,7 @@ describe('buildVolumeFieldsSnapshot', () => {
     const rows = buildVolumeFieldsSnapshot(state);
 
     expect(rows).toHaveLength(1);
-    expect(rows[0]?.handle).toBe('mcpm');
+    expect(rows[0]?.id).toBe('mcpm');
     // Values come from settings.volumes.items, not GPU-side state.
     expect(rows[0]?.contrast).toBe(3);
     expect(rows[0]?.intensity).toBe(0.2);

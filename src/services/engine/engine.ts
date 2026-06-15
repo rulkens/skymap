@@ -963,7 +963,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
             : fieldId === 'debug-cartesian'
               ? 'cartesian'
               : 'spherical';
-        slot.load({ handle: fieldId, shape, dims: 64, boxSizeMpc: 400 });
+        slot.load({ id: fieldId, shape, dims: 64, boxSizeMpc: 400 });
         return;
       }
     }

@@ -55,7 +55,7 @@ export type EngineVolumesHandle = {
   list: () => VolumeFieldId[];
   /** Return a snapshot of every registered field's UI-facing state. */
   getState: () => ReadonlyArray<{
-    handle: VolumeFieldId;
+    id: VolumeFieldId;
     label: string;
     enabled: boolean;
     intensity: number;

@@ -38,7 +38,7 @@ export function projectVolumeFieldRows(
     const field = items[id];
     const defaults = getVolumeFieldDefaults(id);
     return {
-      handle: id,
+      id,
       label: defaults.label ?? id,
       enabled: field?.enabled ?? true,
       intensity: field?.intensity ?? DEFAULT_VOLUME_FIELD_INTENSITY,

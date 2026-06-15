@@ -10,7 +10,7 @@ describe('projectVolumeFieldRows', () => {
     const items = makeSettingsFixture().volumes.items;
     const rows = projectVolumeFieldRows(items);
 
-    const mcpm = rows.find((r) => r.handle === 'mcpm');
+    const mcpm = rows.find((r) => r.id === 'mcpm');
     const defaults = getVolumeFieldDefaults('mcpm');
     expect(mcpm).toBeDefined();
     // Identity + values come from the items Record; label from registry defaults.
@@ -27,11 +27,11 @@ describe('projectVolumeFieldRows', () => {
     const rows = projectVolumeFieldRows(seeded.volumes.items);
 
     // Unfiltered projection includes the debug row …
-    expect(rows.some((r) => r.handle === 'debug-gaussian')).toBe(true);
+    expect(rows.some((r) => r.id === 'debug-gaussian')).toBe(true);
 
     // … the panel's debug-filtered view drops it but keeps the science volumes.
-    const panelRows = rows.filter((r) => !r.handle.startsWith('debug-'));
-    expect(panelRows.some((r) => r.handle === 'debug-gaussian')).toBe(false);
-    expect(panelRows.some((r) => r.handle === 'mcpm')).toBe(true);
+    const panelRows = rows.filter((r) => !r.id.startsWith('debug-'));
+    expect(panelRows.some((r) => r.id === 'debug-gaussian')).toBe(false);
+    expect(panelRows.some((r) => r.id === 'mcpm')).toBe(true);
   });
 });

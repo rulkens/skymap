@@ -103,7 +103,7 @@ const DENSITY_STEP = 0.1;
 
 export type VolumeFieldRowProps = {
   /** Stable id (not displayed; passed back to change callbacks). */
-  handle: VolumeFieldId;
+  id: VolumeFieldId;
   /** Display label; defaults to the id when none was provided at registration. */
   label: string;
   enabled: boolean;
@@ -185,7 +185,7 @@ function LabelledSlider({
 }
 
 export function VolumeFieldRow({
-  handle,
+  id,
   label,
   enabled,
   intensity,
@@ -209,7 +209,7 @@ export function VolumeFieldRow({
           <input
             type="checkbox"
             checked={enabled}
-            onChange={(e) => onEnabledChange(handle, e.target.checked)}
+            onChange={(e) => onEnabledChange(id, e.target.checked)}
           />
           <span>{label}</span>
         </label>
@@ -218,7 +218,7 @@ export function VolumeFieldRow({
             <PaletteSelect
               value={paletteId}
               disabled={!enabled}
-              onChange={(id) => onPaletteChange(handle, id)}
+              onChange={(paletteId) => onPaletteChange(id, paletteId)}
             />
           </div>
         )}
@@ -233,7 +233,7 @@ export function VolumeFieldRow({
         formatValue={(v) => v.toFixed(2)}
         ariaLabel={`${label} intensity`}
         title="Intensity — overall opacity multiplier."
-        onChange={(v) => onIntensityChange(handle, v)}
+        onChange={(v) => onIntensityChange(id, v)}
       />
       <LabelledSlider
         label="Contrast"
@@ -245,7 +245,7 @@ export function VolumeFieldRow({
         formatValue={(v) => v.toFixed(2)}
         ariaLabel={`${label} contrast`}
         title="Contrast — widens a deadband around the midpoint and stretches the surviving range across the palette."
-        onChange={(v) => onContrastChange(handle, v)}
+        onChange={(v) => onContrastChange(id, v)}
       />
       <LabelledSlider
         label="Trim"
@@ -257,7 +257,7 @@ export function VolumeFieldRow({
         formatValue={(v) => v.toFixed(2)}
         ariaLabel={`${label} trim`}
         title="Trim — low-end cutoff that hard-suppresses voxels below the threshold (Polyphorm-style trim_density in normalised LUT space)."
-        onChange={(v) => onTrimChange?.(handle, v)}
+        onChange={(v) => onTrimChange?.(id, v)}
       />
       <LabelledSlider
         label="Exposure"
@@ -269,7 +269,7 @@ export function VolumeFieldRow({
         formatValue={(v) => v.toFixed(1)}
         ariaLabel={`${label} exposure`}
         title="Exposure — HDR multiplier on the rgb contribution per ray-march step; weighted to brighten only peaks so mid-tones stay LDR-bounded."
-        onChange={(v) => onExposureChange?.(handle, v)}
+        onChange={(v) => onExposureChange?.(id, v)}
       />
       <LabelledSlider
         label="Density"
@@ -281,7 +281,7 @@ export function VolumeFieldRow({
         formatValue={(v) => v.toFixed(1)}
         ariaLabel={`${label} density`}
         title="Density — per-cube alpha multiplier inside the optical-depth integral."
-        onChange={(v) => onDensityScaleChange?.(handle, v)}
+        onChange={(v) => onDensityScaleChange?.(id, v)}
       />
     </div>
   );

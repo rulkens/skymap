@@ -732,8 +732,8 @@ export function SettingsPanel({
               ) : (
                 volumeFields.map((field) => (
                   <VolumeFieldRow
-                    key={field.handle}
-                    handle={field.handle}
+                    key={field.id}
+                    id={field.id}
                     label={field.label}
                     enabled={field.enabled}
                     intensity={field.intensity}

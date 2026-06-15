@@ -6,7 +6,7 @@ describe('syntheticVolumeFetcher', () => {
   it('resolves to a ScalarCube of the requested dims', async () => {
     const ctrl = new AbortController();
     const cube = await syntheticVolumeFetcher(
-      { handle: 'debug-gaussian', dims: 32, boxSizeMpc: 200 },
+      { id: 'debug-gaussian', dims: 32, boxSizeMpc: 200 },
       ctrl.signal,
       () => {},
     );
@@ -17,11 +17,7 @@ describe('syntheticVolumeFetcher', () => {
 
   it('respects defaults when dims/boxSizeMpc are not provided', async () => {
     const ctrl = new AbortController();
-    const cube = await syntheticVolumeFetcher(
-      { handle: 'debug-gaussian' },
-      ctrl.signal,
-      () => {},
-    );
+    const cube = await syntheticVolumeFetcher({ id: 'debug-gaussian' }, ctrl.signal, () => {});
     expect(cube.dims).toEqual([64, 64, 64]);
   });
 
@@ -34,14 +30,9 @@ describe('syntheticVolumeFetcher', () => {
     // grid would yield at the same coordinate (both have geometric
     // structure that's near-zero away from a grid plane / shell / spoke).
     const ctrl = new AbortController();
-    const cube = await syntheticVolumeFetcher(
-      { handle: 'h' },
-      ctrl.signal,
-      () => {},
-    );
+    const cube = await syntheticVolumeFetcher({ id: 'h' }, ctrl.signal, () => {});
     const dims = cube.dims[0];
-    const centreIdx =
-      (dims / 2) + (dims / 2) * dims + (dims / 2) * dims * dims;
+    const centreIdx = dims / 2 + (dims / 2) * dims + (dims / 2) * dims * dims;
     const centreValue = f16ToFloat(cube.voxels[centreIdx]!);
     expect(centreValue).toBeGreaterThan(0.5);
   });
@@ -54,7 +45,7 @@ describe('syntheticVolumeFetcher', () => {
     // patterns.  This test just verifies the fetcher dispatch wired up.
     const ctrl = new AbortController();
     const cube = await syntheticVolumeFetcher(
-      { handle: 'h', shape: 'cartesian', dims: 8 },
+      { id: 'h', shape: 'cartesian', dims: 8 },
       ctrl.signal,
       () => {},
     );
@@ -68,7 +59,7 @@ describe('syntheticVolumeFetcher', () => {
     // generator's voxel maths.
     const ctrl = new AbortController();
     const cube = await syntheticVolumeFetcher(
-      { handle: 'h', shape: 'spherical', dims: 8 },
+      { id: 'h', shape: 'spherical', dims: 8 },
       ctrl.signal,
       () => {},
     );

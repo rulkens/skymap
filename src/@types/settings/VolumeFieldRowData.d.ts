@@ -9,9 +9,9 @@
  * registry.  Also returned by `engineHandle.volumes.getState()` for one-shot
  * reads (dev console, tests).
  *
- * The `label` field defaults to the `handle` string when the field was
+ * The `label` field defaults to the `id` string when the field was
  * registered without an explicit human-readable name.  A future
- * `addVolumeField({ handle, label, ... })` API would populate it from
+ * `addVolumeField({ id, label, ... })` API would populate it from
  * caller metadata.
  *
  * ### Why this lives in @types rather than the component folder
@@ -28,8 +28,8 @@ import type { VolumeFieldId } from '../data/VolumeFieldId';
 
 export type VolumeFieldRowData = {
   /** Stable id matching the field registered via `addVolumeField`. */
-  handle: VolumeFieldId;
-  /** Human-readable display name; defaults to the handle if not provided. */
+  id: VolumeFieldId;
+  /** Human-readable display name; defaults to the id if not provided. */
   label: string;
   /** Whether this field is currently included in the render pass. */
   enabled: boolean;

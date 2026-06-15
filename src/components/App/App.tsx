@@ -241,7 +241,7 @@ export function App(): React.ReactElement {
   const volumeFields = useMemo(
     // `debug-*` synthetic fixtures are dropped here so the panel only shows real
     // science volumes (the dev console + handle.volumes.getState() still see them).
-    () => projectVolumeFieldRows(volumeFieldItems).filter((f) => !f.handle.startsWith('debug-')),
+    () => projectVolumeFieldRows(volumeFieldItems).filter((f) => !f.id.startsWith('debug-')),
     [volumeFieldItems],
   );
 
