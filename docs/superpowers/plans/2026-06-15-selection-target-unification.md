@@ -403,16 +403,16 @@ export type ResolvePickDeps = {
 - any other / undefined code → `console.warn` (preserve the current `pickToSelection`
   message) and `null`.
 
-- [ ] Test `returns null for a null pick`.
-- [ ] Test `maps a galaxy catalog code to its GalaxyInfo` (fixture cloud; assert
+- [x] Test `returns null for a null pick`.
+- [x] Test `maps a galaxy catalog code to its GalaxyInfo` (fixture cloud; assert
       `.index`/`.source`/`.type === 'galaxyCatalog'`).
-- [ ] Test `returns null for a galaxy code whose cloud is not loaded` (getCloud → undefined).
-- [ ] Test `maps a structure code to its StructureInfo` (stub `structures.byCategory`;
+- [x] Test `returns null for a galaxy code whose cloud is not loaded` (getCloud → undefined).
+- [x] Test `maps a structure code to its StructureInfo` (stub `structures.byCategory`;
       assert `.type === 'structure'`).
-- [ ] Test `returns null when a structure hit has no backing record`.
-- [ ] Test `warns and returns null for a non-pickable code` (assert the warn fires).
-- [ ] Implement.
-- [ ] `npm test -- resolvePick` green. Commit.
+- [x] Test `returns null when a structure hit has no backing record`.
+- [x] Test `warns and returns null for a non-pickable code` (assert the warn fires).
+- [x] Implement.
+- [x] `npm test -- resolvePick` green. Commit.
 
 > Do not delete `pickToSelection.ts` yet — consumers flip in Task 8; deletion is Task 10.
 
