@@ -10,10 +10,10 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import { StructureDetailCard } from '../../../src/components/InfoCard/StructureDetailCard';
-import type { StructureRecord } from '../../../src/@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 
 // Coma carries an Abell number ('A1656'); the card should expand it.
-const comaWithAbell: StructureRecord = {
+const comaWithAbell: StructureInfo = {
   type: 'structure',
   id: 'coma',
   name: 'Coma Cluster',
@@ -25,7 +25,7 @@ const comaWithAbell: StructureRecord = {
 };
 
 // Virgo has no Abell designation — the row must be absent.
-const virgoNoAbell: StructureRecord = {
+const virgoNoAbell: StructureInfo = {
   type: 'structure',
   id: 'virgo-m87',
   name: 'Virgo Cluster',

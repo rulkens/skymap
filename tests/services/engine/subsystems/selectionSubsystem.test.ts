@@ -10,7 +10,7 @@
  *   - Galaxy variant: setHovered / setSelected resolve through the
  *     cloud + sidecars and fire the callback with a GalaxyInfo.
  *   - Structure variant: setHovered / setSelected resolve through
- *     getStructure and fire the callback with the StructureRecord.
+ *     getStructure and fire the callback with the StructureInfo.
  *   - Cross-kind transitions clear the previous slot correctly.
  *   - prebuiltInfo escape hatch on setSelected (selectByAlias race).
  *   - Cloud-missing / out-of-range galaxy lookups fire onChange(null).
@@ -27,7 +27,7 @@ import { createSelectionSubsystem } from '../../../../src/services/engine/subsys
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { GalaxyInfo } from '../../../../src/@types/engine/GalaxyInfo';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { StructureRecord } from '../../../../src/@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import { Source } from '../../../../src/data/sources';
 
 type Callbacks = EngineCallbacks & {
@@ -64,7 +64,7 @@ function makeCloud(count: number): GalaxyCatalog {
   } as unknown as GalaxyCatalog;
 }
 
-const VIRGO: StructureRecord = {
+const VIRGO: StructureInfo = {
   type: 'structure',
   id: 'virgo',
   name: 'Virgo Cluster',
@@ -74,7 +74,7 @@ const VIRGO: StructureRecord = {
   physicalRadiusMpc: 2,
 };
 
-const FORNAX: StructureRecord = {
+const FORNAX: StructureInfo = {
   type: 'structure',
   id: 'fornax',
   name: 'Fornax Cluster',
@@ -88,7 +88,7 @@ function makeSub(
   cb: Callbacks,
   opts: {
     cloud?: GalaxyCatalog;
-    structures?: readonly StructureRecord[];
+    structures?: readonly StructureInfo[];
     requestRender?: () => void;
   } = {},
 ) {
@@ -140,7 +140,7 @@ describe('createSelectionSubsystem — galaxy variant', () => {
 });
 
 describe('createSelectionSubsystem — structure variant', () => {
-  it('resolves structure hover through getStructure and fires onHoverChange(StructureRecord)', () => {
+  it('resolves structure hover through getStructure and fires onHoverChange(StructureInfo)', () => {
     const cb = makeCallbacks();
     const sub = makeSub(cb, { structures: [VIRGO] });
 
@@ -149,7 +149,7 @@ describe('createSelectionSubsystem — structure variant', () => {
     expect(cb.selection.onHoverChange).toHaveBeenCalledWith(VIRGO);
   });
 
-  it('fires onSelectChange(StructureRecord) when a structure is selected', () => {
+  it('fires onSelectChange(StructureInfo) when a structure is selected', () => {
     const cb = makeCallbacks();
     const sub = makeSub(cb, { structures: [VIRGO] });
 
@@ -184,7 +184,7 @@ describe('createSelectionSubsystem — selectedTarget', () => {
     expect(makeSub(makeCallbacks()).selectedTarget()).toBeNull();
   });
 
-  it('resolves a pinned structure selection to its StructureRecord', () => {
+  it('resolves a pinned structure selection to its StructureInfo', () => {
     const sub = makeSub(makeCallbacks(), { structures: [VIRGO] });
     sub.setSelected({ kind: 'structure', id: 'virgo' });
     expect(sub.selectedTarget()).toBe(VIRGO);

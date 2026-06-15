@@ -1,5 +1,5 @@
 import type { GalaxyInfo } from './GalaxyInfo';
-import type { StructureRecord } from './data/StructureRecord';
+import type { StructureInfo } from './data/StructureInfo';
 
 /**
  * FocusableTarget — TAGGED discriminated union of the two things the camera can
@@ -18,4 +18,4 @@ import type { StructureRecord } from './data/StructureRecord';
  * (`{ kind: 'pgc' | 'objid' | 'famous', ...}`) — that one is a *request* to
  * find a target; this one is the *resolved* target itself.
  */
-export type FocusableTarget = GalaxyInfo | StructureRecord;
+export type FocusableTarget = GalaxyInfo | StructureInfo;

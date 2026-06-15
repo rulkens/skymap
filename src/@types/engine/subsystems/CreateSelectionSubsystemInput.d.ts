@@ -2,7 +2,7 @@ import type { EngineCallbacks } from '../EngineCallbacks';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { SourceType } from '../../data/SourceType';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
-import type { StructureRecord } from '../data/StructureRecord';
+import type { StructureInfo } from '../data/StructureInfo';
 
 /**
  * Hooks the subsystem needs from the outside world.  All passed once
@@ -24,7 +24,7 @@ export type CreateSelectionSubsystemInput = {
    * subsystem treats that as "no structure to expand" and fires the
    * callback with null.
    */
-  getStructure: (id: string) => StructureRecord | null;
+  getStructure: (id: string) => StructureInfo | null;
   /**
    * Wake the render loop one frame. setSelected/setFocused call this on
    * actual change; setHovered does not (see the module header's wake contract).

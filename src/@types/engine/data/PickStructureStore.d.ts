@@ -1,4 +1,4 @@
-import type { StructureRecord } from '../../data/structure/StructureRecord';
+import type { StructureInfo } from '../../data/structure/StructureInfo';
 import type { StructureCategory } from '../../data/structure/StructureCategory';
 
 /**
@@ -7,5 +7,5 @@ import type { StructureCategory } from '../../data/structure/StructureCategory';
  * than the full `StructureStore` so tests stub a one-method object literal.
  */
 export type PickStructureStore = {
-  byCategory(category: StructureCategory): readonly StructureRecord[];
+  byCategory(category: StructureCategory): readonly StructureInfo[];
 };

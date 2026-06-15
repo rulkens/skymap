@@ -9,7 +9,7 @@ export type SelectionSubsystem = {
   selected(): Selection | null;
   /**
    * The pinned selection resolved to its `FocusableTarget` (GalaxyInfo |
-   * StructureRecord), or null. Lets the dblclick handler focus the current
+   * StructureInfo), or null. Lets the dblclick handler focus the current
    * selection without re-running the pick or caching a resolved copy — the
    * selection slot is the authoritative home.
    */

@@ -28,7 +28,7 @@ import type { StructureCategory } from '../data/StructureCategory';
 
 export type FocusState = {
   /**
-   * Stable structure identifier (matches `StructureRecord.id`). Used to key
+   * Stable structure identifier (matches `StructureInfo.id`). Used to key
    * the membership cache (`(structureId, dataRev) → packedIds`) and to wire
    * the URL hash echo.
    */
@@ -52,7 +52,7 @@ export type FocusState = {
 
   /**
    * World-space center of the structure (Mpc). Mirrors
-   * `StructureRecord.worldPos`. Carried separately so the focus
+   * `StructureInfo.worldPos`. Carried separately so the focus
    * uniform write doesn't have to re-resolve the structure by id every frame.
    */
   readonly center: Vec3;

@@ -4,7 +4,7 @@
  * null for background.
  *
  * The resolver is deliberately thin: pick → `pickToSelection` → `Selection`.
- * It does NOT resolve the target (GalaxyInfo / StructureRecord) — `setSelected`
+ * It does NOT resolve the target (GalaxyInfo / StructureInfo) — `setSelected`
  * owns that, resolving once for the InfoCard and again-free for the dblclick
  * focus via `selectedTarget()`. Keeping resolution in the subsystem means the
  * click path holds no resolved copy to drift. The decode → Selection map is

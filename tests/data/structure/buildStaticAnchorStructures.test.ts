@@ -47,7 +47,7 @@ describe('buildStaticAnchorStructures', () => {
   it('carries physicalRadiusMpc through from the seed', () => {
     const structures = buildStaticAnchorStructures();
     const virgo = structures.find((p) => p.id === 'cluster-virgo-m87');
-    // StructureRecord carries the radius on every arm — no narrowing needed.
+    // StructureInfo carries the radius on every arm — no narrowing needed.
     expect(virgo?.physicalRadiusMpc).toBe(2.2);
   });
 

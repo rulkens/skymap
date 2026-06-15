@@ -4,7 +4,7 @@ import type { EngineHandle } from './EngineHandle';
 import type { EngineStatus } from './EngineStatus';
 import type { FocusableTarget } from './FocusableTarget';
 import type { FamousMetaEntry } from '../loading/FamousMetaEntry';
-import type { StructureRecord } from './data/StructureRecord';
+import type { StructureInfo } from './data/StructureInfo';
 
 /**
  * Combined input for `useUrlSync` — both galaxy-side and structure-side state
@@ -24,6 +24,6 @@ export type UseUrlSyncInput = {
   famousMeta: readonly FamousMetaEntry[];
   aliasMap: ReadonlyMap<bigint, readonly string[]>;
   ready: boolean;
-  structures: readonly StructureRecord[];
+  structures: readonly StructureInfo[];
   engineHandleRef: RefObject<EngineHandle | null>;
 };

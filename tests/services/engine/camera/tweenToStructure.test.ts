@@ -16,7 +16,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { tweenToStructure } from '../../../../src/services/engine/camera/tweenToStructure';
 import { structureFocusDistance } from '../../../../src/services/engine/camera/structureFocusDistance';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { StructureRecord } from '../../../../src/@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 
 function makeState(opts: {
   cam: {
@@ -36,7 +36,7 @@ function makeState(opts: {
   } as unknown as EngineState;
 }
 
-const VIRGO: StructureRecord = {
+const VIRGO: StructureInfo = {
   type: 'structure',
   id: 'virgo',
   name: 'Virgo Cluster',
@@ -81,7 +81,7 @@ describe('tweenToStructure', () => {
 
     // Apparent extent (6 Mpc) is wider than the physical core (2 Mpc); the
     // fade reads the apparent radius, so the framing must too.
-    const withApparent: StructureRecord = { ...VIRGO, apparentRadiusMpc: 6 };
+    const withApparent: StructureInfo = { ...VIRGO, apparentRadiusMpc: 6 };
     tweenToStructure(state, withApparent);
 
     const tween = start.mock.calls[0]![0];

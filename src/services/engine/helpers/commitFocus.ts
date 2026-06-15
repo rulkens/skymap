@@ -7,7 +7,7 @@ import { commitStructureFocus } from './commitStructureFocus';
 /**
  * commitFocus — union-aware entry point for `camera.focusOn(target)`.
  *
- * Dispatches on `isStructure(target)`: a StructureRecord →
+ * Dispatches on `isStructure(target)`: a StructureInfo →
  * `commitStructureFocus`, a GalaxyInfo → `commitGalaxyFocus`. Both route
  * their callbacks through the selection subsystem, so this needs no `cb`
  * — it's pure dispatch, sharing the `isStructure` predicate with the InfoCard.

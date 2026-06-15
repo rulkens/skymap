@@ -1,10 +1,10 @@
-import type { StructureRecord } from '../../@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../@types/data/structure/StructureInfo';
 import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
 
 /**
  * isStructure — runtime type predicate for FocusableTarget.
  *
- * Uses `'category' in target` as the discriminant because StructureRecord
+ * Uses `'category' in target` as the discriminant because StructureInfo
  * declares a top-level `category: StructureCategory` field, while GalaxyInfo
  * carries category information only at the nested `galaxyType.category`
  * path.  `'in'` checks the top-level key only, so a GalaxyInfo never
@@ -15,6 +15,6 @@ import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
  * Changing the discriminant later (e.g. adding an explicit `kind` field)
  * is then a single-file change.
  */
-export function isStructure(target: FocusableTarget): target is StructureRecord {
+export function isStructure(target: FocusableTarget): target is StructureInfo {
   return 'category' in target;
 }

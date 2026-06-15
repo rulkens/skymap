@@ -41,10 +41,10 @@ import { GALAXY_CATALOG_SOURCES, Source } from '../../data/sources';
 import { maskHas } from '../maskHas';
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { SourceType } from '../../@types/data/SourceType';
-import type { StructureRecord } from '../../@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../@types/data/structure/StructureInfo';
 
 export function structureMemberCount(
-  structure: StructureRecord,
+  structure: StructureInfo,
   getCloud: (source: SourceType) => GalaxyCatalog | undefined,
   visibleSourceMask: number,
 ): number | null {

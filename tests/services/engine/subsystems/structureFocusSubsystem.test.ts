@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createStructureFocusSubsystem } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
-import type { StructureRecord } from '../../../../src/@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 
-function makeCluster(overrides: Record<string, unknown> = {}): StructureRecord {
+function makeCluster(overrides: Record<string, unknown> = {}): StructureInfo {
   return {
     id: 'virgo',
     name: 'Virgo Cluster',
@@ -11,10 +11,10 @@ function makeCluster(overrides: Record<string, unknown> = {}): StructureRecord {
     physicalRadiusMpc: 2,
     featured: true,
     ...overrides,
-  } as unknown as StructureRecord;
+  } as unknown as StructureInfo;
 }
 
-function makeVoid(overrides: Record<string, unknown> = {}): StructureRecord {
+function makeVoid(overrides: Record<string, unknown> = {}): StructureInfo {
   return makeCluster({ id: 'bootes', name: 'Boötes Void', category: 'void', ...overrides });
 }
 

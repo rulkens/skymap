@@ -1,6 +1,6 @@
 /**
  * resolveStructureFromPick — map a structure pick hit `(category, structureIndex)` back
- * to its `StructureRecord` by indexing into the structure store's
+ * to its `StructureInfo` by indexing into the structure store's
  * per-category table.
  *
  * ### Contract (inherited from the cluster-viz plan-3 pick path)
@@ -40,7 +40,7 @@
  * to the full `StructureStore` import.
  */
 
-import type { StructureRecord } from '../../../@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 import type { StructureCategory } from '../../../@types/data/structure/StructureCategory';
 import type { PickStructureStore } from '../../../@types/engine/data/PickStructureStore';
 
@@ -52,7 +52,7 @@ export type PickStructureInput = {
 export function resolveStructureFromPick(
   structures: PickStructureStore,
   input: PickStructureInput,
-): StructureRecord | null {
+): StructureInfo | null {
   const records = structures.byCategory(input.category);
   return records[input.structureIndex] ?? null;
 }

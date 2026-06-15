@@ -16,11 +16,11 @@ import { describe, it, expect, vi } from 'vitest';
 import { commitStructureFocus } from '../../../../src/services/engine/helpers/commitStructureFocus';
 import { structureFocusDistance } from '../../../../src/services/engine/camera/structureFocusDistance';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { StructureRecord } from '../../../../src/@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 
 const FOV60 = (Math.PI / 180) * 60;
 
-const virgo: StructureRecord = {
+const virgo: StructureInfo = {
   type: 'structure',
   id: 'virgo-m87',
   name: 'Virgo Cluster',

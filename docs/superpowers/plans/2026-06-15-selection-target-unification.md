@@ -170,15 +170,15 @@ non-galaxy `FocusableTarget` arm; renaming it gives the parallel triple
 The provenance difference (galaxy info derived on-demand; structure info stored) is
 an implementation detail, not what they are as targets.
 
-- [ ] Rename the file and the exported type symbol to `StructureInfo`.
-- [ ] Sweep all references: imports (`import type { StructureRecord }`), type
+- [x] Rename the file and the exported type symbol to `StructureInfo`.
+- [x] Sweep all references: imports (`import type { StructureRecord }`), type
       annotations, generic args (`Map<…, readonly StructureRecord[]>`), JSDoc prose.
       The test file `tests/@types/engine/data/structureRecord.types.test.ts` renames
       its references too (rename the test file to `structureInfo.types.test.ts` for
       consistency with the symbol). Watch `RecordRaw`-style local names — only the
       `StructureRecord` type, not unrelated `Record<…>`.
-- [ ] Grep confirms zero `StructureRecord` hits remain anywhere in `src/` or `tests/`.
-- [ ] `npm run typecheck` clean. `npm test` full suite green. Commit.
+- [x] Grep confirms zero `StructureRecord` hits remain anywhere in `src/` or `tests/`.
+- [x] `npm run typecheck` clean. `npm test` full suite green. Commit.
 
 > From here on the plan uses `StructureInfo`.
 

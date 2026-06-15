@@ -2,7 +2,7 @@
  * One per-structure marker descriptor produced by `produceStructureMarkers`
  * and consumed by `structureMarkerRenderer.setMarkers`.
  *
- * Why a separate descriptor type instead of reusing `StructureRecord`?
+ * Why a separate descriptor type instead of reusing `StructureInfo`?
  * Separation of concerns: a descriptor carries only what the renderer
  * needs to draw one marker (already-evaluated tints, already-faded
  * alphas), so the renderer never has to know about category styles or
@@ -16,7 +16,7 @@ import type { StructureCategory } from '../data/structure/StructureCategory';
 
 export type StructureMarkerDescriptor = {
   /**
-   * Stable structure id (mirrors `StructureRecord.id`).  CPU-side metadata
+   * Stable structure id (mirrors `StructureInfo.id`).  CPU-side metadata
    * only — the renderer ignores this field when packing the GPU
    * instance buffer.  Why carry it then?  Two downstream consumers
    * need to correlate a marker back to its source structure: (a) the

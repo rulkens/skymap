@@ -13,11 +13,11 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { pickToSelection } from '../../../../src/services/engine/helpers/pickToSelection';
 import { Source } from '../../../../src/data/sources';
-import type { StructureRecord } from '../../../../src/@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { PickStructureStore } from '../../../../src/@types/engine/data/PickStructureStore';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 
-const virgo: StructureRecord = {
+const virgo: StructureInfo = {
   type: 'structure',
   id: 'virgo',
   name: 'Virgo Cluster',

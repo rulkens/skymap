@@ -8,7 +8,7 @@
  * which lost the native `<details>` "More details" open state on every hover.
  *
  * Both `hovered` and `selected` accept the full `FocusableTarget` union
- * (`GalaxyInfo | StructureRecord`).  App.tsx merges structure and galaxy state
+ * (`GalaxyInfo | StructureInfo`).  App.tsx merges structure and galaxy state
  * before handing them here — structure wins when both are present.  InfoCard then
  * dispatches via `isStructure` into typed sub-slots and picks the right detail-card
  * variant (`GalaxyDetailCard` vs `StructureDetailCard`).
@@ -71,7 +71,7 @@ export function InfoCard({
 }: InfoCardProps): ReactNode {
   if (!hovered && !selected) return null;
 
-  // Dispatch via isStructure into typed sub-slots.  A StructureRecord is identified
+  // Dispatch via isStructure into typed sub-slots.  A StructureInfo is identified
   // by a top-level `category` field; GalaxyInfo carries category only at
   // `galaxyType.category`.  See isStructure.ts for the discriminant rationale.
   const selectedStructure = selected && isStructure(selected) ? selected : null;

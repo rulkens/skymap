@@ -14,11 +14,11 @@
 import { vec3 } from 'gl-matrix';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { StructureRecord } from '../../../@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 import { FOCUS_TWEEN_MS } from './focusTweenDuration';
 import { structureFocusDistance } from './structureFocusDistance';
 
-export function tweenToStructure(state: EngineState, structure: StructureRecord): void {
+export function tweenToStructure(state: EngineState, structure: StructureInfo): void {
   const cam = state.cam;
   if (!cam) return;
 

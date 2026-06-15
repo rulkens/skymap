@@ -11,7 +11,7 @@ function makeRegistry(): FadeRegistry {
 }
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { StructureRecord } from '../../../../src/@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import { STRUCTURE_CATEGORIES } from '../../../../src/data/structure/structureCategories';
 
 // Builds a real engineData store (so state.data.structures is the production
@@ -63,9 +63,9 @@ function makeCtx(focusBlend = 0): ReadyFrameContext {
 
 const rec = (
   id: string,
-  category: StructureRecord['category'] = 'cluster',
-  over: Partial<StructureRecord> = {},
-): StructureRecord =>
+  category: StructureInfo['category'] = 'cluster',
+  over: Partial<StructureInfo> = {},
+): StructureInfo =>
   ({
     id,
     name: id,
@@ -74,7 +74,7 @@ const rec = (
     featured: true,
     physicalRadiusMpc: 5,
     ...over,
-  }) as StructureRecord;
+  }) as StructureInfo;
 
 describe('produceStructureMarkers', () => {
   it('emits one descriptor per marker-bearing structure in all() order (anchors → bulk)', () => {

@@ -6,7 +6,7 @@
  * null, forming the engine's attention ladder: hover → select →
  * focus.  Setters dedupe via `selectionEq` and fan out to
  * `cb.selection.onHoverChange` / `onSelectChange` with the resolved
- * `FocusableTarget` (GalaxyInfo for galaxy variants, StructureRecord
+ * `FocusableTarget` (GalaxyInfo for galaxy variants, StructureInfo
  * for structures) — callers never have to remember to fire the callback
  * themselves.  `setSelected` and `setFocused` also own the render wake —
  * callers never follow up with `requestRender`.  `setHovered` is
@@ -106,7 +106,7 @@ export function createSelectionSubsystem(input: CreateSelectionSubsystemInput): 
 
   /**
    * Resolve a Selection to its expanded `FocusableTarget` (GalaxyInfo
-   * | StructureRecord), or null.  Galaxy variant uses the cloud
+   * | StructureInfo), or null.  Galaxy variant uses the cloud
    * lookup; structure variant resolves through `getStructure` (which
    * the engine wires to `state.data.structures.byId`).  Unknown ids
    * resolve to null — fire-the-callback-with-null is the right

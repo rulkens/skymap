@@ -1,6 +1,9 @@
 /**
- * StructureRecord — one extended structure (cluster / supercluster / void /
- * group) as held by the structure store.
+ * StructureInfo — one extended structure (cluster / supercluster / void /
+ * group) as a resolved focusable target, parallel to `GalaxyInfo` (and the
+ * Milky Way's `MilkyWayInfo`).  That the structure info is the stored record
+ * while galaxy info is derived on-demand is a provenance detail — as targets
+ * they are peers, and both flow through the same hover / select / focus slots.
  *
  * The single source of truth for a structure record.  Famous galaxies are
  * galaxy data, not structures, so they are deliberately absent here.
@@ -105,4 +108,4 @@ type GroupRecord = StructureBase & {
  * (cluster / supercluster / void / group); famous galaxies are not
  * structures and are absent from this union.
  */
-export type StructureRecord = ClusterRecord | SuperclusterRecord | VoidRecord | GroupRecord;
+export type StructureInfo = ClusterRecord | SuperclusterRecord | VoidRecord | GroupRecord;

@@ -10,7 +10,7 @@
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { StructureRecord } from '../../../@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 import { tweenToStructure } from '../camera/tweenToStructure';
 
 /**
@@ -18,7 +18,7 @@ import { tweenToStructure } from '../camera/tweenToStructure';
  * marker alpha bump lands before React observes the callback; focus
  * second so the URL hash echoes it; tween last, on a consistent frame.
  */
-export function commitStructureFocus(state: EngineState, structure: StructureRecord): void {
+export function commitStructureFocus(state: EngineState, structure: StructureInfo): void {
   state.subsystems.selection.setSelected({ kind: 'structure', id: structure.id });
   // The deliberate focus gesture cluster-focus mode keys off (a bare
   // single-click select does not). `setFocused` drives both the

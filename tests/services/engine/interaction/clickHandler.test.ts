@@ -17,7 +17,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createClickResolver } from '../../../../src/services/engine/interaction/clickHandler';
 import type { ClickResolveInput } from '../../../../src/@types/engine/ClickResolveInput';
 import type { PickStructureStore } from '../../../../src/@types/engine/data/PickStructureStore';
-import type { StructureRecord } from '../../../../src/@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import { Source } from '../../../../src/data/sources';
 import type { createPickRenderer } from '../../../../src/services/gpu/renderers/pickRenderer';
 import type { PickResult } from '../../../../src/@types/data/PickResult';
@@ -32,7 +32,7 @@ function makePicker(pick: PickResult | null): PickRenderer {
   } as unknown as PickRenderer;
 }
 
-const virgo: StructureRecord = {
+const virgo: StructureInfo = {
   type: 'structure',
   id: 'virgo',
   name: 'Virgo Cluster',

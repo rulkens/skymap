@@ -55,7 +55,7 @@
  *   4. Structure drain — resolves `pendingStructureId` against the
  *      `structures` table and dispatches via `camera.focusOn(structure)` (the
  *      unified method, which accepts both GalaxyInfo and
- *      StructureRecord).  Clears pending only on successful resolve;
+ *      StructureInfo).  Clears pending only on successful resolve;
  *      missing-id leaves pending set so a future `structures` change (e.g.
  *      famous-meta load) re-fires the drain.
  *
@@ -289,7 +289,7 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
   // "deep-link arrival waits as long as it takes" contract.
   //
   // `camera.focusOn` is the unified method that accepts both GalaxyInfo
-  // and StructureRecord, routing each to its own commit path internally.
+  // and StructureInfo, routing each to its own commit path internally.
   useEffect(() => {
     if (!pendingStructureId) return;
     if (!ready) return;

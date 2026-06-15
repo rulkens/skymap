@@ -1,5 +1,5 @@
 import type { StructureStore } from '../../../@types/engine/data/StructureStore';
-import type { StructureRecord } from '../../../@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 import type { StructureGroupId } from '../../../@types/data/structure/StructureGroupId';
 import type { StructureCategory } from '../../../@types/data/structure/StructureCategory';
 
@@ -23,22 +23,22 @@ const GROUP_ORDER: readonly StructureGroupId[] = ['anchors', 'bulk'];
  * complexity for no measurable gain.
  */
 export function createStructureStore(): StructureStore {
-  const groups = new Map<StructureGroupId, readonly StructureRecord[]>();
+  const groups = new Map<StructureGroupId, readonly StructureInfo[]>();
 
-  const all = (): readonly StructureRecord[] => GROUP_ORDER.flatMap((id) => groups.get(id) ?? []);
+  const all = (): readonly StructureInfo[] => GROUP_ORDER.flatMap((id) => groups.get(id) ?? []);
 
   return Object.freeze({
-    setGroup(id: StructureGroupId, records: readonly StructureRecord[]): void {
+    setGroup(id: StructureGroupId, records: readonly StructureInfo[]): void {
       groups.set(id, records.slice());
     },
     clearGroup(id: StructureGroupId): void {
       groups.delete(id);
     },
     all,
-    byId(id: string): StructureRecord | null {
+    byId(id: string): StructureInfo | null {
       return all().find((r) => r.id === id) ?? null;
     },
-    byCategory(category: StructureCategory): readonly StructureRecord[] {
+    byCategory(category: StructureCategory): readonly StructureInfo[] {
       return all().filter((r) => r.category === category);
     },
   });

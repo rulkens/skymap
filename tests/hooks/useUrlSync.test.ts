@@ -12,7 +12,7 @@
 import { describe, it, expect } from 'vitest';
 import { computeDesiredHash, initialPendingFromHash } from '../../src/hooks/useUrlSync';
 import type { GalaxyInfo } from '../../src/@types/engine/GalaxyInfo';
-import type { StructureRecord } from '../../src/@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../src/@types/data/structure/StructureInfo';
 import { Source } from '../../src/data/sources';
 
 function makeGalaxy(): GalaxyInfo {
@@ -22,7 +22,7 @@ function makeGalaxy(): GalaxyInfo {
   } as unknown as GalaxyInfo;
 }
 
-function makeStructure(id: string): StructureRecord {
+function makeStructure(id: string): StructureInfo {
   return {
     type: 'structure',
     id,

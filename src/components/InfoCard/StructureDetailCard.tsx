@@ -5,7 +5,7 @@
  */
 
 import type { ReactNode } from 'react';
-import type { StructureRecord } from '../../@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../@types/data/structure/StructureInfo';
 import { formatDistance } from '../../utils/format/formatDistance';
 import { formatAbellDesignation } from '../../utils/format/formatAbellDesignation';
 import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
@@ -17,7 +17,7 @@ import { TIPS } from './tooltips';
 import styles from './DetailCard.module.css';
 
 export type StructureDetailCardProps = {
-  structure: StructureRecord;
+  structure: StructureInfo;
   pinned?: boolean;
   /**
    * Catalogued galaxies inside this structure's membership sphere at the
@@ -26,7 +26,7 @@ export type StructureDetailCardProps = {
    * row is omitted rather than flashing a misleading "0".
    */
   memberCount?: number | null;
-  onFocus?: (structure: StructureRecord) => void;
+  onFocus?: (structure: StructureInfo) => void;
   onClose?: () => void;
 };
 

@@ -34,7 +34,7 @@
 
 import { createFadeController } from '../../animation/fadeController';
 import type { StructureFocusSubsystem } from '../../../@types/engine/subsystems/StructureFocusSubsystem';
-import type { StructureRecord } from '../../../@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 import type { FocusUniformsValue } from '../../../@types/rendering/FocusUniformsValue';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
@@ -72,7 +72,7 @@ export function createStructureFocusSubsystem(
   // The id we are currently fading toward; null = fading out / at rest.
   let focusedId: string | null = null;
 
-  function update(structure: StructureRecord | null, nowMs: number): void {
+  function update(structure: StructureInfo | null, nowMs: number): void {
     // Narrow to a focus-eligible extended structure. famousGalaxy has
     // no radius, so it (and null) drives a fade-out. Groups share the
     // same fade band mechanic as clusters — R0 > Rh gives a real band.

@@ -18,7 +18,7 @@ export type EngineCameraHandle = {
    * Smoothly tween the camera so the given target becomes the new orbit
    * focus.  Dispatches by type:
    *   - GalaxyInfo → the galaxy focus path (commitFocus + onFocusChange).
-   *   - StructureRecord → the structure focus path (commitStructureFocus,
+   *   - StructureInfo → the structure focus path (commitStructureFocus,
    *     framing distance derived from the category + onStructureFocusChange).
    *
    * Discrimination uses the `isStructure` predicate from `services/engine/isStructure.ts`.

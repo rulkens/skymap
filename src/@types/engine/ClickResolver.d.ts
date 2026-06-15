@@ -5,7 +5,7 @@ export type ClickResolver = {
   /**
    * Resolve a click position → the `Selection` it hit, or null for
    * background. The engine forwards the result straight to `setSelected`,
-   * which resolves the target (GalaxyInfo / StructureRecord) for the
+   * which resolves the target (GalaxyInfo / StructureInfo) for the
    * InfoCard and dblclick focus.
    */
   resolveClick(input: ClickResolveInput): Promise<Selection | null>;

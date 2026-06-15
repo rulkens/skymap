@@ -42,7 +42,7 @@ describe('wireInput structure wiring', () => {
   });
 
   it('routes double-click on the selection through camera.focusOn', () => {
-    // The unified focusOn takes either a GalaxyInfo or a StructureRecord
+    // The unified focusOn takes either a GalaxyInfo or a StructureInfo
     // and dispatches internally; the dblclick handler hands it the
     // resolved target regardless of category.
     expect(src).toContain('focusOn(target)');
