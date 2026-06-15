@@ -74,7 +74,7 @@ export function packSelection(sourceCode: number, localIdx: number): number {
  * hit. Reverses the `+ PICK_SENTINEL_OFFSET` and the `(code << 27) | localIdx`
  * layout. `0` is the cleared-texture background; source code 31 is the reserved
  * all-ones sentinel band — both return null. Whether the decoded code is a
- * pickable surface is `pickToSelection`'s call.
+ * pickable surface is `resolvePick`'s call.
  */
 export function unpackPick(rawPickValue: number): PickResult | null {
   if (rawPickValue === 0) return null;

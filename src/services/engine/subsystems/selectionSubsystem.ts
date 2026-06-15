@@ -26,10 +26,9 @@
  *
  * ### Resolution lives at the caller, not here
  *
- * The deep-link race a former `prebuiltInfo` escape hatch defended — a
- * `selectByAlias` firing after the data-side catalog arrives but before the
- * GPU upload settles — is now defended by callers passing an already-resolved
- * target.  There is no internal lookup left to race: whatever the caller
+ * Callers pass an already-resolved target, which defends the deep-link race —
+ * a `selectByAlias` firing after the data-side catalog arrives but before the
+ * GPU upload settles.  There is no internal lookup to race: whatever the caller
  * resolved is exactly what the slot stores and the callback receives.
  */
 

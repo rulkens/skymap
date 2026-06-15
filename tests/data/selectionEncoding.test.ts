@@ -164,8 +164,8 @@ describe('unpackPick — decode to (sourceCode, localIdx)', () => {
   }
 
   it('decodes the source code and local index for any allocated code', () => {
-    // unpackPick is pure bit-decode now — classifying the code (galaxy catalog vs
-    // structure vs not-pickable) is pickToSelection's job. Every allocated
+    // unpackPick is pure bit-decode — classifying the code (galaxy catalog vs
+    // structure vs not-pickable) is resolvePick's job. Every allocated
     // code round-trips as { sourceCode, localIdx }, regardless of category.
     const codes: SourceType[] = [
       Source.Synthetic,
@@ -196,8 +196,8 @@ describe('unpackPick — decode to (sourceCode, localIdx)', () => {
   });
 
   it('decodes even unallocated codes — classification is downstream', () => {
-    // No warn here any more (that moved to pickToSelection); unpackPick
-    // doesn't know which codes are pickable. It just reverses the bits.
+    // No warn here — that lives in resolvePick; unpackPick doesn't know
+    // which codes are pickable. It just reverses the bits.
     expect(unpackPick(rawFor(14, 5))).toEqual<PickResult>({
       sourceCode: 14 as SourceType,
       localIdx: 5,

@@ -6,11 +6,8 @@ import type { StructureInfo } from '../data/structure/StructureInfo';
  * focus on: a single galaxy point (`type: 'galaxyCatalog'`) or an extended
  * structure anchor (`type: 'structure'` — cluster, supercluster, void, group).
  *
- * The union is tagged on `type: FocusableTargetType`, so dispatch is a table
- * lookup on the tag rather than a structural sniff.  (The structural
- * `isStructure` predicate in `services/engine/isStructure.ts` still works — it
- * sniffs `'category' in target` — but it is being retired later in this plan in
- * favour of switching on `type`.)
+ * The union is tagged on `type: FocusableTargetType`, so dispatch is a `type`
+ * narrow or a table lookup on the tag rather than a structural sniff.
  *
  * Used by the public `camera.focusOn(target)` handle and by InfoCard's unified
  * `hovered` / `selected` props.  Deliberately distinct from `FocusTarget` in

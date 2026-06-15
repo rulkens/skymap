@@ -69,7 +69,7 @@ export type PickRenderer = {
    *                         mask — the picker draws every record it receives.
    * @returns A {@link PickResult} carrying the front-most fragment's decoded
    *          identity — its `sourceCode` + per-source `localIdx`. Classifying
-   *          that into a galaxy or a structure ring is `pickToSelection`'s
+   *          that into a galaxy or a structure ring is `resolvePick`'s
    *          job. Returns `null` if the cursor is over background or a pick is
    *          already in flight. See `selectionEncoding.ts` for the
    *          (sourceCode << 27 | localIdx + 1) packing.

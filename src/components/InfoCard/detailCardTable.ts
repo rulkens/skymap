@@ -8,12 +8,12 @@
  * structure `Detail` threads the structure-only `selectedMemberCount` through;
  * the galaxy `Detail` ignores it (its card has no member-count row).
  *
- * Replacing InfoCard's old `isStructure(x) ? structureCard : galaxyCard`
- * branches with a `Record<FocusableTargetType, …>` table follows the simplicity
- * convention's table-dispatch rule (item 7): a new focusable kind adds one row
- * here instead of editing every render branch in InfoCard. InfoCard keeps the
- * outer-wrapper-stable contract and the hover/pinned stacking around these
- * lookups; the table only decides which card a given target renders as.
+ * Dispatching on `target.type` through a `Record<FocusableTargetType, …>` table
+ * follows the simplicity convention's table-dispatch rule (item 7): a new
+ * focusable kind adds one row here instead of editing every render branch in
+ * InfoCard. InfoCard keeps the outer-wrapper-stable contract and the
+ * hover/pinned stacking around these lookups; the table only decides which card
+ * a given target renders as.
  *
  * Each entry returns a bare card element with no wrapper of its own, so it
  * drops straight into InfoCard's existing single-wrapper layout (the stable

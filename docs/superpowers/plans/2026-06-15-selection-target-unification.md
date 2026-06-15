@@ -632,39 +632,39 @@ cleaned. Check the JSDoc references the spec/grep flag: `PickRenderer.d.ts`,
 `selectionEncoding.ts`, `tweenToGalaxy.ts`, `CommandPalette.tsx`, `EngineCallbacks.d.ts`,
 `EngineCameraHandle.d.ts` — update prose naming the deleted symbols.
 
-- [ ] Delete the dead files.
-- [ ] `npm test` — full suite green.
-- [ ] `npm run typecheck` — clean (both tsconfigs).
-- [ ] Grep confirms no source/test references to `Selection` / `selectionEq` /
+- [x] Delete the dead files.
+- [x] `npm test` — full suite green.
+- [x] `npm run typecheck` — clean (both tsconfigs).
+- [x] Grep confirms no source/test references to `Selection` / `selectionEq` /
       `prebuiltInfo` / `selectedTarget` / `pickToSelection` / `'category' in` /
       `StructureRecord` / the structural `isStructure` sniff remain (comment-only refs
       updated).
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
 ## Definition of Done
 
-- [ ] `npm test` — full suite green (net deletion of the `selectionEq` /
+- [x] `npm test` — full suite green (net deletion of the `selectionEq` /
       `prebuiltInfo` / `selectedTarget` cases, plus new `resolveGalaxyInfo` /
       `resolvePick` / `targetEq` / table coverage).
-- [ ] `npm run typecheck` — clean across `src` and `tools` tsconfigs.
-- [ ] `Selection.d.ts`, `selectionEq`, `prebuiltInfo`, `selectedTarget()`,
+- [x] `npm run typecheck` — clean across `src` and `tools` tsconfigs.
+- [x] `Selection.d.ts`, `selectionEq`, `prebuiltInfo`, `selectedTarget()`,
       `pickToSelection.ts`, the subsystem's internal `resolveTarget` / `galaxyInfoFor`,
       and the structural `isStructure` sniff (`'category' in target`) are all gone.
-- [ ] `StructureRecord` as a name is gone repo-wide — renamed `StructureInfo`.
-- [ ] `FocusableTarget` is a **tagged union** on `type: FocusableTargetType`
+- [x] `StructureRecord` as a name is gone repo-wide — renamed `StructureInfo`.
+- [x] `FocusableTarget` is a **tagged union** on `type: FocusableTargetType`
       (`'galaxyCatalog' | 'structure'`); the InfoCard detail card, URL hash, and
       commit-focus dispatches are `Record<FocusableTargetType, …>` table lookups
       (`DETAIL_CARD` / `URL_HASH_FOR` / `COMMIT_FOCUS`); simple guards narrow on
       `target.type === '…'` with no `as` cast in any predicate false-branch.
-- [ ] The three selection slots hold `FocusableTarget | null`; setters take a resolved
+- [x] The three selection slots hold `FocusableTarget | null`; setters take a resolved
       target; resolution happens once at the pick / URL boundary via `resolvePick` /
       `resolveGalaxyInfo`.
-- [ ] `CreateSelectionSubsystemInput` no longer carries `getCloud` / `getFamousMeta` /
+- [x] `CreateSelectionSubsystemInput` no longer carries `getCloud` / `getFamousMeta` /
       `getStructure` (resolution left the subsystem).
-- [ ] No behaviour change: hover / single-click select / double-click focus /
+- [x] No behaviour change: hover / single-click select / double-click focus /
       Esc-dismiss / cluster-focus fade / deep-link `selectByAlias` race all behave as
       before (the race is now defended by callers passing an already-resolved target,
       not the `prebuiltInfo` escape hatch).
-- [ ] No new TODOs; comments that named deleted symbols updated, not left stale.
+- [x] No new TODOs; comments that named deleted symbols updated, not left stale.

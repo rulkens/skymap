@@ -1,10 +1,9 @@
 /**
  * resolvePick — the one boundary where a decoded GPU pick (`sourceCode +
- * localIdx`) becomes a fully RESOLVED `FocusableTarget`. It merges the two
- * steps that used to be separate — `pickToSelection` (classify the code) and
- * the subsystem's internal `resolveTarget` (turn that classification into a
- * `GalaxyInfo` / `StructureInfo`) — into a single registry-driven dispatch, so
- * a pixel maps straight to the target the camera/InfoCard consume.
+ * localIdx`) becomes a fully RESOLVED `FocusableTarget`. A single
+ * registry-driven dispatch classifies the code and turns it into the concrete
+ * `GalaxyInfo` / `StructureInfo`, so a pixel maps straight to the target the
+ * camera/InfoCard consume.
  *
  * Dispatch is a table lookup on `SOURCE_REGISTRY[code].type`: a `galaxyCatalog`
  * code resolves through `resolveGalaxyInfo`; a `structure` code resolves through

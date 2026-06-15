@@ -7,8 +7,8 @@
  *   2. setFocused(info)
  *   3. tweenToGalaxy(state, info)
  *
- * The resolved `info` (a `GalaxyInfo`) IS the target the slots hold — the
- * setters take no separate `prebuiltInfo`.
+ * The resolved `info` (a `GalaxyInfo`) IS the target the slots hold — it is
+ * the single value passed to both setters.
  *
  * Order is load-bearing — setSelected before setFocused so the
  * InfoCard echo lands before the focus/URL-hash flips, and the tween

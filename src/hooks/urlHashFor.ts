@@ -7,10 +7,10 @@
  * link-encodable (a Synthetic galaxy has no durable cross-rebuild identity).
  * `computeDesiredHash` wraps a non-null id as `focus=<id>`.
  *
- * Replacing the old `isStructure(focused) ? … : …` predicate with a
- * `Record<FocusableTargetType, …>` table follows the simplicity convention's
- * table-dispatch rule (item 7): a new focusable kind adds one row here instead
- * of growing a predicate chain the codec has to keep in lockstep.
+ * Dispatching on `t.type` through a `Record<FocusableTargetType, …>` table
+ * follows the simplicity convention's table-dispatch rule (item 7): a new
+ * focusable kind adds one row here instead of growing a predicate chain the
+ * codec has to keep in lockstep.
  */
 
 import type { FocusableTarget } from '../@types/engine/FocusableTarget';
