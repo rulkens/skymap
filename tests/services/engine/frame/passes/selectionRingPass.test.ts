@@ -8,6 +8,9 @@ import type { mat4 } from 'gl-matrix';
 import { Source } from '../../../../../src/data/sources';
 import type { FocusableTarget } from '../../../../../src/@types/engine/FocusableTarget';
 import type { GalaxyInfo } from '../../../../../src/@types/engine/GalaxyInfo';
+import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
+import { MILKY_WAY_INFO } from '../../../../../src/data/milkyWay/milkyWayInfo';
+import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacticCenter';
 
 // ── fixtures ──────────────────────────────────────────────────────
 
@@ -65,6 +68,19 @@ function galaxyTarget(overrides: Partial<GalaxyInfo> = {}): GalaxyInfo {
   } as unknown as GalaxyInfo;
 }
 
+// A resolved structure target — drives the marker pass, never this halo.
+function structureTarget(): StructureInfo {
+  return {
+    type: 'structure',
+    id: 'virgo',
+    name: 'Virgo Cluster',
+    category: 'cluster',
+    worldPos: [10, 0, 0],
+    featured: true,
+    physicalRadiusMpc: 2,
+  };
+}
+
 function makeStateWithSelection(selection: FocusableTarget | null): EngineState {
   return {
     gpu: { selectionRingRenderer: makeRendererSpy() },
@@ -94,6 +110,21 @@ describe('selectionRingPass.enabled', () => {
   });
 
   it('returns true when renderer is non-null and a galaxy is selected', () => {
+    const state = makeStateWithSelection(galaxyTarget());
+    expect(selectionRingPass.enabled(state, makeCtx(), makeSettings())).toBe(true);
+  });
+
+  it('is true when the Milky Way is selected', () => {
+    const state = makeStateWithSelection(MILKY_WAY_INFO);
+    expect(selectionRingPass.enabled(state, makeCtx(), makeSettings())).toBe(true);
+  });
+
+  it('stays false for a structure selection (marker pass owns that halo)', () => {
+    const state = makeStateWithSelection(structureTarget());
+    expect(selectionRingPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
+  });
+
+  it('stays true for a galaxy selection (regression)', () => {
     const state = makeStateWithSelection(galaxyTarget());
     expect(selectionRingPass.enabled(state, makeCtx(), makeSettings())).toBe(true);
   });
@@ -145,6 +176,22 @@ describe('selectionRingPass.draw', () => {
     // apparentPxRadius = (60 * 2 / 1000 / 10) * 720 = 8.64
     // apparentPxRadius * 0.5 = 4.32; > pointSizePx (4); * 6 = 25.92
     expect(arg.ringRadiusPx).toBeCloseTo(25.92, 4);
+  });
+
+  it('draws the ring at MILKY_WAY_CENTER_WORLD for a milkyWay selection', () => {
+    const state = makeStateWithSelection(MILKY_WAY_INFO);
+    selectionRingPass.draw(PASS_STUB, makeCtx(), state, makeSettings(), DEPS_STUB);
+
+    const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
+      typeof makeRendererSpy
+    >;
+    expect(rendererSpy.setSelection).toHaveBeenCalledOnce();
+    const arg = rendererSpy.setSelection.mock.calls[0]![0]!;
+    expect(arg.worldPos[0]).toBeCloseTo(MILKY_WAY_CENTER_WORLD[0]);
+    expect(arg.worldPos[1]).toBeCloseTo(MILKY_WAY_CENTER_WORLD[1]);
+    expect(arg.worldPos[2]).toBeCloseTo(MILKY_WAY_CENTER_WORLD[2]);
+    expect(Number.isFinite(arg.ringRadiusPx)).toBe(true);
+    expect(arg.ringRadiusPx).toBeGreaterThan(0);
   });
 
   it('calls renderer.render() exactly once with viewProj + viewport', () => {

@@ -91,4 +91,25 @@ describe('collectPickTargets', () => {
     );
     expect(hasAny).toBe(true);
   });
+
+  it('hasAny is true when only the Milky Way is visible', () => {
+    // MW-only frame: no galaxy catalogs masked-in, no structure markers,
+    // but the MW disk is on screen — its invisible pick billboard must
+    // still get a pick pass.  Same fix the cluster-only case applied.
+    const renderer = makeRenderer([Source.SDSS, Source.TwoMRS, Source.Glade]);
+    const { visibleSources, hasAny } = collectPickTargets(
+      renderer,
+      mask(), // every galaxy catalog toggled off
+      null, // no structure markers
+      true, // Milky-Way disk visible
+    );
+    expect(visibleSources).toHaveLength(0);
+    expect(hasAny).toBe(true);
+  });
+
+  it('hasAny stays false when the Milky Way is hidden and nothing else is pickable', () => {
+    const renderer = makeRenderer([Source.SDSS]);
+    const { hasAny } = collectPickTargets(renderer, mask(), null, false);
+    expect(hasAny).toBe(false);
+  });
 });

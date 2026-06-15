@@ -60,9 +60,9 @@ export const MILKY_WAY_CENTER_WORLD: Vec3 = raDecDistToCartesian(
 );
 
 /**
- * Camera distance (Mpc) used by `handle.focusOnMilkyWay` to land the
- * camera at a viewpoint where the procedural Milky Way impostor is the
- * dominant on-screen subject.
+ * Camera distance (Mpc) used by `commitMilkyWayFocus` to land the camera
+ * at a viewpoint where the procedural Milky Way impostor is the dominant
+ * on-screen subject.
  *
  * Picked at 0.15 Mpc (≈150 kpc) by visual calibration — at this distance
  * the spiral fills most of the FOV at the project default 60° vertical
@@ -78,3 +78,12 @@ export const MILKY_WAY_CENTER_WORLD: Vec3 = raDecDistToCartesian(
  * up "near home".
  */
 export const MILKY_WAY_VIEW_DISTANCE_MPC = 0.15;
+
+/**
+ * Physical radius (kpc) of the Milky Way's stellar disc, used to size the
+ * selection ring when the Milky Way is the selected target.  ~25 kpc is the
+ * conventional figure for the visible disc edge; the selection ring borrows it
+ * the way the galaxy branch borrows a catalog `diameterKpc`, so the ring scales
+ * with the disc's apparent on-screen size.
+ */
+export const MILKY_WAY_DISC_RADIUS_KPC = 25;

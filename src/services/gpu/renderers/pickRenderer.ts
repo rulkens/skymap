@@ -35,6 +35,7 @@ import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniforms
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
 import type { StructureMarkerRenderer } from '../../../@types/rendering/StructureMarkerRenderer';
 import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
+import type { MilkyWayPickRenderer } from '../../../@types/rendering/MilkyWayPickRenderer';
 import {
   POINT_STRIDE,
   POINT_VERTEX_ATTRIBUTES,
@@ -88,6 +89,24 @@ export function createPickRenderer(
   // rather than only their companion point billboard.  Optional so
   // tests and pre-init paths can omit it.
   proceduralDiskRenderer?: ProceduralDiskRenderer,
+  // Optional Milky-Way pick provider.  When present AND the gate below
+  // reports the disk is on screen, the pick pass calls
+  // `milkyWayPickRenderer.pickMilkyWay(pass)` so the galactic centre is
+  // clickable.  Optional so tests and pre-init paths can omit it.
+  milkyWayPickRenderer?: MilkyWayPickRenderer,
+  // Visibility gate + size for the Milky-Way pick draw, folded into one
+  // callback.  Returns the screen-pixel half-extent of the hit billboard
+  // (the apparent on-screen radius of the disc, floored — the SAME px the
+  // visible selection ring uses) while the MW disk is on screen, or `null`
+  // to skip the draw entirely.  The MW must contribute a hit ONLY while
+  // its disk is on screen (the `{ kind: 'milkyWay' }` fade opacity > 0 AND
+  // the camera is inside the distance-fade band) — otherwise a faded-out
+  // MW would still be clickable.  Both gate AND size are supplied as data
+  // rather than read off EngineState so this renderer stays dumb: the
+  // engine owns the fade/camera state and the sizing math.  Defaults to
+  // "never visible" so a picker constructed without the gate never draws
+  // the MW.
+  mwHalfExtentPx: () => number | null = () => null,
 ): PickRenderer {
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'pick.vertex');
   const fsModule = createShaderModuleWithDevLog(device, pickFsCode, 'pick.pickFragment');
@@ -351,6 +370,18 @@ export function createPickRenderer(
       proceduralDiskRenderer.pickDisks(pass);
     }
 
+    // Milky-Way pick: a single billboard at the galactic centre, sized to
+    // the disc's apparent on-screen radius (matching the selection ring),
+    // drawn only while the disk is on screen (a `null` half-extent gates a
+    // faded-out MW out).  Shared depth means a closer galaxy still claims
+    // the pixel.
+    if (milkyWayPickRenderer) {
+      const mwHalfExtent = mwHalfExtentPx();
+      if (mwHalfExtent !== null) {
+        milkyWayPickRenderer.pickMilkyWay(pass, mwHalfExtent);
+      }
+    }
+
     pass.end();
     return pt;
   }
@@ -365,7 +396,8 @@ export function createPickRenderer(
   // every ring has faded out).
   const hasAnyPickTarget = (sourceList: readonly PickSourceDraw[]): boolean =>
     sourceList.length > 0 ||
-    (structureMarkerRenderer !== undefined && structureMarkerRenderer.markerCount() > 0);
+    (structureMarkerRenderer !== undefined && structureMarkerRenderer.markerCount() > 0) ||
+    (milkyWayPickRenderer !== undefined && mwHalfExtentPx() !== null);
 
   async function pick(
     viewportPx: Vec2,

@@ -13,6 +13,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { resolvePick } from '../../../../src/services/engine/helpers/resolvePick';
+import { MILKY_WAY_INFO } from '../../../../src/data/milkyWay/milkyWayInfo';
 import { Source } from '../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
@@ -95,6 +96,13 @@ describe('resolvePick', () => {
       resolvePick({ sourceCode: Source.Cluster, localIdx: 99 }, makeDeps(undefined)),
     ).toBeNull();
     expect(resolvePick({ sourceCode: Source.Void, localIdx: 0 }, makeDeps(undefined))).toBeNull();
+  });
+
+  it('resolves a milkyWay code to MILKY_WAY_INFO', () => {
+    // The Milky Way is a singleton — any localIdx maps to the static const.
+    expect(resolvePick({ sourceCode: Source.MilkyWay, localIdx: 0 }, makeDeps(undefined))).toBe(
+      MILKY_WAY_INFO,
+    );
   });
 
   it('warns and returns null for a non-pickable code', () => {

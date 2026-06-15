@@ -4,10 +4,9 @@ import type { FocusableTarget } from '../FocusableTarget';
  * EngineCameraHandle — viewpoint, tweens, and auto-rotate.
  *
  * Bundles the camera viewpoint operations the user invokes from React
- * (reset, focus-on-target, focus-on-home, focus-on-milkyway),
- * the dev-only `logState` helper bound to the 'L' hotkey, and the auto-
- * rotate toggle (which is conceptually a camera behaviour, not a
- * points/tonemap setting).
+ * (reset, focus-on-target, focus-on-home), the dev-only `logState` helper
+ * bound to the 'L' hotkey, and the auto-rotate toggle (which is
+ * conceptually a camera behaviour, not a points/tonemap setting).
  */
 export type EngineCameraHandle = {
   /** Enable or disable the slow automatic camera yaw. */
@@ -20,6 +19,8 @@ export type EngineCameraHandle = {
    *   - GalaxyInfo → the galaxy focus path (commitFocus + onFocusChange).
    *   - StructureInfo → the structure focus path (commitStructureFocus,
    *     framing distance derived from the category + onStructureFocusChange).
+   *   - MilkyWayInfo → the Milky Way focus path (commitMilkyWayFocus, a tween
+   *     to a viewpoint where the procedural impostor is dominant).
    *
    * Discrimination is a table lookup on `target.type` — see
    * `services/engine/helpers/commitFocus.ts` for the dispatcher
@@ -31,8 +32,6 @@ export type EngineCameraHandle = {
   focusOn: (target: FocusableTarget) => void;
   /** Smoothly tween back to the initial bootstrap framing. */
   focusOnHome: () => void;
-  /** Tween to a viewpoint where the procedural Milky Way is dominant. */
-  focusOnMilkyWay: () => void;
   /** Debug helper — log the live camera state for copy-paste tuning. */
   logState: () => void;
 };

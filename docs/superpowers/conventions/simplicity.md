@@ -188,6 +188,36 @@ edit to every dispatch site.
   `Record<Tag, …>` table for genuine N-way dispatch.
 - **Don't:** sniff structure (`'field' in x`), chain `isA(x) ? … : isB(x) ? …`, or cast in a
   predicate's false-branch.
+- **Don't (the table-exists-but-not-used trap):** once a `Record<Tag, …>` table exists, never
+  index it by **enumerated hardcoded keys** (`TABLE.galaxyCatalog.X`, `TABLE.structure.X`,
+  `TABLE.milkyWay.X` listed separately) or wrap it in **per-type `return` blocks** (one render
+  block per kind). If you're listing the keys, you've re-grown the chain — collapse to
+  `TABLE[x.type].X` and compute the target type-agnostically. (The 2026-06-16 InfoCard pass:
+  three per-type `return` blocks each calling a hardcoded `DETAIL_CARD.<kind>` collapsed to one
+  block dispatching `DETAIL_CARD[target.type]`.)
+
+- **Two false triggers that fool you back into a chain (the 2026-06-16 Part-2 sweep):**
+  1. **"It's inline, not a standalone table file."** The signal is the _discriminant branch_,
+     not whether you're extracting a module. An `if (x.type === …)` chain inside an existing
+     function body (a resolver, a `.map`, an equality fn) is the same smell as one in its own
+     file. (`resolvePick`, `targetEq`, and the CommandPalette `.map` all stayed chains because
+     the dispatch was embedded, while the three sibling dispatches that happened to live in
+     `*Table.ts` files came out as tables.)
+  2. **"The arms return different shapes, so a table would need casts."** False — the
+     row-self-narrows pattern `(x) => x.type === 'k' ? f(x) : fallback` keeps the table's value
+     type uniform (`Resolver`, `(x) => string`, `(props) => ReactNode`) while each row computes
+     something arm-specific. Output divergence is _never_ a reason to drop to a chain; it's
+     exactly what each row narrows for. (Identity-equality → `IDENTITY_KEY[x.type](x)` returning
+     a type-prefixed string; pick resolution → `RESOLVE_PICK[entry.type]`.)
+
+**This is a REVIEW gate, not only a design lens.** Run it against every diff — your own and a
+subagent's. Per-type branches / enumerated table keys in a returned diff are a STOP-and-fix, not
+a thing to rationalize. When the gate fires on one file, **sweep the WHOLE diff** for the same
+shape (`\.type ===`, `\.kind ===`, `switch (…type)`) and fix every instance in one pass — fixing
+only the file someone pointed at leaves the siblings (the 2026-06-16 miss: three chains survived
+because the gate ran on InfoCard alone). When dispatching an implementer to touch a tagged
+union's rendering/dispatch, the prompt must explicitly forbid per-type branches and require
+`TABLE[x.type]`.
 
 ### 8. One canonical home — single source of truth
 
