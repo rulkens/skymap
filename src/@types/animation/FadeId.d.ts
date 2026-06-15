@@ -26,12 +26,12 @@
  *                    Discriminator: `category: StructureCategory`. One
  *                    controller per category so a category's rings can
  *                    fade independently of the others.
- *   - labelLayer   — one logical label layer (you-are-here, structure,
+ *   - labelLayer   — one logical label layer (milkyWay, structure,
  *                    galaxy names, scale bar). Discriminator:
  *                    `layer: LabelLayerId`. Structure labels additionally key
  *                    on `category: StructureCategory` so each structure
  *                    category's labels are a distinct controller; the
- *                    other layers (youAreHere/galaxyNames/scaleBar)
+ *                    other layers (milkyWay/galaxyNames/scaleBar)
  *                    carry no category. Famous-galaxy labels reuse the
  *                    `galaxyNames` layer rather than minting a value.
  *   - overlay      — always-on GPU overlay (Milky Way, procedural

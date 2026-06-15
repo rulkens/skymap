@@ -78,7 +78,7 @@ export function recessionTargetFor(h: FadeId): number | undefined {
     case 'labelLayer':
       // Structure labels (any category) and famous-galaxy labels recede;
       // famous labels reuse the 'galaxyNames' id. The YOU-ARE-HERE
-      // pin ('youAreHere') and scale bar ('scaleBar') do not.
+      // pin ('milkyWay') and scale bar ('scaleBar') do not.
       return h.layer === 'structure' || h.layer === 'galaxyNames' ? LABEL_RECESSION : undefined;
     // Non-recessing kinds — explicit so a new union member can't silently
     // skip declaring its stance.

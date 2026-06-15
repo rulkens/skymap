@@ -17,7 +17,7 @@
  *
  * The three overlay handles come first (Milky Way at its settings gate,
  * procedural + textured disks unconditionally at 1), then the volumes-master
- * gate, then the category-less label-layer handles (youAreHere / galaxyNames /
+ * gate, then the category-less label-layer handles (milkyWay / galaxyNames /
  * scaleBar — structure is per-category only), then the per-category marker +
  * structure-label handles (one pair per structure category).  The order within each
  * group matches the order in the source catalog of concerns so diffs are easy
@@ -25,7 +25,7 @@
  *
  * ### Label-layer opacities
  *
- * youAreHere starts at 0: its subsystem producer fires fadeTo(1) on first
+ * milkyWay starts at 0: its subsystem producer fires fadeTo(1) on first
  * non-empty emit.  galaxyNames starts at 1 because the famous-galaxy labels
  * reuse that handle and consume its opacity directly — a 0 would render them
  * invisible.  scaleBar is React-side and tour-addressable but never auto-faded
@@ -78,13 +78,13 @@ export function registerOverlayFades(state: EngineState): void {
 
   // ── Label-layer handles ──────────────────────────────────────────────
   //
-  // youAreHere starts at 0: fadeTo(1) fires on first non-empty emit (see
+  // milkyWay starts at 0: fadeTo(1) fires on first non-empty emit (see
   // youAreHereSubsystem).  galaxyNames starts at 1 — famous-galaxy labels
   // reuse this handle and consume its opacity directly, so a 0 would hide
   // them.  scaleBar is React-side — registered at 1 for tour addressability
   // but never auto-faded by the engine.  structure is per-category only (registered
   // below); produceStructureLabels fires each category's load-in.
-  state.subsystems.fades.register({ kind: 'labelLayer', layer: 'youAreHere' }, 0);
+  state.subsystems.fades.register({ kind: 'labelLayer', layer: 'milkyWay' }, 0);
   state.subsystems.fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
   state.subsystems.fades.register({ kind: 'labelLayer', layer: 'scaleBar' }, 1);
 

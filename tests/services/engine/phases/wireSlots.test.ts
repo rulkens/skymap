@@ -529,7 +529,7 @@ describe('wireSlots', () => {
     expect(hasHandle({ kind: 'overlay', id: 'proceduralDisks' })).toBe(true);
     expect(hasHandle({ kind: 'overlay', id: 'texturedDisks' })).toBe(true);
     expect(hasHandle({ kind: 'volumesMaster' })).toBe(true);
-    expect(hasHandle({ kind: 'labelLayer', layer: 'youAreHere' })).toBe(true);
+    expect(hasHandle({ kind: 'labelLayer', layer: 'milkyWay' })).toBe(true);
     // No category-less structure handle: structure labels use per-category
     // handles, and produceStructureLabels fires each category's load-in.
     expect(hasHandle({ kind: 'labelLayer', layer: 'galaxyNames' })).toBe(true);
@@ -543,7 +543,7 @@ describe('wireSlots', () => {
     };
     expect(opacityFor({ kind: 'overlay', id: 'milkyWay' })).toBe(1);
     expect(opacityFor({ kind: 'volumesMaster' })).toBe(1);
-    expect(opacityFor({ kind: 'labelLayer', layer: 'youAreHere' })).toBe(0);
+    expect(opacityFor({ kind: 'labelLayer', layer: 'milkyWay' })).toBe(0);
     expect(opacityFor({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(1);
   });
 

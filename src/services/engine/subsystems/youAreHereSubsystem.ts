@@ -67,7 +67,7 @@ export function createYouAreHereSubsystem(): YouAreHereSubsystem {
     if (!didFireFadeIn) {
       didFireFadeIn = true;
       void state.subsystems.fades.fadeTo(
-        { kind: 'labelLayer', layer: 'youAreHere' },
+        { kind: 'labelLayer', layer: 'milkyWay' },
         1,
         FADE_IN_DURATION_MS,
       );

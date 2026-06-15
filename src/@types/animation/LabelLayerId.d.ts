@@ -8,7 +8,7 @@
  * registry itself needs to learn the new value.
  *
  * Current layers:
- *   - youAreHere — the "YOU ARE HERE" Milky Way pin (a single label +
+ *   - milkyWay   — the "YOU ARE HERE" Milky Way pin (a single label +
  *                  marker line). Fades in when the camera reaches the
  *                  band where the marker is meaningful.
  *   - structure  — cluster + named-anchor labels emitted by
@@ -18,4 +18,4 @@
  *   - scaleBar   — the on-screen scale-bar HUD. Constructed by React,
  *                  not a GPU layer; reserved for tour integration.
  */
-export type LabelLayerId = 'youAreHere' | 'structure' | 'galaxyNames' | 'scaleBar';
+export type LabelLayerId = 'milkyWay' | 'structure' | 'galaxyNames' | 'scaleBar';
