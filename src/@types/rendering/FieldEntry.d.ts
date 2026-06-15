@@ -18,11 +18,11 @@
 
 import type { mat4 } from 'gl-matrix';
 
-import type { ScalarFieldHandle } from './ScalarFieldHandle';
+import type { VolumeFieldId } from '../data/VolumeFieldId';
 import type { ScalarFieldPaletteId } from '../data/ScalarFieldPaletteId';
 
 export type FieldEntry = {
-  handle: ScalarFieldHandle;
+  handle: VolumeFieldId;
   /**
    * Per-cube center of the contrast windowing transform, in LUT
    * coordinate space [0, 1].  Divergent palettes (CF-4, coolwarm)
