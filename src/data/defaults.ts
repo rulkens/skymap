@@ -113,6 +113,18 @@ export const DEFAULT_DEPTH_FADE_ENABLED = true;
  */
 export const DEFAULT_MILKY_WAY_ENABLED = SOURCE_REGISTRY[Source.MilkyWay].visible;
 
+/**
+ * "You are here" Milky-Way label default — ON.  The label is always available
+ * by camera distance, so its toggle defaults on.
+ *
+ * Unlike `DEFAULT_MILKY_WAY_ENABLED` above, this is a plain `true` literal, NOT
+ * registry-derived: the registry row's `visible` field gates the DISK overlay,
+ * and the row carries no separate label-visible field.  Inventing a registry
+ * column just to source one boolean would be the wrong kind of indirection —
+ * the literal is the honest single source of truth for this axis.
+ */
+export const DEFAULT_MILKY_WAY_LABEL_ENABLED: boolean = true;
+
 // ── HDR tone-mapping ────────────────────────────────────────────────────────
 
 /**

@@ -32,6 +32,7 @@ import {
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
   DEFAULT_MILKY_WAY_ENABLED,
+  DEFAULT_MILKY_WAY_LABEL_ENABLED,
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_SHOW_DISK_RADIUS_RING,
@@ -65,7 +66,10 @@ export function makeSettingsFixture(
     camera: { autoRotate: DEFAULT_AUTO_ROTATE },
     bias: { mode: DEFAULT_BIAS_MODE, absMagLimit: DEFAULT_ABS_MAG_LIMIT },
     thumbnails: { enabled: DEFAULT_GALAXY_TEXTURES_ENABLED },
-    milkyWay: { enabled: DEFAULT_MILKY_WAY_ENABLED },
+    milkyWay: {
+      enabled: DEFAULT_MILKY_WAY_ENABLED,
+      labelEnabled: DEFAULT_MILKY_WAY_LABEL_ENABLED,
+    },
     filaments: {
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
       intensity: SOURCE_REGISTRY[Source.Filaments].intensity,

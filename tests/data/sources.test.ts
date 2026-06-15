@@ -7,6 +7,8 @@ import {
   HI_RES_LAYER_SIDE_BY_TIER,
 } from '../../src/data/sources';
 import { STRUCTURE_CATEGORIES } from '../../src/data/structure/structureCategories';
+import { LABEL_CATEGORIES } from '../../src/data/structure/labelCategories';
+import { CATEGORY_DISPLAY_INFO } from '../../src/data/structure/categoryDisplayInfo';
 import { DEFAULT_FLOW } from '../../src/data/defaults';
 import { ALL_VISIBLE_MASK } from '../../src/utils/allVisibleMask';
 import { maskHas } from '../../src/utils/maskHas';
@@ -183,13 +185,30 @@ describe('Source enum — overlay codes (milkyWay/flow)', () => {
     expect(maskHas(ALL_VISIBLE_MASK, Source.Flow)).toBe(false);
   });
 
-  it('milkyWay row is a default-visible disk overlay with no label or marker', () => {
+  it('milkyWay row bears a label on the milkyWay layer with display copy', () => {
     const entry = SOURCE_REGISTRY[Source.MilkyWay];
     expect(entry.type).toBe('milkyWay');
     expect(entry.id).toBe('milkyWay');
     expect(entry.visible).toBe(true);
-    expect(entry.bearsLabel).toBe(false);
+    expect(entry.bearsLabel).toBe(true);
+    // The "You are here" label carries a stem line but no ring/halo marker.
     expect(entry.bearsMarker).toBe(false);
+    expect(entry.labelLayer).toBe('milkyWay');
+    expect(entry.detailLabel).toBe('Milky Way');
+    expect(entry.shortLabel).toBe('Milky Way');
+    expect(entry.plural).toBe('Milky Way');
+  });
+
+  it('LABEL_CATEGORIES includes milkyWay', () => {
+    expect(LABEL_CATEGORIES).toContain('milkyWay');
+  });
+
+  it('CATEGORY_DISPLAY_INFO resolves milkyWay copy', () => {
+    expect(CATEGORY_DISPLAY_INFO.milkyWay).toEqual({
+      label: 'Milky Way',
+      shortLabel: 'Milky Way',
+      plural: 'Milky Way',
+    });
   });
 
   it('flow row is a default-off overlay carrying the look/motion defaults', () => {

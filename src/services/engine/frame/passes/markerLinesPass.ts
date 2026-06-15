@@ -25,11 +25,11 @@
  *      until `createMarkerLineRenderer` construction completes in
  *      `initGpu.ts`.
  *
- *   2. `markerLineRenderer.lineCount() > 0` — the `youAreHereSubsystem`
- *      must have called `setLines` with at least one line this frame.
- *      When the camera is far from the origin the subsystem sets an
- *      empty line array and `lineCount()` returns 0, making this pass
- *      a cheap early-return.
+ *   2. `markerLineRenderer.lineCount() > 0` — the label director must
+ *      have called `setLines` with at least one line this frame (e.g.
+ *      the `produceMilkyWayLabel` stem).  When the camera is far from
+ *      the origin the producer emits an empty line set and `lineCount()`
+ *      returns 0, making this pass a cheap early-return.
  *
  * ### Pass position in UI_PASSES
  *
@@ -51,10 +51,9 @@ export const markerLinesPass: Pass = {
     // `enabled()` proved markerLineRenderer is non-null and has at least
     // one line.  The `!` assertion is safe: the pass framework only calls
     // `draw` when `enabled` returns true.
-    state.gpu.markerLineRenderer!.render(
-      pass,
-      ctx.vp as Float32Array,
-      [ctx.canvasSize.width, ctx.canvasSize.height],
-    );
+    state.gpu.markerLineRenderer!.render(pass, ctx.vp as Float32Array, [
+      ctx.canvasSize.width,
+      ctx.canvasSize.height,
+    ]);
   },
 };

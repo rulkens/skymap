@@ -210,9 +210,6 @@ function makeState(): EngineState {
         attachRenderer: vi.fn(),
         setMode: vi.fn().mockResolvedValue(undefined),
       },
-      youAreHere: {
-        attachRenderers: vi.fn(),
-      },
       labelDirector: {
         attachRenderers: vi.fn(),
         registerProducer: vi.fn(),

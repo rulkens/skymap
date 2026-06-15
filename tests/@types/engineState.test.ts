@@ -34,6 +34,7 @@ import {
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
   DEFAULT_MILKY_WAY_ENABLED,
+  DEFAULT_MILKY_WAY_LABEL_ENABLED,
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_TONE_MAP_CURVE,
@@ -46,7 +47,6 @@ import { createSpaceMouseSubsystem } from '../../src/services/engine/subsystems/
 import { createRenderScheduler } from '../../src/services/engine/subsystems/renderScheduler';
 import { createSelectionSubsystem } from '../../src/services/engine/subsystems/selectionSubsystem';
 import { createBiasCorrectionSubsystem } from '../../src/services/engine/subsystems/biasCorrectionSubsystem';
-import { createYouAreHereSubsystem } from '../../src/services/engine/subsystems/youAreHereSubsystem';
 import { createLabelDirectorSubsystem } from '../../src/services/engine/subsystems/labelDirectorSubsystem';
 import { createStructureFocusSubsystem } from '../../src/services/engine/subsystems/structureFocusSubsystem';
 import { createFadeRegistry } from '../../src/services/animation/fadeRegistry';
@@ -100,7 +100,7 @@ describe('EngineState type', () => {
       camera: { autoRotate: false },
       bias: { mode: DEFAULT_BIAS_MODE, absMagLimit: -19 },
       thumbnails: { enabled: true },
-      milkyWay: { enabled: true },
+      milkyWay: { enabled: true, labelEnabled: true },
       filaments: { enabled: false, intensity: 1 },
       volumes: { enabled: false, items: {} },
       flow: {
@@ -203,7 +203,6 @@ describe('EngineState type', () => {
           getLoadedClouds: () => stateRef.current!.data.galaxies.catalogs,
           requestRender: () => stateRef.current!.subsystems.scheduler.requestRender(),
         }),
-        youAreHere: createYouAreHereSubsystem(),
         labelDirector: createLabelDirectorSubsystem(),
         structureFocus: createStructureFocusSubsystem({ requestRender: () => {} }),
         clickResolver: null,
@@ -266,7 +265,10 @@ describe('EngineState type', () => {
       camera: { autoRotate: DEFAULT_AUTO_ROTATE },
       bias: { mode: DEFAULT_BIAS_MODE, absMagLimit: DEFAULT_ABS_MAG_LIMIT },
       thumbnails: { enabled: DEFAULT_GALAXY_TEXTURES_ENABLED },
-      milkyWay: { enabled: DEFAULT_MILKY_WAY_ENABLED },
+      milkyWay: {
+        enabled: DEFAULT_MILKY_WAY_ENABLED,
+        labelEnabled: DEFAULT_MILKY_WAY_LABEL_ENABLED,
+      },
       filaments: {
         enabled: SOURCE_REGISTRY[Source.Filaments].visible,
         intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
@@ -296,6 +298,8 @@ describe('EngineState type', () => {
 
     expect(settings.galaxyCatalogs.sizePx).toBe(DEFAULT_POINT_SIZE_PX);
     expect(settings.bias.absMagLimit).toBe(DEFAULT_ABS_MAG_LIMIT);
+    // The "You are here" label axis defaults on, independently of the disk.
+    expect(settings.milkyWay.labelEnabled).toBe(true);
     expect(bias.apparentMagLimit).toBe(0);
     expect(sources.pickMask).toBe(ALL_VISIBLE_MASK);
   });
@@ -328,7 +332,7 @@ describe('EngineState type', () => {
         camera: { autoRotate: false },
         bias: { mode: DEFAULT_BIAS_MODE, absMagLimit: 0 },
         thumbnails: { enabled: true },
-        milkyWay: { enabled: true },
+        milkyWay: { enabled: true, labelEnabled: true },
         filaments: { enabled: false, intensity: 1 },
         volumes: { enabled: false, items: {} },
         flow: { ...DEFAULT_FLOW },
@@ -410,7 +414,6 @@ describe('EngineState type', () => {
           getLoadedClouds: () => stateRef.current!.data.galaxies.catalogs,
           requestRender: () => stateRef.current!.subsystems.scheduler.requestRender(),
         }),
-        youAreHere: createYouAreHereSubsystem(),
         labelDirector: createLabelDirectorSubsystem(),
         structureFocus: createStructureFocusSubsystem({ requestRender: () => {} }),
         clickResolver: null,

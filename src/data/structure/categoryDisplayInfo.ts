@@ -1,6 +1,6 @@
 /**
  * Per-category display metadata for label-bearing sources (cluster,
- * supercluster, void, famousGalaxy, group).  Keyed by `LabelCategory`.
+ * supercluster, void, famousGalaxy, group, milkyWay).  Keyed by `LabelCategory`.
  *
  * Derived from the SOURCE_REGISTRY rows that carry `bearsLabel: true`,
  * which are the canonical home of per-category copy since A1.  Consumers

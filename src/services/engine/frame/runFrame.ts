@@ -244,7 +244,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // Runs BEFORE the GPU dispatch so `labelRenderer.setLabels` /
   // `markerLineRenderer.setLines` are uploaded before `renderFrame` reads
   // those buffers.  The director polls every registered `LabelProducer`
-  // (youAreHere, structures, ...), merges, change-detects via signature hash,
+  // (milkyWayLabel, structures, ...), merges, change-detects via signature hash,
   // and flushes once; it null-checks its renderers, so this is safe before
   // the atlas load completes.
   state.subsystems.labelDirector.runFrame(state, ctx);

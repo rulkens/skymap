@@ -151,12 +151,12 @@ describe('createFadeRegistry', () => {
     expect(r.opacityOf(perCategory, 0)).toBeCloseTo(0.8, 5);
   });
 
-  it('serializeFadeId leaves youAreHere label key unchanged', () => {
+  it('serializeFadeId keys the milkyWay label handle', () => {
     const r = makeRegistry();
-    const h: FadeId = { kind: 'labelLayer', layer: 'youAreHere' };
+    const h: FadeId = { kind: 'labelLayer', layer: 'milkyWay' };
     r.register(h, 0);
     r.fadeTo(h, 1, 0, 0);
-    // Legacy category-less label handle behaves exactly as before.
+    // Category-less label handle resolves to its own controller.
     expect(r.opacityOf(h, 0)).toBeCloseTo(1, 5);
   });
 

@@ -2,8 +2,10 @@
  * LabelEffectsSection — live-tuning controls for the label outline.
  *
  * Pick a target category, tune outline colour + width, then bake the
- * values into `STRUCTURE_MARKER_STYLES.<cat>` or `youAreHereSubsystem.ts`.  The
- * override is a temporary hook, not a storage location.
+ * values into the matching per-producer style module —
+ * `STRUCTURE_MARKER_STYLES.<cat>`, `FAMOUS_LABEL_STYLE`, or
+ * `MILKY_WAY_LABEL_STYLE`.  The override is a temporary hook, not a
+ * storage location.
  *
  * `setLabelStyleOverride` runs in `useEffect`, not during render —
  * side effects during render trigger strict-mode double-fires.
@@ -18,10 +20,10 @@ import {
 import { LABEL_CATEGORIES } from '../../data/structure/labelCategories';
 import type { Vec4 } from '../../@types/math/Vec4';
 
-// `LabelStyleOverrideTarget` is `'youAreHere' | LabelCategory`, so the dropdown
-// is exactly the registry's label-bearing categories plus the you-are-here pin.
-// 'youAreHere' leads so it stays first in the dropdown.
-const CATEGORIES: readonly LabelStyleOverrideTarget[] = ['youAreHere', ...LABEL_CATEGORIES];
+// The dropdown is exactly the registry's label-bearing categories
+// (`LABEL_CATEGORIES`), which includes the Milky Way "You are here"
+// label as the `milkyWay` category.
+const CATEGORIES: readonly LabelStyleOverrideTarget[] = LABEL_CATEGORIES;
 
 function hexToRgb(hex: string): [number, number, number] {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex);

@@ -24,7 +24,7 @@
  * for non-pseudo entries), so a non-pseudo meta entry at index `i` maps to
  * catalog row `catalogIdx` — a counter that advances only past non-pseudo
  * rows. Pseudo entries (the Milky Way, merged at the React layer) have no
- * `.bin` counterpart and are skipped; `youAreHereSubsystem` labels the user's
+ * `.bin` counterpart and are skipped; `produceMilkyWayLabel` labels the user's
  * own position. The engine's `famousMeta` comes from the bin and never holds
  * pseudo rows, but defending here keeps the join robust to future sources.
  *

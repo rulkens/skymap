@@ -12,6 +12,12 @@ export const MILKY_WAY_ENTRY = {
   allSky: true,
   // On by default — the galactic disk is part of the baseline scene.
   visible: true,
-  bearsLabel: false,
+  bearsLabel: true,
+  // The "You are here" label has a stem line but no ring/halo marker —
+  // markers are the structure-ring concept, which the disk overlay doesn't share.
   bearsMarker: false,
+  labelLayer: 'milkyWay',
+  detailLabel: 'Milky Way',
+  shortLabel: 'Milky Way',
+  plural: 'Milky Way',
 } as const satisfies MilkyWaySourceEntry;

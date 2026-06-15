@@ -18,7 +18,7 @@ export type MarkerLine = {
   pixelWidth: number;
   /** Premultiplied RGBA — alpha-weighted colour packed into a single vec4. */
   color: Vec4;
-  /** Fade multiplier in [0,1] driven by youAreHereVisibility. Defaults to 1. */
+  /** Fade multiplier in [0,1] driven by milkyWayLabelVisibility. Defaults to 1. */
   fadeAlpha?: number;
   /**
    * Id of the `Label` this line anchors, when the line is an anchor for a

@@ -206,9 +206,9 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // Wire the freshly-constructed renderers into the label director, which
   // was built eagerly in the engine state literal with no renderers yet.
   // Same `attachRenderer` post-construction pattern `biasCorrectionSubsystem`
-  // uses.  The director (not youAreHere directly) owns the renderer refs:
-  // all `LabelProducer`s — youAreHere, structures, future overlays — are polled
-  // by the director, which merges their outputs and flushes once.
+  // uses.  The director owns the renderer refs: all `LabelProducer`s —
+  // milkyWayLabel (produceMilkyWayLabel), structures, future overlays — are
+  // polled by the director, which merges their outputs and flushes once.
   state.subsystems.labelDirector.attachRenderers(
     state.gpu.labelRenderer,
     state.gpu.markerLineRenderer,

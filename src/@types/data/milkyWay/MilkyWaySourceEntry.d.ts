@@ -4,10 +4,12 @@ import type { SourceEntryBase } from '../SourceEntryBase';
  * Milky-Way-typed row of the SOURCE_REGISTRY — the procedural galactic-disk
  * overlay drawn by `milkyWayRenderer`.
  *
+ * The row is label-bearing (bearsLabel:true, labelLayer:'milkyWay'), carrying
+ * the "You are here" label through the standard label machinery rather than a
+ * bespoke marker path.
+ *
  * No on-disk asset (generated procedurally) and no per-record identity, so it
- * adds only `code` to the base; its sole user control is the `visible` master
- * toggle. (A future change may set `bearsLabel: true` once the "you are here"
- * marker is consolidated into the standard label machinery.)
+ * adds only `code` to the base.
  */
 export type MilkyWaySourceEntry = SourceEntryBase & {
   readonly type: 'milkyWay';

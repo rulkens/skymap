@@ -21,14 +21,14 @@
  * If any producer returns `awake: true`, the director calls
  * `state.subsystems.scheduler.requestRender()` once.  This is the only
  * loop-wake mechanism for animations driven by label state (e.g. the
- * you-are-here fade band crossing); other systems wake the loop on
+ * Milky Way label's fade band crossing); other systems wake the loop on
  * their own.
  *
  * ### No layer load-in here — each producer owns its own
  *
  * The director merges, declutters, and flushes; it does NOT fire any
  * layer's load-in fade.  Each producer fires its own first-emit load-in
- * (`produceStructureLabels` per category, the famous/you-are-here
+ * (`produceStructureLabels` per category, the famous / `produceMilkyWayLabel`
  * producers per layer), so the fade reacts to the producer's own
  * visibility decision rather than to the merged, decluttered set.
  *
@@ -36,8 +36,7 @@
  *
  * Renderers attach asynchronously (after the font atlas fetch); the
  * director silently no-ops until both are present.  This mirrors the
- * existing pattern at point-of-use in `filamentsPass` and the prior
- * `youAreHereSubsystem`.
+ * existing pattern at point-of-use in `filamentsPass`.
  */
 
 import type { LabelRenderer } from '../../../@types/rendering/LabelRenderer';
@@ -59,7 +58,7 @@ import { getLabelStyleOverrideVersion } from '../labelStyleOverride';
  *
  * The declutter runs in the director (not per producer) so it de-collides
  * labels ACROSS producers — a structure label vs a famous-galaxy label vs the
- * you-are-here marker — which a per-producer pass could never see.
+ * Milky Way "you are here" marker — which a per-producer pass could never see.
  */
 const DECLUTTER_MARGIN_PX = 48;
 
@@ -91,7 +90,7 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
     //
     // Re-upload triggers when ids/count change OR when any entry's
     // `fadeAlpha` differs from the prior frame.  Including `fadeAlpha`
-    // matters because the `youAreHereSubsystem` keeps the same `id`
+    // matters because `produceMilkyWayLabel` keeps the same `id`
     // across the fade band while the alpha smoothly transitions
     // 0→1→0 as the camera moves; without this term, the GPU instance
     // buffer would stay stuck at whatever alpha was uploaded the
@@ -110,12 +109,12 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
     //
     // We deliberately DON'T include world positions or colours — the
     // glyph layout in `labelRenderer.setLabels` is the expensive
-    // step we're protecting; static-position producers (youAreHere,
+    // step we're protecting; static-position producers (milkyWayLabel,
     // structures) keep their positions stable and benefit from the skip.
     //
     // Edge case: a producer mutating a label's `text` while keeping
     // the same `id` will NOT trigger re-upload.  No current producer
-    // does this — youAreHere has constant text; structures derive text
+    // does this — the Milky Way label has constant text; structures derive text
     // from the structure name which is part of the id space.
     const lIds = labels.map((l) => `${l.id}:${l.fadeAlpha ?? 1}`).join('|');
     const mIds = lines.map((m) => `${m.id}:${m.fadeAlpha ?? 1}`).join('|');
@@ -170,7 +169,7 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
         screenY = (1 - (ndcY * 0.5 + 0.5)) * ctx.canvasSize.height;
         onScreen = ndcX >= -1 && ndcX <= 1 && ndcY >= -1 && ndcY <= 1;
       }
-      // A label with no prominence (e.g. you-are-here) sinks to lowest
+      // A label with no prominence (e.g. the Milky Way label) sinks to lowest
       // priority rather than beating real structures.
       return { index, prominencePx: label.prominencePx ?? 0, screenX, screenY, onScreen };
     });

@@ -32,8 +32,9 @@
  * ### What got evicted
  *
  * Per audit Q6 / Q12 / Q11 / Q16d: brightness, exposure, auto-rotate, the
- * galaxy-thumbnails toggle, and the Milky Way toggle are gone from the
- * panel.  Defaults handle the explorer case; the engine plumbing for each
+ * galaxy-thumbnails toggle, and the Milky Way disk toggle are gone from the
+ * panel (the Milky Way "you are here" label keeps its row in the Labels
+ * section).  Defaults handle the explorer case; the engine plumbing for each
  * remains intact (callable from the dev console or future re-introduction)
  * but no UI surface.  Auto-LOD (audit Q15 / PR #156) was dead code, removed
  * entirely.
@@ -824,12 +825,12 @@ export function SettingsPanel({
 
       {/* ── Labels ──────────────────────────────────────────────────────── */}
       {/*
-        Master = tri-state over all four label categories.  The Labels
-        group is a sibling of Structures (and not nested inside it)
-        because per audit Q11 labels are an independent axis from entity
-        visibility.  Per-category checkboxes (including the "you are here"
-        label, expressed via the famousGalaxy category for the Milky Way
-        pseudo-entry) live in Advanced.
+        Master = tri-state over every label-bearing category (driven by
+        `LABEL_CATEGORIES`).  The Labels group is a sibling of Structures
+        (and not nested inside it) because labels are an independent axis
+        from entity visibility.  Per-category checkboxes — including the
+        Milky Way "You are here" label, which is its own `milkyWay`
+        category — render inline below.
       */}
       <CollapsibleSection
         title="Labels"

@@ -62,6 +62,7 @@ import { selectVolumeFieldItems } from '../../services/engine/settingsStore/sele
 import { selectFlow } from '../../services/engine/settingsStore/selectors/selectFlow';
 import { selectStructureItems } from '../../services/engine/settingsStore/selectors/selectStructureItems';
 import { selectGalaxyCatalogItems } from '../../services/engine/settingsStore/selectors/selectGalaxyCatalogItems';
+import { selectMilkyWayLabelEnabled } from '../../services/engine/settingsStore/selectors/selectMilkyWayLabelEnabled';
 import { projectVolumeFieldRows } from '../../services/engine/settingsStore/projectVolumeFieldRows';
 import { projectMarkerCategoryVisibility } from '../../services/engine/settingsStore/projectMarkerCategoryVisibility';
 import { projectLabelCategoryVisibility } from '../../services/engine/settingsStore/projectLabelCategoryVisibility';
@@ -79,6 +80,7 @@ import {
   DEFAULT_SHOW_DISK_RADIUS_RING,
   DEFAULT_VOLUMES_ENABLED,
   DEFAULT_FLOW,
+  DEFAULT_MILKY_WAY_LABEL_ENABLED,
 } from '../../data/defaults';
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
 import { ALL_VISIBLE_MASK } from '../../utils/allVisibleMask';
@@ -268,13 +270,20 @@ export function App(): React.ReactElement {
     selectGalaxyCatalogItems,
     GALAXY_CATALOG_ITEMS_DEFAULT,
   );
+  // The milkyWay label axis is a singleton-overlay scalar (no per-record items
+  // row), so it's a plain boolean read fed into the same label projection.
+  const milkyWayLabelEnabled = useSettingsStore(
+    handleRef,
+    selectMilkyWayLabelEnabled,
+    DEFAULT_MILKY_WAY_LABEL_ENABLED,
+  );
   const markerCategoryVisibility = useMemo(
     () => projectMarkerCategoryVisibility(structureItems),
     [structureItems],
   );
   const labelCategoryVisibility = useMemo(
-    () => projectLabelCategoryVisibility(structureItems, galaxyCatalogItems),
-    [structureItems, galaxyCatalogItems],
+    () => projectLabelCategoryVisibility(structureItems, galaxyCatalogItems, milkyWayLabelEnabled),
+    [structureItems, galaxyCatalogItems, milkyWayLabelEnabled],
   );
 
   // Flow overlay reads live off the engine-owned store. `selectFlow` returns the
@@ -423,12 +432,16 @@ export function App(): React.ReactElement {
               handleRef.current?.structures.setItemEnabled(category, visible);
             }}
             onSetLabelCategoryVisibility={(category, visible) => {
-              // Label rows span famousGalaxy + structures; route by registry so
-              // structure labels drive the structures handle while the curated
-              // atlas (famousGalaxy, a galaxy catalog source) routes through the galaxy catalogs
-              // handle's label axis.
+              // Label rows have three homes: structure labels drive the
+              // structures handle; the milkyWay singleton "You are here" label
+              // drives the milkyWay handle; and the curated atlas (famousGalaxy,
+              // a galaxy catalog source) routes through the galaxy catalogs
+              // handle's label axis. Each guard narrows the union, so the final
+              // else lands on the galaxy-catalog label categories.
               if (isStructureCategory(category)) {
                 handleRef.current?.structures.setLabelEnabled(category, visible);
+              } else if (category === 'milkyWay') {
+                handleRef.current?.milkyWay.setLabelEnabled(visible);
               } else {
                 handleRef.current?.galaxyCatalogs.setLabelEnabled(category, visible);
               }

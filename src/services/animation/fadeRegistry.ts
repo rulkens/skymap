@@ -62,8 +62,8 @@ function serializeFadeId(h: FadeId): string {
     case 'markerLayer':
       return `markerLayer:${h.category}`;
     // A category-less structure handle and a per-category one must not collide,
-    // and existing keys (e.g. `labelLayer:youAreHere`) must stay
-    // byte-identical — so the category suffix is appended only when present.
+    // and a category-less key (e.g. `labelLayer:milkyWay`) must stay distinct
+    // from a per-category one — so the category suffix is appended only when present.
     case 'labelLayer':
       return `labelLayer:${h.layer}${h.category ? ':' + h.category : ''}`;
     case 'overlay':

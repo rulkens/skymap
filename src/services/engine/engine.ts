@@ -83,6 +83,7 @@ import {
   DEFAULT_EXPOSURE,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
+  DEFAULT_MILKY_WAY_LABEL_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_REAL_ONLY_MODE,
@@ -114,9 +115,9 @@ import { createFadeRegistry } from '../animation/fadeRegistry';
 import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../animation/fadeController';
 import { createSelectionSubsystem } from './subsystems/selectionSubsystem';
 import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
-import { createYouAreHereSubsystem } from './subsystems/youAreHereSubsystem';
 import { createLabelDirectorSubsystem } from './subsystems/labelDirectorSubsystem';
 import { registerLabelStyleOverrideWake } from './labelStyleOverride';
+import { produceMilkyWayLabel } from './presentation/produceMilkyWayLabel';
 import { produceStructureLabels } from './presentation/produceStructureLabels';
 import { produceFamousLabels } from './presentation/produceFamousLabels';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
@@ -177,6 +178,7 @@ import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
 import { setSourceVisibleImpl } from './handles/setSourceVisible';
 import { setStructureItemEnabled } from './handles/setStructureItemEnabled';
 import { setStructureLabelEnabled } from './handles/setStructureLabelEnabled';
+import { setMilkyWayLabelEnabled } from './handles/setMilkyWayLabelEnabled';
 import { setGalaxyCatalogLabelEnabled } from './handles/setGalaxyCatalogLabelEnabled';
 
 /**
@@ -317,6 +319,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
     milkyWay: {
       enabled: DEFAULT_MILKY_WAY_ENABLED,
+      labelEnabled: DEFAULT_MILKY_WAY_LABEL_ENABLED,
     },
     filaments: {
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
@@ -506,17 +509,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         requestRender: () => state.subsystems.scheduler.requestRender(),
       }),
 
-      // ── You-are-here subsystem ───────────────────────────────────
-      // Owns the "YOU ARE HERE" marker fade-alpha and drives the label +
-      // marker-line renderers per frame.  Eager (no GPU dep); the renderers
-      // are wired during initGpu via `attachRenderers` after the font-atlas
-      // fetch.
-      youAreHere: createYouAreHereSubsystem(),
-
       // ── Label director ───────────────────────────────────────────
       // The director owns the `labelRenderer.setLabels` /
       // `markerLineRenderer.setLines` calls and declutters across all its
-      // `LabelProducer`s (youAreHere + the structure/famous label producers,
+      // `LabelProducer`s (the milkyWay + structure/famous label producers,
       // registered just after this literal).  Renderers are wired in during
       // initGpu so the director sees everything before the first frame.
       labelDirector: createLabelDirectorSubsystem(),
@@ -594,13 +590,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   // ── Register label producers with the director ───────────────────────
   //
-  // Registration order = merged label order: youAreHere, then the structure
+  // Registration order = merged label order: milkyWayLabel, then the structure
   // labels, then the famous-galaxy labels.  The director declutters across
   // all of them by `prominencePx`, so registration order only sets the
-  // tiebreak for equal-prominence collisions (rare).  The structure + famous
-  // producers are pure functions over the stores; wrap each as a LabelProducer
-  // with a stable id.  All eager, so this is synchronous before any frame.
-  state.subsystems.labelDirector.registerProducer(state.subsystems.youAreHere);
+  // tiebreak for equal-prominence collisions (rare).  All three producers are
+  // pure functions over the state; wrap each as a LabelProducer with a stable
+  // id.  All eager, so this is synchronous before any frame.
+  state.subsystems.labelDirector.registerProducer({
+    id: 'milkyWayLabel',
+    produceLabels: produceMilkyWayLabel,
+  });
   state.subsystems.labelDirector.registerProducer({
     id: 'structureLabels',
     produceLabels: produceStructureLabels,
@@ -1088,7 +1087,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.selection.destroy();
     state.subsystems.tweens.destroy();
     state.subsystems.biasCorrection.destroy();
-    state.subsystems.youAreHere.destroy();
     state.subsystems.labelDirector.destroy();
     state.subsystems.structureFocus.destroy();
     // Impostor teardown order matters: texturedDisks subscribes to
@@ -1223,6 +1221,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
         );
       },
+      setLabelEnabled: (enabled) => setMilkyWayLabelEnabled(state, settingsStore, enabled),
     },
     filaments: {
       // Same fade-on-toggle pattern as milkyWay: filamentsPass.enabled

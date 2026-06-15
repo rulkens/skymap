@@ -116,10 +116,18 @@ export type EngineSettingsState = {
   };
 
   /**
-   * Milky-Way disk overlay master toggle.
+   * Milky-Way singleton overlay — two independent visibility axes, mirroring
+   * how the `structures` cluster separates ring/marker from label:
+   *   - `enabled` — the screen-aligned disk overlay at the world origin.
+   *   - `labelEnabled` — the "You are here" text label.
+   * The two are fully independent: the label can show with the disk hidden and
+   * vice-versa.  (Unlike `structures`, milkyWay is a singleton overlay rather
+   * than a per-record catalog, so both axes are flat fields here — there is no
+   * `items` row.)
    */
   milkyWay: {
     enabled: boolean;
+    labelEnabled: boolean;
   };
 
   /**

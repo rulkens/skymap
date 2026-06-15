@@ -14,9 +14,10 @@
  *      so a default-off session sits at 0 until toggled, and a default-on
  *      session starts drawing volumes from the first frame.
  *
- *   3. The four label-layer handles (youAreHere, structure, galaxyNames, scaleBar)
- *      are registered with the correct initial opacities: the first three at
- *      0 (their producers fire fadeTo(1) on first non-empty emit), scaleBar
+ *   3. The four label-layer handles (milkyWay, structure, galaxyNames, scaleBar)
+ *      are registered with the correct initial opacities: milkyWay at its
+ *      persisted `settings.milkyWay.labelEnabled` (like the per-category
+ *      structure handles), galaxyNames at 1 (famous labels reuse it), scaleBar
  *      at 1 (React-side, tour-addressable but never auto-faded by the engine).
  *
  * Mocking strategy: spy on `state.subsystems.fades.register`; inject a
@@ -37,12 +38,13 @@ type RegisterCall = [FadeId, number | undefined];
 
 /**
  * Build a minimal EngineState with only the fields registerOverlayFades reads:
- * `state.settings.milkyWay.enabled`, `state.settings.volumes.enabled`,
- * and `state.subsystems.fades.register`.
+ * `state.settings.milkyWay.enabled`, `state.settings.milkyWay.labelEnabled`,
+ * `state.settings.volumes.enabled`, and `state.subsystems.fades.register`.
  */
 function makeState(
   opts: {
     milkyWayEnabled?: boolean;
+    milkyWayLabelEnabled?: boolean;
     volumesMasterEnabled?: boolean;
     markerCategoryVisibility?: Partial<Record<string, boolean>>;
     labelCategoryVisibility?: Partial<Record<string, boolean>>;
@@ -72,7 +74,10 @@ function makeState(
   }
   const state = {
     settings: {
-      milkyWay: { enabled: opts.milkyWayEnabled ?? true },
+      milkyWay: {
+        enabled: opts.milkyWayEnabled ?? true,
+        labelEnabled: opts.milkyWayLabelEnabled ?? true,
+      },
       volumes: { enabled: opts.volumesMasterEnabled ?? true },
       structures: { enabled: true, items },
     },
@@ -171,15 +176,17 @@ describe('registerOverlayFades', () => {
 
   // ── label-layer handles ──────────────────────────────────────────
 
-  it('registers the three category-less label-layer handles at 0,1,1', () => {
-    // youAreHere starts at 0: its subsystem producer fires fadeTo(1) on the
-    // first non-empty emit, so a premature 1 would flash an empty layer before
-    // any data has landed.  galaxyNames starts at 1 — famous-galaxy labels
-    // reuse that handle and consume its opacity, so a 0 would make them
-    // invisible (Task 2.4).  scaleBar is React-side and tour-addressable but
-    // never auto-faded by the engine, so it starts at 1.  There is no
-    // category-less structure handle — structure labels use the per-category
-    // structure handles and produceStructureLabels fires each category's load-in.
+  it('registers the category-less label-layer handles (milkyWay from settings, galaxyNames + scaleBar fixed)', () => {
+    // milkyWay is seeded from `settings.milkyWay.labelEnabled` (the persisted
+    // toggle), exactly like the per-category structure label handles — the
+    // default fixture has it on, so it registers at 1.  `produceMilkyWayLabel`
+    // fires the load-in fadeTo on the first intended-visible emit.  galaxyNames
+    // starts at 1 — famous-galaxy labels reuse that handle and consume its
+    // opacity, so a 0 would make them invisible.  scaleBar is React-side and
+    // tour-addressable but never auto-faded by the engine, so it starts at 1.
+    // There is no category-less structure handle — structure labels use the
+    // per-category structure handles and produceStructureLabels fires each
+    // category's load-in.
     const { state, registerSpy } = makeState();
     registerOverlayFades(state);
 
@@ -187,16 +194,31 @@ describe('registerOverlayFades', () => {
     // Filter to category-LESS label handles only: there are multiple structure
     // labelLayer registrations (one per structure category), so collapsing by
     // `layer` alone would be ambiguous for structure.  The category-less handles are
-    // exactly youAreHere/galaxyNames/scaleBar.
+    // exactly milkyWay/galaxyNames/scaleBar.
     const labelCalls = calls(registerSpy).filter(
       ([h]) => h.kind === 'labelLayer' && !(h as Extract<FadeId, { kind: 'labelLayer' }>).category,
     ) as LabelCall[];
     const byLayer = Object.fromEntries(labelCalls.map(([h, op]) => [h.layer, op]));
 
-    expect(byLayer['youAreHere']).toBe(0);
+    expect(byLayer['milkyWay']).toBe(1);
     expect(byLayer['structure']).toBeUndefined();
     expect(byLayer['galaxyNames']).toBe(1);
     expect(byLayer['scaleBar']).toBe(1);
+  });
+
+  it('registers the milkyWay label layer at 0 when settings.milkyWay.labelEnabled is false', () => {
+    // A session with the Milky-Way label toggled off must seed the label layer
+    // at 0 so it doesn't flash before produceMilkyWayLabel's first emit.
+    const { state, registerSpy } = makeState({ milkyWayLabelEnabled: false });
+    registerOverlayFades(state);
+
+    type LabelCall = [Extract<FadeId, { kind: 'labelLayer' }>, number | undefined];
+    const labelCalls = calls(registerSpy).filter(
+      ([h]) => h.kind === 'labelLayer' && !(h as Extract<FadeId, { kind: 'labelLayer' }>).category,
+    ) as LabelCall[];
+    const byLayer = Object.fromEntries(labelCalls.map(([h, op]) => [h.layer, op]));
+
+    expect(byLayer['milkyWay']).toBe(0);
   });
 
   it('galaxyNames registers at opacity 1', () => {
