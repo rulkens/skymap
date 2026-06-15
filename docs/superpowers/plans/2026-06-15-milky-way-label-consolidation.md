@@ -242,17 +242,18 @@ sites must change together). Add `'milkyWay'` to `CategoryLabelLayer`.
 > **Simplest path: run Task 2 and Task 5 back-to-back**; if a gap is needed,
 > rename the literal in `youAreHereSubsystem.ts:70` as part of THIS commit.
 
-- [ ] Update `tests/services/engine/wiring/registerOverlayFades.test.ts` to
+- [x] Update `tests/services/engine/wiring/registerOverlayFades.test.ts` to
   assert the `milkyWay` label-layer handle is registered (replacing the
   `youAreHere` assertion). Keep the asserted initial opacity at `0` (Task 5
   changes it).
-- [ ] Run the affected tests — they fail against the not-yet-renamed union.
-- [ ] Apply the rename across all files above (signature: `LabelLayerId` no
+- [x] Run the affected tests — they fail against the not-yet-renamed union.
+- [x] Apply the rename across all files above (signature: `LabelLayerId` no
   longer contains `'youAreHere'`; `CategoryLabelLayer` now contains `'milkyWay'`).
-- [ ] `npm run typecheck` — must be green (this is the rename's correctness
+- [x] `npm run typecheck` — must be green (this is the rename's correctness
   guard: any missed `'youAreHere'` literal surfaces here).
-- [ ] `npm test` — full suite green.
-- [ ] Commit.
+- [x] `npm test` — full suite green. (2717 passed; also updated
+  `tests/services/engine/phases/wireSlots.test.ts`, outside the original list.)
+- [x] Commit. (`ff8a2bb4`)
 
 ---
 
@@ -290,17 +291,17 @@ a `milkyWay` settings object.
   Read the file first; if it never touches `milkyWay`, no edit is needed (note
   that in the commit message).
 
-- [ ] Add to `tests/@types/engineState.test.ts` (or extend the existing
+- [x] Add to `tests/@types/engineState.test.ts` (or extend the existing
   settings-shape smoke test) an assertion that the constructed default state
   carries `state.settings.milkyWay.labelEnabled === true`. Use the existing
   state-construction helper in that file — do not hand-roll a new state.
-- [ ] Run fails (field absent / type error).
-- [ ] Add `DEFAULT_MILKY_WAY_LABEL_ENABLED` to `defaults.ts`, widen the
+- [x] Run fails (field absent / type error).
+- [x] Add `DEFAULT_MILKY_WAY_LABEL_ENABLED` to `defaults.ts`, widen the
   `EngineSettingsState.milkyWay` type, extend the engine seed + all fixtures.
-- [ ] `npm run typecheck` — green (the type-widening forces every `milkyWay`
+- [x] `npm run typecheck` — green (the type-widening forces every `milkyWay`
   literal to add the field; this surfaces them all).
-- [ ] `npm test` — green.
-- [ ] Commit.
+- [x] `npm test` — green (2717 passed).
+- [x] Commit.
 
 ---
 

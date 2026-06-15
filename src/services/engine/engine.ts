@@ -83,6 +83,7 @@ import {
   DEFAULT_EXPOSURE,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
+  DEFAULT_MILKY_WAY_LABEL_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_REAL_ONLY_MODE,
@@ -317,6 +318,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
     milkyWay: {
       enabled: DEFAULT_MILKY_WAY_ENABLED,
+      labelEnabled: DEFAULT_MILKY_WAY_LABEL_ENABLED,
     },
     filaments: {
       enabled: SOURCE_REGISTRY[Source.Filaments].visible,
