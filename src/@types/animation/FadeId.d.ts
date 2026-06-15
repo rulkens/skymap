@@ -1,7 +1,7 @@
 /**
- * FadeHandle — discriminated union identifying any fadeable layer.
+ * FadeId — discriminated union identifying any fadeable layer.
  *
- * The fade registry stores one `FadeController` per handle, keyed by a
+ * The fade registry stores one `FadeController` per id, keyed by a
  * stable string serialization. The union is closed: every renderer or
  * subsystem that wants to participate in fade orchestration adds itself
  * by extending one of the existing kinds rather than minting an
@@ -49,7 +49,7 @@
  * the union without breaking existing consumers because every consumer
  * matches on `kind` exhaustively.
  *
- * All fields are `readonly` because handles are values used as map keys
+ * All fields are `readonly` because ids are values used as map keys
  * and must not be mutated after construction.
  */
 
@@ -59,7 +59,7 @@ import type { VolumeFieldId } from '../data/VolumeFieldId';
 import type { LabelLayerId } from './LabelLayerId';
 import type { OverlayId } from './OverlayId';
 
-export type FadeHandle =
+export type FadeId =
   | { readonly kind: 'survey'; readonly source: SourceType }
   | { readonly kind: 'filaments' }
   | { readonly kind: 'flow' }

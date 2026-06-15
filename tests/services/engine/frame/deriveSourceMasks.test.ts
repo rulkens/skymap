@@ -19,7 +19,7 @@ import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveS
 import { Source, SURVEY_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { maskHas, ALL_VISIBLE_MASK } from '../../../../src/utils/sourceMask';
 import type { SurveyId } from '../../../../src/@types/engine/data/SurveyId';
-import type { FadeHandle } from '../../../../src/@types/animation/FadeHandle';
+import type { FadeId } from '../../../../src/@types/animation/FadeId';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
 /**
@@ -47,8 +47,8 @@ function makeState(opts: {
     settings: { surveys: { items } } as never,
     subsystems: {
       fades: {
-        opacityOf: (handle: FadeHandle) =>
-          handle.kind === 'survey' ? (opts.opacityBySource?.[handle.source] ?? 0) : 0,
+        opacityOf: (id: FadeId) =>
+          id.kind === 'survey' ? (opts.opacityBySource?.[id.source] ?? 0) : 0,
       },
     } as never,
   };

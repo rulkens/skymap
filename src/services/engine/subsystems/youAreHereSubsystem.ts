@@ -52,8 +52,8 @@ const OUTLINE_EM_FRAC = 0.16;
 
 export function createYouAreHereSubsystem(): YouAreHereSubsystem {
   // One-shot fade-in: the first frame where this producer emits a
-  // non-empty label set fires fadeTo(1) on the layer's FadeHandle.
-  // Subsequent frames skip the call (the handle already saturates at
+  // non-empty label set fires fadeTo(1) on the layer's FadeId.
+  // Subsequent frames skip the call (the id already saturates at
   // 1; even cheap idempotency is wasted work). The label renderer
   // doesn't consume this opacity yet (v1) — the registration is
   // structural so a future tour subsystem can dim the layer via

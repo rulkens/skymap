@@ -42,7 +42,7 @@ import type { WirePointSourceDeps } from '../../../@types/engine/wiring/WirePoin
 import { createAssetSlot } from '../../loading/AssetSlot';
 import { galaxyCatalogFetcher } from '../../loading/fetchers/galaxyCatalogFetcher';
 import { syntheticPointFetcher } from '../../loading/fetchers/syntheticPointFetcher';
-import type { FadeHandle } from '../../../@types/animation/FadeHandle';
+import type { FadeId } from '../../../@types/animation/FadeId';
 import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
 import type { SourceType } from '../../../@types/data/SourceType';
 
@@ -147,7 +147,7 @@ export function wireGalaxyCatalogSourceSlot(
   const { cb } = deps;
   const slotName = `${shortName}-points`;
 
-  // Register the fade handle at opacity 0 so the draw loop's
+  // Register the fade id at opacity 0 so the draw loop's
   // `fadeOpacityOf` lookup always finds it, even on the first frame
   // before any upload lands.  The commit drives the fadeTo lifecycle
   // from there.
@@ -167,7 +167,7 @@ export function wireGalaxyCatalogSourceSlot(
       // populated later in bootstrap (pickRenderer, cam), and would
       // reject this upload during the legitimate wireSlots window.
       if (state.gpu.renderer === null) return;
-      const handle: FadeHandle = { kind: 'survey', source };
+      const id: FadeId = { kind: 'survey', source };
       const fades = state.subsystems.fades;
 
       // Tier swap: fade the old buffer out before the new one lands so
@@ -177,7 +177,7 @@ export function wireGalaxyCatalogSourceSlot(
       // then does `upload()` destroy + recreate it.
       const isFirstLoad = !state.data.galaxies.catalogs.has(source);
       if (!isFirstLoad) {
-        await fades.fadeTo(handle, 0, FADE_OUT_DURATION_MS);
+        await fades.fadeTo(id, 0, FADE_OUT_DURATION_MS);
       }
 
       const t0 = performance.now();
@@ -189,7 +189,7 @@ export function wireGalaxyCatalogSourceSlot(
       // Fire-and-forget fade-in so the slot's `ready` transition
       // fires immediately; user interaction doesn't wait for the
       // smoothstep to saturate.
-      void fades.fadeTo(handle, 1, FADE_IN_DURATION_MS);
+      void fades.fadeTo(id, 1, FADE_IN_DURATION_MS);
 
       const dtMs = Math.round(performance.now() - t0);
       // Dump what the GPU actually holds after upload.  If this

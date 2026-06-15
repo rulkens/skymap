@@ -26,7 +26,7 @@ import {
   FADE_IN_DURATION_MS,
   FADE_OUT_DURATION_MS,
 } from '../../../src/services/animation/fadeController';
-import type { FadeHandle } from '../../../src/@types/animation/FadeHandle';
+import type { FadeId } from '../../../src/@types/animation/FadeId';
 import { setStructureItemEnabledForTest } from '../../../src/services/engine/handles/setStructureItemEnabled';
 import { setStructureLabelEnabledForTest } from '../../../src/services/engine/handles/setStructureLabelEnabled';
 import { setSurveyLabelEnabledForTest } from '../../../src/services/engine/handles/setSurveyLabelEnabled';
@@ -36,13 +36,13 @@ import type { EngineSettingsState } from '../../../src/@types/settings/EngineSet
 // ── Minimal fixture factory ───────────────────────────────────────────────
 
 function makeFixture() {
-  const fadeCalls: Array<{ handle: FadeHandle; target: number; duration: number }> = [];
+  const fadeCalls: Array<{ id: FadeId; target: number; duration: number }> = [];
   const fades = {
     label: 'fadeRegistry',
     register: vi.fn(),
     unregister: vi.fn(),
-    fadeTo: vi.fn(async (h: FadeHandle, target: number, duration: number) => {
-      fadeCalls.push({ handle: h, target, duration });
+    fadeTo: vi.fn(async (h: FadeId, target: number, duration: number) => {
+      fadeCalls.push({ id: h, target, duration });
     }),
     setImmediate: vi.fn(),
     opacityOf: vi.fn(() => 1),
@@ -93,7 +93,7 @@ describe('setStructureItemEnabled — fade orchestration', () => {
 
     expect(fx.fadeCalls).toEqual([
       {
-        handle: { kind: 'markerLayer', category: 'cluster' },
+        id: { kind: 'markerLayer', category: 'cluster' },
         target: 0,
         duration: FADE_OUT_DURATION_MS,
       },
@@ -113,7 +113,7 @@ describe('setStructureItemEnabled — fade orchestration', () => {
 
     expect(fx.fadeCalls).toEqual([
       {
-        handle: { kind: 'markerLayer', category: 'cluster' },
+        id: { kind: 'markerLayer', category: 'cluster' },
         target: 1,
         duration: FADE_IN_DURATION_MS,
       },
@@ -138,7 +138,7 @@ describe('setStructureLabelEnabled — fade orchestration', () => {
 
     expect(fx.fadeCalls).toEqual([
       {
-        handle: { kind: 'labelLayer', layer: 'structure', category: 'cluster' },
+        id: { kind: 'labelLayer', layer: 'structure', category: 'cluster' },
         target: 0,
         duration: FADE_OUT_DURATION_MS,
       },
@@ -162,7 +162,7 @@ describe('setSurveyLabelEnabled — famous-galaxy survey', () => {
     // row's labelLayer), so a toggle fires that handle (no per-category key).
     expect(fx.fadeCalls).toEqual([
       {
-        handle: { kind: 'labelLayer', layer: 'galaxyNames' },
+        id: { kind: 'labelLayer', layer: 'galaxyNames' },
         target: 0,
         duration: FADE_OUT_DURATION_MS,
       },
@@ -181,7 +181,7 @@ describe('setSurveyLabelEnabled — famous-galaxy survey', () => {
 
     expect(fx.fadeCalls).toEqual([
       {
-        handle: { kind: 'labelLayer', layer: 'galaxyNames' },
+        id: { kind: 'labelLayer', layer: 'galaxyNames' },
         target: 1,
         duration: FADE_IN_DURATION_MS,
       },
