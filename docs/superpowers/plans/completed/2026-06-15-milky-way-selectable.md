@@ -132,12 +132,12 @@ static const (not a catalog row) and why the discriminant is `type` (the union t
 shared with the registry row), keeping it on the same table-dispatch path as galaxies
 and structures.
 
-- [ ] Add test `MILKY_WAY_INFO carries the 'milkyWay' tag` asserting `MILKY_WAY_INFO.type === 'milkyWay'`.
-- [ ] Add test `MILKY_WAY_INFO x/y/z match MILKY_WAY_CENTER_WORLD` asserting the triple
+- [x] Add test `MILKY_WAY_INFO carries the 'milkyWay' tag` asserting `MILKY_WAY_INFO.type === 'milkyWay'`.
+- [x] Add test `MILKY_WAY_INFO x/y/z match MILKY_WAY_CENTER_WORLD` asserting the triple
   equals `MILKY_WAY_CENTER_WORLD`.
-- [ ] Add test `MILKY_WAY_INFO displayName is "Milky Way"`.
-- [ ] `npm test -- milkyWayInfo` → all pass; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] Add test `MILKY_WAY_INFO displayName is "Milky Way"`.
+- [x] `npm test -- milkyWayInfo` → all pass; `npm run typecheck` clean.
+- [x] Commit.
 
 ### Task 2: Widen `FocusableTarget` + `FocusableTargetType` with the milkyWay arm
 
@@ -167,12 +167,12 @@ Add the `MilkyWayInfo` import; update the union's docblock to name the three arm
 note that dispatch goes through the `type`-keyed tables. Confirm `FocusableTargetType`
 is `'galaxyCatalog' | 'structure' | 'milkyWay'`.
 
-- [ ] `npm run typecheck` clean. Any table or `switch` that becomes non-exhaustive on
+- [x] `npm run typecheck` clean. Any table or `switch` that becomes non-exhaustive on
   `FocusableTarget` / `FocusableTargetType` here belongs to a later task (its
   `'milkyWay'` row is added there) — if typecheck surfaces one early, add the row in its
   owning task, NEVER a silent `default` that swallows the milkyWay case.
-- [ ] `npm test` → green (no behaviour change).
-- [ ] Commit.
+- [x] `npm test` → green (no behaviour change).
+- [x] Commit.
 
 ### Task 3: `resolvePick` milkyWay row (code 16 → `MILKY_WAY_INFO`)
 
@@ -189,13 +189,13 @@ fall-through-null). Add: `if (entry?.type === 'milkyWay') return MILKY_WAY_INFO;
 `Source.MilkyWay` is code 16 (`src/data/source.ts:102`), and
 `SOURCE_REGISTRY[16].type === 'milkyWay'` (`src/data/sources/milky-way.ts`).
 
-- [ ] Add test `resolvePick resolves a milkyWay code to MILKY_WAY_INFO` asserting
+- [x] Add test `resolvePick resolves a milkyWay code to MILKY_WAY_INFO` asserting
   `resolvePick({ sourceCode: Source.MilkyWay, localIdx: 0 }, deps) === MILKY_WAY_INFO`
   (any `localIdx`; the MW ignores it).
-- [ ] `npm test -- resolvePick` → passes (the existing galaxy / structure / null cases
+- [x] `npm test -- resolvePick` → passes (the existing galaxy / structure / null cases
   stay green).
-- [ ] `npm run typecheck` clean.
-- [ ] Commit.
+- [x] `npm run typecheck` clean.
+- [x] Commit.
 
 ### Task 4: `targetEq` milkyWay row (singleton self-equality)
 
@@ -214,12 +214,12 @@ on both → true`).
 equality) so the dedup is robust by contract, not by the singleton happening to be the
 same object.
 
-- [ ] Add test `targetEq is true for two milkyWay targets` asserting
+- [x] Add test `targetEq is true for two milkyWay targets` asserting
   `targetEq(MILKY_WAY_INFO, MILKY_WAY_INFO) === true`.
-- [ ] Add test `targetEq is false for milkyWay vs a galaxy` (use an existing GalaxyInfo
+- [x] Add test `targetEq is false for milkyWay vs a galaxy` (use an existing GalaxyInfo
   fixture) and `targetEq is false for milkyWay vs a structure`.
-- [ ] `npm test -- targetEq` → passes.
-- [ ] Commit.
+- [x] `npm test -- targetEq` → passes.
+- [x] Commit.
 
 ### Task 5: MW pick provider (the GPU work)
 
@@ -277,18 +277,18 @@ in `structureMarkerRenderer.ts`:
 
 `packSelection` / `PICK_SENTINEL_OFFSET` live in `src/data/selectionEncoding.ts:59,68`.
 
-- [ ] Add test `milkyWayPickRenderer constructs under a null device` asserting the
+- [x] Add test `milkyWayPickRenderer constructs under a null device` asserting the
   renderer is returned and `pickMilkyWay` / `destroy` are callable no-ops (mirror the
   null-device assertions in `structureMarkerRenderer.test.ts`).
-- [ ] Add test `milkyWayPickRenderer satisfies the Renderer label contract` asserting
+- [x] Add test `milkyWayPickRenderer satisfies the Renderer label contract` asserting
   `renderer.label === 'milkyWayPickRenderer'`.
-- [ ] (If a GPU-backed unit test is feasible in the existing harness — check whether
+- [x] (If a GPU-backed unit test is feasible in the existing harness — check whether
   `pickRenderer.test.ts` exercises a real device or only null — add a test asserting a
   pick at the MW screen position decodes to `Source.MilkyWay`. If the harness is
   null-device-only, SKIP and leave a one-line note; the manual smoke test in the DoD
   covers the round-trip.)
-- [ ] `npm test -- milkyWayPickRenderer` → passes; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] `npm test -- milkyWayPickRenderer` → passes; `npm run typecheck` clean.
+- [x] Commit.
 
 ### Task 6: Wire the MW pick provider into the pick pass + visibility gate
 
@@ -327,14 +327,14 @@ still runs a pick pass.
 - `collectPickTargets`: extend `hasAny` so a frame with only the MW on screen still picks
   (cite the structure-marker fold-in at `collectPickTargets.ts` `hasStructureMarkers`).
 
-- [ ] Add test `collectPickTargets.hasAny is true when only the Milky Way is visible`
+- [x] Add test `collectPickTargets.hasAny is true when only the Milky Way is visible`
   (no galaxy catalogs, no structure markers, MW disk visible) asserting `hasAny === true`.
-- [ ] Add a `pickRenderer` test asserting `pickMilkyWay` is invoked inside the pick pass
+- [x] Add a `pickRenderer` test asserting `pickMilkyWay` is invoked inside the pick pass
   when the provider is present and the MW is gated visible, and NOT invoked when gated
   hidden (use a spy `vi.fn<() => void>()` on the provider; mirror how the structure-ring
   call is asserted in the existing pick-renderer test).
-- [ ] `npm test -- pickRenderer collectPickTargets` → passes; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] `npm test -- pickRenderer collectPickTargets` → passes; `npm run typecheck` clean.
+- [x] Commit.
 
 ### Task 7: `selectionRingPass` milkyWay branch
 
@@ -369,16 +369,16 @@ return sel !== null && (sel.type === 'galaxyCatalog' || sel.type === 'milkyWay')
 // Structures render their halo via the marker pass, not here.
 ```
 
-- [ ] Add test `selectionRingPass enabled() is true when the Milky Way is selected`
+- [x] Add test `selectionRingPass enabled() is true when the Milky Way is selected`
   asserting `enabled(stateWithMwSelected) === true`.
-- [ ] Add test `selectionRingPass draws the ring at MILKY_WAY_CENTER_WORLD for a milkyWay
+- [x] Add test `selectionRingPass draws the ring at MILKY_WAY_CENTER_WORLD for a milkyWay
   selection` — spy on `selectionRingRenderer.setSelection` (`vi.fn<...>()`) and assert the
   `worldPos` passed equals `MILKY_WAY_CENTER_WORLD` and `ringRadiusPx` is finite/positive.
-- [ ] Add test `selectionRingPass enabled() stays false for a structure selection`
+- [x] Add test `selectionRingPass enabled() stays false for a structure selection`
   (regression — the structure path is unchanged).
-- [ ] Add test `selectionRingPass enabled() stays true for a galaxy selection` (regression).
-- [ ] `npm test -- selectionRingPass` → passes; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] Add test `selectionRingPass enabled() stays true for a galaxy selection` (regression).
+- [x] `npm test -- selectionRingPass` → passes; `npm run typecheck` clean.
+- [x] Commit.
 
 ### Task 8: `commitMilkyWayFocus` + `COMMIT_FOCUS['milkyWay']` row; retire `focusOnMilkyWay`
 
@@ -425,21 +425,21 @@ the fade collapses exactly as a galaxy focus does — confirm by reading the cur
 `focusOnHome` (`engine.ts:734-747`) is **unchanged** — a different gesture (the wide bbox
 reset).
 
-- [ ] Add test `COMMIT_FOCUS['milkyWay'] resolves to commitMilkyWayFocus` (table-row
+- [x] Add test `COMMIT_FOCUS['milkyWay'] resolves to commitMilkyWayFocus` (table-row
   assertion, mirroring the Part 0 `COMMIT_FOCUS` table tests).
-- [ ] Add test `commitFocus routes a milkyWay target to the milkyWay focus path` —
+- [x] Add test `commitFocus routes a milkyWay target to the milkyWay focus path` —
   assert the observable: both slots end up `MILKY_WAY_INFO` and a tween to
   `MILKY_WAY_VIEW_DISTANCE_MPC` / `MILKY_WAY_CENTER_WORLD` is enqueued.
-- [ ] Add test `commitMilkyWayFocus sets both the select and focus slots to MILKY_WAY_INFO`.
-- [ ] Add test `commitMilkyWayFocus is a no-op when state.cam is null` (mirrors the old
+- [x] Add test `commitMilkyWayFocus sets both the select and focus slots to MILKY_WAY_INFO`.
+- [x] Add test `commitMilkyWayFocus is a no-op when state.cam is null` (mirrors the old
   guard at `engine.ts:756-757`).
-- [ ] Add test `a milkyWay focus collapses the structure member-isolation fade`
+- [x] Add test `a milkyWay focus collapses the structure member-isolation fade`
   (`focused()?.type === 'structure'` is false) — or assert via the `runFrame` gate if
   that's where the existing galaxy-focus equivalent is tested.
-- [ ] `npm test -- commitFocus commitMilkyWayFocus engine` → passes;
+- [x] `npm test -- commitFocus commitMilkyWayFocus engine` → passes;
   `npm run typecheck` clean (the `EngineCameraHandle` removal must surface no stray
   callers — fix any).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 9: `URL_HASH_FOR['milkyWay']` row (clears the focus hash)
 
@@ -462,12 +462,12 @@ This matches pre-existing behavior: the old `focusOnMilkyWay` set the focus slot
 explicitly deferred (see the spec's out-of-scope) and would need the `FocusTarget` parser
 to grow a milkyWay kind — not touched here.
 
-- [ ] Add test `URL_HASH_FOR['milkyWay'] returns null` (table-row assertion).
-- [ ] Add test `a Milky Way focus clears the focus hash` driving the consumer
+- [x] Add test `URL_HASH_FOR['milkyWay'] returns null` (table-row assertion).
+- [x] Add test `a Milky Way focus clears the focus hash` driving the consumer
   (`onFocusChange(MILKY_WAY_INFO)` → resolver → no `#focus=` written / it is cleared),
   mirroring the existing per-`type` hash test.
-- [ ] `npm test` (URL hash + useUrlSync suites) → passes; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] `npm test` (URL hash + useUrlSync suites) → passes; `npm run typecheck` clean.
+- [x] Commit.
 
 ### Task 10: Typed palette MW command; delete the sentinel + onSelect special-case
 
@@ -501,18 +501,18 @@ Either way: the select action is `camera.focusOn(MILKY_WAY_INFO)` — the SAME s
 path every other target uses. No sentinel id, no `selectFamous` fallthrough, no onSelect
 `if (id === ...)`.
 
-- [ ] Add test `the palette routes the Milky Way command to focusOn(MILKY_WAY_INFO)` —
+- [x] Add test `the palette routes the Milky Way command to focusOn(MILKY_WAY_INFO)` —
   render/drive the palette, select the MW row, assert the wired callback fires with
   `MILKY_WAY_INFO` (no string id).
-- [ ] Add test `searching "milky way" surfaces the Milky Way command` (the matcher scores
+- [x] Add test `searching "milky way" surfaces the Milky Way command` (the matcher scores
   the MW names).
-- [ ] Grep the tree for `MILKY_WAY_ID` / `__milky-way__` / `MILKY_WAY_ENTRY` (the palette
+- [x] Grep the tree for `MILKY_WAY_ID` / `__milky-way__` / `MILKY_WAY_ENTRY` (the palette
   pseudo one) → zero matches after deletion. NOTE: `src/data/sources/milky-way.ts` ALSO
   exports a const named `MILKY_WAY_ENTRY` (the source-registry row) — that one STAYS; only
   the `src/data/milkyWay/milkyWayEntry.ts` palette pseudo-entry is deleted. Verify the grep
   distinguishes them.
-- [ ] `npm test` (palette + App suites) → passes; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] `npm test` (palette + App suites) → passes; `npm run typecheck` clean.
+- [x] Commit.
 
 ### Task 11: Retire `FamousMetaEntry.pseudo` + the glyph-fallback path iff MW was its only user
 
@@ -527,14 +527,14 @@ verify nothing else sets `pseudo: true` and remove the dead path.
   branch iff `pseudo` is removed; famous rows then always render the `<img>` thumbnail)
 - relevant tests (modify)
 
-- [ ] Grep `pseudo` across `src/` + `tests/` + `tools/`. The only functional setter is the
+- [x] Grep `pseudo` across `src/` + `tests/` + `tools/`. The only functional setter is the
   deleted `milkyWayEntry.ts`; `famous_meta.json` never sets it (cite the docblock at
   `FamousMetaEntry.d.ts:14-33`). Confirm no other reader depends on it.
-- [ ] IF confirmed sole-user: remove the `pseudo?: true` field and the `isPseudo` branch;
+- [x] IF confirmed sole-user: remove the `pseudo?: true` field and the `isPseudo` branch;
   the palette's famous-row render simplifies to the `<img>` thumbnail only. IF some other
   user surfaces, STOP and leave `pseudo` in place with a note — do not break that user.
-- [ ] `npm test` → passes; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] `npm test` → passes; `npm run typecheck` clean.
+- [x] Commit.
 
 ### Task 12: `MilkyWayDetailCard` + `CompactMilkyWayCard` + `DETAIL_CARD['milkyWay']` row
 
@@ -570,46 +570,46 @@ short line. The outer wrapper stays owned by `InfoCard` (the `<details>`-remount
 `InfoCard.tsx:5-9`), satisfied by the table dispatch rendering inside the existing stable
 wrapper.
 
-- [ ] Add test `DETAIL_CARD['milkyWay'] resolves to the Milky Way detail + compact cards`
+- [x] Add test `DETAIL_CARD['milkyWay'] resolves to the Milky Way detail + compact cards`
   (table-row assertion, mirroring the Part 0 `DETAIL_CARD` table tests — both `Detail` and
   `Compact`).
-- [ ] Add test `InfoCard renders the Milky Way card for a milkyWay selection` asserting
+- [x] Add test `InfoCard renders the Milky Way card for a milkyWay selection` asserting
   the headline "Milky Way" + the description text appear and no `<img>` thumbnail is
   rendered (glyph instead).
-- [ ] Add test `the Milky Way card's Fly here button calls onFocus with MILKY_WAY_INFO`.
-- [ ] Add test `InfoCard renders the compact Milky Way card on hover` (a milkyWay hover →
+- [x] Add test `the Milky Way card's Fly here button calls onFocus with MILKY_WAY_INFO`.
+- [x] Add test `InfoCard renders the compact Milky Way card on hover` (a milkyWay hover →
   the compact variant, glyph + name, no thumbnail).
-- [ ] Add test `a galaxy selection still renders the galaxy card` (regression — the table
+- [x] Add test `a galaxy selection still renders the galaxy card` (regression — the table
   dispatch didn't mis-route galaxies).
-- [ ] `npm test` (InfoCard suite) → passes; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] `npm test` (InfoCard suite) → passes; `npm run typecheck` clean.
+- [x] Commit.
 
 ---
 
 ## Definition of Done
 
-- [ ] `npm test` is fully green (no skips beyond the optional GPU-backed pick test in
+- [x] `npm test` is fully green (no skips beyond the optional GPU-backed pick test in
   Task 5, if the harness is null-device-only).
-- [ ] `npm run typecheck` is clean for both `src` and `tools` tsconfigs.
-- [ ] `npm run build` succeeds.
-- [ ] The Milky Way is **clickable in-scene** → selecting it shows the **InfoCard** (via
+- [x] `npm run typecheck` is clean for both `src` and `tools` tsconfigs.
+- [x] `npm run build` succeeds.
+- [x] The Milky Way is **clickable in-scene** → selecting it shows the **InfoCard** (via
   `DETAIL_CARD['milkyWay']`), draws the **selection ring**, and **double-click / palette /
   "Fly here"** all **focus** (tween) it (via `COMMIT_FOCUS['milkyWay']`) — every step on
   the standard tagged `FocusableTarget` path through the dispatch tables, no MW-specific
   method or predicate.
-- [ ] `camera.focusOn(MILKY_WAY_INFO)` is the only focus entry point; `focusOnMilkyWay` is
+- [x] `camera.focusOn(MILKY_WAY_INFO)` is the only focus entry point; `focusOnMilkyWay` is
   gone from `engine.ts` AND `EngineCameraHandle` (grep returns zero matches).
-- [ ] The `__milky-way__` sentinel + `src/data/milkyWay/milkyWayEntry.ts` + the `App.tsx`
+- [x] The `__milky-way__` sentinel + `src/data/milkyWay/milkyWayEntry.ts` + the `App.tsx`
   `onSelect` MW special-case are deleted (grep for `MILKY_WAY_ID` / `__milky-way__` /
   `milkyWayEntry` returns zero matches; the surviving `MILKY_WAY_ENTRY` in
   `src/data/sources/milky-way.ts` is the source-registry row, intentionally kept).
-- [ ] `FamousMetaEntry.pseudo` + the palette glyph-fallback path are removed (Task 11) OR
+- [x] `FamousMetaEntry.pseudo` + the palette glyph-fallback path are removed (Task 11) OR
   a documented note records why a non-MW user kept them.
-- [ ] The MW is present as exactly **one row per dispatch table** (`DETAIL_CARD`,
+- [x] The MW is present as exactly **one row per dispatch table** (`DETAIL_CARD`,
   `URL_HASH_FOR`, `COMMIT_FOCUS`) plus the `resolvePick` / `targetEq` / `selectionRingPass`
   arms — no dispatch *logic* was edited to special-case it.
-- [ ] No new `TODO` / `FIXME` comments introduced by this plan.
-- [ ] **Manual smoke test** (dev server, real data — ask the user to look, per the
+- [x] No new `TODO` / `FIXME` comments introduced by this plan.
+- [x] **Manual smoke test** (dev server, real data — ask the user to look, per the
   no-kill-dev-server convention): fly near the Milky Way until the disk is visible; click
   the galactic centre; confirm (a) the InfoCard shows the Milky Way card with the glyph,
   (b) a selection ring is drawn around it, (c) double-click (or the palette "Milky Way"
