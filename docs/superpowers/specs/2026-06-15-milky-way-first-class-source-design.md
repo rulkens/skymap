@@ -11,10 +11,18 @@ the same plumbing as every other source, retiring the bespoke identity hacks.
 Its procedural-disk **renderer** stays its own subsystem — only the identity
 axis is unified.
 
-Alongside, fix a naming inconsistency the MW's absence exposed: the `FadeId`
-union names its per-source-render fades three different ways, and the MW disk
-fade is buried inside `overlay`. Bring the fade-layer names into line with the
-source-type names.
+Designing this surfaced two adjacent decomplections worth doing first, because
+they make the MW work fall out almost for free:
+
+- **The `Selection` ↔ `FocusableTarget` mirror** — two parallel discriminated
+  unions for the same entities. `Selection` is purely an internal intermediate;
+  collapsing it removes a mirror the MW work would otherwise have to pay twice.
+- **`FadeId` naming** — the per-source-render fade kinds are named three
+  different ways, and the MW disk fade is buried inside `overlay`.
+
+The work is therefore three sequenced parts: **Part 0** (selection/target
+unification) and **Part 1** (fade/source naming) are pure refactors with no
+behavior change; **Part 2** (MW selectable) is the feature, built on both.
 
 ## Background — what already landed
 
@@ -34,31 +42,117 @@ source-type names.
 4. **Not pickable** — `bearsMarker: false`, no pick geometry; you cannot click the MW.
 5. **`FadeId` naming** — `scalarField` / `markerLayer` are named by render-tech /
    aspect rather than source; the MW disk fade lives under `overlay:'milkyWay'`.
+6. **The `Selection` ↔ `FocusableTarget` mirror** — adding the MW would mean
+   adding a `milkyWay` variant to *both* unions.
 
 ---
 
-## Part 1 — Fade-layer / source naming consistency
+## Part 0 — Collapse `Selection` into `FocusableTarget` (refactor, no behavior change)
 
-A refactor with **no behavior change**: green tests before and after.
+### Diagnosis
+
+Two parallel discriminated unions describe the same set of entities:
+
+```ts
+Selection       = { kind:'galaxy', source, localIdx } | { kind:'structure', id }
+FocusableTarget = GalaxyInfo | StructureRecord
+```
+
+`Selection` is the lightweight identity decoded from the GPU pick
+`(sourceCode, localIdx)`; `FocusableTarget` is the resolved, display-ready data.
+But:
+
+- The selection subsystem's **callbacks already emit `FocusableTarget`**
+  (`onHoverChange` / `onSelectChange` / `onFocusChange`). `Selection` never
+  reaches the outside — it lives *only* between the pick decode and the slot.
+- The identity is a **subset of fields on the resolved target**: `GalaxyInfo`
+  carries `source` + `index` + `x/y/z` + `diameterKpc`; `StructureRecord`
+  carries `id`. Every internal reader of the slots (`selectionRingPass`,
+  `diskRadiusRingPass`, `produceStructureMarkers`/`Labels` via `structureIdOf`,
+  `runFrame`'s focus fade) needs only those fields.
+
+So the second union is accidental complexity. Two consequences fall out:
+
+- **`prebuiltInfo`** exists only because `setSelected`/`setFocused` resolve
+  `Selection → target` *internally*, and the `selectByAlias` deep-link race can
+  make that internal lookup return null (GPU upload not yet done) → blank card.
+  Once callers pass an already-resolved target, there is no internal lookup to
+  race, and the escape hatch dissolves.
+- **`galaxyInfoFor`** is already pure-in-disguise (takes everything as args; the
+  closure only captures the `getCloud`/`getFamousMeta` accessors).
+
+### Target
+
+```
+PickResult { sourceCode, localIdx }                 // raw GPU decode — unchanged
+        │  resolvePick(pick, deps): FocusableTarget | null   // pure
+        ▼
+FocusableTarget = GalaxyInfo | StructureRecord       // the ONE held type
+        │  hover / select / focus slots
+        ▼
+onHoverChange / onSelectChange / onFocusChange       // unchanged signatures
+```
+
+Concrete changes:
+
+- **Delete the `Selection` union** (`src/@types/engine/subsystems/Selection.d.ts`)
+  and `selectionEq`. The slots hold `FocusableTarget | null`.
+- **Extract pure resolvers** (one function per file, project convention):
+  - `resolveGalaxyInfo(cloud, localIdx, source, famousMeta): GalaxyInfo | null`
+    — lifted from `galaxyInfoFor`; the bounds-check is the tier-swap race guard.
+  - `resolvePick(pick: PickResult, deps): FocusableTarget | null` — merges
+    `pickToSelection` + `resolveTarget`; dispatches on `SOURCE_REGISTRY[code].type`
+    (`galaxyCatalog` → `resolveGalaxyInfo`; `structure` → structure-store lookup;
+    falls through to null + warn for non-pickable codes). `deps` carries the
+    cloud/structure/famousMeta accessors.
+- **`setHovered`/`setSelected`/`setFocused`** take `FocusableTarget | null`
+  directly. Dedup via a small `targetEq` comparing identity fields
+  (galaxy: `source` + `index`; structure: `id`). **Drop `prebuiltInfo`.**
+- **`selectedTarget()`** collapses into `selected()` (now identical) — remove the
+  redundant getter; update `wireInput`'s dblclick (`focusOn(selected())`).
+- **Boundary resolution** moves to the pick/URL edge:
+  - `wireInput` hover/click: `resolvePick(pick, deps)` → `setHovered`/`setSelected(target)`.
+  - `clickHandler` returns a `FocusableTarget | null` (resolves via `resolvePick`)
+    instead of a `Selection`.
+  - `selectByAlias` resolves to a target and passes it straight in (it already
+    builds the info).
+- **Slot readers** read off the target:
+  - `selectionRingPass` / `diskRadiusRingPass`: read `worldPos` (`x/y/z`) +
+    `diameterKpc` from the `GalaxyInfo` instead of re-indexing the catalog by
+    `localIdx` (drops their own tier-swap-race guards).
+  - `structureIdOf(target)` = `isStructure(target) ? target.id : null`.
+  - `runFrame` focus fade: `isStructure(focused())`.
+
+### Part 0 testing
+
+`selectionSubsystem` tests update to assert targets in the slots (not
+`Selection`s). New focused unit tests for `resolveGalaxyInfo` (incl. the
+out-of-bounds → null race guard) and `resolvePick` (galaxy / structure / null
+dispatch). Ring-pass tests assert worldPos read from the target. Net deletion of
+the `selectionEq` / `prebuiltInfo` cases.
+
+---
+
+## Part 1 — Fade-layer / source naming consistency (refactor, no behavior change)
 
 ### Diagnosis
 
 `FadeId` mixes two axes — *which source* and *which render aspect* — and names
 its kinds inconsistently:
 
-| Current kind   | Discriminator             | Named by    | Source type        |
-| -------------- | ------------------------- | ----------- | ------------------ |
-| `galaxyCatalog`| `id: GalaxyCatalogId`     | source ✓    | galaxyCatalog      |
-| `scalarField`  | `field: VolumeFieldId`    | render-tech | volume             |
-| `markerLayer`  | `category: StructureCategory` | aspect  | structure          |
-| `filaments`    | —                         | source (plural) | filament       |
-| `flow`         | —                         | source ✓    | flow               |
-| `overlay`      | `id: OverlayId`           | aspect      | milkyWay + galaxy-LOD |
-| `labelLayer`   | `layer` (+`category?`)    | aspect      | cross-source       |
-| `volumesMaster`| —                         | aspect      | volume             |
+| Current kind   | Discriminator                 | Named by    | Source type        |
+| -------------- | ----------------------------- | ----------- | ------------------ |
+| `galaxyCatalog`| `id: GalaxyCatalogId`         | source ✓    | galaxyCatalog      |
+| `scalarField`  | `field: VolumeFieldId`        | render-tech | volume             |
+| `markerLayer`  | `category: StructureCategory` | aspect      | structure          |
+| `filaments`    | —                             | source (plural) | filament       |
+| `flow`         | —                             | source ✓    | flow               |
+| `overlay`      | `id: OverlayId`               | aspect      | milkyWay + galaxy-LOD |
+| `labelLayer`   | `layer` (+`category?`)        | aspect      | cross-source       |
+| `volumesMaster`| —                             | aspect      | volume             |
 
 `galaxyCatalog`, `markerLayer`, and `scalarField` are the **same shape** (one
-fade per source-level id) named three different ways. The MW disk is buried in
+fade per source-level id) named three different ways; the MW disk is buried in
 `overlay`.
 
 ### Target — Model A
@@ -66,8 +160,8 @@ fade per source-level id) named three different ways. The MW disk is buried in
 Name every **primary-render** fade by its source type with an `id` discriminator.
 Labels stay on the cross-source `labelLayer` axis (labels genuinely span sources
 and have their own director — `galaxyNames` is shared across all famous galaxies;
-folding labels into per-source kinds would be a large, risky restructure for
-little gain — the rejected "Model B").
+folding labels into per-source kinds is a large, risky restructure for little
+gain — the rejected "Model B").
 
 ```ts
 export type FadeId =
@@ -86,33 +180,19 @@ export type FadeId =
   | { readonly kind: 'volumesMaster' };
 ```
 
-Decisions (confirmed during brainstorm):
+Decisions (confirmed during brainstorm): volume kind = **`volumeField`**;
+**`structure`** kind with `id: StructureId`; **`filament`** singular.
 
-- **Volume kind name = `volumeField`** (matches the `VolumeFieldId` type).
-- **`structure`** kind with `id: StructureId` (was `markerLayer` / `category`).
-- **`filament`** singular (matches the `filament` source type).
-
-### `serializeFadeId` updates in lockstep
-
-```ts
-case 'structure':   return `structure:${h.id}`;
-case 'volumeField': return `volumeField:${h.id}`;
-case 'milkyWay':    return 'milkyWay';
-case 'filament':    return 'filament';
-// labelLayer key unchanged in shape (still layer + optional category suffix)
-```
+`serializeFadeId` updates in lockstep (`structure:${id}`, `volumeField:${id}`,
+`milkyWay`, `filament`; `labelLayer` key shape unchanged).
 
 ### MW disk fade moves out of `overlay`
 
-- `OverlayId` drops `'milkyWay'` → `'proceduralDisks' | 'texturedDisks'` (the two
-  galaxy-LOD render passes that legitimately remain always-on overlays).
-- The MW disk fade is now `{ kind: 'milkyWay' }`. Repoint:
-  - `milkyWayPass` reads `opacityOf({ kind: 'milkyWay' })`.
-  - `registerOverlayFades` seeds `{ kind: 'milkyWay' }` from
-    `state.settings.milkyWay.enabled ? 1 : 0` (it already seeds the label layer
-    from `labelEnabled`).
-  - The disk toggle handle (`setEnabled` / `EngineMilkyWayHandle.setEnabled`)
-    `fadeTo`s `{ kind: 'milkyWay' }`.
+- `OverlayId` drops `'milkyWay'` → `'proceduralDisks' | 'texturedDisks'`.
+- The MW disk fade is now `{ kind: 'milkyWay' }`. Repoint `milkyWayPass`
+  (`opacityOf({ kind: 'milkyWay' })`), `registerOverlayFades` (seed from
+  `state.settings.milkyWay.enabled ? 1 : 0`, mirroring the label-layer seed),
+  and the disk toggle handle (`EngineMilkyWayHandle.setEnabled`).
 
 ### Repo-wide rename `StructureCategory` → `StructureId`
 
@@ -122,16 +202,13 @@ parallel of `GalaxyCatalogId` and `VolumeFieldId`. Rename it everywhere so the
 codebase carries the parallel triple `GalaxyCatalogId / StructureId / VolumeFieldId`
 with no two-names-one-concept. `'category'` is a POI-era leftover.
 
-Scope of the sweep (mechanical, type-checker-guarded):
-
-- The type file `src/@types/data/structure/StructureCategory.d.ts` → `StructureId.d.ts`.
-- Every `StructureCategory` reference: settings keys, marker buckets, label
-  categories, `pickToSelection`, the runtime companion `STRUCTURE_CATEGORIES`
-  (rename the file/symbol to match), and their tests.
-- `StructureId` is distinct in meaning from the per-record `StructureRecord.id`
-  (e.g. `"A2703"`). The fade is keyed per-source-id (per category), exactly as
-  `GalaxyCatalogId` keys per-catalog, not per-galaxy — so the name is sound. The
-  rename docblock must state this to forestall confusion with the record id.
+Scope of the (mechanical, type-checker-guarded) sweep: the type file
+`StructureCategory.d.ts` → `StructureId.d.ts`; every reference (settings keys,
+marker buckets, label categories, `resolvePick`, the runtime companion
+`STRUCTURE_CATEGORIES` symbol/file), and tests. `StructureId` is distinct from
+the per-record `StructureRecord.id` (e.g. `"A2703"`): the fade keys per-source-id
+(per category), exactly as `GalaxyCatalogId` keys per-catalog, not per-galaxy —
+the rename docblock must say so.
 
 ### Part 1 testing
 
@@ -144,19 +221,27 @@ mirroring the label-layer case.
 
 ## Part 2 — Milky Way as a first-class selectable source
 
-Builds on Part 1's `{ kind: 'milkyWay' }` fade. Selectability level: **fully
-selectable** — clickable in-scene, an InfoCard, and the standard select→focus
-path.
+Builds on Part 0 (one resolved-target type) and Part 1 (`{ kind: 'milkyWay' }`
+fade). Selectability level: **fully selectable** — clickable in-scene, an
+InfoCard, and the standard select→focus path. Because of Part 0 there is **no
+`Selection` variant to add** — only a resolved-target variant.
 
-### Selection variant
+### `MilkyWayInfo` target
+
+`FocusableTarget` widens:
 
 ```ts
-// src/@types/engine/subsystems/Selection.d.ts
-export type MilkyWaySelection = { kind: 'milkyWay' };
-export type Selection = GalaxySelection | StructureSelection | MilkyWaySelection;
+export type FocusableTarget = GalaxyInfo | StructureRecord | MilkyWayInfo;
 ```
 
-`selectionEq` gains: both `milkyWay` → equal (singleton, no payload).
+`MilkyWayInfo` is a static const (one type file, one value
+`src/data/milkyWay/milkyWayInfo.ts`): a discriminant so `FocusableTarget` stays
+discriminable (and `isStructure` keeps working), display name "Milky Way", a
+one-line "Our home galaxy — you are here", barred-spiral type, and a distance
+note ("≈ 8 kpc to the galactic centre; we are inside it"), plus the `x/y/z` of
+`MILKY_WAY_CENTER_WORLD` so ring/focus readers treat it uniformly. No photometry,
+no `(source, localIdx)` — it is not a catalog object. The InfoCard grows one
+small branch keyed on the discriminant (no thumbnail; a glyph in the image slot).
 
 ### Pick — strategy #1, pick-only
 
@@ -169,116 +254,70 @@ A tiny **screen-size-clamped pick billboard** at `MILKY_WAY_CENTER_WORLD` stamps
 - Clamped to a min pixel size so it is hittable at any zoom (like a galaxy point).
 - **Invisible** (pick-only): the visible affordances are the existing disk
   impostor + the "You are here" label. No always-on marker.
-- **Gated on MW disk visibility** — only contributes to the pick texture when the
-  MW is on screen (both disk and label have faded out by the home framing, so the
-  MW is never pickable at hundreds of Mpc — correct).
+- **Gated on MW disk visibility** — only contributes when the MW is on screen
+  (both disk and label have faded out by the home framing, so the MW is never
+  pickable at hundreds of Mpc — correct).
 
-`pickToSelection` grows a branch:
-
-```ts
-if (entry?.type === 'milkyWay') return { kind: 'milkyWay' };
-```
-
-The decode (`unpackPick`) is unchanged — code 16 already round-trips.
-
-### InfoCard target
-
-`FocusableTarget` widens:
-
-```ts
-export type FocusableTarget = GalaxyInfo | StructureRecord | MilkyWayInfo;
-```
-
-`MilkyWayInfo` is a static const (one type, one value — `src/data/milkyWay/milkyWayInfo.ts`):
-discriminant for the InfoCard, display name "Milky Way", a one-line "Our home
-galaxy — you are here", barred-spiral type, and a distance note ("≈ 8 kpc to the
-galactic centre; we are inside it"). No photometry / no `(source, localIdx)` —
-it is not a catalog object.
-
-`selectionSubsystem.resolveTarget` returns it for the `milkyWay` kind:
-
-```ts
-if (sel.kind === 'milkyWay') return MILKY_WAY_INFO;
-```
-
-The InfoCard grows one small branch keyed on the discriminant to render the MW
-card (no thumbnail; a glyph or the impostor motif in the image slot).
+`resolvePick` grows a branch: `type === 'milkyWay'` → `MILKY_WAY_INFO`. The decode
+(`unpackPick`) is unchanged — code 16 already round-trips.
 
 ### Selection ring
 
-`selectionRingPass` grows a `sel.kind === 'milkyWay'` branch — the
-`selectionRingRenderer` is already target-agnostic (`{ worldPos, ringRadiusPx }`),
-and the pass's own docstring anticipates non-galaxy fold-ins:
+`selectionRingPass` grows a milkyWay branch — the `selectionRingRenderer` is
+already target-agnostic (`{ worldPos, ringRadiusPx }`), and the pass's own
+docstring anticipates non-galaxy fold-ins. With Part 0 the pass already reads the
+target: `worldPos = MILKY_WAY_CENTER_WORLD` (off `MilkyWayInfo`), `ringRadiusPx`
+from the disk's apparent on-screen size (disk radius ≈ 25 kpc / camDist ×
+pxPerRad) clamped to a min. `enabled()` returns true for galaxy **or** milkyWay
+targets. Same on-select halo as any galaxy.
 
-- `worldPos = MILKY_WAY_CENTER_WORLD`.
-- `ringRadiusPx` from the disk's apparent on-screen size (disk radius ≈ 25 kpc /
-  camDist × pxPerRad), clamped to a sensible min so it reads at any zoom.
-- `enabled()` returns true for `sel.kind === 'galaxy' || sel.kind === 'milkyWay'`.
+### Focus — generic, no MW-specific method
 
-Same on-select halo behavior as any galaxy.
+`camera.focusOn(target: FocusableTarget)` is the single public focus entry.
+`commitFocus` dispatches on the target's kind:
 
-### Focus
+- structure → `commitStructureFocus`
+- milkyWay → tween to `MILKY_WAY_VIEW_DISTANCE_MPC` at `MILKY_WAY_CENTER_WORLD`,
+  setting both the select and focus slots (so the InfoCard pins and any cluster
+  focus collapses — a milkyWay focus resolves to a non-structure, so `runFrame`
+  drops the member-isolation fade exactly as a galaxy focus does)
+- galaxy → `commitGalaxyFocus`
 
-New `commitMilkyWayFocus` (parallel to `commitGalaxyFocus` / `commitStructureFocus`):
+The bespoke `focusOnMilkyWay` camera method is **retired** — its framing logic is
+exactly the milkyWay dispatch branch. `focusOnHome` (the wide bbox "reset camera"
+framing) is **unchanged** — a different gesture.
 
-```ts
-export function commitMilkyWayFocus(state: EngineState): void {
-  const selection = { kind: 'milkyWay' as const };
-  state.subsystems.selection.setSelected(selection);
-  state.subsystems.selection.setFocused(selection);  // collapses any cluster focus
-  tweenToCameraSnapshot(state, {
-    target: [...MILKY_WAY_CENTER_WORLD],
-    distance: MILKY_WAY_VIEW_DISTANCE_MPC,
-    yaw: state.cam.yaw, pitch: state.cam.pitch,
-    fovYRad: state.cam.fovYRad, near: state.cam.near, far: state.cam.far,
-  });
-}
-```
-
-- `setFocused({ kind: 'milkyWay' })` resolves to a non-structure focus, so
-  `runFrame` collapses the member-isolation fade exactly as a galaxy focus does
-  (verify `runFrame` treats non-`structure` focus kinds as "no structure" — it
-  already does for `galaxy`; `milkyWay` falls in the same bucket).
-- The bespoke `focusOnMilkyWay` camera method is **retired** — its framing logic
-  is exactly this commit. A thin `selection.selectMilkyWay()` handle (on the
-  selection handle namespace) calls `commitMilkyWayFocus`.
-- `focusOnHome` (the wide bbox "reset camera" framing, bound to the reset button /
-  keyboard) is **unchanged** — it is a different gesture.
-
-Single click selects (InfoCard + ring); double-click and the palette focus (tween)
-— same interaction grammar as galaxies and structures.
+Single click selects (InfoCard + ring); double-click and the palette focus
+(tween) — same interaction grammar as galaxies and structures, all driven by the
+one `FocusableTarget` value.
 
 ### Palette
 
 - **Delete** `src/data/milkyWay/milkyWayEntry.ts` (sentinel + `FamousMetaEntry`
   masquerade) and the `App.tsx` `onSelect` `=== MILKY_WAY_ID` interception.
-- The palette gets a **typed MW command** (a first-class palette entry that is not
-  a `FamousMetaEntry`) whose select action calls `selection.selectMilkyWay()` —
-  the same select→focus path `selectFamous` uses.
-- `FamousMetaEntry.pseudo` and the glyph-fallback path: if `pseudo` exists solely
-  for this MW pseudo-entry, retire it; if other entries use it, leave it. (Verify
-  during planning.)
+- The palette gets a **typed MW command** (a first-class entry, not a
+  `FamousMetaEntry`) whose select action calls `camera.focusOn(MILKY_WAY_INFO)`
+  — the same select→focus path every other target uses.
+- `FamousMetaEntry.pseudo` + the glyph-fallback path: retire iff the MW
+  pseudo-entry is its only user (verify during planning).
 
 ### Part 2 testing
 
-- `selectionEq` — milkyWay self-equality and milkyWay-vs-other.
-- `pickToSelection` — code 16 → `{ kind: 'milkyWay' }`.
-- `resolveTarget` — `{ kind: 'milkyWay' }` → `MILKY_WAY_INFO`.
-- `selectionRingPass` — `enabled()` true for milkyWay; ring worldPos = galactic center.
-- `commitMilkyWayFocus` — sets both slots, tweens to the MW framing, collapses
-  structure focus.
-- Palette — the typed MW command routes to `selectMilkyWay`, no sentinel.
+`resolvePick` code 16 → `MILKY_WAY_INFO`; `targetEq` milkyWay self-equality;
+`selectionRingPass` enabled + worldPos for milkyWay; `commitFocus` milkyWay branch
+(both slots set, tween framing, structure-fade collapse); the palette command
+routes to `focusOn(MILKY_WAY_INFO)` with no sentinel.
 
 ---
 
 ## What gets retired (summary)
 
-- `milkyWayEntry.ts` (sentinel `__milky-way__` + pseudo-entry).
-- `App.tsx` onSelect MW special-case.
-- `focusOnMilkyWay` standalone camera method.
-- `overlay:'milkyWay'` (→ `{ kind: 'milkyWay' }`).
-- `StructureCategory` as a name (→ `StructureId`).
-- `scalarField` / `markerLayer` / `filaments` fade kind names.
+- The `Selection` union, `selectionEq`, `prebuiltInfo`, `selectedTarget()`,
+  `pickToSelection`'s Selection output, internal lazy resolution (Part 0).
+- `scalarField` / `markerLayer` / `filaments` fade kind names; `overlay:'milkyWay'`;
+  `StructureCategory` as a name (Part 1).
+- `milkyWayEntry.ts` (sentinel `__milky-way__` + pseudo-entry); the `App.tsx`
+  onSelect MW special-case; the `focusOnMilkyWay` standalone method (Part 2).
 
 After this, the MW's identity / visibility / selection / focus all flow through
 the same plumbing as every other source. Only the procedural-disk **renderer**
@@ -286,19 +325,22 @@ stays bespoke — by design.
 
 ## Plan split
 
-Two plan files, in order:
+Three plan files, in order:
 
-1. **Naming consistency** (refactor, no behavior change): `FadeId` Model A,
-   `serializeFadeId`, `OverlayId` shrink, MW disk fade → `{ kind: 'milkyWay' }`,
-   repo-wide `StructureCategory` → `StructureId`.
-2. **MW selectable** (feature, on top of Plan 1): `Selection` variant, pick
-   provider + `pickToSelection` branch, `MilkyWayInfo` + `resolveTarget` +
-   InfoCard branch, selection-ring branch, `commitMilkyWayFocus` +
-   `selectMilkyWay` handle, palette typed command, delete the sentinel + onSelect
-   special-case + `focusOnMilkyWay`.
+1. **Selection/target unification** (Part 0): collapse `Selection` → `FocusableTarget`,
+   pure `resolvePick`/`resolveGalaxyInfo`, drop `prebuiltInfo`, slot readers off
+   the target.
+2. **Naming consistency** (Part 1): `FadeId` Model A, `serializeFadeId`,
+   `OverlayId` shrink, MW disk fade → `{ kind: 'milkyWay' }`, repo-wide
+   `StructureCategory` → `StructureId`.
+3. **MW selectable** (Part 2): MW pick provider, `MilkyWayInfo`, `resolvePick`
+   milkyWay branch, ring branch, `commitFocus` milkyWay dispatch, palette typed
+   command, delete the sentinel + onSelect special-case + `focusOnMilkyWay`.
 
 ## Out of scope (deferred)
 
 - Model B (full source × aspect `FadeId`).
 - Reworking the procedural-disk renderer (stays bespoke).
 - Any change to `focusOnHome` (reset-camera) semantics.
+- Converging the URL deep-link descriptor (`FocusTarget`) with `FocusableTarget`
+  — a separate concern (it's a parse-time *request*, not a resolved target).
