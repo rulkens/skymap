@@ -1,5 +1,26 @@
 # Renderer Interface Extraction — scalarVolumeRenderer Conformance + Fade Ownership
 
+> **⚠️ ARCHIVED — SUPERSEDED, do not execute.** This plan's two objectives both
+> moved on after it was written (2026-05-27):
+> - **Objective 1 (FieldEntry mirror state → per-frame settings projection through
+>   `draw()`)** shipped independently via **ADR 0006 / PR #271** (volume-settings
+>   unification, 2026-06-06). `FieldEntry` no longer carries the mirror props; the
+>   renderer reads settings each frame via `draw(…, settingsOf, fadeOpacityOf)`.
+>   Tasks 1–7 are moot.
+> - **Objective 2 (fade GPU resources → `FadeRegistry.bindGroupFor`/`flushGpu`,
+>   executing ADR 0001)** is still open in the code, but the *mechanism* was
+>   redesigned. The live design is the fade-ownership work
+>   (`specs/2026-06-14-fade-ownership-design.md` → merged into
+>   `specs/2026-06-15-fade-ownership-visibility-seam-merged-design.md`, "designed,
+>   awaiting plans"), which replaces `bindGroupFor`/`flushGpu` with a declarative
+>   layer manifest + intent API; PR #317 already landed the FadeId Model A rename
+>   underneath it. Execute that spec's plan when written, not Tasks 8–11 here.
+>
+> Kept for archaeology (the per-field-projection rationale and the renderer-
+> convention reasoning are still good reading). The stale "Option C" outlier note
+> this plan was going to remove from `conventions/renderers.md` was removed when
+> this plan was archived.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
 > **Sister documents:**
