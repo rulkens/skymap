@@ -72,8 +72,12 @@ widen union types that several other modules consume. Land each rename + all its
 in-lockstep consumers in ONE commit so the tree typechecks between commits.
 Where a single task spans multiple files for this reason it is called out.
 
-**Recommended task order: 2 → 3 → 1 → 4 → 5 → 6 → 7 → 8.** Two hard
-dependencies force this:
+**Recommended task order: 2 → 3 → 4 → 1 → 5 → 6 → 7 → 8.** Task 4 (the
+`setMilkyWayLabelEnabled` store trio, incl. `selectMilkyWayLabelEnabled`) is
+pulled BEFORE Task 1 so Task 1's App call-site change can read the label flag via
+the real selector instead of a throwaway inline closure (Task 4 has no dependency
+on Task 1 — it only needs Task 3's `labelEnabled` field). Two hard dependencies
+force the rest of the order:
 
 1. Task 1's `labelLayer: 'milkyWay'` only typechecks once Task 2 has widened
    `CategoryLabelLayer` (already noted on Task 1).
@@ -370,11 +374,12 @@ describe('setMilkyWayLabelEnabled', () => {
 });
 ```
 
-- [ ] Run fails (modules absent).
-- [ ] Create the reducer, action, and selector.
-- [ ] Run passes (`npm test -- setMilkyWayLabelEnabled`).
-- [ ] `npm run typecheck`.
-- [ ] Commit.
+- [x] Run fails (modules absent).
+- [x] Create the reducer, action, and selector.
+- [x] Run passes (`npm test -- setMilkyWayLabelEnabled`). (2720 passed; kept
+  `tonemap` sibling in the copy-on-write assertion.)
+- [x] `npm run typecheck`.
+- [x] Commit.
 
 ---
 
