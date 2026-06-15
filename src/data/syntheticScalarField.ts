@@ -21,7 +21,7 @@
  *      this space?" cue from any viewing angle.
  *
  * All three are pure — no I/O — and return a fully-formed `ScalarCube`
- * ready to hand to the renderer's `addField`.  Kept in `src/data/`
+ * ready to hand to the renderer's `upload`.  Kept in `src/data/`
  * (alongside the format encoder/decoder) so they live next to the type
  * they produce and can also serve as vitest fixtures for future
  * renderer-level integration tests.

@@ -44,7 +44,7 @@ export type FlowFieldRenderer = {
   /**
    * Receive the decoded velocity cube and commit it: upload it to a 3D texture
    * (via `flowFieldFromCube`, using the renderer's own device — the device is
-   * never exposed to the caller, mirroring `scalarVolumeRenderer.addField`),
+   * never exposed to the caller, mirroring `scalarVolumeRenderer.upload`),
    * build the cube model matrix from its meta (via `buildCubeModelMatrix`), build
    * the compute bind group, and arm a reseed. Idempotent — disposes the prior
    * field's texture if re-set.

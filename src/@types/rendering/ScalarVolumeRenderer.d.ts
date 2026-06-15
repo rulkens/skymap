@@ -1,8 +1,9 @@
 /**
  * ScalarVolumeRenderer — public handle for the multi-field 3D scalar-
  * volume renderer.  Owns the WebGPU pipeline, the per-field bind groups,
- * and the per-field registry; consumers add / remove cubes, and the
- * renderer READS per-field settings each frame via `draw(settingsOf)`.
+ * and the per-field registry; consumers upload / unload cubes (keyed by
+ * field handle, mirroring `pointRenderer.upload`/`unload` per source), and
+ * the renderer READS per-field settings each frame via `draw(settingsOf)`.
  * The user-tunable knobs (enabled, intensity, palette, contrast,
  * densityScale, trim, exposure) are no longer set through this handle —
  * they live in `state.settings.volumes.items` and are projected in per
@@ -15,7 +16,7 @@ import type { ScalarCube } from '../data/ScalarCube';
 import type { VolumeFieldSettings } from '../settings/VolumeFieldSettings';
 import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';
-import type { ScalarFieldHandle } from './ScalarFieldHandle';
+import type { VolumeFieldId } from '../data/VolumeFieldId';
 
 export type ScalarVolumeRenderer = {
   /**
@@ -23,8 +24,8 @@ export type ScalarVolumeRenderer = {
    * shared `Renderer` contract — see `Renderer.d.ts`.
    */
   readonly label: string;
-  addField(handle: ScalarFieldHandle, cube: ScalarCube): void;
-  removeField(handle: ScalarFieldHandle): void;
+  upload(handle: VolumeFieldId, cube: ScalarCube): void;
+  unload(handle: VolumeFieldId): void;
   /**
    * True iff any field is currently producing visible output. The live
    * per-field settings come from `settingsOf` (the renderer no longer
@@ -38,10 +39,10 @@ export type ScalarVolumeRenderer = {
    * they keep blitting / drawing through the ~100 ms ramp.
    */
   hasActiveFields(
-    settingsOf: (handle: ScalarFieldHandle) => VolumeFieldSettings | undefined,
-    fadeOpacityOf?: (handle: ScalarFieldHandle) => number,
+    settingsOf: (handle: VolumeFieldId) => VolumeFieldSettings | undefined,
+    fadeOpacityOf?: (handle: VolumeFieldId) => number,
   ): boolean;
-  listHandles(): ScalarFieldHandle[];
+  listHandles(): VolumeFieldId[];
   /**
    * Dispatch one raymarch per active field, additively blended.  The
    * per-field tunables are read each frame from `settingsOf`; a field
@@ -54,8 +55,8 @@ export type ScalarVolumeRenderer = {
     viewProj: mat4,
     viewportPx: Vec2,
     cameraPosWorld: Readonly<Vec3>,
-    settingsOf: (handle: ScalarFieldHandle) => VolumeFieldSettings | undefined,
-    fadeOpacityOf: (handle: ScalarFieldHandle) => number,
+    settingsOf: (handle: VolumeFieldId) => VolumeFieldSettings | undefined,
+    fadeOpacityOf: (handle: VolumeFieldId) => number,
   ): void;
   destroy(): void;
 };

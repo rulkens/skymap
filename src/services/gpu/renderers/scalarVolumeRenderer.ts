@@ -6,11 +6,11 @@
  * Public surface (factory shape, matching D.2 conventions):
  *
  *   - createScalarVolumeRenderer(device, format, fadeBgl, callbacks)
- *   - addField(handle, cube)        → upload cube to a 3D r16float
+ *   - upload(handle, cube)        → upload cube to a 3D r16float
  *                                       texture, read the per-cube static
  *                                       config from the registry, register
  *                                       in the field map
- *   - removeField(handle)            → drop the texture, unregister
+ *   - unload(handle)            → drop the texture, unregister
  *   - hasActiveFields(settingsOf)    → true iff any field whose live
  *                                       settings are enabled+intensity>0
  *                                       (or still fading out); used by the
@@ -49,7 +49,6 @@ import { mat4 } from 'gl-matrix';
 import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import type { ScalarFieldPaletteId } from '../../../@types/data/ScalarFieldPaletteId';
 import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { ScalarFieldHandle } from '../../../@types/rendering/ScalarFieldHandle';
 import type { ScalarVolumeRenderer } from '../../../@types/rendering/ScalarVolumeRenderer';
 import type { FieldEntry } from '../../../@types/rendering/FieldEntry';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
@@ -103,8 +102,8 @@ export function createScalarVolumeRenderer(
   format: GPUTextureFormat,
   fadeBgl: FadeUniformsBgl,
   callbacks: {
-    onFieldAdded: (handle: ScalarFieldHandle) => void;
-    onFieldRemoved: (handle: ScalarFieldHandle) => void;
+    onFieldAdded: (handle: VolumeFieldId) => void;
+    onFieldRemoved: (handle: VolumeFieldId) => void;
   },
 ): ScalarVolumeRenderer {
   const cornerBuffer = device.createBuffer({
@@ -198,7 +197,7 @@ export function createScalarVolumeRenderer(
   // The bind-group layout for @group(0). Derived from `group0Bgl` (the
   // manually-created layout) rather than `pipeline.getBindGroupLayout(0)` so
   // the layout identity is consistent: the same object used to build the
-  // pipeline is the one passed to `createBindGroup` in `addField`.
+  // pipeline is the one passed to `createBindGroup` in `upload`.
   const bindGroupLayout = group0Bgl;
 
   // Fade scratch buffer hoisted to factory scope to avoid per-frame
@@ -209,7 +208,7 @@ export function createScalarVolumeRenderer(
   const fadeScratchBuffer = new ArrayBuffer(16);
   const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
 
-  const fields = new Map<ScalarFieldHandle, FieldEntry>();
+  const fields = new Map<VolumeFieldId, FieldEntry>();
   // Per-draw frame counter — incremented every draw() and forwarded to
   // the fragment shader as a temporal seed for the ray-march jitter
   // hash.  Wrapping at FRAME_WRAP keeps the f32 mantissa precise
@@ -232,7 +231,7 @@ export function createScalarVolumeRenderer(
     return tex;
   }
 
-  // Per-field palette texture — created in `addField`, re-uploaded in
+  // Per-field palette texture — created in `upload`, re-uploaded in
   // `draw` via the shared `writePaletteLut` helper when the live palette
   // setting diverges from `residentPaletteId`.  A single
   // PALETTE_LUT_SIZE x 1 2D texture per field is the natural cost since
@@ -265,7 +264,7 @@ export function createScalarVolumeRenderer(
 
   const renderer: ScalarVolumeRenderer = {
     label: 'scalarVolumeRenderer',
-    addField(handle, cube) {
+    upload(handle, cube) {
       const existing = fields.get(handle);
       if (existing) {
         existing.volumeTexture.destroy();
@@ -275,13 +274,11 @@ export function createScalarVolumeRenderer(
         fields.delete(handle);
       }
       // Per-cube STATIC presentation config read once from the registry.
-      // Handles are always registry volume ids (`ScalarFieldHandle` is a
-      // string; the cast is sound and `getVolumeFieldDefaults` throws on a
-      // truly-unknown id, which is acceptable here).  The user-tunable
-      // knobs (enabled, intensity, contrast, densityScale, palette, trim,
-      // exposure) are NOT seeded here — they live in settings and are read
-      // per frame in `draw`.
-      const defaults = getVolumeFieldDefaults(handle as VolumeFieldId);
+      // The handle is a `VolumeFieldId` (the registry-derived field union),
+      // so the lookup needs no cast.  The user-tunable knobs (enabled,
+      // intensity, contrast, densityScale, palette, trim, exposure) are NOT
+      // seeded here — they live in settings and are read per frame in `draw`.
+      const defaults = getVolumeFieldDefaults(handle);
       const modelMatrix = buildCubeModelMatrix(cube);
       const invModelMatrix = mat4.create();
       mat4.invert(invModelMatrix, modelMatrix);
@@ -336,7 +333,7 @@ export function createScalarVolumeRenderer(
       });
       callbacks.onFieldAdded(handle);
     },
-    removeField(handle) {
+    unload(handle) {
       const entry = fields.get(handle);
       if (!entry) return;
       // Fire the callback BEFORE destroying GPU resources so any

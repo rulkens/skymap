@@ -19,7 +19,7 @@ export type VolumeSourceEntry = SourceEntryBase &
     /** Stable numeric tag; not persisted, only used as the registry key. */
     readonly code: number;
     /**
-     * Renderer-side identifier — the key `scalarVolumeRenderer.addField`
+     * Renderer-side identifier — the key `scalarVolumeRenderer.upload`
      * uses to look up the field at the GPU layer. Kebab-case for UI
      * legibility; distinct from `binBaseName` because the on-disk name
      * sometimes uses underscores (`cf4_density.scfd`).

@@ -244,7 +244,7 @@ export function createFlowFieldRenderer(init: {
     upload(cube: ScalarCube): void {
       // Upload the decoded cube to a 3D texture via the shared loader, using the
       // renderer's own device (the device stays encapsulated — the caller hands
-      // us a cube, mirroring scalarVolumeRenderer.addField). Idempotent re-set:
+      // us a cube, mirroring scalarVolumeRenderer.upload). Idempotent re-set:
       // drop the prior field's texture before adopting the new one.
       if (field) field.dispose();
       const next = flowFieldFromCube(device, cube);
