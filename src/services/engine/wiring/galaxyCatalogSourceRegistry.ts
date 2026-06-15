@@ -34,7 +34,8 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
-import { Source } from '../../../data/sources';
+import { Source, SOURCE_REGISTRY } from '../../../data/sources';
+import type { GalaxyCatalogId } from '../../../@types/engine/data/GalaxyCatalogId';
 import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
 import type { GalaxyCatalogSourceConfig } from '../../../@types/engine/wiring/GalaxyCatalogSourceConfig';
 import type { Tier } from '../../../@types/data/Tier';
@@ -97,9 +98,8 @@ const SHORT_NAME_BY_SOURCE: ReadonlyMap<SourceType, string> = new Map(
  * synthetic-fallback ready gate.  Hidden galaxy catalogs count as already
  * settled (see `createSyntheticFallback`).
  */
-export const GALAXY_CATALOG_POINT_SOURCES: readonly SourceType[] = GALAXY_CATALOG_SOURCE_REGISTRY.filter(
-  (c) => c.category === 'survey',
-).map((c) => c.source);
+export const GALAXY_CATALOG_POINT_SOURCES: readonly SourceType[] =
+  GALAXY_CATALOG_SOURCE_REGISTRY.filter((c) => c.category === 'survey').map((c) => c.source);
 
 /**
  * Every tier-fetched catalog source — galaxy catalogs + curated.  Iterated by
@@ -183,7 +183,9 @@ export function wireGalaxyCatalogSourceSlot(
       const t0 = performance.now();
       // eslint-disable-next-line no-console
       console.log(`[engine] upload start ${shortName} count=${cloud.count}`);
-      await state.gpu.renderer.upload(source, cloud);
+      // PointRenderer keys its catalogs by the string id; resolve from
+      // the registry (the source code carries the matching id).
+      await state.gpu.renderer.upload(SOURCE_REGISTRY[source].id as GalaxyCatalogId, cloud);
       state.data.galaxies.setCatalog(source, cloud);
 
       // Fire-and-forget fade-in so the slot's `ready` transition

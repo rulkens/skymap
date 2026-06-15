@@ -13,7 +13,7 @@
  * composes with `@builtin(instance_index)` into the fragment's packed
  * identity for `fsPick` to write into the r32uint pick texture.
  *
- *   GalaxyCatalog → upload(source, …) → GPU vertex buffer per source
+ *   GalaxyCatalog → upload(id, …) → GPU vertex buffer per catalog
  *   OrbitCamera   → computeViewProj() → draw() → uniform buffer (per frame)
  *
  * @module
@@ -28,6 +28,7 @@ import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../data/sources';
 import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
 import type { SourceType } from '../../../@types/data/SourceType';
+import type { GalaxyCatalogId } from '../../../@types/engine/data/GalaxyCatalogId';
 
 // `?worker` emits the worker as a separate chunk and exports a class
 // whose `new` spawns it.  The bake runs off-thread to dodge the
@@ -259,9 +260,37 @@ export function setBuildBufferRunner(runner: BuildRunner | null): void {
 // stay in the `Uniforms` struct for layout stability — removing them
 // would shift every subsequent member's offset.
 
+// ─── Source code ↔ catalog id resolution ──────────────────────────────────────
+//
+// The public key is now the string `GalaxyCatalogId`, but the GPU-facing
+// identity (the 5-bit `sourceCode` packed into the pick texture) and the
+// draw order (`GALAXY_CATALOG_SOURCES`) are numeric.  Both maps are derived
+// from `SOURCE_REGISTRY` so the catalog set + codes stay defined in exactly
+// one place — adding a galaxy catalog there extends both without a hardcoded
+// list here.
+
+/** Numeric `Source` code → string `GalaxyCatalogId`. */
+const ID_OF_CODE = new Map<SourceType, GalaxyCatalogId>(
+  GALAXY_CATALOG_SOURCES.map((code) => [code, SOURCE_REGISTRY[code].id as GalaxyCatalogId]),
+);
+
+/** String `GalaxyCatalogId` → numeric `Source` code. */
+const CODE_OF_ID = new Map<GalaxyCatalogId, SourceType>(
+  GALAXY_CATALOG_SOURCES.map((code) => [SOURCE_REGISTRY[code].id as GalaxyCatalogId, code]),
+);
+
+/**
+ * Loaded catalogs in `GALAXY_CATALOG_SOURCES` (source-code) draw order,
+ * paired with their string id — the draw / pick iteration consults this
+ * so it can key the id-keyed map while still emitting the numeric
+ * `sourceCode` per draw.
+ */
+const CATALOG_DRAW_ORDER: readonly { code: SourceType; id: GalaxyCatalogId }[] =
+  GALAXY_CATALOG_SOURCES.map((code) => ({ code, id: ID_OF_CODE.get(code)! }));
+
 // ─── Per-source bookkeeping ───────────────────────────────────────────────────
 
-/** One source's GPU vertex buffer and the per-source bind groups it needs. */
+/** One catalog's GPU vertex buffer and the per-source bind groups it needs. */
 type LoadedSource = {
   buffer: GPUBuffer;
   count: number;
@@ -289,8 +318,8 @@ type LoadedSource = {
 /**
  * Build the render pipeline, allocate the uniform buffer, and create
  * the bind group.  Pipeline state lives in closure scope; the only
- * mutable bits are the per-source `clouds` Map and the bias-correction
- * callbacks.
+ * mutable bits are the per-source `galaxyCatalogs` Map and the
+ * bias-correction callbacks.
  *
  * @param device  The WebGPU logical device. Owned by the caller.
  * @param format  The swap-chain texture format (e.g. `'bgra8unorm'`).
@@ -316,10 +345,14 @@ export function createPointRenderer(
       device.createBindGroupLayout({
         label: 'points-bgl-group0',
         entries: [
-          { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+          {
+            binding: 0,
+            visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+            buffer: { type: 'uniform' },
+          },
         ],
       }),
-      fadeBgl,   // @group(1) FadeUniforms (canonical)
+      fadeBgl, // @group(1) FadeUniforms (canonical)
       sourceBgl, // @group(2) SourceUniforms (canonical, shared with PickRenderer)
       // @group(3) FocusUniforms — a single shared/global binding (only
       // one POI focused at a time), unlike the per-source @group(1) fade.
@@ -380,10 +413,10 @@ export function createPointRenderer(
   const fadeScratchBuffer = new ArrayBuffer(16);
   const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
 
-  // Loaded galaxy catalog buffers keyed by SourceType.  Map preserves insert
-  // order and dodges the prototype-chain ambiguity of a numeric-keyed
-  // object literal.
-  const clouds = new Map<SourceType, LoadedSource>();
+  // Loaded galaxy catalog buffers keyed by GalaxyCatalogId.  Map preserves
+  // insert order and keys on the stable string id (the same key domain the
+  // volume renderer uses for its fields) rather than the numeric source code.
+  const galaxyCatalogs = new Map<GalaxyCatalogId, LoadedSource>();
 
   // Optional callbacks invoked at the end of `upload` / `unload`.  The
   // bias-correction subsystem installs them so a per-source bake fires
@@ -392,7 +425,9 @@ export function createPointRenderer(
   let biasUploadCallback: ((source: SourceType, cloud: GalaxyCatalog) => void) | null = null;
   let biasUnloadCallback: ((source: SourceType) => void) | null = null;
 
-  function setBiasUploadCallback(cb: ((source: SourceType, cloud: GalaxyCatalog) => void) | null): void {
+  function setBiasUploadCallback(
+    cb: ((source: SourceType, cloud: GalaxyCatalog) => void) | null,
+  ): void {
     biasUploadCallback = cb;
   }
 
@@ -403,29 +438,49 @@ export function createPointRenderer(
   // ─── Data upload ────────────────────────────────────────────────────────────
 
   /**
-   * Bake `cloud` into an interleaved GPU vertex buffer for `source`,
-   * replacing any previous buffer.  Async because the bake runs in a
-   * worker — 3.5 M galaxies inline would freeze the main thread for
-   * ~10 s.  `cloud.count === 0` is the unload signal: destroy the
-   * source's buffers and remove the Map entry.
+   * Bake `galaxyCatalog` into an interleaved GPU vertex buffer for the
+   * catalog `id`, replacing any previous buffer.  Async because the bake
+   * runs in a worker — 3.5 M galaxies inline would freeze the main thread
+   * for ~10 s.  `galaxyCatalog.count === 0` is the unload signal: destroy
+   * the catalog's buffers and remove the Map entry.
    *
-   * Last-writer-wins on parallel uploads of the same source: both
-   * workers spawn, both `clouds.set` calls run in resolution order,
-   * the loser's GPU buffer leaks until the next upload destroys it.
-   * Theoretical — in practice each source uploads once per session.
+   * The public key is the string `GalaxyCatalogId`, but the numeric
+   * source code (resolved from the registry) is what the bake input and
+   * the GPU-facing `sourceCode` need — so the bias callbacks still carry
+   * the numeric source, keeping the subsystem's source-keyed caches and
+   * pick-identity packing untouched.
+   *
+   * Last-writer-wins on parallel uploads of the same catalog: both
+   * workers spawn, both `galaxyCatalogs.set` calls run in resolution
+   * order, the loser's GPU buffer leaks until the next upload destroys it.
+   * Theoretical — in practice each catalog uploads once per session.
    */
-  async function upload(source: SourceType, cloud: GalaxyCatalog): Promise<void> {
+  async function upload(id: GalaxyCatalogId, galaxyCatalog: GalaxyCatalog): Promise<void> {
+    // PointRenderer only handles galaxy catalog sources; the registry
+    // entry for this id carries the numeric source code, per-source
+    // intensityFloor + falloffHalfMpc, and the discriminant we narrow on.
+    const source = CODE_OF_ID.get(id);
+    if (source === undefined) {
+      throw new Error(`PointRenderer cannot upload unknown galaxy catalog id '${id}'`);
+    }
+    const entry = SOURCE_REGISTRY[source];
+    if (entry.type !== 'galaxyCatalog') {
+      throw new Error(
+        `PointRenderer cannot upload non-galaxy catalog id '${id}' (type=${entry.type})`,
+      );
+    }
+
     // Empty cloud is the unload signal (used by tier changes that drop
-    // a source).  Short-circuit before the bake; `createBuffer({size:0})`
+    // a catalog).  Short-circuit before the bake; `createBuffer({size:0})`
     // is forbidden by the spec.
-    if (cloud.count === 0) {
-      const stale = clouds.get(source);
+    if (galaxyCatalog.count === 0) {
+      const stale = galaxyCatalogs.get(id);
       if (stale) {
         stale.buffer.destroy();
         stale.fadeBuffer.destroy();
         stale.sourceBuffer.destroy();
       }
-      clouds.delete(source);
+      galaxyCatalogs.delete(id);
       biasUnloadCallback?.(source);
       return;
     }
@@ -435,11 +490,11 @@ export function createPointRenderer(
     // The renderer always uploads in 'fast' mode; the bias-correction
     // subsystem fires a per-source bake via `biasUploadCallback`
     // below if a mode is active when this resolves.
-    const result = await buildRunner({ cloud, source, mode: 'fast' });
+    const result = await buildRunner({ cloud: galaxyCatalog, source, mode: 'fast' });
     const { interleaved } = result;
 
     // GPU buffers are fixed-size — destroy and reallocate on replace.
-    const prev = clouds.get(source);
+    const prev = galaxyCatalogs.get(id);
     if (prev) {
       prev.buffer.destroy();
       prev.fadeBuffer.destroy();
@@ -447,19 +502,19 @@ export function createPointRenderer(
     }
 
     const buffer = device.createBuffer({
-      label: `points-vertex-buffer-${source}`,
+      label: `points-vertex-buffer-${id}`,
       size: interleaved.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
     device.queue.writeBuffer(buffer, 0, interleaved);
 
     const fadeBuffer = device.createBuffer({
-      label: `points-fade-uniform-${source}`,
+      label: `points-fade-uniform-${id}`,
       size: 16,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     const fadeBindGroup = device.createBindGroup({
-      label: `points-fade-bg-${source}`,
+      label: `points-fade-bg-${id}`,
       layout: fadeBgl,
       entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
     });
@@ -470,34 +525,26 @@ export function createPointRenderer(
     // wasted bytes.  See lib/sourceUniforms.wesl for the struct layout
     // and GalaxyCatalogSourceEntry.d.ts for the per-source value rationale.
     const sourceBuffer = device.createBuffer({
-      label: `points-source-uniform-${source}`,
+      label: `points-source-uniform-${id}`,
       size: 16,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     const sourceScratch = new ArrayBuffer(16);
     const sourceU32 = new Uint32Array(sourceScratch);
     const sourceF32 = new Float32Array(sourceScratch);
-    const entry = SOURCE_REGISTRY[source];
-    // PointRenderer only handles galaxy catalog sources (POI / volume / filament
-    // entries never reach this code path), but SOURCE_REGISTRY's union
-    // type doesn't know that — narrow defensively so the per-source
-    // floor + falloff reads are type-checked.
-    if (entry.type !== 'galaxyCatalog') {
-      throw new Error(`PointRenderer cannot upload non-galaxy catalog source ${source} (type=${entry.type})`);
-    }
     sourceU32[0] = source >>> 0;
     sourceF32[1] = entry.intensityFloor;
     sourceF32[2] = entry.falloffHalfMpc;
     device.queue.writeBuffer(sourceBuffer, 0, sourceScratch);
     const sourceBindGroup = device.createBindGroup({
-      label: `points-source-bg-${source}`,
+      label: `points-source-bg-${id}`,
       layout: sourceBgl,
       entries: [{ binding: 0, resource: { buffer: sourceBuffer } }],
     });
 
-    clouds.set(source, {
+    galaxyCatalogs.set(id, {
       buffer,
-      count: cloud.count,
+      count: galaxyCatalog.count,
       interleaved,
       fadeBuffer,
       fadeBindGroup,
@@ -505,18 +552,19 @@ export function createPointRenderer(
       sourceBindGroup,
     });
 
-    biasUploadCallback?.(source, cloud);
+    biasUploadCallback?.(source, galaxyCatalog);
   }
 
-  /** No-op if the source was never uploaded. */
-  function unload(source: SourceType): void {
-    const entry = clouds.get(source);
+  /** No-op if the catalog was never uploaded. */
+  function unload(id: GalaxyCatalogId): void {
+    const entry = galaxyCatalogs.get(id);
     if (!entry) return;
     entry.buffer.destroy();
     entry.fadeBuffer.destroy();
     entry.sourceBuffer.destroy();
-    clouds.delete(source);
-    biasUnloadCallback?.(source);
+    galaxyCatalogs.delete(id);
+    const source = CODE_OF_ID.get(id);
+    if (source !== undefined) biasUnloadCallback?.(source);
   }
 
   // ─── Bias-correction splice surface ──────────────────────────────────────
@@ -526,16 +574,21 @@ export function createPointRenderer(
   // state machine and calls these once its async bakes resolve.
   //
   // No-op on unloaded sources: a subsystem bake can race against
-  // `unload()`, and re-checking `clouds.has` after every await would
+  // `unload()`, and re-checking the map after every await would
   // duplicate this safety net.  Length mismatch is a programmer error
   // (not a race) and throws.
+  //
+  // These keep the numeric `source` in their public signature (the
+  // bias subsystem's caches are source-keyed); the id-keyed map is
+  // reached via `ID_OF_CODE`.
 
   /**
    * Slot 9 ← `ratios[i]`, then re-upload.  `ratios.length` must equal
    * the source's `count`.
    */
   function spliceSchechterRatios(source: SourceType, ratios: Float32Array): void {
-    const entry = clouds.get(source);
+    const id = ID_OF_CODE.get(source);
+    const entry = id !== undefined ? galaxyCatalogs.get(id) : undefined;
     if (!entry) return;
     if (ratios.length !== entry.count) {
       throw new Error(
@@ -550,7 +603,8 @@ export function createPointRenderer(
 
   /** Slot 10 ← `weights[i]`, then re-upload.  Length must equal `count`. */
   function spliceAngularWeights(source: SourceType, weights: Float32Array): void {
-    const entry = clouds.get(source);
+    const id = ID_OF_CODE.get(source);
+    const entry = id !== undefined ? galaxyCatalogs.get(id) : undefined;
     if (!entry) return;
     if (weights.length !== entry.count) {
       throw new Error(
@@ -574,10 +628,11 @@ export function createPointRenderer(
     const targets: LoadedSource[] =
       source !== undefined
         ? (() => {
-            const entry = clouds.get(source);
+            const id = ID_OF_CODE.get(source);
+            const entry = id !== undefined ? galaxyCatalogs.get(id) : undefined;
             return entry ? [entry] : [];
           })()
-        : Array.from(clouds.values());
+        : Array.from(galaxyCatalogs.values());
     for (const entry of targets) {
       for (let i = 0; i < entry.count; i++) {
         entry.interleaved[i * SLOTS_PER_POINT + 9] = 0;
@@ -589,10 +644,10 @@ export function createPointRenderer(
 
   // ─── Public API for the engine + picker ─────────────────────────────────────
 
-  /** Total points across every loaded source — drives the status-bar count. */
+  /** Total points across every loaded catalog — drives the status-bar count. */
   function totalCount(): number {
     let total = 0;
-    for (const entry of clouds.values()) total += entry.count;
+    for (const entry of galaxyCatalogs.values()) total += entry.count;
     return total;
   }
 
@@ -602,7 +657,8 @@ export function createPointRenderer(
    * since tier swaps can shrink a source's count in flight.
    */
   function countOf(source: SourceType): number {
-    return clouds.get(source)?.count ?? 0;
+    const id = ID_OF_CODE.get(source);
+    return (id !== undefined ? galaxyCatalogs.get(id)?.count : undefined) ?? 0;
   }
 
   /**
@@ -616,11 +672,11 @@ export function createPointRenderer(
     count: number;
     sourceBuffer: GPUBuffer;
   }> {
-    for (const source of GALAXY_CATALOG_SOURCES) {
-      const entry = clouds.get(source);
+    for (const { code, id } of CATALOG_DRAW_ORDER) {
+      const entry = galaxyCatalogs.get(id);
       if (!entry) continue;
       yield {
-        source,
+        source: code,
         vertexBuffer: entry.buffer,
         count: entry.count,
         sourceBuffer: entry.sourceBuffer,
@@ -669,7 +725,7 @@ export function createPointRenderer(
       pxFadeEnd,
       focusBindGroup,
     } = settings;
-    if (clouds.size === 0) return;
+    if (galaxyCatalogs.size === 0) return;
 
     // Pack 176 bytes — see `UNIFORM_BYTES` for the layout, and
     // `points/io.wesl::Uniforms` for the WGSL-side struct.  Pad slots
@@ -680,21 +736,21 @@ export function createPointRenderer(
 
     // CameraUniforms prefix (bytes 0..79).
     f32.set(viewProj, 0);
-    f32[16] = viewportPx[0];      // viewportPx.x
-    f32[17] = viewportPx[1];      // viewportPx.y
+    f32[16] = viewportPx[0]; // viewportPx.x
+    f32[17] = viewportPx[1]; // viewportPx.y
     // f32[18..19] cam._pad0/1 stay zero.
 
-    u32[20] = selectedPacked >>> 0;       // bytes 80
+    u32[20] = selectedPacked >>> 0; // bytes 80
     // u32[21] (offset 84) _pad0 stays zero.
-    f32[22] = pointSizePx;                // bytes 88
-    f32[23] = brightness;                 // bytes 92
-    f32[24] = camPosWorld[0];             // bytes 96
+    f32[22] = pointSizePx; // bytes 88
+    f32[23] = brightness; // bytes 92
+    f32[24] = camPosWorld[0]; // bytes 96
     f32[25] = camPosWorld[1];
     f32[26] = camPosWorld[2];
-    f32[27] = pxPerRad;                   // bytes 108
-    u32[28] = highlightFallback ? 1 : 0;  // bytes 112
-    u32[29] = realOnlyMode ? 1 : 0;       // bytes 116
-    u32[30] = depthFadeEnabled ? 1 : 0;   // bytes 120
+    f32[27] = pxPerRad; // bytes 108
+    u32[28] = highlightFallback ? 1 : 0; // bytes 112
+    u32[29] = realOnlyMode ? 1 : 0; // bytes 116
+    u32[30] = depthFadeEnabled ? 1 : 0; // bytes 120
     // u32[31] _pad4 stays zero.
 
     // Malmquist-bias state.  Mode goes through the u32 view, thresholds
@@ -722,10 +778,12 @@ export function createPointRenderer(
     // before the per-source loop, not per source like fade/source.
     pass.setBindGroup(3, focusBindGroup);
 
-    for (const source of GALAXY_CATALOG_SOURCES) {
-      const entry = clouds.get(source);
+    for (const { code: source, id } of CATALOG_DRAW_ORDER) {
+      const entry = galaxyCatalogs.get(id);
       if (!entry) continue;
-      // Inlined `maskHas(visibleSourceMask, source)` — hot path.
+      // Inlined `maskHas(visibleSourceMask, source)` — hot path.  The
+      // mask + per-source fade are keyed by the numeric code, so we keep
+      // it alongside the id resolved for the map lookup.
       if (((visibleSourceMask >> source) & 1) === 0) continue;
 
       // One 16-byte fade writeBuffer per visible galaxy catalog per frame.
@@ -754,12 +812,12 @@ export function createPointRenderer(
    * overlapping teardowns (HMR mid-StrictMode remount) are safe.
    */
   function destroy(): void {
-    for (const entry of clouds.values()) {
+    for (const entry of galaxyCatalogs.values()) {
       entry.buffer.destroy();
       entry.fadeBuffer.destroy();
       entry.sourceBuffer.destroy();
     }
-    clouds.clear();
+    galaxyCatalogs.clear();
     uniformBuffer.destroy();
   }
 

@@ -41,7 +41,7 @@ import {
 } from '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry';
 import type { GalaxyCatalogSourceConfig } from '../../../../src/@types/engine/wiring/GalaxyCatalogSourceConfig';
 import type { WirePointSourceDeps } from '../../../../src/@types/engine/wiring/WirePointSourceDeps';
-import { Source } from '../../../../src/data/sources';
+import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -236,9 +236,9 @@ describe('wireGalaxyCatalogSourceSlot', () => {
       expect(slot.state().kind).toBe('ready');
     });
 
-    // Upload was called with (source, cloud) — the renderer's contract.
+    // Upload was called with (id, cloud) — the renderer's contract.
     expect(upload).toHaveBeenCalledOnce();
-    expect(upload).toHaveBeenCalledWith(Source.Glade, cloud);
+    expect(upload).toHaveBeenCalledWith(SOURCE_REGISTRY[Source.Glade].id, cloud);
     // sources.catalogs was populated post-upload.
     expect(state.data.galaxies.catalogs.get(Source.Glade)).toBe(cloud);
   });

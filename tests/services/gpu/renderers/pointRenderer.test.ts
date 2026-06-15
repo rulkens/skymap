@@ -24,9 +24,18 @@ import {
   setBuildBufferRunner,
 } from '../../../../src/services/gpu/renderers/pointRenderer';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
-import { Source } from '../../../../src/data/sources';
+import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalogId } from '../../../../src/@types/engine/data/GalaxyCatalogId';
 import type { mat4 } from 'gl-matrix';
+
+// PointRenderer keys its catalogs by the string `GalaxyCatalogId` now;
+// these tests still reason in terms of the numeric `Source` codes (the
+// `loadedSources()` iterator still yields `source`), so resolve the id at
+// each upload/unload call site through the registry.
+function idOf(source: (typeof Source)[keyof typeof Source]): GalaxyCatalogId {
+  return SOURCE_REGISTRY[source].id as GalaxyCatalogId;
+}
 
 // `GPUBufferUsage` and friends come from the shared
 // `tests/setup/webgpuGlobals.ts` setupFile. The beforeAll below only
@@ -159,9 +168,9 @@ describe('PointRenderer.totalCount', () => {
       makeStubSourceBgl(),
       makeStubFocusBgl(),
     );
-    await renderer.upload(Source.SDSS, makeCloud(100));
-    await renderer.upload(Source.TwoMRS, makeCloud(50));
-    await renderer.upload(Source.Glade, makeCloud(25));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(100));
+    await renderer.upload(idOf(Source.TwoMRS), makeCloud(50));
+    await renderer.upload(idOf(Source.Glade), makeCloud(25));
     expect(renderer.totalCount()).toBe(175);
   });
 
@@ -173,11 +182,11 @@ describe('PointRenderer.totalCount', () => {
       makeStubSourceBgl(),
       makeStubFocusBgl(),
     );
-    await renderer.upload(Source.SDSS, makeCloud(100));
-    await renderer.upload(Source.TwoMRS, makeCloud(50));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(100));
+    await renderer.upload(idOf(Source.TwoMRS), makeCloud(50));
     expect(renderer.totalCount()).toBe(150);
 
-    renderer.unload(Source.SDSS);
+    renderer.unload(idOf(Source.SDSS));
     expect(renderer.totalCount()).toBe(50);
   });
 });
@@ -195,8 +204,8 @@ describe('PointRenderer.loadedSources', () => {
     // GALAXY_CATALOG_SOURCES is ordered smallest-catalogue → largest:
     //   [Synthetic, Famous, TwoMRS, SDSS, Glade]
     // so TwoMRS comes before SDSS.
-    await renderer.upload(Source.SDSS, makeCloud(100));
-    await renderer.upload(Source.TwoMRS, makeCloud(50));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(100));
+    await renderer.upload(idOf(Source.TwoMRS), makeCloud(50));
 
     const entries = Array.from(renderer.loadedSources());
 
@@ -214,11 +223,11 @@ describe('PointRenderer.loadedSources', () => {
       makeStubSourceBgl(),
       makeStubFocusBgl(),
     );
-    await renderer.upload(Source.TwoMRS, makeCloud(50));
-    await renderer.upload(Source.SDSS, makeCloud(100));
-    await renderer.upload(Source.Glade, makeCloud(25));
+    await renderer.upload(idOf(Source.TwoMRS), makeCloud(50));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(100));
+    await renderer.upload(idOf(Source.Glade), makeCloud(25));
 
-    renderer.unload(Source.TwoMRS);
+    renderer.unload(idOf(Source.TwoMRS));
 
     const entries = Array.from(renderer.loadedSources());
     expect(entries.map((e) => e.source)).toEqual([Source.SDSS, Source.Glade]);
@@ -250,7 +259,7 @@ describe('PointRenderer.upload — regression: replace, not append', () => {
     const cloudA = makeCloud(1000);
     const cloudB = makeCloud(500);
 
-    await renderer.upload(Source.SDSS, cloudA);
+    await renderer.upload(idOf(Source.SDSS), cloudA);
     const firstEntry = Array.from(renderer.loadedSources()).find((e) => e.source === Source.SDSS);
     expect(firstEntry).toBeDefined();
     const firstBuffer = firstEntry!.vertexBuffer;
@@ -260,7 +269,7 @@ describe('PointRenderer.upload — regression: replace, not append', () => {
     // each upload's buffer has its own `destroy` we can spy on independently.
     const destroySpy = vi.spyOn(firstBuffer, 'destroy');
 
-    await renderer.upload(Source.SDSS, cloudB);
+    await renderer.upload(idOf(Source.SDSS), cloudB);
     expect(destroySpy).toHaveBeenCalledTimes(1);
 
     // Bookkeeping reflects the second upload's count, not the sum.
@@ -279,7 +288,7 @@ describe('PointRenderer.upload — regression: replace, not append', () => {
 // the renderer can clear the source's GPU buffer.  The naive path would call
 // `device.createBuffer({ size: 0, ... })` which the WebGPU spec forbids
 // (OperationError on `size === 0`); the prior buffer would already be
-// destroyed by then, leaving the entry in the clouds Map with a destroyed
+// destroyed by then, leaving the entry in the galaxyCatalogs Map with a destroyed
 // buffer reference and the next frame's draw call would fault.
 //
 // Contract: a count=0 upload destroys the prior buffer, REMOVES the entry
@@ -295,7 +304,7 @@ describe('PointRenderer.upload — regression: empty-cloud unload', () => {
       makeStubSourceBgl(),
       makeStubFocusBgl(),
     );
-    await renderer.upload(Source.SDSS, makeCloud(1000));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(1000));
 
     const firstEntry = Array.from(renderer.loadedSources()).find((e) => e.source === Source.SDSS);
     expect(firstEntry).toBeDefined();
@@ -303,7 +312,7 @@ describe('PointRenderer.upload — regression: empty-cloud unload', () => {
 
     // Empty cloud — same shape `cloudLoader.reloadSource` builds when
     // `TIER_TARGETS[tier][source] === 0`.
-    await renderer.upload(Source.SDSS, makeCloud(0));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(0));
 
     // Prior buffer destroyed (VRAM freed).
     expect(destroySpy).toHaveBeenCalledTimes(1);
@@ -326,7 +335,7 @@ describe('PointRenderer.upload — regression: empty-cloud unload', () => {
       makeStubSourceBgl(),
       makeStubFocusBgl(),
     );
-    await expect(renderer.upload(Source.SDSS, makeCloud(0))).resolves.toBeUndefined();
+    await expect(renderer.upload(idOf(Source.SDSS), makeCloud(0))).resolves.toBeUndefined();
     expect(renderer.totalCount()).toBe(0);
   });
 
@@ -341,9 +350,9 @@ describe('PointRenderer.upload — regression: empty-cloud unload', () => {
       makeStubSourceBgl(),
       makeStubFocusBgl(),
     );
-    await renderer.upload(Source.SDSS, makeCloud(1000));
-    await renderer.upload(Source.SDSS, makeCloud(0));
-    await renderer.upload(Source.SDSS, makeCloud(750));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(1000));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(0));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(750));
 
     const entries = Array.from(renderer.loadedSources());
     expect(entries.length).toBe(1);
@@ -381,8 +390,8 @@ describe('PointRenderer.upload — regression: parallel-upload rebake race', () 
     );
 
     // Seed with the "prior tier" layout so the rebake has stale offsets to act on.
-    await renderer.upload(Source.SDSS, makeCloud(498_227));
-    await renderer.upload(Source.Glade, makeCloud(1_995_421));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(498_227));
+    await renderer.upload(idOf(Source.Glade), makeCloud(1_995_421));
 
     // Build per-source delays: SDSS bakes fast (50 ms), GLADE bakes slow
     // (200 ms).  SDSS's post-bake rebake fires while GLADE's worker is still
@@ -400,8 +409,8 @@ describe('PointRenderer.upload — regression: parallel-upload rebake race', () 
 
     try {
       // Tier swap: kick off both in parallel, the way `engine.setTier` does.
-      const sdssPromise = renderer.upload(Source.SDSS, makeCloud(156_000));
-      const gladePromise = renderer.upload(Source.Glade, makeCloud(400_000));
+      const sdssPromise = renderer.upload(idOf(Source.SDSS), makeCloud(156_000));
+      const gladePromise = renderer.upload(idOf(Source.Glade), makeCloud(400_000));
 
       await Promise.all([sdssPromise, gladePromise]);
 
@@ -541,7 +550,7 @@ describe('PointRenderer.spliceSchechterRatios', () => {
       makeStubSourceBgl(),
       makeStubFocusBgl(),
     );
-    await renderer.upload(Source.SDSS, makeCloud(3));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(3));
 
     const ratios = new Float32Array([0.25, 0.5, 0.75]);
     renderer.spliceSchechterRatios(Source.SDSS, ratios);
@@ -564,7 +573,7 @@ describe('PointRenderer.spliceSchechterRatios', () => {
       makeStubSourceBgl(),
       makeStubFocusBgl(),
     );
-    await renderer.upload(Source.SDSS, makeCloud(5));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(5));
     expect(() => renderer.spliceSchechterRatios(Source.SDSS, new Float32Array(4))).toThrow(
       /length/i,
     );
@@ -594,7 +603,7 @@ describe('PointRenderer.spliceAngularWeights', () => {
       makeStubSourceBgl(),
       makeStubFocusBgl(),
     );
-    await renderer.upload(Source.SDSS, makeCloud(2));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(2));
 
     const weights = new Float32Array([0.1, 0.9]);
     renderer.spliceAngularWeights(Source.SDSS, weights);
@@ -615,7 +624,7 @@ describe('PointRenderer.spliceAngularWeights', () => {
       makeStubSourceBgl(),
       makeStubFocusBgl(),
     );
-    await renderer.upload(Source.SDSS, makeCloud(5));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(5));
     expect(() => renderer.spliceAngularWeights(Source.SDSS, new Float32Array(6))).toThrow(
       /length/i,
     );
@@ -633,7 +642,7 @@ describe('PointRenderer.clearBiasOverlays', () => {
       makeStubSourceBgl(),
       makeStubFocusBgl(),
     );
-    await renderer.upload(Source.SDSS, makeCloud(2));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(2));
 
     // Populate slots 9/10 first so we can assert clear actually clears.
     renderer.spliceSchechterRatios(Source.SDSS, new Float32Array([0.5, 0.6]));
@@ -661,8 +670,8 @@ describe('PointRenderer.clearBiasOverlays', () => {
       makeStubSourceBgl(),
       makeStubFocusBgl(),
     );
-    await renderer.upload(Source.SDSS, makeCloud(1));
-    await renderer.upload(Source.Glade, makeCloud(1));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(1));
+    await renderer.upload(idOf(Source.Glade), makeCloud(1));
 
     const before = writeCalls.length;
     renderer.clearBiasOverlays();
@@ -767,13 +776,13 @@ describe('PointRenderer.destroy', () => {
     // cluster-focus uniform is shared/engine-owned, not per renderer).
     expect(buffers).toHaveLength(1);
 
-    await renderer.upload(Source.SDSS, makeCloud(2));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(2));
     // upload() allocates 3 more buffers per source: the vertex buffer,
     // the FadeUniforms 16-byte uniform, and the SourceUniforms 16-byte
     // uniform (unified-fade architecture).
     expect(buffers).toHaveLength(4);
 
-    await renderer.upload(Source.TwoMRS, makeCloud(3));
+    await renderer.upload(idOf(Source.TwoMRS), makeCloud(3));
     // Second source: another vertex + fade + source triple.
     expect(buffers).toHaveLength(7);
 
@@ -787,7 +796,7 @@ describe('PointRenderer.destroy', () => {
     for (const b of buffers) expect(b.destroyCount).toBe(1);
   });
 
-  it('clears the clouds map', async () => {
+  it('clears the galaxyCatalogs map', async () => {
     const renderer = createPointRenderer(
       makeStubDevice(),
       'rgba16float',
@@ -795,8 +804,8 @@ describe('PointRenderer.destroy', () => {
       makeStubSourceBgl(),
       makeStubFocusBgl(),
     );
-    await renderer.upload(Source.SDSS, makeCloud(2));
-    await renderer.upload(Source.TwoMRS, makeCloud(3));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(2));
+    await renderer.upload(idOf(Source.TwoMRS), makeCloud(3));
     expect(Array.from(renderer.loadedSources())).toHaveLength(2);
 
     renderer.destroy();
@@ -814,10 +823,10 @@ describe('PointRenderer.destroy', () => {
       makeStubSourceBgl(),
       makeStubFocusBgl(),
     );
-    await renderer.upload(Source.SDSS, makeCloud(1));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(1));
 
     expect(() => renderer.destroy()).not.toThrow();
-    // Second call iterates an empty clouds map and re-destroys the
+    // Second call iterates an empty galaxyCatalogs map and re-destroys the
     // already-destroyed uniform buffer.  WebGPU's spec defines
     // `GPUBuffer.destroy()` as idempotent; our stub mirrors that by
     // simply incrementing the counter — the test's contract is "no
@@ -835,7 +844,7 @@ describe('PointRenderer.draw — PointDrawSettings shape', () => {
       makeStubSourceBgl(),
       makeStubFocusBgl(),
     );
-    await renderer.upload(Source.SDSS, makeCloud(10));
+    await renderer.upload(idOf(Source.SDSS), makeCloud(10));
 
     // Stub the encoder.  draw() must call setPipeline + setBindGroup + draw
     // once (one source loaded, one passing visibility bit).
