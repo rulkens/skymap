@@ -8,9 +8,10 @@
  * registry itself needs to learn the new value.
  *
  * Current layers:
- *   - milkyWay   — the "YOU ARE HERE" Milky Way pin (a single label +
- *                  marker line). Fades in when the camera reaches the
- *                  band where the marker is meaningful.
+ *   - milkyWay   — the "You are here" Milky Way label (a single label +
+ *                  marker line) emitted by produceMilkyWayLabel. The layer
+ *                  fade carries the user toggle + load-in ramp; the producer
+ *                  owns the camera-distance fade.
  *   - structure  — cluster + named-anchor labels emitted by
  *                  `produceStructureLabels`.
  *   - galaxyNames — per-galaxy name labels (currently unused but

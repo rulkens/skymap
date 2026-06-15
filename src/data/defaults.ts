@@ -114,9 +114,8 @@ export const DEFAULT_DEPTH_FADE_ENABLED = true;
 export const DEFAULT_MILKY_WAY_ENABLED = SOURCE_REGISTRY[Source.MilkyWay].visible;
 
 /**
- * "You are here" Milky-Way label default — ON.  The label's visibility used to
- * be driven purely by camera distance (always on, fading by range); the new
- * toggle defaults on to preserve that behaviour.
+ * "You are here" Milky-Way label default — ON.  The label is always available
+ * by camera distance, so its toggle defaults on.
  *
  * Unlike `DEFAULT_MILKY_WAY_ENABLED` above, this is a plain `true` literal, NOT
  * registry-derived: the registry row's `visible` field gates the DISK overlay,
