@@ -25,6 +25,13 @@
  * to 0 when every structure category is hidden or every ring has faded
  * out, so `hasAny` correctly reflects whether a ring is actually on
  * screen to be hit.
+ *
+ * The Milky Way is a third independently-pickable layer: its invisible
+ * pick billboard claims the galactic centre, but only while the disk is
+ * on screen.  Folding `mwVisible` into `hasAny` keeps a MW-only frame
+ * (galaxies off, no structure markers, disk visible) running a pick pass
+ * — same fix the structure-marker fold-in applied for cluster-only
+ * frames.
  */
 
 import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
@@ -36,7 +43,8 @@ export type PickTargets = {
   readonly visibleSources: readonly PickSourceDraw[];
   /**
    * Whether a pick pass should run this frame: at least one visible
-   * galaxy catalog OR at least one cluster / SC / void ring marker queued.
+   * galaxy catalog OR at least one cluster / SC / void ring marker queued
+   * OR the Milky-Way disk on screen.
    */
   readonly hasAny: boolean;
 };
@@ -45,11 +53,19 @@ export function collectPickTargets(
   renderer: PointRenderer,
   pickMask: number,
   structureMarkerRenderer: StructureMarkerRenderer | null,
+  // Whether the Milky-Way disk is on screen this frame (its invisible
+  // pick billboard claims the galactic centre only then).  Defaults to
+  // false so existing call sites that don't yet thread the gate keep the
+  // pre-MW behaviour.
+  mwVisible = false,
 ): PickTargets {
   const visibleSources = Array.from(renderer.loadedSources()).filter(
     (s) => ((pickMask >> s.source) & 1) !== 0,
   );
   const hasStructureMarkers =
     structureMarkerRenderer !== null && structureMarkerRenderer.markerCount() > 0;
-  return { visibleSources, hasAny: visibleSources.length > 0 || hasStructureMarkers };
+  return {
+    visibleSources,
+    hasAny: visibleSources.length > 0 || hasStructureMarkers || mwVisible,
+  };
 }

@@ -54,6 +54,7 @@ import { createLabelRenderer } from '../../gpu/renderers/labelRenderer';
 import { createMarkerLineRenderer } from '../../gpu/renderers/markerLineRenderer';
 import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRingRenderer';
 import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarkerRenderer';
+import { createMilkyWayPickRenderer } from '../../gpu/renderers/milkyWayPickRenderer';
 import { createVolumeFieldRenderer } from '../../gpu/renderers/volumeFieldRenderer';
 import { createFlowFieldRenderer } from '../../gpu/renderers/flowFieldRenderer';
 import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
@@ -202,6 +203,11 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     'rgba16float',
     state.gpu.fadeBgl!,
   );
+  // Invisible Milky-Way pick billboard — writes into the r32uint pick
+  // texture (NOT the HDR target), so it takes no format param.  Built
+  // here alongside the other pick providers; `wireInput` threads it into
+  // `createPickRenderer` along with the disk-visibility gate.
+  state.gpu.milkyWayPickRenderer = createMilkyWayPickRenderer(uiCtx, state.gpu.fadeBgl!);
 
   // Wire the freshly-constructed renderers into the label director, which
   // was built eagerly in the engine state literal with no renderers yet.

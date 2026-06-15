@@ -2,6 +2,7 @@ import { describe, expect, it, beforeAll, vi } from 'vitest';
 import { createPickRenderer } from '../../../../src/services/gpu/renderers/pickRenderer';
 import { createPointRenderer } from '../../../../src/services/gpu/renderers/pointRenderer';
 import { Source } from '../../../../src/data/sources';
+import type { MilkyWayPickRenderer } from '../../../../src/@types/rendering/MilkyWayPickRenderer';
 
 beforeAll(() => {
   // GPUBufferUsage / GPUShaderStage / GPUTextureUsage come from the
@@ -180,5 +181,111 @@ describe('createPickRenderer', () => {
     const sourceGroup2Calls = createBindGroupCalls.filter((c) => c.layout === canonicalSourceBgl);
     expect(sourceGroup2Calls).toHaveLength(2);
     expect(sourceGroup2Calls.map((c) => c.buffer)).toEqual([sourceBufA, sourceBufB]);
+  });
+
+  // Device that fully drives pick() to completion (staging buffer has
+  // mapAsync / getMappedRange / unmap); raw=0 so the readback is a clean
+  // null — the MW assertions don't depend on the decode.
+  function makeDrivableDevice(): GPUDevice {
+    return {
+      createShaderModule: vi.fn(() => ({
+        getCompilationInfo: () => Promise.resolve({ messages: [] }),
+      })),
+      createPipelineLayout: vi.fn(() => ({})),
+      createBindGroupLayout: vi.fn(() => ({})),
+      createRenderPipeline: vi.fn(() => ({ getBindGroupLayout: () => ({}) })),
+      createBuffer: vi.fn(() => ({
+        mapAsync: vi.fn(() => Promise.resolve()),
+        getMappedRange: vi.fn(() => new Uint32Array([0]).buffer),
+        unmap: vi.fn(),
+        destroy: vi.fn(),
+      })),
+      createTexture: vi.fn(() => ({ createView: () => ({}), destroy: vi.fn() })),
+      queue: { writeBuffer: vi.fn(), submit: vi.fn() },
+      createCommandEncoder: vi.fn(() => ({
+        beginRenderPass: () => ({
+          setPipeline: vi.fn(),
+          setBindGroup: vi.fn(),
+          setVertexBuffer: vi.fn(),
+          draw: vi.fn(),
+          end: vi.fn(),
+        }),
+        copyTextureToBuffer: vi.fn(),
+        finish: vi.fn(() => ({})),
+      })),
+      createBindGroup: vi.fn(() => ({})),
+    } as unknown as GPUDevice;
+  }
+
+  function makeMilkyWayPickRenderer(): MilkyWayPickRenderer & {
+    pickMilkyWay: ReturnType<typeof vi.fn>;
+  } {
+    return {
+      label: 'milkyWayPickRenderer',
+      pickMilkyWay: vi.fn<(pass: GPURenderPassEncoder) => void>(),
+      destroy: vi.fn<() => void>(),
+    };
+  }
+
+  it('invokes pickMilkyWay inside the pick pass when the MW is gated visible', async () => {
+    const device = makeDrivableDevice();
+    const pointRenderer = createPointRenderer(
+      device,
+      'rgba16float',
+      makeStubFadeBgl(),
+      makeStubSourceBgl(),
+      makeStubFocusBgl(),
+    );
+    const mwPick = makeMilkyWayPickRenderer();
+    const pickRenderer = createPickRenderer(
+      device,
+      pointRenderer,
+      makeStubFadeBgl(),
+      makeStubSourceBgl(),
+      makeStubFocusBgl(),
+      {} as unknown as GPUBindGroup,
+      undefined, // no structure markers
+      undefined, // no procedural disks
+      mwPick,
+      () => true, // MW disk visible
+    );
+
+    await pickRenderer.pick([100, 100], 50, 50, [
+      { source: Source.SDSS, vertexBuffer: {} as GPUBuffer, count: 10, sourceBuffer: {} as GPUBuffer },
+    ]);
+
+    expect(mwPick.pickMilkyWay).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT invoke pickMilkyWay when the MW is gated hidden', async () => {
+    const device = makeDrivableDevice();
+    const pointRenderer = createPointRenderer(
+      device,
+      'rgba16float',
+      makeStubFadeBgl(),
+      makeStubSourceBgl(),
+      makeStubFocusBgl(),
+    );
+    const mwPick = makeMilkyWayPickRenderer();
+    const pickRenderer = createPickRenderer(
+      device,
+      pointRenderer,
+      makeStubFadeBgl(),
+      makeStubSourceBgl(),
+      makeStubFocusBgl(),
+      {} as unknown as GPUBindGroup,
+      undefined,
+      undefined,
+      mwPick,
+      () => false, // MW disk hidden — gate closed
+    );
+
+    // A galaxy source is present so the pass still runs; the MW draw must
+    // be skipped because the gate is closed.
+    await pickRenderer.pick([100, 100], 50, 50, [
+      { source: Source.SDSS, vertexBuffer: {} as GPUBuffer, count: 10, sourceBuffer: {} as GPUBuffer },
+    ]);
+
+    expect(mwPick.pickMilkyWay).not.toHaveBeenCalled();
   });
 });

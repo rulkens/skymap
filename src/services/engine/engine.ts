@@ -398,6 +398,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // for the null-until-init lifecycle rationale.
       renderer: null,
       pickRenderer: null,
+      milkyWayPickRenderer: null,
       // Canonical fade + source + focus bind-group layouts. Built once in
       // initGpu and threaded into every renderer's createPipelineLayout so
       // consumers share one layout identity. See
@@ -1108,6 +1109,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     //    SDSS deck).
     state.gpu.pickRenderer?.destroy();
     state.gpu.pickRenderer = null;
+    state.gpu.milkyWayPickRenderer?.destroy();
+    state.gpu.milkyWayPickRenderer = null;
     state.gpu.postProcess?.destroy();
     state.gpu.postProcess = null;
     state.gpu.volumeOffscreen?.destroy();

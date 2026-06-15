@@ -139,6 +139,10 @@ vi.mock('../../../../src/services/gpu/renderers/structureMarkerRenderer', () => 
   createStructureMarkerRenderer: vi.fn(() => makeStub('structureMarkerRenderer')),
 }));
 
+vi.mock('../../../../src/services/gpu/renderers/milkyWayPickRenderer', () => ({
+  createMilkyWayPickRenderer: vi.fn(() => makeStub('milkyWayPickRenderer')),
+}));
+
 vi.mock('../../../../src/services/gpu/renderers/volumeFieldRenderer', () => ({
   createVolumeFieldRenderer: vi.fn(() => makeStub('volumeFieldRenderer')),
 }));
@@ -189,6 +193,7 @@ function makeState(): EngineState {
     gpu: {
       renderer: null,
       pickRenderer: null,
+      milkyWayPickRenderer: null,
       postProcess: null,
       filamentRenderer: null,
       labelRenderer: null,

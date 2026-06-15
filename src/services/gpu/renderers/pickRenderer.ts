@@ -35,6 +35,7 @@ import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniforms
 import type { FocusUniformsBgl } from '../../../@types/rendering/FocusUniformsBgl';
 import type { StructureMarkerRenderer } from '../../../@types/rendering/StructureMarkerRenderer';
 import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
+import type { MilkyWayPickRenderer } from '../../../@types/rendering/MilkyWayPickRenderer';
 import {
   POINT_STRIDE,
   POINT_VERTEX_ATTRIBUTES,
@@ -88,6 +89,20 @@ export function createPickRenderer(
   // rather than only their companion point billboard.  Optional so
   // tests and pre-init paths can omit it.
   proceduralDiskRenderer?: ProceduralDiskRenderer,
+  // Optional Milky-Way pick provider.  When present AND the gate below
+  // reports the disk is on screen, the pick pass calls
+  // `milkyWayPickRenderer.pickMilkyWay(pass)` so the galactic centre is
+  // clickable.  Optional so tests and pre-init paths can omit it.
+  milkyWayPickRenderer?: MilkyWayPickRenderer,
+  // Visibility gate for the Milky-Way pick draw.  The MW must contribute
+  // a hit ONLY while its disk is on screen (the `{ kind: 'milkyWay' }`
+  // fade opacity > 0 AND the camera is inside the distance-fade band) —
+  // otherwise a faded-out MW would still be clickable.  Passed as a
+  // callback rather than read off EngineState so this renderer stays
+  // dumb: the engine owns the fade/camera state and supplies the
+  // predicate.  Defaults to "never visible" so a picker constructed
+  // without the gate never draws the MW.
+  mwVisible: () => boolean = () => false,
 ): PickRenderer {
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'pick.vertex');
   const fsModule = createShaderModuleWithDevLog(device, pickFsCode, 'pick.pickFragment');
@@ -351,6 +366,14 @@ export function createPickRenderer(
       proceduralDiskRenderer.pickDisks(pass);
     }
 
+    // Milky-Way pick: a single screen-clamped billboard at the galactic
+    // centre, drawn only while the disk is on screen (the gate keeps a
+    // faded-out MW unclickable).  Shared depth means a closer galaxy
+    // still claims the pixel.
+    if (milkyWayPickRenderer && mwVisible()) {
+      milkyWayPickRenderer.pickMilkyWay(pass);
+    }
+
     pass.end();
     return pt;
   }
@@ -365,7 +388,8 @@ export function createPickRenderer(
   // every ring has faded out).
   const hasAnyPickTarget = (sourceList: readonly PickSourceDraw[]): boolean =>
     sourceList.length > 0 ||
-    (structureMarkerRenderer !== undefined && structureMarkerRenderer.markerCount() > 0);
+    (structureMarkerRenderer !== undefined && structureMarkerRenderer.markerCount() > 0) ||
+    (milkyWayPickRenderer !== undefined && mwVisible());
 
   async function pick(
     viewportPx: Vec2,

@@ -44,6 +44,7 @@ import { cssToTexPx } from '../helpers/cssToTexPx';
 import { isEngineReady } from '../helpers/engineReady';
 import { resolvePick } from '../helpers/resolvePick';
 import { collectPickTargets } from '../helpers/collectPickTargets';
+import { milkyWayPickVisible } from '../helpers/milkyWayPickVisible';
 import { produceStructureMarkers } from '../presentation/produceStructureMarkers';
 import { deriveFrameContext } from './frameContext';
 import { deriveSourceMasks } from './deriveSourceMasks';
@@ -335,6 +336,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       ctx.renderer,
       state.sources.pickMask,
       state.gpu.structureMarkerRenderer,
+      milkyWayPickVisible(state),
     );
     if (hasAny) {
       const pickTex = state.gpu.pickRenderer.renderForDebug(
@@ -402,6 +404,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       ctx.renderer,
       state.sources.pickMask,
       state.gpu.structureMarkerRenderer,
+      milkyWayPickVisible(state),
     );
     if (!hasAny) {
       // Nothing pickable (every galaxy catalog off AND no cluster ring visible).

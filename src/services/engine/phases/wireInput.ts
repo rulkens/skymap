@@ -34,6 +34,7 @@ import { attachEngineInputs } from '../interaction/inputBindings';
 import { computeInitialCamera } from '../camera/cameraFraming';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { collectPickTargets } from '../helpers/collectPickTargets';
+import { milkyWayPickVisible } from '../helpers/milkyWayPickVisible';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -65,6 +66,12 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     state.gpu.focusUniform!.bindGroup,
     state.gpu.structureMarkerRenderer ?? undefined,
     state.gpu.proceduralDiskRenderer ?? undefined,
+    // The Milky-Way pick provider + its disk-visibility gate.  The gate
+    // is a closure over `state` so the renderer stays free of
+    // EngineState — it draws the MW only while the disk is on screen,
+    // the same condition `milkyWayPass.enabled` uses.
+    state.gpu.milkyWayPickRenderer ?? undefined,
+    () => milkyWayPickVisible(state),
   );
   state.gpu.pickRenderer = pickRenderer;
   // The resolver runs the whole pixel → resolved `FocusableTarget`
@@ -207,6 +214,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       r,
       state.sources.pickMask,
       state.gpu.structureMarkerRenderer,
+      milkyWayPickVisible(state),
     );
     if (!hasAny) return null;
 

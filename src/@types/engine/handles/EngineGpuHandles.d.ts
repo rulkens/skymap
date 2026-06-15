@@ -43,6 +43,7 @@ import type { PointRenderer } from '../../rendering/PointRenderer';
 import type { PostProcess } from '../../rendering/PostProcess';
 import type { VolumeOffscreen } from '../../rendering/VolumeOffscreen';
 import type { PickRenderer } from '../../rendering/PickRenderer';
+import type { MilkyWayPickRenderer } from '../../rendering/MilkyWayPickRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { LabelRenderer } from '../../rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
@@ -66,6 +67,16 @@ import type { FocusUniformBuffer } from '../../rendering/FocusUniformBuffer';
 export type EngineGpuHandles = {
   renderer: PointRenderer | null;
   pickRenderer: PickRenderer | null;
+  /**
+   * Invisible, pick-only Milky-Way billboard.  Stamps the MW identity
+   * into the r32uint pick texture so the galactic centre is clickable.
+   * Constructed in `wireInput` alongside `pickRenderer` (it is one of the
+   * pick pass's optional providers) and threaded into `createPickRenderer`.
+   * Null until then; destroyed in teardown alongside the other pick
+   * providers.  Drawn only while the MW disk is on screen (gated by the
+   * callback the pick renderer holds).
+   */
+  milkyWayPickRenderer: MilkyWayPickRenderer | null;
   /**
    * Canonical FadeUniforms bind-group layout (@group(1)). Constructed
    * once in `initGpu` and shared by every renderer pipeline that fades.
