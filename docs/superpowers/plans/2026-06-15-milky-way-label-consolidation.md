@@ -414,10 +414,13 @@ register the `milkyWay` label-layer fade at the settings gate.
     producer fires only when it pushes a candidate).
   - `const fadeAlpha = distAlpha * layerOpacity;` applied to BOTH the label and
     the line.
-  - Emit exactly one `Label` (id `'you-are-here'`, text `'You are here'`, origin
-    anchor `[0, LABEL_ANCHOR_MPC, 0]`, the colors / sizes / outline from
-    `youAreHereSubsystem.ts:38-105`) and one `MarkerLine` stem (from
-    `youAreHereSubsystem.ts:107-119`, `ownerLabelId: 'you-are-here'`).
+  - Emit exactly one `Label` (id `'milkyWay'` — same as the source id; text
+    `'You are here'`, origin anchor `[0, LABEL_ANCHOR_MPC, 0]`, the colors /
+    sizes / outline from `youAreHereSubsystem.ts:38-105`) and one `MarkerLine`
+    stem (from `youAreHereSubsystem.ts:107-119`, `ownerLabelId: 'milkyWay'`).
+    NOTE: the OLD subsystem used the Label id `'you-are-here'`; the new producer
+    uses `'milkyWay'` (matching the registry source id) — only the rendered TEXT
+    stays `'You are here'`. Update any test that asserted the old id.
   - Live-tuning override: read `getLabelStyleOverride()`; apply the override
     outline fields when `override.targetCategory === 'milkyWay'` (was
     `'youAreHere'`), mirroring `youAreHereSubsystem.ts:80-87` /
@@ -567,7 +570,9 @@ describe('produceMilkyWayLabel', () => {
     const out = produceMilkyWayLabel(makeState(true, 1), makeCtx(0.5));
     expect(out.labels).toHaveLength(1);
     expect(out.lines).toHaveLength(1);
+    expect(out.labels[0]!.id).toBe('milkyWay'); // id = source id; text stays below
     expect(out.labels[0]!.text).toBe('You are here');
+    expect(out.lines[0]!.ownerLabelId).toBe('milkyWay');
     expect(out.labels[0]!.fadeAlpha).toBeCloseTo(1);
     expect(out.lines[0]!.fadeAlpha).toBeCloseTo(1);
   });
@@ -757,10 +762,13 @@ Run the simplicity lens over the diff, then the full gate.
     `tests/` (grep `youAreHere` case-sensitive — this catches the deleted
     `youAreHereSubsystem`, the renamed `youAreHereVisibility`/`youAreHereAlpha`,
     and the `'youAreHere'` layer / override-target literals). **Deliberately
-    KEEP**: the rendered 3D text `"You are here"`, the `'you-are-here'` Label id
-    (and its `ownerLabelId`), and prose mentions of the "you are here" marker
-    concept — these are the iconic label, not the old symbol names. The rename is
-    complete when no `youAreHere` identifier remains, not when the phrase is gone.
+    KEEP**: the rendered 3D text `"You are here"` and prose mentions of the "you
+    are here" marker concept — these are the iconic label text, not symbol names.
+    The rename is complete when no `youAreHere` identifier remains, not when the
+    phrase is gone. NOTE: the Milky Way label's own id is now `'milkyWay'` (was
+    `'you-are-here'`); any remaining `'you-are-here'` literals are arbitrary
+    label-director test fixtures (sample labels for dedup/prominence tests, not
+    the real producer) and may stay.
 - [ ] Apply any small un-braiding the radar surfaces (or record "no significant
   complecting found").
 - [ ] `npm run typecheck` (both src + tools tsconfigs) — green.
