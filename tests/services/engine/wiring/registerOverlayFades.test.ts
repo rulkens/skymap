@@ -106,9 +106,7 @@ describe('registerOverlayFades', () => {
     const { state, registerSpy } = makeState({ milkyWayEnabled: true });
     registerOverlayFades(state);
 
-    const milkyWayCall = calls(registerSpy).find(
-      ([h]) => h.kind === 'overlay' && (h as Extract<typeof h, { id: string }>).id === 'milkyWay',
-    );
+    const milkyWayCall = calls(registerSpy).find(([h]) => h.kind === 'milkyWay');
     expect(milkyWayCall).toBeDefined();
     expect(milkyWayCall![1]).toBe(1);
   });
@@ -121,9 +119,7 @@ describe('registerOverlayFades', () => {
     const { state, registerSpy } = makeState({ milkyWayEnabled: false });
     registerOverlayFades(state);
 
-    const milkyWayCall = calls(registerSpy).find(
-      ([h]) => h.kind === 'overlay' && (h as Extract<typeof h, { id: string }>).id === 'milkyWay',
-    );
+    const milkyWayCall = calls(registerSpy).find(([h]) => h.kind === 'milkyWay');
     expect(milkyWayCall).toBeDefined();
     expect(milkyWayCall![1]).toBe(0);
   });
@@ -239,8 +235,8 @@ describe('registerOverlayFades', () => {
 
   // ── per-category marker + structure-label handles ──────────────────────
 
-  it('registers a markerLayer handle per structure category', () => {
-    // Each structure category gets its own markerLayer fade controller so its
+  it('registers a structure handle per structure source', () => {
+    // Each structure source gets its own structure fade controller so its
     // rings can recede/fade independently of the others.
     const { state, registerSpy } = makeState();
     registerOverlayFades(state);
@@ -248,10 +244,10 @@ describe('registerOverlayFades', () => {
     for (const category of ['cluster', 'supercluster', 'void', 'group'] as const) {
       const markerCall = calls(registerSpy).find(
         ([h]) =>
-          h.kind === 'markerLayer' &&
-          (h as Extract<FadeId, { kind: 'markerLayer' }>).category === category,
+          h.kind === 'structure' &&
+          (h as Extract<FadeId, { kind: 'structure' }>).id === category,
       );
-      expect(markerCall, `markerLayer{${category}} should be registered`).toBeDefined();
+      expect(markerCall, `structure{${category}} should be registered`).toBeDefined();
     }
   });
 
@@ -285,8 +281,8 @@ describe('registerOverlayFades', () => {
     const markerOpacity = (category: string) =>
       calls(registerSpy).find(
         ([h]) =>
-          h.kind === 'markerLayer' &&
-          (h as Extract<FadeId, { kind: 'markerLayer' }>).category === category,
+          h.kind === 'structure' &&
+          (h as Extract<FadeId, { kind: 'structure' }>).id === category,
       )?.[1];
     const labelOpacity = (category: string) =>
       calls(registerSpy).find(

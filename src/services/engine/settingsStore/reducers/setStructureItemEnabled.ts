@@ -17,11 +17,11 @@
  */
 
 import type { EngineSettingsState } from '../../../../@types/settings/EngineSettingsState';
-import type { StructureCategory } from '../../../../@types/data/structure/StructureCategory';
+import type { StructureId } from '../../../../@types/data/structure/StructureId';
 
 export function setStructureItemEnabled(
   state: EngineSettingsState,
-  category: StructureCategory,
+  category: StructureId,
   enabled: boolean,
 ): EngineSettingsState {
   return {

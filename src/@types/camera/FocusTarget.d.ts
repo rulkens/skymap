@@ -21,7 +21,7 @@
  *                      (19-digit bigint, exceeds JS Number safe range)
  *   pos@<ra>,<dec>   — fallback for 2MRS/GLADE rows without a PGC
  *   cluster-virgo-m87  — structure record id: `${category}-${seed.id}`
- *                        (category from STRUCTURE_CATEGORIES; stable
+ *                        (category from STRUCTURE_IDS; stable
  *                        across rebuilds because the seed id is curated)
  */
 

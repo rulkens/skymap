@@ -6,7 +6,7 @@ import {
 import { LABEL_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
-import { STRUCTURE_CATEGORIES } from '../../../../src/data/structure/structureCategories';
+import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -47,20 +47,20 @@ function makeState(
 // producer reads alongside the fade opacity.
 function makeStructureItems(): EngineState['settings']['structures']['items'] {
   return Object.fromEntries(
-    STRUCTURE_CATEGORIES.map((c) => [c, { enabled: true, labelEnabled: true }]),
+    STRUCTURE_IDS.map((c) => [c, { enabled: true, labelEnabled: true }]),
   ) as EngineState['settings']['structures']['items'];
 }
 
 // Register every per-category structure label AND ring marker handle at full opacity.
 // The label handle backs the producer's load-in `fadeTo` (which THROWS on an
 // unregistered handle); the marker handle backs the anchor gate, which now reads
-// `opacityOf({markerLayer, category})` so a label fades in lock-step with its
+// `opacityOf({structure, id})` so a label fades in lock-step with its
 // ring instead of popping. Individual tests override a handle to 0 (or a
 // mid-fade value) where they need a disabled / fading category.
 function registerAllCategories(fades: FadeRegistry): void {
-  for (const category of STRUCTURE_CATEGORIES) {
+  for (const category of STRUCTURE_IDS) {
     fades.register({ kind: 'labelLayer', layer: 'structure', category }, 1);
-    fades.register({ kind: 'markerLayer', category }, 1);
+    fades.register({ kind: 'structure', id: category }, 1);
   }
 }
 
@@ -116,7 +116,7 @@ describe('produceStructureLabels', () => {
     // must still emit so the label ramps down to invisible instead of popping.
     const fades = makeRegistry();
     fades.register({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 1);
-    fades.register({ kind: 'markerLayer', category: 'cluster' }, 1);
+    fades.register({ kind: 'structure', id: 'cluster' }, 1);
     fades.setImmediate({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 0.5);
     const state = makeState({ fades });
     state.settings.structures.items.cluster.labelEnabled = false;
@@ -130,7 +130,7 @@ describe('produceStructureLabels', () => {
     // pop it back to full visibility mid-fade.
     const fades = makeRegistry();
     fades.register({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 1);
-    fades.register({ kind: 'markerLayer', category: 'cluster' }, 1);
+    fades.register({ kind: 'structure', id: 'cluster' }, 1);
     fades.setImmediate({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 0.5);
     const fadeToSpy = vi.spyOn(fades, 'fadeTo');
     const state = makeState({ fades });
@@ -151,8 +151,8 @@ describe('produceStructureLabels', () => {
     // false) AND its markerLayer opacity is exactly 0.
     const fades = makeRegistry();
     fades.register({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 1);
-    fades.register({ kind: 'markerLayer', category: 'cluster' }, 1);
-    fades.setImmediate({ kind: 'markerLayer', category: 'cluster' }, 0);
+    fades.register({ kind: 'structure', id: 'cluster' }, 1);
+    fades.setImmediate({ kind: 'structure', id: 'cluster' }, 0);
     const state = makeState({ fades });
     state.settings.structures.items.cluster.enabled = false;
     state.data.structures.setGroup('anchors', [rec('c1', { category: 'cluster' })]);
@@ -166,8 +166,8 @@ describe('produceStructureLabels', () => {
     // fade handle keeps them in lock-step.
     const fades = makeRegistry();
     fades.register({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 1);
-    fades.register({ kind: 'markerLayer', category: 'cluster' }, 1);
-    fades.setImmediate({ kind: 'markerLayer', category: 'cluster' }, 0.5);
+    fades.register({ kind: 'structure', id: 'cluster' }, 1);
+    fades.setImmediate({ kind: 'structure', id: 'cluster' }, 0.5);
     const state = makeState({ fades });
     state.data.structures.setGroup('anchors', [rec('c1', { category: 'cluster' })]);
     expect(produceStructureLabels(state, makeCtx()).labels.map((l) => l.id)).toEqual(['c1']);

@@ -15,7 +15,7 @@
  *
  * The reducer stores the boolean verbatim. The cosmetic fade ramp that
  * accompanies the toggle in the UI is NOT this reducer's concern — it lives in
- * the handle setter's `fades.fadeTo({ kind: 'filaments' })` call, which still
+ * the handle setter's `fades.fadeTo({ kind: 'filament' })` call, which still
  * fires alongside the action. The render loop reads this flag (plus the live
  * fade opacity) each frame to decide whether the filaments pass stays alive.
  */

@@ -1,6 +1,6 @@
 import type { StructureInfo } from '../../data/structure/StructureInfo';
 import type { StructureGroupId } from '../../data/structure/StructureGroupId';
-import type { StructureCategory } from '../../data/structure/StructureCategory';
+import type { StructureId } from '../../data/structure/StructureId';
 
 /**
  * StructureStore — the authoritative app-side home for extended-structure
@@ -14,7 +14,7 @@ import type { StructureCategory } from '../../data/structure/StructureCategory';
  * alignment that pick-index decode requires.
  *
  * Per-category marker/label VISIBILITY is not a store concern: it lives in the
- * FadeRegistry as `markerLayer` / `labelLayer` handles, so the producers read
+ * FadeRegistry as `structure` / `labelLayer` handles, so the producers read
  * the same animated opacity the rings fade through. The store holds records
  * only.
  *
@@ -31,5 +31,5 @@ export type StructureStore = {
   /** Resolve a record by id across all groups, or null. */
   byId(id: string): StructureInfo | null;
   /** Records of one category, in `all()` order (pick-index alignment). */
-  byCategory(category: StructureCategory): readonly StructureInfo[];
+  byCategory(category: StructureId): readonly StructureInfo[];
 };

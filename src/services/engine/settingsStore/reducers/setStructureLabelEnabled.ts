@@ -16,11 +16,11 @@
  */
 
 import type { EngineSettingsState } from '../../../../@types/settings/EngineSettingsState';
-import type { StructureCategory } from '../../../../@types/data/structure/StructureCategory';
+import type { StructureId } from '../../../../@types/data/structure/StructureId';
 
 export function setStructureLabelEnabled(
   state: EngineSettingsState,
-  category: StructureCategory,
+  category: StructureId,
   labelEnabled: boolean,
 ): EngineSettingsState {
   return {

@@ -8,41 +8,43 @@
  * ad-hoc string.
  *
  * Kinds:
- *   - galaxy catalog       — one of SDSS, 2MRS, GLADE, Famous, Synthetic.
+ *   - galaxyCatalog — one of SDSS, 2MRS, GLADE, Famous, Synthetic.
  *                    Fades in on first load; fades out → upload → in
  *                    on tier swap. Discriminator: `id: GalaxyCatalogId`
  *                    (the string id the point renderer keys catalogs by).
- *   - filaments    — the single cosmic-web filament skeleton.
- *                    Fades in on first load. No discriminator.
- *   - flow         — the CF4++ peculiar-velocity flow overlay. Fades in on
- *                    first load (the slot commit), like filaments/galaxy catalog;
- *                    fades out on disable. No discriminator.
- *   - scalarField  — one volumetric scalar field (CF-4, rhizome-small,
+ *   - structure    — the structure marker rings for one structure source
+ *                    (cluster, supercluster, void, group). Discriminator:
+ *                    `id: StructureId`. One controller per source so a
+ *                    source's rings can fade independently of the others.
+ *   - volumeField  — one volumetric scalar field (CF-4, rhizome-small,
  *                    rhizome-medium, rhizome-large). Discriminator:
- *                    `field: VolumeFieldId` (the registry id the
- *                    volume renderer keys fields by).
- *   - markerLayer  — the structure marker rings for one structure
- *                    category (cluster, supercluster, void, group).
- *                    Discriminator: `category: StructureCategory`. One
- *                    controller per category so a category's rings can
- *                    fade independently of the others.
+ *                    `id: VolumeFieldId` (the registry id the volume
+ *                    renderer keys fields by).
+ *   - milkyWay     — the procedural Milky-Way disk impostor. Its fade is
+ *                    seeded from `settings.milkyWay.enabled` and multiplied
+ *                    into the renderer's distance fade so the disk dissolves
+ *                    smoothly on toggle. No discriminator.
+ *   - filament     — the single cosmic-web filament skeleton. Fades in on
+ *                    first load. No discriminator.
+ *   - flow         — the CF4++ peculiar-velocity flow overlay. Fades in on
+ *                    first load (the slot commit), like filament/galaxy catalog;
+ *                    fades out on disable. No discriminator.
  *   - labelLayer   — one logical label layer (milkyWay, structure,
  *                    galaxy names, scale bar). Discriminator:
  *                    `layer: LabelLayerId`. Structure labels additionally key
- *                    on `category: StructureCategory` so each structure
- *                    category's labels are a distinct controller; the
- *                    other layers (milkyWay/galaxyNames/scaleBar)
- *                    carry no category. Famous-galaxy labels reuse the
- *                    `galaxyNames` layer rather than minting a value.
- *   - overlay      — always-on GPU overlay (Milky Way, procedural
- *                    disks, textured disks). Registered at
- *                    opacity 1.0 via setImmediate. Discriminator:
- *                    `id: OverlayId`.
+ *                    on `category: StructureId` so each structure source's
+ *                    labels are a distinct controller; the other layers
+ *                    (milkyWay/galaxyNames/scaleBar) carry no category.
+ *                    Famous-galaxy labels reuse the `galaxyNames` layer
+ *                    rather than minting a value.
+ *   - overlay      — always-on GPU overlay (procedural disks, textured
+ *                    disks). Registered at opacity 1.0 via setImmediate.
+ *                    Discriminator: `id: OverlayId`.
  *   - volumesMaster — the master enable gate for the whole scalar-
  *                    volume subsystem. Used by setVolumesEnabled and
  *                    the encodeVolumes / volumeUpsamplePass gates to
  *                    smooth the master toggle. Multiplied into each
- *                    scalarField's per-frame opacity at the call site,
+ *                    volumeField's per-frame opacity at the call site,
  *                    so a master fade-out drags every field down with
  *                    it. No discriminator.
  *
@@ -54,7 +56,7 @@
  * and must not be mutated after construction.
  */
 
-import type { StructureCategory } from '../data/structure/StructureCategory';
+import type { StructureId } from '../data/structure/StructureId';
 import type { GalaxyCatalogId } from '../data/galaxyCatalog/GalaxyCatalogId';
 import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
 import type { LabelLayerId } from './LabelLayerId';
@@ -62,14 +64,15 @@ import type { OverlayId } from './OverlayId';
 
 export type FadeId =
   | { readonly kind: 'galaxyCatalog'; readonly id: GalaxyCatalogId }
-  | { readonly kind: 'filaments' }
+  | { readonly kind: 'structure'; readonly id: StructureId }
+  | { readonly kind: 'volumeField'; readonly id: VolumeFieldId }
+  | { readonly kind: 'milkyWay' }
+  | { readonly kind: 'filament' }
   | { readonly kind: 'flow' }
-  | { readonly kind: 'scalarField'; readonly field: VolumeFieldId }
-  | { readonly kind: 'markerLayer'; readonly category: StructureCategory }
   | {
       readonly kind: 'labelLayer';
       readonly layer: LabelLayerId;
-      readonly category?: StructureCategory;
+      readonly category?: StructureId;
     }
   | { readonly kind: 'overlay'; readonly id: OverlayId }
   | { readonly kind: 'volumesMaster' };

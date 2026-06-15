@@ -8,9 +8,8 @@
  * them without per-renderer plumbing.
  *
  * Current overlays:
- *   - milkyWay         — single-quad procedural Milky Way impostor.
  *   - proceduralDisks  — LOD-1 procedural-disk pass (per-galaxy disk
  *                        impostor for the close-approach band).
  *   - texturedDisks — LOD-2 textured-thumbnail quad pass.
  */
-export type OverlayId = 'milkyWay' | 'proceduralDisks' | 'texturedDisks';
+export type OverlayId = 'proceduralDisks' | 'texturedDisks';

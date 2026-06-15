@@ -11,7 +11,7 @@
  *     `galaxyCatalogs.items[cat].labelEnabled`;
  *   - `milkyWay` reads the scalar `settings.milkyWay.labelEnabled`.
  * This projection partitions structure vs galaxy catalog (routing by
- * `isStructureCategory`, which keeps it registry-driven — no `famousGalaxy`
+ * `isStructureId`, which keeps it registry-driven — no `famousGalaxy`
  * literal) and overlays the milkyWay scalar, merging all three into the single
  * record the panel wants. The React prop shape is therefore a derived view, not
  * a fourth stored copy that could drift.
@@ -38,14 +38,14 @@
 
 import type { LabelCategory } from '../../../@types/engine/data/LabelCategory';
 import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
-import type { StructureCategory } from '../../../@types/data/structure/StructureCategory';
+import type { StructureId } from '../../../@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../../@types/settings/StructureItemSettings';
 import type { GalaxyCatalogItemSettings } from '../../../@types/settings/GalaxyCatalogItemSettings';
 import { LABEL_CATEGORIES } from '../../../data/structure/labelCategories';
-import { isStructureCategory } from '../../../data/structure/structureCategories';
+import { isStructureId } from '../../../data/structure/structureIds';
 
 export function projectLabelCategoryVisibility(
-  structureItems: Record<StructureCategory, StructureItemSettings>,
+  structureItems: Record<StructureId, StructureItemSettings>,
   galaxyCatalogItems: Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
   milkyWayLabelEnabled: boolean,
 ): Record<LabelCategory, boolean> {
@@ -54,7 +54,7 @@ export function projectLabelCategoryVisibility(
       c,
       c === 'milkyWay'
         ? milkyWayLabelEnabled
-        : isStructureCategory(c)
+        : isStructureId(c)
           ? structureItems[c].labelEnabled
           : galaxyCatalogItems[c as GalaxyCatalogId].labelEnabled,
     ]),

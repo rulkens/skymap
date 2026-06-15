@@ -49,7 +49,7 @@ import type { Label } from '../../../@types/rendering/Label';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { LabelProducerOutput } from '../../../@types/engine/subsystems/LabelProducerOutput';
-import type { StructureCategory } from '../../../@types/data/structure/StructureCategory';
+import type { StructureId } from '../../../@types/data/structure/StructureId';
 import { STRUCTURE_MARKER_STYLES } from './structureMarkerStyles';
 import { getLabelStyleOverride } from '../labelStyleOverride';
 import { focusRecession } from './focusRecession';
@@ -65,7 +65,7 @@ import { structureIdOf } from '../helpers/structureIdOf';
 // pop it back to 1 mid-fade. A visible category registered at 1 ramps
 // `fadeTo(1)` as a no-op, fired for symmetry with the famous-galaxy layer's
 // first-emit load-in. Reset between tests via `__resetStructureLabelLoadIn`.
-const loadInFired = new Set<StructureCategory>();
+const loadInFired = new Set<StructureId>();
 
 /** Test-only: clear the module-level load-in latch between unit cases. */
 export function __resetStructureLabelLoadIn(): void {
@@ -118,7 +118,7 @@ export function produceStructureLabels(
     // instead of popping when the category toggles off mid-fade.
     if (
       !state.settings.structures.items[p.category].enabled &&
-      fades.opacityOf({ kind: 'markerLayer', category: p.category }, now) === 0
+      fades.opacityOf({ kind: 'structure', id: p.category }, now) === 0
     )
       continue;
 

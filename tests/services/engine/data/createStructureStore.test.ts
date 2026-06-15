@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { createStructureStore } from '../../../../src/services/engine/data/createStructureStore';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
-import type { StructureCategory } from '../../../../src/@types/data/structure/StructureCategory';
+import type { StructureId } from '../../../../src/@types/data/structure/StructureId';
 
 // StructureInfo is a discriminated union; a union-typed `category` can't be
 // narrowed to a single arm at construction, so the helper asserts the type.
 // The object is a structurally-valid record regardless of which arm.
-const rec = (id: string, category: StructureCategory = 'cluster'): StructureInfo =>
+const rec = (id: string, category: StructureId = 'cluster'): StructureInfo =>
   ({
     id,
     name: id,

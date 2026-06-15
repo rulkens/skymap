@@ -23,11 +23,11 @@
  */
 
 import type { EngineSettingsState } from '../../../../@types/settings/EngineSettingsState';
-import type { StructureCategory } from '../../../../@types/data/structure/StructureCategory';
+import type { StructureId } from '../../../../@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../../../@types/settings/StructureItemSettings';
 
 export function selectStructureItems(
   state: EngineSettingsState,
-): Record<StructureCategory, StructureItemSettings> {
+): Record<StructureId, StructureItemSettings> {
   return state.structures.items;
 }

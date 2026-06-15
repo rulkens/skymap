@@ -1,7 +1,7 @@
 // tests/@types/engine/data/structureRecord.types.test.ts
 import { describe, it, expectTypeOf } from 'vitest';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
-import type { StructureCategory } from '../../../../src/@types/data/structure/StructureCategory';
+import type { StructureId } from '../../../../src/@types/data/structure/StructureId';
 import type { StructureGroupId } from '../../../../src/@types/data/structure/StructureGroupId';
 import type { GalaxyInfo } from '../../../../src/@types/engine/GalaxyInfo';
 
@@ -17,7 +17,7 @@ describe('StructureInfo types', () => {
       physicalRadiusMpc: 2,
       abell: 'A1656',
     };
-    expectTypeOf(rec.category).toExtend<StructureCategory>();
+    expectTypeOf(rec.category).toExtend<StructureId>();
   });
   it('a group record carries radius and a structure category', () => {
     const rec: StructureInfo = {
@@ -29,7 +29,7 @@ describe('StructureInfo types', () => {
       featured: true,
       physicalRadiusMpc: 1.5,
     };
-    expectTypeOf(rec.category).toExtend<StructureCategory>();
+    expectTypeOf(rec.category).toExtend<StructureId>();
   });
   it('the focusable-union tag is the SOURCE_REGISTRY type, distinct from category', () => {
     // `type` is the FocusableTarget discriminant; every structure arm pins it
@@ -37,8 +37,8 @@ describe('StructureInfo types', () => {
     expectTypeOf<StructureInfo['type']>().toEqualTypeOf<'structure'>();
     expectTypeOf<GalaxyInfo['type']>().toEqualTypeOf<'galaxyCatalog'>();
   });
-  it('StructureCategory excludes famousGalaxy', () => {
-    expectTypeOf<StructureCategory>().toEqualTypeOf<
+  it('StructureId excludes famousGalaxy', () => {
+    expectTypeOf<StructureId>().toEqualTypeOf<
       'cluster' | 'supercluster' | 'void' | 'group'
     >();
   });

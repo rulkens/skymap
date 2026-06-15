@@ -85,12 +85,9 @@ import {
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
 import { ALL_VISIBLE_MASK } from '../../utils/allVisibleMask';
 import { buildStaticAnchorStructures } from '../../data/structure/buildStaticAnchorStructures';
-import {
-  isStructureCategory,
-  STRUCTURE_CATEGORIES,
-} from '../../data/structure/structureCategories';
+import { isStructureId, STRUCTURE_IDS } from '../../data/structure/structureIds';
 import { GALAXY_CATALOG_IDS } from '../../data/galaxyCatalog/galaxyCatalogIds';
-import type { StructureCategory } from '../../@types/data/structure/StructureCategory';
+import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
 import type { GalaxyCatalogItemSettings } from '../../@types/settings/GalaxyCatalogItemSettings';
@@ -119,8 +116,8 @@ const VOLUME_FIELD_ITEMS_DEFAULT = seedVolumeFields();
  * checkboxes matches engine truth.
  */
 const STRUCTURE_ITEMS_DEFAULT = Object.fromEntries(
-  STRUCTURE_CATEGORIES.map((c) => [c, { enabled: true, labelEnabled: true }]),
-) as Record<StructureCategory, StructureItemSettings>;
+  STRUCTURE_IDS.map((c) => [c, { enabled: true, labelEnabled: true }]),
+) as Record<StructureId, StructureItemSettings>;
 const GALAXY_CATALOG_ITEMS_DEFAULT = Object.fromEntries(
   GALAXY_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
 ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>;
@@ -427,7 +424,7 @@ export function App(): React.ReactElement {
             labelCategoryVisibility={labelCategoryVisibility}
             markerCategoryVisibility={markerCategoryVisibility}
             onSetMarkerCategoryVisibility={(category, visible) => {
-              // Marker rows are keyed by StructureCategory — drive the ring axis
+              // Marker rows are keyed by StructureId — drive the ring axis
               // on the structures handle.
               handleRef.current?.structures.setItemEnabled(category, visible);
             }}
@@ -438,7 +435,7 @@ export function App(): React.ReactElement {
               // a galaxy catalog source) routes through the galaxy catalogs
               // handle's label axis. Each guard narrows the union, so the final
               // else lands on the galaxy-catalog label categories.
-              if (isStructureCategory(category)) {
+              if (isStructureId(category)) {
                 handleRef.current?.structures.setLabelEnabled(category, visible);
               } else if (category === 'milkyWay') {
                 handleRef.current?.milkyWay.setLabelEnabled(visible);

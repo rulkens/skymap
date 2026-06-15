@@ -8,7 +8,7 @@
  * build it here. The body mirrors the engine's startup construction
  * (`engine.ts` settings literal) so the fixture stays a true shape: defaults
  * from `data/defaults.ts`, item rows DERIVED from `GALAXY_CATALOG_IDS` /
- * `STRUCTURE_CATEGORIES`, volume items from `seedVolumeFields()`. Deriving the
+ * `STRUCTURE_IDS`, volume items from `seedVolumeFields()`. Deriving the
  * item keys (rather than hand-listing them) means adding a galaxy catalog or category
  * can't silently leave the fixture stale.
  *
@@ -19,7 +19,7 @@
 
 import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
-import { STRUCTURE_CATEGORIES } from '../../../../src/data/structure/structureCategories';
+import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 import { seedVolumeFields } from '../../../../src/data/volume/volumeFieldDefaults';
 import {
   DEFAULT_ABS_MAG_LIMIT,
@@ -43,7 +43,7 @@ import {
 
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
-import type { StructureCategory } from '../../../../src/@types/data/structure/StructureCategory';
+import type { StructureId } from '../../../../src/@types/data/structure/StructureId';
 import type { GalaxyCatalogItemSettings } from '../../../../src/@types/settings/GalaxyCatalogItemSettings';
 import type { StructureItemSettings } from '../../../../src/@types/settings/StructureItemSettings';
 
@@ -83,8 +83,8 @@ export function makeSettingsFixture(
     structures: {
       enabled: true,
       items: Object.fromEntries(
-        STRUCTURE_CATEGORIES.map((c) => [c, { enabled: true, labelEnabled: true }]),
-      ) as Record<StructureCategory, StructureItemSettings>,
+        STRUCTURE_IDS.map((c) => [c, { enabled: true, labelEnabled: true }]),
+      ) as Record<StructureId, StructureItemSettings>,
     },
     ...overrides,
   };

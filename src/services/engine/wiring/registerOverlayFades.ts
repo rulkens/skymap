@@ -15,8 +15,9 @@
  *
  * ### Registration order
  *
- * The three overlay handles come first (Milky Way at its settings gate,
- * procedural + textured disks unconditionally at 1), then the volumes-master
+ * The Milky-Way disk fade comes first (at its settings gate) followed by the
+ * two overlay handles (procedural + textured disks unconditionally at 1),
+ * then the volumes-master
  * gate, then the category-less label-layer handles (milkyWay / galaxyNames /
  * scaleBar — structure is per-category only), then the per-category marker +
  * structure-label handles (one pair per structure category).  The order within each
@@ -49,18 +50,19 @@
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import { STRUCTURE_CATEGORIES } from '../../../data/structure/structureCategories';
+import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
 
 /** Register overlay/volume-master/label-layer fade handles. See the module header for the opacity-coherence rationale. */
 export function registerOverlayFades(state: EngineState): void {
-  // ── Overlay handles ──────────────────────────────────────────────────
+  // ── Milky-Way disk + overlay handles ─────────────────────────────────
   //
-  // Milky Way: registered at the current settings value (not a blanket 1)
-  // because the toggle path multiplies this registry opacity into the
-  // renderer's distance-based fadeAlpha.  A default-off session at 1 would
-  // draw the Milky Way on frame 1 before any setImmediate(0) fires.
+  // Milky Way disk: its own source-named fade kind (not an overlay).
+  // Registered at the current settings value (not a blanket 1) because the
+  // toggle path multiplies this registry opacity into the renderer's
+  // distance-based fadeAlpha.  A default-off session at 1 would draw the
+  // Milky Way on frame 1 before any setImmediate(0) fires.
   state.subsystems.fades.register(
-    { kind: 'overlay', id: 'milkyWay' },
+    { kind: 'milkyWay' },
     state.settings.milkyWay.enabled ? 1 : 0,
   );
   // Disk overlays are always-on at boot: their LOD planners gate visibility
@@ -99,14 +101,14 @@ export function registerOverlayFades(state: EngineState): void {
 
   // ── Per-category marker + structure-label handles ──────────────────────────
   //
-  // One markerLayer + one structure labelLayer controller per structure category,
-  // each seeded from the session's persisted per-category visibility so a
-  // category the user turned off sits at 0 from frame 1 (no flash before a
-  // producer's fadeTo).  Iterating STRUCTURE_CATEGORIES keeps this the single
-  // runtime source of truth for the category list.
-  for (const category of STRUCTURE_CATEGORIES) {
+  // One structure + one structure labelLayer controller per structure source,
+  // each seeded from the session's persisted per-source visibility so a
+  // source the user turned off sits at 0 from frame 1 (no flash before a
+  // producer's fadeTo).  Iterating STRUCTURE_IDS keeps this the single
+  // runtime source of truth for the structure-id list.
+  for (const category of STRUCTURE_IDS) {
     state.subsystems.fades.register(
-      { kind: 'markerLayer', category },
+      { kind: 'structure', id: category },
       state.settings.structures.items[category].enabled ? 1 : 0,
     );
     state.subsystems.fades.register(

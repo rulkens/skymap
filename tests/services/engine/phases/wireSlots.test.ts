@@ -525,7 +525,7 @@ describe('wireSlots', () => {
     const hasHandle = (h: unknown): boolean =>
       handles.some((got) => JSON.stringify(got) === JSON.stringify(h));
 
-    expect(hasHandle({ kind: 'overlay', id: 'milkyWay' })).toBe(true);
+    expect(hasHandle({ kind: 'milkyWay' })).toBe(true);
     expect(hasHandle({ kind: 'overlay', id: 'proceduralDisks' })).toBe(true);
     expect(hasHandle({ kind: 'overlay', id: 'texturedDisks' })).toBe(true);
     expect(hasHandle({ kind: 'volumesMaster' })).toBe(true);
@@ -541,7 +541,7 @@ describe('wireSlots', () => {
       const call = register.mock.calls.find((c) => JSON.stringify(c[0]) === JSON.stringify(h));
       return call?.[1] as number | undefined;
     };
-    expect(opacityFor({ kind: 'overlay', id: 'milkyWay' })).toBe(1);
+    expect(opacityFor({ kind: 'milkyWay' })).toBe(1);
     expect(opacityFor({ kind: 'volumesMaster' })).toBe(1);
     // The milkyWay label layer is now seeded from settings.milkyWay.labelEnabled
     // (default true), not registered at 0 for a producer to ramp.

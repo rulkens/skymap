@@ -89,13 +89,13 @@ function makeFixture() {
 // ── Ring/marker axis (setStructureItemEnabled) ───────────────────────────────
 
 describe('setStructureItemEnabled — fade orchestration', () => {
-  it('toggle OFF fires fadeTo(markerLayer{cluster}, 0, FADE_OUT) and writes items[cluster].enabled', () => {
+  it('toggle OFF fires fadeTo(structure{cluster}, 0, FADE_OUT) and writes items[cluster].enabled', () => {
     const fx = makeFixture();
     setStructureItemEnabledForTest(fx.state as never, fx.store, 'cluster', false);
 
     expect(fx.fadeCalls).toEqual([
       {
-        id: { kind: 'markerLayer', category: 'cluster' },
+        id: { kind: 'structure', id: 'cluster' },
         target: 0,
         duration: FADE_OUT_DURATION_MS,
       },
@@ -107,7 +107,7 @@ describe('setStructureItemEnabled — fade orchestration', () => {
     expect(fx.state.subsystems.scheduler.requestRender).not.toHaveBeenCalled();
   });
 
-  it('toggle ON fires fadeTo(markerLayer{cluster}, 1, FADE_IN)', () => {
+  it('toggle ON fires fadeTo(structure{cluster}, 1, FADE_IN)', () => {
     const fx = makeFixture();
     setStructureItemEnabledForTest(fx.state as never, fx.store, 'cluster', false);
     fx.fadeCalls.length = 0;
@@ -115,7 +115,7 @@ describe('setStructureItemEnabled — fade orchestration', () => {
 
     expect(fx.fadeCalls).toEqual([
       {
-        id: { kind: 'markerLayer', category: 'cluster' },
+        id: { kind: 'structure', id: 'cluster' },
         target: 1,
         duration: FADE_IN_DURATION_MS,
       },

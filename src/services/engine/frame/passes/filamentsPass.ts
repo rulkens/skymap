@@ -72,7 +72,7 @@ export const filamentsPass: Pass = {
     // synchronously; this gate is what keeps the pass alive through the
     // ~100 ms ramp.
     if (settings.filamentsEnabled) return true;
-    return state.subsystems.fades.opacityOf({ kind: 'filaments' }, performance.now()) > 0;
+    return state.subsystems.fades.opacityOf({ kind: 'filament' }, performance.now()) > 0;
   },
 
   draw(pass, ctx, state, settings, deps) {
@@ -97,7 +97,7 @@ export const filamentsPass: Pass = {
       // Focus recession is applied HERE (on the drawn opacity), not on the
       // `enabled` gate above: recession ∈ [FILAMENT_RECESSION, 1] can never
       // zero the layer, so the gate keeps reading the pure toggle opacity.
-      resolveLayerOpacity(state.subsystems.fades, { kind: 'filaments' }, ctx.focusBlend, nowMs),
+      resolveLayerOpacity(state.subsystems.fades, { kind: 'filament' }, ctx.focusBlend, nowMs),
     );
   },
 };

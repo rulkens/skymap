@@ -89,10 +89,10 @@ import type { BiasMode as BiasModeT } from '../../@types/data/galaxyCatalog/Bias
 import { ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../../@types/data/ToneMapCurve';
 import type { LabelCategory } from '../../@types/engine/data/LabelCategory';
-import type { StructureCategory } from '../../@types/data/structure/StructureCategory';
+import type { StructureId } from '../../@types/data/structure/StructureId';
 import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
 import { LABEL_CATEGORIES } from '../../data/structure/labelCategories';
-import { STRUCTURE_CATEGORIES } from '../../data/structure/structureCategories';
+import { STRUCTURE_IDS } from '../../data/structure/structureIds';
 import type { ScalarFieldPaletteId } from '../../@types/data/volume/ScalarFieldPaletteId';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
@@ -172,7 +172,7 @@ type Props = {
    * the map (or the whole prop undefined, before the bulk `.ccat`
    * lands) renders the toggle without a count rather than "0".
    */
-  structureCounts?: Partial<Record<StructureCategory, number>>;
+  structureCounts?: Partial<Record<StructureId, number>>;
 
   /** Current point size in pixels.  Lives under Galaxies → Advanced. */
   pointSize: number;
@@ -237,8 +237,8 @@ type Props = {
    * toggle.  Wires through `onSetMarkerCategoryVisibility`, which App routes
    * to `handle.structures.setItemEnabled`.
    */
-  markerCategoryVisibility?: Readonly<Record<StructureCategory, boolean>>;
-  onSetMarkerCategoryVisibility?: (category: StructureCategory, visible: boolean) => void;
+  markerCategoryVisibility?: Readonly<Record<StructureId, boolean>>;
+  onSetMarkerCategoryVisibility?: (category: StructureId, visible: boolean) => void;
 
   // ── Labels group (ALL text annotations) ────────────────────────────────
   /** Per-category LABEL visibility — independent of marker visibility. */
@@ -454,18 +454,18 @@ export function SettingsPanel({
   // ── Structures master (over cluster / SC / void MARKER axis) ────────────
   const structuresMaster = showStructuresGroup
     ? (() => {
-        const enabledCount = STRUCTURE_CATEGORIES.reduce<number>(
+        const enabledCount = STRUCTURE_IDS.reduce<number>(
           (n, cat) => (markerCategoryVisibility[cat] ? n + 1 : n),
           0,
         );
-        const allOn = enabledCount === STRUCTURE_CATEGORIES.length;
+        const allOn = enabledCount === STRUCTURE_IDS.length;
         const noneOn = enabledCount === 0;
         return {
           allOn,
           indeterminate: !allOn && !noneOn,
           onToggle: () => {
             const targetEnabled = noneOn;
-            for (const cat of STRUCTURE_CATEGORIES) {
+            for (const cat of STRUCTURE_IDS) {
               onSetMarkerCategoryVisibility(cat, targetEnabled);
             }
           },
@@ -801,7 +801,7 @@ export function SettingsPanel({
               block: `structuresMaster` truthiness already guarantees
               both props are defined, TS can't trace that through the
               IIFE. */}
-          {STRUCTURE_CATEGORIES.map((cat) => {
+          {STRUCTURE_IDS.map((cat) => {
             const count = structureCounts?.[cat];
             return (
               <div className={styles.panelRow} key={`marker-${cat}`}>

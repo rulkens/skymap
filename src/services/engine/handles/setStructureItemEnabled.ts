@@ -15,26 +15,26 @@
 // already reads `opacityOf({...})` for its layer alpha; flipping the boolean
 // alone would pop a category in/out. Firing `fadeTo` on the same handle the
 // producer reads turns the toggle into a smooth fade — exactly as the
-// milkyWay/filaments setters do for their overlay/filaments handles. The boolean
+// milkyWay/filament setters do for their milkyWay/filament handles. The boolean
 // is the authoritative gate (the producer draws while enabled OR still fading
 // out); the fade opacity is only the cosmetic alpha.
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
-import type { StructureCategory } from '../../../@types/data/structure/StructureCategory';
+import type { StructureId } from '../../../@types/data/structure/StructureId';
 import type { SettingsStore } from '../settingsStore/createSettingsStore';
 import { setStructureItemEnabledAction } from '../settingsStore/actions/setStructureItemEnabledAction';
 
 export function setStructureItemEnabled(
   state: Pick<EngineState, 'settings' | 'subsystems'>,
   store: SettingsStore,
-  category: StructureCategory,
+  category: StructureId,
   visible: boolean,
 ): void {
   // Ring/marker axis. Only structures bear a ring, so this is keyed by
-  // StructureCategory and fires a markerLayer fade.
+  // StructureId and fires a structure fade.
   void state.subsystems.fades.fadeTo(
-    { kind: 'markerLayer', category },
+    { kind: 'structure', id: category },
     visible ? 1 : 0,
     visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
   );

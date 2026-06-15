@@ -21,7 +21,7 @@
  * 5-bit `sourceCode`, which the ringPick fragment composes into
  * `(sourceCode << 27) | structureIndex + PICK_SENTINEL_OFFSET` — the same
  * per-source pattern `pointRenderer` uses per galaxy catalog.  Buckets are
- * data-driven from `STRUCTURE_CATEGORIES`, so a new structure source
+ * data-driven from `STRUCTURE_IDS`, so a new structure source
  * needs no change here.
  *
  * Voids skip the halo draw — a halo implies matter where the structure
@@ -53,10 +53,10 @@ import type { StructureMarkerRenderer } from '../../../@types/rendering/Structur
 import type { StructureMarkerDescriptor } from '../../../@types/rendering/StructureMarkerDescriptor';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import {
-  STRUCTURE_CATEGORIES,
-  STRUCTURE_CATEGORY_CODES,
-} from '../../../data/structure/structureCategories';
-import type { StructureCategory } from '../../../@types/data/structure/StructureCategory';
+  STRUCTURE_IDS,
+  STRUCTURE_ID_CODES,
+} from '../../../data/structure/structureIds';
+import type { StructureId } from '../../../@types/data/structure/StructureId';
 import haloVsCode from '../shaders/structureMarker/halo.wesl?static';
 import haloFsCode from '../shaders/structureMarker/halo.wesl?static';
 import ringVsCode from '../shaders/structureMarker/ring.wesl?static';
@@ -90,11 +90,8 @@ const UNIFORM_BYTES = 80;
 const SOURCE_UNIFORM_BYTES = 16;
 
 /** A per-category bag seeded to `init` — a new structure source can't leave a bucket unset. */
-function byCategory<T>(init: T): Record<StructureCategory, T> {
-  return Object.fromEntries(STRUCTURE_CATEGORIES.map((c) => [c, init])) as Record<
-    StructureCategory,
-    T
-  >;
+function byCategory<T>(init: T): Record<StructureId, T> {
+  return Object.fromEntries(STRUCTURE_IDS.map((c) => [c, init])) as Record<StructureId, T>;
 }
 
 export function createStructureMarkerRenderer(
@@ -390,7 +387,7 @@ export function createStructureMarkerRenderer(
     });
 
     // Per-category SourceUniforms — written once at construction.
-    for (const cat of STRUCTURE_CATEGORIES) {
+    for (const cat of STRUCTURE_IDS) {
       const buf = device.createBuffer({
         label: `structure-marker-source-${cat}`,
         size: SOURCE_UNIFORM_BYTES,
@@ -398,7 +395,7 @@ export function createStructureMarkerRenderer(
       });
       // Write the 5-bit source code at offset 0; rest stays zero.
       const u32 = new Uint32Array(SOURCE_UNIFORM_BYTES / 4);
-      u32[0] = STRUCTURE_CATEGORY_CODES[cat];
+      u32[0] = STRUCTURE_ID_CODES[cat];
       device.queue.writeBuffer(buf, 0, u32);
       sourceBuffers[cat] = buf;
       sourceBindGroups[cat] = device.createBindGroup({
@@ -440,7 +437,7 @@ export function createStructureMarkerRenderer(
     // category and keeps the instance buffer cache-friendly.  A handful
     // of categories means a few passes over the input is fine.
     currentMarkerCount = 0;
-    for (const c of STRUCTURE_CATEGORIES) bucketCounts[c] = 0;
+    for (const c of STRUCTURE_IDS) bucketCounts[c] = 0;
 
     // Grow to fit the full descriptor set — no truncation.  See growTo
     // and the `capacity` docstring for why a cap here would be a
@@ -455,13 +452,13 @@ export function createStructureMarkerRenderer(
     }
     // Prefix-sum the counts into per-category run offsets.
     let acc = 0;
-    for (const c of STRUCTURE_CATEGORIES) {
+    for (const c of STRUCTURE_IDS) {
       bucketOffsets[c] = acc;
       acc += bucketCounts[c];
     }
 
     // Second pass: pack into the instance buffer in category-ordered runs.
-    const writeCursor: Record<StructureCategory, number> = { ...bucketOffsets };
+    const writeCursor: Record<StructureId, number> = { ...bucketOffsets };
     for (let i = 0; i < count; i++) {
       const d = descriptors[i]!;
       const slot = writeCursor[d.category];
@@ -547,7 +544,7 @@ export function createStructureMarkerRenderer(
     // the visible draws (their shaders don't read instance_index for
     // visual output); load-bearing for the pick path.
     pass.setPipeline(haloPipeline);
-    for (const cat of STRUCTURE_CATEGORIES) {
+    for (const cat of STRUCTURE_IDS) {
       if (cat === 'void') continue; // explicit skip per spec
       if (bucketCounts[cat] === 0) continue;
       const bg = sourceBindGroups[cat];
@@ -559,7 +556,7 @@ export function createStructureMarkerRenderer(
 
     // Ring passes second (premultiplied OVER — composites over halo).
     pass.setPipeline(ringPipeline);
-    for (const cat of STRUCTURE_CATEGORIES) {
+    for (const cat of STRUCTURE_IDS) {
       if (bucketCounts[cat] === 0) continue;
       const bg = sourceBindGroups[cat];
       if (!bg) continue;
@@ -595,7 +592,7 @@ export function createStructureMarkerRenderer(
     if (currentMarkerCount === 0) return;
     passEncoder.setPipeline(ringPickPipeline);
     passEncoder.setBindGroup(1, pickDummyFadeBindGroup);
-    for (const cat of STRUCTURE_CATEGORIES) {
+    for (const cat of STRUCTURE_IDS) {
       if (bucketCounts[cat] === 0) continue;
       const bg = sourceBindGroups[cat];
       if (!bg) continue;
@@ -614,7 +611,7 @@ export function createStructureMarkerRenderer(
     instanceBuffer?.destroy();
     fadeBuffer?.destroy();
     pickDummyFadeBuffer?.destroy();
-    for (const cat of STRUCTURE_CATEGORIES) {
+    for (const cat of STRUCTURE_IDS) {
       sourceBuffers[cat]?.destroy();
     }
   }

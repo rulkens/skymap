@@ -10,7 +10,7 @@ import type { Tier } from '../data/Tier';
 import type { ScaleInfo } from './ScaleInfo';
 import type { SourceType } from '../data/SourceType';
 import type { LoadProgressState } from '../loading/LoadProgressState';
-import type { StructureCategory } from './data/StructureCategory';
+import type { StructureId } from '../data/structure/StructureId';
 
 /**
  * Callbacks the engine uses to push state changes into the UI layer.
@@ -169,7 +169,7 @@ export type EngineCallbacks = {
     onTierChange?: (tier: Tier) => void;
     onCatalogReady?: (source: SourceType, count: number) => void;
     onLoadProgress?: (progress: LoadProgressState | null) => void;
-    onStructureCountsChange?: (counts: Partial<Record<StructureCategory, number>>) => void;
+    onStructureCountsChange?: (counts: Partial<Record<StructureId, number>>) => void;
   };
 
   /**
