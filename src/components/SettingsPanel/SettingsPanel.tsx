@@ -82,7 +82,7 @@
 import { type ReactNode } from 'react';
 import type { Tier } from '../../@types/data/Tier';
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
-import { maskHas } from '../../utils/sourceMask';
+import { maskHas } from '../../utils/maskHas';
 import { BiasMode } from '../../data/biasMode';
 import type { BiasMode as BiasModeT } from '../../@types/data/BiasMode';
 import { ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';

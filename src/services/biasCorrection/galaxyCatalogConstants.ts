@@ -46,7 +46,7 @@
 
 import { Source, GALAXY_CATALOG_SOURCES } from '../../data/sources';
 import { galaxyCatalogFluxLimit, galaxyCatalogSchechter } from '../../data/galaxyCatalogFluxLimits';
-import { expectedNumberDensity } from '../../utils/math/schechterDensity';
+import { expectedNumberDensity } from '../../utils/math/expectedNumberDensity';
 import type { GalaxyCatalogConstants } from '../../@types/math/GalaxyCatalogConstants';
 import type { SourceType } from '../../@types/data/SourceType';
 

@@ -1,6 +1,6 @@
 /**
  * SchechterInput — input to the Schechter-density integrator
- * (`src/utils/math/schechterDensity.ts:expectedNumberDensity`).
+ * (`src/utils/math/expectedNumberDensity.ts:expectedNumberDensity`).
  *
  * Carries the Schechter triple `(M*, α, φ*)` plus the galaxy catalog flux limit
  * and the distance at which to evaluate density.  See the runtime

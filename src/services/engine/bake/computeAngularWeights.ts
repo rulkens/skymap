@@ -53,7 +53,7 @@
 
 import type { ComputeAngularWeightsInput } from '../../../@types/engine/ComputeAngularWeightsInput';
 import { cartesianToRaDec } from '../../../utils/math';
-import { healpixNest } from '../../../utils/math/healpix';
+import { healpixNest } from '../../../utils/math/healpixNest';
 
 /** HEALPix resolution.  See module docstring for choice rationale. */
 const NSIDE = 32;

@@ -7,7 +7,10 @@ import {
   HI_RES_LAYER_SIDE_BY_TIER,
 } from '../../src/data/sources';
 import { STRUCTURE_CATEGORIES } from '../../src/data/structureCategories';
-import { ALL_VISIBLE_MASK, maskHas, maskWith, maskWithout } from '../../src/utils/sourceMask';
+import { ALL_VISIBLE_MASK } from '../../src/utils/allVisibleMask';
+import { maskHas } from '../../src/utils/maskHas';
+import { maskWith } from '../../src/utils/maskWith';
+import { maskWithout } from '../../src/utils/maskWithout';
 
 describe('Source.FamousGalaxy', () => {
   it('has integer value 4 (next free slot after Glade=3)', () => {

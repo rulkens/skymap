@@ -42,9 +42,12 @@
  */
 
 import { pickColourIndex } from '../../../data/colourIndex';
-import { paddedRadiusMpc } from '../../../utils/galaxySize';
+import { paddedRadiusMpc } from '../../../utils/paddedRadiusMpc';
 import { Source } from '../../../data/sources';
-import { galaxyCatalogFluxLimit, galaxyCatalogSchechter } from '../../../data/galaxyCatalogFluxLimits';
+import {
+  galaxyCatalogFluxLimit,
+  galaxyCatalogSchechter,
+} from '../../../data/galaxyCatalogFluxLimits';
 import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';
 import {
   absoluteFromApparent,

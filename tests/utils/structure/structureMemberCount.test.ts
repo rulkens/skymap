@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { structureMemberCount } from '../../../src/utils/structure/structureMemberCount';
 import { Source } from '../../../src/data/sources';
-import { ALL_VISIBLE_MASK, maskWith, maskWithout } from '../../../src/utils/sourceMask';
+import { ALL_VISIBLE_MASK } from '../../../src/utils/allVisibleMask';
+import { maskWith } from '../../../src/utils/maskWith';
+import { maskWithout } from '../../../src/utils/maskWithout';
 import type { GalaxyCatalog } from '../../../src/@types/data/GalaxyCatalog';
 import type { SourceType } from '../../../src/@types/data/SourceType';
 import type { StructureRecord } from '../../../src/@types/engine/data/StructureRecord';

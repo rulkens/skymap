@@ -40,7 +40,7 @@ import {
   DEFAULT_VOLUMES_ENABLED,
   DEFAULT_FLOW,
 } from '../../src/data/defaults';
-import { ALL_VISIBLE_MASK } from '../../src/utils/sourceMask';
+import { ALL_VISIBLE_MASK } from '../../src/utils/allVisibleMask';
 import { createTweenManager } from '../../src/services/engine/camera/tweenManager';
 import { createSpaceMouseSubsystem } from '../../src/services/engine/subsystems/spaceMouseSubsystem';
 import { createRenderScheduler } from '../../src/services/engine/subsystems/renderScheduler';

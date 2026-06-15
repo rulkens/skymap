@@ -29,7 +29,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import StatsPanel from '../../../src/components/StatsPanel/StatsPanel';
 import { Source } from '../../../src/data/sources';
-import { ALL_VISIBLE_MASK } from '../../../src/utils/sourceMask';
+import { ALL_VISIBLE_MASK } from '../../../src/utils/allVisibleMask';
 
 describe('StatsPanel', () => {
   it('renders the STATS header', () => {

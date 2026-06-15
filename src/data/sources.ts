@@ -17,8 +17,9 @@
  *
  * Only `'survey'` and `'structure'` codes are persisted to disk / packed into
  * GPU buffers; `'filament'` and `'volume'` codes exist solely so every
- * data source has one place to look. The visibility-bitmask helpers in
- * `utils/sourceMask` operate on galaxy catalog codes only.
+ * data source has one place to look. The visibility-bitmask helpers
+ * (`utils/maskHas`, `utils/maskWith`, `utils/maskWithout`) operate on
+ * galaxy catalog codes only.
  *
  * The `Source` enum lives in `./source` (the leaf, so the per-source entry
  * modules can import it without cycling back through this barrel). Each

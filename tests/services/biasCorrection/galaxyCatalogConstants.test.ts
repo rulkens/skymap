@@ -12,8 +12,11 @@
 
 import { describe, it, expect } from 'vitest';
 import { galaxyCatalogConstants } from '../../../src/services/biasCorrection/galaxyCatalogConstants';
-import { galaxyCatalogFluxLimit, galaxyCatalogSchechter } from '../../../src/data/galaxyCatalogFluxLimits';
-import { expectedNumberDensity } from '../../../src/utils/math/schechterDensity';
+import {
+  galaxyCatalogFluxLimit,
+  galaxyCatalogSchechter,
+} from '../../../src/data/galaxyCatalogFluxLimits';
+import { expectedNumberDensity } from '../../../src/utils/math/expectedNumberDensity';
 import { Source } from '../../../src/data/sources';
 import type { GalaxyCatalogSource } from '../../../src/@types/data/GalaxyCatalogSource';
 

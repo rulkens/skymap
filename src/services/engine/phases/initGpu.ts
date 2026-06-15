@@ -62,7 +62,7 @@ import { createDiskRadiusRing } from '../../gpu/passes/diskRadiusRing';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOT_NAMES } from '../frame/passes';
 import { loadFontAtlases } from '../../gpu/labels/loadFontAtlases';
-import { hasUrlGate } from '../../../utils/url/urlGate';
+import { hasUrlGate } from '../../../utils/url/hasUrlGate';
 import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
   wireGalaxyCatalogSourceSlot,
@@ -267,7 +267,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // Procedural Milky Way impostor at world origin.  See
   // `services/gpu/milkyWayRenderer.ts` for the rationale on why this
   // is a sibling renderer rather than tucked into the per-galaxy
-  // procedural-disk pass, and `utils/math/milkyWayFade.ts` for the
+  // procedural-disk pass, and `utils/math/milkyWayFadeAlpha.ts` for the
   // distance-fade band.
   const milkyWayRenderer = createMilkyWayRenderer({
     device,

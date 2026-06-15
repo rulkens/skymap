@@ -6,7 +6,7 @@
 
 import type { ReactNode } from 'react';
 import type { StructureRecord } from '../../@types/engine/data/StructureRecord';
-import { formatDistance } from '../../utils/format/distance';
+import { formatDistance } from '../../utils/format/formatDistance';
 import { CATEGORY_DISPLAY_INFO } from '../../data/categoryDisplayInfo';
 import styles from './CompactStructureCard.module.css';
 

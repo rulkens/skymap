@@ -27,8 +27,9 @@ import { readNpy } from '../parsers/npyReader';
 import { parseStructureSeed } from '../parsers/parseStructureSeed';
 import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
 import type { Vec3 } from '../../src/@types/math/Vec3';
-import { eqToSg, sgToVoxelIndex } from '../utils/math/coordinates';
-import { percentileOf } from '../utils/math/percentile';
+import { eqToSg } from '../utils/math/eqToSg';
+import { sgToVoxelIndex } from '../utils/math/sgToVoxelIndex';
+import { percentileOf } from '../utils/math/percentileOf';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
 // CF-4 cube dimension — 128³ voxels covering ±500 Mpc.  Used only by

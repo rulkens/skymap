@@ -17,12 +17,7 @@
  * seeding) lives behind one tested boundary instead of scattered booleans.
  */
 
-export type ReseedLatch = {
-  /** Record that a seed pass is needed before the next integrate. Idempotent. */
-  arm(): void;
-  /** Return whether a seed is pending, clearing the flag. True at most once per arm. */
-  consume(): boolean;
-};
+import type { ReseedLatch } from '../@types/rendering/ReseedLatch';
 
 export function createReseedLatch(): ReseedLatch {
   let armed = false;

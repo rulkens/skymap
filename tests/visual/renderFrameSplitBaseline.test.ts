@@ -47,7 +47,7 @@
  * mirror image of the Milky Way's, so a camera close enough to light
  * the impostor is by construction outside the shell's fade band.  The
  * two never co-exist in one frame; the shell's gating + dispatch is
- * covered in `passes.test.ts` and `utils/math/horizonShellFade`.
+ * covered in `passes.test.ts` and `utils/math/horizonShellFadeAlpha`.
  *
  * If the post-split renderFrame skips a pass, drops a draw, or
  * reorders the renderers, this snapshot fails.  That's the gate

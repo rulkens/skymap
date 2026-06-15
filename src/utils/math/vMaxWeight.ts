@@ -27,7 +27,7 @@
  * special-casing.
  */
 
-import { dMaxFromAbsolute } from './distanceModulus';
+import { dMaxFromAbsolute } from './dMaxFromAbsolute';
 import type { VMaxWeightInput } from '../../@types/math/VMaxWeightInput';
 
 export function vMaxWeight(input: VMaxWeightInput): number {

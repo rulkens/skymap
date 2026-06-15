@@ -29,7 +29,7 @@
 
 import { Source } from '../../../data/sources';
 import { pickColourIndex } from '../../../data/colourIndex';
-import { paddedRadiusMpc } from '../../../utils/galaxySize';
+import { paddedRadiusMpc } from '../../../utils/paddedRadiusMpc';
 import { cartesianToRaDec } from '../../../utils/math';
 import { APPARENT_SIZE_THRESHOLD_PX, FADE_BAND_PX, galaxyCacheKey } from './texturedDiskSubsystem';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';

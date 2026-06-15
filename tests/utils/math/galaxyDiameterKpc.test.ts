@@ -17,10 +17,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  galaxyDiameterKpc,
-  DEFAULT_GALAXY_DIAMETER_KPC,
-} from '../../../src/utils/math/galaxyDiameterKpc';
+import { galaxyDiameterKpc } from '../../../src/utils/math/galaxyDiameterKpc';
+import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../../src/utils/math/defaultGalaxyDiameterKpc';
 
 describe('galaxyDiameterKpc', () => {
   it('returns the default when no input is supplied', () => {

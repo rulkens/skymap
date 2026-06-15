@@ -2,8 +2,8 @@
  * structureWorld — map an ICRS sky position + distance to the world cube.
  *
  * This replaces the spike's hand-rolled ICRS→Galactic→Supergalactic rotation
- * matrices with the repo's verified transform: `eqToSg` (tools/utils/math/
- * coordinates) IS the same rotation the spike used (confirmed to agree to the
+ * matrices with the repo's verified transform: `eqToSg`
+ * (tools/utils/math/eqToSg) IS the same rotation the spike used (confirmed to agree to the
  * decimal), so we reuse it rather than carry a second copy of two 3×3 matrices.
  *
  * What stays tool-local is the CF4++ BOX MAPPING, because the shared
@@ -26,7 +26,7 @@
  * not a cosmological constant to be "corrected".
  */
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import { eqToSg } from '../../../../tools/utils/math/coordinates';
+import { eqToSg } from '../../../../tools/utils/math/eqToSg';
 
 export const CF4PP_HUBBLE_H = 0.77;
 const VOXEL_SIZE_MPC_PER_H = 1000 / 128; // CF4++ box: 1 Gpc/h across 128 voxels

@@ -20,7 +20,7 @@ import { Source } from '../../../../src/data/sources';
 import { createGalaxyAtlasSubsystem } from '../../../../src/services/engine/subsystems/galaxyAtlasSubsystem';
 import { createTexturedDiskSubsystem } from '../../../../src/services/engine/subsystems/texturedDiskSubsystem';
 import { createProceduralDiskSubsystem } from '../../../../src/services/engine/subsystems/proceduralDiskSubsystem';
-import { paddedRadiusMpc } from '../../../../src/utils/galaxySize';
+import { paddedRadiusMpc } from '../../../../src/utils/paddedRadiusMpc';
 import { fallbackOrientation } from '../../../../src/utils/random/fallbackOrientation';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';

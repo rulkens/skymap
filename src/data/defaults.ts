@@ -107,7 +107,7 @@ export const DEFAULT_DEPTH_FADE_ENABLED = true;
  * Procedural Milky Way impostor defaults ON.  The single screen-aligned
  * quad at the world origin gives the user a visceral "you are here"
  * sense before they fly out into the cosmic-web view.  See
- * `services/gpu/renderers/milkyWayRenderer.ts` and `utils/math/milkyWayFade.ts`
+ * `services/gpu/renderers/milkyWayRenderer.ts` and `utils/math/milkyWayFadeAlpha.ts`
  * for the rendering rationale and the distance-fade band.
  */
 export const DEFAULT_MILKY_WAY_ENABLED = true;

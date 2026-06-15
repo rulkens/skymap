@@ -14,7 +14,8 @@
  * key" lookups at the call site, which surfaces in the type checker
  * if the caller indexes through a typed record.
  */
-export type FlagSchema = Record<string, 'bool'>;
+
+import type { FlagSchema } from './FlagSchema';
 
 export function parseFlags<S extends FlagSchema>(
   argv: readonly string[],

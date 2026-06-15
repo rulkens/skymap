@@ -38,7 +38,7 @@ import {
 import { setSourceVisibleForTest } from '../../../src/services/engine/handles/setSourceVisible';
 import { deriveSourceMasks } from '../../../src/services/engine/frame/deriveSourceMasks';
 import { createSettingsStore } from '../../../src/services/engine/settingsStore/createSettingsStore';
-import { maskHas } from '../../../src/utils/sourceMask';
+import { maskHas } from '../../../src/utils/maskHas';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 
 // ── Minimal fixture factory ───────────────────────────────────────────────

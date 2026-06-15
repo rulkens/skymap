@@ -36,9 +36,9 @@
  */
 
 import { structureMembership } from './structureMembership';
-import type { CatalogWithSource } from './structureMembership';
+import type { CatalogWithSource } from '../../@types/engine/data/CatalogWithSource';
 import { GALAXY_CATALOG_SOURCES, Source } from '../../data/sources';
-import { maskHas } from '../sourceMask';
+import { maskHas } from '../maskHas';
 import type { GalaxyCatalog } from '../../@types/data/GalaxyCatalog';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { StructureRecord } from '../../@types/engine/data/StructureRecord';

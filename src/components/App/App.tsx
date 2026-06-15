@@ -81,7 +81,7 @@ import {
   DEFAULT_FLOW,
 } from '../../data/defaults';
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
-import { ALL_VISIBLE_MASK } from '../../utils/sourceMask';
+import { ALL_VISIBLE_MASK } from '../../utils/allVisibleMask';
 import { buildStaticAnchorStructures } from '../../data/buildStaticAnchorStructures';
 import { isStructureCategory, STRUCTURE_CATEGORIES } from '../../data/structureCategories';
 import { GALAXY_CATALOG_IDS } from '../../data/galaxyCatalogIds';
@@ -260,7 +260,11 @@ export function App(): React.ReactElement {
   // construction seeds, so first paint matches engine truth before the handle
   // lands.
   const structureItems = useSettingsStore(handleRef, selectStructureItems, STRUCTURE_ITEMS_DEFAULT);
-  const galaxyCatalogItems = useSettingsStore(handleRef, selectGalaxyCatalogItems, GALAXY_CATALOG_ITEMS_DEFAULT);
+  const galaxyCatalogItems = useSettingsStore(
+    handleRef,
+    selectGalaxyCatalogItems,
+    GALAXY_CATALOG_ITEMS_DEFAULT,
+  );
   const markerCategoryVisibility = useMemo(
     () => projectMarkerCategoryVisibility(structureItems),
     [structureItems],

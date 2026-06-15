@@ -25,7 +25,7 @@
  */
 
 import { Source } from '../../../data/sources';
-import { paddedRadiusMpc } from '../../../utils/galaxySize';
+import { paddedRadiusMpc } from '../../../utils/paddedRadiusMpc';
 import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
@@ -39,7 +39,7 @@ import type {
   TexturedDiskSubsystemWithTestSeam,
 } from '../../../@types/engine/subsystems/TexturedDiskSubsystem';
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
-import { fetchGalaxyBitmap } from '../../../utils/network/galaxyImageFetcher';
+import { fetchGalaxyBitmap } from '../../../utils/network/fetchGalaxyBitmap';
 import { cartesianToRaDec } from '../../../utils/math';
 import { calibratedDiskSizeWorld, effectiveTilt, nucleusCorner } from './famousPlacement';
 import type { Vec2 } from '../../../@types/math/Vec2';

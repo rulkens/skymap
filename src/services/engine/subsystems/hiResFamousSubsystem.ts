@@ -36,7 +36,7 @@
 
 import { Source } from '../../../data/sources';
 import { cartesianToRaDec } from '../../../utils/math';
-import { fetchGalaxyBitmap } from '../../../utils/network/galaxyImageFetcher';
+import { fetchGalaxyBitmap } from '../../../utils/network/fetchGalaxyBitmap';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { FetchGalaxyBitmapInput } from '../../../@types/loading/FetchGalaxyBitmapInput';
 import type { HiResFamousTexture } from '../../../@types/rendering/HiResFamousTexture';

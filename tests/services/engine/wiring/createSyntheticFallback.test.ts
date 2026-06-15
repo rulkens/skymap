@@ -18,7 +18,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createSyntheticFallback } from '../../../../src/services/engine/wiring/createSyntheticFallback';
 import { Source } from '../../../../src/data/sources';
-import { maskWith } from '../../../../src/utils/sourceMask';
+import { maskWith } from '../../../../src/utils/maskWith';
 import { GALAXY_CATALOG_POINT_SOURCES } from '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';

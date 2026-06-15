@@ -62,7 +62,7 @@ import { catalogDistanceFor } from './catalogDistanceFor.js';
 import { CUTOFF_MPC } from './localVolumeCutoff.js';
 import type { Cf4CatalogIndex } from '../parsers/cosmicflows4.js';
 import { loadCf4CatalogIndex } from '../parsers/cosmicflows4.js';
-import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/galaxyDiameterKpc.js';
+import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/defaultGalaxyDiameterKpc.js';
 import { Source, SOURCE_REGISTRY } from '../../src/data/sources.js';
 import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog.js';
 import {

@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { Source, SOURCE_REGISTRY } from '../src/data/sources';
-import { ALL_VISIBLE_MASK, maskHas, maskWith, maskWithout } from '../src/utils/sourceMask';
+import { ALL_VISIBLE_MASK } from '../src/utils/allVisibleMask';
+import { maskHas } from '../src/utils/maskHas';
+import { maskWith } from '../src/utils/maskWith';
+import { maskWithout } from '../src/utils/maskWithout';
 
 describe('Source enum', () => {
   it('has stable numeric values used in the binary format', () => {

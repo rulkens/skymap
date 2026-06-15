@@ -1,8 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import {
-  PriorityQueue,
-  MAX_CONCURRENT_FETCHES,
-} from '../../../src/utils/concurrency/priorityQueue';
+import { PriorityQueue } from '../../../src/utils/concurrency/priorityQueue';
+import { MAX_CONCURRENT_FETCHES } from '../../../src/utils/concurrency/maxConcurrentFetches';
 
 describe('PriorityQueue', () => {
   it('exposes a sane concurrency cap (4)', () => {

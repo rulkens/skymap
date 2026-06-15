@@ -44,8 +44,11 @@
  */
 
 import { Source } from '../../../data/sources';
-import { maskHas } from '../../../utils/sourceMask';
-import { GALAXY_CATALOG_POINT_SOURCES, TIER_FETCHED_POINT_SOURCES } from './galaxyCatalogSourceRegistry';
+import { maskHas } from '../../../utils/maskHas';
+import {
+  GALAXY_CATALOG_POINT_SOURCES,
+  TIER_FETCHED_POINT_SOURCES,
+} from './galaxyCatalogSourceRegistry';
 import { reevaluateDemand } from './reevaluateDemand';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';

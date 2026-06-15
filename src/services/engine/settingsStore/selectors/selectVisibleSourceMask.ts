@@ -27,7 +27,7 @@
 import type { EngineSettingsState } from '../../../../@types/settings/EngineSettingsState';
 import type { GalaxyCatalogId } from '../../../../@types/engine/data/GalaxyCatalogId';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../data/sources';
-import { maskWith } from '../../../../utils/sourceMask';
+import { maskWith } from '../../../../utils/maskWith';
 
 export function selectVisibleSourceMask(state: EngineSettingsState): number {
   let mask = 0;

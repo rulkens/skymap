@@ -16,7 +16,7 @@
  *
  *   1. `settings.milkyWayEnabled` — user toggle.
  *   2. `milkyWayFadeAlpha(camDist) > 0` — camera-distance fade band
- *      defined in `utils/math/milkyWayFade.ts` (full strength inside
+ *      defined in `utils/math/milkyWayFadeAlpha.ts` (full strength inside
  *      10 Mpc, smoothstep out to 0 at 50 Mpc).
  *
  * Both gates live in `enabled` so that when the camera flies well
@@ -45,7 +45,7 @@
  */
 
 import type { Pass } from '../../../../@types/engine/frame/Pass';
-import { milkyWayFadeAlpha } from '../../../../utils/math/milkyWayFade';
+import { milkyWayFadeAlpha } from '../../../../utils/math/milkyWayFadeAlpha';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../data/galacticCenter';
 
 export const milkyWayPass: Pass = {

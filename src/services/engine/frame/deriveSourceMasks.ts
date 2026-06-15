@@ -35,7 +35,7 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { GALAXY_CATALOG_SOURCES } from '../../../data/sources';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
-import { maskWith } from '../../../utils/sourceMask';
+import { maskWith } from '../../../utils/maskWith';
 
 export function deriveSourceMasks(
   state: Pick<EngineState, 'sources' | 'settings' | 'subsystems'>,

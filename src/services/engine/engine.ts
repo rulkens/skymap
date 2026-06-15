@@ -69,7 +69,8 @@
  */
 
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
-import { ALL_VISIBLE_MASK, maskHas } from '../../utils/sourceMask';
+import { ALL_VISIBLE_MASK } from '../../utils/allVisibleMask';
+import { maskHas } from '../../utils/maskHas';
 import type { SourceType } from '../../@types/data/SourceType';
 import {
   DEFAULT_ABS_MAG_LIMIT,

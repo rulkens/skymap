@@ -43,7 +43,7 @@
 
 import { memo, type ReactNode } from 'react';
 import { GALAXY_CATALOG_SOURCES, Source } from '../../data/sources';
-import { maskHas } from '../../utils/sourceMask';
+import { maskHas } from '../../utils/maskHas';
 import { Panel } from '../common/Panel/Panel';
 import styles from './StatsPanel.module.css';
 import type { SourceType } from '../../@types/data/SourceType';
@@ -68,7 +68,7 @@ export type StatsPanelProps = {
   sourceCounts: Partial<Record<SourceType, number>>;
   /**
    * Bitmask of currently-visible sources.  Bits are tested with
-   * `maskHas(mask, source)` from `data/sources.ts`.  A galaxy catalog that's
+   * `maskHas(mask, source)` from `utils/maskHas`.  A galaxy catalog that's
    * loaded but toggled off contributes 0 to the displayed count.  We
    * deliberately do NOT show "X loaded, Y visible" — the panel is meant
    * to read as a glanceable telemetry strip, and the SettingsPanel
@@ -115,10 +115,13 @@ function StatsPanel({
   // (the StatusBar already tags that condition).  GALAXY_CATALOG_SOURCES gives us a
   // stable enumeration order; the order doesn't matter for a sum but it
   // keeps this loop trivially predictable.
-  const galaxyTotal = GALAXY_CATALOG_SOURCES.filter((s) => s !== Source.Synthetic).reduce((sum, source) => {
-    if (!maskHas(visibleSourceMask, source)) return sum;
-    return sum + (sourceCounts[source] ?? 0);
-  }, 0);
+  const galaxyTotal = GALAXY_CATALOG_SOURCES.filter((s) => s !== Source.Synthetic).reduce(
+    (sum, source) => {
+      if (!maskHas(visibleSourceMask, source)) return sum;
+      return sum + (sourceCounts[source] ?? 0);
+    },
+    0,
+  );
 
   return (
     <Panel title="STATS" ariaLabel="Render statistics" defaultOpen={defaultOpen}>
