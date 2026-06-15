@@ -43,7 +43,6 @@
 
 import { pickColourIndex } from '../../../data/galaxyCatalog/colourIndex';
 import { paddedRadiusMpc } from '../../../utils/paddedRadiusMpc';
-import { Source } from '../../../data/sources';
 import {
   galaxyCatalogFluxLimit,
   galaxyCatalogSchechter,

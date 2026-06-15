@@ -44,7 +44,7 @@
  * @module
  */
 
-import { Source, GALAXY_CATALOG_SOURCES } from '../../data/sources';
+import { GALAXY_CATALOG_SOURCES } from '../../data/sources';
 import {
   galaxyCatalogFluxLimit,
   galaxyCatalogSchechter,

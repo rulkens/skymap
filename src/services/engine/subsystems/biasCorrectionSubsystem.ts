@@ -84,7 +84,7 @@ import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import { BiasMode } from '../../../data/galaxyCatalog/biasMode';
 import type { BiasMode as BiasModeT } from '../../../@types/data/galaxyCatalog/BiasMode';
-import { Source, GALAXY_CATALOG_SOURCES } from '../../../data/sources';
+import { GALAXY_CATALOG_SOURCES } from '../../../data/sources';
 import type { ComputeSchechterRatiosInput } from '../../../@types/engine/ComputeSchechterRatiosInput';
 import type { ComputeAngularWeightsInput } from '../../../@types/engine/ComputeAngularWeightsInput';
 import type { SchechterRunner } from '../../../@types/engine/subsystems/SchechterRunner';

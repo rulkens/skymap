@@ -84,7 +84,6 @@
  */
 
 import { readFileSync, writeFileSync, existsSync, renameSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
