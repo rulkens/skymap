@@ -54,7 +54,8 @@ export type PassDeps = {
   /**
    * CF4++ flow-field renderer. Null before GPU init completes; `flowFieldPass`
    * null-checks this handle in `draw`, and its `enabled` gate already requires
-   * `settings.flow.enabled` + `data.flow.loaded`, so a null state is a no-op.
+   * `settings.flow.enabled` + `slotReady(assetSlots.flow)`, so a null state is a
+   * no-op.
    */
   flowFieldRenderer: FlowFieldRenderer | null;
   /** Procedural Milky Way impostor renderer. */

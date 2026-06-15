@@ -132,6 +132,7 @@ import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
 import type { RequestKey } from '../../@types/loading/RequestKey';
 import { awaitSlotReady } from '../loading/awaitSlotReady';
+import { slotReady } from '../loading/slotReady';
 import { tierTarget } from '../../data/tierTargets';
 import { snapToCameraSnapshot, tweenToCameraSnapshot } from './camera/cameraSnapshot';
 import { MILKY_WAY_CENTER_WORLD, MILKY_WAY_VIEW_DISTANCE_MPC } from '../../data/galacticCenter';
@@ -323,7 +324,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
     // Flow is a singleton overlay layer: all its user-facing state (master
     // gate + look/motion knobs) lives here, spread from the single
-    // `DEFAULT_FLOW` seed. The `state.data.flow` store stays status-only.
+    // `DEFAULT_FLOW` seed. Flow has no data-layer store — "loaded" is the asset
+    // slot's own `ready` state (`slotReady(assetSlots.flow)`).
     flow: { ...DEFAULT_FLOW },
     debug: {
       showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
@@ -1247,17 +1249,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         state.subsystems.scheduler.requestRender();
 
         // enabled: re-evaluate demand so the first enable lazy-loads the cube,
-        // then fade — but only when the cube is resident. `loaded === true`
-        // implies the slot committed and registered the {kind:'flow'} fade
-        // handle, so fadeTo is provably safe. When NOT loaded there is nothing
-        // drawn to fade AND the handle may be unregistered: a returning user
-        // skips the splash and can toggle during the async bootstrap (before
-        // wireSlots runs), where fadeTo throws. The FIRST-enable fade-in is
-        // owned by the slot commit; this branch handles re-enable + fade-out
-        // (the cube stays resident — reevaluateDemand never unloads).
+        // then fade — but only when the cube is resident. A ready slot implies
+        // the commit ran and registered the {kind:'flow'} fade handle, so fadeTo
+        // is provably safe. When NOT ready there is nothing drawn to fade AND the
+        // handle may be unregistered: a returning user skips the splash and can
+        // toggle during the async bootstrap (before wireSlots runs), where fadeTo
+        // throws. The FIRST-enable fade-in is owned by the slot commit; this
+        // branch handles re-enable + fade-out (the cube stays resident —
+        // reevaluateDemand never unloads).
         if (patch.enabled !== undefined) {
           reevaluateDemand(state);
-          if (state.data.flow.loaded) {
+          if (slotReady(state.assetSlots.flow)) {
             void state.subsystems.fades.fadeTo(
               { kind: 'flow' },
               patch.enabled ? 1 : 0,

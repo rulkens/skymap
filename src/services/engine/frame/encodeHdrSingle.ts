@@ -39,6 +39,7 @@ import type { RenderFrameSettings } from '../../../@types/engine/frame/RenderFra
 import { HDR_PASSES } from './passes';
 import { encodeVolumePrepass } from './encodeVolumePrepass';
 import { encodeFlowCompute } from './encodeFlowCompute';
+import { slotReady } from '../../loading/slotReady';
 
 export function encodeHdrSingle(
   encoder: GPUCommandEncoder,
@@ -69,7 +70,7 @@ export function encodeHdrSingle(
     encoder,
     flowFieldRenderer: state.gpu.flowFieldRenderer,
     flow: state.settings.flow,
-    loaded: state.data.flow.loaded,
+    loaded: slotReady(state.assetSlots.flow),
   });
 
   const hdrPass = encoder.beginRenderPass({

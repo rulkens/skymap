@@ -238,8 +238,8 @@ export const DEFAULT_VOLUME_PALETTE_ID = 'viridis' as const;
  * Flow is a singleton overlay layer (see
  * `docs/superpowers/conventions/singleton-overlay-layers.md`): every
  * user-facing value lives in `settings.flow`, so this one object seeds the
- * whole slice — `enabled` plus the look/motion knobs. The `state.data.flow`
- * store is status-only and seeds nothing from here.
+ * whole slice — `enabled` plus the look/motion knobs. Flow has no data-layer
+ * store; "loaded" is the asset slot's own `ready` state and seeds nothing here.
  *
  * `enabled` defaults OFF: the velocity cube is tens of MB and demand-loads on
  * the first enable, so a fresh session pays nothing until the user asks for it.

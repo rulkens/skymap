@@ -1,6 +1,7 @@
 /**
  * flowFieldPass tests — the enabled() gate (settings.flow.enabled AND
- * data.flow.loaded) and the draw delegation + defensive renderer-null guard.
+ * slotReady(assetSlots.flow)) and the draw delegation + defensive renderer-null
+ * guard.
  *
  * No real GPUDevice — every GPU-typed value is a cast stub. The Pass interface
  * splits `enabled` from `draw`, so the gate predicate is asserted independently
@@ -34,13 +35,19 @@ function makeCtx(): ReadyFrameContext {
  * Build an EngineState stub with the flow settings + load status the gate
  * reads, plus a fade-registry stub whose `opacityOf` returns a fixed value
  * (the draw delegation folds it in; the enabled gate reads it for fade-out).
+ *
+ * The gate reads `slotReady(assetSlots.flow)`, so `loaded` is modelled as the
+ * flow slot's `state().kind` ('ready' when loaded, else 'idle').
  */
 function makeState(
   over: { enabled?: boolean; loaded?: boolean; opacity?: number } = {},
 ): EngineState {
+  const ready = over.loaded ?? true;
   return {
     settings: { flow: { enabled: over.enabled ?? true } },
-    data: { flow: { loaded: over.loaded ?? true } },
+    assetSlots: {
+      flow: { state: () => ({ kind: ready ? 'ready' : 'idle' }) },
+    },
     subsystems: {
       fades: { opacityOf: vi.fn(() => over.opacity ?? 0.42) },
     },

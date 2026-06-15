@@ -155,8 +155,9 @@ export type EngineSettingsState = {
    * `docs/superpowers/conventions/singleton-overlay-layers.md`): all of its
    * user-facing state — the master `enabled` gate plus the look/motion knobs —
    * lives here in `settings`, exactly as `filaments` and `milkyWay` do. The
-   * `state.data.flow` store stays status-only (`loaded`); it carries no user
-   * knobs. The asset-demand predicate reads `settings.flow.enabled`, and the
+   * flow layer has no data-layer store: its "loaded" status is the asset slot's
+   * own `ready` state (`slotReady(assetSlots.flow)`), and it carries no user
+   * knobs here. The asset-demand predicate reads `settings.flow.enabled`, and the
    * renderer reads the rest of this slice each frame. Shape + per-field docs
    * live on `FlowSettings`.
    */

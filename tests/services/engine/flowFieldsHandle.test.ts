@@ -33,14 +33,22 @@ import {
 } from '../../../src/services/animation/fadeController';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { EngineFlowFieldsHandle } from '../../../src/@types/engine/handles/EngineFlowFieldsHandle';
+import { slotReady } from '../../../src/services/loading/slotReady';
 
-/** Mutable state stub exposing exactly the slices the flow handle reads. */
+/**
+ * Mutable state stub exposing exactly the slices the flow handle reads. The
+ * re-enable guard reads `slotReady(assetSlots.flow)`, so `loaded` is modelled as
+ * the flow slot's `state().kind` ('ready' when the cube has committed).
+ */
 function makeState(over: { loaded?: boolean } = {}) {
   const reseed = vi.fn();
   const requestRender = vi.fn();
   const fadeTo = vi.fn(async () => {});
+  const ready = over.loaded ?? false;
   const state = {
-    data: { flow: { loaded: over.loaded ?? false } },
+    assetSlots: {
+      flow: { state: () => ({ kind: ready ? 'ready' : 'idle' }) },
+    },
     gpu: { flowFieldRenderer: { maybeReseed: reseed } },
     subsystems: {
       fades: { fadeTo },
@@ -73,7 +81,7 @@ function makeFlowHandle(
       // fade-in is owned by the slot commit.
       if (patch.enabled !== undefined) {
         reevaluateDemand(state);
-        if (state.data.flow.loaded) {
+        if (slotReady(state.assetSlots.flow)) {
           void state.subsystems.fades.fadeTo(
             { kind: 'flow' },
             patch.enabled ? 1 : 0,

@@ -339,9 +339,10 @@ function makeInput(
           focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
         },
         // encodeFlowCompute (pre-HDR) reads these; flow is default-off so the
-        // gate early-returns once the renderer is null.
+        // gate early-returns once the renderer is null.  A null slot →
+        // slotReady false → not loaded.
         settings: { flow: { enabled: false } },
-        data: { flow: { loaded: false } },
+        assetSlots: { flow: null },
         // proceduralDisksPass / texturedDisksPass each read their slot
         // off `state.subsystems` in their `enabled()` gate; nulling both
         // references makes the passes skip cleanly.

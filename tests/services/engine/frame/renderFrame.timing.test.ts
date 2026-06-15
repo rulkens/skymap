@@ -250,8 +250,9 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
       },
       // encodeFlowCompute (pre-HDR) reads these; default-off → gate returns.
+      // A null slot → slotReady false → not loaded.
       settings: { flow: { enabled: false } },
-      data: { flow: { loaded: false } },
+      assetSlots: { flow: null },
       subsystems: {
         proceduralDisks: null,
         texturedDisks: null,

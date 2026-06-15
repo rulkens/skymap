@@ -2,8 +2,9 @@
  * flowFieldSlot — factory for the CF4++ velocity flow field's asset slot.
  *
  * **Lazy / default-off.**  Mirrors `cf4DensitySlot`: the factory mints the
- * slot unconditionally, but the flow layer's enable bit (`state.data.flow.
- * enabled`) defaults false, so the slot stays idle at boot.  Toggling flow on
+ * slot unconditionally, but the flow layer's enable bit
+ * (`state.settings.flow.enabled`) defaults false, so the slot stays idle at
+ * boot.  Toggling flow on
  * (Phase D UI) flips the bit and the per-frame `reevaluateDemand` fires
  * `flowFieldFetcher` — the ~tens-of-MB velocity cube is paid only on opt-in,
  * never on every page load.
@@ -11,10 +12,11 @@
  * **GPU upload.**  The commit hands the decoded cube to the flow renderer's
  * `upload`, which builds the 3D velocity texture via `flowFieldFromCube` against
  * its own device — the device never leaks to this slot, mirroring
- * `cf4Density → scalarVolumeRenderer.addField`.  `setLoaded()` means "committed
- * to the renderer" (see `FlowFieldStore`), so it fires AFTER
- * `upload`.  The render wake is `installSlotReadyWake`'s job, not the
- * factory's.  A null renderer (pre-bootstrap) is a silent no-op.
+ * `cf4Density → scalarVolumeRenderer.addField`.  The slot's own 'ready'
+ * transition (read via `slotReady(assetSlots.flow)`) is the authoritative
+ * "committed to the renderer" signal — it fires after this commit returns.  The
+ * render wake is `installSlotReadyWake`'s job, not the factory's.  A null
+ * renderer (pre-bootstrap) is a silent no-op.
  *
  * Construction-pure: builds + subscribes + RETURNS the slot.  The orchestrator
  * (`installSlots`) owns the write to `state.assetSlots`.
@@ -38,10 +40,10 @@ export const createFlowFieldSlot: SlotFactory<ScalarCube, void> = (state, _cb) =
     fetch: flowFieldFetcher,
     commit: async (cube) => {
       // Hand the cube to the renderer, which uploads it to the GPU and binds
-      // it. setLoaded() runs AFTER upload so "loaded" truthfully means
-      // "committed to the renderer".
+      // it. The slot transitions to 'ready' AFTER this commit returns, so
+      // slotReady(assetSlots.flow) becomes true exactly when "committed to the
+      // renderer" is true — no separate status mirror needed.
       state.gpu.flowFieldRenderer?.upload(cube);
-      state.data.flow.setLoaded();
       // Fade in only if the setting still requests flow visible. A load that
       // completes after the user toggled off must not visibly render; the
       // pass.enabled() gate keeps anything with opacity > 0 drawing, so

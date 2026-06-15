@@ -37,6 +37,7 @@ import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingServi
 import { HDR_PASSES } from './passes';
 import { encodeVolumePrepass } from './encodeVolumePrepass';
 import { encodeFlowCompute } from './encodeFlowCompute';
+import { slotReady } from '../../loading/slotReady';
 
 export function encodeHdrSplit(
   encoder: GPUCommandEncoder,
@@ -78,7 +79,7 @@ export function encodeHdrSplit(
     encoder,
     flowFieldRenderer: state.gpu.flowFieldRenderer,
     flow: state.settings.flow,
-    loaded: state.data.flow.loaded,
+    loaded: slotReady(state.assetSlots.flow),
   });
 
   // ── HDR sub-passes — one beginRenderPass per enabled pass ─────────
