@@ -28,12 +28,12 @@ import type { VolumeFieldSettings } from '../@types/settings/VolumeFieldSettings
 type VolumeEntry = Extract<SourceEntry, { type: 'volume' }>;
 
 /**
- * Look up the full volume registry entry for an id. The handle is
+ * Look up the full volume registry entry for an id. The id is
  * closed over `VolumeFieldId`, so callers cannot ask for an unknown id
  * — every value in the union has a registry entry.
  */
 function volumeEntry(id: VolumeFieldId): VolumeEntry {
-  const entry = Object.values(SOURCE_REGISTRY).find((e) => e.type === 'volume' && e.handle === id);
+  const entry = Object.values(SOURCE_REGISTRY).find((e) => e.type === 'volume' && e.id === id);
   // The `VolumeFieldId` union is derived from SOURCE_REGISTRY entries,
   // so a missing entry would mean the registry has drifted from the
   // type — surface that loudly rather than papering over it.
@@ -89,16 +89,16 @@ export function buildVolumeFieldSettings(id: VolumeFieldId): VolumeFieldSettings
  *
  * DEV-only debug fixtures (`binBaseName: null`) are excluded: they have
  * no on-disk payload, register only under `import.meta.env.DEV`, and
- * would clutter production state with handles that never load.
+ * would clutter production state with ids that never load.
  */
 export function seedVolumeFields(): Partial<Record<VolumeFieldId, VolumeFieldSettings>> {
-  // Partial, not total: DEV-only debug handles are skipped below, so they
+  // Partial, not total: DEV-only debug ids are skipped below, so they
   // are absent from the result — the type reflects that rather than lying
   // about a complete mapping.
   const seeded: Partial<Record<VolumeFieldId, VolumeFieldSettings>> = {};
   for (const entry of Object.values(SOURCE_REGISTRY)) {
     if (entry.type !== 'volume' || entry.binBaseName === null) continue;
-    seeded[entry.handle] = buildVolumeFieldSettings(entry.handle);
+    seeded[entry.id] = buildVolumeFieldSettings(entry.id);
   }
   return seeded;
 }

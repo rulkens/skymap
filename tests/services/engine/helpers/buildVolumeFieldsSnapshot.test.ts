@@ -28,7 +28,7 @@ describe('buildVolumeFieldsSnapshot', () => {
     const state = {
       gpu: {
         scalarVolumeRenderer: {
-          listHandles: () => ['mcpm'],
+          listIds: () => ['mcpm'],
         },
       },
       settings: {
@@ -70,7 +70,7 @@ describe('buildVolumeFieldsSnapshot', () => {
     const state = {
       gpu: {
         scalarVolumeRenderer: {
-          listHandles: () => ['mcpm'],
+          listIds: () => ['mcpm'],
         },
       },
       settings: {
@@ -105,7 +105,7 @@ describe('buildVolumeFieldsSnapshot', () => {
     const state = {
       gpu: {
         scalarVolumeRenderer: {
-          listHandles: () => ['mcpm'],
+          listIds: () => ['mcpm'],
         },
       },
       settings: {

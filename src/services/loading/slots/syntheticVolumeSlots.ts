@@ -35,10 +35,10 @@ import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
 
-type SyntheticVolumeHandle = 'debug-gaussian' | 'debug-cartesian' | 'debug-spherical';
+type SyntheticVolumeId = 'debug-gaussian' | 'debug-cartesian' | 'debug-spherical';
 
 type SyntheticVolumeSlotRecord = Record<
-  SyntheticVolumeHandle,
+  SyntheticVolumeId,
   AssetSlot<ScalarCube, SyntheticVolumeReq>
 >;
 
@@ -60,38 +60,38 @@ export function createSyntheticVolumeSlots(
   state: EngineState,
   _cb: EngineCallbacks,
 ): SyntheticVolumeSlotRecord {
-  // Helper that mints one synthetic-volume slot.  The handle is baked
+  // Helper that mints one synthetic-volume slot.  The id is baked
   // into a closure (the AssetSlot commit signature only sees the
   // decoded payload, not the request, so per-fixture identity has to
   // ride along on the slot).  Three sibling slots share this helper;
-  // refactoring to a Map of three would lose the per-handle commit
+  // refactoring to a Map of three would lose the per-id commit
   // closure that's the whole point.  The default-enabled bit comes from
   // each fixture's registry `visible` flag (all three are false), so
   // there's no separate argument to thread through.
   const mintSyntheticVolumeSlot = (
-    handle: SyntheticVolumeHandle,
+    id: SyntheticVolumeId,
   ): AssetSlot<ScalarCube, SyntheticVolumeReq> =>
     createAssetSlot({
-      name: `syntheticVolume:${handle}`,
+      name: `syntheticVolume:${id}`,
       fetch: syntheticVolumeFetcher,
       commit: async (cube) => {
         const renderer = state.gpu.scalarVolumeRenderer;
         if (!renderer) return;
-        renderer.upload(handle, cube);
+        renderer.upload(id, cube);
         // Synthetic fixtures get NO construction seed (DEV-only), so this
         // commit seeds the settings row on first load (copy-on-write).  The
         // renderer reads the per-cube static config from the registry and
         // the user knobs from settings per frame, so no renderer setter is
         // replayed here.
-        if (!state.settings.volumes.items[handle]) {
+        if (!state.settings.volumes.items[id]) {
           state.settings.volumes.items = {
             ...state.settings.volumes.items,
-            [handle]: buildVolumeFieldSettings(handle),
+            [id]: buildVolumeFieldSettings(id),
           };
         }
-        if (state.settings.volumes.items[handle]?.enabled) {
+        if (state.settings.volumes.items[id]?.enabled) {
           void state.subsystems.fades.fadeTo(
-            { kind: 'scalarField', field: handle },
+            { kind: 'scalarField', field: id },
             1,
             FADE_IN_DURATION_MS,
           );

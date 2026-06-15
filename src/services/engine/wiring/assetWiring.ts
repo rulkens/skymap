@@ -77,12 +77,12 @@ import type { SurveyId } from '../../../@types/engine/data/SurveyId';
 const BULK_CATALOG_CATEGORIES: readonly StructureCategory[] = ['cluster', 'supercluster', 'void'];
 
 /**
- * Volume-field handle ids, read from the registry rather than re-spelled, so
+ * Volume-field ids, read from the registry rather than re-spelled, so
  * the demand predicates can't drift from the strings the renderer + settings
  * actually key on.
  */
-const CF4_FIELD = SOURCE_REGISTRY[Source.Cf4Density].handle;
-const MCPM_FIELD = SOURCE_REGISTRY[Source.Mcpm].handle;
+const CF4_FIELD = SOURCE_REGISTRY[Source.Cf4Density].id;
+const MCPM_FIELD = SOURCE_REGISTRY[Source.Mcpm].id;
 
 /**
  * Guard factory for `built: 'external'` rows. Reaching it means the slot

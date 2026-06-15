@@ -76,7 +76,7 @@ describe('volumeUpsamplePass.enabled', () => {
   it('returns false when volumesEnabled is false and master fade is fully out', () => {
     const state = {
       gpu: {
-        scalarVolumeRenderer: { hasActiveFields: () => true, listHandles: () => [] },
+        scalarVolumeRenderer: { hasActiveFields: () => true, listIds: () => [] },
         volumeUpsample: { draw: vi.fn(), destroy: vi.fn() },
       },
       // Master opacity 0 = no fade-out tail in flight. The gate
@@ -93,10 +93,10 @@ describe('volumeUpsamplePass.enabled', () => {
       gpu: {
         scalarVolumeRenderer: {
           hasActiveFields: () => false,
-          // The fade-tail check iterates listHandles and calls
+          // The fade-tail check iterates listIds and calls
           // fades.opacityOf for each. Empty list → no tails → gate
           // stays false.
-          listHandles: () => [],
+          listIds: () => [],
         },
         volumeUpsample: { draw: vi.fn(), destroy: vi.fn() },
       },
@@ -128,7 +128,7 @@ describe('volumeUpsamplePass.enabled', () => {
   it('returns true when every gate passes', () => {
     const state = {
       gpu: {
-        scalarVolumeRenderer: { hasActiveFields: () => true, listHandles: () => [] },
+        scalarVolumeRenderer: { hasActiveFields: () => true, listIds: () => [] },
         volumeUpsample: { draw: vi.fn(), destroy: vi.fn() },
       },
       subsystems: { fades: { opacityOf: () => 1 } },

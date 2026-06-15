@@ -6,11 +6,11 @@
  * Public surface (factory shape, matching D.2 conventions):
  *
  *   - createScalarVolumeRenderer(device, format, fadeBgl, callbacks)
- *   - upload(handle, cube)        → upload cube to a 3D r16float
+ *   - upload(id, cube)            → upload cube to a 3D r16float
  *                                       texture, read the per-cube static
  *                                       config from the registry, register
  *                                       in the field map
- *   - unload(handle)            → drop the texture, unregister
+ *   - unload(id)                → drop the texture, unregister
  *   - hasActiveFields(settingsOf)    → true iff any field whose live
  *                                       settings are enabled+intensity>0
  *                                       (or still fading out); used by the
@@ -25,7 +25,7 @@
  *                                       what's resident
  *   - destroy()                      → release all GPU resources
  *
- * Per-field state lives in a 'Map<handle, FieldEntry>'; each entry owns
+ * Per-field state lives in a 'Map<id, FieldEntry>'; each entry owns
  * its own 3D texture, palette LUT texture, bind group, uniform buffer,
  * the cube's matrices, and the per-cube STATIC presentation config
  * (contrastCenter, envelope) + a `residentPaletteId` GPU-residency fact.
@@ -102,8 +102,8 @@ export function createScalarVolumeRenderer(
   format: GPUTextureFormat,
   fadeBgl: FadeUniformsBgl,
   callbacks: {
-    onFieldAdded: (handle: VolumeFieldId) => void;
-    onFieldRemoved: (handle: VolumeFieldId) => void;
+    onFieldAdded: (id: VolumeFieldId) => void;
+    onFieldRemoved: (id: VolumeFieldId) => void;
   },
 ): ScalarVolumeRenderer {
   const cornerBuffer = device.createBuffer({
@@ -264,21 +264,21 @@ export function createScalarVolumeRenderer(
 
   const renderer: ScalarVolumeRenderer = {
     label: 'scalarVolumeRenderer',
-    upload(handle, cube) {
-      const existing = fields.get(handle);
+    upload(id, cube) {
+      const existing = fields.get(id);
       if (existing) {
         existing.volumeTexture.destroy();
         existing.paletteTexture.destroy();
         existing.uniformBuffer.destroy();
         existing.fadeBuffer.destroy();
-        fields.delete(handle);
+        fields.delete(id);
       }
       // Per-cube STATIC presentation config read once from the registry.
-      // The handle is a `VolumeFieldId` (the registry-derived field union),
+      // The id is a `VolumeFieldId` (the registry-derived field union),
       // so the lookup needs no cast.  The user-tunable knobs (enabled,
       // intensity, contrast, densityScale, palette, trim, exposure) are NOT
       // seeded here — they live in settings and are read per frame in `draw`.
-      const defaults = getVolumeFieldDefaults(handle);
+      const defaults = getVolumeFieldDefaults(id);
       const modelMatrix = buildCubeModelMatrix(cube);
       const invModelMatrix = mat4.create();
       mat4.invert(invModelMatrix, modelMatrix);
@@ -303,17 +303,17 @@ export function createScalarVolumeRenderer(
         ],
       });
       const fadeBuffer = device.createBuffer({
-        label: `scalarVolume-fade-uniform-${handle}`,
+        label: `scalarVolume-fade-uniform-${id}`,
         size: 16,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
       });
       const fadeBindGroup = device.createBindGroup({
-        label: `scalarVolume-fade-bg-${handle}`,
+        label: `scalarVolume-fade-bg-${id}`,
         layout: fadeBgl,
         entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
       });
-      fields.set(handle, {
-        handle,
+      fields.set(id, {
+        id,
         // Per-cube static config, read once from the registry above.
         contrastCenter: defaults.contrastCenter,
         envelopeInner: defaults.envelope.inner,
@@ -331,10 +331,10 @@ export function createScalarVolumeRenderer(
         fadeBuffer,
         fadeBindGroup,
       });
-      callbacks.onFieldAdded(handle);
+      callbacks.onFieldAdded(id);
     },
-    unload(handle) {
-      const entry = fields.get(handle);
+    unload(id) {
+      const entry = fields.get(id);
       if (!entry) return;
       // Fire the callback BEFORE destroying GPU resources so any
       // future callback body that needs to read the entry (debug log,
@@ -342,27 +342,27 @@ export function createScalarVolumeRenderer(
       // entry. onFieldRemoved only calls fades.unregister, which
       // doesn't touch the renderer, but the order is the more
       // defensible default.
-      callbacks.onFieldRemoved(handle);
+      callbacks.onFieldRemoved(id);
       entry.volumeTexture.destroy();
       entry.paletteTexture.destroy();
       entry.uniformBuffer.destroy();
       entry.fadeBuffer.destroy();
-      fields.delete(handle);
+      fields.delete(id);
     },
     hasActiveFields(settingsOf, fadeOpacityOf) {
       for (const e of fields.values()) {
-        const s = settingsOf(e.handle);
+        const s = settingsOf(e.id);
         if (!s) continue;
         if (s.intensity <= 0) continue;
         if (s.enabled) return true;
         // If a fade-out tail is in flight (enabled flipped false, but
         // opacity hasn't reached 0 yet) the field is still producing
         // visible pixels — keep upstream gates alive.
-        if (fadeOpacityOf && fadeOpacityOf(e.handle) > 0) return true;
+        if (fadeOpacityOf && fadeOpacityOf(e.id) > 0) return true;
       }
       return false;
     },
-    listHandles() {
+    listIds() {
       return Array.from(fields.keys());
     },
     draw(pass, viewProj, viewportPx, cameraPosWorld, settingsOf, fadeOpacityOf) {
@@ -394,7 +394,7 @@ export function createScalarVolumeRenderer(
       const scratch = new Float32Array(UNIFORM_BYTES / 4);
       frame = (frame + 1) % FRAME_WRAP;
       for (const e of fields.values()) {
-        const s = settingsOf(e.handle);
+        const s = settingsOf(e.id);
         // No live settings row (e.g. a removed field with a late-firing
         // callback) → nothing to draw for this field.
         if (!s) continue;
@@ -419,7 +419,7 @@ export function createScalarVolumeRenderer(
         // visible. s.intensity is the user's intensity slider; 0
         // there means "fully transparent regardless of fade", so we
         // skip the GPU work entirely.
-        const opacity = fadeOpacityOf(e.handle);
+        const opacity = fadeOpacityOf(e.id);
         if ((!s.enabled && opacity <= 0) || s.intensity <= 0) continue;
         for (let i = 0; i < 16; i++) scratch[i] = viewProj[i] ?? 0;
         scratch[16] = viewportPx[0];
@@ -442,8 +442,8 @@ export function createScalarVolumeRenderer(
         scratch[63] = frame;
         device.queue.writeBuffer(e.uniformBuffer, 0, scratch);
         // Per-field fade.opacity write: read from the registry for this
-        // field's handle, write into the 16-byte fadeBuffer.
-        fadeScratchF32[0] = fadeOpacityOf(e.handle);
+        // field's id, write into the 16-byte fadeBuffer.
+        fadeScratchF32[0] = fadeOpacityOf(e.id);
         device.queue.writeBuffer(e.fadeBuffer, 0, fadeScratchBuffer);
         pass.setBindGroup(0, e.bindGroup);
         pass.setBindGroup(1, e.fadeBindGroup);

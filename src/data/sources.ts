@@ -445,8 +445,7 @@ export const SOURCE_REGISTRY = {
     visible: false,
     bearsLabel: false,
     bearsMarker: false,
-    handle: 'cf4-density',
-    // Underscore in the filename for legacy reasons; `handle` mirrors it
+    // Underscore in the filename for legacy reasons; `id` mirrors it
     // in kebab-case for UI / settings keys.
     binBaseName: 'cf4_density',
     tiered: false, // single 256³ cube; no per-tier variants
@@ -475,7 +474,6 @@ export const SOURCE_REGISTRY = {
     visible: true,
     bearsLabel: false,
     bearsMarker: false,
-    handle: 'mcpm',
     binBaseName: 'mcpm',
     tiered: true, // small / medium / large `.scfd` variants
     paletteId: 'inferno',
@@ -502,7 +500,6 @@ export const SOURCE_REGISTRY = {
     visible: false,
     bearsLabel: false,
     bearsMarker: false,
-    handle: 'debug-gaussian',
     binBaseName: null,
     tiered: false,
     paletteId: 'blue-purple',
@@ -525,7 +522,6 @@ export const SOURCE_REGISTRY = {
     visible: false,
     bearsLabel: false,
     bearsMarker: false,
-    handle: 'debug-cartesian',
     binBaseName: null,
     tiered: false,
     paletteId: 'viridis',
@@ -548,7 +544,6 @@ export const SOURCE_REGISTRY = {
     visible: false,
     bearsLabel: false,
     bearsMarker: false,
-    handle: 'debug-spherical',
     binBaseName: null,
     tiered: false,
     paletteId: 'magma',

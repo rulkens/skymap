@@ -11,7 +11,7 @@
  * Lives at the type level rather than as a parallel hand-maintained
  * union so a new volume entry can't drift out of the type. The
  * `Extract` walks every registry entry and keeps only the volume-typed
- * ones; the indexed access then projects out their `handle` literals.
+ * ones; the indexed access then projects out their `id` literals.
  */
 
 import type { SOURCE_REGISTRY } from '../../data/sources';
@@ -19,4 +19,4 @@ import type { SOURCE_REGISTRY } from '../../data/sources';
 type AnyEntry = (typeof SOURCE_REGISTRY)[keyof typeof SOURCE_REGISTRY];
 type VolumeEntry = Extract<AnyEntry, { readonly type: 'volume' }>;
 
-export type VolumeFieldId = VolumeEntry['handle'];
+export type VolumeFieldId = VolumeEntry['id'];

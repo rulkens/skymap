@@ -325,7 +325,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     'rgba16float',
     state.gpu.fadeBgl!,
     {
-      onFieldAdded: (handle) => {
+      onFieldAdded: (id) => {
         // Register at opacity 0 ONLY. Do NOT auto-fade-in here:
         // addVolumeField (the engine.ts wrapper that calls into this
         // factory) drives the fade-in itself, AFTER applying the
@@ -335,10 +335,10 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
         // draw-loop gate's "opacity > 0 keeps rendering through the
         // fade-out tail", that would draw disabled debug fields by
         // mistake.
-        state.subsystems.fades.register({ kind: 'scalarField', field: handle }, 0);
+        state.subsystems.fades.register({ kind: 'scalarField', field: id }, 0);
       },
-      onFieldRemoved: (handle) => {
-        state.subsystems.fades.unregister({ kind: 'scalarField', field: handle });
+      onFieldRemoved: (id) => {
+        state.subsystems.fades.unregister({ kind: 'scalarField', field: id });
       },
     },
   );

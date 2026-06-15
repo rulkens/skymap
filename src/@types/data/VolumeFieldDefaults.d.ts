@@ -1,5 +1,5 @@
 /**
- * VolumeFieldDefaults — per-handle presentation defaults for scalar-volume
+ * VolumeFieldDefaults — per-id presentation defaults for scalar-volume
  * fields registered with the renderer.
  *
  * SCFD v2 is data-only (dims, frame, voxels, dynamic range).  How a
@@ -117,6 +117,6 @@ export type VolumeFieldDefaults = {
    * coolwarm sits comfortably at the global 0.5.
    */
   intensity?: number;
-  /** Optional human-readable label override (renderer falls back to handle). */
+  /** Optional human-readable label override (renderer falls back to id). */
   label?: string;
 };

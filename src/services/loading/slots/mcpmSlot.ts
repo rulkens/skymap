@@ -3,7 +3,7 @@
  *
  * Tier-aware (unlike cf4DensitySlot's void request). On commit, hands
  * the decoded ScalarCube to scalarVolumeRenderer.upload under the
- * handle 'mcpm'. The renderer reads per-cube static config
+ * id 'mcpm'. The renderer reads per-cube static config
  * (contrastCenter, envelope, palette) from the registry and user-tunable
  * knobs from `state.settings.volumes.items` per frame — the commit
  * replays no renderer setter.
@@ -29,19 +29,19 @@ export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, _cb) => 
     commit: async (cube) => {
       const renderer = state.gpu.scalarVolumeRenderer;
       if (!renderer) return;
-      const handle = SOURCE_REGISTRY[Source.Mcpm].handle;
+      const id = SOURCE_REGISTRY[Source.Mcpm].id;
       // Upload the cube; the renderer reads this field's per-cube static
       // config (contrastCenter, envelope, palette) from the registry and
       // its user-tunable knobs from `state.settings.volumes.items` per
       // frame, so the commit replays no renderer setter.  MCPM is a
       // shippable volume, so its settings row already exists from the
       // construction seed.
-      renderer.upload(handle, cube);
+      renderer.upload(id, cube);
       // Fade up only if the user has the field toggled on (matches the
       // symmetric path in engine.ts addVolumeField).
-      if (state.settings.volumes.items[handle]?.enabled) {
+      if (state.settings.volumes.items[id]?.enabled) {
         void state.subsystems.fades.fadeTo(
-          { kind: 'scalarField', field: handle },
+          { kind: 'scalarField', field: id },
           1,
           FADE_IN_DURATION_MS,
         );

@@ -66,7 +66,7 @@ export function makeSyntheticGaussianCube(opts: SyntheticGaussianOptions = {}): 
     rotation: [0, 0, 0, 1],
     // Palette + densityScale presentation defaults live in
     // `src/data/volumeFieldDefaults.ts` keyed by the renderer's field
-    // handle ('debug-gaussian'), no longer encoded in the cube.
+    // id ('debug-gaussian'), no longer encoded in the cube.
     valueMin: 0,
     valueMax: 1,
   };
@@ -143,7 +143,7 @@ export function makeCartesianGridCube(opts: CartesianGridOptions = {}): ScalarCu
     rotation: [0, 0, 0, 1],
     // Palette + densityScale presentation defaults live in
     // `src/data/volumeFieldDefaults.ts` keyed by the renderer's field
-    // handle ('debug-cartesian'), no longer encoded in the cube.
+    // id ('debug-cartesian'), no longer encoded in the cube.
     valueMin: 0,
     valueMax: 1,
   };
@@ -229,7 +229,7 @@ export function makeSphericalGridCube(opts: SphericalGridOptions = {}): ScalarCu
     rotation: [0, 0, 0, 1],
     // Palette + densityScale presentation defaults live in
     // `src/data/volumeFieldDefaults.ts` keyed by the renderer's field
-    // handle ('debug-spherical'), no longer encoded in the cube.
+    // id ('debug-spherical'), no longer encoded in the cube.
     valueMin: 0,
     valueMax: 1,
   };

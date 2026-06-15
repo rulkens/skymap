@@ -2,7 +2,7 @@
  * cf4DensitySlot — factory for the CF-4 DM density volume's asset slot.
  *
  * On commit, hands the decoded `ScalarCube` to
- * `scalarVolumeRenderer.upload` under the handle `'cf4-density'`.
+ * `scalarVolumeRenderer.upload` under the id `'cf4-density'`.
  * The renderer reads per-cube static config (contrastCenter, envelope,
  * paletteId) from the registry and user-tunable knobs from
  * `state.settings.volumes.items` per frame — the commit replays no
@@ -33,19 +33,19 @@ export const createCf4DensitySlot: SlotFactory<ScalarCube, void> = (state, _cb) 
     commit: async (cube) => {
       const renderer = state.gpu.scalarVolumeRenderer;
       if (!renderer) return;
-      const handle = SOURCE_REGISTRY[Source.Cf4Density].handle;
+      const id = SOURCE_REGISTRY[Source.Cf4Density].id;
       // Upload the cube; the renderer reads this field's per-cube static
       // config (contrastCenter, envelope, palette) from the registry and
       // its user-tunable knobs from `state.settings.volumes.items` per
       // frame, so the commit replays no renderer setter.  CF-4 is a
       // shippable volume, so its settings row already exists from the
       // construction seed.
-      renderer.upload(handle, cube);
+      renderer.upload(id, cube);
       // Fade up only if the user has the field toggled on (matches the
       // symmetric path in engine.ts addVolumeField).
-      if (state.settings.volumes.items[handle]?.enabled) {
+      if (state.settings.volumes.items[id]?.enabled) {
         void state.subsystems.fades.fadeTo(
-          { kind: 'scalarField', field: handle },
+          { kind: 'scalarField', field: id },
           1,
           FADE_IN_DURATION_MS,
         );

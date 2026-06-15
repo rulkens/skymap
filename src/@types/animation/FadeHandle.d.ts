@@ -18,7 +18,7 @@
  *                    fades out on disable. No discriminator.
  *   - scalarField  — one volumetric scalar field (CF-4, rhizome-small,
  *                    rhizome-medium, rhizome-large). Discriminator:
- *                    `field: VolumeFieldId` (the registry handle the
+ *                    `field: VolumeFieldId` (the registry id the
  *                    volume renderer keys fields by).
  *   - markerLayer  — the structure marker rings for one structure
  *                    category (cluster, supercluster, void, group).
