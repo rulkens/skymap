@@ -9,16 +9,11 @@
  *
  * The renderer is renderer-type-agnostic: its uniform carries a
  * pre-computed `ringRadiusPx`, not a galaxy diameter.  This pass owns
- * the galaxy-specific sizing math:
- *
- *   apparentPxRadius = (max(diameterKpc, 30) * 2 / 1000 / max(camDist, 0.001))
- *                      * pxPerRad
- *   ringRadiusPx    = max(pointSizePx, apparentPxRadius * 0.5) * RING_SIZE_SCALE
- *
- * The `* 0.5` on `apparentPxRadius` cancels half of the 4× padding the
- * points pipeline bakes into its billboard footprint (to share size with
- * the textured thumbnail) — without it, the halo balloons on zoomed-in
- * galaxies.  The `max(diameterKpc, 30)` floor handles the synthetic-
+ * picking the per-target characteristic radius (catalog diameter vs the
+ * Milky Way disc), then defers the apparent-px math to the shared
+ * `selectionRingRadiusPx` helper — the SAME call the Milky-Way pick
+ * billboard uses to size its hit target, so ring and click area can't
+ * drift.  The `max(diameterKpc, 30)` floor here handles the synthetic-
  * fallback source and any pre-v4-format galaxy without a measured size.
  *
  * Decoupling the formula from the renderer leaves room for a structure
@@ -35,10 +30,7 @@
 
 import type { Pass } from '../../../../@types/engine/frame/Pass';
 import { MILKY_WAY_DISC_RADIUS_KPC } from '../../../../data/milkyWay/galacticCenter';
-
-// Multiplier from the galaxy's base on-screen size to the halo radius.
-// Tune for visual breathing room around the selected point.
-const RING_SIZE_SCALE = 6;
+import { selectionRingRadiusPx } from '../../helpers/selectionRingRadiusPx';
 
 export const selectionRingPass: Pass = {
   name: 'selection-ring',
@@ -66,20 +58,18 @@ export const selectionRingPass: Pass = {
         ? MILKY_WAY_DISC_RADIUS_KPC / 1000
         : ((sel.diameterKpc > 0 ? sel.diameterKpc : 30) * 2) / 1000;
 
-    // Compute the on-screen halo radius — same formula as the main-
-    // points vertex shader (points/vertex.wesl, ringRadiusPx block).
+    // Compute the on-screen halo radius via the shared helper (the
+    // Milky-Way pick billboard sizes its hit target with the same call).
     const dx = worldPos[0] - ctx.drawCamPos[0];
     const dy = worldPos[1] - ctx.drawCamPos[1];
     const dz = worldPos[2] - ctx.drawCamPos[2];
     const camDist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-    const safeDist = Math.max(camDist, 0.001);
-    const apparentPxRadius = (radiusMpc / safeDist) * ctx.drawPxPerRad;
-    // Halve the apparent-radius contribution: the points shader bakes a 4×
-    // padding into the billboard footprint to share size with the textured
-    // thumbnail, which would otherwise make the halo balloon when zoomed in.
-    // The pointSizePx floor keeps faint, sub-pixel galaxies visibly ringed.
-    const sizePx = Math.max(settings.pointSizePx, apparentPxRadius * 0.5);
-    const ringRadiusPx = sizePx * RING_SIZE_SCALE;
+    const ringRadiusPx = selectionRingRadiusPx(
+      radiusMpc,
+      camDist,
+      ctx.drawPxPerRad,
+      settings.pointSizePx,
+    );
 
     state.gpu.selectionRingRenderer!.setSelection({ worldPos, ringRadiusPx });
     state.gpu.selectionRingRenderer!.render(pass, ctx.vp as Float32Array, [

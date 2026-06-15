@@ -35,6 +35,7 @@ import { computeInitialCamera } from '../camera/cameraFraming';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { collectPickTargets } from '../helpers/collectPickTargets';
 import { milkyWayPickVisible } from '../helpers/milkyWayPickVisible';
+import { milkyWayPickHalfExtentPx } from '../helpers/milkyWayPickHalfExtentPx';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -66,12 +67,15 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     state.gpu.focusUniform!.bindGroup,
     state.gpu.structureMarkerRenderer ?? undefined,
     state.gpu.proceduralDiskRenderer ?? undefined,
-    // The Milky-Way pick provider + its disk-visibility gate.  The gate
-    // is a closure over `state` so the renderer stays free of
-    // EngineState — it draws the MW only while the disk is on screen,
-    // the same condition `milkyWayPass.enabled` uses.
+    // The Milky-Way pick provider + its disk-visibility-gate-and-size
+    // closure.  Returns the hit billboard's half-extent in pixels (the
+    // SAME apparent-px the visible selection ring uses, so the click area
+    // tracks the ring) while the disk is on screen, or `null` to skip the
+    // draw — the same gate `milkyWayPass.enabled` uses.  A closure over
+    // `state` + `canvas` so the renderer stays free of EngineState; it
+    // draws what it's told.
     state.gpu.milkyWayPickRenderer ?? undefined,
-    () => milkyWayPickVisible(state),
+    () => milkyWayPickHalfExtentPx(state, canvas.height),
   );
   state.gpu.pickRenderer = pickRenderer;
   // The resolver runs the whole pixel → resolved `FocusableTarget`

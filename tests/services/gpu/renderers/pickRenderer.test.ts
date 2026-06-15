@@ -222,7 +222,7 @@ describe('createPickRenderer', () => {
   } {
     return {
       label: 'milkyWayPickRenderer',
-      pickMilkyWay: vi.fn<(pass: GPURenderPassEncoder) => void>(),
+      pickMilkyWay: vi.fn<(pass: GPURenderPassEncoder, halfExtentPx: number) => void>(),
       destroy: vi.fn<() => void>(),
     };
   }
@@ -247,7 +247,7 @@ describe('createPickRenderer', () => {
       undefined, // no structure markers
       undefined, // no procedural disks
       mwPick,
-      () => true, // MW disk visible
+      () => 24, // MW disk visible — half-extent in px
     );
 
     await pickRenderer.pick([100, 100], 50, 50, [
@@ -255,6 +255,8 @@ describe('createPickRenderer', () => {
     ]);
 
     expect(mwPick.pickMilkyWay).toHaveBeenCalledTimes(1);
+    // The computed half-extent is threaded straight through to the draw.
+    expect(mwPick.pickMilkyWay.mock.calls[0]![1]).toBe(24);
   });
 
   it('does NOT invoke pickMilkyWay when the MW is gated hidden', async () => {
@@ -277,7 +279,7 @@ describe('createPickRenderer', () => {
       undefined,
       undefined,
       mwPick,
-      () => false, // MW disk hidden — gate closed
+      () => null, // MW disk hidden — gate closed
     );
 
     // A galaxy source is present so the pass still runs; the MW draw must

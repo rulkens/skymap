@@ -39,22 +39,27 @@ struct Uniforms {
 
 // ── @group(2) per-source uniform ──────────────────────────────────────
 //
-// Carries BOTH the world-space billboard centre and the source code.
-// The structure ring path keeps the centre in a per-instance vertex
-// buffer and the code in a SourceUniforms block; the MW is a single
-// fixed billboard, so co-locating the centre with the code in one tiny
-// 16-byte uniform (written once at construction) is simpler than a
+// Carries the world-space billboard centre, the source code, and the
+// screen-pixel half-extent of the hit billboard.  The structure ring
+// path keeps the centre in a per-instance vertex buffer and the code in
+// a SourceUniforms block; the MW is a single fixed billboard, so
+// co-locating everything in one tiny uniform is simpler than a
 // one-instance vertex buffer.
 //
-//   offset 0  : centerWorld  vec3<f32>  (Sgr A* world position)
-//   offset 12 : sourceCode   u32        (Source.MilkyWay = 16)
+//   offset 0  : centerWorld   vec3<f32>  (Sgr A* world position)
+//   offset 12 : sourceCode    u32        (Source.MilkyWay = 16)
+//   offset 16 : halfExtentPx  f32        (apparent radius of the MW disc,
+//                                          floored — matches the ring)
 //
-// vec3<f32> aligns to 16 bytes and occupies 0..11; the trailing u32 at
-// offset 12 fills the slot exactly, so the struct is 16 bytes with no
-// extra pad.
+// centerWorld + sourceCode fill bytes 0..15; halfExtentPx takes the next
+// 16-byte slot at offset 16 (WGSL pads the struct to a 16-byte multiple),
+// so the buffer is 32 bytes.  Unlike centre + code (written once at
+// construction), halfExtentPx is rewritten each pick because it tracks
+// the camera distance — the engine supplies it as data per draw.
 struct MilkyWayPickUniforms {
   centerWorld: vec3<f32>,
   sourceCode: u32,
+  halfExtentPx: f32,
 };
 
 // ── vertex-to-fragment interface ──────────────────────────────────────

@@ -1,13 +1,15 @@
-// milkyWayPick/vertex.wesl — screen-size-clamped billboard at the
-// galactic centre for the Milky-Way pick path.
+// milkyWayPick/vertex.wesl — screen-aligned billboard at the galactic
+// centre for the Milky-Way pick path.
 //
-// One instance, six vertices.  The billboard is SCREEN-aligned and
-// SCREEN-SIZED (a fixed pixel half-extent), not world-sized: the Milky
-// Way is a hit target, not a visual, so it must stay clickable at any
-// zoom — the same 'never shrink below a pixel floor' guarantee a galaxy
-// point holds via 'u.pointSizePx' (see points/vertex.wesl's
-// 'max(u.pointSizePx, apparentPxRadius)').  A fixed floor is enough here
-// because there is no visible sprite to scale.
+// One instance, six vertices.  The billboard is SCREEN-aligned and sized
+// by 'mw.halfExtentPx' — the apparent on-screen radius of the Milky Way's
+// disc at the current camera distance, floored at the galaxy point-size
+// minimum.  The CPU computes that px via the shared 'selectionRingRadiusPx'
+// helper (the SAME value the visible selection ring uses), so the
+// invisible hit target tracks the ring the user sees as they approach the
+// disk.  The floor is the same 'never shrink below a pixel' guarantee a
+// galaxy point holds via 'u.pointSizePx' (see points/vertex.wesl's
+// 'max(u.pointSizePx, apparentPxRadius)').
 //
 // The packed pick identity is composed in the vertex stage (mirroring
 // points/vertex.wesl's 'packSelection(source.sourceCode, ii)') and
@@ -30,22 +32,16 @@ import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
 // 80-byte prefix.
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
-// @group(2) MilkyWayPickUniforms — world centre + source code, written
-// once at construction.
+// @group(2) MilkyWayPickUniforms — world centre + source code (written
+// once at construction) + halfExtentPx (rewritten per pick by the engine
+// to track the disc's apparent on-screen radius).
 @group(2) @binding(0) var<uniform> mw: MilkyWayPickUniforms;
-
-// Screen-pixel half-extent of the pick billboard.  Chosen comfortably
-// large so the galactic centre is an easy click target; this is a hit
-// area, not a visual, so an over-generous radius costs nothing.  The
-// matching value lives only here — there is no CPU-side counterpart to
-// drift against.
-const MILKY_WAY_PICK_SIZE_PX: f32 = 16.0;
 
 @vertex
 fn vs(@builtin(vertex_index) vi: u32) -> VsOut {
   let centerClip = worldToClip(u.cam, mw.centerWorld);
   let corner = quadCorner(vi);
-  let offset = expandBillboardScreen(u.cam, centerClip, MILKY_WAY_PICK_SIZE_PX, corner);
+  let offset = expandBillboardScreen(u.cam, centerClip, mw.halfExtentPx, corner);
 
   var out: VsOut;
   // Only X/Y move — depth + w pass through so the shared depth test

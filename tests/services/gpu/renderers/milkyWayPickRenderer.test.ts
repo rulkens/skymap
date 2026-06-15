@@ -22,8 +22,9 @@ describe('milkyWayPickRenderer (null device)', () => {
     const r = newRenderer();
     expect(r).toBeDefined();
     // pickMilkyWay / destroy are callable no-ops with no GPU device.
+    // The new signature takes a half-extent (px); pass any value.
     expect(() =>
-      r.pickMilkyWay(null as unknown as GPURenderPassEncoder),
+      r.pickMilkyWay(null as unknown as GPURenderPassEncoder, 24),
     ).not.toThrow();
     expect(() => r.destroy()).not.toThrow();
   });
