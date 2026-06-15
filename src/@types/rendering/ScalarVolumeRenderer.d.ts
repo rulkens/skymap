@@ -1,8 +1,9 @@
 /**
  * ScalarVolumeRenderer — public handle for the multi-field 3D scalar-
  * volume renderer.  Owns the WebGPU pipeline, the per-field bind groups,
- * and the per-field registry; consumers add / remove cubes, and the
- * renderer READS per-field settings each frame via `draw(settingsOf)`.
+ * and the per-field registry; consumers upload / unload cubes (keyed by
+ * field handle, mirroring `pointRenderer.upload`/`unload` per source), and
+ * the renderer READS per-field settings each frame via `draw(settingsOf)`.
  * The user-tunable knobs (enabled, intensity, palette, contrast,
  * densityScale, trim, exposure) are no longer set through this handle —
  * they live in `state.settings.volumes.items` and are projected in per
@@ -23,8 +24,8 @@ export type ScalarVolumeRenderer = {
    * shared `Renderer` contract — see `Renderer.d.ts`.
    */
   readonly label: string;
-  addField(handle: ScalarFieldHandle, cube: ScalarCube): void;
-  removeField(handle: ScalarFieldHandle): void;
+  upload(handle: ScalarFieldHandle, cube: ScalarCube): void;
+  unload(handle: ScalarFieldHandle): void;
   /**
    * True iff any field is currently producing visible output. The live
    * per-field settings come from `settingsOf` (the renderer no longer

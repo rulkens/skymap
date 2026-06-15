@@ -379,7 +379,7 @@ function makeState(
       proceduralDiskRenderer: {} as never,
       milkyWayRenderer: null,
       scalarVolumeRenderer: {
-        addField: vi.fn(),
+        upload: vi.fn(),
       } as never,
     },
     subsystems: {

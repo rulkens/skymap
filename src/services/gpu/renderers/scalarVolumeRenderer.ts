@@ -6,11 +6,11 @@
  * Public surface (factory shape, matching D.2 conventions):
  *
  *   - createScalarVolumeRenderer(device, format, fadeBgl, callbacks)
- *   - addField(handle, cube)        → upload cube to a 3D r16float
+ *   - upload(handle, cube)        → upload cube to a 3D r16float
  *                                       texture, read the per-cube static
  *                                       config from the registry, register
  *                                       in the field map
- *   - removeField(handle)            → drop the texture, unregister
+ *   - unload(handle)            → drop the texture, unregister
  *   - hasActiveFields(settingsOf)    → true iff any field whose live
  *                                       settings are enabled+intensity>0
  *                                       (or still fading out); used by the
@@ -198,7 +198,7 @@ export function createScalarVolumeRenderer(
   // The bind-group layout for @group(0). Derived from `group0Bgl` (the
   // manually-created layout) rather than `pipeline.getBindGroupLayout(0)` so
   // the layout identity is consistent: the same object used to build the
-  // pipeline is the one passed to `createBindGroup` in `addField`.
+  // pipeline is the one passed to `createBindGroup` in `upload`.
   const bindGroupLayout = group0Bgl;
 
   // Fade scratch buffer hoisted to factory scope to avoid per-frame
@@ -232,7 +232,7 @@ export function createScalarVolumeRenderer(
     return tex;
   }
 
-  // Per-field palette texture — created in `addField`, re-uploaded in
+  // Per-field palette texture — created in `upload`, re-uploaded in
   // `draw` via the shared `writePaletteLut` helper when the live palette
   // setting diverges from `residentPaletteId`.  A single
   // PALETTE_LUT_SIZE x 1 2D texture per field is the natural cost since
@@ -265,7 +265,7 @@ export function createScalarVolumeRenderer(
 
   const renderer: ScalarVolumeRenderer = {
     label: 'scalarVolumeRenderer',
-    addField(handle, cube) {
+    upload(handle, cube) {
       const existing = fields.get(handle);
       if (existing) {
         existing.volumeTexture.destroy();
@@ -336,7 +336,7 @@ export function createScalarVolumeRenderer(
       });
       callbacks.onFieldAdded(handle);
     },
-    removeField(handle) {
+    unload(handle) {
       const entry = fields.get(handle);
       if (!entry) return;
       // Fire the callback BEFORE destroying GPU resources so any
