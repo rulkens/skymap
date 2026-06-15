@@ -94,7 +94,7 @@ describe('labelDirectorSubsystem — labelStyleOverride wake', () => {
     // next frame re-flushes (so a DebugPanel slider edit takes effect
     // immediately rather than waiting for some other invalidator).
     setLabelStyleOverride({
-      targetCategory: 'youAreHere',
+      targetCategory: 'milkyWay',
       outlineColor: [0, 0, 0, 1],
       outlineEmFrac: 0.1,
     });
@@ -113,7 +113,7 @@ describe('labelDirectorSubsystem — labelStyleOverride wake', () => {
 
     // Prime with an override active so we start at version > 0.
     setLabelStyleOverride({
-      targetCategory: 'youAreHere',
+      targetCategory: 'milkyWay',
       outlineColor: [0, 0, 0, 1],
       outlineEmFrac: 0.1,
     });

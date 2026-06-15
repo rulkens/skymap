@@ -715,13 +715,15 @@ collapse the override target to `LabelCategory` and update the DebugPanel dropdo
 > into one derived `Record<LabelCategory, boolean>` is a pure view, not a fourth
 > copy. Keep it a projection.
 
-- [ ] Run the affected tests / typecheck — `override.test.ts` fails to typecheck
+- [x] Run the affected tests / typecheck — `override.test.ts` fails to typecheck
   once `LabelStyleOverrideTarget` collapses (drives the literal rename).
-- [ ] Apply the override-target collapse, the DebugPanel dropdown change, and the
+- [x] Apply the override-target collapse, the DebugPanel dropdown change, and the
   `override.test.ts` literal renames. (App write route already done in Task 1.)
-- [ ] `npm run typecheck` — green.
-- [ ] `npm test` — green.
-- [ ] Commit.
+- [x] `npm run typecheck` — green.
+- [x] `npm test` — green (2729 passed). Resolves quality issues #1 (dead
+  'youAreHere' dropdown entry) + #3 (stale LabelEffectsSection comment). No
+  `'youAreHere'` string literal remains anywhere.
+- [x] Commit.
 
 ---
 
