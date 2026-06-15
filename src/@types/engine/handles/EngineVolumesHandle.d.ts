@@ -14,7 +14,7 @@ import type { VolumeFieldId } from '../../data/VolumeFieldId';
  * to render per-field rows.
  *
  * The spherical envelope is per-cube static presentation config, read
- * once from the registry by the renderer's `addField` — it is not a
+ * once from the registry by the renderer's `upload` — it is not a
  * user-tunable control and is therefore not exposed here.
  */
 export type EngineVolumesHandle = {

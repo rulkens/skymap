@@ -914,7 +914,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     addVolumeFieldAction(settingsStore, fieldId);
     // Upload to the renderer; a silent no-op if it isn't ready yet (re-add
     // once booted).
-    state.gpu.scalarVolumeRenderer?.addField(fieldId, cube);
+    state.gpu.scalarVolumeRenderer?.upload(fieldId, cube);
     // Drive the FadeRegistry from the settings enable bit: enabled → fade to 1;
     // disabled → leave it at the 0 set by onFieldAdded (the draw loop's
     // `(!enabled && opacity <= 0)` skip keeps it invisible until toggled on).
@@ -931,7 +931,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function removeVolumeField(fieldId: VolumeFieldId): void {
-    state.gpu.scalarVolumeRenderer?.removeField(fieldId);
+    state.gpu.scalarVolumeRenderer?.unload(fieldId);
     removeVolumeFieldAction(settingsStore, fieldId);
     // Essential wake: removal fires no fade — the field vanishes outright.
     state.subsystems.scheduler.requestRender();

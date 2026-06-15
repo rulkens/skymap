@@ -7,7 +7,7 @@
  * new object), so this reducer always lands a new `volumes.items` reference —
  * which is the change React's per-field rows selector observes.
  *
- * The GPU teardown (`scalarVolumeRenderer.removeField`) stays in the handle
+ * The GPU teardown (`scalarVolumeRenderer.unload`) stays in the handle
  * setter — that's a renderer side-effect, not a settings write; only the
  * row-removal moves here.
  *

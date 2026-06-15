@@ -24,7 +24,7 @@ function fixture(overrides: Partial<ScalarCube> = {}): ScalarCube {
  * Minimal GPUDevice mock for renderer construction and draw tests.
  *
  * Vitest runs in Node without a real WebGPU surface; every device call
- * the renderer makes during construction + addField must return a
+ * the renderer makes during construction + upload must return a
  * plausibly-shaped stand-in.  Draw tests assert on recorded
  * `device.queue.writeBuffer` / `device.queue.writeTexture` mock calls
  * — the uniform scratch the renderer packs per field, and the palette
@@ -96,8 +96,11 @@ function fullSettings(overrides: Record<string, unknown> = {}): VolumeFieldSetti
  * only the Float32Array(64) that packs the full per-field uniform.
  */
 function uniformScratch(device: GPUDevice): Float32Array | undefined {
-  const calls = (device.queue.writeBuffer as unknown as { mock: { calls: unknown[][] } }).mock.calls;
-  const hit = calls.find((c) => c[2] instanceof Float32Array && (c[2] as Float32Array).length === 64);
+  const calls = (device.queue.writeBuffer as unknown as { mock: { calls: unknown[][] } }).mock
+    .calls;
+  const hit = calls.find(
+    (c) => c[2] instanceof Float32Array && (c[2] as Float32Array).length === 64,
+  );
   return hit?.[2] as Float32Array | undefined;
 }
 
@@ -105,7 +108,7 @@ describe('createScalarVolumeRenderer draw', () => {
   it('draw reads field values from settingsOf', () => {
     const device = mockDevice();
     const r = createScalarVolumeRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
-    r.addField('mcpm', fixture());
+    r.upload('mcpm', fixture());
     const pass = makeFakePass();
     r.draw(
       pass,
@@ -116,11 +119,11 @@ describe('createScalarVolumeRenderer draw', () => {
       () => 1,
     );
     const s = uniformScratch(device);
-    expect(s?.[55]).toBeCloseTo(0.9);   // intensity
-    expect(s?.[57]).toBeCloseTo(4);     // contrast
-    expect(s?.[56]).toBeCloseTo(2);     // densityScale
-    expect(s?.[61]).toBeCloseTo(3);     // exposure
-    expect(s?.[62]).toBeCloseTo(0.1);   // trim
+    expect(s?.[55]).toBeCloseTo(0.9); // intensity
+    expect(s?.[57]).toBeCloseTo(4); // contrast
+    expect(s?.[56]).toBeCloseTo(2); // densityScale
+    expect(s?.[61]).toBeCloseTo(3); // exposure
+    expect(s?.[62]).toBeCloseTo(0.1); // trim
   });
 
   it('draw skips a field with no settings row', () => {
@@ -128,7 +131,7 @@ describe('createScalarVolumeRenderer draw', () => {
     // state for that field and must not issue any GPU work.
     const device = mockDevice();
     const r = createScalarVolumeRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
-    r.addField('mcpm', fixture());
+    r.upload('mcpm', fixture());
     const pass = makeFakePass();
     r.draw(
       pass,
@@ -142,13 +145,13 @@ describe('createScalarVolumeRenderer draw', () => {
     expect(uniformScratch(device)).toBeUndefined();
   });
 
-  it('addField seeds contrastCenter / envelope from the registry', () => {
-    // Per-cube static config read from the registry once at addField;
+  it('upload seeds contrastCenter / envelope from the registry', () => {
+    // Per-cube static config read from the registry once at upload;
     // user-tunable knobs are absent from the entry and arrive per draw
     // via settingsOf.
     const device = mockDevice();
     const r = createScalarVolumeRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
-    r.addField('mcpm', fixture());
+    r.upload('mcpm', fixture());
     r.draw(
       makeFakePass(),
       new Float32Array(16) as unknown as mat4,
@@ -159,21 +162,22 @@ describe('createScalarVolumeRenderer draw', () => {
     );
     const s = uniformScratch(device);
     const defs = getVolumeFieldDefaults('mcpm');
-    expect(s?.[58]).toBeCloseTo(defs.contrastCenter);      // contrastCenter
-    expect(s?.[59]).toBeCloseTo(defs.envelope.inner);      // envelopeInner
-    expect(s?.[60]).toBeCloseTo(defs.envelope.outer);      // envelopeOuter
+    expect(s?.[58]).toBeCloseTo(defs.contrastCenter); // contrastCenter
+    expect(s?.[59]).toBeCloseTo(defs.envelope.inner); // envelopeInner
+    expect(s?.[60]).toBeCloseTo(defs.envelope.outer); // envelopeOuter
   });
 
   it('draw re-uploads the LUT once when settingsOf paletteId changes', () => {
     // First draw with the registry-default palette — no extra upload
-    // (the LUT was already seeded in addField).  Second draw with a
+    // (the LUT was already seeded in upload).  Second draw with a
     // different palette — exactly one writeTexture.  Third draw with
     // the same changed palette — no further writeTexture (resident
     // now tracks the new id).
     const device = mockDevice();
     const r = createScalarVolumeRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
-    r.addField('mcpm', fixture());
-    const before = (device.queue.writeTexture as unknown as { mock: { calls: unknown[] } }).mock.calls.length;
+    r.upload('mcpm', fixture());
+    const before = (device.queue.writeTexture as unknown as { mock: { calls: unknown[] } }).mock
+      .calls.length;
     // Draw with the registry-default palette (already resident).
     r.draw(
       makeFakePass(),
@@ -183,7 +187,9 @@ describe('createScalarVolumeRenderer draw', () => {
       () => fullSettings({ paletteId: getVolumeFieldDefaults('mcpm').paletteId }),
       () => 1,
     );
-    expect((device.queue.writeTexture as unknown as { mock: { calls: unknown[] } }).mock.calls.length).toBe(before);
+    expect(
+      (device.queue.writeTexture as unknown as { mock: { calls: unknown[] } }).mock.calls.length,
+    ).toBe(before);
     // Draw with a different palette — mcpm defaults to 'inferno', so 'viridis' diverges.
     r.draw(
       makeFakePass(),
@@ -193,7 +199,9 @@ describe('createScalarVolumeRenderer draw', () => {
       () => fullSettings({ paletteId: 'viridis' }),
       () => 1,
     );
-    expect((device.queue.writeTexture as unknown as { mock: { calls: unknown[] } }).mock.calls.length).toBe(before + 1);
+    expect(
+      (device.queue.writeTexture as unknown as { mock: { calls: unknown[] } }).mock.calls.length,
+    ).toBe(before + 1);
     // Draw again with 'viridis' — already resident, no further upload.
     r.draw(
       makeFakePass(),
@@ -203,7 +211,9 @@ describe('createScalarVolumeRenderer draw', () => {
       () => fullSettings({ paletteId: 'viridis' }),
       () => 1,
     );
-    expect((device.queue.writeTexture as unknown as { mock: { calls: unknown[] } }).mock.calls.length).toBe(before + 1);
+    expect(
+      (device.queue.writeTexture as unknown as { mock: { calls: unknown[] } }).mock.calls.length,
+    ).toBe(before + 1);
   });
 
   it('draw on a disabled, fully-faded field does not draw', () => {
@@ -211,7 +221,7 @@ describe('createScalarVolumeRenderer draw', () => {
     // off; no GPU work should be issued.
     const device = mockDevice();
     const r = createScalarVolumeRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
-    r.addField('mcpm', fixture());
+    r.upload('mcpm', fixture());
     const pass = makeFakePass();
     r.draw(
       pass,

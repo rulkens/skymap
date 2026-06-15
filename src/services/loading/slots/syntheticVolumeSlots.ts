@@ -16,7 +16,7 @@
  * bundles because `import.meta.env.DEV` is a compile-time constant.
  *
  * **Commit pattern.**  The commit seeds the settings row (copy-on-write,
- * first load only), calls `addField`, and drives the fade from the
+ * first load only), calls `upload`, and drives the fade from the
  * settings enable bit — mirroring what `engine.ts addVolumeField` does.
  * The renderer reads per-cube static config from the registry and
  * user-tunable knobs from `state.settings.volumes.items` per frame;
@@ -77,7 +77,7 @@ export function createSyntheticVolumeSlots(
       commit: async (cube) => {
         const renderer = state.gpu.scalarVolumeRenderer;
         if (!renderer) return;
-        renderer.addField(handle, cube);
+        renderer.upload(handle, cube);
         // Synthetic fixtures get NO construction seed (DEV-only), so this
         // commit seeds the settings row on first load (copy-on-write).  The
         // renderer reads the per-cube static config from the registry and

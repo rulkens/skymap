@@ -11,7 +11,7 @@
  * **GPU upload.**  The commit hands the decoded cube to the flow renderer's
  * `upload`, which builds the 3D velocity texture via `flowFieldFromCube` against
  * its own device — the device never leaks to this slot, mirroring
- * `cf4Density → scalarVolumeRenderer.addField`.  `setLoaded()` means "committed
+ * `cf4Density → scalarVolumeRenderer.upload`.  `setLoaded()` means "committed
  * to the renderer" (see `FlowFieldStore`), so it fires AFTER
  * `upload`.  The render wake is `installSlotReadyWake`'s job, not the
  * factory's.  A null renderer (pre-bootstrap) is a silent no-op.

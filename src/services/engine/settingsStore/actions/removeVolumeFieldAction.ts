@@ -3,7 +3,7 @@
  * settings row.
  *
  * Runs the pure `removeVolumeField` reducer through `store.setState`. The GPU
- * teardown (`scalarVolumeRenderer.removeField`) stays in the handle setter
+ * teardown (`scalarVolumeRenderer.unload`) stays in the handle setter
  * alongside this action — that's a render side-effect, not a settings write.
  */
 
