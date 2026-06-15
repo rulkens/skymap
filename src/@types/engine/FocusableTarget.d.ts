@@ -1,5 +1,5 @@
 import type { GalaxyInfo } from './GalaxyInfo';
-import type { StructureInfo } from './data/StructureInfo';
+import type { StructureInfo } from '../data/structure/StructureInfo';
 
 /**
  * FocusableTarget — TAGGED discriminated union of the two things the camera can

@@ -225,13 +225,13 @@ cite the module header) and its hover-vs-pinned stacking logic, but replaces the
 `isStructure` lines + casts with `DETAIL_CARD[target.type]` lookups. The structure
 -wins-over-galaxy-hover tiebreak (`:86-88`) stays, expressed via `type` comparison.
 
-- [ ] `detailCardTable.test.tsx`: assert `DETAIL_CARD['galaxyCatalog'].Detail`
+- [x] `detailCardTable.test.tsx`: assert `DETAIL_CARD['galaxyCatalog'].Detail`
       renders galaxy chrome (a galaxy-only field) for a `GalaxyInfo` fixture, and
       `DETAIL_CARD['structure'].Detail` renders the structure name + member-count row
       for a `StructureInfo` fixture. One test per type, both `Detail` and `Compact`.
-- [ ] Update `InfoCard.structureHover.test.ts` to the table-driven structure;
+- [x] Update `InfoCard.structureHover.test.ts` to the table-driven structure;
       assertions (structure hover wins, same-structure-pinned suppression) unchanged.
-- [ ] `npm test -- InfoCard detailCardTable` green. `npm run typecheck`. Commit.
+- [x] `npm test -- InfoCard detailCardTable` green. `npm run typecheck`. Commit.
 
 ### 3b. `URL_HASH_FOR` table for `useUrlSync`
 
@@ -253,11 +253,11 @@ export const URL_HASH_FOR: Record<FocusableTargetType, (t: FocusableTarget) => s
 `computeDesiredHash` becomes `URL_HASH_FOR[focused.type](focused)` → wrap as
 `focus=${id}` when non-null. No `isStructure`.
 
-- [ ] `urlHashFor.test.ts`: galaxy entry returns the `selectionToFocusId` value (and
+- [x] `urlHashFor.test.ts`: galaxy entry returns the `selectionToFocusId` value (and
       null for a non-encodable galaxy, e.g. Synthetic); structure entry returns the id.
-- [ ] `useUrlSync.test.ts`: existing `computeDesiredHash` cases (galaxy id / structure
+- [x] `useUrlSync.test.ts`: existing `computeDesiredHash` cases (galaxy id / structure
       id / null / non-encodable) stay green against the table-driven body.
-- [ ] `npm test -- useUrlSync urlHashFor` green. `npm run typecheck`. Commit.
+- [x] `npm test -- useUrlSync urlHashFor` green. `npm run typecheck`. Commit.
 
 ### 3c. `COMMIT_FOCUS` table for `commitFocus`
 
@@ -285,10 +285,10 @@ export const COMMIT_FOCUS: Record<
 `commitFocus` becomes `COMMIT_FOCUS[target.type](state, target)`; drop the
 `isStructure` import + branch. Update the docblock (table dispatch, not predicate).
 
-- [ ] `commitFocus.test.ts`: assert a `GalaxyInfo` routes to the galaxy commit path
+- [x] `commitFocus.test.ts`: assert a `GalaxyInfo` routes to the galaxy commit path
       (spy on the selection setters / tween) and a `StructureInfo` to the structure
       path. Was `isStructure`-keyed; now table-keyed — assertions unchanged.
-- [ ] `npm test -- commitFocus` green. `npm run typecheck`. Commit.
+- [x] `npm test -- commitFocus` green. `npm run typecheck`. Commit.
 
 > The remaining `isStructure` call sites (`useStructureMemberCount`, `runFrame`
 > focus-fade, `structureIdOf`, ring `enabled()`) are simple guards, not N-way
@@ -305,7 +305,7 @@ export const COMMIT_FOCUS: Record<
 with `selected === null || selected.type !== 'structure'`. `selected` then narrows to
 `StructureInfo` for the `structureMemberCount(selected, …)` call with no `as`.
 
-- [ ] Existing member-count tests stay green (galaxy selection → null; structure →
+- [x] Existing member-count tests stay green (galaxy selection → null; structure →
       count). `npm run typecheck`. Commit (may fold into 3c's commit if tightly coupled).
 
 ---

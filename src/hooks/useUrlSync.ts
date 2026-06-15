@@ -70,8 +70,8 @@ import type { UrlSyncReturn } from '../@types/engine/UrlSyncReturn';
 import type { FocusableTarget } from '../@types/engine/FocusableTarget';
 import type { GalaxyCatalog } from '../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { FocusTarget } from '../@types/camera/FocusTarget';
-import { isStructure } from '../services/engine/isStructure';
-import { parseFocusHash, selectionToFocusId } from '../services/url/focusUrl';
+import { parseFocusHash } from '../services/url/focusUrl';
+import { URL_HASH_FOR } from './urlHashFor';
 import { resolveFocusTarget } from '../services/engine/camera/resolveFocusTarget';
 import { GALAXY_CATALOG_SOURCES, Source } from '../data/sources';
 import type { SourceType } from '../@types/data/SourceType';
@@ -104,12 +104,10 @@ export type DesiredHashOutput = {
 export function computeDesiredHash(input: DesiredHashInput): DesiredHashOutput {
   let desiredHashBody = '';
   if (input.focused !== null) {
-    if (isStructure(input.focused)) {
-      desiredHashBody = `focus=${input.focused.id}`;
-    } else {
-      const id = selectionToFocusId(input.focused);
-      if (id) desiredHashBody = `focus=${id}`;
-    }
+    // Table dispatch on the union tag: galaxy ids run the codec ladder
+    // (null when non-encodable), structures yield their own id.
+    const id = URL_HASH_FOR[input.focused.type](input.focused);
+    if (id) desiredHashBody = `focus=${id}`;
   }
   const currentBody = input.currentHash.startsWith('#')
     ? input.currentHash.slice(1)

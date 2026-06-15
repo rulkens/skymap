@@ -5,8 +5,8 @@
 //
 // InfoCard accepts a single `hovered` and a single `selected` prop — each
 // typed as `GalaxyInfo | StructureInfo | null` (the `FocusableTarget`
-// union).  The component dispatches via `isStructure` internally; there are
-// no separate structure slots.
+// union).  The component dispatches via the DETAIL_CARD table (keyed on
+// `type`) internally; there are no separate structure slots.
 //
 // We assert on user-visible text rather than CSS-modules class fragments
 // because the CSS-modules-mangled class names aren't stable across
@@ -49,6 +49,7 @@ const coma: StructureInfo = {
 // the galaxy branch to render without throwing.  Cast away the precise type
 // because populating every field would obscure the test's intent.
 const galaxyStub = {
+  type: 'galaxyCatalog',
   index: 42,
   displayName: 'NGC 1234',
   sourceLabel: 'SDSS',

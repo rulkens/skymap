@@ -17,7 +17,6 @@
  */
 
 import { useMemo } from 'react';
-import { isStructure } from '../services/engine/isStructure';
 import { structureMemberCount } from '../utils/structure/structureMemberCount';
 import type { UseStructureMemberCountInput } from '../@types/engine/UseStructureMemberCountInput';
 
@@ -29,7 +28,10 @@ export function useStructureMemberCount({
   visibleSourceMask,
 }: UseStructureMemberCountInput): number | null {
   return useMemo(() => {
-    if (selected === null || !isStructure(selected)) return null;
+    // Narrow on the union tag, not a structural sniff: only a `structure`
+    // target is countable, and `type !== 'structure'` narrows `selected`
+    // to StructureInfo for the call below without a cast.
+    if (selected === null || selected.type !== 'structure') return null;
     const handle = engineHandleRef.current;
     if (handle === null) return null;
     return structureMemberCount(

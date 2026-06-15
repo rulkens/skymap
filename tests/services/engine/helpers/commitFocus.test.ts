@@ -1,7 +1,7 @@
 /**
  * commitFocus — verifies the union-dispatching entry point routes
  * GalaxyInfo through commitGalaxyFocus and StructureInfo through
- * commitStructureFocus, using the isStructure predicate.
+ * commitStructureFocus via the COMMIT_FOCUS table keyed on `target.type`.
  *
  * Mocks both underlying commit helpers and asserts the right one was
  * called. Deeper coverage lives in commitGalaxyFocus.test.ts /
@@ -27,7 +27,13 @@ import { commitFocus } from '../../../../src/services/engine/helpers/commitFocus
 
 function makeFixtures() {
   const state = {} as unknown as EngineState;
-  const galaxy = { index: 0, x: 0, y: 0, z: 0 } as unknown as GalaxyInfo;
+  const galaxy = {
+    type: 'galaxyCatalog',
+    index: 0,
+    x: 0,
+    y: 0,
+    z: 0,
+  } as unknown as GalaxyInfo;
   const structure: StructureInfo = {
     type: 'structure',
     id: 'virgo-cluster',

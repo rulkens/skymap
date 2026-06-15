@@ -7,7 +7,8 @@
  * on manual smoke testing for the effect plumbing.
  *
  * `focused` is a FocusableTarget union (galaxy | structure | null); the
- * body shape is decided by isStructure() inside the helper.
+ * body shape is decided by the URL_HASH_FOR table (keyed on `type`)
+ * inside the helper.
  */
 import { describe, it, expect } from 'vitest';
 import { computeDesiredHash, initialPendingFromHash } from '../../src/hooks/useUrlSync';
@@ -17,6 +18,7 @@ import { Source } from '../../src/data/sources';
 
 function makeGalaxy(): GalaxyInfo {
   return {
+    type: 'galaxyCatalog',
     source: Source.SDSS,
     objID: 1234567890n,
   } as unknown as GalaxyInfo;
