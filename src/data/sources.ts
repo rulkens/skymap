@@ -1,7 +1,7 @@
 /**
  * `Source` enum + `SOURCE_REGISTRY`.
  *
- * The single registry of every data source skymap loads. Four kinds,
+ * The single registry of every data source skymap loads. Six kinds,
  * discriminated by `type`:
  *
  *   'galaxyCatalog' — per-point galaxy catalogs (SDSS, GLADE, 2MRS, Famous,
@@ -14,10 +14,15 @@
  *   'volume'        — scalar-field cubes (CF-4 DM density, MCPM cosmic web).
  *                     Each volume carries its own presentation defaults
  *                     (palette, contrast, exposure, …).
+ *   'milkyWay'      — procedural galactic-disk overlay. Single global
+ *                     overlay; no asset, no per-record identity.
+ *   'flow'          — CF4++ peculiar-velocity field overlay (single
+ *                     flowfield.scfd cube). No per-record identity; carries
+ *                     its own look/motion defaults.
  *
  * Only `'galaxyCatalog'` and `'structure'` codes are persisted to disk / packed into
- * GPU buffers; `'filament'` and `'volume'` codes exist solely so every
- * data source has one place to look. The visibility-bitmask helpers
+ * GPU buffers; `'filament'`, `'volume'`, `'milkyWay'`, and `'flow'` codes exist
+ * solely so every data source has one place to look. The visibility-bitmask helpers
  * (`utils/maskHas`, `utils/maskWith`, `utils/maskWithout`) operate on
  * galaxy catalog codes only.
  *
@@ -50,6 +55,8 @@ import { MCPM_ENTRY } from './sources/mcpm';
 import { DEBUG_GAUSSIAN_ENTRY } from './sources/debug-gaussian';
 import { DEBUG_CARTESIAN_ENTRY } from './sources/debug-cartesian';
 import { DEBUG_SPHERICAL_ENTRY } from './sources/debug-spherical';
+import { MILKY_WAY_ENTRY } from './sources/milky-way';
+import { FLOW_ENTRY } from './sources/flow';
 
 export { Source } from './source';
 
@@ -98,6 +105,8 @@ export const SOURCE_REGISTRY = {
   [Source.DebugGaussian]: DEBUG_GAUSSIAN_ENTRY,
   [Source.DebugCartesian]: DEBUG_CARTESIAN_ENTRY,
   [Source.DebugSpherical]: DEBUG_SPHERICAL_ENTRY,
+  [Source.MilkyWay]: MILKY_WAY_ENTRY,
+  [Source.Flow]: FLOW_ENTRY,
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 
 // ─── Famous-galaxy high-res LOD ─────────────────────────────────────────────

@@ -94,4 +94,16 @@ export const Source = {
    * renumber the galaxy catalog codes 0–8 below it.
    */
   Group: 15,
+  /**
+   * Procedural Milky-Way galactic-disk overlay. Registry-key-only code (not
+   * persisted, not pickable); the entry carries the default-visible master
+   * toggle. Appended at 16.
+   */
+  MilkyWay: 16,
+  /**
+   * CF4++ peculiar-velocity flow-field overlay (single `flowfield.scfd` cube,
+   * demand-loaded). Registry-key-only code; the entry carries the default-off
+   * gate plus the look/motion defaults. Appended at 17.
+   */
+  Flow: 17,
 } as const;

@@ -54,7 +54,7 @@ import type { BiasMode as BiasModeT } from '../@types/data/galaxyCatalog/BiasMod
 import { ToneMapCurve } from './toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
 import type { FlowSettings } from '../@types/settings/FlowSettings';
-import { MAX_PARTICLES } from './flow/flowFieldConstants';
+import { SOURCE_REGISTRY, Source } from './sources';
 
 // ── Rendering knobs ─────────────────────────────────────────────────────────
 
@@ -104,13 +104,14 @@ export const DEFAULT_REAL_ONLY_MODE = false;
 export const DEFAULT_DEPTH_FADE_ENABLED = true;
 
 /**
- * Procedural Milky Way impostor defaults ON.  The single screen-aligned
- * quad at the world origin gives the user a visceral "you are here"
- * sense before they fly out into the cosmic-web view.  See
- * `services/gpu/renderers/milkyWayRenderer.ts` and `utils/math/milkyWayFadeAlpha.ts`
- * for the rendering rationale and the distance-fade band.
+ * Procedural Milky Way disk overlay default — the screen-aligned disk at the
+ * world origin gives a visceral "you are here" sense before the user flies out
+ * into the cosmic-web view. Derived from the SOURCE_REGISTRY milkyWay row's
+ * `visible` gate, so the registry is the single source of truth; see
+ * `services/gpu/renderers/milkyWayRenderer.ts` + `utils/math/milkyWayFadeAlpha.ts`
+ * for the distance-fade band.
  */
-export const DEFAULT_MILKY_WAY_ENABLED = true;
+export const DEFAULT_MILKY_WAY_ENABLED = SOURCE_REGISTRY[Source.MilkyWay].visible;
 
 // ── HDR tone-mapping ────────────────────────────────────────────────────────
 
@@ -233,35 +234,25 @@ export const DEFAULT_VOLUME_PALETTE_ID = 'viridis' as const;
 // ── CF4++ flow-field overlay ─────────────────────────────────────────────────
 
 /**
- * Default state of the CF4++ peculiar-velocity flow-field overlay.
+ * Default state of the CF4++ peculiar-velocity flow-field overlay — the
+ * shared seed for `settings.flow` (engine) and the SettingsPanel store
+ * fallback (App.tsx).
  *
- * Flow is a singleton overlay layer (see
- * `docs/superpowers/conventions/singleton-overlay-layers.md`): every
- * user-facing value lives in `settings.flow`, so this one object seeds the
- * whole slice — `enabled` plus the look/motion knobs. Flow has no data-layer
- * store; "loaded" is the asset slot's own `ready` state and seeds nothing here.
- *
- * `enabled` defaults OFF: the velocity cube is tens of MB and demand-loads on
- * the first enable, so a fresh session pays nothing until the user asks for it.
- *
- * The motion/look values are hand-dialled in the renderer.  They ARE the
- * look — do not "tidy" them. `count` defaults to the buffer ceiling
- * (`MAX_PARTICLES`) so the field reads as dense the moment it's enabled; the
- * slider trims downward.
+ * Derived from the SOURCE_REGISTRY flow row: `enabled` from its `visible`
+ * gate, the eight look/motion knobs from the `FlowFieldDefaults` it carries.
+ * The registry row is the single source of truth — to retune the hand-dialled
+ * advect look, edit `sources/flow.ts`, not here.
  */
 export const DEFAULT_FLOW: FlowSettings = {
-  enabled: false,
-  mode: 'advect',
-  intensity: 0.18,
-  count: MAX_PARTICLES,
-  trail: 0.002,
-  flowSpeed: 0.02,
-  densityBias: 0.98,
-  wander: 0.15,
-  // Spherical boundary fade: ribbons ease out over this grid-space band ending
-  // at the cube-inscribed sphere (radius 0.5), softening the cube edges into a
-  // sphere. See flow/vertex.wesl.
-  boundaryFadeWidth: 0.1,
+  enabled: SOURCE_REGISTRY[Source.Flow].visible,
+  mode: SOURCE_REGISTRY[Source.Flow].mode,
+  intensity: SOURCE_REGISTRY[Source.Flow].intensity,
+  count: SOURCE_REGISTRY[Source.Flow].count,
+  trail: SOURCE_REGISTRY[Source.Flow].trail,
+  flowSpeed: SOURCE_REGISTRY[Source.Flow].flowSpeed,
+  densityBias: SOURCE_REGISTRY[Source.Flow].densityBias,
+  wander: SOURCE_REGISTRY[Source.Flow].wander,
+  boundaryFadeWidth: SOURCE_REGISTRY[Source.Flow].boundaryFadeWidth,
 };
 
 // ── Debug overlays ─────────────────────────────────────────────────────────

@@ -7,6 +7,7 @@ import {
   HI_RES_LAYER_SIDE_BY_TIER,
 } from '../../src/data/sources';
 import { STRUCTURE_CATEGORIES } from '../../src/data/structure/structureCategories';
+import { DEFAULT_FLOW } from '../../src/data/defaults';
 import { ALL_VISIBLE_MASK } from '../../src/utils/allVisibleMask';
 import { maskHas } from '../../src/utils/maskHas';
 import { maskWith } from '../../src/utils/maskWith';
@@ -159,5 +160,55 @@ describe('Famous-galaxy hi-res LOD constants', () => {
     // `HI_RES_LAYER_COUNT * HI_RES_LAYER_SIDE_BY_TIER[tier]^2 * 4 bytes`,
     // and the 32 MB desktop / 8 MB mobile budget assumes N=8.
     expect(HI_RES_LAYER_COUNT).toBe(8);
+  });
+});
+
+describe('Source enum — overlay codes (milkyWay/flow)', () => {
+  it('appends MilkyWay=16 and Flow=17 to the enum', () => {
+    // Registry-key-only codes (not persisted, not pickable); appended after
+    // the debug-volume codes — never renumber the codes below them.
+    expect(Source.MilkyWay).toBe(16);
+    expect(Source.Flow).toBe(17);
+  });
+
+  it('keeps overlay codes OUT of GALAXY_CATALOG_SOURCES', () => {
+    // Overlays render through their own renderers, not the points pipeline's
+    // visibility bitmask.
+    expect(GALAXY_CATALOG_SOURCES).not.toContain(Source.MilkyWay);
+    expect(GALAXY_CATALOG_SOURCES).not.toContain(Source.Flow);
+  });
+
+  it('keeps overlay bits clear of ALL_VISIBLE_MASK (galaxy-catalog-only)', () => {
+    expect(maskHas(ALL_VISIBLE_MASK, Source.MilkyWay)).toBe(false);
+    expect(maskHas(ALL_VISIBLE_MASK, Source.Flow)).toBe(false);
+  });
+
+  it('milkyWay row is a default-visible disk overlay with no label or marker', () => {
+    const entry = SOURCE_REGISTRY[Source.MilkyWay];
+    expect(entry.type).toBe('milkyWay');
+    expect(entry.id).toBe('milkyWay');
+    expect(entry.visible).toBe(true);
+    expect(entry.bearsLabel).toBe(false);
+    expect(entry.bearsMarker).toBe(false);
+  });
+
+  it('flow row is a default-off overlay carrying the look/motion defaults', () => {
+    const entry = SOURCE_REGISTRY[Source.Flow];
+    expect(entry.type).toBe('flow');
+    expect(entry.id).toBe('flow');
+    expect(entry.visible).toBe(false);
+    expect(entry.mode).toBe('advect');
+    expect(entry.count).toBeGreaterThan(0);
+    expect(entry.binBaseName).toBe('flowfield');
+  });
+
+  it('DEFAULT_FLOW is seeded from the registry flow row', () => {
+    // The registry row is the single source of truth; DEFAULT_FLOW just
+    // assembles its fields into the settings shape.
+    const entry = SOURCE_REGISTRY[Source.Flow];
+    expect(DEFAULT_FLOW.enabled).toBe(entry.visible);
+    expect(DEFAULT_FLOW.mode).toBe(entry.mode);
+    expect(DEFAULT_FLOW.count).toBe(entry.count);
+    expect(DEFAULT_FLOW.boundaryFadeWidth).toBe(entry.boundaryFadeWidth);
   });
 });

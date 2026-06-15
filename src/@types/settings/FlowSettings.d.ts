@@ -15,32 +15,16 @@
  * source of truth.
  *
  * The tunable defaults are the spike's hand-dialled advect look — see
- * `DEFAULT_FLOW`.
+ * `DEFAULT_FLOW`, which derives them from the SOURCE_REGISTRY flow row.
  */
-import type { FlowMode } from '../data/flow/FlowMode';
+import type { FlowFieldDefaults } from '../data/flow/FlowFieldDefaults';
 
+/**
+ * The live flow slice = the master `enabled` gate plus the eight look/motion
+ * knobs. The knob shape + per-field docs live on `FlowFieldDefaults`, shared
+ * with the SOURCE_REGISTRY flow row that seeds them.
+ */
 export type FlowSettings = {
   /** Master layer gate (default-off; the cube demand-loads on first enable). */
   enabled: boolean;
-  /** Active integration mode (default 'advect'). */
-  mode: FlowMode;
-  /** Pre-blend ribbon brightness multiplier, [0, 1]. */
-  intensity: number;
-  /** Particle count actually drawn, [0, MAX_PARTICLES]. */
-  count: number;
-  /** Ring spacing per trail point (world units). */
-  trail: number;
-  /** Advect head distance per frame (motion speed). */
-  flowSpeed: number;
-  /** Density-weighted seeding selectivity, [0, 1]. */
-  densityBias: number;
-  /** Per-step direction jitter (advect only). */
-  wander: number;
-  /**
-   * Spherical boundary-fade width, in grid units [0, 0.5]. Ribbons fade out
-   * over this band ending at the cube-inscribed sphere (grid radius 0.5), so
-   * the cube edges soften into a sphere and respawns at the boundary are
-   * invisible. 0 ≈ a hard sphere clip; larger pulls the fade further inward.
-   */
-  boundaryFadeWidth: number;
-};
+} & FlowFieldDefaults;
