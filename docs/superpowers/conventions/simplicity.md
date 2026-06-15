@@ -188,6 +188,18 @@ edit to every dispatch site.
   `Record<Tag, …>` table for genuine N-way dispatch.
 - **Don't:** sniff structure (`'field' in x`), chain `isA(x) ? … : isB(x) ? …`, or cast in a
   predicate's false-branch.
+- **Don't (the table-exists-but-not-used trap):** once a `Record<Tag, …>` table exists, never
+  index it by **enumerated hardcoded keys** (`TABLE.galaxyCatalog.X`, `TABLE.structure.X`,
+  `TABLE.milkyWay.X` listed separately) or wrap it in **per-type `return` blocks** (one render
+  block per kind). If you're listing the keys, you've re-grown the chain — collapse to
+  `TABLE[x.type].X` and compute the target type-agnostically. (The 2026-06-16 InfoCard pass:
+  three per-type `return` blocks each calling a hardcoded `DETAIL_CARD.<kind>` collapsed to one
+  block dispatching `DETAIL_CARD[target.type]`.)
+
+**This is a REVIEW gate, not only a design lens.** Run it against every diff — your own and a
+subagent's. Per-type branches / enumerated table keys in a returned diff are a STOP-and-fix, not
+a thing to rationalize. When dispatching an implementer to touch a tagged union's
+rendering/dispatch, the prompt must explicitly forbid per-type branches and require `TABLE[x.type]`.
 
 ### 8. One canonical home — single source of truth
 
