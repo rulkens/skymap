@@ -392,6 +392,21 @@ register the `milkyWay` label-layer fade at the settings gate.
 
 **Files (new):**
 
+- `src/services/engine/presentation/milkyWayLabelStyle.ts`
+  **Exports:** `export type MilkyWayLabelStyle = { ... }` + `export const
+  MILKY_WAY_LABEL_STYLE: MilkyWayLabelStyle`. **Mirror `famousLabelStyle.ts`**
+  (the closest analog — a single label-only style object, no halo/ring). Lift the
+  static style constants currently inline in `youAreHereSubsystem.ts:42-50` into
+  the const: `labelColor: [1, 1, 1, 1]` (display white), `lineColor: [1, 1, 1, 1]`,
+  `worldEmMpc: 0.0125`, `minPixelSize: 45`, `maxPixelSize: 150`, `pixelWidth: 3`,
+  `outlineColor: [0, 0, 0, 0.1]`, `outlineEmFrac: 0.16`. Type fields: `labelColor`,
+  `lineColor`, `minPixelSize`, `maxPixelSize`, `worldEmMpc`, `pixelWidth`,
+  `outlineColor`, `outlineEmFrac` (all `readonly`; `Vec4` for the colors). Didactic
+  docblock mirroring `famousLabelStyle.ts`'s header (label-only, renders in the
+  `uiOverlay` pass after tone-map so colours are straight LDR — lift the
+  LDR-colour rationale from `youAreHereSubsystem.ts:38-41`). This consolidates the
+  Milky Way label's styling into the per-producer style-module pattern the
+  structure / famous producers already use, instead of loose producer-scope consts.
 - `src/services/engine/presentation/produceMilkyWayLabel.ts`
   **Signature:** `produceMilkyWayLabel(state: EngineState, ctx: ReadyFrameContext): LabelProducerOutput`
   plus a test-only latch reset `export function __resetMilkyWayLabelLoadIn(): void`.
@@ -415,12 +430,18 @@ register the `milkyWay` label-layer fade at the settings gate.
   - `const fadeAlpha = distAlpha * layerOpacity;` applied to BOTH the label and
     the line.
   - Emit exactly one `Label` (id `'milkyWay'` — same as the source id; text
-    `'You are here'`, origin anchor `[0, LABEL_ANCHOR_MPC, 0]`, the colors /
-    sizes / outline from `youAreHereSubsystem.ts:38-105`) and one `MarkerLine`
-    stem (from `youAreHereSubsystem.ts:107-119`, `ownerLabelId: 'milkyWay'`).
-    NOTE: the OLD subsystem used the Label id `'you-are-here'`; the new producer
-    uses `'milkyWay'` (matching the registry source id) — only the rendered TEXT
-    stays `'You are here'`. Update any test that asserted the old id.
+    `'You are here'`, origin anchor `[0, LABEL_ANCHOR_MPC, 0]`) and one
+    `MarkerLine` stem (`ownerLabelId: 'milkyWay'`). Read ALL static style fields
+    (`labelColor` → `color`, `worldEmMpc`, `minPixelSize`, `maxPixelSize`,
+    `outlineColor`, `outlineEmFrac`, line `pixelWidth` + `lineColor`) from
+    `MILKY_WAY_LABEL_STYLE` (the new module above) — do NOT re-declare them as
+    producer-scope consts. The label keeps `font: 'cormorant'`, `alignX: 'center'`,
+    `pixelSize: 0` (legacy field, ignored by the worldEm sizing model). The line
+    geometry (`fromWorld: [0,0,0]`, `toWorld: [0, LINE_TOP_MPC, 0]`) stays in the
+    producer (it is anchor geometry, not style). NOTE: the OLD subsystem used the
+    Label id `'you-are-here'`; the new producer uses `'milkyWay'` (matching the
+    registry source id) — only the rendered TEXT stays `'You are here'`. Update any
+    test that asserted the old id.
   - Live-tuning override: read `getLabelStyleOverride()`; apply the override
     outline fields when `override.targetCategory === 'milkyWay'` (was
     `'youAreHere'`), mirroring `youAreHereSubsystem.ts:80-87` /
