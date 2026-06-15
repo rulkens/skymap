@@ -30,12 +30,18 @@ Two coupled, type-checker-guarded mechanical sweeps:
   MW disk; `OverlayId` drops `'milkyWay'`.
 - **B. `StructureCategory` → `StructureId`** — rename the type file + type + every
   reference (settings keys, marker buckets, label categories, `resolvePick`) and
-  tests. **Decision:** the *type* renames to `StructureId`; the runtime companion
-  array **keeps** its existing names (`STRUCTURE_CATEGORIES`,
-  `STRUCTURE_CATEGORY_CODES`, `isStructureCategory`) — they describe the *category
-  enumeration*, are a separate concern from the id-type, and renaming them is a
-  larger orthogonal churn out of scope here. (Revisit only if the spec's reviewer
-  asks; note the type/runtime name split in the new docblock.)
+  tests. **Decision (confirmed):** full rename — the *type* **and** its runtime
+  companion both move to the `Id` vocabulary, so no residual `category` naming
+  remains for the structure-id enumeration:
+  - type `StructureCategory` → `StructureId` (file `StructureCategory.d.ts` →
+    `StructureId.d.ts`).
+  - runtime file `src/data/structure/structureCategories.ts` → `structureIds.ts`,
+    and its exports `STRUCTURE_CATEGORIES` → `STRUCTURE_IDS`,
+    `STRUCTURE_CATEGORY_CODES` → `STRUCTURE_ID_CODES` (if present),
+    `isStructureCategory` → `isStructureId`.
+  - the predicate stays `(id: string): id is StructureId`.
+  (`labelCategories.ts` and the `LabelCategory` type are a SEPARATE concern — the
+  label-category space spans famousGalaxy + structures — and are **not** renamed.)
 
 Both changes are guarded by `tsc`: a missed call site is a compile error, not a
 silent behaviour change. **`npm run typecheck` is the primary driver** — after the
@@ -94,21 +100,29 @@ Tasks 1–3 land together (see the note at the end of Task 3).
   `src/services/gpu/renderers/structureMarkerRenderer.ts`,
   `src/services/url/focusUrl.ts`, `src/data/galaxyCatalog/galaxyCatalogIds.ts`
   (comment ref only — check), `tools/structures/buildStructures.ts`.
+- **Runtime companion rename** (Architecture B): `src/data/structure/structureCategories.ts`
+  → `src/data/structure/structureIds.ts`; `STRUCTURE_CATEGORIES` → `STRUCTURE_IDS`,
+  `STRUCTURE_CATEGORY_CODES` → `STRUCTURE_ID_CODES` (if present), `isStructureCategory`
+  → `isStructureId`. Sweep every importer of these symbols (Grep
+  `STRUCTURE_CATEGORIES` / `STRUCTURE_CATEGORY_CODES` / `isStructureCategory` /
+  `structureCategories'` across `src/` + `tests/` — includes `App.tsx`,
+  `SettingsPanel.tsx`, `projectLabelCategoryVisibility.ts`,
+  `projectMarkerCategoryVisibility.ts`, and the structure store / wiring).
 - **Docblock:** the renamed `StructureId.d.ts` docblock must state it is the
   **source-level** id (`cluster` / `supercluster` / `void` / `group`), the exact
   parallel of `GalaxyCatalogId` / `VolumeFieldId`, and that it is **distinct from
-  the per-record `StructureRecord.id`** (e.g. `"A2703"`). It must also note the
-  runtime companion keeps the `STRUCTURE_CATEGORIES` name (see Architecture B).
+  the per-record `StructureRecord.id`** (e.g. `"A2703"`). The runtime companion
+  `structureIds.ts` docblock follows the same `Id` vocabulary.
 
 **Contract:** `StructureId.d.ts:12` shape unchanged —
 `export type StructureId = Extract<AnyEntry, { readonly type: 'structure' }>['id'];`
 
-- [ ] Rename the file and the type symbol; update its docblock per above.
-- [ ] Sweep every `StructureCategory` identifier and import path to `StructureId`
-  (runtime array symbols `STRUCTURE_CATEGORIES` / `STRUCTURE_CATEGORY_CODES` /
-  `isStructureCategory` stay — only the *type* renames; in
-  `structureCategories.ts` the `Record<StructureCategory, …>` annotation and the
-  `import type` become `StructureId`).
+- [ ] Rename the type file + symbol AND the runtime companion file + its exports
+  (`STRUCTURE_IDS` / `STRUCTURE_ID_CODES` / `isStructureId`); update both docblocks.
+- [ ] Sweep every `StructureCategory` identifier + import path to `StructureId`, and
+  every `STRUCTURE_CATEGORIES` / `STRUCTURE_CATEGORY_CODES` / `isStructureCategory`
+  reference to the renamed runtime symbols. In the renamed `structureIds.ts` the
+  `Record<StructureCategory, …>` annotation and the `import type` become `StructureId`.
 - [ ] Sweep test files referencing the type (see Task 6).
 - [ ] (Compile gate deferred to Task 3 — the tree won't fully typecheck until the
   `FadeId` union also changes.)
@@ -266,7 +280,8 @@ Many of these are already touched by Tasks 1–3/5; this task is the cleanup pas
 ensuring no test still constructs an old-named kind or imports the old type.
 
 **Files** (re-Grep `kind: 'scalarField'|markerLayer|filaments|overlay`, and
-`StructureCategory`, across `tests/`):
+`StructureCategory` / `STRUCTURE_CATEGORIES` / `STRUCTURE_CATEGORY_CODES` /
+`isStructureCategory`, across `tests/`):
 
 - `tests/services/engine/frame/passes/filamentsPass.test.ts` — `filaments` → `filament`.
 - `tests/services/engine/phases/wireSlots.test.ts` — `overlay:milkyWay` / `scalarField` etc.
@@ -304,9 +319,10 @@ except the milkyWay seed (Task 5) and the optional `milkyWay` recession arm abov
   Tasks 5/6 net no other coverage change).
 - [ ] `npm run typecheck` clean (both `src` and `tools` tsconfigs).
 - [ ] Repo-wide Grep finds **zero** `'scalarField'`, `'markerLayer'`, `'filaments'`
-  (as a `FadeId` kind), `StructureCategory` (as a *type*; the runtime
-  `STRUCTURE_CATEGORIES` array deliberately remains — see Architecture B), and
-  `overlay'.*'milkyWay'` / `id: 'milkyWay'` on an `overlay` kind.
+  (as a `FadeId` kind), `StructureCategory`, `STRUCTURE_CATEGORIES`,
+  `STRUCTURE_CATEGORY_CODES`, `isStructureCategory`, `structureCategories` (file),
+  and `overlay'.*'milkyWay'` / `id: 'milkyWay'` on an `overlay` kind. (`LabelCategory`
+  / `labelCategories` are a separate concept and remain.)
 - [ ] `OverlayId` is exactly `'proceduralDisks' | 'texturedDisks'`.
 - [ ] `FadeId` carries the source-named kinds `galaxyCatalog` / `structure` /
   `volumeField` / `filament` / `flow` / `milkyWay` plus the unchanged
