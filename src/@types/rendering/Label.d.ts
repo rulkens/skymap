@@ -85,7 +85,7 @@ export type Label = {
    * bounded by the clamps.  Defaults to 0.01 in the renderer if absent.
    */
   readonly worldEmMpc?: number;
-  /** Fade multiplier in [0,1] driven by youAreHereVisibility. Default 1. */
+  /** Fade multiplier in [0,1] driven by milkyWayLabelVisibility. Default 1. */
   readonly fadeAlpha?: number;
   /**
    * Horizontal alignment of the text relative to `worldPos`.

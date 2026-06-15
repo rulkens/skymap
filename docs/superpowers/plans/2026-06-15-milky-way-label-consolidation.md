@@ -149,7 +149,7 @@ milkyWay label-enabled boolean and return it for the `'milkyWay'` category:
   `selectMilkyWayLabelEnabled` through `useSettingsStore`) + the `useMemo` dep.
   The App WRITE route stays in Task 6 (it needs Task 5's handle setter).
 
-- [ ] Add to `tests/data/sources.test.ts` the test
+- [x] Add to `tests/data/sources.test.ts` the test
   `'milkyWay row bears a label on the milkyWay layer with display copy'`
   asserting:
 
@@ -343,7 +343,7 @@ trio (`setMilkyWayEnabled.ts` / `setMilkyWayEnabledAction.ts` /
   `setMilkyWayLabelEnabled.test.ts` (or extend an existing milkyWay store test
   if one exists — search first).
 
-- [ ] Add `tests/services/engine/settingsStore/setMilkyWayLabelEnabled.test.ts`:
+- [x] Add `tests/services/engine/settingsStore/setMilkyWayLabelEnabled.test.ts`:
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -559,7 +559,7 @@ register the `milkyWay` label-layer fade at the settings gate.
   `…labelDirectorSubsystem.override.test.ts` — if they construct or reference a
   `youAreHere` producer/id, update to `milkyWayLabel` / `produceMilkyWayLabel`.
 
-- [ ] Add `tests/services/engine/presentation/produceMilkyWayLabel.test.ts`:
+- [x] Add `tests/services/engine/presentation/produceMilkyWayLabel.test.ts`:
 
 ```ts
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -655,18 +655,20 @@ describe('produceMilkyWayLabel', () => {
 });
 ```
 
-- [ ] Add the renamed `tests/services/gpu/labels/milkyWayLabelVisibility.test.ts`
+- [x] Add the renamed `tests/services/gpu/labels/milkyWayLabelVisibility.test.ts`
   (old `youAreHereVisibility.test.ts` body with symbols renamed).
-- [ ] Run fails (producer + renamed helper absent).
-- [ ] Create `milkyWayLabelVisibility.ts`, create `produceMilkyWayLabel.ts`,
-  delete `youAreHereVisibility.ts` + `youAreHereSubsystem.ts` +
-  `YouAreHereSubsystem.d.ts`, rewire `engine.ts` / `EngineSubsystemHandles` /
-  `EngineMilkyWayHandle` / `registerOverlayFades` / the comment-only files,
-  delete the obsolete subsystem tests.
-- [ ] `npm run typecheck` — green (the removed `youAreHere` subsystem slot +
+- [x] Run fails (producer + renamed helper absent).
+- [x] Create `milkyWayLabelVisibility.ts`, create `produceMilkyWayLabel.ts` +
+  `milkyWayLabelStyle.ts`, delete `youAreHereVisibility.ts` +
+  `youAreHereSubsystem.ts` + `YouAreHereSubsystem.d.ts`, rewire `engine.ts` /
+  `EngineSubsystemHandles` / `registerOverlayFades` / the comment-only files,
+  delete the obsolete subsystem tests. (`EngineMilkyWayHandle` handle setter
+  already landed in Task 1.)
+- [x] `npm run typecheck` — green (the removed `youAreHere` subsystem slot +
   renamed helper must have no dangling references).
-- [ ] `npm test` — full suite green.
-- [ ] Commit.
+- [x] `npm test` — full suite green (2727 passed). Also fixed
+  `tests/@types/engineState.test.ts` (removed the deleted-subsystem construction).
+- [x] Commit.
 
 ---
 

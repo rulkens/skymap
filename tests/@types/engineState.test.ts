@@ -47,7 +47,6 @@ import { createSpaceMouseSubsystem } from '../../src/services/engine/subsystems/
 import { createRenderScheduler } from '../../src/services/engine/subsystems/renderScheduler';
 import { createSelectionSubsystem } from '../../src/services/engine/subsystems/selectionSubsystem';
 import { createBiasCorrectionSubsystem } from '../../src/services/engine/subsystems/biasCorrectionSubsystem';
-import { createYouAreHereSubsystem } from '../../src/services/engine/subsystems/youAreHereSubsystem';
 import { createLabelDirectorSubsystem } from '../../src/services/engine/subsystems/labelDirectorSubsystem';
 import { createStructureFocusSubsystem } from '../../src/services/engine/subsystems/structureFocusSubsystem';
 import { createFadeRegistry } from '../../src/services/animation/fadeRegistry';
@@ -204,7 +203,6 @@ describe('EngineState type', () => {
           getLoadedClouds: () => stateRef.current!.data.galaxies.catalogs,
           requestRender: () => stateRef.current!.subsystems.scheduler.requestRender(),
         }),
-        youAreHere: createYouAreHereSubsystem(),
         labelDirector: createLabelDirectorSubsystem(),
         structureFocus: createStructureFocusSubsystem({ requestRender: () => {} }),
         clickResolver: null,
@@ -416,7 +414,6 @@ describe('EngineState type', () => {
           getLoadedClouds: () => stateRef.current!.data.galaxies.catalogs,
           requestRender: () => stateRef.current!.subsystems.scheduler.requestRender(),
         }),
-        youAreHere: createYouAreHereSubsystem(),
         labelDirector: createLabelDirectorSubsystem(),
         structureFocus: createStructureFocusSubsystem({ requestRender: () => {} }),
         clickResolver: null,

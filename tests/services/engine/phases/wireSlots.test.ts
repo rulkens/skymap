@@ -342,7 +342,7 @@ function makeState(
       camera: { autoRotate: false },
       bias: { mode: 'off', absMagLimit: -18 },
       thumbnails: { enabled: true },
-      milkyWay: { enabled: true },
+      milkyWay: { enabled: true, labelEnabled: true },
       filaments: { enabled: false, intensity: 1.0 },
       volumes: { enabled: true, items: seedVolumeFields() },
       // Overridable so a test can hide every category and pin the bug-fix
@@ -535,15 +535,17 @@ describe('wireSlots', () => {
     expect(hasHandle({ kind: 'labelLayer', layer: 'galaxyNames' })).toBe(true);
     expect(hasHandle({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(true);
 
-    // Opacities are deterministic under the default fixture (milkyWay enabled,
-    // volumes master enabled) — both gate to 1.
+    // Opacities are deterministic under the default fixture (milkyWay disk +
+    // label enabled, volumes master enabled) — all gate to 1.
     const opacityFor = (h: unknown): number | undefined => {
       const call = register.mock.calls.find((c) => JSON.stringify(c[0]) === JSON.stringify(h));
       return call?.[1] as number | undefined;
     };
     expect(opacityFor({ kind: 'overlay', id: 'milkyWay' })).toBe(1);
     expect(opacityFor({ kind: 'volumesMaster' })).toBe(1);
-    expect(opacityFor({ kind: 'labelLayer', layer: 'milkyWay' })).toBe(0);
+    // The milkyWay label layer is now seeded from settings.milkyWay.labelEnabled
+    // (default true), not registered at 0 for a producer to ramp.
+    expect(opacityFor({ kind: 'labelLayer', layer: 'milkyWay' })).toBe(1);
     expect(opacityFor({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(1);
   });
 

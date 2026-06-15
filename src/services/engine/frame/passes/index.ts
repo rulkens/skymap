@@ -56,8 +56,8 @@
  * additive content.  Two problems with that placement:
  *
  *   1. Colour mismatch — LDR-sane label colours (`[1, 1, 1, 1]`) got
- *      compressed by the tone-map curve to mid-grey; the
- *      `youAreHereSubsystem` worked around it with an `[8, 8, 8, 1]`
+ *      compressed by the tone-map curve to mid-grey;
+ *      `produceMilkyWayLabel` worked around it with an `[8, 8, 8, 1]`
  *      overshoot hack.
  *   2. OVER-blend coherency — when timing was enabled (per-pass
  *      split for `timestampWrites`), every `pass.end` stored the HDR

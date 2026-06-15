@@ -11,7 +11,7 @@
  *
  *   1. **Colour mismatch.**  The HDR target's tone-map compresses
  *      linear-light values; an LDR-sane label colour (`[1, 1, 1, 1]`)
- *      survived as mid-grey after ACES.  The `youAreHereSubsystem`
+ *      survived as mid-grey after ACES.  `produceMilkyWayLabel`
  *      worked around this by emitting `[8, 8, 8, 1]` so the tone-map
  *      rolled it off to display-white — a brittle hack that broke
  *      whenever the curve or exposure changed.

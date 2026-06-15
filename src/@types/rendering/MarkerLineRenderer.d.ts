@@ -17,9 +17,11 @@ export type MarkerLineRenderer = {
    * Re-packs the CPU-side instance scratch buffer and, if a real GPU device
    * is present, uploads to the GPU instance buffer.
    *
-   * Designed to be called by `youAreHereSubsystem.runFrame` whenever the
-   * line set changes (camera distance crosses the fade band threshold).
-   * For typical use-cases there will be 1–3 lines so the cost is negligible.
+   * Designed to be called by the label director after polling
+   * `produceMilkyWayLabel` + the structure/famous producers whenever the
+   * merged line set changes (e.g. camera distance crosses the Milky Way fade
+   * band threshold). For typical use-cases there will be 1–3 lines so the cost
+   * is negligible.
    */
   setLines(lines: MarkerLine[]): void;
   /**
@@ -28,11 +30,7 @@ export type MarkerLineRenderer = {
    * implementation.  The pass's render target format must match the
    * `format` field of the `GpuContext` passed to `createMarkerLineRenderer`.
    */
-  render(
-    pass: GPURenderPassEncoder,
-    viewProj: Float32Array,
-    viewportSize: [number, number],
-  ): void;
+  render(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportSize: [number, number]): void;
   /** Number of lines last passed to setLines. Used by tests + debug HUD. */
   lineCount(): number;
   /** Release all GPU resources. No-op if constructed with a null device. */

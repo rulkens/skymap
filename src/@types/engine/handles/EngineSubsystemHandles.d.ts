@@ -26,7 +26,6 @@ import type { HiResFamousTexture } from '../../rendering/HiResFamousTexture';
 import type { SpaceMouseSubsystem } from '../subsystems/SpaceMouseSubsystem';
 import type { SelectionSubsystem } from '../subsystems/SelectionSubsystem';
 import type { BiasCorrectionSubsystem } from '../subsystems/BiasCorrectionSubsystem';
-import type { YouAreHereSubsystem } from '../subsystems/YouAreHereSubsystem';
 import type { LabelDirectorSubsystem } from '../subsystems/LabelDirectorSubsystem';
 import type { StructureFocusSubsystem } from '../subsystems/StructureFocusSubsystem';
 import type { TweenManager } from '../../camera/TweenManager';
@@ -90,18 +89,14 @@ export type EngineSubsystemHandles = {
    */
   biasCorrection: BiasCorrectionSubsystem;
   /**
-   * "YOU ARE HERE" Milky Way marker subsystem. Implements
-   * `LabelProducer`; renderer ownership lives in `labelDirector`, which
-   * polls every registered producer per frame. Constructed eagerly (no
-   * GPU dep), non-null from t=0.
-   */
-  youAreHere: YouAreHereSubsystem;
-  /**
    * Label director — owns `labelRenderer.setLabels` /
    * `markerLineRenderer.setLines`, polls every registered `LabelProducer`
    * each frame, merges outputs, and flushes once. Lets multiple overlays
-   * (you-are-here pin, cluster structures, future galaxy/void labels) coexist
-   * without stomping each other's full-set replacements.
+   * (the Milky Way "you are here" pin, cluster structures, future
+   * galaxy/void labels) coexist without stomping each other's full-set
+   * replacements. The Milky Way label is contributed by the bare
+   * `produceMilkyWayLabel` function (registered inline in `engine.ts`), not a
+   * subsystem.
    *
    * Constructed eagerly; the two renderers are wired during
    * `phases/initGpu.ts` via `attachRenderers(...)` once the font-atlas

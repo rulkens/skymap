@@ -26,11 +26,11 @@
  *      the atlas fetch + `createLabelRenderer` construction complete
  *      in `initGpu.ts`.
  *
- *   2. `labelRenderer.glyphCount() > 0` — the `youAreHereSubsystem`
- *      must have called `setLabels` with at least one label this
- *      frame.  When the camera is far from the origin the subsystem
- *      sets an empty label array and `glyphCount()` returns 0,
- *      making this pass a cheap early-return.
+ *   2. `labelRenderer.glyphCount() > 0` — the label director must
+ *      have called `setLabels` with at least one label this frame
+ *      (e.g. from `produceMilkyWayLabel`).  When the camera is far
+ *      from the origin the producer emits an empty label set and
+ *      `glyphCount()` returns 0, making this pass a cheap early-return.
  *
  * ### Pass position in UI_PASSES
  *
@@ -49,10 +49,9 @@ export const labelsPass: Pass = {
   },
 
   draw(pass, ctx, state, _settings, _deps) {
-    state.gpu.labelRenderer!.render(
-      pass,
-      ctx.vp as Float32Array,
-      [ctx.canvasSize.width, ctx.canvasSize.height],
-    );
+    state.gpu.labelRenderer!.render(pass, ctx.vp as Float32Array, [
+      ctx.canvasSize.width,
+      ctx.canvasSize.height,
+    ]);
   },
 };

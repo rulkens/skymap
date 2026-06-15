@@ -18,10 +18,11 @@ export type LabelRenderer = {
    * if a real GPU device is present, uploads to the GPU storage /
    * instance buffers.
    *
-   * Designed to be called by `youAreHereSubsystem.runFrame` whenever the
-   * label set changes (camera distance crosses the fade band threshold).
-   * For the "you are here" use-case there will typically be 1–3 labels
-   * so the cost is negligible.
+   * Designed to be called by the label director after polling
+   * `produceMilkyWayLabel` + the structure/famous producers whenever the
+   * merged label set changes (e.g. camera distance crosses the Milky Way
+   * fade band threshold). For the "you are here" use-case there will
+   * typically be 1–3 labels so the cost is negligible.
    */
   setLabels(labels: readonly Label[]): void;
   /**
@@ -30,11 +31,7 @@ export type LabelRenderer = {
    * implementation.  The pass's render target format must match the
    * `format` field of the `GpuContext` passed to `createLabelRenderer`.
    */
-  render(
-    pass: GPURenderPassEncoder,
-    viewProj: Float32Array,
-    viewportSize: [number, number],
-  ): void;
+  render(pass: GPURenderPassEncoder, viewProj: Float32Array, viewportSize: [number, number]): void;
   /** Total glyph count across all active labels. Used by tests + debug HUD. */
   glyphCount(): number;
   /** Number of labels last passed to setLabels. Used by tests + debug HUD. */
