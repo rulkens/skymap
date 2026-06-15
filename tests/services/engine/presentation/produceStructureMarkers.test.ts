@@ -43,9 +43,9 @@ function makeState(
       fades: makeRegistry(),
       selection: {
         selected: () =>
-          selectedStructureId !== null ? { kind: 'structure', id: selectedStructureId } : null,
+          selectedStructureId !== null ? { type: 'structure', id: selectedStructureId } : null,
         focused: () =>
-          focusedStructureId !== null ? { kind: 'structure', id: focusedStructureId } : null,
+          focusedStructureId !== null ? { type: 'structure', id: focusedStructureId } : null,
       },
     },
   } as unknown as TestState;

@@ -37,7 +37,7 @@ function makeState(
       fades,
       selection: {
         focused: () =>
-          focusedStructureId === null ? null : { kind: 'structure', id: focusedStructureId },
+          focusedStructureId === null ? null : { type: 'structure', id: focusedStructureId },
       },
     },
   } as unknown as EngineState;

@@ -3,9 +3,12 @@
  *
  * Parallel to `commitStructureFocus.test.ts`.  The helper is the shared
  * 3-call tail of `focusOn` / `selectFamous` / `selectByAlias`:
- *   1. setSelected(`{kind:'galaxy', source, localIdx}`, info)
- *   2. setFocused(`{kind:'galaxy', source, localIdx}`, info)
+ *   1. setSelected(info)
+ *   2. setFocused(info)
  *   3. tweenToGalaxy(state, info)
+ *
+ * The resolved `info` (a `GalaxyInfo`) IS the target the slots hold — the
+ * setters take no separate `prebuiltInfo`.
  *
  * Order is load-bearing — setSelected before setFocused so the
  * InfoCard echo lands before the focus/URL-hash flips, and the tween
@@ -54,9 +57,9 @@ describe('commitGalaxyFocus', () => {
 
     commitGalaxyFocus(state, info);
 
-    const selection = { kind: 'galaxy', source: Source.SDSS, localIdx: 42 };
-    expect(setSelected).toHaveBeenCalledWith(selection, info);
-    expect(setFocused).toHaveBeenCalledWith(selection, info);
+    // The resolved info IS the target — passed straight to both setters.
+    expect(setSelected).toHaveBeenCalledWith(info);
+    expect(setFocused).toHaveBeenCalledWith(info);
     expect(tweenToGalaxySpy).toHaveBeenCalledWith(state, info);
 
     const setSelectedOrder = setSelected.mock.invocationCallOrder[0]!;
@@ -67,26 +70,22 @@ describe('commitGalaxyFocus', () => {
   });
 
   it('latches the focus slot so a galaxy focus supersedes a prior cluster focus', () => {
-    // Focusing a galaxy must set the focus slot to the galaxy variant —
+    // Focusing a galaxy must set the focus slot to the galaxy target —
     // runFrame resolves that to a null structure, collapsing any active
     // cluster-focus fade.  Leaving the slot on a stale cluster would
     // keep the structure faded after flying to a member galaxy.
     const { state, info, setFocused } = makeFixtures();
     commitGalaxyFocus(state, info);
-    expect(setFocused).toHaveBeenCalledWith(
-      { kind: 'galaxy', source: Source.SDSS, localIdx: 42 },
-      info,
-    );
+    expect(setFocused).toHaveBeenCalledWith(info);
   });
 
-  it('forwards info as the prebuiltInfo hint to both setters', () => {
-    // The prebuiltInfo escape hatch defends the selectByAlias deep-link
-    // race window — the GPU upload hasn't completed but the InfoCard
-    // still needs the resolved GalaxyInfo immediately.  Forwarding
-    // `info` unconditionally extends that protection to every caller.
+  it('hands the resolved info — the target — to both setters with no second arg', () => {
+    // The resolved GalaxyInfo is the race defence for the selectByAlias
+    // deep-link window: the GPU upload may not have settled, but the slot
+    // already holds the renderable target, so the InfoCard never blanks.
     const { state, info, setSelected, setFocused } = makeFixtures();
     commitGalaxyFocus(state, info);
-    expect(setSelected.mock.calls[0]![1]).toBe(info);
-    expect(setFocused.mock.calls[0]![1]).toBe(info);
+    expect(setSelected.mock.calls[0]).toEqual([info]);
+    expect(setFocused.mock.calls[0]).toEqual([info]);
   });
 });

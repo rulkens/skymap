@@ -67,17 +67,18 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     state.gpu.proceduralDiskRenderer ?? undefined,
   );
   state.gpu.pickRenderer = pickRenderer;
-  // The resolver hands back the freshly-decoded `(source, localIdx)`
-  // straight from the picker; the engine's only job is to look up
-  // the matching cloud and bounds-check the localIdx against the
-  // data-side map's count.  The bounds check defends the tier-swap
-  // race (in-flight pick decoded against a now-shrunk cloud) — same
-  // guard the selection subsystem applies before building a
-  // GalaxyInfo for a callback fan-out.
+  // The resolver runs the whole pixel → resolved `FocusableTarget`
+  // boundary via `resolvePick`: it decodes the pick, looks up the
+  // matching cloud, and builds the `GalaxyInfo` / `StructureInfo` the
+  // InfoCard + camera consume. The cloud lookup is also the tier-swap
+  // race guard — an in-flight pick decoded against a now-shrunk cloud
+  // resolves to null rather than a ghost.
   state.subsystems.clickResolver = createClickResolver({
     pickRenderer,
-    // The structure store the resolver reads to turn a ring hit into a
-    // structure selection (via `pickToSelection`, shared with the hover path).
+    // The store accessors the resolver hands to `resolvePick`, shared
+    // with the hover path so click and hover resolve identically.
+    getCloud: (source) => state.data.galaxies.get(source),
+    getFamousMeta: () => state.data.galaxies.famousMeta,
     structures: state.data.structures,
   });
 
@@ -241,12 +242,12 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       // want an immediate, synchronous-feeling response.
       const pick = runPickAtCss(xCss, yCss);
       if (!pick) return;
-      pick.then((sel) => {
+      pick.then((target) => {
         // Single-click is pure selection (null clears) for both galaxy and
-        // structure hits. setSelected resolves the target internally, fires
-        // onSelectChange so the React InfoCard swaps bodies, and owns the
-        // render wake.
-        state.subsystems.selection.setSelected(sel);
+        // structure hits. The resolver already built the FocusableTarget;
+        // setSelected just holds it, fires onSelectChange so the React
+        // InfoCard swaps bodies, and owns the render wake.
+        state.subsystems.selection.setSelected(target);
       });
     },
     onDoubleClick: () => {
@@ -258,7 +259,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       // lazily through `deps.handleRef`, non-null by the time a user can
       // dblclick.
       const handle = deps.handleRef.current;
-      const target = state.subsystems.selection.selectedTarget();
+      const target = state.subsystems.selection.selected();
       if (target) {
         handle?.camera.focusOn(target);
         return;

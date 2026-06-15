@@ -6,7 +6,8 @@ import type { RenderFrameSettings } from '../../../../../src/@types/engine/frame
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
 import type { mat4 } from 'gl-matrix';
 import { Source } from '../../../../../src/data/sources';
-import type { GalaxySelection } from '../../../../../src/@types/engine/subsystems/Selection';
+import type { FocusableTarget } from '../../../../../src/@types/engine/FocusableTarget';
+import type { GalaxyInfo } from '../../../../../src/@types/engine/GalaxyInfo';
 
 // ── fixtures ──────────────────────────────────────────────────────
 
@@ -49,20 +50,24 @@ function makeRendererSpy() {
   };
 }
 
-// A catalog stub with one galaxy at known world position + diameter.
-// Position is the flat Float32Array `positions[localIdx*3 .. +3]`.
-function makeStateWithSelection(selection: GalaxySelection | null): EngineState {
-  const positions = new Float32Array([0, 0, 100]); // 100 Mpc away on +z
-  const diameterKpc = new Float32Array([60]); // 60 kpc galaxy
-  const catalog = { positions, diameterKpc } as unknown as Parameters<
-    EngineState['data']['galaxies']['setCatalog']
-  >[1];
-  const catalogs = new Map();
-  catalogs.set(Source.Glade, catalog);
+// A resolved galaxy target at a known world position + diameter. The pass
+// reads these straight off the target (no catalog re-index).
+function galaxyTarget(overrides: Partial<GalaxyInfo> = {}): GalaxyInfo {
+  return {
+    type: 'galaxyCatalog',
+    source: Source.Glade,
+    index: 0,
+    x: 0,
+    y: 0,
+    z: 100, // 100 Mpc away on +z
+    diameterKpc: 60, // 60 kpc galaxy
+    ...overrides,
+  } as unknown as GalaxyInfo;
+}
 
+function makeStateWithSelection(selection: FocusableTarget | null): EngineState {
   return {
     gpu: { selectionRingRenderer: makeRendererSpy() },
-    data: { galaxies: { catalogs } },
     subsystems: {
       selection: {
         selected: () => selection,
@@ -88,8 +93,8 @@ describe('selectionRingPass.enabled', () => {
     expect(selectionRingPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
   });
 
-  it('returns true when renderer is non-null and a selection exists', () => {
-    const state = makeStateWithSelection({ kind: 'galaxy', source: Source.Glade, localIdx: 0 });
+  it('returns true when renderer is non-null and a galaxy is selected', () => {
+    const state = makeStateWithSelection(galaxyTarget());
     expect(selectionRingPass.enabled(state, makeCtx(), makeSettings())).toBe(true);
   });
 });
@@ -97,8 +102,8 @@ describe('selectionRingPass.enabled', () => {
 // ── draw() ────────────────────────────────────────────────────────
 
 describe('selectionRingPass.draw', () => {
-  it('computes ringRadiusPx from catalog data and forwards to renderer', () => {
-    const state = makeStateWithSelection({ kind: 'galaxy', source: Source.Glade, localIdx: 0 });
+  it('computes ringRadiusPx from the target and forwards to renderer', () => {
+    const state = makeStateWithSelection(galaxyTarget());
     selectionRingPass.draw(
       PASS_STUB,
       makeCtx(),
@@ -112,7 +117,7 @@ describe('selectionRingPass.draw', () => {
     >;
     expect(rendererSpy.setSelection).toHaveBeenCalledOnce();
     const arg = rendererSpy.setSelection.mock.calls[0]![0]!;
-    // worldPos copied straight from catalog.positions[0..3]
+    // worldPos copied straight from the target's x/y/z
     expect(arg.worldPos[0]).toBeCloseTo(0);
     expect(arg.worldPos[1]).toBeCloseTo(0);
     expect(arg.worldPos[2]).toBeCloseTo(100);
@@ -123,11 +128,8 @@ describe('selectionRingPass.draw', () => {
   });
 
   it('uses apparentPxRadius when galaxy is closer and larger on screen', () => {
-    const state = makeStateWithSelection({ kind: 'galaxy', source: Source.Glade, localIdx: 0 });
-    // Override the catalog position to put galaxy at 10 Mpc so the
-    // apparent radius dominates.
-    const cat = state.data.galaxies.catalogs.get(Source.Glade)!;
-    (cat as unknown as { positions: Float32Array }).positions = new Float32Array([0, 0, 10]);
+    // Galaxy at 10 Mpc so the apparent radius dominates.
+    const state = makeStateWithSelection(galaxyTarget({ z: 10 }));
 
     selectionRingPass.draw(
       PASS_STUB,
@@ -146,7 +148,7 @@ describe('selectionRingPass.draw', () => {
   });
 
   it('calls renderer.render() exactly once with viewProj + viewport', () => {
-    const state = makeStateWithSelection({ kind: 'galaxy', source: Source.Glade, localIdx: 0 });
+    const state = makeStateWithSelection(galaxyTarget());
     selectionRingPass.draw(PASS_STUB, makeCtx(), state, makeSettings(), DEPS_STUB);
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
       typeof makeRendererSpy

@@ -419,6 +419,7 @@ export type ResolvePickDeps = {
 ---
 
 ## Task 7: Subsystem holds `FocusableTarget | null`
+> **Execution note:** Tasks 7–9 landed as ONE green commit, not three. Flipping the slot contract to `FocusableTarget` simultaneously breaks the boundary (Task 8) and the readers (Task 9), so none of the three typechecks green alone — they are one cross-cutting flip. The plan's per-task green-commit claim doesn't hold for this trio.
 
 **Files:**
 - `src/services/engine/subsystems/selectionSubsystem.ts` (modify)
@@ -455,19 +456,19 @@ destroy(): void;
 
 **Tests:** the suite constructs the subsystem with cloud/structure stubs and asserts
 callback *targets*. Rework to pass targets directly:
-- [ ] Keep/rename `dedupes setHovered — fires onHoverChange only on real transitions`
+- [x] Keep/rename `dedupes setHovered — fires onHoverChange only on real transitions`
       (pass the same target twice → one fire).
-- [ ] Replace the `uses prebuiltInfo on setSelected …` test with `setSelected fires
+- [x] Replace the `uses prebuiltInfo on setSelected …` test with `setSelected fires
       onSelectChange with the passed target` (no lookup).
-- [ ] Delete `fires onHoverChange(null) for an out-of-range galaxy localIdx` (bounds
+- [x] Delete `fires onHoverChange(null) for an out-of-range galaxy localIdx` (bounds
       guard moved to `resolveGalaxyInfo`, covered by Task 4).
-- [ ] Structure-variant test: pass a `StructureInfo` directly; assert the callback
+- [x] Structure-variant test: pass a `StructureInfo` directly; assert the callback
       receives the same reference.
-- [ ] Delete the whole `selectedTarget` describe block (getter gone).
-- [ ] Cross-kind transition test: galaxy then structure targets → one fire each.
-- [ ] Keep focus-slot + render-wake + lifecycle blocks, swapping `Selection` literals
+- [x] Delete the whole `selectedTarget` describe block (getter gone).
+- [x] Cross-kind transition test: galaxy then structure targets → one fire each.
+- [x] Keep focus-slot + render-wake + lifecycle blocks, swapping `Selection` literals
       for target fixtures.
-- [ ] `npm test -- selectionSubsystem` green, `npm run typecheck`. Commit (fold the
+- [x] `npm test -- selectionSubsystem` green, `npm run typecheck`. Commit (fold the
       `engine.ts` construction-site edit into this commit so typecheck stays green).
 
 ---
@@ -522,16 +523,16 @@ dblclick hand-off).
 via `buildGalaxyInfo` and call `commitGalaxyFocus(state, info)` — confirm the new
 `commitGalaxyFocus` signature still takes `GalaxyInfo` and leave the bodies as-is.
 
-- [ ] `commitGalaxyFocus.test.ts`: assert setters called with the `info` object (no
+- [x] `commitGalaxyFocus.test.ts`: assert setters called with the `info` object (no
       Selection literal, no second arg).
-- [ ] `commitStructureFocus.test.ts`: assert setters called with the `StructureInfo`
+- [x] `commitStructureFocus.test.ts`: assert setters called with the `StructureInfo`
       (not `{kind:'structure',id}`).
-- [ ] `clickHandler.test.ts`: assert `resolveClick` resolves to a `GalaxyInfo` /
+- [x] `clickHandler.test.ts`: assert `resolveClick` resolves to a `GalaxyInfo` /
       `StructureInfo` / `null` (was a Selection); stub the new accessors.
-- [ ] `wireInput.test.ts` / `wireInput.structure.test.ts`: click/dblclick pass
+- [x] `wireInput.test.ts` / `wireInput.structure.test.ts`: click/dblclick pass
       resolved targets to the setters; dblclick reads `selected()`.
-- [ ] `npm test -- clickHandler wireInput commitGalaxyFocus commitStructureFocus` green.
-- [ ] `npm run typecheck`. Commit.
+- [x] `npm test -- clickHandler wireInput commitGalaxyFocus commitStructureFocus` green.
+- [x] `npm run typecheck`. Commit.
 
 ---
 
@@ -595,14 +596,14 @@ needs `axisRatio`, `positionAngleDeg`, and famous-row calibration — none on
 `selected: Selection | null` → `selected: FocusableTarget | null`; update the docblock.
 `runFrame` feeds `selected: selection.selected()` — verify no change needed.
 
-- [ ] `structureIdOf.test.ts`: a `GalaxyInfo` → null; a `StructureInfo` → its id;
+- [x] `structureIdOf.test.ts`: a `GalaxyInfo` → null; a `StructureInfo` → its id;
       null → null.
-- [ ] `selectionRingPass.test.ts`: feed a `GalaxyInfo` fixture as the selection;
+- [x] `selectionRingPass.test.ts`: feed a `GalaxyInfo` fixture as the selection;
       assert `setSelection` receives `worldPos` from `x/y/z` and the ring radius from
       `diameterKpc`. Assert `enabled()` false for a `StructureInfo` and for null.
-- [ ] Run the marker/label producer tests if any. `npm test -- structureIdOf
+- [x] Run the marker/label producer tests if any. `npm test -- structureIdOf
       selectionRingPass passes pointSprites` (whichever exist) green.
-- [ ] `npm run typecheck`. Commit.
+- [x] `npm run typecheck`. Commit.
 
 ---
 

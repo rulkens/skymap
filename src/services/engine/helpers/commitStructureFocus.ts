@@ -19,10 +19,11 @@ import { tweenToStructure } from '../camera/tweenToStructure';
  * second so the URL hash echoes it; tween last, on a consistent frame.
  */
 export function commitStructureFocus(state: EngineState, structure: StructureInfo): void {
-  state.subsystems.selection.setSelected({ kind: 'structure', id: structure.id });
+  // The `structure` (a resolved `StructureInfo`) IS the target the slots hold.
+  state.subsystems.selection.setSelected(structure);
   // The deliberate focus gesture cluster-focus mode keys off (a bare
   // single-click select does not). `setFocused` drives both the
   // `onFocusChange` URL fan-out and `runFrame`'s member-isolation fade.
-  state.subsystems.selection.setFocused({ kind: 'structure', id: structure.id });
+  state.subsystems.selection.setFocused(structure);
   tweenToStructure(state, structure);
 }

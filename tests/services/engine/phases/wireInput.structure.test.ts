@@ -35,10 +35,10 @@ describe('wireInput structure wiring', () => {
   });
 
   it('reads the authoritative selection slot for the dblclick focus', () => {
-    // The dblclick handler resolves the pinned selection to its target via
-    // the subsystem rather than caching a resolved copy — the selection
-    // slot is the single source of truth (galaxy OR structure).
-    expect(src).toContain('selection.selectedTarget()');
+    // The dblclick handler reads the pinned target straight from the
+    // selection slot rather than caching a resolved copy — the slot is
+    // the single source of truth (galaxy OR structure).
+    expect(src).toContain('selection.selected()');
   });
 
   it('routes double-click on the selection through camera.focusOn', () => {
