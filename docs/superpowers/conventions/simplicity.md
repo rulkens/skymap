@@ -170,6 +170,25 @@ _open_ and _exhaustively checked_.
   a registry or push behaviour onto a union / protocol.
 - **Don't:** keep extending a closed switch.
 
+**The N-way form — tag + table lookup.** For any **more-than-two-way** split on "what kind of
+thing is this," give the union a literal **discriminant field** (`type` / `kind`, ideally
+mirroring an existing domain tag — in skymap the `SOURCE_REGISTRY` `type`) and **dispatch by
+table**: `TABLE[x.type]` where `TABLE: Record<Tag, Behavior | Component | Fn>` (kind → InfoCard
+component, kind → URL resolver, kind → commit fn). A new variant is then a new **row**, not an
+edit to every dispatch site.
+
+- **The trigger to catch (load-bearing):** the moment a **two-way predicate has to become
+  three-way** — `isStructure(t) ? structure : galaxy` now also needs `milkyWay` — do **not** add
+  a third predicate (`isMilkyWay`) or a `as T` cast in the false-branch. That `as T` cast
+  _suppresses the type error_, so the new variant flows silently into the wrong branch (the
+  latent-bug trap). Stop and convert the union to a **tagged union**, then make the dispatch a
+  table. (The 2026-06-15 Milky-Way-as-a-source redesign is the worked example: `FocusableTarget`
+  gained a `type` tag so the InfoCard/URL/focus dispatches became table lookups.)
+- **Do:** tag the union; narrow on `x.type === '…'` (type-safe) for simple guards; use a
+  `Record<Tag, …>` table for genuine N-way dispatch.
+- **Don't:** sniff structure (`'field' in x`), chain `isA(x) ? … : isB(x) ? …`, or cast in a
+  predicate's false-branch.
+
 ### 8. One canonical home — single source of truth
 
 The same fact in two places is a braid between them: they can drift, and now you must
@@ -316,6 +335,9 @@ A quick pass for review and refactor (the `entanglement-radar` skill runs this a
   Classify essential (any implementation has it) vs accidental (an artifact of storage); un-braid
   the accidental at design time rather than documenting it.
 - Does this **switch / conditional** on a discriminant belong in a registry or a union?
+- Is a **two-way predicate going three-way** (or am I sniffing `'field' in x` / casting in a
+  predicate's false-branch)? That's the trigger to add a `type` tag and dispatch by `Record<Tag, …>`
+  table — not a third predicate.
 - Is the **interface** as small as it could be? Are subcomponents injected, not hardwired?
 - Is **what** separated from **how**? Does the abstraction leak _how_?
 - Does A **call B directly** where a queue would remove the when/where coupling?
