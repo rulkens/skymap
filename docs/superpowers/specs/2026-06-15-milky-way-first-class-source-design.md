@@ -344,3 +344,6 @@ Three plan files, in order:
 - Any change to `focusOnHome` (reset-camera) semantics.
 - Converging the URL deep-link descriptor (`FocusTarget`) with `FocusableTarget`
   — a separate concern (it's a parse-time *request*, not a resolved target).
+- **MW URL deep-linking** (`#focus=milkyway` round-trip). A MW focus clears the
+  focus hash (matching prior behavior); making the MW shareable-by-URL would
+  need the `FocusTarget` parser + resolver to grow a milkyWay kind — a follow-up.
