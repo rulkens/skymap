@@ -1,13 +1,14 @@
 /**
  * filamentSlot — verifies the slot uploads the skeleton to the renderer and
- * records its durable load status on the filament store.
+ * echoes its parsed counts to the UI.
  *
- * The slot's observable effects on `ready` are: the GPU upload, a
- * `filaments.setLoaded(strip, vert)` write to the store (the authoritative
- * status home), and the `onReady` UI echo. The render wake is handled
- * generically by `installSlotReadyWake` in the wiring layer. We mock the
- * fetcher so `slot.load()` drives a deterministic ready transition without
- * touching the network.
+ * The slot's observable effects on `ready` are: the GPU upload and the `onReady`
+ * UI echo. There is no status store — "loaded" is the slot's own `ready` state
+ * (read via `slotReady(assetSlots.filaments)`); the counts flow out through
+ * `onReady`, never back through a getter. The render wake is handled generically
+ * by `installSlotReadyWake` in the wiring layer. We mock the fetcher so
+ * `slot.load()` drives a deterministic ready transition without touching the
+ * network.
  */
 import { describe, expect, it, vi } from 'vitest';
 import type { FilamentCloud } from '../../../../src/@types/data/FilamentCloud';
@@ -51,7 +52,7 @@ function fakeState(): EngineState {
 const noopCb = {} as EngineCallbacks;
 
 describe('createFilamentSlot', () => {
-  it('records load status on the filament store on ready', async () => {
+  it('uploads the skeleton to the renderer and reaches ready', async () => {
     const cloud = fakeCloud();
     mockFetch.mockResolvedValue(cloud);
     const state = fakeState();
@@ -60,10 +61,9 @@ describe('createFilamentSlot', () => {
     slot.load({ tier: 'medium' } as never);
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
-    // The durable status lands on the store, sourced from the decoded counts.
-    expect(state.data.filaments.loaded).toBe(true);
-    expect(state.data.filaments.stripCount).toBe(12);
-    expect(state.data.filaments.vertexCount).toBe(3400);
+    // The decoded cloud lands on the GPU via the renderer upload; the slot's own
+    // `ready` state is the authoritative "loaded" bit (no status store mirror).
+    expect(state.gpu.filamentRenderer!.upload).toHaveBeenCalledWith(cloud);
     // Construction purity: the factory RETURNS the slot and does NOT
     // self-install it — `installSlots` (the orchestrator) owns the write.
     expect(slot.name).toBe('filaments');

@@ -12,9 +12,10 @@
  *
  * Flow is a singleton overlay layer (see
  * `docs/superpowers/conventions/singleton-overlay-layers.md`): its look/motion
- * knobs live in `settings.flow` (a `FlowSettings`), and the `data.flow` store is
- * status-only. So `encodeCompute` / `draw` / `isAnimating` read the live
- * `FlowSettings` the engine already holds, rather than a store handle.
+ * knobs live in `settings.flow` (a `FlowSettings`), and the layer's "loaded"
+ * status is the asset slot's `ready` state — no data-layer store. So
+ * `encodeCompute` / `draw` / `isAnimating` read the live `FlowSettings` the
+ * engine already holds, rather than a store handle.
  *
  * ### One buffer set + reseed-on-switch (decision §3)
  *

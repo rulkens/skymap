@@ -214,7 +214,7 @@ export type EngineGpuHandles = {
    * optional renderers). Excluded from the `isEngineReady` predicate: the layer
    * is default-off and demand-loaded, and `encodeFlowCompute` / `flowFieldPass`
    * null-check the handle alongside the `settings.flow.enabled` +
-   * `data.flow.loaded` gate, so a null handle is a silent no-op. Stored here so
+   * `slotReady(assetSlots.flow)` gate, so a null handle is a silent no-op. Stored here so
    * `destroy()` can release the particle buffers, the three compute pipelines,
    * the ribbon pipeline, and the velocity texture.
    */

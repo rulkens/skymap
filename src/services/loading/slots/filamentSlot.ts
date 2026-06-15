@@ -59,11 +59,12 @@ export const createFilamentSlot: SlotFactory<FilamentCloud, FilamentReq> = (stat
     // installSlotReadyWake's job, not the factory's.
     if (s.kind === 'ready') {
       console.log(`[engine] filaments: ${s.value.stripCount} strips, ${s.value.vertexCount} verts`);
-      // Record the durable load status on the filament store (the authoritative
-      // home), then push the parsed counts up to the UI layer.  See
-      // `EngineCallbacks.filaments.onReady` for the lifecycle rationale —
-      // one-shot, fires only when the optional binary actually loaded.
-      state.data.filaments.setLoaded(s.value.stripCount, s.value.vertexCount);
+      // Push the parsed counts up to the UI layer.  Load status needs no
+      // store mirror — `slotReady(assetSlots.filaments)` is the authoritative
+      // "loaded" bit; the counts only ever flowed out to React, never back
+      // through a getter.  See `EngineCallbacks.filaments.onReady` for the
+      // lifecycle rationale — one-shot, fires only when the optional binary
+      // actually loaded.
       cb.filaments?.onReady?.(s.value.stripCount, s.value.vertexCount);
     }
   });

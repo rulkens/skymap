@@ -11,8 +11,8 @@
  * ### When it draws
  *
  * Gated on the singleton-overlay-layer contract:
- *   1. `state.data.flow.loaded` — the velocity cube has been committed; with no
- *      cube there is nothing to draw, even mid-fade.
+ *   1. `slotReady(state.assetSlots.flow)` — the velocity cube has been committed;
+ *      with no cube there is nothing to draw, even mid-fade.
  *   2. `state.settings.flow.enabled` OR a non-zero flow fade opacity — the
  *      setting is the user's intent, a non-zero fade is the visual state. The
  *      pass stays alive while EITHER is true so a fade-out keeps drawing after
@@ -30,13 +30,14 @@
  */
 
 import type { Pass } from '../../../../@types/engine/frame/Pass';
+import { slotReady } from '../../../loading/slotReady';
 
 export const flowFieldPass: Pass = {
   name: 'flow',
 
   enabled(state) {
     // No cube committed → nothing to draw, even mid-fade.
-    if (!state.data.flow.loaded) return false;
+    if (!slotReady(state.assetSlots.flow)) return false;
     // The setting is the user's intent; a non-zero fade opacity is the visual
     // state. Render while EITHER is true so a fade-out keeps drawing after the
     // user toggles off (until opacity hits 0).
