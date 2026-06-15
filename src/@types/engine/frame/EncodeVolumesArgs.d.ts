@@ -10,7 +10,7 @@
 
 import type { ReadyFrameContext } from './ReadyFrameContext';
 import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
-import type { ScalarFieldHandle } from '../../rendering/ScalarFieldHandle';
+import type { VolumeFieldId } from '../../data/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../settings/VolumeFieldSettings';
 
 export type EncodeVolumesArgs = {
@@ -26,14 +26,14 @@ export type EncodeVolumesArgs = {
    * at the call site.  Returns the current animated opacity [0, 1] for the
    * given scalar-field handle so each field fades independently.
    */
-  fadeOpacityOf: (handle: ScalarFieldHandle) => number;
+  fadeOpacityOf: (handle: VolumeFieldId) => number;
   /**
    * Per-field settings projection, threaded from `state.settings.volumes.items`
    * at the call site. Returns the live VolumeFieldSettings for a scalar-field
    * handle (or undefined if it has no settings row) so the renderer reads each
    * field's knobs per frame instead of mirroring them.
    */
-  settingsOf: (handle: ScalarFieldHandle) => VolumeFieldSettings | undefined;
+  settingsOf: (handle: VolumeFieldId) => VolumeFieldSettings | undefined;
   /**
    * Optional `RenderPassTimestampWrites` for per-pass GPU timing.  When
    * `undefined` the helper omits the field from the `beginRenderPass`

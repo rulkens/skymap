@@ -18,8 +18,8 @@
  *                    fades out on disable. No discriminator.
  *   - scalarField  — one volumetric scalar field (CF-4, rhizome-small,
  *                    rhizome-medium, rhizome-large). Discriminator:
- *                    `field: ScalarFieldHandle` (the string key the
- *                    volume renderer uses internally).
+ *                    `field: VolumeFieldId` (the registry handle the
+ *                    volume renderer keys fields by).
  *   - markerLayer  — the structure marker rings for one structure
  *                    category (cluster, supercluster, void, group).
  *                    Discriminator: `category: StructureCategory`. One
@@ -55,7 +55,7 @@
 
 import type { StructureCategory } from '../engine/data/StructureCategory';
 import type { SourceType } from '../data/SourceType';
-import type { ScalarFieldHandle } from '../rendering/ScalarFieldHandle';
+import type { VolumeFieldId } from '../data/VolumeFieldId';
 import type { LabelLayerId } from './LabelLayerId';
 import type { OverlayId } from './OverlayId';
 
@@ -63,7 +63,7 @@ export type FadeHandle =
   | { readonly kind: 'survey'; readonly source: SourceType }
   | { readonly kind: 'filaments' }
   | { readonly kind: 'flow' }
-  | { readonly kind: 'scalarField'; readonly field: ScalarFieldHandle }
+  | { readonly kind: 'scalarField'; readonly field: VolumeFieldId }
   | { readonly kind: 'markerLayer'; readonly category: StructureCategory }
   | {
       readonly kind: 'labelLayer';

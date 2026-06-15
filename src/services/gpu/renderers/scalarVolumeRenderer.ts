@@ -49,7 +49,6 @@ import { mat4 } from 'gl-matrix';
 import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import type { ScalarFieldPaletteId } from '../../../@types/data/ScalarFieldPaletteId';
 import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { ScalarFieldHandle } from '../../../@types/rendering/ScalarFieldHandle';
 import type { ScalarVolumeRenderer } from '../../../@types/rendering/ScalarVolumeRenderer';
 import type { FieldEntry } from '../../../@types/rendering/FieldEntry';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
@@ -103,8 +102,8 @@ export function createScalarVolumeRenderer(
   format: GPUTextureFormat,
   fadeBgl: FadeUniformsBgl,
   callbacks: {
-    onFieldAdded: (handle: ScalarFieldHandle) => void;
-    onFieldRemoved: (handle: ScalarFieldHandle) => void;
+    onFieldAdded: (handle: VolumeFieldId) => void;
+    onFieldRemoved: (handle: VolumeFieldId) => void;
   },
 ): ScalarVolumeRenderer {
   const cornerBuffer = device.createBuffer({
@@ -209,7 +208,7 @@ export function createScalarVolumeRenderer(
   const fadeScratchBuffer = new ArrayBuffer(16);
   const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
 
-  const fields = new Map<ScalarFieldHandle, FieldEntry>();
+  const fields = new Map<VolumeFieldId, FieldEntry>();
   // Per-draw frame counter — incremented every draw() and forwarded to
   // the fragment shader as a temporal seed for the ray-march jitter
   // hash.  Wrapping at FRAME_WRAP keeps the f32 mantissa precise
@@ -275,13 +274,11 @@ export function createScalarVolumeRenderer(
         fields.delete(handle);
       }
       // Per-cube STATIC presentation config read once from the registry.
-      // Handles are always registry volume ids (`ScalarFieldHandle` is a
-      // string; the cast is sound and `getVolumeFieldDefaults` throws on a
-      // truly-unknown id, which is acceptable here).  The user-tunable
-      // knobs (enabled, intensity, contrast, densityScale, palette, trim,
-      // exposure) are NOT seeded here — they live in settings and are read
-      // per frame in `draw`.
-      const defaults = getVolumeFieldDefaults(handle as VolumeFieldId);
+      // The handle is a `VolumeFieldId` (the registry-derived field union),
+      // so the lookup needs no cast.  The user-tunable knobs (enabled,
+      // intensity, contrast, densityScale, palette, trim, exposure) are NOT
+      // seeded here — they live in settings and are read per frame in `draw`.
+      const defaults = getVolumeFieldDefaults(handle);
       const modelMatrix = buildCubeModelMatrix(cube);
       const invModelMatrix = mat4.create();
       mat4.invert(invModelMatrix, modelMatrix);
