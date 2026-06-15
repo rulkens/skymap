@@ -16,8 +16,8 @@
  *
  * ### Why a string-keyed map (not WeakMap<FadeId, …>)
  *
- * Ids are value-typed records (`{ kind: 'galaxyCatalog', source: 1 }`),
- * not reference identities. Two `{ kind: 'galaxyCatalog', source: SDSS }`
+ * Ids are value-typed records (`{ kind: 'galaxyCatalog', id: 'sdss' }`),
+ * not reference identities. Two `{ kind: 'galaxyCatalog', id: 'sdss' }`
  * literals constructed in different files must address the SAME
  * controller. A WeakMap keys on reference identity — that would mint
  * a new controller every time a caller built a fresh id literal.
@@ -52,7 +52,7 @@ import { createFadeController, FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from 
 function serializeFadeId(h: FadeId): string {
   switch (h.kind) {
     case 'galaxyCatalog':
-      return `galaxyCatalog:${h.source}`;
+      return `galaxyCatalog:${h.id}`;
     case 'filaments':
       return 'filaments';
     case 'flow':

@@ -10,13 +10,14 @@
  *
  * The fixture is deliberately minimal: a settings stub whose `galaxyCatalogs.items`
  * covers every `GALAXY_CATALOG_SOURCES` id (so the loop never indexes undefined), a
- * `fades.opacityOf` stub keyed off the handle's `source`, and a `sources`
+ * `fades.opacityOf` stub keyed off the handle's `id`, and a `sources`
  * object with mutable masks. No GPU, no engine.
  */
 
 import { describe, it, expect } from 'vitest';
 import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
-import { Source, GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
+import { Source, GALAXY_CATALOG_SOURCES } from '../../../../src/data/sources';
+import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 import { maskHas, ALL_VISIBLE_MASK } from '../../../../src/utils/sourceMask';
 import type { GalaxyCatalogId } from '../../../../src/@types/engine/data/GalaxyCatalogId';
 import type { FadeId } from '../../../../src/@types/animation/FadeId';
@@ -24,19 +25,19 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 
 /**
  * Build a state stub with every galaxy catalog id present in `galaxyCatalogs.items`
- * (default enabled), a per-source opacity table, and mutable masks.
+ * (default enabled), a per-id opacity table, and mutable masks.
  *
- * `enabledOverrides` flips specific galaxy catalog ids; `opacityBySource` supplies
- * each source's fade opacity (default 0 — fully faded). Returns the same
+ * `enabledOverrides` flips specific galaxy catalog ids; `opacityById` supplies
+ * each catalog's fade opacity (default 0 — fully faded). Returns the same
  * `Pick<EngineState, ...>` shape `deriveSourceMasks` accepts.
  */
 function makeState(opts: {
   enabledOverrides?: Partial<Record<GalaxyCatalogId, boolean>>;
-  opacityBySource?: Partial<Record<number, number>>;
+  opacityById?: Partial<Record<GalaxyCatalogId, number>>;
 }): Pick<EngineState, 'sources' | 'settings' | 'subsystems'> {
   const items = Object.fromEntries(
     GALAXY_CATALOG_SOURCES.map((s) => {
-      const id = SOURCE_REGISTRY[s].id as GalaxyCatalogId;
+      const id = galaxyCatalogIdOf(s);
       const enabled = opts.enabledOverrides?.[id] ?? true;
       return [id, { enabled, labelEnabled: true }];
     }),
@@ -48,7 +49,7 @@ function makeState(opts: {
     subsystems: {
       fades: {
         opacityOf: (id: FadeId) =>
-          id.kind === 'galaxyCatalog' ? (opts.opacityBySource?.[id.source] ?? 0) : 0,
+          id.kind === 'galaxyCatalog' ? (opts.opacityById?.[id.id] ?? 0) : 0,
       },
     } as never,
   };
@@ -67,7 +68,7 @@ describe('deriveSourceMasks', () => {
   it('keeps the draw bit but clears the pick bit for a disabled galaxy catalog still fading out', () => {
     const state = makeState({
       enabledOverrides: { sdss: false },
-      opacityBySource: { [Source.SDSS]: 0.5 },
+      opacityById: { sdss: 0.5 },
     });
     deriveSourceMasks(state);
     expect(maskHas(state.sources.drawMask, Source.SDSS)).toBe(true);
@@ -77,7 +78,7 @@ describe('deriveSourceMasks', () => {
   it('clears both bits for a disabled, fully-faded galaxy catalog', () => {
     const state = makeState({
       enabledOverrides: { sdss: false },
-      opacityBySource: { [Source.SDSS]: 0 },
+      opacityById: { sdss: 0 },
     });
     deriveSourceMasks(state);
     expect(maskHas(state.sources.drawMask, Source.SDSS)).toBe(false);

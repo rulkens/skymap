@@ -44,10 +44,11 @@ import type { EngineSettingsState } from '../../../src/@types/settings/EngineSet
 // ── Minimal fixture factory ───────────────────────────────────────────────
 //
 // `opacityFor` lets a case control the simulated fade opacity per galaxy catalog
-// `handle.source` — the input deriveSourceMasks reads for the draw bit's
-// fade-out tail.  Default: every galaxy catalog at opacity 0 (no fade in flight).
+// keyed by `GalaxyCatalogId` (`handle.id`) — the input deriveSourceMasks reads
+// for the draw bit's fade-out tail.  Default: every galaxy catalog at opacity 0
+// (no fade in flight).
 
-function makeFixture(opacityFor: (source: number) => number = () => 0) {
+function makeFixture(opacityFor: (id: GalaxyCatalogId) => number = () => 0) {
   const fadeCalls: Array<{ target: number; duration: number }> = [];
   const fades = {
     label: 'fadeRegistry',
@@ -57,7 +58,7 @@ function makeFixture(opacityFor: (source: number) => number = () => 0) {
       fadeCalls.push({ target, duration });
     }),
     setImmediate: vi.fn(),
-    opacityOf: vi.fn((h: { source: number }) => opacityFor(h.source)),
+    opacityOf: vi.fn((h: { id: GalaxyCatalogId }) => opacityFor(h.id)),
     isAnyAnimating: vi.fn(() => false),
     tick: vi.fn(),
     destroy: vi.fn(),
@@ -77,7 +78,9 @@ function makeFixture(opacityFor: (source: number) => number = () => 0) {
   // store and exposes it via a getter — exactly the engine's `state.settings`
   // delegation. After the action runs, the getter hands back the fresh copy,
   // which is what `deriveSourceMasks` and the assertions read.
-  const store = createSettingsStore({ galaxyCatalogs: { items } } as unknown as EngineSettingsState);
+  const store = createSettingsStore({
+    galaxyCatalogs: { items },
+  } as unknown as EngineSettingsState);
   const state = {
     get settings() {
       return store.getState();
@@ -127,7 +130,7 @@ describe('setSourceVisible — synchronous toggle', () => {
 
   it('a hidden galaxy catalog still fading out is DRAWN but not pickable', () => {
     // Simulate a fade-out still in flight: opacity 0.5 for SDSS.
-    const fx = makeFixture((source) => (source === Source.SDSS ? 0.5 : 0));
+    const fx = makeFixture((id) => (id === 'sdss' ? 0.5 : 0));
 
     setSourceVisibleForTest(fx.state as never, fx.store, Source.SDSS, false);
 

@@ -10,7 +10,8 @@
  * Kinds:
  *   - galaxy catalog       — one of SDSS, 2MRS, GLADE, Famous, Synthetic.
  *                    Fades in on first load; fades out → upload → in
- *                    on tier swap. Discriminator: `source: Source`.
+ *                    on tier swap. Discriminator: `id: GalaxyCatalogId`
+ *                    (the string id the point renderer keys catalogs by).
  *   - filaments    — the single cosmic-web filament skeleton.
  *                    Fades in on first load. No discriminator.
  *   - flow         — the CF4++ peculiar-velocity flow overlay. Fades in on
@@ -54,13 +55,13 @@
  */
 
 import type { StructureCategory } from '../engine/data/StructureCategory';
-import type { SourceType } from '../data/SourceType';
+import type { GalaxyCatalogId } from '../engine/data/GalaxyCatalogId';
 import type { VolumeFieldId } from '../data/VolumeFieldId';
 import type { LabelLayerId } from './LabelLayerId';
 import type { OverlayId } from './OverlayId';
 
 export type FadeId =
-  | { readonly kind: 'galaxyCatalog'; readonly source: SourceType }
+  | { readonly kind: 'galaxyCatalog'; readonly id: GalaxyCatalogId }
   | { readonly kind: 'filaments' }
   | { readonly kind: 'flow' }
   | { readonly kind: 'scalarField'; readonly field: VolumeFieldId }

@@ -34,8 +34,8 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
-import { Source, SOURCE_REGISTRY } from '../../../data/sources';
-import type { GalaxyCatalogId } from '../../../@types/engine/data/GalaxyCatalogId';
+import { Source } from '../../../data/sources';
+import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
 import type { GalaxyCatalogSourceConfig } from '../../../@types/engine/wiring/GalaxyCatalogSourceConfig';
 import type { Tier } from '../../../@types/data/Tier';
@@ -151,7 +151,7 @@ export function wireGalaxyCatalogSourceSlot(
   // `fadeOpacityOf` lookup always finds it, even on the first frame
   // before any upload lands.  The commit drives the fadeTo lifecycle
   // from there.
-  state.subsystems.fades.register({ kind: 'galaxyCatalog', source }, 0);
+  state.subsystems.fades.register({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) }, 0);
 
   const slot = createAssetSlot<GalaxyCatalog, GalaxyCatalogReq>({
     name: slotName,
@@ -167,7 +167,8 @@ export function wireGalaxyCatalogSourceSlot(
       // populated later in bootstrap (pickRenderer, cam), and would
       // reject this upload during the legitimate wireSlots window.
       if (state.gpu.renderer === null) return;
-      const id: FadeId = { kind: 'galaxyCatalog', source };
+      const catalogId = galaxyCatalogIdOf(source);
+      const id: FadeId = { kind: 'galaxyCatalog', id: catalogId };
       const fades = state.subsystems.fades;
 
       // Tier swap: fade the old buffer out before the new one lands so
@@ -185,7 +186,7 @@ export function wireGalaxyCatalogSourceSlot(
       console.log(`[engine] upload start ${shortName} count=${cloud.count}`);
       // PointRenderer keys its catalogs by the string id; resolve from
       // the registry (the source code carries the matching id).
-      await state.gpu.renderer.upload(SOURCE_REGISTRY[source].id as GalaxyCatalogId, cloud);
+      await state.gpu.renderer.upload(catalogId, cloud);
       state.data.galaxies.setCatalog(source, cloud);
 
       // Fire-and-forget fade-in so the slot's `ready` transition

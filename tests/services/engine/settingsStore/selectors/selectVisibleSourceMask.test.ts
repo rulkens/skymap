@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 
 import { selectVisibleSourceMask } from '../../../../../src/services/engine/settingsStore/selectors/selectVisibleSourceMask';
 import { deriveSourceMasks } from '../../../../../src/services/engine/frame/deriveSourceMasks';
-import { Source } from '../../../../../src/data/sources';
 import { makeSettingsFixture } from '../makeSettingsFixture';
 import type { EngineSettingsState } from '../../../../../src/@types/settings/EngineSettingsState';
+import type { GalaxyCatalogId } from '../../../../../src/@types/engine/data/GalaxyCatalogId';
 
 // Drive `deriveSourceMasks` against a minimal state stub so we can compare the
 // selector against the engine's authoritative pick-mask packing. The selector
@@ -12,13 +12,13 @@ import type { EngineSettingsState } from '../../../../../src/@types/settings/Eng
 // seam that replaced the old `onMaskChange` echo (which sent `pickMask`).
 function deriveMasks(
   settings: EngineSettingsState,
-  opacityFor: (source: number) => number = () => 0,
+  opacityFor: (id: GalaxyCatalogId) => number = () => 0,
 ): { drawMask: number; pickMask: number } {
   const state = {
     settings,
     sources: { drawMask: 0, pickMask: 0 },
     subsystems: {
-      fades: { opacityOf: (h: { source: number }) => opacityFor(h.source) },
+      fades: { opacityOf: (h: { id: GalaxyCatalogId }) => opacityFor(h.id) },
     },
   };
   deriveSourceMasks(state as never);
@@ -38,7 +38,10 @@ describe('selectVisibleSourceMask', () => {
     const settings = makeSettingsFixture({
       galaxyCatalogs: {
         ...base.galaxyCatalogs,
-        items: { ...base.galaxyCatalogs.items, sdss: { ...base.galaxyCatalogs.items.sdss, enabled: false } },
+        items: {
+          ...base.galaxyCatalogs.items,
+          sdss: { ...base.galaxyCatalogs.items.sdss, enabled: false },
+        },
       },
     });
     const { pickMask } = deriveMasks(settings);
@@ -51,14 +54,15 @@ describe('selectVisibleSourceMask', () => {
     const settings = makeSettingsFixture({
       galaxyCatalogs: {
         ...base.galaxyCatalogs,
-        items: { ...base.galaxyCatalogs.items, sdss: { ...base.galaxyCatalogs.items.sdss, enabled: false } },
+        items: {
+          ...base.galaxyCatalogs.items,
+          sdss: { ...base.galaxyCatalogs.items.sdss, enabled: false },
+        },
       },
     });
     // SDSS hidden but still fading out (opacity 0.5): drawMask keeps the bit,
     // pickMask drops it. The selector must match pickMask, not drawMask.
-    const { drawMask, pickMask } = deriveMasks(settings, (source) =>
-      source === Source.SDSS ? 0.5 : 0,
-    );
+    const { drawMask, pickMask } = deriveMasks(settings, (id) => (id === 'sdss' ? 0.5 : 0));
 
     expect(selectVisibleSourceMask(settings)).toBe(pickMask);
     expect(selectVisibleSourceMask(settings)).not.toBe(drawMask);

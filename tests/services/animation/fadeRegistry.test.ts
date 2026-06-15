@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
-import { Source } from '../../../src/data/sources';
 import type { FadeId } from '../../../src/@types/animation/FadeId';
 
 // No-op wake stub for tests that don't care about the wake.
@@ -16,13 +15,13 @@ describe('createFadeRegistry', () => {
 
   it('opacityOf returns 1.0 for unregistered handles (fail-safe)', () => {
     const r = makeRegistry();
-    const h: FadeId = { kind: 'galaxyCatalog', source: Source.SDSS };
+    const h: FadeId = { kind: 'galaxyCatalog', id: 'sdss' };
     expect(r.opacityOf(h, 1000)).toBe(1.0);
   });
 
   it('register defaults initial opacity to 0', () => {
     const r = makeRegistry();
-    const h: FadeId = { kind: 'galaxyCatalog', source: Source.SDSS };
+    const h: FadeId = { kind: 'galaxyCatalog', id: 'sdss' };
     r.register(h);
     expect(r.opacityOf(h, 1000)).toBe(0);
   });
@@ -52,8 +51,8 @@ describe('createFadeRegistry', () => {
 
   it('serialization is stable across handle equality', () => {
     const r = makeRegistry();
-    const h1: FadeId = { kind: 'galaxyCatalog', source: Source.SDSS };
-    const h2: FadeId = { kind: 'galaxyCatalog', source: Source.SDSS };
+    const h1: FadeId = { kind: 'galaxyCatalog', id: 'sdss' };
+    const h2: FadeId = { kind: 'galaxyCatalog', id: 'sdss' };
     r.register(h1, 0.5);
     // Two structurally-equal handles map to the same controller.
     expect(r.opacityOf(h2, 1000)).toBe(0.5);
@@ -61,8 +60,8 @@ describe('createFadeRegistry', () => {
 
   it('different discriminator values produce different keys', () => {
     const r = makeRegistry();
-    const a: FadeId = { kind: 'galaxyCatalog', source: Source.SDSS };
-    const b: FadeId = { kind: 'galaxyCatalog', source: Source.Glade };
+    const a: FadeId = { kind: 'galaxyCatalog', id: 'sdss' };
+    const b: FadeId = { kind: 'galaxyCatalog', id: 'glade' };
     r.register(a, 0.25);
     r.register(b, 0.75);
     expect(r.opacityOf(a, 1000)).toBe(0.25);
@@ -115,7 +114,7 @@ describe('createFadeRegistry', () => {
 
   it('isAnyAnimating aggregates across multiple controllers', () => {
     const r = makeRegistry();
-    const a: FadeId = { kind: 'galaxyCatalog', source: Source.SDSS };
+    const a: FadeId = { kind: 'galaxyCatalog', id: 'sdss' };
     const b: FadeId = { kind: 'filaments' };
     r.register(a, 0);
     r.register(b, 1);

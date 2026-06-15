@@ -73,7 +73,10 @@ function makeState(): EngineState {
         // items[id].enabled, so a partial record would throw on the first
         // missing id. Seed them all enabled.
         items: Object.fromEntries(
-          GALAXY_CATALOG_SOURCES.map((s) => [SOURCE_REGISTRY[s].id, { enabled: true, labelEnabled: true }]),
+          GALAXY_CATALOG_SOURCES.map((s) => [
+            SOURCE_REGISTRY[s].id,
+            { enabled: true, labelEnabled: true },
+          ]),
         ),
       },
       tonemap: { exposure: 1, curve: 'linear' },
@@ -112,7 +115,7 @@ function makeState(): EngineState {
       tweens: { advance: vi.fn(), isActive: () => false },
       spaceMouse: { applyToCamera: vi.fn(), hasAxes: () => false },
       scheduler: { requestRender: vi.fn() },
-      // deriveSourceMasks reads opacityOf({kind:'galaxyCatalog', source}) for every
+      // deriveSourceMasks reads opacityOf({kind:'galaxyCatalog', id}) for every
       // galaxy catalog to compute the fade-out draw tail; 0 everywhere (no fade in
       // flight) is the right baseline for these fixtures.
       fades: { opacityOf: () => 0 },

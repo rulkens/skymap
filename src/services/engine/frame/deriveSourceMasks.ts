@@ -33,8 +33,8 @@
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { GalaxyCatalogId } from '../../../@types/engine/data/GalaxyCatalogId';
-import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../data/sources';
+import { GALAXY_CATALOG_SOURCES } from '../../../data/sources';
+import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import { maskWith } from '../../../utils/sourceMask';
 
 export function deriveSourceMasks(
@@ -43,11 +43,12 @@ export function deriveSourceMasks(
   let draw = 0;
   let pick = 0;
   for (const src of GALAXY_CATALOG_SOURCES) {
-    // `src ∈ GALAXY_CATALOG_SOURCES` ⇒ its registry id is a galaxy catalog id; the broad
-    // `SourceId` typing on `.id` doesn't know that, so the cast is safe.
-    const id = SOURCE_REGISTRY[src].id as GalaxyCatalogId;
+    // `src ∈ GALAXY_CATALOG_SOURCES` ⇒ its registry id is a galaxy catalog id;
+    // `galaxyCatalogIdOf` contains the narrowing cast that the broad `SourceId`
+    // typing on `.id` would otherwise force here.
+    const id = galaxyCatalogIdOf(src);
     const enabled = state.settings.galaxyCatalogs.items[id].enabled;
-    const opacity = state.subsystems.fades.opacityOf({ kind: 'galaxyCatalog', source: src });
+    const opacity = state.subsystems.fades.opacityOf({ kind: 'galaxyCatalog', id });
     // Draw through the fade-out tail so a hidden galaxy catalog ramps down smoothly.
     if (enabled || opacity > 0) draw = maskWith(draw, src);
     // Pick on intent only — unclickable the instant it's toggled off.

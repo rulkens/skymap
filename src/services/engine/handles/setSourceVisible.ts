@@ -34,8 +34,7 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { GalaxyCatalogId } from '../../../@types/engine/data/GalaxyCatalogId';
-import { SOURCE_REGISTRY } from '../../../data/sources';
+import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
 import { deriveSourceMasks } from '../frame/deriveSourceMasks';
 import type { SettingsStore } from '../settingsStore/createSettingsStore';
@@ -47,7 +46,7 @@ export function setSourceVisibleImpl(
   source: SourceType,
   visible: boolean,
 ): void {
-  const id = SOURCE_REGISTRY[source].id as GalaxyCatalogId;
+  const id = galaxyCatalogIdOf(source);
   if (state.settings.galaxyCatalogs.items[id].enabled === visible) return; // no-op
   // Single source of truth: flip the galaxy catalog's enabled flag THROUGH the store
   // so the copy-on-write write notifies React's selector subscriber.
@@ -55,7 +54,7 @@ export function setSourceVisibleImpl(
   // Fire the fade (fire-and-forget; last-issued wins inside the registry, and
   // deriveSourceMasks keeps the draw bit set while opacity > 0).
   void state.subsystems.fades.fadeTo(
-    { kind: 'galaxyCatalog', source },
+    { kind: 'galaxyCatalog', id },
     visible ? 1 : 0,
     visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
   );

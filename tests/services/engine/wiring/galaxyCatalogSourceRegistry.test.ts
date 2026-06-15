@@ -274,7 +274,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
 
   it('registers a galaxy catalog fade handle at opacity 0 for the wired source', () => {
     // The wiring step (not the slot commit) registers the handle so
-    // every per-frame opacityOf({ kind: 'galaxyCatalog', source }) lookup finds
+    // every per-frame opacityOf({ kind: 'galaxyCatalog', id }) lookup finds
     // it from frame 1 onward — well before any data has loaded. The
     // commit drives the fadeTo(1, …) lifecycle afterwards.
     const register = vi.fn();
@@ -293,6 +293,6 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     const cfg = GALAXY_CATALOG_SOURCE_REGISTRY.find((c) => c.source === Source.SDSS)!;
     wireGalaxyCatalogSourceSlot(state, cfg, makeDeps());
 
-    expect(register).toHaveBeenCalledWith({ kind: 'galaxyCatalog', source: Source.SDSS }, 0);
+    expect(register).toHaveBeenCalledWith({ kind: 'galaxyCatalog', id: 'sdss' }, 0);
   });
 });
