@@ -10,11 +10,10 @@
  * sprites, milky-way, filaments, …).  That had two problems:
  *
  *   1. **Colour mismatch.**  The HDR target's tone-map compresses
- *      linear-light values; an LDR-sane label colour (`[1, 1, 1, 1]`)
- *      survived as mid-grey after ACES.  `produceMilkyWayLabel`
- *      worked around this by emitting `[8, 8, 8, 1]` so the tone-map
- *      rolled it off to display-white — a brittle hack that broke
- *      whenever the curve or exposure changed.
+ *      linear-light values, so an LDR-sane label colour (`[1, 1, 1, 1]`)
+ *      would survive as mid-grey after ACES.  Compositing the overlay
+ *      AFTER the tone-map lets label/marker colours render at their
+ *      literal display values instead of being rolled through the curve.
  *
  *   2. **OVER-blend coherency on tile-based GPUs (M1).**  Marker-lines
  *      and labels use premultiplied OVER, which reads `dst.color` from

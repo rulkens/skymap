@@ -55,10 +55,9 @@
  * Those two were premultiplied-OVER UI overlays mixed in among the
  * additive content.  Two problems with that placement:
  *
- *   1. Colour mismatch — LDR-sane label colours (`[1, 1, 1, 1]`) got
- *      compressed by the tone-map curve to mid-grey;
- *      `produceMilkyWayLabel` worked around it with an `[8, 8, 8, 1]`
- *      overshoot hack.
+ *   1. Colour mismatch — LDR-sane label colours (`[1, 1, 1, 1]`) would be
+ *      compressed by the tone-map curve to mid-grey, so the UI overlay is
+ *      composited after the tone-map (see encodeUiOverlay) instead.
  *   2. OVER-blend coherency — when timing was enabled (per-pass
  *      split for `timestampWrites`), every `pass.end` stored the HDR
  *      target to DRAM and the next `pass.begin` reloaded it.  On M1
