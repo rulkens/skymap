@@ -3,11 +3,11 @@
  * selected cluster / supercluster / void InfoCard.
  *
  * The count is a pure function of (selected structure, loaded catalogs,
- * survey visibility), so this hook is just a memoised call into
+ * galaxy catalog visibility), so this hook is just a memoised call into
  * `structureMemberCount`.  The cone search is O(total loaded ≈ 2.5M) but
  * runs single-digit milliseconds and only when one of the memo deps
  * changes — selecting a different structure, a tier swap, a per-source
- * catalog landing (`sourceCounts` bump), or a survey toggle — never per
+ * catalog landing (`sourceCounts` bump), or a galaxy catalog toggle — never per
  * frame.
  *
  * Returns `null` (caller omits the row) when nothing is countable: no

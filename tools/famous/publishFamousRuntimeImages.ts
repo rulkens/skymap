@@ -26,7 +26,7 @@
  *            ↑ COMMITTED, ships with the static shell.  The NON-deprojected
  *              InfoCard tile (atlas/full are deprojected for the billboard quad).
  *
- * The runtime read side encodes the matching URLs: `galaxyImageFetcher.ts` reads
+ * The runtime read side encodes the matching URLs: `fetchGalaxyBitmap.ts` reads
  * `/images/famous/<id>.webp` + `images/famous-hires/<id>.webp` for the billboard
  * tiers, and the InfoCard (`galaxyInfoBuilder.ts`) reads
  * `/images/famous-thumb/<id>.webp`; those templates must agree with the dirs below.

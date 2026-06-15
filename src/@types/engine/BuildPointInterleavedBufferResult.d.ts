@@ -1,4 +1,4 @@
-import type { SchechterTriple } from '../data/SchechterTriple';
+import type { SchechterTriple } from '../data/galaxyCatalog/SchechterTriple';
 
 /**
  * Output of the bake.  The renderer copies `interleaved` into the GPU
@@ -16,9 +16,9 @@ export type BuildPointInterleavedBufferResult = {
    * bake classified as fallback without re-running the hash.
    */
   isFallbackArr: Uint8Array;
-  /** Schechter LF triple `(M*, α, φ*)` for this survey's selection band. */
+  /** Schechter LF triple `(M*, α, φ*)` for this galaxy catalog's selection band. */
   schechter: SchechterTriple;
-  /** Survey apparent-magnitude flux limit (e.g. SDSS = 17.77). */
+  /** Galaxy catalog apparent-magnitude flux limit (e.g. SDSS = 17.77). */
   mLim: number;
   /** Pre-computed central-density normaliser N_ref = n(d = 10 Mpc). */
   nRef: number;

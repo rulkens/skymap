@@ -26,8 +26,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { createSelectionSubsystem } from '../../../../src/services/engine/subsystems/selectionSubsystem';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { GalaxyInfo } from '../../../../src/@types/engine/GalaxyInfo';
-import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
-import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
+import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { StructureRecord } from '../../../../src/@types/data/structure/StructureRecord';
 import { Source } from '../../../../src/data/sources';
 
 type Callbacks = EngineCallbacks & {

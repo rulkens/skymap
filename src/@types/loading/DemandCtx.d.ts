@@ -19,12 +19,12 @@
  *      `milkyWay.enabled`).  Most predicates start here.  Per-item gates
  *      read the type's items map directly — volumes via
  *      `settings.volumes.items[id]?.enabled`, structures via
- *      `settings.structures.items[cat].enabled`, surveys via
- *      `settings.surveys.items[id].enabled` (wiring rows hoist the
- *      source → survey-id registry mapping at construction).  The survey
+ *      `settings.structures.items[cat].enabled`, galaxy catalogs via
+ *      `settings.galaxyCatalogs.items[id].enabled` (wiring rows hoist the
+ *      source → galaxy-catalog-id registry mapping at construction).  The galaxy catalog
  *      bit is intent — the same field `setSourceVisible` writes; the
  *      fade-tail drawMask is a render-side projection (`enabled ||
- *      fadeOpacity > 0`) and is not consulted: a just-disabled survey
+ *      fadeOpacity > 0`) and is not consulted: a just-disabled galaxy catalog
  *      stops demanding immediately while it fades out.
  *
  *   2. `request` — one-shot transient flags (see `RequestKey`).  Covers

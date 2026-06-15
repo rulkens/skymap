@@ -66,7 +66,7 @@
 import { existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { copyIfChanged, CURATED_DIR, HIRES_RUNTIME_DIR } from './publishFamousRuntimeImages.js';
+import { copyIfChanged, CURATED_DIR, HIRES_RUNTIME_DIR } from './publishFamousRuntimeImages';
 
 type CopyHiResOptions = {
   /** Source root.  Defaults to the curated master dir relative to CWD. */

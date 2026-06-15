@@ -125,7 +125,7 @@ describe('evaluateRows', () => {
     const state = makeState(new Map([[Source.SDSS, slot]]));
     evaluateRows(state, [row(Source.SDSS, () => true)]);
     // Demanded, but the slot already holds data — the idle-guard skips it so a
-    // toggle-driven re-eval doesn't abort + re-fetch a ready survey.
+    // toggle-driven re-eval doesn't abort + re-fetch a ready galaxy catalog.
     expect(slot.load).not.toHaveBeenCalled();
   });
 

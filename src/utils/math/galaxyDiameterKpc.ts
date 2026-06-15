@@ -18,10 +18,9 @@
  * agreement for a single-relation fit across spirals + ellipticals.
  *
  * When `absMagBmag` is missing (undefined or NaN), the function returns
- * the project-wide DEFAULT_GALAXY_DIAMETER_KPC = 30 — the same value used
- * by every fallback path elsewhere in the build pipeline (see
- * `tools/buildAllBins.ts`).  Keeping the constant exported lets the
- * pipeline reuse it without re-importing the helper.
+ * the project-wide `DEFAULT_GALAXY_DIAMETER_KPC` = 30 — the same value
+ * used by every fallback path elsewhere in the build pipeline (see
+ * `tools/buildAllBins.ts`).
  *
  * The output is clamped to a 1 kpc floor.  Without the clamp, very faint
  * dwarfs (M_B ≈ -10) would compute D ≈ 0.16 kpc — smaller than a globular
@@ -29,7 +28,8 @@
  * the visibility floor entirely.  1 kpc is a defensible minimum for any
  * "object the user can call a galaxy".
  */
-export const DEFAULT_GALAXY_DIAMETER_KPC = 30;
+
+import { DEFAULT_GALAXY_DIAMETER_KPC } from './defaultGalaxyDiameterKpc';
 
 /**
  * Minimum diameter we'll ever return.  See module doc for the rationale —

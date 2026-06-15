@@ -11,8 +11,8 @@ function makeRegistry(): FadeRegistry {
 }
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
-import { STRUCTURE_CATEGORIES } from '../../../../src/data/structureCategories';
+import type { StructureRecord } from '../../../../src/@types/data/structure/StructureRecord';
+import { STRUCTURE_CATEGORIES } from '../../../../src/data/structure/structureCategories';
 
 // Builds a real engineData store (so state.data.structures is the production
 // store) + a real FadeRegistry (so per-category marker opacity comes from the

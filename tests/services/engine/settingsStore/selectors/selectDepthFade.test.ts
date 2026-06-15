@@ -4,9 +4,9 @@ import { selectDepthFade } from '../../../../../src/services/engine/settingsStor
 import { makeSettingsFixture } from '../makeSettingsFixture';
 
 describe('selectDepthFade', () => {
-  it('returns surveys.depthFade', () => {
+  it('returns galaxy catalogs.depthFade', () => {
     const state = makeSettingsFixture({
-      surveys: { ...makeSettingsFixture().surveys, depthFade: false },
+      galaxyCatalogs: { ...makeSettingsFixture().galaxyCatalogs, depthFade: false },
     });
 
     expect(selectDepthFade(state)).toBe(false);

@@ -18,10 +18,10 @@
 // ## Why a per-source palette + hashed intensity
 //
 // The whole point of the overlay is to answer "what would a click
-// here hit?".  Distinct colours per survey make it obvious whether
+// here hit?".  Distinct colours per galaxy catalog make it obvious whether
 // the cursor is over an SDSS billboard, a 2MRS billboard, or a structure
 // ring.  The localIdx-hash brightness modulation keeps two adjacent
-// galaxies of the same survey from blurring into a single coloured
+// galaxies of the same galaxy catalog from blurring into a single coloured
 // patch — they read as discrete instances with slightly different
 // brightnesses.
 //
@@ -74,7 +74,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   else if (srcCode == 8u) { col = vec3<f32>(1.00, 0.55, 0.10); } // Milliquas — orange
 
   // Hashed per-instance brightness so two adjacent picks of the same
-  // survey don't blur into one solid patch.  Multiplier is Knuth's
+  // galaxy catalog don't blur into one solid patch.  Multiplier is Knuth's
   // 2654435761 (golden-ratio prime), then shift to drop the noisy
   // low bits.  Maps to [0.6, 1.0] so even the dimmest instance still
   // reads as distinctly coloured against the background scene.

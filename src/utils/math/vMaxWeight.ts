@@ -4,7 +4,7 @@
  * Concept: each catalogued galaxy is the *one we see*, but it represents
  * a population of similar galaxies — many of which we'd see if they were
  * within `d_max`, the maximum distance at which a galaxy of this intrinsic
- * brightness could still pass the survey's flux limit.  The proper
+ * brightness could still pass the galaxy catalog's flux limit.  The proper
  * unbiased weighting is `1 / V_max` where `V_max ∝ d_max³`.
  *
  * For visualisation we don't want unbounded weights (intrinsically faint
@@ -27,7 +27,7 @@
  * special-casing.
  */
 
-import { dMaxFromAbsolute } from './distanceModulus';
+import { dMaxFromAbsolute } from './dMaxFromAbsolute';
 import type { VMaxWeightInput } from '../../@types/math/VMaxWeightInput';
 
 export function vMaxWeight(input: VMaxWeightInput): number {

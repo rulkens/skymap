@@ -9,11 +9,11 @@
  * builds from `"<prefix> J<RA><Dec>"` can reuse the same exact emitter.
  * Today the consumers are:
  *
- *   - `iauName(source, ra, dec)` — survey-aware designation
+ *   - `iauName(source, ra, dec)` — galaxy-catalog-aware designation
  *     (`"SDSS J…"`, `"2MASX J…"`, etc.).
  *   - `galaxyInfoBuilder` — Milliquas display-name reconstruction
  *     from the bin's `parentSurveyByte` (`"SDSS J…"`, `"2MASX J…"`,
- *     `"GAIA J…"`, …) without going through the survey enum, since
+ *     `"GAIA J…"`, …) without going through the galaxy catalog enum, since
  *     Milliquas rows can carry any of those parent prefixes.
  *
  * Sharing one suffix builder guarantees the historical IAU strings

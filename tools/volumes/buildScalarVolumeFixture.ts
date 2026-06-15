@@ -14,8 +14,8 @@
 
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { encodeScalarField } from '../../src/data/scalarFieldFormat';
-import type { ScalarCube } from '../../src/@types/data/ScalarCube';
+import { encodeScalarField } from '../../src/data/volume/scalarFieldFormat';
+import type { ScalarCube } from '../../src/@types/data/volume/ScalarCube';
 
 const OUT = 'tests/fixtures/scalar-volume/tiny-8x8x8.scfd';
 

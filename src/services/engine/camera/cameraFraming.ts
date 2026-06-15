@@ -1,7 +1,7 @@
 /**
  * cameraFraming — pure helper that produces the engine's initial camera
  * snapshot. Pure constants; no dependency on loaded data so the camera
- * can be built before any survey has arrived.
+ * can be built before any galaxy catalog has arrived.
  *
  * ### Constants
  *
@@ -32,7 +32,7 @@ export const FAR_CLIP_MPC = 50000;
 
 /**
  * Compute the initial camera snapshot. Pure constants — no dependency on
- * loaded catalogs, so the camera can be built before any survey arrives.
+ * loaded catalogs, so the camera can be built before any galaxy catalog arrives.
  *
  * @param fovYRad  Vertical field-of-view in radians (e.g. 60° → π/3).
  */

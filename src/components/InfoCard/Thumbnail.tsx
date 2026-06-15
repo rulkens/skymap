@@ -5,7 +5,7 @@
  * same-size placeholder so the surrounding layout doesn't reflow.
  *
  * The fallback chain serves famous galaxies: `url` is the curated tile and
- * `fallbackUrl` the survey sky cutout, so a galaxy without a curated tile
+ * `fallbackUrl` the galaxy catalog sky cutout, so a galaxy without a curated tile
  * still shows an image instead of the placeholder.
  */
 

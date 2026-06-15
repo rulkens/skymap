@@ -1,10 +1,10 @@
 /**
  * setHighlightFallback — pure reducer for the orientation-fallback highlight
- * debug toggle (which surveys lack a measured position angle).
+ * debug toggle (which galaxy catalogs lack a measured position angle).
  *
- * Copy-on-write at the `surveys` cluster only (new top-level + new `surveys`
+ * Copy-on-write at the `galaxyCatalogs` cluster only (new top-level + new `galaxyCatalogs`
  * ref, siblings untouched) — the shared settings-reducer contract. The boolean
- * stores verbatim; the renderer reads `state.settings.surveys.highlightFallback`
+ * stores verbatim; the renderer reads `state.settings.galaxyCatalogs.highlightFallback`
  * each frame.
  */
 
@@ -14,5 +14,5 @@ export function setHighlightFallback(
   state: EngineSettingsState,
   highlightFallback: boolean,
 ): EngineSettingsState {
-  return { ...state, surveys: { ...state.surveys, highlightFallback } };
+  return { ...state, galaxyCatalogs: { ...state.galaxyCatalogs, highlightFallback } };
 }

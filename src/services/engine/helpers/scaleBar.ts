@@ -61,7 +61,7 @@
  *     emit garbage.
  */
 
-import { formatDistance } from '../../../utils/format/distance';
+import { formatDistance } from '../../../utils/format/formatDistance';
 import { niceRound } from './galaxyInfoBuilder';
 import type { ScaleInfo } from '../../../@types/engine/ScaleInfo';
 import type { ScaleBarCamera } from '../../../@types/camera/ScaleBarCamera';

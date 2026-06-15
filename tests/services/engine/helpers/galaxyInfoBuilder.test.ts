@@ -22,7 +22,7 @@ import {
   niceRound,
 } from '../../../../src/services/engine/helpers/galaxyInfoBuilder';
 import { Source } from '../../../../src/data/sources';
-import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import { fallbackOrientation } from '../../../../src/utils/random/fallbackOrientation';
 import { cartesianToRaDecZ } from '../../../../src/utils/math/cartesianToRaDecZ';
 import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';

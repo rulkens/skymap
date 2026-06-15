@@ -159,9 +159,9 @@ export type EngineCallbacks = {
    *
    * `onStructureCountsChange` reports the number of structures published per
    * marker category (cluster / supercluster / void) after each structure
-   * rebuild — the structure analogue of the per-survey
+   * rebuild — the structure analogue of the per-galaxy-catalog
    * `onCatalogReady` count, so the Structures panel can show "Clusters
-   * 573" the way the Surveys panel shows "SDSS 1,234,567".  Fired with
+   * 573" the way the Galaxy catalogs panel shows "SDSS 1,234,567".  Fired with
    * the full snapshot (not a delta) because the three groups settle
    * together when the bulk `.ccat` lands.
    */

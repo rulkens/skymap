@@ -20,7 +20,7 @@
 import type { ReactNode } from 'react';
 import type { SliderSpec } from '../../../@types/visualizations/SliderSpec';
 import type { NumericFlowKey } from '../../state/slices/flowSlice';
-import { MAX_PARTICLES } from '../../../../../src/data/flowFieldConstants';
+import { MAX_PARTICLES } from '../../../../../src/data/flow/flowFieldConstants';
 import { Panel } from '../../../../../src/components/common/Panel/Panel';
 import Button from '../../../../../src/components/common/Button/Button';
 import { useStore } from '../../state/useStore';

@@ -31,12 +31,12 @@
  * `MQ J<RA><Dec>` IAU name.
  */
 
-import { Source } from '../../src/data/sources.js';
+import { Source } from '../../src/data/sources';
 import {
   MILLIQUAS_CLASS_BYTE,
   MILLIQUAS_PARENT_SURVEY_BYTE,
-} from '../../src/data/sourceClass.js';
-import { nonCommentLines, type ParsedRecord } from './common.js';
+} from '../../src/data/galaxyCatalog/sourceClass';
+import { nonCommentLines, type ParsedRecord } from './common';
 
 // ─── Byte ranges (1-based inclusive, as published in the upstream ReadMe) ──
 

@@ -4,21 +4,21 @@ import { setDepthFade } from '../../../../../src/services/engine/settingsStore/r
 import { makeSettingsFixture } from '../makeSettingsFixture';
 
 describe('setDepthFade', () => {
-  it('copies-on-write the surveys cluster', () => {
+  it('copies-on-write the galaxy catalogs cluster', () => {
     const state = makeSettingsFixture();
-    const next = setDepthFade(state, !state.surveys.depthFade);
+    const next = setDepthFade(state, !state.galaxyCatalogs.depthFade);
 
-    expect(next.surveys.depthFade).toBe(!state.surveys.depthFade);
-    expect(next.surveys).not.toBe(state.surveys);
+    expect(next.galaxyCatalogs.depthFade).toBe(!state.galaxyCatalogs.depthFade);
+    expect(next.galaxyCatalogs).not.toBe(state.galaxyCatalogs);
     expect(next.tonemap).toBe(state.tonemap);
   });
 
   it('leaves the input state unmutated', () => {
     const state = makeSettingsFixture();
-    const before = state.surveys.depthFade;
+    const before = state.galaxyCatalogs.depthFade;
 
     setDepthFade(state, !before);
 
-    expect(state.surveys.depthFade).toBe(before);
+    expect(state.galaxyCatalogs.depthFade).toBe(before);
   });
 });

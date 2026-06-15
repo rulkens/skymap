@@ -9,7 +9,7 @@
  */
 
 import type { SettingsStore } from '../createSettingsStore';
-import type { StructureCategory } from '../../../../@types/engine/data/StructureCategory';
+import type { StructureCategory } from '../../../../@types/data/structure/StructureCategory';
 import { setStructureLabelEnabled } from '../reducers/setStructureLabelEnabled';
 
 export function setStructureLabelEnabledAction(

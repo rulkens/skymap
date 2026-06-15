@@ -25,7 +25,7 @@ import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRende
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
 import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
-import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
+import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
 import type { FlowFieldRenderer } from '../../rendering/FlowFieldRenderer';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
@@ -76,7 +76,7 @@ export type RenderFrameInput = {
    * state is silently a no-op — no render pass is opened and no draw
    * is invoked.
    */
-  scalarVolumeRenderer: ScalarVolumeRenderer | null;
+  volumeFieldRenderer: VolumeFieldRenderer | null;
   /**
    * Optional CF4++ flow-field renderer.  Null before `initGpu` constructs it.
    * `encodeFlowCompute` (pre-HDR compute) and `flowFieldPass` both null-check

@@ -12,7 +12,7 @@
  */
 
 import type { EngineSettingsState } from '../../../../@types/settings/EngineSettingsState';
-import type { BiasMode } from '../../../../@types/data/BiasMode';
+import type { BiasMode } from '../../../../@types/data/galaxyCatalog/BiasMode';
 
 export function selectBiasMode(state: EngineSettingsState): BiasMode {
   return state.bias.mode;

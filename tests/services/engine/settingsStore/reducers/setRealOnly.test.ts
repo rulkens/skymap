@@ -4,21 +4,21 @@ import { setRealOnly } from '../../../../../src/services/engine/settingsStore/re
 import { makeSettingsFixture } from '../makeSettingsFixture';
 
 describe('setRealOnly', () => {
-  it('copies-on-write the surveys cluster', () => {
+  it('copies-on-write the galaxy catalogs cluster', () => {
     const state = makeSettingsFixture();
-    const next = setRealOnly(state, !state.surveys.realOnly);
+    const next = setRealOnly(state, !state.galaxyCatalogs.realOnly);
 
-    expect(next.surveys.realOnly).toBe(!state.surveys.realOnly);
-    expect(next.surveys).not.toBe(state.surveys);
+    expect(next.galaxyCatalogs.realOnly).toBe(!state.galaxyCatalogs.realOnly);
+    expect(next.galaxyCatalogs).not.toBe(state.galaxyCatalogs);
     expect(next.tonemap).toBe(state.tonemap);
   });
 
   it('leaves the input state unmutated', () => {
     const state = makeSettingsFixture();
-    const before = state.surveys.realOnly;
+    const before = state.galaxyCatalogs.realOnly;
 
     setRealOnly(state, !before);
 
-    expect(state.surveys.realOnly).toBe(before);
+    expect(state.galaxyCatalogs.realOnly).toBe(before);
   });
 });

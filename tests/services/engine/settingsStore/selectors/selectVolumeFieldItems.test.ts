@@ -22,10 +22,10 @@ describe('selectVolumeFieldItems', () => {
     const afterMaster = setVolumesEnabled(state, !state.volumes.enabled);
     expect(selectVolumeFieldItems(afterMaster)).toBe(before);
 
-    // A wholly-unrelated cluster (brightness lives on surveys) also must not
+    // A wholly-unrelated cluster (brightness lives on galaxy catalogs) also must not
     // disturb the items ref.
-    const afterSurveys = { ...state, surveys: { ...state.surveys, brightness: 0.123 } };
-    expect(selectVolumeFieldItems(afterSurveys)).toBe(before);
+    const afterGalaxyCatalogs = { ...state, galaxyCatalogs: { ...state.galaxyCatalogs, brightness: 0.123 } };
+    expect(selectVolumeFieldItems(afterGalaxyCatalogs)).toBe(before);
   });
 
   it('returns a NEW ref when a field actually changes', () => {

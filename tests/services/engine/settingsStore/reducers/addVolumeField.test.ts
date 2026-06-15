@@ -15,7 +15,7 @@ describe('addVolumeField', () => {
     // Copy-on-write at the touched cluster only.
     expect(next.volumes).not.toBe(state.volumes);
     expect(next.volumes.items).not.toBe(state.volumes.items);
-    expect(next.surveys).toBe(state.surveys);
+    expect(next.galaxyCatalogs).toBe(state.galaxyCatalogs);
     // Sibling enabled leaf preserved.
     expect(next.volumes.enabled).toBe(state.volumes.enabled);
   });

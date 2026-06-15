@@ -4,13 +4,13 @@
  * Coverage:
  *   - opens exactly one beginRenderPass against the offscreen view with
  *     loadOp='clear', clearValue=(0,0,0,0)
- *   - calls scalarVolumeRenderer.draw inside the pass, passing the
+ *   - calls volumeFieldRenderer.draw inside the pass, passing the
  *     downsampled viewport size (not the full canvas size)
  *   - ends the render pass exactly once
  *   - threads timestampWrites onto the pass descriptor when one is
  *     passed in (split-encoder / timing path)
  *   - omits timestampWrites when one isn't passed (single-pass path)
- *   - does nothing if scalarVolumeRenderer is null
+ *   - does nothing if volumeFieldRenderer is null
  */
 import { describe, it, expect, vi } from 'vitest';
 import { encodeVolumes } from '../../../../src/services/engine/frame/encodeVolumes';
@@ -65,11 +65,11 @@ describe('encodeVolumes', () => {
   it('opens one render pass against the offscreen view with a (0,0,0,0) clear', () => {
     const env = makeFakeEncoder();
     const ctx = makeCtx();
-    const scalarVolumeRenderer = { draw: vi.fn(), hasActiveFields: () => true } as any;
+    const volumeFieldRenderer = { draw: vi.fn(), hasActiveFields: () => true } as any;
     encodeVolumes({
       encoder: env.encoder,
       ctx,
-      scalarVolumeRenderer,
+      volumeFieldRenderer,
       settingsOf: () => undefined,
       fadeOpacityOf: () => 1,
       timestampWrites: undefined,
@@ -85,15 +85,15 @@ describe('encodeVolumes', () => {
     expect(env.pass.end).toHaveBeenCalledTimes(1);
   });
 
-  it('passes the downsampled viewport size to scalarVolumeRenderer.draw', () => {
+  it('passes the downsampled viewport size to volumeFieldRenderer.draw', () => {
     const env = makeFakeEncoder();
     const ctx = makeCtx(); // canvas 1280x720 → floor(1280/N) x floor(720/N)
     const drawSpy = vi.fn();
-    const scalarVolumeRenderer = { draw: drawSpy, hasActiveFields: () => true } as any;
+    const volumeFieldRenderer = { draw: drawSpy, hasActiveFields: () => true } as any;
     encodeVolumes({
       encoder: env.encoder,
       ctx,
-      scalarVolumeRenderer,
+      volumeFieldRenderer,
       settingsOf: () => undefined,
       fadeOpacityOf: () => 1,
       timestampWrites: undefined,
@@ -113,11 +113,11 @@ describe('encodeVolumes', () => {
     const env = makeFakeEncoder();
     const ctx: ReadyFrameContext = { ...makeCtx(), canvasSize: { width: 1, height: 1 } };
     const drawSpy = vi.fn();
-    const scalarVolumeRenderer = { draw: drawSpy, hasActiveFields: () => true } as any;
+    const volumeFieldRenderer = { draw: drawSpy, hasActiveFields: () => true } as any;
     encodeVolumes({
       encoder: env.encoder,
       ctx,
-      scalarVolumeRenderer,
+      volumeFieldRenderer,
       settingsOf: () => undefined,
       fadeOpacityOf: () => 1,
       timestampWrites: undefined,
@@ -133,11 +133,11 @@ describe('encodeVolumes', () => {
       beginningOfPassWriteIndex: 18,
       endOfPassWriteIndex: 19,
     };
-    const scalarVolumeRenderer = { draw: vi.fn(), hasActiveFields: () => true } as any;
+    const volumeFieldRenderer = { draw: vi.fn(), hasActiveFields: () => true } as any;
     encodeVolumes({
       encoder: env.encoder,
       ctx,
-      scalarVolumeRenderer,
+      volumeFieldRenderer,
       settingsOf: () => undefined,
       fadeOpacityOf: () => 1,
       timestampWrites: tw,
@@ -152,11 +152,11 @@ describe('encodeVolumes', () => {
   it('omits timestampWrites when none is provided', () => {
     const env = makeFakeEncoder();
     const ctx = makeCtx();
-    const scalarVolumeRenderer = { draw: vi.fn(), hasActiveFields: () => true } as any;
+    const volumeFieldRenderer = { draw: vi.fn(), hasActiveFields: () => true } as any;
     encodeVolumes({
       encoder: env.encoder,
       ctx,
-      scalarVolumeRenderer,
+      volumeFieldRenderer,
       settingsOf: () => undefined,
       fadeOpacityOf: () => 1,
       timestampWrites: undefined,
@@ -168,13 +168,13 @@ describe('encodeVolumes', () => {
     expect(desc.timestampWrites).toBeUndefined();
   });
 
-  it('is a no-op when scalarVolumeRenderer is null', () => {
+  it('is a no-op when volumeFieldRenderer is null', () => {
     const env = makeFakeEncoder();
     const ctx = makeCtx();
     encodeVolumes({
       encoder: env.encoder,
       ctx,
-      scalarVolumeRenderer: null,
+      volumeFieldRenderer: null,
       settingsOf: () => undefined,
       fadeOpacityOf: () => 1,
       timestampWrites: undefined,
@@ -190,14 +190,14 @@ describe('encodeVolumes', () => {
     const env = makeFakeEncoder();
     const ctx = makeCtx();
     const drawSpy = vi.fn();
-    const scalarVolumeRenderer = {
+    const volumeFieldRenderer = {
       draw: drawSpy,
       hasActiveFields: () => false,
     } as any;
     encodeVolumes({
       encoder: env.encoder,
       ctx,
-      scalarVolumeRenderer,
+      volumeFieldRenderer,
       settingsOf: () => undefined,
       fadeOpacityOf: () => 1,
       timestampWrites: undefined,
@@ -213,13 +213,13 @@ describe('encodeVolumes', () => {
     const env = makeFakeEncoder();
     const ctx = makeCtx();
     const drawSpy = vi.fn();
-    const scalarVolumeRenderer = { draw: drawSpy, hasActiveFields: () => true } as any;
+    const volumeFieldRenderer = { draw: drawSpy, hasActiveFields: () => true } as any;
     const settingsOf = () => undefined;
     const fadeOpacityOf = () => 1;
     encodeVolumes({
       encoder: env.encoder,
       ctx,
-      scalarVolumeRenderer,
+      volumeFieldRenderer,
       settingsOf,
       fadeOpacityOf,
       timestampWrites: undefined,
@@ -235,13 +235,13 @@ describe('encodeVolumes', () => {
     const env = makeFakeEncoder();
     const ctx = makeCtx();
     const hasSpy = vi.fn((_settingsOf?: unknown, _fadeOpacityOf?: unknown) => true);
-    const scalarVolumeRenderer = { draw: vi.fn((..._args: unknown[]) => {}), hasActiveFields: hasSpy } as any;
+    const volumeFieldRenderer = { draw: vi.fn((..._args: unknown[]) => {}), hasActiveFields: hasSpy } as any;
     const settingsOf = () => undefined;
     const fadeOpacityOf = () => 1;
     encodeVolumes({
       encoder: env.encoder,
       ctx,
-      scalarVolumeRenderer,
+      volumeFieldRenderer,
       settingsOf,
       fadeOpacityOf,
       timestampWrites: undefined,

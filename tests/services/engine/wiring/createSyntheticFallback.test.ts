@@ -1,12 +1,12 @@
 /**
- * createSyntheticFallback — unit tests for the synthetic-survey fallback gate.
+ * createSyntheticFallback — unit tests for the synthetic-galaxy catalog fallback gate.
  *
  * The gate is intentionally imperative (not a pure demand predicate) because it
- * must see each survey's loaded `count` — a survey that resolves `ready` with
+ * must see each galaxy catalog's loaded `count` — a galaxy catalog that resolves `ready` with
  * zero galaxies is NOT a success. These tests pin that count-aware policy plus
  * the hidden-at-boot shortcut, asserting the observable contract: the
  * `'syntheticFallback'` request flag is armed (which `reevaluateDemand` then
- * turns into the synthetic slot's `load`), and per-survey `ready` arrivals echo
+ * turns into the synthetic slot's `load`), and per-galaxy-catalog `ready` arrivals echo
  * `onStatusChange`.
  *
  * The flag is the seam: `createSyntheticFallback` arms it and calls the REAL
@@ -18,13 +18,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createSyntheticFallback } from '../../../../src/services/engine/wiring/createSyntheticFallback';
 import { Source } from '../../../../src/data/sources';
-import { maskWith } from '../../../../src/utils/sourceMask';
-import { SURVEY_POINT_SOURCES } from '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry';
+import { maskWith } from '../../../../src/utils/maskWith';
+import { GALAXY_CATALOG_POINT_SOURCES } from '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
-import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 
 // ── Stub slot ────────────────────────────────────────────────────────────────
@@ -91,12 +91,12 @@ type MakeStateResult = {
 
 /**
  * Build a minimal engine state with a stub slot per tier-fetched source plus
- * Synthetic. `drawMask` defaults to every survey visible (so none is treated
+ * Synthetic. `drawMask` defaults to every galaxy catalog visible (so none is treated
  * as hidden-at-boot). `settings` is a benign partial — `reevaluateDemand`
  * guards each row, so any predicate that touches an absent leaf is contained.
  */
 function makeState(opts: { drawMask?: number } = {}): MakeStateResult {
-  // Every survey + Famous + Synthetic visible by default.
+  // Every galaxy catalog + Famous + Synthetic visible by default.
   const everyVisible = [
     Source.SDSS,
     Source.TwoMRS,
@@ -134,29 +134,29 @@ function makeState(opts: { drawMask?: number } = {}): MakeStateResult {
   return { state, slots, onStatusChange, cb };
 }
 
-/** Drive every real survey slot through a final state (ready/error). */
-function settleSurveys(
+/** Drive every real galaxy catalog slot through a final state (ready/error). */
+function settleGalaxyCatalogs(
   slots: Map<SourceType, StubSlot>,
   driver: (src: SourceType) => LoadState<GalaxyCatalog>,
 ): void {
-  for (const src of SURVEY_POINT_SOURCES) slots.get(src)?.emit(driver(src));
+  for (const src of GALAXY_CATALOG_POINT_SOURCES) slots.get(src)?.emit(driver(src));
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 describe('createSyntheticFallback', () => {
-  it('arms synthetic fallback (sets the flag) when every real survey settles in error', () => {
+  it('arms synthetic fallback (sets the flag) when every real galaxy catalog settles in error', () => {
     const { state, slots, cb } = makeState();
     createSyntheticFallback(state, cb);
 
-    settleSurveys(slots, () => errored());
+    settleGalaxyCatalogs(slots, () => errored());
 
     expect(state.requests.has('syntheticFallback')).toBe(true);
     // The seam closes: reevaluateDemand saw the flag and loaded the synthetic slot.
     expect(slots.get(Source.Synthetic)?.load).toHaveBeenCalledTimes(1);
   });
 
-  it('does not arm when any real survey succeeds (ready count>0)', () => {
+  it('does not arm when any real galaxy catalog succeeds (ready count>0)', () => {
     const { state, slots, cb } = makeState();
     createSyntheticFallback(state, cb);
 
@@ -168,15 +168,15 @@ describe('createSyntheticFallback', () => {
 
     expect(state.requests.has('syntheticFallback')).toBe(false);
     expect(slots.get(Source.Synthetic)?.load).not.toHaveBeenCalled();
-    // Each settled survey subscriber self-unsubscribed (the once-only
+    // Each settled galaxy catalog subscriber self-unsubscribed (the once-only
     // counted/unsub guard) — no listener leak.
-    for (const src of SURVEY_POINT_SOURCES) {
+    for (const src of GALAXY_CATALOG_POINT_SOURCES) {
       expect(slots.get(src)?.liveListeners()).toBe(0);
     }
   });
 
-  it('arms when a real survey is ready but EMPTY (count 0) and the rest error', () => {
-    // The empty-ready edge: a survey ready with count===0 is NOT a success, so
+  it('arms when a real galaxy catalog is ready but EMPTY (count 0) and the rest error', () => {
+    // The empty-ready edge: a galaxy catalog ready with count===0 is NOT a success, so
     // the fallback must still arm. This is the case a pure ctx predicate (which
     // sees only the 'ready' discriminant, not the count) could not capture.
     const { state, slots, cb } = makeState();
@@ -191,9 +191,9 @@ describe('createSyntheticFallback', () => {
     expect(slots.get(Source.Synthetic)?.load).toHaveBeenCalledTimes(1);
   });
 
-  it('counts a hidden-at-boot survey as already settled', () => {
+  it('counts a hidden-at-boot galaxy catalog as already settled', () => {
     // Hide SDSS in the drawMask: its slot never transitions, but the gate must
-    // not wait on it. Driving the OTHER three surveys to error then arms.
+    // not wait on it. Driving the OTHER three galaxy catalogs to error then arms.
     const everyButSdss = [
       Source.TwoMRS,
       Source.Glade,
@@ -212,7 +212,7 @@ describe('createSyntheticFallback', () => {
     expect(slots.get(Source.Synthetic)?.load).toHaveBeenCalledTimes(1);
   });
 
-  it('emits onStatusChange per real-survey ready arrival', () => {
+  it('emits onStatusChange per real-galaxy catalog ready arrival', () => {
     const { slots, onStatusChange, cb, state } = makeState();
     createSyntheticFallback(state, cb);
 

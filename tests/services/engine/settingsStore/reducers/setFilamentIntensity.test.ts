@@ -12,7 +12,7 @@ describe('setFilamentIntensity', () => {
     // The touched cluster is a NEW reference …
     expect(next.filaments).not.toBe(state.filaments);
     // … but a sibling cluster keeps its existing reference (structural sharing).
-    expect(next.surveys).toBe(state.surveys);
+    expect(next.galaxyCatalogs).toBe(state.galaxyCatalogs);
   });
 
   it('preserves the sibling enabled leaf on the shared cluster', () => {

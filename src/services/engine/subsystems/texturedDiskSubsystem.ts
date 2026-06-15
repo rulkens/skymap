@@ -25,9 +25,7 @@
  */
 
 import { Source } from '../../../data/sources';
-import { paddedRadiusMpc } from '../../../utils/galaxySize';
-import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import { paddedRadiusMpc } from '../../../utils/paddedRadiusMpc';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
 import type { GalaxyAtlasSubsystem } from '../../../@types/engine/subsystems/GalaxyAtlasSubsystem';
@@ -38,8 +36,7 @@ import type {
   TexturedDiskFrameOutput,
   TexturedDiskSubsystemWithTestSeam,
 } from '../../../@types/engine/subsystems/TexturedDiskSubsystem';
-import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
-import { fetchGalaxyBitmap } from '../../../utils/network/galaxyImageFetcher';
+import { fetchGalaxyBitmap } from '../../../utils/network/fetchGalaxyBitmap';
 import { cartesianToRaDec } from '../../../utils/math';
 import { calibratedDiskSizeWorld, effectiveTilt, nucleusCorner } from './famousPlacement';
 import type { Vec2 } from '../../../@types/math/Vec2';

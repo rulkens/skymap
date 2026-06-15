@@ -6,7 +6,7 @@
  *
  * The engine-side `EngineSettingsState` (see
  * `./EngineSettingsState.d.ts`) is the canonical mutable bag living
- * inside the engine closure, organised by *cluster* (`surveys`,
+ * inside the engine closure, organised by *cluster* (`galaxyCatalogs`,
  * `tonemap`, `camera`, `bias`, `thumbnails`, `milkyWay`, `filaments`,
  * `volumes`) so every cluster mirrors a sub-handle namespace 1:1.
  *

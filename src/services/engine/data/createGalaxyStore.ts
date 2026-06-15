@@ -1,6 +1,6 @@
 import type { GalaxyStore } from '../../../@types/engine/data/GalaxyStore';
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 
 /**

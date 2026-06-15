@@ -84,20 +84,20 @@
  */
 
 import { readFileSync, writeFileSync, existsSync, renameSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { rawDataPath } from '../utils/io/rawDataRegistry.js';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
 
-import { parseFamousSeed, validateFamousEntry, type FamousEntry } from '../parsers/famousSeed.js';
+import { parseFamousSeed, validateFamousEntry, type FamousEntry } from '../parsers/famousSeed';
 import {
   parseHyperLedaMeandata,
   hyperLedaMeandataUrl,
   type HyperLedaMeandataRow,
-} from '../parsers/hyperledaMeandata.js';
-import { parseWikipediaSummary, wikipediaSummaryUrl } from '../parsers/wikipediaSummary.js';
-import { loadJsonCache, saveJsonCache } from '../utils/io/jsonCache.js';
-import { parseFlags } from '../utils/cli/args.js';
-import { delay } from '../utils/async/delay.js';
+} from '../parsers/hyperledaMeandata';
+import { parseWikipediaSummary, wikipediaSummaryUrl } from '../parsers/wikipediaSummary';
+import { loadJsonCache } from '../utils/io/loadJsonCache';
+import { saveJsonCache } from '../utils/io/saveJsonCache';
+import { parseFlags } from '../utils/cli/args';
+import { delay } from '../utils/async/delay';
 
 // ──────────────────────────────────────────────────────────────────────
 // Constants
@@ -682,8 +682,12 @@ async function main(): Promise<void> {
   process.stderr.write(`loaded ${existingEntries.length} existing seed entries\n`);
 
   // ── Load caches ───────────────────────────────────────────────────
-  const hyperledaCache = flags.noCache ? {} : loadJsonCache<Record<string, string>>(hyperledaCachePath);
-  const wikipediaCache = flags.noCache ? {} : loadJsonCache<Record<string, string>>(wikipediaCachePath);
+  const hyperledaCache = flags.noCache
+    ? {}
+    : loadJsonCache<Record<string, string>>(hyperledaCachePath);
+  const wikipediaCache = flags.noCache
+    ? {}
+    : loadJsonCache<Record<string, string>>(wikipediaCachePath);
   process.stderr.write(
     `cache: ${Object.keys(hyperledaCache).length} HyperLEDA, ${Object.keys(wikipediaCache).length} Wikipedia\n`,
   );

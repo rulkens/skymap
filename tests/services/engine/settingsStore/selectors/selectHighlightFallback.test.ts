@@ -4,9 +4,9 @@ import { selectHighlightFallback } from '../../../../../src/services/engine/sett
 import { makeSettingsFixture } from '../makeSettingsFixture';
 
 describe('selectHighlightFallback', () => {
-  it('returns surveys.highlightFallback', () => {
+  it('returns galaxy catalogs.highlightFallback', () => {
     const state = makeSettingsFixture({
-      surveys: { ...makeSettingsFixture().surveys, highlightFallback: true },
+      galaxyCatalogs: { ...makeSettingsFixture().galaxyCatalogs, highlightFallback: true },
     });
 
     expect(selectHighlightFallback(state)).toBe(true);

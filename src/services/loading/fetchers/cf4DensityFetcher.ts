@@ -14,15 +14,11 @@
  */
 
 import type { Fetcher } from '../../../@types/loading/Fetcher';
-import type { ScalarCube } from '../../../@types/data/ScalarCube';
-import { decodeScalarField } from '../../../data/scalarFieldFormat';
+import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
+import { decodeScalarField } from '../../../data/volume/scalarFieldFormat';
 import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
 
-export const cf4DensityFetcher: Fetcher<ScalarCube, void> = async (
-  _req,
-  signal,
-  onProgress,
-) => {
+export const cf4DensityFetcher: Fetcher<ScalarCube, void> = async (_req, signal, onProgress) => {
   const buf = await fetchWithProgress(dataUrl('cf4_density.scfd'), signal, onProgress);
   return decodeScalarField(buf);
 };

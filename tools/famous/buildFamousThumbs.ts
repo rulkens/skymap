@@ -39,15 +39,15 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } fro
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { parseRecipe, type RecipeCrop, type RecipeDisk } from '../famous-curator/plugin/recipe.js';
-import { resolveStarnetConfig } from '../famous-curator/plugin/starnet.js';
-import { willDeproject } from './deprojectDisk.js';
-import { squareDeprojectCrop } from './squareDeprojectCrop.js';
-import { buildThumbTile } from './buildThumbTile.js';
-import { resolveFamousSourceUrl } from './resolveFamousSourceUrl.js';
-import { fetchWithCache } from './sourceImageCache.js';
-import { publishFamousRuntimeImages, CURATED_DIR } from './publishFamousRuntimeImages.js';
-import { rawDataPath } from '../utils/io/rawDataRegistry.js';
+import { parseRecipe, type RecipeCrop, type RecipeDisk } from '../famous-curator/plugin/recipe';
+import { resolveStarnetConfig } from '../famous-curator/plugin/starnet';
+import { willDeproject } from './deprojectDisk';
+import { squareDeprojectCrop } from './squareDeprojectCrop';
+import { buildThumbTile } from './buildThumbTile';
+import { resolveFamousSourceUrl } from './resolveFamousSourceUrl';
+import { fetchWithCache } from './sourceImageCache';
+import { publishFamousRuntimeImages, CURATED_DIR } from './publishFamousRuntimeImages';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
 
 const UA = 'skymap-curator/0.3 (https://github.com/rulkens/skymap; rulkens@gmail.com)';
 

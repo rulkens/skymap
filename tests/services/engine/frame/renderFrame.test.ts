@@ -19,12 +19,12 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/sources';
-import { BiasMode } from '../../../../src/data/biasMode';
+import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
-import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { mat4 } from 'gl-matrix';
 import type { Selection } from '../../../../src/@types/engine/subsystems/Selection';
 
@@ -333,7 +333,7 @@ function makeInput(
           labelRenderer: null,
           markerLineRenderer: null,
           selectionRingRenderer: null,
-          scalarVolumeRenderer: null,
+          volumeFieldRenderer: null,
           flowFieldRenderer: null,
           structureMarkerRenderer: null,
           focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
@@ -366,7 +366,7 @@ function makeInput(
       milkyWayRenderer,
       horizonShellRenderer,
       filamentRenderer: null,
-      scalarVolumeRenderer: null,
+      volumeFieldRenderer: null,
       flowFieldRenderer: null,
       texturedQuadRenderer,
       texturedDiskRenderer,
@@ -539,20 +539,20 @@ describe('renderFrame', () => {
   });
 
   it('opens a pre-HDR render pass against the half-res view when volumes are active', () => {
-    // When `volumesEnabled` is true AND scalarVolumeRenderer has active
+    // When `volumesEnabled` is true AND volumeFieldRenderer has active
     // fields, `encodeVolumes` must run BEFORE the HDR mega-pass.  The
     // fixture's default settings has volumesEnabled=false → no pre-pass
     // fires.  We force-enable it here and stub a renderer with an
     // active field, then check that the FIRST beginRenderPass goes
     // against the half-res view.
     const fx2 = makeInput({ settings: { volumesEnabled: true } });
-    // Wire in a scalarVolumeRenderer with active fields.
+    // Wire in a volumeFieldRenderer with active fields.
     const drawSpy = vi.fn();
-    (fx2.input as any).scalarVolumeRenderer = {
+    (fx2.input as any).volumeFieldRenderer = {
       draw: drawSpy,
       hasActiveFields: () => true,
     };
-    (fx2.input.state as any).gpu.scalarVolumeRenderer = {
+    (fx2.input.state as any).gpu.volumeFieldRenderer = {
       draw: drawSpy,
       hasActiveFields: () => true,
     };

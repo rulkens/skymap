@@ -50,14 +50,14 @@ fn fsPick(in: VSOut) -> @location(0) vec4<u32> {
   // Write '(sourceCode << 27 | instance_index) + 1' so background
   // pixels (cleared to 0) are distinguishable from a real hit. The +1
   // keeps 0 as the unambiguous 'no hit' sentinel; even with sourceCode
-  // = 0 (the Synthetic survey) and localIdx = 0 the written value is
+  // = 0 (the Synthetic galaxy catalog) and localIdx = 0 the written value is
   // 1, never 0.
   //
   // 'in.instanceIdx' was assembled in the vertex stage from
   // '(source.sourceCode << 27u) | @builtin(instance_index)'. The
-  // packing gives every survey a structurally-disjoint identity range
+  // packing gives every galaxy catalog a structurally-disjoint identity range
   // (top 5 bits = source code, bottom 27 = local index <= 134M), so
-  // two galaxies in different surveys can never collide on the same
+  // two galaxies in different galaxy catalogs can never collide on the same
   // pick value.
   //
   // The g/b/a channels are unused — we only read the r channel back

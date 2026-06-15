@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildSegmentInstances } from '../../../../src/services/gpu/renderers/filamentRenderer';
-import type { FilamentCloud } from '../../../../src/@types/data/FilamentCloud';
+import type { FilamentCloud } from '../../../../src/@types/data/filament/FilamentCloud';
 
 describe('buildSegmentInstances', () => {
   it('emits one instance per consecutive vertex pair within each strip', () => {

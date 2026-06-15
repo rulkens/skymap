@@ -18,7 +18,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { mat4 } from 'gl-matrix';
 
 import { Source } from '../../../../../src/data/sources';
-import { BiasMode } from '../../../../../src/data/biasMode';
+import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../../src/data/toneMapCurve';
 import {
   HDR_PASSES,
@@ -121,7 +121,7 @@ function makeDeps(overrides: Partial<PassDeps> = {}): PassDeps {
     texturedDiskRenderer: { draw: vi.fn(), bindAtlas: vi.fn() } as any,
     proceduralDiskRenderer: { draw: vi.fn() } as any,
     filamentRenderer: null,
-    scalarVolumeRenderer: null,
+    volumeFieldRenderer: null,
     flowFieldRenderer: null,
     milkyWayRenderer: { draw: vi.fn() } as any,
     horizonShellRenderer: { draw: vi.fn() } as any,

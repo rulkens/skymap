@@ -1,6 +1,6 @@
 /**
  * Fields shared by every row of the SOURCE_REGISTRY, regardless of kind.
- * Each variant (`SurveySourceEntry`, `StructureSourceEntry`, ...) intersects with
+ * Each variant (`GalaxyCatalogSourceEntry`, `StructureSourceEntry`, ...) intersects with
  * this base and adds its own discriminator (`type: '<kind>'`) plus
  * kind-specific fields.
  */
@@ -13,15 +13,15 @@ export type SourceEntryBase = {
   readonly label: string;
   /**
    * True if the source covers (approximately) the full celestial sphere.
-   * For surveys this is the footprint flag; for structures it's trivially true
-   * (anchors are individual points, not survey patches), so the renderer's
+   * For galaxy catalogs this is the footprint flag; for structures it's trivially true
+   * (anchors are individual points, not galaxy catalog patches), so the renderer's
    * coverage-mask logic stays well-behaved across both kinds.
    */
   readonly allSky: boolean;
   /**
    * Whether the source is rendered by default. Drives `ALL_VISIBLE_MASK`
-   * (bitwise-OR of every `type: 'survey'` entry whose `visible` is true)
-   * and the engine's startup `drawMask`. Users can toggle a survey on or
+   * (bitwise-OR of every `type: 'galaxyCatalog'` entry whose `visible` is true)
+   * and the engine's startup `drawMask`. Users can toggle a galaxy catalog on or
    * off at runtime — this is purely the default.
    */
   readonly visible: boolean;
@@ -31,7 +31,7 @@ export type SourceEntryBase = {
    * label subsystem. The two real label sets are:
    *   - galaxyNames layer: famousGalaxy
    *   - structure layer:   cluster, supercluster, void, group
-   * All bulk surveys (sdss, glade, 2mrs, milliquas, synthetic) are false.
+   * All bulk galaxy catalogs (sdss, glade, 2mrs, milliquas, synthetic) are false.
    */
   readonly bearsLabel: boolean;
   /**

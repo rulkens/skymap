@@ -4,7 +4,7 @@
  *
  * ### Why this exists
  *
- * The boot path needs a fallback when every real survey is empty/errored
+ * The boot path needs a fallback when every real galaxy catalog is empty/errored
  * (no network, missing .bin files, dev launch with no data).  Pre-spec-A
  * the engine called `renderer.upload(Source.Synthetic, generateSyntheticCloud(...))`
  * directly, bypassing the slot machinery — two code paths for the same
@@ -13,7 +13,7 @@
  * Routing the synthetic through a slot collapses both paths into one.
  * Synthetic gets the same fade-in, the same `LoadingDevPanel` row, the
  * same retry semantics, and the same race-checked commit ordering as
- * every real survey for free.
+ * every real galaxy catalog for free.
  *
  * ### Why a fixed count
  *
@@ -33,9 +33,9 @@
  */
 
 import type { Fetcher } from '../../../@types/loading/Fetcher';
-import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
-import { generateSyntheticCloud } from '../../../data/synthetic';
+import { generateSyntheticCloud } from '../../../data/galaxyCatalog/synthetic';
 
 /** Hard-coded synthetic catalog size — matches the legacy fallback. */
 export const SYNTHETIC_POINT_COUNT = 100_000;

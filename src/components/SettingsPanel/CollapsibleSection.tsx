@@ -3,7 +3,7 @@
  *
  * ### Why this exists
  *
- * The SettingsPanel grew to ~80 controls in seven loose groupings (Surveys,
+ * The SettingsPanel grew to ~80 controls in seven loose groupings (Galaxy catalogs,
  * Density correction, Tone curve, Visual sliders, Overlays, Input,
  * Orientation).  Without internal folding, the user had to scroll a uniform
  * wall of rows to find any single slider.  Wrapping each grouping in a
@@ -45,7 +45,7 @@ type Props = {
    * fresh visitor sees a tidy panel of section headers rather than an
    * 80-control wall — they expand only the sections they care about.
    * Override with `defaultOpen={true}` for sections that should be open
-   * on first paint (e.g. Surveys, the panel's primary affordance).
+   * on first paint (e.g. Galaxy catalogs, the panel's primary affordance).
    */
   defaultOpen?: boolean;
   children: ReactNode;
@@ -67,7 +67,7 @@ type Props = {
   /**
    * Optional indeterminate visual state for the master checkbox —
    * rendered as a dash/dot rather than empty or checked.  Used by the
-   * Surveys section when SOME but not ALL per-source toggles are on,
+   * Galaxy catalogs section when SOME but not ALL per-source toggles are on,
    * to communicate "mixed".
    *
    * Why imperative: the HTML `indeterminate` IDL attribute is not the

@@ -54,7 +54,7 @@ import { createLabelRenderer } from '../../gpu/renderers/labelRenderer';
 import { createMarkerLineRenderer } from '../../gpu/renderers/markerLineRenderer';
 import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRingRenderer';
 import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarkerRenderer';
-import { createScalarVolumeRenderer } from '../../gpu/renderers/scalarVolumeRenderer';
+import { createVolumeFieldRenderer } from '../../gpu/renderers/volumeFieldRenderer';
 import { createFlowFieldRenderer } from '../../gpu/renderers/flowFieldRenderer';
 import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
@@ -62,7 +62,7 @@ import { createDiskRadiusRing } from '../../gpu/passes/diskRadiusRing';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOT_NAMES } from '../frame/passes';
 import { loadFontAtlases } from '../../gpu/labels/loadFontAtlases';
-import { hasUrlGate } from '../../../utils/url/urlGate';
+import { hasUrlGate } from '../../../utils/url/hasUrlGate';
 import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
   wireGalaxyCatalogSourceSlot,
@@ -174,7 +174,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // overlay renderers in one block, sequenced after the PointRenderer but
   // before the GALAXY_CATALOG_SOURCE_REGISTRY loop.  Awaiting the atlas
   // fetch here keeps the loop below from racing ahead of it; in practice
-  // the ~120 KB atlas resolves well before the much larger per-survey
+  // the ~120 KB atlas resolves well before the much larger per-galaxy-catalog
   // `.bin` fetches.  All renderers share the `{ device, context, format,
   // canvas }` GpuContext shape, so building them here keeps GPU-resource
   // allocation at one site.
@@ -216,7 +216,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
 
   // ── Per-source asset slots ───────────────────────────────────────────
   //
-  // Every survey flows through `createAssetSlot`: one cell of mutable
+  // Every galaxy catalog flows through `createAssetSlot`: one cell of mutable
   // LoadState behind a race-checked fetch→commit façade (see
   // `AssetSlot.ts` for the race-check points that fix the tier-swap
   // stomping bug).
@@ -267,7 +267,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // Procedural Milky Way impostor at world origin.  See
   // `services/gpu/milkyWayRenderer.ts` for the rationale on why this
   // is a sibling renderer rather than tucked into the per-galaxy
-  // procedural-disk pass, and `utils/math/milkyWayFade.ts` for the
+  // procedural-disk pass, and `utils/math/milkyWayFadeAlpha.ts` for the
   // distance-fade band.
   const milkyWayRenderer = createMilkyWayRenderer({
     device,
@@ -320,12 +320,12 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // EngineState dependency), so keeping it FadeRegistry-agnostic leaves
   // the factory pure (testable without a registry stub) and puts the
   // registry-side wiring at the bootstrap layer.
-  state.gpu.scalarVolumeRenderer = createScalarVolumeRenderer(
+  state.gpu.volumeFieldRenderer = createVolumeFieldRenderer(
     device,
     'rgba16float',
     state.gpu.fadeBgl!,
     {
-      onFieldAdded: (handle) => {
+      onFieldAdded: (id) => {
         // Register at opacity 0 ONLY. Do NOT auto-fade-in here:
         // addVolumeField (the engine.ts wrapper that calls into this
         // factory) drives the fade-in itself, AFTER applying the
@@ -335,10 +335,10 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
         // draw-loop gate's "opacity > 0 keeps rendering through the
         // fade-out tail", that would draw disabled debug fields by
         // mistake.
-        state.subsystems.fades.register({ kind: 'scalarField', field: handle }, 0);
+        state.subsystems.fades.register({ kind: 'scalarField', field: id }, 0);
       },
-      onFieldRemoved: (handle) => {
-        state.subsystems.fades.unregister({ kind: 'scalarField', field: handle });
+      onFieldRemoved: (id) => {
+        state.subsystems.fades.unregister({ kind: 'scalarField', field: id });
       },
     },
   );

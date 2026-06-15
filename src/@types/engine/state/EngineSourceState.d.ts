@@ -8,8 +8,8 @@
  *                   and the renderer's per-frame draw loop.  Both are DERIVED
  *                   OUTPUTS: `deriveSourceMasks` recomputes them every frame
  *                   (and synchronously inside `setSourceVisible` on a toggle)
- *                   from each survey's `settings.surveys.items[id].enabled`
- *                   flag + that survey's live fade opacity.  No setter writes
+ *                   from each galaxy catalog's `settings.galaxyCatalogs.items[id].enabled`
+ *                   flag + that galaxy catalog's live fade opacity.  No setter writes
  *                   them directly — the settings record is the single source
  *                   of truth, and these masks are a compiled projection of it.
  *
@@ -27,14 +27,14 @@ import type { Tier } from '../../data/Tier';
 export type EngineSourceState = {
   /**
    * pickMask — derived output, packed from `enabled` alone (= intent). The
-   * picker reads this mask; a survey toggled off is non-clickable the
+   * picker reads this mask; a galaxy catalog toggled off is non-clickable the
    * instant it's toggled, even while still visibly fading. Recomputed by
    * `deriveSourceMasks`, never assigned by a setter.
    */
   pickMask: number;
   /**
    * drawMask — derived output, packed from `enabled || opacity > 0`. The
-   * renderer's per-source draw loop reads it; a just-hidden survey keeps
+   * renderer's per-source draw loop reads it; a just-hidden galaxy catalog keeps
    * its draw bit through the fade-out tail (so it ramps down smoothly) and
    * loses it only once opacity resolves to 0. Recomputed by
    * `deriveSourceMasks`, never assigned by a setter.

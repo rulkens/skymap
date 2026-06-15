@@ -109,13 +109,13 @@ describe('ASSET_WIRING membership', () => {
 });
 
 describe('ASSET_WIRING demand predicates', () => {
-  it("survey rows demand the survey's enabled settings bit", () => {
+  it("galaxy catalog rows demand the galaxy catalog's enabled settings bit", () => {
     const sdss = rowFor(Source.SDSS);
     expect(
-      sdss.demand(makeCtx({ settings: { surveys: { items: { sdss: { enabled: true } } } } })),
+      sdss.demand(makeCtx({ settings: { galaxyCatalogs: { items: { sdss: { enabled: true } } } } })),
     ).toBe(true);
     // Absent items row (or disabled bit) ⇒ not demanded.
-    expect(sdss.demand(makeCtx({ settings: { surveys: { items: {} } } }))).toBe(false);
+    expect(sdss.demand(makeCtx({ settings: { galaxyCatalogs: { items: {} } } }))).toBe(false);
   });
 
   it('famousMeta demands when the Famous slot is not idle', () => {
@@ -223,7 +223,7 @@ describe('ASSET_WIRING demand predicates', () => {
     const synth = rowFor(Source.Synthetic);
     expect(synth.demand(makeCtx({ requests: new Set(['syntheticFallback']) }))).toBe(true);
     expect(synth.demand(makeCtx({ requests: new Set() }))).toBe(false);
-    // Survey slot states don't move the predicate any more.
+    // Galaxy catalog slot states don't move the predicate any more.
     expect(
       synth.demand(
         makeCtx({
@@ -240,7 +240,7 @@ describe('ASSET_WIRING demand predicates', () => {
 });
 
 describe('ASSET_WIRING req builders', () => {
-  it('survey rows carry { source, tier }', () => {
+  it('galaxy catalog rows carry { source, tier }', () => {
     expect(rowFor(Source.SDSS).req('medium')).toEqual({ source: Source.SDSS, tier: 'medium' });
     expect(rowFor(Source.Synthetic).req('large')).toEqual({
       source: Source.Synthetic,

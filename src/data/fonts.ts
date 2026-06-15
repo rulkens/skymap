@@ -41,6 +41,9 @@
  * `tests/data/fonts.test.ts` makes this explicit.
  */
 
+import type { FontConfig } from '../@types/data/FontConfig';
+import type { FontId } from '../@types/data/FontId';
+
 /**
  * Atlas page dimensions in pixels.  Every font bakes into a single
  * `ATLAS_PX × ATLAS_PX` PNG; this becomes the per-layer size of the
@@ -103,16 +106,6 @@ const ASCII_PRINTABLE = Array.from({ length: 95 }, (_, i) => String.fromCodePoin
 const UNIT_SYMBOLS = '°±µ';
 
 /**
- * Per-font configuration.  `ttf` is a filename relative to
- * `data/raw/fonts/`; `charset` is the union of codepoints the bake
- * step embeds in this font's atlas.
- */
-export type FontConfig = {
-  readonly ttf: string;
-  readonly charset: string;
-};
-
-/**
  * The registry.  Adding a font is a three-step config change:
  *   1. Drop the TTF under `data/raw/fonts/`.
  *   2. Add a `<id>: { ttf, charset }` entry below.
@@ -127,13 +120,6 @@ export const FONTS = {
     charset: ASCII_PRINTABLE + UNIT_SYMBOLS,
   },
 } as const satisfies Readonly<Record<string, FontConfig>>;
-
-/**
- * Union of registered font ids.  Used by `Label.font`, `LoadedFontAtlases`,
- * the renderer's per-instance attribute packing — anywhere a font is
- * referenced by id.
- */
-export type FontId = keyof typeof FONTS;
 
 /**
  * Ordered list of font ids.  `FONT_IDS[i]` is the GPU layer index for

@@ -22,12 +22,12 @@
  * The slot orchestration code does
  *
  *   await fades.fadeTo(handle, 0, FADE_OUT_DURATION_MS);
- *   renderer.upload(source, newCatalog);
+ *   renderer.upload(catalogId, newCatalog);
  *   fades.fadeTo(handle, 1, FADE_IN_DURATION_MS);
  *
  * — naturally sequential, naturally readable. A callback API would
  * force the second and third lines into a `.then(...)` continuation
- * and the Source-typed local bindings would have to be re-captured.
+ * and the local bindings would have to be re-captured.
  * The promise allocation per fade is negligible (a few per second at
  * most).
  *
@@ -93,11 +93,7 @@ export function createFadeController(
 
   function currentOpacity(now: number = performance.now()): number {
     if (transitionDurationMs <= 0) return targetOpacity;
-    const t = smoothstep(
-      transitionStartMs,
-      transitionStartMs + transitionDurationMs,
-      now,
-    );
+    const t = smoothstep(transitionStartMs, transitionStartMs + transitionDurationMs, now);
     return sourceOpacity + (targetOpacity - sourceOpacity) * t;
   }
 

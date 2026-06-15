@@ -2,7 +2,7 @@
  * cf4DensitySlot — factory for the CF-4 DM density volume's asset slot.
  *
  * On commit, hands the decoded `ScalarCube` to
- * `scalarVolumeRenderer.upload` under the handle `'cf4-density'`.
+ * `volumeFieldRenderer.upload` under the id `'cf4-density'`.
  * The renderer reads per-cube static config (contrastCenter, envelope,
  * paletteId) from the registry and user-tunable knobs from
  * `state.settings.volumes.items` per frame — the commit replays no
@@ -23,7 +23,7 @@ import { createAssetSlot } from '../AssetSlot';
 import { cf4DensityFetcher } from '../fetchers/cf4DensityFetcher';
 import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
-import type { ScalarCube } from '../../../@types/data/ScalarCube';
+import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
 export const createCf4DensitySlot: SlotFactory<ScalarCube, void> = (state, _cb) => {
@@ -31,21 +31,21 @@ export const createCf4DensitySlot: SlotFactory<ScalarCube, void> = (state, _cb) 
     name: 'cf4Density',
     fetch: cf4DensityFetcher,
     commit: async (cube) => {
-      const renderer = state.gpu.scalarVolumeRenderer;
+      const renderer = state.gpu.volumeFieldRenderer;
       if (!renderer) return;
-      const handle = SOURCE_REGISTRY[Source.Cf4Density].handle;
+      const id = SOURCE_REGISTRY[Source.Cf4Density].id;
       // Upload the cube; the renderer reads this field's per-cube static
       // config (contrastCenter, envelope, palette) from the registry and
       // its user-tunable knobs from `state.settings.volumes.items` per
       // frame, so the commit replays no renderer setter.  CF-4 is a
       // shippable volume, so its settings row already exists from the
       // construction seed.
-      renderer.upload(handle, cube);
+      renderer.upload(id, cube);
       // Fade up only if the user has the field toggled on (matches the
       // symmetric path in engine.ts addVolumeField).
-      if (state.settings.volumes.items[handle]?.enabled) {
+      if (state.settings.volumes.items[id]?.enabled) {
         void state.subsystems.fades.fadeTo(
-          { kind: 'scalarField', field: handle },
+          { kind: 'scalarField', field: id },
           1,
           FADE_IN_DURATION_MS,
         );

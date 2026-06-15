@@ -14,7 +14,7 @@
  * drift.
  */
 
-import type { StructureCategory } from '../../../@types/engine/data/StructureCategory';
+import type { StructureCategory } from '../../../@types/data/structure/StructureCategory';
 import type { Vec4 } from '../../../@types/math/Vec4';
 import { hexToGl } from '../../../utils/color/hexToGl';
 

@@ -20,7 +20,7 @@
  */
 
 import type { FontMetrics } from './FontMetrics';
-import type { FontId } from '../../data/fonts';
+import type { FontId } from '../data/FontId';
 
 export type LoadedFontAtlases = {
   readonly metricsByFont: Readonly<Record<FontId, FontMetrics>>;

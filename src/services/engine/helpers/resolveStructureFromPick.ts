@@ -40,8 +40,8 @@
  * to the full `StructureStore` import.
  */
 
-import type { StructureRecord } from '../../../@types/engine/data/StructureRecord';
-import type { StructureCategory } from '../../../@types/engine/data/StructureCategory';
+import type { StructureRecord } from '../../../@types/data/structure/StructureRecord';
+import type { StructureCategory } from '../../../@types/data/structure/StructureCategory';
 import type { PickStructureStore } from '../../../@types/engine/data/PickStructureStore';
 
 export type PickStructureInput = {

@@ -20,7 +20,7 @@
  * SourceUniforms at `@group(2)`.  The uniform carries the category's
  * 5-bit `sourceCode`, which the ringPick fragment composes into
  * `(sourceCode << 27) | structureIndex + PICK_SENTINEL_OFFSET` — the same
- * per-source pattern `pointRenderer` uses per survey.  Buckets are
+ * per-source pattern `pointRenderer` uses per galaxy catalog.  Buckets are
  * data-driven from `STRUCTURE_CATEGORIES`, so a new structure source
  * needs no change here.
  *
@@ -52,8 +52,11 @@ import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { StructureMarkerRenderer } from '../../../@types/rendering/StructureMarkerRenderer';
 import type { StructureMarkerDescriptor } from '../../../@types/rendering/StructureMarkerDescriptor';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
-import { STRUCTURE_CATEGORIES, STRUCTURE_CATEGORY_CODES } from '../../../data/structureCategories';
-import type { StructureCategory } from '../../../@types/engine/data/StructureCategory';
+import {
+  STRUCTURE_CATEGORIES,
+  STRUCTURE_CATEGORY_CODES,
+} from '../../../data/structure/structureCategories';
+import type { StructureCategory } from '../../../@types/data/structure/StructureCategory';
 import haloVsCode from '../shaders/structureMarker/halo.wesl?static';
 import haloFsCode from '../shaders/structureMarker/halo.wesl?static';
 import ringVsCode from '../shaders/structureMarker/ring.wesl?static';

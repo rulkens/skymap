@@ -8,14 +8,14 @@
  * without polling the GPU handle.
  *
  * Extends `DataItemSettings` so a volume field's on/off lives in the same
- * `enabled` field every other data item uses (`scalarVolumeRenderer.setEnabled`
+ * `enabled` field every other data item uses (`volumeFieldRenderer.setEnabled`
  * reads it when false). The per-field render knobs below ride on top — they're
- * what makes a scalar-volume field richer than a survey or structure item,
+ * what makes a scalar-volume field richer than a galaxy catalog or structure item,
  * which carry only visibility (and an optional label axis).
  */
 
 import type { DataItemSettings } from './DataItemSettings';
-import type { ScalarFieldPaletteId } from '../data/ScalarFieldPaletteId';
+import type { ScalarFieldPaletteId } from '../data/volume/ScalarFieldPaletteId';
 
 export type VolumeFieldSettings = DataItemSettings & {
   /** Linear mix-in weight in [0, 1].  Seeded from `DEFAULT_VOLUME_FIELD_INTENSITY`. */

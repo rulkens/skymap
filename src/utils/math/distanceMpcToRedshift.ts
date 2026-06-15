@@ -31,7 +31,7 @@ import { redshiftToDistanceMpc } from './redshiftToDistanceMpc';
  * distance > 9 Gpc — well beyond anything in our catalogs (Milliquas tails
  * at z ≈ 7).  A distance past `LUT_D[LUT_N]` saturates at `Z_MAX`, which
  * is the right behaviour: such a position is past the physical horizon and
- * shouldn't have come from a real survey row.
+ * shouldn't have come from a real galaxy catalog row.
  */
 const Z_MAX = 12;
 

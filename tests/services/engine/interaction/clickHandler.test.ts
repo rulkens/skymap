@@ -6,7 +6,7 @@
  * `pickToSelection.test.ts`). These tests verify the wrapper itself:
  *
  *   1. A picker miss (`null`) returns null.
- *   2. A survey hit returns its galaxy `Selection`.
+ *   2. A galaxy catalog hit returns its galaxy `Selection`.
  *   3. A structure hit resolves through the injected store to its id.
  *   4. The picker is called with the exact (viewport, x, y, sources)
  *      values supplied by the engine — no transformation.
@@ -17,10 +17,10 @@ import { describe, it, expect, vi } from 'vitest';
 import { createClickResolver } from '../../../../src/services/engine/interaction/clickHandler';
 import type { ClickResolveInput } from '../../../../src/@types/engine/ClickResolveInput';
 import type { PickStructureStore } from '../../../../src/@types/engine/data/PickStructureStore';
-import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
+import type { StructureRecord } from '../../../../src/@types/data/structure/StructureRecord';
 import { Source } from '../../../../src/data/sources';
 import type { createPickRenderer } from '../../../../src/services/gpu/renderers/pickRenderer';
-import type { PickResult } from '../../../../src/data/selectionEncoding';
+import type { PickResult } from '../../../../src/@types/data/PickResult';
 
 type PickRenderer = ReturnType<typeof createPickRenderer>;
 
@@ -58,7 +58,7 @@ describe('createClickResolver', () => {
     expect(await r.resolveClick(dummyArgs)).toBeNull();
   });
 
-  it('returns a galaxy Selection on a survey hit', async () => {
+  it('returns a galaxy Selection on a galaxy catalog hit', async () => {
     const r = createClickResolver({
       pickRenderer: makePicker({ sourceCode: Source.SDSS, localIdx: 7 }),
       structures,

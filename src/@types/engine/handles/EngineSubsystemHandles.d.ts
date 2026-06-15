@@ -66,7 +66,7 @@ export type EngineSubsystemHandles = {
   scheduler: RenderScheduler;
   /**
    * Unified fade registry — owns one FadeController per registered
-   * FadeHandle. Constructed eagerly BEFORE any renderer so renderer
+   * FadeId. Constructed eagerly BEFORE any renderer so renderer
    * construction can call `register(...)` without a null-check. Drives
    * the render-on-demand predicate and the slot orchestration's
    * fade-out → upload → fade-in sequence. See

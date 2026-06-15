@@ -81,10 +81,10 @@
  */
 
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
-import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
-import { BiasMode } from '../../../data/biasMode';
-import type { BiasMode as BiasModeT } from '../../../@types/data/BiasMode';
-import { Source, SURVEY_SOURCES } from '../../../data/sources';
+import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
+import { BiasMode } from '../../../data/galaxyCatalog/biasMode';
+import type { BiasMode as BiasModeT } from '../../../@types/data/galaxyCatalog/BiasMode';
+import { GALAXY_CATALOG_SOURCES } from '../../../data/sources';
 import type { ComputeSchechterRatiosInput } from '../../../@types/engine/ComputeSchechterRatiosInput';
 import type { ComputeAngularWeightsInput } from '../../../@types/engine/ComputeAngularWeightsInput';
 import type { SchechterRunner } from '../../../@types/engine/subsystems/SchechterRunner';
@@ -106,7 +106,7 @@ import type { SourceType } from '../../../@types/data/SourceType';
 // this module's defaults.
 import ComputeSchechterRatiosWorker from '../bake/computeSchechterRatios.worker?worker';
 import ComputeAngularWeightsWorker from '../bake/computeAngularWeights.worker?worker';
-import { cloneGalaxyCatalogForTransfer } from '../../../data/galaxyCatalogTransfer';
+import { cloneGalaxyCatalogForTransfer } from '../../../data/galaxyCatalog/galaxyCatalogTransfer';
 import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
 
 /**
@@ -116,7 +116,7 @@ import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
  *
  * ### Why one worker per call?
  *
- * Parallel survey fetches resolve in unpredictable order, so SDSS can
+ * Parallel galaxy catalog fetches resolve in unpredictable order, so SDSS can
  * finish baking while 2MRS is mid-bake.  A long-lived worker would have
  * to queue requests internally; a per-call worker has zero shared
  * state and the OS-level concurrency happens automatically.  Worker
@@ -202,7 +202,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
   function loadedSourceCatalogPairs(): { source: SourceType; catalog: GalaxyCatalog }[] {
     const out: { source: SourceType; catalog: GalaxyCatalog }[] = [];
     const catalogs = getLoadedClouds();
-    for (const source of SURVEY_SOURCES) {
+    for (const source of GALAXY_CATALOG_SOURCES) {
       const catalog = catalogs.get(source);
       if (catalog && catalog.count > 0) {
         out.push({ source, catalog });

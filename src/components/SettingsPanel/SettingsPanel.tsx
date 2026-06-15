@@ -12,7 +12,7 @@
  * mental model of the scene:
  *
  *   1. **Galaxies** — the points themselves.  Master toggle + a
- *      default-open "Surveys" sub-disclosure (per-catalog toggles) +
+ *      default-open "Galaxy catalogs" sub-disclosure (per-catalog toggles) +
  *      Advanced (render tunables).
  *   2. **Cosmic web** — the diffuse stuff *between* galaxies (volume
  *      density fields + DisPerSE filaments).  Master toggle + a Style
@@ -82,19 +82,19 @@
 import { type ReactNode } from 'react';
 import type { Tier } from '../../@types/data/Tier';
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
-import { maskHas } from '../../utils/sourceMask';
-import { BiasMode } from '../../data/biasMode';
-import type { BiasMode as BiasModeT } from '../../@types/data/BiasMode';
+import { maskHas } from '../../utils/maskHas';
+import { BiasMode } from '../../data/galaxyCatalog/biasMode';
+import type { BiasMode as BiasModeT } from '../../@types/data/galaxyCatalog/BiasMode';
 import { ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../../@types/data/ToneMapCurve';
 import type { LabelCategory } from '../../@types/engine/data/LabelCategory';
-import type { StructureCategory } from '../../@types/engine/data/StructureCategory';
-import { CATEGORY_DISPLAY_INFO } from '../../data/categoryDisplayInfo';
-import { LABEL_CATEGORIES } from '../../data/labelCategories';
-import { STRUCTURE_CATEGORIES } from '../../data/structureCategories';
-import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
+import type { StructureCategory } from '../../@types/data/structure/StructureCategory';
+import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
+import { LABEL_CATEGORIES } from '../../data/structure/labelCategories';
+import { STRUCTURE_CATEGORIES } from '../../data/structure/structureCategories';
+import type { ScalarFieldPaletteId } from '../../@types/data/volume/ScalarFieldPaletteId';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
-import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
+import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import { VolumeFieldRow } from './VolumeFieldRow';
 import FlowRow from './FlowRow';
@@ -108,11 +108,11 @@ import type { SourceType } from '../../@types/data/SourceType';
 // ── Module-level constants ─────────────────────────────────────────────────────
 
 /**
- * The set of survey sources we expose as user-controllable toggles.
+ * The set of galaxy catalog sources we expose as user-controllable toggles.
  *
  * `Source.Synthetic` is intentionally omitted — the synthetic cloud is a
- * procedurally-generated fallback used while real survey data is loading.
- * Letting users toggle it would invite confusing "no real surveys +
+ * procedurally-generated fallback used while real galaxy catalog data is loading.
+ * Letting users toggle it would invite confusing "no real galaxy catalogs +
  * synthetic off = empty sky" states with no clear way back.
  *
  * Ordered smallest-catalogue → largest (Famous ~20 → 2MRS ~38 k → SDSS
@@ -155,10 +155,10 @@ type Props = {
   // ── Galaxies group ─────────────────────────────────────────────────────
   /** Bitmask of currently-visible sources.  See `data/sources.ts`. */
   visibleSourceMask?: number;
-  /** Called when the user toggles a single survey on/off in Advanced. */
+  /** Called when the user toggles a single galaxy catalog on/off in Advanced. */
   onToggleSource?: (source: SourceType, visible: boolean) => void;
   /**
-   * Per-source point counts indexed by Source enum value.  Surveys whose
+   * Per-source point counts indexed by Source enum value.  Galaxy catalogs whose
    * .bin hasn't loaded yet are absent from the map — the row in the UI
    * then renders the toggle without a count rather than a misleading "0".
    */
@@ -167,7 +167,7 @@ type Props = {
   /**
    * Per-marker-category structure counts (cluster / supercluster / void) for
    * the Structures section, shown beside each toggle the same way
-   * `sourceCounts` annotates the Surveys rows.  A category absent from
+   * `sourceCounts` annotates the Galaxy catalogs rows.  A category absent from
    * the map (or the whole prop undefined, before the bulk `.ccat`
    * lands) renders the toggle without a count rather than "0".
    */
@@ -339,7 +339,7 @@ export function SettingsPanel({
   // would produce half-broken UIs (controls without echoes, or echoes
   // without controls).
   const showTierChip = tier !== undefined && onTierChange !== undefined;
-  const showSurveyToggles = visibleSourceMask !== undefined && onToggleSource !== undefined;
+  const showGalaxyCatalogToggles = visibleSourceMask !== undefined && onToggleSource !== undefined;
   const showFilamentsToggle = filamentsEnabled !== undefined && onFilamentsChange !== undefined;
   const showFilamentIntensitySlider =
     showFilamentsToggle &&
@@ -365,11 +365,11 @@ export function SettingsPanel({
   const showStructuresGroup =
     markerCategoryVisibility !== undefined && onSetMarkerCategoryVisibility !== undefined;
 
-  // ── Galaxies master (derived tri-state over per-survey toggles) ─────────
-  // Same shape the pre-restructure panel used (it was the Surveys section
+  // ── Galaxies master (derived tri-state over per-galaxy-catalog toggles) ─────────
+  // Same shape the pre-restructure panel used (it was the Galaxy catalogs section
   // master); the audit promoted that pattern to the explorer surface and
-  // moved per-survey toggles into Advanced.
-  const galaxiesMaster = showSurveyToggles
+  // moved per-galaxy-catalog toggles into Advanced.
+  const galaxiesMaster = showGalaxyCatalogToggles
     ? (() => {
         const enabledCount = TOGGLEABLE_SOURCES.reduce<number>(
           (n, s) => (maskHas(visibleSourceMask, s) ? n + 1 : n),
@@ -523,9 +523,9 @@ export function SettingsPanel({
 
       {/* ── Galaxies ──────────────────────────────────────────────────── */}
       {/*
-        Master = tri-state over per-survey toggles.  Default-on (every
-        survey on at first paint).  The Advanced disclosure holds the
-        per-survey toggles AND the galaxy-only render tunables (point
+        Master = tri-state over per-galaxy-catalog toggles.  Default-on (every
+        galaxy catalog on at first paint).  The Advanced disclosure holds the
+        per-galaxy-catalog toggles AND the galaxy-only render tunables (point
         size, depth fade, density correction) — all of which are
         meaningless when the master is off, so co-locating them keeps
         the explorer surface tight.
@@ -537,12 +537,12 @@ export function SettingsPanel({
           headerToggleIndeterminate={galaxiesMaster.indeterminate}
           onHeaderToggleChange={galaxiesMaster.onToggle}
         >
-          {/* Surveys — per-survey toggles get their own subsection that
+          {/* Galaxy catalogs — per-galaxy-catalog toggles get their own subsection that
               opens by default with the Galaxies group.  "Which catalog am
               I looking at" is the most common reason to drill into
               Galaxies, so it sits in front and is one fewer click away
               than the power-user knobs below. */}
-          <CollapsibleSection title="Surveys" defaultOpen>
+          <CollapsibleSection title="Galaxy catalogs" defaultOpen>
             {TOGGLEABLE_SOURCES.map((s) => {
               const count = sourceCounts?.[s];
               return (
@@ -558,7 +558,7 @@ export function SettingsPanel({
                     type="checkbox"
                     // `!` here is safe: this row only renders when
                     // `galaxiesMaster` is truthy, which itself gates on
-                    // `showSurveyToggles`.  TS can't trace the narrow
+                    // `showGalaxyCatalogToggles`.  TS can't trace the narrow
                     // through the IIFE-derived `galaxiesMaster` value, so
                     // assert what we already know.
                     checked={maskHas(visibleSourceMask!, s)}
@@ -732,8 +732,8 @@ export function SettingsPanel({
               ) : (
                 volumeFields.map((field) => (
                   <VolumeFieldRow
-                    key={field.handle}
-                    handle={field.handle}
+                    key={field.id}
+                    id={field.id}
                     label={field.label}
                     enabled={field.enabled}
                     intensity={field.intensity}
@@ -796,7 +796,7 @@ export function SettingsPanel({
         >
           {/* Per-category marker checkboxes live directly in the section
               body — no Advanced wrapper, since there are no other knobs
-              to hide behind one.  Same `!` rationale as the Surveys
+              to hide behind one.  Same `!` rationale as the Galaxy catalogs
               block: `structuresMaster` truthiness already guarantees
               both props are defined, TS can't trace that through the
               IIFE. */}

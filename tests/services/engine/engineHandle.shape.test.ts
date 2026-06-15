@@ -11,7 +11,7 @@ describe('EngineHandle — namespace sub-handles', () => {
   it('declares 14 sub-handles + destroy + assetSlots as type-level members', () => {
     // Compile-time assertion: every name below must exist on EngineHandle.
     const expectedSubHandles: ReadonlyArray<keyof EngineHandle> = [
-      'surveys',
+      'galaxyCatalogs',
       'tonemap',
       'camera',
       'selection',

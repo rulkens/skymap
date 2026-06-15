@@ -11,7 +11,7 @@
 import { describe, it, expect } from 'vitest';
 import { isStructure } from '../../../src/services/engine/isStructure';
 import type { GalaxyInfo } from '../../../src/@types/engine/GalaxyInfo';
-import type { StructureRecord } from '../../../src/@types/engine/data/StructureRecord';
+import type { StructureRecord } from '../../../src/@types/data/structure/StructureRecord';
 
 describe('isStructure', () => {
   it('returns true for a StructureRecord', () => {

@@ -16,7 +16,7 @@ import {
   packSelection,
   unpackPick,
 } from '../../src/data/selectionEncoding';
-import type { PickResult } from '../../src/data/selectionEncoding';
+import type { PickResult } from '../../src/@types/data/PickResult';
 import { Source } from '../../src/data/sources';
 
 describe('selectionEncoding', () => {
@@ -164,7 +164,7 @@ describe('unpackPick — decode to (sourceCode, localIdx)', () => {
   }
 
   it('decodes the source code and local index for any allocated code', () => {
-    // unpackPick is pure bit-decode now — classifying the code (survey vs
+    // unpackPick is pure bit-decode now — classifying the code (galaxy catalog vs
     // structure vs not-pickable) is pickToSelection's job. Every allocated
     // code round-trips as { sourceCode, localIdx }, regardless of category.
     const codes: SourceType[] = [

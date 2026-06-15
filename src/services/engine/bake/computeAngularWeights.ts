@@ -16,7 +16,7 @@
  * ### Algorithm — per-cloud, per-(cell, distance shell) median normalisation
  *
  * 1. Tile the sky into HEALPix cells at `nside = 32` (12 288 cells, ~1.83°
- *    per cell — fine enough to resolve survey footprints, coarse enough that
+ *    per cell — fine enough to resolve galaxy catalog footprints, coarse enough that
  *    each populated cell carries tens-to-hundreds of galaxies for a stable
  *    density estimate).
  * 2. For each galaxy, compute (RA, Dec, distance) from the Cartesian position
@@ -33,12 +33,12 @@
  *    over-represented); galaxies in sparse cells get weight > 1 (they're
  *    under-represented).
  *
- * ### Why per-survey, never global
+ * ### Why per-galaxy-catalog, never global
  *
  * Each cloud bins itself.  A unified all-source LUT would let SDSS's
  * footprint contaminate GLADE's correction (or vice versa), turning the
  * correction into a different cosmetic effect entirely.  Mode 4 is a
- * pencil-beam fix for the survey it's loaded into, full stop.
+ * pencil-beam fix for the galaxy catalog it's loaded into, full stop.
  *
  * ### Why typed-array tables instead of nested Maps
  *
@@ -53,7 +53,7 @@
 
 import type { ComputeAngularWeightsInput } from '../../../@types/engine/ComputeAngularWeightsInput';
 import { cartesianToRaDec } from '../../../utils/math';
-import { healpixNest } from '../../../utils/math/healpix';
+import { healpixNest } from '../../../utils/math/healpixNest';
 
 /** HEALPix resolution.  See module docstring for choice rationale. */
 const NSIDE = 32;
@@ -194,10 +194,10 @@ export function computeAngularWeights(input: ComputeAngularWeightsInput): Float3
   // For each shell, gather all `count > 0` values across the 12 288 cells
   // and take the median.  The "populated" filter matters: an unpopulated
   // cell at this shell isn't evidence of low density — it's just outside
-  // the survey's footprint at this shell — so including its 0 would drag
+  // the galaxy catalog's footprint at this shell — so including its 0 would drag
   // the median toward zero and break the correction.
   //
-  // Median (not mean) because survey footprint edges produce a few cells
+  // Median (not mean) because galaxy catalog footprint edges produce a few cells
   // with hugely-elevated counts; a mean would inflate the reference and
   // make every other cell look under-dense.
   const medianPerShell = new Float32Array(N_SHELLS);
@@ -228,7 +228,7 @@ export function computeAngularWeights(input: ComputeAngularWeightsInput): Float3
   //
   // weight = clamp(medianPerShell[shell] / count[cell, shell], 0.1, 10).
   // The clamp bounds prevent runaway alpha modulation in pathological cells
-  // (e.g., a single survey-footprint corner with 1 galaxy in a shell whose
+  // (e.g., a single galaxy-catalog-footprint corner with 1 galaxy in a shell whose
   // median is 200 — a literal 200× boost would saturate the rendering).
   for (let i = 0; i < N; i++) {
     const cell = cellIdxArr[i]!;

@@ -1,15 +1,20 @@
-import type { SurveySourceEntry } from './SurveySourceEntry';
-import type { StructureSourceEntry } from './StructureSourceEntry';
-import type { FilamentSourceEntry } from './FilamentSourceEntry';
-import type { VolumeSourceEntry } from './VolumeSourceEntry';
+import type { GalaxyCatalogSourceEntry } from './galaxyCatalog/GalaxyCatalogSourceEntry';
+import type { StructureSourceEntry } from './structure/StructureSourceEntry';
+import type { FilamentSourceEntry } from './filament/FilamentSourceEntry';
+import type { VolumeSourceEntry } from './volume/VolumeSourceEntry';
+import type { MilkyWaySourceEntry } from './milkyWay/MilkyWaySourceEntry';
+import type { FlowSourceEntry } from './flow/FlowSourceEntry';
 
 /**
  * One row of the SOURCE_REGISTRY — discriminated by the `type` field
- * across four kinds: per-point galaxy surveys, marker-ring structures, the
- * filament skeleton, and scalar-volume cubes.
+ * across six kinds: per-point galaxy catalogs, marker-ring structures, the
+ * filament skeleton, scalar-volume cubes, the Milky-Way disk overlay, and
+ * the peculiar-velocity flow field.
  */
 export type SourceEntry =
-  | SurveySourceEntry
+  | GalaxyCatalogSourceEntry
   | StructureSourceEntry
   | FilamentSourceEntry
-  | VolumeSourceEntry;
+  | VolumeSourceEntry
+  | MilkyWaySourceEntry
+  | FlowSourceEntry;

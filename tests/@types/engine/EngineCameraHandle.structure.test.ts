@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { EngineCameraHandle } from '../../../src/@types/engine/handles/EngineCameraHandle';
-import type { StructureRecord } from '../../../src/@types/engine/data/StructureRecord';
+import type { StructureRecord } from '../../../src/@types/data/structure/StructureRecord';
 
 describe('EngineCameraHandle.focusOn (structure)', () => {
   it('accepts a StructureRecord via the unified focusOn slot', () => {

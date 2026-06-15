@@ -5,9 +5,9 @@
  */
 
 import type { ReactNode } from 'react';
-import type { StructureRecord } from '../../@types/engine/data/StructureRecord';
-import { formatDistance } from '../../utils/format/distance';
-import { CATEGORY_DISPLAY_INFO } from '../../data/categoryDisplayInfo';
+import type { StructureRecord } from '../../@types/data/structure/StructureRecord';
+import { formatDistance } from '../../utils/format/formatDistance';
+import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
 import styles from './CompactStructureCard.module.css';
 
 export type CompactStructureCardProps = {

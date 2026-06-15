@@ -17,7 +17,7 @@
  */
 
 import type { EngineSettingsState } from '../../../../@types/settings/EngineSettingsState';
-import type { StructureCategory } from '../../../../@types/engine/data/StructureCategory';
+import type { StructureCategory } from '../../../../@types/data/structure/StructureCategory';
 
 export function setStructureItemEnabled(
   state: EngineSettingsState,

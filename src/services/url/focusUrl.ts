@@ -40,7 +40,7 @@
 import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
 import type { FocusTarget } from '../../@types/camera/FocusTarget';
 import { Source } from '../../data/sources';
-import { STRUCTURE_CATEGORIES } from '../../data/structureCategories';
+import { STRUCTURE_CATEGORIES } from '../../data/structure/structureCategories';
 
 /**
  * Build the `#focus=<id>` payload (the bit after `=`) for the given

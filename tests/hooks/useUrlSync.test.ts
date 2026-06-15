@@ -12,7 +12,7 @@
 import { describe, it, expect } from 'vitest';
 import { computeDesiredHash, initialPendingFromHash } from '../../src/hooks/useUrlSync';
 import type { GalaxyInfo } from '../../src/@types/engine/GalaxyInfo';
-import type { StructureRecord } from '../../src/@types/engine/data/StructureRecord';
+import type { StructureRecord } from '../../src/@types/data/structure/StructureRecord';
 import { Source } from '../../src/data/sources';
 
 function makeGalaxy(): GalaxyInfo {

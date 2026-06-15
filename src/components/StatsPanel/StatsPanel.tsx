@@ -8,11 +8,11 @@
  * telemetry on a single line.  Splitting the perf telemetry into its own
  * panel lets us:
  *
- *   - Show a single rolled-up "Galaxies · N" total across the surveys
+ *   - Show a single rolled-up "Galaxies · N" total across the galaxy catalogs
  *     currently TOGGLED ON (`visibleSourceMask`).  The earlier draft listed
- *     one row per loaded survey, but the user's mental model is "how many
+ *     one row per loaded galaxy catalog, but the user's mental model is "how many
  *     points am I looking at right now?" — a single number that responds
- *     to the survey toggles maps that question more directly than four
+ *     to the galaxy catalog toggles maps that question more directly than four
  *     rows the eye has to sum manually.
  *   - Show filament strip/vertex counts when the optional cosmic-web file
  *     loads.
@@ -42,8 +42,8 @@
  */
 
 import { memo, type ReactNode } from 'react';
-import { SURVEY_SOURCES, Source } from '../../data/sources';
-import { maskHas } from '../../utils/sourceMask';
+import { GALAXY_CATALOG_SOURCES, Source } from '../../data/sources';
+import { maskHas } from '../../utils/maskHas';
 import { Panel } from '../common/Panel/Panel';
 import styles from './StatsPanel.module.css';
 import type { SourceType } from '../../@types/data/SourceType';
@@ -58,7 +58,7 @@ export type StatsPanelProps = {
    */
   fps: number;
   /**
-   * Per-survey loaded point counts, indexed by `Source` enum value.
+   * Per-galaxy catalog loaded point counts, indexed by `Source` enum value.
    * Populated as each `.bin` finishes uploading.  Used here only as the
    * input to the rolled-up "Galaxies" total — entries for sources whose
    * visibility bit is OFF in `visibleSourceMask` are excluded from the
@@ -68,7 +68,7 @@ export type StatsPanelProps = {
   sourceCounts: Partial<Record<SourceType, number>>;
   /**
    * Bitmask of currently-visible sources.  Bits are tested with
-   * `maskHas(mask, source)` from `data/sources.ts`.  A survey that's
+   * `maskHas(mask, source)` from `utils/maskHas`.  A galaxy catalog that's
    * loaded but toggled off contributes 0 to the displayed count.  We
    * deliberately do NOT show "X loaded, Y visible" — the panel is meant
    * to read as a glanceable telemetry strip, and the SettingsPanel
@@ -109,16 +109,19 @@ function StatsPanel({
   // in one place rather than scattered through the JSX.
   const fpsText = fps > 0 ? String(fps) : '—';
 
-  // Sum only the visible, real surveys — Synthetic is excluded because its
+  // Sum only the visible, real galaxy catalogs — Synthetic is excluded because its
   // count would only appear in the rare all-fetch-failed fallback, where
   // labelling its synthetic-cloud points as "Galaxies" would be misleading
-  // (the StatusBar already tags that condition).  SURVEY_SOURCES gives us a
+  // (the StatusBar already tags that condition).  GALAXY_CATALOG_SOURCES gives us a
   // stable enumeration order; the order doesn't matter for a sum but it
   // keeps this loop trivially predictable.
-  const galaxyTotal = SURVEY_SOURCES.filter((s) => s !== Source.Synthetic).reduce((sum, source) => {
-    if (!maskHas(visibleSourceMask, source)) return sum;
-    return sum + (sourceCounts[source] ?? 0);
-  }, 0);
+  const galaxyTotal = GALAXY_CATALOG_SOURCES.filter((s) => s !== Source.Synthetic).reduce(
+    (sum, source) => {
+      if (!maskHas(visibleSourceMask, source)) return sum;
+      return sum + (sourceCounts[source] ?? 0);
+    },
+    0,
+  );
 
   return (
     <Panel title="STATS" ariaLabel="Render statistics" defaultOpen={defaultOpen}>
@@ -129,9 +132,9 @@ function StatsPanel({
 
       {/*
         Rolled-up galaxy total.  Sums the loaded counts for sources whose
-        visibility bit is ON, so the number tracks the user's survey
+        visibility bit is ON, so the number tracks the user's galaxy catalog
         toggles in real time.  Renders unconditionally even when the total
-        is zero (e.g. all surveys toggled off) so the panel doesn't
+        is zero (e.g. all galaxy catalogs toggled off) so the panel doesn't
         visually shrink mid-session.
       */}
       <div className={styles.row}>
@@ -160,7 +163,7 @@ function StatsPanel({
 
 // `React.memo` because App.tsx re-renders on every camera/fps update
 // during animation, but our props only legitimately change at engine
-// events (`fps` integer flip, survey load, filaments toggle).  Shallow
+// events (`fps` integer flip, galaxy catalog load, filaments toggle).  Shallow
 // compare on six props skips renders that would otherwise re-do the
 // `galaxyTotal` reduce and the row JSX for no visible change.
 export default memo(StatsPanel);

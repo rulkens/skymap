@@ -43,8 +43,14 @@ import generateBMFont from 'msdf-bmfont-xml';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { PNG } from 'pngjs';
-import { ATLAS_PX, ATLAS_FONT_SIZE, DISTANCE_RANGE_PX, FONTS, FONT_IDS } from '../../src/data/fonts';
-import type { FontId } from '../../src/data/fonts';
+import {
+  ATLAS_PX,
+  ATLAS_FONT_SIZE,
+  DISTANCE_RANGE_PX,
+  FONTS,
+  FONT_IDS,
+} from '../../src/data/fonts';
+import type { FontId } from '../../src/@types/data/FontId';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
 const RAW_FONTS_DIR = rawDataPath('fonts.dir');

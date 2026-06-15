@@ -40,7 +40,7 @@ import {
   DEFAULT_VOLUMES_ENABLED,
   DEFAULT_FLOW,
 } from '../../src/data/defaults';
-import { ALL_VISIBLE_MASK } from '../../src/utils/sourceMask';
+import { ALL_VISIBLE_MASK } from '../../src/utils/allVisibleMask';
 import { createTweenManager } from '../../src/services/engine/camera/tweenManager';
 import { createSpaceMouseSubsystem } from '../../src/services/engine/subsystems/spaceMouseSubsystem';
 import { createRenderScheduler } from '../../src/services/engine/subsystems/renderScheduler';
@@ -80,7 +80,7 @@ describe('EngineState type', () => {
     // an explicit update here — easier to spot than in a single
     // 30-line literal.
     const settings: EngineSettingsState = {
-      surveys: {
+      galaxyCatalogs: {
         enabled: true,
         sizePx: 2.5,
         brightness: 1.0,
@@ -171,7 +171,7 @@ describe('EngineState type', () => {
         proceduralDiskRenderer: null,
         milkyWayRenderer: null,
         horizonShellRenderer: null,
-        scalarVolumeRenderer: null,
+        volumeFieldRenderer: null,
         flowFieldRenderer: null,
         volumeUpsample: null,
         pickDebugOverlay: null,
@@ -228,10 +228,10 @@ describe('EngineState type', () => {
     };
     stateRef.current = state;
 
-    expect(state.settings.surveys.sizePx).toBe(2.5);
-    expect(state.settings.surveys.enabled).toBe(true);
-    expect(state.settings.surveys.items.sdss.enabled).toBe(true);
-    expect(state.settings.surveys.items.famousGalaxy.labelEnabled).toBe(true);
+    expect(state.settings.galaxyCatalogs.sizePx).toBe(2.5);
+    expect(state.settings.galaxyCatalogs.enabled).toBe(true);
+    expect(state.settings.galaxyCatalogs.items.sdss.enabled).toBe(true);
+    expect(state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled).toBe(true);
     expect(state.settings.bias.mode).toBe(DEFAULT_BIAS_MODE);
     expect(state.sources.pickMask).toBe(ALL_VISIBLE_MASK);
     expect(state.sources.drawMask).toBe(ALL_VISIBLE_MASK);
@@ -246,7 +246,7 @@ describe('EngineState type', () => {
     // drifts (e.g. `DEFAULT_BIAS_MODE` becomes a string), this fails to
     // compile here rather than inside engine.ts.
     const settings: EngineSettingsState = {
-      surveys: {
+      galaxyCatalogs: {
         enabled: true,
         sizePx: DEFAULT_POINT_SIZE_PX,
         brightness: DEFAULT_BRIGHTNESS,
@@ -294,7 +294,7 @@ describe('EngineState type', () => {
       drawMask: ALL_VISIBLE_MASK,
     };
 
-    expect(settings.surveys.sizePx).toBe(DEFAULT_POINT_SIZE_PX);
+    expect(settings.galaxyCatalogs.sizePx).toBe(DEFAULT_POINT_SIZE_PX);
     expect(settings.bias.absMagLimit).toBe(DEFAULT_ABS_MAG_LIMIT);
     expect(bias.apparentMagLimit).toBe(0);
     expect(sources.pickMask).toBe(ALL_VISIBLE_MASK);
@@ -302,13 +302,13 @@ describe('EngineState type', () => {
 
   it('allows in-place mutation of every sub-bag field', () => {
     // The engine mutates fields directly (e.g.
-    // `state.settings.surveys.brightness = v`), so the type must NOT be
+    // `state.settings.galaxyCatalogs.brightness = v`), so the type must NOT be
     // Readonly. Exercise one representative mutation per bag.
     // eslint-disable-next-line prefer-const
     let stateRef: { current: EngineState | null } = { current: null };
     const state: EngineState = {
       settings: {
-        surveys: {
+        galaxyCatalogs: {
           enabled: true,
           sizePx: 1,
           brightness: 1,
@@ -378,7 +378,7 @@ describe('EngineState type', () => {
         proceduralDiskRenderer: null,
         milkyWayRenderer: null,
         horizonShellRenderer: null,
-        scalarVolumeRenderer: null,
+        volumeFieldRenderer: null,
         flowFieldRenderer: null,
         volumeUpsample: null,
         pickDebugOverlay: null,
@@ -435,7 +435,7 @@ describe('EngineState type', () => {
     };
     stateRef.current = state;
 
-    state.settings.surveys.brightness = 2.5;
+    state.settings.galaxyCatalogs.brightness = 2.5;
     state.settings.bias.absMagLimit = -20;
     state.sources.pickMask = 0xff;
     state.sources.drawMask = 0xff;
@@ -447,7 +447,7 @@ describe('EngineState type', () => {
     });
     state.picking.pickInFlight = true;
 
-    expect(state.settings.surveys.brightness).toBe(2.5);
+    expect(state.settings.galaxyCatalogs.brightness).toBe(2.5);
     expect(state.settings.bias.absMagLimit).toBe(-20);
     expect(state.sources.pickMask).toBe(0xff);
     expect(state.sources.drawMask).toBe(0xff);

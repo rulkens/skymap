@@ -28,7 +28,7 @@
  * left `group` countless until it was added).
  */
 
-import { buildStaticAnchorStructures } from '../../../data/buildStaticAnchorStructures';
+import { buildStaticAnchorStructures } from '../../../data/structure/buildStaticAnchorStructures';
 import { structureCatalogToStructures } from './structureCatalogToStructures';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';

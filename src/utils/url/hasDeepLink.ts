@@ -34,10 +34,7 @@
  * leading character.
  */
 
-export type DeepLinkInput = {
-  hash: string;
-  search: string;
-};
+import type { DeepLinkInput } from '../../@types/splash/DeepLinkInput';
 
 const DEEP_LINK_QUERY_KEYS = new Set(['tour']);
 

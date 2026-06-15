@@ -1,12 +1,12 @@
 /**
- * FadeController — public surface of the pure-CPU per-handle opacity
+ * FadeController — public surface of the pure-CPU per-id opacity
  * ramp primitive.
  *
  * Owns one (sourceOpacity, targetOpacity, transitionStartMs,
  * transitionDurationMs) tuple. `currentOpacity(now)` returns a
  * smoothstep between source and target, clamped after start + duration.
  * No GPU resources; the controller is a pure value the registry holds
- * one of per FadeHandle.
+ * one of per FadeId.
  *
  * The factory + concrete implementation live in
  * `src/services/animation/fadeController.ts`.

@@ -11,10 +11,10 @@
  * one `items[category]` entry to learn everything about that category's
  * visibility instead of cross-indexing two records by the same key.
  *
- * Same shape as `SurveyItemSettings` on purpose: both extend the base with the
+ * Same shape as `GalaxyCatalogItemSettings` on purpose: both extend the base with the
  * single `labelEnabled` axis. They're kept as distinct named types (not one
  * shared alias) because they're keyed and consumed by different source-type
- * clusters — collapsing them would re-braid surveys and structures behind a
+ * clusters — collapsing them would re-braid galaxy catalogs and structures behind a
  * name that claims they're interchangeable when their producers, ids, and
  * registries differ.
  */

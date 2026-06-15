@@ -2,9 +2,9 @@
  * fadeRegistry — engine subsystem at `state.subsystems.fades`.
  *
  * Owns a `Map<string, FadeController>` keyed by a stable serialization
- * of every registered FadeHandle. Renderers and slot commit steps drive
- * the registry; renderers read `opacityOf(handle, now)` per frame and
- * write the value into their per-handle GPU fade buffer.
+ * of every registered FadeId. Renderers and slot commit steps drive
+ * the registry; renderers read `opacityOf(id, now)` per frame and
+ * write the value into their per-id GPU fade buffer.
  *
  * ### Wake contract: fadeTo wakes the scheduler; callers do not
  *
@@ -14,45 +14,45 @@
  * `setImmediate` run from already-awake settings paths or pre-frame
  * seeding, and `opacityOf` / `tick` are frame-internal reads.
  *
- * ### Why a string-keyed map (not WeakMap<FadeHandle, …>)
+ * ### Why a string-keyed map (not WeakMap<FadeId, …>)
  *
- * Handles are value-typed records (`{ kind: 'survey', source: 1 }`),
- * not reference identities. Two `{ kind: 'survey', source: SDSS }`
+ * Ids are value-typed records (`{ kind: 'galaxyCatalog', id: 'sdss' }`),
+ * not reference identities. Two `{ kind: 'galaxyCatalog', id: 'sdss' }`
  * literals constructed in different files must address the SAME
  * controller. A WeakMap keys on reference identity — that would mint
- * a new controller every time a caller built a fresh handle literal.
+ * a new controller every time a caller built a fresh id literal.
  * A string serialization gives us value equality at the cost of one
  * short string allocation per registry call (negligible).
  *
- * ### Why fail-safe opacityOf=1.0 for unregistered handles
+ * ### Why fail-safe opacityOf=1.0 for unregistered ids
  *
  * Renderers call `opacityOf` from their per-frame draw. The registry
  * is constructed BEFORE renderers, and renderers register their
- * handles at construction — but bootstrap order is subtle, and a
+ * ids at construction — but bootstrap order is subtle, and a
  * half-finished bootstrap (test fixtures, HMR reload races) can leave
- * a renderer drawing before its handle is registered. Returning 0
+ * a renderer drawing before its id is registered. Returning 0
  * would black-screen the user; returning 1.0 (the steady-state value)
  * draws normally. The visible cost is one frame of unfaded content
  * during bootstrap — far less annoying than a black screen.
  *
- * ### Why fadeTo THROWS on unregistered handles (asymmetric)
+ * ### Why fadeTo THROWS on unregistered ids (asymmetric)
  *
  * Slots and UI handlers reach for `fadeTo` only when they expect a
- * specific layer to exist. A fadeTo on an unregistered handle means
+ * specific layer to exist. A fadeTo on an unregistered id means
  * "the slot is trying to orchestrate a layer that was never set up" —
  * a programmer error worth surfacing. The fail-safe path is the
  * draw-loop read; the explicit-call paths get the strict check.
  */
 
 import type { FadeController } from '../../@types/animation/FadeController';
-import type { FadeHandle } from '../../@types/animation/FadeHandle';
+import type { FadeId } from '../../@types/animation/FadeId';
 import type { FadeRegistry } from '../../@types/animation/FadeRegistry';
 import { createFadeController, FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from './fadeController';
 
-function serializeFadeHandle(h: FadeHandle): string {
+function serializeFadeId(h: FadeId): string {
   switch (h.kind) {
-    case 'survey':
-      return `survey:${h.source}`;
+    case 'galaxyCatalog':
+      return `galaxyCatalog:${h.id}`;
     case 'filaments':
       return 'filaments';
     case 'flow':
@@ -76,31 +76,26 @@ function serializeFadeHandle(h: FadeHandle): string {
 export function createFadeRegistry(deps: { readonly requestRender: () => void }): FadeRegistry {
   const controllers = new Map<string, FadeController>();
 
-  function register(handle: FadeHandle, initialOpacity: number = 0): void {
-    const key = serializeFadeHandle(handle);
+  function register(id: FadeId, initialOpacity: number = 0): void {
+    const key = serializeFadeId(id);
     if (controllers.has(key)) return; // idempotent
     controllers.set(key, createFadeController(initialOpacity));
   }
 
-  function unregister(handle: FadeHandle): void {
-    controllers.delete(serializeFadeHandle(handle));
+  function unregister(id: FadeId): void {
+    controllers.delete(serializeFadeId(id));
   }
 
-  function requireController(handle: FadeHandle): FadeController {
-    const c = controllers.get(serializeFadeHandle(handle));
+  function requireController(id: FadeId): FadeController {
+    const c = controllers.get(serializeFadeId(id));
     if (!c) {
-      throw new Error(`FadeRegistry: handle not registered: ${serializeFadeHandle(handle)}`);
+      throw new Error(`FadeRegistry: id not registered: ${serializeFadeId(id)}`);
     }
     return c;
   }
 
-  function fadeTo(
-    handle: FadeHandle,
-    target: number,
-    durationMs?: number,
-    nowMs?: number,
-  ): Promise<void> {
-    const c = requireController(handle);
+  function fadeTo(id: FadeId, target: number, durationMs?: number, nowMs?: number): Promise<void> {
+    const c = requireController(id);
     const now = nowMs ?? performance.now();
     const dur =
       durationMs ?? (target > c.currentOpacity(now) ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS);
@@ -109,12 +104,12 @@ export function createFadeRegistry(deps: { readonly requestRender: () => void })
     return promise;
   }
 
-  function setImmediate(handle: FadeHandle, value: number): void {
-    requireController(handle).setImmediate(value);
+  function setImmediate(id: FadeId, value: number): void {
+    requireController(id).setImmediate(value);
   }
 
-  function opacityOf(handle: FadeHandle, nowMs?: number): number {
-    const c = controllers.get(serializeFadeHandle(handle));
+  function opacityOf(id: FadeId, nowMs?: number): number {
+    const c = controllers.get(serializeFadeId(id));
     if (!c) return 1.0; // fail-safe — see module docblock
     return c.currentOpacity(nowMs);
   }

@@ -19,7 +19,7 @@ import { createAssetSlot } from '../AssetSlot';
 import { filamentFetcher } from '../fetchers/filamentFetcher';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 import type { FilamentReq } from '../../../@types/loading/FilamentReq';
-import type { FilamentCloud } from '../../../@types/data/FilamentCloud';
+import type { FilamentCloud } from '../../../@types/data/filament/FilamentCloud';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
 export const createFilamentSlot: SlotFactory<FilamentCloud, FilamentReq> = (state, cb) => {

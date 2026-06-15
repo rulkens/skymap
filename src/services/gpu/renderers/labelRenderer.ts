@@ -72,7 +72,7 @@ import type { LabelRenderer } from '../../../@types/rendering/LabelRenderer';
 import type { FontMetrics } from '../../../@types/rendering/FontMetrics';
 import type { LoadedFontAtlases } from '../../../@types/rendering/LoadedFontAtlases';
 import { FONT_IDS } from '../../../data/fonts';
-import type { FontId } from '../../../data/fonts';
+import type { FontId } from '../../../@types/data/FontId';
 import { layoutLabel } from '../labels/labelLayout';
 import vsCode from '../shaders/labels/vertex.wesl?static';
 import fsCode from '../shaders/labels/fragment.wesl?static';
@@ -263,11 +263,11 @@ export function createLabelRenderer(
             arrayStride: GLYPH_INSTANCE_BYTES,
             stepMode: 'instance',
             attributes: [
-              { shaderLocation: 1, offset: 0, format: 'float32x2' },   // localOffset
-              { shaderLocation: 2, offset: 8, format: 'float32x2' },   // localSize
-              { shaderLocation: 3, offset: 16, format: 'float32x4' },  // uvRect
-              { shaderLocation: 4, offset: 32, format: 'uint32' },     // labelIndex
-              { shaderLocation: 5, offset: 36, format: 'uint32' },     // fontIndex
+              { shaderLocation: 1, offset: 0, format: 'float32x2' }, // localOffset
+              { shaderLocation: 2, offset: 8, format: 'float32x2' }, // localSize
+              { shaderLocation: 3, offset: 16, format: 'float32x4' }, // uvRect
+              { shaderLocation: 4, offset: 32, format: 'uint32' }, // labelIndex
+              { shaderLocation: 5, offset: 36, format: 'uint32' }, // fontIndex
             ],
           },
         ],

@@ -38,9 +38,9 @@
  *                non-positive z are dropped regardless of target.
  */
 
-import { absoluteMagnitude } from '../../src/utils/math/absoluteMagnitude.js';
-import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc.js';
-import type { ParsedRecord } from '../parsers/common.js';
+import { absoluteMagnitude } from '../../src/utils/math/absoluteMagnitude';
+import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
+import type { ParsedRecord } from '../parsers/common';
 
 export function subsampleByAbsMag(records: ParsedRecord[], target: number): ParsedRecord[] {
   const kept = subsampleIndicesByAbsMag(records, target);
@@ -68,10 +68,7 @@ export function subsampleByAbsMag(records: ParsedRecord[], target: number): Pars
  * variant uses, so the two functions are guaranteed to agree on which
  * records survive a given (records, target) pair.
  */
-export function subsampleIndicesByAbsMag(
-  records: ParsedRecord[],
-  target: number,
-): number[] {
+export function subsampleIndicesByAbsMag(records: ParsedRecord[], target: number): number[] {
   if (target <= 0) return [];
 
   // Build (originalIdx, M_abs) tuples for records that have a finite M_abs.

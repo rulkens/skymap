@@ -22,7 +22,7 @@ import {
   FADE_IN_DURATION_MS,
   FADE_OUT_DURATION_MS,
 } from '../../../../src/services/animation/fadeController';
-import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { GalaxyCatalogSourceConfig } from '../../../../src/@types/engine/wiring/GalaxyCatalogSourceConfig';
@@ -96,9 +96,7 @@ describe('wireGalaxyCatalogSourceSlot — fade orchestration', () => {
     });
 
     expect(fx.upload).toHaveBeenCalledOnce();
-    expect(fx.fadeCalls).toEqual([
-      { target: 1, duration: FADE_IN_DURATION_MS, at: 'post-upload' },
-    ]);
+    expect(fx.fadeCalls).toEqual([{ target: 1, duration: FADE_IN_DURATION_MS, at: 'post-upload' }]);
   });
 
   it('second load awaits fadeTo(0, FADE_OUT_DURATION_MS) BEFORE upload, then fires fadeTo(1) after', async () => {

@@ -9,7 +9,7 @@ import type { FocusableTarget } from './FocusableTarget';
  * recompute triggers, not direct reads: a tier swap (and each per-source
  * catalog landing it fans out) changes the loaded data that the engine's
  * `getCloud` returns, so the member count must re-run.  `visibleSourceMask`
- * is read directly so toggling a survey updates the count immediately.
+ * is read directly so toggling a galaxy catalog updates the count immediately.
  */
 export type UseStructureMemberCountInput = {
   selected: FocusableTarget | null;

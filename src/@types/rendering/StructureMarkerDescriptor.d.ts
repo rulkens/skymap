@@ -12,7 +12,7 @@
 
 import type { Vec3 } from '../math/Vec3';
 import type { Vec4 } from '../math/Vec4';
-import type { StructureCategory } from '../engine/data/StructureCategory';
+import type { StructureCategory } from '../data/structure/StructureCategory';
 
 export type StructureMarkerDescriptor = {
   /**

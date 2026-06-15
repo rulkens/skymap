@@ -46,7 +46,7 @@ import {
 import {
   DEPROJECT_MIN_AXIS_RATIO,
   DEFAULT_DISK_MARGIN,
-} from '../../../../src/data/famousCalibration';
+} from '../../../../src/data/galaxyCatalog/famousCalibration';
 
 export type DiskOverlayProps = {
   source: { width: number; height: number; previewUrl: string };

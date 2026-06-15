@@ -5,7 +5,7 @@ import type { BuildPointInterleavedBufferMode } from './BuildPointInterleavedBuf
 export type BuildPointInterleavedBufferInput = {
   /** The galaxy catalog to bake.  Travels by structured clone (see module doc). */
   cloud: GalaxyCatalog;
-  /** Which survey this catalog belongs to — drives flux limit, Schechter triple, etc. */
+  /** Which galaxy catalog this catalog belongs to — drives flux limit, Schechter triple, etc. */
   source: SourceType;
   /**
    * Whether to compute the per-galaxy Schechter ratios as part of this bake.

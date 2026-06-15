@@ -7,11 +7,11 @@
  * call `register(...)` without a null-check). See
  * `src/services/animation/fadeRegistry.ts` for the concrete factory.
  *
- * Storage: `Map<string, FadeController>` keyed by `serializeFadeHandle(h)`.
- * Consumers don't see the serialization — they always pass handles.
+ * Storage: `Map<string, FadeController>` keyed by `serializeFadeId(h)`.
+ * Consumers don't see the serialization — they always pass ids.
  */
 
-import type { FadeHandle } from './FadeHandle';
+import type { FadeId } from './FadeId';
 import type { Destroyable } from '../rendering/Destroyable';
 
 export type FadeRegistry = Destroyable & {
@@ -22,24 +22,24 @@ export type FadeRegistry = Destroyable & {
   readonly label: string;
 
   /**
-   * Register a handle with the given initial opacity. Idempotent — a
-   * second `register` call with the same handle is a no-op (the
+   * Register an id with the given initial opacity. Idempotent — a
+   * second `register` call with the same id is a no-op (the
    * existing controller is preserved). Initial opacity defaults to 0
    * (the loading-fade-in case).
    */
-  register(handle: FadeHandle, initialOpacity?: number): void;
+  register(id: FadeId, initialOpacity?: number): void;
 
-  /** Drop a handle and its controller. */
-  unregister(handle: FadeHandle): void;
+  /** Drop an id and its controller. */
+  unregister(id: FadeId): void;
 
   /**
-   * Start (or retarget) the fade for a handle. Forwards to the
+   * Start (or retarget) the fade for an id. Forwards to the
    * controller's `fadeTo`. Returns the controller's Promise. Also wakes
    * the render scheduler — callers never follow up with `requestRender`.
    *
-   * If the handle is not registered, throws — slots and renderers
+   * If the id is not registered, throws — slots and renderers
    * MUST register before fading, and a quiet no-op would hide bugs
-   * where a handle is fadeTo'd before its registration runs.
+   * where an id is fadeTo'd before its registration runs.
    *
    * `durationMs` defaults to `FADE_IN_DURATION_MS` when target > current,
    * `FADE_OUT_DURATION_MS` otherwise — but callers are expected to pass
@@ -50,18 +50,18 @@ export type FadeRegistry = Destroyable & {
    * can inject deterministic timestamps. Production callers omit it
    * and let `performance.now()` flow through.
    */
-  fadeTo(handle: FadeHandle, target: number, durationMs?: number, nowMs?: number): Promise<void>;
+  fadeTo(id: FadeId, target: number, durationMs?: number, nowMs?: number): Promise<void>;
 
   /** Forwards to the controller's `setImmediate`. Throws if unregistered. */
-  setImmediate(handle: FadeHandle, value: number): void;
+  setImmediate(id: FadeId, value: number): void;
 
   /**
-   * The opacity at the given time for the given handle. Returns 1.0 for
-   * unregistered handles — fail-safe so a renderer asking for a handle
+   * The opacity at the given time for the given id. Returns 1.0 for
+   * unregistered ids — fail-safe so a renderer asking for an id
    * that hasn't finished registering draws at full opacity instead of
    * disappearing.
    */
-  opacityOf(handle: FadeHandle, nowMs?: number): number;
+  opacityOf(id: FadeId, nowMs?: number): number;
 
   /**
    * True iff any registered controller is still animating at the given

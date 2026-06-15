@@ -11,7 +11,7 @@
  */
 
 import type { SettingsStore } from '../createSettingsStore';
-import type { BiasMode } from '../../../../@types/data/BiasMode';
+import type { BiasMode } from '../../../../@types/data/galaxyCatalog/BiasMode';
 import { setBiasMode } from '../reducers/setBiasMode';
 
 export function setBiasModeAction(store: SettingsStore, mode: BiasMode): void {

@@ -16,7 +16,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { buildCf4Density } from '../../tools/volumes/buildCf4Density';
-import { decodeScalarField } from '../../src/data/scalarFieldFormat';
+import { decodeScalarField } from '../../src/data/volume/scalarFieldFormat';
 
 /** Write a flat C-order f32 .npy with the given shape and values. */
 function writeF32Npy(path: string, values: number[], shape: readonly number[]): void {

@@ -1,5 +1,5 @@
 /**
- * GalaxyDetailCard — rich panel for a focused galaxy: name + survey badge,
+ * GalaxyDetailCard — rich panel for a focused galaxy: name + galaxy catalog badge,
  * curated description (famous only), catalogue links, thumbnail + cosmology
  * summary, and an expandable block of reference figures.
  *
@@ -11,7 +11,8 @@
 import { Fragment, type ReactNode } from 'react';
 import cx from 'classnames';
 import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
-import { formatDistance, formatDiameterKpc } from '../../utils/format/distance';
+import { formatDistance } from '../../utils/format/formatDistance';
+import { formatDiameterKpc } from '../../utils/format/formatDiameterKpc';
 import { Thumbnail } from './Thumbnail';
 import { CardHeader } from './CardHeader';
 import { CardRow } from './CardRow';

@@ -1,5 +1,5 @@
 /**
- * registerOverlayFades — unit tests for the overlay/volume/label fade-handle
+ * registerOverlayFades — unit tests for the overlay/volume/label fade-id
  * registration extracted from wireSlots.
  *
  * Three invariants targeted:
@@ -26,14 +26,14 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { FadeHandle } from '../../../../src/@types/animation/FadeHandle';
+import type { FadeId } from '../../../../src/@types/animation/FadeId';
 
 // Import AFTER describing mocks (none needed here — no GPU factories called).
 import { registerOverlayFades } from '../../../../src/services/engine/wiring/registerOverlayFades';
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
-type RegisterCall = [FadeHandle, number | undefined];
+type RegisterCall = [FadeId, number | undefined];
 
 /**
  * Build a minimal EngineState with only the fields registerOverlayFades reads:
@@ -183,14 +183,13 @@ describe('registerOverlayFades', () => {
     const { state, registerSpy } = makeState();
     registerOverlayFades(state);
 
-    type LabelCall = [Extract<FadeHandle, { kind: 'labelLayer' }>, number | undefined];
+    type LabelCall = [Extract<FadeId, { kind: 'labelLayer' }>, number | undefined];
     // Filter to category-LESS label handles only: there are multiple structure
     // labelLayer registrations (one per structure category), so collapsing by
     // `layer` alone would be ambiguous for structure.  The category-less handles are
     // exactly youAreHere/galaxyNames/scaleBar.
     const labelCalls = calls(registerSpy).filter(
-      ([h]) =>
-        h.kind === 'labelLayer' && !(h as Extract<FadeHandle, { kind: 'labelLayer' }>).category,
+      ([h]) => h.kind === 'labelLayer' && !(h as Extract<FadeId, { kind: 'labelLayer' }>).category,
     ) as LabelCall[];
     const byLayer = Object.fromEntries(labelCalls.map(([h, op]) => [h.layer, op]));
 
@@ -209,8 +208,8 @@ describe('registerOverlayFades', () => {
     const galaxyNamesCall = calls(registerSpy).find(
       ([h]) =>
         h.kind === 'labelLayer' &&
-        (h as Extract<FadeHandle, { kind: 'labelLayer' }>).layer === 'galaxyNames' &&
-        !(h as Extract<FadeHandle, { kind: 'labelLayer' }>).category,
+        (h as Extract<FadeId, { kind: 'labelLayer' }>).layer === 'galaxyNames' &&
+        !(h as Extract<FadeId, { kind: 'labelLayer' }>).category,
     );
     expect(galaxyNamesCall).toBeDefined();
     expect(galaxyNamesCall![1]).toBe(1);
@@ -228,7 +227,7 @@ describe('registerOverlayFades', () => {
       const markerCall = calls(registerSpy).find(
         ([h]) =>
           h.kind === 'markerLayer' &&
-          (h as Extract<FadeHandle, { kind: 'markerLayer' }>).category === category,
+          (h as Extract<FadeId, { kind: 'markerLayer' }>).category === category,
       );
       expect(markerCall, `markerLayer{${category}} should be registered`).toBeDefined();
     }
@@ -244,8 +243,8 @@ describe('registerOverlayFades', () => {
       const labelCall = calls(registerSpy).find(
         ([h]) =>
           h.kind === 'labelLayer' &&
-          (h as Extract<FadeHandle, { kind: 'labelLayer' }>).layer === 'structure' &&
-          (h as Extract<FadeHandle, { kind: 'labelLayer' }>).category === category,
+          (h as Extract<FadeId, { kind: 'labelLayer' }>).layer === 'structure' &&
+          (h as Extract<FadeId, { kind: 'labelLayer' }>).category === category,
       );
       expect(labelCall, `labelLayer{structure,${category}} should be registered`).toBeDefined();
     }
@@ -265,14 +264,14 @@ describe('registerOverlayFades', () => {
       calls(registerSpy).find(
         ([h]) =>
           h.kind === 'markerLayer' &&
-          (h as Extract<FadeHandle, { kind: 'markerLayer' }>).category === category,
+          (h as Extract<FadeId, { kind: 'markerLayer' }>).category === category,
       )?.[1];
     const labelOpacity = (category: string) =>
       calls(registerSpy).find(
         ([h]) =>
           h.kind === 'labelLayer' &&
-          (h as Extract<FadeHandle, { kind: 'labelLayer' }>).layer === 'structure' &&
-          (h as Extract<FadeHandle, { kind: 'labelLayer' }>).category === category,
+          (h as Extract<FadeId, { kind: 'labelLayer' }>).layer === 'structure' &&
+          (h as Extract<FadeId, { kind: 'labelLayer' }>).category === category,
       )?.[1];
 
     expect(markerOpacity('cluster')).toBe(0);

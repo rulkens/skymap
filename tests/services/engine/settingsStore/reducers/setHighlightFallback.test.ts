@@ -4,21 +4,21 @@ import { setHighlightFallback } from '../../../../../src/services/engine/setting
 import { makeSettingsFixture } from '../makeSettingsFixture';
 
 describe('setHighlightFallback', () => {
-  it('copies-on-write the surveys cluster', () => {
+  it('copies-on-write the galaxy catalogs cluster', () => {
     const state = makeSettingsFixture();
-    const next = setHighlightFallback(state, !state.surveys.highlightFallback);
+    const next = setHighlightFallback(state, !state.galaxyCatalogs.highlightFallback);
 
-    expect(next.surveys.highlightFallback).toBe(!state.surveys.highlightFallback);
-    expect(next.surveys).not.toBe(state.surveys);
+    expect(next.galaxyCatalogs.highlightFallback).toBe(!state.galaxyCatalogs.highlightFallback);
+    expect(next.galaxyCatalogs).not.toBe(state.galaxyCatalogs);
     expect(next.tonemap).toBe(state.tonemap);
   });
 
   it('leaves the input state unmutated', () => {
     const state = makeSettingsFixture();
-    const before = state.surveys.highlightFallback;
+    const before = state.galaxyCatalogs.highlightFallback;
 
     setHighlightFallback(state, !before);
 
-    expect(state.surveys.highlightFallback).toBe(before);
+    expect(state.galaxyCatalogs.highlightFallback).toBe(before);
   });
 });

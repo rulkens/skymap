@@ -11,7 +11,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import { CompactStructureCard } from '../../../src/components/InfoCard/CompactStructureCard';
-import type { StructureRecord } from '../../../src/@types/engine/data/StructureRecord';
+import type { StructureRecord } from '../../../src/@types/data/structure/StructureRecord';
 
 // Fixture structure ~10 Mpc from origin so the distance formatter renders a
 // readable Mpc value (formatDistance("Mpc / Mly") shape).  physicalRadiusMpc

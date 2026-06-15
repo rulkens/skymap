@@ -20,7 +20,7 @@
  * This loop's semantic is narrower: "start loading what should be loading but
  * isn't." That is exactly an idle-check. Because the loop re-runs on every
  * toggle/visibility/settings change, calling `load()` on every demanded row
- * unconditionally would abort + re-fetch + re-upload already-`ready` surveys —
+ * unconditionally would abort + re-fetch + re-upload already-`ready` galaxy catalogs —
  * a single checkbox flip into a multi-hundred-MB re-download storm. Guarding on
  * `slot.state().kind === 'idle'` here, rather than trusting load() to be a
  * no-op, prevents that without weakening the re-fetch primitive. Tier changes

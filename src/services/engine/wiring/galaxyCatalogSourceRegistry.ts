@@ -7,7 +7,7 @@
  *   - `GALAXY_CATALOG_SOURCE_REGISTRY` — one row per source: short
  *     name, fetcher, category (`survey` | `curated` | `synthetic`),
  *     optional companion sidecars.  Pure data.
- *   - `SURVEY_POINT_SOURCES` / `TIER_FETCHED_POINT_SOURCES` — derived
+ *   - `GALAXY_CATALOG_POINT_SOURCES` / `TIER_FETCHED_POINT_SOURCES` — derived
  *     iteration lists for the synthetic-fallback gate: which sources
  *     count toward "real data arrived", and which slots it watches.
  *   - `wireGalaxyCatalogSourceSlot` — uniform slot-construction
@@ -27,14 +27,15 @@
  * Non-point sidecars (filaments, pgc-aliases, cf4/mcpm volumes, the
  * cluster catalog) live only in `ASSET_WIRING`.
  *
- * A new survey adds one row here AND one point row in `ASSET_WIRING`.
+ * A new galaxy catalog adds one row here AND one point row in `ASSET_WIRING`.
  * A new companion type adds one `GalaxyCatalogCompanionRef` member plus
  * one slot minted on `state.assetSlots` with a matching key.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import { Source } from '../../../data/sources';
+import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
 import type { GalaxyCatalogSourceConfig } from '../../../@types/engine/wiring/GalaxyCatalogSourceConfig';
 import type { Tier } from '../../../@types/data/Tier';
@@ -42,7 +43,7 @@ import type { WirePointSourceDeps } from '../../../@types/engine/wiring/WirePoin
 import { createAssetSlot } from '../../loading/AssetSlot';
 import { galaxyCatalogFetcher } from '../../loading/fetchers/galaxyCatalogFetcher';
 import { syntheticPointFetcher } from '../../loading/fetchers/syntheticPointFetcher';
-import type { FadeHandle } from '../../../@types/animation/FadeHandle';
+import type { FadeId } from '../../../@types/animation/FadeId';
 import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
 import type { SourceType } from '../../../@types/data/SourceType';
 
@@ -94,17 +95,16 @@ const SHORT_NAME_BY_SOURCE: ReadonlyMap<SourceType, string> = new Map(
 
 /**
  * Sources in the `survey` category — counted toward the
- * synthetic-fallback ready gate.  Hidden surveys count as already
+ * synthetic-fallback ready gate.  Hidden galaxy catalogs count as already
  * settled (see `createSyntheticFallback`).
  */
-export const SURVEY_POINT_SOURCES: readonly SourceType[] = GALAXY_CATALOG_SOURCE_REGISTRY.filter(
-  (c) => c.category === 'survey',
-).map((c) => c.source);
+export const GALAXY_CATALOG_POINT_SOURCES: readonly SourceType[] =
+  GALAXY_CATALOG_SOURCE_REGISTRY.filter((c) => c.category === 'survey').map((c) => c.source);
 
 /**
- * Every tier-fetched catalog source — surveys + curated.  Iterated by
+ * Every tier-fetched catalog source — galaxy catalogs + curated.  Iterated by
  * the synthetic-fallback gate, which subscribes to each to learn when
- * every real survey has settled.
+ * every real galaxy catalog has settled.
  */
 export const TIER_FETCHED_POINT_SOURCES: readonly SourceType[] =
   GALAXY_CATALOG_SOURCE_REGISTRY.filter((c) => c.category !== 'synthetic').map((c) => c.source);
@@ -147,11 +147,11 @@ export function wireGalaxyCatalogSourceSlot(
   const { cb } = deps;
   const slotName = `${shortName}-points`;
 
-  // Register the fade handle at opacity 0 so the draw loop's
+  // Register the fade id at opacity 0 so the draw loop's
   // `fadeOpacityOf` lookup always finds it, even on the first frame
   // before any upload lands.  The commit drives the fadeTo lifecycle
   // from there.
-  state.subsystems.fades.register({ kind: 'survey', source }, 0);
+  state.subsystems.fades.register({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) }, 0);
 
   const slot = createAssetSlot<GalaxyCatalog, GalaxyCatalogReq>({
     name: slotName,
@@ -167,7 +167,8 @@ export function wireGalaxyCatalogSourceSlot(
       // populated later in bootstrap (pickRenderer, cam), and would
       // reject this upload during the legitimate wireSlots window.
       if (state.gpu.renderer === null) return;
-      const handle: FadeHandle = { kind: 'survey', source };
+      const catalogId = galaxyCatalogIdOf(source);
+      const id: FadeId = { kind: 'galaxyCatalog', id: catalogId };
       const fades = state.subsystems.fades;
 
       // Tier swap: fade the old buffer out before the new one lands so
@@ -177,19 +178,21 @@ export function wireGalaxyCatalogSourceSlot(
       // then does `upload()` destroy + recreate it.
       const isFirstLoad = !state.data.galaxies.catalogs.has(source);
       if (!isFirstLoad) {
-        await fades.fadeTo(handle, 0, FADE_OUT_DURATION_MS);
+        await fades.fadeTo(id, 0, FADE_OUT_DURATION_MS);
       }
 
       const t0 = performance.now();
       // eslint-disable-next-line no-console
       console.log(`[engine] upload start ${shortName} count=${cloud.count}`);
-      await state.gpu.renderer.upload(source, cloud);
+      // PointRenderer keys its catalogs by the string id; resolve from
+      // the registry (the source code carries the matching id).
+      await state.gpu.renderer.upload(catalogId, cloud);
       state.data.galaxies.setCatalog(source, cloud);
 
       // Fire-and-forget fade-in so the slot's `ready` transition
       // fires immediately; user interaction doesn't wait for the
       // smoothstep to saturate.
-      void fades.fadeTo(handle, 1, FADE_IN_DURATION_MS);
+      void fades.fadeTo(id, 1, FADE_IN_DURATION_MS);
 
       const dtMs = Math.round(performance.now() - t0);
       // Dump what the GPU actually holds after upload.  If this

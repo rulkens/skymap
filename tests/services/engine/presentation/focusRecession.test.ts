@@ -14,17 +14,16 @@ import { lerp } from '../../../../src/utils/math/lerp';
 function makeRegistry() {
   return createFadeRegistry({ requestRender: () => {} });
 }
-import { Source } from '../../../../src/data/sources';
-import type { StructureCategory } from '../../../../src/@types/engine/data/StructureCategory';
+import type { StructureCategory } from '../../../../src/@types/data/structure/StructureCategory';
 
 describe('focusRecession', () => {
   it('returns 1.0 for an untagged handle at blend 0', () => {
-    expect(focusRecession({ kind: 'survey', source: Source.SDSS }, 0)).toBe(1);
+    expect(focusRecession({ kind: 'galaxyCatalog', id: 'sdss' }, 0)).toBe(1);
   });
 
   it('returns 1.0 for an untagged handle at blend 1', () => {
-    // Survey handles have no recession target — they never recede, at any blend.
-    expect(focusRecession({ kind: 'survey', source: Source.SDSS }, 1)).toBe(1);
+    // Galaxy catalog handles have no recession target — they never recede, at any blend.
+    expect(focusRecession({ kind: 'galaxyCatalog', id: 'sdss' }, 1)).toBe(1);
   });
 
   it('returns 1.0 for a tagged handle at blend 0', () => {

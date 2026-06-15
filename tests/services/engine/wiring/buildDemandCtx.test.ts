@@ -44,7 +44,7 @@ function makeState(
   return {
     settings: {
       marker: 'sentinel',
-      surveys: { items: {} },
+      galaxyCatalogs: { items: {} },
       volumes: { items: {} },
     },
     sources: { drawMask: 0 },

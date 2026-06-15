@@ -4,7 +4,7 @@
  *
  * `computeInitialCamera` is called with a 60° FOV and the result drives
  * `state.cam` + `state.initialCamSnapshot`. No bbox input — framing
- * uses pure constants so the phase can run before any survey arrives.
+ * uses pure constants so the phase can run before any galaxy catalog arrives.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -69,7 +69,7 @@ import { wireInput } from '../../../../src/services/engine/phases/wireInput';
 function makeState(): EngineState {
   return {
     settings: {
-      surveys: {
+      galaxyCatalogs: {
         enabled: true,
         sizePx: 2.5,
         brightness: 1.0,
@@ -127,7 +127,7 @@ function makeState(): EngineState {
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
       milkyWayRenderer: null,
-      scalarVolumeRenderer: null,
+      volumeFieldRenderer: null,
       volumeUpsample: null,
     },
     subsystems: {
@@ -188,7 +188,7 @@ describe('wireInput', () => {
   });
 
   it('runs to completion even with no catalogs loaded', async () => {
-    // Progressive disclosure: wireInput must not require any survey to
+    // Progressive disclosure: wireInput must not require any galaxy catalog to
     // have arrived. Empty catalogs is the normal case at boot.
     const state = makeState();
     const deps = makeDeps();

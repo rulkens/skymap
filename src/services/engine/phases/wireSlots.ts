@@ -18,7 +18,7 @@
  *      handles, and the structure-store anchor + bulk projection.
  *   5. `createSyntheticFallback` — the imperative gate that arms the synthetic
  *      backstop (via the `'syntheticFallback'` request flag) iff every real
- *      survey settles without data.
+ *      galaxy catalog settles without data.
  *   6. `installLoadProgress` — the flat `allSlots` registry + load-progress
  *      emitter, over both point + sidecar slots.
  *   7. `installSlotReadyWake` — one subscription per slot wakes the render
@@ -102,9 +102,9 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // straight from galaxyStore by produceFamousLabels — not wired here.
   wireStructureProjection(state, cb);
 
-  // Arm the synthetic-fallback gate.  It subscribes to the survey slots and
+  // Arm the synthetic-fallback gate.  It subscribes to the galaxy catalog slots and
   // trips the `'syntheticFallback'` request flag (then re-runs demand) iff
-  // every real survey settles without data — the count-aware policy a pure
+  // every real galaxy catalog settles without data — the count-aware policy a pure
   // demand predicate can't express.
   createSyntheticFallback(state, cb);
 
@@ -122,7 +122,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
 
   // The single place loads start: walk the wiring registry and trigger every
   // demanded slot with its tier-derived request.  At boot this loads the
-  // default-visible surveys + famous-meta + the default-on MCPM volume +
+  // default-visible galaxy catalogs + famous-meta + the default-on MCPM volume +
   // the cluster catalog; filaments / CF-4 / PGC-alias stay idle until their
   // demand flips.  The same loop re-runs on every state change.
   reevaluateDemand(state);

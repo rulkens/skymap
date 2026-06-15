@@ -20,7 +20,6 @@
  * not a distinct absent state requiring extra narrowing.
  */
 
-import { Source } from '../../src/data/sources.js';
 import type { SourceType } from '../../src/@types/data/SourceType';
 
 export type ParsedRecord = {

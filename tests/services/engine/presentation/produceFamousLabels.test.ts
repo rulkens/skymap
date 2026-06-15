@@ -10,7 +10,7 @@ import { Source } from '../../../../src/data/sources';
 import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
 
 // Convenience factory used wherever the test doesn't care about wake behavior.
@@ -20,7 +20,7 @@ function makeRegistry(): FadeRegistry {
 
 // produceFamousLabels reads `state.data.galaxies` for the records,
 // `state.subsystems.fades` for the `galaxyNames` opacity + load-in fire, and
-// `state.settings.surveys.items.famousGalaxy.labelEnabled` for the
+// `state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled` for the
 // visibility gate. The fixture supplies all three; the `galaxyNames` handle is
 // registered at 1 so the load-in `fadeTo` (which THROWS on an unregistered
 // handle) is a safe no-op ramp and the at-rest opacity is 1. The famous label
@@ -31,7 +31,9 @@ function makeState(opts: { fades?: FadeRegistry } = {}): EngineState {
   return {
     data: createEngineData(),
     subsystems: { fades },
-    settings: { surveys: { items: { famousGalaxy: { enabled: true, labelEnabled: true } } } },
+    settings: {
+      galaxyCatalogs: { items: { famousGalaxy: { enabled: true, labelEnabled: true } } },
+    },
   } as unknown as EngineState;
 }
 
@@ -115,7 +117,7 @@ describe('produceFamousLabels', () => {
     fades.setImmediate({ kind: 'labelLayer', layer: 'galaxyNames' }, 0);
     const state = makeState({ fades });
     seed(state, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-    state.settings.surveys.items.famousGalaxy.labelEnabled = false;
+    state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled = false;
     expect(produceFamousLabels(state, makeCtx()).labels).toEqual([]);
   });
 
@@ -128,7 +130,7 @@ describe('produceFamousLabels', () => {
     midFade.setImmediate({ kind: 'labelLayer', layer: 'galaxyNames' }, 0.5);
     const fading = makeState({ fades: midFade });
     seed(fading, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-    fading.settings.surveys.items.famousGalaxy.labelEnabled = false;
+    fading.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled = false;
     const out = produceFamousLabels(fading, makeCtx());
     expect(out.labels.map((l) => l.id)).toEqual(['famous-m31']);
     // Emitted at the half opacity (full distance-fade alpha here is 1 × 0.5).
@@ -142,7 +144,7 @@ describe('produceFamousLabels', () => {
     done.setImmediate({ kind: 'labelLayer', layer: 'galaxyNames' }, 0);
     const settled = makeState({ fades: done });
     seed(settled, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-    settled.settings.surveys.items.famousGalaxy.labelEnabled = false;
+    settled.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled = false;
     expect(produceFamousLabels(settled, makeCtx()).labels).toEqual([]);
   });
 

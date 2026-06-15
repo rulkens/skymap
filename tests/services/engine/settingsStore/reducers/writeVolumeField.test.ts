@@ -18,7 +18,7 @@ describe('writeVolumeField', () => {
     expect(next.volumes).not.toBe(state.volumes);
     expect(next.volumes.items).not.toBe(state.volumes.items);
     // … sibling cluster untouched.
-    expect(next.surveys).toBe(state.surveys);
+    expect(next.galaxyCatalogs).toBe(state.galaxyCatalogs);
   });
 
   it('preserves the sibling enabled leaf on the shared volumes cluster', () => {

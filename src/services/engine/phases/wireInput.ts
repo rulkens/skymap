@@ -3,9 +3,9 @@
  * camera, click + double-click handlers, and the input-bindings listener
  * bag.
  *
- * Runs without waiting on any survey load: the camera framing uses pure
+ * Runs without waiting on any galaxy catalog load: the camera framing uses pure
  * constants from `cameraFraming.ts`, so the orbit camera and the loop
- * can come up immediately and surveys can fade in as they arrive. The
+ * can come up immediately and galaxy catalogs can fade in as they arrive. The
  * `ready` status emission lives in `wireSlots` as a per-arrival
  * subscriber.
  *
@@ -84,7 +84,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // ── Camera auto-framing ──────────────────────────────────────────────
   //
   // Pure constants — see `cameraFraming.ts`. No dependency on loaded
-  // catalogs, so the camera is built before any survey has arrived.
+  // catalogs, so the camera is built before any galaxy catalog has arrived.
   const fovYRad = (Math.PI / 180) * 60;
   const initialCam = computeInitialCamera({ fovYRad });
 
@@ -197,7 +197,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     const cr = state.subsystems.clickResolver;
     if (!r || state.data.galaxies.catalogs.size === 0 || !cr) return null;
 
-    // Snapshot what's pickable — visible galaxy surveys (filtered by the
+    // Snapshot what's pickable — visible galaxy catalogs (filtered by the
     // pick mask; a fading-out layer clears its bit immediately so it
     // can't claim a click while still visually fading) plus whether any
     // cluster ring is on screen.  Shared with the hover + pick-debug
@@ -216,7 +216,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       visibleSources,
       // Threaded through so the pick pass can boost its floor size
       // for easier click targets — see PICK_PADDING_PX in pickRenderer.ts.
-      pointSizePx: state.settings.surveys.sizePx,
+      pointSizePx: state.settings.galaxyCatalogs.sizePx,
       // Per-pass GPU timing.  Resolves to `undefined` when the
       // timing service isn't active on this adapter (no
       // `timestamp-query` feature) — in that case the pick render

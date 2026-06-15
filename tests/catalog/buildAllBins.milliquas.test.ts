@@ -24,17 +24,14 @@ import { recordsToCloud } from '../../tools/catalog/buildAllBins';
 import {
   encodeGalaxyCatalog,
   decodeGalaxyCatalog,
-} from '../../src/data/galaxyCatalogFormat';
-import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/galaxyDiameterKpc';
+} from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
+import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/defaultGalaxyDiameterKpc';
 
 describe('buildAllBins — Milliquas smoke', () => {
   // Resolved up front so each `it` block can lean on the same parse
   // result without re-reading the fixture (vitest reuses describe-scope
   // closures across `it` blocks within the file).
-  const raw = readFileSync(
-    resolve(__dirname, '../fixtures/milliquas/sample.txt'),
-    'utf8',
-  );
+  const raw = readFileSync(resolve(__dirname, '../fixtures/milliquas/sample.txt'), 'utf8');
 
   it('records-to-cloud + encode/decode preserves Milliquas-specific shape', () => {
     const { records } = parseMilliquas(raw);
@@ -82,10 +79,7 @@ describe('buildAllBins — Milliquas smoke', () => {
     expect(decoded.count).toBe(cloud.count);
     expect(decoded.magR[0]).toBeCloseTo(cloud.magR[0]!, 5);
     expect(decoded.axisRatio[0]).toBeCloseTo(cloud.axisRatio[0]!, 5);
-    expect(decoded.positionAngleDeg[0]).toBeCloseTo(
-      cloud.positionAngleDeg[0]!,
-      5,
-    );
+    expect(decoded.positionAngleDeg[0]).toBeCloseTo(cloud.positionAngleDeg[0]!, 5);
     expect(decoded.diameterKpc[0]).toBe(DEFAULT_GALAXY_DIAMETER_KPC);
     // classByte + parentSurveyByte must round-trip too.
     expect(decoded.classByte[qIdx]).toBe(1);

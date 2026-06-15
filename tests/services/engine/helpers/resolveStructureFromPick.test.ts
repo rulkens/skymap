@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 
 import { resolveStructureFromPick } from '../../../../src/services/engine/helpers/resolveStructureFromPick';
-import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
-import type { StructureCategory } from '../../../../src/@types/engine/data/StructureCategory';
+import type { StructureRecord } from '../../../../src/@types/data/structure/StructureRecord';
+import type { StructureCategory } from '../../../../src/@types/data/structure/StructureCategory';
 
 // Minimal structure fixtures.  The helper only indexes the returned array by
 // identity, so each record needs only the fields that satisfy `StructureRecord`.

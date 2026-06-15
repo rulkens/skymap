@@ -58,7 +58,7 @@ import package::lib::focusUniforms::focusAlphaMultiplier;
 
 // ── @group(2) — per-source SourceUniforms ──────────────────────────
 //
-// Each loaded survey has its OWN @group(2) bind group whose buffer
+// Each loaded galaxy catalog has its OWN @group(2) bind group whose buffer
 // carries SourceUniforms's 16-byte struct (sourceCode + intensityFloor
 // + falloffHalfMpc + 4 bytes pad — see lib/sourceUniforms.wesl).
 // Per-source bind groups dodge the 'queue.writeBuffer' race entirely
@@ -110,7 +110,7 @@ fn vs(
   let absMag = distanceModulus(p.magnitude, dMpc);
 
   // Recover the per-instance packed identity for the pick path. Bits
-  // 27..31 = 5-bit 'source.sourceCode' (this draw's survey, set per-
+  // 27..31 = 5-bit 'source.sourceCode' (this draw's galaxy catalog, set per-
   // source via the @group(2) bind group); bits 0..26 = the GPU's
   // '@builtin(instance_index)' (local 0..count-1).
   let myPacked = packSelection(source.sourceCode, ii);

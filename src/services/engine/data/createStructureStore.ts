@@ -1,7 +1,7 @@
 import type { StructureStore } from '../../../@types/engine/data/StructureStore';
-import type { StructureRecord } from '../../../@types/engine/data/StructureRecord';
-import type { StructureGroupId } from '../../../@types/engine/data/StructureGroupId';
-import type { StructureCategory } from '../../../@types/engine/data/StructureCategory';
+import type { StructureRecord } from '../../../@types/data/structure/StructureRecord';
+import type { StructureGroupId } from '../../../@types/data/structure/StructureGroupId';
+import type { StructureCategory } from '../../../@types/data/structure/StructureCategory';
 
 /**
  * Fixed concatenation order for `all()`. Anchors come before bulk so the

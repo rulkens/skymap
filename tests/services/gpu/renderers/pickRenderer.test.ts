@@ -159,7 +159,7 @@ describe('createPickRenderer', () => {
     const pickRenderer = createPickRenderer(device, pointRenderer, canonicalFadeBgl, canonicalSourceBgl, canonicalFocusBgl, {} as unknown as GPUBindGroup);
 
     // Two distinct sourceBuffers — the production case is N visible
-    // surveys and we want one bind group per source.
+    // galaxy catalogs and we want one bind group per source.
     const sourceBufA = { __source: 'A' } as unknown as GPUBuffer;
     const sourceBufB = { __source: 'B' } as unknown as GPUBuffer;
     const vbA = { __vb: 'A' } as unknown as GPUBuffer;

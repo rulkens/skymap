@@ -47,7 +47,7 @@
  * mirror image of the Milky Way's, so a camera close enough to light
  * the impostor is by construction outside the shell's fade band.  The
  * two never co-exist in one frame; the shell's gating + dispatch is
- * covered in `passes.test.ts` and `utils/math/horizonShellFade`.
+ * covered in `passes.test.ts` and `utils/math/horizonShellFadeAlpha`.
  *
  * If the post-split renderFrame skips a pass, drops a draw, or
  * reorders the renderers, this snapshot fails.  That's the gate
@@ -56,12 +56,12 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { Source } from '../../src/data/sources';
-import { BiasMode } from '../../src/data/biasMode';
+import { BiasMode } from '../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../src/data/toneMapCurve';
 import { renderFrame } from '../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
 import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
-import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { mat4 } from 'gl-matrix';
 import type { SourceType } from '../../src/@types/data/SourceType';
 
@@ -255,7 +255,7 @@ describe('renderFrame visual baseline', () => {
     const proceduralDiskRenderer = makeLoggingRenderer(records, 'procedural-disks');
     const texturedDiskRenderer = makeLoggingRenderer(records, 'textured-disks');
     const filamentRenderer = makeLoggingRenderer(records, 'filaments');
-    const scalarVolumeRenderer = {
+    const volumeFieldRenderer = {
       hasActiveFields: vi.fn(() => true),
       draw: vi.fn((...args: unknown[]) => {
         records.push({
@@ -358,7 +358,7 @@ describe('renderFrame visual baseline', () => {
           labelRenderer,
           markerLineRenderer,
           selectionRingRenderer: null,
-          scalarVolumeRenderer,
+          volumeFieldRenderer,
           // Flow's ribbon draw lands in Task 5; here flow stays off (null
           // renderer + disabled below) so encodeFlowCompute is a no-op and
           // the recorded single-vs-split sequence is unchanged.
@@ -399,7 +399,7 @@ describe('renderFrame visual baseline', () => {
       milkyWayRenderer: milkyWayRenderer as never,
       horizonShellRenderer: horizonShellRenderer as never,
       filamentRenderer: filamentRenderer as never,
-      scalarVolumeRenderer: scalarVolumeRenderer as never,
+      volumeFieldRenderer: volumeFieldRenderer as never,
       flowFieldRenderer: null,
       texturedDiskRenderer: texturedDiskRenderer as never,
       proceduralDiskRenderer: proceduralDiskRenderer as never,

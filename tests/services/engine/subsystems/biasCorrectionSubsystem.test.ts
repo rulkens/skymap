@@ -27,10 +27,10 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { createBiasCorrectionSubsystem } from '../../../../src/services/engine/subsystems/biasCorrectionSubsystem';
-import { BiasMode } from '../../../../src/data/biasMode';
-import type { BiasMode as BiasModeT } from '../../../../src/@types/data/BiasMode';
+import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
+import type { BiasMode as BiasModeT } from '../../../../src/@types/data/galaxyCatalog/BiasMode';
 import { Source } from '../../../../src/data/sources';
-import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { PointRenderer } from '../../../../src/@types/rendering/PointRenderer';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 

@@ -16,20 +16,16 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { downloadWithResume, sha256OfFile } from './fetchCosmicflows4.js';
-import { rawDataPath } from '../utils/io/rawDataRegistry.js';
+import { downloadWithResume, sha256OfFile } from './fetchCosmicflows4';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
 
 // ── CDS FTP URLs ────────────────────────────────────────────────────────────
 
-export const MCXC_TABLE_URL =
-  'https://cdsarc.cds.unistra.fr/ftp/J/A+A/534/A109/mcxc.dat';
-export const MCXC_README_URL =
-  'https://cdsarc.cds.unistra.fr/ftp/J/A+A/534/A109/ReadMe';
+export const MCXC_TABLE_URL = 'https://cdsarc.cds.unistra.fr/ftp/J/A+A/534/A109/mcxc.dat';
+export const MCXC_README_URL = 'https://cdsarc.cds.unistra.fr/ftp/J/A+A/534/A109/ReadMe';
 
-export const MSCC_TABLE_URL =
-  'https://cdsarc.cds.unistra.fr/ftp/J/MNRAS/445/4073/mscc.dat';
-export const MSCC_README_URL =
-  'https://cdsarc.cds.unistra.fr/ftp/J/MNRAS/445/4073/ReadMe';
+export const MSCC_TABLE_URL = 'https://cdsarc.cds.unistra.fr/ftp/J/MNRAS/445/4073/mscc.dat';
+export const MSCC_README_URL = 'https://cdsarc.cds.unistra.fr/ftp/J/MNRAS/445/4073/ReadMe';
 
 // ── Paths via registry (never hardcoded) ────────────────────────────────────
 

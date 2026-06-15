@@ -19,12 +19,10 @@
 import sharp from 'sharp';
 import { rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { rotatedExtract, type RotatedCrop } from '../famous-curator/plugin/cropExtract.js';
-import { runStarnet, type StarnetConfig } from '../famous-curator/plugin/starnet.js';
-import {
-  applyLuminanceAsAlpha,
-  type LuminanceAsAlphaOptions,
-} from '../utils/image/applyLuminanceAsAlpha.js';
+import { rotatedExtract, type RotatedCrop } from '../famous-curator/plugin/cropExtract';
+import { runStarnet, type StarnetConfig } from '../famous-curator/plugin/starnet';
+import { applyLuminanceAsAlpha } from '../utils/image/applyLuminanceAsAlpha';
+import type { LuminanceAsAlphaOptions } from '../utils/image/LuminanceAsAlphaOptions';
 
 // StarNet working size, applied to the SHORTER edge (fit: 'outside').  A
 // foreshortened crop (e.g. an edge-on disk at b/a≈0.4 → ~2.5:1) must still

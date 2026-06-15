@@ -35,7 +35,7 @@ describe('setFlow', () => {
     const state = makeSettingsFixture();
     const next = setFlow(state, { flowSpeed: 0.01 });
 
-    expect(next.surveys).toBe(state.surveys);
+    expect(next.galaxyCatalogs).toBe(state.galaxyCatalogs);
     expect(next.volumes).toBe(state.volumes);
   });
 

@@ -49,7 +49,7 @@ import type { Label } from '../../../@types/rendering/Label';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { LabelProducerOutput } from '../../../@types/engine/subsystems/LabelProducerOutput';
-import type { StructureCategory } from '../../../@types/engine/data/StructureCategory';
+import type { StructureCategory } from '../../../@types/data/structure/StructureCategory';
 import { STRUCTURE_MARKER_STYLES } from './structureMarkerStyles';
 import { getLabelStyleOverride } from '../labelStyleOverride';
 import { focusRecession } from './focusRecession';

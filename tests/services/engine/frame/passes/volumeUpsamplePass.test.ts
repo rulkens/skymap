@@ -76,7 +76,7 @@ describe('volumeUpsamplePass.enabled', () => {
   it('returns false when volumesEnabled is false and master fade is fully out', () => {
     const state = {
       gpu: {
-        scalarVolumeRenderer: { hasActiveFields: () => true, listHandles: () => [] },
+        volumeFieldRenderer: { hasActiveFields: () => true, listIds: () => [] },
         volumeUpsample: { draw: vi.fn(), destroy: vi.fn() },
       },
       // Master opacity 0 = no fade-out tail in flight. The gate
@@ -91,12 +91,12 @@ describe('volumeUpsamplePass.enabled', () => {
   it('returns false when no fields are active and no fade-out tail is in flight', () => {
     const state = {
       gpu: {
-        scalarVolumeRenderer: {
+        volumeFieldRenderer: {
           hasActiveFields: () => false,
-          // The fade-tail check iterates listHandles and calls
+          // The fade-tail check iterates listIds and calls
           // fades.opacityOf for each. Empty list → no tails → gate
           // stays false.
-          listHandles: () => [],
+          listIds: () => [],
         },
         volumeUpsample: { draw: vi.fn(), destroy: vi.fn() },
       },
@@ -108,17 +108,17 @@ describe('volumeUpsamplePass.enabled', () => {
   it('returns false when volumeUpsample is null (pre-bootstrap)', () => {
     const state = {
       gpu: {
-        scalarVolumeRenderer: { hasActiveFields: () => true },
+        volumeFieldRenderer: { hasActiveFields: () => true },
         volumeUpsample: null,
       },
     } as unknown as EngineState;
     expect(volumeUpsamplePass.enabled(state, makeCtx(), makeSettings())).toBe(false);
   });
 
-  it('returns false when scalarVolumeRenderer is null (pre-bootstrap)', () => {
+  it('returns false when volumeFieldRenderer is null (pre-bootstrap)', () => {
     const state = {
       gpu: {
-        scalarVolumeRenderer: null,
+        volumeFieldRenderer: null,
         volumeUpsample: { draw: vi.fn(), destroy: vi.fn() },
       },
     } as unknown as EngineState;
@@ -128,7 +128,7 @@ describe('volumeUpsamplePass.enabled', () => {
   it('returns true when every gate passes', () => {
     const state = {
       gpu: {
-        scalarVolumeRenderer: { hasActiveFields: () => true, listHandles: () => [] },
+        volumeFieldRenderer: { hasActiveFields: () => true, listIds: () => [] },
         volumeUpsample: { draw: vi.fn(), destroy: vi.fn() },
       },
       subsystems: { fades: { opacityOf: () => 1 } },
@@ -147,7 +147,7 @@ describe('volumeUpsamplePass.draw', () => {
     const drawSpy = vi.fn();
     const state = {
       gpu: {
-        scalarVolumeRenderer: { hasActiveFields: () => true },
+        volumeFieldRenderer: { hasActiveFields: () => true },
         volumeUpsample: { draw: drawSpy, destroy: vi.fn() },
       },
     } as unknown as EngineState;
@@ -160,7 +160,7 @@ describe('volumeUpsamplePass.draw', () => {
   it('does not throw when volumeUpsample is null (defensive null-check)', () => {
     const state = {
       gpu: {
-        scalarVolumeRenderer: { hasActiveFields: () => true },
+        volumeFieldRenderer: { hasActiveFields: () => true },
         volumeUpsample: null,
       },
     } as unknown as EngineState;

@@ -1,5 +1,5 @@
 /**
- * setDepthFadeAction — the thin imperative bridge for the survey depth-fade
+ * setDepthFadeAction — the thin imperative bridge for the galaxy catalog depth-fade
  * toggle. Runs the pure `setDepthFade` reducer through `store.setState`; the
  * action adds nothing but the write call.
  */

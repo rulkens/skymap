@@ -34,32 +34,9 @@
  */
 
 import { packSelection } from '../../data/selectionEncoding';
-import type { GalaxyCatalog } from '../../@types/data/GalaxyCatalog';
-import type { SourceType } from '../../@types/data/SourceType';
 import type { Vec3 } from '../../@types/math/Vec3';
-
-/**
- * One catalog tagged with its survey source. The source is needed at
- * the call boundary because the catalog itself is source-agnostic —
- * it's the same `GalaxyCatalog` shape regardless of which survey
- * produced it. The caller assembles the list from the engine's
- * `galaxyStore` catalogs map.
- */
-export type CatalogWithSource = {
-  readonly source: SourceType;
-  readonly catalog: GalaxyCatalog;
-};
-
-/**
- * The return value of {@link structureMembership}. `packedIds` carries
- * the matched galaxies in catalog-array-order, then local-index order;
- * `count` is its length, exposed redundantly so callers (e.g. the
- * InfoCard "N member galaxies" text) don't have to read `.length`.
- */
-export type StructureMembershipResult = {
-  readonly count: number;
-  readonly packedIds: readonly number[];
-};
+import type { CatalogWithSource } from '../../@types/data/structure/CatalogWithSource';
+import type { StructureMembershipResult } from '../../@types/data/structure/StructureMembershipResult';
 
 /**
  * Compute the packed identities of every galaxy strictly within

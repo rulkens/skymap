@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { filamentFetcher } from '../../../../src/services/loading/fetchers/filamentFetcher';
-import { encodeFilaments } from '../../../../src/data/filamentBinaryFormat';
+import { encodeFilaments } from '../../../../src/data/filament/filamentBinaryFormat';
 import { useFetchMock } from '../../../setup/fetchMock';
 
 const fetch = useFetchMock();
@@ -24,9 +24,7 @@ const emptyFilamentBuffer = (): ArrayBuffer => {
 
 describe('filamentFetcher (URL routing)', () => {
   it('uses filaments-small.bin for small tier', async () => {
-    fetch.mock.mockResolvedValue(
-      new Response(emptyFilamentBuffer(), { status: 200 }),
-    );
+    fetch.mock.mockResolvedValue(new Response(emptyFilamentBuffer(), { status: 200 }));
     await filamentFetcher({ tier: 'small' }, new AbortController().signal, () => {});
     expect(fetch.mock.mock.calls[0]?.[0]).toContain('filaments-small.bin');
   });
@@ -34,9 +32,7 @@ describe('filamentFetcher (URL routing)', () => {
   it('uses filaments.bin for medium and large', async () => {
     for (const tier of ['medium', 'large'] as const) {
       fetch.mock.mockReset();
-      fetch.mock.mockResolvedValue(
-        new Response(emptyFilamentBuffer(), { status: 200 }),
-      );
+      fetch.mock.mockResolvedValue(new Response(emptyFilamentBuffer(), { status: 200 }));
       await filamentFetcher({ tier }, new AbortController().signal, () => {});
       expect(fetch.mock.mock.calls[0]?.[0]).toMatch(/\/filaments\.bin$/);
     }
@@ -45,14 +41,8 @@ describe('filamentFetcher (URL routing)', () => {
 
 describe('filamentFetcher (success path)', () => {
   it('decodes the response body into a FilamentCloud', async () => {
-    fetch.mock.mockResolvedValue(
-      new Response(emptyFilamentBuffer(), { status: 200 }),
-    );
-    const cloud = await filamentFetcher(
-      { tier: 'small' },
-      new AbortController().signal,
-      () => {},
-    );
+    fetch.mock.mockResolvedValue(new Response(emptyFilamentBuffer(), { status: 200 }));
+    const cloud = await filamentFetcher({ tier: 'small' }, new AbortController().signal, () => {});
     // An empty-cloud round-trip survives encode→fetch→decode.  Specific
     // shape (vertex array layout) is tested in filamentBinaryFormat
     // round-trip tests — here we only need to know the decoder ran
@@ -67,9 +57,7 @@ describe('filamentFetcher (success path)', () => {
 
 describe('filamentFetcher (error path)', () => {
   it('propagates a non-2xx HTTP status', async () => {
-    fetch.mock.mockResolvedValue(
-      new Response('not found', { status: 404 }),
-    );
+    fetch.mock.mockResolvedValue(new Response('not found', { status: 404 }));
     await expect(
       filamentFetcher({ tier: 'small' }, new AbortController().signal, () => {}),
     ).rejects.toThrow();

@@ -45,7 +45,7 @@
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import { STRUCTURE_CATEGORIES } from '../../../data/structureCategories';
+import { STRUCTURE_CATEGORIES } from '../../../data/structure/structureCategories';
 
 /** Register overlay/volume-master/label-layer fade handles. See the module header for the opacity-coherence rationale. */
 export function registerOverlayFades(state: EngineState): void {

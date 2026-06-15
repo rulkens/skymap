@@ -12,7 +12,7 @@ describe('setThumbnailsEnabled', () => {
     // The touched cluster is a NEW reference …
     expect(next.thumbnails).not.toBe(state.thumbnails);
     // … but a sibling cluster keeps its existing reference (structural sharing).
-    expect(next.surveys).toBe(state.surveys);
+    expect(next.galaxyCatalogs).toBe(state.galaxyCatalogs);
   });
 
   it('stores the boolean verbatim in either direction', () => {

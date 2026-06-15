@@ -27,7 +27,7 @@ describe('useSettingsStore', () => {
 
   it('returns the live store value once a store is supplied', () => {
     const store = createSettingsStore(
-      makeSettingsFixture({ surveys: { ...makeSettingsFixture().surveys, brightness: 2 } }),
+      makeSettingsFixture({ galaxyCatalogs: { ...makeSettingsFixture().galaxyCatalogs, brightness: 2 } }),
     );
     const ref: RefObject<EngineHandle | null> = { current: handleWith(store) };
 

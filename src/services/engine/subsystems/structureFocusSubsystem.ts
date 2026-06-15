@@ -34,7 +34,7 @@
 
 import { createFadeController } from '../../animation/fadeController';
 import type { StructureFocusSubsystem } from '../../../@types/engine/subsystems/StructureFocusSubsystem';
-import type { StructureRecord } from '../../../@types/engine/data/StructureRecord';
+import type { StructureRecord } from '../../../@types/data/structure/StructureRecord';
 import type { FocusUniformsValue } from '../../../@types/rendering/FocusUniformsValue';
 import type { Vec3 } from '../../../@types/math/Vec3';
 

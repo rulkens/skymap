@@ -14,7 +14,7 @@
  *
  *   - `null` — background, another pick in flight, or a structure ring with
  *     no backing record. Engine calls `setSelected(null)`.
- *   - `{ kind: 'galaxy', source, localIdx }` — a survey point. Returned
+ *   - `{ kind: 'galaxy', source, localIdx }` — a galaxy catalog point. Returned
  *     unconditionally; a not-yet-loaded cloud surfaces as
  *     onSelectChange(null) inside `setSelected`, not a dropped selection.
  *   - `{ kind: 'structure', id }` — a structure ring resolved to its

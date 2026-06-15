@@ -44,7 +44,7 @@ import {
 } from './pointRenderer';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { SELECTION_NONE_SENTINEL, unpackPick } from '../../../data/selectionEncoding';
-import type { PickResult } from '../../../data/selectionEncoding';
+import type { PickResult } from '../../../@types/data/PickResult';
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
@@ -360,7 +360,7 @@ export function createPickRenderer(
   // `structureMarkerRenderer.pickRing` inside `recordPickPass`).  Shared
   // by `pick` and `renderForDebug` so a galaxy-empty scene with visible
   // rings still picks (and the pick-debug texture isn't black when every
-  // survey is toggled off).  `markerCount() > 0` mirrors
+  // galaxy catalog is toggled off).  `markerCount() > 0` mirrors
   // `structureMarkersPass`'s enable gate (0 when the category is hidden or
   // every ring has faded out).
   const hasAnyPickTarget = (sourceList: readonly PickSourceDraw[]): boolean =>

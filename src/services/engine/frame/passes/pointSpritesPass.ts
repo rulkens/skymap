@@ -44,10 +44,8 @@
  */
 
 import type { Pass } from '../../../../@types/engine/frame/Pass';
-import {
-  packSelection,
-  SELECTION_NONE_SENTINEL,
-} from '../../../../data/selectionEncoding';
+import { packSelection, SELECTION_NONE_SENTINEL } from '../../../../data/selectionEncoding';
+import { galaxyCatalogIdOf } from '../../../../utils/galaxyCatalogIdOf';
 
 export const pointSpritesPass: Pass = {
   name: 'point-sprites',
@@ -102,10 +100,13 @@ export const pointSpritesPass: Pass = {
       // bind its group. At rest (blend 0) the shader multiplier is 1.0.
       focusBindGroup: state.gpu.focusUniform!.bindGroup,
       // Look up the FadeRegistry opacity for each source at this frame's
-      // timestamp. The registry returns 1.0 for unregistered handles —
-      // a safe fallback so a source that hasn't registered yet renders
-      // at full opacity rather than disappearing.
-      fadeOpacityOf: (source) => fades.opacityOf({ kind: 'survey', source }, nowMs),
+      // timestamp. The renderer calls back with the numeric source code of
+      // each loaded catalog; resolve it to the catalog's string id (the
+      // registry's fade-id discriminator). The registry returns 1.0 for
+      // unregistered handles — a safe fallback so a source that hasn't
+      // registered yet renders at full opacity rather than disappearing.
+      fadeOpacityOf: (source) =>
+        fades.opacityOf({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) }, nowMs),
     });
   },
 };

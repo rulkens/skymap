@@ -12,6 +12,7 @@
 import type { mat4 } from 'gl-matrix';
 import type { SourceType } from '../data/SourceType';
 import type { GalaxyCatalog } from '../data/GalaxyCatalog';
+import type { GalaxyCatalogId } from '../data/galaxyCatalog/GalaxyCatalogId';
 import type { PointDrawSettings } from './PointDrawSettings';
 
 export type PointRenderer = {
@@ -22,15 +23,16 @@ export type PointRenderer = {
   readonly label: string;
   /**
    * Pack a `GalaxyCatalog` into an interleaved GPU vertex buffer for the
-   * given source.  Replaces any previous buffer for that source.  See
+   * given catalog id (mirroring `volumeFieldRenderer.upload`, which keys
+   * by field id).  Replaces any previous buffer for that catalog.  See
    * the factory body for the off-thread bake / race-condition rationale.
    */
-  upload(source: SourceType, cloud: GalaxyCatalog): Promise<void>;
+  upload(id: GalaxyCatalogId, galaxyCatalog: GalaxyCatalog): Promise<void>;
   /**
-   * Remove a source's GPU vertex buffer and reclaim its VRAM.  No-op
-   * if the source was never uploaded.
+   * Remove a catalog's GPU vertex buffer and reclaim its VRAM.  No-op
+   * if the catalog was never uploaded.
    */
-  unload(source: SourceType): void;
+  unload(id: GalaxyCatalogId): void;
   /**
    * Install the upload-tail callback used by the bias-correction
    * subsystem.  Pass `null` to detach.  Idempotent.

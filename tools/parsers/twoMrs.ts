@@ -68,9 +68,9 @@
  * definition; the merger uses 0n as the dedup-skip sentinel.
  */
 
-import { Source } from '../../src/data/sources.js';
-import { nonCommentLines, type ParsedRecord } from './common.js';
-import { arcsecToKpc } from '../../src/utils/math/arcsecToKpc.js';
+import { Source } from '../../src/data/sources';
+import { nonCommentLines, type ParsedRecord } from './common';
+import { arcsecToKpc } from '../../src/utils/math/arcsecToKpc';
 
 /**
  * Speed of light in km/s, used to convert heliocentric velocity cz into

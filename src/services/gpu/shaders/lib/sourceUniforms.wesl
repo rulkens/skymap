@@ -50,7 +50,7 @@ struct SourceUniforms {
   // '1 / (1 + (d / falloffHalfMpc)^2)'. Replaces the prior hardcoded
   // FALLOFF_HALF_MPC = 1000. Set very large (effectively disables fade)
   // for sparse far-field catalogs like Milliquas; keep at 1000 for the
-  // bulk galaxy surveys where the curve was originally tuned.
+  // bulk galaxy catalogs where the curve was originally tuned.
   falloffHalfMpc: f32,
 
   // Remaining pad slot — kept named so a future field can repurpose

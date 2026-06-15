@@ -14,9 +14,9 @@
 
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import { resolveStructureFromPick } from './resolveStructureFromPick';
-import type { PickResult } from '../../../data/selectionEncoding';
+import type { PickResult } from '../../../@types/data/PickResult';
 import type { Selection } from '../../../@types/engine/subsystems/Selection';
-import type { StructureCategory } from '../../../@types/engine/data/StructureCategory';
+import type { StructureCategory } from '../../../@types/data/structure/StructureCategory';
 import type { PickStructureStore } from '../../../@types/engine/data/PickStructureStore';
 
 export function pickToSelection(
@@ -25,7 +25,7 @@ export function pickToSelection(
 ): Selection | null {
   if (pick === null) return null;
   const entry = SOURCE_REGISTRY[pick.sourceCode];
-  if (entry?.type === 'survey') {
+  if (entry?.type === 'galaxyCatalog') {
     return { kind: 'galaxy', source: pick.sourceCode, localIdx: pick.localIdx };
   }
   if (entry?.type === 'structure') {

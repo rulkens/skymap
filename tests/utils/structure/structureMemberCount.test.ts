@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { structureMemberCount } from '../../../src/utils/structure/structureMemberCount';
 import { Source } from '../../../src/data/sources';
-import { ALL_VISIBLE_MASK, maskWith, maskWithout } from '../../../src/utils/sourceMask';
-import type { GalaxyCatalog } from '../../../src/@types/data/GalaxyCatalog';
+import { ALL_VISIBLE_MASK } from '../../../src/utils/allVisibleMask';
+import { maskWith } from '../../../src/utils/maskWith';
+import { maskWithout } from '../../../src/utils/maskWithout';
+import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { SourceType } from '../../../src/@types/data/SourceType';
-import type { StructureRecord } from '../../../src/@types/engine/data/StructureRecord';
+import type { StructureRecord } from '../../../src/@types/data/structure/StructureRecord';
 
 /**
  * Minimal GalaxyCatalog from (x,y,z) tuples — only `positions`/`count` are
@@ -55,7 +57,7 @@ function cloudFrom(map: Partial<Record<SourceType, GalaxyCatalog>>) {
 }
 
 describe('structureMemberCount', () => {
-  it('counts galaxies inside the sphere across visible surveys', () => {
+  it('counts galaxies inside the sphere across visible galaxy catalogs', () => {
     const getCloud = cloudFrom({
       [Source.SDSS]: makeCatalog([
         [1, 0, 0],
@@ -70,7 +72,7 @@ describe('structureMemberCount', () => {
     expect(structureMemberCount(cluster, getCloud, ALL_VISIBLE_MASK)).toBe(3);
   });
 
-  it('excludes surveys toggled off in the visibility mask', () => {
+  it('excludes galaxy catalogs toggled off in the visibility mask', () => {
     const getCloud = cloudFrom({
       [Source.SDSS]: makeCatalog([
         [1, 0, 0],
@@ -129,7 +131,7 @@ describe('structureMemberCount', () => {
     ).toBe(0);
   });
 
-  it('drops a single hidden survey from the count without disturbing the rest', () => {
+  it('drops a single hidden galaxy catalog from the count without disturbing the rest', () => {
     const getCloud = cloudFrom({
       [Source.SDSS]: makeCatalog([[1, 0, 0]]),
       [Source.Glade]: makeCatalog([[0, 1, 0]]),

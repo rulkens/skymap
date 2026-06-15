@@ -4,7 +4,7 @@
  *
  * Mirrors `cf4DensityFetcher`'s shape: one URL, no per-request branching,
  * decode via the format module. The request payload is `void` — there is
- * one and only one CF4++ velocity cube. Unlike the survey catalogs (and
+ * one and only one CF4++ velocity cube. Unlike the galaxy catalog catalogs (and
  * unlike MCPM), the flow field is NOT tier-gated: it ships as a single
  * self-describing `.scfd` with no per-tier variants and no JSON sidecar
  * (SCFD v3 folds the frame + velocity stats into the binary header), so a
@@ -17,15 +17,11 @@
  */
 
 import type { Fetcher } from '../../../@types/loading/Fetcher';
-import type { ScalarCube } from '../../../@types/data/ScalarCube';
-import { decodeScalarField } from '../../../data/scalarFieldFormat';
+import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
+import { decodeScalarField } from '../../../data/volume/scalarFieldFormat';
 import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
 
-export const flowFieldFetcher: Fetcher<ScalarCube, void> = async (
-  _req,
-  signal,
-  onProgress,
-) => {
+export const flowFieldFetcher: Fetcher<ScalarCube, void> = async (_req, signal, onProgress) => {
   const buf = await fetchWithProgress(dataUrl('flowfield.scfd'), signal, onProgress);
   return decodeScalarField(buf);
 };

@@ -26,7 +26,7 @@
  *   GLADE itself uses to pre-merge its constituent catalogues.
  */
 
-import type { ParsedRecord } from '../parsers/common.js';
+import type { ParsedRecord } from '../parsers/common';
 
 /**
  * Position tolerance: 5 arcseconds expressed in degrees.

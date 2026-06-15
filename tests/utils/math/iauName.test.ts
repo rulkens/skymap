@@ -1,5 +1,5 @@
 /**
- * Unit tests for `iauName` — the survey-aware IAU coordinate-based designation.
+ * Unit tests for `iauName` — the galaxy-catalog-aware IAU coordinate-based designation.
  *
  * IAU designations encode (RA, Dec) with truncated (NOT rounded) precision so
  * the name is stable across catalog re-measurements.  We verify:

@@ -25,7 +25,7 @@
  * surface them if we ever want to render cluster nodes as dots.
  */
 
-import type { FilamentCloud } from '../../src/@types/data/FilamentCloud';
+import type { FilamentCloud } from '../../src/@types/data/filament/FilamentCloud';
 
 /** A single filament polyline. */
 export type FilamentStrip = {

@@ -9,7 +9,7 @@
  * ### Why short-circuit here rather than in the AssetSlot
  *
  * The slot is intentionally generic over `<T, Req>` and knows nothing about
- * tiers, sources, or surveys.  Encoding the excluded-tier rule inside the
+ * tiers, sources, or galaxy catalogs.  Encoding the excluded-tier rule inside the
  * fetcher keeps the slot's type signature pristine — the fetcher decides
  * what "successful fetch" means for its own asset.  A different fetcher
  * (filaments, sidecar JSON) might have a totally different short-circuit
@@ -34,8 +34,11 @@
  */
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
-import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
-import { decodeGalaxyCatalog, emptyGalaxyCatalog } from '../../../data/galaxyCatalogFormat';
+import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
+import {
+  decodeGalaxyCatalog,
+  emptyGalaxyCatalog,
+} from '../../../data/galaxyCatalog/galaxyCatalogFormat';
 import { tierTarget, tierFilenameForSource } from '../../../data/tierTargets';
 import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
 

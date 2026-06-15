@@ -19,7 +19,7 @@ import type { ParsedRecord } from '../tools/parsers/common';
  * keeps each test focused on the cross-match behaviour under examination.
  *
  * NaN for the four bands the synthetic record doesn't pretend to carry is
- * the same sentinel the real parsers emit when a survey lacks that band
+ * the same sentinel the real parsers emit when a galaxy catalog lacks that band
  * (see common.ts), so the merger is exercised with realistic input.
  */
 function rec(source: SourceType, ra: number, dec: number, z: number, objID = 0n): ParsedRecord {

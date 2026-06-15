@@ -41,12 +41,8 @@ import {
   hyperLedaMeandataUrl,
   parseHyperLedaMeandata,
   type HyperLedaMeandataRow,
-} from '../parsers/hyperledaMeandata.js';
-import {
-  mergeIntoFamousEntry,
-  orderEntryFields,
-  ngcDisplayName,
-} from './expandFamousFromCatalogs.js';
+} from '../parsers/hyperledaMeandata';
+import { mergeIntoFamousEntry, orderEntryFields, ngcDisplayName } from './expandFamousFromCatalogs';
 
 /**
  * Build a canonically-ordered seed entry object from a parsed HyperLEDA row.

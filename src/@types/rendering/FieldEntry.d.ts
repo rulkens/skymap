@@ -1,6 +1,6 @@
 /**
  * FieldEntry — internal per-registered-field record kept by the
- * `ScalarVolumeRenderer`'s `fields` map.
+ * `VolumeFieldRenderer`'s `fields` map.
  *
  * Holds the things the renderer genuinely owns: GPU resources (textures,
  * buffers, bind groups), the cube's model / inverse-model matrices, the
@@ -18,11 +18,11 @@
 
 import type { mat4 } from 'gl-matrix';
 
-import type { VolumeFieldId } from '../data/VolumeFieldId';
-import type { ScalarFieldPaletteId } from '../data/ScalarFieldPaletteId';
+import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
+import type { ScalarFieldPaletteId } from '../data/volume/ScalarFieldPaletteId';
 
 export type FieldEntry = {
-  handle: VolumeFieldId;
+  id: VolumeFieldId;
   /**
    * Per-cube center of the contrast windowing transform, in LUT
    * coordinate space [0, 1].  Divergent palettes (CF-4, coolwarm)
@@ -30,7 +30,7 @@ export type FieldEntry = {
    * symmetrically; sequential palettes (MCPM, inferno) want 0.0 so
    * the deadband suppresses the void floor (LUT t=0) and the stretch
    * pushes mid-density values toward the bright end.  Per-cube
-   * static — read once at registration time from the per-handle
+   * static — read once at registration time from the per-id
    * registry, not user-tunable.  See `applyContrastWindow` in
    * `fragment.wesl` for the math.
    */
@@ -42,7 +42,7 @@ export type FieldEntry = {
    * `envelopeOuter` are fully suppressed; values in between cross-fade.
    * Setting both to a value ≥ √3 (the cube-corner distance) disables
    * the envelope.  Per-cube static — read once at registration from
-   * the per-handle registry.
+   * the per-id registry.
    */
   envelopeInner: number;
   envelopeOuter: number;
@@ -65,7 +65,7 @@ export type FieldEntry = {
   /**
    * Per-field FadeUniforms GPU buffer (16 bytes — opacity f32 + 12
    * bytes pad). Written each frame in `draw` from the registry-read
-   * opacity for this field's handle.
+   * opacity for this field's id.
    */
   fadeBuffer: GPUBuffer;
   /**

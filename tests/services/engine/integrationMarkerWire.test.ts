@@ -26,7 +26,7 @@ import { produceStructureMarkers } from '../../../src/services/engine/presentati
 import { createEngineData } from '../../../src/services/engine/data/createEngineData';
 import { createStructureMarkerRenderer } from '../../../src/services/gpu/renderers/structureMarkerRenderer';
 import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
-import type { StructureRecord } from '../../../src/@types/engine/data/StructureRecord';
+import type { StructureRecord } from '../../../src/@types/data/structure/StructureRecord';
 
 function makeRegistry() {
   return createFadeRegistry({ requestRender: () => {} });

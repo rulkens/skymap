@@ -3,7 +3,7 @@ import type { SyntheticVolumeShape } from './SyntheticVolumeShape';
 /**
  * Request shape for the synthetic volume fetcher.
  *
- * `handle` is a caller-chosen identifier surfaced in `LoadingDevPanel`
+ * `id` is a caller-chosen identifier surfaced in `LoadingDevPanel`
  * (it mirrors the `name` shown in the slot registry row).  `shape`
  * picks which procedural generator to call.  `dims` and `boxSizeMpc`
  * pass through to the generators; both have reasonable defaults so
@@ -12,7 +12,7 @@ import type { SyntheticVolumeShape } from './SyntheticVolumeShape';
  */
 export type SyntheticVolumeReq = {
   /** Caller-chosen identifier; surfaced in `LoadingDevPanel`. */
-  handle: string;
+  id: string;
   /** Which shape to build.  Default `'gaussian'` for back-compat with
    *  callers from before the multi-shape extension. */
   shape?: SyntheticVolumeShape;

@@ -5,10 +5,10 @@ export type ComputeAngularWeightsInput = {
   /** Galaxy catalog whose galaxies need per-row angular re-weight values. */
   cloud: GalaxyCatalog;
   /**
-   * Survey this catalog belongs to.  Currently unused by the algorithm — the
+   * Galaxy catalog this catalog belongs to.  Currently unused by the algorithm — the
    * binning is purely geometric on the catalog's positions — but threaded
    * through the API for parity with `computeSchechterRatios` and to support
-   * a future per-survey tuning (e.g., different `nside` for the smaller 2MRS
+   * a future per-galaxy-catalog tuning (e.g., different `nside` for the smaller 2MRS
    * catalog where 12 288 cells overresolve the data).
    */
   source: SourceType;

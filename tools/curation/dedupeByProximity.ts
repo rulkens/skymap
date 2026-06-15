@@ -21,7 +21,7 @@
  * pair.  Pure function; preserves input order of surviving candidates.
  */
 
-import type { Vec3 } from '../../src/@types/math/Vec3.js';
+import type { Vec3 } from '../../src/@types/math/Vec3';
 
 export type ProximityPoint = { worldPos: Vec3 };
 

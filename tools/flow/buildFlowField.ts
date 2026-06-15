@@ -30,9 +30,9 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { readNpy } from '../parsers/npyReader';
-import { f32ToF16Bits } from '../utils/math/floatHalf';
-import { encodeScalarField } from '../../src/data/scalarFieldFormat';
-import type { ScalarCube } from '../../src/@types/data/ScalarCube';
+import { f32ToF16Bits } from '../utils/math/f32ToF16Bits';
+import { encodeScalarField } from '../../src/data/volume/scalarFieldFormat';
+import type { ScalarCube } from '../../src/@types/data/volume/ScalarCube';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { attractorVoxel } from './flowFieldFrame';
@@ -72,9 +72,7 @@ function asVelocityField(
   values: Float64Array | Float32Array,
 ): VelocityField {
   if (shape.length !== 4) {
-    throw new Error(
-      `buildFlowField: expected a 4D velocity array, got shape ${shape.join('x')}`,
-    );
+    throw new Error(`buildFlowField: expected a 4D velocity array, got shape ${shape.join('x')}`);
   }
   const componentLeading = shape[0] === 3;
   const componentTrailing = shape[3] === 3;
@@ -229,11 +227,7 @@ export async function buildFlowField(args?: {
   // lower corner of voxel (0,0,0) is at -voxelSize × N/2 per axis.  Physical
   // Mpc (CF4++ is not Mpc/h), so no h-rescale.
   const voxelSizeMpc = CF4PP_BOX_SIZE_MPC / N;
-  const origin: Vec3 = [
-    -voxelSizeMpc * (N / 2),
-    -voxelSizeMpc * (N / 2),
-    -voxelSizeMpc * (N / 2),
-  ];
+  const origin: Vec3 = [-voxelSizeMpc * (N / 2), -voxelSizeMpc * (N / 2), -voxelSizeMpc * (N / 2)];
 
   // ── 5. Build the cube + encode ───────────────────────────────────────
   const cube: ScalarCube = {

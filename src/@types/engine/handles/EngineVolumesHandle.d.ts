@@ -1,6 +1,6 @@
-import type { ScalarCube } from '../../data/ScalarCube';
-import type { ScalarFieldPaletteId } from '../../data/ScalarFieldPaletteId';
-import type { VolumeFieldId } from '../../data/VolumeFieldId';
+import type { ScalarCube } from '../../data/volume/ScalarCube';
+import type { ScalarFieldPaletteId } from '../../data/volume/ScalarFieldPaletteId';
+import type { VolumeFieldId } from '../../data/volume/VolumeFieldId';
 
 /**
  * EngineVolumesHandle — scalar-volume overlay registry + per-field tunables.
@@ -55,7 +55,7 @@ export type EngineVolumesHandle = {
   list: () => VolumeFieldId[];
   /** Return a snapshot of every registered field's UI-facing state. */
   getState: () => ReadonlyArray<{
-    handle: VolumeFieldId;
+    id: VolumeFieldId;
     label: string;
     enabled: boolean;
     intensity: number;

@@ -8,7 +8,7 @@
  * doesn't reset its sliders. Only a brand-new dynamically-added handle seeds a
  * fresh row from `buildVolumeFieldSettings`.
  *
- * The GPU upload (`scalarVolumeRenderer.upload`) and the conditional fade stay
+ * The GPU upload (`volumeFieldRenderer.upload`) and the conditional fade stay
  * in the handle setter — those are renderer side-effects, not settings writes;
  * only the row-seeding moves here so React's per-field rows selector wakes on a
  * genuinely-new field.
@@ -19,8 +19,8 @@
  */
 
 import type { EngineSettingsState } from '../../../../@types/settings/EngineSettingsState';
-import type { VolumeFieldId } from '../../../../@types/data/VolumeFieldId';
-import { buildVolumeFieldSettings } from '../../../../data/volumeFieldDefaults';
+import type { VolumeFieldId } from '../../../../@types/data/volume/VolumeFieldId';
+import { buildVolumeFieldSettings } from '../../../../data/volume/volumeFieldDefaults';
 
 export function addVolumeField(state: EngineSettingsState, id: VolumeFieldId): EngineSettingsState {
   if (state.volumes.items[id]) return state;

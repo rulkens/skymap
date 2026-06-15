@@ -2,7 +2,7 @@
  * scaleBar — unit tests for the pure scale-bar computation.
  *
  * We exercise the {1, 2, 5} × 10^k tick selection across a few
- * representative camera distances (close-up galaxy, mid-survey, deep
+ * representative camera distances (close-up galaxy, mid-galaxy catalog, deep
  * field) and verify the output `widthPx` always fits inside the target
  * pixel envelope (a property of `niceRound`'s floor behaviour).  We
  * also verify the degenerate-input short-circuits (zero canvas, infinite
@@ -45,7 +45,7 @@ describe('computeScaleInfo', () => {
     expect(result).toBeNull();
   });
 
-  it('emits a Mpc label at mid-survey distance', () => {
+  it('emits a Mpc label at mid-galaxy catalog distance', () => {
     // distance = 100 Mpc, 720px tall, 60° FOV.
     // h_world = 2 * 100 * tan(30°) ≈ 115.47
     // pxPerMpc ≈ 720 / 115.47 ≈ 6.235

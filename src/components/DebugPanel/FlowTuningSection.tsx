@@ -18,7 +18,7 @@
 
 import type { ReactElement } from 'react';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
-import { FLOW_SLIDER_FIELDS, flowSliderPatch } from '../../data/flowFields';
+import { FLOW_SLIDER_FIELDS, flowSliderPatch } from '../../data/flow/flowFields';
 
 type SliderProps = {
   label: string;

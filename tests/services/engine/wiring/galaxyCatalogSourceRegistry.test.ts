@@ -35,17 +35,17 @@ import type { SourceType } from '../../../../src/@types/data/SourceType';
 
 import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
-  SURVEY_POINT_SOURCES,
+  GALAXY_CATALOG_POINT_SOURCES,
   TIER_FETCHED_POINT_SOURCES,
   wireGalaxyCatalogSourceSlot,
 } from '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry';
 import type { GalaxyCatalogSourceConfig } from '../../../../src/@types/engine/wiring/GalaxyCatalogSourceConfig';
 import type { WirePointSourceDeps } from '../../../../src/@types/engine/wiring/WirePointSourceDeps';
-import { Source } from '../../../../src/data/sources';
+import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 /**
  * Minimal-shape fixture for the `EngineState` slices the helper reads
@@ -110,7 +110,7 @@ describe('GALAXY_CATALOG_SOURCE_REGISTRY', () => {
     ]);
   });
 
-  it('uses the shared galaxyCatalogFetcher for the five real surveys and the dedicated synthetic fetcher for Synthetic', () => {
+  it('uses the shared galaxyCatalogFetcher for the five real galaxy catalogs and the dedicated synthetic fetcher for Synthetic', () => {
     // We don't import the fetchers here to avoid coupling to their
     // implementation — but we can verify the structural invariant
     // "Synthetic's fetcher is not the same reference as the other four".
@@ -118,15 +118,15 @@ describe('GALAXY_CATALOG_SOURCE_REGISTRY', () => {
     const synthetic = GALAXY_CATALOG_SOURCE_REGISTRY.find((c) => c.source === Source.Synthetic);
     expect(synthetic).toBeDefined();
     const realFetchers = new Set(real.map((c) => c.fetcher));
-    expect(realFetchers.size).toBe(1); // all four real surveys share one fetcher
+    expect(realFetchers.size).toBe(1); // all four real galaxy catalogs share one fetcher
     expect(synthetic!.fetcher).not.toBe(real[0]!.fetcher);
   });
 
-  it('derives SURVEY_POINT_SOURCES from rows with category="survey"', () => {
+  it('derives GALAXY_CATALOG_POINT_SOURCES from rows with category="survey"', () => {
     // Pin the consolidation invariant: anything that the boot-time
     // synthetic-fallback gate consults must come from the registry,
     // never from a hardcoded enum literal scattered elsewhere.
-    expect([...SURVEY_POINT_SOURCES]).toEqual([
+    expect([...GALAXY_CATALOG_POINT_SOURCES]).toEqual([
       Source.SDSS,
       Source.TwoMRS,
       Source.Glade,
@@ -136,7 +136,7 @@ describe('GALAXY_CATALOG_SOURCE_REGISTRY', () => {
 
   it('derives TIER_FETCHED_POINT_SOURCES as every non-synthetic row in enum order', () => {
     // The boot-time slot-load loop + the tier-change reload loop both
-    // iterate this list.  Adding a new survey via one registry row
+    // iterate this list.  Adding a new galaxy catalog via one registry row
     // should automatically wire it through both loops.
     expect([...TIER_FETCHED_POINT_SOURCES]).toEqual([
       Source.SDSS,
@@ -236,9 +236,9 @@ describe('wireGalaxyCatalogSourceSlot', () => {
       expect(slot.state().kind).toBe('ready');
     });
 
-    // Upload was called with (source, cloud) — the renderer's contract.
+    // Upload was called with (id, cloud) — the renderer's contract.
     expect(upload).toHaveBeenCalledOnce();
-    expect(upload).toHaveBeenCalledWith(Source.Glade, cloud);
+    expect(upload).toHaveBeenCalledWith(SOURCE_REGISTRY[Source.Glade].id, cloud);
     // sources.catalogs was populated post-upload.
     expect(state.data.galaxies.catalogs.get(Source.Glade)).toBe(cloud);
   });
@@ -272,9 +272,9 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     expect(state.data.galaxies.catalogs.has(Source.TwoMRS)).toBe(false);
   });
 
-  it('registers a survey fade handle at opacity 0 for the wired source', () => {
+  it('registers a galaxy catalog fade handle at opacity 0 for the wired source', () => {
     // The wiring step (not the slot commit) registers the handle so
-    // every per-frame opacityOf({ kind: 'survey', source }) lookup finds
+    // every per-frame opacityOf({ kind: 'galaxyCatalog', id }) lookup finds
     // it from frame 1 onward — well before any data has loaded. The
     // commit drives the fadeTo(1, …) lifecycle afterwards.
     const register = vi.fn();
@@ -293,6 +293,6 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     const cfg = GALAXY_CATALOG_SOURCE_REGISTRY.find((c) => c.source === Source.SDSS)!;
     wireGalaxyCatalogSourceSlot(state, cfg, makeDeps());
 
-    expect(register).toHaveBeenCalledWith({ kind: 'survey', source: Source.SDSS }, 0);
+    expect(register).toHaveBeenCalledWith({ kind: 'galaxyCatalog', id: 'sdss' }, 0);
   });
 });

@@ -33,9 +33,9 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { readNpy } from '../parsers/npyReader';
-import { f32ToF16Bits } from '../utils/math/floatHalf';
-import { encodeScalarField } from '../../src/data/scalarFieldFormat';
-import type { ScalarCube } from '../../src/@types/data/ScalarCube';
+import { f32ToF16Bits } from '../utils/math/f32ToF16Bits';
+import { encodeScalarField } from '../../src/data/volume/scalarFieldFormat';
+import type { ScalarCube } from '../../src/@types/data/volume/ScalarCube';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
 /**

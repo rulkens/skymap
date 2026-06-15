@@ -12,7 +12,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { resolveFocusTarget } from '../../../../src/services/engine/camera/resolveFocusTarget';
-import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import { Source } from '../../../../src/data/sources';
 import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
 import { raDecZToCartesian } from '../../../../src/utils/math/raDecZToCartesian';

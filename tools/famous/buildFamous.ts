@@ -23,19 +23,19 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { parseFamousSeed, type FamousEntry } from '../parsers/famousSeed.js';
-import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalogFormat.js';
-import { Source } from '../../src/data/sources.js';
-import { resolveFamousOrientation } from './resolveFamousOrientation.js';
-import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog.js';
-import type { FamousMetaEntry } from '../../src/@types/loading/FamousMetaEntry.js';
-import { rawDataPath } from '../utils/io/rawDataRegistry.js';
-import { parseRecipe, type Recipe } from '../famous-curator/plugin/recipe.js';
-import { curatedGalaxyDir } from '../famous-curator/plugin/paths.js';
-import { deriveFamousCalibration } from './deriveFamousCalibration.js';
-import { willDeproject } from './deprojectDisk.js';
-import { squareDeprojectCrop } from './squareDeprojectCrop.js';
-import { writeMetaSidecar } from '../curation/writeMetaSidecar.js';
+import { parseFamousSeed, type FamousEntry } from '../parsers/famousSeed';
+import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
+import { Source } from '../../src/data/sources';
+import { resolveFamousOrientation } from './resolveFamousOrientation';
+import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { FamousMetaEntry } from '../../src/@types/loading/FamousMetaEntry';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { parseRecipe, type Recipe } from '../famous-curator/plugin/recipe';
+import { curatedGalaxyDir } from '../famous-curator/plugin/paths';
+import { deriveFamousCalibration } from './deriveFamousCalibration';
+import { willDeproject } from './deprojectDisk';
+import { squareDeprojectCrop } from './squareDeprojectCrop';
+import { writeMetaSidecar } from '../curation/writeMetaSidecar';
 
 /**
  * Convert a curated entry's (RA, Dec, distanceMpc) to Cartesian (x, y, z).

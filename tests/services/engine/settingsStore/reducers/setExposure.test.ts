@@ -12,7 +12,7 @@ describe('setExposure', () => {
     // The touched cluster is a NEW reference …
     expect(next.tonemap).not.toBe(state.tonemap);
     // … but a sibling cluster keeps its existing reference (structural sharing).
-    expect(next.surveys).toBe(state.surveys);
+    expect(next.galaxyCatalogs).toBe(state.galaxyCatalogs);
   });
 
   it('stores the raw value verbatim — no clamp (the bound lives at clampExposure)', () => {

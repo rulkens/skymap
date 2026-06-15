@@ -44,7 +44,7 @@ import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameC
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RenderFrameSettings } from '../../../@types/engine/frame/RenderFrameSettings';
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
-import type { VolumeFieldId } from '../../../@types/data/VolumeFieldId';
+import type { VolumeFieldId } from '../../../@types/data/volume/VolumeFieldId';
 import { encodeVolumes } from './encodeVolumes';
 import { resolveLayerOpacity } from '../presentation/focusRecession';
 
@@ -55,7 +55,7 @@ export function encodeVolumePrepass(
   settings: RenderFrameSettings,
   timingService: GpuTimingService | null,
 ): void {
-  if (state.gpu.scalarVolumeRenderer !== null) {
+  if (state.gpu.volumeFieldRenderer !== null) {
     const nowMs = performance.now();
     const masterOpacity = state.subsystems.fades.opacityOf({ kind: 'volumesMaster' }, nowMs);
     if (settings.volumesEnabled || masterOpacity > 0) {
@@ -69,15 +69,15 @@ export function encodeVolumePrepass(
         ctx.focusBlend,
         nowMs,
       );
-      const fadeOpacityOf = (handle: VolumeFieldId) =>
-        state.subsystems.fades.opacityOf({ kind: 'scalarField', field: handle }, nowMs) *
+      const fadeOpacityOf = (id: VolumeFieldId) =>
+        state.subsystems.fades.opacityOf({ kind: 'scalarField', field: id }, nowMs) *
         recessedMaster;
-      const settingsOf = (handle: VolumeFieldId) => state.settings.volumes.items[handle];
-      if (state.gpu.scalarVolumeRenderer.hasActiveFields(settingsOf, fadeOpacityOf)) {
+      const settingsOf = (id: VolumeFieldId) => state.settings.volumes.items[id];
+      if (state.gpu.volumeFieldRenderer.hasActiveFields(settingsOf, fadeOpacityOf)) {
         encodeVolumes({
           encoder,
           ctx,
-          scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
+          volumeFieldRenderer: state.gpu.volumeFieldRenderer,
           settingsOf,
           fadeOpacityOf,
           // Resolve the timing descriptor lazily, inside every gate, so

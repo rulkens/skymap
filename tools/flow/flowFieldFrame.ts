@@ -1,10 +1,10 @@
 /**
- * flowFieldFrame.ts — the parameterised sibling of `coordinates.ts`'s
- * hardcoded `sgToVoxelIndex`, used to map a sky anchor (RA/Dec/distance)
+ * flowFieldFrame.ts — the parameterised sibling of `sgToVoxelIndex`'s
+ * hardcoded version, used to map a sky anchor (RA/Dec/distance)
  * into the flow cube's continuous voxel space.
  *
  * Why a separate, parameterised helper instead of reusing
- * `tools/utils/math/coordinates.ts:sgToVoxelIndex`?  That function bakes in
+ * `tools/utils/math/sgToVoxelIndex.ts`?  That function bakes in
  * the CF-4 density box geometry (origin -500 Mpc, voxel 1000/128 Mpc) — its
  * docstring is explicit that it's coupled to that specific catalog.  The flow
  * cube *happens* to share that geometry today, but the contract here is "given
@@ -14,7 +14,7 @@
  * resolution or extent, this stays correct because it reads the geometry from
  * `meta` rather than module constants.
  *
- * We deliberately do NOT modify `coordinates.ts` to consolidate the two: a
+ * We deliberately do NOT modify `sgToVoxelIndex.ts` to consolidate the two: a
  * second consumer of the *parameterised* form is not yet a third consumer of
  * the *hardcoded* form, and the project convention is to consolidate on the
  * third occurrence, not the second.  If a third volume needs this, that's the
@@ -27,13 +27,13 @@
 
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
-import { eqToSg } from '../utils/math/coordinates';
+import { eqToSg } from '../utils/math/eqToSg';
 
 /**
  * Locate a sky anchor inside a flow/scalar cube, returning its continuous
  * voxel coordinate and whether it falls within the cube's bounds.
  *
- * The conversion mirrors `coordinates.ts:sgToVoxelIndex` exactly —
+ * The conversion mirrors `sgToVoxelIndex.ts` exactly —
  * `raDecDistToEqCart(anchor)` → `eqToSg(eq)` → linear rescale per axis —
  * but takes the box geometry from `meta` rather than hardcoded CF-4
  * constants, so it works for any cube.

@@ -5,10 +5,10 @@
  */
 
 import type { ReactNode } from 'react';
-import type { StructureRecord } from '../../@types/engine/data/StructureRecord';
-import { formatDistance } from '../../utils/format/distance';
+import type { StructureRecord } from '../../@types/data/structure/StructureRecord';
+import { formatDistance } from '../../utils/format/formatDistance';
 import { formatAbellDesignation } from '../../utils/format/formatAbellDesignation';
-import { CATEGORY_DISPLAY_INFO } from '../../data/categoryDisplayInfo';
+import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
 import { CardHeader } from './CardHeader';
 import { CardRow } from './CardRow';
 import { DescriptionBlock } from './DescriptionBlock';
@@ -21,7 +21,7 @@ export type StructureDetailCardProps = {
   pinned?: boolean;
   /**
    * Catalogued galaxies inside this structure's membership sphere at the
-   * current tier + survey visibility, or null/undefined when not countable
+   * current tier + galaxy catalog visibility, or null/undefined when not countable
    * (famous-galaxy structure, or catalogs not loaded yet) — in which case the
    * row is omitted rather than flashing a misleading "0".
    */

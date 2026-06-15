@@ -24,7 +24,7 @@
  *
  * The alternative — omitting point rows from the registry and keeping their
  * load policy inline in `initGpu` — would re-scatter the very load logic this
- * table consolidates, and the synthetic-fallback gate (which reads survey
+ * table consolidates, and the synthetic-fallback gate (which reads galaxy catalog
  * slot states) would have no single place to express its demand. One table,
  * one marker, wins.
  *

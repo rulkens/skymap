@@ -102,26 +102,34 @@
  * sequential model — versus the original 2 for DESI.
  */
 
-import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadCuratedOverrides, type CuratedOverrideIndex } from './famousCuratedOverrides.js';
-import { rawDataPath } from '../utils/io/rawDataRegistry.js';
+import { loadCuratedOverrides, type CuratedOverrideIndex } from './famousCuratedOverrides';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
 import sharp from 'sharp';
-import { parseFlags } from '../utils/cli/args.js';
-import { loadJsonCache, saveJsonCache } from '../utils/io/jsonCache.js';
-import { parseFamousSeed, type FamousEntry } from '../parsers/famousSeed.js';
+import { parseFlags } from '../utils/cli/args';
+import { loadJsonCache } from '../utils/io/loadJsonCache';
+import { saveJsonCache } from '../utils/io/saveJsonCache';
+import { parseFamousSeed, type FamousEntry } from '../parsers/famousSeed';
 import {
   parseWikipediaSummary,
   wikipediaSummaryUrl,
   type WikipediaSummary,
-} from '../parsers/wikipediaSummary.js';
+} from '../parsers/wikipediaSummary';
 import {
   applyRadialFade,
   applyTransparency,
   sampleCornerColor,
   type RGBA,
-} from './famousImageProcessor.js';
+} from './famousImageProcessor';
 
 // ──────────────────────────────────────────────────────────────────────
 // Constants — Wikipedia path
@@ -630,7 +638,9 @@ async function main(): Promise<void> {
         ok++;
         continue;
       } catch (err) {
-        process.stderr.write(`  warn ${e.id}: curated copy failed (${(err as Error).message}); falling back\n`);
+        process.stderr.write(
+          `  warn ${e.id}: curated copy failed (${(err as Error).message}); falling back\n`,
+        );
       }
     }
 

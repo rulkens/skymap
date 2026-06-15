@@ -36,13 +36,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { mat4 } from 'gl-matrix';
 import { Source } from '../../../../src/data/sources';
-import { BiasMode } from '../../../../src/data/biasMode';
+import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import type { RenderFrameInput } from '../../../../src/@types/engine/frame/RenderFrameInput';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
-import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
 import type { TimingSlotName } from '../../../../src/@types/gpu/timing/TimingSlotName';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
@@ -244,7 +244,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         labelRenderer: null,
         markerLineRenderer: null,
         selectionRingRenderer: null,
-        scalarVolumeRenderer: null,
+        volumeFieldRenderer: null,
         flowFieldRenderer: null,
         structureMarkerRenderer: null,
         focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
@@ -272,7 +272,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     milkyWayRenderer: milkyWayRenderer as never,
     horizonShellRenderer: horizonShellRenderer as never,
     filamentRenderer: null,
-    scalarVolumeRenderer: null,
+    volumeFieldRenderer: null,
     flowFieldRenderer: null,
     texturedDiskRenderer: texturedDiskRenderer as never,
     proceduralDiskRenderer: proceduralDiskRenderer as never,
@@ -378,14 +378,14 @@ describe('renderFrame — timing service hookup', () => {
     const { svc, descriptorFor } = makeFakeTimingService();
     const { input, beginCalls } = makeMinimalInputWithTiming(svc);
 
-    // Force volumes on with an active scalarVolumeRenderer.
+    // Force volumes on with an active volumeFieldRenderer.
     (input.settings as any).volumesEnabled = true;
     const drawSpy = vi.fn();
-    (input as any).scalarVolumeRenderer = {
+    (input as any).volumeFieldRenderer = {
       draw: drawSpy,
       hasActiveFields: () => true,
     };
-    (input.state as any).gpu.scalarVolumeRenderer = {
+    (input.state as any).gpu.volumeFieldRenderer = {
       draw: drawSpy,
       hasActiveFields: () => true,
     };

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createFlowFieldRenderer } from '../../../../src/services/gpu/renderers/flowFieldRenderer';
-import type { ScalarCube } from '../../../../src/@types/data/ScalarCube';
+import type { ScalarCube } from '../../../../src/@types/data/volume/ScalarCube';
 import type { FlowSettings } from '../../../../src/@types/settings/FlowSettings';
 
 /**
@@ -12,7 +12,7 @@ import type { FlowSettings } from '../../../../src/@types/settings/FlowSettings'
  * that construction wires the 3 compute pipelines + render pipeline + BGLs
  * without throwing, and that `isAnimating` reflects the field/enabled gate.
  * Adds `createComputePipeline` (the engine's first compute renderer) on top of
- * the scalarVolumeRenderer mock.
+ * the volumeFieldRenderer mock.
  */
 function mockDevice(): GPUDevice {
   const makeTexture = () => ({ createView: vi.fn(() => ({})), destroy: vi.fn() });

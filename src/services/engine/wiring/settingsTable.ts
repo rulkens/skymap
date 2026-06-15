@@ -59,7 +59,7 @@
 
 import type { SettingsTableKey } from '../../../@types/settings/SettingsTableKey';
 import type { SettingsStore } from '../settingsStore/createSettingsStore';
-import { setSurveySizeAction } from '../settingsStore/actions/setSurveySizeAction';
+import { setGalaxyCatalogSizeAction } from '../settingsStore/actions/setGalaxyCatalogSizeAction';
 import { setBrightnessAction } from '../settingsStore/actions/setBrightnessAction';
 import { setDepthFadeAction } from '../settingsStore/actions/setDepthFadeAction';
 import { setHighlightFallbackAction } from '../settingsStore/actions/setHighlightFallbackAction';
@@ -102,15 +102,15 @@ type SettingsDescriptor = { name: SettingsTableKey; action: SettingsAction };
  * the new forwarder from the `boringSetters` record by name.
  */
 export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
-  // ── Surveys cluster (migrated to the engine-owned store) ───────────
+  // ── Galaxy catalogs cluster (migrated to the engine-owned store) ───────────
   // These five rows dispatch store actions (copy-on-write reducers) rather
-  // than mutating `state.settings.surveys` in place + echoing. React reads
-  // each via a `useStore` selector (`selectSurveySize`, `selectBrightness`,
+  // than mutating `state.settings.galaxyCatalogs` in place + echoing. React reads
+  // each via a `useStore` selector (`selectGalaxyCatalogSize`, `selectBrightness`,
   // `selectDepthFade`, `selectHighlightFallback`, `selectRealOnly`), so no
   // echo is wired. The wrapper still calls `requestRender`.
   {
     name: 'setPointSize',
-    action: setSurveySizeAction,
+    action: setGalaxyCatalogSizeAction,
   },
   {
     name: 'setBrightness',

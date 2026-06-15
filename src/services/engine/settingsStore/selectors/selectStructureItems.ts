@@ -23,7 +23,7 @@
  */
 
 import type { EngineSettingsState } from '../../../../@types/settings/EngineSettingsState';
-import type { StructureCategory } from '../../../../@types/engine/data/StructureCategory';
+import type { StructureCategory } from '../../../../@types/data/structure/StructureCategory';
 import type { StructureItemSettings } from '../../../../@types/settings/StructureItemSettings';
 
 export function selectStructureItems(

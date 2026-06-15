@@ -22,10 +22,10 @@ describe('selectStructureItems', () => {
     const afterMaster = { ...state, structures: { ...state.structures, enabled: false } };
     expect(selectStructureItems(afterMaster)).toBe(before);
 
-    // A wholly-unrelated cluster (brightness lives on surveys) also must not
+    // A wholly-unrelated cluster (brightness lives on galaxy catalogs) also must not
     // disturb the items ref.
-    const afterSurveys = { ...state, surveys: { ...state.surveys, brightness: 0.123 } };
-    expect(selectStructureItems(afterSurveys)).toBe(before);
+    const afterGalaxyCatalogs = { ...state, galaxyCatalogs: { ...state.galaxyCatalogs, brightness: 0.123 } };
+    expect(selectStructureItems(afterGalaxyCatalogs)).toBe(before);
   });
 
   it('returns a NEW ref when a category actually changes', () => {

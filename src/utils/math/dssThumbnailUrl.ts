@@ -1,5 +1,5 @@
 /**
- * Build a Digitized Sky Survey (DSS) image cutout URL for a given (RA, Dec).
+ * Build a Digitized Sky Galaxy catalog (DSS) image cutout URL for a given (RA, Dec).
  *
  * DSS is all-sky (originally photographic plates from Palomar/UK Schmidt),
  * unlike SDSS which only covers ~1/3 of the sky.  We use DSS as the

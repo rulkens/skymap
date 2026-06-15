@@ -34,7 +34,7 @@ import SearchTrigger from '../SearchTrigger/SearchTrigger';
 import AutoRotateToggle from '../AutoRotateToggle/AutoRotateToggle';
 import Splash from '../Splash/Splash';
 import AboutPill from '../Splash/AboutPill';
-import { MILKY_WAY_ENTRY, MILKY_WAY_ID } from '../../data/milkyWayEntry';
+import { MILKY_WAY_ENTRY, MILKY_WAY_ID } from '../../data/milkyWay/milkyWayEntry';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import appStyles from './App.module.css';
 import { useUrlSync } from '../../hooks/useUrlSync';
@@ -44,7 +44,7 @@ import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useEngineSettings } from '../../hooks/useEngineSettings';
 import { useSettingsStore } from '../../hooks/useSettingsStore';
 import { useSpaceMouseDevicePresence } from '../../hooks/useSpaceMouseDevicePresence';
-import { selectSurveySize } from '../../services/engine/settingsStore/selectors/selectSurveySize';
+import { selectGalaxyCatalogSize } from '../../services/engine/settingsStore/selectors/selectGalaxyCatalogSize';
 import { selectDepthFade } from '../../services/engine/settingsStore/selectors/selectDepthFade';
 import { selectHighlightFallback } from '../../services/engine/settingsStore/selectors/selectHighlightFallback';
 import { selectRealOnly } from '../../services/engine/settingsStore/selectors/selectRealOnly';
@@ -61,11 +61,11 @@ import { selectVolumesEnabled } from '../../services/engine/settingsStore/select
 import { selectVolumeFieldItems } from '../../services/engine/settingsStore/selectors/selectVolumeFieldItems';
 import { selectFlow } from '../../services/engine/settingsStore/selectors/selectFlow';
 import { selectStructureItems } from '../../services/engine/settingsStore/selectors/selectStructureItems';
-import { selectSurveyItems } from '../../services/engine/settingsStore/selectors/selectSurveyItems';
+import { selectGalaxyCatalogItems } from '../../services/engine/settingsStore/selectors/selectGalaxyCatalogItems';
 import { projectVolumeFieldRows } from '../../services/engine/settingsStore/projectVolumeFieldRows';
 import { projectMarkerCategoryVisibility } from '../../services/engine/settingsStore/projectMarkerCategoryVisibility';
 import { projectLabelCategoryVisibility } from '../../services/engine/settingsStore/projectLabelCategoryVisibility';
-import { seedVolumeFields } from '../../data/volumeFieldDefaults';
+import { seedVolumeFields } from '../../data/volume/volumeFieldDefaults';
 import {
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_DEPTH_FADE_ENABLED,
@@ -81,14 +81,17 @@ import {
   DEFAULT_FLOW,
 } from '../../data/defaults';
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
-import { ALL_VISIBLE_MASK } from '../../utils/sourceMask';
-import { buildStaticAnchorStructures } from '../../data/buildStaticAnchorStructures';
-import { isStructureCategory, STRUCTURE_CATEGORIES } from '../../data/structureCategories';
-import { SURVEY_IDS } from '../../data/surveyIds';
-import type { StructureCategory } from '../../@types/engine/data/StructureCategory';
-import type { SurveyId } from '../../@types/engine/data/SurveyId';
+import { ALL_VISIBLE_MASK } from '../../utils/allVisibleMask';
+import { buildStaticAnchorStructures } from '../../data/structure/buildStaticAnchorStructures';
+import {
+  isStructureCategory,
+  STRUCTURE_CATEGORIES,
+} from '../../data/structure/structureCategories';
+import { GALAXY_CATALOG_IDS } from '../../data/galaxyCatalog/galaxyCatalogIds';
+import type { StructureCategory } from '../../@types/data/structure/StructureCategory';
+import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
-import type { SurveyItemSettings } from '../../@types/settings/SurveyItemSettings';
+import type { GalaxyCatalogItemSettings } from '../../@types/settings/GalaxyCatalogItemSettings';
 import { DebugPanel } from '../DebugPanel/DebugPanel';
 import { isWebHIDSupported } from '../../services/input/spaceMouse';
 
@@ -104,7 +107,7 @@ import { isWebHIDSupported } from '../../services/input/spaceMouse';
 const VOLUME_FIELD_ITEMS_DEFAULT = seedVolumeFields();
 
 /**
- * Stable fallbacks for the structure / survey item selectors during the
+ * Stable fallbacks for the structure / galaxy catalog item selectors during the
  * null-store window (before `handleRef` lands). Same rationale as
  * `VOLUME_FIELD_ITEMS_DEFAULT`: `useSettingsStore` keys a `useCallback` on the
  * fallback, so it MUST be a single stable reference — building either record
@@ -116,9 +119,9 @@ const VOLUME_FIELD_ITEMS_DEFAULT = seedVolumeFields();
 const STRUCTURE_ITEMS_DEFAULT = Object.fromEntries(
   STRUCTURE_CATEGORIES.map((c) => [c, { enabled: true, labelEnabled: true }]),
 ) as Record<StructureCategory, StructureItemSettings>;
-const SURVEY_ITEMS_DEFAULT = Object.fromEntries(
-  SURVEY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
-) as Record<SurveyId, SurveyItemSettings>;
+const GALAXY_CATALOG_ITEMS_DEFAULT = Object.fromEntries(
+  GALAXY_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
+) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>;
 
 export function App(): React.ReactElement {
   const {
@@ -151,12 +154,12 @@ export function App(): React.ReactElement {
     currentTier,
   } = useEngine({ extraCallbacks: settingsCallbacks });
 
-  // Surveys-cluster settings read live off the engine-owned store (no React
+  // Galaxy catalogs-cluster settings read live off the engine-owned store (no React
   // mirror). Each fallback is the same `data/defaults.ts` seed the store is
   // constructed from, so the first paint (before `handleRef` lands) matches
-  // engine truth. `visibleSourceMask` is a pure projection of the per-survey
+  // engine truth. `visibleSourceMask` is a pure projection of the per-galaxy-catalog
   // `enabled` bits — `ALL_VISIBLE_MASK` is the all-on startup default.
-  const pointSize = useSettingsStore(handleRef, selectSurveySize, DEFAULT_POINT_SIZE_PX);
+  const pointSize = useSettingsStore(handleRef, selectGalaxyCatalogSize, DEFAULT_POINT_SIZE_PX);
   const depthFadeEnabled = useSettingsStore(handleRef, selectDepthFade, DEFAULT_DEPTH_FADE_ENABLED);
   const highlightFallback = useSettingsStore(
     handleRef,
@@ -241,7 +244,7 @@ export function App(): React.ReactElement {
   const volumeFields = useMemo(
     // `debug-*` synthetic fixtures are dropped here so the panel only shows real
     // science volumes (the dev console + handle.volumes.getState() still see them).
-    () => projectVolumeFieldRows(volumeFieldItems).filter((f) => !f.handle.startsWith('debug-')),
+    () => projectVolumeFieldRows(volumeFieldItems).filter((f) => !f.id.startsWith('debug-')),
     [volumeFieldItems],
   );
 
@@ -251,23 +254,27 @@ export function App(): React.ReactElement {
   // selector that built them per call would mint a fresh object each
   // `getSnapshot` and break `useSyncExternalStore`'s stability contract. Instead
   // the selectors return the underlying item Records verbatim
-  // (`selectStructureItems` / `selectSurveyItems` — stable under copy-on-write,
-  // changing only when a category/survey row actually changes), and the `useMemo`
+  // (`selectStructureItems` / `selectGalaxyCatalogItems` — stable under copy-on-write,
+  // changing only when a category/galaxy catalog row actually changes), and the `useMemo`
   // projections build the marker + label records keyed on those stable refs. The
   // marker axis spans structure categories only; the label axis spans structure
-  // categories PLUS the `famousGalaxy` survey (its label lives on the survey item
+  // categories PLUS the `famousGalaxy` galaxy catalog (its label lives on the galaxy catalog item
   // row), so its projection takes both Records. Fallbacks are the all-visible
   // construction seeds, so first paint matches engine truth before the handle
   // lands.
   const structureItems = useSettingsStore(handleRef, selectStructureItems, STRUCTURE_ITEMS_DEFAULT);
-  const surveyItems = useSettingsStore(handleRef, selectSurveyItems, SURVEY_ITEMS_DEFAULT);
+  const galaxyCatalogItems = useSettingsStore(
+    handleRef,
+    selectGalaxyCatalogItems,
+    GALAXY_CATALOG_ITEMS_DEFAULT,
+  );
   const markerCategoryVisibility = useMemo(
     () => projectMarkerCategoryVisibility(structureItems),
     [structureItems],
   );
   const labelCategoryVisibility = useMemo(
-    () => projectLabelCategoryVisibility(structureItems, surveyItems),
-    [structureItems, surveyItems],
+    () => projectLabelCategoryVisibility(structureItems, galaxyCatalogItems),
+    [structureItems, galaxyCatalogItems],
   );
 
   // Flow overlay reads live off the engine-owned store. `selectFlow` returns the
@@ -288,7 +295,7 @@ export function App(): React.ReactElement {
   );
 
   // Live "N galaxies" figure for a pinned cluster/SC/void card.  Recomputes
-  // on selection / tier swap / catalog landing (`sourceCounts`) / survey
+  // on selection / tier swap / catalog landing (`sourceCounts`) / galaxy catalog
   // toggle — null for galaxy selections and famous-galaxy structures.
   const selectedMemberCount = useStructureMemberCount({
     selected,
@@ -407,7 +414,7 @@ export function App(): React.ReactElement {
           <SettingsPanel
             defaultOpen={initialPanelsOpen}
             pointSize={pointSize}
-            onPointSizeChange={(size) => handleRef.current?.surveys.setSize(size)}
+            onPointSizeChange={(size) => handleRef.current?.galaxyCatalogs.setSize(size)}
             labelCategoryVisibility={labelCategoryVisibility}
             markerCategoryVisibility={markerCategoryVisibility}
             onSetMarkerCategoryVisibility={(category, visible) => {
@@ -418,12 +425,12 @@ export function App(): React.ReactElement {
             onSetLabelCategoryVisibility={(category, visible) => {
               // Label rows span famousGalaxy + structures; route by registry so
               // structure labels drive the structures handle while the curated
-              // atlas (famousGalaxy, a survey source) routes through the surveys
+              // atlas (famousGalaxy, a galaxy catalog source) routes through the galaxy catalogs
               // handle's label axis.
               if (isStructureCategory(category)) {
                 handleRef.current?.structures.setLabelEnabled(category, visible);
               } else {
-                handleRef.current?.surveys.setLabelEnabled(category, visible);
+                handleRef.current?.galaxyCatalogs.setLabelEnabled(category, visible);
               }
             }}
             // Filaments reads off the engine-owned store (`selectFilamentsEnabled`
@@ -437,7 +444,7 @@ export function App(): React.ReactElement {
             onFilamentIntensityChange={(value) => handleRef.current?.filaments.setIntensity(value)}
             depthFadeEnabled={depthFadeEnabled}
             onDepthFadeEnabledChange={(enabled) => {
-              handleRef.current?.surveys.setDepthFade(enabled);
+              handleRef.current?.galaxyCatalogs.setDepthFade(enabled);
             }}
             onResetCamera={() => handleRef.current?.camera.focusOnHome()}
             // Tier swap is owned end-to-end by the engine: it cancels
@@ -448,7 +455,7 @@ export function App(): React.ReactElement {
             visibleSourceMask={visibleSourceMask}
             sourceCounts={sourceCounts}
             structureCounts={structureCounts}
-            // `setVisible` is synchronous: it flips the survey's `enabled`
+            // `setVisible` is synchronous: it flips the galaxy catalog's `enabled`
             // flag (single source of truth) and echoes the derived mask back
             // via `onMaskChange` before this handler returns, so the React
             // checkbox stays engine-driven — no optimistic update needed.
@@ -568,16 +575,16 @@ export function App(): React.ReactElement {
             slots={handleRef.current.assetSlots}
             timingService={handleRef.current.debug.timingService}
             passOverrides={handleRef.current.debug.passOverrides}
-            // Orientation-fallback diagnostic toggles — `surveys`
+            // Orientation-fallback diagnostic toggles — `galaxyCatalogs`
             // setters echo synchronously, so React mirrors engine
             // truth without an optimistic update.
             highlightFallback={highlightFallback}
             realOnlyMode={realOnlyMode}
             onHighlightFallbackChange={(enabled) => {
-              handleRef.current?.surveys.setHighlightFallback(enabled);
+              handleRef.current?.galaxyCatalogs.setHighlightFallback(enabled);
             }}
             onRealOnlyModeChange={(enabled) => {
-              handleRef.current?.surveys.setRealOnly(enabled);
+              handleRef.current?.galaxyCatalogs.setRealOnly(enabled);
             }}
             showPickBuffer={showPickBuffer}
             onShowPickBufferChange={(enabled) => {

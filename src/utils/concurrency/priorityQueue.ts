@@ -47,8 +47,7 @@
  */
 
 import type { QueueEntry } from '../../@types/loading/QueueEntry';
-
-export const MAX_CONCURRENT_FETCHES = 4;
+import { MAX_CONCURRENT_FETCHES } from './maxConcurrentFetches';
 
 export class PriorityQueue<T = ImageBitmap | null> {
   private pending = new Map<string, QueueEntry<T>>();

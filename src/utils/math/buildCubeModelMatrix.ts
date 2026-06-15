@@ -4,7 +4,7 @@
  *
  * Maps the unit cube `[0,1]³` (the vertex shaders' input space) to the cube's
  * footprint in skymap world space. It lives in its own module — rather than
- * inside `scalarVolumeRenderer` — because two renderers depend on it, and a
+ * inside `volumeFieldRenderer` — because two renderers depend on it, and a
  * renderer importing from a sibling renderer would couple their teardown and
  * load order for no reason. Both consume this neutral helper instead.
  *
@@ -15,7 +15,7 @@
  */
 import { mat4 } from 'gl-matrix';
 import { SG_TO_EQ_MAT4_COL_MAJOR } from '../../data/superGalacticTransform';
-import type { ScalarFieldFrameKind } from '../../@types/data/ScalarFieldFrameKind';
+import type { ScalarFieldFrameKind } from '../../@types/data/volume/ScalarFieldFrameKind';
 import type { CubePlacement } from '../../@types/rendering/CubePlacement';
 
 // Supergalactic→equatorial rotation, J2000.  Imported directly from

@@ -18,13 +18,15 @@
  *   npx tsx tools/verifyCf4Scfd.ts
  */
 import { readFileSync } from 'node:fs';
-import { decodeScalarField } from '../../src/data/scalarFieldFormat';
+import { decodeScalarField } from '../../src/data/volume/scalarFieldFormat';
 import { parseStructureSeed } from '../parsers/parseStructureSeed';
 import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
 import type { Vec3 } from '../../src/@types/math/Vec3';
-import { eqToSg, eqCartToRaDecDist, voxelToEqCart } from '../utils/math/coordinates';
-import { f16BitsToFloat } from '../utils/math/floatHalf';
-import { percentileOf } from '../utils/math/percentile';
+import { eqToSg } from '../utils/math/eqToSg';
+import { eqCartToRaDecDist } from '../utils/math/eqCartToRaDecDist';
+import { voxelToEqCart } from '../utils/math/voxelToEqCart';
+import { f16BitsToFloat } from '../utils/math/f16BitsToFloat';
+import { percentileOf } from '../utils/math/percentileOf';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
 /**

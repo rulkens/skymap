@@ -6,12 +6,12 @@
  * the old imperative `cloudLoader.reloadSource` to a `createAssetSlot`
  * whose race-checked `commit` step is the structural fix for tier-swap
  * stomping bugs.  Task 8 introduced the SDSS slot; Task 9 extends the bag
- * with the other surveys (2MRS, GLADE, Famous) plus the filament layer.
+ * with the other galaxy catalogs (2MRS, GLADE, Famous) plus the filament layer.
  *
  * `points` is keyed by Source so any future per-source consumer can look
- * up the active slot for a survey without iterating.  `filaments` is a
+ * up the active slot for a galaxy catalog without iterating.  `filaments` is a
  * single slot rather than a map because filaments are a global derived
- * asset, not a per-survey one — the request type carries `tier` alone,
+ * asset, not a per-galaxy-catalog one — the request type carries `tier` alone,
  * no `source`.
  *
  * Filaments load exactly once at boot and are NOT swapped on tier change.
@@ -23,11 +23,11 @@
 import type { AssetSlot } from '../../loading/AssetSlot';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { GalaxyCatalogReq } from '../../loading/GalaxyCatalogReq';
-import type { FilamentCloud } from '../../data/FilamentCloud';
+import type { FilamentCloud } from '../../data/filament/FilamentCloud';
 import type { FilamentReq } from '../../loading/FilamentReq';
 import type { FamousPayload } from '../../loading/FamousPayload';
 import type { PgcAliasMap } from '../../loading/PgcAliasMap';
-import type { ScalarCube } from '../../data/ScalarCube';
+import type { ScalarCube } from '../../data/volume/ScalarCube';
 import type { SyntheticVolumeReq } from '../../loading/SyntheticVolumeReq';
 import type { MCPMReq } from '../../loading/MCPMReq';
 import type { CompanionAssetReq } from '../../loading/CompanionAssetReq';
