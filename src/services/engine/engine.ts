@@ -136,10 +136,6 @@ import { awaitSlotReady } from '../loading/awaitSlotReady';
 import { slotReady } from '../loading/slotReady';
 import { tierTarget } from '../../data/tierTargets';
 import { snapToCameraSnapshot, tweenToCameraSnapshot } from './camera/cameraSnapshot';
-import {
-  MILKY_WAY_CENTER_WORLD,
-  MILKY_WAY_VIEW_DISTANCE_MPC,
-} from '../../data/milkyWay/galacticCenter';
 import { seedVolumeFields } from '../../data/volume/volumeFieldDefaults';
 import { buildVolumeFieldsSnapshot } from './helpers/buildVolumeFieldsSnapshot';
 import { clampVolumeIntensity } from '../../utils/clampVolumeIntensity';
@@ -740,32 +736,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     tweenToCameraSnapshot(state, state.initialCamSnapshot);
   }
 
-  function focusOnMilkyWay(): void {
-    // Distinct from `focusOnHome` (the wide hundreds-of-Mpc framing): this
-    // tweens inside the impostor's full-visibility band so the Milky Way is
-    // the dominant subject — target Sgr A*, ride in to
-    // `MILKY_WAY_VIEW_DISTANCE_MPC`, preserve the user's yaw/pitch to avoid
-    // a disorienting snap.  Reuses `tweenToCameraSnapshot` with a
-    // synthesized snapshot.
-    const cam = state.cam;
-    if (!cam) return;
-
-    // Not a catalog object — drop the focus slot so the URL hash doesn't
-    // resolve a stale one and the cluster-focus fade collapses on the
-    // way to the Milky Way.  `setFocused(null)` fires `onFocusChange`.
-    state.subsystems.selection.setFocused(null);
-
-    tweenToCameraSnapshot(state, {
-      target: [MILKY_WAY_CENTER_WORLD[0], MILKY_WAY_CENTER_WORLD[1], MILKY_WAY_CENTER_WORLD[2]],
-      distance: MILKY_WAY_VIEW_DISTANCE_MPC,
-      yaw: cam.yaw,
-      pitch: cam.pitch,
-      fovYRad: cam.fovYRad,
-      near: cam.near,
-      far: cam.far,
-    });
-  }
-
   function logCameraStateFn(): void {
     logCameraState(state.cam);
   }
@@ -1182,7 +1152,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       reset: resetCamera,
       focusOn,
       focusOnHome,
-      focusOnMilkyWay,
       logState: logCameraStateFn,
     },
     selection: {

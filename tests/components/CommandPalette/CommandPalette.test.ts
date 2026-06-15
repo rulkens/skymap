@@ -107,6 +107,46 @@ describe('CommandPalette', () => {
     expect(onSelect).toHaveBeenCalledWith('ngc1300');
   });
 
+  it('routes the Milky Way command to onSelectMilkyWay (no string id)', async () => {
+    const onSelect = vi.fn<(id: string) => void>();
+    const onSelectMilkyWay = vi.fn<() => void>();
+    const user = userEvent.setup();
+    render(
+      createElement(CommandPalette, {
+        entries: [NGC1300],
+        open: true,
+        onClose: () => {},
+        onSelect,
+        onSelectMilkyWay,
+      }),
+    );
+    // The MW row is always present (empty query heads the list with it).
+    await user.click(screen.getByTestId('milky-way-row'));
+    expect(onSelectMilkyWay).toHaveBeenCalledOnce();
+    // The famous-id path must NOT fire — the MW carries no catalog id.
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('surfaces the Milky Way command when searching "milky way"', async () => {
+    const onSelectMilkyWay = vi.fn<() => void>();
+    const user = userEvent.setup();
+    render(
+      createElement(CommandPalette, {
+        entries: [M31],
+        open: true,
+        onClose: () => {},
+        onSelect: () => {},
+        onSelectMilkyWay,
+      }),
+    );
+    const input = screen.getByPlaceholderText(/search galaxies/i);
+    await user.type(input, 'milky way');
+    const row = await screen.findByTestId('milky-way-row');
+    expect(row).toBeInTheDocument();
+    await user.click(row);
+    expect(onSelectMilkyWay).toHaveBeenCalledOnce();
+  });
+
   it('calls onClose when the user presses Escape', async () => {
     const onClose = vi.fn();
     const user = userEvent.setup();

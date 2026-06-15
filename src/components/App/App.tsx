@@ -34,7 +34,7 @@ import SearchTrigger from '../SearchTrigger/SearchTrigger';
 import AutoRotateToggle from '../AutoRotateToggle/AutoRotateToggle';
 import Splash from '../Splash/Splash';
 import AboutPill from '../Splash/AboutPill';
-import { MILKY_WAY_ENTRY, MILKY_WAY_ID } from '../../data/milkyWay/milkyWayEntry';
+import { MILKY_WAY_INFO } from '../../data/milkyWay/milkyWayInfo';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import appStyles from './App.module.css';
 import { useUrlSync } from '../../hooks/useUrlSync';
@@ -343,13 +343,6 @@ export function App(): React.ReactElement {
   // and dismiss/reopen.  See `useSplash.ts` for rationale.
   const splash = useSplash({ status, loadProgress, famousMetaReady });
 
-  // Milky Way isn't in any catalog .bin (procedural backdrop), but users
-  // expect to find it in the palette.  Sentinel-id entry prepended so the
-  // palette searches it like any other galaxy; `onSelect` intercepts the
-  // id and routes to `focusOnMilkyWay`.  `useMemo` because CommandPalette's
-  // scoring depends on `entries` reference identity.
-  const paletteEntries = useMemo(() => [MILKY_WAY_ENTRY, ...famousMeta], [famousMeta]);
-
   const { aliasIndex, aliasMap } = useAliasIndex({
     paletteOpen,
     sourceCounts,
@@ -561,22 +554,15 @@ export function App(): React.ReactElement {
           <AboutPill onClick={splash.reopen} hidden={paletteOpen || splash.splashVisible} />
         </div>
         <CommandPalette
-          entries={paletteEntries}
+          entries={famousMeta}
           aliasIndex={aliasIndex ?? undefined}
           open={paletteOpen}
           onClose={closePalette}
-          onSelect={(id) => {
-            // Milky Way is a procedural backdrop, not a catalog object —
-            // route the sentinel id to the dedicated focus method.  See
-            // `data/milkyWayEntry.ts` for the impostor visibility band
-            // (`focusOnHome` sits past the fade-out).
-            if (id === MILKY_WAY_ID) {
-              handleRef.current?.camera.focusOnMilkyWay();
-              return;
-            }
-            handleRef.current?.selection.selectFamous(id);
-          }}
+          onSelect={(id) => handleRef.current?.selection.selectFamous(id)}
           onSelectAlias={(target) => handleRef.current?.selection.selectByAlias(target)}
+          // The Milky Way is a first-class FocusableTarget — focus it through
+          // the same select → focus path every other target uses.
+          onSelectMilkyWay={() => handleRef.current?.camera.focusOn(MILKY_WAY_INFO)}
         />
         {/* `handleRef.current` set means the engine finished constructing,
             so the panel can subscribe to slots without racing. */}

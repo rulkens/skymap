@@ -20,13 +20,10 @@
  *
  * ### Meta ⋈ catalog alignment
  *
- * `famous.bin` is built in lock-step with `famous_meta.json` (same ordering
- * for non-pseudo entries), so a non-pseudo meta entry at index `i` maps to
- * catalog row `catalogIdx` — a counter that advances only past non-pseudo
- * rows. Pseudo entries (the Milky Way, merged at the React layer) have no
- * `.bin` counterpart and are skipped; `produceMilkyWayLabel` labels the user's
- * own position. The engine's `famousMeta` comes from the bin and never holds
- * pseudo rows, but defending here keeps the join robust to future sources.
+ * `famous.bin` is built in lock-step with `famous_meta.json` (same ordering),
+ * so meta entry at index `i` maps to catalog row `i`. The Milky Way is a
+ * first-class FocusableTarget, not a famous-meta row, so it never appears here;
+ * `produceMilkyWayLabel` labels the user's own position separately.
  *
  * ### galaxyNames opacity × uniform focus recession bakes into fadeAlpha
  *
@@ -131,8 +128,8 @@ type FamousLabelInput = {
 
 /**
  * Zip the meta sidecar with the famous catalog rows into label inputs. The
- * `catalogIdx` counter advances only for non-pseudo entries so the index
- * mapping survives mixed-in pseudo rows.
+ * meta array is loaded from `famous_meta.json` in lock-step with `famous.bin`,
+ * so row `i` of the meta maps to row `i` of the catalog.
  */
 function deriveFamousLabelInputs(
   meta: readonly FamousMetaEntry[],
@@ -141,7 +138,6 @@ function deriveFamousLabelInputs(
   const out: FamousLabelInput[] = [];
   let catalogIdx = 0;
   for (const e of meta) {
-    if (e.pseudo === true) continue;
     if (catalogIdx >= catalog.count) break; // ran past the catalog; defensive
     const x = catalog.positions[catalogIdx * 3 + 0]!;
     const y = catalog.positions[catalogIdx * 3 + 1]!;

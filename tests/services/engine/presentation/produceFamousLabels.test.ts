@@ -158,22 +158,6 @@ describe('produceFamousLabels', () => {
     expect(produceFamousLabels(noMeta, makeCtx()).labels).toEqual([]);
   });
 
-  it('skips pseudo meta entries and keeps the catalog index aligned', () => {
-    const state = makeState();
-    // Pseudo Milky Way first (no .bin row), then M31 → maps to catalog[0].
-    seed(
-      state,
-      [
-        { id: 'mw', pseudo: true },
-        { id: 'm31', names: ['M31'] },
-      ],
-      [10, 0, 0],
-      [120],
-    );
-    const out = produceFamousLabels(state, makeCtx());
-    expect(out.labels.map((l) => l.id)).toEqual(['famous-m31']);
-  });
-
   it('scales worldEmMpc with diameter (40 kpc anchors the category default)', () => {
     const state = makeState();
     // 40 kpc galaxy at 3 Mpc → ~12.5 px (full alpha); worldEm == reference.

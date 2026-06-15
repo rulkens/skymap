@@ -16,10 +16,15 @@
  *   - Esc closes without action.
  *   - Click outside the panel closes.
  *
- * Selection: the row's onClick / Enter handler calls either
- * `onSelect(id)` (famous) or `onSelectAlias({ source, localIdx })`
- * (alias) — App.tsx routes those to engine.selection.selectFamous
- * or engine.selection.selectByAlias respectively.
+ * A third, always-present row is the Milky Way — a first-class
+ * FocusableTarget rather than a catalog object, so it carries no id or
+ * alias tuple and renders a glyph instead of an atlas thumbnail.
+ *
+ * Selection: the row's onClick / Enter handler dispatches by row kind —
+ * `onSelect(id)` (famous), `onSelectAlias({ source, localIdx })` (alias),
+ * or `onSelectMilkyWay()` (Milky Way).  App.tsx routes those to
+ * engine.selection.selectFamous / selectByAlias / camera.focusOn(MILKY_WAY_INFO)
+ * respectively.
  *
  * Why not a third-party command-palette library?  Same reasoning as
  * the original famous-only iteration: ~120 lines of UI logic, no
@@ -32,7 +37,7 @@ import { scoreFamousMatch } from './scoreFamousMatch';
 import { scoreAliasMatch } from './scoreAliasMatch';
 import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
-import { Source, SOURCE_REGISTRY } from '../../data/sources';
+import { SOURCE_REGISTRY } from '../../data/sources';
 import { InfoTip } from '../InfoTip/InfoTip';
 import styles from './CommandPalette.module.css';
 import type { SourceType } from '../../@types/data/SourceType';
@@ -161,16 +166,35 @@ export type CommandPaletteProps = {
   onSelect: (id: string) => void;
   /** Selection handler for alias rows — receives the picked entry's source + localIdx. */
   onSelectAlias?: (target: { source: SourceType; localIdx: number }) => void;
+  /**
+   * Selection handler for the Milky Way row.  The MW is a first-class
+   * FocusableTarget, not a catalog row, so it carries no id / alias tuple —
+   * App wires this to `camera.focusOn(MILKY_WAY_INFO)`, the same select → focus
+   * path every other target uses.  Optional so the palette renders standalone
+   * (e.g. in tests) without the handler.
+   */
+  onSelectMilkyWay?: () => void;
 };
 
 /**
- * One scored row, ready to render.  `kind` discriminates the two
- * payload shapes; the renderer branches on it to pick the right
- * onClick handler and the right primary/secondary text.
+ * Fixed search terms for the always-present Milky Way row.  The matcher
+ * (`scoreFamousMatch`) scores these like any catalog row's `names`, so
+ * "milky way", "galaxy", or "home" all surface the command.  The first is
+ * what renders in the row.
+ */
+const MILKY_WAY_PRIMARY_NAME = 'Milky Way';
+const MILKY_WAY_NAMES: readonly string[] = [MILKY_WAY_PRIMARY_NAME, 'Galaxy', 'Home'];
+
+/**
+ * One scored row, ready to render.  `kind` discriminates the three payload
+ * shapes; the renderer + `dispatchSelection` switch on it to pick the right
+ * handler and the right primary/secondary text.  `milkyWay` carries no
+ * payload — it's the singleton FocusableTarget, resolved by App.
  */
 type ScoredRow =
   | { kind: 'famous'; entry: FamousMetaEntry; score: number }
-  | { kind: 'alias'; entry: AliasIndexEntry; score: number };
+  | { kind: 'alias'; entry: AliasIndexEntry; score: number }
+  | { kind: 'milkyWay'; score: number };
 
 export function CommandPalette({
   entries,
@@ -179,6 +203,7 @@ export function CommandPalette({
   onClose,
   onSelect,
   onSelectAlias,
+  onSelectMilkyWay,
 }: CommandPaletteProps): ReactNode {
   const [query, setQuery] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
@@ -195,8 +220,19 @@ export function CommandPalette({
   // reasonable cap, and concatenate (famous first because famous always
   // wins ties — see FAMOUS_TIEBREAK).
   const matches: ScoredRow[] = useMemo(() => {
+    // The Milky Way row is always present (no catalog membership): on an empty
+    // query it heads the list as the most-asked-after object; on a query it's
+    // scored over MILKY_WAY_NAMES like a famous row and only kept if it hits.
+    const mwScore =
+      query.trim().length === 0
+        ? 0
+        : scoreFamousMatch({ id: 'milky-way', names: MILKY_WAY_NAMES, description: '' }, query);
+    const milkyWayRow: ScoredRow | null =
+      query.trim().length === 0 || mwScore > 0 ? { kind: 'milkyWay', score: mwScore } : null;
+
     if (query.trim().length === 0) {
-      return entries.map<ScoredRow>((e) => ({ kind: 'famous', entry: e, score: 0 }));
+      const famousAll = entries.map<ScoredRow>((e) => ({ kind: 'famous', entry: e, score: 0 }));
+      return milkyWayRow ? [milkyWayRow, ...famousAll] : famousAll;
     }
 
     const famousScored: ScoredRow[] = entries
@@ -218,7 +254,7 @@ export function CommandPalette({
     aliasScored.sort((a, b) => b.score - a.score);
     const aliasCapped = aliasScored.slice(0, MAX_ALIAS_RESULTS);
 
-    return [...famousScored, ...aliasCapped];
+    return [...(milkyWayRow ? [milkyWayRow] : []), ...famousScored, ...aliasCapped];
   }, [entries, aliasIndex, query]);
 
   // Reset highlight when the query changes — otherwise we'd point past the
@@ -246,10 +282,17 @@ export function CommandPalette({
    * apart silently.
    */
   const dispatchSelection = (m: ScoredRow): void => {
-    if (m.kind === 'famous') {
-      onSelect(m.entry.id);
-    } else {
-      onSelectAlias?.({ source: m.entry.source, localIdx: m.entry.localIdx });
+    // Switch on the row tag — three kinds, three handlers, no per-id checks.
+    switch (m.kind) {
+      case 'famous':
+        onSelect(m.entry.id);
+        break;
+      case 'alias':
+        onSelectAlias?.({ source: m.entry.source, localIdx: m.entry.localIdx });
+        break;
+      case 'milkyWay':
+        onSelectMilkyWay?.();
+        break;
     }
     onClose();
   };
@@ -360,12 +403,6 @@ export function CommandPalette({
               const isActive = i === activeIdx;
               const className = `${styles.result} ${isActive ? styles.resultActive : ''}`;
               if (m.kind === 'famous') {
-                // Pseudo entries (currently just the Milky Way) have no
-                // per-id WebP under `/images/famous/`.  Rendering the
-                // standard <img> tag would emit a 404 + broken-image
-                // icon.  Use the alias-style first-letter glyph as the
-                // visual fallback instead.
-                const isPseudo = m.entry.pseudo === true;
                 return (
                   <li
                     key={`famous:${m.entry.id}`}
@@ -373,18 +410,12 @@ export function CommandPalette({
                     onMouseEnter={() => setActiveIdx(i)}
                     onClick={() => dispatchSelection(m)}
                   >
-                    {isPseudo ? (
-                      <span className={styles.aliasGlyph} aria-hidden="true">
-                        {m.entry.names[0]?.[0] ?? '·'}
-                      </span>
-                    ) : (
-                      <img
-                        className={styles.thumb}
-                        src={`/images/famous/${m.entry.id}.webp`}
-                        alt=""
-                        loading="lazy"
-                      />
-                    )}
+                    <img
+                      className={styles.thumb}
+                      src={`/images/famous/${m.entry.id}.webp`}
+                      alt=""
+                      loading="lazy"
+                    />
                     <span>
                       <span className={styles.primary}>{m.entry.names[0]}</span>
                       {m.entry.names.length > 1 && (
@@ -392,6 +423,31 @@ export function CommandPalette({
                           {m.entry.names.slice(1).join(' · ')}
                         </span>
                       )}
+                    </span>
+                  </li>
+                );
+              }
+              if (m.kind === 'milkyWay') {
+                // The Milky Way is a procedural backdrop with no atlas WebP,
+                // so it renders a first-letter glyph like an alias row, but
+                // it is its own row kind (a first-class FocusableTarget),
+                // not a famous catalog entry.
+                return (
+                  <li
+                    key="milkyWay"
+                    className={className}
+                    onMouseEnter={() => setActiveIdx(i)}
+                    onClick={() => dispatchSelection(m)}
+                    data-testid="milky-way-row"
+                  >
+                    <span className={styles.aliasGlyph} aria-hidden="true">
+                      {MILKY_WAY_PRIMARY_NAME[0]}
+                    </span>
+                    <span>
+                      <span className={styles.primary}>{MILKY_WAY_PRIMARY_NAME}</span>
+                      <span className={styles.secondary}>
+                        {MILKY_WAY_NAMES.slice(1).join(' · ')}
+                      </span>
                     </span>
                   </li>
                 );
