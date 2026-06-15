@@ -69,20 +69,33 @@ Make the Milky Way label a first-class category label:
 - A `setMilkyWayLabelEnabled` action/reducer/selector mirrors the existing
   `setMilkyWayEnabled` and `setStructureLabelEnabled` trio.
 
-### Producer
+### Producer — delete the subsystem, use a bare producer function
 
-- `youAreHereSubsystem` → `milkyWayLabelSubsystem` (file + type + handle
-  rename). It keeps:
+`youAreHereSubsystem` is the only label producer implemented as a stateful
+_subsystem_ (with `destroy()` + a teardown slot); `produceStructureLabels` /
+`produceFamousLabels` are bare functions registered via inline
+`{ produceLabels }` wrappers in `engine.ts`. The subsystem exists solely for
+its `didFireFadeIn` one-shot latch. The toggle model makes that latch
+redundant (the load-in fade follows the `produceStructureLabels` pattern: a
+module-level per-layer latch fires `fadeTo(1)` once on first intended-visible
+emit), so the Milky Way label can be a bare function like the others.
+
+- **Delete `youAreHereSubsystem`** — the file, its `@types`
+  (`YouAreHereSubsystem`), its `EngineSubsystemHandles` slot, and its
+  teardown / `initGpu` / `startLoop` / director-registration wiring.
+- **Add `produceMilkyWayLabel(state, ctx)`** as a bare function in
+  `src/services/engine/presentation/`, mirroring `produceStructureLabels`,
+  registered via an inline `{ produceLabels }` wrapper in `engine.ts` next to
+  the structure/famous registrations. It keeps:
   - the fixed label text **"You are here"** (the user-chosen wording; the
     registry `label` `'Milky Way'` drives only the settings/toggle UI, not the
     3D text);
   - the marker-line stem;
   - the distance fade `youAreHereAlpha(camDist)`.
-- It now multiplies in the label toggle: effective label/line alpha =
-  `youAreHereAlpha(camDist) × layerOpacity('milkyWay')`, where the layer
-  opacity is the toggle-driven fade. (When `labelEnabled` is off the layer
-  fades to 0 and the producer's output is suppressed — same shape as
-  structure labels honouring `labelEnabled`.)
+- Effective label/line alpha = `youAreHereAlpha(camDist) × layerOpacity('milkyWay')`.
+  The authoritative gate is `settings.milkyWay.labelEnabled`: skip wholesale
+  when disabled AND faded to 0, keep emitting the fade-out tail otherwise —
+  exactly the `produceStructureLabels` shape.
 
 ### Why the distance fade stays a producer concern
 
@@ -109,9 +122,11 @@ uniform toggle axis; per-producer alpha logic is expected to differ.
 - `sources/milky-way.ts` + `MilkyWaySourceEntry` (`bearsLabel` etc.).
 - `@types/settings/EngineSettingsState` (`milkyWay.labelEnabled`) + the
   settings seed in `engine.ts` + `data/defaults.ts` + test fixtures.
-- `youAreHereSubsystem` → `milkyWayLabelSubsystem` (+ its `@types`, the
-  `EngineSubsystemHandles` slot, `initGpu`/`startLoop` wiring,
-  `labelDirectorSubsystem` registration).
+- DELETE `youAreHereSubsystem` (+ its `@types/.../YouAreHereSubsystem`, the
+  `EngineSubsystemHandles.youAreHere` slot, `initGpu`/`startLoop` wiring, and
+  the teardown registration); ADD `produceMilkyWayLabel` in `presentation/`
+  registered inline in `engine.ts` (replacing the
+  `registerProducer(state.subsystems.youAreHere)` call at engine.ts:603).
 - `registerOverlayFades` (register the `milkyWay` label layer at the toggle).
 - `youAreHereVisibility` → `milkyWayLabelVisibility` (or keep the filename,
   rename the layer only — TBD in plan, lower-risk to rename for consistency).
