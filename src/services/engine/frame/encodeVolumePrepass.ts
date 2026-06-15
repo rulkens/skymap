@@ -55,7 +55,7 @@ export function encodeVolumePrepass(
   settings: RenderFrameSettings,
   timingService: GpuTimingService | null,
 ): void {
-  if (state.gpu.scalarVolumeRenderer !== null) {
+  if (state.gpu.volumeFieldRenderer !== null) {
     const nowMs = performance.now();
     const masterOpacity = state.subsystems.fades.opacityOf({ kind: 'volumesMaster' }, nowMs);
     if (settings.volumesEnabled || masterOpacity > 0) {
@@ -73,11 +73,11 @@ export function encodeVolumePrepass(
         state.subsystems.fades.opacityOf({ kind: 'scalarField', field: id }, nowMs) *
         recessedMaster;
       const settingsOf = (id: VolumeFieldId) => state.settings.volumes.items[id];
-      if (state.gpu.scalarVolumeRenderer.hasActiveFields(settingsOf, fadeOpacityOf)) {
+      if (state.gpu.volumeFieldRenderer.hasActiveFields(settingsOf, fadeOpacityOf)) {
         encodeVolumes({
           encoder,
           ctx,
-          scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
+          volumeFieldRenderer: state.gpu.volumeFieldRenderer,
           settingsOf,
           fadeOpacityOf,
           // Resolve the timing descriptor lazily, inside every gate, so

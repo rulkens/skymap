@@ -22,7 +22,7 @@
  *
  * ### Why on `state.gpu.volumeOffscreen` instead of inside the renderer
  *
- * `scalarVolumeRenderer` is a draw-only helper — its colour attachment
+ * `volumeFieldRenderer` is a draw-only helper — its colour attachment
  * is provided by whoever opens the render pass.  Render-target
  * lifetimes live on engine state, parallel to `state.gpu.postProcess`;
  * renderers are pure draw producers.
@@ -51,7 +51,7 @@ import type { Size } from '../../../@types/rendering/Size';
  *
  * Total fragment-count reduction is the square of this value (e.g. 4 →
  * 1/16 the fragments).  `encodeVolumes.ts` imports the SAME constant
- * when computing the viewport passed to `scalarVolumeRenderer.draw`, so
+ * when computing the viewport passed to `volumeFieldRenderer.draw`, so
  * "viewport == texture size" is enforced by construction.  Tune this
  * dial here and both sites move together.
  */

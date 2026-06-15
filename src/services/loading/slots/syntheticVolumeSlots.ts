@@ -2,7 +2,7 @@
  * syntheticVolumeSlots — factory for the three DEV-only synthetic
  * volume fixtures (Gaussian blob, Cartesian grid, spherical grid).
  *
- * Each fixture drives the same `scalarVolumeRenderer` commit path as
+ * Each fixture drives the same `volumeFieldRenderer` commit path as
  * the real CF-4 density slot but with procedurally-generated cube
  * data.  Routing the synthetic cubes through the slot system (rather
  * than a bespoke "synthetic shortcut") means they get the same
@@ -75,7 +75,7 @@ export function createSyntheticVolumeSlots(
       name: `syntheticVolume:${id}`,
       fetch: syntheticVolumeFetcher,
       commit: async (cube) => {
-        const renderer = state.gpu.scalarVolumeRenderer;
+        const renderer = state.gpu.volumeFieldRenderer;
         if (!renderer) return;
         renderer.upload(id, cube);
         // Synthetic fixtures get NO construction seed (DEV-only), so this

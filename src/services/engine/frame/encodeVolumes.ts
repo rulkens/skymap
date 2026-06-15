@@ -3,7 +3,7 @@
  *
  * Runs before the HDR mega-pass (`encodeHdrSingle` / `encodeHdrSplit`).
  * Opens one render pass against the downsampled offscreen target on
- * `ctx.volumeOffscreen.view`, asks `scalarVolumeRenderer` to iterate
+ * `ctx.volumeOffscreen.view`, asks `volumeFieldRenderer` to iterate
  * every active field and draw it with the additive blend state baked
  * into the pipeline, and closes the pass.  `volumeUpsamplePass` (an
  * entry in `HDR_PASSES`) bilinearly samples the result and additively
@@ -20,7 +20,7 @@
  *
  * ### Why the offscreen viewport (not the canvas viewport) to the renderer
  *
- * `scalarVolumeRenderer.draw` takes `viewportPx` to compute the per-
+ * `volumeFieldRenderer.draw` takes `viewportPx` to compute the per-
  * fragment jitter dither's spatial frequency.  Passing the canvas size
  * when the actual target is downsampled would shift the dither
  * frequency, making it appear "finer" on the upsampled output.  The
@@ -39,7 +39,7 @@ import type { EncodeVolumesArgs } from '../../../@types/engine/frame/EncodeVolum
 import { VOLUME_RENDER_SCALE_DIVISOR } from '../../gpu/passes/volumeOffscreen';
 
 export function encodeVolumes(args: EncodeVolumesArgs): void {
-  const { encoder, ctx, scalarVolumeRenderer, settingsOf, fadeOpacityOf, timestampWrites } = args;
+  const { encoder, ctx, volumeFieldRenderer, settingsOf, fadeOpacityOf, timestampWrites } = args;
 
   // Two-part gate:
   //
@@ -50,7 +50,7 @@ export function encodeVolumes(args: EncodeVolumesArgs): void {
   //      the upsample blit is the consumer of whatever we'd write here.
   //      Skipping the pass avoids one tile-RAM round-trip per frame
   //      on M1 for a cleared-but-unused offscreen target.
-  if (scalarVolumeRenderer === null || !scalarVolumeRenderer.hasActiveFields(settingsOf, fadeOpacityOf))
+  if (volumeFieldRenderer === null || !volumeFieldRenderer.hasActiveFields(settingsOf, fadeOpacityOf))
     return;
 
   // Viewport matches `volumeOffscreen`'s texture size, per the shared
@@ -76,7 +76,7 @@ export function encodeVolumes(args: EncodeVolumesArgs): void {
     // shift between production and dev-with-timings.
     ...(timestampWrites ? { timestampWrites } : {}),
   });
-  scalarVolumeRenderer.draw(
+  volumeFieldRenderer.draw(
     pass,
     ctx.vp,
     [vw, vh],

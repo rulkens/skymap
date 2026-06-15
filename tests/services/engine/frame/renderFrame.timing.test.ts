@@ -244,7 +244,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         labelRenderer: null,
         markerLineRenderer: null,
         selectionRingRenderer: null,
-        scalarVolumeRenderer: null,
+        volumeFieldRenderer: null,
         flowFieldRenderer: null,
         structureMarkerRenderer: null,
         focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
@@ -272,7 +272,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     milkyWayRenderer: milkyWayRenderer as never,
     horizonShellRenderer: horizonShellRenderer as never,
     filamentRenderer: null,
-    scalarVolumeRenderer: null,
+    volumeFieldRenderer: null,
     flowFieldRenderer: null,
     texturedDiskRenderer: texturedDiskRenderer as never,
     proceduralDiskRenderer: proceduralDiskRenderer as never,
@@ -378,14 +378,14 @@ describe('renderFrame — timing service hookup', () => {
     const { svc, descriptorFor } = makeFakeTimingService();
     const { input, beginCalls } = makeMinimalInputWithTiming(svc);
 
-    // Force volumes on with an active scalarVolumeRenderer.
+    // Force volumes on with an active volumeFieldRenderer.
     (input.settings as any).volumesEnabled = true;
     const drawSpy = vi.fn();
-    (input as any).scalarVolumeRenderer = {
+    (input as any).volumeFieldRenderer = {
       draw: drawSpy,
       hasActiveFields: () => true,
     };
-    (input.state as any).gpu.scalarVolumeRenderer = {
+    (input.state as any).gpu.volumeFieldRenderer = {
       draw: drawSpy,
       hasActiveFields: () => true,
     };

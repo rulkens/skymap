@@ -421,7 +421,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       horizonShellRenderer: null,
       // null until initGpu; excluded from isEngineReady — volumeUpsamplePass
       // null-checks both before hasActiveFields(), so a null state no-ops.
-      scalarVolumeRenderer: null,
+      volumeFieldRenderer: null,
       flowFieldRenderer: null,
       volumeUpsample: null,
       // Debug overlays. null until initGpu; the per-frame consumer
@@ -557,7 +557,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // consumers can `state.assetSlots.points.get(source)?.load(...)` without
     // a null check, but the slots are minted inside the GPU init IIFE: they
     // close over GPU handles (renderer, filamentRenderer,
-    // scalarVolumeRenderer) for their commit step, all null until initGpu
+    // volumeFieldRenderer) for their commit step, all null until initGpu
     // resolves.  Minting them all in one IIFE pass keeps the lifecycle
     // uniform — even the GPU-handle-free slots (famousMeta, pgcAlias) are
     // born there.
@@ -916,7 +916,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     addVolumeFieldAction(settingsStore, fieldId);
     // Upload to the renderer; a silent no-op if it isn't ready yet (re-add
     // once booted).
-    state.gpu.scalarVolumeRenderer?.upload(fieldId, cube);
+    state.gpu.volumeFieldRenderer?.upload(fieldId, cube);
     // Drive the FadeRegistry from the settings enable bit: enabled → fade to 1;
     // disabled → leave it at the 0 set by onFieldAdded (the draw loop's
     // `(!enabled && opacity <= 0)` skip keeps it invisible until toggled on).
@@ -933,7 +933,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function removeVolumeField(fieldId: VolumeFieldId): void {
-    state.gpu.scalarVolumeRenderer?.unload(fieldId);
+    state.gpu.volumeFieldRenderer?.unload(fieldId);
     removeVolumeFieldAction(settingsStore, fieldId);
     // Essential wake: removal fires no fade — the field vanishes outright.
     state.subsystems.scheduler.requestRender();
@@ -1135,8 +1135,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.milkyWayRenderer = null;
     state.gpu.horizonShellRenderer?.destroy();
     state.gpu.horizonShellRenderer = null;
-    state.gpu.scalarVolumeRenderer?.destroy();
-    state.gpu.scalarVolumeRenderer = null;
+    state.gpu.volumeFieldRenderer?.destroy();
+    state.gpu.volumeFieldRenderer = null;
     state.gpu.flowFieldRenderer?.destroy();
     state.gpu.flowFieldRenderer = null;
     state.gpu.volumeUpsample?.destroy();

@@ -255,7 +255,7 @@ describe('renderFrame visual baseline', () => {
     const proceduralDiskRenderer = makeLoggingRenderer(records, 'procedural-disks');
     const texturedDiskRenderer = makeLoggingRenderer(records, 'textured-disks');
     const filamentRenderer = makeLoggingRenderer(records, 'filaments');
-    const scalarVolumeRenderer = {
+    const volumeFieldRenderer = {
       hasActiveFields: vi.fn(() => true),
       draw: vi.fn((...args: unknown[]) => {
         records.push({
@@ -358,7 +358,7 @@ describe('renderFrame visual baseline', () => {
           labelRenderer,
           markerLineRenderer,
           selectionRingRenderer: null,
-          scalarVolumeRenderer,
+          volumeFieldRenderer,
           // Flow's ribbon draw lands in Task 5; here flow stays off (null
           // renderer + disabled below) so encodeFlowCompute is a no-op and
           // the recorded single-vs-split sequence is unchanged.
@@ -399,7 +399,7 @@ describe('renderFrame visual baseline', () => {
       milkyWayRenderer: milkyWayRenderer as never,
       horizonShellRenderer: horizonShellRenderer as never,
       filamentRenderer: filamentRenderer as never,
-      scalarVolumeRenderer: scalarVolumeRenderer as never,
+      volumeFieldRenderer: volumeFieldRenderer as never,
       flowFieldRenderer: null,
       texturedDiskRenderer: texturedDiskRenderer as never,
       proceduralDiskRenderer: proceduralDiskRenderer as never,

@@ -274,7 +274,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     milkyWayRenderer: deps.milkyWayRenderer,
     horizonShellRenderer: deps.horizonShellRenderer,
     filamentRenderer: deps.filamentRenderer,
-    scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
+    volumeFieldRenderer: state.gpu.volumeFieldRenderer,
     flowFieldRenderer: state.gpu.flowFieldRenderer,
     texturedDiskRenderer: deps.texturedDiskRenderer,
     proceduralDiskRenderer: deps.proceduralDiskRenderer,

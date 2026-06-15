@@ -139,8 +139,8 @@ vi.mock('../../../../src/services/gpu/renderers/structureMarkerRenderer', () => 
   createStructureMarkerRenderer: vi.fn(() => makeStub('structureMarkerRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/scalarVolumeRenderer', () => ({
-  createScalarVolumeRenderer: vi.fn(() => makeStub('scalarVolumeRenderer')),
+vi.mock('../../../../src/services/gpu/renderers/volumeFieldRenderer', () => ({
+  createVolumeFieldRenderer: vi.fn(() => makeStub('volumeFieldRenderer')),
 }));
 
 vi.mock('../../../../src/services/gpu/renderers/flowFieldRenderer', () => ({
@@ -199,7 +199,7 @@ function makeState(): EngineState {
       proceduralDiskRenderer: null,
       milkyWayRenderer: null,
       horizonShellRenderer: null,
-      scalarVolumeRenderer: null,
+      volumeFieldRenderer: null,
       flowFieldRenderer: null,
       volumeUpsample: null,
       pickDebugOverlay: null,

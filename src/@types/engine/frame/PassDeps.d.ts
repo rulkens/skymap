@@ -20,7 +20,7 @@ import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRende
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
 import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
-import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
+import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
 import type { FlowFieldRenderer } from '../../rendering/FlowFieldRenderer';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
@@ -50,7 +50,7 @@ export type PassDeps = {
    * both null-check this handle so a null state is silently a no-op
    * (no render pass opened, no draw invoked).
    */
-  scalarVolumeRenderer: ScalarVolumeRenderer | null;
+  volumeFieldRenderer: VolumeFieldRenderer | null;
   /**
    * CF4++ flow-field renderer. Null before GPU init completes; `flowFieldPass`
    * null-checks this handle in `draw`, and its `enabled` gate already requires

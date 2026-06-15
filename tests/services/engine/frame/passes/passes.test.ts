@@ -121,7 +121,7 @@ function makeDeps(overrides: Partial<PassDeps> = {}): PassDeps {
     texturedDiskRenderer: { draw: vi.fn(), bindAtlas: vi.fn() } as any,
     proceduralDiskRenderer: { draw: vi.fn() } as any,
     filamentRenderer: null,
-    scalarVolumeRenderer: null,
+    volumeFieldRenderer: null,
     flowFieldRenderer: null,
     milkyWayRenderer: { draw: vi.fn() } as any,
     horizonShellRenderer: { draw: vi.fn() } as any,

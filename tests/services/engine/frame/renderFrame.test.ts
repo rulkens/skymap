@@ -333,7 +333,7 @@ function makeInput(
           labelRenderer: null,
           markerLineRenderer: null,
           selectionRingRenderer: null,
-          scalarVolumeRenderer: null,
+          volumeFieldRenderer: null,
           flowFieldRenderer: null,
           structureMarkerRenderer: null,
           focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
@@ -366,7 +366,7 @@ function makeInput(
       milkyWayRenderer,
       horizonShellRenderer,
       filamentRenderer: null,
-      scalarVolumeRenderer: null,
+      volumeFieldRenderer: null,
       flowFieldRenderer: null,
       texturedQuadRenderer,
       texturedDiskRenderer,
@@ -539,20 +539,20 @@ describe('renderFrame', () => {
   });
 
   it('opens a pre-HDR render pass against the half-res view when volumes are active', () => {
-    // When `volumesEnabled` is true AND scalarVolumeRenderer has active
+    // When `volumesEnabled` is true AND volumeFieldRenderer has active
     // fields, `encodeVolumes` must run BEFORE the HDR mega-pass.  The
     // fixture's default settings has volumesEnabled=false → no pre-pass
     // fires.  We force-enable it here and stub a renderer with an
     // active field, then check that the FIRST beginRenderPass goes
     // against the half-res view.
     const fx2 = makeInput({ settings: { volumesEnabled: true } });
-    // Wire in a scalarVolumeRenderer with active fields.
+    // Wire in a volumeFieldRenderer with active fields.
     const drawSpy = vi.fn();
-    (fx2.input as any).scalarVolumeRenderer = {
+    (fx2.input as any).volumeFieldRenderer = {
       draw: drawSpy,
       hasActiveFields: () => true,
     };
-    (fx2.input.state as any).gpu.scalarVolumeRenderer = {
+    (fx2.input.state as any).gpu.volumeFieldRenderer = {
       draw: drawSpy,
       hasActiveFields: () => true,
     };

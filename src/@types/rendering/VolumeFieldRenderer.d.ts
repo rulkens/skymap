@@ -1,5 +1,5 @@
 /**
- * ScalarVolumeRenderer — public handle for the multi-field 3D scalar-
+ * VolumeFieldRenderer — public handle for the multi-field 3D scalar-
  * volume renderer.  Owns the WebGPU pipeline, the per-field bind groups,
  * and the per-field registry; consumers upload / unload cubes (keyed by
  * field id, mirroring `pointRenderer.upload`/`unload` per source), and
@@ -7,7 +7,7 @@
  * The user-tunable knobs (enabled, intensity, palette, contrast,
  * densityScale, trim, exposure) are no longer set through this handle —
  * they live in `state.settings.volumes.items` and are projected in per
- * frame.  See `scalarVolumeRenderer.ts` for the full pipeline +
+ * frame.  See `volumeFieldRenderer.ts` for the full pipeline +
  * ray-march details.
  */
 
@@ -18,9 +18,9 @@ import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';
 import type { VolumeFieldId } from '../data/VolumeFieldId';
 
-export type ScalarVolumeRenderer = {
+export type VolumeFieldRenderer = {
   /**
-   * Human-readable identifier (`'scalarVolumeRenderer'`).  Part of the
+   * Human-readable identifier (`'volumeFieldRenderer'`).  Part of the
    * shared `Renderer` contract — see `Renderer.d.ts`.
    */
   readonly label: string;

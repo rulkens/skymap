@@ -9,7 +9,7 @@
  */
 
 import type { ReadyFrameContext } from './ReadyFrameContext';
-import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
+import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
 import type { VolumeFieldId } from '../../data/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../settings/VolumeFieldSettings';
 
@@ -17,10 +17,10 @@ export type EncodeVolumesArgs = {
   encoder: GPUCommandEncoder;
   ctx: ReadyFrameContext;
   /**
-   * Scalar-volume renderer.  Null in the brief bootstrap window before
+   * Volume-field renderer.  Null in the brief bootstrap window before
    * `initGpu` has wired it up; the helper is a no-op in that case.
    */
-  scalarVolumeRenderer: ScalarVolumeRenderer | null;
+  volumeFieldRenderer: VolumeFieldRenderer | null;
   /**
    * Per-field fade opacity callback, threaded from `state.subsystems.fades`
    * at the call site.  Returns the current animated opacity [0, 1] for the

@@ -27,7 +27,7 @@ describe('buildVolumeFieldsSnapshot', () => {
     // must include both — the panel shows CF-4's row before its cube arrives.
     const state = {
       gpu: {
-        scalarVolumeRenderer: {
+        volumeFieldRenderer: {
           listIds: () => ['mcpm'],
         },
       },
@@ -69,7 +69,7 @@ describe('buildVolumeFieldsSnapshot', () => {
   it('derives field values from state.settings.volumes.items', () => {
     const state = {
       gpu: {
-        scalarVolumeRenderer: {
+        volumeFieldRenderer: {
           listIds: () => ['mcpm'],
         },
       },
@@ -104,7 +104,7 @@ describe('buildVolumeFieldsSnapshot', () => {
     // regardless of what the renderer might know about.
     const state = {
       gpu: {
-        scalarVolumeRenderer: {
+        volumeFieldRenderer: {
           listIds: () => ['mcpm'],
         },
       },

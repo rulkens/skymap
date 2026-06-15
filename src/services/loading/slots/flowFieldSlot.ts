@@ -12,7 +12,7 @@
  * **GPU upload.**  The commit hands the decoded cube to the flow renderer's
  * `upload`, which builds the 3D velocity texture via `flowFieldFromCube` against
  * its own device — the device never leaks to this slot, mirroring
- * `cf4Density → scalarVolumeRenderer.upload`.  The slot's own 'ready'
+ * `cf4Density → volumeFieldRenderer.upload`.  The slot's own 'ready'
  * transition (read via `slotReady(assetSlots.flow)`) is the authoritative
  * "committed to the renderer" signal — it fires after this commit returns.  The
  * render wake is `installSlotReadyWake`'s job, not the factory's.  A null

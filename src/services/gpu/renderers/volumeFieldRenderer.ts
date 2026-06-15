@@ -1,11 +1,11 @@
 /**
- * ScalarVolumeRenderer — multi-field, palette-driven, additive 3D
+ * VolumeFieldRenderer — multi-field, palette-driven, additive 3D
  * scalar-field volume renderer.  See the spec at
  * 'docs/superpowers/specs/2026-05-09-scalar-volume-renderer-design.md'.
  *
  * Public surface (factory shape, matching D.2 conventions):
  *
- *   - createScalarVolumeRenderer(device, format, fadeBgl, callbacks)
+ *   - createVolumeFieldRenderer(device, format, fadeBgl, callbacks)
  *   - upload(id, cube)            → upload cube to a 3D r16float
  *                                       texture, read the per-cube static
  *                                       config from the registry, register
@@ -49,7 +49,7 @@ import { mat4 } from 'gl-matrix';
 import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import type { ScalarFieldPaletteId } from '../../../@types/data/ScalarFieldPaletteId';
 import type { Renderer } from '../../../@types/rendering/Renderer';
-import type { ScalarVolumeRenderer } from '../../../@types/rendering/ScalarVolumeRenderer';
+import type { VolumeFieldRenderer } from '../../../@types/rendering/VolumeFieldRenderer';
 import type { FieldEntry } from '../../../@types/rendering/FieldEntry';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { VolumeFieldId } from '../../../@types/data/VolumeFieldId';
@@ -97,7 +97,7 @@ const CUBE_INDICES = new Uint16Array([
 
 // ── Factory ─────────────────────────────────────────────────────────
 
-export function createScalarVolumeRenderer(
+export function createVolumeFieldRenderer(
   device: GPUDevice,
   format: GPUTextureFormat,
   fadeBgl: FadeUniformsBgl,
@@ -105,7 +105,7 @@ export function createScalarVolumeRenderer(
     onFieldAdded: (id: VolumeFieldId) => void;
     onFieldRemoved: (id: VolumeFieldId) => void;
   },
-): ScalarVolumeRenderer {
+): VolumeFieldRenderer {
   const cornerBuffer = device.createBuffer({
     size: CUBE_CORNERS.byteLength,
     usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
@@ -262,8 +262,8 @@ export function createScalarVolumeRenderer(
     );
   }
 
-  const renderer: ScalarVolumeRenderer = {
-    label: 'scalarVolumeRenderer',
+  const renderer: VolumeFieldRenderer = {
+    label: 'volumeFieldRenderer',
     upload(id, cube) {
       const existing = fields.get(id);
       if (existing) {

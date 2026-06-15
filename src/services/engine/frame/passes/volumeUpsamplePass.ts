@@ -22,7 +22,7 @@
  * ### Why three null-checks in `enabled`
  *
  * The pre-bootstrap window is the only legitimate case where any of the
- * three matters.  `scalarVolumeRenderer === null` means initGpu hasn't
+ * three matters.  `volumeFieldRenderer === null` means initGpu hasn't
  * finished; `volumeUpsample === null` means the same.  `hasActiveFields()`
  * is the per-frame fine-grained gate that skips the upsample when no
  * fields are enabled (since `encodeVolumes` then skipped the half-res
@@ -39,7 +39,7 @@ export const volumeUpsamplePass: Pass = {
   enabled(state, _ctx, settings) {
     // Pre-bootstrap window: either handle null means initGpu hasn't
     // finished.  Same shape as the old scalarVolumePass gate.
-    if (state.gpu.scalarVolumeRenderer === null) return false;
+    if (state.gpu.volumeFieldRenderer === null) return false;
     if (state.gpu.volumeUpsample === null) return false;
     // Master gate: settings boolean OR a non-zero master fade tail.
     // While master is fading out, encodeHdr* is still drawing into
@@ -50,8 +50,8 @@ export const volumeUpsamplePass: Pass = {
     if (!settings.volumesEnabled && masterOpacity <= 0) return false;
     // Per-field gate: active fields OR fade-out tails in flight.
     const settingsOf = (id: VolumeFieldId) => state.settings.volumes.items[id];
-    if (state.gpu.scalarVolumeRenderer.hasActiveFields(settingsOf)) return true;
-    for (const id of state.gpu.scalarVolumeRenderer.listIds()) {
+    if (state.gpu.volumeFieldRenderer.hasActiveFields(settingsOf)) return true;
+    for (const id of state.gpu.volumeFieldRenderer.listIds()) {
       if (state.subsystems.fades.opacityOf({ kind: 'scalarField', field: id }, now) > 0) {
         return true;
       }

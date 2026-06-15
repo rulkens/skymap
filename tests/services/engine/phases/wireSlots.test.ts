@@ -378,7 +378,7 @@ function makeState(
       texturedDiskRenderer: { bindAtlas: vi.fn(), bindHiResArray: vi.fn() } as never,
       proceduralDiskRenderer: {} as never,
       milkyWayRenderer: null,
-      scalarVolumeRenderer: {
+      volumeFieldRenderer: {
         upload: vi.fn(),
       } as never,
     },

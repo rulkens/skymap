@@ -127,7 +127,7 @@ function makeState(): EngineState {
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
       milkyWayRenderer: null,
-      scalarVolumeRenderer: null,
+      volumeFieldRenderer: null,
       volumeUpsample: null,
     },
     subsystems: {

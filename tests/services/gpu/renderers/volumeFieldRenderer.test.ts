@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { mat4 } from 'gl-matrix';
-import { createScalarVolumeRenderer } from '../../../../src/services/gpu/renderers/scalarVolumeRenderer';
+import { createVolumeFieldRenderer } from '../../../../src/services/gpu/renderers/volumeFieldRenderer';
 import { getVolumeFieldDefaults } from '../../../../src/data/volumeFieldDefaults';
 import type { ScalarCube } from '../../../../src/@types/data/ScalarCube';
 import type { VolumeFieldSettings } from '../../../../src/@types/settings/VolumeFieldSettings';
@@ -57,7 +57,7 @@ function mockDevice(): GPUDevice {
   } as unknown as GPUDevice;
 }
 
-/** Stub callbacks for createScalarVolumeRenderer — avoids FadeRegistry dep in tests. */
+/** Stub callbacks for createVolumeFieldRenderer — avoids FadeRegistry dep in tests. */
 function stubCallbacks() {
   return {
     onFieldAdded: vi.fn(),
@@ -104,10 +104,10 @@ function uniformScratch(device: GPUDevice): Float32Array | undefined {
   return hit?.[2] as Float32Array | undefined;
 }
 
-describe('createScalarVolumeRenderer draw', () => {
+describe('createVolumeFieldRenderer draw', () => {
   it('draw reads field values from settingsOf', () => {
     const device = mockDevice();
-    const r = createScalarVolumeRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
+    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
     r.upload('mcpm', fixture());
     const pass = makeFakePass();
     r.draw(
@@ -130,7 +130,7 @@ describe('createScalarVolumeRenderer draw', () => {
     // When `settingsOf` returns undefined the renderer has no tunable
     // state for that field and must not issue any GPU work.
     const device = mockDevice();
-    const r = createScalarVolumeRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
+    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
     r.upload('mcpm', fixture());
     const pass = makeFakePass();
     r.draw(
@@ -150,7 +150,7 @@ describe('createScalarVolumeRenderer draw', () => {
     // user-tunable knobs are absent from the entry and arrive per draw
     // via settingsOf.
     const device = mockDevice();
-    const r = createScalarVolumeRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
+    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
     r.upload('mcpm', fixture());
     r.draw(
       makeFakePass(),
@@ -174,7 +174,7 @@ describe('createScalarVolumeRenderer draw', () => {
     // the same changed palette — no further writeTexture (resident
     // now tracks the new id).
     const device = mockDevice();
-    const r = createScalarVolumeRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
+    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
     r.upload('mcpm', fixture());
     const before = (device.queue.writeTexture as unknown as { mock: { calls: unknown[] } }).mock
       .calls.length;
@@ -220,7 +220,7 @@ describe('createScalarVolumeRenderer draw', () => {
     // enabled:false + fadeOpacityOf returning 0 → the field is fully
     // off; no GPU work should be issued.
     const device = mockDevice();
-    const r = createScalarVolumeRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
+    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
     r.upload('mcpm', fixture());
     const pass = makeFakePass();
     r.draw(

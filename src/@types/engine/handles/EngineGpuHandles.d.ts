@@ -48,7 +48,7 @@ import type { LabelRenderer } from '../../rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
 import type { SelectionRingRenderer } from '../../rendering/SelectionRingRenderer';
 import type { StructureMarkerRenderer } from '../../rendering/StructureMarkerRenderer';
-import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
+import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
 import type { FlowFieldRenderer } from '../../rendering/FlowFieldRenderer';
 import type { VolumeUpsample } from '../../rendering/VolumeUpsample';
 import type { PickDebugOverlay } from '../../rendering/PickDebugOverlay';
@@ -207,7 +207,7 @@ export type EngineGpuHandles = {
    * per-field GPU buffer (3D volume textures, palette LUTs, uniform
    * buffers, corner / index VBOs).
    */
-  scalarVolumeRenderer: ScalarVolumeRenderer | null;
+  volumeFieldRenderer: VolumeFieldRenderer | null;
   /**
    * CF4++ peculiar-velocity flow-field renderer — the engine's first compute
    * renderer. Null until `initGpu` constructs it (same phase as the other

@@ -54,7 +54,7 @@ import { createLabelRenderer } from '../../gpu/renderers/labelRenderer';
 import { createMarkerLineRenderer } from '../../gpu/renderers/markerLineRenderer';
 import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRingRenderer';
 import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarkerRenderer';
-import { createScalarVolumeRenderer } from '../../gpu/renderers/scalarVolumeRenderer';
+import { createVolumeFieldRenderer } from '../../gpu/renderers/volumeFieldRenderer';
 import { createFlowFieldRenderer } from '../../gpu/renderers/flowFieldRenderer';
 import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
@@ -320,7 +320,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // EngineState dependency), so keeping it FadeRegistry-agnostic leaves
   // the factory pure (testable without a registry stub) and puts the
   // registry-side wiring at the bootstrap layer.
-  state.gpu.scalarVolumeRenderer = createScalarVolumeRenderer(
+  state.gpu.volumeFieldRenderer = createVolumeFieldRenderer(
     device,
     'rgba16float',
     state.gpu.fadeBgl!,

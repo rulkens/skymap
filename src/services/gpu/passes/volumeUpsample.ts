@@ -17,7 +17,7 @@
  *
  * The scalar-volume pipeline draws into the half-res target with
  * '{ srcFactor: "one", dstFactor: "one" }' for both color and alpha
- * (see scalarVolumeRenderer.ts).  The half-res target therefore holds
+ * (see volumeFieldRenderer.ts).  The half-res target therefore holds
  * the per-fragment additive sum of every active field.  We bilinearly
  * upsample that sum and ADD it to the HDR target — net effect is
  * mathematically identical to having drawn every field directly into

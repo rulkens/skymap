@@ -4,7 +4,7 @@
  *
  * Maps the unit cube `[0,1]³` (the vertex shaders' input space) to the cube's
  * footprint in skymap world space. It lives in its own module — rather than
- * inside `scalarVolumeRenderer` — because two renderers depend on it, and a
+ * inside `volumeFieldRenderer` — because two renderers depend on it, and a
  * renderer importing from a sibling renderer would couple their teardown and
  * load order for no reason. Both consume this neutral helper instead.
  *

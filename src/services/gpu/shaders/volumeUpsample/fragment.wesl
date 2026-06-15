@@ -28,7 +28,7 @@
 // ## Why this is safe to filter
 //
 // Every scalar-volume field draws into the offscreen with additive
-// blending '(one, one)' for color AND alpha (see scalarVolumeRenderer's
+// blending '(one, one)' for color AND alpha (see volumeFieldRenderer's
 // pipeline state), so the offscreen holds the additive sum of every
 // field's contribution.  Averaging four bilinear-filtered samples is
 // still a low-pass reconstruction of that same sum.  The pipeline's

@@ -8,7 +8,7 @@
  * doesn't reset its sliders. Only a brand-new dynamically-added handle seeds a
  * fresh row from `buildVolumeFieldSettings`.
  *
- * The GPU upload (`scalarVolumeRenderer.upload`) and the conditional fade stay
+ * The GPU upload (`volumeFieldRenderer.upload`) and the conditional fade stay
  * in the handle setter — those are renderer side-effects, not settings writes;
  * only the row-seeding moves here so React's per-field rows selector wakes on a
  * genuinely-new field.

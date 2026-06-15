@@ -2,7 +2,7 @@
  * mcpmSlot — factory for the MCPM Cosmic Web volume's asset slot.
  *
  * Tier-aware (unlike cf4DensitySlot's void request). On commit, hands
- * the decoded ScalarCube to scalarVolumeRenderer.upload under the
+ * the decoded ScalarCube to volumeFieldRenderer.upload under the
  * id 'mcpm'. The renderer reads per-cube static config
  * (contrastCenter, envelope, palette) from the registry and user-tunable
  * knobs from `state.settings.volumes.items` per frame — the commit
@@ -27,7 +27,7 @@ export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, _cb) => 
     name: 'mcpm',
     fetch: mcpmFetcher,
     commit: async (cube) => {
-      const renderer = state.gpu.scalarVolumeRenderer;
+      const renderer = state.gpu.volumeFieldRenderer;
       if (!renderer) return;
       const id = SOURCE_REGISTRY[Source.Mcpm].id;
       // Upload the cube; the renderer reads this field's per-cube static

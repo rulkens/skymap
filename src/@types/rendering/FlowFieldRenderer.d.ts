@@ -44,7 +44,7 @@ export type FlowFieldRenderer = {
   /**
    * Receive the decoded velocity cube and commit it: upload it to a 3D texture
    * (via `flowFieldFromCube`, using the renderer's own device — the device is
-   * never exposed to the caller, mirroring `scalarVolumeRenderer.upload`),
+   * never exposed to the caller, mirroring `volumeFieldRenderer.upload`),
    * build the cube model matrix from its meta (via `buildCubeModelMatrix`), build
    * the compute bind group, and arm a reseed. Idempotent — disposes the prior
    * field's texture if re-set.
@@ -67,7 +67,7 @@ export type FlowFieldRenderer = {
    * a reseed is pending (then cleared), followed by the `advect` or `streamline`
    * integrator for `flow.mode`. Reads particle count / motion knobs off `flow`.
    * An internal frame counter (self-incremented per call, mirroring
-   * `scalarVolumeRenderer`) salts the per-particle RNG and advances the
+   * `volumeFieldRenderer`) salts the per-particle RNG and advances the
    * streamline pulse phase. Caller gates on enabled + loaded (see
    * `encodeFlowCompute`).
    */

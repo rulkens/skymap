@@ -92,7 +92,7 @@ export type RenderFrameSettings = {
    * renderer, so no per-field checks or GPU work occurs — and the
    * pre-HDR `encodeVolumes` step is also a no-op (it never reaches its
    * draw because no field is active).  When true, the pass also
-   * requires `scalarVolumeRenderer.hasActiveFields()` to be true (at
+   * requires `volumeFieldRenderer.hasActiveFields()` to be true (at
    * least one registered field is enabled with intensity > 0).  See
    * `volumeUpsamplePass.ts` and `EngineSettingsState.volumesEnabled`
    * for the full gate rationale.

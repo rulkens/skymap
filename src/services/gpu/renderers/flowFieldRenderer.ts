@@ -226,7 +226,7 @@ export function createFlowFieldRenderer(init: {
   // counter advanced by DT * flowSpeed, kept off the settings store.
   let phase = 0;
   // Per-frame counter, self-incremented each encodeCompute (mirrors
-  // scalarVolumeRenderer's internal frame counter — there is no engine-level
+  // volumeFieldRenderer's internal frame counter — there is no engine-level
   // frame counter to thread). Salts the per-particle RNG so spawn jitter and
   // wander vary frame to frame. Stored as a u32 (wraps at 2^32 via `>>> 0`);
   // the WGSL reads it as `Prm.frame: u32`.
@@ -244,7 +244,7 @@ export function createFlowFieldRenderer(init: {
     upload(cube: ScalarCube): void {
       // Upload the decoded cube to a 3D texture via the shared loader, using the
       // renderer's own device (the device stays encapsulated — the caller hands
-      // us a cube, mirroring scalarVolumeRenderer.upload). Idempotent re-set:
+      // us a cube, mirroring volumeFieldRenderer.upload). Idempotent re-set:
       // drop the prior field's texture before adopting the new one.
       if (field) field.dispose();
       const next = flowFieldFromCube(device, cube);

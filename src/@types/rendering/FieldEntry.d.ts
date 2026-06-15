@@ -1,6 +1,6 @@
 /**
  * FieldEntry — internal per-registered-field record kept by the
- * `ScalarVolumeRenderer`'s `fields` map.
+ * `VolumeFieldRenderer`'s `fields` map.
  *
  * Holds the things the renderer genuinely owns: GPU resources (textures,
  * buffers, bind groups), the cube's model / inverse-model matrices, the

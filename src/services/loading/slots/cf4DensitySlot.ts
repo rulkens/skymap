@@ -2,7 +2,7 @@
  * cf4DensitySlot — factory for the CF-4 DM density volume's asset slot.
  *
  * On commit, hands the decoded `ScalarCube` to
- * `scalarVolumeRenderer.upload` under the id `'cf4-density'`.
+ * `volumeFieldRenderer.upload` under the id `'cf4-density'`.
  * The renderer reads per-cube static config (contrastCenter, envelope,
  * paletteId) from the registry and user-tunable knobs from
  * `state.settings.volumes.items` per frame — the commit replays no
@@ -31,7 +31,7 @@ export const createCf4DensitySlot: SlotFactory<ScalarCube, void> = (state, _cb) 
     name: 'cf4Density',
     fetch: cf4DensityFetcher,
     commit: async (cube) => {
-      const renderer = state.gpu.scalarVolumeRenderer;
+      const renderer = state.gpu.volumeFieldRenderer;
       if (!renderer) return;
       const id = SOURCE_REGISTRY[Source.Cf4Density].id;
       // Upload the cube; the renderer reads this field's per-cube static

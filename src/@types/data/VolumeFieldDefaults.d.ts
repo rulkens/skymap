@@ -51,7 +51,7 @@ export type VolumeFieldDefaults = {
   contrastCenter: number;
   /**
    * Per-cube opacity multiplier; see the alpha-formula docblock in
-   * `scalarVolumeRenderer.ts`.  Tuned per field so intensity=1 produces
+   * `volumeFieldRenderer.ts`.  Tuned per field so intensity=1 produces
    * a saturated-but-not-flat overlay against typical data ranges.
    */
   densityScale: number;
