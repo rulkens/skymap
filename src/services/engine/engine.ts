@@ -178,6 +178,7 @@ import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
 import { setSourceVisibleImpl } from './handles/setSourceVisible';
 import { setStructureItemEnabled } from './handles/setStructureItemEnabled';
 import { setStructureLabelEnabled } from './handles/setStructureLabelEnabled';
+import { setMilkyWayLabelEnabled } from './handles/setMilkyWayLabelEnabled';
 import { setGalaxyCatalogLabelEnabled } from './handles/setGalaxyCatalogLabelEnabled';
 
 /**
@@ -1225,6 +1226,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
         );
       },
+      setLabelEnabled: (enabled) => setMilkyWayLabelEnabled(state, settingsStore, enabled),
     },
     filaments: {
       // Same fade-on-toggle pattern as milkyWay: filamentsPass.enabled

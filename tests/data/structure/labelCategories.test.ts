@@ -3,11 +3,12 @@ import { LABEL_CATEGORIES } from '../../../src/data/structure/labelCategories';
 import { STRUCTURE_CATEGORIES } from '../../../src/data/structure/structureCategories';
 
 describe('LABEL_CATEGORIES', () => {
-  it('contains famousGalaxy and the four structure categories', () => {
+  it('contains famousGalaxy, milkyWay, and the four structure categories', () => {
     expect([...LABEL_CATEGORIES].sort()).toEqual([
       'cluster',
       'famousGalaxy',
       'group',
+      'milkyWay',
       'supercluster',
       'void',
     ]);

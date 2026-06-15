@@ -185,19 +185,23 @@ test('CATEGORY_DISPLAY_INFO resolves milkyWay copy', () => {
 > copy fields — so an incomplete row fails the whole suite loudly, not just
 > these assertions.
 
-- [ ] Add the milkyWay case to the existing `projectLabelCategoryVisibility`
+- [x] Add the milkyWay case to the existing `projectLabelCategoryVisibility`
   test: `projectLabelCategoryVisibility(structureItems, galaxyCatalogItems,
   false).milkyWay === false` and `…(…, true).milkyWay === true`, with the
   structure + galaxy-catalog entries still projected correctly. Mirror the
   existing cases' shape.
-- [ ] Run fails (row still `bearsLabel:false`; projector arity / throw).
-- [ ] Implement the row edit + the docstring tidy on `MilkyWaySourceEntry.d.ts`
+- [x] Run fails (row still `bearsLabel:false`; projector arity / throw).
+- [x] Implement the row edit + the docstring tidy on `MilkyWaySourceEntry.d.ts`
   + the projector read branch + the App call-site third argument.
-- [ ] Run passes (`npm test -- sources projectLabelCategoryVisibility`).
-- [ ] `npm run typecheck` — confirm `labelLayer: 'milkyWay'` typechecks (depends
+- [x] Run passes (`npm test -- sources projectLabelCategoryVisibility`).
+- [x] `npm run typecheck` — confirm `labelLayer: 'milkyWay'` typechecks (depends
   on Task 2 having landed or riding the same commit) and the projector signature
   change has no dangling call sites.
-- [ ] Commit.
+- [x] Commit. (Scope grew: widening `LabelCategory` forced the WRITE handle
+  (`setMilkyWayLabelEnabled` + `EngineMilkyWayHandle.setLabelEnabled` + engine
+  wiring) and the App write-route branch into this commit — pulled from Tasks 5/6.
+  Also updated `engineSettingsState.itemVisibility.test.ts` +
+  `labelCategories.test.ts` exhaustiveness fixtures.)
 
 ---
 
@@ -503,20 +507,15 @@ register the `milkyWay` label-layer fade at the settings gate.
     Update the "Registration order = merged label order: youAreHere, …" comment
     (lines 597-602) to name `milkyWayLabel`.
   - Remove `state.subsystems.youAreHere.destroy();` (line 1091).
-  - Add a `milkyWay.setLabelEnabled` handle setter alongside the existing
-    `milkyWay.setEnabled` (lines 1213-1226). **Signature:**
-    `setLabelEnabled: (enabled: boolean) => void`. **Behaviour:** mirror
-    `setStructureLabelEnabled.ts` — `fades.fadeTo({kind:'labelLayer',
-    layer:'milkyWay'}, enabled ? 1 : 0, enabled ? FADE_IN_DURATION_MS :
-    FADE_OUT_DURATION_MS)` then dispatch `setMilkyWayLabelEnabledAction(settingsStore, enabled)`.
-    The unconditional fadeTo wakes the scheduler — no extra requestRender. Import
-    the action.
+  - NOTE: the `milkyWay.setLabelEnabled` handle setter + the
+    `EngineMilkyWayHandle.setLabelEnabled` type + the `setMilkyWayLabelEnabled`
+    handle file ALREADY LANDED IN TASK 1 (widening `LabelCategory` forced the App
+    write route — which needs the handle — into Task 1's commit). Task 5 does NOT
+    touch the handle. It only deletes the subsystem and adds the producer +
+    registerOverlayFades change below.
 - `src/@types/engine/handles/EngineSubsystemHandles.d.ts` — remove the
   `import { YouAreHereSubsystem } …` (line 29) and the `youAreHere: YouAreHereSubsystem;`
   slot (line 98); update the surrounding docblock that names the you-are-here pin.
-- `src/@types/engine/handles/EngineMilkyWayHandle.d.ts` — add
-  `setLabelEnabled: (enabled: boolean) => void;` with a didactic comment (disk
-  axis vs label axis, mirroring how `structures` separates ring vs label).
 - `src/services/engine/wiring/registerOverlayFades.ts` — change the milkyWay
   label-layer registration (renamed in Task 2 to
   `register({ kind: 'labelLayer', layer: 'milkyWay' }, 0)`) so the initial
@@ -671,16 +670,17 @@ describe('produceMilkyWayLabel', () => {
 
 ---
 
-## Task 6: collapse the `'youAreHere'` override target + route the milkyWay label toggle (DebugPanel / labelStyleOverride / App write route)
+## Task 6: collapse the `'youAreHere'` override target (DebugPanel / labelStyleOverride)
 
 The user-facing label-style-override target string still carries a separate
-`'youAreHere'` literal, and the App's label-toggle write route doesn't know the
-`milkyWay` category. Now that `milkyWay` is a `LabelCategory` (Task 1) with a
-handle setter (Task 5), collapse the override target to `LabelCategory` and route
-the milkyWay label checkbox through `milkyWay.setLabelEnabled`.
+`'youAreHere'` literal. Now that `milkyWay` is a `LabelCategory` (Task 1),
+collapse the override target to `LabelCategory` and update the DebugPanel dropdown.
 
-> The projector READ branch landed in Task 1. This task is the WRITE side + the
-> override-target type collapse.
+> The projector READ branch AND the App write route (`onSetLabelCategoryVisibility`
+> → `milkyWay.setLabelEnabled`) already landed in Task 1 — widening `LabelCategory`
+> forced the exhaustive write route into that commit. This task is now ONLY the
+> override-target type collapse + the DebugPanel dropdown + the override test
+> literal rename.
 
 **Files:**
 
@@ -700,12 +700,8 @@ the milkyWay label checkbox through `milkyWay.setLabelEnabled`.
   sample-label literals in `labelDirectorSubsystem.test.ts` are arbitrary
   director-dedup fixtures — leave them; they are not the override target and the
   produced label keeps the `'you-are-here'` id.)
-- `src/components/App/App.tsx`:
-  - `onSetLabelCategoryVisibility` (lines 425-435) gains a third branch: when
-    the category is `'milkyWay'`, route to
-    `handleRef.current?.milkyWay.setLabelEnabled(visible)`. The existing
-    `isStructureCategory` / else (galaxy catalogs) branches stay. (The READ-side
-    third projector argument + `useMemo` dep landed in Task 1.)
+- `src/components/App/App.tsx` — NO change here; the `onSetLabelCategoryVisibility`
+  milkyWay branch already landed in Task 1.
 
 > **Entanglement note (preserve the spec's un-braided choices).** The label
 > axis now lives in THREE homes (structure items, galaxy-catalog items,
@@ -719,8 +715,8 @@ the milkyWay label checkbox through `milkyWay.setLabelEnabled`.
 
 - [ ] Run the affected tests / typecheck — `override.test.ts` fails to typecheck
   once `LabelStyleOverrideTarget` collapses (drives the literal rename).
-- [ ] Apply the override-target collapse, the DebugPanel dropdown change, the
-  `override.test.ts` literal renames, and the App write-route branch.
+- [ ] Apply the override-target collapse, the DebugPanel dropdown change, and the
+  `override.test.ts` literal renames. (App write route already done in Task 1.)
 - [ ] `npm run typecheck` — green.
 - [ ] `npm test` — green.
 - [ ] Commit.

@@ -1,9 +1,11 @@
 /**
  * projectLabelCategoryVisibility — projection tests.
  *
- * Known structure + galaxy catalog items Records → a known concrete record, exercising
- * BOTH partition arms (structure category from `structures.items[cat].labelEnabled`,
- * famousGalaxy from `galaxyCatalogs.items.famousGalaxy.labelEnabled`).
+ * Known structure + galaxy catalog items Records (plus the milkyWay scalar) → a
+ * known concrete record, exercising ALL three arms (structure category from
+ * `structures.items[cat].labelEnabled`, famousGalaxy from
+ * `galaxyCatalogs.items.famousGalaxy.labelEnabled`, milkyWay from the scalar
+ * third argument).
  */
 
 import { describe, it, expect } from 'vitest';
@@ -24,9 +26,10 @@ describe('projectLabelCategoryVisibility', () => {
     const record = projectLabelCategoryVisibility(
       state.structures.items,
       state.galaxyCatalogs.items,
+      state.milkyWay.labelEnabled,
     );
 
-    // Keyed by exactly the label categories (structures + famousGalaxy).
+    // Keyed by exactly the label categories (structures + famousGalaxy + milkyWay).
     expect(Object.keys(record).sort()).toEqual([...LABEL_CATEGORIES].sort());
     // The structure arm: hidden category reads false.
     expect(record[firstStructure]).toBe(false);
@@ -46,13 +49,26 @@ describe('projectLabelCategoryVisibility', () => {
     const record = projectLabelCategoryVisibility(
       state.structures.items,
       state.galaxyCatalogs.items,
+      state.milkyWay.labelEnabled,
     );
 
     expect(record.famousGalaxy).toBe(false);
-    // Structure labels untouched.
+    // Structure + milkyWay labels untouched.
     for (const cat of LABEL_CATEGORIES) {
       if (cat === 'famousGalaxy') continue;
       expect(record[cat]).toBe(true);
     }
+  });
+
+  it('projects the milkyWay label axis from the third argument', () => {
+    const state = makeSettingsFixture();
+    expect(
+      projectLabelCategoryVisibility(state.structures.items, state.galaxyCatalogs.items, false)
+        .milkyWay,
+    ).toBe(false);
+    expect(
+      projectLabelCategoryVisibility(state.structures.items, state.galaxyCatalogs.items, true)
+        .milkyWay,
+    ).toBe(true);
   });
 });

@@ -50,6 +50,7 @@ describe('EngineSettingsState item visibility', () => {
       famousGalaxy: true,
       void: true,
       group: true,
+      milkyWay: true,
     };
     expect(Object.values(all).every(Boolean)).toBe(true);
   });
