@@ -8,22 +8,25 @@
  * this many pixels of half-extent".  The renderer stays free of
  * EngineState; it just draws what it's told.
  *
- * ## Why the size matches the selection ring
+ * ## Sizing: the impostor's visible extent, not the selection ring
  *
- * The visible selection ring sizes itself from the Milky Way's 25 kpc disc
- * radius at the current camera distance via `selectionRingRadiusPx`.  The
- * pick target calls the SAME helper with the SAME inputs, so the click
- * area always equals the ring the user sees — it grows as you approach the
- * disk and never drops below the galaxy point-size floor (so a small/far
- * MW stays hittable).  This replaces the old fixed 16 px half-extent that
- * didn't track the disk's apparent size.
+ * The hit target tracks what the user SEES — the glowing disc — not the
+ * selection ring, which is deliberately drawn ~3× larger to leave breathing
+ * room around the object.  So this projects the Milky Way's disc radius to
+ * screen with the bare apparent-size formula:
+ *
+ *   apparentPxRadius = (discRadiusMpc / camDist) * pxPerRad
+ *
+ * No ring scale, no points-pipeline 4× padding — just the disc's angular
+ * half-extent.  The disc's bright emission fades around this radius (the
+ * fragment shader's `MILKY_WAY_RADIUS_MPC` scale), so the click area lands on
+ * the glow rather than the empty padding of the 240-kpc billboard quad.  A
+ * galaxy point-size floor keeps a small/far disk hittable.
  *
  * `camDist` is the distance from the camera to the galactic centre (NOT
- * from the origin), matching the selection ring's `worldPos - drawCamPos`
- * — the ring and the hit target measure the same span.  `pxPerRad` is
- * derived the same way `frameContext` does: `canvasHeight / (2 *
- * tan(fovY/2))`, using the backing-store canvas height (texture pixels),
- * because the pick pass renders into a texture of that size.
+ * from the origin).  `pxPerRad` is derived the same way `frameContext` does:
+ * `canvasHeight / (2 * tan(fovY/2))`, using the backing-store canvas height
+ * (texture pixels), because the pick pass renders into a texture of that size.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -32,7 +35,6 @@ import {
   MILKY_WAY_DISC_RADIUS_KPC,
 } from '../../../data/milkyWay/galacticCenter';
 import { milkyWayPickVisible } from './milkyWayPickVisible';
-import { selectionRingRadiusPx } from './selectionRingRadiusPx';
 
 export function milkyWayPickHalfExtentPx(
   state: EngineState,
@@ -47,11 +49,10 @@ export function milkyWayPickHalfExtentPx(
   const camDistMpc = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
   const pxPerRad = canvasHeightPx / (2 * Math.tan(state.cam.fovYRad / 2));
+  const apparentPxRadius =
+    (MILKY_WAY_DISC_RADIUS_KPC / 1000 / Math.max(camDistMpc, 0.001)) * pxPerRad;
 
-  return selectionRingRadiusPx(
-    MILKY_WAY_DISC_RADIUS_KPC / 1000,
-    camDistMpc,
-    pxPerRad,
-    state.settings.galaxyCatalogs.sizePx,
-  );
+  // Floor at the galaxy point size — the same far-field minimum the points
+  // shader applies — so a small/far disk stays clickable.
+  return Math.max(state.settings.galaxyCatalogs.sizePx, apparentPxRadius);
 }

@@ -2,11 +2,12 @@
  * selectionRingRadiusPx — on-screen radius (pixels) of the selection halo
  * for a target of physical radius `radiusMpc` viewed from `camDistMpc`.
  *
- * One formula, two readers: the selection-ring pass sizes the visible halo
- * with it, and the Milky-Way pick billboard sizes its INVISIBLE hit target
- * with the same call so the click area always matches the ring the user
- * sees.  Keeping the math here (rather than inlined in the pass) is what
- * makes that guarantee structural — there is no second copy to drift.
+ * The ring is sized larger than the object it surrounds (`RING_SIZE_SCALE`)
+ * to leave visual breathing room.  This is the halo size only — the
+ * Milky-Way pick target sizes itself to the impostor's *visible* extent
+ * instead (the bare apparent radius, no ring scale; see
+ * `milkyWayPickHalfExtentPx`), so the clickable area lands on the glow the
+ * user sees rather than the larger ring.
  *
  * ## The math (mirrors points/vertex.wesl's apparent-size billboard)
  *
