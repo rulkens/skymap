@@ -756,13 +756,19 @@ famousGalaxy category for the Milky Way pseudo-entry".
 > confirming `labelCategoryVisibility.milkyWay` / the `onSet…` route are both
 > populated by Task 6.
 
-- [ ] Confirm (by reading the Labels-section loop + Task 6's projector/route)
-  that the milkyWay row renders and toggles. If a behavioural test is feasible
-  without a full GPU engine, add one asserting the Labels section includes a
-  row whose label is `CATEGORY_DISPLAY_INFO.milkyWay.plural` ('Milky Way').
-- [ ] Update the stale comments.
-- [ ] `npm run typecheck` + `npm test` — green.
-- [ ] Commit.
+- [x] Confirm (by reading the Labels-section loop + Task 6's projector/route)
+  that the milkyWay row renders and toggles. Confirmed: the row auto-renders via
+  the existing `LABEL_CATEGORIES.map` (milkyWay ∈ LABEL_CATEGORIES), reads
+  `labelCategoryVisibility.milkyWay` (projector, Task 1), and routes through the
+  App `milkyWay.setLabelEnabled` branch (Task 1). No behavioural test added: the
+  Labels section requires a full SettingsPanel render and there is no existing
+  label-row test to extend; a snapshot would be brittle. The row's behavior is
+  covered by the projector test + the handle fade test.
+- [x] Update the stale comments. (Labels-section comment fixed in Task 1's review
+  remediation; the line-35 "evicted" docblock clarified to "Milky Way disk
+  toggle" — the label keeps its Labels-section row.)
+- [x] `npm run typecheck` + `npm test` — green (comment-only change).
+- [x] Commit.
 
 ---
 
