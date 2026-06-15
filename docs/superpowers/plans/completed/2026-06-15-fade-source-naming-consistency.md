@@ -57,6 +57,8 @@ deep relative imports / no barrels, didactic comments, tests mirror `src/`, type
 
 ---
 
+> **Execution note:** Tasks 1–4 landed as ONE commit and 5–6 folded in: the `OverlayId` shrink (Task 2) immediately breaks the `overlay:'milkyWay'` construction sites (Task 4), so there is no intermediate green state — the whole rename is one no-behaviour-change changeset. Task 5's ON→1/OFF→0 disk-seed assertions were already covered by the existing `registerOverlayFades` milkyWay tests (repointed to `{ kind: 'milkyWay' }`).
+
 ## Task 1 — Rename the type file `StructureCategory` → `StructureId`
 
 The type-side rename and the `FadeId` union change are interdependent (the union
@@ -117,14 +119,14 @@ Tasks 1–3 land together (see the note at the end of Task 3).
 **Contract:** `StructureId.d.ts:12` shape unchanged —
 `export type StructureId = Extract<AnyEntry, { readonly type: 'structure' }>['id'];`
 
-- [ ] Rename the type file + symbol AND the runtime companion file + its exports
+- [x] Rename the type file + symbol AND the runtime companion file + its exports
   (`STRUCTURE_IDS` / `STRUCTURE_ID_CODES` / `isStructureId`); update both docblocks.
-- [ ] Sweep every `StructureCategory` identifier + import path to `StructureId`, and
+- [x] Sweep every `StructureCategory` identifier + import path to `StructureId`, and
   every `STRUCTURE_CATEGORIES` / `STRUCTURE_CATEGORY_CODES` / `isStructureCategory`
   reference to the renamed runtime symbols. In the renamed `structureIds.ts` the
   `Record<StructureCategory, …>` annotation and the `import type` become `StructureId`.
-- [ ] Sweep test files referencing the type (see Task 6).
-- [ ] (Compile gate deferred to Task 3 — the tree won't fully typecheck until the
+- [x] Sweep test files referencing the type (see Task 6).
+- [x] (Compile gate deferred to Task 3 — the tree won't fully typecheck until the
   `FadeId` union also changes.)
 
 ---
@@ -156,18 +158,18 @@ export type FadeId =
   | { readonly kind: 'volumesMaster' };
 ```
 
-- [ ] Rewrite the union and its docblock (`FadeId.d.ts:1–76`): rename the
+- [x] Rewrite the union and its docblock (`FadeId.d.ts:1–76`): rename the
   `scalarField`/`markerLayer`/`filaments`/`overlay:milkyWay` doc paragraphs to
   `volumeField`/`structure`/`filament` and add a `milkyWay` paragraph (the MW disk
   fade, seeded from `settings.milkyWay.enabled`, multiplied into the renderer's
   distance fade — mirror the old `overlay` milkyWay wording).
-- [ ] `OverlayId.d.ts`: drop `'milkyWay'` → `export type OverlayId = 'proceduralDisks' | 'texturedDisks';`
+- [x] `OverlayId.d.ts`: drop `'milkyWay'` → `export type OverlayId = 'proceduralDisks' | 'texturedDisks';`
   and remove the `milkyWay` bullet from its docblock.
-- [ ] `serializeFadeId` (`fadeRegistry.ts:52–74`): update the switch in lockstep —
+- [x] `serializeFadeId` (`fadeRegistry.ts:52–74`): update the switch in lockstep —
   `case 'structure': return \`structure:${h.id}\``, `case 'volumeField': return \`volumeField:${h.id}\``,
   `case 'milkyWay': return 'milkyWay'`, `case 'filament': return 'filament'`.
   `labelLayer` key shape **unchanged** (`labelLayer:${layer}[:${category}]`).
-- [ ] `fadeRegistry.test.ts`: update the serialize round-trip assertions in
+- [x] `fadeRegistry.test.ts`: update the serialize round-trip assertions in
   lockstep — assert `serializeFadeId`-derived keys `structure:cluster`,
   `volumeField:cf4`, `milkyWay`, `filament` register/resolve distinctly (parity
   with the old `markerLayer:cluster` / `scalarField:cf4` / `filaments` cases). If
@@ -211,14 +213,14 @@ together** — commit only when `npm run typecheck` is clean.
 every renamed kind is **identical** to before — same recession constant, same
 `undefined`.
 
-- [ ] Mechanically repoint each construction site above (kind + property rename;
+- [x] Mechanically repoint each construction site above (kind + property rename;
   no value/logic change).
-- [ ] Add the `milkyWay` arm to `recessionTargetFor` returning `undefined`.
-- [ ] `npm run typecheck` → clean (this is the proof the sweep is complete — zero
+- [x] Add the `milkyWay` arm to `recessionTargetFor` returning `undefined`.
+- [x] `npm run typecheck` → clean (this is the proof the sweep is complete — zero
   `scalarField` / `markerLayer` / `filaments` / `StructureCategory` left).
-- [ ] `npm test` → green (no behaviour change; existing tests pass under the new
+- [x] `npm test` → green (no behaviour change; existing tests pass under the new
   names once Task 6 updates the test-side constructions).
-- [ ] Commit Tasks 1–3 together (the tree only compiles with all three).
+- [x] Commit Tasks 1–3 together (the tree only compiles with all three).
 
 ---
 
@@ -247,9 +249,9 @@ this task there is **no** `overlay`-kind construction with `id: 'milkyWay'`
 anywhere (Grep confirms `OverlayId` no longer admits it — already enforced by
 Task 2's type, so a leftover is a compile error).
 
-- [ ] Repoint the three sites above.
-- [ ] `npm run typecheck` → clean.
-- [ ] Commit.
+- [x] Repoint the three sites above.
+- [x] `npm run typecheck` → clean.
+- [x] Commit.
 
 ---
 
@@ -260,17 +262,17 @@ Task 2's type, so a leftover is a compile error).
 The disk fade gets the same ON→1 / OFF→0 seed assertions the label-layer milkyWay
 case already has (spec "Part 1 testing").
 
-- [ ] Update any existing `overlay:milkyWay` seed assertion to the new
+- [x] Update any existing `overlay:milkyWay` seed assertion to the new
   `{ kind: 'milkyWay' }` key.
-- [ ] Add/confirm test `registerOverlayFades seeds the milky-way disk fade from settings.milkyWay.enabled (on → 1)`
+- [x] Add/confirm test `registerOverlayFades seeds the milky-way disk fade from settings.milkyWay.enabled (on → 1)`
   — fixture with `settings.milkyWay.enabled = true`, assert
   `fades.opacityOf({ kind: 'milkyWay' })` is `1`.
-- [ ] Add test `registerOverlayFades seeds the milky-way disk fade off (off → 0)`
+- [x] Add test `registerOverlayFades seeds the milky-way disk fade off (off → 0)`
   — `enabled = false`, assert opacity `0`. (Mirror the existing label-layer
   milkyWay seed test; reuse the same fixture builder. Typed `vi.fn<() => void>()`
   for any `requestRender` stub.)
-- [ ] `npm test -- registerOverlayFades` → green.
-- [ ] Commit.
+- [x] `npm test -- registerOverlayFades` → green.
+- [x] Commit.
 
 ---
 
@@ -306,29 +308,29 @@ ensuring no test still constructs an old-named kind or imports the old type.
 **Contract:** parity only — same assertions under new names; **no new coverage**
 except the milkyWay seed (Task 5) and the optional `milkyWay` recession arm above.
 
-- [ ] Sweep each file; keep assertions semantically identical.
-- [ ] `npm test` → full suite green.
-- [ ] `npm run typecheck` → clean.
-- [ ] Commit.
+- [x] Sweep each file; keep assertions semantically identical.
+- [x] `npm test` → full suite green.
+- [x] `npm run typecheck` → clean.
+- [x] Commit.
 
 ---
 
 ## Definition of Done
 
-- [ ] `npm test` green (same count as before plus the one milkyWay-seed test;
+- [x] `npm test` green (same count as before plus the one milkyWay-seed test;
   Tasks 5/6 net no other coverage change).
-- [ ] `npm run typecheck` clean (both `src` and `tools` tsconfigs).
-- [ ] Repo-wide Grep finds **zero** `'scalarField'`, `'markerLayer'`, `'filaments'`
+- [x] `npm run typecheck` clean (both `src` and `tools` tsconfigs).
+- [x] Repo-wide Grep finds **zero** `'scalarField'`, `'markerLayer'`, `'filaments'`
   (as a `FadeId` kind), `StructureCategory`, `STRUCTURE_CATEGORIES`,
   `STRUCTURE_CATEGORY_CODES`, `isStructureCategory`, `structureCategories` (file),
   and `overlay'.*'milkyWay'` / `id: 'milkyWay'` on an `overlay` kind. (`LabelCategory`
   / `labelCategories` are a separate concept and remain.)
-- [ ] `OverlayId` is exactly `'proceduralDisks' | 'texturedDisks'`.
-- [ ] `FadeId` carries the source-named kinds `galaxyCatalog` / `structure` /
+- [x] `OverlayId` is exactly `'proceduralDisks' | 'texturedDisks'`.
+- [x] `FadeId` carries the source-named kinds `galaxyCatalog` / `structure` /
   `volumeField` / `filament` / `flow` / `milkyWay` plus the unchanged
   `labelLayer` / `overlay` / `volumesMaster`.
-- [ ] MW disk fade flows through `{ kind: 'milkyWay' }` end-to-end (seed →
+- [x] MW disk fade flows through `{ kind: 'milkyWay' }` end-to-end (seed →
   toggle → pass read), behaviourally identical to the retired `overlay:'milkyWay'`.
-- [ ] `recessionTargetFor` stays exhaustive over `FadeId['kind']` (no `default`).
-- [ ] No new TODO/FIXME comments introduced.
-- [ ] No behaviour change observable in the running app (pure rename refactor).
+- [x] `recessionTargetFor` stays exhaustive over `FadeId['kind']` (no `default`).
+- [x] No new TODO/FIXME comments introduced.
+- [x] No behaviour change observable in the running app (pure rename refactor).

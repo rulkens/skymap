@@ -4,7 +4,7 @@
  *
  * The pass forwards the filament layer's opacity as the 6th argument to
  * `filamentRenderer.draw`.  Pre-1.4 that was the bare toggle opacity
- * (`fades.opacityOf({kind:'filaments'})`).  Post-1.4 it is routed through
+ * (`fades.opacityOf({kind:'filament'})`).  Post-1.4 it is routed through
  * `resolveLayerOpacity(..., ctx.focusBlend, ...)` so the layer recedes
  * under cluster focus.  These tests pin both ends of the blend:
  *
@@ -60,7 +60,7 @@ function makeSettings(overrides: Partial<RenderFrameSettings> = {}): RenderFrame
 /**
  * Build a state whose filament fade reports `opacity`.  `opacityOf` is a
  * single stub returning the same value regardless of handle/now — the
- * filaments pass only ever asks for the `{kind:'filaments'}` handle, so a
+ * filaments pass only ever asks for the `{kind:'filament'}` handle, so a
  * constant stub faithfully models "the filament layer is at `opacity`".
  */
 function makeState(opacity: number): EngineState {

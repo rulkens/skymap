@@ -52,7 +52,7 @@ export const volumeUpsamplePass: Pass = {
     const settingsOf = (id: VolumeFieldId) => state.settings.volumes.items[id];
     if (state.gpu.volumeFieldRenderer.hasActiveFields(settingsOf)) return true;
     for (const id of state.gpu.volumeFieldRenderer.listIds()) {
-      if (state.subsystems.fades.opacityOf({ kind: 'scalarField', field: id }, now) > 0) {
+      if (state.subsystems.fades.opacityOf({ kind: 'volumeField', id }, now) > 0) {
         return true;
       }
     }

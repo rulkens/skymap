@@ -29,7 +29,7 @@
  *
  * Rings are a structure-only affordance (cluster / supercluster / void);
  * famous galaxies are picked through the point path, never the ring path.
- * The input `category` is therefore typed `StructureCategory` — a famous
+ * The input `category` is therefore typed `StructureId` — a famous
  * category can't reach this lookup by construction.
  *
  * ### Why a narrowed `structures` param rather than the full `EngineState`
@@ -41,11 +41,11 @@
  */
 
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
-import type { StructureCategory } from '../../../@types/data/structure/StructureCategory';
+import type { StructureId } from '../../../@types/data/structure/StructureId';
 import type { PickStructureStore } from '../../../@types/engine/data/PickStructureStore';
 
 export type PickStructureInput = {
-  readonly category: StructureCategory;
+  readonly category: StructureId;
   readonly structureIndex: number;
 };
 

@@ -47,7 +47,7 @@
 
 import type { BiasMode } from '../data/galaxyCatalog/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
-import type { StructureCategory } from '../data/structure/StructureCategory';
+import type { StructureId } from '../data/structure/StructureId';
 import type { GalaxyCatalogId } from '../data/galaxyCatalog/GalaxyCatalogId';
 import type { FlowSettings } from './FlowSettings';
 import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
@@ -196,7 +196,7 @@ export type EngineSettingsState = {
   /**
    * Structure-overlay master gate and per-category settings.  `enabled` is
    * the coarse "hide all structures" gate (symmetric with `volumes.enabled`).
-   * Per-category state lives in `items` — one row per `StructureCategory`,
+   * Per-category state lives in `items` — one row per `StructureId`,
    * each carrying the ring/marker axis (`enabled`) and the text-label axis
    * (`labelEnabled`).  Co-locating both axes on one row replaces the two
    * parallel root records that previously held the same booleans in different
@@ -208,6 +208,6 @@ export type EngineSettingsState = {
    */
   structures: {
     enabled: boolean;
-    items: Record<StructureCategory, StructureItemSettings>;
+    items: Record<StructureId, StructureItemSettings>;
   };
 };

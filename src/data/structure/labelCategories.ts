@@ -17,7 +17,7 @@ import { SOURCE_ENTRIES } from '../sourceEntries';
  * the SettingsPanel label-on/off rows all iterate this set. Bulk galaxy catalogs
  * (SDSS, GLADE, 2MRS, Milliquas) do not bear labels and are excluded.
  *
- * Companion to STRUCTURE_CATEGORIES, which is the narrower structure-only axis
+ * Companion to STRUCTURE_IDS, which is the narrower structure-only axis
  * (used where 'famousGalaxy' is irrelevant, e.g. the structure store and
  * marker producer).
  */

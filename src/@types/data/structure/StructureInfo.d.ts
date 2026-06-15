@@ -12,7 +12,7 @@
  *
  * Clusters alone carry an Abell/ACO designation.  Modelling the record as a
  * flat shape with `abell?` optional would let a supercluster, void, or group
- * literal silently carry one.  Splitting on `category` (`StructureCategory`)
+ * literal silently carry one.  Splitting on `category` (`StructureId`)
  * makes `abell` exist only on the cluster arm — consumers must narrow on
  * `category` before reading it, and a producer can't build a void or group
  * with an Abell number.  The shared structure fields live on `StructureBase`
@@ -104,7 +104,7 @@ type GroupRecord = StructureBase & {
 };
 
 /**
- * An extended structure record.  `category` is a `StructureCategory`
+ * An extended structure record.  `category` is a `StructureId`
  * (cluster / supercluster / void / group); famous galaxies are not
  * structures and are absent from this union.
  */

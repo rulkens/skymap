@@ -3,18 +3,18 @@
  * structures (cluster / supercluster / void / group) rendered as ring/halo
  * markers and text labels.
  *
- * The per-`StructureCategory` marker styles travel with the structure
+ * The per-`StructureId` marker styles travel with the structure
  * presentation producers (`produceStructureMarkers`, `produceStructureLabels`);
  * famous-galaxy styling lives in `famousLabelStyle`. Keeping the structure
  * styles here lets the producers' per-category math read a single local table
  * rather than a wider union that includes a kind they never emit.
  *
- * `StructureCategory` (cluster | supercluster | void | group) is the
+ * `StructureId` (cluster | supercluster | void | group) is the
  * discriminant; every row is keyed by it so the table and the type can't
  * drift.
  */
 
-import type { StructureCategory } from '../../../@types/data/structure/StructureCategory';
+import type { StructureId } from '../../../@types/data/structure/StructureId';
 import type { Vec4 } from '../../../@types/math/Vec4';
 import { hexToGl } from '../../../utils/color/hexToGl';
 
@@ -143,7 +143,7 @@ export const STRUCTURE_MARKER_STYLES = {
     outlineColor: [0, 0, 0, 0.1],
     outlineEmFrac: 0.16,
   },
-} as const satisfies Readonly<Record<StructureCategory, StructureMarkerStyle>>;
+} as const satisfies Readonly<Record<StructureId, StructureMarkerStyle>>;
 
 /**
  * Alpha floor for significance weighting. Halo + ring alpha lerps from

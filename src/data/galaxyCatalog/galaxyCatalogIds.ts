@@ -8,7 +8,7 @@ import { SOURCE_ENTRIES } from '../sourceEntries';
  * volumes), so keying a galaxy-catalog-items record by it would let a structure or
  * volume id slip in. Filtering to `type === 'galaxyCatalog'` here gives a key domain
  * that admits exactly the point-layer sources — the same narrowing
- * `STRUCTURE_CATEGORIES` does for the structure clusters. Order is registry
+ * `STRUCTURE_IDS` does for the structure clusters. Order is registry
  * source-code order; it's purely iteration order, since per-galaxy-catalog state comes
  * from the keyed `items` record, not list position.
  */

@@ -1,5 +1,5 @@
 import type { StructureInfo } from '../../data/structure/StructureInfo';
-import type { StructureCategory } from '../../data/structure/StructureCategory';
+import type { StructureId } from '../../data/structure/StructureId';
 
 /**
  * Minimal projection of the structure store the pick path reads — just the
@@ -7,5 +7,5 @@ import type { StructureCategory } from '../../data/structure/StructureCategory';
  * than the full `StructureStore` so tests stub a one-method object literal.
  */
 export type PickStructureStore = {
-  byCategory(category: StructureCategory): readonly StructureInfo[];
+  byCategory(category: StructureId): readonly StructureInfo[];
 };

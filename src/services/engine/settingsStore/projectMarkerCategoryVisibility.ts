@@ -1,6 +1,6 @@
 /**
  * projectMarkerCategoryVisibility — pure projection from the per-category
- * structure settings Record to the flat `Record<StructureCategory, boolean>`
+ * structure settings Record to the flat `Record<StructureId, boolean>`
  * the SettingsPanel reads for its marker (ring) checkboxes.
  *
  * The structure items ARE the truth: each `items[cat].enabled` is the marker
@@ -18,15 +18,15 @@
  * `useSyncExternalStore`'s snapshot stable.
  */
 
-import type { StructureCategory } from '../../../@types/data/structure/StructureCategory';
+import type { StructureId } from '../../../@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../../@types/settings/StructureItemSettings';
-import { STRUCTURE_CATEGORIES } from '../../../data/structure/structureCategories';
+import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
 
 export function projectMarkerCategoryVisibility(
-  items: Record<StructureCategory, StructureItemSettings>,
-): Record<StructureCategory, boolean> {
-  return Object.fromEntries(STRUCTURE_CATEGORIES.map((c) => [c, items[c].enabled])) as Record<
-    StructureCategory,
+  items: Record<StructureId, StructureItemSettings>,
+): Record<StructureId, boolean> {
+  return Object.fromEntries(STRUCTURE_IDS.map((c) => [c, items[c].enabled])) as Record<
+    StructureId,
     boolean
   >;
 }

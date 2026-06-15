@@ -18,14 +18,14 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
-import type { StructureCategory } from '../../../@types/data/structure/StructureCategory';
+import type { StructureId } from '../../../@types/data/structure/StructureId';
 import type { SettingsStore } from '../settingsStore/createSettingsStore';
 import { setStructureLabelEnabledAction } from '../settingsStore/actions/setStructureLabelEnabledAction';
 
 export function setStructureLabelEnabled(
   state: Pick<EngineState, 'settings' | 'subsystems'>,
   store: SettingsStore,
-  category: StructureCategory,
+  category: StructureId,
   visible: boolean,
 ): void {
   // Text axis. Structure labels fade their per-category handle on the shared

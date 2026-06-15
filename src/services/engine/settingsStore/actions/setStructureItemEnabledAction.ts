@@ -9,12 +9,12 @@
  */
 
 import type { SettingsStore } from '../createSettingsStore';
-import type { StructureCategory } from '../../../../@types/data/structure/StructureCategory';
+import type { StructureId } from '../../../../@types/data/structure/StructureId';
 import { setStructureItemEnabled } from '../reducers/setStructureItemEnabled';
 
 export function setStructureItemEnabledAction(
   store: SettingsStore,
-  category: StructureCategory,
+  category: StructureId,
   enabled: boolean,
 ): void {
   store.setState((s) => setStructureItemEnabled(s, category, enabled));

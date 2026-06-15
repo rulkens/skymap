@@ -39,8 +39,8 @@
  * stance, rather than silently falling through a catch-all.
  *
  * A function beats a flat string-keyed table here because some kinds
- * recede across *all* their discriminator values (`markerLayer` for every
- * category) while others recede for *some* (`labelLayer` for
+ * recede across *all* their discriminator values (`structure` for every
+ * source) while others recede for *some* (`labelLayer` for
  * `structure`/`galaxyNames` only). The switch says exactly that without
  * repetition.
  */
@@ -69,12 +69,12 @@ export const LABEL_RECESSION = 0.25;
  */
 export function recessionTargetFor(h: FadeId): number | undefined {
   switch (h.kind) {
-    case 'filaments':
+    case 'filament':
       return FILAMENT_RECESSION;
     case 'volumesMaster':
       return VOLUME_RECESSION;
-    case 'markerLayer':
-      return MARKER_RECESSION; // all categories recede
+    case 'structure':
+      return MARKER_RECESSION; // all structure sources recede
     case 'labelLayer':
       // Structure labels (any category) and famous-galaxy labels recede;
       // famous labels reuse the 'galaxyNames' id. The YOU-ARE-HERE
@@ -84,8 +84,10 @@ export function recessionTargetFor(h: FadeId): number | undefined {
     // skip declaring its stance.
     case 'galaxyCatalog':
       return undefined;
-    case 'scalarField':
+    case 'volumeField':
       return undefined;
+    case 'milkyWay':
+      return undefined; // the MW disk does not recede on focus
     case 'overlay':
       return undefined;
   }

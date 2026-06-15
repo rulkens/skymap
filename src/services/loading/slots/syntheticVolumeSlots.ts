@@ -91,7 +91,7 @@ export function createSyntheticVolumeSlots(
         }
         if (state.settings.volumes.items[id]?.enabled) {
           void state.subsystems.fades.fadeTo(
-            { kind: 'scalarField', field: id },
+            { kind: 'volumeField', id },
             1,
             FADE_IN_DURATION_MS,
           );

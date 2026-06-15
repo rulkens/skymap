@@ -149,10 +149,10 @@ import { clampVolumeTrim } from '../../utils/clampVolumeTrim';
 import { clampVolumeExposure } from '../../utils/clampVolumeExposure';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
-import type { StructureCategory } from '../../@types/data/structure/StructureCategory';
+import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import { GALAXY_CATALOG_IDS } from '../../data/galaxyCatalog/galaxyCatalogIds';
-import { STRUCTURE_CATEGORIES } from '../../data/structure/structureCategories';
+import { STRUCTURE_IDS } from '../../data/structure/structureIds';
 import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
 import type { GalaxyCatalogItemSettings } from '../../@types/settings/GalaxyCatalogItemSettings';
 
@@ -338,14 +338,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
     },
     // Structure overlay: master gate on + one item row per category, each
-    // ring + label default-on. Keys are DERIVED from `STRUCTURE_CATEGORIES`
-    // so the seed can't drift from the category set (famous galaxies bear no
+    // ring + label default-on. Keys are DERIVED from `STRUCTURE_IDS`
+    // so the seed can't drift from the structure-id set (famous galaxies bear no
     // ring and so have no row here).
     structures: {
       enabled: true,
       items: Object.fromEntries(
-        STRUCTURE_CATEGORIES.map((c) => [c, { enabled: true, labelEnabled: true }]),
-      ) as Record<StructureCategory, StructureItemSettings>,
+        STRUCTURE_IDS.map((c) => [c, { enabled: true, labelEnabled: true }]),
+      ) as Record<StructureId, StructureItemSettings>,
     },
   });
 
@@ -918,7 +918,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // `(!enabled && opacity <= 0)` skip keeps it invisible until toggled on).
     if (state.settings.volumes.items[fieldId]?.enabled) {
       void state.subsystems.fades.fadeTo(
-        { kind: 'scalarField', field: fieldId },
+        { kind: 'volumeField', id: fieldId },
         1,
         FADE_IN_DURATION_MS,
       );
@@ -976,7 +976,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // Drive the FadeRegistry: the draw loop's `(!enabled && opacity <= 0)` skip
     // keeps rendering through fade-out so the blend reaches zero before stopping.
     void state.subsystems.fades.fadeTo(
-      { kind: 'scalarField', field: fieldId },
+      { kind: 'volumeField', id: fieldId },
       enabled ? 1 : 0,
       enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
     );
@@ -1209,7 +1209,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setEnabled: (enabled) => {
         boringSetters.setMilkyWayEnabled(enabled);
         void state.subsystems.fades.fadeTo(
-          { kind: 'overlay', id: 'milkyWay' },
+          { kind: 'milkyWay' },
           enabled ? 1 : 0,
           enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
         );
@@ -1224,7 +1224,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setEnabled: (enabled) => {
         boringSetters.setFilamentsEnabled(enabled);
         void state.subsystems.fades.fadeTo(
-          { kind: 'filaments' },
+          { kind: 'filament' },
           enabled ? 1 : 0,
           enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
         );

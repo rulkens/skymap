@@ -40,7 +40,7 @@
 import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
 import type { FocusTarget } from '../../@types/camera/FocusTarget';
 import { Source } from '../../data/sources';
-import { STRUCTURE_CATEGORIES } from '../../data/structure/structureCategories';
+import { STRUCTURE_IDS } from '../../data/structure/structureIds';
 
 /**
  * Build the `#focus=<id>` payload (the bit after `=`) for the given
@@ -137,12 +137,12 @@ export function parseFocusHash(hash: string): FocusTarget | null {
   }
 
   // Structure ids: `${category}-${seed.id}` where `category` is one of
-  // STRUCTURE_CATEGORIES ('cluster', 'supercluster', 'void', 'group').
+  // STRUCTURE_IDS ('cluster', 'supercluster', 'void', 'group').
   // Must be checked before the famous-id fallback below — `cluster-virgo-m87`
   // passes the `[a-z0-9_-]+` class and would otherwise route to `famous`.
   // We derive the prefix set from the registry so adding a new structure
   // category automatically extends the codec without touching this file.
-  for (const cat of STRUCTURE_CATEGORIES) {
+  for (const cat of STRUCTURE_IDS) {
     if (raw.startsWith(`${cat}-`)) {
       if (/^[a-z0-9_-]+$/i.test(raw)) return { kind: 'structure', id: raw };
       return null;

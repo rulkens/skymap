@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { EngineSettingsState } from '../../src/@types/settings/EngineSettingsState';
 import type { LabelCategory } from '../../src/@types/engine/data/LabelCategory';
-import type { StructureCategory } from '../../src/@types/data/structure/StructureCategory';
+import type { StructureId } from '../../src/@types/data/structure/StructureId';
 import type { GalaxyCatalogId } from '../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 
 /**
@@ -9,7 +9,7 @@ import type { GalaxyCatalogId } from '../../src/@types/data/galaxyCatalog/Galaxy
  *   - `galaxyCatalogs.items` is keyed by `GalaxyCatalogId`, each row carrying the galaxy catalog
  *     layer axis (`enabled`) + the text-label axis (`labelEnabled`) — the
  *     famous-galaxy catalog is where the curated-atlas name visibility lives;
- *   - `structures.items` is keyed by `StructureCategory`, each row carrying the
+ *   - `structures.items` is keyed by `StructureId`, each row carrying the
  *     ring axis (`enabled`) + the label axis (`labelEnabled`) — famous galaxies
  *     bear no ring, so a `famousGalaxy` key here is a type error.
  * If either union drifts from its record shape, these assignments stop
@@ -29,17 +29,17 @@ describe('EngineSettingsState item visibility', () => {
     expect(v[c].labelEnabled).toBe(true);
   });
 
-  it('structures.items is a Record keyed by StructureCategory (no famousGalaxy key)', () => {
+  it('structures.items is a Record keyed by StructureId (no famousGalaxy key)', () => {
     const v: EngineSettingsState['structures']['items'] = {
       cluster: { enabled: true, labelEnabled: true },
       supercluster: { enabled: true, labelEnabled: true },
       void: { enabled: true, labelEnabled: true },
       group: { enabled: true, labelEnabled: true },
     };
-    const c: StructureCategory = 'cluster';
+    const c: StructureId = 'cluster';
     expect(v[c].enabled).toBe(true);
     expect(v[c].labelEnabled).toBe(true);
-    // 'famousGalaxy' is not a StructureCategory, so it is absent from the record.
+    // 'famousGalaxy' is not a StructureId, so it is absent from the record.
     expect('famousGalaxy' in v).toBe(false);
   });
 

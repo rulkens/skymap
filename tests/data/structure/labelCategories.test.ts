@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LABEL_CATEGORIES } from '../../../src/data/structure/labelCategories';
-import { STRUCTURE_CATEGORIES } from '../../../src/data/structure/structureCategories';
+import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 
 describe('LABEL_CATEGORIES', () => {
   it('contains famousGalaxy, milkyWay, and the four structure categories', () => {
@@ -14,8 +14,8 @@ describe('LABEL_CATEGORIES', () => {
     ]);
   });
 
-  it('is a superset of STRUCTURE_CATEGORIES', () => {
-    for (const cat of STRUCTURE_CATEGORIES) {
+  it('is a superset of STRUCTURE_IDS', () => {
+    for (const cat of STRUCTURE_IDS) {
       expect(LABEL_CATEGORIES).toContain(cat);
     }
   });

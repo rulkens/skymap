@@ -9,12 +9,12 @@
  */
 
 import type { SettingsStore } from '../createSettingsStore';
-import type { StructureCategory } from '../../../../@types/data/structure/StructureCategory';
+import type { StructureId } from '../../../../@types/data/structure/StructureId';
 import { setStructureLabelEnabled } from '../reducers/setStructureLabelEnabled';
 
 export function setStructureLabelEnabledAction(
   store: SettingsStore,
-  category: StructureCategory,
+  category: StructureId,
   labelEnabled: boolean,
 ): void {
   store.setState((s) => setStructureLabelEnabled(s, category, labelEnabled));

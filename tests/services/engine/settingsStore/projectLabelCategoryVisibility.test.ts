@@ -12,13 +12,13 @@ import { describe, it, expect } from 'vitest';
 
 import { projectLabelCategoryVisibility } from '../../../../src/services/engine/settingsStore/projectLabelCategoryVisibility';
 import { LABEL_CATEGORIES } from '../../../../src/data/structure/labelCategories';
-import { isStructureCategory } from '../../../../src/data/structure/structureCategories';
+import { isStructureId } from '../../../../src/data/structure/structureIds';
 import { makeSettingsFixture } from './makeSettingsFixture';
 
 describe('projectLabelCategoryVisibility', () => {
   it('reads structure labels from structures.items and famousGalaxy from galaxy catalogs.items', () => {
     const state = makeSettingsFixture();
-    const firstStructure = LABEL_CATEGORIES.find(isStructureCategory)!;
+    const firstStructure = LABEL_CATEGORIES.find(isStructureId)!;
     // Distinguish the two partition arms: structure label off, famous label on.
     state.structures.items[firstStructure].labelEnabled = false;
     state.galaxyCatalogs.items.famousGalaxy.labelEnabled = true;

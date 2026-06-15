@@ -18,7 +18,7 @@ import { resolveGalaxyInfo } from './resolveGalaxyInfo';
 import { resolveStructureFromPick } from './resolveStructureFromPick';
 import type { PickResult } from '../../../@types/data/PickResult';
 import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
-import type { StructureCategory } from '../../../@types/data/structure/StructureCategory';
+import type { StructureId } from '../../../@types/data/structure/StructureId';
 import type { ResolvePickDeps } from '../../../@types/engine/ResolvePickDeps';
 
 export function resolvePick(
@@ -36,10 +36,10 @@ export function resolvePick(
     );
   }
   if (entry?.type === 'structure') {
-    // A structure entry's id *is* its category (StructureCategory derives from
+    // A structure entry's id *is* its category (StructureId derives from
     // exactly these ids), so the cast is sound by construction.
     return resolveStructureFromPick(deps.structures, {
-      category: entry.id as StructureCategory,
+      category: entry.id as StructureId,
       structureIndex: pick.localIdx,
     });
   }

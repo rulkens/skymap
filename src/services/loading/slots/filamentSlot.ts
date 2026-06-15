@@ -27,7 +27,7 @@ export const createFilamentSlot: SlotFactory<FilamentCloud, FilamentReq> = (stat
   // fadeTo(1, FADE_IN_DURATION_MS) ramps it in once the upload lands.
   // Filament is one-shot — never reloaded on tier change — so no
   // fade-out branch is needed.
-  state.subsystems.fades.register({ kind: 'filaments' }, 0);
+  state.subsystems.fades.register({ kind: 'filament' }, 0);
 
   const slot = createAssetSlot({
     name: 'filaments',
@@ -48,7 +48,7 @@ export const createFilamentSlot: SlotFactory<FilamentCloud, FilamentReq> = (stat
       // honest: the fade reflects the user's intent at the moment
       // the binary lands.
       if (state.settings.filaments.enabled) {
-        void state.subsystems.fades.fadeTo({ kind: 'filaments' }, 1, FADE_IN_DURATION_MS);
+        void state.subsystems.fades.fadeTo({ kind: 'filament' }, 1, FADE_IN_DURATION_MS);
       }
     },
   });

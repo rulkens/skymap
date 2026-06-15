@@ -24,7 +24,7 @@
  */
 
 import type { Vec3 } from '../../math/Vec3';
-import type { StructureCategory } from '../data/StructureCategory';
+import type { StructureId } from '../../data/structure/StructureId';
 
 export type FocusState = {
   /**
@@ -40,7 +40,7 @@ export type FocusState = {
    * (interior galaxies stay bright), so the shader needs no per-category
    * bit.
    */
-  readonly category: StructureCategory;
+  readonly category: StructureId;
 
   /**
    * Packed-identity members from `structureMembership(...)`. CPU-side

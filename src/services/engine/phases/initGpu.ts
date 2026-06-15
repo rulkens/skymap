@@ -335,10 +335,10 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
         // draw-loop gate's "opacity > 0 keeps rendering through the
         // fade-out tail", that would draw disabled debug fields by
         // mistake.
-        state.subsystems.fades.register({ kind: 'scalarField', field: id }, 0);
+        state.subsystems.fades.register({ kind: 'volumeField', id }, 0);
       },
       onFieldRemoved: (id) => {
-        state.subsystems.fades.unregister({ kind: 'scalarField', field: id });
+        state.subsystems.fades.unregister({ kind: 'volumeField', id });
       },
     },
   );

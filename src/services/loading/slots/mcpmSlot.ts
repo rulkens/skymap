@@ -41,7 +41,7 @@ export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, _cb) => 
       // symmetric path in engine.ts addVolumeField).
       if (state.settings.volumes.items[id]?.enabled) {
         void state.subsystems.fades.fadeTo(
-          { kind: 'scalarField', field: id },
+          { kind: 'volumeField', id },
           1,
           FADE_IN_DURATION_MS,
         );

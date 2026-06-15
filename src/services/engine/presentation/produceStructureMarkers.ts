@@ -67,7 +67,7 @@ export function produceStructureMarkers(
     // faded do we skip (the all-or-nothing case, safe for within-category
     // alignment). A mid-fade value scales the descriptor alpha; catOpacity is
     // still multiplied into `weightedFade` below.
-    const catOpacity = fades.opacityOf({ kind: 'markerLayer', category: p.category }, now);
+    const catOpacity = fades.opacityOf({ kind: 'structure', id: p.category }, now);
     const enabled = state.settings.structures.items[p.category].enabled;
     if (!enabled && catOpacity === 0) continue;
     // Render at the WIDER apparent extent, falling back to the core for
@@ -133,7 +133,7 @@ export function produceStructureMarkers(
     const recession =
       p.id === focusedStructureId
         ? 1
-        : focusRecession({ kind: 'markerLayer', category: p.category }, ctx.focusBlend);
+        : focusRecession({ kind: 'structure', id: p.category }, ctx.focusBlend);
 
     // Halo: style at-rest alpha × per-frame fade × recession baked into alpha.
     const haloColor: Vec4 = [

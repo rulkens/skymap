@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { resolveStructureFromPick } from '../../../../src/services/engine/helpers/resolveStructureFromPick';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
-import type { StructureCategory } from '../../../../src/@types/data/structure/StructureCategory';
+import type { StructureId } from '../../../../src/@types/data/structure/StructureId';
 
 // Minimal structure fixtures.  The helper only indexes the returned array by
 // identity, so each record needs only the fields that satisfy `StructureInfo`.
@@ -38,7 +38,7 @@ const bootes: StructureInfo = {
 // Only `byCategory` is needed.  We branch on the category so each test can
 // verify the helper indexes the RIGHT per-category bucket.
 const structures = {
-  byCategory(category: StructureCategory): readonly StructureInfo[] {
+  byCategory(category: StructureId): readonly StructureInfo[] {
     if (category === 'cluster') return [virgo, coma];
     if (category === 'void') return [bootes];
     return [];

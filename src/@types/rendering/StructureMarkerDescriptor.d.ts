@@ -12,7 +12,7 @@
 
 import type { Vec3 } from '../math/Vec3';
 import type { Vec4 } from '../math/Vec4';
-import type { StructureCategory } from '../data/structure/StructureCategory';
+import type { StructureId } from '../data/structure/StructureId';
 
 export type StructureMarkerDescriptor = {
   /**
@@ -27,7 +27,7 @@ export type StructureMarkerDescriptor = {
    */
   readonly id: string;
   /** Category — drives which draw bucket this descriptor lands in (per-category source-code uniform). */
-  readonly category: StructureCategory;
+  readonly category: StructureId;
   /** World-space centre. */
   readonly worldPos: Vec3;
   /**

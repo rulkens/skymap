@@ -53,14 +53,16 @@ function serializeFadeId(h: FadeId): string {
   switch (h.kind) {
     case 'galaxyCatalog':
       return `galaxyCatalog:${h.id}`;
-    case 'filaments':
-      return 'filaments';
+    case 'structure':
+      return `structure:${h.id}`;
+    case 'volumeField':
+      return `volumeField:${h.id}`;
+    case 'milkyWay':
+      return 'milkyWay';
+    case 'filament':
+      return 'filament';
     case 'flow':
       return 'flow';
-    case 'scalarField':
-      return `scalarField:${h.field}`;
-    case 'markerLayer':
-      return `markerLayer:${h.category}`;
     // A category-less structure handle and a per-category one must not collide,
     // and a category-less key (e.g. `labelLayer:milkyWay`) must stay distinct
     // from a per-category one — so the category suffix is appended only when present.

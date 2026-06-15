@@ -6,7 +6,7 @@ import {
   HI_RES_LAYER_COUNT,
   HI_RES_LAYER_SIDE_BY_TIER,
 } from '../../src/data/sources';
-import { STRUCTURE_CATEGORIES } from '../../src/data/structure/structureCategories';
+import { STRUCTURE_IDS } from '../../src/data/structure/structureIds';
 import { LABEL_CATEGORIES } from '../../src/data/structure/labelCategories';
 import { CATEGORY_DISPLAY_INFO } from '../../src/data/structure/categoryDisplayInfo';
 import { DEFAULT_FLOW } from '../../src/data/defaults';
@@ -61,16 +61,16 @@ describe('SOURCE_REGISTRY ids', () => {
 
   it('ids are unique across the registry', () => {
     // The id is the single home for each source's readable key — domain
-    // types (StructureCategory, visibility records, volume handles) derive
+    // types (StructureId, visibility records, volume handles) derive
     // from it, so a collision would silently merge two sources downstream.
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('STRUCTURE_CATEGORIES is exactly the four structure ids', () => {
-    // STRUCTURE_CATEGORIES derives from the registry's type:'structure' rows,
+  it('STRUCTURE_IDS is exactly the four structure ids', () => {
+    // STRUCTURE_IDS derives from the registry's type:'structure' rows,
     // so this pins the registry's structure set — accidentally dropping or
     // renaming a structure source (or mistyping an id) trips this guard.
-    expect([...STRUCTURE_CATEGORIES].sort()).toEqual(['cluster', 'group', 'supercluster', 'void']);
+    expect([...STRUCTURE_IDS].sort()).toEqual(['cluster', 'group', 'supercluster', 'void']);
   });
 });
 
@@ -127,7 +127,7 @@ describe('Registry capability flags — bearsLabel / bearsMarker', () => {
   });
 
   it('structure rows bear both a label and a marker', () => {
-    // The four structure source ids — verified correct in STRUCTURE_CATEGORIES test above.
+    // The four structure source ids — verified correct in STRUCTURE_IDS test above.
     const structureIds = [Source.Cluster, Source.Supercluster, Source.Void, Source.Group] as const;
     for (const id of structureIds) {
       const entry = SOURCE_REGISTRY[id];
