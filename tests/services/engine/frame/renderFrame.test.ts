@@ -26,7 +26,8 @@ import { createDisabledGpuTimingService } from '../../../../src/services/gpu/tim
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { mat4 } from 'gl-matrix';
-import type { Selection } from '../../../../src/@types/engine/subsystems/Selection';
+import type { FocusableTarget } from '../../../../src/@types/engine/FocusableTarget';
+import type { GalaxyInfo } from '../../../../src/@types/engine/GalaxyInfo';
 
 // ── Test fixtures ───────────────────────────────────────────────────────────
 
@@ -249,7 +250,7 @@ function makeInput(
   const settings = {
     pointSizePx: 2.5,
     brightness: 1.0,
-    selected: null as Selection | null,
+    selected: null as FocusableTarget | null,
     visibleSourceMask: 0xffffffff,
     highlightFallback: true,
     realOnlyMode: false,
@@ -459,10 +460,16 @@ describe('renderFrame', () => {
     expect(drawSettings.depthFadeEnabled).toBe(fx.input.settings.depthFadeEnabled);
   });
 
-  it('packs (source, localIdx) into the selectedPacked u32 sent to pointRenderer.draw', () => {
-    // SDSS = 1, localIdx = 42 → (1 << 27) | 42 = 0x0800_002a = 134217770.
+  it('packs (source, index) into the selectedPacked u32 sent to pointRenderer.draw', () => {
+    // SDSS = 1, index = 42 → (1 << 27) | 42 = 0x0800_002a = 134217770.
     const fx2 = makeInput({
-      settings: { selected: { kind: 'galaxy', source: Source.SDSS, localIdx: 42 } },
+      settings: {
+        selected: {
+          type: 'galaxyCatalog',
+          source: Source.SDSS,
+          index: 42,
+        } as unknown as GalaxyInfo,
+      },
     });
     renderFrame(fx2.input);
     const draw = fx2.pointRenderer.draw as ReturnType<typeof vi.fn>;

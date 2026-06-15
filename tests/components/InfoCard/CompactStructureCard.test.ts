@@ -11,12 +11,13 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import { CompactStructureCard } from '../../../src/components/InfoCard/CompactStructureCard';
-import type { StructureRecord } from '../../../src/@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 
 // Fixture structure ~10 Mpc from origin so the distance formatter renders a
 // readable Mpc value (formatDistance("Mpc / Mly") shape).  physicalRadiusMpc
 // is 2.2 — a real-world Virgo-ish radius.
-const virgo: StructureRecord = {
+const virgo: StructureInfo = {
+  type: 'structure',
   id: 'virgo-m87',
   name: 'Virgo Cluster',
   category: 'cluster',

@@ -431,6 +431,7 @@ export function buildGalaxyInfo(
   const morphology = famousEntry?.type ? formatMorphology(famousEntry.type) : undefined;
 
   return {
+    type: 'galaxyCatalog',
     index: idx,
     objID: cloud.objIDs[idx]!,
 

@@ -8,7 +8,7 @@
  * affecting setting is a one-line addition here.
  */
 
-import type { Selection } from '../subsystems/Selection';
+import type { FocusableTarget } from '../FocusableTarget';
 import type { BiasMode } from '../../data/galaxyCatalog/BiasMode';
 import type { ToneMapCurve } from '../../data/ToneMapCurve';
 import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
@@ -17,13 +17,14 @@ export type RenderFrameSettings = {
   pointSizePx: number;
   brightness: number;
   /**
-   * Selected entity, or `null` when nothing is selected.  Galaxy
-   * variants are translated inside `pointSpritesPass` to the packed
-   * u32 `(source << 27) | localIdx` (or the `0xFFFFFFFF` "no selection"
-   * sentinel) the shader's halo path expects.  Structure variants don't
-   * drive the halo and are treated as "no galaxy selected" by the pass.
+   * Selected target, or `null` when nothing is selected.  Galaxy targets
+   * (`type: 'galaxyCatalog'`) are translated inside `pointSpritesPass` to
+   * the packed u32 `(source << 27) | index` (or the `0xFFFFFFFF` "no
+   * selection" sentinel) the shader's halo path expects.  Structure
+   * targets don't drive the halo and are treated as "no galaxy selected"
+   * by the pass.
    */
-  selected: Selection | null;
+  selected: FocusableTarget | null;
   visibleSourceMask: number;
   highlightFallback: boolean;
   realOnlyMode: boolean;

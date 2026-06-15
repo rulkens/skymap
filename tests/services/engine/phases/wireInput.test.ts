@@ -107,9 +107,13 @@ function makeState(): EngineState {
       tier: 'medium',
     },
     picking: { latestMouseCss: null, pointerDown: false } as never,
-    // createClickResolver captures the structure store for pickToSelection;
-    // an empty store is enough — these tests don't exercise a structure pick.
-    data: { structures: { byCategory: () => [] } } as never,
+    // createClickResolver captures the store accessors for resolvePick;
+    // createClickResolver is module-mocked here, so the accessors are
+    // never invoked — an empty galaxies/structures stub is enough.
+    data: {
+      structures: { byCategory: () => [] },
+      galaxies: { get: () => undefined, famousMeta: [] },
+    } as never,
     gpu: {
       renderer: {
         totalCount: () => 0,

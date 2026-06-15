@@ -4,9 +4,9 @@
 // structure hover preview branch and its suppression rule.
 //
 // InfoCard accepts a single `hovered` and a single `selected` prop — each
-// typed as `GalaxyInfo | StructureRecord | null` (the `FocusableTarget`
-// union).  The component dispatches via `isStructure` internally; there are
-// no separate structure slots.
+// typed as `GalaxyInfo | StructureInfo | null` (the `FocusableTarget`
+// union).  The component dispatches via the DETAIL_CARD table (keyed on
+// `type`) internally; there are no separate structure slots.
 //
 // We assert on user-visible text rather than CSS-modules class fragments
 // because the CSS-modules-mangled class names aren't stable across
@@ -22,10 +22,11 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import { InfoCard } from '../../../src/components/InfoCard/InfoCard';
-import type { StructureRecord } from '../../../src/@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { GalaxyInfo } from '../../../src/@types/engine/GalaxyInfo';
 
-const virgo: StructureRecord = {
+const virgo: StructureInfo = {
+  type: 'structure',
   id: 'virgo-m87',
   name: 'Virgo Cluster',
   category: 'cluster',
@@ -33,7 +34,8 @@ const virgo: StructureRecord = {
   featured: true,
   physicalRadiusMpc: 2.2,
 };
-const coma: StructureRecord = {
+const coma: StructureInfo = {
+  type: 'structure',
   id: 'coma',
   name: 'Coma Cluster',
   category: 'cluster',
@@ -47,6 +49,7 @@ const coma: StructureRecord = {
 // the galaxy branch to render without throwing.  Cast away the precise type
 // because populating every field would obscure the test's intent.
 const galaxyStub = {
+  type: 'galaxyCatalog',
   index: 42,
   displayName: 'NGC 1234',
   sourceLabel: 'SDSS',

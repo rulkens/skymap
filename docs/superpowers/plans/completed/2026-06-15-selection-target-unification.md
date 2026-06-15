@@ -139,17 +139,17 @@ the `isStructure` predicate is being retired in this plan (cite Task 10).
   `type: 'structure'`.
 
 **Tests:**
-- [ ] In `tests/@types/engine/data/structureRecord.types.test.ts` (or the nearest
+- [x] In `tests/@types/engine/data/structureRecord.types.test.ts` (or the nearest
       type test), add a compile-time assertion that `StructureInfo['type']` is
       `'structure'` and `GalaxyInfo['type']` is `'galaxyCatalog'` (a `satisfies` /
       assignment check). (File renamed in Task 2 — leave it where it is now.)
-- [ ] Grep the test tree for fixture builders of `GalaxyInfo` and structure literals
+- [x] Grep the test tree for fixture builders of `GalaxyInfo` and structure literals
       (`tests/.../galaxyInfoBuilder.test.ts`, `buildStaticAnchorStructures.test.ts`,
       `structureCatalogToStructures` test, `createStructureStore.test.ts`, any
       `as GalaxyInfo` / `as StructureRecord` fixtures) and add the `type` field so
       they typecheck. Assert one existing test still asserts `.source` / `.category`
       to prove no behaviour change.
-- [ ] `npm run typecheck` clean (the new required field surfaces every construction
+- [x] `npm run typecheck` clean (the new required field surfaces every construction
       site at compile time — that's the point). `npm test` green. Commit.
 
 ---
@@ -170,15 +170,15 @@ non-galaxy `FocusableTarget` arm; renaming it gives the parallel triple
 The provenance difference (galaxy info derived on-demand; structure info stored) is
 an implementation detail, not what they are as targets.
 
-- [ ] Rename the file and the exported type symbol to `StructureInfo`.
-- [ ] Sweep all references: imports (`import type { StructureRecord }`), type
+- [x] Rename the file and the exported type symbol to `StructureInfo`.
+- [x] Sweep all references: imports (`import type { StructureRecord }`), type
       annotations, generic args (`Map<…, readonly StructureRecord[]>`), JSDoc prose.
       The test file `tests/@types/engine/data/structureRecord.types.test.ts` renames
       its references too (rename the test file to `structureInfo.types.test.ts` for
       consistency with the symbol). Watch `RecordRaw`-style local names — only the
       `StructureRecord` type, not unrelated `Record<…>`.
-- [ ] Grep confirms zero `StructureRecord` hits remain anywhere in `src/` or `tests/`.
-- [ ] `npm run typecheck` clean. `npm test` full suite green. Commit.
+- [x] Grep confirms zero `StructureRecord` hits remain anywhere in `src/` or `tests/`.
+- [x] `npm run typecheck` clean. `npm test` full suite green. Commit.
 
 > From here on the plan uses `StructureInfo`.
 
@@ -225,13 +225,13 @@ cite the module header) and its hover-vs-pinned stacking logic, but replaces the
 `isStructure` lines + casts with `DETAIL_CARD[target.type]` lookups. The structure
 -wins-over-galaxy-hover tiebreak (`:86-88`) stays, expressed via `type` comparison.
 
-- [ ] `detailCardTable.test.tsx`: assert `DETAIL_CARD['galaxyCatalog'].Detail`
+- [x] `detailCardTable.test.tsx`: assert `DETAIL_CARD['galaxyCatalog'].Detail`
       renders galaxy chrome (a galaxy-only field) for a `GalaxyInfo` fixture, and
       `DETAIL_CARD['structure'].Detail` renders the structure name + member-count row
       for a `StructureInfo` fixture. One test per type, both `Detail` and `Compact`.
-- [ ] Update `InfoCard.structureHover.test.ts` to the table-driven structure;
+- [x] Update `InfoCard.structureHover.test.ts` to the table-driven structure;
       assertions (structure hover wins, same-structure-pinned suppression) unchanged.
-- [ ] `npm test -- InfoCard detailCardTable` green. `npm run typecheck`. Commit.
+- [x] `npm test -- InfoCard detailCardTable` green. `npm run typecheck`. Commit.
 
 ### 3b. `URL_HASH_FOR` table for `useUrlSync`
 
@@ -253,11 +253,11 @@ export const URL_HASH_FOR: Record<FocusableTargetType, (t: FocusableTarget) => s
 `computeDesiredHash` becomes `URL_HASH_FOR[focused.type](focused)` → wrap as
 `focus=${id}` when non-null. No `isStructure`.
 
-- [ ] `urlHashFor.test.ts`: galaxy entry returns the `selectionToFocusId` value (and
+- [x] `urlHashFor.test.ts`: galaxy entry returns the `selectionToFocusId` value (and
       null for a non-encodable galaxy, e.g. Synthetic); structure entry returns the id.
-- [ ] `useUrlSync.test.ts`: existing `computeDesiredHash` cases (galaxy id / structure
+- [x] `useUrlSync.test.ts`: existing `computeDesiredHash` cases (galaxy id / structure
       id / null / non-encodable) stay green against the table-driven body.
-- [ ] `npm test -- useUrlSync urlHashFor` green. `npm run typecheck`. Commit.
+- [x] `npm test -- useUrlSync urlHashFor` green. `npm run typecheck`. Commit.
 
 ### 3c. `COMMIT_FOCUS` table for `commitFocus`
 
@@ -285,10 +285,10 @@ export const COMMIT_FOCUS: Record<
 `commitFocus` becomes `COMMIT_FOCUS[target.type](state, target)`; drop the
 `isStructure` import + branch. Update the docblock (table dispatch, not predicate).
 
-- [ ] `commitFocus.test.ts`: assert a `GalaxyInfo` routes to the galaxy commit path
+- [x] `commitFocus.test.ts`: assert a `GalaxyInfo` routes to the galaxy commit path
       (spy on the selection setters / tween) and a `StructureInfo` to the structure
       path. Was `isStructure`-keyed; now table-keyed — assertions unchanged.
-- [ ] `npm test -- commitFocus` green. `npm run typecheck`. Commit.
+- [x] `npm test -- commitFocus` green. `npm run typecheck`. Commit.
 
 > The remaining `isStructure` call sites (`useStructureMemberCount`, `runFrame`
 > focus-fade, `structureIdOf`, ring `enabled()`) are simple guards, not N-way
@@ -305,7 +305,7 @@ export const COMMIT_FOCUS: Record<
 with `selected === null || selected.type !== 'structure'`. `selected` then narrows to
 `StructureInfo` for the `structureMemberCount(selected, …)` call with no `as`.
 
-- [ ] Existing member-count tests stay green (galaxy selection → null; structure →
+- [x] Existing member-count tests stay green (galaxy selection → null; structure →
       count). `npm run typecheck`. Commit (may fold into 3c's commit if tightly coupled).
 
 ---
@@ -333,15 +333,15 @@ otherwise `buildGalaxyInfo(cloud, localIdx, source, famousMeta)`. The guard is t
 tier-swap-race defence — keep the docblock explaining it (cite the existing comment).
 Pure: no closures, all deps as args.
 
-- [ ] Test `returns null when the cloud is undefined`.
-- [ ] Test `returns null for a negative localIdx`.
-- [ ] Test `returns null when localIdx >= cloud.count` (the tier-swap race guard).
-- [ ] Test `delegates to buildGalaxyInfo for an in-range index` — assert the returned
+- [x] Test `returns null when the cloud is undefined`.
+- [x] Test `returns null for a negative localIdx`.
+- [x] Test `returns null when localIdx >= cloud.count` (the tier-swap race guard).
+- [x] Test `delegates to buildGalaxyInfo for an in-range index` — assert the returned
       `GalaxyInfo.index === localIdx`, `.source === source`, `.type === 'galaxyCatalog'`
       against a small fixture cloud (reuse the cloud-fixture shape in
       `tests/services/engine/helpers/galaxyInfoBuilder.test.ts`).
-- [ ] Implement; wrap `buildGalaxyInfo` (`galaxyInfoBuilder.ts:126`).
-- [ ] `npm test -- resolveGalaxyInfo` green. Commit.
+- [x] Implement; wrap `buildGalaxyInfo` (`galaxyInfoBuilder.ts:126`).
+- [x] `npm test -- resolveGalaxyInfo` green. Commit.
 
 ---
 
@@ -360,13 +360,13 @@ fields: galaxy (`type === 'galaxyCatalog'`) → `source` + `index`; structure
 (`type === 'structure'`) → `id`. Dispatch on `a.type` after the null + equal-type
 guard (type-safe narrowing, no `as`).
 
-- [ ] Test `both null are equal`.
-- [ ] Test `null vs non-null are not equal` (both directions).
-- [ ] Test `galaxy vs structure are not equal`.
-- [ ] Test `same galaxy (source + index) is equal; differing index is not`.
-- [ ] Test `same structure id is equal; differing id is not`.
-- [ ] Implement by narrowing on `type`.
-- [ ] `npm test -- targetEq` green. Commit.
+- [x] Test `both null are equal`.
+- [x] Test `null vs non-null are not equal` (both directions).
+- [x] Test `galaxy vs structure are not equal`.
+- [x] Test `same galaxy (source + index) is equal; differing index is not`.
+- [x] Test `same structure id is equal; differing id is not`.
+- [x] Implement by narrowing on `type`.
+- [x] `npm test -- targetEq` green. Commit.
 
 ---
 
@@ -403,22 +403,23 @@ export type ResolvePickDeps = {
 - any other / undefined code → `console.warn` (preserve the current `pickToSelection`
   message) and `null`.
 
-- [ ] Test `returns null for a null pick`.
-- [ ] Test `maps a galaxy catalog code to its GalaxyInfo` (fixture cloud; assert
+- [x] Test `returns null for a null pick`.
+- [x] Test `maps a galaxy catalog code to its GalaxyInfo` (fixture cloud; assert
       `.index`/`.source`/`.type === 'galaxyCatalog'`).
-- [ ] Test `returns null for a galaxy code whose cloud is not loaded` (getCloud → undefined).
-- [ ] Test `maps a structure code to its StructureInfo` (stub `structures.byCategory`;
+- [x] Test `returns null for a galaxy code whose cloud is not loaded` (getCloud → undefined).
+- [x] Test `maps a structure code to its StructureInfo` (stub `structures.byCategory`;
       assert `.type === 'structure'`).
-- [ ] Test `returns null when a structure hit has no backing record`.
-- [ ] Test `warns and returns null for a non-pickable code` (assert the warn fires).
-- [ ] Implement.
-- [ ] `npm test -- resolvePick` green. Commit.
+- [x] Test `returns null when a structure hit has no backing record`.
+- [x] Test `warns and returns null for a non-pickable code` (assert the warn fires).
+- [x] Implement.
+- [x] `npm test -- resolvePick` green. Commit.
 
 > Do not delete `pickToSelection.ts` yet — consumers flip in Task 8; deletion is Task 10.
 
 ---
 
 ## Task 7: Subsystem holds `FocusableTarget | null`
+> **Execution note:** Tasks 7–9 landed as ONE green commit, not three. Flipping the slot contract to `FocusableTarget` simultaneously breaks the boundary (Task 8) and the readers (Task 9), so none of the three typechecks green alone — they are one cross-cutting flip. The plan's per-task green-commit claim doesn't hold for this trio.
 
 **Files:**
 - `src/services/engine/subsystems/selectionSubsystem.ts` (modify)
@@ -455,19 +456,19 @@ destroy(): void;
 
 **Tests:** the suite constructs the subsystem with cloud/structure stubs and asserts
 callback *targets*. Rework to pass targets directly:
-- [ ] Keep/rename `dedupes setHovered — fires onHoverChange only on real transitions`
+- [x] Keep/rename `dedupes setHovered — fires onHoverChange only on real transitions`
       (pass the same target twice → one fire).
-- [ ] Replace the `uses prebuiltInfo on setSelected …` test with `setSelected fires
+- [x] Replace the `uses prebuiltInfo on setSelected …` test with `setSelected fires
       onSelectChange with the passed target` (no lookup).
-- [ ] Delete `fires onHoverChange(null) for an out-of-range galaxy localIdx` (bounds
+- [x] Delete `fires onHoverChange(null) for an out-of-range galaxy localIdx` (bounds
       guard moved to `resolveGalaxyInfo`, covered by Task 4).
-- [ ] Structure-variant test: pass a `StructureInfo` directly; assert the callback
+- [x] Structure-variant test: pass a `StructureInfo` directly; assert the callback
       receives the same reference.
-- [ ] Delete the whole `selectedTarget` describe block (getter gone).
-- [ ] Cross-kind transition test: galaxy then structure targets → one fire each.
-- [ ] Keep focus-slot + render-wake + lifecycle blocks, swapping `Selection` literals
+- [x] Delete the whole `selectedTarget` describe block (getter gone).
+- [x] Cross-kind transition test: galaxy then structure targets → one fire each.
+- [x] Keep focus-slot + render-wake + lifecycle blocks, swapping `Selection` literals
       for target fixtures.
-- [ ] `npm test -- selectionSubsystem` green, `npm run typecheck`. Commit (fold the
+- [x] `npm test -- selectionSubsystem` green, `npm run typecheck`. Commit (fold the
       `engine.ts` construction-site edit into this commit so typecheck stays green).
 
 ---
@@ -522,16 +523,16 @@ dblclick hand-off).
 via `buildGalaxyInfo` and call `commitGalaxyFocus(state, info)` — confirm the new
 `commitGalaxyFocus` signature still takes `GalaxyInfo` and leave the bodies as-is.
 
-- [ ] `commitGalaxyFocus.test.ts`: assert setters called with the `info` object (no
+- [x] `commitGalaxyFocus.test.ts`: assert setters called with the `info` object (no
       Selection literal, no second arg).
-- [ ] `commitStructureFocus.test.ts`: assert setters called with the `StructureInfo`
+- [x] `commitStructureFocus.test.ts`: assert setters called with the `StructureInfo`
       (not `{kind:'structure',id}`).
-- [ ] `clickHandler.test.ts`: assert `resolveClick` resolves to a `GalaxyInfo` /
+- [x] `clickHandler.test.ts`: assert `resolveClick` resolves to a `GalaxyInfo` /
       `StructureInfo` / `null` (was a Selection); stub the new accessors.
-- [ ] `wireInput.test.ts` / `wireInput.structure.test.ts`: click/dblclick pass
+- [x] `wireInput.test.ts` / `wireInput.structure.test.ts`: click/dblclick pass
       resolved targets to the setters; dblclick reads `selected()`.
-- [ ] `npm test -- clickHandler wireInput commitGalaxyFocus commitStructureFocus` green.
-- [ ] `npm run typecheck`. Commit.
+- [x] `npm test -- clickHandler wireInput commitGalaxyFocus commitStructureFocus` green.
+- [x] `npm run typecheck`. Commit.
 
 ---
 
@@ -595,14 +596,14 @@ needs `axisRatio`, `positionAngleDeg`, and famous-row calibration — none on
 `selected: Selection | null` → `selected: FocusableTarget | null`; update the docblock.
 `runFrame` feeds `selected: selection.selected()` — verify no change needed.
 
-- [ ] `structureIdOf.test.ts`: a `GalaxyInfo` → null; a `StructureInfo` → its id;
+- [x] `structureIdOf.test.ts`: a `GalaxyInfo` → null; a `StructureInfo` → its id;
       null → null.
-- [ ] `selectionRingPass.test.ts`: feed a `GalaxyInfo` fixture as the selection;
+- [x] `selectionRingPass.test.ts`: feed a `GalaxyInfo` fixture as the selection;
       assert `setSelection` receives `worldPos` from `x/y/z` and the ring radius from
       `diameterKpc`. Assert `enabled()` false for a `StructureInfo` and for null.
-- [ ] Run the marker/label producer tests if any. `npm test -- structureIdOf
+- [x] Run the marker/label producer tests if any. `npm test -- structureIdOf
       selectionRingPass passes pointSprites` (whichever exist) green.
-- [ ] `npm run typecheck`. Commit.
+- [x] `npm run typecheck`. Commit.
 
 ---
 
@@ -631,39 +632,39 @@ cleaned. Check the JSDoc references the spec/grep flag: `PickRenderer.d.ts`,
 `selectionEncoding.ts`, `tweenToGalaxy.ts`, `CommandPalette.tsx`, `EngineCallbacks.d.ts`,
 `EngineCameraHandle.d.ts` — update prose naming the deleted symbols.
 
-- [ ] Delete the dead files.
-- [ ] `npm test` — full suite green.
-- [ ] `npm run typecheck` — clean (both tsconfigs).
-- [ ] Grep confirms no source/test references to `Selection` / `selectionEq` /
+- [x] Delete the dead files.
+- [x] `npm test` — full suite green.
+- [x] `npm run typecheck` — clean (both tsconfigs).
+- [x] Grep confirms no source/test references to `Selection` / `selectionEq` /
       `prebuiltInfo` / `selectedTarget` / `pickToSelection` / `'category' in` /
       `StructureRecord` / the structural `isStructure` sniff remain (comment-only refs
       updated).
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
 ## Definition of Done
 
-- [ ] `npm test` — full suite green (net deletion of the `selectionEq` /
+- [x] `npm test` — full suite green (net deletion of the `selectionEq` /
       `prebuiltInfo` / `selectedTarget` cases, plus new `resolveGalaxyInfo` /
       `resolvePick` / `targetEq` / table coverage).
-- [ ] `npm run typecheck` — clean across `src` and `tools` tsconfigs.
-- [ ] `Selection.d.ts`, `selectionEq`, `prebuiltInfo`, `selectedTarget()`,
+- [x] `npm run typecheck` — clean across `src` and `tools` tsconfigs.
+- [x] `Selection.d.ts`, `selectionEq`, `prebuiltInfo`, `selectedTarget()`,
       `pickToSelection.ts`, the subsystem's internal `resolveTarget` / `galaxyInfoFor`,
       and the structural `isStructure` sniff (`'category' in target`) are all gone.
-- [ ] `StructureRecord` as a name is gone repo-wide — renamed `StructureInfo`.
-- [ ] `FocusableTarget` is a **tagged union** on `type: FocusableTargetType`
+- [x] `StructureRecord` as a name is gone repo-wide — renamed `StructureInfo`.
+- [x] `FocusableTarget` is a **tagged union** on `type: FocusableTargetType`
       (`'galaxyCatalog' | 'structure'`); the InfoCard detail card, URL hash, and
       commit-focus dispatches are `Record<FocusableTargetType, …>` table lookups
       (`DETAIL_CARD` / `URL_HASH_FOR` / `COMMIT_FOCUS`); simple guards narrow on
       `target.type === '…'` with no `as` cast in any predicate false-branch.
-- [ ] The three selection slots hold `FocusableTarget | null`; setters take a resolved
+- [x] The three selection slots hold `FocusableTarget | null`; setters take a resolved
       target; resolution happens once at the pick / URL boundary via `resolvePick` /
       `resolveGalaxyInfo`.
-- [ ] `CreateSelectionSubsystemInput` no longer carries `getCloud` / `getFamousMeta` /
+- [x] `CreateSelectionSubsystemInput` no longer carries `getCloud` / `getFamousMeta` /
       `getStructure` (resolution left the subsystem).
-- [ ] No behaviour change: hover / single-click select / double-click focus /
+- [x] No behaviour change: hover / single-click select / double-click focus /
       Esc-dismiss / cluster-focus fade / deep-link `selectByAlias` race all behave as
       before (the race is now defended by callers passing an already-resolved target,
       not the `prebuiltInfo` escape hatch).
-- [ ] No new TODOs; comments that named deleted symbols updated, not left stale.
+- [x] No new TODOs; comments that named deleted symbols updated, not left stale.

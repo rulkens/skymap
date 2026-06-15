@@ -42,8 +42,8 @@ export type BootstrapDeps = {
    * Mutable: the public `EngineHandle`.  The handle literal is evaluated
    * AFTER the bootstrap IIFE in `engine.ts` (it captures helpers that
    * close over `state`), but `wireInput`'s onDoubleClick handler calls
-   * `handle.focusOn(selectedTarget())` — the unified `focusOn` accepts
-   * the full `FocusableTarget` (both `GalaxyInfo` and `StructureRecord`).
+   * `handle.focusOn(selection.selected())` — the unified `focusOn` accepts
+   * the full `FocusableTarget` (both `GalaxyInfo` and `StructureInfo`).
    * We thread the reference through a `{current}` ref so engine.ts can
    * assign it after the handle literal evaluates — by the time the user
    * can double-click, the handle is fully wired.  Null until engine.ts

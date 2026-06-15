@@ -12,20 +12,15 @@
 import { describe, it, expect, vi } from 'vitest';
 import { clearAll } from '../../../../src/services/engine/helpers/clearAll';
 import type { SelectionSubsystem } from '../../../../src/@types/engine/subsystems/SelectionSubsystem';
-import type { Selection } from '../../../../src/@types/engine/subsystems/Selection';
-import type { GalaxyInfo } from '../../../../src/@types/engine/GalaxyInfo';
+import type { FocusableTarget } from '../../../../src/@types/engine/FocusableTarget';
 
 function makeSelection(): Pick<SelectionSubsystem, 'setSelected' | 'setFocused'> & {
-  setSelected: ReturnType<
-    typeof vi.fn<(sel: Selection | null, prebuiltInfo?: GalaxyInfo | null) => void>
-  >;
-  setFocused: ReturnType<
-    typeof vi.fn<(sel: Selection | null, prebuiltInfo?: GalaxyInfo | null) => void>
-  >;
+  setSelected: ReturnType<typeof vi.fn<(target: FocusableTarget | null) => void>>;
+  setFocused: ReturnType<typeof vi.fn<(target: FocusableTarget | null) => void>>;
 } {
   return {
-    setSelected: vi.fn<(sel: Selection | null, prebuiltInfo?: GalaxyInfo | null) => void>(),
-    setFocused: vi.fn<(sel: Selection | null, prebuiltInfo?: GalaxyInfo | null) => void>(),
+    setSelected: vi.fn<(target: FocusableTarget | null) => void>(),
+    setFocused: vi.fn<(target: FocusableTarget | null) => void>(),
   };
 }
 

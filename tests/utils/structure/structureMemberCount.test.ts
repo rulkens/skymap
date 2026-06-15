@@ -6,7 +6,7 @@ import { maskWith } from '../../../src/utils/maskWith';
 import { maskWithout } from '../../../src/utils/maskWithout';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { SourceType } from '../../../src/@types/data/SourceType';
-import type { StructureRecord } from '../../../src/@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 
 /**
  * Minimal GalaxyCatalog from (x,y,z) tuples — only `positions`/`count` are
@@ -42,7 +42,8 @@ function makeCatalog(positions: ReadonlyArray<readonly [number, number, number]>
 }
 
 /** A cluster at the origin with a 10 Mpc core radius. */
-const cluster: StructureRecord = {
+const cluster: StructureInfo = {
+  type: 'structure',
   id: 'test-cluster',
   name: 'Test Cluster',
   category: 'cluster',
@@ -114,7 +115,7 @@ describe('structureMemberCount', () => {
 
   it('prefers apparentRadiusMpc over physicalRadiusMpc for the cone', () => {
     // Galaxy at r=8: outside the 5 Mpc core, inside the 12 Mpc apparent extent.
-    const wide: StructureRecord = {
+    const wide: StructureInfo = {
       ...cluster,
       physicalRadiusMpc: 5,
       apparentRadiusMpc: 12,

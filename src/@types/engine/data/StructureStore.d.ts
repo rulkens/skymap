@@ -1,4 +1,4 @@
-import type { StructureRecord } from '../../data/structure/StructureRecord';
+import type { StructureInfo } from '../../data/structure/StructureInfo';
 import type { StructureGroupId } from '../../data/structure/StructureGroupId';
 import type { StructureCategory } from '../../data/structure/StructureCategory';
 
@@ -23,13 +23,13 @@ import type { StructureCategory } from '../../data/structure/StructureCategory';
  */
 export type StructureStore = {
   /** Install (replacing) the records for one group. A defensive copy is taken. */
-  setGroup(id: StructureGroupId, records: readonly StructureRecord[]): void;
+  setGroup(id: StructureGroupId, records: readonly StructureInfo[]): void;
   /** Remove a group; other groups are unaffected. */
   clearGroup(id: StructureGroupId): void;
   /** All records, concatenated in `anchors` → `bulk` order. */
-  all(): readonly StructureRecord[];
+  all(): readonly StructureInfo[];
   /** Resolve a record by id across all groups, or null. */
-  byId(id: string): StructureRecord | null;
+  byId(id: string): StructureInfo | null;
   /** Records of one category, in `all()` order (pick-index alignment). */
-  byCategory(category: StructureCategory): readonly StructureRecord[];
+  byCategory(category: StructureCategory): readonly StructureInfo[];
 };

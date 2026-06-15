@@ -18,11 +18,11 @@ export type EngineCameraHandle = {
    * Smoothly tween the camera so the given target becomes the new orbit
    * focus.  Dispatches by type:
    *   - GalaxyInfo → the galaxy focus path (commitFocus + onFocusChange).
-   *   - StructureRecord → the structure focus path (commitStructureFocus,
+   *   - StructureInfo → the structure focus path (commitStructureFocus,
    *     framing distance derived from the category + onStructureFocusChange).
    *
-   * Discrimination uses the `isStructure` predicate from `services/engine/isStructure.ts`.
-   * See `services/engine/helpers/dispatchFocusOn.ts` for the dispatcher
+   * Discrimination is a table lookup on `target.type` — see
+   * `services/engine/helpers/commitFocus.ts` for the dispatcher
    * implementation.  Pre-bootstrap behaviour mirrors the per-kind paths:
    * galaxy focus is a no-op when `state.cam` is null; structure focus still
    * fires the subsystem flag + React-side callback even with no camera

@@ -1,8 +1,8 @@
 /**
  * commitStructureFocus — direct unit tests for the structure-side focus
  * protocol. Parallel to `commitGalaxyFocus.test.ts`:
- *   - selection + focus go through `setSelected` / `setFocused` with a
- *     `{kind:'structure', id}` Selection (the setters own `onFocusChange`,
+ *   - selection + focus go through `setSelected` / `setFocused` with the
+ *     resolved `StructureInfo` itself (the setters own `onFocusChange`,
  *     so the helper takes no `cb`);
  *   - tween distance comes from `structureFocusDistance`, not the galaxy path.
  *
@@ -16,11 +16,12 @@ import { describe, it, expect, vi } from 'vitest';
 import { commitStructureFocus } from '../../../../src/services/engine/helpers/commitStructureFocus';
 import { structureFocusDistance } from '../../../../src/services/engine/camera/structureFocusDistance';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { StructureRecord } from '../../../../src/@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 
 const FOV60 = (Math.PI / 180) * 60;
 
-const virgo: StructureRecord = {
+const virgo: StructureInfo = {
+  type: 'structure',
   id: 'virgo-m87',
   name: 'Virgo Cluster',
   category: 'cluster',
@@ -47,18 +48,15 @@ function makeMockState(): EngineState {
 }
 
 describe('commitStructureFocus', () => {
-  it('calls selection.setSelected with a structure-variant Selection', () => {
+  it('calls selection.setSelected with the resolved StructureInfo', () => {
     const state = makeMockState();
 
     commitStructureFocus(state, virgo);
 
-    expect(state.subsystems.selection.setSelected).toHaveBeenCalledWith({
-      kind: 'structure',
-      id: 'virgo-m87',
-    });
+    expect(state.subsystems.selection.setSelected).toHaveBeenCalledWith(virgo);
   });
 
-  it('latches the focus slot with the same structure-variant Selection', () => {
+  it('latches the focus slot with the same resolved StructureInfo', () => {
     const state = makeMockState();
 
     commitStructureFocus(state, virgo);
@@ -67,10 +65,7 @@ describe('commitStructureFocus', () => {
     // cluster-focus member-isolation fade in runFrame (and owns the
     // onFocusChange URL-hash fan-out).  A bare single-click select must
     // NOT set it, but a focus commit must.
-    expect(state.subsystems.selection.setFocused).toHaveBeenCalledWith({
-      kind: 'structure',
-      id: 'virgo-m87',
-    });
+    expect(state.subsystems.selection.setFocused).toHaveBeenCalledWith(virgo);
   });
 
   it('starts a tween with structureFocusDistance', () => {
@@ -96,14 +91,8 @@ describe('commitStructureFocus', () => {
     // guard), but selection + focus still fire — they can land before
     // the camera is ready, and the deep-link drain depends on that
     // ordering.
-    expect(state.subsystems.selection.setSelected).toHaveBeenCalledWith({
-      kind: 'structure',
-      id: 'virgo-m87',
-    });
-    expect(state.subsystems.selection.setFocused).toHaveBeenCalledWith({
-      kind: 'structure',
-      id: 'virgo-m87',
-    });
+    expect(state.subsystems.selection.setSelected).toHaveBeenCalledWith(virgo);
+    expect(state.subsystems.selection.setFocused).toHaveBeenCalledWith(virgo);
     expect(state.subsystems.tweens.start).not.toHaveBeenCalled();
   });
 });

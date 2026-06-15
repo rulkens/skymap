@@ -1,17 +1,16 @@
 /**
  * selectionSubsystem — owns the engine's hover + select + focus state.
  *
- * Three slots, each holding a `Selection` discriminated union
- * (`{kind:'galaxy', source, localIdx}` or `{kind:'structure', id}`) or
- * null, forming the engine's attention ladder: hover → select →
- * focus.  Setters dedupe via `selectionEq` and fan out to
- * `cb.selection.onHoverChange` / `onSelectChange` with the resolved
- * `FocusableTarget` (GalaxyInfo for galaxy variants, StructureRecord
- * for structures) — callers never have to remember to fire the callback
- * themselves.  `setSelected` and `setFocused` also own the render wake —
- * callers never follow up with `requestRender`.  `setHovered` is
- * wake-free: it feeds only the React InfoCard (no scene-side halo), and
- * hover picks resolve inside frames anyway.
+ * Three slots, each holding an already-resolved `FocusableTarget`
+ * (GalaxyInfo | StructureInfo) or null, forming the engine's attention
+ * ladder: hover → select → focus.  The subsystem is a thin slot store:
+ * setters dedupe via `targetEq` and fan out the STORED target to
+ * `cb.selection.onHoverChange` / `onSelectChange` / `cb.camera.onFocusChange`.
+ * It does no resolution of its own — callers resolve picks to targets (via the
+ * pick-boundary helpers) before handing them in.  `setSelected` and
+ * `setFocused` also own the render wake — callers never follow up with
+ * `requestRender`.  `setHovered` is wake-free: it feeds only the React
+ * InfoCard (no scene-side halo).
  *
  * ### Why `focused` is a third slot, not a synonym for `selected`
  *
@@ -23,138 +22,48 @@
  * it owns the `cb.camera.onFocusChange` fan-out the same way
  * `setSelected` owns `onSelectChange`, so the GPU fade (read off
  * `focused()` in `runFrame`) and the React/URL focus state can never
- * desync — there is exactly one setter.  The optional `prebuiltInfo`
- * mirrors `setSelected`'s escape hatch for the `selectByAlias`
- * deep-link race.
+ * desync — there is exactly one setter.
  *
- * ### Deps are closures, not snapshots
+ * ### Resolution lives at the caller, not here
  *
- * `getCloud` / `getFamousMeta` / `getStructure` are accessor functions so
- * the subsystem reads the LIVE source maps at call time.  Catalogs
- * arrive after engine construction (async GPU init), the sidecar
- * even later, and tier swaps replace whole sources mid-session — a
- * value snapshot taken at construction would be perpetually stale.
- *
- * ### prebuiltInfo escape hatch on setSelected
- *
- * `selectByAlias` can fire from a deep-link drain the moment the
- * data-side catalog arrives but BEFORE the GPU upload completes.  In
- * that window the cloud-lookup would briefly return null and the
- * InfoCard would render blank.  The optional second arg to
- * `setSelected` hands a pre-built GalaxyInfo straight to the
- * callback, bypassing the lookup until the GPU upload settles.
- * `commitGalaxyFocus` always forwards `info`, so every focus path
- * gets the defense for free.
+ * Callers pass an already-resolved target, which defends the deep-link race —
+ * a `selectByAlias` firing after the data-side catalog arrives but before the
+ * GPU upload settles.  There is no internal lookup to race: whatever the caller
+ * resolved is exactly what the slot stores and the callback receives.
  */
 
-import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
 import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
-import type { GalaxySelection, Selection } from '../../../@types/engine/subsystems/Selection';
 import type { SelectionSubsystem } from '../../../@types/engine/subsystems/SelectionSubsystem';
 import type { CreateSelectionSubsystemInput } from '../../../@types/engine/subsystems/CreateSelectionSubsystemInput';
-import { buildGalaxyInfo } from '../helpers/galaxyInfoBuilder';
-
-/**
- * Are these two selections value-equal?  Both null → equal; both
- * non-null with matching discriminant + payload → equal; otherwise
- * different.  Lifted out of the closure so it doesn't get re-allocated
- * per engine instance (purely cosmetic; engine is a singleton anyway).
- */
-function selectionEq(a: Selection | null, b: Selection | null): boolean {
-  if (a === null && b === null) return true;
-  if (a === null || b === null) return false;
-  if (a.kind !== b.kind) return false;
-  if (a.kind === 'galaxy' && b.kind === 'galaxy') {
-    return a.source === b.source && a.localIdx === b.localIdx;
-  }
-  if (a.kind === 'structure' && b.kind === 'structure') {
-    return a.id === b.id;
-  }
-  return false;
-}
+import { targetEq } from '../helpers/targetEq';
 
 export function createSelectionSubsystem(input: CreateSelectionSubsystemInput): SelectionSubsystem {
-  const { cb, getCloud, getFamousMeta, getStructure, requestRender } = input;
+  const { cb, requestRender } = input;
 
   // Closure-captured `let`s — genuinely inaccessible from outside.
-  // All start null; `hovered`/`selected` populate from the first hover
-  // pick / click resolve, `focused` from the first focus commit.
-  let hovered: Selection | null = null;
-  let selected: Selection | null = null;
-  let focused: Selection | null = null;
+  // All start null; the setters populate them with resolved targets.
+  let hovered: FocusableTarget | null = null;
+  let selected: FocusableTarget | null = null;
+  let focused: FocusableTarget | null = null;
 
-  /**
-   * Build a GalaxyInfo for a `(source, localIdx)` selection, or null if
-   * the source's cloud isn't loaded or `localIdx >= cloud.count`.
-   *
-   * The bounds check defends the tier-swap-window race: a still-in-
-   * flight pick from a previous frame can return a `(source, localIdx)`
-   * decoded against an older, larger layout — without the guard,
-   * `buildGalaxyInfo` would index past the end of the freshly-uploaded
-   * smaller cloud's typed arrays and crash downstream `.toFixed()`
-   * calls in the InfoCard.  Returning null here is the right
-   * semantics: "we don't have data for that pick; render no card,
-   * the next frame's pick will succeed".
-   */
-  function galaxyInfoFor(sel: GalaxySelection): GalaxyInfo | null {
-    const c = getCloud(sel.source);
-    if (!c) return null;
-    if (sel.localIdx < 0 || sel.localIdx >= c.count) return null;
-    return buildGalaxyInfo(c, sel.localIdx, sel.source, getFamousMeta());
+  function setHovered(target: FocusableTarget | null): void {
+    if (targetEq(target, hovered)) return;
+    hovered = target;
+    cb.selection?.onHoverChange?.(target);
   }
 
-  /**
-   * Resolve a Selection to its expanded `FocusableTarget` (GalaxyInfo
-   * | StructureRecord), or null.  Galaxy variant uses the cloud
-   * lookup; structure variant resolves through `getStructure` (which
-   * the engine wires to `state.data.structures.byId`).  Unknown ids
-   * resolve to null — fire-the-callback-with-null is the right
-   * semantics for a stale id pick.
-   */
-  function resolveTarget(sel: Selection | null): FocusableTarget | null {
-    if (sel === null) return null;
-    return sel.kind === 'galaxy' ? galaxyInfoFor(sel) : getStructure(sel.id);
-  }
-
-  function setHovered(sel: Selection | null): void {
-    if (selectionEq(sel, hovered)) return;
-    hovered = sel;
-    cb.selection?.onHoverChange?.(resolveTarget(sel));
-  }
-
-  function setSelected(sel: Selection | null, prebuiltInfo?: GalaxyInfo | null): void {
-    if (selectionEq(sel, selected)) return;
-    selected = sel;
-    // `prebuiltInfo` short-circuits the cloud lookup for the
-    // `selectByAlias` race window — see the module header for the
-    // pre-GPU-upload story.  Galaxy-only escape hatch; structure ids
-    // resolve directly through the structure table.
-    const target =
-      sel !== null && sel.kind === 'galaxy' && prebuiltInfo !== undefined
-        ? prebuiltInfo
-        : resolveTarget(sel);
+  function setSelected(target: FocusableTarget | null): void {
+    if (targetEq(target, selected)) return;
+    selected = target;
     cb.selection?.onSelectChange?.(target);
     // Channel mouth owns the wake (see module header).
     requestRender();
   }
 
-  /**
-   * Update the focus slot and fan out `cb.camera.onFocusChange`.
-   * Symmetric with `setSelected`: the cluster-focus fade reads
-   * `focused()` in `runFrame`, while React mirrors the same target
-   * into the `#focus=` URL hash via the callback.  One
-   * setter for both consumers means they can't drift.  `prebuiltInfo`
-   * short-circuits the cloud lookup for the `selectByAlias` race —
-   * same escape hatch as `setSelected`; ignored for structure focuses.
-   */
-  function setFocused(sel: Selection | null, prebuiltInfo?: GalaxyInfo | null): void {
-    if (selectionEq(sel, focused)) return;
-    focused = sel;
-    const target =
-      sel !== null && sel.kind === 'galaxy' && prebuiltInfo !== undefined
-        ? prebuiltInfo
-        : resolveTarget(sel);
+  function setFocused(target: FocusableTarget | null): void {
+    if (targetEq(target, focused)) return;
+    focused = target;
     cb.camera?.onFocusChange?.(target);
     // Wake — the focus change drives the cluster-isolation fade.
     requestRender();
@@ -178,7 +87,6 @@ export function createSelectionSubsystem(input: CreateSelectionSubsystemInput): 
   const subsystem: SelectionSubsystem = {
     hovered: () => hovered,
     selected: () => selected,
-    selectedTarget: () => resolveTarget(selected),
     focused: () => focused,
     setHovered,
     setSelected,

@@ -1,4 +1,4 @@
-import type { StructureRecord } from '../data/StructureRecord';
+import type { StructureInfo } from '../data/StructureInfo';
 import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
 import type { Destroyable } from '../../rendering/Destroyable';
 
@@ -41,7 +41,7 @@ export type StructureFocusSubsystem = {
    * Also wakes the render scheduler on any transition — callers never follow
    * up with `requestRender`.
    */
-  update(focusedStructure: StructureRecord | null, nowMs: number): void;
+  update(focusedStructure: StructureInfo | null, nowMs: number): void;
 
   /**
    * Pure read: ticks the fade and returns the live uniform value. At

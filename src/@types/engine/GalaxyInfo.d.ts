@@ -22,6 +22,9 @@ import type { SourceType } from '../data/SourceType';
  * Fields are grouped into four logical sections below.
  */
 export type GalaxyInfo = {
+  /** Union discriminant — mirrors SOURCE_REGISTRY's 'galaxyCatalog' type. */
+  readonly type: 'galaxyCatalog';
+
   /** 0-based point index in the loaded cloud. */
   index: number;
 

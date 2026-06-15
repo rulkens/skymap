@@ -1,17 +1,17 @@
 import type { ClickResolveInput } from './ClickResolveInput';
-import type { Selection } from './subsystems/Selection';
+import type { FocusableTarget } from './FocusableTarget';
 
 export type ClickResolver = {
   /**
-   * Resolve a click position → the `Selection` it hit, or null for
-   * background. The engine forwards the result straight to `setSelected`,
-   * which resolves the target (GalaxyInfo / StructureRecord) for the
-   * InfoCard and dblclick focus.
+   * Resolve a click position → the `FocusableTarget` it hit (a resolved
+   * `GalaxyInfo` / `StructureInfo`), or null for background. The engine
+   * forwards the result straight to `setSelected`, which holds it for the
+   * InfoCard and the dblclick focus.
    */
-  resolveClick(input: ClickResolveInput): Promise<Selection | null>;
+  resolveClick(input: ClickResolveInput): Promise<FocusableTarget | null>;
   /**
    * Tear down the resolver.  No-op — the resolver is a thin wrapper
-   * around the pick renderer plus the structure-store lookup; its
+   * around the pick renderer plus the pick-resolution deps; its
    * dependencies are owned by the engine and torn down separately.
    * Method exists so the engine's bag of subsystems can be torn down
    * uniformly via the shared `Destroyable` shape (`engine.destroy()`

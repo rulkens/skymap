@@ -1,6 +1,6 @@
 /**
  * structureCatalogToStructures — assemble the bulk (non-featured)
- * cluster/supercluster `StructureRecord`s from the decoded `.ccat` catalog +
+ * cluster/supercluster `StructureInfo`s from the decoded `.ccat` catalog +
  * its meta sidecar.
  *
  * ### Why a separate module
@@ -16,7 +16,7 @@
  *
  * The `.ccat` stores a category byte (0 = cluster, 1 = supercluster; higher
  * values reserved for a future void source).  We switch on it and return an
- * arm-typed literal so the discriminated `StructureRecord` union narrows
+ * arm-typed literal so the discriminated `StructureInfo` union narrows
  * with no `as` cast (same construction as `buildAnchorStructure`).  Records whose
  * byte is neither 0 nor 1 are skipped defensively — a reserved/void byte
  * must not crash the producer or emit a malformed record.
@@ -51,7 +51,7 @@
  */
 
 import type { StructureCatalogPayload } from '../../../@types/loading/StructureCatalogPayload';
-import type { StructureRecord } from '../../../@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { minOf } from '../../../utils/math/minOf';
 import { makeMinMaxNormaliser } from '../../../utils/math/makeMinMaxNormaliser';
@@ -65,7 +65,7 @@ function categoryFromByte(byte: number): KnownCategory | null {
   return null; // reserved / void — not yet a renderable arm
 }
 
-export function structureCatalogToStructures(payload: StructureCatalogPayload): StructureRecord[] {
+export function structureCatalogToStructures(payload: StructureCatalogPayload): StructureInfo[] {
   const { catalog, meta } = payload;
   if (catalog.count === 0) return [];
 
@@ -85,7 +85,7 @@ export function structureCatalogToStructures(payload: StructureCatalogPayload): 
   const normaliseCluster = makeMinMaxNormaliser(clusterRaw, safeLog);
   const normaliseSupercluster = makeMinMaxNormaliser(superclusterRaw, (raw) => raw);
 
-  const out: StructureRecord[] = [];
+  const out: StructureInfo[] = [];
   for (let i = 0; i < catalog.count; i++) {
     const category = categoryFromByte(catalog.category[i]!);
     if (category === null) continue; // reserved/void byte — skip, don't emit
@@ -99,6 +99,7 @@ export function structureCatalogToStructures(payload: StructureCatalogPayload): 
     const significance =
       category === 'cluster' ? normaliseCluster(raw) : normaliseSupercluster(raw);
     const common = {
+      type: 'structure',
       // `-bulk-` infix: distinct from the featured `${category}-${seed.id}`
       // anchors and flags the structure as non-deep-linkable.
       id: `${category}-bulk-${m.id}`,

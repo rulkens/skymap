@@ -5,13 +5,13 @@
  */
 
 import type { ReactNode } from 'react';
-import type { StructureRecord } from '../../@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../@types/data/structure/StructureInfo';
 import { formatDistance } from '../../utils/format/formatDistance';
 import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
 import styles from './CompactStructureCard.module.css';
 
 export type CompactStructureCardProps = {
-  structure: StructureRecord;
+  structure: StructureInfo;
 };
 
 export function CompactStructureCard({ structure }: CompactStructureCardProps): ReactNode {

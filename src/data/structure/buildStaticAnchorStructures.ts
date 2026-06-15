@@ -1,5 +1,5 @@
 /**
- * buildStaticAnchorStructures — assemble the static `StructureRecord[]` list
+ * buildStaticAnchorStructures — assemble the static `StructureInfo[]` list
  * from the curated cluster/supercluster/void/group seed in
  * `data/seeds/structure_anchors.seed.json`.
  *
@@ -12,7 +12,7 @@
  *       overlays know where to draw.
  *
  *   2.  `hooks/useUrlSync.ts` — the React-side `#focus=<id>` deep-link drain
- *       needs a `StructureRecord` to feed `camera.focusOn`, but App.tsx has
+ *       needs a `StructureInfo` to feed `camera.focusOn`, but App.tsx has
  *       no public read-side accessor for the engine's structure table (the
  *       store owns the list).
  *
@@ -32,7 +32,7 @@
  *     (cone-search, ring sizing) rely on.
  *
  *   - The cluster-only `abell` carry-through: the seed's Abell/ACO
- *     designation lands on the cluster arm alone (the `StructureRecord`
+ *     designation lands on the cluster arm alone (the `StructureInfo`
  *     union has no `abell` field on the supercluster/void/group arms), so
  *     the field never leaks onto a non-cluster anchor.
  *
@@ -57,7 +57,7 @@
  */
 
 import { raDecDistToEqCart } from '../../utils/math/raDecDistToEqCart';
-import type { StructureRecord } from '../../@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../@types/data/structure/StructureInfo';
 // Vite resolves JSON imports at build time; TypeScript narrows the type
 // via `resolveJsonModule: true`.  We cast to the fields we consume so
 // new seed columns don't require a type update here.  The JSON's shape is
@@ -89,13 +89,14 @@ type SeedEntry = {
  * Build one record from a seed entry.  The seed's `category` is the union
  * `'cluster' | 'supercluster' | 'void' | 'group'`; a single object
  * literal whose `category` is that union does NOT narrow to one arm of
- * the discriminated `StructureRecord`, so we switch on it and let each
+ * the discriminated `StructureInfo`, so we switch on it and let each
  * branch produce a literal whose `category` is a single string — which
  * the arm types accept.  The four structure arms share `StructureBase`'s
  * body, so the only difference between branches is the discriminant.
  */
-function buildAnchorStructure(a: SeedEntry): StructureRecord {
+function buildAnchorStructure(a: SeedEntry): StructureInfo {
   const common = {
+    type: 'structure',
     // `${category}-${seed.id}` is the canonical structure id — the seed's
     // curated `id` field is the single source of truth, so deep-link
     // hashes never diverge from the stored ids regardless of punctuation
@@ -137,6 +138,6 @@ function buildAnchorStructure(a: SeedEntry): StructureRecord {
  * fresh array each call — callers should memoize at the React boundary so
  * reference identity is preserved across renders).
  */
-export function buildStaticAnchorStructures(): StructureRecord[] {
+export function buildStaticAnchorStructures(): StructureInfo[] {
   return (structureSeedJson as SeedEntry[]).map(buildAnchorStructure);
 }

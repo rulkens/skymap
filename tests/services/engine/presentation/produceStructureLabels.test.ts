@@ -10,7 +10,7 @@ import { STRUCTURE_CATEGORIES } from '../../../../src/data/structure/structureCa
 import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { StructureRecord } from '../../../../src/@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 
 // Convenience factory used wherever the test doesn't care about wake behavior.
 function makeRegistry(): FadeRegistry {
@@ -37,7 +37,7 @@ function makeState(
       fades,
       selection: {
         focused: () =>
-          focusedStructureId === null ? null : { kind: 'structure', id: focusedStructureId },
+          focusedStructureId === null ? null : { type: 'structure', id: focusedStructureId },
       },
     },
   } as unknown as EngineState;
@@ -74,7 +74,7 @@ function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
   } as unknown as ReadyFrameContext;
 }
 
-const rec = (id: string, over: Partial<StructureRecord> = {}): StructureRecord =>
+const rec = (id: string, over: Partial<StructureInfo> = {}): StructureInfo =>
   ({
     id,
     name: id,
@@ -83,7 +83,7 @@ const rec = (id: string, over: Partial<StructureRecord> = {}): StructureRecord =
     featured: true,
     physicalRadiusMpc: 5,
     ...over,
-  }) as StructureRecord;
+  }) as StructureInfo;
 
 describe('produceStructureLabels', () => {
   // The module-level load-in Set is a singleton; reset it between cases so a

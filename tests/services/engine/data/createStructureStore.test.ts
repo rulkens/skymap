@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { createStructureStore } from '../../../../src/services/engine/data/createStructureStore';
-import type { StructureRecord } from '../../../../src/@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { StructureCategory } from '../../../../src/@types/data/structure/StructureCategory';
 
-// StructureRecord is a discriminated union; a union-typed `category` can't be
+// StructureInfo is a discriminated union; a union-typed `category` can't be
 // narrowed to a single arm at construction, so the helper asserts the type.
 // The object is a structurally-valid record regardless of which arm.
-const rec = (id: string, category: StructureCategory = 'cluster'): StructureRecord =>
+const rec = (id: string, category: StructureCategory = 'cluster'): StructureInfo =>
   ({
     id,
     name: id,
@@ -14,7 +14,7 @@ const rec = (id: string, category: StructureCategory = 'cluster'): StructureReco
     category,
     featured: true,
     physicalRadiusMpc: 1,
-  }) as StructureRecord;
+  }) as StructureInfo;
 
 describe('createStructureStore', () => {
   it('all() concatenates anchors before bulk, preserving within-group order', () => {

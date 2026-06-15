@@ -128,7 +128,6 @@ import { clearAll } from './helpers/clearAll';
 import { commitFocus } from './helpers/commitFocus';
 import { commitGalaxyFocus } from './helpers/commitGalaxyFocus';
 import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
-import { isStructure } from './isStructure';
 import { logCameraState } from './helpers/logCameraState';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
@@ -483,17 +482,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // ── Selection subsystem ──────────────────────────────────────
       // Owns hover / select state and fans out `cb.onHoverChange` /
       // `cb.onSelectChange` on actual change.  Eager (no GPU dep) so the
-      // public handle can call into it from t=0.  Cloud + sidecar accessors
-      // are closures (not snapshots) so the subsystem reads the LIVE map at
-      // call time — see the module header for the tier-swap rationale.
+      // public handle can call into it from t=0.  A thin slot store — callers
+      // resolve picks to targets before handing them in, so the subsystem
+      // needs no source accessors.
       selection: createSelectionSubsystem({
         cb,
-        getCloud: (s) => state.data.galaxies.catalogs.get(s),
-        getFamousMeta: () => state.data.galaxies.famousMeta,
-        // Structure-kind selections are ring hits (cluster / SC / void /
-        // group); resolve them straight from the structure store. Famous
-        // galaxies are selected via the point path (kind 'galaxy'), never here.
-        getStructure: (id) => state.data.structures.byId(id),
         requestRender: () => state.subsystems.scheduler.requestRender(),
       }),
 
@@ -727,7 +720,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // bootstrap would set `#focus=…` while the camera stays put.  The
     // structure branch skips the guard so deep-link drains can land
     // structure state pre-camera (see commitStructureFocus).
-    if (!isStructure(target) && !state.cam) return;
+    if (target.type !== 'structure' && !state.cam) return;
     commitFocus(state, target);
   }
 

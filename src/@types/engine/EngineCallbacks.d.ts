@@ -85,7 +85,7 @@ export type EngineCallbacks = {
   /**
    * Selection-state callbacks.  Carry the resolved `FocusableTarget`
    * (galaxy or structure) so consumers don't need to branch on a separate
-   * id callback — they receive the full GalaxyInfo / StructureRecord
+   * id callback — they receive the full GalaxyInfo / StructureInfo
    * directly.  Both required: every engine consumer needs hover /
    * select fan-out (InfoCard text, halo, hover preview).
    */
@@ -117,7 +117,7 @@ export type EngineCallbacks = {
      * casual click doesn't pollute browser history with hash entries —
      * only deliberate focus actions do.  The `FocusableTarget` union
      * means one callback covers both galaxy and structure focus; consumers
-     * branch on the discriminant (use `isStructure`).
+     * branch on the `target.type` discriminant.
      */
     onFocusChange?: (target: FocusableTarget | null) => void;
     /**

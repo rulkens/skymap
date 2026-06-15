@@ -16,6 +16,7 @@
 
 import { describe, it, expect } from 'vitest';
 import type { SourceType } from '../../src/@types/data/SourceType';
+import type { GalaxyInfo } from '../../src/@types/engine/GalaxyInfo';
 
 import type { EngineState } from '../../src/@types/engine/state/EngineState';
 import { createEngineData } from '../../src/services/engine/data/createEngineData';
@@ -193,9 +194,6 @@ describe('EngineState type', () => {
         tweens: createTweenManager({ requestRender: () => {} }),
         selection: createSelectionSubsystem({
           cb: noopCb,
-          getCloud: () => undefined,
-          getFamousMeta: () => [],
-          getStructure: () => null,
           requestRender: () => {},
         }),
         biasCorrection: createBiasCorrectionSubsystem({
@@ -404,9 +402,6 @@ describe('EngineState type', () => {
         tweens: createTweenManager({ requestRender: () => {} }),
         selection: createSelectionSubsystem({
           cb: noopCb,
-          getCloud: () => undefined,
-          getFamousMeta: () => [],
-          getStructure: () => null,
           requestRender: () => {},
         }),
         biasCorrection: createBiasCorrectionSubsystem({
@@ -443,22 +438,20 @@ describe('EngineState type', () => {
     state.sources.pickMask = 0xff;
     state.sources.drawMask = 0xff;
     // Hovered/selected live on the selection subsystem, not `state.picking`.
-    state.subsystems.selection.setHovered({
-      kind: 'galaxy',
+    // The slot now holds a resolved FocusableTarget directly.
+    const hoverTarget = {
+      type: 'galaxyCatalog',
       source: 1 as SourceType,
-      localIdx: 42,
-    });
+      index: 42,
+    } as unknown as GalaxyInfo;
+    state.subsystems.selection.setHovered(hoverTarget);
     state.picking.pickInFlight = true;
 
     expect(state.settings.galaxyCatalogs.brightness).toBe(2.5);
     expect(state.settings.bias.absMagLimit).toBe(-20);
     expect(state.sources.pickMask).toBe(0xff);
     expect(state.sources.drawMask).toBe(0xff);
-    expect(state.subsystems.selection.hovered()).toEqual({
-      kind: 'galaxy',
-      source: 1,
-      localIdx: 42,
-    });
+    expect(state.subsystems.selection.hovered()).toBe(hoverTarget);
     expect(state.picking.pickInFlight).toBe(true);
   });
 });

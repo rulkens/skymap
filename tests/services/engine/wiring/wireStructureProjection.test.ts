@@ -30,13 +30,13 @@ import { createEngineData } from '../../../../src/services/engine/data/createEng
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
-import type { StructureRecord } from '../../../../src/@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { StructureCatalogPayload } from '../../../../src/@types/loading/StructureCatalogPayload';
 
 // ── Module mocks ───────────────────────────────────────────────────────
 
 vi.mock('../../../../src/data/structure/buildStaticAnchorStructures', () => ({
-  buildStaticAnchorStructures: vi.fn((): StructureRecord[] => [
+  buildStaticAnchorStructures: vi.fn((): StructureInfo[] => [
     {
       id: 'cluster-virgo',
       name: 'Virgo Cluster',
@@ -44,7 +44,7 @@ vi.mock('../../../../src/data/structure/buildStaticAnchorStructures', () => ({
       worldPos: [0, 0, 0.016],
       physicalRadiusMpc: 2.2,
       featured: true,
-    } as StructureRecord,
+    } as StructureInfo,
     {
       id: 'supercluster-laniakea',
       name: 'Laniakea',
@@ -52,7 +52,7 @@ vi.mock('../../../../src/data/structure/buildStaticAnchorStructures', () => ({
       worldPos: [0, 0, 0.08],
       physicalRadiusMpc: 160,
       featured: true,
-    } as StructureRecord,
+    } as StructureInfo,
     {
       id: 'void-local',
       name: 'Local Void',
@@ -60,7 +60,7 @@ vi.mock('../../../../src/data/structure/buildStaticAnchorStructures', () => ({
       worldPos: [0.05, 0, 0],
       physicalRadiusMpc: 45,
       featured: true,
-    } as StructureRecord,
+    } as StructureInfo,
     {
       id: 'group-local-group',
       name: 'Local Group',
@@ -69,14 +69,14 @@ vi.mock('../../../../src/data/structure/buildStaticAnchorStructures', () => ({
       physicalRadiusMpc: 0.16,
       apparentRadiusMpc: 0.94,
       featured: true,
-    } as StructureRecord,
+    } as StructureInfo,
   ]),
 }));
 
 // structureCatalogToStructures: one record per entry in payload.meta.
 vi.mock('../../../../src/services/engine/phases/structureCatalogToStructures', () => ({
   structureCatalogToStructures: vi.fn(
-    (payload: StructureCatalogPayload): StructureRecord[] =>
+    (payload: StructureCatalogPayload): StructureInfo[] =>
       payload.meta.map((m) => ({
         id: `cluster-bulk-${m.id}`,
         name: m.names[0],
@@ -84,7 +84,7 @@ vi.mock('../../../../src/services/engine/phases/structureCatalogToStructures', (
         worldPos: [0, 0, 0],
         physicalRadiusMpc: 2,
         featured: false,
-      })) as StructureRecord[],
+      })) as StructureInfo[],
   ),
 }));
 

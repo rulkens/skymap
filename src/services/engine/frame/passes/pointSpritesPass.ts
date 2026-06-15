@@ -61,12 +61,12 @@ export const pointSpritesPass: Pass = {
     const { width, height } = canvasSize;
 
     // Pack the galaxy selection into the u32 the shader compares
-    // against per-vertex `(sourceCode << 27u) | instance_index`.  POI
-    // selections don't light up galaxy halos, so they map to the
+    // against per-vertex `(sourceCode << 27u) | instance_index`.
+    // Structure targets don't light up galaxy halos, so they map to the
     // "nothing selected" sentinel.
     const selectedPacked =
-      settings.selected !== null && settings.selected.kind === 'galaxy'
-        ? packSelection(settings.selected.source, settings.selected.localIdx)
+      settings.selected !== null && settings.selected.type === 'galaxyCatalog'
+        ? packSelection(settings.selected.source, settings.selected.index)
         : SELECTION_NONE_SENTINEL;
 
     // Capture the fade registry + timestamp once so the per-source

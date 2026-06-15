@@ -34,6 +34,7 @@ import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/R
 import type { RenderFrameSettings } from '../../../../../src/@types/engine/frame/RenderFrameSettings';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
+import type { GalaxyInfo } from '../../../../../src/@types/engine/GalaxyInfo';
 
 // ── Stub builders ───────────────────────────────────────────────────────────
 
@@ -420,10 +421,14 @@ describe('horizonShellPass.draw', () => {
 });
 
 describe('pointSpritesPass.draw', () => {
-  it('packs (source, localIdx) into the selectedPacked u32', () => {
+  it('packs (source, index) into the selectedPacked u32', () => {
     const ctx = makeCtx();
     const settings = makeSettings({
-      selected: { kind: 'galaxy', source: Source.SDSS, localIdx: 42 },
+      selected: {
+        type: 'galaxyCatalog',
+        source: Source.SDSS,
+        index: 42,
+      } as unknown as GalaxyInfo,
     });
     const deps = makeDeps();
     pointSpritesPass.draw(PASS_STUB, ctx, STATE_STUB, settings, deps);

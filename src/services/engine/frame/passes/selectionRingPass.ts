@@ -45,33 +45,24 @@ export const selectionRingPass: Pass = {
   enabled(state, _ctx, _settings) {
     if (state.gpu.selectionRingRenderer === null) return false;
     const sel = state.subsystems.selection.selected();
-    // Galaxy selections drive the halo; structure selections render through
+    // Galaxy targets drive the halo; structure targets render through
     // the cluster marker pass instead.
-    return sel !== null && sel.kind === 'galaxy';
+    return sel !== null && sel.type === 'galaxyCatalog';
   },
 
   draw(pass, ctx, state, settings, _deps) {
     const sel = state.subsystems.selection.selected();
-    // `enabled()` proved sel is a galaxy selection — narrow accordingly.
-    if (sel === null || sel.kind !== 'galaxy') return;
-    const catalog = state.data.galaxies.catalogs.get(sel.source);
-    // Defensive: catalog could be evicted between `enabled()` and
-    // `draw()` if a tier swap completes mid-frame.  A no-op is the
-    // correct response — the next frame's `enabled()` will see the
-    // updated catalog map.
-    if (!catalog) return;
+    // `enabled()` proved sel is a galaxy target — narrow accordingly.
+    if (sel === null || sel.type !== 'galaxyCatalog') return;
 
-    const i = sel.localIdx;
-    const worldPos: [number, number, number] = [
-      catalog.positions[i * 3 + 0]!,
-      catalog.positions[i * 3 + 1]!,
-      catalog.positions[i * 3 + 2]!,
-    ];
+    // The target carries its own resolved world position + diameter (built
+    // + bounds-checked at pick time), so there's no catalog re-index here —
+    // no tier-swap race to guard either.
+    const worldPos: [number, number, number] = [sel.x, sel.y, sel.z];
 
     // Compute the on-screen halo radius — same formula as the main-
     // points vertex shader (points/vertex.wesl, ringRadiusPx block).
-    const diameterKpc = catalog.diameterKpc[i]!;
-    const safeDiameterKpc = diameterKpc > 0 ? diameterKpc : 30;
+    const safeDiameterKpc = sel.diameterKpc > 0 ? sel.diameterKpc : 30;
     const dx = worldPos[0] - ctx.drawCamPos[0];
     const dy = worldPos[1] - ctx.drawCamPos[1];
     const dz = worldPos[2] - ctx.drawCamPos[2];

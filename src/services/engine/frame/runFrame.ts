@@ -42,7 +42,7 @@ import { runCameraDrivers } from '../camera/cameraDrivers';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { isEngineReady } from '../helpers/engineReady';
-import { pickToSelection } from '../helpers/pickToSelection';
+import { resolvePick } from '../helpers/resolvePick';
 import { collectPickTargets } from '../helpers/collectPickTargets';
 import { produceStructureMarkers } from '../presentation/produceStructureMarkers';
 import { deriveFrameContext } from './frameContext';
@@ -192,11 +192,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // captured in `focusUniforms`; `ctx.focusBlend` and the render
   // `settings.focus` both read THAT captured value — never a fresh
   // `produceFocusUniforms` call.
-  const focusSel = state.subsystems.selection.focused();
-  const focusedStructure =
-    focusSel !== null && focusSel.kind === 'structure'
-      ? (state.data.structures.byId(focusSel.id) ?? null)
-      : null;
+  const focused = state.subsystems.selection.focused();
+  // The focus slot already holds the resolved target, so a structure focus is
+  // the StructureInfo itself — no `byId` re-lookup. A galaxy / nothing focus
+  // resolves to null, collapsing the member-isolation fade.
+  const focusedStructure = focused !== null && focused.type === 'structure' ? focused : null;
   state.subsystems.structureFocus.update(focusedStructure, nowMs);
   const focusUniforms = state.subsystems.structureFocus.produceFocusUniforms(nowMs);
   ctx.focusBlend = focusUniforms.blend;
@@ -433,12 +433,19 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         state.gpu.timingService.descriptorFor('pick'),
       )
       .then((pick) => {
-        // Decode the pick to a hover `Selection` (galaxy / structure / null) via the
-        // shared map — the same one the click path uses, so hover and click
-        // can't drift. One slot: setHovered(null) clears, a galaxy or structure hit
-        // replaces; setHovered equality-short-circuits, so a steady hover is a
-        // no-op. The InfoCard reads the resolved target.
-        state.subsystems.selection.setHovered(pickToSelection(pick, state.data.structures));
+        // Decode + resolve the pick to a hover `FocusableTarget` (galaxy /
+        // structure / null) via `resolvePick` — the same boundary the click
+        // path uses, so hover and click can't drift. One slot: setHovered(null)
+        // clears, a galaxy or structure hit replaces; setHovered
+        // equality-short-circuits, so a steady hover is a no-op. The InfoCard
+        // reads the resolved target the slot now holds directly.
+        state.subsystems.selection.setHovered(
+          resolvePick(pick, {
+            getCloud: (source) => state.data.galaxies.get(source),
+            getFamousMeta: () => state.data.galaxies.famousMeta,
+            structures: state.data.structures,
+          }),
+        );
         // No scheduler.requestRender() here intentionally.
         // The hover state only feeds the React InfoCard text —
         // there is no hover halo in the rendered scene today,

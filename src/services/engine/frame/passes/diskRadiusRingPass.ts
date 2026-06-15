@@ -43,19 +43,22 @@ export const diskRadiusRingPass: Pass = {
     if (!state.gpu.diskRadiusRing) return false;
     if (!state.settings.debug.showDiskRadiusRing) return false;
     const sel = state.subsystems.selection.selected();
-    return sel !== null && sel.kind === 'galaxy';
+    return sel !== null && sel.type === 'galaxyCatalog';
   },
 
   draw(pass, ctx, state, _settings, _deps) {
     const sel = state.subsystems.selection.selected();
-    // `enabled()` proved a galaxy selection — narrow accordingly.
-    if (sel === null || sel.kind !== 'galaxy') return;
+    // `enabled()` proved a galaxy target — narrow accordingly.
+    if (sel === null || sel.type !== 'galaxyCatalog') return;
+    // This debug pass still re-indexes the catalog: it needs the tilt /
+    // calibration fields (axisRatio, positionAngleDeg, famous calibration)
+    // that aren't carried on GalaxyInfo, only `sel.source` + `sel.index`.
     const catalog = state.data.galaxies.catalogs.get(sel.source);
     // Defensive: a tier swap can evict the catalog between `enabled()`
     // and `draw()`; a no-op is correct (next frame's gate re-reads it).
     if (!catalog) return;
 
-    const i = sel.localIdx;
+    const i = sel.index;
     const center: Vec3 = [
       catalog.positions[i * 3 + 0]!,
       catalog.positions[i * 3 + 1]!,

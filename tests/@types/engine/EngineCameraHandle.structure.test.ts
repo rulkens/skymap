@@ -1,14 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import type { EngineCameraHandle } from '../../../src/@types/engine/handles/EngineCameraHandle';
-import type { StructureRecord } from '../../../src/@types/data/structure/StructureRecord';
+import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 
 describe('EngineCameraHandle.focusOn (structure)', () => {
-  it('accepts a StructureRecord via the unified focusOn slot', () => {
+  it('accepts a StructureInfo via the unified focusOn slot', () => {
     // Type-level assertion: the unified focusOn signature accepts both
-    // GalaxyInfo and StructureRecord (see FocusableTarget).  This test
+    // GalaxyInfo and StructureInfo (see FocusableTarget).  This test
     // pins the structure half of that contract; the galaxy half is implicit
     // in every existing handle consumer.
-    const structure: StructureRecord = {
+    const structure: StructureInfo = {
+      type: 'structure',
       id: 'virgo-cluster',
       name: 'Virgo Cluster',
       category: 'cluster',

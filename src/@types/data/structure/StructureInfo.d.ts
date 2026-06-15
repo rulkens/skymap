@@ -1,6 +1,9 @@
 /**
- * StructureRecord — one extended structure (cluster / supercluster / void /
- * group) as held by the structure store.
+ * StructureInfo — one extended structure (cluster / supercluster / void /
+ * group) as a resolved focusable target, parallel to `GalaxyInfo` (and the
+ * Milky Way's `MilkyWayInfo`).  That the structure info is the stored record
+ * while galaxy info is derived on-demand is a provenance detail — as targets
+ * they are peers, and both flow through the same hover / select / focus slots.
  *
  * The single source of truth for a structure record.  Famous galaxies are
  * galaxy data, not structures, so they are deliberately absent here.
@@ -19,10 +22,16 @@
 import type { Vec3 } from '../../math/Vec3';
 
 /**
- * Fields every structure record carries regardless of category.  `category`
- * is added per-arm below so each arm's literal pins a single discriminant.
+ * Fields every structure record carries regardless of category.  Two distinct
+ * axes live here: `type` is the focusable-union tag (the parallel of a galaxy's
+ * `'galaxyCatalog'` tag) and is the same for every arm; `category` is the
+ * structure sub-kind (cluster / supercluster / void / group, the parallel of a
+ * `GalaxyCatalogId`) and is added per-arm below so each arm's literal pins a
+ * single discriminant.
  */
 type StructureBase = {
+  /** Union discriminant — mirrors SOURCE_REGISTRY's 'structure' type. */
+  readonly type: 'structure';
   readonly id: string;
   readonly name: string;
   readonly worldPos: Vec3;
@@ -99,4 +108,4 @@ type GroupRecord = StructureBase & {
  * (cluster / supercluster / void / group); famous galaxies are not
  * structures and are absent from this union.
  */
-export type StructureRecord = ClusterRecord | SuperclusterRecord | VoidRecord | GroupRecord;
+export type StructureInfo = ClusterRecord | SuperclusterRecord | VoidRecord | GroupRecord;
