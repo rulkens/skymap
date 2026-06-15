@@ -37,19 +37,19 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { parseMcxc, type McxcRow } from '../parsers/parseMcxc.js';
-import { parseMscc, type MsccRow } from '../parsers/parseMscc.js';
-import { parseStructureSeed, type StructureSeedEntry } from '../parsers/parseStructureSeed.js';
-import { encodeStructureCatalog } from '../../src/data/structure/structureCatalogFormat.js';
-import { rawDataPath } from '../utils/io/rawDataRegistry.js';
-import { writeMetaSidecar } from '../curation/writeMetaSidecar.js';
-import { dedupeByProximity } from '../curation/dedupeByProximity.js';
-import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart.js';
-import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc.js';
-import { H0_KM_S_MPC } from '../../src/utils/math/constants.js';
-import type { StructureCatalog } from '../../src/@types/data/structure/StructureCatalog.js';
-import type { StructureCategoryByte } from '../../src/@types/data/structure/StructureCatalog.js';
-import type { Vec3 } from '../../src/@types/math/Vec3.js';
+import { parseMcxc, type McxcRow } from '../parsers/parseMcxc';
+import { parseMscc, type MsccRow } from '../parsers/parseMscc';
+import { parseStructureSeed, type StructureSeedEntry } from '../parsers/parseStructureSeed';
+import { encodeStructureCatalog } from '../../src/data/structure/structureCatalogFormat';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { writeMetaSidecar } from '../curation/writeMetaSidecar';
+import { dedupeByProximity } from '../curation/dedupeByProximity';
+import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
+import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
+import { H0_KM_S_MPC } from '../../src/utils/math/constants';
+import type { StructureCatalog } from '../../src/@types/data/structure/StructureCatalog';
+import type { StructureCategoryByte } from '../../src/@types/data/structure/StructureCatalog';
+import type { Vec3 } from '../../src/@types/math/Vec3';
 
 // ── Tunable threshold constants ───────────────────────────────────────────────
 //

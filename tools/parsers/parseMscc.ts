@@ -68,7 +68,7 @@
  * faithful column reader; it does not interpret units.
  */
 
-import { nonCommentLines, slot } from './common.js';
+import { nonCommentLines, slot } from './common';
 
 /** Minimum useful line length — all required fields end at byte 51. */
 const MIN_LINE_LEN = 51;

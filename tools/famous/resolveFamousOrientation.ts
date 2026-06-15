@@ -22,7 +22,7 @@
  * propagate into the vertex attributes, collapsing the orientation disk.
  */
 
-import { fallbackOrientation } from '../../src/utils/random/fallbackOrientation.js';
+import { fallbackOrientation } from '../../src/utils/random/fallbackOrientation';
 
 export type ResolveFamousOrientationInput = {
   /** Real axis ratio b/a, or undefined when the seed has no measurement. */

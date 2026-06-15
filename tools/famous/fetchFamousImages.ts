@@ -112,24 +112,24 @@ import {
 } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadCuratedOverrides, type CuratedOverrideIndex } from './famousCuratedOverrides.js';
-import { rawDataPath } from '../utils/io/rawDataRegistry.js';
+import { loadCuratedOverrides, type CuratedOverrideIndex } from './famousCuratedOverrides';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
 import sharp from 'sharp';
-import { parseFlags } from '../utils/cli/args.js';
-import { loadJsonCache } from '../utils/io/loadJsonCache.js';
-import { saveJsonCache } from '../utils/io/saveJsonCache.js';
-import { parseFamousSeed, type FamousEntry } from '../parsers/famousSeed.js';
+import { parseFlags } from '../utils/cli/args';
+import { loadJsonCache } from '../utils/io/loadJsonCache';
+import { saveJsonCache } from '../utils/io/saveJsonCache';
+import { parseFamousSeed, type FamousEntry } from '../parsers/famousSeed';
 import {
   parseWikipediaSummary,
   wikipediaSummaryUrl,
   type WikipediaSummary,
-} from '../parsers/wikipediaSummary.js';
+} from '../parsers/wikipediaSummary';
 import {
   applyRadialFade,
   applyTransparency,
   sampleCornerColor,
   type RGBA,
-} from './famousImageProcessor.js';
+} from './famousImageProcessor';
 
 // ──────────────────────────────────────────────────────────────────────
 // Constants — Wikipedia path

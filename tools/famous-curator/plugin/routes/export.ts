@@ -34,17 +34,17 @@
 import sharp from 'sharp';
 import { existsSync, mkdirSync, rmSync, renameSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { curatedGalaxyDir, curatedTmpDir, overrideIndexPath } from '../paths.js';
-import { sessionPath } from '../tmpSession.js';
-import { serialiseRecipe, validateRecipeDisk, type Recipe, type RecipeDisk } from '../recipe.js';
-import { upsertOverrideEntry, type OverrideIndex } from '../overrideIndex.js';
-import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlpha.js';
-import { willDeproject } from '../../../famous/deprojectDisk.js';
-import { squareDeprojectCrop } from '../../../famous/squareDeprojectCrop.js';
-import { deriveFamousCalibration } from '../../../famous/deriveFamousCalibration.js';
-import { publishFamousRuntimeImages } from '../../../famous/publishFamousRuntimeImages.js';
-import { buildThumbTile } from '../../../famous/buildThumbTile.js';
-import { type StarnetConfig } from '../starnet.js';
+import { curatedGalaxyDir, curatedTmpDir, overrideIndexPath } from '../paths';
+import { sessionPath } from '../tmpSession';
+import { serialiseRecipe, validateRecipeDisk, type Recipe, type RecipeDisk } from '../recipe';
+import { upsertOverrideEntry, type OverrideIndex } from '../overrideIndex';
+import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlpha';
+import { willDeproject } from '../../../famous/deprojectDisk';
+import { squareDeprojectCrop } from '../../../famous/squareDeprojectCrop';
+import { deriveFamousCalibration } from '../../../famous/deriveFamousCalibration';
+import { publishFamousRuntimeImages } from '../../../famous/publishFamousRuntimeImages';
+import { buildThumbTile } from '../../../famous/buildThumbTile';
+import { type StarnetConfig } from '../starnet';
 import type { FamousCalibration } from '../../../../src/@types/loading/FamousCalibration';
 
 const FULL_PX = 1024;

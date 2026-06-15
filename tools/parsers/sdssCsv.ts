@@ -32,10 +32,10 @@
  *   them inside the row loop.
  */
 
-import { Source } from '../../src/data/sources.js';
-import { arcsecToKpc } from '../../src/utils/math/arcsecToKpc.js';
-import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc.js';
-import { nonCommentLines, type ParsedRecord } from './common.js';
+import { Source } from '../../src/data/sources';
+import { arcsecToKpc } from '../../src/utils/math/arcsecToKpc';
+import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc';
+import { nonCommentLines, type ParsedRecord } from './common';
 
 /**
  * Result of parsing an SDSS CSV: the validated records plus a count of

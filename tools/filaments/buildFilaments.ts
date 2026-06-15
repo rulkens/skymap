@@ -69,19 +69,19 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname, basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { SourceType } from '../../src/@types/data/SourceType';
-import { rawDataPath } from '../utils/io/rawDataRegistry.js';
+import { rawDataPath } from '../utils/io/rawDataRegistry';
 
-import { decodeGalaxyCatalog } from '../../src/data/galaxyCatalog/galaxyCatalogFormat.js';
-import { parseNDskl, skeletonToFilamentCloud } from '../parsers/ndskl.js';
-import { encodeFilaments } from '../../src/data/filament/filamentBinaryFormat.js';
+import { decodeGalaxyCatalog } from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
+import { parseNDskl, skeletonToFilamentCloud } from '../parsers/ndskl';
+import { encodeFilaments } from '../../src/data/filament/filamentBinaryFormat';
 import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import { Source } from '../../src/data/sources.js';
-import { galaxyCatalogFluxLimit } from '../../src/data/galaxyCatalog/galaxyCatalogFluxLimits.js';
-import { absoluteFromApparent } from '../../src/utils/math/absoluteFromApparent.js';
-import { dMaxFromAbsolute } from '../../src/utils/math/dMaxFromAbsolute.js';
-import { mulberry32 } from '../../src/utils/random/mulberry32.js';
-import { computeAngularWeights } from '../../src/services/engine/bake/computeAngularWeights.js';
-import { gaussian } from '../utils/random/gaussian.js';
+import { Source } from '../../src/data/sources';
+import { galaxyCatalogFluxLimit } from '../../src/data/galaxyCatalog/galaxyCatalogFluxLimits';
+import { absoluteFromApparent } from '../../src/utils/math/absoluteFromApparent';
+import { dMaxFromAbsolute } from '../../src/utils/math/dMaxFromAbsolute';
+import { mulberry32 } from '../../src/utils/random/mulberry32';
+import { computeAngularWeights } from '../../src/services/engine/bake/computeAngularWeights';
+import { gaussian } from '../utils/random/gaussian';
 
 /**
  * Default persistence cut in σ.  Lower = more filaments accepted as

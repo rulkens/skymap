@@ -44,8 +44,8 @@
  * @returns        Fresh array of selected records in original input order.
  */
 
-import { subsampleIndicesByAbsMag } from './subsampleByAbsMag.js';
-import type { ParsedRecord } from '../parsers/common.js';
+import { subsampleIndicesByAbsMag } from './subsampleByAbsMag';
+import type { ParsedRecord } from '../parsers/common';
 
 export function selectTierRecords(
   records: ParsedRecord[],
