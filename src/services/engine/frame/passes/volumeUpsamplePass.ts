@@ -31,7 +31,7 @@
  */
 
 import type { Pass } from '../../../../@types/engine/frame/Pass';
-import type { VolumeFieldId } from '../../../../@types/data/VolumeFieldId';
+import type { VolumeFieldId } from '../../../../@types/data/volume/VolumeFieldId';
 
 export const volumeUpsamplePass: Pass = {
   name: 'volume-upsample',

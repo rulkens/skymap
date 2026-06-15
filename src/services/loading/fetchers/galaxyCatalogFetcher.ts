@@ -34,8 +34,11 @@
  */
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
-import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
-import { decodeGalaxyCatalog, emptyGalaxyCatalog } from '../../../data/galaxyCatalogFormat';
+import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
+import {
+  decodeGalaxyCatalog,
+  emptyGalaxyCatalog,
+} from '../../../data/galaxyCatalog/galaxyCatalogFormat';
 import { tierTarget, tierFilenameForSource } from '../../../data/tierTargets';
 import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
 

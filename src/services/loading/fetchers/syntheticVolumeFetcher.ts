@@ -35,16 +35,16 @@
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { SyntheticVolumeShape } from '../../../@types/loading/SyntheticVolumeShape';
 import type { SyntheticVolumeReq } from '../../../@types/loading/SyntheticVolumeReq';
-import type { ScalarCube } from '../../../@types/data/ScalarCube';
+import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
 import {
   makeSyntheticGaussianCube,
   makeCartesianGridCube,
   makeSphericalGridCube,
-} from '../../../data/syntheticScalarField';
+} from '../../../data/volume/syntheticScalarField';
 
 /**
  * Pure synchronous generator wrapped in a promise.  Dispatches on
- * `shape` to one of the three generators in `data/syntheticScalarField`.
+ * `shape` to one of the three generators in `data/volume/syntheticScalarField`.
  * The `signal` and `onProgress` parameters are accepted (matching the
  * `Fetcher` contract) but unused — there is no I/O to cancel and no
  * byte stream to measure.  Accepting them makes the call site uniform

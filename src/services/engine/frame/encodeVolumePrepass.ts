@@ -44,7 +44,7 @@ import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameC
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RenderFrameSettings } from '../../../@types/engine/frame/RenderFrameSettings';
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
-import type { VolumeFieldId } from '../../../@types/data/VolumeFieldId';
+import type { VolumeFieldId } from '../../../@types/data/volume/VolumeFieldId';
 import { encodeVolumes } from './encodeVolumes';
 import { resolveLayerOpacity } from '../presentation/focusRecession';
 

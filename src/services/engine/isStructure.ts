@@ -1,4 +1,4 @@
-import type { StructureRecord } from '../../@types/engine/data/StructureRecord';
+import type { StructureRecord } from '../../@types/data/structure/StructureRecord';
 import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
 
 /**

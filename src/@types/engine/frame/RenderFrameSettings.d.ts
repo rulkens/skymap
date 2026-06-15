@@ -9,7 +9,7 @@
  */
 
 import type { Selection } from '../subsystems/Selection';
-import type { BiasMode } from '../../data/BiasMode';
+import type { BiasMode } from '../../data/galaxyCatalog/BiasMode';
 import type { ToneMapCurve } from '../../data/ToneMapCurve';
 import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
 

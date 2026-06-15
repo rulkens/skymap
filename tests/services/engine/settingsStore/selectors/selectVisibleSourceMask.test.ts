@@ -4,7 +4,7 @@ import { selectVisibleSourceMask } from '../../../../../src/services/engine/sett
 import { deriveSourceMasks } from '../../../../../src/services/engine/frame/deriveSourceMasks';
 import { makeSettingsFixture } from '../makeSettingsFixture';
 import type { EngineSettingsState } from '../../../../../src/@types/settings/EngineSettingsState';
-import type { GalaxyCatalogId } from '../../../../../src/@types/engine/data/GalaxyCatalogId';
+import type { GalaxyCatalogId } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 
 // Drive `deriveSourceMasks` against a minimal state stub so we can compare the
 // selector against the engine's authoritative pick-mask packing. The selector

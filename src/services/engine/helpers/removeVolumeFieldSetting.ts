@@ -10,7 +10,7 @@
  * the caller uses to detect a state change).
  */
 
-import type { VolumeFieldId } from '../../../@types/data/VolumeFieldId';
+import type { VolumeFieldId } from '../../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../../@types/settings/VolumeFieldSettings';
 
 export function removeVolumeFieldSetting(

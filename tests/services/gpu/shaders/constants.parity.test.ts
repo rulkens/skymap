@@ -21,7 +21,7 @@ import {
   FADE,
   DENS_SCALE,
   SPEED_COLOR_MAX,
-} from '../../../../src/data/flowFieldConstants';
+} from '../../../../src/data/flow/flowFieldConstants';
 
 /**
  * Extract every `const NAME: (u32|f32) = <number>;` from flow/constants.wesl.

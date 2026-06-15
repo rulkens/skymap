@@ -15,7 +15,7 @@
  */
 import { mat4 } from 'gl-matrix';
 import { SG_TO_EQ_MAT4_COL_MAJOR } from '../../data/superGalacticTransform';
-import type { ScalarFieldFrameKind } from '../../@types/data/ScalarFieldFrameKind';
+import type { ScalarFieldFrameKind } from '../../@types/data/volume/ScalarFieldFrameKind';
 import type { CubePlacement } from '../../@types/rendering/CubePlacement';
 
 // Supergalactic→equatorial rotation, J2000.  Imported directly from

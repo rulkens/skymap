@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { projectVolumeFieldRows } from '../../../../src/services/engine/settingsStore/projectVolumeFieldRows';
 import { addVolumeField } from '../../../../src/services/engine/settingsStore/reducers/addVolumeField';
-import { getVolumeFieldDefaults } from '../../../../src/data/volumeFieldDefaults';
+import { getVolumeFieldDefaults } from '../../../../src/data/volume/volumeFieldDefaults';
 import { makeSettingsFixture } from './makeSettingsFixture';
 
 describe('projectVolumeFieldRows', () => {

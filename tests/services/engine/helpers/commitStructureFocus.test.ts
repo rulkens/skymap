@@ -16,7 +16,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { commitStructureFocus } from '../../../../src/services/engine/helpers/commitStructureFocus';
 import { structureFocusDistance } from '../../../../src/services/engine/camera/structureFocusDistance';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
+import type { StructureRecord } from '../../../../src/@types/data/structure/StructureRecord';
 
 const FOV60 = (Math.PI / 180) * 60;
 

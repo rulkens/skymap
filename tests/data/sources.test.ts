@@ -6,7 +6,7 @@ import {
   HI_RES_LAYER_COUNT,
   HI_RES_LAYER_SIDE_BY_TIER,
 } from '../../src/data/sources';
-import { STRUCTURE_CATEGORIES } from '../../src/data/structureCategories';
+import { STRUCTURE_CATEGORIES } from '../../src/data/structure/structureCategories';
 import { ALL_VISIBLE_MASK } from '../../src/utils/allVisibleMask';
 import { maskHas } from '../../src/utils/maskHas';
 import { maskWith } from '../../src/utils/maskWith';

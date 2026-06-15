@@ -48,7 +48,7 @@ import {
 } from '../../../src/services/camera/orbitCamera';
 import { createFlowFieldRenderer } from '../../../src/services/gpu/renderers/flowFieldRenderer';
 import { encodeFlowCompute } from '../../../src/services/engine/frame/encodeFlowCompute';
-import { decodeScalarField } from '../../../src/data/scalarFieldFormat';
+import { decodeScalarField } from '../../../src/data/volume/scalarFieldFormat';
 import { makeShaderFactory } from './engine/gpu/makeShaderFactory';
 import { createRenderGraph } from './engine/RenderGraph';
 import { setCameraViewProj } from './state/slices/cameraSlice';

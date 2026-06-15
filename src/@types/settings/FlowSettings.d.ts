@@ -17,7 +17,7 @@
  * The tunable defaults are the spike's hand-dialled advect look — see
  * `DEFAULT_FLOW`.
  */
-import type { FlowMode } from '../data/FlowMode';
+import type { FlowMode } from '../data/flow/FlowMode';
 
 export type FlowSettings = {
   /** Master layer gate (default-off; the cube demand-loads on first enable). */

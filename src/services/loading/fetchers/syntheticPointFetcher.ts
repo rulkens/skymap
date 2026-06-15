@@ -33,9 +33,9 @@
  */
 
 import type { Fetcher } from '../../../@types/loading/Fetcher';
-import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
-import { generateSyntheticCloud } from '../../../data/synthetic';
+import { generateSyntheticCloud } from '../../../data/galaxyCatalog/synthetic';
 
 /** Hard-coded synthetic catalog size — matches the legacy fallback. */
 export const SYNTHETIC_POINT_COUNT = 100_000;

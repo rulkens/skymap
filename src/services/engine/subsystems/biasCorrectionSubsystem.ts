@@ -81,9 +81,9 @@
  */
 
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
-import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
-import { BiasMode } from '../../../data/biasMode';
-import type { BiasMode as BiasModeT } from '../../../@types/data/BiasMode';
+import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
+import { BiasMode } from '../../../data/galaxyCatalog/biasMode';
+import type { BiasMode as BiasModeT } from '../../../@types/data/galaxyCatalog/BiasMode';
 import { Source, GALAXY_CATALOG_SOURCES } from '../../../data/sources';
 import type { ComputeSchechterRatiosInput } from '../../../@types/engine/ComputeSchechterRatiosInput';
 import type { ComputeAngularWeightsInput } from '../../../@types/engine/ComputeAngularWeightsInput';
@@ -106,7 +106,7 @@ import type { SourceType } from '../../../@types/data/SourceType';
 // this module's defaults.
 import ComputeSchechterRatiosWorker from '../bake/computeSchechterRatios.worker?worker';
 import ComputeAngularWeightsWorker from '../bake/computeAngularWeights.worker?worker';
-import { cloneGalaxyCatalogForTransfer } from '../../../data/galaxyCatalogTransfer';
+import { cloneGalaxyCatalogForTransfer } from '../../../data/galaxyCatalog/galaxyCatalogTransfer';
 import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
 
 /**

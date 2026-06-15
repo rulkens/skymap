@@ -11,7 +11,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { removeVolumeFieldSetting } from '../../../../src/services/engine/helpers/removeVolumeFieldSetting';
-import type { VolumeFieldId } from '../../../../src/@types/data/VolumeFieldId';
+import type { VolumeFieldId } from '../../../../src/@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../../../src/@types/settings/VolumeFieldSettings';
 
 // A complete VolumeFieldSettings literal used as a stable baseline fixture.

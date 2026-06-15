@@ -58,7 +58,7 @@ import type { UseEngineInput } from '../@types/engine/UseEngineInput';
 import type { UseEngineReturn } from '../@types/engine/UseEngineReturn';
 import { initialTierFromViewport } from '../utils/initialTierFromViewport';
 import type { SourceType } from '../@types/data/SourceType';
-import type { StructureCategory } from '../@types/engine/data/StructureCategory';
+import type { StructureCategory } from '../@types/data/structure/StructureCategory';
 
 /**
  * Initial scale-bar value that renders something sensible before the

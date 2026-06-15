@@ -25,8 +25,8 @@ import {
 } from '../../../../src/services/gpu/renderers/pointRenderer';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
 import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
-import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
-import type { GalaxyCatalogId } from '../../../../src/@types/engine/data/GalaxyCatalogId';
+import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { mat4 } from 'gl-matrix';
 
 // PointRenderer keys its catalogs by the string `GalaxyCatalogId` now;

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createFlowFieldRenderer } from '../../../../src/services/gpu/renderers/flowFieldRenderer';
-import type { ScalarCube } from '../../../../src/@types/data/ScalarCube';
+import type { ScalarCube } from '../../../../src/@types/data/volume/ScalarCube';
 import type { FlowSettings } from '../../../../src/@types/settings/FlowSettings';
 
 /**

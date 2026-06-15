@@ -12,7 +12,7 @@
 import type { mat4 } from 'gl-matrix';
 import type { SourceType } from '../data/SourceType';
 import type { GalaxyCatalog } from '../data/GalaxyCatalog';
-import type { GalaxyCatalogId } from '../engine/data/GalaxyCatalogId';
+import type { GalaxyCatalogId } from '../data/galaxyCatalog/GalaxyCatalogId';
 import type { PointDrawSettings } from './PointDrawSettings';
 
 export type PointRenderer = {

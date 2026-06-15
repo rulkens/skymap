@@ -54,7 +54,7 @@
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
-import type { StructureCategory } from '../../../@types/engine/data/StructureCategory';
+import type { StructureCategory } from '../../../@types/data/structure/StructureCategory';
 import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import { createFilamentSlot } from '../../loading/slots/filamentSlot';
 import { createFamousMetaSlot } from '../../loading/slots/famousMetaSlot';
@@ -64,7 +64,7 @@ import { createFlowFieldSlot } from '../../loading/slots/flowFieldSlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
 import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { GalaxyCatalogId } from '../../../@types/engine/data/GalaxyCatalogId';
+import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
 
 /**
  * The categories backed by the bulk `.ccat` catalog — their visibility

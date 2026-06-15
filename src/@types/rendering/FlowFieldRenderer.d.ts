@@ -32,7 +32,7 @@
 
 import type { mat4 } from 'gl-matrix';
 import type { Vec2 } from '../math/Vec2';
-import type { ScalarCube } from '../data/ScalarCube';
+import type { ScalarCube } from '../data/volume/ScalarCube';
 import type { FlowSettings } from '../settings/FlowSettings';
 
 export type FlowFieldRenderer = {

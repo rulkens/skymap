@@ -14,7 +14,7 @@
  */
 
 import type { SettingsStore } from '../createSettingsStore';
-import type { VolumeFieldId } from '../../../../@types/data/VolumeFieldId';
+import type { VolumeFieldId } from '../../../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../../../@types/settings/VolumeFieldSettings';
 import { writeVolumeField } from '../reducers/writeVolumeField';
 

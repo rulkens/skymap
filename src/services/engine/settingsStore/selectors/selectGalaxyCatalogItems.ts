@@ -19,7 +19,7 @@
  */
 
 import type { EngineSettingsState } from '../../../../@types/settings/EngineSettingsState';
-import type { GalaxyCatalogId } from '../../../../@types/engine/data/GalaxyCatalogId';
+import type { GalaxyCatalogId } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { GalaxyCatalogItemSettings } from '../../../../@types/settings/GalaxyCatalogItemSettings';
 
 export function selectGalaxyCatalogItems(

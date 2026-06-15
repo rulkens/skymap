@@ -56,12 +56,12 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { Source } from '../../src/data/sources';
-import { BiasMode } from '../../src/data/biasMode';
+import { BiasMode } from '../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../src/data/toneMapCurve';
 import { renderFrame } from '../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
 import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
-import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { mat4 } from 'gl-matrix';
 import type { SourceType } from '../../src/@types/data/SourceType';
 

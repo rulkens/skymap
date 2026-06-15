@@ -35,7 +35,7 @@ import { Source } from '../../src/data/sources.js';
 import {
   MILLIQUAS_CLASS_BYTE,
   MILLIQUAS_PARENT_SURVEY_BYTE,
-} from '../../src/data/sourceClass.js';
+} from '../../src/data/galaxyCatalog/sourceClass.js';
 import { nonCommentLines, type ParsedRecord } from './common.js';
 
 // ─── Byte ranges (1-based inclusive, as published in the upstream ReadMe) ──

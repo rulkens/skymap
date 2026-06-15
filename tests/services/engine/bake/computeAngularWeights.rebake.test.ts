@@ -20,7 +20,7 @@
 import { describe, expect, it } from 'vitest';
 import { computeAngularWeights } from '../../../../src/services/engine/bake/computeAngularWeights';
 import { Source } from '../../../../src/data/sources';
-import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 function syntheticCloud(count: number, seedOffset: number): GalaxyCatalog {
   const positions = new Float32Array(count * 3);

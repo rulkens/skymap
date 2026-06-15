@@ -17,7 +17,7 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
-import type { GalaxyCatalogId } from '../../../@types/engine/data/GalaxyCatalogId';
+import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import type { SettingsStore } from '../settingsStore/createSettingsStore';
 import { setGalaxyCatalogLabelEnabledAction } from '../settingsStore/actions/setGalaxyCatalogLabelEnabledAction';

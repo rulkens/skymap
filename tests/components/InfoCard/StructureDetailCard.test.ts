@@ -10,7 +10,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import { StructureDetailCard } from '../../../src/components/InfoCard/StructureDetailCard';
-import type { StructureRecord } from '../../../src/@types/engine/data/StructureRecord';
+import type { StructureRecord } from '../../../src/@types/data/structure/StructureRecord';
 
 // Coma carries an Abell number ('A1656'); the card should expand it.
 const comaWithAbell: StructureRecord = {

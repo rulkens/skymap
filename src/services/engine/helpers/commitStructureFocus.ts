@@ -10,7 +10,7 @@
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { StructureRecord } from '../../../@types/engine/data/StructureRecord';
+import type { StructureRecord } from '../../../@types/data/structure/StructureRecord';
 import { tweenToStructure } from '../camera/tweenToStructure';
 
 /**

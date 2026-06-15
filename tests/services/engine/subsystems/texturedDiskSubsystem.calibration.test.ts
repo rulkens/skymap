@@ -22,7 +22,7 @@ import { createTexturedDiskSubsystem } from '../../../../src/services/engine/sub
 import { createProceduralDiskSubsystem } from '../../../../src/services/engine/subsystems/proceduralDiskSubsystem';
 import { paddedRadiusMpc } from '../../../../src/utils/paddedRadiusMpc';
 import { fallbackOrientation } from '../../../../src/utils/random/fallbackOrientation';
-import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';

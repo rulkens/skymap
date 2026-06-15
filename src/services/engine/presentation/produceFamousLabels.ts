@@ -62,7 +62,7 @@ import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameC
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { LabelProducerOutput } from '../../../@types/engine/subsystems/LabelProducerOutput';
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
-import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import { Source } from '../../../data/sources';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { famousDisplayName } from '../helpers/famousDisplayName';

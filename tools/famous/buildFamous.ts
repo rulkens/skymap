@@ -24,10 +24,10 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseFamousSeed, type FamousEntry } from '../parsers/famousSeed.js';
-import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalogFormat.js';
+import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalog/galaxyCatalogFormat.js';
 import { Source } from '../../src/data/sources.js';
 import { resolveFamousOrientation } from './resolveFamousOrientation.js';
-import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog.js';
+import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { FamousMetaEntry } from '../../src/@types/loading/FamousMetaEntry.js';
 import { rawDataPath } from '../utils/io/rawDataRegistry.js';
 import { parseRecipe, type Recipe } from '../famous-curator/plugin/recipe.js';

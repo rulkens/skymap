@@ -20,7 +20,7 @@
  */
 
 import type { EngineSettingsState } from '../../../../@types/settings/EngineSettingsState';
-import type { VolumeFieldId } from '../../../../@types/data/VolumeFieldId';
+import type { VolumeFieldId } from '../../../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../../../@types/settings/VolumeFieldSettings';
 import { writeVolumeFieldSetting } from '../../helpers/writeVolumeFieldSetting';
 

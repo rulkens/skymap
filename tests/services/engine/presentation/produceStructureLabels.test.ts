@@ -6,11 +6,11 @@ import {
 import { LABEL_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
-import { STRUCTURE_CATEGORIES } from '../../../../src/data/structureCategories';
+import { STRUCTURE_CATEGORIES } from '../../../../src/data/structure/structureCategories';
 import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
+import type { StructureRecord } from '../../../../src/@types/data/structure/StructureRecord';
 
 // Convenience factory used wherever the test doesn't care about wake behavior.
 function makeRegistry(): FadeRegistry {

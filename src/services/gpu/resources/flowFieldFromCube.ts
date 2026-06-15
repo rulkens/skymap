@@ -16,10 +16,10 @@
  * conversion.
  */
 
-import type { FlowField } from '../../../@types/data/FlowField';
-import type { ScalarCube } from '../../../@types/data/ScalarCube';
+import type { FlowField } from '../../../@types/data/flow/FlowField';
+import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
 import { gpuTextureFormatForChannels } from '../../../utils/gpu/gpuTextureFormatForChannels';
-import { flowFieldMetaFromCube } from '../../../data/flowFieldMetaFromCube';
+import { flowFieldMetaFromCube } from '../../../data/flow/flowFieldMetaFromCube';
 
 export function flowFieldFromCube(device: GPUDevice, cube: ScalarCube): FlowField {
   const meta = flowFieldMetaFromCube(cube);

@@ -48,8 +48,8 @@
 import { mat4 } from 'gl-matrix';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec4 } from '../../../@types/math/Vec4';
-import type { ScalarCube } from '../../../@types/data/ScalarCube';
-import type { FlowField } from '../../../@types/data/FlowField';
+import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
+import type { FlowField } from '../../../@types/data/flow/FlowField';
 import type { FlowSettings } from '../../../@types/settings/FlowSettings';
 import type { FlowFieldRenderer } from '../../../@types/rendering/FlowFieldRenderer';
 import type { Renderer } from '../../../@types/rendering/Renderer';
@@ -63,7 +63,7 @@ import {
   DT,
   HEAD_STEP_SCALE,
   RIBBON_WIDTH,
-} from '../../../data/flowFieldConstants';
+} from '../../../data/flow/flowFieldConstants';
 import flowComputeWgsl from '../shaders/flow/compute.wesl?static';
 import flowVertexWgsl from '../shaders/flow/vertex.wesl?static';
 import flowFragmentWgsl from '../shaders/flow/fragment.wesl?static';

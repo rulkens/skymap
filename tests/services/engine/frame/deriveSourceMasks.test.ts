@@ -20,7 +20,7 @@ import { Source, GALAXY_CATALOG_SOURCES } from '../../../../src/data/sources';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 import { maskHas } from '../../../../src/utils/maskHas';
 import { ALL_VISIBLE_MASK } from '../../../../src/utils/allVisibleMask';
-import type { GalaxyCatalogId } from '../../../../src/@types/engine/data/GalaxyCatalogId';
+import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { FadeId } from '../../../../src/@types/animation/FadeId';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 

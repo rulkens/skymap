@@ -15,8 +15,8 @@
  */
 
 import { Source } from '../../data/sources';
-import type { GalaxyTypeInfo } from '../../@types/data/GalaxyTypeInfo';
-import type { GalaxyTypeMags } from '../../@types/data/GalaxyTypeMags';
+import type { GalaxyTypeInfo } from '../../@types/data/galaxyCatalog/GalaxyTypeInfo';
+import type { GalaxyTypeMags } from '../../@types/data/galaxyCatalog/GalaxyTypeMags';
 import { galaxyTypeFromColor } from './galaxyTypeFromColor';
 import { galaxyTypeFromBminusJ } from './galaxyTypeFromBminusJ';
 import { galaxyTypeFromJminusK } from './galaxyTypeFromJminusK';
@@ -81,6 +81,8 @@ export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyType
       // indicates the InfoCard is rendering a galaxy row for a
       // non-galaxy catalog pick / handle; route those through their own info
       // panel instead.
-      throw new Error(`galaxyType: non-galaxy catalog source ${source} has no galaxy classification`);
+      throw new Error(
+        `galaxyType: non-galaxy catalog source ${source} has no galaxy classification`,
+      );
   }
 }

@@ -52,8 +52,11 @@ import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { StructureMarkerRenderer } from '../../../@types/rendering/StructureMarkerRenderer';
 import type { StructureMarkerDescriptor } from '../../../@types/rendering/StructureMarkerDescriptor';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
-import { STRUCTURE_CATEGORIES, STRUCTURE_CATEGORY_CODES } from '../../../data/structureCategories';
-import type { StructureCategory } from '../../../@types/engine/data/StructureCategory';
+import {
+  STRUCTURE_CATEGORIES,
+  STRUCTURE_CATEGORY_CODES,
+} from '../../../data/structure/structureCategories';
+import type { StructureCategory } from '../../../@types/data/structure/StructureCategory';
 import haloVsCode from '../shaders/structureMarker/halo.wesl?static';
 import haloFsCode from '../shaders/structureMarker/halo.wesl?static';
 import ringVsCode from '../shaders/structureMarker/ring.wesl?static';

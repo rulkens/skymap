@@ -54,9 +54,9 @@
  * and must not be mutated after construction.
  */
 
-import type { StructureCategory } from '../engine/data/StructureCategory';
-import type { GalaxyCatalogId } from '../engine/data/GalaxyCatalogId';
-import type { VolumeFieldId } from '../data/VolumeFieldId';
+import type { StructureCategory } from '../data/structure/StructureCategory';
+import type { GalaxyCatalogId } from '../data/galaxyCatalog/GalaxyCatalogId';
+import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
 import type { LabelLayerId } from './LabelLayerId';
 import type { OverlayId } from './OverlayId';
 

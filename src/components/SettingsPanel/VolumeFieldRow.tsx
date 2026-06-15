@@ -48,8 +48,8 @@
  * to just the enable checkbox + label.
  */
 import type { ReactNode } from 'react';
-import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
-import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
+import type { ScalarFieldPaletteId } from '../../@types/data/volume/ScalarFieldPaletteId';
+import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import { PaletteSelect } from '../common/PaletteSelect/PaletteSelect';
 import styles from './VolumeFieldRow.module.css';
 

@@ -12,7 +12,7 @@
  *   Baldry et al. 2004, ApJ 600, 681.
  */
 
-import type { GalaxyTypeInfo } from '../../@types/data/GalaxyTypeInfo';
+import type { GalaxyTypeInfo } from '../../@types/data/galaxyCatalog/GalaxyTypeInfo';
 
 /**
  * Heuristic galaxy classification from the u−r colour index.

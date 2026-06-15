@@ -28,9 +28,9 @@
 import { createAssetSlot } from '../AssetSlot';
 import { syntheticVolumeFetcher } from '../fetchers/syntheticVolumeFetcher';
 import type { SyntheticVolumeReq } from '../../../@types/loading/SyntheticVolumeReq';
-import { buildVolumeFieldSettings } from '../../../data/volumeFieldDefaults';
+import { buildVolumeFieldSettings } from '../../../data/volume/volumeFieldDefaults';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
-import type { ScalarCube } from '../../../@types/data/ScalarCube';
+import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';

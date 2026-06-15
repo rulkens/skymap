@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { encodeGalaxyCatalog, decodeGalaxyCatalog } from '../src/data/galaxyCatalogFormat';
-import type { GalaxyCatalog } from '../src/@types/data/GalaxyCatalog';
+import {
+  encodeGalaxyCatalog,
+  decodeGalaxyCatalog,
+} from '../src/data/galaxyCatalog/galaxyCatalogFormat';
+import type { GalaxyCatalog } from '../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 /**
  * Build a minimal 2-point v4 GalaxyCatalog for use across multiple tests.

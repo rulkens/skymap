@@ -45,7 +45,7 @@ import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 /**
  * Minimal-shape fixture for the `EngineState` slices the helper reads

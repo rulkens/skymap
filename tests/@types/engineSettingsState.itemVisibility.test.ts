@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { EngineSettingsState } from '../../src/@types/settings/EngineSettingsState';
 import type { LabelCategory } from '../../src/@types/engine/data/LabelCategory';
-import type { StructureCategory } from '../../src/@types/engine/data/StructureCategory';
-import type { GalaxyCatalogId } from '../../src/@types/engine/data/GalaxyCatalogId';
+import type { StructureCategory } from '../../src/@types/data/structure/StructureCategory';
+import type { GalaxyCatalogId } from '../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 
 /**
  * Type-level checks on the per-item visibility homes:

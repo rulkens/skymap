@@ -70,7 +70,10 @@
  */
 
 import type { ComputeSchechterRatiosInput } from '../../../@types/engine/ComputeSchechterRatiosInput';
-import { galaxyCatalogFluxLimit, galaxyCatalogSchechter } from '../../../data/galaxyCatalogFluxLimits';
+import {
+  galaxyCatalogFluxLimit,
+  galaxyCatalogSchechter,
+} from '../../../data/galaxyCatalog/galaxyCatalogFluxLimits';
 import { expectedNumberDensity } from '../../../utils/math';
 
 /**

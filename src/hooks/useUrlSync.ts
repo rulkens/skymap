@@ -68,7 +68,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { UseUrlSyncInput } from '../@types/engine/UseUrlSyncInput';
 import type { UrlSyncReturn } from '../@types/engine/UrlSyncReturn';
 import type { FocusableTarget } from '../@types/engine/FocusableTarget';
-import type { GalaxyCatalog } from '../@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { FocusTarget } from '../@types/camera/FocusTarget';
 import { isStructure } from '../services/engine/isStructure';
 import { parseFocusHash, selectionToFocusId } from '../services/url/focusUrl';

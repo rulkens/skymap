@@ -36,12 +36,12 @@
  */
 
 import { structureMembership } from './structureMembership';
-import type { CatalogWithSource } from '../../@types/engine/data/CatalogWithSource';
+import type { CatalogWithSource } from '../../@types/data/structure/CatalogWithSource';
 import { GALAXY_CATALOG_SOURCES, Source } from '../../data/sources';
 import { maskHas } from '../maskHas';
-import type { GalaxyCatalog } from '../../@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { SourceType } from '../../@types/data/SourceType';
-import type { StructureRecord } from '../../@types/engine/data/StructureRecord';
+import type { StructureRecord } from '../../@types/data/structure/StructureRecord';
 
 export function structureMemberCount(
   structure: StructureRecord,

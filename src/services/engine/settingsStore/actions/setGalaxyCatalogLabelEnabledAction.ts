@@ -9,7 +9,7 @@
  */
 
 import type { SettingsStore } from '../createSettingsStore';
-import type { GalaxyCatalogId } from '../../../../@types/engine/data/GalaxyCatalogId';
+import type { GalaxyCatalogId } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import { setGalaxyCatalogLabelEnabled } from '../reducers/setGalaxyCatalogLabelEnabled';
 
 export function setGalaxyCatalogLabelEnabledAction(

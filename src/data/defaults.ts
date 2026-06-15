@@ -49,12 +49,12 @@
  * site — keep this file flat.
  */
 
-import { BiasMode } from './biasMode';
-import type { BiasMode as BiasModeT } from '../@types/data/BiasMode';
+import { BiasMode } from './galaxyCatalog/biasMode';
+import type { BiasMode as BiasModeT } from '../@types/data/galaxyCatalog/BiasMode';
 import { ToneMapCurve } from './toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
 import type { FlowSettings } from '../@types/settings/FlowSettings';
-import { MAX_PARTICLES } from './flowFieldConstants';
+import { MAX_PARTICLES } from './flow/flowFieldConstants';
 
 // ── Rendering knobs ─────────────────────────────────────────────────────────
 

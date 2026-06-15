@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createGalaxyStore } from '../../../../src/services/engine/data/createGalaxyStore';
 import { Source } from '../../../../src/data/sources';
-import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 const fakeCatalog = (count: number) => ({ count }) as unknown as GalaxyCatalog;
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createStructureFocusSubsystem } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
-import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
+import type { StructureRecord } from '../../../../src/@types/data/structure/StructureRecord';
 
 function makeCluster(overrides: Record<string, unknown> = {}): StructureRecord {
   return {

@@ -90,13 +90,13 @@ import {
   DEFAULT_VOLUMES_ENABLED,
   DEFAULT_FLOW,
 } from '../../data/defaults';
-import type { GalaxyCatalog } from '../../@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineState } from '../../@types/engine/state/EngineState';
-import type { BiasMode } from '../../@types/data/BiasMode';
-import type { ScalarCube } from '../../@types/data/ScalarCube';
-import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
+import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
+import type { ScalarCube } from '../../@types/data/volume/ScalarCube';
+import type { ScalarFieldPaletteId } from '../../@types/data/volume/ScalarFieldPaletteId';
 import type { Tier } from '../../@types/data/Tier';
 import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 
@@ -136,8 +136,11 @@ import { awaitSlotReady } from '../loading/awaitSlotReady';
 import { slotReady } from '../loading/slotReady';
 import { tierTarget } from '../../data/tierTargets';
 import { snapToCameraSnapshot, tweenToCameraSnapshot } from './camera/cameraSnapshot';
-import { MILKY_WAY_CENTER_WORLD, MILKY_WAY_VIEW_DISTANCE_MPC } from '../../data/galacticCenter';
-import { seedVolumeFields } from '../../data/volumeFieldDefaults';
+import {
+  MILKY_WAY_CENTER_WORLD,
+  MILKY_WAY_VIEW_DISTANCE_MPC,
+} from '../../data/milkyWay/galacticCenter';
+import { seedVolumeFields } from '../../data/volume/volumeFieldDefaults';
 import { buildVolumeFieldsSnapshot } from './helpers/buildVolumeFieldsSnapshot';
 import { clampVolumeIntensity } from '../../utils/clampVolumeIntensity';
 import { clampVolumeContrast } from '../../utils/clampVolumeContrast';
@@ -145,11 +148,11 @@ import { clampVolumeDensityScale } from '../../utils/clampVolumeDensityScale';
 import { clampVolumeTrim } from '../../utils/clampVolumeTrim';
 import { clampVolumeExposure } from '../../utils/clampVolumeExposure';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
-import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
-import type { StructureCategory } from '../../@types/engine/data/StructureCategory';
-import type { GalaxyCatalogId } from '../../@types/engine/data/GalaxyCatalogId';
-import { GALAXY_CATALOG_IDS } from '../../data/galaxyCatalogIds';
-import { STRUCTURE_CATEGORIES } from '../../data/structureCategories';
+import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
+import type { StructureCategory } from '../../@types/data/structure/StructureCategory';
+import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
+import { GALAXY_CATALOG_IDS } from '../../data/galaxyCatalog/galaxyCatalogIds';
+import { STRUCTURE_CATEGORIES } from '../../data/structure/structureCategories';
 import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
 import type { GalaxyCatalogItemSettings } from '../../@types/settings/GalaxyCatalogItemSettings';
 

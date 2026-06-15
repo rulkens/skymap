@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest';
 import { computeSchechterRatios } from '../../../../src/services/engine/bake/computeSchechterRatios';
 import { Source } from '../../../../src/data/sources';
-import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 function makeCloud(count: number): GalaxyCatalog {
   return {

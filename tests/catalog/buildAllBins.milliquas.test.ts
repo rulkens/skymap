@@ -21,7 +21,10 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseMilliquas } from '../../tools/parsers/milliquas';
 import { recordsToCloud } from '../../tools/catalog/buildAllBins';
-import { encodeGalaxyCatalog, decodeGalaxyCatalog } from '../../src/data/galaxyCatalogFormat';
+import {
+  encodeGalaxyCatalog,
+  decodeGalaxyCatalog,
+} from '../../src/data/galaxyCatalog/galaxyCatalogFormat';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/defaultGalaxyDiameterKpc';
 
 describe('buildAllBins — Milliquas smoke', () => {

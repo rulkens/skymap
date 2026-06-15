@@ -8,7 +8,7 @@
  */
 
 import type { SettingsStore } from '../createSettingsStore';
-import type { VolumeFieldId } from '../../../../@types/data/VolumeFieldId';
+import type { VolumeFieldId } from '../../../../@types/data/volume/VolumeFieldId';
 import { removeVolumeField } from '../reducers/removeVolumeField';
 
 export function removeVolumeFieldAction(store: SettingsStore, id: VolumeFieldId): void {

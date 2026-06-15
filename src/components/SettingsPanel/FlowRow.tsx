@@ -33,9 +33,9 @@
  * glance.
  */
 import type { ReactNode } from 'react';
-import type { FlowMode } from '../../@types/data/FlowMode';
+import type { FlowMode } from '../../@types/data/flow/FlowMode';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
-import { FLOW_SLIDER_FIELDS, flowSliderPatch } from '../../data/flowFields';
+import { FLOW_SLIDER_FIELDS, flowSliderPatch } from '../../data/flow/flowFields';
 import styles from './FlowRow.module.css';
 
 export type FlowRowProps = {

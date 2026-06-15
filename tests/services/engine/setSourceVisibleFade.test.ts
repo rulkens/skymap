@@ -30,7 +30,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { Source, GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../src/data/sources';
-import type { GalaxyCatalogId } from '../../../src/@types/engine/data/GalaxyCatalogId';
+import type { GalaxyCatalogId } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 import {
   FADE_IN_DURATION_MS,
   FADE_OUT_DURATION_MS,

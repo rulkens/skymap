@@ -14,7 +14,7 @@ import { lerp } from '../../../../src/utils/math/lerp';
 function makeRegistry() {
   return createFadeRegistry({ requestRender: () => {} });
 }
-import type { StructureCategory } from '../../../../src/@types/engine/data/StructureCategory';
+import type { StructureCategory } from '../../../../src/@types/data/structure/StructureCategory';
 
 describe('focusRecession', () => {
   it('returns 1.0 for an untagged handle at blend 0', () => {

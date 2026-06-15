@@ -17,7 +17,7 @@
  */
 
 import type { EngineSettingsState } from '../../../../@types/settings/EngineSettingsState';
-import type { VolumeFieldId } from '../../../../@types/data/VolumeFieldId';
+import type { VolumeFieldId } from '../../../../@types/data/volume/VolumeFieldId';
 import { removeVolumeFieldSetting } from '../../helpers/removeVolumeFieldSetting';
 
 export function removeVolumeField(

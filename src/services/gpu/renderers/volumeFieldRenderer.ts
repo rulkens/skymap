@@ -46,15 +46,15 @@
  */
 
 import { mat4 } from 'gl-matrix';
-import type { ScalarCube } from '../../../@types/data/ScalarCube';
-import type { ScalarFieldPaletteId } from '../../../@types/data/ScalarFieldPaletteId';
+import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
+import type { ScalarFieldPaletteId } from '../../../@types/data/volume/ScalarFieldPaletteId';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { VolumeFieldRenderer } from '../../../@types/rendering/VolumeFieldRenderer';
 import type { FieldEntry } from '../../../@types/rendering/FieldEntry';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
-import type { VolumeFieldId } from '../../../@types/data/VolumeFieldId';
-import { getVolumeFieldDefaults } from '../../../data/volumeFieldDefaults';
-import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../data/scalarFieldPalettes';
+import type { VolumeFieldId } from '../../../@types/data/volume/VolumeFieldId';
+import { getVolumeFieldDefaults } from '../../../data/volume/volumeFieldDefaults';
+import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../data/volume/scalarFieldPalettes';
 import vsCode from '../shaders/scalarVolume/vertex.wesl?static';
 import fsCode from '../shaders/scalarVolume/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';

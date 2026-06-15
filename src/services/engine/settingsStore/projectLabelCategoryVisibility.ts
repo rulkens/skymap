@@ -23,12 +23,12 @@
  */
 
 import type { LabelCategory } from '../../../@types/engine/data/LabelCategory';
-import type { GalaxyCatalogId } from '../../../@types/engine/data/GalaxyCatalogId';
-import type { StructureCategory } from '../../../@types/engine/data/StructureCategory';
+import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { StructureCategory } from '../../../@types/data/structure/StructureCategory';
 import type { StructureItemSettings } from '../../../@types/settings/StructureItemSettings';
 import type { GalaxyCatalogItemSettings } from '../../../@types/settings/GalaxyCatalogItemSettings';
-import { LABEL_CATEGORIES } from '../../../data/labelCategories';
-import { isStructureCategory } from '../../../data/structureCategories';
+import { LABEL_CATEGORIES } from '../../../data/structure/labelCategories';
+import { isStructureCategory } from '../../../data/structure/structureCategories';
 
 export function projectLabelCategoryVisibility(
   structureItems: Record<StructureCategory, StructureItemSettings>,

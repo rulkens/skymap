@@ -8,7 +8,7 @@
  */
 
 import type { mat4 } from 'gl-matrix';
-import type { FilamentCloud } from '../data/FilamentCloud';
+import type { FilamentCloud } from '../data/filament/FilamentCloud';
 
 export type FilamentRenderer = {
   readonly label: string;

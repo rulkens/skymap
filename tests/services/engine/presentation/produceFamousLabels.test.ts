@@ -10,7 +10,7 @@ import { Source } from '../../../../src/data/sources';
 import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
 
 // Convenience factory used wherever the test doesn't care about wake behavior.
@@ -31,7 +31,9 @@ function makeState(opts: { fades?: FadeRegistry } = {}): EngineState {
   return {
     data: createEngineData(),
     subsystems: { fades },
-    settings: { galaxyCatalogs: { items: { famousGalaxy: { enabled: true, labelEnabled: true } } } },
+    settings: {
+      galaxyCatalogs: { items: { famousGalaxy: { enabled: true, labelEnabled: true } } },
+    },
   } as unknown as EngineState;
 }
 

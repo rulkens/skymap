@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { projectMarkerCategoryVisibility } from '../../../../src/services/engine/settingsStore/projectMarkerCategoryVisibility';
-import { STRUCTURE_CATEGORIES } from '../../../../src/data/structureCategories';
+import { STRUCTURE_CATEGORIES } from '../../../../src/data/structure/structureCategories';
 import { makeSettingsFixture } from './makeSettingsFixture';
 
 describe('projectMarkerCategoryVisibility', () => {

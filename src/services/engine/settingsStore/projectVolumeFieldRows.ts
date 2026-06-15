@@ -25,9 +25,9 @@
  */
 
 import type { VolumeFieldRowData } from '../../../@types/settings/VolumeFieldRowData';
-import type { VolumeFieldId } from '../../../@types/data/VolumeFieldId';
+import type { VolumeFieldId } from '../../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../../@types/settings/VolumeFieldSettings';
-import { getVolumeFieldDefaults } from '../../../data/volumeFieldDefaults';
+import { getVolumeFieldDefaults } from '../../../data/volume/volumeFieldDefaults';
 import { DEFAULT_VOLUME_FIELD_INTENSITY, DEFAULT_VOLUME_PALETTE_ID } from '../../../data/defaults';
 
 export function projectVolumeFieldRows(

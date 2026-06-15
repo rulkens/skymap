@@ -11,7 +11,7 @@
  * network.
  */
 import { describe, expect, it, vi } from 'vitest';
-import type { FilamentCloud } from '../../../../src/@types/data/FilamentCloud';
+import type { FilamentCloud } from '../../../../src/@types/data/filament/FilamentCloud';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';

@@ -3,8 +3,8 @@ import {
   structureCatalogFetcher,
   parseStructureMeta,
 } from '../../../../src/services/loading/fetchers/structureCatalogFetcher';
-import { encodeStructureCatalog } from '../../../../src/data/structureCatalogFormat';
-import type { StructureCatalog } from '../../../../src/@types/data/StructureCatalog';
+import { encodeStructureCatalog } from '../../../../src/data/structure/structureCatalogFormat';
+import type { StructureCatalog } from '../../../../src/@types/data/structure/StructureCatalog';
 import type { StructureMetaEntry } from '../../../../src/@types/loading/StructureCatalogPayload';
 import { useFetchMock } from '../../../setup/fetchMock';
 
@@ -46,9 +46,7 @@ const routeByUrl = (
 
 describe('parseStructureMeta', () => {
   it('parses a valid array', () => {
-    const parsed = parseStructureMeta(
-      '[{"id":"a","names":["A"],"abell":null,"description":""}]',
-    );
+    const parsed = parseStructureMeta('[{"id":"a","names":["A"],"abell":null,"description":""}]');
     expect(parsed).toHaveLength(1);
     expect(parsed[0]?.id).toBe('a');
   });
@@ -65,11 +63,7 @@ describe('structureCatalogFetcher', () => {
     const ccat = encodeStructureCatalog(makeCatalog(2));
     routeByUrl(fetch.mock, ccat, JSON.stringify(makeMeta(2)));
 
-    const payload = await structureCatalogFetcher(
-      {},
-      new AbortController().signal,
-      () => {},
-    );
+    const payload = await structureCatalogFetcher({}, new AbortController().signal, () => {});
 
     expect(payload.catalog.count).toBe(2);
     expect(payload.meta).toHaveLength(2);
@@ -128,8 +122,6 @@ describe('structureCatalogFetcher', () => {
 
     const controller = new AbortController();
     controller.abort();
-    await expect(
-      structureCatalogFetcher({}, controller.signal, () => {}),
-    ).rejects.toThrow();
+    await expect(structureCatalogFetcher({}, controller.signal, () => {})).rejects.toThrow();
   });
 });

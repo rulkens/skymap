@@ -1,4 +1,4 @@
-import type { StructureCatalog } from '../data/StructureCatalog';
+import type { StructureCatalog } from '../data/structure/StructureCatalog';
 
 /**
  * One entry of the `structures_meta.json` sidecar — the string/identity fields

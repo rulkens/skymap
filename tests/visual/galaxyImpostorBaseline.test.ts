@@ -23,7 +23,7 @@ import { Source } from '../../src/data/sources';
 import { createGalaxyAtlasSubsystem } from '../../src/services/engine/subsystems/galaxyAtlasSubsystem';
 import { createProceduralDiskSubsystem } from '../../src/services/engine/subsystems/proceduralDiskSubsystem';
 import { createTexturedDiskSubsystem } from '../../src/services/engine/subsystems/texturedDiskSubsystem';
-import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
 
 function makeFakeDevice(): GPUDevice {

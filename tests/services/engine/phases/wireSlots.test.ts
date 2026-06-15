@@ -40,9 +40,9 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/sources';
-import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalogIds';
+import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
-import { seedVolumeFields } from '../../../../src/data/volumeFieldDefaults';
+import { seedVolumeFields } from '../../../../src/data/volume/volumeFieldDefaults';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';

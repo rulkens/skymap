@@ -15,10 +15,10 @@ import { galaxyCatalogConstants } from '../../../src/services/biasCorrection/gal
 import {
   galaxyCatalogFluxLimit,
   galaxyCatalogSchechter,
-} from '../../../src/data/galaxyCatalogFluxLimits';
+} from '../../../src/data/galaxyCatalog/galaxyCatalogFluxLimits';
 import { expectedNumberDensity } from '../../../src/utils/math/expectedNumberDensity';
 import { Source } from '../../../src/data/sources';
-import type { GalaxyCatalogSource } from '../../../src/@types/data/GalaxyCatalogSource';
+import type { GalaxyCatalogSource } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalogSource';
 
 // Reverse-lookup name from a Source value.  TS's old numeric enum
 // auto-generated this map; the `as const` replacement does not, so we

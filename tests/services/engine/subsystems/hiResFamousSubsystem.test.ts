@@ -24,7 +24,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { Source } from '../../../../src/data/sources';
 import { createHiResFamousSubsystem } from '../../../../src/services/engine/subsystems/hiResFamousSubsystem';
 import { createHiResFamousTexture } from '../../../../src/services/gpu/resources/hiResFamousTexture';
-import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';

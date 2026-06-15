@@ -35,8 +35,8 @@
 
 import { packSelection } from '../../data/selectionEncoding';
 import type { Vec3 } from '../../@types/math/Vec3';
-import type { CatalogWithSource } from '../../@types/engine/data/CatalogWithSource';
-import type { StructureMembershipResult } from '../../@types/engine/data/StructureMembershipResult';
+import type { CatalogWithSource } from '../../@types/data/structure/CatalogWithSource';
+import type { StructureMembershipResult } from '../../@types/data/structure/StructureMembershipResult';
 
 /**
  * Compute the packed identities of every galaxy strictly within

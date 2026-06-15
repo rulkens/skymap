@@ -30,12 +30,12 @@ import { createEngineData } from '../../../../src/services/engine/data/createEng
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
-import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
+import type { StructureRecord } from '../../../../src/@types/data/structure/StructureRecord';
 import type { StructureCatalogPayload } from '../../../../src/@types/loading/StructureCatalogPayload';
 
 // ── Module mocks ───────────────────────────────────────────────────────
 
-vi.mock('../../../../src/data/buildStaticAnchorStructures', () => ({
+vi.mock('../../../../src/data/structure/buildStaticAnchorStructures', () => ({
   buildStaticAnchorStructures: vi.fn((): StructureRecord[] => [
     {
       id: 'cluster-virgo',

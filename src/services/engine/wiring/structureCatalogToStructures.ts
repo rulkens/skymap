@@ -51,7 +51,7 @@
  */
 
 import type { StructureCatalogPayload } from '../../../@types/loading/StructureCatalogPayload';
-import type { StructureRecord } from '../../../@types/engine/data/StructureRecord';
+import type { StructureRecord } from '../../../@types/data/structure/StructureRecord';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { minOf } from '../../../utils/math/minOf';
 import { makeMinMaxNormaliser } from '../../../utils/math/makeMinMaxNormaliser';

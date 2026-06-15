@@ -30,7 +30,7 @@
  * write a number into a non-numeric field.
  */
 import type { FlowSettings } from '../../../../../src/@types/settings/FlowSettings';
-import type { FlowMode } from '../../../../../src/@types/data/FlowMode';
+import type { FlowMode } from '../../../../../src/@types/data/flow/FlowMode';
 import { DEFAULT_FLOW } from '../../../../../src/data/defaults';
 
 export const defaultFlowSlice: FlowSettings = { ...DEFAULT_FLOW, enabled: true };
@@ -53,10 +53,6 @@ export function setFlowMode(prev: FlowSettings, mode: FlowMode): FlowSettings {
   return { ...prev, mode };
 }
 
-export function setFlowParam(
-  prev: FlowSettings,
-  key: NumericFlowKey,
-  value: number,
-): FlowSettings {
+export function setFlowParam(prev: FlowSettings, key: NumericFlowKey, value: number): FlowSettings {
   return { ...prev, [key]: value };
 }

@@ -18,9 +18,9 @@
  */
 
 import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
-import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalogIds';
-import { STRUCTURE_CATEGORIES } from '../../../../src/data/structureCategories';
-import { seedVolumeFields } from '../../../../src/data/volumeFieldDefaults';
+import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
+import { STRUCTURE_CATEGORIES } from '../../../../src/data/structure/structureCategories';
+import { seedVolumeFields } from '../../../../src/data/volume/volumeFieldDefaults';
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_AUTO_ROTATE,
@@ -41,8 +41,8 @@ import {
 } from '../../../../src/data/defaults';
 
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
-import type { GalaxyCatalogId } from '../../../../src/@types/engine/data/GalaxyCatalogId';
-import type { StructureCategory } from '../../../../src/@types/engine/data/StructureCategory';
+import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { StructureCategory } from '../../../../src/@types/data/structure/StructureCategory';
 import type { GalaxyCatalogItemSettings } from '../../../../src/@types/settings/GalaxyCatalogItemSettings';
 import type { StructureItemSettings } from '../../../../src/@types/settings/StructureItemSettings';
 

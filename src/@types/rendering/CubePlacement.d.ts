@@ -14,7 +14,7 @@
  */
 import type { Vec3 } from '../math/Vec3';
 import type { Vec4 } from '../math/Vec4';
-import type { ScalarFieldFrameKind } from '../data/ScalarFieldFrameKind';
+import type { ScalarFieldFrameKind } from '../data/volume/ScalarFieldFrameKind';
 
 export type CubePlacement = {
   /** Coordinate frame the cube lives in; mapped to world by the builder. */

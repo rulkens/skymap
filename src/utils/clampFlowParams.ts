@@ -26,7 +26,7 @@
  */
 
 import type { FlowSettings } from '../@types/settings/FlowSettings';
-import { MAX_PARTICLES, MIN_TRAIL_STEP } from '../data/flowFieldConstants';
+import { MAX_PARTICLES, MIN_TRAIL_STEP } from '../data/flow/flowFieldConstants';
 
 export function clampFlowParams(flow: FlowSettings): FlowSettings {
   return {

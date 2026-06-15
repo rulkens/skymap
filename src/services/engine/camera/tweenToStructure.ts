@@ -14,7 +14,7 @@
 import { vec3 } from 'gl-matrix';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { StructureRecord } from '../../../@types/engine/data/StructureRecord';
+import type { StructureRecord } from '../../../@types/data/structure/StructureRecord';
 import { FOCUS_TWEEN_MS } from './focusTweenDuration';
 import { structureFocusDistance } from './structureFocusDistance';
 

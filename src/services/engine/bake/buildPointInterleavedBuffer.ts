@@ -41,13 +41,13 @@
  * @module
  */
 
-import { pickColourIndex } from '../../../data/colourIndex';
+import { pickColourIndex } from '../../../data/galaxyCatalog/colourIndex';
 import { paddedRadiusMpc } from '../../../utils/paddedRadiusMpc';
 import { Source } from '../../../data/sources';
 import {
   galaxyCatalogFluxLimit,
   galaxyCatalogSchechter,
-} from '../../../data/galaxyCatalogFluxLimits';
+} from '../../../data/galaxyCatalog/galaxyCatalogFluxLimits';
 import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';
 import {
   absoluteFromApparent,

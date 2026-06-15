@@ -16,7 +16,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { AssetWiringRow } from '../../../src/@types/loading/AssetWiringRow';
-import type { GalaxyCatalog } from '../../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogReq } from '../../../src/@types/loading/GalaxyCatalogReq';
 import type { AssetSlot } from '../../../src/@types/loading/AssetSlot';
 import type { SlotDeps } from '../../../src/@types/loading/SlotDeps';

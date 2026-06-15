@@ -18,9 +18,12 @@
  */
 
 import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
-import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import { Source, SOURCE_REGISTRY } from '../../../data/sources';
-import { sourceClassLabel, milliquasParentSurveyPrefix } from '../../../data/sourceClass';
+import {
+  sourceClassLabel,
+  milliquasParentSurveyPrefix,
+} from '../../../data/galaxyCatalog/sourceClass';
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import { famousDisplayName } from './famousDisplayName';
 import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';
@@ -181,7 +184,9 @@ export function buildGalaxyInfo(
   // volume) reaching here is a bug upstream.
   const entry = SOURCE_REGISTRY[source];
   if (entry.type !== 'galaxyCatalog') {
-    throw new Error(`buildGalaxyInfo: non-galaxy catalog source ${source} has no photometric bands`);
+    throw new Error(
+      `buildGalaxyInfo: non-galaxy catalog source ${source} has no photometric bands`,
+    );
   }
   const bands = entry.bandLabels;
 

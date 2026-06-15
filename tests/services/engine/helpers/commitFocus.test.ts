@@ -10,7 +10,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { GalaxyInfo } from '../../../../src/@types/engine/GalaxyInfo';
-import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
+import type { StructureRecord } from '../../../../src/@types/data/structure/StructureRecord';
 
 const commitGalaxyFocusSpy = vi.fn();
 const commitStructureFocusSpy = vi.fn();

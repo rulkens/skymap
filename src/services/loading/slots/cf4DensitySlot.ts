@@ -23,7 +23,7 @@ import { createAssetSlot } from '../AssetSlot';
 import { cf4DensityFetcher } from '../fetchers/cf4DensityFetcher';
 import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
-import type { ScalarCube } from '../../../@types/data/ScalarCube';
+import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
 export const createCf4DensitySlot: SlotFactory<ScalarCube, void> = (state, _cb) => {

@@ -28,7 +28,7 @@
  */
 
 import { Source } from '../../../data/sources';
-import { pickColourIndex } from '../../../data/colourIndex';
+import { pickColourIndex } from '../../../data/galaxyCatalog/colourIndex';
 import { paddedRadiusMpc } from '../../../utils/paddedRadiusMpc';
 import { cartesianToRaDec } from '../../../utils/math';
 import { APPARENT_SIZE_THRESHOLD_PX, FADE_BAND_PX, galaxyCacheKey } from './texturedDiskSubsystem';

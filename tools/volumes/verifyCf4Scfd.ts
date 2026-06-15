@@ -18,7 +18,7 @@
  *   npx tsx tools/verifyCf4Scfd.ts
  */
 import { readFileSync } from 'node:fs';
-import { decodeScalarField } from '../../src/data/scalarFieldFormat';
+import { decodeScalarField } from '../../src/data/volume/scalarFieldFormat';
 import { parseStructureSeed } from '../parsers/parseStructureSeed';
 import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
 import type { Vec3 } from '../../src/@types/math/Vec3';

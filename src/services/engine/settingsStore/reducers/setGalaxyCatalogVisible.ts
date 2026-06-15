@@ -15,7 +15,7 @@
  */
 
 import type { EngineSettingsState } from '../../../../@types/settings/EngineSettingsState';
-import type { GalaxyCatalogId } from '../../../../@types/engine/data/GalaxyCatalogId';
+import type { GalaxyCatalogId } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogId';
 
 export function setGalaxyCatalogVisible(
   state: EngineSettingsState,

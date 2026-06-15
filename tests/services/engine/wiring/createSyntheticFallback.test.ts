@@ -24,7 +24,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
-import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 
 // ── Stub slot ────────────────────────────────────────────────────────────────

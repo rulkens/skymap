@@ -45,12 +45,12 @@
  * `EngineSettingsState` value by pulling those constants into each field.
  */
 
-import type { BiasMode } from '../data/BiasMode';
+import type { BiasMode } from '../data/galaxyCatalog/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
-import type { StructureCategory } from '../engine/data/StructureCategory';
-import type { GalaxyCatalogId } from '../engine/data/GalaxyCatalogId';
+import type { StructureCategory } from '../data/structure/StructureCategory';
+import type { GalaxyCatalogId } from '../data/galaxyCatalog/GalaxyCatalogId';
 import type { FlowSettings } from './FlowSettings';
-import type { VolumeFieldId } from '../data/VolumeFieldId';
+import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
 import type { StructureItemSettings } from './StructureItemSettings';
 import type { GalaxyCatalogItemSettings } from './GalaxyCatalogItemSettings';

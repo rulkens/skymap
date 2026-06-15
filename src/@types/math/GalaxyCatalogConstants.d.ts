@@ -7,7 +7,7 @@
  * pre-computation of `nRef`.
  */
 
-import type { SchechterTriple } from '../data/SchechterTriple';
+import type { SchechterTriple } from '../data/galaxyCatalog/SchechterTriple';
 
 export type GalaxyCatalogConstants = {
   /** Schechter LF triple `(M*, α, φ*)` for the band defining the flux limit. */

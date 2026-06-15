@@ -5,9 +5,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import { cf4DensityFetcher } from '../../../../src/services/loading/fetchers/cf4DensityFetcher';
-import { encodeScalarField } from '../../../../src/data/scalarFieldFormat';
+import { encodeScalarField } from '../../../../src/data/volume/scalarFieldFormat';
 import { SG_TO_EQ_QUATERNION } from '../../../../src/data/superGalacticTransform';
-import type { ScalarCube } from '../../../../src/@types/data/ScalarCube';
+import type { ScalarCube } from '../../../../src/@types/data/volume/ScalarCube';
 import { useFetchMock } from '../../../setup/fetchMock';
 
 const fetch = useFetchMock();
@@ -39,11 +39,7 @@ describe('cf4DensityFetcher (success path)', () => {
     // `src/data/volumeFieldDefaults.ts`.
     const buf = encodeScalarField(makeTinyCube());
     fetch.mock.mockResolvedValue(new Response(buf, { status: 200 }));
-    const cube = await cf4DensityFetcher(
-      undefined,
-      new AbortController().signal,
-      () => {},
-    );
+    const cube = await cf4DensityFetcher(undefined, new AbortController().signal, () => {});
     expect(cube.dims).toEqual([2, 2, 2]);
     expect(cube.frameKind).toBe('supergalactic-cartesian');
     expect(cube.voxelSize).toBe(1);

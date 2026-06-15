@@ -20,7 +20,7 @@ import type { RecipeDisk } from '../../plugin/recipe';
 import {
   DEPROJECT_MIN_AXIS_RATIO,
   DEFAULT_DISK_MARGIN,
-} from '../../../../src/data/famousCalibration';
+} from '../../../../src/data/galaxyCatalog/famousCalibration';
 
 export type DiskControlsProps = {
   disk: RecipeDisk | undefined;

@@ -33,7 +33,7 @@
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import { Source } from '../../../data/sources';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';

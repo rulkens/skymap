@@ -58,13 +58,13 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { reevaluateDemand } from '../../../../src/services/engine/wiring/reevaluateDemand';
 import { Source } from '../../../../src/data/sources';
-import { seedVolumeFields } from '../../../../src/data/volumeFieldDefaults';
+import { seedVolumeFields } from '../../../../src/data/volume/volumeFieldDefaults';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
-import type { VolumeFieldId } from '../../../../src/@types/data/VolumeFieldId';
-import type { GalaxyCatalogId } from '../../../../src/@types/engine/data/GalaxyCatalogId';
+import type { VolumeFieldId } from '../../../../src/@types/data/volume/VolumeFieldId';
+import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 

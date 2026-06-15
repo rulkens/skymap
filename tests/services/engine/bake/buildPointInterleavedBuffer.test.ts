@@ -32,7 +32,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
 import { Source } from '../../../../src/data/sources';
-import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 /** Build a tiny synthetic cloud with three galaxies at known coordinates. */
 function makeCloud(count: number): GalaxyCatalog {

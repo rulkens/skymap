@@ -22,7 +22,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import { InfoCard } from '../../../src/components/InfoCard/InfoCard';
-import type { StructureRecord } from '../../../src/@types/engine/data/StructureRecord';
+import type { StructureRecord } from '../../../src/@types/data/structure/StructureRecord';
 import type { GalaxyInfo } from '../../../src/@types/engine/GalaxyInfo';
 
 const virgo: StructureRecord = {

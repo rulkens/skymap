@@ -18,8 +18,8 @@
 
 import type { mat4 } from 'gl-matrix';
 
-import type { VolumeFieldId } from '../data/VolumeFieldId';
-import type { ScalarFieldPaletteId } from '../data/ScalarFieldPaletteId';
+import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
+import type { ScalarFieldPaletteId } from '../data/volume/ScalarFieldPaletteId';
 
 export type FieldEntry = {
   id: VolumeFieldId;

@@ -37,7 +37,7 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { decodeScalarField } from '../../src/data/scalarFieldFormat';
+import { decodeScalarField } from '../../src/data/volume/scalarFieldFormat';
 import { f16BitsToFloat } from '../utils/math/f16BitsToFloat';
 import { raDecDistToEqCart } from '../../src/utils/math/raDecDistToEqCart';
 import { eqToSg } from '../utils/math/eqToSg';

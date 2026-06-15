@@ -13,11 +13,11 @@
  */
 
 import type { mat4 } from 'gl-matrix';
-import type { ScalarCube } from '../data/ScalarCube';
+import type { ScalarCube } from '../data/volume/ScalarCube';
 import type { VolumeFieldSettings } from '../settings/VolumeFieldSettings';
 import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';
-import type { VolumeFieldId } from '../data/VolumeFieldId';
+import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
 
 export type VolumeFieldRenderer = {
   /**

@@ -1,4 +1,4 @@
-import type { SchechterTriple } from '../data/SchechterTriple';
+import type { SchechterTriple } from '../data/galaxyCatalog/SchechterTriple';
 
 /**
  * Output of the bake.  The renderer copies `interleaved` into the GPU

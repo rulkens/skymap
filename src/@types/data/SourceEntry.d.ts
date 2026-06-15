@@ -1,7 +1,7 @@
-import type { GalaxyCatalogSourceEntry } from './GalaxyCatalogSourceEntry';
-import type { StructureSourceEntry } from './StructureSourceEntry';
-import type { FilamentSourceEntry } from './FilamentSourceEntry';
-import type { VolumeSourceEntry } from './VolumeSourceEntry';
+import type { GalaxyCatalogSourceEntry } from './galaxyCatalog/GalaxyCatalogSourceEntry';
+import type { StructureSourceEntry } from './structure/StructureSourceEntry';
+import type { FilamentSourceEntry } from './filament/FilamentSourceEntry';
+import type { VolumeSourceEntry } from './volume/VolumeSourceEntry';
 
 /**
  * One row of the SOURCE_REGISTRY — discriminated by the `type` field

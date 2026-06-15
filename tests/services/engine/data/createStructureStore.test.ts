@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createStructureStore } from '../../../../src/services/engine/data/createStructureStore';
-import type { StructureRecord } from '../../../../src/@types/engine/data/StructureRecord';
-import type { StructureCategory } from '../../../../src/@types/engine/data/StructureCategory';
+import type { StructureRecord } from '../../../../src/@types/data/structure/StructureRecord';
+import type { StructureCategory } from '../../../../src/@types/data/structure/StructureCategory';
 
 // StructureRecord is a discriminated union; a union-typed `category` can't be
 // narrowed to a single arm at construction, so the helper asserts the type.

@@ -23,8 +23,8 @@
  * engine snapshot deep-import a single source of truth.
  */
 
-import type { ScalarFieldPaletteId } from '../data/ScalarFieldPaletteId';
-import type { VolumeFieldId } from '../data/VolumeFieldId';
+import type { ScalarFieldPaletteId } from '../data/volume/ScalarFieldPaletteId';
+import type { VolumeFieldId } from '../data/volume/VolumeFieldId';
 
 export type VolumeFieldRowData = {
   /** Stable id matching the field registered via `addVolumeField`. */

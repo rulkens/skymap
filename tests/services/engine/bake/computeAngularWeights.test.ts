@@ -16,7 +16,7 @@ import { describe, it, expect } from 'vitest';
 import { computeAngularWeights } from '../../../../src/services/engine/bake/computeAngularWeights';
 import { Source } from '../../../../src/data/sources';
 import { raDecZToCartesian } from '../../../../src/utils/math';
-import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 function emptyCloud(count: number): GalaxyCatalog {
   return {

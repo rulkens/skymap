@@ -25,7 +25,7 @@
 import { createAssetSlot } from '../AssetSlot';
 import { flowFieldFetcher } from '../fetchers/flowFieldFetcher';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
-import type { ScalarCube } from '../../../@types/data/ScalarCube';
+import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
 export const createFlowFieldSlot: SlotFactory<ScalarCube, void> = (state, _cb) => {

@@ -54,7 +54,7 @@ import { dropFamousMatches } from './dropFamousMatches.js';
 import type { FamousSkyPosition } from './dropFamousMatches.js';
 import { parseFamousSeed } from '../parsers/famousSeed.js';
 
-import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalogFormat.js';
+import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalog/galaxyCatalogFormat.js';
 import { raDecZToCartesian } from '../../src/utils/math/index.js';
 import { raDecDistToCartesian } from '../../src/utils/math/raDecDistToCartesian.js';
 import { fallbackOrientation } from '../../src/utils/random/fallbackOrientation.js';
@@ -64,7 +64,7 @@ import type { Cf4CatalogIndex } from '../parsers/cosmicflows4.js';
 import { loadCf4CatalogIndex } from '../parsers/cosmicflows4.js';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/defaultGalaxyDiameterKpc.js';
 import { Source, SOURCE_REGISTRY } from '../../src/data/sources.js';
-import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog.js';
+import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import {
   tierTarget,
   tierFilenameForSource,

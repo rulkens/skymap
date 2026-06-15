@@ -34,7 +34,7 @@ import SearchTrigger from '../SearchTrigger/SearchTrigger';
 import AutoRotateToggle from '../AutoRotateToggle/AutoRotateToggle';
 import Splash from '../Splash/Splash';
 import AboutPill from '../Splash/AboutPill';
-import { MILKY_WAY_ENTRY, MILKY_WAY_ID } from '../../data/milkyWayEntry';
+import { MILKY_WAY_ENTRY, MILKY_WAY_ID } from '../../data/milkyWay/milkyWayEntry';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import appStyles from './App.module.css';
 import { useUrlSync } from '../../hooks/useUrlSync';
@@ -65,7 +65,7 @@ import { selectGalaxyCatalogItems } from '../../services/engine/settingsStore/se
 import { projectVolumeFieldRows } from '../../services/engine/settingsStore/projectVolumeFieldRows';
 import { projectMarkerCategoryVisibility } from '../../services/engine/settingsStore/projectMarkerCategoryVisibility';
 import { projectLabelCategoryVisibility } from '../../services/engine/settingsStore/projectLabelCategoryVisibility';
-import { seedVolumeFields } from '../../data/volumeFieldDefaults';
+import { seedVolumeFields } from '../../data/volume/volumeFieldDefaults';
 import {
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_DEPTH_FADE_ENABLED,
@@ -82,11 +82,14 @@ import {
 } from '../../data/defaults';
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
 import { ALL_VISIBLE_MASK } from '../../utils/allVisibleMask';
-import { buildStaticAnchorStructures } from '../../data/buildStaticAnchorStructures';
-import { isStructureCategory, STRUCTURE_CATEGORIES } from '../../data/structureCategories';
-import { GALAXY_CATALOG_IDS } from '../../data/galaxyCatalogIds';
-import type { StructureCategory } from '../../@types/engine/data/StructureCategory';
-import type { GalaxyCatalogId } from '../../@types/engine/data/GalaxyCatalogId';
+import { buildStaticAnchorStructures } from '../../data/structure/buildStaticAnchorStructures';
+import {
+  isStructureCategory,
+  STRUCTURE_CATEGORIES,
+} from '../../data/structure/structureCategories';
+import { GALAXY_CATALOG_IDS } from '../../data/galaxyCatalog/galaxyCatalogIds';
+import type { StructureCategory } from '../../@types/data/structure/StructureCategory';
+import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
 import type { GalaxyCatalogItemSettings } from '../../@types/settings/GalaxyCatalogItemSettings';
 import { DebugPanel } from '../DebugPanel/DebugPanel';

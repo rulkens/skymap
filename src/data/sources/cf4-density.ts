@@ -1,4 +1,4 @@
-import type { VolumeSourceEntry } from '../../@types/data/VolumeSourceEntry';
+import type { VolumeSourceEntry } from '../../@types/data/volume/VolumeSourceEntry';
 import { Source } from '../source';
 
 export const CF4_DENSITY_ENTRY = {

@@ -7,9 +7,13 @@
  */
 
 import type { SettingsStore } from '../createSettingsStore';
-import type { GalaxyCatalogId } from '../../../../@types/engine/data/GalaxyCatalogId';
+import type { GalaxyCatalogId } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import { setGalaxyCatalogVisible } from '../reducers/setGalaxyCatalogVisible';
 
-export function setGalaxyCatalogVisibleAction(store: SettingsStore, id: GalaxyCatalogId, enabled: boolean): void {
+export function setGalaxyCatalogVisibleAction(
+  store: SettingsStore,
+  id: GalaxyCatalogId,
+  enabled: boolean,
+): void {
   store.setState((s) => setGalaxyCatalogVisible(s, id, enabled));
 }

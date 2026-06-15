@@ -1,6 +1,6 @@
-import type { StructureRecord } from './StructureRecord';
-import type { StructureGroupId } from './StructureGroupId';
-import type { StructureCategory } from './StructureCategory';
+import type { StructureRecord } from '../../data/structure/StructureRecord';
+import type { StructureGroupId } from '../../data/structure/StructureGroupId';
+import type { StructureCategory } from '../../data/structure/StructureCategory';
 
 /**
  * StructureStore — the authoritative app-side home for extended-structure

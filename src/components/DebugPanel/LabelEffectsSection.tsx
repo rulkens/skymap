@@ -15,7 +15,7 @@ import {
   clearLabelStyleOverride,
   type LabelStyleOverrideTarget,
 } from '../../services/engine/labelStyleOverride';
-import { LABEL_CATEGORIES } from '../../data/labelCategories';
+import { LABEL_CATEGORIES } from '../../data/structure/labelCategories';
 import type { Vec4 } from '../../@types/math/Vec4';
 
 // `LabelStyleOverrideTarget` is `'youAreHere' | LabelCategory`, so the dropdown

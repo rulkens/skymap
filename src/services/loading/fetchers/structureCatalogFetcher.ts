@@ -35,7 +35,7 @@ import type {
   StructureCatalogPayload,
   StructureMetaEntry,
 } from '../../../@types/loading/StructureCatalogPayload';
-import { decodeStructureCatalog } from '../../../data/structureCatalogFormat';
+import { decodeStructureCatalog } from '../../../data/structure/structureCatalogFormat';
 import { HttpError, dataUrl } from '../fetchWithProgress';
 
 /**
@@ -53,10 +53,10 @@ export function parseStructureMeta(rawJson: string): StructureMetaEntry[] {
 const CCAT_FILE = 'structures.ccat';
 const META_FILE = 'structures_meta.json';
 
-export const structureCatalogFetcher: Fetcher<StructureCatalogPayload, StructureCatalogReq> = async (
-  _req,
-  signal,
-) => {
+export const structureCatalogFetcher: Fetcher<
+  StructureCatalogPayload,
+  StructureCatalogReq
+> = async (_req, signal) => {
   const ccatUrl = dataUrl(CCAT_FILE);
   const metaUrl = dataUrl(META_FILE);
 

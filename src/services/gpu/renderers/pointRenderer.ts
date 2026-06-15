@@ -23,12 +23,12 @@ import { mat4 } from 'gl-matrix';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { PointDrawSettings } from '../../../@types/rendering/PointDrawSettings';
 import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
-import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../data/sources';
 import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { GalaxyCatalogId } from '../../../@types/engine/data/GalaxyCatalogId';
+import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
 
 // `?worker` emits the worker as a separate chunk and exports a class
 // whose `new` spawns it.  The bake runs off-thread to dodge the
@@ -36,7 +36,7 @@ import type { GalaxyCatalogId } from '../../../@types/engine/data/GalaxyCatalogI
 // can't resolve `?worker`; they inject a synchronous fallback via
 // `setBuildBufferRunner`.
 import BuildPointBufferWorker from '../../engine/bake/buildPointInterleavedBuffer.worker?worker';
-import { cloneGalaxyCatalogForTransfer } from '../../../data/galaxyCatalogTransfer';
+import { cloneGalaxyCatalogForTransfer } from '../../../data/galaxyCatalog/galaxyCatalogTransfer';
 import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
 
 // `?static` runs the WESL linker at build time and hands back a plain

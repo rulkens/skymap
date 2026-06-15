@@ -1,5 +1,5 @@
-import type { StructureRecord } from './StructureRecord';
-import type { StructureCategory } from './StructureCategory';
+import type { StructureRecord } from '../../data/structure/StructureRecord';
+import type { StructureCategory } from '../../data/structure/StructureCategory';
 
 /**
  * Minimal projection of the structure store the pick path reads — just the

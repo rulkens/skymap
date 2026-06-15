@@ -15,7 +15,7 @@
  */
 
 import type { DataItemSettings } from './DataItemSettings';
-import type { ScalarFieldPaletteId } from '../data/ScalarFieldPaletteId';
+import type { ScalarFieldPaletteId } from '../data/volume/ScalarFieldPaletteId';
 
 export type VolumeFieldSettings = DataItemSettings & {
   /** Linear mix-in weight in [0, 1].  Seeded from `DEFAULT_VOLUME_FIELD_INTENSITY`. */

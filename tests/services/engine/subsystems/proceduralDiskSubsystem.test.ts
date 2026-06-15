@@ -18,7 +18,7 @@ import {
   createProceduralDiskSubsystem,
   type ProceduralDiskDeps,
 } from '../../../../src/services/engine/subsystems/proceduralDiskSubsystem';
-import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 

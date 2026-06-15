@@ -1,4 +1,4 @@
-import type { GalaxyCatalogSourceEntry } from '../../@types/data/GalaxyCatalogSourceEntry';
+import type { GalaxyCatalogSourceEntry } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
 import { Source } from '../source';
 
 export const FAMOUS_GALAXY_ENTRY = {

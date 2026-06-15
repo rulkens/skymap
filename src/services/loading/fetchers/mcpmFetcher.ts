@@ -15,9 +15,9 @@
  */
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { MCPMReq } from '../../../@types/loading/MCPMReq';
-import type { ScalarCube } from '../../../@types/data/ScalarCube';
+import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
 import type { Tier } from '../../../@types/data/Tier';
-import { decodeScalarField } from '../../../data/scalarFieldFormat';
+import { decodeScalarField } from '../../../data/volume/scalarFieldFormat';
 import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
 
 const FILENAME: Record<Tier, string> = {

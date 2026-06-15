@@ -1,4 +1,4 @@
-import type { StructureSourceEntry } from '../../@types/data/StructureSourceEntry';
+import type { StructureSourceEntry } from '../../@types/data/structure/StructureSourceEntry';
 import { Source } from '../source';
 
 export const VOID_ENTRY = {

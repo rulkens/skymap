@@ -9,8 +9,8 @@
 import { describe, it, expect } from 'vitest';
 
 import { projectLabelCategoryVisibility } from '../../../../src/services/engine/settingsStore/projectLabelCategoryVisibility';
-import { LABEL_CATEGORIES } from '../../../../src/data/labelCategories';
-import { isStructureCategory } from '../../../../src/data/structureCategories';
+import { LABEL_CATEGORIES } from '../../../../src/data/structure/labelCategories';
+import { isStructureCategory } from '../../../../src/data/structure/structureCategories';
 import { makeSettingsFixture } from './makeSettingsFixture';
 
 describe('projectLabelCategoryVisibility', () => {
@@ -21,7 +21,10 @@ describe('projectLabelCategoryVisibility', () => {
     state.structures.items[firstStructure].labelEnabled = false;
     state.galaxyCatalogs.items.famousGalaxy.labelEnabled = true;
 
-    const record = projectLabelCategoryVisibility(state.structures.items, state.galaxyCatalogs.items);
+    const record = projectLabelCategoryVisibility(
+      state.structures.items,
+      state.galaxyCatalogs.items,
+    );
 
     // Keyed by exactly the label categories (structures + famousGalaxy).
     expect(Object.keys(record).sort()).toEqual([...LABEL_CATEGORIES].sort());
@@ -40,7 +43,10 @@ describe('projectLabelCategoryVisibility', () => {
     const state = makeSettingsFixture();
     state.galaxyCatalogs.items.famousGalaxy.labelEnabled = false;
 
-    const record = projectLabelCategoryVisibility(state.structures.items, state.galaxyCatalogs.items);
+    const record = projectLabelCategoryVisibility(
+      state.structures.items,
+      state.galaxyCatalogs.items,
+    );
 
     expect(record.famousGalaxy).toBe(false);
     // Structure labels untouched.

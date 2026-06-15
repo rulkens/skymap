@@ -23,7 +23,7 @@ import { reducer, initialState, canCommit } from './state';
 import { seedDeprojectCrop, fitCropToSource, rescaleCrop } from './cropMath';
 import { rescaleDisk } from './diskOverlay';
 import { willDeproject } from '../../famous/deprojectDisk';
-import { DEFAULT_DISK_MARGIN } from '../../../src/data/famousCalibration';
+import { DEFAULT_DISK_MARGIN } from '../../../src/data/galaxyCatalog/famousCalibration';
 import type { RecipeDisk } from '../plugin/recipe';
 import { GalaxyList } from './components/GalaxyList';
 import { SourceBar } from './components/SourceBar';

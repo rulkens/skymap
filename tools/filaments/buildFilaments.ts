@@ -71,12 +71,12 @@ import { fileURLToPath } from 'node:url';
 import type { SourceType } from '../../src/@types/data/SourceType';
 import { rawDataPath } from '../utils/io/rawDataRegistry.js';
 
-import { decodeGalaxyCatalog } from '../../src/data/galaxyCatalogFormat.js';
+import { decodeGalaxyCatalog } from '../../src/data/galaxyCatalog/galaxyCatalogFormat.js';
 import { parseNDskl, skeletonToFilamentCloud } from '../parsers/ndskl.js';
-import { encodeFilaments } from '../../src/data/filamentBinaryFormat.js';
-import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog.js';
+import { encodeFilaments } from '../../src/data/filament/filamentBinaryFormat.js';
+import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import { Source } from '../../src/data/sources.js';
-import { galaxyCatalogFluxLimit } from '../../src/data/galaxyCatalogFluxLimits.js';
+import { galaxyCatalogFluxLimit } from '../../src/data/galaxyCatalog/galaxyCatalogFluxLimits.js';
 import { absoluteFromApparent } from '../../src/utils/math/absoluteFromApparent.js';
 import { dMaxFromAbsolute } from '../../src/utils/math/dMaxFromAbsolute.js';
 import { mulberry32 } from '../../src/utils/random/mulberry32.js';

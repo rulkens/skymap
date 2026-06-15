@@ -46,7 +46,7 @@
 
 import type { Pass } from '../../../../@types/engine/frame/Pass';
 import { milkyWayFadeAlpha } from '../../../../utils/math/milkyWayFadeAlpha';
-import { MILKY_WAY_CENTER_WORLD } from '../../../../data/galacticCenter';
+import { MILKY_WAY_CENTER_WORLD } from '../../../../data/milkyWay/galacticCenter';
 
 export const milkyWayPass: Pass = {
   name: 'milky-way',

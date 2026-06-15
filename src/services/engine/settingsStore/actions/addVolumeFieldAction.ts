@@ -9,7 +9,7 @@
  */
 
 import type { SettingsStore } from '../createSettingsStore';
-import type { VolumeFieldId } from '../../../../@types/data/VolumeFieldId';
+import type { VolumeFieldId } from '../../../../@types/data/volume/VolumeFieldId';
 import { addVolumeField } from '../reducers/addVolumeField';
 
 export function addVolumeFieldAction(store: SettingsStore, id: VolumeFieldId): void {

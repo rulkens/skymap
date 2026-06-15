@@ -10,7 +10,7 @@
 
 import type { ReadyFrameContext } from './ReadyFrameContext';
 import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
-import type { VolumeFieldId } from '../../data/VolumeFieldId';
+import type { VolumeFieldId } from '../../data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../settings/VolumeFieldSettings';
 
 export type EncodeVolumesArgs = {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { clampFlowParams } from '../../src/utils/clampFlowParams';
-import { MAX_PARTICLES, MIN_TRAIL_STEP } from '../../src/data/flowFieldConstants';
+import { MAX_PARTICLES, MIN_TRAIL_STEP } from '../../src/data/flow/flowFieldConstants';
 import { DEFAULT_FLOW } from '../../src/data/defaults';
 import type { FlowSettings } from '../../src/@types/settings/FlowSettings';
 

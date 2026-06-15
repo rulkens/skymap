@@ -13,7 +13,7 @@
  */
 
 import type { SourceType } from '../@types/data/SourceType';
-import type { GalaxyCatalogId } from '../@types/engine/data/GalaxyCatalogId';
+import type { GalaxyCatalogId } from '../@types/data/galaxyCatalog/GalaxyCatalogId';
 import { SOURCE_REGISTRY } from '../data/sources';
 
 export function galaxyCatalogIdOf(source: SourceType): GalaxyCatalogId {

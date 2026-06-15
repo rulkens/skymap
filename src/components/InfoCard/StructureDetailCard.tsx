@@ -5,10 +5,10 @@
  */
 
 import type { ReactNode } from 'react';
-import type { StructureRecord } from '../../@types/engine/data/StructureRecord';
+import type { StructureRecord } from '../../@types/data/structure/StructureRecord';
 import { formatDistance } from '../../utils/format/formatDistance';
 import { formatAbellDesignation } from '../../utils/format/formatAbellDesignation';
-import { CATEGORY_DISPLAY_INFO } from '../../data/categoryDisplayInfo';
+import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
 import { CardHeader } from './CardHeader';
 import { CardRow } from './CardRow';
 import { DescriptionBlock } from './DescriptionBlock';

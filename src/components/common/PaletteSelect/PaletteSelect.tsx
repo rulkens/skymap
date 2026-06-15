@@ -1,6 +1,6 @@
 /**
  * PaletteSelect — a small `<select>` wrapper for picking one of the
- * scalar-field palette ids defined in `data/scalarFieldPalettes.ts`.
+ * scalar-field palette ids defined in `data/volume/scalarFieldPalettes.ts`.
  *
  * Lives in `components/common/` because more than one surface needs to
  * pick a palette: today the per-field row in the SettingsPanel's
@@ -18,8 +18,8 @@
  * specialisation of it.
  */
 import type { ReactNode } from 'react';
-import type { ScalarFieldPaletteId } from '../../../@types/data/ScalarFieldPaletteId';
-import { PALETTE_IDS } from '../../../data/scalarFieldPalettes';
+import type { ScalarFieldPaletteId } from '../../../@types/data/volume/ScalarFieldPaletteId';
+import { PALETTE_IDS } from '../../../data/volume/scalarFieldPalettes';
 import styles from './PaletteSelect.module.css';
 
 export type PaletteSelectProps = {
