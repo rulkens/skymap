@@ -34,6 +34,7 @@
  */
 
 import type { SourceType } from '../@types/data/SourceType';
+import type { PickResult } from '../@types/data/PickResult';
 
 /** Bit shift for the source code in the packed identity. */
 export const SELECTION_SOURCE_SHIFT = 27;
@@ -67,14 +68,6 @@ export const PICK_SENTINEL_OFFSET = 1;
 export function packSelection(sourceCode: number, localIdx: number): number {
   return ((sourceCode << SELECTION_SOURCE_SHIFT) | localIdx) >>> 0;
 }
-
-/**
- * Decoded pick-buffer hit: the source code + per-source local index, the pure
- * identity the bits carry. Classifying it (galaxy catalog galaxy vs structure ring) is
- * a registry read done downstream by `pickToSelection` — the decode itself
- * stays store-free and dispatch-free.
- */
-export type PickResult = { readonly sourceCode: SourceType; readonly localIdx: number };
 
 /**
  * Decode a raw r32uint pick value into a {@link PickResult}, or `null` for no

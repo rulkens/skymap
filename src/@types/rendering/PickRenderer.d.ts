@@ -7,7 +7,7 @@
  */
 
 import type { PickSourceDraw } from './PickSourceDraw';
-import type { PickResult } from '../../data/selectionEncoding';
+import type { PickResult } from '../data/PickResult';
 import type { Vec2 } from '../math/Vec2';
 
 export type PickRenderer = {

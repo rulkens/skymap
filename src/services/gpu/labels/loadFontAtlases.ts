@@ -48,7 +48,7 @@ import type { RawBMFont } from '../../../@types/rendering/RawBMFont';
 import type { LoadedFontAtlases } from '../../../@types/rendering/LoadedFontAtlases';
 import type { FontMetrics } from '../../../@types/rendering/FontMetrics';
 import { FONT_IDS } from '../../../data/fonts';
-import type { FontId } from '../../../data/fonts';
+import type { FontId } from '../../../@types/data/FontId';
 
 /**
  * Base URL for the font atlas files.  Intentionally a relative path so

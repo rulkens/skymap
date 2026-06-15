@@ -20,7 +20,7 @@ import type { PickStructureStore } from '../../../../src/@types/engine/data/Pick
 import type { StructureRecord } from '../../../../src/@types/data/structure/StructureRecord';
 import { Source } from '../../../../src/data/sources';
 import type { createPickRenderer } from '../../../../src/services/gpu/renderers/pickRenderer';
-import type { PickResult } from '../../../../src/data/selectionEncoding';
+import type { PickResult } from '../../../../src/@types/data/PickResult';
 
 type PickRenderer = ReturnType<typeof createPickRenderer>;
 

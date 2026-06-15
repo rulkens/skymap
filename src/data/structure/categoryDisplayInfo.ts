@@ -15,16 +15,8 @@
  */
 
 import type { LabelCategory } from '../../@types/engine/data/LabelCategory';
+import type { CategoryDisplayInfo } from '../../@types/data/structure/CategoryDisplayInfo';
 import { SOURCE_ENTRIES } from '../sourceEntries';
-
-export type CategoryDisplayInfo = {
-  /** Long form for detail surfaces ('Galaxy Cluster', 'Famous Galaxy'). */
-  label: string;
-  /** Compact form for previews and chips ('Cluster', 'Galaxy'). */
-  shortLabel: string;
-  /** Plural form for list/toggle headers ('Clusters', 'Famous Galaxies'). */
-  readonly plural: string;
-};
 
 function buildDisplayInfo(): Readonly<Record<LabelCategory, CategoryDisplayInfo>> {
   const result = {} as Record<LabelCategory, CategoryDisplayInfo>;

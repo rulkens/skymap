@@ -16,7 +16,7 @@ import {
   packSelection,
   unpackPick,
 } from '../../src/data/selectionEncoding';
-import type { PickResult } from '../../src/data/selectionEncoding';
+import type { PickResult } from '../../src/@types/data/PickResult';
 import { Source } from '../../src/data/sources';
 
 describe('selectionEncoding', () => {

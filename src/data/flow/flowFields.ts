@@ -27,29 +27,9 @@
  * knob can't silently skip the panels.
  */
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
+import type { FlowSliderKey } from '../../@types/data/flow/FlowSliderKey';
+import type { FlowSliderField } from '../../@types/data/flow/FlowSliderField';
 import { MAX_PARTICLES } from './flowFieldConstants';
-
-/** Keys of `FlowSettings` that surface as numeric sliders (everything but `enabled`/`mode`). */
-export type FlowSliderKey = Exclude<keyof FlowSettings, 'enabled' | 'mode'>;
-
-/** Which panel a slider surfaces in. */
-export type FlowSliderSurface = 'panel' | 'debug';
-
-export type FlowSliderField = {
-  key: FlowSliderKey;
-  label: string;
-  surface: FlowSliderSurface;
-  /** Inclusive min for the range input. */
-  min: number;
-  /** Inclusive max — the UI owns the visible ceiling (single source of truth). */
-  max: number;
-  /** Slider granularity. */
-  step: number;
-  /** Pre-format the current value for the readout (e.g. `toFixed`/rounded count). */
-  format: (value: number) => string;
-  /** Optional hover tooltip. */
-  title?: string;
-};
 
 export const FLOW_SLIDER_FIELDS: readonly FlowSliderField[] = [
   {

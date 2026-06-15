@@ -6,7 +6,7 @@ import {
   FONTS,
   FONT_IDS,
 } from '../../src/data/fonts';
-import type { FontId } from '../../src/data/fonts';
+import type { FontId } from '../../src/@types/data/FontId';
 
 describe('font registry', () => {
   it('exposes the shared atlas envelope constants', () => {

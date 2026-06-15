@@ -20,7 +20,7 @@ import type { Vec3 } from '../math/Vec3';
 import type { Vec4 } from '../math/Vec4';
 import type { LabelAlignX } from './LabelAlignX';
 import type { LabelAlignY } from './LabelAlignY';
-import type { FontId } from '../../data/fonts';
+import type { FontId } from '../data/FontId';
 
 export type Label = {
   readonly id: string;

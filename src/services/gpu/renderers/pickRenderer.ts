@@ -44,7 +44,7 @@ import {
 } from './pointRenderer';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { SELECTION_NONE_SENTINEL, unpackPick } from '../../../data/selectionEncoding';
-import type { PickResult } from '../../../data/selectionEncoding';
+import type { PickResult } from '../../../@types/data/PickResult';
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
