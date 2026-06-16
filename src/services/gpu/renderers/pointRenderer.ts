@@ -175,12 +175,12 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  *   bytes 124..127: _pad4             u32          (written as 0)
  *   bytes 128..131: biasMode          u32          (Malmquist mode)  }
  *   bytes 132..135: absMagLimit       f32          (volume-limit M)  }
- *   bytes 136..139: apparentMagLimit  f32          (reserved)        } 32 bytes
- *   bytes 140..143: schechterMStar    f32          (per-source)      }  (two vec4 slots)
- *   bytes 144..147: schechterAlpha    f32          (per-source)      }
- *   bytes 148..151: schechterMLim     f32          (per-source)      }
- *   bytes 152..155: schechterNRef     f32          (per-source)      }
- *   bytes 156..159: _pad5             u32          (written as 0)    }
+ *   bytes 136..139: apparentMagLimit  f32          (reserved, unwritten) } 32 bytes
+ *   bytes 140..143: schechterMStar    f32          (reserved, unwritten) }  (two vec4 slots)
+ *   bytes 144..147: schechterAlpha    f32          (reserved, unwritten) }
+ *   bytes 148..151: schechterMLim     f32          (reserved, unwritten) }
+ *   bytes 152..155: schechterNRef     f32          (reserved, unwritten) }
+ *   bytes 156..159: _pad5             u32          (written as 0)        }
  *   bytes 160..163: pxFadeStart       f32          (procedural-disk band low)  }
  *   bytes 164..167: pxFadeEnd         f32          (procedural-disk band high) } 16 bytes
  *   bytes 168..171: pickPass          u32          (0 = visual, 1 = pick)      }
@@ -201,9 +201,12 @@ export const PICK_PASS_BYTE_OFFSET = 168;
  *
  * The trailing u32 padding words round the struct out to a 16-byte
  * boundary so a future vec3/vec4 append doesn't fall into mis-alignment.
- * The four `schechter*` slots are written PER SOURCE in `draw()` between
- * per-source draw calls — each galaxy catalog has its own M*, α, m_lim, and
- * pre-computed central-density normaliser.
+ * The `apparentMagLimit` / `schechterMStar` / `schechterAlpha` slots are
+ * reserved-but-unwritten: the shader's Schechter / 1-over-Vmax modes read
+ * their per-galaxy weights from the per-vertex `schechterRatio` + angular
+ * slots (spliced in by `biasCorrectionSubsystem`), never from these
+ * uniforms.  They stay in the layout only to keep `pickPass`'s byte offset
+ * stable; the WGSL struct still declares them but no shader reads them.
  */
 const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4 + 4 * 4; // 176 bytes
 
@@ -717,9 +720,6 @@ export function createPointRenderer(
       realOnlyMode,
       biasMode,
       absMagLimit,
-      apparentMagLimit,
-      schechterMStar,
-      schechterAlpha,
       depthFadeEnabled,
       pxFadeStart,
       pxFadeEnd,
@@ -753,14 +753,17 @@ export function createPointRenderer(
     u32[30] = depthFadeEnabled ? 1 : 0; // bytes 120
     // u32[31] _pad4 stays zero.
 
-    // Malmquist-bias state.  Mode goes through the u32 view, thresholds
+    // Malmquist-bias state.  Mode goes through the u32 view, threshold
     // through f32 — both alias the same ArrayBuffer.
     u32[32] = biasMode >>> 0;
     f32[33] = absMagLimit;
-    f32[34] = apparentMagLimit;
-    f32[35] = schechterMStar;
-    f32[36] = schechterAlpha;
-    // u32[37..39] (_pad5/6/7) stay zero (16-byte boundary padding).
+    // f32[34..38] (apparentMagLimit / schechterMStar / schechterAlpha /
+    // schechterMLim / schechterNRef) + u32[39] (_pad5) stay zero.  The
+    // Schechter / 1-over-Vmax modes read their per-galaxy weights from the
+    // per-vertex `schechterRatio` + angular slots (spliced in by
+    // `biasCorrectionSubsystem`), so these uniform slots carry nothing —
+    // left reserved rather than removed to keep the struct's byte offsets
+    // (incl. `pickPass`) stable.
 
     // Procedural-disk crossfade band.  Slot 42 is `pickPass` — stays 0
     // here (visual pass); pickRenderer flips it to 1 in place before its

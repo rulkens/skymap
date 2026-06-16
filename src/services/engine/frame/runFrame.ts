@@ -292,9 +292,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       realOnlyMode: state.settings.galaxyCatalogs.realOnly,
       biasMode: state.settings.bias.mode,
       absMagLimit: state.settings.bias.absMagLimit,
-      apparentMagLimit: state.bias.apparentMagLimit,
-      schechterMStar: state.bias.schechterMStar,
-      schechterAlpha: state.bias.schechterAlpha,
       depthFadeEnabled: state.settings.galaxyCatalogs.depthFade,
       // Same crossfade band the procedural-disk pass fades IN over, so the
       // two passes blend cleanly without a double-bright donut.  Constants

@@ -256,9 +256,6 @@ function makeInput(
     realOnlyMode: false,
     biasMode: BiasMode.None,
     absMagLimit: -19,
-    apparentMagLimit: 19.5,
-    schechterMStar: -20.83,
-    schechterAlpha: -1.2,
     depthFadeEnabled: true,
     // Points-pass crossfade-OUT band thresholds. Match the runtime
     // defaults from `thumbnailSubsystem.ts` so the fixture mirrors
@@ -454,9 +451,6 @@ describe('renderFrame', () => {
     expect(drawSettings.realOnlyMode).toBe(fx.input.settings.realOnlyMode);
     expect(drawSettings.biasMode).toBe(fx.input.settings.biasMode);
     expect(drawSettings.absMagLimit).toBe(fx.input.settings.absMagLimit);
-    expect(drawSettings.apparentMagLimit).toBe(fx.input.settings.apparentMagLimit);
-    expect(drawSettings.schechterMStar).toBe(fx.input.settings.schechterMStar);
-    expect(drawSettings.schechterAlpha).toBe(fx.input.settings.schechterAlpha);
     expect(drawSettings.depthFadeEnabled).toBe(fx.input.settings.depthFadeEnabled);
   });
 

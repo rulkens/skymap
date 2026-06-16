@@ -28,16 +28,10 @@ export type PointDrawSettings = {
   highlightFallback: boolean;
   /** When true, fallback-orientation fragments are `discard`ed entirely. */
   realOnlyMode: boolean;
-  /** Malmquist-bias correction selector (`data/biasMode.ts`).  0 = no correction; next four fields ignored. */
+  /** Malmquist-bias correction selector (`data/biasMode.ts`).  0 = no correction; `absMagLimit` ignored.  The Schechter / 1-over-Vmax modes read per-vertex weights (`schechterRatio`, angular-density) the bias-correction subsystem splices into the vertex buffer — not uniforms. */
   biasMode: number;
   /** Volume-limit threshold for `biasMode == 1`.  Galaxies fainter than this are discarded in the vertex stage. */
   absMagLimit: number;
-  /** Reserved for `biasMode == 2` (1/V_max). */
-  apparentMagLimit: number;
-  /** Initial Schechter M* — per-source override applies in the draw loop. */
-  schechterMStar: number;
-  /** Initial Schechter α — per-source override applies in the draw loop. */
-  schechterAlpha: number;
   /** Whether the points pass applies depth-based alpha fade. */
   depthFadeEnabled: boolean;
   /** Procedural-disk crossfade band — pixel threshold below which points render full-alpha. */

@@ -8,9 +8,9 @@ import type { BiasMode } from '../../../data/galaxyCatalog/biasMode';
  * not via settingsTable — see settingsTable.ts module doc).  `setAbsMagLimit`
  * tunes the threshold the volume-limited mode uses.
  *
- * The bake-derived parameters (`apparentMagLimit`, `schechterMStar`,
- * `schechterAlpha`) are NOT user-tunable — they live on `EngineState.bias`
- * as internal bake state.
+ * The bake-derived per-galaxy weights are NOT user-tunable and never pass
+ * through engine state: `biasCorrectionSubsystem` splices them straight into
+ * the per-vertex buffer (`schechterRatio` + angular slots) after each bake.
  */
 export type EngineBiasHandle = {
   /** Set the Malmquist-bias correction mode. */

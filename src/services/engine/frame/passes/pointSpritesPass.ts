@@ -85,9 +85,6 @@ export const pointSpritesPass: Pass = {
       realOnlyMode: settings.realOnlyMode,
       biasMode: settings.biasMode,
       absMagLimit: settings.absMagLimit,
-      apparentMagLimit: settings.apparentMagLimit,
-      schechterMStar: settings.schechterMStar,
-      schechterAlpha: settings.schechterAlpha,
       depthFadeEnabled: settings.depthFadeEnabled,
       // The points-pass fragment fades alpha to zero across the same
       // apparent-pixel-size band the procedural-disk pass fades IN over.

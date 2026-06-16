@@ -88,11 +88,6 @@ function makeState(): EngineState {
       filaments: { enabled: false, intensity: 1 },
       volumes: { enabled: false },
     },
-    bias: {
-      apparentMagLimit: 0,
-      schechterMStar: 0,
-      schechterAlpha: 0,
-    },
     picking: {
       latestMouseCss: null,
       lastPickedMouseCss: null,

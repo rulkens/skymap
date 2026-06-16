@@ -30,9 +30,6 @@ export type RenderFrameSettings = {
   realOnlyMode: boolean;
   biasMode: BiasMode;
   absMagLimit: number;
-  apparentMagLimit: number;
-  schechterMStar: number;
-  schechterAlpha: number;
   depthFadeEnabled: boolean;
   /**
    * Procedural-disk crossfade-OUT thresholds for the points-pass
