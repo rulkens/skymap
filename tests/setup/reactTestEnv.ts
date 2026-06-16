@@ -47,4 +47,15 @@ if (typeof window !== 'undefined') {
     }
     globalThis.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver;
   }
+
+  // jsdom omits Element.prototype.scrollTo.  Components that call
+  // scrollRef.current?.scrollTo(...) in an effect (e.g. MobileSheet
+  // resetting scroll position on open) would throw TypeError at mount time.
+  // A no-op here is the single source instead of repeating per-file stubs —
+  // same rationale as the ResizeObserver and fetch stubs above.  The property
+  // is writable/configurable, so individual tests can still swap in a vi.fn()
+  // to spy on calls and restore the no-op when done.
+  if (typeof Element.prototype.scrollTo !== 'function') {
+    Element.prototype.scrollTo = () => {};
+  }
 }
