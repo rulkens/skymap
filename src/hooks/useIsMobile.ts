@@ -44,6 +44,10 @@ export function useIsMobile(): boolean {
 
     const mql = window.matchMedia(MOBILE_MEDIA_QUERY);
 
+    // Re-sync in case the query result changed between the lazy initialiser
+    // and this effect running (the render→effect gap).
+    setIsMobile(mql.matches);
+
     const handleChange = (event: MediaQueryListEvent): void => {
       setIsMobile(event.matches);
     };

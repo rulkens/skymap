@@ -61,7 +61,6 @@ describe('useIsMobile', () => {
     expect(result.current).toBe(false);
 
     act(() => {
-      fakeMql.matches = true;
       fakeMql._listeners.forEach((fn) => fn({ matches: true }));
     });
 
