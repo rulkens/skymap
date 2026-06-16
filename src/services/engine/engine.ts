@@ -813,7 +813,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       if (cfg.category === 'synthetic') continue;
       if (tierTarget(src, prevTier) === tierTarget(src, tier)) continue;
       if (!state.settings.galaxyCatalogs.items[galaxyCatalogIdOf(src)].enabled) continue;
-      state.assetSlots.points.get(src)?.load({ source: src, tier });
+      // `dissolvePrevious`: a tier swap is the one reload the user should see
+      // the old tier fade out of. The commit reads this flag instead of
+      // guessing "is this a re-commit" from the data store, so re-enable /
+      // forceReload / boot never trigger a spurious dissolve.
+      state.assetSlots.points.get(src)?.load({ source: src, tier, dissolvePrevious: true });
       // Companion sidecars reload in lockstep so localIdx lookups stay valid.
       loadCompanionAssets(state, cfg, tier);
     }

@@ -43,9 +43,8 @@ import type { WirePointSourceDeps } from '../../../@types/engine/wiring/WirePoin
 import { createAssetSlot } from '../../loading/AssetSlot';
 import { galaxyCatalogFetcher } from '../../loading/fetchers/galaxyCatalogFetcher';
 import { syntheticPointFetcher } from '../../loading/fetchers/syntheticPointFetcher';
-import type { FadeId } from '../../../@types/animation/FadeId';
-import { FADE_OUT_DURATION_MS } from '../../animation/fadeController';
 import { syncVisibilityFadeItem } from './syncVisibilityFades';
+import { dissolveCatalogBuffer } from './dissolveCatalogBuffer';
 import type { SourceType } from '../../../@types/data/SourceType';
 
 /**
@@ -151,7 +150,7 @@ export function wireGalaxyCatalogSourceSlot(
   const slot = createAssetSlot<GalaxyCatalog, GalaxyCatalogReq>({
     name: slotName,
     fetch: fetcher,
-    commit: async (cloud) => {
+    commit: async (cloud, _signal, req) => {
       // The renderer can be null mid-bootstrap (commit fires during
       // wireSlots, which runs before wireInput) or after teardown
       // (StrictMode unmount, hot-reload).  Drop the upload silently
@@ -163,18 +162,16 @@ export function wireGalaxyCatalogSourceSlot(
       // reject this upload during the legitimate wireSlots window.
       if (state.gpu.renderer === null) return;
       const catalogId = galaxyCatalogIdOf(source);
-      const id: FadeId = { kind: 'galaxyCatalog', id: catalogId };
-      const fades = state.subsystems.fades;
 
-      // Tier swap: fade the old buffer out before the new one lands so
-      // the user sees the previous tier dissolve.  First load skips
-      // straight to fade-in.  The renderer keeps drawing the OLD
-      // buffer with falling alpha until fade-out completes — only
-      // then does `upload()` destroy + recreate it.
-      const isFirstLoad = !state.data.galaxies.catalogs.has(source);
-      if (!isFirstLoad) {
-        await fades.fadeTo(id, 0, FADE_OUT_DURATION_MS);
-      }
+      // Tier swap: dissolve the currently-drawn buffer before the new one
+      // replaces it.  The trigger is EXPLICIT — `req.dissolvePrevious`, set
+      // only by `setTier` — not inferred from data-store membership, which
+      // any second commit (re-enable, forceReload, a dev double-bootstrap)
+      // would trip into a spurious dissolve.  The await is load-bearing: one
+      // buffer per catalog means the old and new tiers can't cross-fade, so
+      // the dissolve must finish before `upload()` destroys the buffer (see
+      // `dissolveCatalogBuffer` for why awaiting here also avoids a blank gap).
+      if (req.dissolvePrevious) await dissolveCatalogBuffer(state, catalogId);
 
       const t0 = performance.now();
       // eslint-disable-next-line no-console
@@ -193,8 +190,8 @@ export function wireGalaxyCatalogSourceSlot(
       // re-drive every other source's fade, racing their own in-flight commits.
       // It's fire-and-forget so the slot's `ready` transition fires immediately;
       // user interaction doesn't wait for the smoothstep to saturate. The
-      // tier-swap fade-OUT above stays hand-coded — it's a producer-driven
-      // mid-commit dissolve, not an intent toggle.
+      // tier-swap fade-OUT above (`dissolveCatalogBuffer`) is a transient
+      // pre-replace dissolve, not an intent toggle — hence the two are separate.
       syncVisibilityFadeItem(state, 'survey', catalogId, { animate: true });
 
       const dtMs = Math.round(performance.now() - t0);

@@ -196,7 +196,7 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
 
       if (commit) {
         try {
-          await commit(value, ctrl.signal);
+          await commit(value, ctrl.signal, req);
         } catch (err) {
           if ((err as Error).name === 'AbortError') return;
           dispatch({ kind: 'gave-up', error: err as Error, attempt });
