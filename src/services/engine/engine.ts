@@ -982,20 +982,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // `boringSetters` entry.  This literal is the only public surface.
   const handle: EngineHandle = {
     galaxyCatalogs: {
-      setSize: (sizePx) => boringSetters.setPointSize(sizePx),
-      setBrightness: (value) => boringSetters.setBrightness(value),
-      setDepthFade: (enabled) => boringSetters.setDepthFadeEnabled(enabled),
-      setHighlightFallback: (enabled) => boringSetters.setHighlightFallback(enabled),
-      setRealOnly: (enabled) => boringSetters.setRealOnlyMode(enabled),
+      setSize: boringSetters.setPointSize,
+      setBrightness: boringSetters.setBrightness,
+      setDepthFade: boringSetters.setDepthFadeEnabled,
+      setHighlightFallback: boringSetters.setHighlightFallback,
+      setRealOnly: boringSetters.setRealOnlyMode,
       setLabelEnabled: (galaxyCatalog, enabled) =>
         setGalaxyCatalogLabelEnabled(state, settingsStore, galaxyCatalog, enabled),
     },
     tonemap: {
-      setExposure: (value) => boringSetters.setExposure(value),
-      setCurve: (curve) => boringSetters.setToneMapCurve(curve),
+      setExposure: boringSetters.setExposure,
+      setCurve: boringSetters.setToneMapCurve,
     },
     camera: {
-      setAutoRotate: (enabled) => boringSetters.setAutoRotate(enabled),
+      setAutoRotate: boringSetters.setAutoRotate,
       reset: resetCamera,
       focusOn,
       focusOnHome,
@@ -1015,10 +1015,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
     bias: {
       setMode: setBiasMode,
-      setAbsMagLimit: (absMag) => boringSetters.setAbsMagLimit(absMag),
+      setAbsMagLimit: boringSetters.setAbsMagLimit,
     },
     thumbnails: {
-      setEnabled: (enabled) => boringSetters.setGalaxyTexturesEnabled(enabled),
+      setEnabled: boringSetters.setGalaxyTexturesEnabled,
     },
     milkyWay: {
       // Write the store, then drive the fade through `syncVisibilityFades`:
@@ -1041,7 +1041,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         boringSetters.setFilamentsEnabled(enabled);
         syncVisibilityFades(state, { animate: true, only: ['filaments'] });
       },
-      setIntensity: (value) => boringSetters.setFilamentIntensity(value),
+      setIntensity: boringSetters.setFilamentIntensity,
     },
     flow: {
       // One patch-shaped entry point over the `settings.flow` slice. The WHOLE
@@ -1129,8 +1129,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           state.subsystems.scheduler.requestRender();
         },
       },
-      setShowPickBuffer: (enabled: boolean) => boringSetters.setShowPickBuffer(enabled),
-      setShowDiskRadiusRing: (enabled: boolean) => boringSetters.setShowDiskRadiusRing(enabled),
+      setShowPickBuffer: boringSetters.setShowPickBuffer,
+      setShowDiskRadiusRing: boringSetters.setShowDiskRadiusRing,
     },
 
     // The engine-owned settings store. React subscribes via `useStore`; the
