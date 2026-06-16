@@ -95,13 +95,6 @@ export const FADE_LAYERS = [
     handle: () => ({ kind: 'milkyWay' }),
     seed: (s) => (s.milkyWay.enabled ? 1 : 0),
     intent: (s) => s.milkyWay.enabled,
-    // writeIntent is the React-SILENT symmetric inverse of intent: it mutates
-    // the settings leaf directly, the way intent reads it. It does NOT go
-    // through the settings store — the React-notifying writes are the push
-    // setters' job, and they hold the SettingsStore handle this signature lacks.
-    writeIntent: (s, _item, value) => {
-      s.milkyWay.enabled = value;
-    },
   }),
   // procedural disks — registerOverlayFades.ts:70 (always-on)
   layer({
@@ -125,9 +118,6 @@ export const FADE_LAYERS = [
     handle: () => ({ kind: 'volumesMaster' }),
     seed: (s) => (s.volumes.enabled ? 1 : 0),
     intent: (s) => s.volumes.enabled,
-    writeIntent: (s, _item, value) => {
-      s.volumes.enabled = value;
-    },
   }),
   // milkyWay label — registerOverlayFades.ts:95-98
   layer({
@@ -137,9 +127,6 @@ export const FADE_LAYERS = [
     handle: () => ({ kind: 'labelLayer', layer: 'milkyWay' }),
     seed: (s) => (s.milkyWay.labelEnabled ? 1 : 0),
     intent: (s) => s.milkyWay.labelEnabled,
-    writeIntent: (s, _item, value) => {
-      s.milkyWay.labelEnabled = value;
-    },
   }),
   // survey/galaxy names label — registerOverlayFades.ts:99. The famous-galaxy
   // label fade reuses the galaxyNames handle and is driven by the famous-galaxy
@@ -152,9 +139,6 @@ export const FADE_LAYERS = [
     handle: () => ({ kind: 'labelLayer', layer: 'galaxyNames' }),
     seed: (s) => (s.galaxyCatalogs.items.famousGalaxy.labelEnabled ? 1 : 0),
     intent: (s) => s.galaxyCatalogs.items.famousGalaxy.labelEnabled,
-    writeIntent: (s, _item, value) => {
-      s.galaxyCatalogs.items.famousGalaxy.labelEnabled = value;
-    },
   }),
   // scale bar — registerOverlayFades.ts:100 (React-side, tour-addressable)
   layer({
@@ -171,9 +155,6 @@ export const FADE_LAYERS = [
     handle: (id) => ({ kind: 'structure', id }),
     seed: (s, id) => (s.structures.items[id].enabled ? 1 : 0),
     intent: (s, id) => s.structures.items[id].enabled,
-    writeIntent: (s, id, value) => {
-      s.structures.items[id].enabled = value;
-    },
   }),
   // structure labels — registerOverlayFades.ts:114-117 (per StructureId)
   layer({
@@ -183,9 +164,6 @@ export const FADE_LAYERS = [
     handle: (id) => ({ kind: 'labelLayer', layer: 'structure', category: id }),
     seed: (s, id) => (s.structures.items[id].labelEnabled ? 1 : 0),
     intent: (s, id) => s.structures.items[id].labelEnabled,
-    writeIntent: (s, id, value) => {
-      s.structures.items[id].labelEnabled = value;
-    },
   }),
   // galaxy catalogs — absorbs galaxyCatalogSourceRegistry.ts:154 (demand-loaded; seed 0)
   layer({
@@ -195,9 +173,6 @@ export const FADE_LAYERS = [
     handle: (id) => ({ kind: 'galaxyCatalog', id }),
     seed: () => 0,
     intent: (s, id) => s.galaxyCatalogs.items[id].enabled,
-    writeIntent: (s, id, value) => {
-      s.galaxyCatalogs.items[id].enabled = value;
-    },
     // No `post`: the draw/pick bitmasks are derived per-frame in `runFrame`
     // (and fresh at click time), so a toggle needs no eager mask recompute here.
   }),
@@ -209,9 +184,6 @@ export const FADE_LAYERS = [
     handle: () => ({ kind: 'filament' }),
     seed: () => 0,
     intent: (s) => s.filaments.enabled,
-    writeIntent: (s, _item, value) => {
-      s.filaments.enabled = value;
-    },
   }),
   // flow field — absorbs flowFieldSlot.ts:36 (demand-loaded; seed 0)
   layer({
@@ -221,9 +193,6 @@ export const FADE_LAYERS = [
     handle: () => ({ kind: 'flow' }),
     seed: () => 0,
     intent: (s) => s.flow.enabled,
-    writeIntent: (s, _item, value) => {
-      s.flow.enabled = value;
-    },
     // Flow's asset is demand-loaded: gate the fade on the renderer's real "cube
     // loaded" truth — true exactly when there is something to render. The same
     // guarded bridge call is then correct for both the toggle (asks "loaded?")
@@ -239,10 +208,6 @@ export const FADE_LAYERS = [
     handle: (id) => ({ kind: 'volumeField', id }),
     seed: () => 0,
     intent: (s, id) => s.volumes.items[id]?.enabled ?? false,
-    writeIntent: (s, id, value) => {
-      const item = s.volumes.items[id];
-      if (item) item.enabled = value;
-    },
     // Enable-gated lazy-load: re-read the just-applied intent so a disable
     // toggle never triggers a load. The DEV debug fixtures aren't demand rows,
     // so they keep this direct lazy-load; cf4/mcpm load via reevaluateDemand and

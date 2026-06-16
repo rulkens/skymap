@@ -38,10 +38,9 @@
  * or a tour can toggle) is a strict *subset* of the *registration* set
  * (every fadeable layer). Plan A only needs to register and seed — that is
  * `key`/`expand`/`handle`/`seed`, the four required fields. The later
- * intent bridge fills in `intent`/`writeIntent` (read/write the
- * toggle in settings), `post` (side effect after a fade resolves), and
- * `guard` (suppress a fade under some state). Rows that are register-only
- * simply omit them.
+ * intent bridge fills in `intent` (read the toggle in settings), `post`
+ * (side effect after a fade resolves), and `guard` (suppress a fade under
+ * some state). Rows that are register-only simply omit them.
  */
 
 import type { VisibilityLayerKey } from './VisibilityLayerKey';
@@ -52,7 +51,7 @@ import type { SettingsSnapshot } from '../engine/settings/SettingsSnapshot';
 
 export type FadeLayer<Item> = {
   readonly key: VisibilityLayerKey;
-  // The `SettingsSnapshot` cluster this row's `intent`/`writeIntent` read/write.
+  // The `SettingsSnapshot` cluster this row's `intent` reads.
   // Lets `applyEffect` map a touched cluster to its rows without a parallel
   // table; registration-only rows omit it.
   readonly cluster?: keyof SettingsSnapshot;
@@ -61,7 +60,6 @@ export type FadeLayer<Item> = {
   seed(settings: EngineSettingsState, item: Item): number;
   // Intent rows only (optional, unused by Plan A):
   intent?(settings: EngineSettingsState, item: Item): boolean;
-  writeIntent?(settings: EngineSettingsState, item: Item, value: boolean): void;
   post?(state: EngineState, item: Item): void;
   guard?(state: EngineState, item: Item): boolean;
 };

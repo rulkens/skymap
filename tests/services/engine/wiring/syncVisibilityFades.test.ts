@@ -3,13 +3,12 @@
  * the public batch bridge `syncVisibilityFades`.
  *
  * `applyIntent` is the fades-ONLY primitive of the intent → fade bridge. Its
- * tests isolate its five obligations:
+ * tests isolate its four obligations:
  *
  *   1. Animated: read intent, `fadeTo` the handle to 1 (FADE_IN) or 0 (FADE_OUT).
  *   2. Non-animated: `setImmediate` instead, never `fadeTo`.
  *   3. An explicit `guard() === false` skips the whole op — no fade, no post.
  *   4. `post` runs after the fade, with `(state, item)`.
- *   5. It NEVER calls `writeIntent` — settings writes are the public bridge's job.
  *
  * Strategy: a stubbed fades registry with typed spies, plus hand-built FadeLayer
  * rows whose intent/guard/post/handle the test controls. Driving these isolates
@@ -130,17 +129,6 @@ describe('applyIntent', () => {
 
     expect(post).toHaveBeenCalledTimes(1);
     expect(post).toHaveBeenCalledWith(state, undefined);
-  });
-
-  it('never writes settings', () => {
-    const { state } = makeState();
-    const writeIntent =
-      vi.fn<(settings: EngineSettingsState, item: undefined, value: boolean) => void>();
-
-    const row = makeRow({ writeIntent });
-    applyIntentForTest(state, row, undefined, { animate: true });
-
-    expect(writeIntent).not.toHaveBeenCalled();
   });
 });
 
@@ -311,7 +299,7 @@ describe('syncVisibilityFades', () => {
 
     syncVisibilityFades(state, { animate: true });
 
-    // The bridge does fades ONLY — no writeIntent, so settings are untouched.
+    // The bridge does fades ONLY, so settings are untouched.
     expect(JSON.parse(JSON.stringify(settings))).toEqual(before);
   });
 });

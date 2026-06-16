@@ -300,10 +300,10 @@ describe('seedFades', () => {
 
 // ── Intent-subset closures ───────────────────────────────────────────
 //
-// The intent rows carry the optional read/write/post/guard closures; the
+// The intent rows carry the optional read/post/guard closures; the
 // register-only rows must not. These tests assert the closures are present and
-// behave as the inverse-pair contract (intent reads a leaf, writeIntent writes
-// it) plus the per-row post/guard side effects.
+// behave as the contract: intent reads a leaf, plus the per-row post/guard
+// side effects.
 
 describe('FADE_LAYERS intent subset', () => {
   const INTENT_KEYS: readonly VisibilityLayerKey[] = [
@@ -324,16 +324,14 @@ describe('FADE_LAYERS intent subset', () => {
     'scaleBar',
   ];
 
-  it('every intent row exposes intent + writeIntent; register-only rows do not', () => {
+  it('every intent row exposes intent; register-only rows do not', () => {
     for (const key of INTENT_KEYS) {
       const row = rowFor(key);
       expect(typeof row.intent, `${key}.intent`).toBe('function');
-      expect(typeof row.writeIntent, `${key}.writeIntent`).toBe('function');
     }
     for (const key of REGISTRATION_ONLY_KEYS) {
       const row = rowFor(key);
       expect(row.intent, `${key}.intent`).toBeUndefined();
-      expect(row.writeIntent, `${key}.writeIntent`).toBeUndefined();
     }
   });
 
@@ -376,13 +374,6 @@ describe('FADE_LAYERS intent subset', () => {
     const row = rowFor('surveyLabel');
     expect(row.seed(makeSettings({ famousLabelEnabled: false }), undefined)).toBe(0);
     expect(row.seed(makeSettings({ famousLabelEnabled: true }), undefined)).toBe(1);
-  });
-
-  it('writeIntent writes the leaf (milkyWayDisk)', () => {
-    const row = rowFor('milkyWayDisk');
-    const settings = makeSettings({ milkyWayEnabled: true });
-    row.writeIntent?.(settings, undefined, false);
-    expect(settings.milkyWay.enabled).toBe(false);
   });
 
   it('volume-field row post lazy-loads debug volumes on enable only', () => {

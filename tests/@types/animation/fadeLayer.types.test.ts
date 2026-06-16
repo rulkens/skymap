@@ -2,7 +2,7 @@
  * FadeLayer — compile-time assignability check.
  *
  * Confirms three contracts of `FadeLayer<Item>` that Plan A depends on:
- *   1. The intent fields (`intent`/`writeIntent`/`post`/`guard`) are
+ *   1. The intent fields (`intent`/`post`/`guard`) are
  *      optional — a row with ONLY `key`/`expand`/`handle`/`seed`
  *      typechecks. If any intent field becomes required, this literal
  *      stops compiling.
