@@ -68,28 +68,9 @@
  * ```
  */
 
-import { Source, SOURCE_REGISTRY } from '../../data/sources';
+import { Source } from '../../data/sources';
 import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import type { SourceType } from '../../@types/data/SourceType';
-import {
-  DEFAULT_ABS_MAG_LIMIT,
-  DEFAULT_AUTO_ROTATE,
-  DEFAULT_BIAS_MODE,
-  DEFAULT_BRIGHTNESS,
-  DEFAULT_DEPTH_FADE_ENABLED,
-  DEFAULT_SHOW_PICK_BUFFER,
-  DEFAULT_SHOW_DISK_RADIUS_RING,
-  DEFAULT_EXPOSURE,
-  DEFAULT_GALAXY_TEXTURES_ENABLED,
-  DEFAULT_MILKY_WAY_ENABLED,
-  DEFAULT_MILKY_WAY_LABEL_ENABLED,
-  DEFAULT_HIGHLIGHT_FALLBACK,
-  DEFAULT_POINT_SIZE_PX,
-  DEFAULT_REAL_ONLY_MODE,
-  DEFAULT_TONE_MAP_CURVE,
-  DEFAULT_VOLUMES_ENABLED,
-  DEFAULT_FLOW,
-} from '../../data/defaults';
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
@@ -102,6 +83,7 @@ import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 
 import { createTweenManager } from './camera/tweenManager';
 import { createSettingsStore } from './settingsStore/createSettingsStore';
+import { buildInitialSettings } from './settingsStore/buildInitialSettings';
 import { setBiasModeAction } from './settingsStore/actions/setBiasModeAction';
 import { setTierAction } from './settingsStore/actions/setTierAction';
 import { setVolumesEnabledAction } from './settingsStore/actions/setVolumesEnabledAction';
@@ -134,7 +116,6 @@ import type { RequestKey } from '../../@types/loading/RequestKey';
 import { awaitSlotReady } from '../loading/awaitSlotReady';
 import { tierTarget } from '../../data/tierTargets';
 import { snapToCameraSnapshot, tweenToCameraSnapshot } from './camera/cameraSnapshot';
-import { seedVolumeFields } from '../../data/volume/volumeFieldDefaults';
 import { buildVolumeFieldsSnapshot } from './helpers/buildVolumeFieldsSnapshot';
 import { clampVolumeIntensity } from '../../utils/clampVolumeIntensity';
 import { clampVolumeContrast } from '../../utils/clampVolumeContrast';
@@ -143,12 +124,6 @@ import { clampVolumeTrim } from '../../utils/clampVolumeTrim';
 import { clampVolumeExposure } from '../../utils/clampVolumeExposure';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
-import type { StructureId } from '../../@types/data/structure/StructureId';
-import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
-import { GALAXY_CATALOG_IDS } from '../../data/galaxyCatalog/galaxyCatalogIds';
-import { STRUCTURE_IDS } from '../../data/structure/structureIds';
-import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
-import type { GalaxyCatalogItemSettings } from '../../@types/settings/GalaxyCatalogItemSettings';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -274,80 +249,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // `settingsStore.getState()`, so React can subscribe to settings changes
   // via `useStore` instead of keeping a parallel mirror that drifts. The
   // dozens of `state.settings.X` read sites stay byte-identical — the getter
-  // hands back the held object directly.
-  const settingsStore = createSettingsStore({
-    // Currently-loaded data tier — the cross-cutting data-resolution preset
-    // (galaxy catalogs + MCPM volume + filaments all fetch by it). Seeded from
-    // `cb.initialTier`; 'medium' is the ~600k-galaxy desktop budget. Flat root
-    // field, not a cluster member — see `EngineSettingsState`.
-    tier: cb.initialTier ?? 'medium',
-    // Galaxy catalog layer: master gate on + shared billboard appearance knobs +
-    // one item row per galaxy catalog, each layer + label default-on. Keys are
-    // DERIVED from `GALAXY_CATALOG_IDS` so the seed can't drift from the galaxy catalog set.
-    // `labelEnabled` is inert for every galaxy catalog except famousGalaxy (the only
-    // one that renders a name label) — seeded uniformly true.
-    galaxyCatalogs: {
-      enabled: true,
-      sizePx: DEFAULT_POINT_SIZE_PX,
-      brightness: DEFAULT_BRIGHTNESS,
-      depthFade: DEFAULT_DEPTH_FADE_ENABLED,
-      highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
-      realOnly: DEFAULT_REAL_ONLY_MODE,
-      items: Object.fromEntries(
-        GALAXY_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
-      ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
-    },
-    tonemap: {
-      exposure: DEFAULT_EXPOSURE,
-      curve: DEFAULT_TONE_MAP_CURVE,
-    },
-    camera: {
-      autoRotate: DEFAULT_AUTO_ROTATE,
-    },
-    // Bias's user-tunable subset.  Bake-derived fields live on
-    // `state.bias` (worker outputs, not settings).  The -19 default is
-    // roughly where the SDSS spectroscopic main sample is volume-complete
-    // out to the galaxy catalog's flux limit — bright enough that nearly every
-    // catalog galaxy has a spectrum, dim enough to keep plenty of structure.
-    bias: {
-      mode: DEFAULT_BIAS_MODE,
-      absMagLimit: DEFAULT_ABS_MAG_LIMIT,
-    },
-    thumbnails: {
-      enabled: DEFAULT_GALAXY_TEXTURES_ENABLED,
-    },
-    milkyWay: {
-      enabled: DEFAULT_MILKY_WAY_ENABLED,
-      labelEnabled: DEFAULT_MILKY_WAY_LABEL_ENABLED,
-    },
-    filaments: {
-      enabled: SOURCE_REGISTRY[Source.Filaments].visible,
-      intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
-    },
-    volumes: {
-      enabled: DEFAULT_VOLUMES_ENABLED,
-      items: seedVolumeFields(),
-    },
-    // Flow is a singleton overlay layer: all its user-facing state (master
-    // gate + look/motion knobs) lives here, spread from the single
-    // `DEFAULT_FLOW` seed. Flow has no data-layer store — "loaded" is the asset
-    // slot's own `ready` state (`slotReady(assetSlots.flow)`).
-    flow: { ...DEFAULT_FLOW },
-    debug: {
-      showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
-      showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
-    },
-    // Structure overlay: master gate on + one item row per category, each
-    // ring + label default-on. Keys are DERIVED from `STRUCTURE_IDS`
-    // so the seed can't drift from the structure-id set (famous galaxies bear no
-    // ring and so have no row here).
-    structures: {
-      enabled: true,
-      items: Object.fromEntries(
-        STRUCTURE_IDS.map((c) => [c, { enabled: true, labelEnabled: true }]),
-      ) as Record<StructureId, StructureItemSettings>,
-    },
-  });
+  // hands back the held object directly. The literal's assembly lives in
+  // `buildInitialSettings` so the boot-defaults shape is testable on its own.
+  const settingsStore = createSettingsStore(
+    buildInitialSettings({ initialTier: cb.initialTier ?? 'medium' }),
+  );
 
   const state: EngineState = {
     // `state.settings` delegates to the engine-owned store. Copy-on-write
