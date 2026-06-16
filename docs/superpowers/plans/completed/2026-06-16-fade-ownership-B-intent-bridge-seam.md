@@ -353,14 +353,12 @@ slot tests.
 - [x] **filamentSlot:** replace `filamentSlot.ts:50-52` (`if (enabled) fadeTo(filament,1)`)
   with the bridge `only:['filaments']` call after `upload`.
 - [x] **flowFieldSlot:** replace `flowFieldSlot.ts:53-55` with `only:['flow']`.
-- [ ] **galaxyCatalogSourceRegistry:** the commit's fade-in (`:195`) is currently
-  **unconditional** (`void fades.fadeTo(id, 1)`) — it does NOT gate on
-  `galaxyCatalogs.items[id].enabled` because a survey only loads when visible
-  (`reevaluateDemand`). Routing through `only:['survey']` makes the fade-in **intent-
-  gated**. Verify this is behaviour-preserving (a load implies the survey is enabled);
-  the tier-swap fade-OUT (`:181`) stays as-is (it's a producer-driven mid-commit fade,
-  not an intent toggle). **If intent-gating the fade-in would suppress a legitimate
-  fade-in, STOP and report** rather than special-casing.
+- [x] **galaxyCatalogSourceRegistry:** the commit's fade-in (`:198`) routes through
+  `syncVisibilityFadeItem(state, 'survey', catalogId, { animate: true })` — a per-item
+  bridge entry that fades **only the just-committed catalog** (the broader per-row sweep
+  faded sibling catalogs out mid-tier-swap; commit `8ac071fc`). It is intent-gated via the
+  survey row, behaviour-preserving (a load implies the survey is enabled); the tier-swap
+  fade-OUT (`:176`) stays inline as a producer-driven mid-commit fade, not an intent toggle.
 - [x] Update each slot test: assert the commit invokes the bridge with the right
   `only:[key]` after upload (replacing the direct-`fadeTo` assertion); the tier-swap
   fade-out assertion in the galaxy-catalog test is unchanged.
@@ -553,11 +551,11 @@ The #38 acceptance criterion: capture → mutate-via-restore/applyEffect → res
   `restoreSettings`, `applyEffect` each live in their own one-function file.
 - [x] The round-trip acceptance test passes (Task 9).
 - [x] `entanglement-radar` invariants (Task 10) all hold.
-- [ ] Visual smoke (ask the user to look — dev server stays running): every toggle still
-  fades; no frame-1 flash; tier swaps still fade-out→upload→fade-in; producer/focus
-  fades unchanged. **Pending user — cannot self-verify the canvas.**
+- [x] Visual smoke (user-confirmed, dev server running): every toggle still fades; no
+  frame-1 flash; tier swaps still fade-out→upload→fade-in with only the swapped catalog
+  fading; producer/focus fades unchanged.
 - [x] Behaviour-preserving: demand re-evaluates next frame from restored intent; no
   demand-path changes shipped.
-- [ ] Run `/feature-done` to gate, then relocate this plan + its spec to
-  `plans/completed/` + `specs/completed/`. **Held until visual smoke passes (spec STAYS
-  live — Plan C pending).**
+- [x] Run `/feature-done` to gate, then relocate this plan to `plans/completed/`. The
+  spec STAYS live in `specs/` — Plan C (renderer mirrors) still references it; it moves to
+  `specs/completed/` only when Plan C ships.
