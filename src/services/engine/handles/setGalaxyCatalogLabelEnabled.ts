@@ -6,8 +6,17 @@
 // the engine-owned store (the `setGalaxyCatalogLabelEnabledAction` copy-on-write
 // reducer) rather than mutating the held object in place: the store write is
 // what NOTIFIES React's `useSettingsStore(selectGalaxyCatalogItems)` subscriber so the
-// panel checkbox re-renders. It then drives the matching FadeRegistry handle for
-// a smooth ramp. The `createEngine` literal delegates here.
+// panel checkbox re-renders. Having written the intent, it drives the matching
+// fade THROUGH `syncVisibilityFades` (the intent → fade bridge) for a smooth
+// ramp. The `createEngine` literal delegates here.
+//
+// ORDERING MATTERS: the store write MUST precede the bridge call, because the
+// `surveyLabel` row reads the just-written intent from settings. That row maps to
+// the shared `galaxyNames` handle, which only the famous-galaxy catalog bears, so
+// the bridge fades it from `famousGalaxy.labelEnabled`. For a non-famous catalog
+// id (which has no label and is never offered a label toggle in the UI — only
+// `bearsLabel` sources appear in the Labels panel) the bridge re-fades
+// `galaxyNames` to its unchanged value: a harmless no-op plus one render wake.
 //
 // Fading the galaxy catalog's label handle keeps the toggle smooth: the producer
 // (produceFamousLabels) reads `opacityOf({...})` for its layer alpha, so
@@ -15,36 +24,24 @@
 // authoritative gate (the producer draws while enabled OR still fading out);
 // the fade opacity is only the cosmetic alpha.
 
-import type { EngineState } from '../../../@types/engine/state/EngineState';
-import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
 import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
-import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import type { SettingsStore } from '../settingsStore/createSettingsStore';
 import { setGalaxyCatalogLabelEnabledAction } from '../settingsStore/actions/setGalaxyCatalogLabelEnabledAction';
+import { syncVisibilityFades } from '../wiring/syncVisibilityFades';
+import type { ApplyIntentState } from '../wiring/syncVisibilityFades';
 
 export function setGalaxyCatalogLabelEnabled(
-  state: Pick<EngineState, 'settings' | 'subsystems'>,
+  state: ApplyIntentState,
   store: SettingsStore,
   galaxyCatalog: GalaxyCatalogId,
   enabled: boolean,
 ): void {
-  // Fire the galaxy catalog's label fade IF it bears one — registry-driven: famous
-  // carries labelLayer 'galaxyNames', the other galaxy catalogs carry none, so a
-  // labelEnabled toggle on a label-free galaxy catalog just writes the (inert) flag.
-  const entry = SOURCE_ENTRIES.find((e) => e.id === galaxyCatalog);
-  const layer = entry && 'labelLayer' in entry ? entry.labelLayer : undefined;
-  if (layer) {
-    void state.subsystems.fades.fadeTo(
-      { kind: 'labelLayer', layer },
-      enabled ? 1 : 0,
-      enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
-    );
-  }
   // Single source of truth: flip the galaxy catalog's labelEnabled flag THROUGH the
   // store so the copy-on-write write notifies React's selector subscriber.
   setGalaxyCatalogLabelEnabledAction(store, galaxyCatalog, enabled);
-  // No requestRender: with a layer the fadeTo above wakes the scheduler;
-  // without one the flag is render-inert — no producer reads it.
+  // Drive the surveyLabel fade through the bridge off the just-written intent.
+  syncVisibilityFades(state, { animate: true, only: ['surveyLabel'] });
+  // No requestRender: the bridge's animate path rides fadeTo's own wake.
   // No echo: React reads the record via `selectGalaxyCatalogItems` + a projection.
 }
 

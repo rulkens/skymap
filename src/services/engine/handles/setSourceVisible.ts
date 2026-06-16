@@ -14,13 +14,17 @@
 // re-renders.  An in-place mutation would update the value but never wake the
 // subscription — that's exactly the mirror-drift the echo used to paper over.
 //
-// It then fires the fade (fire-and-forget) and recomputes the masks via
-// `deriveSourceMasks`.  It does NOT mutate `drawMask`/`pickMask` itself: those
-// are derived outputs that `deriveSourceMasks` owns, packed from `enabled` +
-// live fade opacity.  Recompute-from-truth replaces the old
-// remember-to-flip-the-mask dance, which is why there's no await and no
-// last-issued-wins re-read here — the fade registry's last-issued fade and the
-// per-frame derive together handle a rapid concurrent toggle.
+// Having written the intent, it drives the fade THROUGH `syncVisibilityFades`
+// (the intent → fade bridge) rather than firing an inline `fadeTo`. The bridge
+// reads the just-written `enabled` intent from settings, fades the `survey` row's
+// `galaxyCatalog` handle, and runs that row's `post: deriveSourceMasks` — so this
+// setter no longer recomputes the masks itself. ORDERING MATTERS: the store write
+// MUST precede the bridge call, because the bridge reads intent from settings.
+//
+// It does NOT mutate `drawMask`/`pickMask` itself: those are derived outputs the
+// bridge's `post` (deriveSourceMasks) owns, packed from `enabled` + live fade
+// opacity. The bridge fires only the `survey` row, so a rapid concurrent toggle
+// is still last-issued-wins inside the fade registry.
 //
 // React no longer learns the mask through an echo: the SettingsPanel reads
 // `selectVisibleSourceMask(store.getState())`, a pure projection of the same
@@ -32,16 +36,15 @@
 // galaxy catalog (and companions) next frame, so visibility and loading stay
 // decoupled.
 
-import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { SourceType } from '../../../@types/data/SourceType';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
-import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
-import { deriveSourceMasks } from '../frame/deriveSourceMasks';
 import type { SettingsStore } from '../settingsStore/createSettingsStore';
 import { setGalaxyCatalogVisibleAction } from '../settingsStore/actions/setGalaxyCatalogVisibleAction';
+import { syncVisibilityFades } from '../wiring/syncVisibilityFades';
+import type { ApplyIntentState } from '../wiring/syncVisibilityFades';
 
 export function setSourceVisibleImpl(
-  state: Pick<EngineState, 'sources' | 'settings' | 'subsystems'>,
+  state: ApplyIntentState,
   store: SettingsStore,
   source: SourceType,
   visible: boolean,
@@ -51,19 +54,9 @@ export function setSourceVisibleImpl(
   // Single source of truth: flip the galaxy catalog's enabled flag THROUGH the store
   // so the copy-on-write write notifies React's selector subscriber.
   setGalaxyCatalogVisibleAction(store, id, visible);
-  // Fire the fade (fire-and-forget; last-issued wins inside the registry, and
-  // deriveSourceMasks keeps the draw bit set while opacity > 0).
-  void state.subsystems.fades.fadeTo(
-    { kind: 'galaxyCatalog', id },
-    visible ? 1 : 0,
-    visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
-  );
-  // Recompute the masks NOW so any synchronous reader (e.g. a tier change in
-  // the same tick) sees fresh intent; the frame loop re-derives anyway.
-  deriveSourceMasks(state);
-  // No echo and no requestRender: React reads the mask via
-  // `selectVisibleSourceMask`, fadeTo owns the wake, and the per-frame
-  // deriveSourceMasks keeps the masks tracking the fade.
+  // Drive the fade through the bridge: it reads the just-written intent, fades
+  // the survey row's handle, and runs its `post: deriveSourceMasks`.
+  syncVisibilityFades(state, { animate: true, only: ['survey'] });
 }
 
 // Test-only alias matching the import name used in tests.

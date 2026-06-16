@@ -49,7 +49,10 @@ import { FADE_LAYERS } from './fadeLayers';
 // `assetSlots` (slotReady); `row.post` reads `settings` (volume lazy-load) and,
 // for the survey row, recomputes the masks via `deriveSourceMasks`, which reads
 // `sources` + `subsystems` too. This Pick is the union of all of those.
-type ApplyIntentState = Pick<EngineState, 'settings' | 'subsystems' | 'assetSlots' | 'sources'>;
+export type ApplyIntentState = Pick<
+  EngineState,
+  'settings' | 'subsystems' | 'assetSlots' | 'sources'
+>;
 
 /**
  * Apply one row's intent to one of its items as a single fade.
