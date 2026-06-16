@@ -39,6 +39,12 @@ export type DebugPanelProps = {
   slots: ReadonlyMap<string, AssetSlot<unknown, unknown>>;
   timingService: GpuTimingService;
   passOverrides: PassOverridesHandle;
+  /**
+   * The currently-disabled renderer-pass names, read live off the settings
+   * store by `App`. Drives the `RenderTogglesSection` checkbox state; writes go
+   * back through `passOverrides.setDisabled`.
+   */
+  disabledPasses: ReadonlySet<string>;
   highlightFallback: boolean;
   realOnlyMode: boolean;
   onHighlightFallbackChange: (enabled: boolean) => void;
@@ -72,6 +78,7 @@ export function DebugPanel({
   slots,
   timingService,
   passOverrides,
+  disabledPasses,
   highlightFallback,
   realOnlyMode,
   onHighlightFallbackChange,
@@ -104,7 +111,7 @@ export function DebugPanel({
       <div style={{ marginTop: 6 }} />
       <GpuTimingsSection service={timingService} />
       <div style={{ marginTop: 6 }} />
-      <RenderTogglesSection passOverrides={passOverrides} />
+      <RenderTogglesSection passOverrides={passOverrides} disabledPasses={disabledPasses} />
       <div style={{ marginTop: 6 }} />
       <FlowTuningSection flow={flow} onChange={onFlowChange} />
       <div style={{ marginTop: 6 }} />

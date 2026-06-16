@@ -113,7 +113,11 @@ describe('EngineState type', () => {
         wander: 0.15,
         boundaryFadeWidth: 0.1,
       },
-      debug: { showPickBuffer: false, showDiskRadiusRing: false },
+      debug: {
+        showPickBuffer: false,
+        showDiskRadiusRing: false,
+        disabledPasses: new Set<string>(),
+      },
       structures: {
         enabled: true,
         items: {
@@ -208,7 +212,6 @@ describe('EngineState type', () => {
         flow: null,
       },
       requests: new Set(),
-      debug: { disabledPasses: new Set<string>() },
     };
     stateRef.current = state;
 
@@ -262,7 +265,11 @@ describe('EngineState type', () => {
       },
       volumes: { enabled: DEFAULT_VOLUMES_ENABLED, items: {} },
       flow: { ...DEFAULT_FLOW },
-      debug: { showPickBuffer: false, showDiskRadiusRing: false },
+      debug: {
+        showPickBuffer: false,
+        showDiskRadiusRing: false,
+        disabledPasses: new Set<string>(),
+      },
       structures: {
         enabled: true,
         items: {
@@ -314,7 +321,11 @@ describe('EngineState type', () => {
         filaments: { enabled: false, intensity: 1 },
         volumes: { enabled: false, items: {} },
         flow: { ...DEFAULT_FLOW },
-        debug: { showPickBuffer: false, showDiskRadiusRing: false },
+        debug: {
+          showPickBuffer: false,
+          showDiskRadiusRing: false,
+          disabledPasses: new Set<string>(),
+        },
         structures: {
           enabled: true,
           items: {
@@ -400,7 +411,6 @@ describe('EngineState type', () => {
         flow: null,
       },
       requests: new Set(),
-      debug: { disabledPasses: new Set<string>() },
     };
     stateRef.current = state;
 

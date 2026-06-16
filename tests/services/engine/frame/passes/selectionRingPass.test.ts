@@ -87,7 +87,6 @@ function makeStateWithSelection(selection: FocusableTarget | null): EngineState 
         selected: () => selection,
       },
     },
-    debug: { disabledPasses: new Set() },
   } as unknown as EngineState;
 }
 

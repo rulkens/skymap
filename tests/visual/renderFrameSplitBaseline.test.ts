@@ -369,7 +369,9 @@ describe('renderFrame visual baseline', () => {
         },
         // encodeFlowCompute (pre-HDR) reads these; default-off → gate returns.
         // A null slot → slotReady false → not loaded.
-        settings: { flow: { enabled: false } },
+        // The encoders read the renderer-toggle override bag off
+        // `settings.debug.disabledPasses`; empty so every pass fires.
+        settings: { flow: { enabled: false }, debug: { disabledPasses: new Set<string>() } },
         assetSlots: { flow: null },
         subsystems: {
           proceduralDisks: proceduralDisksSubsystem,
@@ -386,9 +388,6 @@ describe('renderFrame visual baseline', () => {
             label: 'fadeRegistry',
           },
         },
-        // DebugPanel renderer-toggle override bag — empty so every
-        // pass fires (the visual baseline asserts the full lineup).
-        debug: { disabledPasses: new Set<string>() },
       } as never,
       milkyWayITimeSec: 0,
       device,

@@ -56,6 +56,7 @@ import { selectAbsMagLimit } from '../../services/engine/settingsStore/selectors
 import { selectTier } from '../../services/engine/settingsStore/selectors/selectTier';
 import { selectShowPickBuffer } from '../../services/engine/settingsStore/selectors/selectShowPickBuffer';
 import { selectShowDiskRadiusRing } from '../../services/engine/settingsStore/selectors/selectShowDiskRadiusRing';
+import { selectDisabledPasses } from '../../services/engine/settingsStore/selectors/selectDisabledPasses';
 import { selectFilamentsEnabled } from '../../services/engine/settingsStore/selectors/selectFilamentsEnabled';
 import { selectFilamentIntensity } from '../../services/engine/settingsStore/selectors/selectFilamentIntensity';
 import { selectVolumesEnabled } from '../../services/engine/settingsStore/selectors/selectVolumesEnabled';
@@ -122,6 +123,15 @@ const STRUCTURE_ITEMS_DEFAULT = Object.fromEntries(
 const GALAXY_CATALOG_ITEMS_DEFAULT = Object.fromEntries(
   GALAXY_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
 ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>;
+
+/**
+ * Stable empty fallback for the renderer-toggle override set during the
+ * null-store window. Same single-reference requirement as the records above:
+ * `useSettingsStore` returns it as the snapshot until `handleRef` lands, so
+ * minting a fresh `Set` inline each render would re-fire the subscription.
+ * Empty matches the engine's construction default (no pass disabled at boot).
+ */
+const DISABLED_PASSES_DEFAULT: ReadonlySet<string> = new Set();
 
 export function App(): React.ReactElement {
   const {
@@ -212,6 +222,12 @@ export function App(): React.ReactElement {
     selectShowDiskRadiusRing,
     DEFAULT_SHOW_DISK_RADIUS_RING,
   );
+  // Renderer-toggle override set: read live off the store so the checkboxes
+  // track engine truth without mirroring the set in component state. Writes go
+  // through `handle.debug.passOverrides.setDisabled` (action-backed), which
+  // notifies synchronously — same "dispatch + read back via selector" shape as
+  // the pick-buffer toggle above.
+  const disabledPasses = useSettingsStore(handleRef, selectDisabledPasses, DISABLED_PASSES_DEFAULT);
 
   // Filaments cluster (toggle + intensity) reads live off the engine-owned
   // store. The SettingsPanel handlers dispatch through `handle.filaments.setEnabled`
@@ -581,6 +597,7 @@ export function App(): React.ReactElement {
             slots={handleRef.current.assetSlots}
             timingService={handleRef.current.debug.timingService}
             passOverrides={handleRef.current.debug.passOverrides}
+            disabledPasses={disabledPasses}
             // Orientation-fallback diagnostic toggles — `galaxyCatalogs`
             // setters echo synchronously, so React mirrors engine
             // truth without an optimistic update.

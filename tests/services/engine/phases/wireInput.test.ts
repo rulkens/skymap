@@ -97,7 +97,11 @@ function makeState(): EngineState {
           group: { enabled: true, labelEnabled: true },
         },
       },
-      debug: { showPickBuffer: false, showDiskRadiusRing: false },
+      debug: {
+        showPickBuffer: false,
+        showDiskRadiusRing: false,
+        disabledPasses: new Set<string>(),
+      },
     },
     bias: {} as never,
     picking: { latestMouseCss: null, pointerDown: false } as never,

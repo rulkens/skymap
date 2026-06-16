@@ -138,6 +138,7 @@ import { listVolumeFields } from './handles/listVolumeFields';
 import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
 import { setBiasMode } from './handles/setBiasMode';
 import { setTier } from './handles/setTier';
+import { setPassDisabled } from './handles/setPassDisabled';
 
 /**
  * Start the WebGPU engine on `canvas`.
@@ -441,12 +442,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // a key and leaves it set — the demand loop's idle-guard prevents a
     // re-fetch, so no clear is needed.  See `@types/loading/RequestKey.d.ts`.
     requests: new Set<RequestKey>(),
-    // ── Debug-only per-frame skip flags ─────────────────────────────────
-    //
-    // The DebugPanel mutates this via `passOverrides` to flip individual
-    // passes off and distinguish overlapping draws.  Empty in production —
-    // one `Set.has` per pass per frame, noise next to the GPU dispatch.
-    debug: { disabledPasses: new Set<string>() },
   };
 
   // ── Register label producers with the director ───────────────────────
@@ -879,22 +874,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // assigns `state.gpu.timingService` AFTER this literal is built — a copy
     // would be null forever.
     //
-    // `passOverrides`: DebugPanel hook mutating `state.debug.disabledPasses`.
-    // `allNames` is materialised once from HDR_PASSES + UI_PASSES so the
-    // React rows track the encoder's pass loop; every `setDisabled` wakes
-    // the scheduler so the toggle shows even when idle.
+    // `passOverrides`: DebugPanel hook for the `settings.debug.disabledPasses`
+    // override set. `allNames` is materialised once from HDR_PASSES + UI_PASSES
+    // so the React rows track the encoder's pass loop; `setDisabled` delegates to
+    // the `setPassDisabled` handle (store action + render wake). The panel reads
+    // the set back via `selectDisabledPasses`, so there is no `isDisabled` query.
     debug: {
       get timingService() {
         return state.gpu.timingService;
       },
       passOverrides: {
         allNames: [...HDR_PASSES.map((p) => p.name), ...UI_PASSES.map((p) => p.name)],
-        isDisabled: (name: string) => state.debug.disabledPasses.has(name),
-        setDisabled: (name: string, disabled: boolean) => {
-          if (disabled) state.debug.disabledPasses.add(name);
-          else state.debug.disabledPasses.delete(name);
-          state.subsystems.scheduler.requestRender();
-        },
+        setDisabled: (name, disabled) => setPassDisabled(state, settingsStore, name, disabled),
       },
       setShowPickBuffer: boringSetters.setShowPickBuffer,
       setShowDiskRadiusRing: boringSetters.setShowDiskRadiusRing,

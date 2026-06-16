@@ -73,7 +73,6 @@
  */
 
 import type { EngineSettingsState } from '../../settings/EngineSettingsState';
-import type { EngineDebugState } from './EngineDebugState';
 import type { EngineData } from '../data/EngineData';
 import type { EnginePickingState } from './EnginePickingState';
 import type { EngineAssetSlots } from './EngineAssetSlots';
@@ -107,10 +106,4 @@ export type EngineState = {
    * until the first such event fires.
    */
   requests: Set<RequestKey>;
-  /**
-   * Debug-only per-frame skip flags.  Populated only by the React-
-   * side DebugPanel; empty in production.  See `EngineDebugState`
-   * for the rationale on living here vs the engine closure.
-   */
-  debug: EngineDebugState;
 };

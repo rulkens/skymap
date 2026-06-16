@@ -5,8 +5,8 @@
  * The intended use case is "I see two overlapping draws on screen and
  * I want to know which renderer is responsible for which".  Toggling
  * a pass off skips its draw block in the next frame; the
- * `passOverrides` handle on the engine handles both the state mutation
- * and the one-shot render request that wakes the on-demand loop.
+ * `passOverrides.setDisabled` handle dispatches the store write and the
+ * one-shot render request that wakes the on-demand loop.
  *
  * ### Override semantics (one-way)
  *
@@ -16,17 +16,14 @@
  * settings panel turned filaments off).  This matches the encoder
  * loop: `pass.enabled() && !disabledPasses.has(pass.name)`.
  *
- * ### Why local React state mirrors the handle's set
+ * ### Where the disabled set lives
  *
- * The handle is an imperative façade — there's no subscribe channel.
- * Mirroring the disabled set in component state means the checkbox
- * stays in sync with the toggle action without polling.  The mirror
- * is initialised on mount by querying `isDisabled` per name; after
- * that React owns the source of truth for what the UI shows, and
- * each toggle simultaneously updates React state AND calls
- * `setDisabled` on the handle.  If the engine handle is ever recreated
- * (HMR + a new `createEngine`), the parent DebugPanel remounts this
- * section with a fresh mirror.
+ * The set is engine-owned settings state (`settings.debug.disabledPasses`),
+ * read live via the `disabledPasses` prop (App subscribes with
+ * `selectDisabledPasses`).  No local mirror: a toggle dispatches through
+ * `passOverrides.setDisabled`, the store notifies synchronously, and the prop
+ * flows the new set back down — the same "write through the handle, read back
+ * via the selector" shape the pick-buffer toggle uses.
  *
  * ### Why a separate `<details>` block
  *
@@ -37,32 +34,21 @@
  * primary reason someone opened the panel.
  */
 
-import { useState, type ReactElement } from 'react';
+import type { ReactElement } from 'react';
 import type { PassOverridesHandle } from '../../@types/engine/handles/EngineDebugHandle';
 
 export type RenderTogglesSectionProps = {
   passOverrides: PassOverridesHandle;
+  /** Live disabled-pass set from the settings store (App subscribes). */
+  disabledPasses: ReadonlySet<string>;
 };
 
-export function RenderTogglesSection({ passOverrides }: RenderTogglesSectionProps): ReactElement {
-  // Mirror the handle's disabled set in component state so React drives
-  // the checkbox `checked` attribute without per-render polling.
-  // Initialised from the handle once on mount.
-  const [disabled, setDisabled] = useState<ReadonlySet<string>>(() => {
-    const initial = new Set<string>();
-    for (const name of passOverrides.allNames) {
-      if (passOverrides.isDisabled(name)) initial.add(name);
-    }
-    return initial;
-  });
-
+export function RenderTogglesSection({
+  passOverrides,
+  disabledPasses,
+}: RenderTogglesSectionProps): ReactElement {
   const toggle = (name: string) => {
-    const next = new Set(disabled);
-    const isCurrentlyDisabled = next.has(name);
-    if (isCurrentlyDisabled) next.delete(name);
-    else next.add(name);
-    setDisabled(next);
-    passOverrides.setDisabled(name, !isCurrentlyDisabled);
+    passOverrides.setDisabled(name, !disabledPasses.has(name));
   };
 
   return (
@@ -70,7 +56,7 @@ export function RenderTogglesSection({ passOverrides }: RenderTogglesSectionProp
       <summary style={{ fontWeight: 'bold', cursor: 'pointer' }}>Renderer Toggles</summary>
       <div style={{ marginTop: 4 }}>
         {passOverrides.allNames.map((name) => {
-          const isDisabled = disabled.has(name);
+          const isDisabled = disabledPasses.has(name);
           return (
             <label
               key={name}
