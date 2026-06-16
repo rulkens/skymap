@@ -269,9 +269,41 @@ describe('createBiasCorrectionSubsystem', () => {
 
     const splices = stub.calls.filter((c) => c.kind === 'schechter');
     expect(splices.map((s) => s.source)).toEqual([Source.Glade, Source.TwoMRS, Source.SDSS]);
-    // Two requestRender calls: one on-entry (immediate mode-gate flip) and
-    // one post-bake (after all three splices land).
-    expect(requestRender).toHaveBeenCalledTimes(2);
+    // Four requestRender calls: one on-entry (immediate mode-gate flip) plus one
+    // per splice. Each bake wakes the loop at its own splice site rather than
+    // setMode firing a single post-Promise.all wake — so the onSourceUploaded
+    // re-bake path is woken the same way and a reweight is never stranded.
+    expect(requestRender).toHaveBeenCalledTimes(4);
+  });
+
+  it('onSourceUploaded bake wakes the loop after splicing (boot AngularReweight strand fix)', async () => {
+    // Regression: AngularReweight is the DEFAULT mode, so at boot every source
+    // upload fires an async onSourceUploaded re-bake. The bake spliced the
+    // dimming weights into the vertex buffer but never woke the render-on-demand
+    // loop — which had gone to sleep after the boot fade-in settled — so the
+    // reweight stayed invisible until the next mouse move ("galaxies dim on first
+    // input"). The fix wakes the loop at the splice site.
+    const stub = makeStubRenderer();
+    const clouds = new Map<SourceType, GalaxyCatalog>([[Source.Glade, makeCloud(4)]]);
+    const { deps, requestRender, setMode } = makeDeps(clouds);
+    const angularRunner = vi.fn(
+      async (input: { source: SourceType; cloud: GalaxyCatalog }) =>
+        new Float32Array(input.cloud.count),
+    );
+    // Mirror AngularReweight BEFORE attach: attachRenderer reads currentMode(),
+    // which memoizes on first call, so the mode must be set before then.
+    setMode(BiasMode.AngularReweight);
+    const sub = createBiasCorrectionSubsystem({ ...deps, angularRunner });
+    sub.attachRenderer(stub.renderer);
+    requestRender.mockClear();
+
+    sub.onSourceUploaded(Source.Glade, clouds.get(Source.Glade)!);
+    await new Promise((r) => setTimeout(r, 0)); // let the async bake resolve + splice
+
+    // The angular weights spliced into the per-source vertex buffer…
+    expect(stub.calls.filter((c) => c.kind === 'angular').length).toBe(1);
+    // …and the splice woke the loop so the dimming shows this frame, not the next input.
+    expect(requestRender).toHaveBeenCalled();
   });
 
   it('attach_before_setMode — setMode without attachRenderer; splice fires at attach time', async () => {
