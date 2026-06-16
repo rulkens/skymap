@@ -30,12 +30,14 @@ import { makeSettingsFixture } from '../settingsStore/makeSettingsFixture';
 
 describe('settingsTable', () => {
   describe('SETTINGS_TABLE', () => {
-    it('declares the 15 table-candidate setters', () => {
-      // Bespoke setters (`setBiasMode`, `setTier`, `setSourceVisible`,
-      // `setSpaceMouseSensitivity`, `flow.set`) MUST stay inline in engine.ts.
-      // If this list drifts, either a new boring setter snuck in (good —
-      // extend the table) or a bespoke one was accidentally tabled (bad —
-      // bespoke logic gets dropped silently).
+    it('declares the 13 table-candidate setters', () => {
+      // Bespoke setters MUST stay out of the table: the "dispatch + render"
+      // ones (`setBiasMode`, `setTier`, `setSourceVisible`,
+      // `setSpaceMouseSensitivity`) plus the fade-driving ones
+      // (`flow.set`, `milkyWay`/`filaments` visibility) that live as `handles/`
+      // functions. If this list drifts, either a new boring setter snuck in
+      // (good — extend the table) or a bespoke one was accidentally tabled (bad
+      // — bespoke logic gets dropped silently).
       const names = SETTINGS_TABLE.map((d) => d.name).sort();
       expect(names).toEqual(
         [
@@ -45,10 +47,8 @@ describe('settingsTable', () => {
           'setDepthFadeEnabled',
           'setExposure',
           'setFilamentIntensity',
-          'setFilamentsEnabled',
           'setGalaxyTexturesEnabled',
           'setHighlightFallback',
-          'setMilkyWayEnabled',
           'setPointSize',
           'setRealOnlyMode',
           'setShowDiskRadiusRing',

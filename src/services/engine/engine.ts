@@ -75,22 +75,13 @@ import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalo
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineState } from '../../@types/engine/state/EngineState';
-import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
-import type { ScalarCube } from '../../@types/data/volume/ScalarCube';
-import type { ScalarFieldPaletteId } from '../../@types/data/volume/ScalarFieldPaletteId';
 import type { Tier } from '../../@types/data/Tier';
 import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 
 import { createTweenManager } from './camera/tweenManager';
 import { createSettingsStore } from './settingsStore/createSettingsStore';
 import { buildInitialSettings } from './settingsStore/buildInitialSettings';
-import { setBiasModeAction } from './settingsStore/actions/setBiasModeAction';
 import { setTierAction } from './settingsStore/actions/setTierAction';
-import { setVolumesEnabledAction } from './settingsStore/actions/setVolumesEnabledAction';
-import { setFlowAction } from './settingsStore/actions/setFlowAction';
-import { writeVolumeFieldAction } from './settingsStore/actions/writeVolumeFieldAction';
-import { addVolumeFieldAction } from './settingsStore/actions/addVolumeFieldAction';
-import { removeVolumeFieldAction } from './settingsStore/actions/removeVolumeFieldAction';
 import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
@@ -116,14 +107,6 @@ import type { RequestKey } from '../../@types/loading/RequestKey';
 import { awaitSlotReady } from '../loading/awaitSlotReady';
 import { tierTarget } from '../../data/tierTargets';
 import { snapToCameraSnapshot, tweenToCameraSnapshot } from './camera/cameraSnapshot';
-import { buildVolumeFieldsSnapshot } from './helpers/buildVolumeFieldsSnapshot';
-import { clampVolumeIntensity } from '../../utils/clampVolumeIntensity';
-import { clampVolumeContrast } from '../../utils/clampVolumeContrast';
-import { clampVolumeDensityScale } from '../../utils/clampVolumeDensityScale';
-import { clampVolumeTrim } from '../../utils/clampVolumeTrim';
-import { clampVolumeExposure } from '../../utils/clampVolumeExposure';
-import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
-import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -133,8 +116,6 @@ import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 // connect/disconnect/sensitivity setters forward straight through.
 import { createSpaceMouseSubsystem } from './subsystems/spaceMouseSubsystem';
 import { buildSettersFromTable } from './wiring/settingsTable';
-import { reevaluateDemand } from './wiring/reevaluateDemand';
-import { syncVisibilityFades } from './wiring/syncVisibilityFades';
 import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
   loadCompanionAssets,
@@ -149,6 +130,22 @@ import { setStructureItemEnabled } from './handles/setStructureItemEnabled';
 import { setStructureLabelEnabled } from './handles/setStructureLabelEnabled';
 import { setMilkyWayLabelEnabled } from './handles/setMilkyWayLabelEnabled';
 import { setGalaxyCatalogLabelEnabled } from './handles/setGalaxyCatalogLabelEnabled';
+import { setMilkyWayEnabled } from './handles/setMilkyWayEnabled';
+import { setFilamentsEnabled } from './handles/setFilamentsEnabled';
+import { setFlow } from './handles/setFlow';
+import { setVolumesEnabled } from './handles/setVolumesEnabled';
+import { addVolumeField } from './handles/addVolumeField';
+import { removeVolumeField } from './handles/removeVolumeField';
+import { setVolumeFieldEnabled } from './handles/setVolumeFieldEnabled';
+import { setVolumeFieldIntensity } from './handles/setVolumeFieldIntensity';
+import { setVolumeFieldContrast } from './handles/setVolumeFieldContrast';
+import { setVolumeFieldDensityScale } from './handles/setVolumeFieldDensityScale';
+import { setVolumeFieldTrim } from './handles/setVolumeFieldTrim';
+import { setVolumeFieldExposure } from './handles/setVolumeFieldExposure';
+import { setVolumeFieldPalette } from './handles/setVolumeFieldPalette';
+import { listVolumeFields } from './handles/listVolumeFields';
+import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
+import { setBiasMode } from './handles/setBiasMode';
 
 /**
  * Start the WebGPU engine on `canvas`.
@@ -571,19 +568,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     clearAll(state.subsystems.selection);
   }
 
-  function setBiasMode(mode: BiasMode): void {
-    // Shader branches on the integer mode (0 = none, 1 = volume-limited, …),
-    // so flipping it takes effect next frame with no pipeline rebuild.  The
-    // store action owns the (copy-on-write) write; React reads via
-    // `selectBiasMode`, so no echo is wired.  The worker re-bake is a separate
-    // event-driven action: it routes through `biasCorrectionSubsystem`, which
-    // owns the cached ratios/weights + worker runners and the render wakes
-    // (entry + post-splice).  The `void` discards the Promise — engine.ts
-    // doesn't await.
-    setBiasModeAction(settingsStore, mode);
-    void state.subsystems.biasCorrection.setMode(mode);
-  }
-
   function resetCamera(): void {
     // Snapshot null-check; cam-null is absorbed inside the helper.
     // Both must exist for a meaningful snap.
@@ -747,118 +731,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     return state.data.galaxies.catalogs.get(source)?.objIDs;
   }
 
-  function setVolumesEnabled(enabled: boolean): void {
-    // Master toggle — dispatch the copy-on-write store action so the per-frame
-    // volume gates see it next frame.  No echo: React reads via
-    // `selectVolumesEnabled`.
-    setVolumesEnabledAction(settingsStore, enabled);
-    // Having written the store, drive the fade through `syncVisibilityFades`:
-    // the bridge reads the just-written intent and fades the volumesMaster
-    // handle (and owns the render wake).  The encodeHdr* sites multiply this
-    // master opacity into every per-field fade, so the whole subsystem ramps in
-    // lockstep; the pass-enabled gate accepts the master enable bit OR
-    // opacity > 0, so it keeps blitting through fade-out.
-    syncVisibilityFades(state, { animate: true, only: ['volumesMaster'] });
-  }
-
-  function addVolumeField(fieldId: VolumeFieldId, cube: ScalarCube): void {
-    // Ensure a settings row exists before the GPU upload.  Re-registering a
-    // field preserves its tuned values (identity no-op in the reducer); a
-    // brand-new handle seeds from registry defaults.  Shippable volumes already
-    // have a construction seed, so this only seeds for a dynamically-added
-    // handle.  React reads the per-field rows via `selectVolumeFieldItems`.
-    addVolumeFieldAction(settingsStore, fieldId);
-    // Upload to the renderer; a silent no-op if it isn't ready yet (re-add
-    // once booted).
-    state.gpu.volumeFieldRenderer?.upload(fieldId, cube);
-    // Drive the first-load fade through the intent → fade bridge; the volumeField
-    // row's intent gate (reads settings.volumes.items[id].enabled) decides, so a
-    // disabled add leaves the handle at the 0 seeded by the fade manifest
-    // (`seedFades`) at construction (the draw loop's `(!enabled && opacity <= 0)`
-    // skip keeps it invisible until toggled on).
-    syncVisibilityFades(state, { animate: true, only: ['volumeField'] });
-    // Essential wake: the bridge's fade is intent-gated — a disabled add fires no
-    // fade, yet still changes the renderer's field set and settings row, so wake
-    // regardless.
-    state.subsystems.scheduler.requestRender();
-  }
-
-  function removeVolumeField(fieldId: VolumeFieldId): void {
-    state.gpu.volumeFieldRenderer?.unload(fieldId);
-    removeVolumeFieldAction(settingsStore, fieldId);
-    // Essential wake: removal fires no fade — the field vanishes outright.
-    state.subsystems.scheduler.requestRender();
-  }
-
-  function setVolumeFieldEnabled(fieldId: VolumeFieldId, enabled: boolean): void {
-    // Dispatch the copy-on-write store action; React reads via
-    // `selectVolumeFieldItems`.  An unknown id lands an identity write (no-op).
-    writeVolumeFieldAction(settingsStore, fieldId, { enabled });
-    // Having written the store, drive the fade through `syncVisibilityFades`:
-    // the volumeField row reads the just-written intent, fades the matching
-    // handle (the draw loop's `(!enabled && opacity <= 0)` skip keeps rendering
-    // through fade-out), and runs its enable-gated `post: maybeLazyLoadDebugVolume`
-    // so the DEV debug fixtures still lazy-load.  The bridge owns the wake.
-    syncVisibilityFades(state, { animate: true, only: ['volumeField'] });
-  }
-
-  // The per-field knob setters below dispatch the copy-on-write store action —
-  // no boringSetter, no fade, so no channel wakes for them.  Each keeps an
-  // explicit requestRender to re-render the raymarch pass.  Each clamps raw
-  // intent before the write; React reads via `selectVolumeFieldItems`.
-
-  function setVolumeFieldIntensity(fieldId: VolumeFieldId, intensity: number): void {
-    writeVolumeFieldAction(settingsStore, fieldId, {
-      intensity: clampVolumeIntensity(intensity),
-    });
-    state.subsystems.scheduler.requestRender();
-  }
-
-  function setVolumeFieldContrast(fieldId: VolumeFieldId, contrast: number): void {
-    writeVolumeFieldAction(settingsStore, fieldId, {
-      contrast: clampVolumeContrast(contrast),
-    });
-    state.subsystems.scheduler.requestRender();
-  }
-
-  function setVolumeFieldDensityScale(fieldId: VolumeFieldId, value: number): void {
-    writeVolumeFieldAction(settingsStore, fieldId, {
-      densityScale: clampVolumeDensityScale(value),
-    });
-    state.subsystems.scheduler.requestRender();
-  }
-
-  function setVolumeFieldTrim(fieldId: VolumeFieldId, trim: number): void {
-    writeVolumeFieldAction(settingsStore, fieldId, {
-      trim: clampVolumeTrim(trim),
-    });
-    state.subsystems.scheduler.requestRender();
-  }
-
-  function setVolumeFieldExposure(fieldId: VolumeFieldId, exposure: number): void {
-    writeVolumeFieldAction(settingsStore, fieldId, {
-      exposure: clampVolumeExposure(exposure),
-    });
-    state.subsystems.scheduler.requestRender();
-  }
-
-  function setVolumeFieldPalette(fieldId: VolumeFieldId, id: ScalarFieldPaletteId): void {
-    writeVolumeFieldAction(settingsStore, fieldId, {
-      paletteId: id,
-    });
-    state.subsystems.scheduler.requestRender();
-  }
-
-  function listVolumeFields(): VolumeFieldId[] {
-    // Settings keys are the source of truth for which fields exist; mirrors
-    // buildVolumeFieldsSnapshot so both views of identity stay in sync.
-    return Object.keys(state.settings.volumes.items) as VolumeFieldId[];
-  }
-
-  function getVolumeFieldsState(): ReadonlyArray<VolumeFieldRowData> {
-    return buildVolumeFieldsSnapshot(state);
-  }
-
   async function connectSpaceMouse(): Promise<boolean> {
     const result = await state.subsystems.spaceMouse.connect();
     return result.ok;
@@ -1014,65 +886,22 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       getCloudObjIds,
     },
     bias: {
-      setMode: setBiasMode,
+      setMode: (mode) => setBiasMode(state, settingsStore, mode),
       setAbsMagLimit: boringSetters.setAbsMagLimit,
     },
     thumbnails: {
       setEnabled: boringSetters.setGalaxyTexturesEnabled,
     },
     milkyWay: {
-      // Write the store, then drive the fade through `syncVisibilityFades`:
-      // the bridge reads the just-written intent and fades the milkyWayDisk
-      // handle (and owns the wake).  milkyWayPass.enabled accepts the boolean
-      // OR a non-zero opacity, so the gate keeps the pass alive through fade-out.
-      setEnabled: (enabled) => {
-        boringSetters.setMilkyWayEnabled(enabled);
-        syncVisibilityFades(state, { animate: true, only: ['milkyWayDisk'] });
-      },
+      setEnabled: (enabled) => setMilkyWayEnabled(state, settingsStore, enabled),
       setLabelEnabled: (enabled) => setMilkyWayLabelEnabled(state, settingsStore, enabled),
     },
     filaments: {
-      // Same bridge pattern as milkyWay: write the store, then drive the fade
-      // through `syncVisibilityFades`, which reads the just-written intent and
-      // fades the filaments handle (owning the wake).  filamentsPass.enabled
-      // accepts the boolean OR a non-zero opacity, keeping the pass alive
-      // through fade-out.
-      setEnabled: (enabled) => {
-        boringSetters.setFilamentsEnabled(enabled);
-        syncVisibilityFades(state, { animate: true, only: ['filaments'] });
-      },
+      setEnabled: (enabled) => setFilamentsEnabled(state, settingsStore, enabled),
       setIntensity: boringSetters.setFilamentIntensity,
     },
     flow: {
-      // One patch-shaped entry point over the `settings.flow` slice. The WHOLE
-      // patch lands through the copy-on-write store action (React reads via
-      // `selectFlow`); the raw intent is stored verbatim — the GPU-safe clamps
-      // live in `clampFlowParams` at the flow renderer. Then the per-leaf side
-      // effects fire off which keys the patch carried.
-      set: (patch) => {
-        setFlowAction(settingsStore, patch);
-        // Wake the loop so the renderer picks up the new params next frame —
-        // the action does NOT wake; fadeTo below wakes on its own, but the
-        // knob-only patches (intensity / trail / …) need this explicit nudge.
-        state.subsystems.scheduler.requestRender();
-
-        // enabled: re-evaluate demand so the first enable lazy-loads the cube,
-        // then hand the fade to the bridge. The bridge reads the just-written
-        // `settings.flow.enabled` intent and the flow manifest's resident-only
-        // guard (`fieldLoaded()`) decides whether to drive: enable-while-loaded
-        // fades to 1, enable-while-unloaded skips (the slot commit owns that
-        // first fade-in), disable fades to 0. A loaded field implies the fade
-        // handle is registered, so the bridge can't fault on an unknown id.
-        if (patch.enabled !== undefined) {
-          reevaluateDemand(state);
-          syncVisibilityFades(state, { animate: true, only: ['flow'] });
-        }
-
-        // mode / count both reseed the shared particle buffers.
-        if (patch.mode !== undefined || patch.count !== undefined) {
-          state.gpu.flowFieldRenderer?.maybeReseed();
-        }
-      },
+      set: (patch) => setFlow(state, settingsStore, patch),
     },
     structures: {
       // Two setters, one per independent structure visibility axis. Each writes
@@ -1085,18 +914,23 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         setStructureLabelEnabled(state, settingsStore, category, visible),
     },
     volumes: {
-      setMasterEnabled: setVolumesEnabled,
-      add: addVolumeField,
-      remove: removeVolumeField,
-      setEnabled: setVolumeFieldEnabled,
-      setIntensity: setVolumeFieldIntensity,
-      setContrast: setVolumeFieldContrast,
-      setDensityScale: setVolumeFieldDensityScale,
-      setTrim: setVolumeFieldTrim,
-      setExposure: setVolumeFieldExposure,
-      setPalette: setVolumeFieldPalette,
-      list: listVolumeFields,
-      getState: getVolumeFieldsState,
+      setMasterEnabled: (enabled) => setVolumesEnabled(state, settingsStore, enabled),
+      add: (fieldId, cube) => addVolumeField(state, settingsStore, fieldId, cube),
+      remove: (fieldId) => removeVolumeField(state, settingsStore, fieldId),
+      setEnabled: (fieldId, enabled) =>
+        setVolumeFieldEnabled(state, settingsStore, fieldId, enabled),
+      setIntensity: (fieldId, intensity) =>
+        setVolumeFieldIntensity(state, settingsStore, fieldId, intensity),
+      setContrast: (fieldId, contrast) =>
+        setVolumeFieldContrast(state, settingsStore, fieldId, contrast),
+      setDensityScale: (fieldId, value) =>
+        setVolumeFieldDensityScale(state, settingsStore, fieldId, value),
+      setTrim: (fieldId, trim) => setVolumeFieldTrim(state, settingsStore, fieldId, trim),
+      setExposure: (fieldId, exposure) =>
+        setVolumeFieldExposure(state, settingsStore, fieldId, exposure),
+      setPalette: (fieldId, id) => setVolumeFieldPalette(state, settingsStore, fieldId, id),
+      list: () => listVolumeFields(state),
+      getState: () => getVolumeFieldsState(state),
     },
     input: {
       spaceMouse: {
