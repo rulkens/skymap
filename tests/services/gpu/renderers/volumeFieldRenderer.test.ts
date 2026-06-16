@@ -57,14 +57,6 @@ function mockDevice(): GPUDevice {
   } as unknown as GPUDevice;
 }
 
-/** Stub callbacks for createVolumeFieldRenderer — avoids FadeRegistry dep in tests. */
-function stubCallbacks() {
-  return {
-    onFieldAdded: vi.fn(),
-    onFieldRemoved: vi.fn(),
-  };
-}
-
 // ── Draw-path helpers ────────────────────────────────────────────────
 
 function makeFakePass() {
@@ -107,7 +99,7 @@ function uniformScratch(device: GPUDevice): Float32Array | undefined {
 describe('createVolumeFieldRenderer draw', () => {
   it('draw reads field values from settingsOf', () => {
     const device = mockDevice();
-    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
+    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
     r.upload('mcpm', fixture());
     const pass = makeFakePass();
     r.draw(
@@ -130,7 +122,7 @@ describe('createVolumeFieldRenderer draw', () => {
     // When `settingsOf` returns undefined the renderer has no tunable
     // state for that field and must not issue any GPU work.
     const device = mockDevice();
-    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
+    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
     r.upload('mcpm', fixture());
     const pass = makeFakePass();
     r.draw(
@@ -150,7 +142,7 @@ describe('createVolumeFieldRenderer draw', () => {
     // user-tunable knobs are absent from the entry and arrive per draw
     // via settingsOf.
     const device = mockDevice();
-    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
+    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
     r.upload('mcpm', fixture());
     r.draw(
       makeFakePass(),
@@ -174,7 +166,7 @@ describe('createVolumeFieldRenderer draw', () => {
     // the same changed palette — no further writeTexture (resident
     // now tracks the new id).
     const device = mockDevice();
-    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
+    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
     r.upload('mcpm', fixture());
     const before = (device.queue.writeTexture as unknown as { mock: { calls: unknown[] } }).mock
       .calls.length;
@@ -220,7 +212,7 @@ describe('createVolumeFieldRenderer draw', () => {
     // enabled:false + fadeOpacityOf returning 0 → the field is fully
     // off; no GPU work should be issued.
     const device = mockDevice();
-    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never, stubCallbacks());
+    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
     r.upload('mcpm', fixture());
     const pass = makeFakePass();
     r.draw(

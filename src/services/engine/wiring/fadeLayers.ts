@@ -62,13 +62,24 @@ const layer = <Item, K extends VisibilityLayerKey>(
   row: FadeLayer<Item> & { readonly key: K },
 ): FadeLayer<unknown> & { readonly key: K } => row as FadeLayer<unknown> & { readonly key: K };
 
-// Resident production volume fields, enumerated from the registry — the same
-// exclusion seedVolumeFields applies. DEV-only binBaseName:null debug fixtures
-// are skipped (they have no on-disk payload and register on-demand under DEV).
-function residentVolumeFieldIds(): readonly VolumeFieldId[] {
+// Every volume field in the registry — INCLUDING the DEV-only
+// binBaseName:null debug fixtures (debug-gaussian/-cartesian/-spherical).
+//
+// This deliberately differs from `seedVolumeFields`, which excludes the debug
+// fixtures from `settings.volumes.items` because that record drives the
+// Volumes-panel UI + demand loading. Fade registration has the opposite
+// requirement: a fade handle is inert until something fades it, and BOTH the
+// debug toggle (`engine.ts` setVolumeFieldEnabled → fadeTo) and the debug
+// slot's commit (`syntheticVolumeSlots.ts`) call `fadeTo({kind:'volumeField'})`
+// on these ids. `FadeRegistry.fadeTo` throws on an unregistered id, so the
+// debug handles must be seeded here or the DEV toggle breaks. Registering all
+// volume fields at 0 is behaviour-preserving in production — the 3 extra debug
+// handles are never read there (their field never enters the renderer's map),
+// so a registered-but-unused handle costs nothing.
+function volumeFieldIds(): readonly VolumeFieldId[] {
   const ids: VolumeFieldId[] = [];
   for (const entry of Object.values(SOURCE_REGISTRY)) {
-    if (entry.type !== 'volume' || entry.binBaseName === null) continue;
+    if (entry.type !== 'volume') continue;
     ids.push(entry.id);
   }
   return ids;
@@ -159,10 +170,11 @@ export const FADE_LAYERS = [
     handle: () => ({ kind: 'flow' }),
     seed: () => 0,
   }),
-  // volume fields — absorbs initGpu.ts onFieldAdded (demand-loaded; seed 0; per resident VolumeFieldId)
+  // volume fields — absorbs initGpu.ts onFieldAdded (demand-loaded; seed 0; per
+  // VolumeFieldId, including the DEV-only debug fixtures — see volumeFieldIds)
   layer({
     key: 'volumeField',
-    expand: () => residentVolumeFieldIds(),
+    expand: () => volumeFieldIds(),
     handle: (id) => ({ kind: 'volumeField', id }),
     seed: () => 0,
   }),

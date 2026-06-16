@@ -29,12 +29,6 @@ import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
 export const createFlowFieldSlot: SlotFactory<ScalarCube, void> = (state, _cb) => {
-  // Register the flow fade handle at opacity 0; the commit's
-  // fadeTo(1, FADE_IN_DURATION_MS) ramps it in once the upload lands. The
-  // handle (engine.ts) owns the re-enable (cube already resident) + fade-out
-  // branches — see the fade design in `EngineFlowFieldsHandle`.
-  state.subsystems.fades.register({ kind: 'flow' }, 0);
-
   const slot = createAssetSlot({
     name: 'flow',
     fetch: flowFieldFetcher,

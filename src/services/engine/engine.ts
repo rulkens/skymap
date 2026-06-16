@@ -885,8 +885,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // once booted).
     state.gpu.volumeFieldRenderer?.upload(fieldId, cube);
     // Drive the FadeRegistry from the settings enable bit: enabled → fade to 1;
-    // disabled → leave it at the 0 set by onFieldAdded (the draw loop's
-    // `(!enabled && opacity <= 0)` skip keeps it invisible until toggled on).
+    // disabled → leave it at the 0 seeded by the fade manifest (`seedFades`)
+    // at construction (the draw loop's `(!enabled && opacity <= 0)` skip keeps
+    // it invisible until toggled on).
     if (state.settings.volumes.items[fieldId]?.enabled) {
       void state.subsystems.fades.fadeTo(
         { kind: 'volumeField', id: fieldId },

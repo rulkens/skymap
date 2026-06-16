@@ -195,19 +195,35 @@ describe('seedFades', () => {
     expect(state.subsystems.fades.opacityOf({ kind: 'flow' })).toBe(0);
   });
 
-  it('seeds every resident volume field at 0', () => {
+  it('seeds EVERY volume field at 0, including DEV debug fixtures', () => {
     const state = makeState();
     seedFades(state);
-    // Derive the expected resident set from the registry — the same exclusion
-    // seedFades applies (type:'volume' && binBaseName !== null). Not hardcoded.
-    const residentVolumeIds = Object.values(SOURCE_REGISTRY)
-      .filter((e) => e.type === 'volume' && e.binBaseName !== null)
+    // Derive the expected set from the registry — every type:'volume' entry,
+    // INCLUDING the binBaseName:null debug fixtures. Not hardcoded. The
+    // inclusion of the debug ids is load-bearing: setVolumeFieldEnabled +
+    // the debug slot commit both fadeTo these handles, and fadeTo throws on
+    // an unregistered id, so a missing debug handle breaks the DEV toggle.
+    const volumeIds = Object.values(SOURCE_REGISTRY)
+      .filter((e) => e.type === 'volume')
       .map((e) => e.id);
-    expect(residentVolumeIds.length).toBeGreaterThan(0);
-    for (const id of residentVolumeIds) {
+    expect(volumeIds.length).toBeGreaterThan(0);
+    for (const id of volumeIds) {
       expect(
         state.subsystems.fades.opacityOf({ kind: 'volumeField', id }),
         `volumeField{${id}} should seed at 0`,
+      ).toBe(0);
+    }
+    // Regression lock: at least one binBaseName:null debug fixture is present
+    // in the iterated set and seeds at 0. This is the gap Part C fixed — before
+    // it, debug fixtures were excluded and their fadeTo threw under DEV.
+    const debugIds = Object.values(SOURCE_REGISTRY)
+      .filter((e) => e.type === 'volume' && e.binBaseName === null)
+      .map((e) => e.id);
+    expect(debugIds.length).toBeGreaterThan(0);
+    for (const id of debugIds) {
+      expect(
+        state.subsystems.fades.opacityOf({ kind: 'volumeField', id }),
+        `debug volumeField{${id}} should seed at 0`,
       ).toBe(0);
     }
   });

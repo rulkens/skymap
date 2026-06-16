@@ -147,12 +147,6 @@ export function wireGalaxyCatalogSourceSlot(
   const { cb } = deps;
   const slotName = `${shortName}-points`;
 
-  // Register the fade id at opacity 0 so the draw loop's
-  // `fadeOpacityOf` lookup always finds it, even on the first frame
-  // before any upload lands.  The commit drives the fadeTo lifecycle
-  // from there.
-  state.subsystems.fades.register({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) }, 0);
-
   const slot = createAssetSlot<GalaxyCatalog, GalaxyCatalogReq>({
     name: slotName,
     fetch: fetcher,
