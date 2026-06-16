@@ -338,8 +338,14 @@ function makeInput(
         },
         // encodeFlowCompute (pre-HDR) reads these; flow is default-off so the
         // gate early-returns once the renderer is null.  A null slot →
-        // slotReady false → not loaded.
-        settings: { flow: { enabled: false } },
+        // slotReady false → not loaded.  The encoders read the DebugPanel
+        // renderer-toggle override bag off `settings.debug.disabledPasses`:
+        // most tests pass no overrides so the default is an empty Set (matches
+        // production); the skip-on-toggle test passes `overrides.disabledPasses`.
+        settings: {
+          flow: { enabled: false },
+          debug: { disabledPasses: new Set<string>(overrides.disabledPasses ?? []) },
+        },
         assetSlots: { flow: null },
         // proceduralDisksPass / texturedDisksPass each read their slot
         // off `state.subsystems` in their `enabled()` gate; nulling both
@@ -352,11 +358,6 @@ function makeInput(
           // keeps the gate from crashing.
           fades: { opacityOf: () => 1 },
         },
-        // DebugPanel renderer-toggle override bag.  Most tests don't
-        // pass any overrides so the default is an empty Set — matches
-        // the production default.  Tests that need to assert the
-        // skip-on-toggle behaviour pass `overrides.disabledPasses`.
-        debug: { disabledPasses: new Set<string>(overrides.disabledPasses ?? []) },
       } as never,
       milkyWayITimeSec: 0,
       device,
@@ -590,8 +591,8 @@ describe('renderFrame', () => {
     expect(calls).toHaveLength(1);
   });
 
-  it('skips a pass whose name appears in state.debug.disabledPasses', () => {
-    // The DebugPanel flips entries in/out of `state.debug.disabledPasses`.
+  it('skips a pass whose name appears in settings.debug.disabledPasses', () => {
+    // The DebugPanel flips entries in/out of `settings.debug.disabledPasses`.
     // The encoder loop in `encodeHdrSingle` checks the set after the
     // pass's own `enabled()` gate, so toggling `point-sprites` off stops
     // `pointRenderer.draw` even though every other input would run it.

@@ -248,7 +248,9 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       },
       // encodeFlowCompute (pre-HDR) reads these; default-off → gate returns.
       // A null slot → slotReady false → not loaded.
-      settings: { flow: { enabled: false } },
+      // The encoders read the renderer-toggle override bag off
+      // `settings.debug.disabledPasses`; empty by default so no pass is skipped.
+      settings: { flow: { enabled: false }, debug: { disabledPasses: new Set<string>() } },
       assetSlots: { flow: null },
       subsystems: {
         proceduralDisks: null,
@@ -259,9 +261,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         // milky-way fire), so opacityOf returns 0 — no fade-out tail.
         fades: { opacityOf: () => 0 },
       },
-      // DebugPanel renderer-toggle override bag — empty by default so
-      // the encoder loop skips no passes.
-      debug: { disabledPasses: new Set<string>() },
     } as never,
     milkyWayITimeSec: 0,
     device,

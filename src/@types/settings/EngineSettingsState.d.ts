@@ -207,10 +207,19 @@ export type EngineSettingsState = {
    *     disk-radius footprint so the developer can calibrate the
    *     placement against the underlying billboard.  Gated behind the
    *     DebugPanel.
+   *   - `disabledPasses` — pass names the developer has manually toggled
+   *     off in the renderer-toggle section.  The frame encoders consult
+   *     this set AFTER each pass's own `enabled()` gate and skip the draw
+   *     when the name is present, so the override is one-way: it can hide
+   *     a pass that would otherwise run but never force-enable one whose
+   *     gate returned false.  An open-world membership set (any pass name)
+   *     against the closed-world `HDR_PASSES` / `UI_PASSES` arrays; normally
+   *     empty, so the production frame pays one `Set.has` per pass.
    */
   debug: {
     showPickBuffer: boolean;
     showDiskRadiusRing: boolean;
+    disabledPasses: ReadonlySet<string>;
   };
 
   /**
