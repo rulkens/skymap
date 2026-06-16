@@ -3,9 +3,8 @@
  *
  * Before this module existed the engine kept a single mutable
  * `let currentTween: CameraTween | null = null;` as a closure variable.
- * Five separate sites read or wrote it — `frame()` (advance + clear),
- * the `pointerdown` handler (cancel on user grab), the SpaceMouse
- * per-frame block (cancel when the puck is deflected), and three
+ * Several separate sites read or wrote it — `frame()` (advance + clear),
+ * the `pointerdown` handler (cancel on user grab), and three
  * public-handle methods (`focusOn`, `focusOnHome`, `selectFamous`)
  * that all replaced the running tween.
  *
@@ -81,8 +80,8 @@ export function createTweenManager(deps: { readonly requestRender: () => void })
     // manager whose only owned state is the single tween reference IS
     // cancelling that tween.  Keeping `destroy` and `cancel` as
     // separate names preserves the existing call-site vocabulary
-    // (pointerdown / SpaceMouse cancel a tween *without* destroying
-    // the manager) while wiring into the uniform teardown contract.
+    // (pointerdown cancels a tween *without* destroying the manager)
+    // while wiring into the uniform teardown contract.
     destroy(): void {
       cancel();
     },

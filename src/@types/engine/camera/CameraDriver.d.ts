@@ -2,14 +2,14 @@
  * CameraDriver — the seam that turns camera precedence into DATA.
  *
  * The engine has several things that all want to move the camera on a
- * given frame: raw input (SpaceMouse / drag), an in-flight tween, the
- * idle auto-rotate, and (added later) a guided tour. Historically the
- * winner was decided by *call order* inside the per-frame body — tween
- * advanced first, then input overwrote it, then a hand-written guard
- * suppressed auto-rotate when anything else was active. Precedence was
- * an emergent property of how the statements happened to be sequenced,
- * which meant inserting a new mover (or changing who beats whom) was a
- * surgical edit to control flow rather than a one-line declaration.
+ * given frame: an in-flight tween, the idle auto-rotate, and (added
+ * later) a guided tour. Historically the winner was decided by *call
+ * order* inside the per-frame body — tween advanced first, then a
+ * hand-written guard suppressed auto-rotate when anything else was
+ * active. Precedence was an emergent property of how the statements
+ * happened to be sequenced, which meant inserting a new mover (or
+ * changing who beats whom) was a surgical edit to control flow rather
+ * than a one-line declaration.
  *
  * A CameraDriver makes each mover a uniform, self-describing unit so a
  * single resolver can pick the winner by comparing `priority` instead
@@ -19,15 +19,15 @@
  *
  * The four members, and why each exists:
  *
- *   - `id` — a stable string identity ('input' | 'tween' | 'autoRotate',
- *     with 'tour' joining later). Purely for debugging and logging: it
+ *   - `id` — a stable string identity ('tween' | 'autoRotate', with
+ *     'tour' joining later). Purely for debugging and logging: it
  *     lets a trace say "frame written by 'tween'" without the resolver
  *     needing to know any concrete driver's type.
  *
  *   - `priority` — the sole thing the resolver orders by. The current
- *     ranking is input 100 > tour 80 > tween 60 > autoRotate 20; the
- *     gap below 100 and around 80 is deliberate headroom so a future
- *     driver can slot between two existing ones without renumbering.
+ *     ranking is tour 80 > tween 60 > autoRotate 20; the gap around 80
+ *     is deliberate headroom so a future driver can slot between two
+ *     existing ones without renumbering.
  *
  *   - `isActive(nowMs)` — answers two questions with one predicate.
  *     Per-driver it means "do I want to write state.cam this frame?",

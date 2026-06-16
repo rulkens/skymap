@@ -57,8 +57,6 @@ export type OrbitCameraInit = {
    * Why expose roll on an orbit camera at all?  In a cosmological
    * scene there is no preferred up direction, so allowing the user
    * to roll is physically meaningful and not just a cosmetic.
-   * SpaceMouse's `ry` (tilt-left-right) maps to this naturally;
-   * before this field existed `ry` was ignored entirely.
    *
    * Optional with a default of 0 to keep every existing call site
    * (synthetic clouds, focus tween, controls) working unchanged.

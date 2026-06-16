@@ -74,8 +74,8 @@ export const MAX_DISTANCE_MPC = 30000;
 /**
  * Clamp a candidate distance to `[MIN_DISTANCE_MPC, MAX_DISTANCE_MPC]`.
  *
- * Centralised so wheel zoom, SpaceMouse zoom, focus tweens and initial
- * framing all share the same policy — drift here would be hard to debug.
+ * Centralised so wheel zoom, focus tweens and initial framing all share
+ * the same policy — drift here would be hard to debug.
  */
 export function clampDistance(d: number): number {
   if (d < MIN_DISTANCE_MPC) return MIN_DISTANCE_MPC;

@@ -30,9 +30,9 @@
  * engine-owned settings store; React reads them via `useSettingsStore`
  * selectors, not through this hook.  The only thing the caller layers in
  * via `extraCallbacks` is extra EVENT subscriptions — App-level event
- * wiring plus the `filaments.onReady` / SpaceMouse-connect events
- * `useEngineSettings` owns — which we spread into the createEngine
- * options block alongside our session callbacks.
+ * wiring plus the `filaments.onReady` event `useEngineSettings` owns —
+ * which we spread into the createEngine options block alongside our
+ * session callbacks.
  *
  * ──────────────────────────────────────────────────────────────────────
  * Why empty `useEffect` deps?
