@@ -40,8 +40,10 @@
  */
 
 import type { FadeLayer } from '../../../@types/animation/FadeLayer';
+import type { VisibilityLayerKey } from '../../../@types/animation/VisibilityLayerKey';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
+import { FADE_LAYERS } from './fadeLayers';
 
 // The state slice applyIntent feeds the row closures. `row.guard` reads
 // `assetSlots` (slotReady); `row.post` reads `settings` (volume lazy-load) and,
@@ -89,3 +91,53 @@ function applyIntent<Item>(
 // part of the public bridge API — it's the private per-row op, exposed only so
 // its fades-only behaviour can be driven in isolation.
 export { applyIntent as applyIntentForTest };
+
+/**
+ * The single public intent → fade bridge. Walks the manifest's INTENT SUBSET
+ * (the rows that carry an `intent` closure — the registration-only overlay/
+ * scaleBar rows have none and are skipped) and drives one fade per item via the
+ * private `applyIntent`. With `opts.only`, the subset is further narrowed to the
+ * named keys, so a caller (e.g. a tour cue) can sync just one layer.
+ *
+ * Does fades ONLY: no `writeIntent` (settings writes belong to the push setters /
+ * restore path), no React echoes. State flows one way here — settings → intent →
+ * fade.
+ *
+ * ### Why the wake is asymmetric
+ *
+ * `applyIntent` itself never wakes the scheduler; the wake is the whole reason
+ * this batch bridge exists on top of it, and the two animate modes need opposite
+ * treatment:
+ *
+ *   - `animate: false` snaps via `setImmediate`, which deliberately does NOT
+ *     wake the loop (a snap is a frame-1 / non-animated path). So after the
+ *     ENTIRE batch we issue exactly one `requestRender` to draw the snapped
+ *     state once — one wake for the whole batch, not one per item.
+ *   - `animate: true` drives `fadeTo`, which wakes the scheduler itself per the
+ *     registry's contract. A batch wake here would be redundant, so we issue
+ *     none.
+ */
+export function syncVisibilityFades(
+  state: ApplyIntentState,
+  opts: { animate: boolean; only?: readonly VisibilityLayerKey[] },
+): void {
+  const only = opts.only ? new Set(opts.only) : undefined;
+
+  for (const row of FADE_LAYERS) {
+    // The registration-only rows (proceduralDisks/texturedDisks/scaleBar) have
+    // no intent to sync — skip them.
+    if (row.intent === undefined) continue;
+    // Narrow to the requested keys when `only` is given.
+    if (only && !only.has(row.key)) continue;
+
+    // `expand` is typed against the full EngineState but the manifest's expands
+    // are constants that read nothing from state — same boundary cast as the
+    // guard/post calls inside applyIntent.
+    for (const item of row.expand(state as EngineState)) {
+      applyIntent(state, row, item, { animate: opts.animate });
+    }
+  }
+
+  // One batch wake for the snap path; the animated path rides fadeTo's own wake.
+  if (!opts.animate) state.subsystems.scheduler.requestRender();
+}
