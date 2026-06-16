@@ -35,7 +35,6 @@
  *
  *   Subsystems (closure-returning factories with internal state):
  *   - `tweenManager.ts`        — at-most-one in-flight CameraTween facade
- *   - `spaceMouseSubsystem.ts` — 6DOF puck device + per-frame camera mutation
  *   - `clickHandler.ts`        — pick → globalIdx → GalaxyInfo resolver
  *   - `inputBindings.ts`       — pointer/keyboard/resize listener bag
  *   - `thumbnailSubsystem.ts`  — atlas + queue + per-frame thumbnail draw
@@ -104,13 +103,6 @@ import type { RequestKey } from '../../@types/loading/RequestKey';
 import { awaitSlotReady } from '../loading/awaitSlotReady';
 import { tweenToCameraSnapshot } from './camera/cameraSnapshot';
 
-// ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
-//
-// The whole subsystem lives in `spaceMouseSubsystem.ts`.  Engine-side we
-// instantiate it once with `cancelTween` / `onAxes` / `onConnectionChange`
-// callbacks and call `applyToCamera()` from `frame()`; the handle's
-// connect/disconnect/sensitivity setters forward straight through.
-import { createSpaceMouseSubsystem } from './subsystems/spaceMouseSubsystem';
 import { buildSettersFromTable } from './wiring/settingsTable';
 import type { SettingsTableKey } from '../../@types/settings/SettingsTableKey';
 import { runBootstrapPhases } from './phases/bootstrap';
@@ -177,8 +169,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //   - `picking`    → hover / click / drag mutables.
   //   - `gpu`        → renderers / HDR target / tone-map pass — null until
   //                    `initGpu` finishes.
-  //   - `subsystems` → long-lived helpers; `tweens`/`spaceMouse` construct
-  //                    up-front, the rest land later.
+  //   - `subsystems` → long-lived helpers; `tweens` constructs up-front,
+  //                    the rest land later.
   //   - `cam` / `initialCamSnapshot` → orbit camera + framing snapshot,
   //                    null until the first cloud loads.
   //
@@ -323,29 +315,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       //   - public handle's focusOn / focusOnHome / selectFamous
       //     (start a tween — auto-replaces any running one),
       //   - pointerdown handler                (cancel on user grab),
-      //   - SpaceMouse per-frame block         (cancel on puck deflect),
       //   - per-frame frame() loop             (advance + auto-clear).
       tweens: createTweenManager({
         requestRender: () => state.subsystems.scheduler.requestRender(),
-      }),
-
-      // ── SpaceMouse subsystem ──────────────────────────────────
-      // All puck state lives inside the subsystem.  We hand it three
-      // callbacks: cancelTween (yield the focus tween to user input),
-      // onConnectionChange (UI indicator), onAxes (wake the loop).
-      spaceMouse: createSpaceMouseSubsystem({
-        cancelTween: () => state.subsystems.tweens.cancel(),
-        onConnectionChange: (connected) => {
-          // Single site for the connected-change echo (both connect +
-          // disconnect); the subsystem owns the truth, handle methods don't
-          // echo directly.
-          cb.input?.spaceMouse?.onConnectedChange?.(connected);
-          // Wake one frame so the still-animating predicate sees the
-          // freshly-zeroed axes and lets the loop sleep cleanly — the only
-          // wake on the disconnect path (handle.disconnect relies on it).
-          state.subsystems.scheduler.requestRender();
-        },
-        onAxes: () => state.subsystems.scheduler.requestRender(),
       }),
 
       // ── Selection subsystem ──────────────────────────────────────
@@ -652,25 +624,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     return state.data.galaxies.catalogs.get(source)?.objIDs;
   }
 
-  async function connectSpaceMouse(): Promise<boolean> {
-    const result = await state.subsystems.spaceMouse.connect();
-    return result.ok;
-  }
-
-  function disconnectSpaceMouse(): void {
-    // No requestRender: a real disconnect fires onConnectionChange (which
-    // wakes); with no device open nothing observable changes.
-    state.subsystems.spaceMouse.disconnect();
-  }
-
-  function isSpaceMouseConnected(): boolean {
-    return state.subsystems.spaceMouse.isConnected();
-  }
-
-  function setSpaceMouseSensitivity(value: number): void {
-    state.subsystems.spaceMouse.setSensitivity(value);
-  }
-
   function destroy(): void {
     // Every subsystem and renderer satisfies `Destroyable`, so this reads as
     // a flat list of `.destroy()` calls.  Ordering is load-bearing only for
@@ -707,7 +660,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.proceduralDisks = null;
     state.subsystems.galaxyAtlas?.destroy();
     state.subsystems.galaxyAtlas = null;
-    state.subsystems.spaceMouse.destroy();
     state.subsystems.clickResolver?.destroy();
     state.subsystems.clickResolver = null;
     state.subsystems.loadProgress?.destroy();
@@ -851,14 +803,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setPalette: (fieldId, id) => setVolumeFieldPalette(state, settingsStore, fieldId, id),
       list: () => listVolumeFields(state),
       getState: () => getVolumeFieldsState(state),
-    },
-    input: {
-      spaceMouse: {
-        connect: connectSpaceMouse,
-        disconnect: disconnectSpaceMouse,
-        isConnected: isSpaceMouseConnected,
-        setSensitivity: setSpaceMouseSensitivity,
-      },
     },
     // ── Debug sub-handle (observability + dev toggles) ────────
     //

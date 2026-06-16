@@ -33,8 +33,6 @@
  *     `cloudLoader.reloadSource`, with abort-controller plumbing.
  *   - `setSourceVisible` — touches the visible-source mask with a
  *     fade animation, not just one boolean.
- *   - `setSpaceMouseSensitivity` — forwards into the SpaceMouse
- *     subsystem rather than dispatching a store action.
  *   - `flow.set` — dispatches the whole-patch `setFlowAction` then runs
  *     per-leaf demand/fade/reseed side effects keyed off which keys the
  *     patch carried.

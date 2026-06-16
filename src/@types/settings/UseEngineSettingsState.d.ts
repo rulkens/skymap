@@ -29,9 +29,8 @@
 export type UseEngineSettingsState = {
   // Every SETTING moved to the engine-owned store and is read React-side via
   // `useSettingsStore` selectors, so no settings leaf is mirrored here. The
-  // three fields below are the non-settings remainder: `filamentCounts` is an
-  // EVENT payload (no store home), and the two SpaceMouse fields are the input
-  // subsystem's React-owned state.
+  // one field below is the non-settings remainder: `filamentCounts` is an
+  // EVENT payload (no store home).
   /**
    * Strip + vertex counts from the cosmic-web `filaments.bin`, or `null` until
    * the engine fires `filaments.onReady` (once, after the optional file lands).
@@ -40,18 +39,4 @@ export type UseEngineSettingsState = {
    * migrated to the engine-owned store.
    */
   filamentCounts: { stripCount: number; vertexCount: number } | null;
-  /**
-   * Whether a 3Dconnexion SpaceMouse is currently paired and feeding
-   * input reports.  Engine echoes this through
-   * `EngineCallbacks.input.spaceMouse.onConnectedChange` on every
-   * connect / disconnect transition (including unsolicited unplugs).
-   */
-  spaceMouseConnected: boolean;
-  /**
-   * Current SpaceMouse global sensitivity multiplier (applied AFTER the
-   * cube response curve).  App-owned optimistic state — the engine has
-   * no echo callback for sensitivity, so React is the source of truth.
-   * It is NOT in `EngineSettingsState`, so it does not move to the store.
-   */
-  spaceMouseSensitivity: number;
 };

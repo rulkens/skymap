@@ -3,8 +3,8 @@
  * statement order into data.
  *
  * The engine has several movers that all want to write `state.cam` on a
- * given frame: raw input, an in-flight tween, idle auto-rotate, and a
- * guided tour. Previously the winner was whoever ran last in the
+ * given frame: an in-flight tween, idle auto-rotate, and a guided tour.
+ * Previously the winner was whoever ran last in the
  * per-frame body, with hand-written guards suppressing the losers.
  * Precedence was emergent from control flow, so inserting a mover or
  * changing who-beats-whom meant surgery on the frame loop.
@@ -40,8 +40,8 @@
  * reflected on the very next frame without rebuilding the list. The
  * wrappers are deliberately thin — they map "is this mover active?" and
  * "let this mover write the camera" onto the subsystems that already own
- * that behaviour (`spaceMouse`, `tweens`) or onto the one-line
- * auto-rotate increment, rather than reimplementing any of it. The list
+ * that behaviour (`tweens`) or onto the one-line auto-rotate increment,
+ * rather than reimplementing any of it. The list
  * is built once at loop start and carried on `RunFrameDeps`, not on
  * `EngineState`: it is a per-frame dependency of the frame body, not a
  * piece of engine-owned mutable state, so threading it through the deps
@@ -96,23 +96,15 @@ const AUTO_ROTATE_YAW_DELTA = 0.000873;
  * read fresh every frame through the closures. The drivers, highest
  * priority first:
  *
- *   - `input` (100) — raw SpaceMouse axes. Beats everything: direct user
- *     input always wins.
  *   - `tween` (60) — an in-flight focus/framing tween.
  *   - `autoRotate` (20) — the idle drift, lowest priority so any of the
  *     above suppresses it.
  *
  * The `tour` driver (priority 80) is intentionally absent — a separate
- * plan slots it in between input and tween.
+ * plan slots it in above the tween.
  */
 export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] {
   return [
-    {
-      id: 'input',
-      priority: 100,
-      isActive: () => state.subsystems.spaceMouse.hasAxes(),
-      apply: (cam, nowMs) => state.subsystems.spaceMouse.applyToCamera(cam, nowMs),
-    },
     {
       id: 'tween',
       priority: 60,

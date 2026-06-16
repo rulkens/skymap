@@ -7,7 +7,7 @@
  *
  * ### Why some fields are null at construction
  *
- *   - Eager (no GPU dep): `spaceMouse`, `tweens`, `scheduler` — callbacks
+ *   - Eager (no GPU dep): `tweens`, `scheduler` — callbacks
  *     queue work the scheduler picks up once the GPU IIFE finishes.
  *   - Lazy (inside the GPU init IIFE): `galaxyAtlas`, `proceduralDisks`,
  *     `texturedDisks`, `clickResolver`, `inputBindings`.
@@ -23,7 +23,6 @@ import type { ProceduralDiskSubsystem } from '../subsystems/ProceduralDiskSubsys
 import type { TexturedDiskSubsystem } from '../subsystems/TexturedDiskSubsystem';
 import type { HiResFamousSubsystem } from '../subsystems/HiResFamousSubsystem';
 import type { HiResFamousTexture } from '../../rendering/HiResFamousTexture';
-import type { SpaceMouseSubsystem } from '../subsystems/SpaceMouseSubsystem';
 import type { SelectionSubsystem } from '../subsystems/SelectionSubsystem';
 import type { BiasCorrectionSubsystem } from '../subsystems/BiasCorrectionSubsystem';
 import type { LabelDirectorSubsystem } from '../subsystems/LabelDirectorSubsystem';
@@ -58,7 +57,6 @@ export type EngineSubsystemHandles = {
    * runs.
    */
   hiResFamousTexture: HiResFamousTexture | null;
-  spaceMouse: SpaceMouseSubsystem;
   tweens: TweenManager;
   clickResolver: ClickResolver | null;
   inputBindings: InputBindings | null;

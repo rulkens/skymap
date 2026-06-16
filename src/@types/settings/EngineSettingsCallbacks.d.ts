@@ -18,8 +18,7 @@ export type EngineSettingsCallbacks = Pick<
   // and React reads each via a `useStore` selector, so there is no settings
   // mirror to keep in sync from a callback. What remains the hook subscribes to
   // here is EVENT-shaped: `filaments.onReady` (the one-shot strip/vertex count
-  // payload after `filaments.bin` lands) and `input.spaceMouse.onConnectedChange`
-  // (puck connect / disconnect). Camera EVENTS — focus / camera / scale — are
-  // also not settings, but `useEngine` wires those, not this hook.
-  'filaments' | 'input'
+  // payload after `filaments.bin` lands). Camera EVENTS — focus / camera / scale
+  // — are also not settings, but `useEngine` wires those, not this hook.
+  'filaments'
 >;

@@ -5,8 +5,8 @@
  * ### Why this type exists
  *
  * Phases 1–3 of the engine.ts refactor pulled per-frame GPU dispatch,
- * pointer/keyboard input wiring, click resolution, the SpaceMouse and
- * thumbnail subsystems, and the camera-tween facade out into siblings
+ * pointer/keyboard input wiring, click resolution, the thumbnail
+ * subsystem, and the camera-tween facade out into siblings
  * under `src/services/engine/`.  Each extraction shrank `frame()` and
  * the public-handle setters to thin orchestrators — but the *opening*
  * of `createEngine` still declared ~30 individual `let` bindings:

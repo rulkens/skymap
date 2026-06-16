@@ -43,7 +43,6 @@ import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useEngineSettings } from '../../hooks/useEngineSettings';
 import { useSettingsStore } from '../../hooks/useSettingsStore';
-import { useSpaceMouseDevicePresence } from '../../hooks/useSpaceMouseDevicePresence';
 import { selectGalaxyCatalogSize } from '../../services/engine/settingsStore/selectors/selectGalaxyCatalogSize';
 import { selectDepthFade } from '../../services/engine/settingsStore/selectors/selectDepthFade';
 import { selectHighlightFallback } from '../../services/engine/settingsStore/selectors/selectHighlightFallback';
@@ -94,7 +93,6 @@ import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCata
 import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
 import type { GalaxyCatalogItemSettings } from '../../@types/settings/GalaxyCatalogItemSettings';
 import { DebugPanel } from '../DebugPanel/DebugPanel';
-import { isWebHIDSupported } from '../../services/input/spaceMouse';
 
 /**
  * Stable fallback for the volume-field items selector during the null-store
@@ -134,20 +132,9 @@ const GALAXY_CATALOG_ITEMS_DEFAULT = Object.fromEntries(
 const DISABLED_PASSES_DEFAULT: ReadonlySet<string> = new Set();
 
 export function App(): React.ReactElement {
-  const {
-    settings,
-    engineCallbacks: settingsCallbacks,
-    setSpaceMouseSensitivity,
-  } = useEngineSettings();
+  const { settings, engineCallbacks: settingsCallbacks } = useEngineSettings();
 
-  const { filamentCounts, spaceMouseConnected, spaceMouseSensitivity } = settings;
-
-  // SettingsPanel's SpaceMouse section appears only when WebHID is
-  // available AND a previously-authorised puck is attached.  The other
-  // 99 % of users see no clutter; the 1 % who own one find the controls
-  // automatically with no reload.
-  const spaceMouseDevicePresent = useSpaceMouseDevicePresence();
-  const spaceMouseSectionVisible = isWebHIDSupported() && spaceMouseDevicePresent;
+  const { filamentCounts } = settings;
 
   const {
     canvasRef,
@@ -491,21 +478,6 @@ export function App(): React.ReactElement {
             onToggleSource={(source, visible) =>
               handleRef.current?.sources.setVisible(source, visible)
             }
-            spaceMouseSupported={spaceMouseSectionVisible}
-            spaceMouseConnected={spaceMouseConnected}
-            onConnectSpaceMouse={() => {
-              // `connect()` returns a promise; fire-and-forget.  The
-              // subsystem's `onConnectedChange` echo drives the
-              // "connected" indicator on success.
-              void handleRef.current?.input.spaceMouse.connect();
-            }}
-            spaceMouseSensitivity={spaceMouseSensitivity}
-            onSpaceMouseSensitivityChange={(value) => {
-              // No engine echo — React owns the truth, same as the
-              // filament / volume master toggles.
-              setSpaceMouseSensitivity(value);
-              handleRef.current?.input.spaceMouse.setSensitivity(value);
-            }}
             // Bias mode + absMagLimit read off the engine-owned store
             // (`selectBiasMode` / `selectAbsMagLimit`); the handle setters
             // dispatch the store action (and `setMode` also re-bakes the worker),

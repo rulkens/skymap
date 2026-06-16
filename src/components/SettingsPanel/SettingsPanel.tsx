@@ -250,14 +250,6 @@ type Props = {
   toneMapCurve?: ToneMapCurveT;
   onToneMapCurveChange?: (curve: ToneMapCurveT) => void;
 
-  // ── SpaceMouse 6DOF input (conditional, WebHID-only) ───────────────────
-  /** Feature gate — only render the SpaceMouse section when true. */
-  spaceMouseSupported?: boolean;
-  spaceMouseConnected?: boolean;
-  onConnectSpaceMouse?: () => void;
-  spaceMouseSensitivity?: number;
-  onSpaceMouseSensitivityChange?: (value: number) => void;
-
   // ── Footer ─────────────────────────────────────────────────────────────
   /** Called when the user clicks Reset camera. */
   onResetCamera: () => void;
@@ -327,11 +319,6 @@ export function SettingsPanel({
   onSetLabelCategoryVisibility,
   toneMapCurve,
   onToneMapCurveChange,
-  spaceMouseSupported,
-  spaceMouseConnected,
-  onConnectSpaceMouse,
-  spaceMouseSensitivity,
-  onSpaceMouseSensitivityChange,
   onResetCamera,
   defaultOpen,
 }: Props): ReactNode {
@@ -513,13 +500,13 @@ export function SettingsPanel({
         Four thematic sections (Galaxies, Cosmic web, Structures, Labels)
         each with a master toggle on the header and an "Advanced"
         disclosure for power-user knobs.  Then Display (its own Advanced
-        disclosure) and the conditional SpaceMouse section.  Reset camera
-        sits outside any section as a footer action.
+        disclosure).  Reset camera sits outside any section as a footer
+        action.
 
         Section ORDER mirrors the explorer's mental model from "things"
         (Galaxies) → "the stuff between things" (Cosmic web) → "named
         landmarks" (Structures) → "annotations" (Labels), then global
-        Display, then optional Input, then the footer action.
+        Display, then the footer action.
       */}
 
       {/* ── Galaxies ──────────────────────────────────────────────────── */}
@@ -724,9 +711,7 @@ export function SettingsPanel({
             {/* Per-cube knobs — one VolumeFieldRow per registered field.
                 Same component as the pre-restructure Volumes section; only
                 its location changed (now under Cosmic web → Advanced).
-                Empty-state hint when no cubes are registered yet — same
-                idiom the SpaceMouse section uses for its "not connected"
-                line. */}
+                Empty-state hint when no cubes are registered yet. */}
             {showVolumesSection &&
               (volumeFields.length === 0 ? (
                 <div className={styles.panelMode}>No volume fields registered.</div>
@@ -880,50 +865,6 @@ export function SettingsPanel({
               ))}
             </select>
           </div>
-        </CollapsibleSection>
-      )}
-
-      {/* ── SpaceMouse (auto-detected, conditional) ─────────────────────── */}
-      {/*
-        Visible only when the parent's WebHID feature-detect + device-
-        presence check both pass (App.tsx composes the predicate; see
-        `spaceMouseSectionVisible`).  Per audit Q16f: invisible to the
-        ~99 % of users without a 3Dconnexion device, automatically
-        present for the 1 % who plug one in.
-      */}
-      {spaceMouseSupported && (
-        <CollapsibleSection title="SpaceMouse">
-          <div className={styles.panelMode}>
-            {spaceMouseConnected ? 'connected' : 'not connected'}
-          </div>
-          {!spaceMouseConnected && onConnectSpaceMouse && (
-            <div className={styles.panelRow}>
-              <Button className={styles.resetButton} onClick={onConnectSpaceMouse}>
-                Connect SpaceMouse
-              </Button>
-            </div>
-          )}
-          {spaceMouseConnected &&
-            spaceMouseSensitivity !== undefined &&
-            onSpaceMouseSensitivityChange && (
-              <>
-                <div className={styles.panelRow}>
-                  <label htmlFor="slider-spacemouse-sensitivity">Sensitivity</label>
-                  <span className={styles.panelValue}>{spaceMouseSensitivity.toFixed(2)}×</span>
-                </div>
-                <div className={styles.panelRow}>
-                  <input
-                    id="slider-spacemouse-sensitivity"
-                    type="range"
-                    min={0.1}
-                    max={3.0}
-                    step={0.05}
-                    value={spaceMouseSensitivity}
-                    onChange={(e) => onSpaceMouseSensitivityChange(parseFloat(e.target.value))}
-                  />
-                </div>
-              </>
-            )}
         </CollapsibleSection>
       )}
 

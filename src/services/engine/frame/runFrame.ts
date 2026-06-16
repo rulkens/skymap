@@ -141,8 +141,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // ── Camera drivers ────────────────────────────────────────────────
   //
   // One camera-write site per frame, behind the camera-driver-authority
-  // model.  Every mover that wants to write the camera (raw input, an
-  // in-flight tween, idle auto-rotate) is a `CameraDriver` with a numeric
+  // model.  Every mover that wants to write the camera (an in-flight
+  // tween, idle auto-rotate) is a `CameraDriver` with a numeric
   // `priority`; `runCameraDrivers` scans the list, picks the single
   // highest-priority driver that declares itself active, and runs ONLY
   // that one's `apply`.  Precedence is therefore data (priority), not
@@ -156,10 +156,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   //
   // This runs *before* `deriveFrameContext` so a camera-only-ready frame
   // still makes motion progress before we early-return for missing GPU
-  // handles.  Cancellation (raw input cancelling an in-flight tween) is
-  // unchanged and does NOT live here: the SpaceMouse subsystem fires its
-  // `cancelTween` callback as part of `applyToCamera`.  The resolver only
-  // arbitrates the same-frame race for who gets to write the camera.
+  // handles.  The resolver only arbitrates the same-frame race for who
+  // gets to write the camera.
   if (state.cam) {
     runCameraDrivers(deps.drivers, state.cam, nowMs);
   }
@@ -468,8 +466,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // selection/focus change, or a settings write.
   //
   // Predicate breakdown:
-  //   - camera drivers active: any camera mover (raw input, an in-flight
-  //     tween, or idle auto-rotate) declares itself active this frame, via
+  //   - camera drivers active: any camera mover (an in-flight tween, or
+  //     idle auto-rotate) declares itself active this frame, via
   //     the same driver registry the per-frame camera write resolves
   //     through.  `.some(d => d.isActive(nowMs))` IS the boolean OR of
   //     those movers, so it tracks the resolver exactly — one place decides
