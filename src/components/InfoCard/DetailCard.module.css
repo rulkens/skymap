@@ -438,3 +438,19 @@ details:not([open]) > .detailsSummary::before {
 .closeButton:active {
   background: var(--surface-control-active);
 }
+
+/*
+ * Inside the mobile bottom-sheet the card fills the sheet width instead of
+ * holding a fixed corner position.  `min-width: 0` overrides both the
+ * --card-min-width on .infoCardFull and the --card-max-width on .structure,
+ * either of which would otherwise force horizontal overflow inside the
+ * full-width sheet.
+ */
+@media (max-width: 768px) {
+  :global(.mobileSheet) .infoCardFull {
+    position: static;
+    max-width: none;
+    min-width: 0;
+    width: 100%;
+  }
+}
