@@ -65,10 +65,17 @@
  *
  * ### Wake contract
  *
- * `setMode` wakes the scheduler on entry (so the shader's mode gate flips
- * next frame) and, for bake modes, again once every per-source splice lands
- * (skipped if a newer `setMode` superseded it).  Callers need no trailing
- * `requestRender()`.
+ * `setMode` wakes the scheduler on entry (so the shader's mode gate flips next
+ * frame, including for the identity modes that fire no bake).  Every per-source
+ * bake then wakes the loop AT ITS SPLICE SITE — `bakeSchechterFor` /
+ * `bakeAngularFor` call `requestRender()` right after splicing into the vertex
+ * buffer.  The wake lives there, not in `setMode`'s post-`Promise.all`, because
+ * the same splice is reached by `onSourceUploaded` (a re-bake when a source
+ * uploads while a bias mode is active — the boot path, since `AngularReweight`
+ * is the default mode).  A wake only in `setMode` left that path stranded: the
+ * reweight spliced into the GPU buffer but the render-on-demand loop, asleep
+ * after the boot fade-in, never redrew it until the next unrelated input.
+ * Callers need no trailing `requestRender()`.
  *
  * ### Production wiring
  *
@@ -225,9 +232,20 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     const ratios = await schechterRunner({ cloud, source });
     if (myGen !== generation) return; // stale — superseded by a newer setMode
     cachedSchechter.set(source, ratios);
-    // If the renderer is attached, splice immediately.  If not yet
-    // attached, the cached entry will splice on attachRenderer.
-    renderer?.spliceSchechterRatios(source, ratios);
+    // If the renderer is attached, splice immediately AND wake the loop.  The
+    // bake is async, so by the time it resolves the render-on-demand loop may
+    // have gone to sleep (the boot fade-in already settled).  The splice mutates
+    // the per-source vertex buffer, so without a wake the reweight sits in the
+    // GPU buffer unshown until the next unrelated input — the AngularReweight-
+    // on-boot "galaxies dim on first mouse move" strand.  The wake is at the
+    // splice site so it covers BOTH callers (setMode's bake AND the
+    // onSourceUploaded re-bake), not just the manual mode toggle.  If no
+    // renderer is attached yet, the cached entry splices on attachRenderer
+    // instead — no wake here, the bootstrap loop is starting anyway.
+    if (renderer) {
+      renderer.spliceSchechterRatios(source, ratios);
+      requestRender();
+    }
   }
 
   async function bakeAngularFor(
@@ -238,7 +256,13 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     const weights = await angularRunner({ cloud, source });
     if (myGen !== generation) return;
     cachedAngular.set(source, weights);
-    renderer?.spliceAngularWeights(source, weights);
+    // See bakeSchechterFor: wake at the splice site so an onSourceUploaded
+    // re-bake (the boot path, AngularReweight being the default mode) isn't
+    // stranded in the GPU buffer until the next input.
+    if (renderer) {
+      renderer.spliceAngularWeights(source, weights);
+      requestRender();
+    }
   }
 
   async function setMode(next: BiasModeT): Promise<void> {
@@ -263,24 +287,18 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     if (next === BiasMode.Schechter) {
       // Per-source independence: each bake is a separate Promise, splice
       // fires when each resolves.  Tests assert this ordering invariant
-      // via the multi_source_completion_ordering case.
+      // via the multi_source_completion_ordering case.  No post-Promise.all
+      // wake: each bakeSchechterFor wakes the loop at its own splice site, so a
+      // trailing wake here would be redundant (and the same per-splice wake is
+      // what fixes the onSourceUploaded re-bake path — #render-wake).
       await Promise.all(
         pairs.map(({ source, catalog }) => bakeSchechterFor(source, catalog, myGen)),
       );
-      // Wake the loop ONCE after every splice has landed.  If `myGen`
-      // is stale (a newer setMode bumped it mid-Promise.all), skip the
-      // wake — the newer setMode will fire its own.
-      if (myGen === generation) {
-        requestRender();
-      }
       return;
     }
 
     if (next === BiasMode.AngularReweight) {
       await Promise.all(pairs.map(({ source, catalog }) => bakeAngularFor(source, catalog, myGen)));
-      if (myGen === generation) {
-        requestRender();
-      }
       return;
     }
   }
