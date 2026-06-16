@@ -60,9 +60,9 @@ per file in `utils/`/`helpers/`; deep relative imports, no barrels; didactic com
 
 **Files:** none (verification only).
 
-- [ ] `npm test` — full suite green at HEAD (the current 590+ tests).
-- [ ] `npm run typecheck` — clean across `src` and `tools` tsconfigs.
-- [ ] Record the flow + selection-ring test files that must stay green:
+- [x] `npm test` — full suite green at HEAD (2810 tests / 511 files).
+- [x] `npm run typecheck` — clean across `src` and `tools` tsconfigs.
+- [x] Record the flow + selection-ring test files that must stay green:
   `tests/services/gpu/renderers/flowFieldRenderer.test.ts`,
   `tests/services/engine/frame/passes/selectionRingPass.test.ts`,
   `tests/services/gpu/renderers/selectionRingRenderer.test.ts`,
@@ -106,20 +106,18 @@ frames as today; the render loop keeps ticking on exactly the same frames.
 
 ### 1a. Internal self-guards read `field`, not `hasField`
 
-- [ ] Delete the `let hasField = false;` declaration (`flowFieldRenderer.ts:222`) and its
+- [x] Delete the `let hasField = false;` declaration (`flowFieldRenderer.ts:222`) and its
   `hasField = true;` assignment in `upload` (`:252`).
-- [ ] `isAnimating` returns `flow.enabled && field !== null` (was `flow.enabled && hasField`).
-- [ ] `fieldLoaded()` returns `field !== null` (was `return hasField`). **Keep the method** — the
-  flow fade row's guard (`fadeLayers.ts:231`) calls it. The existing test `fieldLoaded is false
-  before upload, true after` (`flowFieldRenderer.test.ts:95-101`) must pass unchanged.
-- [ ] `encodeCompute`'s early return (`:302`) becomes `if (field === null || !computeBindGroup)
-  return;` (was `!hasField || !computeBindGroup`). Note `computeBindGroup` is only built in
-  `upload` alongside `field`, so `field !== null` ⇒ `computeBindGroup !== null` — but keep both
-  guards for the bootstrap window (the implementer must not "simplify away" the bind-group guard).
-- [ ] `draw`'s early return (`:359`) becomes `if (field === null) return;` (was `!hasField`).
-- [ ] The existing tests `isAnimating is false before a field is set` and `isAnimating reflects
-  enabled && loaded` (`flowFieldRenderer.test.ts:83-93`) must pass unchanged — they are the
-  behaviour-preservation contract for this sub-task. Do **not** edit them.
+- [x] ~~`isAnimating` returns `flow.enabled && field !== null`~~ — superseded by 1b: `isAnimating`
+  was deleted (sole consumer was the wake), not repointed.
+- [x] `fieldLoaded()` returns `field !== null` (was `return hasField`). **Kept the method** — the
+  flow fade row's guard (`fadeLayers.ts:231`) calls it. The `fieldLoaded is false before upload,
+  true after` test passes unchanged.
+- [x] `encodeCompute`'s early return becomes `if (field === null || !computeBindGroup) return;` —
+  both guards kept for the bootstrap window.
+- [x] `draw`'s early return becomes `if (field === null) return;` (was `!hasField`).
+- [x] ~~The `isAnimating` tests must pass unchanged~~ — superseded by 1b: both were dropped with
+  the method (the load fact is now covered by the pass-level `slotReady` gate).
 
 ### 1b. Render-wake reads `slotReady`, not the renderer mirror
 
@@ -137,14 +135,14 @@ state.gpu.flowFieldRenderer?.isAnimating(state.settings.flow) === true;
 (state.settings.flow.enabled && slotReady(state.assetSlots.flow));
 ```
 
-- [ ] Replace the `isAnimating(...)` disjunct at `runFrame.ts:504` with
+- [x] Replace the `isAnimating(...)` disjunct at `runFrame.ts:504` with
   `state.settings.flow.enabled && slotReady(state.assetSlots.flow)`. Import `slotReady` from
   `../../loading/slotReady` (verify the relative path from `runFrame.ts`).
-- [ ] Update the comment block at `runFrame.ts:486-489` (it currently narrates
+- [x] Update the comment block at `runFrame.ts:486-489` (it currently narrates
   `flowFieldRenderer.isAnimating()`): the wake now reads `settings.flow.enabled &&
   slotReady(assetSlots.flow)` directly — same condition (`enabled && loaded`), no renderer
   round-trip. Keep it didactic (why this is the same set of frames).
-- [ ] **Decision to confirm in-task — `isAnimating` only, NOT `fieldLoaded`:** does `isAnimating`
+- [x] **Decision to confirm in-task — `isAnimating` only, NOT `fieldLoaded`:** does `isAnimating`
   have any *other* consumer? Grep confirms `runFrame.ts:504` is the sole runtime caller. If so,
   **delete `isAnimating` entirely** — from the renderer (`flowFieldRenderer.ts:293-296`), the
   type (`src/@types/rendering/FlowFieldRenderer.d.ts:64` + its docblock at `:59-63`), and the
@@ -153,14 +151,13 @@ state.gpu.flowFieldRenderer?.isAnimating(state.settings.flow) === true;
   pass-level `slotReady` gate). If grep finds another consumer, STOP and escalate before
   removing the method. **Default expectation: removal** (the mirror's only purpose was the wake).
   `fieldLoaded()` is **out of scope for deletion** — it has a live consumer (the fade guard).
-- [ ] If `isAnimating` is deleted, fix `fieldLoaded`'s docblock
+- [x] If `isAnimating` is deleted, fix `fieldLoaded`'s docblock
   (`FlowFieldRenderer.d.ts:65-69`): it currently reads "the same flag `isAnimating` gates on …
   rather than slot lifecycle". Reword to stand on its own (`true once a velocity cube is uploaded
   and bound`) — no dangling reference to a deleted method, and drop the "rather than slot
   lifecycle" contrast now that the wake reads `slotReady` directly.
 
-- [ ] `npm test -- flowFieldRenderer encodeFlowCompute runFrame` green. `npm run typecheck`
-  clean. Commit.
+- [x] `npm test` green (2808 / 511). `npm run typecheck` clean. Committed (`66135bc4`).
 
 ---
 
