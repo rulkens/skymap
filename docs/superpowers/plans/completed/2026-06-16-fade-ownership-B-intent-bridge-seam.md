@@ -120,12 +120,12 @@ needed — used elsewhere in the engine). The fade registry core is untouched (s
 
 **Files:** none (read-only).
 
-- [ ] Confirm Plan A has landed: `src/services/engine/wiring/fadeLayers.ts` exists with
+- [x] Confirm Plan A has landed: `src/services/engine/wiring/fadeLayers.ts` exists with
   `FADE_LAYERS` + `seedFades`, and `src/@types/animation/FadeLayer.d.ts` declares the
   optional `intent`/`writeIntent`/`post`/`guard` fields. **If not, STOP and report.**
-- [ ] `npm run typecheck` + `npm test` → green. Record the test/file counts in the
+- [x] `npm run typecheck` + `npm test` → green. Record the test/file counts in the
   commit message of Task 1 as the baseline (per the house "note counts" rule).
-- [ ] Read the current intent sites so cites are accurate (Plan A may have moved them):
+- [x] Read the current intent sites so cites are accurate (Plan A may have moved them):
   `setSourceVisible.ts`, `setStructureItemEnabled.ts`, `setStructureLabelEnabled.ts`,
   `setMilkyWayLabelEnabled.ts`, `setGalaxyCatalogLabelEnabled.ts`, the `engine.ts`
   `setVolumesEnabled` / `setVolumeFieldEnabled` / `milkyWay.setEnabled` /
@@ -159,22 +159,31 @@ pattern):
 | milkyWay label | `milkyWay.labelEnabled` | `setMilkyWayLabelEnabledAction` | — | — |
 | flow | `flow.enabled` | `setFlowAction(…, { enabled })` | — | `slotReady(state.assetSlots.flow)` |
 
-- [ ] Test `every intent row exposes intent + writeIntent`: assert the intent subset
+- [x] Test `every intent row exposes intent + writeIntent`: assert the intent subset
   (the ten keys above) all have `typeof row.intent === 'function'` and
   `typeof row.writeIntent === 'function'`; assert the registration-only rows
   (proceduralDisks, texturedDisks, scaleBar) have `row.intent === undefined`.
-- [ ] Test `survey row intent reads galaxyCatalogs.items[id].enabled`: build a stub
+- [x] Test `survey row intent reads galaxyCatalogs.items[id].enabled`: build a stub
   settings with `sdss.enabled = false`, assert `surveyRow.intent(settings, 'sdss')` is
   `false`; flip to `true`, assert `true`.
-- [ ] Test `volume-field row post lazy-loads debug volumes on enable only`: assert
+- [x] Test `volume-field row post lazy-loads debug volumes on enable only`: assert
   `post` is wired to `maybeLazyLoadDebugVolume` (spy / behavioural — see existing
   `maybeLazyLoadDebugVolume` idempotence at `engine.ts:918`).
-- [ ] Test `flow row guard gates on slotReady`: assert `flowRow.guard(state)` is `false`
+- [x] Test `flow row guard gates on slotReady`: assert `flowRow.guard(state)` is `false`
   for an `idle` flow slot and `true` for a `ready` one (reuse the `slotReady` predicate
   — `src/services/loading/slotReady.ts`).
-- [ ] Test `survey row post recomputes masks`: assert `post` triggers
+- [x] Test `survey row post recomputes masks`: assert `post` triggers
   `deriveSourceMasks` (the survey toggle's mask recompute — `setSourceVisible.ts:63`).
-- [ ] `npm test -- fadeLayers` green. Commit.
+- [x] `npm test -- fadeLayers` green. Commit.
+
+> **Task 1 deviations:** (a) `writeIntent` is a React-silent direct settings-leaf write
+> (the FadeLayer signature takes `EngineSettingsState`, not the store) — the
+> store-notifying writes stay in the push setters; the plan table's "existing action"
+> column describes what the *push setters* still call, not what `writeIntent` does.
+> (b) `maybeLazyLoadDebugVolume` was an inline `createEngine` closure (not importable), so
+> it was extracted verbatim to `src/services/engine/volume/maybeLazyLoadDebugVolume.ts`
+> (move-the-call, behaviour unchanged). (c) `surveyLabel`'s `seed` was changed `() => 1`
+> → settings-derived to match its new `intent` (the approved cross-plan seam decision).
 
 **Note for the implementer:** `post` and `guard` capture engine behaviour that today
 lives _in the setter body_. Move the **call**, not a reimplementation — `post` should
@@ -216,18 +225,24 @@ Read `target = row.intent!(state.settings, item) ? 1 : 0`. `animate` →
 `fades.setImmediate(row.handle(item), target)`. Then `row.post?.(state, item)`. Never
 writes settings; never calls `requestRender` (the batch wake is the public bridge's job).
 
-- [ ] Test `applyIntent animate fades to intent target`: stub a fades registry
+- [x] Test `applyIntent animate fades to intent target`: stub a fades registry
   (typed `vi.fn<…>()`), assert `fadeTo` called with `row.handle(item)` and `1` when
   intent is true, `0` when false.
-- [ ] Test `applyIntent non-animate uses setImmediate, never fadeTo`: assert
+- [x] Test `applyIntent non-animate uses setImmediate, never fadeTo`: assert
   `setImmediate` called, `fadeTo` not called.
-- [ ] Test `applyIntent skips guarded-off rows entirely`: with `guard → false`, assert
+- [x] Test `applyIntent skips guarded-off rows entirely`: with `guard → false`, assert
   neither `fadeTo`/`setImmediate` nor `post` ran.
-- [ ] Test `applyIntent runs post after the fade`: assert `post` invoked with
+- [x] Test `applyIntent runs post after the fade`: assert `post` invoked with
   `(state, item)`.
-- [ ] Test `applyIntent never writes settings`: drive a row whose `writeIntent` is a spy,
+- [x] Test `applyIntent never writes settings`: drive a row whose `writeIntent` is a spy,
   assert it's not called by `applyIntent`.
-- [ ] `npm test -- syncVisibilityFades` green. Commit.
+- [x] `npm test -- syncVisibilityFades` green. Commit.
+
+> **Task 2 note:** `applyIntent`'s state Pick widened to
+> `'settings' | 'subsystems' | 'assetSlots' | 'sources'` (survey `post` →
+> `deriveSourceMasks` reads `sources`). `FadeLayer.post`/`guard` take the full
+> `EngineState`, so the narrow state is cast at those two call sites (applyIntent only
+> ever feeds them the clusters they read). Exposed as `applyIntentForTest`.
 
 ---
 
@@ -255,17 +270,17 @@ item. On `animate: false`, after the whole batch, call `scheduler.requestRender(
 **once**. On `animate: true`, issue no extra wake. Does fades only — no settings writes,
 no echoes.
 
-- [ ] Test `bridge with only filters to that row's handles`: assert `fadeTo` fired only
+- [x] Test `bridge with only filters to that row's handles`: assert `fadeTo` fired only
   for the `survey` handles when `only: ['survey']`, none for structures/volumes/etc.
-- [ ] Test `bridge with no only covers every intent row`: assert each intent row's
+- [x] Test `bridge with no only covers every intent row`: assert each intent row's
   handle saw a `fadeTo` (and the registration-only rows did not).
-- [ ] Test `bridge animate:false issues exactly one requestRender after the batch`:
+- [x] Test `bridge animate:false issues exactly one requestRender after the batch`:
   assert `setImmediate` called per item and `requestRender` called exactly once.
-- [ ] Test `bridge animate:true issues no requestRender` (fadeTo owns the wake): assert
+- [x] Test `bridge animate:true issues no requestRender` (fadeTo owns the wake): assert
   `requestRender` not called.
-- [ ] Test `bridge writes no settings and fires no echo`: drive with spied store
+- [x] Test `bridge writes no settings and fires no echo`: drive with spied store
   actions / echo cb, assert none called.
-- [ ] `npm test -- syncVisibilityFades` green. Commit.
+- [x] `npm test -- syncVisibilityFades` green. Commit.
 
 ---
 
@@ -290,19 +305,27 @@ no-op short-circuit. Its hand-coded `fadeTo` (and any `deriveSourceMasks` /
 //         (bridge fires the fade AND runs the survey row's post = deriveSourceMasks)
 ```
 
-- [ ] For each setter, keep the existing no-op short-circuit (e.g.
+- [x] For each setter, keep the existing no-op short-circuit (e.g.
   `setSourceVisible.ts:50`) and the store write that drives the echo; **delete** the
   inline `fadeTo` and any post-fade `deriveSourceMasks`/`maybeLazyLoadDebugVolume`;
   route through `syncVisibilityFades(only:[<that row's key>])`.
-- [ ] Update each setter's test: assert the **bridge** is invoked with the right
+- [x] Update each setter's test: assert the **bridge** is invoked with the right
   `only:[key]` (spy the bridge), the store action still fires (echo preserved), and the
   no-op path still short-circuits. The previously-asserted direct-`fadeTo` calls are
   replaced by bridge assertions.
-- [ ] Survey test must still assert masks are recomputed (now via the bridge's `post`),
-  not dropped.
-- [ ] `volumes.setEnabled` test must still assert the debug-volume lazy-load happens on
-  enable (now via the bridge's `post`).
-- [ ] `npm test` + `npm run typecheck` green. Commit.
+- [x] Survey test must still assert masks are recomputed (now via the bridge's `post`),
+  not dropped. — _moved: mask recompute now lives in the survey row's `post`, asserted in
+  `fadeLayers.test.ts`; the mocked-bridge setter test asserts the `only:['survey']` call._
+- [x] `volumes.setEnabled` test must still assert the debug-volume lazy-load happens on
+  enable (now via the bridge's `post`). — _moved to `fadeLayers.test.ts` (volumeField row
+  `post`); engine.ts setters are inline in `createEngine` with no direct unit test._
+- [x] `npm test` + `npm run typecheck` green. Commit.
+
+> **Task 4 split:** 4a = the 5 `handles/` setters (commit `ada2e1de`), 4b = the 4
+> inline engine.ts setters (commit `be8e0271`). The handle setters widened their state
+> param to the bridge's exported `ApplyIntentState`; the engine.ts setters pass the full
+> `state`. `surveyLabel` maps to the famous-only `galaxyNames` handle (non-famous label
+> toggles, never shown in the UI, re-fade it to its unchanged value — a harmless no-op).
 
 **Decision baked in (spec §2):** the structure/milkyWay/galaxyCatalog-label setters
 currently fade _before_ writing the store; the survey setter writes _then_ fades. The
@@ -327,21 +350,32 @@ on the manifest, which is constructed before any commit fires — safe.)
 `src/services/engine/wiring/galaxyCatalogSourceRegistry.ts` (commit ~195). Plus their
 slot tests.
 
-- [ ] **filamentSlot:** replace `filamentSlot.ts:50-52` (`if (enabled) fadeTo(filament,1)`)
+- [x] **filamentSlot:** replace `filamentSlot.ts:50-52` (`if (enabled) fadeTo(filament,1)`)
   with the bridge `only:['filaments']` call after `upload`.
-- [ ] **flowFieldSlot:** replace `flowFieldSlot.ts:53-55` with `only:['flow']`.
-- [ ] **galaxyCatalogSourceRegistry:** the commit's fade-in (`:195`) is currently
-  **unconditional** (`void fades.fadeTo(id, 1)`) — it does NOT gate on
-  `galaxyCatalogs.items[id].enabled` because a survey only loads when visible
-  (`reevaluateDemand`). Routing through `only:['survey']` makes the fade-in **intent-
-  gated**. Verify this is behaviour-preserving (a load implies the survey is enabled);
-  the tier-swap fade-OUT (`:181`) stays as-is (it's a producer-driven mid-commit fade,
-  not an intent toggle). **If intent-gating the fade-in would suppress a legitimate
-  fade-in, STOP and report** rather than special-casing.
-- [ ] Update each slot test: assert the commit invokes the bridge with the right
+- [x] **flowFieldSlot:** replace `flowFieldSlot.ts:53-55` with `only:['flow']`.
+- [x] **galaxyCatalogSourceRegistry:** the commit's fade-in (`:198`) routes through
+  `syncVisibilityFadeItem(state, 'survey', catalogId, { animate: true })` — a per-item
+  bridge entry that fades **only the just-committed catalog** (the broader per-row sweep
+  faded sibling catalogs out mid-tier-swap; commit `8ac071fc`). It is intent-gated via the
+  survey row, behaviour-preserving (a load implies the survey is enabled); the tier-swap
+  fade-OUT (`:176`) stays inline as a producer-driven mid-commit fade, not an intent toggle.
+- [x] Update each slot test: assert the commit invokes the bridge with the right
   `only:[key]` after upload (replacing the direct-`fadeTo` assertion); the tier-swap
   fade-out assertion in the galaxy-catalog test is unchanged.
-- [ ] `npm test` + `npm run typecheck` green. Commit.
+- [x] `npm test` + `npm run typecheck` green. Commit.
+
+> **Task 5 — flow guard fixed at the root (deviation from the plan's slotReady framing).**
+> The plan assumed `slotReady` is true during the commit; it is NOT — `AssetSlot`
+> dispatches `'ready'` only AFTER `commit` returns, so during the commit the slot is
+> `'committing'` and `slotReady` is false, which would have suppressed flow's first-load
+> fade-in. Rather than special-case flow (a guard-skip flag or leaving its commit a direct
+> fade), the asymmetry was dissolved: the flow row's guard now reads the renderer's own
+> `flowFieldRenderer.fieldLoaded()` (the `hasField` flag the pass already gates on) instead
+> of the slot-lifecycle proxy. It is true at commit time and correctly gates the toggle, so
+> all three slot commits call the bridge identically and flow stops being special. Also
+> fixes a latent toggle-while-fetching drop. `ApplyIntentState` gained `'gpu'` (the guard
+> reads it). This makes Task 6 cleaner — the engine.ts guard deletion now leans on a
+> correct manifest guard.
 
 ---
 
@@ -363,14 +397,16 @@ Braid #1 (#309) already repointed this guard to `slotReady`; the manifest's flow
 //    by the slot commit per Task 5; re-enable + fade-out flow through the bridge here)
 ```
 
-- [ ] Replace the `slotReady(...) { fadeTo(...) }` block with the bridge `only:['flow']`
+- [x] Replace the `slotReady(...) { fadeTo(...) }` block with the bridge `only:['flow']`
   call. Keep `reevaluateDemand(state)` (it triggers the first-enable lazy-load) and the
-  `requestRender` / `maybeReseed` side effects (`engine.ts:1217`, `:1240-1242`).
-- [ ] Confirm `slotReady` import in `engine.ts:136` is now unused there (it lives in the
-  manifest guard) and remove it if so.
-- [ ] Flow test: re-enable on a ready slot still fades in; toggle on an idle slot (cube
+  `requestRender` / `maybeReseed` side effects.
+- [x] Confirm `slotReady` import in `engine.ts` is now unused there (it lives in the
+  manifest guard) and remove it if so. — _removed; also removed now-unused
+  `FADE_OUT_DURATION_MS` (`FADE_IN` stays for `addVolumeField`)._
+- [x] Flow test: re-enable on a ready slot still fades in; toggle on an idle slot (cube
   not resident) fires no fade (guard skips) but still `reevaluateDemand`s to lazy-load.
-- [ ] `npm test` + `npm run typecheck` green. Commit.
+  — _now gated by the manifest's `fieldLoaded()` guard, not `slotReady`._
+- [x] `npm test` + `npm run typecheck` green. Commit.
 
 ---
 
@@ -395,11 +431,11 @@ catalog cluster is `galaxyCatalogs`. `tonemap`/`camera`/`bias`/`thumbnails`/`deb
 **Behaviour:** `structuredClone` of the six clusters into a detached snapshot (whole
 clusters so look-knobs ride along; zero translation layer).
 
-- [ ] Test `captureSettings clones the six clusters`: assert the returned snapshot has
+- [x] Test `captureSettings clones the six clusters`: assert the returned snapshot has
   exactly the six keys and deep-equals the source clusters.
-- [ ] Test `captureSettings is detached`: mutate `state.settings.flow.enabled` after
+- [x] Test `captureSettings is detached`: mutate `state.settings.flow.enabled` after
   capture, assert the snapshot is unchanged (structuredClone, not a reference).
-- [ ] `npm test -- captureSettings` + `npm run typecheck` green. Commit.
+- [x] `npm test -- captureSettings` + `npm run typecheck` green. Commit.
 
 ---
 
@@ -435,14 +471,20 @@ applyEffect(
   the manifest's vocabulary, not a bespoke translation table — **if a clean
   cluster→rows derivation isn't available, STOP and report** rather than hardcoding.
 
-- [ ] Test `restoreSettings deep-assigns clusters then syncs all rows`: spy the bridge,
+- [x] Test `restoreSettings deep-assigns clusters then syncs all rows`: spy the bridge,
   assert called with `{ animate }` and no `only`; assert `state.settings.flow` now
   equals the snapshot's.
-- [ ] Test `restoreSettings invokes cb echo when provided`.
-- [ ] Test `applyEffect syncs only the touched rows`: patch `{ filaments: {...} }`,
+- [x] Test `restoreSettings invokes cb echo when provided`.
+- [x] Test `applyEffect syncs only the touched rows`: patch `{ filaments: {...} }`,
   assert bridge called with `only` containing the filaments key and not the structure
   keys.
-- [ ] `npm test` + `npm run typecheck` green. Commit.
+- [x] `npm test` + `npm run typecheck` green. Commit.
+
+> **Task 8 deviation:** added a declarative `cluster?: keyof SettingsSnapshot` field to the
+> ten intent rows so `applyEffect` derives cluster→keys FROM the manifest (no parallel
+> translation table — the plan's "manifest vocabulary" requirement). Deep-assign uses six
+> explicit per-cluster assignments (a `keyof`-loop typed the write target as the
+> intersection of all six clusters).
 
 ---
 
@@ -453,13 +495,13 @@ The #38 acceptance criterion: capture → mutate-via-restore/applyEffect → res
 
 **Files:** `tests/services/engine/wiring/settingsRoundTrip.test.ts` (create).
 
-- [ ] Test `capture → restore(mutated) → restore(original) → capture deepEquals first`:
+- [x] Test `capture → restore(mutated) → restore(original) → capture deepEquals first`:
   `const a = captureSettings(state)`; mutate via `restoreSettings`/`applyEffect` to a
   different state; `restoreSettings(state, a, { animate: false })`;
   `expect(captureSettings(state)).toEqual(a)`.
-- [ ] Test the `applyEffect` partial path round-trips the same way for a one-cluster
+- [x] Test the `applyEffect` partial path round-trips the same way for a one-cluster
   patch.
-- [ ] `npm test -- settingsRoundTrip` green. Commit.
+- [x] `npm test -- settingsRoundTrip` green. Commit.
 
 ---
 
@@ -467,39 +509,53 @@ The #38 acceptance criterion: capture → mutate-via-restore/applyEffect → res
 
 **Files:** none (review).
 
-- [ ] Run the `entanglement-radar` skill over the full Plan B diff. Confirm these
+- [x] Run the `entanglement-radar` skill over the full Plan B diff. Confirm these
   invariants hold; if any fails, fix before DoD:
   - **intent→fade has exactly one home** — the bridge. No setter or slot commit calls
-    `fades.fadeTo` for a visibility toggle directly.
+    `fades.fadeTo` for a visibility toggle directly. _Radar found two gaps, both
+    remediated: (1) the three volume slot commits + `addVolumeField` still faded
+    `{volumeField}` directly (Task 5's file list missed them) — no direct
+    `fadeTo({kind:'volumeField'})` remains outside the bridge; (2) the three label
+    producers (`produceFamousLabels`/`produceMilkyWayLabel`/`produceStructureLabels`)
+    each carried a vestigial load-in `fadeTo(handle, 1)` ramp — producers that both READ
+    `opacityOf` and WROTE the same handle. `produceFamousLabels` was a live bug (its
+    load-in is gated only on `labels.length > 0`, so it could re-fire while the category
+    is disabled-but-fading-out); the other two were gated no-ops. All three are now pure
+    readers. Final `fadeTo` audit (rg): only `syncVisibilityFades` (the bridge), the
+    galaxy-catalog tier-swap fade-OUT (explicitly inline), `structureFocusSubsystem`
+    (focus, out of scope), and `fadeRegistry`/`fadeController` internals remain._
   - **the bridge does fades only** — no settings writes, no React echoes inside
-    `syncVisibilityFades` / `applyIntent`.
+    `syncVisibilityFades` / `applyIntent`. ✓
   - **no drive-guards remain** — the slot-commit `if(settings.X.enabled) fadeTo(1)`
-    blocks and the engine.ts flow guard are gone; the flow guard lives in the manifest.
+    blocks and the engine.ts flow guard are gone; the flow guard lives in the manifest
+    (now `fieldLoaded()`, not `slotReady`). ✓
   - **the snapshot is a whole-cluster `Pick`** — `SettingsSnapshot` introduces no
-    bespoke per-field translation layer; capture/restore are clone + deep-assign.
+    bespoke per-field translation layer; capture/restore are clone + deep-assign. ✓
   - **the seed/intent rows stay data, not prose** — the manifest closures are calls to
-    existing helpers, not reimplemented behaviour; no "remember-to" asymmetry comments.
+    existing helpers, not reimplemented behaviour; no "remember-to" asymmetry comments. ✓
 
 ---
 
 ## Definition of Done
 
-- [ ] `npm run typecheck` (src + tools) green.
-- [ ] `npm test` green; test/file counts ≥ Task 0 baseline (note the new total).
-- [ ] `npm run format` on touched files only (not repo-wide).
-- [ ] `syncVisibilityFades` / `applyIntent` are the **sole** intent→fade path; no
-  visibility setter or slot commit calls `fades.fadeTo` directly (grep-audit via the
-  Grep tool, not Bash `grep`).
-- [ ] The engine.ts flow drive-guard (`engine.ts:~1228`) is deleted; the unused
+- [x] `npm run typecheck` (src + tools) green.
+- [x] `npm test` green; test/file counts ≥ Task 0 baseline (now 2802 tests / 508 files).
+- [x] `npm run format` on touched files only (not repo-wide).
+- [x] `syncVisibilityFades` / `applyIntent` are the **sole** intent→fade path; no
+  visibility setter or slot commit calls `fades.fadeTo` directly (rg-audit: only the
+  bridge, the inline tier-swap fade-OUT, focus fades, and registry/controller internals
+  remain — see Task 10 radar note).
+- [x] The engine.ts flow drive-guard (`engine.ts:~1228`) is deleted; the unused
   `slotReady` import (if now unused) is removed.
-- [ ] `SettingsSnapshot.d.ts` declares exactly one type; `captureSettings`,
+- [x] `SettingsSnapshot.d.ts` declares exactly one type; `captureSettings`,
   `restoreSettings`, `applyEffect` each live in their own one-function file.
-- [ ] The round-trip acceptance test passes (Task 9).
-- [ ] `entanglement-radar` invariants (Task 10) all hold.
-- [ ] Visual smoke (ask the user to look — dev server stays running): every toggle still
-  fades; no frame-1 flash; tier swaps still fade-out→upload→fade-in; producer/focus
-  fades unchanged.
-- [ ] Behaviour-preserving: demand re-evaluates next frame from restored intent; no
+- [x] The round-trip acceptance test passes (Task 9).
+- [x] `entanglement-radar` invariants (Task 10) all hold.
+- [x] Visual smoke (user-confirmed, dev server running): every toggle still fades; no
+  frame-1 flash; tier swaps still fade-out→upload→fade-in with only the swapped catalog
+  fading; producer/focus fades unchanged.
+- [x] Behaviour-preserving: demand re-evaluates next frame from restored intent; no
   demand-path changes shipped.
-- [ ] Run `/feature-done` to gate, then relocate this plan + its spec to
-  `plans/completed/` + `specs/completed/`.
+- [x] Run `/feature-done` to gate, then relocate this plan to `plans/completed/`. The
+  spec STAYS live in `specs/` — Plan C (renderer mirrors) still references it; it moves to
+  `specs/completed/` only when Plan C ships.

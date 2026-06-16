@@ -6,7 +6,7 @@
  *
  * The bitmask is NOT authoritative state — it is a compiled projection of the
  * per-galaxy-catalog `items[id].enabled` flags, exactly as `deriveSourceMasks` packs
- * `state.sources.pickMask`. Before the store migration React kept a parallel
+ * its returned `pick` mask. Before the store migration React kept a parallel
  * `visibleSourceMask` cell fed by an `onMaskChange` echo; that mirror could
  * drift from the authoritative bits. Deriving it on read instead — one source
  * of truth, projected the same way on both the engine (`deriveSourceMasks`) and

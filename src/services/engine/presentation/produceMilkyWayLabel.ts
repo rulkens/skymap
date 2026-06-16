@@ -6,17 +6,14 @@
  * This is a BARE function (not a subsystem) registered with the
  * `labelDirector` via an inline `{ id, produceLabels }` wrapper in `engine.ts`,
  * mirroring `produceStructureLabels` / `produceFamousLabels`. There is no
- * mutable subsystem state to own and nothing to tear down — the only state is
- * the module-level load-in latch below.
+ * mutable subsystem state to own and nothing to tear down.
  *
- * ### Why the load-in latch lives at module scope
+ * ### Pure reader of the layer opacity
  *
- * As a bare function the producer has nowhere to keep a once-per-session
- * one-shot except module scope. The first frame this label is INTENDED-VISIBLE
- * (`labelEnabled` true) AND actually emits, it fires its `fadeTo(1)` once.
- * Because it is a single label (not a per-category family) the latch is a plain
- * boolean — the structure producer needs a `Set<Category>` for its many
- * categories; here one boolean is the essential single-vs-many difference.
+ * The producer only READS `fades.opacityOf(LAYER_ID)` — the visibility bridge
+ * (`syncVisibilityFades`) is the sole writer of the layer's intent opacity,
+ * seeding and ramping it from `settings.milkyWay.labelEnabled`. The producer
+ * never drives a fade of its own.
  *
  * ### Why the distance fade stays a producer concern
  *
@@ -25,8 +22,8 @@
  * concept. Keeping `milkyWayLabelAlpha` here and multiplying it by the layer
  * opacity (`fadeAlpha = distAlpha × layerOpacity`) composes the two cleanly
  * without the fade registry learning a Milky-Way special case. The layer
- * opacity carries the user toggle + the load-in ramp; the distance alpha
- * carries the orientation-usefulness gate.
+ * opacity carries the user toggle; the distance alpha carries the
+ * orientation-usefulness gate.
  */
 
 import type { Label } from '../../../@types/rendering/Label';
@@ -37,7 +34,6 @@ import type { LabelProducerOutput } from '../../../@types/engine/subsystems/Labe
 import { MILKY_WAY_LABEL_STYLE } from './milkyWayLabelStyle';
 import { milkyWayLabelAlpha } from '../../gpu/labels/milkyWayLabelVisibility';
 import { getLabelStyleOverride } from '../labelStyleOverride';
-import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 
 // Origin anchor + stem geometry. The label floats just above the Milky Way
 // dot; the stem runs from the origin up to 3/4 of the label anchor height so
@@ -50,16 +46,6 @@ const LINE_TOP_MPC = LABEL_ANCHOR_MPC * 0.75;
 const LABEL_TEXT = 'You are here';
 
 const LAYER_ID = { kind: 'labelLayer', layer: 'milkyWay' } as const;
-
-// Module-scope load-in latch — see the module header. Fires `fadeTo(1)` once
-// on the first INTENDED-VISIBLE emit. Reset between tests via
-// `__resetMilkyWayLabelLoadIn`.
-let loadInFired = false;
-
-/** Test-only: clear the module-level load-in latch between unit cases. */
-export function __resetMilkyWayLabelLoadIn(): void {
-  loadInFired = false;
-}
 
 export function produceMilkyWayLabel(
   state: EngineState,
@@ -79,22 +65,12 @@ export function produceMilkyWayLabel(
 
   const camDist = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
   const distAlpha = milkyWayLabelAlpha(camDist);
-  // Far away: emit nothing this frame. The load-in latch must NOT fire here —
-  // it fires only on an actual intended-visible emit, so a far camera on the
-  // first frame doesn't burn the one-shot before the label is ever seen.
+  // Far away: emit nothing this frame.
   if (distAlpha <= 0) return { labels: [], lines: [], awake: false };
 
-  // Load-in: fire the layer's fade-in once on the first intended-visible emit.
-  // Gated on `labelEnabled` (not merely on reaching this line): a disabled
-  // label fading OUT still passes the draw gate above, and an ungated fire
-  // would re-ramp it to 1 mid-fade.
-  if (labelEnabled && !loadInFired) {
-    loadInFired = true;
-    void fades.fadeTo(LAYER_ID, 1, FADE_IN_DURATION_MS);
-  }
-
-  // The distance fade composes with the layer opacity (user toggle + load-in
-  // ramp). Applied to BOTH the label and the stem so they fade in lock-step.
+  // The distance fade composes with the layer opacity (the user toggle, driven
+  // by the visibility bridge). Applied to BOTH the label and the stem so they
+  // fade in lock-step.
   const fadeAlpha = distAlpha * layerOpacity;
 
   // Live-tuning override: when the DebugPanel targets the milkyWay category,

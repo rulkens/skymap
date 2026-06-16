@@ -7,41 +7,39 @@
 // reducer) rather than mutating the held object in place: the store write is
 // what NOTIFIES React's `useSettingsStore(selectStructureItems)` subscriber so
 // the panel checkbox re-renders. An in-place mutation would update the value but
-// never wake the subscription. It then drives the matching per-category
-// FadeRegistry handle for a smooth ramp. The `createEngine` literal delegates
-// here.
+// never wake the subscription. Having written the intent, it drives the matching
+// per-category fade THROUGH `syncVisibilityFades` (the intent → fade bridge) for
+// a smooth ramp. The `createEngine` literal delegates here.
 //
-// Why fade the per-category handle here?  The producer (produceStructureMarkers)
+// ORDERING MATTERS: the store write MUST precede the bridge call, because the
+// bridge reads the just-written `enabled` intent from settings and fades the
+// `structureRing` row's per-category handle to match.
+//
+// Why fade the per-category handle?  The producer (produceStructureMarkers)
 // already reads `opacityOf({...})` for its layer alpha; flipping the boolean
-// alone would pop a category in/out. Firing `fadeTo` on the same handle the
-// producer reads turns the toggle into a smooth fade — exactly as the
-// milkyWay/filament setters do for their milkyWay/filament handles. The boolean
-// is the authoritative gate (the producer draws while enabled OR still fading
-// out); the fade opacity is only the cosmetic alpha.
+// alone would pop a category in/out. The bridge fading the same handle the
+// producer reads turns the toggle into a smooth fade. The boolean is the
+// authoritative gate (the producer draws while enabled OR still fading out);
+// the fade opacity is only the cosmetic alpha.
 
-import type { EngineState } from '../../../@types/engine/state/EngineState';
-import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
 import type { SettingsStore } from '../settingsStore/createSettingsStore';
 import { setStructureItemEnabledAction } from '../settingsStore/actions/setStructureItemEnabledAction';
+import { syncVisibilityFades } from '../wiring/syncVisibilityFades';
+import type { ApplyIntentState } from '../wiring/syncVisibilityFades';
 
 export function setStructureItemEnabled(
-  state: Pick<EngineState, 'settings' | 'subsystems'>,
+  state: ApplyIntentState,
   store: SettingsStore,
   category: StructureId,
   visible: boolean,
 ): void {
-  // Ring/marker axis. Only structures bear a ring, so this is keyed by
-  // StructureId and fires a structure fade.
-  void state.subsystems.fades.fadeTo(
-    { kind: 'structure', id: category },
-    visible ? 1 : 0,
-    visible ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
-  );
   // Single source of truth: flip the category's enabled flag THROUGH the store
   // so the copy-on-write write notifies React's selector subscriber.
   setStructureItemEnabledAction(store, category, visible);
-  // No requestRender: the unconditional fadeTo above wakes the scheduler.
+  // Drive the structureRing fade through the bridge off the just-written intent.
+  syncVisibilityFades(state, { animate: true, only: ['structureRing'] });
+  // No requestRender: the bridge's animate path rides fadeTo's own wake.
   // No echo: React reads the record via `selectStructureItems` + a projection.
 }
 

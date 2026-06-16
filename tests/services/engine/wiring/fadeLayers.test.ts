@@ -26,6 +26,8 @@ import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { SOURCE_REGISTRY } from '../../../../src/data/sources';
 import type { VisibilityLayerKey } from '../../../../src/@types/animation/VisibilityLayerKey';
+import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
+import type { FadeLayer } from '../../../../src/@types/animation/FadeLayer';
 import { FADE_LAYERS, seedFades } from '../../../../src/services/engine/wiring/fadeLayers';
 
 // ── Drift guard ───────────────────────────────────────────────────────
@@ -50,6 +52,7 @@ function makeState(
   opts: {
     milkyWayEnabled?: boolean;
     milkyWayLabelEnabled?: boolean;
+    surveyLabelEnabled?: boolean;
     volumesMasterEnabled?: boolean;
     ringVisibility?: Partial<Record<string, boolean>>;
     labelVisibility?: Partial<Record<string, boolean>>;
@@ -69,12 +72,55 @@ function makeState(
         labelEnabled: opts.milkyWayLabelEnabled ?? true,
       },
       volumes: { enabled: opts.volumesMasterEnabled ?? true },
+      // The surveyLabel fade row seeds from famousGalaxy.labelEnabled (famous
+      // labels reuse the galaxyNames layer), so seedFades indexes this leaf.
+      galaxyCatalogs: {
+        items: { famousGalaxy: { enabled: true, labelEnabled: opts.surveyLabelEnabled ?? true } },
+      },
       structures: { enabled: true, items },
     },
     subsystems: {
       fades: createFadeRegistry({ requestRender: vi.fn<() => void>() }),
     },
   } as unknown as EngineState;
+}
+
+/** Look a manifest row up by its literal key (rows are stored Item-erased). */
+function rowFor(key: VisibilityLayerKey): FadeLayer<unknown> {
+  const row = FADE_LAYERS.find((r) => r.key === key);
+  if (!row) throw new Error(`no FADE_LAYERS row for key '${key}'`);
+  return row;
+}
+
+/**
+ * A minimal EngineSettingsState carrying only the leaf paths the intent rows
+ * read/write. Every per-item record is populated so `items[id]` reads never go
+ * undefined. Overrides flip a single leaf.
+ */
+function makeSettings(
+  opts: {
+    sdssEnabled?: boolean;
+    famousLabelEnabled?: boolean;
+    milkyWayEnabled?: boolean;
+  } = {},
+): EngineSettingsState {
+  const galaxyItems: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
+  for (const id of GALAXY_CATALOG_IDS) {
+    galaxyItems[id] = {
+      enabled: id === 'sdss' ? (opts.sdssEnabled ?? true) : true,
+      labelEnabled: id === 'famousGalaxy' ? (opts.famousLabelEnabled ?? true) : false,
+    };
+  }
+  const structureItems: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
+  for (const id of STRUCTURE_IDS) structureItems[id] = { enabled: true, labelEnabled: true };
+  return {
+    galaxyCatalogs: { items: galaxyItems },
+    structures: { enabled: true, items: structureItems },
+    milkyWay: { enabled: opts.milkyWayEnabled ?? true, labelEnabled: true },
+    volumes: { enabled: true, items: {} },
+    filaments: { enabled: true },
+    flow: { enabled: true },
+  } as unknown as EngineSettingsState;
 }
 
 // ── Tests ────────────────────────────────────────────────────────────
@@ -142,6 +188,19 @@ describe('seedFades', () => {
     expect(state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(1);
   });
 
+  it('seeds the surveyLabel (galaxyNames) handle from famousGalaxy.labelEnabled', () => {
+    // Wired THROUGH seedFades (not just the row.seed unit call): the galaxyNames
+    // layer's frame-1 opacity must honour the persisted famous-label toggle so a
+    // labels-off session doesn't flash them on.
+    const off = makeState({ surveyLabelEnabled: false });
+    seedFades(off);
+    expect(off.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'galaxyNames' })).toBe(0);
+
+    const on = makeState();
+    seedFades(on);
+    expect(on.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'galaxyNames' })).toBe(1);
+  });
+
   // ── per-structure ring + label handles ───────────────────────────
 
   it('seeds a ring + label handle per structure source, defaulting to 1', () => {
@@ -195,6 +254,16 @@ describe('seedFades', () => {
     expect(state.subsystems.fades.opacityOf({ kind: 'flow' })).toBe(0);
   });
 
+  it('survey row has no post — masks are a pure per-frame derivation', () => {
+    // The draw/pick bitmasks are no longer cached state recomputed on toggle;
+    // `deriveSourceMasks` projects them on read (per-frame in `runFrame`, fresh
+    // at click time). So the survey row carries NO `post` — a toggle just fades
+    // the catalog handle, and the next frame's derivation picks up the new
+    // enabled set on its own.
+    const surveyRow = rowFor('survey');
+    expect(surveyRow.post).toBeUndefined();
+  });
+
   it('seeds EVERY volume field at 0, including DEV debug fixtures', () => {
     const state = makeState();
     seedFades(state);
@@ -226,5 +295,126 @@ describe('seedFades', () => {
         `debug volumeField{${id}} should seed at 0`,
       ).toBe(0);
     }
+  });
+});
+
+// ── Intent-subset closures ───────────────────────────────────────────
+//
+// The intent rows carry the optional read/write/post/guard closures; the
+// register-only rows must not. These tests assert the closures are present and
+// behave as the inverse-pair contract (intent reads a leaf, writeIntent writes
+// it) plus the per-row post/guard side effects.
+
+describe('FADE_LAYERS intent subset', () => {
+  const INTENT_KEYS: readonly VisibilityLayerKey[] = [
+    'survey',
+    'surveyLabel',
+    'structureRing',
+    'structureLabel',
+    'volumeField',
+    'volumesMaster',
+    'filaments',
+    'milkyWayDisk',
+    'milkyWayLabel',
+    'flow',
+  ];
+  const REGISTRATION_ONLY_KEYS: readonly VisibilityLayerKey[] = [
+    'proceduralDisks',
+    'texturedDisks',
+    'scaleBar',
+  ];
+
+  it('every intent row exposes intent + writeIntent; register-only rows do not', () => {
+    for (const key of INTENT_KEYS) {
+      const row = rowFor(key);
+      expect(typeof row.intent, `${key}.intent`).toBe('function');
+      expect(typeof row.writeIntent, `${key}.writeIntent`).toBe('function');
+    }
+    for (const key of REGISTRATION_ONLY_KEYS) {
+      const row = rowFor(key);
+      expect(row.intent, `${key}.intent`).toBeUndefined();
+      expect(row.writeIntent, `${key}.writeIntent`).toBeUndefined();
+    }
+  });
+
+  it('every intent row declares its settings cluster', () => {
+    // The cluster field is what lets applyEffect map a touched SettingsSnapshot
+    // cluster to its fade rows without a parallel table. An intent row MUST
+    // carry one; a registration-only row MUST NOT (it has no settings to read).
+    const VALID_CLUSTERS = new Set([
+      'galaxyCatalogs',
+      'structures',
+      'volumes',
+      'filaments',
+      'milkyWay',
+      'flow',
+    ]);
+    for (const row of FADE_LAYERS) {
+      expect(
+        row.intent === undefined,
+        `${row.key}: cluster presence must mirror intent presence`,
+      ).toBe(row.cluster === undefined);
+      if (row.intent !== undefined) {
+        expect(VALID_CLUSTERS.has(row.cluster as string), `${row.key}.cluster is valid`).toBe(true);
+      }
+    }
+  });
+
+  it('survey row intent reads galaxyCatalogs.items[id].enabled', () => {
+    const row = rowFor('survey');
+    expect(row.intent?.(makeSettings({ sdssEnabled: false }), 'sdss')).toBe(false);
+    expect(row.intent?.(makeSettings({ sdssEnabled: true }), 'sdss')).toBe(true);
+  });
+
+  it('surveyLabel row intent reads famousGalaxy.labelEnabled', () => {
+    const row = rowFor('surveyLabel');
+    expect(row.intent?.(makeSettings({ famousLabelEnabled: false }), undefined)).toBe(false);
+    expect(row.intent?.(makeSettings({ famousLabelEnabled: true }), undefined)).toBe(true);
+  });
+
+  it('surveyLabel seed follows famousGalaxy.labelEnabled', () => {
+    const row = rowFor('surveyLabel');
+    expect(row.seed(makeSettings({ famousLabelEnabled: false }), undefined)).toBe(0);
+    expect(row.seed(makeSettings({ famousLabelEnabled: true }), undefined)).toBe(1);
+  });
+
+  it('writeIntent writes the leaf (milkyWayDisk)', () => {
+    const row = rowFor('milkyWayDisk');
+    const settings = makeSettings({ milkyWayEnabled: true });
+    row.writeIntent?.(settings, undefined, false);
+    expect(settings.milkyWay.enabled).toBe(false);
+  });
+
+  it('volume-field row post lazy-loads debug volumes on enable only', () => {
+    const load = vi.fn<(req: unknown) => void>();
+    const slot = {
+      state: () => ({ kind: 'idle' }) as const,
+      load,
+    };
+    function makeVolumeState(enabled: boolean): EngineState {
+      return {
+        assetSlots: { syntheticVolumes: { 'debug-gaussian': slot } },
+        settings: { volumes: { items: { 'debug-gaussian': { enabled } } } },
+      } as unknown as EngineState;
+    }
+    const row = rowFor('volumeField');
+
+    row.post?.(makeVolumeState(true), 'debug-gaussian');
+    expect(load).toHaveBeenCalledTimes(1);
+
+    load.mockClear();
+    row.post?.(makeVolumeState(false), 'debug-gaussian');
+    expect(load).not.toHaveBeenCalled();
+  });
+
+  it('flow row guard gates on the renderer’s fieldLoaded()', () => {
+    const row = rowFor('flow');
+    const fieldLoaded = vi.fn<() => boolean>(() => false);
+    const state = {
+      gpu: { flowFieldRenderer: { fieldLoaded } },
+    } as unknown as EngineState;
+    expect(row.guard?.(state, undefined)).toBe(false);
+    fieldLoaded.mockReturnValue(true);
+    expect(row.guard?.(state, undefined)).toBe(true);
   });
 });

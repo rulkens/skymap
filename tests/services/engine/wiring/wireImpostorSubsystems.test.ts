@@ -99,7 +99,7 @@ function makeState(opts: {
   const bindAtlas = vi.fn();
   const bindHiResArray = vi.fn();
   return {
-    sources: { tier: 'medium' },
+    settings: { tier: 'medium' },
     gpu: {
       texturedDiskRenderer:
         opts.texturedDiskRenderer !== undefined

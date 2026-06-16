@@ -8,10 +8,11 @@
  * The all-enabled case pins boot-equivalence with `ALL_VISIBLE_MASK`, the
  * construction-time seed the rest of the system relies on.
  *
- * The fixture is deliberately minimal: a settings stub whose `galaxyCatalogs.items`
- * covers every `GALAXY_CATALOG_SOURCES` id (so the loop never indexes undefined), a
- * `fades.opacityOf` stub keyed off the handle's `id`, and a `sources`
- * object with mutable masks. No GPU, no engine.
+ * `deriveSourceMasks` is a PURE projection: it RETURNS `{ draw, pick }` and
+ * writes nothing. The fixture is therefore just its two inputs — a settings stub
+ * whose `galaxyCatalogs.items` covers every `GALAXY_CATALOG_SOURCES` id (so the
+ * loop never indexes undefined), and a `fades.opacityOf` stub keyed off the
+ * handle's `id`. No `sources` slot, no GPU, no engine.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -26,7 +27,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 
 /**
  * Build a state stub with every galaxy catalog id present in `galaxyCatalogs.items`
- * (default enabled), a per-id opacity table, and mutable masks.
+ * (default enabled) and a per-id opacity table.
  *
  * `enabledOverrides` flips specific galaxy catalog ids; `opacityById` supplies
  * each catalog's fade opacity (default 0 — fully faded). Returns the same
@@ -35,7 +36,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 function makeState(opts: {
   enabledOverrides?: Partial<Record<GalaxyCatalogId, boolean>>;
   opacityById?: Partial<Record<GalaxyCatalogId, number>>;
-}): Pick<EngineState, 'sources' | 'settings' | 'subsystems'> {
+}): Pick<EngineState, 'settings' | 'subsystems'> {
   const items = Object.fromEntries(
     GALAXY_CATALOG_SOURCES.map((s) => {
       const id = galaxyCatalogIdOf(s);
@@ -45,7 +46,6 @@ function makeState(opts: {
   ) as Record<GalaxyCatalogId, { enabled: boolean; labelEnabled: boolean }>;
 
   return {
-    sources: { drawMask: 0, pickMask: 0, tier: 'medium' },
     settings: { galaxyCatalogs: { items } } as never,
     subsystems: {
       fades: {
@@ -61,9 +61,9 @@ describe('deriveSourceMasks', () => {
     // Enabled with zero opacity still gets both bits — `enabled` alone drives
     // the pick bit, and `enabled || opacity>0` drives the draw bit.
     const state = makeState({ enabledOverrides: { sdss: true } });
-    deriveSourceMasks(state);
-    expect(maskHas(state.sources.drawMask, Source.SDSS)).toBe(true);
-    expect(maskHas(state.sources.pickMask, Source.SDSS)).toBe(true);
+    const { draw, pick } = deriveSourceMasks(state);
+    expect(maskHas(draw, Source.SDSS)).toBe(true);
+    expect(maskHas(pick, Source.SDSS)).toBe(true);
   });
 
   it('keeps the draw bit but clears the pick bit for a disabled galaxy catalog still fading out', () => {
@@ -71,9 +71,9 @@ describe('deriveSourceMasks', () => {
       enabledOverrides: { sdss: false },
       opacityById: { sdss: 0.5 },
     });
-    deriveSourceMasks(state);
-    expect(maskHas(state.sources.drawMask, Source.SDSS)).toBe(true);
-    expect(maskHas(state.sources.pickMask, Source.SDSS)).toBe(false);
+    const { draw, pick } = deriveSourceMasks(state);
+    expect(maskHas(draw, Source.SDSS)).toBe(true);
+    expect(maskHas(pick, Source.SDSS)).toBe(false);
   });
 
   it('clears both bits for a disabled, fully-faded galaxy catalog', () => {
@@ -81,17 +81,17 @@ describe('deriveSourceMasks', () => {
       enabledOverrides: { sdss: false },
       opacityById: { sdss: 0 },
     });
-    deriveSourceMasks(state);
-    expect(maskHas(state.sources.drawMask, Source.SDSS)).toBe(false);
-    expect(maskHas(state.sources.pickMask, Source.SDSS)).toBe(false);
+    const { draw, pick } = deriveSourceMasks(state);
+    expect(maskHas(draw, Source.SDSS)).toBe(false);
+    expect(maskHas(pick, Source.SDSS)).toBe(false);
   });
 
   it('derives exactly ALL_VISIBLE_MASK when every galaxy catalog is enabled', () => {
     // Every galaxy catalog id defaults to enabled in the fixture, so this pins the
     // boot-equivalence the construction seed relies on.
     const state = makeState({});
-    deriveSourceMasks(state);
-    expect(state.sources.drawMask).toBe(ALL_VISIBLE_MASK);
-    expect(state.sources.pickMask).toBe(ALL_VISIBLE_MASK);
+    const { draw, pick } = deriveSourceMasks(state);
+    expect(draw).toBe(ALL_VISIBLE_MASK);
+    expect(pick).toBe(ALL_VISIBLE_MASK);
   });
 });

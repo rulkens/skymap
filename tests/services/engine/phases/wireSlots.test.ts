@@ -324,6 +324,8 @@ function makeState(
   const data = createEngineData();
   return {
     settings: {
+      // Cross-cutting data tier — the source expression `req(tier)` reads.
+      tier: 'medium',
       galaxyCatalogs: {
         enabled: true,
         sizePx: 2.5,
@@ -353,12 +355,6 @@ function makeState(
     // The synthetic-fallback gate writes `state.requests.add('syntheticFallback')`
     // and the demand loop reads request flags — both need a live Set.
     requests: new Set(),
-    sources: {
-      pickMask: 0xff,
-      drawMask: 0xff,
-      famousMeta: [],
-      tier: 'medium',
-    },
     data,
     picking: {} as never,
     gpu: {
@@ -666,7 +662,7 @@ describe('wireSlots', () => {
     expect(synthSlot.load).toHaveBeenCalledTimes(1);
     expect(synthSlot.load).toHaveBeenCalledWith({
       source: Source.Synthetic,
-      tier: state.sources.tier,
+      tier: state.settings.tier,
     });
   });
 

@@ -18,7 +18,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createSyntheticFallback } from '../../../../src/services/engine/wiring/createSyntheticFallback';
 import { Source } from '../../../../src/data/sources';
-import { maskWith } from '../../../../src/utils/maskWith';
+import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 import { GALAXY_CATALOG_POINT_SOURCES } from '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
@@ -91,20 +91,26 @@ type MakeStateResult = {
 
 /**
  * Build a minimal engine state with a stub slot per tier-fetched source plus
- * Synthetic. `drawMask` defaults to every galaxy catalog visible (so none is treated
- * as hidden-at-boot). `settings` is a benign partial — `reevaluateDemand`
- * guards each row, so any predicate that touches an absent leaf is contained.
+ * Synthetic. `disabledSources` lists the catalogs hidden at boot — the gate now
+ * reads each catalog's `settings.galaxyCatalogs.items[id].enabled` INTENT (no
+ * longer a draw mask) to decide hidden-at-boot, so a disabled source is treated
+ * as pre-settled. Every catalog is enabled by default.
  */
-function makeState(opts: { drawMask?: number } = {}): MakeStateResult {
-  // Every galaxy catalog + Famous + Synthetic visible by default.
-  const everyVisible = [
+function makeState(opts: { disabledSources?: readonly SourceType[] } = {}): MakeStateResult {
+  const disabled = new Set(opts.disabledSources ?? []);
+
+  // Per-catalog enabled intent, keyed by GalaxyCatalogId — the same record
+  // shape `engine.ts` seeds and the production gate indexes.
+  const items: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
+  for (const src of [
     Source.SDSS,
     Source.TwoMRS,
     Source.Glade,
     Source.Milliquas,
     Source.FamousGalaxy,
-  ].reduce((m, s) => maskWith(m, s), 0);
-  const drawMask = opts.drawMask ?? everyVisible;
+  ]) {
+    items[galaxyCatalogIdOf(src)] = { enabled: !disabled.has(src), labelEnabled: true };
+  }
 
   const slots = new Map<SourceType, StubSlot>();
   for (const src of [
@@ -122,8 +128,7 @@ function makeState(opts: { drawMask?: number } = {}): MakeStateResult {
   const cb = { lifecycle: { onStatusChange } } as unknown as EngineCallbacks;
 
   const state = {
-    settings: {} as never,
-    sources: { drawMask, tier: 'medium' },
+    settings: { tier: 'medium', galaxyCatalogs: { items } } as never,
     requests: new Set<string>(),
     gpu: { renderer: { totalCount: () => 42 } },
     assetSlots: {
@@ -192,15 +197,10 @@ describe('createSyntheticFallback', () => {
   });
 
   it('counts a hidden-at-boot galaxy catalog as already settled', () => {
-    // Hide SDSS in the drawMask: its slot never transitions, but the gate must
-    // not wait on it. Driving the OTHER three galaxy catalogs to error then arms.
-    const everyButSdss = [
-      Source.TwoMRS,
-      Source.Glade,
-      Source.Milliquas,
-      Source.FamousGalaxy,
-    ].reduce((m, s) => maskWith(m, s), 0);
-    const { state, slots, cb } = makeState({ drawMask: everyButSdss });
+    // Disable SDSS's enabled intent: its slot never transitions, but the gate
+    // reads the enabled flag and must not wait on it. Driving the OTHER three
+    // galaxy catalogs to error then arms.
+    const { state, slots, cb } = makeState({ disabledSources: [Source.SDSS] });
     createSyntheticFallback(state, cb);
 
     slots.get(Source.TwoMRS)?.emit(errored());

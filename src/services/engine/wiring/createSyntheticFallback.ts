@@ -44,7 +44,7 @@
  */
 
 import { Source } from '../../../data/sources';
-import { maskHas } from '../../../utils/maskHas';
+import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import {
   GALAXY_CATALOG_POINT_SOURCES,
   TIER_FETCHED_POINT_SOURCES,
@@ -80,7 +80,9 @@ export function createSyntheticFallback(state: EngineState, cb: EngineCallbacks)
     // Hidden-at-boot (or missing) sources never transition, so count them as
     // pre-settled rather than waiting on them forever. For Famous (curated,
     // not in realSet) this branch just skips without touching the gate.
-    const hiddenAtBoot = !maskHas(state.sources.drawMask, source);
+    // hiddenAtBoot reads the catalog's enabled INTENT directly — a disabled
+    // source is pre-settled — rather than consulting a boot-time draw mask.
+    const hiddenAtBoot = !state.settings.galaxyCatalogs.items[galaxyCatalogIdOf(source)].enabled;
     if (!slot || hiddenAtBoot) {
       if (realSet.has(source)) {
         realSettled++;

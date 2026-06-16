@@ -49,8 +49,8 @@ export type EngineAssetSlots = {
    * parity with point loads.  Loaded eagerly at engine boot — the JSON
    * is tiny so the cost is negligible, and the InfoCard depends on
    * `meta` being present whenever a famous galaxy is hovered.  The
-   * subscriber writes the parsed array straight into
-   * `state.sources.famousMeta`.
+   * subscriber writes the parsed array straight into the galaxy store
+   * (`state.data.galaxies.famousMeta`).
    *
    * No `commit` step — there is nothing GPU-side to upload, just CPU
    * state mutation done by the subscriber.  Null until the IIFE mints it
@@ -102,7 +102,7 @@ export type EngineAssetSlots = {
    *
    * Tier-aware (unlike cf4Density above). Default-on (the headline
    * cosmic-web overlay), so demand loads it at boot with
-   * `state.sources.tier`; `engine.setTier` reloads it on tier change.
+   * `state.settings.tier`; `engine.setTier` reloads it on tier change.
    *
    * Null until `wireSlots` mints it (matches cf4Density for the same
    * lifecycle reason — the renderer must exist before commit).

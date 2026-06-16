@@ -17,7 +17,7 @@
 
 import { createAssetSlot } from '../AssetSlot';
 import { filamentFetcher } from '../fetchers/filamentFetcher';
-import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
+import { syncVisibilityFades } from '../../engine/wiring/syncVisibilityFades';
 import type { FilamentReq } from '../../../@types/loading/FilamentReq';
 import type { FilamentCloud } from '../../../@types/data/filament/FilamentCloud';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
@@ -32,18 +32,11 @@ export const createFilamentSlot: SlotFactory<FilamentCloud, FilamentReq> = (stat
       // Kept inside the async commit body for symmetry with the
       // galaxyCatalogSourceRegistry slot, whose upload is async.
       state.gpu.filamentRenderer.upload(cloud);
-      // Only fade in if the user setting requests filaments visible.
-      // When `DEFAULT_FILAMENTS_ENABLED = false`, an unconditional
-      // fadeTo(1) here would race the React-side toggle and visibly
-      // render the cosmic web until the user toggled it off — the
-      // pass.enabled() gate accepts EITHER the boolean OR a non-zero
-      // fade opacity so anything > 0 keeps rendering.  Gating on
-      // settings.filaments.enabled at commit time keeps the slot
-      // honest: the fade reflects the user's intent at the moment
-      // the binary lands.
-      if (state.settings.filaments.enabled) {
-        void state.subsystems.fades.fadeTo({ kind: 'filament' }, 1, FADE_IN_DURATION_MS);
-      }
+      // Drive the first-load fade through the intent → fade bridge: the
+      // filaments row owns the intent gate (reads settings.filaments.enabled), so
+      // a load that completes while the user has filaments off snaps to opacity 0
+      // and never renders the cosmic web until they toggle it on.
+      syncVisibilityFades(state, { animate: true, only: ['filaments'] });
     },
   });
   slot.subscribe((s) => {

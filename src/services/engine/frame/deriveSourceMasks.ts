@@ -1,16 +1,18 @@
 /**
- * deriveSourceMasks — recompute the galaxy catalog draw/pick bitmasks from settings.
+ * deriveSourceMasks — project the galaxy catalog draw/pick bitmasks from settings.
  *
- * ### Single writer, derived output
+ * ### A pure projection, applied by the caller
  *
- * `state.sources.drawMask` / `pickMask` are not authoritative state — they
- * are a *derivation* of two inputs the user actually controls: each galaxy catalog's
- * `settings.galaxyCatalogs.items[id].enabled` flag, and that galaxy catalog's live fade
- * opacity. The single source of truth is the settings record; the bitmask is
- * a compiled, GPU-cheap projection of it. This function is the SINGLE writer
- * of those two masks, so they can never drift out of sync with settings the
- * way a hand-maintained parallel mirror (toggle X → also remember to flip the
- * mask) inevitably does. Recompute-from-truth replaces remember-to-update.
+ * The two masks are not authoritative state — they are a *derivation* of two
+ * inputs the user actually controls: each galaxy catalog's
+ * `settings.galaxyCatalogs.items[id].enabled` flag, and that galaxy catalog's live
+ * fade opacity. The single source of truth is the settings record; the bitmask is
+ * a compiled, GPU-cheap projection of it. This function computes that projection
+ * and RETURNS it as a `SourceMasks` value — it writes nothing. Each caller decides
+ * where to apply the result: `runFrame` derives it once per frame and threads it
+ * into the render + pick passes; the click path derives it fresh at click time.
+ * Computing on read (rather than caching a field a setter must remember to
+ * refresh) is what keeps the masks from ever drifting out of sync with settings.
  *
  * ### Why draw and pick diverge
  *
@@ -33,13 +35,14 @@
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { SourceMasks } from '../../../@types/engine/frame/SourceMasks';
 import { GALAXY_CATALOG_SOURCES } from '../../../data/sources';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import { maskWith } from '../../../utils/maskWith';
 
 export function deriveSourceMasks(
-  state: Pick<EngineState, 'sources' | 'settings' | 'subsystems'>,
-): void {
+  state: Pick<EngineState, 'settings' | 'subsystems'>,
+): SourceMasks {
   let draw = 0;
   let pick = 0;
   for (const src of GALAXY_CATALOG_SOURCES) {
@@ -54,6 +57,5 @@ export function deriveSourceMasks(
     // Pick on intent only — unclickable the instant it's toggled off.
     if (enabled) pick = maskWith(pick, src);
   }
-  state.sources.drawMask = draw;
-  state.sources.pickMask = pick;
+  return { draw, pick };
 }

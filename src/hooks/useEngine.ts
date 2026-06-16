@@ -13,9 +13,11 @@
  *     useKeyboardShortcuts) can call methods on it without dependency
  *     gymnastics.
  *   - Engine-driven state: status, hovered, selected, focused, scale,
- *     fps, sourceCounts, loadProgress, currentTier.  All but `scale`
- *     are fed by engine callbacks that fire only when the value
- *     changes, so direct `setX` wiring is safe (no spurious re-renders).
+ *     fps, sourceCounts, loadProgress.  All but `scale` are fed by engine
+ *     callbacks that fire only when the value changes, so direct `setX`
+ *     wiring is safe (no spurious re-renders).  The data tier is NOT here:
+ *     it lives in the engine settings store, read via `selectTier`; this
+ *     hook only exposes the immutable `initialTier` boot seed.
  *     `scale` is derived locally from `onCameraChange` snapshots via
  *     the pure `computeScaleInfo` helper — the engine emits the
  *     camera scalars; this hook computes the legend.  React's
@@ -45,7 +47,7 @@
  * render.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createEngine } from '../services/engine';
 import { computeScaleInfo } from '../services/engine/helpers/scaleBar';
 import type { EngineHandle } from '../@types/engine/EngineHandle';
@@ -93,11 +95,15 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
     Partial<Record<StructureId, number>>
   >({});
   const [loadProgress, setLoadProgress] = useState<LoadProgressState | null>(null);
-  // Lazy-init from viewport — `window` is guarded for SSR / unit-test
-  // hosts.  Echoed by the engine via `onTierChange`, so this state
-  // mirrors engine truth after the first user-driven swap too.
-  const [currentTier, setCurrentTier] = useState<Tier>(() =>
-    typeof window !== 'undefined' ? initialTierFromViewport(window.innerWidth) : 'medium',
+  // One-time startup SEED for the engine's initial tier, derived from the
+  // viewport (`window` guarded for SSR / unit-test hosts). This is no longer
+  // React state: the live tier now lives in the engine settings store and is
+  // read via `selectTier`, so this hook only needs the immutable boot value.
+  // A stable `useMemo` keeps it from re-deriving (and so never perturbs the
+  // engine effect's deps).
+  const initialTier = useMemo<Tier>(
+    () => (typeof window !== 'undefined' ? initialTierFromViewport(window.innerWidth) : 'medium'),
+    [],
   );
 
   useEffect(() => {
@@ -154,7 +160,7 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
     } = extraCallbacks ?? {};
 
     const handle = createEngine(canvas, {
-      initialTier: currentTier,
+      initialTier,
       lifecycle: {
         onStatusChange: setStatus,
         onFpsChange: setFps,
@@ -181,7 +187,6 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
       },
       sources: {
         onCatalogReady: onCatalogReadyImpl,
-        onTierChange: setCurrentTier,
         onLoadProgress: setLoadProgress,
         onStructureCountsChange: setStructureCounts,
         ...extraSources,
@@ -202,12 +207,11 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
       handleRef.current = null;
     };
     // Engine is a one-shot effect — see hook header for rationale.
-    // `extraCallbacks` and `currentTier` are both intentionally
-    // captured at first render: callbacks are stable React setters
-    // (would never trigger meaningful re-runs even if listed); the
-    // tier is a startup seed that the engine echoes back through
-    // `onTierChange`.  Listing either here would re-create the engine
-    // on every render.
+    // `extraCallbacks` and `initialTier` are both intentionally captured at
+    // first render: callbacks are stable React setters (would never trigger
+    // meaningful re-runs even if listed); `initialTier` is a stable `useMemo`
+    // startup seed. Listing either here would re-create the engine on every
+    // render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -223,6 +227,6 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
     sourceCounts,
     structureCounts,
     loadProgress,
-    currentTier,
+    initialTier,
   };
 }

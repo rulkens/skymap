@@ -69,8 +69,7 @@
  */
 
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
-import { ALL_VISIBLE_MASK } from '../../utils/allVisibleMask';
-import { maskHas } from '../../utils/maskHas';
+import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import type { SourceType } from '../../@types/data/SourceType';
 import {
   DEFAULT_ABS_MAG_LIMIT,
@@ -104,6 +103,7 @@ import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 import { createTweenManager } from './camera/tweenManager';
 import { createSettingsStore } from './settingsStore/createSettingsStore';
 import { setBiasModeAction } from './settingsStore/actions/setBiasModeAction';
+import { setTierAction } from './settingsStore/actions/setTierAction';
 import { setVolumesEnabledAction } from './settingsStore/actions/setVolumesEnabledAction';
 import { setFlowAction } from './settingsStore/actions/setFlowAction';
 import { writeVolumeFieldAction } from './settingsStore/actions/writeVolumeFieldAction';
@@ -112,7 +112,6 @@ import { removeVolumeFieldAction } from './settingsStore/actions/removeVolumeFie
 import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
-import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../animation/fadeController';
 import { createSelectionSubsystem } from './subsystems/selectionSubsystem';
 import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
 import { createLabelDirectorSubsystem } from './subsystems/labelDirectorSubsystem';
@@ -133,7 +132,6 @@ import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
 import type { RequestKey } from '../../@types/loading/RequestKey';
 import { awaitSlotReady } from '../loading/awaitSlotReady';
-import { slotReady } from '../loading/slotReady';
 import { tierTarget } from '../../data/tierTargets';
 import { snapToCameraSnapshot, tweenToCameraSnapshot } from './camera/cameraSnapshot';
 import { seedVolumeFields } from '../../data/volume/volumeFieldDefaults';
@@ -161,6 +159,7 @@ import type { GalaxyCatalogItemSettings } from '../../@types/settings/GalaxyCata
 import { createSpaceMouseSubsystem } from './subsystems/spaceMouseSubsystem';
 import { buildSettersFromTable } from './wiring/settingsTable';
 import { reevaluateDemand } from './wiring/reevaluateDemand';
+import { syncVisibilityFades } from './wiring/syncVisibilityFades';
 import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
   loadCompanionAssets,
@@ -277,6 +276,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // dozens of `state.settings.X` read sites stay byte-identical — the getter
   // hands back the held object directly.
   const settingsStore = createSettingsStore({
+    // Currently-loaded data tier — the cross-cutting data-resolution preset
+    // (galaxy catalogs + MCPM volume + filaments all fetch by it). Seeded from
+    // `cb.initialTier`; 'medium' is the ~600k-galaxy desktop budget. Flat root
+    // field, not a cluster member — see `EngineSettingsState`.
+    tier: cb.initialTier ?? 'medium',
     // Galaxy catalog layer: master gate on + shared billboard appearance knobs +
     // one item row per galaxy catalog, each layer + label default-on. Keys are
     // DERIVED from `GALAXY_CATALOG_IDS` so the seed can't drift from the galaxy catalog set.
@@ -361,22 +365,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       apparentMagLimit: 0,
       schechterMStar: 0,
       schechterAlpha: 0,
-    },
-    sources: {
-      // Two 32-bit bitmasks, one bit per `Source` enum value — DERIVED
-      // outputs, not authoritative state.  From frame 1 onward
-      // `deriveSourceMasks` owns them, recomputing both from each galaxy catalog's
-      // `settings.galaxyCatalogs.items[id].enabled` + live fade opacity.
-      //
-      // ALL_VISIBLE_MASK matches what frame 1 derives (every galaxy catalog seeds
-      // enabled), so pre-frame readers — the synthetic-fallback hiddenAtBoot
-      // check, the UI visibility seed — see the same mask the loop will
-      // compute.
-      pickMask: ALL_VISIBLE_MASK,
-      drawMask: ALL_VISIBLE_MASK,
-      // Currently-loaded data tier, seeded from `cb.initialTier`; 'medium'
-      // is the ~600k-galaxy desktop budget.  `setTier` mutates in place.
-      tier: cb.initialTier ?? 'medium',
     },
     // Per-type data stores. Empty at construction; slot commits fill them.
     data: createEngineData(),
@@ -806,21 +794,25 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function setTier(tier: Tier): void {
-    if (tier === state.sources.tier) return;
-    const prevTier = state.sources.tier;
-    state.sources.tier = tier;
-    cb.sources?.onTierChange?.(tier);
+    // Tier now lives in the settings store; React reads it via `selectTier`,
+    // so there's no `onTierChange` echo to fire — the store write notifies
+    // subscribers. We diff against the store's current value to skip a no-op,
+    // then commit through the action before driving the per-source reloads.
+    const prevTier = settingsStore.getState().tier;
+    if (tier === prevTier) return;
+    setTierAction(settingsStore, tier);
 
     // For each tier-relevant source: same target → skip; different target →
     // hand the slot the new request (it cancels any in-flight load,
-    // re-fetches the tier's `.bin`, commits).  Hidden sources skip too —
-    // toggling one on later loads it at the current tier via
-    // `setSourceVisible`.  Filaments are NOT swapped (see `filamentFetcher.ts`).
+    // re-fetches the tier's `.bin`, commits).  Sources whose enabled INTENT is
+    // off skip too — don't re-fetch a source you're hiding; toggling one on
+    // later loads it at the current tier via `setSourceVisible`.  Filaments are
+    // NOT swapped (see `filamentFetcher.ts`).
     for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
       const src = cfg.source;
       if (cfg.category === 'synthetic') continue;
       if (tierTarget(src, prevTier) === tierTarget(src, tier)) continue;
-      if (!maskHas(state.sources.drawMask, src)) continue;
+      if (!state.settings.galaxyCatalogs.items[galaxyCatalogIdOf(src)].enabled) continue;
       state.assetSlots.points.get(src)?.load({ source: src, tier });
       // Companion sidecars reload in lockstep so localIdx lookups stay valid.
       loadCompanionAssets(state, cfg, tier);
@@ -862,16 +854,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // volume gates see it next frame.  No echo: React reads via
     // `selectVolumesEnabled`.
     setVolumesEnabledAction(settingsStore, enabled);
-    // Drive the FadeRegistry on the volumesMaster handle.  The encodeHdr*
-    // sites multiply this master opacity into every per-field fade, so the
-    // whole subsystem ramps in lockstep.  The pass-enabled gate accepts
-    // the master enable bit OR opacity > 0, so it keeps blitting through fade-out.
-    // fadeTo owns the render wake.
-    void state.subsystems.fades.fadeTo(
-      { kind: 'volumesMaster' },
-      enabled ? 1 : 0,
-      enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
-    );
+    // Having written the store, drive the fade through `syncVisibilityFades`:
+    // the bridge reads the just-written intent and fades the volumesMaster
+    // handle (and owns the render wake).  The encodeHdr* sites multiply this
+    // master opacity into every per-field fade, so the whole subsystem ramps in
+    // lockstep; the pass-enabled gate accepts the master enable bit OR
+    // opacity > 0, so it keeps blitting through fade-out.
+    syncVisibilityFades(state, { animate: true, only: ['volumesMaster'] });
   }
 
   function addVolumeField(fieldId: VolumeFieldId, cube: ScalarCube): void {
@@ -884,19 +873,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // Upload to the renderer; a silent no-op if it isn't ready yet (re-add
     // once booted).
     state.gpu.volumeFieldRenderer?.upload(fieldId, cube);
-    // Drive the FadeRegistry from the settings enable bit: enabled → fade to 1;
-    // disabled → leave it at the 0 seeded by the fade manifest (`seedFades`)
-    // at construction (the draw loop's `(!enabled && opacity <= 0)` skip keeps
-    // it invisible until toggled on).
-    if (state.settings.volumes.items[fieldId]?.enabled) {
-      void state.subsystems.fades.fadeTo(
-        { kind: 'volumeField', id: fieldId },
-        1,
-        FADE_IN_DURATION_MS,
-      );
-    }
-    // Essential wake: the fadeTo above is conditional — a disabled add still
-    // changes the renderer's field set and settings row.
+    // Drive the first-load fade through the intent → fade bridge; the volumeField
+    // row's intent gate (reads settings.volumes.items[id].enabled) decides, so a
+    // disabled add leaves the handle at the 0 seeded by the fade manifest
+    // (`seedFades`) at construction (the draw loop's `(!enabled && opacity <= 0)`
+    // skip keeps it invisible until toggled on).
+    syncVisibilityFades(state, { animate: true, only: ['volumeField'] });
+    // Essential wake: the bridge's fade is intent-gated — a disabled add fires no
+    // fade, yet still changes the renderer's field set and settings row, so wake
+    // regardless.
     state.subsystems.scheduler.requestRender();
   }
 
@@ -907,53 +892,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.scheduler.requestRender();
   }
 
-  /**
-   * Lazy-load the DEV-only debug volume slot backing a field if it's `idle`.
-   * The shippable volumes (CF-4, MCPM) load via `reevaluateDemand` instead
-   * (their demand reads `items[id].enabled`); the debug fixtures are
-   * excluded from the registry, so they keep a direct lazy-load.
-   *
-   * Idempotent (a non-idle slot no-ops, so off-then-on doesn't re-fetch),
-   * and a no-op for cf4/mcpm ids — so the two load mechanisms partition.
-   */
-  function maybeLazyLoadDebugVolume(fieldId: VolumeFieldId): void {
-    switch (fieldId) {
-      case 'debug-gaussian':
-      case 'debug-cartesian':
-      case 'debug-spherical': {
-        const slot = state.assetSlots.syntheticVolumes?.[fieldId];
-        if (!slot || slot.state().kind !== 'idle') return;
-        // Same dims + box-size triple across all three fixtures so they
-        // overlay coherently when more than one is enabled at once.
-        const shape =
-          fieldId === 'debug-gaussian'
-            ? 'gaussian'
-            : fieldId === 'debug-cartesian'
-              ? 'cartesian'
-              : 'spherical';
-        slot.load({ id: fieldId, shape, dims: 64, boxSizeMpc: 400 });
-        return;
-      }
-    }
-  }
-
   function setVolumeFieldEnabled(fieldId: VolumeFieldId, enabled: boolean): void {
     // Dispatch the copy-on-write store action; React reads via
     // `selectVolumeFieldItems`.  An unknown id lands an identity write (no-op).
     writeVolumeFieldAction(settingsStore, fieldId, { enabled });
-    // DEV debug fixtures aren't demand rows, so they keep a direct lazy load
-    // here; cf4/mcpm load via reevaluateDemand reading items[id].enabled, and
-    // this call is a no-op for those ids, so the two load paths partition.
-    if (enabled) maybeLazyLoadDebugVolume(fieldId);
-    // Drive the FadeRegistry: the draw loop's `(!enabled && opacity <= 0)` skip
-    // keeps rendering through fade-out so the blend reaches zero before stopping.
-    void state.subsystems.fades.fadeTo(
-      { kind: 'volumeField', id: fieldId },
-      enabled ? 1 : 0,
-      enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
-    );
-    // No requestRender: fadeTo wakes, and that frame's reevaluateDemand sees
-    // the flipped enabled bit for the shippable cf4/mcpm rows.
+    // Having written the store, drive the fade through `syncVisibilityFades`:
+    // the volumeField row reads the just-written intent, fades the matching
+    // handle (the draw loop's `(!enabled && opacity <= 0)` skip keeps rendering
+    // through fade-out), and runs its enable-gated `post: maybeLazyLoadDebugVolume`
+    // so the DEV debug fixtures still lazy-load.  The bridge owns the wake.
+    syncVisibilityFades(state, { animate: true, only: ['volumeField'] });
   }
 
   // The per-field knob setters below dispatch the copy-on-write store action —
@@ -1175,32 +1123,25 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setEnabled: (enabled) => boringSetters.setGalaxyTexturesEnabled(enabled),
     },
     milkyWay: {
-      // Drive the FadeRegistry alongside the boolean flip for a smooth ramp.
-      // milkyWayPass.enabled accepts the boolean OR a non-zero opacity, so
-      // the gate keeps the pass alive through fade-out.  The boringSetter and
-      // fadeTo both wake the scheduler — no extra requestRender.
+      // Write the store, then drive the fade through `syncVisibilityFades`:
+      // the bridge reads the just-written intent and fades the milkyWayDisk
+      // handle (and owns the wake).  milkyWayPass.enabled accepts the boolean
+      // OR a non-zero opacity, so the gate keeps the pass alive through fade-out.
       setEnabled: (enabled) => {
         boringSetters.setMilkyWayEnabled(enabled);
-        void state.subsystems.fades.fadeTo(
-          { kind: 'milkyWay' },
-          enabled ? 1 : 0,
-          enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
-        );
+        syncVisibilityFades(state, { animate: true, only: ['milkyWayDisk'] });
       },
       setLabelEnabled: (enabled) => setMilkyWayLabelEnabled(state, settingsStore, enabled),
     },
     filaments: {
-      // Same fade-on-toggle pattern as milkyWay: filamentsPass.enabled
+      // Same bridge pattern as milkyWay: write the store, then drive the fade
+      // through `syncVisibilityFades`, which reads the just-written intent and
+      // fades the filaments handle (owning the wake).  filamentsPass.enabled
       // accepts the boolean OR a non-zero opacity, keeping the pass alive
-      // through fade-out.  The boringSetter and fadeTo both wake the
-      // scheduler — no extra requestRender.
+      // through fade-out.
       setEnabled: (enabled) => {
         boringSetters.setFilamentsEnabled(enabled);
-        void state.subsystems.fades.fadeTo(
-          { kind: 'filament' },
-          enabled ? 1 : 0,
-          enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
-        );
+        syncVisibilityFades(state, { animate: true, only: ['filaments'] });
       },
       setIntensity: (value) => boringSetters.setFilamentIntensity(value),
     },
@@ -1218,23 +1159,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         state.subsystems.scheduler.requestRender();
 
         // enabled: re-evaluate demand so the first enable lazy-loads the cube,
-        // then fade — but only when the cube is resident. A ready slot implies
-        // the commit ran and registered the {kind:'flow'} fade handle, so fadeTo
-        // is provably safe. When NOT ready there is nothing drawn to fade AND the
-        // handle may be unregistered: a returning user skips the splash and can
-        // toggle during the async bootstrap (before wireSlots runs), where fadeTo
-        // throws. The FIRST-enable fade-in is owned by the slot commit; this
-        // branch handles re-enable + fade-out (the cube stays resident —
-        // reevaluateDemand never unloads).
+        // then hand the fade to the bridge. The bridge reads the just-written
+        // `settings.flow.enabled` intent and the flow manifest's resident-only
+        // guard (`fieldLoaded()`) decides whether to drive: enable-while-loaded
+        // fades to 1, enable-while-unloaded skips (the slot commit owns that
+        // first fade-in), disable fades to 0. A loaded field implies the fade
+        // handle is registered, so the bridge can't fault on an unknown id.
         if (patch.enabled !== undefined) {
           reevaluateDemand(state);
-          if (slotReady(state.assetSlots.flow)) {
-            void state.subsystems.fades.fadeTo(
-              { kind: 'flow' },
-              patch.enabled ? 1 : 0,
-              patch.enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
-            );
-          }
+          syncVisibilityFades(state, { animate: true, only: ['flow'] });
         }
 
         // mode / count both reseed the shared particle buffers.

@@ -69,6 +69,7 @@ import { wireInput } from '../../../../src/services/engine/phases/wireInput';
 function makeState(): EngineState {
   return {
     settings: {
+      tier: 'medium',
       galaxyCatalogs: {
         enabled: true,
         sizePx: 2.5,
@@ -99,13 +100,6 @@ function makeState(): EngineState {
       debug: { showPickBuffer: false, showDiskRadiusRing: false },
     },
     bias: {} as never,
-    sources: {
-      catalogs: new Map(),
-      pickMask: 0xff,
-      drawMask: 0xff,
-      famousMeta: [],
-      tier: 'medium',
-    },
     picking: { latestMouseCss: null, pointerDown: false } as never,
     // createClickResolver captures the store accessors for resolvePick;
     // createClickResolver is module-mocked here, so the accessors are

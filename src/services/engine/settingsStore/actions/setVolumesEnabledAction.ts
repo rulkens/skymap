@@ -3,9 +3,10 @@
  * overlay master toggle.
  *
  * Runs the pure `setVolumesEnabled` reducer through `store.setState`, the only
- * place a write lands. The cosmetic master fade ramp (`fades.fadeTo({ kind:
- * 'volumesMaster' })`) stays in the handle setter alongside this action — it's a
- * render side-effect, not a settings write.
+ * place a write lands. The cosmetic master fade ramp is a render side-effect, not
+ * a settings write: it flows through `syncVisibilityFades` (the intent → fade
+ * bridge), which reads the just-written intent and fades the `volumesMaster`
+ * handle — it does not live in this action.
  */
 
 import type { SettingsStore } from '../createSettingsStore';

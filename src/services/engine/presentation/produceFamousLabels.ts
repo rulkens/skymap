@@ -37,13 +37,12 @@
  * snapshotted once before the loop and folded into both the label's and its
  * anchor line's `fadeAlpha` so the connector fades in lockstep with its label.
  *
- * ### This producer owns the galaxyNames load-in fade
+ * ### Pure reader of the galaxyNames opacity
  *
- * The first time the producer emits any famous label, it fires the
- * `galaxyNames` `fadeTo(1)` once (a module-level latch). Because `galaxyNames`
- * is registered at opacity 1 (it never toggles off, only recedes under focus),
- * this ramp is a no-op — fired for SYMMETRY with the per-category structure load-in in
- * `produceStructureLabels`, not to reveal anything.
+ * This producer only READS `fades.opacityOf({labelLayer, galaxyNames})` — the
+ * visibility bridge (`syncVisibilityFades`) is the sole writer of the layer's
+ * intent opacity, seeding and ramping it from the `famousGalaxy.labelEnabled`
+ * setting. The producer never drives a fade of its own.
  *
  * ### No declutter here — the director owns it
  *
@@ -66,22 +65,8 @@ import { famousDisplayName } from '../helpers/famousDisplayName';
 import { getLabelStyleOverride } from '../labelStyleOverride';
 import { FAMOUS_LABEL_STYLE } from './famousLabelStyle';
 import { focusRecession } from './focusRecession';
-import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 
 const FAMOUS_MIN_APPARENT_PX = 6;
-
-// Load-in latch for the famous-galaxy (`galaxyNames`) label layer. The producer
-// is a bare function (not a closure over subsystem state), so the once-only
-// one-shot has nowhere to live except module scope. Fires the `galaxyNames`
-// `fadeTo(1)` the first time the producer emits any famous label, mirroring the
-// per-category structure load-in in `produceStructureLabels`. Reset between tests via
-// `__resetFamousLabelLoadIn`.
-let didFireFamousLoadIn = false;
-
-/** Test-only: clear the module-level load-in latch between unit cases. */
-export function __resetFamousLabelLoadIn(): void {
-  didFireFamousLoadIn = false;
-}
 
 /**
  * Minimum vertical lift, in Mpc, applied to a famous-galaxy label. Tiny
@@ -280,16 +265,6 @@ export function produceFamousLabels(
       prominencePx,
       ...overrideFields,
     });
-  }
-
-  // Galaxy-names load-in: fire the `galaxyNames` fade once on this producer's
-  // first emitted famous label. Because `galaxyNames` is registered at opacity
-  // 1 (it never toggles off, only recedes under focus), this `fadeTo(1)` is a
-  // no-op ramp — fired for SYMMETRY with the per-category structure load-in in
-  // `produceStructureLabels`, not to reveal anything.
-  if (!didFireFamousLoadIn && labels.length > 0) {
-    didFireFamousLoadIn = true;
-    void fades.fadeTo({ kind: 'labelLayer', layer: 'galaxyNames' }, 1, FADE_IN_DURATION_MS);
   }
 
   return { labels, lines, awake: false };

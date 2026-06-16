@@ -1,8 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  produceFamousLabels,
-  __resetFamousLabelLoadIn,
-} from '../../../../src/services/engine/presentation/produceFamousLabels';
+import { describe, expect, it } from 'vitest';
+import { produceFamousLabels } from '../../../../src/services/engine/presentation/produceFamousLabels';
 import { LABEL_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
@@ -19,12 +16,11 @@ function makeRegistry(): FadeRegistry {
 }
 
 // produceFamousLabels reads `state.data.galaxies` for the records,
-// `state.subsystems.fades` for the `galaxyNames` opacity + load-in fire, and
+// `state.subsystems.fades` for the `galaxyNames` opacity (read-only), and
 // `state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled` for the
 // visibility gate. The fixture supplies all three; the `galaxyNames` handle is
-// registered at 1 so the load-in `fadeTo` (which THROWS on an unregistered
-// handle) is a safe no-op ramp and the at-rest opacity is 1. The famous label
-// gate defaults visible.
+// registered at 1 so the at-rest opacity is 1. The famous label gate defaults
+// visible.
 function makeState(opts: { fades?: FadeRegistry } = {}): EngineState {
   const fades = opts.fades ?? makeRegistry();
   fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
@@ -73,12 +69,6 @@ function seed(
 }
 
 describe('produceFamousLabels', () => {
-  // The module-level load-in latch is a singleton; reset it between cases so a
-  // fired load-in in one test doesn't suppress the fire in the next.
-  beforeEach(() => {
-    __resetFamousLabelLoadIn();
-  });
-
   it('emits a lifted label + anchor line for a galaxy above the size gate', () => {
     const state = makeState();
     // 120 kpc galaxy at 10 Mpc → ~11.2 px (above the 6 px gate, full alpha).
@@ -138,7 +128,6 @@ describe('produceFamousLabels', () => {
     expect(out.lines[0]!.fadeAlpha).toBeCloseTo(0.5, 6);
 
     // Once the fade reaches 0, the producer falls silent.
-    __resetFamousLabelLoadIn();
     const done = makeRegistry();
     done.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
     done.setImmediate({ kind: 'labelLayer', layer: 'galaxyNames' }, 0);
@@ -210,26 +199,6 @@ describe('produceFamousLabels', () => {
     const out = produceFamousLabels(state, makeCtx({ focusBlend: 1 }));
 
     expect(out.lines[0]!.fadeAlpha).toBeCloseTo(out.labels[0]!.fadeAlpha!, 6);
-  });
-
-  it('fires the galaxyNames load-in once then dedupes', () => {
-    const fades = makeRegistry();
-    fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 1);
-    const fadeToSpy = vi.spyOn(fades, 'fadeTo');
-    const state = makeState({ fades });
-    seed(state, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-
-    produceFamousLabels(state, makeCtx());
-    expect(fadeToSpy).toHaveBeenCalledTimes(1);
-    expect(fadeToSpy).toHaveBeenCalledWith(
-      { kind: 'labelLayer', layer: 'galaxyNames' },
-      1,
-      expect.any(Number),
-    );
-
-    // A second producer call must NOT fire again (latch dedupe).
-    produceFamousLabels(state, makeCtx());
-    expect(fadeToSpy).toHaveBeenCalledTimes(1);
   });
 
   it('at-rest output is unchanged (galaxyNames at 1, blend 0)', () => {

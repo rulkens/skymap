@@ -14,7 +14,7 @@
  *   - `state.settings`             — predicate leaf values, including each
  *                                    galaxy catalog's `galaxyCatalogs.items[id].enabled`
  *                                    (the intent bit galaxy catalog demand reads)
- *   - `state.sources.tier`         — passed to `req(tier)`
+ *   - `state.settings.tier`        — passed to `req(tier)`
  *   - `state.requests`             — `Set<RequestKey>`
  *   - `state.assetSlots`           — `slotFor` dispatch target
  *
@@ -237,12 +237,13 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     // `ctx.settings.volumes.items[id]?.enabled` from there.
     settings: {
       ...(settings as unknown as EngineSettingsState),
+      // tier feeds `req(tier)`; it lives top-level on settings now. Pinned after
+      // the spread because `settings` is a `SettingsLeaves` partial that carries
+      // no `tier` — this is the sole source of it in the fixture.
+      tier: 'medium',
       galaxyCatalogs: { items: galaxyCatalogItems },
       volumes: { items: volumeFields },
     } as unknown as EngineSettingsState,
-    // tier feeds `req(tier)`; the masks are render/pick projections that
-    // demand never reads, so no drawMask is stubbed here.
-    sources: { tier: 'medium' },
     requests: requests as Set<import('../../../../src/@types/loading/RequestKey').RequestKey>,
     assetSlots: {
       points,

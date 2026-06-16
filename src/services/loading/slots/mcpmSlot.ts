@@ -18,7 +18,7 @@ import { createAssetSlot } from '../AssetSlot';
 import { mcpmFetcher } from '../fetchers/mcpmFetcher';
 import type { MCPMReq } from '../../../@types/loading/MCPMReq';
 import { Source, SOURCE_REGISTRY } from '../../../data/sources';
-import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
+import { syncVisibilityFades } from '../../engine/wiring/syncVisibilityFades';
 import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
@@ -37,15 +37,11 @@ export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, _cb) => 
       // shippable volume, so its settings row already exists from the
       // construction seed.
       renderer.upload(id, cube);
-      // Fade up only if the user has the field toggled on (matches the
-      // symmetric path in engine.ts addVolumeField).
-      if (state.settings.volumes.items[id]?.enabled) {
-        void state.subsystems.fades.fadeTo(
-          { kind: 'volumeField', id },
-          1,
-          FADE_IN_DURATION_MS,
-        );
-      }
+      // Drive the first-load fade through the intent → fade bridge; the
+      // volumeField row's intent gate (reads settings.volumes.items[id].enabled)
+      // decides, so a load that completes while the field is toggled off snaps to
+      // opacity 0 and never renders until the user enables it.
+      syncVisibilityFades(state, { animate: true, only: ['volumeField'] });
       // No echo: React reads the per-field rows via `selectVolumeFieldItems` +
       // a `useMemo` projection off the engine-owned settings store, so the
       // commit's settings-row seed needs no callback fan-out.

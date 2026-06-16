@@ -66,7 +66,7 @@ export function wireImpostorSubsystems(state: EngineState, deps: BootstrapDeps):
   // tier change destroys this pair and re-creates it at the new layerSide
   // via `rebuildHiResFamousForTier`.  `initTexture()` is mandatory before
   // `getTextureView()` — the texture handle throws otherwise.
-  const layerSide = HI_RES_LAYER_SIDE_BY_TIER[state.sources.tier];
+  const layerSide = HI_RES_LAYER_SIDE_BY_TIER[state.settings.tier];
   const hiResFamousTexture = createHiResFamousTexture({
     device,
     layerSide,

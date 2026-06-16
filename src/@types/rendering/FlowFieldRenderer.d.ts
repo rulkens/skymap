@@ -63,6 +63,12 @@ export type FlowFieldRenderer = {
    */
   isAnimating(flow: FlowSettings): boolean;
   /**
+   * True once a velocity cube is uploaded and bound — the same flag `isAnimating`
+   * gates on. Lets the fade manifest gate flow's fade on real renderable-ness
+   * rather than slot lifecycle.
+   */
+  fieldLoaded(): boolean;
+  /**
    * Dispatch the compute work into the per-frame encoder: the `seed` pass when
    * a reseed is pending (then cleared), followed by the `advect` or `streamline`
    * integrator for `flow.mode`. Reads particle count / motion knobs off `flow`.

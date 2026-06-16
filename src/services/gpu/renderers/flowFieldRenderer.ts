@@ -294,6 +294,10 @@ export function createFlowFieldRenderer(init: {
       return flow.enabled && hasField;
     },
 
+    fieldLoaded(): boolean {
+      return hasField;
+    },
+
     encodeCompute(encoder: GPUCommandEncoder, flow: FlowSettings): void {
       if (!hasField || !computeBindGroup) return;
       // Clamp every knob to its GPU-safe bound once, at the point of use — the

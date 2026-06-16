@@ -1,8 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  produceMilkyWayLabel,
-  __resetMilkyWayLabelLoadIn,
-} from '../../../../src/services/engine/presentation/produceMilkyWayLabel';
+import { afterEach, describe, expect, it } from 'vitest';
+import { produceMilkyWayLabel } from '../../../../src/services/engine/presentation/produceMilkyWayLabel';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import {
@@ -11,15 +8,15 @@ import {
 } from '../../../../src/services/engine/labelStyleOverride';
 
 // Minimal state: the producer reads settings.milkyWay.labelEnabled, the fade
-// registry (opacityOf + fadeTo), the selection focused() is not consulted (single
-// label, no recession), and the label-style override (global module, no stub).
+// registry (opacityOf only — the producer is a pure reader), the selection
+// focused() is not consulted (single label, no recession), and the label-style
+// override (global module, no stub).
 function makeState(labelEnabled: boolean, layerOpacity: number): EngineState {
   return {
     settings: { milkyWay: { enabled: true, labelEnabled } },
     subsystems: {
       fades: {
         opacityOf: () => layerOpacity,
-        fadeTo: vi.fn<() => Promise<void>>(() => Promise.resolve()),
       },
     },
   } as unknown as EngineState;
@@ -30,10 +27,9 @@ function makeCtx(camDistMpc: number): ReadyFrameContext {
 }
 
 describe('produceMilkyWayLabel', () => {
-  // Reset both module-global slots: the load-in latch and the live-tuning
-  // override (set by the override tests below) — otherwise they leak forward.
+  // Reset the live-tuning override set by the override tests below — otherwise
+  // it leaks forward.
   afterEach(() => {
-    __resetMilkyWayLabelLoadIn();
     clearLabelStyleOverride();
   });
 
@@ -72,24 +68,6 @@ describe('produceMilkyWayLabel', () => {
     expect(out.labels[0]!.fadeAlpha).toBeCloseTo(0.3);
   });
 
-  it('fires the load-in fadeTo(1) once on first intended-visible emit', () => {
-    const state = makeState(true, 1);
-    produceMilkyWayLabel(state, makeCtx(0.5));
-    produceMilkyWayLabel(state, makeCtx(0.5));
-    expect(state.subsystems.fades.fadeTo).toHaveBeenCalledTimes(1);
-    expect(state.subsystems.fades.fadeTo).toHaveBeenCalledWith(
-      { kind: 'labelLayer', layer: 'milkyWay' },
-      1,
-      expect.any(Number),
-    );
-  });
-
-  it('does not fire the load-in while disabled and fading out', () => {
-    const state = makeState(false, 0.3);
-    produceMilkyWayLabel(state, makeCtx(0.5));
-    expect(state.subsystems.fades.fadeTo).not.toHaveBeenCalled();
-  });
-
   it('applies the label-style override outline when targetCategory is milkyWay', () => {
     setLabelStyleOverride({
       targetCategory: 'milkyWay',
@@ -118,7 +96,6 @@ describe('produceMilkyWayLabel', () => {
     for (const r of [0.1, 0.5, 0.8, 1.1, 1.5]) {
       const out = produceMilkyWayLabel(makeState(true, 1), makeCtx(r));
       expect(out.awake).toBe(false);
-      __resetMilkyWayLabelLoadIn();
     }
   });
 });

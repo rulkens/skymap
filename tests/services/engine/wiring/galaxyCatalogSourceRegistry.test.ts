@@ -33,6 +33,23 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 
+// The commit's first-load fade-in routes through the bridge; mock it to a typed
+// no-op so these slot-plumbing tests (upload + onCatalogReady) don't have to
+// stand up full settings/sources state for the real per-row fade walk.
+vi.mock('../../../../src/services/engine/wiring/syncVisibilityFades', () => ({
+  syncVisibilityFades:
+    vi.fn<
+      typeof import('../../../../src/services/engine/wiring/syncVisibilityFades').syncVisibilityFades
+    >(),
+  // The slot commit drives its fade-in through the single-item entry; mock it
+  // too so the commit's bridge call is a no-op here (this file tests upload /
+  // commit mechanics, not the fade — that lives in the sibling Fade test).
+  syncVisibilityFadeItem:
+    vi.fn<
+      typeof import('../../../../src/services/engine/wiring/syncVisibilityFades').syncVisibilityFadeItem
+    >(),
+}));
+
 import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
   GALAXY_CATALOG_POINT_SOURCES,

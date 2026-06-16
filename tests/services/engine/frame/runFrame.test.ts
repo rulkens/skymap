@@ -61,6 +61,7 @@ function makeState(): EngineState {
   return {
     // Post-H5 nested-only settings shape.
     settings: {
+      tier: 'medium',
       galaxyCatalogs: {
         enabled: true,
         sizePx: 2,
@@ -91,13 +92,6 @@ function makeState(): EngineState {
       apparentMagLimit: 0,
       schechterMStar: 0,
       schechterAlpha: 0,
-    },
-    sources: {
-      pickMask: 0,
-      drawMask: 0,
-      catalogs: new Map(),
-      famousMeta: [],
-      tier: 'medium',
     },
     picking: {
       latestMouseCss: null,

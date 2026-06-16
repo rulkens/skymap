@@ -44,7 +44,8 @@ import { createAssetSlot } from '../../loading/AssetSlot';
 import { galaxyCatalogFetcher } from '../../loading/fetchers/galaxyCatalogFetcher';
 import { syntheticPointFetcher } from '../../loading/fetchers/syntheticPointFetcher';
 import type { FadeId } from '../../../@types/animation/FadeId';
-import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
+import { FADE_OUT_DURATION_MS } from '../../animation/fadeController';
+import { syncVisibilityFadeItem } from './syncVisibilityFades';
 import type { SourceType } from '../../../@types/data/SourceType';
 
 /**
@@ -183,10 +184,18 @@ export function wireGalaxyCatalogSourceSlot(
       await state.gpu.renderer.upload(catalogId, cloud);
       state.data.galaxies.setCatalog(source, cloud);
 
-      // Fire-and-forget fade-in so the slot's `ready` transition
-      // fires immediately; user interaction doesn't wait for the
-      // smoothstep to saturate.
-      void fades.fadeTo(id, 1, FADE_IN_DURATION_MS);
+      // Drive the fade-in through the intent → fade bridge, scoped to ONLY the
+      // catalog just uploaded: the survey row owns the intent gate (reads
+      // galaxyCatalogs.items[id].enabled) and the mask-recompute `post`, and the
+      // single-item entry applies both to this one item — NOT a sweep of every
+      // survey catalog. That scoping matters on a tier swap, where every visible
+      // source reloads concurrently: the batch bridge would have this commit
+      // re-drive every other source's fade, racing their own in-flight commits.
+      // It's fire-and-forget so the slot's `ready` transition fires immediately;
+      // user interaction doesn't wait for the smoothstep to saturate. The
+      // tier-swap fade-OUT above stays hand-coded — it's a producer-driven
+      // mid-commit dissolve, not an intent toggle.
+      syncVisibilityFadeItem(state, 'survey', catalogId, { animate: true });
 
       const dtMs = Math.round(performance.now() - t0);
       // Dump what the GPU actually holds after upload.  If this
