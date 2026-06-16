@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createFlowFieldRenderer } from '../../../../src/services/gpu/renderers/flowFieldRenderer';
 import type { ScalarCube } from '../../../../src/@types/data/volume/ScalarCube';
-import type { FlowSettings } from '../../../../src/@types/settings/FlowSettings';
 
 /**
  * Minimal GPUDevice mock for renderer-construction tests.
@@ -10,7 +9,7 @@ import type { FlowSettings } from '../../../../src/@types/settings/FlowSettings'
  * renderer makes during construction + upload must return a plausibly-shaped
  * stand-in. The objects are never inspected by the renderer — we only assert
  * that construction wires the 3 compute pipelines + render pipeline + BGLs
- * without throwing, and that `isAnimating` reflects the field/enabled gate.
+ * without throwing, and that `fieldLoaded` reflects the field-committed gate.
  * Adds `createComputePipeline` (the engine's first compute renderer) on top of
  * the volumeFieldRenderer mock.
  */
@@ -55,22 +54,6 @@ function mockCube(): ScalarCube {
   } as unknown as ScalarCube;
 }
 
-/** A full FlowSettings with the spike's hand-dialled advect defaults + overrides. */
-function flowStub(over: Partial<FlowSettings> = {}): FlowSettings {
-  return {
-    enabled: true,
-    mode: 'advect',
-    intensity: 0.7,
-    count: 40000,
-    trail: 0.003,
-    flowSpeed: 0.06,
-    densityBias: 1,
-    wander: 0.15,
-    boundaryFadeWidth: 0.1,
-    ...over,
-  };
-}
-
 describe('createFlowFieldRenderer', () => {
   it('construct does not throw under the mock device', () => {
     // Smoke: the 3 compute pipelines + render pipeline + both explicit BGLs all
@@ -80,21 +63,9 @@ describe('createFlowFieldRenderer', () => {
     ).not.toThrow();
   });
 
-  it('isAnimating is false before a field is set', () => {
-    const renderer = createFlowFieldRenderer({ device: mockDevice(), hdrFormat: 'rgba16float' });
-    expect(renderer.isAnimating(flowStub({ enabled: true }))).toBe(false);
-  });
-
-  it('isAnimating reflects enabled && loaded', () => {
-    const renderer = createFlowFieldRenderer({ device: mockDevice(), hdrFormat: 'rgba16float' });
-    renderer.upload(mockCube());
-    expect(renderer.isAnimating(flowStub({ enabled: true }))).toBe(true);
-    expect(renderer.isAnimating(flowStub({ enabled: false }))).toBe(false);
-  });
-
   it('fieldLoaded is false before upload, true after', () => {
-    // The fade manifest's flow guard reads this — it must report the same
-    // cube-loaded truth `isAnimating` gates on, independent of the slot lifecycle.
+    // The flow fade row's guard reads this — it reports whether a cube is
+    // committed, independent of the slot lifecycle.
     const renderer = createFlowFieldRenderer({ device: mockDevice(), hdrFormat: 'rgba16float' });
     expect(renderer.fieldLoaded()).toBe(false);
     renderer.upload(mockCube());
@@ -104,9 +75,9 @@ describe('createFlowFieldRenderer', () => {
   it('upload builds a model matrix placing the cube origin in world space', () => {
     // The model-matrix math itself is covered by buildCubeModelMatrix.test.ts;
     // here we only assert upload wires the field without throwing and flips
-    // the animating gate true (proving the matrix + bind group built).
+    // fieldLoaded true (proving the matrix + bind group built).
     const renderer = createFlowFieldRenderer({ device: mockDevice(), hdrFormat: 'rgba16float' });
     expect(() => renderer.upload(mockCube())).not.toThrow();
-    expect(renderer.isAnimating(flowStub({ enabled: true }))).toBe(true);
+    expect(renderer.fieldLoaded()).toBe(true);
   });
 });

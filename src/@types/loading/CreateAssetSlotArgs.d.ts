@@ -11,6 +11,6 @@ import type { RetryPolicy } from './RetryPolicy';
 export type CreateAssetSlotArgs<T, Req> = {
   name: string;
   fetch: Fetcher<T, Req>;
-  commit?: Committer<T>;
+  commit?: Committer<T, Req>;
   retry?: RetryPolicy;
 };

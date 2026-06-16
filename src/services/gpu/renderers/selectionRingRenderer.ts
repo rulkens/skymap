@@ -22,8 +22,10 @@
  *
  * Camera prefix is 80 bytes; selection tail is 16. Combining would force
  * a 96-byte writeBuffer every frame even when the selection hasn't
- * moved. Split bindings let each upload at its own cadence: camera per
- * frame, selection only when the user picks.
+ * moved. Split bindings keep the two concerns separable. The selection
+ * is not renderer-held state — the caller passes it to `draw`, and the
+ * pass already gates `draw` to frames where something is selected, so
+ * the selection UBO uploads once per frame the pass draws.
  *
  * ## Blend mode
  *
@@ -34,6 +36,7 @@
 
 import type { GpuContext } from '../../../@types/rendering/GpuContext';
 import type { Renderer } from '../../../@types/rendering/Renderer';
+import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { SelectionRingRenderer } from '../../../@types/rendering/SelectionRingRenderer';
 import vsCode from '../shaders/selectionRing/vertex.wesl?static';
@@ -51,8 +54,6 @@ export function createSelectionRingRenderer(ctx: GpuContext): SelectionRingRende
   // through. Runtime null-checks below gate every GPU call.
   const device = ctx.device as GPUDevice | null;
   const format = ctx.format;
-
-  let currentSelection: { worldPos: Readonly<Vec3>; ringRadiusPx: number } | null = null;
 
   let pipeline: GPURenderPipeline | null = null;
   let cameraBuffer: GPUBuffer | null = null;
@@ -116,21 +117,14 @@ export function createSelectionRingRenderer(ctx: GpuContext): SelectionRingRende
     });
   }
 
-  function setSelection(value: { worldPos: Readonly<Vec3>; ringRadiusPx: number } | null): void {
-    currentSelection = value;
-  }
-
-  function hasSelection(): boolean {
-    return currentSelection !== null;
-  }
-
-  function render(
+  function draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
-    viewportSize: [number, number],
+    viewportSize: Vec2,
+    selection: { worldPos: Readonly<Vec3>; ringRadiusPx: number } | null,
   ): void {
     if (!device || !pipeline || !bindGroup || !cameraBuffer || !selectionBuffer) return;
-    if (currentSelection === null) return;
+    if (selection === null) return;
 
     // Camera UBO: viewProj at [0..15], viewportPx at [16..17], pads zero
     // by virtue of Float32Array zero-init.
@@ -141,10 +135,10 @@ export function createSelectionRingRenderer(ctx: GpuContext): SelectionRingRende
     device.queue.writeBuffer(cameraBuffer, 0, camUni);
 
     const selUni = new Float32Array(SELECTION_UNIFORM_BYTES / 4);
-    selUni[0] = currentSelection.worldPos[0];
-    selUni[1] = currentSelection.worldPos[1];
-    selUni[2] = currentSelection.worldPos[2];
-    selUni[3] = currentSelection.ringRadiusPx;
+    selUni[0] = selection.worldPos[0];
+    selUni[1] = selection.worldPos[1];
+    selUni[2] = selection.worldPos[2];
+    selUni[3] = selection.ringRadiusPx;
     device.queue.writeBuffer(selectionBuffer, 0, selUni);
 
     pass.setPipeline(pipeline);
@@ -159,9 +153,7 @@ export function createSelectionRingRenderer(ctx: GpuContext): SelectionRingRende
 
   const renderer: SelectionRingRenderer = {
     label: 'selectionRingRenderer',
-    setSelection,
-    hasSelection,
-    render,
+    draw,
     destroy,
   };
   renderer satisfies Renderer;

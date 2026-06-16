@@ -2,19 +2,21 @@
  * galaxyCatalogSourceRegistry — fade-orchestration test.
  *
  * Sibling to galaxyCatalogSourceRegistry.test.ts; this file isolates
- * the sequential fade-out / upload / fade-in choreography of the slot's
- * commit step. The tier-swap fade-OUT is a producer-driven mid-commit
- * dissolve and stays hand-coded through `state.subsystems.fades.fadeTo`;
- * the first-load fade-IN routes through the SCOPED single-item intent →
- * fade bridge (`syncVisibilityFadeItem`) — driving ONLY the catalog just
- * uploaded, not every survey row, so a concurrent tier-swap reload of
- * another source can't re-drive (and race) this one's fade.
+ * the sequential dissolve / upload / fade-in choreography of the slot's
+ * commit step. The tier-swap dissolve is a transient pre-replace fade-OUT
+ * (via `dissolveCatalogBuffer` → `fades.fadeTo`), fired only when the reload
+ * request carries `dissolvePrevious` — an EXPLICIT flag set by `setTier`, not
+ * inferred from data-store membership. The fade-IN routes through the SCOPED
+ * single-item intent → fade bridge (`syncVisibilityFadeItem`) — driving ONLY
+ * the catalog just uploaded, not every survey row, so a concurrent tier-swap
+ * reload of another source can't re-drive (and race) this one's fade.
  *
  * The bridge is mocked to a typed spy so this test asserts the commit's
- * own contract: first load calls the scoped bridge once (after upload, no
- * fade-out); second load fires fadeTo(0, FADE_OUT_DURATION_MS) BEFORE
- * upload, then calls the bridge after. The bridge's per-row fade is
- * covered by syncVisibilityFades.test.ts.
+ * own contract: a plain load calls the scoped bridge once (after upload, no
+ * dissolve); a `dissolvePrevious` load fires fadeTo(0, FADE_OUT_DURATION_MS)
+ * BEFORE upload, then calls the bridge after; and a plain re-commit of an
+ * already-loaded source does NOT dissolve (the old `isFirstLoad` proxy would
+ * have). The bridge's per-row fade is covered by syncVisibilityFades.test.ts.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -130,11 +132,8 @@ describe('wireGalaxyCatalogSourceSlot — fade orchestration', () => {
     );
   });
 
-  it('second load awaits fadeTo(0, FADE_OUT_DURATION_MS) BEFORE upload, then drives the bridge after', async () => {
+  it('dissolvePrevious load awaits fadeTo(0, FADE_OUT_DURATION_MS) BEFORE upload, then drives the bridge after', async () => {
     const fx = makeFixture();
-    // Pre-seed: pretend a catalog is already loaded for this source.
-    fx.state.data.galaxies.setCatalog(Source.SDSS, fakeCloud(99));
-
     const cloud = fakeCloud(7);
     const cfg: GalaxyCatalogSourceConfig = {
       source: Source.SDSS,
@@ -145,14 +144,15 @@ describe('wireGalaxyCatalogSourceSlot — fade orchestration', () => {
 
     wireGalaxyCatalogSourceSlot(fx.state, cfg, makeDeps());
     const slot = fx.state.assetSlots.points.get(Source.SDSS)!;
-    slot.load({ source: Source.SDSS, tier: 'large' });
+    // The EXPLICIT flag is the dissolve trigger — not a pre-seeded data store.
+    slot.load({ source: Source.SDSS, tier: 'large', dissolvePrevious: true });
 
     await vi.waitFor(() => {
       expect(slot.state().kind).toBe('ready');
     });
 
     expect(fx.upload).toHaveBeenCalledOnce();
-    // The tier-swap fade-OUT fires BEFORE upload, unchanged by the bridge routing.
+    // The dissolve fires BEFORE upload.
     expect(fx.fadeOutCalls).toEqual([
       { target: 0, duration: FADE_OUT_DURATION_MS, at: 'pre-upload' },
     ]);
@@ -166,5 +166,34 @@ describe('wireGalaxyCatalogSourceSlot — fade orchestration', () => {
     expect(fx.upload.mock.invocationCallOrder[0]!).toBeLessThan(
       bridge.mock.invocationCallOrder[bridge.mock.invocationCallOrder.length - 1]!,
     );
+  });
+
+  it('a plain re-commit of an already-loaded source does NOT dissolve (the leaky isFirstLoad proxy is gone)', async () => {
+    const fx = makeFixture();
+    // The source is already in the data store — exactly the condition the old
+    // `!catalogs.has(source)` proxy read as "tier swap" and dissolved on. With
+    // the explicit flag, a plain reload (no `dissolvePrevious`) must NOT dissolve.
+    fx.state.data.galaxies.setCatalog(Source.SDSS, fakeCloud(99));
+
+    const cloud = fakeCloud(7);
+    const cfg: GalaxyCatalogSourceConfig = {
+      source: Source.SDSS,
+      shortName: 'sdss',
+      fetcher: async () => cloud,
+      category: 'survey',
+    };
+
+    wireGalaxyCatalogSourceSlot(fx.state, cfg, makeDeps());
+    const slot = fx.state.assetSlots.points.get(Source.SDSS)!;
+    slot.load({ source: Source.SDSS, tier: 'medium' });
+
+    await vi.waitFor(() => {
+      expect(slot.state().kind).toBe('ready');
+    });
+
+    expect(fx.upload).toHaveBeenCalledOnce();
+    // No dissolve — the buffer is replaced straight through, fade-in only.
+    expect(fx.fadeOutCalls).toEqual([]);
+    expect(bridge).toHaveBeenCalledTimes(1);
   });
 });

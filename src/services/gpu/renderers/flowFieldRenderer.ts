@@ -219,7 +219,6 @@ export function createFlowFieldRenderer(init: {
 
   // ── Mutable internal state (the one allowed mutable shell) ─────────────────
   const reseed = createReseedLatch();
-  let hasField = false;
   let field: FlowField | null = null;
   let modelMatrix = mat4.create();
   // Travelling-pulse accumulator for streamline mode; an internal per-frame
@@ -249,7 +248,6 @@ export function createFlowFieldRenderer(init: {
       if (field) field.dispose();
       const next = flowFieldFromCube(device, cube);
       field = next;
-      hasField = true;
 
       // Place the cube in world space. Flow cubes ship axis-aligned (identity
       // rotation); the meta carries frame + geometry.
@@ -290,16 +288,12 @@ export function createFlowFieldRenderer(init: {
       reseed.arm();
     },
 
-    isAnimating(flow: FlowSettings): boolean {
-      return flow.enabled && hasField;
-    },
-
     fieldLoaded(): boolean {
-      return hasField;
+      return field !== null;
     },
 
     encodeCompute(encoder: GPUCommandEncoder, flow: FlowSettings): void {
-      if (!hasField || !computeBindGroup) return;
+      if (field === null || !computeBindGroup) return;
       // Clamp every knob to its GPU-safe bound once, at the point of use — the
       // store holds raw intent; this renderer owns its buffer + loop limits.
       const f = clampFlowParams(flow);
@@ -356,7 +350,7 @@ export function createFlowFieldRenderer(init: {
       flow: FlowSettings,
       opacity: number,
     ): void {
-      if (!hasField) return;
+      if (field === null) return;
       // Clamp at point of use (see encodeCompute) — the draw instance count must
       // never exceed the fixed MAX_PARTICLES-sized buffer.
       const f = clampFlowParams(flow);

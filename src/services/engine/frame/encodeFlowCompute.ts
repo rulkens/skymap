@@ -22,7 +22,7 @@
  * Three conditions, all required: the renderer exists (post-bootstrap), the
  * user has the layer enabled (`settings.flow.enabled`), and the velocity cube
  * has been committed (`slotReady(assetSlots.flow)`). The renderer also self-guards
- * on its internal `hasField`, but gating here avoids the call entirely on the
+ * on its own `field !== null`, but gating here avoids the call entirely on the
  * common default-off path.
  */
 
