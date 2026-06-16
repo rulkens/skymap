@@ -1,5 +1,5 @@
 /**
- * SettingsTableKey — the fifteen names of the engine's "boring"
+ * SettingsTableKey — the thirteen names of the engine's "boring"
  * table-driven public-handle setters (see
  * `src/services/engine/wiring/settingsTable.ts`).
  *
@@ -12,9 +12,11 @@
  * sub-handle forwarders in `engine.ts` can resolve a forwarder by
  * name (`boringSetters.setPointSize`).
  *
- * The flow overlay's setters are NOT here: `handle.flow.set(patch)` dispatches
- * the whole-patch `setFlowAction` and then runs per-leaf side effects, so it's
- * a bespoke setter, not a table row.
+ * Setters that ALSO drive a fade or other side effect are NOT here — they live
+ * as bespoke `handles/` functions: `handle.flow.set(patch)` (whole-patch
+ * dispatch + per-leaf effects), and `milkyWay`/`filaments` visibility
+ * (`setMilkyWayEnabled` / `setFilamentsEnabled` call the action + the fade
+ * bridge). Only the boring "dispatch + render" cases are table rows.
  */
 
 export type SettingsTableKey =
@@ -22,8 +24,6 @@ export type SettingsTableKey =
   | 'setBrightness'
   | 'setAutoRotate'
   | 'setGalaxyTexturesEnabled'
-  | 'setMilkyWayEnabled'
-  | 'setFilamentsEnabled'
   | 'setFilamentIntensity'
   | 'setHighlightFallback'
   | 'setRealOnlyMode'

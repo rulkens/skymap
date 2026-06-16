@@ -1,7 +1,7 @@
 // ── Test-accessible category-visibility logic ───────────────────────────────
 //
 // A per-galaxy-catalog label-visibility setter living at module scope (mirroring
-// `setSourceVisibleImpl`) so tests can drive it against a partial-state stub
+// `setSourceVisible`) so tests can drive it against a partial-state stub
 // without a full GPU engine. It writes the authoritative settings leaf THROUGH
 // the engine-owned store (the `setGalaxyCatalogLabelEnabledAction` copy-on-write
 // reducer) rather than mutating the held object in place: the store write is

@@ -69,8 +69,6 @@ import { setToneMapCurveAction } from '../settingsStore/actions/setToneMapCurveA
 import { setAutoRotateAction } from '../settingsStore/actions/setAutoRotateAction';
 import { setAbsMagLimitAction } from '../settingsStore/actions/setAbsMagLimitAction';
 import { setThumbnailsEnabledAction } from '../settingsStore/actions/setThumbnailsEnabledAction';
-import { setMilkyWayEnabledAction } from '../settingsStore/actions/setMilkyWayEnabledAction';
-import { setFilamentsEnabledAction } from '../settingsStore/actions/setFilamentsEnabledAction';
 import { setFilamentIntensityAction } from '../settingsStore/actions/setFilamentIntensityAction';
 import { setShowPickBufferAction } from '../settingsStore/actions/setShowPickBufferAction';
 import { setShowDiskRadiusRingAction } from '../settingsStore/actions/setShowDiskRadiusRingAction';
@@ -132,29 +130,17 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     action: setThumbnailsEnabledAction,
   },
   {
-    // milkyWay cluster (migrated to the engine-owned store). Dispatches the
-    // copy-on-write action; React reads via `selectMilkyWayEnabled`, so no echo
-    // is wired. The cosmetic fade ramp stays in the handle setter alongside this
-    // action (see the `milkyWay.setEnabled` wrapper in engine.ts). The wrapper
-    // still calls `requestRender`.
-    name: 'setMilkyWayEnabled',
-    action: setMilkyWayEnabledAction,
-  },
-  {
-    // filaments cluster (migrated to the engine-owned store). Dispatches the
-    // copy-on-write action; React reads via `selectFilamentsEnabled`, so no echo
-    // is wired. The cosmetic fade ramp stays in the handle setter alongside this
-    // action (see the `filaments.setEnabled` wrapper in engine.ts). The wrapper
-    // still calls `requestRender`.
-    name: 'setFilamentsEnabled',
-    action: setFilamentsEnabledAction,
-  },
-  {
     // filaments cluster (migrated to the engine-owned store). Dispatches the
     // copy-on-write action; React reads via `selectFilamentIntensity`, so no
     // echo is wired. Stores raw intent — the filament renderer clamps to [0, 1]
     // at point of use (clampFilamentIntensity). The wrapper still calls
     // `requestRender`.
+    //
+    // Filament/milkyWay *visibility* is NOT in this table: those setters also
+    // drive a fade, so they live as bespoke `handles/` functions
+    // (`setFilamentsEnabled`, `setMilkyWayEnabled`) that call the action +
+    // `requestRender` + the fade bridge directly. Only the boring intensity knob
+    // is table-driven.
     name: 'setFilamentIntensity',
     action: setFilamentIntensityAction,
   },
