@@ -112,7 +112,6 @@ import { removeVolumeFieldAction } from './settingsStore/actions/removeVolumeFie
 import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
-import { FADE_IN_DURATION_MS } from '../animation/fadeController';
 import { createSelectionSubsystem } from './subsystems/selectionSubsystem';
 import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
 import { createLabelDirectorSubsystem } from './subsystems/labelDirectorSubsystem';
@@ -881,19 +880,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // Upload to the renderer; a silent no-op if it isn't ready yet (re-add
     // once booted).
     state.gpu.volumeFieldRenderer?.upload(fieldId, cube);
-    // Drive the FadeRegistry from the settings enable bit: enabled → fade to 1;
-    // disabled → leave it at the 0 seeded by the fade manifest (`seedFades`)
-    // at construction (the draw loop's `(!enabled && opacity <= 0)` skip keeps
-    // it invisible until toggled on).
-    if (state.settings.volumes.items[fieldId]?.enabled) {
-      void state.subsystems.fades.fadeTo(
-        { kind: 'volumeField', id: fieldId },
-        1,
-        FADE_IN_DURATION_MS,
-      );
-    }
-    // Essential wake: the fadeTo above is conditional — a disabled add still
-    // changes the renderer's field set and settings row.
+    // Drive the first-load fade through the intent → fade bridge; the volumeField
+    // row's intent gate (reads settings.volumes.items[id].enabled) decides, so a
+    // disabled add leaves the handle at the 0 seeded by the fade manifest
+    // (`seedFades`) at construction (the draw loop's `(!enabled && opacity <= 0)`
+    // skip keeps it invisible until toggled on).
+    syncVisibilityFades(state, { animate: true, only: ['volumeField'] });
+    // Essential wake: the bridge's fade is intent-gated — a disabled add fires no
+    // fade, yet still changes the renderer's field set and settings row, so wake
+    // regardless.
     state.subsystems.scheduler.requestRender();
   }
 

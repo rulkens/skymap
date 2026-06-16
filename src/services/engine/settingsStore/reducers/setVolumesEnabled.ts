@@ -14,8 +14,9 @@
  * toggle flips, so the volume-field panel rows don't rebuild on a master toggle.
  *
  * The reducer stores the boolean verbatim. The cosmetic master fade ramp that
- * accompanies the toggle stays in the handle setter's `fades.fadeTo({ kind:
- * 'volumesMaster' })` call — it's a render side-effect, not a settings write.
+ * accompanies the toggle is a render side-effect, not a settings write: it flows
+ * through `syncVisibilityFades` (the intent → fade bridge), which reads the
+ * just-written intent and fades the `volumesMaster` handle.
  */
 
 import type { EngineSettingsState } from '../../../../@types/settings/EngineSettingsState';
