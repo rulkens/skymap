@@ -161,7 +161,7 @@ import type { GalaxyCatalogItemSettings } from '../../@types/settings/GalaxyCata
 import { createSpaceMouseSubsystem } from './subsystems/spaceMouseSubsystem';
 import { buildSettersFromTable } from './wiring/settingsTable';
 import { reevaluateDemand } from './wiring/reevaluateDemand';
-import { maybeLazyLoadDebugVolume } from './volume/maybeLazyLoadDebugVolume';
+import { syncVisibilityFades } from './wiring/syncVisibilityFades';
 import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
   loadCompanionAssets,
@@ -863,16 +863,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // volume gates see it next frame.  No echo: React reads via
     // `selectVolumesEnabled`.
     setVolumesEnabledAction(settingsStore, enabled);
-    // Drive the FadeRegistry on the volumesMaster handle.  The encodeHdr*
-    // sites multiply this master opacity into every per-field fade, so the
-    // whole subsystem ramps in lockstep.  The pass-enabled gate accepts
-    // the master enable bit OR opacity > 0, so it keeps blitting through fade-out.
-    // fadeTo owns the render wake.
-    void state.subsystems.fades.fadeTo(
-      { kind: 'volumesMaster' },
-      enabled ? 1 : 0,
-      enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
-    );
+    // Having written the store, drive the fade through `syncVisibilityFades`:
+    // the bridge reads the just-written intent and fades the volumesMaster
+    // handle (and owns the render wake).  The encodeHdr* sites multiply this
+    // master opacity into every per-field fade, so the whole subsystem ramps in
+    // lockstep; the pass-enabled gate accepts the master enable bit OR
+    // opacity > 0, so it keeps blitting through fade-out.
+    syncVisibilityFades(state, { animate: true, only: ['volumesMaster'] });
   }
 
   function addVolumeField(fieldId: VolumeFieldId, cube: ScalarCube): void {
@@ -912,19 +909,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // Dispatch the copy-on-write store action; React reads via
     // `selectVolumeFieldItems`.  An unknown id lands an identity write (no-op).
     writeVolumeFieldAction(settingsStore, fieldId, { enabled });
-    // DEV debug fixtures aren't demand rows, so they keep a direct lazy load
-    // here; cf4/mcpm load via reevaluateDemand reading items[id].enabled, and
-    // this call is a no-op for those ids, so the two load paths partition.
-    if (enabled) maybeLazyLoadDebugVolume(state, fieldId);
-    // Drive the FadeRegistry: the draw loop's `(!enabled && opacity <= 0)` skip
-    // keeps rendering through fade-out so the blend reaches zero before stopping.
-    void state.subsystems.fades.fadeTo(
-      { kind: 'volumeField', id: fieldId },
-      enabled ? 1 : 0,
-      enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
-    );
-    // No requestRender: fadeTo wakes, and that frame's reevaluateDemand sees
-    // the flipped enabled bit for the shippable cf4/mcpm rows.
+    // Having written the store, drive the fade through `syncVisibilityFades`:
+    // the volumeField row reads the just-written intent, fades the matching
+    // handle (the draw loop's `(!enabled && opacity <= 0)` skip keeps rendering
+    // through fade-out), and runs its enable-gated `post: maybeLazyLoadDebugVolume`
+    // so the DEV debug fixtures still lazy-load.  The bridge owns the wake.
+    syncVisibilityFades(state, { animate: true, only: ['volumeField'] });
   }
 
   // The per-field knob setters below dispatch the copy-on-write store action —
@@ -1146,32 +1136,25 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setEnabled: (enabled) => boringSetters.setGalaxyTexturesEnabled(enabled),
     },
     milkyWay: {
-      // Drive the FadeRegistry alongside the boolean flip for a smooth ramp.
-      // milkyWayPass.enabled accepts the boolean OR a non-zero opacity, so
-      // the gate keeps the pass alive through fade-out.  The boringSetter and
-      // fadeTo both wake the scheduler — no extra requestRender.
+      // Write the store, then drive the fade through `syncVisibilityFades`:
+      // the bridge reads the just-written intent and fades the milkyWayDisk
+      // handle (and owns the wake).  milkyWayPass.enabled accepts the boolean
+      // OR a non-zero opacity, so the gate keeps the pass alive through fade-out.
       setEnabled: (enabled) => {
         boringSetters.setMilkyWayEnabled(enabled);
-        void state.subsystems.fades.fadeTo(
-          { kind: 'milkyWay' },
-          enabled ? 1 : 0,
-          enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
-        );
+        syncVisibilityFades(state, { animate: true, only: ['milkyWayDisk'] });
       },
       setLabelEnabled: (enabled) => setMilkyWayLabelEnabled(state, settingsStore, enabled),
     },
     filaments: {
-      // Same fade-on-toggle pattern as milkyWay: filamentsPass.enabled
+      // Same bridge pattern as milkyWay: write the store, then drive the fade
+      // through `syncVisibilityFades`, which reads the just-written intent and
+      // fades the filaments handle (owning the wake).  filamentsPass.enabled
       // accepts the boolean OR a non-zero opacity, keeping the pass alive
-      // through fade-out.  The boringSetter and fadeTo both wake the
-      // scheduler — no extra requestRender.
+      // through fade-out.
       setEnabled: (enabled) => {
         boringSetters.setFilamentsEnabled(enabled);
-        void state.subsystems.fades.fadeTo(
-          { kind: 'filament' },
-          enabled ? 1 : 0,
-          enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
-        );
+        syncVisibilityFades(state, { animate: true, only: ['filaments'] });
       },
       setIntensity: (value) => boringSetters.setFilamentIntensity(value),
     },
