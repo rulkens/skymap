@@ -112,7 +112,7 @@ import { removeVolumeFieldAction } from './settingsStore/actions/removeVolumeFie
 import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
-import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../animation/fadeController';
+import { FADE_IN_DURATION_MS } from '../animation/fadeController';
 import { createSelectionSubsystem } from './subsystems/selectionSubsystem';
 import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
 import { createLabelDirectorSubsystem } from './subsystems/labelDirectorSubsystem';
@@ -133,7 +133,6 @@ import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
 import type { RequestKey } from '../../@types/loading/RequestKey';
 import { awaitSlotReady } from '../loading/awaitSlotReady';
-import { slotReady } from '../loading/slotReady';
 import { tierTarget } from '../../data/tierTargets';
 import { snapToCameraSnapshot, tweenToCameraSnapshot } from './camera/cameraSnapshot';
 import { seedVolumeFields } from '../../data/volume/volumeFieldDefaults';
@@ -1172,23 +1171,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         state.subsystems.scheduler.requestRender();
 
         // enabled: re-evaluate demand so the first enable lazy-loads the cube,
-        // then fade — but only when the cube is resident. A ready slot implies
-        // the commit ran and registered the {kind:'flow'} fade handle, so fadeTo
-        // is provably safe. When NOT ready there is nothing drawn to fade AND the
-        // handle may be unregistered: a returning user skips the splash and can
-        // toggle during the async bootstrap (before wireSlots runs), where fadeTo
-        // throws. The FIRST-enable fade-in is owned by the slot commit; this
-        // branch handles re-enable + fade-out (the cube stays resident —
-        // reevaluateDemand never unloads).
+        // then hand the fade to the bridge. The bridge reads the just-written
+        // `settings.flow.enabled` intent and the flow manifest's resident-only
+        // guard (`fieldLoaded()`) decides whether to drive: enable-while-loaded
+        // fades to 1, enable-while-unloaded skips (the slot commit owns that
+        // first fade-in), disable fades to 0. A loaded field implies the fade
+        // handle is registered, so the bridge can't fault on an unknown id.
         if (patch.enabled !== undefined) {
           reevaluateDemand(state);
-          if (slotReady(state.assetSlots.flow)) {
-            void state.subsystems.fades.fadeTo(
-              { kind: 'flow' },
-              patch.enabled ? 1 : 0,
-              patch.enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
-            );
-          }
+          syncVisibilityFades(state, { animate: true, only: ['flow'] });
         }
 
         // mode / count both reseed the shared particle buffers.

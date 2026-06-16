@@ -113,8 +113,8 @@ describe('wireGalaxyCatalogSourceSlot — fade orchestration', () => {
     expect(bridge).toHaveBeenCalledTimes(1);
     expect(bridge).toHaveBeenCalledWith(fx.state, { animate: true, only: ['survey'] });
     // The fade-in bridge fires AFTER the renderer upload (commit order).
-    expect(fx.upload.mock.invocationCallOrder[0]).toBeLessThan(
-      bridge.mock.invocationCallOrder[bridge.mock.invocationCallOrder.length - 1],
+    expect(fx.upload.mock.invocationCallOrder[0]!).toBeLessThan(
+      bridge.mock.invocationCallOrder[bridge.mock.invocationCallOrder.length - 1]!,
     );
   });
 
@@ -148,8 +148,8 @@ describe('wireGalaxyCatalogSourceSlot — fade orchestration', () => {
     expect(bridge).toHaveBeenCalledTimes(1);
     expect(bridge).toHaveBeenCalledWith(fx.state, { animate: true, only: ['survey'] });
     // The fade-in bridge fires AFTER the renderer upload (commit order).
-    expect(fx.upload.mock.invocationCallOrder[0]).toBeLessThan(
-      bridge.mock.invocationCallOrder[bridge.mock.invocationCallOrder.length - 1],
+    expect(fx.upload.mock.invocationCallOrder[0]!).toBeLessThan(
+      bridge.mock.invocationCallOrder[bridge.mock.invocationCallOrder.length - 1]!,
     );
   });
 });
