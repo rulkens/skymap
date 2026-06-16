@@ -51,6 +51,9 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
 import { GALAXY_CATALOG_IDS } from '../../../data/galaxyCatalog/galaxyCatalogIds';
 import { SOURCE_REGISTRY } from '../../../data/sources';
+import { deriveSourceMasks } from '../frame/deriveSourceMasks';
+import { slotReady } from '../../loading/slotReady';
+import { maybeLazyLoadDebugVolume } from '../volume/maybeLazyLoadDebugVolume';
 
 // Erase a row's Item type for the heterogeneous FADE_LAYERS array while keeping
 // its literal `key`. Each row is authored at its concrete Item (full checking on
@@ -92,6 +95,14 @@ export const FADE_LAYERS = [
     expand: () => [undefined],
     handle: () => ({ kind: 'milkyWay' }),
     seed: (s) => (s.milkyWay.enabled ? 1 : 0),
+    intent: (s) => s.milkyWay.enabled,
+    // writeIntent is the React-SILENT symmetric inverse of intent: it mutates
+    // the settings leaf directly, the way intent reads it. It does NOT go
+    // through the settings store — the React-notifying writes are the push
+    // setters' job, and they hold the SettingsStore handle this signature lacks.
+    writeIntent: (s, _item, value) => {
+      s.milkyWay.enabled = value;
+    },
   }),
   // procedural disks — registerOverlayFades.ts:70 (always-on)
   layer({
@@ -113,6 +124,10 @@ export const FADE_LAYERS = [
     expand: () => [undefined],
     handle: () => ({ kind: 'volumesMaster' }),
     seed: (s) => (s.volumes.enabled ? 1 : 0),
+    intent: (s) => s.volumes.enabled,
+    writeIntent: (s, _item, value) => {
+      s.volumes.enabled = value;
+    },
   }),
   // milkyWay label — registerOverlayFades.ts:95-98
   layer({
@@ -120,13 +135,24 @@ export const FADE_LAYERS = [
     expand: () => [undefined],
     handle: () => ({ kind: 'labelLayer', layer: 'milkyWay' }),
     seed: (s) => (s.milkyWay.labelEnabled ? 1 : 0),
+    intent: (s) => s.milkyWay.labelEnabled,
+    writeIntent: (s, _item, value) => {
+      s.milkyWay.labelEnabled = value;
+    },
   }),
-  // survey/galaxy names label — registerOverlayFades.ts:99 (famous labels reuse this handle; seed 1)
+  // survey/galaxy names label — registerOverlayFades.ts:99. The famous-galaxy
+  // label fade reuses the galaxyNames handle and is driven by the famous-galaxy
+  // "Labels" toggle, so this row is settings-derived (intent + seed both read
+  // famousGalaxy.labelEnabled) — matching milkyWayLabel/structureLabel.
   layer({
     key: 'surveyLabel',
     expand: () => [undefined],
     handle: () => ({ kind: 'labelLayer', layer: 'galaxyNames' }),
-    seed: () => 1,
+    seed: (s) => (s.galaxyCatalogs.items.famousGalaxy.labelEnabled ? 1 : 0),
+    intent: (s) => s.galaxyCatalogs.items.famousGalaxy.labelEnabled,
+    writeIntent: (s, _item, value) => {
+      s.galaxyCatalogs.items.famousGalaxy.labelEnabled = value;
+    },
   }),
   // scale bar — registerOverlayFades.ts:100 (React-side, tour-addressable)
   layer({
@@ -141,6 +167,10 @@ export const FADE_LAYERS = [
     expand: () => STRUCTURE_IDS,
     handle: (id) => ({ kind: 'structure', id }),
     seed: (s, id) => (s.structures.items[id].enabled ? 1 : 0),
+    intent: (s, id) => s.structures.items[id].enabled,
+    writeIntent: (s, id, value) => {
+      s.structures.items[id].enabled = value;
+    },
   }),
   // structure labels — registerOverlayFades.ts:114-117 (per StructureId)
   layer({
@@ -148,6 +178,10 @@ export const FADE_LAYERS = [
     expand: () => STRUCTURE_IDS,
     handle: (id) => ({ kind: 'labelLayer', layer: 'structure', category: id }),
     seed: (s, id) => (s.structures.items[id].labelEnabled ? 1 : 0),
+    intent: (s, id) => s.structures.items[id].labelEnabled,
+    writeIntent: (s, id, value) => {
+      s.structures.items[id].labelEnabled = value;
+    },
   }),
   // galaxy catalogs — absorbs galaxyCatalogSourceRegistry.ts:154 (demand-loaded; seed 0)
   layer({
@@ -155,6 +189,13 @@ export const FADE_LAYERS = [
     expand: () => GALAXY_CATALOG_IDS,
     handle: (id) => ({ kind: 'galaxyCatalog', id }),
     seed: () => 0,
+    intent: (s, id) => s.galaxyCatalogs.items[id].enabled,
+    writeIntent: (s, id, value) => {
+      s.galaxyCatalogs.items[id].enabled = value;
+    },
+    // The draw/pick bitmasks are a derivation of the per-catalog enabled flag,
+    // so a toggle must recompute them from the just-applied intent.
+    post: (state) => deriveSourceMasks(state),
   }),
   // filament skeleton — absorbs filamentSlot.ts:30 (demand-loaded; seed 0)
   layer({
@@ -162,6 +203,10 @@ export const FADE_LAYERS = [
     expand: () => [undefined],
     handle: () => ({ kind: 'filament' }),
     seed: () => 0,
+    intent: (s) => s.filaments.enabled,
+    writeIntent: (s, _item, value) => {
+      s.filaments.enabled = value;
+    },
   }),
   // flow field — absorbs flowFieldSlot.ts:36 (demand-loaded; seed 0)
   layer({
@@ -169,14 +214,33 @@ export const FADE_LAYERS = [
     expand: () => [undefined],
     handle: () => ({ kind: 'flow' }),
     seed: () => 0,
+    intent: (s) => s.flow.enabled,
+    writeIntent: (s, _item, value) => {
+      s.flow.enabled = value;
+    },
+    // Flow's asset is demand-loaded: suppress the fade until its slot has
+    // committed, so a toggle while the slot is still idle doesn't fade in nothing.
+    guard: (state) => slotReady(state.assetSlots.flow),
   }),
   // volume fields — absorbs initGpu.ts onFieldAdded (demand-loaded; seed 0; per
   // VolumeFieldId, including the DEV-only debug fixtures — see volumeFieldIds)
-  layer({
+  layer<VolumeFieldId, 'volumeField'>({
     key: 'volumeField',
     expand: () => volumeFieldIds(),
     handle: (id) => ({ kind: 'volumeField', id }),
     seed: () => 0,
+    intent: (s, id) => s.volumes.items[id]?.enabled ?? false,
+    writeIntent: (s, id, value) => {
+      const item = s.volumes.items[id];
+      if (item) item.enabled = value;
+    },
+    // Enable-gated lazy-load: re-read the just-applied intent so a disable
+    // toggle never triggers a load. The DEV debug fixtures aren't demand rows,
+    // so they keep this direct lazy-load; cf4/mcpm load via reevaluateDemand and
+    // maybeLazyLoadDebugVolume is a no-op for them, so the two paths partition.
+    post: (state, id) => {
+      if (state.settings.volumes.items[id]?.enabled) maybeLazyLoadDebugVolume(state, id);
+    },
   }),
 ] satisfies readonly FadeLayer<unknown>[];
 

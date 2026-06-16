@@ -161,6 +161,7 @@ import type { GalaxyCatalogItemSettings } from '../../@types/settings/GalaxyCata
 import { createSpaceMouseSubsystem } from './subsystems/spaceMouseSubsystem';
 import { buildSettersFromTable } from './wiring/settingsTable';
 import { reevaluateDemand } from './wiring/reevaluateDemand';
+import { maybeLazyLoadDebugVolume } from './volume/maybeLazyLoadDebugVolume';
 import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
   loadCompanionAssets,
@@ -907,36 +908,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.scheduler.requestRender();
   }
 
-  /**
-   * Lazy-load the DEV-only debug volume slot backing a field if it's `idle`.
-   * The shippable volumes (CF-4, MCPM) load via `reevaluateDemand` instead
-   * (their demand reads `items[id].enabled`); the debug fixtures are
-   * excluded from the registry, so they keep a direct lazy-load.
-   *
-   * Idempotent (a non-idle slot no-ops, so off-then-on doesn't re-fetch),
-   * and a no-op for cf4/mcpm ids — so the two load mechanisms partition.
-   */
-  function maybeLazyLoadDebugVolume(fieldId: VolumeFieldId): void {
-    switch (fieldId) {
-      case 'debug-gaussian':
-      case 'debug-cartesian':
-      case 'debug-spherical': {
-        const slot = state.assetSlots.syntheticVolumes?.[fieldId];
-        if (!slot || slot.state().kind !== 'idle') return;
-        // Same dims + box-size triple across all three fixtures so they
-        // overlay coherently when more than one is enabled at once.
-        const shape =
-          fieldId === 'debug-gaussian'
-            ? 'gaussian'
-            : fieldId === 'debug-cartesian'
-              ? 'cartesian'
-              : 'spherical';
-        slot.load({ id: fieldId, shape, dims: 64, boxSizeMpc: 400 });
-        return;
-      }
-    }
-  }
-
   function setVolumeFieldEnabled(fieldId: VolumeFieldId, enabled: boolean): void {
     // Dispatch the copy-on-write store action; React reads via
     // `selectVolumeFieldItems`.  An unknown id lands an identity write (no-op).
@@ -944,7 +915,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // DEV debug fixtures aren't demand rows, so they keep a direct lazy load
     // here; cf4/mcpm load via reevaluateDemand reading items[id].enabled, and
     // this call is a no-op for those ids, so the two load paths partition.
-    if (enabled) maybeLazyLoadDebugVolume(fieldId);
+    if (enabled) maybeLazyLoadDebugVolume(state, fieldId);
     // Drive the FadeRegistry: the draw loop's `(!enabled && opacity <= 0)` skip
     // keeps rendering through fade-out so the blend reaches zero before stopping.
     void state.subsystems.fades.fadeTo(
