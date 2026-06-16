@@ -69,19 +69,16 @@
  */
 
 import { Source } from '../../data/sources';
-import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineState } from '../../@types/engine/state/EngineState';
-import type { Tier } from '../../@types/data/Tier';
 import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 
 import { createTweenManager } from './camera/tweenManager';
 import { createSettingsStore } from './settingsStore/createSettingsStore';
 import { buildInitialSettings } from './settingsStore/buildInitialSettings';
-import { setTierAction } from './settingsStore/actions/setTierAction';
 import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
@@ -105,7 +102,6 @@ import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
 import type { RequestKey } from '../../@types/loading/RequestKey';
 import { awaitSlotReady } from '../loading/awaitSlotReady';
-import { tierTarget } from '../../data/tierTargets';
 import { snapToCameraSnapshot, tweenToCameraSnapshot } from './camera/cameraSnapshot';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
@@ -116,16 +112,11 @@ import { snapToCameraSnapshot, tweenToCameraSnapshot } from './camera/cameraSnap
 // connect/disconnect/sensitivity setters forward straight through.
 import { createSpaceMouseSubsystem } from './subsystems/spaceMouseSubsystem';
 import { buildSettersFromTable } from './wiring/settingsTable';
-import {
-  GALAXY_CATALOG_SOURCE_REGISTRY,
-  loadCompanionAssets,
-} from './wiring/galaxyCatalogSourceRegistry';
 import type { SettingsTableKey } from '../../@types/settings/SettingsTableKey';
 import { runBootstrapPhases } from './phases/bootstrap';
-import { rebuildHiResFamousForTier } from './helpers/rebuildHiResFamousForTier';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
 import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
-import { setSourceVisibleImpl } from './handles/setSourceVisible';
+import { setSourceVisible } from './handles/setSourceVisible';
 import { setStructureItemEnabled } from './handles/setStructureItemEnabled';
 import { setStructureLabelEnabled } from './handles/setStructureLabelEnabled';
 import { setMilkyWayLabelEnabled } from './handles/setMilkyWayLabelEnabled';
@@ -146,6 +137,7 @@ import { setVolumeFieldPalette } from './handles/setVolumeFieldPalette';
 import { listVolumeFields } from './handles/listVolumeFields';
 import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
 import { setBiasMode } from './handles/setBiasMode';
+import { setTier } from './handles/setTier';
 
 /**
  * Start the WebGPU engine on `canvas`.
@@ -664,65 +656,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     return awaitSlotReady(state.assetSlots.pgcAlias, new Map() as PgcAliasMap);
   }
 
-  function setSourceVisible(source: SourceType, visible: boolean): void {
-    // Delegate to the module-scope helper (testable without a GPU engine).
-    // The per-galaxy-catalog `enabled` flag is written through the settings store so
-    // React's `useSettingsStore(selectVisibleSourceMask)` subscriber wakes.
-    setSourceVisibleImpl(state, settingsStore, source, visible);
-  }
-
-  function setTier(tier: Tier): void {
-    // Tier now lives in the settings store; React reads it via `selectTier`,
-    // so there's no `onTierChange` echo to fire — the store write notifies
-    // subscribers. We diff against the store's current value to skip a no-op,
-    // then commit through the action before driving the per-source reloads.
-    const prevTier = settingsStore.getState().tier;
-    if (tier === prevTier) return;
-    setTierAction(settingsStore, tier);
-
-    // For each tier-relevant source: same target → skip; different target →
-    // hand the slot the new request (it cancels any in-flight load,
-    // re-fetches the tier's `.bin`, commits).  Sources whose enabled INTENT is
-    // off skip too — don't re-fetch a source you're hiding; toggling one on
-    // later loads it at the current tier via `setSourceVisible`.  Filaments are
-    // NOT swapped (see `filamentFetcher.ts`).
-    for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
-      const src = cfg.source;
-      if (cfg.category === 'synthetic') continue;
-      if (tierTarget(src, prevTier) === tierTarget(src, tier)) continue;
-      if (!state.settings.galaxyCatalogs.items[galaxyCatalogIdOf(src)].enabled) continue;
-      // `dissolvePrevious`: a tier swap is the one reload the user should see
-      // the old tier fade out of. The commit reads this flag instead of
-      // guessing "is this a re-commit" from the data store, so re-enable /
-      // forceReload / boot never trigger a spurious dissolve.
-      state.assetSlots.points.get(src)?.load({ source: src, tier, dissolvePrevious: true });
-      // Companion sidecars reload in lockstep so localIdx lookups stay valid.
-      loadCompanionAssets(state, cfg, tier);
-    }
-
-    // MCPM volume is tier-aware (unlike CF-4); same per-tier reload via the
-    // AssetSlot machinery.
-    state.assetSlots.mcpm?.load({ tier });
-
-    // The hi-res LOD-3 famous-galaxy texture is tier-aware on its layerSide.
-    // WebGPU textures are immutable in shape, so a tier flip destroys +
-    // recreates the texture + planner pair and re-binds the renderer's
-    // hi-res view (see `helpers/rebuildHiResFamousForTier.ts`).  device +
-    // texturedDiskRenderer are null until initGpu, so the guard skips the
-    // rebuild pre-bootstrap (e.g. a test driving the handle directly).
-    const device = bootstrapDeps.phaseLocals?.device;
-    const texturedDiskRenderer = state.gpu.texturedDiskRenderer;
-    if (device && texturedDiskRenderer) {
-      rebuildHiResFamousForTier({
-        state,
-        device,
-        tier,
-        texturedDiskRenderer,
-        requestRender: () => state.subsystems.scheduler.requestRender(),
-      });
-    }
-  }
-
   function getCloud(source: SourceType): GalaxyCatalog | undefined {
     return state.data.galaxies.catalogs.get(source);
   }
@@ -880,8 +813,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       loadAliases: loadPgcAliasesFn,
     },
     sources: {
-      setVisible: setSourceVisible,
-      setTier,
+      setVisible: (source, visible) => setSourceVisible(state, settingsStore, source, visible),
+      setTier: (tier) => setTier(state, settingsStore, bootstrapDeps.phaseLocals?.device, tier),
       getCloud,
       getCloudObjIds,
     },

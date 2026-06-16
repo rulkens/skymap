@@ -43,7 +43,7 @@ import { setGalaxyCatalogVisibleAction } from '../settingsStore/actions/setGalax
 import { syncVisibilityFades } from '../wiring/syncVisibilityFades';
 import type { ApplyIntentState } from '../wiring/syncVisibilityFades';
 
-export function setSourceVisibleImpl(
+export function setSourceVisible(
   state: ApplyIntentState,
   store: SettingsStore,
   source: SourceType,
@@ -60,4 +60,4 @@ export function setSourceVisibleImpl(
 }
 
 // Test-only alias matching the import name used in tests.
-export { setSourceVisibleImpl as setSourceVisibleForTest };
+export { setSourceVisible as setSourceVisibleForTest };
