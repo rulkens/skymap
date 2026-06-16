@@ -21,15 +21,12 @@
  * bright label, but the thing under inspection keeps its label. The marker pass
  * (`produceStructureMarkers`) bakes the mirror of this into each ring's alpha.
  *
- * ### This producer owns the per-category load-in fade
+ * ### Pure reader of the per-category opacity
  *
- * The first time a category emits a label while INTENDED-VISIBLE
- * (`labelEnabled` true), the producer fires its `fadeTo(handle, 1)` once. Each
- * category fires its load-in independently, mirroring how the famous-galaxy
- * layer fires its own load-in on first emit. The load-in is gated on the
- * boolean (not merely on reaching this line): a disabled category fading OUT
- * still passes the draw gate, but must never re-fire its load-in and pop back
- * to 1.
+ * The producer only READS `fades.opacityOf({labelLayer, structure, category})`
+ * — the visibility bridge (`syncVisibilityFades`) is the sole writer of each
+ * category's intent opacity, seeding and ramping it from the category's
+ * `labelEnabled` setting. The producer never drives a fade of its own.
  *
  * ### No declutter here — the director owns it
  *
@@ -49,28 +46,10 @@ import type { Label } from '../../../@types/rendering/Label';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { LabelProducerOutput } from '../../../@types/engine/subsystems/LabelProducerOutput';
-import type { StructureId } from '../../../@types/data/structure/StructureId';
 import { STRUCTURE_MARKER_STYLES } from './structureMarkerStyles';
 import { getLabelStyleOverride } from '../labelStyleOverride';
 import { focusRecession } from './focusRecession';
-import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 import { structureIdOf } from '../helpers/structureIdOf';
-
-// Per-category load-in latch. The producer is a bare function (not a closure
-// over subsystem state like the director), so the once-per-category one-shot
-// has nowhere to live except module scope. Each category fires its load-in
-// `fadeTo(1)` the first time it emits a label while INTENDED-VISIBLE. The fire
-// is gated on `labelEnabled`, not merely on reaching the line: a disabled
-// category fading OUT still passes the draw gate, so an ungated load-in would
-// pop it back to 1 mid-fade. A visible category registered at 1 ramps
-// `fadeTo(1)` as a no-op, fired for symmetry with the famous-galaxy layer's
-// first-emit load-in. Reset between tests via `__resetStructureLabelLoadIn`.
-const loadInFired = new Set<StructureId>();
-
-/** Test-only: clear the module-level load-in latch between unit cases. */
-export function __resetStructureLabelLoadIn(): void {
-  loadInFired.clear();
-}
 
 export function produceStructureLabels(
   state: EngineState,
@@ -186,21 +165,6 @@ export function produceStructureLabels(
             ctx.focusBlend,
           );
     fadeAlpha *= catOpacity * recession;
-
-    // Per-category load-in: fire the load-in fade once on this category's first
-    // emitted label while INTENDED-VISIBLE. The `labelEnabled` guard is
-    // load-bearing: a disabled category fading OUT still reaches here (its
-    // opacity > 0 passed the draw gate), and an ungated fire would re-ramp it
-    // to 1 mid-fade. Gating on the boolean keeps the load-in to the visible
-    // first-emit only.
-    if (labelEnabled && !loadInFired.has(p.category)) {
-      loadInFired.add(p.category);
-      void fades.fadeTo(
-        { kind: 'labelLayer', layer: 'structure', category: p.category },
-        1,
-        FADE_IN_DURATION_MS,
-      );
-    }
 
     // Per-structure override fields: only structures whose category matches the
     // override's target adopt the outline values; others keep the default.

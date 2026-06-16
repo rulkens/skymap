@@ -1,8 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  produceStructureLabels,
-  __resetStructureLabelLoadIn,
-} from '../../../../src/services/engine/presentation/produceStructureLabels';
+import { describe, expect, it } from 'vitest';
+import { produceStructureLabels } from '../../../../src/services/engine/presentation/produceStructureLabels';
 import { LABEL_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
@@ -17,9 +14,9 @@ function makeRegistry(): FadeRegistry {
   return createFadeRegistry({ requestRender: () => {} });
 }
 
-// produceStructureLabels now reads `state.data.structures` for the records,
+// produceStructureLabels reads `state.data.structures` for the records,
 // `state.settings.structures.items` for the authoritative per-category gate,
-// `state.subsystems.fades` for the per-category opacity + load-in fire, and
+// `state.subsystems.fades` for the per-category opacity (read-only), and
 // `state.subsystems.selection.focused()` for the focused-exempt recession.
 // The fixture supplies all four; `focusedStructureId` selects which structure
 // (if any) the selection subsystem reports as focused. The items bag defaults
@@ -52,8 +49,8 @@ function makeStructureItems(): EngineState['settings']['structures']['items'] {
 }
 
 // Register every per-category structure label AND ring marker handle at full opacity.
-// The label handle backs the producer's load-in `fadeTo` (which THROWS on an
-// unregistered handle); the marker handle backs the anchor gate, which now reads
+// The label handle backs the producer's `opacityOf` read (which THROWS on an
+// unregistered handle); the marker handle backs the anchor gate, which reads
 // `opacityOf({structure, id})` so a label fades in lock-step with its
 // ring instead of popping. Individual tests override a handle to 0 (or a
 // mid-fade value) where they need a disabled / fading category.
@@ -86,12 +83,6 @@ const rec = (id: string, over: Partial<StructureInfo> = {}): StructureInfo =>
   }) as StructureInfo;
 
 describe('produceStructureLabels', () => {
-  // The module-level load-in Set is a singleton; reset it between cases so a
-  // fired category in one test doesn't suppress the fire in the next.
-  beforeEach(() => {
-    __resetStructureLabelLoadIn();
-  });
-
   it('emits a label only for featured structures', () => {
     const state = makeState();
     state.data.structures.setGroup('bulk', [rec('a'), rec('b', { featured: false })]);
@@ -122,28 +113,6 @@ describe('produceStructureLabels', () => {
     state.settings.structures.items.cluster.labelEnabled = false;
     state.data.structures.setGroup('anchors', [rec('c1', { category: 'cluster' })]);
     expect(produceStructureLabels(state, makeCtx()).labels.map((l) => l.id)).toEqual(['c1']);
-  });
-
-  it('does NOT re-fire the load-in for a disabled category still fading out', () => {
-    // A category fading OUT (labelEnabled false, opacity > 0) passes the draw
-    // gate but must never re-fire its load-in `fadeTo(handle, 1)` — that would
-    // pop it back to full visibility mid-fade.
-    const fades = makeRegistry();
-    fades.register({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 1);
-    fades.register({ kind: 'structure', id: 'cluster' }, 1);
-    fades.setImmediate({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 0.5);
-    const fadeToSpy = vi.spyOn(fades, 'fadeTo');
-    const state = makeState({ fades });
-    state.settings.structures.items.cluster.labelEnabled = false;
-    state.data.structures.setGroup('anchors', [rec('c1', { category: 'cluster' })]);
-
-    produceStructureLabels(state, makeCtx());
-    // The label still emits (fade-out tail), but no fadeTo(handle, 1) load-in.
-    expect(fadeToSpy).not.toHaveBeenCalledWith(
-      { kind: 'labelLayer', layer: 'structure', category: 'cluster' },
-      1,
-      expect.any(Number),
-    );
   });
 
   it('hides a structure label when its marker (ring anchor) is disabled and fully hidden', () => {
@@ -256,25 +225,5 @@ describe('produceStructureLabels', () => {
     state.data.structures.setGroup('anchors', [rec('a'), rec('b')]);
     const out = produceStructureLabels(state, makeCtx());
     expect(out.labels.map((l) => l.fadeAlpha)).toEqual([1, 1]);
-  });
-
-  it('fires the per-category load-in fade on first emit, dedupes thereafter', () => {
-    const fades = makeRegistry();
-    fades.register({ kind: 'labelLayer', layer: 'structure', category: 'cluster' }, 1);
-    const fadeToSpy = vi.spyOn(fades, 'fadeTo');
-    const state = makeState({ fades });
-    state.data.structures.setGroup('anchors', [rec('a', { category: 'cluster' })]);
-
-    produceStructureLabels(state, makeCtx());
-    expect(fadeToSpy).toHaveBeenCalledTimes(1);
-    expect(fadeToSpy).toHaveBeenCalledWith(
-      { kind: 'labelLayer', layer: 'structure', category: 'cluster' },
-      1,
-      expect.any(Number),
-    );
-
-    // A second producer call must NOT fire again (Set dedupe).
-    produceStructureLabels(state, makeCtx());
-    expect(fadeToSpy).toHaveBeenCalledTimes(1);
   });
 });
