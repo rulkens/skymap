@@ -5,10 +5,13 @@
  * inherited `color` (used by child icons via currentColor) jumps to
  * the cosmic-blue accent.
  *
- * Positioning is owned by the parent (.topBar in App.module.css);
- * this rule deliberately has no `position` / `top` / `left`.
+ * Placement in the row is owned by the parent (.topBar in
+ * App.module.css); this rule has no `top` / `left`. The lone
+ * `position: relative` is not self-placement — it's the containing
+ * block the absolutely-positioned `.tooltip` anchors to.
  */
 .root {
+  position: relative;
   width: 40px;
   height: 40px;
   flex-shrink: 0;
@@ -49,6 +52,45 @@
   opacity: 0;
   transform: scale(0.92);
   pointer-events: none;
+}
+
+/*
+ * Hover/focus tooltip. Sits below the pill (the top-bar row hugs the
+ * viewport top, so there's no room above) and is hidden until the
+ * parent .root is hovered or keyboard-focused. `pointer-events: none`
+ * keeps it from eating the hover it depends on; the explicit
+ * `--color-fg` text resists the accent tint .root:hover applies to
+ * currentColor. Whitespace-nowrap because these labels are short by
+ * contract — a wrapping tooltip would look broken.
+ */
+.tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: var(--surface-card-strong);
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
+  border: 1px solid var(--border-card);
+  box-shadow: var(--shadow-card);
+
+  color: var(--color-fg);
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease-out;
+}
+
+.root:hover .tooltip,
+.root:focus-visible .tooltip {
+  opacity: 1;
 }
 
 /* WCAG 2.5.5 touch target on small phones. */
