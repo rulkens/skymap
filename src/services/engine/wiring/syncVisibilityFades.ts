@@ -13,10 +13,10 @@
  * It deliberately does NOT do three things that belong to the public batch
  * bridge:
  *
- *   - **It never writes settings.** `row.writeIntent` is the settings-mutating
- *     half; the push setters (which hold the React-notifying SettingsStore
- *     handle) own that write. `applyIntent` only *reads* intent and reacts to
- *     it, so driving it never desyncs settings from the toggle that set them.
+ *   - **It never writes settings.** It only *reads* intent and drives a fade;
+ *     the settings write is owned by the push setters (the store actions that
+ *     hold the React-notifying SettingsStore handle) and the restore path. So
+ *     driving it never desyncs settings from the toggle that set them.
  *   - **It never wakes the scheduler.** `fadeTo` already wakes the render loop
  *     unconditionally, and the public bridge issues a single batch wake; a wake
  *     here would be redundant. (`setImmediate` deliberately does NOT wake — a
@@ -102,7 +102,7 @@ export { applyIntent as applyIntentForTest };
  * private `applyIntent`. With `opts.only`, the subset is further narrowed to the
  * named keys, so a caller (e.g. a tour cue) can sync just one layer.
  *
- * Does fades ONLY: no `writeIntent` (settings writes belong to the push setters /
+ * Does fades ONLY: no settings writes (those belong to the push setters /
  * restore path), no React echoes. State flows one way here — settings → intent →
  * fade.
  *
