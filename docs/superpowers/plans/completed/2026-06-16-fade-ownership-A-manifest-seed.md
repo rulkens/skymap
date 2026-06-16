@@ -101,10 +101,10 @@ not a redesign.
 
 **Files:** none (verification only).
 
-- [ ] Run `npm test` — record the passing count (CLAUDE.md says 590+ across 76
-  files; capture the exact numbers as the green baseline).
-- [ ] Run `npm run typecheck` — confirm clean (both `src` and `tools` tsconfigs).
-- [ ] Note the baseline in the task log so later tasks can prove "same count + N
+- [x] Run `npm test` — record the passing count (CLAUDE.md says 590+ across 76
+  files; capture the exact numbers as the green baseline). **Baseline: 2775 tests / 501 files.**
+- [x] Run `npm run typecheck` — confirm clean (both `src` and `tools` tsconfigs).
+- [x] Note the baseline in the task log so later tasks can prove "same count + N
   new tests".
 
 ---
@@ -132,7 +132,7 @@ export type FadeLayer<Item> = {
 };
 ```
 
-- [ ] Add `VisibilityLayerKey` (spec §87–91 + §96–103): a new
+- [x] Add `VisibilityLayerKey` (spec §87–91 + §96–103): a new
   `src/@types/animation/VisibilityLayerKey.d.ts` one-type-per-file union. **The
   vocabulary is pinned (do not re-choose)**: row keys are the friendly,
   *intent-addressing* names — finer-grained than `FadeId` kinds, because the
@@ -152,16 +152,16 @@ export type FadeLayer<Item> = {
   keys = intent-addressing vocabulary; `FadeId` kinds = registry vocabulary;
   `handle()` bridges them. (The `surveyLabel` key is the `galaxyNames`-handle row —
   see the cross-plan seam note at the top of this plan.)
-- [ ] Write `FadeLayer.d.ts` with the shape above + a multi-paragraph docblock:
+- [x] Write `FadeLayer.d.ts` with the shape above + a multi-paragraph docblock:
   why a closure-row table (heterogeneity — static / per-id / settings-seed vs
   zero-seed — lives in per-row closures so the seed loop stays generic, spec
   §223–228); why intent fields are optional (the intent set is a *subset* of the
   registration set, spec §94–106).
-- [ ] Add a type-level test asserting a `FadeLayer<X>` literal with only
+- [x] Add a type-level test asserting a `FadeLayer<X>` literal with only
   `key`/`expand`/`handle`/`seed` typechecks (intent fields omittable), and that
   `handle` returns `FadeId`. Use `expectTypeOf` or an assignment-compile smoke
   consistent with existing `tests/@types/**.types.test.ts` files.
-- [ ] `npm run typecheck` → clean.
+- [x] `npm run typecheck` → clean.
 
 ---
 
@@ -228,14 +228,14 @@ disabled layer for one frame; settings-derived seeds keep frame 1 coherent) and
 add the new para: registration now has exactly **one home** — slot factories and
 `initGpu` no longer call `register`.
 
-- [ ] Create `fadeLayers.ts` with `FADE_LAYERS` (every row above, each with a
+- [x] Create `fadeLayers.ts` with `FADE_LAYERS` (every row above, each with a
   one-line comment citing the site it absorbs) + `seedFades`.
-- [ ] Delete `registerOverlayFades.ts`; in `wireSlots.ts` replace the import +
+- [x] Delete `registerOverlayFades.ts`; in `wireSlots.ts` replace the import +
   the `registerOverlayFades(state)` call (`wireSlots.ts:58,98`) with `seedFades`.
   Update the call-site comment (`wireSlots.ts:96–98`) to say "seed **every** fade
   handle from the manifest" (it now covers the demand-loaded + volumeField sets
   too, not just overlay/volume-master/label).
-- [ ] Rename the test file to `fadeLayers.test.ts`. Keep the existing
+- [x] Rename the test file to `fadeLayers.test.ts`. Keep the existing
   `registerOverlayFades` seed assertions, repointed to `seedFades`:
   - test `seedFades seeds the milky-way disk fade from settings.milkyWay.enabled
     (on → 1)` — fixture `milkyWay.enabled = true`, assert
@@ -248,7 +248,7 @@ add the new para: registration now has exactly **one home** — slot factories a
   - test `seedFades seeds each structure ring + label from
     settings.structures.items[id]` — assert at least one off-by-settings case so
     a default-off structure sits at 0.
-- [ ] **New coverage for the absorbed out-of-band rows** (the four
+- [x] **New coverage for the absorbed out-of-band rows** (the four
   demand-loaded sets — previously registered in slots/`initGpu`, never in the
   seed test):
   - test `seedFades registers every galaxy catalog at 0` — iterate
@@ -262,9 +262,9 @@ add the new para: registration now has exactly **one home** — slot factories a
     source of truth, not a hardcoded id list.
   - Use a typed `vi.fn<() => void>()` for any `requestRender` stub in the
     fixture's fade-registry construction.
-- [ ] `npm test -- fadeLayers` → green.
-- [ ] `npm run typecheck` → clean.
-- [ ] Commit (manifest + seed + wireSlots repoint, tests green).
+- [x] `npm test -- fadeLayers` → green (24 tests across fadeLayers + wireSlots).
+- [x] `npm run typecheck` → clean.
+- [x] Commit (manifest + seed + wireSlots repoint, tests green). `9cf8e0d3`
 
 ---
 
@@ -294,7 +294,7 @@ registration has exactly one home.
 the factory's 4th arg goes away (or becomes optional). Read the factory before
 editing:
 
-- [ ] Read `createVolumeFieldRenderer`'s definition + its type
+- [x] Read `createVolumeFieldRenderer`'s definition + its type
   (find it via Grep — likely `src/services/gpu/renderers/volumeFieldRenderer.ts`
   and a `@types/.../VolumeFieldRenderer*` deps type). Remove the
   `onFieldAdded`/`onFieldRemoved` deps from the factory signature, its deps type,
@@ -302,19 +302,26 @@ editing:
   uses those callbacks for anything beyond fade registration (it should not — the
   callback only `register`/`unregister`s, per `initGpu.ts:334–348` — but verify
   before deleting).
-- [ ] Delete the four `register` sites + the renderer callbacks listed above.
-- [ ] Update `initGpu.ts:324–328`'s comment block (which explains *why* the
+- [x] Delete the four `register` sites + the renderer callbacks listed above.
+- [x] Update `initGpu.ts:324–328`'s comment block (which explains *why* the
   renderer went through callbacks) — replace with: the renderer is now fully
   FadeRegistry-agnostic; the manifest seeds the `volumeField` set at construction.
-- [ ] Confirm no remaining `fades.register(` calls exist outside
+- [x] Confirm no remaining `fades.register(` calls exist outside
   `fadeLayers.ts` (Grep `fades.register(` / `.register({ kind:` across `src/` —
-  expect hits only in `fadeLayers.ts` and the registry's own tests).
-- [ ] `npm run typecheck` → clean (a missed callback consumer is a compile error).
-- [ ] `npm test` → full suite green. Update any slot/`initGpu`/volumeFieldRenderer
-  test that asserted the old `register` call or the callbacks — those assertions
-  move conceptually to Task 2's `seedFades` tests; delete the now-stale
-  registration assertions rather than reproducing them per-slot.
-- [ ] Commit.
+  expect hits only in `fadeLayers.ts` and the registry's own tests). Confirmed: only `fadeLayers.ts`.
+- [x] `npm run typecheck` → clean (a missed callback consumer is a compile error).
+- [x] `npm test` → full suite green (2779/502). Stale register-assertion tests
+  deleted (galaxyCatalogSourceRegistry, volumeFieldRenderer construction args);
+  registration coverage now lives in `fadeLayers.test.ts`.
+- [x] Commit. `63acf89f`
+
+**Plan deviation (Task 3, folded in):** the manifest's volume row now seeds
+ALL volume fields incl. DEV `binBaseName:null` debug fixtures. The written plan
+excluded them (and the Task 2 test asserted exclusion), but deleting
+`onFieldAdded` would have stranded the debug handles → `setVolumeFieldEnabled` +
+the synthetic-slot commit `fadeTo` on unregistered ids (throws). Fade
+registration legitimately diverges from `seedVolumeFields` (settings excludes
+debug; fade includes it) — inert in production.
 
 ---
 
@@ -325,43 +332,45 @@ editing:
 Run the `entanglement-radar` skill over the Plan A diff. Confirm the invariants
 the spec names for this plan (spec §269):
 
-- [ ] **Registration has exactly one home** — every fade handle is registered
+- [x] **Registration has exactly one home** — every fade handle is registered
   only by `seedFades`; Grep proves no `fades.register(` outside `fadeLayers.ts`.
-- [ ] **No renderer mutates the fade registry** — `volumeFieldRenderer` no longer
+- [x] **No renderer mutates the fade registry** — `volumeFieldRenderer` no longer
   receives `onFieldAdded`/`onFieldRemoved`; no GPU renderer references
   `subsystems.fades.register`/`unregister`.
-- [ ] **The seed asymmetry is data, not prose** — settings-derived vs zero-seed
+- [x] **The seed asymmetry is data, not prose** — settings-derived vs zero-seed
   lives in per-row `seed()` closures, not in a comment or a branch in
   `seedFades`. `seedFades` itself has no per-kind switch.
-- [ ] **No new mirror** — `FADE_LAYERS` is the only enumeration of fade layers;
+- [x] **No new mirror** — `FADE_LAYERS` is the only enumeration of fade layers;
   the `volumeField` set derives from the existing volume registry (not a second
   hardcoded list), the structure set from `STRUCTURE_IDS`, the galaxy set from
   `GALAXY_CATALOG_IDS`.
-- [ ] Record findings in the task log; if the radar flags a knot, STOP and report
-  rather than self-resolving with a workaround.
+- [x] Record findings in the task log; if the radar flags a knot, STOP and report
+  rather than self-resolving with a workaround. **Radar clean — no new complecting;
+  the intended value×place braid (registration scattered across 5 sites) is dissolved.**
 
 ---
 
 ## Definition of Done
 
-- [ ] `npm test` green — baseline count from Task 0 plus the new `seedFades`
+- [x] `npm test` green — baseline count from Task 0 plus the new `seedFades`
   registration tests (Task 2); no net coverage loss from the deleted slot/`initGpu`
-  registration assertions (Task 3).
-- [ ] `npm run typecheck` clean (both `src` and `tools` tsconfigs).
-- [ ] `registerOverlayFades.ts` is **deleted**; `wireSlots` calls `seedFades`.
-- [ ] `FADE_LAYERS` carries all 13 rows of the Task 2 table; `youAreHere` absent;
+  registration assertions (Task 3). **2779/502 (baseline 2775/501; +5 net).**
+- [x] `npm run typecheck` clean (both `src` and `tools` tsconfigs).
+- [x] `registerOverlayFades.ts` is **deleted**; `wireSlots` calls `seedFades`.
+- [x] `FADE_LAYERS` carries all 13 rows of the Task 2 table; `youAreHere` absent;
   Milky Way is two rows (disk + label).
-- [ ] Grep finds **zero** `fades.register(` / `.register({ kind:` outside
-  `fadeLayers.ts` (and the registry's own unit tests).
-- [ ] `volumeFieldRenderer` no longer takes `onFieldAdded`/`onFieldRemoved`; the
-  `volumeField` set seeds from the volume registry at construction.
-- [ ] The slot-commit `fadeTo(1)` fade-in paths are **unchanged** (Plan B's job) —
+- [x] Grep finds **zero** `fades.register(` / `.register({ kind:` outside
+  `fadeLayers.ts` (and the registry's own unit tests). Confirmed: sole hit `fadeLayers.ts:195`.
+- [x] `volumeFieldRenderer` no longer takes `onFieldAdded`/`onFieldRemoved`; the
+  `volumeField` set seeds from the volume registry at construction (all fields,
+  incl. DEV debug — see the Task 3 deviation note above).
+- [x] The slot-commit `fadeTo(1)` fade-in paths are **unchanged** (Plan B's job) —
   only *registration* moved.
-- [ ] Frame-1 opacities identical to today (seed-coherence tests prove the
+- [x] Frame-1 opacities identical to today (seed-coherence tests prove the
   settings-derived rows; the four demand-loaded rows seed at `0` so first-load
   fade-in is preserved).
-- [ ] `entanglement-radar` invariants (Task 4) all hold; registration has exactly
+- [x] `entanglement-radar` invariants (Task 4) all hold; registration has exactly
   one home.
-- [ ] No new TODO/FIXME comments introduced.
-- [ ] No observable behaviour change in the running app (pure registration
+- [x] No new TODO/FIXME comments introduced.
+- [x] No observable behaviour change in the running app (pure registration
   relocation).
