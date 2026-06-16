@@ -33,6 +33,7 @@ import {
 import {
   applyIntentForTest,
   syncVisibilityFades,
+  syncVisibilityFadeItem,
 } from '../../../../src/services/engine/wiring/syncVisibilityFades';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
@@ -317,5 +318,44 @@ describe('syncVisibilityFades', () => {
 
     // The bridge does fades ONLY — no writeIntent, so settings are untouched.
     expect(JSON.parse(JSON.stringify(settings))).toEqual(before);
+  });
+});
+
+// ── syncVisibilityFadeItem (scoped single-item bridge) ────────────────
+//
+// The single-item entry applies ONE row's intent to ONE item — vs the batch,
+// which sweeps every item the row expands to. The slot commit uses it so a
+// concurrent tier-swap reload of source A doesn't re-drive source B's fade.
+//
+// We drive the REAL `structureRing` row: it's a MULTI-item row (expands to
+// STRUCTURE_IDS) with no `post`, so the fixture stays light and we can assert
+// that exactly one of its sibling handles faded.
+
+describe('syncVisibilityFadeItem', () => {
+  it('drives exactly the one named item, not its row siblings', () => {
+    const { state, fadeTo } = makeBridgeState();
+    const idA = STRUCTURE_IDS[0]!;
+    const idB = STRUCTURE_IDS[1]!;
+
+    syncVisibilityFadeItem(state, 'structureRing', idA, { animate: true });
+
+    // Exactly one fade, on idA's handle, to the intent target (enabled → 1).
+    expect(fadeTo).toHaveBeenCalledTimes(1);
+    expect(fadeTo).toHaveBeenCalledWith({ kind: 'structure', id: idA }, 1, FADE_IN_DURATION_MS);
+    // The sibling structure id was never touched.
+    expect(fadedHandle(fadeTo, { kind: 'structure', id: idB })).toBe(false);
+  });
+
+  it('animate:false snaps via setImmediate and issues exactly one requestRender', () => {
+    const { state, fadeTo, setImmediate, requestRender } = makeBridgeState();
+    const idA = STRUCTURE_IDS[0]!;
+
+    syncVisibilityFadeItem(state, 'structureRing', idA, { animate: false });
+
+    expect(fadeTo).not.toHaveBeenCalled();
+    expect(setImmediate).toHaveBeenCalledTimes(1);
+    expect(setImmediate).toHaveBeenCalledWith({ kind: 'structure', id: idA }, 1);
+    // The snap path needs one explicit wake (setImmediate doesn't wake).
+    expect(requestRender).toHaveBeenCalledTimes(1);
   });
 });

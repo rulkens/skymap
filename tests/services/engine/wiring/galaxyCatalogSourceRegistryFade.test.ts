@@ -5,11 +5,13 @@
  * the sequential fade-out / upload / fade-in choreography of the slot's
  * commit step. The tier-swap fade-OUT is a producer-driven mid-commit
  * dissolve and stays hand-coded through `state.subsystems.fades.fadeTo`;
- * the first-load fade-IN routes through the intent → fade bridge
- * (`syncVisibilityFades`).
+ * the first-load fade-IN routes through the SCOPED single-item intent →
+ * fade bridge (`syncVisibilityFadeItem`) — driving ONLY the catalog just
+ * uploaded, not every survey row, so a concurrent tier-swap reload of
+ * another source can't re-drive (and race) this one's fade.
  *
  * The bridge is mocked to a typed spy so this test asserts the commit's
- * own contract: first load calls the bridge once (after upload, no
+ * own contract: first load calls the scoped bridge once (after upload, no
  * fade-out); second load fires fadeTo(0, FADE_OUT_DURATION_MS) BEFORE
  * upload, then calls the bridge after. The bridge's per-row fade is
  * covered by syncVisibilityFades.test.ts.
@@ -20,24 +22,31 @@ import { Source } from '../../../../src/data/sources';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import { FADE_OUT_DURATION_MS } from '../../../../src/services/animation/fadeController';
-import { syncVisibilityFades } from '../../../../src/services/engine/wiring/syncVisibilityFades';
+import { syncVisibilityFadeItem } from '../../../../src/services/engine/wiring/syncVisibilityFades';
+import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { GalaxyCatalogSourceConfig } from '../../../../src/@types/engine/wiring/GalaxyCatalogSourceConfig';
 
-// Mock the bridge: the first-load fade-in routes through it, so a typed spy lets
-// us assert the commit's call without standing up the real per-row fade walk.
+// Mock the bridge: the first-load fade-in routes through the scoped single-item
+// entry, so a typed spy lets us assert the commit's call without standing up the
+// real per-row fade walk. `syncVisibilityFades` (the batch entry) is kept
+// exported too so the module's shape is preserved for any other importer.
 vi.mock('../../../../src/services/engine/wiring/syncVisibilityFades', () => ({
   syncVisibilityFades:
     vi.fn<
       typeof import('../../../../src/services/engine/wiring/syncVisibilityFades').syncVisibilityFades
     >(),
+  syncVisibilityFadeItem:
+    vi.fn<
+      typeof import('../../../../src/services/engine/wiring/syncVisibilityFades').syncVisibilityFadeItem
+    >(),
 }));
 
 import { wireGalaxyCatalogSourceSlot } from '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry';
 
-const bridge = vi.mocked(syncVisibilityFades);
+const bridge = vi.mocked(syncVisibilityFadeItem);
 
 function fakeCloud(count: number): GalaxyCatalog {
   return { count } as unknown as GalaxyCatalog;
@@ -109,9 +118,12 @@ describe('wireGalaxyCatalogSourceSlot — fade orchestration', () => {
     expect(fx.upload).toHaveBeenCalledOnce();
     // No tier-swap fade-out on first load.
     expect(fx.fadeOutCalls).toEqual([]);
-    // The fade-in routes through the bridge, scoped to the survey row.
+    // The fade-in routes through the scoped bridge, applying the survey row's
+    // intent to ONLY this catalog (not every survey id).
     expect(bridge).toHaveBeenCalledTimes(1);
-    expect(bridge).toHaveBeenCalledWith(fx.state, { animate: true, only: ['survey'] });
+    expect(bridge).toHaveBeenCalledWith(fx.state, 'survey', galaxyCatalogIdOf(Source.SDSS), {
+      animate: true,
+    });
     // The fade-in bridge fires AFTER the renderer upload (commit order).
     expect(fx.upload.mock.invocationCallOrder[0]!).toBeLessThan(
       bridge.mock.invocationCallOrder[bridge.mock.invocationCallOrder.length - 1]!,
@@ -144,9 +156,12 @@ describe('wireGalaxyCatalogSourceSlot — fade orchestration', () => {
     expect(fx.fadeOutCalls).toEqual([
       { target: 0, duration: FADE_OUT_DURATION_MS, at: 'pre-upload' },
     ]);
-    // The fade-in still routes through the bridge after upload.
+    // The fade-in still routes through the scoped bridge after upload, applying
+    // the survey intent to ONLY this catalog.
     expect(bridge).toHaveBeenCalledTimes(1);
-    expect(bridge).toHaveBeenCalledWith(fx.state, { animate: true, only: ['survey'] });
+    expect(bridge).toHaveBeenCalledWith(fx.state, 'survey', galaxyCatalogIdOf(Source.SDSS), {
+      animate: true,
+    });
     // The fade-in bridge fires AFTER the renderer upload (commit order).
     expect(fx.upload.mock.invocationCallOrder[0]!).toBeLessThan(
       bridge.mock.invocationCallOrder[bridge.mock.invocationCallOrder.length - 1]!,

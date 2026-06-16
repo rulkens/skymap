@@ -145,3 +145,39 @@ export function syncVisibilityFades(
   // One batch wake for the snap path; the animated path rides fadeTo's own wake.
   if (!opts.animate) state.subsystems.scheduler.requestRender();
 }
+
+/**
+ * Apply ONE row's intent to ONE item — the scoped sibling of `syncVisibilityFades`.
+ *
+ * Where the batch bridge sweeps every item a row expands to (`only` narrows by
+ * ROW, so `only: ['survey']` still drives ALL survey catalogs), this entry drives
+ * exactly the single item named. The galaxy-catalog slot commit needs that: a
+ * tier swap reloads every visible source concurrently, and each source's commit
+ * must fade in ONLY the catalog it just uploaded. Routing its fade-in through the
+ * batch bridge would have source A's commit re-drive source B's fade while B's own
+ * commit is mid-dissolve — they'd race ("last-issued wins") and B would visibly
+ * flicker up then down.
+ *
+ * `item` is `unknown` because the row is erased to `FadeLayer<unknown>` in
+ * FADE_LAYERS. The row's handle/intent/post all consume the item the row was
+ * authored for, so the caller passes the matching item for `key` — the same
+ * soundness argument as the batch's per-row loop, which feeds `applyIntent` items
+ * typed `unknown` straight from `row.expand`.
+ */
+export function syncVisibilityFadeItem(
+  state: ApplyIntentState,
+  key: VisibilityLayerKey,
+  item: unknown,
+  opts: { animate: boolean },
+): void {
+  const row = FADE_LAYERS.find((r) => r.key === key);
+  // Registration-only keys have no intent to apply — skip, the same way the
+  // batch loop skips intent-less rows. A non-intent key here is a caller bug.
+  if (row === undefined || row.intent === undefined) return;
+
+  applyIntent(state, row, item, opts);
+
+  // Mirror the batch wake policy: the snap path needs one explicit render; the
+  // animated path rides fadeTo's own wake (see syncVisibilityFades).
+  if (!opts.animate) state.subsystems.scheduler.requestRender();
+}
