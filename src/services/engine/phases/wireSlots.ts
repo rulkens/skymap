@@ -13,9 +13,10 @@
  *      onto its named `state.assetSlots` field.
  *   3. DEV synthetic-volume fixtures — minted + installed here (not a wiring
  *      row; tree-shaken from production).
- *   4. `wireImpostorSubsystems` / `registerOverlayFades` /
- *      `wireStructureProjection` — the thumbnail/disk subsystems, fade
- *      handles, and the structure-store anchor + bulk projection.
+ *   4. `wireImpostorSubsystems` / `seedFades` /
+ *      `wireStructureProjection` — the thumbnail/disk subsystems, the
+ *      whole fade-ownership manifest (every fade handle, seeded), and the
+ *      structure-store anchor + bulk projection.
  *   5. `createSyntheticFallback` — the imperative gate that arms the synthetic
  *      backstop (via the `'syntheticFallback'` request flag) iff every real
  *      galaxy catalog settles without data.
@@ -55,7 +56,7 @@ import { installLoadProgress } from '../wiring/installLoadProgress';
 import { installSlotReadyWake } from '../wiring/installSlotReadyWake';
 import { createSyntheticVolumeSlots } from '../../loading/slots/syntheticVolumeSlots';
 import { wireImpostorSubsystems } from '../wiring/wireImpostorSubsystems';
-import { registerOverlayFades } from '../wiring/registerOverlayFades';
+import { seedFades } from '../wiring/fadeLayers';
 import { wireStructureProjection } from '../wiring/wireStructureProjection';
 import { createSyntheticFallback } from '../wiring/createSyntheticFallback';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
@@ -93,9 +94,11 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // disks, procedural disks, hi-res Famous texture + planner).
   wireImpostorSubsystems(state, deps);
 
-  // Register overlay, volume-master, and label-layer fade handles, seeded
-  // from the user's stored opacities so frame 1 is coherent.
-  registerOverlayFades(state);
+  // Register and seed EVERY fade handle from the manifest — the
+  // overlay/volume-master/label/structure rows PLUS the demand-loaded
+  // galaxy/filament/flow/volume sets — so frame 1 is coherent and the
+  // demand-loaded layers seed at 0 ready to fade in on first load.
+  seedFades(state);
 
   // Wire the structure groups (static anchors + the bulk-cluster
   // subscription) into the structure store. Famous-galaxy labels are derived

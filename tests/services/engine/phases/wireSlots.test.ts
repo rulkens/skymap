@@ -509,7 +509,7 @@ describe('wireSlots', () => {
   });
 
   it('registers the overlay, volume-master, and label-layer fade handles', async () => {
-    // registerOverlayFades pins each layer's frame-1 opacity in the fade
+    // seedFades pins each layer's frame-1 opacity in the fade
     // registry.  A missed handle means that layer's toggle has nothing to
     // multiply against (or flashes at the wrong opacity on frame 1).  We
     // assert the handle shapes as a SUBSET — wireSlots also registers a

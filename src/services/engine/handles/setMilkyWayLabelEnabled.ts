@@ -16,7 +16,7 @@
 //
 // Unlike the structure label layer, milkyWay is a singleton: its label layer is
 // a plain `{ kind: 'labelLayer', layer: 'milkyWay' }` (no per-category axis),
-// registered without a category in registerOverlayFades.
+// seeded without a category by the fade manifest in `fadeLayers.ts`.
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
