@@ -41,6 +41,13 @@ vi.mock('../../../../src/services/engine/wiring/syncVisibilityFades', () => ({
     vi.fn<
       typeof import('../../../../src/services/engine/wiring/syncVisibilityFades').syncVisibilityFades
     >(),
+  // The slot commit drives its fade-in through the single-item entry; mock it
+  // too so the commit's bridge call is a no-op here (this file tests upload /
+  // commit mechanics, not the fade — that lives in the sibling Fade test).
+  syncVisibilityFadeItem:
+    vi.fn<
+      typeof import('../../../../src/services/engine/wiring/syncVisibilityFades').syncVisibilityFadeItem
+    >(),
 }));
 
 import {

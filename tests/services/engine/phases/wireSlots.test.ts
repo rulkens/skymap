@@ -354,8 +354,6 @@ function makeState(
     // and the demand loop reads request flags — both need a live Set.
     requests: new Set(),
     sources: {
-      pickMask: 0xff,
-      drawMask: 0xff,
       famousMeta: [],
       tier: 'medium',
     },

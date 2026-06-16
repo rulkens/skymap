@@ -53,7 +53,7 @@ function stubSlot(): StubSlot {
 function makeState(flowEnabled: boolean, slot: AssetSlot<unknown, unknown>): EngineState {
   return {
     settings: { flow: { enabled: flowEnabled } },
-    sources: { drawMask: 0, tier: 'medium' },
+    sources: { tier: 'medium' },
     requests: new Set(),
     data: {},
     assetSlots: { points: new Map(), flow: slot },

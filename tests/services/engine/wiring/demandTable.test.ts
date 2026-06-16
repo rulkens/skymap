@@ -240,8 +240,9 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
       galaxyCatalogs: { items: galaxyCatalogItems },
       volumes: { items: volumeFields },
     } as unknown as EngineSettingsState,
-    // tier feeds `req(tier)`; the masks are render/pick projections that
-    // demand never reads, so no drawMask is stubbed here.
+    // tier feeds `req(tier)`; the draw/pick masks are render/pick projections
+    // demand never reads (and no longer cached on `sources`), so `tier` is all
+    // this slice needs.
     sources: { tier: 'medium' },
     requests: requests as Set<import('../../../../src/@types/loading/RequestKey').RequestKey>,
     assetSlots: {

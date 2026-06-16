@@ -15,9 +15,9 @@
  * truth for on/off — THROUGH the store's copy-on-write action (so React's
  * `useSettingsStore(selectVisibleSourceMask)` subscriber wakes), THEN calls the
  * bridge with `{ animate: true, only: ['survey'] }`. The bridge reads the
- * just-written intent, fades the `galaxyCatalog` handle, and runs the survey
- * row's `post: deriveSourceMasks` — so the setter no longer recomputes the masks
- * itself. Mask derivation is therefore covered by `fadeLayers.test.ts`, not here.
+ * just-written intent and fades the `galaxyCatalog` handle. The setter never
+ * touches the draw/pick masks — those are a pure derivation (`deriveSourceMasks`
+ * on read, per-frame in `runFrame` / fresh at click time), tested separately.
  *
  * The bridge is mocked to a typed spy: these tests assert the setter's own
  * contract (store write → bridge call with the right opts; no-op short-circuit),
@@ -35,7 +35,7 @@ import type { EngineSettingsState } from '../../../src/@types/settings/EngineSet
 
 // The bridge is the seam under test: mock it to a typed spy so the setter test
 // asserts ONLY the setter's contract (write-then-bridge, short-circuit). The
-// bridge's own fade + deriveSourceMasks post is covered by fadeLayers.test.ts.
+// bridge's own fade behaviour is covered by syncVisibilityFades.test.ts.
 vi.mock('../../../src/services/engine/wiring/syncVisibilityFades', () => ({
   syncVisibilityFades:
     vi.fn<

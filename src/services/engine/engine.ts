@@ -69,8 +69,7 @@
  */
 
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
-import { ALL_VISIBLE_MASK } from '../../utils/allVisibleMask';
-import { maskHas } from '../../utils/maskHas';
+import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import type { SourceType } from '../../@types/data/SourceType';
 import {
   DEFAULT_ABS_MAG_LIMIT,
@@ -362,17 +361,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       schechterAlpha: 0,
     },
     sources: {
-      // Two 32-bit bitmasks, one bit per `Source` enum value — DERIVED
-      // outputs, not authoritative state.  From frame 1 onward
-      // `deriveSourceMasks` owns them, recomputing both from each galaxy catalog's
-      // `settings.galaxyCatalogs.items[id].enabled` + live fade opacity.
+      // `state.sources` no longer caches the draw/pick bitmasks — those are a
+      // pure projection of settings + live fade opacity, derived on read
+      // (per-frame in `runFrame`, fresh at click time).  This bag now holds
+      // only the loaded-tier marker.
       //
-      // ALL_VISIBLE_MASK matches what frame 1 derives (every galaxy catalog seeds
-      // enabled), so pre-frame readers — the synthetic-fallback hiddenAtBoot
-      // check, the UI visibility seed — see the same mask the loop will
-      // compute.
-      pickMask: ALL_VISIBLE_MASK,
-      drawMask: ALL_VISIBLE_MASK,
       // Currently-loaded data tier, seeded from `cb.initialTier`; 'medium'
       // is the ~600k-galaxy desktop budget.  `setTier` mutates in place.
       tier: cb.initialTier ?? 'medium',
@@ -812,14 +805,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
     // For each tier-relevant source: same target → skip; different target →
     // hand the slot the new request (it cancels any in-flight load,
-    // re-fetches the tier's `.bin`, commits).  Hidden sources skip too —
-    // toggling one on later loads it at the current tier via
-    // `setSourceVisible`.  Filaments are NOT swapped (see `filamentFetcher.ts`).
+    // re-fetches the tier's `.bin`, commits).  Sources whose enabled INTENT is
+    // off skip too — don't re-fetch a source you're hiding; toggling one on
+    // later loads it at the current tier via `setSourceVisible`.  Filaments are
+    // NOT swapped (see `filamentFetcher.ts`).
     for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
       const src = cfg.source;
       if (cfg.category === 'synthetic') continue;
       if (tierTarget(src, prevTier) === tierTarget(src, tier)) continue;
-      if (!maskHas(state.sources.drawMask, src)) continue;
+      if (!state.settings.galaxyCatalogs.items[galaxyCatalogIdOf(src)].enabled) continue;
       state.assetSlots.points.get(src)?.load({ source: src, tier });
       // Companion sidecars reload in lockstep so localIdx lookups stay valid.
       loadCompanionAssets(state, cfg, tier);

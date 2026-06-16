@@ -34,6 +34,7 @@ import { attachEngineInputs } from '../interaction/inputBindings';
 import { computeInitialCamera } from '../camera/cameraFraming';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { collectPickTargets } from '../helpers/collectPickTargets';
+import { deriveSourceMasks } from '../frame/deriveSourceMasks';
 import { milkyWayPickVisible } from '../helpers/milkyWayPickVisible';
 import { milkyWayPickHalfExtentPx } from '../helpers/milkyWayPickHalfExtentPx';
 
@@ -213,10 +214,13 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // pick mask; a fading-out layer clears its bit immediately so it
     // can't claim a click while still visually fading) plus whether any
     // cluster ring is on screen.  Shared with the hover + pick-debug
-    // gates via collectPickTargets so all three agree.
+    // gates via collectPickTargets so all three agree.  The pick mask is
+    // DERIVED FRESH here at click time — strictly fresher than the
+    // per-frame value `runFrame` computes, so a same-tick toggle is
+    // already reflected.
     const { visibleSources, hasAny } = collectPickTargets(
       r,
-      state.sources.pickMask,
+      deriveSourceMasks(state).pick,
       state.gpu.structureMarkerRenderer,
       milkyWayPickVisible(state),
     );

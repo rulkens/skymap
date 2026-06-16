@@ -93,8 +93,6 @@ function makeState(): EngineState {
       schechterAlpha: 0,
     },
     sources: {
-      pickMask: 0,
-      drawMask: 0,
       catalogs: new Map(),
       famousMeta: [],
       tier: 'medium',

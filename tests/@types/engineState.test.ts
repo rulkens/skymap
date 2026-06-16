@@ -42,7 +42,6 @@ import {
   DEFAULT_VOLUMES_ENABLED,
   DEFAULT_FLOW,
 } from '../../src/data/defaults';
-import { ALL_VISIBLE_MASK } from '../../src/utils/allVisibleMask';
 import { createTweenManager } from '../../src/services/engine/camera/tweenManager';
 import { createSpaceMouseSubsystem } from '../../src/services/engine/subsystems/spaceMouseSubsystem';
 import { createRenderScheduler } from '../../src/services/engine/subsystems/renderScheduler';
@@ -132,8 +131,6 @@ describe('EngineState type', () => {
       schechterAlpha: 0,
     };
     const sources: EngineSourceState = {
-      pickMask: ALL_VISIBLE_MASK,
-      drawMask: ALL_VISIBLE_MASK,
       tier: 'medium',
     };
     const picking: EnginePickingState = {
@@ -231,8 +228,9 @@ describe('EngineState type', () => {
     expect(state.settings.galaxyCatalogs.items.sdss.enabled).toBe(true);
     expect(state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled).toBe(true);
     expect(state.settings.bias.mode).toBe(DEFAULT_BIAS_MODE);
-    expect(state.sources.pickMask).toBe(ALL_VISIBLE_MASK);
-    expect(state.sources.drawMask).toBe(ALL_VISIBLE_MASK);
+    // `state.sources` no longer caches the draw/pick masks (a pure per-frame
+    // derivation now); it carries only the loaded-tier marker.
+    expect(state.sources.tier).toBe('medium');
     // Hover/selection live on `state.subsystems.selection`, not `state.picking`.
     expect(state.subsystems.selection.hovered()).toBeNull();
     expect(state.gpu.renderer).toBeNull();
@@ -290,9 +288,8 @@ describe('EngineState type', () => {
       schechterMStar: 0,
       schechterAlpha: 0,
     };
-    const sources: Pick<EngineSourceState, 'pickMask' | 'drawMask'> = {
-      pickMask: ALL_VISIBLE_MASK,
-      drawMask: ALL_VISIBLE_MASK,
+    const sources: Pick<EngineSourceState, 'tier'> = {
+      tier: 'medium',
     };
 
     expect(settings.galaxyCatalogs.sizePx).toBe(DEFAULT_POINT_SIZE_PX);
@@ -300,7 +297,7 @@ describe('EngineState type', () => {
     // The "You are here" label axis defaults on, independently of the disk.
     expect(settings.milkyWay.labelEnabled).toBe(true);
     expect(bias.apparentMagLimit).toBe(0);
-    expect(sources.pickMask).toBe(ALL_VISIBLE_MASK);
+    expect(sources.tier).toBe('medium');
   });
 
   it('allows in-place mutation of every sub-bag field', () => {
@@ -352,8 +349,6 @@ describe('EngineState type', () => {
         schechterAlpha: 0,
       },
       sources: {
-        pickMask: 0,
-        drawMask: 0,
         tier: 'medium',
       },
       data: createEngineData(),
@@ -437,8 +432,9 @@ describe('EngineState type', () => {
 
     state.settings.galaxyCatalogs.brightness = 2.5;
     state.settings.bias.absMagLimit = -20;
-    state.sources.pickMask = 0xff;
-    state.sources.drawMask = 0xff;
+    // `state.sources` now carries only the loaded-tier marker — `setTier`
+    // mutates it in place, so it's the representative mutation for this bag.
+    state.sources.tier = 'large';
     // Hovered/selected live on the selection subsystem, not `state.picking`.
     // The slot now holds a resolved FocusableTarget directly.
     const hoverTarget = {
@@ -451,8 +447,7 @@ describe('EngineState type', () => {
 
     expect(state.settings.galaxyCatalogs.brightness).toBe(2.5);
     expect(state.settings.bias.absMagLimit).toBe(-20);
-    expect(state.sources.pickMask).toBe(0xff);
-    expect(state.sources.drawMask).toBe(0xff);
+    expect(state.sources.tier).toBe('large');
     expect(state.subsystems.selection.hovered()).toBe(hoverTarget);
     expect(state.picking.pickInFlight).toBe(true);
   });

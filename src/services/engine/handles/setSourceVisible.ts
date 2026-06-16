@@ -16,15 +16,15 @@
 //
 // Having written the intent, it drives the fade THROUGH `syncVisibilityFades`
 // (the intent → fade bridge) rather than firing an inline `fadeTo`. The bridge
-// reads the just-written `enabled` intent from settings, fades the `survey` row's
-// `galaxyCatalog` handle, and runs that row's `post: deriveSourceMasks` — so this
-// setter no longer recomputes the masks itself. ORDERING MATTERS: the store write
-// MUST precede the bridge call, because the bridge reads intent from settings.
+// reads the just-written `enabled` intent from settings and fades the `survey`
+// row's `galaxyCatalog` handle. ORDERING MATTERS: the store write MUST precede
+// the bridge call, because the bridge reads intent from settings.
 //
-// It does NOT mutate `drawMask`/`pickMask` itself: those are derived outputs the
-// bridge's `post` (deriveSourceMasks) owns, packed from `enabled` + live fade
-// opacity. The bridge fires only the `survey` row, so a rapid concurrent toggle
-// is still last-issued-wins inside the fade registry.
+// It does NOT touch the draw/pick bitmasks: those are not stored state at all —
+// `deriveSourceMasks` projects them on read (per-frame in `runFrame`, fresh at
+// click time) from `enabled` + live fade opacity. The bridge fires only the
+// `survey` row, so a rapid concurrent toggle is still last-issued-wins inside
+// the fade registry.
 //
 // React no longer learns the mask through an echo: the SettingsPanel reads
 // `selectVisibleSourceMask(store.getState())`, a pure projection of the same
@@ -54,8 +54,8 @@ export function setSourceVisibleImpl(
   // Single source of truth: flip the galaxy catalog's enabled flag THROUGH the store
   // so the copy-on-write write notifies React's selector subscriber.
   setGalaxyCatalogVisibleAction(store, id, visible);
-  // Drive the fade through the bridge: it reads the just-written intent, fades
-  // the survey row's handle, and runs its `post: deriveSourceMasks`.
+  // Drive the fade through the bridge: it reads the just-written intent and
+  // fades the survey row's handle. The masks are derived on read elsewhere.
   syncVisibilityFades(state, { animate: true, only: ['survey'] });
 }
 

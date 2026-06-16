@@ -51,7 +51,6 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
 import { GALAXY_CATALOG_IDS } from '../../../data/galaxyCatalog/galaxyCatalogIds';
 import { SOURCE_REGISTRY } from '../../../data/sources';
-import { deriveSourceMasks } from '../frame/deriveSourceMasks';
 import { maybeLazyLoadDebugVolume } from '../volume/maybeLazyLoadDebugVolume';
 
 // Erase a row's Item type for the heterogeneous FADE_LAYERS array while keeping
@@ -199,9 +198,8 @@ export const FADE_LAYERS = [
     writeIntent: (s, id, value) => {
       s.galaxyCatalogs.items[id].enabled = value;
     },
-    // The draw/pick bitmasks are a derivation of the per-catalog enabled flag,
-    // so a toggle must recompute them from the just-applied intent.
-    post: (state) => deriveSourceMasks(state),
+    // No `post`: the draw/pick bitmasks are derived per-frame in `runFrame`
+    // (and fresh at click time), so a toggle needs no eager mask recompute here.
   }),
   // filament skeleton — absorbs filamentSlot.ts:30 (demand-loaded; seed 0)
   layer({

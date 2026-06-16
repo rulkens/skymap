@@ -47,7 +47,7 @@ function makeState(
       galaxyCatalogs: { items: {} },
       volumes: { items: {} },
     },
-    sources: { drawMask: 0 },
+    sources: { tier: 'medium' },
     requests: opts.requests ?? new Set<RequestKey>(),
     assetSlots: {
       points: opts.points ?? new Map(),

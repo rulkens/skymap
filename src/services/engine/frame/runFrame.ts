@@ -91,12 +91,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // frames.  (Boot loads are kicked from wireSlots, and the
   // synthetic-fallback gate kicks its backstop directly.)
   //
-  // Recompute the galaxy catalog draw/pick masks from settings + live fade opacity at
+  // Derive the galaxy catalog draw/pick masks from settings + live fade opacity at
   // the top of every frame, before any reader (render or pick pass) touches
-  // them — so the masks are always a fresh derivation of the single source of
-  // truth, never a hand-maintained mirror.  Demand itself reads settings
-  // directly, not the masks.
-  deriveSourceMasks(state);
+  // them — so the masks are always a fresh projection of the single source of
+  // truth, never a hand-maintained mirror.  `deriveSourceMasks` is pure: it
+  // returns the masks, which live as a per-frame-derived local here (no longer
+  // written into state) and are threaded into the render + pick passes below.
+  // Demand itself reads settings directly, not the masks.
+  const masks = deriveSourceMasks(state);
   reevaluateDemand(state);
 
   // ── Resize the swap-chain if the canvas element changed size ──────
@@ -212,7 +214,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.subsystems.proceduralDisks.runFrame({
       cam: ctx.cam,
       catalogs: state.data.galaxies.catalogs,
-      visibleSourceMask: state.sources.drawMask,
+      visibleSourceMask: masks.draw,
       pxPerRad: ctx.drawPxPerRad,
     });
   }
@@ -225,7 +227,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.subsystems.hiResFamous.runFrame({
       cam: ctx.cam,
       catalogs: state.data.galaxies.catalogs,
-      visibleSourceMask: state.sources.drawMask,
+      visibleSourceMask: masks.draw,
       pxPerRad: ctx.drawPxPerRad,
       famousMeta: state.data.galaxies.famousMeta,
     });
@@ -234,7 +236,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.subsystems.texturedDisks.runFrame({
       cam: ctx.cam,
       catalogs: state.data.galaxies.catalogs,
-      visibleSourceMask: state.sources.drawMask,
+      visibleSourceMask: masks.draw,
       pxPerRad: ctx.drawPxPerRad,
       famousMeta: state.data.galaxies.famousMeta,
     });
@@ -284,7 +286,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       pointSizePx: state.settings.galaxyCatalogs.sizePx,
       brightness: state.settings.galaxyCatalogs.brightness,
       selected: state.subsystems.selection.selected(),
-      visibleSourceMask: state.sources.drawMask,
+      visibleSourceMask: masks.draw,
       highlightFallback: state.settings.galaxyCatalogs.highlightFallback,
       realOnlyMode: state.settings.galaxyCatalogs.realOnly,
       biasMode: state.settings.bias.mode,
@@ -334,7 +336,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   ) {
     const { visibleSources: overlaySources, hasAny } = collectPickTargets(
       ctx.renderer,
-      state.sources.pickMask,
+      masks.pick,
       state.gpu.structureMarkerRenderer,
       milkyWayPickVisible(state),
     );
@@ -402,7 +404,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     // agree on "is there anything to pick".
     const { visibleSources, hasAny } = collectPickTargets(
       ctx.renderer,
-      state.sources.pickMask,
+      masks.pick,
       state.gpu.structureMarkerRenderer,
       milkyWayPickVisible(state),
     );

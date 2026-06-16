@@ -254,24 +254,14 @@ describe('seedFades', () => {
     expect(state.subsystems.fades.opacityOf({ kind: 'flow' })).toBe(0);
   });
 
-  it('survey row post recomputes draw/pick masks from settings', () => {
-    // deriveSourceMasks writes sources.drawMask/pickMask from each catalog's
-    // enabled flag. The survey row's `post` must call through to it so a toggle
-    // recomputes the masks. Build a state with real masks + the inputs
-    // deriveSourceMasks reads (settings.galaxyCatalogs.items + a fades registry).
-    const fades = createFadeRegistry({ requestRender: vi.fn<() => void>() });
-    const items: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
-    for (const id of GALAXY_CATALOG_IDS) items[id] = { enabled: true, labelEnabled: false };
-    const state = {
-      sources: { drawMask: 0, pickMask: 0 },
-      settings: { galaxyCatalogs: { items } },
-      subsystems: { fades },
-    } as unknown as EngineState;
+  it('survey row has no post — masks are a pure per-frame derivation', () => {
+    // The draw/pick bitmasks are no longer cached state recomputed on toggle;
+    // `deriveSourceMasks` projects them on read (per-frame in `runFrame`, fresh
+    // at click time). So the survey row carries NO `post` — a toggle just fades
+    // the catalog handle, and the next frame's derivation picks up the new
+    // enabled set on its own.
     const surveyRow = rowFor('survey');
-    surveyRow.post?.(state, GALAXY_CATALOG_IDS[0]);
-    // Every catalog enabled ⇒ both masks become non-zero (the ALL_VISIBLE set).
-    expect(state.sources.drawMask).toBeGreaterThan(0);
-    expect(state.sources.pickMask).toBeGreaterThan(0);
+    expect(surveyRow.post).toBeUndefined();
   });
 
   it('seeds EVERY volume field at 0, including DEV debug fixtures', () => {

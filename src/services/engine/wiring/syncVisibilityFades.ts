@@ -47,13 +47,12 @@ import { FADE_LAYERS } from './fadeLayers';
 
 // The state slice applyIntent feeds the row closures. `row.guard` reads `gpu`
 // (the flow row asks the renderer's `fieldLoaded()`); `row.post` reads `settings`
-// (volume lazy-load) and, for the survey row, recomputes the masks via
-// `deriveSourceMasks`, which reads `sources` + `subsystems` too. `assetSlots` is
-// kept because other guards/posts may reach a slot. This Pick is the union.
-export type ApplyIntentState = Pick<
-  EngineState,
-  'settings' | 'subsystems' | 'assetSlots' | 'sources' | 'gpu'
->;
+// (the volumeField row's lazy-load). `intent` reads `settings`; the fade calls go
+// through `subsystems.fades` / `subsystems.scheduler`. `assetSlots` is kept
+// because other guards/posts may reach a slot. This Pick is the union — `sources`
+// is no longer in it: with the survey row's mask-recompute `post` gone, no row
+// closure reads `state.sources`.
+export type ApplyIntentState = Pick<EngineState, 'settings' | 'subsystems' | 'assetSlots' | 'gpu'>;
 
 /**
  * Apply one row's intent to one of its items as a single fade.

@@ -4,14 +4,11 @@
  *
  * ### What this sub-bag owns
  *
- *   - `pickMask` / `drawMask` — 32-bit per-source bitmasks read by the picker
- *                   and the renderer's per-frame draw loop.  Both are DERIVED
- *                   OUTPUTS: `deriveSourceMasks` recomputes them every frame
- *                   (and synchronously inside `setSourceVisible` on a toggle)
- *                   from each galaxy catalog's `settings.galaxyCatalogs.items[id].enabled`
- *                   flag + that galaxy catalog's live fade opacity.  No setter writes
- *                   them directly — the settings record is the single source
- *                   of truth, and these masks are a compiled projection of it.
+ *   - `tier` — the currently-loaded data tier marker, the input to subsequent
+ *                   `setTier` diffing.  The draw/pick bitmasks are NOT held
+ *                   here: they're a pure projection of settings + live fade
+ *                   opacity, derived on read (per-frame in `runFrame`, fresh at
+ *                   click time), never a cached field.
  *
  * ### Why a separate type
  *
@@ -25,21 +22,6 @@
 import type { Tier } from '../../data/Tier';
 
 export type EngineSourceState = {
-  /**
-   * pickMask — derived output, packed from `enabled` alone (= intent). The
-   * picker reads this mask; a galaxy catalog toggled off is non-clickable the
-   * instant it's toggled, even while still visibly fading. Recomputed by
-   * `deriveSourceMasks`, never assigned by a setter.
-   */
-  pickMask: number;
-  /**
-   * drawMask — derived output, packed from `enabled || opacity > 0`. The
-   * renderer's per-source draw loop reads it; a just-hidden galaxy catalog keeps
-   * its draw bit through the fade-out tail (so it ramps down smoothly) and
-   * loses it only once opacity resolves to 0. Recomputed by
-   * `deriveSourceMasks`, never assigned by a setter.
-   */
-  drawMask: number;
   /**
    * Currently-loaded data tier — drives subsequent `setTier` diffing.
    * Seeded at engine init from `opts.initialTier` (defaulting to 'medium')

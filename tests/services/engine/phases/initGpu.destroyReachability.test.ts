@@ -226,8 +226,6 @@ function makeState(): EngineState {
     },
     sources: {
       catalogs: new Map(),
-      pickMask: 0,
-      drawMask: 0,
       famousMeta: [],
       tier: 'medium',
     },

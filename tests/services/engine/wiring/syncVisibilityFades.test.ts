@@ -40,14 +40,12 @@ import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 
 // ── Fixtures ──────────────────────────────────────────────────────────
 //
-// The state slice applyIntent feeds the row closures. We only populate
-// `settings` + `subsystems.fades`; the test rows never read `assetSlots`/
-// `sources`, so those stay absent and the cast bridges the gap the same way
-// production does.
-type ApplyIntentState = Pick<
-  EngineState,
-  'settings' | 'subsystems' | 'assetSlots' | 'sources' | 'gpu'
->;
+// The state slice applyIntent feeds the row closures — mirrors production's
+// `ApplyIntentState` (no `sources`: with the survey row's mask-recompute `post`
+// gone, no row closure reads it). We only populate `settings` +
+// `subsystems.fades`; the test rows never read `assetSlots`, so those stay
+// absent and the cast bridges the gap the same way production does.
+type ApplyIntentState = Pick<EngineState, 'settings' | 'subsystems' | 'assetSlots' | 'gpu'>;
 
 function makeState(): {
   state: ApplyIntentState;
@@ -155,12 +153,12 @@ describe('applyIntent', () => {
 // we assert the spy calls directly.
 
 // The state slice the bridge feeds the rows — same Pick applyIntent uses.
-type BridgeState = Pick<EngineState, 'settings' | 'subsystems' | 'assetSlots' | 'sources' | 'gpu'>;
+type BridgeState = Pick<EngineState, 'settings' | 'subsystems' | 'assetSlots' | 'gpu'>;
 
 /**
  * Build a state whose settings cover every intent row's leaf, a stubbed fades
- * registry + scheduler, a loaded flow renderer (so the flow guard passes), and
- * the `sources` masks the survey row's `post` (deriveSourceMasks) writes.
+ * registry + scheduler, and a loaded flow renderer (so the flow guard passes).
+ * No `sources` slice: the survey row no longer has a mask-recompute `post`.
  */
 function makeBridgeState(): {
   state: BridgeState;
@@ -173,8 +171,6 @@ function makeBridgeState(): {
     Promise.resolve(),
   );
   const setImmediate = vi.fn<(id: FadeId, v: number) => void>();
-  // opacityOf is read by deriveSourceMasks (survey post); a constant 0 is fine.
-  const opacityOf = vi.fn<(id: FadeId) => number>(() => 0);
   const requestRender = vi.fn<() => void>();
 
   const galaxyItems: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
@@ -200,9 +196,8 @@ function makeBridgeState(): {
     settings,
     // Flow field loaded so the flow guard (fieldLoaded()) passes and its fade fires.
     gpu: { flowFieldRenderer: { fieldLoaded: () => true } },
-    sources: { drawMask: 0, pickMask: 0 },
     subsystems: {
-      fades: { fadeTo, setImmediate, opacityOf },
+      fades: { fadeTo, setImmediate },
       scheduler: { requestRender },
     },
   } as unknown as BridgeState;

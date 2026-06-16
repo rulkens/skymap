@@ -101,8 +101,6 @@ function makeState(): EngineState {
     bias: {} as never,
     sources: {
       catalogs: new Map(),
-      pickMask: 0xff,
-      drawMask: 0xff,
       famousMeta: [],
       tier: 'medium',
     },
