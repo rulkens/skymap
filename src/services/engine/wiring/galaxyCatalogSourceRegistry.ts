@@ -44,7 +44,8 @@ import { createAssetSlot } from '../../loading/AssetSlot';
 import { galaxyCatalogFetcher } from '../../loading/fetchers/galaxyCatalogFetcher';
 import { syntheticPointFetcher } from '../../loading/fetchers/syntheticPointFetcher';
 import type { FadeId } from '../../../@types/animation/FadeId';
-import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
+import { FADE_OUT_DURATION_MS } from '../../animation/fadeController';
+import { syncVisibilityFades } from './syncVisibilityFades';
 import type { SourceType } from '../../../@types/data/SourceType';
 
 /**
@@ -183,10 +184,13 @@ export function wireGalaxyCatalogSourceSlot(
       await state.gpu.renderer.upload(catalogId, cloud);
       state.data.galaxies.setCatalog(source, cloud);
 
-      // Fire-and-forget fade-in so the slot's `ready` transition
-      // fires immediately; user interaction doesn't wait for the
-      // smoothstep to saturate.
-      void fades.fadeTo(id, 1, FADE_IN_DURATION_MS);
+      // Drive the first-load fade-in through the intent → fade bridge: the survey
+      // row owns the intent gate (reads galaxyCatalogs.items[id].enabled) and the
+      // mask-recompute `post`. It's fire-and-forget so the slot's `ready`
+      // transition fires immediately; user interaction doesn't wait for the
+      // smoothstep to saturate. The tier-swap fade-OUT above stays hand-coded —
+      // it's a producer-driven mid-commit dissolve, not an intent toggle.
+      syncVisibilityFades(state, { animate: true, only: ['survey'] });
 
       const dtMs = Math.round(performance.now() - t0);
       // Dump what the GPU actually holds after upload.  If this

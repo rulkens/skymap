@@ -92,6 +92,15 @@ describe('createFlowFieldRenderer', () => {
     expect(renderer.isAnimating(flowStub({ enabled: false }))).toBe(false);
   });
 
+  it('fieldLoaded is false before upload, true after', () => {
+    // The fade manifest's flow guard reads this — it must report the same
+    // cube-loaded truth `isAnimating` gates on, independent of the slot lifecycle.
+    const renderer = createFlowFieldRenderer({ device: mockDevice(), hdrFormat: 'rgba16float' });
+    expect(renderer.fieldLoaded()).toBe(false);
+    renderer.upload(mockCube());
+    expect(renderer.fieldLoaded()).toBe(true);
+  });
+
   it('upload builds a model matrix placing the cube origin in world space', () => {
     // The model-matrix math itself is covered by buildCubeModelMatrix.test.ts;
     // here we only assert upload wires the field without throwing and flips

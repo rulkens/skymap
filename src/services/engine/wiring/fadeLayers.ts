@@ -52,7 +52,6 @@ import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
 import { GALAXY_CATALOG_IDS } from '../../../data/galaxyCatalog/galaxyCatalogIds';
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import { deriveSourceMasks } from '../frame/deriveSourceMasks';
-import { slotReady } from '../../loading/slotReady';
 import { maybeLazyLoadDebugVolume } from '../volume/maybeLazyLoadDebugVolume';
 
 // Erase a row's Item type for the heterogeneous FADE_LAYERS array while keeping
@@ -218,9 +217,11 @@ export const FADE_LAYERS = [
     writeIntent: (s, _item, value) => {
       s.flow.enabled = value;
     },
-    // Flow's asset is demand-loaded: suppress the fade until its slot has
-    // committed, so a toggle while the slot is still idle doesn't fade in nothing.
-    guard: (state) => slotReady(state.assetSlots.flow),
+    // Flow's asset is demand-loaded: gate the fade on the renderer's real "cube
+    // loaded" truth — true exactly when there is something to render. The same
+    // guarded bridge call is then correct for both the toggle (asks "loaded?")
+    // and the slot commit (the cube was just uploaded → true).
+    guard: (state) => state.gpu.flowFieldRenderer?.fieldLoaded() ?? false,
   }),
   // volume fields — absorbs initGpu.ts onFieldAdded (demand-loaded; seed 0; per
   // VolumeFieldId, including the DEV-only debug fixtures — see volumeFieldIds)

@@ -43,7 +43,10 @@ import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 // `settings` + `subsystems.fades`; the test rows never read `assetSlots`/
 // `sources`, so those stay absent and the cast bridges the gap the same way
 // production does.
-type ApplyIntentState = Pick<EngineState, 'settings' | 'subsystems' | 'assetSlots' | 'sources'>;
+type ApplyIntentState = Pick<
+  EngineState,
+  'settings' | 'subsystems' | 'assetSlots' | 'sources' | 'gpu'
+>;
 
 function makeState(): {
   state: ApplyIntentState;
@@ -151,12 +154,15 @@ describe('applyIntent', () => {
 // we assert the spy calls directly.
 
 // The state slice the bridge feeds the rows — same Pick applyIntent uses.
-type BridgeState = Pick<EngineState, 'settings' | 'subsystems' | 'assetSlots' | 'sources'>;
+type BridgeState = Pick<
+  EngineState,
+  'settings' | 'subsystems' | 'assetSlots' | 'sources' | 'gpu'
+>;
 
 /**
  * Build a state whose settings cover every intent row's leaf, a stubbed fades
- * registry + scheduler, a ready flow slot (so the flow guard passes), and the
- * `sources` masks the survey row's `post` (deriveSourceMasks) writes.
+ * registry + scheduler, a loaded flow renderer (so the flow guard passes), and
+ * the `sources` masks the survey row's `post` (deriveSourceMasks) writes.
  */
 function makeBridgeState(): {
   state: BridgeState;
@@ -194,8 +200,8 @@ function makeBridgeState(): {
 
   const state = {
     settings,
-    // Flow slot ready so the flow guard (slotReady) passes and its fade fires.
-    assetSlots: { flow: { state: () => ({ kind: 'ready', value: {} }) } },
+    // Flow field loaded so the flow guard (fieldLoaded()) passes and its fade fires.
+    gpu: { flowFieldRenderer: { fieldLoaded: () => true } },
     sources: { drawMask: 0, pickMask: 0 },
     subsystems: {
       fades: { fadeTo, setImmediate, opacityOf },

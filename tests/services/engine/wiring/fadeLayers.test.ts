@@ -394,15 +394,14 @@ describe('FADE_LAYERS intent subset', () => {
     expect(load).not.toHaveBeenCalled();
   });
 
-  it('flow row guard gates on slotReady', () => {
+  it('flow row guard gates on the renderer’s fieldLoaded()', () => {
     const row = rowFor('flow');
-    const idle = {
-      assetSlots: { flow: { state: () => ({ kind: 'idle' }) as const } },
+    const fieldLoaded = vi.fn<() => boolean>(() => false);
+    const state = {
+      gpu: { flowFieldRenderer: { fieldLoaded } },
     } as unknown as EngineState;
-    const ready = {
-      assetSlots: { flow: { state: () => ({ kind: 'ready', value: {} }) as const } },
-    } as unknown as EngineState;
-    expect(row.guard?.(idle, undefined)).toBe(false);
-    expect(row.guard?.(ready, undefined)).toBe(true);
+    expect(row.guard?.(state, undefined)).toBe(false);
+    fieldLoaded.mockReturnValue(true);
+    expect(row.guard?.(state, undefined)).toBe(true);
   });
 });

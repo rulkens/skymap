@@ -45,13 +45,14 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
 import { FADE_LAYERS } from './fadeLayers';
 
-// The state slice applyIntent feeds the row closures. `row.guard` reads
-// `assetSlots` (slotReady); `row.post` reads `settings` (volume lazy-load) and,
-// for the survey row, recomputes the masks via `deriveSourceMasks`, which reads
-// `sources` + `subsystems` too. This Pick is the union of all of those.
+// The state slice applyIntent feeds the row closures. `row.guard` reads `gpu`
+// (the flow row asks the renderer's `fieldLoaded()`); `row.post` reads `settings`
+// (volume lazy-load) and, for the survey row, recomputes the masks via
+// `deriveSourceMasks`, which reads `sources` + `subsystems` too. `assetSlots` is
+// kept because other guards/posts may reach a slot. This Pick is the union.
 export type ApplyIntentState = Pick<
   EngineState,
-  'settings' | 'subsystems' | 'assetSlots' | 'sources'
+  'settings' | 'subsystems' | 'assetSlots' | 'sources' | 'gpu'
 >;
 
 /**
