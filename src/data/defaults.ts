@@ -30,10 +30,10 @@
  *   colour ramps).  Those live in `data/sources.ts`,
  *   `data/galaxyCatalogFluxLimits.ts`, `data/colourIndex.ts` — domain-specific
  *   data, not user-configurable settings.
- * - Internal sentinel values that get overwritten before any frame
- *   renders (`apparentMagLimit`, `schechterMStar`, `schechterAlpha`
- *   start at 0 and are overwritten per-source by the upload bake).
- *   No external caller should read those zero defaults.
+ * - Bake-derived per-galaxy weights (Schechter ratio, angular-density
+ *   weight).  `biasCorrectionSubsystem` splices these straight into the
+ *   per-vertex buffer after each upload bake — they're never settings and
+ *   never pass through engine state.
  * - GPU-pipeline constants (uniform layout offsets, vertex stride,
  *   texture atlas dimensions).  Those live with their consumers in
  *   `services/gpu/`.

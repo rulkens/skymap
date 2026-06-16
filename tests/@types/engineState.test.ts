@@ -9,9 +9,9 @@
  *      `Readonly<>` where the engine wants to assign.
  *
  * `EngineSettingsState` is a flat list of sub-bags; the user-facing
- * `mode` and `absMagLimit` live inside `settings.bias`, while
- * `EngineBiasState` holds only the bake-output sentinels
- * (`apparentMagLimit`, `schechterMStar`, `schechterAlpha`).
+ * `mode` and `absMagLimit` live inside `settings.bias`.  (Bake-derived
+ * per-galaxy weights aren't engine state at all — `biasCorrectionSubsystem`
+ * splices them straight into the vertex buffer.)
  */
 
 import { describe, it, expect } from 'vitest';
@@ -21,7 +21,6 @@ import type { GalaxyInfo } from '../../src/@types/engine/GalaxyInfo';
 import type { EngineState } from '../../src/@types/engine/state/EngineState';
 import { createEngineData } from '../../src/services/engine/data/createEngineData';
 import type { EngineSettingsState } from '../../src/@types/settings/EngineSettingsState';
-import type { EngineBiasState } from '../../src/@types/engine/state/EngineBiasState';
 import type { EnginePickingState } from '../../src/@types/engine/state/EnginePickingState';
 
 import {
@@ -125,11 +124,6 @@ describe('EngineState type', () => {
         },
       },
     };
-    const bias: EngineBiasState = {
-      apparentMagLimit: 0,
-      schechterMStar: 0,
-      schechterAlpha: 0,
-    };
     const picking: EnginePickingState = {
       latestMouseCss: null,
       lastPickedMouseCss: null,
@@ -144,7 +138,6 @@ describe('EngineState type', () => {
     let stateRef: { current: EngineState | null } = { current: null };
     const state: EngineState = {
       settings,
-      bias,
       data: createEngineData(),
       picking,
       gpu: {
@@ -280,17 +273,10 @@ describe('EngineState type', () => {
         },
       },
     };
-    const bias: EngineBiasState = {
-      apparentMagLimit: 0,
-      schechterMStar: 0,
-      schechterAlpha: 0,
-    };
-
     expect(settings.galaxyCatalogs.sizePx).toBe(DEFAULT_POINT_SIZE_PX);
     expect(settings.bias.absMagLimit).toBe(DEFAULT_ABS_MAG_LIMIT);
     // The "You are here" label axis defaults on, independently of the disk.
     expect(settings.milkyWay.labelEnabled).toBe(true);
-    expect(bias.apparentMagLimit).toBe(0);
     // The data tier now lives top-level on `settings`.
     expect(settings.tier).toBe('medium');
   });
@@ -338,11 +324,6 @@ describe('EngineState type', () => {
             group: { enabled: true, labelEnabled: true },
           },
         },
-      },
-      bias: {
-        apparentMagLimit: 0,
-        schechterMStar: 0,
-        schechterAlpha: 0,
       },
       data: createEngineData(),
       picking: {

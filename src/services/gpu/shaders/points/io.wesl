@@ -152,9 +152,12 @@ struct Uniforms {
   //   3 = Schechter    — reweight by the expected Schechter LF.
   //   4 = AngularReweight — re-weight by HEALPix angular completeness.
   //
-  // The four 'schechter*' fields are written PER SOURCE between draw
-  // calls. The φ* normalisation drops out of the ratio 'N_ref / n(d)',
-  // so it doesn't need a uniform slot.
+  // Only 'biasMode' + 'absMagLimit' are live. The 'apparentMagLimit' /
+  // 'schechter*' fields are reserved-but-unread: the Schechter / 1-over-Vmax
+  // modes read their per-galaxy weights from the per-vertex 'schechterRatio'
+  // + angular slots (spliced in by biasCorrectionSubsystem on the CPU), not
+  // these uniforms. They stay declared only to keep 'pickPass's byte offset
+  // stable; nothing writes them, no shader reads them.
   biasMode: u32,
   absMagLimit: f32,
   apparentMagLimit: f32,

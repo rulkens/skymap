@@ -117,10 +117,10 @@ export type EngineSettingsState = {
 
   /**
    * Luminosity-bias correction inputs — the user-tunable subset.  The
-   * bake-derived fields (`apparentMagLimit`, `schechterMStar`,
-   * `schechterAlpha`) stay on `state.bias` — they're outputs of the
-   * worker bake, not user-facing settings, so they don't belong in
-   * the SettingsPanel's mental model.
+   * bake-derived per-galaxy weights (Schechter ratio, angular-density
+   * weight) aren't settings at all: `biasCorrectionSubsystem` splices them
+   * straight into the per-vertex buffer (`schechterRatio` / angular slots)
+   * after each worker bake, so they never pass through engine state.
    */
   bias: {
     mode: BiasMode;

@@ -207,10 +207,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //
   //   - `settings`   → SettingsPanel knobs, seeded from `data/defaults.ts`
   //                    (the single source of truth shared with App.tsx).
-  //   - `bias`       → Malmquist-bias bake outputs (apparentMagLimit + two
-  //                    Schechter params), 0 until the shader's mode-2/3/4
-  //                    branches activate.  The user knobs live on
-  //                    `state.settings.bias`.
   //   - `sources`    → loaded `GalaxyCatalog`s + visibility bitmasks + tier
   //                    + optional famous-galaxy sidecars.
   //   - `picking`    → hover / click / drag mutables.
@@ -357,14 +353,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // getter surfaces unchanged.
     get settings() {
       return settingsStore.getState();
-    },
-    bias: {
-      // Bake-only sentinels — overwritten before the shader's mode-2/3/4
-      // branches are reachable (see `setBiasMode`).  User-tunable mode +
-      // absMagLimit live on `state.settings.bias`.
-      apparentMagLimit: 0,
-      schechterMStar: 0,
-      schechterAlpha: 0,
     },
     // Per-type data stores. Empty at construction; slot commits fill them.
     data: createEngineData(),

@@ -25,7 +25,6 @@
  * The mental model becomes:
  *
  *   - `state.settings`   — what the SettingsPanel surfaces (incl. the data tier).
- *   - `state.bias`       — Malmquist-bias correction tuning.
  *   - `state.data`       — per-type data stores (galaxies, structures, …).
  *   - `state.picking`    — hover / click / drag mutables.
  *   - `state.gpu`        — pipelines / textures allocated lazily.
@@ -74,7 +73,6 @@
  */
 
 import type { EngineSettingsState } from '../../settings/EngineSettingsState';
-import type { EngineBiasState } from './EngineBiasState';
 import type { EngineDebugState } from './EngineDebugState';
 import type { EngineData } from '../data/EngineData';
 import type { EnginePickingState } from './EnginePickingState';
@@ -87,7 +85,6 @@ import type { RequestKey } from '../../loading/RequestKey';
 
 export type EngineState = {
   settings: EngineSettingsState;
-  bias: EngineBiasState;
   /**
    * Per-type data stores — the authoritative app-side home for each
    * data type (galaxies, structures, volumes, filaments). Slot commits
