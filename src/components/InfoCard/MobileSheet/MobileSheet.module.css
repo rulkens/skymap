@@ -1,0 +1,73 @@
+/*
+ * MobileSheet.module.css — the scroll-snap mechanics for the phone bottom sheet.
+ *
+ * The sheet IS a scroll container with two snap children stacked vertically:
+ * a transparent `.spacer` (the peek snap, scrolled to top) and the `.sheet`
+ * (the expanded snap).  `scroll-snap-type: y mandatory` makes a flick settle on
+ * one or the other — that's the whole gesture, no JS.
+ *
+ * Pointer-events are deliberately split: `.root` and `.spacer` let touches fall
+ * through to the WebGPU canvas behind, while `.sheet` captures them.  Tokens are
+ * sourced from `src/styles/global.css`; the peek height is the shared
+ * `--mobile-sheet-peek` so the sheet and the scale-bar lift never drift apart.
+ */
+
+/*
+ * Full-viewport scroll container.  Transparent to pointer events so the empty
+ * area above the sheet passes touches through to the canvas; only the `.sheet`
+ * child re-enables them.  Hidden scrollbar — the snap children, not a visible
+ * track, are the affordance.
+ */
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  pointer-events: none;
+  scrollbar-width: none;
+}
+
+.root::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+ * Peek snap.  A transparent block sized so that, scrolled to the top, only the
+ * peek sliver of the sheet beneath it remains on screen.  Pointer-events:none so
+ * the canvas stays interactive through the gap.
+ */
+.spacer {
+  scroll-snap-align: start;
+  height: calc(100% - var(--mobile-sheet-peek));
+  pointer-events: none;
+}
+
+/*
+ * Expanded snap.  Captures pointer events and scrolls its own body when the card
+ * is long.  Min-height keeps the expanded snap filling to roughly three-quarters
+ * of the viewport regardless of how short the card content is.
+ */
+.sheet {
+  scroll-snap-align: start;
+  min-height: 75vh;
+  overflow-y: auto;
+  pointer-events: auto;
+  background: var(--surface-card-strong);
+  border-top: 1px solid var(--border-card);
+  border-top-left-radius: var(--radius-2xl);
+  border-top-right-radius: var(--radius-2xl);
+  padding: var(--space-4);
+}
+
+/*
+ * Grab-handle affordance — a small pill centred at the top of the sheet that
+ * signals the card is draggable.  Purely decorative, so aria-hidden in markup.
+ */
+.handle {
+  width: 36px;
+  height: 4px;
+  margin: var(--space-2) auto var(--space-6);
+  border-radius: var(--radius-md);
+  background: var(--border-control);
+}
