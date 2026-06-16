@@ -50,6 +50,7 @@ import { deriveFrameContext } from './frameContext';
 import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
+import { slotReady } from '../../loading/slotReady';
 import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
@@ -485,10 +486,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   //     filaments included).
   //   - structureFocus.isAwake(): the member-isolation fade (its own
   //     controller, not in the registry) across the 400 ms ramp.
-  //   - flowFieldRenderer.isAnimating(): the flow layer is enabled + loaded;
-  //     both modes animate (advect drifts, streamline pulses), so the loop
-  //     must keep ticking while flow is on. isAnimating already folds in the
-  //     settings.flow.enabled check.
+  //   - flow enabled + loaded: the flow layer keeps animating while on (advect
+  //     drifts, streamline pulses), so the loop must keep ticking. We read the
+  //     condition straight off its two authoritative sources —
+  //     settings.flow.enabled and slotReady(assetSlots.flow) — rather than
+  //     round-tripping through the renderer; slotReady IS the "field loaded"
+  //     truth (the slot dispatches 'ready' only after upload commits), so this
+  //     selects exactly the same set of frames with no renderer mirror.
   //
   // `isEngineReady` consolidates the bootstrap-bag null guard: when ready,
   // all those fields are simultaneously non-null, so we dereference
@@ -503,6 +507,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     (ready && state.subsystems.texturedDisks.hasInFlightWork()) ||
     state.subsystems.fades.isAnyAnimating(nowMs) ||
     state.subsystems.structureFocus.isAwake(nowMs) ||
-    state.gpu.flowFieldRenderer?.isAnimating(state.settings.flow) === true;
+    (state.settings.flow.enabled && slotReady(state.assetSlots.flow));
   if (stillAnimating) state.subsystems.scheduler.requestRender();
 }

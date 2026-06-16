@@ -14,8 +14,8 @@
  * `docs/superpowers/conventions/singleton-overlay-layers.md`): its look/motion
  * knobs live in `settings.flow` (a `FlowSettings`), and the layer's "loaded"
  * status is the asset slot's `ready` state — no data-layer store. So
- * `encodeCompute` / `draw` / `isAnimating` read the live `FlowSettings` the
- * engine already holds, rather than a store handle.
+ * `encodeCompute` / `draw` read the live `FlowSettings` the engine already
+ * holds, rather than a store handle.
  *
  * ### One buffer set + reseed-on-switch (decision §3)
  *
@@ -57,15 +57,8 @@ export type FlowFieldRenderer = {
    */
   maybeReseed(): void;
   /**
-   * True while the layer should drive continuous render — enabled AND a field
-   * is committed. Both modes animate (advect drifts; streamline pulses). Used
-   * by the render-on-demand reschedule predicate.
-   */
-  isAnimating(flow: FlowSettings): boolean;
-  /**
-   * True once a velocity cube is uploaded and bound — the same flag `isAnimating`
-   * gates on. Lets the fade manifest gate flow's fade on real renderable-ness
-   * rather than slot lifecycle.
+   * True once a velocity cube is uploaded and bound. Lets the flow fade row's
+   * guard gate flow's fade on real renderable-ness.
    */
   fieldLoaded(): boolean;
   /**
