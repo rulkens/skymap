@@ -207,40 +207,40 @@ export type SelectionRingRenderer = {
   destroy(): void;
 };
 ```
-- [ ] Use the `Vec2` alias for `viewportSize` (the old `render` used a raw `[number, number]` —
+- [x] Use the `Vec2` alias for `viewportSize` (the old `render` used a raw `[number, number]` —
   fix it while here, per the Vec-alias convention). Confirm `Vec2`/`Vec3` import paths.
-- [ ] Rewrite the type's module docblock: the renderer is now **stateless w.r.t. selection** —
+- [x] Rewrite the type's module docblock: the renderer is now **stateless w.r.t. selection** —
   it holds no current selection; the caller passes the per-frame value. Drop the "Holds one
   selection at a time" framing.
 
 ### 2b. Implement the stateless draw
 
-- [ ] Delete `currentSelection` (`selectionRingRenderer.ts:55`), `setSelection` (`:119-121`),
+- [x] Delete `currentSelection` (`selectionRingRenderer.ts:55`), `setSelection` (`:119-121`),
   and `hasSelection` (`:123-125`).
-- [ ] Rename/rework the internal `render` (`:127-153`) into `draw(pass, viewProj, viewportSize,
+- [x] Rename/rework the internal `render` (`:127-153`) into `draw(pass, viewProj, viewportSize,
   selection)`: early-return when `selection === null` (or any GPU handle is null, as today at
   `:132`); write the camera UBO unchanged; write the selection UBO from `selection.worldPos` +
   `selection.ringRadiusPx` (same 4-float layout as `:143-148`), then issue the same
   `pass.draw(6, 1, 0, 0)`.
-- [ ] Update the renderer's module docblock — the "## Why two uniform bindings" rationale still
+- [x] Update the renderer's module docblock — the "## Why two uniform bindings" rationale still
   holds (split cadence), but the selection is no longer renderer-held state; the upload cadence
   is now "once per frame the pass draws", which the pass already gates to selected frames.
-- [ ] In the returned object (`:160-166`), expose `{ label, draw, destroy }` (drop
+- [x] In the returned object (`:160-166`), expose `{ label, draw, destroy }` (drop
   `setSelection`, `hasSelection`, keep `satisfies Renderer`).
 
 ### 2c. Thread the value through the pass
 
-- [ ] `selectionRingPass.draw` (`selectionRingPass.ts:66-71`): replace the
+- [x] `selectionRingPass.draw` (`selectionRingPass.ts:66-71`): replace the
   `setSelection({ worldPos, ringRadiusPx })` + `render(...)` pair with one
   `draw(pass, ctx.vp, [width, height], { worldPos, ringRadiusPx })`. The `enabled()` gate
   (`:37-42`) is unchanged — it already owns the "is there a halo this frame" decision.
-- [ ] Update the pass's "## Why one writeBuffer is fine" docblock note if it references
+- [x] Update the pass's "## Why one writeBuffer is fine" docblock note if it references
   `setSelection`/`hasSelection` (it gates `enabled()`-false when nothing is selected — still
   true).
 
 ### 2d. Tests
 
-- [ ] `selectionRingRenderer.test.ts`: rework the renderer-level tests to call `draw` with a
+- [x] `selectionRingRenderer.test.ts`: rework the renderer-level tests to call `draw` with a
   selection argument. Add/keep:
   - `draw is a no-op when selection is null` — assert `pass.setPipeline`/`pass.draw` are **not**
     called (under a real-ish mock device; the existing file builds the renderer with a mock —
@@ -249,7 +249,7 @@ export type SelectionRingRenderer = {
     is called for the selection buffer with `ringRadiusPx` at float offset 3, and
     `pass.draw(6, 1, 0, 0)` fires once.
   - Delete any `hasSelection` / `setSelection` assertions.
-- [ ] `selectionRingPass.test.ts`: update `makeRendererSpy` (`:46-54`) to expose
+- [x] `selectionRingPass.test.ts`: update `makeRendererSpy` (`:46-54`) to expose
   `draw: vi.fn()` (drop `setSelection`/`hasSelection`/`render`). Rework the `draw` describe
   block (`:135-206`) to assert on the **single `draw` call's 4th argument**:
   - `computes ringRadiusPx from the target and forwards to renderer` — assert
@@ -263,8 +263,7 @@ export type SelectionRingRenderer = {
   - The `enabled()` describe block (`:98-131`) is unchanged — `enabled` already lives in the
     pass and does not touch the renderer's removed methods.
 
-- [ ] `npm test -- selectionRingRenderer selectionRingPass` green. `npm run typecheck` clean.
-  Commit.
+- [x] `npm test` green (2810 / 512). `npm run typecheck` clean. Committed (`aee15a6c`).
 
 ---
 
@@ -272,41 +271,37 @@ export type SelectionRingRenderer = {
 
 **Files:** none (review only). Run the `entanglement-radar` skill over the full Plan C diff.
 
-- [ ] Confirm the invariant holds: **no renderer mirrors `EngineState`/selection** — grep the
-  two renderers for any remaining cached load-state / selection field. `flowFieldRenderer`
-  holds only its owned GPU resources (`field`, buffers, `computeBindGroup`, the reseed latch,
-  `phase`/`frame` counters — all genuinely renderer-owned, not mirrors of state).
-  `selectionRingRenderer` holds only GPU handles.
-- [ ] Confirm the gate/selection reads are **pull, not push**: the flow load fact is read from
-  `slotReady(assetSlots.flow)` at the wake site and the pass `enabled()`; the selection-ring
-  value is computed by the pass and passed into `draw()` per frame — neither is stashed and
-  read-back.
-- [ ] Confirm no *new* mirror or indirection was introduced (e.g. no helper that re-caches the
-  selection). If the radar surfaces anything, capture it (fix in-scope if tiny, else note for
-  the backlog) — do not silently leave a flagged knot.
+- [x] Confirmed: **no renderer mirrors `EngineState`/selection** — `flowFieldRenderer`'s shell
+  is only `field`, `modelMatrix`, `phase`/`frame`, `computeBindGroup`, the reseed latch (all
+  genuinely renderer-owned); `selectionRingRenderer`'s shell is only GPU handles. Zero remaining
+  `hasField`/`currentSelection` references in `src`/`tests`.
+- [x] Confirmed the reads are **pull, not push**: the flow load fact reads `slotReady(assetSlots.flow)`
+  at the wake site + the pass `enabled()`; `fieldLoaded()` reads the renderer's own `field`; the
+  selection-ring value is computed by the pass and passed into `draw()` per frame — none stashed.
+- [x] No *new* mirror introduced. The radar additionally credited the `isFirstLoad`→`dissolvePrevious`
+  work folded onto this branch as removing a fourth shadow-mirror (data-store membership read as a
+  swap proxy → explicit request signal). Full report in the session.
 
 ---
 
 ## Definition of Done
 
-- [ ] `npm test` — full suite green (net: the flow `isAnimating` load-mirror tests and the
-  selection-ring `setSelection`/`hasSelection` tests are gone or reworked; the
-  behaviour-preservation assertions — same ring radius/position, same flow gate frames — pass).
-- [ ] `npm run typecheck` — clean across `src` and `tools` tsconfigs.
-- [ ] `flowFieldRenderer.hasField` is gone; the renderer's self-guards **and `fieldLoaded()`**
+- [x] `npm test` — full suite green (2810 / 512; the flow `isAnimating` and selection
+  `setSelection`/`hasSelection` tests were dropped/reworked; behaviour-preservation assertions pass).
+- [x] `npm run typecheck` — clean across `src` and `tools` tsconfigs.
+- [x] `flowFieldRenderer.hasField` is gone; the renderer's self-guards **and `fieldLoaded()`**
   read its own `field !== null`; `fieldLoaded()` survives (the flow fade guard's consumer); the
-  render-wake reads `slotReady(state.assetSlots.flow)`. If `isAnimating` had no other consumer,
+  render-wake reads `slotReady(state.assetSlots.flow)`. `isAnimating` had no other consumer, so
   it (and its type member + mock) are deleted too.
-- [ ] `selectionRingRenderer.currentSelection` / `setSelection` / `hasSelection` are gone; the
+- [x] `selectionRingRenderer.currentSelection` / `setSelection` / `hasSelection` are gone; the
   renderer is stateless w.r.t. selection; `draw(pass, viewProj, viewportSize, selection)` takes
   the per-frame `{worldPos, ringRadiusPx} | null` the pass derives from `SELECTION_HALO`.
-- [ ] `selectionRingPass` threads the derived value through the single `draw()` call; its
+- [x] `selectionRingPass` threads the derived value through the single `draw()` call; its
   `enabled()` gate is unchanged.
-- [ ] No WGSL/WESL change (selection-ring uniform bytes unchanged). If any was needed, it was
-  escalated, not silently made.
-- [ ] entanglement-radar invariant met: no renderer mirrors `EngineState`/selection; the
+- [x] No WGSL/WESL change (selection-ring uniform bytes unchanged).
+- [x] entanglement-radar invariant met: no renderer mirrors `EngineState`/selection; the
   gate/selection reads are pull, not push. No new mirror introduced.
-- [ ] No behaviour change: the flow layer animates/draws and the loop wakes on the same frames;
+- [x] No behaviour change: the flow layer animates/draws and the loop wakes on the same frames;
   the selection ring draws on the same selections at the same radius/position.
-- [ ] No new TODOs; comments naming removed symbols (`hasField`, `isAnimating`, `setSelection`,
+- [x] No new TODOs; comments naming removed symbols (`hasField`, `isAnimating`, `setSelection`,
   `hasSelection`, `currentSelection`) updated, not left stale.
