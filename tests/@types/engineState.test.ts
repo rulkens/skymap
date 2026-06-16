@@ -22,7 +22,6 @@ import type { EngineState } from '../../src/@types/engine/state/EngineState';
 import { createEngineData } from '../../src/services/engine/data/createEngineData';
 import type { EngineSettingsState } from '../../src/@types/settings/EngineSettingsState';
 import type { EngineBiasState } from '../../src/@types/engine/state/EngineBiasState';
-import type { EngineSourceState } from '../../src/@types/engine/state/EngineSourceState';
 import type { EnginePickingState } from '../../src/@types/engine/state/EnginePickingState';
 
 import {
@@ -80,6 +79,7 @@ describe('EngineState type', () => {
     // an explicit update here — easier to spot than in a single
     // 30-line literal.
     const settings: EngineSettingsState = {
+      tier: 'medium',
       galaxyCatalogs: {
         enabled: true,
         sizePx: 2.5,
@@ -130,9 +130,6 @@ describe('EngineState type', () => {
       schechterMStar: 0,
       schechterAlpha: 0,
     };
-    const sources: EngineSourceState = {
-      tier: 'medium',
-    };
     const picking: EnginePickingState = {
       latestMouseCss: null,
       lastPickedMouseCss: null,
@@ -148,7 +145,6 @@ describe('EngineState type', () => {
     const state: EngineState = {
       settings,
       bias,
-      sources,
       data: createEngineData(),
       picking,
       gpu: {
@@ -228,20 +224,21 @@ describe('EngineState type', () => {
     expect(state.settings.galaxyCatalogs.items.sdss.enabled).toBe(true);
     expect(state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled).toBe(true);
     expect(state.settings.bias.mode).toBe(DEFAULT_BIAS_MODE);
-    // `state.sources` no longer caches the draw/pick masks (a pure per-frame
-    // derivation now); it carries only the loaded-tier marker.
-    expect(state.sources.tier).toBe('medium');
+    // The data tier now lives top-level on `settings` (cross-cutting: galaxy
+    // catalogs / MCPM volume / filaments all fetch by it).
+    expect(state.settings.tier).toBe('medium');
     // Hover/selection live on `state.subsystems.selection`, not `state.picking`.
     expect(state.subsystems.selection.hovered()).toBeNull();
     expect(state.gpu.renderer).toBeNull();
     expect(state.subsystems.tweens.isActive()).toBe(false);
   });
 
-  it('builds the settings + bias + sources sub-bags directly from data/defaults.ts', () => {
+  it('builds the settings + bias sub-bags directly from data/defaults.ts', () => {
     // Mirror the engine's startup construction — if a default's type
     // drifts (e.g. `DEFAULT_BIAS_MODE` becomes a string), this fails to
     // compile here rather than inside engine.ts.
     const settings: EngineSettingsState = {
+      tier: 'medium',
       galaxyCatalogs: {
         enabled: true,
         sizePx: DEFAULT_POINT_SIZE_PX,
@@ -288,16 +285,14 @@ describe('EngineState type', () => {
       schechterMStar: 0,
       schechterAlpha: 0,
     };
-    const sources: Pick<EngineSourceState, 'tier'> = {
-      tier: 'medium',
-    };
 
     expect(settings.galaxyCatalogs.sizePx).toBe(DEFAULT_POINT_SIZE_PX);
     expect(settings.bias.absMagLimit).toBe(DEFAULT_ABS_MAG_LIMIT);
     // The "You are here" label axis defaults on, independently of the disk.
     expect(settings.milkyWay.labelEnabled).toBe(true);
     expect(bias.apparentMagLimit).toBe(0);
-    expect(sources.tier).toBe('medium');
+    // The data tier now lives top-level on `settings`.
+    expect(settings.tier).toBe('medium');
   });
 
   it('allows in-place mutation of every sub-bag field', () => {
@@ -308,6 +303,7 @@ describe('EngineState type', () => {
     let stateRef: { current: EngineState | null } = { current: null };
     const state: EngineState = {
       settings: {
+        tier: 'medium',
         galaxyCatalogs: {
           enabled: true,
           sizePx: 1,
@@ -347,9 +343,6 @@ describe('EngineState type', () => {
         apparentMagLimit: 0,
         schechterMStar: 0,
         schechterAlpha: 0,
-      },
-      sources: {
-        tier: 'medium',
       },
       data: createEngineData(),
       picking: {
@@ -432,9 +425,9 @@ describe('EngineState type', () => {
 
     state.settings.galaxyCatalogs.brightness = 2.5;
     state.settings.bias.absMagLimit = -20;
-    // `state.sources` now carries only the loaded-tier marker — `setTier`
-    // mutates it in place, so it's the representative mutation for this bag.
-    state.sources.tier = 'large';
+    // The data tier lives top-level on `settings` now; the action layer
+    // copies-on-write, but the field itself is assignable (not Readonly).
+    state.settings.tier = 'large';
     // Hovered/selected live on the selection subsystem, not `state.picking`.
     // The slot now holds a resolved FocusableTarget directly.
     const hoverTarget = {
@@ -447,7 +440,7 @@ describe('EngineState type', () => {
 
     expect(state.settings.galaxyCatalogs.brightness).toBe(2.5);
     expect(state.settings.bias.absMagLimit).toBe(-20);
-    expect(state.sources.tier).toBe('large');
+    expect(state.settings.tier).toBe('large');
     expect(state.subsystems.selection.hovered()).toBe(hoverTarget);
     expect(state.picking.pickInFlight).toBe(true);
   });

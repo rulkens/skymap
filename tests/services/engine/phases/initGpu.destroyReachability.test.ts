@@ -224,11 +224,7 @@ function makeState(): EngineState {
         requestRender: vi.fn(),
       },
     },
-    sources: {
-      catalogs: new Map(),
-      famousMeta: [],
-      tier: 'medium',
-    },
+    settings: { tier: 'medium' },
     assetSlots: {
       points: new Map(),
     },

@@ -128,8 +128,7 @@ function makeState(opts: { disabledSources?: readonly SourceType[] } = {}): Make
   const cb = { lifecycle: { onStatusChange } } as unknown as EngineCallbacks;
 
   const state = {
-    settings: { galaxyCatalogs: { items } } as never,
-    sources: { tier: 'medium' },
+    settings: { tier: 'medium', galaxyCatalogs: { items } } as never,
     requests: new Set<string>(),
     gpu: { renderer: { totalCount: () => 42 } },
     assetSlots: {

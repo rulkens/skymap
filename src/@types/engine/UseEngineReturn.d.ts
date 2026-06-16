@@ -20,5 +20,10 @@ export type UseEngineReturn = {
   /** Per-category structure counts (cluster / supercluster / void / group) for the Structures panel. */
   structureCounts: Partial<Record<StructureId, number>>;
   loadProgress: LoadProgressState | null;
-  currentTier: Tier;
+  /**
+   * Immutable startup tier seed (viewport-derived). The LIVE tier lives in
+   * the engine settings store — read it via `selectTier`; this is only the
+   * boot value (also usable as the selector's pre-handle fallback).
+   */
+  initialTier: Tier;
 };

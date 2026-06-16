@@ -53,6 +53,7 @@ import { selectToneMapCurve } from '../../services/engine/settingsStore/selector
 import { selectAutoRotate } from '../../services/engine/settingsStore/selectors/selectAutoRotate';
 import { selectBiasMode } from '../../services/engine/settingsStore/selectors/selectBiasMode';
 import { selectAbsMagLimit } from '../../services/engine/settingsStore/selectors/selectAbsMagLimit';
+import { selectTier } from '../../services/engine/settingsStore/selectors/selectTier';
 import { selectShowPickBuffer } from '../../services/engine/settingsStore/selectors/selectShowPickBuffer';
 import { selectShowDiskRadiusRing } from '../../services/engine/settingsStore/selectors/selectShowDiskRadiusRing';
 import { selectFilamentsEnabled } from '../../services/engine/settingsStore/selectors/selectFilamentsEnabled';
@@ -150,7 +151,7 @@ export function App(): React.ReactElement {
     sourceCounts,
     structureCounts,
     loadProgress,
-    currentTier,
+    initialTier,
   } = useEngine({ extraCallbacks: settingsCallbacks });
 
   // Galaxy catalogs-cluster settings read live off the engine-owned store (no React
@@ -187,6 +188,14 @@ export function App(): React.ReactElement {
   // cell. Fallback is the same `data/defaults.ts` seed.
   const biasMode = useSettingsStore(handleRef, selectBiasMode, DEFAULT_BIAS_MODE);
   const absMagLimit = useSettingsStore(handleRef, selectAbsMagLimit, DEFAULT_ABS_MAG_LIMIT);
+
+  // The live data tier reads off the engine-owned store (no React mirror). The
+  // tier dropdown dispatches through `handle.sources.setTier`, which commits to
+  // the store synchronously, so the dropdown tracks without an optimistic cell.
+  // Fallback is the viewport-derived `initialTier` boot seed — the value the
+  // engine itself was constructed with, so the first paint (before `handleRef`
+  // lands) matches engine truth.
+  const currentTier = useSettingsStore(handleRef, selectTier, initialTier);
 
   // Debug-overlay toggles (pick buffer + disk-radius ring) read live off the
   // engine-owned store. The DebugPanel checkboxes dispatch through
@@ -450,9 +459,10 @@ export function App(): React.ReactElement {
               handleRef.current?.galaxyCatalogs.setDepthFade(enabled);
             }}
             onResetCamera={() => handleRef.current?.camera.focusOnHome()}
-            // Tier swap is owned end-to-end by the engine: it cancels
-            // in-flight loads, re-fetches tier-suffixed bins, re-uploads,
-            // then echoes the new tier back through `onTierChange`.
+            // Tier swap is owned end-to-end by the engine: `setTier` commits
+            // the new tier to the settings store (which `currentTier` reads via
+            // `selectTier`), then cancels in-flight loads, re-fetches the
+            // tier-suffixed bins, and re-uploads.
             tier={currentTier}
             onTierChange={(tier) => handleRef.current?.sources.setTier(tier)}
             visibleSourceMask={visibleSourceMask}

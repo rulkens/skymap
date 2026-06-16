@@ -46,14 +46,13 @@ function stubSlot(): StubSlot {
 
 /**
  * Build a minimal EngineState carrying the slices the flow demand path reads
- * transitively (via buildDemandCtx + slotFor): `settings.flow.enabled`,
- * `sources`, `requests`, `data`, and `assetSlots.flow` (the named string-key
- * slot `slotFor('flow')` resolves).
+ * transitively (via buildDemandCtx + slotFor): `settings.flow.enabled` (+ the
+ * top-level `tier`), `requests`, `data`, and `assetSlots.flow` (the named
+ * string-key slot `slotFor('flow')` resolves).
  */
 function makeState(flowEnabled: boolean, slot: AssetSlot<unknown, unknown>): EngineState {
   return {
-    settings: { flow: { enabled: flowEnabled } },
-    sources: { tier: 'medium' },
+    settings: { tier: 'medium', flow: { enabled: flowEnabled } },
     requests: new Set(),
     data: {},
     assetSlots: { points: new Map(), flow: slot },

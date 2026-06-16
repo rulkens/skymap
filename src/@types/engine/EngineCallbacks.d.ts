@@ -143,8 +143,9 @@ export type EngineCallbacks = {
   };
 
   /**
-   * Source-state callbacks — tier, per-source readiness, and aggregated
-   * load progress.
+   * Source-state callbacks — per-source readiness and aggregated load
+   * progress. (Tier is no longer echoed here: it lives in the settings store,
+   * read React-side via `selectTier`.)
    *
    * `onCatalogReady` is granular per-source because the three .bin
    * files run as parallel fetches with very different sizes (2MRS
@@ -166,7 +167,6 @@ export type EngineCallbacks = {
    * together when the bulk `.ccat` lands.
    */
   sources?: {
-    onTierChange?: (tier: Tier) => void;
     onCatalogReady?: (source: SourceType, count: number) => void;
     onLoadProgress?: (progress: LoadProgressState | null) => void;
     onStructureCountsChange?: (counts: Partial<Record<StructureId, number>>) => void;

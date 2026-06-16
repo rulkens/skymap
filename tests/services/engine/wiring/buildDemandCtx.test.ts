@@ -23,9 +23,8 @@ import type { SourceType } from '../../../../src/@types/data/SourceType';
 /**
  * Build a minimal EngineState with only the fields buildDemandCtx reads.
  * `requests` defaults to empty, and the slot maps/fields to empty so
- * `slotState` falls back to 'idle' unless a test supplies a slot.
- * `sources` stays as a stub field the EngineState shape expects; the builder
- * itself never reads it.
+ * `slotState` falls back to 'idle' unless a test supplies a slot.  `tier`
+ * lives top-level on `settings` (the builder itself never reads it).
  */
 function makeState(
   opts: {
@@ -44,10 +43,10 @@ function makeState(
   return {
     settings: {
       marker: 'sentinel',
+      tier: 'medium',
       galaxyCatalogs: { items: {} },
       volumes: { items: {} },
     },
-    sources: { tier: 'medium' },
     requests: opts.requests ?? new Set<RequestKey>(),
     assetSlots: {
       points: opts.points ?? new Map(),

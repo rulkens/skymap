@@ -49,9 +49,9 @@ import { FADE_LAYERS } from './fadeLayers';
 // (the flow row asks the renderer's `fieldLoaded()`); `row.post` reads `settings`
 // (the volumeField row's lazy-load). `intent` reads `settings`; the fade calls go
 // through `subsystems.fades` / `subsystems.scheduler`. `assetSlots` is kept
-// because other guards/posts may reach a slot. This Pick is the union — `sources`
-// is no longer in it: with the survey row's mask-recompute `post` gone, no row
-// closure reads `state.sources`.
+// because other guards/posts may reach a slot. This Pick is the union: no row
+// closure reads a source-loading bag — the survey row's mask-recompute `post`
+// is gone, and the tier it once needed now lives in `settings`.
 export type ApplyIntentState = Pick<EngineState, 'settings' | 'subsystems' | 'assetSlots' | 'gpu'>;
 
 /**

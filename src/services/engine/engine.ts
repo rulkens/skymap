@@ -103,6 +103,7 @@ import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 import { createTweenManager } from './camera/tweenManager';
 import { createSettingsStore } from './settingsStore/createSettingsStore';
 import { setBiasModeAction } from './settingsStore/actions/setBiasModeAction';
+import { setTierAction } from './settingsStore/actions/setTierAction';
 import { setVolumesEnabledAction } from './settingsStore/actions/setVolumesEnabledAction';
 import { setFlowAction } from './settingsStore/actions/setFlowAction';
 import { writeVolumeFieldAction } from './settingsStore/actions/writeVolumeFieldAction';
@@ -275,6 +276,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // dozens of `state.settings.X` read sites stay byte-identical — the getter
   // hands back the held object directly.
   const settingsStore = createSettingsStore({
+    // Currently-loaded data tier — the cross-cutting data-resolution preset
+    // (galaxy catalogs + MCPM volume + filaments all fetch by it). Seeded from
+    // `cb.initialTier`; 'medium' is the ~600k-galaxy desktop budget. Flat root
+    // field, not a cluster member — see `EngineSettingsState`.
+    tier: cb.initialTier ?? 'medium',
     // Galaxy catalog layer: master gate on + shared billboard appearance knobs +
     // one item row per galaxy catalog, each layer + label default-on. Keys are
     // DERIVED from `GALAXY_CATALOG_IDS` so the seed can't drift from the galaxy catalog set.
@@ -359,16 +365,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       apparentMagLimit: 0,
       schechterMStar: 0,
       schechterAlpha: 0,
-    },
-    sources: {
-      // `state.sources` no longer caches the draw/pick bitmasks — those are a
-      // pure projection of settings + live fade opacity, derived on read
-      // (per-frame in `runFrame`, fresh at click time).  This bag now holds
-      // only the loaded-tier marker.
-      //
-      // Currently-loaded data tier, seeded from `cb.initialTier`; 'medium'
-      // is the ~600k-galaxy desktop budget.  `setTier` mutates in place.
-      tier: cb.initialTier ?? 'medium',
     },
     // Per-type data stores. Empty at construction; slot commits fill them.
     data: createEngineData(),
@@ -798,10 +794,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function setTier(tier: Tier): void {
-    if (tier === state.sources.tier) return;
-    const prevTier = state.sources.tier;
-    state.sources.tier = tier;
-    cb.sources?.onTierChange?.(tier);
+    // Tier now lives in the settings store; React reads it via `selectTier`,
+    // so there's no `onTierChange` echo to fire — the store write notifies
+    // subscribers. We diff against the store's current value to skip a no-op,
+    // then commit through the action before driving the per-source reloads.
+    const prevTier = settingsStore.getState().tier;
+    if (tier === prevTier) return;
+    setTierAction(settingsStore, tier);
 
     // For each tier-relevant source: same target → skip; different target →
     // hand the slot the new request (it cancels any in-flight load,

@@ -20,13 +20,19 @@
  *
  * ### Shape
  *
- * Every settings field lives under exactly one named cluster — no flat
- * root fields (a flat duplicate invites split-brain reads/writes).  The
- * clusters mirror EngineHandle's sub-handle namespaces 1:1 — a setter
- * on `handle.galaxyCatalogs` writes into `state.settings.galaxyCatalogs`, a setter on
- * `handle.tonemap` writes into `state.settings.tonemap`, etc.  This
- * shape makes the engine's per-frame snapshot and the React-facing
+ * Every per-cluster *appearance* knob lives under exactly one named
+ * cluster — no flat root duplicates (a flat duplicate of a knob with a
+ * natural cluster home invites split-brain reads/writes).  The clusters
+ * mirror EngineHandle's sub-handle namespaces 1:1 — a setter on
+ * `handle.galaxyCatalogs` writes into `state.settings.galaxyCatalogs`, a
+ * setter on `handle.tonemap` writes into `state.settings.tonemap`, etc.
+ * This shape makes the engine's per-frame snapshot and the React-facing
  * setters trivially derivable from each other.
+ *
+ * The lone deliberate exception is `tier` (below): it is a *cross-cutting*
+ * data-resolution selector, not a per-cluster appearance knob, so it has
+ * no honest cluster home — see its field doc for why a flat root keeps its
+ * one reader-set honest.
  *
  * ### Mutation contract
  *
@@ -45,6 +51,7 @@
  * `EngineSettingsState` value by pulling those constants into each field.
  */
 
+import type { Tier } from '../data/Tier';
 import type { BiasMode } from '../data/galaxyCatalog/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { StructureId } from '../data/structure/StructureId';
@@ -56,6 +63,19 @@ import type { StructureItemSettings } from './StructureItemSettings';
 import type { GalaxyCatalogItemSettings } from './GalaxyCatalogItemSettings';
 
 export type EngineSettingsState = {
+  /**
+   * The data-resolution preset (small / medium / large). Unlike every other
+   * field here, `tier` is a FLAT root field rather than a member of a named
+   * cluster — because it is cross-cutting: galaxy catalogs, the MCPM volume,
+   * and filaments all fetch their `.bin`/`.scfd` BY tier (`row.req(tier)`).
+   * Parking it inside any one source cluster (`galaxyCatalogs.tier`) would lie
+   * about its scope and force the volume/filament demand rows to reach across
+   * cluster boundaries to read a sibling's field. Top-level keeps the one
+   * reader-set honest. (The flat-root exception is deliberate; the
+   * no-flat-root rule below holds for every per-cluster appearance knob.)
+   */
+  tier: Tier;
+
   /**
    * Galaxy catalog point-billboard controls — the shared appearance knobs that
    * influence every galaxy catalog's `points.wgsl` draw — plus the galaxy-catalog-layer
