@@ -42,13 +42,11 @@ const PASS_STUB = {
 
 const DEPS_STUB = {} as PassDeps;
 
-// A minimal stand-in for the renderer's `setSelection` + `render`.
+// A minimal stand-in for the renderer's stateless `draw`.
 function makeRendererSpy() {
   return {
     label: 'selectionRingRenderer',
-    setSelection: vi.fn(),
-    hasSelection: vi.fn().mockReturnValue(false),
-    render: vi.fn(),
+    draw: vi.fn(),
     destroy: vi.fn(),
   };
 }
@@ -146,8 +144,9 @@ describe('selectionRingPass.draw', () => {
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
       typeof makeRendererSpy
     >;
-    expect(rendererSpy.setSelection).toHaveBeenCalledOnce();
-    const arg = rendererSpy.setSelection.mock.calls[0]![0]!;
+    expect(rendererSpy.draw).toHaveBeenCalledOnce();
+    // The selection is `draw`'s 4th argument.
+    const arg = rendererSpy.draw.mock.calls[0]![3]!;
     // worldPos copied straight from the target's x/y/z
     expect(arg.worldPos[0]).toBeCloseTo(0);
     expect(arg.worldPos[1]).toBeCloseTo(0);
@@ -172,7 +171,7 @@ describe('selectionRingPass.draw', () => {
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
       typeof makeRendererSpy
     >;
-    const arg = rendererSpy.setSelection.mock.calls[0]![0]!;
+    const arg = rendererSpy.draw.mock.calls[0]![3]!;
     // apparentPxRadius = (60 * 2 / 1000 / 10) * 720 = 8.64
     // apparentPxRadius * 0.5 = 4.32; > pointSizePx (4); * 6 = 25.92
     expect(arg.ringRadiusPx).toBeCloseTo(25.92, 4);
@@ -185,8 +184,8 @@ describe('selectionRingPass.draw', () => {
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
       typeof makeRendererSpy
     >;
-    expect(rendererSpy.setSelection).toHaveBeenCalledOnce();
-    const arg = rendererSpy.setSelection.mock.calls[0]![0]!;
+    expect(rendererSpy.draw).toHaveBeenCalledOnce();
+    const arg = rendererSpy.draw.mock.calls[0]![3]!;
     expect(arg.worldPos[0]).toBeCloseTo(MILKY_WAY_CENTER_WORLD[0]);
     expect(arg.worldPos[1]).toBeCloseTo(MILKY_WAY_CENTER_WORLD[1]);
     expect(arg.worldPos[2]).toBeCloseTo(MILKY_WAY_CENTER_WORLD[2]);
@@ -194,13 +193,14 @@ describe('selectionRingPass.draw', () => {
     expect(arg.ringRadiusPx).toBeGreaterThan(0);
   });
 
-  it('calls renderer.render() exactly once with viewProj + viewport', () => {
+  it('calls renderer.draw() exactly once with viewProj + viewport', () => {
     const state = makeStateWithSelection(galaxyTarget());
     selectionRingPass.draw(PASS_STUB, makeCtx(), state, makeSettings(), DEPS_STUB);
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
       typeof makeRendererSpy
     >;
-    expect(rendererSpy.render).toHaveBeenCalledOnce();
-    expect(rendererSpy.render.mock.calls[0]![2]).toEqual([1280, 720]);
+    expect(rendererSpy.draw).toHaveBeenCalledOnce();
+    // The viewport is `draw`'s 3rd argument.
+    expect(rendererSpy.draw.mock.calls[0]![2]).toEqual([1280, 720]);
   });
 });
