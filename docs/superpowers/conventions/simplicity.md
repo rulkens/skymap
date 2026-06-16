@@ -132,6 +132,9 @@ it's about whether you can reason about a single-threaded run at all.
 - **Don't:** let a value be reachable only through a mutable place. A "mirror copy" of
   state that already has an authoritative home is exactly this (a renderer must not
   cache what `EngineState` owns — `renderers.md`).
+- **Companion:** [`intent.md`](intent.md) is the state-shaped extension of this
+  principle — _where_ a value lives (Intent vs. derived vs. resource) and _who_ may
+  write it (a single dispatched write path), so a mirror can't form in the first place.
 
 ### 6. Pull _what_ from _how_ — and who / when / where / why
 

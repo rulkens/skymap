@@ -20,6 +20,7 @@ Curated list of pickup-able work and surfaced issues. Living document — update
 | ADR | Status | Executed by |
 |---|---|---|
 | [0001 — Fade ownership](adrs/0001-fade-ownership.md) | Accepted 2026-05-27 | Original executor ([renderer-interface-extraction plan](superpowers/plans/archive/2026-05-27-renderer-interface-extraction.md)) **archived/superseded**; the `bindGroupFor`/`flushGpu` mechanism is reworked by the live [fade-ownership merged design](superpowers/specs/2026-06-15-fade-ownership-visibility-seam-merged-design.md) (designed, awaiting plan) |
+| [0007 — Intent-centric state + effects layer](adrs/0007-intent-centric-state-and-effects.md) | Accepted 2026-06-17 (direction); **effects-layer vehicle open** (RTK listener middleware vs. typed-redux-saga) | Not started — needs a vehicle decision then an incremental migration spec. See the "From ADR 0007" deferred item. Convention: [`intent.md`](superpowers/conventions/intent.md). |
 
 ---
 
@@ -56,6 +57,10 @@ From [renderer-interface-extraction plan §Out of scope](superpowers/plans/archi
 
 From [ADR 0001 §"explicitly not deciding"](adrs/0001-fade-ownership.md):
 - **Label fade opt-in / opt-out decision** — per-character MSDF opacity may not fit the per-handle bind-group pattern; needs a follow-up ADR if labels opt out.
+
+From [ADR 0007 §"NOT deciding" / "Open question"](adrs/0007-intent-centric-state-and-effects.md) (intent-centric state + effects):
+- **Effects-layer vehicle decision** — choose RTK `createListenerMiddleware` vs. `typed-redux-saga` for the reactive effects layer (demand/loads/fade-triggering). Trade-offs recorded in the ADR; either way the tour timeline stays a separate engine-land concern that dispatches into the store. Promote to its own ADR (0008) when picked.
+- **Incremental intent-migration spec** — turn ADR 0007 into a sequenced plan. **First fold: the selection subsystem** (the worked example in [`intent.md`](superpowers/conventions/intent.md)) — move hover/select/focus into the Intent store, delete the React `useState` mirrors + echo callbacks, move the select/focus scheduler-wake into the effects layer. Then: retire the in-place `items[id]` / `restoreSettings` mutations (the known staleness bug), and rebuild **tours as an ephemeral Intent overlay** (supersedes `captureSettings`/`restoreSettings`/`applyEffect`, unblocking the [tour work](superpowers/plans/2026-05-20-splash-screen-02-stub-tour.md)). `debug.disabledPasses` `Set`→`Record` for serializable Intent.
 
 ---
 
