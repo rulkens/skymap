@@ -1,7 +1,23 @@
 # Fade ownership + visibility seam (merged) — design
 
-**Status:** designed, awaiting plans. Merges braid #2 with the #38 visibility
-seam so the fade manifest has exactly **one home**.
+**Status:** designed, awaiting plans. Re-grounded 2026-06-16 against the tree after
+the Milky-Way-first-class effort (#312/#313/#317/#318) and braid #1 (#309) landed.
+Merges braid #2 with the #38 visibility seam so the fade manifest has exactly
+**one home**.
+
+> **Re-grounding deltas (2026-06-16) — what changed under the spec since 2026-06-15:**
+> - `FadeHandle` → **`FadeId`** (#317); `STRUCTURE_CATEGORIES` → **`STRUCTURE_IDS`**
+>   (#317); the `surveys` settings cluster → **`galaxyCatalogs`** (#312); the
+>   `scalarVolumeRenderer` → **`volumeFieldRenderer`**. Applied throughout below.
+> - The **`youAreHere` fade layer is gone** (#313 folded it into `labelLayer:milkyWay`).
+>   Its discipline ("producer-driven, seed `0`") had no other member, so that row is
+>   **deleted** — a net simplification, not an open question.
+> - The **Milky Way is now two intent rows** (disk `{kind:'milkyWay'}` +
+>   `{kind:'labelLayer', layer:'milkyWay'}`), both settings-derived, parallel to how
+>   structures carry a marker row + a label row (#318 made the disk a first-class
+>   toggle).
+> - **Braid #1 shipped** (#309): the flow re-enable guard is already repointed to
+>   `slotReady(assetSlots.flow)`; Plan B's job narrows to *deleting* it.
 
 **Supersedes the standalone framing of:**
 
@@ -27,15 +43,16 @@ the #39 cinematic tour depends on.
 ## What grounding the code changed about the design
 
 `registerOverlayFades` (`src/services/engine/wiring/registerOverlayFades.ts`) is
-already ~80% the manifest: it iterates `STRUCTURE_CATEGORIES`, seeds each handle
+already ~80% the manifest: it iterates `STRUCTURE_IDS`, seeds each handle
 from `state.settings`, and documents the frame-1 coherence rationale. The four
 **out-of-band** registration sites are the holdouts:
 
-- `galaxyCatalogSourceRegistry.ts` — `survey` handle per source, in the slot factory.
-- `filamentSlot.ts` — `filaments`, in the slot factory.
-- `flowFieldSlot.ts` — `flow`, in the slot factory.
-- `initGpu.ts` — `scalarField` handles, via the renderer callback
-  `scalarVolumeRenderer.onFieldAdded/onFieldRemoved` (an inversion: a renderer
+- `galaxyCatalogSourceRegistry.ts` — `{kind:'galaxyCatalog'}` handle per source, in
+  the slot factory (`register(…, 0)`, line ~154).
+- `filamentSlot.ts` — `{kind:'filament'}`, in the slot factory (line ~30).
+- `flowFieldSlot.ts` — `{kind:'flow'}`, in the slot factory (line ~36).
+- `initGpu.ts` — `{kind:'volumeField'}` handles, via the renderer callback
+  `volumeFieldRenderer.onFieldAdded/onFieldRemoved` (an inversion: a renderer
   mutating the fade registry).
 
 ### The seed asymmetry is essential, not accidental (radar finding)
@@ -43,35 +60,47 @@ from `state.settings`, and documents the frame-1 coherence rationale. The four
 The braid #2 spec claimed *"seed opacity is settings-derived for every layer."*
 The code says otherwise, and the difference is load-bearing:
 
-- `registerOverlayFades` seeds overlays / volumesMaster / markers / structure
-  labels from **settings** (so a default-off layer sits at 0 on frame 1).
+- `registerOverlayFades` seeds disks / volumesMaster / markers / Milky-Way + structure
+  labels from **settings** (so a default-off layer sits at 0 on frame 1). The
+  producer-driven labels (Milky-Way label, structure labels) seed **settings-derived
+  too** — their producer's first-emit `fadeTo(1)` is a coherence *re-assertion*, not
+  the source of initial visibility (`registerOverlayFades.ts:95–117`).
 - The four demand-loaded layers register at **0** and fade in from their **slot
-  commit** once content lands (`flowFieldSlot.ts:34` → `register(flow, 0)`, then
-  the commit fires `fadeTo(1)`).
+  commit** once content lands (`flowFieldSlot.ts:36` → `register({kind:'flow'}, 0)`,
+  then the commit fires `fadeTo(1)`).
 
 If a manifest naively seeded the demand-loaded layers at `settings ? 1 : 0`, the
 first-load fade-in would be lost — a `fadeTo(1)` from 1 is a no-op. So the seed
 rule is genuinely **multi-valued**, and that variation belongs in the manifest as
-data (one `seed()` closure per row), not flattened into a single rule:
+data (one `seed()` closure per row), not flattened into a single rule. The seed
+disciplines, after #313 removed the lone seed-`0`-producer-driven layer
+(`youAreHere`):
 
 | Discipline | Layers | seed |
 |---|---|---|
 | always-on overlay | proceduralDisks, texturedDisks | `1` |
-| producer-driven | youAreHere | `0` (fades in on first emit) |
 | reused-by-producer | galaxyNames | `1` (famous labels consume it directly) |
 | react-side, tour-addressable | scaleBar | `1` |
-| intent toggle, resident content | milkyWay, volumesMaster, markerLayer, structure labelLayer | `settings-derived` |
-| intent toggle, **demand-loaded** | survey, filaments, flow, scalarField | `0` (commit fades in toward intent) |
+| intent toggle, resident content | milkyWay disk, milkyWay label, volumesMaster, markerLayer (per structure), structure labelLayer (per structure) | `settings-derived` |
+| intent toggle, **demand-loaded** | galaxyCatalog, filament, flow, volumeField | `0` (commit fades in toward intent) |
+
+Note the vocabulary: the **`FadeId` kinds** are `galaxyCatalog` / `filament` (singular)
+/ `flow` / `volumeField`; the manifest's row keys (`VisibilityLayerKey`, below) may use
+friendlier names (`survey` / `filaments`), but `handle()` must emit the real `FadeId`
+kinds. Pick one vocabulary for the row keys when Plan A lands and keep `handle()` as the
+sole translation point.
 
 ## The two overlapping sets (why one table works)
 
 - **Registration set** — *all* fade handles need registering + seeding at
   construction (braid #2's job).
 - **Intent set** — the toggle subset (survey, survey-label, structure ring,
-  structure label, volume field, volumesMaster, filaments, milkyWay, flow) also
-  needs intent read/write for #38 capture/restore. The producer-driven and
-  always-on handles (youAreHere, galaxyNames, scaleBar, disks) are
-  registration-only — the *essential* fades the spec says not to flatten.
+  structure label, volume field, volumesMaster, filaments, milkyWay **disk**,
+  milkyWay **label**, flow) also needs intent read/write for #38 capture/restore.
+  The reused-by-producer and always-on handles (galaxyNames, scaleBar, disks) are
+  registration-only — the *essential* fades the spec says not to flatten. (Milky Way
+  now contributes two intent rows: `milkyWay.enabled` → disk, `milkyWay.labelEnabled`
+  → label, mirroring a structure's ring + label pair.)
 
 The intent set is a **subset** of the registration set, so one table serves both:
 intent-bearing rows carry an `intent`/`writeIntent`; the rest don't.
@@ -88,8 +117,8 @@ and the four out-of-band sites.
 // src/@types/animation/FadeLayer.d.ts  (one type per file)
 export type FadeLayer<Item> = {
   readonly key: VisibilityLayerKey;                 // 'survey' | 'structureRing' | …
-  expand(state: EngineState): readonly Item[];      // singleton | per SurveyId | per Cat | per Field
-  handle(item: Item): FadeHandle;
+  expand(state: EngineState): readonly Item[];      // singleton | per GalaxyCatalogId | per StructureId | per VolumeFieldId
+  handle(item: Item): FadeId;                        // the sole VisibilityLayerKey → FadeId-kind translation point
   seed(settings: EngineSettingsState, item: Item): number;  // settings-derived OR 0 (demand-loaded)
   // intent rows only (the #38 subset):
   intent?(settings: EngineSettingsState, item: Item): boolean;
@@ -102,9 +131,9 @@ export type FadeLayer<Item> = {
 `seedFades(state)` iterates every row, expands it, and `register`s each handle at
 its `seed()`. Because the FadeRegistry is built eagerly before any renderer and
 seeding is a pure opacity write (no GPU dependency), every handle — including the
-now-static `scalarField` set, enumerated from the volume registry — seeds at t=0.
+now-static `volumeField` set, enumerated from the volume registry — seeds at t=0.
 Result: registration has exactly one home; the slot factories and `initGpu` no
-longer call `register`; `scalarVolumeRenderer` drops the
+longer call `register`; `volumeFieldRenderer` drops the
 `onFieldAdded/onFieldRemoved` callbacks.
 
 ### 2. The intent bridge — one function, not push-vs-pull
@@ -153,7 +182,7 @@ Unchanged from the reconciled #38 spec, now built on the manifest above:
 // src/@types/engine/settings/SettingsSnapshot.d.ts
 export type SettingsSnapshot = Readonly<
   Pick<EngineSettingsState,
-    'surveys' | 'structures' | 'volumes' | 'filaments' | 'milkyWay' | 'flow'>
+    'galaxyCatalogs' | 'structures' | 'volumes' | 'filaments' | 'milkyWay' | 'flow'>
 >;
 ```
 
@@ -168,11 +197,20 @@ Demand re-evaluates next frame from the restored intent (#298) — no demand cha
 
 ### 4. Renderers shed fade-adjacent state
 
-- `scalarVolumeRenderer.onFieldAdded/onFieldRemoved` → **deleted** (manifest seeds
-  the scalarField set at construction).
-- `flowFieldRenderer.hasField` → read `field !== null`.
-- `selectionRingRenderer.currentSelection` → passed in per frame from
-  `state.subsystems.selection`.
+- `volumeFieldRenderer.onFieldAdded/onFieldRemoved` → **deleted** (manifest seeds
+  the `volumeField` set at construction).
+- `flowFieldRenderer.hasField` → this is already a **private closure flag**, and it
+  mirrors **load-state**, not fade. Post-braid-#1 the `enabled()` gate should read
+  `slotReady(state.assetSlots.flow)` instead of a local `hasField`, deleting the
+  mirror. (Re-scoped: the spec's original "→ `field !== null`" predates braid #1's
+  `slotReady` predicate, which is the cleaner source.)
+- `selectionRingRenderer.currentSelection` → already a private closure set via
+  `setSelection(value)`. The push→pull move (read per frame from
+  `state.subsystems.selection`) still stands, but re-ground it against the
+  **post-#318 selection flow**: selection is now a tagged `FocusableTarget`, and
+  `selectionRingPass` derives `{worldPos, ringRadiusPx}` via `SELECTION_HALO[type]`
+  before calling the renderer. Plan C threads that pass's per-frame value in rather
+  than calling `setSelection`.
 
 ### 5. `fadeTo` throw — kept
 
@@ -202,10 +240,10 @@ gate.
 
 | Plan | Scope | Depends on |
 |---|---|---|
-| **Braid #1** (separate spec, ready) | `slotReady` predicate; delete the 2 status-only stores; repoint the flow re-enable guard to `slotReady` | — (ship first) |
-| **Plan C** — renderer mirrors | `flowFieldRenderer.hasField` → `field !== null`; `selectionRingRenderer.currentSelection` → per-frame input | independent, anytime |
+| **Braid #1** ✅ **SHIPPED (#309)** | `slotReady` predicate; deleted the 2 status-only stores; repointed the flow re-enable guard to `slotReady` | done |
+| **Plan C** — renderer mirrors | `flowFieldRenderer.hasField` → `slotReady(assetSlots.flow)` (braid #1's predicate); `selectionRingRenderer.currentSelection` → per-frame input from `selectionRingPass`'s `SELECTION_HALO`-derived value (post-#318) | independent, anytime |
 | **Plan A** — manifest seed | `FADE_LAYERS` + `seedFades`; absorb `registerOverlayFades` + the 4 out-of-band sites; delete the scalarVolume callback | — |
-| **Plan B** — intent bridge + #38 seam | `syncVisibilityFades`/`applyIntent`; `captureSettings`/`restoreSettings`/`applyEffect` + `SettingsSnapshot`; repoint the ~10 drivers + slot-commit fade-ins through the bridge; **delete** the drive-guards | A (+ braid #1: the guard braid #1 repoints is the one B deletes) |
+| **Plan B** — intent bridge + #38 seam | `syncVisibilityFades`/`applyIntent`; `captureSettings`/`restoreSettings`/`applyEffect` + `SettingsSnapshot`; repoint the ~10 drivers + slot-commit fade-ins through the bridge; **delete** the flow drive-guard braid #1 already repointed to `slotReady` (`engine.ts:~1228`) | A (braid #1 is shipped) |
 
 **Two sequencing calls baked in:**
 
@@ -213,10 +251,10 @@ gate.
   rather than hand-coding the `fadeTo`. The consolidation is the point (one intent
   mapping, guard included); the cost is that slot commits now depend on the
   manifest — acceptable, since the manifest is constructed before any commit fires.
-- **(b)** Braid #1 lands **before** Plan B so the flow re-enable guard is deleted
-  (B) rather than just repointed-and-kept. Braid #1 repoints it to `slotReady`; B
-  removes it once every handle seeds at construction and `fadeTo` can no longer hit
-  an unregistered handle.
+- **(b)** Braid #1 has **already shipped** (#309), repointing the flow re-enable
+  guard to `slotReady`. Plan B's remaining job is to *delete* that guard once every
+  handle seeds at construction and `fadeTo` can no longer hit an unregistered handle
+  — the guard becomes dead weight, not a correctness requirement.
 
 Then #39 cinematic tour wires `snapshot`/`restore`/`applyEffect` onto
 `captureSettings`/`restoreSettings`/`applyEffect`.
@@ -240,5 +278,5 @@ Then #39 cinematic tour wires `snapshot`/`restore`/`applyEffect` onto
   `thumbnails`/`debug` in the snapshot.
 - **No** new fade-handle `kind`s — the manifest reuses the handles producers
   already read.
-- **No** change to producer-driven (youAreHere / galaxyNames / structure labels'
-  first-emit) or focus-recession fades — both essential, both untouched.
+- **No** change to producer-driven first-emit fades (galaxyNames / Milky-Way label /
+  structure labels) or focus-recession fades — both essential, both untouched.
