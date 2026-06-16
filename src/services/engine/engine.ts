@@ -102,7 +102,7 @@ import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
 import type { RequestKey } from '../../@types/loading/RequestKey';
 import { awaitSlotReady } from '../loading/awaitSlotReady';
-import { snapToCameraSnapshot, tweenToCameraSnapshot } from './camera/cameraSnapshot';
+import { tweenToCameraSnapshot } from './camera/cameraSnapshot';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -555,13 +555,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     clearAll(state.subsystems.selection);
   }
 
-  function resetCamera(): void {
-    // Snapshot null-check; cam-null is absorbed inside the helper.
-    // Both must exist for a meaningful snap.
-    if (!state.initialCamSnapshot) return;
-    snapToCameraSnapshot(state, state.initialCamSnapshot);
-  }
-
   function focusOn(target: FocusableTarget): void {
     // Dispatch by type — one public method, two separate commit paths
     // (different tween shapes, cam-null gating, callbacks).  See commitFocus.
@@ -796,7 +789,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
     camera: {
       setAutoRotate: boringSetters.setAutoRotate,
-      reset: resetCamera,
       focusOn,
       focusOnHome,
       logState: logCameraStateFn,

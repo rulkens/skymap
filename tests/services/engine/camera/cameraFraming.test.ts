@@ -27,7 +27,7 @@ describe('computeInitialCamera', () => {
     expect(cam.fovYRad).toBe(FOV);
   });
 
-  it('uses stable yaw / pitch defaults so resetCamera is reproducible', () => {
+  it('uses stable yaw / pitch defaults so the initial framing is reproducible', () => {
     const cam = computeInitialCamera({ fovYRad: FOV });
     expect(cam.yaw).toBe(3.0045);
     expect(cam.pitch).toBe(0.0609);
