@@ -5,7 +5,7 @@
  *
  * Public surface (factory shape, matching D.2 conventions):
  *
- *   - createVolumeFieldRenderer(device, format, fadeBgl, callbacks)
+ *   - createVolumeFieldRenderer(device, format, fadeBgl)
  *   - upload(id, cube)            → upload cube to a 3D r16float
  *                                       texture, read the per-cube static
  *                                       config from the registry, register
@@ -101,10 +101,6 @@ export function createVolumeFieldRenderer(
   device: GPUDevice,
   format: GPUTextureFormat,
   fadeBgl: FadeUniformsBgl,
-  callbacks: {
-    onFieldAdded: (id: VolumeFieldId) => void;
-    onFieldRemoved: (id: VolumeFieldId) => void;
-  },
 ): VolumeFieldRenderer {
   const cornerBuffer = device.createBuffer({
     size: CUBE_CORNERS.byteLength,
@@ -331,18 +327,15 @@ export function createVolumeFieldRenderer(
         fadeBuffer,
         fadeBindGroup,
       });
-      callbacks.onFieldAdded(id);
     },
     unload(id) {
       const entry = fields.get(id);
       if (!entry) return;
-      // Fire the callback BEFORE destroying GPU resources so any
-      // future callback body that needs to read the entry (debug log,
-      // pre-destroy fade-out path, etc.) operates on a still-valid
-      // entry. onFieldRemoved only calls fades.unregister, which
-      // doesn't touch the renderer, but the order is the more
-      // defensible default.
-      callbacks.onFieldRemoved(id);
+      // The renderer is FadeRegistry-agnostic: it neither registers nor
+      // unregisters fade handles. The fade-ownership manifest (`seedFades`)
+      // owns the whole volume-field handle set at construction, so a field's
+      // handle stays registered across upload/unload — `unload` just releases
+      // this field's GPU resources.
       entry.volumeTexture.destroy();
       entry.paletteTexture.destroy();
       entry.uniformBuffer.destroy();

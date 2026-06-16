@@ -321,32 +321,15 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // draws nothing.  Same HDR target as every overlay so the raymarch
   // accumulates into the linear-light buffer before tone mapping.
   //
-  // Registry wiring goes through onFieldAdded/onFieldRemoved callbacks
-  // rather than a direct `fades` reference: scalarVolume is GPU-only (no
-  // EngineState dependency), so keeping it FadeRegistry-agnostic leaves
-  // the factory pure (testable without a registry stub) and puts the
-  // registry-side wiring at the bootstrap layer.
+  // The renderer is fully FadeRegistry-agnostic: it neither registers nor
+  // unregisters fade handles. The fade-ownership manifest (`seedFades`)
+  // registers the entire volume-field set — including the DEV-only debug
+  // fixtures — at construction, so every `fadeTo({kind:'volumeField'})` finds
+  // a registered handle regardless of which fields are currently uploaded.
   state.gpu.volumeFieldRenderer = createVolumeFieldRenderer(
     device,
     'rgba16float',
     state.gpu.fadeBgl!,
-    {
-      onFieldAdded: (id) => {
-        // Register at opacity 0 ONLY. Do NOT auto-fade-in here:
-        // addVolumeField (the engine.ts wrapper that calls into this
-        // factory) drives the fade-in itself, AFTER applying the
-        // persisted user enable/disable setting. Auto-fading here
-        // would ramp every field's opacity to 1 regardless of
-        // whether the user has it toggled off — combined with the
-        // draw-loop gate's "opacity > 0 keeps rendering through the
-        // fade-out tail", that would draw disabled debug fields by
-        // mistake.
-        state.subsystems.fades.register({ kind: 'volumeField', id }, 0);
-      },
-      onFieldRemoved: (id) => {
-        state.subsystems.fades.unregister({ kind: 'volumeField', id });
-      },
-    },
   );
 
   // ── CF4++ flow-field renderer (the engine's first compute renderer) ─

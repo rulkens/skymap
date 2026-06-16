@@ -23,12 +23,6 @@ import type { FilamentCloud } from '../../../@types/data/filament/FilamentCloud'
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
 export const createFilamentSlot: SlotFactory<FilamentCloud, FilamentReq> = (state, cb) => {
-  // Register the filament fade handle at opacity 0; the commit's
-  // fadeTo(1, FADE_IN_DURATION_MS) ramps it in once the upload lands.
-  // Filament is one-shot — never reloaded on tier change — so no
-  // fade-out branch is needed.
-  state.subsystems.fades.register({ kind: 'filament' }, 0);
-
   const slot = createAssetSlot({
     name: 'filaments',
     fetch: filamentFetcher,
