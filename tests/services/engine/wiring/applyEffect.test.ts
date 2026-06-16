@@ -47,7 +47,9 @@ describe('applyEffect', () => {
 
   it('syncs only the touched rows (single-cluster patch)', () => {
     const state = makeState();
-    const patch = { filaments: { enabled: true, intensity: 1 } } as unknown as Partial<SettingsSnapshot>;
+    const patch = {
+      filaments: { enabled: true, intensity: 1 },
+    } as unknown as Partial<SettingsSnapshot>;
 
     applyEffect(state, patch, { animate: true });
 
@@ -55,7 +57,17 @@ describe('applyEffect', () => {
     const only = lastOnly();
     expect(only).toContain('filaments');
     // No other cluster's rows came along.
-    for (const k of ['survey', 'surveyLabel', 'structureRing', 'structureLabel', 'volumeField', 'volumesMaster', 'milkyWayDisk', 'milkyWayLabel', 'flow']) {
+    for (const k of [
+      'survey',
+      'surveyLabel',
+      'structureRing',
+      'structureLabel',
+      'volumeField',
+      'volumesMaster',
+      'milkyWayDisk',
+      'milkyWayLabel',
+      'flow',
+    ]) {
       expect(only).not.toContain(k);
     }
 
@@ -66,7 +78,9 @@ describe('applyEffect', () => {
 
   it('detaches the patched cluster from the patch', () => {
     const state = makeState();
-    const patch = { filaments: { enabled: true, intensity: 1 } } as unknown as Partial<SettingsSnapshot>;
+    const patch = {
+      filaments: { enabled: true, intensity: 1 },
+    } as unknown as Partial<SettingsSnapshot>;
     applyEffect(state, patch, { animate: false });
 
     (patch.filaments as { intensity: number }).intensity = 999;
@@ -75,14 +89,25 @@ describe('applyEffect', () => {
 
   it('maps a structures patch to BOTH structure rows and nothing else', () => {
     const state = makeState();
-    const patch = { structures: { enabled: true, items: {} } } as unknown as Partial<SettingsSnapshot>;
+    const patch = {
+      structures: { enabled: true, items: {} },
+    } as unknown as Partial<SettingsSnapshot>;
 
     applyEffect(state, patch, { animate: true });
 
     const only = lastOnly();
     expect(only).toContain('structureRing');
     expect(only).toContain('structureLabel');
-    for (const k of ['survey', 'surveyLabel', 'filaments', 'volumeField', 'volumesMaster', 'milkyWayDisk', 'milkyWayLabel', 'flow']) {
+    for (const k of [
+      'survey',
+      'surveyLabel',
+      'filaments',
+      'volumeField',
+      'volumesMaster',
+      'milkyWayDisk',
+      'milkyWayLabel',
+      'flow',
+    ]) {
       expect(only).not.toContain(k);
     }
   });

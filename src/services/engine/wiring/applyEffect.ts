@@ -46,9 +46,7 @@ export function applyEffect(
       patch.structures,
     ) as EngineState['settings']['structures'];
   if (patch.volumes !== undefined)
-    state.settings.volumes = structuredClone(
-      patch.volumes,
-    ) as EngineState['settings']['volumes'];
+    state.settings.volumes = structuredClone(patch.volumes) as EngineState['settings']['volumes'];
   if (patch.filaments !== undefined)
     state.settings.filaments = structuredClone(
       patch.filaments,

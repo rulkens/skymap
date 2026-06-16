@@ -154,10 +154,7 @@ describe('applyIntent', () => {
 // we assert the spy calls directly.
 
 // The state slice the bridge feeds the rows — same Pick applyIntent uses.
-type BridgeState = Pick<
-  EngineState,
-  'settings' | 'subsystems' | 'assetSlots' | 'sources' | 'gpu'
->;
+type BridgeState = Pick<EngineState, 'settings' | 'subsystems' | 'assetSlots' | 'sources' | 'gpu'>;
 
 /**
  * Build a state whose settings cover every intent row's leaf, a stubbed fades
@@ -287,7 +284,9 @@ describe('syncVisibilityFades', () => {
 
     // The registration-only handles were never faded.
     for (const handle of REGISTRATION_ONLY_HANDLES) {
-      expect(fadedHandle(fadeTo, handle), `registration-only ${JSON.stringify(handle)}`).toBe(false);
+      expect(fadedHandle(fadeTo, handle), `registration-only ${JSON.stringify(handle)}`).toBe(
+        false,
+      );
     }
   });
 

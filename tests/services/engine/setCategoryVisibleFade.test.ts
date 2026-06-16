@@ -33,7 +33,10 @@ import type { EngineSettingsState } from '../../../src/@types/settings/EngineSet
 // asserts ONLY the setter's contract (write-then-bridge). The bridge's own fade
 // behaviour is covered by its own suite.
 vi.mock('../../../src/services/engine/wiring/syncVisibilityFades', () => ({
-  syncVisibilityFades: vi.fn<typeof import('../../../src/services/engine/wiring/syncVisibilityFades').syncVisibilityFades>(),
+  syncVisibilityFades:
+    vi.fn<
+      typeof import('../../../src/services/engine/wiring/syncVisibilityFades').syncVisibilityFades
+    >(),
 }));
 
 const bridge = vi.mocked(syncVisibilityFades);

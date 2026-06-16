@@ -37,7 +37,10 @@ import type { EngineSettingsState } from '../../../src/@types/settings/EngineSet
 // asserts ONLY the setter's contract (write-then-bridge, short-circuit). The
 // bridge's own fade + deriveSourceMasks post is covered by fadeLayers.test.ts.
 vi.mock('../../../src/services/engine/wiring/syncVisibilityFades', () => ({
-  syncVisibilityFades: vi.fn<typeof import('../../../src/services/engine/wiring/syncVisibilityFades').syncVisibilityFades>(),
+  syncVisibilityFades:
+    vi.fn<
+      typeof import('../../../src/services/engine/wiring/syncVisibilityFades').syncVisibilityFades
+    >(),
 }));
 
 const bridge = vi.mocked(syncVisibilityFades);
