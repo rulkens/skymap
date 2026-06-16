@@ -18,7 +18,7 @@ export type AboutPillProps = {
 
 function AboutPill({ onClick, hidden = false }: AboutPillProps): ReactNode {
   return (
-    <PillButton onClick={onClick} hidden={hidden} aria-label="About skymap">
+    <PillButton onClick={onClick} hidden={hidden} aria-label="About skymap" tooltip="About skymap">
       <InfoIcon />
     </PillButton>
   );

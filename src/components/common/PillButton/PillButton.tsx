@@ -11,8 +11,11 @@
  * construction.
  *
  * Consumers own the semantics (aria-label, aria-pressed, dynamic
- * icon swap, onClick); PillButton owns the visual identity and the
- * shared `hidden` fade-out used during palette-open transitions.
+ * icon swap, onClick); PillButton owns the visual identity, the
+ * shared `hidden` fade-out used during palette-open transitions, and
+ * the optional hover/focus `tooltip` box (these pills are icon-only,
+ * so a short label is the only thing telling a newcomer what each
+ * glyph does).
  */
 
 import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react';
@@ -27,6 +30,16 @@ export type PillButtonProps = {
    * sits on top.
    */
   readonly hidden?: boolean;
+  /**
+   * Optional short label shown in a frosted-glass box below the pill
+   * on hover / keyboard focus. These icon-only pills carry no visible
+   * text, so the tooltip is what tells a first-time user what each
+   * glyph does — keep it terse (a few words). Purely visual: the
+   * screen-reader name still comes from the consumer's `aria-label`,
+   * so the box is `aria-hidden` to avoid a double announcement. Omit
+   * it and no box renders.
+   */
+  readonly tooltip?: string;
   readonly children: ReactNode;
 } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> & {
     readonly ref?: Ref<HTMLButtonElement>;
@@ -34,6 +47,7 @@ export type PillButtonProps = {
 
 function PillButton({
   hidden = false,
+  tooltip,
   className,
   type = 'button',
   children,
@@ -47,6 +61,11 @@ function PillButton({
       {...rest}
     >
       {children}
+      {tooltip && (
+        <span className={styles.tooltip} aria-hidden="true">
+          {tooltip}
+        </span>
+      )}
     </button>
   );
 }

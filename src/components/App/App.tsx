@@ -32,6 +32,7 @@ import StatsPanel from '../StatsPanel/StatsPanel';
 import { CommandPalette } from '../CommandPalette/CommandPalette';
 import SearchTrigger from '../SearchTrigger/SearchTrigger';
 import AutoRotateToggle from '../AutoRotateToggle/AutoRotateToggle';
+import HomeButton from '../HomeButton/HomeButton';
 import Splash from '../Splash/Splash';
 import AboutPill from '../Splash/AboutPill';
 import { MILKY_WAY_INFO } from '../../data/milkyWay/milkyWayInfo';
@@ -568,10 +569,14 @@ export function App(): React.ReactElement {
             filamentCounts={filamentCounts}
           />
         </div>
-        {/* Top-center pill row.  SearchTrigger + AutoRotateToggle share
-            a flex wrapper so they fade together when the palette opens. */}
+        {/* Top-center pill row.  SearchTrigger + the pills share a flex
+            wrapper so they fade together when the palette opens. */}
         <div className={appStyles.topBar}>
           <SearchTrigger onClick={openPalette} hidden={paletteOpen || splash.splashVisible} />
+          <HomeButton
+            onClick={() => handleRef.current?.camera.focusOnHome()}
+            hidden={paletteOpen || splash.splashVisible}
+          />
           <AutoRotateToggle
             playing={autoRotate}
             onToggle={() => handleRef.current?.camera.setAutoRotate(!autoRotate)}
