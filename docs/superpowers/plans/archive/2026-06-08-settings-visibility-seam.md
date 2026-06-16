@@ -1,5 +1,20 @@
 # Settings snapshot/restore seam — implementation plan
 
+> **⚠️ ARCHIVED — STALE, do not execute.** This plan predates two refactors that
+> invalidated its core data shape:
+> - The **settings-by-source-type reshape** (PR #295) + **engine-owned settings
+>   store** (PR #302) deleted the seven-fold pre-reshape `VisibilitySnapshot`
+>   geography this plan builds (`sourceDrawMask`, `volumes.masterEnabled`, the two
+>   flat category records). Those storage shapes no longer exist.
+> - Its source spec (§2 of `specs/2026-06-08-pre-tour-decomplection-design.md`) was
+>   superseded — first by `specs/archive/2026-06-10-visibility-seam-reconciled-design.md`,
+>   then folded into the **live** design
+>   `specs/2026-06-15-fade-ownership-visibility-seam-merged-design.md`, which builds
+>   `VISIBILITY_LAYERS` as the intent-bearing subset of one fade manifest.
+>
+> Write a fresh plan off the 2026-06-15 merged spec when the seam is tackled; do not
+> resurrect this one. Kept for archaeology only.
+
 > **REQUIRED SUB-SKILL:** execute this plan via `superpowers:subagent-driven-development`
 > (one fresh implementer subagent per task, plus spec + quality reviews). The
 > main thread runs `npm test` / `npm run typecheck` and makes commits; implementers

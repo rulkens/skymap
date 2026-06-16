@@ -1,6 +1,8 @@
 # Load-state consolidation (braid #1) — design
 
-**Status:** designed, awaiting implementation. One PR.
+**Status:** ✅ SHIPPED via PR #309 (`75eef55c`). `slotReady(slot)` is the single
+predicate (`src/services/loading/slotReady.ts`); the flow/filament status-mirror
+stores are deleted; `EngineData` carries only galaxies + structures.
 
 **Goal:** the "is it loaded?" fact for the flow and filament layers lives in
 **one** home — the asset slot — read through a single predicate. Delete the two
