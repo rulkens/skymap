@@ -299,8 +299,8 @@
    `VolumeFieldRow.module.css` alongside the component. */
 
 /*
- * Action buttons inside the panel body (Reset camera, SpaceMouse connect)
- * use the shared Button primitive.  This class is the per-panel override
+ * Action buttons inside the panel body (Reset camera) use the shared
+ * Button primitive.  This class is the per-panel override
  * for full-width layout — Button itself ships content-width.
  */
 .resetButton {

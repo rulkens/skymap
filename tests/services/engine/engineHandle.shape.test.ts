@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest';
 import type { EngineHandle } from '../../../src/@types/engine/EngineHandle';
 
 describe('EngineHandle — namespace sub-handles', () => {
-  it('declares 14 sub-handles + destroy + assetSlots as type-level members', () => {
+  it('declares 13 sub-handles + destroy + assetSlots as type-level members', () => {
     // Compile-time assertion: every name below must exist on EngineHandle.
     const expectedSubHandles: ReadonlyArray<keyof EngineHandle> = [
       'galaxyCatalogs',
@@ -23,11 +23,10 @@ describe('EngineHandle — namespace sub-handles', () => {
       'flow',
       'structures',
       'volumes',
-      'input',
       'debug',
     ];
     const expectedRoot: ReadonlyArray<keyof EngineHandle> = ['destroy', 'assetSlots'];
-    expect(expectedSubHandles).toHaveLength(14);
+    expect(expectedSubHandles).toHaveLength(13);
     expect(expectedRoot).toHaveLength(2);
   });
 });

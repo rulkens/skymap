@@ -24,7 +24,7 @@ import type { StructureId } from '../data/structure/StructureId';
  * Every member here is an EVENT — something the engine *did* that the
  * UI must learn about (a status transition, a selection change, a
  * camera-snapshot tick, a catalog arrival, a load-progress update, the
- * one-shot filaments-ready, a SpaceMouse connect). Settings VALUES do
+ * one-shot filaments-ready). Settings VALUES do
  * NOT live here: they're owned by the engine settings store and read
  * React-side via `useStore` selectors, so there is no echo-mirror
  * protocol to maintain.
@@ -32,8 +32,8 @@ import type { StructureId } from '../data/structure/StructureId';
  * ### Nested-only shape
  *
  * Each sub-bag groups its callbacks by the engine sub-system they
- * concern (lifecycle / selection / camera / sources / filaments /
- * input). There are no flat siblings — every fire site lives at its
+ * concern (lifecycle / selection / camera / sources / filaments).
+ * There are no flat siblings — every fire site lives at its
  * nested address.
  *
  * Why namespacing at all (rather than sibling lambdas)?  The grouping
@@ -181,15 +181,4 @@ export type EngineCallbacks = {
    * skipped on fresh clones (before `npm run build-filaments`).
    */
   filaments?: { onReady?: (stripCount: number, vertexCount: number) => void };
-
-  /**
-   * SpaceMouse connection-state echo.  Fires for both successful
-   * pair (`connect()` returned true), explicit user disconnect, and
-   * unsolicited HID disconnects (USB unplugged, browser permission
-   * revoked).  Without this the React "Connected" indicator can
-   * persist after the puck is physically gone.
-   */
-  input?: {
-    spaceMouse?: { onConnectedChange?: (connected: boolean) => void };
-  };
 };

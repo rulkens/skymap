@@ -66,8 +66,8 @@
  *   - Hover pick readback (mutates `hoveredIndex` + queues another GPU
  *     submit on its own — the pick renderer encodes its own commands).
  *   - The render-on-demand scheduler decision.
- *   - Camera state mutation (resize, tween advance, SpaceMouse apply,
- *     auto-rotate yaw bump).
+ *   - Camera state mutation (resize, tween advance, auto-rotate yaw
+ *     bump).
  */
 
 import type { RenderFrameInput } from '../../../@types/engine/frame/RenderFrameInput';

@@ -30,7 +30,7 @@
  *
  * function frame() {
  *   // ...all the existing per-frame work...
- *   if (autoRotate || currentTween || hasAnyAxis(spaceMouse) || queue.inFlightCount() > 0) {
+ *   if (autoRotate || currentTween || queue.inFlightCount() > 0) {
  *     sched.requestRender();
  *   }
  * }

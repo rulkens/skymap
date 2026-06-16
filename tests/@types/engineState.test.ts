@@ -41,7 +41,6 @@ import {
   DEFAULT_FLOW,
 } from '../../src/data/defaults';
 import { createTweenManager } from '../../src/services/engine/camera/tweenManager';
-import { createSpaceMouseSubsystem } from '../../src/services/engine/subsystems/spaceMouseSubsystem';
 import { createRenderScheduler } from '../../src/services/engine/subsystems/renderScheduler';
 import { createSelectionSubsystem } from '../../src/services/engine/subsystems/selectionSubsystem';
 import { createBiasCorrectionSubsystem } from '../../src/services/engine/subsystems/biasCorrectionSubsystem';
@@ -177,11 +176,6 @@ describe('EngineState type', () => {
         hiResFamous: null,
         hiResFamousTexture: null,
         loadProgress: null,
-        spaceMouse: createSpaceMouseSubsystem({
-          cancelTween: () => {},
-          onConnectionChange: () => {},
-          onAxes: () => {},
-        }),
         tweens: createTweenManager({ requestRender: () => {} }),
         selection: createSelectionSubsystem({
           cb: noopCb,
@@ -376,11 +370,6 @@ describe('EngineState type', () => {
         hiResFamous: null,
         hiResFamousTexture: null,
         loadProgress: null,
-        spaceMouse: createSpaceMouseSubsystem({
-          cancelTween: () => {},
-          onConnectionChange: () => {},
-          onAxes: () => {},
-        }),
         tweens: createTweenManager({ requestRender: () => {} }),
         selection: createSelectionSubsystem({
           cb: noopCb,

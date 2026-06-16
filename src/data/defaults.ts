@@ -274,13 +274,3 @@ export const DEFAULT_SHOW_PICK_BUFFER = false;
 
 /** Disk-radius debug ring starts off.  See `EngineSettingsState.debug.showDiskRadiusRing`. */
 export const DEFAULT_SHOW_DISK_RADIUS_RING = false;
-
-// ── SpaceMouse ─────────────────────────────────────────────────────────────
-
-/**
- * Default SpaceMouse global sensitivity multiplier.  1.0 = unscaled.
- * Range typically 0.25–4.0.  Only meaningful when a 3DConnexion device
- * is paired; the WebHID glue ignores this constant if no device is
- * present.
- */
-export const DEFAULT_SPACE_MOUSE_SENSITIVITY = 1.0;

@@ -12,7 +12,7 @@
  * ### Why a closure-returning factory rather than a class?
  *
  * Same rationale every other subsystem under this folder uses
- * (selectionSubsystem, thumbnailSubsystem, spaceMouseSubsystem):
+ * (selectionSubsystem, thumbnailSubsystem):
  * the codebase's convention is "factories return typed handles, not
  * class instances", the internal mutable state (renderer ref, mode,
  * cache maps, generation counter) is genuinely inaccessible from

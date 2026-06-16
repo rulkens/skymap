@@ -6,7 +6,7 @@
  * These tuples are MUTABLE by default.  That matches gl-matrix's `vec3`
  * (a plain `Float32Array` that callers freely write into) and reflects
  * the codebase's reality: factories return mutable tuples, and a few
- * hot paths (cameraTween, spaceMouseToCamera) write back into them in
+ * hot paths (cameraTween) write back into them in
  * place.  Functions that promise not to mutate their input should
  * annotate the parameter as `Readonly<Vec3>` — this gives one shared
  * storage type and lets read-only-ness be a per-boundary decision

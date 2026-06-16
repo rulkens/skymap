@@ -30,9 +30,9 @@
  * engine-owned settings store; React reads them via `useSettingsStore`
  * selectors, not through this hook.  The only thing the caller layers in
  * via `extraCallbacks` is extra EVENT subscriptions — App-level event
- * wiring plus the `filaments.onReady` / SpaceMouse-connect events
- * `useEngineSettings` owns — which we spread into the createEngine
- * options block alongside our session callbacks.
+ * wiring plus the `filaments.onReady` event `useEngineSettings` owns —
+ * which we spread into the createEngine options block alongside our
+ * session callbacks.
  *
  * ──────────────────────────────────────────────────────────────────────
  * Why empty `useEffect` deps?
@@ -138,15 +138,15 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
     };
 
     // `EngineCallbacks` is EVENT-only: lifecycle / selection / camera /
-    // sources events, plus the one-shot `filaments.onReady` and the
-    // SpaceMouse connect echo.  Each bag here merges this hook's
-    // session-level subscriptions (status / hover / select / focus /
-    // camera / fps / catalog / tier / load progress) with whatever
-    // `extraCallbacks` declares for that cluster — App-level event
-    // subscriptions (e.g. `selection.onStructureHoverChange`) plus the
-    // `filaments`/`input` events `useEngineSettings` owns.  Spread order
-    // puts the extra-callback entries LAST so the caller wins where both
-    // define the same method.  Settings VALUES do not flow through here:
+    // sources events, plus the one-shot `filaments.onReady`.  Each bag
+    // here merges this hook's session-level subscriptions (status /
+    // hover / select / focus / camera / fps / catalog / tier / load
+    // progress) with whatever `extraCallbacks` declares for that
+    // cluster — App-level event subscriptions (e.g.
+    // `selection.onStructureHoverChange`) plus the `filaments` events
+    // `useEngineSettings` owns.  Spread order puts the extra-callback
+    // entries LAST so the caller wins where both define the same
+    // method.  Settings VALUES do not flow through here:
     // they live in the engine-owned store and React reads them via
     // `useSettingsStore` selectors, so there is no echo to merge.
     // `initialTier` rides through as a non-callback option.
@@ -156,7 +156,6 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
       selection: extraSelection,
       sources: extraSources,
       filaments: extraFilaments,
-      input: extraInput,
     } = extraCallbacks ?? {};
 
     const handle = createEngine(canvas, {
@@ -191,13 +190,12 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
         onStructureCountsChange: setStructureCounts,
         ...extraSources,
       },
-      // The filaments-ready and SpaceMouse-connect events have no
-      // session-level subscription here — `useEngineSettings` owns them.
-      // Pass them through unconditionally so the optional-chain in engine
-      // code resolves to the actual function (or stays undefined if the
-      // consumer didn't subscribe).
+      // The filaments-ready event has no session-level subscription
+      // here — `useEngineSettings` owns it.  Pass it through
+      // unconditionally so the optional-chain in engine code resolves to
+      // the actual function (or stays undefined if the consumer didn't
+      // subscribe).
       filaments: extraFilaments,
-      input: extraInput,
     });
 
     handleRef.current = handle;

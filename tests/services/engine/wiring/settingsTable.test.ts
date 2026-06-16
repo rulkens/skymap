@@ -32,10 +32,10 @@ describe('settingsTable', () => {
   describe('SETTINGS_TABLE', () => {
     it('declares the 13 table-candidate setters', () => {
       // Bespoke setters MUST stay out of the table: the "dispatch + render"
-      // ones (`setBiasMode`, `setTier`, `setSourceVisible`,
-      // `setSpaceMouseSensitivity`) plus the fade-driving ones
-      // (`flow.set`, `milkyWay`/`filaments` visibility) that live as `handles/`
-      // functions. If this list drifts, either a new boring setter snuck in
+      // ones (`setBiasMode`, `setTier`, `setSourceVisible`) plus the
+      // fade-driving ones (`flow.set`, `milkyWay`/`filaments` visibility) that
+      // live as `handles/` functions. If this list drifts, either a new boring
+      // setter snuck in
       // (good — extend the table) or a bespoke one was accidentally tabled (bad
       // — bespoke logic gets dropped silently).
       const names = SETTINGS_TABLE.map((d) => d.name).sort();

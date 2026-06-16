@@ -33,7 +33,6 @@ import type { EngineFilamentsHandle } from './handles/EngineFilamentsHandle';
 import type { EngineFlowFieldsHandle } from './handles/EngineFlowFieldsHandle';
 import type { EngineStructuresHandle } from './handles/EngineStructuresHandle';
 import type { EngineVolumesHandle } from './handles/EngineVolumesHandle';
-import type { EngineInputHandle } from './handles/EngineInputHandle';
 import type { EngineDebugHandle } from './handles/EngineDebugHandle';
 
 /**
@@ -57,7 +56,6 @@ export type EngineHandle = {
   flow: EngineFlowFieldsHandle;
   structures: EngineStructuresHandle;
   volumes: EngineVolumesHandle;
-  input: EngineInputHandle;
   debug: EngineDebugHandle;
 
   /**

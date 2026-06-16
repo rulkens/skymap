@@ -28,7 +28,6 @@ const AUTO_ROTATE_YAW_DELTA = 0.000873;
 
 type FakeState = {
   subsystems: {
-    spaceMouse: { hasAxes: ReturnType<typeof vi.fn>; applyToCamera: ReturnType<typeof vi.fn> };
     tweens: { isActive: ReturnType<typeof vi.fn>; advance: ReturnType<typeof vi.fn> };
   };
   settings: { camera: { autoRotate: boolean } };
@@ -37,7 +36,6 @@ type FakeState = {
 function makeFakeState(): FakeState {
   return {
     subsystems: {
-      spaceMouse: { hasAxes: vi.fn(() => false), applyToCamera: vi.fn() },
       tweens: { isActive: vi.fn(() => false), advance: vi.fn(() => false) },
     },
     settings: { camera: { autoRotate: false } },
@@ -52,29 +50,6 @@ function driverById(state: EngineState, id: string): CameraDriver {
 }
 
 const camStub = {} as OrbitCamera;
-
-describe('buildCameraDrivers — input wrapper', () => {
-  it('isActive reflects spaceMouse.hasAxes', () => {
-    const fake = makeFakeState();
-    const input = driverById(fake as unknown as EngineState, 'input');
-
-    fake.subsystems.spaceMouse.hasAxes.mockReturnValue(true);
-    expect(input.isActive(0)).toBe(true);
-
-    fake.subsystems.spaceMouse.hasAxes.mockReturnValue(false);
-    expect(input.isActive(0)).toBe(false);
-  });
-
-  it('apply forwards cam + nowMs to spaceMouse.applyToCamera', () => {
-    const fake = makeFakeState();
-    const input = driverById(fake as unknown as EngineState, 'input');
-
-    input.apply(camStub, 1234);
-
-    expect(fake.subsystems.spaceMouse.applyToCamera).toHaveBeenCalledTimes(1);
-    expect(fake.subsystems.spaceMouse.applyToCamera).toHaveBeenCalledWith(camStub, 1234);
-  });
-});
 
 describe('buildCameraDrivers — tween wrapper', () => {
   it('isActive reflects tweenManager.isActive', () => {

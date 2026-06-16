@@ -102,7 +102,6 @@ function makeState(): EngineState {
     },
     subsystems: {
       tweens: { advance: vi.fn(), isActive: () => false },
-      spaceMouse: { applyToCamera: vi.fn(), hasAxes: () => false },
       scheduler: { requestRender: vi.fn() },
       // deriveSourceMasks reads opacityOf({kind:'galaxyCatalog', id}) for every
       // galaxy catalog to compute the fade-out draw tail; 0 everywhere (no fade in
@@ -231,17 +230,14 @@ describe('runFrame — FPS wiring', () => {
  * reports not-ready and the body early-returns right after the camera
  * block: exactly the slice we want to pin without standing up a GPU.
  *
- * `makeCamState` lets each test control the three driver predicates
- * (autoRotate / tween-active / spaceMouse-axes) and inject a tween
- * `advance` that mutates the camera, so we can prove which driver actually
- * authored the frame.
+ * `makeCamState` lets each test control the two driver predicates
+ * (autoRotate / tween-active) and inject a tween `advance` that mutates
+ * the camera, so we can prove which driver actually authored the frame.
  */
 function makeCamState(opts: {
   autoRotate?: boolean;
   tweenActive?: boolean;
   tweenAdvance?: (cam: OrbitCamera, nowMs: number) => void;
-  spaceMouseHasAxes?: boolean;
-  spaceMouseApply?: (cam: OrbitCamera, nowMs: number) => void;
 }): EngineState {
   const cam: OrbitCamera = {
     yaw: 0,
@@ -265,10 +261,6 @@ function makeCamState(opts: {
     isActive: () => opts.tweenActive ?? false,
     advance: vi.fn(opts.tweenAdvance ?? (() => {})),
   } as unknown as EngineState['subsystems']['tweens'];
-  state.subsystems.spaceMouse = {
-    hasAxes: () => opts.spaceMouseHasAxes ?? false,
-    applyToCamera: vi.fn(opts.spaceMouseApply ?? (() => {})),
-  } as unknown as EngineState['subsystems']['spaceMouse'];
   return state;
 }
 
@@ -330,7 +322,6 @@ describe('runFrame — camera drivers (regression)', () => {
     expect(state.cam!.pitch).toBe(before.pitch);
     expect(state.cam!.distance).toBe(before.distance);
     expect(state.subsystems.tweens.advance).not.toHaveBeenCalled();
-    expect(state.subsystems.spaceMouse.applyToCamera).not.toHaveBeenCalled();
   });
 
   it('autoRotate on, nothing else active → yaw advances by exactly 0.000873', () => {
@@ -347,12 +338,12 @@ describe('runFrame — camera drivers (regression)', () => {
   });
 
   // RoD camera-term collapse (`deps.drivers.some(d => d.isActive(nowMs))`
-  // replacing the three old autoRotate/tween/spaceMouse OR terms) is NOT
-  // directly asserted here: the `stillAnimating` tail is reachable only on
-  // the GPU-ready path, and these lightweight fixtures early-return at the
-  // renderer-null guard.  The equivalence is underwritten elsewhere — each
-  // driver's `isActive` maps one-to-one onto an old term, proven by
-  // cameraDriverWrappers.test.ts, and `.some` over those three IS their
+  // standing in for the per-driver OR terms) is NOT directly asserted here:
+  // the `stillAnimating` tail is reachable only on the GPU-ready path, and
+  // these lightweight fixtures early-return at the renderer-null guard.  The
+  // equivalence is underwritten elsewhere — each driver's `isActive` maps
+  // one-to-one onto a keep-ticking term, proven by
+  // cameraDriverWrappers.test.ts, and `.some` over the drivers IS their
   // boolean OR.  Building a full GPU-ready fixture solely to re-prove that
   // identity would be disproportionate, so we document the coverage instead.
 });
