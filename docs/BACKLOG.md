@@ -27,6 +27,10 @@ Curated list of pickup-able work and surfaced issues. Living document — update
 
 Plans live in `docs/superpowers/plans/`. All have TDD task lists with checkboxes; pick one and run it via `superpowers:subagent-driven-development` or `superpowers:executing-plans`.
 
+- **Fade ownership + visibility seam** — three sequenced plans off the [2026-06-15 merged design](superpowers/specs/2026-06-15-fade-ownership-visibility-seam-merged-design.md) (braid #1 already shipped, #309). The visibility seam is the **#39 cinematic-tour prerequisite** — it gives the tour a single capture/restore surface. Order: **A → B**, **C anytime**.
+  - **[A — manifest seed](superpowers/plans/2026-06-16-fade-ownership-A-manifest-seed.md)** — `FADE_LAYERS` + `seedFades`; absorb `registerOverlayFades` + the four out-of-band register sites; registration gets one home. No deps.
+  - **[B — intent bridge + #38 seam](superpowers/plans/2026-06-16-fade-ownership-B-intent-bridge-seam.md)** — `syncVisibilityFades`/`applyIntent` + `captureSettings`/`restoreSettings`/`applyEffect`; repoint ~10 drivers; delete the flow guard. **Depends on A.** Carries the `surveyLabel`/`galaxyNames` open seam (see Plan A's top note).
+  - **[C — renderer mirrors](superpowers/plans/2026-06-16-fade-ownership-C-renderer-mirrors.md)** — drop `flowFieldRenderer.hasField` + `selectionRingRenderer.currentSelection`. Independent, anytime.
 - **[2026-05-20 Splash screen — Part 2 (tour)](superpowers/plans/2026-05-20-splash-screen-02-stub-tour.md)** — replaces Part 1's no-op Tour button with a six-beat camera tour. Re-architected 2026-06-04 from a throwaway React stub into an **engine-side seed**: `engine.tour` handle + `tourSubsystem` (frame-driven, in the RoD gate) + `TourBeat`/`TourFocus`/`TourEffect` data model, so the cinematic tour extends it. Part 1 shipped (PR #178); Tour CTA currently dismisses without running. Resolves the cinematic spec's decision 4.
 
 ---
