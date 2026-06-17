@@ -6,9 +6,10 @@
  * (the expanded snap).  `scroll-snap-type: y mandatory` makes a flick settle on
  * one or the other — that's the whole gesture, no JS.
  *
- * Pointer-events are deliberately split: `.root` and `.spacer` let touches fall
- * through to the WebGPU canvas behind, while `.sheet` captures them.  Tokens are
- * sourced from `src/styles/global.css`; the peek height is the shared
+ * Pointer-events are deliberately split: `.root`, `.spacer`, and the `.sheet`
+ * snap target are all transparent to touches (they fall through to the WebGPU
+ * canvas behind); only the inner `.surface` captures them.  Tokens are sourced
+ * from `src/styles/global.css`; the peek height is the shared
  * `--mobile-sheet-peek` so the sheet and the scale-bar lift never drift apart.
  */
 
@@ -44,14 +45,26 @@
 }
 
 /*
- * Expanded snap.  Captures pointer events and scrolls its own body when the card
- * is long.  Min-height keeps the expanded snap filling to roughly three-quarters
- * of the viewport regardless of how short the card content is.
+ * Expanded snap TARGET — kept at min-height 75vh purely so the scroll-snap
+ * position stays reachable (a content-sized target would let mandatory snap
+ * yank a short card back to the peek).  Transparent and pointer-transparent: it
+ * only positions the surface; it paints nothing, and below a short card it lets
+ * the canvas show through instead of trailing an empty background band.
  */
 .sheet {
   scroll-snap-align: start;
   min-height: 75vh;
-  overflow-y: auto;
+  pointer-events: none;
+}
+
+/*
+ * Visible glass surface.  Hugs its content height (no min-height), so the card
+ * never trails an empty background band — the area of the taller `.sheet` below
+ * it is transparent and passes touches to the canvas.  This is the only piece
+ * that captures pointer events; a long card grows the surface and the root
+ * scroll-snap container scrolls it.
+ */
+.surface {
   pointer-events: auto;
   background: var(--surface-card-strong);
   border-top: 1px solid var(--border-card);

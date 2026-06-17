@@ -12,12 +12,14 @@
  * here at all.
  *
  * Pointer-events are split so the canvas behind the sheet stays usable.  The
- * `.root` and `.spacer` are `pointer-events: none`, so a touch landing on the
- * empty peek area (above the sheet) passes straight through to the WebGPU canvas
- * — you can still orbit the galaxy while the card peeks.  Only the `.sheet`
- * re-enables `pointer-events: auto`, capturing touches on the card body and on
- * its scroll thumb.  The asymmetry is essential: the wrapper must be transparent
- * to interaction everywhere except over the card.
+ * `.root`, `.spacer`, AND the `.sheet` snap target are all `pointer-events: none`
+ * and paint nothing — the `.sheet` exists only to position the expanded snap.
+ * The visible glass is an inner `.surface` that hugs the card's content height
+ * and is the only element to re-enable `pointer-events: auto`.  So every touch
+ * passes through to the WebGPU canvas except one landing directly on the card —
+ * including the expanded sheet's area below a short card, which shows canvas
+ * rather than an empty background band.  Hugging the surface to its content is
+ * what removes that trailing band; the snap target above stays full-height.
  *
  * The only JavaScript is the reset.  When the user selects a different target
  * the card content swaps, and we want the sheet to return to the peek so the new
@@ -53,8 +55,10 @@ function MobileSheet({ resetKey, children }: MobileSheetProps): ReactNode {
     <div ref={scrollRef} className={styles.root}>
       <div className={styles.spacer} />
       <section className={cx(styles.sheet, 'mobileSheet')}>
-        <div className={styles.handle} aria-hidden />
-        {children}
+        <div className={styles.surface}>
+          <div className={styles.handle} aria-hidden />
+          {children}
+        </div>
       </section>
     </div>
   );
