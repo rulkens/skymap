@@ -11,15 +11,17 @@
  * without a single `touchmove` listener.  This is why there is no JS drag code
  * here at all.
  *
- * Pointer-events are split so the canvas behind the sheet stays usable.  The
- * `.root`, `.spacer`, AND the `.sheet` snap target are all `pointer-events: none`
- * and paint nothing — the `.sheet` exists only to position the expanded snap.
- * The visible glass is an inner `.surface` that hugs the card's content height
- * and is the only element to re-enable `pointer-events: auto`.  So every touch
- * passes through to the WebGPU canvas except one landing directly on the card —
- * including the expanded sheet's area below a short card, which shows canvas
- * rather than an empty background band.  Hugging the surface to its content is
- * what removes that trailing band; the snap target above stays full-height.
+ * The `.sheet` hugs its content (capped at the viewport minus the peek) and
+ * snaps by its BOTTOM edge, so the expanded state sits the card flush at the
+ * bottom of the screen with no empty band trailing beneath it.  Bottom-edge
+ * snapping is also what keeps the expanded position reachable: it rests at the
+ * scroll maximum, so a short card can't get yanked back to the peek the way a
+ * top-aligned content-sized sheet would under `mandatory` snapping.
+ *
+ * Pointer-events are split so the canvas behind stays usable.  The `.root` and
+ * `.spacer` are `pointer-events: none`, so a touch above the sheet (and beside
+ * it, once expanded) passes straight through to the WebGPU canvas; only the
+ * `.sheet` re-enables them, capturing touches on the card body and its scroll.
  *
  * The only JavaScript is the reset.  When the user selects a different target
  * the card content swaps, and we want the sheet to return to the peek so the new
@@ -55,10 +57,8 @@ function MobileSheet({ resetKey, children }: MobileSheetProps): ReactNode {
     <div ref={scrollRef} className={styles.root}>
       <div className={styles.spacer} />
       <section className={cx(styles.sheet, 'mobileSheet')}>
-        <div className={styles.surface}>
-          <div className={styles.handle} aria-hidden />
-          {children}
-        </div>
+        <div className={styles.handle} aria-hidden />
+        {children}
       </section>
     </div>
   );
