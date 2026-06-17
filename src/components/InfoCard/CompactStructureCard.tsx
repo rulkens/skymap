@@ -8,6 +8,7 @@ import type { ReactNode } from 'react';
 import type { StructureInfo } from '../../@types/data/structure/StructureInfo';
 import { formatDistance } from '../../utils/format/formatDistance';
 import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
+import { CardRow } from './CardRow';
 import styles from './CompactStructureCard.module.css';
 
 export type CompactStructureCardProps = {
@@ -26,12 +27,9 @@ export function CompactStructureCard({ structure }: CompactStructureCardProps): 
       <div className={styles.cardTitle}>
         <span>Hover</span>
       </div>
-      <div className={styles.headlineRow}>
-        <div className={styles.cardHeadline}>{structure.name}</div>
-        <span className={styles.sourceBadge}>
-          {CATEGORY_DISPLAY_INFO[structure.category].shortLabel}
-        </span>
-      </div>
+      <CardRow type="headline" badge={CATEGORY_DISPLAY_INFO[structure.category].shortLabel}>
+        {structure.name}
+      </CardRow>
       <div className={styles.cardDistLine}>
         {formatDistance(distanceMpc)}
         <> &middot; r {formatDistance(structure.physicalRadiusMpc)}</>

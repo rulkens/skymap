@@ -29,18 +29,6 @@
   composes: cardTitle from './CompactCard.module.css';
 }
 
-.headlineRow {
-  composes: headlineRow from './CompactCard.module.css';
-}
-
-.cardHeadline {
-  composes: cardHeadline from './CompactCard.module.css';
-}
-
-.sourceBadge {
-  composes: sourceBadge from './CompactCard.module.css';
-}
-
 .cardDistLine {
   composes: cardDistLine from './CompactCard.module.css';
 }

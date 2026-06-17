@@ -49,18 +49,15 @@ export function GalaxyDetailCard({
         onClose={pinned ? onClose : undefined}
       />
 
-      <div className={styles.headlineRow}>
-        <div className={styles.cardHeadline}>
-          {info.displayName}
-          {famousAliases.map((alias) => (
-            <span key={alias} className={styles.headlineAlias}>
-              {' · '}
-              {alias}
-            </span>
-          ))}
-        </div>
-        <span className={styles.sourceBadge}>{info.sourceLabel}</span>
-      </div>
+      <CardRow type="headline" badge={info.sourceLabel}>
+        {info.displayName}
+        {famousAliases.map((alias) => (
+          <span key={alias} className={styles.headlineAlias}>
+            {' · '}
+            {alias}
+          </span>
+        ))}
+      </CardRow>
 
       {info.famous?.description && (
         <div className={styles.cardSection}>

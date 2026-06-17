@@ -61,12 +61,9 @@ export function StructureDetailCard({
         onClose={pinned ? onClose : undefined}
       />
 
-      <div className={styles.headlineRow}>
-        <div className={styles.cardHeadline}>{structure.name}</div>
-        <span className={styles.sourceBadge}>
-          {CATEGORY_DISPLAY_INFO[structure.category].label}
-        </span>
-      </div>
+      <CardRow type="headline" badge={CATEGORY_DISPLAY_INFO[structure.category].label}>
+        {structure.name}
+      </CardRow>
 
       <div className={styles.cardSection}>
         <CardRow

@@ -67,39 +67,6 @@
   text-transform: uppercase;
 }
 
-/* Name on the left, source badge top-right — mirrors the FullCard header. */
-.headlineRow {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-4);
-  margin-bottom: var(--space-3);
-}
-
-/* SDSS name headline */
-.cardHeadline {
-  flex: 1;
-  min-width: 0;
-  font-size: var(--font-size-xl);
-  color: var(--color-fg);
-  letter-spacing: var(--letter-spacing-tight);
-  word-break: break-all;
-}
-
-/* Compact variant of the FullCard source badge — slightly tighter padding. */
-.sourceBadge {
-  display: inline-block;
-  flex-shrink: 0;
-  padding: 0 5px;
-  border-radius: var(--radius-sm);
-  background: var(--surface-badge);
-  border: 1px solid var(--border-control);
-  color: var(--color-accent-bright);
-  font-size: var(--font-size-xs);
-  letter-spacing: var(--letter-spacing-wider);
-  text-transform: uppercase;
-}
-
 /* Lookback time line */
 .cardLookbackLine {
   color: var(--color-fg);
