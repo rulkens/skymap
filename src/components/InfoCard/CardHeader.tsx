@@ -6,7 +6,7 @@
  */
 
 import type { ReactNode } from 'react';
-import styles from './DetailCard.module.css';
+import styles from './cardChrome.module.css';
 
 export type CardHeaderProps = {
   eyebrow: string;

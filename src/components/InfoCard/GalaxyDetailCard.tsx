@@ -19,7 +19,7 @@ import { CardRow } from './CardRow';
 import { DescriptionBlock } from './DescriptionBlock';
 import { InfoTip } from '../InfoTip/InfoTip';
 import { TIPS } from './tooltips';
-import styles from './DetailCard.module.css';
+import styles from './cardChrome.module.css';
 
 export type GalaxyDetailCardProps = {
   info: GalaxyInfo;

@@ -1,16 +1,14 @@
 /*
- * FullCard.module.css — rich galaxy info card layout.
+ * cardChrome.module.css — shared styling vocabulary for the detail cards
+ * (galaxy / structure / Milky-Way).  The "loud" half of the InfoCard pair:
+ * more padding, more opaque glass, a starlight gradient line along the top
+ * edge.  Each detail card's own module composes the pieces it needs from here;
+ * this file owns no component of its own.  All atoms reference tokens from
+ * `src/styles/global.css`.
  *
- * The FullCard is the "loud" half of the InfoCard pair: more padding,
- * more opaque glass, and a starlight gradient line along the top edge.
- * All atoms reference tokens from `src/styles/global.css`.
- *
- * CSS-modules note:
- *   The `pinned` variant is applied via an additional class on the root:
- *     <div className={`${styles.infoCardFull} ${styles.pinned}`}>
- *   The .pinnedBadge span is always in the DOM; the CSS selector
- *     .infoCardFull.pinned .pinnedBadge { display: inline; }
- *   controls its visibility.
+ * CSS-modules note: the `pinned` variant is an extra class on the root —
+ * `.infoCardFull.pinned` — and `.pinnedBadge` is always in the DOM, shown via
+ * `.infoCardFull.pinned .pinnedBadge { display: inline }`.
  */
 
 /* ── Shared glass-panel base (shared by .infoCardFull and CompactCard) ──────── */

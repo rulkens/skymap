@@ -1,12 +1,13 @@
 /*
- * CompactCard.module.css — slimmer hover-preview card.
- *
- * Visual weight is deliberately lower than FullCard: same glass family,
- * tighter padding, slightly less opaque background.  All atoms reference
- * tokens from `src/styles/global.css`.
+ * compactChrome.module.css — shared styling vocabulary for the compact
+ * hover-preview cards (galaxy / structure / Milky-Way).  Visual weight is
+ * deliberately lower than the detail cards: same glass family, tighter
+ * padding, slightly less opaque background.  Each compact card composes the
+ * pieces it needs from here.  All atoms reference tokens from
+ * `src/styles/global.css`.
  */
 
-/* Outer glass panel — same base as FullCard but more compact */
+/* Outer glass panel — same base as the detail card but more compact */
 .infoCardCompact {
   position: relative; /* for the ::before accent line */
 

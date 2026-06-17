@@ -12,13 +12,13 @@
  *
  * Owns its own collapse state: each card mounts one block per description and
  * the expanded/collapsed flag is local UI, never lifted. The 5-line clamp and
- * the column layout live in DetailCard.module.css (.descCollapsed / .descBlock).
+ * the column layout live in cardChrome.module.css (.descCollapsed / .descBlock).
  */
 
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import cx from 'classnames';
-import styles from './DetailCard.module.css';
+import styles from './cardChrome.module.css';
 
 export type DescriptionBlockProps = {
   /** The prose to show — a curated blurb or auto-generated one-liner. */

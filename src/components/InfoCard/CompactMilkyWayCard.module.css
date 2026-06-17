@@ -1,20 +1,20 @@
 /*
  * CompactMilkyWayCard.module.css — Milky Way variant of the slim hover-preview.
  *
- * Same visual weight as the galaxy CompactCard; only the content differs (no
- * thumbnail, since we're inside the Milky Way).  Chrome is composed from
- * CompactCard.module.css to avoid drift — see CompactStructureCard.module.css
- * for the composes-from rationale.
+ * Only the content differs from the other compact cards (no thumbnail, since
+ * we're inside the Milky Way).  Chrome is composed from the shared
+ * compactChrome.module.css — see CompactStructureCard.module.css for the
+ * composes-from rationale.
  */
 
 .infoCardCompact {
-  composes: infoCardCompact from './CompactCard.module.css';
+  composes: infoCardCompact from './compactChrome.module.css';
 }
 
 .cardTitle {
-  composes: cardTitle from './CompactCard.module.css';
+  composes: cardTitle from './compactChrome.module.css';
 }
 
 .cardDistLine {
-  composes: cardDistLine from './CompactCard.module.css';
+  composes: cardDistLine from './compactChrome.module.css';
 }

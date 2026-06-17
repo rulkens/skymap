@@ -18,7 +18,7 @@ import { MILKY_WAY_INFO } from '../../data/milkyWay/milkyWayInfo';
 import { CardHeader } from './CardHeader';
 import { CardRow } from './CardRow';
 import { DescriptionBlock } from './DescriptionBlock';
-import styles from './DetailCard.module.css';
+import styles from './cardChrome.module.css';
 import mw from './MilkyWayDetailCard.module.css';
 
 export type MilkyWayDetailCardProps = {

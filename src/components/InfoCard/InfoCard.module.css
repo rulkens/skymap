@@ -2,9 +2,9 @@
  * InfoCard.module.css — the outer stack wrapper used when both pinned and
  * hover cards are visible simultaneously.
  *
- * When only a single card is rendered InfoCard returns <FullCard> directly,
- * so this module's only rule is the stack container itself.  The individual
- * card styles live in FullCard.module.css and CompactCard.module.css.
+ * When only a single card is rendered InfoCard returns the detail card
+ * directly, so this module's only rule is the stack container itself.  The
+ * shared card styling lives in cardChrome.module.css and compactChrome.module.css.
  *
  * All atoms reference tokens from `src/styles/global.css`.
  */

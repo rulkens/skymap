@@ -8,7 +8,7 @@ import type { ReactNode } from 'react';
 import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
 import { formatDistance } from '../../utils/format/formatDistance';
 import { CardRow } from './CardRow';
-import styles from './CompactCard.module.css';
+import styles from './compactChrome.module.css';
 
 export type CompactCardProps = {
   info: GalaxyInfo;

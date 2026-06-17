@@ -2,7 +2,7 @@
  * MilkyWayDetailCard.module.css — Milky-Way-specific styling only.
  *
  * The panel, headline, top row, and chrome all come from the shared
- * DetailCard.module.css (the component references those classes directly).
+ * cardChrome.module.css (the component references those classes directly).
  * This file styles the one piece unique to the Milky Way card: the glyph
  * standing in for the missing thumbnail.
  */
