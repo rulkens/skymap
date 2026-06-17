@@ -1,6 +1,6 @@
 ---
 name: create-component
-description: Create a new React component in `src/components/` following skymap's conventions — own folder, `<Name>.tsx` + `<Name>.module.css`, single-component-per-file, `function Name() {}` + `export default Name`, top-level `.root` class. Use when the user types `/create-component`, asks to "make a component", "add a component", "extract this into a component", or "split this component up". Also use proactively whenever a component file is growing past ~120 lines or starts handling more than one concern — the *right* time to create a new component is before the parent gets messy, not after.
+description: Create OR change a React component in `src/components/` following skymap's conventions — own folder, `<Name>.tsx` + `<Name>.module.css`, single-component-per-file, `function Name() {}` + `export default Name`, top-level `.root` class, shared vocabulary in a minimal shared module via `composes` (never `:global`). Use when the user types `/create-component`, asks to "make a component", "add a component", "extract this into a component", or "split this component up" — and, just as important, load it BEFORE editing, refactoring, restructuring, or restyling ANY existing `src/components/**` file (changing its props, markup, exports, or CSS), to check the change against the conventions. Also use proactively whenever a component file is growing past ~120 lines or starts handling more than one concern — the *right* time to create a new component is before the parent gets messy, not after.
 ---
 
 # `/create-component` — Create a React component, the skymap way
@@ -103,6 +103,50 @@ outermost element in dev tools), `.root` is the single predictable hook.
 Without it you end up reading the JSX to figure out which class is the
 outermost one (`.backdrop`? `.card`? `.wrapper`?), and every component
 answers it differently.
+
+### 5b. Shared vocabulary → a minimal shared module, composed in (never `:global`)
+
+A *family* of closely-related components sometimes shares a real styling
+vocabulary — the InfoCard detail cards (galaxy / structure / Milky-Way) and
+their compact hover variants all draw the same glass panel, headline row,
+section separators, and source badge. Three ways to handle that; only one is
+right:
+
+- **Duplicate** the rules into each component's module — they drift the moment
+  one copy is tweaked. No.
+- **Reach across files with `:global(.someClass)`** — leaks out of scope and is
+  the rule-8 anti-pattern. No.
+- **Extract the shared rules into a minimal shared module** and `composes` them
+  where needed. Yes.
+
+A shared module:
+
+- Is named for the *concept*, not a component, so it's obvious it has no
+  eponymous `.tsx`: `cardChrome.module.css`, not `DetailCard.module.css`.
+- Lives at the family's folder root (e.g. `InfoCard/cardChrome.module.css`),
+  beside the router component whose children share it.
+- Holds *only* genuinely-shared rules. A rule used by a single component
+  belongs in that component's own module — keep the shared module minimal, it's
+  a vocabulary, not a dumping ground.
+- Has no `.root` (it isn't a component).
+
+Each component still has its own `<Name>.module.css` with a `.root`, and
+composes the shared bits into it:
+
+```css
+/* InfoCard/GalaxyDetailCard/GalaxyDetailCard.module.css */
+.root {
+  composes: panel from '../cardChrome.module.css';
+}
+
+.summary { /* galaxy-only */ }
+```
+
+Why `composes` over `:global`: the dependency becomes a real import the build
+resolves — greppable, scoped, and refactor-safe — where `:global` is an
+invisible string handshake between two files that nothing checks. Any time
+you're tempted to write `:global(.foo)` in a module so another component's CSS
+can reach in, the answer is a shared class composed in instead.
 
 ### 6. Destructure props inline
 
