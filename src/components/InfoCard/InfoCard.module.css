@@ -11,10 +11,10 @@
 
 /*
  * Vertical stack wrapper — positions the whole pair at the top-right corner.
- * Child cards (FullCard, CompactCard) are normal flow inside the flex column,
- * so the stack height grows naturally as content changes.
+ * The detail + compact cards are normal flow inside the flex column, so the
+ * stack height grows naturally as content changes.
  */
-.infoCardStack {
+.root {
   position: fixed;
   top: var(--corner-offset);
   right: var(--corner-offset);

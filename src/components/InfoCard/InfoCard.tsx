@@ -64,7 +64,7 @@ export type InfoCardProps = {
   onClose?: () => void;
 };
 
-export function InfoCard({
+function InfoCard({
   hovered,
   selected,
   selectedMemberCount,
@@ -101,7 +101,7 @@ export function InfoCard({
   const compactTarget = hovered !== null && !targetEq(hovered, selected) ? hovered : null;
 
   return (
-    <div className={cx(styles.infoCardStack, 'infoCardStack')}>
+    <div className={cx(styles.root, 'infoCardStack')}>
       {selected &&
         DETAIL_CARD[selected.type].Detail({
           target: selected,
@@ -114,3 +114,5 @@ export function InfoCard({
     </div>
   );
 }
+
+export default InfoCard;

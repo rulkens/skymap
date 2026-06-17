@@ -25,7 +25,7 @@ import { useStructureMemberCount } from '../../hooks/useStructureMemberCount';
 import { useSplash } from '../../hooks/useSplash';
 import { StatusBar } from '../StatusBar/StatusBar';
 import { LoadingBar } from '../LoadingBar/LoadingBar';
-import { InfoCard } from '../InfoCard/InfoCard';
+import InfoCard from '../InfoCard/InfoCard';
 import { ScaleBar } from '../ScaleBar/ScaleBar';
 import { SettingsPanel } from '../SettingsPanel/SettingsPanel';
 import NavigationPanel from '../NavigationPanel/NavigationPanel';

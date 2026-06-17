@@ -21,7 +21,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
-import { InfoCard } from '../../../src/components/InfoCard/InfoCard';
+import InfoCard from '../../../src/components/InfoCard/InfoCard';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { GalaxyInfo } from '../../../src/@types/engine/GalaxyInfo';
 

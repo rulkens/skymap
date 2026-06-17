@@ -11,7 +11,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { createElement } from 'react';
-import { InfoCard } from '../../../src/components/InfoCard/InfoCard';
+import InfoCard from '../../../src/components/InfoCard/InfoCard';
 import { MILKY_WAY_INFO } from '../../../src/data/milkyWay/milkyWayInfo';
 import type { GalaxyInfo } from '../../../src/@types/engine/GalaxyInfo';
 import type { FocusableTarget } from '../../../src/@types/engine/FocusableTarget';
