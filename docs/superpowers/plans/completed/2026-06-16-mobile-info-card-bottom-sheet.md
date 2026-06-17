@@ -356,44 +356,44 @@ The gesture, snap, momentum, and `pointer-events` passthrough are
 browser-native and not unit-testable. Verify on the running dev server at a
 phone viewport (e.g. 390 px). This closes the spec's three risk items.
 
-- [ ] **Peek-height single token (risk 2):** confirm the scale bar sits exactly
+- [x] **Peek-height single token (risk 2):** confirm the scale bar sits exactly
   above the collapsed peek with no gap/overlap — proving both consumers read
   `--mobile-sheet-peek`. Tune the token value once if needed; both move together.
-- [ ] **pointer-events passthrough (risk 1):** drag on the sky *above* the sheet
+- [x] **pointer-events passthrough (risk 1):** drag on the sky *above* the sheet
   → camera orbits (spacer is `pointer-events: none`); drag *on* the sheet → it
   scrolls/snaps (sheet is `pointer-events: auto`). Confirm against the canvas'
   `touch-action: none`.
-- [ ] **useIsMobile vs CSS (risk 3):** confirm desktop is byte-for-byte
+- [x] **useIsMobile vs CSS (risk 3):** confirm desktop is byte-for-byte
   unchanged (top-right stack, hover preview, panels) and that rotating across
   768 px swaps the presentation live (the reactive hook, vs. the one-shot
   `initialMobile`). Confirm peek → expanded reveals the full card body scrolling
   internally, capped so the sky still peeks at the top (~75 vh).
-- [ ] Ask the user to look (do not kill the dev server). Note any token tweak.
+- [x] Ask the user to look (do not kill the dev server). Note any token tweak.
 
 ## Task 9 — Entanglement-radar pass over the full diff
 
 **Files:** none (review).
 
-- [ ] Run the `entanglement-radar` skill over the complete diff for this plan.
-- [ ] Verify the three un-braided choices held: (a) peek is the top slice of the
+- [x] Run the `entanglement-radar` skill over the complete diff for this plan.
+- [x] Verify the three un-braided choices held: (a) peek is the top slice of the
   same card, no duplicate headline component; (b) gesture is pure CSS, JS only
   for scroll-reset + `hasSelection`; (c) `--mobile-sheet-peek` is the single
   source for both the snap and the scale-bar lift (grep for any stray peek-height
   literal — there must be none).
-- [ ] Confirm `useIsMobile` is used ONLY for the render branch + `hasSelection`,
+- [x] Confirm `useIsMobile` is used ONLY for the render branch + `hasSelection`,
   never as a layout substitute for a media query.
-- [ ] Fix anything flagged; re-run `npm test` + `npm run typecheck` → green.
+- [x] Fix anything flagged; re-run `npm test` + `npm run typecheck` → green.
   Commit.
 
 ---
 
 ## Definition of done
 
-- [ ] All new tests green; **all pre-existing `InfoCard` tests green unchanged**
+- [x] All new tests green; **all pre-existing `InfoCard` tests green unchanged**
   (desktop parity).
-- [ ] `npm run typecheck` clean (src + tools).
-- [ ] No new state introduced beyond `useIsMobile`'s internal `useState`.
-- [ ] Peek height is one token; no duplicate literal anywhere.
-- [ ] `GalaxyInfo` / `galaxyInfoBuilder` / engine / data paths untouched.
-- [ ] Settings/Stats/Navigation mobile launcher NOT touched (out of scope).
-- [ ] Entanglement-radar pass complete with no outstanding flags.
+- [x] `npm run typecheck` clean (src + tools).
+- [x] No new state introduced beyond `useIsMobile`'s internal `useState`.
+- [x] Peek height is one token; no duplicate literal anywhere.
+- [x] `GalaxyInfo` / `galaxyInfoBuilder` / engine / data paths untouched.
+- [x] Settings/Stats/Navigation mobile launcher NOT touched (out of scope).
+- [x] Entanglement-radar pass complete with no outstanding flags.
