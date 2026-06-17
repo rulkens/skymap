@@ -1,0 +1,8 @@
+/*
+ * GalaxyDetailCard.module.css — the galaxy card's outer hook.  The card draws
+ * the shared detail-card chrome, so .root just composes the panel from
+ * cardChrome; everything inside is pulled from cardChrome directly.
+ */
+.root {
+  composes: infoCardFull from '../cardChrome.module.css';
+}

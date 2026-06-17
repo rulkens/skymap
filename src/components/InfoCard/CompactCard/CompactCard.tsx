@@ -5,18 +5,19 @@
  */
 
 import type { ReactNode } from 'react';
-import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
-import { formatDistance } from '../../utils/format/formatDistance';
-import CardRow from './CardRow/CardRow';
-import styles from './compactChrome.module.css';
+import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
+import { formatDistance } from '../../../utils/format/formatDistance';
+import CardRow from '../CardRow/CardRow';
+import styles from '../compactChrome.module.css';
+import local from './CompactCard.module.css';
 
 export type CompactCardProps = {
   info: GalaxyInfo;
 };
 
-export function CompactCard({ info }: CompactCardProps): ReactNode {
+function CompactCard({ info }: CompactCardProps): ReactNode {
   return (
-    <div className={styles.infoCardCompact} role="status" aria-live="polite">
+    <div className={local.root} role="status" aria-live="polite">
       <div className={styles.cardTitle}>
         <span>Hover</span>
       </div>
@@ -33,3 +34,5 @@ export function CompactCard({ info }: CompactCardProps): ReactNode {
     </div>
   );
 }
+
+export default CompactCard;

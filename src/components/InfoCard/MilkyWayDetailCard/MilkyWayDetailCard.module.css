@@ -1,11 +1,14 @@
 /*
- * MilkyWayDetailCard.module.css — Milky-Way-specific styling only.
+ * MilkyWayDetailCard.module.css — Milky-Way-specific styling.
  *
- * The panel, headline, top row, and chrome all come from the shared
- * cardChrome.module.css (the component references those classes directly).
- * This file styles the one piece unique to the Milky Way card: the glyph
- * standing in for the missing thumbnail.
+ * The card's chrome comes from the shared cardChrome vocabulary, composed into
+ * .root; the only piece unique to this card is the glyph standing in for the
+ * missing thumbnail.
  */
+
+.root {
+  composes: infoCardFull structure from '../cardChrome.module.css';
+}
 
 /*
  * Glyph standing in for the thumbnail.  A spiral-ish emoji in a square slot —

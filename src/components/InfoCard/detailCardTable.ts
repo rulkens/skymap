@@ -27,12 +27,12 @@
 import { createElement, type ReactNode } from 'react';
 import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
 import type { FocusableTargetType } from '../../@types/engine/FocusableTargetType';
-import { GalaxyDetailCard } from './GalaxyDetailCard';
-import { StructureDetailCard } from './StructureDetailCard';
-import { MilkyWayDetailCard } from './MilkyWayDetailCard';
-import { CompactCard } from './CompactCard';
-import { CompactStructureCard } from './CompactStructureCard';
-import { CompactMilkyWayCard } from './CompactMilkyWayCard';
+import GalaxyDetailCard from './GalaxyDetailCard/GalaxyDetailCard';
+import StructureDetailCard from './StructureDetailCard/StructureDetailCard';
+import MilkyWayDetailCard from './MilkyWayDetailCard/MilkyWayDetailCard';
+import CompactCard from './CompactCard/CompactCard';
+import CompactStructureCard from './CompactStructureCard/CompactStructureCard';
+import CompactMilkyWayCard from './CompactMilkyWayCard/CompactMilkyWayCard';
 
 /** Props InfoCard passes to a detail-card variant, identical across arms. */
 export type DetailCardProps = {

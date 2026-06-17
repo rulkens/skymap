@@ -12,13 +12,13 @@
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import type { MilkyWayInfo } from '../../@types/engine/MilkyWayInfo';
-import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
-import { MILKY_WAY_INFO } from '../../data/milkyWay/milkyWayInfo';
-import CardHeader from './CardHeader/CardHeader';
-import CardRow from './CardRow/CardRow';
-import DescriptionBlock from './DescriptionBlock/DescriptionBlock';
-import styles from './cardChrome.module.css';
+import type { MilkyWayInfo } from '../../../@types/engine/MilkyWayInfo';
+import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
+import { MILKY_WAY_INFO } from '../../../data/milkyWay/milkyWayInfo';
+import CardHeader from '../CardHeader/CardHeader';
+import CardRow from '../CardRow/CardRow';
+import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
+import styles from '../cardChrome.module.css';
 import mw from './MilkyWayDetailCard.module.css';
 
 export type MilkyWayDetailCardProps = {
@@ -29,19 +29,14 @@ export type MilkyWayDetailCardProps = {
   onClose?: () => void;
 };
 
-export function MilkyWayDetailCard({
+function MilkyWayDetailCard({
   target,
   pinned = false,
   chrome = true,
   onFocus,
   onClose,
 }: MilkyWayDetailCardProps): ReactNode {
-  const outerClass = cx(
-    styles.infoCardFull,
-    styles.structure,
-    pinned && styles.pinned,
-    !chrome && styles.chromeless,
-  );
+  const outerClass = cx(mw.root, pinned && styles.pinned, !chrome && styles.chromeless);
 
   return (
     <div className={outerClass} role="status" aria-live="polite">
@@ -71,3 +66,5 @@ export function MilkyWayDetailCard({
     </div>
   );
 }
+
+export default MilkyWayDetailCard;

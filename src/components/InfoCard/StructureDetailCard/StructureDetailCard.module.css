@@ -1,0 +1,8 @@
+/*
+ * StructureDetailCard.module.css — the structure card's outer hook.  Composes
+ * the shared detail-card panel plus the structure width-floor from cardChrome;
+ * everything inside is pulled from cardChrome directly.
+ */
+.root {
+  composes: infoCardFull structure from '../cardChrome.module.css';
+}

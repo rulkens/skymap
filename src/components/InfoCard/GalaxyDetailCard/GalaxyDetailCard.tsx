@@ -10,16 +10,17 @@
 
 import { Fragment, type ReactNode } from 'react';
 import cx from 'classnames';
-import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
-import { formatDistance } from '../../utils/format/formatDistance';
-import { formatDiameterKpc } from '../../utils/format/formatDiameterKpc';
-import Thumbnail from './Thumbnail/Thumbnail';
-import CardHeader from './CardHeader/CardHeader';
-import CardRow from './CardRow/CardRow';
-import DescriptionBlock from './DescriptionBlock/DescriptionBlock';
-import { InfoTip } from '../InfoTip/InfoTip';
-import { TIPS } from './tooltips';
-import styles from './cardChrome.module.css';
+import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
+import { formatDistance } from '../../../utils/format/formatDistance';
+import { formatDiameterKpc } from '../../../utils/format/formatDiameterKpc';
+import Thumbnail from '../Thumbnail/Thumbnail';
+import CardHeader from '../CardHeader/CardHeader';
+import CardRow from '../CardRow/CardRow';
+import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
+import { InfoTip } from '../../InfoTip/InfoTip';
+import { TIPS } from '../tooltips';
+import styles from '../cardChrome.module.css';
+import local from './GalaxyDetailCard.module.css';
 
 export type GalaxyDetailCardProps = {
   info: GalaxyInfo;
@@ -29,14 +30,14 @@ export type GalaxyDetailCardProps = {
   onClose?: () => void;
 };
 
-export function GalaxyDetailCard({
+function GalaxyDetailCard({
   info,
   pinned = false,
   chrome = true,
   onFocus,
   onClose,
 }: GalaxyDetailCardProps): ReactNode {
-  const outerClass = cx(styles.infoCardFull, pinned && styles.pinned, !chrome && styles.chromeless);
+  const outerClass = cx(local.root, pinned && styles.pinned, !chrome && styles.chromeless);
 
   const famousAliases = info.famous?.names.filter((n) => n !== info.displayName) ?? [];
 
@@ -202,3 +203,5 @@ export function GalaxyDetailCard({
     </div>
   );
 }
+
+export default GalaxyDetailCard;

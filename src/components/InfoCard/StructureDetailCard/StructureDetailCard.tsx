@@ -6,16 +6,17 @@
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import type { StructureInfo } from '../../@types/data/structure/StructureInfo';
-import { formatDistance } from '../../utils/format/formatDistance';
-import { formatAbellDesignation } from '../../utils/format/formatAbellDesignation';
-import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
-import CardHeader from './CardHeader/CardHeader';
-import CardRow from './CardRow/CardRow';
-import DescriptionBlock from './DescriptionBlock/DescriptionBlock';
-import { InfoTip } from '../InfoTip/InfoTip';
-import { TIPS } from './tooltips';
-import styles from './cardChrome.module.css';
+import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
+import { formatDistance } from '../../../utils/format/formatDistance';
+import { formatAbellDesignation } from '../../../utils/format/formatAbellDesignation';
+import { CATEGORY_DISPLAY_INFO } from '../../../data/structure/categoryDisplayInfo';
+import CardHeader from '../CardHeader/CardHeader';
+import CardRow from '../CardRow/CardRow';
+import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
+import { InfoTip } from '../../InfoTip/InfoTip';
+import { TIPS } from '../tooltips';
+import styles from '../cardChrome.module.css';
+import local from './StructureDetailCard.module.css';
 
 export type StructureDetailCardProps = {
   structure: StructureInfo;
@@ -32,7 +33,7 @@ export type StructureDetailCardProps = {
   onClose?: () => void;
 };
 
-export function StructureDetailCard({
+function StructureDetailCard({
   structure,
   pinned = false,
   memberCount,
@@ -45,12 +46,7 @@ export function StructureDetailCard({
     structure.worldPos[1],
     structure.worldPos[2],
   );
-  const outerClass = cx(
-    styles.infoCardFull,
-    styles.structure,
-    pinned && styles.pinned,
-    !chrome && styles.chromeless,
-  );
+  const outerClass = cx(local.root, pinned && styles.pinned, !chrome && styles.chromeless);
 
   return (
     <div className={outerClass} role="status" aria-live="polite">
@@ -96,3 +92,5 @@ export function StructureDetailCard({
     </div>
   );
 }
+
+export default StructureDetailCard;
