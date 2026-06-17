@@ -10,7 +10,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
-import { CompactStructureCard } from '../../../src/components/InfoCard/CompactStructureCard';
+import CompactStructureCard from '../../../src/components/InfoCard/CompactStructureCard/CompactStructureCard';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 
 // Fixture structure ~10 Mpc from origin so the distance formatter renders a

@@ -1,16 +1,14 @@
 /*
- * FullCard.module.css — rich galaxy info card layout.
+ * cardChrome.module.css — shared styling vocabulary for the detail cards
+ * (galaxy / structure / Milky-Way).  The "loud" half of the InfoCard pair:
+ * more padding, more opaque glass, a starlight gradient line along the top
+ * edge.  Each detail card's own module composes the pieces it needs from here;
+ * this file owns no component of its own.  All atoms reference tokens from
+ * `src/styles/global.css`.
  *
- * The FullCard is the "loud" half of the InfoCard pair: more padding,
- * more opaque glass, and a starlight gradient line along the top edge.
- * All atoms reference tokens from `src/styles/global.css`.
- *
- * CSS-modules note:
- *   The `pinned` variant is applied via an additional class on the root:
- *     <div className={`${styles.infoCardFull} ${styles.pinned}`}>
- *   The .pinnedBadge span is always in the DOM; the CSS selector
- *     .infoCardFull.pinned .pinnedBadge { display: inline; }
- *   controls its visibility.
+ * CSS-modules note: the `pinned` variant is an extra class on the root —
+ * `.infoCardFull.pinned` — and `.pinnedBadge` is always in the DOM, shown via
+ * `.infoCardFull.pinned .pinnedBadge { display: inline }`.
  */
 
 /* ── Shared glass-panel base (shared by .infoCardFull and CompactCard) ──────── */
@@ -80,6 +78,29 @@
   top: auto;
   right: auto;
   z-index: auto;
+}
+
+/*
+ * Chromeless — chrome off means the surrounding sheet owns the surface, so the
+ * card strips its panel frame (positioning, background, border, shadow, width
+ * caps) and only keeps its content padding.  The compound selector wins over
+ * both `.infoCardFull` and `.structure`'s min-width.
+ */
+.infoCardFull.chromeless {
+  position: static;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  min-width: 0;
+  max-width: none;
+  /* No explicit width: position:static block already fills its container at
+     width:auto, and auto keeps padding inside — explicit 100% under
+     content-box would add padding on top of the full width and overflow. */
+}
+
+.infoCardFull.chromeless::before {
+  display: none;
 }
 
 /* Subtle starlight-blue gradient accent line along the top edge */
@@ -398,6 +419,7 @@ details:not([open]) > .detailsSummary::before {
 }
 
 /* ── Close button (only visible when the card is pinned) ──────────────────── */
+
 /*
  * Subtle "×" glyph that clears the selection — same affordance as the Esc
  * key, but discoverable on touch devices where there's no Esc.  Sits to the

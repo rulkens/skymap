@@ -10,7 +10,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { createElement } from 'react';
-import { DescriptionBlock } from '../../../src/components/InfoCard/DescriptionBlock';
+import DescriptionBlock from '../../../src/components/InfoCard/DescriptionBlock/DescriptionBlock';
 
 const PROSE = 'Coma is a rich cluster of over a thousand galaxies in the Coma supercluster.';
 

@@ -10,31 +10,34 @@
 
 import { Fragment, type ReactNode } from 'react';
 import cx from 'classnames';
-import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
-import { formatDistance } from '../../utils/format/formatDistance';
-import { formatDiameterKpc } from '../../utils/format/formatDiameterKpc';
-import { Thumbnail } from './Thumbnail';
-import { CardHeader } from './CardHeader';
-import { CardRow } from './CardRow';
-import { DescriptionBlock } from './DescriptionBlock';
-import { InfoTip } from '../InfoTip/InfoTip';
-import { TIPS } from './tooltips';
-import styles from './DetailCard.module.css';
+import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
+import { formatDistance } from '../../../utils/format/formatDistance';
+import { formatDiameterKpc } from '../../../utils/format/formatDiameterKpc';
+import Thumbnail from '../Thumbnail/Thumbnail';
+import CardHeader from '../CardHeader/CardHeader';
+import CardRow from '../CardRow/CardRow';
+import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
+import { InfoTip } from '../../InfoTip/InfoTip';
+import { TIPS } from '../tooltips';
+import styles from '../cardChrome.module.css';
+import local from './GalaxyDetailCard.module.css';
 
 export type GalaxyDetailCardProps = {
   info: GalaxyInfo;
   pinned?: boolean;
+  chrome?: boolean;
   onFocus?: (info: GalaxyInfo) => void;
   onClose?: () => void;
 };
 
-export function GalaxyDetailCard({
+function GalaxyDetailCard({
   info,
   pinned = false,
+  chrome = true,
   onFocus,
   onClose,
 }: GalaxyDetailCardProps): ReactNode {
-  const outerClass = pinned ? `${styles.infoCardFull} ${styles.pinned}` : styles.infoCardFull;
+  const outerClass = cx(local.root, pinned && styles.pinned, !chrome && styles.chromeless);
 
   const famousAliases = info.famous?.names.filter((n) => n !== info.displayName) ?? [];
 
@@ -47,18 +50,15 @@ export function GalaxyDetailCard({
         onClose={pinned ? onClose : undefined}
       />
 
-      <div className={styles.headlineRow}>
-        <div className={styles.cardHeadline}>
-          {info.displayName}
-          {famousAliases.map((alias) => (
-            <span key={alias} className={styles.headlineAlias}>
-              {' · '}
-              {alias}
-            </span>
-          ))}
-        </div>
-        <span className={styles.sourceBadge}>{info.sourceLabel}</span>
-      </div>
+      <CardRow type="headline" badge={info.sourceLabel}>
+        {info.displayName}
+        {famousAliases.map((alias) => (
+          <span key={alias} className={styles.headlineAlias}>
+            {' · '}
+            {alias}
+          </span>
+        ))}
+      </CardRow>
 
       {info.famous?.description && (
         <div className={styles.cardSection}>
@@ -203,3 +203,5 @@ export function GalaxyDetailCard({
     </div>
   );
 }
+
+export default GalaxyDetailCard;

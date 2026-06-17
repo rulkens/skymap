@@ -20,11 +20,12 @@
 import { useCallback, useMemo, useState } from 'react';
 import cx from 'classnames';
 import { useEngine } from '../../hooks/useEngine';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { useStructureMemberCount } from '../../hooks/useStructureMemberCount';
 import { useSplash } from '../../hooks/useSplash';
 import { StatusBar } from '../StatusBar/StatusBar';
 import { LoadingBar } from '../LoadingBar/LoadingBar';
-import { InfoCard } from '../InfoCard/InfoCard';
+import InfoCard from '../InfoCard/InfoCard';
 import { ScaleBar } from '../ScaleBar/ScaleBar';
 import { SettingsPanel } from '../SettingsPanel/SettingsPanel';
 import NavigationPanel from '../NavigationPanel/NavigationPanel';
@@ -334,6 +335,11 @@ export function App(): React.ReactElement {
   );
   const initialPanelsOpen = !initialMobile;
 
+  // Reactive companion to `initialMobile`: the scale-bar lift must update live
+  // when the viewport crosses the breakpoint (rotation), so it reads the
+  // `matchMedia`-backed hook rather than the non-reactive one-shot above.
+  const isMobile = useIsMobile();
+
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   // Stable handlers for the `React.memo`'d SearchTrigger — a fresh
@@ -403,6 +409,7 @@ export function App(): React.ReactElement {
         className={cx(
           appStyles.uiStack,
           (uiHidden || splash.splashVisible) && appStyles.uiStackHidden,
+          selected != null && isMobile && appStyles.hasSelection,
         )}
       >
         {/* Mounted unconditionally; fades itself out when `loadProgress`

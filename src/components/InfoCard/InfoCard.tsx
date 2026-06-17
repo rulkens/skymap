@@ -13,13 +13,19 @@
  * whichever target lands in each slot, so there is no per-kind branching and a
  * new focusable kind is one table row.  The only logic here is slot precedence —
  * pinned target → detail, a different hovered target → compact preview.
+ *
+ * On mobile (`useIsMobile`) hover has no cursor, so the card drops to a single
+ * MobileSheet showing only the selected target's full detail — no compact slot.
  */
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
 import { targetEq } from '../../services/engine/helpers/targetEq';
+import { TARGET_IDENTITY_KEY } from '../../services/engine/helpers/targetIdentityKey';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { DETAIL_CARD } from './detailCardTable';
+import MobileSheet from './MobileSheet/MobileSheet';
 import styles from './InfoCard.module.css';
 
 export type InfoCardProps = {
@@ -44,8 +50,8 @@ export type InfoCardProps = {
    */
   selectedMemberCount?: number | null;
   /**
-   * Optional callback fired when the user clicks "Focus" (galaxy) or "Fly here"
-   * (structure) on the pinned card.  Caller routes to the unified handle method
+   * Optional callback fired when the user clicks the "Focus" pill on the pinned
+   * card.  Caller routes to the unified handle method
    * `handle.camera.focusOn(target)`.
    */
   onFocus?: (target: FocusableTarget) => void;
@@ -58,13 +64,33 @@ export type InfoCardProps = {
   onClose?: () => void;
 };
 
-export function InfoCard({
+function InfoCard({
   hovered,
   selected,
   selectedMemberCount,
   onFocus,
   onClose,
 }: InfoCardProps): ReactNode {
+  const isMobile = useIsMobile();
+
+  // Mobile has no hover cursor: only the pinned target matters, and it shows as
+  // a single MobileSheet wrapping the same Detail card the desktop branch uses.
+  if (isMobile) {
+    if (selected === null) return null;
+    return (
+      <MobileSheet resetKey={TARGET_IDENTITY_KEY[selected.type](selected)}>
+        {DETAIL_CARD[selected.type].Detail({
+          target: selected,
+          pinned: true,
+          selectedMemberCount,
+          chrome: false,
+          onFocus,
+          onClose,
+        })}
+      </MobileSheet>
+    );
+  }
+
   if (!hovered && !selected) return null;
 
   // Two slots, both dispatched by the target's union tag through DETAIL_CARD —
@@ -75,7 +101,7 @@ export function InfoCard({
   const compactTarget = hovered !== null && !targetEq(hovered, selected) ? hovered : null;
 
   return (
-    <div className={cx(styles.infoCardStack, 'infoCardStack')}>
+    <div className={cx(styles.root, 'infoCardStack')}>
       {selected &&
         DETAIL_CARD[selected.type].Detail({
           target: selected,
@@ -88,3 +114,5 @@ export function InfoCard({
     </div>
   );
 }
+
+export default InfoCard;

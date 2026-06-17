@@ -1,0 +1,9 @@
+/*
+ * CompactStructureCard.module.css — the structure hover-preview's outer hook.
+ * The chrome is the shared compactChrome vocabulary; .root composes the panel
+ * and the component reads the inner classes (cardTitle, cardDistLine) straight
+ * from compactChrome.
+ */
+.root {
+  composes: infoCardCompact from '../compactChrome.module.css';
+}

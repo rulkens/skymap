@@ -5,16 +5,18 @@
  */
 
 import type { ReactNode } from 'react';
-import type { StructureInfo } from '../../@types/data/structure/StructureInfo';
-import { formatDistance } from '../../utils/format/formatDistance';
-import { formatAbellDesignation } from '../../utils/format/formatAbellDesignation';
-import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
-import { CardHeader } from './CardHeader';
-import { CardRow } from './CardRow';
-import { DescriptionBlock } from './DescriptionBlock';
-import { InfoTip } from '../InfoTip/InfoTip';
-import { TIPS } from './tooltips';
-import styles from './DetailCard.module.css';
+import cx from 'classnames';
+import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
+import { formatDistance } from '../../../utils/format/formatDistance';
+import { formatAbellDesignation } from '../../../utils/format/formatAbellDesignation';
+import { CATEGORY_DISPLAY_INFO } from '../../../data/structure/categoryDisplayInfo';
+import CardHeader from '../CardHeader/CardHeader';
+import CardRow from '../CardRow/CardRow';
+import DescriptionBlock from '../DescriptionBlock/DescriptionBlock';
+import { InfoTip } from '../../InfoTip/InfoTip';
+import { TIPS } from '../tooltips';
+import styles from '../cardChrome.module.css';
+import local from './StructureDetailCard.module.css';
 
 export type StructureDetailCardProps = {
   structure: StructureInfo;
@@ -26,14 +28,16 @@ export type StructureDetailCardProps = {
    * row is omitted rather than flashing a misleading "0".
    */
   memberCount?: number | null;
+  chrome?: boolean;
   onFocus?: (structure: StructureInfo) => void;
   onClose?: () => void;
 };
 
-export function StructureDetailCard({
+function StructureDetailCard({
   structure,
   pinned = false,
   memberCount,
+  chrome = true,
   onFocus,
   onClose,
 }: StructureDetailCardProps): ReactNode {
@@ -42,7 +46,7 @@ export function StructureDetailCard({
     structure.worldPos[1],
     structure.worldPos[2],
   );
-  const outerClass = `${styles.infoCardFull} ${styles.structure}${pinned ? ` ${styles.pinned}` : ''}`;
+  const outerClass = cx(local.root, pinned && styles.pinned, !chrome && styles.chromeless);
 
   return (
     <div className={outerClass} role="status" aria-live="polite">
@@ -53,12 +57,9 @@ export function StructureDetailCard({
         onClose={pinned ? onClose : undefined}
       />
 
-      <div className={styles.headlineRow}>
-        <div className={styles.cardHeadline}>{structure.name}</div>
-        <span className={styles.sourceBadge}>
-          {CATEGORY_DISPLAY_INFO[structure.category].label}
-        </span>
-      </div>
+      <CardRow type="headline" badge={CATEGORY_DISPLAY_INFO[structure.category].label}>
+        {structure.name}
+      </CardRow>
 
       <div className={styles.cardSection}>
         <CardRow
@@ -91,3 +92,5 @@ export function StructureDetailCard({
     </div>
   );
 }
+
+export default StructureDetailCard;

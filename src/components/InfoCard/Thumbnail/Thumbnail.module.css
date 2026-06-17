@@ -1,12 +1,13 @@
 /*
- * Thumbnail.module.css — 80×80 px SDSS image cutout and its broken-image
- * fallback placeholder.
+ * Thumbnail.module.css — 80×80 px image cutout (.root) and its broken-image
+ * fallback placeholder (.placeholder).  Two mutually-exclusive render branches,
+ * so the placeholder is a sibling root rather than nested under .root.
  *
  * All atoms reference tokens from `src/styles/global.css`.
  */
 
 /* Thumbnail image — 80×80 px rounded square */
-.thumbImg {
+.root {
   width: 80px;
   height: 80px;
   border-radius: var(--radius-lg);
@@ -23,7 +24,7 @@
 }
 
 /* Placeholder shown when the thumbnail fails to load — same dimensions */
-.thumbPlaceholder {
+.placeholder {
   width: 80px;
   height: 80px;
   border-radius: var(--radius-lg);

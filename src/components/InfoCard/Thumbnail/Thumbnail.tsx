@@ -21,13 +21,13 @@ export type ThumbnailProps = {
   fallbackUrl?: string;
 };
 
-export function Thumbnail({ url, fallbackUrl }: ThumbnailProps): ReactNode {
+function Thumbnail({ url, fallbackUrl }: ThumbnailProps): ReactNode {
   const [src, setSrc] = useState(url);
   const [errored, setErrored] = useState(false);
 
   if (errored) {
     return (
-      <div className={styles.thumbPlaceholder} aria-label="No image available">
+      <div className={styles.placeholder} aria-label="No image available">
         no image
       </div>
     );
@@ -35,7 +35,7 @@ export function Thumbnail({ url, fallbackUrl }: ThumbnailProps): ReactNode {
 
   return (
     <img
-      className={styles.thumbImg}
+      className={styles.root}
       src={src}
       alt="Galaxy thumbnail"
       width={80}
@@ -48,3 +48,5 @@ export function Thumbnail({ url, fallbackUrl }: ThumbnailProps): ReactNode {
     />
   );
 }
+
+export default Thumbnail;

@@ -119,3 +119,28 @@
     transform: none;
   }
 }
+
+/*
+ * `.hasSelection` — set on `.uiStack` by App when a target is pinned on
+ * mobile.  Lifts the bottom-right scale bar clear of the collapsed
+ * MobileSheet peek so the two never overlap.  The descendant selector
+ * reaches the scale bar through its stable global hook (ScaleBar carries
+ * the literal `scaleBar` class alongside its hashed module class).
+ *
+ * Desktop and the unselected mobile state are untouched: this rule only
+ * exists inside the mobile media query and only when `.hasSelection` is
+ * present, so the scale bar keeps its default `bottom: var(--corner-offset)`
+ * everywhere else.
+ */
+@media (max-width: 768px) {
+  .uiStack.hasSelection :global(.scaleBar) {
+    /* Lift the scale bar above the collapsed sheet peek when a target is
+       selected; same token the sheet's peek snap uses, so they never drift. */
+    bottom: calc(var(--corner-offset) + var(--mobile-sheet-peek));
+  }
+
+  /* On a phone the open card owns the screen; the panels return on close. */
+  .uiStack.hasSelection .leftStack {
+    display: none;
+  }
+}

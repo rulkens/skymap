@@ -1,0 +1,14 @@
+/*
+ * CardRow.module.css — CardRow is polymorphic: the default label/value row and
+ * the headline are mutually-exclusive render branches, each with its own
+ * outermost element, so there are two roots (.root and .headline) rather than
+ * one wrapper.  Both compose their layout from the shared cardChrome vocabulary;
+ * the inner cells are pulled from cardChrome in the component.
+ */
+.root {
+  composes: cardRow from '../cardChrome.module.css';
+}
+
+.headline {
+  composes: headlineRow from '../cardChrome.module.css';
+}

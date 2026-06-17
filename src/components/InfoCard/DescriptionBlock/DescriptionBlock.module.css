@@ -1,0 +1,8 @@
+/*
+ * DescriptionBlock.module.css — the prose block's outermost hook.  The column
+ * layout and clamp live in the shared cardChrome vocabulary; .root composes the
+ * block wrapper and the component pulls the inner classes from cardChrome.
+ */
+.root {
+  composes: descBlock from '../cardChrome.module.css';
+}

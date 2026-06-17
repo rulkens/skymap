@@ -5,24 +5,25 @@
  */
 
 import type { ReactNode } from 'react';
-import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
-import { formatDistance } from '../../utils/format/formatDistance';
-import styles from './CompactCard.module.css';
+import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
+import { formatDistance } from '../../../utils/format/formatDistance';
+import CardRow from '../CardRow/CardRow';
+import styles from '../compactChrome.module.css';
+import local from './CompactCard.module.css';
 
 export type CompactCardProps = {
   info: GalaxyInfo;
 };
 
-export function CompactCard({ info }: CompactCardProps): ReactNode {
+function CompactCard({ info }: CompactCardProps): ReactNode {
   return (
-    <div className={styles.infoCardCompact} role="status" aria-live="polite">
+    <div className={local.root} role="status" aria-live="polite">
       <div className={styles.cardTitle}>
         <span>Hover</span>
       </div>
-      <div className={styles.headlineRow}>
-        <div className={styles.cardHeadline}>{info.displayName}</div>
-        <span className={styles.sourceBadge}>{info.sourceLabel}</span>
-      </div>
+      <CardRow type="headline" badge={info.sourceLabel}>
+        {info.displayName}
+      </CardRow>
       <div className={styles.cardLookbackLine}>
         Light left {info.lookbackGyr.toFixed(1)} Gyr ago
       </div>
@@ -33,3 +34,5 @@ export function CompactCard({ info }: CompactCardProps): ReactNode {
     </div>
   );
 }
+
+export default CompactCard;

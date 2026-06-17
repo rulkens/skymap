@@ -12,33 +12,34 @@
  *
  * Owns its own collapse state: each card mounts one block per description and
  * the expanded/collapsed flag is local UI, never lifted. The 5-line clamp and
- * the column layout live in DetailCard.module.css (.descCollapsed / .descBlock).
+ * the column layout live in cardChrome.module.css (.descCollapsed / .descBlock).
  */
 
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import cx from 'classnames';
-import styles from './DetailCard.module.css';
+import chrome from '../cardChrome.module.css';
+import styles from './DescriptionBlock.module.css';
 
 export type DescriptionBlockProps = {
   /** The prose to show — a curated blurb or auto-generated one-liner. */
   text: string;
 };
 
-export function DescriptionBlock({ text }: DescriptionBlockProps): ReactNode {
+function DescriptionBlock({ text }: DescriptionBlockProps): ReactNode {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className={styles.descBlock}>
+    <div className={styles.root}>
       <span
-        className={cx(styles.cardValue, expanded ? styles.descExpanded : styles.descCollapsed)}
+        className={cx(chrome.cardValue, expanded ? chrome.descExpanded : chrome.descCollapsed)}
         style={{ fontStyle: 'italic' }}
       >
         {text}
       </span>
       <button
         type="button"
-        className={styles.descToggle}
+        className={chrome.descToggle}
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
       >
@@ -47,3 +48,5 @@ export function DescriptionBlock({ text }: DescriptionBlockProps): ReactNode {
     </div>
   );
 }
+
+export default DescriptionBlock;

@@ -290,6 +290,10 @@
   /** Distance from the viewport edge for fixed corner overlays. */
   --corner-offset: 16px;
 
+  /** Collapsed-peek height of the mobile info-card bottom sheet.
+   *  Single source for the sheet's peek snap AND the scale-bar lift. */
+  --mobile-sheet-peek: 96px;
+
   /* ── Glass blur ─────────────────────────────────────────────────────── */
   /*
    * Two blur strengths.  Panels use 10 px (a touch lighter so the

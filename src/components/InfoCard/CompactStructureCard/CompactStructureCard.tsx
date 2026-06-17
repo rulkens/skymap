@@ -5,16 +5,18 @@
  */
 
 import type { ReactNode } from 'react';
-import type { StructureInfo } from '../../@types/data/structure/StructureInfo';
-import { formatDistance } from '../../utils/format/formatDistance';
-import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
-import styles from './CompactStructureCard.module.css';
+import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
+import { formatDistance } from '../../../utils/format/formatDistance';
+import { CATEGORY_DISPLAY_INFO } from '../../../data/structure/categoryDisplayInfo';
+import CardRow from '../CardRow/CardRow';
+import styles from '../compactChrome.module.css';
+import local from './CompactStructureCard.module.css';
 
 export type CompactStructureCardProps = {
   structure: StructureInfo;
 };
 
-export function CompactStructureCard({ structure }: CompactStructureCardProps): ReactNode {
+function CompactStructureCard({ structure }: CompactStructureCardProps): ReactNode {
   const distanceMpc = Math.hypot(
     structure.worldPos[0],
     structure.worldPos[1],
@@ -22,16 +24,13 @@ export function CompactStructureCard({ structure }: CompactStructureCardProps): 
   );
 
   return (
-    <div className={styles.infoCardCompact} role="status" aria-live="polite">
+    <div className={local.root} role="status" aria-live="polite">
       <div className={styles.cardTitle}>
         <span>Hover</span>
       </div>
-      <div className={styles.headlineRow}>
-        <div className={styles.cardHeadline}>{structure.name}</div>
-        <span className={styles.sourceBadge}>
-          {CATEGORY_DISPLAY_INFO[structure.category].shortLabel}
-        </span>
-      </div>
+      <CardRow type="headline" badge={CATEGORY_DISPLAY_INFO[structure.category].shortLabel}>
+        {structure.name}
+      </CardRow>
       <div className={styles.cardDistLine}>
         {formatDistance(distanceMpc)}
         <> &middot; r {formatDistance(structure.physicalRadiusMpc)}</>
@@ -39,3 +38,5 @@ export function CompactStructureCard({ structure }: CompactStructureCardProps): 
     </div>
   );
 }
+
+export default CompactStructureCard;
