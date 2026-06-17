@@ -18,27 +18,28 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import cx from 'classnames';
-import styles from './cardChrome.module.css';
+import chrome from '../cardChrome.module.css';
+import styles from './DescriptionBlock.module.css';
 
 export type DescriptionBlockProps = {
   /** The prose to show — a curated blurb or auto-generated one-liner. */
   text: string;
 };
 
-export function DescriptionBlock({ text }: DescriptionBlockProps): ReactNode {
+function DescriptionBlock({ text }: DescriptionBlockProps): ReactNode {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className={styles.descBlock}>
+    <div className={styles.root}>
       <span
-        className={cx(styles.cardValue, expanded ? styles.descExpanded : styles.descCollapsed)}
+        className={cx(chrome.cardValue, expanded ? chrome.descExpanded : chrome.descCollapsed)}
         style={{ fontStyle: 'italic' }}
       >
         {text}
       </span>
       <button
         type="button"
-        className={styles.descToggle}
+        className={chrome.descToggle}
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
       >
@@ -47,3 +48,5 @@ export function DescriptionBlock({ text }: DescriptionBlockProps): ReactNode {
     </div>
   );
 }
+
+export default DescriptionBlock;

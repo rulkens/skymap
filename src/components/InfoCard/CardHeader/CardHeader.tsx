@@ -6,7 +6,8 @@
  */
 
 import type { ReactNode } from 'react';
-import styles from './cardChrome.module.css';
+import chrome from '../cardChrome.module.css';
+import styles from './CardHeader.module.css';
 
 export type CardHeaderProps = {
   eyebrow: string;
@@ -17,20 +18,15 @@ export type CardHeaderProps = {
   onClose?: () => void;
 };
 
-export function CardHeader({
-  eyebrow,
-  onFocus,
-  focusAriaLabel,
-  onClose,
-}: CardHeaderProps): ReactNode {
+function CardHeader({ eyebrow, onFocus, focusAriaLabel, onClose }: CardHeaderProps): ReactNode {
   return (
-    <div className={styles.cardTitle}>
+    <div className={styles.root}>
       <span>{eyebrow}</span>
-      <span className={styles.pinnedBadge}>Pinned</span>
+      <span className={chrome.pinnedBadge}>Pinned</span>
       {onFocus && (
         <button
           type="button"
-          className={styles.focusButton}
+          className={chrome.focusButton}
           onClick={onFocus}
           aria-label={focusAriaLabel ?? 'Focus camera'}
         >
@@ -40,7 +36,7 @@ export function CardHeader({
       {onClose && (
         <button
           type="button"
-          className={styles.closeButton}
+          className={chrome.closeButton}
           onClick={onClose}
           aria-label="Clear selection"
           title="Clear selection (Esc)"
@@ -51,3 +47,5 @@ export function CardHeader({
     </div>
   );
 }
+
+export default CardHeader;

@@ -1,0 +1,9 @@
+/*
+ * CardHeader.module.css — the header row's outermost hook.  CardHeader renders
+ * nothing of its own beyond the shared title-row layout, so .root simply
+ * composes it from the shared cardChrome vocabulary; the badge + buttons are
+ * pulled straight from cardChrome in the component.
+ */
+.root {
+  composes: cardTitle from '../cardChrome.module.css';
+}

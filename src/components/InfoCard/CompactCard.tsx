@@ -7,7 +7,7 @@
 import type { ReactNode } from 'react';
 import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
 import { formatDistance } from '../../utils/format/formatDistance';
-import { CardRow } from './CardRow';
+import CardRow from './CardRow/CardRow';
 import styles from './compactChrome.module.css';
 
 export type CompactCardProps = {
