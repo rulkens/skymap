@@ -57,7 +57,6 @@
   border-top: 1px solid var(--border-card);
   border-top-left-radius: var(--radius-2xl);
   border-top-right-radius: var(--radius-2xl);
-  padding: var(--space-4);
 }
 
 /*

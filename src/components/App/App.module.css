@@ -138,4 +138,9 @@
        selected; same token the sheet's peek snap uses, so they never drift. */
     bottom: calc(var(--corner-offset) + var(--mobile-sheet-peek));
   }
+
+  /* On a phone the open card owns the screen; the panels return on close. */
+  .uiStack.hasSelection .leftStack {
+    display: none;
+  }
 }

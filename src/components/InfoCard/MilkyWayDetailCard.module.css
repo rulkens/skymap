@@ -14,6 +14,29 @@
   composes: structure from './DetailCard.module.css';
 }
 
+/*
+ * Chromeless — chrome off means the surrounding sheet owns the surface, so the
+ * card strips the panel frame it inherits from the composed DetailCard classes
+ * (positioning, background, border, shadow, width caps) and keeps only its
+ * content padding.  The compound selector wins over the composed min-width.
+ */
+.infoCardFull.chromeless {
+  position: static;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  min-width: 0;
+  max-width: none;
+  /* No explicit width: position:static block already fills its container at
+     width:auto, and auto keeps padding inside — explicit 100% under
+     content-box would add padding on top of the full width and overflow. */
+}
+
+.infoCardFull.chromeless::before {
+  display: none;
+}
+
 .headlineRow {
   composes: headlineRow from './DetailCard.module.css';
 }

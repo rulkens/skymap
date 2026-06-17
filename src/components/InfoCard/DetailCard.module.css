@@ -82,6 +82,29 @@
   z-index: auto;
 }
 
+/*
+ * Chromeless — chrome off means the surrounding sheet owns the surface, so the
+ * card strips its panel frame (positioning, background, border, shadow, width
+ * caps) and only keeps its content padding.  The compound selector wins over
+ * both `.infoCardFull` and `.structure`'s min-width.
+ */
+.infoCardFull.chromeless {
+  position: static;
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  min-width: 0;
+  max-width: none;
+  /* No explicit width: position:static block already fills its container at
+     width:auto, and auto keeps padding inside — explicit 100% under
+     content-box would add padding on top of the full width and overflow. */
+}
+
+.infoCardFull.chromeless::before {
+  display: none;
+}
+
 /* Subtle starlight-blue gradient accent line along the top edge */
 .infoCardFull::before {
   content: '';
@@ -398,6 +421,7 @@ details:not([open]) > .detailsSummary::before {
 }
 
 /* ── Close button (only visible when the card is pinned) ──────────────────── */
+
 /*
  * Subtle "×" glyph that clears the selection — same affordance as the Esc
  * key, but discoverable on touch devices where there's no Esc.  Sits to the
@@ -437,20 +461,4 @@ details:not([open]) > .detailsSummary::before {
 
 .closeButton:active {
   background: var(--surface-control-active);
-}
-
-/*
- * Inside the mobile bottom-sheet the card fills the sheet width instead of
- * holding a fixed corner position.  `min-width: 0` overrides both the
- * --card-min-width on .infoCardFull and the --card-max-width on .structure,
- * either of which would otherwise force horizontal overflow inside the
- * full-width sheet.
- */
-@media (max-width: 768px) {
-  :global(.mobileSheet) .infoCardFull {
-    position: static;
-    max-width: none;
-    min-width: 0;
-    width: 100%;
-  }
 }

@@ -43,6 +43,12 @@ export type DetailCardProps = {
    * applicable. Consumed by the structure arm; the galaxy arm ignores it.
    */
   selectedMemberCount?: number | null;
+  /**
+   * When false (mobile, in-sheet) the card drops its panel frame —
+   * background/border/positioning/width caps — so the surrounding sheet owns
+   * the surface. Defaults to true.
+   */
+  chrome?: boolean;
   onFocus?: (target: FocusableTarget) => void;
   onClose?: () => void;
 };
@@ -57,11 +63,12 @@ export type DetailCardEntry = {
 
 export const DETAIL_CARD: Record<FocusableTargetType, DetailCardEntry> = {
   galaxyCatalog: {
-    Detail: ({ target, pinned, onFocus, onClose }) => {
+    Detail: ({ target, pinned, chrome, onFocus, onClose }) => {
       if (target.type !== 'galaxyCatalog') return null;
       return createElement(GalaxyDetailCard, {
         info: target,
         pinned,
+        chrome,
         onFocus: pinned ? onFocus : undefined,
         onClose: pinned ? onClose : undefined,
       });
@@ -70,12 +77,13 @@ export const DETAIL_CARD: Record<FocusableTargetType, DetailCardEntry> = {
       target.type === 'galaxyCatalog' ? createElement(CompactCard, { info: target }) : null,
   },
   structure: {
-    Detail: ({ target, pinned, selectedMemberCount, onFocus, onClose }) => {
+    Detail: ({ target, pinned, selectedMemberCount, chrome, onFocus, onClose }) => {
       if (target.type !== 'structure') return null;
       return createElement(StructureDetailCard, {
         structure: target,
         pinned,
         memberCount: selectedMemberCount,
+        chrome,
         onFocus,
         onClose,
       });
@@ -86,11 +94,12 @@ export const DETAIL_CARD: Record<FocusableTargetType, DetailCardEntry> = {
         : null,
   },
   milkyWay: {
-    Detail: ({ target, pinned, onFocus, onClose }) => {
+    Detail: ({ target, pinned, chrome, onFocus, onClose }) => {
       if (target.type !== 'milkyWay') return null;
       return createElement(MilkyWayDetailCard, {
         target,
         pinned,
+        chrome,
         onFocus,
         onClose,
       });

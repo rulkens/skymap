@@ -11,6 +11,7 @@
  */
 
 import type { ReactNode } from 'react';
+import cx from 'classnames';
 import type { MilkyWayInfo } from '../../@types/engine/MilkyWayInfo';
 import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
 import { MILKY_WAY_INFO } from '../../data/milkyWay/milkyWayInfo';
@@ -23,6 +24,7 @@ import styles from './MilkyWayDetailCard.module.css';
 export type MilkyWayDetailCardProps = {
   target: MilkyWayInfo;
   pinned?: boolean;
+  chrome?: boolean;
   onFocus?: (target: FocusableTarget) => void;
   onClose?: () => void;
 };
@@ -30,10 +32,15 @@ export type MilkyWayDetailCardProps = {
 export function MilkyWayDetailCard({
   target,
   pinned = false,
+  chrome = true,
   onFocus,
   onClose,
 }: MilkyWayDetailCardProps): ReactNode {
-  const outerClass = `${styles.infoCardFull}${pinned ? ` ${detail.pinned}` : ''}`;
+  const outerClass = cx(
+    styles.infoCardFull,
+    pinned && detail.pinned,
+    !chrome && styles.chromeless,
+  );
 
   return (
     <div className={outerClass} role="status" aria-live="polite">

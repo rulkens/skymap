@@ -83,6 +83,7 @@ export function InfoCard({
           target: selected,
           pinned: true,
           selectedMemberCount,
+          chrome: false,
           onFocus,
           onClose,
         })}

@@ -24,6 +24,7 @@ import styles from './DetailCard.module.css';
 export type GalaxyDetailCardProps = {
   info: GalaxyInfo;
   pinned?: boolean;
+  chrome?: boolean;
   onFocus?: (info: GalaxyInfo) => void;
   onClose?: () => void;
 };
@@ -31,10 +32,11 @@ export type GalaxyDetailCardProps = {
 export function GalaxyDetailCard({
   info,
   pinned = false,
+  chrome = true,
   onFocus,
   onClose,
 }: GalaxyDetailCardProps): ReactNode {
-  const outerClass = pinned ? `${styles.infoCardFull} ${styles.pinned}` : styles.infoCardFull;
+  const outerClass = cx(styles.infoCardFull, pinned && styles.pinned, !chrome && styles.chromeless);
 
   const famousAliases = info.famous?.names.filter((n) => n !== info.displayName) ?? [];
 

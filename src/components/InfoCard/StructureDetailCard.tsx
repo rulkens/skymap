@@ -5,6 +5,7 @@
  */
 
 import type { ReactNode } from 'react';
+import cx from 'classnames';
 import type { StructureInfo } from '../../@types/data/structure/StructureInfo';
 import { formatDistance } from '../../utils/format/formatDistance';
 import { formatAbellDesignation } from '../../utils/format/formatAbellDesignation';
@@ -26,6 +27,7 @@ export type StructureDetailCardProps = {
    * row is omitted rather than flashing a misleading "0".
    */
   memberCount?: number | null;
+  chrome?: boolean;
   onFocus?: (structure: StructureInfo) => void;
   onClose?: () => void;
 };
@@ -34,6 +36,7 @@ export function StructureDetailCard({
   structure,
   pinned = false,
   memberCount,
+  chrome = true,
   onFocus,
   onClose,
 }: StructureDetailCardProps): ReactNode {
@@ -42,7 +45,12 @@ export function StructureDetailCard({
     structure.worldPos[1],
     structure.worldPos[2],
   );
-  const outerClass = `${styles.infoCardFull} ${styles.structure}${pinned ? ` ${styles.pinned}` : ''}`;
+  const outerClass = cx(
+    styles.infoCardFull,
+    styles.structure,
+    pinned && styles.pinned,
+    !chrome && styles.chromeless,
+  );
 
   return (
     <div className={outerClass} role="status" aria-live="polite">
