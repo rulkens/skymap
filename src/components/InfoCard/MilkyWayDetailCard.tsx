@@ -1,13 +1,13 @@
 /**
  * MilkyWayDetailCard — rich panel for the Milky Way singleton.
  *
- * Mirrors StructureDetailCard's shape but for the one-instance Milky Way:
- * there's no external thumbnail to fetch (we're inside it), so the image slot
- * is a glyph rather than an <img>.  Shows the name, morphological type
- * (`typeString` — distinct from the union `type` tag), a distance note (we're
- * inside the galaxy, so the usual catalog distance is undefined), the
- * description, and a "Fly here" button that routes through the same
- * `onFocus(MILKY_WAY_INFO)` → `camera.focusOn` path every other target uses.
+ * Mirrors the shared galaxy/structure layout (headline row, then image slot +
+ * summary in a cardTopRow): there's no external thumbnail to fetch (we're
+ * inside the galaxy), so a spiral glyph sits in the image slot rather than an
+ * <img>.  Shows the name, morphological type (`typeString` — distinct from the
+ * union `type` tag), a distance note (we're inside the galaxy, so the usual
+ * catalog distance is undefined), and the description.  The focus action lives
+ * in the shared CardHeader (the "Focus" pill, shown when the card is pinned).
  */
 
 import type { ReactNode } from 'react';
@@ -18,8 +18,8 @@ import { MILKY_WAY_INFO } from '../../data/milkyWay/milkyWayInfo';
 import { CardHeader } from './CardHeader';
 import { CardRow } from './CardRow';
 import { DescriptionBlock } from './DescriptionBlock';
-import detail from './DetailCard.module.css';
-import styles from './MilkyWayDetailCard.module.css';
+import styles from './DetailCard.module.css';
+import mw from './MilkyWayDetailCard.module.css';
 
 export type MilkyWayDetailCardProps = {
   target: MilkyWayInfo;
@@ -38,7 +38,8 @@ export function MilkyWayDetailCard({
 }: MilkyWayDetailCardProps): ReactNode {
   const outerClass = cx(
     styles.infoCardFull,
-    pinned && detail.pinned,
+    styles.structure,
+    pinned && styles.pinned,
     !chrome && styles.chromeless,
   );
 
@@ -51,27 +52,21 @@ export function MilkyWayDetailCard({
         onClose={pinned ? onClose : undefined}
       />
 
-      <div className={styles.topRow}>
+      <CardRow type="headline">{target.displayName}</CardRow>
+
+      <div className={cx(styles.cardSection, styles.cardTopRow)}>
         {/* Spiral glyph in place of a thumbnail — we're inside the galaxy. */}
-        <div className={styles.glyph} aria-hidden="true">
+        <div className={mw.glyph} aria-hidden="true">
           🌌
         </div>
-        <div className={styles.headlineRow}>
-          <div className={styles.cardHeadline}>{target.displayName}</div>
+        <div className={styles.cardSummary}>
+          <div className={styles.cardTypeLine}>{target.typeString}</div>
+          <div className={styles.cardDistLine}>{target.distanceNote}</div>
         </div>
       </div>
 
       <div className={styles.cardSection}>
-        <CardRow label="Type" value={target.typeString} />
-        <CardRow label="Distance" value={target.distanceNote} />
         <DescriptionBlock text={target.description} />
-        <button
-          type="button"
-          className={styles.flyButton}
-          onClick={() => onFocus?.(MILKY_WAY_INFO)}
-        >
-          Fly here
-        </button>
       </div>
     </div>
   );

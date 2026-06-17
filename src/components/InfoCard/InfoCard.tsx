@@ -50,8 +50,8 @@ export type InfoCardProps = {
    */
   selectedMemberCount?: number | null;
   /**
-   * Optional callback fired when the user clicks "Focus" (galaxy) or "Fly here"
-   * (structure) on the pinned card.  Caller routes to the unified handle method
+   * Optional callback fired when the user clicks the "Focus" pill on the pinned
+   * card.  Caller routes to the unified handle method
    * `handle.camera.focusOn(target)`.
    */
   onFocus?: (target: FocusableTarget) => void;

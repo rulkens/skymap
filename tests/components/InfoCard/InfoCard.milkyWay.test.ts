@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 //
 // InfoCard — Milky Way routing tests.  A milkyWay selection renders the MW
-// detail card (glyph, no thumbnail) and its "Fly here" button focuses
+// detail card (glyph, no thumbnail) and the CardHeader "Focus" pill focuses
 // MILKY_WAY_INFO; a milkyWay hover renders the compact preview.  A galaxy
 // selection still renders the galaxy card (the table dispatch didn't
 // mis-route).
@@ -64,10 +64,10 @@ describe('InfoCard Milky Way', () => {
     expect(container.querySelector('img')).toBeNull();
   });
 
-  it("the Milky Way card's Fly here button calls onFocus with MILKY_WAY_INFO", () => {
+  it("the Milky Way card's Focus button calls onFocus with MILKY_WAY_INFO", () => {
     const onFocus = vi.fn<(t: FocusableTarget) => void>();
     render(createElement(InfoCard, { hovered: null, selected: MILKY_WAY_INFO, onFocus }));
-    fireEvent.click(screen.getByText('Fly here'));
+    fireEvent.click(screen.getByText('Focus'));
     expect(onFocus).toHaveBeenCalledWith(MILKY_WAY_INFO);
   });
 

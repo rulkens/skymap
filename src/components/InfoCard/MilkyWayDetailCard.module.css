@@ -1,62 +1,16 @@
 /*
- * MilkyWayDetailCard.module.css — Milky Way variant of the detail card.
+ * MilkyWayDetailCard.module.css — Milky-Way-specific styling only.
  *
- * The Milky Way has no thumbnail (we're inside it; there's no external cutout
- * to fetch), so its image slot is a glyph instead of an <img>.  All chrome
- * (panel, title row, headline, rows) is composed from the galaxy DetailCard
- * module so the panel reads as "same panel, different content" across a
- * galaxy ↔ Milky Way swap — see CompactStructureCard.module.css for the same
- * composes-from rationale.
+ * The panel, headline, top row, and chrome all come from the shared
+ * DetailCard.module.css (the component references those classes directly).
+ * This file styles the one piece unique to the Milky Way card: the glyph
+ * standing in for the missing thumbnail.
  */
-
-.infoCardFull {
-  composes: infoCardFull from './DetailCard.module.css';
-  composes: structure from './DetailCard.module.css';
-}
-
-/*
- * Chromeless — chrome off means the surrounding sheet owns the surface, so the
- * card strips the panel frame it inherits from the composed DetailCard classes
- * (positioning, background, border, shadow, width caps) and keeps only its
- * content padding.  The compound selector wins over the composed min-width.
- */
-.infoCardFull.chromeless {
-  position: static;
-  background: none;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
-  min-width: 0;
-  max-width: none;
-  /* No explicit width: position:static block already fills its container at
-     width:auto, and auto keeps padding inside — explicit 100% under
-     content-box would add padding on top of the full width and overflow. */
-}
-
-.infoCardFull.chromeless::before {
-  display: none;
-}
-
-.headlineRow {
-  composes: headlineRow from './DetailCard.module.css';
-}
-
-.cardHeadline {
-  composes: cardHeadline from './DetailCard.module.css';
-}
-
-.sourceBadge {
-  composes: sourceBadge from './DetailCard.module.css';
-}
-
-.cardSection {
-  composes: cardSection from './DetailCard.module.css';
-}
 
 /*
  * Glyph standing in for the thumbnail.  A spiral-ish emoji in a square slot —
  * large enough to read as the card's "image", quiet enough not to compete with
- * the headline.
+ * the headline.  Sits in the cardTopRow's image slot beside the summary.
  */
 .glyph {
   display: flex;
@@ -69,39 +23,4 @@
   border-radius: var(--radius-lg);
   background: var(--surface-badge);
   border: 1px solid var(--border-control);
-}
-
-.topRow {
-  display: flex;
-  gap: var(--space-5);
-  align-items: center;
-  margin-bottom: var(--space-4);
-}
-
-/*
- * "Fly here" button — full-width primary action.  Quieter than the title-row
- * Focus pill but discoverable in the card body; both route to onFocus.
- */
-.flyButton {
-  margin-top: var(--space-4);
-  padding: var(--space-2) var(--space-5);
-  width: 100%;
-  border: 1px solid var(--border-control);
-  border-radius: var(--radius-md);
-  background: var(--surface-control);
-  color: var(--color-fg);
-  font: inherit;
-  font-size: var(--font-size-md);
-  letter-spacing: var(--letter-spacing-mid);
-  cursor: pointer;
-  text-transform: uppercase;
-}
-
-.flyButton:hover {
-  background: var(--surface-control-hover);
-  border-color: var(--border-hover);
-}
-
-.flyButton:active {
-  background: var(--surface-control-active);
 }

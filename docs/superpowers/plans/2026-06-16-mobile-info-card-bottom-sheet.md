@@ -131,18 +131,18 @@ Mirror the mount/cleanup shape of `useFamousMeta` (`src/hooks/useFamousMeta.ts`)
 `useState` initial from the current match, `useEffect` subscribing to
 `addEventListener('change', …)` and cleaning up.
 
-- [ ] `tests/hooks/useIsMobile.test.ts`: mock `window.matchMedia` to a fake
+- [x] `tests/hooks/useIsMobile.test.ts`: mock `window.matchMedia` to a fake
   `MediaQueryList` with controllable `matches` + `addEventListener`/`removeEventListener`.
-  - [ ] `returns true when the query matches` — `matches: true` → hook returns `true`.
-  - [ ] `returns false when the query does not match` — `matches: false` → `false`.
-  - [ ] `updates when the media query change event fires` — flip `matches` and
+  - [x] `returns true when the query matches` — `matches: true` → hook returns `true`.
+  - [x] `returns false when the query does not match` — `matches: false` → `false`.
+  - [x] `updates when the media query change event fires` — flip `matches` and
     dispatch the stored `change` listener → re-rendered value flips.
-  - [ ] `returns false when matchMedia is unavailable` — delete `window.matchMedia`
+  - [x] `returns false when matchMedia is unavailable` — delete `window.matchMedia`
     → `false` (SSR/jsdom-fallback guard).
-- [ ] Run `npm test -- useIsMobile` → all fail (no impl).
-- [ ] Implement the hook.
-- [ ] Run `npm test -- useIsMobile` → green.
-- [ ] Commit.
+- [x] Run `npm test -- useIsMobile` → all fail (no impl).
+- [x] Implement the hook.
+- [x] Run `npm test -- useIsMobile` → green.
+- [x] Commit.
 
 ## Task 2 — `--mobile-sheet-peek` token (single source of truth)
 
@@ -165,8 +165,8 @@ Before / after (just the added line, in context):
 
 (`96px` ≈ grab handle + two text lines + padding; tune visually in Task 8.)
 
-- [ ] Add the token with a didactic comment naming both consumers.
-- [ ] `npm run typecheck` (CSS-only change; no test). Commit.
+- [x] Add the token with a didactic comment naming both consumers.
+- [x] `npm run typecheck` (CSS-only change; no test). Commit.
 
 ## Task 3 — `MobileSheet` component + module (scroll-snap container)
 
@@ -209,15 +209,15 @@ effect dependency array trivially correct. **Do not** pass `FocusableTarget`.
 
 **Tests** (jsdom; the snap/momentum is browser-native and NOT asserted — assert
 content presence + the reset spy, matching `InfoCard.structureHover.test.ts`):
-- [ ] `renders its child content` — render `MobileSheet` with a `<p>marker</p>`
+- [x] `renders its child content` — render `MobileSheet` with a `<p>marker</p>`
   child → `getByText('marker')` present.
-- [ ] `scrolls to the peek on mount` — spy on `HTMLElement.prototype.scrollTo`
+- [x] `scrolls to the peek on mount` — spy on `HTMLElement.prototype.scrollTo`
   → called with `{ top: 0 }` after mount.
-- [ ] `scrolls back to the peek when resetKey changes` — rerender with a new
+- [x] `scrolls back to the peek when resetKey changes` — rerender with a new
   `resetKey` → `scrollTo` called again; rerender with the SAME `resetKey` → not
   called again (effect-dep correctness).
-- [ ] `does not throw when the container ref is detached` — sanity guard.
-- [ ] Run `npm test -- MobileSheet` → fail, implement, → green. Commit.
+- [x] `does not throw when the container ref is detached` — sanity guard.
+- [x] Run `npm test -- MobileSheet` → fail, implement, → green. Commit.
 
 ## Task 4 — `DetailCard.module.css` mobile peek block
 
@@ -253,10 +253,10 @@ untouched:
 keep it consistent with Task 3; reference it via `:global(...)` exactly as the
 existing `:global(.infoCardStack)` rule does.)
 
-- [ ] No desktop rule edited; verify the existing `:global(.infoCardStack)` rule
+- [x] No desktop rule edited; verify the existing `:global(.infoCardStack)` rule
   and all standalone `.infoCardFull` rules are unchanged (desktop parity).
-- [ ] Add the `@media (max-width: 768px)` in-sheet block.
-- [ ] `npm run typecheck`. Commit. (Visual peek-fit is validated in Task 8.)
+- [x] Add the `@media (max-width: 768px)` in-sheet block.
+- [x] `npm run typecheck`. Commit. (Visual peek-fit is validated in Task 8.)
 
 ## Task 5 — `InfoCard` mobile branch
 
@@ -274,24 +274,24 @@ Keep `InfoCardProps` unchanged. Keep the named `export function InfoCard`.
 
 **Tests** (mock `window.matchMedia`; reuse the `virgo`/`galaxyStub` fixtures from
 `InfoCard.structureHover.test.ts`):
-- [ ] `renders only the selected card on mobile and ignores hovered` —
+- [x] `renders only the selected card on mobile and ignores hovered` —
   matchMedia matches; `hovered: virgo, selected: coma` → `getByText('Coma Cluster')`
   present, `queryByText('Virgo Cluster')` absent (hover suppressed). Exactly one
   "Structure" eyebrow / no "Hover".
-- [ ] `renders nothing on mobile when nothing is selected even if hovered` —
+- [x] `renders nothing on mobile when nothing is selected even if hovered` —
   matches; `hovered: virgo, selected: null` → `queryByText('Virgo Cluster')` absent
   (mobile ignores hover; container empty).
-- [ ] `shows the peek content for a selected structure on mobile` —
+- [x] `shows the peek content for a selected structure on mobile` —
   `selected: virgo` → name "Virgo Cluster", category badge label, and the
   distance line all present in the DOM.
-- [ ] `keeps the full detail body in the DOM on mobile (reveal is CSS)` —
+- [x] `keeps the full detail body in the DOM on mobile (reveal is CSS)` —
   selected galaxy stub → assert a "More details" / below-fold reference row
   (e.g. "RA" or "Orientation") is in the DOM (presence, not position).
-- [ ] `renders today's stack on desktop` — matchMedia does NOT match;
+- [x] `renders today's stack on desktop` — matchMedia does NOT match;
   `hovered: virgo, selected: coma` → both names present (parity with the desktop
   stacking behaviour).
-- [ ] Run `npm test -- InfoCard.mobile` → fail, implement, → green.
-- [ ] Run `npm test -- InfoCard` → **all existing InfoCard tests still green**
+- [x] Run `npm test -- InfoCard.mobile` → fail, implement, → green.
+- [x] Run `npm test -- InfoCard` → **all existing InfoCard tests still green**
   (desktop parity gate). Commit.
 
 ## Task 6 — `App` `hasSelection` class on the UI-stack root
@@ -309,12 +309,12 @@ it with `:global` cleanly, OR add the class to `App.module.css` and apply via
 references the scale bar (the scale bar is `ScaleBar`'s own module, so a `:global`
 hook on the wrapper read by `App.module.css` is the natural seam; see Task 7).
 
-- [ ] Apply `hasSelection` to the wrapper `cx(...)` guarded by `selected != null && isMobile`.
-- [ ] No new InfoCard/App test asserts the class directly (it's a styling hook;
+- [x] Apply `hasSelection` to the wrapper `cx(...)` guarded by `selected != null && isMobile`.
+- [x] No new InfoCard/App test asserts the class directly (it's a styling hook;
   the lift is visual). Add a lightweight render assertion ONLY if it is cheap and
   stable; otherwise rely on Task 8 visual check. Prefer not asserting CSS-module
   class fragments (matches the testing philosophy).
-- [ ] `npm run typecheck`; `npm test -- App` (if an App test suite exists) green.
+- [x] `npm run typecheck`; `npm test -- App` (if an App test suite exists) green.
   Commit.
 
 ## Task 7 — Scale-bar lift (mobile, when a selection is present)
@@ -344,9 +344,9 @@ addressable, add a plain global class alongside the module class on the
 `ScaleBar` root, mirroring how `InfoCard` carries both `styles.infoCardStack` and
 the global `'infoCardStack'`, `InfoCard.tsx:78`.)
 
-- [ ] Add the mobile lift rule consuming `--mobile-sheet-peek`.
-- [ ] Ensure desktop (`> 768px`) scale-bar position is unchanged.
-- [ ] `npm run typecheck`. Commit. (Visual confirmation in Task 8.)
+- [x] Add the mobile lift rule consuming `--mobile-sheet-peek`.
+- [x] Ensure desktop (`> 768px`) scale-bar position is unchanged.
+- [x] `npm run typecheck`. Commit. (Visual confirmation in Task 8.)
 
 ## Task 8 — Visual verification at phone width (manual)
 
