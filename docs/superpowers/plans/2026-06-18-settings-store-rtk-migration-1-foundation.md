@@ -86,10 +86,10 @@ The main thread (not an implementer subagent — background subagents can't run 
 `@reduxjs/toolkit`, `react-redux`, `redux-saga`, `typed-redux-saga` to `dependencies`.
 Do **not** remove `zustand` yet (the old store is still live until Plan 2).
 
-- [ ] `npm install @reduxjs/toolkit react-redux redux-saga typed-redux-saga` (pin the
+- [x] `npm install @reduxjs/toolkit react-redux redux-saga typed-redux-saga` (pin the
   installed versions in `package.json`).
-- [ ] `npm run typecheck` still passes (no usage yet, so this is a no-op guard).
-- [ ] Commit `package.json` + `package-lock.json`.
+- [x] `npm run typecheck` still passes (no usage yet, so this is a no-op guard).
+- [x] Commit `package.json` + `package-lock.json`.
 
 ---
 
@@ -101,12 +101,12 @@ Do **not** remove `zustand` yet (the old store is still live until Plan 2).
 via `as const` or a `const` string literal). Reference: `src/state/constants.ts` in the
 reference impl.
 
-- [ ] Add the test `settingsRoute is the 'settings' literal` asserting
+- [x] Add the test `settingsRoute is the 'settings' literal` asserting
   `settingsRoute === 'settings'`.
-- [ ] Implement `constants.ts` with a didactic header (why a route constant: it keys
+- [x] Implement `constants.ts` with a didactic header (why a route constant: it keys
   `combineReducers` so `RootState` gains a typed `settings` slot, and the selection fold
   adds sibling routes here without touching reducers).
-- [ ] `npm test -- store/constants` → green. Commit both files.
+- [x] `npm test -- store/constants` → green. Commit both files.
 
 ---
 
@@ -123,16 +123,16 @@ it does, so **do Task 7 before this task** — see sequencing note at the bottom
 and every cluster verbatim (see `buildInitialSettings.ts:50-127`), except:
 `debug.disabledPasses: {}`.
 
-- [ ] Add tests asserting: every cluster present; `galaxyCatalogs.items` has one row per
+- [x] Add tests asserting: every cluster present; `galaxyCatalogs.items` has one row per
   `GALAXY_CATALOG_IDS` (each `{ enabled: true, labelEnabled: true }`); `structures.items`
   one row per `STRUCTURE_IDS`; `volumes.items` from `seedVolumeFields()`;
   `debug.disabledPasses` deep-equals `{}`; `tier` echoes the passed `initialTier`. (Port the
   existing assertions from `tests/services/engine/settingsStore/buildInitialSettings.test.ts`,
   adjusting the `disabledPasses` assertion from `Set` to `{}`.)
-- [ ] Implement `initialState.ts` exporting `buildInitialSettings` (keep the name — Plan 2's
+- [x] Implement `initialState.ts` exporting `buildInitialSettings` (keep the name — Plan 2's
   `createAppStore` preloaded-state helper calls it). Didactic header: assembly step, derives
   item rows from the id arrays so the seed can't drift; flat-root `tier` exception noted.
-- [ ] `npm test -- state/settings/initialState` → green. Commit both files.
+- [x] `npm test -- state/settings/initialState` → green. Commit both files.
 
 > Note: the OLD `buildInitialSettings.ts` stays in place this plan (engine still imports it).
 > It's deleted in Plan 2. This is an intentional transient duplication of the literal — both
@@ -158,14 +158,14 @@ export type AppStore = ReturnType<typeof createAppStore>;   // imported from cre
 export type AppDispatch = AppStore['dispatch'];
 ```
 
-- [ ] Add the test `rootReducer exposes only the settings route` — assert
+- [x] Add the test `rootReducer exposes only the settings route` — assert
   `Object.keys(rootReducer(undefined, { type: '@@INIT' }))` deep-equals `['settings']` and that
   `rootReducer(undefined, { type: '@@INIT' }).settings` is defined. (Don't re-assert the
   initialState shape here — that's the slice's own concern in Task 6.)
-- [ ] Implement `rootReducer.ts` (combineReducers keyed by `settingsRoute`) and `types.ts`
+- [x] Implement `rootReducer.ts` (combineReducers keyed by `settingsRoute`) and `types.ts`
   (the three type aliases). Didactic header on `rootReducer.ts`: route-keyed combine gives the
   forward-compatible `RootState` the selection fold extends with sibling slices.
-- [ ] `npm test -- store/rootReducer` + `npm run typecheck` → green. Commit all three files.
+- [x] `npm test -- store/rootReducer` + `npm run typecheck` → green. Commit all three files.
 
 ---
 
@@ -179,13 +179,13 @@ export const useAppDispatch: () => AppDispatch = useDispatch;
 export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
 ```
 
-- [ ] Add a render test: wrap a probe component in `<Provider store={createAppStore()}>`,
+- [x] Add a render test: wrap a probe component in `<Provider store={createAppStore()}>`,
   call `useAppSelector(selectSettings)` inside it (use `@testing-library/react`'s
   `renderHook` with a `wrapper`), assert it returns the slice's `initialState`. (This doubles
   as the first Provider-read smoke.)
-- [ ] Implement `hooks.ts`. Didactic header: typed wrappers so call sites never re-annotate
+- [x] Implement `hooks.ts`. Didactic header: typed wrappers so call sites never re-annotate
   `RootState`; `react-redux` is allowed here (hooks/ layer), not in `services/`.
-- [ ] `npm test -- store/hooks` → green. Commit both files.
+- [x] `npm test -- store/hooks` → green. Commit both files.
 
 > `createAppStore` is referenced here — sequence Task 8 (the factory) before this task's test
 > can run. See the sequencing note.
@@ -255,25 +255,25 @@ Notes the implementer must honour:
 `setMilkyWayLabelEnabled.test.ts`, restructured to dispatch-then-assert). One `describe` per
 action; each test constructs a throwaway store (or calls `settingsSlice.reducer(state,
 action)` directly) and asserts the resulting state:
-- [ ] For each action creator, a test `<actionName> updates <field>` — e.g.
+- [x] For each action creator, a test `<actionName> updates <field>` — e.g.
   `setBrightness updates galaxyCatalogs.brightness`: `reducer(initialState, setBrightness(0.5))`
   → `.galaxyCatalogs.brightness === 0.5`. (Group the 29 into per-cluster `describe` blocks;
   the test names are the acceptance criteria — keep them specific per the existing tests.)
-- [ ] `setPassDisabled` tests assert the **object** semantics:
+- [x] `setPassDisabled` tests assert the **object** semantics:
   `reducer(s, setPassDisabled({ pass: 'foo', disabled: true })).debug.disabledPasses` deep-equals
   `{ foo: true }`; a second `setPassDisabled({ pass: 'foo', disabled: false })` → `{ foo: false }`.
-- [ ] `mergeSnapshot` tests port `tests/.../reducers/mergeSettingsSnapshot.test.ts` — partial
+- [x] `mergeSnapshot` tests port `tests/.../reducers/mergeSettingsSnapshot.test.ts` — partial
   patch replaces only its clusters; untouched clusters keep their **reference** (assert
   `result.camera === before.camera` for a patch that omits `camera`); the patch is detached
   (mutating the input patch after dispatch doesn't bleed into state).
-- [ ] **Ref-stability** test (the property the old copy-on-write reducers hand-maintained,
+- [x] **Ref-stability** test (the property the old copy-on-write reducers hand-maintained,
   now Immer's job): `const before = reducer(initialState, { type: 'x' }); const after =
   reducer(before, setBrightness(9));` → `after.galaxyCatalogs !== before.galaxyCatalogs` **and**
   `after.tonemap === before.tonemap`. This is the React-selector-skip guarantee.
-- [ ] Implement the slice. Didactic header: why inline Immer (deletes the 29+29 free-function
+- [x] Implement the slice. Didactic header: why inline Immer (deletes the 29+29 free-function
   reducer/action pair; Immer gives the structural sharing the old copy-on-write hand-maintained);
   `mergeSnapshot` stays a returning case-reducer over the kept free function.
-- [ ] `npm test -- state/settings/settingsSlice` → all green. Commit both files.
+- [x] `npm test -- state/settings/settingsSlice` → all green. Commit both files.
 
 ---
 
@@ -312,15 +312,15 @@ the encoders and lands a green commit without any RTK code. Do it **before** Tas
   boolean>`; membership reads `disabledPasses[name] === true` (replaces `.has(name)` at
   `RenderTogglesSection.tsx:51,59`); App's `DISABLED_PASSES_DEFAULT` becomes `{}`.
 
-- [ ] Update the failing-first test: change `makeSettingsFixture.ts` and the
+- [x] Update the failing-first test: change `makeSettingsFixture.ts` and the
   `setPassDisabled` / `selectDisabledPasses` / `buildInitialSettings` tests to expect a
   `Record`. Run them — they fail against the current `Set` impl.
-- [ ] Add an encoder-level assertion if a frame-encoder test exists for pass-skipping; assert
+- [x] Add an encoder-level assertion if a frame-encoder test exists for pass-skipping; assert
   a disabled pass (`{ foo: true }`) is skipped and `{ foo: false }` is not. (If no such test
   exists, skip — don't invent a GPU harness.)
-- [ ] Apply the type + encoder + old-reducer + old-selector + `buildInitialSettings` + React
+- [x] Apply the type + encoder + old-reducer + old-selector + `buildInitialSettings` + React
   edits. Run `npm test` + `npm run typecheck`.
-- [ ] Commit all touched paths in one commit (the type, the three encoders, the old
+- [x] Commit all touched paths in one commit (the type, the three encoders, the old
   reducer/selector/builder, the React props, the fixtures). Suite green on the *old* store.
 
 ---
@@ -376,8 +376,7 @@ export function createAppStore(preloadedState?: PreloadedState) {
 ### Task 9: `src/state/settings/selectors.ts` — consolidated RootState-scoped selectors
 
 **Files:** `src/state/settings/selectors.ts` (new),
-`tests/state/settings/selectors.test.ts` (new). Also relocate `mergeSettingsSnapshot` and the
-three `project*` helpers (see below). Depends on Tasks 4/6/8.
+`tests/state/settings/selectors.test.ts` (new). Depends on Tasks 4/6/8.
 
 **Contract.** A single module, base + derived (reference `cutouts/selectors.ts` shape):
 ```ts
@@ -397,33 +396,36 @@ result functions — extract each into a small named `derive*` function file und
 `src/utils/` **only if** it's genuinely reusable; otherwise inline the result function (the
 spec consolidates selectors, so an inline arrow in `selectors.ts` is correct here).
 
-**`mergeSettingsSnapshot` + `project*` relocation:** the spec keeps `mergeSettingsSnapshot`
-a free function feeding the `mergeSnapshot` case reducer, and keeps the three `project*`
-helpers feeding selectors. Move them to the new layer so Plan 2 can delete the old
-`settingsStore/` directory wholesale:
-- `mergeSettingsSnapshot` → `src/state/settings/mergeSettingsSnapshot.ts` (one-symbol file;
-  update the Task 6 slice import to this path).
-- `projectLabelCategoryVisibility`, `projectMarkerCategoryVisibility`,
-  `projectVolumeFieldRows` → `src/state/settings/` (one file each), imported by the relevant
-  selectors. (These are one-function-per-file — the selectors-consolidation override does
-  **not** extend to these helpers.)
-- Move their tests to `tests/state/settings/` (port assertions unchanged).
+**`mergeSettingsSnapshot` + `project*` relocation — DEFERRED to Plan 2.** The original plan
+moved these helpers into `src/state/settings/` here. Investigation showed that would break the
+**still-live** old store in Plan 1: the old wiring (`applyEffect.ts`, `restoreSettings.ts`)
+imports `mergeSettingsSnapshot`, and ~10 old files (App.tsx, the old selectors/reducers,
+`buildVolumeFieldsSnapshot`) import the three `project*` helpers. Relocating now would either
+break those or force churn on files Plan 2 deletes anyway. So in Plan 1, Task 9:
+- builds `selectors.ts` with **no** `project*` imports at all — the old selectors return raw
+  sub-records and the `project*` projection happens React-side (App.tsx `useMemo`), so the
+  consolidated selectors don't touch those helpers;
+- leaves the slice's `mergeSettingsSnapshot` import at its current path (Task 6 already wired it).
+
+Plan 2 owns the physical move of `mergeSettingsSnapshot` + the three `project*` helpers into
+`src/state/settings/` (one file each, one-fn-per-file) and their tests, as part of deleting the
+old `settingsStore/` directory.
 
 **Tests:** port the 24 selector tests into `selectors.test.ts`, RootState-scoped — each
 builds a `RootState` via `{ [settingsRoute]: buildInitialSettings({ initialTier: 'medium' }) }`
 (optionally patched) and asserts the selector's output:
-- [ ] One test per selector — e.g. `selectBrightness reads galaxyCatalogs.brightness`,
+- [x] One test per selector — e.g. `selectBrightness reads galaxyCatalogs.brightness`,
   `selectVisibleSourceMask packs enabled bits bit-identically to deriveSourceMasks' pick mask`
   (port the existing assertion), `selectDisabledPasses returns the debug record`,
   `selectTier reads tier`. Group by cluster.
-- [ ] `createSelector` memoization smoke: `selectVisibleSourceMask(state) ===
+- [x] `createSelector` memoization smoke: `selectVisibleSourceMask(state) ===
   selectVisibleSourceMask(state)` for the same `state` reference (proves the derived selector
   is memoized, matching the reference style).
-- [ ] Implement `selectors.ts` + the relocated `mergeSettingsSnapshot` + `project*` files.
+- [x] Implement `selectors.ts` (importing `project*` helpers from their current location).
   Didactic header on `selectors.ts`: one module is the spec's explicit override of
   one-fn-per-file; base `selectSettings` + derived `createSelector` chain; RootState-scoped so
   they drop into both `useAppSelector(selectX)` and engine-side `selectX(store.getState())`.
-- [ ] `npm test -- state/settings/selectors` + `npm run typecheck` → green. Commit all new files.
+- [x] `npm test -- state/settings/selectors` + `npm run typecheck` → green. Commit all new files.
 
 ---
 
@@ -433,38 +435,43 @@ builds a `RootState` via `{ [settingsRoute]: buildInitialSettings({ initialTier:
 
 Run the `entanglement-radar` skill over the full Plan-1 diff (`src/store/` + `src/state/settings/`
 + the `disabledPasses` change). Check specifically:
-- [ ] No `serializableCheck: false` / `enableMapSet` snuck in (the spec's serializability win).
-- [ ] `disabledPasses` is a single canonical `Record` shape everywhere — no surviving `Set`
+- [x] No `serializableCheck: false` / `enableMapSet` snuck in (the spec's serializability win).
+- [x] `disabledPasses` is a single canonical `Record` shape everywhere — no surviving `Set`
   idiom, no `.has(` left in encoders or React.
-- [ ] Selectors are RootState-scoped from one base (`selectSettings`) — no selector still
+- [x] Selectors are RootState-scoped from one base (`selectSettings`) — no selector still
   typed over bare `EngineSettingsState` (those would force a second cast at the engine seam in
   Plan 2).
-- [ ] The slice is the **single** write path — no re-introduced action-wrapper layer parallel
+- [x] The slice is the **single** write path — no re-introduced action-wrapper layer parallel
   to the slice's generated creators.
-- [ ] `src/state/` / `src/store/` import **no** `react-redux` (services stays React-free;
+- [x] `src/state/` / `src/store/` import **no** `react-redux` (services stays React-free;
   only `hooks.ts` may import it, and `hooks.ts` lives under `src/store/` which is the seam —
   confirm nothing in `src/state/settings/` imports react).
-- [ ] Record any genuine knot as a follow-up; "no significant complecting found" is a valid
+- [x] Record any genuine knot as a follow-up; "no significant complecting found" is a valid
   result. Commit any fixes with a clear message.
+
+**Radar result (2026-06-18):** CLEAN to merge — all 8 gates PASS, no must-fix knots. The
+`disabledPasses` delete→`false` semantic shift is closed by uniform strict `=== true` reads and
+regression-pinned. One optional non-blocking follow-up recorded for Plan 2: a parity test
+asserting `selectVisibleSourceMask` stays bit-identical to `deriveSourceMasks`' pick mask (they
+now independently iterate the same source set).
 
 ---
 
 ## Definition of Done (Plan 1 — the `/feature-done` gate)
 
-- [ ] `npm test` — full suite green (new `tests/store/**` + `tests/state/settings/**` pass;
-  old `tests/services/engine/settingsStore/**` still pass — they're deleted in Plan 2).
-- [ ] `npm run typecheck` — both tsconfigs clean.
-- [ ] No `TODO` / placeholder left in any new file.
-- [ ] New surface present and exported with the **naming contract** names:
+- [x] `npm test` — full suite green (2847 tests, +75 new; old `settingsStore/**` tests still pass).
+- [x] `npm run typecheck` — both tsconfigs clean.
+- [x] No `TODO` / placeholder left in any new file.
+- [x] New surface present and exported with the **naming contract** names:
   `createAppStore`, `RootState`/`AppStore`/`AppDispatch`, `settingsRoute`, `mainSaga`,
   `useAppDispatch`/`useAppSelector`, `selectSettings`, and the slice action creators matching
   the old reducer names.
-- [ ] `disabledPasses` is `Record<string, boolean>` everywhere; no `.has(` on it remains
+- [x] `disabledPasses` is `Record<string, boolean>` everywhere; no `.has(` on it remains
   (`grep -rn "disabledPasses" src/ | grep "\.has("` is empty).
-- [ ] The **old** zustand store, `useSettingsStore`, `createSettingsStore`,
+- [x] The **old** zustand store, `useSettingsStore`, `createSettingsStore`,
   `buildInitialSettings`, and the 29/29/25 reducer/action/selector files are **still present
   and wired** — Plan 1 does not delete them.
-- [ ] `zustand` is **still** in `package.json` (removed in Plan 2).
+- [x] `zustand` is **still** in `package.json` (removed in Plan 2).
 
 ---
 
