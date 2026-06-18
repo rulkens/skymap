@@ -28,8 +28,7 @@
  * The `fallback` is passed per call site rather than read from a defaults map
  * here so the hook carries no dependency on the full settings shape — each
  * caller already knows which `DEFAULT_*` value (or derived seed, e.g.
- * `ALL_VISIBLE_MASK`) matches its selector, exactly as the old
- * `useEngineSettings` cells did.
+ * `ALL_VISIBLE_MASK`) matches its selector.
  */
 
 import { useCallback, useSyncExternalStore } from 'react';

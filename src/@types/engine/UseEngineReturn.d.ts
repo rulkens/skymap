@@ -15,7 +15,6 @@ export type UseEngineReturn = {
   selected: FocusableTarget | null;
   focused: FocusableTarget | null;
   scale: ScaleInfo;
-  fps: number;
   sourceCounts: Partial<Record<SourceType, number>>;
   /** Per-category structure counts (cluster / supercluster / void / group) for the Structures panel. */
   structureCounts: Partial<Record<StructureId, number>>;

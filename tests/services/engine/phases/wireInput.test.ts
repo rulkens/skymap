@@ -163,8 +163,6 @@ function makeDeps(): BootstrapDeps {
     detachControlsRef: { current: null },
     handleRef: { current: null },
     allSlots: new Map(),
-    fpsCounter: { sample: () => null } as unknown as BootstrapDeps['fpsCounter'],
-    lastReportedFps: { current: null },
     phaseLocals: {
       device: {} as GPUDevice,
       context: {} as GPUCanvasContext,

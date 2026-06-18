@@ -54,11 +54,10 @@
  *   - `canvas`, `cb` — createEngine arguments;
  *   - the `frameRef` and `detachControlsRef` boxes for the two
  *     forward-declared `let`s in `engine.ts` that later phases need to
- *     write to (round-trip via the `{current}` ref pattern);
- *   - `fpsCounter`, `lastReportedFps` — needed by `startLoop` to build
- *     the `RunFrameDeps` bag.  The pure `cssToTexPx` helper is
- *     imported directly in `wireInput` (no per-engine dedup state),
- *     and the milky-way iTime epoch is a `performance.now()` snapshot
+ *     write to (round-trip via the `{current}` ref pattern).  The pure
+ *     `cssToTexPx` helper is imported directly in `wireInput` (no
+ *     per-engine dedup state), and the milky-way iTime epoch is a
+ *     `performance.now()` snapshot
  *     taken in `startLoop` (the * 0.25 animation scale makes "engine
  *     construction" vs "loop start" imperceptible).  Scale-bar
  *     derivation lives entirely React-side (driven by
@@ -107,10 +106,7 @@ import { startLoop } from './startLoop';
  * closure captures (`frame`, `detachControls`, `handle`) propagate
  * via the `{current}` ref boxes carried in `deps`.
  */
-export async function runBootstrapPhases(
-  state: EngineState,
-  deps: BootstrapDeps,
-): Promise<void> {
+export async function runBootstrapPhases(state: EngineState, deps: BootstrapDeps): Promise<void> {
   await initGpu(state, deps);
   await wireSlots(state, deps);
   await wireInput(state, deps);

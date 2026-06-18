@@ -5,8 +5,6 @@
  * `engine.ts:1407–1708` body; the galaxy catalog done in Phase 3 Task 3.1
  * enumerated each one by source (createEngine arg, IIFE-local renderer,
  * createEngine helper, etc.) and confirmed read-only vs. mutated.
- * `lastReportedFps` is the only mutated entry, hence the `{current}`
- * box.
  */
 
 import type { EngineCallbacks } from '../EngineCallbacks';
@@ -15,24 +13,14 @@ import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRende
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
 import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
-import type { FpsCounter } from '../subsystems/FpsCounter';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { CameraDriver } from '../camera/CameraDriver';
 
 export type RunFrameDeps = {
   /** createEngine arg — for resize + viewport reads. */
   canvas: HTMLCanvasElement;
-  /** createEngine arg — for `onFpsChange` / `onSourceMaskChange` echoes. */
+  /** createEngine arg — for the `camera.onCameraChange` echo. */
   cb: EngineCallbacks;
-  /** Rolling 60-frame counter; `.sample()` called once per frame. */
-  fpsCounter: FpsCounter;
-  /**
-   * Mutable: last integer fps value reported via `cb.onFpsChange`.
-   * Boxed as `{current}` so the body's write round-trips back into
-   * createEngine's scope across the module boundary.  See the module
-   * header for the why.
-   */
-  lastReportedFps: { current: number | null };
   /** GPU device handle from `initGpu`. */
   device: GPUDevice;
   /** Swap-chain context handle from `initGpu`. */

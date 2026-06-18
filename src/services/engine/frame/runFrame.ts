@@ -9,10 +9,10 @@
  *
  * ### What counts as the "frame body"
  *
- * Everything from the FPS sample at the top to the `renderFrame()` GPU
- * dispatch and the throttled hover pick that follows.  The
- * still-animating predicate ("keep ticking ONLY if motion or async work
- * is in flight") lives here too — a single condition that fires
+ * Everything from the camera-driver resolve at the top to the
+ * `renderFrame()` GPU dispatch and the throttled hover pick that follows.
+ * The still-animating predicate ("keep ticking ONLY if motion or async
+ * work is in flight") lives here too — a single condition that fires
  * `state.subsystems.scheduler.requestRender()` if any busy-flag is set.
  *
  * ### Why deps are passed explicitly instead of lifted to EngineState
@@ -24,14 +24,6 @@
  * fields it never touches.  They flow through `RunFrameDeps` instead.
  * The pure `cssToTexPx` helper captures nothing, so it's imported
  * directly rather than threaded.
- *
- * ### The `{current}` ref pattern for mutable closure values
- *
- * `lastReportedFps` is owned by `createEngine`'s closure but mutated
- * here.  Wrapping it as `{ current: T }` lets `RunFrameDeps` carry it by
- * reference: the body writes `deps.lastReportedFps.current` and engine.ts
- * sees the same object.  `fpsCounter` is passed as-is (no mutation of a
- * binding, just a method call).
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -66,19 +58,6 @@ import {
  * reading the global so tests can drive deterministic timing.
  */
 export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number): void {
-  // ── FPS measurement ───────────────────────────────────────────────
-  //
-  // Sample BEFORE any frame work so the timestamp is the gap between
-  // successive rAF dispatches — what the user perceives as framerate.  The
-  // counter handles its own < 2-samples bootstrap (null) and a 60-frame
-  // window; we throttle the callback to integer changes so React doesn't
-  // re-render on noise.
-  const fpsNow = deps.fpsCounter.sample(nowMs);
-  if (fpsNow !== null && fpsNow !== deps.lastReportedFps.current) {
-    deps.lastReportedFps.current = fpsNow;
-    deps.cb.lifecycle?.onFpsChange?.(fpsNow);
-  }
-
   // ── Demand re-evaluation ──────────────────────────────────────────
   //
   // Re-derive what should be loading from current state, every frame.

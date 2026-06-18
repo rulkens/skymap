@@ -23,16 +23,15 @@ import type { StructureId } from '../data/structure/StructureId';
  *
  * Every member here is an EVENT — something the engine *did* that the
  * UI must learn about (a status transition, a selection change, a
- * camera-snapshot tick, a catalog arrival, a load-progress update, the
- * one-shot filaments-ready). Settings VALUES do
- * NOT live here: they're owned by the engine settings store and read
- * React-side via `useStore` selectors, so there is no echo-mirror
- * protocol to maintain.
+ * camera-snapshot tick, a catalog arrival, a load-progress update).
+ * Settings VALUES do NOT live here: they're owned by the engine settings
+ * store and read React-side via `useStore` selectors, so there is no
+ * echo-mirror protocol to maintain.
  *
  * ### Nested-only shape
  *
  * Each sub-bag groups its callbacks by the engine sub-system they
- * concern (lifecycle / selection / camera / sources / filaments).
+ * concern (lifecycle / selection / camera / sources).
  * There are no flat siblings — every fire site lives at its
  * nested address.
  *
@@ -64,22 +63,11 @@ export type EngineCallbacks = {
    * Engine lifecycle callbacks.  `onStatusChange` is required — every
    * engine consumer needs to observe the initializing → loading →
    * ready transitions (the React shell hides the loading overlay on
-   * `ready`).  `onFpsChange` is optional; only the perf HUD subscribes.
+   * `ready`).
    */
   lifecycle: {
     /** Fired whenever the engine status advances (initializing → loading → ready). */
     onStatusChange: (s: EngineStatus) => void;
-    /**
-     * Fired when the rolling-window FPS estimate changes (integer Hz).
-     *
-     * The engine measures inter-frame deltas inside its
-     * `requestAnimationFrame` loop and averages over the last ~60
-     * frames to smooth out per-frame jitter (a steady visual 60 fps
-     * has individual deltas swinging between 12 and 24 ms).  This
-     * callback fires only when the *integer* fps value changes
-     * (e.g. 59 → 60), so React's setState is a safe direct wire-up.
-     */
-    onFpsChange?: (fps: number) => void;
   };
 
   /**
@@ -171,14 +159,4 @@ export type EngineCallbacks = {
     onLoadProgress?: (progress: LoadProgressState | null) => void;
     onStructureCountsChange?: (counts: Partial<Record<StructureId, number>>) => void;
   };
-
-  /**
-   * Fired exactly once, after the optional cosmic-web `filaments.bin`
-   * lands and is uploaded to the renderer.  Reports strip + vertex
-   * counts so the UI can show e.g. "Filaments · 3,845 strips,
-   * 27,410 verts".  One-shot because counts are properties of the
-   * underlying file, not of the runtime visibility flag.  Silently
-   * skipped on fresh clones (before `npm run build-filaments`).
-   */
-  filaments?: { onReady?: (stripCount: number, vertexCount: number) => void };
 };

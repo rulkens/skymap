@@ -89,7 +89,6 @@ import { produceMilkyWayLabel } from './presentation/produceMilkyWayLabel';
 import { produceStructureLabels } from './presentation/produceStructureLabels';
 import { produceFamousLabels } from './presentation/produceFamousLabels';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
-import { createFpsCounter } from './subsystems/fpsCounter';
 import { HDR_PASSES, UI_PASSES } from './frame/passes';
 import { buildGalaxyInfo } from './helpers/galaxyInfoBuilder';
 import { clearAll } from './helpers/clearAll';
@@ -190,8 +189,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // stub.  The scheduler captures `frameRef` via `() => frameRef.current()`,
   // so once `startLoop` assigns the real body, every rAF runs it.  A ref
   // (not a `let`) because the bootstrap phases are sibling modules where a
-  // `let` would be invisible — same pattern as `lastReportedFps` (see
-  // `BootstrapDeps` for the full ref inventory).
+  // `let` would be invisible (see `BootstrapDeps` for the full ref inventory).
   //
   // The stub is a silent no-op: its only invocation window is "rAF fires
   // before startLoop wires `frameRef.current`", vanishingly rare and
@@ -201,18 +199,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       /* stub until startLoop assigns the real body */
     },
   };
-
-  // ── Rolling FPS counter ────────────────────────────────────────────────────
-  //
-  // Engine-scope so the same instance accumulates samples across every
-  // frame() (a counter inside frame() would reset each call).  Thin closure
-  // over a 60-frame ring buffer — see fpsCounter.ts.  `lastReportedFps`
-  // throttles the callback fan-out to integer changes, so a steady
-  // framerate fires once then goes silent instead of burning React renders.
-  const fpsCounter = createFpsCounter(60);
-  // Boxed as `{current}` so the frame body in `runFrame.ts` can write to it
-  // across the module boundary.
-  const lastReportedFps: { current: number | null } = { current: null };
 
   // ── Settings — the user-facing SettingsPanel sub-bags ──────────
   //
@@ -469,9 +455,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //
   // The four bootstrap phases consume a shared `BootstrapDeps` built here:
   // the canvas + cb args, `{current}` ref boxes for forward-declared
-  // bindings (frameRef, detachControlsRef, handleRef), and the values
-  // `startLoop` needs for `RunFrameDeps` (fpsCounter, lastReportedFps,
-  // allSlots).
+  // bindings (frameRef, detachControlsRef, handleRef), and the `allSlots`
+  // registry `startLoop` and the loading bar share.
   //
   // `handleRef.current` is null here — the handle is declared after the
   // IIFE below.  `wireInput`'s onDoubleClick reads it lazily, so it's
@@ -484,8 +469,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     detachControlsRef,
     handleRef,
     allSlots,
-    fpsCounter,
-    lastReportedFps,
   };
   // The main async IIFE runs the bootstrap phases; all errors are caught
   // and reported via `onStatusChange`.  See `runBootstrapPhases`.
