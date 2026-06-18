@@ -394,20 +394,32 @@ didn't regress.
 
 ## Definition of Done (Plan 2 — the `/feature-done` gate)
 
-- [ ] `npm test` — full suite green.
-- [ ] `npm run typecheck` — both tsconfigs clean.
-- [ ] No `TODO` / placeholder in any changed file.
-- [ ] `grep -rn "useSettingsStore" src/ tests/` → **empty** (adapter + all call sites gone).
-- [ ] `grep -rn "zustand" src/ tests/ package.json` → **empty** (dependency removed).
-- [ ] `grep -rn "settingsStore/" src/ tests/` → **empty** (old reducer/action/selector
+- [x] `npm test` — full suite green. (2678 passing; ~166 redundant old-store tests removed.)
+- [x] `npm run typecheck` — both tsconfigs clean.
+- [x] No `TODO` / placeholder in any changed file.
+- [x] `grep -rn "useSettingsStore" src/ tests/` → **empty** (adapter + all call sites gone).
+- [x] `grep -rn "zustand" src/ tests/ package.json` → **empty** (dependency removed).
+- [x] `grep -rn "settingsStore/" src/ tests/` → **empty** (old reducer/action/selector
   directory deleted; `createSettingsStore` + `buildInitialSettings` gone).
-- [ ] `grep -rn "settingsStore" src/@types/engine/EngineHandle.d.ts` → **empty**
+- [x] `grep -rn "settingsStore" src/@types/engine/EngineHandle.d.ts` → **empty**
   (`handle.settingsStore` removed).
-- [ ] `main.tsx` wraps `<Provider store={createAppStore(...)}>`; `useEngine` reads the store
+- [x] `main.tsx` wraps `<Provider store={createAppStore(...)}>`; `useEngine` reads the store
   via `useStore` and passes it into `createEngine`.
-- [ ] The engine no longer constructs a store; `get settings()` returns
+- [x] The engine no longer constructs a store; `get settings()` returns
   `store.getState().settings`.
-- [ ] Manual smoke passes: settings toggles, debug pass toggles, tour capture/restore.
+- [ ] Manual smoke passes: settings toggles, debug pass toggles, tour capture/restore. ← awaiting user
+
+### Entanglement-radar verdict (Task 11)
+
+One real knot found + fixed (commit `2be6509e`): `useEngine` re-derived the boot tier and
+exposed `UseEngineReturn.initialTier` with no remaining reader — a dead value×place surface.
+Removed. Otherwise CLEAN: single store home (`main.tsx` `<Provider>`), `state.settings` a pure
+delegating read with no engine-side mirror, writes funnel through the one handle→`dispatch`
+seam (no component dispatches directly yet — that's phase 2), and `settingsTable` stayed a
+registry (no new discriminant branch introduced by the dispatch repoint).
+
+Landed as 3 commits: `af41db21` (inject + dispatch write path), `43099473` (delete old store +
+drop zustand), `2be6509e` (radar fix).
 
 ---
 
