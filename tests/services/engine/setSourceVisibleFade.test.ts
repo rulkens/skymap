@@ -3,9 +3,9 @@
  *
  * These drive `setSourceVisibleForTest` directly against a minimal state stub
  * rather than instantiating a full GPU engine.  The helper writes the galaxy
- * catalog's `enabled` flag through a real engine-owned settings store (the
- * fixture backs `state.settings` with `createSettingsStore` and a getter,
- * mirroring the engine's delegation), then drives the fade THROUGH
+ * catalog's `enabled` flag through a real injected settings store (the fixture
+ * backs `state.settings` with `createAppStore` and a getter, mirroring the
+ * engine's delegation), then drives the fade THROUGH
  * `syncVisibilityFades` (the intent → fade bridge).
  *
  * ### Model under test
@@ -30,7 +30,7 @@ import type { GalaxyCatalogId } from '../../../src/@types/data/galaxyCatalog/Gal
 import type { ApplyIntentState } from '../../../src/services/engine/wiring/syncVisibilityFades';
 import { syncVisibilityFades } from '../../../src/services/engine/wiring/syncVisibilityFades';
 import { setSourceVisibleForTest } from '../../../src/services/engine/handles/setSourceVisible';
-import { createSettingsStore } from '../../../src/services/engine/settingsStore/createSettingsStore';
+import { createAppStore } from '../../../src/store/createAppStore';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 
 // The bridge is the seam under test: mock it to a typed spy so the setter test
@@ -59,12 +59,12 @@ function makeFixture() {
       { enabled: true, labelEnabled: true },
     ]),
   );
-  const store = createSettingsStore({
-    galaxyCatalogs: { items },
-  } as unknown as EngineSettingsState);
+  const store = createAppStore({
+    settings: { galaxyCatalogs: { items } } as unknown as EngineSettingsState,
+  });
   const state = {
     get settings() {
-      return store.getState();
+      return store.getState().settings;
     },
     subsystems: {
       fades: { fadeTo: vi.fn(), setImmediate: vi.fn() },
@@ -81,13 +81,13 @@ describe('setSourceVisible — synchronous toggle', () => {
 
   it('flips galaxyCatalogs.items[id].enabled synchronously (through the store)', () => {
     const fx = makeFixture();
-    expect(fx.store.getState().galaxyCatalogs.items.sdss!.enabled).toBe(true);
+    expect(fx.store.getState().settings.galaxyCatalogs.items.sdss!.enabled).toBe(true);
 
     setSourceVisibleForTest(fx.state, fx.store, Source.SDSS, false);
 
     // Re-read through the store: the write is copy-on-write, so the row is a
     // fresh object — reading the live state, not a captured reference.
-    expect(fx.store.getState().galaxyCatalogs.items.sdss!.enabled).toBe(false);
+    expect(fx.store.getState().settings.galaxyCatalogs.items.sdss!.enabled).toBe(false);
   });
 
   it('drives the fade through the bridge with { animate: true, only: ["survey"] }', () => {
@@ -96,7 +96,10 @@ describe('setSourceVisible — synchronous toggle', () => {
     expect(bridge).toHaveBeenCalledWith(hide.state, { animate: true, only: ['survey'] });
 
     const show = makeFixture();
-    show.store.getState().galaxyCatalogs.items.sdss!.enabled = false;
+    // Seed sdss disabled by driving the setter (the store is immutable — no
+    // direct getState mutation), then clear so the assertion sees only the show.
+    setSourceVisibleForTest(show.state, show.store, Source.SDSS, false);
+    bridge.mockClear();
     setSourceVisibleForTest(show.state, show.store, Source.SDSS, true);
     expect(bridge).toHaveBeenLastCalledWith(show.state, { animate: true, only: ['survey'] });
   });
@@ -116,6 +119,6 @@ describe('setSourceVisible — synchronous toggle', () => {
     setSourceVisibleForTest(fx.state, fx.store, Source.SDSS, true); // already true → no-op
 
     expect(bridge).not.toHaveBeenCalled();
-    expect(fx.store.getState().galaxyCatalogs.items.sdss!.enabled).toBe(true);
+    expect(fx.store.getState().settings.galaxyCatalogs.items.sdss!.enabled).toBe(true);
   });
 });

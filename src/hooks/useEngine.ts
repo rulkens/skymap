@@ -26,12 +26,16 @@
  * ──────────────────────────────────────────────────────────────────────
  * What this hook does NOT own
  * ──────────────────────────────────────────────────────────────────────
- * Settings values (point size, brightness, etc.) live in the
- * engine-owned settings store; React reads them via `useSettingsStore`
- * selectors, not through this hook.  The only thing the caller layers in
- * via `extraCallbacks` is extra EVENT subscriptions — App-level event
- * wiring (e.g. `selection.onStructureHoverChange`) — which we spread into
- * the createEngine options block alongside our session callbacks.
+ * Settings values (point size, brightness, etc.) live in the injected
+ * settings store — created once in `main.tsx` and shared with React via
+ * the redux `<Provider>`.  React reads those values via `useAppSelector`
+ * selectors, not through this hook; this hook only obtains the store via
+ * `useAppStore` and threads that same instance into `createEngine` so the
+ * engine reads its settings from the one store React renders from.  The
+ * only thing the caller layers in via `extraCallbacks` is extra EVENT
+ * subscriptions — App-level event wiring (e.g.
+ * `selection.onStructureHoverChange`) — which we spread into the
+ * createEngine options block alongside our session callbacks.
  *
  * ──────────────────────────────────────────────────────────────────────
  * Why empty `useEffect` deps?
@@ -57,7 +61,8 @@ import type { LoadProgressState } from '../@types/loading/LoadProgressState';
 import type { Tier } from '../@types/data/Tier';
 import type { UseEngineInput } from '../@types/engine/UseEngineInput';
 import type { UseEngineReturn } from '../@types/engine/UseEngineReturn';
-import { initialTierFromViewport } from '../utils/initialTierFromViewport';
+import { useAppStore } from '../store/hooks';
+import { selectTier } from '../state/settings/selectors';
 import type { SourceType } from '../@types/data/SourceType';
 import type { StructureId } from '../@types/data/structure/StructureId';
 
@@ -80,6 +85,11 @@ const SCALE_TARGET_PX = 150;
 export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
   const { extraCallbacks } = input;
 
+  // The injected settings store — created in main.tsx, shared with React via
+  // the redux `<Provider>`. We thread this exact instance into `createEngine`
+  // so the engine reads its settings from the same store React renders from.
+  const store = useAppStore();
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const handleRef = useRef<EngineHandle | null>(null);
 
@@ -91,16 +101,11 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
   const [sourceCounts, setSourceCounts] = useState<Partial<Record<SourceType, number>>>({});
   const [structureCounts, setStructureCounts] = useState<Partial<Record<StructureId, number>>>({});
   const [loadProgress, setLoadProgress] = useState<LoadProgressState | null>(null);
-  // One-time startup SEED for the engine's initial tier, derived from the
-  // viewport (`window` guarded for SSR / unit-test hosts). This is no longer
-  // React state: the live tier now lives in the engine settings store and is
-  // read via `selectTier`, so this hook only needs the immutable boot value.
-  // A stable `useMemo` keeps it from re-deriving (and so never perturbs the
-  // engine effect's deps).
-  const initialTier = useMemo<Tier>(
-    () => (typeof window !== 'undefined' ? initialTierFromViewport(window.innerWidth) : 'medium'),
-    [],
-  );
+  // The boot tier is whatever main.tsx seeded the injected store with; read it
+  // once as the immutable startup value. The live tier is read elsewhere via
+  // selectTier/useAppSelector. A stable `useMemo` keeps it from re-deriving
+  // (and so never perturbs the engine effect's deps).
+  const initialTier = useMemo<Tier>(() => selectTier(store.getState()), [store]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -141,9 +146,9 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
     // `selection.onStructureHoverChange`).  Spread order puts the
     // extra-callback entries LAST so the caller wins where both define the
     // same method.  Settings VALUES do not flow through here: they live in
-    // the engine-owned store and React reads them via `useSettingsStore`
-    // selectors, so there is no echo to merge.  `initialTier` rides
-    // through as a non-callback option.
+    // the injected store and React reads them via `useAppSelector` selectors,
+    // so there is no echo to merge.  The injected `store` rides through as a
+    // non-callback option — the engine reads its settings from it.
     const {
       lifecycle: extraLifecycle,
       camera: extraCamera,
@@ -152,7 +157,7 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
     } = extraCallbacks ?? {};
 
     const handle = createEngine(canvas, {
-      initialTier,
+      store,
       lifecycle: {
         onStatusChange: setStatus,
         ...extraLifecycle,
@@ -191,11 +196,11 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
       handleRef.current = null;
     };
     // Engine is a one-shot effect — see hook header for rationale.
-    // `extraCallbacks` and `initialTier` are both intentionally captured at
-    // first render: callbacks are stable React setters (would never trigger
-    // meaningful re-runs even if listed); `initialTier` is a stable `useMemo`
-    // startup seed. Listing either here would re-create the engine on every
-    // render.
+    // `extraCallbacks` and `store` are both intentionally captured at first
+    // render: callbacks are stable React setters (would never trigger
+    // meaningful re-runs even if listed); `store` is the single injected store
+    // instance, stable for the app's lifetime. Listing either here would
+    // re-create the engine on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

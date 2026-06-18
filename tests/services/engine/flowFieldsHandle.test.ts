@@ -9,9 +9,9 @@
  * The handle is two halves:
  *
  *   1. The STORE WRITE — the whole `Partial<FlowSettings>` patch is dispatched
- *      through `setFlowAction` (copy-on-write into `settings.flow`). The store
- *      stores the raw request verbatim; clamping lives in `clampFlowParams`,
- *      tested there.
+ *      through the `setFlow` slice action (copy-on-write into `settings.flow`).
+ *      The store stores the raw request verbatim; clamping lives in
+ *      `clampFlowParams`, tested there.
  *
  *   2. The SIDE-EFFECT WRAPPERS — the fade bridge call (enabled patches) and
  *      the reseed-on-mode/count.
@@ -30,8 +30,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createSettingsStore } from '../../../src/services/engine/settingsStore/createSettingsStore';
-import type { SettingsStore } from '../../../src/services/engine/settingsStore/createSettingsStore';
+import { createAppStore } from '../../../src/store/createAppStore';
+import type { AppStore } from '../../../src/store/types';
 import { makeSettingsFixture } from './settingsStore/makeSettingsFixture';
 import { MAX_PARTICLES } from '../../../src/data/flow/flowFieldConstants';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
@@ -55,14 +55,14 @@ const bridge = vi.mocked(syncVisibilityFades);
  * bridge mocked the fade/assetSlots internals are swallowed; the stub only needs
  * the reseed + scheduler subsystems the handle touches directly.
  */
-function makeState(store: SettingsStore) {
+function makeState(store: AppStore) {
   const reseed = vi.fn();
   const requestRender = vi.fn();
   const state = {
     // Mirror the engine's settings delegation so the bridge (and the
     // write-before-bridge assertion) reads the live, just-written intent.
     get settings() {
-      return store.getState();
+      return store.getState().settings;
     },
     gpu: { flowFieldRenderer: { maybeReseed: reseed } },
     subsystems: {
@@ -74,7 +74,7 @@ function makeState(store: SettingsStore) {
 
 /** Convenience: assemble state + store. */
 function harness() {
-  const store = createSettingsStore(makeSettingsFixture());
+  const store = createAppStore({ settings: makeSettingsFixture() });
   const ctx = makeState(store);
   return { ...ctx, store };
 }
@@ -86,7 +86,7 @@ describe('flow sub-handle — setEnabled drives the fade bridge', () => {
     const h = harness();
     setFlow(h.state, h.store, { enabled: true });
 
-    expect(h.store.getState().flow.enabled).toBe(true);
+    expect(h.store.getState().settings.flow.enabled).toBe(true);
     expect(h.requestRender).toHaveBeenCalled();
     expect(bridge).toHaveBeenCalledWith(h.state, { animate: true, only: ['flow'] });
   });
@@ -95,7 +95,7 @@ describe('flow sub-handle — setEnabled drives the fade bridge', () => {
     const h = harness();
     setFlow(h.state, h.store, { enabled: false });
 
-    expect(h.store.getState().flow.enabled).toBe(false);
+    expect(h.store.getState().settings.flow.enabled).toBe(false);
     expect(bridge).toHaveBeenCalledWith(h.state, { animate: true, only: ['flow'] });
   });
 
@@ -116,7 +116,7 @@ describe('flow sub-handle — reseed wrappers', () => {
     const h = harness();
     setFlow(h.state, h.store, { mode: 'streamline' });
 
-    expect(h.store.getState().flow.mode).toBe('streamline');
+    expect(h.store.getState().settings.flow.mode).toBe('streamline');
     expect(h.reseed).toHaveBeenCalledOnce();
     expect(h.requestRender).toHaveBeenCalled();
     // Knob-only patch: no enabled key, so the fade bridge stays untouched.
@@ -127,7 +127,7 @@ describe('flow sub-handle — reseed wrappers', () => {
     const h = harness();
     setFlow(h.state, h.store, { count: 1000 });
 
-    expect(h.store.getState().flow.count).toBe(1000);
+    expect(h.store.getState().settings.flow.count).toBe(1000);
     expect(h.reseed).toHaveBeenCalledOnce();
     expect(h.requestRender).toHaveBeenCalled();
     expect(bridge).not.toHaveBeenCalled();
@@ -137,7 +137,7 @@ describe('flow sub-handle — reseed wrappers', () => {
     const h = harness();
     setFlow(h.state, h.store, { intensity: 0.5 });
 
-    expect(h.store.getState().flow.intensity).toBe(0.5);
+    expect(h.store.getState().settings.flow.intensity).toBe(0.5);
     expect(h.requestRender).toHaveBeenCalled();
     expect(h.reseed).not.toHaveBeenCalled();
     expect(bridge).not.toHaveBeenCalled();
@@ -150,18 +150,18 @@ describe('flow sub-handle — stores raw intent (clamping moved to clampFlowPara
   it('setIntensity stores a raw out-of-range value (clamping moved to clampFlowParams)', () => {
     const h = harness();
     setFlow(h.state, h.store, { intensity: 5 });
-    expect(h.store.getState().flow.intensity).toBe(5);
+    expect(h.store.getState().settings.flow.intensity).toBe(5);
   });
 
   it('setCount stores a raw negative value', () => {
     const h = harness();
     setFlow(h.state, h.store, { count: -10 });
-    expect(h.store.getState().flow.count).toBe(-10);
+    expect(h.store.getState().settings.flow.count).toBe(-10);
   });
 
   it('setCount stores a raw value above MAX_PARTICLES', () => {
     const h = harness();
     setFlow(h.state, h.store, { count: MAX_PARTICLES + 9999 });
-    expect(h.store.getState().flow.count).toBe(MAX_PARTICLES + 9999);
+    expect(h.store.getState().settings.flow.count).toBe(MAX_PARTICLES + 9999);
   });
 });

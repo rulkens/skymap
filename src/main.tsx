@@ -28,10 +28,21 @@
  * NOT wrap `<App />` in `<React.StrictMode>` because StrictMode double-mounts
  * components and our WebGPU engine is not designed for that pattern (it
  * creates GPU resources and starts a render loop on mount).
+ *
+ * The app is wrapped in the redux `<Provider>` whose store is constructed here,
+ * once, from `createAppStore` seeded with the viewport-derived boot tier. That
+ * single store instance is the one settings store the app owns: React reads it
+ * through the `<Provider>`, and the engine reads it through `useEngine` →
+ * `createEngine`, so there is no second store to drift.
  */
 
 import { createRoot } from 'react-dom/client';
+import { Provider } from 'react-redux';
 import { App } from './components/App/App';
+import { createAppStore } from './store/createAppStore';
+import { settingsRoute } from './store/constants';
+import { buildInitialSettings } from './state/settings/initialState';
+import { initialTierFromViewport } from './utils/initialTierFromViewport';
 import { renderUnsupportedPageHtml } from './unsupportedPage';
 // Side-effect import — defines design-token custom properties on `:root`
 // and the page-level reset.  Loaded once at app boot so every CSS module
@@ -51,5 +62,15 @@ if (typeof navigator === 'undefined' || typeof navigator.gpu === 'undefined') {
   // page and bail.  React never mounts; no engine objects are constructed.
   document.body.innerHTML = renderUnsupportedPageHtml();
 } else {
-  createRoot(root).render(<App />);
+  // Seed the settings store with the viewport-derived boot tier — the ONE home
+  // for that derivation. The same store instance is injected into the engine
+  // (via useEngine → createEngine) and read by React through <Provider>, so
+  // there is no second settings store to drift.
+  const initialTier = initialTierFromViewport(window.innerWidth);
+  const store = createAppStore({ [settingsRoute]: buildInitialSettings({ initialTier }) });
+  createRoot(root).render(
+    <Provider store={store}>
+      <App />
+    </Provider>,
+  );
 }

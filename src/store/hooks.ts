@@ -16,9 +16,12 @@
  * the store through these wrappers, never through `react-redux` directly.
  */
 
-import { useDispatch, useSelector, type TypedUseSelectorHook } from 'react-redux';
+import { useDispatch, useSelector, useStore, type TypedUseSelectorHook } from 'react-redux';
 
-import type { AppDispatch, RootState } from './types';
+import type { AppDispatch, AppStore, RootState } from './types';
 
 export const useAppDispatch: () => AppDispatch = useDispatch;
 export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
+
+/** Typed `useStore` — returns the app's concrete `AppStore` (dispatch + getState typed). */
+export const useAppStore: () => AppStore = useStore;

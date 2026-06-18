@@ -3,7 +3,7 @@
  *
  * The bridge (`syncVisibilityFades`) is mocked to a typed spy so these tests
  * assert applyEffect's own contract: write ONLY the patched clusters back onto
- * the settings store THROUGH `store.setState` (one copy-on-write swap that
+ * the settings store THROUGH `store.dispatch` (one copy-on-write swap that
  * notifies React subscribers, detached from the Readonly patch), then sync ONLY
  * the fade keys whose `row.cluster` is in the patch — the cluster→keys map
  * DERIVED from the manifest, not a parallel table. The bridge's fade behaviour
@@ -11,10 +11,10 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createStore } from 'zustand/vanilla';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { SettingsSnapshot } from '../../../../src/@types/engine/settings/SettingsSnapshot';
-import type { SettingsStore } from '../../../../src/services/engine/settingsStore/createSettingsStore';
+import type { AppStore } from '../../../../src/store/types';
+import { createAppStore } from '../../../../src/store/createAppStore';
 import { syncVisibilityFades } from '../../../../src/services/engine/wiring/syncVisibilityFades';
 import { applyEffect } from '../../../../src/services/engine/wiring/applyEffect';
 import { makeSettingsFixture } from '../settingsStore/makeSettingsFixture';
@@ -28,11 +28,11 @@ vi.mock('../../../../src/services/engine/wiring/syncVisibilityFades', () => ({
 
 const bridge = vi.mocked(syncVisibilityFades);
 
-function makeHarness(): { store: SettingsStore; state: EngineState } {
-  const store = createStore(() => makeSettingsFixture());
+function makeHarness(): { store: AppStore; state: EngineState } {
+  const store = createAppStore({ settings: makeSettingsFixture() });
   const state = {
     get settings() {
-      return store.getState();
+      return store.getState().settings;
     },
   } as unknown as EngineState;
   return { store, state };

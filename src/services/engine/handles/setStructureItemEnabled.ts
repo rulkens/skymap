@@ -2,16 +2,16 @@
 //
 // The per-category visibility setter lives at module scope (mirroring
 // `setSourceVisible`) so tests can drive it against a partial-state stub
-// without a full GPU engine. It writes the authoritative settings leaf THROUGH
-// the engine-owned store (the `setStructureItemEnabledAction` copy-on-write
-// reducer) rather than mutating the held object in place: the store write is
-// what NOTIFIES React's `useSettingsStore(selectStructureItems)` subscriber so
-// the panel checkbox re-renders. An in-place mutation would update the value but
-// never wake the subscription. Having written the intent, it drives the matching
+// without a full GPU engine. It writes the authoritative settings leaf by
+// dispatching the `setStructureItemEnabled` slice action rather than mutating
+// the held object in place: `store.dispatch(...)` is what NOTIFIES React's
+// `useAppSelector(selectStructureItems)` subscriber so the panel checkbox
+// re-renders. An in-place mutation would update the value but never wake the
+// subscription. Having written the intent, it drives the matching
 // per-category fade THROUGH `syncVisibilityFades` (the intent → fade bridge) for
 // a smooth ramp. The `createEngine` literal delegates here.
 //
-// ORDERING MATTERS: the store write MUST precede the bridge call, because the
+// ORDERING MATTERS: the dispatch MUST precede the bridge call, because the
 // bridge reads the just-written `enabled` intent from settings and fades the
 // `structureRing` row's per-category handle to match.
 //
@@ -23,20 +23,20 @@
 // the fade opacity is only the cosmetic alpha.
 
 import type { StructureId } from '../../../@types/data/structure/StructureId';
-import type { SettingsStore } from '../settingsStore/createSettingsStore';
-import { setStructureItemEnabledAction } from '../settingsStore/actions/setStructureItemEnabledAction';
+import type { AppStore } from '../../../store/types';
+import { setStructureItemEnabled as setStructureItemEnabledAction } from '../../../state/settings/settingsSlice';
 import { syncVisibilityFades } from '../wiring/syncVisibilityFades';
 import type { ApplyIntentState } from '../wiring/syncVisibilityFades';
 
 export function setStructureItemEnabled(
   state: ApplyIntentState,
-  store: SettingsStore,
+  store: AppStore,
   category: StructureId,
   visible: boolean,
 ): void {
-  // Single source of truth: flip the category's enabled flag THROUGH the store
-  // so the copy-on-write write notifies React's selector subscriber.
-  setStructureItemEnabledAction(store, category, visible);
+  // Single source of truth: flip the category's enabled flag by dispatching the
+  // slice action so the write notifies React's selector subscriber.
+  store.dispatch(setStructureItemEnabledAction({ id: category, enabled: visible }));
   // Drive the structureRing fade through the bridge off the just-written intent.
   syncVisibilityFades(state, { animate: true, only: ['structureRing'] });
   // No requestRender: the bridge's animate path rides fadeTo's own wake.

@@ -4,9 +4,9 @@
  *
  * These drive the extracted module-level setters directly against a minimal
  * state stub (mirroring `setSourceVisibleFade.test.ts`). Each setter writes the
- * authoritative item leaf THROUGH a real engine-owned settings store (the
- * fixture backs `state.settings` with `createSettingsStore` and a getter,
- * mirroring the engine's delegation) so the copy-on-write write notifies React's
+ * authoritative item leaf THROUGH a real injected settings store (the fixture
+ * backs `state.settings` with `createAppStore` and a getter, mirroring the
+ * engine's delegation) so the copy-on-write write notifies React's
  * `useSettingsStore` subscriber, THEN drives the matching fade THROUGH
  * `syncVisibilityFades` (the intent → fade bridge).
  *
@@ -26,7 +26,7 @@ import { setStructureItemEnabledForTest } from '../../../src/services/engine/han
 import { setStructureLabelEnabledForTest } from '../../../src/services/engine/handles/setStructureLabelEnabled';
 import { setGalaxyCatalogLabelEnabledForTest } from '../../../src/services/engine/handles/setGalaxyCatalogLabelEnabled';
 import { setMilkyWayLabelEnabledForTest } from '../../../src/services/engine/handles/setMilkyWayLabelEnabled';
-import { createSettingsStore } from '../../../src/services/engine/settingsStore/createSettingsStore';
+import { createAppStore } from '../../../src/store/createAppStore';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 
 // The bridge is the seam under test: mock it to a typed spy so each setter test
@@ -48,27 +48,29 @@ const bridge = vi.mocked(syncVisibilityFades);
 // carries the item leaves each setter writes.
 
 function makeFixture() {
-  const store = createSettingsStore({
-    galaxyCatalogs: {
-      enabled: true,
-      items: {
-        famousGalaxy: { enabled: true, labelEnabled: true },
+  const store = createAppStore({
+    settings: {
+      galaxyCatalogs: {
+        enabled: true,
+        items: {
+          famousGalaxy: { enabled: true, labelEnabled: true },
+        },
       },
-    },
-    structures: {
-      enabled: true,
-      items: {
-        cluster: { enabled: true, labelEnabled: true },
-        supercluster: { enabled: true, labelEnabled: true },
-        void: { enabled: true, labelEnabled: true },
-        group: { enabled: true, labelEnabled: true },
+      structures: {
+        enabled: true,
+        items: {
+          cluster: { enabled: true, labelEnabled: true },
+          supercluster: { enabled: true, labelEnabled: true },
+          void: { enabled: true, labelEnabled: true },
+          group: { enabled: true, labelEnabled: true },
+        },
       },
-    },
-    milkyWay: { enabled: true, labelEnabled: true },
-  } as unknown as EngineSettingsState);
+      milkyWay: { enabled: true, labelEnabled: true },
+    } as unknown as EngineSettingsState,
+  });
   const state = {
     get settings() {
-      return store.getState();
+      return store.getState().settings;
     },
     subsystems: {
       fades: { fadeTo: vi.fn(), setImmediate: vi.fn() },
@@ -89,7 +91,7 @@ describe('setStructureItemEnabled — store write + bridge dispatch', () => {
 
     // Re-read through the store: the write is copy-on-write, so the row is a
     // fresh object — reading the live state, not a captured reference.
-    expect(fx.store.getState().structures.items.cluster.enabled).toBe(false);
+    expect(fx.store.getState().settings.structures.items.cluster.enabled).toBe(false);
     expect(bridge).toHaveBeenCalledWith(fx.state, { animate: true, only: ['structureRing'] });
   });
 
@@ -105,7 +107,7 @@ describe('setStructureItemEnabled — store write + bridge dispatch', () => {
   it('preserves the category label axis when flipping the ring', () => {
     const fx = makeFixture();
     setStructureItemEnabledForTest(fx.state, fx.store, 'cluster', false);
-    expect(fx.store.getState().structures.items.cluster.labelEnabled).toBe(true);
+    expect(fx.store.getState().settings.structures.items.cluster.labelEnabled).toBe(true);
   });
 });
 
@@ -116,9 +118,9 @@ describe('setStructureLabelEnabled — store write + bridge dispatch', () => {
     const fx = makeFixture();
     setStructureLabelEnabledForTest(fx.state, fx.store, 'cluster', false);
 
-    expect(fx.store.getState().structures.items.cluster.labelEnabled).toBe(false);
+    expect(fx.store.getState().settings.structures.items.cluster.labelEnabled).toBe(false);
     // The ring axis is untouched.
-    expect(fx.store.getState().structures.items.cluster.enabled).toBe(true);
+    expect(fx.store.getState().settings.structures.items.cluster.enabled).toBe(true);
     expect(bridge).toHaveBeenCalledWith(fx.state, { animate: true, only: ['structureLabel'] });
   });
 });
@@ -130,7 +132,7 @@ describe('setGalaxyCatalogLabelEnabled — famous-galaxy catalog', () => {
     const fx = makeFixture();
     setGalaxyCatalogLabelEnabledForTest(fx.state, fx.store, 'famousGalaxy', false);
 
-    expect(fx.store.getState().galaxyCatalogs.items.famousGalaxy.labelEnabled).toBe(false);
+    expect(fx.store.getState().settings.galaxyCatalogs.items.famousGalaxy.labelEnabled).toBe(false);
     expect(bridge).toHaveBeenCalledWith(fx.state, { animate: true, only: ['surveyLabel'] });
   });
 });
@@ -142,9 +144,9 @@ describe('setMilkyWayLabelEnabled — singleton milkyWay layer', () => {
     const fx = makeFixture();
     setMilkyWayLabelEnabledForTest(fx.state, fx.store, false);
 
-    expect(fx.store.getState().milkyWay.labelEnabled).toBe(false);
+    expect(fx.store.getState().settings.milkyWay.labelEnabled).toBe(false);
     // The disk axis is untouched.
-    expect(fx.store.getState().milkyWay.enabled).toBe(true);
+    expect(fx.store.getState().settings.milkyWay.enabled).toBe(true);
     expect(bridge).toHaveBeenCalledWith(fx.state, { animate: true, only: ['milkyWayLabel'] });
   });
 });

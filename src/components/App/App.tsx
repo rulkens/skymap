@@ -41,94 +41,36 @@ import { useUrlSync } from '../../hooks/useUrlSync';
 import { useFamousMeta } from '../../hooks/useFamousMeta';
 import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
-import { useSettingsStore } from '../../hooks/useSettingsStore';
-import { selectGalaxyCatalogSize } from '../../services/engine/settingsStore/selectors/selectGalaxyCatalogSize';
-import { selectDepthFade } from '../../services/engine/settingsStore/selectors/selectDepthFade';
-import { selectHighlightFallback } from '../../services/engine/settingsStore/selectors/selectHighlightFallback';
-import { selectRealOnly } from '../../services/engine/settingsStore/selectors/selectRealOnly';
-import { selectVisibleSourceMask } from '../../services/engine/settingsStore/selectors/selectVisibleSourceMask';
-import { selectToneMapCurve } from '../../services/engine/settingsStore/selectors/selectToneMapCurve';
-import { selectAutoRotate } from '../../services/engine/settingsStore/selectors/selectAutoRotate';
-import { selectBiasMode } from '../../services/engine/settingsStore/selectors/selectBiasMode';
-import { selectAbsMagLimit } from '../../services/engine/settingsStore/selectors/selectAbsMagLimit';
-import { selectTier } from '../../services/engine/settingsStore/selectors/selectTier';
-import { selectShowPickBuffer } from '../../services/engine/settingsStore/selectors/selectShowPickBuffer';
-import { selectShowDiskRadiusRing } from '../../services/engine/settingsStore/selectors/selectShowDiskRadiusRing';
-import { selectDisabledPasses } from '../../services/engine/settingsStore/selectors/selectDisabledPasses';
-import { selectFilamentsEnabled } from '../../services/engine/settingsStore/selectors/selectFilamentsEnabled';
-import { selectFilamentIntensity } from '../../services/engine/settingsStore/selectors/selectFilamentIntensity';
-import { selectVolumesEnabled } from '../../services/engine/settingsStore/selectors/selectVolumesEnabled';
-import { selectVolumeFieldItems } from '../../services/engine/settingsStore/selectors/selectVolumeFieldItems';
-import { selectFlow } from '../../services/engine/settingsStore/selectors/selectFlow';
-import { selectStructureItems } from '../../services/engine/settingsStore/selectors/selectStructureItems';
-import { selectGalaxyCatalogItems } from '../../services/engine/settingsStore/selectors/selectGalaxyCatalogItems';
-import { selectMilkyWayLabelEnabled } from '../../services/engine/settingsStore/selectors/selectMilkyWayLabelEnabled';
+import { useAppSelector } from '../../store/hooks';
+import {
+  selectGalaxyCatalogSize,
+  selectDepthFade,
+  selectHighlightFallback,
+  selectRealOnly,
+  selectVisibleSourceMask,
+  selectToneMapCurve,
+  selectAutoRotate,
+  selectBiasMode,
+  selectAbsMagLimit,
+  selectTier,
+  selectShowPickBuffer,
+  selectShowDiskRadiusRing,
+  selectDisabledPasses,
+  selectFilamentsEnabled,
+  selectFilamentIntensity,
+  selectVolumesEnabled,
+  selectVolumeFieldItems,
+  selectFlow,
+  selectStructureItems,
+  selectGalaxyCatalogItems,
+  selectMilkyWayLabelEnabled,
+} from '../../state/settings/selectors';
 import { projectVolumeFieldRows } from '../../services/engine/settingsStore/projectVolumeFieldRows';
 import { projectMarkerCategoryVisibility } from '../../services/engine/settingsStore/projectMarkerCategoryVisibility';
 import { projectLabelCategoryVisibility } from '../../services/engine/settingsStore/projectLabelCategoryVisibility';
-import { seedVolumeFields } from '../../data/volume/volumeFieldDefaults';
-import {
-  DEFAULT_POINT_SIZE_PX,
-  DEFAULT_DEPTH_FADE_ENABLED,
-  DEFAULT_HIGHLIGHT_FALLBACK,
-  DEFAULT_REAL_ONLY_MODE,
-  DEFAULT_TONE_MAP_CURVE,
-  DEFAULT_AUTO_ROTATE,
-  DEFAULT_BIAS_MODE,
-  DEFAULT_ABS_MAG_LIMIT,
-  DEFAULT_SHOW_PICK_BUFFER,
-  DEFAULT_SHOW_DISK_RADIUS_RING,
-  DEFAULT_VOLUMES_ENABLED,
-  DEFAULT_FLOW,
-  DEFAULT_MILKY_WAY_LABEL_ENABLED,
-} from '../../data/defaults';
-import { Source, SOURCE_REGISTRY } from '../../data/sources';
-import { ALL_VISIBLE_MASK } from '../../utils/allVisibleMask';
 import { buildStaticAnchorStructures } from '../../data/structure/buildStaticAnchorStructures';
-import { isStructureId, STRUCTURE_IDS } from '../../data/structure/structureIds';
-import { GALAXY_CATALOG_IDS } from '../../data/galaxyCatalog/galaxyCatalogIds';
-import type { StructureId } from '../../@types/data/structure/StructureId';
-import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
-import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
-import type { GalaxyCatalogItemSettings } from '../../@types/settings/GalaxyCatalogItemSettings';
+import { isStructureId } from '../../data/structure/structureIds';
 import { DebugPanel } from '../DebugPanel/DebugPanel';
-
-/**
- * Stable fallback for the volume-field items selector during the null-store
- * window (before `handleRef` lands). `useSettingsStore` feeds this into
- * `getSnapshot` and keys a `useCallback` on it, so it MUST be a single stable
- * reference — calling `seedVolumeFields()` inline would mint a fresh object each
- * render and re-fire the subscription. Hoisted to module scope; it's the same
- * construction seed the store starts from, so the first paint matches engine
- * truth.
- */
-const VOLUME_FIELD_ITEMS_DEFAULT = seedVolumeFields();
-
-/**
- * Stable fallbacks for the structure / galaxy catalog item selectors during the
- * null-store window (before `handleRef` lands). Same rationale as
- * `VOLUME_FIELD_ITEMS_DEFAULT`: `useSettingsStore` keys a `useCallback` on the
- * fallback, so it MUST be a single stable reference — building either record
- * inline would mint a fresh object each render and re-fire the subscription.
- * Both seed every item to fully visible (`enabled` + `labelEnabled` true),
- * matching the engine's construction default so the first paint of the panel
- * checkboxes matches engine truth.
- */
-const STRUCTURE_ITEMS_DEFAULT = Object.fromEntries(
-  STRUCTURE_IDS.map((c) => [c, { enabled: true, labelEnabled: true }]),
-) as Record<StructureId, StructureItemSettings>;
-const GALAXY_CATALOG_ITEMS_DEFAULT = Object.fromEntries(
-  GALAXY_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
-) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>;
-
-/**
- * Stable empty fallback for the renderer-toggle override record during the
- * null-store window. Same single-reference requirement as the records above:
- * `useSettingsStore` returns it as the snapshot until `handleRef` lands, so
- * minting a fresh object inline each render would re-fire the subscription.
- * Empty matches the engine's construction default (no pass disabled at boot).
- */
-const DISABLED_PASSES_DEFAULT: Record<string, boolean> = {};
 
 export function App(): React.ReactElement {
   const {
@@ -142,109 +84,71 @@ export function App(): React.ReactElement {
     sourceCounts,
     structureCounts,
     loadProgress,
-    initialTier,
   } = useEngine();
 
-  // Galaxy catalogs-cluster settings read live off the engine-owned store (no React
-  // mirror). Each fallback is the same `data/defaults.ts` seed the store is
-  // constructed from, so the first paint (before `handleRef` lands) matches
-  // engine truth. `visibleSourceMask` is a pure projection of the per-galaxy-catalog
-  // `enabled` bits — `ALL_VISIBLE_MASK` is the all-on startup default.
-  const pointSize = useSettingsStore(handleRef, selectGalaxyCatalogSize, DEFAULT_POINT_SIZE_PX);
-  const depthFadeEnabled = useSettingsStore(handleRef, selectDepthFade, DEFAULT_DEPTH_FADE_ENABLED);
-  const highlightFallback = useSettingsStore(
-    handleRef,
-    selectHighlightFallback,
-    DEFAULT_HIGHLIGHT_FALLBACK,
-  );
-  const realOnlyMode = useSettingsStore(handleRef, selectRealOnly, DEFAULT_REAL_ONLY_MODE);
-  const visibleSourceMask = useSettingsStore(handleRef, selectVisibleSourceMask, ALL_VISIBLE_MASK);
+  // Galaxy catalogs-cluster settings read straight off the RTK settings slice
+  // via `useAppSelector`. The store exists before first paint under the
+  // `<Provider>`, so no fallback is needed. `visibleSourceMask` is a pure
+  // projection of the per-galaxy-catalog `enabled` bits.
+  const pointSize = useAppSelector(selectGalaxyCatalogSize);
+  const depthFadeEnabled = useAppSelector(selectDepthFade);
+  const highlightFallback = useAppSelector(selectHighlightFallback);
+  const realOnlyMode = useAppSelector(selectRealOnly);
+  const visibleSourceMask = useAppSelector(selectVisibleSourceMask);
 
-  // Tonemap cluster reads live off the engine-owned store too. Exposure has no
-  // React consumer today (no slider in the panels), so only the curve dropdown
-  // reads here; the store write notifies synchronously, so `setCurve` tracks
-  // without an optimistic cell. Fallback is the same `data/defaults.ts` seed.
-  const toneMapCurve = useSettingsStore(handleRef, selectToneMapCurve, DEFAULT_TONE_MAP_CURVE);
+  // Tonemap cluster. Exposure has no React consumer today (no slider in the
+  // panels), so only the curve dropdown reads here; the store write notifies
+  // synchronously, so `setCurve` tracks without an optimistic cell.
+  const toneMapCurve = useAppSelector(selectToneMapCurve);
 
-  // Camera auto-rotate reads live off the engine-owned store too. The toggle's
-  // handler dispatches the store action through `handle.camera.setAutoRotate`,
-  // which notifies synchronously, so the play/pause icon tracks without an
-  // optimistic cell. Fallback is the same `data/defaults.ts` seed.
-  const autoRotate = useSettingsStore(handleRef, selectAutoRotate, DEFAULT_AUTO_ROTATE);
+  // Camera auto-rotate. The toggle's handler dispatches through
+  // `handle.camera.setAutoRotate`, which notifies synchronously, so the
+  // play/pause icon tracks without an optimistic cell.
+  const autoRotate = useAppSelector(selectAutoRotate);
 
-  // Bias mode + absolute-magnitude limit read live off the engine-owned store.
-  // The mode radio dispatches through `handle.bias.setMode` (which also kicks
-  // the async worker re-bake) and the slider through `handle.setAbsMagLimit`;
-  // both notify synchronously, so the controls track without an optimistic
-  // cell. Fallback is the same `data/defaults.ts` seed.
-  const biasMode = useSettingsStore(handleRef, selectBiasMode, DEFAULT_BIAS_MODE);
-  const absMagLimit = useSettingsStore(handleRef, selectAbsMagLimit, DEFAULT_ABS_MAG_LIMIT);
+  // Bias mode + absolute-magnitude limit. The mode radio dispatches through
+  // `handle.bias.setMode` (which also kicks the async worker re-bake) and the
+  // slider through `handle.setAbsMagLimit`; both notify synchronously, so the
+  // controls track without an optimistic cell.
+  const biasMode = useAppSelector(selectBiasMode);
+  const absMagLimit = useAppSelector(selectAbsMagLimit);
 
-  // The live data tier reads off the engine-owned store (no React mirror). The
-  // tier dropdown dispatches through `handle.sources.setTier`, which commits to
-  // the store synchronously, so the dropdown tracks without an optimistic cell.
-  // Fallback is the viewport-derived `initialTier` boot seed — the value the
-  // engine itself was constructed with, so the first paint (before `handleRef`
-  // lands) matches engine truth.
-  const currentTier = useSettingsStore(handleRef, selectTier, initialTier);
+  // The live data tier. The tier dropdown dispatches through
+  // `handle.sources.setTier`, which commits to the store synchronously, so the
+  // dropdown tracks without an optimistic cell.
+  const currentTier = useAppSelector(selectTier);
 
-  // Debug-overlay toggles (pick buffer + disk-radius ring) read live off the
-  // engine-owned store. The DebugPanel checkboxes dispatch through
-  // `handle.debug.setShowPickBuffer` / `setShowDiskRadiusRing` (action-backed),
-  // which notify synchronously, so the checkbox tracks without an optimistic
-  // cell. Fallback is the same `data/defaults.ts` seed the store is built from.
-  const showPickBuffer = useSettingsStore(
-    handleRef,
-    selectShowPickBuffer,
-    DEFAULT_SHOW_PICK_BUFFER,
-  );
-  const showDiskRadiusRing = useSettingsStore(
-    handleRef,
-    selectShowDiskRadiusRing,
-    DEFAULT_SHOW_DISK_RADIUS_RING,
-  );
-  // Renderer-toggle override set: read live off the store so the checkboxes
-  // track engine truth without mirroring the set in component state. Writes go
-  // through `handle.debug.passOverrides.setDisabled` (action-backed), which
-  // notifies synchronously — same "dispatch + read back via selector" shape as
-  // the pick-buffer toggle above.
-  const disabledPasses = useSettingsStore(handleRef, selectDisabledPasses, DISABLED_PASSES_DEFAULT);
+  // Debug-overlay toggles (pick buffer + disk-radius ring). The DebugPanel
+  // checkboxes dispatch through `handle.debug.setShowPickBuffer` /
+  // `setShowDiskRadiusRing` (action-backed), which notify synchronously, so the
+  // checkbox tracks without an optimistic cell.
+  const showPickBuffer = useAppSelector(selectShowPickBuffer);
+  const showDiskRadiusRing = useAppSelector(selectShowDiskRadiusRing);
+  // Renderer-toggle override set: read so the checkboxes track engine truth
+  // without mirroring the set in component state. Writes go through
+  // `handle.debug.passOverrides.setDisabled` (action-backed), which notifies
+  // synchronously — same "dispatch + read back via selector" shape as the
+  // pick-buffer toggle above.
+  const disabledPasses = useAppSelector(selectDisabledPasses);
 
-  // Filaments cluster (toggle + intensity) reads live off the engine-owned
-  // store. The SettingsPanel handlers dispatch through `handle.filaments.setEnabled`
-  // / `setIntensity` (action-backed; `setEnabled` also drives the fade ramp),
-  // which notify synchronously, so the controls track without an optimistic
-  // cell. Fallbacks match the store's seed (`SOURCE_REGISTRY[Source.Filaments]`),
-  // so first paint (before `handleRef` lands) matches engine truth.
-  const filamentsEnabled = useSettingsStore(
-    handleRef,
-    selectFilamentsEnabled,
-    SOURCE_REGISTRY[Source.Filaments].visible,
-  );
-  const filamentIntensity = useSettingsStore(
-    handleRef,
-    selectFilamentIntensity,
-    SOURCE_REGISTRY[Source.Filaments].intensity,
-  );
+  // Filaments cluster (toggle + intensity). The SettingsPanel handlers dispatch
+  // through `handle.filaments.setEnabled` / `setIntensity` (action-backed;
+  // `setEnabled` also drives the fade ramp), which notify synchronously, so the
+  // controls track without an optimistic cell.
+  const filamentsEnabled = useAppSelector(selectFilamentsEnabled);
+  const filamentIntensity = useAppSelector(selectFilamentIntensity);
 
-  // Volumes cluster reads live off the engine-owned store. The master toggle is
-  // a primitive boolean (`selectVolumesEnabled`), dispatched by the handle setter
-  // alongside the master fade. The per-field rows go through a STABLE-ref read:
+  // Volumes cluster. The master toggle is a primitive boolean
+  // (`selectVolumesEnabled`), dispatched by the handle setter alongside the
+  // master fade. The per-field rows go through a STABLE-ref read:
   // `selectVolumeFieldItems` returns the underlying `volumes.items` Record (only
   // changes when a field actually changes, unaffected by a master-toggle flip),
   // and the `useMemo` projects it to the debug-filtered `VolumeFieldRowData[]`
   // the panel renders. Building the array inside the selector would mint a fresh
-  // array per `getSnapshot`, breaking `useSyncExternalStore`'s stability contract
-  // — keying the `useMemo` on the stable `items` ref is what keeps it cheap. The
-  // master fallback is the same `data/defaults.ts` seed; the items fallback is
-  // the construction seed (`seedVolumeFields()`), so first paint (before
-  // `handleRef` lands) matches engine truth.
-  const volumesEnabled = useSettingsStore(handleRef, selectVolumesEnabled, DEFAULT_VOLUMES_ENABLED);
-  const volumeFieldItems = useSettingsStore(
-    handleRef,
-    selectVolumeFieldItems,
-    VOLUME_FIELD_ITEMS_DEFAULT,
-  );
+  // array per read, breaking react-redux's reference-equality bail-out — keying
+  // the `useMemo` on the stable `items` ref is what keeps it cheap.
+  const volumesEnabled = useAppSelector(selectVolumesEnabled);
+  const volumeFieldItems = useAppSelector(selectVolumeFieldItems);
   const volumeFields = useMemo(
     // `debug-*` synthetic fixtures are dropped here so the panel only shows real
     // science volumes (the dev console + handle.volumes.getState() still see them).
@@ -252,33 +156,23 @@ export function App(): React.ReactElement {
     [volumeFieldItems],
   );
 
-  // Structure / label visibility reads live off the engine-owned store, through
-  // the same STABLE-ref pattern as the volume rows. The two flat
-  // `Record<Category, boolean>` views the panel renders are DERIVED records, so a
-  // selector that built them per call would mint a fresh object each
-  // `getSnapshot` and break `useSyncExternalStore`'s stability contract. Instead
-  // the selectors return the underlying item Records verbatim
-  // (`selectStructureItems` / `selectGalaxyCatalogItems` — stable under copy-on-write,
-  // changing only when a category/galaxy catalog row actually changes), and the `useMemo`
-  // projections build the marker + label records keyed on those stable refs. The
-  // marker axis spans structure categories only; the label axis spans structure
-  // categories PLUS the `famousGalaxy` galaxy catalog (its label lives on the galaxy catalog item
-  // row), so its projection takes both Records. Fallbacks are the all-visible
-  // construction seeds, so first paint matches engine truth before the handle
-  // lands.
-  const structureItems = useSettingsStore(handleRef, selectStructureItems, STRUCTURE_ITEMS_DEFAULT);
-  const galaxyCatalogItems = useSettingsStore(
-    handleRef,
-    selectGalaxyCatalogItems,
-    GALAXY_CATALOG_ITEMS_DEFAULT,
-  );
+  // Structure / label visibility, through the same STABLE-ref pattern as the
+  // volume rows. The two flat `Record<Category, boolean>` views the panel
+  // renders are DERIVED records, so a selector that built them per call would
+  // mint a fresh object each read and break react-redux's reference-equality
+  // bail-out. Instead the selectors return the underlying item Records verbatim
+  // (`selectStructureItems` / `selectGalaxyCatalogItems` — stable under
+  // copy-on-write, changing only when a category/galaxy catalog row actually
+  // changes), and the `useMemo` projections build the marker + label records
+  // keyed on those stable refs. The marker axis spans structure categories only;
+  // the label axis spans structure categories PLUS the `famousGalaxy` galaxy
+  // catalog (its label lives on the galaxy catalog item row), so its projection
+  // takes both Records.
+  const structureItems = useAppSelector(selectStructureItems);
+  const galaxyCatalogItems = useAppSelector(selectGalaxyCatalogItems);
   // The milkyWay label axis is a singleton-overlay scalar (no per-record items
   // row), so it's a plain boolean read fed into the same label projection.
-  const milkyWayLabelEnabled = useSettingsStore(
-    handleRef,
-    selectMilkyWayLabelEnabled,
-    DEFAULT_MILKY_WAY_LABEL_ENABLED,
-  );
+  const milkyWayLabelEnabled = useAppSelector(selectMilkyWayLabelEnabled);
   const markerCategoryVisibility = useMemo(
     () => projectMarkerCategoryVisibility(structureItems),
     [structureItems],
@@ -288,16 +182,13 @@ export function App(): React.ReactElement {
     [structureItems, galaxyCatalogItems, milkyWayLabelEnabled],
   );
 
-  // Flow overlay reads live off the engine-owned store. `selectFlow` returns the
-  // stored `settings.flow` object verbatim — referentially stable under
-  // copy-on-write, so `getSnapshot` needs no memo. A knob change goes through the
-  // handle alone: `handle.flow.set(patch)` dispatches the copy-on-write action
-  // (which the store notifies synchronously) AND runs the per-leaf
-  // demand/fade/reseed effects, so the controls track without an optimistic cell.
-  // Both panels share this. Fallback is the same `DEFAULT_FLOW` seed the store is
-  // constructed from, so first paint (before `handleRef` lands) matches engine
-  // truth.
-  const flow = useSettingsStore(handleRef, selectFlow, DEFAULT_FLOW);
+  // Flow overlay. `selectFlow` returns the stored `settings.flow` object
+  // verbatim — referentially stable under copy-on-write, so no memo is needed. A
+  // knob change goes through the handle alone: `handle.flow.set(patch)`
+  // dispatches the copy-on-write action (which the store notifies synchronously)
+  // AND runs the per-leaf demand/fade/reseed effects, so the controls track
+  // without an optimistic cell. Both panels share this.
+  const flow = useAppSelector(selectFlow);
   const onFlowChange = useCallback(
     (patch: Partial<FlowSettings>) => {
       handleRef.current?.flow.set(patch);
