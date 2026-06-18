@@ -145,6 +145,113 @@ is settled: effects react to Intent, in one home.) Note that a fade's _opacity_ 
 derived State (per-frame, never dispatched); only the _decision to start a fade_
 is an effect.
 
+## Resources and derived state across the store boundary
+
+The four-layer table says resources stay imperative and out of the store. That
+leaves the question every derived value eventually hits: **how does a pure,
+memoized derivation combine Intent (in the store) with a heavy resource — a point
+cloud, a sidecar, a GPU buffer — that must never enter the store, and how does a
+React consumer re-render when the _resource_ changes, not just the Intent?**
+
+The derived value is `D = f(Intent, Resource)`. Intent is serializable and
+subscribable; the resource is a large, device-bound reference. Three needs pull
+apart:
+
+1. **Purity** — `D` is a pure function of its inputs.
+2. **Memoization** — don't rebuild `D` on every read.
+3. **Notification** — a consumer must recompute when _either_ input changes.
+
+Purity and memoization are easy. **Notification is the hard part**: the consumer
+subscribes to the store, and the resource isn't in it. Two tempting wrong turns,
+both of which reintroduce the staleness class this whole doc exists to kill:
+
+- **Copying the resource into the store** to make it subscribable — a mirror, by
+  construction.
+- **Reaching into a mutable singleton inside the selector** (`getCatalogs()`
+  mid-derivation) — breaks purity _and_ memoization: the output now depends on
+  something the inputs don't capture, so nothing can tell when to recompute.
+
+### The rule: store a descriptor, dereference at the edge
+
+> The store holds Intent **plus serializable _descriptors_ of resources** — ids,
+> versions, readiness flags — never the resource bytes. Derived values are pure
+> functions of `(Intent, descriptor, dereferenced-resource)`; the resource is
+> dereferenced **as late as possible, at the resolver's edge**, and its
+> **identity** (the descriptor) is what drives memoization and change-notification.
+> Invalidation flows through the descriptor. The bytes never cross into
+> subscribable state; only their identity does.
+
+Purity is recovered by making the resource an **explicit, identity-tracked input**
+rather than an ambient reach. Concretely, split "a selector that needs a resource"
+into two pure pieces:
+
+```ts
+// 1. A pure STORE selector — sees only what's in the store. Returns Intent.
+export function selectSelectedRef(state: RootState): SelectionRef | null {
+  return state.selection.select;
+}
+
+// 2. A pure RESOLVER — fed the resource explicitly, memoized on resource identity.
+//    NOT a store selector: its inputs aren't all in the store.
+export function resolveSelectionRef(
+  ref: SelectionRef | null,
+  catalogs: ReadonlyMap<SourceType, GalaxyCatalog>,
+  famousMeta: readonly FamousMetaEntry[],
+): FocusableTarget | null {
+  if (ref === null) return null;
+  // ...dereference the cloud HERE, at the edge, and build the derived value.
+}
+```
+
+The resource bytes are touched only inside the resolver, never stored; the
+store-side selector stays pure over store state.
+
+### Closing the notification gap: the descriptor is a store fact
+
+The resolver re-runs when its inputs change — but a React consumer only re-renders
+on _store_ changes, and a catalog finishing its load is not a store change. The fix
+is **not** to push the resolved value into the store (mirror); it is to project the
+resource's _readiness_ into the store as a small serializable descriptor, dispatched
+from the one place the resource commits:
+
+```ts
+// In the resource layer's commit path — the ONE place a cloud lands:
+store.dispatch(catalogLoaded({ source, generation: nextGen }));
+// state.data.catalogs[source].generation === nextGen   (a number, not the cloud)
+```
+
+Now "source X is ready at generation N" is a store fact, and a consumer keys on it:
+
+```ts
+const ref = useStore(selectSelectedRef);
+const gen = useStore((s) => selectCatalogGeneration(s, ref?.source));
+// `gen` participates so a late-arriving cloud forces a re-resolve:
+const target = useMemo(
+  () => resolveSelectionRef(ref, engine.catalogs(), engine.famousMeta()),
+  [ref, gen], // ref from Intent, gen from the descriptor
+);
+```
+
+A deep-linked selection whose cloud hasn't loaded resolves to `null`, then
+re-resolves the instant `catalogLoaded` bumps the generation — no echo callback, no
+mirror, no stale copy. The descriptor is the bridge; the bytes stay imperative.
+
+This is the manual, principles-only form of what a reconciler (or an atom/signal
+graph) tracks automatically: an explicit dependency on a resource's _identity_. It
+is also the RTK Query / entity-adapter shape — the store holds ids, versions, and
+status; a side cache holds the blobs; subscriptions fire on status transitions.
+Skymap already has the raw material: AssetSlot generation counters _are_ the
+descriptor; they need only projecting where selectors and React can key on them.
+
+### Where this generalizes
+
+The same boundary recurs wherever derived state needs a heavy resource: a volume
+field reading its SCFD cube, the InfoCard reading a thumbnail, labels reading the
+glyph atlas. In every case — **Intent (or a ref) in the store; the resource
+imperative; a serializable descriptor bridging them; dereference at the edge;
+memoize on identity.** If you find yourself wanting to put the resource in the store
+to make a view update, reach for the descriptor instead.
+
 ## Worked example: folding the selection subsystem
 
 Selection is the cleanest illustration of every rule above, and the obvious first
