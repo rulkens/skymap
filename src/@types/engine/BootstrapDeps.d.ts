@@ -2,6 +2,9 @@ import type { EngineCallbacks } from './EngineCallbacks';
 import type { EngineHandle } from './EngineHandle';
 import type { AssetSlot } from '../loading/AssetSlot';
 import type { PhaseLocals } from './PhaseLocals';
+// SPIKE (worktree-fly-to-edge-spike): threaded to startLoop so the
+// `?flowshow` driver can call the scene-setup setters (flow/volumes/etc.).
+import type { SettingsStore } from '../../services/engine/settingsStore/createSettingsStore';
 
 /**
  * Closure captures the bootstrap phases rely on.  Every entry was a
@@ -16,6 +19,15 @@ export type BootstrapDeps = {
   canvas: HTMLCanvasElement;
   /** createEngine arg — UI-callback sink. */
   cb: EngineCallbacks;
+
+  /**
+   * SPIKE (worktree-fly-to-edge-spike): the engine settings store, so the
+   * `?flowshow` driver built in `startLoop` can drive scene-setup setters
+   * (enable flow, cosmic web off, famous labels off) on its own timeline.
+   * Optional so the phase-test fixtures need no change; real runtime always
+   * provides it (engine.ts), and the driver is only built behind the gate.
+   */
+  settingsStore?: SettingsStore;
 
   /**
    * Mutable: forward-declared `frame` binding from `engine.ts`.  The

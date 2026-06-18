@@ -60,6 +60,10 @@
 
 import { runFrame } from '../frame/runFrame';
 import { buildCameraDrivers } from '../camera/cameraDrivers';
+import { createFlyoutDriver } from '../camera/flyoutDriver';
+import { createFlowOrbitDriver } from '../camera/flowOrbitDriver';
+import { createFlowShowcaseDriver } from '../camera/flowShowcaseDriver';
+import { hasUrlGate } from '../../../utils/url/hasUrlGate';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -103,6 +107,46 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   // TIME macro" for the inner `* 0.1` factor that runs on top.
   const milkyWayITimeEpochMs = performance.now();
 
+  // SPIKE (worktree-fly-to-edge-spike): when `?flyout` is present, slot the
+  // throwaway fly-to-the-edge driver into the priority-80 tour slot. Press
+  // `g` in-app to run the log-dolly pull-back for a screen recording.
+  // Optional `?flyout=<seconds>` overrides the clip length. Absent the gate,
+  // the driver list is the normal tween + auto-rotate pair.
+  const wake = () => state.subsystems.scheduler.requestRender();
+  const params = new URLSearchParams(window.location.search);
+  const flyoutSeconds = Number(params.get('flyout'));
+  const orbitSeconds = Number(params.get('floworbit'));
+  const showFarMpc = Number(params.get('flowshow'));
+  const drivers = [
+    ...buildCameraDrivers(state),
+    ...(hasUrlGate('flyout')
+      ? [
+          createFlyoutDriver(
+            wake,
+            Number.isFinite(flyoutSeconds) && flyoutSeconds > 0 ? flyoutSeconds * 1000 : undefined,
+          ),
+        ]
+      : []),
+    ...(hasUrlGate('floworbit')
+      ? [
+          createFlowOrbitDriver(
+            wake,
+            Number.isFinite(orbitSeconds) && orbitSeconds > 0 ? orbitSeconds : undefined,
+          ),
+        ]
+      : []),
+    ...(hasUrlGate('flowshow') && deps.settingsStore
+      ? [
+          createFlowShowcaseDriver(
+            state,
+            deps.settingsStore,
+            wake,
+            Number.isFinite(showFarMpc) && showFarMpc > 0 ? showFarMpc : undefined,
+          ),
+        ]
+      : []),
+  ];
+
   // Build the dep bag for `runFrame` once, here in the orchestrator's
   // last phase where every closure-captured local is in scope.  The bag
   // is stable across frames: the GPU-side renderers (`milkyWayRenderer`,
@@ -127,7 +171,7 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
     // wrappers close over the live `state`, so the list never needs
     // rebuilding — toggled settings and subsystem state are read fresh
     // each frame through the closures.
-    drivers: buildCameraDrivers(state),
+    drivers,
   };
 
   // Assign the real frame body to the forward-declared `frame`

@@ -469,6 +469,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     detachControlsRef,
     handleRef,
     allSlots,
+    settingsStore, // SPIKE: ?flowshow driver scene-setup setters
   };
   // The main async IIFE runs the bootstrap phases; all errors are caught
   // and reported via `onStatusChange`.  See `runBootstrapPhases`.

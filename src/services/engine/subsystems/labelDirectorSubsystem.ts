@@ -49,6 +49,14 @@ import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { LabelProducer } from '../../../@types/engine/subsystems/LabelProducer';
 import type { LabelDirectorSubsystem } from '../../../@types/engine/subsystems/LabelDirectorSubsystem';
 import { getLabelStyleOverrideVersion } from '../labelStyleOverride';
+import { hasUrlGate } from '../../../utils/url/hasUrlGate';
+
+// SPIKE (worktree-fly-to-edge-spike): `?nodeclutter` bypasses the greedy
+// overlap cull so labels stay put under continuous camera motion (the cull
+// suppresses-then-releases neighbours during an orbit, which reads as
+// flicker on a recording). Read once at construction. BACKLOG: promote this
+// to a real Labels → Advanced setting (see docs/BACKLOG.md).
+const DECLUTTER_DISABLED = hasUrlGate('nodeclutter');
 
 /**
  * Minimum screen-pixel gap between two on-screen label anchors before the
@@ -226,8 +234,12 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
     }
 
     // Cross-producer declutter — producers emit every candidate (no internal
-    // declutter); the director de-collides them together here.
-    const { labels, lines } = declutter(mergedLabels, mergedLines, ctx);
+    // declutter); the director de-collides them together here. The
+    // `?nodeclutter` spike gate skips the cull entirely (flicker-free under
+    // camera motion, at the cost of overlapping labels in dense regions).
+    const { labels, lines } = DECLUTTER_DISABLED
+      ? { labels: mergedLabels, lines: mergedLines }
+      : declutter(mergedLabels, mergedLines, ctx);
 
     const sig = signatureOf(labels, lines);
     if (sig !== prevSignature) {
