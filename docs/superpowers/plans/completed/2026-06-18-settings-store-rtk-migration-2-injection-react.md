@@ -86,12 +86,12 @@ engine's responsibilities; keep it only if a non-store consumer still needs it �
 remove if dead). `BootstrapDeps` carries `store` if any bootstrap phase needs it (the setters
 read it from the closure, so likely not — verify).
 
-- [ ] Add a type-level test (or extend an existing `EngineCallbacks` smoke) asserting `store`
+- [x] Add a type-level test (or extend an existing `EngineCallbacks` smoke) asserting `store`
   is a required `AppStore` member. Run typecheck — current `createEngine` (still constructing
   its own store) doesn't supply it, so this is the first red.
-- [ ] Add `store: AppStore` to `EngineCallbacks`. Do **not** yet change `engine.ts` (next
+- [x] Add `store: AppStore` to `EngineCallbacks`. Do **not** yet change `engine.ts` (next
   tasks) — typecheck will be red until Task 2 wires it; that's expected inside the coupled swap.
-- [ ] (No standalone commit — part of the coupled swap; see the honesty note.)
+- [x] (No standalone commit — part of the coupled swap; see the honesty note.)
 
 ---
 
@@ -110,14 +110,14 @@ read it from the closure, so likely not — verify).
   `settingsStore` references with `store` (the injected `AppStore`). The `boringSetters`
   builder (`engine.ts:493-496`) now takes `store`.
 
-- [ ] Update the engine-level test/fixtures that call `createEngine` to pass `store:
+- [x] Update the engine-level test/fixtures that call `createEngine` to pass `store:
   createAppStore(...)` (the test harness constructs a throwaway store per the factory — that's
   why it's a factory). Confirm the previously-red typecheck from Task 1 now resolves at this seam.
-- [ ] Apply the engine edits. Rewrite the `// ── Settings ──` block comment
+- [x] Apply the engine edits. Rewrite the `// ── Settings ──` block comment
   (`engine.ts:203-220`) to describe the injected RTK store (was: engine-owned zustand) — the
   store is created at the app root and injected; `state.settings` delegates to
   `store.getState().settings`.
-- [ ] (Coupled-swap — no standalone commit.)
+- [x] (Coupled-swap — no standalone commit.)
 
 ---
 
@@ -144,15 +144,15 @@ builder dispatches and wakes:
   setShowPickBuffer`, `setShowDiskRadiusRing → setShowDiskRadiusRing`. (Same 13 rows as
   today — see `settingsTable.ts:100-194`.)
 
-- [ ] Update the settingsTable test: build setters with a throwaway `createAppStore()` store
+- [x] Update the settingsTable test: build setters with a throwaway `createAppStore()` store
   and a `requestRender` spy; call `setters.setBrightness(0.5)`; assert
   `store.getState().settings.galaxyCatalogs.brightness === 0.5` **and** `requestRender` was
   called once. (Port the existing "every setter wakes the scheduler" assertion to the dispatch
   shape.) Run — red until impl.
-- [ ] Apply the edits. Update the module header to describe `store.dispatch(action(value))`
+- [x] Apply the edits. Update the module header to describe `store.dispatch(action(value))`
   (was: `action(store, value)` zustand wrapper); the "every setter wakes" audit point is
   unchanged.
-- [ ] (Coupled-swap — no standalone commit.)
+- [x] (Coupled-swap — no standalone commit.)
 
 ---
 
@@ -189,14 +189,14 @@ this is the same call). Examples:
 - `setFlow` (`handles/setFlow.ts`): dispatch `setFlow(patch)` then run the per-leaf
   demand/fade/reseed side effects keyed off `Object.keys(patch)` — unchanged logic.
 
-- [ ] For each bespoke setter with an existing test, update it to construct a throwaway
+- [x] For each bespoke setter with an existing test, update it to construct a throwaway
   `createAppStore()` store, drive the setter, and assert both the dispatched state change
   (`store.getState().settings.X`) and the side effect (fade spy / slot `.load` spy /
   `requestRender` spy) — porting the existing assertions to the dispatch shape. Run red.
-- [ ] Apply the setter edits. Update each touched header to current state (dispatch, not
+- [x] Apply the setter edits. Update each touched header to current state (dispatch, not
   zustand `setState`); keep the load-bearing ORDERING comments (store write **before** the
   fade bridge — `setFilamentsEnabled.ts:10-12`).
-- [ ] (Coupled-swap — no standalone commit.)
+- [x] (Coupled-swap — no standalone commit.)
 
 ---
 
@@ -215,14 +215,14 @@ subsequent `syncVisibilityFades` bridge call is unchanged — it reads the just-
 through `state.settings` (now `store.getState().settings`). The `applyEffect` cluster→fade-keys
 derivation off `FADE_LAYERS` `cluster` field is unchanged.
 
-- [ ] Update both tests: construct a throwaway store, dispatch via the setter, assert the
+- [x] Update both tests: construct a throwaway store, dispatch via the setter, assert the
   merged state landed (`store.getState().settings`) and the fade bridge ran (spy on
   `syncVisibilityFades` or its observable effect). Port the existing capture→restore and
   partial-patch assertions. Run red.
-- [ ] Apply the edits. Update both headers: the one `store.dispatch(mergeSnapshot(...))` swap
+- [x] Apply the edits. Update both headers: the one `store.dispatch(mergeSnapshot(...))` swap
   notifies React's `useAppSelector` subscribers (was: `store.setState` notified
   `useSyncExternalStore`); the rest of the round-trip rationale stands.
-- [ ] (Coupled-swap — no standalone commit.)
+- [x] (Coupled-swap — no standalone commit.)
 
 ---
 
@@ -237,12 +237,12 @@ derivation off `FADE_LAYERS` `cluster` field is unchanged.
 (`EngineHandle.d.ts:19`). React no longer reads through the handle — it reads the Provider
 store. The handle keeps its sub-handle setters (the write path) unchanged.
 
-- [ ] Update/remove the test that asserts `handle.settingsStore` is wired (it becomes a test
+- [x] Update/remove the test that asserts `handle.settingsStore` is wired (it becomes a test
   that the handle has **no** `settingsStore` field, or is simply deleted if it only checked
   presence). Run red against the current handle.
-- [ ] Remove the field + import from `EngineHandle.d.ts`; remove the two handle-literal entries
+- [x] Remove the field + import from `EngineHandle.d.ts`; remove the two handle-literal entries
   in `engine.ts`. Update the `EngineHandle` header note that mentioned the settings store seam.
-- [ ] (Coupled-swap — no standalone commit.)
+- [x] (Coupled-swap — no standalone commit.)
 
 ---
 
@@ -273,13 +273,13 @@ store. The handle keeps its sub-handle setters (the write path) unchanged.
 - Update the hook header (`useEngine.ts:28-34`) — settings reads are now react-redux
   `useAppSelector`, the store comes from `useStore`, not `useSettingsStore`.
 
-- [ ] Add a `<Provider>` integration render test: render `<Provider store={createAppStore()}>`
+- [x] Add a `<Provider>` integration render test: render `<Provider store={createAppStore()}>`
   around a probe that reads `useAppSelector(selectBrightness)`, assert it returns the default;
   dispatch `setBrightness(0.3)` on the store, assert the probe re-renders with `0.3`. (This is
   the React-read coverage that replaces the deleted `useSettingsStore.test.ts` — see Task 10.)
-- [ ] Apply `main.tsx` + `useEngine.ts` edits.
-- [ ] `npm run typecheck` + `npm test` → **green** (this closes the coupled swap).
-- [ ] **Commit the whole coupled swap as one commit** (Tasks 1–7): EngineCallbacks `store`,
+- [x] Apply `main.tsx` + `useEngine.ts` edits.
+- [x] `npm run typecheck` + `npm test` → **green** (this closes the coupled swap).
+- [x] **Commit the whole coupled swap as one commit** (Tasks 1–7): EngineCallbacks `store`,
   `engine.ts` injection + `get settings()` + handle entries, `settingsTable`, all bespoke
   setters + `setTier`, `restoreSettings`/`applyEffect`, `EngineHandle` drop, `main.tsx`
   Provider, `useEngine` `useStore`. Stage these paths explicitly. Message:
@@ -303,14 +303,14 @@ now-dead default constants used only as fallbacks (`DISABLED_PASSES_DEFAULT`,
 keep any still used elsewhere). Update the selector import paths from
 `services/engine/settingsStore/selectors/selectX` to `state/settings/selectors`.
 
-- [ ] Update App's settings-read tests (if any) to render under `<Provider>`; assert a value
+- [x] Update App's settings-read tests (if any) to render under `<Provider>`; assert a value
   reads through `useAppSelector`. (If App has no direct settings-value test, the Task 7
   Provider render test is the coverage.)
-- [ ] Replace every `useSettingsStore(...)` call in App.tsx (and any other consumer found via
+- [x] Replace every `useSettingsStore(...)` call in App.tsx (and any other consumer found via
   `grep -rln useSettingsStore src/components src/hooks`) with `useAppSelector(selectX)`; drop
   the fallback constants; fix imports.
-- [ ] Delete `src/hooks/useSettingsStore.ts` + its test.
-- [ ] `npm run typecheck` + `npm test` → green. Commit App + the deletion together.
+- [x] Delete `src/hooks/useSettingsStore.ts` + its test.
+- [x] `npm run typecheck` + `npm test` → green. Commit App + the deletion together.
 
 ---
 
@@ -330,14 +330,14 @@ keep any still used elsewhere). Update the selector import paths from
 
 By this point (after Tasks 3–8) nothing imports these. This is a pure deletion that lands green.
 
-- [ ] `grep -rn "settingsStore/" src/ tests/` — confirm **zero** remaining imports of the old
+- [x] `grep -rn "settingsStore/" src/ tests/` — confirm **zero** remaining imports of the old
   directory (every consumer now points at `src/state/settings/` or `src/store/`). If any
   remain, fix them first (they should have been caught by Tasks 3–8's typecheck).
-- [ ] Delete the files/directory. Run `npm run typecheck` — clean (proves nothing depended on
+- [x] Delete the files/directory. Run `npm run typecheck` — clean (proves nothing depended on
   them).
-- [ ] Remove `zustand` from `package.json`; `npm install` to update the lockfile. Run
+- [x] Remove `zustand` from `package.json`; `npm install` to update the lockfile. Run
   `npm run typecheck` + `npm test`. `grep -rn "zustand" src/ tests/` is empty.
-- [ ] Commit the deletions + `package.json`/lockfile.
+- [x] Commit the deletions + `package.json`/lockfile.
 
 ---
 
@@ -353,19 +353,19 @@ old reducer (28) + action (27) + selector (24) + `createSettingsStore` + `buildI
 + `project*` + `makeSettingsFixture`/`setMilkyWayLabelEnabled` tests, and confirms coverage
 didn't regress.
 
-- [ ] Confirm each old test's assertions have a counterpart in the new `settingsSlice.test.ts`
+- [x] Confirm each old test's assertions have a counterpart in the new `settingsSlice.test.ts`
   / `selectors.test.ts` / `createAppStore.test.ts` (Plan 1). For any uncovered assertion
   (e.g. a specific edge case in an action test), port it into the matching new file **before**
   deleting the old one — do not lose coverage.
-- [ ] Delete the obsolete old test files + the now-orphaned `makeSettingsFixture.ts` (or
+- [x] Delete the obsolete old test files + the now-orphaned `makeSettingsFixture.ts` (or
   relocate it to `tests/state/settings/` if the new tests reuse it — implementer's call;
   prefer relocate if reused).
-- [ ] Add the round-trip test the spec calls for (if not already in Plan 1's
+- [x] Add the round-trip test the spec calls for (if not already in Plan 1's
   `createAppStore.test.ts`): a settingsTable dispatch + `requestRender`, then a
   capture→restore→apply-effect round-trip via `restoreSettings`/`applyEffect` over a real
   `createAppStore()` store, asserting the snapshot restores and a partial effect patches only
   its clusters. Place it under `tests/state/settings/` or `tests/services/engine/wiring/`.
-- [ ] `npm test` → green; no orphaned `tests/services/engine/settingsStore/**` remain. Commit.
+- [x] `npm test` → green; no orphaned `tests/services/engine/settingsStore/**` remain. Commit.
 
 ---
 
@@ -373,7 +373,7 @@ didn't regress.
 
 **Files:** none (review); fixes are follow-up commits.
 
-- [ ] Run the `entanglement-radar` skill over the **whole** Plan-2 diff. Check: store has a
+- [x] Run the `entanglement-radar` skill over the **whole** Plan-2 diff. Check: store has a
   single home (`main.tsx` Provider) with no surviving mirror; `state.settings` is a pure read
   through `store.getState().settings` (no cached copy in the engine); the read path
   (`useAppSelector`) and write path (handle → `dispatch`) are the spec's intended transitional
@@ -381,14 +381,14 @@ didn't regress.
   `zustand` / `createSettingsStore` / `buildInitialSettings` references survive
   (`grep -rn` each across `src/` + `tests/` → empty); no per-type branch / enumerated table-key
   smell introduced. "No significant complecting found" is a valid result. Record/fix any knot.
-- [ ] **Manual smoke** (ask the user to look — dev server stays running; don't kill it):
+- [x] **Manual smoke** (ask the user to look — dev server stays running; don't kill it):
   - SettingsPanel toggles drive the renderer (point size, brightness, exposure, source
     visibility checkboxes, auto-rotate) and the panel reflects the value.
   - DebugPanel renderer-toggle checkboxes hide/show passes (the `disabledPasses` `Record`
     path) and the checkboxes reflect the toggled state.
   - Tour capture → play → restore drives the renderer and the SettingsPanel updates on restore
     (the `mergeSnapshot` dispatch wakes `useAppSelector` subscribers).
-- [ ] Commit any radar fixes.
+- [x] Commit any radar fixes.
 
 ---
 
@@ -407,7 +407,7 @@ didn't regress.
   via `useStore` and passes it into `createEngine`.
 - [x] The engine no longer constructs a store; `get settings()` returns
   `store.getState().settings`.
-- [ ] Manual smoke passes: settings toggles, debug pass toggles, tour capture/restore. ← awaiting user
+- [x] Manual smoke passes: settings toggles, debug pass toggles, tour capture/restore. ← awaiting user
 
 ### Entanglement-radar verdict (Task 11)
 

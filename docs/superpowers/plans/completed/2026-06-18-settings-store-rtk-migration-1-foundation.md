@@ -356,20 +356,20 @@ export function createAppStore(preloadedState?: PreloadedState) {
 - `AppStore`/`AppDispatch` (in `types.ts`, Task 4) derive from `createAppStore`'s return.
 
 **Tests:**
-- [ ] `createAppStore returns a store seeded with settings initialState` — no preloaded state,
+- [x] `createAppStore returns a store seeded with settings initialState` — no preloaded state,
   assert `store.getState().settings` deep-equals the slice `initialState`.
-- [ ] `createAppStore honours preloadedState` — pass `{ settings: buildInitialSettings({
+- [x] `createAppStore honours preloadedState` — pass `{ settings: buildInitialSettings({
   initialTier: 'large' }) }`, assert `store.getState().settings.tier === 'large'`.
-- [ ] `dispatching a slice action updates state` — `store.dispatch(setBrightness(0.25))`,
+- [x] `dispatching a slice action updates state` — `store.dispatch(setBrightness(0.25))`,
   assert `store.getState().settings.galaxyCatalogs.brightness === 0.25` (round-trip through
   the real configured store, proving the saga middleware didn't swallow the action).
-- [ ] `the saga middleware runs mainSaga without throwing` — constructing the store doesn't
+- [x] `the saga middleware runs mainSaga without throwing` — constructing the store doesn't
   throw and `store.getState()` is defined (smoke that `sagaMiddleware.run(mainSaga)` is wired).
-- [ ] Implement `rootSaga.ts` then `createAppStore.ts`. Didactic headers: factory not
+- [x] Implement `rootSaga.ts` then `createAppStore.ts`. Didactic headers: factory not
   singleton (test isolation — engines are constructed repeatedly); saga wired-but-empty so
   phase 2 forks feature sagas without re-plumbing the store; no serializableCheck exception
   because `disabledPasses` is now a plain object.
-- [ ] `npm test -- store/createAppStore` + `npm run typecheck` → green. Commit all three files.
+- [x] `npm test -- store/createAppStore` + `npm run typecheck` → green. Commit all three files.
 
 ---
 
