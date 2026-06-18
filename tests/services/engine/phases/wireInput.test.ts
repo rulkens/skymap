@@ -100,7 +100,7 @@ function makeState(): EngineState {
       debug: {
         showPickBuffer: false,
         showDiskRadiusRing: false,
-        disabledPasses: new Set<string>(),
+        disabledPasses: {},
       },
     },
     bias: {} as never,

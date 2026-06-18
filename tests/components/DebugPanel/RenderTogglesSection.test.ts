@@ -6,7 +6,7 @@
  * `passOverrides.setDisabled` with the right (name, disabled) pair. The section
  * is a CONTROLLED component: its checkbox state comes from the prop, not local
  * state, so a click fires the handle and the box only flips once the parent
- * re-renders with the updated set.
+ * re-renders with the updated record.
  *
  * Project convention (matches Sparkline.test.ts and
  * GpuTimingsSection.test.ts): tests are `.test.ts` and use
@@ -37,7 +37,7 @@ describe('RenderTogglesSection', () => {
     const { container } = render(
       createElement(RenderTogglesSection, {
         passOverrides: handle,
-        disabledPasses: new Set<string>(),
+        disabledPasses: {},
       }),
     );
     const labels = container.querySelectorAll('label');
@@ -49,12 +49,12 @@ describe('RenderTogglesSection', () => {
     expect(labels[3]!.textContent).toContain('textured-disks');
   });
 
-  it('checks every box when the disabledPasses set is empty', () => {
+  it('checks every box when the disabledPasses record is empty', () => {
     const { handle } = makeHandle();
     const { container } = render(
       createElement(RenderTogglesSection, {
         passOverrides: handle,
-        disabledPasses: new Set<string>(),
+        disabledPasses: {},
       }),
     );
     const boxes = container.querySelectorAll<HTMLInputElement>('input[type=checkbox]');
@@ -68,7 +68,7 @@ describe('RenderTogglesSection', () => {
     const { container } = render(
       createElement(RenderTogglesSection, {
         passOverrides: handle,
-        disabledPasses: new Set(['textured-disks']),
+        disabledPasses: { 'textured-disks': true },
       }),
     );
     const boxes = container.querySelectorAll<HTMLInputElement>('input[type=checkbox]');
@@ -82,7 +82,7 @@ describe('RenderTogglesSection', () => {
     const { container } = render(
       createElement(RenderTogglesSection, {
         passOverrides: handle,
-        disabledPasses: new Set<string>(),
+        disabledPasses: {},
       }),
     );
     const box = container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[2]!;
@@ -95,7 +95,7 @@ describe('RenderTogglesSection', () => {
     const { container } = render(
       createElement(RenderTogglesSection, {
         passOverrides: handle,
-        disabledPasses: new Set(['textured-disks']),
+        disabledPasses: { 'textured-disks': true },
       }),
     );
     const box = container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[3]!;
@@ -104,12 +104,12 @@ describe('RenderTogglesSection', () => {
     expect(setDisabled).toHaveBeenCalledWith('textured-disks', false);
   });
 
-  it('reflects the prop after the parent re-renders with an updated set', () => {
+  it('reflects the prop after the parent re-renders with an updated record', () => {
     const { handle } = makeHandle();
     const { container, rerender } = render(
       createElement(RenderTogglesSection, {
         passOverrides: handle,
-        disabledPasses: new Set<string>(),
+        disabledPasses: {},
       }),
     );
     const box = () => container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[2]!;
@@ -117,7 +117,7 @@ describe('RenderTogglesSection', () => {
     rerender(
       createElement(RenderTogglesSection, {
         passOverrides: handle,
-        disabledPasses: new Set(['textured-quads']),
+        disabledPasses: { 'textured-quads': true },
       }),
     );
     expect(box().checked).toBe(false);

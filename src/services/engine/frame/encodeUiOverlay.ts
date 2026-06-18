@@ -73,7 +73,7 @@ export function encodeUiOverlay(
   // live settings snapshot; empty in production, so the check is in the noise.
   const disabledPasses = state.settings.debug.disabledPasses;
   const enabled = UI_PASSES.filter(
-    (p) => p.enabled(state, ctx, settings) && !disabledPasses.has(p.name),
+    (p) => p.enabled(state, ctx, settings) && disabledPasses[p.name] !== true,
   );
   if (enabled.length === 0 && !timestampWrites) return;
 

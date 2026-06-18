@@ -371,7 +371,7 @@ describe('renderFrame visual baseline', () => {
         // A null slot → slotReady false → not loaded.
         // The encoders read the renderer-toggle override bag off
         // `settings.debug.disabledPasses`; empty so every pass fires.
-        settings: { flow: { enabled: false }, debug: { disabledPasses: new Set<string>() } },
+        settings: { flow: { enabled: false }, debug: { disabledPasses: {} } },
         assetSlots: { flow: null },
         subsystems: {
           proceduralDisks: proceduralDisksSubsystem,

@@ -1,7 +1,7 @@
 // ── Flow overlay patch entry point ──────────────────────────────────────────
 //
 // One patch-shaped setter over the `settings.flow` slice. The WHOLE patch lands
-// through the copy-on-write store action (React reads via `selectFlow`); the raw
+// through the `setFlow` slice action (React reads via `selectFlow`); the raw
 // intent is stored verbatim — the GPU-safe clamps live in `clampFlowParams` at
 // the flow renderer. Then the per-leaf side effects fire off which keys the
 // patch carried.
@@ -10,19 +10,19 @@
 // `handles/` setters) and so it's testable without a full GPU engine.
 
 import type { FlowSettings } from '../../../@types/settings/FlowSettings';
-import type { SettingsStore } from '../settingsStore/createSettingsStore';
-import { setFlowAction } from '../settingsStore/actions/setFlowAction';
+import type { AppStore } from '../../../store/types';
+import { setFlow as setFlowAction } from '../../../state/settings/settingsSlice';
 import { syncVisibilityFades } from '../wiring/syncVisibilityFades';
 import type { ApplyIntentState } from '../wiring/syncVisibilityFades';
 
 export function setFlow(
   state: ApplyIntentState,
-  store: SettingsStore,
+  store: AppStore,
   patch: Partial<FlowSettings>,
 ): void {
-  setFlowAction(store, patch);
+  store.dispatch(setFlowAction(patch));
   // Wake the loop so the renderer picks up the new params next frame — the
-  // action does NOT wake. This also drives the per-frame `reevaluateDemand`,
+  // dispatch does NOT wake. This also drives the per-frame `reevaluateDemand`,
   // which lazy-loads the velocity cube on first enable: no setter has to kick
   // the loader itself (see runFrame's demand-re-eval seam).
   state.subsystems.scheduler.requestRender();

@@ -11,6 +11,7 @@ import type { ScaleInfo } from './ScaleInfo';
 import type { SourceType } from '../data/SourceType';
 import type { LoadProgressState } from '../loading/LoadProgressState';
 import type { StructureId } from '../data/structure/StructureId';
+import type { AppStore } from '../../store/types';
 
 /**
  * Callbacks the engine uses to push state changes into the UI layer.
@@ -49,6 +50,14 @@ import type { StructureId } from '../data/structure/StructureId';
  * an empty object.
  */
 export type EngineCallbacks = {
+  /**
+   * The injected Redux store created once at the app root (`main.tsx`) and
+   * shared with React via `<Provider>`.  The engine reads settings from it
+   * (`store.getState().settings`) and dispatches the write path through it,
+   * so the engine and React drive one authoritative instance with no mirror.
+   */
+  store: AppStore;
+
   /**
    * Initial data tier to load on engine startup.  Defaults to `'medium'`
    * when absent.  This is technically an option, not a callback, but the

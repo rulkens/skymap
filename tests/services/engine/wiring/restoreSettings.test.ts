@@ -3,20 +3,20 @@
  *
  * The bridge (`syncVisibilityFades`) is mocked to a typed spy so these tests
  * assert restoreSettings' own contract: write the six clusters back onto the
- * settings store THROUGH `store.setState` (one copy-on-write swap that notifies
+ * settings store THROUGH `store.dispatch` (one copy-on-write swap that notifies
  * React subscribers — never an in-place mutation that leaves the panel stale),
  * detached from the Readonly snapshot, then one bridge pass over ALL rows (no
  * `only`). The bridge's fade behaviour is covered by its own suite.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createStore } from 'zustand/vanilla';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { SettingsSnapshot } from '../../../../src/@types/engine/settings/SettingsSnapshot';
-import type { SettingsStore } from '../../../../src/services/engine/settingsStore/createSettingsStore';
+import type { AppStore } from '../../../../src/store/types';
+import { createAppStore } from '../../../../src/store/createAppStore';
 import { syncVisibilityFades } from '../../../../src/services/engine/wiring/syncVisibilityFades';
 import { restoreSettings } from '../../../../src/services/engine/wiring/restoreSettings';
-import { makeSettingsFixture } from '../settingsStore/makeSettingsFixture';
+import { makeSettingsFixture } from '../../../state/settings/makeSettingsFixture';
 
 vi.mock('../../../../src/services/engine/wiring/syncVisibilityFades', () => ({
   syncVisibilityFades:
@@ -29,14 +29,14 @@ const bridge = vi.mocked(syncVisibilityFades);
 
 /**
  * A real settings store plus a `state` whose `settings` getter delegates to it —
- * mirrors the engine's `get settings() { return settingsStore.getState() }` so a
- * `setState` write is observable through `state.settings`.
+ * mirrors the engine's `get settings() { return store.getState().settings }` so a
+ * `dispatch` write is observable through `state.settings`.
  */
-function makeHarness(): { store: SettingsStore; state: EngineState } {
-  const store = createStore(() => makeSettingsFixture());
+function makeHarness(): { store: AppStore; state: EngineState } {
+  const store = createAppStore({ settings: makeSettingsFixture() });
   const state = {
     get settings() {
-      return store.getState();
+      return store.getState().settings;
     },
   } as unknown as EngineState;
   return { store, state };
@@ -82,7 +82,7 @@ describe('restoreSettings', () => {
 
     restoreSettings(state, store, makeSnapshot(), { animate: true });
 
-    // A single setState swap — React subscribers wake exactly once, not zero
+    // A single dispatch swap — React subscribers wake exactly once, not zero
     // times (the in-place-mutation bug) nor once-per-cluster (a thrash).
     expect(listener).toHaveBeenCalledTimes(1);
   });

@@ -3,16 +3,16 @@
  * settings delta) onto the live engine settings store, then re-fade ONLY the
  * layers whose settings live in the patched clusters.
  *
- * Like `restoreSettings`, this lands the patch through ONE `store.setState`
- * swap (`mergeSettingsSnapshot`) — a single copy-on-write transition that
- * NOTIFIES React's settings subscribers — rather than mutating the held state
- * object in place (which would bypass `setState` and leave the panel stale).
- * `mergeSettingsSnapshot` clones only the clusters the patch carries, so
- * untouched clusters keep both their live values and their references.
+ * Like `restoreSettings`, this lands the patch through ONE
+ * `store.dispatch(mergeSnapshot(...))` — a single transition that NOTIFIES
+ * React's settings subscribers — rather than mutating the held state object in
+ * place (which would bypass dispatch and leave the panel stale). `mergeSnapshot`
+ * merges only the clusters the patch carries, so untouched clusters keep their
+ * live values.
  *
  * Two steps:
  *
- *   1. One `store.setState` merging the patched clusters in (detached clones).
+ *   1. One `mergeSnapshot` dispatch merging the patched clusters in.
  *   2. Narrow the bridge to the affected fade keys, DERIVED FROM THE MANIFEST.
  *      Each intent row declares the `SettingsSnapshot` cluster it reads via
  *      `row.cluster`, so the cluster→keys map is read off the manifest itself —
@@ -23,20 +23,20 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { SettingsSnapshot } from '../../../@types/engine/settings/SettingsSnapshot';
-import type { SettingsStore } from '../settingsStore/createSettingsStore';
-import { mergeSettingsSnapshot } from '../settingsStore/reducers/mergeSettingsSnapshot';
+import type { AppStore } from '../../../store/types';
+import { mergeSnapshot } from '../../../state/settings/settingsSlice';
 import { FADE_LAYERS } from './fadeLayers';
 import { syncVisibilityFades } from './syncVisibilityFades';
 
 export function applyEffect(
   state: EngineState,
-  store: SettingsStore,
+  store: AppStore,
   patch: Partial<SettingsSnapshot>,
   opts: { animate: boolean },
 ): void {
-  // One copy-on-write swap → one store notification; only the patch's own
-  // clusters are cloned in, the rest keep their references.
-  store.setState((s) => mergeSettingsSnapshot(s, patch));
+  // One dispatch → one store notification; only the patch's own clusters are
+  // merged in.
+  store.dispatch(mergeSnapshot(patch));
 
   // Map the touched clusters to their fade keys off the manifest's `cluster`
   // field — no parallel table.

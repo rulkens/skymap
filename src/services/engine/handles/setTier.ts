@@ -16,9 +16,9 @@ import type { Tier } from '../../../@types/data/Tier';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import { tierTarget } from '../../../data/tierTargets';
-import type { SettingsStore } from '../settingsStore/createSettingsStore';
-import { setTierAction } from '../settingsStore/actions/setTierAction';
-import { selectTier } from '../settingsStore/selectors/selectTier';
+import type { AppStore } from '../../../store/types';
+import { setTier as setTierAction } from '../../../state/settings/settingsSlice';
+import { selectTier } from '../../../state/settings/selectors';
 import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
   loadCompanionAssets,
@@ -27,17 +27,17 @@ import { rebuildHiResFamousForTier } from '../helpers/rebuildHiResFamousForTier'
 
 export function setTier(
   state: EngineState,
-  store: SettingsStore,
+  store: AppStore,
   device: GPUDevice | undefined,
   tier: Tier,
 ): void {
   // Tier lives in the settings store; React reads it via `selectTier`, so
-  // there's no `onTierChange` echo to fire — the store write notifies
-  // subscribers. We diff against the store's current value to skip a no-op,
-  // then commit through the action before driving the per-source reloads.
+  // there's no `onTierChange` echo to fire — the dispatch notifies subscribers.
+  // We diff against the store's current value to skip a no-op, then commit
+  // through the slice action before driving the per-source reloads.
   const prevTier = selectTier(store.getState());
   if (tier === prevTier) return;
-  setTierAction(store, tier);
+  store.dispatch(setTierAction(tier));
 
   // For each tier-relevant source: same target → skip; different target → hand
   // the slot the new request (it cancels any in-flight load, re-fetches the
