@@ -13,8 +13,43 @@ Take skymap from a deployed-but-unknown personal project to a citable, discovera
 Sequenced in three waves:
 
 - **Wave A (Tasks 0–2):** Release + repo polish — everything that makes a stranger landing on the GitHub page take it seriously. Task 0 (v0.2.0 release) is the news hook; Task 1 (hero GIF, screenshots, DOI badge) is the storefront; Task 2 (HyperLEDA R2) removes the biggest contributor friction wall.
-- **Wave B (Tasks 3, 6):** Durable artifacts — JOSS paper draft and the optional RNAAS note, both citable and indexable in ADS.
-- **Wave C (Tasks 4–5):** Outreach — broad public posts first, then targeted academic emails that can reference traction and cite the v0.2.0 release.
+- **Wave B (Task 3):** Durable artifact — the JOSS paper draft, citable and indexable in ADS. (Task 6 RNAAS dropped — see re-scope below.)
+- **Wave C (Tasks 4, 5, 7, 8):** Outreach — public posts, Product Hunt, ed-tech blogs, and targeted academic emails, all now anchored to the steady traffic baseline rather than a launch spike.
+
+## Re-scope (2026-06-18)
+
+Six weeks and two releases on (v0.3.0, **v0.4.0** shipped 2026-05-30), the
+plan's original spine — *"ride the v0.2.0 launch traction"* — is obsolete.
+The launch moment passed and HN landed soft (score 5). Two facts reset the
+plan:
+
+1. **Steady 80–100 visitors/day.** A *durable* traction anchor that beats
+   the launch-spike framing. It becomes the honest opener for every email,
+   pitch, and post — replacing "got 5 points on HN".
+2. **Competitive intel from a direct peer — AstroGrid** (velonspace.com).
+   Same segment, same catalogs (2MRS + SDSS + HYG + JPL). Its *entire*
+   visible footprint was **Product Hunt** (117 upvotes, #12 of day) +
+   organic ed-tech blog pickup (outilstice.com). **No Reddit/HN thread.**
+   Skymap's footprint is the exact mirror — HN/Bluesky/Reddit done, PH +
+   ed-tech untouched. So the two highest-value new moves are the channels
+   a proven peer used and skymap skipped.
+
+**Net live campaign:**
+
+- **Task 3 — JOSS paper** → keystone, do first. Time-independent; makes the
+  emails real ("submitted to JOSS" > "5 points on HN").
+- **Task 5 — academic emails** → re-gated onto Task 3 + the traffic stat,
+  *not* onto cold public-post traction. Drafts already exist; Email 5 (LVK)
+  dropped.
+- **Task 7 — Product Hunt launch** → NEW, biggest gap, proven for this
+  segment. See [task-7-product-hunt.md](task-7-product-hunt.md).
+- **Task 8 — ed-tech blogger outreach** → NEW. See
+  [task-8-edtech-blogs.md](task-8-edtech-blogs.md).
+- **Task 4 — public posts** → dated May schedule dropped; untapped
+  subreddit tiers (r/InternetIsBeautiful, r/cosmology, r/space) kept for
+  opportunistic posting.
+- **Task 6 — RNAAS** → DROPPED. Overlaps ~entirely with the JOSS paper;
+  revisit only if JOSS stalls.
 
 ## Tech stack
 
@@ -28,20 +63,34 @@ Skymap is a personal didactic project that happens to be a useful tool. Outreach
 
 | Task | Depends on | Status |
 |---|---|---|
-| [0 — Cut v0.2.0 + concept-DOI](task-0-release.md) | nothing | pending |
-| [1 — Repo polish](task-1-repo-polish.md) | (Task 0 helpful but not strict) | mostly shipped |
+| [0 — Cut v0.2.0 + concept-DOI](task-0-release.md) | nothing | done 2026-05-06 (now at v0.4.0) |
+| [1 — Repo polish](task-1-repo-polish.md) | (Task 0 helpful but not strict) | done 2026-05-06 |
 | [2 — HyperLEDA R2 distribution](task-2-hyperleda-r2.md) | nothing | done 2026-05-07 (partial cache shipped) |
-| [3 — JOSS paper](task-3-joss-paper.md) | Task 0 (DOI) | pending |
-| [4 — Public posts](task-4-public-posts.md) | Tasks 0 + 1 | pending |
-| [5 — Academic emails](task-5-academic-emails.md) | Task 4 traction | pending |
-| [6 — RNAAS note (optional)](task-6-rnaas.md) | Task 0 (DOI) | pending |
+| [3 — JOSS paper](task-3-joss-paper.md) | concept DOI (have it) | **pending — keystone, do first** |
+| [4 — Public posts](task-4-public-posts.md) | nothing (opportunistic) | HN/Bluesky/r-dataisbeautiful done; rest re-scoped |
+| [5 — Academic emails](task-5-academic-emails.md) | Task 3 + traffic stat | drafted, unsent |
+| [7 — Product Hunt launch](task-7-product-hunt.md) | capture video | **pending — NEW, biggest gap** |
+| [8 — Ed-tech blogs](task-8-edtech-blogs.md) | (Task 7 helpful, not strict) | pending — NEW |
+| [6 — RNAAS note](task-6-rnaas.md) | — | **DROPPED (overlaps JOSS)** |
 
-## Status snapshot (2026-05-07)
+## Status snapshot (2026-06-18)
 
-- **Task 0** — done 2026-05-06. v0.2.0 release cut, Zenodo minted version-DOI `10.5281/zenodo.20053519` under concept DOI `10.5281/zenodo.20037028`. v0.1.0 version-DOI is `10.5281/zenodo.20037029` (kept for reference). README badge + CITATION.cff cite the concept DOI so they always resolve to the latest version.
-- **Task 1** — done 2026-05-06. All eight README assets present and wired in: `hero.gif`, `ui-overview.png`, `tier-selector.png`, `infocard-detail.png`, `local-group.png`, `wide-field.png`, `zoomed.gif`, `density-correction-modes.png`. Topic chips and DOI badge live.
-- **Task 2** — done 2026-05-07. Infra (`tools/syncR2.ts`, README) shipped on `feat/outreach-r2-hyperleda-cache`. R2 serves the partial cache (52,178 PGCs queried; 41,332 with PA) — decision was to ship the partial run rather than spend another hour fetching the empty long tail. Verified `https://skymap-data.rulkens.com/data/hyperleda_pa.csv.gz` returns HTTP 200.
-- **Tasks 3–6** — not started.
+- **Task 0** — done 2026-05-06. v0.2.0 release cut; concept DOI
+  `10.5281/zenodo.20037028` is cited everywhere (auto-resolves to latest).
+  **Now at v0.4.0** (shipped 2026-05-30); CITATION.cff already updated.
+  *Open verification:* confirm Zenodo actually minted a deposit for the
+  v0.3.0/v0.4.0 GitHub releases (webhook may or may not have fired) — the
+  concept DOI resolving is what matters and is non-blocking.
+- **Task 1** — done 2026-05-06. All eight README assets present and wired in.
+- **Task 2** — done 2026-05-07. R2 serves the partial HyperLEDA cache.
+- **Task 4** — partially done. HN (soft), Bluesky thread, r/dataisbeautiful
+  all sent. Remaining Reddit re-scoped to opportunistic untapped tiers.
+- **Tasks 3, 5, 7, 8** — pending; see the Re-scope section above for the
+  live sequence. **Task 6 dropped.**
+
+### Traction baseline
+- **80–100 visitors/day, steady** (as of 2026-06-18) — the durable anchor
+  for all Wave-C copy.
 
 ## Files in this folder
 
@@ -53,9 +102,11 @@ Skymap is a personal didactic project that happens to be a useful tool. Outreach
 | `task-1-repo-polish.md` | Topic chips, hero GIF, screenshots, Zenodo DOI, README embeds |
 | `task-2-hyperleda-r2.md` | HyperLEDA CSV fetch → gzip → R2 sync |
 | `task-3-joss-paper.md` | JOSS paper draft (`paper/paper.md` + `paper/paper.bib`) |
-| `task-4-public-posts.md` | Show HN, Bluesky thread, Reddit posts (full drafts) |
-| `task-5-academic-emails.md` | Five cold emails to SDSS, GLADE, AAS WWT, CDS, LVK teams |
-| `task-6-rnaas.md` | Optional RNAAS note (`paper/rnaas.md`) |
+| `task-4-public-posts.md` | Show HN, Bluesky thread, Reddit posts + re-scoped subreddit tiers |
+| `task-5-academic-emails.md` | Cold emails to SDSS, GLADE, AAS WWT, CDS (LVK dropped) |
+| `task-6-rnaas.md` | RNAAS note — **DROPPED 2026-06-18** (overlaps JOSS) |
+| `task-7-product-hunt.md` | Product Hunt launch (NEW — AstroGrid-derived channel) |
+| `task-8-edtech-blogs.md` | Ed-tech blogger / newsletter outreach (NEW) |
 
 ## Self-review checklist (run before declaring the plan ready)
 
