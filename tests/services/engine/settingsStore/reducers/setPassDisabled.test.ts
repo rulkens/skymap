@@ -4,23 +4,23 @@ import { setPassDisabled } from '../../../../../src/services/engine/settingsStor
 import { makeSettingsFixture } from '../makeSettingsFixture';
 
 describe('setPassDisabled', () => {
-  it('adds the pass name to a fresh disabled set', () => {
+  it('marks the pass name disabled in a fresh record', () => {
     const state = makeSettingsFixture();
-    const next = setPassDisabled(state, 'point-sprites', true);
+    const next = setPassDisabled(state, 'foo', true);
 
-    expect(next.debug.disabledPasses.has('point-sprites')).toBe(true);
-    // Copy-on-write: a new Set, not the input mutated in place.
+    expect(next.debug.disabledPasses).toEqual({ foo: true });
+    // Copy-on-write: a new record, not the input mutated in place.
     expect(next.debug.disabledPasses).not.toBe(state.debug.disabledPasses);
-    expect(state.debug.disabledPasses.has('point-sprites')).toBe(false);
+    expect(state.debug.disabledPasses.foo).toBeUndefined();
   });
 
-  it('removes the pass name when disabled is false', () => {
+  it('maps the pass name to false when disabled is false', () => {
     const state = makeSettingsFixture({
-      debug: { ...makeSettingsFixture().debug, disabledPasses: new Set(['labels']) },
+      debug: { ...makeSettingsFixture().debug, disabledPasses: { foo: true } },
     });
-    const next = setPassDisabled(state, 'labels', false);
+    const next = setPassDisabled(state, 'foo', false);
 
-    expect(next.debug.disabledPasses.has('labels')).toBe(false);
+    expect(next.debug.disabledPasses).toEqual({ foo: false });
     expect(next.debug.disabledPasses).not.toBe(state.debug.disabledPasses);
   });
 

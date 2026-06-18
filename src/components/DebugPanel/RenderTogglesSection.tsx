@@ -14,15 +14,15 @@
  * this frame — it never force-enables a pass whose own `enabled()`
  * gate returned false (e.g. there are no thumbnails on screen, or the
  * settings panel turned filaments off).  This matches the encoder
- * loop: `pass.enabled() && !disabledPasses.has(pass.name)`.
+ * loop: `pass.enabled() && disabledPasses[pass.name] !== true`.
  *
- * ### Where the disabled set lives
+ * ### Where the disabled record lives
  *
- * The set is engine-owned settings state (`settings.debug.disabledPasses`),
+ * The record is engine-owned settings state (`settings.debug.disabledPasses`),
  * read live via the `disabledPasses` prop (App subscribes with
  * `selectDisabledPasses`).  No local mirror: a toggle dispatches through
  * `passOverrides.setDisabled`, the store notifies synchronously, and the prop
- * flows the new set back down — the same "write through the handle, read back
+ * flows the new record back down — the same "write through the handle, read back
  * via the selector" shape the pick-buffer toggle uses.
  *
  * ### Why a separate `<details>` block
@@ -39,8 +39,8 @@ import type { PassOverridesHandle } from '../../@types/engine/handles/EngineDebu
 
 export type RenderTogglesSectionProps = {
   passOverrides: PassOverridesHandle;
-  /** Live disabled-pass set from the settings store (App subscribes). */
-  disabledPasses: ReadonlySet<string>;
+  /** Live disabled-pass record from the settings store (App subscribes). */
+  disabledPasses: Record<string, boolean>;
 };
 
 export function RenderTogglesSection({
@@ -48,7 +48,7 @@ export function RenderTogglesSection({
   disabledPasses,
 }: RenderTogglesSectionProps): ReactElement {
   const toggle = (name: string) => {
-    passOverrides.setDisabled(name, !disabledPasses.has(name));
+    passOverrides.setDisabled(name, disabledPasses[name] !== true);
   };
 
   return (
@@ -56,7 +56,7 @@ export function RenderTogglesSection({
       <summary style={{ fontWeight: 'bold', cursor: 'pointer' }}>Renderer Toggles</summary>
       <div style={{ marginTop: 4 }}>
         {passOverrides.allNames.map((name) => {
-          const isDisabled = disabledPasses.has(name);
+          const isDisabled = disabledPasses[name] === true;
           return (
             <label
               key={name}

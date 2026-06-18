@@ -4,12 +4,12 @@ import { selectDisabledPasses } from '../../../../../src/services/engine/setting
 import { makeSettingsFixture } from '../makeSettingsFixture';
 
 describe('selectDisabledPasses', () => {
-  it('returns the debug.disabledPasses set', () => {
+  it('returns the debug.disabledPasses record', () => {
     const state = makeSettingsFixture({
-      debug: { ...makeSettingsFixture().debug, disabledPasses: new Set(['point-sprites']) },
+      debug: { ...makeSettingsFixture().debug, disabledPasses: { 'point-sprites': true } },
     });
 
-    expect(selectDisabledPasses(state).has('point-sprites')).toBe(true);
+    expect(selectDisabledPasses(state)).toEqual({ 'point-sprites': true });
   });
 
   it('returns the same reference for a stable snapshot (cheap useSyncExternalStore compare)', () => {

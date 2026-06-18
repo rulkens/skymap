@@ -5,7 +5,7 @@
 //
 // Not a `settingsTable` row because it takes two arguments — a pass `name` plus
 // the on/off flag — where table rows dispatch a single value. It writes the
-// authoritative `disabledPasses` set THROUGH the store action (copy-on-write) so
+// authoritative `disabledPasses` record THROUGH the store action (copy-on-write) so
 // React's `selectDisabledPasses` subscriber re-renders the checkbox, then wakes
 // the render-on-demand loop: the store write notifies React but does NOT wake the
 // frame loop, and the next frame must re-encode to actually show/hide the pass.

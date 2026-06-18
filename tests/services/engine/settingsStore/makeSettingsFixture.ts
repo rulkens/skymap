@@ -82,7 +82,7 @@ export function makeSettingsFixture(
     debug: {
       showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
-      disabledPasses: new Set<string>(),
+      disabledPasses: {},
     },
     structures: {
       enabled: true,

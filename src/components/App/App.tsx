@@ -122,13 +122,13 @@ const GALAXY_CATALOG_ITEMS_DEFAULT = Object.fromEntries(
 ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>;
 
 /**
- * Stable empty fallback for the renderer-toggle override set during the
+ * Stable empty fallback for the renderer-toggle override record during the
  * null-store window. Same single-reference requirement as the records above:
  * `useSettingsStore` returns it as the snapshot until `handleRef` lands, so
- * minting a fresh `Set` inline each render would re-fire the subscription.
+ * minting a fresh object inline each render would re-fire the subscription.
  * Empty matches the engine's construction default (no pass disabled at boot).
  */
-const DISABLED_PASSES_DEFAULT: ReadonlySet<string> = new Set();
+const DISABLED_PASSES_DEFAULT: Record<string, boolean> = {};
 
 export function App(): React.ReactElement {
   const {

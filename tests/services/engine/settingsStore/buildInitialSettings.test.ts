@@ -65,6 +65,11 @@ describe('buildInitialSettings', () => {
     expect(structures.enabled).toBe(true);
   });
 
+  it('seeds an empty disabled-passes record (no pass disabled at boot)', () => {
+    const s = buildInitialSettings({ initialTier: 'medium' });
+    expect(s.debug.disabledPasses).toEqual({});
+  });
+
   it('wires per-field defaults from data/defaults', () => {
     const s = buildInitialSettings({ initialTier: 'medium' });
     expect(s.galaxyCatalogs.sizePx).toBe(DEFAULT_POINT_SIZE_PX);

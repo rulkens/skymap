@@ -12,19 +12,19 @@ describe('setPassDisabledAction', () => {
 
     setPassDisabledAction(store, 'point-sprites', true);
 
-    expect(selectDisabledPasses(store.getState()).has('point-sprites')).toBe(true);
+    expect(selectDisabledPasses(store.getState())['point-sprites']).toBe(true);
     expect(store.getState().debug).not.toBe(before);
   });
 
-  it('removes a name on a false write', () => {
+  it('maps a name to false on a false write', () => {
     const store = createSettingsStore(
       makeSettingsFixture({
-        debug: { ...makeSettingsFixture().debug, disabledPasses: new Set(['labels']) },
+        debug: { ...makeSettingsFixture().debug, disabledPasses: { labels: true } },
       }),
     );
 
     setPassDisabledAction(store, 'labels', false);
 
-    expect(selectDisabledPasses(store.getState()).has('labels')).toBe(false);
+    expect(selectDisabledPasses(store.getState()).labels).toBe(false);
   });
 });

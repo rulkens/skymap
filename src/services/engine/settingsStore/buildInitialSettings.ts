@@ -110,8 +110,8 @@ export function buildInitialSettings(opts: { readonly initialTier: Tier }): Engi
       showPickBuffer: DEFAULT_SHOW_PICK_BUFFER,
       showDiskRadiusRing: DEFAULT_SHOW_DISK_RADIUS_RING,
       // Empty in production: a developer populates it from the DebugPanel's
-      // renderer-toggle section. A fresh Set per engine — never persisted.
-      disabledPasses: new Set<string>(),
+      // renderer-toggle section. A fresh record per engine — never persisted.
+      disabledPasses: {},
     },
     // Structure overlay: master gate on + one item row per category, each
     // ring + label default-on. Keys are DERIVED from `STRUCTURE_IDS`

@@ -115,7 +115,7 @@ describe('EngineState type', () => {
       debug: {
         showPickBuffer: false,
         showDiskRadiusRing: false,
-        disabledPasses: new Set<string>(),
+        disabledPasses: {},
       },
       structures: {
         enabled: true,
@@ -262,7 +262,7 @@ describe('EngineState type', () => {
       debug: {
         showPickBuffer: false,
         showDiskRadiusRing: false,
-        disabledPasses: new Set<string>(),
+        disabledPasses: {},
       },
       structures: {
         enabled: true,
@@ -318,7 +318,7 @@ describe('EngineState type', () => {
         debug: {
           showPickBuffer: false,
           showDiskRadiusRing: false,
-          disabledPasses: new Set<string>(),
+          disabledPasses: {},
         },
         structures: {
           enabled: true,

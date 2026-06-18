@@ -250,7 +250,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       // A null slot → slotReady false → not loaded.
       // The encoders read the renderer-toggle override bag off
       // `settings.debug.disabledPasses`; empty by default so no pass is skipped.
-      settings: { flow: { enabled: false }, debug: { disabledPasses: new Set<string>() } },
+      settings: { flow: { enabled: false }, debug: { disabledPasses: {} } },
       assetSlots: { flow: null },
       subsystems: {
         proceduralDisks: null,

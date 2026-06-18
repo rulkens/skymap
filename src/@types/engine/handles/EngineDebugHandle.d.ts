@@ -31,7 +31,7 @@ import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 
 /**
  * `passOverrides` — DebugPanel hook for toggling individual renderer
- * passes off (HDR + UI overlay).  The disabled set is engine-owned settings
+ * passes off (HDR + UI overlay).  The disabled record is engine-owned settings
  * state (`EngineSettingsState.debug.disabledPasses`); the React panel reads it
  * back via `selectDisabledPasses`, so this handle is write-only — there is no
  * `isDisabled` query (the same "dispatch + read back via selector" shape as the
@@ -50,9 +50,10 @@ export type PassOverridesHandle = {
   /** Every pass name across HDR + UI registries, in draw order. */
   readonly allNames: readonly string[];
   /**
-   * Add (`disabled === true`) or remove (`disabled === false`) `name`
-   * from the disabled set.  Wakes the render-on-demand loop so the
-   * change shows up on the next frame even when the camera is idle.
+   * Mark `name` disabled (`disabled === true`) or enabled
+   * (`disabled === false`) in the disabled record.  Wakes the
+   * render-on-demand loop so the change shows up on the next frame even
+   * when the camera is idle.
    */
   setDisabled(name: string, disabled: boolean): void;
 };
