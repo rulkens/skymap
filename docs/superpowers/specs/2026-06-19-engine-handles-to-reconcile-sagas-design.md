@@ -251,11 +251,17 @@ The full set (from the `handleRef.current?.…` audit) and its target action:
 | `debug.setShowPickBuffer/​setShowDiskRadiusRing` | `setShowPickBuffer` / `setShowDiskRadiusRing` |
 | `flow.set(patch)` | `setFlow(patch)` |
 
-**Clamps move onto the write path.** `setVolumeFieldContrast` & co. clamp raw
-intent before dispatching today (`clampVolumeContrast`, …). Since the setter
-disappears, the clamp moves into the `writeVolumeField` reducer so the stored
-Intent is always valid regardless of caller. (`setFlow` already stores raw intent
-and clamps at the renderer — left as is; only the volume-param clamps relocate.)
+**Clamps move to the renderer edge, not the reducer.** `setVolumeFieldContrast` &
+co. clamp raw intent before dispatching today (`clampVolumeContrast`,
+`clampVolumeExposure`, `clampVolumeIntensity`, `clampVolumeDensityScale`,
+`clampVolumeTrim`). Per `intent.md`, the store holds **raw** Intent and GPU-safe
+clamps live at the consumption edge — exactly what `setFlow` already does via
+`clampFlowParams` at the flow renderer. So the setter disappears and the UI
+dispatches `writeVolumeField` **unclamped**; the clamps move to where the params
+are read into the volume uniform — `encodeVolumePrepass.ts` reads
+`state.settings.volumes.items[id]` (line ~75) and feeds the `volumeFieldRenderer`,
+so the clamp applies there (the renderer/prepass edge), mirroring
+`clampFlowParams`. No reducer change.
 
 **Camera / selection / tier / `volumes.add|remove` / read accessors stay on the
 handle** and their call sites are unchanged.
@@ -291,10 +297,10 @@ wiring, e.g. `src/services/engine/wiring/makeReconcileEffects.ts`);
 `src/store/rootSaga.ts` (compose the four watchers); `src/store/createAppStore.ts`
 (return `{ store, setSagaContext }`); `src/main.tsx` + callers (destructure);
 `src/@types/engine/EngineCallbacks.d.ts` (+`setSagaContext`); engine wiring
-(register `reconcile`); `src/state/settings/settingsSlice.ts` (volume-param clamps
-into `writeVolumeField`); **every** SettingsPanel / DebugPanel component that calls
-a dissolved handle (§4); the `EngineHandle` sub-handle types (drop the dissolved
-methods, keep camera/selection/tier/add-remove/accessors).
+(register `reconcile`); `src/services/engine/frame/encodeVolumePrepass.ts` (apply
+the volume-param clamps at the read edge); **every** SettingsPanel / DebugPanel
+component that calls a dissolved handle (§4); the `EngineHandle` sub-handle types
+(drop the dissolved methods, keep camera/selection/tier/add-remove/accessors).
 
 **Delete:**
 `src/services/engine/wiring/settingsTable.ts`; `src/@types/settings/SettingsTableKey.d.ts`;
@@ -346,8 +352,9 @@ rendering.
    dispatch; delete `settingsTable.ts` + `SettingsTableKey` + forwarders. Wake now
    comes from `watchWake`.
 4. **Cut the fade/effect handles over.** Migrate the visibility/label/volume/flow/
-   bias/pass call sites to direct dispatch; relocate the volume-param clamps into
-   `writeVolumeField`; delete the dissolved `handles/*.ts` + forwarders.
+   bias/pass call sites to direct dispatch; move the volume-param clamps to the
+   read edge in `encodeVolumePrepass`; delete the dissolved `handles/*.ts` +
+   forwarders.
 5. **Trim `EngineHandle`.** Drop the dissolved sub-handle methods; freeze the
    surviving surface (camera, selection, tier, add/remove, accessors); reconcile
    tests.
