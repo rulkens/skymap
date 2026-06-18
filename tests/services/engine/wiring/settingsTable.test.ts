@@ -61,7 +61,7 @@ describe('settingsTable', () => {
 
   describe('buildSettersFromTable', () => {
     it('writes a row through the store action and requests a render', () => {
-      const store = createAppStore({ settings: makeSettingsFixture() });
+      const { store } = createAppStore({ settings: makeSettingsFixture() });
       const requestRender = vi.fn();
 
       const setters = buildSettersFromTable(requestRender, store);
@@ -80,7 +80,7 @@ describe('settingsTable', () => {
       // post-process pass (clampExposure) and setFilamentIntensity's to the
       // filament renderer (clampFilamentIntensity). Out-of-range values pass
       // through unchanged — both dispatch copy-on-write store actions.
-      const store = createAppStore({ settings: makeSettingsFixture() });
+      const { store } = createAppStore({ settings: makeSettingsFixture() });
       const requestRender = vi.fn();
 
       const setters = buildSettersFromTable(requestRender, store);
