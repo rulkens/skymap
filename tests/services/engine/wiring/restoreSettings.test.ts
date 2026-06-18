@@ -16,7 +16,7 @@ import type { AppStore } from '../../../../src/store/types';
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { syncVisibilityFades } from '../../../../src/services/engine/wiring/syncVisibilityFades';
 import { restoreSettings } from '../../../../src/services/engine/wiring/restoreSettings';
-import { makeSettingsFixture } from '../settingsStore/makeSettingsFixture';
+import { makeSettingsFixture } from '../../../state/settings/makeSettingsFixture';
 
 vi.mock('../../../../src/services/engine/wiring/syncVisibilityFades', () => ({
   syncVisibilityFades:

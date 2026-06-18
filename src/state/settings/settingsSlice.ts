@@ -31,7 +31,7 @@ import { createSlice, current, type PayloadAction } from '@reduxjs/toolkit';
 
 import { buildInitialSettings } from './initialState';
 import { buildVolumeFieldSettings } from '../../data/volume/volumeFieldDefaults';
-import { mergeSettingsSnapshot } from '../../services/engine/settingsStore/reducers/mergeSettingsSnapshot';
+import { mergeSettingsSnapshot } from './mergeSettingsSnapshot';
 import type { Tier } from '../../@types/data/Tier';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
@@ -159,10 +159,7 @@ const settingsSlice = createSlice({
     setShowDiskRadiusRing: (settings, action: PayloadAction<boolean>) => {
       settings.debug.showDiskRadiusRing = action.payload;
     },
-    setPassDisabled: (
-      settings,
-      action: PayloadAction<{ pass: string; disabled: boolean }>,
-    ) => {
+    setPassDisabled: (settings, action: PayloadAction<{ pass: string; disabled: boolean }>) => {
       // Open-world membership record (any pass name): `[name] === true` disables.
       settings.debug.disabledPasses[action.payload.pass] = action.payload.disabled;
     },

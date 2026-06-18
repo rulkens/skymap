@@ -26,7 +26,7 @@ import {
   SETTINGS_TABLE,
 } from '../../../../src/services/engine/wiring/settingsTable';
 import { createAppStore } from '../../../../src/store/createAppStore';
-import { makeSettingsFixture } from '../settingsStore/makeSettingsFixture';
+import { makeSettingsFixture } from '../../../state/settings/makeSettingsFixture';
 
 describe('settingsTable', () => {
   describe('SETTINGS_TABLE', () => {

@@ -32,7 +32,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createAppStore } from '../../../src/store/createAppStore';
 import type { AppStore } from '../../../src/store/types';
-import { makeSettingsFixture } from './settingsStore/makeSettingsFixture';
+import { makeSettingsFixture } from '../../state/settings/makeSettingsFixture';
 import { MAX_PARTICLES } from '../../../src/data/flow/flowFieldConstants';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import { setFlow } from '../../../src/services/engine/handles/setFlow';

@@ -65,9 +65,9 @@ import {
   selectGalaxyCatalogItems,
   selectMilkyWayLabelEnabled,
 } from '../../state/settings/selectors';
-import { projectVolumeFieldRows } from '../../services/engine/settingsStore/projectVolumeFieldRows';
-import { projectMarkerCategoryVisibility } from '../../services/engine/settingsStore/projectMarkerCategoryVisibility';
-import { projectLabelCategoryVisibility } from '../../services/engine/settingsStore/projectLabelCategoryVisibility';
+import { projectVolumeFieldRows } from '../../state/settings/projectVolumeFieldRows';
+import { projectMarkerCategoryVisibility } from '../../state/settings/projectMarkerCategoryVisibility';
+import { projectLabelCategoryVisibility } from '../../state/settings/projectLabelCategoryVisibility';
 import { buildStaticAnchorStructures } from '../../data/structure/buildStaticAnchorStructures';
 import { isStructureId } from '../../data/structure/structureIds';
 import { DebugPanel } from '../DebugPanel/DebugPanel';
