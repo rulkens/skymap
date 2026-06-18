@@ -2,9 +2,6 @@ import type { EngineCallbacks } from './EngineCallbacks';
 import type { EngineHandle } from './EngineHandle';
 import type { AssetSlot } from '../loading/AssetSlot';
 import type { PhaseLocals } from './PhaseLocals';
-// SPIKE (worktree-fly-to-edge-spike): threaded to startLoop so the
-// `?flowshow` driver can call the scene-setup setters (flow/volumes/etc.).
-import type { SettingsStore } from '../../services/engine/settingsStore/createSettingsStore';
 
 /**
  * Closure captures the bootstrap phases rely on.  Every entry was a

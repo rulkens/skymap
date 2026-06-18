@@ -58,7 +58,7 @@
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { SettingsStore } from '../settingsStore/createSettingsStore';
+import type { AppStore } from '../../../store/types';
 import type { FadeId } from '../../../@types/animation/FadeId';
 import { updatePosition, clampDistance } from '../../camera/orbitCamera';
 import { GALAXY_CATALOG_IDS } from '../../../data/galaxyCatalog/galaxyCatalogIds';
@@ -162,7 +162,7 @@ type Phase = 'idle' | 'armed' | 'running';
  */
 export function createFlowShowcaseDriver(
   state: EngineState,
-  store: SettingsStore,
+  store: AppStore,
   requestRender: () => void,
   farMpc: number = DEFAULT_FAR_MPC,
 ): CameraDriver {

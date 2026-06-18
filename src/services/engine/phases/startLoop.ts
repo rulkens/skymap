@@ -113,7 +113,12 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   // Optional `?flyout=<seconds>` overrides the clip length. Absent the gate,
   // the driver list is the normal tween + auto-rotate pair.
   const wake = () => state.subsystems.scheduler.requestRender();
-  const params = new URLSearchParams(window.location.search);
+  // SPIKE: guard `window` so the node-env phase unit tests (no jsdom) don't
+  // throw on the optional `?flyout=<sec>` / `?floworbit` / `?flowshow` reads.
+  const params =
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search)
+      : new URLSearchParams();
   const flyoutSeconds = Number(params.get('flyout'));
   const orbitSeconds = Number(params.get('floworbit'));
   const showFarMpc = Number(params.get('flowshow'));
@@ -135,11 +140,11 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
           ),
         ]
       : []),
-    ...(hasUrlGate('flowshow') && deps.settingsStore
+    ...(hasUrlGate('flowshow')
       ? [
           createFlowShowcaseDriver(
             state,
-            deps.settingsStore,
+            deps.cb.store,
             wake,
             Number.isFinite(showFarMpc) && showFarMpc > 0 ? showFarMpc : undefined,
           ),
