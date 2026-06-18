@@ -12,8 +12,8 @@
  *
  * `setVisible` is SYNCHRONOUS and does TWO things, in order: it flips the galaxy
  * catalog's `settings.galaxyCatalogs.items[id].enabled` — the single source of
- * truth for on/off — THROUGH the store's copy-on-write action (so React's
- * `useSettingsStore(selectVisibleSourceMask)` subscriber wakes), THEN calls the
+ * truth for on/off — THROUGH a dispatched slice action (so React's
+ * `useAppSelector(selectVisibleSourceMask)` subscriber wakes), THEN calls the
  * bridge with `{ animate: true, only: ['survey'] }`. The bridge reads the
  * just-written intent and fades the `galaxyCatalog` handle. The setter never
  * touches the draw/pick masks — those are a pure derivation (`deriveSourceMasks`

@@ -6,8 +6,8 @@
  * state stub (mirroring `setSourceVisibleFade.test.ts`). Each setter writes the
  * authoritative item leaf THROUGH a real injected settings store (the fixture
  * backs `state.settings` with `createAppStore` and a getter, mirroring the
- * engine's delegation) so the copy-on-write write notifies React's
- * `useSettingsStore` subscriber, THEN drives the matching fade THROUGH
+ * engine's delegation) so the dispatch notifies React's
+ * `useAppSelector` subscriber, THEN drives the matching fade THROUGH
  * `syncVisibilityFades` (the intent → fade bridge).
  *
  * The contract under test: a toggle (1) writes the authoritative item leaf

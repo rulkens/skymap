@@ -16,8 +16,8 @@
  *     sourceCounts, loadProgress.  All but `scale` are fed by engine
  *     callbacks that fire only when the value changes, so direct `setX`
  *     wiring is safe (no spurious re-renders).  The data tier is NOT here:
- *     it lives in the engine settings store, read via `selectTier`; this
- *     hook only exposes the immutable `initialTier` boot seed.
+ *     it lives in the engine settings store, read via `selectTier` /
+ *     `useAppSelector` — this hook neither holds nor exposes it.
  *     `scale` is derived locally from `onCameraChange` snapshots via
  *     the pure `computeScaleInfo` helper — the engine emits the
  *     camera scalars; this hook computes the legend.  React's
@@ -50,7 +50,7 @@
  * render.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createEngine } from '../services/engine';
 import { computeScaleInfo } from '../services/engine/helpers/scaleBar';
 import type { EngineHandle } from '../@types/engine/EngineHandle';
@@ -58,11 +58,9 @@ import type { EngineStatus } from '../@types/engine/EngineStatus';
 import type { FocusableTarget } from '../@types/engine/FocusableTarget';
 import type { ScaleInfo } from '../@types/engine/ScaleInfo';
 import type { LoadProgressState } from '../@types/loading/LoadProgressState';
-import type { Tier } from '../@types/data/Tier';
 import type { UseEngineInput } from '../@types/engine/UseEngineInput';
 import type { UseEngineReturn } from '../@types/engine/UseEngineReturn';
 import { useAppStore } from '../store/hooks';
-import { selectTier } from '../state/settings/selectors';
 import type { SourceType } from '../@types/data/SourceType';
 import type { StructureId } from '../@types/data/structure/StructureId';
 
@@ -101,11 +99,6 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
   const [sourceCounts, setSourceCounts] = useState<Partial<Record<SourceType, number>>>({});
   const [structureCounts, setStructureCounts] = useState<Partial<Record<StructureId, number>>>({});
   const [loadProgress, setLoadProgress] = useState<LoadProgressState | null>(null);
-  // The boot tier is whatever main.tsx seeded the injected store with; read it
-  // once as the immutable startup value. The live tier is read elsewhere via
-  // selectTier/useAppSelector. A stable `useMemo` keeps it from re-deriving
-  // (and so never perturbs the engine effect's deps).
-  const initialTier = useMemo<Tier>(() => selectTier(store.getState()), [store]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -215,6 +208,5 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
     sourceCounts,
     structureCounts,
     loadProgress,
-    initialTier,
   };
 }
