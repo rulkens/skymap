@@ -22,7 +22,7 @@ import type { FilamentReq } from '../../../@types/loading/FilamentReq';
 import type { FilamentCloud } from '../../../@types/data/filament/FilamentCloud';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
-export const createFilamentSlot: SlotFactory<FilamentCloud, FilamentReq> = (state, cb) => {
+export const createFilamentSlot: SlotFactory<FilamentCloud, FilamentReq> = (state) => {
   const slot = createAssetSlot({
     name: 'filaments',
     fetch: filamentFetcher,
@@ -41,18 +41,12 @@ export const createFilamentSlot: SlotFactory<FilamentCloud, FilamentReq> = (stat
   });
   slot.subscribe((s) => {
     // Loading-bar plumbing is owned by aggregateRegistry; this subscriber
-    // fires the app-visible side effects (counts echo + store write + UI
-    // callback) on the `ready` transition. The render wake is
-    // installSlotReadyWake's job, not the factory's.
+    // just logs the parsed counts on the `ready` transition as a dev
+    // diagnostic. The render wake is installSlotReadyWake's job, not the
+    // factory's. Load status needs no store mirror either —
+    // `slotReady(assetSlots.filaments)` is the authoritative "loaded" bit.
     if (s.kind === 'ready') {
       console.log(`[engine] filaments: ${s.value.stripCount} strips, ${s.value.vertexCount} verts`);
-      // Push the parsed counts up to the UI layer.  Load status needs no
-      // store mirror — `slotReady(assetSlots.filaments)` is the authoritative
-      // "loaded" bit; the counts only ever flowed out to React, never back
-      // through a getter.  See `EngineCallbacks.filaments.onReady` for the
-      // lifecycle rationale — one-shot, fires only when the optional binary
-      // actually loaded.
-      cb.filaments?.onReady?.(s.value.stripCount, s.value.vertexCount);
     }
   });
   return slot;

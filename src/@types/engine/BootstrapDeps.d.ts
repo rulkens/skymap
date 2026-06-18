@@ -1,7 +1,6 @@
 import type { EngineCallbacks } from './EngineCallbacks';
 import type { EngineHandle } from './EngineHandle';
 import type { AssetSlot } from '../loading/AssetSlot';
-import type { FpsCounter } from './subsystems/FpsCounter';
 import type { PhaseLocals } from './PhaseLocals';
 
 /**
@@ -24,8 +23,7 @@ export type BootstrapDeps = {
    * `onFrame: () => frameRef.current()` so this assignment in
    * `startLoop` makes every subsequent rAF tick run the real body.
    * Boxed as `{current}` so the write round-trips back across the
-   * module boundary — see Phase 3's `lastReportedFps` for the same
-   * pattern.
+   * module boundary.
    */
   frameRef: { current: () => void };
 
@@ -61,16 +59,6 @@ export type BootstrapDeps = {
    * full lifecycle rationale.
    */
   allSlots: Map<string, AssetSlot<unknown, unknown>>;
-
-  /** Rolling 60-frame counter; threaded through to `startLoop`'s `RunFrameDeps`. */
-  fpsCounter: FpsCounter;
-
-  /**
-   * Mutable: last integer fps value reported via `cb.onFpsChange`.
-   * Threaded through to `startLoop`'s `RunFrameDeps` (the frame body
-   * reads + writes it).  Boxed as `{current}` — see Phase 3.
-   */
-  lastReportedFps: { current: number | null };
 
   /**
    * Phase-local carrier for IIFE-scoped device/context handles that

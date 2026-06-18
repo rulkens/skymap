@@ -11,8 +11,7 @@ import type { StructureStore } from './StructureStore';
  *
  * Filaments and flow have NO store: they held only a status-only `loaded` bit
  * that mirrored their asset slot's `ready` state. That mirror is gone — read
- * `slotReady(state.assetSlots.flow / .filaments)` instead (filament counts reach
- * React via `cb.filaments.onReady`, never through a getter).
+ * `slotReady(state.assetSlots.flow / .filaments)` instead.
  *
  * Volumes also have no store: their only app-side state is per-field settings,
  * which live in `state.settings.volumes.items` (ADR 0006 superseded the

@@ -105,7 +105,7 @@ function NavigationPanel(props: NavigationPanelProps): ReactNode {
 
 // `React.memo` because every prop is a primitive — the panel content is
 // fully static after the first render, but App.tsx re-renders on every
-// camera/fps update during animation.  Without memo the cheatsheet
+// camera update during animation.  Without memo the cheatsheet
 // would re-run its row-mapping for nothing.  Shallow compare on two
 // booleans is essentially free.
 export default memo(NavigationPanel);

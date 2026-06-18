@@ -422,10 +422,6 @@ function makeDeps(): BootstrapDeps {
   const cb: EngineCallbacks = {
     lifecycle: { onStatusChange: vi.fn() },
     selection: { onSelectionChange: vi.fn() } as never,
-    // wireSlots fires `cb.filaments?.onReady` when that slot resolves; it's
-    // optional so absence is fine, but including it lets the test inspect call
-    // counts if needed.
-    filaments: { onReady: vi.fn() } as never,
     sources: { onCatalogReady: vi.fn(), onLoadProgress: vi.fn() } as never,
   } as unknown as EngineCallbacks;
   return {
@@ -435,8 +431,6 @@ function makeDeps(): BootstrapDeps {
     detachControlsRef: { current: null },
     handleRef: { current: null },
     allSlots: new Map(),
-    fpsCounter: { sample: () => null } as unknown as BootstrapDeps['fpsCounter'],
-    lastReportedFps: { current: null },
     phaseLocals: {
       device: {} as GPUDevice,
       context: {} as GPUCanvasContext,

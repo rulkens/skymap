@@ -13,7 +13,7 @@
  *     useKeyboardShortcuts) can call methods on it without dependency
  *     gymnastics.
  *   - Engine-driven state: status, hovered, selected, focused, scale,
- *     fps, sourceCounts, loadProgress.  All but `scale` are fed by engine
+ *     sourceCounts, loadProgress.  All but `scale` are fed by engine
  *     callbacks that fire only when the value changes, so direct `setX`
  *     wiring is safe (no spurious re-renders).  The data tier is NOT here:
  *     it lives in the engine settings store, read via `selectTier`; this
@@ -30,9 +30,8 @@
  * engine-owned settings store; React reads them via `useSettingsStore`
  * selectors, not through this hook.  The only thing the caller layers in
  * via `extraCallbacks` is extra EVENT subscriptions — App-level event
- * wiring plus the `filaments.onReady` event `useEngineSettings` owns —
- * which we spread into the createEngine options block alongside our
- * session callbacks.
+ * wiring (e.g. `selection.onStructureHoverChange`) — which we spread into
+ * the createEngine options block alongside our session callbacks.
  *
  * ──────────────────────────────────────────────────────────────────────
  * Why empty `useEffect` deps?
@@ -89,11 +88,8 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
   const [selected, setSelected] = useState<FocusableTarget | null>(null);
   const [focused, setFocused] = useState<FocusableTarget | null>(null);
   const [scale, setScale] = useState<ScaleInfo>(INITIAL_SCALE);
-  const [fps, setFps] = useState<number>(0);
   const [sourceCounts, setSourceCounts] = useState<Partial<Record<SourceType, number>>>({});
-  const [structureCounts, setStructureCounts] = useState<
-    Partial<Record<StructureId, number>>
-  >({});
+  const [structureCounts, setStructureCounts] = useState<Partial<Record<StructureId, number>>>({});
   const [loadProgress, setLoadProgress] = useState<LoadProgressState | null>(null);
   // One-time startup SEED for the engine's initial tier, derived from the
   // viewport (`window` guarded for SSR / unit-test hosts). This is no longer
@@ -138,31 +134,27 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
     };
 
     // `EngineCallbacks` is EVENT-only: lifecycle / selection / camera /
-    // sources events, plus the one-shot `filaments.onReady`.  Each bag
-    // here merges this hook's session-level subscriptions (status /
-    // hover / select / focus / camera / fps / catalog / tier / load
-    // progress) with whatever `extraCallbacks` declares for that
-    // cluster — App-level event subscriptions (e.g.
-    // `selection.onStructureHoverChange`) plus the `filaments` events
-    // `useEngineSettings` owns.  Spread order puts the extra-callback
-    // entries LAST so the caller wins where both define the same
-    // method.  Settings VALUES do not flow through here:
-    // they live in the engine-owned store and React reads them via
-    // `useSettingsStore` selectors, so there is no echo to merge.
-    // `initialTier` rides through as a non-callback option.
+    // sources events.  Each bag here merges this hook's session-level
+    // subscriptions (status / hover / select / focus / camera / catalog /
+    // tier / load progress) with whatever `extraCallbacks` declares for
+    // that cluster — App-level event subscriptions (e.g.
+    // `selection.onStructureHoverChange`).  Spread order puts the
+    // extra-callback entries LAST so the caller wins where both define the
+    // same method.  Settings VALUES do not flow through here: they live in
+    // the engine-owned store and React reads them via `useSettingsStore`
+    // selectors, so there is no echo to merge.  `initialTier` rides
+    // through as a non-callback option.
     const {
       lifecycle: extraLifecycle,
       camera: extraCamera,
       selection: extraSelection,
       sources: extraSources,
-      filaments: extraFilaments,
     } = extraCallbacks ?? {};
 
     const handle = createEngine(canvas, {
       initialTier,
       lifecycle: {
         onStatusChange: setStatus,
-        onFpsChange: setFps,
         ...extraLifecycle,
       },
       selection: {
@@ -190,12 +182,6 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
         onStructureCountsChange: setStructureCounts,
         ...extraSources,
       },
-      // The filaments-ready event has no session-level subscription
-      // here — `useEngineSettings` owns it.  Pass it through
-      // unconditionally so the optional-chain in engine code resolves to
-      // the actual function (or stays undefined if the consumer didn't
-      // subscribe).
-      filaments: extraFilaments,
     });
 
     handleRef.current = handle;
@@ -221,7 +207,6 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
     selected,
     focused,
     scale,
-    fps,
     sourceCounts,
     structureCounts,
     loadProgress,

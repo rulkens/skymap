@@ -103,8 +103,6 @@ function makeDeps(): any {
     detachControlsRef: { current: null },
     handleRef: { current: null },
     allSlots: new Map(),
-    fpsCounter: { sample: () => null } as any,
-    lastReportedFps: { current: null },
   };
 }
 
@@ -126,26 +124,20 @@ describe('runBootstrapPhases', () => {
 
   it('first rejection short-circuits — initGpu throws → wireSlots/wireInput/startLoop NOT called', async () => {
     __phaseControl.initGpu.throw = new Error('initGpu boom');
-    await expect(runBootstrapPhases(makeState(), makeDeps())).rejects.toThrow(
-      'initGpu boom',
-    );
+    await expect(runBootstrapPhases(makeState(), makeDeps())).rejects.toThrow('initGpu boom');
     // Only the throwing phase ran; later phases are not invoked.
     expect(order).toEqual(['initGpu']);
   });
 
   it('first rejection short-circuits — wireSlots throws → wireInput/startLoop NOT called', async () => {
     __phaseControl.wireSlots.throw = new Error('wireSlots boom');
-    await expect(runBootstrapPhases(makeState(), makeDeps())).rejects.toThrow(
-      'wireSlots boom',
-    );
+    await expect(runBootstrapPhases(makeState(), makeDeps())).rejects.toThrow('wireSlots boom');
     expect(order).toEqual(['initGpu', 'wireSlots']);
   });
 
   it('first rejection short-circuits — wireInput throws → startLoop NOT called', async () => {
     __phaseControl.wireInput.throw = new Error('wireInput boom');
-    await expect(runBootstrapPhases(makeState(), makeDeps())).rejects.toThrow(
-      'wireInput boom',
-    );
+    await expect(runBootstrapPhases(makeState(), makeDeps())).rejects.toThrow('wireInput boom');
     expect(order).toEqual(['initGpu', 'wireSlots', 'wireInput']);
   });
 

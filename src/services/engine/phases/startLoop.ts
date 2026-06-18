@@ -6,10 +6,9 @@
  * ### What this phase does
  *
  *   - Constructs the `RunFrameDeps` object, threading every closure
- *     capture the frame body needs: `canvas`, `cb`, `fpsCounter`,
- *     `lastReportedFps` (a `{current}` ref), the GPU device + context
- *     (from `phaseLocals`), every renderer (from `state.gpu.*`), and
- *     a locally-snapshotted Milky-Way iTime epoch.  The pure `cssToTexPx` helper is imported
+ *     capture the frame body needs: `canvas`, `cb`, the GPU device +
+ *     context (from `phaseLocals`), every renderer (from `state.gpu.*`),
+ *     and a locally-snapshotted Milky-Way iTime epoch.  The pure `cssToTexPx` helper is imported
  *     directly in `runFrame.ts` rather than threaded through deps —
  *     it captures no per-engine state.  See `runFrame.ts`'s module
  *     header for the dep-vs-state rationale.  Hover/select callbacks
@@ -106,17 +105,13 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
 
   // Build the dep bag for `runFrame` once, here in the orchestrator's
   // last phase where every closure-captured local is in scope.  The bag
-  // is stable across frames: `lastReportedFps` rides as a `{current}`
-  // ref so the body's writes round-trip back into engine.ts; the GPU-
-  // side renderers (`milkyWayRenderer`, `texturedQuadRenderer`, …) are
-  // read off `state.gpu.*` directly — mirroring them on `phaseLocals`
-  // would be redundant state.  See runFrame.ts's module header for
-  // the dep-vs-state rationale.
+  // is stable across frames: the GPU-side renderers (`milkyWayRenderer`,
+  // `texturedQuadRenderer`, …) are read off `state.gpu.*` directly —
+  // mirroring them on `phaseLocals` would be redundant state.  See
+  // runFrame.ts's module header for the dep-vs-state rationale.
   const frameDeps: RunFrameDeps = {
     canvas: deps.canvas,
     cb: deps.cb,
-    fpsCounter: deps.fpsCounter,
-    lastReportedFps: deps.lastReportedFps,
     device: phaseLocals.device,
     context: phaseLocals.context,
     milkyWayRenderer,

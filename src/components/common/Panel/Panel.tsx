@@ -3,29 +3,29 @@
  *
  * ### Why this component exists
  *
- * The HUD has a family of left-stack overlays — Navigation, Settings,
- * Stats — that all wear the exact same chrome: blue-tinted glass card,
+ * The HUD has a family of left-stack overlays — Navigation, Settings —
+ * that all wear the exact same chrome: blue-tinted glass card,
  * uppercase title row with a clickable chevron that folds the body away,
  * 300 px width.  Until this refactor, each panel re-implemented the
  * markup AND duplicated the CSS for that chrome (with a comment apologising
- * for the duplication).  Three forks of the same affordance is the point
+ * for the duplication).  Multiple forks of the same affordance is the point
  * at which "small duplication wins on clarity" stops being true — fixing
- * a hover-state bug or tweaking the corner radius required three identical
- * edits, and divergence was inevitable.
+ * a hover-state bug or tweaking the corner radius required the same edit
+ * in every fork, and divergence was inevitable.
  *
  * Panel collapses (pun intended) the chrome into one component.  Consumers
  * pass `title`, `defaultOpen`, and `children`; the per-row styling lives in
- * the consumer's own CSS module (key/action for Navigation, label/value for
- * Stats, panelRow for Settings).  See `Panel.module.css` for the chrome
- * rules and the matching split between "shared chrome" and "per-panel rows".
+ * the consumer's own CSS module (key/action for Navigation, panelRow for
+ * Settings).  See `Panel.module.css` for the chrome rules and the matching
+ * split between "shared chrome" and "per-panel rows".
  *
  * ### Collapse state — session-only, no localStorage
  *
  * Collapse is intentionally session-only.  An earlier draft persisted the
  * open/closed boolean to `localStorage` per-panel so a user's layout choice
- * survived reloads, but that wired three near-identical SSR-safe try/catch
- * blocks across the codebase and produced surprises (a user hides the Stats
- * panel once, then weeks later wonders why fps numbers stopped working).
+ * survived reloads, but that wired near-identical SSR-safe try/catch
+ * blocks across the codebase and produced surprises (a user collapses a
+ * panel once, then weeks later wonders why a control went missing).
  * A fresh visit always starts in the `defaultOpen` state — predictable,
  * cheap, no state synchronisation across tabs.
  *
@@ -65,17 +65,15 @@ import styles from './Panel.module.css';
 export type PanelProps = {
   /**
    * Heading text rendered uppercase by the stylesheet.  Pass it the way
-   * you'd want it to read in a sentence ("Settings", "STATS", "Navigation")
-   * — the CSS handles the visual case.  (NavigationPanel and StatsPanel
-   * historically passed already-uppercased strings; both forms work, but
-   * lower- or title-case in the source reads more naturally.)
+   * you'd want it to read in a sentence ("Settings", "Navigation") — the
+   * CSS handles the visual case.  Already-uppercased strings work too, but
+   * lower- or title-case in the source reads more naturally.
    */
   title: string;
   /**
    * Forwarded to the outer `<div>` as `aria-label`.  Optional because most
    * consumers' titles are already self-describing — supply this when the
-   * panel's purpose isn't obvious from the title alone (e.g. "Render
-   * statistics" disambiguates the "STATS" header for a screen reader).
+   * panel's purpose isn't obvious from the title alone for a screen reader.
    */
   ariaLabel?: string;
   /**
@@ -157,10 +155,7 @@ export function Panel({
             CollapsibleSection sub-sections, so the open/close gesture
             reads as one consistent "fold" at every nesting level.
           */}
-          <span
-            className={cx(styles.chevron, open && styles.chevronOpen)}
-            aria-hidden
-          >
+          <span className={cx(styles.chevron, open && styles.chevronOpen)} aria-hidden>
             ▸
           </span>
           <span className={styles.title}>{title}</span>
@@ -170,9 +165,7 @@ export function Panel({
           Tier chip).  Rendered only when the consumer passes a node so
           panels without an extra control don't pay any layout cost.
         */}
-        {headerExtra !== undefined && (
-          <div className={styles.headerExtra}>{headerExtra}</div>
-        )}
+        {headerExtra !== undefined && <div className={styles.headerExtra}>{headerExtra}</div>}
       </div>
 
       {/*

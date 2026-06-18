@@ -19,13 +19,11 @@ type ExtraEngineCallbacks = {
 
 export type UseEngineInput = {
   /**
-   * Extra callbacks to layer onto the engine's options block.  In
-   * practice this is the `engineCallbacks` slice from
-   * `useEngineSettings` — settings echoes that drive React-side
-   * SettingsPanel state — plus App-level subscriptions to specific
-   * methods like `selection.onStructureHoverChange` for the structure hover preview.
-   * Captured at first render; do not expect subsequent changes to take
-   * effect.
+   * Extra callbacks to layer onto the engine's options block — App-level
+   * subscriptions to specific methods like `selection.onStructureHoverChange`
+   * for the structure hover preview, without re-supplying the required
+   * methods this hook already wires.  Captured at first render; do not
+   * expect subsequent changes to take effect.
    */
   extraCallbacks?: ExtraEngineCallbacks;
 };

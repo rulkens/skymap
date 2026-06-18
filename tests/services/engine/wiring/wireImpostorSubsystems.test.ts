@@ -92,10 +92,12 @@ import { wireImpostorSubsystems } from '../../../../src/services/engine/wiring/w
 // ── Helpers ───────────────────────────────────────────────────────────
 
 /** Build a minimal EngineState with the GPU renderers needed by wireImpostorSubsystems. */
-function makeState(opts: {
-  texturedDiskRenderer?: object | null;
-  proceduralDiskRenderer?: object | null;
-} = {}): EngineState {
+function makeState(
+  opts: {
+    texturedDiskRenderer?: object | null;
+    proceduralDiskRenderer?: object | null;
+  } = {},
+): EngineState {
   const bindAtlas = vi.fn();
   const bindHiResArray = vi.fn();
   return {
@@ -128,8 +130,6 @@ function makeDeps(): BootstrapDeps {
     detachControlsRef: { current: null },
     handleRef: { current: null },
     allSlots: new Map(),
-    fpsCounter: { sample: () => null } as unknown as BootstrapDeps['fpsCounter'],
-    lastReportedFps: { current: null },
     phaseLocals: {
       device: {} as GPUDevice,
       context: {} as GPUCanvasContext,
@@ -186,17 +186,11 @@ describe('wireImpostorSubsystems', () => {
     // the explicit throws turn a confusing runtime NPE into a clear
     // bootstrap-ordering error.
     expect(() =>
-      wireImpostorSubsystems(
-        makeState({ texturedDiskRenderer: null }),
-        makeDeps(),
-      ),
+      wireImpostorSubsystems(makeState({ texturedDiskRenderer: null }), makeDeps()),
     ).toThrow('wireSlots: texturedDisk/proceduralDisk renderers must be initialised by initGpu');
 
     expect(() =>
-      wireImpostorSubsystems(
-        makeState({ proceduralDiskRenderer: null }),
-        makeDeps(),
-      ),
+      wireImpostorSubsystems(makeState({ proceduralDiskRenderer: null }), makeDeps()),
     ).toThrow('wireSlots: texturedDisk/proceduralDisk renderers must be initialised by initGpu');
   });
 });

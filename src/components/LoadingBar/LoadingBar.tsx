@@ -21,10 +21,11 @@
  *
  * The bar must remain visible regardless of which overlay is open —
  * Settings panel, InfoCard, CommandPalette modal — so a fixed-position,
- * z-index 100 strip at the top edge wins over (a) a row inside the
- * StatsPanel (hidden when the panel is collapsed) and (b) an in-canvas
- * overlay (visually crowds the renderer).  GitHub, YouTube, and many
- * web apps use the same pattern; the affordance is well-learned.
+ * z-index 100 strip at the top edge wins over (a) a row inside a
+ * collapsible left-stack panel (hidden when the panel is collapsed) and
+ * (b) an in-canvas overlay (visually crowds the renderer).  GitHub,
+ * YouTube, and many web apps use the same pattern; the affordance is
+ * well-learned.
  *
  * ### Why a fade-out rather than instant unmount
  *

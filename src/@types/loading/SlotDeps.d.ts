@@ -5,7 +5,7 @@
  *
  * Each slot factory needs access to `EngineState` (to write its slot onto
  * `state.assetSlots`, read GPU handles in the commit callback, etc.) and
- * `EngineCallbacks` (to fire engine EVENTS like `filaments.onReady` from
+ * `EngineCallbacks` (to fire engine EVENTS like `sources.onCatalogReady` from
  * inside commit). Splitting them into individual parameters `(state, cb, device, ...)` as
  * more dependencies accumulate would force every factory signature to
  * change in lockstep. A single bag keeps every factory shape identical

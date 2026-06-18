@@ -4,8 +4,7 @@
  * Boundary between the imperative WebGPU engine and the React UI.  Its
  * job is wiring: pull state out of focused hooks in `src/hooks/`, hand
  * it to presentational children, and forward user input back into the
- * engine.  Hook order matters: `useEngineSettings` runs first so its
- * `engineCallbacks` exist when `useEngine` constructs the engine.
+ * engine.
  *
  * `handleRef` is a ref, not state: many hooks call methods on the
  * engine, and putting the handle in state would re-render every
@@ -28,7 +27,6 @@ import { InfoCard } from '../InfoCard/InfoCard';
 import { ScaleBar } from '../ScaleBar/ScaleBar';
 import { SettingsPanel } from '../SettingsPanel/SettingsPanel';
 import NavigationPanel from '../NavigationPanel/NavigationPanel';
-import StatsPanel from '../StatsPanel/StatsPanel';
 import { CommandPalette } from '../CommandPalette/CommandPalette';
 import SearchTrigger from '../SearchTrigger/SearchTrigger';
 import AutoRotateToggle from '../AutoRotateToggle/AutoRotateToggle';
@@ -42,7 +40,6 @@ import { useUrlSync } from '../../hooks/useUrlSync';
 import { useFamousMeta } from '../../hooks/useFamousMeta';
 import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
-import { useEngineSettings } from '../../hooks/useEngineSettings';
 import { useSettingsStore } from '../../hooks/useSettingsStore';
 import { selectGalaxyCatalogSize } from '../../services/engine/settingsStore/selectors/selectGalaxyCatalogSize';
 import { selectDepthFade } from '../../services/engine/settingsStore/selectors/selectDepthFade';
@@ -133,10 +130,6 @@ const GALAXY_CATALOG_ITEMS_DEFAULT = Object.fromEntries(
 const DISABLED_PASSES_DEFAULT: ReadonlySet<string> = new Set();
 
 export function App(): React.ReactElement {
-  const { settings, engineCallbacks: settingsCallbacks } = useEngineSettings();
-
-  const { filamentCounts } = settings;
-
   const {
     canvasRef,
     handleRef,
@@ -145,12 +138,11 @@ export function App(): React.ReactElement {
     selected,
     focused,
     scale,
-    fps,
     sourceCounts,
     structureCounts,
     loadProgress,
     initialTier,
-  } = useEngine({ extraCallbacks: settingsCallbacks });
+  } = useEngine();
 
   // Galaxy catalogs-cluster settings read live off the engine-owned store (no React
   // mirror). Each fallback is the same `data/defaults.ts` seed the store is
@@ -221,9 +213,8 @@ export function App(): React.ReactElement {
   // store. The SettingsPanel handlers dispatch through `handle.filaments.setEnabled`
   // / `setIntensity` (action-backed; `setEnabled` also drives the fade ramp),
   // which notify synchronously, so the controls track without an optimistic
-  // cell. The StatsPanel reads `filamentsEnabled` too. Fallbacks match the
-  // store's seed (`SOURCE_REGISTRY[Source.Filaments]`), so first paint (before
-  // `handleRef` lands) matches engine truth.
+  // cell. Fallbacks match the store's seed (`SOURCE_REGISTRY[Source.Filaments]`),
+  // so first paint (before `handleRef` lands) matches engine truth.
   const filamentsEnabled = useSettingsStore(
     handleRef,
     selectFilamentsEnabled,
@@ -531,14 +522,6 @@ export function App(): React.ReactElement {
             // per-knob handlers).
             flow={flow}
             onFlowChange={onFlowChange}
-          />
-          <StatsPanel
-            defaultOpen={false}
-            fps={fps}
-            sourceCounts={sourceCounts}
-            visibleSourceMask={visibleSourceMask}
-            filamentsEnabled={filamentsEnabled}
-            filamentCounts={filamentCounts}
           />
         </div>
         {/* Top-center pill row.  SearchTrigger + the pills share a flex

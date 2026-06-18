@@ -1,11 +1,10 @@
 /**
  * filamentSlot — verifies the slot uploads the skeleton to the renderer and
- * echoes its parsed counts to the UI.
+ * reaches `ready`.
  *
- * The slot's observable effects on `ready` are: the GPU upload, the first-load
- * fade-in driven through the intent → fade bridge, and the `onReady` UI echo.
- * There is no status store — "loaded" is the slot's own `ready` state; the counts
- * flow out through `onReady`, never back through a getter. The render wake is
+ * The slot's observable effects on `ready` are: the GPU upload and the
+ * first-load fade-in driven through the intent → fade bridge. There is no
+ * status store — "loaded" is the slot's own `ready` state. The render wake is
  * handled generically by `installSlotReadyWake` in the wiring layer. We mock the
  * fetcher so `slot.load()` drives a deterministic ready transition without
  * touching the network, and mock the bridge to a typed spy so we assert the
@@ -82,19 +81,5 @@ describe('createFilamentSlot', () => {
     // self-install it — `installSlots` (the orchestrator) owns the write.
     expect(slot.name).toBe('filaments');
     expect(state.assetSlots.filaments).toBeUndefined();
-  });
-
-  it('echoes the parsed counts to the UI callback', async () => {
-    const cloud = fakeCloud();
-    mockFetch.mockResolvedValue(cloud);
-    const state = fakeState();
-    const onReady = vi.fn();
-    const cb = { filaments: { onReady } } as unknown as EngineCallbacks;
-
-    const slot = createFilamentSlot(state, cb);
-    slot.load({ tier: 'medium' } as never);
-    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
-
-    expect(onReady).toHaveBeenCalledWith(12, 3400);
   });
 });

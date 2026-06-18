@@ -1,22 +1,19 @@
 /**
- * runFrame — focused integration test for the FPS-counter wiring.
+ * runFrame — focused tests for the camera-driver resolve and the
+ * per-frame demand re-evaluation.
  *
  * The full per-frame body is exercised end-to-end by higher-level engine
  * tests (renderFrame.test.ts integration suite, engine.tier-swap-race, etc.).
- * This file only verifies the *plumbing* the Phase-3 extraction introduces:
- * the `lastReportedFps` mutable closure now lives behind a `{current}` ref
- * threaded through `RunFrameDeps`, and the round-trip — sample the counter,
- * compare against the ref, fire the callback when the integer rolls over —
- * still happens inside `runFrame`.
+ * This file pins two lighter slices: the camera-driver priority resolver
+ * (which runs before `deriveFrameContext`) and the once-per-frame
+ * `reevaluateDemand` call.
  *
- * Testing only this slice keeps the test cheap: we don't need a GPU device,
- * an OrbitCamera, or any of the rendering subsystems.  The frame body is
- * structured so every "do something" path is gated on a state field
- * (`state.cam`, `state.gpu.renderer`, …) — leaving them all null short-
- * circuits the body before any of the GPU work runs, while still letting
- * the FPS sampling at the very top of the body execute.  See the early-
- * return at `if (!vp || !rendererRef || …) return` inside runFrame for
- * the bail-out that makes this possible.
+ * Testing only these slices keeps the test cheap: we don't need a GPU device
+ * or any of the rendering subsystems.  The frame body is structured so every
+ * "do something" GPU path is gated on a state field (`state.gpu.renderer`,
+ * …) — leaving them all null short-circuits the body before any of the GPU
+ * work runs.  See the early-return at `if (!vp || !rendererRef || …) return`
+ * inside runFrame for the bail-out that makes this possible.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -50,12 +47,11 @@ import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
 
 /**
- * Build a minimal `EngineState`-shaped fixture that lets `runFrame`
- * execute the FPS-sampling block at the top of the body and then bail
- * out cleanly via the renderer-null guard further down.  Casting through
- * `unknown` keeps the test honest — if the FPS path ever reaches into a
- * field not stubbed here, the test will surface it as a runtime
- * undefined rather than a silently-passing stub.
+ * Build a minimal `EngineState`-shaped fixture that lets `runFrame` run the
+ * camera + demand slices and then bail out cleanly via the renderer-null
+ * guard further down.  Casting through `unknown` keeps the test honest — if
+ * the exercised path ever reaches into a field not stubbed here, the test
+ * will surface it as a runtime undefined rather than a silently-passing stub.
  */
 function makeState(): EngineState {
   return {
@@ -140,15 +136,12 @@ function makeState(): EngineState {
 }
 
 /**
- * Build a `RunFrameDeps` whose only meaningful field is the FPS wiring;
- * every other dep is a no-op stub because the renderer-null bail-out
- * inside `runFrame` short-circuits before any of them are touched.
+ * Build a `RunFrameDeps` of no-op stubs.  Every dep is inert because the
+ * renderer-null bail-out inside `runFrame` short-circuits before any of
+ * them are touched; the camera-driver fixtures override `drivers` + `canvas`
+ * via `makeCamDeps`.
  */
-function makeDeps(opts: {
-  fpsValue: number | null;
-  lastReportedFps: { current: number | null };
-  onFpsChange?: (fps: number) => void;
-}): RunFrameDeps {
+function makeDeps(): RunFrameDeps {
   return {
     canvas: {
       width: 0,
@@ -156,13 +149,9 @@ function makeDeps(opts: {
       clientWidth: 0,
       clientHeight: 0,
     } as unknown as HTMLCanvasElement,
-    // H5 task 11: runFrame fires the nested `lifecycle.onFpsChange`
-    // address only.  The test fixture mirrors that shape.
-    cb: { lifecycle: { onFpsChange: opts.onFpsChange } } as unknown as RunFrameDeps['cb'],
-    fpsCounter: {
-      sample: vi.fn().mockReturnValue(opts.fpsValue),
-    } as unknown as RunFrameDeps['fpsCounter'],
-    lastReportedFps: opts.lastReportedFps,
+    // runFrame only reads `cb.camera?.onCameraChange` (optional); these
+    // renderer-null fixtures don't subscribe, so an empty bag suffices.
+    cb: {} as unknown as RunFrameDeps['cb'],
     device: {} as unknown as GPUDevice,
     context: {} as unknown as GPUCanvasContext,
     milkyWayRenderer: {} as unknown as RunFrameDeps['milkyWayRenderer'],
@@ -176,49 +165,6 @@ function makeDeps(opts: {
     drivers: [],
   };
 }
-
-describe('runFrame — FPS wiring', () => {
-  it('updates lastReportedFps.current and fires onFpsChange when the counter rolls over to a new integer', () => {
-    const onFpsChange = vi.fn();
-    const lastReportedFps = { current: null as number | null };
-
-    const state = makeState();
-    const deps = makeDeps({ fpsValue: 60, lastReportedFps, onFpsChange });
-
-    runFrame(state, deps, 1000);
-
-    expect(lastReportedFps.current).toBe(60);
-    expect(onFpsChange).toHaveBeenCalledWith(60);
-    expect(onFpsChange).toHaveBeenCalledOnce();
-  });
-
-  it('does not re-fire onFpsChange when the counter samples the same integer twice in a row', () => {
-    const onFpsChange = vi.fn();
-    const lastReportedFps = { current: 60 as number | null };
-
-    const state = makeState();
-    const deps = makeDeps({ fpsValue: 60, lastReportedFps, onFpsChange });
-
-    runFrame(state, deps, 1016);
-
-    // Same integer → no callback fire, ref unchanged.
-    expect(onFpsChange).not.toHaveBeenCalled();
-    expect(lastReportedFps.current).toBe(60);
-  });
-
-  it('does not fire onFpsChange when the counter is still bootstrapping (sample returns null)', () => {
-    const onFpsChange = vi.fn();
-    const lastReportedFps = { current: null as number | null };
-
-    const state = makeState();
-    const deps = makeDeps({ fpsValue: null, lastReportedFps, onFpsChange });
-
-    runFrame(state, deps, 0);
-
-    expect(onFpsChange).not.toHaveBeenCalled();
-    expect(lastReportedFps.current).toBeNull();
-  });
-});
 
 /**
  * Camera-driver regression fixtures.
@@ -271,7 +217,7 @@ function makeCamState(opts: {
  * returns false and doesn't poke `cam.aspect`.
  */
 function makeCamDeps(state: EngineState): RunFrameDeps {
-  const deps = makeDeps({ fpsValue: null, lastReportedFps: { current: null } });
+  const deps = makeDeps();
   return {
     ...deps,
     canvas: {
@@ -358,7 +304,7 @@ describe('runFrame — demand re-evaluation', () => {
     // can't silently regress the way a forgotten per-setter call did.
     vi.mocked(reevaluateDemand).mockClear();
     const state = makeState();
-    const deps = makeDeps({ fpsValue: null, lastReportedFps: { current: null } });
+    const deps = makeDeps();
 
     runFrame(state, deps, 1000);
 
