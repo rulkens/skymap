@@ -1,6 +1,12 @@
 # Outreach Plan — Actionable TODO
 
-Flat checklist of currently-unchecked items, grouped by task. Skip items marked `[x]` in the per-task files. Start at Task 0 and work down.
+Flat checklist of currently-unchecked items, grouped by task. Skip items marked `[x]` in the per-task files.
+
+> **Re-scoped 2026-06-18** (see README "Re-scope" section). Live sequence:
+> **Task 3 (JOSS, keystone) → Task 7 (Product Hunt) / Task 8 (ed-tech) /
+> Task 5 (emails) / Task 4 (opportunistic subreddits)** — the last four
+> no longer block each other; all anchor to the steady 80–100 visitors/day.
+> Task 6 (RNAAS) is dropped.
 
 ## Task 0: Cut v0.2.0 release + refresh Zenodo DOI — DONE 2026-05-06
 
@@ -43,36 +49,45 @@ locally (it's resumable and the README still documents the fallback).
 - [ ] Submit at https://joss.theoj.org/papers/new once Task 0's DOI is locked in
 - [ ] Verify: `gh issue list --repo rulkens/skymap --search "JOSS in:title"` shows pre-review issue within 24 h
 
-## Task 4: Public posts (all pending Task 0 + Task 1)
+## Task 4: Public posts — re-scoped (opportunistic, no calendar)
 
-- [x] Show HN: sent 2026-05-06 — https://news.ycombinator.com/item?id=48037383
-- [x] Verify HN: Firebase API returns score, descendants, dead=null (checked 2026-05-07: score 5, 10 comments, ~25 h old)
-- [x] Bluesky: 4-part thread sent 2026-05-07 — https://bsky.app/profile/rulkens.bsky.social/post/3ml723ez2fk2d
-- [ ] Verify Bluesky thread is live and chained (manual check)
-- [ ] ~~**Thu 7 May, 12:00 CEST**: r/MapPorn~~ — slot slipped past noon; reschedule TBD
-- [ ] **Thu 7 May, 12:00-18:00 CEST**: record 20-30 s screen capture of skymap orbit + zoom (Tab-hidden UI). Reused for r/Astronomy and r/WebGPU.
-- [ ] **Thu 7 May, ~19:00 CEST**: r/Astronomy (VIDEO; +17pp lift)
-- [x] **Thu 7 May, 16:30 CEST**: r/dataisbeautiful — sent. https://www.reddit.com/r/dataisbeautiful/comments/1t6cjhr/oc_cosmicweb_structure_across_2m_galaxies_sdss/
-- [ ] **Fri 8 May, ~21:00-22:00 CEST**: r/WebGPU (VIDEO; +14pp lift, +8pp evening)
-- [ ] Verify each Reddit post appears in /new; check upvote + comment count after 6 h
-- [ ] Maintain threads: reply to comments for 48 h after each post
+Done: Show HN (2026-05-06, soft), Bluesky thread (2026-05-07), r/dataisbeautiful (2026-05-07).
 
-## Task 5: Academic emails (pending Task 4 traction)
+- [ ] Record a 20–30 s capture video (Tab-hidden UI) — shared asset with Task 7.
+- [ ] **r/InternetIsBeautiful** — highest-fit untapped sub; interaction-first title.
+- [ ] **r/cosmology** — large-scale-structure audience; high signal.
+- [ ] **r/space** (VIDEO) and **r/Astronomy** (VIDEO; +17pp) — read sidebars first.
+- [ ] Tier 2 opportunistic: r/WebGPU / r/programming (engineering angle).
+- [ ] Obey the 10% self-promo rule, `[OC]` + data-source credit, spread over days.
+- [ ] Verify each post in /new; reply to comments for 48 h.
 
-- [ ] Substitute concept DOI `10.5281/zenodo.20037028` into all five email drafts
-- [ ] Send Email 1 — SDSS outreach team (`outreach@sdss.org`)
-- [ ] Send Email 2 — GLADE authors (Gergely Dálya — confirm address first)
-- [ ] Send Email 3 — AAS WWT / Peter Williams (`pwilliams@aas.org` — confirm)
-- [ ] Send Email 4 — CDS Strasbourg / Thomas Boch + Pierre Fernique (confirm addresses)
-- [ ] Send Email 5 — LVK EM follow-up (GROWTH or ENGRAVE — choose one)
-- [ ] Verify sent-mail: no `NNNNNNNN` literal in any sent message
-- [ ] Start reply log at `~/.claude/projects/-Users-rulkens-Development-js-skymap/memory/outreach_log.md`
+## Task 5: Academic emails — re-gated onto Task 3 + traffic stat
 
-## Task 6: RNAAS note (optional)
+- [x] Drafts exist locally under `posts-and-emails/` with concept DOI `10.5281/zenodo.20037028`.
+- [ ] Refresh opener to lead with **80–100 visitors/day** + live demo (+ "JOSS submitted" once Task 3 lands).
+- [ ] Confirm address — Email 2 GLADE / Gergely Dálya (current institution).
+- [ ] Confirm address — Email 4 CDS / Thomas Boch + Pierre Fernique.
+- [ ] Confirm address — Email 3 AAS WWT / Peter Williams (`pwilliams@aas.org`?).
+- [ ] Send Email 1 (SDSS `outreach@sdss.org`), 2, 3, 4 — spread over 3–5 days.
+- [ ] Email 5 (LVK) — **dropped** unless GW overlay ships or GW community reaches out.
+- [ ] Verify sent-mail: no `NNNNNNNN` / `1228374974` literal; DOI correct everywhere.
+- [ ] Start reply log at `~/.claude/projects/-Users-rulkens-Development-js-skymap/memory/outreach_log.md`.
 
-- [ ] Write `paper/rnaas.md` (content in [task-6-rnaas.md](task-6-rnaas.md) Step 6.1)
-- [ ] Verify: `wc -w paper/rnaas.md` — expect ~400–700 words
-- [ ] Convert to PDF: `pandoc paper/rnaas.md -o paper/rnaas.pdf`
-- [ ] Verify PDF renders cleanly
-- [ ] Submit at https://aas.org/journals/journals_about/research_notes_aas
-- [ ] Commit: `git add paper/rnaas.md`
+## Task 7: Product Hunt launch (NEW — see task-7-product-hunt.md)
+
+- [ ] Capture flythrough video (shared with Task 4).
+- [ ] Write tagline (≤60 chars), description (~260 chars), maker first-comment (~200 words).
+- [ ] Decide account/handle (personal vs skymap-specific) — **user decision**.
+- [ ] Pick gallery images from `docs/screenshots/`.
+- [ ] Schedule launch (Tue–Thu, live 00:01 PT); reply to all comments in first 6 h.
+- [ ] Log final rank + upvotes in `outreach_log.md`.
+
+## Task 8: Ed-tech blogger outreach (NEW — see task-8-edtech-blogs.md)
+
+- [ ] Build target list (~8–12 outlets, start with outilstice.com).
+- [ ] Write pitch template (~120–150 words); state the WebGPU requirement up front.
+- [ ] Customize per outlet; stagger sends; log in `outreach_log.md`.
+
+## Task 6: RNAAS note — DROPPED 2026-06-18
+
+Overlaps ~entirely with the JOSS paper (Task 3). Revisit only if JOSS stalls.

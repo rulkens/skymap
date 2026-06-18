@@ -13,18 +13,57 @@ Three audiences, three angles, stepped rhythm so a single dud doesn't cap exposu
 - `posts-and-emails/reddit-r-webgpu.md` — r/WebGPU.
 - `posts-and-emails/reddit-r-mapporn.md` — r/MapPorn (cartography angle, added 2026-05-07).
 
-## Send order
+## Done (Wave-B launch, May 2026)
 
-1. HN (weekday afternoon CET ≈ 15:30 CET / 09:30 ET, OP available 4-6h after submit).
-2. Bluesky thread (2h after HN submit, ~17:30 CET).
-**Reddit schedule rebuilt 2026-05-07 00:39 CEST** after Wed slipped past without
-posting. Order now bracketed by video-prerequisite (record once Thu afternoon,
-reuse for Fri WebGPU). Two posts per day to avoid spam-flag risk.
+1. **HN** — sent 2026-05-06 (score 5, 10 comments). Soft.
+2. **Bluesky** 4-part thread — sent 2026-05-07.
+3. **r/dataisbeautiful** — sent 2026-05-07.
 
-3. **Thu 7 May 12:00 CEST**: r/MapPorn (image, no video needed; +10pp morning).
-4. **Thu 7 May ~19:00 CEST**: r/Astronomy (**video**, +17pp lift).
-5. **Fri 8 May ~12:00 CEST**: r/dataisbeautiful (image, short title; time-noise).
-6. **Fri 8 May ~21:00 CEST**: r/WebGPU (**video**, +14pp; +8pp evening).
+## Re-scope 2026-06-18 — the dated schedule is dead, the channels aren't
+
+The original Thu/Fri-in-May Reddit schedule (r/MapPorn, r/Astronomy,
+r/WebGPU) all slipped and the **v0.2.0 launch hook is gone** — there's no
+"just shipped" news peg anymore. But the launch peg was never load-bearing:
+skymap now has a **steady 80–100 visitors/day**, so a good post is *upside
+on a proven funnel*, not a one-shot gamble. So: drop the calendar, keep the
+subreddits, and post **opportunistically** — when there's a fresh feature
+or a good capture video, pick the best-fit untapped sub.
+
+### Untapped subreddit tiers (by fit)
+
+**Tier 1 — highest fit, not yet hit:**
+
+- **r/InternetIsBeautiful** (~17M) — purpose-built for interactive browser
+  tools; probably the single best untapped sub. Title must sell the
+  *interaction*; one-link posts only.
+- **r/space** (~28M) — largest topical audience; strictest. Needs a strong
+  video/GIF, read the sidebar, lead with the visual not "I built".
+- **r/Astronomy** (~5M) — core knowledgeable audience; **video** lifts ~17pp.
+- **r/cosmology** (~500k) — *exactly* the large-scale-structure / filament
+  audience; small but high-signal, they get SDSS+2MRS+GLADE with no setup.
+
+**Tier 2 — opportunistic:**
+
+- **r/WebGPU**, **r/programming**, **r/javascript** — the *engineering*
+  angle (raw WebGPU + WGSL, 2.5M instanced billboards). Different story
+  than the science posts; reuse the engine narrative, not the catalog one.
+- **r/visualization** / **r/dataviz** — discussion-oriented; good for
+  feedback, low traffic.
+- **r/askastronomy**, **r/amateurastronomy** — softer; share as "a tool to
+  explore X", not a showcase.
+
+**Skip:** r/threejs / r/webgl (wrong stack — skymap is WebGPU, they'll
+nitpick), r/woahdude / r/interestingasfuck (viral, zero retention for a
+niche tool), r/proceduralgeneration (not procedural).
+
+### Universal rules (these bit the original plan)
+
+- **10% self-promo rule** — ≤10% of recent activity may be self-promotional;
+  the rest genuine participation. A fresh account that only posts its own
+  tool reads as spam regardless of quality.
+- **Per-sub karma/account-age gates** + **`[OC]` tag** + **data-source/tool
+  credit** (r/dataisbeautiful enforces this).
+- **Spread posts over days** across 4–5 subs — never a same-day blast.
 
 ## Maintenance
 
