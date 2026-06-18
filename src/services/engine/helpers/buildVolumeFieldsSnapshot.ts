@@ -16,7 +16,7 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { VolumeFieldRowData } from '../../../@types/settings/VolumeFieldRowData';
-import { projectVolumeFieldRows } from '../settingsStore/projectVolumeFieldRows';
+import { projectVolumeFieldRows } from '../../../state/settings/projectVolumeFieldRows';
 
 export function buildVolumeFieldsSnapshot(state: EngineState): ReadonlyArray<VolumeFieldRowData> {
   return projectVolumeFieldRows(state.settings.volumes.items);

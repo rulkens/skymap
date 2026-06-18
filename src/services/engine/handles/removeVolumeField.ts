@@ -7,17 +7,17 @@
 // fires no ramp — the field vanishes outright.
 
 import type { VolumeFieldId } from '../../../@types/data/volume/VolumeFieldId';
-import type { SettingsStore } from '../settingsStore/createSettingsStore';
-import { removeVolumeFieldAction } from '../settingsStore/actions/removeVolumeFieldAction';
+import type { AppStore } from '../../../store/types';
+import { removeVolumeField as removeVolumeFieldAction } from '../../../state/settings/settingsSlice';
 import type { ApplyIntentState } from '../wiring/syncVisibilityFades';
 
 export function removeVolumeField(
   state: ApplyIntentState,
-  store: SettingsStore,
+  store: AppStore,
   fieldId: VolumeFieldId,
 ): void {
   state.gpu.volumeFieldRenderer?.unload(fieldId);
-  removeVolumeFieldAction(store, fieldId);
+  store.dispatch(removeVolumeFieldAction(fieldId));
   // Essential wake: removal fires no fade — the field vanishes outright.
   state.subsystems.scheduler.requestRender();
 }

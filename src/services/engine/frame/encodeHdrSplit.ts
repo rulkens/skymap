@@ -94,12 +94,12 @@ export function encodeHdrSplit(
   // DebugPanel renderer-toggle override — same one-way semantics as the
   // single-pass branch in `encodeHdrSingle`.  Read once off the live settings
   // snapshot; the per-pass skip below happens BEFORE opening the render pass so
-  // a disabled pass costs nothing beyond the `Set.has` check (no empty
+  // a disabled pass costs nothing beyond the membership check (no empty
   // `beginRenderPass` round-trip, no timestamp slot written).
   const disabledPasses = state.settings.debug.disabledPasses;
   for (const pass of HDR_PASSES) {
     if (!pass.enabled(state, ctx, settings)) continue;
-    if (disabledPasses.has(pass.name)) continue;
+    if (disabledPasses[pass.name] === true) continue;
 
     const timestampWrites = timingService.descriptorFor(pass.name);
 

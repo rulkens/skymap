@@ -72,12 +72,11 @@ import type { SourceType } from '../../@types/data/SourceType';
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
+import type { AppStore } from '../../store/types';
 import type { EngineState } from '../../@types/engine/state/EngineState';
 import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 
 import { createTweenManager } from './camera/tweenManager';
-import { createSettingsStore } from './settingsStore/createSettingsStore';
-import { buildInitialSettings } from './settingsStore/buildInitialSettings';
 import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
@@ -200,33 +199,24 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
   };
 
-  // ── Settings — the user-facing SettingsPanel sub-bags ──────────
+  // ── Settings — the injected Redux store ──────────────────────────
   //
-  // Every settings field lives under a named cluster (galaxy catalog billboard
-  // knobs under `galaxyCatalogs`, HDR controls under `tonemap`, etc.). Defaults
-  // flow from `data/defaults.ts`; see `EngineSettingsState.d.ts` for the
-  // type-level map.
-  //
-  // We seed a zustand vanilla store (engine-owned, no React dependency in
-  // the core) with this literal rather than parking it directly on
-  // `state.settings`. `state.settings` then becomes a getter delegating to
-  // `settingsStore.getState()`, so React can subscribe to settings changes
-  // via `useStore` instead of keeping a parallel mirror that drifts. The
-  // dozens of `state.settings.X` read sites stay byte-identical — the getter
-  // hands back the held object directly. The literal's assembly lives in
-  // `buildInitialSettings` so the boot-defaults shape is testable on its own.
-  const settingsStore = createSettingsStore(
-    buildInitialSettings({ initialTier: cb.initialTier ?? 'medium' }),
-  );
+  // The settings store is created once at the app root (main.tsx) and
+  // injected here, so the engine and React share one instance: React reads
+  // it through <Provider> + useAppSelector, the engine reads it each frame
+  // via the `state.settings` getter below and writes it through the
+  // sub-handle setters' dispatches. The dozens of `state.settings.X` read
+  // sites stay byte-identical — the getter hands back `getState().settings`
+  // directly, with no parallel mirror to drift.
+  const store = cb.store;
 
   const state: EngineState = {
-    // `state.settings` delegates to the engine-owned store. Copy-on-write
-    // writes (Plan 02's actions) change the ref only on user-driven changes,
-    // so per-frame reads see a stable object; the in-place nested mutators
-    // still alive in Phase 1 mutate that held object directly, which the
-    // getter surfaces unchanged.
+    // `state.settings` delegates to the injected store. Reads hand back
+    // `store.getState().settings`; the write path dispatches through the
+    // sub-handle setters, so per-frame reads see the authoritative object
+    // with no parallel mirror to keep in sync.
     get settings() {
-      return settingsStore.getState();
+      return store.getState().settings;
     },
     // Per-type data stores. Empty at construction; slot commits fill them.
     data: createEngineData(),
@@ -492,7 +482,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // sub-handle clusters.
   const boringSetters = buildSettersFromTable(
     () => state.subsystems.scheduler.requestRender(),
-    settingsStore,
+    store,
   ) satisfies Record<SettingsTableKey, (value: unknown) => void>;
 
   // ── Bespoke methods (don't fit the settingsTable shape) ────────────
@@ -716,7 +706,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setHighlightFallback: boringSetters.setHighlightFallback,
       setRealOnly: boringSetters.setRealOnlyMode,
       setLabelEnabled: (galaxyCatalog, enabled) =>
-        setGalaxyCatalogLabelEnabled(state, settingsStore, galaxyCatalog, enabled),
+        setGalaxyCatalogLabelEnabled(state, store, galaxyCatalog, enabled),
     },
     tonemap: {
       setExposure: boringSetters.setExposure,
@@ -735,28 +725,28 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       loadAliases: loadPgcAliasesFn,
     },
     sources: {
-      setVisible: (source, visible) => setSourceVisible(state, settingsStore, source, visible),
-      setTier: (tier) => setTier(state, settingsStore, bootstrapDeps.phaseLocals?.device, tier),
+      setVisible: (source, visible) => setSourceVisible(state, store, source, visible),
+      setTier: (tier) => setTier(state, store, bootstrapDeps.phaseLocals?.device, tier),
       getCloud,
       getCloudObjIds,
     },
     bias: {
-      setMode: (mode) => setBiasMode(state, settingsStore, mode),
+      setMode: (mode) => setBiasMode(state, store, mode),
       setAbsMagLimit: boringSetters.setAbsMagLimit,
     },
     thumbnails: {
       setEnabled: boringSetters.setGalaxyTexturesEnabled,
     },
     milkyWay: {
-      setEnabled: (enabled) => setMilkyWayEnabled(state, settingsStore, enabled),
-      setLabelEnabled: (enabled) => setMilkyWayLabelEnabled(state, settingsStore, enabled),
+      setEnabled: (enabled) => setMilkyWayEnabled(state, store, enabled),
+      setLabelEnabled: (enabled) => setMilkyWayLabelEnabled(state, store, enabled),
     },
     filaments: {
-      setEnabled: (enabled) => setFilamentsEnabled(state, settingsStore, enabled),
+      setEnabled: (enabled) => setFilamentsEnabled(state, store, enabled),
       setIntensity: boringSetters.setFilamentIntensity,
     },
     flow: {
-      set: (patch) => setFlow(state, settingsStore, patch),
+      set: (patch) => setFlow(state, store, patch),
     },
     structures: {
       // Two setters, one per independent structure visibility axis. Each writes
@@ -764,26 +754,22 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // store (so React's `selectStructureItems` subscriber wakes) and fades the
       // matching FadeRegistry handle.
       setItemEnabled: (category, visible) =>
-        setStructureItemEnabled(state, settingsStore, category, visible),
+        setStructureItemEnabled(state, store, category, visible),
       setLabelEnabled: (category, visible) =>
-        setStructureLabelEnabled(state, settingsStore, category, visible),
+        setStructureLabelEnabled(state, store, category, visible),
     },
     volumes: {
-      setMasterEnabled: (enabled) => setVolumesEnabled(state, settingsStore, enabled),
-      add: (fieldId, cube) => addVolumeField(state, settingsStore, fieldId, cube),
-      remove: (fieldId) => removeVolumeField(state, settingsStore, fieldId),
-      setEnabled: (fieldId, enabled) =>
-        setVolumeFieldEnabled(state, settingsStore, fieldId, enabled),
+      setMasterEnabled: (enabled) => setVolumesEnabled(state, store, enabled),
+      add: (fieldId, cube) => addVolumeField(state, store, fieldId, cube),
+      remove: (fieldId) => removeVolumeField(state, store, fieldId),
+      setEnabled: (fieldId, enabled) => setVolumeFieldEnabled(state, store, fieldId, enabled),
       setIntensity: (fieldId, intensity) =>
-        setVolumeFieldIntensity(state, settingsStore, fieldId, intensity),
-      setContrast: (fieldId, contrast) =>
-        setVolumeFieldContrast(state, settingsStore, fieldId, contrast),
-      setDensityScale: (fieldId, value) =>
-        setVolumeFieldDensityScale(state, settingsStore, fieldId, value),
-      setTrim: (fieldId, trim) => setVolumeFieldTrim(state, settingsStore, fieldId, trim),
-      setExposure: (fieldId, exposure) =>
-        setVolumeFieldExposure(state, settingsStore, fieldId, exposure),
-      setPalette: (fieldId, id) => setVolumeFieldPalette(state, settingsStore, fieldId, id),
+        setVolumeFieldIntensity(state, store, fieldId, intensity),
+      setContrast: (fieldId, contrast) => setVolumeFieldContrast(state, store, fieldId, contrast),
+      setDensityScale: (fieldId, value) => setVolumeFieldDensityScale(state, store, fieldId, value),
+      setTrim: (fieldId, trim) => setVolumeFieldTrim(state, store, fieldId, trim),
+      setExposure: (fieldId, exposure) => setVolumeFieldExposure(state, store, fieldId, exposure),
+      setPalette: (fieldId, id) => setVolumeFieldPalette(state, store, fieldId, id),
       list: () => listVolumeFields(state),
       getState: () => getVolumeFieldsState(state),
     },
@@ -804,17 +790,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       },
       passOverrides: {
         allNames: [...HDR_PASSES.map((p) => p.name), ...UI_PASSES.map((p) => p.name)],
-        setDisabled: (name, disabled) => setPassDisabled(state, settingsStore, name, disabled),
+        setDisabled: (name, disabled) => setPassDisabled(state, store, name, disabled),
       },
       setShowPickBuffer: boringSetters.setShowPickBuffer,
       setShowDiskRadiusRing: boringSetters.setShowDiskRadiusRing,
     },
-
-    // The engine-owned settings store. React subscribes via `useStore`; the
-    // engine reads it each frame through the `state.settings` getter. Phase 1
-    // exposes it alongside the still-live React mirror — Plan 02 migrates
-    // consumers and deletes the mirror.
-    settingsStore,
 
     destroy,
 

@@ -25,8 +25,8 @@ import {
   buildSettersFromTable,
   SETTINGS_TABLE,
 } from '../../../../src/services/engine/wiring/settingsTable';
-import { createSettingsStore } from '../../../../src/services/engine/settingsStore/createSettingsStore';
-import { makeSettingsFixture } from '../settingsStore/makeSettingsFixture';
+import { createAppStore } from '../../../../src/store/createAppStore';
+import { makeSettingsFixture } from '../../../state/settings/makeSettingsFixture';
 
 describe('settingsTable', () => {
   describe('SETTINGS_TABLE', () => {
@@ -61,17 +61,17 @@ describe('settingsTable', () => {
 
   describe('buildSettersFromTable', () => {
     it('writes a row through the store action and requests a render', () => {
-      const store = createSettingsStore(makeSettingsFixture());
+      const store = createAppStore({ settings: makeSettingsFixture() });
       const requestRender = vi.fn();
 
       const setters = buildSettersFromTable(requestRender, store);
 
       setters.setPointSize(4.2);
-      expect(store.getState().galaxyCatalogs.sizePx).toBe(4.2);
+      expect(store.getState().settings.galaxyCatalogs.sizePx).toBe(4.2);
       expect(requestRender).toHaveBeenCalledOnce();
 
       setters.setBrightness(2.0);
-      expect(store.getState().galaxyCatalogs.brightness).toBe(2.0);
+      expect(store.getState().settings.galaxyCatalogs.brightness).toBe(2.0);
       expect(requestRender).toHaveBeenCalledTimes(2);
     });
 
@@ -80,20 +80,20 @@ describe('settingsTable', () => {
       // post-process pass (clampExposure) and setFilamentIntensity's to the
       // filament renderer (clampFilamentIntensity). Out-of-range values pass
       // through unchanged — both dispatch copy-on-write store actions.
-      const store = createSettingsStore(makeSettingsFixture());
+      const store = createAppStore({ settings: makeSettingsFixture() });
       const requestRender = vi.fn();
 
       const setters = buildSettersFromTable(requestRender, store);
 
       setters.setExposure(1e9);
-      expect(store.getState().tonemap.exposure).toBe(1e9);
+      expect(store.getState().settings.tonemap.exposure).toBe(1e9);
       setters.setExposure(-1);
-      expect(store.getState().tonemap.exposure).toBe(-1);
+      expect(store.getState().settings.tonemap.exposure).toBe(-1);
 
       setters.setFilamentIntensity(5);
-      expect(store.getState().filaments.intensity).toBe(5);
+      expect(store.getState().settings.filaments.intensity).toBe(5);
       setters.setFilamentIntensity(-1);
-      expect(store.getState().filaments.intensity).toBe(-1);
+      expect(store.getState().settings.filaments.intensity).toBe(-1);
     });
   });
 });

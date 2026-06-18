@@ -89,11 +89,11 @@ export function encodeHdrSingle(
   // surface — checked AFTER the pass's own `enabled()` gate so the override is
   // one-way (hides a pass that would otherwise run; can never force-enable a
   // pass whose gate returned false).  Read once off the live settings snapshot;
-  // empty in production, so the membership check is in the noise.
+  // empty in production, so the membership lookup is in the noise.
   const disabledPasses = state.settings.debug.disabledPasses;
   for (const pass of HDR_PASSES) {
     if (!pass.enabled(state, ctx, settings)) continue;
-    if (disabledPasses.has(pass.name)) continue;
+    if (disabledPasses[pass.name] === true) continue;
     pass.draw(hdrPass, ctx, state, settings, deps);
   }
 

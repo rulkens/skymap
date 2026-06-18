@@ -224,7 +224,7 @@ function makeCloud(count = 1): GalaxyCatalog {
 
 /** Build a complete RenderFrameInput fixture with sensible defaults. */
 function makeInput(
-  overrides: { settings?: Partial<any>; disabledPasses?: ReadonlySet<string> } = {},
+  overrides: { settings?: Partial<any>; disabledPasses?: Record<string, boolean> } = {},
 ) {
   const callLog: CallLog = [];
   const env = makeEncoderEnv(callLog);
@@ -340,11 +340,11 @@ function makeInput(
         // gate early-returns once the renderer is null.  A null slot →
         // slotReady false → not loaded.  The encoders read the DebugPanel
         // renderer-toggle override bag off `settings.debug.disabledPasses`:
-        // most tests pass no overrides so the default is an empty Set (matches
+        // most tests pass no overrides so the default is an empty record (matches
         // production); the skip-on-toggle test passes `overrides.disabledPasses`.
         settings: {
           flow: { enabled: false },
-          debug: { disabledPasses: new Set<string>(overrides.disabledPasses ?? []) },
+          debug: { disabledPasses: overrides.disabledPasses ?? {} },
         },
         assetSlots: { flow: null },
         // proceduralDisksPass / texturedDisksPass each read their slot
@@ -593,13 +593,20 @@ describe('renderFrame', () => {
 
   it('skips a pass whose name appears in settings.debug.disabledPasses', () => {
     // The DebugPanel flips entries in/out of `settings.debug.disabledPasses`.
-    // The encoder loop in `encodeHdrSingle` checks the set after the
-    // pass's own `enabled()` gate, so toggling `point-sprites` off stops
+    // The encoder loop in `encodeHdrSingle` checks the record after the
+    // pass's own `enabled()` gate, so mapping `point-sprites` to true stops
     // `pointRenderer.draw` even though every other input would run it.
-    const fx2 = makeInput({ disabledPasses: new Set(['point-sprites']) });
+    const fx2 = makeInput({ disabledPasses: { 'point-sprites': true } });
     renderFrame(fx2.input);
     expect(fx2.pointRenderer.draw).not.toHaveBeenCalled();
     // Milky-way still draws — the override is per-pass, not global.
     expect(fx2.milkyWayRenderer.draw).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not skip a pass whose name maps to false in disabledPasses', () => {
+    // `[name] === false` means enabled — only `=== true` hides a pass.
+    const fx2 = makeInput({ disabledPasses: { 'point-sprites': false } });
+    renderFrame(fx2.input);
+    expect(fx2.pointRenderer.draw).toHaveBeenCalledTimes(1);
   });
 });

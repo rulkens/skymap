@@ -1,14 +1,14 @@
 // ── Milky-Way "You are here" label visibility setter ─────────────────────────
 //
 // The singleton sibling of `setStructureLabelEnabled`. It writes the
-// authoritative `labelEnabled` flag THROUGH the engine-owned store (the
-// `setMilkyWayLabelEnabledAction` copy-on-write reducer) rather than mutating
-// in place: the store write is what NOTIFIES React's
-// `useSettingsStore(selectMilkyWayLabelEnabled)` subscriber so the panel
-// checkbox re-renders. Having written the intent, it ramps the milkyWay label
-// layer's fade THROUGH `syncVisibilityFades` (the intent → fade bridge).
+// authoritative `labelEnabled` flag by dispatching the `setMilkyWayLabelEnabled`
+// slice action rather than mutating in place: `store.dispatch(...)` is what
+// NOTIFIES React's `useAppSelector(selectMilkyWayLabelEnabled)` subscriber so
+// the panel checkbox re-renders. Having written the intent, it ramps the
+// milkyWay label layer's fade THROUGH `syncVisibilityFades` (the intent → fade
+// bridge).
 //
-// ORDERING MATTERS: the store write MUST precede the bridge call, because the
+// ORDERING MATTERS: the dispatch MUST precede the bridge call, because the
 // bridge reads the just-written `labelEnabled` intent from settings and fades the
 // `milkyWayLabel` row's handle to match.
 //
@@ -22,19 +22,19 @@
 // a plain `{ kind: 'labelLayer', layer: 'milkyWay' }` (no per-category axis),
 // seeded without a category by the fade manifest in `fadeLayers.ts`.
 
-import type { SettingsStore } from '../settingsStore/createSettingsStore';
-import { setMilkyWayLabelEnabledAction } from '../settingsStore/actions/setMilkyWayLabelEnabledAction';
+import type { AppStore } from '../../../store/types';
+import { setMilkyWayLabelEnabled as setMilkyWayLabelEnabledAction } from '../../../state/settings/settingsSlice';
 import { syncVisibilityFades } from '../wiring/syncVisibilityFades';
 import type { ApplyIntentState } from '../wiring/syncVisibilityFades';
 
 export function setMilkyWayLabelEnabled(
   state: ApplyIntentState,
-  store: SettingsStore,
+  store: AppStore,
   visible: boolean,
 ): void {
-  // Single source of truth: flip the labelEnabled flag THROUGH the store so the
-  // copy-on-write write notifies React's selector subscriber.
-  setMilkyWayLabelEnabledAction(store, visible);
+  // Single source of truth: flip the labelEnabled flag by dispatching the slice
+  // action so the write notifies React's selector subscriber.
+  store.dispatch(setMilkyWayLabelEnabledAction(visible));
   // Drive the milkyWayLabel fade through the bridge off the just-written intent.
   syncVisibilityFades(state, { animate: true, only: ['milkyWayLabel'] });
 }

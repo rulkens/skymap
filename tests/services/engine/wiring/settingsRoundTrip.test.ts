@@ -19,13 +19,13 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { createStore } from 'zustand/vanilla';
 import { captureSettings } from '../../../../src/services/engine/wiring/captureSettings';
 import { restoreSettings } from '../../../../src/services/engine/wiring/restoreSettings';
 import { applyEffect } from '../../../../src/services/engine/wiring/applyEffect';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
-import type { SettingsStore } from '../../../../src/services/engine/settingsStore/createSettingsStore';
+import type { AppStore } from '../../../../src/store/types';
+import { createAppStore } from '../../../../src/store/createAppStore';
 
 // Both restoreSettings and applyEffect import the bridge from this module; mock
 // it once to a typed spy so the deep-assign runs but no fade machinery is hit.
@@ -43,11 +43,11 @@ vi.mock('../../../../src/services/engine/wiring/syncVisibilityFades', () => ({
 // deep-equality through the round-trip is a meaningful assertion: each `items`
 // row is its own object, each cluster mixes visibility gates with look knobs.
 
-function makeHarness(): { store: SettingsStore; state: EngineState } {
-  const store = createStore(() => makeSettings());
+function makeHarness(): { store: AppStore; state: EngineState } {
+  const store = createAppStore({ settings: makeSettings() });
   const state = {
     get settings() {
-      return store.getState();
+      return store.getState().settings;
     },
   } as unknown as EngineState;
   return { store, state };

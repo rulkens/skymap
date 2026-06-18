@@ -44,7 +44,7 @@ export type DebugPanelProps = {
    * store by `App`. Drives the `RenderTogglesSection` checkbox state; writes go
    * back through `passOverrides.setDisabled`.
    */
-  disabledPasses: ReadonlySet<string>;
+  disabledPasses: Record<string, boolean>;
   highlightFallback: boolean;
   realOnlyMode: boolean;
   onHighlightFallbackChange: (enabled: boolean) => void;

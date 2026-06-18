@@ -208,18 +208,20 @@ export type EngineSettingsState = {
    *     placement against the underlying billboard.  Gated behind the
    *     DebugPanel.
    *   - `disabledPasses` — pass names the developer has manually toggled
-   *     off in the renderer-toggle section.  The frame encoders consult
-   *     this set AFTER each pass's own `enabled()` gate and skip the draw
-   *     when the name is present, so the override is one-way: it can hide
-   *     a pass that would otherwise run but never force-enable one whose
-   *     gate returned false.  An open-world membership set (any pass name)
-   *     against the closed-world `HDR_PASSES` / `UI_PASSES` arrays; normally
-   *     empty, so the production frame pays one `Set.has` per pass.
+   *     off in the renderer-toggle section.  Membership is `[name] === true`;
+   *     a name absent from the record (or mapped to `false`) means the pass
+   *     is enabled.  The frame encoders consult this record AFTER each pass's
+   *     own `enabled()` gate and skip the draw when the name maps to `true`,
+   *     so the override is one-way: it can hide a pass that would otherwise
+   *     run but never force-enable one whose gate returned false.  An
+   *     open-world membership record (any pass name) against the closed-world
+   *     `HDR_PASSES` / `UI_PASSES` arrays.  A plain object so the whole
+   *     settings state stays JSON-serializable.
    */
   debug: {
     showPickBuffer: boolean;
     showDiskRadiusRing: boolean;
-    disabledPasses: ReadonlySet<string>;
+    disabledPasses: Record<string, boolean>;
   };
 
   /**
