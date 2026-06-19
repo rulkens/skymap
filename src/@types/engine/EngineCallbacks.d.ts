@@ -6,12 +6,11 @@
 
 import type { EngineStatus } from './EngineStatus';
 import type { FocusableTarget } from './FocusableTarget';
-import type { Tier } from '../data/Tier';
 import type { ScaleInfo } from './ScaleInfo';
 import type { SourceType } from '../data/SourceType';
 import type { LoadProgressState } from '../loading/LoadProgressState';
 import type { StructureId } from '../data/structure/StructureId';
-import type { AppStore } from '../../store/types';
+import type { AppStore, SetSagaContext } from '../../store/types';
 
 /**
  * Callbacks the engine uses to push state changes into the UI layer.
@@ -59,14 +58,16 @@ export type EngineCallbacks = {
   store: AppStore;
 
   /**
-   * Initial data tier to load on engine startup.  Defaults to `'medium'`
-   * when absent.  This is technically an option, not a callback, but the
-   * `createEngine(canvas, cb)` signature already passes a single bag for
-   * both — extending it here keeps the public surface compact rather than
-   * introducing a separate `EngineOpts` type for one extra field.  Will
-   * grow into a richer Opts split if more startup-only knobs accumulate.
+   * Registers the engine's saga runner into the store's saga context.  The
+   * engine builds `runTierTransition` (closed over the live `EngineState`) and
+   * hands it to the running root saga through this setter, which the store
+   * factory exposes alongside the store.  It can't ride the `<Provider>`
+   * because it's a SIBLING of the store (the factory returns
+   * `{ store, setSagaContext }`), so it's threaded down as a callback instead.
+   * Required: without it the tier saga's `getContext('runTierTransition')`
+   * stays a no-op and a tier change never reaches the engine's GPU resources.
    */
-  initialTier?: Tier;
+  setSagaContext: SetSagaContext;
 
   /**
    * Engine lifecycle callbacks.  `onStatusChange` is required — every
@@ -141,7 +142,7 @@ export type EngineCallbacks = {
 
   /**
    * Source-state callbacks — per-source readiness and aggregated load
-   * progress. (Tier is no longer echoed here: it lives in the settings store,
+   * progress. (Tier is not echoed here: it lives in the `tier` root slice,
    * read React-side via `selectTier`.)
    *
    * `onCatalogReady` is granular per-source because the three .bin

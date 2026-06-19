@@ -14,7 +14,7 @@
  *   - `state.settings`             — predicate leaf values, including each
  *                                    galaxy catalog's `galaxyCatalogs.items[id].enabled`
  *                                    (the intent bit galaxy catalog demand reads)
- *   - `state.settings.tier`        — passed to `req(tier)`
+ *   - `state.tier`                 — passed to `req(tier)` by `reevaluateDemand`
  *   - `state.requests`             — `Set<RequestKey>`
  *   - `state.assetSlots`           — `slotFor` dispatch target
  *
@@ -232,15 +232,13 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
   );
 
   return {
+    // tier feeds `req(state.tier)`; it lives in its own root field on EngineState.
+    tier: 'medium',
     // Inject galaxy catalog + volume items directly into the settings bag — demand
     // predicates read `ctx.settings.galaxyCatalogs.items[id]?.enabled` and
     // `ctx.settings.volumes.items[id]?.enabled` from there.
     settings: {
       ...(settings as unknown as EngineSettingsState),
-      // tier feeds `req(tier)`; it lives top-level on settings now. Pinned after
-      // the spread because `settings` is a `SettingsLeaves` partial that carries
-      // no `tier` — this is the sole source of it in the fixture.
-      tier: 'medium',
       galaxyCatalogs: { items: galaxyCatalogItems },
       volumes: { items: volumeFields },
     } as unknown as EngineSettingsState,

@@ -11,7 +11,7 @@ import {
   selectSplashDismissedVersion,
 } from '../../../src/state/ui/selectors';
 
-const baseSettings = buildInitialSettings({ initialTier: 'medium' });
+const baseSettings = buildInitialSettings();
 
 describe('ui selectors', () => {
   it('selectPaletteOpen returns ui.paletteOpen', () => {
@@ -21,7 +21,7 @@ describe('ui selectors', () => {
       debugPanelOpen: false,
       splash: { visible: false, dismissedVersion: null },
     };
-    const store = createAppStore({ settings: baseSettings, ui });
+    const { store } = createAppStore({ settings: baseSettings, ui });
     expect(selectPaletteOpen(store.getState())).toBe(true);
   });
 
@@ -32,7 +32,7 @@ describe('ui selectors', () => {
       debugPanelOpen: false,
       splash: { visible: false, dismissedVersion: null },
     };
-    const store = createAppStore({ settings: baseSettings, ui });
+    const { store } = createAppStore({ settings: baseSettings, ui });
     expect(selectUiHidden(store.getState())).toBe(true);
   });
 
@@ -43,7 +43,7 @@ describe('ui selectors', () => {
       debugPanelOpen: true,
       splash: { visible: false, dismissedVersion: null },
     };
-    const store = createAppStore({ settings: baseSettings, ui });
+    const { store } = createAppStore({ settings: baseSettings, ui });
     expect(selectDebugPanelOpen(store.getState())).toBe(true);
   });
 
@@ -54,7 +54,7 @@ describe('ui selectors', () => {
       debugPanelOpen: false,
       splash: { visible: true, dismissedVersion: null },
     };
-    const store = createAppStore({ settings: baseSettings, ui });
+    const { store } = createAppStore({ settings: baseSettings, ui });
     expect(selectSplashVisible(store.getState())).toBe(true);
   });
 
@@ -65,7 +65,7 @@ describe('ui selectors', () => {
       debugPanelOpen: false,
       splash: { visible: false, dismissedVersion: 4 },
     };
-    const store = createAppStore({ settings: baseSettings, ui });
+    const { store } = createAppStore({ settings: baseSettings, ui });
     expect(selectSplashDismissedVersion(store.getState())).toBe(4);
   });
 
@@ -76,7 +76,7 @@ describe('ui selectors', () => {
       debugPanelOpen: false,
       splash: { visible: true, dismissedVersion: null },
     };
-    const store = createAppStore({ settings: baseSettings, ui });
+    const { store } = createAppStore({ settings: baseSettings, ui });
     expect(selectSplashDismissedVersion(store.getState())).toBeNull();
   });
 
@@ -89,7 +89,7 @@ describe('ui selectors', () => {
       debugPanelOpen: true,
       splash: { visible: true, dismissedVersion: 7 },
     };
-    const store = createAppStore({ settings: baseSettings, ui });
+    const { store } = createAppStore({ settings: baseSettings, ui });
     const state = store.getState();
     expect(selectPaletteOpen(state)).toBe(true);
     expect(selectUiHidden(state)).toBe(true);

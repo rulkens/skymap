@@ -57,7 +57,6 @@ function makeState(): EngineState {
   return {
     // Post-H5 nested-only settings shape.
     settings: {
-      tier: 'medium',
       galaxyCatalogs: {
         enabled: true,
         sizePx: 2,

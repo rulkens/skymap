@@ -44,7 +44,7 @@ vi.mock('../../../../src/services/engine/wiring/syncVisibilityFades', () => ({
 // row is its own object, each cluster mixes visibility gates with look knobs.
 
 function makeHarness(): { store: AppStore; state: EngineState } {
-  const store = createAppStore({ settings: makeSettings() });
+  const { store } = createAppStore({ settings: makeSettings() });
   const state = {
     get settings() {
       return store.getState().settings;

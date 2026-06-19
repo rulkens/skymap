@@ -8,9 +8,21 @@
  * (and each test) its own isolated store, so there is no cross-construction
  * bleed.
  *
- * The saga middleware is wired and `mainSaga` is run at construction even though
- * the root saga forks nothing yet — see `rootSaga`. Running an empty root now
- * means phase 2 adds feature sagas without touching this factory.
+ * The saga middleware is wired and `mainSaga` is run at construction — see
+ * `rootSaga`, which now forks its first feature saga (the tier watcher). Running
+ * the root here means the seam's later phases add feature sagas without touching
+ * this factory.
+ *
+ * The factory ALSO hands back a `setSagaContext` setter, delegating to
+ * redux-saga's `sagaMiddleware.setContext`. The store is a state container;
+ * registering a saga's runner (an engine resource the saga calls into) is a
+ * DISTINCT capability, kept un-braided from the store by returning it as its own
+ * value rather than bolting it onto the store object. The engine calls
+ * `setSagaContext({ runTierTransition })` post-construction to inject the
+ * tier-transition runner; `getContext('runTierTransition')` inside the running
+ * saga reads it back. That `setContext`/`getContext` pair is how an engine
+ * resource crosses from engine-land into store-land without the saga importing
+ * the engine.
  *
  * Notably absent: NO `serializableCheck: false` and NO `enableMapSet`. The whole
  * point of this migration is that the settings state is now fully serializable —
@@ -25,16 +37,15 @@ import createSagaMiddleware from 'redux-saga';
 
 import { rootReducer } from './rootReducer';
 import { mainSaga } from './rootSaga';
-import { settingsRoute, uiRoute } from './constants';
-import type { EngineSettingsState } from '../@types/settings/EngineSettingsState';
-import type { UiState } from '../@types/ui/UiState';
+import type { RootState, SagaContext } from './types';
 
-// The store's preloaded shape mirrors the route map RTK's `preloadedState`
-// expects. The `ui` key is optional: callers that care only about settings
-// (engine wiring tests, tour restore) omit it and the slice self-seeds from
-// `buildInitialUiState()`. An explicit seed is only needed at boot time for
-// freshness (main.tsx reads localStorage + URL once before React mounts).
-export type PreloadedState = { [settingsRoute]: EngineSettingsState; [uiRoute]?: UiState };
+// The store's preloaded shape is a partial route map: a caller may seed any
+// subset of the routes (`tier`, `settings`, `ui` — all optional) and leave the
+// rest to each slice's `initialState`. `Partial<RootState>` is exactly RTK's
+// `preloadedState` contract, so a settings-only, tier-only, or ui-only seed all
+// type-check. (The `ui` slice self-seeds from `buildInitialUiState()` when
+// omitted; main.tsx seeds it explicitly for a fresh boot-time localStorage read.)
+export type PreloadedState = Partial<RootState>;
 
 export function createAppStore(preloadedState?: PreloadedState) {
   const sagaMiddleware = createSagaMiddleware();
@@ -44,5 +55,5 @@ export function createAppStore(preloadedState?: PreloadedState) {
     middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(sagaMiddleware),
   });
   sagaMiddleware.run(mainSaga);
-  return store;
+  return { store, setSagaContext: (ctx: Partial<SagaContext>) => sagaMiddleware.setContext(ctx) };
 }

@@ -16,7 +16,7 @@ import { persistSplashVersion } from '../../../src/state/ui/persistSplashVersion
 import { SPLASH_STORAGE_KEY } from '../../../src/state/ui/splashStorage';
 import type { UiState } from '../../../src/@types/ui/UiState';
 
-const settings = buildInitialSettings({ initialTier: 'medium' });
+const settings = buildInitialSettings();
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -24,7 +24,7 @@ beforeEach(() => {
 
 describe('persistSplashVersion', () => {
   it('dispatching dismissSplash(2) writes seenVersion to localStorage', () => {
-    const store = createAppStore({ settings });
+    const { store } = createAppStore({ settings });
     persistSplashVersion(store);
 
     store.dispatch(dismissSplash(2));
@@ -43,7 +43,7 @@ describe('persistSplashVersion', () => {
       debugPanelOpen: false,
       splash: { visible: false, dismissedVersion: 2 },
     };
-    const store = createAppStore({ settings, ui: preloadedUi });
+    const { store } = createAppStore({ settings, ui: preloadedUi });
     persistSplashVersion(store);
 
     // localStorage is clear; confirm the subscriber does not write on reopenSplash.
@@ -53,7 +53,7 @@ describe('persistSplashVersion', () => {
   });
 
   it('the returned unsubscribe stops further writes', () => {
-    const store = createAppStore({ settings });
+    const { store } = createAppStore({ settings });
     const stop = persistSplashVersion(store);
 
     stop();

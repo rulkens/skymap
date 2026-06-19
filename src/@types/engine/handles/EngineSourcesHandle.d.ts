@@ -1,14 +1,13 @@
 import type { SourceType } from '../../data/SourceType';
-import type { Tier } from '../../data/Tier';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 
 /**
- * EngineSourcesHandle — galaxy catalog lifecycle: visibility, tier, raw catalog access.
+ * EngineSourcesHandle — galaxy catalog lifecycle: visibility + raw catalog access.
  *
- * `setVisible` toggles one galaxy catalog on/off with a fade animation.  `setTier`
- * hot-swaps the active data tier across all galaxy catalogs with per-source re-fetch.
+ * `setVisible` toggles one galaxy catalog on/off with a fade animation.
  * `getCloud`/`getCloudObjIds` expose the in-memory GalaxyCatalog for
- * deep-link / alias-index consumers.
+ * deep-link / alias-index consumers.  Tier is NOT a method here: a tier change
+ * is an Intent dispatched from the UI (`requestTier`), driven by the tier saga.
  */
 export type EngineSourcesHandle = {
   /**
@@ -19,8 +18,6 @@ export type EngineSourcesHandle = {
    * `handle.sources.setVisible(s, v)`.
    */
   setVisible: (source: SourceType, visible: boolean) => void;
-  /** Hot-swap the active data tier (re-fetches per-source bins). */
-  setTier: (tier: Tier) => void;
   /** Return the full GalaxyCatalog for a source, or undefined if unloaded. */
   getCloud: (source: SourceType) => GalaxyCatalog | undefined;
   /** Return just the objIDs array for a source (narrower contract). */

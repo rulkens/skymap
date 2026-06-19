@@ -31,7 +31,7 @@ function fireKey(init: KeyboardEventInit): void {
 }
 
 /** Build the minimal hook input that wires everything through a real store. */
-function makeInput(store: ReturnType<typeof createAppStore>) {
+function makeInput(store: ReturnType<typeof createAppStore>['store']) {
   return {
     selected: null,
     paletteOpen: false,
@@ -43,10 +43,10 @@ function makeInput(store: ReturnType<typeof createAppStore>) {
 }
 
 describe('useKeyboardShortcuts — integration (real store)', () => {
-  let store: ReturnType<typeof createAppStore>;
+  let store: ReturnType<typeof createAppStore>['store'];
 
   beforeEach(() => {
-    store = createAppStore({ settings: buildInitialSettings({ initialTier: 'medium' }) });
+    store = createAppStore({ settings: buildInitialSettings() }).store;
   });
 
   it('Tab toggles uiHidden false → true → false (proves toggle, no stale closure)', () => {
