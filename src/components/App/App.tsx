@@ -41,7 +41,7 @@ import { useUrlSync } from '../../hooks/useUrlSync';
 import { useFamousMeta } from '../../hooks/useFamousMeta';
 import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
-import { useAppSelector } from '../../store/hooks';
+import { useAppSelector, useAppDispatch } from '../../store/hooks';
 import {
   selectGalaxyCatalogSize,
   selectDepthFade,
@@ -71,6 +71,8 @@ import { projectLabelCategoryVisibility } from '../../state/settings/projectLabe
 import { buildStaticAnchorStructures } from '../../data/structure/buildStaticAnchorStructures';
 import { isStructureId } from '../../data/structure/structureIds';
 import { DebugPanel } from '../DebugPanel/DebugPanel';
+import { selectPaletteOpen, selectUiHidden, selectDebugPanelOpen } from '../../state/ui/selectors';
+import { setPaletteOpen, toggleUiHidden, toggleDebugPanelOpen } from '../../state/ui/uiSlice';
 
 export function App(): React.ReactElement {
   const {
@@ -85,6 +87,8 @@ export function App(): React.ReactElement {
     structureCounts,
     loadProgress,
   } = useEngine();
+
+  const dispatch = useAppDispatch();
 
   // Galaxy catalogs-cluster settings read straight off the RTK settings slice
   // via `useAppSelector`. The store exists before first paint under the
@@ -222,20 +226,31 @@ export function App(): React.ReactElement {
   // `matchMedia`-backed hook rather than the non-reactive one-shot above.
   const isMobile = useIsMobile();
 
-  const [paletteOpen, setPaletteOpen] = useState(false);
+  // paletteOpen / uiHidden / debugPanelOpen are owned by the `ui` slice;
+  // keyboard shortcuts dispatch slice actions, not React setters.
+  const paletteOpen = useAppSelector(selectPaletteOpen);
+  const uiHidden = useAppSelector(selectUiHidden);
+  const debugPanelOpen = useAppSelector(selectDebugPanelOpen);
 
   // Stable handlers for the `React.memo`'d SearchTrigger — a fresh
   // inline arrow each render would defeat the memo.
-  const openPalette = useCallback(() => setPaletteOpen(true), []);
-  const closePalette = useCallback(() => setPaletteOpen(false), []);
+  const openPalette = useCallback(() => dispatch(setPaletteOpen(true)), [dispatch]);
+  const closePalette = useCallback(() => dispatch(setPaletteOpen(false)), [dispatch]);
 
-  // `Tab` fades the whole HUD via a single CSS opacity transition on
-  // the `.uiStack` wrapper — for screenshots, recordings, or unobstructed
-  // orbiting.
-  const [uiHidden, setUiHidden] = useState(false);
-
-  // `d` toggles the debug panel.
-  const [debugPanelOpen, setDebugPanelOpen] = useState(false);
+  // Stable dispatching callbacks for the keyboard hook — wrapped in
+  // `useCallback([dispatch])` so the arrow identity is stable for the
+  // component lifetime and the effect's dep array stays stable.
+  // `useAppDispatch()` returns the invariant `store.dispatch`, so these
+  // never trigger re-binds.
+  const dispatchSetPaletteOpen = useCallback(
+    (open: boolean) => dispatch(setPaletteOpen(open)),
+    [dispatch],
+  );
+  const dispatchToggleUiHidden = useCallback(() => dispatch(toggleUiHidden()), [dispatch]);
+  const dispatchToggleDebugPanelOpen = useCallback(
+    () => dispatch(toggleDebugPanelOpen()),
+    [dispatch],
+  );
 
   const { famousMeta, ready: famousMetaReady } = useFamousMeta();
 
@@ -272,9 +287,9 @@ export function App(): React.ReactElement {
     selected,
     paletteOpen,
     engineHandleRef: handleRef,
-    setPaletteOpen,
-    setUiHidden,
-    setDebugPanelOpen,
+    setPaletteOpen: dispatchSetPaletteOpen,
+    toggleUiHidden: dispatchToggleUiHidden,
+    toggleDebugPanelOpen: dispatchToggleDebugPanelOpen,
   });
 
   return (

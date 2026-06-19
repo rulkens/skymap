@@ -1,4 +1,4 @@
-import type { Dispatch, RefObject, SetStateAction } from 'react';
+import type { RefObject } from 'react';
 import type { EngineHandle } from './EngineHandle';
 import type { FocusableTarget } from './FocusableTarget';
 
@@ -10,27 +10,22 @@ export type UseKeyboardShortcutsInput = {
   /** Engine driver for selection.clear, camera.focusOn, camera.focusOnHome, camera.logState. */
   engineHandleRef: RefObject<EngineHandle | null>;
   /**
-   * The React setter for the palette-open state.  Taking the setter
-   * directly (instead of an `() => void` callback) is the only honest
-   * way to keep the effect's dep list stable: React's `setState`
-   * functions are guaranteed-stable references for the component
-   * lifetime, so the listener re-binds only when `selected` or
-   * `paletteOpen` actually change.  An arrow `() => setPaletteOpen(true)`
-   * passed from the call site would be a fresh identity each render
-   * and force a re-bind on every parent render.
+   * Stable `useCallback(() => dispatch(setPaletteOpen(open)), [dispatch])` from App.
+   * The keyboard shortcut only ever opens the palette (not closes), so this takes
+   * an explicit boolean rather than a toggler. Passing it in as a stable ref keeps
+   * the effect's dep array stable — the arrow identity doesn't change between renders.
    */
-  setPaletteOpen: Dispatch<SetStateAction<boolean>>;
+  setPaletteOpen: (open: boolean) => void;
   /**
-   * The React setter for the "hide UI" mode (`Tab` shortcut).  Same
-   * stable-reference rationale as `setPaletteOpen` — passed in directly
-   * so the effect's dep list stays stable.  Toggled with the functional
-   * form (`prev => !prev`) inside the handler so we don't need to read
-   * the current state.
+   * Stable `useCallback(() => dispatch(toggleUiHidden()), [dispatch])` from App.
+   * The `Tab` shortcut is a pure toggle: the reducer computes `!state.uiHidden`,
+   * removing React's `SetStateAction` functional-updater and its stale-closure trap
+   * (a handler capturing an old value would compute the wrong target).
    */
-  setUiHidden: Dispatch<SetStateAction<boolean>>;
+  toggleUiHidden: () => void;
   /**
-   * The React setter for the debug panel's visibility (`d` shortcut).
-   * Same stable-reference rationale as the others.
+   * Stable `useCallback(() => dispatch(toggleDebugPanelOpen()), [dispatch])` from App.
+   * Same pure-toggle rationale as `toggleUiHidden`.
    */
-  setDebugPanelOpen: Dispatch<SetStateAction<boolean>>;
+  toggleDebugPanelOpen: () => void;
 };
