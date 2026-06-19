@@ -1,24 +1,22 @@
 /**
- * rootSaga — the store's single saga entry point, deliberately empty for now.
+ * rootSaga — the store's single saga entry point.
  *
- * The store wires the saga middleware and runs this root saga at construction
- * even though it forks nothing yet. That up-front plumbing is the point: the
- * seam's phase 2 fills this `all([])` with the feature sagas (render-wake,
- * fade-triggering, demand re-evaluation) by adding forks, without having to
- * re-thread `createSagaMiddleware`/`run` through the store factory again. The
- * empty root keeps the construction path identical between "no behaviour yet"
- * and "behaviour added later".
+ * Runs four reconcile watchers in parallel:
+ *   watchWake       — requests a render frame on every settings write
+ *   watchFlowReseed — reseeds the flow particle field when mode or count changes
+ *   watchBiasBake   — rebakes the brightness bias LUT when BiasMode changes
+ *   watchFades      — syncs visibility-layer fades via the FADE_ROW table
  *
- * `all([])` (over the empty array) is the form chosen over a bare empty generator
- * because it makes the forthcoming shape explicit — the next edit appends fork
- * effects to this array rather than introducing the `all` combinator from
- * scratch. typed-redux-saga's `all<T>(effects: T[])` accepts the empty array
- * (T infers to `unknown`) and yields immediately, so the running saga completes
- * cleanly with nothing forked.
+ * Each watcher's worker body reaches the engine via `getContext('reconcile')`,
+ * so composing the watchers before the context is registered (Task 2.4) is safe:
+ * no worker body runs until an action arrives, and the engine registers the
+ * context at construction before any settings dispatch can occur.
  */
 
 import { all } from 'typed-redux-saga';
 
+import { watchWake, watchFlowReseed, watchBiasBake, watchFades } from './effects/reconcileSagas';
+
 export function* mainSaga() {
-  yield* all([]);
+  yield* all([watchWake(), watchFlowReseed(), watchBiasBake(), watchFades()]);
 }
