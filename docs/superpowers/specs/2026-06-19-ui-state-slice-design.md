@@ -67,7 +67,7 @@ export type UiState = {
   debugPanelOpen: boolean;
   splash: {
     visible: boolean;             // Intent: dismiss/reopen mutate it
-    dismissedVersion: string | null; // Intent mirror of localStorage seenVersion
+    dismissedVersion: number | null; // Intent mirror of localStorage seenVersion (an integer)
   };
 };
 ```
@@ -82,13 +82,23 @@ uiReducer`; the `createAppStore` `PreloadedState` type grows `[uiRoute]: UiState
 
 - `setPaletteOpen(state, action: PayloadAction<boolean>)`
 - `setUiHidden(state, action: PayloadAction<boolean>)`
+- `toggleUiHidden(state)` — `state.uiHidden = !state.uiHidden`
 - `setDebugPanelOpen(state, action: PayloadAction<boolean>)`
-- `dismissSplash(state, action: PayloadAction<string>)` — sets
+- `toggleDebugPanelOpen(state)` — `state.debugPanelOpen = !state.debugPanelOpen`
+- `dismissSplash(state, action: PayloadAction<number>)` — sets
   `splash.visible = false` and `splash.dismissedVersion = action.payload` (the
-  current app version). One reducer for both Explore and Tour dismiss.
+  current `CURRENT_SPLASH_VERSION`). One reducer for both Explore and Tour dismiss.
 - `reopenSplash(state)` — sets `splash.visible = true`; leaves
   `dismissedVersion` untouched (reopening is informational, not a first-time
   event — matches today's `reopen` contract in `UseSplashReturn`).
+
+The two **toggle** reducers exist because the keyboard shortcuts toggle
+`uiHidden` / `debugPanelOpen` (`setUiHidden((prev) => !prev)` /
+`setDebugPanelOpen((prev) => !prev)` in `useKeyboardShortcuts`). Modelling the
+toggle as its own Intent reducer (computing `!state.x` from store state) avoids
+re-creating React's `SetStateAction` functional-updater contract over `dispatch`
+and the stale-closure trap a "close over the current value" shim would carry.
+`paletteOpen` needs no toggler — the keyboard only ever opens it.
 
 (Per the project convention, slice-reducer args are named `state`/`action`, never
 terse `s`/`a`.)
@@ -103,27 +113,38 @@ export const selectPaletteOpen = (s: RootState): boolean => s.ui.paletteOpen;
 export const selectUiHidden = (s: RootState): boolean => s.ui.uiHidden;
 export const selectDebugPanelOpen = (s: RootState): boolean => s.ui.debugPanelOpen;
 export const selectSplashVisible = (s: RootState): boolean => s.ui.splash.visible;
-export const selectSplashDismissedVersion = (s: RootState): string | null =>
+export const selectSplashDismissedVersion = (s: RootState): number | null =>
   s.ui.splash.dismissedVersion;
 ```
 
 ## 4. Seeding + persistence (outside the slice)
 
+**The storage helpers move to `src/state/ui/splashStorage.ts`.** Today
+`CURRENT_SPLASH_VERSION`, `SPLASH_STORAGE_KEY`, and the SSR-safe
+`readSeenVersion` / `writeSeenVersion` live in `src/hooks/useSplash.ts`. Once
+`buildInitialUiState` (the seed) and the persistence effect read/write them, a
+`hooks/` home would make the store layer import from the React layer — a layering
+inversion. They relocate to `src/state/ui/splashStorage.ts` (the splash-Intent
+home); `useSplash` re-imports them (hooks→state is the correct direction).
+
 **Seed (init-once, into `preloadedState`).** A `buildInitialUiState()` helper
 (`src/state/ui/buildInitialUiState.ts`) computes the initial slice — in particular
-`splash.visible` and `splash.dismissedVersion` — from the same inputs `useSplash`
-reads today: the `localStorage` `seenVersion` vs. the current app version, and
-deep-link presence (`hasDeepLink`, which skips the splash). `main.tsx` seeds it via
+`splash.visible` and `splash.dismissedVersion` (a `number | null` straight from
+`readSeenVersion()`) — from the same inputs `useSplash` reads today: the
+`localStorage` `seenVersion` vs. `CURRENT_SPLASH_VERSION`, and deep-link presence
+(`hasDeepLink`, which skips the splash). `main.tsx` seeds it via
 `createAppStore({ [uiRoute]: buildInitialUiState(), ... })`. `paletteOpen` /
 `uiHidden` / `debugPanelOpen` seed `false`.
 
 **Persist (a thin effect, not the slice).** Writing `seenVersion` to
 `localStorage` is a reactive consequence of `dismissSplash`. It lives as a thin
-effect — the simplest is a store subscription in `main.tsx` (`store.subscribe`
-diffing `selectSplashDismissedVersion`), or a `takeEvery(dismissSplash)` saga **if**
-the reconcile seam from the engine-handles work has landed. It needs no engine
-resources (localStorage is global), so it stays independent of that work; the plan
-picks whichever is in tree at execution time and notes the choice.
+effect — a `persistSplashVersion(store)` store subscription installed in `main.tsx`
+that diffs `selectSplashDismissedVersion` and calls `writeSeenVersion` on a change
+to a non-null value (`reopenSplash` leaves `dismissedVersion` untouched → no write).
+It needs no engine resources (localStorage is global), so it stays independent of
+the reconcile-sagas work; a `takeEvery(dismissSplash)` saga is an equivalent
+alternative once that seam lands, but the subscription is the chosen form on this
+branch.
 
 ## 5. The migration
 
@@ -131,6 +152,12 @@ picks whichever is in tree at execution time and notes the choice.
 (`App.tsx:225,235,238`); read via `useAppSelector(selectPaletteOpen)` etc. and
 write via `dispatch(setPaletteOpen(v))`. The deep-link / first-visit computation
 that today seeds `useState`/`useSplash` moves into `buildInitialUiState`.
+
+**`useKeyboardShortcuts`** — its input drops `setUiHidden` / `setDebugPanelOpen`
+(the `SetStateAction` setters it toggled) and gains `toggleUiHidden` /
+`toggleDebugPanelOpen` (`() => void`); the hook body calls them. `App.tsx` passes
+`() => dispatch(toggleUiHidden())` etc. `setPaletteOpen` stays a plain
+`(open: boolean) => void` the hook calls as `setPaletteOpen(true)`.
 
 **`useSplash`** (`src/hooks/useSplash.ts` + `UseSplashReturn`) — keep
 computing `blocked` / `canContinueAnyway` / `error` (unchanged); its `splashVisible`
@@ -146,21 +173,25 @@ return type is unchanged, so `Splash` / `AboutPill` consumers don't change.
 ## 6. Blast radius
 
 **Add:**
-`src/state/ui/{UiState (type), uiSlice, selectors, buildInitialUiState}.ts`;
-`uiRoute` in `src/store/constants.ts`.
+`src/@types/ui/UiState.d.ts` (type); `src/state/ui/{uiSlice, selectors,
+buildInitialUiState, splashStorage, persistSplashVersion}.ts`; `uiRoute` in
+`src/store/constants.ts`.
 
 **Rework:**
 `src/store/rootReducer.ts` (+ui route); `src/store/createAppStore.ts`
 (`PreloadedState` +`[uiRoute]`); `src/store/types.ts` (`RootState` gains `ui` via
 the reducer combine — derived, no hand-edit); `src/main.tsx` (seed
-`buildInitialUiState`, install the persistence subscription); `src/components/App/App.tsx`
-(selector reads + dispatches); the `useSplash` hook (visibility/dismiss/reopen
-slice-backed).
+`buildInitialUiState`, install `persistSplashVersion`); `src/components/App/App.tsx`
+(selector reads + dispatches); `src/hooks/useKeyboardShortcuts.ts` +
+`UseKeyboardShortcutsInput` (togglers); the `useSplash` hook (visibility/dismiss/
+reopen slice-backed; re-imports the relocated storage helpers).
 
-**Delete:**
+**Delete / move:**
 the `paletteOpen`/`uiHidden`/`debugPanelOpen` `useState` in `App.tsx`; the
-visibility/dismiss `useState` (or equivalent) inside `useSplash`; the in-hook
-`localStorage` write moves to the §4 effect.
+visibility/dismiss `useState` inside `useSplash`; the splash storage
+constants + `read`/`writeSeenVersion` helpers move from `useSplash.ts` to
+`src/state/ui/splashStorage.ts`; the in-hook `localStorage` write moves to the §4
+effect.
 
 **Unchanged:** `UseSplashReturn` shape; splash derived state; all local-component
 `useState`; the settings slice and the (parallel) reconcile-sagas work.
@@ -169,17 +200,19 @@ visibility/dismiss `useState` (or equivalent) inside `useSplash`; the in-hook
 
 ## 7. Testing
 
-- **Slice** (`uiSlice.test.ts`): each setter writes its field; `dismissSplash('v2')`
-  sets `visible:false` + `dismissedVersion:'v2'`; `reopenSplash` sets `visible:true`
+- **Slice** (`uiSlice.test.ts`): each setter writes its field; `toggleUiHidden` /
+  `toggleDebugPanelOpen` flip their flag across two dispatches; `dismissSplash(2)`
+  sets `visible:false` + `dismissedVersion:2`; `reopenSplash` sets `visible:true`
   and leaves `dismissedVersion` unchanged.
-- **`buildInitialUiState`**: returns `splash.visible:false` when `seenVersion ===`
-  current version; `true` when unseen; `false` when a deep link is present
+- **`buildInitialUiState`**: returns `splash.visible:false` when `seenVersion >=`
+  `CURRENT_SPLASH_VERSION`; `true` when unseen; `false` when a deep link is present
   (regardless of seen state); `paletteOpen`/`uiHidden`/`debugPanelOpen` default
   `false`. Drive `localStorage` + deep-link inputs as fixtures (mirrors today's
   `useSplash` init tests — repoint them).
 - **Selectors**: each returns its slice field.
-- **Persistence effect**: dispatching `dismissSplash('v2')` writes
-  `seenVersion='v2'` to `localStorage`; `reopenSplash` does **not** write.
+- **Persistence effect** (`persistSplashVersion`): dispatching `dismissSplash(2)`
+  writes `seenVersion` to `localStorage`; `reopenSplash` does **not** write; the
+  returned unsubscribe stops further writes.
 - **`useSplash`** (repoint existing hook tests): `splashVisible` follows the store;
   `dismissExplore`/`dismissTour` dispatch `dismissSplash`; `reopen` dispatches
   `reopenSplash`; `blocked`/`canContinueAnyway`/`error` still derive as before.
