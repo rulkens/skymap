@@ -111,11 +111,11 @@ This task is **additive**: `tier` lives in BOTH the settings slice and the new r
 - `tests/state/tier/selectors.test.ts`:
   - `selectTier lifts state.tier`: build a `RootState`-shaped object `{ [tierRoute]: 'small', [settingsRoute]: <any> }` (cast as needed) and assert `selectTier(state) === 'small'`.
 
-- [ ] Write `tierSlice.test.ts` + `selectors.test.ts` (red — modules don't exist).
-- [ ] Implement `tierSlice.ts`, `selectors.ts`, `requestTier.ts`; add `tierRoute` to `constants.ts`; wire it into `rootReducer.ts`.
-- [ ] `npm test` → tier slice/selector tests pass; full suite still green (tier in both slices is harmless).
-- [ ] `npm run typecheck` clean.
-- [ ] Commit. Stage: `src/state/tier/tierSlice.ts src/state/tier/selectors.ts src/state/tier/requestTier.ts src/store/constants.ts src/store/rootReducer.ts tests/state/tier/tierSlice.test.ts tests/state/tier/selectors.test.ts`. Message: `feat(store): add the tier root slice + requestTier command action`.
+- [x] Write `tierSlice.test.ts` + `selectors.test.ts` (red — modules don't exist).
+- [x] Implement `tierSlice.ts`, `selectors.ts`, `requestTier.ts`; add `tierRoute` to `constants.ts`; wire it into `rootReducer.ts`.
+- [x] `npm test` → tier slice/selector tests pass; full suite still green (tier in both slices is harmless).
+- [x] `npm run typecheck` clean.
+- [x] Commit. Stage: `src/state/tier/tierSlice.ts src/state/tier/selectors.ts src/state/tier/requestTier.ts src/store/constants.ts src/store/rootReducer.ts tests/state/tier/tierSlice.test.ts tests/state/tier/selectors.test.ts`. Message: `feat(store): add the tier root slice + requestTier command action`.
 
 ---
 
@@ -208,17 +208,17 @@ This is the store-shape change. The runner is **not yet registered by the engine
     expect(selectTier(store.getState())).toBe('large');
     ```
 
-- [ ] Write `tierSaga.test.ts` (red); update `createAppStore.test.ts` for the destructure + tier-seed.
-- [ ] Add the three types + fix `AppStore` in `types.ts`; change `createAppStore` to return `{ store, setSagaContext }` with `PreloadedState = Partial<RootState>`; compose `watchTier` in `rootSaga.ts`; implement `tierSaga.ts`.
-- [ ] Update all 13 `createAppStore(...)` call sites to `const { store } = …`.
-- [ ] `npm run typecheck` clean (catches any missed call site); `npm test` green.
-- [ ] Commit. Stage: `src/store/createAppStore.ts src/store/types.ts src/store/rootSaga.ts src/state/tier/tierSaga.ts tests/state/tier/tierSaga.test.ts tests/store/createAppStore.test.ts` + the 12 other touched test files + `src/main.tsx`. Message: `feat(store): return setSagaContext + fork the tier saga on the root seam`.
+- [x] Write `tierSaga.test.ts` (red); update `createAppStore.test.ts` for the destructure + tier-seed.
+- [x] Add the three types + fix `AppStore` in `types.ts`; change `createAppStore` to return `{ store, setSagaContext }` with `PreloadedState = Partial<RootState>`; compose `watchTier` in `rootSaga.ts`; implement `tierSaga.ts`.
+- [x] Update all 13 `createAppStore(...)` call sites to `const { store } = …`.
+- [x] `npm run typecheck` clean (catches any missed call site); `npm test` green.
+- [x] Commit. Stage: `src/store/createAppStore.ts src/store/types.ts src/store/rootSaga.ts src/state/tier/tierSaga.ts tests/state/tier/tierSaga.test.ts tests/store/createAppStore.test.ts` + the 12 other touched test files + `src/main.tsx`. Message: `feat(store): return setSagaContext + fork the tier saga on the root seam`.
 
 ---
 
 ### Task 3: Extract `makeRunTierTransition`; engine registers it; add `state.tier`; thread `setSagaContext`
 
-**Files:** create `src/services/engine/wiring/makeRunTierTransition.ts`, `tests/services/engine/wiring/makeRunTierTransition.test.ts`; modify `src/services/engine/engine.ts`, `src/@types/engine/state/EngineState.d.ts`, `src/@types/engine/EngineCallbacks.d.ts`, `src/main.tsx`, `src/hooks/useEngine.ts`. The runner stays defined in `handles/setTier.ts` until Task 5 deletes it — this task **adds** the factory and registers it; the old handle path still exists in parallel (App still calls `handle.sources.setTier`) until Task 5. The suite stays green.
+**Files:** create `src/services/engine/wiring/makeRunTierTransition.ts`, `src/store/SagaContextProvider.tsx`, `tests/services/engine/wiring/makeRunTierTransition.test.ts`; modify `src/services/engine/engine.ts`, `src/@types/engine/state/EngineState.d.ts`, `src/@types/engine/EngineCallbacks.d.ts`, `src/main.tsx`, `src/hooks/useEngine.ts`. (`src/@types/engine/state/engineState.test.ts` fixture gains `tier`.) The runner stays defined in `handles/setTier.ts` until Task 5 deletes it — this task **adds** the factory and registers it; the old handle path still exists in parallel (App still calls `handle.sources.setTier`) until Task 5. The suite stays green.
 
 **Contracts:**
 
@@ -245,8 +245,11 @@ This is the store-shape change. The runner is **not yet registered by the engine
     ```
     Import `makeRunTierTransition` from `./wiring/makeRunTierTransition`.
 - `src/@types/engine/EngineCallbacks.d.ts` — add `setSagaContext: SetSagaContext;` (required), import `SetSagaContext` from `../../store/types`. Document it: the engine registers `runTierTransition` (closed over live `EngineState`) into the saga's context through this setter the store factory exposes. **Keep `initialTier?` for now** (Task 6 decides its fate).
-- `src/main.tsx` — destructure `const { store, setSagaContext } = createAppStore(...)` and pass `setSagaContext` into the engine alongside `store` (through `useEngine` → `createEngine`). For this task, thread it; Task 6 changes the seed.
-- `src/hooks/useEngine.ts` — `useEngine` obtains the store via `useAppStore()` (useEngine.ts:89) and threads it into `createEngine` (useEngine.ts:152-153). `setSagaContext` is NOT obtainable from `useStore` — it must be threaded as an input. Add it to `UseEngineInput` (`src/@types/engine/UseEngineInput.d.ts`) as `setSagaContext: SetSagaContext` and pass it from `main.tsx` → `<App>` → `useEngine`. **Verify the actual path** main.tsx uses to reach `useEngine`: `main.tsx` renders `<App>`, and `App` calls `useEngine()` with no store arg today (store comes from `useAppStore`). So `setSagaContext` likewise can't ride the Provider — it must be passed as a prop/context. **Simplest honest thread:** have `main.tsx` put `setSagaContext` on a prop of `<App setSagaContext={…}>` (add the prop to `App`), `App` forwards it into `useEngine({ setSagaContext, extraCallbacks })`, and `useEngine` spreads it into the `createEngine` options bag. Read `useEngine.ts:83-153` + `App`'s signature to wire this exactly; update `UseEngineInput` + `App`'s props type accordingly.
+- **`setSagaContext` rides a dedicated React context, NOT a prop.** It can't ride the redux `<Provider>` (it's a sibling of the store, not on it), so it gets its own context — the mirror of how the store reaches `useAppStore()`. This keeps `App` prop-less and `setSagaContext` un-braided from the store.
+  - Create `src/store/SagaContextProvider.tsx` — `createContext<SetSagaContext | null>(null)`, a `SagaContextProvider({ value, children })` component, and a throwing `useSetSagaContext(): SetSagaContext` hook (loud-fail on a missing provider). Mirror `src/store/hooks.ts` for tone. Didactic header: the mirror of the redux `<Provider>`, un-braided from the store object, App-prop-free.
+  - `src/main.tsx` — `const { store, setSagaContext } = createAppStore(...)`; wrap `<App />` (prop-less) in `<SagaContextProvider value={setSagaContext}>` nested inside `<Provider store={store}>`. (Task 6 changes the seed.)
+  - `src/hooks/useEngine.ts` — read `const setSagaContext = useSetSagaContext();` alongside `const store = useAppStore();`, and forward it into the `createEngine(canvas, { store, setSagaContext, … })` options bag. `UseEngineInput` is UNCHANGED (no `setSagaContext` field — the hook sources it itself, symmetric with the store).
+  - `src/components/App/App.tsx` — UNCHANGED in this task (stays prop-less; it neither holds nor passes `setSagaContext`). App's tier-dispatch change is Task 5.
 
 **Tests:**
 
@@ -258,10 +261,10 @@ This is the store-shape change. The runner is **not yet registered by the engine
   - `gates the hi-res famous rebuild on device + renderer`: with `bootstrapDeps.phaseLocals.device` undefined OR `gpu.texturedDiskRenderer` null → no rebuild; with both present → rebuild fires (mock `rebuildHiResFamousForTier` to a typed spy and assert it was called with `tier: next`).
   This is the coverage the old `handles/setTier.ts` never had a dedicated test for.
 
-- [ ] Write `makeRunTierTransition.test.ts` (red).
-- [ ] Implement `makeRunTierTransition.ts` (relocate the `handles/setTier.ts:42-80` body, minus dispatch/`selectTier`); add `get tier()` + the `EngineState.tier` type; add `EngineCallbacks.setSagaContext`; register the runner in `engine.ts`; thread `setSagaContext` main → App → useEngine → createEngine.
-- [ ] `npm run typecheck` clean; `npm test` green.
-- [ ] Commit. Stage the created files + `src/services/engine/engine.ts src/@types/engine/state/EngineState.d.ts src/@types/engine/EngineCallbacks.d.ts src/@types/engine/UseEngineInput.d.ts src/main.tsx src/hooks/useEngine.ts src/components/App/App.tsx`. Message: `feat(engine): register runTierTransition into the saga context`.
+- [x] Write `makeRunTierTransition.test.ts` (red).
+- [x] Implement `makeRunTierTransition.ts` (relocate the `handles/setTier.ts:42-80` body, minus dispatch/`selectTier`); add `get tier()` + the `EngineState.tier` type; add `EngineCallbacks.setSagaContext`; register the runner in `engine.ts`; thread `setSagaContext` via `SagaContextProvider` (main wraps the provider; `useEngine` reads `useSetSagaContext()`; App stays prop-less).
+- [x] `npm run typecheck` clean; `npm test` green.
+- [x] Commit. Stage the created files (`makeRunTierTransition.ts`, `SagaContextProvider.tsx`, `makeRunTierTransition.test.ts`) + `src/services/engine/engine.ts src/@types/engine/state/EngineState.d.ts src/@types/engine/EngineCallbacks.d.ts src/@types/engine/UseEngineInput.d.ts src/main.tsx src/hooks/useEngine.ts tests/@types/engineState.test.ts`. Message: `feat(engine): register runTierTransition into the saga context`.
 
 ---
 
@@ -276,9 +279,9 @@ This is the store-shape change. The runner is **not yet registered by the engine
 
 Both reads now hit the store-delegating `state.tier` getter (still equal to `state.settings.tier` until Task 6 removes the settings field — so this task is safe with tier in both places).
 
-- [ ] Repoint both reads. (No new tests; existing demand/impostor tests exercise these paths — confirm they still pass against `state.tier`. If an existing test builds a fake state with `settings.tier` but no `tier`, add a `get tier()` / `tier` field to that fixture.)
-- [ ] `npm run typecheck` clean; `npm test` green.
-- [ ] Commit. Stage: `src/services/engine/wiring/reevaluateDemand.ts src/services/engine/wiring/wireImpostorSubsystems.ts` (+ any fixture file touched). Message: `refactor(engine): read tier from the root slice in demand wiring`.
+- [x] Repoint both reads. (No new tests; existing demand/impostor tests exercise these paths — confirm they still pass against `state.tier`. If an existing test builds a fake state with `settings.tier` but no `tier`, add a `get tier()` / `tier` field to that fixture.)
+- [x] `npm run typecheck` clean; `npm test` green.
+- [x] Commit. Stage: `src/services/engine/wiring/reevaluateDemand.ts src/services/engine/wiring/wireImpostorSubsystems.ts` (+ any fixture file touched). Message: `refactor(engine): read tier from the root slice in demand wiring`.
 
 ---
 
@@ -297,10 +300,10 @@ Both reads now hit the store-delegating `state.tier` getter (still equal to `sta
 - `src/@types/engine/handles/EngineSourcesHandle.d.ts` — delete the `setTier: (tier: Tier) => void;` member (line 23) and its docblock line; update the type's top docblock (drop the "`setTier` hot-swaps the active data tier" sentence — tier is now an Intent dispatched from the UI, not a handle method). Remove the now-unused `Tier` import if nothing else in the file uses it (it imports `Tier` only for `setTier` — verify and drop).
 - Delete `src/services/engine/handles/setTier.ts` (its body now lives in `makeRunTierTransition.ts`).
 
-- [ ] Delete/repoint any test asserting `handle.sources.setTier` exists or works (grep `setTier` under `tests/services/engine/`). The transition coverage now lives in `makeRunTierTransition.test.ts` (Task 3) and the dispatch→write in `tierSaga.test.ts` (Task 2).
-- [ ] Apply the App dispatch swap; remove the handle method + import; delete `handles/setTier.ts`; trim `EngineSourcesHandle`.
-- [ ] `npm run typecheck` clean (catches any surviving `setTier` import); `npm test` green.
-- [ ] Commit. Stage: `src/components/App/App.tsx src/services/engine/engine.ts src/@types/engine/handles/EngineSourcesHandle.d.ts` + the deleted `src/services/engine/handles/setTier.ts` + any touched test. Message: `refactor(engine): dispatch requestTier from the UI and delete the setTier handle`.
+- [x] Delete/repoint any test asserting `handle.sources.setTier` exists or works (grep `setTier` under `tests/services/engine/`). The transition coverage now lives in `makeRunTierTransition.test.ts` (Task 3) and the dispatch→write in `tierSaga.test.ts` (Task 2). _(No test drove the handle — none needed touching.)_
+- [x] Apply the App dispatch swap; remove the handle method + import; delete `handles/setTier.ts`; trim `EngineSourcesHandle`. _(Also re-tidied the `makeRunTierTransition` docblock — the duplication note is obsolete now.)_
+- [x] `npm run typecheck` clean (catches any surviving `setTier` import); `npm test` green.
+- [x] Commit. Stage: `src/components/App/App.tsx src/services/engine/engine.ts src/@types/engine/handles/EngineSourcesHandle.d.ts` + the deleted `src/services/engine/handles/setTier.ts` + any touched test. Message: `refactor(engine): dispatch requestTier from the UI and delete the setTier handle`.
 
 ---
 
@@ -331,25 +334,25 @@ Tier now has readers and writers cut over (Tasks 3-5), so this removes the dead 
 - `tests/store/createAppStore.test.ts` — the `returns a store seeded with settings initialState` test compares against `buildInitialSettings({ initialTier: 'medium' })`; change to `buildInitialSettings()`. The `honours preloadedState` test asserted `settings.tier === 'large'`; replace with the `tier`-slice seed assertion added in Task 2 (`store.getState().tier`), and drop the settings-tier assertion. Confirm no test still reads `settings.tier`.
 - `makeSettingsFixture` / `makeSettings` helpers + any `settingsSlice`/`selectors`/`buildInitialSettings` test — drop their `tier` assertions / `initialTier` args. Grep `settings.tier` and `initialTier` across `tests/` and reconcile every hit.
 
-- [ ] Grep `settings.tier`, `initialTier`, `selectTier` across `src/` + `tests/`; confirm the only remaining `selectTier` references resolve to `state/tier/selectors` (App, the saga, the saga test) and no `settings.tier` / `initialTier` survive after the edits.
-- [ ] Apply the deletions + `buildInitialSettings()` signature + `main.tsx` seed; reconcile the tests.
-- [ ] `npm run typecheck` clean; `npm test` green.
-- [ ] Commit. Stage: `src/state/settings/settingsSlice.ts src/state/settings/selectors.ts src/state/settings/initialState.ts src/@types/settings/EngineSettingsState.d.ts src/main.tsx` + the reconciled test files. Message: `refactor(settings): remove tier from the settings slice — it lives in its own root slice now`.
+- [x] Grep `settings.tier`, `initialTier`, `selectTier` across `src/` + `tests/`; confirm the only remaining `selectTier` references resolve to `state/tier/selectors` (App, the saga, the saga test) and no `settings.tier` / `initialTier` survive after the edits.
+- [x] Apply the deletions + `buildInitialSettings()` signature + `main.tsx` seed; reconcile the tests. _(Also deleted the now-dead `EngineCallbacks.initialTier?` field and reworded two stale "tier lives in settings" comments.)_
+- [x] `npm run typecheck` clean; `npm test` green.
+- [x] Commit. Stage: `src/state/settings/settingsSlice.ts src/state/settings/selectors.ts src/state/settings/initialState.ts src/@types/settings/EngineSettingsState.d.ts src/main.tsx` + the reconciled test files. Message: `refactor(settings): remove tier from the settings slice — it lives in its own root slice now`.
 
 ---
 
 ## Definition of Done (the `/feature-done` gate)
 
-- [ ] `npm test` — full suite green.
-- [ ] `npm run typecheck` — both tsconfigs clean.
-- [ ] No `TODO` / placeholder in any changed file.
-- [ ] `grep -rn "settings.tier\|initialTier" src/ tests/` → empty (tier no longer lives in settings; `buildInitialSettings()` takes no arg).
-- [ ] `grep -rn "selectTier" src/` → resolves only to `state/tier/selectors` consumers (App, `tierSaga`); no `state/settings/selectors` export survives.
-- [ ] `grep -rn "sources.setTier\|handles/setTier" src/ tests/` → empty (handle method + file deleted).
-- [ ] `state.tier` reads from `store.getState().tier`; `setTier` (the tier-slice reducer) is the ONLY writer of `state.tier`; `requestTier` has no reducer.
-- [ ] `createAppStore(...)` returns `{ store, setSagaContext }`; all 13 call sites destructure `{ store }`; the engine registers `runTierTransition` via `cb.setSagaContext`.
-- [ ] **Smoke-test attestation** (ask the user to look — dev server stays running, don't kill it): the tier dropdown swaps data resolution (galaxy catalogs re-fetch + fade the old tier out, MCPM volume reloads, the dropdown reflects the new tier); a same-tier re-select is a visible no-op (no flicker / no famous-texture rebuild); the SettingsPanel and the rest of the HUD continue to track.
-- [ ] **Deferred (NOT in this plan — note, do not implement):**
+- [x] `npm test` — full suite green. _(2687 passing, 442 files.)_
+- [x] `npm run typecheck` — both tsconfigs clean. _(exit 0, 0 errors.)_
+- [x] No `TODO` / placeholder in any changed file. _(none introduced.)_
+- [x] `grep -rn "settings.tier\|initialTier" src/ tests/` → `settings.tier` empty; `initialTier` survives only as the local seed const + `initialTierFromViewport` helper in `main.tsx` (both legitimate — the settings field + the `buildInitialSettings` param are gone).
+- [x] `grep -rn "selectTier" src/` → resolves only to `state/tier/selectors` consumers (App, `tierSaga`); no `state/settings/selectors` export survives.
+- [x] `grep -rn "sources.setTier\|handles/setTier" src/ tests/` → empty (handle method + file deleted).
+- [x] `state.tier` reads from `store.getState().tier`; `setTier` (the tier-slice reducer) is the ONLY writer of `state.tier`; `requestTier` has no reducer.
+- [x] `createAppStore(...)` returns `{ store, setSagaContext }`; all 13 call sites destructure `{ store }`; the engine registers `runTierTransition` via `cb.setSagaContext`.
+- [x] **Smoke-test attestation** (ask the user to look — dev server stays running, don't kill it): the tier dropdown swaps data resolution (galaxy catalogs re-fetch + fade the old tier out, MCPM volume reloads, the dropdown reflects the new tier); a same-tier re-select is a visible no-op (no flicker / no famous-texture rebuild); the SettingsPanel and the rest of the HUD continue to track. _(User confirmed: "visual smoke test is good", 2026-06-19.)_
+- [x] **Deferred (NOT in this plan — note, do not implement):**
   - Selection re-anchoring across a tier swap (selection is still in `selectionSubsystem.ts`, not the store — nothing to re-anchor; the fold later adds lines inside `watchTier`).
   - The `tierChanged` completion event (no consumer yet — YAGNI until the selection fold lands).
   - Converging other settings effects onto the saga (only `tier` triggers an orchestrated load/evict/rebuild; the asymmetry is essential).

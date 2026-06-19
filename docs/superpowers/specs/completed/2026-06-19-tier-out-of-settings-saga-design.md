@@ -195,16 +195,26 @@ export function createAppStore(preloadedState?: Partial<RootState>): {
 }
 ```
 
-```ts
-// src/main.tsx
+```tsx
+// src/main.tsx — setSagaContext rides its OWN React context, the mirror of the
+// redux <Provider> that carries the store. App stays prop-less.
 const { store, setSagaContext } = createAppStore({
   [tierRoute]: initialTier,
   [settingsRoute]: buildInitialSettings(),
 });
-createEngine({ store, setSagaContext, ... });
+<Provider store={store}>
+  <SagaContextProvider value={setSagaContext}>
+    <App />
+  </SagaContextProvider>
+</Provider>;
+
+// src/hooks/useEngine.ts — obtains BOTH from context seams, symmetric:
+const store = useAppStore(); // from the redux <Provider>
+const setSagaContext = useSetSagaContext(); // from <SagaContextProvider>
+createEngine(canvas, { store, setSagaContext, ... });
 
 // engine wiring, after EngineState exists:
-cb.setSagaContext({ runTierTransition: makeRunTierTransition(state) });
+cb.setSagaContext({ runTierTransition: makeRunTierTransition(state, bootstrapDeps) });
 ```
 
 `EngineCallbacks` gains `setSagaContext: SetSagaContext`. The contract types live
@@ -218,8 +228,18 @@ export type SetSagaContext = (ctx: Partial<SagaContext>) => void;
 ```
 
 `setSagaContext` is returned **alongside** the store, not bolted onto it: the store
-is a state container; registering a saga's runner is a distinct capability. Threading
-it as its own value keeps the two concerns un-braided.
+is a state container; registering a saga's runner is a distinct capability, kept as
+its own value so the two concerns stay un-braided. It reaches `useEngine` through a
+dedicated **`SagaContextProvider`** (`src/store/SagaContextProvider.tsx`) — a small
+React context that is the mirror of the redux `<Provider>`: `useEngine` reads the
+store from `useAppStore()` and the setter from `useSetSagaContext()`, symmetrically.
+This keeps `App` prop-less (no infrastructure handle drilled through the root
+component) while still avoiding the store-attachment that would re-braid the two.
+`EngineCallbacks` carries `setSagaContext: SetSagaContext` (the engine receives it as
+a `createEngine` option); `UseEngineInput` does **not** — the hook sources it itself.
+The contract types (`RunTierTransition` / `SagaContext` / `SetSagaContext`) live in
+`src/store/types.ts` (same home as `AppStore`; the one-type-per-file rule governs
+`src/@types/`, not `src/store/`).
 
 ---
 
@@ -281,14 +301,17 @@ yield* takeLatest(requestTier, function* (action) {
 `src/state/tier/{tierSlice,selectors,requestTier,tierSaga}.ts`;
 `RunTierTransition` / `SagaContext` / `SetSagaContext` in `src/store/types.ts`;
 `tierRoute` in `src/store/constants.ts`;
-`src/services/engine/wiring/makeRunTierTransition.ts`.
+`src/services/engine/wiring/makeRunTierTransition.ts`;
+`src/store/SagaContextProvider.tsx` (the context + `useSetSagaContext` hook).
 
 **Rework:**
 `src/store/rootReducer.ts` (+tier route), `src/store/rootSaga.ts` (compose
 `watchTier`), `src/store/createAppStore.ts` (return `{store, setSagaContext}`),
-`src/main.tsx`, `src/@types/engine/EngineCallbacks.d.ts` (+`setSagaContext`), engine
-wiring (register runner), `src/services/engine/handles/setTier.ts` → deleted, its
-body relocated to `makeRunTierTransition`, `src/components/App/App.tsx`,
+`src/main.tsx` (wrap `<SagaContextProvider>`), `src/hooks/useEngine.ts` (read
+`useSetSagaContext()`), `src/@types/engine/EngineCallbacks.d.ts` (+`setSagaContext`),
+engine wiring (register runner), `src/services/engine/handles/setTier.ts` → deleted,
+its body relocated to `makeRunTierTransition`, `src/components/App/App.tsx` (tier
+dispatch only — App is NOT touched for `setSagaContext`),
 `wireImpostorSubsystems.ts`, `reevaluateDemand.ts`, `buildDemandCtx.ts`,
 `buildInitialSettings.ts`, `src/@types/settings/EngineSettingsState.d.ts` (−tier),
 `src/state/settings/settingsSlice.ts` (−`setTier`), `src/state/settings/selectors.ts`
