@@ -1,6 +1,8 @@
 # Selection into the Intent Store (design)
 
-> **Status:** approved design, awaiting implementation plan.
+> **Status:** approved design, awaiting implementation plan. **Revised** to target
+> the RTK store that has since landed (the zustand→RTK migration and the first
+> `requestTier`/`tierSaga`/`SagaContext` slice are now on `main`).
 > **Why this exists:** selection (hover → select → focus) is the cleanest
 > illustration of the scattered-authoritative-state pattern
 > [ADR 0007](../../adrs/0007-intent-centric-state-and-effects.md) names: the
@@ -8,44 +10,74 @@
 > parallel `useState` copy, and the two are reconciled by echo callbacks
 > (`onHoverChange` / `onSelectChange` / `onFocusChange`). That is two
 > authoritative homes plus a mirror — the exact shape `intent.md` #2 forbids. This
-> spec folds selection into the engine Intent store as the **first intent-migration
-> fold**, and in doing so collapses the stray `engine.ts` entry points
+> spec folds selection into the engine Intent store as the **first
+> application-state fold** (the `tier` slice was the infrastructure
+> proof-of-shape), and in doing so collapses the stray `engine.ts` entry points
 > (`selectFamous`, `selectByAlias`, `focusOn`) the cleanup was originally about.
 > Grounded in the grill session
 > [`docs/grill-sessions/selection-into-intent-store-2026-06-18.md`](../../grill-sessions/selection-into-intent-store-2026-06-18.md).
 
+## What changed since the first draft (and why this is now simpler)
+
+The original draft was deliberately **vehicle-agnostic**: it targeted "the current
+zustand-vanilla store," showed every effect "both ways" (a hand-rolled listener vs.
+typed-redux-saga), and deferred the vehicle to a never-written ADR 0008. That
+hedging is now moot. The store landed as **Redux Toolkit, injected at the app
+root**, and the **first feature saga** (`requestTier` command → `tierSaga` watcher
+→ engine-owned `runTierTransition` reached via injected `SagaContext`) landed with
+it. So the vehicle is **decided**: RTK `createSlice` + `typed-redux-saga`, and the
+infrastructure this fold needs already exists:
+
+- **`combineReducers` with route constants** (`settingsRoute`, `tierRoute`). Adding
+  a slice is an additive edit to `rootReducer` + `constants`; `RootState` follows the
+  combine automatically. The draft's §2 "blast radius — every settings selector now
+  needs `s.settings.…`" worry is **gone**: settings is already its own route and
+  every consumer already reads it through scoped `useAppSelector(selector)` hooks.
+- **`tier` is already a root slice** with a `requestTier` command and a `tierSaga`.
+  The draft's §8 proposal "promote tier out of settings + add `requestTier` + reuse
+  `setTier` as `runTierTransition`" is **shipped**. This fold *extends* the existing
+  `tierSaga`, it does not introduce tier.
+- **`SagaContext` is the engine→saga seam.** `createAppStore` returns
+  `{ store, setSagaContext }`; the engine injects capabilities post-construction
+  (`setSagaContext({ runTierTransition })`) and sagas read them with `getContext`.
+  Selection effects join this exact seam — render-wake and the resolver deps inject
+  the same way `runTierTransition` does.
+- **Serializability + immutability checks are ON** (no `serializableCheck:false`,
+  no `enableMapSet`). This *reinforces* the reference-not-snapshot model in §1: a
+  resolved `GalaxyInfo` in the store would fail the serializable check; a flat
+  `SelectionRef` passes. The model isn't just cleaner — it's the only one the store
+  admits.
+
+The result: the draft's two longest hedges (§2 blast radius, §7/§8 "shown both
+ways") collapse to single concrete paths, and roughly a third of the proposed new
+infrastructure is struck because it already exists.
+
 ## Scope
 
-Fold selection (hover/select/focus) into the centralized engine store as
-**Intent**, with the resolved `FocusableTarget` becoming **derived** state:
+Fold selection (hover/select/focus) into the RTK store as **Intent**, with the
+resolved `FocusableTarget` becoming **derived** state:
 
 1. **Reference, not snapshot.** The store holds a serializable `SelectionRef`;
    `GalaxyInfo` / `StructureInfo` are resolved at the read boundary, memoized.
 2. **One Intent home, single write path.** A `selection` slice with a
    dedup-on-write reducer; the React `useState` mirrors and echo callbacks delete.
-3. **Two doors, not five entry points.** `focus(ref)` + `focusByFocusId(string)`;
-   `selectFamous` + `selectByAlias` + `focusOn` + the `useUrlSync` drain + the
-   `FocusTarget` type all dissolve.
-4. **Effects on a listener seam.** The render-wake and the tier-swap re-anchor
-   become effects on a store-boundary listener layer (reverting the
-   no-middleware stance), shown both ways pending the ADR 0008 vehicle.
-
-**Target store: the current zustand-vanilla store.** Everything here is
-vehicle-agnostic and lands on the store we have today. The RTK (+ possibly
-typed-redux-saga) migration is a **separate, later** effort; the shapes chosen
-here — slices, selectors, actions-as-setters, a descriptor slice, a listener seam —
-are RTK-ready by construction, so that migration is mechanical, not a redesign.
+3. **Direct dispatch, no write handle.** Writes are `store.dispatch(...)` at the
+   call site — engine-side via the injected store, React-side via `useAppDispatch`.
+   The `selectFamous` + `selectByAlias` + `focusOn` handle methods, the `useUrlSync`
+   drain, and the `FocusTarget` type all dissolve with **no replacement surface**.
+   The only engine→React channel that survives is the *read* (`resolveSelection`),
+   because resolution touches GPU-side catalogs — and it's a thin context hook, not
+   a method bag.
+4. **Effects on the saga seam.** Render-wake, tier re-anchor, and deep-link
+   deferral are all sagas reached through the injected `SagaContext` — the single
+   effects vehicle established by the tier slice.
 
 **Out of scope (do not scope-creep):**
 
-- The effects-layer **vehicle** decision (RTK `createListenerMiddleware` vs.
-  typed-redux-saga) — [ADR 0008](../../adrs/), still open. This spec shows the
-  orchestrated flows both ways.
-- **Converging `syncVisibilityFades`** onto the listener seam — it stays an
-  explicit bridge for this fold; it converges at the vehicle migration. Recorded
-  as a known temporary two-pattern state, not drift.
-- Converting **settings** to actions, `debug.disabledPasses` `Set`→`Record`,
-  tours-as-overlay — later folds.
+- **Converging `syncVisibilityFades`** onto the saga seam — it stays an explicit
+  bridge for this fold (consistent with `fades-not-zustand-middleware`: fades are
+  never reducer state). Recorded as a known temporary two-pattern state, not drift.
+- Converting **settings** to actions, tours-as-overlay — later folds.
 - Any **camera / tween behaviour** change. `tweenToGalaxy` / `tweenToStructure`
   are untouched; only their *callers* change.
 
@@ -71,7 +103,8 @@ The store holds a **reference**; the resolved target is **derived**. The proof
 this is the real Intent: the URL hash `#focus=source:localIdx` is already a
 reference, round-tripped back through `selectByAlias` — the resolved target and
 the URL reference are two encodings of one Intent kept in sync by hand. Holding
-the reference as the single Intent collapses that.
+the reference as the single Intent collapses that. (And the RTK serializability
+check makes it mandatory: only the reference is store-shaped.)
 
 ```ts
 // src/@types/engine/SelectionRef.d.ts  (one type per file)
@@ -103,21 +136,28 @@ Three deliberate choices, each grounded:
 
 ---
 
-## 2. The store shape
+## 2. The store shape — two sibling routes
 
-`RootState` grows from "settings only" to "all Intent + resource descriptors".
-**Nested slices**, and **`tier` promoted out of `settings`** — both for the same
-reason: a settings/tour `restoreSettings` round-trip must not sweep up selection
-or the data-resolution level.
+The store today combines `settings` + `tier`. The fold adds two sibling routes,
+following the established pattern (a constant per route in `store/constants.ts`, a
+route entry in `rootReducer.ts`); `RootState` extends automatically through the
+combine.
 
 ```ts
-export type RootState = {
-  tier: Tier; // promoted: own lifecycle, not swept by a settings restore
-  settings: EngineSettingsState; // knobs only (today's store, unchanged shape)
-  selection: SelectionState; // the attention ladder
-  dataStatus: DataStatusState; // serializable resource *descriptors* — never bytes (§4)
-};
+// store/constants.ts — additive
+export const selectionRoute = 'selection' as const;
+export const dataStatusRoute = 'dataStatus' as const;
 
+// rootReducer.ts — additive
+export const rootReducer = combineReducers({
+  [settingsRoute]: settingsReducer,
+  [tierRoute]: tierReducer, // already present
+  [selectionRoute]: selectionReducer,
+  [dataStatusRoute]: dataStatusReducer,
+});
+```
+
+```ts
 export type SelectionState = {
   readonly hover: SelectionRef | null;
   readonly select: SelectionRef | null;
@@ -130,14 +170,20 @@ export type DataStatusState = {
 };
 ```
 
-The blast-radius worry — "every settings selector now needs `s.settings.…`" —
-dissolves because `useSettingsStore` scopes its snapshot to `.settings`
-internally (one line: `selector(store.getState().settings)`), so **every existing
-settings consumer keeps its exact signature, untouched.** Selection gets its own
-`useSelection` selector hook.
+`tier` is **already** its own root slice (lifted out of `settings` so a
+settings/tour `restoreSettings` round-trip can't sweep the data-resolution level).
+Selection and `dataStatus` join it as peers for the same reason — selection Intent
+and resource readiness must survive a settings restore untouched.
 
-Seed `selection` to all-`null` and `dataStatus` to empty at store construction
-(same "seed at construction" rule as `drawMask` / volume fields).
+Each slice seeds from its own `initialState` (selection all-`null`, `dataStatus`
+empty), the same "seed at construction" rule the settings slice and `tier` already
+follow. Both shapes are flat serializable primitives, so they sail through RTK's
+serializability + immutability checks with no escape hatch.
+
+No consumer-signature churn: existing settings reads keep using
+`useAppSelector(selectExposure)` etc. (scoped to the `settings` route inside the
+selector); selection gets its own `state/selection/selectors.ts` read surface,
+consumed through the same `useAppSelector` hook.
 
 ---
 
@@ -147,8 +193,10 @@ Resolution splits into two pure pieces (the `intent.md` "Resources and derived
 state across the store boundary" rule):
 
 ```ts
-// pure STORE selector — sees only the store. Returns Intent.
-export const selectSelectedRef = (s: RootState): SelectionRef | null => s.selection.select;
+// pure STORE selectors — RootState-scoped, so the SAME function drops into React
+// (useAppSelector) and the engine (selectGenForSlot(store.getState(), slot)). The
+// compound ones are memoized with reselect — see the selectors module in §3b.
+export const selectSelectedRef = (state: RootState): SelectionRef | null => state[selectionRoute].select;
 
 // pure RESOLVER — fed the resources explicitly; NOT a store selector. Table-dispatched.
 type ResolveDeps = {
@@ -183,12 +231,9 @@ Within one frame `select` is read 3× (`runFrame:287`, `selectionRingPass`
 function makeResolveSlot(state: EngineState) {
   const memo = new Map<SelectionSlot, { ref: SelectionRef | null; gen: number; out: FocusableTarget | null }>();
   return (slot: SelectionSlot): FocusableTarget | null => {
-    const ref = selectSlot(state.store.getState(), slot);
-    const ds = state.store.getState().dataStatus;
-    const gen =
-      ref?.type === 'galaxyCatalog' ? (ds.catalogGen[ref.source] ?? 0)
-      : ref?.type === 'structure' ? ds.structureGen
-      : 0;
+    const root = state.store.getState();
+    const ref = selectSlot(root, slot);
+    const gen = selectGenForSlot(root, slot); // the §3b reselect selector — shared with React
     const hit = memo.get(slot);
     if (hit && hit.ref === ref && hit.gen === gen) return hit.out; // ref identity stable when unchanged (§5)
     const out = resolveSelectionRef(ref, {
@@ -202,20 +247,102 @@ function makeResolveSlot(state: EngineState) {
 }
 ```
 
-Per-frame consumers (`selectionRingPass`, `selectionHaloTable`, `runFrame`'s
-`structureFocus.update`) and React (InfoCard) read **through** this getter, so they
-keep consuming a resolved `FocusableTarget` unchanged — they never touch catalogs.
+Per-frame engine consumers (`selectionRingPass`, `selectionHaloTable`, `runFrame`'s
+`structureFocus.update`) read **through** this getter directly — they have
+`state`, so they call `resolveSlot(slot)` with no indirection.
+
+### 3a. The React read channel — a thin context hook, not a handle
+
+React can't reach `state.data.galaxies.catalogs`, and the store deliberately
+doesn't hold them (§4). So the *one* engine→React selection channel that survives
+the handle dissolution (§6) is the resolved read. It rides its **own React
+context**, exactly mirroring how `SagaContextProvider` carries `setSagaContext` to
+`useEngine` — the engine publishes a `resolveSelection` bound to its live deps +
+memo; InfoCard consumes it:
+
+```ts
+// engine publishes (alongside setSagaContext):
+const resolveSlot = makeResolveSlot(state);
+// → carried down via <SelectionResolveProvider value={resolveSlot}>
+
+// InfoCard consumes — re-resolves when the ref OR the descriptor generation changes:
+const resolveSelection = useResolveSelection();
+const ref = useAppSelector(selectSelectedRef);
+const gen = useAppSelector(selectSelectedGen);
+const selected = useMemo(() => resolveSelection('select'), [ref, gen]);
+```
+
+This is a single bound function on a context, not a method bag — the same weight
+and shape as `useSetSagaContext`. The write path needs no such channel at all
+(direct dispatch, §6); only the read, which carries real resolver logic, does.
+
+### 3b. Compound selectors (reselect)
+
+The "which descriptor generation pairs with this ref" computation was inlined in
+both `makeResolveSlot` (engine) and InfoCard's `useMemo` deps (React) — the same
+logic in two homes. It lifts into one **memoized reselect selector** in
+`state/selection/selectors.ts`, consumed from both sides. RTK re-exports
+`createSelector`, so this adds no dependency.
+
+```ts
+import { createSelector } from '@reduxjs/toolkit';
+
+import { selectionRoute, dataStatusRoute } from '../../store/constants';
+import type { RootState } from '../../store/types';
+import type { SelectionRef } from '../../@types/engine/SelectionRef';
+import type { SelectionSlot } from '../../@types/engine/SelectionSlot';
+import type { DataStatusState } from '../../@types/engine/state/DataStatusState';
+
+// ── input selectors (cheap, direct reads) ──
+export const selectSlot = (state: RootState, slot: SelectionSlot): SelectionRef | null => state[selectionRoute][slot];
+export const selectSelectedRef = (state: RootState): SelectionRef | null => state[selectionRoute].select;
+export const selectFocusRef = (state: RootState): SelectionRef | null => state[selectionRoute].focus;
+export const selectHoverRef = (state: RootState): SelectionRef | null => state[selectionRoute].hover;
+const selectDataStatus = (state: RootState): DataStatusState => state[dataStatusRoute];
+
+// the generation that, paired with a ref, tells the resolver a re-resolve is due (§4).
+const genForRef = (ref: SelectionRef | null, ds: DataStatusState): number =>
+  ref?.type === 'galaxyCatalog' ? (ds.catalogGen[ref.source] ?? 0)
+  : ref?.type === 'structure' ? ds.structureGen
+  : 0;
+
+// ── compound selectors (reselect-memoized) ──
+const makeSelectGen = (selectRef: (s: RootState) => SelectionRef | null) =>
+  createSelector([selectRef, selectDataStatus], genForRef);
+
+export const selectSelectedGen = makeSelectGen(selectSelectedRef);
+export const selectFocusGen = makeSelectGen(selectFocusRef);
+
+// per-slot map so the engine's parametric getter shares the SAME memoized selectors.
+const GEN_BY_SLOT: Record<SelectionSlot, (s: RootState) => number> = {
+  hover: makeSelectGen(selectHoverRef),
+  select: selectSelectedGen,
+  focus: selectFocusGen,
+};
+export const selectGenForSlot = (state: RootState, slot: SelectionSlot): number => GEN_BY_SLOT[slot](state);
+
+// a derived boolean the InfoCard / overlays read instead of re-deriving null-checks.
+export const selectIsSelectionActive = createSelector(
+  [selectSelectedRef, selectFocusRef],
+  (select, focus) => select !== null || focus !== null,
+);
+```
+
+Each `makeSelectGen(...)` is a distinct memoized instance, so the three slots never
+thrash one shared cache. The engine's `makeResolveSlot` calls `selectGenForSlot`;
+InfoCard calls `selectSelectedGen` — neither recomputes unless the ref or the
+matching descriptor actually changed.
 
 ---
 
 ## 4. The resource boundary — the descriptor bridge
 
 A pure store selector can't resolve a ref, because resolution needs the catalogs,
-which are heavy GPU-backed resources that **stay out of the store**. The
-notification gap — React must re-render when a *late-arriving cloud* makes a
-previously-null ref resolve — is closed not by mirroring the resolved target into
-the store, but by projecting the resource's **readiness** into the store as a
-serializable **descriptor**: `dataStatus.catalogGen`.
+which are heavy GPU-backed resources that **stay out of the store** (and would fail
+the serializable check). The notification gap — React must re-render when a
+*late-arriving cloud* makes a previously-null ref resolve — is closed not by
+mirroring the resolved target into the store, but by projecting the resource's
+**readiness** into the store as a serializable **descriptor**: `dataStatus.catalogGen`.
 
 This is the rule written into
 [`intent.md` § "Resources and derived state across the store boundary"](../../superpowers/conventions/intent.md).
@@ -226,17 +353,20 @@ It is dispatched from the one place a cloud commits:
 store.dispatch(catalogLoaded({ source, generation: nextGen })); // a number, not the cloud
 ```
 
+`catalogLoaded` is a real RTK action (its `dataStatus` reducer bumps
+`catalogGen[source]`, and the deep-link / re-anchor sagas in §7–§8 `take` it).
 React keys on it; a deep-linked selection whose cloud hasn't loaded resolves to
 `null`, then re-resolves the instant `catalogGen` ticks:
 
 ```ts
-const ref = useSelection((s) => s.select);
-const gen = useStore((s) => (ref?.type === 'galaxyCatalog' ? s.dataStatus.catalogGen[ref.source] ?? 0 : 0));
-const selected = useMemo(() => handle.current?.selection.resolve('select') ?? null, [ref, gen]);
+const resolveSelection = useResolveSelection(); // the §3a context hook
+const ref = useAppSelector(selectSelectedRef);
+const gen = useAppSelector(selectSelectedGen); // the §3b reselect selector — no inline ternary
+const selected = useMemo(() => resolveSelection('select'), [ref, gen]);
 ```
 
 Skymap already has the raw material — AssetSlot generation counters *are* this
-descriptor; they need only projecting into `dataStatus`.
+descriptor; they need only projecting into `dataStatus` via `catalogLoaded`.
 
 ---
 
@@ -248,34 +378,45 @@ flat primitives, so a stock `shallowEqual` *is* structural equality — no per-t
 code.
 
 ```ts
-import { shallowEqual } from 'react-redux'; // or the zustand-side equivalent
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { shallowEqual } from 'react-redux';
 
 const setIfChanged =
-  (key: keyof SelectionState) =>
-  (state: SelectionState, { payload }: PayloadAction<SelectionRef | null>) => {
-    if (!shallowEqual(state[key], payload)) state[key] = payload;
+  (slot: keyof SelectionState) =>
+  (state: SelectionState, action: PayloadAction<SelectionRef | null>) => {
+    if (!shallowEqual(state[slot], action.payload)) state[slot] = action.payload; // Immer: in-place when changed
   };
 
 const selectionSlice = createSlice({
-  name: 'selection',
+  name: selectionRoute,
   initialState: { hover: null, select: null, focus: null } as SelectionState,
   reducers: {
-    hover: setIfChanged('hover'),
-    select: setIfChanged('select'),
-    focus: setIfChanged('focus'),
-    clear: (s) => { s.select = null; s.focus = null; }, // dismiss: deselect AND drop focus
+    updateSelectionHover: setIfChanged('hover'),
+    updateSelectionSelect: setIfChanged('select'),
+    updateSelectionFocus: setIfChanged('focus'),
+    clearSelection: (state) => { state.select = null; state.focus = null; }, // dismiss: deselect AND drop focus
   },
 });
+
+export const {
+  updateSelectionHover,
+  updateSelectionSelect,
+  updateSelectionFocus,
+  clearSelection,
+} = selectionSlice.actions;
+
+// per-slot map for the parametric dispatch in the tier re-anchor (§8).
+export const SELECTION_WRITE_BY_SLOT: Record<SelectionSlot, (ref: SelectionRef | null) => PayloadAction<SelectionRef | null>> = {
+  hover: updateSelectionHover,
+  select: updateSelectionSelect,
+  focus: updateSelectionFocus,
+};
 ```
 
-On the **zustand store today** this is the same logic via a setter that returns the
-*same* state object on a no-op (zustand's dedup mechanism):
-`set((s) => shallowEqual(s.selection[key], ref) ? s : { ...s, selection: { ...s.selection, [key]: ref } })`.
-
-The payoff: the old "fire callback only on actual change" guard becomes "no new
-state on a no-op" → **no subscriber notification, no React re-render, no
-render-wake**, all from one guard. And the invariant *ref identity is stable when
-the value is unchanged* lets §3's memo and §7's wake compare with `===`.
+The payoff: the old "fire callback only on actual change" guard becomes "Immer
+returns the same state slot on a no-op" → **no subscriber notification, no React
+re-render** from a no-op write. And the invariant *ref identity is stable when the
+value is unchanged* lets §3's memo compare with `===`.
 
 `targetEq.ts` **and** `targetIdentityKey.ts` delete with no bespoke replacement.
 
@@ -283,27 +424,41 @@ the value is unchanged* lets §3's memo and §7's wake compare with `===`.
 > so `===` would always miss; making it work would need interning (more plumbing).
 > `shallowEqual` gets the dedup without interning.
 
+> **Render-wake is NOT free from the reducer dedup** — see §7a. The wake is a saga
+> watcher on the write *actions*, which fire even when this reducer no-ops the
+> *state*. That extra wake is named and accepted there.
+
 ---
 
-## 6. Entry points — two doors, `FocusTarget` deleted
+## 6. Entry points — direct dispatch, the write handle dissolved
 
 `selectFamous` / `selectByAlias` / `focusOn` are all "resolve an identifier →
-commit focus," differing only in the identifier. They split into **two doors** and
-delete:
+commit focus," differing only in the identifier. The first draft folded them into
+two engine-handle doors (`focus(ref)` / `focusByFocusId(string)`). With the store
+injected at the app root, **those doors are pure proxies over `store.dispatch`** —
+they carry no logic — so they dissolve too. Every write is a direct dispatch; there
+is **no selection write surface on the engine handle at all**:
 
 ```ts
-// Door 1 — the ref door (Intent write path). Replaces focusOn(target) and selectByAlias({source, localIdx}).
-function focus(ref: SelectionRef | null): void {
-  store.dispatch(selectionActions.focus(ref)); // the tween is an effect (§7), not part of the write
-}
+// the ref write — the value a pick or a double-click produces:
+store.dispatch(updateSelectionFocus(ref)); // null releases focus; the tween is an effect (§7)
 
-// Door 2 — the durable-id door. Replaces selectFamous(id). Stateless: resolve-or-noop.
-function focusByFocusId(focusId: string): void {
-  const ref = resolveFocusId(focusId, deps);
-  if (ref) focus(ref);
-  // else: not resolvable yet — the CALLER's effect retries on catalogGen (§ below). No engine pending state.
-}
+// the durable-id command — what a deep link / command-palette pick produces:
+store.dispatch(requestFocus(focusId)); // the saga resolves now, or defers on catalogLoaded (§7b)
 ```
+
+`requestFocus(focusId)` is a reducer-less `createAction` command (the same
+command/write split `requestTier` uses): it carries intent, changes no state, and
+the deep-link saga is what reacts — resolving the id to a `SelectionRef` and
+dispatching `updateSelectionFocus(ref)` when the cloud is ready. No engine
+`pendingFocus` field; the "wait until loaded" is a `yield`, not stored state.
+
+Why this is safe to dissolve rather than keep "for ergonomics": a wrapper that only
+forwards an argument to `dispatch` is exactly the proxy surface the
+`delete-proxy-surfaces` rule says to remove once the thing it adapted (the old
+subsystem closure) is gone. The read is the asymmetric case — it is **not** a proxy
+(it runs the resolver against GPU-side catalogs), so it survives, as a thin context
+hook (§3a).
 
 **`SelectionRef` is the one selection type; the durable form is just its string
 serialization at the boundary.** `FocusTarget` (the `{kind:'famous'|'pgc'|'sdss'|'pos'|'structure'}`
@@ -324,139 +479,127 @@ a type. The URL string format is **unchanged**.
 Call-site rewrites, each simpler:
 
 ```ts
-// wireInput double-click: was focusOn(selected()); now read the ref:
-onDoubleClick: () => handle.selection.focus(selectSlot(store.getState(), 'select')); // null releases focus
-// CommandPalette famous: was selectFamous(id):
-onSelect: (id) => handle.selection.focusByFocusId(`famous:${id}`);
-// useUrlSync: was parse → resolveFocusTarget → selectByAlias:
-handle.selection.focusByFocusId(hashFocusId);
+// wireInput double-click (engine-side, has the injected store): was focusOn(selected());
+onDoubleClick: () => store.dispatch(updateSelectionFocus(selectSlot(store.getState(), 'select'))); // null releases
+// CommandPalette famous (React): was selectFamous(id):
+onSelect: (id) => dispatch(requestFocus(`famous:${id}`)); // dispatch = useAppDispatch()
+// useUrlSync (React): was parse → resolveFocusTarget → selectByAlias:
+dispatch(requestFocus(hashFocusId));
 ```
 
-**No engine `pendingFocus`.** The deep-link "retry when the cloud arrives" is the
-*consumer's* effect, keyed on the `catalogGen` descriptor — and `useUrlSync`
-already owns the URL's pending; under the descriptor bridge its bespoke drain
-becomes one effect:
-
-```ts
-const focusId = useStore(selectUrlFocusId);
-const gen = useStore(selectAllCatalogGen);
-useEffect(() => { if (focusId) handle.current?.selection.focusByFocusId(focusId); }, [focusId, gen]);
-```
-
-Deferral is always the consumer's effect (URL today, tours later), never a field on
+Deferral is always a saga's `take`-loop (URL today, tours later), never a field on
 the engine.
 
 ---
 
-## 7. Effects — a listener seam on the store
+## 7. Effects — sagas on the `SagaContext` seam
 
-`select`/`focus` must wake the render-on-demand loop (halo draw, focus fade);
-`hover` must **not** (it only feeds the React InfoCard — no GPU consequence). Today
-this wake is baked into the subsystem setters. It moves to a **store-boundary
-listener seam** — the effects layer `intent.md` #5 calls for — **reverting the
-`fades-not-zustand-middleware` / ADR 0001 no-middleware stance.**
+Selection has three effects, and **all three are sagas** reached through the
+injected `SagaContext` — the single vehicle the tier slice established. There is
+**no listener middleware on the store**: the store reducers stay free of engine
+references (upholding `fades-not-zustand-middleware` / ADR 0001's no-store-effects
+stance), and engine capabilities cross into saga-land only through `getContext`,
+exactly as `runTierTransition` does.
 
-This is a deliberate reversal, made because the target architecture is RTK with an
-effects layer: standing up the seam now (on zustand) means one effects pattern that
-migrates 1:1 to `createListenerMiddleware`, rather than a bridge rewritten later.
+The engine extends the context it already injects:
 
 ```ts
-// effectsMiddleware — a tiny listener layer: after each transition, run (prev, next) listeners.
-// Maps 1:1 onto RTK createListenerMiddleware later. selection-wake is its first listener:
-listen(store, (prev, next) => {
-  if (next.selection.select !== prev.selection.select || next.selection.focus !== prev.selection.focus) {
-    requestRender(); // essential wake; hover deliberately excluded (no GPU consequence)
-  }
-});
+// store/types.ts — SagaContext grows the capabilities selection sagas call.
+export type SagaContext = {
+  runTierTransition: RunTierTransition; // already present
+  requestRender: () => void;            // engine render-on-demand wake
+  resolveDeps: () => ResolveDeps;       // live catalogs / famousMeta / structures (lazy — GPU lands post-bootstrap)
+};
+// engine, post-construction:
+setSagaContext({ runTierTransition, requestRender, resolveDeps });
 ```
 
-Two consequences, named so the reversal is deliberate:
+### 7a. Render-wake
 
-1. **The store layer now couples to `requestRender`** (injected into the listener
-   layer at bootstrap) — exactly what the fades bridge avoided. Accepted as the
-   cost of the effects seam.
-2. **`syncVisibilityFades` is temporarily the odd one out** (bridge, while
-   selection is on the seam). Tolerated for this fold; converges at the vehicle
-   migration. A known temporary inconsistency, recorded here so it doesn't read as
-   drift.
+`select`/`focus` must wake the render-on-demand loop (halo draw, focus fade);
+`hover` must **not** (it only feeds the React InfoCard — no GPU consequence). A
+`takeEvery` watcher on the two waking actions fires `requestRender` from context:
 
-This reversal is recorded in ADR 0007 (or a short follow-up): *effects land at the
-store boundary as a listener seam; the no-middleware stance is retired.*
+```ts
+function* watchSelectionWake() {
+  const requestRender = yield* getContext<SagaContext['requestRender']>('requestRender');
+  yield* takeEvery([updateSelectionSelect, updateSelectionFocus], () => requestRender());
+}
+```
+
+**Named trade-off of the uniform-saga choice:** the watcher fires on the *action*,
+which is dispatched even when §5's reducer no-ops the *state* (re-selecting the
+same target). So a no-op `select` still calls `requestRender`. This is harmless —
+`requestRender` is idempotent and coalesced into a single rAF, and the loop sleeps
+again immediately if nothing animates — but it does forfeit the draft's "perfectly
+quiet steady state on a no-op." Accepted as the cost of one effects vehicle; a
+state-diff listener would reclaim it but reintroduce the second mechanism this fold
+deliberately avoids. (If a profile ever shows it matters, the watcher can `select`
+the slot and gate on a saga-local last-seen — but YAGNI until measured.)
+
+### 7b. Deep-link / `requestFocus` deferral
+
+`focusByFocusId` dispatches `requestFocus(focusId)` (§6). The saga resolves it,
+deferring on the descriptor bridge (§4) until the cloud is ready:
+
+```ts
+function* onRequestFocus(action: ReturnType<typeof requestFocus>) {
+  const resolveDeps = yield* getContext<SagaContext['resolveDeps']>('resolveDeps');
+  let ref = resolveFocusId(action.payload, resolveDeps());
+  while (!ref) { yield* take(catalogLoaded); ref = resolveFocusId(action.payload, resolveDeps()); }
+  yield* put(updateSelectionFocus(ref));
+}
+function* watchRequestFocus() { yield* takeLatest(requestFocus, onRequestFocus); } // latest deep-link wins
+```
+
+This is the indefinite-wait door (a deep-linked source may be toggled on much
+later). The tier re-anchor in §8 uses the same resolver but a **bounded** wait.
 
 ---
 
-## 8. Tier swap — `requestTier` Intent action + a transition effect
+## 8. Tier swap — re-anchor folded into the existing `tierSaga`
 
 A stored `(source, index)` is **positional**: after a tier swap the same index
-resolves to a *different* galaxy (or `null`). "Do nothing" is the one wrong
-option (silently wrong galaxy). The fix re-anchors by durable id — and it is
-cleanest as a **`requestTier` Intent action + a transition effect**, because that
-*dissolves* the capture-before-eviction problem:
+resolves to a *different* galaxy (or `null`). "Do nothing" is the one wrong option
+(silently wrong galaxy). The fix re-anchors by durable id. Because
+`requestTier`/`tierSaga`/`runTierTransition` already exist, this is an **addition
+to the landed saga**, not new machinery:
 
 ```
-dispatch requestTier('large')
-  → reducer: state.tier = 'large'        // old clouds STILL loaded — only intent changed
-  → effect fires (reacts to the tier intent):
-       1. capture durable focus-ids       // old clouds present → focusIdOf works
-       2. run the transition (evict + load) // eviction happens HERE, after capture
-       3. on completion → re-resolve ids → focus(newRef)  (null clears a dropped-out galaxy)
+dispatch requestTier('large')                 // already the UI path
+  → tierSaga (extended):
+       prev = select(tier); if prev === next return
+       reanchor = captureGalaxyFocusIds(select(selection), resolveDeps())  // BEFORE the write — old clouds present
+       put(updateSelectionHover(null))
+       put(setTier(next)); run = getContext('runTierTransition'); run?.(prev, next)  // eviction + reload starts
+       for [slot, id] of reanchor:
+            take(catalogLoaded for that source)        // bounded: this tier's load WILL complete
+            put(SELECTION_WRITE_BY_SLOT[slot](resolveFocusId(id, resolveDeps()) ?? null))  // hit → re-anchor, miss → clear
 ```
 
-The effect reacts to the **intent** (`requestTier`), so it fires *before* any
-eviction and the capture is just a read at the top — no pre-capture function, no
-closure stash, no persistent `pendingReanchor` field. `tier` becomes a proper
-Intent with a single write path (consistent with promoting it to `RootState`, §2);
-the UI dispatches `requestTier` instead of calling `handle.setTier`. The existing
-`setTier` body is **reused** as `runTierTransition` (companion assets, MCPM, famous
-texture unchanged), now *called from* the effect.
+Two properties make this clean:
 
-### Shown both ways (vehicle deferred to ADR 0008)
+- **Capture is a read at the top, pre-eviction.** The re-anchor reads durable ids
+  while the *old* clouds are still loaded (`focusIdOf` works), before
+  `runTierTransition` evicts anything. No pre-capture closure stash, no persistent
+  `pendingReanchor` field — the saga's linear flow *is* the ordering guarantee.
+- **Re-anchor shares §7b's resolver but bounds its wait.** Deep-link waits
+  indefinitely; re-anchor waits for the specific `catalogLoaded` of the swapped
+  source(s) — those loads are in flight and will land — then re-resolves **once**.
+  A hit re-anchors to the new ref; a miss (`null`) clears, because the galaxy
+  dropped out of the new tier. This is *more* correct than today, which persists a
+  haloed "ghost" galaxy that may not exist in the new tier.
 
-**Listener seam (zustand now / RTK listener later):**
+`takeLatest` on `requestTier` (already how the landed saga is wired) gives
+latest-wins cancellation free: a rapid second tier change aborts the first
+re-anchor mid-`take`. Structures / milkyWay refs are untouched (already durable);
+only the galaxy arm re-anchors.
 
-```ts
-listen(store, async (prev, next) => {
-  if (prev.tier === next.tier) return;
-  const reanchor = captureGalaxyFocusIds(prev.selection, state.data.galaxies); // pre-eviction
-  store.dispatch(selectionActions.hover(null));
-  await runTierTransition(next.tier);
-  for (const [slot, id] of reanchor) store.dispatch(selectionActions[slot](resolveFocusId(id, state.data.galaxies)));
-});
-// rapid tier changes need a manual transition token here (RTK listener: cancelActiveListeners).
-```
-
-**typed-redux-saga (the orchestrated-flow sweet spot):** `takeLatest` gives
-latest-wins cancellation free, `select` is the read, the command/event split is
-explicit, and the deep-link deferral becomes a first-class `take`-loop:
-
-```ts
-function* onRequestTier(action: ReturnType<typeof requestTier>) {
-  const galaxies = yield* getContext<GalaxyData>('galaxies');
-  const reanchor = captureGalaxyFocusIds(yield* select(selectSelection), galaxies); // pre-eviction
-  yield* put(selectionActions.hover(null));
-  yield* call(runTierTransition, action.payload); // takeLatest cancels this if a newer requestTier arrives
-  for (const [slot, id] of reanchor) yield* put(selectionActions[slot](resolveFocusId(id, galaxies)));
-  yield* put(tierChanged(action.payload)); // the event other reactions hang off
-}
-function* watchTier() { yield* takeLatest(requestTier, onRequestTier); }
-
-// deep-link deferral as a saga — the "wait until ready" is a yield, not stored state:
-function* onRequestFocus(action: ReturnType<typeof requestFocus>) {
-  const galaxies = yield* getContext<GalaxyData>('galaxies');
-  let ref = resolveFocusId(action.payload, galaxies);
-  while (!ref) { yield* take(catalogLoaded); ref = resolveFocusId(action.payload, galaxies); }
-  yield* put(selectionActions.focus(ref));
-}
-```
-
-The read for ADR 0008: **saga earns its keep on the orchestrated edges (tier,
-deep-link, tours) — cancellation, sequencing, first-class waits — not on the common
-click path, where a one-line listener is lighter.** This fold ships on whichever
-vehicle is chosen; the action/selector/effect shapes are identical either way.
-
-`hover → clear`; `select`/`focus` → re-anchor (clear on drop-out); structures /
-milkyWay refs untouched (already durable). This is *more* correct than today, which
-persists a haloed "ghost" galaxy that may not be in the new tier.
+The landed `runTierTransition` is fire-and-forget today (its note: "the `run(...)`
+line would become `yield* call(run, …)` only if a step needed to be cancellable").
+Re-anchor does **not** force that change — it keys off the per-source
+`catalogLoaded` descriptor rather than awaiting the runner, so the runner's
+signature stays as-is.
 
 ---
 
@@ -471,22 +614,36 @@ persists a haloed "ghost" galaxy that may not be in the new tier.
 / `onFocusChange` echo callbacks, `useUrlSync`'s bespoke drain.
 
 **Rework:** `resolvePick` / `resolvePickTable` (pick → ref instead of pick →
-resolved target), `wireInput` (dispatch refs), `setTier.ts` (→ `requestTier` +
-`runTierTransition`), `useUrlSync` (→ `focusByFocusId` + `catalogGen` effect),
-`useEngine` (→ `useSelection` selectors), `useSettingsStore` (scope to `.settings`),
+resolved target), `wireInput` (dispatch `updateSelection*` / `requestFocus` refs
+straight to the injected store — no handle), `useUrlSync` (→ `dispatch(requestFocus)`
++ a `catalogGen` effect), `CommandPalette` (→ `useAppDispatch` + `requestFocus`),
+`useEngine` / InfoCard (→ `useAppSelector` selectors + `useResolveSelection`),
 `focusUrl.ts` (`selectionToFocusId` → `focusIdOf`; `parseFocusHash` →
-`resolveFocusId`).
+`resolveFocusId`), **`tierSaga`** (add the re-anchor read + bounded `take` loop),
+**`SagaContext`** (add `requestRender` + `resolveDeps`), the engine's
+`setSagaContext` call (inject the two new capabilities), the galaxy-catalog commit
+path (dispatch `catalogLoaded`).
+
+**Also delete (handle dissolution):** the first draft's proposed `focus` /
+`focusByFocusId` engine-handle doors never get built — writes are direct
+`store.dispatch` at every call site. The only surviving engine→React selection
+channel is the *read*.
 
 **Add:** `SelectionRef.d.ts`, the `selection` slice + `dataStatus` slice +
-`requestTier`/`tierChanged` actions, `resolveSelectionRef` + the memoized getter,
-`focusIdOf` / `resolveFocusId`, the effects-listener seam + the selection-wake and
-tier-transition listeners, `useSelection`.
+`requestFocus` / `catalogLoaded` actions + `selectionRoute` / `dataStatusRoute`
+constants + route entries, `resolveSelectionRef` + the memoized getter,
+`focusIdOf` / `resolveFocusId`, `state/selection/selectors.ts` (the reselect
+compound selectors, §3b), the `SelectionResolveProvider` + `useResolveSelection`
+read hook (§3a), `watchSelectionWake` + `watchRequestFocus` sagas (forked from
+`rootSaga`).
 
-**Unchanged (read through the getter):** `selectionRingPass`, `selectionHaloTable`,
-`structureFocusSubsystem`, `runFrame` selection reads, InfoCard + the
-`DETAIL_CARD` table + detail cards, `tweenToGalaxy` / `tweenToStructure`.
+**Unchanged (read through the getter / existing hooks):** `selectionRingPass`,
+`selectionHaloTable`, `structureFocusSubsystem`, `runFrame` selection reads,
+InfoCard + the `DETAIL_CARD` table + detail cards, `tweenToGalaxy` /
+`tweenToStructure`, every settings selector/consumer.
 
-~12–15 files of real change; ~65 read sites unchanged.
+~12–15 files of real change; ~65 read sites unchanged. (Lower than the first draft
+— tier promotion, the store growth, and the effects vehicle are already in place.)
 
 ---
 
@@ -495,15 +652,22 @@ tier-transition listeners, `useSelection`.
 1. **`SelectionRef` + resolver + codecs**, behind the existing subsystem (no
    behaviour change): introduce the type, `resolveSelectionRef`, `focusIdOf` /
    `resolveFocusId`; unit-test in isolation.
-2. **The slice + `dataStatus`**, seeded at construction; project `catalogGen` from
-   the commit path; `useSettingsStore` scoped to `.settings`.
-3. **Cut the reads over** to the memoized getter (`selectionRingPass`, `runFrame`,
-   InfoCard via `useSelection`); delete the `useState` mirrors + echo callbacks.
-4. **Cut the writes over**: `wireInput` + pick → ref dispatches; `focus(ref)` +
-   `focusByFocusId`; delete `selectFamous` / `selectByAlias` / `focusOn` /
-   `commit*` / `clearAll` / `targetEq` / `targetIdentityKey` / `FocusTarget`.
-5. **The effects seam**: render-wake listener; `requestTier` + transition effect;
-   `useUrlSync` → `focusByFocusId` + `catalogGen` effect.
+2. **The `selection` + `dataStatus` slices** (with the `updateSelection*` /
+   `clearSelection` / `requestFocus` / `catalogLoaded` actions), seeded at
+   construction; add the two route constants + `rootReducer` entries + the §3b
+   reselect selectors; dispatch `catalogLoaded` from the commit path. (No
+   tier/settings work — already landed.)
+3. **Cut the reads over**: engine consumers (`selectionRingPass`, `runFrame`) call
+   the memoized getter; InfoCard reads `useAppSelector` selectors + the
+   `useResolveSelection` hook (§3a). Delete the `useState` mirrors + echo callbacks.
+4. **Cut the writes over** to direct dispatch: `wireInput` + pick → `updateSelection*`
+   dispatches; deep-link/palette → `dispatch(requestFocus(...))`. Delete
+   `selectFamous` / `selectByAlias` / `focusOn` / `commit*` / `clearAll` /
+   `targetEq` / `targetIdentityKey` / `FocusTarget` — and build NO replacement
+   handle doors.
+5. **The sagas**: extend `SagaContext` + `setSagaContext`; add `watchSelectionWake`
+   + `watchRequestFocus` to `rootSaga`; fold the re-anchor into `tierSaga`; rewire
+   `useUrlSync` → `focusByFocusId`.
 6. **Delete `selectionSubsystem.ts`**; reconcile tests.
 
 ---
@@ -511,10 +675,16 @@ tier-transition listeners, `useSelection`.
 ## References
 
 - [ADR 0007](../../adrs/0007-intent-centric-state-and-effects.md) — intent-centric
-  state; this is its first fold. The §7 middleware reversal amends it.
+  state; this is its first *application-state* fold (the `tier` slice was the
+  infrastructure proof-of-shape).
 - [`intent.md`](../../superpowers/conventions/intent.md) — the lens; the
   "Resources and derived state across the store boundary" section is §4 here.
-- [ADR 0001](../../adrs/0001-fade-ownership.md) — fade ownership; §7 retires its
-  no-middleware clause.
+- [ADR 0001](../../adrs/0001-fade-ownership.md) — fade ownership. **Upheld**, not
+  reverted: effects live in sagas reached via `SagaContext`, so the store reducers
+  stay free of engine references. (The first draft proposed a store-listener
+  middleware that would have reverted this; the saga vehicle makes that
+  unnecessary.) ADR 0008 (the deferred vehicle decision) is **moot** — the vehicle
+  was settled by the RTK + `typed-redux-saga` migration.
 - [Grill session 2026-06-18](../../grill-sessions/selection-into-intent-store-2026-06-18.md)
-  — the nine decisions and their rejected alternatives.
+  — the nine decisions and their rejected alternatives. Decision 9 (effects
+  vehicle, left open there) is now resolved: uniform sagas.
