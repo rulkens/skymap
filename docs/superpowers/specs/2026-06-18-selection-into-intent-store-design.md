@@ -435,15 +435,24 @@ dispatch(requestFocus(hashFocusId));
 All selection effects are sagas reached through the injected `SagaContext`. The store
 reducers stay free of engine references; engine capabilities cross in only through
 `getContext`, exactly as `runTierTransition` does — so ADR 0001's no-store-effects
-stance is **upheld**, not reverted. The engine extends the context it already injects:
+stance is **upheld**, not reverted. The engine extends the context it already injects.
+
+The reconcile-sagas fold (PR #352) already grew `SagaContext` to
+`{ runTierTransition, reconcile: ReconcileEffects }`, where `ReconcileEffects` bundles
+the settings-driven engine callbacks — including `requestRender`. Selection therefore
+**reuses** `reconcile.requestRender` for its render-wake rather than adding a second
+wake capability, and adds only the two genuinely-new selection capabilities — both
+flat, mirroring `runTierTransition` (a resolver and a camera effect, too heterogeneous
+to share `reconcile`'s settings-effect bag):
 
 ```ts
 export type SagaContext = {
   runTierTransition: RunTierTransition; // already present
-  requestRender: () => void;            // render-on-demand wake
-  resolveDeps: () => ResolveDeps;       // live catalogs / famousMeta / structures (lazy — GPU lands post-bootstrap)
+  reconcile: ReconcileEffects;          // already present (PR #352) — provides requestRender
+  resolveDeps: () => ResolveDeps;        // NEW: live catalogs / famousMeta / structures (lazy — GPU lands post-bootstrap)
+  runFocusTween: (ref: SelectionRef | null) => void; // NEW: camera tween as a focus effect (see the Part 2 plan §4b)
 };
-setSagaContext({ runTierTransition, requestRender, resolveDeps });
+setSagaContext({ resolveDeps, runFocusTween }); // joins the existing { runTierTransition, reconcile }
 ```
 
 ### 7a. Render-wake
@@ -453,8 +462,8 @@ consequence — it only feeds React).
 
 ```ts
 function* watchSelectionWake() {
-  const requestRender = yield* getContext<SagaContext['requestRender']>('requestRender');
-  yield* takeEvery([updateSelectionSelect, updateSelectionFocus], () => requestRender());
+  const fx = yield* getContext<ReconcileEffects>('reconcile'); // requestRender lives here (PR #352)
+  yield* takeEvery([updateSelectionSelect, updateSelectionFocus], () => fx.requestRender());
 }
 ```
 
@@ -555,7 +564,8 @@ deferral is the saga's), `CommandPalette` (→ `useAppDispatch` + `requestFocus`
 `focusUrl.ts` (`selectionToFocusId` → `focusIdOf`; `parseFocusHash` → `resolveFocusId`),
 `galaxyInfoBuilder.ts` (split into engine `extractGalaxyRow` + pure React `buildGalaxyInfo`),
 `tierSaga` (add the re-anchor read + bounded `take`), `SagaContext` + the engine's
-`setSagaContext` (add `requestRender` + `resolveDeps`), the galaxy-catalog commit path
+`setSagaContext` (add `resolveDeps` + `runFocusTween`; `requestRender` already arrives
+via the `reconcile` bag from PR #352), the galaxy-catalog commit path
 (dispatch `catalogLoaded`), the per-frame selection readers (`selectionRingPass`,
 `runFrame`) → read `selectionRows`.
 

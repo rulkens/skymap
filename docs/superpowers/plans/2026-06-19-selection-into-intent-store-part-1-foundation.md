@@ -61,7 +61,7 @@ New saga:
 
 Modified engine wiring:
 - `src/services/engine/wiring/galaxyCatalogSourceRegistry.ts` — dispatch `catalogLoaded` from the commit path (Modify).
-- `src/services/engine/engine.ts` — extend `setSagaContext` with `requestRender` + `resolveDeps` (Modify).
+- `src/services/engine/engine.ts` — extend `setSagaContext` with `resolveDeps` (`requestRender` already arrives via the `reconcile` bag from PR #352) (Modify).
 
 **Produces (consumed by Part 2 — exact names/types):**
 - `SelectionRef` (`src/@types/engine/SelectionRef.d.ts`)
@@ -74,7 +74,7 @@ Modified engine wiring:
 - `catalogLoaded` (`src/state/dataStatus/dataStatusSlice.ts`)
 - selectors `selectSelectedFocusable`, `selectHoveredFocusable`, `selectFocusedFocusable`, `selectIsSelectionActive`, and the slot ref selectors (`src/state/selection/selectors.ts`)
 - `focusIdOf`, `resolveFocusId` (`src/services/url/`)
-- extended `SagaContext = { runTierTransition; requestRender; resolveDeps }` (`src/store/types.ts`)
+- extended `SagaContext = { runTierTransition; reconcile; resolveDeps }` (`src/store/types.ts`) — `requestRender` is reached via `reconcile.requestRender`, not a top-level member
 
 ---
 
@@ -1771,58 +1771,60 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 ---
 
-## Task 10: Extend `SagaContext` with `requestRender` + `resolveDeps`
+## Task 10: Extend `SagaContext` with `resolveDeps`
 
-Widen the context type and the engine's `setSagaContext` call. `runTierTransition` stays; the two new capabilities join it.
+Widen the context type and the engine's `setSagaContext` call. The reconcile-sagas fold (PR #352) already grew `SagaContext` to `{ runTierTransition, reconcile: ReconcileEffects }`, and `ReconcileEffects` already exposes `requestRender`. So the **render-wake capability is reused, not re-added** — Part 1 adds exactly one new flat member, `resolveDeps` (the reconciler's live-resource read). Part 2 Task 4b adds the second flat member, `runFocusTween`.
 
 **Files:**
 - Modify: `src/store/types.ts` (extend `SagaContext`)
-- Modify: `src/services/engine/engine.ts` (the `setSagaContext({...})` call, ~line 469-474)
+- Modify: `src/services/engine/engine.ts` (the `setSagaContext({...})` call — currently `{ runTierTransition, reconcile }`, ~line 463-466)
 - Test: `tests/store/sagaContext.test.ts` (a type-level + shape test) — or fold into an engine wiring test if one exists (grep)
 
 **Interfaces:**
-- Consumes: `ResolveDeps`, `RunTierTransition`.
-- Produces: `SagaContext = { runTierTransition: RunTierTransition; requestRender: () => void; resolveDeps: () => ResolveDeps }`.
+- Consumes: `ResolveDeps`, `RunTierTransition`, `ReconcileEffects` (already in `SagaContext`).
+- Produces: `SagaContext = { runTierTransition: RunTierTransition; reconcile: ReconcileEffects; resolveDeps: () => ResolveDeps }` (Part 2 Task 4b appends `runFocusTween`).
 
 - [ ] **Step 1: Extend the `SagaContext` type**
 
-In `src/store/types.ts`, replace the `SagaContext` line and update the module docblock to name the two new capabilities:
+In `src/store/types.ts`, add `resolveDeps` to the existing `SagaContext` literal (do NOT touch `runTierTransition` or `reconcile`), and update the module docblock to name it. `requestRender` is NOT added here — it already arrives via `reconcile.requestRender`:
 
 ```ts
 import type { ResolveDeps } from '../@types/engine/ResolveDeps';
-// ... existing imports
+// ... existing imports (ReconcileEffects is already imported)
 
 export type RunTierTransition = (prevTier: Tier, nextTier: Tier) => void;
 export type SagaContext = {
-  runTierTransition: RunTierTransition;
-  /** Render-on-demand wake — select/focus effects call this. */
-  requestRender: () => void;
-  /** Live engine resources the reconciler reads (lazy — GPU lands post-bootstrap). */
+  runTierTransition: RunTierTransition; // already present (PR #349)
+  reconcile: ReconcileEffects;          // already present (PR #352) — provides requestRender
+  /** NEW: live engine resources the reconciler reads (lazy — GPU lands post-bootstrap). */
   resolveDeps: () => ResolveDeps;
 };
 export type SetSagaContext = (ctx: Partial<SagaContext>) => void;
 ```
 
-`SetSagaContext` already takes `Partial<SagaContext>`, so the engine can keep injecting `runTierTransition` first and the rest together; no `SetSagaContext` change needed.
+`SetSagaContext` already takes `Partial<SagaContext>`, so the engine keeps its single injection call and just adds the `resolveDeps` key; no `SetSagaContext` change needed.
 
 - [ ] **Step 2: Extend the engine's `setSagaContext` call**
 
-In `src/services/engine/engine.ts`, find the existing call (around line 469-474):
+In `src/services/engine/engine.ts`, find the existing call (around line 463-466). It currently injects two capabilities:
 
 ```ts
-cb.setSagaContext({ runTierTransition: makeRunTierTransition(state, bootstrapDeps) });
-```
-
-Replace with:
-
-```ts
-// Inject all three saga capabilities. requestRender wakes the render loop for
-// select/focus effects; resolveDeps hands the reconciler saga the LIVE engine
-// resources (read lazily each call, because clouds + structures change as data
-// loads and the GPU lands only after bootstrap).
 cb.setSagaContext({
   runTierTransition: makeRunTierTransition(state, bootstrapDeps),
-  requestRender: () => state.subsystems.scheduler.requestRender(),
+  reconcile: makeReconcileEffects(state),
+});
+```
+
+Add the `resolveDeps` key (leave `runTierTransition` + `reconcile` exactly as they are):
+
+```ts
+// resolveDeps hands the reconciler saga the LIVE engine resources (read lazily
+// each call, because clouds + structures change as data loads and the GPU lands
+// only after bootstrap). requestRender is NOT added here — selection sagas reach
+// it through the existing `reconcile` bag (makeReconcileEffects).
+cb.setSagaContext({
+  runTierTransition: makeRunTierTransition(state, bootstrapDeps),
+  reconcile: makeReconcileEffects(state),
   resolveDeps: () => ({
     catalogs: { get: (source) => state.data.galaxies.get(source) },
     famousMeta: state.data.galaxies.famousMeta,
@@ -1831,21 +1833,22 @@ cb.setSagaContext({
 });
 ```
 
-Note: confirm `state.subsystems.scheduler.requestRender` and `state.data.galaxies.get` / `state.data.structures.byId` exist (they're used in `makeRunTierTransition` and `wireInput` already). The `get(source)` param is typed `SourceType`; `ResolveDeps.catalogs.get` expects `GalaxyCatalogSourceType` (a subtype) — the arrow's param widens fine. If typecheck complains, annotate the arrow param as `GalaxyCatalogSourceType`.
+Note: confirm `state.data.galaxies.get` / `state.data.structures.byId` exist (they're used in `makeRunTierTransition` and `wireInput` already). The `get(source)` param is typed `SourceType`; `ResolveDeps.catalogs.get` expects `GalaxyCatalogSourceType` (a subtype) — the arrow's param widens fine. If typecheck complains, annotate the arrow param as `GalaxyCatalogSourceType`. (Part 2 Task 4b lifts this `resolveDeps` arrow into a named const so the focus-tween runner can share it.)
 
 - [ ] **Step 3: Write a shape test for the context wiring**
 
-If an engine-construction test harness exists (grep `createEngine` in `tests/`), assert the injected context has the three keys. Otherwise add a minimal type-level test:
+If an engine-construction test harness exists (grep `createEngine` in `tests/`), assert the injected context carries `resolveDeps`. Otherwise add a minimal type-level test (the `reconcile`/`requestRender` shape is already pinned by `tests/store/effects/reconcileSagas.test.ts`):
 
 ```ts
 import { describe, it, expectTypeOf } from 'vitest';
 import type { SagaContext } from '../../src/store/types';
 import type { ResolveDeps } from '../../src/@types/engine/ResolveDeps';
+import type { ReconcileEffects } from '../../src/store/effects/ReconcileEffects';
 
 describe('SagaContext', () => {
-  it('carries the three capabilities', () => {
-    expectTypeOf<SagaContext['requestRender']>().toEqualTypeOf<() => void>();
+  it('carries resolveDeps alongside the existing reconcile/tier capabilities', () => {
     expectTypeOf<SagaContext['resolveDeps']>().toEqualTypeOf<() => ResolveDeps>();
+    expectTypeOf<SagaContext['reconcile']>().toEqualTypeOf<ReconcileEffects>();
   });
 });
 ```
@@ -1857,10 +1860,11 @@ Expected: PASS.
 
 ```bash
 git add src/store/types.ts src/services/engine/engine.ts tests/store/sagaContext.test.ts
-git commit -m "feat(engine): extend SagaContext with requestRender + resolveDeps
+git commit -m "feat(engine): extend SagaContext with resolveDeps
 
-The engine injects render-wake and a lazy live-resource bag alongside the
-tier runner, so selection sagas reach engine resources through the same seam.
+The engine injects a lazy live-resource bag alongside the tier runner and the
+reconcile effects, so the selection reconciler reaches engine resources through
+the same seam. Render-wake is reused from the existing reconcile.requestRender.
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ```
@@ -2016,20 +2020,28 @@ Note: `takeEvery(action, () => reextract(slot))` — the second arg returning a 
 
 - [ ] **Step 3: Fork from `rootSaga`**
 
-In `src/store/rootSaga.ts`:
+In `src/store/rootSaga.ts`, **append** `watchSelectionRows()` to the existing fork list — do NOT replace it. The reconcile-sagas fold (PR #352) already forks five watchers here (`watchTier`, `watchWake`, `watchFlowReseed`, `watchBiasBake`, `watchFades`); add the new import and one array entry:
 
 ```ts
 import { all } from 'typed-redux-saga';
 
 import { watchTier } from '../state/tier/tierSaga';
+import { watchWake, watchFlowReseed, watchBiasBake, watchFades } from './effects/reconcileSagas';
 import { watchSelectionRows } from '../state/selectionRows/selectionRowsSaga';
 
 export function* mainSaga() {
-  yield* all([watchTier(), watchSelectionRows()]);
+  yield* all([
+    watchTier(),
+    watchWake(),
+    watchFlowReseed(),
+    watchBiasBake(),
+    watchFades(),
+    watchSelectionRows(),
+  ]);
 }
 ```
 
-Update the docblock to name the new fork.
+Update the docblock to name the new fork. (`tests/store/rootSaga.test.ts` only asserts `mainSaga` starts without throwing when no context is registered, so appending a forked watcher keeps it green.)
 
 - [ ] **Step 4: Run to pass, full suite, typecheck**
 

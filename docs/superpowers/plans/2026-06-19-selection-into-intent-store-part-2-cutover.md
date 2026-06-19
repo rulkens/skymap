@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-> **Depends on Part 1 being merged** (`docs/superpowers/plans/2026-06-19-selection-into-intent-store-part-1-foundation.md`). Part 2 consumes Part 1's Produces interfaces by exact name: the slices/actions (`updateSelectionHover/Select/Focus`, `clearSelection`, `requestFocus`, `setSelectionRow`, `catalogLoaded`), the selectors (`selectSelectedFocusable`, `selectHoveredFocusable`, `selectFocusedFocusable`, `selectSelectedRef`, `selectFocusRef`, `selectIsSelectionActive`), the codecs (`focusIdOf`, `resolveFocusId`), the engine helpers (`extractSelectionRow`, `buildFocusable`, `extractGalaxyRow`, `buildGalaxyInfo`), the types (`SelectionRef`, `SelectionRow`, `SelectionSlot`, `ResolveDeps`), the extended `SagaContext` (`requestRender` + `resolveDeps`), the reconciler `watchSelectionRows`, and the `catalogLoaded` commit-path dispatch.
+> **Depends on Part 1 being merged** (`docs/superpowers/plans/2026-06-19-selection-into-intent-store-part-1-foundation.md`). Part 2 consumes Part 1's Produces interfaces by exact name: the slices/actions (`updateSelectionHover/Select/Focus`, `clearSelection`, `requestFocus`, `setSelectionRow`, `catalogLoaded`), the selectors (`selectSelectedFocusable`, `selectHoveredFocusable`, `selectFocusedFocusable`, `selectSelectedRef`, `selectFocusRef`, `selectIsSelectionActive`), the codecs (`focusIdOf`, `resolveFocusId`), the engine helpers (`extractSelectionRow`, `buildFocusable`, `extractGalaxyRow`, `buildGalaxyInfo`), the types (`SelectionRef`, `SelectionRow`, `SelectionSlot`, `ResolveDeps`), the extended `SagaContext` (`resolveDeps`; `requestRender` is reused from the `reconcile` bag, PR #352), the reconciler `watchSelectionRows`, and the `catalogLoaded` commit-path dispatch.
 
 **Goal:** Cut selection reads and writes over to the store and delete the old `selectionSubsystem` path: engine per-frame readers + React read from the store; pick/double-click/Esc/palette/deep-link dispatch refs and commands; the tier saga re-anchors durable focus across a swap; the closure-mirror subsystem, the commit helpers, `targetEq`/`targetIdentityKey`, `FocusTarget`, and the `selectFamous`/`selectByAlias`/`focusOn` handle methods all dissolve.
 
@@ -272,7 +272,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 - Test: `tests/state/selection/selectionWakeSaga.test.ts`
 
 **Interfaces:**
-- Consumes: `updateSelectionSelect`, `updateSelectionFocus`, `updateSelectionHover`, `SagaContext['requestRender']`.
+- Consumes: `updateSelectionSelect`, `updateSelectionFocus`, `updateSelectionHover`, `ReconcileEffects` (reached via `getContext('reconcile')` — `requestRender` lives there, PR #352).
 - Produces: `watchSelectionWake` generator.
 
 - [ ] **Step 1: Write the failing test**
@@ -285,6 +285,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchSelectionWake } from '../../../src/state/selection/selectionWakeSaga';
 import { updateSelectionSelect, updateSelectionFocus, updateSelectionHover } from '../../../src/state/selection/selectionSlice';
+import type { ReconcileEffects } from '../../../src/store/effects/ReconcileEffects';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -297,7 +298,15 @@ describe('watchSelectionWake', () => {
     const s = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
     mw.run(watchSelectionWake);
     requestRender = vi.fn<() => void>();
-    mw.setContext({ requestRender });
+    // requestRender lives in the reconcile bag (PR #352); inject the whole
+    // surface with spies, mirroring tests/store/effects/reconcileSagas.test.ts.
+    const reconcile: ReconcileEffects = {
+      requestRender,
+      syncFades: vi.fn(),
+      reseedFlow: vi.fn(),
+      bakeBias: vi.fn(),
+    };
+    mw.setContext({ reconcile });
     return s;
   }
   beforeEach(() => { store = build(); });
@@ -337,11 +346,13 @@ Run: `npm test -- tests/state/selection/selectionWakeSaga.test.ts` → FAIL.
 import { takeEvery, getContext } from 'typed-redux-saga';
 
 import { updateSelectionSelect, updateSelectionFocus } from './selectionSlice';
-import type { SagaContext } from '../../store/types';
+import type { ReconcileEffects } from '../../store/effects/ReconcileEffects';
 
 export function* watchSelectionWake() {
-  const requestRender = yield* getContext<SagaContext['requestRender']>('requestRender');
-  yield* takeEvery([updateSelectionSelect, updateSelectionFocus], () => requestRender());
+  // requestRender lives in the reconcile bag the engine already injects (PR #352) —
+  // reuse it rather than adding a second wake capability to SagaContext.
+  const fx = yield* getContext<ReconcileEffects>('reconcile');
+  yield* takeEvery([updateSelectionSelect, updateSelectionFocus], () => fx.requestRender());
 }
 ```
 
@@ -349,10 +360,20 @@ Note: confirm `takeEvery` accepts an action-creator array in the installed `type
 
 - [ ] **Step 3: Fork from `rootSaga`**
 
+Append `watchSelectionWake()` to the existing fork list (which already carries the four reconcile watchers plus `watchTier` and Part 1's `watchSelectionRows`):
+
 ```ts
 import { watchSelectionWake } from '../state/selection/selectionWakeSaga';
 // ...
-yield* all([watchTier(), watchSelectionRows(), watchSelectionWake()]);
+yield* all([
+  watchTier(),
+  watchWake(),
+  watchFlowReseed(),
+  watchBiasBake(),
+  watchFades(),
+  watchSelectionRows(),
+  watchSelectionWake(),
+]);
 ```
 
 - [ ] **Step 4: Run to pass, full suite, typecheck, commit**
@@ -477,10 +498,21 @@ export function* watchRequestFocus() {
 
 - [ ] **Step 3: Fork from `rootSaga`**
 
+Append `watchRequestFocus()` to the fork list:
+
 ```ts
 import { watchRequestFocus } from '../state/selection/requestFocusSaga';
 // ...
-yield* all([watchTier(), watchSelectionRows(), watchSelectionWake(), watchRequestFocus()]);
+yield* all([
+  watchTier(),
+  watchWake(),
+  watchFlowReseed(),
+  watchBiasBake(),
+  watchFades(),
+  watchSelectionRows(),
+  watchSelectionWake(),
+  watchRequestFocus(),
+]);
 ```
 
 - [ ] **Step 4: Run to pass, full suite, typecheck, commit**
@@ -681,9 +713,9 @@ import type { SelectionRef } from '../@types/engine/SelectionRef';
 export type RunFocusTween = (ref: SelectionRef | null) => void;
 
 export type SagaContext = {
-  runTierTransition: RunTierTransition;
-  requestRender: () => void;
-  resolveDeps: () => ResolveDeps;
+  runTierTransition: RunTierTransition; // PR #349
+  reconcile: ReconcileEffects;          // PR #352 — provides requestRender
+  resolveDeps: () => ResolveDeps;        // Part 1 Task 10
   /** Engine-owned camera-tween runner — watchFocusTween calls this on a focus ref change. */
   runFocusTween: RunFocusTween;
 };
@@ -802,7 +834,7 @@ Run: `npm test -- tests/services/engine/camera/makeRunFocusTween.test.ts` → PA
 
 - [ ] **Step 4: Inject `runFocusTween` in the engine's `setSagaContext`**
 
-In `src/services/engine/engine.ts`, the Part-1 Task-10 call built `{ runTierTransition, requestRender, resolveDeps }`. Lift the `resolveDeps` closure into a named const so both `resolveDeps` and the runner share it, and add `runFocusTween` with the real GPU/cam table (the milkyWay body lifted verbatim from the deleted `commitMilkyWayFocus.ts`):
+In `src/services/engine/engine.ts`, the Part-1 Task-10 call built `{ runTierTransition, reconcile, resolveDeps }` (`reconcile` lands via PR #352; `requestRender` lives inside it). Lift the `resolveDeps` closure into a named const so both `resolveDeps` and the runner share it, and add `runFocusTween` with the real GPU/cam table (the milkyWay body lifted verbatim from the deleted `commitMilkyWayFocus.ts`):
 
 ```ts
 const resolveDeps = (): ResolveDeps => ({
@@ -813,7 +845,7 @@ const resolveDeps = (): ResolveDeps => ({
 
 cb.setSagaContext({
   runTierTransition: makeRunTierTransition(state, bootstrapDeps),
-  requestRender: () => state.subsystems.scheduler.requestRender(),
+  reconcile: makeReconcileEffects(state),
   resolveDeps,
   runFocusTween: makeRunFocusTween(resolveDeps, {
     galaxyCatalog: (row) => tweenToGalaxy(state, buildGalaxyInfo(row)),
@@ -899,10 +931,22 @@ export function* watchFocusTween() {
 
 - [ ] **Step 6: Fork from `rootSaga`**
 
+Append `watchFocusTween()` to the fork list — the full set after this task:
+
 ```ts
 import { watchFocusTween } from '../state/selection/focusTweenSaga';
 // ...
-yield* all([watchTier(), watchSelectionRows(), watchSelectionWake(), watchRequestFocus(), watchFocusTween()]);
+yield* all([
+  watchTier(),
+  watchWake(),
+  watchFlowReseed(),
+  watchBiasBake(),
+  watchFades(),
+  watchSelectionRows(),
+  watchSelectionWake(),
+  watchRequestFocus(),
+  watchFocusTween(),
+]);
 ```
 
 - [ ] **Step 7: Run to pass, full suite, typecheck, commit**
