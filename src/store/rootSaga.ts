@@ -3,12 +3,13 @@
  *
  * The store wires the saga middleware and runs this root saga at construction.
  * The root only composes; it forks every feature watcher:
- *   watchTier          — runs the tier transition (per-source reload + famous rebuild)
- *   watchWake          — requests a render frame on every settings write
- *   watchFlowReseed    — reseeds the flow particle field when mode or count changes
- *   watchBiasBake      — rebakes the brightness bias LUT when BiasMode changes
- *   watchFades         — syncs visibility-layer fades via the FADE_ROW table
- *   watchSelectionRows — keeps the selectionRows derived cache in sync with selection refs
+ *   watchTier            — runs the tier transition (per-source reload + famous rebuild)
+ *   watchWake            — requests a render frame on every settings write
+ *   watchFlowReseed      — reseeds the flow particle field when mode or count changes
+ *   watchBiasBake        — rebakes the brightness bias LUT when BiasMode changes
+ *   watchFades           — syncs visibility-layer fades via the FADE_ROW table
+ *   watchSelectionRows   — keeps the selectionRows derived cache in sync with selection refs
+ *   watchSelectionWake   — wakes the render loop on select/focus writes (hover excluded)
  *
  * Each watcher is authored beside its concern (the tier watcher in
  * `state/tier/tierSaga`, the reconcile watchers in `effects/reconcileSagas`) and
@@ -29,6 +30,7 @@ import { all } from 'typed-redux-saga';
 import { watchTier } from '../state/tier/tierSaga';
 import { watchWake, watchFlowReseed, watchBiasBake, watchFades } from './effects/reconcileSagas';
 import { watchSelectionRows } from '../state/selectionRows/selectionRowsSaga';
+import { watchSelectionWake } from '../state/selection/selectionWakeSaga';
 
 export function* mainSaga() {
   yield* all([
@@ -38,5 +40,6 @@ export function* mainSaga() {
     watchBiasBake(),
     watchFades(),
     watchSelectionRows(),
+    watchSelectionWake(),
   ]);
 }
