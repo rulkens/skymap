@@ -330,7 +330,7 @@ function TierChipContainer(): React.ReactElement
 the tier saga run the transition; the slice value `selectTier` reads only
 updates once the new bins are ready, so the chip tracks committed truth.
 
-- [ ] Write `tests/components/containers/TierChipContainer.test.ts`:
+- [x] Write `tests/components/containers/TierChipContainer.test.ts`:
   - `'reflects the seeded tier in the select value'` — seed `tier: 'large'`,
     assert the `<select>` value is `large`.
   - `'dispatches requestTier when a new tier is picked'` — fire a `change` to
@@ -343,10 +343,10 @@ updates once the new bins are ready, so the chip tracks committed truth.
     `store.dispatch` by wrapping. **Pick the spy-on-dispatch approach** (wrap
     `store.dispatch` with a `vi.fn` passthrough before rendering) and assert it
     was called with `requestTier('medium')`. Note this in the test docblock.
-- [ ] Confirm it fails (module not found).
-- [ ] Implement the container against the contract.
-- [ ] `npm test -- TierChipContainer` → pass; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] Confirm it fails (module not found).
+- [x] Implement the container against the contract.
+- [x] `npm test -- TierChipContainer` → pass; `npm run typecheck` clean.
+- [x] Commit.
 
 ---
 
