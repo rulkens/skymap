@@ -75,7 +75,18 @@ import {
   setAutoRotate,
   setShowPickBuffer,
   setShowDiskRadiusRing,
+  setStructureItemEnabled,
+  setStructureLabelEnabled,
+  setMilkyWayLabelEnabled,
+  setGalaxyCatalogLabelEnabled,
+  setFilamentsEnabled,
+  setGalaxyCatalogVisible,
+  setBiasMode,
+  setVolumesEnabled,
+  writeVolumeField,
+  setFlow,
 } from '../../state/settings/settingsSlice';
+import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import { selectTier } from '../../state/tier/selectors';
 import { requestTier } from '../../state/tier/requestTier';
 import { projectVolumeFieldRows } from '../../state/settings/projectVolumeFieldRows';
@@ -124,11 +135,10 @@ export function App(): React.ReactElement {
   // `watchWake` wakes the render loop.
   const autoRotate = useAppSelector(selectAutoRotate);
 
-  // Bias mode + absolute-magnitude limit. The mode radio dispatches through
-  // `handle.bias.setMode` (which also kicks the async worker re-bake). The
-  // abs-mag slider dispatches `setAbsMagLimit` directly; the store write is
-  // synchronous so the slider tracks without an optimistic cell, and `watchWake`
-  // wakes the render loop.
+  // Bias mode + absolute-magnitude limit. The mode radio dispatches
+  // `setBiasMode`; `watchBiasBake` re-bakes the worker and `watchWake` wakes
+  // the loop. The abs-mag slider dispatches `setAbsMagLimit`; store writes are
+  // synchronous so both controls track without an optimistic cell.
   const biasMode = useAppSelector(selectBiasMode);
   const absMagLimit = useAppSelector(selectAbsMagLimit);
 
@@ -144,7 +154,7 @@ export function App(): React.ReactElement {
   // cell, and `watchWake` wakes the render loop.
   const showPickBuffer = useAppSelector(selectShowPickBuffer);
   const showDiskRadiusRing = useAppSelector(selectShowDiskRadiusRing);
-  // Renderer-toggle override set: read so the checkboxes track engine truth
+  // Renderer-toggle override set: read so the checkboxes track the store
   // without mirroring the set in component state. Writes go through
   // `handle.debug.passOverrides.setDisabled` (action-backed), which notifies
   // synchronously — same "dispatch + read back via selector" shape as the
@@ -152,22 +162,23 @@ export function App(): React.ReactElement {
   const disabledPasses = useAppSelector(selectDisabledPasses);
 
   // Filaments cluster (toggle + intensity). Both read off the store. The toggle
-  // dispatches through the handle (`setEnabled` also drives the fade ramp). The
-  // intensity slider dispatches `setFilamentIntensity` directly; the store write
-  // is synchronous so the slider tracks without an optimistic cell, and
-  // `watchWake` wakes the render loop.
+  // dispatches `setFilamentsEnabled`; `watchFades` drives the fade ramp. The
+  // intensity slider dispatches `setFilamentIntensity`; `watchWake` wakes the
+  // loop. Store writes are synchronous so both controls track without an
+  // optimistic cell.
   const filamentsEnabled = useAppSelector(selectFilamentsEnabled);
   const filamentIntensity = useAppSelector(selectFilamentIntensity);
 
   // Volumes cluster. The master toggle is a primitive boolean
-  // (`selectVolumesEnabled`), dispatched by the handle setter alongside the
-  // master fade. The per-field rows go through a STABLE-ref read:
-  // `selectVolumeFieldItems` returns the underlying `volumes.items` Record (only
-  // changes when a field actually changes, unaffected by a master-toggle flip),
-  // and the `useMemo` projects it to the debug-filtered `VolumeFieldRowData[]`
-  // the panel renders. Building the array inside the selector would mint a fresh
-  // array per read, breaking react-redux's reference-equality bail-out — keying
-  // the `useMemo` on the stable `items` ref is what keeps it cheap.
+  // (`selectVolumesEnabled`); dispatching `setVolumesEnabled` updates the store
+  // synchronously and `watchFades` drives the master fade. The per-field rows
+  // go through a STABLE-ref read: `selectVolumeFieldItems` returns the
+  // underlying `volumes.items` Record (only changes when a field actually
+  // changes, unaffected by a master-toggle flip), and the `useMemo` projects
+  // it to the debug-filtered `VolumeFieldRowData[]` the panel renders. Building
+  // the array inside the selector would mint a fresh array per read, breaking
+  // react-redux's reference-equality bail-out — keying the `useMemo` on the
+  // stable `items` ref is what keeps it cheap.
   const volumesEnabled = useAppSelector(selectVolumesEnabled);
   const volumeFieldItems = useAppSelector(selectVolumeFieldItems);
   const volumeFields = useMemo(
@@ -204,17 +215,17 @@ export function App(): React.ReactElement {
   );
 
   // Flow overlay. `selectFlow` returns the stored `settings.flow` object
-  // verbatim — referentially stable under copy-on-write, so no memo is needed. A
-  // knob change goes through the handle alone: `handle.flow.set(patch)`
-  // dispatches the copy-on-write action (which the store notifies synchronously)
-  // AND runs the per-leaf demand/fade/reseed effects, so the controls track
-  // without an optimistic cell. Both panels share this.
+  // verbatim — referentially stable under copy-on-write, so no memo is needed.
+  // A knob change dispatches `setFlow(patch)` directly; the store write is
+  // synchronous so the controls track without an optimistic cell.
+  // `watchFlowReseed` reseeds on mode/count changes; `watchFades` drives the
+  // enable/disable fade. Both panels share this handler.
   const flow = useAppSelector(selectFlow);
   const onFlowChange = useCallback(
     (patch: Partial<FlowSettings>) => {
-      handleRef.current?.flow.set(patch);
+      dispatch(setFlow(patch));
     },
-    [handleRef],
+    [dispatch],
   );
 
   // Live "N galaxies" figure for a pinned cluster/SC/void card.  Recomputes
@@ -340,33 +351,34 @@ export function App(): React.ReactElement {
             labelCategoryVisibility={labelCategoryVisibility}
             markerCategoryVisibility={markerCategoryVisibility}
             onSetMarkerCategoryVisibility={(category, visible) => {
-              // Marker rows are keyed by StructureId — drive the ring axis
-              // on the structures handle.
-              handleRef.current?.structures.setItemEnabled(category, visible);
+              // Marker rows are keyed by StructureId. Dispatching
+              // `setStructureItemEnabled` updates the store synchronously;
+              // `watchFades` syncs the ring-axis fade.
+              dispatch(setStructureItemEnabled({ id: category, enabled: visible }));
             }}
             onSetLabelCategoryVisibility={(category, visible) => {
-              // Label rows have three homes: structure labels drive the
-              // structures handle; the milkyWay singleton "You are here" label
-              // drives the milkyWay handle; and the curated atlas (famousGalaxy,
-              // a galaxy catalog source) routes through the galaxy catalogs
-              // handle's label axis. Each guard narrows the union, so the final
-              // else lands on the galaxy-catalog label categories.
+              // Label rows have three homes: structure labels dispatch
+              // `setStructureLabelEnabled`; the milkyWay singleton "You are
+              // here" label dispatches `setMilkyWayLabelEnabled`; and the
+              // curated atlas (famousGalaxy, a galaxy catalog source) dispatches
+              // `setGalaxyCatalogLabelEnabled`. Each guard narrows the union, so
+              // the final else lands on the galaxy-catalog label categories.
+              // `watchFades` syncs the fade for all three paths.
               if (isStructureId(category)) {
-                handleRef.current?.structures.setLabelEnabled(category, visible);
+                dispatch(setStructureLabelEnabled({ id: category, enabled: visible }));
               } else if (category === 'milkyWay') {
-                handleRef.current?.milkyWay.setLabelEnabled(visible);
+                dispatch(setMilkyWayLabelEnabled(visible));
               } else {
-                handleRef.current?.galaxyCatalogs.setLabelEnabled(category, visible);
+                dispatch(setGalaxyCatalogLabelEnabled({ id: category, enabled: visible }));
               }
             }}
             // Filaments reads off the store (`selectFilamentsEnabled` /
-            // `selectFilamentIntensity`). The toggle (`setEnabled`) still dispatches
-            // through the handle — it also drives the fade ramp. The intensity
-            // slider dispatches `setFilamentIntensity` directly; the store write is
-            // synchronous so the slider tracks without an optimistic cell, and
-            // `watchWake` wakes the render loop.
+            // `selectFilamentIntensity`). The toggle dispatches `setFilamentsEnabled`
+            // directly; the store write is synchronous so the toggle tracks without
+            // an optimistic cell, and `watchFades` syncs the fade ramp. The intensity
+            // slider dispatches `setFilamentIntensity`; `watchWake` wakes the loop.
             filamentsEnabled={filamentsEnabled}
-            onFilamentsChange={(enabled) => handleRef.current?.filaments.setEnabled(enabled)}
+            onFilamentsChange={(enabled) => dispatch(setFilamentsEnabled(enabled))}
             filamentIntensity={filamentIntensity}
             onFilamentIntensityChange={(value) => dispatch(setFilamentIntensity(value))}
             depthFadeEnabled={depthFadeEnabled}
@@ -385,63 +397,63 @@ export function App(): React.ReactElement {
             visibleSourceMask={visibleSourceMask}
             sourceCounts={sourceCounts}
             structureCounts={structureCounts}
-            // `setVisible` is synchronous: it flips the galaxy catalog's `enabled`
-            // flag (single source of truth) and echoes the derived mask back
-            // via `onMaskChange` before this handler returns, so the React
-            // checkbox stays engine-driven — no optimistic update needed.
+            // Dispatching `setGalaxyCatalogVisible` flips the galaxy catalog's
+            // `enabled` flag (single source of truth); the store write is
+            // synchronous so the checkbox tracks without an optimistic update,
+            // and `watchFades` syncs the fade.
             onToggleSource={(source, visible) =>
-              handleRef.current?.sources.setVisible(source, visible)
+              dispatch(setGalaxyCatalogVisible({ id: galaxyCatalogIdOf(source), enabled: visible }))
             }
             // Bias mode + absMagLimit read off the store (`selectBiasMode` /
-            // `selectAbsMagLimit`). The mode radio dispatches through the handle
-            // (`setMode` also re-bakes the worker). The abs-mag slider dispatches
-            // `setAbsMagLimit` directly; `watchWake` wakes the render loop. The
-            // tone-map curve reads off the store (`selectToneMapCurve`); the
-            // dropdown dispatches `setToneMapCurve` directly likewise.
+            // `selectAbsMagLimit`). The mode radio dispatches `setBiasMode`
+            // directly; `watchBiasBake` re-bakes the worker and `watchWake`
+            // wakes the render loop. The abs-mag slider dispatches
+            // `setAbsMagLimit` directly; `watchWake` wakes the render loop.
+            // The tone-map curve reads off the store (`selectToneMapCurve`);
+            // the dropdown dispatches `setToneMapCurve` directly likewise.
             biasMode={biasMode}
-            onBiasModeChange={(mode) => handleRef.current?.bias.setMode(mode)}
+            onBiasModeChange={(mode) => dispatch(setBiasMode(mode))}
             absMagLimit={absMagLimit}
             // `M` is the conventional astronomy symbol for absolute magnitude.
             onAbsMagLimitChange={(M) => dispatch(setAbsMagLimit(M))}
             toneMapCurve={toneMapCurve}
             onToneMapCurveChange={(curve) => dispatch(setToneMapCurve(curve))}
-            // `volumesEnabled` reads off the engine-owned store
-            // (`selectVolumesEnabled`); the handle setter dispatches the
-            // action (which notifies synchronously) and drives the master
-            // fade, so the toggle tracks without an optimistic cell. The
-            // per-field rows read via `selectVolumeFieldItems` + the `useMemo`
-            // projection; each per-field setter forwards straight to the
-            // engine, whose store write wakes the rows subscription.
+            // `volumesEnabled` reads off the store (`selectVolumesEnabled`);
+            // the toggle dispatches `setVolumesEnabled` directly (store write is
+            // synchronous) and `watchFades` drives the master fade. The per-field
+            // rows read via `selectVolumeFieldItems` + the `useMemo` projection;
+            // each per-field setter dispatches `writeVolumeField` with a
+            // single-key patch. Volume params are stored UNCLAMPED (raw Intent);
+            // the renderer clamps at read-edge.
             volumesEnabled={volumesEnabled}
             onVolumesEnabledChange={(enabled) =>
-              handleRef.current?.volumes.setMasterEnabled(enabled)
+              dispatch(setVolumesEnabled(enabled))
             }
             volumeFields={volumeFields}
             onVolumeFieldEnabledChange={(fieldId, enabled) =>
-              handleRef.current?.volumes.setEnabled(fieldId, enabled)
+              dispatch(writeVolumeField({ id: fieldId, patch: { enabled } }))
             }
             onVolumeFieldIntensityChange={(fieldId, intensity) =>
-              handleRef.current?.volumes.setIntensity(fieldId, intensity)
+              dispatch(writeVolumeField({ id: fieldId, patch: { intensity } }))
             }
             onVolumeFieldContrastChange={(fieldId, contrast) =>
-              handleRef.current?.volumes.setContrast(fieldId, contrast)
+              dispatch(writeVolumeField({ id: fieldId, patch: { contrast } }))
             }
             onVolumeFieldDensityScaleChange={(fieldId, densityScale) =>
-              handleRef.current?.volumes.setDensityScale(fieldId, densityScale)
+              dispatch(writeVolumeField({ id: fieldId, patch: { densityScale } }))
             }
             onVolumeFieldTrimChange={(fieldId, trim) =>
-              handleRef.current?.volumes.setTrim(fieldId, trim)
+              dispatch(writeVolumeField({ id: fieldId, patch: { trim } }))
             }
             onVolumeFieldExposureChange={(fieldId, exposure) =>
-              handleRef.current?.volumes.setExposure(fieldId, exposure)
+              dispatch(writeVolumeField({ id: fieldId, patch: { exposure } }))
             }
             onVolumeFieldPaletteChange={(fieldId, paletteId) =>
-              handleRef.current?.volumes.setPalette(fieldId, paletteId)
+              dispatch(writeVolumeField({ id: fieldId, patch: { paletteId } }))
             }
-            // Flow has no engine echo — React owns the slice, so `onFlowChange`
-            // applies the optimistic patch AND forwards it to the engine handle
-            // (same lock-step idiom as filaments, now one patch instead of nine
-            // per-knob handlers).
+            // Flow motion tunables share the same `onFlowChange` handler as
+            // DebugPanel — both dispatch `setFlow(patch)` straight to the store.
+            // `watchFlowReseed` reseeds on mode/count; `watchFades` drives enable/disable.
             flow={flow}
             onFlowChange={onFlowChange}
           />
@@ -499,9 +511,8 @@ export function App(): React.ReactElement {
             onShowDiskRadiusRingChange={(enabled) => {
               dispatch(setShowDiskRadiusRing(enabled));
             }}
-            // Flow motion tunables — no engine echo; the shared `onFlowChange`
-            // applies the optimistic patch AND forwards it to the handle (same
-            // path as the SettingsPanel flow look controls).
+            // Flow motion tunables share the same `onFlowChange` handler as
+            // SettingsPanel — both dispatch `setFlow(patch)` straight to the store.
             flow={flow}
             onFlowChange={onFlowChange}
           />
