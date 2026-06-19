@@ -99,8 +99,9 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
 
   // The store factory's saga-context setter — its sibling, carried to this seam
   // by the `<SagaContextProvider>` symmetrically with how `useAppStore` carries
-  // the store. Forwarded into `createEngine` so the engine can register its
-  // `runTierTransition` runner; this hook neither owns nor reads it.
+  // the store. Forwarded into `createEngine` so the engine can register its saga
+  // runners (`runTierTransition` + the `ReconcileEffects` closures); this hook
+  // neither owns nor reads it.
   const setSagaContext = useSetSagaContext();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -155,8 +156,10 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
     // extra-callback entries LAST so the caller wins where both define the
     // same method.  Settings VALUES do not flow through here: they live in
     // the injected store and React reads them via `useAppSelector` selectors,
-    // so there is no echo to merge.  The injected `store` rides through as a
-    // non-callback option — the engine reads its settings from it.
+    // so there is no echo to merge.  The injected `store` and `setSagaContext`
+    // ride through as non-callback options — both are sibling returns of
+    // `createAppStore`, delivered here via their respective React contexts
+    // (`<Provider>` for `store`, `<SagaContextProvider>` for `setSagaContext`).
     const {
       lifecycle: extraLifecycle,
       camera: extraCamera,
@@ -205,11 +208,11 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
       handleRef.current = null;
     };
     // Engine is a one-shot effect — see hook header for rationale.
-    // `extraCallbacks` and `store` are both intentionally captured at first
-    // render: callbacks are stable React setters (would never trigger
-    // meaningful re-runs even if listed); `store` is the single injected store
-    // instance, stable for the app's lifetime. Listing either here would
-    // re-create the engine on every render.
+    // `extraCallbacks`, `store`, and `setSagaContext` are all intentionally
+    // captured at first render: callbacks are stable React setters; `store`
+    // and `setSagaContext` are both single instances stable for the app's
+    // lifetime (each created once in main.tsx). Listing any of them here
+    // would re-create the engine on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

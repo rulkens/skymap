@@ -24,6 +24,14 @@
  * resource crosses from engine-land into store-land without the saga importing
  * the engine.
  *
+ * `setSagaContext` is the outward seam for engine-side closures. Sagas live
+ * entirely in the store layer and have no compile-time access to the engine's
+ * scheduler, renderers, or fade bridge. After constructing the engine, callers
+ * register plain closures (typed as `ReconcileEffects`) via `setSagaContext`; the
+ * saga middleware merges them into the running root saga's context where feature
+ * sagas can retrieve them with `getContext`. This keeps the store/saga layer free
+ * of engine imports while still letting sagas trigger engine effects.
+ *
  * Notably absent: NO `serializableCheck: false` and NO `enableMapSet`. The whole
  * point of this migration is that the settings state is now fully serializable —
  * `disabledPasses` is a plain `Record`, not a `Set` — so RTK's default
@@ -39,10 +47,12 @@ import { rootReducer } from './rootReducer';
 import { mainSaga } from './rootSaga';
 import type { RootState, SagaContext } from './types';
 
-// The store's preloaded shape is a partial route map: a caller may seed `tier`
-// and/or `settings` (both optional) and leave the rest to each slice's
-// `initialState`. `Partial<RootState>` is exactly RTK's `preloadedState`
-// contract, so a settings-only or tier-only seed both type-check.
+// The store's preloaded shape is a partial route map: a caller may seed any
+// subset of the routes (`tier`, `settings`, `ui` — all optional) and leave the
+// rest to each slice's `initialState`. `Partial<RootState>` is exactly RTK's
+// `preloadedState` contract, so a settings-only, tier-only, or ui-only seed all
+// type-check. (The `ui` slice self-seeds from `buildInitialUiState()` when
+// omitted; main.tsx seeds it explicitly for a fresh boot-time localStorage read.)
 export type PreloadedState = Partial<RootState>;
 
 export function createAppStore(preloadedState?: PreloadedState) {
@@ -53,5 +63,8 @@ export function createAppStore(preloadedState?: PreloadedState) {
     middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(sagaMiddleware),
   });
   sagaMiddleware.run(mainSaga);
-  return { store, setSagaContext: (ctx: Partial<SagaContext>) => sagaMiddleware.setContext(ctx) };
+  return {
+    store,
+    setSagaContext: (ctx: Partial<SagaContext>) => sagaMiddleware.setContext(ctx),
+  };
 }
