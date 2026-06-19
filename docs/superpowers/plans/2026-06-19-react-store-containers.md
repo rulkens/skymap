@@ -665,20 +665,20 @@ The 3-way guard chain dispatches to three slice actions; keep the exact
 narrowing order from App (structure → milkyWay → galaxy catalog else-branch) so
 behaviour is byte-identical.
 
-- [ ] Write `tests/components/SettingsPanel/LabelsSection.test.ts`
+- [x] Write `tests/components/SettingsPanel/LabelsSection.test.ts`
   (plain-props): master tri-state over `LABEL_CATEGORIES`; per-category checkbox
   reflects `labelCategoryVisibility[cat]`; toggling calls
   `onSetLabelCategoryVisibility(cat, …)`.
-- [ ] Write `tests/components/containers/LabelsSectionContainer.test.ts`
+- [x] Write `tests/components/containers/LabelsSectionContainer.test.ts`
   (store-backed): three assertions — toggling a structure-label category flips
   the structure item's label flag (`selectStructureItems`); toggling `milkyWay`
   flips `selectMilkyWayLabelEnabled`; toggling the `famousGalaxy` label category
   flips the galaxy catalog item's label flag (`selectGalaxyCatalogItems`). This
   is the critical test — it proves the 3-way dispatch lands on the right home.
-- [ ] Confirm both fail.
-- [ ] Implement presentational + container.
-- [ ] `npm test -- LabelsSection` → pass; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] Confirm both fail.
+- [x] Implement presentational + container.
+- [x] `npm test -- LabelsSection` → pass; `npm run typecheck` clean.
+- [x] Commit.
 
 ---
 
