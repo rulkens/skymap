@@ -27,6 +27,6 @@ describe('useAppSelector', () => {
 
     // The hook surfaces the live slice, which is the seeded initialState.
     expect(result.current).toBe(store.getState().settings);
-    expect(result.current.tier).toBe('medium');
+    expect(result.current.galaxyCatalogs.enabled).toBe(true);
   });
 });

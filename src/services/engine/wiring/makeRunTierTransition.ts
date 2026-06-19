@@ -1,0 +1,96 @@
+/**
+ * makeRunTierTransition — the dispatch-free tier-transition effect, reached
+ * from the tier saga via injected context.
+ *
+ * ## What this is
+ *
+ * The engine's per-source data-reload orchestration for a confirmed tier
+ * change, packaged as a `RunTierTransition` the root saga calls through its
+ * injected `SagaContext`. The saga owns the WRITE (it dispatched the `tier`
+ * slice action and computed `prev`/`next`); this runner owns the EFFECT
+ * (cancel + re-fetch each source's `.bin`, reload MCPM, rebuild the hi-res
+ * famous texture). No dispatch here, and no `selectTier` read — prev/next
+ * arrive as params so the saga is the single source of the diff.
+ *
+ * ## Why a factory closing over EngineState
+ *
+ * The runner needs `state` (asset slots, GPU handles, settings) and the
+ * `device`, neither of which the saga has. The engine builds this factory once
+ * and registers the result via `cb.setSagaContext`, so the saga reaches the
+ * engine's GPU resources without importing the engine.
+ *
+ * ## Why `device` is read LAZILY inside the closure
+ *
+ * GPU init lands AFTER this factory is built (the factory is constructed
+ * alongside `bootstrapDeps`, before the async bootstrap IIFE finishes), so
+ * reading `bootstrapDeps.phaseLocals?.device` at build time would always see
+ * `undefined`. Reading it inside the returned closure means the hi-res rebuild
+ * guard correctly skips pre-bootstrap and fires once the device exists via the
+ * `if (device && texturedDiskRenderer)` guard below.
+ *
+ * ## The sole tier-transition path
+ *
+ * This runner is the ONLY place the per-source reload orchestration lives. The
+ * UI dispatches `requestTier`; the tier saga writes the slice action and calls
+ * this runner with the computed prev/next. There is no parallel handle method.
+ */
+
+import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
+import type { RunTierTransition } from '../../../store/types';
+import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
+import { tierTarget } from '../../../data/tierTargets';
+import { GALAXY_CATALOG_SOURCE_REGISTRY, loadCompanionAssets } from './galaxyCatalogSourceRegistry';
+import { rebuildHiResFamousForTier } from '../helpers/rebuildHiResFamousForTier';
+
+export function makeRunTierTransition(
+  state: EngineState,
+  bootstrapDeps: BootstrapDeps,
+): RunTierTransition {
+  return (prevTier, nextTier) => {
+    // For each tier-relevant source: same target → skip; different target → hand
+    // the slot the new request (it cancels any in-flight load, re-fetches the
+    // tier's `.bin`, commits). Sources whose enabled INTENT is off skip too —
+    // don't re-fetch a source you're hiding; toggling one on later loads it at the
+    // current tier via `setSourceVisible`. Filaments are NOT swapped (see
+    // `filamentFetcher.ts`).
+    for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
+      const src = cfg.source;
+      if (cfg.category === 'synthetic') continue;
+      if (tierTarget(src, prevTier) === tierTarget(src, nextTier)) continue;
+      if (!state.settings.galaxyCatalogs.items[galaxyCatalogIdOf(src)].enabled) continue;
+      // `dissolvePrevious`: a tier swap is the one reload the user should see the
+      // old tier fade out of. The commit reads this flag instead of guessing "is
+      // this a re-commit" from the data store, so re-enable / forceReload / boot
+      // never trigger a spurious dissolve.
+      state.assetSlots.points
+        .get(src)
+        ?.load({ source: src, tier: nextTier, dissolvePrevious: true });
+      // Companion sidecars reload in lockstep so localIdx lookups stay valid.
+      loadCompanionAssets(state, cfg, nextTier);
+    }
+
+    // MCPM volume is tier-aware (unlike CF-4); same per-tier reload via the
+    // AssetSlot machinery.
+    state.assetSlots.mcpm?.load({ tier: nextTier });
+
+    // The hi-res LOD-3 famous-galaxy texture is tier-aware on its layerSide.
+    // WebGPU textures are immutable in shape, so a tier flip destroys + recreates
+    // the texture + planner pair and re-binds the renderer's hi-res view (see
+    // `helpers/rebuildHiResFamousForTier.ts`). device + texturedDiskRenderer are
+    // null until initGpu, so the guard skips the rebuild pre-bootstrap.  device is
+    // read live off phaseLocals here (not captured at factory-build time) so the
+    // guard reflects the post-bootstrap GPU state, not the build-time null.
+    const device = bootstrapDeps.phaseLocals?.device;
+    const texturedDiskRenderer = state.gpu.texturedDiskRenderer;
+    if (device && texturedDiskRenderer) {
+      rebuildHiResFamousForTier({
+        state,
+        device,
+        tier: nextTier,
+        texturedDiskRenderer,
+        requestRender: () => state.subsystems.scheduler.requestRender(),
+      });
+    }
+  };
+}

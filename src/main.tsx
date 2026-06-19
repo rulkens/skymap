@@ -30,10 +30,17 @@
  * creates GPU resources and starts a render loop on mount).
  *
  * The app is wrapped in the redux `<Provider>` whose store is constructed here,
- * once, from `createAppStore` seeded with the viewport-derived boot tier. That
- * single store instance is the one settings store the app owns: React reads it
- * through the `<Provider>`, and the engine reads it through `useEngine` →
- * `createEngine`, so there is no second store to drift.
+ * once, from `createAppStore`. Its `preloadedState` seeds the `tier` root slice
+ * with the viewport-derived boot tier and the settings slice with the boot
+ * appearance knobs. That single store instance is the one store the app owns:
+ * React reads it through the `<Provider>`, and the engine reads it through
+ * `useEngine` → `createEngine`, so there is no second store to drift.
+ *
+ * The factory also returns `setSagaContext` — its saga-context setter, a sibling
+ * of the store rather than part of it. It reaches the engine through its own
+ * `SagaContextProvider` context (mirroring the store's `<Provider>`) rather than
+ * a prop on `<App>`, keeping `<App>` prop-less; the engine uses it to register
+ * its `runTierTransition` saga runner.
  */
 
 import { createRoot } from 'react-dom/client';
@@ -41,7 +48,7 @@ import { Provider } from 'react-redux';
 import { App } from './components/App/App';
 import { createAppStore } from './store/createAppStore';
 import { SagaContextProvider } from './store/SagaContextProvider';
-import { settingsRoute } from './store/constants';
+import { settingsRoute, tierRoute } from './store/constants';
 import { buildInitialSettings } from './state/settings/initialState';
 import { initialTierFromViewport } from './utils/initialTierFromViewport';
 import { renderUnsupportedPageHtml } from './unsupportedPage';
@@ -63,13 +70,15 @@ if (typeof navigator === 'undefined' || typeof navigator.gpu === 'undefined') {
   // page and bail.  React never mounts; no engine objects are constructed.
   document.body.innerHTML = renderUnsupportedPageHtml();
 } else {
-  // Seed the settings store with the viewport-derived boot tier — the ONE home
-  // for that derivation. The same store instance is injected into the engine
-  // (via useEngine → createEngine) and read by React through <Provider>, so
-  // there is no second settings store to drift.
+  // Seed the store: the viewport-derived boot tier goes into the `tier` root
+  // slice (its ONE home for that derivation), and the appearance knobs into the
+  // settings slice. The same store instance is injected into the engine (via
+  // useEngine → createEngine) and read by React through <Provider>, so there is
+  // no second store to drift.
   const initialTier = initialTierFromViewport(window.innerWidth);
   const { store, setSagaContext } = createAppStore({
-    [settingsRoute]: buildInitialSettings({ initialTier }),
+    [tierRoute]: initialTier,
+    [settingsRoute]: buildInitialSettings(),
   });
   createRoot(root).render(
     <Provider store={store}>

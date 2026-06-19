@@ -41,7 +41,7 @@ describe('SagaContextProvider / useSetSagaContext', () => {
   it('throws a clear error when rendered outside a SagaContextProvider', () => {
     // renderHook with no wrapper mounts in a bare React tree — no provider.
     expect(() => renderHook(() => useSetSagaContext())).toThrow(
-      'useSetSagaContext: no <SagaContextProvider> found in the tree.',
+      'useSetSagaContext must be used within a <SagaContextProvider>',
     );
   });
 });

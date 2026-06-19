@@ -29,8 +29,6 @@
  *     and chains a follow-up `requestRender` to the resolve handler.
  *     The descriptor's `dispatch(action(v)); requestRender()` shape can't
  *     express that.
- *   - `setTier` — orchestrates per-source asset-slot reloads via
- *     `cloudLoader.reloadSource`, with abort-controller plumbing.
  *   - `setSourceVisible` — touches the visible-source mask with a
  *     fade animation, not just one boolean.
  *   - `flow.set` — dispatches the whole-patch `setFlow` slice action then runs

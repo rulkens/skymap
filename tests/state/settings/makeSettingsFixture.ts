@@ -51,9 +51,6 @@ export function makeSettingsFixture(
   overrides: Partial<EngineSettingsState> = {},
 ): EngineSettingsState {
   return {
-    // Flat root field — the cross-cutting data-resolution preset. 'medium' is
-    // the default desktop budget the engine seeds when no viewport hint is given.
-    tier: 'medium',
     galaxyCatalogs: {
       enabled: true,
       sizePx: DEFAULT_POINT_SIZE_PX,

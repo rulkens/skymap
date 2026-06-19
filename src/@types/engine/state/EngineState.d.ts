@@ -24,7 +24,8 @@
  * sub-bags organised by concern, gives the engine one obvious answer.
  * The mental model becomes:
  *
- *   - `state.settings`   — what the SettingsPanel surfaces (incl. the data tier).
+ *   - `state.settings`   — the appearance knobs the SettingsPanel surfaces.
+ *   - `state.tier`       — the data-resolution tier (its own root slice).
  *   - `state.data`       — per-type data stores (galaxies, structures, …).
  *   - `state.picking`    — hover / click / drag mutables.
  *   - `state.gpu`        — pipelines / textures allocated lazily.
@@ -72,6 +73,7 @@
  * type's docstring.
  */
 
+import type { Tier } from '../../data/Tier';
 import type { EngineSettingsState } from '../../settings/EngineSettingsState';
 import type { EngineData } from '../data/EngineData';
 import type { EnginePickingState } from './EnginePickingState';
@@ -84,6 +86,14 @@ import type { RequestKey } from '../../loading/RequestKey';
 
 export type EngineState = {
   settings: EngineSettingsState;
+  /**
+   * The live data-resolution tier. A getter delegating to the injected store
+   * (`store.getState().tier`), mirroring the `settings` delegation above —
+   * reads hand back the authoritative value with no parallel mirror to drift.
+   * The tier saga owns the write (it dispatches the `tier` slice action); the
+   * engine reads here.
+   */
+  tier: Tier;
   /**
    * Per-type data stores — the authoritative app-side home for each
    * data type (galaxies, structures, volumes, filaments). Slot commits

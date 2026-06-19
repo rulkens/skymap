@@ -16,7 +16,7 @@
  *     sourceCounts, loadProgress.  All but `scale` are fed by engine
  *     callbacks that fire only when the value changes, so direct `setX`
  *     wiring is safe (no spurious re-renders).  The data tier is NOT here:
- *     it lives in the engine settings store, read via `selectTier` /
+ *     it lives in its own `tier` root slice, read via `selectTier` /
  *     `useAppSelector` — this hook neither holds nor exposes it.
  *     `scale` is derived locally from `onCameraChange` snapshots via
  *     the pure `computeScaleInfo` helper — the engine emits the
@@ -36,6 +36,14 @@
  * subscriptions — App-level event wiring (e.g.
  * `selection.onStructureHoverChange`) — which we spread into the
  * createEngine options block alongside our session callbacks.
+ *
+ * Two NON-callback options ride into `createEngine` as plain values: the
+ * `store` (above) and `setSagaContext` — the store factory's saga-context
+ * setter.  Both are obtained from context seams symmetrically: `store` via
+ * `useAppStore` (the redux `<Provider>`), `setSagaContext` via
+ * `useSetSagaContext` (the `<SagaContextProvider>`).  The engine uses the
+ * setter to register its `runTierTransition` runner so the tier saga can reach
+ * the engine; this hook just forwards it, it neither owns nor reads it.
  *
  * ──────────────────────────────────────────────────────────────────────
  * Why empty `useEffect` deps?
@@ -89,11 +97,11 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
   // so the engine reads its settings from the same store React renders from.
   const store = useAppStore();
 
-  // The saga-context registration function — sibling to `store` in the
-  // `createAppStore` return, delivered via `<SagaContextProvider>`. The engine
-  // calls it (Task 2.4) to register `ReconcileEffects` closures into the
-  // running saga middleware so sagas can trigger engine effects without
-  // importing the engine's concrete types.
+  // The store factory's saga-context setter — its sibling, carried to this seam
+  // by the `<SagaContextProvider>` symmetrically with how `useAppStore` carries
+  // the store. Forwarded into `createEngine` so the engine can register its saga
+  // runners (`runTierTransition` + the `ReconcileEffects` closures); this hook
+  // neither owns nor reads it.
   const setSagaContext = useSetSagaContext();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);

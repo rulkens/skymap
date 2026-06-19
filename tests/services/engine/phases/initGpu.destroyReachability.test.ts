@@ -224,7 +224,7 @@ function makeState(): EngineState {
         requestRender: vi.fn(),
       },
     },
-    settings: { tier: 'medium' },
+    settings: {},
     assetSlots: {
       points: new Map(),
     },

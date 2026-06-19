@@ -6,7 +6,6 @@
 
 import type { EngineStatus } from './EngineStatus';
 import type { FocusableTarget } from './FocusableTarget';
-import type { Tier } from '../data/Tier';
 import type { ScaleInfo } from './ScaleInfo';
 import type { SourceType } from '../data/SourceType';
 import type { LoadProgressState } from '../loading/LoadProgressState';
@@ -59,30 +58,19 @@ export type EngineCallbacks = {
   store: AppStore;
 
   /**
-   * Registers engine-side closures into the running saga middleware context.
-   * The engine calls this once `EngineState` exists (Task 2.4) to publish
-   * `ReconcileEffects` implementations; sagas retrieve them via `getContext`
-   * without importing the engine's concrete types.
+   * Registers the engine's saga runners into the store's saga context.  The
+   * engine builds its closures over the live `EngineState` and hands them to the
+   * running root saga through this setter, which the store factory exposes
+   * alongside the store: `runTierTransition` (the tier saga's
+   * `getContext('runTierTransition')` target — without it a tier change never
+   * reaches the engine's GPU resources) and the `ReconcileEffects` bag (the
+   * render-wake / fade / reseed / bias closures the reconcile sagas invoke).
    *
-   * Sourced from `<SagaContextProvider>` in `useEngine`, exactly mirroring
-   * how `store` rides here from `<Provider>` — both are sibling returns of
-   * `createAppStore`, and both are injected through React context rather than
-   * threaded as props through `App`.
-   *
-   * The engine does NOT call this yet — that is Task 2.4.  This field
-   * establishes the plumbing so the value is present when that task lands.
+   * Sourced from `<SagaContextProvider>` in `useEngine`, mirroring how `store`
+   * rides here from `<Provider>` — both are sibling returns of `createAppStore`,
+   * injected through React context rather than threaded as props through `App`.
    */
   setSagaContext: SetSagaContext;
-
-  /**
-   * Initial data tier to load on engine startup.  Defaults to `'medium'`
-   * when absent.  This is technically an option, not a callback, but the
-   * `createEngine(canvas, cb)` signature already passes a single bag for
-   * both — extending it here keeps the public surface compact rather than
-   * introducing a separate `EngineOpts` type for one extra field.  Will
-   * grow into a richer Opts split if more startup-only knobs accumulate.
-   */
-  initialTier?: Tier;
 
   /**
    * Engine lifecycle callbacks.  `onStatusChange` is required — every
@@ -157,7 +145,7 @@ export type EngineCallbacks = {
 
   /**
    * Source-state callbacks — per-source readiness and aggregated load
-   * progress. (Tier is no longer echoed here: it lives in the settings store,
+   * progress. (Tier is not echoed here: it lives in the `tier` root slice,
    * read React-side via `selectTier`.)
    *
    * `onCatalogReady` is granular per-source because the three .bin
