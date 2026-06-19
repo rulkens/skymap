@@ -1,26 +1,25 @@
 /**
- * resolveGalaxyInfo — turn a `(cloud, localIdx, source)` selection into a
- * `GalaxyInfo`, or `null` when the pick can't be resolved.
+ * resolveGalaxyInfo — composes the engine-side cloud read (`extractGalaxyRow`)
+ * with the pure formatter (`buildGalaxyInfo`). The existing pick path still
+ * calls this to get a `GalaxyInfo` for the current selectionSubsystem; the
+ * bounds/null guard now lives in extractGalaxyRow.
  *
- * This is the pure core of the selection subsystem's galaxy lookup: every
- * dependency arrives as an argument (the live cloud, the decoded local index,
- * the source tag, the optional famous sidecar), so it captures no closures and
- * can be unit-tested in isolation.
- *
- * The bounds check defends the tier-swap-window race.  A still-in-flight pick
- * from a previous frame can carry a `(source, localIdx)` decoded against an
- * older, larger layout; if the cloud has since been swapped to a smaller tier,
- * `buildGalaxyInfo` would index past the end of the freshly-uploaded typed
- * arrays and crash downstream `.toFixed()` calls in the InfoCard.  Returning
- * `null` is the right semantics — "we have no data for that pick; render no
- * card, the next frame's pick will succeed".
+ * The `source` param is typed `SourceType` to match the caller (`resolvePickTable`
+ * passes `pick.sourceCode`, which is `SourceType`). The cast to
+ * `GalaxyCatalogSourceType` is sound at this call site because `resolvePickTable`
+ * only reaches this arm when the registry entry has `type: 'galaxyCatalog'`,
+ * which guarantees the source code is a galaxy-catalog source. A later task
+ * will push that narrowing into the type of `pick.sourceCode` so the cast can
+ * be removed.
  */
 
-import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
+import { extractGalaxyRow } from './extractGalaxyRow';
+import { buildGalaxyInfo } from './buildGalaxyInfo';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
-import { buildGalaxyInfo } from './galaxyInfoBuilder';
+import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
 
 export function resolveGalaxyInfo(
   cloud: GalaxyCatalog | undefined,
@@ -28,7 +27,6 @@ export function resolveGalaxyInfo(
   source: SourceType,
   famousMeta?: readonly FamousMetaEntry[],
 ): GalaxyInfo | null {
-  if (!cloud) return null;
-  if (localIdx < 0 || localIdx >= cloud.count) return null;
-  return buildGalaxyInfo(cloud, localIdx, source, famousMeta);
+  const row = extractGalaxyRow(cloud, localIdx, source as GalaxyCatalogSourceType, famousMeta);
+  return row ? buildGalaxyInfo(row) : null;
 }

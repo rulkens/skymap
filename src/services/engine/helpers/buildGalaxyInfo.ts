@@ -1,0 +1,215 @@
+/**
+ * buildGalaxyInfo — the PURE formatting half of the old galaxyInfoBuilder.
+ *
+ * Takes a serializable `GalaxyRow` (the cloud reads `extractGalaxyRow`
+ * produced) and computes the full display-ready `GalaxyInfo`: sky coordinates,
+ * distance, lookback, colours, IAU name, catalogue + thumbnail URLs, the
+ * orientation/diameter provenance, the famous enrichment, and the display-name
+ * ladder. Every helper it calls is a pure util, so this function imports no
+ * engine state and no GPU — which is exactly why React can call it directly in
+ * a memoized selector (the inverse of today's engine-bakes-GalaxyInfo flow).
+ *
+ * `row.objId` is the decimal string of the catalog objID; we parse it back to
+ * a bigint once here because the SDSS/PGC URL + name logic compares it to 0n.
+ */
+import { Source, SOURCE_REGISTRY } from '../../../data/sources';
+import {
+  sourceClassLabel,
+  milliquasParentSurveyPrefix,
+} from '../../../data/galaxyCatalog/sourceClass';
+import { famousDisplayName } from './famousDisplayName';
+import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';
+import { formatMorphology } from '../../../utils/format/formatMorphology';
+import { famousWikipediaTitle } from '../../../utils/format/famousWikipediaTitle';
+import {
+  cartesianToRaDecZ,
+  formatRaSexagesimal,
+  formatDecSexagesimal,
+  iauName,
+  iauRaDecSuffix,
+  lookbackTimeGyr,
+  hubbleVelocityKmS,
+  absoluteMagnitude,
+  earthEraForLookback,
+  galaxyType,
+  sdssExplorerUrl,
+  sdssThumbnailUrl,
+  dssThumbnailUrl,
+  galaxyThumbnailFovArcmin,
+  nedByNameUrl,
+  nedNearPositionUrl,
+  DEFAULT_GALAXY_DIAMETER_KPC,
+} from '../../../utils/math';
+import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
+import type { GalaxyRow } from '../../../@types/engine/GalaxyRow';
+
+export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
+  const { x: px, y: py, z: pz, source } = row;
+  const objID = BigInt(row.objId);
+
+  const [ra, dec, fallbackRedshift] = cartesianToRaDecZ(px, py, pz);
+  const redshift = Number.isFinite(row.redshift) ? row.redshift : fallbackRedshift;
+  const distanceMpc = Math.sqrt(px * px + py * py + pz * pz);
+
+  const { magU, magG, magR, magI, magZ } = row;
+
+  const entry = SOURCE_REGISTRY[source];
+  if (entry.type !== 'galaxyCatalog') {
+    throw new Error(
+      `buildGalaxyInfo: non-galaxy catalog source ${source} has no photometric bands`,
+    );
+  }
+  const bands = entry.bandLabels;
+
+  const candidatePairs: Array<[keyof typeof bands, keyof typeof bands, number]> = [
+    ['u', 'g', magU - magG],
+    ['g', 'r', magG - magR],
+    ['r', 'i', magR - magI],
+    ['i', 'z', magI - magZ],
+  ];
+  const colours: Array<{ label: string; value: number }> = [];
+  for (const [a, b, value] of candidatePairs) {
+    if (bands[a] === '—' || bands[b] === '—') continue;
+    if (!Number.isFinite(value)) continue;
+    colours.push({ label: `${bands[a]}−${bands[b]}`, value });
+  }
+
+  const isSdss = source === Source.SDSS;
+  const famousEntry = row.famous;
+  let primaryCatalogue: { label: string; href: string } | null;
+  if (isSdss && objID > 0n) {
+    primaryCatalogue = { label: 'SDSS Explorer', href: sdssExplorerUrl(objID) };
+  } else if (source === Source.TwoMRS) {
+    primaryCatalogue = { label: 'NED', href: nedNearPositionUrl(ra, dec) };
+  } else if (source === Source.Glade) {
+    primaryCatalogue = {
+      label: 'NED',
+      href: objID > 0n ? nedByNameUrl(`PGC ${objID}`) : nedNearPositionUrl(ra, dec),
+    };
+  } else if (famousEntry) {
+    primaryCatalogue = { label: 'NED', href: nedByNameUrl(famousEntry.names[0]!) };
+  } else if (source === Source.SDSS) {
+    primaryCatalogue = { label: 'NED', href: nedNearPositionUrl(ra, dec) };
+  } else {
+    primaryCatalogue = null;
+  }
+  const catalogues: GalaxyInfo['catalogues'] = [];
+  if (primaryCatalogue) catalogues.push(primaryCatalogue);
+  if (famousEntry) {
+    catalogues.push({
+      label: 'Wikipedia',
+      href: `https://en.wikipedia.org/wiki/${encodeURIComponent(
+        famousWikipediaTitle([...famousEntry.names]).replace(/ /g, '_'),
+      )}`,
+    });
+  }
+
+  const fovArcmin = galaxyThumbnailFovArcmin(row.diameterKpc, distanceMpc);
+  const surveyThumbnailUrl = isSdss
+    ? sdssThumbnailUrl(ra, dec, 200, fovArcmin)
+    : dssThumbnailUrl(ra, dec, fovArcmin);
+  const thumbnailUrl = famousEntry
+    ? `/images/famous-thumb/${famousEntry.id}.webp`
+    : surveyThumbnailUrl;
+  const thumbnailFallbackUrl = famousEntry ? surveyThumbnailUrl : undefined;
+
+  const ar = row.axisRatio;
+  const pa = row.positionAngleDeg;
+  const fb = fallbackOrientation(objID, ra, dec);
+  const fbAr = new Float32Array([fb.axisRatio])[0]!;
+  const fbPa = new Float32Array([fb.positionAngleDeg])[0]!;
+  const isFallback = ar === fbAr && pa === fbPa;
+  let provenance: string;
+  if (isFallback) {
+    provenance = 'deterministic fallback';
+  } else if (source === Source.SDSS) {
+    provenance = 'SDSS exp+deV blend';
+  } else if (source === Source.TwoMRS) {
+    provenance = '2MASS XSC sup_phi';
+  } else if (source === Source.Glade) {
+    provenance = 'HyperLEDA PGC';
+  } else {
+    provenance = 'deterministic fallback';
+  }
+
+  const dKpc = row.diameterKpc;
+  let diameterProvenance: string;
+  if (dKpc === DEFAULT_GALAXY_DIAMETER_KPC) {
+    diameterProvenance = 'fallback (30 kpc)';
+  } else if (source === Source.SDSS) {
+    diameterProvenance = 'SDSS petroR50_r';
+  } else if (source === Source.TwoMRS) {
+    diameterProvenance = '2MRS Riso';
+  } else if (source === Source.Glade) {
+    diameterProvenance = 'GLADE Tully';
+  } else {
+    diameterProvenance = 'fallback (30 kpc)';
+  }
+
+  const agnClass = sourceClassLabel(source, row.classByte) ?? undefined;
+  const parentSurveyPrefix = milliquasParentSurveyPrefix(row.parentSurveyByte);
+  const milliquasDisplayName =
+    source === Source.Milliquas && parentSurveyPrefix !== null
+      ? `${parentSurveyPrefix} ${iauRaDecSuffix(ra, dec)}`
+      : undefined;
+
+  let famous: GalaxyInfo['famous'];
+  if (famousEntry) {
+    famous = {
+      id: famousEntry.id,
+      ...(famousEntry.commonName !== undefined ? { commonName: famousEntry.commonName } : {}),
+      names: [...famousEntry.names],
+      description: famousEntry.description,
+      type: famousEntry.type,
+    };
+  }
+  const morphology = famousEntry?.type ? formatMorphology(famousEntry.type) : undefined;
+
+  return {
+    type: 'galaxyCatalog',
+    index: row.index,
+    objID,
+    x: px,
+    y: py,
+    z: pz,
+    ra,
+    dec,
+    raSexagesimal: formatRaSexagesimal(ra),
+    decSexagesimal: formatDecSexagesimal(dec),
+    redshift,
+    distanceMpc,
+    hubbleVelocityKmS: hubbleVelocityKmS(redshift),
+    lookbackGyr: lookbackTimeGyr(redshift),
+    earthEra: earthEraForLookback(lookbackTimeGyr(redshift)),
+    magU,
+    magG,
+    magR,
+    magI,
+    magZ,
+    absoluteMagG: absoluteMagnitude(magG, distanceMpc),
+    galaxyType: galaxyType(source, { magU, magG, magR, magI, magZ }),
+    morphology,
+    iauName: iauName(source, ra, dec),
+    displayName:
+      [
+        famous ? famousDisplayName(famous) : undefined,
+        milliquasDisplayName,
+        (source === Source.TwoMRS || source === Source.Glade) && objID > 0n
+          ? `PGC ${objID}`
+          : undefined,
+        iauName(source, ra, dec),
+      ].find((c) => c !== undefined && c.length > 0) ?? iauName(source, ra, dec),
+    bands,
+    colours,
+    source,
+    sourceLabel: SOURCE_REGISTRY[source].label,
+    agnClass,
+    catalogues,
+    thumbnailUrl,
+    ...(thumbnailFallbackUrl !== undefined ? { thumbnailFallbackUrl } : {}),
+    diameterKpc: dKpc,
+    diameterProvenance,
+    orientation: { axisRatio: ar, positionAngleDeg: pa, provenance },
+    famous,
+  };
+}

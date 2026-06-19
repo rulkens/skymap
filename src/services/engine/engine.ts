@@ -70,6 +70,7 @@
 import { Source } from '../../data/sources';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineState } from '../../@types/engine/state/EngineState';
@@ -89,6 +90,7 @@ import { produceFamousLabels } from './presentation/produceFamousLabels';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { HDR_PASSES, UI_PASSES } from './frame/passes';
 import { buildGalaxyInfo } from './helpers/galaxyInfoBuilder';
+import { extractGalaxyRow } from './helpers/extractGalaxyRow';
 import { clearAll } from './helpers/clearAll';
 import { commitFocus } from './helpers/commitFocus';
 import { commitGalaxyFocus } from './helpers/commitGalaxyFocus';
@@ -540,13 +542,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     if (localIdx < 0) return;
 
     // Build the GalaxyInfo the picker would, from live sidecars.
-    const info = buildGalaxyInfo(
+    const famousRow = extractGalaxyRow(
       cloud,
       localIdx,
       Source.FamousGalaxy,
       state.data.galaxies.famousMeta,
     );
-    if (!info) return;
+    if (!famousRow) return;
+    const info = buildGalaxyInfo(famousRow);
 
     // A palette pick is a deliberate focus action, so move the camera too.
     commitGalaxyFocus(state, info);
@@ -567,13 +570,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
     // Caller-supplied `famousMeta` wins over the engine's copy — see the
     // EngineHandle JSDoc for the race this defends against.
-    const info = buildGalaxyInfo(
+    // The cast is sound: selectByAlias is only reached from palette/alias
+    // paths that resolve against galaxy-catalog clouds, so source is
+    // always a GalaxyCatalogSourceType at runtime.
+    const aliasRow = extractGalaxyRow(
       cloud,
       localIdx,
-      source,
+      source as GalaxyCatalogSourceType,
       famousMeta ?? state.data.galaxies.famousMeta,
     );
-    if (!info) return;
+    if (!aliasRow) return;
+    const info = buildGalaxyInfo(aliasRow);
 
     commitGalaxyFocus(state, info);
   }

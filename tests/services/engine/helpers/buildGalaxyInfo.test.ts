@@ -1,33 +1,16 @@
-/**
- * Characterization (golden) test for buildGalaxyInfo AFTER the extract/build
- * split. This pins the exact GalaxyInfo the composed path produces so any
- * future change to buildGalaxyInfo is caught as a snapshot delta.
- * Deliberately a snapshot of the WHOLE object: any perturbation to a derived
- * field (sexagesimal, distance, colours, displayName, urls, provenance) will
- * show up as a diff.
- *
- * The test now exercises the composed path: extractGalaxyRow(cloud, idx, source)
- * followed by buildGalaxyInfo(row). This mirrors what resolveGalaxyInfo does
- * in production; keeping it here proves the re-export from galaxyInfoBuilder
- * routes through the new pure formatter.
- */
 import { describe, it, expect } from 'vitest';
 
-import { buildGalaxyInfo } from '../../../../src/services/engine/helpers/galaxyInfoBuilder';
 import { extractGalaxyRow } from '../../../../src/services/engine/helpers/extractGalaxyRow';
+import { buildGalaxyInfo } from '../../../../src/services/engine/helpers/buildGalaxyInfo';
 import { Source } from '../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
 
-// A single-row cloud at a known position with known photometry. Positions are
-// world-space Mpc; values chosen so RA/Dec/distance are non-degenerate.
-// Note: objIDs is BigUint64Array (unsigned), not BigInt64Array (signed) — the
-// GalaxyCatalog type mandates the unsigned variant because SDSS objIDs are
-// positive 64-bit integers that would be misinterpreted as signed.
+// Note: objIDs uses BigUint64Array (unsigned), matching the GalaxyCatalog type.
+// The brief listed BigInt64Array (signed) — that would fail tsc; corrected here.
 function makeCloud(over: Partial<GalaxyCatalog> = {}): GalaxyCatalog {
-  const count = 1;
   return {
-    count,
+    count: 1,
     positions: new Float32Array([10, 20, 30]),
     spectroscopicZ: new Float32Array([0.0123]),
     magU: new Float32Array([18.1]),
@@ -45,13 +28,13 @@ function makeCloud(over: Partial<GalaxyCatalog> = {}): GalaxyCatalog {
   };
 }
 
-describe('buildGalaxyInfo characterization', () => {
-  it('SDSS row golden', () => {
+describe('buildGalaxyInfo(extractGalaxyRow(...))', () => {
+  it('matches the SDSS golden', () => {
     const info = buildGalaxyInfo(extractGalaxyRow(makeCloud(), 0, Source.SDSS)!);
     expect(info).toMatchSnapshot();
   });
 
-  it('famous row golden', () => {
+  it('matches the famous golden', () => {
     const famousMeta: readonly FamousMetaEntry[] = [
       {
         id: 'm31',
@@ -61,8 +44,6 @@ describe('buildGalaxyInfo characterization', () => {
         type: 'SBb',
       },
     ];
-    // famousMeta is indexed by the local index (idx=0), not by objID. The cloud
-    // objID can be anything — the famous metadata is looked up via famousMeta[idx].
     const info = buildGalaxyInfo(
       extractGalaxyRow(
         makeCloud({ objIDs: new BigUint64Array([224n]) }),

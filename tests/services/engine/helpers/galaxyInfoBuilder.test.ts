@@ -7,11 +7,12 @@
  *   - `niceRound`    — axis-ticker style {1,2,5}×10^k floor (used by the
  *                      scale-bar legend).
  *   - `maxAbsCoord`  — bounding-box heuristic used at startup framing.
- *   - `buildGalaxyInfo` — turns a (cloud, idx) pair into a fully-derived
- *                      `GalaxyInfo` value.  The bulk of these tests pin the
- *                      per-source dispatch (SDSS / 2MRS / GLADE / Famous /
- *                      Synthetic) end-to-end so any cross-cut regression in
- *                      thumbnails, explorer URLs, IAU names, orientation
+ *   - `buildGalaxyInfo` — takes a `GalaxyRow` and returns a fully-derived
+ *                      `GalaxyInfo` value. These tests compose
+ *                      `extractGalaxyRow(cloud, idx, source)` → `buildGalaxyInfo(row)`
+ *                      to exercise the per-source dispatch (SDSS / 2MRS / GLADE /
+ *                      Famous / Synthetic) end-to-end so any cross-cut regression
+ *                      in thumbnails, explorer URLs, IAU names, orientation
  *                      provenance, or the famous-meta block is caught here.
  */
 
@@ -21,6 +22,7 @@ import {
   maxAbsCoord,
   niceRound,
 } from '../../../../src/services/engine/helpers/galaxyInfoBuilder';
+import { extractGalaxyRow } from '../../../../src/services/engine/helpers/extractGalaxyRow';
 import { Source } from '../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import { fallbackOrientation } from '../../../../src/utils/random/fallbackOrientation';
@@ -52,6 +54,16 @@ function makeCloud(count: number): GalaxyCatalog {
     parentSurveyByte: new Uint8Array(count),
     spectroscopicZ: new Float32Array(count),
   };
+}
+
+/** Convenience: extractGalaxyRow then buildGalaxyInfo in one call. */
+function buildInfo(
+  cloud: GalaxyCatalog,
+  idx: number,
+  source: Parameters<typeof extractGalaxyRow>[2],
+  famousMeta?: readonly FamousMetaEntry[],
+) {
+  return buildGalaxyInfo(extractGalaxyRow(cloud, idx, source, famousMeta)!);
 }
 
 // ─── niceRound ──────────────────────────────────────────────────────────────
@@ -162,7 +174,7 @@ describe('buildGalaxyInfo — SDSS source', () => {
     // axisRatio / pa default to (0.7, 45) which is *not* the deterministic
     // fallback for objID=1, so provenance should resolve to "SDSS exp+deV blend".
 
-    const info = buildGalaxyInfo(cloud, 0, Source.SDSS);
+    const info = buildInfo(cloud, 0, Source.SDSS);
 
     // Index + objID round-trip from the cloud arrays.
     expect(info.index).toBe(0);
@@ -224,7 +236,7 @@ describe('buildGalaxyInfo — SDSS source', () => {
     const cloud = makeCloud(1);
     cloud.objIDs[0] = 0n;
     setPosition(cloud, 0, 100, 0, 0);
-    const info = buildGalaxyInfo(cloud, 0, Source.SDSS);
+    const info = buildInfo(cloud, 0, Source.SDSS);
     expect(info.catalogues[0]!.label).toBe('NED');
     expect(info.catalogues[0]!.href).toContain('ned.ipac.caltech.edu');
     expect(info.catalogues[0]!.href).toContain('Near+Position+Search');
@@ -241,7 +253,7 @@ describe('buildGalaxyInfo — SDSS source', () => {
     const fb = fallbackOrientation(cloud.objIDs[0]!, ra, dec);
     cloud.axisRatio[0] = fb.axisRatio;
     cloud.positionAngleDeg[0] = fb.positionAngleDeg;
-    const info = buildGalaxyInfo(cloud, 0, Source.SDSS);
+    const info = buildInfo(cloud, 0, Source.SDSS);
     expect(info.orientation.provenance).toBe('deterministic fallback');
   });
 });
@@ -258,7 +270,7 @@ describe('buildGalaxyInfo — TwoMRS source', () => {
     cloud.magR[0] = 11.5; // H
     cloud.magI[0] = 11.0; // K
 
-    const info = buildGalaxyInfo(cloud, 0, Source.TwoMRS);
+    const info = buildInfo(cloud, 0, Source.TwoMRS);
 
     expect(info.source).toBe(Source.TwoMRS);
     expect(info.sourceLabel).toBe('2MRS');
@@ -295,7 +307,7 @@ describe('buildGalaxyInfo — TwoMRS source', () => {
     const cloud = makeCloud(1);
     cloud.objIDs[0] = 2789n; // NGC 253's PGC
     setPosition(cloud, 0, 50, 50, 0);
-    const info = buildGalaxyInfo(cloud, 0, Source.TwoMRS);
+    const info = buildInfo(cloud, 0, Source.TwoMRS);
     expect(info.displayName).toBe('PGC 2789');
     // The IAU name still comes through unchanged for callers that need
     // the coord-based form (it's not the headline anymore but other
@@ -307,7 +319,7 @@ describe('buildGalaxyInfo — TwoMRS source', () => {
     const cloud = makeCloud(1);
     cloud.objIDs[0] = 0n;
     setPosition(cloud, 0, 50, 50, 0);
-    const info = buildGalaxyInfo(cloud, 0, Source.TwoMRS);
+    const info = buildInfo(cloud, 0, Source.TwoMRS);
     expect(info.displayName).toBe(info.iauName);
     expect(info.displayName.startsWith('2MASX J')).toBe(true);
   });
@@ -330,7 +342,7 @@ describe('buildGalaxyInfo — Glade source', () => {
     cloud.magI[0] = 12.5; // H
     cloud.magZ[0] = 12.0; // K
 
-    const info = buildGalaxyInfo(cloud, 0, Source.Glade);
+    const info = buildInfo(cloud, 0, Source.Glade);
 
     expect(info.source).toBe(Source.Glade);
     expect(info.sourceLabel).toBe('GLADE');
@@ -358,7 +370,7 @@ describe('buildGalaxyInfo — Glade source', () => {
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 0, 0, 200);
     cloud.objIDs[0] = 12345n;
-    const info = buildGalaxyInfo(cloud, 0, Source.Glade);
+    const info = buildInfo(cloud, 0, Source.Glade);
     expect(info.catalogues[0]!.label).toBe('NED');
     expect(info.catalogues[0]!.href).toContain('ned.ipac.caltech.edu/byname');
     expect(info.catalogues[0]!.href).toContain('PGC+12345');
@@ -384,7 +396,7 @@ describe('buildGalaxyInfo — Synthetic source', () => {
     cloud.axisRatio[0] = fb.axisRatio;
     cloud.positionAngleDeg[0] = fb.positionAngleDeg;
 
-    const info = buildGalaxyInfo(cloud, 0, Source.Synthetic);
+    const info = buildInfo(cloud, 0, Source.Synthetic);
 
     expect(info.source).toBe(Source.Synthetic);
     expect(info.sourceLabel).toBe('Synthetic');
@@ -413,7 +425,7 @@ describe('buildGalaxyInfo — Famous source', () => {
       },
     ];
 
-    const info = buildGalaxyInfo(cloud, 0, Source.FamousGalaxy, meta);
+    const info = buildInfo(cloud, 0, Source.FamousGalaxy, meta);
 
     expect(info.source).toBe(Source.FamousGalaxy);
     expect(info.iauName.startsWith('Famous J')).toBe(true);
@@ -441,7 +453,7 @@ describe('buildGalaxyInfo — Famous source', () => {
     // not crash — the InfoCard simply renders the generic layout for that hover.
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 1, 0, 0);
-    const info = buildGalaxyInfo(cloud, 0, Source.FamousGalaxy);
+    const info = buildInfo(cloud, 0, Source.FamousGalaxy);
     expect(info.famous).toBeUndefined();
   });
 });
@@ -456,7 +468,7 @@ describe('buildGalaxyInfo — diameter provenance', () => {
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);
     cloud.diameterKpc[0] = 25; // not the 30 kpc fallback
-    const info = buildGalaxyInfo(cloud, 0, Source.SDSS);
+    const info = buildInfo(cloud, 0, Source.SDSS);
     expect(info.diameterProvenance).toBe('SDSS petroR50_r');
   });
 
@@ -464,7 +476,7 @@ describe('buildGalaxyInfo — diameter provenance', () => {
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);
     cloud.diameterKpc[0] = 22;
-    const info = buildGalaxyInfo(cloud, 0, Source.TwoMRS);
+    const info = buildInfo(cloud, 0, Source.TwoMRS);
     expect(info.diameterProvenance).toBe('2MRS Riso');
   });
 
@@ -472,7 +484,7 @@ describe('buildGalaxyInfo — diameter provenance', () => {
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);
     cloud.diameterKpc[0] = 18;
-    const info = buildGalaxyInfo(cloud, 0, Source.Glade);
+    const info = buildInfo(cloud, 0, Source.Glade);
     expect(info.diameterProvenance).toBe('GLADE Tully');
   });
 });
@@ -487,7 +499,7 @@ describe('buildGalaxyInfo — Milliquas source', () => {
     cloud.parentSurveyByte[0] = 1;
     // 1 = Quasar — see MILLIQUAS_CLASS_BYTE.Q.
     cloud.classByte[0] = 1;
-    const info = buildGalaxyInfo(cloud, 0, Source.Milliquas);
+    const info = buildInfo(cloud, 0, Source.Milliquas);
     expect(info.displayName.startsWith('SDSS J')).toBe(true);
     // The suffix portion must be byte-identical to iauName's
     // (`MQ J…`) suffix — the whole point of iauRaDecSuffix is that
@@ -501,7 +513,7 @@ describe('buildGalaxyInfo — Milliquas source', () => {
     // stay at the zero-fill default.
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);
-    const info = buildGalaxyInfo(cloud, 0, Source.Milliquas);
+    const info = buildInfo(cloud, 0, Source.Milliquas);
     expect(info.displayName).toBe(info.iauName);
     expect(info.displayName.startsWith('MQ J')).toBe(true);
     expect(info.agnClass).toBeUndefined();
@@ -521,7 +533,7 @@ describe('buildGalaxyInfo — Milliquas source', () => {
       const cloud = makeCloud(1);
       setPosition(cloud, 0, 100, 0, 0);
       cloud.parentSurveyByte[0] = byte;
-      const info = buildGalaxyInfo(cloud, 0, Source.Milliquas);
+      const info = buildInfo(cloud, 0, Source.Milliquas);
       expect(info.displayName.startsWith(`${prefix} J`)).toBe(true);
     }
   });
@@ -539,7 +551,7 @@ describe('buildGalaxyInfo — Milliquas source', () => {
       const cloud = makeCloud(1);
       setPosition(cloud, 0, 100, 0, 0);
       cloud.classByte[0] = byte;
-      const info = buildGalaxyInfo(cloud, 0, Source.Milliquas);
+      const info = buildInfo(cloud, 0, Source.Milliquas);
       expect(info.agnClass).toBe(expected);
     }
   });
@@ -548,7 +560,7 @@ describe('buildGalaxyInfo — Milliquas source', () => {
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);
     cloud.classByte[0] = 1; // Would mean "Quasar" if source were Milliquas.
-    const info = buildGalaxyInfo(cloud, 0, Source.SDSS);
+    const info = buildInfo(cloud, 0, Source.SDSS);
     expect(info.agnClass).toBeUndefined();
   });
 });
