@@ -13,8 +13,8 @@
  *     useKeyboardShortcuts) can call methods on it without dependency
  *     gymnastics.
  *   - Engine-driven state: status, scale, sourceCounts, loadProgress.
- *     Selection state (hovered/selected/focused) was moved to the Redux
- *     store in P2.5 — App reads `useAppSelector(selectXFocusable)`.
+ *     Selection state (hovered/selected/focused) lives in the Redux store —
+ *     App reads via `useAppSelector(selectXFocusable)`.
  *     `scale` is derived locally from `onCameraChange` snapshots via
  *     the pure `computeScaleInfo` helper — the engine emits the
  *     camera scalars; this hook computes the legend.  React's
@@ -30,8 +30,7 @@
  * `useAppStore` and threads that same instance into `createEngine` so the
  * engine reads its settings from the one store React renders from.  The
  * only thing the caller layers in via `extraCallbacks` is extra EVENT
- * subscriptions — App-level event wiring (e.g.
- * `selection.onStructureHoverChange`) — which we spread into the
+ * subscriptions — App-level event wiring — which we spread into the
  * createEngine options block alongside our session callbacks.
  *
  * Two NON-callback options ride into `createEngine` as plain values: the
@@ -103,8 +102,8 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const handleRef = useRef<EngineHandle | null>(null);
 
-  // Selection (hovered/selected/focused) is no longer mirrored here — the engine
-  // dispatches directly to the Redux store (P2.4) and App reads via selectors (P2.5).
+  // Selection (hovered/selected/focused) is not mirrored here — the engine
+  // dispatches directly to the Redux store and App reads via selectors.
   const [status, setStatus] = useState<EngineStatus>({ kind: 'initializing' });
   const [scale, setScale] = useState<ScaleInfo>(INITIAL_SCALE);
   const [sourceCounts, setSourceCounts] = useState<Partial<Record<SourceType, number>>>({});
@@ -142,17 +141,15 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
       );
     };
 
-    // `EngineCallbacks` is EVENT-only: lifecycle / selection / camera /
-    // sources events.  Each bag merges this hook's session-level subscriptions
-    // with whatever `extraCallbacks` declares for that cluster — App-level event
-    // subscriptions (e.g. `selection.onStructureHoverChange`).  Spread order
-    // puts the extra-callback entries LAST so the caller wins where both define
-    // the same method.
+    // `EngineCallbacks` is EVENT-only: lifecycle / camera / sources events.
+    // Each bag merges this hook's session-level subscriptions with whatever
+    // `extraCallbacks` declares for that cluster. Spread order puts the
+    // extra-callback entries LAST so the caller wins where both define the
+    // same method.
     //
-    // Selection echoes (onHoverChange/onSelectChange/onFocusChange) are NOT
-    // wired here — the engine dispatches directly to the Redux store (P2.4) and
-    // App reads via selectors (P2.5).  The `selection` cluster is intentionally
-    // omitted from `createEngine` (the bag is now optional in `EngineCallbacks`).
+    // Selection state flows through the Redux `selection` slice — the engine
+    // dispatches directly; React reads via `useAppSelector` selectors.
+    // There is no selection callback cluster in `EngineCallbacks`.
     //
     // Settings VALUES do not flow through here: they live in the injected store
     // and React reads them via `useAppSelector` selectors, so there is no echo
@@ -163,7 +160,6 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
     const {
       lifecycle: extraLifecycle,
       camera: extraCamera,
-      selection: extraSelection,
       sources: extraSources,
     } = extraCallbacks ?? {};
 
@@ -174,10 +170,6 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
         onStatusChange: setStatus,
         ...extraLifecycle,
       },
-      // The `selection` cluster is omitted from this hook's own wiring —
-      // selection echoes now flow through the Redux store. If a caller passes
-      // `extraCallbacks.selection`, forward it so App-level subscriptions still land.
-      ...(extraSelection !== undefined && { selection: extraSelection }),
       camera: {
         // Derive scale-bar legend from the engine's per-frame camera
         // snapshot.  `computeScaleInfo` is pure (and reused from the

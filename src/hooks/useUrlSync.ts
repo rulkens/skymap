@@ -6,11 +6,12 @@
  *
  *   A. Hash READ (mount + hashchange listener)
  *      Parses `#focus=<id>` from the URL on mount and on every
- *      subsequent hashchange. A match dispatches `requestFocus(id)`;
- *      an empty or unrecognised hash dispatches `clearSelection()`.
- *      The `watchRequestFocus` saga owns resolution and deferral —
- *      the hook is dispatch-only. Back-navigation to an empty hash
- *      clears selection via the same `clearSelection()` path.
+ *      subsequent hashchange. A match dispatches `requestFocus(id)`.
+ *      An empty or unrecognised hash dispatches `clearSelection()`,
+ *      but ONLY on hashchange events (back/forward navigation) — not
+ *      on the initial mount call, which would fire a spurious
+ *      `clearSelection` on every normal page load. The
+ *      `watchRequestFocus` saga owns resolution and deferral.
  *
  *   B. URL WRITE (runs on every store-derived `focused` change)
  *      Reads `selectFocusedFocusable` from the Redux store and
@@ -105,22 +106,23 @@ export function useUrlSync(): void {
 
   // ── Effect A: hash READ → dispatch ───────────────────────────────────
   // Parse the URL once on mount and on every subsequent hashchange.
-  // A `focus=<id>` match dispatches `requestFocus(id)`; the
-  // `watchRequestFocus` saga resolves + defers. An empty or
-  // unrecognised hash dispatches `clearSelection()`, which handles both
-  // back-navigation to an empty hash and any non-focus segment.
+  // A `focus=<id>` match always dispatches `requestFocus(id)`.
+  // An empty or unrecognised hash dispatches `clearSelection()` only on
+  // hashchange (back/forward navigation) — not on the initial mount call,
+  // which would fire a spurious `clearSelection` on every normal page load.
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const apply = () => {
+    const apply = (isInitial: boolean) => {
       const h = window.location.hash;
       const body = h.startsWith('#') ? h.slice(1) : h;
       const m = /^focus=(.+)$/.exec(body);
       if (m) dispatch(requestFocus(m[1]!));
-      else dispatch(clearSelection());
+      else if (!isInitial) dispatch(clearSelection());
     };
-    apply();
-    window.addEventListener('hashchange', apply);
-    return () => window.removeEventListener('hashchange', apply);
+    apply(true);
+    const onHashChange = () => apply(false);
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
   }, [dispatch]);
 
   // ── Effect B: store → URL WRITE ──────────────────────────────────────

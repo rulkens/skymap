@@ -272,7 +272,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       // authoritative slot rather than running a second pick (racing
       // readbacks resolve out of order). A null select ref means empty space:
       // dispatch focus(null) to lift the cluster-focus fade. The camera tween
-      // is triggered by Task 4b's watchFocusTween saga — not here.
+      // is triggered by the watchFocusTween saga — not here.
       const ref = selectSelectedRef(deps.cb.store.getState());
       deps.cb.store.dispatch(updateSelectionFocus(ref));
     },

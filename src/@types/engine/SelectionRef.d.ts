@@ -1,4 +1,3 @@
-// src/@types/engine/SelectionRef.d.ts
 import type { GalaxyCatalogSourceType } from '../data/galaxyCatalog/GalaxyCatalogSourceType';
 
 /**

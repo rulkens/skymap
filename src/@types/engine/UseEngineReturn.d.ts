@@ -7,8 +7,8 @@ import type { StructureId } from '../data/structure/StructureId';
 
 /**
  * The shape returned by `useEngine`. Selection state (hovered/selected/focused)
- * was removed in P2.5 — App now reads those from the Redux store via
- * `useAppSelector(selectXFocusable)` rather than echoing them through this hook.
+ * lives in the Redux store — App reads via `useAppSelector(selectXFocusable)`
+ * rather than echoing it through this hook.
  */
 export type UseEngineReturn = {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;

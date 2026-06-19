@@ -110,7 +110,7 @@ export function App(): React.ReactElement {
   const dispatch = useAppDispatch();
 
   // Selection slots — read from the Redux store. The engine dispatches
-  // `updateSelectionHover/Select/Focus` directly (P2.4); these selectors build
+  // `updateSelectionHover/Select/Focus` directly; these selectors build
   // the rich `FocusableTarget` display models from the resolved row cache.
   const hovered = useAppSelector(selectHoveredFocusable);
   const selected = useAppSelector(selectSelectedFocusable);

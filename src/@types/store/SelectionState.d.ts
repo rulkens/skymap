@@ -1,4 +1,3 @@
-// src/@types/store/SelectionState.d.ts
 import type { SelectionRef } from '../engine/SelectionRef';
 
 /**

@@ -1,4 +1,3 @@
-// src/@types/engine/ResolveDeps.d.ts
 import type { GalaxyCatalog } from '../data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogSourceType } from '../data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { FamousMetaEntry } from '../loading/FamousMetaEntry';

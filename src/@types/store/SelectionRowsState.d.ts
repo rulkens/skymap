@@ -1,4 +1,3 @@
-// src/@types/store/SelectionRowsState.d.ts
 import type { SelectionSlot } from '../engine/SelectionSlot';
 import type { SelectionRow } from '../engine/SelectionRow';
 

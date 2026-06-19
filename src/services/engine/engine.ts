@@ -15,11 +15,12 @@
  *   orbit camera math
  *   GPU pick readback
  *
- * Callbacks are the seam. The engine fires `onStatusChange`, `onHoverChange`,
- * and `onSelectChange` only when values *actually change*, so the React side
- * can call `setState` directly without worrying about spurious re-renders.
- * Per-frame `onCameraChange` emissions instead fire unconditionally while
- * the camera exists; React-side `setState` equality checks filter the noise.
+ * Callbacks (`EngineCallbacks`) are the seam for lifecycle, camera, and
+ * source-readiness events. Selection state (hover / select / focus) is not
+ * echoed via callbacks — the engine dispatches directly to the Redux
+ * `selection` slice, and React reads via `useAppSelector` selectors.
+ * Per-frame `onCameraChange` fires unconditionally while the camera exists;
+ * React-side `setState` equality checks filter unchanged frames.
  *
  * ### Module layout
  *
@@ -56,10 +57,10 @@
  *
  * ```ts
  * const handle = createEngine(canvas, {
- *   onStatusChange: (s) => setStatus(s),
- *   onHoverChange:  (p) => setReactHovered(p),
- *   onSelectChange: (p) => setReactSelected(p),
- *   onCameraChange: (snap) => setScale(computeScaleInfo({...})),
+ *   store,
+ *   setSagaContext,
+ *   lifecycle: { onStatusChange: (s) => setStatus(s) },
+ *   camera: { onCameraChange: (snap) => setScale(computeScaleInfo({...})) },
  * });
  *
  * // later (e.g. React cleanup):
@@ -126,8 +127,8 @@ import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
  *   3. `cb.onStatusChange({ kind: 'loading' })` fires before the fetch.
  *   4. `cb.onStatusChange({ kind: 'ready', ... })` fires when the render loop
  *      starts, or `{ kind: 'error' }` if GPU init fails.
- *   5. `cb.onHoverChange`, `cb.onSelectChange`, `cb.onCameraChange` fire during
- *      steady-state rendering as the user interacts.
+ *   5. `cb.camera.onCameraChange` fires during steady-state rendering as
+ *      the camera moves.
  *
  * @throws Never — errors are reported via `onStatusChange({ kind: 'error' })`.
  */

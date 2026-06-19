@@ -10,7 +10,8 @@
  *   2. Hook integration — rendered against a real Redux store via
  *      `createAppStore` + a `<Provider>` wrapper. Tests assert that:
  *      (a) a `#focus=<id>` hash on mount dispatches `requestFocus(id)`;
- *      (b) an empty hash on mount dispatches `clearSelection()`;
+ *      (b) an empty hash on mount does NOT dispatch `clearSelection()` —
+ *          the empty-hash clear is gated to hashchange only;
  *      (c) a hashchange to `#focus=<id>` dispatches `requestFocus(id)`;
  *      (d) a hashchange to empty dispatches `clearSelection()`.
  *
@@ -137,12 +138,14 @@ describe('useUrlSync hook integration', () => {
     expect(calls).toContainEqual(requestFocus('m31'));
   });
 
-  it('dispatches clearSelection on mount when hash is empty', () => {
+  it('does NOT dispatch clearSelection on mount when hash is empty', () => {
+    // The empty-hash → clearSelection branch is gated to hashchange events
+    // only. A normal page load with no hash should not fire clearSelection.
     window.location.hash = '';
     const { dispatchSpy, wrapper } = makeStoreAndWrapper();
     renderHook(() => useUrlSync(), { wrapper });
     const calls = dispatchSpy.mock.calls.map((c) => c[0]);
-    expect(calls).toContainEqual(clearSelection());
+    expect(calls).not.toContainEqual(clearSelection());
   });
 
   it('dispatches requestFocus on hashchange to #focus=<id>', () => {

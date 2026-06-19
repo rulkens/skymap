@@ -1,4 +1,3 @@
-// src/@types/engine/SelectionSlot.d.ts
 import type { SelectionState } from '../store/SelectionState';
 
 /**

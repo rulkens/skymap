@@ -1,4 +1,3 @@
-// src/@types/engine/SelectionRow.d.ts
 import type { GalaxyRow } from './GalaxyRow';
 import type { StructureInfo } from '../data/structure/StructureInfo';
 

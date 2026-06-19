@@ -1,7 +1,7 @@
 /**
  * GalaxyInfo — display-ready data for a single galaxy, computed on-demand from
- * raw cloud arrays when the user hovers or selects a point. Passed from the
- * engine to React components via the onHoverChange / onSelectChange callbacks.
+ * raw cloud arrays when the user hovers or selects a point. Surfaced to React
+ * via the Redux `selectionRows` slice (saga-resolved display cache).
  */
 
 import type { GalaxyTypeInfo } from '../data/galaxyCatalog/GalaxyTypeInfo';
