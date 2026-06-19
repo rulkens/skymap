@@ -45,10 +45,14 @@ Cut the writes:
 - `src/hooks/useUrlSync.ts` (Modify) — dispatch `requestFocus(hashFocusId)`; the URL-write reads `selectFocusRef` + `focusIdOf`; delete the drain effects.
 - `src/components/CommandPalette/CommandPalette.tsx` (Modify) — handlers dispatch `requestFocus`.
 
-New sagas:
+New sagas + the focus-tween runner:
 - `src/state/selection/selectionWakeSaga.ts` — `watchSelectionWake`.
 - `src/state/selection/requestFocusSaga.ts` — `watchRequestFocus`.
-- `src/store/rootSaga.ts` (Modify) — fork both.
+- `src/state/selection/focusTweenSaga.ts` — `watchFocusTween` (Task 4b).
+- `src/services/engine/camera/makeRunFocusTween.ts` — the engine-injected camera-tween runner (Task 4b).
+- `src/store/types.ts` (Modify) — add `runFocusTween` to `SagaContext` (Task 4b).
+- `src/services/engine/engine.ts` (Modify) — inject `runFocusTween` in `setSagaContext` (Task 4b).
+- `src/store/rootSaga.ts` (Modify) — fork all three sagas.
 
 Tier re-anchor folded in:
 - `src/state/tier/tierSaga.ts` (Modify) — capture durable focus-ids before the write, re-anchor on bounded `catalogLoaded`.
@@ -134,7 +138,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 Cut the three per-frame consumers from `state.subsystems.selection.*()` to the Task-0 getters `state.selectionRows.select` / `state.selectionRows.focus`. The row carries the `x/y/z/diameterKpc` the halo + structure-focus need.
 
-> **EXECUTION ORDER (read first).** The runtime stays green only if writes feed the rows BEFORE the readers flip, and the React cutover must immediately follow the write cutover (the pick resolver stops producing a `FocusableTarget`, so the subsystem echo goes stale). Execute in this order: **Task 0 → Task 2 → Task 3 → Task 4 → Task 4b → Task 5 → Task 1 → Task 6 → Task 7 → Task 8.** Tasks 2/3 (sagas) and Task 4/4b (writes → dispatch refs; reconciler fills `selectionRows`; focus-tween subscription) land first; Task 5 (React reads the store, deletes the echo) immediately follows so the InfoCard stays correct; THEN Task 1 flips the per-frame engine reads (rows now populated); the rest follow. Each task is independently reviewable — only this runtime-green ordering differs from the document order. The unit suite is green after every task regardless (no unit test asserts the live React echo or the live per-frame read against production data; the halo/pass tests drive the row directly).
+> **EXECUTION ORDER (read first).** The runtime stays green only if writes feed the rows BEFORE the readers flip, and the React cutover must immediately follow the write cutover (the pick resolver stops producing a `FocusableTarget`, so the subsystem echo goes stale). Execute in this order: **Task 0 → Task 2 → Task 3 → Task 4 → Task 4b → Task 5 → Task 1 → Task 6 → Task 7 → Task 8.** Tasks 2/3 (sagas) and Task 4/4b (writes → dispatch refs; reconciler fills `selectionRows`; the `watchFocusTween` focus-tween saga) land first; Task 5 (React reads the store, deletes the echo) immediately follows so the InfoCard stays correct; THEN Task 1 flips the per-frame engine reads (rows now populated); the rest follow. Each task is independently reviewable — only this runtime-green ordering differs from the document order. The unit suite is green after every task regardless (no unit test asserts the live React echo or the live per-frame read against production data; the halo/pass tests drive the row directly).
 
 **Files:**
 - Modify: `src/services/engine/frame/runFrame.ts` (~line 176-181 focused read → `state.selectionRows.focus`; ~line 266 selected snapshot read). The ~line 420 hover WRITE is in Task 4.
@@ -600,7 +604,7 @@ onDoubleClick: () => {
 },
 ```
 
-The focus tween (today run by `commitGalaxyFocus`/`commitStructureFocus`/`commitMilkyWayFocus`) is an imperative engine effect, not reducer state. It is relocated to a store subscription in Task 4b (`wireFocusTween`); here the double-click only dispatches the ref.
+The focus tween (today run by `commitGalaxyFocus`/`commitStructureFocus`/`commitMilkyWayFocus`) is an imperative engine effect, not reducer state. It is relocated to the `watchFocusTween` saga + the engine-injected `runFocusTween` runner in Task 4b; here the double-click only dispatches the ref.
 
 For `onPointerLeave`/`onPointerDown`: `deps.cb.store.dispatch(updateSelectionHover(null))`. For `onEscape`: `deps.cb.store.dispatch(clearSelection())`.
 
@@ -643,130 +647,276 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 ---
 
-## Task 4b: The focus-tween effect (engine-side subscription to the focus row)
+## Task 4b: The focus-tween effect (a saga on the focus ref + an engine-injected runner)
 
-Today the tween fired inside `commitGalaxyFocus`/`commitStructureFocus`/`commitMilkyWayFocus`. With those deleted, the tween must fire when `selectionRows.focus` becomes a real row. Subscribe engine-side to the store and run the matching tween. This is an engine effect, NOT reducer state (the tweens stay untouched per scope).
+Today the tween fired inside `commitGalaxyFocus`/`commitStructureFocus`/`commitMilkyWayFocus` as their last step. With those deleted, the camera tween becomes an EFFECT of the focus Intent: a `watchFocusTween` saga reacts to `updateSelectionFocus` and calls an engine-injected `runFocusTween(ref)` runner — symmetric with how `watchSelectionWake` calls `requestRender` and `tierSaga` calls `runTierTransition`. The runner is engine-owned (it touches cam + GPU), reached through the `SagaContext` seam, so ADR 0001's no-store-effects stance holds and the design stays uniform (no lone `store.subscribe`).
+
+Why fire on the REF, not the reconciled row: a tween is the camera's response to a focus *gesture* (the Intent), not to the `selectionRows` cache being refilled. Firing on the ref also means the runner doesn't depend on whether `watchSelectionRows` ran first — it re-resolves the coords itself via the same `resolveDeps` the engine already injects. By the time `updateSelectionFocus(ref)` is dispatched the data is always loaded (`requestFocus` defers until resolvable; picks look at loaded clouds; the tier re-anchor dispatches *after* `catalogLoaded`), so the runner always resolves. A `null` ref (focus release) is a no-op tween. The slice's dedup-on-write means a no-op re-focus of the same ref doesn't even dispatch a state change — but note the action still fires, so a tier re-anchor (a genuinely different index) re-runs the tween; that is a benign near-noop ride (camera already framing the same galaxy) and the code stays uniform — no special-case branch.
 
 **Files:**
-- Create: `src/services/engine/wiring/wireFocusTween.ts`
-- Modify: `src/services/engine/engine.ts` or the bootstrap wiring (subscribe after the store + cam exist)
-- Test: `tests/services/engine/wiring/wireFocusTween.test.ts`
+- Create: `src/services/engine/camera/makeRunFocusTween.ts` (the engine-side runner factory — mirrors `makeRunTierTransition`)
+- Create: `src/state/selection/focusTweenSaga.ts` (`watchFocusTween`)
+- Modify: `src/store/types.ts` (add `runFocusTween` to `SagaContext`)
+- Modify: `src/services/engine/engine.ts` (inject `runFocusTween` in the `setSagaContext` call extended in Task 10 of Part 1)
+- Modify: `src/store/rootSaga.ts` (fork `watchFocusTween`)
+- Test: `tests/services/engine/camera/makeRunFocusTween.test.ts`, `tests/state/selection/focusTweenSaga.test.ts`
 
 **Interfaces:**
-- Consumes: the engine `AppStore`, `selectFocusRow`/`selectFocusRef`, `tweenToGalaxy`/`tweenToStructure`/`tweenToCameraSnapshot` + the milkyWay tween inputs, `buildFocusable` (to get a `GalaxyInfo` for `tweenToGalaxy`, which takes a `GalaxyInfo`) OR `tweenToGalaxy` adapted to take a `GalaxyRow`.
-- Produces: a `store.subscribe` that runs the focus tween on focus-row changes.
+- Consumes: `SelectionRef`, `SelectionRow`, `ResolveDeps`, `extractSelectionRow`, `buildGalaxyInfo`, `tweenToGalaxy`/`tweenToStructure`/`tweenToCameraSnapshot` + the milkyWay snapshot inputs (`MILKY_WAY_CENTER_WORLD`, `MILKY_WAY_VIEW_DISTANCE_MPC`), `updateSelectionFocus`, `SagaContext['runFocusTween']`, the engine `EngineState`.
+- Produces: `makeRunFocusTween(resolveDeps, tweens): (ref: SelectionRef | null) => void`; `watchFocusTween` generator; `SagaContext.runFocusTween`.
 
 - [ ] **Step 1: Read the tween signatures**
 
 Run: `grep -rn "export function tweenToGalaxy\|export function tweenToStructure\|tweenToCameraSnapshot\|MILKY_WAY_CENTER_WORLD\|MILKY_WAY_VIEW_DISTANCE" src/services/engine`
-Note: `tweenToGalaxy(state, info: GalaxyInfo)`, `tweenToStructure(state, structure: StructureInfo)`, and `commitMilkyWayFocus`'s `tweenToCameraSnapshot(...)` body. The focus ROW is a `GalaxyRow | StructureInfo | {type:'milkyWay'}`; build a `FocusableTarget` from it with `buildFocusable(row)` so `tweenToGalaxy`/`tweenToStructure` get the `GalaxyInfo`/`StructureInfo` they expect.
+Note: `tweenToGalaxy(state, info: GalaxyInfo)`, `tweenToStructure(state, structure: StructureInfo)`, and `commitMilkyWayFocus`'s `tweenToCameraSnapshot(...)` body (lift it verbatim in Step 4). The galaxy arm builds a `GalaxyInfo` from the resolved `GalaxyRow` via `buildGalaxyInfo(row)`; the structure arm IS a `StructureInfo` already.
 
-- [ ] **Step 2: Write the failing test**
+- [ ] **Step 2: Add `runFocusTween` to `SagaContext`**
+
+In `src/store/types.ts`, after the Part-1 `resolveDeps` member, add (and update the module docblock to name it):
+
+```ts
+import type { SelectionRef } from '../@types/engine/SelectionRef';
+// ... existing imports (ResolveDeps already added in Part 1 Task 10)
+
+export type RunFocusTween = (ref: SelectionRef | null) => void;
+
+export type SagaContext = {
+  runTierTransition: RunTierTransition;
+  requestRender: () => void;
+  resolveDeps: () => ResolveDeps;
+  /** Engine-owned camera-tween runner — watchFocusTween calls this on a focus ref change. */
+  runFocusTween: RunFocusTween;
+};
+```
+
+`SetSagaContext` already takes `Partial<SagaContext>`, so no setter change. Extend the Part-1 `SagaContext` type test (`tests/store/sagaContext.test.ts`) with `expectTypeOf<SagaContext['runFocusTween']>().toEqualTypeOf<(ref: SelectionRef | null) => void>();`.
+
+- [ ] **Step 3: Write the failing test + implement `makeRunFocusTween`**
+
+The runner is split from the GPU/cam table so it is hermetic: it resolves the ref → row via `resolveDeps`, then dispatches by tag to an injected `tweens` table. The engine builds the real table (closing over `state`) in Step 4; the test injects spies.
 
 ```ts
 import { describe, it, expect, vi } from 'vitest';
 
-import { wireFocusTween } from '../../../../src/services/engine/wiring/wireFocusTween';
-import { createAppStore } from '../../../../src/store/createAppStore';
-import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
+import { makeRunFocusTween } from '../../../../src/services/engine/camera/makeRunFocusTween';
+import { Source } from '../../../../src/data/sources';
+import type { ResolveDeps } from '../../../../src/@types/engine/ResolveDeps';
+import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 
-describe('wireFocusTween', () => {
-  it('runs the milkyWay tween when the focus row becomes milkyWay', () => {
-    const { store } = createAppStore();
-    const runTween = { galaxy: vi.fn(), structure: vi.fn(), milkyWay: vi.fn() };
-    const unsub = wireFocusTween(store, runTween);
-    store.dispatch(setSelectionRow({ slot: 'focus', row: { type: 'milkyWay' } }));
-    expect(runTween.milkyWay).toHaveBeenCalledTimes(1);
-    unsub();
+function makeCloud(): GalaxyCatalog {
+  return {
+    count: 1, positions: new Float32Array([10, 20, 30]), spectroscopicZ: new Float32Array([0.0123]),
+    magU: new Float32Array([18.1]), magG: new Float32Array([17.4]), magR: new Float32Array([16.9]),
+    magI: new Float32Array([16.6]), magZ: new Float32Array([16.4]), objIDs: new BigInt64Array([1237668n]),
+    diameterKpc: new Float32Array([42]), axisRatio: new Float32Array([0.7]), positionAngleDeg: new Float32Array([35]),
+    classByte: new Uint8Array([0]), parentSurveyByte: new Uint8Array([0]),
+  } as unknown as GalaxyCatalog;
+}
+
+const structure = { type: 'structure', category: 'cluster', id: 'abell-2065' } as unknown as StructureInfo;
+
+const deps: ResolveDeps = {
+  catalogs: { get: (s) => (s === Source.SDSS ? makeCloud() : undefined) },
+  famousMeta: [],
+  structures: { byId: (id) => (id === 'abell-2065' ? structure : null) },
+};
+
+describe('makeRunFocusTween', () => {
+  function build() {
+    const tweens = { galaxyCatalog: vi.fn(), structure: vi.fn(), milkyWay: vi.fn() };
+    return { run: makeRunFocusTween(() => deps, tweens), tweens };
+  }
+  it('galaxy ref → galaxy tween with the resolved row', () => {
+    const { run, tweens } = build();
+    run({ type: 'galaxyCatalog', source: Source.SDSS, index: 0 });
+    expect(tweens.galaxyCatalog).toHaveBeenCalledTimes(1);
+    expect(tweens.galaxyCatalog.mock.calls[0]![0]).toMatchObject({ type: 'galaxyCatalog', objId: '1237668' });
   });
-  it('does not re-run the tween when the focus row is unchanged', () => {
-    const { store } = createAppStore();
-    const runTween = { galaxy: vi.fn(), structure: vi.fn(), milkyWay: vi.fn() };
-    wireFocusTween(store, runTween);
-    store.dispatch(setSelectionRow({ slot: 'focus', row: { type: 'milkyWay' } }));
-    store.dispatch(setSelectionRow({ slot: 'hover', row: { type: 'milkyWay' } })); // unrelated slot
-    expect(runTween.milkyWay).toHaveBeenCalledTimes(1);
+  it('structure ref → structure tween', () => {
+    const { run, tweens } = build();
+    run({ type: 'structure', id: 'abell-2065' });
+    expect(tweens.structure).toHaveBeenCalledWith(structure);
+  });
+  it('milkyWay ref → milkyWay tween', () => {
+    const { run, tweens } = build();
+    run({ type: 'milkyWay' });
+    expect(tweens.milkyWay).toHaveBeenCalledTimes(1);
+  });
+  it('null ref → no tween (focus release)', () => {
+    const { run, tweens } = build();
+    run(null);
+    expect(tweens.galaxyCatalog).not.toHaveBeenCalled();
+    expect(tweens.structure).not.toHaveBeenCalled();
+    expect(tweens.milkyWay).not.toHaveBeenCalled();
+  });
+  it('galaxy ref to an unloaded cloud → no tween (resolves null)', () => {
+    const { run, tweens } = build();
+    run({ type: 'galaxyCatalog', source: Source.Glade, index: 0 });
+    expect(tweens.galaxyCatalog).not.toHaveBeenCalled();
   });
 });
 ```
 
-`wireFocusTween(store, runTween)` is tested against an injected `runTween` table so it's hermetic (no GPU). The engine wires the real table (closing over `state`) in Step 4.
-
-- [ ] **Step 3: Run to fail, then implement**
-
-Run: `npm test -- tests/services/engine/wiring/wireFocusTween.test.ts` → FAIL.
+Run: `npm test -- tests/services/engine/camera/makeRunFocusTween.test.ts` → FAIL, then implement:
 
 ```ts
 /**
- * wireFocusTween — the engine-side focus-tween EFFECT. With the commitFocus
- * helpers deleted, the camera tween must fire when the focus row becomes a real
- * target. This subscribes to the store, watches selectionRows.focus, and runs
- * the matching tween via a table (galaxy / structure / milkyWay) when — and only
- * when — the focus row's identity changes. The tweens themselves are untouched;
- * this only relocates their TRIGGER from the old commit helpers to a store
- * subscription. Returns an unsubscribe for teardown.
+ * makeRunFocusTween — the engine-side camera-tween runner the watchFocusTween
+ * saga calls through SagaContext (symmetric with makeRunTierTransition). Given a
+ * focus SelectionRef it re-resolves the row via the live `resolveDeps` (so it
+ * never depends on the reconciler having run first), then dispatches by tag to
+ * an injected `tweens` table. The table is injected — not closed over here — so
+ * this stays pure and hermetic; the engine builds the real GPU/cam table.
  *
- * Why a subscribe and not a saga: the tween needs live engine state (cam, GPU)
- * and is fire-and-forget, exactly like runTierTransition — keeping it engine-side
- * (off the reducer path) upholds ADR 0001. A saga would still have to reach back
- * through SagaContext; a direct subscription closing over `state` is simpler.
+ * A null ref (focus release) or a ref whose cloud is not loaded resolves to null
+ * → no tween. The tweens themselves are untouched; this only relocates their
+ * TRIGGER from the deleted commitFocus helpers to a saga effect.
  */
-import { selectFocusRow } from '../../../state/selection/selectors';
-import type { AppStore } from '../../../store/types';
+import { extractSelectionRow } from '../helpers/extractSelectionRow';
+import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
+import type { ResolveDeps } from '../../../@types/engine/ResolveDeps';
 
 export type FocusTweenTable = {
-  galaxy: (row: Extract<SelectionRow, { type: 'galaxyCatalog' }>) => void;
+  galaxyCatalog: (row: Extract<SelectionRow, { type: 'galaxyCatalog' }>) => void;
   structure: (row: Extract<SelectionRow, { type: 'structure' }>) => void;
   milkyWay: () => void;
 };
 
-export function wireFocusTween(store: AppStore, runTween: FocusTweenTable): () => void {
-  let prev: SelectionRow | null = selectFocusRow(store.getState());
-  return store.subscribe(() => {
-    const row = selectFocusRow(store.getState());
-    if (row === prev) return; // reselect/Immer identity — only a real change re-runs
-    prev = row;
+export function makeRunFocusTween(
+  resolveDeps: () => ResolveDeps,
+  tweens: FocusTweenTable,
+): (ref: SelectionRef | null) => void {
+  return (ref) => {
+    const row = extractSelectionRow(ref, resolveDeps());
     if (row === null) return;
-    if (row.type === 'galaxyCatalog') runTween.galaxy(row);
-    else if (row.type === 'structure') runTween.structure(row);
-    else runTween.milkyWay();
-  });
+    if (row.type === 'galaxyCatalog') tweens.galaxyCatalog(row);
+    else if (row.type === 'structure') tweens.structure(row);
+    else tweens.milkyWay();
+  };
 }
 ```
 
-- [ ] **Step 4: Wire the real table in the engine**
+Run: `npm test -- tests/services/engine/camera/makeRunFocusTween.test.ts` → PASS.
 
-After the cam + store exist in bootstrap (near where `setSagaContext` is injected, or in `wireInput` where `state.cam` is set), call:
+- [ ] **Step 4: Inject `runFocusTween` in the engine's `setSagaContext`**
+
+In `src/services/engine/engine.ts`, the Part-1 Task-10 call built `{ runTierTransition, requestRender, resolveDeps }`. Lift the `resolveDeps` closure into a named const so both `resolveDeps` and the runner share it, and add `runFocusTween` with the real GPU/cam table (the milkyWay body lifted verbatim from the deleted `commitMilkyWayFocus.ts`):
 
 ```ts
-deps.detachFocusTweenRef.current = wireFocusTween(cb.store, {
-  galaxy: (row) => tweenToGalaxy(state, buildGalaxyInfo(row)),
-  structure: (row) => tweenToStructure(state, row),
-  milkyWay: () => {
-    const cam = state.cam;
-    if (!cam) return;
-    tweenToCameraSnapshot(state, {
-      target: [MILKY_WAY_CENTER_WORLD[0], MILKY_WAY_CENTER_WORLD[1], MILKY_WAY_CENTER_WORLD[2]],
-      distance: MILKY_WAY_VIEW_DISTANCE_MPC,
-      yaw: cam.yaw, pitch: cam.pitch, fovYRad: cam.fovYRad, near: cam.near, far: cam.far,
-    });
-  },
+const resolveDeps = (): ResolveDeps => ({
+  catalogs: { get: (source) => state.data.galaxies.get(source) },
+  famousMeta: state.data.galaxies.famousMeta,
+  structures: { byId: (id) => state.data.structures.byId(id) },
+});
+
+cb.setSagaContext({
+  runTierTransition: makeRunTierTransition(state, bootstrapDeps),
+  requestRender: () => state.subsystems.scheduler.requestRender(),
+  resolveDeps,
+  runFocusTween: makeRunFocusTween(resolveDeps, {
+    galaxyCatalog: (row) => tweenToGalaxy(state, buildGalaxyInfo(row)),
+    structure: (row) => tweenToStructure(state, row),
+    milkyWay: () => {
+      const cam = state.cam;
+      if (!cam) return;
+      tweenToCameraSnapshot(state, {
+        target: [MILKY_WAY_CENTER_WORLD[0], MILKY_WAY_CENTER_WORLD[1], MILKY_WAY_CENTER_WORLD[2]],
+        distance: MILKY_WAY_VIEW_DISTANCE_MPC,
+        yaw: cam.yaw, pitch: cam.pitch, fovYRad: cam.fovYRad, near: cam.near, far: cam.far,
+      });
+    },
+  }),
 });
 ```
 
-Lift the milkyWay body verbatim from the deleted `commitMilkyWayFocus.ts`. Register the unsubscribe in the engine's teardown bag (mirror `detachControlsRef`). Confirm `MILKY_WAY_VIEW_DISTANCE_MPC` import path.
+Add the imports (`makeRunFocusTween`, `buildGalaxyInfo`, `tweenToGalaxy`, `tweenToStructure`, `tweenToCameraSnapshot`, `MILKY_WAY_CENTER_WORLD`, `MILKY_WAY_VIEW_DISTANCE_MPC`, `ResolveDeps`). No teardown bag is needed — unlike a `store.subscribe`, the saga is torn down when the saga middleware stops, so there is no per-engine unsubscribe to register.
 
-- [ ] **Step 5: Run to pass, full suite, typecheck, commit**
+- [ ] **Step 5: Write the failing saga test + implement `watchFocusTween`**
 
-Run: `npm test -- tests/services/engine/wiring/wireFocusTween.test.ts` → PASS. Then `npm test`, `npm run typecheck`.
+```ts
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import createSagaMiddleware from 'redux-saga';
+import { configureStore } from '@reduxjs/toolkit';
+
+import { rootReducer } from '../../../src/store/rootReducer';
+import { watchFocusTween } from '../../../src/state/selection/focusTweenSaga';
+import { updateSelectionFocus, updateSelectionSelect } from '../../../src/state/selection/selectionSlice';
+
+const flush = () => new Promise((r) => setTimeout(r, 0));
+
+describe('watchFocusTween', () => {
+  let store: ReturnType<typeof build>;
+  let runFocusTween: ReturnType<typeof vi.fn<(ref: unknown) => void>>;
+
+  function build() {
+    const mw = createSagaMiddleware();
+    const s = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
+    mw.run(watchFocusTween);
+    runFocusTween = vi.fn<(ref: unknown) => void>();
+    mw.setContext({ runFocusTween });
+    return s;
+  }
+  beforeEach(() => { store = build(); });
+
+  it('a focus ref change runs the tween with the ref', async () => {
+    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
+    await flush();
+    expect(runFocusTween).toHaveBeenCalledWith({ type: 'milkyWay' });
+  });
+  it('a select (non-focus) write does NOT run the tween', async () => {
+    store.dispatch(updateSelectionSelect({ type: 'milkyWay' }));
+    await flush();
+    expect(runFocusTween).not.toHaveBeenCalled();
+  });
+});
+```
+
+Run: `npm test -- tests/state/selection/focusTweenSaga.test.ts` → FAIL, then implement:
+
+```ts
+/**
+ * watchFocusTween — the camera-tween EFFECT. A focus gesture writes the focus
+ * ref (updateSelectionFocus); the camera flying to the target is an effect of
+ * that Intent, so it lives here as a saga — symmetric with watchSelectionWake
+ * (render-wake) and tierSaga's runTierTransition. It calls the engine-injected
+ * runFocusTween runner via SagaContext; the runner resolves the ref's coords
+ * from the live cloud and runs the existing tweens. Firing on the REF (not the
+ * reconciled row) keeps the tween a response to the Intent and free of any
+ * dependence on watchSelectionRows running first.
+ */
+import { takeEvery, getContext } from 'typed-redux-saga';
+
+import { updateSelectionFocus } from './selectionSlice';
+import type { SagaContext } from '../../store/types';
+
+export function* watchFocusTween() {
+  const runFocusTween = yield* getContext<SagaContext['runFocusTween']>('runFocusTween');
+  yield* takeEvery(updateSelectionFocus, (action) => runFocusTween(action.payload));
+}
+```
+
+- [ ] **Step 6: Fork from `rootSaga`**
+
+```ts
+import { watchFocusTween } from '../state/selection/focusTweenSaga';
+// ...
+yield* all([watchTier(), watchSelectionRows(), watchSelectionWake(), watchRequestFocus(), watchFocusTween()]);
+```
+
+- [ ] **Step 7: Run to pass, full suite, typecheck, commit**
+
+Run: `npm test -- tests/state/selection/focusTweenSaga.test.ts tests/services/engine/camera/makeRunFocusTween.test.ts` → PASS. Then `npm test`, `npm run typecheck`.
 
 ```bash
-git add src/services/engine/wiring/wireFocusTween.ts tests/services/engine/wiring/wireFocusTween.test.ts src/services/engine/engine.ts
-git commit -m "feat(engine): run the focus tween off a selectionRows.focus subscription
+git add src/services/engine/camera/makeRunFocusTween.ts src/state/selection/focusTweenSaga.ts src/store/types.ts src/services/engine/engine.ts src/store/rootSaga.ts tests/services/engine/camera/makeRunFocusTween.test.ts tests/state/selection/focusTweenSaga.test.ts tests/store/sagaContext.test.ts
+git commit -m "feat(engine): run the focus tween as a saga effect via an injected runFocusTween
 
-Relocates the camera tween trigger from the deleted commitFocus helpers to a
-store subscription; the tweens themselves are untouched.
+The camera tween becomes an effect of the focus Intent: watchFocusTween reacts
+to updateSelectionFocus and calls the engine-injected runFocusTween runner via
+SagaContext, symmetric with runTierTransition. The tweens themselves are
+untouched; this relocates their trigger off the deleted commitFocus helpers.
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 ```
@@ -826,7 +976,7 @@ InfoCard props:
   onFocus={(target) => {
     // Promote the displayed selection to focus by its ref. The card's target is
     // a FocusableTarget; dispatch the matching ref (galaxy: source+index;
-    // structure: id; milkyWay: tag). The wireFocusTween effect runs the tween.
+    // structure: id; milkyWay: tag). The watchFocusTween saga runs the tween off the ref.
     dispatch(updateSelectionFocus(refOf(target)));
   }}
   onClose={() => dispatch(clearSelection())}
@@ -846,7 +996,7 @@ CommandPalette props:
 />
 ```
 
-Note on `onSelectAlias`: today it called `selectByAlias({source, localIdx})`. The cleanest store equivalent is to dispatch `updateSelectionFocus({ type:'galaxyCatalog', source, index: localIdx })` directly (the cloud is loaded — the palette only offers loaded rows), letting the reconciler + wireFocusTween handle the rest. Prefer that over inventing an `aliasFocusId`:
+Note on `onSelectAlias`: today it called `selectByAlias({source, localIdx})`. The cleanest store equivalent is to dispatch `updateSelectionFocus({ type:'galaxyCatalog', source, index: localIdx })` directly (the cloud is loaded — the palette only offers loaded rows), letting the reconciler + watchFocusTween handle the rest. Prefer that over inventing an `aliasFocusId`:
 
 ```tsx
 onSelectAlias={(target) => dispatch(updateSelectionFocus({ type: 'galaxyCatalog', source: target.source, index: target.localIdx }))}
