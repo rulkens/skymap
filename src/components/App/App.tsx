@@ -63,11 +63,7 @@ import {
   selectGalaxyCatalogItems,
   selectMilkyWayLabelEnabled,
 } from '../../state/settings/selectors';
-import {
-  selectHoveredFocusable,
-  selectSelectedFocusable,
-  selectFocusedFocusable,
-} from '../../state/selection/selectors';
+import { selectHoveredFocusable, selectSelectedFocusable } from '../../state/selection/selectors';
 import { updateSelectionFocus, clearSelection } from '../../state/selection/selectionSlice';
 import { requestFocus } from '../../state/selection/requestFocus';
 import { refOf } from '../../services/engine/helpers/refOf';
@@ -100,7 +96,6 @@ import { requestTier } from '../../state/tier/requestTier';
 import { projectVolumeFieldRows } from '../../state/settings/projectVolumeFieldRows';
 import { projectMarkerCategoryVisibility } from '../../state/settings/projectMarkerCategoryVisibility';
 import { projectLabelCategoryVisibility } from '../../state/settings/projectLabelCategoryVisibility';
-import { buildStaticAnchorStructures } from '../../data/structure/buildStaticAnchorStructures';
 import { isStructureId } from '../../data/structure/structureIds';
 import { DebugPanel } from '../DebugPanel/DebugPanel';
 import { selectPaletteOpen, selectUiHidden, selectDebugPanelOpen } from '../../state/ui/selectors';
@@ -119,8 +114,6 @@ export function App(): React.ReactElement {
   // the rich `FocusableTarget` display models from the resolved row cache.
   const hovered = useAppSelector(selectHoveredFocusable);
   const selected = useAppSelector(selectSelectedFocusable);
-  const focused = useAppSelector(selectFocusedFocusable);
-
   // Galaxy catalogs-cluster settings read straight off the RTK settings slice
   // via `useAppSelector`. The store exists before first paint under the
   // `<Provider>`, so no fallback is needed. `visibleSourceMask` is a pure
@@ -293,29 +286,15 @@ export function App(): React.ReactElement {
   // and dismiss/reopen.  See `useSplash.ts` for rationale.
   const splash = useSplash({ status, loadProgress, famousMetaReady });
 
-  const { aliasIndex, aliasMap } = useAliasIndex({
+  const { aliasIndex } = useAliasIndex({
     paletteOpen,
     sourceCounts,
     engineHandleRef: handleRef,
   });
 
-  // Static structure table for the URL drain.  The engine owns the merged
-  // list (static anchors + the async bulk cluster catalog), but threading
-  // that as a reactive React slice would re-render App on every catalog load.
-  // Deep-link arrivals only need the static subset (`#focus=cluster-…` /
-  // `supercluster-…` / `void-…`).  `useMemo([])` so the drain effect
-  // doesn't re-fire on every render.
-  const staticStructures = useMemo(() => buildStaticAnchorStructures(), []);
-  useUrlSync({
-    focused,
-    status,
-    sourceCounts,
-    famousMeta,
-    aliasMap,
-    ready: status.kind === 'ready',
-    structures: staticStructures,
-    engineHandleRef: handleRef,
-  });
+  // Deep-link hash read + URL write. Reads focus from the store directly;
+  // dispatches `requestFocus` / `clearSelection` for hash changes.
+  useUrlSync();
 
   useKeyboardShortcuts({
     selected,

@@ -1,29 +1,10 @@
-import type { RefObject } from 'react';
-import type { SourceType } from '../data/SourceType';
-import type { EngineHandle } from './EngineHandle';
-import type { EngineStatus } from './EngineStatus';
-import type { FocusableTarget } from './FocusableTarget';
-import type { FamousMetaEntry } from '../loading/FamousMetaEntry';
-import type { StructureInfo } from './data/StructureInfo';
-
 /**
- * Combined input for `useUrlSync` — both galaxy-side and structure-side state
- * the hook needs to keep `location.hash` in lock-step with engine
- * selection.
+ * UseUrlSyncInput — formerly the combined input bag for `useUrlSync`.
  *
- * The reactive fields drive their respective drain effects' re-runs
- * as data lands; `engineHandleRef` is a mutable ref because the engine
- * handle is constructed asynchronously during App mount and should
- * not retrigger this hook on assignment.
+ * The hook now reads all focus state from the Redux store directly
+ * (`selectFocusedFocusable`) and dispatches `requestFocus` /
+ * `clearSelection` for deep-link reads. No external props are needed.
+ * This type is kept as an empty alias so any lingering import compiles
+ * without churn; remove it when all import sites are gone.
  */
-export type UseUrlSyncInput = {
-  /** Camera-focus target — galaxy or structure; drives the URL hash. */
-  focused: FocusableTarget | null;
-  status: EngineStatus;
-  sourceCounts: Partial<Record<SourceType, number>>;
-  famousMeta: readonly FamousMetaEntry[];
-  aliasMap: ReadonlyMap<bigint, readonly string[]>;
-  ready: boolean;
-  structures: readonly StructureInfo[];
-  engineHandleRef: RefObject<EngineHandle | null>;
-};
+export type UseUrlSyncInput = Record<never, never>;

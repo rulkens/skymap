@@ -1,13 +1,10 @@
-import type { FocusTarget } from '../camera/FocusTarget';
-
 /**
- * Return shape for `useUrlSync` — the two pending slots the hook
- * surfaces back to the App so it can render loading banners or
- * await-data spinners.  Both are null in steady state; non-null
- * means a deep-link arrival hasn't been resolved against engine
- * data yet.
+ * UrlSyncReturn — return type for `useUrlSync`.
+ *
+ * The hook is a pure side-effect hook: it owns `window.location.hash`
+ * and dispatches to the Redux store. No state is surfaced back to the
+ * caller; callers that previously read `pendingTarget` /
+ * `pendingStructureId` from here should remove those reads — the saga
+ * owns resolution and deferral, and the store's focus slot is the truth.
  */
-export type UrlSyncReturn = {
-  pendingTarget: FocusTarget | null;
-  pendingStructureId: string | null;
-};
+export type UrlSyncReturn = void;
