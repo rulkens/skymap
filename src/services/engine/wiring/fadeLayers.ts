@@ -70,8 +70,8 @@ const layer = <Item, K extends VisibilityLayerKey>(
 // fixtures from `settings.volumes.items` because that record drives the
 // Volumes-panel UI + demand loading. Fade registration has the opposite
 // requirement: a fade handle is inert until something fades it, and BOTH the
-// debug toggle (`engine.ts` setVolumeFieldEnabled → fadeTo) and the debug
-// slot's commit (`syntheticVolumeSlots.ts`) call `fadeTo({kind:'volumeField'})`
+// debug toggle (dispatches `writeVolumeField` → `syncFades` → fadeTo) and the
+// debug slot's commit (`syntheticVolumeSlots.ts`) call `fadeTo({kind:'volumeField'})`
 // on these ids. `FadeRegistry.fadeTo` throws on an unregistered id, so the
 // debug handles must be seeded here or the DEV toggle breaks. Registering all
 // volume fields at 0 is behaviour-preserving in production — the 3 extra debug

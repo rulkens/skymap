@@ -79,10 +79,10 @@
  *
  * ### Production wiring
  *
- * `handle.setBiasMode` routes through this subsystem.  The renderer
- * reads `state.settings.bias.mode` per-frame for the uniform write;
- * this subsystem owns the splice pipeline that lays per-galaxy
- * ratios/weights into the per-source vertex buffers.
+ * The reconcile saga drives bake state via the bias.mode reconcile row.
+ * The renderer reads `state.settings.bias.mode` per-frame for the
+ * uniform write; this subsystem owns the splice pipeline that lays
+ * per-galaxy ratios/weights into the per-source vertex buffers.
  *
  * @module
  */

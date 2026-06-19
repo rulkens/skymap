@@ -26,7 +26,6 @@
 
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
-import type { PassOverridesHandle } from '../../@types/engine/handles/EngineDebugHandle';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import { AssetLoadingSection } from './AssetLoadingSection';
 import { GpuTimingsSection } from './GpuTimingsSection';
@@ -38,11 +37,12 @@ import { LabelEffectsSection } from './LabelEffectsSection';
 export type DebugPanelProps = {
   slots: ReadonlyMap<string, AssetSlot<unknown, unknown>>;
   timingService: GpuTimingService;
-  passOverrides: PassOverridesHandle;
+  /** Pass names in draw order, sourced from the engine handle's `passOverrides.allNames`. */
+  passNames: readonly string[];
   /**
-   * The currently-disabled renderer-pass names, read live off the settings
-   * store by `App`. Drives the `RenderTogglesSection` checkbox state; writes go
-   * back through `passOverrides.setDisabled`.
+   * Live disabled-pass record from the settings store (App subscribes via
+   * `selectDisabledPasses`).  Checkbox writes dispatch `setPassDisabled`;
+   * `watchWake` wakes the render loop on the store write.
    */
   disabledPasses: Record<string, boolean>;
   highlightFallback: boolean;
@@ -77,7 +77,7 @@ export type DebugPanelProps = {
 export function DebugPanel({
   slots,
   timingService,
-  passOverrides,
+  passNames,
   disabledPasses,
   highlightFallback,
   realOnlyMode,
@@ -111,7 +111,7 @@ export function DebugPanel({
       <div style={{ marginTop: 6 }} />
       <GpuTimingsSection service={timingService} />
       <div style={{ marginTop: 6 }} />
-      <RenderTogglesSection passOverrides={passOverrides} disabledPasses={disabledPasses} />
+      <RenderTogglesSection passNames={passNames} disabledPasses={disabledPasses} />
       <div style={{ marginTop: 6 }} />
       <FlowTuningSection flow={flow} onChange={onFlowChange} />
       <div style={{ marginTop: 6 }} />

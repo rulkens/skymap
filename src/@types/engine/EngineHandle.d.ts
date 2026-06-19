@@ -18,17 +18,9 @@
 
 import type { AssetSlot } from '../loading/AssetSlot';
 
-import type { EngineGalaxyCatalogsHandle } from './handles/EngineGalaxyCatalogsHandle';
-import type { EngineTonemapHandle } from './handles/EngineTonemapHandle';
 import type { EngineCameraHandle } from './handles/EngineCameraHandle';
 import type { EngineSelectionHandle } from './handles/EngineSelectionHandle';
 import type { EngineSourcesHandle } from './handles/EngineSourcesHandle';
-import type { EngineBiasHandle } from './handles/EngineBiasHandle';
-import type { EngineThumbnailsHandle } from './handles/EngineThumbnailsHandle';
-import type { EngineMilkyWayHandle } from './handles/EngineMilkyWayHandle';
-import type { EngineFilamentsHandle } from './handles/EngineFilamentsHandle';
-import type { EngineFlowFieldsHandle } from './handles/EngineFlowFieldsHandle';
-import type { EngineStructuresHandle } from './handles/EngineStructuresHandle';
 import type { EngineVolumesHandle } from './handles/EngineVolumesHandle';
 import type { EngineDebugHandle } from './handles/EngineDebugHandle';
 
@@ -41,17 +33,9 @@ export type EngineHandle = {
   //
   // Each cluster's public surface lives in its own type alias so the
   // React shell can subscribe to just the namespace it cares about.
-  galaxyCatalogs: EngineGalaxyCatalogsHandle;
-  tonemap: EngineTonemapHandle;
   camera: EngineCameraHandle;
   selection: EngineSelectionHandle;
   sources: EngineSourcesHandle;
-  bias: EngineBiasHandle;
-  thumbnails: EngineThumbnailsHandle;
-  milkyWay: EngineMilkyWayHandle;
-  filaments: EngineFilamentsHandle;
-  flow: EngineFlowFieldsHandle;
-  structures: EngineStructuresHandle;
   volumes: EngineVolumesHandle;
   debug: EngineDebugHandle;
 
