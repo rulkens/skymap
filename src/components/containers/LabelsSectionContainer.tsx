@@ -8,7 +8,7 @@
  * `useCallback`. The presentational `LabelsSection` imports nothing from
  * `store/` or `state/`.
  *
- * ### Label-visibility projection (moved from App.tsx:183–186)
+ * ### Label-visibility projection
  *
  * Label visibility lives in three authoritative homes — structure items,
  * the galaxy catalog items (famousGalaxy), and the milkyWay scalar. The
@@ -16,7 +16,7 @@
  * `Record<LabelCategory, boolean>` the section's checkboxes read. The
  * `useMemo` rebuilds only when any of those stable-reference inputs change.
  *
- * ### 3-way dispatch (moved verbatim from App.tsx:341–356)
+ * ### 3-way dispatch guard
  *
  * A label checkbox toggle dispatches to one of three slices based on the
  * category's type:
@@ -61,15 +61,15 @@ function LabelsSectionContainer(): React.ReactElement {
   const milkyWayLabelEnabled = useAppSelector(selectMilkyWayLabelEnabled);
 
   // Project items → flat label-visibility record. Rebuilds only when any of the
-  // three stable-reference inputs change. Moved verbatim from App.tsx:183–186.
+  // three stable-reference inputs change.
   const labelCategoryVisibility = useMemo(
     () => projectLabelCategoryVisibility(structureItems, galaxyCatalogItems, milkyWayLabelEnabled),
     [structureItems, galaxyCatalogItems, milkyWayLabelEnabled],
   );
 
-  // 3-way dispatch guard, moved verbatim from App.tsx:341–356. Narrowing order:
-  // structure → milkyWay → galaxy catalog (else branch covers famousGalaxy and
-  // any future label-bearing galaxy catalog sources).
+  // 3-way dispatch guard. Narrowing order: structure → milkyWay → galaxy catalog
+  // (else branch covers famousGalaxy and any future label-bearing galaxy catalog
+  // sources).
   const onSetLabelCategoryVisibility = useCallback(
     (category: LabelCategory, enabled: boolean) => {
       if (isStructureId(category)) {

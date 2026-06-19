@@ -52,7 +52,7 @@ function StructuresSectionContainer({
 
   // Project items → flat visibility record. Rebuilds only when the stable
   // `structureItems` reference changes (Immer structural sharing guarantees
-  // this is fine-grained). Moved verbatim from App.tsx:209–212.
+  // this is fine-grained).
   const markerCategoryVisibility = useMemo(
     () => projectMarkerCategoryVisibility(structureItems),
     [structureItems],

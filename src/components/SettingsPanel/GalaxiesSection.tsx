@@ -3,12 +3,13 @@
  * GalaxiesSection — presentational component for the Galaxies thematic group
  * inside the SettingsPanel.
  *
- * Extracted from the Galaxies block in `SettingsPanel.tsx` (lines 511–634) so
- * a slider drag re-renders ONLY this section rather than the entire HUD. The
- * section owns the tri-state master derivation (the `galaxiesMaster` IIFE) that
- * was previously computed inline in `SettingsPanel`. That logic is section-local
- * — it summarises the per-catalog toggles that live right here — so it belongs
- * here, not in a shared parent.
+ * Owns the Galaxies thematic group UI: per-catalog toggles, the tri-state
+ * master, the point-size slider, depth-fade toggle, and density-correction
+ * controls. Isolating this into its own component ensures a slider drag
+ * re-renders ONLY this section rather than the entire HUD. The section owns the
+ * tri-state master derivation (the `galaxiesMaster` object) — that logic is
+ * section-local, summarising the per-catalog toggles that live right here, so
+ * it belongs here, not in a shared parent.
  *
  * Imports nothing from `store/` or `state/`: this is a pure function of props
  * and transient CollapsibleSection open/closed state. Tests supply plain props

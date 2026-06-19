@@ -3,12 +3,12 @@
  * LabelsSection — presentational component for the Labels thematic group
  * inside the SettingsPanel.
  *
- * Extracted from the Labels block in `SettingsPanel.tsx` (lines 810–840) so a
+ * Owns the Labels thematic group UI: the tri-state master toggle and per-
+ * category label checkboxes. Isolating this into its own component ensures a
  * label toggle re-renders ONLY this section rather than the entire HUD. The
- * section owns the tri-state master derivation (the `labelsMaster` IIFE) that
- * was previously computed inline in `SettingsPanel`. That logic is
- * section-local — it summarises the per-category toggles that live right here
- * — so it belongs here, not in a shared parent.
+ * section owns the tri-state master derivation (the `labelsMaster` object) —
+ * that logic is section-local, summarising the per-category toggles that live
+ * right here, so it belongs here, not in a shared parent.
  *
  * Three kinds of sources bear labels, which the container routes to three
  * dispatch homes (structure / milkyWay singleton / galaxy catalog). This

@@ -3,9 +3,9 @@
  * DisplaySection — presentational component for the Display settings section
  * inside the SettingsPanel.
  *
- * Extracted from the Display block in `SettingsPanel.tsx` (~line 842–868) so a
- * tone-curve change re-renders ONLY this section rather than the entire HUD.
- * The section contains a single control: the tone-mapping curve dropdown.
+ * Owns the Display thematic group UI: the tone-mapping curve dropdown. Isolating
+ * this into its own component ensures a tone-curve change re-renders ONLY this
+ * section rather than the entire HUD.
  *
  * ### Props-driven, no internal state
  *

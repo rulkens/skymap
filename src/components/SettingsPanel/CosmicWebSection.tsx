@@ -3,11 +3,13 @@
  * CosmicWebSection — presentational component for the Cosmic web thematic
  * group inside the SettingsPanel.
  *
- * Extracted from the Cosmic web block in `SettingsPanel.tsx` (lines 636–742)
- * so a slider drag re-renders ONLY this section rather than the entire HUD.
- * The section owns the master derivation, the Style picker logic
- * (`deriveCosmicWebStyle` + `onCosmicWebMasterToggle` + `onSetCosmicWebStyle`),
- * and the per-cube `VolumeFieldRow` list — all of which are section-local.
+ * Owns the Cosmic web thematic group UI: the master toggle, the Style picker
+ * (Smooth / Filaments / Both), the filament-intensity slider, and the per-cube
+ * `VolumeFieldRow` list. Isolating this into its own component ensures a slider
+ * drag re-renders ONLY this section rather than the entire HUD. The section
+ * owns the master derivation and Style picker logic (`deriveCosmicWebStyle` +
+ * `onCosmicWebMasterToggle` + `onSetCosmicWebStyle`) — all of which are
+ * section-local.
  *
  * ### Style picker semantics
  *

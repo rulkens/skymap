@@ -3,12 +3,12 @@
  * StructuresSection — presentational component for the Structures thematic group
  * inside the SettingsPanel.
  *
- * Extracted from the Structures block in `SettingsPanel.tsx` (lines 765–808) so
- * a marker toggle re-renders ONLY this section rather than the entire HUD. The
- * section owns the tri-state master derivation (the `structuresMaster` IIFE) that
- * was previously computed inline in `SettingsPanel`. That logic is section-local
- * — it summarises the per-category toggles that live right here — so it belongs
- * here, not in a shared parent.
+ * Owns the Structures thematic group UI: the tri-state master toggle and per-
+ * category marker (ring) checkboxes. Isolating this into its own component
+ * ensures a marker toggle re-renders ONLY this section rather than the entire
+ * HUD. The section owns the tri-state master derivation (the `structuresMaster`
+ * object) — that logic is section-local, summarising the per-category toggles
+ * that live right here, so it belongs here, not in a shared parent.
  *
  * Imports nothing from `store/` or `state/`: this is a pure function of props
  * and transient CollapsibleSection open/closed state. Tests supply plain props

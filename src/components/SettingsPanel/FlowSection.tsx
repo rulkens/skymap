@@ -3,11 +3,11 @@
  * FlowSection — presentational component for the CF4++ flow-field overlay
  * section inside the SettingsPanel.
  *
- * Extracted from the Flow block in `SettingsPanel.tsx` (~line 744–763) so a
+ * Owns the Flow thematic group UI: a master enable toggle on the section header
+ * and `FlowRow` in the body. Isolating this into its own component ensures a
  * flow setting change re-renders ONLY this section rather than the entire HUD.
- * The section is intentionally minimal: a master enable toggle on the header
- * and `FlowRow` in the body. All look controls (mode switch + intensity slider)
- * live inside `FlowRow`.
+ * The section is intentionally minimal — all look controls (mode switch +
+ * intensity slider) live inside `FlowRow`.
  *
  * ### Props-driven, no internal state
  *
