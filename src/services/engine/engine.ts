@@ -127,7 +127,6 @@ import { setVolumeFieldPalette } from './handles/setVolumeFieldPalette';
 import { listVolumeFields } from './handles/listVolumeFields';
 import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
 import { setBiasMode } from './handles/setBiasMode';
-import { setTier } from './handles/setTier';
 import { setPassDisabled } from './handles/setPassDisabled';
 import { makeRunTierTransition } from './wiring/makeRunTierTransition';
 
@@ -740,7 +739,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
     sources: {
       setVisible: (source, visible) => setSourceVisible(state, store, source, visible),
-      setTier: (tier) => setTier(state, store, bootstrapDeps.phaseLocals?.device, tier),
       getCloud,
       getCloudObjIds,
     },

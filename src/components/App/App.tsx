@@ -41,7 +41,7 @@ import { useUrlSync } from '../../hooks/useUrlSync';
 import { useFamousMeta } from '../../hooks/useFamousMeta';
 import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
-import { useAppSelector } from '../../store/hooks';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   selectGalaxyCatalogSize,
   selectDepthFade,
@@ -52,7 +52,6 @@ import {
   selectAutoRotate,
   selectBiasMode,
   selectAbsMagLimit,
-  selectTier,
   selectShowPickBuffer,
   selectShowDiskRadiusRing,
   selectDisabledPasses,
@@ -65,6 +64,8 @@ import {
   selectGalaxyCatalogItems,
   selectMilkyWayLabelEnabled,
 } from '../../state/settings/selectors';
+import { selectTier } from '../../state/tier/selectors';
+import { requestTier } from '../../state/tier/requestTier';
 import { projectVolumeFieldRows } from '../../state/settings/projectVolumeFieldRows';
 import { projectMarkerCategoryVisibility } from '../../state/settings/projectMarkerCategoryVisibility';
 import { projectLabelCategoryVisibility } from '../../state/settings/projectLabelCategoryVisibility';
@@ -85,6 +86,10 @@ export function App(): React.ReactElement {
     structureCounts,
     loadProgress,
   } = useEngine();
+
+  // The tier dropdown dispatches `requestTier` (a command) rather than calling a
+  // handle method — the tier saga reacts and runs the transition.
+  const dispatch = useAppDispatch();
 
   // Galaxy catalogs-cluster settings read straight off the RTK settings slice
   // via `useAppSelector`. The store exists before first paint under the
@@ -113,9 +118,10 @@ export function App(): React.ReactElement {
   const biasMode = useAppSelector(selectBiasMode);
   const absMagLimit = useAppSelector(selectAbsMagLimit);
 
-  // The live data tier. The tier dropdown dispatches through
-  // `handle.sources.setTier`, which commits to the store synchronously, so the
-  // dropdown tracks without an optimistic cell.
+  // The live data tier, read from the RTK tier slice. The dropdown dispatches
+  // the `requestTier` command; the tier saga writes the new tier (the slice
+  // value `selectTier` reads) only once the new bins are ready, so the dropdown
+  // tracks the engine's committed truth rather than an optimistic guess.
   const currentTier = useAppSelector(selectTier);
 
   // Debug-overlay toggles (pick buffer + disk-radius ring). The DebugPanel
@@ -352,12 +358,14 @@ export function App(): React.ReactElement {
               handleRef.current?.galaxyCatalogs.setDepthFade(enabled);
             }}
             onResetCamera={() => handleRef.current?.camera.focusOnHome()}
-            // Tier swap is owned end-to-end by the engine: `setTier` commits
-            // the new tier to the settings store (which `currentTier` reads via
-            // `selectTier`), then cancels in-flight loads, re-fetches the
-            // tier-suffixed bins, and re-uploads.
+            // A tier swap is an Intent: the dropdown dispatches `requestTier`
+            // (a command carrying no state change), and the tier saga reacts —
+            // it writes the new tier to the slice (which `currentTier` reads via
+            // `selectTier`) and runs the transition (evict in-flight loads,
+            // re-fetch the tier-suffixed bins, rebuild the hi-res famous
+            // texture).
             tier={currentTier}
-            onTierChange={(tier) => handleRef.current?.sources.setTier(tier)}
+            onTierChange={(tier) => dispatch(requestTier(tier))}
             visibleSourceMask={visibleSourceMask}
             sourceCounts={sourceCounts}
             structureCounts={structureCounts}

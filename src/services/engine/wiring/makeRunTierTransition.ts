@@ -25,17 +25,14 @@
  * alongside `bootstrapDeps`, before the async bootstrap IIFE finishes), so
  * reading `bootstrapDeps.phaseLocals?.device` at build time would always see
  * `undefined`. Reading it inside the returned closure means the hi-res rebuild
- * guard correctly skips pre-bootstrap and fires once the device exists — the
- * same `if (device && texturedDiskRenderer)` guard the handle path uses.
+ * guard correctly skips pre-bootstrap and fires once the device exists via the
+ * `if (device && texturedDiskRenderer)` guard below.
  *
- * ## Transitional duplication
+ * ## The sole tier-transition path
  *
- * This body is (transitionally) duplicated with `handles/setTier.ts` until
- * that handle is deleted: during the overlap BOTH the handle and this
- * saga-reached runner can drive a tier change, but only the handle is actually
- * invoked (App still calls it). The handle takes `device` directly rather than
- * `bootstrapDeps`, so delegating one into the other would churn a soon-deleted
- * file — they stay independent.
+ * This runner is the ONLY place the per-source reload orchestration lives. The
+ * UI dispatches `requestTier`; the tier saga writes the slice action and calls
+ * this runner with the computed prev/next. There is no parallel handle method.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
