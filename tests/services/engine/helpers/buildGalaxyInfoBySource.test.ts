@@ -1,27 +1,17 @@
 /**
- * Unit tests for `galaxyInfoBuilder` — the pure data → display path that the
+ * Unit tests for `buildGalaxyInfo` — the pure data → display path that the
  * engine uses on every hover/select event.
  *
- * Three exported helpers are exercised:
- *
- *   - `niceRound`    — axis-ticker style {1,2,5}×10^k floor (used by the
- *                      scale-bar legend).
- *   - `maxAbsCoord`  — bounding-box heuristic used at startup framing.
- *   - `buildGalaxyInfo` — takes a `GalaxyRow` and returns a fully-derived
- *                      `GalaxyInfo` value. These tests compose
- *                      `extractGalaxyRow(cloud, idx, source)` → `buildGalaxyInfo(row)`
- *                      to exercise the per-source dispatch (SDSS / 2MRS / GLADE /
- *                      Famous / Synthetic) end-to-end so any cross-cut regression
- *                      in thumbnails, explorer URLs, IAU names, orientation
- *                      provenance, or the famous-meta block is caught here.
+ * `buildGalaxyInfo` takes a `GalaxyRow` and returns a fully-derived
+ * `GalaxyInfo` value. These tests compose
+ * `extractGalaxyRow(cloud, idx, source)` → `buildGalaxyInfo(row)` to exercise
+ * the per-source dispatch (SDSS / 2MRS / GLADE / Famous / Synthetic) end-to-end
+ * so any cross-cut regression in thumbnails, explorer URLs, IAU names,
+ * orientation provenance, or the famous-meta block is caught here.
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  buildGalaxyInfo,
-  maxAbsCoord,
-  niceRound,
-} from '../../../../src/services/engine/helpers/galaxyInfoBuilder';
+import { buildGalaxyInfo } from '../../../../src/services/engine/helpers/buildGalaxyInfo';
 import { extractGalaxyRow } from '../../../../src/services/engine/helpers/extractGalaxyRow';
 import { Source } from '../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -65,74 +55,6 @@ function buildInfo(
 ) {
   return buildGalaxyInfo(extractGalaxyRow(cloud, idx, source, famousMeta)!);
 }
-
-// ─── niceRound ──────────────────────────────────────────────────────────────
-
-describe('niceRound', () => {
-  it('returns 2 for 3.7 (mantissa 3.7 → 2)', () => {
-    // Mantissa 3.7 falls into the [2, 5) bucket, so it rounds down to 2.
-    expect(niceRound(3.7)).toBe(2);
-  });
-
-  it('returns 20 for 47 (mantissa 4.7 → 2 × 10¹)', () => {
-    // 47 = 4.7 × 10¹ → nice mantissa 2 → 20.
-    expect(niceRound(47)).toBe(20);
-  });
-
-  it('returns 500 for 800 (mantissa 8 → 5 × 10²)', () => {
-    // 800 = 8 × 10² → nice mantissa 5 → 500.
-    expect(niceRound(800)).toBe(500);
-  });
-
-  it('returns 0.05 for 0.07 (mantissa 7 → 5 × 10⁻²)', () => {
-    // Sub-unit values are handled by the same Math.log10 / Math.pow logic.
-    // 0.07 → mantissa 7 → 5 × 10⁻² = 0.05.
-    expect(niceRound(0.07)).toBeCloseTo(0.05, 10);
-  });
-
-  it('returns 0 for 0 (degenerate input)', () => {
-    // The function explicitly guards x ≤ 0 because Math.log10(0) is -∞.
-    expect(niceRound(0)).toBe(0);
-  });
-
-  it('returns 0 for negative inputs (the contract is "round positive values")', () => {
-    // Negative values fall into the same x ≤ 0 guard.  The scale bar never
-    // passes a negative — but the function's documented behaviour is to
-    // return 0 so callers don't get a NaN downstream.
-    expect(niceRound(-5)).toBe(0);
-  });
-
-  it('returns the value itself when it is already a nice power of ten', () => {
-    // Powers of 10 (mantissa = 1) sit at the bucket boundary and pass through.
-    expect(niceRound(100)).toBe(100);
-  });
-});
-
-// ─── maxAbsCoord ────────────────────────────────────────────────────────────
-
-describe('maxAbsCoord', () => {
-  it('returns the largest absolute coordinate component across all points', () => {
-    // Place 3 points at (1, 2, 3), (4, 5, 6), (7, 8, 9).  The maximum
-    // absolute component is 9.
-    const cloud = makeCloud(3);
-    cloud.positions.set([1, 2, 3, 4, 5, 6, 7, 8, 9]);
-    expect(maxAbsCoord(cloud)).toBe(9);
-  });
-
-  it('considers negative components by their absolute value', () => {
-    // A negative component can dominate if its magnitude is largest.  We
-    // verify by placing a -100 in the middle of otherwise-small coords.
-    const cloud = makeCloud(2);
-    cloud.positions.set([1, 2, 3, -100, 0, 0]);
-    expect(maxAbsCoord(cloud)).toBe(100);
-  });
-
-  it('returns 0 for an all-zero cloud', () => {
-    // An empty / zero cloud (e.g. count=1 with default fill) has max-abs = 0.
-    const cloud = makeCloud(1);
-    expect(maxAbsCoord(cloud)).toBe(0);
-  });
-});
 
 // ─── buildGalaxyInfo — common helpers ────────────────────────────────────────
 

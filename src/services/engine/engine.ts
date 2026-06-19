@@ -29,7 +29,7 @@
  *
  *   Pure helpers:
  *   - `galaxyFocusDistance.ts` / `structureFocusDistance.ts` — framing-distance helpers
- *   - `galaxyInfoBuilder.ts`   — buildGalaxyInfo / maxAbsCoord / niceRound
+ *   - `buildGalaxyInfo.ts`     — buildGalaxyInfo (per-source GalaxyInfo formatter)
  *   - `cloudLoader.ts`         — parallel /data/{sdss,2mrs,glade}.bin fetch + synthetic fallback
  *   - `cameraFraming.ts`       — bbox + FOV → initial camera snapshot
  *   - `scaleBar.ts`            — pure scale-bar tick selection + label formatting (consumed by React)
@@ -87,7 +87,7 @@ import { produceStructureLabels } from './presentation/produceStructureLabels';
 import { produceFamousLabels } from './presentation/produceFamousLabels';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { HDR_PASSES, UI_PASSES } from './frame/passes';
-import { buildGalaxyInfo } from './helpers/galaxyInfoBuilder';
+import { buildGalaxyInfo } from './helpers/buildGalaxyInfo';
 import { logCameraState } from './helpers/logCameraState';
 import { updateSelectionFocus } from '../../state/selection/selectionSlice';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';

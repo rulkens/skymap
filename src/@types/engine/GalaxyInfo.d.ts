@@ -115,7 +115,7 @@ export type GalaxyInfo = {
    *
    * Pre-computing here keeps the React layer presentational — FullCard just
    * maps over the array — and means the band-pairing logic lives next to the
-   * other data-derivation code in `galaxyInfoBuilder.ts`.
+   * other data-derivation code in `buildGalaxyInfo.ts`.
    */
   colours: Array<{ label: string; value: number }>;
 
@@ -270,7 +270,7 @@ export type GalaxyInfo = {
   /**
    * Famous-galaxy enrichment block, present only when `source === Source.FamousGalaxy`.
    *
-   * Populated by `galaxyInfoBuilder` from the `famous_meta.json` sidecar loaded
+   * Populated by `buildGalaxyInfo` from the `famous_meta.json` sidecar loaded
    * at engine startup.  Absent (`undefined`) for SDSS / 2MRS / GLADE / Synthetic
    * rows — those never have curated metadata.
    */

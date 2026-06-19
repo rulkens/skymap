@@ -28,7 +28,7 @@ vi.mock('../../../../src/services/engine/camera/cameraFraming', () => ({
     computeInitialCameraSpy(...(args as Parameters<typeof computeInitialCameraSpy>)),
 }));
 
-vi.mock('../../../../src/services/engine/helpers/galaxyInfoBuilder', () => ({
+vi.mock('../../../../src/services/engine/helpers/buildGalaxyInfo', () => ({
   buildGalaxyInfo: vi.fn(),
 }));
 
