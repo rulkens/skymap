@@ -31,16 +31,9 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import type { UiState } from '../../@types/ui/UiState';
+import { buildInitialUiState } from './buildInitialUiState';
 
-const initialState: UiState = {
-  paletteOpen: false,
-  uiHidden: false,
-  debugPanelOpen: false,
-  splash: {
-    visible: false,
-    dismissedVersion: null,
-  },
-};
+const initialState: UiState = buildInitialUiState();
 
 const uiSlice = createSlice({
   name: 'ui',

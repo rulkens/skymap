@@ -64,55 +64,18 @@ import { hasDeepLink } from '../utils/url/hasDeepLink';
 import type { UseSplashInput } from '../@types/splash/UseSplashInput';
 import type { UseSplashReturn } from '../@types/splash/UseSplashReturn';
 import type { SplashError } from '../@types/splash/SplashError';
+import {
+  CURRENT_SPLASH_VERSION,
+  readSeenVersion,
+  writeSeenVersion,
+  readUrlAtMount,
+} from '../state/ui/splashStorage';
 
-/** Persisted storage key — never rename without a migration. */
-export const SPLASH_STORAGE_KEY = 'skymap.splash.seenVersion';
-
-/**
- * Version stamp written to localStorage on dismiss.  Bump when meaningful
- * splash content changes — increments re-show the splash to returning
- * users on their next visit.
- */
-export const CURRENT_SPLASH_VERSION = 1;
+// Re-export so existing importers (e.g. tests) don't need updating this task.
+export { SPLASH_STORAGE_KEY, CURRENT_SPLASH_VERSION } from '../state/ui/splashStorage';
 
 /** Milliseconds before the "Continue anyway" escape appears. */
 export const CONTINUE_ANYWAY_DELAY_MS = 8_000;
-
-/**
- * Read seenVersion from localStorage.  SSR-safe and try/catch-guarded
- * against private-browsing modes that throw on storage access.
- */
-function readSeenVersion(): number {
-  if (typeof window === 'undefined') return 0;
-  try {
-    const raw = window.localStorage.getItem(SPLASH_STORAGE_KEY);
-    if (raw === null) return 0;
-    const parsed = Number.parseInt(raw, 10);
-    return Number.isFinite(parsed) ? parsed : 0;
-  } catch {
-    return 0;
-  }
-}
-
-/** Write seenVersion to localStorage.  Swallows storage errors silently. */
-function writeSeenVersion(version: number): void {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(SPLASH_STORAGE_KEY, String(version));
-  } catch {
-    // Private browsing or storage quota — best-effort; the splash will
-    // re-show next time, which is acceptable degraded behaviour.
-  }
-}
-
-/**
- * Read the current URL hash + search, returning empty strings under SSR.
- * Captured lazily inside the hook's initializer so it runs once at mount.
- */
-function readUrlAtMount(): { hash: string; search: string } {
-  if (typeof window === 'undefined') return { hash: '', search: '' };
-  return { hash: window.location.hash, search: window.location.search };
-}
 
 export function useSplash(input: UseSplashInput): UseSplashReturn {
   const { status, loadProgress, famousMetaReady, famousMetaFailed = false } = input;
@@ -130,7 +93,8 @@ export function useSplash(input: UseSplashInput): UseSplashReturn {
   const [splashVisible, setSplashVisible] = useState<boolean>(() => {
     const { hash, search } = readUrlAtMount();
     if (hasDeepLink({ hash, search })) return false;
-    if (readSeenVersion() >= CURRENT_SPLASH_VERSION) return false;
+    const seen = readSeenVersion();
+    if (seen !== null && seen >= CURRENT_SPLASH_VERSION) return false;
     return true;
   });
 
