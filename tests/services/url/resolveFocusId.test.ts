@@ -171,11 +171,22 @@ describe('resolveFocusId', () => {
   // ── pos@ ─────────────────────────────────────────────────────────────────
 
   it('pos@ra,dec → nearest galaxy ref within 30-arcsec threshold', () => {
-    // Position (1, 0, 0) in the SDSS cloud → RA = 0°, Dec = 0°.
-    // pos@0.0000,0.0000 should be an exact match (0 arcsec separation).
-    const ref = resolveFocusId('pos@0.0000,0.0000', deps);
-    expect(ref).not.toBeNull();
-    expect(ref?.type).toBe('galaxyCatalog');
+    // Use a local deps with exactly ONE cloud at (1, 0, 0) = RA 0°, Dec 0°.
+    // The shared `deps` has three clouds at that position (SDSS, GLADE,
+    // FamousGalaxy), making the nearest-neighbour winner a tie resolved by
+    // GALAXY_CATALOG_SOURCES order — a fragile coupling to iteration order.
+    // A single-cloud fixture makes source + index unambiguous.
+    const posDeps: ResolveDeps = {
+      ...deps,
+      catalogs: {
+        get: (s) => (s === Source.SDSS ? makeCloud(1237668393006604288n, [1, 0, 0]) : undefined),
+      },
+    };
+    expect(resolveFocusId('pos@0.0000,0.0000', posDeps)).toEqual({
+      type: 'galaxyCatalog',
+      source: Source.SDSS,
+      index: 0,
+    });
   });
 
   it('pos@ beyond 30-arcsec threshold → null', () => {
