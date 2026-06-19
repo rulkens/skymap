@@ -72,7 +72,6 @@ import type { SourceType } from '../../@types/data/SourceType';
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
-import type { AppStore } from '../../store/types';
 import type { EngineState } from '../../@types/engine/state/EngineState';
 import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 
@@ -129,6 +128,7 @@ import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
 import { setBiasMode } from './handles/setBiasMode';
 import { setPassDisabled } from './handles/setPassDisabled';
 import { makeRunTierTransition } from './wiring/makeRunTierTransition';
+import { makeReconcileEffects } from './wiring/makeReconcileEffects';
 
 /**
  * Start the WebGPU engine on `canvas`.
@@ -466,12 +466,24 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     allSlots,
   };
 
-  // Register the tier-transition runner into the saga context so a
-  // `requestTier` dispatch reaches the engine's GPU resources. The runner
-  // closes over the live `state` + `bootstrapDeps` (reading `device` lazily off
-  // `phaseLocals`), so registering here — before the async bootstrap finishes —
-  // is safe: the closure sees the device once initGpu populates it.
-  cb.setSagaContext({ runTierTransition: makeRunTierTransition(state, bootstrapDeps) });
+  // Register both saga runners in one setSagaContext call so the running root
+  // saga receives the full context bag synchronously, before the async GPU
+  // bootstrap finishes.
+  //
+  // `makeRunTierTransition(state, bootstrapDeps)` closes over `bootstrapDeps`
+  // (reading `device` lazily off `phaseLocals`) — safe to build here because
+  // the closure dereferences the device only at call time, after initGpu
+  // populates it.
+  //
+  // `makeReconcileEffects(state)` closes over the live `state.gpu` and
+  // `state.subsystems`, also dereferenced lazily at call time — the same
+  // rationale: registering before the async bootstrap is safe because the
+  // subsystems the closures reach into are populated before any saga dispatches
+  // them.
+  cb.setSagaContext({
+    runTierTransition: makeRunTierTransition(state, bootstrapDeps),
+    reconcile: makeReconcileEffects(state),
+  });
 
   // The main async IIFE runs the bootstrap phases; all errors are caught
   // and reported via `onStatusChange`.  See `runBootstrapPhases`.
