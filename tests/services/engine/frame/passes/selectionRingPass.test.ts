@@ -6,10 +6,9 @@ import type { RenderFrameSettings } from '../../../../../src/@types/engine/frame
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
 import type { mat4 } from 'gl-matrix';
 import { Source } from '../../../../../src/data/sources';
-import type { FocusableTarget } from '../../../../../src/@types/engine/FocusableTarget';
-import type { GalaxyInfo } from '../../../../../src/@types/engine/GalaxyInfo';
+import type { GalaxyRow } from '../../../../../src/@types/engine/GalaxyRow';
+import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
-import { MILKY_WAY_INFO } from '../../../../../src/data/milkyWay/milkyWayInfo';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacticCenter';
 
 // ── fixtures ──────────────────────────────────────────────────────
@@ -51,23 +50,34 @@ function makeRendererSpy() {
   };
 }
 
-// A resolved galaxy target at a known world position + diameter. The pass
-// reads these straight off the target (no catalog re-index).
-function galaxyTarget(overrides: Partial<GalaxyInfo> = {}): GalaxyInfo {
+// A minimal GalaxyRow at a known world position + diameter. The pass reads
+// x/y/z and diameterKpc straight from the row via selectionHalo.
+function galaxyRow(overrides: Partial<GalaxyRow> = {}): GalaxyRow {
   return {
     type: 'galaxyCatalog',
     source: Source.Glade,
     index: 0,
+    objId: '1',
     x: 0,
     y: 0,
     z: 100, // 100 Mpc away on +z
+    redshift: 0,
+    magU: 0,
+    magG: 0,
+    magR: 0,
+    magI: 0,
+    magZ: 0,
     diameterKpc: 60, // 60 kpc galaxy
+    axisRatio: 1,
+    positionAngleDeg: 0,
+    classByte: 0,
+    parentSurveyByte: 0,
     ...overrides,
-  } as unknown as GalaxyInfo;
+  };
 }
 
-// A resolved structure target — drives the marker pass, never this halo.
-function structureTarget(): StructureInfo {
+// A structure row — drives the marker pass, never this halo.
+function structureRow(): StructureInfo {
   return {
     type: 'structure',
     id: 'virgo',
@@ -79,14 +89,13 @@ function structureTarget(): StructureInfo {
   };
 }
 
-function makeStateWithSelection(selection: FocusableTarget | null): EngineState {
+// The milkyWay singleton row (bare tag — position resolved from the constant).
+const MILKY_WAY_ROW: SelectionRow = { type: 'milkyWay' };
+
+function makeStateWithSelection(row: SelectionRow | null): EngineState {
   return {
     gpu: { selectionRingRenderer: makeRendererSpy() },
-    subsystems: {
-      selection: {
-        selected: () => selection,
-      },
-    },
+    selectionRows: { select: row, focus: null, hover: null },
   } as unknown as EngineState;
 }
 
@@ -96,7 +105,7 @@ describe('selectionRingPass.enabled', () => {
   it('returns false when renderer is null', () => {
     const state = {
       gpu: { selectionRingRenderer: null },
-      subsystems: { selection: { selected: () => null } },
+      selectionRows: { select: null, focus: null, hover: null },
     } as unknown as EngineState;
     expect(selectionRingPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
   });
@@ -106,23 +115,23 @@ describe('selectionRingPass.enabled', () => {
     expect(selectionRingPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
   });
 
-  it('returns true when renderer is non-null and a galaxy is selected', () => {
-    const state = makeStateWithSelection(galaxyTarget());
+  it('returns true when renderer is non-null and a galaxy row is selected', () => {
+    const state = makeStateWithSelection(galaxyRow());
     expect(selectionRingPass.enabled(state, makeCtx(), makeSettings())).toBe(true);
   });
 
-  it('is true when the Milky Way is selected', () => {
-    const state = makeStateWithSelection(MILKY_WAY_INFO);
+  it('is true when the Milky Way row is selected', () => {
+    const state = makeStateWithSelection(MILKY_WAY_ROW);
     expect(selectionRingPass.enabled(state, makeCtx(), makeSettings())).toBe(true);
   });
 
-  it('stays false for a structure selection (marker pass owns that halo)', () => {
-    const state = makeStateWithSelection(structureTarget());
+  it('stays false for a structure row (marker pass owns that halo)', () => {
+    const state = makeStateWithSelection(structureRow() as SelectionRow);
     expect(selectionRingPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
   });
 
-  it('stays true for a galaxy selection (regression)', () => {
-    const state = makeStateWithSelection(galaxyTarget());
+  it('stays true for a galaxy row (regression)', () => {
+    const state = makeStateWithSelection(galaxyRow());
     expect(selectionRingPass.enabled(state, makeCtx(), makeSettings())).toBe(true);
   });
 });
@@ -130,8 +139,8 @@ describe('selectionRingPass.enabled', () => {
 // ── draw() ────────────────────────────────────────────────────────
 
 describe('selectionRingPass.draw', () => {
-  it('computes ringRadiusPx from the target and forwards to renderer', () => {
-    const state = makeStateWithSelection(galaxyTarget());
+  it('computes ringRadiusPx from the row and forwards to renderer', () => {
+    const state = makeStateWithSelection(galaxyRow());
     selectionRingPass.draw(
       PASS_STUB,
       makeCtx(),
@@ -146,7 +155,7 @@ describe('selectionRingPass.draw', () => {
     expect(rendererSpy.draw).toHaveBeenCalledOnce();
     // The selection is `draw`'s 4th argument.
     const arg = rendererSpy.draw.mock.calls[0]![3]!;
-    // worldPos copied straight from the target's x/y/z
+    // worldPos copied straight from the row's x/y/z
     expect(arg.worldPos[0]).toBeCloseTo(0);
     expect(arg.worldPos[1]).toBeCloseTo(0);
     expect(arg.worldPos[2]).toBeCloseTo(100);
@@ -158,7 +167,7 @@ describe('selectionRingPass.draw', () => {
 
   it('uses apparentPxRadius when galaxy is closer and larger on screen', () => {
     // Galaxy at 10 Mpc so the apparent radius dominates.
-    const state = makeStateWithSelection(galaxyTarget({ z: 10 }));
+    const state = makeStateWithSelection(galaxyRow({ z: 10 }));
 
     selectionRingPass.draw(
       PASS_STUB,
@@ -176,8 +185,8 @@ describe('selectionRingPass.draw', () => {
     expect(arg.ringRadiusPx).toBeCloseTo(25.92, 4);
   });
 
-  it('draws the ring at MILKY_WAY_CENTER_WORLD for a milkyWay selection', () => {
-    const state = makeStateWithSelection(MILKY_WAY_INFO);
+  it('draws the ring at MILKY_WAY_CENTER_WORLD for a milkyWay row', () => {
+    const state = makeStateWithSelection(MILKY_WAY_ROW);
     selectionRingPass.draw(PASS_STUB, makeCtx(), state, makeSettings(), DEPS_STUB);
 
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
@@ -193,7 +202,7 @@ describe('selectionRingPass.draw', () => {
   });
 
   it('calls renderer.draw() exactly once with viewProj + viewport', () => {
-    const state = makeStateWithSelection(galaxyTarget());
+    const state = makeStateWithSelection(galaxyRow());
     selectionRingPass.draw(PASS_STUB, makeCtx(), state, makeSettings(), DEPS_STUB);
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
       typeof makeRendererSpy

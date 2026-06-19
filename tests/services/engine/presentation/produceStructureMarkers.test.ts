@@ -16,8 +16,8 @@ import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 
 // Builds a real engineData store (so state.data.structures is the production
 // store) + a real FadeRegistry (so per-category marker opacity comes from the
-// production fail-safe path: unregistered markerLayer handles read 1.0) + a
-// selection stub whose selected()/focused() drive the ring bump + recession +
+// production fail-safe path: unregistered markerLayer handles read 1.0) +
+// state.selection refs that drive the ring bump + recession +
 // a settings.structures.items bag (the authoritative per-category gate, all
 // enabled by default), then drives the producer. The registry is returned on
 // the state so a test can register/seed a structure handle to exercise the
@@ -39,14 +39,13 @@ function makeState(
   return {
     data: createEngineData(),
     settings: { structures: { enabled: true, items: makeStructureItems() } },
+    selection: {
+      select: selectedStructureId !== null ? { type: 'structure', id: selectedStructureId } : null,
+      focus: focusedStructureId !== null ? { type: 'structure', id: focusedStructureId } : null,
+      hover: null,
+    },
     subsystems: {
       fades: makeRegistry(),
-      selection: {
-        selected: () =>
-          selectedStructureId !== null ? { type: 'structure', id: selectedStructureId } : null,
-        focused: () =>
-          focusedStructureId !== null ? { type: 'structure', id: focusedStructureId } : null,
-      },
     },
   } as unknown as TestState;
 }

@@ -74,7 +74,7 @@ export function produceStructureLabels(
   // the same instant and the same focus state.
   const fades = state.subsystems.fades;
   const now = performance.now();
-  const focusedStructureId = structureIdOf(state.subsystems.selection.focused());
+  const focusedStructureId = structureIdOf(state.selection.focus);
 
   const structures = state.data.structures;
   for (const p of structures.all()) {

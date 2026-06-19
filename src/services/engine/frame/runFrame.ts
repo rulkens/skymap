@@ -174,11 +174,12 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // captured in `focusUniforms`; `ctx.focusBlend` and the render
   // `settings.focus` both read THAT captured value — never a fresh
   // `produceFocusUniforms` call.
-  const focused = state.subsystems.selection.focused();
-  // The focus slot already holds the resolved target, so a structure focus is
-  // the StructureInfo itself — no `byId` re-lookup. A galaxy / nothing focus
-  // resolves to null, collapsing the member-isolation fade.
-  const focusedStructure = focused !== null && focused.type === 'structure' ? focused : null;
+  const focusRow = state.selectionRows.focus;
+  // The focus row is the saga-reconciled SelectionRow for the focus slot.
+  // A structure row IS a StructureInfo, so passing it directly typechecks.
+  // A galaxy / milkyWay / nothing resolves to null, collapsing the
+  // member-isolation fade.
+  const focusedStructure = focusRow !== null && focusRow.type === 'structure' ? focusRow : null;
   state.subsystems.structureFocus.update(focusedStructure, nowMs);
   const focusUniforms = state.subsystems.structureFocus.produceFocusUniforms(nowMs);
   ctx.focusBlend = focusUniforms.blend;
@@ -264,7 +265,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     settings: {
       pointSizePx: state.settings.galaxyCatalogs.sizePx,
       brightness: state.settings.galaxyCatalogs.brightness,
-      selected: state.subsystems.selection.selected(),
+      selected: state.selection.select,
       visibleSourceMask: masks.draw,
       highlightFallback: state.settings.galaxyCatalogs.highlightFallback,
       realOnlyMode: state.settings.galaxyCatalogs.realOnly,
