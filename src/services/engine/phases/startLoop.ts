@@ -63,6 +63,7 @@ import { buildCameraDrivers } from '../camera/cameraDrivers';
 import { createFlyoutDriver } from '../camera/flyoutDriver';
 import { createFlowOrbitDriver } from '../camera/flowOrbitDriver';
 import { createFlowShowcaseDriver } from '../camera/flowShowcaseDriver';
+import { createWebShowcaseDriver } from '../camera/webShowcaseDriver';
 import { hasUrlGate } from '../../../utils/url/hasUrlGate';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 
@@ -122,6 +123,7 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   const flyoutSeconds = Number(params.get('flyout'));
   const orbitSeconds = Number(params.get('floworbit'));
   const showFarMpc = Number(params.get('flowshow'));
+  const webPanMpc = Number(params.get('webshow'));
   const drivers = [
     ...buildCameraDrivers(state),
     ...(hasUrlGate('flyout')
@@ -147,6 +149,16 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
             deps.cb.store,
             wake,
             Number.isFinite(showFarMpc) && showFarMpc > 0 ? showFarMpc : undefined,
+          ),
+        ]
+      : []),
+    ...(hasUrlGate('webshow')
+      ? [
+          createWebShowcaseDriver(
+            state,
+            deps.cb.store,
+            wake,
+            Number.isFinite(webPanMpc) && webPanMpc > 0 ? webPanMpc : undefined,
           ),
         ]
       : []),
