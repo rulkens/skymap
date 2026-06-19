@@ -29,7 +29,7 @@ vi.mock('../../../../src/services/engine/wiring/syncVisibilityFades', () => ({
 const bridge = vi.mocked(syncVisibilityFades);
 
 function makeHarness(): { store: AppStore; state: EngineState } {
-  const store = createAppStore({ settings: makeSettingsFixture() });
+  const { store } = createAppStore({ settings: makeSettingsFixture() });
   const state = {
     get settings() {
       return store.getState().settings;

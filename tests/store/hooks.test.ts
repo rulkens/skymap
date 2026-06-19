@@ -16,7 +16,7 @@ import type { RootState } from '../../src/store/types';
 
 describe('useAppSelector', () => {
   it('reads the settings slice through a Provider-wrapped store', () => {
-    const store = createAppStore();
+    const { store } = createAppStore();
     const wrapper = ({ children }: { children: ReactNode }) =>
       createElement(Provider, { store, children });
 
@@ -27,6 +27,6 @@ describe('useAppSelector', () => {
 
     // The hook surfaces the live slice, which is the seeded initialState.
     expect(result.current).toBe(store.getState().settings);
-    expect(result.current.tier).toBe('medium');
+    expect(result.current.galaxyCatalogs.enabled).toBe(true);
   });
 });

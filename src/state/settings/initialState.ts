@@ -2,19 +2,18 @@
  * buildInitialSettings — assemble the engine's boot-time settings literal.
  *
  * Every settings field lives under a named cluster (galaxy-catalog billboard
- * knobs under `galaxyCatalogs`, HDR controls under `tonemap`, etc.); `tier`
- * is the one deliberate flat-root exception (see `EngineSettingsState`). This
+ * knobs under `galaxyCatalogs`, HDR controls under `tonemap`, etc.). This
  * function is the *assembly* step that composes the per-field defaults from
  * `data/defaults.ts` (mirroring how those constants are defined one place) plus
  * the registry-derived item rows into the single `EngineSettingsState` that the
- * settings slice seeds.
+ * settings slice seeds. The data tier is NOT a settings field — it lives in its
+ * own root slice and is seeded separately via the store's `preloadedState`.
  *
  * It lives apart from `createEngine` for two reasons: the boot-defaults shape
  * becomes independently testable (assert every cluster + every derived item row
  * is seeded) without standing up the whole engine, and `createEngine` sheds ~70
- * lines of construction noise. The function is pure and total — the caller
- * resolves the tier (including any `?? 'medium'` fallback) and hands a definite
- * `Tier` in, so there's no ambient default to drift.
+ * lines of construction noise. The function is pure and total — it takes no
+ * arguments, so there's no ambient default to drift.
  */
 
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
@@ -41,19 +40,13 @@ import { seedVolumeFields } from '../../data/volume/volumeFieldDefaults';
 import { GALAXY_CATALOG_IDS } from '../../data/galaxyCatalog/galaxyCatalogIds';
 import { STRUCTURE_IDS } from '../../data/structure/structureIds';
 import type { EngineSettingsState } from '../../@types/settings/EngineSettingsState';
-import type { Tier } from '../../@types/data/Tier';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { GalaxyCatalogItemSettings } from '../../@types/settings/GalaxyCatalogItemSettings';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../@types/settings/StructureItemSettings';
 
-export function buildInitialSettings(opts: { readonly initialTier: Tier }): EngineSettingsState {
+export function buildInitialSettings(): EngineSettingsState {
   return {
-    // Currently-loaded data tier — the cross-cutting data-resolution preset
-    // (galaxy catalogs + MCPM volume + filaments all fetch by it). Resolved by
-    // the caller; 'medium' is the ~600k-galaxy desktop budget. Flat root field,
-    // not a cluster member — see `EngineSettingsState`.
-    tier: opts.initialTier,
     // Galaxy catalog layer: master gate on + shared billboard appearance knobs +
     // one item row per galaxy catalog, each layer + label default-on. Keys are
     // DERIVED from `GALAXY_CATALOG_IDS` so the seed can't drift from the galaxy catalog set.

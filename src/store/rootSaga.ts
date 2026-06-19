@@ -1,24 +1,22 @@
 /**
- * rootSaga — the store's single saga entry point, deliberately empty for now.
+ * rootSaga — the store's single saga entry point, COMPOSING the feature sagas.
  *
- * The store wires the saga middleware and runs this root saga at construction
- * even though it forks nothing yet. That up-front plumbing is the point: the
- * seam's phase 2 fills this `all([])` with the feature sagas (render-wake,
- * fade-triggering, demand re-evaluation) by adding forks, without having to
- * re-thread `createSagaMiddleware`/`run` through the store factory again. The
- * empty root keeps the construction path identical between "no behaviour yet"
- * and "behaviour added later".
+ * The store wires the saga middleware and runs this root saga at construction.
+ * The root only composes: each watcher is authored beside its slice (the tier
+ * watcher lives in `state/tier/tierSaga`, not here) and the root forks them all.
+ * The seam's later phases add render-wake, fade-triggering, and demand
+ * re-evaluation watchers the same way — by appending their forks to this `all`
+ * array, never by re-threading `createSagaMiddleware`/`run` through the factory.
  *
- * `all([])` (over the empty array) is the form chosen over a bare empty generator
- * because it makes the forthcoming shape explicit — the next edit appends fork
- * effects to this array rather than introducing the `all` combinator from
- * scratch. typed-redux-saga's `all<T>(effects: T[])` accepts the empty array
- * (T infers to `unknown`) and yields immediately, so the running saga completes
- * cleanly with nothing forked.
+ * `all([...])` runs the forked watchers concurrently; typed-redux-saga's
+ * `all<T>(effects: T[])` yields once every effect has been started, so the
+ * running root saga stays alive forking its children.
  */
 
 import { all } from 'typed-redux-saga';
 
+import { watchTier } from '../state/tier/tierSaga';
+
 export function* mainSaga() {
-  yield* all([]);
+  yield* all([watchTier()]);
 }

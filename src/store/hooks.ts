@@ -7,8 +7,8 @@
  * Re-annotating `RootState` / `AppDispatch` at every call site is the failure mode
  * these wrappers exist to prevent: `useAppSelector` pre-binds the selector's input
  * to `RootState`, and `useAppDispatch` pre-binds the return to `AppDispatch`, so a
- * component writes `useAppSelector((state) => state.settings.tier)` with full
- * inference and never re-spells a store type.
+ * component writes `useAppSelector((state) => state.settings.tonemap.exposure)`
+ * with full inference and never re-spells a store type.
  *
  * Importing `react-redux` is allowed HERE because this file IS the store seam.
  * It is NOT allowed in `src/state/` (pure slices/selectors, framework-agnostic)

@@ -74,7 +74,7 @@ function makeState(store: AppStore) {
 
 /** Convenience: assemble state + store. */
 function harness() {
-  const store = createAppStore({ settings: makeSettingsFixture() });
+  const { store } = createAppStore({ settings: makeSettingsFixture() });
   const ctx = makeState(store);
   return { ...ctx, store };
 }

@@ -67,7 +67,7 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
       // lives here rather than inside load() (which stays a re-fetch primitive).
       const slot = slotFor(state, row.key);
       if (slot && row.demand(ctx) && slot.state().kind === 'idle') {
-        slot.load(row.req(state.settings.tier));
+        slot.load(row.req(state.tier));
       }
     } catch (err) {
       // Contain the failure to this row so later rows still evaluate.

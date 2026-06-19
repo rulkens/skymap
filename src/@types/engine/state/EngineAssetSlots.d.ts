@@ -101,8 +101,8 @@ export type EngineAssetSlots = {
    * native resolution, downsampled into three tiers.
    *
    * Tier-aware (unlike cf4Density above). Default-on (the headline
-   * cosmic-web overlay), so demand loads it at boot with
-   * `state.settings.tier`; `engine.setTier` reloads it on tier change.
+   * cosmic-web overlay), so demand loads it at boot with the `tier` root
+   * slice (`state.tier`); `engine.setTier` reloads it on tier change.
    *
    * Null until `wireSlots` mints it (matches cf4Density for the same
    * lifecycle reason — the renderer must exist before commit).

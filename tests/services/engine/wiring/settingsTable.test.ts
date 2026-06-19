@@ -32,7 +32,7 @@ describe('settingsTable', () => {
   describe('SETTINGS_TABLE', () => {
     it('declares the 13 table-candidate setters', () => {
       // Bespoke setters MUST stay out of the table: the "dispatch + render"
-      // ones (`setBiasMode`, `setTier`, `setSourceVisible`) plus the
+      // ones (`setBiasMode`, `setSourceVisible`) plus the
       // fade-driving ones (`flow.set`, `milkyWay`/`filaments` visibility) that
       // live as `handles/` functions. If this list drifts, either a new boring
       // setter snuck in
@@ -61,7 +61,7 @@ describe('settingsTable', () => {
 
   describe('buildSettersFromTable', () => {
     it('writes a row through the store action and requests a render', () => {
-      const store = createAppStore({ settings: makeSettingsFixture() });
+      const { store } = createAppStore({ settings: makeSettingsFixture() });
       const requestRender = vi.fn();
 
       const setters = buildSettersFromTable(requestRender, store);
@@ -80,7 +80,7 @@ describe('settingsTable', () => {
       // post-process pass (clampExposure) and setFilamentIntensity's to the
       // filament renderer (clampFilamentIntensity). Out-of-range values pass
       // through unchanged — both dispatch copy-on-write store actions.
-      const store = createAppStore({ settings: makeSettingsFixture() });
+      const { store } = createAppStore({ settings: makeSettingsFixture() });
       const requestRender = vi.fn();
 
       const setters = buildSettersFromTable(requestRender, store);

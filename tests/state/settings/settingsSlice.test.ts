@@ -40,7 +40,6 @@ import reducer, {
   setPassDisabled,
   setStructureItemEnabled,
   setStructureLabelEnabled,
-  setTier,
   mergeSnapshot,
 } from '../../../src/state/settings/settingsSlice';
 import { buildInitialSettings } from '../../../src/state/settings/initialState';
@@ -49,7 +48,7 @@ import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import type { VolumeFieldId } from '../../../src/@types/data/volume/VolumeFieldId';
 import type { SettingsSnapshot } from '../../../src/@types/engine/settings/SettingsSnapshot';
 
-const base = () => buildInitialSettings({ initialTier: 'medium' });
+const base = () => buildInitialSettings();
 
 // A real galaxy-catalog / structure id from the registry-derived arrays.
 // These arrays are always non-empty, so the non-null assertion is safe.
@@ -160,12 +159,6 @@ describe('settingsSlice — structures', () => {
   it('setStructureLabelEnabled flips one item label', () => {
     const next = reducer(base(), setStructureLabelEnabled({ id: structureId, enabled: false }));
     expect(next.structures.items[structureId].labelEnabled).toBe(false);
-  });
-});
-
-describe('settingsSlice — tier', () => {
-  it('setTier updates the flat-root tier', () => {
-    expect(reducer(base(), setTier('large')).tier).toBe('large');
   });
 });
 
