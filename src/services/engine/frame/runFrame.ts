@@ -34,6 +34,7 @@ import { runCameraDrivers } from '../camera/cameraDrivers';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { isEngineReady } from '../helpers/engineReady';
+import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
 import { resolvePick } from '../helpers/resolvePick';
 import { collectPickTargets } from '../helpers/collectPickTargets';
 import { milkyWayPickVisible } from '../helpers/milkyWayPickVisible';
@@ -42,7 +43,6 @@ import { deriveFrameContext } from './frameContext';
 import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
-import { slotReady } from '../../loading/slotReady';
 import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
@@ -383,105 +383,78 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       state.gpu.structureMarkerRenderer,
       milkyWayPickVisible(state),
     );
-    if (!hasAny) {
-      // Nothing pickable (every galaxy catalog off AND no cluster ring visible).
-      // Let the loop sleep — the next galaxy-catalog or structure-marker
-      // settings write wakes it.  This `return` skips the keep-rendering
-      // predicate at the tail, which is correct: with nothing pickable there's
-      // nothing to animate, so the predicate would return false anyway.
-      return;
+    // Only kick off a GPU pick when something is pickable (a visible galaxy
+    // catalog or an on-screen cluster ring). When nothing is, we skip the pick
+    // but must NOT return — control has to reach the keep-ticking tail so
+    // animated overlays (the flow field) keep the loop alive even with every
+    // galaxy catalog hidden. Pickability and frame-liveness are independent:
+    // an early return here once froze the flow field whenever the cursor
+    // stopped over the canvas or moved onto a panel.
+    if (hasAny) {
+      // Snapshot the position at the moment we kick off the pick.
+      const pos = state.picking.latestMouseCss;
+      state.picking.lastPickedMouseCss = pos;
+      state.picking.pickInFlight = true;
+
+      state.gpu.pickRenderer
+        .pick(
+          [deps.canvas.width, deps.canvas.height],
+          cssToTexPx(pos.x),
+          cssToTexPx(pos.y),
+          visibleSources,
+          // Boost the picking floor for easier hover targets — see
+          // PICK_PADDING_PX in pickRenderer.ts.
+          state.settings.galaxyCatalogs.sizePx,
+          // Optional GPU-timing descriptor for the hover-pick pass.
+          // Undefined unless `?gpuTimings` is set; the click path in
+          // clickHandler.ts wires this the same way.  Slot (18, 19) is
+          // resolved by the next main-frame `endFrame`.
+          state.gpu.timingService.descriptorFor('pick'),
+        )
+        .then((pick) => {
+          // Decode + resolve the pick to a hover `FocusableTarget` (galaxy /
+          // structure / null) via `resolvePick` — the same boundary the click
+          // path uses, so hover and click can't drift. One slot: setHovered(null)
+          // clears, a galaxy or structure hit replaces; setHovered
+          // equality-short-circuits, so a steady hover is a no-op. The InfoCard
+          // reads the resolved target the slot now holds directly.
+          state.subsystems.selection.setHovered(
+            resolvePick(pick, {
+              getCloud: (source) => state.data.galaxies.get(source),
+              getFamousMeta: () => state.data.galaxies.famousMeta,
+              structures: state.data.structures,
+            }),
+          );
+          // No scheduler.requestRender() here intentionally.
+          // The hover state only feeds the React InfoCard text —
+          // there is no hover halo in the rendered scene today,
+          // so a hover change does NOT require a re-render.
+          // Skipping the wake keeps idle CPU at zero on
+          // mouse-over without click.  If a future task adds a
+          // hover halo, add scheduler.requestRender() here.
+        })
+        .finally(() => {
+          state.picking.pickInFlight = false;
+        });
     }
-
-    // Snapshot the position at the moment we kick off the pick.
-    const pos = state.picking.latestMouseCss;
-    state.picking.lastPickedMouseCss = pos;
-    state.picking.pickInFlight = true;
-
-    state.gpu.pickRenderer
-      .pick(
-        [deps.canvas.width, deps.canvas.height],
-        cssToTexPx(pos.x),
-        cssToTexPx(pos.y),
-        visibleSources,
-        // Boost the picking floor for easier hover targets — see
-        // PICK_PADDING_PX in pickRenderer.ts.
-        state.settings.galaxyCatalogs.sizePx,
-        // Optional GPU-timing descriptor for the hover-pick pass.
-        // Undefined unless `?gpuTimings` is set; the click path in
-        // clickHandler.ts wires this the same way.  Slot (18, 19) is
-        // resolved by the next main-frame `endFrame`.
-        state.gpu.timingService.descriptorFor('pick'),
-      )
-      .then((pick) => {
-        // Decode + resolve the pick to a hover `FocusableTarget` (galaxy /
-        // structure / null) via `resolvePick` — the same boundary the click
-        // path uses, so hover and click can't drift. One slot: setHovered(null)
-        // clears, a galaxy or structure hit replaces; setHovered
-        // equality-short-circuits, so a steady hover is a no-op. The InfoCard
-        // reads the resolved target the slot now holds directly.
-        state.subsystems.selection.setHovered(
-          resolvePick(pick, {
-            getCloud: (source) => state.data.galaxies.get(source),
-            getFamousMeta: () => state.data.galaxies.famousMeta,
-            structures: state.data.structures,
-          }),
-        );
-        // No scheduler.requestRender() here intentionally.
-        // The hover state only feeds the React InfoCard text —
-        // there is no hover halo in the rendered scene today,
-        // so a hover change does NOT require a re-render.
-        // Skipping the wake keeps idle CPU at zero on
-        // mouse-over without click.  If a future task adds a
-        // hover halo, add scheduler.requestRender() here.
-      })
-      .finally(() => {
-        state.picking.pickInFlight = false;
-      });
   }
 
-  // ── Render-on-demand: continue ticking ONLY if motion or async
-  // work is in flight.  Otherwise the loop sleeps until a channel mouth
-  // wakes it: input, a fade or tween start, a slot reaching ready, a
-  // selection/focus change, or a settings write.
+  // ── Render-on-demand: continue ticking ONLY if motion or async work is in
+  // flight.  Otherwise the loop sleeps until a channel mouth wakes it: input, a
+  // fade or tween start, a slot reaching ready, a selection/focus change, or a
+  // settings write.  `shouldKeepTicking` owns the full predicate (camera
+  // drivers, in-flight thumbnails, fades, structure-focus, animated flow) and
+  // is deliberately independent of what is pickable — see its module header.
   //
-  // Predicate breakdown:
-  //   - camera drivers active: any camera mover (an in-flight tween, or
-  //     idle auto-rotate) declares itself active this frame, via
-  //     the same driver registry the per-frame camera write resolves
-  //     through.  `.some(d => d.isActive(nowMs))` IS the boolean OR of
-  //     those movers, so it tracks the resolver exactly — one place decides
-  //     "is the camera moving" for both the write and the keep-ticking gate.
-  //   - texturedDisks.hasInFlightWork(): a thumbnail fetch is racing the
-  //     network OR a landed bitmap is in its 400 ms load-fade window.  The
-  //     onResult calls requestRender(), but we keep a frame queued anyway
-  //     so the fade lerp ramps smoothly.
-  //   - fades.isAnyAnimating(): a galaxy catalog / filament handle is ramping its
-  //     opacity from a recent upload (the FadeRegistry owns every clock,
-  //     filaments included).
-  //   - structureFocus.isAwake(): the member-isolation fade (its own
-  //     controller, not in the registry) across the 400 ms ramp.
-  //   - flow enabled + loaded: the flow layer keeps animating while on (advect
-  //     drifts, streamline pulses), so the loop must keep ticking. We read the
-  //     condition straight off its two authoritative sources —
-  //     settings.flow.enabled and slotReady(assetSlots.flow) — rather than
-  //     round-tripping through the renderer; slotReady IS the "field loaded"
-  //     truth (the slot dispatches 'ready' only after upload commits), so this
-  //     selects exactly the same set of frames with no renderer mirror.
+  // This MUST be reached every ready frame, which is why the hover-pick block
+  // above skips the pick with `if (hasAny)` rather than an early `return`.
   //
-  // `isEngineReady` consolidates the bootstrap-bag null guard: when ready,
-  // all those fields are simultaneously non-null, so we dereference
-  // texturedDisks without a bespoke check.
-  const ready = isEngineReady(state);
-  // Tick the FadeRegistry BEFORE isAnyAnimating: tick is the single
-  // resolution site for fadeTo promises, so without it the awaited
-  // fade-out in galaxy-catalog visibility changes and tier-swap commits
-  // would hang forever.
+  // Tick the FadeRegistry BEFORE the predicate reads isAnyAnimating: tick is
+  // the single resolution site for fadeTo promises, so without it the awaited
+  // fade-out in galaxy-catalog visibility changes and tier-swap commits would
+  // hang forever.
   state.subsystems.fades.tick(nowMs);
-  const stillAnimating =
-    deps.drivers.some((d) => d.isActive(nowMs)) ||
-    (ready && state.subsystems.texturedDisks.hasInFlightWork()) ||
-    state.subsystems.fades.isAnyAnimating(nowMs) ||
-    state.subsystems.structureFocus.isAwake(nowMs) ||
-    (state.settings.flow.enabled && slotReady(state.assetSlots.flow));
-  if (stillAnimating) state.subsystems.scheduler.requestRender();
+  if (shouldKeepTicking(state, deps.drivers, nowMs)) {
+    state.subsystems.scheduler.requestRender();
+  }
 }
