@@ -1,6 +1,8 @@
 # Camera intent into the store; pose derived in the frame (design)
 
-> **Status:** approved direction, awaiting implementation plan.
+> **Status:** approved direction, awaiting implementation plan. **Builds on** the
+> landed reconcile-sagas seam (PR #352, `a1af66d6`) — `setSagaContext` /
+> `ReconcileEffects` / `getContext('reconcile')` / `watchWake` are on `main`.
 > **Why this exists:** the camera is a mutable `OrbitCamera` struct
 > (`state.cam`) written every frame by three producers — drag input, an in-flight
 > tween, and auto-rotate — and its "a change needs a frame" wake is hand-paired at
@@ -49,10 +51,14 @@ that single-producer camera systems don't have:
    thing never in the store is the per-frame *interpolated* value, which the frame
    computes and the renderers read.
 
-What remains in the store is therefore genuine, serializable Intent — and because
-the tween *descriptor* lives there, **tours and deep-links capture in-flight
-camera motion for free**, not just static poses. That is the capability the Intent
-store exists to enable (`intent.md` #3, #4).
+What remains in the store is therefore genuine, serializable Intent. The
+descriptor's payoff is **in-session**: derivation without a tick storm, and a clean
+tween→drag handoff (below). It is *not* a deep-link-of-motion mechanism — a
+deep-link is `#focus=<ref>` (a focus target ref, `focusUrl.ts`), gated on
+catalog-ready, that **produces an arrival tween home→target on load**; it never
+serializes the live pose or a descriptor. Motion *recording* is a separate tour
+feature with its own relative-time beat list. The live tween descriptor is
+**session-local** (see §2 on the clock).
 
 ## Scope
 
@@ -201,10 +207,17 @@ essential, not an oversight: a state-saturating clamp belongs with the integrato
 an output clamp belongs at the consumption edge. (Radar note for the plan: keep
 these two clamp kinds named distinctly so neither migrates to the other's home.)
 
-`base` is genuine Intent: "where the user dragged to," serializable and
-deep-linkable. In single-producer camera systems this base *is* the whole pose —
-which is why storing it has always worked; skymap only adds the two animated
-descriptors on top.
+`base` is genuine Intent: "where the user dragged to," serializable. In
+single-producer camera systems this base *is* the whole pose — which is why storing
+it has always worked; skymap only adds the two animated descriptors on top.
+
+**`autoRotate` relocates, it isn't greenfield.** PR #352 dissolved
+`camera.setAutoRotate` into a direct `settings/` write — it currently lives at
+`settings.camera.autoRotate` (`settingsSlice.ts:91`). This spec **moves** it into
+the new `camera` slice as `{ active, rate }`; the `settings/setAutoRotate` action
+and the now-empty `settings.camera` sub-object are removed, and the SettingsPanel
+toggle dispatches the camera-slice action instead. (It is wake-only — not in
+`FADE_ROW` — so only the wake-route generalization in §4 carries it.)
 
 ---
 
@@ -269,11 +282,16 @@ thin post-step) detects a tween that finished this frame (`evaluate` reports
 
 ### Wake + loop continuation
 
-- **Wake (mouth):** every camera action is a settings-route-sibling write, so the
-  reconcile `watchWake` saga (from the reconcile-sagas spec) already wakes on it —
-  `requestRender` is idempotent (`renderScheduler.ts:77`), so the throttled input
-  writes, the `startCameraTween`, and the `setAutoRotate` each wake the
-  render-on-demand loop with no per-site `onCameraChange`.
+- **Wake (mouth):** the landed `watchWake` matches **`settings/` only**
+  (`isSettingsWrite = a.type.startsWith(`${settingsRoute}/`)`, `reconcileSagas.ts`).
+  The `camera` slice is a **new root route** (like `tier`/`ui`), so its actions are
+  **not** caught today — this is the one change this spec makes to landed reconcile
+  code. **Generalize the wake predicate to a `WAKE_ROUTES` set** (`settings` +
+  `camera`, and `selection` when it lands) rather than adding a parallel
+  `watchCameraWake` — wake-on-scene-write is not a settings-specific concern, and a
+  set keeps it one matcher. `requestRender` stays idempotent (`renderScheduler.ts:77`),
+  so the throttled input writes, `startCameraTween`, and the auto-rotate toggle each
+  wake the loop with no per-site `onCameraChange`.
 - **Continuation (predicate):** the frame tail keeps rescheduling while an
   animation owns the pose. The closure predicate `autoRotate || currentTween`
   becomes a selector over store intent:
@@ -335,7 +353,11 @@ derivation** instead of closures + scattered callbacks.
 `src/store/effects/cameraInputSaga.ts` (throttle watchers); the
 `commitCameraPose`-on-transition step in `deriveFrameContext`.
 
-**Rework:** `src/store/rootReducer.ts` (+`camera` slice);
+**Rework:** `src/store/rootReducer.ts` (+`camera` slice) + `src/store/constants.ts`
+(+`cameraRoute`); `src/store/effects/reconcileSagas.ts` (generalize `isSettingsWrite`
+→ a `WAKE_ROUTES` matcher covering `camera`); `src/state/settings/settingsSlice.ts`
+(remove `setAutoRotate` + the `settings.camera` sub-object — relocated to the camera
+slice); the SettingsPanel auto-rotate toggle (dispatch the camera-slice action);
 `src/store/rootSaga.ts` (compose the input watchers);
 `src/services/camera/orbitControls.ts` (emit deltas, drop `onCameraChange`);
 `src/services/engine/engine.ts` (`get cam()` returns store intent; remove
@@ -356,9 +378,10 @@ calls.
 and all renderer uniform writes; the HDR passes; `state.cam` *shape* (now sourced
 from the store, same fields).
 
-**Depends on:** the `reconcile-sagas` seam (`setSagaContext` / `ReconcileEffects` /
-`getContext('reconcile')`, `watchWake`) — this slice's wake rides `watchWake`, so
-it lands **after** the reconcile-sagas branch merges.
+**Builds on (landed):** the reconcile-sagas seam (`setSagaContext` /
+`ReconcileEffects` / `getContext('reconcile')` / `watchWake`) is on `main` (PR
+#352). This slice's wake rides a **generalized** `watchWake` (§4) — the one edit it
+makes to landed reconcile code.
 
 ---
 
@@ -401,8 +424,9 @@ it lands **after** the reconcile-sagas branch merges.
   not a scattered switch), §8 (single source of truth — the pose stops having two
   homes).
 - [Engine handles → reconcile sagas](./2026-06-19-engine-handles-to-reconcile-sagas-design.md)
-  — the `setSagaContext` / `ReconcileEffects` / `watchWake` seam this rides; camera
-  writes wake by construction through `watchWake`.
+  — **landed** (PR #352). The `setSagaContext` / `ReconcileEffects` / `watchWake`
+  seam this rides; camera writes wake through `watchWake` once its predicate is
+  generalized from `settings/`-only to a `WAKE_ROUTES` set (§4).
 - [Selection into the Intent Store](./2026-06-18-selection-into-intent-store-design.md)
   — the attention-ladder fold `focusOn` composes with (select + command-a-tween),
   shipped separately.
