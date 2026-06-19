@@ -24,6 +24,7 @@ import {
   watchFades,
   watchFlowReseed,
   watchBiasBake,
+  FADE_ROW,
 } from '../../../src/store/effects/reconcileSagas';
 import {
   setMilkyWayEnabled,
@@ -31,6 +32,13 @@ import {
   writeVolumeField,
   setFlow,
   setBiasMode,
+  setGalaxyCatalogVisible,
+  setGalaxyCatalogLabelEnabled,
+  setFilamentsEnabled,
+  setMilkyWayLabelEnabled,
+  setStructureItemEnabled,
+  setStructureLabelEnabled,
+  setVolumesEnabled,
 } from '../../../src/state/settings/settingsSlice';
 import type { VisibilityLayerKey } from '../../../src/@types/animation/VisibilityLayerKey';
 import type { BiasMode } from '../../../src/@types/data/galaxyCatalog/BiasMode';
@@ -188,5 +196,35 @@ describe('reconcileSagas', () => {
 
     expect(reconcile.requestRender).toHaveBeenCalledTimes(1);
     expect(reconcile.bakeBias).toHaveBeenCalledWith(2);
+  });
+
+  // ── FADE_ROW mapping table — freezes action→visibility-layer registry ────────
+  // The three wired test cases above (milkyWayDisk, volumeField, flow) prove that
+  // the saga correctly dispatches syncFades([key]) for each FADE_ROW entry. This
+  // section directly asserts the complete action→key mapping that the deleted
+  // handle tests verified individually. The saga's USE of the table (dispatch →
+  // syncFades([key])) is proven by the wired cases; this freezes the DATA table
+  // so a stray future row fails.
+
+  it('FADE_ROW: complete action→key mapping', () => {
+    const fadeRowTests: Array<[{ type: string }, VisibilityLayerKey]> = [
+      [setGalaxyCatalogVisible, 'survey'],
+      [setGalaxyCatalogLabelEnabled, 'surveyLabel'],
+      [setFilamentsEnabled, 'filaments'],
+      [setMilkyWayEnabled, 'milkyWayDisk'],
+      [setMilkyWayLabelEnabled, 'milkyWayLabel'],
+      [setStructureItemEnabled, 'structureRing'],
+      [setStructureLabelEnabled, 'structureLabel'],
+      [writeVolumeField, 'volumeField'],
+      [setVolumesEnabled, 'volumesMaster'],
+      [setFlow, 'flow'],
+    ];
+
+    fadeRowTests.forEach(([actionCreator, expectedKey]) => {
+      expect(FADE_ROW[actionCreator.type]).toBe(expectedKey);
+    });
+
+    // Freeze the table size so a stray row added later fails.
+    expect(Object.keys(FADE_ROW)).toHaveLength(10);
   });
 });
