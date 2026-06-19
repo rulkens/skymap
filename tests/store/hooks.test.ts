@@ -16,7 +16,7 @@ import type { RootState } from '../../src/store/types';
 
 describe('useAppSelector', () => {
   it('reads the settings slice through a Provider-wrapped store', () => {
-    const store = createAppStore();
+    const { store } = createAppStore();
     const wrapper = ({ children }: { children: ReactNode }) =>
       createElement(Provider, { store, children });
 
