@@ -67,7 +67,6 @@
  * ```
  */
 
-import { Source } from '../../data/sources';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
@@ -92,6 +91,7 @@ import { buildGalaxyInfo } from './helpers/galaxyInfoBuilder';
 import { clearAll } from './helpers/clearAll';
 import { commitFocus } from './helpers/commitFocus';
 import { commitGalaxyFocus } from './helpers/commitGalaxyFocus';
+import { resolveFamousGalaxy } from './helpers/resolveFamousGalaxy';
 import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
 import { logCameraState } from './helpers/logCameraState';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
@@ -532,20 +532,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function selectFamous(id: string): void {
-    // Guard: the famous catalog may not be loaded yet (sidecars arrive
-    // slightly after the point cloud).  Early return is cosmetically safe.
-    const cloud = state.data.galaxies.catalogs.get(Source.FamousGalaxy);
-    if (!cloud) return;
-    const localIdx = state.data.galaxies.famousMeta.findIndex((m) => m.id === id);
-    if (localIdx < 0) return;
-
-    // Build the GalaxyInfo the picker would, from live sidecars.
-    const info = buildGalaxyInfo(
-      cloud,
-      localIdx,
-      Source.FamousGalaxy,
-      state.data.galaxies.famousMeta,
-    );
+    // Resolve the famous id to the GalaxyInfo the picker would build (null if
+    // the catalog / sidecar hasn't loaded yet, or the id is unknown — both
+    // cosmetically safe to ignore).
+    const info = resolveFamousGalaxy(state.data.galaxies, id);
     if (!info) return;
 
     // A palette pick is a deliberate focus action, so move the camera too.
