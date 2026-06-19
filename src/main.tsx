@@ -44,6 +44,7 @@ import { createAppStore } from './store/createAppStore';
 import { settingsRoute, uiRoute } from './store/constants';
 import { buildInitialSettings } from './state/settings/initialState';
 import { buildInitialUiState } from './state/ui/buildInitialUiState';
+import { persistSplashVersion } from './state/ui/persistSplashVersion';
 import { initialTierFromViewport } from './utils/initialTierFromViewport';
 import { renderUnsupportedPageHtml } from './unsupportedPage';
 // Side-effect import — defines design-token custom properties on `:root`
@@ -73,6 +74,8 @@ if (typeof navigator === 'undefined' || typeof navigator.gpu === 'undefined') {
     [settingsRoute]: buildInitialSettings({ initialTier }),
     [uiRoute]: buildInitialUiState(),
   });
+  // Store lives for the page lifetime; unsubscribe is intentionally not held.
+  persistSplashVersion(store);
   createRoot(root).render(
     <Provider store={store}>
       <App />
