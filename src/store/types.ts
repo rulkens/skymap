@@ -19,11 +19,13 @@
  * store-land: `RunTierTransition` is the engine-owned runner that reacts to a
  * confirmed tier change (drive the per-source data load + famous rebuild);
  * `ReconcileEffects` (see `./effects/ReconcileEffects`) is the bag of render-wake /
- * fade / reseed / bias closures the reconcile sagas invoke; and `resolveDeps` is
+ * fade / reseed / bias closures the reconcile sagas invoke; `resolveDeps` is
  * the lazy live-resource read the selection reconciler uses to turn a `SelectionRef`
  * into a `SelectionRow` (read lazily each call so the reconciler always sees the
  * current catalog and structure state — render-wake is reused from
- * `reconcile.requestRender`, not re-added here). `SagaContext` is the bag the
+ * `reconcile.requestRender`, not re-added here); and `runFocusTween` is the
+ * engine-owned camera-tween runner `watchFocusTween` calls when the focus ref
+ * changes — symmetric with `runTierTransition`. `SagaContext` is the bag the
  * running root saga reads them back out of via `getContext`; `SetSagaContext` is
  * the setter the factory hands back so the engine can inject them
  * post-construction (a `Partial`, so each registration site supplies only what it
@@ -40,16 +42,21 @@ import type { createAppStore } from './createAppStore';
 import type { ReconcileEffects } from './effects/ReconcileEffects';
 import type { ResolveDeps } from '../@types/engine/ResolveDeps';
 import type { Tier } from '../@types/data/Tier';
+import type { SelectionRef } from '../@types/engine/SelectionRef';
 
 export type RootState = ReturnType<typeof rootReducer>;
 export type AppStore = ReturnType<typeof createAppStore>['store'];
 export type AppDispatch = AppStore['dispatch'];
 
 export type RunTierTransition = (prevTier: Tier, nextTier: Tier) => void;
+/** Camera-tween runner injected by the engine. `watchFocusTween` calls it when the focus ref changes. */
+export type RunFocusTween = (ref: SelectionRef | null) => void;
 export type SagaContext = {
   runTierTransition: RunTierTransition; // already present — drives per-source data load on tier change
   reconcile: ReconcileEffects; // already present — provides requestRender + fade/reseed/bias
   /** Live engine resources the selection reconciler reads to turn a SelectionRef into a SelectionRow. */
   resolveDeps: () => ResolveDeps;
+  /** Engine-owned camera-tween runner — watchFocusTween calls this on a focus ref change. */
+  runFocusTween: RunFocusTween;
 };
 export type SetSagaContext = (ctx: Partial<SagaContext>) => void;
