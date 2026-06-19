@@ -28,15 +28,23 @@
 
 import { createOrbitCamera } from '../../camera/orbitCamera';
 import { attachOrbitControls } from '../../camera/orbitControls';
+import { seedCameraFromBase } from '../../camera/seedCameraFromBase';
 import { createPickRenderer } from '../../gpu/renderers/pickRenderer';
 import { createClickResolver } from '../interaction/clickHandler';
 import { attachEngineInputs } from '../interaction/inputBindings';
 import { computeInitialCamera } from '../camera/cameraFraming';
+import { poseOf } from '../camera/poseOf';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { collectPickTargets } from '../helpers/collectPickTargets';
 import { deriveSourceMasks } from '../frame/deriveSourceMasks';
 import { milkyWayPickVisible } from '../helpers/milkyWayPickVisible';
 import { milkyWayPickHalfExtentPx } from '../helpers/milkyWayPickHalfExtentPx';
+import {
+  commitCameraPose,
+  beginDrag,
+  endDrag,
+  cancelCameraTween,
+} from '../../../state/camera/cameraSlice';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -112,6 +120,31 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     far: initialCam.far,
   });
   state.cam = cam;
+
+  // ── Bootstrap seed ───────────────────────────────────────────────────────
+  //
+  // Fill the cameraRuntime Resources with real values now that the initial
+  // OrbitCamera exists. Without this seed the first resting frame would return
+  // the placeholder `base` (yaw 0, distance 0.43) rather than the computed
+  // framing pose, causing a visible camera jump on the first frame.
+  //
+  // Three writes, in dependency order:
+  //   1. `projection` — the full projection config from the initial camera +
+  //      the current canvas aspect ratio. Subsequent resizes patch only `aspect`.
+  //   2. `lastPose.current` — the initial pose so the first commit-on-edge has
+  //      a valid previous pose to refer to.
+  //   3. `commitCameraPose` dispatch — makes `camera.base` in the Redux store
+  //      authoritative before the first produced frame, so the `resting` driver
+  //      returns the correct pose and the first frame does not jump.
+  const store = deps.cb.store;
+  state.cameraRuntime.projection = {
+    fovYRad,
+    aspect: canvas.width / canvas.height,
+    near: initialCam.near,
+    far: initialCam.far,
+  };
+  state.cameraRuntime.lastPose.current = poseOf(cam);
+  store.dispatch(commitCameraPose(poseOf(cam)));
 
   // ── Initial camera snapshot for resetCamera() ────────────────────────
   //
@@ -246,12 +279,35 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   };
 
   deps.detachControlsRef.current = attachOrbitControls(canvas, cam, {
-    onCameraChange: () => {
-      // Camera moved — wake the render loop for one frame.
-      // Scale-bar refresh and the pick gate run inside the next
-      // frame body.
+    // Wake the render loop after any camera mutation so the frame body
+    // re-derives the pose, updates the scale bar, and runs the pick gate.
+    onChange: () => {
       state.subsystems.scheduler.requestRender();
     },
+
+    // Gesture start: seed the drag register from the live produced pose (NOT
+    // from store.camera.base, which is stale mid-tween), begin the Redux drag,
+    // and cancel any in-flight tween. Seeding from `lastPose.current` makes
+    // both at-rest grabs (lastPose == base) and mid-tween grabs jump-free —
+    // the drag register continues from exactly where the animation left the
+    // camera. cancelCameraTween here + tweens.cancel() in onPointerDown are a
+    // harmless dual-write bridge; Phase 5 removes tweenManager entirely.
+    onGestureStart: () => {
+      if (state.cam) seedCameraFromBase(state.cam, state.cameraRuntime.lastPose.current);
+      store.dispatch(beginDrag());
+      store.dispatch(cancelCameraTween());
+    },
+
+    // Gesture end: commit the final drag pose into Redux base BEFORE ending
+    // the drag, so the committed base is in place the moment the orbitDrag
+    // driver deactivates on the next frame. Without this ordering, the next
+    // frame's resting driver would return the pre-gesture base, causing a
+    // one-frame snap-back to the old position.
+    onGestureEnd: () => {
+      if (state.cam) store.dispatch(commitCameraPose(poseOf(state.cam)));
+      store.dispatch(endDrag());
+    },
+
     onClick: (xCss, yCss) => {
       // Run a one-shot pick at the click position.  We don't use
       // the throttle guard here — clicks are infrequent and we

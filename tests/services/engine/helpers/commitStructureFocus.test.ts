@@ -15,6 +15,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { commitStructureFocus } from '../../../../src/services/engine/helpers/commitStructureFocus';
 import { structureFocusDistance } from '../../../../src/services/engine/camera/structureFocusDistance';
+import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import type { AppStore } from '../../../../src/store/types';
@@ -45,6 +46,14 @@ function makeMockState(): EngineState {
       yaw: 0,
       pitch: 0,
       fovYRad: FOV60,
+    },
+    cameraRuntime: {
+      clock: createCameraClock(),
+      // fovYRad must agree with the `cam` fixture above so structureFocusDistance
+      // is called with the same FOV the test assertions use.
+      projection: { fovYRad: FOV60, aspect: 1, near: 0.01, far: 1000 },
+      lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 } },
+      prevActiveId: { current: 'resting' },
     },
     subsystems: {
       selection: { setSelected: vi.fn(), setFocused: vi.fn(), selected: () => null },
@@ -81,16 +90,19 @@ describe('commitStructureFocus', () => {
     const state = makeMockState();
     const store = makeStore();
     commitStructureFocus(state, virgo, store);
-    expect(state.subsystems.tweens.start).toHaveBeenCalledTimes(1);
-    const startMock = state.subsystems.tweens.start as ReturnType<typeof vi.fn>;
-    const firstCall = startMock.mock.calls[0];
-    if (!firstCall) throw new Error('tweens.start was not called');
-    const payload = firstCall[0];
+    const dispatch = store.dispatch as ReturnType<typeof vi.fn>;
+    // tweenToStructure dispatches startCameraTween (the tweens.start dual-write
+    // was removed in the camera-intent cutover). Inspect that action's payload.
+    const tweenCall = dispatch.mock.calls
+      .map(([a]) => a)
+      .find((a) => a && a.type === 'camera/startCameraTween');
+    if (!tweenCall) throw new Error('startCameraTween was not dispatched');
+    const payload = tweenCall.payload;
     // Virgo has no apparentRadiusMpc → frames the physical core (2 Mpc) at the
     // camera's 60° FOV. Asserts against the helper so the framing law has one
     // source of truth.
-    expect(payload.toDistance).toBe(structureFocusDistance(2, FOV60));
-    expect(Array.from(payload.toTarget)).toEqual([10, 0, 0]);
+    expect(payload.to.distance).toBe(structureFocusDistance(2, FOV60));
+    expect(payload.to.target).toEqual([10, 0, 0]);
   });
 
   it('skips the tween when state.cam is null, but still updates selection + focus', () => {
@@ -104,6 +116,10 @@ describe('commitStructureFocus', () => {
     // ordering.
     expect(state.subsystems.selection.setSelected).toHaveBeenCalledWith(virgo);
     expect(state.subsystems.selection.setFocused).toHaveBeenCalledWith(virgo);
-    expect(state.subsystems.tweens.start).not.toHaveBeenCalled();
+    const dispatch = store.dispatch as ReturnType<typeof vi.fn>;
+    const tweenDispatched = dispatch.mock.calls
+      .map(([a]) => a)
+      .some((a) => a && a.type === 'camera/startCameraTween');
+    expect(tweenDispatched).toBe(false);
   });
 });

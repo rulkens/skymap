@@ -41,6 +41,7 @@ import {
   DEFAULT_FLOW,
 } from '../../src/data/defaults';
 import { createTweenManager } from '../../src/services/engine/camera/tweenManager';
+import { createCameraClock } from '../../src/services/engine/camera/cameraClock';
 import { createRenderScheduler } from '../../src/services/engine/subsystems/renderScheduler';
 import { createSelectionSubsystem } from '../../src/services/engine/subsystems/selectionSubsystem';
 import { createBiasCorrectionSubsystem } from '../../src/services/engine/subsystems/biasCorrectionSubsystem';
@@ -197,6 +198,12 @@ describe('EngineState type', () => {
       },
       cam: null,
       initialCamSnapshot: null,
+      cameraRuntime: {
+        clock: createCameraClock(),
+        projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 50000 },
+        lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 } },
+        prevActiveId: { current: 'resting' },
+      },
       assetSlots: {
         points: new Map(),
         filaments: null,
@@ -390,6 +397,12 @@ describe('EngineState type', () => {
       },
       cam: null,
       initialCamSnapshot: null,
+      cameraRuntime: {
+        clock: createCameraClock(),
+        projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 50000 },
+        lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 } },
+        prevActiveId: { current: 'resting' },
+      },
       assetSlots: {
         points: new Map(),
         filaments: null,

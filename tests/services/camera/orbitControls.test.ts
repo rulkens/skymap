@@ -1,7 +1,8 @@
 /**
  * orbitControls — unit tests for the canvas → OrbitCamera input mapping,
  * focused on the listener-target contract that keeps touch gestures
- * working on iOS Safari.
+ * working on iOS Safari, and the gesture-hook callbacks that wire the
+ * drag state into the Redux camera slice.
  *
  * ### Why this test exists
  *
@@ -23,6 +24,19 @@
  *   2. `setPointerCapture` is never called.
  *   3. An orbit driven by a `window` pointermove actually mutates yaw —
  *      i.e. the drag works through the window listener path.
+ *
+ * ### Gesture hook tests
+ *
+ * The new `onGestureStart` / `onGestureEnd` / `onChange` callbacks let
+ * wireInput.ts wire the Redux camera slice without subclassing or patching
+ * the controls. Tests pin:
+ *
+ *   - `onGestureStart` fires exactly on the FIRST contact (not on a
+ *     second finger promoting to pinch).
+ *   - `onGestureEnd` fires exactly when ALL contacts are lifted.
+ *   - `onChange` fires after any orbit, pan, pinch, or wheel change.
+ *   - The deprecated `onCameraChange` is NOT called from any fire site
+ *     (only `onChange` is).
  *
  * Vitest runs in `node` here (no jsdom), so — matching
  * `inputBindings.test.ts` — we hand-roll EventTarget recorders for the
@@ -219,5 +233,180 @@ describe('attachOrbitControls — listener targets (iOS touch capture fix)', () 
     });
     win.fire('pointermove', { pointerId: 1, clientX: 150, clientY: 100 });
     expect(cam.yaw).toBe(0);
+  });
+});
+
+describe('attachOrbitControls — gesture hooks (Redux wiring)', () => {
+  it('onGestureStart fires exactly once for the first pointerdown', () => {
+    const { canvas, rec } = makeCanvas();
+    const onGestureStart = vi.fn<() => void>();
+
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, makeCamera(), {
+      onGestureStart,
+    });
+
+    rec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'touch',
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+    });
+
+    expect(onGestureStart).toHaveBeenCalledOnce();
+  });
+
+  it('onGestureStart does NOT fire when a second finger promotes to pinch', () => {
+    // The gesture-start commit (seed + beginDrag + cancelCameraTween) should
+    // only fire once per gesture, on the first contact. A second finger
+    // changes the mode to 'pinch' but does not start a new gesture.
+    const { canvas, rec } = makeCanvas();
+    const onGestureStart = vi.fn<() => void>();
+
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, makeCamera(), {
+      onGestureStart,
+    });
+
+    rec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'touch',
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+    });
+    // Second finger down — promotes to pinch.
+    rec.fire('pointerdown', {
+      pointerId: 2,
+      pointerType: 'touch',
+      button: 0,
+      clientX: 200,
+      clientY: 200,
+    });
+
+    // onGestureStart fired only on the first contact.
+    expect(onGestureStart).toHaveBeenCalledOnce();
+  });
+
+  it('onGestureEnd fires when ALL contacts are lifted', () => {
+    const { canvas, rec } = makeCanvas();
+    const onGestureEnd = vi.fn<() => void>();
+
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, makeCamera(), {
+      onGestureEnd,
+    });
+
+    rec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'touch',
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+    });
+    win.fire('pointerup', { pointerId: 1, clientX: 110, clientY: 110 });
+
+    expect(onGestureEnd).toHaveBeenCalledOnce();
+  });
+
+  it('onGestureEnd does NOT fire when only one of two contacts is lifted', () => {
+    // Gesture end (commitCameraPose + endDrag) must only fire when the last
+    // finger leaves. A pinch where one finger lifts should not commit.
+    const { canvas, rec } = makeCanvas();
+    const onGestureEnd = vi.fn<() => void>();
+
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, makeCamera(), {
+      onGestureEnd,
+    });
+
+    rec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'touch',
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+    });
+    rec.fire('pointerdown', {
+      pointerId: 2,
+      pointerType: 'touch',
+      button: 0,
+      clientX: 200,
+      clientY: 200,
+    });
+    // First finger up — one still down.
+    win.fire('pointerup', { pointerId: 1, clientX: 100, clientY: 100 });
+
+    expect(onGestureEnd).not.toHaveBeenCalled();
+  });
+
+  it('onChange fires after an orbit (pointermove)', () => {
+    const { canvas, rec } = makeCanvas();
+    const onChange = vi.fn<() => void>();
+
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, makeCamera(), { onChange });
+
+    rec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'touch',
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+    });
+    const countAfterDown = onChange.mock.calls.length;
+    win.fire('pointermove', { pointerId: 1, clientX: 150, clientY: 100 });
+
+    expect(onChange.mock.calls.length).toBeGreaterThan(countAfterDown);
+  });
+
+  it('onChange fires after a wheel zoom', () => {
+    const onChange = vi.fn<() => void>();
+    const cam = makeCamera();
+    const rec = makeRecorder();
+    // attachOrbitControls binds 'wheel' to the canvas; we need a fresh
+    // canvas recorder that also has a 'wheel' listener.
+    const wheelCanvas = Object.assign(rec.target, {
+      setPointerCapture: vi.fn(),
+      releasePointerCapture: vi.fn(),
+      hasPointerCapture: () => false,
+      clientHeight: 1000,
+      clientWidth: 1000,
+      width: 1000,
+      height: 1000,
+    });
+
+    attachOrbitControls(
+      wheelCanvas as unknown as HTMLCanvasElement,
+      cam,
+      { onChange },
+    );
+
+    rec.fire('wheel', { deltaY: 100, preventDefault: vi.fn() });
+
+    expect(onChange).toHaveBeenCalled();
+  });
+
+  it('does not call onCameraChange (deprecated — no fire sites after cutover)', () => {
+    // `onCameraChange` is kept on OrbitControlsOptions for backward compat but
+    // must not be called from any fire site. Only `onChange` fires.
+    const { canvas, rec } = makeCanvas();
+    const onCameraChange = vi.fn<() => void>();
+    const onChange = vi.fn<() => void>();
+
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, makeCamera(), {
+      onCameraChange,
+      onChange,
+    });
+
+    rec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'touch',
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+    });
+    win.fire('pointermove', { pointerId: 1, clientX: 150, clientY: 100 });
+    win.fire('pointerup', { pointerId: 1, clientX: 150, clientY: 100 });
+
+    // onChange must fire at least once; onCameraChange must never fire.
+    expect(onChange).toHaveBeenCalled();
+    expect(onCameraChange).not.toHaveBeenCalled();
   });
 });

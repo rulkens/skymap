@@ -76,6 +76,10 @@ import type { EngineState } from '../../@types/engine/state/EngineState';
 import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 
 import { createTweenManager } from './camera/tweenManager';
+import { createCameraClock } from './camera/cameraClock';
+import { poseOf } from './camera/poseOf';
+import type { CameraProjection } from '../../@types/camera/CameraProjection';
+import type { CameraPose } from '../../@types/camera/CameraPose';
 import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
@@ -177,6 +181,27 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     current: () => {
       /* stub until startLoop assigns the real body */
     },
+  };
+
+  // ── Live camera Resources (cameraRuntime) ────────────────────────────────
+  //
+  // The animation clock, live projection config, and the commit-on-edge
+  // bookkeeping refs. Constructed here alongside `frameRef` so wireInput
+  // (gesture seed + focus `from`), startLoop (RunFrameDeps), and runFrame
+  // (produce + commit-on-edge) all read from one source. Seeded with
+  // placeholders; wireInput's bootstrap seed fills real values once the
+  // initial OrbitCamera exists.
+  //
+  // `lastPose` starts at the slice's initial `base` placeholder (same values:
+  // distance 0.43, yaw/pitch/target at zero) so the first resting frame has a
+  // stable object to read before wireInput's commitCameraPose fires.
+  const cameraRuntime = {
+    clock: createCameraClock(),
+    projection: { fovYRad: 0, aspect: 1, near: 0.01, far: 50000 } as CameraProjection,
+    lastPose: {
+      current: { target: [0, 0, 0] as [number, number, number], yaw: 0, pitch: 0, distance: 0.43 } as CameraPose,
+    },
+    prevActiveId: { current: 'resting' as string },
   };
 
   // ── Settings — the injected Redux store ──────────────────────────
@@ -345,6 +370,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
     cam: null,
     initialCamSnapshot: null,
+    // The live camera Resources — clock, projection, lastPose, prevActiveId.
+    // Seeded with placeholders; wireInput fills real values at bootstrap.
+    cameraRuntime,
     // ── Asset-loading slot bag ───────────────────────────────────────────
     //
     // Each slot is a race-checked fetch→commit pipeline (see

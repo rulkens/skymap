@@ -83,6 +83,7 @@ import type { EngineSubsystemHandles } from '../handles/EngineSubsystemHandles';
 import type { createOrbitCamera } from '../../../services/camera/orbitCamera';
 import type { InitialCam } from '../../camera/InitialCam';
 import type { RequestKey } from '../../loading/RequestKey';
+import type { CameraRuntime } from './CameraRuntime';
 
 export type EngineState = {
   settings: EngineSettingsState;
@@ -105,6 +106,17 @@ export type EngineState = {
   subsystems: EngineSubsystemHandles;
   cam: ReturnType<typeof createOrbitCamera> | null;
   initialCamSnapshot: InitialCam | null;
+  /**
+   * Live camera Resources: the animation clock, the projection config, and
+   * the commit-on-edge bookkeeping (lastPose + prevActiveId). Constructed in
+   * `engine.ts` alongside `frameRef` and seeded with placeholders;
+   * `wireInput`'s bootstrap seed fills real values once the initial camera
+   * exists. All three callers that need these Resources — `wireInput`
+   * (gesture seed + focus `from`), `startLoop` (RunFrameDeps), and `runFrame`
+   * (produce + commit-on-edge) — read from this single bag, eliminating the
+   * 'which copy is live?' ambiguity.
+   */
+  cameraRuntime: CameraRuntime;
   assetSlots: EngineAssetSlots;
   /**
    * One-shot transient request flags read by demand predicates via

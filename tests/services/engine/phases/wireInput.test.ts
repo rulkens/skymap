@@ -8,6 +8,9 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { configureStore } from '@reduxjs/toolkit';
+import { rootReducer } from '../../../../src/store/rootReducer';
+import { createCameraClock } from '../../../../src/services/engine/camera/cameraClock';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
@@ -140,6 +143,12 @@ function makeState(): EngineState {
     } as never,
     cam: null,
     initialCamSnapshot: null,
+    cameraRuntime: {
+      clock: createCameraClock(),
+      projection: { fovYRad: 0, aspect: 1, near: 0.01, far: 50000 },
+      lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 } },
+      prevActiveId: { current: 'resting' },
+    },
     assetSlots: {
       points: new Map(),
       filaments: null,
@@ -152,6 +161,7 @@ function makeState(): EngineState {
 
 function makeDeps(): BootstrapDeps {
   const cb: EngineCallbacks = {
+    store: configureStore({ reducer: rootReducer }),
     lifecycle: { onStatusChange: vi.fn() },
     selection: { onSelectionChange: vi.fn() } as never,
   } as unknown as EngineCallbacks;
