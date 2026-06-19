@@ -22,6 +22,7 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
+import type { AppStore } from '../../../store/types';
 import { tweenToGalaxy } from '../camera/tweenToGalaxy';
 
 /**
@@ -33,12 +34,12 @@ import { tweenToGalaxy } from '../camera/tweenToGalaxy';
  * React state, and `tweenToGalaxy` last so the camera animation begins
  * on a frame where every other state is consistent.
  */
-export function commitGalaxyFocus(state: EngineState, info: GalaxyInfo): void {
+export function commitGalaxyFocus(state: EngineState, info: GalaxyInfo, store: AppStore): void {
   state.subsystems.selection.setSelected(info);
   // Latch the focus slot too — focusing a galaxy is a focus gesture, so
   // it supersedes any prior cluster focus: `runFrame` resolves a galaxy
   // focus to a null structure, collapsing the member-isolation fade.
   // `setFocused` owns the `onFocusChange` fan-out (URL hash).
   state.subsystems.selection.setFocused(info);
-  tweenToGalaxy(state, info);
+  tweenToGalaxy(state, info, store);
 }

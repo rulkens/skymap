@@ -15,10 +15,17 @@ import { vec3 } from 'gl-matrix';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
+import type { AppStore } from '../../../store/types';
 import { FOCUS_TWEEN_MS } from './focusTweenDuration';
 import { structureFocusDistance } from './structureFocusDistance';
+import { poseOf } from './poseOf';
+import { startCameraTween } from '../../../state/camera/cameraSlice';
 
-export function tweenToStructure(state: EngineState, structure: StructureInfo): void {
+export function tweenToStructure(
+  state: EngineState,
+  structure: StructureInfo,
+  store: AppStore,
+): void {
   const cam = state.cam;
   if (!cam) return;
 
@@ -45,4 +52,20 @@ export function tweenToStructure(state: EngineState, structure: StructureInfo): 
     toPitch: cam.pitch,
   });
   // tweens.start wakes the scheduler; no follow-up requestRender needed.
+
+  // Also record the tween as camera-slice Intent; the slice becomes the
+  // read-of-truth once the driver reads it (dual-write bridge).
+  store.dispatch(
+    startCameraTween({
+      from: poseOf(cam),
+      to: {
+        target: [structure.worldPos[0], structure.worldPos[1], structure.worldPos[2]],
+        yaw: cam.yaw,
+        pitch: cam.pitch,
+        distance: structureFocusDistance(radius, cam.fovYRad),
+      },
+      durationMs: FOCUS_TWEEN_MS,
+      easing: 'easeOutCubic',
+    }),
+  );
 }

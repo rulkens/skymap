@@ -33,7 +33,10 @@ import { vec3 } from 'gl-matrix';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { InitialCam } from '../../../@types/camera/InitialCam';
+import type { AppStore } from '../../../store/types';
 import { FOCUS_TWEEN_MS } from './focusTweenDuration';
+import { poseOf } from './poseOf';
+import { startCameraTween } from '../../../state/camera/cameraSlice';
 
 /**
  * Tween the live camera toward `snapshot` over the project-wide
@@ -58,7 +61,11 @@ import { FOCUS_TWEEN_MS } from './focusTweenDuration';
  * clear `#focus=…`) and stays at the call site that decides "this
  * action is leaving a focus state".
  */
-export function tweenToCameraSnapshot(state: EngineState, snapshot: InitialCam): void {
+export function tweenToCameraSnapshot(
+  state: EngineState,
+  snapshot: InitialCam,
+  store: AppStore,
+): void {
   const cam = state.cam;
   if (!cam) return;
 
@@ -75,4 +82,20 @@ export function tweenToCameraSnapshot(state: EngineState, snapshot: InitialCam):
     toPitch: snapshot.pitch,
   });
   // tweens.start wakes the scheduler; no follow-up requestRender needed.
+
+  // Also record the tween as camera-slice Intent; the slice becomes the
+  // read-of-truth once the driver reads it (dual-write bridge).
+  store.dispatch(
+    startCameraTween({
+      from: poseOf(cam),
+      to: {
+        target: [snapshot.target[0], snapshot.target[1], snapshot.target[2]],
+        yaw: snapshot.yaw,
+        pitch: snapshot.pitch,
+        distance: snapshot.distance,
+      },
+      durationMs: FOCUS_TWEEN_MS,
+      easing: 'easeOutCubic',
+    }),
+  );
 }

@@ -11,6 +11,7 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
+import type { AppStore } from '../../../store/types';
 import { tweenToStructure } from '../camera/tweenToStructure';
 
 /**
@@ -18,12 +19,16 @@ import { tweenToStructure } from '../camera/tweenToStructure';
  * marker alpha bump lands before React observes the callback; focus
  * second so the URL hash echoes it; tween last, on a consistent frame.
  */
-export function commitStructureFocus(state: EngineState, structure: StructureInfo): void {
+export function commitStructureFocus(
+  state: EngineState,
+  structure: StructureInfo,
+  store: AppStore,
+): void {
   // The `structure` (a resolved `StructureInfo`) IS the target the slots hold.
   state.subsystems.selection.setSelected(structure);
   // The deliberate focus gesture cluster-focus mode keys off (a bare
   // single-click select does not). `setFocused` drives both the
   // `onFocusChange` URL fan-out and `runFrame`'s member-isolation fade.
   state.subsystems.selection.setFocused(structure);
-  tweenToStructure(state, structure);
+  tweenToStructure(state, structure, store);
 }

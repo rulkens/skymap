@@ -5,7 +5,7 @@
  * 3-call tail of `focusOn` / `selectFamous` / `selectByAlias`:
  *   1. setSelected(info)
  *   2. setFocused(info)
- *   3. tweenToGalaxy(state, info)
+ *   3. tweenToGalaxy(state, info, store)
  *
  * The resolved `info` (a `GalaxyInfo`) IS the target the slots hold — it is
  * the single value passed to both setters.
@@ -24,6 +24,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { GalaxyInfo } from '../../../../src/@types/engine/GalaxyInfo';
+import type { AppStore } from '../../../../src/store/types';
+import type { AppDispatch } from '../../../../src/store/types';
 
 const tweenToGalaxySpy = vi.fn();
 vi.mock('../../../../src/services/engine/camera/tweenToGalaxy', () => ({
@@ -44,7 +46,9 @@ function makeFixtures() {
     index: 42,
     diameterKpc: 30,
   } as unknown as GalaxyInfo;
-  return { state, info, setSelected, setFocused };
+  const dispatch = vi.fn<AppDispatch>();
+  const store = { dispatch, getState: () => ({}) } as unknown as AppStore;
+  return { state, info, setSelected, setFocused, store };
 }
 
 describe('commitGalaxyFocus', () => {
@@ -53,14 +57,14 @@ describe('commitGalaxyFocus', () => {
   });
 
   it('fires setSelected → setFocused → tweenToGalaxy in that order', () => {
-    const { state, info, setSelected, setFocused } = makeFixtures();
+    const { state, info, setSelected, setFocused, store } = makeFixtures();
 
-    commitGalaxyFocus(state, info);
+    commitGalaxyFocus(state, info, store);
 
     // The resolved info IS the target — passed straight to both setters.
     expect(setSelected).toHaveBeenCalledWith(info);
     expect(setFocused).toHaveBeenCalledWith(info);
-    expect(tweenToGalaxySpy).toHaveBeenCalledWith(state, info);
+    expect(tweenToGalaxySpy).toHaveBeenCalledWith(state, info, store);
 
     const setSelectedOrder = setSelected.mock.invocationCallOrder[0]!;
     const setFocusedOrder = setFocused.mock.invocationCallOrder[0]!;
@@ -74,8 +78,8 @@ describe('commitGalaxyFocus', () => {
     // runFrame resolves that to a null structure, collapsing any active
     // cluster-focus fade.  Leaving the slot on a stale cluster would
     // keep the structure faded after flying to a member galaxy.
-    const { state, info, setFocused } = makeFixtures();
-    commitGalaxyFocus(state, info);
+    const { state, info, setFocused, store } = makeFixtures();
+    commitGalaxyFocus(state, info, store);
     expect(setFocused).toHaveBeenCalledWith(info);
   });
 
@@ -83,8 +87,8 @@ describe('commitGalaxyFocus', () => {
     // The resolved GalaxyInfo is the race defence for the selectByAlias
     // deep-link window: the GPU upload may not have settled, but the slot
     // already holds the renderable target, so the InfoCard never blanks.
-    const { state, info, setSelected, setFocused } = makeFixtures();
-    commitGalaxyFocus(state, info);
+    const { state, info, setSelected, setFocused, store } = makeFixtures();
+    commitGalaxyFocus(state, info, store);
     expect(setSelected.mock.calls[0]).toEqual([info]);
     expect(setFocused.mock.calls[0]).toEqual([info]);
   });

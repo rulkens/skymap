@@ -74,8 +74,11 @@ import { vec3 } from 'gl-matrix';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { TweenTarget } from '../../../@types/camera/TweenTarget';
+import type { AppStore } from '../../../store/types';
 import { FOCUS_TWEEN_MS } from './focusTweenDuration';
 import { galaxyFocusDistance } from './galaxyFocusDistance';
+import { poseOf } from './poseOf';
+import { startCameraTween } from '../../../state/camera/cameraSlice';
 
 /**
  * Start a focus tween toward `target`, snapshotting the current camera
@@ -91,7 +94,7 @@ import { galaxyFocusDistance } from './galaxyFocusDistance';
  * No-op when `state.cam` is null — see the module header for the two
  * windows where that happens.
  */
-export function tweenToGalaxy(state: EngineState, target: TweenTarget): void {
+export function tweenToGalaxy(state: EngineState, target: TweenTarget, store: AppStore): void {
   const cam = state.cam;
   if (!cam) return;
 
@@ -111,4 +114,20 @@ export function tweenToGalaxy(state: EngineState, target: TweenTarget): void {
     toPitch: cam.pitch,
   });
   // tweens.start wakes the scheduler; no follow-up requestRender needed.
+
+  // Also record the tween as camera-slice Intent; the slice becomes the
+  // read-of-truth once the driver reads it (dual-write bridge).
+  store.dispatch(
+    startCameraTween({
+      from: poseOf(cam),
+      to: {
+        target: [target.x, target.y, target.z],
+        yaw: cam.yaw,
+        pitch: cam.pitch,
+        distance: galaxyFocusDistance(target.diameterKpc),
+      },
+      durationMs: FOCUS_TWEEN_MS,
+      easing: 'easeOutCubic',
+    }),
+  );
 }

@@ -1,5 +1,6 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
+import type { AppStore } from '../../../store/types';
 import { COMMIT_FOCUS } from './commitFocusTable';
 
 /**
@@ -11,6 +12,6 @@ import { COMMIT_FOCUS } from './commitFocusTable';
  * subsystem, so this needs no `cb` — it's pure dispatch, and adding a new
  * focusable kind is a new table row rather than a new predicate branch.
  */
-export function commitFocus(state: EngineState, target: FocusableTarget): void {
-  COMMIT_FOCUS[target.type](state, target);
+export function commitFocus(state: EngineState, target: FocusableTarget, store: AppStore): void {
+  COMMIT_FOCUS[target.type](state, target, store);
 }

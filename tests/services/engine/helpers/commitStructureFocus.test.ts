@@ -17,6 +17,8 @@ import { commitStructureFocus } from '../../../../src/services/engine/helpers/co
 import { structureFocusDistance } from '../../../../src/services/engine/camera/structureFocusDistance';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
+import type { AppStore } from '../../../../src/store/types';
+import type { AppDispatch } from '../../../../src/store/types';
 
 const FOV60 = (Math.PI / 180) * 60;
 
@@ -29,6 +31,11 @@ const virgo: StructureInfo = {
   featured: true,
   physicalRadiusMpc: 2,
 };
+
+function makeStore(): AppStore {
+  const dispatch = vi.fn<AppDispatch>();
+  return { dispatch, getState: () => ({}) } as unknown as AppStore;
+}
 
 function makeMockState(): EngineState {
   return {
@@ -50,16 +57,18 @@ function makeMockState(): EngineState {
 describe('commitStructureFocus', () => {
   it('calls selection.setSelected with the resolved StructureInfo', () => {
     const state = makeMockState();
+    const store = makeStore();
 
-    commitStructureFocus(state, virgo);
+    commitStructureFocus(state, virgo, store);
 
     expect(state.subsystems.selection.setSelected).toHaveBeenCalledWith(virgo);
   });
 
   it('latches the focus slot with the same resolved StructureInfo', () => {
     const state = makeMockState();
+    const store = makeStore();
 
-    commitStructureFocus(state, virgo);
+    commitStructureFocus(state, virgo, store);
 
     // The focus slot — not just the selection slot — drives the
     // cluster-focus member-isolation fade in runFrame (and owns the
@@ -70,7 +79,8 @@ describe('commitStructureFocus', () => {
 
   it('starts a tween with structureFocusDistance', () => {
     const state = makeMockState();
-    commitStructureFocus(state, virgo);
+    const store = makeStore();
+    commitStructureFocus(state, virgo, store);
     expect(state.subsystems.tweens.start).toHaveBeenCalledTimes(1);
     const startMock = state.subsystems.tweens.start as ReturnType<typeof vi.fn>;
     const firstCall = startMock.mock.calls[0];
@@ -85,8 +95,9 @@ describe('commitStructureFocus', () => {
 
   it('skips the tween when state.cam is null, but still updates selection + focus', () => {
     const state = makeMockState();
+    const store = makeStore();
     (state as unknown as { cam: unknown }).cam = null;
-    commitStructureFocus(state, virgo);
+    commitStructureFocus(state, virgo, store);
     // Tween is skipped because cam is null (tweenToStructure absorbs the
     // guard), but selection + focus still fire — they can land before
     // the camera is ready, and the deep-link drain depends on that

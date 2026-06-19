@@ -11,6 +11,8 @@
  *     to-target = (info.x, info.y, info.z), to-distance derived from
  *     diameterKpc, and from-* snapshots cloned off the live camera so
  *     interrupting an in-flight tween hands off smoothly;
+ *   - dispatch: `startCameraTween` is also dispatched with the matching
+ *     descriptor so the camera slice stays in sync (dual-write bridge);
  *   - cam-null guard: when the engine has been destroyed (or is still
  *     bootstrapping pre-`startLoop`) `state.cam` is null — the helper
  *     must short-circuit silently rather than dereference null.
@@ -27,7 +29,10 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { tweenToGalaxy } from '../../../../src/services/engine/camera/tweenToGalaxy';
 import { galaxyFocusDistance } from '../../../../src/services/engine/camera/galaxyFocusDistance';
+import { FOCUS_TWEEN_MS } from '../../../../src/services/engine/camera/focusTweenDuration';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { AppStore } from '../../../../src/store/types';
+import type { AppDispatch } from '../../../../src/store/types';
 
 /**
  * Build a minimal `EngineState`-shaped fixture that exposes only the
@@ -48,6 +53,12 @@ function makeState(opts: {
   } as unknown as EngineState;
 }
 
+function makeStore(): { store: AppStore; dispatch: ReturnType<typeof vi.fn<AppDispatch>> } {
+  const dispatch = vi.fn<AppDispatch>();
+  const store = { dispatch, getState: () => ({}) } as unknown as AppStore;
+  return { store, dispatch };
+}
+
 describe('tweenToGalaxy', () => {
   it('starts a CameraTween toward (info.x, info.y, info.z) with galaxyFocusDistance(diameterKpc)', () => {
     const start = vi.fn();
@@ -58,8 +69,9 @@ describe('tweenToGalaxy', () => {
       pitch: -0.1,
     };
     const state = makeState({ cam, start });
+    const { store } = makeStore();
 
-    tweenToGalaxy(state, { x: 100, y: 200, z: 300, diameterKpc: 25 });
+    tweenToGalaxy(state, { x: 100, y: 200, z: 300, diameterKpc: 25 }, store);
 
     expect(start).toHaveBeenCalledOnce();
     const tween = start.mock.calls[0]![0];
@@ -83,6 +95,42 @@ describe('tweenToGalaxy', () => {
     expect(tween.startMs).toBeGreaterThanOrEqual(0);
   });
 
+  it('dispatches startCameraTween with matching from/to descriptor', () => {
+    const start = vi.fn();
+    const cam = {
+      target: [1, 2, 3] as [number, number, number],
+      distance: 50,
+      yaw: 0.25,
+      pitch: -0.1,
+    };
+    const state = makeState({ cam, start });
+    const { store, dispatch } = makeStore();
+
+    tweenToGalaxy(state, { x: 100, y: 200, z: 300, diameterKpc: 25 }, store);
+
+    expect(dispatch).toHaveBeenCalledOnce();
+    const action = dispatch.mock.calls[0]![0] as { type: string; payload: unknown };
+    expect(action.type).toBe('camera/startCameraTween');
+    const payload = action.payload as {
+      from: { target: number[]; yaw: number; pitch: number; distance: number };
+      to: { target: number[]; yaw: number; pitch: number; distance: number };
+      durationMs: number;
+      easing: string;
+    };
+    // from = pose snapshotted off the live camera at call time.
+    expect(payload.from.target).toEqual([1, 2, 3]);
+    expect(payload.from.yaw).toBe(0.25);
+    expect(payload.from.pitch).toBe(-0.1);
+    expect(payload.from.distance).toBe(50);
+    // to = framing target.
+    expect(payload.to.target).toEqual([100, 200, 300]);
+    expect(payload.to.yaw).toBe(cam.yaw);
+    expect(payload.to.pitch).toBe(cam.pitch);
+    expect(payload.to.distance).toBe(galaxyFocusDistance(25));
+    expect(payload.durationMs).toBe(FOCUS_TWEEN_MS);
+    expect(payload.easing).toBe('easeOutCubic');
+  });
+
   it('clones cam.target so later mutation of cam.target does not corrupt the tween snapshot', () => {
     const start = vi.fn();
     const cam = {
@@ -92,8 +140,9 @@ describe('tweenToGalaxy', () => {
       pitch: 0,
     };
     const state = makeState({ cam, start });
+    const { store } = makeStore();
 
-    tweenToGalaxy(state, { x: 0, y: 0, z: 0, diameterKpc: 30 });
+    tweenToGalaxy(state, { x: 0, y: 0, z: 0, diameterKpc: 30 }, store);
 
     const captured = start.mock.calls[0]![0].fromTarget as ArrayLike<number>;
     // Mutate the live camera target after the tween was started.
@@ -107,9 +156,11 @@ describe('tweenToGalaxy', () => {
   it('is a no-op when state.cam is null (post-destroy / pre-startLoop race window)', () => {
     const start = vi.fn();
     const state = makeState({ cam: null, start });
+    const { store, dispatch } = makeStore();
 
-    tweenToGalaxy(state, { x: 100, y: 200, z: 300, diameterKpc: 25 });
+    tweenToGalaxy(state, { x: 100, y: 200, z: 300, diameterKpc: 25 }, store);
 
     expect(start).not.toHaveBeenCalled();
+    expect(dispatch).not.toHaveBeenCalled();
   });
 });

@@ -509,7 +509,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // structure branch skips the guard so deep-link drains can land
     // structure state pre-camera (see commitStructureFocus).
     if (target.type !== 'structure' && !state.cam) return;
-    commitFocus(state, target);
+    commitFocus(state, target, store);
   }
 
   function focusOnHome(): void {
@@ -524,7 +524,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // `tweenToCameraSnapshot` doesn't decide.
     state.subsystems.selection.setFocused(null);
 
-    tweenToCameraSnapshot(state, state.initialCamSnapshot);
+    tweenToCameraSnapshot(state, state.initialCamSnapshot, store);
   }
 
   function logCameraStateFn(): void {
@@ -549,7 +549,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     if (!info) return;
 
     // A palette pick is a deliberate focus action, so move the camera too.
-    commitGalaxyFocus(state, info);
+    commitGalaxyFocus(state, info, store);
   }
 
   type SelectByAliasTarget = {
@@ -575,7 +575,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     );
     if (!info) return;
 
-    commitGalaxyFocus(state, info);
+    commitGalaxyFocus(state, info, store);
   }
 
   function loadPgcAliasesFn(): Promise<PgcAliasMap> {

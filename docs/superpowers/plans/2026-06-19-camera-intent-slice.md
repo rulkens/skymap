@@ -467,14 +467,18 @@ read inline — though during the bridge `lastPose` tracks `state.cam`, so the v
 result is identical. Build `to` from the target (galaxy diameter / structure radius
 framing math is unchanged — `galaxyFocusDistance`, `structureFocusDistance` stay).
 
-- [ ] `tweenToGalaxy dispatches startCameraTween with from=lastPose, to=target framing`
+- [x] `tweenToGalaxy dispatches startCameraTween with from=lastPose, to=target framing`
   — assert the dispatched descriptor's `from` equals the engine's current `lastPose`
   and `to.distance === galaxyFocusDistance(target.diameterKpc)`, `to.yaw === from.yaw`
   (orientation preserved).
-- [ ] `tweenToStructure dispatches with to.distance === structureFocusDistance(radius, fovY)`.
-- [ ] `cam-null window still no-ops` (pre-bootstrap / post-destroy — the existing
+- [x] `tweenToStructure dispatches with to.distance === structureFocusDistance(radius, fovY)`.
+- [x] `cam-null window still no-ops` (pre-bootstrap / post-destroy — the existing
   guard's contract, `tweenToGalaxy.ts:95-96`).
-- [ ] Confirm fail → implement → pass. `npm test -- tweenTo`. Commit.
+- [x] Confirm fail → implement → pass. `npm test -- tweenTo`. Commit.
+  (Implemented as a DUAL-WRITE bridge — `tweens.start()` kept alongside the new
+  dispatch — not the plan's "replace", so the suite stays green until Task 2.3 flips
+  the read. Threaded `store: AppStore` through commitFocus → COMMIT_FOCUS →
+  commitXFocus → tweenToX. `from = poseOf(cam)` (== lastPose during the bridge).)
 
 > **Where the auto-rotate + drag writers land (spec §8.2 mapping).** The spec lists
 > three Phase-2 writers (tween / auto-rotate / drag); two of them have no standalone

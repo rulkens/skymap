@@ -18,6 +18,7 @@
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { AppStore } from '../../../store/types';
 import { MILKY_WAY_INFO } from '../../../data/milkyWay/milkyWayInfo';
 import {
   MILKY_WAY_CENTER_WORLD,
@@ -25,7 +26,7 @@ import {
 } from '../../../data/milkyWay/galacticCenter';
 import { tweenToCameraSnapshot } from '../camera/cameraSnapshot';
 
-export function commitMilkyWayFocus(state: EngineState): void {
+export function commitMilkyWayFocus(state: EngineState, store: AppStore): void {
   const cam = state.cam;
   if (!cam) return;
 
@@ -35,13 +36,17 @@ export function commitMilkyWayFocus(state: EngineState): void {
   state.subsystems.selection.setSelected(MILKY_WAY_INFO);
   state.subsystems.selection.setFocused(MILKY_WAY_INFO);
 
-  tweenToCameraSnapshot(state, {
-    target: [MILKY_WAY_CENTER_WORLD[0], MILKY_WAY_CENTER_WORLD[1], MILKY_WAY_CENTER_WORLD[2]],
-    distance: MILKY_WAY_VIEW_DISTANCE_MPC,
-    yaw: cam.yaw,
-    pitch: cam.pitch,
-    fovYRad: cam.fovYRad,
-    near: cam.near,
-    far: cam.far,
-  });
+  tweenToCameraSnapshot(
+    state,
+    {
+      target: [MILKY_WAY_CENTER_WORLD[0], MILKY_WAY_CENTER_WORLD[1], MILKY_WAY_CENTER_WORLD[2]],
+      distance: MILKY_WAY_VIEW_DISTANCE_MPC,
+      yaw: cam.yaw,
+      pitch: cam.pitch,
+      fovYRad: cam.fovYRad,
+      near: cam.near,
+      far: cam.far,
+    },
+    store,
+  );
 }

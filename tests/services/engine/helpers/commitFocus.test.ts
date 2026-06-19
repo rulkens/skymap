@@ -11,6 +11,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { GalaxyInfo } from '../../../../src/@types/engine/GalaxyInfo';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
+import type { AppStore } from '../../../../src/store/types';
+import type { AppDispatch } from '../../../../src/store/types';
 
 const commitGalaxyFocusSpy = vi.fn();
 const commitStructureFocusSpy = vi.fn();
@@ -48,7 +50,9 @@ function makeFixtures() {
     featured: true,
     physicalRadiusMpc: 2,
   };
-  return { state, galaxy, structure };
+  const dispatch = vi.fn<AppDispatch>();
+  const store = { dispatch, getState: () => ({}) } as unknown as AppStore;
+  return { state, galaxy, structure, store };
 }
 
 describe('commitFocus', () => {
@@ -59,24 +63,24 @@ describe('commitFocus', () => {
   });
 
   it('routes a GalaxyInfo through commitGalaxyFocus', () => {
-    const { state, galaxy } = makeFixtures();
-    commitFocus(state, galaxy);
-    expect(commitGalaxyFocusSpy).toHaveBeenCalledWith(state, galaxy);
+    const { state, galaxy, store } = makeFixtures();
+    commitFocus(state, galaxy, store);
+    expect(commitGalaxyFocusSpy).toHaveBeenCalledWith(state, galaxy, store);
     expect(commitStructureFocusSpy).not.toHaveBeenCalled();
   });
 
   it('routes a StructureInfo through commitStructureFocus', () => {
-    const { state, structure } = makeFixtures();
-    commitFocus(state, structure);
-    expect(commitStructureFocusSpy).toHaveBeenCalledWith(state, structure);
+    const { state, structure, store } = makeFixtures();
+    commitFocus(state, structure, store);
+    expect(commitStructureFocusSpy).toHaveBeenCalledWith(state, structure, store);
     expect(commitGalaxyFocusSpy).not.toHaveBeenCalled();
   });
 
   it('routes a milkyWay target to the milkyWay focus path', () => {
-    const { state } = makeFixtures();
-    commitFocus(state, MILKY_WAY_INFO);
-    // The MW helper takes only `state` (singleton — no per-instance data).
-    expect(commitMilkyWayFocusSpy).toHaveBeenCalledWith(state);
+    const { state, store } = makeFixtures();
+    commitFocus(state, MILKY_WAY_INFO, store);
+    // The MW helper takes only `state` and `store` (singleton — no per-instance data).
+    expect(commitMilkyWayFocusSpy).toHaveBeenCalledWith(state, store);
     expect(commitGalaxyFocusSpy).not.toHaveBeenCalled();
     expect(commitStructureFocusSpy).not.toHaveBeenCalled();
   });

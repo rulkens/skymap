@@ -17,23 +17,24 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
 import type { FocusableTargetType } from '../../../@types/engine/FocusableTargetType';
+import type { AppStore } from '../../../store/types';
 import { commitGalaxyFocus } from './commitGalaxyFocus';
 import { commitStructureFocus } from './commitStructureFocus';
 import { commitMilkyWayFocus } from './commitMilkyWayFocus';
 
 export const COMMIT_FOCUS: Record<
   FocusableTargetType,
-  (state: EngineState, target: FocusableTarget) => void
+  (state: EngineState, target: FocusableTarget, store: AppStore) => void
 > = {
-  galaxyCatalog: (state, target) => {
-    if (target.type === 'galaxyCatalog') commitGalaxyFocus(state, target);
+  galaxyCatalog: (state, target, store) => {
+    if (target.type === 'galaxyCatalog') commitGalaxyFocus(state, target, store);
   },
-  structure: (state, target) => {
-    if (target.type === 'structure') commitStructureFocus(state, target);
+  structure: (state, target, store) => {
+    if (target.type === 'structure') commitStructureFocus(state, target, store);
   },
-  // The Milky Way is a singleton — the target carries no per-instance data, so
-  // the helper takes only `state` (it focuses MILKY_WAY_INFO unconditionally).
-  milkyWay: (state, target) => {
-    if (target.type === 'milkyWay') commitMilkyWayFocus(state);
+  // The Milky Way is a singleton — the target carries no per-instance data,
+  // so the helper ignores `target` (it focuses MILKY_WAY_INFO unconditionally).
+  milkyWay: (state, _target, store) => {
+    commitMilkyWayFocus(state, store);
   },
 };
