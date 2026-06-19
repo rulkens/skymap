@@ -306,12 +306,12 @@ Builds the full `OrbitCamera` by spreading `pose` + `projection` and computing
 (one-type-per-file — prefer the `.d.ts` if it's exported/reused; the engine clock
 task will reuse it, so create the `.d.ts`).
 
-- [ ] `assembleOrbitCamera merges pose + projection and derives position` — assert
+- [x] `assembleOrbitCamera merges pose + projection and derives position` — assert
   `result.fovYRad === projection.fovYRad`, `result.target === pose.target`, and
   `result.position` matches `updatePosition` for that pose (compute the expected via
   the same helper, or assert against a known orbit geometry).
-- [ ] `the produced camera carries no extra fields` (shape pin).
-- [ ] Confirm fail → implement → pass. `npm test -- assembleOrbitCamera`. Commit.
+- [x] `the produced camera carries no extra fields` (shape pin).
+- [x] Confirm fail → implement → pass. `npm test -- assembleOrbitCamera`. Commit.
 
 ### Task 1.6 — `CameraDriver.pose` + `runCameraDrivers` returns a pose
 
