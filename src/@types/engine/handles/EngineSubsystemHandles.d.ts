@@ -7,8 +7,8 @@
  *
  * ### Why some fields are null at construction
  *
- *   - Eager (no GPU dep): `tweens`, `scheduler` — callbacks
- *     queue work the scheduler picks up once the GPU IIFE finishes.
+ *   - Eager (no GPU dep): `tweens`, `scheduler` — constructed up-front
+ *     so their callbacks can be captured before the GPU IIFE finishes.
  *   - Lazy (inside the GPU init IIFE): `galaxyAtlas`, `proceduralDisks`,
  *     `texturedDisks`, `clickResolver`, `inputBindings`.
  *
@@ -23,7 +23,6 @@ import type { ProceduralDiskSubsystem } from '../subsystems/ProceduralDiskSubsys
 import type { TexturedDiskSubsystem } from '../subsystems/TexturedDiskSubsystem';
 import type { HiResFamousSubsystem } from '../subsystems/HiResFamousSubsystem';
 import type { HiResFamousTexture } from '../../rendering/HiResFamousTexture';
-import type { SelectionSubsystem } from '../subsystems/SelectionSubsystem';
 import type { BiasCorrectionSubsystem } from '../subsystems/BiasCorrectionSubsystem';
 import type { LabelDirectorSubsystem } from '../subsystems/LabelDirectorSubsystem';
 import type { StructureFocusSubsystem } from '../subsystems/StructureFocusSubsystem';
@@ -70,14 +69,6 @@ export type EngineSubsystemHandles = {
    * `src/services/animation/fadeRegistry.ts`.
    */
   fades: FadeRegistry;
-  /**
-   * Hover/select state façade — owns the user-facing `(source, localIdx)`
-   * selection pair and fans out `cb.onHoverChange` / `cb.onSelectChange`
-   * only on actual change. Constructed eagerly (no GPU dep) so it's
-   * non-null from t=0. Single source of truth for selection state; the
-   * callback fan-out lives in one place.
-   */
-  selection: SelectionSubsystem;
   /**
    * Malmquist-bias correction subsystem. Owns the bias-mode flags,
    * cached per-source ratios/weights, and the async bake state machine.

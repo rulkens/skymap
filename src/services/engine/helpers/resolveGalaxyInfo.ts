@@ -1,8 +1,8 @@
 /**
  * resolveGalaxyInfo — composes the engine-side cloud read (`extractGalaxyRow`)
- * with the pure formatter (`buildGalaxyInfo`). The existing pick path still
- * calls this to get a `GalaxyInfo` for the current selectionSubsystem; the
- * bounds/null guard now lives in extractGalaxyRow.
+ * with the pure formatter (`buildGalaxyInfo`). The pick path calls this to
+ * produce a `GalaxyInfo` that is then dispatched into the selection slice;
+ * the bounds/null guard lives in extractGalaxyRow.
  *
  * The `source` param is typed `SourceType` to match the caller (`resolvePickTable`
  * passes `pick.sourceCode`, which is `SourceType`). The cast to

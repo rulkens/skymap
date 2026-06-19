@@ -46,11 +46,11 @@
  *   - `phases/startLoop.ts`    — RunFrameDeps assembly + first requestRender
  *   - `phases/bootstrap.ts`    — orchestrator + BootstrapDeps + Phase signature
  *
- * Hover/select state lives in `state.subsystems.selection`
- * (`selectionSubsystem.ts`).  The public handle and the forward-declared
- * `frameRef` / `detachControlsRef` / `handleRef` boxes stay inline here
- * because the bootstrap phases (sibling modules) write them via the
- * `{current}` ref pattern.
+ * Hover/select/focus state lives in the Redux `selection` slice
+ * (`state/selection/selectionSlice.ts`).  The public handle and the
+ * forward-declared `frameRef` / `detachControlsRef` / `handleRef` boxes
+ * stay inline here because the bootstrap phases (sibling modules) write
+ * them via the `{current}` ref pattern.
  *
  * ### Usage
  *
@@ -67,20 +67,17 @@
  * ```
  */
 
-import { Source } from '../../data/sources';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineState } from '../../@types/engine/state/EngineState';
-import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 
 import { createTweenManager } from './camera/tweenManager';
 import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
-import { createSelectionSubsystem } from './subsystems/selectionSubsystem';
 import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
 import { createLabelDirectorSubsystem } from './subsystems/labelDirectorSubsystem';
 import { registerLabelStyleOverrideWake } from './labelStyleOverride';
@@ -90,12 +87,8 @@ import { produceFamousLabels } from './presentation/produceFamousLabels';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { HDR_PASSES, UI_PASSES } from './frame/passes';
 import { buildGalaxyInfo } from './helpers/galaxyInfoBuilder';
-import { extractGalaxyRow } from './helpers/extractGalaxyRow';
-import { clearAll } from './helpers/clearAll';
-import { commitFocus } from './helpers/commitFocus';
-import { commitGalaxyFocus } from './helpers/commitGalaxyFocus';
-import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
 import { logCameraState } from './helpers/logCameraState';
+import { updateSelectionFocus } from '../../state/selection/selectionSlice';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
 import type { RequestKey } from '../../@types/loading/RequestKey';
@@ -228,8 +221,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // Per-type data stores. Empty at construction; slot commits fill them.
     data: createEngineData(),
     picking: {
-      // Per-frame pick-throttle state. Hover / select live on
-      // `state.subsystems.selection`; see `EnginePickingState.d.ts`.
+      // Per-frame pick-throttle state. Hover / select live on the
+      // Redux `selection` slice; see `EnginePickingState.d.ts`.
       latestMouseCss: null,
       lastPickedMouseCss: null,
       pickInFlight: false,
@@ -295,22 +288,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       hiResFamousTexture: null,
       // ── Tween manager ──────────────────────────────────────────
       // At most one camera tween at a time.  Sites that mutate it:
-      //   - public handle's focusOn / focusOnHome / selectFamous
-      //     (start a tween — auto-replaces any running one),
-      //   - pointerdown handler                (cancel on user grab),
-      //   - per-frame frame() loop             (advance + auto-clear).
+      //   - public handle's focusOnHome (start a tween — auto-replaces
+      //     any running one),
+      //   - pointerdown handler         (cancel on user grab),
+      //   - per-frame frame() loop      (advance + auto-clear).
       tweens: createTweenManager({
-        requestRender: () => state.subsystems.scheduler.requestRender(),
-      }),
-
-      // ── Selection subsystem ──────────────────────────────────────
-      // Owns hover / select state and fans out `cb.onHoverChange` /
-      // `cb.onSelectChange` on actual change.  Eager (no GPU dep) so the
-      // public handle can call into it from t=0.  A thin slot store — callers
-      // resolve picks to targets before handing them in, so the subsystem
-      // needs no source accessors.
-      selection: createSelectionSubsystem({
-        cb,
         requestRender: () => state.subsystems.scheduler.requestRender(),
       }),
 
@@ -547,95 +529,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // returning live state.  Declared up-front so the sub-handle literal can
   // reference each by name — no forward references, no `!` assertions.
 
-  function clearSelection(): void {
-    // Unified teardown — clears galaxy/structure selection AND the focus slot
-    // (so the cluster-focus fade collapses) in one call.  Each setter owns
-    // its own dedupe and render wake; clearAll just pairs the two calls.
-    // See clearAll.ts for the dismiss-vs-deselect rationale.
-    clearAll(state.subsystems.selection);
-  }
-
-  function focusOn(target: FocusableTarget): void {
-    // Dispatch by type — one public method, two separate commit paths
-    // (different tween shapes, cam-null gating, callbacks).  See commitFocus.
-    //
-    // The galaxy branch keeps the cam-null guard: without it a focus during
-    // bootstrap would set `#focus=…` while the camera stays put.  The
-    // structure branch skips the guard so deep-link drains can land
-    // structure state pre-camera (see commitStructureFocus).
-    if (target.type !== 'structure' && !state.cam) return;
-    commitFocus(state, target);
-  }
-
   function focusOnHome(): void {
     // Snapshot null-check; cam-null is absorbed inside the helper.
     if (!state.initialCamSnapshot) return;
 
-    // Returning to the home view means we're no longer focused on
-    // anything: drop the focus slot, which collapses the cluster-focus
-    // fade AND fires `onFocusChange(null)` so the URL clears its
-    // `#focus=…`.  Stays at the call site (not in the helper) because
-    // "this action is leaving a focus state" is something
-    // `tweenToCameraSnapshot` doesn't decide.
-    state.subsystems.selection.setFocused(null);
+    // Returning to home clears the focus slot so the cluster-focus fade
+    // collapses and the URL hash clears. The focus slot lives in the Redux
+    // selection slice — dispatch the null write through the store so the
+    // saga and React readers see the same authoritative value.
+    store.dispatch(updateSelectionFocus(null));
 
     tweenToCameraSnapshot(state, state.initialCamSnapshot);
   }
 
   function logCameraStateFn(): void {
     logCameraState(state.cam);
-  }
-
-  function selectFamous(id: string): void {
-    // Guard: the famous catalog may not be loaded yet (sidecars arrive
-    // slightly after the point cloud).  Early return is cosmetically safe.
-    const cloud = state.data.galaxies.catalogs.get(Source.FamousGalaxy);
-    if (!cloud) return;
-    const localIdx = state.data.galaxies.famousMeta.findIndex((m) => m.id === id);
-    if (localIdx < 0) return;
-
-    // Build the GalaxyInfo the picker would, from live sidecars.
-    const famousRow = extractGalaxyRow(
-      cloud,
-      localIdx,
-      Source.FamousGalaxy,
-      state.data.galaxies.famousMeta,
-    );
-    if (!famousRow) return;
-    const info = buildGalaxyInfo(famousRow);
-
-    // A palette pick is a deliberate focus action, so move the camera too.
-    commitGalaxyFocus(state, info);
-  }
-
-  type SelectByAliasTarget = {
-    source: SourceType;
-    localIdx: number;
-    famousMeta?: readonly FamousMetaEntry[];
-  };
-
-  function selectByAlias({ source, localIdx, famousMeta }: SelectByAliasTarget): void {
-    // Guard: the source cloud may not be loaded yet, or localIdx could be
-    // stale across a tier swap.  Both early-return safely.
-    const cloud = state.data.galaxies.catalogs.get(source);
-    if (!cloud) return;
-    if (localIdx < 0 || localIdx >= cloud.count) return;
-
-    // Caller-supplied `famousMeta` wins over the engine's copy — see the
-    // EngineHandle JSDoc for the race this defends against.
-    // The cast is sound: selectByAlias is only reached from palette/alias
-    // paths that resolve against galaxy-catalog clouds, so source is
-    // always a GalaxyCatalogSourceType at runtime.
-    const aliasRow = extractGalaxyRow(
-      cloud,
-      localIdx,
-      source as GalaxyCatalogSourceType,
-      famousMeta ?? state.data.galaxies.famousMeta,
-    );
-    if (!aliasRow) return;
-    const info = buildGalaxyInfo(aliasRow);
-
-    commitGalaxyFocus(state, info);
   }
 
   function loadPgcAliasesFn(): Promise<PgcAliasMap> {
@@ -674,7 +582,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     detachControlsRef.current = null;
 
     // 3. Walk every other subsystem (order-independent past here).
-    state.subsystems.selection.destroy();
     state.subsystems.tweens.destroy();
     state.subsystems.biasCorrection.destroy();
     state.subsystems.labelDirector.destroy();
@@ -761,14 +668,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // selection, sources, volumes, debug) while store writes go direct to the store.
   const handle: EngineHandle = {
     camera: {
-      focusOn,
       focusOnHome,
       logState: logCameraStateFn,
     },
     selection: {
-      clear: clearSelection,
-      selectFamous,
-      selectByAlias,
       loadAliases: loadPgcAliasesFn,
     },
     sources: {
@@ -811,9 +714,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     assetSlots: allSlots,
   };
 
-  // Publish the handle so `wireInput`'s onDoubleClick can resolve
-  // `handle.focusOn` lazily.  The IIFE may still be in flight, but the
-  // handle is non-null well before the user can double-click.
+  // Publish the handle so `wireInput` can read it lazily. The IIFE may
+  // still be in flight, but the handle is non-null well before the user
+  // can interact.
   handleRef.current = handle;
 
   return handle;

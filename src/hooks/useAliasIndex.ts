@@ -19,7 +19,7 @@
  * oracle for the tier-vs-unknown distinction.  Starts as an empty Map
  * so callers can call `.has(...)` without a null guard before the load
  * resolves; an empty map just collapses unknown PGCs to `unknown`
- * instead of `tier`, which is documented in `resolveFocusTarget.ts`.
+ * instead of `tier`.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -33,9 +33,7 @@ export function useAliasIndex(input: UseAliasIndexInput): UseAliasIndexReturn {
   const { paletteOpen, sourceCounts, engineHandleRef } = input;
 
   const [aliasIndex, setAliasIndex] = useState<readonly AliasIndexEntry[] | null>(null);
-  const [aliasMap, setAliasMap] = useState<ReadonlyMap<bigint, readonly string[]>>(
-    () => new Map(),
-  );
+  const [aliasMap, setAliasMap] = useState<ReadonlyMap<bigint, readonly string[]>>(() => new Map());
   // Tracks whether we've already kicked off the lazy load — the
   // effect's `paletteOpen` dependency would otherwise re-trigger on
   // every open.

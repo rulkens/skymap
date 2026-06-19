@@ -82,11 +82,10 @@ export type EngineCallbacks = {
   };
 
   /**
-   * Selection-state callbacks.  Now optional: `selectionSubsystem.ts` still
-   * calls `cb.selection?.onSelectChange?.(…)` and `cb.selection?.onHoverChange?.(…)`
-   * via optional chaining, so omitting the cluster is safe. These echo members
-   * are dead after the React read cutover (P2.5) and will be removed along with
-   * the subsystem in a later task (P2.8).
+   * Selection-state callbacks. Optional — omitting the cluster is safe.
+   * Hover/select/focus live entirely in the Redux `selection` slice; these
+   * echo callbacks are legacy seam stubs retained for tooling/test consumers
+   * that subscribe via the callback rather than the store.
    */
   selection?: {
     /** Fired when the pinned/selected entity changes. */

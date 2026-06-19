@@ -7,8 +7,8 @@
  * this stays pure and hermetic; the engine builds the real GPU/cam table.
  *
  * A null ref (focus release) or a ref whose cloud is not loaded resolves to null
- * → no tween. The tweens themselves are untouched; this only relocates their
- * TRIGGER from the deleted commitFocus helpers to a saga effect.
+ * → no tween. The tweens themselves are untouched; this relocates the tween
+ * trigger from the engine handle into a saga effect.
  */
 import { extractSelectionRow } from '../helpers/extractSelectionRow';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';

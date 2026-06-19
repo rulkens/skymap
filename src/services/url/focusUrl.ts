@@ -38,9 +38,7 @@
  */
 
 import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
-import type { FocusTarget } from '../../@types/camera/FocusTarget';
 import { Source } from '../../data/sources';
-import { STRUCTURE_IDS } from '../../data/structure/structureIds';
 
 /**
  * Build the `#focus=<id>` payload (the bit after `=`) for the given
@@ -73,88 +71,4 @@ export function selectionToFocusId(info: GalaxyInfo): string | null {
   // Last resort: 4-decimal RA/Dec.  No URL-encoding needed — the
   // characters `0-9`, `.`, `,`, `-` are all safe in a hash fragment.
   return `pos@${info.ra.toFixed(4)},${info.dec.toFixed(4)}`;
-}
-
-/**
- * Strict regex for the pos@ form.  Anchored at both ends, so trailing
- * garbage (e.g. `pos@1,2,3`) is rejected.  Matches optional sign +
- * digits + optional fractional part on both coordinates.
- */
-const POS_RE = /^pos@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/;
-
-/**
- * Parse a `window.location.hash` string into a `FocusTarget`.  Returns
- * null for anything we can't confidently route — the caller treats
- * null as "no deep link, render as if the URL were clean".
- *
- * Accepts hash strings with or without the leading `#`, so this is
- * easy to call from both `location.hash` (which includes `#`) and
- * test fixtures (which often don't).
- */
-export function parseFocusHash(hash: string): FocusTarget | null {
-  if (!hash) return null;
-  const trimmed = hash.startsWith('#') ? hash.slice(1) : hash;
-  if (!trimmed) return null;
-
-  // We expect exactly `focus=<value>`.  The `=` split lets us validate
-  // the key without running a regex on every hash; non-focus hashes
-  // (e.g. `#about`, future `#search=foo`) bail out cheaply.
-  const eq = trimmed.indexOf('=');
-  if (eq < 0 || trimmed.slice(0, eq) !== 'focus') return null;
-  // `decodeURIComponent` throws `URIError` on malformed percent-escapes
-  // (e.g. a truncated `%E0%A4`).  Catch and return null so the codec's
-  // "null on anything we can't confidently route" contract holds even
-  // for users pasting half-copied URLs.
-  let raw: string;
-  try {
-    raw = decodeURIComponent(trimmed.slice(eq + 1));
-  } catch {
-    return null;
-  }
-  if (!raw) return null;
-
-  if (raw.startsWith('pgc-')) {
-    const n = raw.slice(4);
-    // Strict numeric check — `BigInt('abc')` throws, so we'd otherwise
-    // need a try/catch; explicit regex is clearer and lets us return
-    // null for the empty case (`pgc-`) without a special branch.
-    if (!/^\d+$/.test(n)) return null;
-    return { kind: 'pgc', pgc: BigInt(n) };
-  }
-
-  if (raw.startsWith('sdss-')) {
-    const n = raw.slice(5);
-    if (!/^\d+$/.test(n)) return null;
-    return { kind: 'sdss', objID: BigInt(n) };
-  }
-
-  const m = POS_RE.exec(raw);
-  if (m) {
-    const raDeg = parseFloat(m[1]!);
-    const decDeg = parseFloat(m[2]!);
-    if (!Number.isFinite(raDeg) || !Number.isFinite(decDeg)) return null;
-    return { kind: 'pos', raDeg, decDeg };
-  }
-
-  // Structure ids: `${category}-${seed.id}` where `category` is one of
-  // STRUCTURE_IDS ('cluster', 'supercluster', 'void', 'group').
-  // Must be checked before the famous-id fallback below — `cluster-virgo-m87`
-  // passes the `[a-z0-9_-]+` class and would otherwise route to `famous`.
-  // We derive the prefix set from the registry so adding a new structure
-  // category automatically extends the codec without touching this file.
-  for (const cat of STRUCTURE_IDS) {
-    if (raw.startsWith(`${cat}-`)) {
-      if (/^[a-z0-9_-]+$/i.test(raw)) return { kind: 'structure', id: raw };
-      return null;
-    }
-  }
-
-  // Anything else: treat as a famous-id token.  Famous ids in the seed
-  // JSON use lowercase letters, digits, `_`, and `-`; restricting to
-  // that character class keeps the codec from accepting wild input
-  // (e.g. raw spaces, query separators) that would never resolve
-  // anyway.  The downstream resolver is the authority on whether the
-  // id actually exists.
-  if (/^[a-z0-9_-]+$/i.test(raw)) return { kind: 'famous', id: raw };
-  return null;
 }
