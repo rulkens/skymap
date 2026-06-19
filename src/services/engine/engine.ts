@@ -72,7 +72,6 @@ import type { SourceType } from '../../@types/data/SourceType';
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
-import type { AppStore } from '../../store/types';
 import type { EngineState } from '../../@types/engine/state/EngineState';
 import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 
@@ -101,34 +100,15 @@ import type { RequestKey } from '../../@types/loading/RequestKey';
 import { awaitSlotReady } from '../loading/awaitSlotReady';
 import { tweenToCameraSnapshot } from './camera/cameraSnapshot';
 
-import { buildSettersFromTable } from './wiring/settingsTable';
-import type { SettingsTableKey } from '../../@types/settings/SettingsTableKey';
 import { runBootstrapPhases } from './phases/bootstrap';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
 import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
-import { setSourceVisible } from './handles/setSourceVisible';
-import { setStructureItemEnabled } from './handles/setStructureItemEnabled';
-import { setStructureLabelEnabled } from './handles/setStructureLabelEnabled';
-import { setMilkyWayLabelEnabled } from './handles/setMilkyWayLabelEnabled';
-import { setGalaxyCatalogLabelEnabled } from './handles/setGalaxyCatalogLabelEnabled';
-import { setMilkyWayEnabled } from './handles/setMilkyWayEnabled';
-import { setFilamentsEnabled } from './handles/setFilamentsEnabled';
-import { setFlow } from './handles/setFlow';
-import { setVolumesEnabled } from './handles/setVolumesEnabled';
 import { addVolumeField } from './handles/addVolumeField';
 import { removeVolumeField } from './handles/removeVolumeField';
-import { setVolumeFieldEnabled } from './handles/setVolumeFieldEnabled';
-import { setVolumeFieldIntensity } from './handles/setVolumeFieldIntensity';
-import { setVolumeFieldContrast } from './handles/setVolumeFieldContrast';
-import { setVolumeFieldDensityScale } from './handles/setVolumeFieldDensityScale';
-import { setVolumeFieldTrim } from './handles/setVolumeFieldTrim';
-import { setVolumeFieldExposure } from './handles/setVolumeFieldExposure';
-import { setVolumeFieldPalette } from './handles/setVolumeFieldPalette';
 import { listVolumeFields } from './handles/listVolumeFields';
 import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
-import { setBiasMode } from './handles/setBiasMode';
-import { setPassDisabled } from './handles/setPassDisabled';
 import { makeRunTierTransition } from './wiring/makeRunTierTransition';
+import { makeReconcileEffects } from './wiring/makeReconcileEffects';
 
 /**
  * Start the WebGPU engine on `canvas`.
@@ -315,9 +295,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // ── Bias-correction subsystem ─────────────────────────────────
       // Owns Malmquist-bias mode flags, cached per-source ratios/weights,
       // and the async bake state machine.  Eager (no GPU dep); the renderer
-      // is wired during initGpu via `attachRenderer`.  `handle.setBiasMode`
-      // calls into `setMode` here.  Production uses the module-level
-      // Vite `?worker` runners; tests inject synchronous stubs.
+      // is wired during initGpu via `attachRenderer`.  The reconcile saga
+      // drives bake state via the bias.mode reconcile row.  Production uses
+      // the module-level Vite `?worker` runners; tests inject synchronous stubs.
       biasCorrection: createBiasCorrectionSubsystem({
         getMode: () => state.settings.bias.mode,
         getLoadedClouds: () => state.data.galaxies.catalogs,
@@ -466,12 +446,24 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     allSlots,
   };
 
-  // Register the tier-transition runner into the saga context so a
-  // `requestTier` dispatch reaches the engine's GPU resources. The runner
-  // closes over the live `state` + `bootstrapDeps` (reading `device` lazily off
-  // `phaseLocals`), so registering here — before the async bootstrap finishes —
-  // is safe: the closure sees the device once initGpu populates it.
-  cb.setSagaContext({ runTierTransition: makeRunTierTransition(state, bootstrapDeps) });
+  // Register both saga runners in one setSagaContext call so the running root
+  // saga receives the full context bag synchronously, before the async GPU
+  // bootstrap finishes.
+  //
+  // `makeRunTierTransition(state, bootstrapDeps)` closes over `bootstrapDeps`
+  // (reading `device` lazily off `phaseLocals`) — safe to build here because
+  // the closure dereferences the device only at call time, after initGpu
+  // populates it.
+  //
+  // `makeReconcileEffects(state)` closes over the live `state.gpu` and
+  // `state.subsystems`, also dereferenced lazily at call time — the same
+  // rationale: registering before the async bootstrap is safe because the
+  // subsystems the closures reach into are populated before any saga dispatches
+  // them.
+  cb.setSagaContext({
+    runTierTransition: makeRunTierTransition(state, bootstrapDeps),
+    reconcile: makeReconcileEffects(state),
+  });
 
   // The main async IIFE runs the bootstrap phases; all errors are caught
   // and reported via `onStatusChange`.  See `runBootstrapPhases`.
@@ -489,18 +481,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   // ── Public handle ─────────────────────────────────────────────────────────
   //
-  // The table-driven setters land in `boringSetters`; bespoke ones (async
-  // bakes, subsystem forwards, multi-field mutations) are local functions
-  // below.  The handle literal at the end stitches both into the public
-  // sub-handle clusters.
-  const boringSetters = buildSettersFromTable(
-    () => state.subsystems.scheduler.requestRender(),
-    store,
-  ) satisfies Record<SettingsTableKey, (value: unknown) => void>;
+  // Bespoke local methods handle async bakes, subsystem forwards, multi-field
+  // mutations, and live-state reads.  The handle literal at the end stitches
+  // them into the public sub-handle clusters.
 
-  // ── Bespoke methods (don't fit the settingsTable shape) ────────────
+  // ── Bespoke methods (async bakes, subsystem forwards, multi-field mutations) ──
   //
-  // Each owns work the descriptor table can't express: async worker bakes,
+  // Each owns work a simple store dispatch can't express: async worker bakes,
   // per-source slot reloads, subsystem forwards, multi-field mutations, or
   // returning live state.  Declared up-front so the sub-handle literal can
   // reference each by name — no forward references, no `!` assertions.
@@ -709,24 +696,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   // ── Handle literal — sub-handle clusters + destroy + slots ──
   //
-  // Each sub-handle is a thin forwarder onto a local function or a
-  // `boringSetters` entry.  This literal is the only public surface.
+  // Each sub-handle delegates to local functions. This literal is the
+  // engine's only public surface; it holds imperative operations (camera,
+  // selection, sources, volumes, debug) while store writes go direct to the store.
   const handle: EngineHandle = {
-    galaxyCatalogs: {
-      setSize: boringSetters.setPointSize,
-      setBrightness: boringSetters.setBrightness,
-      setDepthFade: boringSetters.setDepthFadeEnabled,
-      setHighlightFallback: boringSetters.setHighlightFallback,
-      setRealOnly: boringSetters.setRealOnlyMode,
-      setLabelEnabled: (galaxyCatalog, enabled) =>
-        setGalaxyCatalogLabelEnabled(state, store, galaxyCatalog, enabled),
-    },
-    tonemap: {
-      setExposure: boringSetters.setExposure,
-      setCurve: boringSetters.setToneMapCurve,
-    },
     camera: {
-      setAutoRotate: boringSetters.setAutoRotate,
       focusOn,
       focusOnHome,
       logState: logCameraStateFn,
@@ -738,50 +712,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       loadAliases: loadPgcAliasesFn,
     },
     sources: {
-      setVisible: (source, visible) => setSourceVisible(state, store, source, visible),
       getCloud,
       getCloudObjIds,
     },
-    bias: {
-      setMode: (mode) => setBiasMode(state, store, mode),
-      setAbsMagLimit: boringSetters.setAbsMagLimit,
-    },
-    thumbnails: {
-      setEnabled: boringSetters.setGalaxyTexturesEnabled,
-    },
-    milkyWay: {
-      setEnabled: (enabled) => setMilkyWayEnabled(state, store, enabled),
-      setLabelEnabled: (enabled) => setMilkyWayLabelEnabled(state, store, enabled),
-    },
-    filaments: {
-      setEnabled: (enabled) => setFilamentsEnabled(state, store, enabled),
-      setIntensity: boringSetters.setFilamentIntensity,
-    },
-    flow: {
-      set: (patch) => setFlow(state, store, patch),
-    },
-    structures: {
-      // Two setters, one per independent structure visibility axis. Each writes
-      // the authoritative `settings.structures.items[category]` row THROUGH the
-      // store (so React's `selectStructureItems` subscriber wakes) and fades the
-      // matching FadeRegistry handle.
-      setItemEnabled: (category, visible) =>
-        setStructureItemEnabled(state, store, category, visible),
-      setLabelEnabled: (category, visible) =>
-        setStructureLabelEnabled(state, store, category, visible),
-    },
     volumes: {
-      setMasterEnabled: (enabled) => setVolumesEnabled(state, store, enabled),
       add: (fieldId, cube) => addVolumeField(state, store, fieldId, cube),
       remove: (fieldId) => removeVolumeField(state, store, fieldId),
-      setEnabled: (fieldId, enabled) => setVolumeFieldEnabled(state, store, fieldId, enabled),
-      setIntensity: (fieldId, intensity) =>
-        setVolumeFieldIntensity(state, store, fieldId, intensity),
-      setContrast: (fieldId, contrast) => setVolumeFieldContrast(state, store, fieldId, contrast),
-      setDensityScale: (fieldId, value) => setVolumeFieldDensityScale(state, store, fieldId, value),
-      setTrim: (fieldId, trim) => setVolumeFieldTrim(state, store, fieldId, trim),
-      setExposure: (fieldId, exposure) => setVolumeFieldExposure(state, store, fieldId, exposure),
-      setPalette: (fieldId, id) => setVolumeFieldPalette(state, store, fieldId, id),
       list: () => listVolumeFields(state),
       getState: () => getVolumeFieldsState(state),
     },
@@ -791,21 +727,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // assigns `state.gpu.timingService` AFTER this literal is built — a copy
     // would be null forever.
     //
-    // `passOverrides`: DebugPanel hook for the `settings.debug.disabledPasses`
-    // override set. `allNames` is materialised once from HDR_PASSES + UI_PASSES
-    // so the React rows track the encoder's pass loop; `setDisabled` delegates to
-    // the `setPassDisabled` handle (store action + render wake). The panel reads
-    // the set back via `selectDisabledPasses`, so there is no `isDisabled` query.
+    // `passOverrides`: read-only pass-name list for the DebugPanel's renderer
+    // toggle section. `allNames` is materialised from HDR_PASSES + UI_PASSES so
+    // the React rows track the encoder's actual pass loop in draw order.
+    // The DebugPanel dispatches `setPassDisabled` directly; `watchWake` wakes
+    // the render loop on the store write.
     debug: {
       get timingService() {
         return state.gpu.timingService;
       },
       passOverrides: {
         allNames: [...HDR_PASSES.map((p) => p.name), ...UI_PASSES.map((p) => p.name)],
-        setDisabled: (name, disabled) => setPassDisabled(state, store, name, disabled),
       },
-      setShowPickBuffer: boringSetters.setShowPickBuffer,
-      setShowDiskRadiusRing: boringSetters.setShowDiskRadiusRing,
     },
 
     destroy,

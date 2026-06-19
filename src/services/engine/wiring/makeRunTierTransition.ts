@@ -51,9 +51,9 @@ export function makeRunTierTransition(
     // For each tier-relevant source: same target → skip; different target → hand
     // the slot the new request (it cancels any in-flight load, re-fetches the
     // tier's `.bin`, commits). Sources whose enabled INTENT is off skip too —
-    // don't re-fetch a source you're hiding; toggling one on later loads it at the
-    // current tier via `setSourceVisible`. Filaments are NOT swapped (see
-    // `filamentFetcher.ts`).
+    // don't re-fetch a source you're hiding; toggling one on later triggers
+    // a demand-reevaluation load at the current tier. Filaments are NOT swapped
+    // (see `filamentFetcher.ts`).
     for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
       const src = cfg.source;
       if (cfg.category === 'synthetic') continue;
