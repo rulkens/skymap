@@ -10,6 +10,7 @@
  *   watchFades           — syncs visibility-layer fades via the FADE_ROW table
  *   watchSelectionRows   — keeps the selectionRows derived cache in sync with selection refs
  *   watchSelectionWake   — wakes the render loop on select/focus writes (hover excluded)
+ *   watchRequestFocus    — resolves a durable focus id to a ref, deferring on catalogLoaded
  *
  * Each watcher is authored beside its concern (the tier watcher in
  * `state/tier/tierSaga`, the reconcile watchers in `effects/reconcileSagas`) and
@@ -31,6 +32,7 @@ import { watchTier } from '../state/tier/tierSaga';
 import { watchWake, watchFlowReseed, watchBiasBake, watchFades } from './effects/reconcileSagas';
 import { watchSelectionRows } from '../state/selectionRows/selectionRowsSaga';
 import { watchSelectionWake } from '../state/selection/selectionWakeSaga';
+import { watchRequestFocus } from '../state/selection/requestFocusSaga';
 
 export function* mainSaga() {
   yield* all([
@@ -41,5 +43,6 @@ export function* mainSaga() {
     watchFades(),
     watchSelectionRows(),
     watchSelectionWake(),
+    watchRequestFocus(),
   ]);
 }
