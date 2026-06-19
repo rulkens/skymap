@@ -17,13 +17,17 @@
  *
  * The saga-context types describe the engine capabilities that cross into
  * store-land: `RunTierTransition` is the engine-owned runner that reacts to a
- * confirmed tier change (drive the per-source data load + famous rebuild), and
+ * confirmed tier change (drive the per-source data load + famous rebuild);
  * `ReconcileEffects` (see `./effects/ReconcileEffects`) is the bag of render-wake /
- * fade / reseed / bias closures the reconcile sagas invoke. `SagaContext` is the
- * bag the running root saga reads them back out of via `getContext`;
- * `SetSagaContext` is the setter the factory hands back so the engine can inject
- * them post-construction (a `Partial`, so each registration site supplies only what
- * it knows). They live here, beside the store types, because the sagas and the
+ * fade / reseed / bias closures the reconcile sagas invoke; and `resolveDeps` is
+ * the lazy live-resource read the selection reconciler uses to turn a `SelectionRef`
+ * into a `SelectionRow` (read lazily each call so the reconciler always sees the
+ * current catalog and structure state — render-wake is reused from
+ * `reconcile.requestRender`, not re-added here). `SagaContext` is the bag the
+ * running root saga reads them back out of via `getContext`; `SetSagaContext` is
+ * the setter the factory hands back so the engine can inject them
+ * post-construction (a `Partial`, so each registration site supplies only what it
+ * knows). They live here, beside the store types, because the sagas and the
  * factory both depend on them and neither owns the other.
  *
  * The imports are type-only, so there is no runtime cycle even though
@@ -34,6 +38,7 @@
 import type { rootReducer } from './rootReducer';
 import type { createAppStore } from './createAppStore';
 import type { ReconcileEffects } from './effects/ReconcileEffects';
+import type { ResolveDeps } from '../@types/engine/ResolveDeps';
 import type { Tier } from '../@types/data/Tier';
 
 export type RootState = ReturnType<typeof rootReducer>;
@@ -41,5 +46,10 @@ export type AppStore = ReturnType<typeof createAppStore>['store'];
 export type AppDispatch = AppStore['dispatch'];
 
 export type RunTierTransition = (prevTier: Tier, nextTier: Tier) => void;
-export type SagaContext = { runTierTransition: RunTierTransition; reconcile: ReconcileEffects };
+export type SagaContext = {
+  runTierTransition: RunTierTransition; // already present — drives per-source data load on tier change
+  reconcile: ReconcileEffects; // already present — provides requestRender + fade/reseed/bias
+  /** Live engine resources the selection reconciler reads to turn a SelectionRef into a SelectionRow. */
+  resolveDeps: () => ResolveDeps;
+};
 export type SetSagaContext = (ctx: Partial<SagaContext>) => void;

@@ -462,9 +462,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // rationale: registering before the async bootstrap is safe because the
   // subsystems the closures reach into are populated before any saga dispatches
   // them.
+  //
+  // `resolveDeps` hands the reconciler saga the LIVE engine resources (read
+  // lazily each call, because clouds + structures change as data loads and the
+  // GPU lands only after bootstrap). requestRender is NOT added here — selection
+  // sagas reach it through the existing `reconcile` bag (makeReconcileEffects).
   cb.setSagaContext({
     runTierTransition: makeRunTierTransition(state, bootstrapDeps),
     reconcile: makeReconcileEffects(state),
+    resolveDeps: () => ({
+      catalogs: {
+        get: (source: GalaxyCatalogSourceType) => state.data.galaxies.catalogs.get(source),
+      },
+      famousMeta: state.data.galaxies.famousMeta,
+      structures: { byId: (id) => state.data.structures.byId(id) },
+    }),
   });
 
   // The main async IIFE runs the bootstrap phases; all errors are caught
