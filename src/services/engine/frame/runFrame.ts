@@ -385,9 +385,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     );
     if (!hasAny) {
       // Nothing pickable (every galaxy catalog off AND no cluster ring visible).
-      // Let the loop sleep — the next setSourceVisible / structure-marker
-      // change wakes it.  This `return` skips the keep-rendering predicate
-      // at the tail, which is correct: with nothing pickable there's
+      // Let the loop sleep — the next galaxy-catalog or structure-marker
+      // settings write wakes it.  This `return` skips the keep-rendering
+      // predicate at the tail, which is correct: with nothing pickable there's
       // nothing to animate, so the predicate would return false anyway.
       return;
     }
@@ -474,7 +474,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const ready = isEngineReady(state);
   // Tick the FadeRegistry BEFORE isAnyAnimating: tick is the single
   // resolution site for fadeTo promises, so without it the awaited
-  // fade-out in setSourceVisible / tier-swap commit would hang forever.
+  // fade-out in galaxy-catalog visibility changes and tier-swap commits
+  // would hang forever.
   state.subsystems.fades.tick(nowMs);
   const stillAnimating =
     deps.drivers.some((d) => d.isActive(nowMs)) ||

@@ -6,19 +6,13 @@
  *
  * ### The unifying idea: "is this asset required?"
  *
- * Before this table, each asset's load policy lived wherever its toggle was
- * handled — `setSourceVisible` fired the point load, `setFilamentsEnabled`
- * fired the filament load, the boot loop fired everything once, the
- * tier-change loop fired the tier-aware subset, and a separate counter+flag
- * pair gated the synthetic fallback. The same question — *should this asset
- * be loading, given the current state?* — was answered in a dozen scattered
- * places, each easy to forget when a new edge appeared (tier flip while a
- * galaxy catalog is hidden, a settings toggle mid-flight, etc.).
- *
  * Every row's `demand(ctx)` collapses one asset's entire load policy into a
  * single pure predicate over the `DemandCtx` read surfaces. The demand
  * loop re-runs the whole table on any state change, so "is it required?" has
- * exactly one answer per asset, in one place, re-evaluated uniformly.
+ * exactly one answer per asset, in one place, re-evaluated uniformly — no
+ * scattered per-toggle imperative load calls that can be missed on a new
+ * edge (tier flip while a source is hidden, a settings toggle mid-flight,
+ * etc.).
  *
  * ### Two corrections to the original demand table (bug fixes)
  *

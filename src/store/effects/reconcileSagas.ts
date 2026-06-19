@@ -3,8 +3,8 @@
  * engine side-effects, plus the FADE_ROW dispatch table.
  *
  * FADE_ROW is the flat 1:1 action→VisibilityLayerKey registry that replaces
- * nine near-identical setter bodies (simplicity.md §7 — data-table, not a
- * branch chain). Adding a new fade-triggering action is one line here;
+ * a chain of near-identical setter bodies (simplicity.md §7 — data-table, not
+ * a branch chain). Adding a new fade-triggering action is one line here;
  * watchFades never changes.
  *
  * watchWake centralises the render-wake 'by construction': one
@@ -48,6 +48,11 @@ import type { ReconcileEffects } from './ReconcileEffects';
  * VisibilityLayerKey it drives. One entry per action that should trigger a
  * fade-bridge sync. Pure data; watchFades dispatches by lookup, never by
  * if/switch.
+ *
+ * Every matching write fires `syncFades`, including numeric-only patches via
+ * `writeVolumeField` (contrast, intensity, …). The fade bridge owns the
+ * no-op-if-unchanged guard, so a patch that doesn't cross a visibility
+ * boundary is a cheap lookup with no visible effect.
  */
 export const FADE_ROW: Partial<Record<string, VisibilityLayerKey>> = {
   [setGalaxyCatalogVisible.type]: 'survey',
@@ -87,7 +92,7 @@ export function* watchWake() {
  * watchFades — push a visibility-layer sync to the fade bridge on every
  * action that appears in FADE_ROW.
  *
- * The table lookup replaces nine near-identical handlers. Adding a new
+ * The table lookup replaces near-identical per-action handlers. Adding a new
  * fade-triggering action requires only a new FADE_ROW entry; this worker
  * never changes.
  */

@@ -22,12 +22,9 @@
  *
  * Every field lives under exactly one named cluster — no flat root
  * fields (a flat duplicate of a knob with a natural cluster home invites
- * split-brain reads/writes).  The clusters mirror EngineHandle's
- * sub-handle namespaces 1:1 — a setter on `handle.galaxyCatalogs` writes
- * into `state.settings.galaxyCatalogs`, a setter on `handle.tonemap`
- * writes into `state.settings.tonemap`, etc.  This shape makes the
- * engine's per-frame snapshot and the React-facing setters trivially
- * derivable from each other.
+ * split-brain reads/writes).  The clusters group related knobs; writes
+ * flow through dispatched slice actions and are read in the per-frame
+ * loop and the `renderFrame` dispatch.
  *
  * ### Mutation contract
  *

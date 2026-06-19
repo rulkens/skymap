@@ -22,8 +22,8 @@
  *      `settings.structures.items[cat].enabled`, galaxy catalogs via
  *      `settings.galaxyCatalogs.items[id].enabled` (wiring rows hoist the
  *      source → galaxy-catalog-id registry mapping at construction).  The galaxy catalog
- *      bit is intent — the same field `setSourceVisible` writes; the
- *      fade-tail drawMask is a render-side projection (`enabled ||
+ *      bit is pure intent — written by the `setGalaxyCatalogVisible` slice
+ *      action; the fade-tail drawMask is a render-side projection (`enabled ||
  *      fadeOpacity > 0`) and is not consulted: a just-disabled galaxy catalog
  *      stops demanding immediately while it fades out.
  *

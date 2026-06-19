@@ -10,9 +10,8 @@
  * restore, undo), while the GPU never sees an out-of-range uniform.
  *
  * Only the five number fields that feed GPU uniforms are clamped; `paletteId`
- * and `enabled` pass through untouched, matching the original handle setters
- * (`setVolumeFieldPalette`, `setVolumeFieldEnabled`) which never applied range
- * enforcement.
+ * and `enabled` pass through untouched — the store dispatch for those fields
+ * never applies range enforcement, so the read edge leaves them as-is.
  *
  * The return value is always a NEW object — the store's raw record is never
  * mutated.

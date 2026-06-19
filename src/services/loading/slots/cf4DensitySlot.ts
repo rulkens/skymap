@@ -10,9 +10,9 @@
  *
  * **Lazy fetch.**  CF-4 is registry-visible:false, so its construction
  * seed lands `enabled: false` and the slot stays idle at boot.
- * Toggling the field on flips the bit and lazy-loads via
- * `engine.setVolumeFieldEnabled`, keeping a default-off CF-4 off the
- * boot bandwidth budget.
+ * Toggling the field on dispatches `writeVolumeField`, which flips the
+ * `enabled` bit and triggers a demand-reevaluation load — keeping
+ * default-off CF-4 off the boot bandwidth budget.
  *
  * **Settings row.**  CF-4 is a shippable volume, so the construction
  * seed already created the entry in `state.settings.volumes.items`
