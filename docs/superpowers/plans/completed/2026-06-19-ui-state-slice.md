@@ -501,8 +501,9 @@ store-backed hook tests wrap with `<Provider>`.
   persistence CONFIRMED single-writer (`writeSeenVersion` called only from
   `persistSplashVersion`), `splashVisible` CONFIRMED single source of truth (the
   slice), derived state CONFIRMED still derived. No mirror-write.
-- [ ] Run the `superpowers:finishing-a-development-branch` handoff: present
-  merge/PR/cleanup options to the user (branch + PR, squash-merge).
+- [x] Run the `superpowers:finishing-a-development-branch` handoff: present
+  merge/PR/cleanup options to the user (branch + PR, squash-merge). User
+  smoke-tested all surfaces; `/feature-done` audit passed (READY).
 
 ---
 
