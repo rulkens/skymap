@@ -45,15 +45,10 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   selectGalaxyCatalogSize,
   selectDepthFade,
-  selectHighlightFallback,
-  selectRealOnly,
   selectVisibleSourceMask,
   selectToneMapCurve,
   selectBiasMode,
   selectAbsMagLimit,
-  selectShowPickBuffer,
-  selectShowDiskRadiusRing,
-  selectDisabledPasses,
   selectFilamentsEnabled,
   selectFilamentIntensity,
   selectVolumesEnabled,
@@ -66,13 +61,9 @@ import {
 import {
   setGalaxyCatalogSize,
   setDepthFade,
-  setHighlightFallback,
-  setRealOnly,
   setFilamentIntensity,
   setAbsMagLimit,
   setToneMapCurve,
-  setShowPickBuffer,
-  setShowDiskRadiusRing,
   setStructureItemEnabled,
   setStructureLabelEnabled,
   setMilkyWayLabelEnabled,
@@ -92,7 +83,7 @@ import { projectMarkerCategoryVisibility } from '../../state/settings/projectMar
 import { projectLabelCategoryVisibility } from '../../state/settings/projectLabelCategoryVisibility';
 import { buildStaticAnchorStructures } from '../../data/structure/buildStaticAnchorStructures';
 import { isStructureId } from '../../data/structure/structureIds';
-import { DebugPanel } from '../DebugPanel/DebugPanel';
+import DebugPanelContainer from '../containers/DebugPanelContainer';
 import { selectPaletteOpen, selectUiHidden, selectDebugPanelOpen } from '../../state/ui/selectors';
 import { setPaletteOpen, toggleUiHidden, toggleDebugPanelOpen } from '../../state/ui/uiSlice';
 
@@ -120,8 +111,6 @@ export function App(): React.ReactElement {
   // projection of the per-galaxy-catalog `enabled` bits.
   const pointSize = useAppSelector(selectGalaxyCatalogSize);
   const depthFadeEnabled = useAppSelector(selectDepthFade);
-  const highlightFallback = useAppSelector(selectHighlightFallback);
-  const realOnlyMode = useAppSelector(selectRealOnly);
   const visibleSourceMask = useAppSelector(selectVisibleSourceMask);
 
   // Tonemap cluster. Exposure has no React consumer today (no slider in the
@@ -142,18 +131,6 @@ export function App(): React.ReactElement {
   // value `selectTier` reads) only once the new bins are ready, so the dropdown
   // tracks the engine's committed truth rather than an optimistic guess.
   const currentTier = useAppSelector(selectTier);
-
-  // Debug-overlay toggles (pick buffer + disk-radius ring). The DebugPanel
-  // checkboxes dispatch `setShowPickBuffer` / `setShowDiskRadiusRing` directly;
-  // the store write is synchronous so the checkboxes track without an optimistic
-  // cell, and `watchWake` wakes the render loop.
-  const showPickBuffer = useAppSelector(selectShowPickBuffer);
-  const showDiskRadiusRing = useAppSelector(selectShowDiskRadiusRing);
-  // Renderer-toggle override set: checkboxes read the store via
-  // `selectDisabledPasses`; a toggle dispatches `setPassDisabled` and
-  // `watchWake` wakes the render loop. The store notifies synchronously
-  // so the checkboxes track without a local mirror.
-  const disabledPasses = useAppSelector(selectDisabledPasses);
 
   // Filaments cluster (toggle + intensity). Both read off the store. The toggle
   // dispatches `setFilamentsEnabled`; `watchFades` drives the fade ramp. The
@@ -486,34 +463,10 @@ export function App(): React.ReactElement {
         {/* `handleRef.current` set means the engine finished constructing,
             so the panel can subscribe to slots without racing. */}
         {debugPanelOpen && handleRef.current && (
-          <DebugPanel
+          <DebugPanelContainer
             slots={handleRef.current.assetSlots}
             timingService={handleRef.current.debug.timingService}
             passNames={handleRef.current.debug.passOverrides.allNames}
-            disabledPasses={disabledPasses}
-            // Orientation-fallback diagnostic toggles — dispatching the slice
-            // action updates the store synchronously, so React mirrors the truth
-            // without an optimistic update; `watchWake` wakes the render loop.
-            highlightFallback={highlightFallback}
-            realOnlyMode={realOnlyMode}
-            onHighlightFallbackChange={(enabled) => {
-              dispatch(setHighlightFallback(enabled));
-            }}
-            onRealOnlyModeChange={(enabled) => {
-              dispatch(setRealOnly(enabled));
-            }}
-            showPickBuffer={showPickBuffer}
-            onShowPickBufferChange={(enabled) => {
-              dispatch(setShowPickBuffer(enabled));
-            }}
-            showDiskRadiusRing={showDiskRadiusRing}
-            onShowDiskRadiusRingChange={(enabled) => {
-              dispatch(setShowDiskRadiusRing(enabled));
-            }}
-            // Flow motion tunables share the same `onFlowChange` handler as
-            // SettingsPanel — both dispatch `setFlow(patch)` straight to the store.
-            flow={flow}
-            onFlowChange={onFlowChange}
           />
         )}
       </div>

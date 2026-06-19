@@ -183,7 +183,7 @@ function AutoRotateToggleContainer({ hidden }: { hidden: boolean }): React.React
 
 (See spec §1 contract sketch lines 97–109 — match it.)
 
-- [ ] Write `tests/components/containers/AutoRotateToggleContainer.test.ts`
+- [x] Write `tests/components/containers/AutoRotateToggleContainer.test.ts`
   (store-backed, mirroring `RenderTogglesSection.test.ts`'s `makeWrapper`
   shape):
   - `'reflects autoRotate=false from a seeded store (renders the Play affordance)'`
@@ -194,13 +194,13 @@ function AutoRotateToggleContainer({ hidden }: { hidden: boolean }): React.React
     `selectAutoRotate(store.getState())` is `true`.
   - `'forwards hidden through to the presentational toggle'` — render with
     `hidden: true`, assert the pill is hidden (its `hidden` styling/attr).
-- [ ] Run the test, confirm it fails (module not found).
-- [ ] Write `README.md` + the container against the contract above.
-- [ ] Update `App.tsx`: import + render `AutoRotateToggleContainer`, remove the
+- [x] Run the test, confirm it fails (module not found).
+- [x] Write `README.md` + the container against the contract above.
+- [x] Update `App.tsx`: import + render `AutoRotateToggleContainer`, remove the
   dead `autoRotate` selector read and the two now-unused imports.
-- [ ] `npm test -- AutoRotateToggleContainer` → all pass; `npm run typecheck`
+- [x] `npm test -- AutoRotateToggleContainer` → all pass; `npm run typecheck`
   clean.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -270,7 +270,7 @@ existing `RenderTogglesSection` toggle computes `disabled` the same way
 rewritten section test still passes. `selectFlow` having a second subscriber
 (`FlowSectionContainer`, Task 6) is expected and correct (spec §2).
 
-- [ ] Write `tests/components/containers/DebugPanelContainer.test.ts`
+- [x] Write `tests/components/containers/DebugPanelContainer.test.ts`
   (store-backed): seed a store, render with stub engine props (a `new Map()` for
   `slots`, a minimal `timingService` stub, a `passNames` array), then:
   - `'reflects showPickBuffer from the store'` — seed `showPickBuffer: true`,
@@ -283,22 +283,22 @@ rewritten section test still passes. `selectFlow` having a second subscriber
     absorbed dispatch path works end-to-end through the container).
   - `'dispatches setRealOnly on the data-quality toggle'` — fire it, assert the
     store changed.
-- [ ] Write `tests/.../RenderTogglesSection.test.ts` rewrite first as a failing
+- [x] Write `tests/.../RenderTogglesSection.test.ts` rewrite first as a failing
   presentational test (`onTogglePass` typed spy called with the pass name; no
   Provider). Confirm it fails against current (store-coupled) section.
-- [ ] Confirm the container test fails (module not found).
-- [ ] Implement: make `RenderTogglesSection` presentational (prop `onTogglePass`);
+- [x] Confirm the container test fails (module not found).
+- [x] Implement: make `RenderTogglesSection` presentational (prop `onTogglePass`);
   add `onTogglePass` to `DebugPanel` props + pass-through; write the container.
-- [ ] Update `App.tsx`: render `DebugPanelContainer` in the existing gate;
+- [x] Update `App.tsx`: render `DebugPanelContainer` in the existing gate;
   remove debug selector reads + dispatch arrows + now-unused imports
   (`selectShowPickBuffer`, `selectShowDiskRadiusRing`, `selectDisabledPasses`,
   `selectHighlightFallback`, `selectRealOnly`, `setShowPickBuffer`,
   `setShowDiskRadiusRing`, `setHighlightFallback`, `setRealOnly`, and the
   `DebugPanel` import → swap for `DebugPanelContainer`). Keep `selectFlow` /
   `setFlow` if still used by SettingsPanel (it is, until Task 6).
-- [ ] `npm test -- DebugPanel RenderTogglesSection` → all pass; `npm run
+- [x] `npm test -- DebugPanel RenderTogglesSection` → all pass; `npm run
   typecheck` clean.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
