@@ -209,14 +209,6 @@ describe('selectHoveredFocusable', () => {
     store.dispatch(setSelectionRow({ slot: 'hover', row: structureInfo }));
     expect(selectHoveredFocusable(store.getState())).toBe(structureInfo);
   });
-
-  it('memoizes: same row reference returns same target reference', () => {
-    const { store } = createAppStore();
-    store.dispatch(setSelectionRow({ slot: 'hover', row: { type: 'milkyWay' } }));
-    const t1 = selectHoveredFocusable(store.getState());
-    const t2 = selectHoveredFocusable(store.getState());
-    expect(t1).toBe(t2);
-  });
 });
 
 describe('selectSelectedFocusable', () => {
@@ -231,6 +223,19 @@ describe('selectSelectedFocusable', () => {
     store.dispatch(setSelectionRow({ slot: 'select', row: galaxyRow }));
     const target = selectSelectedFocusable(store.getState());
     expect(target).toMatchObject({ type: 'galaxyCatalog', source: Source.SDSS });
+  });
+
+  it('memoizes across an unrelated-slot write: changing hover does not recompute the select focusable', () => {
+    const { store } = createAppStore();
+    store.dispatch(setSelectionRow({ slot: 'select', row: { type: 'milkyWay' } }));
+    const a = selectSelectedFocusable(store.getState());
+    // A write to the hover slot changes the selectionRows state object but leaves
+    // the select slot's row reference untouched — createSelector must return the
+    // cached focusable, so identity is preserved. (A plain non-memoized selector
+    // would rebuild a fresh object here and fail this assertion.)
+    store.dispatch(setSelectionRow({ slot: 'hover', row: { type: 'milkyWay' } }));
+    const b = selectSelectedFocusable(store.getState());
+    expect(a).toBe(b);
   });
 });
 
