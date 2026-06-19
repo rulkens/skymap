@@ -6,11 +6,23 @@
  *
  * App.tsx already wires six hooks.  The splash has its own state shape
  * (visibility, blocked, error, canContinueAnyway), its own derived
- * predicates (deep-link detection, readiness signal), and its own side
- * effects (localStorage persistence, 8 s timer).  Bolting all of that
- * onto App.tsx would push the file past its already-substantial size
- * and would scatter "splash logic" across the file.  A dedicated hook
- * gives the splash a single home with a clean public contract.
+ * predicates (readiness signal), and its own side effects (8 s timer).
+ * Bolting all of that onto App.tsx would push the file past its already-
+ * substantial size and would scatter "splash logic" across the file.  A
+ * dedicated hook gives the splash a single home with a clean public contract.
+ *
+ * ### Slice-backed visibility
+ *
+ * `splashVisible` is read from the `ui` Redux slice via `selectSplashVisible`.
+ * Dismiss (either CTA) dispatches `dismissSplash(CURRENT_SPLASH_VERSION)`,
+ * which atomically writes `visible: false` and records the version.  Reopen
+ * dispatches `reopenSplash()`, which sets `visible: true` without touching
+ * `dismissedVersion` (reopening is informational, not a first-time event).
+ *
+ * The first-visit / deep-link / seen-version decision is seeded once into the
+ * slice by `buildInitialUiState` at store construction.  localStorage
+ * persistence (writing `seenVersion` on dismiss) is handled by the
+ * `persistSplashVersion` store effect, not here.
  *
  * ### Readiness signal
  *
@@ -26,53 +38,24 @@
  * does render a disabled Tour tooltip — that's wired in Task 6's error
  * mapping plus the Splash component's disabled-state CSS.
  *
- * ### localStorage versioning
- *
- * Key: `skymap.splash.seenVersion` — an integer.  Hook reads on first
- * mount; if missing or lower than `CURRENT_SPLASH_VERSION`, splash is
- * shown.  Dismiss (either CTA) writes the current version; bumping
- * `CURRENT_SPLASH_VERSION` re-shows the splash to all returning users.
- * `reopen()` (called by the AboutPill) shows the splash WITHOUT touching
- * storage — informational reopens shouldn't reset the version stamp.
- *
- * ### Deep-link bypass
- *
- * A URL with `#focus=` or `?tour=` (see `hasDeepLink`) skips
- * the splash on first arrival and never auto-shows it.  About pill
- * `reopen()` still works.  Power-user gates (`?debug`, etc.) do NOT
- * count as deep links.
- *
  * ### 8 s "Continue anyway" timer
  *
- * Starts when the splash becomes visible AND blocked.  Fires once,
+ * Starts when the splash becomes visible AND blocked.  Fired once,
  * flipping `canContinueAnyway` to true so the splash can show the
  * escape link.  Cleared on unmount and re-armed if the splash is
  * reopened.  Does NOT fire when the splash isn't visible (deep-link
  * path) — the timer is a UX affordance for slow loads, not a global
  * timeout.
- *
- * ### SSR-safety
- *
- * `typeof window` guards wrap localStorage and location reads so unit
- * tests that render `useSplash` without a jsdom env don't blow up.
- * The deep-link helper itself takes plain strings — no `window`
- * dependency.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { hasDeepLink } from '../utils/url/hasDeepLink';
 import type { UseSplashInput } from '../@types/splash/UseSplashInput';
 import type { UseSplashReturn } from '../@types/splash/UseSplashReturn';
 import type { SplashError } from '../@types/splash/SplashError';
-import {
-  CURRENT_SPLASH_VERSION,
-  readSeenVersion,
-  writeSeenVersion,
-  readUrlAtMount,
-} from '../state/ui/splashStorage';
-
-// Re-export so existing importers (e.g. tests) don't need updating this task.
-export { SPLASH_STORAGE_KEY, CURRENT_SPLASH_VERSION } from '../state/ui/splashStorage';
+import { CURRENT_SPLASH_VERSION } from '../state/ui/splashStorage';
+import { useAppSelector, useAppDispatch } from '../store/hooks';
+import { selectSplashVisible } from '../state/ui/selectors';
+import { dismissSplash, reopenSplash } from '../state/ui/uiSlice';
 
 /** Milliseconds before the "Continue anyway" escape appears. */
 export const CONTINUE_ANYWAY_DELAY_MS = 8_000;
@@ -80,23 +63,13 @@ export const CONTINUE_ANYWAY_DELAY_MS = 8_000;
 export function useSplash(input: UseSplashInput): UseSplashReturn {
   const { status, loadProgress, famousMetaReady, famousMetaFailed = false } = input;
 
-  // ── Initial visibility (snapshot at mount) ───────────────────────────────
+  // ── Slice-backed visibility ───────────────────────────────────────────────
   //
-  // Three gates compose:
-  //   1. Deep link present → never auto-show.
-  //   2. Stored seenVersion >= CURRENT_SPLASH_VERSION → don't re-show.
-  //   3. Otherwise → show.
-  //
-  // We capture once via a lazy initializer so the splash decision doesn't
-  // flip mid-session if the user manually edits the URL.  `reopen()`
-  // overrides this snapshot via the `userOpened` slot below.
-  const [splashVisible, setSplashVisible] = useState<boolean>(() => {
-    const { hash, search } = readUrlAtMount();
-    if (hasDeepLink({ hash, search })) return false;
-    const seen = readSeenVersion();
-    if (seen !== null && seen >= CURRENT_SPLASH_VERSION) return false;
-    return true;
-  });
+  // The initial value is seeded by buildInitialUiState (deep-link / seen-
+  // version gates applied at store construction).  Dismiss/reopen dispatch
+  // into the same slice so any subscriber sees the same value.
+  const splashVisible = useAppSelector(selectSplashVisible);
+  const dispatch = useAppDispatch();
 
   // ── Readiness signal ─────────────────────────────────────────────────────
   //
@@ -135,22 +108,23 @@ export function useSplash(input: UseSplashInput): UseSplashReturn {
   }, [splashVisible]);
 
   // ── Dismiss + reopen ─────────────────────────────────────────────────────
+  //
+  // Both dismiss paths dispatch the same action — the version stamp is the
+  // only thing that varies, and both CTAs stamp CURRENT_SPLASH_VERSION.
+  // localStorage persistence is handled by the persistSplashVersion store
+  // effect, not here.
 
-  const dismissExplore = useCallback(() => {
-    writeSeenVersion(CURRENT_SPLASH_VERSION);
-    setSplashVisible(false);
-  }, []);
+  const dismissExplore = useCallback(
+    () => dispatch(dismissSplash(CURRENT_SPLASH_VERSION)),
+    [dispatch],
+  );
 
-  const dismissTour = useCallback(() => {
-    writeSeenVersion(CURRENT_SPLASH_VERSION);
-    setSplashVisible(false);
-  }, []);
+  const dismissTour = useCallback(
+    () => dispatch(dismissSplash(CURRENT_SPLASH_VERSION)),
+    [dispatch],
+  );
 
-  const reopen = useCallback(() => {
-    // Intentionally does NOT write seenVersion — reopening from the About
-    // pill is informational, not a "first-time dismissal" event.
-    setSplashVisible(true);
-  }, []);
+  const reopen = useCallback(() => dispatch(reopenSplash()), [dispatch]);
 
   // ── Error mapping ────────────────────────────────────────────────────────
   //
