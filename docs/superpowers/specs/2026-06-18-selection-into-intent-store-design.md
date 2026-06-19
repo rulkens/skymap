@@ -251,35 +251,53 @@ Per-frame engine consumers (`selectionRingPass`, `selectionHaloTable`, `runFrame
 `structureFocus.update`) read **through** this getter directly — they have
 `state`, so they call `resolveSlot(slot)` with no indirection.
 
-### 3a. The React read — inside `useEngine`, on the channel that already exists
+### 3a. The React read — `handle.resolveRef(ref)`, inside `useEngine`
 
-React can't reach `state.data.galaxies.catalogs`, and the store deliberately
-doesn't hold them (§4). So the resolved read needs an engine→React channel — but
-**no new one is required**: `useEngine` *already* creates the engine handle, holds
-it in `handleRef`, and already returns `selected` / `hovered` / `focused` to
-components. Today it populates those via `onSelectChange`→`useState` echo; the fold
-swaps that push for a pull, **in the same hook**, leaving every consumer's
-signature untouched:
+The catalogs can't live in the store (heavy, non-serializable, §4), so turning a
+ref into a displayable `GalaxyInfo`/`StructureInfo` *must* call the engine — that
+crossing is **irreducible**. But no new channel is required, and it is *thin*:
+`useEngine` already creates the engine handle, holds it in `handleRef`, and already
+returns `selected`/`hovered`/`focused`. And React already holds the ref (a store
+selector) and already memoizes (`useMemo`). So the handle method is just the pure
+resolver bound to the engine's live deps — **no slot, no internal memo, no store
+read**:
 
 ```ts
+// engine handle — one read method:
+resolveRef: (ref: SelectionRef | null): FocusableTarget | null => resolveSelectionRef(ref, deps()),
+
 // useEngine.ts — the echo callbacks (onHoverChange/onSelectChange/onFocusChange)
-// and their useState delete. Resolution pulls through the handle this hook already holds:
-const selectRef = useAppSelector(selectSelectedRef);
-const selectGen = useAppSelector(selectSelectedGen); // re-resolve trigger on a late-arriving cloud
-const selected = useMemo(
-  () => handleRef.current?.resolveSelection('select') ?? null,
-  [selectRef, selectGen],
-);
-// ...and the same two-line pattern for hovered / focused. useEngine returns
-// { selected, hovered, focused, ... } exactly as before → InfoCard is UNCHANGED.
+// and their useState delete; the resolved target is derived from store ref + descriptor:
+const ref = useAppSelector(selectSelectedRef);
+const gen = useAppSelector(selectSelectedGen); // re-resolve trigger on a late-arriving cloud
+const selected = useMemo(() => handleRef.current?.resolveRef(ref) ?? null, [ref, gen]);
+// ...same two lines for hovered / focused. useEngine returns { selected, hovered,
+// focused, ... } exactly as before → InfoCard and every consumer are UNCHANGED.
 ```
 
-`resolveSelection(slot)` is one **read** method on the engine handle — it wraps the
-same `makeResolveSlot` getter the per-frame consumers use, against live GPU-side
-resources. That is not a proxy (it runs the resolver), so it legitimately lives on
-the handle; it is the asymmetric counterpart to the write doors, which *were*
-proxies and dissolved (§6). No `SelectionResolveProvider`, no `useResolveSelection`
-— a second context would just duplicate the handle channel `useEngine` already is.
+Why this is the floor, not removable:
+
+- **The crossing is essential.** `resolveRef` runs the resolver against GPU-side
+  catalogs — it is *not* a proxy (unlike the write doors, which forwarded to
+  `dispatch` and dissolved, §6). Something must do this; `resolveRef(ref)` is its
+  minimal form — a pure function plus the engine's deps.
+- **`handleRef.current?.` is contained.** The pre-boot null guard appears *once*,
+  inside `useEngine` (the engine boots async). InfoCard never sees it — it consumes
+  `selected` from `useEngine`'s unchanged return shape.
+- **The sagas' `getContext` does NOT subsume this.** Sagas reach `deps` via
+  `getContext('resolveDeps')`, but two facts keep that off React's path: (a)
+  `getContext` is redux-saga's *runtime* context — only a running saga reads it, not
+  a React component; (b) the sagas resolve `focusId → SelectionRef` (serializable →
+  serializable, so the result `put`s back into the store), whereas React needs
+  `SelectionRef → FocusableTarget` (a heavy `GalaxyInfo` that **can't** enter the
+  store, so no saga could deliver it). Same source, two runtimes: the engine's
+  `deps()` closure is handed to the saga runtime via `setSagaContext` *and* closed
+  over by `handle.resolveRef` — one closure, not a copy.
+- **Two memos, on purpose.** The engine's per-frame `makeResolveSlot` getter (§3,
+  memoized, store-reading) is a *separate* consumer: the draw loop caches per-frame,
+  React caches per-render — different clocks. Both wrap the one pure
+  `resolveSelectionRef`; that shared core is the de-duplication, the two caches are
+  essential.
 
 ### 3b. Compound selectors (reselect)
 
@@ -368,7 +386,7 @@ React keys on it; a deep-linked selection whose cloud hasn't loaded resolves to
 // handle the hook already holds, re-resolving when the ref OR the descriptor ticks:
 const ref = useAppSelector(selectSelectedRef);
 const gen = useAppSelector(selectSelectedGen); // the §3b reselect selector — no inline ternary
-const selected = useMemo(() => handleRef.current?.resolveSelection('select') ?? null, [ref, gen]);
+const selected = useMemo(() => handleRef.current?.resolveRef(ref) ?? null, [ref, gen]);
 ```
 
 Skymap already has the raw material — AssetSlot generation counters *are* this
@@ -633,13 +651,13 @@ path (dispatch `catalogLoaded`).
 **Also delete (handle dissolution):** the first draft's proposed `focus` /
 `focusByFocusId` engine-handle doors never get built — writes are direct
 `store.dispatch` at every call site. The only surviving engine→React selection
-channel is the *read*, a single `resolveSelection(slot)` method on the existing
-engine handle (no new provider).
+channel is the *read*, a single `resolveRef(ref)` method on the existing engine
+handle (no new provider).
 
 **Add:** `SelectionRef.d.ts`, the `selection` slice + `dataStatus` slice +
 `requestFocus` / `catalogLoaded` actions + `selectionRoute` / `dataStatusRoute`
 constants + route entries, `resolveSelectionRef` + the memoized getter +
-`resolveSelection(slot)` on the engine handle, `focusIdOf` / `resolveFocusId`,
+`resolveRef(ref)` on the engine handle, `focusIdOf` / `resolveFocusId`,
 `state/selection/selectors.ts` (the reselect compound selectors, §3b),
 `watchSelectionWake` + `watchRequestFocus` sagas (forked from `rootSaga`).
 
@@ -664,7 +682,7 @@ InfoCard + the `DETAIL_CARD` table + detail cards, `tweenToGalaxy` /
    reselect selectors; dispatch `catalogLoaded` from the commit path. (No
    tier/settings work — already landed.)
 3. **Cut the reads over**: engine consumers (`selectionRingPass`, `runFrame`) call
-   the memoized getter; add `resolveSelection(slot)` to the handle and pull through
+   the memoized getter; add `resolveRef(ref)` to the handle and pull through
    it inside `useEngine` (§3a), keeping `useEngine`'s `{selected,hovered,focused}`
    return shape. Delete the `useState` mirrors + the echo callbacks.
 4. **Cut the writes over** to direct dispatch: `wireInput` + pick → `updateSelection*`
