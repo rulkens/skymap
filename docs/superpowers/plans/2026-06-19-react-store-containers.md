@@ -839,17 +839,17 @@ grep App.tsx and confirm the ONLY `useAppSelector` calls remaining are
 `selectPaletteOpen`, `selectUiHidden`, `selectDebugPanelOpen`,
 `selectVisibleSourceMask`, `selectTier`. Any other selector left = unfinished.
 
-- [ ] Add/extend an App-level test only if one exists today (search
+- [x] Add/extend an App-level test only if one exists today (search
   `tests/components/App/`); App is largely engine-coupled and may not have a
   unit test — if not, this task's safety net is the full suite + typecheck, not
   a new App test (don't fabricate one against the engine).
-- [ ] Edit App: render the shell + chrome containers; delete the settings prop
+- [x] Edit App: render the shell + chrome containers; delete the settings prop
   block; remove every dead import/local listed above; wrap `onResetCamera` in
   `useCallback`.
-- [ ] `npm test` (full suite) → green; `npm run typecheck` clean; `npm run
+- [x] `npm test` (full suite) → green; `npm run typecheck` clean; `npm run
   build` (tsc --noEmit + vite build) clean.
-- [ ] Grep-verify App's retained selector set is exactly the five above.
-- [ ] Commit.
+- [x] Grep-verify App's retained selector set is exactly the five above.
+- [x] Commit.
 
 ---
 

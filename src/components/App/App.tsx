@@ -1,19 +1,22 @@
 /**
  * App — the root React component for Skymap.
  *
- * Boundary between the imperative WebGPU engine and the React UI.  Its
- * job is wiring: pull state out of focused hooks in `src/hooks/`, hand
- * it to presentational children, and forward user input back into the
- * engine.
+ * Layout and container-mounting: renders the engine canvas, mounts the HUD
+ * chrome (StatusBar, InfoCard, ScaleBar, NavigationPanel, SettingsPanel,
+ * CommandPalette, AutoRotateToggleContainer, DebugPanelContainer, Splash),
+ * and wires keyboard shortcuts + URL sync.
  *
- * `handleRef` is a ref, not state: many hooks call methods on the
- * engine, and putting the handle in state would re-render every
- * consumer when it starts up.  `useEngine` writes once, everyone reads.
+ * `handleRef` is a ref, not state: engine hooks call methods on it, and
+ * putting the handle in state would re-render every consumer at startup.
  *
- * No `React.StrictMode`: the engine creates GPU resources, starts a
- * render loop, and attaches listeners — it isn't designed for the
- * synthetic double-mount.  `useEngine`'s cleanup still runs on real
- * unmounts.
+ * No `React.StrictMode`: the engine creates GPU resources and starts a render
+ * loop — it isn't designed for the synthetic double-mount. `useEngine`'s
+ * cleanup still runs on real unmounts.
+ *
+ * Store reach is intentionally minimal: `selectPaletteOpen`, `selectUiHidden`,
+ * `selectDebugPanelOpen` gate App's own JSX; `selectVisibleSourceMask` and
+ * `selectTier` feed `useStructureMemberCount`. All settings reach lives in the
+ * section containers under SettingsPanel.
  */
 
 import { useCallback, useMemo, useState } from 'react';
@@ -35,54 +38,15 @@ import HomeButton from '../HomeButton/HomeButton';
 import Splash from '../Splash/Splash';
 import AboutPill from '../Splash/AboutPill';
 import { MILKY_WAY_INFO } from '../../data/milkyWay/milkyWayInfo';
-import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import appStyles from './App.module.css';
 import { useUrlSync } from '../../hooks/useUrlSync';
 import { useFamousMeta } from '../../hooks/useFamousMeta';
 import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import {
-  selectGalaxyCatalogSize,
-  selectDepthFade,
-  selectVisibleSourceMask,
-  selectToneMapCurve,
-  selectBiasMode,
-  selectAbsMagLimit,
-  selectFilamentsEnabled,
-  selectFilamentIntensity,
-  selectVolumesEnabled,
-  selectVolumeFieldItems,
-  selectFlow,
-  selectStructureItems,
-  selectGalaxyCatalogItems,
-  selectMilkyWayLabelEnabled,
-} from '../../state/settings/selectors';
-import {
-  setGalaxyCatalogSize,
-  setDepthFade,
-  setFilamentIntensity,
-  setAbsMagLimit,
-  setToneMapCurve,
-  setStructureItemEnabled,
-  setStructureLabelEnabled,
-  setMilkyWayLabelEnabled,
-  setGalaxyCatalogLabelEnabled,
-  setFilamentsEnabled,
-  setGalaxyCatalogVisible,
-  setBiasMode,
-  setVolumesEnabled,
-  writeVolumeField,
-  setFlow,
-} from '../../state/settings/settingsSlice';
-import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
+import { selectVisibleSourceMask } from '../../state/settings/selectors';
 import { selectTier } from '../../state/tier/selectors';
-import { requestTier } from '../../state/tier/requestTier';
-import { projectVolumeFieldRows } from '../../state/settings/projectVolumeFieldRows';
-import { projectMarkerCategoryVisibility } from '../../state/settings/projectMarkerCategoryVisibility';
-import { projectLabelCategoryVisibility } from '../../state/settings/projectLabelCategoryVisibility';
 import { buildStaticAnchorStructures } from '../../data/structure/buildStaticAnchorStructures';
-import { isStructureId } from '../../data/structure/structureIds';
 import DebugPanelContainer from '../containers/DebugPanelContainer';
 import { selectPaletteOpen, selectUiHidden, selectDebugPanelOpen } from '../../state/ui/selectors';
 import { setPaletteOpen, toggleUiHidden, toggleDebugPanelOpen } from '../../state/ui/uiSlice';
@@ -101,103 +65,15 @@ export function App(): React.ReactElement {
     loadProgress,
   } = useEngine();
 
-  // The tier dropdown dispatches `requestTier` (a command) rather than calling a
-  // handle method — the tier saga reacts and runs the transition.
+  // Dispatch is used for palette/ui/debug toggle actions dispatched from the
+  // keyboard hook and from inline chrome callbacks below.
   const dispatch = useAppDispatch();
 
-  // Galaxy catalogs-cluster settings read straight off the RTK settings slice
-  // via `useAppSelector`. The store exists before first paint under the
-  // `<Provider>`, so no fallback is needed. `visibleSourceMask` is a pure
-  // projection of the per-galaxy-catalog `enabled` bits.
-  const pointSize = useAppSelector(selectGalaxyCatalogSize);
-  const depthFadeEnabled = useAppSelector(selectDepthFade);
+  // `visibleSourceMask` and `currentTier` are the only settings-slice reads App
+  // keeps: both feed `useStructureMemberCount` for the InfoCard member-count.
+  // All other settings reach lives in the section containers under SettingsPanel.
   const visibleSourceMask = useAppSelector(selectVisibleSourceMask);
-
-  // Tonemap cluster. Exposure has no React consumer today (no slider in the
-  // panels), so only the curve dropdown reads here. Dispatching `setToneMapCurve`
-  // updates the store synchronously, so the dropdown tracks without an optimistic
-  // cell; `watchWake` wakes the render loop.
-  const toneMapCurve = useAppSelector(selectToneMapCurve);
-
-  // Bias mode + absolute-magnitude limit. The mode radio dispatches
-  // `setBiasMode`; `watchBiasBake` re-bakes the worker and `watchWake` wakes
-  // the loop. The abs-mag slider dispatches `setAbsMagLimit`; store writes are
-  // synchronous so both controls track without an optimistic cell.
-  const biasMode = useAppSelector(selectBiasMode);
-  const absMagLimit = useAppSelector(selectAbsMagLimit);
-
-  // The live data tier, read from the RTK tier slice. The dropdown dispatches
-  // the `requestTier` command; the tier saga writes the new tier (the slice
-  // value `selectTier` reads) only once the new bins are ready, so the dropdown
-  // tracks the engine's committed truth rather than an optimistic guess.
   const currentTier = useAppSelector(selectTier);
-
-  // Filaments cluster (toggle + intensity). Both read off the store. The toggle
-  // dispatches `setFilamentsEnabled`; `watchFades` drives the fade ramp. The
-  // intensity slider dispatches `setFilamentIntensity`; `watchWake` wakes the
-  // loop. Store writes are synchronous so both controls track without an
-  // optimistic cell.
-  const filamentsEnabled = useAppSelector(selectFilamentsEnabled);
-  const filamentIntensity = useAppSelector(selectFilamentIntensity);
-
-  // Volumes cluster. The master toggle is a primitive boolean
-  // (`selectVolumesEnabled`); dispatching `setVolumesEnabled` updates the store
-  // synchronously and `watchFades` drives the master fade. The per-field rows
-  // go through a STABLE-ref read: `selectVolumeFieldItems` returns the
-  // underlying `volumes.items` Record (only changes when a field actually
-  // changes, unaffected by a master-toggle flip), and the `useMemo` projects
-  // it to the debug-filtered `VolumeFieldRowData[]` the panel renders. Building
-  // the array inside the selector would mint a fresh array per read, breaking
-  // react-redux's reference-equality bail-out — keying the `useMemo` on the
-  // stable `items` ref is what keeps it cheap.
-  const volumesEnabled = useAppSelector(selectVolumesEnabled);
-  const volumeFieldItems = useAppSelector(selectVolumeFieldItems);
-  const volumeFields = useMemo(
-    // `debug-*` synthetic fixtures are dropped here so the panel only shows real
-    // science volumes (the dev console + handle.volumes.getState() still see them).
-    () => projectVolumeFieldRows(volumeFieldItems).filter((f) => !f.id.startsWith('debug-')),
-    [volumeFieldItems],
-  );
-
-  // Structure / label visibility, through the same STABLE-ref pattern as the
-  // volume rows. The two flat `Record<Category, boolean>` views the panel
-  // renders are DERIVED records, so a selector that built them per call would
-  // mint a fresh object each read and break react-redux's reference-equality
-  // bail-out. Instead the selectors return the underlying item Records verbatim
-  // (`selectStructureItems` / `selectGalaxyCatalogItems` — stable under
-  // copy-on-write, changing only when a category/galaxy catalog row actually
-  // changes), and the `useMemo` projections build the marker + label records
-  // keyed on those stable refs. The marker axis spans structure categories only;
-  // the label axis spans structure categories PLUS the `famousGalaxy` galaxy
-  // catalog (its label lives on the galaxy catalog item row), so its projection
-  // takes both Records.
-  const structureItems = useAppSelector(selectStructureItems);
-  const galaxyCatalogItems = useAppSelector(selectGalaxyCatalogItems);
-  // The milkyWay label axis is a singleton-overlay scalar (no per-record items
-  // row), so it's a plain boolean read fed into the same label projection.
-  const milkyWayLabelEnabled = useAppSelector(selectMilkyWayLabelEnabled);
-  const markerCategoryVisibility = useMemo(
-    () => projectMarkerCategoryVisibility(structureItems),
-    [structureItems],
-  );
-  const labelCategoryVisibility = useMemo(
-    () => projectLabelCategoryVisibility(structureItems, galaxyCatalogItems, milkyWayLabelEnabled),
-    [structureItems, galaxyCatalogItems, milkyWayLabelEnabled],
-  );
-
-  // Flow overlay. `selectFlow` returns the stored `settings.flow` object
-  // verbatim — referentially stable under copy-on-write, so no memo is needed.
-  // A knob change dispatches `setFlow(patch)` directly; the store write is
-  // synchronous so the controls track without an optimistic cell.
-  // `watchFlowReseed` reseeds on mode/count changes; `watchFades` drives the
-  // enable/disable fade. Both panels share this handler.
-  const flow = useAppSelector(selectFlow);
-  const onFlowChange = useCallback(
-    (patch: Partial<FlowSettings>) => {
-      dispatch(setFlow(patch));
-    },
-    [dispatch],
-  );
 
   // Stable reset-camera callback for SettingsPanel's memo to bail on re-renders.
   // `handleRef` is a stable ref — the arrow identity is permanent.
