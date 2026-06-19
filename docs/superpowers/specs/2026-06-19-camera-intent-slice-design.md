@@ -1,8 +1,10 @@
 # Camera intent into the store; pose derived in the frame (design)
 
-> **Status:** approved direction, awaiting implementation plan. **Builds on** the
+> **Status:** approved design, awaiting implementation plan. **Builds on** the
 > landed reconcile-sagas seam (PR #352, `a1af66d6`) — `setSagaContext` /
 > `ReconcileEffects` / `getContext('reconcile')` / `watchWake` are on `main`.
+> **Grilled** 2026-06-19 (decisions folded below; transcript in
+> `docs/grill-sessions/camera-intent-slice-2026-06-19.md`).
 > **Why this exists:** the camera is a mutable `OrbitCamera` struct
 > (`state.cam`) written every frame by three producers — drag input, an in-flight
 > tween, and auto-rotate — and its "a change needs a frame" wake is hand-paired at
@@ -12,21 +14,20 @@
 > single-source-of-truth knot [`intent.md`](../../superpowers/conventions/intent.md)
 > and [`simplicity.md`](../../superpowers/conventions/simplicity.md) §5/§8 exist to
 > remove. This folds the camera's **Intent** into the store (alongside settings,
-> selection, tier, ui), drives it through the same `reconcile-sagas` seam, lets
-> sagas throttle the high-frequency input stream, and keeps the **per-frame
-> interpolated pose derived** — never stored, never mirrored.
+> selection, tier, ui) and keeps the **per-frame interpolated pose derived** by the
+> camera-driver table — never stored, never mirrored.
 
 ## The decision in one line
 
 The store holds camera **intent** — the drag-accumulated **base pose**, the active
-**tween descriptor**, and **auto-rotate** params — never the per-frame
-interpolated pose. Continuous input (drag / pan / zoom / pinch / SpaceMouse) is
-**saga-throttled** into base-pose writes; discrete commands (`focusOn`, fly-to)
-dispatch a **tween descriptor once**. The frame derives the active pose via a pure
-`resolveCameraPose(intent, now)` (which replaces `cameraDrivers`' priority scan),
-and the engine reads it through a `get cam()` getter that mirrors today's
-`get settings()`. The pose **lands back in the engine by pull, not push** — the
-frame already polls the store.
+**tween descriptor**, **auto-rotate** params, and a `dragging` flag — never the
+per-frame interpolated pose. The pose is produced each frame by the existing
+**`CameraDriver` table** (now returning a pose instead of mutating `cam`): a
+**drag driver** reads the transient gesture register `state.cam`; **tween** and
+**auto-rotate** drivers produce their pose from a store descriptor + an
+engine-owned clock. Every non-resting driver **commits its last pose into `base` on
+its deactivation edge** — one dispatch, never per frame. The engine reads the
+result through `runCameraDrivers`, where it reads `state.cam` today.
 
 ### Why store the intent, not the pose
 
@@ -34,142 +35,157 @@ The naive "put the pose in the store and pull it" fails on two skymap specifics
 that single-producer camera systems don't have:
 
 1. **The pose is an integrator with three full-rate producers.** `yaw += dyaw`
-   needs the previous yaw — a drag is a fold over time, not a pure function of
-   (intent, now). And the register is written every frame by the **tween** and
-   **auto-rotate** as well as drag. For the store to be the pose's authoritative
-   home, *all three* must write it — including the tween's per-frame interpolation
-   step. Throttling fixes input sampling (you can drop intermediate pointermoves)
-   but **cannot** fix animation playback: a tween must play every frame, so it
-   would either dispatch at 60 fps (the action-log-as-sample-buffer smell) or
-   mutate imperatively while a throttled pose sits stale in the store — a mirror.
+   needs the previous yaw — a drag is a fold over time. And the pose is written
+   every frame by the **tween** and **auto-rotate** as well as drag. For the store
+   to be the pose's authoritative home, *all three* must write it — including the
+   tween's per-frame interpolation step. Dispatching that 60×/s is the
+   action-log-as-sample-buffer smell `intent.md` forbids.
 
-2. **Storing the descriptor, not the pose, dissolves both.** A tween's pose is
-   `evaluate(descriptor, now)` — a pure function of store intent + frame time. So
-   the **descriptor is dispatched once** and the frame evaluates it every frame
-   with zero further dispatches. The same trick removes the auto-rotate tick:
-   store `{ startTime, rate }` and derive the spin from elapsed time. The only
-   thing never in the store is the per-frame *interpolated* value, which the frame
-   computes and the renderers read.
+2. **Store the *descriptor*, derive the pose.** A tween's pose is
+   `evaluate(descriptor, elapsed)` — a pure function of a store descriptor + frame
+   time. So the **descriptor is dispatched once** and the frame evaluates it with
+   zero further dispatches. The same removes the auto-rotate tick (store `{rate}`,
+   derive the spin from elapsed). And a **drag** integrates in the engine's
+   transient register and commits **one** pose on `pointerup`. The only thing never
+   in the store is the per-frame interpolated value — produced by the driver table,
+   read by the renderers.
 
-What remains in the store is therefore genuine, serializable Intent. The
-descriptor's payoff is **in-session**: derivation without a tick storm, and a clean
-tween→drag handoff (below). It is *not* a deep-link-of-motion mechanism — a
-deep-link is `#focus=<ref>` (a focus target ref, `focusUrl.ts`), gated on
-catalog-ready, that **produces an arrival tween home→target on load**; it never
-serializes the live pose or a descriptor. Motion *recording* is a separate tour
-feature with its own relative-time beat list. The live tween descriptor is
-**session-local** (see §2 on the clock).
+What remains in the store is genuine, serializable Intent. The descriptor's payoff
+is **in-session**: derivation without a tick storm, and a uniform commit-on-edge
+handoff. It is *not* a deep-link-of-motion mechanism — a deep-link is `#focus=<ref>`
+(a focus target ref, `focusUrl.ts`), gated on catalog-ready, that **produces an
+arrival tween home→target on load**; it never serializes the live pose or a
+descriptor. Motion *recording* is a separate tour feature with its own
+relative-time beat list. The live tween descriptor is **session-local** — its clock
+is an engine Resource (§2), so the store carries no wall-clock at all.
 
 ## Scope
 
-**In scope — fold into the store + reconcile sagas:**
+**In scope:**
 
-- A new `camera` root slice holding **base pose** (`{ target, yaw, pitch,
-  distance }`), the active **tween descriptor** (`{ from, to, start, duration,
-  easing } | null`), and **auto-rotate** (`{ active, startTime, rate }`).
-- Continuous-input → **throttled** `cameraOrbit` / `cameraPan` / `cameraZoom`
-  delta actions folded into the base pose (replacing the `onCameraChange`
-  callback wiring in `orbitControls`).
-- Discrete camera commands dispatching a **tween descriptor** once
-  (`startCameraTween`) — the effect path `focusOn` / fly-to already lead into
-  (`tweenToGalaxy`/`tweenToStructure` today call `tweens.start`).
-- `resolveCameraPose(intent, now)` — the pure derivation that replaces
-  `cameraDrivers` + `tweenManager`'s closure, run in `deriveFrameContext`.
-- The engine `get cam()` getter (pull), and the **loop-continuation predicate**
-  (`autoRotate || activeTween`) re-expressed as selectors.
-- The **commit-on-transition** dispatch: when an animation ends (tween settles, or
-  a grab/auto-rotate-off cancels it) the engine folds the live evaluated pose into
-  the base — one dispatch per transition, not per frame.
+- A new `camera` root slice (route `cameraRoute`) holding **base pose**
+  (`{ target, yaw, pitch, distance }`), a **timeless tween descriptor**
+  (`{ from, to, duration, easing } | null`), **auto-rotate** (`{ active, rate }`),
+  and a **`dragging`** flag.
+- `orbitControls` reworked: it keeps its orbit/pan/zoom math but mutates the
+  transient gesture register `state.cam`, and flips `dragging` on the gesture
+  edges (`beginDrag` / `endDrag`). The `onCameraChange` pairing is replaced by a
+  single `onChange → requestRender` wake.
+- The `CameraDriver` table reworked to **return a pose**: `orbitDrag` (80),
+  `tween` (60), `autoRotate` (20), `resting` (0). `runCameraDrivers` returns the
+  highest-priority active driver's pose.
+- Engine-owned animation clock(s) (Resource): elapsed since a descriptor's
+  identity changed, fed to the tween / auto-rotate drivers.
+- The uniform **commit-on-edge**: when the active driver changes away from a
+  non-resting one, the engine dispatches `commitCameraPose(lastPose)` once.
+- Generalize the landed `watchWake` predicate from `settings/`-only to a
+  `WAKE_ROUTES` set covering `camera`.
 
 **Out of scope (do not scope-creep):**
 
-- **The selection / attention ladder** (hover → select → focus). Its own fold —
+- **The selection / attention ladder** (hover → select → focus) —
   [selection-into-intent-store](./2026-06-18-selection-into-intent-store-design.md).
-  `focusOn` *selects* (selection slice) and *commands a tween* (this slice); the
-  two compose but ship separately.
-- **The tween easing math.** `advanceCameraTween` / `cameraTween.ts` is reused
-  verbatim as the `evaluate(descriptor, now)` body — no animation-curve change.
-- **The tour driver** (priority 80, still unbuilt — see `cameraDrivers.ts:103`).
-  It slots in as the highest-priority branch of `resolveCameraPose` later; this
-  spec lands the two existing drivers (tween, auto-rotate) plus base.
-- **GPU upload / matrix code.** `computeViewProj`, the per-renderer uniform writes,
-  and the HDR passes are unchanged — they read the derived pose where they read
-  `state.cam` today.
-- **Any motion-feel change.** Throttle cadence is chosen to be visually
-  indistinguishable from today (≈ one sample per frame); easing, clamps, and
-  auto-rotate rate are moved verbatim.
+  `focusOn` *selects* (selection slice) and *commands a tween* (this slice); they
+  compose but ship separately.
+- **The tween easing math.** `advanceCameraTween` / `cameraTween.ts` is reused as
+  the pure `evaluate(descriptor, elapsed)` body — no animation-curve change.
+- **The tour driver** (priority 100, unbuilt — see `cameraDrivers.ts:103`). A new
+  top-priority row later; this spec lands the three existing producers + `resting`.
+- **GPU / matrix code.** `computeViewProj`, per-renderer uniform writes, HDR passes
+  are unchanged — they read the produced pose where they read `state.cam` today.
+- **Any motion-feel change.** Sensitivities, easing, clamps, and the auto-rotate
+  rate move verbatim.
 
 ---
 
 ## 1. The model
 
-Camera Intent has **two kinds**, and the derived pose is a pure function of them
-plus frame time:
+Camera Intent lives in the store; the per-frame pose is **produced by the driver
+table** from that Intent plus engine Resources (the gesture register, the clock):
 
-| In the store (Intent — serializable) | Derived in `deriveFrameContext` (never stored) |
-| --- | --- |
-| **base pose** `{ target, yaw, pitch, distance }` — the committed resting state | the **active pose** `{ target, yaw, pitch, distance }` |
-| **tween descriptor** `{ from, to, start, duration, easing } | null` — dispatched once | view-proj matrix, `position`, `drawPxPerRad` |
-| **auto-rotate** `{ active, startTime, rate }` | |
-
-```
-input (drag/pan/zoom/pinch/spacemouse)
-   └─ throttle saga ─▶ cameraOrbit/Pan/Zoom ─▶ camera slice (base pose)
-focusOn / fly-to ─────▶ startCameraTween(descriptor) ─▶ camera slice (descriptor)
-toggle auto-rotate ───▶ setAutoRotate ────────────────▶ camera slice (auto-rotate)
-                                                              │ (store notifies)
-                       reconcile saga ─▶ requestRender ◀──────┤  (wake at the mouth)
-                                                              ▼
-engine  get cam()  ─pull every frame─▶  resolveCameraPose(intent, now)  ─▶ computeViewProj ─▶ renderers
-                                                              │
-                  animation ends ─▶ engine dispatch commitCameraPose(derivedPose)  (fold into base, once)
-```
-
-`resolveCameraPose` is the priority arbitration `cameraDrivers` does today, as a
-pure derivation over store intent:
+| In the store (`camera` slice — Intent, serializable) | Engine Resource (transient) | Produced each frame (never stored) |
+| --- | --- | --- |
+| `base { target, yaw, pitch, distance }` — committed resting pose | `state.cam` — the **drag gesture register** | the active pose |
+| `tween { from, to, duration, easing } | null` — timeless | `tweenStartMs` / `autoRotateStartMs` — the clock | view-proj, `position` |
+| `autoRotate { active, rate }` — timeless | `lastPose` / `prevActiveId` — for commit-on-edge | |
+| `dragging: boolean` | | |
 
 ```
-resolveCameraPose(intent, now):
-   intent.tween      ? evaluate(intent.tween, now)                      // priority: tween
- : intent.autoRotate.active
-                     ? { ...intent.base, yaw: base.yaw + elapsed*rate } // priority: auto-rotate (time-eval)
- : intent.base                                                          // resting / drag accumulator
+pointermove ─▶ orbitControls.onMove ─▶ mutate state.cam (gesture register) + requestRender
+focusOn / fly-to ─▶ engine fills from=lastPose ─▶ dispatch startCameraTween(descriptor)
+toggle auto-rotate ─▶ dispatch setAutoRotate({active,rate})
+                                                    │ (store notifies)
+                  watchWake (WAKE_ROUTES) ─▶ requestRender  (wake at the mouth)
+                                                    ▼
+engine frame ─▶ runCameraDrivers(drivers, getState(), state.cam, elapsed) ─▶ pose ─▶ computeViewProj
+                                                    │
+        active driver changed off a non-resting one ─▶ dispatch commitCameraPose(lastPose)   (once)
 ```
 
-Branch order **is** the driver priority (`tween` 60 > `autoRotate` 20 > base), so
-the data that today lives as `priority` numbers on `CameraDriver`s becomes the
-order of this expression. No blending (the single-writer guarantee
-`cameraDrivers.ts:75` bakes in) survives by construction — exactly one branch
-yields the pose.
+### The driver table (data; priority-ordered)
 
-### Two animated drivers, one shape: dispatch-once, derive, commit-on-end
+Each driver **produces** a pose; priority replaces statement order, as today
+(`cameraDrivers.ts`). No blending — exactly one driver yields the pose:
 
-Both `tween` and `autoRotate` follow the identical lifecycle, which is the heart
-of "no per-frame dispatch":
+```ts
+type CameraDriver = {
+  id: string;
+  priority: number;
+  isActive: (s: RootState) => boolean;
+  pose: (s: RootState, cam: OrbitCamera, elapsed: number) => OrbitCamera;
+};
 
-- **Start** — one dispatch installs the descriptor (`startCameraTween` /
-  `setAutoRotate({ active: true, startTime, rate })`).
-- **Run** — the frame derives the pose from `(descriptor, base, now)`. Zero
-  dispatches. The base is untouched and stale-but-irrelevant while the animation
-  owns the pose.
-- **End** — the **engine** (the only party that knows `now` and the evaluated
-  pose) dispatches `commitCameraPose(derivedPose)` once, folding the live pose
-  into the base, then clears the descriptor. Subsequent drag integrates from where
-  the animation landed — no jump.
+const drivers: CameraDriver[] = [
+  { id: 'orbitDrag',  priority: 80, isActive: (s) => s.camera.dragging,
+    pose: (_s, cam) => cam },                                   // the gesture register
+  { id: 'tween',      priority: 60, isActive: (s) => s.camera.tween !== null,
+    pose: (s, _c, e) => evaluate(s.camera.tween!, e) },         // from/to/duration — no base, no store time
+  { id: 'autoRotate', priority: 20, isActive: (s) => s.camera.autoRotate.active,
+    pose: (s, _c, e) => spin(s.camera.base, s.camera.autoRotate.rate, e) },
+  { id: 'resting',    priority: 0,  isActive: () => true,
+    pose: (s) => s.camera.base },                               // committed resting pose
+];
 
-A user **grab** mid-animation is just an early end: `pointerdown` dispatches
-`cancelCameraTween`; the engine commits the live evaluated pose into base on the
-next frame and the drag takes over. This is the existing **cancel-on-grab
-handshake** (`wireInput.ts:172`), now expressed as commit + clear rather than a
-closure `tweens.cancel()`. `cameraSnapshot.ts` already captures a pose for exactly
-this purpose — it becomes the `commitCameraPose` payload builder.
+export function runCameraDrivers(drivers, s, cam, elapsed): OrbitCamera {
+  let winner = drivers[0];
+  for (const d of drivers) if (d.isActive(s) && d.priority > winner.priority) winner = d;
+  return winner.pose(s, cam, elapsed);                          // returns, not mutates
+}
+```
 
-> **Why the engine commits, not a reducer.** The settled pose depends on `now`
-> (elapsed since `start`), which is frame knowledge, and `Date.now()` in a reducer
-> is impure (and banned in this codebase). So the engine — which computes the
-> evaluated pose every frame anyway — projects the final value into the store on
-> the transition. This is `intent.md`'s descriptor pattern ("the resource layer's
-> commit path dispatches a fact"): one dispatch per animation end, not per frame.
+`tween.pose` is `evaluate(descriptor, elapsed)` — `from`/`to` are absolute poses,
+so it needs neither `base` nor any stored time. `autoRotate.pose` spins `base` by
+`elapsed * rate`. `resting` is the floor.
+
+### One lifecycle for every driver: produce → commit-on-edge
+
+Drag, tween, and auto-rotate share a single lifecycle, which is the heart of "no
+per-frame dispatch":
+
+- **Enter.** `orbitDrag`: `orbitControls.onGestureStart` seeds `state.cam` from
+  `base` and dispatches `beginDrag` (`dragging = true`). `tween` / `autoRotate`:
+  the dispatch that installs the descriptor; the engine zeroes that driver's clock
+  when the descriptor's identity changes.
+- **Run.** The winning driver's `pose(...)` is produced each frame. Zero
+  dispatches. `base` is untouched and irrelevant while a non-resting driver owns
+  the pose.
+- **Exit (commit-on-edge).** When the active driver changes away from a non-resting
+  one — drag released, tween elapsed ≥ duration, auto-rotate toggled off — the
+  engine dispatches **one** `commitCameraPose(lastPose)`, folding the last produced
+  pose into `base`. The next drag seeds from there; no jump.
+
+> **Why the engine commits, not a reducer.** The committed pose is the last
+> *produced* pose, which depends on `elapsed` / the gesture register — frame
+> knowledge, and `Date.now()` in a reducer is impure (and banned here). The engine,
+> which produced that pose this frame, projects it into the store on the edge. This
+> is `intent.md`'s descriptor pattern (the resource layer's commit path dispatches
+> a fact): one dispatch per transition, not per frame.
+
+A grab mid-animation is the same edge: `pointerdown` → `beginDrag` makes
+`orbitDrag` win (priority 80); the displaced tween/auto-rotate driver commits its
+last pose on the same frame and `orbitControls` mutates `state.cam` from there.
+`cameraSnapshot.ts` (today's pose-capture helper) becomes the `commitCameraPose`
+payload builder.
 
 ---
 
@@ -179,258 +195,241 @@ this purpose — it becomes the `commitCameraPose` payload builder.
 // src/state/camera/cameraSlice.ts  (inline-Immer, like settingsSlice)
 type CameraState = {
   base: { target: Vec3; yaw: number; pitch: number; distance: number };
-  tween: CameraTweenDescriptor | null;            // serializable: from/to/start/duration/easing
-  autoRotate: { active: boolean; startTime: number; rate: number };
+  tween: CameraTweenDescriptor | null;      // { from, to, duration, easing } — timeless
+  autoRotate: { active: boolean; rate: number };
+  dragging: boolean;
 };
 
 reducers: {
-  // continuous input — throttled deltas folded into the accumulator
-  cameraOrbit (s, { payload: { dyaw, dpitch } }) { s.base.yaw -= dyaw; s.base.pitch = clampPitch(s.base.pitch - dpitch); },
-  cameraPan   (s, { payload: { delta } })        { vec3Add(s.base.target, delta); },
-  cameraZoom  (s, { payload: { factor } })       { s.base.distance = clampDistance(s.base.distance * factor); },
-  // commit the live evaluated pose (engine, on animation end / grab)
-  commitCameraPose (s, { payload }) { s.base = payload; },
-  // descriptors — dispatched once
-  startCameraTween  (s, { payload }) { s.tween = payload; },
+  beginDrag (s) { s.dragging = true; },
+  endDrag   (s) { s.dragging = false; },
+  commitCameraPose (s, { payload }) { s.base = payload; },   // engine, on a deactivation edge
+  startCameraTween  (s, { payload }) { s.tween = payload; }, // from filled by the engine (= lastPose)
   cancelCameraTween (s)              { s.tween = null; },
   setAutoRotate     (s, { payload }) { s.autoRotate = payload; },
 }
 ```
 
-**Clamps split by kind, deliberately.** `clampPitch` (pole saturation) and
-`clampDistance` stay in the **reducer** — they are constraints on the *state
-value* (a saturating integrator: orbit past the pole and the accumulator must
-hold, so the next delta integrates from a valid value). This is **not** the
-display-clamp case the reconcile-sagas spec moves to the read edge
-(`clampVolumeContrast` et al. clamp an *output mapping*). The distinction is
-essential, not an oversight: a state-saturating clamp belongs with the integrator;
-an output clamp belongs at the consumption edge. (Radar note for the plan: keep
-these two clamp kinds named distinctly so neither migrates to the other's home.)
+No wall-clock in the store: the descriptors are **timeless**, and `elapsed` is an
+engine Resource (the clock), reset when a descriptor's identity changes. This keeps
+Intent serializable and means the dispatcher never needs `nowMs`.
 
-`base` is genuine Intent: "where the user dragged to," serializable. In
-single-producer camera systems this base *is* the whole pose — which is why storing
-it has always worked; skymap only adds the two animated descriptors on top.
+**Clamps split by kind, deliberately.** Pitch (pole saturation) and distance clamps
+apply where `state.cam` is mutated (`orbitControls`) and on `commitCameraPose`'s
+payload build — they are constraints on the *state value* (a saturating integrator:
+orbit past the pole and the accumulator must hold). This is **not** the display-clamp
+case the reconcile-sagas spec moves to the read edge (`clampVolumeContrast` clamps an
+*output mapping*). The distinction is essential: a state-saturating clamp belongs
+with the integrator; an output clamp belongs at the consumption edge. (Radar note:
+keep the two clamp kinds named distinctly so neither migrates to the other's home.)
 
 **`autoRotate` relocates, it isn't greenfield.** PR #352 dissolved
 `camera.setAutoRotate` into a direct `settings/` write — it currently lives at
-`settings.camera.autoRotate` (`settingsSlice.ts:91`). This spec **moves** it into
-the new `camera` slice as `{ active, rate }`; the `settings/setAutoRotate` action
-and the now-empty `settings.camera` sub-object are removed, and the SettingsPanel
-toggle dispatches the camera-slice action instead. (It is wake-only — not in
-`FADE_ROW` — so only the wake-route generalization in §4 carries it.)
+`settings.camera.autoRotate` (`settingsSlice.ts:91`). This spec **moves** it into the
+new `camera` slice as `{ active, rate }`; the `settings/setAutoRotate` action and the
+now-empty `settings.camera` sub-object are removed, and the SettingsPanel toggle
+dispatches the camera-slice action.
+
+`base` is genuine Intent: "where the user came to rest," serializable. In
+single-producer camera systems this base *is* the whole pose — which is why storing
+it has always worked; skymap only adds the descriptors and the drag register on top.
 
 ---
 
-## 3. Input throttling (sagas)
+## 3. How drag reaches the driver (no manipulator, no throttle)
 
-Continuous input handlers stop mutating `cam` + calling `onCameraChange`, and
-instead emit **raw delta actions** that a throttling saga coalesces to frame
-cadence:
+Drag does not dispatch deltas. `orbitControls` keeps its exact math, mutating the
+transient gesture register `state.cam`, and flips `dragging` on the gesture edges:
 
 ```ts
-// orbitControls emits, per pointermove/wheel/pinch tick:
-dispatch(cameraOrbitRaw({ dyaw, dpitch }));   // command, reducer-less
-
-// src/store/effects/cameraInputSaga.ts — accumulate within a frame, flush once
-function* watchOrbit() {
-  yield* throttle(FRAME_MS, cameraOrbitRaw, function* (a) {
-    yield* put(cameraOrbit(a.payload));       // the actual base-pose write
-  });
-}
+attachOrbitControls(canvas, state.cam, {
+  onGestureStart: () => {
+    seedFromBase(state.cam, store.getState().camera.base);   // start from the committed pose
+    store.dispatch(beginDrag());                             // dragging = true (+ wakes via watchWake)
+    store.dispatch(cancelCameraTween());                    // a grab interrupts any animation
+  },
+  onGestureEnd:   () => store.dispatch(endDrag()),           // dragging = false; engine commits on the edge
+  onChange:       () => scheduler.requestRender(),           // the wake (replaces onCameraChange 1:1)
+});
+// onMove still does: state.cam.yaw -= dx*SENS; updatePosition(state.cam); onChange();
 ```
 
-`throttle` (leading-edge + trailing flush) samples the input at ≈ one per frame —
-visually identical to today, where every move mutates `cam` but only the next rAF
-renders it. Pan and zoom get sibling watchers. (Planning note: confirm whether a
-simple `throttle` or an accumulate-and-flush worker best preserves sub-frame
-delta *sums* — a drag that fires 3 moves in one frame should orbit by their sum,
-not the last. Accumulation may move into the saga; the slice still sees one
-folded write per frame.)
+This is **strictly less machinery than a delta stream**: summation is just
+integration in the register (what `orbitControls` already does), per-frame sampling
+is just the engine producing one pose per frame, and there are **no** `cameraOrbit/
+Pan/Zoom` actions, no throttle saga, no accumulate-and-sum, no `CameraManipulator`
+type. `state.cam` stays the sanctioned mutable Resource — now demoted to *transient
+gesture scratch*: seeded from `base` on grab, the `orbitDrag` driver's pose source
+while `dragging`, committed back to `base` on release. Between gestures it is stale
+and unread (the `resting` driver returns `base`, not `cam`).
 
-The throttle is the load-bearing piece — sagas absorbing the high-frequency input
-stream so the store only ever sees coarse, frame-cadence writes. It is exactly why
-the camera *can* go through the store without a dispatch storm: the store is never
-asked to record the analog signal, only its per-frame sample.
+The new edits to `orbitControls`: call `onGestureStart` in `onDown`, `onGestureEnd`
+in `onUp` (when `activePointers` hits 0), rename `onCameraChange` → `onChange`. The
+orbit/pan/zoom bodies are untouched.
 
 ---
 
-## 4. How the pose lands in the engine (pull, via the existing seam)
+## 4. How the pose lands in the engine (the existing read site)
 
 The engine already polls the store per frame — `get settings()` is
-`store.getState().settings` (`engine.ts:218`). The camera reads back the same way:
+`store.getState().settings` (`engine.ts:218`). `deriveFrameContext` produces the
+pose where it reads `state.cam` today:
 
 ```ts
-get cam() { return store.getState().camera; }                 // the INTENT (base + descriptors)
+const s    = store.getState();
+const pose = runCameraDrivers(drivers, s, state.cam, elapsed);   // returns the winner's pose
+const vp   = computeViewProj(pose, aspect);                      // unchanged downstream
+
+// commit-on-edge — ONE dispatch when the active driver leaves a non-resting state.
+const active = activeDriverId(drivers, s);
+if (prevActiveId !== active && prevActiveId !== 'resting' && prevActiveId !== 'orbitDrag-still')
+  store.dispatch(commitCameraPose(baseOf(lastPose)));
+prevActiveId = active; lastPose = pose;
 ```
 
-`deriveFrameContext(state, canvas)` then computes the **pose** before
-`computeViewProj`:
-
-```ts
-const pose = resolveCameraPose(state.cam, nowMs);             // pure derivation (replaces runCameraDrivers)
-const vp   = computeViewProj(pose, aspect);                  // unchanged
-```
-
-No `store.subscribe`, no copy into a register, no mirror: the frame loop is the
-puller, and `resolveCameraPose` is a pure function of (polled intent, frame time).
-The renderers read `ctx.vp` exactly as today.
-
-**Animation-end commit** is the one engine→store write. `deriveFrameContext` (or a
-thin post-step) detects a tween that finished this frame (`evaluate` reports
-`now >= start + duration`) or an auto-rotate that was toggled off, and dispatches
-`commitCameraPose(pose)` + the matching clear — once.
+`runCameraDrivers` is a pure function of `(driver list, store intent, gesture
+register, elapsed)`; the impure reads (the mutable register, the clock) happen at
+this call site — `intent.md`'s "dereference the resource at the edge." The renderers
+read the produced `vp` exactly as today; no `store.subscribe`, no mirror.
 
 ### Wake + loop continuation
 
 - **Wake (mouth):** the landed `watchWake` matches **`settings/` only**
   (`isSettingsWrite = a.type.startsWith(`${settingsRoute}/`)`, `reconcileSagas.ts`).
-  The `camera` slice is a **new root route** (like `tier`/`ui`), so its actions are
-  **not** caught today — this is the one change this spec makes to landed reconcile
-  code. **Generalize the wake predicate to a `WAKE_ROUTES` set** (`settings` +
-  `camera`, and `selection` when it lands) rather than adding a parallel
-  `watchCameraWake` — wake-on-scene-write is not a settings-specific concern, and a
-  set keeps it one matcher. `requestRender` stays idempotent (`renderScheduler.ts:77`),
-  so the throttled input writes, `startCameraTween`, and the auto-rotate toggle each
-  wake the loop with no per-site `onCameraChange`.
-- **Continuation (predicate):** the frame tail keeps rescheduling while an
-  animation owns the pose. The closure predicate `autoRotate || currentTween`
-  becomes a selector over store intent:
-  `selectCameraAnimating(s) = s.camera.tween !== null || s.camera.autoRotate.active`.
-  Reading it via `get cam()` keeps the loop alive through an animation without
-  dispatching per frame.
+  The `camera` slice is a **new root route**, so its actions are not caught today —
+  the one change this spec makes to landed reconcile code. **Generalize the wake
+  predicate to a `WAKE_ROUTES` set** (`settings` + `camera`, and `selection` when it
+  lands) rather than a parallel `watchCameraWake` — wake-on-scene-write is not a
+  settings-specific concern. `requestRender` is idempotent (`renderScheduler.ts:77`),
+  so `beginDrag`, `startCameraTween`, and the auto-rotate toggle each wake the loop;
+  the in-gesture `onChange` wake covers the per-move frames.
+- **Continuation (predicate):** the frame tail keeps rescheduling while a non-resting
+  driver is active. The closure predicate becomes a selector:
+  `selectCameraActive(s) = s.camera.dragging || s.camera.tween !== null || s.camera.autoRotate.active`.
 
 ---
 
-## 5. What `tweenManager` / `cameraDrivers` become
+## 5. What changes in the existing camera subsystems
 
-They don't vanish — they **invert** from closure-owned mutable state into store
-intent + a pure derivation:
-
-- `tweenManager`'s privately-held `currentTween` → `state.camera.tween` (store).
-  Its `start()` → `dispatch(startCameraTween)`; `cancel()` →
-  `dispatch(cancelCameraTween)`; `isActive()` → `selectCameraAnimating`;
-  `advance()` → the `tween` branch of `resolveCameraPose`. The documented **wake
-  contract** ("start wakes; advance/cancel are wake-free") is preserved — start
-  wakes via `watchWake`; the derivation in the frame is interior, wake-free.
-- `cameraDrivers`' priority scan → the branch order of `resolveCameraPose`. The
-  "exactly one writer per frame, no blending" property holds by construction (one
-  branch yields). `buildCameraDrivers`/`runCameraDrivers` are deleted.
-- `orbitControls`' five `updatePosition + onCameraChange` pairs → emit delta
-  actions; the `onCameraChange` option is removed from its signature.
-
-The net is the same arbitration and the same wake discipline, now as **data +
-derivation** instead of closures + scattered callbacks.
+- **`cameraDrivers.ts` is KEPT and reworked**, not deleted (this is the abstraction
+  the design leans on): `CameraDriver` gains `pose` (replacing the void `apply`);
+  `runCameraDrivers` returns the winner's pose; `buildCameraDrivers` gains the
+  `orbitDrag` and `resting` rows and reads store intent. Priority arbitration and
+  the single-writer/no-blending guarantee are unchanged.
+- **`tweenManager.ts` is dissolved.** Its private `currentTween` → `state.camera.tween`;
+  `start()` → `dispatch(startCameraTween)` (engine fills `from = lastPose`);
+  `cancel()` → `dispatch(cancelCameraTween)`; `isActive()` → `selectCameraActive`;
+  `advance()` → the `tween` driver's `pose: evaluate(descriptor, elapsed)`. The
+  documented wake contract is preserved — `startCameraTween` wakes via `watchWake`;
+  the per-frame `evaluate` is interior, wake-free.
+- **`cameraTween.ts` easing is reused** as the pure `evaluate(descriptor, elapsed)`
+  (today's `advanceCameraTween` mutates `cam`; the pure form returns a pose).
+- **`orbitControls.ts` is reworked** per §3 (gesture hooks, `onChange`); its
+  orbit/pan/zoom math is untouched.
 
 ---
 
 ## 6. Correctness invariants (verify in planning)
 
-- **No visible motion change.** Throttled-to-frame input is indistinguishable from
-  per-move mutate + next-rAF render. Pin with a test that a sequence of raw deltas
-  in one frame produces the same base pose as today's summed mutations.
-- **No jump on animation→drag handoff.** `commitCameraPose` folds the *live
-  evaluated* pose into base before the descriptor clears, so the resting pose the
-  next drag integrates from equals the last rendered pose. Test: start a tween,
-  cancel mid-flight, assert base == evaluate(descriptor, cancelTime).
-- **`resolveCameraPose` is pure.** Same (intent, now) → same pose; no `cam`
-  mutation, no I/O. Testable with a plain intent literal and a fake `now`
-  (mirrors `runCameraDrivers`' existing purity test).
-- **Single writer per frame.** Exactly one branch of `resolveCameraPose` produces
-  the pose; no two drivers contribute.
-- **Synchronous post-write intent.** The frame's `get cam()` reads post-dispatch
+- **No visible motion change.** Per-move `state.cam` mutation + next-frame produce is
+  identical to today's mutate + next-rAF render. Pin with a drag-sequence test.
+- **No jump on any handoff.** `commitCameraPose(lastPose)` folds the *last produced*
+  pose into `base` on the deactivation edge, so the next driver (usually `resting` or
+  `orbitDrag` seeded from `base`) starts exactly where the last left off. Test: grab
+  mid-tween, assert `base == evaluate(descriptor, elapsedAtGrab)`.
+- **`runCameraDrivers` / `evaluate` / `spin` are pure.** Same inputs → same pose; no
+  mutation, no I/O. Testable with a plain intent literal, a fake `cam`, a fake
+  `elapsed` (mirrors the existing `runCameraDrivers` purity test).
+- **Single writer per frame.** Exactly one driver yields the pose; no blending.
+- **Synchronous post-write intent.** The frame's `getState()` reads post-dispatch
   intent (the store notifies synchronously, as `get settings()` already relies on).
-- **Serializable intent.** `base`, `tween`, `autoRotate` are plain data (no `Set`,
-  no class, no GPU handle) — a deep-link/tour can snapshot and replay them,
-  including a mid-flight tween.
+- **Serializable, clock-free intent.** `base`, `tween`, `autoRotate`, `dragging` are
+  plain data — no `Set`, no class, no GPU handle, **no wall-clock** (the clock is an
+  engine Resource).
+- **`commitCameraPose` fires once per transition**, never per frame (assert via the
+  edge guard).
 
 ---
 
 ## 7. Blast radius
 
-**Add:** `src/state/camera/cameraSlice.ts` + selectors
-(`selectCameraIntent`, `selectCameraAnimating`); `src/@types/camera/CameraState.d.ts`,
-`CameraTweenDescriptor.d.ts`; `src/services/camera/resolveCameraPose.ts` (pure);
-`src/store/effects/cameraInputSaga.ts` (throttle watchers); the
-`commitCameraPose`-on-transition step in `deriveFrameContext`.
+**Add:** `src/state/camera/cameraSlice.ts` + selectors (`selectCameraIntent`,
+`selectCameraActive`); `src/@types/camera/CameraState.d.ts`,
+`CameraTweenDescriptor.d.ts`; `src/services/engine/camera/evaluateTween.ts` (pure,
+from `cameraTween` math) + `spinAutoRotate.ts`; `src/store/constants.ts`
+(+`cameraRoute`); the engine-side clock + `lastPose`/`prevActiveId` + commit-on-edge
+in `deriveFrameContext`.
 
-**Rework:** `src/store/rootReducer.ts` (+`camera` slice) + `src/store/constants.ts`
-(+`cameraRoute`); `src/store/effects/reconcileSagas.ts` (generalize `isSettingsWrite`
-→ a `WAKE_ROUTES` matcher covering `camera`); `src/state/settings/settingsSlice.ts`
-(remove `setAutoRotate` + the `settings.camera` sub-object — relocated to the camera
-slice); the SettingsPanel auto-rotate toggle (dispatch the camera-slice action);
-`src/store/rootSaga.ts` (compose the input watchers);
-`src/services/camera/orbitControls.ts` (emit deltas, drop `onCameraChange`);
-`src/services/engine/engine.ts` (`get cam()` returns store intent; remove
-`createTweenManager` wiring); `src/services/engine/frame/deriveFrameContext.ts`
-(call `resolveCameraPose` + commit-on-end); `src/services/engine/frame/runFrame.ts`
-(drop `runCameraDrivers`); the engine `focusOn`/fly-to handles
-(`tweenToGalaxy`/`tweenToStructure`/`cameraSnapshot` dispatch `startCameraTween`
-instead of `tweens.start`); `engine.ts` `get cam()` consumers that assumed a live
-mutable `OrbitCamera` (audit — most read `ctx`/pose, not `cam` directly).
+**Rework:** `src/store/rootReducer.ts` (+`camera` slice);
+`src/store/effects/reconcileSagas.ts` (generalize `isSettingsWrite` → a `WAKE_ROUTES`
+matcher covering `camera`); `src/state/settings/settingsSlice.ts` (remove
+`setAutoRotate` + the `settings.camera` sub-object — relocated); the SettingsPanel
+auto-rotate toggle; `src/services/engine/camera/cameraDrivers.ts` (`CameraDriver.pose`,
+`runCameraDrivers` returns a pose, `buildCameraDrivers` gains `orbitDrag`/`resting` +
+reads store intent); `src/services/camera/orbitControls.ts` (gesture hooks, `onChange`);
+`src/services/engine/frame/deriveFrameContext.ts` (produce the pose + commit-on-edge);
+the engine `focusOn`/fly-to handles (`tweenToGalaxy`/`tweenToStructure`/`cameraSnapshot`
+fill `from = lastPose` and dispatch `startCameraTween`); `engine.ts` (drop
+`createTweenManager` wiring).
 
 **Delete:** `src/services/engine/camera/tweenManager.ts` +
-`src/@types/camera/TweenManager.d.ts`; `src/services/engine/camera/cameraDrivers.ts`
-(`buildCameraDrivers`/`runCameraDrivers`) + `CameraDriver.d.ts`; the
-`onCameraChange` option on `OrbitControlsOptions`; the per-site `onCameraChange`
-calls.
+`src/@types/camera/TweenManager.d.ts`; the `onCameraChange` option on
+`OrbitControlsOptions`; the per-site `onCameraChange` calls.
 
-**Unchanged:** `cameraTween.ts` easing (reused as `evaluate`); `computeViewProj`
-and all renderer uniform writes; the HDR passes; `state.cam` *shape* (now sourced
-from the store, same fields).
+**Unchanged:** `cameraTween.ts` easing curve (reused by `evaluateTween`);
+`computeViewProj` + all renderer uniform writes; the HDR passes; the `OrbitCamera`
+shape (now used as the gesture register + produced-pose type).
 
-**Builds on (landed):** the reconcile-sagas seam (`setSagaContext` /
-`ReconcileEffects` / `getContext('reconcile')` / `watchWake`) is on `main` (PR
-#352). This slice's wake rides a **generalized** `watchWake` (§4) — the one edit it
-makes to landed reconcile code.
+**Builds on (landed):** the reconcile-sagas seam (PR #352). This slice's wake rides a
+**generalized** `watchWake` — the one edit it makes to landed reconcile code.
 
 ---
 
 ## 8. Build order (suite green at each step)
 
-1. **Slice, no consumers.** Add the `camera` slice + selectors +
-   `resolveCameraPose` (pure, unit-tested against intent literals). Nothing reads
-   it yet. Additive.
-2. **Derive the pose from the slice.** `deriveFrameContext` calls
-   `resolveCameraPose(store.getState().camera, now)` instead of mutating + reading
-   `state.cam`; seed the slice `base` from the current camera at init. Tween +
-   auto-rotate still driven by the old subsystems writing base via
-   `commitCameraPose` each frame *temporarily* — both paths agree (parity), suite
-   green.
-3. **Move the tween into the slice.** `focusOn`/fly-to dispatch
-   `startCameraTween`; `resolveCameraPose` evaluates it; engine commits on settle;
-   delete `tweenManager`. Auto-rotate likewise → `setAutoRotate` + time-eval +
-   commit-on-stop; delete `cameraDrivers`.
-4. **Throttle input into the slice.** `orbitControls` emits raw deltas;
-   `cameraInputSaga` folds them; remove `onCameraChange`. The wake now comes from
-   `watchWake`.
-5. **Trim.** Remove the dead `OrbitControlsOptions.onCameraChange`, the
-   `createTweenManager` wiring, and the driver types; freeze the surviving camera
-   surface.
+The cutover rule (grill Q3): **never derive-from-the-new-home before every writer
+fills it.** `state.cam` stays the bridge until the last step.
+
+1. **Slice + pure pieces, no consumers.** Add the `camera` slice + `cameraRoute` +
+   selectors; add `evaluateTween` / `spin` (unit-tested against literals); rework
+   `CameraDriver.pose` / `runCameraDrivers` to return a pose but keep the old
+   `apply`-style drivers writing `state.cam` for now. Additive; engine still reads
+   `state.cam`.
+2. **Writers populate the slice, engine still reads `state.cam` (bridge).** Tween →
+   `startCameraTween` + the `tween` driver, *also* keeping `state.cam` in sync via a
+   temporary commit each frame; auto-rotate → `setAutoRotate` + driver; drag →
+   `beginDrag`/`endDrag` + `commitCameraPose`. Every step renders identically because
+   the read is still `state.cam`. Suite green throughout.
+3. **Flip the read (cutover).** `deriveFrameContext` switches to
+   `runCameraDrivers(drivers, getState(), state.cam, elapsed)` + commit-on-edge, with
+   `state.cam` now only the `orbitDrag` register. Delete the temporary per-frame sync.
+4. **Throttle-free input + wake.** `orbitControls` → gesture hooks + `onChange`;
+   generalize `watchWake` to `WAKE_ROUTES`; remove `onCameraChange`.
+5. **Trim.** Delete `tweenManager` + `createTweenManager` wiring + the
+   `OrbitControlsOptions.onCameraChange` option; relocate `autoRotate` out of
+   `settings`; freeze the surviving camera surface.
 
 ---
 
 ## References
 
-- [`intent.md`](../../superpowers/conventions/intent.md) — the four-layer table
-  (live pose = Resource; target/auto-rotate/focus = Intent), the "dispatching it
-  60×/second would be absurd" smell test, and the **descriptor-bridges-a-resource**
-  pattern this spec applies to the tween. Note: this spec **refines** intent.md's
-  camera example — an orbit camera has no separable "position register"; the whole
-  orbit register is derived, and what's stored is the *base accumulator* +
-  *descriptors*, not the interpolated pose. (Fold the correction back into
-  intent.md when this lands.)
+- [`intent.md`](../../superpowers/conventions/intent.md) — the four-layer table (live
+  pose = Resource; target/auto-rotate/focus = Intent), the "60×/second is absurd"
+  smell test, and the descriptor-bridges-a-resource pattern. This spec **refines**
+  intent.md's camera example — an orbit camera has no separable "position register";
+  what's stored is the *base accumulator* + *descriptors*, and the pose is produced by
+  the driver table. (Fold the correction into intent.md when this lands.)
 - [`simplicity.md`](../../superpowers/conventions/simplicity.md) — §5 (value/place;
-  concentrate mutation), §7 (priority numbers → branch order is still a registry,
-  not a scattered switch), §8 (single source of truth — the pose stops having two
-  homes).
+  concentrate mutation in the transient register), §7 (the driver **table** is a
+  registry, not a scattered switch), §8 (single home for the resting pose — `base`).
 - [Engine handles → reconcile sagas](./2026-06-19-engine-handles-to-reconcile-sagas-design.md)
-  — **landed** (PR #352). The `setSagaContext` / `ReconcileEffects` / `watchWake`
-  seam this rides; camera writes wake through `watchWake` once its predicate is
-  generalized from `settings/`-only to a `WAKE_ROUTES` set (§4).
+  — **landed** (PR #352). The `setSagaContext` / `ReconcileEffects` / `watchWake` seam
+  this rides; camera writes wake once `watchWake`'s predicate is generalized to
+  `WAKE_ROUTES` (§4).
 - [Selection into the Intent Store](./2026-06-18-selection-into-intent-store-design.md)
-  — the attention-ladder fold `focusOn` composes with (select + command-a-tween),
-  shipped separately.
-- Current camera subsystems being inverted: `tweenManager.ts` (closure tween +
-  wake contract), `cameraDrivers.ts` (priority arbitration), `orbitControls.ts`
-  (the `onCameraChange` pairing), `cameraSnapshot.ts` (the commit-pose builder),
-  `renderScheduler.ts` (idempotent wake).
+  — the attention-ladder fold `focusOn` composes with; shipped separately.
+- Current camera subsystems: `cameraDrivers.ts` (the driver table this reworks),
+  `tweenManager.ts` (the closure this dissolves), `orbitControls.ts` (the
+  `onCameraChange` pairing this retires), `cameraSnapshot.ts` (the commit-pose
+  builder), `cameraTween.ts` (easing reused by `evaluateTween`), `renderScheduler.ts`
+  (idempotent wake).
