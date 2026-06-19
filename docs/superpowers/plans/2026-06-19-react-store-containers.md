@@ -414,20 +414,20 @@ function GalaxiesSectionContainer({ sourceCounts }): React.ReactElement
 // export default memo(GalaxiesSectionContainer)
 ```
 
-- [ ] Write `tests/components/SettingsPanel/GalaxiesSection.test.ts`
+- [x] Write `tests/components/SettingsPanel/GalaxiesSection.test.ts`
   (plain-props): assert the master tri-state (`indeterminate` when a subset of
   `TOGGLEABLE_SOURCES` bits are set), that a per-catalog checkbox reflects
   `visibleSourceMask`, that the point-size slider echoes `pointSize`, and that
   toggling/sliding calls the matching typed-`vi.fn` prop with the right args.
-- [ ] Write `tests/components/containers/GalaxiesSectionContainer.test.ts`
+- [x] Write `tests/components/containers/GalaxiesSectionContainer.test.ts`
   (store-backed): seed `sizePx`, assert the slider value; fire the slider,
   assert `selectGalaxyCatalogSize(store.getState())` changed; toggle a catalog,
   assert `selectVisibleSourceMask(store.getState())` changed.
-- [ ] Confirm both fail.
-- [ ] Implement the presentational section (extracting the JSX + master IIFE),
+- [x] Confirm both fail.
+- [x] Implement the presentational section (extracting the JSX + master IIFE),
   then the container.
-- [ ] `npm test -- GalaxiesSection` → pass; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] `npm test -- GalaxiesSection` → pass; `npm run typecheck` clean.
+- [x] Commit.
 
 ---
 
