@@ -12,12 +12,9 @@
  *     stored in a ref so other hooks (useFocusUrlSync, useAliasIndex,
  *     useKeyboardShortcuts) can call methods on it without dependency
  *     gymnastics.
- *   - Engine-driven state: status, hovered, selected, focused, scale,
- *     sourceCounts, loadProgress.  All but `scale` are fed by engine
- *     callbacks that fire only when the value changes, so direct `setX`
- *     wiring is safe (no spurious re-renders).  The data tier is NOT here:
- *     it lives in its own `tier` root slice, read via `selectTier` /
- *     `useAppSelector` — this hook neither holds nor exposes it.
+ *   - Engine-driven state: status, scale, sourceCounts, loadProgress.
+ *     Selection state (hovered/selected/focused) was moved to the Redux
+ *     store in P2.5 — App reads `useAppSelector(selectXFocusable)`.
  *     `scale` is derived locally from `onCameraChange` snapshots via
  *     the pure `computeScaleInfo` helper — the engine emits the
  *     camera scalars; this hook computes the legend.  React's
@@ -63,7 +60,6 @@ import { createEngine } from '../services/engine';
 import { computeScaleInfo } from '../services/engine/helpers/scaleBar';
 import type { EngineHandle } from '../@types/engine/EngineHandle';
 import type { EngineStatus } from '../@types/engine/EngineStatus';
-import type { FocusableTarget } from '../@types/engine/FocusableTarget';
 import type { ScaleInfo } from '../@types/engine/ScaleInfo';
 import type { LoadProgressState } from '../@types/loading/LoadProgressState';
 import type { UseEngineInput } from '../@types/engine/UseEngineInput';
@@ -107,10 +103,9 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const handleRef = useRef<EngineHandle | null>(null);
 
+  // Selection (hovered/selected/focused) is no longer mirrored here — the engine
+  // dispatches directly to the Redux store (P2.4) and App reads via selectors (P2.5).
   const [status, setStatus] = useState<EngineStatus>({ kind: 'initializing' });
-  const [hovered, setHovered] = useState<FocusableTarget | null>(null);
-  const [selected, setSelected] = useState<FocusableTarget | null>(null);
-  const [focused, setFocused] = useState<FocusableTarget | null>(null);
   const [scale, setScale] = useState<ScaleInfo>(INITIAL_SCALE);
   const [sourceCounts, setSourceCounts] = useState<Partial<Record<SourceType, number>>>({});
   const [structureCounts, setStructureCounts] = useState<Partial<Record<StructureId, number>>>({});
@@ -148,18 +143,23 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
     };
 
     // `EngineCallbacks` is EVENT-only: lifecycle / selection / camera /
-    // sources events.  Each bag here merges this hook's session-level
-    // subscriptions (status / hover / select / focus / camera / catalog /
-    // tier / load progress) with whatever `extraCallbacks` declares for
-    // that cluster — App-level event subscriptions (e.g.
-    // `selection.onStructureHoverChange`).  Spread order puts the
-    // extra-callback entries LAST so the caller wins where both define the
-    // same method.  Settings VALUES do not flow through here: they live in
-    // the injected store and React reads them via `useAppSelector` selectors,
-    // so there is no echo to merge.  The injected `store` and `setSagaContext`
-    // ride through as non-callback options — both are sibling returns of
-    // `createAppStore`, delivered here via their respective React contexts
-    // (`<Provider>` for `store`, `<SagaContextProvider>` for `setSagaContext`).
+    // sources events.  Each bag merges this hook's session-level subscriptions
+    // with whatever `extraCallbacks` declares for that cluster — App-level event
+    // subscriptions (e.g. `selection.onStructureHoverChange`).  Spread order
+    // puts the extra-callback entries LAST so the caller wins where both define
+    // the same method.
+    //
+    // Selection echoes (onHoverChange/onSelectChange/onFocusChange) are NOT
+    // wired here — the engine dispatches directly to the Redux store (P2.4) and
+    // App reads via selectors (P2.5).  The `selection` cluster is intentionally
+    // omitted from `createEngine` (the bag is now optional in `EngineCallbacks`).
+    //
+    // Settings VALUES do not flow through here: they live in the injected store
+    // and React reads them via `useAppSelector` selectors, so there is no echo
+    // to merge.  The injected `store` and `setSagaContext` ride through as
+    // non-callback options — both are sibling returns of `createAppStore`,
+    // delivered here via their respective React contexts (`<Provider>` for
+    // `store`, `<SagaContextProvider>` for `setSagaContext`).
     const {
       lifecycle: extraLifecycle,
       camera: extraCamera,
@@ -174,11 +174,10 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
         onStatusChange: setStatus,
         ...extraLifecycle,
       },
-      selection: {
-        onHoverChange: setHovered,
-        onSelectChange: setSelected,
-        ...extraSelection,
-      },
+      // The `selection` cluster is omitted from this hook's own wiring —
+      // selection echoes now flow through the Redux store. If a caller passes
+      // `extraCallbacks.selection`, forward it so App-level subscriptions still land.
+      ...(extraSelection !== undefined && { selection: extraSelection }),
       camera: {
         // Derive scale-bar legend from the engine's per-frame camera
         // snapshot.  `computeScaleInfo` is pure (and reused from the
@@ -189,7 +188,6 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
         // degenerate inputs (viewport height 0, distance ≈ 0); we
         // skip setState in that window so the placeholder stays.
         // React's setState equality dedups unchanged frames.
-        onFocusChange: setFocused,
         onCameraChange: onCameraChangeImpl,
         ...extraCamera,
       },
@@ -220,9 +218,6 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
     canvasRef,
     handleRef,
     status,
-    hovered,
-    selected,
-    focused,
     scale,
     sourceCounts,
     structureCounts,

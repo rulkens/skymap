@@ -42,11 +42,9 @@ import type { AppStore, SetSagaContext } from '../../store/types';
  * (`const { camera } = ...`), and adding a new event lands in the
  * cluster it belongs to instead of bloating a flat record.
  *
- * Required-ness rules: sub-bags whose members include any required
- * callback are themselves required (`lifecycle`, `selection`).
- * Bags that are entirely optional (`camera`, `sources`, …) keep their
- * `?:` marker so subscribers can omit them without needing to declare
- * an empty object.
+ * Required-ness rules: only `lifecycle` is required (its `onStatusChange`
+ * drives the loading overlay). All other bags (`selection`, `camera`,
+ * `sources`) are optional — omitting one is a no-op at the engine.
  */
 export type EngineCallbacks = {
   /**
@@ -84,17 +82,17 @@ export type EngineCallbacks = {
   };
 
   /**
-   * Selection-state callbacks.  Carry the resolved `FocusableTarget`
-   * (galaxy or structure) so consumers don't need to branch on a separate
-   * id callback — they receive the full GalaxyInfo / StructureInfo
-   * directly.  Both required: every engine consumer needs hover /
-   * select fan-out (InfoCard text, halo, hover preview).
+   * Selection-state callbacks.  Now optional: `selectionSubsystem.ts` still
+   * calls `cb.selection?.onSelectChange?.(…)` and `cb.selection?.onHoverChange?.(…)`
+   * via optional chaining, so omitting the cluster is safe. These echo members
+   * are dead after the React read cutover (P2.5) and will be removed along with
+   * the subsystem in a later task (P2.8).
    */
-  selection: {
+  selection?: {
     /** Fired when the pinned/selected entity changes. */
-    onSelectChange: (target: FocusableTarget | null) => void;
+    onSelectChange?: (target: FocusableTarget | null) => void;
     /** Fired when the entity under the cursor changes (null = empty sky). */
-    onHoverChange: (target: FocusableTarget | null) => void;
+    onHoverChange?: (target: FocusableTarget | null) => void;
   };
 
   /**

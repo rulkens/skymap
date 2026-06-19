@@ -1,18 +1,19 @@
 import type { SourceType } from '../data/SourceType';
 import type { EngineHandle } from './EngineHandle';
 import type { EngineStatus } from './EngineStatus';
-import type { FocusableTarget } from './FocusableTarget';
 import type { ScaleInfo } from './ScaleInfo';
 import type { LoadProgressState } from '../loading/LoadProgressState';
 import type { StructureId } from '../data/structure/StructureId';
 
+/**
+ * The shape returned by `useEngine`. Selection state (hovered/selected/focused)
+ * was removed in P2.5 — App now reads those from the Redux store via
+ * `useAppSelector(selectXFocusable)` rather than echoing them through this hook.
+ */
 export type UseEngineReturn = {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   handleRef: React.RefObject<EngineHandle | null>;
   status: EngineStatus;
-  hovered: FocusableTarget | null;
-  selected: FocusableTarget | null;
-  focused: FocusableTarget | null;
   scale: ScaleInfo;
   sourceCounts: Partial<Record<SourceType, number>>;
   /** Per-category structure counts (cluster / supercluster / void / group) for the Structures panel. */

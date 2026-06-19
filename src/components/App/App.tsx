@@ -34,7 +34,6 @@ import AutoRotateToggle from '../AutoRotateToggle/AutoRotateToggle';
 import HomeButton from '../HomeButton/HomeButton';
 import Splash from '../Splash/Splash';
 import AboutPill from '../Splash/AboutPill';
-import { MILKY_WAY_INFO } from '../../data/milkyWay/milkyWayInfo';
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import appStyles from './App.module.css';
 import { useUrlSync } from '../../hooks/useUrlSync';
@@ -64,6 +63,15 @@ import {
   selectGalaxyCatalogItems,
   selectMilkyWayLabelEnabled,
 } from '../../state/settings/selectors';
+import {
+  selectHoveredFocusable,
+  selectSelectedFocusable,
+  selectFocusedFocusable,
+} from '../../state/selection/selectors';
+import { updateSelectionFocus, clearSelection } from '../../state/selection/selectionSlice';
+import { requestFocus } from '../../state/selection/requestFocus';
+import { refOf } from '../../services/engine/helpers/refOf';
+import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import {
   setGalaxyCatalogSize,
   setDepthFade,
@@ -99,22 +107,19 @@ import { selectPaletteOpen, selectUiHidden, selectDebugPanelOpen } from '../../s
 import { setPaletteOpen, toggleUiHidden, toggleDebugPanelOpen } from '../../state/ui/uiSlice';
 
 export function App(): React.ReactElement {
-  const {
-    canvasRef,
-    handleRef,
-    status,
-    hovered,
-    selected,
-    focused,
-    scale,
-    sourceCounts,
-    structureCounts,
-    loadProgress,
-  } = useEngine();
+  const { canvasRef, handleRef, status, scale, sourceCounts, structureCounts, loadProgress } =
+    useEngine();
 
   // The tier dropdown dispatches `requestTier` (a command) rather than calling a
   // handle method — the tier saga reacts and runs the transition.
   const dispatch = useAppDispatch();
+
+  // Selection slots — read from the Redux store. The engine dispatches
+  // `updateSelectionHover/Select/Focus` directly (P2.4); these selectors build
+  // the rich `FocusableTarget` display models from the resolved row cache.
+  const hovered = useAppSelector(selectHoveredFocusable);
+  const selected = useAppSelector(selectSelectedFocusable);
+  const focused = useAppSelector(selectFocusedFocusable);
 
   // Galaxy catalogs-cluster settings read straight off the RTK settings slice
   // via `useAppSelector`. The store exists before first paint under the
@@ -348,8 +353,8 @@ export function App(): React.ReactElement {
           hovered={hovered}
           selected={selected}
           selectedMemberCount={selectedMemberCount}
-          onFocus={(target) => handleRef.current?.camera.focusOn(target)}
-          onClose={() => handleRef.current?.selection.clear()}
+          onFocus={(target) => dispatch(updateSelectionFocus(refOf(target)))}
+          onClose={() => dispatch(clearSelection())}
         />
         <ScaleBar scale={scale} />
         {/* Flex column anchored bottom-left.  Children stack upward as
@@ -438,9 +443,7 @@ export function App(): React.ReactElement {
             // single-key patch. Volume params are stored UNCLAMPED (raw Intent);
             // the renderer clamps at read-edge.
             volumesEnabled={volumesEnabled}
-            onVolumesEnabledChange={(enabled) =>
-              dispatch(setVolumesEnabled(enabled))
-            }
+            onVolumesEnabledChange={(enabled) => dispatch(setVolumesEnabled(enabled))}
             volumeFields={volumeFields}
             onVolumeFieldEnabledChange={(fieldId, enabled) =>
               dispatch(writeVolumeField({ id: fieldId, patch: { enabled } }))
@@ -490,11 +493,19 @@ export function App(): React.ReactElement {
           aliasIndex={aliasIndex ?? undefined}
           open={paletteOpen}
           onClose={closePalette}
-          onSelect={(id) => handleRef.current?.selection.selectFamous(id)}
-          onSelectAlias={(target) => handleRef.current?.selection.selectByAlias(target)}
+          onSelect={(id) => dispatch(requestFocus(id))}
+          onSelectAlias={(target) =>
+            dispatch(
+              updateSelectionFocus({
+                type: 'galaxyCatalog',
+                source: target.source as GalaxyCatalogSourceType,
+                index: target.localIdx,
+              }),
+            )
+          }
           // The Milky Way is a first-class FocusableTarget — focus it through
           // the same select → focus path every other target uses.
-          onSelectMilkyWay={() => handleRef.current?.camera.focusOn(MILKY_WAY_INFO)}
+          onSelectMilkyWay={() => dispatch(updateSelectionFocus({ type: 'milkyWay' }))}
         />
         {/* `handleRef.current` set means the engine finished constructing,
             so the panel can subscribe to slots without racing. */}
