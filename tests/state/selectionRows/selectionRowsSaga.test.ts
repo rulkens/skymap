@@ -19,8 +19,10 @@ import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchSelectionRows } from '../../../src/state/selectionRows/selectionRowsSaga';
 import {
+  updateSelectionHover,
   updateSelectionSelect,
   updateSelectionFocus,
+  clearSelection,
 } from '../../../src/state/selection/selectionSlice';
 import { catalogLoaded } from '../../../src/state/dataStatus/dataStatusSlice';
 import { selectionRowsRoute } from '../../../src/store/constants';
@@ -83,6 +85,27 @@ describe('watchSelectionRows', () => {
       type: 'galaxyCatalog',
       objId: '1237668',
     });
+  });
+
+  it('clearSelection re-extracts select + focus rows to null, leaving hover untouched', async () => {
+    // Regression: clearSelection (Esc / InfoCard ×) nulls the select+focus REFS,
+    // but the reconciler must also null the derived ROWS — otherwise the InfoCard,
+    // focus ring, and structure-focus subsystem (all read the rows) stay stuck and
+    // Esc appears to do nothing.
+    const ref = { type: 'galaxyCatalog', source: Source.SDSS, index: 0 } as const;
+    store.dispatch(updateSelectionHover(ref));
+    store.dispatch(updateSelectionSelect(ref));
+    store.dispatch(updateSelectionFocus(ref));
+    await flush();
+    expect(store.getState()[selectionRowsRoute].select).not.toBeNull();
+    expect(store.getState()[selectionRowsRoute].focus).not.toBeNull();
+
+    store.dispatch(clearSelection());
+    await flush();
+    expect(store.getState()[selectionRowsRoute].select).toBeNull();
+    expect(store.getState()[selectionRowsRoute].focus).toBeNull();
+    // clearSelection leaves hover alone (it clears select + focus only).
+    expect(store.getState()[selectionRowsRoute].hover).not.toBeNull();
   });
 
   it('a deep link defers: ref present but cloud absent → null row; catalogLoaded fills it', async () => {

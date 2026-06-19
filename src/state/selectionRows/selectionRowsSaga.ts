@@ -3,12 +3,17 @@
  * derived cache. It keeps every row in sync with its SelectionRef.
  *
  * On a ref change (updateSelection{Hover,Select,Focus}) it re-extracts that one
- * slot. On catalogLoaded — a late cloud arriving — it re-extracts any slot
- * whose row is still null but whose ref is set (a deep link, or a galaxy in a
- * tier whose cloud just finished loading). Keyed on the COMPLETE trigger set
- * (ref writes ∪ catalogLoaded), so the cache can't hand-sync-drift the way two
- * authoritative homes do — this is what justifies materializing a derived value
- * in the store (see the spec's exception note).
+ * slot. On clearSelection it re-extracts select + focus (the slots that action
+ * nulls) so the derived rows clear in lockstep with the refs — Esc / InfoCard ×
+ * depend on this. On catalogLoaded — a late cloud arriving — it re-extracts any
+ * slot whose row is still null but whose ref is set (a deep link, or a galaxy in
+ * a tier whose cloud just finished loading). Keyed on the COMPLETE writer set
+ * (every selection-slice action ∪ catalogLoaded), so the cache can't
+ * hand-sync-drift the way two authoritative homes do — this is what justifies
+ * materializing a derived value in the store (see the spec's exception note).
+ *
+ * Every action that writes a selection ref MUST appear here, or its slot's row
+ * goes stale — a clear that the UI never sees.
  *
  * It reaches the live engine cloud/structures via getContext('resolveDeps'),
  * the same seam tierSaga uses for runTierTransition. The reducers stay free of
@@ -20,6 +25,7 @@ import {
   updateSelectionHover,
   updateSelectionSelect,
   updateSelectionFocus,
+  clearSelection,
 } from '../selection/selectionSlice';
 import { catalogLoaded } from '../dataStatus/dataStatusSlice';
 import { setSelectionRow } from './selectionRowsSlice';
@@ -42,6 +48,12 @@ export function* watchSelectionRows() {
     yield* reextract('select');
   });
   yield* takeEvery(updateSelectionFocus, function* () {
+    yield* reextract('focus');
+  });
+  // clearSelection nulls the select + focus refs in one action; re-extract both
+  // so their derived rows clear too (the reducer leaves hover alone).
+  yield* takeEvery(clearSelection, function* () {
+    yield* reextract('select');
     yield* reextract('focus');
   });
   // A late cloud makes a previously-unresolvable ref resolvable — fill the gaps.
