@@ -550,17 +550,17 @@ function FlowSectionContainer(): React.ReactElement
 `selectFlow` now has two independent subscribers (this + `DebugPanelContainer`);
 correct per spec §2 — each re-renders only its own subtree on a flow change.
 
-- [ ] Write `tests/components/SettingsPanel/FlowSection.test.ts` (plain-props):
+- [x] Write `tests/components/SettingsPanel/FlowSection.test.ts` (plain-props):
   master toggle reflects `flow.enabled`; toggling it calls `onFlowChange({
   enabled: <toggled> })`; a `FlowRow` control change calls `onFlowChange` with
   the patched key.
-- [ ] Write `tests/components/containers/FlowSectionContainer.test.ts`
+- [x] Write `tests/components/containers/FlowSectionContainer.test.ts`
   (store-backed): toggle the header, assert `selectFlow(store.getState()).enabled`
   flipped.
-- [ ] Confirm both fail.
-- [ ] Implement presentational + container.
-- [ ] `npm test -- FlowSection` → pass; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] Confirm both fail.
+- [x] Implement presentational + container.
+- [x] `npm test -- FlowSection` → pass; `npm run typecheck` clean.
+- [x] Commit.
 
 ---
 
