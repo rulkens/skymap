@@ -8,8 +8,9 @@
  * Only refs whose source actually reloads on the given swap are captured. Tier-
  * agnostic sources (2MRS, Famous) never emit a `catalogLoaded` on a tier swap,
  * so capturing them would cause the consumer's `take(catalogLoaded for source)`
- * to block forever. `tierTarget(src, prev) !== tierTarget(src, next)` is the
- * same predicate `makeRunTierTransition` uses — these two must stay in sync.
+ * to block forever. The reload predicate here — tierTarget differs AND source
+ * enabled — MUST mirror `makeRunTierTransition`'s guard set exactly. If they
+ * drift, a captured-but-not-reloaded source hangs the re-anchor `take`.
  *
  * Hover is NOT captured: `watchTier` clears the hover slot unconditionally
  * across the swap (a stale hover over an evicted cloud would resolve to a
@@ -28,6 +29,7 @@
 import { focusIdOf } from '../../services/url/focusIdOf';
 import { selectSelectedRef, selectFocusRef } from './selectors';
 import { tierTarget } from '../../data/tierTargets';
+import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import type { RootState } from '../../store/types';
 import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
 import type { SelectionSlot } from '../../@types/engine/SelectionSlot';
@@ -61,6 +63,9 @@ export function captureGalaxyFocusIds(
     // Skip sources whose tier target is unchanged — they do NOT reload, so no
     // `catalogLoaded` will arrive and the consumer's `take` would block forever.
     if (tierTarget(ref.source, prevTier) === tierTarget(ref.source, nextTier)) continue;
+    // Skip disabled sources — `makeRunTierTransition` skips them too, so no
+    // `catalogLoaded` fires for a disabled source even when its tier target changes.
+    if (!state.settings.galaxyCatalogs.items[galaxyCatalogIdOf(ref.source)].enabled) continue;
     // focusIdOf returns null when the cloud is absent or the ref has no durable
     // representation (Milky Way, already guarded above). Skip nulls so the
     // return type carries only resolvable ids.

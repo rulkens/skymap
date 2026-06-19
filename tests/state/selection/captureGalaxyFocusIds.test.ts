@@ -25,6 +25,7 @@ import {
   updateSelectionSelect,
   updateSelectionFocus,
 } from '../../../src/state/selection/selectionSlice';
+import { setGalaxyCatalogVisible } from '../../../src/state/settings/settingsSlice';
 import { Source } from '../../../src/data/sources';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -184,6 +185,25 @@ describe('captureGalaxyFocusIds', () => {
     };
 
     const result = captureGalaxyFocusIds(store.getState(), emptyDeps, 'medium', 'large');
+
+    expect(result).toHaveLength(0);
+  });
+
+  it('does NOT capture a galaxy ref on a DISABLED source even when its tierTarget changes', () => {
+    // SDSS's tierTarget differs across medium→large, so the tierTarget guard alone
+    // would capture it. But `makeRunTierTransition` also skips disabled sources —
+    // no `catalogLoaded` fires for them — so we must not capture them either or the
+    // consumer's `take` blocks forever.
+    const store = buildStore();
+    store.dispatch(updateSelectionSelect(SDSS_REF));
+    store.dispatch(setGalaxyCatalogVisible({ id: 'sdss', enabled: false }));
+
+    const result = captureGalaxyFocusIds(
+      store.getState(),
+      makeSdssResolveDeps(SDSS_OBJ_ID),
+      'medium',
+      'large',
+    );
 
     expect(result).toHaveLength(0);
   });
