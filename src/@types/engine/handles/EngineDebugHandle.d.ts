@@ -1,12 +1,11 @@
 /**
  * EngineDebugHandle — the engine's observability sub-handle.
  *
- * Hosts handles to debug/inspection surfaces the React shell reads
- * but never drives.  Today's inhabitants are `timingService` (read)
- * and `passOverrides` (read/write toggle bag); future debug surfaces
- * (CPU-timing breakdowns, render-stat counters, frame-timeline
- * exports) cluster here rather than sprawling across the top-level
- * handle.
+ * Hosts debug/inspection surfaces the React shell reads.  Today's
+ * inhabitants are `timingService` (GPU timing) and `passOverrides`
+ * (read-only pass-name list); future additions (CPU-timing
+ * breakdowns, render-stat counters, frame-timeline exports) cluster
+ * here rather than sprawling across the top-level handle.
  *
  * ### Why a sub-handle for one field
  *
@@ -30,31 +29,22 @@
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 
 /**
- * `passOverrides` — DebugPanel hook for toggling individual renderer
- * passes off (HDR + UI overlay).  The disabled record is engine-owned settings
- * state (`EngineSettingsState.debug.disabledPasses`); the React panel reads it
- * back via `selectDisabledPasses`, so this handle is write-only — there is no
- * `isDisabled` query.
+ * `passOverrides` — read-only pass-name list for the DebugPanel's
+ * renderer-toggle section.
  *
- * The override is **one-way**: it can hide a pass that would otherwise
- * run, but can never force-enable a pass whose own `enabled()` gate
- * returned false.  Toggling triggers a one-frame re-render so the
- * change shows up while the render-on-demand loop is idle.
+ * `allNames` is materialised from the encoder's HDR + UI pass
+ * registries in draw order so the React panel can render one
+ * checkbox per pass without enumerating kebab-case names itself.
+ * The one-way override semantics (can hide a passing pass, cannot
+ * force-enable a gated one) are enforced in the encoder loop;
+ * `selectDisabledPasses` reads the live record back from the store.
  *
- * `allNames` lists every pass name across HDR + UI registries in
- * deterministic draw order.  Callers iterate it to render a UI row per
- * pass without enumerating the kebab-case names themselves.
+ * Toggle writes are dispatched directly via `setPassDisabled`
+ * (RTK action) — no write surface lives on this handle.
  */
 export type PassOverridesHandle = {
   /** Every pass name across HDR + UI registries, in draw order. */
   readonly allNames: readonly string[];
-  /**
-   * Mark `name` disabled (`disabled === true`) or enabled
-   * (`disabled === false`) in the disabled record.  Wakes the
-   * render-on-demand loop so the change shows up on the next frame even
-   * when the camera is idle.
-   */
-  setDisabled(name: string, disabled: boolean): void;
 };
 
 export type EngineDebugHandle = {
@@ -67,9 +57,9 @@ export type EngineDebugHandle = {
    */
   readonly timingService: GpuTimingService;
   /**
-   * Per-pass on/off overrides for the DebugPanel's renderer-toggle
-   * section.  See `PassOverridesHandle` for the one-way override
-   * semantics.
+   * Read-only pass-name list for the DebugPanel's renderer-toggle
+   * section.  `allNames` is the source of truth for which passes
+   * exist; checkbox writes go to the store via `setPassDisabled`.
    */
   readonly passOverrides: PassOverridesHandle;
 };

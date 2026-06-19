@@ -124,7 +124,6 @@ import { setVolumeFieldPalette } from './handles/setVolumeFieldPalette';
 import { listVolumeFields } from './handles/listVolumeFields';
 import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
 import { setBiasMode } from './handles/setBiasMode';
-import { setPassDisabled } from './handles/setPassDisabled';
 import { makeRunTierTransition } from './wiring/makeRunTierTransition';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
 
@@ -783,17 +782,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // assigns `state.gpu.timingService` AFTER this literal is built — a copy
     // would be null forever.
     //
-    // `passOverrides`: DebugPanel hook for the `settings.debug.disabledPasses`
-    // override set. `allNames` is materialised once from HDR_PASSES + UI_PASSES
-    // so the React rows track the encoder's pass loop; `setDisabled` delegates to
-    // the `setPassDisabled` handle (store action + render wake).
+    // `passOverrides`: read-only pass-name list for the DebugPanel's renderer
+    // toggle section. `allNames` is materialised from HDR_PASSES + UI_PASSES so
+    // the React rows track the encoder's actual pass loop in draw order.
+    // The DebugPanel dispatches `setPassDisabled` directly; `watchWake` wakes
+    // the render loop on the store write.
     debug: {
       get timingService() {
         return state.gpu.timingService;
       },
       passOverrides: {
         allNames: [...HDR_PASSES.map((p) => p.name), ...UI_PASSES.map((p) => p.name)],
-        setDisabled: (name, disabled) => setPassDisabled(state, store, name, disabled),
       },
     },
 

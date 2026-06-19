@@ -154,11 +154,10 @@ export function App(): React.ReactElement {
   // cell, and `watchWake` wakes the render loop.
   const showPickBuffer = useAppSelector(selectShowPickBuffer);
   const showDiskRadiusRing = useAppSelector(selectShowDiskRadiusRing);
-  // Renderer-toggle override set: read so the checkboxes track the store
-  // without mirroring the set in component state. Writes go through
-  // `handle.debug.passOverrides.setDisabled` (action-backed), which notifies
-  // synchronously — same "dispatch + read back via selector" shape as the
-  // pick-buffer toggle above.
+  // Renderer-toggle override set: checkboxes read the store via
+  // `selectDisabledPasses`; a toggle dispatches `setPassDisabled` and
+  // `watchWake` wakes the render loop. The store notifies synchronously
+  // so the checkboxes track without a local mirror.
   const disabledPasses = useAppSelector(selectDisabledPasses);
 
   // Filaments cluster (toggle + intensity). Both read off the store. The toggle
@@ -490,7 +489,7 @@ export function App(): React.ReactElement {
           <DebugPanel
             slots={handleRef.current.assetSlots}
             timingService={handleRef.current.debug.timingService}
-            passOverrides={handleRef.current.debug.passOverrides}
+            passNames={handleRef.current.debug.passOverrides.allNames}
             disabledPasses={disabledPasses}
             // Orientation-fallback diagnostic toggles — dispatching the slice
             // action updates the store synchronously, so React mirrors the truth

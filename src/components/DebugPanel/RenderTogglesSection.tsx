@@ -4,9 +4,11 @@
  *
  * The intended use case is "I see two overlapping draws on screen and
  * I want to know which renderer is responsible for which".  Toggling
- * a pass off skips its draw block in the next frame; the
- * `passOverrides.setDisabled` handle dispatches the store write and the
- * one-shot render request that wakes the on-demand loop.
+ * a pass dispatches `setPassDisabled` to the RTK settings store; the
+ * store notifies synchronously and the updated `disabledPasses` record
+ * flows back down via the `disabledPasses` prop (App subscribes with
+ * `selectDisabledPasses`); `watchWake` wakes the render-on-demand loop
+ * so the change shows up on the next frame even when the camera is idle.
  *
  * ### Override semantics (one-way)
  *
@@ -18,12 +20,10 @@
  *
  * ### Where the disabled record lives
  *
- * The record is engine-owned settings state (`settings.debug.disabledPasses`),
- * read live via the `disabledPasses` prop (App subscribes with
- * `selectDisabledPasses`).  No local mirror: a toggle dispatches through
- * `passOverrides.setDisabled`, the store notifies synchronously, and the prop
- * flows the new record back down — the same "write through the handle, read back
- * via the selector" shape the pick-buffer toggle uses.
+ * The record is RTK settings state (`settings.debug.disabledPasses`),
+ * read live via the `disabledPasses` prop.  No local mirror: a toggle
+ * dispatches `setPassDisabled`, the store notifies synchronously, and
+ * the prop flows the new record back down.
  *
  * ### Why a separate `<details>` block
  *
@@ -35,27 +35,31 @@
  */
 
 import type { ReactElement } from 'react';
-import type { PassOverridesHandle } from '../../@types/engine/handles/EngineDebugHandle';
+import { useAppDispatch } from '../../store/hooks';
+import { setPassDisabled } from '../../state/settings/settingsSlice';
 
 export type RenderTogglesSectionProps = {
-  passOverrides: PassOverridesHandle;
+  /** Pass names in draw order, sourced from the engine handle's `passOverrides.allNames`. */
+  passNames: readonly string[];
   /** Live disabled-pass record from the settings store (App subscribes). */
   disabledPasses: Record<string, boolean>;
 };
 
 export function RenderTogglesSection({
-  passOverrides,
+  passNames,
   disabledPasses,
 }: RenderTogglesSectionProps): ReactElement {
+  const dispatch = useAppDispatch();
+
   const toggle = (name: string) => {
-    passOverrides.setDisabled(name, disabledPasses[name] !== true);
+    dispatch(setPassDisabled({ pass: name, disabled: disabledPasses[name] !== true }));
   };
 
   return (
     <details>
       <summary style={{ fontWeight: 'bold', cursor: 'pointer' }}>Renderer Toggles</summary>
       <div style={{ marginTop: 4 }}>
-        {passOverrides.allNames.map((name) => {
+        {passNames.map((name) => {
           const isDisabled = disabledPasses[name] === true;
           return (
             <label

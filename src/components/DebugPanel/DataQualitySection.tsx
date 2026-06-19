@@ -33,13 +33,11 @@
  *
  * ### Why props, not an imperative handle
  *
- * Unlike RenderTogglesSection, which mirrors a `PassOverridesHandle`'s
- * set of disabled-by-name passes, the orientation flags live in the
- * RTK settings slice — App.tsx reads them via `useAppSelector`
- * selectors and passes them down here.  Receiving them as plain props
- * keeps this section a pure function of its inputs (mirrors how
- * SettingsPanel hosted the same two checkboxes before the move) and
- * lets the parent DebugPanel decide the wiring.
+ * The orientation flags live in the RTK settings slice — App.tsx reads
+ * them via `useAppSelector` selectors and passes them down as plain
+ * props.  Receiving them as props keeps this section a pure function
+ * of its inputs and lets the parent DebugPanel decide the wiring.
+ * `RenderTogglesSection` dispatches writes the same way.
  */
 
 import type { ReactElement } from 'react';
