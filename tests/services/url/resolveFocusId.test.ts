@@ -1,0 +1,216 @@
+/**
+ * Tests for resolveFocusId — the focus-id string → SelectionRef decoder.
+ *
+ * resolveFocusId replaces parseFocusHash (which returned a FocusTarget) +
+ * resolveFocusTarget (which mapped a FocusTarget to engine state).  Here
+ * the two are collapsed: we parse and resolve in one call, returning a
+ * SelectionRef directly (or null when the cloud isn't loaded or the id
+ * doesn't resolve to any known row).
+ *
+ * Returning null is REQUIRED for unresolvable ids — the reconciler saga
+ * loops on catalogLoaded until non-null, so null means "try again later"
+ * not "die".
+ */
+
+import { describe, it, expect } from 'vitest';
+import { resolveFocusId } from '../../../src/services/url/resolveFocusId';
+import { Source } from '../../../src/data/sources';
+import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
+import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+
+/**
+ * Build a one-row GalaxyCatalog fixture at a given position.
+ * objIDs is BigUint64Array (unsigned 64-bit).
+ */
+function makeCloud(objId: bigint, pos: [number, number, number] = [1, 0, 0]): GalaxyCatalog {
+  return {
+    count: 1,
+    positions: new Float32Array(pos),
+    spectroscopicZ: new Float32Array([0.01]),
+    magU: new Float32Array([18]),
+    magG: new Float32Array([17]),
+    magR: new Float32Array([16]),
+    magI: new Float32Array([16]),
+    magZ: new Float32Array([16]),
+    objIDs: new BigUint64Array([objId]),
+    diameterKpc: new Float32Array([30]),
+    axisRatio: new Float32Array([1]),
+    positionAngleDeg: new Float32Array([0]),
+    classByte: new Uint8Array([0]),
+    parentSurveyByte: new Uint8Array([0]),
+  } as GalaxyCatalog;
+}
+
+// Standard deps: SDSS cloud has one row with objId 1237668393006604288n at
+// position (1, 0, 0) → RA=0°, Dec=0°; GLADE has PGC 99 at the same pos;
+// Famous cloud has row 0 indexed to famousMeta[0] ("m31").
+const deps: ResolveDeps = {
+  catalogs: {
+    get: (s) => {
+      if (s === Source.SDSS) return makeCloud(1237668393006604288n, [1, 0, 0]);
+      if (s === Source.Glade) return makeCloud(99n, [1, 0, 0]);
+      if (s === Source.TwoMRS) return makeCloud(2789n, [0, 1, 0]); // RA=90°, Dec=0°
+      if (s === Source.FamousGalaxy) return makeCloud(0n, [1, 0, 0]);
+      return undefined;
+    },
+  },
+  famousMeta: [
+    {
+      id: 'm31',
+      names: ['M31', 'Andromeda'],
+      description: 'The Andromeda Galaxy',
+      type: 'Sb',
+    },
+  ],
+  structures: { byId: () => null },
+};
+
+describe('resolveFocusId', () => {
+  // ── sdss ─────────────────────────────────────────────────────────────────
+
+  it('sdss-<objId> → galaxy ref at the matching index', () => {
+    expect(resolveFocusId('sdss-1237668393006604288', deps)).toEqual({
+      type: 'galaxyCatalog',
+      source: Source.SDSS,
+      index: 0,
+    });
+  });
+
+  it('sdss- with cloud not loaded → null', () => {
+    const noSdss: ResolveDeps = { ...deps, catalogs: { get: () => undefined } };
+    expect(resolveFocusId('sdss-1237668393006604288', noSdss)).toBeNull();
+  });
+
+  it('sdss- with id not in loaded cloud → null', () => {
+    // objId 9999n is not in the SDSS cloud fixture (only 1237668393006604288n).
+    expect(resolveFocusId('sdss-9999', deps)).toBeNull();
+  });
+
+  // ── pgc ──────────────────────────────────────────────────────────────────
+
+  it('pgc-<objId> → galaxy ref in GLADE cloud', () => {
+    expect(resolveFocusId('pgc-99', deps)).toEqual({
+      type: 'galaxyCatalog',
+      source: Source.Glade,
+      index: 0,
+    });
+  });
+
+  it('pgc-<objId> in 2MRS but not GLADE → 2MRS ref', () => {
+    expect(resolveFocusId('pgc-2789', deps)).toEqual({
+      type: 'galaxyCatalog',
+      source: Source.TwoMRS,
+      index: 0,
+    });
+  });
+
+  it('pgc- with id not in any PGC cloud → null', () => {
+    expect(resolveFocusId('pgc-99999', deps)).toBeNull();
+  });
+
+  // ── famous ───────────────────────────────────────────────────────────────
+
+  it('famous id → galaxy ref in FamousGalaxy cloud', () => {
+    expect(resolveFocusId('m31', deps)).toEqual({
+      type: 'galaxyCatalog',
+      source: Source.FamousGalaxy,
+      index: 0,
+    });
+  });
+
+  it('famous id with FamousGalaxy cloud not loaded → null', () => {
+    const noFamous: ResolveDeps = {
+      ...deps,
+      catalogs: { get: (s) => (s === Source.SDSS ? makeCloud(1237668393006604288n) : undefined) },
+    };
+    expect(resolveFocusId('m31', noFamous)).toBeNull();
+  });
+
+  it('unknown famous id → null', () => {
+    expect(resolveFocusId('ngc9999', deps)).toBeNull();
+  });
+
+  // ── structure ────────────────────────────────────────────────────────────
+
+  it('cluster-<seed> → structure ref with durable id', () => {
+    // The focusId is the durable instance id; resolveFocusId returns it
+    // without consulting byId (structures resolve via the structure-store
+    // arm; we only need to know it's a structure, not that it's loaded).
+    expect(resolveFocusId('cluster-virgo', deps)).toEqual({
+      type: 'structure',
+      id: 'cluster-virgo',
+    });
+  });
+
+  it('supercluster-<seed> → structure ref', () => {
+    expect(resolveFocusId('supercluster-hydra-wall', deps)).toEqual({
+      type: 'structure',
+      id: 'supercluster-hydra-wall',
+    });
+  });
+
+  it('void-<seed> → structure ref', () => {
+    expect(resolveFocusId('void-bootes', deps)).toEqual({
+      type: 'structure',
+      id: 'void-bootes',
+    });
+  });
+
+  it('group-<seed> → structure ref', () => {
+    expect(resolveFocusId('group-local', deps)).toEqual({
+      type: 'structure',
+      id: 'group-local',
+    });
+  });
+
+  it('structure id with invalid chars → null', () => {
+    // The regex [a-z0-9_-]+ must fail to prevent wild input slipping through.
+    expect(resolveFocusId('cluster-virgo m87', deps)).toBeNull();
+  });
+
+  // ── pos@ ─────────────────────────────────────────────────────────────────
+
+  it('pos@ra,dec → nearest galaxy ref within 30-arcsec threshold', () => {
+    // Position (1, 0, 0) in the SDSS cloud → RA = 0°, Dec = 0°.
+    // pos@0.0000,0.0000 should be an exact match (0 arcsec separation).
+    const ref = resolveFocusId('pos@0.0000,0.0000', deps);
+    expect(ref).not.toBeNull();
+    expect(ref?.type).toBe('galaxyCatalog');
+  });
+
+  it('pos@ beyond 30-arcsec threshold → null', () => {
+    // RA 90°, Dec 89° is far from every test-cloud row.
+    // But TwoMRS is at (0, 1, 0) → RA=90°, Dec=0°.  Use Dec 89° to push
+    // past the threshold.
+    expect(resolveFocusId('pos@90.0000,89.0000', deps)).toBeNull();
+  });
+
+  it('pos@ with no clouds loaded → null', () => {
+    const noClouds: ResolveDeps = { ...deps, catalogs: { get: () => undefined } };
+    expect(resolveFocusId('pos@0.0000,0.0000', noClouds)).toBeNull();
+  });
+
+  // ── edge cases ───────────────────────────────────────────────────────────
+
+  it('empty string → null', () => {
+    expect(resolveFocusId('', deps)).toBeNull();
+  });
+
+  it('pgc- with non-numeric suffix → null', () => {
+    expect(resolveFocusId('pgc-abc', deps)).toBeNull();
+  });
+
+  it('sdss- with non-numeric suffix → null', () => {
+    expect(resolveFocusId('sdss-abc', deps)).toBeNull();
+  });
+
+  it('malformed pos@ (trailing garbage) → null', () => {
+    // POS_RE is anchored at both ends; extra components should fail.
+    expect(resolveFocusId('pos@1,2,3', deps)).toBeNull();
+  });
+
+  it('id with invalid characters → null', () => {
+    // Not a recognized prefix, not a valid famous id character class.
+    expect(resolveFocusId('foo bar', deps)).toBeNull();
+  });
+});
