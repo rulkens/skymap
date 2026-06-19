@@ -439,12 +439,12 @@ export function autoRotateElapsed(clock: CameraClock, active: boolean, nowMs: nu
 > the clock-reset the spec §1 "Enter" bullet describes — no per-driver `enter` hook
 > needed (Open item 2).
 
-- [ ] `tweenElapsed returns 0 on the frame a new descriptor reference appears`
+- [x] `tweenElapsed returns 0 on the frame a new descriptor reference appears`
   (different object) `and grows on subsequent frames with the same reference`.
-- [ ] `autoRotateElapsed resets to 0 when active flips false→true`.
-- [ ] `the clock never reads wall-clock from the store` (it takes `nowMs` as an arg
+- [x] `autoRotateElapsed resets to 0 when active flips false→true`.
+- [x] `the clock never reads wall-clock from the store` (it takes `nowMs` as an arg
   — purity-of-source pin).
-- [ ] Confirm fail → implement → pass. `npm test -- cameraClock`. Commit.
+- [x] Confirm fail → implement → pass. `npm test -- cameraClock`. Commit.
 
 ### Task 2.2 — tween writer: focus handlers dispatch `startCameraTween`
 
