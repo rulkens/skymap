@@ -602,18 +602,18 @@ function StructuresSectionContainer({ structureCounts }): React.ReactElement
 // export default memo(StructuresSectionContainer)
 ```
 
-- [ ] Write `tests/components/SettingsPanel/StructuresSection.test.ts`
+- [x] Write `tests/components/SettingsPanel/StructuresSection.test.ts`
   (plain-props): master tri-state derived from `STRUCTURE_IDS` membership; a
   per-category checkbox reflects `markerCategoryVisibility[cat]`; toggling calls
   `onSetMarkerCategoryVisibility(cat, …)`; a count renders when present.
-- [ ] Write `tests/components/containers/StructuresSectionContainer.test.ts`
+- [x] Write `tests/components/containers/StructuresSectionContainer.test.ts`
   (store-backed): toggle a category, assert `selectStructureItems` /
   `selectVisibleSourceMask`-equivalent — assert the structure item's `enabled`
   flipped in the store via `selectStructureItems(store.getState())`.
-- [ ] Confirm both fail.
-- [ ] Implement presentational + container.
-- [ ] `npm test -- StructuresSection` → pass; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] Confirm both fail.
+- [x] Implement presentational + container.
+- [x] `npm test -- StructuresSection` → pass; `npm run typecheck` clean.
+- [x] Commit.
 
 ---
 
