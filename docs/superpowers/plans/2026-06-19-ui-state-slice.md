@@ -485,22 +485,22 @@ store-backed hook tests wrap with `<Provider>`.
 
 **Files:** none (review pass).
 
-- [ ] `npm run typecheck` (both src + tools tsconfigs) → clean.
-- [ ] `npm test` (full suite) → green; record the new count (baseline 590+ plus the
-  new `uiSlice` / `selectors` / `buildInitialUiState` / `persistSplashVersion` /
-  repointed `useSplash` tests).
-- [ ] Grep `App.tsx` for residual `useState(` on the three folded flags
+- [x] `npm run typecheck` (both src + tools tsconfigs) → clean.
+- [x] `npm test` (full suite) → green; record the new count (2728 tests / 448 files,
+  up from the pre-branch baseline, incl. the new `uiSlice` / `selectors` /
+  `buildInitialUiState` / `persistSplashVersion` / keyboard-integration / rewritten
+  `useSplash` tests).
+- [x] Grep `App.tsx` for residual `useState(` on the three folded flags
   (`paletteOpen` / `uiHidden` / `debugPanelOpen`) — zero hits; they're now selector
-  reads. (The local-only `initialMobile` `useState` at `App.tsx:215` STAYS — it's
-  out of scope per spec.)
-- [ ] Confirm `UseSplashReturn` (`src/@types/splash/UseSplashReturn.d.ts`) is
-  byte-identical to its pre-branch shape — `Splash` / `AboutPill` must not need a
-  change. Confirm the in-hook `localStorage` write is gone from `useSplash.ts`
-  (search for `setItem` / `writeSeenVersion`).
-- [ ] Run the `entanglement-radar` skill over the branch diff; specifically verify
-  splash persistence is a single thin effect (one writer), not re-scattered into
-  the hook AND the effect (the duplicate write would be a mirror-state bug). Address
-  or record any finding.
+  reads. (The local-only `initialMobile` `useState` STAYS — out of scope per spec.)
+- [x] Confirm `UseSplashReturn` (`src/@types/splash/UseSplashReturn.d.ts`) is
+  shape-identical to its pre-branch contract — `Splash` / `AboutPill` need no change
+  (only stale doc comments updated). Confirmed the in-hook `localStorage` write is
+  gone from `useSplash.ts` (no `setItem` / `writeSeenVersion`).
+- [x] entanglement-radar lens (folded into the final whole-branch review): splash
+  persistence CONFIRMED single-writer (`writeSeenVersion` called only from
+  `persistSplashVersion`), `splashVisible` CONFIRMED single source of truth (the
+  slice), derived state CONFIRMED still derived. No mirror-write.
 - [ ] Run the `superpowers:finishing-a-development-branch` handoff: present
   merge/PR/cleanup options to the user (branch + PR, squash-merge).
 
