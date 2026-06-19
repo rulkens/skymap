@@ -495,22 +495,22 @@ docblock). `selectFilamentsEnabled` having a second subscriber (it drives both
 this section's Style picker and its own filament toggle) is internal to one
 container — no cross-container concern.
 
-- [ ] Write `tests/components/SettingsPanel/CosmicWebSection.test.ts`
+- [x] Write `tests/components/SettingsPanel/CosmicWebSection.test.ts`
   (plain-props): assert the Style picker label derives correctly from
   `(volumesEnabled, filamentsEnabled)` (`smooth`/`filaments`/`both`/hidden), that
   the master toggle reflects `volumes OR filaments`, that clicking "Both" calls
   both `onVolumesEnabledChange(true)` and `onFilamentsChange(true)`, and that a
   `VolumeFieldRow` intensity change calls `onVolumeFieldIntensityChange`.
-- [ ] Write `tests/components/containers/CosmicWebSectionContainer.test.ts`
+- [x] Write `tests/components/containers/CosmicWebSectionContainer.test.ts`
   (store-backed): toggle the master, assert `selectVolumesEnabled` /
   `selectFilamentsEnabled`; assert `debug-*` fields are filtered out of the
   rendered rows (seed a `volumes.items` with a `debug-` field if the initial
   state has one, else assert the projection ran by checking a real field row
   renders).
-- [ ] Confirm both fail.
-- [ ] Implement presentational + container.
-- [ ] `npm test -- CosmicWebSection` → pass; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] Confirm both fail.
+- [x] Implement presentational + container.
+- [x] `npm test -- CosmicWebSection` → pass; `npm run typecheck` clean.
+- [x] Commit.
 
 ---
 
