@@ -11,7 +11,7 @@ import { takeLatest, take, put, getContext } from 'typed-redux-saga';
 
 import { requestFocus } from './requestFocus';
 import { updateSelectionFocus } from './selectionSlice';
-import { catalogLoaded } from '../dataStatus/dataStatusSlice';
+import { catalogLoaded } from '../catalog/catalogLoaded';
 import { resolveFocusId } from '../../services/url/resolveFocusId';
 import type { SagaContext } from '../../store/types';
 

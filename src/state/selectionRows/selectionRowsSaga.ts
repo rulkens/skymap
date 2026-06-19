@@ -27,7 +27,7 @@ import {
   updateSelectionFocus,
   clearSelection,
 } from '../selection/selectionSlice';
-import { catalogLoaded } from '../dataStatus/dataStatusSlice';
+import { catalogLoaded } from '../catalog/catalogLoaded';
 import { setSelectionRow } from './selectionRowsSlice';
 import { extractSelectionRow } from '../../services/engine/helpers/extractSelectionRow';
 import { selectionRoute, selectionRowsRoute } from '../../store/constants';

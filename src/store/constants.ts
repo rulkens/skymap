@@ -22,4 +22,3 @@ export const uiRoute = 'ui' as const;
 export const tierRoute = 'tier' as const;
 export const selectionRoute = 'selection' as const;
 export const selectionRowsRoute = 'selectionRows' as const;
-export const dataStatusRoute = 'dataStatus' as const;

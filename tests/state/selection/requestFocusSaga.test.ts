@@ -5,7 +5,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchRequestFocus } from '../../../src/state/selection/requestFocusSaga';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
-import { catalogLoaded } from '../../../src/state/dataStatus/dataStatusSlice';
+import { catalogLoaded } from '../../../src/state/catalog/catalogLoaded';
 import { selectionRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/sources';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
@@ -75,7 +75,7 @@ describe('watchRequestFocus', () => {
     expect(store.getState()[selectionRoute].focus).toBeNull();
 
     cloudPresent = true;
-    store.dispatch(catalogLoaded({ source: Source.SDSS, generation: 1 }));
+    store.dispatch(catalogLoaded({ source: Source.SDSS }));
     await flush();
     expect(store.getState()[selectionRoute].focus).toEqual({
       type: 'galaxyCatalog',

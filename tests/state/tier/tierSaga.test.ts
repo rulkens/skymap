@@ -38,7 +38,7 @@ import {
   updateSelectionSelect,
   updateSelectionFocus,
 } from '../../../src/state/selection/selectionSlice';
-import { catalogLoaded } from '../../../src/state/dataStatus/dataStatusSlice';
+import { catalogLoaded } from '../../../src/state/catalog/catalogLoaded';
 import { selectionRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/sources';
 import type { RunTierTransition } from '../../../src/store/types';
@@ -144,7 +144,7 @@ describe('watchTier', () => {
     // The select ref should still be pending (re-anchor waits for catalogLoaded).
     // Simulate the new cloud arriving: objID 42n is now at index 3.
     currentCloud = makeCloud(SDSS_OBJ_ID, 3, 4);
-    store.dispatch(catalogLoaded({ source: Source.SDSS, generation: 2 }));
+    store.dispatch(catalogLoaded({ source: Source.SDSS }));
     await flush();
 
     const selectRef = store.getState()[selectionRoute].select;
@@ -175,7 +175,7 @@ describe('watchTier', () => {
 
     // New cloud: objID 99n is absent — a cloud with a different objID.
     currentCloud = makeCloud(1n, 0, 1);
-    store.dispatch(catalogLoaded({ source: Source.SDSS, generation: 2 }));
+    store.dispatch(catalogLoaded({ source: Source.SDSS }));
     await flush();
 
     const selectRef = store.getState()[selectionRoute].select;
@@ -229,9 +229,9 @@ describe('watchTier', () => {
     currentCloud = buildCloud(objIDsNew);
     // The saga awaits two catalogLoaded events (one per captured slot × same source).
     // Dispatch twice: the saga's for-loop takes one event per re-anchor.
-    store.dispatch(catalogLoaded({ source: Source.SDSS, generation: 2 }));
+    store.dispatch(catalogLoaded({ source: Source.SDSS }));
     await flush();
-    store.dispatch(catalogLoaded({ source: Source.SDSS, generation: 3 }));
+    store.dispatch(catalogLoaded({ source: Source.SDSS }));
     await flush();
 
     const state = store.getState()[selectionRoute];

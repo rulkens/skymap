@@ -24,7 +24,7 @@ import {
   updateSelectionFocus,
   clearSelection,
 } from '../../../src/state/selection/selectionSlice';
-import { catalogLoaded } from '../../../src/state/dataStatus/dataStatusSlice';
+import { catalogLoaded } from '../../../src/state/catalog/catalogLoaded';
 import { selectionRowsRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/sources';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
@@ -115,7 +115,7 @@ describe('watchSelectionRows', () => {
     expect(store.getState()[selectionRowsRoute].focus).toBeNull();
 
     cloudPresent = true;
-    store.dispatch(catalogLoaded({ source: Source.SDSS, generation: 1 }));
+    store.dispatch(catalogLoaded({ source: Source.SDSS }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toMatchObject({
       type: 'galaxyCatalog',

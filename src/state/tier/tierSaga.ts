@@ -64,7 +64,7 @@ import { captureGalaxyFocusIds } from '../selection/captureGalaxyFocusIds';
 import { SELECTION_WRITE_BY_SLOT } from '../selection/selectionWriteBySlot';
 import { updateSelectionHover } from '../selection/selectionSlice';
 import { resolveFocusId } from '../../services/url/resolveFocusId';
-import { catalogLoaded } from '../dataStatus/dataStatusSlice';
+import { catalogLoaded } from '../catalog/catalogLoaded';
 import type { RootState, RunTierTransition, SagaContext } from '../../store/types';
 
 export function* watchTier() {

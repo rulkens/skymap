@@ -7,13 +7,12 @@ import {
   tierRoute,
   selectionRoute,
   selectionRowsRoute,
-  dataStatusRoute,
 } from '../../src/store/constants';
 
 describe('rootReducer', () => {
-  it('mounts the settings, ui, tier, selection, selectionRows, and dataStatus routes', () => {
-    // The combine should mount exactly the six slices the store holds —
-    // `settings`, `ui`, `tier`, `selection`, `selectionRows`, and `dataStatus`
+  it('mounts the settings, ui, tier, selection, and selectionRows routes', () => {
+    // The combine should mount exactly the five slices the store holds —
+    // `settings`, `ui`, `tier`, `selection`, and `selectionRows`
     // — in that order. This guards against an accidental extra route sneaking in
     // (or one going missing); each slice's own initialState shape is asserted in
     // its slice test, not re-checked here.
@@ -24,13 +23,11 @@ describe('rootReducer', () => {
       tierRoute,
       selectionRoute,
       selectionRowsRoute,
-      dataStatusRoute,
     ]);
     expect(state.settings).toBeDefined();
     expect(state.ui).toBeDefined();
     expect(state.tier).toBeDefined();
     expect(state.selection).toBeDefined();
     expect(state.selectionRows).toBeDefined();
-    expect(state.dataStatus).toBeDefined();
   });
 });

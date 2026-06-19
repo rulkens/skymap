@@ -1,29 +1,24 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { dispatchCatalogLoaded } from '../../../../src/services/engine/wiring/dispatchCatalogLoaded';
+import { catalogLoaded } from '../../../../src/state/catalog/catalogLoaded';
 import { Source } from '../../../../src/data/sources';
-import { dataStatusRoute } from '../../../../src/store/constants';
 
 describe('dispatchCatalogLoaded', () => {
-  it('records the generation in dataStatus.catalogGen', () => {
+  it('dispatches the catalogLoaded event carrying the source', () => {
     const { store } = createAppStore();
-    dispatchCatalogLoaded(store, Source.SDSS, 4);
-    expect(store.getState()[dataStatusRoute].catalogGen[Source.SDSS]).toBe(4);
+    const spy = vi.spyOn(store, 'dispatch');
+    dispatchCatalogLoaded(store, Source.SDSS);
+    expect(spy).toHaveBeenCalledWith(catalogLoaded({ source: Source.SDSS }));
   });
 
-  it('overwrites with a later generation for the same source', () => {
+  it('dispatches one event per source independently', () => {
     const { store } = createAppStore();
-    dispatchCatalogLoaded(store, Source.SDSS, 1);
-    dispatchCatalogLoaded(store, Source.SDSS, 2);
-    expect(store.getState()[dataStatusRoute].catalogGen[Source.SDSS]).toBe(2);
-  });
-
-  it('records generations for different sources independently', () => {
-    const { store } = createAppStore();
-    dispatchCatalogLoaded(store, Source.SDSS, 3);
-    dispatchCatalogLoaded(store, Source.TwoMRS, 7);
-    expect(store.getState()[dataStatusRoute].catalogGen[Source.SDSS]).toBe(3);
-    expect(store.getState()[dataStatusRoute].catalogGen[Source.TwoMRS]).toBe(7);
+    const spy = vi.spyOn(store, 'dispatch');
+    dispatchCatalogLoaded(store, Source.SDSS);
+    dispatchCatalogLoaded(store, Source.TwoMRS);
+    expect(spy).toHaveBeenCalledWith(catalogLoaded({ source: Source.SDSS }));
+    expect(spy).toHaveBeenCalledWith(catalogLoaded({ source: Source.TwoMRS }));
   });
 });
