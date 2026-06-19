@@ -100,8 +100,6 @@ import type { RequestKey } from '../../@types/loading/RequestKey';
 import { awaitSlotReady } from '../loading/awaitSlotReady';
 import { tweenToCameraSnapshot } from './camera/cameraSnapshot';
 
-import { buildSettersFromTable } from './wiring/settingsTable';
-import type { SettingsTableKey } from '../../@types/settings/SettingsTableKey';
 import { runBootstrapPhases } from './phases/bootstrap';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
 import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
@@ -501,18 +499,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   // ── Public handle ─────────────────────────────────────────────────────────
   //
-  // The table-driven setters land in `boringSetters`; bespoke ones (async
-  // bakes, subsystem forwards, multi-field mutations) are local functions
-  // below.  The handle literal at the end stitches both into the public
-  // sub-handle clusters.
-  const boringSetters = buildSettersFromTable(
-    () => state.subsystems.scheduler.requestRender(),
-    store,
-  ) satisfies Record<SettingsTableKey, (value: unknown) => void>;
+  // Bespoke local methods handle async bakes, subsystem forwards, multi-field
+  // mutations, and live-state reads.  The handle literal at the end stitches
+  // them into the public sub-handle clusters.
 
-  // ── Bespoke methods (don't fit the settingsTable shape) ────────────
+  // ── Bespoke methods (async bakes, subsystem forwards, multi-field mutations) ──
   //
-  // Each owns work the descriptor table can't express: async worker bakes,
+  // Each owns work a simple store dispatch can't express: async worker bakes,
   // per-source slot reloads, subsystem forwards, multi-field mutations, or
   // returning live state.  Declared up-front so the sub-handle literal can
   // reference each by name — no forward references, no `!` assertions.
@@ -721,24 +714,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   // ── Handle literal — sub-handle clusters + destroy + slots ──
   //
-  // Each sub-handle is a thin forwarder onto a local function or a
-  // `boringSetters` entry.  This literal is the only public surface.
+  // Each sub-handle is a thin forwarder onto a local function.
+  // This literal is the only public surface.
   const handle: EngineHandle = {
     galaxyCatalogs: {
-      setSize: boringSetters.setPointSize,
-      setBrightness: boringSetters.setBrightness,
-      setDepthFade: boringSetters.setDepthFadeEnabled,
-      setHighlightFallback: boringSetters.setHighlightFallback,
-      setRealOnly: boringSetters.setRealOnlyMode,
       setLabelEnabled: (galaxyCatalog, enabled) =>
         setGalaxyCatalogLabelEnabled(state, store, galaxyCatalog, enabled),
     },
-    tonemap: {
-      setExposure: boringSetters.setExposure,
-      setCurve: boringSetters.setToneMapCurve,
-    },
+    tonemap: {},
     camera: {
-      setAutoRotate: boringSetters.setAutoRotate,
       focusOn,
       focusOnHome,
       logState: logCameraStateFn,
@@ -756,18 +740,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
     bias: {
       setMode: (mode) => setBiasMode(state, store, mode),
-      setAbsMagLimit: boringSetters.setAbsMagLimit,
     },
-    thumbnails: {
-      setEnabled: boringSetters.setGalaxyTexturesEnabled,
-    },
+    thumbnails: {},
     milkyWay: {
       setEnabled: (enabled) => setMilkyWayEnabled(state, store, enabled),
       setLabelEnabled: (enabled) => setMilkyWayLabelEnabled(state, store, enabled),
     },
     filaments: {
       setEnabled: (enabled) => setFilamentsEnabled(state, store, enabled),
-      setIntensity: boringSetters.setFilamentIntensity,
     },
     flow: {
       set: (patch) => setFlow(state, store, patch),
@@ -806,8 +786,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // `passOverrides`: DebugPanel hook for the `settings.debug.disabledPasses`
     // override set. `allNames` is materialised once from HDR_PASSES + UI_PASSES
     // so the React rows track the encoder's pass loop; `setDisabled` delegates to
-    // the `setPassDisabled` handle (store action + render wake). The panel reads
-    // the set back via `selectDisabledPasses`, so there is no `isDisabled` query.
+    // the `setPassDisabled` handle (store action + render wake).
     debug: {
       get timingService() {
         return state.gpu.timingService;
@@ -816,8 +795,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         allNames: [...HDR_PASSES.map((p) => p.name), ...UI_PASSES.map((p) => p.name)],
         setDisabled: (name, disabled) => setPassDisabled(state, store, name, disabled),
       },
-      setShowPickBuffer: boringSetters.setShowPickBuffer,
-      setShowDiskRadiusRing: boringSetters.setShowDiskRadiusRing,
     },
 
     destroy,

@@ -1,16 +1,13 @@
 import type { FocusableTarget } from '../FocusableTarget';
 
 /**
- * EngineCameraHandle — viewpoint, tweens, and auto-rotate.
+ * EngineCameraHandle — viewpoint tweens and dev helpers.
  *
  * Bundles the camera viewpoint operations the user invokes from React
- * (focus-on-target, focus-on-home), the dev-only `logState` helper
- * bound to the 'L' hotkey, and the auto-rotate toggle (which is
- * conceptually a camera behaviour, not a points/tonemap setting).
+ * (focus-on-target, focus-on-home) and the dev-only `logState` helper
+ * bound to the 'L' hotkey.
  */
 export type EngineCameraHandle = {
-  /** Enable or disable the slow automatic camera yaw. */
-  setAutoRotate: (enabled: boolean) => void;
   /**
    * Smoothly tween the camera so the given target becomes the new orbit
    * focus.  Dispatches by type:

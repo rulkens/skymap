@@ -34,8 +34,7 @@ import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
  * passes off (HDR + UI overlay).  The disabled record is engine-owned settings
  * state (`EngineSettingsState.debug.disabledPasses`); the React panel reads it
  * back via `selectDisabledPasses`, so this handle is write-only — there is no
- * `isDisabled` query (the same "dispatch + read back via selector" shape as the
- * sibling `setShowPickBuffer` toggle).
+ * `isDisabled` query.
  *
  * The override is **one-way**: it can hide a pass that would otherwise
  * run, but can never force-enable a pass whose own `enabled()` gate
@@ -73,18 +72,4 @@ export type EngineDebugHandle = {
    * semantics.
    */
   readonly passOverrides: PassOverridesHandle;
-  /**
-   * Toggle the pick-buffer debug overlay (see
-   * `EngineSettingsState.debug.showPickBuffer`).  Dispatches the engine-owned
-   * store action; the DebugPanel reads the value back via
-   * `selectShowPickBuffer`, so there is no echo callback.
-   */
-  setShowPickBuffer(enabled: boolean): void;
-  /**
-   * Toggle the disk-radius debug ring (see
-   * `EngineSettingsState.debug.showDiskRadiusRing`).  Dispatches the engine-owned
-   * store action; the DebugPanel reads the value back via
-   * `selectShowDiskRadiusRing`, so there is no echo callback.
-   */
-  setShowDiskRadiusRing(enabled: boolean): void;
 };
