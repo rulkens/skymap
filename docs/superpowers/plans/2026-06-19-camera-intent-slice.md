@@ -169,11 +169,11 @@ export type CameraState = {
 };
 ```
 
-- [ ] Create the three files (one type each, `Vec3` import from `../math/Vec3`).
+- [x] Create the three files (one type each, `Vec3` import from `../math/Vec3`).
   Didactic header on `CameraTweenDescriptor`: timeless by design — `from`/`to` are
   absolute poses, the clock is an engine Resource, so the descriptor needs no
   `startMs` (contrast the old `CameraTween.startMs`, `CameraTween.d.ts:17`).
-- [ ] `npm run typecheck` → clean. Commit.
+- [x] `npm run typecheck` → clean. Commit.
 
 ### Task 1.2 — the `camera` slice + `cameraRoute`
 
@@ -206,14 +206,14 @@ setAutoRotate     (camera, action: PayloadAction<{ active: boolean; rate: number
 > carries that same value (radians/frame for now — `spinAutoRotate` consumes it in
 > Task 1.4). Do NOT change the motion feel: reuse the exact constant.
 
-- [ ] `commitCameraPose replaces base` — dispatch with a `CameraPose`, assert
+- [x] `commitCameraPose replaces base` — dispatch with a `CameraPose`, assert
   `state.camera.base` equals it.
-- [ ] `startCameraTween installs the descriptor` / `cancelCameraTween clears it to null`.
-- [ ] `beginDrag / endDrag flip dragging`.
-- [ ] `setAutoRotate replaces the autoRotate object`.
-- [ ] `initial state is serializable` — assert no `Set`/class/`position`/`fovYRad`
+- [x] `startCameraTween installs the descriptor` / `cancelCameraTween clears it to null`.
+- [x] `beginDrag / endDrag flip dragging`.
+- [x] `setAutoRotate replaces the autoRotate object`.
+- [x] `initial state is serializable` — assert no `Set`/class/`position`/`fovYRad`
   on the state (plain data, clock-free — spec §6).
-- [ ] Confirm fail → implement → pass. `npm test -- cameraSlice`. Commit.
+- [x] Confirm fail → implement → pass. `npm test -- cameraSlice`. Commit.
 
 ### Task 1.3 — register the slice in `rootReducer` + selectors
 
