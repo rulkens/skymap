@@ -22,9 +22,22 @@
  *   click    +0.8 s  Settle on the ring, beat, then FOCUS Virgo — the same
  *                    gesture a double-click fires. Non-member galaxies fade to
  *                    ~8% over 400 ms; Virgo's members stay bright.
- *   hold     11–17 s Drift further in on the surviving members (ring framing →
- *                    close framing) with a slow yaw + pitch bob, so the
- *                    isolated cluster fills the frame. Then release.
+ *   dwell    11–15 s Drift further in on the surviving members (ring framing →
+ *                    close framing) with a slow yaw + pitch bob.
+ *   galaxy   15–20 s Dive from the cluster framing down to M87 (Virgo A, the
+ *                    central giant elliptical) — log-dolly to its focus
+ *                    distance so the curated thumbnail quad resolves. Virgo
+ *                    stays focused, so M87 (a member) holds bright while the
+ *                    rest of the sky stays dimmed.
+ *   hold     20–23 s Slow orbit on M87, then release.
+ *
+ * ### Why the galaxy beat keeps Virgo focused (doesn't focus M87)
+ *
+ * Focus is the structure-isolation source of truth, and a *galaxy* focus
+ * cancels it (no radius → the dim fades out). So the final beat drives the
+ * camera to M87 directly and leaves the focused slot on Virgo — the isolation
+ * persists and M87, a member, stays bright. The thumbnail resolves on close
+ * approach (apparent size, not selection), so no select call is needed.
  *
  * ### Why the driver owns the focus call (not a real click)
  *
@@ -53,8 +66,11 @@ import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { AppStore } from '../../../store/types';
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
+import type { Vec3 } from '../../../@types/math/Vec3';
 import { updatePosition, clampDistance } from '../../camera/orbitCamera';
 import { structureFocusDistance } from './structureFocusDistance';
+import { galaxyFocusDistance } from './galaxyFocusDistance';
+import { resolveFamousGalaxy } from '../helpers/resolveFamousGalaxy';
 // Scene toggles are plain settings-slice actions (PR #352 dissolved the
 // `handles/setX` setters into reconcile sagas). The driver dispatches; the
 // sagas fire the side effects the old setters did.
@@ -71,16 +87,22 @@ import {
  */
 const VIRGO_ID = 'cluster-virgo-m87';
 
+/** Famous-galaxy sidecar id of M87 (Virgo A) — the final dive target. */
+const M87_ID = 'm87';
+
 // ── Beat durations (seconds) ──────────────────────────────────────────
 const PREROLL_SEC = 2; // static start pose after `g` — time to hit record
 const PAN_SEC = 6; // orbit the neighbourhood, rings + labels sweep through
 const APPROACH_SEC = 5; // ease target → Virgo + dolly in to frame its ring
-const HOLD_SEC = 6; // drift in on the isolated members, then release
+const DWELL_SEC = 4; // drift in on the isolated members
+const GALAXY_SEC = 5; // dive from the cluster framing down to M87
+const GHOLD_SEC = 3; // slow orbit on the M87 thumbnail, then release
 
 const T_PAN_END = PAN_SEC; // 6
 const T_APPROACH_END = T_PAN_END + APPROACH_SEC; // 11
-const T_HOLD_END = T_APPROACH_END + HOLD_SEC; // 17
-const T_END = T_HOLD_END; // 17
+const T_DWELL_END = T_APPROACH_END + DWELL_SEC; // 15
+const T_GALAXY_END = T_DWELL_END + GALAXY_SEC; // 20
+const T_END = T_GALAXY_END + GHOLD_SEC; // 23
 
 /** Beat after the approach settles before the isolate fires — the "click". */
 const CLICK_DELAY_SEC = 0.8;
@@ -160,6 +182,11 @@ export function createWebShowcaseDriver(
   let logDring = logDpan;
   let logDclose = logDpan;
 
+  // M87's world position + framing distance, resolved on `g`. null → skip the
+  // galaxy dive (hold on the isolated members instead).
+  let m87Pos: Vec3 | null = null;
+  let logDgalaxy = logDpan;
+
   // Clean scene, set once at page load: cosmic-web masters (volumes +
   // filaments) and famous-galaxy labels off, so the establishing view is the
   // galaxies + structure rings + their names.
@@ -209,6 +236,17 @@ export function createWebShowcaseDriver(
           logDring = logDpan;
           logDclose = logDpan;
         }
+
+        // Resolve M87 for the final dive. Absent (famous catalog not loaded) →
+        // m87Pos stays null and the galaxy beat holds on the members.
+        const m87 = resolveFamousGalaxy(state.data.galaxies, M87_ID);
+        if (m87 !== null) {
+          m87Pos = [m87.x, m87.y, m87.z];
+          logDgalaxy = Math.log(clampDistance(galaxyFocusDistance(m87.diameterKpc)));
+        } else {
+          m87Pos = null;
+          logDgalaxy = logDclose;
+        }
         phase = 'running';
       }
 
@@ -230,36 +268,53 @@ export function createWebShowcaseDriver(
       yawAccum += omega * dt;
       cam.yaw = START_YAW + yawAccum;
 
-      // ── Target: hold on the Milky Way through the pan, then ease out to
-      // Virgo across the approach. The camera looks at `target`, so this is
-      // what centres Virgo — no yaw alignment needed. Holds at Virgo there-
-      // after. ──
-      let targetLerp = 0;
-      if (tAnim >= T_PAN_END && tAnim < T_APPROACH_END) {
-        targetLerp = easeInOutCubic((tAnim - T_PAN_END) / APPROACH_SEC);
-      } else if (tAnim >= T_APPROACH_END) {
-        targetLerp = 1;
-      }
+      // ── Target: Milky Way → Virgo across the approach (held through the
+      // dwell), then Virgo → M87 across the galaxy dive. The camera looks at
+      // `target`, so lerping it is what centres each subject — no yaw
+      // alignment needed. M87 sits at Virgo's core, so the dive is mostly a
+      // dolly: the target barely moves while the distance collapses. ──
       if (virgo !== null) {
-        cam.target[0] = virgo.worldPos[0] * targetLerp;
-        cam.target[1] = virgo.worldPos[1] * targetLerp;
-        cam.target[2] = virgo.worldPos[2] * targetLerp;
+        const vp = virgo.worldPos;
+        if (tAnim < T_DWELL_END || m87Pos === null) {
+          // origin → Virgo (eased), then held at Virgo through the dwell.
+          const l =
+            tAnim < T_PAN_END
+              ? 0
+              : tAnim < T_APPROACH_END
+                ? easeInOutCubic((tAnim - T_PAN_END) / APPROACH_SEC)
+                : 1;
+          cam.target[0] = vp[0] * l;
+          cam.target[1] = vp[1] * l;
+          cam.target[2] = vp[2] * l;
+        } else {
+          // Virgo → M87 (eased), then held at M87.
+          const l =
+            tAnim < T_GALAXY_END ? easeInOutCubic((tAnim - T_DWELL_END) / GALAXY_SEC) : 1;
+          cam.target[0] = vp[0] + (m87Pos[0] - vp[0]) * l;
+          cam.target[1] = vp[1] + (m87Pos[1] - vp[1]) * l;
+          cam.target[2] = vp[2] + (m87Pos[2] - vp[2]) * l;
+        }
       }
 
-      // ── Distance: hold the pan distance, log-dolly to the ring framing
-      // across the approach, then keep drifting in to the close framing
-      // through the hold (members fill the frame as the field dims). ──
+      // ── Distance: log-dolly through the framing waypoints — pan distance →
+      // Virgo ring (approach) → close cluster framing (dwell) → M87 focus
+      // distance (galaxy dive) — each segment eased. Each waypoint is a log of
+      // a clamped distance, so exp() interpolates geometrically (constant
+      // zoom-rate feel across the orders of magnitude from 160 Mpc to ~0.3). ──
       let logD = logDpan;
       if (tAnim < T_PAN_END) {
         logD = logDpan;
       } else if (tAnim < T_APPROACH_END) {
         const e = easeInOutCubic((tAnim - T_PAN_END) / APPROACH_SEC);
         logD = logDpan + (logDring - logDpan) * e;
-      } else if (tAnim < T_HOLD_END) {
-        const e = easeInOutCubic((tAnim - T_APPROACH_END) / HOLD_SEC);
+      } else if (tAnim < T_DWELL_END) {
+        const e = easeInOutCubic((tAnim - T_APPROACH_END) / DWELL_SEC);
         logD = logDring + (logDclose - logDring) * e;
+      } else if (tAnim < T_GALAXY_END) {
+        const e = easeInOutCubic((tAnim - T_DWELL_END) / GALAXY_SEC);
+        logD = logDclose + (logDgalaxy - logDclose) * e;
       } else {
-        logD = logDclose;
+        logD = logDgalaxy;
       }
       cam.distance = clampDistance(Math.exp(logD));
 
