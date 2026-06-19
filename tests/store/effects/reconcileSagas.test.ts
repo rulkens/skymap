@@ -91,6 +91,29 @@ describe('reconcileSagas', () => {
     expect(reconcile.syncFades).toHaveBeenCalledWith(['milkyWayDisk']);
   });
 
+  // ── synchronous-notify invariant: saga worker sees post-dispatch state ───────
+  // RTK dispatch is synchronous; the saga `takeEvery` worker runs AFTER the
+  // reducer. This test confirms the load-bearing invariant: when syncFades fires
+  // inside reconcileSagas, it observes the flipped `milkyWay.enabled` value, not
+  // the pre-dispatch stale value. An assertion that only lives INSIDE the spy
+  // passes silently if the spy is never called; the call-count check outside
+  // makes it fail loudly if the worker never fires (preventing vacuous passes).
+
+  it('synchronous-notify: when watchFades fires, store.getState() sees POST-WRITE settings', () => {
+    const before = store.getState().settings.milkyWay.enabled;
+
+    // Mock the spy to assert it sees the FLIPPED value at the moment it runs.
+    reconcile.syncFades.mockImplementationOnce(() => {
+      expect(store.getState().settings.milkyWay.enabled).toBe(!before);
+    });
+
+    store.dispatch(setMilkyWayEnabled(!before));
+
+    // Verify the spy actually ran — an assertion inside a never-called spy
+    // can't make this test fail, so we gate on call-count outside.
+    expect(reconcile.syncFades).toHaveBeenCalledTimes(1);
+  });
+
   // ── setGalaxyCatalogSize — boring write, no FADE_ROW entry ────────────────
 
   it('setGalaxyCatalogSize(n) → requestRender called, syncFades NOT called', () => {
