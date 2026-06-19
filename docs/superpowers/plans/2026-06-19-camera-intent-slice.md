@@ -277,14 +277,14 @@ and converts via the assumed 60fps frame budget (`rate * elapsedMs / FRAME_MS`),
 OR `rate` is redefined as radians/ms — pick one in the test's assertion and document
 why. (Either is fine; the constraint is "same visible drift speed as today.")
 
-- [ ] `evaluateTween at elapsed 0 returns from` / `at >= durationMs returns to exactly`.
-- [ ] `evaluateTween eases yaw the short way around the circle` (a from/to crossing
+- [x] `evaluateTween at elapsed 0 returns from` / `at >= durationMs returns to exactly`.
+- [x] `evaluateTween eases yaw the short way around the circle` (a from/to crossing
   ±π picks the short arc — mirror the existing `lerpAngleShortest` coverage).
-- [ ] `evaluateTween is pure` — same inputs → deep-equal pose, input descriptor
+- [x] `evaluateTween is pure` — same inputs → deep-equal pose, input descriptor
   unmutated.
-- [ ] `spinAutoRotate advances yaw by the documented rate, leaves target/pitch/distance` /
+- [x] `spinAutoRotate advances yaw by the documented rate, leaves target/pitch/distance` /
   `spinAutoRotate is pure` (base unmutated).
-- [ ] Confirm fail → implement → pass. `npm test -- evaluateTween spinAutoRotate`.
+- [x] Confirm fail → implement → pass. `npm test -- evaluateTween spinAutoRotate`.
   Commit.
 
 ### Task 1.5 — `assembleOrbitCamera` (pose + projection → OrbitCamera)
