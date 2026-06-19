@@ -15,3 +15,4 @@
  */
 
 export const settingsRoute = 'settings' as const;
+export const uiRoute = 'ui' as const;

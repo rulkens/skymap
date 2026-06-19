@@ -31,17 +31,19 @@
  *
  * The app is wrapped in the redux `<Provider>` whose store is constructed here,
  * once, from `createAppStore` seeded with the viewport-derived boot tier. That
- * single store instance is the one settings store the app owns: React reads it
- * through the `<Provider>`, and the engine reads it through `useEngine` →
- * `createEngine`, so there is no second store to drift.
+ * single store instance owns both the `settings` route and the `ui` route
+ * (palette / uiHidden / debug + splash, seeded from `buildInitialUiState()`).
+ * React reads it through the `<Provider>`, and the engine reads it through
+ * `useEngine` → `createEngine`, so there is no second store to drift.
  */
 
 import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
 import { App } from './components/App/App';
 import { createAppStore } from './store/createAppStore';
-import { settingsRoute } from './store/constants';
+import { settingsRoute, uiRoute } from './store/constants';
 import { buildInitialSettings } from './state/settings/initialState';
+import { buildInitialUiState } from './state/ui/buildInitialUiState';
 import { initialTierFromViewport } from './utils/initialTierFromViewport';
 import { renderUnsupportedPageHtml } from './unsupportedPage';
 // Side-effect import — defines design-token custom properties on `:root`
@@ -67,7 +69,10 @@ if (typeof navigator === 'undefined' || typeof navigator.gpu === 'undefined') {
   // (via useEngine → createEngine) and read by React through <Provider>, so
   // there is no second settings store to drift.
   const initialTier = initialTierFromViewport(window.innerWidth);
-  const store = createAppStore({ [settingsRoute]: buildInitialSettings({ initialTier }) });
+  const store = createAppStore({
+    [settingsRoute]: buildInitialSettings({ initialTier }),
+    [uiRoute]: buildInitialUiState(),
+  });
   createRoot(root).render(
     <Provider store={store}>
       <App />

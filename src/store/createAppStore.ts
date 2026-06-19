@@ -25,13 +25,16 @@ import createSagaMiddleware from 'redux-saga';
 
 import { rootReducer } from './rootReducer';
 import { mainSaga } from './rootSaga';
-import { settingsRoute } from './constants';
+import { settingsRoute, uiRoute } from './constants';
 import type { EngineSettingsState } from '../@types/settings/EngineSettingsState';
+import type { UiState } from '../@types/ui/UiState';
 
-// The store's preloaded shape is exactly the route map RTK's `preloadedState`
-// expects: one slice keyed by `settingsRoute`. Naming it here lets callers (tour
-// restore, tests) hand a seeded settings state in without re-spelling the route.
-export type PreloadedState = { [settingsRoute]: EngineSettingsState };
+// The store's preloaded shape mirrors the route map RTK's `preloadedState`
+// expects. The `ui` key is optional: callers that care only about settings
+// (engine wiring tests, tour restore) omit it and the slice self-seeds from
+// `buildInitialUiState()`. An explicit seed is only needed at boot time for
+// freshness (main.tsx reads localStorage + URL once before React mounts).
+export type PreloadedState = { [settingsRoute]: EngineSettingsState; [uiRoute]?: UiState };
 
 export function createAppStore(preloadedState?: PreloadedState) {
   const sagaMiddleware = createSagaMiddleware();

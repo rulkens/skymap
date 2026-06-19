@@ -1,23 +1,24 @@
 /**
  * rootReducer — the Redux store's single combine point.
  *
- * Today the store holds exactly one slice (`settings`), so a bare
- * `combineReducers` with one route looks like ceremony over `settingsReducer`
- * directly. It earns its keep as the forward-compatible shape: `RootState` is
- * derived from this combine, and the selection fold extends the store by adding
- * sibling routes here rather than re-wiring every call site. A flat single
- * reducer would force a structural migration the first time a second slice lands.
+ * The store combines two slices (`settings` and `ui`) via `combineReducers`.
+ * This forward-compatible shape derives `RootState` from the combine and makes
+ * future sibling routes additive edits here rather than structural migrations
+ * across all call sites.
  *
- * The route key comes from `settingsRoute` (not an inline `'settings'`) so the
- * literal type flows into `RootState` and the reducer wiring shares the exact key
- * that selectors read by — a misspelt route fails at compile time, not runtime.
+ * Route keys come from the `settingsRoute` and `uiRoute` constants (not inline
+ * strings) so the literal types flow into `RootState` and the reducer wiring
+ * shares the exact keys that selectors read by — a misspelt route fails at
+ * compile time, not runtime.
  */
 
 import { combineReducers } from '@reduxjs/toolkit';
 
-import { settingsRoute } from './constants';
+import { settingsRoute, uiRoute } from './constants';
 import settingsReducer from '../state/settings/settingsSlice';
+import uiReducer from '../state/ui/uiSlice';
 
 export const rootReducer = combineReducers({
   [settingsRoute]: settingsReducer,
+  [uiRoute]: uiReducer,
 });
