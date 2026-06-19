@@ -240,10 +240,10 @@ export const selectCameraActive = (state: RootState): boolean =>
 > settings selector; until then the two coexist with different import paths — the
 > App migration (Task 5.1) flips the import.
 
-- [ ] `RootState gains a typed camera slot` (tsc: `state.camera.base` resolves).
-- [ ] `selectCameraActive is true while dragging / tween / autoRotate, false at rest`
+- [x] `RootState gains a typed camera slot` (tsc: `state.camera.base` resolves).
+- [x] `selectCameraActive is true while dragging / tween / autoRotate, false at rest`
   (four cases).
-- [ ] Confirm fail → implement → pass. `npm test -- camera` + `npm run typecheck`.
+- [x] Confirm fail → implement → pass. `npm test -- camera` + `npm run typecheck`.
   Commit.
 
 ### Task 1.4 — pure `evaluateTween` + `spinAutoRotate`
