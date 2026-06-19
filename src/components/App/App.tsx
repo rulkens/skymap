@@ -30,7 +30,7 @@ import { SettingsPanel } from '../SettingsPanel/SettingsPanel';
 import NavigationPanel from '../NavigationPanel/NavigationPanel';
 import { CommandPalette } from '../CommandPalette/CommandPalette';
 import SearchTrigger from '../SearchTrigger/SearchTrigger';
-import AutoRotateToggle from '../AutoRotateToggle/AutoRotateToggle';
+import AutoRotateToggleContainer from '../containers/AutoRotateToggleContainer';
 import HomeButton from '../HomeButton/HomeButton';
 import Splash from '../Splash/Splash';
 import AboutPill from '../Splash/AboutPill';
@@ -49,7 +49,6 @@ import {
   selectRealOnly,
   selectVisibleSourceMask,
   selectToneMapCurve,
-  selectAutoRotate,
   selectBiasMode,
   selectAbsMagLimit,
   selectShowPickBuffer,
@@ -72,7 +71,6 @@ import {
   setFilamentIntensity,
   setAbsMagLimit,
   setToneMapCurve,
-  setAutoRotate,
   setShowPickBuffer,
   setShowDiskRadiusRing,
   setStructureItemEnabled,
@@ -131,11 +129,6 @@ export function App(): React.ReactElement {
   // updates the store synchronously, so the dropdown tracks without an optimistic
   // cell; `watchWake` wakes the render loop.
   const toneMapCurve = useAppSelector(selectToneMapCurve);
-
-  // Camera auto-rotate. The toggle dispatches `setAutoRotate`, which updates the
-  // store synchronously so the play/pause icon tracks without an optimistic cell;
-  // `watchWake` wakes the render loop.
-  const autoRotate = useAppSelector(selectAutoRotate);
 
   // Bias mode + absolute-magnitude limit. The mode radio dispatches
   // `setBiasMode`; `watchBiasBake` re-bakes the worker and `watchWake` wakes
@@ -438,9 +431,7 @@ export function App(): React.ReactElement {
             // single-key patch. Volume params are stored UNCLAMPED (raw Intent);
             // the renderer clamps at read-edge.
             volumesEnabled={volumesEnabled}
-            onVolumesEnabledChange={(enabled) =>
-              dispatch(setVolumesEnabled(enabled))
-            }
+            onVolumesEnabledChange={(enabled) => dispatch(setVolumesEnabled(enabled))}
             volumeFields={volumeFields}
             onVolumeFieldEnabledChange={(fieldId, enabled) =>
               dispatch(writeVolumeField({ id: fieldId, patch: { enabled } }))
@@ -478,11 +469,7 @@ export function App(): React.ReactElement {
             onClick={() => handleRef.current?.camera.focusOnHome()}
             hidden={paletteOpen || splash.splashVisible}
           />
-          <AutoRotateToggle
-            playing={autoRotate}
-            onToggle={() => dispatch(setAutoRotate(!autoRotate))}
-            hidden={paletteOpen || splash.splashVisible}
-          />
+          <AutoRotateToggleContainer hidden={paletteOpen || splash.splashVisible} />
           <AboutPill onClick={splash.reopen} hidden={paletteOpen || splash.splashVisible} />
         </div>
         <CommandPalette
