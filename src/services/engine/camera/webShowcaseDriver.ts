@@ -64,8 +64,12 @@ import {
   setGalaxyCatalogLabelEnabled,
 } from '../../../state/settings/settingsSlice';
 
-/** Featured-anchor id of the Virgo Cluster (data/seeds/structure_anchors.seed.json). */
-const VIRGO_ID = 'virgo-m87';
+/**
+ * Store id of the Virgo Cluster. The structure store keys anchors as
+ * `${category}-${seed.id}` (buildStaticAnchorStructures), so the seed's
+ * `virgo-m87` becomes `cluster-virgo-m87`.
+ */
+const VIRGO_ID = 'cluster-virgo-m87';
 
 // ── Beat durations (seconds) ──────────────────────────────────────────
 const PREROLL_SEC = 2; // static start pose after `g` — time to hit record
