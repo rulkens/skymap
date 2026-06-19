@@ -46,6 +46,7 @@ import { syntheticPointFetcher } from '../../loading/fetchers/syntheticPointFetc
 import { syncVisibilityFadeItem } from './syncVisibilityFades';
 import { dissolveCatalogBuffer } from './dissolveCatalogBuffer';
 import type { SourceType } from '../../../@types/data/SourceType';
+import { dispatchCatalogLoaded } from './dispatchCatalogLoaded';
 
 /**
  * Registry rows, in Source enum order.  Order matters: `initGpu`'s
@@ -147,6 +148,13 @@ export function wireGalaxyCatalogSourceSlot(
   const { cb } = deps;
   const slotName = `${shortName}-points`;
 
+  // Per-source commit counter: incremented on every SUCCESSFUL commit (when the
+  // cloud truly lands in the data store). This is a truer "the cloud is here now"
+  // signal than the AssetSlot's internal load-generation, which also ticks on
+  // aborted loads. The reconciler and tier-reanchor saga consume this via the
+  // catalogLoaded action dispatched below.
+  let committedGen = 0;
+
   const slot = createAssetSlot<GalaxyCatalog, GalaxyCatalogReq>({
     name: slotName,
     fetch: fetcher,
@@ -180,6 +188,14 @@ export function wireGalaxyCatalogSourceSlot(
       // the registry (the source code carries the matching id).
       await state.gpu.renderer.upload(catalogId, cloud);
       state.data.galaxies.setCatalog(source, cloud);
+
+      // Project the just-committed cloud's generation into dataStatus so the
+      // selection reconciler (and the tier-reanchor saga) can re-resolve refs
+      // whose cloud just landed. A per-source commit counter, not the AssetSlot
+      // load-generation: this counts SUCCESSFUL commits (the AssetSlot gen also
+      // ticks on aborted loads), so it's the honest "the cloud is here now" signal.
+      committedGen += 1;
+      dispatchCatalogLoaded(cb.store, source, committedGen);
 
       // Drive the fade-in through the intent → fade bridge, scoped to ONLY the
       // catalog just uploaded: the survey row owns the intent gate (reads

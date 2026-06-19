@@ -167,7 +167,9 @@ describe('GALAXY_CATALOG_SOURCE_REGISTRY', () => {
 
 describe('wireGalaxyCatalogSourceSlot', () => {
   function makeDeps(cb: Partial<EngineCallbacks> = {}): WirePointSourceDeps {
-    return { cb: cb as EngineCallbacks };
+    // commit() now dispatches catalogLoaded via cb.store.dispatch; supply a no-op
+    // store so the slot-plumbing tests don't have to care about the descriptor.
+    return { cb: { store: { dispatch: vi.fn() }, ...cb } as unknown as EngineCallbacks };
   }
 
   it('builds a slot and stores it in state.assetSlots.points keyed by Source', () => {
