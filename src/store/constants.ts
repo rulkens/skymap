@@ -20,3 +20,4 @@
 export const settingsRoute = 'settings' as const;
 export const uiRoute = 'ui' as const;
 export const tierRoute = 'tier' as const;
+export const selectionRoute = 'selection' as const;
