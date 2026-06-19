@@ -101,6 +101,7 @@ function makeState(
   const bindAtlas = vi.fn();
   const bindHiResArray = vi.fn();
   return {
+    tier: 'medium',
     settings: { tier: 'medium' },
     gpu: {
       texturedDiskRenderer:

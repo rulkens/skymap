@@ -323,6 +323,10 @@ function makeState(
   }
   const data = createEngineData();
   return {
+    // Top-level data tier — the engine read repointed from `settings.tier` to
+    // `state.tier` (a getter); keep it equal to `settings.tier` so the
+    // synthetic-fallback assertion `tier: state.settings.tier` still holds.
+    tier: 'medium',
     settings: {
       // Cross-cutting data tier — the source expression `req(tier)` reads.
       tier: 'medium',

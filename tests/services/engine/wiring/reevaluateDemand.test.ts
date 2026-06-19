@@ -61,6 +61,7 @@ function stubSlot(initialKind: LoadState<unknown>['kind'] = 'idle'): StubSlot {
  */
 function makeState(points: Map<SourceType, AssetSlot<unknown, unknown>>): EngineState {
   return {
+    tier: 'medium',
     settings: { tier: 'medium' },
     requests: new Set(),
     assetSlots: { points },
