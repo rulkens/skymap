@@ -37,6 +37,13 @@ import { collectPickTargets } from '../helpers/collectPickTargets';
 import { deriveSourceMasks } from '../frame/deriveSourceMasks';
 import { milkyWayPickVisible } from '../helpers/milkyWayPickVisible';
 import { milkyWayPickHalfExtentPx } from '../helpers/milkyWayPickHalfExtentPx';
+import {
+  updateSelectionSelect,
+  updateSelectionFocus,
+  updateSelectionHover,
+  clearSelection,
+} from '../../../state/selection/selectionSlice';
+import { selectSelectedRef } from '../../../state/selection/selectors';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -79,18 +86,13 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     () => milkyWayPickHalfExtentPx(state, canvas.height),
   );
   state.gpu.pickRenderer = pickRenderer;
-  // The resolver runs the whole pixel → resolved `FocusableTarget`
-  // boundary via `resolvePick`: it decodes the pick, looks up the
-  // matching cloud, and builds the `GalaxyInfo` / `StructureInfo` the
-  // InfoCard + camera consume. The cloud lookup is also the tier-swap
-  // race guard — an in-flight pick decoded against a now-shrunk cloud
-  // resolves to null rather than a ghost.
+  // The resolver runs the whole pixel → SelectionRef boundary via
+  // `resolvePick`: it decodes the pick and emits an identity ref. Galaxy
+  // identity is purely positional (no cloud read at pick time); the
+  // reconciler resolves the cloud at display time. Structure hits resolve
+  // the pick index to the record's durable id via the structure store.
   state.subsystems.clickResolver = createClickResolver({
     pickRenderer,
-    // The store accessors the resolver hands to `resolvePick`, shared
-    // with the hover path so click and hover resolve identically.
-    getCloud: (source) => state.data.galaxies.get(source),
-    getFamousMeta: () => state.data.galaxies.famousMeta,
     structures: state.data.structures,
   });
 
@@ -159,7 +161,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // point) — selection state is unaffected.
     onPointerLeave: () => {
       state.picking.latestMouseCss = null;
-      state.subsystems.selection.setHovered(null);
+      deps.cb.store.dispatch(updateSelectionHover(null));
     },
     // Manual orbit controls always win — cancel any running focus
     // tween the moment the user grabs the mouse.  Otherwise the
@@ -171,20 +173,20 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     onPointerDown: () => {
       state.subsystems.tweens.cancel();
       state.picking.pointerDown = true;
-      state.subsystems.selection.setHovered(null);
+      deps.cb.store.dispatch(updateSelectionHover(null));
     },
     onPointerUp: () => {
       state.picking.pointerDown = false;
     },
-    // Esc is an explicit dismiss: clear BOTH the selection (close the
-    // card) and the focus slot (collapse the cluster-focus fade).
-    // Self-contained at the engine level so it doesn't depend on the
-    // React Esc path — App.tsx also forwards Esc through the handle's
-    // `clearSelection()` (→ clearAll), which does the same two clears;
-    // both setters dedupe, so the double-fire is a no-op.
+    // Esc is an explicit dismiss: clear BOTH the select and focus ref slots
+    // (close the card, collapse the cluster-focus fade). `clearSelection`
+    // targets select + focus only — hover is not cleared, which is correct
+    // since the pointer hasn't moved. Self-contained at the engine level so
+    // it doesn't depend on the React Esc path — App.tsx also forwards Esc
+    // through the handle's `clearSelection()`, which dispatches the same
+    // action; the reducer dedupes, so a double-fire is a no-op.
     onEscape: () => {
-      state.subsystems.selection.setSelected(null);
-      state.subsystems.selection.setFocused(null);
+      deps.cb.store.dispatch(clearSelection());
     },
     // resize: the next frame's resizeCanvasToDisplay() picks up
     // the new dimensions and recreates the HDR target.  All we
@@ -258,30 +260,21 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       // want an immediate, synchronous-feeling response.
       const pick = runPickAtCss(xCss, yCss);
       if (!pick) return;
-      pick.then((target) => {
-        // Single-click is pure selection (null clears) for both galaxy and
-        // structure hits. The resolver already built the FocusableTarget;
-        // setSelected just holds it, fires onSelectChange so the React
-        // InfoCard swaps bodies, and owns the render wake.
-        state.subsystems.selection.setSelected(target);
+      // Single-click dispatches the identity ref (null clears). The
+      // reconciler saga watches the slot and fills `selectionRows`.
+      pick.then((ref) => {
+        deps.cb.store.dispatch(updateSelectionSelect(ref));
       });
     },
     onDoubleClick: () => {
-      // Upgrade the current selection to a focus. The preceding single-clicks
-      // already pinned it, so we read the authoritative selection slot rather
-      // than running a second pick (racing readbacks resolve out of order) or
-      // caching a resolved copy. A null target means empty-space: release the
-      // focus slot so the cluster-focus fade lifts. `handle` is resolved
-      // lazily through `deps.handleRef`, non-null by the time a user can
-      // dblclick.
-      const handle = deps.handleRef.current;
-      const target = state.subsystems.selection.selected();
-      if (target) {
-        handle?.camera.focusOn(target);
-        return;
-      }
-      // setFocused owns the wake when the slot actually changes.
-      state.subsystems.selection.setFocused(null);
+      // Upgrade the current select ref to focus. The preceding single-click
+      // already wrote the ref to the store, so we read it back from the
+      // authoritative slot rather than running a second pick (racing
+      // readbacks resolve out of order). A null select ref means empty space:
+      // dispatch focus(null) to lift the cluster-focus fade. The camera tween
+      // is triggered by Task 4b's watchFocusTween saga — not here.
+      const ref = selectSelectedRef(deps.cb.store.getState());
+      deps.cb.store.dispatch(updateSelectionFocus(ref));
     },
   });
 }
