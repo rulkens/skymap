@@ -11,7 +11,7 @@ import type { ScaleInfo } from './ScaleInfo';
 import type { SourceType } from '../data/SourceType';
 import type { LoadProgressState } from '../loading/LoadProgressState';
 import type { StructureId } from '../data/structure/StructureId';
-import type { AppStore } from '../../store/types';
+import type { AppStore, SetSagaContext } from '../../store/types';
 
 /**
  * Callbacks the engine uses to push state changes into the UI layer.
@@ -57,6 +57,18 @@ export type EngineCallbacks = {
    * so the engine and React drive one authoritative instance with no mirror.
    */
   store: AppStore;
+
+  /**
+   * Registers the engine's saga runner into the store's saga context.  The
+   * engine builds `runTierTransition` (closed over the live `EngineState`) and
+   * hands it to the running root saga through this setter, which the store
+   * factory exposes alongside the store.  It can't ride the `<Provider>`
+   * because it's a SIBLING of the store (the factory returns
+   * `{ store, setSagaContext }`), so it's threaded down as a callback instead.
+   * Required: without it the tier saga's `getContext('runTierTransition')`
+   * stays a no-op and a tier change never reaches the engine's GPU resources.
+   */
+  setSagaContext: SetSagaContext;
 
   /**
    * Initial data tier to load on engine startup.  Defaults to `'medium'`

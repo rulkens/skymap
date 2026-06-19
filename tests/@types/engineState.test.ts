@@ -141,6 +141,9 @@ describe('EngineState type', () => {
     let stateRef: { current: EngineState | null } = { current: null };
     const state: EngineState = {
       settings,
+      // `state.tier` delegates to the root tier slice in the engine; in this
+      // plain literal it's a direct value (the type is `Tier`, not a getter).
+      tier: 'medium',
       data: createEngineData(),
       picking,
       gpu: {
@@ -330,6 +333,9 @@ describe('EngineState type', () => {
           },
         },
       },
+      // `state.tier` delegates to the root tier slice in the engine; in this
+      // plain literal it's a direct value (the type is `Tier`, not a getter).
+      tier: 'medium',
       data: createEngineData(),
       picking: {
         latestMouseCss: null,

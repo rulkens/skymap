@@ -34,12 +34,19 @@
  * single store instance is the one settings store the app owns: React reads it
  * through the `<Provider>`, and the engine reads it through `useEngine` →
  * `createEngine`, so there is no second store to drift.
+ *
+ * The factory also returns `setSagaContext` — its saga-context setter, a sibling
+ * of the store rather than part of it. It reaches the engine through its own
+ * `SagaContextProvider` context (mirroring the store's `<Provider>`) rather than
+ * a prop on `<App>`, keeping `<App>` prop-less; the engine uses it to register
+ * its `runTierTransition` saga runner.
  */
 
 import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
 import { App } from './components/App/App';
 import { createAppStore } from './store/createAppStore';
+import { SagaContextProvider } from './store/SagaContextProvider';
 import { settingsRoute } from './store/constants';
 import { buildInitialSettings } from './state/settings/initialState';
 import { initialTierFromViewport } from './utils/initialTierFromViewport';
@@ -67,10 +74,14 @@ if (typeof navigator === 'undefined' || typeof navigator.gpu === 'undefined') {
   // (via useEngine → createEngine) and read by React through <Provider>, so
   // there is no second settings store to drift.
   const initialTier = initialTierFromViewport(window.innerWidth);
-  const { store } = createAppStore({ [settingsRoute]: buildInitialSettings({ initialTier }) });
+  const { store, setSagaContext } = createAppStore({
+    [settingsRoute]: buildInitialSettings({ initialTier }),
+  });
   createRoot(root).render(
     <Provider store={store}>
-      <App />
+      <SagaContextProvider value={setSagaContext}>
+        <App />
+      </SagaContextProvider>
     </Provider>,
   );
 }

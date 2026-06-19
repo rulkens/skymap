@@ -129,6 +129,7 @@ import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
 import { setBiasMode } from './handles/setBiasMode';
 import { setTier } from './handles/setTier';
 import { setPassDisabled } from './handles/setPassDisabled';
+import { makeRunTierTransition } from './wiring/makeRunTierTransition';
 
 /**
  * Start the WebGPU engine on `canvas`.
@@ -217,6 +218,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // with no parallel mirror to keep in sync.
     get settings() {
       return store.getState().settings;
+    },
+    // `state.tier` delegates to the root `tier` slice the same way `settings`
+    // delegates above. The tier saga owns the write; the engine reads here.
+    get tier() {
+      return store.getState().tier;
     },
     // Per-type data stores. Empty at construction; slot commits fill them.
     data: createEngineData(),
@@ -460,6 +466,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     handleRef,
     allSlots,
   };
+
+  // Register the tier-transition runner into the saga context so a
+  // `requestTier` dispatch reaches the engine's GPU resources. The runner
+  // closes over the live `state` + `bootstrapDeps` (reading `device` lazily off
+  // `phaseLocals`), so registering here — before the async bootstrap finishes —
+  // is safe: the closure sees the device once initGpu populates it.
+  cb.setSagaContext({ runTierTransition: makeRunTierTransition(state, bootstrapDeps) });
+
   // The main async IIFE runs the bootstrap phases; all errors are caught
   // and reported via `onStatusChange`.  See `runBootstrapPhases`.
   (async () => {

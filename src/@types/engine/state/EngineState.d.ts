@@ -72,6 +72,7 @@
  * type's docstring.
  */
 
+import type { Tier } from '../../data/Tier';
 import type { EngineSettingsState } from '../../settings/EngineSettingsState';
 import type { EngineData } from '../data/EngineData';
 import type { EnginePickingState } from './EnginePickingState';
@@ -84,6 +85,14 @@ import type { RequestKey } from '../../loading/RequestKey';
 
 export type EngineState = {
   settings: EngineSettingsState;
+  /**
+   * The live data-resolution tier. A getter delegating to the injected store
+   * (`store.getState().tier`), mirroring the `settings` delegation above —
+   * reads hand back the authoritative value with no parallel mirror to drift.
+   * The tier saga owns the write (it dispatches the `tier` slice action); the
+   * engine reads here.
+   */
+  tier: Tier;
   /**
    * Per-type data stores — the authoritative app-side home for each
    * data type (galaxies, structures, volumes, filaments). Slot commits
