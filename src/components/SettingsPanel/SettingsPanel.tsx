@@ -221,11 +221,10 @@ type Props = {
   // ── Flow group (CF4++ peculiar-velocity overlay) ───────────────────────
   /**
    * Flow-overlay state.  App-owned optimistic (no engine echo), like the
-   * filaments props above — `onFlowChange` applies a `Partial<FlowSettings>`
-   * to both the React mirror and `handle.flow.set`.  The header toggle reads
-   * `flow.enabled`; FlowRow reads `mode` / `intensity`.  The group is gated on
-   * both props being present (see `showFlowSection`), so older / partial call
-   * sites render no Flow section.
+   * filaments props above — `onFlowChange` dispatches `setFlow` to the store.
+   * The header toggle reads `flow.enabled`; FlowRow reads `mode` / `intensity`.
+   * The group is gated on both props being present (see `showFlowSection`), so
+   * older / partial call sites render no Flow section.
    */
   flow?: FlowSettings;
   onFlowChange?: (patch: Partial<FlowSettings>) => void;
@@ -234,8 +233,8 @@ type Props = {
   /**
    * Per-category MARKER visibility — drives the per-category checkboxes
    * inside Structures → Advanced and the derived tri-state of the master
-   * toggle.  Wires through `onSetMarkerCategoryVisibility`, which App routes
-   * to `handle.structures.setItemEnabled`.
+   * toggle.  Wires through `onSetMarkerCategoryVisibility`, which App
+   * dispatches `setStructureItemEnabled` to the store.
    */
   markerCategoryVisibility?: Readonly<Record<StructureId, boolean>>;
   onSetMarkerCategoryVisibility?: (category: StructureId, visible: boolean) => void;

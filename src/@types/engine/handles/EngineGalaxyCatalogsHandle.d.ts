@@ -1,14 +1,6 @@
 /**
- * EngineGalaxyCatalogsHandle — galaxy catalog label controls.
+ * EngineGalaxyCatalogsHandle — galaxy catalog cluster.
  *
- * `setLabelEnabled` writes the galaxy catalog's item row in the store and
- * fires the label fade for label-bearing catalogs (the famous-galaxy
- * `galaxyNames` layer today).
+ * Catalog writes dispatch through the settings store; no handle methods remain.
  */
-
-import type { GalaxyCatalogId } from '../data/GalaxyCatalogId';
-
-export type EngineGalaxyCatalogsHandle = {
-  /** Show/hide the text labels for a galaxy catalog (famous-galaxy names today). */
-  setLabelEnabled(galaxyCatalog: GalaxyCatalogId, enabled: boolean): void;
-};
+export type EngineGalaxyCatalogsHandle = {};

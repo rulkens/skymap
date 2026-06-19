@@ -1,10 +1,6 @@
 /**
- * EngineFilamentsHandle — cosmic-web filament overlay controls.
+ * EngineFilamentsHandle — cosmic-web filament overlay cluster.
  *
- * Optional asset (built by the DisPerSE pipeline via `npm run build-filaments`);
- * when missing, the method is a silent no-op.
+ * Visibility writes dispatch through the settings store; no handle methods remain.
  */
-export type EngineFilamentsHandle = {
-  /** Toggle the cosmic-web filament-skeleton overlay on or off. */
-  setEnabled: (enabled: boolean) => void;
-};
+export type EngineFilamentsHandle = {};

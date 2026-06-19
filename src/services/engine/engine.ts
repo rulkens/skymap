@@ -103,27 +103,10 @@ import { tweenToCameraSnapshot } from './camera/cameraSnapshot';
 import { runBootstrapPhases } from './phases/bootstrap';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
 import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
-import { setSourceVisible } from './handles/setSourceVisible';
-import { setStructureItemEnabled } from './handles/setStructureItemEnabled';
-import { setStructureLabelEnabled } from './handles/setStructureLabelEnabled';
-import { setMilkyWayLabelEnabled } from './handles/setMilkyWayLabelEnabled';
-import { setGalaxyCatalogLabelEnabled } from './handles/setGalaxyCatalogLabelEnabled';
-import { setMilkyWayEnabled } from './handles/setMilkyWayEnabled';
-import { setFilamentsEnabled } from './handles/setFilamentsEnabled';
-import { setFlow } from './handles/setFlow';
-import { setVolumesEnabled } from './handles/setVolumesEnabled';
 import { addVolumeField } from './handles/addVolumeField';
 import { removeVolumeField } from './handles/removeVolumeField';
-import { setVolumeFieldEnabled } from './handles/setVolumeFieldEnabled';
-import { setVolumeFieldIntensity } from './handles/setVolumeFieldIntensity';
-import { setVolumeFieldContrast } from './handles/setVolumeFieldContrast';
-import { setVolumeFieldDensityScale } from './handles/setVolumeFieldDensityScale';
-import { setVolumeFieldTrim } from './handles/setVolumeFieldTrim';
-import { setVolumeFieldExposure } from './handles/setVolumeFieldExposure';
-import { setVolumeFieldPalette } from './handles/setVolumeFieldPalette';
 import { listVolumeFields } from './handles/listVolumeFields';
 import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
-import { setBiasMode } from './handles/setBiasMode';
 import { makeRunTierTransition } from './wiring/makeRunTierTransition';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
 
@@ -312,9 +295,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // ── Bias-correction subsystem ─────────────────────────────────
       // Owns Malmquist-bias mode flags, cached per-source ratios/weights,
       // and the async bake state machine.  Eager (no GPU dep); the renderer
-      // is wired during initGpu via `attachRenderer`.  `handle.setBiasMode`
-      // calls into `setMode` here.  Production uses the module-level
-      // Vite `?worker` runners; tests inject synchronous stubs.
+      // is wired during initGpu via `attachRenderer`.  The reconcile saga
+      // drives bake state via the bias.mode reconcile row.  Production uses
+      // the module-level Vite `?worker` runners; tests inject synchronous stubs.
       biasCorrection: createBiasCorrectionSubsystem({
         getMode: () => state.settings.bias.mode,
         getLoadedClouds: () => state.data.galaxies.catalogs,
@@ -713,13 +696,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   // ── Handle literal — sub-handle clusters + destroy + slots ──
   //
-  // Each sub-handle is a thin forwarder onto a local function.
+  // Sub-handles with live methods delegate to local functions.
+  // Clusters whose writes have migrated to sagas are empty `{}`
+  // placeholders — their types match `{}` in EngineHandle.d.ts.
   // This literal is the only public surface.
   const handle: EngineHandle = {
-    galaxyCatalogs: {
-      setLabelEnabled: (galaxyCatalog, enabled) =>
-        setGalaxyCatalogLabelEnabled(state, store, galaxyCatalog, enabled),
-    },
+    galaxyCatalogs: {},
     tonemap: {},
     camera: {
       focusOn,
@@ -733,46 +715,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       loadAliases: loadPgcAliasesFn,
     },
     sources: {
-      setVisible: (source, visible) => setSourceVisible(state, store, source, visible),
       getCloud,
       getCloudObjIds,
     },
-    bias: {
-      setMode: (mode) => setBiasMode(state, store, mode),
-    },
+    bias: {},
     thumbnails: {},
-    milkyWay: {
-      setEnabled: (enabled) => setMilkyWayEnabled(state, store, enabled),
-      setLabelEnabled: (enabled) => setMilkyWayLabelEnabled(state, store, enabled),
-    },
-    filaments: {
-      setEnabled: (enabled) => setFilamentsEnabled(state, store, enabled),
-    },
-    flow: {
-      set: (patch) => setFlow(state, store, patch),
-    },
-    structures: {
-      // Two setters, one per independent structure visibility axis. Each writes
-      // the authoritative `settings.structures.items[category]` row THROUGH the
-      // store (so React's `selectStructureItems` subscriber wakes) and fades the
-      // matching FadeRegistry handle.
-      setItemEnabled: (category, visible) =>
-        setStructureItemEnabled(state, store, category, visible),
-      setLabelEnabled: (category, visible) =>
-        setStructureLabelEnabled(state, store, category, visible),
-    },
+    milkyWay: {},
+    filaments: {},
+    flow: {},
+    structures: {},
     volumes: {
-      setMasterEnabled: (enabled) => setVolumesEnabled(state, store, enabled),
       add: (fieldId, cube) => addVolumeField(state, store, fieldId, cube),
       remove: (fieldId) => removeVolumeField(state, store, fieldId),
-      setEnabled: (fieldId, enabled) => setVolumeFieldEnabled(state, store, fieldId, enabled),
-      setIntensity: (fieldId, intensity) =>
-        setVolumeFieldIntensity(state, store, fieldId, intensity),
-      setContrast: (fieldId, contrast) => setVolumeFieldContrast(state, store, fieldId, contrast),
-      setDensityScale: (fieldId, value) => setVolumeFieldDensityScale(state, store, fieldId, value),
-      setTrim: (fieldId, trim) => setVolumeFieldTrim(state, store, fieldId, trim),
-      setExposure: (fieldId, exposure) => setVolumeFieldExposure(state, store, fieldId, exposure),
-      setPalette: (fieldId, id) => setVolumeFieldPalette(state, store, fieldId, id),
       list: () => listVolumeFields(state),
       getState: () => getVolumeFieldsState(state),
     },

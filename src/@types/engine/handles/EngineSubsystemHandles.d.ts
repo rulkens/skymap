@@ -82,8 +82,8 @@ export type EngineSubsystemHandles = {
    * Malmquist-bias correction subsystem. Owns the bias-mode flags,
    * cached per-source ratios/weights, and the async bake state machine.
    * Constructed eagerly (no GPU dep); the renderer is wired in during
-   * `phases/initGpu.ts` via `attachRenderer(...)`. `handle.setBiasMode`
-   * routes through here.
+   * `phases/initGpu.ts` via `attachRenderer(...)`. The reconcile saga
+   * drives bake state via the bias.mode reconcile row.
    */
   biasCorrection: BiasCorrectionSubsystem;
   /**
