@@ -69,7 +69,6 @@ import { wireInput } from '../../../../src/services/engine/phases/wireInput';
 function makeState(): EngineState {
   return {
     settings: {
-      tier: 'medium',
       galaxyCatalogs: {
         enabled: true,
         sizePx: 2.5,

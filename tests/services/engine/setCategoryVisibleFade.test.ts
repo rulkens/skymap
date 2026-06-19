@@ -48,7 +48,7 @@ const bridge = vi.mocked(syncVisibilityFades);
 // carries the item leaves each setter writes.
 
 function makeFixture() {
-  const store = createAppStore({
+  const { store } = createAppStore({
     settings: {
       galaxyCatalogs: {
         enabled: true,

@@ -32,7 +32,6 @@ import { createSlice, current, type PayloadAction } from '@reduxjs/toolkit';
 import { buildInitialSettings } from './initialState';
 import { buildVolumeFieldSettings } from '../../data/volume/volumeFieldDefaults';
 import { mergeSettingsSnapshot } from './mergeSettingsSnapshot';
-import type { Tier } from '../../@types/data/Tier';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
@@ -42,9 +41,10 @@ import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSetti
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import type { SettingsSnapshot } from '../../@types/engine/settings/SettingsSnapshot';
 
-// 'medium' is the ~600k-galaxy desktop budget — the engine's boot default. The
-// slice seeds from it; a runtime tier change goes through `setTier`.
-const initialState = buildInitialSettings({ initialTier: 'medium' });
+// The slice seeds the appearance knobs from `buildInitialSettings()`. The data
+// tier is NOT a settings field — it lives in its own root slice (seeded via the
+// store's `preloadedState`, written by the tier saga), so it never appears here.
+const initialState = buildInitialSettings();
 
 const settingsSlice = createSlice({
   name: 'settings',
@@ -178,11 +178,6 @@ const settingsSlice = createSlice({
       settings.structures.items[action.payload.id].labelEnabled = action.payload.enabled;
     },
 
-    // ── tier (flat root field) ──────────────────────────────────────────────
-    setTier: (settings, action: PayloadAction<Tier>) => {
-      settings.tier = action.payload;
-    },
-
     // ── snapshot merge (tour restore / mid-playback effect) ─────────────────
     // The ONE return-new-state reducer. `mergeSettingsSnapshot` does
     // `{ ...state, ...structuredClone(patch) }`; inside a case reducer `settings`
@@ -224,7 +219,6 @@ export const {
   setPassDisabled,
   setStructureItemEnabled,
   setStructureLabelEnabled,
-  setTier,
   mergeSnapshot,
 } = settingsSlice.actions;
 

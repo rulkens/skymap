@@ -59,7 +59,7 @@ function makeFixture() {
       { enabled: true, labelEnabled: true },
     ]),
   );
-  const store = createAppStore({
+  const { store } = createAppStore({
     settings: { galaxyCatalogs: { items } } as unknown as EngineSettingsState,
   });
   const state = {
