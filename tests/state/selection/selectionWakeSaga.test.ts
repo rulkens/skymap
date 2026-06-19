@@ -8,6 +8,7 @@ import {
   updateSelectionSelect,
   updateSelectionFocus,
   updateSelectionHover,
+  clearSelection,
 } from '../../../src/state/selection/selectionSlice';
 import type { ReconcileEffects } from '../../../src/store/effects/ReconcileEffects';
 
@@ -51,5 +52,13 @@ describe('watchSelectionWake', () => {
     store.dispatch(updateSelectionHover({ type: 'milkyWay' }));
     await flush();
     expect(requestRender).not.toHaveBeenCalled();
+  });
+  it('clearSelection wakes the loop so the focus ring redraws away', async () => {
+    // Regression: clearSelection (Esc / InfoCard ×) drops the select+focus refs,
+    // but render-on-demand means the frame holding the focus ring never redraws
+    // unless this action also wakes the loop — so the ring lingers on screen.
+    store.dispatch(clearSelection());
+    await flush();
+    expect(requestRender).toHaveBeenCalledTimes(1);
   });
 });
