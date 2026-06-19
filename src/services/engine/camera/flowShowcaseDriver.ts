@@ -63,10 +63,16 @@ import type { FadeId } from '../../../@types/animation/FadeId';
 import { updatePosition, clampDistance } from '../../camera/orbitCamera';
 import { GALAXY_CATALOG_IDS } from '../../../data/galaxyCatalog/galaxyCatalogIds';
 import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
-import { setFlow } from '../handles/setFlow';
-import { setVolumesEnabled } from '../handles/setVolumesEnabled';
-import { setFilamentsEnabled } from '../handles/setFilamentsEnabled';
-import { setGalaxyCatalogLabelEnabled } from '../handles/setGalaxyCatalogLabelEnabled';
+// Scene toggles are plain settings-slice actions now (PR #352 dissolved the
+// `handles/setX` setters into reconcile sagas). The driver dispatches; the
+// sagas fire the side effects the old setters used to — requestRender,
+// syncVisibilityFades, the flow reseed — so a bare dispatch is the whole call.
+import {
+  setFlow,
+  setVolumesEnabled,
+  setFilamentsEnabled,
+  setGalaxyCatalogLabelEnabled,
+} from '../../../state/settings/settingsSlice';
 
 // ── Beat durations (seconds) ──────────────────────────────────────────
 const PREROLL_SEC = 2; // static start pose after `g` — time to hit record
@@ -183,9 +189,9 @@ export function createFlowShowcaseDriver(
   // Static scene, set once at page load: the cosmic-web masters (volumes +
   // filaments) and famous-galaxy labels off, so the establishing view is
   // just the galaxies + Milky Way. Flow is left OFF until a take starts.
-  setVolumesEnabled(state, store, false);
-  setFilamentsEnabled(state, store, false);
-  setGalaxyCatalogLabelEnabled(state, store, 'famousGalaxy', false);
+  store.dispatch(setVolumesEnabled(false));
+  store.dispatch(setFilamentsEnabled(false));
+  store.dispatch(setGalaxyCatalogLabelEnabled({ id: 'famousGalaxy', enabled: false }));
 
   // `g` toggles: idle → start a take; running → abort (reload to reset the
   // scene before the next take, since galaxies stay faded out).
@@ -226,7 +232,7 @@ export function createFlowShowcaseDriver(
         // Enable the flow (loads the cube if needed, keeps it advecting) but
         // clamp its opacity to 0 — beat A owns the visible fade-in. Intensity
         // is left at its default; only enable + opacity are choreographed.
-        setFlow(state, store, { enabled: true });
+        store.dispatch(setFlow({ enabled: true }));
         fades.setImmediate({ kind: 'flow' }, 0);
       }
 
