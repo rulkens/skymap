@@ -131,7 +131,7 @@ Tour dismiss; `reopenSplash` leaves `dismissedVersion` alone because reopening i
 informational, not a first-time event (matches today's `reopen` contract,
 `useSplash.ts:185-189`).
 
-- [ ] Tests (per spec §7 "Slice"):
+- [x] Tests (per spec §7 "Slice"):
   - `setPaletteOpen(true) writes paletteOpen`
   - `setUiHidden(true) writes uiHidden`
   - `toggleUiHidden flips uiHidden` (false→true→false across two dispatches)
@@ -140,8 +140,8 @@ informational, not a first-time event (matches today's `reopen` contract,
   - `dismissSplash(2) sets splash.visible false and dismissedVersion 2`
   - `reopenSplash sets splash.visible true and leaves dismissedVersion unchanged`
     (seed `dismissedVersion:2`, dispatch `reopenSplash`, assert still `2`).
-- [ ] Confirm fail → implement → pass. `npm test -- uiSlice`.
-- [ ] Commit.
+- [x] Confirm fail → implement → pass. `npm test -- uiSlice`.
+- [x] Commit.
 
 ### Task 1.2 — `selectors.ts`
 
@@ -174,9 +174,9 @@ settings convention (the deliberate override of one-fn-per-file).
 prefer ordering 1.4 before 1.2 if the implementer wants `uiRoute` available. Either
 order is green; the selectors don't read the store until Phase 3.)
 
-- [ ] Tests (spec §7 "Selectors"): each selector returns its slice field, driving a
+- [x] Tests (spec §7 "Selectors"): each selector returns its slice field, driving a
   hand-built `RootState`-shaped object (or a real store via `createAppStore`).
-- [ ] Confirm fail → implement → pass. `npm test -- ui/selectors`. Commit.
+- [x] Confirm fail → implement → pass. `npm test -- ui/selectors`. Commit.
 
 ### Task 1.3 — relocate `splashStorage` + `buildInitialUiState()`
 
@@ -222,17 +222,17 @@ returns `number | null`, matching `UiState.splash.dismissedVersion: number | nul
 window` guards + private-browsing try/catch live in `readSeenVersion` /
 `readUrlAtMount` (relocated alongside).
 
-- [ ] Move the four symbols into `splashStorage.ts`; repoint `useSplash.ts`'s
+- [x] Move the four symbols into `splashStorage.ts`; repoint `useSplash.ts`'s
   imports; move their unit tests. Confirm `npm test -- useSplash splashStorage` green
   (pure relocation, no behaviour change).
-- [ ] Tests (spec §7 "buildInitialUiState"; drive `localStorage` + URL as fixtures,
+- [x] Tests (spec §7 "buildInitialUiState"; drive `localStorage` + URL as fixtures,
   jsdom env, mirror `useSplash.test.ts:27-55`):
   - `splash.visible is false when seenVersion equals the current version`
   - `splash.visible is true on a first visit (no seenVersion)`
   - `splash.visible is false when a #focus= deep link is present (regardless of seen state)`
   - `splash.visible is false when a ?tour= deep link is present`
   - `paletteOpen, uiHidden, debugPanelOpen all default false`
-- [ ] Confirm fail → implement; swap the slice's `initialState` to
+- [x] Confirm fail → implement; swap the slice's `initialState` to
   `buildInitialUiState()`. `npm test -- buildInitialUiState uiSlice`. Commit.
 
 ### Task 1.4 — wire `uiRoute` into store
@@ -255,10 +255,13 @@ rootReducer>` — it gains `ui` automatically from the combine; **no hand-edit**
 `createAppStore` returning the bare store; the `{store,setSagaContext}` change is a
 different branch — do not import it here).
 
-- [ ] Failing test: assert `createAppStore(…).getState().ui` exists / equals the
+- [x] Failing test: assert `createAppStore(…).getState().ui` exists / equals the
   seeded `UiState`; assert `RootState` typechecks with a `ui` field (tsc).
-- [ ] Implement the three store edits. `npm run typecheck` + `npm test -- createAppStore`.
-- [ ] Commit.
+- [x] Implement the three store edits. `npm run typecheck` + `npm test -- createAppStore`.
+  (Controller decision: `[uiRoute]?` is OPTIONAL, not required — ~14 existing
+  `{settings}`-only callers stay green untouched; the slice self-seeds via
+  `buildInitialUiState()`. Task 2.1's `main.tsx` seed folded into this commit.)
+- [x] Commit.
 
 ---
 
@@ -287,9 +290,10 @@ const store = createAppStore({
 });
 ```
 
-- [ ] Add the import + the `[uiRoute]` seed. Update the `main.tsx` Provider docblock
+- [x] Add the import + the `[uiRoute]` seed. Update the `main.tsx` Provider docblock
   (`:32-36`) to mention the second seeded route in one timeless line.
-- [ ] `npm run typecheck` + `npm test` → green. Commit.
+  (Done as part of the Task 1.4 commit — see above.)
+- [x] `npm run typecheck` + `npm test` → green. Commit.
 
 ### Task 2.2 — persistence effect (`store.subscribe`) in `main.tsx`
 
@@ -327,15 +331,15 @@ it explicitly.
 lands**, but that seam is NOT in this branch — the subscription is the chosen form.
 State this rationale in the header (no dates / PR refs).
 
-- [ ] Tests (real `createAppStore` seeded, jsdom localStorage):
+- [x] Tests (real `createAppStore` seeded, jsdom localStorage):
   - `dispatching dismissSplash(2) writes seenVersion to localStorage`
   - `reopenSplash does not write seenVersion` (seed a dismissed version, clear the
     storage spy, dispatch `reopenSplash`, assert no write)
   - `the returned unsubscribe stops further writes`
-- [ ] Confirm fail → implement → pass; install
+- [x] Confirm fail → implement → pass; install
   `persistSplashVersion(store)` in `main.tsx` (inside the `else` branch, after the
   store is created). `npm test -- persistSplashVersion`.
-- [ ] `npm run typecheck` + `npm test` → green. Commit.
+- [x] `npm run typecheck` + `npm test` → green. Commit.
 
 ---
 
@@ -392,16 +396,19 @@ state. So:
   `toggleDebugPanelOpen={() => dispatch(toggleDebugPanelOpen())}`. No value is
   closed over, so there is no stale-closure risk.
 
-- [ ] Replace the three `useState` with selector reads; add `dispatch`; rewrite
+- [x] Replace the three `useState` with selector reads; add `dispatch`; rewrite
   `openPalette`/`closePalette` to dispatch; change `UseKeyboardShortcutsInput` +
   the hook to togglers; pass the dispatching callbacks. Update the surrounding
   didactic comments (the "useState" framing → "reads the `ui` slice via selector;
   the keyboard hook dispatches `toggleUiHidden`/`toggleDebugPanelOpen`").
-- [ ] Repointed keyboard test: pressing the toggle key twice flips the flag both
-  ways (proves the reducer toggle, no stale closure).
-- [ ] `npm test` + `npm run typecheck` → green (the splash path still uses
+  (Dispatching callbacks wrapped in `useCallback([dispatch])` so the keyboard
+  effect's dep array stays stable — no per-render re-bind.)
+- [x] Repointed keyboard test: pressing the toggle key twice flips the flag both
+  ways (proves the reducer toggle, no stale closure). New 9-case integration test
+  against a real store (no prior keyboard test existed).
+- [x] `npm test` + `npm run typecheck` → green (the splash path still uses
   `useSplash`'s own state, untouched).
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -451,12 +458,13 @@ The `useSplash` tests must now render inside a redux `<Provider>` (a real
 `localStorage`/URL fixture) so `useAppSelector` resolves — mirror how other
 store-backed hook tests wrap with `<Provider>`.
 
-- [ ] Repoint the existing init tests (`useSplash.test.ts:27-55`) — the
+- [x] Repoint the existing init tests (`useSplash.test.ts:27-55`) — the
   first-visit / deep-link / seenVersion cases now assert through the seeded store
   (or move to `buildInitialUiState.test.ts`, already covering them in Task 1.3;
   keep `useSplash`'s as integration coverage that `splashVisible` *follows the
-  store*).
-- [ ] Tests (spec §7 "useSplash"):
+  store*). Gate logic left to `buildInitialUiState.test.ts`; useSplash tests now
+  prove `splashVisible` follows the seeded store + dispatches.
+- [x] Tests (spec §7 "useSplash"):
   - `splashVisible follows the store` (dispatch `reopenSplash`/`dismissSplash`,
     assert `result.current.splashVisible` flips)
   - `dismissExplore dispatches dismissSplash` (assert store
@@ -466,8 +474,8 @@ store-backed hook tests wrap with `<Provider>`.
     unchanged)
   - `blocked / canContinueAnyway / error still derive as before` (keep the existing
     timer + error assertions green)
-- [ ] Confirm fail → implement → pass. `npm test -- useSplash`.
-- [ ] `npm run typecheck` + `npm test` → green. Commit.
+- [x] Confirm fail → implement → pass. `npm test -- useSplash`.
+- [x] `npm run typecheck` + `npm test` → green. Commit.
 
 ---
 
@@ -477,24 +485,25 @@ store-backed hook tests wrap with `<Provider>`.
 
 **Files:** none (review pass).
 
-- [ ] `npm run typecheck` (both src + tools tsconfigs) → clean.
-- [ ] `npm test` (full suite) → green; record the new count (baseline 590+ plus the
-  new `uiSlice` / `selectors` / `buildInitialUiState` / `persistSplashVersion` /
-  repointed `useSplash` tests).
-- [ ] Grep `App.tsx` for residual `useState(` on the three folded flags
+- [x] `npm run typecheck` (both src + tools tsconfigs) → clean.
+- [x] `npm test` (full suite) → green; record the new count (2728 tests / 448 files,
+  up from the pre-branch baseline, incl. the new `uiSlice` / `selectors` /
+  `buildInitialUiState` / `persistSplashVersion` / keyboard-integration / rewritten
+  `useSplash` tests).
+- [x] Grep `App.tsx` for residual `useState(` on the three folded flags
   (`paletteOpen` / `uiHidden` / `debugPanelOpen`) — zero hits; they're now selector
-  reads. (The local-only `initialMobile` `useState` at `App.tsx:215` STAYS — it's
-  out of scope per spec.)
-- [ ] Confirm `UseSplashReturn` (`src/@types/splash/UseSplashReturn.d.ts`) is
-  byte-identical to its pre-branch shape — `Splash` / `AboutPill` must not need a
-  change. Confirm the in-hook `localStorage` write is gone from `useSplash.ts`
-  (search for `setItem` / `writeSeenVersion`).
-- [ ] Run the `entanglement-radar` skill over the branch diff; specifically verify
-  splash persistence is a single thin effect (one writer), not re-scattered into
-  the hook AND the effect (the duplicate write would be a mirror-state bug). Address
-  or record any finding.
-- [ ] Run the `superpowers:finishing-a-development-branch` handoff: present
-  merge/PR/cleanup options to the user (branch + PR, squash-merge).
+  reads. (The local-only `initialMobile` `useState` STAYS — out of scope per spec.)
+- [x] Confirm `UseSplashReturn` (`src/@types/splash/UseSplashReturn.d.ts`) is
+  shape-identical to its pre-branch contract — `Splash` / `AboutPill` need no change
+  (only stale doc comments updated). Confirmed the in-hook `localStorage` write is
+  gone from `useSplash.ts` (no `setItem` / `writeSeenVersion`).
+- [x] entanglement-radar lens (folded into the final whole-branch review): splash
+  persistence CONFIRMED single-writer (`writeSeenVersion` called only from
+  `persistSplashVersion`), `splashVisible` CONFIRMED single source of truth (the
+  slice), derived state CONFIRMED still derived. No mirror-write.
+- [x] Run the `superpowers:finishing-a-development-branch` handoff: present
+  merge/PR/cleanup options to the user (branch + PR, squash-merge). User
+  smoke-tested all surfaces; `/feature-done` audit passed (READY).
 
 ---
 

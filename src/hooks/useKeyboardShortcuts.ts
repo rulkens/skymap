@@ -28,8 +28,14 @@ import { useEffect } from 'react';
 import type { UseKeyboardShortcutsInput } from '../@types/engine/UseKeyboardShortcutsInput';
 
 export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
-  const { selected, paletteOpen, engineHandleRef, setPaletteOpen, setUiHidden, setDebugPanelOpen } =
-    input;
+  const {
+    selected,
+    paletteOpen,
+    engineHandleRef,
+    setPaletteOpen,
+    toggleUiHidden,
+    toggleDebugPanelOpen,
+  } = input;
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -90,7 +96,7 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
       // and the user would have a hidden UI plus a stray focus ring.
       if (e.key === 'Tab' && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
-        setUiHidden((prev) => !prev);
+        toggleUiHidden();
         return;
       }
 
@@ -106,14 +112,22 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
       // tuck it away.  Bare key (no modifier) so it doesn't collide
       // with browser dev-tool shortcuts (Cmd+Opt+D etc.).
       if (e.key === 'd' || e.key === 'D') {
-        setDebugPanelOpen((prev) => !prev);
+        toggleDebugPanelOpen();
         return;
       }
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selected, paletteOpen, engineHandleRef, setPaletteOpen, setUiHidden, setDebugPanelOpen]);
-  // engineHandleRef (ref object), setPaletteOpen and setUiHidden (React setters)
-  // are stable references — listed for exhaustive-deps; never trigger re-binds.
+  }, [
+    selected,
+    paletteOpen,
+    engineHandleRef,
+    setPaletteOpen,
+    toggleUiHidden,
+    toggleDebugPanelOpen,
+  ]);
+  // engineHandleRef (ref object), setPaletteOpen, toggleUiHidden, toggleDebugPanelOpen
+  // are stable useCallback wrappers over dispatch — listed for exhaustive-deps but
+  // never trigger re-binds.
 }

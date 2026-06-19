@@ -31,9 +31,10 @@
  *
  * The app is wrapped in the redux `<Provider>` whose store is constructed here,
  * once, from `createAppStore`. Its `preloadedState` seeds the `tier` root slice
- * with the viewport-derived boot tier and the settings slice with the boot
- * appearance knobs. That single store instance is the one store the app owns:
- * React reads it through the `<Provider>`, and the engine reads it through
+ * with the viewport-derived boot tier, the settings slice with the boot
+ * appearance knobs, and the `ui` route (palette / hide-UI / debug + splash) from
+ * `buildInitialUiState()`. That single store instance is the one store the app
+ * owns: React reads it through the `<Provider>`, and the engine reads it through
  * `useEngine` → `createEngine`, so there is no second store to drift.
  *
  * The factory also returns `setSagaContext` — its saga-context setter, a sibling
@@ -48,8 +49,10 @@ import { Provider } from 'react-redux';
 import { App } from './components/App/App';
 import { createAppStore } from './store/createAppStore';
 import { SagaContextProvider } from './store/SagaContextProvider';
-import { settingsRoute, tierRoute } from './store/constants';
+import { settingsRoute, tierRoute, uiRoute } from './store/constants';
 import { buildInitialSettings } from './state/settings/initialState';
+import { buildInitialUiState } from './state/ui/buildInitialUiState';
+import { persistSplashVersion } from './state/ui/persistSplashVersion';
 import { initialTierFromViewport } from './utils/initialTierFromViewport';
 import { renderUnsupportedPageHtml } from './unsupportedPage';
 // Side-effect import — defines design-token custom properties on `:root`
@@ -79,7 +82,10 @@ if (typeof navigator === 'undefined' || typeof navigator.gpu === 'undefined') {
   const { store, setSagaContext } = createAppStore({
     [tierRoute]: initialTier,
     [settingsRoute]: buildInitialSettings(),
+    [uiRoute]: buildInitialUiState(),
   });
+  // Store lives for the page lifetime; unsubscribe is intentionally not held.
+  persistSplashVersion(store);
   createRoot(root).render(
     <Provider store={store}>
       <SagaContextProvider value={setSagaContext}>

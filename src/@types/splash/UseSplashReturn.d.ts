@@ -9,10 +9,9 @@ import type { SplashError } from './SplashError';
  * link.  `error` is null on the happy path; `famous-meta-failed` leaves
  * the splash usable, the other kinds force the error layout.
  *
- * `dismissExplore` / `dismissTour` bump localStorage's `seenVersion` and
- * close the splash.  `reopen` (called by the AboutPill) shows the splash
- * again but does NOT touch localStorage — reopening is informational, not
- * a "first-time" event.
+ * `dismissExplore` / `dismissTour` dismiss the splash (marks it seen at the
+ * current version) and reveal the app.  `reopen` (called by the AboutPill)
+ * re-shows the splash; the dismissed version is unchanged.
  */
 export type UseSplashReturn = {
   splashVisible: boolean;

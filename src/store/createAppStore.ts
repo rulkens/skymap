@@ -47,10 +47,12 @@ import { rootReducer } from './rootReducer';
 import { mainSaga } from './rootSaga';
 import type { RootState, SagaContext } from './types';
 
-// The store's preloaded shape is a partial route map: a caller may seed `tier`
-// and/or `settings` (both optional) and leave the rest to each slice's
-// `initialState`. `Partial<RootState>` is exactly RTK's `preloadedState`
-// contract, so a settings-only or tier-only seed both type-check.
+// The store's preloaded shape is a partial route map: a caller may seed any
+// subset of the routes (`tier`, `settings`, `ui` — all optional) and leave the
+// rest to each slice's `initialState`. `Partial<RootState>` is exactly RTK's
+// `preloadedState` contract, so a settings-only, tier-only, or ui-only seed all
+// type-check. (The `ui` slice self-seeds from `buildInitialUiState()` when
+// omitted; main.tsx seeds it explicitly for a fresh boot-time localStorage read.)
 export type PreloadedState = Partial<RootState>;
 
 export function createAppStore(preloadedState?: PreloadedState) {
