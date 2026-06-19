@@ -12,6 +12,14 @@
  * the root saga forks nothing yet — see `rootSaga`. Running an empty root now
  * means phase 2 adds feature sagas without touching this factory.
  *
+ * `setSagaContext` is the outward seam for engine-side closures. Sagas live
+ * entirely in the store layer and have no compile-time access to the engine's
+ * scheduler, renderers, or fade bridge. After constructing the engine, callers
+ * register plain closures (typed as `ReconcileEffects`) via `setSagaContext`; the
+ * saga middleware merges them into the running root saga's context where feature
+ * sagas can retrieve them with `getContext`. This keeps the store/saga layer free
+ * of engine imports while still letting sagas trigger engine effects.
+ *
  * Notably absent: NO `serializableCheck: false` and NO `enableMapSet`. The whole
  * point of this migration is that the settings state is now fully serializable —
  * `disabledPasses` is a plain `Record`, not a `Set` — so RTK's default
@@ -26,6 +34,7 @@ import createSagaMiddleware from 'redux-saga';
 import { rootReducer } from './rootReducer';
 import { mainSaga } from './rootSaga';
 import { settingsRoute } from './constants';
+import type { SagaContext } from './types';
 import type { EngineSettingsState } from '../@types/settings/EngineSettingsState';
 
 // The store's preloaded shape is exactly the route map RTK's `preloadedState`
@@ -41,5 +50,8 @@ export function createAppStore(preloadedState?: PreloadedState) {
     middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(sagaMiddleware),
   });
   sagaMiddleware.run(mainSaga);
-  return store;
+  return {
+    store,
+    setSagaContext: (ctx: Partial<SagaContext>) => sagaMiddleware.setContext(ctx),
+  };
 }
