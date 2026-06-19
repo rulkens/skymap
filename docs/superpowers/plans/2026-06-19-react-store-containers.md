@@ -713,16 +713,16 @@ function DisplaySectionContainer(): React.ReactElement
 // export default memo(DisplaySectionContainer)
 ```
 
-- [ ] Write `tests/components/SettingsPanel/DisplaySection.test.ts`
+- [x] Write `tests/components/SettingsPanel/DisplaySection.test.ts`
   (plain-props): dropdown reflects `toneMapCurve`; changing it calls
   `onToneMapCurveChange` with the parsed curve value.
-- [ ] Write `tests/components/containers/DisplaySectionContainer.test.ts`
+- [x] Write `tests/components/containers/DisplaySectionContainer.test.ts`
   (store-backed): change the dropdown, assert `selectToneMapCurve(store.getState())`
   changed.
-- [ ] Confirm both fail.
-- [ ] Implement presentational + container.
-- [ ] `npm test -- DisplaySection` → pass; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] Confirm both fail.
+- [x] Implement presentational + container.
+- [x] `npm test -- DisplaySection` → pass; `npm run typecheck` clean.
+- [x] Commit.
 
 ---
 
