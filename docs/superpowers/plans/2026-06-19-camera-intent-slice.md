@@ -364,13 +364,15 @@ reads/advances the live `cam` the way `apply` did and returns the resulting
 `CameraPose` (the engine writes that pose back onto `state.cam` at the call site —
 Task 1.7). This is the throwaway shim the spec's §8.1 allows; deleted in Phase 2.
 
-- [ ] Update the purity test to assert `runCameraDrivers(drivers, s, cam, e)` returns
+- [x] Update the purity test to assert `runCameraDrivers(drivers, s, cam, e)` returns
   the highest-priority active driver's pose (fake drivers returning sentinel poses,
   a fake `RootState`, a throwaway `cam`).
-- [ ] `runCameraDrivers picks by priority, not list order` (sentinel poses).
-- [ ] `with only resting active, the resolver returns resting's pose` (the always-active
+- [x] `runCameraDrivers picks by priority, not list order` (sentinel poses).
+- [x] `with only resting active, the resolver returns resting's pose` (the always-active
   floor — no nullable return, never an inactive driver).
-- [ ] Confirm fail → implement → pass. `npm test -- cameraDrivers`. Commit.
+- [x] Confirm fail → implement → pass. `npm test -- cameraDrivers`. Commit.
+  (Shipped jointly with Task 1.7 as one green commit — a resolver signature change
+  cannot be green without its call site.)
 
 ### Task 1.7 — engine writes the returned pose back onto `state.cam` (shim)
 
@@ -386,12 +388,14 @@ Task 1.7). This is the throwaway shim the spec's §8.1 allows; deleted in Phase 
   camera path; assert the camera still advances identically (or rely on the
   unchanged visible behaviour + the resolver test).
 
-- [ ] Adjust the call site to consume the returned pose and write it back +
+- [x] Adjust the call site to consume the returned pose and write it back +
   `updatePosition`. `shouldKeepTicking` still reads `drivers.some(d => d.isActive(...))`
   — update its `isActive(nowMs)` → `isActive(s)` call to pass the store state
-  (`shouldKeepTicking.ts`), threading `RootState` in (read via the engine's store).
-- [ ] `npm test` (full suite) + `npm run typecheck` → green. Behaviour unchanged.
-  Commit.
+  (`shouldKeepTicking.ts`), threading `RootState` in (read via the engine's store,
+  `deps.cb.store.getState()`).
+- [x] `npm test` (full suite) + `npm run typecheck` → green. Behaviour unchanged.
+  Commit. (Also repaired the pre-existing `cameraDriverWrappers`, `runFrame`,
+  `shouldKeepTicking`, and `rootReducer` tests to the new signatures.)
 
 ---
 

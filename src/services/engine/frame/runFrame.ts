@@ -123,22 +123,35 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // model.  Every mover that wants to write the camera (an in-flight
   // tween, idle auto-rotate) is a `CameraDriver` with a numeric
   // `priority`; `runCameraDrivers` scans the list, picks the single
-  // highest-priority driver that declares itself active, and runs ONLY
-  // that one's `apply`.  Precedence is therefore data (priority), not
-  // statement order, and there is no blending — a frame is authored by one
-  // driver or by none.
+  // highest-priority driver that declares itself active, and RETURNS
+  // that driver's `CameraPose`, which we write onto `state.cam` here.
+  // Precedence is therefore data (priority), not statement order, and
+  // there is no blending — a frame is authored by one driver or by none.
   //
   // Auto-rotate is suppressed-by-tween purely through priority: the tween
   // driver outranks auto-rotate, so when a tween is active it wins and
   // auto-rotate never fires.  The old explicit `!tweens.isActive()` guard
   // that encoded the same rule is gone — the resolver subsumes it.
   //
+  // The write-back below is a forward-looking structure: while the shim
+  // drivers still mutate `state.cam` directly it is a no-op, but it
+  // becomes load-bearing when the shims are replaced by pure pose
+  // producers that read the Redux store.
+  //
   // This runs *before* `deriveFrameContext` so a camera-only-ready frame
   // still makes motion progress before we early-return for missing GPU
   // handles.  The resolver only arbitrates the same-frame race for who
   // gets to write the camera.
+  const rootState = deps.cb.store.getState();
   if (state.cam) {
-    runCameraDrivers(deps.drivers, state.cam, nowMs);
+    const pose = runCameraDrivers(deps.drivers, rootState, state.cam, nowMs);
+    state.cam.target[0] = pose.target[0];
+    state.cam.target[1] = pose.target[1];
+    state.cam.target[2] = pose.target[2];
+    state.cam.yaw = pose.yaw;
+    state.cam.pitch = pose.pitch;
+    state.cam.distance = pose.distance;
+    updatePosition(state.cam);
   }
 
   // ── Per-frame derived snapshot ────────────────────────────────────
@@ -454,7 +467,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // fade-out in galaxy-catalog visibility changes and tier-swap commits would
   // hang forever.
   state.subsystems.fades.tick(nowMs);
-  if (shouldKeepTicking(state, deps.drivers, nowMs)) {
+  if (shouldKeepTicking(state, deps.drivers, rootState, nowMs)) {
     state.subsystems.scheduler.requestRender();
   }
 }

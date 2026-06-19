@@ -16,6 +16,11 @@ import { describe, it, expect, vi } from 'vitest';
 import { shouldKeepTicking } from '../../../../src/services/engine/helpers/shouldKeepTicking';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
+import type { RootState } from '../../../../src/store/types';
+
+// The shim drivers ignore the `s` arg in `isActive` (they close over EngineState).
+// An empty cast suffices; these tests exercise the EngineState-driven terms.
+const fakeState = {} as RootState;
 
 /**
  * Minimal state covering every term shouldKeepTicking reads. All terms default
@@ -68,41 +73,41 @@ describe('shouldKeepTicking', () => {
     // field is on and its cube committed — the loop MUST keep ticking so the
     // ribbons keep advecting without the cursor poking requestRender.
     const state = makeState({ flowEnabled: true, flowReady: true });
-    expect(shouldKeepTicking(state, [], 1000)).toBe(true);
+    expect(shouldKeepTicking(state, [], fakeState, 1000)).toBe(true);
   });
 
   it('at rest (flow off, no drivers, no fades/focus) → false', () => {
     const state = makeState({});
-    expect(shouldKeepTicking(state, [driver(false)], 1000)).toBe(false);
+    expect(shouldKeepTicking(state, [driver(false)], fakeState, 1000)).toBe(false);
   });
 
   it('flow enabled but NOT loaded → false (the slotReady guard)', () => {
     const state = makeState({ flowEnabled: true, flowReady: false });
-    expect(shouldKeepTicking(state, [], 1000)).toBe(false);
+    expect(shouldKeepTicking(state, [], fakeState, 1000)).toBe(false);
   });
 
   it('flow loaded but disabled → false (the enabled guard)', () => {
     const state = makeState({ flowEnabled: false, flowReady: true });
-    expect(shouldKeepTicking(state, [], 1000)).toBe(false);
+    expect(shouldKeepTicking(state, [], fakeState, 1000)).toBe(false);
   });
 
   it('an active camera driver → true (drivers.some is the OR of movers)', () => {
     const state = makeState({});
-    expect(shouldKeepTicking(state, [driver(false), driver(true)], 1000)).toBe(true);
+    expect(shouldKeepTicking(state, [driver(false), driver(true)], fakeState, 1000)).toBe(true);
   });
 
   it('a fade animating → true', () => {
     const state = makeState({ fadesAnimating: true });
-    expect(shouldKeepTicking(state, [], 1000)).toBe(true);
+    expect(shouldKeepTicking(state, [], fakeState, 1000)).toBe(true);
   });
 
   it('structure-focus fade awake → true', () => {
     const state = makeState({ focusAwake: true });
-    expect(shouldKeepTicking(state, [], 1000)).toBe(true);
+    expect(shouldKeepTicking(state, [], fakeState, 1000)).toBe(true);
   });
 
-  it('passes nowMs through to every time-dependent term', () => {
-    const isActive = vi.fn<(nowMs: number) => boolean>(() => false);
+  it('passes nowMs through to time-dependent terms; passes RootState to isActive', () => {
+    const isActive = vi.fn<(s: RootState) => boolean>(() => false);
     const isAnyAnimating = vi.fn<(nowMs: number) => boolean>(() => false);
     const isAwake = vi.fn<(nowMs: number) => boolean>(() => false);
     const state = {
@@ -117,9 +122,9 @@ describe('shouldKeepTicking', () => {
       assetSlots: { flow: null },
     } as unknown as EngineState;
 
-    shouldKeepTicking(state, [{ isActive } as unknown as CameraDriver], 4242);
+    shouldKeepTicking(state, [{ isActive } as unknown as CameraDriver], fakeState, 4242);
 
-    expect(isActive).toHaveBeenCalledWith(4242);
+    expect(isActive).toHaveBeenCalledWith(fakeState);
     expect(isAnyAnimating).toHaveBeenCalledWith(4242);
     expect(isAwake).toHaveBeenCalledWith(4242);
   });

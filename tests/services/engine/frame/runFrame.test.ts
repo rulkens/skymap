@@ -148,9 +148,10 @@ function makeDeps(): RunFrameDeps {
       clientWidth: 0,
       clientHeight: 0,
     } as unknown as HTMLCanvasElement,
-    // runFrame only reads `cb.camera?.onCameraChange` (optional); these
-    // renderer-null fixtures don't subscribe, so an empty bag suffices.
-    cb: {} as unknown as RunFrameDeps['cb'],
+    // runFrame reads `cb.camera?.onCameraChange` (optional) and
+    // `cb.store.getState()` for the camera-driver RootState; the Phase-1
+    // shim drivers ignore that state, so a getState returning {} suffices.
+    cb: { store: { getState: () => ({}) } } as unknown as RunFrameDeps['cb'],
     device: {} as unknown as GPUDevice,
     context: {} as unknown as GPUCanvasContext,
     milkyWayRenderer: {} as unknown as RunFrameDeps['milkyWayRenderer'],

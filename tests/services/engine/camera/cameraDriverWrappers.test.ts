@@ -4,10 +4,10 @@
  *
  * The wrappers are thin mappings: `isActive` should mirror the
  * underlying predicate (a subsystem method or a settings flag) and
- * `apply` should forward to the underlying mutator with the same `cam`
- * and `nowMs` the resolver hands it. These tests assert exactly that
- * mapping against a minimal fake `state` of `vi.fn()` spies. The
- * auto-rotate wrapper has no subsystem to forward to, so it is checked
+ * `pose` should forward to the underlying mutator with the `cam` param
+ * the resolver hands it, returning a `CameraPose`. These tests assert
+ * exactly that mapping against a minimal fake `state` of `vi.fn()` spies.
+ * The auto-rotate wrapper has no subsystem to forward to, so it is checked
  * directly: a precise yaw delta and a recomputed `position`.
  *
  * Because every wrapper closes over the live `state`, toggling a fake's
@@ -21,24 +21,38 @@ import { describe, it, expect, vi } from 'vitest';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import type { RootState } from '../../../../src/store/types';
 import { buildCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
 
 // Must match the constant baked into the autoRotate wrapper.
 const AUTO_ROTATE_YAW_DELTA = 0.000873;
 
+// The shim drivers ignore the `s` arg in `pose` (they close over EngineState
+// for `isActive` and use the `cam` param for mutation). An empty cast is
+// sufficient; the test exercises the cam-param path, not store reads.
+const fakeState = {} as RootState;
+
 type FakeState = {
   subsystems: {
-    tweens: { isActive: ReturnType<typeof vi.fn>; advance: ReturnType<typeof vi.fn> };
+    tweens: {
+      isActive: ReturnType<typeof vi.fn<() => boolean>>;
+      advance: ReturnType<typeof vi.fn<() => boolean>>;
+    };
   };
   settings: { camera: { autoRotate: boolean } };
+  cam: OrbitCamera | null;
 };
 
 function makeFakeState(): FakeState {
   return {
     subsystems: {
-      tweens: { isActive: vi.fn(() => false), advance: vi.fn(() => false) },
+      tweens: {
+        isActive: vi.fn<() => boolean>(() => false),
+        advance: vi.fn<() => boolean>(() => false),
+      },
     },
     settings: { camera: { autoRotate: false } },
+    cam: null,
   };
 }
 
@@ -49,7 +63,13 @@ function driverById(state: EngineState, id: string): CameraDriver {
   return driver;
 }
 
-const camStub = {} as OrbitCamera;
+const camStub = {
+  target: [0, 0, 0],
+  yaw: 0,
+  pitch: 0,
+  distance: 10,
+  position: new Float32Array([0, 0, 0]),
+} as unknown as OrbitCamera;
 
 describe('buildCameraDrivers — tween wrapper', () => {
   it('isActive reflects tweenManager.isActive', () => {
@@ -57,20 +77,20 @@ describe('buildCameraDrivers — tween wrapper', () => {
     const tween = driverById(fake as unknown as EngineState, 'tween');
 
     fake.subsystems.tweens.isActive.mockReturnValue(true);
-    expect(tween.isActive(0)).toBe(true);
+    expect(tween.isActive(fakeState)).toBe(true);
 
     fake.subsystems.tweens.isActive.mockReturnValue(false);
-    expect(tween.isActive(0)).toBe(false);
+    expect(tween.isActive(fakeState)).toBe(false);
   });
 
-  it('apply forwards cam + nowMs to tweenManager.advance', () => {
+  it('pose forwards the cam param to tweens.advance', () => {
     const fake = makeFakeState();
     const tween = driverById(fake as unknown as EngineState, 'tween');
 
-    tween.apply(camStub, 5678);
+    tween.pose(fakeState, camStub, 0);
 
     expect(fake.subsystems.tweens.advance).toHaveBeenCalledTimes(1);
-    expect(fake.subsystems.tweens.advance).toHaveBeenCalledWith(camStub, 5678);
+    expect(fake.subsystems.tweens.advance).toHaveBeenCalledWith(camStub, expect.any(Number));
   });
 });
 
@@ -80,13 +100,13 @@ describe('buildCameraDrivers — autoRotate wrapper', () => {
     const autoRotate = driverById(fake as unknown as EngineState, 'autoRotate');
 
     fake.settings.camera.autoRotate = true;
-    expect(autoRotate.isActive(0)).toBe(true);
+    expect(autoRotate.isActive(fakeState)).toBe(true);
 
     fake.settings.camera.autoRotate = false;
-    expect(autoRotate.isActive(0)).toBe(false);
+    expect(autoRotate.isActive(fakeState)).toBe(false);
   });
 
-  it('apply increments yaw by the auto-rotate delta and recomputes position', () => {
+  it('pose increments yaw by the auto-rotate delta and recomputes position', () => {
     const fake = makeFakeState();
     const autoRotate = driverById(fake as unknown as EngineState, 'autoRotate');
 
@@ -100,7 +120,7 @@ describe('buildCameraDrivers — autoRotate wrapper', () => {
       position: new Float32Array([0, 0, 0]),
     } as unknown as OrbitCamera;
 
-    autoRotate.apply(cam, 0);
+    autoRotate.pose(fakeState, cam, 0);
 
     expect(cam.yaw).toBeCloseTo(AUTO_ROTATE_YAW_DELTA, 12);
     // updatePosition ran: with yaw≈delta, pitch 0, distance 10, the

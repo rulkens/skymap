@@ -19,8 +19,9 @@
  * Predicate breakdown:
  *   - camera drivers active: any camera mover (an in-flight tween, or idle
  *     auto-rotate) declares itself active this frame, via the same driver
- *     registry the per-frame camera write resolves through. `.some(isActive)`
- *     IS the boolean OR of those movers, so it tracks the resolver exactly —
+ *     registry the per-frame camera write resolves through. `isActive` now
+ *     takes the store `RootState` (not `nowMs`). `.some(isActive(s))` IS the
+ *     boolean OR of those movers, so it tracks the resolver exactly —
  *     one place decides 'is the camera moving' for both the write and this gate.
  *   - texturedDisks.hasInFlightWork(): a thumbnail fetch is racing the network
  *     OR a landed bitmap is in its 400 ms load-fade window. Guarded by
@@ -42,16 +43,18 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
+import type { RootState } from '../../../store/types';
 import { isEngineReady } from './engineReady';
 import { slotReady } from '../../loading/slotReady';
 
 export function shouldKeepTicking(
   state: EngineState,
   drivers: readonly CameraDriver[],
+  s: RootState,
   nowMs: number,
 ): boolean {
   return (
-    drivers.some((d) => d.isActive(nowMs)) ||
+    drivers.some((d) => d.isActive(s)) ||
     (isEngineReady(state) && state.subsystems.texturedDisks.hasInFlightWork()) ||
     state.subsystems.fades.isAnyAnimating(nowMs) ||
     state.subsystems.structureFocus.isAwake(nowMs) ||
