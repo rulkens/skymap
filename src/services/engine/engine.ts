@@ -696,13 +696,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   // ── Handle literal — sub-handle clusters + destroy + slots ──
   //
-  // Sub-handles with live methods delegate to local functions.
-  // Clusters whose writes have migrated to sagas are empty `{}`
-  // placeholders — their types match `{}` in EngineHandle.d.ts.
-  // This literal is the only public surface.
+  // Each sub-handle delegates to local functions. This literal is the
+  // engine's only public surface; it holds imperative operations (camera,
+  // selection, sources, volumes, debug) while store writes go direct to the store.
   const handle: EngineHandle = {
-    galaxyCatalogs: {},
-    tonemap: {},
     camera: {
       focusOn,
       focusOnHome,
@@ -718,12 +715,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       getCloud,
       getCloudObjIds,
     },
-    bias: {},
-    thumbnails: {},
-    milkyWay: {},
-    filaments: {},
-    flow: {},
-    structures: {},
     volumes: {
       add: (fieldId, cube) => addVolumeField(state, store, fieldId, cube),
       remove: (fieldId) => removeVolumeField(state, store, fieldId),
