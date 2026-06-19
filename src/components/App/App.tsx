@@ -64,6 +64,18 @@ import {
   selectGalaxyCatalogItems,
   selectMilkyWayLabelEnabled,
 } from '../../state/settings/selectors';
+import {
+  setGalaxyCatalogSize,
+  setDepthFade,
+  setHighlightFallback,
+  setRealOnly,
+  setFilamentIntensity,
+  setAbsMagLimit,
+  setToneMapCurve,
+  setAutoRotate,
+  setShowPickBuffer,
+  setShowDiskRadiusRing,
+} from '../../state/settings/settingsSlice';
 import { selectTier } from '../../state/tier/selectors';
 import { requestTier } from '../../state/tier/requestTier';
 import { projectVolumeFieldRows } from '../../state/settings/projectVolumeFieldRows';
@@ -102,19 +114,21 @@ export function App(): React.ReactElement {
   const visibleSourceMask = useAppSelector(selectVisibleSourceMask);
 
   // Tonemap cluster. Exposure has no React consumer today (no slider in the
-  // panels), so only the curve dropdown reads here; the store write notifies
-  // synchronously, so `setCurve` tracks without an optimistic cell.
+  // panels), so only the curve dropdown reads here. Dispatching `setToneMapCurve`
+  // updates the store synchronously, so the dropdown tracks without an optimistic
+  // cell; `watchWake` wakes the render loop.
   const toneMapCurve = useAppSelector(selectToneMapCurve);
 
-  // Camera auto-rotate. The toggle's handler dispatches through
-  // `handle.camera.setAutoRotate`, which notifies synchronously, so the
-  // play/pause icon tracks without an optimistic cell.
+  // Camera auto-rotate. The toggle dispatches `setAutoRotate`, which updates the
+  // store synchronously so the play/pause icon tracks without an optimistic cell;
+  // `watchWake` wakes the render loop.
   const autoRotate = useAppSelector(selectAutoRotate);
 
   // Bias mode + absolute-magnitude limit. The mode radio dispatches through
-  // `handle.bias.setMode` (which also kicks the async worker re-bake) and the
-  // slider through `handle.setAbsMagLimit`; both notify synchronously, so the
-  // controls track without an optimistic cell.
+  // `handle.bias.setMode` (which also kicks the async worker re-bake). The
+  // abs-mag slider dispatches `setAbsMagLimit` directly; the store write is
+  // synchronous so the slider tracks without an optimistic cell, and `watchWake`
+  // wakes the render loop.
   const biasMode = useAppSelector(selectBiasMode);
   const absMagLimit = useAppSelector(selectAbsMagLimit);
 
@@ -125,9 +139,9 @@ export function App(): React.ReactElement {
   const currentTier = useAppSelector(selectTier);
 
   // Debug-overlay toggles (pick buffer + disk-radius ring). The DebugPanel
-  // checkboxes dispatch through `handle.debug.setShowPickBuffer` /
-  // `setShowDiskRadiusRing` (action-backed), which notify synchronously, so the
-  // checkbox tracks without an optimistic cell.
+  // checkboxes dispatch `setShowPickBuffer` / `setShowDiskRadiusRing` directly;
+  // the store write is synchronous so the checkboxes track without an optimistic
+  // cell, and `watchWake` wakes the render loop.
   const showPickBuffer = useAppSelector(selectShowPickBuffer);
   const showDiskRadiusRing = useAppSelector(selectShowDiskRadiusRing);
   // Renderer-toggle override set: read so the checkboxes track engine truth
@@ -137,10 +151,11 @@ export function App(): React.ReactElement {
   // pick-buffer toggle above.
   const disabledPasses = useAppSelector(selectDisabledPasses);
 
-  // Filaments cluster (toggle + intensity). The SettingsPanel handlers dispatch
-  // through `handle.filaments.setEnabled` / `setIntensity` (action-backed;
-  // `setEnabled` also drives the fade ramp), which notify synchronously, so the
-  // controls track without an optimistic cell.
+  // Filaments cluster (toggle + intensity). Both read off the store. The toggle
+  // dispatches through the handle (`setEnabled` also drives the fade ramp). The
+  // intensity slider dispatches `setFilamentIntensity` directly; the store write
+  // is synchronous so the slider tracks without an optimistic cell, and
+  // `watchWake` wakes the render loop.
   const filamentsEnabled = useAppSelector(selectFilamentsEnabled);
   const filamentIntensity = useAppSelector(selectFilamentIntensity);
 
@@ -321,7 +336,7 @@ export function App(): React.ReactElement {
           <SettingsPanel
             defaultOpen={initialPanelsOpen}
             pointSize={pointSize}
-            onPointSizeChange={(size) => handleRef.current?.galaxyCatalogs.setSize(size)}
+            onPointSizeChange={(size) => dispatch(setGalaxyCatalogSize(size))}
             labelCategoryVisibility={labelCategoryVisibility}
             markerCategoryVisibility={markerCategoryVisibility}
             onSetMarkerCategoryVisibility={(category, visible) => {
@@ -344,18 +359,19 @@ export function App(): React.ReactElement {
                 handleRef.current?.galaxyCatalogs.setLabelEnabled(category, visible);
               }
             }}
-            // Filaments reads off the engine-owned store (`selectFilamentsEnabled`
-            // / `selectFilamentIntensity`); the handle setters dispatch the store
-            // action (and `setEnabled` also drives the fade ramp), which notifies
-            // synchronously, so the controls stay in sync without an optimistic
-            // update.
+            // Filaments reads off the store (`selectFilamentsEnabled` /
+            // `selectFilamentIntensity`). The toggle (`setEnabled`) still dispatches
+            // through the handle — it also drives the fade ramp. The intensity
+            // slider dispatches `setFilamentIntensity` directly; the store write is
+            // synchronous so the slider tracks without an optimistic cell, and
+            // `watchWake` wakes the render loop.
             filamentsEnabled={filamentsEnabled}
             onFilamentsChange={(enabled) => handleRef.current?.filaments.setEnabled(enabled)}
             filamentIntensity={filamentIntensity}
-            onFilamentIntensityChange={(value) => handleRef.current?.filaments.setIntensity(value)}
+            onFilamentIntensityChange={(value) => dispatch(setFilamentIntensity(value))}
             depthFadeEnabled={depthFadeEnabled}
             onDepthFadeEnabledChange={(enabled) => {
-              handleRef.current?.galaxyCatalogs.setDepthFade(enabled);
+              dispatch(setDepthFade(enabled));
             }}
             onResetCamera={() => handleRef.current?.camera.focusOnHome()}
             // A tier swap is an Intent: the dropdown dispatches `requestTier`
@@ -376,19 +392,19 @@ export function App(): React.ReactElement {
             onToggleSource={(source, visible) =>
               handleRef.current?.sources.setVisible(source, visible)
             }
-            // Bias mode + absMagLimit read off the engine-owned store
-            // (`selectBiasMode` / `selectAbsMagLimit`); the handle setters
-            // dispatch the store action (and `setMode` also re-bakes the worker),
-            // which notifies synchronously, so the controls stay in sync without
-            // an optimistic update. The tone-map curve reads off the store too
-            // (`selectToneMapCurve`); `setCurve` dispatches its action likewise.
+            // Bias mode + absMagLimit read off the store (`selectBiasMode` /
+            // `selectAbsMagLimit`). The mode radio dispatches through the handle
+            // (`setMode` also re-bakes the worker). The abs-mag slider dispatches
+            // `setAbsMagLimit` directly; `watchWake` wakes the render loop. The
+            // tone-map curve reads off the store (`selectToneMapCurve`); the
+            // dropdown dispatches `setToneMapCurve` directly likewise.
             biasMode={biasMode}
             onBiasModeChange={(mode) => handleRef.current?.bias.setMode(mode)}
             absMagLimit={absMagLimit}
             // `M` is the conventional astronomy symbol for absolute magnitude.
-            onAbsMagLimitChange={(M) => handleRef.current?.bias.setAbsMagLimit(M)}
+            onAbsMagLimitChange={(M) => dispatch(setAbsMagLimit(M))}
             toneMapCurve={toneMapCurve}
-            onToneMapCurveChange={(curve) => handleRef.current?.tonemap.setCurve(curve)}
+            onToneMapCurveChange={(curve) => dispatch(setToneMapCurve(curve))}
             // `volumesEnabled` reads off the engine-owned store
             // (`selectVolumesEnabled`); the handle setter dispatches the
             // action (which notifies synchronously) and drives the master
@@ -440,7 +456,7 @@ export function App(): React.ReactElement {
           />
           <AutoRotateToggle
             playing={autoRotate}
-            onToggle={() => handleRef.current?.camera.setAutoRotate(!autoRotate)}
+            onToggle={() => dispatch(setAutoRotate(!autoRotate))}
             hidden={paletteOpen || splash.splashVisible}
           />
           <AboutPill onClick={splash.reopen} hidden={paletteOpen || splash.splashVisible} />
@@ -464,24 +480,24 @@ export function App(): React.ReactElement {
             timingService={handleRef.current.debug.timingService}
             passOverrides={handleRef.current.debug.passOverrides}
             disabledPasses={disabledPasses}
-            // Orientation-fallback diagnostic toggles — `galaxyCatalogs`
-            // setters echo synchronously, so React mirrors engine
-            // truth without an optimistic update.
+            // Orientation-fallback diagnostic toggles — dispatching the slice
+            // action updates the store synchronously, so React mirrors the truth
+            // without an optimistic update; `watchWake` wakes the render loop.
             highlightFallback={highlightFallback}
             realOnlyMode={realOnlyMode}
             onHighlightFallbackChange={(enabled) => {
-              handleRef.current?.galaxyCatalogs.setHighlightFallback(enabled);
+              dispatch(setHighlightFallback(enabled));
             }}
             onRealOnlyModeChange={(enabled) => {
-              handleRef.current?.galaxyCatalogs.setRealOnly(enabled);
+              dispatch(setRealOnly(enabled));
             }}
             showPickBuffer={showPickBuffer}
             onShowPickBufferChange={(enabled) => {
-              handleRef.current?.debug.setShowPickBuffer(enabled);
+              dispatch(setShowPickBuffer(enabled));
             }}
             showDiskRadiusRing={showDiskRadiusRing}
             onShowDiskRadiusRingChange={(enabled) => {
-              handleRef.current?.debug.setShowDiskRadiusRing(enabled);
+              dispatch(setShowDiskRadiusRing(enabled));
             }}
             // Flow motion tunables — no engine echo; the shared `onFlowChange`
             // applies the optimistic patch AND forwards it to the handle (same
