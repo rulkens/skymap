@@ -102,7 +102,7 @@ function makeState(
   const bindHiResArray = vi.fn();
   return {
     tier: 'medium',
-    settings: { tier: 'medium' },
+    settings: {},
     gpu: {
       texturedDiskRenderer:
         opts.texturedDiskRenderer !== undefined

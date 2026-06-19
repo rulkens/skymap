@@ -43,7 +43,6 @@ function makeState(
   return {
     settings: {
       marker: 'sentinel',
-      tier: 'medium',
       galaxyCatalogs: { items: {} },
       volumes: { items: {} },
     },

@@ -46,15 +46,10 @@ import type { VolumeFieldSettings } from '../../@types/settings/VolumeFieldSetti
 import type { FlowSettings } from '../../@types/settings/FlowSettings';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
-import type { Tier } from '../../@types/data/Tier';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../data/sources';
 import { maskWith } from '../../utils/maskWith';
 
 export const selectSettings = (state: RootState) => state[settingsRoute];
-
-// --- tier (flat root field) ---------------------------------------------------
-
-export const selectTier = (state: RootState): Tier => selectSettings(state).tier;
 
 // --- galaxyCatalogs cluster ---------------------------------------------------
 

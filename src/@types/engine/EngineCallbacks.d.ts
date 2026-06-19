@@ -6,7 +6,6 @@
 
 import type { EngineStatus } from './EngineStatus';
 import type { FocusableTarget } from './FocusableTarget';
-import type { Tier } from '../data/Tier';
 import type { ScaleInfo } from './ScaleInfo';
 import type { SourceType } from '../data/SourceType';
 import type { LoadProgressState } from '../loading/LoadProgressState';
@@ -69,16 +68,6 @@ export type EngineCallbacks = {
    * stays a no-op and a tier change never reaches the engine's GPU resources.
    */
   setSagaContext: SetSagaContext;
-
-  /**
-   * Initial data tier to load on engine startup.  Defaults to `'medium'`
-   * when absent.  This is technically an option, not a callback, but the
-   * `createEngine(canvas, cb)` signature already passes a single bag for
-   * both — extending it here keeps the public surface compact rather than
-   * introducing a separate `EngineOpts` type for one extra field.  Will
-   * grow into a richer Opts split if more startup-only knobs accumulate.
-   */
-  initialTier?: Tier;
 
   /**
    * Engine lifecycle callbacks.  `onStatusChange` is required — every
@@ -153,7 +142,7 @@ export type EngineCallbacks = {
 
   /**
    * Source-state callbacks — per-source readiness and aggregated load
-   * progress. (Tier is no longer echoed here: it lives in the settings store,
+   * progress. (Tier is not echoed here: it lives in the `tier` root slice,
    * read React-side via `selectTier`.)
    *
    * `onCatalogReady` is granular per-source because the three .bin

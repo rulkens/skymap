@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 
 import {
   selectSettings,
-  selectTier,
   selectGalaxyCatalogSize,
   selectBrightness,
   selectDepthFade,
@@ -40,7 +39,7 @@ import type { GalaxyCatalogId } from '../../../src/@types/data/galaxyCatalog/Gal
 // settings route, optionally patched. The selectors are RootState-scoped, so
 // they read through `state[settingsRoute]` exactly as the React/engine sides do.
 function makeRoot(patch?: Partial<EngineSettingsState>): RootState {
-  const settings = { ...buildInitialSettings({ initialTier: 'medium' }), ...patch };
+  const settings = { ...buildInitialSettings(), ...patch };
   return { [settingsRoute]: settings } as RootState;
 }
 
@@ -68,14 +67,6 @@ describe('selectSettings', () => {
     const state = makeRoot();
 
     expect(selectSettings(state)).toBe(state[settingsRoute]);
-  });
-});
-
-describe('tier', () => {
-  it('selectTier reads tier', () => {
-    const state = makeRoot({ tier: 'large' });
-
-    expect(selectTier(state)).toBe('large');
   });
 });
 

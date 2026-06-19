@@ -129,7 +129,7 @@ function makeState(opts: { disabledSources?: readonly SourceType[] } = {}): Make
 
   const state = {
     tier: 'medium',
-    settings: { tier: 'medium', galaxyCatalogs: { items } } as never,
+    settings: { galaxyCatalogs: { items } } as never,
     requests: new Set<string>(),
     gpu: { renderer: { totalCount: () => 42 } },
     assetSlots: {

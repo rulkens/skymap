@@ -16,7 +16,7 @@
  *     sourceCounts, loadProgress.  All but `scale` are fed by engine
  *     callbacks that fire only when the value changes, so direct `setX`
  *     wiring is safe (no spurious re-renders).  The data tier is NOT here:
- *     it lives in the engine settings store, read via `selectTier` /
+ *     it lives in its own `tier` root slice, read via `selectTier` /
  *     `useAppSelector` — this hook neither holds nor exposes it.
  *     `scale` is derived locally from `onCameraChange` snapshots via
  *     the pure `computeScaleInfo` helper — the engine emits the

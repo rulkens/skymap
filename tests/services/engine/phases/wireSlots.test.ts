@@ -323,13 +323,11 @@ function makeState(
   }
   const data = createEngineData();
   return {
-    // Top-level data tier — the engine read repointed from `settings.tier` to
-    // `state.tier` (a getter); keep it equal to `settings.tier` so the
-    // synthetic-fallback assertion `tier: state.settings.tier` still holds.
+    // Top-level data tier — its own root field on EngineState; the source
+    // expression `req(state.tier)` reads it, and the synthetic-fallback
+    // assertion checks `tier: state.tier`.
     tier: 'medium',
     settings: {
-      // Cross-cutting data tier — the source expression `req(tier)` reads.
-      tier: 'medium',
       galaxyCatalogs: {
         enabled: true,
         sizePx: 2.5,
@@ -660,7 +658,7 @@ describe('wireSlots', () => {
     expect(synthSlot.load).toHaveBeenCalledTimes(1);
     expect(synthSlot.load).toHaveBeenCalledWith({
       source: Source.Synthetic,
-      tier: state.settings.tier,
+      tier: state.tier,
     });
   });
 

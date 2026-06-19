@@ -24,7 +24,8 @@
  * sub-bags organised by concern, gives the engine one obvious answer.
  * The mental model becomes:
  *
- *   - `state.settings`   — what the SettingsPanel surfaces (incl. the data tier).
+ *   - `state.settings`   — the appearance knobs the SettingsPanel surfaces.
+ *   - `state.tier`       — the data-resolution tier (its own root slice).
  *   - `state.data`       — per-type data stores (galaxies, structures, …).
  *   - `state.picking`    — hover / click / drag mutables.
  *   - `state.gpu`        — pipelines / textures allocated lazily.

@@ -3,11 +3,11 @@
  *
  * The reason this literal was pulled out of `createEngine`: its shape can be
  * pinned without standing up the whole engine. These tests assert the contract
- * the runtime relies on at boot — the tier passes through verbatim, every
- * cluster is present, and the two registry-DERIVED item records seed exactly
- * one row per id (a drift between the id set and the seed would strand a
- * catalog/structure with no settings row, the bug the `Object.fromEntries`
- * derivation exists to prevent).
+ * the runtime relies on at boot — every cluster is present, and the two
+ * registry-DERIVED item records seed exactly one row per id (a drift between the
+ * id set and the seed would strand a catalog/structure with no settings row, the
+ * bug the `Object.fromEntries` derivation exists to prevent). The data tier is
+ * NOT a settings field (it lives in its own root slice), so it is absent here.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -18,13 +18,8 @@ import { seedVolumeFields } from '../../../src/data/volume/volumeFieldDefaults';
 import { DEFAULT_FLOW, DEFAULT_POINT_SIZE_PX } from '../../../src/data/defaults';
 
 describe('buildInitialSettings', () => {
-  it('passes the caller-resolved tier through verbatim (no ambient default)', () => {
-    expect(buildInitialSettings({ initialTier: 'large' }).tier).toBe('large');
-    expect(buildInitialSettings({ initialTier: 'small' }).tier).toBe('small');
-  });
-
-  it('seeds every settings cluster', () => {
-    const s = buildInitialSettings({ initialTier: 'medium' });
+  it('seeds every settings cluster (no flat-root tier field)', () => {
+    const s = buildInitialSettings();
     expect(Object.keys(s).sort()).toEqual(
       [
         'bias',
@@ -36,7 +31,6 @@ describe('buildInitialSettings', () => {
         'milkyWay',
         'structures',
         'thumbnails',
-        'tier',
         'tonemap',
         'volumes',
       ].sort(),
@@ -44,7 +38,7 @@ describe('buildInitialSettings', () => {
   });
 
   it('derives exactly one galaxy-catalog item row per id, each layer + label on', () => {
-    const { items } = buildInitialSettings({ initialTier: 'medium' }).galaxyCatalogs;
+    const { items } = buildInitialSettings().galaxyCatalogs;
     expect(Object.keys(items).sort()).toEqual([...GALAXY_CATALOG_IDS].sort());
     for (const id of GALAXY_CATALOG_IDS) {
       expect(items[id]).toEqual({ enabled: true, labelEnabled: true });
@@ -52,7 +46,7 @@ describe('buildInitialSettings', () => {
   });
 
   it('derives exactly one structure item row per id, each ring + label on', () => {
-    const { items } = buildInitialSettings({ initialTier: 'medium' }).structures;
+    const { items } = buildInitialSettings().structures;
     expect(Object.keys(items).sort()).toEqual([...STRUCTURE_IDS].sort());
     for (const id of STRUCTURE_IDS) {
       expect(items[id]).toEqual({ enabled: true, labelEnabled: true });
@@ -60,19 +54,19 @@ describe('buildInitialSettings', () => {
   });
 
   it('seeds the volume-field rows from seedVolumeFields and master gates on', () => {
-    const { volumes, galaxyCatalogs, structures } = buildInitialSettings({ initialTier: 'medium' });
+    const { volumes, galaxyCatalogs, structures } = buildInitialSettings();
     expect(volumes.items).toEqual(seedVolumeFields());
     expect(galaxyCatalogs.enabled).toBe(true);
     expect(structures.enabled).toBe(true);
   });
 
   it('seeds an empty disabled-passes record (no pass disabled at boot)', () => {
-    const s = buildInitialSettings({ initialTier: 'medium' });
+    const s = buildInitialSettings();
     expect(s.debug.disabledPasses).toEqual({});
   });
 
   it('wires per-field defaults from data/defaults', () => {
-    const s = buildInitialSettings({ initialTier: 'medium' });
+    const s = buildInitialSettings();
     expect(s.galaxyCatalogs.sizePx).toBe(DEFAULT_POINT_SIZE_PX);
     expect(s.flow).toEqual(DEFAULT_FLOW);
     // Spread, not aliased — mutating the result must not write the seed.

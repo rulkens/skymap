@@ -3,19 +3,27 @@ import { describe, it, expect } from 'vitest';
 import { createAppStore } from '../../src/store/createAppStore';
 import { setBrightness } from '../../src/state/settings/settingsSlice';
 import { buildInitialSettings } from '../../src/state/settings/initialState';
-import { tierRoute } from '../../src/store/constants';
+import { settingsRoute, tierRoute } from '../../src/store/constants';
 
 describe('createAppStore', () => {
   it('returns a store seeded with settings initialState', () => {
     const { store } = createAppStore();
-    // The slice seeds from `buildInitialSettings({ initialTier: 'medium' })`;
-    // an unpreloaded store must surface exactly that.
-    expect(store.getState().settings).toEqual(buildInitialSettings({ initialTier: 'medium' }));
+    // The slice seeds from `buildInitialSettings()`; an unpreloaded store must
+    // surface exactly that.
+    expect(store.getState().settings).toEqual(buildInitialSettings());
   });
 
   it('honours preloadedState', () => {
-    const { store } = createAppStore({ settings: buildInitialSettings({ initialTier: 'large' }) });
-    expect(store.getState().settings.tier).toBe('large');
+    // A settings field round-trips through `preloadedState`: seed a distinctive
+    // brightness and assert the slice surfaces it rather than the default.
+    const seeded = buildInitialSettings();
+    const { store } = createAppStore({
+      [settingsRoute]: {
+        ...seeded,
+        galaxyCatalogs: { ...seeded.galaxyCatalogs, brightness: 0.42 },
+      },
+    });
+    expect(store.getState().settings.galaxyCatalogs.brightness).toBe(0.42);
   });
 
   it('seeds the tier slice from preloadedState', () => {

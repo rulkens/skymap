@@ -77,7 +77,6 @@ describe('EngineState type', () => {
     // an explicit update here — easier to spot than in a single
     // 30-line literal.
     const settings: EngineSettingsState = {
-      tier: 'medium',
       galaxyCatalogs: {
         enabled: true,
         sizePx: 2.5,
@@ -217,9 +216,9 @@ describe('EngineState type', () => {
     expect(state.settings.galaxyCatalogs.items.sdss.enabled).toBe(true);
     expect(state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled).toBe(true);
     expect(state.settings.bias.mode).toBe(DEFAULT_BIAS_MODE);
-    // The data tier now lives top-level on `settings` (cross-cutting: galaxy
-    // catalogs / MCPM volume / filaments all fetch by it).
-    expect(state.settings.tier).toBe('medium');
+    // The data tier lives in its own root slice, surfaced on `state.tier`
+    // (cross-cutting: galaxy catalogs / MCPM volume / filaments all fetch by it).
+    expect(state.tier).toBe('medium');
     // Hover/selection live on `state.subsystems.selection`, not `state.picking`.
     expect(state.subsystems.selection.hovered()).toBeNull();
     expect(state.gpu.renderer).toBeNull();
@@ -231,7 +230,6 @@ describe('EngineState type', () => {
     // drifts (e.g. `DEFAULT_BIAS_MODE` becomes a string), this fails to
     // compile here rather than inside engine.ts.
     const settings: EngineSettingsState = {
-      tier: 'medium',
       galaxyCatalogs: {
         enabled: true,
         sizePx: DEFAULT_POINT_SIZE_PX,
@@ -281,8 +279,6 @@ describe('EngineState type', () => {
     expect(settings.bias.absMagLimit).toBe(DEFAULT_ABS_MAG_LIMIT);
     // The "You are here" label axis defaults on, independently of the disk.
     expect(settings.milkyWay.labelEnabled).toBe(true);
-    // The data tier now lives top-level on `settings`.
-    expect(settings.tier).toBe('medium');
   });
 
   it('allows in-place mutation of every sub-bag field', () => {
@@ -293,7 +289,6 @@ describe('EngineState type', () => {
     let stateRef: { current: EngineState | null } = { current: null };
     const state: EngineState = {
       settings: {
-        tier: 'medium',
         galaxyCatalogs: {
           enabled: true,
           sizePx: 1,
@@ -411,9 +406,9 @@ describe('EngineState type', () => {
 
     state.settings.galaxyCatalogs.brightness = 2.5;
     state.settings.bias.absMagLimit = -20;
-    // The data tier lives top-level on `settings` now; the action layer
-    // copies-on-write, but the field itself is assignable (not Readonly).
-    state.settings.tier = 'large';
+    // The data tier lives in its own root slice, surfaced on `state.tier`; the
+    // action layer copies-on-write, but the field itself is assignable.
+    state.tier = 'large';
     // Hovered/selected live on the selection subsystem, not `state.picking`.
     // The slot now holds a resolved FocusableTarget directly.
     const hoverTarget = {
@@ -426,7 +421,7 @@ describe('EngineState type', () => {
 
     expect(state.settings.galaxyCatalogs.brightness).toBe(2.5);
     expect(state.settings.bias.absMagLimit).toBe(-20);
-    expect(state.settings.tier).toBe('large');
+    expect(state.tier).toBe('large');
     expect(state.subsystems.selection.hovered()).toBe(hoverTarget);
     expect(state.picking.pickInFlight).toBe(true);
   });

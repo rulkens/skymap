@@ -51,7 +51,7 @@ import { FADE_LAYERS } from './fadeLayers';
 // through `subsystems.fades` / `subsystems.scheduler`. `assetSlots` is kept
 // because other guards/posts may reach a slot. This Pick is the union: no row
 // closure reads a source-loading bag — the survey row's mask-recompute `post`
-// is gone, and the tier it once needed now lives in `settings`.
+// is gone, and the tier it once needed lives in the `tier` root slice.
 export type ApplyIntentState = Pick<EngineState, 'settings' | 'subsystems' | 'assetSlots' | 'gpu'>;
 
 /**
