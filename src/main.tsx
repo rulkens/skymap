@@ -40,6 +40,7 @@ import { createRoot } from 'react-dom/client';
 import { Provider } from 'react-redux';
 import { App } from './components/App/App';
 import { createAppStore } from './store/createAppStore';
+import { SagaContextProvider } from './store/SagaContextProvider';
 import { settingsRoute } from './store/constants';
 import { buildInitialSettings } from './state/settings/initialState';
 import { initialTierFromViewport } from './utils/initialTierFromViewport';
@@ -67,10 +68,14 @@ if (typeof navigator === 'undefined' || typeof navigator.gpu === 'undefined') {
   // (via useEngine → createEngine) and read by React through <Provider>, so
   // there is no second settings store to drift.
   const initialTier = initialTierFromViewport(window.innerWidth);
-  const { store } = createAppStore({ [settingsRoute]: buildInitialSettings({ initialTier }) });
+  const { store, setSagaContext } = createAppStore({
+    [settingsRoute]: buildInitialSettings({ initialTier }),
+  });
   createRoot(root).render(
     <Provider store={store}>
-      <App />
+      <SagaContextProvider value={setSagaContext}>
+        <App />
+      </SagaContextProvider>
     </Provider>,
   );
 }

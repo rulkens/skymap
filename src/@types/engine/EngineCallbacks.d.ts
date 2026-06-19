@@ -11,7 +11,7 @@ import type { ScaleInfo } from './ScaleInfo';
 import type { SourceType } from '../data/SourceType';
 import type { LoadProgressState } from '../loading/LoadProgressState';
 import type { StructureId } from '../data/structure/StructureId';
-import type { AppStore } from '../../store/types';
+import type { AppStore, SetSagaContext } from '../../store/types';
 
 /**
  * Callbacks the engine uses to push state changes into the UI layer.
@@ -57,6 +57,22 @@ export type EngineCallbacks = {
    * so the engine and React drive one authoritative instance with no mirror.
    */
   store: AppStore;
+
+  /**
+   * Registers engine-side closures into the running saga middleware context.
+   * The engine calls this once `EngineState` exists (Task 2.4) to publish
+   * `ReconcileEffects` implementations; sagas retrieve them via `getContext`
+   * without importing the engine's concrete types.
+   *
+   * Sourced from `<SagaContextProvider>` in `useEngine`, exactly mirroring
+   * how `store` rides here from `<Provider>` — both are sibling returns of
+   * `createAppStore`, and both are injected through React context rather than
+   * threaded as props through `App`.
+   *
+   * The engine does NOT call this yet — that is Task 2.4.  This field
+   * establishes the plumbing so the value is present when that task lands.
+   */
+  setSagaContext: SetSagaContext;
 
   /**
    * Initial data tier to load on engine startup.  Defaults to `'medium'`

@@ -61,6 +61,7 @@ import type { LoadProgressState } from '../@types/loading/LoadProgressState';
 import type { UseEngineInput } from '../@types/engine/UseEngineInput';
 import type { UseEngineReturn } from '../@types/engine/UseEngineReturn';
 import { useAppStore } from '../store/hooks';
+import { useSetSagaContext } from '../store/SagaContextProvider';
 import type { SourceType } from '../@types/data/SourceType';
 import type { StructureId } from '../@types/data/structure/StructureId';
 
@@ -87,6 +88,13 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
   // the redux `<Provider>`. We thread this exact instance into `createEngine`
   // so the engine reads its settings from the same store React renders from.
   const store = useAppStore();
+
+  // The saga-context registration function — sibling to `store` in the
+  // `createAppStore` return, delivered via `<SagaContextProvider>`. The engine
+  // calls it (Task 2.4) to register `ReconcileEffects` closures into the
+  // running saga middleware so sagas can trigger engine effects without
+  // importing the engine's concrete types.
+  const setSagaContext = useSetSagaContext();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const handleRef = useRef<EngineHandle | null>(null);
@@ -140,8 +148,10 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
     // extra-callback entries LAST so the caller wins where both define the
     // same method.  Settings VALUES do not flow through here: they live in
     // the injected store and React reads them via `useAppSelector` selectors,
-    // so there is no echo to merge.  The injected `store` rides through as a
-    // non-callback option — the engine reads its settings from it.
+    // so there is no echo to merge.  The injected `store` and `setSagaContext`
+    // ride through as non-callback options — both are sibling returns of
+    // `createAppStore`, delivered here via their respective React contexts
+    // (`<Provider>` for `store`, `<SagaContextProvider>` for `setSagaContext`).
     const {
       lifecycle: extraLifecycle,
       camera: extraCamera,
@@ -151,6 +161,7 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
 
     const handle = createEngine(canvas, {
       store,
+      setSagaContext,
       lifecycle: {
         onStatusChange: setStatus,
         ...extraLifecycle,
@@ -189,11 +200,11 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
       handleRef.current = null;
     };
     // Engine is a one-shot effect — see hook header for rationale.
-    // `extraCallbacks` and `store` are both intentionally captured at first
-    // render: callbacks are stable React setters (would never trigger
-    // meaningful re-runs even if listed); `store` is the single injected store
-    // instance, stable for the app's lifetime. Listing either here would
-    // re-create the engine on every render.
+    // `extraCallbacks`, `store`, and `setSagaContext` are all intentionally
+    // captured at first render: callbacks are stable React setters; `store`
+    // and `setSagaContext` are both single instances stable for the app's
+    // lifetime (each created once in main.tsx). Listing any of them here
+    // would re-create the engine on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
