@@ -767,18 +767,18 @@ describe the shell's new role (layout + section order; the UX-audit rationale
 for section composition stays, the props-driven-no-state paragraph is replaced
 by "composes containers").
 
-- [ ] Replace the existing `tests/components/SettingsPanel/SettingsPanel.*` test
+- [x] Replace the existing `tests/components/SettingsPanel/SettingsPanel.*` test
   (if one exists — search `tests/components/SettingsPanel/`) with a shell test:
   render `SettingsPanel` under a `<Provider>` (it now mounts containers that need
   the store) with stub `sourceCounts`/`structureCounts`/`onResetCamera`; assert
   each section's heading renders (Galaxies / Cosmic web / Flow / Structures /
   Labels / Display) and that "Reset camera" fires `onResetCamera`. If no
   SettingsPanel test exists, add this as a new file.
-- [ ] Confirm it fails against the current monolithic SettingsPanel (it will —
+- [x] Confirm it fails against the current monolithic SettingsPanel (it will —
   the old one demands the full prop set / has no container children).
-- [ ] Rewrite `SettingsPanel.tsx` as the shell.
-- [ ] `npm test -- SettingsPanel` → pass; `npm run typecheck` clean.
-- [ ] Commit.
+- [x] Rewrite `SettingsPanel.tsx` as the shell.
+- [x] `npm test -- SettingsPanel` → pass; `npm run typecheck` clean.
+- [x] Commit.
 
 ---
 

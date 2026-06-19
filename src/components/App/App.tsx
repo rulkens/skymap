@@ -199,6 +199,10 @@ export function App(): React.ReactElement {
     [dispatch],
   );
 
+  // Stable reset-camera callback for SettingsPanel's memo to bail on re-renders.
+  // `handleRef` is a stable ref — the arrow identity is permanent.
+  const onResetCamera = useCallback(() => handleRef.current?.camera.focusOnHome(), [handleRef]);
+
   // Live "N galaxies" figure for a pinned cluster/SC/void card.  Recomputes
   // on selection / tier swap / catalog landing (`sourceCounts`) / galaxy catalog
   // toggle — null for galaxy selections and famous-galaxy structures.
@@ -328,114 +332,9 @@ export function App(): React.ReactElement {
           <NavigationPanel defaultOpen={initialPanelsOpen} isMobile={initialMobile} />
           <SettingsPanel
             defaultOpen={initialPanelsOpen}
-            pointSize={pointSize}
-            onPointSizeChange={(size) => dispatch(setGalaxyCatalogSize(size))}
-            labelCategoryVisibility={labelCategoryVisibility}
-            markerCategoryVisibility={markerCategoryVisibility}
-            onSetMarkerCategoryVisibility={(category, visible) => {
-              // Marker rows are keyed by StructureId. Dispatching
-              // `setStructureItemEnabled` updates the store synchronously;
-              // `watchFades` syncs the ring-axis fade.
-              dispatch(setStructureItemEnabled({ id: category, enabled: visible }));
-            }}
-            onSetLabelCategoryVisibility={(category, visible) => {
-              // Label rows have three homes: structure labels dispatch
-              // `setStructureLabelEnabled`; the milkyWay singleton "You are
-              // here" label dispatches `setMilkyWayLabelEnabled`; and the
-              // curated atlas (famousGalaxy, a galaxy catalog source) dispatches
-              // `setGalaxyCatalogLabelEnabled`. Each guard narrows the union, so
-              // the final else lands on the galaxy-catalog label categories.
-              // `watchFades` syncs the fade for all three paths.
-              if (isStructureId(category)) {
-                dispatch(setStructureLabelEnabled({ id: category, enabled: visible }));
-              } else if (category === 'milkyWay') {
-                dispatch(setMilkyWayLabelEnabled(visible));
-              } else {
-                dispatch(setGalaxyCatalogLabelEnabled({ id: category, enabled: visible }));
-              }
-            }}
-            // Filaments reads off the store (`selectFilamentsEnabled` /
-            // `selectFilamentIntensity`). The toggle dispatches `setFilamentsEnabled`
-            // directly; the store write is synchronous so the toggle tracks without
-            // an optimistic cell, and `watchFades` syncs the fade ramp. The intensity
-            // slider dispatches `setFilamentIntensity`; `watchWake` wakes the loop.
-            filamentsEnabled={filamentsEnabled}
-            onFilamentsChange={(enabled) => dispatch(setFilamentsEnabled(enabled))}
-            filamentIntensity={filamentIntensity}
-            onFilamentIntensityChange={(value) => dispatch(setFilamentIntensity(value))}
-            depthFadeEnabled={depthFadeEnabled}
-            onDepthFadeEnabledChange={(enabled) => {
-              dispatch(setDepthFade(enabled));
-            }}
-            onResetCamera={() => handleRef.current?.camera.focusOnHome()}
-            // A tier swap is an Intent: the dropdown dispatches `requestTier`
-            // (a command carrying no state change), and the tier saga reacts —
-            // it writes the new tier to the slice (which `currentTier` reads via
-            // `selectTier`) and runs the transition (evict in-flight loads,
-            // re-fetch the tier-suffixed bins, rebuild the hi-res famous
-            // texture).
-            tier={currentTier}
-            onTierChange={(tier) => dispatch(requestTier(tier))}
-            visibleSourceMask={visibleSourceMask}
             sourceCounts={sourceCounts}
             structureCounts={structureCounts}
-            // Dispatching `setGalaxyCatalogVisible` flips the galaxy catalog's
-            // `enabled` flag (single source of truth); the store write is
-            // synchronous so the checkbox tracks without an optimistic update,
-            // and `watchFades` syncs the fade.
-            onToggleSource={(source, visible) =>
-              dispatch(setGalaxyCatalogVisible({ id: galaxyCatalogIdOf(source), enabled: visible }))
-            }
-            // Bias mode + absMagLimit read off the store (`selectBiasMode` /
-            // `selectAbsMagLimit`). The mode radio dispatches `setBiasMode`
-            // directly; `watchBiasBake` re-bakes the worker and `watchWake`
-            // wakes the render loop. The abs-mag slider dispatches
-            // `setAbsMagLimit` directly; `watchWake` wakes the render loop.
-            // The tone-map curve reads off the store (`selectToneMapCurve`);
-            // the dropdown dispatches `setToneMapCurve` directly likewise.
-            biasMode={biasMode}
-            onBiasModeChange={(mode) => dispatch(setBiasMode(mode))}
-            absMagLimit={absMagLimit}
-            // `M` is the conventional astronomy symbol for absolute magnitude.
-            onAbsMagLimitChange={(M) => dispatch(setAbsMagLimit(M))}
-            toneMapCurve={toneMapCurve}
-            onToneMapCurveChange={(curve) => dispatch(setToneMapCurve(curve))}
-            // `volumesEnabled` reads off the store (`selectVolumesEnabled`);
-            // the toggle dispatches `setVolumesEnabled` directly (store write is
-            // synchronous) and `watchFades` drives the master fade. The per-field
-            // rows read via `selectVolumeFieldItems` + the `useMemo` projection;
-            // each per-field setter dispatches `writeVolumeField` with a
-            // single-key patch. Volume params are stored UNCLAMPED (raw Intent);
-            // the renderer clamps at read-edge.
-            volumesEnabled={volumesEnabled}
-            onVolumesEnabledChange={(enabled) => dispatch(setVolumesEnabled(enabled))}
-            volumeFields={volumeFields}
-            onVolumeFieldEnabledChange={(fieldId, enabled) =>
-              dispatch(writeVolumeField({ id: fieldId, patch: { enabled } }))
-            }
-            onVolumeFieldIntensityChange={(fieldId, intensity) =>
-              dispatch(writeVolumeField({ id: fieldId, patch: { intensity } }))
-            }
-            onVolumeFieldContrastChange={(fieldId, contrast) =>
-              dispatch(writeVolumeField({ id: fieldId, patch: { contrast } }))
-            }
-            onVolumeFieldDensityScaleChange={(fieldId, densityScale) =>
-              dispatch(writeVolumeField({ id: fieldId, patch: { densityScale } }))
-            }
-            onVolumeFieldTrimChange={(fieldId, trim) =>
-              dispatch(writeVolumeField({ id: fieldId, patch: { trim } }))
-            }
-            onVolumeFieldExposureChange={(fieldId, exposure) =>
-              dispatch(writeVolumeField({ id: fieldId, patch: { exposure } }))
-            }
-            onVolumeFieldPaletteChange={(fieldId, paletteId) =>
-              dispatch(writeVolumeField({ id: fieldId, patch: { paletteId } }))
-            }
-            // Flow motion tunables share the same `onFlowChange` handler as
-            // DebugPanel — both dispatch `setFlow(patch)` straight to the store.
-            // `watchFlowReseed` reseeds on mode/count; `watchFades` drives enable/disable.
-            flow={flow}
-            onFlowChange={onFlowChange}
+            onResetCamera={onResetCamera}
           />
         </div>
         {/* Top-center pill row.  SearchTrigger + the pills share a flex
