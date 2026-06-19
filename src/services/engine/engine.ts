@@ -205,6 +205,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     get tier() {
       return store.getState().tier;
     },
+    // `state.selection` delegates to the root `selection` slice — the same
+    // single-seam pattern as `settings`/`tier`. The pick path dispatches writes;
+    // per-frame readers reach the store here, with no engine-side mirror to drift.
+    get selection() {
+      return store.getState().selection;
+    },
+    // `state.selectionRows` delegates to the saga-owned `selectionRows` slice.
+    // The selection-resolution saga is the sole writer; per-frame readers
+    // (selection-ring, structure focus) use this getter.
+    get selectionRows() {
+      return store.getState().selectionRows;
+    },
     // Per-type data stores. Empty at construction; slot commits fill them.
     data: createEngineData(),
     picking: {

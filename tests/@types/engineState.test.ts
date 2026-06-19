@@ -14,7 +14,7 @@
  * splices them straight into the vertex buffer.)
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, expectTypeOf } from 'vitest';
 import type { SourceType } from '../../src/@types/data/SourceType';
 import type { GalaxyInfo } from '../../src/@types/engine/GalaxyInfo';
 
@@ -22,6 +22,8 @@ import type { EngineState } from '../../src/@types/engine/state/EngineState';
 import { createEngineData } from '../../src/services/engine/data/createEngineData';
 import type { EngineSettingsState } from '../../src/@types/settings/EngineSettingsState';
 import type { EnginePickingState } from '../../src/@types/engine/state/EnginePickingState';
+import type { SelectionState } from '../../src/@types/store/SelectionState';
+import type { SelectionRowsState } from '../../src/@types/store/SelectionRowsState';
 
 import {
   DEFAULT_ABS_MAG_LIMIT,
@@ -143,6 +145,10 @@ describe('EngineState type', () => {
       // `state.tier` delegates to the root tier slice in the engine; in this
       // plain literal it's a direct value (the type is `Tier`, not a getter).
       tier: 'medium',
+      // `state.selection`/`selectionRows` delegate to the store in the real engine;
+      // here they're direct values representing the initial (all-null) Redux state.
+      selection: { hover: null, select: null, focus: null },
+      selectionRows: { hover: null, select: null, focus: null },
       data: createEngineData(),
       picking,
       gpu: {
@@ -331,6 +337,10 @@ describe('EngineState type', () => {
       // `state.tier` delegates to the root tier slice in the engine; in this
       // plain literal it's a direct value (the type is `Tier`, not a getter).
       tier: 'medium',
+      // `state.selection`/`selectionRows` delegate to the store in the real engine;
+      // here they're direct values representing the initial (all-null) Redux state.
+      selection: { hover: null, select: null, focus: null },
+      selectionRows: { hover: null, select: null, focus: null },
       data: createEngineData(),
       picking: {
         latestMouseCss: null,
@@ -424,5 +434,15 @@ describe('EngineState type', () => {
     expect(state.tier).toBe('large');
     expect(state.subsystems.selection.hovered()).toBe(hoverTarget);
     expect(state.picking.pickInFlight).toBe(true);
+  });
+
+  it('carries selection: SelectionState and selectionRows: SelectionRowsState', () => {
+    // Type-level proof that the two new getter-backed fields are on EngineState
+    // with the right types. The actual delegation (`store.getState().selection`)
+    // is proven by `npm run typecheck` on engine.ts; this pins the declared
+    // surface on the shared type so mis-typed fields fail here rather than
+    // silently in the per-frame readers added in later tasks.
+    expectTypeOf<EngineState['selection']>().toEqualTypeOf<SelectionState>();
+    expectTypeOf<EngineState['selectionRows']>().toEqualTypeOf<SelectionRowsState>();
   });
 });
