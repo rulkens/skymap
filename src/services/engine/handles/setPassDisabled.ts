@@ -3,8 +3,8 @@
 // Module-scope so the `createEngine` literal delegates here (mirroring the other
 // `handles/` setters) and so the toggle is testable without a full GPU engine.
 //
-// Not a `settingsTable` row because it takes two arguments — a pass `name` plus
-// the on/off flag — where table rows dispatch a single value. It writes the
+// It takes two arguments — a pass `name` plus the on/off flag — so it stays a
+// bespoke setter. It writes the
 // authoritative `disabledPasses` record by dispatching the `setPassDisabled`
 // slice action so React's `selectDisabledPasses` subscriber re-renders the
 // checkbox, then wakes the render-on-demand loop: the dispatch notifies React

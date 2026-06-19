@@ -3,7 +3,7 @@
 // Module-scope so the `createEngine` literal delegates here (mirroring the other
 // `handles/` setters) and so it's testable without a full GPU engine.
 //
-// Two jobs, which is why this is bespoke rather than a `settingsTable` row:
+// Two jobs, which is why it is bespoke:
 //
 //   1. Write the mode intent by dispatching the `setBiasMode` slice action.
 //      The shader branches on the integer mode (0 = none, 1 = volume-limited,

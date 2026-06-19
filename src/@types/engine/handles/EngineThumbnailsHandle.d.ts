@@ -1,6 +1,6 @@
 /**
  * EngineThumbnailsHandle — galaxy-thumbnail render pass controls.
  *
- * Thumbnail knobs are now dispatched directly to the store by the UI.
+ * Thumbnail knobs are dispatched directly to the store by the UI.
  */
 export type EngineThumbnailsHandle = {};

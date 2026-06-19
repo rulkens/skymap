@@ -31,10 +31,9 @@
  *
  * ### Mutation contract
  *
- * Every leaf field is mutated in place by the public-handle setters in
- * `engine.ts` (forwarded via `boringSetters` constructed from
- * `settingsTable.ts`) and read inside the per-frame loop and the
- * `renderFrame` dispatch.  The type is intentionally NOT `Readonly<>` —
+ * Every leaf field is written by dispatching the settings slice actions
+ * and read inside the per-frame loop and the `renderFrame` dispatch.
+ * The type is intentionally NOT `Readonly<>` —
  * see the smoke tests in `tests/@types/engineState.test.ts` for the
  * contract assertion.
  *
