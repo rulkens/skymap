@@ -22,19 +22,15 @@
  *
  * Every field lives under exactly one named cluster — no flat root
  * fields (a flat duplicate of a knob with a natural cluster home invites
- * split-brain reads/writes).  The clusters mirror EngineHandle's
- * sub-handle namespaces 1:1 — a setter on `handle.galaxyCatalogs` writes
- * into `state.settings.galaxyCatalogs`, a setter on `handle.tonemap`
- * writes into `state.settings.tonemap`, etc.  This shape makes the
- * engine's per-frame snapshot and the React-facing setters trivially
- * derivable from each other.
+ * split-brain reads/writes).  The clusters group related knobs; writes
+ * flow through dispatched slice actions and are read in the per-frame
+ * loop and the `renderFrame` dispatch.
  *
  * ### Mutation contract
  *
- * Every leaf field is mutated in place by the public-handle setters in
- * `engine.ts` (forwarded via `boringSetters` constructed from
- * `settingsTable.ts`) and read inside the per-frame loop and the
- * `renderFrame` dispatch.  The type is intentionally NOT `Readonly<>` —
+ * Every leaf field is written by dispatching the settings slice actions
+ * and read inside the per-frame loop and the `renderFrame` dispatch.
+ * The type is intentionally NOT `Readonly<>` —
  * see the smoke tests in `tests/@types/engineState.test.ts` for the
  * contract assertion.
  *

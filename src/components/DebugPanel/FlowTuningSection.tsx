@@ -8,8 +8,7 @@
  *
  * The rows are driven from `FLOW_SLIDER_FIELDS` (the `'debug'` surface), so the
  * field list, ranges, and value formatting live in one registry rather than
- * re-spelled here.  Each slider owns its `max` (the settingsTable applies
- * floor-only clamps); a new debug knob is one registry row.
+ * re-spelled here.  Each slider owns its `max`; a new debug knob is one registry row.
  *
  * Idiom: a default-closed `<details>` with inline monospace styles (no
  * `.module.css`), matching the other DebugPanel sections.  A local `Slider`

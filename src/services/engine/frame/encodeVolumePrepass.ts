@@ -47,6 +47,7 @@ import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingServi
 import type { VolumeFieldId } from '../../../@types/data/volume/VolumeFieldId';
 import { encodeVolumes } from './encodeVolumes';
 import { resolveLayerOpacity } from '../presentation/focusRecession';
+import { clampVolumeFieldSettings } from '../../../utils/clampVolumeFieldSettings';
 
 export function encodeVolumePrepass(
   encoder: GPUCommandEncoder,
@@ -72,7 +73,13 @@ export function encodeVolumePrepass(
       const fadeOpacityOf = (id: VolumeFieldId) =>
         state.subsystems.fades.opacityOf({ kind: 'volumeField', id }, nowMs) *
         recessedMaster;
-      const settingsOf = (id: VolumeFieldId) => state.settings.volumes.items[id];
+      // The store holds raw Intent; clamp GPU-bound fields at the read edge so
+      // out-of-range values never reach the raymarch shader uniforms.  Mirrors
+      // the setFlow / clampFlowParams pattern for the flow-field subsystem.
+      const settingsOf = (id: VolumeFieldId) => {
+        const raw = state.settings.volumes.items[id];
+        return raw === undefined ? undefined : clampVolumeFieldSettings(raw);
+      };
       if (state.gpu.volumeFieldRenderer.hasActiveFields(settingsOf, fadeOpacityOf)) {
         encodeVolumes({
           encoder,

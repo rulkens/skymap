@@ -2,43 +2,47 @@
 
 /**
  * RenderTogglesSection — verify the checkbox list reflects the `disabledPasses`
- * prop (read live off the settings store by App) and that toggling calls
- * `passOverrides.setDisabled` with the right (name, disabled) pair. The section
- * is a CONTROLLED component: its checkbox state comes from the prop, not local
- * state, so a click fires the handle and the box only flips once the parent
+ * prop (read live off the settings store by App) and that toggling dispatches
+ * `setPassDisabled({ pass, disabled })` to the RTK store.  The section is a
+ * CONTROLLED component: its checkbox state comes from the prop, not local state,
+ * so a click dispatches the action and the box only flips once the parent
  * re-renders with the updated record.
  *
  * Project convention (matches Sparkline.test.ts and
  * GpuTimingsSection.test.ts): tests are `.test.ts` and use
  * `createElement` rather than JSX, because `vitest.config.ts`'s
  * `include` glob is `tests/**\/*.test.ts`.
+ *
+ * The component calls `useAppDispatch`, so renders are wrapped in a
+ * Redux Provider backed by a real `createAppStore()` store.  Dispatch
+ * assertions read `store.getState()` after the click to confirm the
+ * action was processed.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
-import { createElement } from 'react';
+import { createElement, type ReactNode } from 'react';
+import { Provider } from 'react-redux';
 import { RenderTogglesSection } from '../../../src/components/DebugPanel/RenderTogglesSection';
-import type { PassOverridesHandle } from '../../../src/@types/engine/handles/EngineDebugHandle';
+import { createAppStore } from '../../../src/store/createAppStore';
+import { selectDisabledPasses } from '../../../src/state/settings/selectors';
 
 const ALL_NAMES = ['point-sprites', 'procedural-disks', 'textured-quads', 'textured-disks'];
 
-function makeHandle(): {
-  handle: PassOverridesHandle;
-  setDisabled: ReturnType<typeof vi.fn>;
-} {
-  const setDisabled = vi.fn<(name: string, disabled: boolean) => void>();
-  const handle: PassOverridesHandle = { allNames: ALL_NAMES, setDisabled };
-  return { handle, setDisabled };
+function makeWrapper(store: ReturnType<typeof createAppStore>['store']) {
+  return ({ children }: { children: ReactNode }) =>
+    createElement(Provider, { store, children });
 }
 
 describe('RenderTogglesSection', () => {
-  it('renders one checkbox per pass name in allNames order', () => {
-    const { handle } = makeHandle();
+  it('renders one checkbox per pass name in passNames order', () => {
+    const { store } = createAppStore();
     const { container } = render(
       createElement(RenderTogglesSection, {
-        passOverrides: handle,
+        passNames: ALL_NAMES,
         disabledPasses: {},
       }),
+      { wrapper: makeWrapper(store) },
     );
     const labels = container.querySelectorAll('label');
     expect(labels).toHaveLength(4);
@@ -50,12 +54,13 @@ describe('RenderTogglesSection', () => {
   });
 
   it('checks every box when the disabledPasses record is empty', () => {
-    const { handle } = makeHandle();
+    const { store } = createAppStore();
     const { container } = render(
       createElement(RenderTogglesSection, {
-        passOverrides: handle,
+        passNames: ALL_NAMES,
         disabledPasses: {},
       }),
+      { wrapper: makeWrapper(store) },
     );
     const boxes = container.querySelectorAll<HTMLInputElement>('input[type=checkbox]');
     for (const box of boxes) {
@@ -64,59 +69,65 @@ describe('RenderTogglesSection', () => {
   });
 
   it('renders a checkbox unchecked when its name is in disabledPasses', () => {
-    const { handle } = makeHandle();
+    const { store } = createAppStore();
     const { container } = render(
       createElement(RenderTogglesSection, {
-        passOverrides: handle,
+        passNames: ALL_NAMES,
         disabledPasses: { 'textured-disks': true },
       }),
+      { wrapper: makeWrapper(store) },
     );
     const boxes = container.querySelectorAll<HTMLInputElement>('input[type=checkbox]');
-    // allNames order: point-sprites, procedural-disks, textured-quads, textured-disks
+    // passNames order: point-sprites, procedural-disks, textured-quads, textured-disks
     expect(boxes[0]!.checked).toBe(true);
     expect(boxes[3]!.checked).toBe(false);
   });
 
-  it('calls setDisabled(name, true) when a checked box is unchecked', () => {
-    const { handle, setDisabled } = makeHandle();
+  it('dispatches setPassDisabled({ pass, disabled: true }) when a checked box is unchecked', () => {
+    const { store } = createAppStore();
     const { container } = render(
       createElement(RenderTogglesSection, {
-        passOverrides: handle,
+        passNames: ALL_NAMES,
         disabledPasses: {},
       }),
+      { wrapper: makeWrapper(store) },
     );
     const box = container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[2]!;
     fireEvent.click(box);
-    expect(setDisabled).toHaveBeenCalledWith('textured-quads', true);
+    expect(selectDisabledPasses(store.getState())['textured-quads']).toBe(true);
   });
 
-  it('calls setDisabled(name, false) when an unchecked box is re-checked', () => {
-    const { handle, setDisabled } = makeHandle();
+  it('dispatches setPassDisabled({ pass, disabled: false }) when an unchecked box is re-checked', () => {
+    const { store } = createAppStore();
     const { container } = render(
       createElement(RenderTogglesSection, {
-        passOverrides: handle,
+        passNames: ALL_NAMES,
         disabledPasses: { 'textured-disks': true },
       }),
+      { wrapper: makeWrapper(store) },
     );
     const box = container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[3]!;
     expect(box.checked).toBe(false);
     fireEvent.click(box);
-    expect(setDisabled).toHaveBeenCalledWith('textured-disks', false);
+    // The prop still says disabled (parent hasn't re-rendered), but the store
+    // now holds the toggle result.
+    expect(selectDisabledPasses(store.getState())['textured-disks']).toBe(false);
   });
 
   it('reflects the prop after the parent re-renders with an updated record', () => {
-    const { handle } = makeHandle();
+    const { store } = createAppStore();
     const { container, rerender } = render(
       createElement(RenderTogglesSection, {
-        passOverrides: handle,
+        passNames: ALL_NAMES,
         disabledPasses: {},
       }),
+      { wrapper: makeWrapper(store) },
     );
     const box = () => container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[2]!;
     expect(box().checked).toBe(true);
     rerender(
       createElement(RenderTogglesSection, {
-        passOverrides: handle,
+        passNames: ALL_NAMES,
         disabledPasses: { 'textured-quads': true },
       }),
     );
