@@ -14,8 +14,10 @@
 
 import { describe, it, expect } from 'vitest';
 import { resolveFocusId } from '../../../src/services/url/resolveFocusId';
+import { focusIdOf } from '../../../src/services/url/focusIdOf';
 import { Source } from '../../../src/data/sources';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
+import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 /**
@@ -223,5 +225,55 @@ describe('resolveFocusId', () => {
   it('id with invalid characters → null', () => {
     // Not a recognized prefix, not a valid famous id character class.
     expect(resolveFocusId('foo bar', deps)).toBeNull();
+  });
+});
+
+/**
+ * Round-trip parity: `focusIdOf` and `resolveFocusId` are inverses through the
+ * shared encodeGalaxyId ladder.  This is the guard that keeps the encode home
+ * single — a prefix or pos-precision drift in encodeGalaxyId would re-anchor a
+ * shared URL onto a different row, and one of these cases would fail.
+ *
+ * Each case builds a ResolveDeps whose clouds carry the galaxy at a known index,
+ * encodes a ref, then asserts the decode returns the SAME ref.
+ */
+describe('focusIdOf ∘ resolveFocusId round-trip', () => {
+  it('SDSS ref (large objId) → sdss-<objId> → same ref', () => {
+    const ref: SelectionRef = { type: 'galaxyCatalog', source: Source.SDSS, index: 0 };
+    const id = focusIdOf(ref, deps);
+    expect(id).toBe('sdss-1237668393006604288');
+    expect(resolveFocusId(id!, deps)).toEqual(ref);
+  });
+
+  it('GLADE ref (PGC) → pgc-<pgc> → same ref', () => {
+    // resolvePgc scans GLADE then 2MRS; PGC 99 lives only in GLADE here, so the
+    // first hit is deterministic.
+    const ref: SelectionRef = { type: 'galaxyCatalog', source: Source.Glade, index: 0 };
+    const id = focusIdOf(ref, deps);
+    expect(id).toBe('pgc-99');
+    expect(resolveFocusId(id!, deps)).toEqual(ref);
+  });
+
+  it('GLADE ref (objId 0n) → pos@ra,dec → same ref', () => {
+    // Single-cloud deps so the nearest-neighbour winner is unambiguous: only
+    // GLADE is loaded, with one row at (1,0,0) → RA 0°, Dec 0°.  The stored
+    // position is 0 arcsec from the encoded pos@, well under the 30-arcsec gate.
+    const posDeps: ResolveDeps = {
+      ...deps,
+      catalogs: {
+        get: (s) => (s === Source.Glade ? makeCloud(0n, [1, 0, 0]) : undefined),
+      },
+    };
+    const ref: SelectionRef = { type: 'galaxyCatalog', source: Source.Glade, index: 0 };
+    const id = focusIdOf(ref, posDeps);
+    expect(id).toBe('pos@0.0000,0.0000');
+    expect(resolveFocusId(id!, posDeps)).toEqual(ref);
+  });
+
+  it('FamousGalaxy ref → famous seed id → same ref', () => {
+    const ref: SelectionRef = { type: 'galaxyCatalog', source: Source.FamousGalaxy, index: 0 };
+    const id = focusIdOf(ref, deps);
+    expect(id).toBe('m31');
+    expect(resolveFocusId(id!, deps)).toEqual(ref);
   });
 });
