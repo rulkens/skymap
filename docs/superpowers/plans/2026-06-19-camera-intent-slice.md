@@ -502,6 +502,9 @@ framing math is unchanged — `galaxyFocusDistance`, `structureFocusDistance` st
 
 ### Task 2.3 — `buildCameraDrivers` reads store intent; bridge sync + commit-on-edge
 
+> ✅ **DONE** — folded into the atomic cutover commit `85a71ff7` (Tasks 2.3 + 3.1 +
+> 3.2 + 4.1 + 4.2 shipped as one green, reviewed-clean commit; full suite 2848 green).
+
 **Files:**
 - `src/services/engine/camera/cameraDrivers.ts` (modify) — rewrite
   `buildCameraDrivers(state)` to return the four-row table reading STORE intent
@@ -601,6 +604,8 @@ temporary per-frame `state.cam` write is deleted.
 
 ### Task 3.1 — assert `CameraDriver` did NOT grow `enter`/`exit` (Open item 2)
 
+> ✅ **DONE** — folded into the atomic cutover commit `85a71ff7`.
+
 **Files:**
 - `tests/services/engine/camera/cameraDriverShape.test.ts` (create) — a compile-time
   + runtime pin that `CameraDriver` is exactly `{ id, priority, isActive, pose }`.
@@ -615,6 +620,8 @@ assertion over a sample driver's own-keys.
 - [ ] `npm test -- cameraDriverShape` + `npm run typecheck` → green. Commit.
 
 ### Task 3.2 — `deriveFrameContext` produces the pose; merge projection; cutover
+
+> ✅ **DONE** — folded into the atomic cutover commit `85a71ff7`.
 
 **Files:**
 - `src/services/engine/frame/frameContext.ts` (modify — `deriveFrameContext`,
@@ -664,6 +671,8 @@ activates via `beginDrag`/`endDrag`; `watchWake` generalizes to `WAKE_ROUTES`.
 
 ### Task 4.1 — `orbitControls` gesture hooks + `onChange` (rename), drag seeds `state.cam`
 
+> ✅ **DONE** — folded into the atomic cutover commit `85a71ff7`.
+
 **Files:**
 - `src/@types/camera/OrbitControlsOptions.d.ts` (modify) — ADD
   `onGestureStart?: () => void`, `onGestureEnd?: () => void`, `onChange?: () => void`;
@@ -705,6 +714,8 @@ keeps the integrator clamps with the integrator (do NOT move them to a read edge
   green. Commit.
 
 ### Task 4.2 — `orbitDrag` activation: `dragging` now wins priority 80
+
+> ✅ **DONE** — folded into the atomic cutover commit `85a71ff7`.
 
 **Files:**
 - `src/services/engine/frame/runFrame.ts` / `frameContext.ts` — no code change beyond

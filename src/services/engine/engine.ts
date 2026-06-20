@@ -78,8 +78,7 @@ import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 import { createTweenManager } from './camera/tweenManager';
 import { createCameraClock } from './camera/cameraClock';
 import { poseOf } from './camera/poseOf';
-import type { CameraProjection } from '../../@types/camera/CameraProjection';
-import type { CameraPose } from '../../@types/camera/CameraPose';
+import type { CameraRuntime } from '../../@types/engine/state/CameraRuntime';
 import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
@@ -195,13 +194,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // `lastPose` starts at the slice's initial `base` placeholder (same values:
   // distance 0.43, yaw/pitch/target at zero) so the first resting frame has a
   // stable object to read before wireInput's commitCameraPose fires.
-  const cameraRuntime = {
+  const cameraRuntime: CameraRuntime = {
     clock: createCameraClock(),
-    projection: { fovYRad: 0, aspect: 1, near: 0.01, far: 50000 } as CameraProjection,
+    projection: { fovYRad: 0, aspect: 1, near: 0.01, far: 50000 },
     lastPose: {
-      current: { target: [0, 0, 0] as [number, number, number], yaw: 0, pitch: 0, distance: 0.43 } as CameraPose,
+      current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0.43 },
     },
-    prevActiveId: { current: 'resting' as string },
+    prevActiveId: { current: 'resting' },
   };
 
   // ── Settings — the injected Redux store ──────────────────────────

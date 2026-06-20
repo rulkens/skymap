@@ -41,8 +41,7 @@ import {
   endDrag,
   setAutoRotate,
 } from '../../../../src/state/camera/cameraSlice';
-import { buildCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
-import { runCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
+import { buildCameraDrivers, runCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
 import { activeDriverId } from '../../../../src/services/engine/camera/activeDriverId';
 import { createCameraClock, tweenElapsed } from '../../../../src/services/engine/camera/cameraClock';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';

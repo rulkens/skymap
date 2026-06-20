@@ -47,17 +47,6 @@ import {
 } from '../../../../src/state/camera/cameraSlice';
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
 
-/** Build a real-ish RootState with default slice values. */
-function makeRootState(patch?: (store: ReturnType<typeof configureStore<{ camera: ReturnType<typeof rootReducer>['camera'] }>>) => void): RootState {
-  const store = configureStore({ reducer: rootReducer });
-  if (patch) {
-    // Use the store's dispatch to produce real actions rather than hand-patching.
-    // The patch callback receives the store.
-    (patch as (s: typeof store) => void)(store);
-  }
-  return store.getState() as unknown as RootState;
-}
-
 /** A real-ish store so we can observe dispatches. */
 function makeStore() {
   return configureStore({ reducer: rootReducer });

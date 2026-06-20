@@ -243,6 +243,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // unchanged snapshots, so the cost on stable frames is one object alloc and
   // one optional-chain call. Distance comes from the produced pose (not
   // `state.cam`, the stale drag register); fovYRad from the projection Resource.
+  // state.cam non-null is the bootstrap-ready proxy here — the snapshot values come from lastPose + projection, not from state.cam.
   if (state.cam) {
     const snap = {
       distance: lastPose.current.distance,
