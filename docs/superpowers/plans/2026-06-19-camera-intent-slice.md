@@ -861,8 +861,8 @@ surviving surface.
 
 **Files:** none (review pass; capture findings inline if any).
 
-- [ ] Run the `entanglement-radar` skill over the full branch diff.
-- [ ] **Verify the spec's un-braided choices held:**
+- [x] Run the `entanglement-radar` skill over the full branch diff.
+- [x] **Verify the spec's un-braided choices held:**
   - **Single home for the resting pose** — `base` is the ONLY place the committed
     pose lives; no second copy (no mirror of `base` on the engine, no `state.cam`
     read as truth between gestures). `state.cam` is transient drag scratch only.
@@ -880,7 +880,7 @@ surviving surface.
     dispatch, no renderer-side copy.
   - **Wake centralized** — one `WAKE_ROUTES` matcher, not a parallel
     `watchCameraWake` (spec §4).
-- [ ] Address any finding (or record as a follow-up if out of scope), re-run affected
+- [x] Address any finding (or record as a follow-up if out of scope), re-run affected
   tests, commit.
 
 ### Task 6.2 — final verification + handoff
