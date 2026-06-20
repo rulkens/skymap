@@ -105,6 +105,9 @@ export function createFlowOrbitDriver(
         distance: cam.distance,
       };
 
+      // Self-sustain the loop (shouldKeepTicking can't see a spike driver).
+      requestRender();
+
       return out;
     },
   };

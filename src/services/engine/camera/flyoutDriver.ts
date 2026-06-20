@@ -35,9 +35,10 @@
  * orbitDrag 80, tween 60, autoRotate 20 — the slot the real tour will
  * eventually own), while it runs it outranks them and owns the camera
  * outright. While armed-or-running its `isActive` returns true, which wins
- * the per-frame arbitration AND keeps the render loop awake: runFrame's
- * keep-tick re-arms the loop whenever a non-`resting` driver owns the frame.
- * On `keydown` it pokes `requestRender` so a sleeping loop wakes to start.
+ * the per-frame arbitration. The render loop's keep-alive predicate
+ * (`shouldKeepTicking`) reads camera liveness off the STORE, so it can't see
+ * a spike driver — the driver therefore pokes `requestRender` every frame
+ * (and on `keydown`) to keep itself animating.
  *
  * Attached ONLY when `?flyout` is present (see startLoop wiring), so it can
  * never interfere with a normal session.
@@ -133,6 +134,9 @@ export function createFlyoutDriver(
 
       // Land and release control back to the normal drivers.
       if (t >= 1) phase = 'idle';
+
+      // Self-sustain the loop (shouldKeepTicking can't see a spike driver).
+      requestRender();
 
       return out;
     },
