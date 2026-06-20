@@ -15,11 +15,12 @@
  *   orbit camera math
  *   GPU pick readback
  *
- * Callbacks are the seam. The engine fires `onStatusChange`, `onHoverChange`,
- * and `onSelectChange` only when values *actually change*, so the React side
- * can call `setState` directly without worrying about spurious re-renders.
- * Per-frame `onCameraChange` emissions instead fire unconditionally while
- * the camera exists; React-side `setState` equality checks filter the noise.
+ * Callbacks (`EngineCallbacks`) are the seam for lifecycle, camera, and
+ * source-readiness events. Selection state (hover / select / focus) is not
+ * echoed via callbacks — the engine dispatches directly to the Redux
+ * `selection` slice, and React reads via `useAppSelector` selectors.
+ * Per-frame `onCameraChange` fires unconditionally while the camera exists;
+ * React-side `setState` equality checks filter unchanged frames.
  *
  * ### Module layout
  *
@@ -28,7 +29,7 @@
  *
  *   Pure helpers:
  *   - `galaxyFocusDistance.ts` / `structureFocusDistance.ts` — framing-distance helpers
- *   - `galaxyInfoBuilder.ts`   — buildGalaxyInfo / maxAbsCoord / niceRound
+ *   - `buildGalaxyInfo.ts`     — buildGalaxyInfo (per-source GalaxyInfo formatter)
  *   - `cloudLoader.ts`         — parallel /data/{sdss,2mrs,glade}.bin fetch + synthetic fallback
  *   - `cameraFraming.ts`       — bbox + FOV → initial camera snapshot
  *   - `scaleBar.ts`            — pure scale-bar tick selection + label formatting (consumed by React)
@@ -46,20 +47,20 @@
  *   - `phases/startLoop.ts`    — RunFrameDeps assembly + first requestRender
  *   - `phases/bootstrap.ts`    — orchestrator + BootstrapDeps + Phase signature
  *
- * Hover/select state lives in `state.subsystems.selection`
- * (`selectionSubsystem.ts`).  The public handle and the forward-declared
- * `frameRef` / `detachControlsRef` / `handleRef` boxes stay inline here
- * because the bootstrap phases (sibling modules) write them via the
- * `{current}` ref pattern.
+ * Hover/select/focus state lives in the Redux `selection` slice
+ * (`state/selection/selectionSlice.ts`).  The public handle and the
+ * forward-declared `frameRef` / `detachControlsRef` / `handleRef` boxes
+ * stay inline here because the bootstrap phases (sibling modules) write
+ * them via the `{current}` ref pattern.
  *
  * ### Usage
  *
  * ```ts
  * const handle = createEngine(canvas, {
- *   onStatusChange: (s) => setStatus(s),
- *   onHoverChange:  (p) => setReactHovered(p),
- *   onSelectChange: (p) => setReactSelected(p),
- *   onCameraChange: (snap) => setScale(computeScaleInfo({...})),
+ *   store,
+ *   setSagaContext,
+ *   lifecycle: { onStatusChange: (s) => setStatus(s) },
+ *   camera: { onCameraChange: (snap) => setScale(computeScaleInfo({...})) },
  * });
  *
  * // later (e.g. React cleanup):
@@ -69,16 +70,15 @@
 
 import type { SourceType } from '../../@types/data/SourceType';
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineState } from '../../@types/engine/state/EngineState';
-import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 
 import { createTweenManager } from './camera/tweenManager';
 import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
-import { createSelectionSubsystem } from './subsystems/selectionSubsystem';
 import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
 import { createLabelDirectorSubsystem } from './subsystems/labelDirectorSubsystem';
 import { registerLabelStyleOverrideWake } from './labelStyleOverride';
@@ -87,13 +87,9 @@ import { produceStructureLabels } from './presentation/produceStructureLabels';
 import { produceFamousLabels } from './presentation/produceFamousLabels';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { HDR_PASSES, UI_PASSES } from './frame/passes';
-import { buildGalaxyInfo } from './helpers/galaxyInfoBuilder';
-import { clearAll } from './helpers/clearAll';
-import { commitFocus } from './helpers/commitFocus';
-import { commitGalaxyFocus } from './helpers/commitGalaxyFocus';
-import { resolveFamousGalaxy } from './helpers/resolveFamousGalaxy';
-import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
+import { buildGalaxyInfo } from './helpers/buildGalaxyInfo';
 import { logCameraState } from './helpers/logCameraState';
+import { updateSelectionFocus } from '../../state/selection/selectionSlice';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
 import type { RequestKey } from '../../@types/loading/RequestKey';
@@ -109,6 +105,14 @@ import { listVolumeFields } from './handles/listVolumeFields';
 import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
 import { makeRunTierTransition } from './wiring/makeRunTierTransition';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
+import { makeRunFocusTween } from './camera/makeRunFocusTween';
+import { tweenToGalaxy } from './camera/tweenToGalaxy';
+import { tweenToStructure } from './camera/tweenToStructure';
+import {
+  MILKY_WAY_CENTER_WORLD,
+  MILKY_WAY_VIEW_DISTANCE_MPC,
+} from '../../data/milkyWay/galacticCenter';
+import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
 
 /**
  * Start the WebGPU engine on `canvas`.
@@ -123,8 +127,8 @@ import { makeReconcileEffects } from './wiring/makeReconcileEffects';
  *   3. `cb.onStatusChange({ kind: 'loading' })` fires before the fetch.
  *   4. `cb.onStatusChange({ kind: 'ready', ... })` fires when the render loop
  *      starts, or `{ kind: 'error' }` if GPU init fails.
- *   5. `cb.onHoverChange`, `cb.onSelectChange`, `cb.onCameraChange` fire during
- *      steady-state rendering as the user interacts.
+ *   5. `cb.camera.onCameraChange` fires during steady-state rendering as
+ *      the camera moves.
  *
  * @throws Never — errors are reported via `onStatusChange({ kind: 'error' })`.
  */
@@ -203,11 +207,23 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     get tier() {
       return store.getState().tier;
     },
+    // `state.selection` delegates to the root `selection` slice — the same
+    // single-seam pattern as `settings`/`tier`. The pick path dispatches writes;
+    // per-frame readers reach the store here, with no engine-side mirror to drift.
+    get selection() {
+      return store.getState().selection;
+    },
+    // `state.selectionRows` delegates to the saga-owned `selectionRows` slice.
+    // The selection-resolution saga is the sole writer; per-frame readers
+    // (selection-ring, structure focus) use this getter.
+    get selectionRows() {
+      return store.getState().selectionRows;
+    },
     // Per-type data stores. Empty at construction; slot commits fill them.
     data: createEngineData(),
     picking: {
-      // Per-frame pick-throttle state. Hover / select live on
-      // `state.subsystems.selection`; see `EnginePickingState.d.ts`.
+      // Per-frame pick-throttle state. Hover / select live on the
+      // Redux `selection` slice; see `EnginePickingState.d.ts`.
       latestMouseCss: null,
       lastPickedMouseCss: null,
       pickInFlight: false,
@@ -273,22 +289,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       hiResFamousTexture: null,
       // ── Tween manager ──────────────────────────────────────────
       // At most one camera tween at a time.  Sites that mutate it:
-      //   - public handle's focusOn / focusOnHome / selectFamous
-      //     (start a tween — auto-replaces any running one),
-      //   - pointerdown handler                (cancel on user grab),
-      //   - per-frame frame() loop             (advance + auto-clear).
+      //   - public handle's focusOnHome (start a tween — auto-replaces
+      //     any running one),
+      //   - pointerdown handler         (cancel on user grab),
+      //   - per-frame frame() loop      (advance + auto-clear).
       tweens: createTweenManager({
-        requestRender: () => state.subsystems.scheduler.requestRender(),
-      }),
-
-      // ── Selection subsystem ──────────────────────────────────────
-      // Owns hover / select state and fans out `cb.onHoverChange` /
-      // `cb.onSelectChange` on actual change.  Eager (no GPU dep) so the
-      // public handle can call into it from t=0.  A thin slot store — callers
-      // resolve picks to targets before handing them in, so the subsystem
-      // needs no source accessors.
-      selection: createSelectionSubsystem({
-        cb,
         requestRender: () => state.subsystems.scheduler.requestRender(),
       }),
 
@@ -446,7 +451,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     allSlots,
   };
 
-  // Register both saga runners in one setSagaContext call so the running root
+  // Register all saga runners in one setSagaContext call so the running root
   // saga receives the full context bag synchronously, before the async GPU
   // bootstrap finishes.
   //
@@ -460,9 +465,42 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // rationale: registering before the async bootstrap is safe because the
   // subsystems the closures reach into are populated before any saga dispatches
   // them.
+  //
+  // `resolveDeps` hands the reconciler saga and the focus-tween runner the LIVE
+  // engine resources (read lazily each call, because clouds + structures change
+  // as data loads and the GPU lands only after bootstrap). Named as a const so
+  // both `resolveDeps:` and `makeRunFocusTween(resolveDeps, ...)` share the same
+  // closure — no duplication, no drift. requestRender is NOT added here —
+  // selection sagas reach it through the existing `reconcile` bag.
+  const resolveDeps = (): ResolveDeps => ({
+    catalogs: {
+      get: (source: GalaxyCatalogSourceType) => state.data.galaxies.catalogs.get(source),
+    },
+    famousMeta: state.data.galaxies.famousMeta,
+    structures: { byId: (id) => state.data.structures.byId(id) },
+  });
+
   cb.setSagaContext({
     runTierTransition: makeRunTierTransition(state, bootstrapDeps),
     reconcile: makeReconcileEffects(state),
+    resolveDeps,
+    runFocusTween: makeRunFocusTween(resolveDeps, {
+      galaxyCatalog: (row) => tweenToGalaxy(state, buildGalaxyInfo(row)),
+      structure: (row) => tweenToStructure(state, row),
+      milkyWay: () => {
+        const cam = state.cam;
+        if (!cam) return;
+        tweenToCameraSnapshot(state, {
+          target: [MILKY_WAY_CENTER_WORLD[0], MILKY_WAY_CENTER_WORLD[1], MILKY_WAY_CENTER_WORLD[2]],
+          distance: MILKY_WAY_VIEW_DISTANCE_MPC,
+          yaw: cam.yaw,
+          pitch: cam.pitch,
+          fovYRad: cam.fovYRad,
+          near: cam.near,
+          far: cam.far,
+        });
+      },
+    }),
   });
 
   // The main async IIFE runs the bootstrap phases; all errors are caught
@@ -492,80 +530,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // returning live state.  Declared up-front so the sub-handle literal can
   // reference each by name — no forward references, no `!` assertions.
 
-  function clearSelection(): void {
-    // Unified teardown — clears galaxy/structure selection AND the focus slot
-    // (so the cluster-focus fade collapses) in one call.  Each setter owns
-    // its own dedupe and render wake; clearAll just pairs the two calls.
-    // See clearAll.ts for the dismiss-vs-deselect rationale.
-    clearAll(state.subsystems.selection);
-  }
-
-  function focusOn(target: FocusableTarget): void {
-    // Dispatch by type — one public method, two separate commit paths
-    // (different tween shapes, cam-null gating, callbacks).  See commitFocus.
-    //
-    // The galaxy branch keeps the cam-null guard: without it a focus during
-    // bootstrap would set `#focus=…` while the camera stays put.  The
-    // structure branch skips the guard so deep-link drains can land
-    // structure state pre-camera (see commitStructureFocus).
-    if (target.type !== 'structure' && !state.cam) return;
-    commitFocus(state, target);
-  }
-
   function focusOnHome(): void {
     // Snapshot null-check; cam-null is absorbed inside the helper.
     if (!state.initialCamSnapshot) return;
 
-    // Returning to the home view means we're no longer focused on
-    // anything: drop the focus slot, which collapses the cluster-focus
-    // fade AND fires `onFocusChange(null)` so the URL clears its
-    // `#focus=…`.  Stays at the call site (not in the helper) because
-    // "this action is leaving a focus state" is something
-    // `tweenToCameraSnapshot` doesn't decide.
-    state.subsystems.selection.setFocused(null);
+    // Returning to home clears the focus slot so the cluster-focus fade
+    // collapses and the URL hash clears. The focus slot lives in the Redux
+    // selection slice — dispatch the null write through the store so the
+    // saga and React readers see the same authoritative value.
+    store.dispatch(updateSelectionFocus(null));
 
     tweenToCameraSnapshot(state, state.initialCamSnapshot);
   }
 
   function logCameraStateFn(): void {
     logCameraState(state.cam);
-  }
-
-  function selectFamous(id: string): void {
-    // Resolve the famous id to the GalaxyInfo the picker would build (null if
-    // the catalog / sidecar hasn't loaded yet, or the id is unknown — both
-    // cosmetically safe to ignore).
-    const info = resolveFamousGalaxy(state.data.galaxies, id);
-    if (!info) return;
-
-    // A palette pick is a deliberate focus action, so move the camera too.
-    commitGalaxyFocus(state, info);
-  }
-
-  type SelectByAliasTarget = {
-    source: SourceType;
-    localIdx: number;
-    famousMeta?: readonly FamousMetaEntry[];
-  };
-
-  function selectByAlias({ source, localIdx, famousMeta }: SelectByAliasTarget): void {
-    // Guard: the source cloud may not be loaded yet, or localIdx could be
-    // stale across a tier swap.  Both early-return safely.
-    const cloud = state.data.galaxies.catalogs.get(source);
-    if (!cloud) return;
-    if (localIdx < 0 || localIdx >= cloud.count) return;
-
-    // Caller-supplied `famousMeta` wins over the engine's copy — see the
-    // EngineHandle JSDoc for the race this defends against.
-    const info = buildGalaxyInfo(
-      cloud,
-      localIdx,
-      source,
-      famousMeta ?? state.data.galaxies.famousMeta,
-    );
-    if (!info) return;
-
-    commitGalaxyFocus(state, info);
   }
 
   function loadPgcAliasesFn(): Promise<PgcAliasMap> {
@@ -604,7 +583,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     detachControlsRef.current = null;
 
     // 3. Walk every other subsystem (order-independent past here).
-    state.subsystems.selection.destroy();
     state.subsystems.tweens.destroy();
     state.subsystems.biasCorrection.destroy();
     state.subsystems.labelDirector.destroy();
@@ -691,14 +669,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // selection, sources, volumes, debug) while store writes go direct to the store.
   const handle: EngineHandle = {
     camera: {
-      focusOn,
       focusOnHome,
       logState: logCameraStateFn,
     },
     selection: {
-      clear: clearSelection,
-      selectFamous,
-      selectByAlias,
       loadAliases: loadPgcAliasesFn,
     },
     sources: {
@@ -741,9 +715,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     assetSlots: allSlots,
   };
 
-  // Publish the handle so `wireInput`'s onDoubleClick can resolve
-  // `handle.focusOn` lazily.  The IIFE may still be in flight, but the
-  // handle is non-null well before the user can double-click.
+  // Publish the handle so `wireInput` can read it lazily. The IIFE may
+  // still be in flight, but the handle is non-null well before the user
+  // can interact.
   handleRef.current = handle;
 
   return handle;

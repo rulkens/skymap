@@ -62,16 +62,15 @@
  *     construction" vs "loop start" imperceptible).  Scale-bar
  *     derivation lives entirely React-side (driven by
  *     `cb.onCameraChange`), so there's no engine-side scale-bar
- *     factory to thread.  `setHovered` / `setSelected` don't appear
- *     either: phases call into `state.subsystems.selection` directly;
+ *     factory to thread.  Hover/select/focus dispatches go through the
+ *     Redux store (the pick path calls `store.dispatch` directly);
  *   - `allSlots` — the flat slot Map that `engine.ts` exposes via the
  *     public handle's `assetSlots` field; populated by `wireSlots`
  *     once every slot has been minted;
  *   - `handleRef` — the public handle is constructed AFTER the
- *     bootstrap call, but `wireInput`'s onDoubleClick handler calls
- *     `handle.focusOn(lastClickedInfo)`.  A `{current}` ref carries the
- *     handle reference forward; engine.ts assigns it after the handle
- *     literal evaluates.
+ *     bootstrap call, but `wireInput` reads it lazily. A `{current}`
+ *     ref carries the handle reference forward; engine.ts assigns it
+ *     after the handle literal evaluates.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';

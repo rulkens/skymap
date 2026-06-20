@@ -43,14 +43,12 @@
  *
  * Isolation is part of the CHOREOGRAPHY — it must land on a cue, framed and
  * timed — so the same object that runs the clock fires it. The member-isolation
- * fade keys off the engine's *focused* slot (`selection.setFocused`), the
- * deliberate gesture a double-click uses; the driver calls that setter directly
- * with the resolved Virgo record rather than synthesising a pointer event.
- *
- * NOTE (selection→Intent-store refactor, PR #350): when that lands, focus
- * becomes a store dispatch and this one `setFocused` line retargets to
- * `store.dispatch(...)`. Single isolated seam; the rest of the driver is
- * unaffected.
+ * fade keys off the focused slot in the selection slice, the deliberate gesture
+ * a double-click uses; the driver dispatches `updateSelectionFocus` with Virgo's
+ * structure ref directly rather than synthesising a pointer event. The
+ * selectionRows saga reconciles that ref into the focused StructureInfo the
+ * fade reads. The dispatch also kicks the focus-tween saga, but this driver
+ * sits at priority 80 and owns the camera, so that tween never applies.
  *
  * ### Scene setup the user still does
  *
@@ -67,10 +65,10 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { AppStore } from '../../../store/types';
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import { Source } from '../../../data/sources';
 import { updatePosition, clampDistance } from '../../camera/orbitCamera';
 import { structureFocusDistance } from './structureFocusDistance';
 import { galaxyFocusDistance } from './galaxyFocusDistance';
-import { resolveFamousGalaxy } from '../helpers/resolveFamousGalaxy';
 // Scene toggles are plain settings-slice actions (PR #352 dissolved the
 // `handles/setX` setters into reconcile sagas). The driver dispatches; the
 // sagas fire the side effects the old setters did.
@@ -79,6 +77,11 @@ import {
   setFilamentsEnabled,
   setGalaxyCatalogLabelEnabled,
 } from '../../../state/settings/settingsSlice';
+// Focus is the identity-Intent ref in the selection slice (PR #350 folded the
+// old selection subsystem into the RTK store). Dispatching the structure ref is
+// what the selectionRows saga reconciles into the focused StructureInfo that
+// drives the member-isolation fade — the same write a double-click makes.
+import { updateSelectionFocus } from '../../../state/selection/selectionSlice';
 
 /**
  * Store id of the Virgo Cluster. The structure store keys anchors as
@@ -158,9 +161,10 @@ function smoothstep01(x: number): number {
 type Phase = 'idle' | 'armed' | 'running';
 
 /**
- * Build the named-cosmic-web sequencer. `state` supplies the structure store +
- * selection slot; `store` lets it set the clean scene; `requestRender` wakes a
- * sleeping loop on `g`; `panMpc` is the opening orbit distance.
+ * Build the named-cosmic-web sequencer. `state` supplies the structure +
+ * galaxy stores; `store` sets the clean scene and dispatches the focus ref;
+ * `requestRender` wakes a sleeping loop on `g`; `panMpc` is the opening orbit
+ * distance.
  */
 export function createWebShowcaseDriver(
   state: EngineState,
@@ -237,12 +241,16 @@ export function createWebShowcaseDriver(
           logDclose = logDpan;
         }
 
-        // Resolve M87 for the final dive. Absent (famous catalog not loaded) →
-        // m87Pos stays null and the galaxy beat holds on the members.
-        const m87 = resolveFamousGalaxy(state.data.galaxies, M87_ID);
-        if (m87 !== null) {
-          m87Pos = [m87.x, m87.y, m87.z];
-          logDgalaxy = Math.log(clampDistance(galaxyFocusDistance(m87.diameterKpc)));
+        // Resolve M87 for the final dive straight from the famous catalog —
+        // its interleaved world position + angular diameter. Absent (catalog
+        // not loaded, or id unknown) → m87Pos stays null and the galaxy beat
+        // holds on the members instead of diving.
+        const famous = state.data.galaxies.get(Source.FamousGalaxy);
+        const m87Idx = state.data.galaxies.famousMeta.findIndex((m) => m.id === M87_ID);
+        if (famous && m87Idx >= 0) {
+          const p = famous.positions;
+          m87Pos = [p[m87Idx * 3], p[m87Idx * 3 + 1], p[m87Idx * 3 + 2]];
+          logDgalaxy = Math.log(clampDistance(galaxyFocusDistance(famous.diameterKpc[m87Idx])));
         } else {
           m87Pos = null;
           logDgalaxy = logDclose;
@@ -329,7 +337,7 @@ export function createWebShowcaseDriver(
       // shader dims non-members to ~8% over 400 ms off this focused slot. ──
       if (!firedFocus && tAnim >= T_CLICK && virgo !== null) {
         firedFocus = true;
-        state.subsystems.selection.setFocused(virgo);
+        store.dispatch(updateSelectionFocus({ type: 'structure', id: VIRGO_ID }));
       }
 
       // Release control once the timeline ends. The isolate stays latched

@@ -1,9 +1,10 @@
 /**
  * resolvePick — the one boundary where a decoded GPU pick (`sourceCode +
- * localIdx`) becomes a fully RESOLVED `FocusableTarget`. A single
- * registry-driven dispatch classifies the code and turns it into the concrete
- * `GalaxyInfo` / `StructureInfo` / Milky-Way const, so a pixel maps straight to
- * the target the camera/InfoCard consume.
+ * localIdx`) becomes a `SelectionRef` identity. A single registry-driven
+ * dispatch classifies the code and emits the ref the slice/reconciler consume:
+ * positional for galaxies, durable-id for structures, singleton tag for the
+ * Milky Way. Display resolution (cloud read → GalaxyInfo) happens downstream
+ * in the reconciler, so the pick path stays store-free and tier-swap-safe.
  *
  * Dispatch is table-driven via `RESOLVE_PICK`, keyed on
  * `SOURCE_REGISTRY[code].type`. A row exists only for the pickable kinds; an
@@ -16,13 +17,10 @@
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import { RESOLVE_PICK } from './resolvePickTable';
 import type { PickResult } from '../../../@types/data/PickResult';
-import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
+import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { ResolvePickDeps } from '../../../@types/engine/ResolvePickDeps';
 
-export function resolvePick(
-  pick: PickResult | null,
-  deps: ResolvePickDeps,
-): FocusableTarget | null {
+export function resolvePick(pick: PickResult | null, deps: ResolvePickDeps): SelectionRef | null {
   if (pick === null) return null;
   const entry = SOURCE_REGISTRY[pick.sourceCode];
   const resolve = entry ? RESOLVE_PICK[entry.type] : undefined;

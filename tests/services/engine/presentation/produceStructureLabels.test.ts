@@ -17,10 +17,10 @@ function makeRegistry(): FadeRegistry {
 // produceStructureLabels reads `state.data.structures` for the records,
 // `state.settings.structures.items` for the authoritative per-category gate,
 // `state.subsystems.fades` for the per-category opacity (read-only), and
-// `state.subsystems.selection.focused()` for the focused-exempt recession.
+// `state.selection.focus` for the focused-exempt recession.
 // The fixture supplies all four; `focusedStructureId` selects which structure
-// (if any) the selection subsystem reports as focused. The items bag defaults
-// all-enabled; tests flip an entry to drive the disabled path.
+// (if any) occupies the focus slot. The items bag defaults all-enabled; tests
+// flip an entry to drive the disabled path.
 function makeState(
   opts: { focusedStructureId?: string | null; fades?: FadeRegistry } = {},
 ): EngineState {
@@ -30,12 +30,13 @@ function makeState(
   return {
     data: createEngineData(),
     settings: { structures: { enabled: true, items: makeStructureItems() } },
+    selection: {
+      focus: focusedStructureId === null ? null : { type: 'structure', id: focusedStructureId },
+      select: null,
+      hover: null,
+    },
     subsystems: {
       fades,
-      selection: {
-        focused: () =>
-          focusedStructureId === null ? null : { type: 'structure', id: focusedStructureId },
-      },
     },
   } as unknown as EngineState;
 }

@@ -13,8 +13,10 @@
  * focus on the UI-slice side effects that don't touch the handle.
  */
 
+import { createElement, type ReactNode } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { Provider } from 'react-redux';
 import { useKeyboardShortcuts } from '../../src/hooks/useKeyboardShortcuts';
 import { createAppStore } from '../../src/store/createAppStore';
 import { buildInitialSettings } from '../../src/state/settings/initialState';
@@ -51,7 +53,10 @@ describe('useKeyboardShortcuts — integration (real store)', () => {
 
   it('Tab toggles uiHidden false → true → false (proves toggle, no stale closure)', () => {
     const input = makeInput(store);
-    renderHook(() => useKeyboardShortcuts(input));
+    renderHook(() => useKeyboardShortcuts(input), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(Provider, { store, children }),
+    });
 
     expect(selectUiHidden(store.getState())).toBe(false);
 
@@ -64,7 +69,10 @@ describe('useKeyboardShortcuts — integration (real store)', () => {
 
   it('Tab fires e.preventDefault() (cancelable event is cancelled)', () => {
     const input = makeInput(store);
-    renderHook(() => useKeyboardShortcuts(input));
+    renderHook(() => useKeyboardShortcuts(input), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(Provider, { store, children }),
+    });
 
     const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
     const preventSpy = vi.spyOn(event, 'preventDefault');
@@ -74,7 +82,10 @@ describe('useKeyboardShortcuts — integration (real store)', () => {
 
   it('d toggles debugPanelOpen false → true → false', () => {
     const input = makeInput(store);
-    renderHook(() => useKeyboardShortcuts(input));
+    renderHook(() => useKeyboardShortcuts(input), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(Provider, { store, children }),
+    });
 
     expect(selectDebugPanelOpen(store.getState())).toBe(false);
 
@@ -87,7 +98,10 @@ describe('useKeyboardShortcuts — integration (real store)', () => {
 
   it('D (uppercase) also toggles debugPanelOpen', () => {
     const input = makeInput(store);
-    renderHook(() => useKeyboardShortcuts(input));
+    renderHook(() => useKeyboardShortcuts(input), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(Provider, { store, children }),
+    });
 
     act(() => fireKey({ key: 'D' }));
     expect(selectDebugPanelOpen(store.getState())).toBe(true);
@@ -95,7 +109,10 @@ describe('useKeyboardShortcuts — integration (real store)', () => {
 
   it('Cmd+K sets paletteOpen true', () => {
     const input = makeInput(store);
-    renderHook(() => useKeyboardShortcuts(input));
+    renderHook(() => useKeyboardShortcuts(input), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(Provider, { store, children }),
+    });
 
     expect(selectPaletteOpen(store.getState())).toBe(false);
     act(() => fireKey({ key: 'k', metaKey: true }));
@@ -104,7 +121,10 @@ describe('useKeyboardShortcuts — integration (real store)', () => {
 
   it('Ctrl+K sets paletteOpen true', () => {
     const input = makeInput(store);
-    renderHook(() => useKeyboardShortcuts(input));
+    renderHook(() => useKeyboardShortcuts(input), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(Provider, { store, children }),
+    });
 
     act(() => fireKey({ key: 'k', ctrlKey: true }));
     expect(selectPaletteOpen(store.getState())).toBe(true);
@@ -112,7 +132,10 @@ describe('useKeyboardShortcuts — integration (real store)', () => {
 
   it('Tab with Shift is ignored (not a hide-UI press)', () => {
     const input = makeInput(store);
-    renderHook(() => useKeyboardShortcuts(input));
+    renderHook(() => useKeyboardShortcuts(input), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(Provider, { store, children }),
+    });
 
     act(() => fireKey({ key: 'Tab', shiftKey: true }));
     expect(selectUiHidden(store.getState())).toBe(false);
@@ -120,7 +143,10 @@ describe('useKeyboardShortcuts — integration (real store)', () => {
 
   it('Tab with Meta is ignored', () => {
     const input = makeInput(store);
-    renderHook(() => useKeyboardShortcuts(input));
+    renderHook(() => useKeyboardShortcuts(input), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(Provider, { store, children }),
+    });
 
     act(() => fireKey({ key: 'Tab', metaKey: true }));
     expect(selectUiHidden(store.getState())).toBe(false);
@@ -128,7 +154,10 @@ describe('useKeyboardShortcuts — integration (real store)', () => {
 
   it('keys inside an INPUT element are ignored', () => {
     const input = makeInput(store);
-    renderHook(() => useKeyboardShortcuts(input));
+    renderHook(() => useKeyboardShortcuts(input), {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(Provider, { store, children }),
+    });
 
     const inputEl = document.createElement('input');
     document.body.appendChild(inputEl);

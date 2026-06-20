@@ -60,9 +60,9 @@ export const MILKY_WAY_CENTER_WORLD: Vec3 = raDecDistToCartesian(
 );
 
 /**
- * Camera distance (Mpc) used by `commitMilkyWayFocus` to land the camera
- * at a viewpoint where the procedural Milky Way impostor is the dominant
- * on-screen subject.
+ * Camera distance (Mpc) used by the Milky Way focus tween to land the
+ * camera at a viewpoint where the procedural Milky Way impostor is the
+ * dominant on-screen subject.
  *
  * Picked at 0.15 Mpc (≈150 kpc) by visual calibration — at this distance
  * the spiral fills most of the FOV at the project default 60° vertical

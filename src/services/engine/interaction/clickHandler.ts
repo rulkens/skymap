@@ -1,25 +1,24 @@
 /**
  * clickHandler — wraps the GPU pick + decode + resolve step the engine
- * runs in response to a canvas click. Returns the `FocusableTarget` the
- * click hit (a resolved `GalaxyInfo` / `StructureInfo`), or null for
- * background.
+ * runs in response to a canvas click. Returns the `SelectionRef` (identity)
+ * the click hit, or null for background.
  *
- * The resolver runs the whole pixel → target boundary: pick → `resolvePick`
- * → `FocusableTarget`. The decode + resolution is shared with the hover
- * path (both call `resolvePick`) so the two can't diverge on how a pixel
- * maps to a target. The engine forwards the result straight to
- * `setSelected`, which now just holds the already-resolved target.
+ * The resolver runs the whole pixel → identity boundary: pick → `resolvePick`
+ * → `SelectionRef`. The decode + resolution is shared with the hover path
+ * (both call `resolvePick`) so the two can't diverge on how a pixel maps to a
+ * ref. The engine dispatches the result via `updateSelectionSelect`; the
+ * reconciler saga then fills `selectionRows` from the ref.
  *
  * ### What the resolver returns (see `resolvePick`)
  *
- *   - `null` — background, another pick in flight, a not-yet-loaded cloud,
- *     or a structure ring with no backing record. Engine calls
- *     `setSelected(null)`.
- *   - a `GalaxyInfo` (`type: 'galaxyCatalog'`) — a resolved galaxy point.
- *   - a `StructureInfo` (`type: 'structure'`) — a resolved structure ring.
+ *   - `null` — background, another pick in flight, or a structure ring
+ *     with no backing record. Engine dispatches `updateSelectionSelect(null)`.
+ *   - `{ type:'galaxyCatalog', source, index }` — positional galaxy ref.
+ *   - `{ type:'structure', id }` — durable structure ref.
+ *   - `{ type:'milkyWay' }` — Milky Way singleton ref.
  *
  * The resolver does NOT call `requestRender()` — that's the engine's job
- * after it updates the selection. Scheduler-free keeps tests stub-free.
+ * after it dispatches the selection. Scheduler-free keeps tests stub-free.
  *
  * ### Idempotency / in-flight calls
  *
@@ -32,23 +31,24 @@ import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { ClickResolveInput } from '../../../@types/engine/ClickResolveInput';
 import type { ClickResolver } from '../../../@types/engine/ClickResolver';
 import type { CreateClickResolverInput } from '../../../@types/engine/CreateClickResolverInput';
-import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
+import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { ResolvePickDeps } from '../../../@types/engine/ResolvePickDeps';
 import { resolvePick } from '../helpers/resolvePick';
 
 export function createClickResolver(input: CreateClickResolverInput): ClickResolver {
-  const { pickRenderer, getCloud, getFamousMeta, structures } = input;
+  const { pickRenderer, structures } = input;
 
   // Everything `resolvePick` needs, bundled once at construction so the
-  // per-click path is a single call. Mirrors the hover path's deps.
-  const deps: ResolvePickDeps = { getCloud, getFamousMeta, structures };
+  // per-click path is a single call. The galaxy arm is positional (no cloud
+  // read), so the dep bag is just the structure store.
+  const deps: ResolvePickDeps = { structures };
 
   // Built as a `const` (rather than returned inline) so we can attach
   // the `satisfies Destroyable` latch — the click resolver is one of
   // the engine's ~13 teardown targets, and the shared shape lets
   // engine.destroy() iterate uniformly across the bag.
   const resolver: ClickResolver = {
-    async resolveClick(args: ClickResolveInput): Promise<FocusableTarget | null> {
+    async resolveClick(args: ClickResolveInput): Promise<SelectionRef | null> {
       const pick = await pickRenderer.pick(
         args.viewportPx,
         args.pickXPx,

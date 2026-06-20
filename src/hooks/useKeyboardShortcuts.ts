@@ -25,6 +25,9 @@
  */
 
 import { useEffect } from 'react';
+import { useAppDispatch } from '../store/hooks';
+import { clearSelection, updateSelectionFocus } from '../state/selection/selectionSlice';
+import { refOf } from '../services/engine/helpers/refOf';
 import type { UseKeyboardShortcutsInput } from '../@types/engine/UseKeyboardShortcutsInput';
 
 export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
@@ -36,6 +39,8 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
     toggleUiHidden,
     toggleDebugPanelOpen,
   } = input;
+
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -65,17 +70,18 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
       }
 
       // ── Esc — universal "close the card" gesture ──────────────
-      // `selection.clear()` tears down both galaxy selection AND structure
-      // focus in one call, so this single line
-      // collapses whichever card variant is on screen.
+      // Clears both galaxy selection AND structure focus in one
+      // dispatch, collapsing whichever card variant is on screen.
       if (e.key === 'Escape') {
-        engineHandleRef.current?.selection.clear();
+        dispatch(clearSelection());
         return;
       }
 
-      // ── f focuses on the currently-pinned galaxy ───────────────
+      // ── f focuses on the currently-pinned target ───────────────
+      // Converts the rich display-model target to its identity
+      // SelectionRef and dispatches the focus slot write.
       if (e.key === 'f' || e.key === 'F') {
-        if (selected) engineHandleRef.current?.camera.focusOn(selected);
+        if (selected) dispatch(updateSelectionFocus(refOf(selected)));
         return;
       }
 
@@ -122,12 +128,13 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
   }, [
     selected,
     paletteOpen,
+    dispatch,
     engineHandleRef,
     setPaletteOpen,
     toggleUiHidden,
     toggleDebugPanelOpen,
   ]);
-  // engineHandleRef (ref object), setPaletteOpen, toggleUiHidden, toggleDebugPanelOpen
-  // are stable useCallback wrappers over dispatch — listed for exhaustive-deps but
-  // never trigger re-binds.
+  // dispatch is stable (redux store identity); engineHandleRef (ref object),
+  // setPaletteOpen, toggleUiHidden, toggleDebugPanelOpen are stable useCallback
+  // wrappers — listed for exhaustive-deps but never trigger re-binds.
 }

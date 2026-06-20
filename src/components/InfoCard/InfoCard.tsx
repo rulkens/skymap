@@ -51,15 +51,13 @@ export type InfoCardProps = {
   selectedMemberCount?: number | null;
   /**
    * Optional callback fired when the user clicks the "Focus" pill on the pinned
-   * card.  Caller routes to the unified handle method
-   * `handle.camera.focusOn(target)`.
+   * card.  App dispatches `updateSelectionFocus(refOf(target))`.
    */
   onFocus?: (target: FocusableTarget) => void;
   /**
    * Optional callback fired when the user clicks the Close (×) button on the
-   * pinned card.  Same effect as pressing Esc — clears the selection.  Caller
-   * routes to `handle.selection.clear()` which tears down both galaxy AND structure
-   * selection in one call.
+   * pinned card.  Same effect as pressing Esc — App dispatches `clearSelection()`
+   * which tears down both galaxy AND structure selection in one call.
    */
   onClose?: () => void;
 };

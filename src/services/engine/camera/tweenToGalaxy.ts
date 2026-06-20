@@ -3,45 +3,18 @@
  *
  * ### Why a helper
  *
- * Three public-handle methods on `EngineHandle` — `focusOn`, `selectFamous`,
- * and `selectByAlias` — each carried the same five-line block:
- *
- * ```ts
- * state.subsystems.tweens.start({
- *   startMs: performance.now(),
- *   durationMs: FOCUS_TWEEN_MS,
- *   fromTarget: vec3.clone(cam.target as vec3),
- *   toTarget: vec3.fromValues(info.x, info.y, info.z),
- *   fromDistance: cam.distance,
- *   toDistance: galaxyFocusDistance(info.diameterKpc),
- *   fromYaw: cam.yaw,
- *   toYaw: cam.yaw,
- *   fromPitch: cam.pitch,
- *   toPitch: cam.pitch,
- * });
- * state.subsystems.scheduler.requestRender();
- * ```
- *
- * Three near-identical bodies — exactly the kind of copy-paste that
- * silently rots when one site adds a new field (e.g. an FOV transition)
- * and the others lag behind.  One helper, three call sites collapse to
- * a single line each.
+ * The focus-tween saga (`watchFocusTween`) and `focusOnHome` each kick off
+ * a camera tween toward a galaxy; both carry the same five-line block. One
+ * helper, two call sites collapsed to a single line each.
  *
  * ### Why we DON'T extend the responsibility
  *
- * Each call site has its own pre-tween bookkeeping that doesn't belong
- * in the helper:
- *   - `selectFamous` / `selectByAlias` resolve a `GalaxyInfo` via
- *     `buildGalaxyInfo`, then call `setSelected` and `cb.onFocusChange`
- *     before tweening;
- *   - `focusOn` calls `cb.onFocusChange` first so the URL hash updates
- *     in lock-step with the user's commitment.
- *
- * Pulling that work into `tweenToGalaxy` would force the helper to know
- * about callbacks, selection state, and source enums — turning a
- * five-line dispatcher into a multi-purpose coordinator.  The single
- * responsibility we DO want is "given a camera-able target, start the
- * tween" — keep it tiny.
+ * The caller (the focus-tween saga) resolves the `GalaxyInfo` and has already
+ * dispatched the selection-slot write before reaching here. Pulling that into
+ * `tweenToGalaxy` would force the helper to know about the store and selection
+ * state — turning a five-line tween starter into a multi-purpose coordinator.
+ * The single responsibility we DO want is "given a camera-able target, start
+ * the tween" — keep it tiny.
  *
  * ### Why the cam-null guard is here
  *
@@ -49,15 +22,12 @@
  * windows leave it null:
  *   - **Pre-bootstrap**: `createOrbitCamera` runs inside `wireInput`
  *     during the bootstrap IIFE, after `initGpu` and the first cloud
- *     arrival.  Code that fires before then (e.g. an unlikely
- *     `selectByAlias` from a deep-link drain that races the very first
- *     cloud upload) still finds `cam` null.
+ *     arrival.  A focus saga that races bootstrap still finds `cam` null.
  *   - **Post-destroy**: `handle.destroy()` detaches controls and clears
- *     `state.cam = null`.  An in-flight focus promise that resolves
- *     after destroy must not crash the engine on shutdown.
+ *     `state.cam = null`.  An in-flight focus saga that resolves after
+ *     destroy must not crash the engine on shutdown.
  *
- * The three call sites all check for null themselves today — the helper
- * absorbs that check so future call sites get the safe behaviour for
+ * The helper absorbs the null check so call sites get safe behaviour for
  * free.  It is genuinely needed; do not remove on the grounds of YAGNI.
  *
  * ### Why `TweenTarget` is a structural minimum, not `GalaxyInfo`

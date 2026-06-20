@@ -4,11 +4,15 @@
  *
  * The intended use case is "I see two overlapping draws on screen and
  * I want to know which renderer is responsible for which".  Toggling
- * a pass dispatches `setPassDisabled` to the RTK settings store; the
+ * a pass calls `onTogglePass(name)` (supplied by `DebugPanelContainer`),
+ * which dispatches `setPassDisabled` to the RTK settings store; the
  * store notifies synchronously and the updated `disabledPasses` record
- * flows back down via the `disabledPasses` prop (App subscribes with
- * `selectDisabledPasses`); `watchWake` wakes the render-on-demand loop
- * so the change shows up on the next frame even when the camera is idle.
+ * flows back down via the `disabledPasses` prop; `watchWake` wakes the
+ * render-on-demand loop so the change shows up on the next frame even
+ * when the camera is idle.
+ *
+ * This section is PRESENTATIONAL — it imports nothing from `store/` or
+ * `state/`.  All dispatch is delegated upward to `DebugPanelContainer`.
  *
  * ### Override semantics (one-way)
  *
@@ -22,8 +26,8 @@
  *
  * The record is RTK settings state (`settings.debug.disabledPasses`),
  * read live via the `disabledPasses` prop.  No local mirror: a toggle
- * dispatches `setPassDisabled`, the store notifies synchronously, and
- * the prop flows the new record back down.
+ * calls `onTogglePass`, the container dispatches `setPassDisabled`, the
+ * store notifies synchronously, and the prop flows the new record back.
  *
  * ### Why a separate `<details>` block
  *
@@ -35,26 +39,21 @@
  */
 
 import type { ReactElement } from 'react';
-import { useAppDispatch } from '../../store/hooks';
-import { setPassDisabled } from '../../state/settings/settingsSlice';
 
 export type RenderTogglesSectionProps = {
   /** Pass names in draw order, sourced from the engine handle's `passOverrides.allNames`. */
   passNames: readonly string[];
-  /** Live disabled-pass record from the settings store (App subscribes). */
+  /** Live disabled-pass record from the settings store (container subscribes). */
   disabledPasses: Record<string, boolean>;
+  /** Called with the pass name when a checkbox is toggled. Container dispatches setPassDisabled. */
+  onTogglePass: (name: string) => void;
 };
 
 export function RenderTogglesSection({
   passNames,
   disabledPasses,
+  onTogglePass,
 }: RenderTogglesSectionProps): ReactElement {
-  const dispatch = useAppDispatch();
-
-  const toggle = (name: string) => {
-    dispatch(setPassDisabled({ pass: name, disabled: disabledPasses[name] !== true }));
-  };
-
   return (
     <details>
       <summary style={{ fontWeight: 'bold', cursor: 'pointer' }}>Renderer Toggles</summary>
@@ -72,7 +71,7 @@ export function RenderTogglesSection({
                 opacity: isDisabled ? 0.5 : 1,
               }}
             >
-              <input type="checkbox" checked={!isDisabled} onChange={() => toggle(name)} />
+              <input type="checkbox" checked={!isDisabled} onChange={() => onTogglePass(name)} />
               <span>{name}</span>
             </label>
           );

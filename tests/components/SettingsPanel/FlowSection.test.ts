@@ -1,0 +1,128 @@
+// @vitest-environment jsdom
+
+/**
+ * FlowSection — plain-props tests for the presentational Flow section.
+ *
+ * No Redux Provider: `FlowSection` imports nothing from `store/` or `state/`.
+ * Props drive rendering; typed `vi.fn()` spies capture callbacks.
+ *
+ * Tests cover:
+ *  - Master toggle reflects `flow.enabled` (checked when true, unchecked when false).
+ *  - Clicking the master toggle calls `onFlowChange({ enabled: <toggled> })`.
+ *  - A FlowRow control change (mode button click) calls `onFlowChange` with the
+ *    patched key.
+ *
+ * Checkbox toggle: fireEvent.click (not fireEvent.change) — click is the
+ * reliable trigger for controlled checkboxes in jsdom; change does not update
+ * e.target.checked for React-controlled inputs, so the callback would receive
+ * the wrong value.
+ *
+ * CollapsibleSection note: the body is always in the DOM but is aria-hidden when
+ * collapsed (default closed). To query controls inside the body (like FlowRow's
+ * mode buttons), first expand the section with
+ * `fireEvent.click(getByRole('button', { name: /flow/i }))`.
+ * The header toggle is a CHECKBOX inside the header BUTTON — distinct affordances.
+ */
+
+import { describe, it, expect, vi } from 'vitest';
+import { render, fireEvent } from '@testing-library/react';
+import { createElement } from 'react';
+import FlowSection from '../../../src/components/SettingsPanel/FlowSection';
+import type { FlowSectionProps } from '../../../src/components/SettingsPanel/FlowSection';
+import type { FlowSettings } from '../../../src/@types/settings/FlowSettings';
+
+// ── Fixtures ───────────────────────────────────────────────────────────────────
+
+const BASE_FLOW: FlowSettings = {
+  enabled: true,
+  mode: 'advect',
+  intensity: 0.7,
+  count: 200000,
+  trail: 0.97,
+  flowSpeed: 0.004,
+  densityBias: 1.5,
+  wander: 0.12,
+  boundaryFadeWidth: 30,
+};
+
+function baseProps(overrides?: Partial<FlowSectionProps>): FlowSectionProps {
+  return {
+    flow: BASE_FLOW,
+    onFlowChange: vi.fn<(patch: Partial<FlowSettings>) => void>(),
+    ...overrides,
+  };
+}
+
+// ── Tests ──────────────────────────────────────────────────────────────────────
+
+describe('FlowSection', () => {
+  describe('master toggle reflects flow.enabled', () => {
+    it('is checked when flow.enabled is true', () => {
+      const { container } = render(
+        createElement(FlowSection, baseProps({ flow: { ...BASE_FLOW, enabled: true } })),
+      );
+      const headerCheckbox =
+        container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
+      expect(headerCheckbox.checked).toBe(true);
+    });
+
+    it('is unchecked when flow.enabled is false', () => {
+      const { container } = render(
+        createElement(FlowSection, baseProps({ flow: { ...BASE_FLOW, enabled: false } })),
+      );
+      const headerCheckbox =
+        container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
+      expect(headerCheckbox.checked).toBe(false);
+    });
+  });
+
+  describe('master toggle click calls onFlowChange', () => {
+    it('calls onFlowChange({ enabled: false }) when master is clicked while enabled=true', () => {
+      const onFlowChange = vi.fn<(patch: Partial<FlowSettings>) => void>();
+      const { container } = render(
+        createElement(
+          FlowSection,
+          baseProps({ flow: { ...BASE_FLOW, enabled: true }, onFlowChange }),
+        ),
+      );
+      const headerCheckbox =
+        container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
+      fireEvent.click(headerCheckbox);
+      expect(onFlowChange).toHaveBeenCalledOnce();
+      expect(onFlowChange).toHaveBeenCalledWith({ enabled: false });
+    });
+
+    it('calls onFlowChange({ enabled: true }) when master is clicked while enabled=false', () => {
+      const onFlowChange = vi.fn<(patch: Partial<FlowSettings>) => void>();
+      const { container } = render(
+        createElement(
+          FlowSection,
+          baseProps({ flow: { ...BASE_FLOW, enabled: false }, onFlowChange }),
+        ),
+      );
+      const headerCheckbox =
+        container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
+      fireEvent.click(headerCheckbox);
+      expect(onFlowChange).toHaveBeenCalledOnce();
+      expect(onFlowChange).toHaveBeenCalledWith({ enabled: true });
+    });
+  });
+
+  describe('FlowRow mode button click calls onFlowChange', () => {
+    it('calls onFlowChange({ mode: "streamline" }) when the Streamline button is clicked', () => {
+      const onFlowChange = vi.fn<(patch: Partial<FlowSettings>) => void>();
+      // Start with mode='advect' so Streamline is not currently pressed.
+      const { getByRole } = render(
+        createElement(
+          FlowSection,
+          baseProps({ flow: { ...BASE_FLOW, enabled: true, mode: 'advect' }, onFlowChange }),
+        ),
+      );
+      // Expand the section so FlowRow controls leave aria-hidden and become queryable.
+      fireEvent.click(getByRole('button', { name: /flow/i }));
+      const streamlineBtn = getByRole('button', { name: /streamline/i });
+      fireEvent.click(streamlineBtn);
+      expect(onFlowChange).toHaveBeenCalledWith({ mode: 'streamline' });
+    });
+  });
+});
