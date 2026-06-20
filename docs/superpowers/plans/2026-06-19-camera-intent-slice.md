@@ -805,6 +805,10 @@ surviving surface.
 
 ### Task 5.2 — delete `tweenManager` + `createTweenManager` wiring
 
+> ✅ **DONE** — commit `7a64bb23`. Also removed the `tweens.cancel()` dual-write in
+> orbitControls onPointerDown (onGestureStart's `cancelCameraTween()` is the sole
+> cancel-on-grab path) and tidied comments referencing the deleted symbols.
+
 **Files (delete):**
 - `src/services/engine/camera/tweenManager.ts`.
 - `src/@types/camera/TweenManager.d.ts`.
@@ -828,9 +832,9 @@ surviving surface.
 **Interfaces:** After this task no `createTweenManager` / `TweenManager` /
 `CameraTween` / `advanceCameraTween` import remains. Confirm via search.
 
-- [ ] Search for residual importers of each deleted symbol → zero.
-- [ ] Delete the files; remove the engine wiring + type field.
-- [ ] `npm run typecheck` (catches dangling imports) + `npm test` → green. Commit.
+- [x] Search for residual importers of each deleted symbol → zero.
+- [x] Delete the files; remove the engine wiring + type field.
+- [x] `npm run typecheck` (catches dangling imports) + `npm test` → green. Commit.
 
 ### Task 5.3 — delete `OrbitControlsOptions.onCameraChange`; freeze the surface
 
