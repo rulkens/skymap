@@ -126,12 +126,12 @@ the running root saga's context). Document *why* the seam exists: sagas live in
 the store layer and can't reach the engine scheduler/renderers/fades; the engine
 registers closures over `EngineState` here.
 
-- [ ] Update `createAppStore.test.ts`: every `createAppStore(...)` call destructures
+- [x] Update `createAppStore.test.ts`: every `createAppStore(...)` call destructures
   `{ store }` (4 call sites in the file). Add `returns a setSagaContext function`
   asserting `typeof setSagaContext === 'function'`. Confirm fail (factory still
   returns the bare store), then implement, then pass.
-- [ ] Run `npm test -- createAppStore` → green.
-- [ ] Commit.
+- [x] Run `npm test -- createAppStore` → green.
+- [x] Commit.
 
 ### Task 1.2 — repoint the remaining `createAppStore` callers
 
@@ -147,11 +147,11 @@ registers closures over `EngineState` here.
 **Interfaces:** Consumes the new `{ store, setSagaContext }` return. Each caller
 destructures `{ store }` (and ignores `setSagaContext` unless it needs it).
 
-- [ ] Mechanical: change `const store = createAppStore(...)` →
+- [x] Mechanical: change `const store = createAppStore(...)` →
   `const { store } = createAppStore(...)` at every caller. `main.tsx` passes the
   destructured `store` to `<Provider>` and `useEngine`.
-- [ ] `npm test` → full suite green; `npm run typecheck`.
-- [ ] Commit.
+- [x] `npm test` → full suite green; `npm run typecheck`.
+- [x] Commit.
 
 ### Task 1.3 — `EngineCallbacks` gains `setSagaContext`
 
@@ -171,11 +171,11 @@ Produces: `EngineCallbacks.setSagaContext: SetSagaContext` (required, sibling of
 reconcile effects. Until Phase 2 the engine doesn't call it — this task only adds
 the field + threads the value, so it stays additive.
 
-- [ ] Add a failing type-level/usage test or rely on tsc: a fixture omitting
+- [x] Add a failing type-level/usage test or rely on tsc: a fixture omitting
   `setSagaContext` must fail. Add the field, thread through `main.tsx` +
   `useEngine`, stub in fixtures.
-- [ ] `npm run typecheck` + `npm test` → green. `mainSaga` is still `all([])`.
-- [ ] Commit.
+- [x] `npm run typecheck` + `npm test` → green. `mainSaga` is still `all([])`.
+- [x] Commit.
 
 ---
 
@@ -215,13 +215,13 @@ These mirror the bodies relocated from `handles/setMilkyWayEnabled.ts:27-29`,
 
 **Tests** (fake `EngineState` with spy subsystems, typed
 `vi.fn<() => void>()`):
-- [ ] `requestRender calls scheduler.requestRender`.
-- [ ] `syncFades(['flow']) calls syncVisibilityFades with { animate: true, only: ['flow'] }`
+- [x] `requestRender calls scheduler.requestRender`.
+- [x] `syncFades(['flow']) calls syncVisibilityFades with { animate: true, only: ['flow'] }`
   (spy/mock the bridge, or assert the fade subsystem received the flow row).
-- [ ] `reseedFlow calls flowFieldRenderer.maybeReseed`.
-- [ ] `reseedFlow tolerates a null flowFieldRenderer` (no throw when `gpu.flowFieldRenderer === null`).
-- [ ] `bakeBias(1) calls biasCorrection.setMode(1)`.
-- [ ] Confirm fail → implement → pass. `npm test -- makeReconcileEffects`. Commit.
+- [x] `reseedFlow calls flowFieldRenderer.maybeReseed`.
+- [x] `reseedFlow tolerates a null flowFieldRenderer` (no throw when `gpu.flowFieldRenderer === null`).
+- [x] `bakeBias(1) calls biasCorrection.setMode(1)`.
+- [x] Confirm fail → implement → pass. `npm test -- makeReconcileEffects`. Commit.
 
 ### Task 2.2 — the four reconcile sagas + `FADE_ROW`
 
@@ -279,19 +279,19 @@ chain on action type. `watchWake` centralizes the wake "by construction", killin
 vi.fn<(r: readonly VisibilityLayerKey[]) => void>(), reseedFlow: vi.fn<() =>
 void>(), bakeBias: vi.fn<(m: BiasMode) => void>() } })`. Run the four watchers via
 the saga middleware, dispatch, assert spies. Spec §7 enumerates the cases:
-- [ ] `setMilkyWayEnabled(true)` → `requestRender` called **and**
+- [x] `setMilkyWayEnabled(true)` → `requestRender` called **and**
   `syncFades(['milkyWayDisk'])` called.
-- [ ] `setPointSize(…)` (a boring write, no `FADE_ROW` entry) → `requestRender`
+- [x] `setPointSize(…)` (a boring write, no `FADE_ROW` entry) → `requestRender`
   called, `syncFades` **not** called.
-- [ ] `writeVolumeField({ id, patch: { contrast } })` → `syncFades(['volumeField'])`
+- [x] `writeVolumeField({ id, patch: { contrast } })` → `syncFades(['volumeField'])`
   fires. Idempotence: dispatch against an unchanged `enabled` bit and assert
   `syncFades` is still called with `['volumeField']` (the saga is row-driven; the
   no-op lives in the bridge, asserted in Task 2.1 / the bridge's own tests).
-- [ ] `setFlow({ count })` → `reseedFlow` called and `syncFades` **not** called
+- [x] `setFlow({ count })` → `reseedFlow` called and `syncFades` **not** called
   (no `enabled` in patch). `setFlow({ enabled: true })` → `reseedFlow` **not**
   called, `syncFades(['flow'])` called.
-- [ ] `setBiasMode(1)` → `bakeBias(1)` called.
-- [ ] Confirm fail → implement → pass. `npm test -- reconcileSagas`. Commit.
+- [x] `setBiasMode(1)` → `bakeBias(1)` called.
+- [x] Confirm fail → implement → pass. `npm test -- reconcileSagas`. Commit.
 
 ### Task 2.3 — compose the watchers in `rootSaga`
 
@@ -310,10 +310,10 @@ reconcile watchers. (Note: the watchers `getContext('reconcile')` lazily inside
 each worker, so composing them before any context is set is safe — no worker runs
 until an action arrives, by which point Phase 2.4 has registered the context.)
 
-- [ ] Confirm fail (test expecting forks) → implement → pass.
-- [ ] `npm test` → green (sagas have no context registered yet in plain store
+- [x] Confirm fail (test expecting forks) → implement → pass.
+- [x] `npm test` → green (sagas have no context registered yet in plain store
   tests, but no action triggers a worker, so still green).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 2.4 — engine registers `reconcile` at wiring
 
@@ -334,11 +334,11 @@ Place it right after `state` is constructed (the closures dereference
 `state.gpu` / `state.subsystems` at call time, so registering before async GPU
 init is fine — document this).
 
-- [ ] Failing test: a spy `setSagaContext` receives an object with a `reconcile`
+- [x] Failing test: a spy `setSagaContext` receives an object with a `reconcile`
   bag whose four members are functions. Confirm fail → implement → pass.
-- [ ] `npm test` + `npm run typecheck` → green. Behaviour now runs alongside the
+- [x] `npm test` + `npm run typecheck` → green. Behaviour now runs alongside the
   handles (idempotent); verify a manual smoke or existing fade tests still pass.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 2.5 — verify the synchronous-notify invariant (spec §5)
 
@@ -354,14 +354,14 @@ ordering (`setMilkyWayEnabled.ts:27-29`: dispatch, then bridge reads
 `state.settings`). Confirm the engine's settings view reflects the store
 synchronously *before* the `takeEvery` worker runs.
 
-- [ ] Add a test: with a store seeded so a row's intent flips on dispatch, the
+- [x] Add a test: with a store seeded so a row's intent flips on dispatch, the
   `syncFades` spy's call happens-after the reducer has updated
   `store.getState().settings` (assert the store state is already the new value at
   the moment the worker fires — e.g. read `store.getState()` inside the spy).
-- [ ] If the invariant does **not** hold (worker sees stale settings), STOP and
+- [x] If the invariant does **not** hold (worker sees stale settings), STOP and
   surface to the user — do not paper over with a re-read. (Expected: it holds —
   RTK dispatch is synchronous and the saga `takeEvery` runs after the reducer.)
-- [ ] `npm test -- reconcileSagas` → green. Commit.
+- [x] `npm test -- reconcileSagas` → green. Commit.
 
 ---
 
@@ -400,11 +400,11 @@ Their dead sub-handle methods — `EngineGalaxyCatalogsHandle.setBrightness`,
 `EngineTonemapHandle.setExposure`, `EngineThumbnailsHandle.setEnabled` — are
 dropped in Task 3.2 / 5.1 with no call-site change.)
 
-- [ ] Add `const dispatch = useAppDispatch();` in `App`. Replace each
+- [x] Add `const dispatch = useAppDispatch();` in `App`. Replace each
   `handleRef.current?.<cluster>.<setter>(…)` above with `dispatch(<action>(…))`.
   Update the surrounding didactic comments to "dispatches the slice action;
   `watchWake` wakes the loop" (drop the "handle notifies synchronously" framing).
-- [ ] `npm test` + `npm run typecheck` → green (handles + sagas + new dispatch all
+- [x] `npm test` + `npm run typecheck` → green (handles + sagas + new dispatch all
   coexist; idempotent). Commit.
 
 ### Task 3.2 — delete the boring forwarders from `engine.ts`
@@ -424,9 +424,9 @@ construction `engine.ts:483-486`, the `buildSettersFromTable` import
 `.d.ts` files (keep methods Phase 4 will remove, e.g. filaments `setEnabled`,
 until Phase 4).
 
-- [ ] Remove the forwarders + the now-dead sub-handle method declarations. The
+- [x] Remove the forwarders + the now-dead sub-handle method declarations. The
   `setLabelEnabled`/`setEnabled`/`setIntensity` (fade) methods stay for now.
-- [ ] `npm run typecheck` → resolves (no dangling `boringSetters` refs). `npm test`.
+- [x] `npm run typecheck` → resolves (no dangling `boringSetters` refs). `npm test`.
   Commit.
 
 ### Task 3.3 — delete `settingsTable.ts` + `SettingsTableKey` + their test
@@ -438,9 +438,9 @@ until Phase 4).
 **Interfaces:** none — confirm no remaining importers (`buildSettersFromTable`,
 `SETTINGS_TABLE`, `SettingsTableKey`).
 
-- [ ] Search for residual importers; delete the three files; remove the
+- [x] Search for residual importers; delete the three files; remove the
   `SettingsTableKey` import already cut in 3.2.
-- [ ] `npm run typecheck` + `npm test` → green. Commit.
+- [x] `npm run typecheck` + `npm test` → green. Commit.
 
 ---
 
@@ -485,11 +485,11 @@ renderer edge in Task 4.2. The store holds raw Intent (mirrors `setFlow` /
   (`../../utils/galaxyCatalogIdOf`) as `setSourceVisible.ts:52` does, or dispatch
   whatever id the panel already has.
 
-- [ ] Replace each call site with the dispatch above. Update didactic comments
+- [x] Replace each call site with the dispatch above. Update didactic comments
   (the `setEnabled`/`setVisible`/`setMode` ones currently describe the handle's
   fade/bake — replace with "dispatches the write; `watchFades`/`watchBiasBake`/
   `watchFlowReseed` reconcile downstream").
-- [ ] `npm test` + `npm run typecheck` → green (handles still wired but now
+- [x] `npm test` + `npm run typecheck` → green (handles still wired but now
   unreachable from App; sagas drive the consequences). Commit.
 
 ### Task 4.2 — move volume-param clamps to `encodeVolumePrepass`
@@ -523,11 +523,11 @@ handles, where `setVolumeFieldPalette.ts` / `setVolumeFieldEnabled.ts` never
 clamped). Verify `hasActiveFields` and `encodeVolumes` both consume the clamped
 `settingsOf` (they take it as the same arg at `encodeVolumePrepass.ts:76,79`).
 
-- [ ] Failing test: feed an `EngineState` whose `volumes.items[id]` carries
+- [x] Failing test: feed an `EngineState` whose `volumes.items[id]` carries
   out-of-range raw values; assert `settingsOf(id)` returns the clamped values
   (one assertion per clamped field) while the store value stays raw.
-- [ ] Implement the spread; confirm pass. `npm test -- encodeVolumePrepass`.
-- [ ] `npm run typecheck` → green. Commit.
+- [x] Implement the spread; confirm pass. `npm test -- encodeVolumePrepass`.
+- [x] `npm run typecheck` → green. Commit.
 
 ### Task 4.3 — delete the dissolved `handles/*.ts` + forwarders + repoint tests
 
@@ -561,10 +561,10 @@ untested).
 **Interfaces:** After this task, no `handles/set*` (dissolved set) is imported
 anywhere. Confirm via search.
 
-- [ ] Repoint the three fade/flow tests' assertions onto the saga +
+- [x] Repoint the three fade/flow tests' assertions onto the saga +
   `makeReconcileEffects` (gap-fill, don't drop coverage). Delete the dissolved
   `handles/*.ts`. Remove the engine.ts imports + forwarders.
-- [ ] `npm run typecheck` (catches any dangling import) + `npm test` → green.
+- [x] `npm run typecheck` (catches any dangling import) + `npm test` → green.
   Commit.
 
 ---
@@ -612,9 +612,9 @@ non-dissolved method after trimming. Likely fully-removed sub-handles: `bias`,
 `thumbnails` — but **verify each `.d.ts` is actually empty** before removing it;
 trim methods first, remove the sub-handle only if nothing remains.
 
-- [ ] Decide per sub-handle: trimmed vs fully removed. Remove the matching
+- [x] Decide per sub-handle: trimmed vs fully removed. Remove the matching
   forwarders + `import` lines from `engine.ts`'s handle literal.
-- [ ] `npm run typecheck` (App + tests must not reference dropped methods — Phase
+- [x] `npm run typecheck` (App + tests must not reference dropped methods — Phase
   3/4 already removed them). `npm test`. Commit.
 
 ### Task 5.2 — freeze the surviving surface + reconcile guard tests
@@ -626,13 +626,13 @@ count to the survivors).
 **Interfaces:** The shape test becomes the freeze for the trimmed surface. Update
 `expectedSubHandles` to exactly the survivors and the `toHaveLength` to match.
 
-- [ ] Update the shape test's sub-handle list + length to the surviving set
+- [x] Update the shape test's sub-handle list + length to the surviving set
   (whatever 5.1 left). Confirm it's a compile-time `keyof EngineHandle` check so a
   stray method addition fails loudly.
-- [ ] Confirm the `SettingsTableKey` freeze test is already deleted (Task 3.3) and
+- [x] Confirm the `SettingsTableKey` freeze test is already deleted (Task 3.3) and
   the dissolved-handle tests are repointed/deleted (Task 4.3) — no lingering
   guard references a deleted symbol.
-- [ ] `npm test` + `npm run typecheck` → green. Commit.
+- [x] `npm test` + `npm run typecheck` → green. Commit.
 
 ---
 
@@ -642,23 +642,23 @@ count to the survivors).
 
 **Files:** none (review pass; capture findings inline if any).
 
-- [ ] Run the `entanglement-radar` skill over the full branch diff.
-- [ ] **Specifically verify** (`simplicity.md` #7): the `FADE_ROW` / wake dispatch
+- [x] Run the `entanglement-radar` skill over the full branch diff.
+- [x] **Specifically verify** (`simplicity.md` #7): the `FADE_ROW` / wake dispatch
   is a flat data-table lookup (`a.type in FADE_ROW`, `FADE_ROW[action.type]`), not
   a per-action `if`/`switch` chain. If a chain crept in, un-braid to the table.
-- [ ] Verify the wake is centralized in `watchWake` (one matcher over the settings
+- [x] Verify the wake is centralized in `watchWake` (one matcher over the settings
   route prefix), not re-scattered into per-saga `requestRender` calls.
-- [ ] Address any finding (or record as a follow-up if out of scope), re-run
+- [x] Address any finding (or record as a follow-up if out of scope), re-run
   affected tests, commit.
 
 ### Task 6.2 — final verification + handoff
 
-- [ ] `npm run typecheck` (both src + tools tsconfigs) → clean.
-- [ ] `npm test` (full suite) → green; count is ≥ the 590+ baseline minus the
+- [x] `npm run typecheck` (both src + tools tsconfigs) → clean.
+- [x] `npm test` (full suite) → green; count is ≥ the 590+ baseline minus the
   deletion-guard tests legitimately removed (settingsTable, dissolved-handle) plus
   the new saga/effects tests. Confirm no net coverage loss for the moved behaviour.
-- [ ] Grep the tree for residual references to deleted symbols
+- [x] Grep the tree for residual references to deleted symbols
   (`buildSettersFromTable`, `SETTINGS_TABLE`, `SettingsTableKey`, the dissolved
   `handles/set*` names) — zero hits.
-- [ ] Run the `superpowers:finishing-a-development-branch` handoff: present
+- [x] Run the `superpowers:finishing-a-development-branch` handoff: present
   merge/PR/cleanup options to the user (branch + PR, squash-merge).
