@@ -40,6 +40,8 @@ import {
   setStructureLabelEnabled,
   setVolumesEnabled,
 } from '../../../src/state/settings/settingsSlice';
+import { beginDrag, setAutoRotate } from '../../../src/state/camera/cameraSlice';
+import { setTier } from '../../../src/state/tier/tierSlice';
 import type { VisibilityLayerKey } from '../../../src/@types/animation/VisibilityLayerKey';
 import type { BiasMode } from '../../../src/@types/data/galaxyCatalog/BiasMode';
 import type { ReconcileEffects } from '../../../src/store/effects/ReconcileEffects';
@@ -196,6 +198,29 @@ describe('reconcileSagas', () => {
 
     expect(reconcile.requestRender).toHaveBeenCalledTimes(1);
     expect(reconcile.bakeBias).toHaveBeenCalledWith(2);
+  });
+
+  // ── WAKE_ROUTES — camera writes wake the loop; unrelated routes do not ───────
+  // watchWake matches the WAKE_ROUTES set (settings + camera). A camera-slice
+  // write must poke the passive scheduler; a write to a non-wake route (tier)
+  // must not.
+
+  it('a camera slice write (beginDrag) wakes the loop', () => {
+    store.dispatch(beginDrag());
+
+    expect(reconcile.requestRender).toHaveBeenCalledTimes(1);
+  });
+
+  it('a camera slice write (setAutoRotate) wakes the loop', () => {
+    store.dispatch(setAutoRotate({ active: true, rate: 0.001 }));
+
+    expect(reconcile.requestRender).toHaveBeenCalledTimes(1);
+  });
+
+  it('a tier write does NOT wake the loop (tier is not a WAKE_ROUTE)', () => {
+    store.dispatch(setTier('large'));
+
+    expect(reconcile.requestRender).not.toHaveBeenCalled();
   });
 
   // ── FADE_ROW mapping table — freezes action→visibility-layer registry ────────
