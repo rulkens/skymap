@@ -20,6 +20,23 @@ import reducer, {
 } from '../../../src/state/camera/cameraSlice';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
+import type { EngineSubsystemHandles } from '../../../src/@types/engine/handles/EngineSubsystemHandles';
+
+// ── Compile-time freeze guards ──────────────────────────────────────────────
+// These never run; they fail at `tsc` time if the camera surface regrows a
+// field the cutover deleted. The `@ts-expect-error` lines are load-bearing:
+// re-adding the property makes the suppressed access legal, turning the
+// directive into an "unused @ts-expect-error" compile error.
+
+// The animation clock is an engine Resource, never a descriptor field — so a
+// wall-clock `startMs` must not be assignable onto CameraTweenDescriptor.
+// @ts-expect-error — CameraTweenDescriptor is clock-free; `startMs` does not exist.
+type _DescriptorIsClockFree = CameraTweenDescriptor['startMs'];
+
+// The tween manager was dissolved; the engine subsystem bag no longer owns a
+// `tweens` handle (the tween lives in the store, driven per-frame).
+// @ts-expect-error — `tweens` was removed from the subsystem bag.
+type _SubsystemsHaveNoTweens = EngineSubsystemHandles['tweens'];
 
 // Stable initial state — each test gets a fresh copy via the reducer with an
 // unknown action (same pattern as the settings tests).
@@ -106,5 +123,24 @@ describe('cameraSlice — initial state is serialisable', () => {
       expect(value).not.toBeInstanceOf(Set);
       expect(value).not.toBeInstanceOf(Map);
     }
+  });
+});
+
+describe('cameraSlice — frozen surface', () => {
+  it('the slice state is exactly { base, tween, autoRotate, dragging }', () => {
+    // Pins the camera Intent surface: the cutover folded the whole mutable
+    // OrbitCamera into these four fields. A new key here means new Intent that
+    // should have been deliberated, not slipped in.
+    expect(Object.keys(base()).sort()).toEqual(['autoRotate', 'base', 'dragging', 'tween']);
+  });
+
+  it('the tween descriptor is exactly { from, to, durationMs, easing } — no wall-clock', () => {
+    expect(Object.keys(tween).sort()).toEqual(['durationMs', 'easing', 'from', 'to']);
+    // Belt-and-suspenders for the clock-free type guard above: no serialized
+    // descriptor carries a `startMs` / `position` / `fovYRad` wall-clock field.
+    const json = JSON.stringify(tween);
+    expect(json).not.toContain('"startMs"');
+    expect(json).not.toContain('"position"');
+    expect(json).not.toContain('"fovYRad"');
   });
 });

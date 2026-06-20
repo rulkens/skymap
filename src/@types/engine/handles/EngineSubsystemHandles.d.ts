@@ -7,7 +7,7 @@
  *
  * ### Why some fields are null at construction
  *
- *   - Eager (no GPU dep): `tweens`, `scheduler` — constructed up-front
+ *   - Eager (no GPU dep): `scheduler`, `fades` — constructed up-front
  *     so their callbacks can be captured before the GPU IIFE finishes.
  *   - Lazy (inside the GPU init IIFE): `galaxyAtlas`, `proceduralDisks`,
  *     `texturedDisks`, `clickResolver`, `inputBindings`.

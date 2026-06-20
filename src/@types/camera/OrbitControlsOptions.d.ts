@@ -39,15 +39,10 @@ export type OrbitControlsOptions = {
   onDoubleClick?: (xCss: number, yCss: number) => void;
   /**
    * Called every time the camera state has been mutated by this module (any
-   * pointer drag, pan, or wheel zoom). The engine routes this into its render
-   * scheduler so a single user gesture wakes the render loop for one frame.
-   *
-   * This replaces `onCameraChange` as the canonical wake callback. The engine
-   * wires `onChange` to `scheduler.requestRender()` and passes `onGestureStart`
-   * / `onGestureEnd` for Redux bookkeeping around gesture boundaries.
-   *
-   * Optional for backwards compatibility — callers that have not migrated from
-   * `onCameraChange` yet still function; Phase 5 removes `onCameraChange`.
+   * pointer drag, pan, or wheel zoom). The engine wires this to
+   * `scheduler.requestRender()` so a single user gesture wakes the render loop
+   * for one frame; `onGestureStart` / `onGestureEnd` carry the Redux
+   * bookkeeping around gesture boundaries.
    *
    * Fired AFTER `updatePosition(cam)` so the camera state is fully settled
    * before the engine reads it for the next frame.
@@ -79,13 +74,4 @@ export type OrbitControlsOptions = {
    * snap-back to the pre-gesture base.
    */
   onGestureEnd?: () => void;
-  /**
-   * Called every time the camera state has been mutated by this module.
-   *
-   * @deprecated Use `onChange` instead. This field has no fire sites as of the
-   *   camera cutover and will be removed in Phase 5 when the App auto-rotate
-   *   toggle relocates to the camera slice. Kept here only to avoid a type
-   *   churn in the same commit; passing it has no effect.
-   */
-  onCameraChange?: () => void;
 };

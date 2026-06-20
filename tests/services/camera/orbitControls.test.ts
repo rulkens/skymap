@@ -35,8 +35,6 @@
  *     second finger promoting to pinch).
  *   - `onGestureEnd` fires exactly when ALL contacts are lifted.
  *   - `onChange` fires after any orbit, pan, pinch, or wheel change.
- *   - The deprecated `onCameraChange` is NOT called from any fire site
- *     (only `onChange` is).
  *
  * Vitest runs in `node` here (no jsdom), so — matching
  * `inputBindings.test.ts` — we hand-roll EventTarget recorders for the
@@ -372,41 +370,10 @@ describe('attachOrbitControls — gesture hooks (Redux wiring)', () => {
       height: 1000,
     });
 
-    attachOrbitControls(
-      wheelCanvas as unknown as HTMLCanvasElement,
-      cam,
-      { onChange },
-    );
+    attachOrbitControls(wheelCanvas as unknown as HTMLCanvasElement, cam, { onChange });
 
     rec.fire('wheel', { deltaY: 100, preventDefault: vi.fn() });
 
     expect(onChange).toHaveBeenCalled();
-  });
-
-  it('does not call onCameraChange (deprecated — no fire sites after cutover)', () => {
-    // `onCameraChange` is kept on OrbitControlsOptions for backward compat but
-    // must not be called from any fire site. Only `onChange` fires.
-    const { canvas, rec } = makeCanvas();
-    const onCameraChange = vi.fn<() => void>();
-    const onChange = vi.fn<() => void>();
-
-    attachOrbitControls(canvas as unknown as HTMLCanvasElement, makeCamera(), {
-      onCameraChange,
-      onChange,
-    });
-
-    rec.fire('pointerdown', {
-      pointerId: 1,
-      pointerType: 'touch',
-      button: 0,
-      clientX: 100,
-      clientY: 100,
-    });
-    win.fire('pointermove', { pointerId: 1, clientX: 150, clientY: 100 });
-    win.fire('pointerup', { pointerId: 1, clientX: 150, clientY: 100 });
-
-    // onChange must fire at least once; onCameraChange must never fire.
-    expect(onChange).toHaveBeenCalled();
-    expect(onCameraChange).not.toHaveBeenCalled();
   });
 });
