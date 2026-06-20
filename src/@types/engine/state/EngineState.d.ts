@@ -50,7 +50,7 @@
  * would allocate two intermediate objects per slider drag — fine
  * for a React form, wasteful inside a 60 fps render loop.  Mutation
  * in place keeps allocations off the hot path and matches how the
- * subsystem facades (TweenManager, ThumbnailSubsystem) already manage
+ * subsystem facades (e.g. the impostor planners) already manage
  * their own internal state.
  *
  * ### What this type is NOT

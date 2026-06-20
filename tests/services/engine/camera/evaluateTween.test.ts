@@ -1,10 +1,9 @@
 /**
  * evaluateTween — unit tests for the pure tween pose evaluator.
  *
- * These tests verify that `evaluateTween` reproduces the same easing,
- * saturation, and shortest-arc yaw behavior as the legacy
- * `advanceCameraTween`, while staying strictly pure (no mutation of the
- * input descriptor or its nested `CameraPose` objects).
+ * These tests verify `evaluateTween`'s easing, saturation, and shortest-arc
+ * yaw behavior, and that it stays strictly pure (no mutation of the input
+ * descriptor or its nested `CameraPose` objects).
  */
 
 import { describe, it, expect } from 'vitest';

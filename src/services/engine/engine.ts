@@ -35,7 +35,6 @@
  *   - `scaleBar.ts`            — pure scale-bar tick selection + label formatting (consumed by React)
  *
  *   Subsystems (closure-returning factories with internal state):
- *   - `tweenManager.ts`        — at-most-one in-flight CameraTween facade
  *   - `clickHandler.ts`        — pick → globalIdx → GalaxyInfo resolver
  *   - `inputBindings.ts`       — pointer/keyboard/resize listener bag
  *   - `thumbnailSubsystem.ts`  — atlas + queue + per-frame thumbnail draw
@@ -75,7 +74,6 @@ import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineState } from '../../@types/engine/state/EngineState';
 
-import { createTweenManager } from './camera/tweenManager';
 import { createCameraClock } from './camera/cameraClock';
 import type { CameraRuntime } from '../../@types/engine/state/CameraRuntime';
 import { createEngineData } from './data/createEngineData';
@@ -153,8 +151,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //   - `picking`    → hover / click / drag mutables.
   //   - `gpu`        → renderers / HDR target / tone-map pass — null until
   //                    `initGpu` finishes.
-  //   - `subsystems` → long-lived helpers; `tweens` constructs up-front,
-  //                    the rest land later.
+  //   - `subsystems` → long-lived helpers; some construct up-front, the rest
+  //                    land later.
   //   - `cam` / `initialCamSnapshot` → orbit camera + framing snapshot,
   //                    null until the first cloud loads.
   //
@@ -310,15 +308,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       texturedDisks: null,
       hiResFamous: null,
       hiResFamousTexture: null,
-      // ── Tween manager ──────────────────────────────────────────
-      // At most one camera tween at a time.  Sites that mutate it:
-      //   - public handle's focusOnHome (start a tween — auto-replaces
-      //     any running one),
-      //   - pointerdown handler         (cancel on user grab),
-      //   - per-frame frame() loop      (advance + auto-clear).
-      tweens: createTweenManager({
-        requestRender: () => state.subsystems.scheduler.requestRender(),
-      }),
 
       // ── Bias-correction subsystem ─────────────────────────────────
       // Owns Malmquist-bias mode flags, cached per-source ratios/weights,
@@ -617,7 +606,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     detachControlsRef.current = null;
 
     // 3. Walk every other subsystem (order-independent past here).
-    state.subsystems.tweens.destroy();
     state.subsystems.biasCorrection.destroy();
     state.subsystems.labelDirector.destroy();
     state.subsystems.structureFocus.destroy();

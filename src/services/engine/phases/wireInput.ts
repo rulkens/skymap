@@ -196,15 +196,11 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       state.picking.latestMouseCss = null;
       deps.cb.store.dispatch(updateSelectionHover(null));
     },
-    // Manual orbit controls always win — cancel any running focus
-    // tween the moment the user grabs the mouse.  Otherwise the
-    // tween's updatePosition would fight the orbit-controls'
-    // updatePosition for the same camera each frame, producing a
-    // juddery jump.  Also clear hover so the card immediately
-    // reflects "nothing hovered" instead of lagging until the
-    // drag ends.
+    // Clear hover on pointerdown so the card immediately reflects "nothing
+    // hovered" instead of lagging until the drag ends. Cancelling an in-flight
+    // tween on a grab is owned by `onGestureStart` (it dispatches
+    // `cancelCameraTween()` when a drag actually begins).
     onPointerDown: () => {
-      state.subsystems.tweens.cancel();
       state.picking.pointerDown = true;
       deps.cb.store.dispatch(updateSelectionHover(null));
     },
@@ -292,8 +288,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // and cancel any in-flight tween. Seeding from `lastPose.current` makes
     // both at-rest grabs (lastPose == base) and mid-tween grabs jump-free —
     // the drag register continues from exactly where the animation left the
-    // camera. cancelCameraTween here + tweens.cancel() in onPointerDown are a
-    // harmless dual-write bridge; Phase 5 removes tweenManager entirely.
+    // camera. `cancelCameraTween()` is the single cancel-on-grab path: a manual
+    // orbit always wins over a focus tween.
     onGestureStart: () => {
       if (state.cam) seedCameraFromBase(state.cam, state.cameraRuntime.lastPose.current);
       store.dispatch(beginDrag());

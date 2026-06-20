@@ -117,7 +117,6 @@ function makeState(): EngineState {
       filamentRenderer: null,
     },
     subsystems: {
-      tweens: { advance: vi.fn(), isActive: () => false },
       scheduler: { requestRender: vi.fn() },
       // deriveSourceMasks reads opacityOf({kind:'galaxyCatalog', id}) for every
       // galaxy catalog to compute the fade-out draw tail; 0 everywhere (no fade in

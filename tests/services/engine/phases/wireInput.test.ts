@@ -136,7 +136,6 @@ function makeState(): EngineState {
     subsystems: {
       scheduler: { requestRender: vi.fn() },
       selection: { setHovered: vi.fn(), setSelected: vi.fn() },
-      tweens: { cancel: vi.fn() },
       clickResolver: null,
       inputBindings: null,
     } as never,

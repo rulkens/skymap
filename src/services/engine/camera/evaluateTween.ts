@@ -1,30 +1,21 @@
 /**
- * evaluateTween — pure successor to `advanceCameraTween`'s tween math.
+ * evaluateTween — pure tween math: a `CameraTweenDescriptor` plus elapsed time
+ * in, a fresh `CameraPose` out.
  *
- * The legacy `advanceCameraTween` in `services/camera/cameraTween.ts` takes an
- * `OrbitCamera` and a wall-clock `nowMs`, mutates the camera in place, and
- * calls `updatePosition` to recompute the derived world-space position.  That
- * design is convenient for the old engine loop but impossible to test in
- * isolation and impossible to compose without side-effects.
- *
- * This function breaks both couplings:
+ * Three properties make it composable and trivially testable:
  *
  *   - **No mutation.** Given a `CameraTweenDescriptor` and the elapsed time
  *     since the tween started, it returns a fresh `CameraPose`.  Nothing in
  *     `d`, `d.from`, or `d.to` is touched.
  *
- *   - **No `updatePosition` call.** `CameraPose` carries only the orbit
- *     parameters (target, yaw, pitch, distance) — the world-space `position`
- *     is not part of the pose and is not needed to evaluate the tween.  The
- *     frame loop that resolves the pose into a matrix is responsible for that
- *     step.
+ *   - **No world-space `position`.** `CameraPose` carries only the orbit
+ *     parameters (target, yaw, pitch, distance); the world-space position is
+ *     derived later by the frame loop that resolves the pose into a matrix, so
+ *     it is not needed to evaluate the tween.
  *
  *   - **Elapsed-ms clock.** The caller owns the wall clock and supplies only
  *     `elapsedMs = now - tweenStartMs`.  This makes the function trivially
  *     testable with deterministic numbers.
- *
- * The easing, saturation, and channel logic are identical to the original
- * `advanceCameraTween`.
  */
 
 import type { CameraTweenDescriptor } from '../../../@types/camera/CameraTweenDescriptor';

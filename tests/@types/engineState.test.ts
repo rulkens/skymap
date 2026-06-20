@@ -40,7 +40,6 @@ import {
   DEFAULT_VOLUMES_ENABLED,
   DEFAULT_FLOW,
 } from '../../src/data/defaults';
-import { createTweenManager } from '../../src/services/engine/camera/tweenManager';
 import { createCameraClock } from '../../src/services/engine/camera/cameraClock';
 import { createRenderScheduler } from '../../src/services/engine/subsystems/renderScheduler';
 import { createBiasCorrectionSubsystem } from '../../src/services/engine/subsystems/biasCorrectionSubsystem';
@@ -171,7 +170,6 @@ describe('EngineState type', () => {
         hiResFamous: null,
         hiResFamousTexture: null,
         loadProgress: null,
-        tweens: createTweenManager({ requestRender: () => {} }),
         biasCorrection: createBiasCorrectionSubsystem({
           getMode: () => stateRef.current!.settings.bias.mode,
           getLoadedClouds: () => stateRef.current!.data.galaxies.catalogs,
@@ -217,7 +215,6 @@ describe('EngineState type', () => {
     // Hover/select/focus live in the Redux `selection` slice, not the picking bag.
     expect(state.selection.hover).toBeNull();
     expect(state.gpu.renderer).toBeNull();
-    expect(state.subsystems.tweens.isActive()).toBe(false);
   });
 
   it('builds the settings + bias sub-bags directly from data/defaults.ts', () => {
@@ -368,7 +365,6 @@ describe('EngineState type', () => {
         hiResFamous: null,
         hiResFamousTexture: null,
         loadProgress: null,
-        tweens: createTweenManager({ requestRender: () => {} }),
         biasCorrection: createBiasCorrectionSubsystem({
           getMode: () => stateRef.current!.settings.bias.mode,
           getLoadedClouds: () => stateRef.current!.data.galaxies.catalogs,
