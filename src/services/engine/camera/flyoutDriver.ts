@@ -31,21 +31,22 @@
  * pitch, fov are left untouched — only distance grows (plus an optional
  * whisper of yaw drift so the wide end isn't dead-still).
  *
- * Because it is the highest-priority driver (80, the slot the real tour
- * will eventually own), while it runs it outranks the tween and
- * auto-rotate and owns the camera outright. While armed-or-running its
- * `isActive` returns true, which both wins the per-frame arbitration AND
- * keeps the render loop awake (the frame tail's still-animating predicate
- * ORs the drivers' `isActive`). On `keydown` it pokes `requestRender` so a
- * sleeping loop wakes to start the motion.
+ * Because it is the highest-priority driver (90, above the store movers —
+ * orbitDrag 80, tween 60, autoRotate 20 — the slot the real tour will
+ * eventually own), while it runs it outranks them and owns the camera
+ * outright. While armed-or-running its `isActive` returns true, which wins
+ * the per-frame arbitration. The render loop's keep-alive predicate
+ * (`shouldKeepTicking`) reads camera liveness off the STORE, so it can't see
+ * a spike driver — the driver therefore pokes `requestRender` every frame
+ * (and on `keydown`) to keep itself animating.
  *
  * Attached ONLY when `?flyout` is present (see startLoop wiring), so it can
  * never interfere with a normal session.
  */
 
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
-import { updatePosition, clampDistance } from '../../camera/orbitCamera';
+import type { CameraPose } from '../../../@types/camera/CameraPose';
+import { clampDistance } from '../../camera/orbitCamera';
 
 /**
  * Where the pull-back ends, in Mpc. The horizon shell fades in around
@@ -101,9 +102,14 @@ export function createFlyoutDriver(
 
   return {
     id: 'flyout-spike',
-    priority: 80,
+    // Above the store movers (orbitDrag 80 …) so the take owns the camera.
+    priority: 90,
     isActive: () => phase !== 'idle',
-    apply: (cam: OrbitCamera, nowMs: number) => {
+    pose: (_s, cam): CameraPose => {
+      // Self-clocked: the driver-table elapsed clock only serves tween /
+      // autoRotate, so this spike reads the wall clock itself.
+      const nowMs = performance.now();
+
       // First frame of a take: latch the start from the LIVE camera so the
       // dolly begins from whatever the user framed, and stamp the clock.
       if (phase === 'armed') {
@@ -116,13 +122,23 @@ export function createFlyoutDriver(
       const t = clamp01((nowMs - startMs) / durationMs);
       const e = easeInOutCubic(t);
 
-      // The log-dolly: uniform decades/sec, the whole point of the spike.
-      cam.distance = clampDistance(Math.exp(logD0 + (logD1 - logD0) * e));
-      cam.yaw = yaw0 + TOTAL_YAW_DRIFT * e;
-      updatePosition(cam);
+      // Author a fresh pose: target + pitch carry through from the live camera
+      // (flyout only grows distance + drifts yaw); the log-dolly distance is
+      // uniform decades/sec, the whole point of the spike.
+      const out: CameraPose = {
+        target: [cam.target[0], cam.target[1], cam.target[2]],
+        yaw: yaw0 + TOTAL_YAW_DRIFT * e,
+        pitch: cam.pitch,
+        distance: clampDistance(Math.exp(logD0 + (logD1 - logD0) * e)),
+      };
 
       // Land and release control back to the normal drivers.
       if (t >= 1) phase = 'idle';
+
+      // Self-sustain the loop (shouldKeepTicking can't see a spike driver).
+      requestRender();
+
+      return out;
     },
   };
 }

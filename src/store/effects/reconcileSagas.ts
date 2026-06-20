@@ -7,10 +7,10 @@
  * a branch chain). Adding a new fade-triggering action is one line here;
  * watchFades never changes.
  *
- * watchWake centralises the render-wake 'by construction': one
- * startsWith(settingsRoute+'/') matcher over the entire write stream means
- * there is no per-action 'did we remember requestRender?' audit to maintain.
- * New actions in the slice wake the renderer automatically.
+ * watchWake centralises the render-wake 'by construction': WAKE_ROUTES
+ * membership (settings and camera) covers every action that affects the drawn
+ * scene. There is no per-action 'did we remember requestRender?' audit to
+ * maintain. New actions in any wake-route slice wake the renderer automatically.
  *
  * watchFlowReseed and watchBiasBake are narrow: they fire only on their
  * specific action type and delegate immediately to the effect closure.
@@ -26,7 +26,7 @@
 import { takeEvery, getContext } from 'typed-redux-saga';
 import type { Action } from '@reduxjs/toolkit';
 
-import { settingsRoute } from '../constants';
+import { settingsRoute, cameraRoute } from '../constants';
 import {
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
@@ -67,22 +67,25 @@ export const FADE_ROW: Partial<Record<string, VisibilityLayerKey>> = {
   [setFlow.type]: 'flow',
 };
 
-// Predicate: any action whose type lives under the settings-route namespace.
-// The prefix check covers every slice action without enumeration — new actions
-// wake the renderer automatically.
-const isSettingsWrite = (a: Action): boolean =>
-  typeof a.type === 'string' && a.type.startsWith(`${settingsRoute}/`);
+// WAKE_ROUTES — the registry of store routes whose writes affect the drawn
+// scene and must poke the passive render-on-demand scheduler. Settings and
+// camera today; selection joins when it lands. Membership by route means new
+// actions within any listed slice wake the renderer by construction, with no
+// per-action `did we remember requestRender?` audit.
+const WAKE_ROUTES = new Set<string>([settingsRoute, cameraRoute]);
+const isWakeWrite = (a: Action): boolean =>
+  typeof a.type === 'string' && WAKE_ROUTES.has(a.type.split('/')[0]!);
 
 /**
- * watchWake — request a render frame on every settings write.
+ * watchWake — request a render frame on every write to a WAKE_ROUTE.
  *
  * The render-on-demand scheduler is passive; something must poke it after
- * state changes that affect the drawn scene. Rather than each setter
- * remembering to call requestRender, a single prefix-matcher covers the
- * entire settings namespace by construction.
+ * state changes that affect the drawn scene. A single route-membership check
+ * covers all writes to settings and camera by construction, without per-action
+ * `did we remember requestRender?` audits.
  */
 export function* watchWake() {
-  yield* takeEvery(isSettingsWrite, function* () {
+  yield* takeEvery(isWakeWrite, function* () {
     const fx = yield* getContext<ReconcileEffects>('reconcile');
     fx.requestRender();
   });

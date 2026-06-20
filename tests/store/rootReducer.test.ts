@@ -5,28 +5,31 @@ import {
   settingsRoute,
   uiRoute,
   tierRoute,
+  cameraRoute,
   selectionRoute,
   selectionRowsRoute,
 } from '../../src/store/constants';
 
 describe('rootReducer', () => {
-  it('mounts the settings, ui, tier, selection, and selectionRows routes', () => {
-    // The combine should mount exactly the five slices the store holds —
-    // `settings`, `ui`, `tier`, `selection`, and `selectionRows`
-    // — in that order. This guards against an accidental extra route sneaking in
-    // (or one going missing); each slice's own initialState shape is asserted in
-    // its slice test, not re-checked here.
+  it('mounts the settings, ui, tier, camera, selection, and selectionRows routes', () => {
+    // The combine should mount exactly the six slices the store holds —
+    // `settings`, `ui`, `tier`, `camera`, `selection`, and `selectionRows` — in
+    // that order. This guards against an accidental extra route sneaking in (or
+    // one going missing); each slice's own initialState shape is asserted in its
+    // slice test, not re-checked here.
     const state = rootReducer(undefined, { type: '@@INIT' });
     expect(Object.keys(state)).toEqual([
       settingsRoute,
       uiRoute,
       tierRoute,
+      cameraRoute,
       selectionRoute,
       selectionRowsRoute,
     ]);
     expect(state.settings).toBeDefined();
     expect(state.ui).toBeDefined();
     expect(state.tier).toBeDefined();
+    expect(state.camera).toBeDefined();
     expect(state.selection).toBeDefined();
     expect(state.selectionRows).toBeDefined();
   });

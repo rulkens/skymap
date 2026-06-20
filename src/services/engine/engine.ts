@@ -35,7 +35,6 @@
  *   - `scaleBar.ts`            — pure scale-bar tick selection + label formatting (consumed by React)
  *
  *   Subsystems (closure-returning factories with internal state):
- *   - `tweenManager.ts`        — at-most-one in-flight CameraTween facade
  *   - `clickHandler.ts`        — pick → globalIdx → GalaxyInfo resolver
  *   - `inputBindings.ts`       — pointer/keyboard/resize listener bag
  *   - `thumbnailSubsystem.ts`  — atlas + queue + per-frame thumbnail draw
@@ -75,7 +74,8 @@ import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineState } from '../../@types/engine/state/EngineState';
 
-import { createTweenManager } from './camera/tweenManager';
+import { createCameraClock } from './camera/cameraClock';
+import type { CameraRuntime } from '../../@types/engine/state/CameraRuntime';
 import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
@@ -87,7 +87,6 @@ import { produceStructureLabels } from './presentation/produceStructureLabels';
 import { produceFamousLabels } from './presentation/produceFamousLabels';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { HDR_PASSES, UI_PASSES } from './frame/passes';
-import { buildGalaxyInfo } from './helpers/buildGalaxyInfo';
 import { logCameraState } from './helpers/logCameraState';
 import { updateSelectionFocus } from '../../state/selection/selectionSlice';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
@@ -105,13 +104,6 @@ import { listVolumeFields } from './handles/listVolumeFields';
 import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
 import { makeRunTierTransition } from './wiring/makeRunTierTransition';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
-import { makeRunFocusTween } from './camera/makeRunFocusTween';
-import { tweenToGalaxy } from './camera/tweenToGalaxy';
-import { tweenToStructure } from './camera/tweenToStructure';
-import {
-  MILKY_WAY_CENTER_WORLD,
-  MILKY_WAY_VIEW_DISTANCE_MPC,
-} from '../../data/milkyWay/galacticCenter';
 import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
 
 /**
@@ -151,8 +143,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //   - `picking`    → hover / click / drag mutables.
   //   - `gpu`        → renderers / HDR target / tone-map pass — null until
   //                    `initGpu` finishes.
-  //   - `subsystems` → long-lived helpers; `tweens` constructs up-front,
-  //                    the rest land later.
+  //   - `subsystems` → long-lived helpers; some construct up-front, the rest
+  //                    land later.
   //   - `cam` / `initialCamSnapshot` → orbit camera + framing snapshot,
   //                    null until the first cloud loads.
   //
@@ -181,6 +173,28 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     current: () => {
       /* stub until startLoop assigns the real body */
     },
+  };
+
+  // ── Live camera Resources (cameraRuntime) ────────────────────────────────
+  //
+  // The animation clock, live projection config, and the commit-on-edge
+  // bookkeeping refs. Constructed here alongside `frameRef` so wireInput
+  // (gesture seed + focus `from`), startLoop (RunFrameDeps), and runFrame
+  // (produce + commit-on-edge) all read from one source. Seeded with
+  // placeholders; wireInput's bootstrap seed fills real values once the
+  // initial OrbitCamera exists.
+  //
+  // `lastPose` seeds from the camera slice's initial `base` — the single home
+  // for the pre-bootstrap placeholder pose — so the first resting frame has a
+  // stable pose to read before wireInput's commitCameraPose fires. Copied so a
+  // later per-frame `lastPose.current = …` never aliases the store's state.
+  const cameraRuntime: CameraRuntime = {
+    clock: createCameraClock(),
+    projection: { fovYRad: 0, aspect: 1, near: 0.01, far: 50000 },
+    lastPose: {
+      current: { ...cb.store.getState().camera.base },
+    },
+    prevActiveId: { current: 'resting' },
   };
 
   // ── Settings — the injected Redux store ──────────────────────────
@@ -287,15 +301,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       texturedDisks: null,
       hiResFamous: null,
       hiResFamousTexture: null,
-      // ── Tween manager ──────────────────────────────────────────
-      // At most one camera tween at a time.  Sites that mutate it:
-      //   - public handle's focusOnHome (start a tween — auto-replaces
-      //     any running one),
-      //   - pointerdown handler         (cancel on user grab),
-      //   - per-frame frame() loop      (advance + auto-clear).
-      tweens: createTweenManager({
-        requestRender: () => state.subsystems.scheduler.requestRender(),
-      }),
 
       // ── Bias-correction subsystem ─────────────────────────────────
       // Owns Malmquist-bias mode flags, cached per-source ratios/weights,
@@ -350,6 +355,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
     cam: null,
     initialCamSnapshot: null,
+    // The live camera Resources — clock, projection, lastPose, prevActiveId.
+    // Seeded with placeholders; wireInput fills real values at bootstrap.
+    cameraRuntime,
     // ── Asset-loading slot bag ───────────────────────────────────────────
     //
     // Each slot is a race-checked fetch→commit pipeline (see
@@ -466,12 +474,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // subsystems the closures reach into are populated before any saga dispatches
   // them.
   //
-  // `resolveDeps` hands the reconciler saga and the focus-tween runner the LIVE
+  // `resolveDeps` hands the reconciler saga and the focus-tween saga the LIVE
   // engine resources (read lazily each call, because clouds + structures change
-  // as data loads and the GPU lands only after bootstrap). Named as a const so
-  // both `resolveDeps:` and `makeRunFocusTween(resolveDeps, ...)` share the same
-  // closure — no duplication, no drift. requestRender is NOT added here —
-  // selection sagas reach it through the existing `reconcile` bag.
+  // as data loads and the GPU lands only after bootstrap). requestRender is NOT
+  // added here — selection sagas reach it through the existing `reconcile` bag.
   const resolveDeps = (): ResolveDeps => ({
     catalogs: {
       get: (source: GalaxyCatalogSourceType) => state.data.galaxies.catalogs.get(source),
@@ -484,23 +490,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     runTierTransition: makeRunTierTransition(state, bootstrapDeps),
     reconcile: makeReconcileEffects(state),
     resolveDeps,
-    runFocusTween: makeRunFocusTween(resolveDeps, {
-      galaxyCatalog: (row) => tweenToGalaxy(state, buildGalaxyInfo(row)),
-      structure: (row) => tweenToStructure(state, row),
-      milkyWay: () => {
-        const cam = state.cam;
-        if (!cam) return;
-        tweenToCameraSnapshot(state, {
-          target: [MILKY_WAY_CENTER_WORLD[0], MILKY_WAY_CENTER_WORLD[1], MILKY_WAY_CENTER_WORLD[2]],
-          distance: MILKY_WAY_VIEW_DISTANCE_MPC,
-          yaw: cam.yaw,
-          pitch: cam.pitch,
-          fovYRad: cam.fovYRad,
-          near: cam.near,
-          far: cam.far,
-        });
-      },
-    }),
+    // The live camera Resources `watchFocusTween` reads to build a focus tween:
+    // the visible from-pose (so a re-focus hands off from what the user sees) and
+    // the lens FOV (for structure screen-fill framing). Null when `state.cam` is
+    // absent — pre-bootstrap or post-destroy — so the focus tween no-ops rather
+    // than tween from a stale pose.
+    cameraRuntime: () =>
+      state.cam
+        ? {
+            from: state.cameraRuntime.lastPose.current,
+            fovYRad: state.cameraRuntime.projection.fovYRad,
+          }
+        : null,
   });
 
   // The main async IIFE runs the bootstrap phases; all errors are caught
@@ -540,7 +541,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // saga and React readers see the same authoritative value.
     store.dispatch(updateSelectionFocus(null));
 
-    tweenToCameraSnapshot(state, state.initialCamSnapshot);
+    tweenToCameraSnapshot(state, state.initialCamSnapshot, store);
   }
 
   function logCameraStateFn(): void {
@@ -583,7 +584,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     detachControlsRef.current = null;
 
     // 3. Walk every other subsystem (order-independent past here).
-    state.subsystems.tweens.destroy();
     state.subsystems.biasCorrection.destroy();
     state.subsystems.labelDirector.destroy();
     state.subsystems.structureFocus.destroy();

@@ -26,7 +26,6 @@ import type { SelectionRowsState } from '../../src/@types/store/SelectionRowsSta
 
 import {
   DEFAULT_ABS_MAG_LIMIT,
-  DEFAULT_AUTO_ROTATE,
   DEFAULT_BIAS_MODE,
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
@@ -41,7 +40,7 @@ import {
   DEFAULT_VOLUMES_ENABLED,
   DEFAULT_FLOW,
 } from '../../src/data/defaults';
-import { createTweenManager } from '../../src/services/engine/camera/tweenManager';
+import { createCameraClock } from '../../src/services/engine/camera/cameraClock';
 import { createRenderScheduler } from '../../src/services/engine/subsystems/renderScheduler';
 import { createBiasCorrectionSubsystem } from '../../src/services/engine/subsystems/biasCorrectionSubsystem';
 import { createLabelDirectorSubsystem } from '../../src/services/engine/subsystems/labelDirectorSubsystem';
@@ -84,7 +83,6 @@ describe('EngineState type', () => {
         },
       },
       tonemap: { exposure: 3.0, curve: DEFAULT_TONE_MAP_CURVE },
-      camera: { autoRotate: false },
       bias: { mode: DEFAULT_BIAS_MODE, absMagLimit: -19 },
       thumbnails: { enabled: true },
       milkyWay: { enabled: true, labelEnabled: true },
@@ -172,7 +170,6 @@ describe('EngineState type', () => {
         hiResFamous: null,
         hiResFamousTexture: null,
         loadProgress: null,
-        tweens: createTweenManager({ requestRender: () => {} }),
         biasCorrection: createBiasCorrectionSubsystem({
           getMode: () => stateRef.current!.settings.bias.mode,
           getLoadedClouds: () => stateRef.current!.data.galaxies.catalogs,
@@ -187,6 +184,12 @@ describe('EngineState type', () => {
       },
       cam: null,
       initialCamSnapshot: null,
+      cameraRuntime: {
+        clock: createCameraClock(),
+        projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 50000 },
+        lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 } },
+        prevActiveId: { current: 'resting' },
+      },
       assetSlots: {
         points: new Map(),
         filaments: null,
@@ -212,7 +215,6 @@ describe('EngineState type', () => {
     // Hover/select/focus live in the Redux `selection` slice, not the picking bag.
     expect(state.selection.hover).toBeNull();
     expect(state.gpu.renderer).toBeNull();
-    expect(state.subsystems.tweens.isActive()).toBe(false);
   });
 
   it('builds the settings + bias sub-bags directly from data/defaults.ts', () => {
@@ -237,7 +239,6 @@ describe('EngineState type', () => {
         },
       },
       tonemap: { exposure: DEFAULT_EXPOSURE, curve: DEFAULT_TONE_MAP_CURVE },
-      camera: { autoRotate: DEFAULT_AUTO_ROTATE },
       bias: { mode: DEFAULT_BIAS_MODE, absMagLimit: DEFAULT_ABS_MAG_LIMIT },
       thumbnails: { enabled: DEFAULT_GALAXY_TEXTURES_ENABLED },
       milkyWay: {
@@ -296,7 +297,6 @@ describe('EngineState type', () => {
           },
         },
         tonemap: { exposure: 1, curve: DEFAULT_TONE_MAP_CURVE },
-        camera: { autoRotate: false },
         bias: { mode: DEFAULT_BIAS_MODE, absMagLimit: 0 },
         thumbnails: { enabled: true },
         milkyWay: { enabled: true, labelEnabled: true },
@@ -365,7 +365,6 @@ describe('EngineState type', () => {
         hiResFamous: null,
         hiResFamousTexture: null,
         loadProgress: null,
-        tweens: createTweenManager({ requestRender: () => {} }),
         biasCorrection: createBiasCorrectionSubsystem({
           getMode: () => stateRef.current!.settings.bias.mode,
           getLoadedClouds: () => stateRef.current!.data.galaxies.catalogs,
@@ -380,6 +379,12 @@ describe('EngineState type', () => {
       },
       cam: null,
       initialCamSnapshot: null,
+      cameraRuntime: {
+        clock: createCameraClock(),
+        projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 50000 },
+        lastPose: { current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 } },
+        prevActiveId: { current: 'resting' },
+      },
       assetSlots: {
         points: new Map(),
         filaments: null,

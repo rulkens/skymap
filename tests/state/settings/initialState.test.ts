@@ -23,7 +23,6 @@ describe('buildInitialSettings', () => {
     expect(Object.keys(s).sort()).toEqual(
       [
         'bias',
-        'camera',
         'debug',
         'filaments',
         'flow',

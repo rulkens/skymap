@@ -53,7 +53,8 @@
  * structure ref directly rather than synthesising a pointer event. The
  * selectionRows saga reconciles that ref into the focused StructureInfo the
  * fade reads. The dispatch also kicks the focus-tween saga, but this driver
- * sits at priority 80 and owns the camera, so that tween never applies.
+ * sits at priority 90 (above the store movers — orbitDrag 80, tween 60) and
+ * owns the camera, so that tween never applies.
  *
  * ### Scene setup the user still does
  *
@@ -67,13 +68,13 @@
  */
 
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { AppStore } from '../../../store/types';
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { Source } from '../../../data/sources';
-import { updatePosition, clampDistance } from '../../camera/orbitCamera';
+import { clampDistance } from '../../camera/orbitCamera';
 import { structureFocusDistance } from './structureFocusDistance';
 import { galaxyFocusDistance } from './galaxyFocusDistance';
 // Scene toggles are plain settings-slice actions (PR #352 dissolved the
@@ -149,7 +150,6 @@ const ROT_EASE_IN_SEC = 1.5;
 const START_TARGET: readonly [number, number, number] = [0, 0, 0];
 const START_YAW = 0.6;
 const START_PITCH = 0.26;
-const START_FOV_Y_RAD = 1.0472;
 
 /** Pitch bob — a slow sine on top of the framing pitch for a touch of life. */
 const PITCH_AMP_RAD = 0.05;
@@ -217,20 +217,34 @@ export function createWebShowcaseDriver(
 
   return {
     id: 'web-showcase-spike',
-    priority: 80,
+    // Above the store movers (orbitDrag 80, tween 60, autoRotate 20, resting 0)
+    // so a scripted take owns the camera outright — the focus-tween it kicks at
+    // the click never wins.
+    priority: 90,
     isActive: () => phase !== 'idle',
-    apply: (cam: OrbitCamera, nowMs: number) => {
-      // ── Beat 0: snap to the opening pose, latch the clock, resolve Virgo
-      // and its framing distances against the live FOV. ──
-      if (phase === 'armed') {
-        cam.target[0] = START_TARGET[0];
-        cam.target[1] = START_TARGET[1];
-        cam.target[2] = START_TARGET[2];
-        cam.distance = clampDistance(panMpc);
-        cam.yaw = START_YAW;
-        cam.pitch = START_PITCH;
-        cam.fovYRad = START_FOV_Y_RAD;
+    pose: (_s, cam): CameraPose => {
+      // Self-clocked: the driver table's elapsed clock (cameraDrivers
+      // `elapsedForWinner`) only serves the `tween` / `autoRotate` ids, so a
+      // spike driver reads the wall clock itself. Throwaway recording code —
+      // determinism isn't a concern. `cam` is the live register, read-only here:
+      // we author a fresh pose and never mutate it.
+      const nowMs = performance.now();
 
+      // Working pose. Distance/yaw/pitch/target are all recomputed below, so the
+      // origin-target seed is just the pan/pre-roll value the no-Virgo fallback
+      // keeps. fovYRad isn't a pose field — we read the live projection FOV off
+      // `cam` for the framing math.
+      const out: CameraPose = {
+        target: [START_TARGET[0], START_TARGET[1], START_TARGET[2]],
+        yaw: START_YAW,
+        pitch: START_PITCH,
+        distance: clampDistance(panMpc),
+      };
+
+      // ── Beat 0: latch the clock, resolve Virgo + its framing against the live
+      // FOV. The opening pose is just the t≈0 running computation below (pre-roll
+      // branch), so no explicit snap is needed. ──
+      if (phase === 'armed') {
         startMs = nowMs;
         lastMs = nowMs;
         yawAccum = 0;
@@ -281,13 +295,14 @@ export function createWebShowcaseDriver(
           ? ROT_RATE_RAD_S * smoothstep01(tAnim / ROT_EASE_IN_SEC)
           : ROT_RATE_RAD_S;
       yawAccum += omega * dt;
-      cam.yaw = START_YAW + yawAccum;
+      out.yaw = START_YAW + yawAccum;
 
       // ── Target: Milky Way → Virgo across the approach (held through the
       // dwell), then Virgo → M87 across the galaxy dive. The camera looks at
       // `target`, so lerping it is what centres each subject — no yaw
       // alignment needed. M87 sits at Virgo's core, so the dive is mostly a
-      // dolly: the target barely moves while the distance collapses. ──
+      // dolly: the target barely moves while the distance collapses. (No Virgo
+      // record → target stays at the origin the `out` seed set.) ──
       if (virgo !== null) {
         const vp = virgo.worldPos;
         if (tAnim < T_DWELL_END || m87Pos === null) {
@@ -298,16 +313,16 @@ export function createWebShowcaseDriver(
               : tAnim < T_APPROACH_END
                 ? easeInOutCubic((tAnim - T_PAN_END) / APPROACH_SEC)
                 : 1;
-          cam.target[0] = vp[0] * l;
-          cam.target[1] = vp[1] * l;
-          cam.target[2] = vp[2] * l;
+          out.target[0] = vp[0] * l;
+          out.target[1] = vp[1] * l;
+          out.target[2] = vp[2] * l;
         } else {
           // Virgo → M87 (eased), then held at M87.
           const l =
             tAnim < T_GALAXY_END ? easeInOutCubic((tAnim - T_DWELL_END) / GALAXY_SEC) : 1;
-          cam.target[0] = vp[0] + (m87Pos[0] - vp[0]) * l;
-          cam.target[1] = vp[1] + (m87Pos[1] - vp[1]) * l;
-          cam.target[2] = vp[2] + (m87Pos[2] - vp[2]) * l;
+          out.target[0] = vp[0] + (m87Pos[0] - vp[0]) * l;
+          out.target[1] = vp[1] + (m87Pos[1] - vp[1]) * l;
+          out.target[2] = vp[2] + (m87Pos[2] - vp[2]) * l;
         }
       }
 
@@ -332,14 +347,12 @@ export function createWebShowcaseDriver(
       } else {
         logD = logDgalaxy;
       }
-      cam.distance = clampDistance(Math.exp(logD));
+      out.distance = clampDistance(Math.exp(logD));
 
       // ── Pitch bob: a slow sine on top of the framing pitch. The arg is
       // floored at 0 so the bob starts cleanly from zero at the first frame. ──
       const tBob = Math.max(0, tAnim);
-      cam.pitch = START_PITCH + PITCH_AMP_RAD * Math.sin((2 * Math.PI * tBob) / PITCH_PERIOD_SEC);
-
-      updatePosition(cam);
+      out.pitch = START_PITCH + PITCH_AMP_RAD * Math.sin((2 * Math.PI * tBob) / PITCH_PERIOD_SEC);
 
       // ── The "click": focus Virgo once, after the approach settles. The
       // shader dims non-members to ~8% over 400 ms off this focused slot. ──
@@ -349,16 +362,21 @@ export function createWebShowcaseDriver(
       }
 
       // End of take: after a 4 s wait orbiting M87, lift the isolation so the
-      // dimmed background fades back in, then release control. requestRender
-      // keeps the loop awake for the 400 ms recession fade past the last
-      // scripted frame. (An aborted take — `g` mid-run — skips this and leaves
-      // the isolate latched; reload to reset.)
+      // dimmed background fades back in, then release control. (An aborted take —
+      // `g` mid-run — skips this and leaves the isolate latched; reload to reset.)
       if (!firedClear && tAnim >= T_END) {
         firedClear = true;
         store.dispatch(updateSelectionFocus(null));
-        requestRender();
         phase = 'idle';
       }
+
+      // Self-sustain the loop: `shouldKeepTicking` reads camera liveness off the
+      // store (drag / tween / autoRotate), so a spike driver — invisible there —
+      // must re-arm the next frame itself, or the take freezes after one tick.
+      // Also covers the 400 ms isolation-lift fade on the final frame.
+      requestRender();
+
+      return out;
     },
   };
 }

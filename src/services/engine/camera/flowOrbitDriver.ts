@@ -37,8 +37,7 @@
  */
 
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
-import { updatePosition } from '../../camera/orbitCamera';
+import type { CameraPose } from '../../../@types/camera/CameraPose';
 
 /** Seconds per full 360° revolution. Override with `?floworbit=<seconds>`. */
 const DEFAULT_PERIOD_SEC = 30;
@@ -78,9 +77,14 @@ export function createFlowOrbitDriver(
 
   return {
     id: 'flow-orbit-spike',
-    priority: 80,
+    // Above the store movers (orbitDrag 80 …) so the take owns the camera.
+    priority: 90,
     isActive: () => phase !== 'idle',
-    apply: (cam: OrbitCamera, nowMs: number) => {
+    pose: (_s, cam): CameraPose => {
+      // Self-clocked: the driver-table elapsed clock only serves tween /
+      // autoRotate, so this spike reads the wall clock itself.
+      const nowMs = performance.now();
+
       // First frame of a take: latch the orbit center from the live camera
       // so the sweep is relative to whatever framing the user dialed in.
       if (phase === 'armed') {
@@ -90,11 +94,21 @@ export function createFlowOrbitDriver(
         phase = 'running';
       }
 
-      // Constant angular rate → seamless loop every `periodSec`.
+      // Constant angular rate → seamless loop every `periodSec`. Author a fresh
+      // pose: target + distance carry through from the live camera (the orbit
+      // only sweeps orientation); yaw + pitch advance.
       const theta = TWO_PI * ((nowMs - startMs) / 1000 / periodSec);
-      cam.yaw = yaw0 + theta;
-      cam.pitch = pitch0 + PITCH_AMP_RAD * Math.sin(theta);
-      updatePosition(cam);
+      const out: CameraPose = {
+        target: [cam.target[0], cam.target[1], cam.target[2]],
+        yaw: yaw0 + theta,
+        pitch: pitch0 + PITCH_AMP_RAD * Math.sin(theta),
+        distance: cam.distance,
+      };
+
+      // Self-sustain the loop (shouldKeepTicking can't see a spike driver).
+      requestRender();
+
+      return out;
     },
   };
 }

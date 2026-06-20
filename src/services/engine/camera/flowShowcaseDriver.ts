@@ -56,11 +56,11 @@
  */
 
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { AppStore } from '../../../store/types';
 import type { FadeId } from '../../../@types/animation/FadeId';
-import { updatePosition, clampDistance } from '../../camera/orbitCamera';
+import { clampDistance } from '../../camera/orbitCamera';
 import { GALAXY_CATALOG_IDS } from '../../../data/galaxyCatalog/galaxyCatalogIds';
 import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
 // Scene toggles are plain settings-slice actions now (PR #352 dissolved the
@@ -145,7 +145,6 @@ const START_TARGET: readonly [number, number, number] = [0, -0.01, 0];
 const START_DISTANCE_MPC = 0.14;
 const START_YAW = 4.44;
 const START_PITCH = 0.2932;
-const START_FOV_Y_RAD = 1.0472;
 
 function clamp01(x: number): number {
   return x < 0 ? 0 : x > 1 ? 1 : x;
@@ -204,21 +203,32 @@ export function createFlowShowcaseDriver(
 
   return {
     id: 'flow-showcase-spike',
-    priority: 80,
+    // Above the store movers (orbitDrag 80, tween 60, autoRotate 20) so the
+    // scripted take owns the camera outright.
+    priority: 90,
     isActive: () => phase !== 'idle',
-    apply: (cam: OrbitCamera, nowMs: number) => {
-      // ── Beat 0: snap to the fixed opening pose, latch it, enable+hide the
-      // flow. The pose makes every take identical regardless of where the
-      // user left the camera. ──
-      if (phase === 'armed') {
-        cam.target[0] = START_TARGET[0];
-        cam.target[1] = START_TARGET[1];
-        cam.target[2] = START_TARGET[2];
-        cam.distance = START_DISTANCE_MPC;
-        cam.yaw = START_YAW;
-        cam.pitch = START_PITCH;
-        cam.fovYRad = START_FOV_Y_RAD;
+    pose: (_s, _cam): CameraPose => {
+      // Self-clocked: the driver-table elapsed clock only serves tween /
+      // autoRotate, so this spike reads the wall clock itself.
+      const nowMs = performance.now();
 
+      // Working pose. The target stays fixed at the Milky-Way origin for the
+      // whole take (the move is orbit + dolly, never a re-target), so it's
+      // seeded once here and never rewritten. yaw / pitch / distance are
+      // recomputed every frame below. fovYRad is no longer a pose field — the
+      // opening framing uses the app's live projection FOV.
+      const out: CameraPose = {
+        target: [START_TARGET[0], START_TARGET[1], START_TARGET[2]],
+        yaw: START_YAW,
+        pitch: START_PITCH,
+        distance: clampDistance(START_DISTANCE_MPC),
+      };
+
+      // ── Beat 0: latch the fixed opening pose, enable+hide the flow. The
+      // running computation at t≈0 reproduces the opening pose (yaw0/pitch0/
+      // logD0 are the START_* constants), so no explicit camera snap is needed
+      // — every take is identical regardless of where the user left the camera. ──
+      if (phase === 'armed') {
         startMs = nowMs;
         lastMs = nowMs;
         yaw0 = START_YAW;
@@ -283,7 +293,7 @@ export function createFlowShowcaseDriver(
         omega = ROT_RATE_RAD_S * (1 - k) + HOLD_RATE_RAD_S * k;
       }
       yawAccum += omega * dt;
-      cam.yaw = yaw0 + yawAccum;
+      out.yaw = yaw0 + yawAccum;
 
       // ── Distance: hold close through the cross-dissolve, then a two-stage
       // log-dolly with a dwell in the middle — pull back to the Laniakea /
@@ -291,17 +301,17 @@ export function createFlowShowcaseDriver(
       // again out to the full field. The dwell IS the "slow down in the
       // middle"; each segment is eased so accel/decel are smooth. ──
       if (tAnim < T_FADE_END) {
-        cam.distance = clampDistance(Math.exp(logD0)); // close on the MW
+        out.distance = clampDistance(Math.exp(logD0)); // close on the MW
       } else if (tAnim < T_ZOOM1_END) {
         const e = easeInOutCubic((tAnim - T_FADE_END) / ZOOM1_SEC);
-        cam.distance = clampDistance(Math.exp(logD0 + (logDmid - logD0) * e));
+        out.distance = clampDistance(Math.exp(logD0 + (logDmid - logD0) * e));
       } else if (tAnim < T_DWELL_END) {
-        cam.distance = clampDistance(Math.exp(logDmid)); // dwell: local flows
+        out.distance = clampDistance(Math.exp(logDmid)); // dwell: local flows
       } else if (tAnim < T_ZOOM2_END) {
         const e = easeInOutCubic((tAnim - T_DWELL_END) / ZOOM2_SEC);
-        cam.distance = clampDistance(Math.exp(logDmid + (logD1 - logDmid) * e));
+        out.distance = clampDistance(Math.exp(logDmid + (logD1 - logDmid) * e));
       } else {
-        cam.distance = clampDistance(Math.exp(logD1)); // full field
+        out.distance = clampDistance(Math.exp(logD1)); // full field
       }
 
       // ── Pitch bob: a slow sine on top of the framing pitch (the flow-orbit
@@ -309,9 +319,7 @@ export function createFlowShowcaseDriver(
       // is floored at 0 so the pitch holds flat through the pre-roll and
       // starts the bob cleanly from zero at the animation's first frame. ──
       const tBob = Math.max(0, tAnim);
-      cam.pitch = pitch0 + PITCH_AMP_RAD * Math.sin((2 * Math.PI * tBob) / PITCH_PERIOD_SEC);
-
-      updatePosition(cam);
+      out.pitch = pitch0 + PITCH_AMP_RAD * Math.sin((2 * Math.PI * tBob) / PITCH_PERIOD_SEC);
 
       // ── Beat D: fade EVERYTHING still on screen out together, once, after
       // the hold — flow, the Milky-Way impostor, every structure marker
@@ -343,6 +351,14 @@ export function createFlowShowcaseDriver(
       // Release control once the timeline ends. The flow fade-out finishes
       // on its own — the registry keeps the loop awake while it animates.
       if (tAnim >= T_END) phase = 'idle';
+
+      // Self-sustain the loop: shouldKeepTicking reads camera liveness off the
+      // store, so a spike driver — invisible there — must re-arm the next frame
+      // itself or the take freezes. (The fade registry covers the post-release
+      // fade-out, but the camera motion before it needs this.)
+      requestRender();
+
+      return out;
     },
   };
 }

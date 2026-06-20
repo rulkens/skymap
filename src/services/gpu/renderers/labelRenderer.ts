@@ -13,7 +13,7 @@
  * ## Why a closure-keyed factory and not a class?
  *
  * Same convention every other freshly-extracted handle in the engine
- * follows (`thumbnailSubsystem`, `biasCorrectionSubsystem`, `tweenManager`,
+ * follows (`thumbnailSubsystem`, `biasCorrectionSubsystem`,
  * the `Pass` object literals in `engine/frame/passes/`): factories return
  * typed handles, not class instances.  Internal state (CPU scratch buffers, running counts,
  * pipeline + bind-group references) is genuinely inaccessible from

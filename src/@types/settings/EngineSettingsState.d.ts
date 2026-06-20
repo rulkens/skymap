@@ -85,14 +85,6 @@ export type EngineSettingsState = {
   };
 
   /**
-   * Camera-orbit behaviour controls.  Currently just `autoRotate`;
-   * future tween / damping knobs would also live here.
-   */
-  camera: {
-    autoRotate: boolean;
-  };
-
-  /**
    * Luminosity-bias correction inputs — the user-tunable subset.  The
    * bake-derived per-galaxy weights (Schechter ratio, angular-density
    * weight) aren't settings at all: `biasCorrectionSubsystem` splices them

@@ -19,7 +19,6 @@
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
 import {
   DEFAULT_ABS_MAG_LIMIT,
-  DEFAULT_AUTO_ROTATE,
   DEFAULT_BIAS_MODE,
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
@@ -66,9 +65,6 @@ export function buildInitialSettings(): EngineSettingsState {
     tonemap: {
       exposure: DEFAULT_EXPOSURE,
       curve: DEFAULT_TONE_MAP_CURVE,
-    },
-    camera: {
-      autoRotate: DEFAULT_AUTO_ROTATE,
     },
     // Bias's user-tunable subset.  Bake-derived fields live on
     // `state.bias` (worker outputs, not settings).  The -19 default is
