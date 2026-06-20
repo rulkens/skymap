@@ -734,6 +734,8 @@ keeps the integrator clamps with the integrator (do NOT move them to a read edge
 
 ### Task 4.3 — generalize `watchWake` to `WAKE_ROUTES`
 
+> ✅ **DONE** — commit `88672804`, review clean (spec ✅, quality approved).
+
 **Files:**
 - `src/store/effects/reconcileSagas.ts` (modify) — replace `isSettingsWrite`
   (`reconcileSagas.ts:73-74`) with a `WAKE_ROUTES` set matcher (spec §4):
@@ -751,13 +753,13 @@ const isWakeWrite = (a: Action): boolean =>
   `watchCameraWake` (spec §4 — generalize, don't duplicate).
 - `tests/store/effects/reconcileSagas.test.ts` (modify) — add camera-route coverage.
 
-- [ ] `a camera slice write (beginDrag / startCameraTween / setAutoRotate) wakes the loop`
+- [x] `a camera slice write (beginDrag / startCameraTween / setAutoRotate) wakes the loop`
   — dispatch a `camera/*` action, assert `requestRender` called.
-- [ ] `a settings write still wakes the loop` (regression — existing case still
+- [x] `a settings write still wakes the loop` (regression — existing case still
   passes).
-- [ ] `an unrelated route (tier / ui) does NOT wake via watchWake` (the set is
+- [x] `an unrelated route (tier / ui) does NOT wake via watchWake` (the set is
   exactly settings+camera).
-- [ ] Confirm fail → implement → pass. `npm test -- reconcileSagas` + full suite →
+- [x] Confirm fail → implement → pass. `npm test -- reconcileSagas` + full suite →
   green. Commit.
 
 ---
