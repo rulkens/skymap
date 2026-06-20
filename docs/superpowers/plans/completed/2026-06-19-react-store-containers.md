@@ -855,23 +855,27 @@ grep App.tsx and confirm the ONLY `useAppSelector` calls remaining are
 
 ## Definition of done
 
-- [ ] All seven SettingsPanel section containers + their presentational pairs,
+- [x] All seven SettingsPanel section containers + their presentational pairs,
   `AutoRotateToggleContainer`, `DebugPanelContainer`, `TierChipContainer`, and
   the `SettingsPanel` shell exist under the conventions in §1.
-- [ ] `RenderTogglesSection` is presentational (no `store/`/`state/` import) —
+- [x] `RenderTogglesSection` is presentational (no `store/`/`state/` import) —
   the codebase has ZERO leaf-level store reach.
-- [ ] App's retained `useAppSelector` set is exactly `selectPaletteOpen`,
-  `selectUiHidden`, `selectDebugPanelOpen`, `selectVisibleSourceMask`,
-  `selectTier`.
-- [ ] No presentational component imports from `store/` or `state/`
+- [x] App's retained settings/ui `useAppSelector` set is exactly
+  `selectPaletteOpen`, `selectUiHidden`, `selectDebugPanelOpen`,
+  `selectVisibleSourceMask`, `selectTier`. App also reads
+  `selectHoveredFocusable` / `selectSelectedFocusable`, which the #350
+  selection-into-store merge moved into App — selection *display* reads, not
+  settings reach the containers should own, so they're outside the scope this
+  item bounds.
+- [x] No presentational component imports from `store/` or `state/`
   (grep-verifiable).
-- [ ] Every container is `memo()`'d; presentational components are `memo()`'d
+- [x] Every container is `memo()`'d; presentational components are `memo()`'d
   where non-trivial, with `useCallback`-wrapped handlers from the containers.
-- [ ] No selector was rewritten as `createSelector`; the three projection
+- [x] No selector was rewritten as `createSelector`; the three projection
   helpers are reused verbatim (only their call sites moved).
-- [ ] Full suite green (≥ 590 tests), `npm run typecheck` + `npm run build`
+- [x] Full suite green (2890 tests), `npm run typecheck` + `npm run build`
   clean.
-- [ ] `src/components/containers/README.md` documents the convention.
+- [x] `src/components/containers/README.md` documents the convention.
 
 ## Out of scope (do not scope-creep — spec §"Out of scope")
 
