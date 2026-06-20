@@ -1,7 +1,7 @@
 /**
  * Public handle returned by `createLabelRenderer`.  Mirrors the shape of
- * other engine handles (`SelectionSubsystem`, `ThumbnailSubsystem`,
- * `BiasCorrectionSubsystem`): explicit method type, no internals leaked.
+ * other engine handles (`ThumbnailSubsystem`, `BiasCorrectionSubsystem`):
+ * explicit method type, no internals leaked.
  */
 
 import type { Label } from './Label';

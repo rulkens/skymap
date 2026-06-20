@@ -52,10 +52,6 @@ describe('createEngine — saga context registration', () => {
       store,
       setSagaContext,
       lifecycle: { onStatusChange: vi.fn<() => void>() },
-      selection: {
-        onSelectChange: vi.fn<() => void>(),
-        onHoverChange: vi.fn<() => void>(),
-      },
     };
 
     // Call createEngine — runs the synchronous prefix, which calls setSagaContext,

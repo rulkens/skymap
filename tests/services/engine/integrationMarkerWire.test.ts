@@ -93,8 +93,8 @@ describe('produceStructureMarkers → structureMarkerRenderer.setMarkers', () =>
           },
         },
       },
+      selection: { hover: null, select: null, focus: null },
       subsystems: {
-        selection: { selected: () => null, focused: () => null },
         fades: makeRegistry(),
       },
     } as unknown as EngineState;

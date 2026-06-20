@@ -50,8 +50,8 @@ export function produceStructureMarkers(
   // selected → 1.5× ring bump (highlight what you clicked); focused → the
   // "every OTHER ring recedes" mode (cluster-focus). A galaxy selection
   // leaves the matching id null, so no structure ring is bumped / recedes.
-  const selectedStructureId = structureIdOf(state.subsystems.selection.selected());
-  const focusedStructureId = structureIdOf(state.subsystems.selection.focused());
+  const selectedStructureId = structureIdOf(state.selection.select);
+  const focusedStructureId = structureIdOf(state.selection.focus);
 
   // Per-category marker opacity (the category toggle's fade) lives in the
   // FadeRegistry; unregistered handles fail-safe to 1.0. Snapshot `now` once so

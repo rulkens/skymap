@@ -1,7 +1,7 @@
 /**
  * GalaxyInfo — display-ready data for a single galaxy, computed on-demand from
- * raw cloud arrays when the user hovers or selects a point. Passed from the
- * engine to React components via the onHoverChange / onSelectChange callbacks.
+ * raw cloud arrays when the user hovers or selects a point. Surfaced to React
+ * via the Redux `selectionRows` slice (saga-resolved display cache).
  */
 
 import type { GalaxyTypeInfo } from '../data/galaxyCatalog/GalaxyTypeInfo';
@@ -115,7 +115,7 @@ export type GalaxyInfo = {
    *
    * Pre-computing here keeps the React layer presentational — FullCard just
    * maps over the array — and means the band-pairing logic lives next to the
-   * other data-derivation code in `galaxyInfoBuilder.ts`.
+   * other data-derivation code in `buildGalaxyInfo.ts`.
    */
   colours: Array<{ label: string; value: number }>;
 
@@ -270,7 +270,7 @@ export type GalaxyInfo = {
   /**
    * Famous-galaxy enrichment block, present only when `source === Source.FamousGalaxy`.
    *
-   * Populated by `galaxyInfoBuilder` from the `famous_meta.json` sidecar loaded
+   * Populated by `buildGalaxyInfo` from the `famous_meta.json` sidecar loaded
    * at engine startup.  Absent (`undefined`) for SDSS / 2MRS / GLADE / Synthetic
    * rows — those never have curated metadata.
    */

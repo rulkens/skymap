@@ -38,9 +38,8 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 import type { RunTierTransition } from '../../../store/types';
-import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
-import { tierTarget } from '../../../data/tierTargets';
 import { GALAXY_CATALOG_SOURCE_REGISTRY, loadCompanionAssets } from './galaxyCatalogSourceRegistry';
+import { willSourceReload } from './willSourceReload';
 import { rebuildHiResFamousForTier } from '../helpers/rebuildHiResFamousForTier';
 
 export function makeRunTierTransition(
@@ -48,17 +47,15 @@ export function makeRunTierTransition(
   bootstrapDeps: BootstrapDeps,
 ): RunTierTransition {
   return (prevTier, nextTier) => {
-    // For each tier-relevant source: same target → skip; different target → hand
-    // the slot the new request (it cancels any in-flight load, re-fetches the
-    // tier's `.bin`, commits). Sources whose enabled INTENT is off skip too —
-    // don't re-fetch a source you're hiding; toggling one on later triggers
-    // a demand-reevaluation load at the current tier. Filaments are NOT swapped
-    // (see `filamentFetcher.ts`).
+    // For each source that actually reloads on this swap, hand the slot the new
+    // request (it cancels any in-flight load, re-fetches the tier's `.bin`,
+    // commits). The per-source skip logic — synthetic / unchanged target /
+    // disabled intent — lives in `willSourceReload`, the shared predicate the
+    // re-anchor capture consumes too so the two can't drift. Filaments are NOT
+    // swapped (see `filamentFetcher.ts`).
     for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
       const src = cfg.source;
-      if (cfg.category === 'synthetic') continue;
-      if (tierTarget(src, prevTier) === tierTarget(src, nextTier)) continue;
-      if (!state.settings.galaxyCatalogs.items[galaxyCatalogIdOf(src)].enabled) continue;
+      if (!willSourceReload(src, prevTier, nextTier, state.settings)) continue;
       // `dissolvePrevious`: a tier swap is the one reload the user should see the
       // old tier fade out of. The commit reads this flag instead of guessing "is
       // this a re-commit" from the data store, so re-enable / forceReload / boot

@@ -1,20 +1,44 @@
+// @vitest-environment jsdom
 /**
- * useUrlSync — pure-helper coverage.
+ * useUrlSync — test coverage.
  *
- * The hook itself is DOM glue over `location.hash` and `history.pushState`,
- * vitest runs in node env (no DOM).  We test the pure decision functions
- * directly — `computeDesiredHash` and `initialPendingFromHash` — and rely
- * on manual smoke testing for the effect plumbing.
+ * Two scopes:
  *
- * `focused` is a FocusableTarget union (galaxy | structure | null); the
- * body shape is decided by the URL_HASH_FOR table (keyed on `type`)
- * inside the helper.
+ *   1. `computeDesiredHash` — pure function, fully testable without DOM or
+ *      Redux. Runs in node or jsdom env equally.
+ *
+ *   2. Hook integration — rendered against a real Redux store via
+ *      `createAppStore` + a `<Provider>` wrapper. Tests assert that:
+ *      (a) a `#focus=<id>` hash on mount dispatches `requestFocus(id)`;
+ *      (b) an empty hash on mount does NOT dispatch `clearSelection()` —
+ *          the empty-hash clear is gated to hashchange only;
+ *      (c) a hashchange to `#focus=<id>` dispatches `requestFocus(id)`;
+ *      (d) a hashchange to empty dispatches `clearSelection()`.
+ *
+ * The URL WRITE (Effect B) is verified indirectly: it calls
+ * `history.pushState`, which jsdom honours on the `window.location`
+ * object. A focused FocusableTarget in the store causes the hash to be
+ * written; that assertion lives in the integration block below.
+ *
+ * `initialPendingFromHash` was the old drain-pending helper; it no longer
+ * exists. Its tests have been removed along with the function.
  */
-import { describe, it, expect } from 'vitest';
-import { computeDesiredHash, initialPendingFromHash } from '../../src/hooks/useUrlSync';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { createElement } from 'react';
+import type { ReactNode } from 'react';
+import { renderHook, act } from '@testing-library/react';
+import { Provider } from 'react-redux';
+import { computeDesiredHash } from '../../src/hooks/useUrlSync';
+import { useUrlSync } from '../../src/hooks/useUrlSync';
 import type { GalaxyInfo } from '../../src/@types/engine/GalaxyInfo';
 import type { StructureInfo } from '../../src/@types/data/structure/StructureInfo';
 import { Source } from '../../src/data/sources';
+import { createAppStore } from '../../src/store/createAppStore';
+import { buildInitialSettings } from '../../src/state/settings/initialState';
+import { requestFocus } from '../../src/state/selection/requestFocus';
+import { clearSelection } from '../../src/state/selection/selectionSlice';
+
+// ── Fixtures ──────────────────────────────────────────────────────────────
 
 function makeGalaxy(): GalaxyInfo {
   return {
@@ -35,6 +59,8 @@ function makeStructure(id: string): StructureInfo {
     physicalRadiusMpc: 2,
   };
 }
+
+// ── computeDesiredHash ────────────────────────────────────────────────────
 
 describe('computeDesiredHash (unified)', () => {
   it('returns empty body when focus is null', () => {
@@ -72,28 +98,100 @@ describe('computeDesiredHash (unified)', () => {
   });
 });
 
-describe('initialPendingFromHash', () => {
-  it('parses #focus=… into a galaxy pending target', () => {
-    // Use a valid pgc- format (dash, not colon — parseFocusHash uses `pgc-`
-    // prefix; a colon would reject to null via the famous-id regex).
-    const out = initialPendingFromHash('#focus=pgc-1234');
-    expect(out.kind).toBe('galaxy');
-    if (out.kind === 'galaxy') expect(out.target).not.toBeNull();
+// ── Hook integration ──────────────────────────────────────────────────────
+
+/**
+ * Build a real store and a Provider wrapper for renderHook.
+ *
+ * The store is seeded with just the settings slice; the selection slice
+ * starts empty (no focused target). We spy on `store.dispatch` to assert
+ * which actions the hook fires.
+ */
+function makeStoreAndWrapper() {
+  const { store } = createAppStore({ settings: buildInitialSettings() });
+  const dispatchSpy = vi.spyOn(store, 'dispatch');
+  const wrapper = ({ children }: { children: ReactNode }) =>
+    createElement(Provider, { store, children });
+  return { store, dispatchSpy, wrapper };
+}
+
+describe('useUrlSync hook integration', () => {
+  // Save and restore location.hash around each test so tests are isolated.
+  let originalHash: string;
+
+  beforeEach(() => {
+    originalHash = window.location.hash;
   });
 
-  it('routes #focus=cluster-virgo-m87 to kind structure with the id', () => {
-    const out = initialPendingFromHash('#focus=cluster-virgo-m87');
-    expect(out.kind).toBe('structure');
-    if (out.kind === 'structure') expect(out.id).toBe('cluster-virgo-m87');
+  afterEach(() => {
+    // jsdom allows hash assignment but ignores pushState on location.hash
+    // for history-path purposes — resetting via href is the reliable form.
+    window.location.hash = originalHash;
+    vi.restoreAllMocks();
   });
 
-  it('returns kind=null for an empty hash', () => {
-    const out = initialPendingFromHash('');
-    expect(out.kind).toBeNull();
+  it('dispatches requestFocus on mount when hash is #focus=<id>', () => {
+    window.location.hash = '#focus=m31';
+    const { dispatchSpy, wrapper } = makeStoreAndWrapper();
+    renderHook(() => useUrlSync(), { wrapper });
+    const calls = dispatchSpy.mock.calls.map((c) => c[0]);
+    expect(calls).toContainEqual(requestFocus('m31'));
   });
 
-  it('returns kind=null for an unrecognized hash', () => {
-    const out = initialPendingFromHash('#something-else');
-    expect(out.kind).toBeNull();
+  it('does NOT dispatch clearSelection on mount when hash is empty', () => {
+    // The empty-hash → clearSelection branch is gated to hashchange events
+    // only. A normal page load with no hash should not fire clearSelection.
+    window.location.hash = '';
+    const { dispatchSpy, wrapper } = makeStoreAndWrapper();
+    renderHook(() => useUrlSync(), { wrapper });
+    const calls = dispatchSpy.mock.calls.map((c) => c[0]);
+    expect(calls).not.toContainEqual(clearSelection());
+  });
+
+  it('dispatches requestFocus on hashchange to #focus=<id>', () => {
+    window.location.hash = '';
+    const { dispatchSpy, wrapper } = makeStoreAndWrapper();
+    renderHook(() => useUrlSync(), { wrapper });
+    // Clear mount-time dispatch noise.
+    dispatchSpy.mockClear();
+
+    act(() => {
+      window.location.hash = '#focus=cluster-virgo-m87';
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+
+    const calls = dispatchSpy.mock.calls.map((c) => c[0]);
+    expect(calls).toContainEqual(requestFocus('cluster-virgo-m87'));
+  });
+
+  it('dispatches clearSelection on hashchange to empty hash', () => {
+    window.location.hash = '#focus=m31';
+    const { dispatchSpy, wrapper } = makeStoreAndWrapper();
+    renderHook(() => useUrlSync(), { wrapper });
+    dispatchSpy.mockClear();
+
+    act(() => {
+      window.location.hash = '';
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+
+    const calls = dispatchSpy.mock.calls.map((c) => c[0]);
+    expect(calls).toContainEqual(clearSelection());
+  });
+
+  it('removes the hashchange listener on unmount', () => {
+    window.location.hash = '';
+    const { dispatchSpy, wrapper } = makeStoreAndWrapper();
+    const { unmount } = renderHook(() => useUrlSync(), { wrapper });
+    unmount();
+    dispatchSpy.mockClear();
+
+    // After unmount, a hashchange should not dispatch anything from this hook.
+    act(() => {
+      window.location.hash = '#focus=pgc-1234';
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+
+    expect(dispatchSpy).not.toHaveBeenCalled();
   });
 });

@@ -1,43 +1,15 @@
-import type { SourceType } from '../../data/SourceType';
-import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
 import type { PgcAliasMap } from '../../loading/PgcAliasMap';
 
 /**
- * EngineSelectionHandle — selection bookkeeping + the data its consumers need.
+ * EngineSelectionHandle — selection data loader.
  *
- * `clear` revokes the current pin.  `selectFamous` / `selectByAlias` are the
- * two entry points the command palette uses to land a hit.  `loadAliases`
- * is the lazy-fetch helper that powers alias search — it lives here because
- * `selectByAlias` is its only consumer; nesting them together puts the data
- * loader next to its data consumer.
+ * Selection state (hover/select/focus) now lives entirely in the Redux
+ * `selection` slice; callers dispatch `clearSelection` / `updateSelectionFocus`
+ * / `updateSelectionSelect` directly. This handle exposes only the one piece
+ * that cannot be a plain dispatch: the lazy PGC alias fetch, which triggers a
+ * network request and returns a Promise.
  */
 export type EngineSelectionHandle = {
-  /**
-   * Programmatically clear the current selection — galaxy AND structure in one
-   * call.  "Close the card" semantic: anywhere a user dismisses the
-   * InfoCard (Esc, the × button, URL drift back to empty hash), both
-   * sides collapse together in a single render frame.
-   *
-   * Order is deterministic: galaxy selection clears first
-   * (`onSelectChange` / `onFocusChange` fire), then structure selection
-   * (`onStructureFocusChange` fires).  Idempotent: calling with neither
-   * selected fires only the structure teardown's no-op callback chain
-   * (no presence gate).
-   *
-   * For code paths that need to clear ONLY the structure without disturbing
-   * a pinned galaxy, drop down to the engine internals.  There's no
-   * public narrow-clear method (no real consumer existed when this
-   * was unified; revisit if a use case appears).
-   */
-  clear: () => void;
-  /** Select (pin) the famous-atlas galaxy with the given id, then focus-tween. */
-  selectFamous: (id: string) => void;
-  /** Select a non-famous galaxy by (source, localIdx) and focus-tween. */
-  selectByAlias: (target: {
-    source: SourceType;
-    localIdx: number;
-    famousMeta?: readonly FamousMetaEntry[];
-  }) => void;
   /** Lazy-load the PGC → human-name alias map (1.7 MB JSON). */
   loadAliases: () => Promise<PgcAliasMap>;
 };

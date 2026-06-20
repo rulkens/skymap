@@ -42,13 +42,13 @@ export const diskRadiusRingPass: Pass = {
     // reaching for `state.settings`.
     if (!state.gpu.diskRadiusRing) return false;
     if (!state.settings.debug.showDiskRadiusRing) return false;
-    const sel = state.subsystems.selection.selected();
+    const sel = state.selection.select;
     return sel !== null && sel.type === 'galaxyCatalog';
   },
 
   draw(pass, ctx, state, _settings, _deps) {
-    const sel = state.subsystems.selection.selected();
-    // `enabled()` proved a galaxy target — narrow accordingly.
+    const sel = state.selection.select;
+    // `enabled()` proved a galaxy ref — narrow accordingly.
     if (sel === null || sel.type !== 'galaxyCatalog') return;
     // This debug pass still re-indexes the catalog: it needs the tilt /
     // calibration fields (axisRatio, positionAngleDeg, famous calibration)

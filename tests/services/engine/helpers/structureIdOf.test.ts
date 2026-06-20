@@ -1,26 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import { structureIdOf } from '../../../../src/services/engine/helpers/structureIdOf';
 import { Source } from '../../../../src/data/sources';
-import type { FocusableTarget } from '../../../../src/@types/engine/FocusableTarget';
-import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
-import type { GalaxyInfo } from '../../../../src/@types/engine/GalaxyInfo';
+import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 
 describe('structureIdOf', () => {
-  it('returns null for a null target', () => {
+  it('returns null for a null ref', () => {
     expect(structureIdOf(null)).toBeNull();
   });
 
-  it('returns the id for a structure target', () => {
-    const target = { type: 'structure', id: 'virgo' } as unknown as StructureInfo;
-    expect(structureIdOf(target satisfies FocusableTarget)).toBe('virgo');
+  it('returns the id for a structure ref', () => {
+    const ref: SelectionRef = { type: 'structure', id: 'virgo' };
+    expect(structureIdOf(ref)).toBe('virgo');
   });
 
-  it('returns null for a non-structure (galaxy) target', () => {
-    const target = {
-      type: 'galaxyCatalog',
-      source: Source.SDSS,
-      index: 7,
-    } as unknown as GalaxyInfo;
-    expect(structureIdOf(target satisfies FocusableTarget)).toBeNull();
+  it('returns null for a galaxy ref', () => {
+    const ref: SelectionRef = { type: 'galaxyCatalog', source: Source.SDSS, index: 7 };
+    expect(structureIdOf(ref)).toBeNull();
+  });
+
+  it('returns null for a milkyWay ref', () => {
+    const ref: SelectionRef = { type: 'milkyWay' };
+    expect(structureIdOf(ref)).toBeNull();
   });
 });

@@ -46,6 +46,7 @@ import { syntheticPointFetcher } from '../../loading/fetchers/syntheticPointFetc
 import { syncVisibilityFadeItem } from './syncVisibilityFades';
 import { dissolveCatalogBuffer } from './dissolveCatalogBuffer';
 import type { SourceType } from '../../../@types/data/SourceType';
+import { dispatchCatalogLoaded } from './dispatchCatalogLoaded';
 
 /**
  * Registry rows, in Source enum order.  Order matters: `initGpu`'s
@@ -180,6 +181,11 @@ export function wireGalaxyCatalogSourceSlot(
       // the registry (the source code carries the matching id).
       await state.gpu.renderer.upload(catalogId, cloud);
       state.data.galaxies.setCatalog(source, cloud);
+
+      // Signal that this source's cloud is now committed and resolvable, so the
+      // selection reconciler and the tier-reanchor saga can re-resolve refs whose
+      // cloud just landed.
+      dispatchCatalogLoaded(cb.store, source);
 
       // Drive the fade-in through the intent → fade bridge, scoped to ONLY the
       // catalog just uploaded: the survey row owns the intent gate (reads

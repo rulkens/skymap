@@ -53,10 +53,7 @@ import { FOCUS_TWEEN_MS } from './focusTweenDuration';
  * from-target out from under the in-progress tween.
  *
  * No-op when `state.cam` is null — same cam-null window as
- * `tweenToGalaxy`.  Callers do NOT need to fire `cb.onFocusChange`
- * here; that's a separate semantic concern (telling the URL hash to
- * clear `#focus=…`) and stays at the call site that decides "this
- * action is leaving a focus state".
+ * `tweenToGalaxy`.
  */
 export function tweenToCameraSnapshot(state: EngineState, snapshot: InitialCam): void {
   const cam = state.cam;

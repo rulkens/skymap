@@ -10,14 +10,14 @@
  * The renderer is renderer-type-agnostic: its uniform carries a
  * pre-computed `ringRadiusPx`, not a galaxy diameter.  The per-target
  * characteristic radius (Mpc) and the world position to centre on both come
- * from the `SELECTION_HALO` table, keyed on the target's union tag — a galaxy
- * yields its catalog diameter, the Milky Way its disc radius, a structure
- * `null` (it renders its ring through the cluster marker pass).  This pass
- * then defers the apparent-px math to the shared `selectionRingRadiusPx`
- * helper.  Because a structure is already a table row returning null, no
- * per-kind branch is needed here: a new halo-bearing kind is one `SELECTION_HALO`
- * row, and the descriptor carries the position so the pass never re-narrows
- * the union to read coordinates.
+ * from the `selectionHalo` dispatch function, keyed on the row's union tag —
+ * a galaxy yields its catalog diameter, the Milky Way its disc radius, a
+ * structure `null` (it renders its ring through the cluster marker pass).
+ * This pass then defers the apparent-px math to the shared
+ * `selectionRingRadiusPx` helper.  Because a structure is already a table
+ * row returning null, no per-kind branch is needed here: a new halo-bearing
+ * kind is one table row, and the descriptor carries the position so the pass
+ * never re-narrows the union to read coordinates.
  *
  * ## Why one writeBuffer is fine
  *
@@ -28,7 +28,7 @@
  */
 
 import type { Pass } from '../../../../@types/engine/frame/Pass';
-import { SELECTION_HALO } from '../../helpers/selectionHaloTable';
+import { selectionHalo } from '../../helpers/selectionHaloTable';
 import { selectionRingRadiusPx } from '../../helpers/selectionRingRadiusPx';
 
 export const selectionRingPass: Pass = {
@@ -36,19 +36,18 @@ export const selectionRingPass: Pass = {
 
   enabled(state, _ctx, _settings) {
     if (state.gpu.selectionRingRenderer === null) return false;
-    const sel = state.subsystems.selection.selected();
-    // A target drives the halo iff the table yields a descriptor for its kind.
-    return sel !== null && SELECTION_HALO[sel.type](sel) !== null;
+    const row = state.selectionRows.select;
+    // A row drives the halo iff the table yields a descriptor for its kind.
+    return selectionHalo(row) !== null;
   },
 
   draw(pass, ctx, state, settings, _deps) {
-    const sel = state.subsystems.selection.selected();
-    if (sel === null) return;
+    const row = state.selectionRows.select;
     // A null descriptor is the structure arm (it renders its ring through the
     // cluster marker pass).  The descriptor carries both the radius and the
     // world position, so there's no union re-narrow and no catalog re-index —
-    // each kind's position (galaxy/MW flat `x/y/z`) is resolved in the table.
-    const halo = SELECTION_HALO[sel.type](sel);
+    // each kind's position is resolved in the table.
+    const halo = selectionHalo(row);
     if (halo === null) return;
     const { radiusMpc, worldPos } = halo;
 

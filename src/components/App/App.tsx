@@ -13,13 +13,14 @@
  * loop — it isn't designed for the synthetic double-mount. `useEngine`'s
  * cleanup still runs on real unmounts.
  *
- * Store reach is intentionally minimal: `selectPaletteOpen`, `selectUiHidden`,
- * `selectDebugPanelOpen` gate App's own JSX; `selectVisibleSourceMask` and
- * `selectTier` feed `useStructureMemberCount`. All settings reach lives in the
- * section containers under SettingsPanel.
+ * Store reach is intentionally minimal: `selectHoveredFocusable` /
+ * `selectSelectedFocusable` drive the InfoCard; `selectPaletteOpen`,
+ * `selectUiHidden`, `selectDebugPanelOpen` gate App's own JSX; and
+ * `selectVisibleSourceMask` + `selectTier` feed `useStructureMemberCount`. All
+ * settings reach lives in the section containers under SettingsPanel.
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import cx from 'classnames';
 import { useEngine } from '../../hooks/useEngine';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -37,7 +38,6 @@ import AutoRotateToggleContainer from '../containers/AutoRotateToggleContainer';
 import HomeButton from '../HomeButton/HomeButton';
 import Splash from '../Splash/Splash';
 import AboutPill from '../Splash/AboutPill';
-import { MILKY_WAY_INFO } from '../../data/milkyWay/milkyWayInfo';
 import appStyles from './App.module.css';
 import { useUrlSync } from '../../hooks/useUrlSync';
 import { useFamousMeta } from '../../hooks/useFamousMeta';
@@ -46,32 +46,34 @@ import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectVisibleSourceMask } from '../../state/settings/selectors';
 import { selectTier } from '../../state/tier/selectors';
-import { buildStaticAnchorStructures } from '../../data/structure/buildStaticAnchorStructures';
+import { selectHoveredFocusable, selectSelectedFocusable } from '../../state/selection/selectors';
+import { updateSelectionFocus, clearSelection } from '../../state/selection/selectionSlice';
+import { requestFocus } from '../../state/selection/requestFocus';
+import { refOf } from '../../services/engine/helpers/refOf';
+import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import DebugPanelContainer from '../containers/DebugPanelContainer';
 import { selectPaletteOpen, selectUiHidden, selectDebugPanelOpen } from '../../state/ui/selectors';
 import { setPaletteOpen, toggleUiHidden, toggleDebugPanelOpen } from '../../state/ui/uiSlice';
 
 export function App(): React.ReactElement {
-  const {
-    canvasRef,
-    handleRef,
-    status,
-    hovered,
-    selected,
-    focused,
-    scale,
-    sourceCounts,
-    structureCounts,
-    loadProgress,
-  } = useEngine();
+  const { canvasRef, handleRef, status, scale, sourceCounts, structureCounts, loadProgress } =
+    useEngine();
 
-  // Dispatch is used for palette/ui/debug toggle actions dispatched from the
-  // keyboard hook and from inline chrome callbacks below.
+  // Dispatch drives selection commands (InfoCard / CommandPalette) plus the
+  // palette/ui/debug toggle actions fired from the keyboard hook and the
+  // inline chrome callbacks below.
   const dispatch = useAppDispatch();
 
-  // `visibleSourceMask` and `currentTier` are the only settings-slice reads App
-  // keeps: both feed `useStructureMemberCount` for the InfoCard member-count.
-  // All other settings reach lives in the section containers under SettingsPanel.
+  // Selection slots — read from the Redux store. The engine dispatches
+  // `updateSelectionHover/Select/Focus` directly; these selectors build
+  // the rich `FocusableTarget` display models from the resolved row cache.
+  const hovered = useAppSelector(selectHoveredFocusable);
+  const selected = useAppSelector(selectSelectedFocusable);
+
+  // `visibleSourceMask` and `currentTier` are the only settings/tier-slice
+  // reads App keeps: both feed `useStructureMemberCount` for the InfoCard
+  // member-count. All other settings reach lives in the section containers
+  // under SettingsPanel.
   const visibleSourceMask = useAppSelector(selectVisibleSourceMask);
   const currentTier = useAppSelector(selectTier);
 
@@ -138,29 +140,15 @@ export function App(): React.ReactElement {
   // and dismiss/reopen.  See `useSplash.ts` for rationale.
   const splash = useSplash({ status, loadProgress, famousMetaReady });
 
-  const { aliasIndex, aliasMap } = useAliasIndex({
+  const { aliasIndex } = useAliasIndex({
     paletteOpen,
     sourceCounts,
     engineHandleRef: handleRef,
   });
 
-  // Static structure table for the URL drain.  The engine owns the merged
-  // list (static anchors + the async bulk cluster catalog), but threading
-  // that as a reactive React slice would re-render App on every catalog load.
-  // Deep-link arrivals only need the static subset (`#focus=cluster-…` /
-  // `supercluster-…` / `void-…`).  `useMemo([])` so the drain effect
-  // doesn't re-fire on every render.
-  const staticStructures = useMemo(() => buildStaticAnchorStructures(), []);
-  useUrlSync({
-    focused,
-    status,
-    sourceCounts,
-    famousMeta,
-    aliasMap,
-    ready: status.kind === 'ready',
-    structures: staticStructures,
-    engineHandleRef: handleRef,
-  });
+  // Deep-link hash read + URL write. Reads focus from the store directly;
+  // dispatches `requestFocus` / `clearSelection` for hash changes.
+  useUrlSync();
 
   useKeyboardShortcuts({
     selected,
@@ -198,8 +186,8 @@ export function App(): React.ReactElement {
           hovered={hovered}
           selected={selected}
           selectedMemberCount={selectedMemberCount}
-          onFocus={(target) => handleRef.current?.camera.focusOn(target)}
-          onClose={() => handleRef.current?.selection.clear()}
+          onFocus={(target) => dispatch(updateSelectionFocus(refOf(target)))}
+          onClose={() => dispatch(clearSelection())}
         />
         <ScaleBar scale={scale} />
         {/* Flex column anchored bottom-left.  Children stack upward as
@@ -229,11 +217,19 @@ export function App(): React.ReactElement {
           aliasIndex={aliasIndex ?? undefined}
           open={paletteOpen}
           onClose={closePalette}
-          onSelect={(id) => handleRef.current?.selection.selectFamous(id)}
-          onSelectAlias={(target) => handleRef.current?.selection.selectByAlias(target)}
+          onSelect={(id) => dispatch(requestFocus(id))}
+          onSelectAlias={(target) =>
+            dispatch(
+              updateSelectionFocus({
+                type: 'galaxyCatalog',
+                source: target.source as GalaxyCatalogSourceType,
+                index: target.localIdx,
+              }),
+            )
+          }
           // The Milky Way is a first-class FocusableTarget — focus it through
           // the same select → focus path every other target uses.
-          onSelectMilkyWay={() => handleRef.current?.camera.focusOn(MILKY_WAY_INFO)}
+          onSelectMilkyWay={() => dispatch(updateSelectionFocus({ type: 'milkyWay' }))}
         />
         {/* `handleRef.current` set means the engine finished constructing,
             so the panel can subscribe to slots without racing. */}

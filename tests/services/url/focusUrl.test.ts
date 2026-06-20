@@ -1,15 +1,18 @@
 /**
- * Tests for the pure focus-id URL codec.
+ * Tests for `selectionToFocusId` — the pure encoder that maps a
+ * `GalaxyInfo` to the `#focus=<id>` payload.
  *
- * The codec encodes a galaxy selection into the `#focus=<id>` hash and
- * decodes the inverse.  These tests exercise the priority ladder
- * (famous > pgc > sdss > pos fallback > synthetic-rejected) and the
- * round-trip through bigint-precision SDSS objIDs, which exceed JS's
- * Number.MAX_SAFE_INTEGER.
+ * The encoder follows the priority ladder: famous seed id > PGC > SDSS
+ * objID > pos@ fallback, with Synthetic rows rejected (null).  These tests
+ * exercise the full ladder and the round-trip through bigint-precision SDSS
+ * objIDs, which exceed JS's Number.MAX_SAFE_INTEGER.
+ *
+ * Parsing (`parseFocusHash`) was removed in P2.8 — the new codec lives in
+ * `resolveFocusId.ts` which inlines parse + resolve into a single step.
  */
 
 import { describe, it, expect } from 'vitest';
-import { selectionToFocusId, parseFocusHash } from '../../../src/services/url/focusUrl';
+import { selectionToFocusId } from '../../../src/services/url/focusUrl';
 import { Source } from '../../../src/data/sources';
 import type { GalaxyInfo } from '../../../src/@types/engine/GalaxyInfo';
 
@@ -17,8 +20,6 @@ import type { GalaxyInfo } from '../../../src/@types/engine/GalaxyInfo';
  * Build a minimal `GalaxyInfo` for codec tests.  The codec only reads
  * `source`, `objID`, `ra`, `dec`, and `famous`, so the rest is filler
  * that satisfies the type without claiming to be physically meaningful.
- * We cast through `unknown` because typing every field would obscure
- * what the test is actually exercising.
  */
 const baseInfo = (overrides: Partial<GalaxyInfo>): GalaxyInfo =>
   ({
@@ -110,129 +111,5 @@ describe('selectionToFocusId', () => {
 
   it('returns null for synthetic-source rows (not link-encodable)', () => {
     expect(selectionToFocusId(baseInfo({ source: Source.Synthetic }))).toBeNull();
-  });
-});
-
-describe('parseFocusHash', () => {
-  it('parses a famous-id hash', () => {
-    expect(parseFocusHash('#focus=m31')).toEqual({ kind: 'famous', id: 'm31' });
-  });
-
-  it('parses a pgc hash to a bigint', () => {
-    expect(parseFocusHash('#focus=pgc-2789')).toEqual({
-      kind: 'pgc',
-      pgc: 2789n,
-    });
-  });
-
-  it('parses an sdss hash with full 19-digit bigint round-trip', () => {
-    expect(parseFocusHash('#focus=sdss-1237665128253423687')).toEqual({
-      kind: 'sdss',
-      objID: 1237665128253423687n,
-    });
-  });
-
-  it('parses a pos hash with negative declination', () => {
-    expect(parseFocusHash('#focus=pos@10.1235,-5.4567')).toEqual({
-      kind: 'pos',
-      raDeg: 10.1235,
-      decDeg: -5.4567,
-    });
-  });
-
-  it('parses a pos hash with positive declination', () => {
-    expect(parseFocusHash('#focus=pos@123.0000,45.6789')).toEqual({
-      kind: 'pos',
-      raDeg: 123.0,
-      decDeg: 45.6789,
-    });
-  });
-
-  it('returns null for an unrecognised hash key', () => {
-    expect(parseFocusHash('#bogus')).toBeNull();
-  });
-
-  it('returns null for an empty string', () => {
-    expect(parseFocusHash('')).toBeNull();
-  });
-
-  it('returns null for #focus= with no value', () => {
-    expect(parseFocusHash('#focus=')).toBeNull();
-  });
-
-  it('returns null for malformed pgc with non-numeric body', () => {
-    expect(parseFocusHash('#focus=pgc-abc')).toBeNull();
-  });
-
-  it('returns null for malformed sdss with non-numeric body', () => {
-    expect(parseFocusHash('#focus=sdss-xyz')).toBeNull();
-  });
-
-  it('returns null for pos@ with non-numeric coordinates', () => {
-    expect(parseFocusHash('#focus=pos@bad,values')).toBeNull();
-  });
-
-  it('returns null for a malformed percent-escape (decodeURIComponent throws)', () => {
-    // Truncated UTF-8 escape: `%E0%A4` is a valid 2-byte prefix, but
-    // `%E0%A4%A` is missing the final hex digit, which makes
-    // `decodeURIComponent` throw `URIError`.  The codec catches that
-    // and returns null so a half-copied URL doesn't crash the app.
-    expect(parseFocusHash('#focus=%E0%A4%A')).toBeNull();
-  });
-
-  // ── Structure prefix routing ────────────────────────────────────────
-
-  it("routes 'focus=cluster-virgo-m87' to kind structure with the full id", () => {
-    expect(parseFocusHash('#focus=cluster-virgo-m87')).toEqual({
-      kind: 'structure',
-      id: 'cluster-virgo-m87',
-    });
-  });
-
-  it('routes a supercluster id to kind structure', () => {
-    expect(parseFocusHash('#focus=supercluster-coma-sc')).toEqual({
-      kind: 'structure',
-      id: 'supercluster-coma-sc',
-    });
-  });
-
-  it('routes a void id to kind structure', () => {
-    expect(parseFocusHash('#focus=void-bootes-void')).toEqual({
-      kind: 'structure',
-      id: 'void-bootes-void',
-    });
-  });
-
-  it('routes a group id to kind structure', () => {
-    expect(parseFocusHash('#focus=group-local-group')).toEqual({
-      kind: 'structure',
-      id: 'group-local-group',
-    });
-  });
-
-  // Regression: bare famous ids must not be swallowed by the structure branch
-  it("still routes a bare famous id (e.g. 'm31') to kind famous", () => {
-    expect(parseFocusHash('#focus=m31')).toEqual({ kind: 'famous', id: 'm31' });
-  });
-
-  // Regressions: pgc/sdss/pos@ must be unchanged (existing tests cover them;
-  // the assertions below confirm the structure branch doesn't interfere)
-  it('leaves pgc- decoding unchanged when a structure category prefix is absent', () => {
-    expect(parseFocusHash('#focus=pgc-2789')).toEqual({ kind: 'pgc', pgc: 2789n });
-  });
-
-  it('leaves sdss- decoding unchanged when a structure category prefix is absent', () => {
-    expect(parseFocusHash('#focus=sdss-1237665128253423687')).toEqual({
-      kind: 'sdss',
-      objID: 1237665128253423687n,
-    });
-  });
-
-  it('leaves pos@ decoding unchanged when a structure category prefix is absent', () => {
-    expect(parseFocusHash('#focus=pos@10.1235,-5.4567')).toEqual({
-      kind: 'pos',
-      raDeg: 10.1235,
-      decDeg: -5.4567,
-    });
   });
 });
