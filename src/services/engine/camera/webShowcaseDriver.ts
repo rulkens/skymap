@@ -19,17 +19,22 @@
  *                    log-dolly in, framing Virgo's ring (factor 1.8 keeps the
  *                    ring just visible rather than past its close-approach
  *                    fade-out).
- *   click    +0.8 s  Settle on the ring, beat, then FOCUS Virgo — the same
- *                    gesture a double-click fires. Non-member galaxies fade to
- *                    ~8% over 400 ms; Virgo's members stay bright.
- *   dwell    11–15 s Drift further in on the surviving members (ring framing →
- *                    close framing) with a slow yaw + pitch bob.
- *   galaxy   15–20 s Dive from the cluster framing down to M87 (Virgo A, the
+ *   click    @11 s   The moment the approach settles, FOCUS Virgo — the isolate
+ *                    lands on the SAME beat as the camera arriving, not after a
+ *                    pause. The same gesture a double-click fires: non-member
+ *                    galaxies fade to ~8% over 400 ms; Virgo's members stay bright.
+ *   dwell    11–15 s HOLD the ring framing the approach landed on — the click
+ *                    settles exactly where the camera arrives, so there's no
+ *                    post-click dolly. The isolation reads while the camera sits
+ *                    still (bar the slow orbit + pitch bob) before the dive.
+ *   galaxy   15–20 s Dive from the ring framing down to M87 (Virgo A, the
  *                    central giant elliptical) — log-dolly to its focus
  *                    distance so the curated thumbnail quad resolves. Virgo
  *                    stays focused, so M87 (a member) holds bright while the
  *                    rest of the sky stays dimmed.
- *   hold     20–23 s Slow orbit on M87, then release.
+ *   hold     20–23 s Slow orbit on the M87 thumbnail.
+ *   clear    23–27 s Keep orbiting for a 4 s beat, then lift the focus — the
+ *                    dimmed background fades back in — and release control.
  *
  * ### Why the galaxy beat keeps Virgo focused (doesn't focus M87)
  *
@@ -55,8 +60,10 @@
  *   - Press `h` (home) to centre the orbit on the Milky Way.
  *   - Ensure structure labels are on (default), `Tab` to hide UI, then `g`.
  *
- * Members stay isolated after a take; reload between takes. `?webshow=<mpc>`
- * overrides the opening pan distance. Attached only when `?webshow` is present.
+ * A full take lifts its own isolation at the end, so the scene is clean for the
+ * next `g` — no reload needed (an aborted take still leaves it latched).
+ * `?webshow=<mpc>` overrides the opening pan distance. Attached only when
+ * `?webshow` is present.
  */
 
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
@@ -97,19 +104,23 @@ const M87_ID = 'm87';
 const PREROLL_SEC = 2; // static start pose after `g` — time to hit record
 const PAN_SEC = 6; // orbit the neighbourhood, rings + labels sweep through
 const APPROACH_SEC = 5; // ease target → Virgo + dolly in to frame its ring
-const DWELL_SEC = 4; // drift in on the isolated members
+const DWELL_SEC = 4; // hold the ring framing while the isolate reads
 const GALAXY_SEC = 5; // dive from the cluster framing down to M87
-const GHOLD_SEC = 3; // slow orbit on the M87 thumbnail, then release
+const GHOLD_SEC = 3; // slow orbit on the M87 thumbnail
+const CLEAR_SEC = 4; // wait on M87, then lift the isolation (background returns)
 
 const T_PAN_END = PAN_SEC; // 6
 const T_APPROACH_END = T_PAN_END + APPROACH_SEC; // 11
 const T_DWELL_END = T_APPROACH_END + DWELL_SEC; // 15
 const T_GALAXY_END = T_DWELL_END + GALAXY_SEC; // 20
-const T_END = T_GALAXY_END + GHOLD_SEC; // 23
+const T_HOLD_END = T_GALAXY_END + GHOLD_SEC; // 23
+const T_END = T_HOLD_END + CLEAR_SEC; // 27 — clear focus + release here
 
-/** Beat after the approach settles before the isolate fires — the "click". */
-const CLICK_DELAY_SEC = 0.8;
-const T_CLICK = T_APPROACH_END + CLICK_DELAY_SEC; // 11.8
+// The isolate fires the instant the approach settles — same beat as the camera
+// arriving at the cluster. Bump this to reinstate a "settle, beat, then click"
+// pause if the take wants one.
+const CLICK_DELAY_SEC = 0;
+const T_CLICK = T_APPROACH_END + CLICK_DELAY_SEC; // 11
 
 /**
  * Opening orbit distance, Mpc — frames the local structure neighbourhood
@@ -124,9 +135,6 @@ const DEFAULT_PAN_MPC = 160;
  * still visible at the moment of the isolate — the "click a ring" read.
  */
 const RING_FRAMING_FACTOR = 1.8;
-
-/** Close-framing factor — the hold drifts in to here on the isolated members. */
-const CLOSE_FRAMING_FACTOR = 0.9;
 
 /** Slow rotation rate, rad/s (~50 s per revolution) — a gentle parallax pan. */
 const ROT_RATE_RAD_S = 0.12;
@@ -177,6 +185,7 @@ export function createWebShowcaseDriver(
   let lastMs = 0;
   let yawAccum = 0;
   let firedFocus = false;
+  let firedClear = false;
 
   // Resolved on `g` (anchors load synchronously during wiring, but resolving
   // at arm-time avoids any construction-order assumption). null → run the
@@ -184,7 +193,6 @@ export function createWebShowcaseDriver(
   let virgo: StructureInfo | null = null;
   let logDpan = Math.log(clampDistance(panMpc));
   let logDring = logDpan;
-  let logDclose = logDpan;
 
   // M87's world position + framing distance, resolved on `g`. null → skip the
   // galaxy dive (hold on the isolated members instead).
@@ -227,6 +235,7 @@ export function createWebShowcaseDriver(
         lastMs = nowMs;
         yawAccum = 0;
         firedFocus = false;
+        firedClear = false;
 
         virgo = state.data.structures.byId(VIRGO_ID);
         logDpan = Math.log(clampDistance(panMpc));
@@ -234,11 +243,9 @@ export function createWebShowcaseDriver(
           const r = virgo.apparentRadiusMpc ?? virgo.physicalRadiusMpc;
           const dFocus = structureFocusDistance(r, cam.fovYRad);
           logDring = Math.log(clampDistance(dFocus * RING_FRAMING_FACTOR));
-          logDclose = Math.log(clampDistance(dFocus * CLOSE_FRAMING_FACTOR));
         } else {
           // No Virgo record → stay at the pan distance (camera move only).
           logDring = logDpan;
-          logDclose = logDpan;
         }
 
         // Resolve M87 for the final dive straight from the famous catalog —
@@ -253,7 +260,7 @@ export function createWebShowcaseDriver(
           logDgalaxy = Math.log(clampDistance(galaxyFocusDistance(famous.diameterKpc[m87Idx])));
         } else {
           m87Pos = null;
-          logDgalaxy = logDclose;
+          logDgalaxy = logDring;
         }
         phase = 'running';
       }
@@ -305,10 +312,11 @@ export function createWebShowcaseDriver(
       }
 
       // ── Distance: log-dolly through the framing waypoints — pan distance →
-      // Virgo ring (approach) → close cluster framing (dwell) → M87 focus
-      // distance (galaxy dive) — each segment eased. Each waypoint is a log of
-      // a clamped distance, so exp() interpolates geometrically (constant
-      // zoom-rate feel across the orders of magnitude from 160 Mpc to ~0.3). ──
+      // Virgo ring (approach) → HOLD at the ring framing (dwell, so the click
+      // settles where the approach landed) → M87 focus distance (galaxy dive).
+      // Each moving segment is eased. Each waypoint is a log of a clamped
+      // distance, so exp() interpolates geometrically (constant zoom-rate feel
+      // across the orders of magnitude from 160 Mpc to ~0.3). ──
       let logD = logDpan;
       if (tAnim < T_PAN_END) {
         logD = logDpan;
@@ -316,11 +324,11 @@ export function createWebShowcaseDriver(
         const e = easeInOutCubic((tAnim - T_PAN_END) / APPROACH_SEC);
         logD = logDpan + (logDring - logDpan) * e;
       } else if (tAnim < T_DWELL_END) {
-        const e = easeInOutCubic((tAnim - T_APPROACH_END) / DWELL_SEC);
-        logD = logDring + (logDclose - logDring) * e;
+        // Hold: stay exactly where the approach landed while the isolate reads.
+        logD = logDring;
       } else if (tAnim < T_GALAXY_END) {
         const e = easeInOutCubic((tAnim - T_DWELL_END) / GALAXY_SEC);
-        logD = logDclose + (logDgalaxy - logDclose) * e;
+        logD = logDring + (logDgalaxy - logDring) * e;
       } else {
         logD = logDgalaxy;
       }
@@ -340,9 +348,17 @@ export function createWebShowcaseDriver(
         store.dispatch(updateSelectionFocus({ type: 'structure', id: VIRGO_ID }));
       }
 
-      // Release control once the timeline ends. The isolate stays latched
-      // (reload to reset before the next take).
-      if (tAnim >= T_END) phase = 'idle';
+      // End of take: after a 4 s wait orbiting M87, lift the isolation so the
+      // dimmed background fades back in, then release control. requestRender
+      // keeps the loop awake for the 400 ms recession fade past the last
+      // scripted frame. (An aborted take — `g` mid-run — skips this and leaves
+      // the isolate latched; reload to reset.)
+      if (!firedClear && tAnim >= T_END) {
+        firedClear = true;
+        store.dispatch(updateSelectionFocus(null));
+        requestRender();
+        phase = 'idle';
+      }
     },
   };
 }
