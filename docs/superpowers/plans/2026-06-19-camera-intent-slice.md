@@ -772,6 +772,9 @@ surviving surface.
 
 ### Task 5.1 — App auto-rotate toggle → camera-slice `setAutoRotate`; relocate out of settings
 
+> ✅ **DONE** — commit `4a495027`, review clean (spec ✅, quality approved). Also
+> deleted the runFrame auto-rotate bridge + its tests (the relocation made it dead).
+
 **Files:**
 - `src/components/App/App.tsx` (modify) — import `setAutoRotate` + `selectAutoRotate`
   from the CAMERA slice (`../../state/camera/...`) instead of settings (`App.tsx:75`
@@ -795,9 +798,9 @@ surviving surface.
 > selectCameraIntent(state).autoRotate.rate }` (reuse the existing rate, don't
 > re-literal it at the call site — single source of truth).
 
-- [ ] `the auto-rotate toggle dispatches camera/setAutoRotate with the active bit flipped and the existing rate`.
-- [ ] `settings slice no longer has a camera sub-object` (settings state shape pin).
-- [ ] Confirm fail → implement → pass. `npm test` + `npm run typecheck` → green.
+- [x] `the auto-rotate toggle dispatches camera/setAutoRotate with the active bit flipped and the existing rate`.
+- [x] `settings slice no longer has a camera sub-object` (settings state shape pin).
+- [x] Confirm fail → implement → pass. `npm test` + `npm run typecheck` → green.
   Commit.
 
 ### Task 5.2 — delete `tweenManager` + `createTweenManager` wiring
