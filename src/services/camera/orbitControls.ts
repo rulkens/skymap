@@ -497,9 +497,22 @@ export function attachOrbitControls(
     // an inverted scene; a hard ceiling prevents drifting off into the void
     // beyond the deepest galaxy catalog, where the cloud collapses to a dot.
     const factor = Math.exp(e.deltaY * 0.001);
-    cam.distance = clampDistance(cam.distance * factor);
-    updatePosition(cam);
-    options?.onChange?.();
+
+    if (activePointers.size > 0) {
+      // Wheel DURING a drag/pinch: fold the zoom into the live `cam` register.
+      // The `orbitDrag` driver (priority 80) is active and renders `poseOf(cam)`,
+      // so the zoom shows immediately and rides the `onGestureEnd` commit.
+      cam.distance = clampDistance(cam.distance * factor);
+      updatePosition(cam);
+      options?.onChange?.();
+      return;
+    }
+
+    // Discrete wheel zoom with NO gesture in progress: `dragging` is false, so
+    // the `resting` driver renders the store `base`, not `cam` — a `cam`
+    // mutation would be invisible. Commit the zoom straight into `base` via the
+    // engine callback (which also wakes the loop).
+    options?.onZoom?.(factor);
   };
 
   // ── Register listeners ─────────────────────────────────────────────────────

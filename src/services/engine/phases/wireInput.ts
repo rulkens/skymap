@@ -26,7 +26,7 @@
  *     orbit-controls detach function.
  */
 
-import { createOrbitCamera } from '../../camera/orbitCamera';
+import { createOrbitCamera, clampDistance } from '../../camera/orbitCamera';
 import { attachOrbitControls } from '../../camera/orbitControls';
 import { seedCameraFromBase } from '../../camera/seedCameraFromBase';
 import { createPickRenderer } from '../../gpu/renderers/pickRenderer';
@@ -280,6 +280,25 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // Wake the render loop after any camera mutation so the frame body
     // re-derives the pose, updates the scale bar, and runs the pick gate.
     onChange: () => {
+      state.subsystems.scheduler.requestRender();
+    },
+
+    // Discrete wheel zoom (no gesture in progress): the resting driver renders
+    // the store `base`, so commit the zoomed distance straight into it. Reading
+    // `base` from the store (not the frame-lagged `lastPose` Resource) makes
+    // rapid wheel ticks accumulate correctly — each tick zooms from the prior
+    // tick's committed distance. `clampDistance` enforces the same zoom envelope
+    // as the drag/pinch path.
+    onZoom: (factor) => {
+      const base = store.getState().camera.base;
+      store.dispatch(
+        commitCameraPose({
+          target: [base.target[0], base.target[1], base.target[2]],
+          yaw: base.yaw,
+          pitch: base.pitch,
+          distance: clampDistance(base.distance * factor),
+        }),
+      );
       state.subsystems.scheduler.requestRender();
     },
 

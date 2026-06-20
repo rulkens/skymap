@@ -20,6 +20,7 @@
 
 import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
 import type { CameraTweenDescriptor } from '../../../@types/camera/CameraTweenDescriptor';
+import type { CameraPose } from '../../../@types/camera/CameraPose';
 
 /**
  * Create a fresh CameraClock with no recorded starts.
@@ -32,6 +33,7 @@ export function createCameraClock(): CameraClock {
     autoRotateStartMs: null,
     lastTweenRef: null,
     lastAutoRotateActive: false,
+    lastBaseRef: null,
   };
 }
 
@@ -60,16 +62,29 @@ export function tweenElapsed(
 }
 
 /**
- * Detect whether the auto-rotate active bit flipped; if so, reset the
- * auto-rotate start to `nowMs` (or null when it deactivated). Then return
- * ms elapsed since auto-rotate last became active.
+ * Reset the auto-rotate start to `nowMs` when the active bit flips OR when the
+ * `base` reference changes underneath an active spin; then return ms elapsed
+ * since that start.
  *
- * Active false→true returns 0 on the activation frame then grows. Any
+ * `spinAutoRotate` advances yaw from a FROZEN base by cumulative elapsed. A
+ * commit-on-edge (drag-release, focus settle) installs a NEW base object while
+ * `active` stays true — without the base-identity reset the accumulated elapsed
+ * would apply to the fresh base and jump the camera on resume. `base` only
+ * changes on a commit edge, never mid-continuous-spin, so a steady spin is
+ * never reset by this.
+ *
+ * Active false→true (or a base change) returns 0 on that frame then grows. Any
  * transition to false returns 0.
  */
-export function autoRotateElapsed(clock: CameraClock, active: boolean, nowMs: number): number {
-  if (active !== clock.lastAutoRotateActive) {
+export function autoRotateElapsed(
+  clock: CameraClock,
+  active: boolean,
+  base: CameraPose,
+  nowMs: number,
+): number {
+  if (active !== clock.lastAutoRotateActive || base !== clock.lastBaseRef) {
     clock.lastAutoRotateActive = active;
+    clock.lastBaseRef = base;
     clock.autoRotateStartMs = active ? nowMs : null;
   }
   return clock.autoRotateStartMs === null ? 0 : nowMs - clock.autoRotateStartMs;

@@ -87,7 +87,7 @@ function elapsedForWinner(
 ): number {
   if (winner.id === 'tween') return tweenElapsed(clock, s.camera.tween, nowMs);
   if (winner.id === 'autoRotate')
-    return autoRotateElapsed(clock, s.camera.autoRotate.active, nowMs);
+    return autoRotateElapsed(clock, s.camera.autoRotate.active, s.camera.base, nowMs);
   // orbitDrag and resting are stateless; elapsed is irrelevant to their pose.
   return 0;
 }

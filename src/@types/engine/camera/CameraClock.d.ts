@@ -18,10 +18,16 @@
  */
 
 import type { CameraTweenDescriptor } from '../../camera/CameraTweenDescriptor';
+import type { CameraPose } from '../../camera/CameraPose';
 
 export type CameraClock = {
   tweenStartMs: number | null;
   autoRotateStartMs: number | null;
   lastTweenRef: CameraTweenDescriptor | null;
   lastAutoRotateActive: boolean;
+  // The `base` reference auto-rotate last spun from. A commit-on-edge installs a
+  // NEW base object while auto-rotate stays active; the spin clock resets when
+  // this changes so the freshly committed base spins from elapsed 0, not from
+  // the stale accumulated time (which would jump the camera on resume).
+  lastBaseRef: CameraPose | null;
 };

@@ -193,8 +193,18 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // exactly at the `desc.to` value.
   const { lastPose, prevActiveId } = state.cameraRuntime;
   const prev = prevActiveId.current;
+  // The pose this frame actually renders. Normally the freshly produced pose;
+  // on a deactivation edge it is overridden to the just-committed pose (below).
+  let renderPose = pose;
   if (prev !== activeId && (prev === 'tween' || prev === 'autoRotate')) {
     deps.cb.store.dispatch(commitCameraPose(lastPose.current));
+    // Commit-on-edge fires AFTER produce, so the produce step above ran the
+    // INCOMING driver against the PRE-commit `base`. For a driver that reads
+    // `base` (resting / autoRotate) that pose is the stale pre-edge value —
+    // rendering it flashes the camera back to where the tween or spin started
+    // for one frame. `lastPose.current` is the animation's final pose and the
+    // value we just baked into `base`, so render THAT this frame instead.
+    renderPose = lastPose.current;
   }
 
   // ── (4) UPDATE Resources for next frame ───────────────────────────────────
@@ -202,7 +212,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // `prevActiveId` and `lastPose` are updated AFTER the commit-on-edge so the
   // commit correctly reads the PREVIOUS frame's values.
   prevActiveId.current = activeId;
-  lastPose.current = pose;
+  lastPose.current = renderPose;
 
   // Emit a per-frame camera snapshot for React-side derived state (scale bar
   // today; potentially other zoom-dependent UI later). Fires unconditionally
@@ -227,7 +237,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // for downstream `renderFrame()`. The 'not ready' branch is the brief window
   // before the first cloud lands; once cam + GPU handles populate together,
   // it's never taken again.
-  const ctx = deriveFrameContext(state, deps.canvas, pose, state.cameraRuntime.projection);
+  const ctx = deriveFrameContext(state, deps.canvas, renderPose, state.cameraRuntime.projection);
   if (!ctx.isReady) {
     // Essential wake: bootstrap populates cam/GPU handles without waking any
     // channel — keep re-polling until the gate opens.

@@ -49,6 +49,16 @@ export type OrbitControlsOptions = {
    */
   onChange?: () => void;
   /**
+   * Called for a wheel zoom that occurs with NO pointer gesture in progress,
+   * with the multiplicative distance `factor` (e^(deltaY·k)). The engine commits
+   * the zoom straight into the store `base` — without a gesture, `dragging` is
+   * false, so the `resting` driver renders `base` and a mutation of the live
+   * `cam` register would be invisible. A wheel DURING a drag/pinch instead folds
+   * into `cam` (the `orbitDrag` driver renders it live) and rides the
+   * `onGestureEnd` commit, so it does not go through this callback.
+   */
+  onZoom?: (factor: number) => void;
+  /**
    * Called on the first pointer contact that begins a new gesture (i.e. when
    * `activePointers.size === 1` on `pointerdown`). Subsequent fingers (pinch
    * promotion) do NOT re-fire this.

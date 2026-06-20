@@ -34,7 +34,8 @@
  *   - `onGestureStart` fires exactly on the FIRST contact (not on a
  *     second finger promoting to pinch).
  *   - `onGestureEnd` fires exactly when ALL contacts are lifted.
- *   - `onChange` fires after any orbit, pan, pinch, or wheel change.
+ *   - `onChange` fires after any orbit, pan, pinch, or in-gesture wheel change;
+ *     a discrete wheel zoom (no gesture) fires `onZoom` instead.
  *
  * Vitest runs in `node` here (no jsdom), so — matching
  * `inputBindings.test.ts` — we hand-roll EventTarget recorders for the
@@ -354,26 +355,45 @@ describe('attachOrbitControls — gesture hooks (Redux wiring)', () => {
     expect(onChange.mock.calls.length).toBeGreaterThan(countAfterDown);
   });
 
-  it('onChange fires after a wheel zoom', () => {
+  it('a discrete wheel zoom (no gesture) calls onZoom with the distance factor, not onChange', () => {
+    const onZoom = vi.fn<(factor: number) => void>();
     const onChange = vi.fn<() => void>();
-    const cam = makeCamera();
-    const rec = makeRecorder();
-    // attachOrbitControls binds 'wheel' to the canvas; we need a fresh
-    // canvas recorder that also has a 'wheel' listener.
-    const wheelCanvas = Object.assign(rec.target, {
-      setPointerCapture: vi.fn(),
-      releasePointerCapture: vi.fn(),
-      hasPointerCapture: () => false,
-      clientHeight: 1000,
-      clientWidth: 1000,
-      width: 1000,
-      height: 1000,
-    });
+    const { canvas, rec } = makeCanvas();
 
-    attachOrbitControls(wheelCanvas as unknown as HTMLCanvasElement, cam, { onChange });
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, makeCamera(), { onZoom, onChange });
 
     rec.fire('wheel', { deltaY: 100, preventDefault: vi.fn() });
 
+    // exp(100 * 0.001) = exp(0.1) ≈ 1.105 — zoom OUT (distance grows).
+    expect(onZoom).toHaveBeenCalledTimes(1);
+    expect(onZoom.mock.calls[0]?.[0]).toBeCloseTo(Math.exp(0.1), 6);
+    // With no gesture, `cam` is not the rendered pose; onZoom commits to `base`
+    // and wakes the loop itself, so the onChange wake path is NOT taken.
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('a wheel DURING a drag folds into the cam register and fires onChange (no onZoom)', () => {
+    const onZoom = vi.fn<(factor: number) => void>();
+    const onChange = vi.fn<() => void>();
+    const cam = makeCamera();
+    const { canvas, rec } = makeCanvas();
+
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, cam, { onZoom, onChange });
+
+    // Begin a gesture so activePointers.size > 0.
+    rec.fire('pointerdown', {
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+    });
+    const before = cam.distance;
+    rec.fire('wheel', { deltaY: 100, preventDefault: vi.fn() });
+
+    // Folded into the live register (orbitDrag renders it); rides onGestureEnd.
+    expect(cam.distance).toBeGreaterThan(before);
     expect(onChange).toHaveBeenCalled();
+    expect(onZoom).not.toHaveBeenCalled();
   });
 });

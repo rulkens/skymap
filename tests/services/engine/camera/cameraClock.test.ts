@@ -13,6 +13,7 @@ import {
   autoRotateElapsed,
 } from '../../../../src/services/engine/camera/cameraClock';
 import type { CameraTweenDescriptor } from '../../../../src/@types/camera/CameraTweenDescriptor';
+import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 
 function makeDescriptor(overrides?: Partial<CameraTweenDescriptor>): CameraTweenDescriptor {
   return {
@@ -31,6 +32,7 @@ describe('createCameraClock', () => {
     expect(clock.autoRotateStartMs).toBeNull();
     expect(clock.lastTweenRef).toBeNull();
     expect(clock.lastAutoRotateActive).toBe(false);
+    expect(clock.lastBaseRef).toBeNull();
   });
 });
 
@@ -111,53 +113,77 @@ describe('tweenElapsed', () => {
 });
 
 describe('autoRotateElapsed', () => {
+  // A stable base reference; passing the SAME object each call means the
+  // base-identity reset never fires, so these tests exercise only the
+  // active-bit transitions.
+  const BASE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
+
   it('returns 0 when auto-rotate is inactive from the start', () => {
     const clock = createCameraClock();
-    expect(autoRotateElapsed(clock, false, 2000)).toBe(0);
-    expect(autoRotateElapsed(clock, false, 2100)).toBe(0);
+    expect(autoRotateElapsed(clock, false, BASE, 2000)).toBe(0);
+    expect(autoRotateElapsed(clock, false, BASE, 2100)).toBe(0);
   });
 
   it('returns 0 on the frame auto-rotate becomes active (false → true)', () => {
     const clock = createCameraClock();
-    expect(autoRotateElapsed(clock, true, 2000)).toBe(0);
+    expect(autoRotateElapsed(clock, true, BASE, 2000)).toBe(0);
   });
 
   it('grows on subsequent frames while active', () => {
     const clock = createCameraClock();
-    autoRotateElapsed(clock, true, 2000); // activation → 0
-    expect(autoRotateElapsed(clock, true, 2016)).toBe(16);
-    expect(autoRotateElapsed(clock, true, 2032)).toBe(32);
+    autoRotateElapsed(clock, true, BASE, 2000); // activation → 0
+    expect(autoRotateElapsed(clock, true, BASE, 2016)).toBe(16);
+    expect(autoRotateElapsed(clock, true, BASE, 2032)).toBe(32);
   });
 
   it('resets to 0 when auto-rotate deactivates (true → false)', () => {
     const clock = createCameraClock();
-    autoRotateElapsed(clock, true, 2000);
-    autoRotateElapsed(clock, true, 2050);
-    expect(autoRotateElapsed(clock, false, 2100)).toBe(0);
+    autoRotateElapsed(clock, true, BASE, 2000);
+    autoRotateElapsed(clock, true, BASE, 2050);
+    expect(autoRotateElapsed(clock, false, BASE, 2100)).toBe(0);
   });
 
   it('returns 0 on the frame auto-rotate re-activates after a pause', () => {
     const clock = createCameraClock();
-    autoRotateElapsed(clock, true, 2000);
-    autoRotateElapsed(clock, true, 2016);
-    autoRotateElapsed(clock, false, 2100); // deactivate → 0
-    expect(autoRotateElapsed(clock, true, 2200)).toBe(0); // re-activate → 0
+    autoRotateElapsed(clock, true, BASE, 2000);
+    autoRotateElapsed(clock, true, BASE, 2016);
+    autoRotateElapsed(clock, false, BASE, 2100); // deactivate → 0
+    expect(autoRotateElapsed(clock, true, BASE, 2200)).toBe(0); // re-activate → 0
   });
 
   it('grows again after re-activation', () => {
     const clock = createCameraClock();
-    autoRotateElapsed(clock, true, 2000);
-    autoRotateElapsed(clock, false, 2100);
-    autoRotateElapsed(clock, true, 2200); // re-activate → 0
-    expect(autoRotateElapsed(clock, true, 2216)).toBe(16);
+    autoRotateElapsed(clock, true, BASE, 2000);
+    autoRotateElapsed(clock, false, BASE, 2100);
+    autoRotateElapsed(clock, true, BASE, 2200); // re-activate → 0
+    expect(autoRotateElapsed(clock, true, BASE, 2216)).toBe(16);
   });
 
   it('full false→true→false→true sequence matches the brief', () => {
     const clock = createCameraClock();
-    expect(autoRotateElapsed(clock, true, 2000)).toBe(0);
-    expect(autoRotateElapsed(clock, true, 2016)).toBe(16);
-    expect(autoRotateElapsed(clock, false, 2100)).toBe(0);
-    expect(autoRotateElapsed(clock, true, 2200)).toBe(0);
+    expect(autoRotateElapsed(clock, true, BASE, 2000)).toBe(0);
+    expect(autoRotateElapsed(clock, true, BASE, 2016)).toBe(16);
+    expect(autoRotateElapsed(clock, false, BASE, 2100)).toBe(0);
+    expect(autoRotateElapsed(clock, true, BASE, 2200)).toBe(0);
+  });
+
+  it('resets to 0 when base changes underneath an active spin (commit-on-edge)', () => {
+    // A drag-release / focus settle commits a NEW base object while auto-rotate
+    // stays active. The spin must restart from elapsed 0 against the fresh base,
+    // not carry the accumulated time forward (which would jump the camera).
+    const clock = createCameraClock();
+    autoRotateElapsed(clock, true, BASE, 2000); // activation → 0
+    expect(autoRotateElapsed(clock, true, BASE, 2050)).toBe(50); // same base → grows
+    const NEW_BASE: CameraPose = { target: [1, 0, 0], yaw: 0.5, pitch: 0, distance: 80 };
+    expect(autoRotateElapsed(clock, true, NEW_BASE, 2060)).toBe(0); // base changed → reset
+    expect(autoRotateElapsed(clock, true, NEW_BASE, 2075)).toBe(15); // grows from new base
+  });
+
+  it('does NOT reset while the base reference is stable (steady spin)', () => {
+    const clock = createCameraClock();
+    autoRotateElapsed(clock, true, BASE, 1000);
+    expect(autoRotateElapsed(clock, true, BASE, 1500)).toBe(500);
+    expect(autoRotateElapsed(clock, true, BASE, 2000)).toBe(1000);
   });
 
   it('is deterministic from its args — no real wall-clock dependency', () => {
@@ -172,8 +198,8 @@ describe('autoRotateElapsed', () => {
       [true, 3220],
     ];
 
-    const xResults = steps.map(([active, nowMs]) => autoRotateElapsed(clockX, active, nowMs));
-    const yResults = steps.map(([active, nowMs]) => autoRotateElapsed(clockY, active, nowMs));
+    const xResults = steps.map(([active, nowMs]) => autoRotateElapsed(clockX, active, BASE, nowMs));
+    const yResults = steps.map(([active, nowMs]) => autoRotateElapsed(clockY, active, BASE, nowMs));
 
     expect(xResults).toEqual(yResults);
   });

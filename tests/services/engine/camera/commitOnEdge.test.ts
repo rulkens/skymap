@@ -123,18 +123,22 @@ function simulateFrame(
     }
   }
 
-  // Step 3: Commit-on-edge.
+  // Step 3: Commit-on-edge. On a deactivation edge the frame renders the
+  // just-committed pose (lastPose), not the stale-base produce result — mirrors
+  // runFrame's `renderPose` override that prevents the one-frame edge flicker.
   const prev = prevActiveId.current;
+  let renderPose = pose;
   if (prev !== currActiveId && (prev === 'tween' || prev === 'autoRotate')) {
     store.dispatch(commitCameraPose(lastPose.current));
     committed = true;
+    renderPose = lastPose.current;
   }
 
   // Step 4: Update Resources.
   prevActiveId.current = currActiveId;
-  lastPose.current = pose;
+  lastPose.current = renderPose;
 
-  return { pose, activeId: currActiveId, committed };
+  return { pose: renderPose, activeId: currActiveId, committed };
 }
 
 describe('commitOnEdge — tween settles', () => {
@@ -250,6 +254,34 @@ describe('commitOnEdge — tween settles', () => {
     expect(base.pitch).toBeCloseTo(TO.pitch, 6);
     expect(base.distance).toBeCloseTo(TO.distance, 6);
     expect(Array.from(base.target as number[])).toEqual([5, 10, 15]);
+  });
+
+  it('the deactivation frame RENDERS the committed pose, not the stale base (no edge flicker)', () => {
+    // Regression: commit-on-edge fires AFTER produce, so on the deactivation
+    // frame the resting driver reads the pre-commit base. Without the renderPose
+    // override the frame would flash the pre-tween pose (PRE) for one frame
+    // before the next frame snaps to the target.
+    const store = makeStore();
+    const { state } = makeEngineState();
+    const drivers = buildCameraDrivers(state as unknown as EngineState);
+    const PRE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
+    const TO: CameraPose = { target: [5, 10, 15], yaw: 2.5, pitch: -0.3, distance: 40 };
+
+    store.dispatch(commitCameraPose(PRE));
+    store.dispatch(
+      startCameraTween({ from: PRE, to: TO, durationMs: 200, easing: 'easeOutCubic' }),
+    );
+    state.cameraRuntime.prevActiveId.current = 'tween';
+
+    simulateFrame(state, store, drivers, 0); // arrival: primes clock
+    simulateFrame(state, store, drivers, 200); // cancel frame: lastPose := saturated TO
+    const edge = simulateFrame(state, store, drivers, 220); // deactivation edge
+
+    expect(edge.activeId).toBe('resting');
+    expect(edge.committed).toBe(true);
+    // The rendered pose is the committed target, NOT the stale pre-tween base.
+    expect(edge.pose.yaw).toBeCloseTo(TO.yaw, 6);
+    expect(edge.pose.distance).toBeCloseTo(TO.distance, 6);
   });
 });
 
