@@ -7,7 +7,7 @@
  *
  * ### Why some fields are null at construction
  *
- *   - Eager (no GPU dep): `tweens`, `scheduler` — constructed up-front
+ *   - Eager (no GPU dep): `scheduler`, `fades` — constructed up-front
  *     so their callbacks can be captured before the GPU IIFE finishes.
  *   - Lazy (inside the GPU init IIFE): `galaxyAtlas`, `proceduralDisks`,
  *     `texturedDisks`, `clickResolver`, `inputBindings`.
@@ -26,7 +26,6 @@ import type { HiResFamousTexture } from '../../rendering/HiResFamousTexture';
 import type { BiasCorrectionSubsystem } from '../subsystems/BiasCorrectionSubsystem';
 import type { LabelDirectorSubsystem } from '../subsystems/LabelDirectorSubsystem';
 import type { StructureFocusSubsystem } from '../subsystems/StructureFocusSubsystem';
-import type { TweenManager } from '../../camera/TweenManager';
 import type { ClickResolver } from '../ClickResolver';
 import type { InputBindings } from '../../input/InputBindings';
 import type { RenderScheduler } from '../subsystems/RenderScheduler';
@@ -56,7 +55,6 @@ export type EngineSubsystemHandles = {
    * runs.
    */
   hiResFamousTexture: HiResFamousTexture | null;
-  tweens: TweenManager;
   clickResolver: ClickResolver | null;
   inputBindings: InputBindings | null;
   scheduler: RenderScheduler;

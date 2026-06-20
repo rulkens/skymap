@@ -35,7 +35,6 @@
  *   - `scaleBar.ts`            — pure scale-bar tick selection + label formatting (consumed by React)
  *
  *   Subsystems (closure-returning factories with internal state):
- *   - `tweenManager.ts`        — at-most-one in-flight CameraTween facade
  *   - `clickHandler.ts`        — pick → globalIdx → GalaxyInfo resolver
  *   - `inputBindings.ts`       — pointer/keyboard/resize listener bag
  *   - `thumbnailSubsystem.ts`  — atlas + queue + per-frame thumbnail draw
@@ -75,7 +74,8 @@ import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineState } from '../../@types/engine/state/EngineState';
 
-import { createTweenManager } from './camera/tweenManager';
+import { createCameraClock } from './camera/cameraClock';
+import type { CameraRuntime } from '../../@types/engine/state/CameraRuntime';
 import { createEngineData } from './data/createEngineData';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
@@ -151,8 +151,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //   - `picking`    → hover / click / drag mutables.
   //   - `gpu`        → renderers / HDR target / tone-map pass — null until
   //                    `initGpu` finishes.
-  //   - `subsystems` → long-lived helpers; `tweens` constructs up-front,
-  //                    the rest land later.
+  //   - `subsystems` → long-lived helpers; some construct up-front, the rest
+  //                    land later.
   //   - `cam` / `initialCamSnapshot` → orbit camera + framing snapshot,
   //                    null until the first cloud loads.
   //
@@ -181,6 +181,28 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     current: () => {
       /* stub until startLoop assigns the real body */
     },
+  };
+
+  // ── Live camera Resources (cameraRuntime) ────────────────────────────────
+  //
+  // The animation clock, live projection config, and the commit-on-edge
+  // bookkeeping refs. Constructed here alongside `frameRef` so wireInput
+  // (gesture seed + focus `from`), startLoop (RunFrameDeps), and runFrame
+  // (produce + commit-on-edge) all read from one source. Seeded with
+  // placeholders; wireInput's bootstrap seed fills real values once the
+  // initial OrbitCamera exists.
+  //
+  // `lastPose` seeds from the camera slice's initial `base` — the single home
+  // for the pre-bootstrap placeholder pose — so the first resting frame has a
+  // stable pose to read before wireInput's commitCameraPose fires. Copied so a
+  // later per-frame `lastPose.current = …` never aliases the store's state.
+  const cameraRuntime: CameraRuntime = {
+    clock: createCameraClock(),
+    projection: { fovYRad: 0, aspect: 1, near: 0.01, far: 50000 },
+    lastPose: {
+      current: { ...cb.store.getState().camera.base },
+    },
+    prevActiveId: { current: 'resting' },
   };
 
   // ── Settings — the injected Redux store ──────────────────────────
@@ -287,15 +309,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       texturedDisks: null,
       hiResFamous: null,
       hiResFamousTexture: null,
-      // ── Tween manager ──────────────────────────────────────────
-      // At most one camera tween at a time.  Sites that mutate it:
-      //   - public handle's focusOnHome (start a tween — auto-replaces
-      //     any running one),
-      //   - pointerdown handler         (cancel on user grab),
-      //   - per-frame frame() loop      (advance + auto-clear).
-      tweens: createTweenManager({
-        requestRender: () => state.subsystems.scheduler.requestRender(),
-      }),
 
       // ── Bias-correction subsystem ─────────────────────────────────
       // Owns Malmquist-bias mode flags, cached per-source ratios/weights,
@@ -350,6 +363,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
     cam: null,
     initialCamSnapshot: null,
+    // The live camera Resources — clock, projection, lastPose, prevActiveId.
+    // Seeded with placeholders; wireInput fills real values at bootstrap.
+    cameraRuntime,
     // ── Asset-loading slot bag ───────────────────────────────────────────
     //
     // Each slot is a race-checked fetch→commit pipeline (see
@@ -485,20 +501,28 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     reconcile: makeReconcileEffects(state),
     resolveDeps,
     runFocusTween: makeRunFocusTween(resolveDeps, {
-      galaxyCatalog: (row) => tweenToGalaxy(state, buildGalaxyInfo(row)),
-      structure: (row) => tweenToStructure(state, row),
+      galaxyCatalog: (row) => tweenToGalaxy(state, buildGalaxyInfo(row), store),
+      structure: (row) => tweenToStructure(state, row, store),
       milkyWay: () => {
         const cam = state.cam;
         if (!cam) return;
-        tweenToCameraSnapshot(state, {
-          target: [MILKY_WAY_CENTER_WORLD[0], MILKY_WAY_CENTER_WORLD[1], MILKY_WAY_CENTER_WORLD[2]],
-          distance: MILKY_WAY_VIEW_DISTANCE_MPC,
-          yaw: cam.yaw,
-          pitch: cam.pitch,
-          fovYRad: cam.fovYRad,
-          near: cam.near,
-          far: cam.far,
-        });
+        tweenToCameraSnapshot(
+          state,
+          {
+            target: [
+              MILKY_WAY_CENTER_WORLD[0],
+              MILKY_WAY_CENTER_WORLD[1],
+              MILKY_WAY_CENTER_WORLD[2],
+            ],
+            distance: MILKY_WAY_VIEW_DISTANCE_MPC,
+            yaw: cam.yaw,
+            pitch: cam.pitch,
+            fovYRad: cam.fovYRad,
+            near: cam.near,
+            far: cam.far,
+          },
+          store,
+        );
       },
     }),
   });
@@ -540,7 +564,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // saga and React readers see the same authoritative value.
     store.dispatch(updateSelectionFocus(null));
 
-    tweenToCameraSnapshot(state, state.initialCamSnapshot);
+    tweenToCameraSnapshot(state, state.initialCamSnapshot, store);
   }
 
   function logCameraStateFn(): void {
@@ -583,7 +607,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     detachControlsRef.current = null;
 
     // 3. Walk every other subsystem (order-independent past here).
-    state.subsystems.tweens.destroy();
     state.subsystems.biasCorrection.destroy();
     state.subsystems.labelDirector.destroy();
     state.subsystems.structureFocus.destroy();

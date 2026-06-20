@@ -5,17 +5,15 @@
  *
  * `focusOnHome` on `EngineHandle` targets `state.initialCamSnapshot` and reads
  * the same four orbit fields off it (`target.{x,y,z}`, `distance`, `yaw`,
- * `pitch`).  Pre-extraction it built a full `CameraTween` literal inline —
- * `vec3.clone` of the from-target, `vec3.fromValues` of the to-target, every
- * other from/to scalar — and handed it to `tweens.start(...)`.  Pulling that
- * scaffolding here collapses the call site to one line, and a future
- * home-targeting method (e.g. a "tween home" variant for a benchmark) plugs in
- * without re-spelling the tween literal.
+ * `pitch`). Pre-extraction it built a full tween literal inline and handed it
+ * to `tweens.start(...)`. Pulling that scaffolding here collapses the call site
+ * to one line, and a future home-targeting method plugs in without re-spelling
+ * the tween literal.
  *
  * ### Why the `state` parameter, not `(cam, snapshot)`
  *
  * The helper absorbs the cam-null guard itself — same pattern `tweenToGalaxy`
- * established for the focus-commit family.  Pulling `state` in is the cost of
+ * established for the focus-commit family. Pulling `state` in is the cost of
  * moving that guard out of the call site; the win is that callers who add a
  * third home-targeting method later inherit the safe behaviour for free.
  *
@@ -23,53 +21,73 @@
  *
  * `tweenToGalaxy` declares its own minimum-surface `TweenTarget` type because
  * its only callers (`GalaxyInfo`-bearing) are structurally compatible with a
- * much narrower shape.  Here, every caller already holds an `InitialCam` (built
+ * much narrower shape. Here, every caller already holds an `InitialCam` (built
  * once during bootstrap, stored on `state.initialCamSnapshot`); narrowing
- * wouldn't document anything the type doesn't already.  Use the existing domain
+ * wouldn't document anything the type doesn't already. Use the existing domain
  * type.
+ *
+ * ### Why `from` reads `cameraRuntime.lastPose.current`
+ *
+ * Same reason as `tweenToGalaxy`: `lastPose.current` is the pose the user
+ * actually sees, while `state.cam` (the drag register) may be stale.
+ *
+ * ### Why `requestRender` after dispatch
+ *
+ * A direct, synchronous wake for the first tween frame. The `camera/*` write
+ * also wakes the loop via the `watchWake` saga; the explicit call does not
+ * depend on saga ordering — same rationale as `tweenToGalaxy`.
  */
-
-import { vec3 } from 'gl-matrix';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { InitialCam } from '../../../@types/camera/InitialCam';
+import type { AppStore } from '../../../store/types';
 import { FOCUS_TWEEN_MS } from './focusTweenDuration';
+import { startCameraTween } from '../../../state/camera/cameraSlice';
 
 /**
- * Tween the live camera toward `snapshot` over the project-wide
- * `FOCUS_TWEEN_MS` duration — same easing curve, same advance loop
- * as `tweenToGalaxy`.  Used by `focusOnHome` to return to the
- * bootstrap-derived framing without the visual abruptness of a snap.
+ * Tween the live camera toward `snapshot` over the project-wide `FOCUS_TWEEN_MS`
+ * duration — same easing curve, same advance loop as `tweenToGalaxy`. Used by
+ * `focusOnHome` to return to the bootstrap-derived framing without the visual
+ * abruptness of a snap.
  *
- * The from-snapshot is taken at call time so an in-flight tween
- * hands off smoothly: the new tween's `from*` fields capture the
- * camera's current pose mid-animation, and the tween manager
- * replaces the in-flight tween with this one (`tweens.start` is
- * "at-most-one in-flight" by contract).
+ * The from-snapshot is taken at call time from `state.cameraRuntime.lastPose`
+ * (the live produced pose) so an in-flight tween hands off smoothly: the new
+ * tween's `from` captures the camera's current visible position mid-animation.
  *
- * `vec3.clone` on `cam.target` defends against the same
- * shared-reference hazard `tweenToGalaxy` documents — the next
- * frame's orbit-controls update could otherwise mutate the
- * from-target out from under the in-progress tween.
- *
- * No-op when `state.cam` is null — same cam-null window as
- * `tweenToGalaxy`.
+ * No-op when `state.cam` is null — same cam-null window as `tweenToGalaxy`.
+ * Callers do NOT need to fire any URL-hash side-effect here; clearing
+ * `#focus=…` is a separate concern owned by the call site that decides 'this
+ * action is leaving a focus state'.
  */
-export function tweenToCameraSnapshot(state: EngineState, snapshot: InitialCam): void {
+export function tweenToCameraSnapshot(
+  state: EngineState,
+  snapshot: InitialCam,
+  store: AppStore,
+): void {
   const cam = state.cam;
   if (!cam) return;
 
-  state.subsystems.tweens.start({
-    startMs: performance.now(),
-    durationMs: FOCUS_TWEEN_MS,
-    fromTarget: vec3.clone(cam.target as vec3),
-    toTarget: vec3.fromValues(snapshot.target[0], snapshot.target[1], snapshot.target[2]),
-    fromDistance: cam.distance,
-    toDistance: snapshot.distance,
-    fromYaw: cam.yaw,
-    toYaw: snapshot.yaw,
-    fromPitch: cam.pitch,
-    toPitch: snapshot.pitch,
-  });
-  // tweens.start wakes the scheduler; no follow-up requestRender needed.
+  // Read the live produced pose as the tween's `from`. `lastPose.current` is
+  // the pose the user actually sees (produced by the driver table each frame);
+  // at rest it equals `poseOf(cam)`, but mid-tween it is the interpolated
+  // position rather than the stale drag register.
+  const from = state.cameraRuntime.lastPose.current;
+
+  store.dispatch(
+    startCameraTween({
+      from,
+      to: {
+        target: [snapshot.target[0], snapshot.target[1], snapshot.target[2]],
+        yaw: snapshot.yaw,
+        pitch: snapshot.pitch,
+        distance: snapshot.distance,
+      },
+      durationMs: FOCUS_TWEEN_MS,
+      easing: 'easeOutCubic',
+    }),
+  );
+
+  // Direct wake for the first tween frame — see the module header. The
+  // `camera/*` dispatch also wakes the loop via `watchWake`.
+  state.subsystems.scheduler.requestRender();
 }

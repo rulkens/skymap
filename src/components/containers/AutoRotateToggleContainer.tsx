@@ -15,13 +15,19 @@
 import { memo, useCallback } from 'react';
 import AutoRotateToggle from '../AutoRotateToggle/AutoRotateToggle';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectAutoRotate } from '../../state/settings/selectors';
-import { setAutoRotate } from '../../state/settings/settingsSlice';
+import { selectAutoRotate, selectAutoRotateRate } from '../../state/camera/selectors';
+import { setAutoRotate } from '../../state/camera/cameraSlice';
 
 function AutoRotateToggleContainer({ hidden }: { hidden: boolean }): React.ReactElement {
   const autoRotate = useAppSelector(selectAutoRotate);
+  // The slice replaces the whole `{ active, rate }` sub-object, so the toggle
+  // carries the current rate forward unchanged while flipping `active`.
+  const rate = useAppSelector(selectAutoRotateRate);
   const dispatch = useAppDispatch();
-  const onToggle = useCallback(() => dispatch(setAutoRotate(!autoRotate)), [dispatch, autoRotate]);
+  const onToggle = useCallback(
+    () => dispatch(setAutoRotate({ active: !autoRotate, rate })),
+    [dispatch, autoRotate, rate],
+  );
   return <AutoRotateToggle playing={autoRotate} onToggle={onToggle} hidden={hidden} />;
 }
 

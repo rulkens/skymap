@@ -1,21 +1,19 @@
 /**
  * frameContext — unit tests for the per-frame derived snapshot.
  *
- * `deriveFrameContext` is the seed of Spec D's per-frame abstraction
- * stack: it lifts the 5-way "is the engine ready?" null check (camera +
- * GPU renderer + post-process + thumbnail subsystem) out of the frame
- * body and into one named predicate, and it computes the two derived
- * scalars (`drawCamPos`, `drawPxPerRad`) that today live in
- * `renderFrame.ts:286–297`.  These tests pin both halves down: the
- * branching shape (ready vs not-ready) and the arithmetic (the pinhole
- * pxPerRad formula and the camera-position tuple snapshot).
+ * `deriveFrameContext` receives an already-produced `CameraPose` and a
+ * `CameraProjection` (the engine Resources), assembles the full `OrbitCamera`
+ * via `assembleOrbitCamera`, and pre-computes the view-projection matrix,
+ * camera-position tuple, and pixel-per-radian scalar. These tests pin both
+ * halves: the branching shape (ready vs not-ready) and the arithmetic.
  *
- * We don't need a live GPU device or a real OrbitCamera here — the
- * derivation is pure: it reads a handful of fields off `state` and a
- * couple off `canvas`, computes a matrix and a scalar, and returns.
- * Stubbing through `unknown` keeps the fixture small and forces a
- * runtime failure if the implementation grows a new dependency we
- * forgot to satisfy.
+ * The threaded-pose variant (binding decision 1) means `deriveFrameContext`
+ * does NOT re-call `runCameraDrivers` internally; it only calls
+ * `assembleOrbitCamera(pose, projection)` + `computeViewProj`. The `cam` on
+ * the ready context is the assembled camera, NOT `state.cam`.
+ *
+ * Tests also verify the bootstrap gate still works (cam=null → not-ready) even
+ * though the rendered camera comes from the assembled pose, not `state.cam`.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -24,42 +22,23 @@ import { deriveFrameContext } from '../../../../src/services/engine/frame/frameC
 import type { FrameContext } from '../../../../src/@types/engine/frame/FrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
+import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
+import { computeViewProj } from '../../../../src/services/camera/orbitCamera';
 
-/**
- * Build an `OrbitCamera`-shaped stub with just enough fields populated
- * for `computeViewProj` to run without throwing and for the per-frame
- * derivations (`drawCamPos`, `drawPxPerRad`) to read what they need.
- */
-function makeCam(overrides: Partial<OrbitCamera> = {}): OrbitCamera {
-  // Defaults chosen so the fovY/2 = 0.5 rad path gives a clean tan() value
-  // for the pxPerRad assertion below.  height / (2 * tan(0.5)) is the test
-  // arithmetic; we pin it precisely in the "ready" test.
-  return {
-    target: [0, 0, 0],
-    distance: 100,
-    yaw: 0,
-    pitch: 0,
-    roll: 0,
-    fovYRad: 1,
-    aspect: 16 / 9,
-    near: 0.1,
-    far: 10000,
-    position: [10, 20, 30],
-    ...overrides,
-  } as unknown as OrbitCamera;
-}
+const RESTING_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
+const PROJECTION: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
 
 /**
  * Build an `EngineState`-shaped fixture with the guard fields
  * (`cam`, `gpu.renderer`, `gpu.postProcess`, `gpu.pickRenderer`,
- * `gpu.volumeOffscreen`, `subsystems.texturedDisks`) populated by
- * default.  Each test override can null any one of them to exercise the
- * not-ready branch.
+ * `gpu.volumeOffscreen`, `subsystems.texturedDisks`) populated by default.
+ * Each test can null any one to exercise the not-ready branch.
  *
- * `volumeOffscreen` was added in Task 3 of the half-res volume plan.
- * It sits alongside `postProcess` in the bootstrap gate: both are
- * allocated in `initGpu` and torn down together.  The fixture includes
- * a non-null stub so the default path still produces `isReady: true`.
+ * `state.cam` is only used by the `isEngineReady` bootstrap gate (non-null
+ * check); the rendered camera comes from `assembleOrbitCamera(pose, projection)`
+ * passed as arguments.
  */
 function makeState(overrides: {
   cam?: OrbitCamera | null;
@@ -69,16 +48,14 @@ function makeState(overrides: {
   volumeOffscreen?: unknown;
   texturedDisks?: unknown;
 } = {}): EngineState {
-  const cam = overrides.cam === undefined ? makeCam() : overrides.cam;
+  const cam = overrides.cam === undefined
+    ? ({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100, position: new Float32Array(3) } as unknown as OrbitCamera)
+    : overrides.cam;
   const renderer = overrides.renderer === undefined ? ({} as unknown) : overrides.renderer;
-  const postProcess =
-    overrides.postProcess === undefined ? ({} as unknown) : overrides.postProcess;
-  const pickRenderer =
-    overrides.pickRenderer === undefined ? ({} as unknown) : overrides.pickRenderer;
-  const volumeOffscreen =
-    overrides.volumeOffscreen === undefined ? ({} as unknown) : overrides.volumeOffscreen;
-  const texturedDisks =
-    overrides.texturedDisks === undefined ? ({} as unknown) : overrides.texturedDisks;
+  const postProcess = overrides.postProcess === undefined ? ({} as unknown) : overrides.postProcess;
+  const pickRenderer = overrides.pickRenderer === undefined ? ({} as unknown) : overrides.pickRenderer;
+  const volumeOffscreen = overrides.volumeOffscreen === undefined ? ({} as unknown) : overrides.volumeOffscreen;
+  const texturedDisks = overrides.texturedDisks === undefined ? ({} as unknown) : overrides.texturedDisks;
   return {
     cam,
     gpu: { renderer, postProcess, pickRenderer, volumeOffscreen },
@@ -92,61 +69,81 @@ function makeCanvas(width = 1920, height = 1080): HTMLCanvasElement {
 
 describe('deriveFrameContext — not-ready branch', () => {
   it('returns isReady:false when state.cam is null', () => {
-    const ctx = deriveFrameContext(makeState({ cam: null }), makeCanvas());
+    const ctx = deriveFrameContext(makeState({ cam: null }), makeCanvas(), RESTING_POSE, PROJECTION);
     expect(ctx.isReady).toBe(false);
   });
 
   it('returns isReady:false when gpu.renderer is null', () => {
-    const ctx = deriveFrameContext(makeState({ renderer: null }), makeCanvas());
+    const ctx = deriveFrameContext(makeState({ renderer: null }), makeCanvas(), RESTING_POSE, PROJECTION);
     expect(ctx.isReady).toBe(false);
   });
 
   it('returns isReady:false when gpu.postProcess is null', () => {
-    const ctx = deriveFrameContext(makeState({ postProcess: null }), makeCanvas());
+    const ctx = deriveFrameContext(makeState({ postProcess: null }), makeCanvas(), RESTING_POSE, PROJECTION);
     expect(ctx.isReady).toBe(false);
   });
 
   it('returns isReady:false when gpu.volumeOffscreen is null', () => {
-    // volumeOffscreen is part of the bootstrap gate (Task 3): without the
-    // half-res target the volume pass would have nowhere to draw.
-    const ctx = deriveFrameContext(makeState({ volumeOffscreen: null }), makeCanvas());
+    const ctx = deriveFrameContext(makeState({ volumeOffscreen: null }), makeCanvas(), RESTING_POSE, PROJECTION);
     expect(ctx.isReady).toBe(false);
   });
 
   it('returns isReady:false when subsystems.texturedDisks is null', () => {
-    const ctx = deriveFrameContext(makeState({ texturedDisks: null }), makeCanvas());
+    const ctx = deriveFrameContext(makeState({ texturedDisks: null }), makeCanvas(), RESTING_POSE, PROJECTION);
     expect(ctx.isReady).toBe(false);
   });
 });
 
 describe('deriveFrameContext — ready branch', () => {
-  it('populates cam, vp, canvasSize, drawCamPos, drawPxPerRad when every guard is non-null', () => {
-    const cam = makeCam({
-      fovYRad: 1, // tan(0.5) ≈ 0.5463024898
-      position: [10, 20, 30],
-    });
-    const state = makeState({ cam });
-    const canvas = makeCanvas(1920, 1080);
-
-    const ctx = deriveFrameContext(state, canvas);
-
+  it('assembles ctx.cam from pose + projection (not from state.cam)', () => {
+    const pose: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
+    const projection: CameraProjection = { fovYRad: 1.2, aspect: 2, near: 0.01, far: 5000 };
+    const ctx = deriveFrameContext(makeState(), makeCanvas(), pose, projection);
     expect(ctx.isReady).toBe(true);
-    if (!ctx.isReady) return; // narrow for TS
+    if (!ctx.isReady) return;
+    // ctx.cam must reflect the pose and projection.
+    expect(ctx.cam.fovYRad).toBe(1.2);
+    expect(ctx.cam.aspect).toBe(2);
+    expect(ctx.cam.distance).toBe(50);
+    expect(ctx.cam.yaw).toBeCloseTo(0.5);
+    expect(ctx.cam.pitch).toBeCloseTo(0.1);
+  });
 
-    expect(ctx.cam).toBe(cam);
-    expect(ctx.canvasSize).toEqual({ width: 1920, height: 1080 });
-    expect(ctx.drawCamPos).toEqual([10, 20, 30]);
+  it('ctx.cam.fovYRad === projection.fovYRad (not from state.cam.fovYRad)', () => {
+    // The projection Resource is the source of fovYRad; state.cam.fovYRad is
+    // only the drag register bootstrap value and is never read for rendering.
+    const projection: CameraProjection = { fovYRad: 0.9, aspect: 1, near: 0.1, far: 1000 };
+    const ctx = deriveFrameContext(makeState(), makeCanvas(), RESTING_POSE, projection);
+    expect(ctx.isReady).toBe(true);
+    if (!ctx.isReady) return;
+    expect(ctx.cam.fovYRad).toBe(0.9);
+  });
 
+  it('drawPxPerRad uses projection.fovYRad', () => {
+    const projection: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
+    const canvas = makeCanvas(1920, 1080);
+    const ctx = deriveFrameContext(makeState(), canvas, RESTING_POSE, projection);
+    expect(ctx.isReady).toBe(true);
+    if (!ctx.isReady) return;
     // pxPerRad = height / (2 * tan(fovY / 2))
-    //         = 1080 / (2 * tan(0.5))
-    const expectedPxPerRad = 1080 / (2 * Math.tan(0.5));
-    expect(ctx.drawPxPerRad).toBeCloseTo(expectedPxPerRad, 6);
+    const expected = 1080 / (2 * Math.tan(0.5));
+    expect(ctx.drawPxPerRad).toBeCloseTo(expected, 6);
+  });
 
-    // vp is a 16-float matrix produced by computeViewProj; we don't
-    // pin its exact contents here (orbitCamera.test.ts owns that), we
-    // just verify the field is populated and shaped right.
-    expect(ctx.vp).toBeDefined();
-    expect(ctx.vp.length).toBe(16);
+  it('ctx.vp matches computeViewProj(assembleOrbitCamera(pose, projection))', () => {
+    const pose: CameraPose = { target: [0, 0, 0], yaw: 0.3, pitch: 0.1, distance: 100 };
+    const ctx = deriveFrameContext(makeState(), makeCanvas(), pose, PROJECTION);
+    expect(ctx.isReady).toBe(true);
+    if (!ctx.isReady) return;
+    const expected = computeViewProj(assembleOrbitCamera(pose, PROJECTION));
+    expect(Array.from(ctx.vp)).toEqual(Array.from(expected));
+  });
+
+  it('populates canvasSize from canvas dimensions', () => {
+    const ctx = deriveFrameContext(makeState(), makeCanvas(800, 600), RESTING_POSE, PROJECTION);
+    expect(ctx.isReady).toBe(true);
+    if (!ctx.isReady) return;
+    expect(ctx.canvasSize).toEqual({ width: 800, height: 600 });
   });
 
   it('forwards renderer, postProcess, texturedDisks references onto the ready context', () => {
@@ -156,6 +153,8 @@ describe('deriveFrameContext — ready branch', () => {
     const ctx = deriveFrameContext(
       makeState({ renderer, postProcess, texturedDisks }),
       makeCanvas(),
+      RESTING_POSE,
+      PROJECTION,
     );
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
@@ -165,14 +164,8 @@ describe('deriveFrameContext — ready branch', () => {
   });
 
   it('forwards volumeOffscreen reference onto the ready context', () => {
-    // `deriveFrameContext` is a pure forwarder: once `isEngineReady`
-    // passes, it plucks the non-null handle off `state.gpu.volumeOffscreen`
-    // and copies the reference directly onto the ready context.
-    // This regression test pins that reference-identity — not a copy or
-    // wrapper — so that downstream passes can safely use `ctx.volumeOffscreen.view`
-    // to open a render pass against the half-res target.
     const volumeOffscreen = { view: {} as GPUTextureView, resize: () => {}, destroy: () => {} };
-    const ctx = deriveFrameContext(makeState({ volumeOffscreen }), makeCanvas());
+    const ctx = deriveFrameContext(makeState({ volumeOffscreen }), makeCanvas(), RESTING_POSE, PROJECTION);
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     expect(ctx.volumeOffscreen).toBe(volumeOffscreen);
@@ -181,26 +174,20 @@ describe('deriveFrameContext — ready branch', () => {
 
 describe('deriveFrameContext — type narrowing', () => {
   it('narrows ctx.cam to non-null after the isReady guard (TS-level)', () => {
-    // This test exists for the compile-time narrowing assertion.  The
-    // body is a runtime no-op; tsc proves the win.
-    const ctx: FrameContext = deriveFrameContext(makeState(), makeCanvas());
+    const ctx: FrameContext = deriveFrameContext(makeState(), makeCanvas(), RESTING_POSE, PROJECTION);
     if (ctx.isReady) {
-      // If `FrameContext` were `{ cam: OrbitCamera | null }` instead of
-      // a discriminated union, this line would require a `!` non-null
-      // assertion.  The assignment-without-`!` is the test.
+      // If FrameContext were `{ cam: OrbitCamera | null }` instead of a
+      // discriminated union, this line would require a `!` non-null assertion.
       const cam: OrbitCamera = ctx.cam;
       expect(cam).toBeDefined();
     }
   });
 
   it('treats drawCamPos as readonly at the type level', () => {
-    const ctx: FrameContext = deriveFrameContext(makeState(), makeCanvas());
+    const ctx: FrameContext = deriveFrameContext(makeState(), makeCanvas(), RESTING_POSE, PROJECTION);
     if (ctx.isReady) {
       // @ts-expect-error — drawCamPos is Readonly<[...]>; index assignment is forbidden.
       ctx.drawCamPos[0] = 999;
-      // The runtime side of this is permissive (Readonly<T> is a
-      // type-only modifier; the underlying array is still mutable).
-      // The compile-time error is the contract we care about.
     }
   });
 });

@@ -122,8 +122,11 @@ const PITCH_LIMIT = Math.PI / 2 - 0.01;
  *                 registered here so the hit-test area matches the viewport.
  * @param cam      The orbit camera to mutate. The caller owns this object;
  *                 `attachOrbitControls` only reads and writes its fields.
- * @param options  Optional configuration. Currently supports `onClick`, a
- *                 callback fired when the user taps without dragging.
+ * @param options  Optional configuration. Supports `onClick`, `onDoubleClick`,
+ *                 `onChange` (wake the render loop after any mutation),
+ *                 `onGestureStart` (first pointer contact — seed the drag
+ *                 register + begin Redux drag), and `onGestureEnd` (all
+ *                 pointers lifted — commit the final pose + end Redux drag).
  * @returns A teardown function — call it to remove all event listeners.
  */
 export function attachOrbitControls(
@@ -223,6 +226,14 @@ export function attachOrbitControls(
       downX = e.clientX;
       downY = e.clientY;
 
+      // Notify the engine that a new gesture is starting. The engine uses this
+      // to seed the drag register from the live produced pose (so a mid-tween
+      // grab continues from where the animation left the camera, not from a
+      // stale register) and to dispatch beginDrag() + cancelCameraTween().
+      // Only fires on the FIRST contact — a second finger promoting to pinch
+      // does NOT re-fire gesture-start.
+      options?.onGestureStart?.();
+
       // No `setPointerCapture` here — see the module header. The move /
       // up / cancel listeners live on `window`, so a drag keeps tracking
       // outside the canvas without capture, and we sidestep the WebKit
@@ -244,7 +255,7 @@ export function attachOrbitControls(
     // Notify the engine so it can wake the render loop — any subsequent
     // pointermove will fire the same callback.  Calling here too means
     // the click→hover-clear path also gets a frame.
-    options?.onCameraChange?.();
+    options?.onChange?.();
   };
 
   // ── Pointer up — end drag (or click) ──────────────────────────────────────
@@ -277,6 +288,14 @@ export function attachOrbitControls(
           options.onClick(e.clientX, e.clientY);
         }
       }
+
+      // All contacts lifted — commit the gesture's final pose to the Redux
+      // store and end the drag. This fires AFTER click detection so a click
+      // still resolves before the gesture-end commit (order is harmless
+      // either way; the click callback and the gesture-end dispatch are
+      // independent). The engine dispatches commitCameraPose THEN endDrag so
+      // the baked pose is in `base` before the orbitDrag driver deactivates.
+      options?.onGestureEnd?.();
     } else if (dragMode === 'pinch') {
       // Pinch broken (one finger lifted, one or more still down) — end
       // the gesture entirely.  We deliberately do NOT promote the
@@ -333,7 +352,7 @@ export function attachOrbitControls(
         cam.distance = clampDistance(cam.distance * (lastPinchDist / newDist));
         lastPinchDist = newDist;
         updatePosition(cam);
-        options?.onCameraChange?.();
+        options?.onChange?.();
       }
       return;
     }
@@ -410,7 +429,7 @@ export function attachOrbitControls(
       // only mutate target — the orbit framing stays intact.
       vec3.add(cam.target as vec3, cam.target as vec3, panDeltaScratch);
       updatePosition(cam);
-      options?.onCameraChange?.();
+      options?.onChange?.();
       return;
     }
 
@@ -443,7 +462,7 @@ export function attachOrbitControls(
     // The render loop reads cam.position (via computeViewProj) on the next
     // requestAnimationFrame tick, so this mutation is effectively immediate.
     updatePosition(cam);
-    options?.onCameraChange?.();
+    options?.onChange?.();
   };
 
   // ── Wheel — zoom ───────────────────────────────────────────────────────────
@@ -478,9 +497,22 @@ export function attachOrbitControls(
     // an inverted scene; a hard ceiling prevents drifting off into the void
     // beyond the deepest galaxy catalog, where the cloud collapses to a dot.
     const factor = Math.exp(e.deltaY * 0.001);
-    cam.distance = clampDistance(cam.distance * factor);
-    updatePosition(cam);
-    options?.onCameraChange?.();
+
+    if (activePointers.size > 0) {
+      // Wheel DURING a drag/pinch: fold the zoom into the live `cam` register.
+      // The `orbitDrag` driver (priority 80) is active and renders `poseOf(cam)`,
+      // so the zoom shows immediately and rides the `onGestureEnd` commit.
+      cam.distance = clampDistance(cam.distance * factor);
+      updatePosition(cam);
+      options?.onChange?.();
+      return;
+    }
+
+    // Discrete wheel zoom with NO gesture in progress: `dragging` is false, so
+    // the `resting` driver renders the store `base`, not `cam` — a `cam`
+    // mutation would be invisible. Commit the zoom straight into `base` via the
+    // engine callback (which also wakes the loop).
+    options?.onZoom?.(factor);
   };
 
   // ── Register listeners ─────────────────────────────────────────────────────

@@ -16,7 +16,7 @@ import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import AutoRotateToggleContainer from '../../../src/components/containers/AutoRotateToggleContainer';
 import { createAppStore } from '../../../src/store/createAppStore';
-import { selectAutoRotate } from '../../../src/state/settings/selectors';
+import { selectAutoRotate } from '../../../src/state/camera/selectors';
 
 function makeWrapper(store: ReturnType<typeof createAppStore>['store']) {
   return ({ children }: { children: ReactNode }) => createElement(Provider, { store, children });

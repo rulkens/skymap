@@ -17,11 +17,11 @@
  * the cursor stopped moving or left the canvas. The signature keeps them apart.
  *
  * Predicate breakdown:
- *   - camera drivers active: any camera mover (an in-flight tween, or idle
- *     auto-rotate) declares itself active this frame, via the same driver
- *     registry the per-frame camera write resolves through. `.some(isActive)`
- *     IS the boolean OR of those movers, so it tracks the resolver exactly —
- *     one place decides 'is the camera moving' for both the write and this gate.
+ *   - camera active: `selectCameraActive(s)` — the continuation predicate
+ *     (design §4), true while a drag is held, a focus tween is in flight, or
+ *     auto-rotate is spinning. It reads the camera-slice flags straight off the
+ *     store `RootState`, so the keep-tick gate and the React play/pause
+ *     affordance share one definition of 'the camera is moving'.
  *   - texturedDisks.hasInFlightWork(): a thumbnail fetch is racing the network
  *     OR a landed bitmap is in its 400 ms load-fade window. Guarded by
  *     isEngineReady so the subsystem is non-null before the deref.
@@ -41,17 +41,14 @@
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
+import type { RootState } from '../../../store/types';
+import { selectCameraActive } from '../../../state/camera/selectors';
 import { isEngineReady } from './engineReady';
 import { slotReady } from '../../loading/slotReady';
 
-export function shouldKeepTicking(
-  state: EngineState,
-  drivers: readonly CameraDriver[],
-  nowMs: number,
-): boolean {
+export function shouldKeepTicking(state: EngineState, s: RootState, nowMs: number): boolean {
   return (
-    drivers.some((d) => d.isActive(nowMs)) ||
+    selectCameraActive(s) ||
     (isEngineReady(state) && state.subsystems.texturedDisks.hasInFlightWork()) ||
     state.subsystems.fades.isAnyAnimating(nowMs) ||
     state.subsystems.structureFocus.isAwake(nowMs) ||

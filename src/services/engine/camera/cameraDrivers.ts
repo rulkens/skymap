@@ -1,128 +1,185 @@
 /**
- * cameraDrivers — the single arbiter that turns camera precedence from
- * statement order into data.
+ * cameraDrivers — the camera-driver table and its resolver.
  *
- * The engine has several movers that all want to write `state.cam` on a
- * given frame: an in-flight tween, idle auto-rotate, and a guided tour.
- * Previously the winner was whoever ran last in the
- * per-frame body, with hand-written guards suppressing the losers.
- * Precedence was emergent from control flow, so inserting a mover or
- * changing who-beats-whom meant surgery on the frame loop.
+ * The engine has several movers that each want to author the camera pose on a
+ * given frame: an in-flight focus tween, idle auto-rotate, an orbit-controls
+ * gesture, and a resting floor. They are resolved as a priority-ranked table
+ * rather than by call order in the frame body, so inserting a mover or changing
+ * who-beats-whom is a data edit, not surgery on the frame loop.
  *
- * `runCameraDrivers` collapses that into one rule: among the drivers
- * that declare themselves active this frame, the highest `priority`
- * wins, and ONLY that winner's `apply` runs. Two properties fall out of
- * this deliberately:
+ * `runCameraDrivers` collapses that into one rule: among the drivers that declare
+ * themselves active this frame, the highest `priority` wins, and ONLY that
+ * winner's `pose` is returned. Two properties fall out of this:
  *
- *   - Single-writer arbitration. There is exactly one camera-write site
- *     per frame — the chosen winner's `apply`. The design bakes this in:
- *     there is NO cooperative blending of multiple drivers into one
- *     frame. A frame is authored by one driver or by none. Blending
- *     would reintroduce the "who contributed what, in what order"
- *     entanglement this seam exists to remove.
+ *   - Single-writer arbitration. There is exactly one pose returned per frame —
+ *     the chosen winner's. There is NO cooperative blending of multiple drivers
+ *     into one frame. A frame is authored by one driver. Blending would
+ *     reintroduce the 'who contributed what, in what order' entanglement this
+ *     seam exists to remove.
  *
- *   - Precedence is data. The ordering between movers is a `priority`
- *     number on each driver, not a position in a sequence of statements.
- *     Re-ranking or slotting in a new mover is a one-line declaration.
+ *   - Precedence is data. The ordering between movers is a `priority` number on
+ *     each driver, not a position in a sequence of statements. Re-ranking or
+ *     slotting in a new mover is a one-line declaration.
  *
- * The resolver is pure over its driver list. It captures no state, does
- * no I/O, and treats `drivers` as readonly — it never sort-mutates the
- * caller's array (a single max-scan, not a `.sort()`). It also never
- * reads or mutates `cam`; it only forwards the reference (and `nowMs`)
- * to the winner's `apply`, so the camera remains entirely the winner's
- * concern. That purity is what makes the heart of camera authority
- * testable with a throwaway `cam` stub and a handful of fake drivers.
+ * `pickWinner` is exported so `activeDriverId` can call it and get the SAME
+ * winner, guaranteeing that the driver's `pose` and the commit-on-edge guard
+ * never disagree (invariant 1 of the frame-ordering contract).
  *
- * `buildCameraDrivers` is the other half of the seam: a pure builder
- * that wraps the engine's existing camera movers as `CameraDriver`s and
- * hands back the list the resolver scans. Each wrapper closes over the
- * live `state`, so a toggled setting or a freshly-started tween is
- * reflected on the very next frame without rebuilding the list. The
- * wrappers are deliberately thin — they map "is this mover active?" and
- * "let this mover write the camera" onto the subsystems that already own
- * that behaviour (`tweens`) or onto the one-line auto-rotate increment,
- * rather than reimplementing any of it. The list
- * is built once at loop start and carried on `RunFrameDeps`, not on
- * `EngineState`: it is a per-frame dependency of the frame body, not a
- * piece of engine-owned mutable state, so threading it through the deps
- * bag keeps the state contract from widening into mirror data.
+ * `buildCameraDrivers` produces the four-row table that reads directly from the
+ * Redux store. Each driver's `isActive` and `pose` read `s.camera.*`, so the
+ * resolver needs only the store `RootState` to work; `cam` is still forwarded
+ * to the `orbitDrag` driver, which reads `state.cam` (the gesture register) for
+ * its live yaw/pitch/distance. The `_state: EngineState` parameter is unused
+ * but kept for stability at the `startLoop` call site.
+ *
+ * Priorities: orbitDrag 80 > tween 60 > autoRotate 20 > resting 0. The gap
+ * between each step is deliberate headroom so a future driver (e.g. a tour at
+ * 95) can slot in without renumbering.
  */
 
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
+import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import { updatePosition } from '../../camera/orbitCamera';
+import type { RootState } from '../../../store/types';
+import type { CameraClock } from '../../../@types/engine/camera/CameraClock';
+import { poseOf } from './poseOf';
+import { evaluateTween } from './evaluateTween';
+import { spinAutoRotate } from './spinAutoRotate';
+import { tweenElapsed, autoRotateElapsed } from './cameraClock';
 
-export function runCameraDrivers(
-  drivers: readonly CameraDriver[],
-  cam: OrbitCamera,
-  nowMs: number,
-): void {
-  // Single max-scan rather than filter-then-sort: sorting would either
-  // mutate the caller's array (forbidden — `drivers` is readonly) or
-  // allocate a copy for no reason. We only ever need the one winner, so
-  // we fold the active drivers into a running best-by-priority.
+/**
+ * Pick the highest-priority active driver. A pure max-scan over `drivers`:
+ * never mutates the array, never allocates an intermediate sort copy. The
+ * always-active `resting` floor (priority 0) ensures the result is never null
+ * in normal operation; the defensive fallback (`drivers[0]!`) only fires for an
+ * empty list.
+ *
+ * Exported so `activeDriverId` can call the exact same function and guarantee
+ * that 'who produced the pose' and 'what was the winning id' are decided by one
+ * code path, not two independent scans that could disagree.
+ */
+export function pickWinner(drivers: readonly CameraDriver[], s: RootState): CameraDriver {
   let winner: CameraDriver | null = null;
-  for (const driver of drivers) {
-    if (!driver.isActive(nowMs)) continue;
-    if (winner === null || driver.priority > winner.priority) {
-      winner = driver;
-    }
+  for (const d of drivers) {
+    if (!d.isActive(s)) continue;
+    if (winner === null || d.priority > winner.priority) winner = d;
   }
-
-  // No active driver means no camera write this frame — the resolver
-  // calls no `apply` at all rather than falling back to some default.
-  if (winner !== null) {
-    winner.apply(cam, nowMs);
-  }
+  // Defensive fallback: the resting floor makes this unreachable in normal
+  // operation; it fires only for an empty list.
+  return winner ?? drivers[0]!;
 }
 
 /**
- * Idle auto-rotate yaw increment, in radians per frame.
+ * Compute the elapsed ms for whichever driver won this frame.
  *
- * A constant per-frame nudge (not time-scaled) so the spin reads as a
- * gentle, frame-rate-tied drift — the same value the per-frame body used
- * before camera authority moved behind the driver seam.
+ * `orbitDrag` and `resting` are stateless — they do not use elapsed time,
+ * so 0 is the correct and only sensible value. `tween` and `autoRotate`
+ * both need cumulative elapsed time from their respective clocks. Dispatching
+ * on `winner.id` is a table lookup keyed on a stable string — cleaner than a
+ * chain of `if (driver === tweenDriver)` identity checks.
  */
-const AUTO_ROTATE_YAW_DELTA = 0.000873;
+function elapsedForWinner(
+  winner: CameraDriver,
+  s: RootState,
+  clock: CameraClock,
+  nowMs: number,
+): number {
+  if (winner.id === 'tween') return tweenElapsed(clock, s.camera.tween, nowMs);
+  if (winner.id === 'autoRotate')
+    return autoRotateElapsed(clock, s.camera.autoRotate.active, s.camera.base, nowMs);
+  // orbitDrag and resting are stateless; elapsed is irrelevant to their pose.
+  return 0;
+}
 
 /**
- * Build the engine's camera drivers — pure over `state`, returning the
- * fixed set of wrappers in no particular order (priority, not position,
- * decides who wins).
+ * Resolve the per-frame camera pose.
  *
- * Each wrapper closes over the live `state`, so the list is built once
- * and never needs rebuilding: settings toggles and subsystem state are
- * read fresh every frame through the closures. The drivers, highest
- * priority first:
+ * Calls `pickWinner` once, computes the winner's elapsed time via
+ * `elapsedForWinner`, and delegates to the winner's `pose`. The caller
+ * receives a single `CameraPose` — the frame is authored by one driver.
  *
- *   - `tween` (60) — an in-flight focus/framing tween.
- *   - `autoRotate` (20) — the idle drift, lowest priority so any of the
- *     above suppresses it.
- *
- * The `tour` driver (priority 80) is intentionally absent — a separate
- * plan slots it in above the tween.
+ * The `clock` parameter is mutated as a side effect: `tweenElapsed` and
+ * `autoRotateElapsed` detect descriptor-identity changes and reset start times.
+ * The clock must therefore be called exactly once per frame — this function
+ * enforces that contract by being the sole caller of the elapsed helpers in the
+ * hot path.
  */
-export function buildCameraDrivers(state: EngineState): readonly CameraDriver[] {
+export function runCameraDrivers(
+  drivers: readonly CameraDriver[],
+  s: RootState,
+  cam: OrbitCamera,
+  clock: CameraClock,
+  nowMs: number,
+): CameraPose {
+  const winner = pickWinner(drivers, s);
+  const elapsed = elapsedForWinner(winner, s, clock, nowMs);
+  return winner.pose(s, cam, elapsed);
+}
+
+/**
+ * Build the engine's camera-driver table — four rows, store-reading, returned
+ * in priority order for readability (the resolver uses a max-scan, so order
+ * does not affect correctness).
+ *
+ * All four drivers read directly from the Redux store `RootState`; none of them
+ * mutate `state.cam` or `EngineState`. The `_state` parameter is kept for
+ * stability at the `startLoop.ts` call site (`buildCameraDrivers(state)`) — it
+ * is unused here because the drivers close over nothing from `EngineState`.
+ *
+ * Drivers, highest priority first:
+ *
+ *   - `orbitDrag` (80) — the live gesture register (`state.cam`). Active while
+ *     `s.camera.dragging` is true. Returns `poseOf(cam)` so the controls keep
+ *     directly manipulating the register without re-composing through the store.
+ *
+ *   - `tween` (60) — an in-flight focus tween. Active while `s.camera.tween`
+ *     is non-null. Pure: reads `s.camera.tween` + `elapsedMs` from the clock,
+ *     returns `evaluateTween(descriptor, elapsed)`.
+ *
+ *   - `autoRotate` (20) — the idle drift. Active while
+ *     `s.camera.autoRotate.active` is true. Pure: returns
+ *     `spinAutoRotate(s.camera.base, rate, elapsedMs)` — base is frozen while
+ *     active, giving a rate-accurate spin regardless of frame rate.
+ *
+ *   - `resting` (0) — always active; returns `s.camera.base` as-is. The
+ *     permanent floor that guarantees the resolver always has a winner.
+ */
+export function buildCameraDrivers(_state: EngineState): readonly CameraDriver[] {
   return [
+    {
+      id: 'orbitDrag',
+      priority: 80,
+      isActive: (s) => s.camera.dragging,
+      // The live drag register is the source of truth while the gesture is
+      // held — poseOf reads yaw/pitch/distance/target off the OrbitCamera
+      // that orbitControls mutates in real time.
+      pose: (_s, cam) => poseOf(cam),
+    },
     {
       id: 'tween',
       priority: 60,
-      isActive: () => state.subsystems.tweens.isActive(),
-      apply: (cam, nowMs) => {
-        // `advance` returns a finished-this-frame boolean the engine has
-        // never consumed; a block discards it so `apply` stays void.
-        state.subsystems.tweens.advance(cam, nowMs);
-      },
+      isActive: (s) => s.camera.tween !== null,
+      pose: (s, _cam, elapsedMs) => evaluateTween(s.camera.tween!, elapsedMs),
     },
     {
       id: 'autoRotate',
       priority: 20,
-      isActive: () => state.settings.camera.autoRotate,
-      apply: (cam) => {
-        cam.yaw += AUTO_ROTATE_YAW_DELTA;
-        updatePosition(cam);
-      },
+      isActive: (s) => s.camera.autoRotate.active,
+      // Spins from the FROZEN base: base does not update while autoRotate wins
+      // (commit-on-edge only fires on driver deactivation), so the yaw advances
+      // at the correct cumulative rate rather than a per-frame delta off a
+      // moving base.
+      pose: (s, _cam, elapsedMs) =>
+        spinAutoRotate(s.camera.base, s.camera.autoRotate.rate, elapsedMs),
+    },
+    {
+      id: 'resting',
+      priority: 0,
+      isActive: () => true,
+      // At rest, the committed base IS the pose. No clock, no elapsed — pure
+      // identity read from the store.
+      pose: (s) => s.camera.base,
     },
   ];
 }
