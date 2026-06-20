@@ -192,14 +192,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // placeholders; wireInput's bootstrap seed fills real values once the
   // initial OrbitCamera exists.
   //
-  // `lastPose` starts at the slice's initial `base` placeholder (same values:
-  // distance 0.43, yaw/pitch/target at zero) so the first resting frame has a
-  // stable object to read before wireInput's commitCameraPose fires.
+  // `lastPose` seeds from the camera slice's initial `base` — the single home
+  // for the pre-bootstrap placeholder pose — so the first resting frame has a
+  // stable pose to read before wireInput's commitCameraPose fires. Copied so a
+  // later per-frame `lastPose.current = …` never aliases the store's state.
   const cameraRuntime: CameraRuntime = {
     clock: createCameraClock(),
     projection: { fovYRad: 0, aspect: 1, near: 0.01, far: 50000 },
     lastPose: {
-      current: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0.43 },
+      current: { ...cb.store.getState().camera.base },
     },
     prevActiveId: { current: 'resting' },
   };

@@ -13,11 +13,13 @@
  * (`useAppSelector(selectCameraActive)`) and the engine side
  * (`selectCameraActive(store.getState())`) unchanged.
  *
- * `selectCameraActive` is the render-loop continuation predicate (spec §4): it
- * returns true whenever any non-resting driver is in play — a drag in progress,
- * an active tween, or auto-rotate spinning. The engine frame loop reschedules
- * itself only while this is true, so adding a new driver means adding its flag
- * to this selector, not hunting through the engine loop body.
+ * `selectCameraActive` is the camera term of the render-loop continuation
+ * predicate (spec §4): it returns true whenever any non-resting driver is in
+ * play — a drag in progress, an active tween, or auto-rotate spinning.
+ * `shouldKeepTicking` ORs it with the non-camera movers (thumbnails, fades,
+ * structure-focus, animated flow) to decide whether the loop reschedules. A new
+ * camera driver with its own active flag adds that flag here too, so this
+ * selector stays the one definition of 'the camera is moving'.
  *
  * `selectAutoRotate` reads the camera slice exclusively — the settings-side
  * `camera.autoRotate` field and its selector have been removed. The App toggle
@@ -39,8 +41,9 @@ export const selectAutoRotate = (state: RootState): boolean =>
 export const selectAutoRotateRate = (state: RootState): number =>
   selectCameraIntent(state).autoRotate.rate;
 
-// Loop-continuation predicate (spec §4): true while any non-resting driver
-// would win. The engine reschedules the next frame only while this is true.
+// Camera term of the loop-continuation predicate (spec §4): true while any
+// non-resting driver would win. `shouldKeepTicking` ORs this with the other
+// movers to decide whether to reschedule the next frame.
 export const selectCameraActive = (state: RootState): boolean => {
   const c = selectCameraIntent(state);
   return c.dragging || c.tween !== null || c.autoRotate.active;

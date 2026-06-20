@@ -47,7 +47,7 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 
-import { runCameraDrivers, pickWinner } from '../camera/cameraDrivers';
+import { runCameraDrivers } from '../camera/cameraDrivers';
 import { activeDriverId } from '../camera/activeDriverId';
 import { tweenElapsed } from '../camera/cameraClock';
 import { resizeCanvasToDisplay } from '../../gpu/device';
@@ -517,7 +517,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // flight. Otherwise the loop sleeps until a channel mouth wakes it: input,
   // a fade or tween start, a slot reaching ready, a selection/focus change,
   // or a settings write. `shouldKeepTicking` owns the full predicate (camera
-  // drivers, in-flight thumbnails, fades, structure-focus, animated flow) and
+  // motion, in-flight thumbnails, fades, structure-focus, animated flow) and
   // is deliberately independent of what is pickable — see its module header.
   //
   // This MUST be reached every ready frame, which is why the hover-pick block
@@ -528,7 +528,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // fade-out in galaxy-catalog visibility changes and tier-swap commits would
   // hang forever.
   state.subsystems.fades.tick(nowMs);
-  if (shouldKeepTicking(state, deps.drivers, rootState, nowMs)) {
+  if (shouldKeepTicking(state, rootState, nowMs)) {
     state.subsystems.scheduler.requestRender();
   }
 }
