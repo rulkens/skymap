@@ -41,11 +41,9 @@ import type { AppState } from '../@types/state/AppState';
 import type { Mat4 } from '../../../src/@types/math/Mat4';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import { initGpu, resizeCanvasToDisplay } from '../../../src/services/gpu/device';
-import {
-  createOrbitCamera,
-  updatePosition,
-  computeViewProj,
-} from '../../../src/services/camera/orbitCamera';
+import { createOrbitCamera } from '../../../src/utils/camera/createOrbitCamera';
+import { updatePosition } from '../../../src/utils/camera/updatePosition';
+import { computeViewProj } from '../../../src/utils/camera/computeViewProj';
 import { createFlowFieldRenderer } from '../../../src/services/gpu/renderers/flowFieldRenderer';
 import { encodeFlowCompute } from '../../../src/services/engine/frame/encodeFlowCompute';
 import { decodeScalarField } from '../../../src/data/volume/scalarFieldFormat';

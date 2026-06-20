@@ -25,7 +25,7 @@ import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
 import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
-import { computeViewProj } from '../../../../src/services/camera/orbitCamera';
+import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
 
 const RESTING_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
 const PROJECTION: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
@@ -40,22 +40,34 @@ const PROJECTION: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, fa
  * check); the rendered camera comes from `assembleOrbitCamera(pose, projection)`
  * passed as arguments.
  */
-function makeState(overrides: {
-  cam?: OrbitCamera | null;
-  renderer?: unknown;
-  postProcess?: unknown;
-  pickRenderer?: unknown;
-  volumeOffscreen?: unknown;
-  texturedDisks?: unknown;
-} = {}): EngineState {
-  const cam = overrides.cam === undefined
-    ? ({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100, position: new Float32Array(3) } as unknown as OrbitCamera)
-    : overrides.cam;
+function makeState(
+  overrides: {
+    cam?: OrbitCamera | null;
+    renderer?: unknown;
+    postProcess?: unknown;
+    pickRenderer?: unknown;
+    volumeOffscreen?: unknown;
+    texturedDisks?: unknown;
+  } = {},
+): EngineState {
+  const cam =
+    overrides.cam === undefined
+      ? ({
+          target: [0, 0, 0],
+          yaw: 0,
+          pitch: 0,
+          distance: 100,
+          position: new Float32Array(3),
+        } as unknown as OrbitCamera)
+      : overrides.cam;
   const renderer = overrides.renderer === undefined ? ({} as unknown) : overrides.renderer;
   const postProcess = overrides.postProcess === undefined ? ({} as unknown) : overrides.postProcess;
-  const pickRenderer = overrides.pickRenderer === undefined ? ({} as unknown) : overrides.pickRenderer;
-  const volumeOffscreen = overrides.volumeOffscreen === undefined ? ({} as unknown) : overrides.volumeOffscreen;
-  const texturedDisks = overrides.texturedDisks === undefined ? ({} as unknown) : overrides.texturedDisks;
+  const pickRenderer =
+    overrides.pickRenderer === undefined ? ({} as unknown) : overrides.pickRenderer;
+  const volumeOffscreen =
+    overrides.volumeOffscreen === undefined ? ({} as unknown) : overrides.volumeOffscreen;
+  const texturedDisks =
+    overrides.texturedDisks === undefined ? ({} as unknown) : overrides.texturedDisks;
   return {
     cam,
     gpu: { renderer, postProcess, pickRenderer, volumeOffscreen },
@@ -69,27 +81,52 @@ function makeCanvas(width = 1920, height = 1080): HTMLCanvasElement {
 
 describe('deriveFrameContext — not-ready branch', () => {
   it('returns isReady:false when state.cam is null', () => {
-    const ctx = deriveFrameContext(makeState({ cam: null }), makeCanvas(), RESTING_POSE, PROJECTION);
+    const ctx = deriveFrameContext(
+      makeState({ cam: null }),
+      makeCanvas(),
+      RESTING_POSE,
+      PROJECTION,
+    );
     expect(ctx.isReady).toBe(false);
   });
 
   it('returns isReady:false when gpu.renderer is null', () => {
-    const ctx = deriveFrameContext(makeState({ renderer: null }), makeCanvas(), RESTING_POSE, PROJECTION);
+    const ctx = deriveFrameContext(
+      makeState({ renderer: null }),
+      makeCanvas(),
+      RESTING_POSE,
+      PROJECTION,
+    );
     expect(ctx.isReady).toBe(false);
   });
 
   it('returns isReady:false when gpu.postProcess is null', () => {
-    const ctx = deriveFrameContext(makeState({ postProcess: null }), makeCanvas(), RESTING_POSE, PROJECTION);
+    const ctx = deriveFrameContext(
+      makeState({ postProcess: null }),
+      makeCanvas(),
+      RESTING_POSE,
+      PROJECTION,
+    );
     expect(ctx.isReady).toBe(false);
   });
 
   it('returns isReady:false when gpu.volumeOffscreen is null', () => {
-    const ctx = deriveFrameContext(makeState({ volumeOffscreen: null }), makeCanvas(), RESTING_POSE, PROJECTION);
+    const ctx = deriveFrameContext(
+      makeState({ volumeOffscreen: null }),
+      makeCanvas(),
+      RESTING_POSE,
+      PROJECTION,
+    );
     expect(ctx.isReady).toBe(false);
   });
 
   it('returns isReady:false when subsystems.texturedDisks is null', () => {
-    const ctx = deriveFrameContext(makeState({ texturedDisks: null }), makeCanvas(), RESTING_POSE, PROJECTION);
+    const ctx = deriveFrameContext(
+      makeState({ texturedDisks: null }),
+      makeCanvas(),
+      RESTING_POSE,
+      PROJECTION,
+    );
     expect(ctx.isReady).toBe(false);
   });
 });
@@ -165,7 +202,12 @@ describe('deriveFrameContext — ready branch', () => {
 
   it('forwards volumeOffscreen reference onto the ready context', () => {
     const volumeOffscreen = { view: {} as GPUTextureView, resize: () => {}, destroy: () => {} };
-    const ctx = deriveFrameContext(makeState({ volumeOffscreen }), makeCanvas(), RESTING_POSE, PROJECTION);
+    const ctx = deriveFrameContext(
+      makeState({ volumeOffscreen }),
+      makeCanvas(),
+      RESTING_POSE,
+      PROJECTION,
+    );
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     expect(ctx.volumeOffscreen).toBe(volumeOffscreen);
@@ -174,7 +216,12 @@ describe('deriveFrameContext — ready branch', () => {
 
 describe('deriveFrameContext — type narrowing', () => {
   it('narrows ctx.cam to non-null after the isReady guard (TS-level)', () => {
-    const ctx: FrameContext = deriveFrameContext(makeState(), makeCanvas(), RESTING_POSE, PROJECTION);
+    const ctx: FrameContext = deriveFrameContext(
+      makeState(),
+      makeCanvas(),
+      RESTING_POSE,
+      PROJECTION,
+    );
     if (ctx.isReady) {
       // If FrameContext were `{ cam: OrbitCamera | null }` instead of a
       // discriminated union, this line would require a `!` non-null assertion.
@@ -184,7 +231,12 @@ describe('deriveFrameContext — type narrowing', () => {
   });
 
   it('treats drawCamPos as readonly at the type level', () => {
-    const ctx: FrameContext = deriveFrameContext(makeState(), makeCanvas(), RESTING_POSE, PROJECTION);
+    const ctx: FrameContext = deriveFrameContext(
+      makeState(),
+      makeCanvas(),
+      RESTING_POSE,
+      PROJECTION,
+    );
     if (ctx.isReady) {
       // @ts-expect-error — drawCamPos is Readonly<[...]>; index assignment is forbidden.
       ctx.drawCamPos[0] = 999;

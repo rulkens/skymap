@@ -80,7 +80,7 @@ import type { EnginePickingState } from './EnginePickingState';
 import type { EngineAssetSlots } from './EngineAssetSlots';
 import type { EngineGpuHandles } from '../handles/EngineGpuHandles';
 import type { EngineSubsystemHandles } from '../handles/EngineSubsystemHandles';
-import type { createOrbitCamera } from '../../../services/camera/orbitCamera';
+import type { createOrbitCamera } from '../../../utils/camera/createOrbitCamera';
 import type { InitialCam } from '../../camera/InitialCam';
 import type { RequestKey } from '../../loading/RequestKey';
 import type { CameraRuntime } from './CameraRuntime';

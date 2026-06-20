@@ -62,7 +62,8 @@
 
 import type { OrbitCamera } from '../../@types/camera/OrbitCamera';
 import type { OrbitControlsOptions } from '../../@types/camera/OrbitControlsOptions';
-import { updatePosition, clampDistance } from './orbitCamera';
+import { updatePosition } from '../../utils/camera/updatePosition';
+import { clampDistance } from '../../utils/camera/clampDistance';
 import { vec3 } from 'gl-matrix';
 
 // ─── Constants ────────────────────────────────────────────────────────────────

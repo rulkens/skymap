@@ -45,7 +45,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { attachOrbitControls } from '../../../src/services/camera/orbitControls';
-import { createOrbitCamera } from '../../../src/services/camera/orbitCamera';
+import { createOrbitCamera } from '../../../src/utils/camera/createOrbitCamera';
 import type { OrbitCamera } from '../../../src/@types/camera/OrbitCamera';
 
 type Listener = (e: unknown) => void;

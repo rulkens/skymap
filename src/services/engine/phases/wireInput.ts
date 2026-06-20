@@ -26,7 +26,8 @@
  *     orbit-controls detach function.
  */
 
-import { createOrbitCamera, clampDistance } from '../../camera/orbitCamera';
+import { createOrbitCamera } from '../../../utils/camera/createOrbitCamera';
+import { clampDistance } from '../../../utils/camera/clampDistance';
 import { attachOrbitControls } from '../../camera/orbitControls';
 import { seedCameraFromBase } from '../../camera/seedCameraFromBase';
 import { createPickRenderer } from '../../gpu/renderers/pickRenderer';

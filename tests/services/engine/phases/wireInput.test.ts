@@ -35,7 +35,7 @@ vi.mock('../../../../src/services/engine/helpers/buildGalaxyInfo', () => ({
   buildGalaxyInfo: vi.fn(),
 }));
 
-vi.mock('../../../../src/services/camera/orbitCamera', () => ({
+vi.mock('../../../../src/utils/camera/createOrbitCamera', () => ({
   createOrbitCamera: vi.fn(() => ({
     target: [0, 0, 0],
     distance: 0.43,

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { vec4 } from 'gl-matrix';
-import { createOrbitCamera, computeViewProj } from '../../../src/services/camera/orbitCamera';
+import { createOrbitCamera } from '../../../src/utils/camera/createOrbitCamera';
+import { computeViewProj } from '../../../src/utils/camera/computeViewProj';
 
 describe('orbit camera', () => {
   it('places the camera at +z when yaw=0 pitch=0', () => {

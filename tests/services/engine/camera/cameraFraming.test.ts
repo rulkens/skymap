@@ -12,7 +12,7 @@ import {
   INITIAL_DISTANCE_MPC,
   FAR_CLIP_MPC,
 } from '../../../../src/services/engine/camera/cameraFraming';
-import { MAX_DISTANCE_MPC, MIN_DISTANCE_MPC } from '../../../../src/services/camera/orbitCamera';
+import { MAX_DISTANCE_MPC, MIN_DISTANCE_MPC } from '../../../../src/utils/camera/clampDistance';
 
 describe('computeInitialCamera', () => {
   const FOV = (Math.PI / 180) * 60;
