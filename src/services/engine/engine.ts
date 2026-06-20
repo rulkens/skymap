@@ -87,7 +87,6 @@ import { produceStructureLabels } from './presentation/produceStructureLabels';
 import { produceFamousLabels } from './presentation/produceFamousLabels';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { HDR_PASSES, UI_PASSES } from './frame/passes';
-import { buildGalaxyInfo } from './helpers/buildGalaxyInfo';
 import { logCameraState } from './helpers/logCameraState';
 import { updateSelectionFocus } from '../../state/selection/selectionSlice';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
@@ -105,13 +104,6 @@ import { listVolumeFields } from './handles/listVolumeFields';
 import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
 import { makeRunTierTransition } from './wiring/makeRunTierTransition';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
-import { makeRunFocusTween } from './camera/makeRunFocusTween';
-import { tweenToGalaxy } from './camera/tweenToGalaxy';
-import { tweenToStructure } from './camera/tweenToStructure';
-import {
-  MILKY_WAY_CENTER_WORLD,
-  MILKY_WAY_VIEW_DISTANCE_MPC,
-} from '../../data/milkyWay/galacticCenter';
 import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
 
 /**
@@ -482,12 +474,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // subsystems the closures reach into are populated before any saga dispatches
   // them.
   //
-  // `resolveDeps` hands the reconciler saga and the focus-tween runner the LIVE
+  // `resolveDeps` hands the reconciler saga and the focus-tween saga the LIVE
   // engine resources (read lazily each call, because clouds + structures change
-  // as data loads and the GPU lands only after bootstrap). Named as a const so
-  // both `resolveDeps:` and `makeRunFocusTween(resolveDeps, ...)` share the same
-  // closure — no duplication, no drift. requestRender is NOT added here —
-  // selection sagas reach it through the existing `reconcile` bag.
+  // as data loads and the GPU lands only after bootstrap). requestRender is NOT
+  // added here — selection sagas reach it through the existing `reconcile` bag.
   const resolveDeps = (): ResolveDeps => ({
     catalogs: {
       get: (source: GalaxyCatalogSourceType) => state.data.galaxies.catalogs.get(source),
@@ -500,31 +490,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     runTierTransition: makeRunTierTransition(state, bootstrapDeps),
     reconcile: makeReconcileEffects(state),
     resolveDeps,
-    runFocusTween: makeRunFocusTween(resolveDeps, {
-      galaxyCatalog: (row) => tweenToGalaxy(state, buildGalaxyInfo(row), store),
-      structure: (row) => tweenToStructure(state, row, store),
-      milkyWay: () => {
-        const cam = state.cam;
-        if (!cam) return;
-        tweenToCameraSnapshot(
-          state,
-          {
-            target: [
-              MILKY_WAY_CENTER_WORLD[0],
-              MILKY_WAY_CENTER_WORLD[1],
-              MILKY_WAY_CENTER_WORLD[2],
-            ],
-            distance: MILKY_WAY_VIEW_DISTANCE_MPC,
-            yaw: cam.yaw,
-            pitch: cam.pitch,
-            fovYRad: cam.fovYRad,
-            near: cam.near,
-            far: cam.far,
-          },
-          store,
-        );
-      },
-    }),
+    // The live camera Resources `watchFocusTween` reads to build a focus tween:
+    // the visible from-pose (so a re-focus hands off from what the user sees) and
+    // the lens FOV (for structure screen-fill framing). Null when `state.cam` is
+    // absent — pre-bootstrap or post-destroy — so the focus tween no-ops rather
+    // than tween from a stale pose.
+    cameraRuntime: () =>
+      state.cam
+        ? {
+            from: state.cameraRuntime.lastPose.current,
+            fovYRad: state.cameraRuntime.projection.fovYRad,
+          }
+        : null,
   });
 
   // The main async IIFE runs the bootstrap phases; all errors are caught

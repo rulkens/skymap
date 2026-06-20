@@ -4,38 +4,27 @@
  * ### Why a helper
  *
  * `focusOnHome` on `EngineHandle` targets `state.initialCamSnapshot` and reads
- * the same four orbit fields off it (`target.{x,y,z}`, `distance`, `yaw`,
- * `pitch`). Pre-extraction it built a full tween literal inline and handed it
- * to `tweens.start(...)`. Pulling that scaffolding here collapses the call site
- * to one line, and a future home-targeting method plugs in without re-spelling
- * the tween literal.
+ * the four orbit fields off it (`target.{x,y,z}`, `distance`, `yaw`, `pitch`).
+ * Collapsing that into one call keeps the handle method a one-liner, and a
+ * future home-targeting method plugs in without re-spelling the tween literal.
  *
  * ### Why the `state` parameter, not `(cam, snapshot)`
  *
- * The helper absorbs the cam-null guard itself — same pattern `tweenToGalaxy`
- * established for the focus-commit family. Pulling `state` in is the cost of
- * moving that guard out of the call site; the win is that callers who add a
- * third home-targeting method later inherit the safe behaviour for free.
- *
- * ### Why `InitialCam` rather than a narrowed structural type
- *
- * `tweenToGalaxy` declares its own minimum-surface `TweenTarget` type because
- * its only callers (`GalaxyInfo`-bearing) are structurally compatible with a
- * much narrower shape. Here, every caller already holds an `InitialCam` (built
- * once during bootstrap, stored on `state.initialCamSnapshot`); narrowing
- * wouldn't document anything the type doesn't already. Use the existing domain
- * type.
+ * The helper absorbs the cam-null guard itself, so callers do not repeat it.
+ * Pulling `state` in is the cost of moving that guard out of the call site.
  *
  * ### Why `from` reads `cameraRuntime.lastPose.current`
  *
- * Same reason as `tweenToGalaxy`: `lastPose.current` is the pose the user
- * actually sees, while `state.cam` (the drag register) may be stale.
+ * `lastPose.current` is the pose the user actually sees (produced by the driver
+ * table each frame), while `state.cam` (the drag register) may be stale; seeding
+ * `from` from the live pose lets an in-flight tween hand off smoothly.
  *
- * ### Why `requestRender` after dispatch
+ * ### Why no requestRender
  *
- * A direct, synchronous wake for the first tween frame. The `camera/*` write
- * also wakes the loop via the `watchWake` saga; the explicit call does not
- * depend on saga ordering — same rationale as `tweenToGalaxy`.
+ * The `startCameraTween` dispatch is a `camera/*` write, and `watchWake`/
+ * WAKE_ROUTES turns every such write into a render request — so the wake is
+ * automatic. (The lone caller, `focusOnHome`, also dispatches a selection write,
+ * which wakes via `watchSelectionWake` too.)
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -46,26 +35,25 @@ import { startCameraTween } from '../../../state/camera/cameraSlice';
 
 /**
  * Tween the live camera toward `snapshot` over the project-wide `FOCUS_TWEEN_MS`
- * duration — same easing curve, same advance loop as `tweenToGalaxy`. Used by
- * `focusOnHome` to return to the bootstrap-derived framing without the visual
- * abruptness of a snap.
+ * duration — same easing curve as the focus tweens. Used by `focusOnHome` to
+ * return to the bootstrap-derived framing without the visual abruptness of a
+ * snap.
  *
- * The from-snapshot is taken at call time from `state.cameraRuntime.lastPose`
+ * The `from` pose is taken at call time from `state.cameraRuntime.lastPose`
  * (the live produced pose) so an in-flight tween hands off smoothly: the new
  * tween's `from` captures the camera's current visible position mid-animation.
  *
- * No-op when `state.cam` is null — same cam-null window as `tweenToGalaxy`.
- * Callers do NOT need to fire any URL-hash side-effect here; clearing
- * `#focus=…` is a separate concern owned by the call site that decides 'this
- * action is leaving a focus state'.
+ * No-op when `state.cam` is null (pre-bootstrap / post-destroy). Callers do NOT
+ * need to fire any URL-hash side-effect here; clearing `#focus=…` is a separate
+ * concern owned by the call site that decides 'this action is leaving a focus
+ * state'.
  */
 export function tweenToCameraSnapshot(
   state: EngineState,
   snapshot: InitialCam,
   store: AppStore,
 ): void {
-  const cam = state.cam;
-  if (!cam) return;
+  if (!state.cam) return;
 
   // Read the live produced pose as the tween's `from`. `lastPose.current` is
   // the pose the user actually sees (produced by the driver table each frame);
@@ -86,8 +74,4 @@ export function tweenToCameraSnapshot(
       easing: 'easeOutCubic',
     }),
   );
-
-  // Direct wake for the first tween frame — see the module header. The
-  // `camera/*` dispatch also wakes the loop via `watchWake`.
-  state.subsystems.scheduler.requestRender();
 }
