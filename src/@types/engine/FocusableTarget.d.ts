@@ -10,13 +10,10 @@ import type { MilkyWayInfo } from './MilkyWayInfo';
  *
  * The union is tagged on `type: FocusableTargetType`, so dispatch is a `type`
  * narrow or a table lookup on the tag (`DETAIL_CARD[t.type]`,
- * `URL_HASH_FOR[t.type]`, `COMMIT_FOCUS[t.type]`) rather than a structural
+ * `URL_HASH_FOR[t.type]`, `REF_OF[t.type]`) rather than a structural
  * sniff — a new arm is one table row per dispatch, not a new branch everywhere.
  *
- * Used by the public `camera.focusOn(target)` handle and by InfoCard's unified
- * `hovered` / `selected` props.  Deliberately distinct from `FocusTarget` in
- * `@types/camera/FocusTarget.d.ts`, which is the URL-parsed deep-link descriptor
- * (`{ kind: 'pgc' | 'objid' | 'famous', ...}`) — that one is a *request* to
- * find a target; this one is the *resolved* target itself.
+ * Used by InfoCard's unified `hovered` / `selected` props and by `refOf` (the
+ * boundary mapper to `SelectionRef` for store dispatches).
  */
 export type FocusableTarget = GalaxyInfo | StructureInfo | MilkyWayInfo;

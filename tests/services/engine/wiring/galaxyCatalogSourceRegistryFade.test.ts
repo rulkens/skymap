@@ -93,7 +93,9 @@ function makeFixture() {
 }
 
 function makeDeps() {
-  return { cb: {} as EngineCallbacks };
+  // commit() dispatches catalogLoaded via cb.store.dispatch; a no-op store keeps
+  // these fade-orchestration tests focused on the dissolve/fade path.
+  return { cb: { store: { dispatch: vi.fn() } } as unknown as EngineCallbacks };
 }
 
 describe('wireGalaxyCatalogSourceSlot — fade orchestration', () => {

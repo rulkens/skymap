@@ -12,9 +12,9 @@
  *       overlays know where to draw.
  *
  *   2.  `hooks/useUrlSync.ts` — the React-side `#focus=<id>` deep-link drain
- *       needs a `StructureInfo` to feed `camera.focusOn`, but App.tsx has
- *       no public read-side accessor for the engine's structure table (the
- *       store owns the list).
+ *       needs a `StructureInfo` to dispatch `updateSelectionFocus`, but
+ *       App.tsx has no public read-side accessor for the engine's structure
+ *       table (the store owns the list).
  *
  * Keeping a single helper here means both call sites agree on:
  *

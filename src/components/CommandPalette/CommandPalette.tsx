@@ -23,10 +23,10 @@
  * Selection: the row's onClick / Enter handler routes through the `SELECT_ROW`
  * table dispatch (keyed on row kind) — `onSelect(id)` (famous),
  * `onSelectAlias({ source, localIdx })` (alias), or `onSelectMilkyWay()` (Milky
- * Way).  App.tsx routes those to engine.selection.selectFamous / selectByAlias /
- * camera.focusOn(MILKY_WAY_INFO) respectively.  Rendering is likewise
- * table-driven: `ROW_VIEW[kind]` supplies each row's leading visual + text into
- * one shared <li>.
+ * Way).  App.tsx translates those into Redux dispatches (`requestFocus`,
+ * `updateSelectionFocus`) so the selection slice is the single write path.
+ * Rendering is likewise table-driven: `ROW_VIEW[kind]` supplies each row's
+ * leading visual + text into one shared <li>.
  *
  * Why not a third-party command-palette library?  Same reasoning as
  * the original famous-only iteration: ~120 lines of UI logic, no
@@ -171,9 +171,9 @@ export type CommandPaletteProps = {
   /**
    * Selection handler for the Milky Way row.  The MW is a first-class
    * FocusableTarget, not a catalog row, so it carries no id / alias tuple —
-   * App wires this to `camera.focusOn(MILKY_WAY_INFO)`, the same select → focus
-   * path every other target uses.  Optional so the palette renders standalone
-   * (e.g. in tests) without the handler.
+   * App dispatches `updateSelectionFocus({ type: 'milkyWay' })` here, the same
+   * select → focus path every other target uses.  Optional so the palette renders
+   * standalone (e.g. in tests) without the handler.
    */
   onSelectMilkyWay?: () => void;
 };

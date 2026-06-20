@@ -14,14 +14,15 @@
  * splices them straight into the vertex buffer.)
  */
 
-import { describe, it, expect } from 'vitest';
-import type { SourceType } from '../../src/@types/data/SourceType';
-import type { GalaxyInfo } from '../../src/@types/engine/GalaxyInfo';
+import { describe, it, expect, expectTypeOf } from 'vitest';
+import type { GalaxyCatalogSourceType } from '../../src/@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 
 import type { EngineState } from '../../src/@types/engine/state/EngineState';
 import { createEngineData } from '../../src/services/engine/data/createEngineData';
 import type { EngineSettingsState } from '../../src/@types/settings/EngineSettingsState';
 import type { EnginePickingState } from '../../src/@types/engine/state/EnginePickingState';
+import type { SelectionState } from '../../src/@types/store/SelectionState';
+import type { SelectionRowsState } from '../../src/@types/store/SelectionRowsState';
 
 import {
   DEFAULT_ABS_MAG_LIMIT,
@@ -43,7 +44,6 @@ import {
 import { createTweenManager } from '../../src/services/engine/camera/tweenManager';
 import { createCameraClock } from '../../src/services/engine/camera/cameraClock';
 import { createRenderScheduler } from '../../src/services/engine/subsystems/renderScheduler';
-import { createSelectionSubsystem } from '../../src/services/engine/subsystems/selectionSubsystem';
 import { createBiasCorrectionSubsystem } from '../../src/services/engine/subsystems/biasCorrectionSubsystem';
 import { createLabelDirectorSubsystem } from '../../src/services/engine/subsystems/labelDirectorSubsystem';
 import { createStructureFocusSubsystem } from '../../src/services/engine/subsystems/structureFocusSubsystem';
@@ -53,17 +53,7 @@ import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gp
 function makeRegistry() {
   return createFadeRegistry({ requestRender: () => {} });
 }
-import type { EngineCallbacks } from '../../src/@types/engine/EngineCallbacks';
 import { Source, SOURCE_REGISTRY } from '../../src/data/sources';
-
-// No-op callback bag for the selection subsystem fixture.
-// `onHoverChange` / `onSelectChange` are the only fields it reads; the
-// rest exist only to satisfy the type.
-const noopCb = {
-  onStatusChange: () => {},
-  onHoverChange: () => {},
-  onSelectChange: () => {},
-} as unknown as EngineCallbacks;
 
 // No-op rAF/cAF pair so the scheduler factory doesn't reach for
 // `window.requestAnimationFrame` in the Vitest node environment. No
@@ -144,6 +134,10 @@ describe('EngineState type', () => {
       // `state.tier` delegates to the root tier slice in the engine; in this
       // plain literal it's a direct value (the type is `Tier`, not a getter).
       tier: 'medium',
+      // `state.selection`/`selectionRows` delegate to the store in the real engine;
+      // here they're direct values representing the initial (all-null) Redux state.
+      selection: { hover: null, select: null, focus: null },
+      selectionRows: { hover: null, select: null, focus: null },
       data: createEngineData(),
       picking,
       gpu: {
@@ -180,10 +174,6 @@ describe('EngineState type', () => {
         hiResFamousTexture: null,
         loadProgress: null,
         tweens: createTweenManager({ requestRender: () => {} }),
-        selection: createSelectionSubsystem({
-          cb: noopCb,
-          requestRender: () => {},
-        }),
         biasCorrection: createBiasCorrectionSubsystem({
           getMode: () => stateRef.current!.settings.bias.mode,
           getLoadedClouds: () => stateRef.current!.data.galaxies.catalogs,
@@ -226,8 +216,8 @@ describe('EngineState type', () => {
     // The data tier lives in its own root slice, surfaced on `state.tier`
     // (cross-cutting: galaxy catalogs / MCPM volume / filaments all fetch by it).
     expect(state.tier).toBe('medium');
-    // Hover/selection live on `state.subsystems.selection`, not `state.picking`.
-    expect(state.subsystems.selection.hovered()).toBeNull();
+    // Hover/select/focus live in the Redux `selection` slice, not the picking bag.
+    expect(state.selection.hover).toBeNull();
     expect(state.gpu.renderer).toBeNull();
     expect(state.subsystems.tweens.isActive()).toBe(false);
   });
@@ -338,6 +328,10 @@ describe('EngineState type', () => {
       // `state.tier` delegates to the root tier slice in the engine; in this
       // plain literal it's a direct value (the type is `Tier`, not a getter).
       tier: 'medium',
+      // `state.selection`/`selectionRows` delegate to the store in the real engine;
+      // here they're direct values representing the initial (all-null) Redux state.
+      selection: { hover: null, select: null, focus: null },
+      selectionRows: { hover: null, select: null, focus: null },
       data: createEngineData(),
       picking: {
         latestMouseCss: null,
@@ -379,10 +373,6 @@ describe('EngineState type', () => {
         hiResFamousTexture: null,
         loadProgress: null,
         tweens: createTweenManager({ requestRender: () => {} }),
-        selection: createSelectionSubsystem({
-          cb: noopCb,
-          requestRender: () => {},
-        }),
         biasCorrection: createBiasCorrectionSubsystem({
           getMode: () => stateRef.current!.settings.bias.mode,
           getLoadedClouds: () => stateRef.current!.data.galaxies.catalogs,
@@ -422,20 +412,30 @@ describe('EngineState type', () => {
     // The data tier lives in its own root slice, surfaced on `state.tier`; the
     // action layer copies-on-write, but the field itself is assignable.
     state.tier = 'large';
-    // Hovered/selected live on the selection subsystem, not `state.picking`.
-    // The slot now holds a resolved FocusableTarget directly.
-    const hoverTarget = {
-      type: 'galaxyCatalog',
-      source: 1 as SourceType,
-      index: 42,
-    } as unknown as GalaxyInfo;
-    state.subsystems.selection.setHovered(hoverTarget);
+    // Hover/select/focus live in the Redux selection slice, not `state.picking`.
+    // In the plain literal the `selection` field itself is mutable; individual
+    // slots inside SelectionState are readonly, so replace the whole object.
+    state.selection = {
+      hover: { type: 'galaxyCatalog', source: 1 as GalaxyCatalogSourceType, index: 42 },
+      select: null,
+      focus: null,
+    };
     state.picking.pickInFlight = true;
 
     expect(state.settings.galaxyCatalogs.brightness).toBe(2.5);
     expect(state.settings.bias.absMagLimit).toBe(-20);
     expect(state.tier).toBe('large');
-    expect(state.subsystems.selection.hovered()).toBe(hoverTarget);
+    expect(state.selection.hover).toEqual({ type: 'galaxyCatalog', source: 1, index: 42 });
     expect(state.picking.pickInFlight).toBe(true);
+  });
+
+  it('carries selection: SelectionState and selectionRows: SelectionRowsState', () => {
+    // Type-level proof that the two new getter-backed fields are on EngineState
+    // with the right types. The actual delegation (`store.getState().selection`)
+    // is proven by `npm run typecheck` on engine.ts; this pins the declared
+    // surface on the shared type so mis-typed fields fail here rather than
+    // silently in the per-frame readers added in later tasks.
+    expectTypeOf<EngineState['selection']>().toEqualTypeOf<SelectionState>();
+    expectTypeOf<EngineState['selectionRows']>().toEqualTypeOf<SelectionRowsState>();
   });
 });

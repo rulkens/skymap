@@ -84,6 +84,8 @@ import type { createOrbitCamera } from '../../../services/camera/orbitCamera';
 import type { InitialCam } from '../../camera/InitialCam';
 import type { RequestKey } from '../../loading/RequestKey';
 import type { CameraRuntime } from './CameraRuntime';
+import type { SelectionState } from '../../store/SelectionState';
+import type { SelectionRowsState } from '../../store/SelectionRowsState';
 
 export type EngineState = {
   settings: EngineSettingsState;
@@ -95,6 +97,19 @@ export type EngineState = {
    * engine reads here.
    */
   tier: Tier;
+  /**
+   * The selection identity Intent (hover/select/focus refs). A getter
+   * delegating to the injected store (`store.getState().selection`), like
+   * `settings`/`tier` — the store is the single home, no engine-side mirror.
+   * The pick path dispatches the writes; the engine reads here.
+   */
+  selection: SelectionState;
+  /**
+   * The saga-reconciled selection display rows. A getter delegating to
+   * `store.getState().selectionRows`; the per-frame selection-ring + structure
+   * focus readers read this.
+   */
+  selectionRows: SelectionRowsState;
   /**
    * Per-type data stores — the authoritative app-side home for each
    * data type (galaxies, structures, volumes, filaments). Slot commits

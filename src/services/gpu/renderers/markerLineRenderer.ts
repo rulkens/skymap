@@ -12,11 +12,11 @@
  * ## Why a closure-keyed factory and not a class?
  *
  * Same convention every other freshly-extracted handle in the engine
- * follows (`selectionSubsystem`, `thumbnailSubsystem`,
- * `biasCorrectionSubsystem`, `tweenManager`, the `Pass` object literals
- * in `engine/frame/passes/`): factories return typed handles, not class
- * instances.  Internal state (CPU scratch buffer, running count, pipeline
- * + bind-group reference) is genuinely inaccessible from outside the
+ * follows (`thumbnailSubsystem`, `biasCorrectionSubsystem`, `tweenManager`,
+ * the `Pass` object literals in `engine/frame/passes/`): factories return
+ * typed handles, not class instances.  Internal state (CPU scratch buffer,
+ * running count, pipeline + bind-group reference) is genuinely inaccessible
+ * from outside the
  * closure — there is no `this.instanceBuf` to reach in and poke from a
  * misbehaving caller — and the `type` aliases convention (CLAUDE.md)
  * deliberately rejects the inheritance escape hatch a class would otherwise
@@ -120,10 +120,7 @@ const CORNER_BYTES = CORNER_DATA.byteLength; // 32 bytes (4 × 2 × 4)
  * the "you are here" indicator plus any future tagged-object markers without
  * a follow-up resize.
  */
-export function createMarkerLineRenderer(
-  ctx: GpuContext,
-  maxLines = 64,
-): MarkerLineRenderer {
+export function createMarkerLineRenderer(ctx: GpuContext, maxLines = 64): MarkerLineRenderer {
   // The `as ... | null` cast lets a test pass `device: null as unknown as
   // GPUDevice` through GpuContext without TypeScript complaining at the
   // factory's call site.  Runtime code below null-checks before each use.
@@ -160,9 +157,7 @@ export function createMarkerLineRenderer(
     // appear here.
     const bindGroupLayout = device.createBindGroupLayout({
       label: 'marker-line-bgl',
-      entries: [
-        { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
-      ],
+      entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } }],
     });
 
     // ── Pipeline ──────────────────────────────────────────────────────────
@@ -193,7 +188,7 @@ export function createMarkerLineRenderer(
             arrayStride: LINE_INSTANCE_BYTES, // 48 bytes = 3 × vec4
             stepMode: 'instance',
             attributes: [
-              { shaderLocation: 1, offset: 0,  format: 'float32x4' }, // fromAndWidth
+              { shaderLocation: 1, offset: 0, format: 'float32x4' }, // fromAndWidth
               { shaderLocation: 2, offset: 16, format: 'float32x4' }, // toAndAlpha
               { shaderLocation: 3, offset: 32, format: 'float32x4' }, // color
             ],
@@ -252,9 +247,7 @@ export function createMarkerLineRenderer(
     bindGroup = device.createBindGroup({
       label: 'marker-line-bg',
       layout: bindGroupLayout,
-      entries: [
-        { binding: 0, resource: { buffer: uniformBuffer } },
-      ],
+      entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
     });
   }
 
@@ -279,16 +272,16 @@ export function createMarkerLineRenderer(
       // no Uint32Array aliasing needed (unlike labelRenderer's glyph buffer
       // which carries a u32 labelIndex at offset 8).
       const base = i * (LINE_INSTANCE_BYTES / 4); // 12 f32s per instance
-      instanceBuf[base + 0]  = line.fromWorld[0];
-      instanceBuf[base + 1]  = line.fromWorld[1];
-      instanceBuf[base + 2]  = line.fromWorld[2];
-      instanceBuf[base + 3]  = line.pixelWidth;
-      instanceBuf[base + 4]  = line.toWorld[0];
-      instanceBuf[base + 5]  = line.toWorld[1];
-      instanceBuf[base + 6]  = line.toWorld[2];
-      instanceBuf[base + 7]  = line.fadeAlpha ?? 1;
-      instanceBuf[base + 8]  = line.color[0]!;
-      instanceBuf[base + 9]  = line.color[1]!;
+      instanceBuf[base + 0] = line.fromWorld[0];
+      instanceBuf[base + 1] = line.fromWorld[1];
+      instanceBuf[base + 2] = line.fromWorld[2];
+      instanceBuf[base + 3] = line.pixelWidth;
+      instanceBuf[base + 4] = line.toWorld[0];
+      instanceBuf[base + 5] = line.toWorld[1];
+      instanceBuf[base + 6] = line.toWorld[2];
+      instanceBuf[base + 7] = line.fadeAlpha ?? 1;
+      instanceBuf[base + 8] = line.color[0]!;
+      instanceBuf[base + 9] = line.color[1]!;
       instanceBuf[base + 10] = line.color[2]!;
       instanceBuf[base + 11] = line.color[3]!;
 
@@ -314,7 +307,14 @@ export function createMarkerLineRenderer(
     viewProj: Float32Array,
     viewportSize: [number, number],
   ): void {
-    if (!device || !pipeline || !bindGroup || !uniformBuffer || !cornerBuffer || !gpuInstanceBuffer) {
+    if (
+      !device ||
+      !pipeline ||
+      !bindGroup ||
+      !uniformBuffer ||
+      !cornerBuffer ||
+      !gpuInstanceBuffer
+    ) {
       return;
     }
     if (currentLineCount === 0) return;

@@ -73,12 +73,11 @@
  *
  * ### Why `requestRender` after `startCameraTween`
  *
- * `startCameraTween` does NOT wake the render loop (it dispatches a settings-
- * style action; the watchWake saga matches only certain prefixes — Task 4.3 is
- * out of scope for this commit). An explicit `scheduler.requestRender()` here
- * ensures the loop wakes for the first tween frame. Without it, the tween
- * dispatch would land in the store but the loop would stay asleep until some
- * other event woke it, producing a silent stall on focus.
+ * `startCameraTween` reaches the store, and the `watchWake` saga wakes the loop
+ * on any `camera/*` write — so the dispatch alone would eventually wake it. The
+ * explicit `scheduler.requestRender()` here is a direct, synchronous wake that
+ * does not depend on saga-middleware ordering or on the wake saga being forked
+ * yet, guaranteeing the first tween frame fires immediately from any call site.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -125,8 +124,8 @@ export function tweenToGalaxy(state: EngineState, target: TweenTarget, store: Ap
     }),
   );
 
-  // `startCameraTween` does not wake the render loop automatically — add an
-  // explicit wake so the loop starts running the tween immediately. Without
-  // this the tween would wait until the next unrelated event woke the loop.
+  // Direct wake for the first tween frame. The `camera/*` dispatch also wakes
+  // the loop via the `watchWake` saga, but this synchronous call does not
+  // depend on saga ordering — see the module header.
   state.subsystems.scheduler.requestRender();
 }

@@ -1,7 +1,7 @@
 /**
  * Public handle returned by `createMarkerLineRenderer`.  Mirrors the shape of
- * other engine handles (`SelectionSubsystem`, `ThumbnailSubsystem`,
- * `LabelRenderer`): explicit method type, no internals leaked.
+ * other engine handles (`ThumbnailSubsystem`, `LabelRenderer`): explicit
+ * method type, no internals leaked.
  */
 
 import type { MarkerLine } from './MarkerLine';

@@ -15,8 +15,10 @@
  * visible interpolated position. Seeding from the live produced pose avoids a
  * jump when the user re-focuses rapidly during an animation.
  *
- * `requestRender` is called explicitly after the dispatch because
- * `startCameraTween` does not wake the render loop on its own.
+ * `requestRender` is called explicitly after the dispatch as a direct,
+ * synchronous wake. The `camera/*` write also wakes the loop via the
+ * `watchWake` saga; the explicit call does not depend on saga ordering — same
+ * rationale as `tweenToGalaxy`.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -59,7 +61,7 @@ export function tweenToStructure(
     }),
   );
 
-  // `startCameraTween` does not wake the render loop automatically — add an
-  // explicit wake so the loop starts running the tween immediately.
+  // Direct wake for the first tween frame — see the module header. The
+  // `camera/*` dispatch also wakes the loop via `watchWake`.
   state.subsystems.scheduler.requestRender();
 }

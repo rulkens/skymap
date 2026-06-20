@@ -1,14 +1,14 @@
 import type { ClickResolveInput } from './ClickResolveInput';
-import type { FocusableTarget } from './FocusableTarget';
+import type { SelectionRef } from './SelectionRef';
 
 export type ClickResolver = {
   /**
-   * Resolve a click position → the `FocusableTarget` it hit (a resolved
-   * `GalaxyInfo` / `StructureInfo`), or null for background. The engine
-   * forwards the result straight to `setSelected`, which holds it for the
-   * InfoCard and the dblclick focus.
+   * Resolve a click position → the `SelectionRef` it hit (a positional galaxy
+   * ref, a durable-id structure ref, or the milkyWay singleton), or null for
+   * background. The engine forwards the result to `updateSelectionSelect`,
+   * which the reconciler saga watches to fill `selectionRows`.
    */
-  resolveClick(input: ClickResolveInput): Promise<FocusableTarget | null>;
+  resolveClick(input: ClickResolveInput): Promise<SelectionRef | null>;
   /**
    * Tear down the resolver.  No-op — the resolver is a thin wrapper
    * around the pick renderer plus the pick-resolution deps; its

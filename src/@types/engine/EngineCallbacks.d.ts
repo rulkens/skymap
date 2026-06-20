@@ -5,7 +5,6 @@
  */
 
 import type { EngineStatus } from './EngineStatus';
-import type { FocusableTarget } from './FocusableTarget';
 import type { ScaleInfo } from './ScaleInfo';
 import type { SourceType } from '../data/SourceType';
 import type { LoadProgressState } from '../loading/LoadProgressState';
@@ -22,16 +21,17 @@ import type { AppStore, SetSagaContext } from '../../store/types';
  * ### Events only
  *
  * Every member here is an EVENT — something the engine *did* that the
- * UI must learn about (a status transition, a selection change, a
- * camera-snapshot tick, a catalog arrival, a load-progress update).
- * Settings VALUES do NOT live here: they're owned by the engine settings
- * store and read React-side via `useStore` selectors, so there is no
- * echo-mirror protocol to maintain.
+ * UI must learn about (a status transition, a camera-snapshot tick, a
+ * catalog arrival, a load-progress update). Settings VALUES do NOT live
+ * here: they're owned by the engine settings store and read React-side
+ * via `useStore` selectors, so there is no echo-mirror protocol to
+ * maintain. Selection state lives in the Redux `selection` slice; the
+ * engine dispatches directly.
  *
  * ### Nested-only shape
  *
  * Each sub-bag groups its callbacks by the engine sub-system they
- * concern (lifecycle / selection / camera / sources).
+ * concern (lifecycle / camera / sources).
  * There are no flat siblings — every fire site lives at its
  * nested address.
  *
@@ -42,11 +42,9 @@ import type { AppStore, SetSagaContext } from '../../store/types';
  * (`const { camera } = ...`), and adding a new event lands in the
  * cluster it belongs to instead of bloating a flat record.
  *
- * Required-ness rules: sub-bags whose members include any required
- * callback are themselves required (`lifecycle`, `selection`).
- * Bags that are entirely optional (`camera`, `sources`, …) keep their
- * `?:` marker so subscribers can omit them without needing to declare
- * an empty object.
+ * Required-ness rules: only `lifecycle` is required (its `onStatusChange`
+ * drives the loading overlay). All other bags (`camera`, `sources`) are
+ * optional — omitting one is a no-op at the engine.
  */
 export type EngineCallbacks = {
   /**
@@ -84,43 +82,10 @@ export type EngineCallbacks = {
   };
 
   /**
-   * Selection-state callbacks.  Carry the resolved `FocusableTarget`
-   * (galaxy or structure) so consumers don't need to branch on a separate
-   * id callback — they receive the full GalaxyInfo / StructureInfo
-   * directly.  Both required: every engine consumer needs hover /
-   * select fan-out (InfoCard text, halo, hover preview).
-   */
-  selection: {
-    /** Fired when the pinned/selected entity changes. */
-    onSelectChange: (target: FocusableTarget | null) => void;
-    /** Fired when the entity under the cursor changes (null = empty sky). */
-    onHoverChange: (target: FocusableTarget | null) => void;
-  };
-
-  /**
    * Camera-state callbacks.  All entries optional — App.tsx and the
    * scale-bar subscribe, but headless / test consumers can omit.
    */
   camera?: {
-    /**
-     * Fired when the camera-focus target changes — i.e. the engine has
-     * started a tween toward (or away from) a specific galaxy or structure.
-     *
-     * Selection (`onSelectChange`) and focus are separate concepts:
-     *   - Selection is the pin state — InfoCard, halo highlight.  A bare
-     *     canvas click fires `onSelectChange` only.
-     *   - Focus is a user-deliberate camera commitment — the Focus button
-     *     on the InfoCard, the `f` shortcut, a palette pick, or a deep-
-     *     link resolve.  Each of those fires `onFocusChange` *in
-     *     addition to* `onSelectChange`.
-     *
-     * The deep-link URL hook subscribes to focus, not selection, so a
-     * casual click doesn't pollute browser history with hash entries —
-     * only deliberate focus actions do.  The `FocusableTarget` union
-     * means one callback covers both galaxy and structure focus; consumers
-     * branch on the `target.type` discriminant.
-     */
-    onFocusChange?: (target: FocusableTarget | null) => void;
     /**
      * Reserved.  Scale-bar derivation happens React-side from
      * `onCameraChange` snapshots; the slot stays for future overlays

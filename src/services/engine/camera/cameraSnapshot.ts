@@ -33,8 +33,9 @@
  *
  * ### Why `requestRender` after dispatch
  *
- * `startCameraTween` does not wake the render loop; an explicit wake ensures
- * the first tween frame fires immediately.
+ * A direct, synchronous wake for the first tween frame. The `camera/*` write
+ * also wakes the loop via the `watchWake` saga; the explicit call does not
+ * depend on saga ordering — same rationale as `tweenToGalaxy`.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -54,9 +55,9 @@ import { startCameraTween } from '../../../state/camera/cameraSlice';
  * tween's `from` captures the camera's current visible position mid-animation.
  *
  * No-op when `state.cam` is null — same cam-null window as `tweenToGalaxy`.
- * Callers do NOT need to fire `cb.onFocusChange` here; that's a separate
- * semantic concern (telling the URL hash to clear `#focus=…`) and stays at the
- * call site that decides 'this action is leaving a focus state'.
+ * Callers do NOT need to fire any URL-hash side-effect here; clearing
+ * `#focus=…` is a separate concern owned by the call site that decides 'this
+ * action is leaving a focus state'.
  */
 export function tweenToCameraSnapshot(
   state: EngineState,
@@ -86,7 +87,7 @@ export function tweenToCameraSnapshot(
     }),
   );
 
-  // `startCameraTween` does not wake the render loop automatically — add an
-  // explicit wake so the loop starts running the tween immediately.
+  // Direct wake for the first tween frame — see the module header. The
+  // `camera/*` dispatch also wakes the loop via `watchWake`.
   state.subsystems.scheduler.requestRender();
 }

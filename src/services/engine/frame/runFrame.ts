@@ -80,6 +80,7 @@ import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
 } from '../subsystems/proceduralDiskSubsystem';
+import { updateSelectionHover } from '../../../state/selection/selectionSlice';
 
 /**
  * Run one frame of the render loop. Called every rAF tick by the scheduler in
@@ -181,7 +182,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // non-null). So the resting or tween/autoRotate drivers win pre-bootstrap,
   // both of which ignore `cam`. The guard below for the scale-bar snapshot
   // still keeps the post-cam path distinct.
-  const pose = runCameraDrivers(deps.drivers, rootState, state.cam!, state.cameraRuntime.clock, nowMs);
+  const pose = runCameraDrivers(
+    deps.drivers,
+    rootState,
+    state.cam!,
+    state.cameraRuntime.clock,
+    nowMs,
+  );
   const activeId = activeDriverId(deps.drivers, rootState);
 
   // ── (2) TWEEN COMPLETION: cancel a finished tween exactly once ────────────
@@ -198,11 +205,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // `tweenElapsed` does not fire, and the returned elapsed is the same value
   // `runCameraDrivers` used — no double-tick of the clock.
   if (activeId === 'tween' && rootState.camera.tween !== null) {
-    const elapsed = tweenElapsed(
-      state.cameraRuntime.clock,
-      rootState.camera.tween,
-      nowMs,
-    );
+    const elapsed = tweenElapsed(state.cameraRuntime.clock, rootState.camera.tween, nowMs);
     if (elapsed >= rootState.camera.tween.durationMs) {
       deps.cb.store.dispatch(cancelCameraTween());
       // The tween driver deactivates on the NEXT frame; the commit fires then
@@ -276,13 +279,21 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // the subsystem diff it against its focused id to drive the 400 ms
   // member-isolation fade.
   //
-  // `produceFocusUniforms(nowMs)` TICKS the focus fade controller, so it must
-  // run EXACTLY ONCE per frame — a second call would double-advance the ramp
-  // (a visible glitch). We compute it here, before the label director, marker
-  // upload, and render-settings sections, because all of those (and later
-  // per-galaxy presentation producers) consume the blend via `ctx.focusBlend`.
-  const focused = state.subsystems.selection.focused();
-  const focusedStructure = focused !== null && focused.type === 'structure' ? focused : null;
+  // `produceFocusUniforms(nowMs)` TICKS the focus fade controller, so it
+  // must run EXACTLY ONCE per frame — a second call would double-advance
+  // the ramp (a visible glitch).  We compute it here, before the label
+  // director, marker upload, and render-settings sections, because all of
+  // those (and later per-galaxy presentation producers) consume the blend
+  // via `ctx.focusBlend`.  The single returned `FocusUniformsValue` is
+  // captured in `focusUniforms`; `ctx.focusBlend` and the render
+  // `settings.focus` both read THAT captured value — never a fresh
+  // `produceFocusUniforms` call.
+  const focusRow = state.selectionRows.focus;
+  // The focus row is the saga-reconciled SelectionRow for the focus slot.
+  // A structure row IS a StructureInfo, so passing it directly typechecks.
+  // A galaxy / milkyWay / nothing resolves to null, collapsing the
+  // member-isolation fade.
+  const focusedStructure = focusRow !== null && focusRow.type === 'structure' ? focusRow : null;
   state.subsystems.structureFocus.update(focusedStructure, nowMs);
   const focusUniforms = state.subsystems.structureFocus.produceFocusUniforms(nowMs);
   ctx.focusBlend = focusUniforms.blend;
@@ -367,7 +378,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     settings: {
       pointSizePx: state.settings.galaxyCatalogs.sizePx,
       brightness: state.settings.galaxyCatalogs.brightness,
-      selected: state.subsystems.selection.selected(),
+      selected: state.selection.select,
       visibleSourceMask: masks.draw,
       highlightFallback: state.settings.galaxyCatalogs.highlightFallback,
       realOnlyMode: state.settings.galaxyCatalogs.realOnly,
@@ -517,18 +528,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
           state.gpu.timingService.descriptorFor('pick'),
         )
         .then((pick) => {
-          // Decode + resolve the pick to a hover `FocusableTarget` (galaxy /
-          // structure / null) via `resolvePick` — the same boundary the click
-          // path uses, so hover and click can't drift. One slot: setHovered(null)
-          // clears, a galaxy or structure hit replaces; setHovered
-          // equality-short-circuits, so a steady hover is a no-op. The InfoCard
-          // reads the resolved target the slot now holds directly.
-          state.subsystems.selection.setHovered(
-            resolvePick(pick, {
-              getCloud: (source) => state.data.galaxies.get(source),
-              getFamousMeta: () => state.data.galaxies.famousMeta,
-              structures: state.data.structures,
-            }),
+          // Decode the pick to a SelectionRef (identity) via `resolvePick` —
+          // the same boundary the click path uses, so hover and click can't
+          // drift. Dispatch to the store; the reconciler fills `selectionRows`.
+          // The reducer dedupes on structural equality, so a steady hover is
+          // a no-op and downstream sagas don't re-fire.
+          deps.cb.store.dispatch(
+            updateSelectionHover(resolvePick(pick, { structures: state.data.structures })),
           );
           // No scheduler.requestRender() here intentionally. The hover state
           // only feeds the React InfoCard text — there is no hover halo in the

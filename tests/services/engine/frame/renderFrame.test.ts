@@ -26,8 +26,7 @@ import { createDisabledGpuTimingService } from '../../../../src/services/gpu/tim
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { mat4 } from 'gl-matrix';
-import type { FocusableTarget } from '../../../../src/@types/engine/FocusableTarget';
-import type { GalaxyInfo } from '../../../../src/@types/engine/GalaxyInfo';
+import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 
 // ── Test fixtures ───────────────────────────────────────────────────────────
 
@@ -250,7 +249,7 @@ function makeInput(
   const settings = {
     pointSizePx: 2.5,
     brightness: 1.0,
-    selected: null as FocusableTarget | null,
+    selected: null as SelectionRef | null,
     visibleSourceMask: 0xffffffff,
     highlightFallback: true,
     realOnlyMode: false,
@@ -463,7 +462,7 @@ describe('renderFrame', () => {
           type: 'galaxyCatalog',
           source: Source.SDSS,
           index: 42,
-        } as unknown as GalaxyInfo,
+        } as SelectionRef,
       },
     });
     renderFrame(fx2.input);

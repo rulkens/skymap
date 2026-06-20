@@ -1,12 +1,13 @@
-import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
+import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 
 /**
- * structureIdOf — a target's structure id, or null for nothing / a galaxy.
+ * structureIdOf — a ref's structure id, or null for nothing / a galaxy / the
+ * Milky Way.
  *
  * The marker and label producers both want "id if a structure is
- * select/focused, else null (a galaxy bumps/recedes no ring)" — one home for
- * that unwrap.
+ * selected/focused, else null (a galaxy or MW bumps/recedes no ring)" — one
+ * home for that unwrap.
  */
-export function structureIdOf(target: FocusableTarget | null): string | null {
-  return target !== null && target.type === 'structure' ? target.id : null;
+export function structureIdOf(ref: SelectionRef | null): string | null {
+  return ref !== null && ref.type === 'structure' ? ref.id : null;
 }

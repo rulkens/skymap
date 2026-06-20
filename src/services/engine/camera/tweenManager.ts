@@ -4,9 +4,8 @@
  * Before this module existed the engine kept a single mutable
  * `let currentTween: CameraTween | null = null;` as a closure variable.
  * Several separate sites read or wrote it — `frame()` (advance + clear),
- * the `pointerdown` handler (cancel on user grab), and three
- * public-handle methods (`focusOn`, `focusOnHome`, `selectFamous`)
- * that all replaced the running tween.
+ * the `pointerdown` handler (cancel on user grab), and the focus-tween
+ * saga + `focusOnHome` that both replace the running tween.
  *
  * That spread made it easy to:
  *   - add a fourth cancel site (e.g. a future keyboard shortcut) and
