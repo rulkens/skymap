@@ -1,6 +1,6 @@
 # Selection into the Intent Store — Part 2 (Cutover) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 > **Depends on Part 1 being merged** (`docs/superpowers/plans/2026-06-19-selection-into-intent-store-part-1-foundation.md`). Part 2 consumes Part 1's Produces interfaces by exact name: the slices/actions (`updateSelectionHover/Select/Focus`, `clearSelection`, `requestFocus`, `setSelectionRow`, `catalogLoaded`), the selectors (`selectSelectedFocusable`, `selectHoveredFocusable`, `selectFocusedFocusable`, `selectSelectedRef`, `selectFocusRef`, `selectIsSelectionActive`), the codecs (`focusIdOf`, `resolveFocusId`), the engine helpers (`extractSelectionRow`, `buildFocusable`, `extractGalaxyRow`, `buildGalaxyInfo`), the types (`SelectionRef`, `SelectionRow`, `SelectionSlot`, `ResolveDeps`), the extended `SagaContext` (`resolveDeps`; `requestRender` is reused from the `reconcile` bag, PR #352), the reconciler `watchSelectionRows`, and the `catalogLoaded` commit-path dispatch.
 
@@ -82,7 +82,7 @@ The engine reads `settings`/`tier` through getters delegating to the injected st
 - Consumes: the injected `store` (already in `engine.ts` scope), `SelectionState`, `SelectionRowsState`.
 - Produces: `state.selection` (→ `store.getState().selection`), `state.selectionRows` (→ `store.getState().selectionRows`).
 
-- [ ] **Step 1: Add the fields to `EngineState`**
+- [x] **Step 1: Add the fields to `EngineState`**
 
 In `src/@types/engine/state/EngineState.d.ts`, after `tier: Tier;` (with a docblock mirroring the `tier` one):
 
@@ -104,7 +104,7 @@ In `src/@types/engine/state/EngineState.d.ts`, after `tier: Tier;` (with a docbl
 
 Add the imports `import type { SelectionState } from '../../store/SelectionState';` and `import type { SelectionRowsState } from '../../store/SelectionRowsState';`.
 
-- [ ] **Step 2: Add the getters in `engine.ts`**
+- [x] **Step 2: Add the getters in `engine.ts`**
 
 Next to `get tier()` (~line 223):
 
@@ -117,7 +117,7 @@ Next to `get tier()` (~line 223):
     },
 ```
 
-- [ ] **Step 3: Test, typecheck, commit**
+- [x] **Step 3: Test, typecheck, commit**
 
 Run: `npm run typecheck` then `npm test`.
 Expected: PASS (the getters are additive; nothing reads them yet).
@@ -151,11 +151,11 @@ Cut the three per-frame consumers from `state.subsystems.selection.*()` to the T
 - Consumes: the `state.selection` / `state.selectionRows` getters added in Task 0 (for READS), `selectionHalo`, `SelectionRow`. (For WRITES — Task 4 — `runFrame` dispatches via `deps.cb.store.dispatch` since `RunFrameDeps.cb: EngineCallbacks` and `EngineCallbacks.store: AppStore`.)
 - Produces: per-frame reads sourced from the store getters.
 
-- [ ] **Step 1: Confirm the store accessors (already grounded)**
+- [x] **Step 1: Confirm the store accessors (already grounded)**
 
 READS use the Task-0 getters: `state.selectionRows.select` / `state.selectionRows.focus` (the per-frame consumers) and `state.selection.<slot>` (refs, if needed). WRITES (Task 4) use `deps.cb.store.dispatch(...)` in `runFrame` (it has `deps.cb`) and `deps.cb.store.dispatch(...)` in `wireInput` (it has `deps.cb`). Do NOT invent a `state.cb.store` accessor — `EngineState` exposes getters, not the raw store; dispatch flows through `deps.cb.store`.
 
-- [ ] **Step 2: Rework `selectionHaloTable.ts` to take a `SelectionRow`**
+- [x] **Step 2: Rework `selectionHaloTable.ts` to take a `SelectionRow`**
 
 Today `SELECTION_HALO` is keyed on `FocusableTargetType` and reads `t.diameterKpc`/`t.x` (a `GalaxyInfo`) and `t.x` (a `StructureInfo`/`MilkyWayInfo`). The galaxy `SelectionRow` is a `GalaxyRow` which ALSO carries `x/y/z/diameterKpc`; the structure arm is `StructureInfo` (carries `worldPos`); the milkyWay arm is the tag (no coords). For the milkyWay arm the row has no `x/y/z`, so use `MILKY_WAY_CENTER_WORLD` directly.
 
@@ -195,7 +195,7 @@ export function selectionHalo(row: SelectionRow | null): SelectionHalo | null {
 
 Confirm the exact import paths for `MILKY_WAY_DISC_RADIUS_KPC` + `MILKY_WAY_CENTER_WORLD` (grep them) and the `SelectionHalo` type (grep `type SelectionHalo` — reuse the existing one). Update the table's test to pass a `GalaxyRow`/`{type:'milkyWay'}` instead of a `GalaxyInfo`.
 
-- [ ] **Step 3: Cut `selectionRingPass.ts` to read `selectionRows`**
+- [x] **Step 3: Cut `selectionRingPass.ts` to read `selectionRows`**
 
 Replace `state.subsystems.selection.selected()` (returns `FocusableTarget`) with the stored row. Match TODAY's slot: the pass reads `selected()`, so read `selectionRows.select`.
 
@@ -214,7 +214,7 @@ const { radiusMpc, worldPos } = halo;
 
 `state.selectionRows` is the getter added in Task 0 (delegates to `store.getState().selectionRows`). Import `selectionHalo` from the halo table.
 
-- [ ] **Step 4: Cut `runFrame.ts` structure-focus read to `selectionRows.focus`**
+- [x] **Step 4: Cut `runFrame.ts` structure-focus read to `selectionRows.focus`**
 
 At ~line 176-181, replace:
 
@@ -237,18 +237,18 @@ state.subsystems.structureFocus.update(focusedStructure, nowMs);
 
 Note: `structureFocus.update` expects a `StructureInfo | null`; the `structure` arm of `SelectionRow` IS a `StructureInfo`, so this typechecks. Confirm against `structureFocus.update`'s signature.
 
-- [ ] **Step 5: Move the ~line 266 `selected` snapshot read off the subsystem**
+- [x] **Step 5: Move the ~line 266 `selected` snapshot read off the subsystem**
 
 Find the `selected: state.subsystems.selection.selected()` at ~line 266 (a pick-targets / debug snapshot). Replace it with the store equivalent for what it consumes: if it needs the resolved structure, use `state.selectionRows.select`; if only the identity, use `state.selection.select`. Read the surrounding consumer to pick the right shape. (Because this task runs AFTER Task 4 per the execution order, `selectionRows` is populated and the subsystem is no longer written.)
 
-- [ ] **Step 6: Run pass/halo tests + full suite + typecheck**
+- [x] **Step 6: Run pass/halo tests + full suite + typecheck**
 
 Per the execution order, Task 4 (writes) and Task 4b (focus tween) have already landed, so the reconciler populates `selectionRows` in production and these store reads light up correctly.
 
 Run: `npm test -- tests/services/engine/helpers/selectionHaloTable.test.ts tests/services/engine/frame` then `npm test` then `npm run typecheck`.
 Expected: PASS. Ask the user to verify in the running app: a selected galaxy still shows its ring; a focused cluster still fades non-members.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/services/engine/helpers/selectionHaloTable.ts src/services/engine/frame/passes/selectionRingPass.ts src/services/engine/frame/runFrame.ts tests/services/engine/helpers/selectionHaloTable.test.ts
@@ -275,7 +275,7 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 - Consumes: `updateSelectionSelect`, `updateSelectionFocus`, `updateSelectionHover`, `ReconcileEffects` (reached via `getContext('reconcile')` — `requestRender` lives there, PR #352).
 - Produces: `watchSelectionWake` generator.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -329,7 +329,7 @@ describe('watchSelectionWake', () => {
 });
 ```
 
-- [ ] **Step 2: Run to fail, then implement**
+- [x] **Step 2: Run to fail, then implement**
 
 Run: `npm test -- tests/state/selection/selectionWakeSaga.test.ts` → FAIL.
 
@@ -358,7 +358,7 @@ export function* watchSelectionWake() {
 
 Note: confirm `takeEvery` accepts an action-creator array in the installed `typed-redux-saga`; if not, fork two `takeEvery`s. Mirror whatever typechecks.
 
-- [ ] **Step 3: Fork from `rootSaga`**
+- [x] **Step 3: Fork from `rootSaga`**
 
 Append `watchSelectionWake()` to the existing fork list (which already carries the four reconcile watchers plus `watchTier` and Part 1's `watchSelectionRows`):
 
@@ -376,7 +376,7 @@ yield* all([
 ]);
 ```
 
-- [ ] **Step 4: Run to pass, full suite, typecheck, commit**
+- [x] **Step 4: Run to pass, full suite, typecheck, commit**
 
 Run: `npm test -- tests/state/selection/selectionWakeSaga.test.ts` → PASS. Then `npm test`, `npm run typecheck`.
 
@@ -402,7 +402,7 @@ Resolves a durable focus id to a ref, looping on `catalogLoaded` until the cloud
 - Consumes: `requestFocus`, `catalogLoaded`, `updateSelectionFocus`, `resolveFocusId`, `SagaContext['resolveDeps']`.
 - Produces: `watchRequestFocus` generator.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -461,7 +461,7 @@ describe('watchRequestFocus', () => {
 
 (Adjust `resolveFocusId`'s structure handling so a bare known id resolves to `{type:'structure', id}` — Part 1 Task 6 built it; if it gates structures on a `STRUCTURE_IDS` registry that doesn't include `abell-2065`, use a real registered structure id in the test.)
 
-- [ ] **Step 2: Run to fail, then implement**
+- [x] **Step 2: Run to fail, then implement**
 
 Run: `npm test -- tests/state/selection/requestFocusSaga.test.ts` → FAIL.
 
@@ -496,7 +496,7 @@ export function* watchRequestFocus() {
 }
 ```
 
-- [ ] **Step 3: Fork from `rootSaga`**
+- [x] **Step 3: Fork from `rootSaga`**
 
 Append `watchRequestFocus()` to the fork list:
 
@@ -515,7 +515,7 @@ yield* all([
 ]);
 ```
 
-- [ ] **Step 4: Run to pass, full suite, typecheck, commit**
+- [x] **Step 4: Run to pass, full suite, typecheck, commit**
 
 Run: `npm test -- tests/state/selection/requestFocusSaga.test.ts` → PASS. Then `npm test`, `npm run typecheck`.
 
@@ -545,7 +545,7 @@ Make `resolvePick`/`resolvePickTable`/the click resolver produce a `SelectionRef
 - Consumes: `SelectionRef`, `updateSelectionHover/Select/Focus`, `clearSelection`, `selectSelectedRef`, the engine store via `deps.cb.store` (in `wireInput` and `runFrame`), `resolveStructureFromPick` (to get the structure id), `pick.sourceCode`/`pick.localIdx`.
 - Produces: `resolvePick(pick, deps): SelectionRef | null`.
 
-- [ ] **Step 1: Rework `resolvePickTable.ts` to emit refs**
+- [x] **Step 1: Rework `resolvePickTable.ts` to emit refs**
 
 ```ts
 /**
@@ -588,7 +588,7 @@ export const RESOLVE_PICK: Partial<
 
 `ResolvePickDeps` now only needs `structures` (the galaxy arm no longer reads the cloud — identity is positional). Simplify `ResolvePickDeps` to `{ structures }` and drop `getCloud`/`getFamousMeta` from the resolver wiring in `wireInput`/`clickHandler`/`runFrame` hover. (Confirm nothing else uses those two on the resolver path; the cloud read now happens in the reconciler via `resolveDeps`.)
 
-- [ ] **Step 2: Rework `resolvePick.ts` return type**
+- [x] **Step 2: Rework `resolvePick.ts` return type**
 
 ```ts
 import { SOURCE_REGISTRY } from '../../../data/sources';
@@ -611,11 +611,11 @@ export function resolvePick(pick: PickResult | null, deps: ResolvePickDeps): Sel
 
 Update the module docblock (it currently says "becomes a fully RESOLVED FocusableTarget" — now it's "a SelectionRef identity").
 
-- [ ] **Step 3: Update the click resolver return type**
+- [x] **Step 3: Update the click resolver return type**
 
 In `clickHandler.ts`, `resolveClick` now returns `Promise<SelectionRef | null>`; update its type (`ClickResolver`/`ClickResolveInput` return) and the `deps` bundle (only `structures`). Update the docblock.
 
-- [ ] **Step 4: Rewrite `wireInput.ts` handlers to dispatch refs**
+- [x] **Step 4: Rewrite `wireInput.ts` handlers to dispatch refs**
 
 `wireInput` has `deps.cb.store` (the `AppStore`). Replace the subsystem calls:
 
@@ -644,7 +644,7 @@ Import `updateSelectionSelect`, `updateSelectionFocus`, `updateSelectionHover`, 
 
 > **Coupling note — Task 4 + Task 5 land as a back-to-back pair.** The pick resolver now returns a `SelectionRef`, NOT a `FocusableTarget`, so the old `state.subsystems.selection.setSelected(target)` call can no longer be fed (its contract wants a resolved target). We therefore DELETE the subsystem setter calls in this task and rely on the store path for React. But React still reads the subsystem echo until Task 5. So **execute Task 5 immediately after Task 4 (and 4b) — commit each separately, but do not run the app for users until Task 5 lands.** The unit suite stays green after Task 4 alone (no unit test asserts the React echo against a live engine). This is the one place the read+write cutover is genuinely atomic; keeping them adjacent is cleaner than synthesizing a throwaway `buildFocusable(extractSelectionRow(ref, …))` dual-write just to keep the dying subsystem fed for one commit.
 
-- [ ] **Step 5: Rewrite `runFrame.ts` hover write (~line 420)**
+- [x] **Step 5: Rewrite `runFrame.ts` hover write (~line 420)**
 
 ```ts
 .then((ref) => {
@@ -654,16 +654,16 @@ Import `updateSelectionSelect`, `updateSelectionFocus`, `updateSelectionHover`, 
 
 `runFrame` reaches the store's dispatch via `deps.cb.store` (`RunFrameDeps.cb.store: AppStore`). `resolvePick(pick, { structures: state.data.structures })` now yields a ref. Remove the `getCloud`/`getFamousMeta` from the hover resolver deps. For the ~line 266 `selected:` snapshot, replace with `state.selection.select` (the ref) if it needs the identity, or `state.selectionRows.focus` if it needs the resolved structure — read the surrounding code to see what consumes it and pass the matching shape.
 
-- [ ] **Step 6: Update `resolvePick.test.ts`**
+- [x] **Step 6: Update `resolvePick.test.ts`**
 
 Repoint expectations: a galaxy pick → `{ type:'galaxyCatalog', source, index }`; a structure pick → `{ type:'structure', id }`; a milkyWay pick → `{ type:'milkyWay' }`; an unpickable code → null.
 
-- [ ] **Step 7: Run the unit suite + typecheck**
+- [x] **Step 7: Run the unit suite + typecheck**
 
 Run: `npm test` then `npm run typecheck`.
 Expected: PASS. After this task the store path is fully fed (dispatches → reconciler → `selectionRows`); the subsystem setter calls are gone. React still reads the (now stale) subsystem echo until Task 5, so do NOT ship to users between Task 4 and Task 5 — land Task 4b + Task 5 next. The unit suite is fully green throughout (no unit test asserts the live React echo).
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/services/engine/helpers/resolvePick.ts src/services/engine/helpers/resolvePickTable.ts src/services/engine/interaction/clickHandler.ts src/@types/engine/ClickResolver.d.ts src/@types/engine/ResolvePickDeps.d.ts src/services/engine/phases/wireInput.ts src/services/engine/frame/runFrame.ts tests/services/engine/helpers/resolvePick.test.ts
@@ -697,12 +697,12 @@ Why fire on the REF, not the reconciled row: a tween is the camera's response to
 - Consumes: `SelectionRef`, `SelectionRow`, `ResolveDeps`, `extractSelectionRow`, `buildGalaxyInfo`, `tweenToGalaxy`/`tweenToStructure`/`tweenToCameraSnapshot` + the milkyWay snapshot inputs (`MILKY_WAY_CENTER_WORLD`, `MILKY_WAY_VIEW_DISTANCE_MPC`), `updateSelectionFocus`, `SagaContext['runFocusTween']`, the engine `EngineState`.
 - Produces: `makeRunFocusTween(resolveDeps, tweens): (ref: SelectionRef | null) => void`; `watchFocusTween` generator; `SagaContext.runFocusTween`.
 
-- [ ] **Step 1: Read the tween signatures**
+- [x] **Step 1: Read the tween signatures**
 
 Run: `grep -rn "export function tweenToGalaxy\|export function tweenToStructure\|tweenToCameraSnapshot\|MILKY_WAY_CENTER_WORLD\|MILKY_WAY_VIEW_DISTANCE" src/services/engine`
 Note: `tweenToGalaxy(state, info: GalaxyInfo)`, `tweenToStructure(state, structure: StructureInfo)`, and `commitMilkyWayFocus`'s `tweenToCameraSnapshot(...)` body (lift it verbatim in Step 4). The galaxy arm builds a `GalaxyInfo` from the resolved `GalaxyRow` via `buildGalaxyInfo(row)`; the structure arm IS a `StructureInfo` already.
 
-- [ ] **Step 2: Add `runFocusTween` to `SagaContext`**
+- [x] **Step 2: Add `runFocusTween` to `SagaContext`**
 
 In `src/store/types.ts`, after the Part-1 `resolveDeps` member, add (and update the module docblock to name it):
 
@@ -723,7 +723,7 @@ export type SagaContext = {
 
 `SetSagaContext` already takes `Partial<SagaContext>`, so no setter change. Extend the Part-1 `SagaContext` type test (`tests/store/sagaContext.test.ts`) with `expectTypeOf<SagaContext['runFocusTween']>().toEqualTypeOf<(ref: SelectionRef | null) => void>();`.
 
-- [ ] **Step 3: Write the failing test + implement `makeRunFocusTween`**
+- [x] **Step 3: Write the failing test + implement `makeRunFocusTween`**
 
 The runner is split from the GPU/cam table so it is hermetic: it resolves the ref → row via `resolveDeps`, then dispatches by tag to an injected `tweens` table. The engine builds the real table (closing over `state`) in Step 4; the test injects spies.
 
@@ -832,7 +832,7 @@ export function makeRunFocusTween(
 
 Run: `npm test -- tests/services/engine/camera/makeRunFocusTween.test.ts` → PASS.
 
-- [ ] **Step 4: Inject `runFocusTween` in the engine's `setSagaContext`**
+- [x] **Step 4: Inject `runFocusTween` in the engine's `setSagaContext`**
 
 In `src/services/engine/engine.ts`, the Part-1 Task-10 call built `{ runTierTransition, reconcile, resolveDeps }` (`reconcile` lands via PR #352; `requestRender` lives inside it). Lift the `resolveDeps` closure into a named const so both `resolveDeps` and the runner share it, and add `runFocusTween` with the real GPU/cam table (the milkyWay body lifted verbatim from the deleted `commitMilkyWayFocus.ts`):
 
@@ -865,7 +865,7 @@ cb.setSagaContext({
 
 Add the imports (`makeRunFocusTween`, `buildGalaxyInfo`, `tweenToGalaxy`, `tweenToStructure`, `tweenToCameraSnapshot`, `MILKY_WAY_CENTER_WORLD`, `MILKY_WAY_VIEW_DISTANCE_MPC`, `ResolveDeps`). No teardown bag is needed — unlike a `store.subscribe`, the saga is torn down when the saga middleware stops, so there is no per-engine unsubscribe to register.
 
-- [ ] **Step 5: Write the failing saga test + implement `watchFocusTween`**
+- [x] **Step 5: Write the failing saga test + implement `watchFocusTween`**
 
 ```ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -929,7 +929,7 @@ export function* watchFocusTween() {
 }
 ```
 
-- [ ] **Step 6: Fork from `rootSaga`**
+- [x] **Step 6: Fork from `rootSaga`**
 
 Append `watchFocusTween()` to the fork list — the full set after this task:
 
@@ -949,7 +949,7 @@ yield* all([
 ]);
 ```
 
-- [ ] **Step 7: Run to pass, full suite, typecheck, commit**
+- [x] **Step 7: Run to pass, full suite, typecheck, commit**
 
 Run: `npm test -- tests/state/selection/focusTweenSaga.test.ts tests/services/engine/camera/makeRunFocusTween.test.ts` → PASS. Then `npm test`, `npm run typecheck`.
 
@@ -982,15 +982,15 @@ Delete the `hovered/selected/focused` `useState` + echo callbacks; App reads `us
 - Consumes: `selectSelectedFocusable`, `selectHoveredFocusable`, `selectFocusedFocusable`, `selectSelectedRef`, `useAppSelector`, `useAppDispatch`, `requestFocus`, `clearSelection`, `updateSelectionFocus`.
 - Produces: a pure-store React read path.
 
-- [ ] **Step 1: Delete the `useState` mirrors + echo wiring in `useEngine.ts`**
+- [x] **Step 1: Delete the `useState` mirrors + echo wiring in `useEngine.ts`**
 
 Remove `const [hovered, setHovered] = useState(...)`, `selected`, `focused`. Remove `selection: { onHoverChange: setHovered, onSelectChange: setSelected, ...extraSelection }` and `camera.onFocusChange: setFocused` from the `createEngine` options (keep `onCameraChange`, `extraCamera`, `extraSelection` if any other extra-callbacks remain — check what `extraSelection` carries; if it was ONLY the echoes, drop it). Remove `hovered/selected/focused` from the return object. Keep `FocusableTarget` import only if still used (likely remove).
 
-- [ ] **Step 2: Update `UseEngineReturn.d.ts` + `EngineCallbacks.d.ts`**
+- [x] **Step 2: Update `UseEngineReturn.d.ts` + `EngineCallbacks.d.ts`**
 
 Drop `hovered`/`selected`/`focused` from `UseEngineReturn`. In `EngineCallbacks.d.ts`, drop `selection.onHoverChange`/`onSelectChange` and `camera.onFocusChange`. If the `selection` cluster becomes empty, decide whether to keep it for `extraSelection` subscriptions (e.g. `onStructureHoverChange` — grep) or remove it; preserve any non-selection events that ride the cluster.
 
-- [ ] **Step 3: Rewrite `App.tsx` reads + writes**
+- [x] **Step 3: Rewrite `App.tsx` reads + writes**
 
 ```ts
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
@@ -1048,12 +1048,12 @@ onSelectAlias={(target) => dispatch(updateSelectionFocus({ type: 'galaxyCatalog'
 
 (Confirm `target.source` is a `GalaxyCatalogSourceType`; if it's `SourceType`, narrow or cast at this boundary.)
 
-- [ ] **Step 4: Run the React/component tests + full suite + typecheck**
+- [x] **Step 4: Run the React/component tests + full suite + typecheck**
 
 Run: `npm test` then `npm run typecheck`.
 Expected: PASS. Fix any test that asserted the old engine echo (`onSelectChange` etc.) to instead drive the store and assert via selectors. Ask the user to verify the InfoCard still shows hover/select/focus correctly in the running app.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/hooks/useEngine.ts src/@types/engine/UseEngineReturn.d.ts src/@types/engine/EngineCallbacks.d.ts src/components/App/App.tsx src/services/engine/helpers/refOf.ts tests/services/engine/helpers/refOf.test.ts
@@ -1081,11 +1081,11 @@ The URL write reads `selectFocusRef` + `focusIdOf`; the deep-link read dispatche
 - Consumes: `requestFocus`, `selectFocusRef`, `focusIdOf`, `useAppDispatch`, `useAppSelector`, `useAppStore` (to get `resolveDeps` for `focusIdOf`? — see note), the engine's `resolveDeps`.
 - Produces: a store-driven URL sync.
 
-- [ ] **Step 1: Read `useUrlSync.ts` in full + its `@types`**
+- [x] **Step 1: Read `useUrlSync.ts` in full + its `@types`**
 
 Run: `cat src/hooks/useUrlSync.ts` and note: the three effects (galaxy drain, structure drain, URL write), `computeDesiredHash`, `URL_HASH_FOR`, and what props it takes (`focused`, `engineHandleRef`, `selected`, ...). The URL WRITE needs a focusId from the current focus; today it used `URL_HASH_FOR[focused.type](focused)` on a `FocusableTarget`. Now it should encode the focus REF via `focusIdOf(ref, deps)`. But `focusIdOf` for a galaxy needs the cloud (to read objID). Two options: (a) keep encoding from the resolved `FocusableTarget` (a `GalaxyInfo` carries `objID` + `famous`) with a small `focusIdOfFocusable(target)` that needs no deps; (b) thread `resolveDeps` in. Option (a) is simpler and keeps the URL write a pure function of the displayed target — prefer it, and note that `focusIdOf(ref, deps)` (Part 1) is used only by the tier re-anchor (Task 7) where the cloud is in hand.
 
-- [ ] **Step 2: Rework the URL write to encode the focusable**
+- [x] **Step 2: Rework the URL write to encode the focusable**
 
 Keep `computeDesiredHash` but feed it the `focused` `FocusableTarget` from `useAppSelector(selectFocusedFocusable)` and encode via the existing `URL_HASH_FOR` table (which already maps a `FocusableTarget` → id). If `URL_HASH_FOR` lived in `useUrlSync`, keep it. The URL write effect becomes:
 
@@ -1103,7 +1103,7 @@ useEffect(() => {
 
 The `pendingTarget`/`pendingStructureId` gating is GONE (the saga owns deferral), so the write no longer waits on a pending drain.
 
-- [ ] **Step 3: Rework the hash-read to dispatch `requestFocus`**
+- [x] **Step 3: Rework the hash-read to dispatch `requestFocus`**
 
 The deep-link read effect (on mount + hashchange) parses `#focus=<id>` and dispatches `requestFocus(id)` — one line, no drain, no resolution. The `watchRequestFocus` saga (Task 3) resolves + defers.
 
@@ -1123,11 +1123,11 @@ useEffect(() => {
 
 (Match the exact existing hash-parsing regex/format from `focusUrl.ts`/`useUrlSync.ts`.)
 
-- [ ] **Step 4: Delete the galaxy-drain + structure-drain effects**
+- [x] **Step 4: Delete the galaxy-drain + structure-drain effects**
 
 Remove the two `useEffect`s that called `handle.selection.selectByAlias` / `handle.camera.focusOn` and the `pendingTarget`/`pendingStructureId`/`resolveFocusTarget` plumbing. Remove now-dead props from `useUrlSync`'s input type (`engineHandleRef`, `selected`, `sourceCounts`, `famousMeta`, `aliasMap` — keep only what the URL write + hash read need). Update `App.tsx`'s `useUrlSync({...})` call to the slimmed input.
 
-- [ ] **Step 5: Run + typecheck + commit**
+- [x] **Step 5: Run + typecheck + commit**
 
 Run: `npm test` then `npm run typecheck`.
 Expected: PASS. Repoint `useUrlSync.test.ts` to assert `requestFocus` is dispatched on a deep link and the hash is written on a focus change. Ask the user to verify deep-linking (`#focus=m31`) still flies to M31.
@@ -1159,7 +1159,7 @@ Capture durable focus-ids BEFORE the tier write + eviction; after the bounded `c
 - Consumes: `requestTier`, `setTier`, `selectTier`, `selectHoverRef`/`selectSelectedRef`/`selectFocusRef`, `updateSelectionHover/Select/Focus`, `focusIdOf`, `resolveFocusId`, `catalogLoaded`, `SagaContext['resolveDeps']`, `RunTierTransition`, `SelectionSlot`, `SelectionRef`.
 - Produces: `SELECTION_WRITE_BY_SLOT`, `captureGalaxyFocusIds`, the extended `watchTier`.
 
-- [ ] **Step 1: `SELECTION_WRITE_BY_SLOT` table**
+- [x] **Step 1: `SELECTION_WRITE_BY_SLOT` table**
 
 ```ts
 /**
@@ -1183,7 +1183,7 @@ export const SELECTION_WRITE_BY_SLOT: Record<
 };
 ```
 
-- [ ] **Step 2: `captureGalaxyFocusIds` (pre-write durable capture)**
+- [x] **Step 2: `captureGalaxyFocusIds` (pre-write durable capture)**
 
 Capture, for `select` + `focus` (and optionally `hover`), the durable focus-id of any GALAXY ref (structures/milkyWay are already durable — skip; their refs survive the swap unchanged). Returns a list of `{ slot, focusId }` to re-resolve after the swap.
 
@@ -1222,7 +1222,7 @@ export function captureGalaxyFocusIds(
 
 Unit-test both helpers (table maps each slot to the right action; capture returns galaxy slots only, with the right focusId).
 
-- [ ] **Step 3: Extend `tierSaga.ts`**
+- [x] **Step 3: Extend `tierSaga.ts`**
 
 ```ts
 import { takeLatest, select, put, take, getContext } from 'typed-redux-saga';
@@ -1277,7 +1277,7 @@ yield* take((a) => catalogLoaded.match(a) && a.payload.source === captured.sourc
 
 Adjust `captureGalaxyFocusIds` to also return `source` per item. Update its unit test.
 
-- [ ] **Step 4: Write the failing tier re-anchor test**
+- [x] **Step 4: Write the failing tier re-anchor test**
 
 Extend `tierSaga.test.ts`: seed a galaxy `select` ref, dispatch `requestTier`, simulate the new cloud's `catalogLoaded`, assert the `select` ref re-resolved (or cleared on a miss). Use a `resolveDeps` whose cloud changes the index for the same objID across the "swap" so re-anchor visibly moves the index.
 
@@ -1291,7 +1291,7 @@ it('re-anchors a galaxy select ref across a tier swap by durable id', async () =
 
 (Build the mutable `resolveDeps` like the reconciler test.)
 
-- [ ] **Step 5: Run to pass, full suite, typecheck, commit**
+- [x] **Step 5: Run to pass, full suite, typecheck, commit**
 
 Run: `npm test -- tests/state/tier` → PASS. Then `npm test`, `npm run typecheck`.
 
@@ -1326,20 +1326,20 @@ With reads, writes, effects, and re-anchor all on the store, the closure-mirror 
 - `src/services/engine/engine.ts` (delete the `selectFamous`/`selectByAlias`/`focusOn` implementations + handle wiring)
 - `src/services/url/focusUrl.ts` (delete `selectionToFocusId`/`parseFocusHash`/`resolveFocusTarget` if now unused)
 
-- [ ] **Step 1: Find every remaining reference**
+- [x] **Step 1: Find every remaining reference**
 
 Run: `grep -rn "subsystems.selection\|selectionSubsystem\|targetEq\|targetIdentityKey\|commitFocus\|commitGalaxyFocus\|commitStructureFocus\|commitMilkyWayFocus\|clearAll\|FocusTarget\|selectFamous\|selectByAlias\|\.focusOn\b\|selectionToFocusId\|parseFocusHash\|resolveFocusTarget" src/`
 Make a checklist of every hit. Each must be either deleted or repointed to the store path.
 
-- [ ] **Step 2: Repoint `App.tsx`'s `clear`/`focusOn` callers**
+- [x] **Step 2: Repoint `App.tsx`'s `clear`/`focusOn` callers**
 
 App's `onClose={() => handleRef.current?.selection.clear()}` and `onFocus={... camera.focusOn ...}` and CommandPalette `camera.focusOn(MILKY_WAY_INFO)` were already rewired in Task 5 to dispatch. Confirm no other caller of `handle.selection.clear` / `handle.camera.focusOn` / `selectFamous` / `selectByAlias` remains (e.g. `useKeyboardShortcuts` — grep). Repoint each to a dispatch (`clearSelection`, `updateSelectionFocus`, `requestFocus`).
 
-- [ ] **Step 3: Delete the subsystem from the engine bag**
+- [x] **Step 3: Delete the subsystem from the engine bag**
 
 Remove `state.subsystems.selection` from `EngineState`'s subsystem bag type and its construction/destruction in the bootstrap. The hover/select/focus state no longer lives in the engine — it's in the store. Remove `createSelectionSubsystem` import + call. Remove the `requestRender`/`cb` wiring it took.
 
-- [ ] **Step 4: Delete the files**
+- [x] **Step 4: Delete the files**
 
 ```bash
 git rm src/services/engine/subsystems/selectionSubsystem.ts \
@@ -1359,16 +1359,16 @@ git rm tests/services/engine/helpers/targetEq.test.ts tests/services/engine/help
 
 (Run the grep in Step 1 to enumerate the exact test files; only `git rm` ones that exclusively tested deleted code.)
 
-- [ ] **Step 5: Drop the handle methods + the `FocusTarget`/`focusUrl` dead exports**
+- [x] **Step 5: Drop the handle methods + the `FocusTarget`/`focusUrl` dead exports**
 
 In `EngineSelectionHandle.d.ts` drop `selectFamous`/`selectByAlias` (and `clear` if no caller remains — re-grep). In `EngineCameraHandle.d.ts` drop `focusOn` (keep `focusOnHome`). In `engine.ts` delete the three function bodies + their handle wiring. In `focusUrl.ts` delete `selectionToFocusId`/`parseFocusHash`/`resolveFocusTarget` if Step 1 shows no remaining importer; keep `URL_HASH_FOR`/`computeDesiredHash` if `useUrlSync` still uses them.
 
-- [ ] **Step 6: Full suite + typecheck — fix every break**
+- [x] **Step 6: Full suite + typecheck — fix every break**
 
 Run: `npm run typecheck` then `npm test`.
 Expected: typecheck surfaces every dangling reference; fix each by repointing to the store path or deleting. Then PASS (the suite should be back to ~2687 + the net-new selection tests, minus the deleted subsystem tests).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 The `git rm` calls in Step 4 already STAGED every deletion. Step 7 only needs to
 stage the MODIFIED files — by explicit path, never `git add -u`/`-A`/`.` (the
@@ -1408,3 +1408,13 @@ After Task 8:
 - Manual app verification (ask the user): hover preview, single-click select + ring, double-click focus + tween, Esc/× clear, command-palette pick, deep-link `#focus=m31`, and a tier swap that keeps the selected galaxy anchored — all behave as before.
 - The blast-radius "Unchanged" list holds: InfoCard + `DETAIL_CARD` + detail cards consume `selected`/`hovered`/`focused` exactly as before; `tweenToGalaxy`/`tweenToStructure` are untouched; every settings selector/consumer is untouched.
 - Out-of-scope confirmed untouched: `syncVisibilityFades` stays an explicit bridge; settings/tour folds not started; no camera/tween behaviour change.
+
+## Definition of Done
+
+Shipped on branch `worktree-selection-slice-rewrite` (PR #350), 2026-06-20.
+
+- [x] Every Part-2 task deliverable present (engine `selection`/`selectionRows` getters, per-frame readers on the store, `watchSelectionWake`, `watchRequestFocus`, the pick→ref cut, the focus-tween saga + engine-injected runner, React mirror deletion + selector reads, `useUrlSync` + CommandPalette over to the store, tier re-anchor in `tierSaga`, and the old-subsystem / dead-helper / handle / type deletions).
+- [x] Full test suite green (2814) + typecheck clean.
+- [x] Smoke-tested live; the Esc focus-clear regression surfaced during smoke testing was fixed — both the rows reconciler and render-on-demand now react to `clearSelection`.
+
+Deferred (radar follow-up, non-blocking): the selection-writer hand-listing un-braiding — replacing the two hand-maintained writer-action lists (`watchSelectionWake` + `watchSelectionRows`) with a single `selectionChanged` signal. Captured in `docs/superpowers/conventions/simplicity.md` (Known entanglements).

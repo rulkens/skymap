@@ -1,6 +1,6 @@
 # Selection into the Intent Store — Part 1 (Foundation) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Land the foundation for folding selection (hover/select/focus) into the RTK store — the builder/codec split, the three sibling slices + selectors, and the reconciler saga — additive and behind the existing `selectionSubsystem`, with NO behaviour change yet and the suite green at every step.
 
@@ -89,12 +89,12 @@ The split in Task 2/3 must preserve behaviour exactly. Pin a golden snapshot of 
 - Consumes: `buildGalaxyInfo(cloud: GalaxyCatalog, idx: number, source: SourceType, famousMeta?: readonly FamousMetaEntry[]): GalaxyInfo` from `src/services/engine/helpers/galaxyInfoBuilder.ts` (today's combined function).
 - Produces: a reusable fixture builder + golden assertions later tasks reuse.
 
-- [ ] **Step 1: Find an existing galaxy-catalog test fixture to reuse**
+- [x] **Step 1: Find an existing galaxy-catalog test fixture to reuse**
 
 Run: `ls tests/services/engine/helpers/ | head -40` and `grep -rl "buildGalaxyInfo" tests/`
 Expected: locate any existing fixture helper that builds a small `GalaxyCatalog` (e.g. a `makeCloud`/`fakeCatalog` helper). If none exists, the next step builds one inline.
 
-- [ ] **Step 2: Write the characterization test**
+- [x] **Step 2: Write the characterization test**
 
 Build a minimal real `GalaxyCatalog` (one SDSS-ish row + one famous row) and snapshot the full `GalaxyInfo` for each. Use a hand-built cloud so the test is self-contained.
 
@@ -152,12 +152,12 @@ describe('buildGalaxyInfo characterization', () => {
 });
 ```
 
-- [ ] **Step 3: Run the test to create the snapshot**
+- [x] **Step 3: Run the test to create the snapshot**
 
 Run: `npm test -- tests/services/engine/helpers/galaxyInfoBuilderCharacterization.test.ts`
 Expected: PASS, writing a new `.snap` file. If the `GalaxyCatalog` shape mismatch causes a TypeScript/runtime error, fix the fixture's field names against `src/@types/data/galaxyCatalog/GalaxyCatalog.d.ts` (read it) until it builds a valid cloud and the snapshot is created.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add tests/services/engine/helpers/galaxyInfoBuilderCharacterization.test.ts tests/services/engine/helpers/__snapshots__/galaxyInfoBuilderCharacterization.test.ts.snap
@@ -184,7 +184,7 @@ Split the cloud reads out of `galaxyInfoBuilder`. `extractGalaxyRow` reads the ~
 - Consumes: `GalaxyCatalog` (`src/@types/data/galaxyCatalog/GalaxyCatalog`), `GalaxyCatalogSourceType` (`src/@types/data/galaxyCatalog/GalaxyCatalogSourceType`), `SourceType` (`src/@types/data/SourceType`), `FamousMetaEntry` (`src/@types/loading/FamousMetaEntry`), `Source` (`src/data/sources`).
 - Produces: `GalaxyRow` type; `extractGalaxyRow(cloud: GalaxyCatalog | undefined, idx: number, source: GalaxyCatalogSourceType, famousMeta?: readonly FamousMetaEntry[]): GalaxyRow | null`.
 
-- [ ] **Step 1: Write the `GalaxyRow` type**
+- [x] **Step 1: Write the `GalaxyRow` type**
 
 Note vs spec: the spec's §1 `GalaxyRow` omits `classByte` + `parentSurveyByte`, but `buildGalaxyInfo` reads them for the Milliquas `agnClass` + `displayName`. They are raw cloud bytes, so they belong in the row. Include them.
 
@@ -237,7 +237,7 @@ export type GalaxyRow = {
 };
 ```
 
-- [ ] **Step 2: Write the failing test for `extractGalaxyRow`**
+- [x] **Step 2: Write the failing test for `extractGalaxyRow`**
 
 ```ts
 import { describe, it, expect } from 'vitest';
@@ -294,12 +294,12 @@ describe('extractGalaxyRow', () => {
 });
 ```
 
-- [ ] **Step 3: Run the test to verify it fails**
+- [x] **Step 3: Run the test to verify it fails**
 
 Run: `npm test -- tests/services/engine/helpers/extractGalaxyRow.test.ts`
 Expected: FAIL with "Cannot find module '.../extractGalaxyRow'".
 
-- [ ] **Step 4: Implement `extractGalaxyRow`**
+- [x] **Step 4: Implement `extractGalaxyRow`**
 
 ```ts
 /**
@@ -367,12 +367,12 @@ export function extractGalaxyRow(
 }
 ```
 
-- [ ] **Step 5: Run the test to verify it passes**
+- [x] **Step 5: Run the test to verify it passes**
 
 Run: `npm test -- tests/services/engine/helpers/extractGalaxyRow.test.ts`
 Expected: PASS (both tests).
 
-- [ ] **Step 6: Typecheck + commit**
+- [x] **Step 6: Typecheck + commit**
 
 Run: `npm run typecheck`
 Expected: PASS.
@@ -405,7 +405,7 @@ Re-author `buildGalaxyInfo` to take a `GalaxyRow` (not a cloud + idx) and produc
 - Consumes: `GalaxyRow`, `extractGalaxyRow`, all pure utils today's builder imports (`cartesianToRaDecZ`, `formatRaSexagesimal`, `formatDecSexagesimal`, `iauName`, `iauRaDecSuffix`, `lookbackTimeGyr`, `hubbleVelocityKmS`, `absoluteMagnitude`, `earthEraForLookback`, `galaxyType`, `sdssExplorerUrl`, `sdssThumbnailUrl`, `dssThumbnailUrl`, `galaxyThumbnailFovArcmin`, `nedByNameUrl`, `nedNearPositionUrl`, `DEFAULT_GALAXY_DIAMETER_KPC` from `utils/math`; `sourceClassLabel`, `milliquasParentSurveyPrefix` from `data/galaxyCatalog/sourceClass`; `famousDisplayName`, `fallbackOrientation`, `formatMorphology`, `famousWikipediaTitle`; `SOURCE_REGISTRY`, `Source`).
 - Produces: `buildGalaxyInfo(row: GalaxyRow): GalaxyInfo`.
 
-- [ ] **Step 1: Write `buildGalaxyInfo(row)` — pure formatting from the row**
+- [x] **Step 1: Write `buildGalaxyInfo(row)` — pure formatting from the row**
 
 Lift the formatting body of today's `galaxyInfoBuilder.ts` (lines ~136–537) verbatim, but read every input off `row` instead of `cloud[idx]`. The mechanical substitutions are:
 - `px,py,pz` ← `row.x,row.y,row.z`
@@ -633,7 +633,7 @@ export function buildGalaxyInfo(row: GalaxyRow): GalaxyInfo {
 }
 ```
 
-- [ ] **Step 2: Repoint `galaxyInfoBuilder.ts` — keep `maxAbsCoord`/`niceRound`, re-export `buildGalaxyInfo`**
+- [x] **Step 2: Repoint `galaxyInfoBuilder.ts` — keep `maxAbsCoord`/`niceRound`, re-export `buildGalaxyInfo`**
 
 In `src/services/engine/helpers/galaxyInfoBuilder.ts`: delete the old combined `buildGalaxyInfo` function body (lines ~100–538) and its now-unused imports, keep `maxAbsCoord` + `niceRound`, and re-export the new builder so existing importers (`engine.ts`, `resolveGalaxyInfo.ts`, tests) keep resolving `buildGalaxyInfo` from here without churn:
 
@@ -643,7 +643,7 @@ export { buildGalaxyInfo } from './buildGalaxyInfo';
 
 Read the file's remaining imports after deletion and remove any that only the old body used (e.g. `cartesianToRaDecZ`, `SOURCE_REGISTRY`, `Source`, the format/url utils) — `npm run typecheck` will flag unused imports if `noUnusedLocals` is on; remove until clean.
 
-- [ ] **Step 3: Update `resolveGalaxyInfo` to compose extract + build**
+- [x] **Step 3: Update `resolveGalaxyInfo` to compose extract + build**
 
 ```ts
 /**
@@ -672,7 +672,7 @@ export function resolveGalaxyInfo(
 
 Note: `resolveGalaxyInfo`'s `source` param was `SourceType` before; narrow it to `GalaxyCatalogSourceType` to match `extractGalaxyRow`. The caller (`resolvePickTable`) passes `pick.sourceCode` — if that's typed `SourceType`, keep `resolveGalaxyInfo` accepting `SourceType` and cast inside, OR widen `extractGalaxyRow` to `SourceType`. Read `src/@types/data/PickResult.d.ts` to see `sourceCode`'s type; pick the narrowing that typechecks without a cast where possible. If a cast is unavoidable at the pick boundary, leave it there (Part 2 reworks that boundary).
 
-- [ ] **Step 4: Write the equality test (extract→build == golden)**
+- [x] **Step 4: Write the equality test (extract→build == golden)**
 
 ```ts
 import { describe, it, expect } from 'vitest';
@@ -721,17 +721,17 @@ describe('buildGalaxyInfo(extractGalaxyRow(...))', () => {
 });
 ```
 
-- [ ] **Step 5: Cross-check goldens are identical**
+- [x] **Step 5: Cross-check goldens are identical**
 
 Run: `npm test -- tests/services/engine/helpers/buildGalaxyInfo.test.ts tests/services/engine/helpers/galaxyInfoBuilderCharacterization.test.ts`
 Expected: BOTH pass. Open both `.snap` files and confirm the `GalaxyInfo` objects are field-for-field identical (the characterization snapshot from Task 1 and the new one). If any field differs, the split perturbed behaviour — fix `buildGalaxyInfo` until they match exactly. (The characterization test still imports `buildGalaxyInfo` from `galaxyInfoBuilder` via the re-export, so it now exercises the composed path indirectly; that is intended.)
 
-- [ ] **Step 6: Run full suite + typecheck**
+- [x] **Step 6: Run full suite + typecheck**
 
 Run: `npm test` then `npm run typecheck`
 Expected: PASS (2687+ tests). The existing selection/pick tests still pass because `resolveGalaxyInfo` composes to the same output.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/services/engine/helpers/buildGalaxyInfo.ts src/services/engine/helpers/galaxyInfoBuilder.ts src/services/engine/helpers/resolveGalaxyInfo.ts tests/services/engine/helpers/buildGalaxyInfo.test.ts
@@ -761,7 +761,7 @@ The identity Intent union, the display projection union, and the `SelectionSlot`
 - Consumes: `GalaxyCatalogSourceType`, `GalaxyRow`, `StructureInfo` (`src/@types/data/structure/StructureInfo`).
 - Produces: `SelectionRef`, `SelectionRow`, `SelectionSlot`, `SelectionState`.
 
-- [ ] **Step 1: Write `SelectionRef`**
+- [x] **Step 1: Write `SelectionRef`**
 
 ```ts
 // src/@types/engine/SelectionRef.d.ts
@@ -783,7 +783,7 @@ export type SelectionRef =
   | { readonly type: 'milkyWay' };
 ```
 
-- [ ] **Step 2: Write `SelectionRow`**
+- [x] **Step 2: Write `SelectionRow`**
 
 ```ts
 // src/@types/engine/SelectionRow.d.ts
@@ -803,7 +803,7 @@ import type { StructureInfo } from '../data/structure/StructureInfo';
 export type SelectionRow = GalaxyRow | StructureInfo | { readonly type: 'milkyWay' };
 ```
 
-- [ ] **Step 3: Write `SelectionState` + `SelectionSlot`**
+- [x] **Step 3: Write `SelectionState` + `SelectionSlot`**
 
 ```ts
 // src/@types/store/SelectionState.d.ts
@@ -835,7 +835,7 @@ import type { SelectionState } from '../store/SelectionState';
 export type SelectionSlot = keyof SelectionState;
 ```
 
-- [ ] **Step 4: Write a compile-only type test**
+- [x] **Step 4: Write a compile-only type test**
 
 ```ts
 import { describe, it, expectTypeOf } from 'vitest';
@@ -859,12 +859,12 @@ describe('selection types', () => {
 });
 ```
 
-- [ ] **Step 5: Run test + typecheck**
+- [x] **Step 5: Run test + typecheck**
 
 Run: `npm test -- tests/@types/selectionTypes.test.ts` then `npm run typecheck`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/@types/engine/SelectionRef.d.ts src/@types/engine/SelectionRow.d.ts src/@types/engine/SelectionSlot.d.ts src/@types/store/SelectionState.d.ts tests/@types/selectionTypes.test.ts
@@ -893,7 +893,7 @@ The engine-side resolver bag, the table-dispatched extract, and the pure React-s
 - Consumes: `SelectionRef`, `SelectionRow`, `GalaxyRow`, `extractGalaxyRow`, `buildGalaxyInfo`, `FocusableTarget` (`src/@types/engine/FocusableTarget`), `StructureInfo`, `MILKY_WAY_INFO` (`src/data/milkyWay/milkyWayInfo`), `GalaxyCatalog`, `GalaxyCatalogSourceType`, `FamousMetaEntry`.
 - Produces: `ResolveDeps`; `extractSelectionRow(ref: SelectionRef | null, deps: ResolveDeps): SelectionRow | null`; `buildFocusable(row: SelectionRow | null): FocusableTarget | null`.
 
-- [ ] **Step 1: Write `ResolveDeps`**
+- [x] **Step 1: Write `ResolveDeps`**
 
 Grounded in `wireInput`'s existing resolver wiring (`getCloud`/`getFamousMeta`/`structures`) and the `GalaxyStore`/`StructureStore` types.
 
@@ -920,7 +920,7 @@ export type ResolveDeps = {
 };
 ```
 
-- [ ] **Step 2: Write the failing test for `extractSelectionRow`**
+- [x] **Step 2: Write the failing test for `extractSelectionRow`**
 
 ```ts
 import { describe, it, expect } from 'vitest';
@@ -975,12 +975,12 @@ describe('extractSelectionRow', () => {
 });
 ```
 
-- [ ] **Step 3: Run to verify it fails**
+- [x] **Step 3: Run to verify it fails**
 
 Run: `npm test -- tests/services/engine/helpers/extractSelectionRow.test.ts`
 Expected: FAIL with "Cannot find module".
 
-- [ ] **Step 4: Implement `extractSelectionRow`**
+- [x] **Step 4: Implement `extractSelectionRow`**
 
 ```ts
 /**
@@ -1019,12 +1019,12 @@ export function extractSelectionRow(ref: SelectionRef | null, deps: ResolveDeps)
 }
 ```
 
-- [ ] **Step 5: Run to verify it passes**
+- [x] **Step 5: Run to verify it passes**
 
 Run: `npm test -- tests/services/engine/helpers/extractSelectionRow.test.ts`
 Expected: PASS.
 
-- [ ] **Step 6: Write the failing test for `buildFocusable`**
+- [x] **Step 6: Write the failing test for `buildFocusable`**
 
 ```ts
 import { describe, it, expect } from 'vitest';
@@ -1062,12 +1062,12 @@ describe('buildFocusable', () => {
 });
 ```
 
-- [ ] **Step 7: Run to verify it fails**
+- [x] **Step 7: Run to verify it fails**
 
 Run: `npm test -- tests/services/engine/helpers/buildFocusable.test.ts`
 Expected: FAIL with "Cannot find module".
 
-- [ ] **Step 8: Implement `buildFocusable`**
+- [x] **Step 8: Implement `buildFocusable`**
 
 ```ts
 /**
@@ -1100,12 +1100,12 @@ export function buildFocusable(row: SelectionRow | null): FocusableTarget | null
 }
 ```
 
-- [ ] **Step 9: Run to verify it passes**
+- [x] **Step 9: Run to verify it passes**
 
 Run: `npm test -- tests/services/engine/helpers/buildFocusable.test.ts`
 Expected: PASS.
 
-- [ ] **Step 10: Full suite + typecheck + commit**
+- [x] **Step 10: Full suite + typecheck + commit**
 
 Run: `npm test` then `npm run typecheck`
 Expected: PASS.
@@ -1138,12 +1138,12 @@ The URL codecs, replacing `selectionToFocusId` (which took a `GalaxyInfo`) and `
 - Consumes: `SelectionRef`, `ResolveDeps`, `Source`, `SOURCE_REGISTRY`, the existing `STRUCTURE_IDS` registry (grep its export), the existing nearest-lookup helper.
 - Produces: `focusIdOf(ref: SelectionRef, deps: ResolveDeps): string`; `resolveFocusId(focusId: string, deps: ResolveDeps): SelectionRef | null`.
 
-- [ ] **Step 1: Read the existing URL format + nearest-lookup**
+- [x] **Step 1: Read the existing URL format + nearest-lookup**
 
 Run: `cat src/services/url/focusUrl.ts` and `grep -rn "resolveFocusTarget\|nearest\|pos@\|STRUCTURE_IDS\|aliasMap" src/services/url src/hooks/useUrlSync.ts`
 Note the exact string formats: famous id is bare; SDSS is `sdss-<objID>`; non-SDSS galaxy is `pgc-<objID>`; positional is `pos@<ra4>,<dec4>`; structure id is bare (validated against `STRUCTURE_IDS`). Note where the famous-id→index and alias→(source,localIdx) and pos→nearest lookups live today (in `useUrlSync` / `focusUrl` / a `resolveFocusTarget` helper). `resolveFocusId` must reproduce those lookups but return a `SelectionRef`.
 
-- [ ] **Step 2: Write the failing test for `focusIdOf`**
+- [x] **Step 2: Write the failing test for `focusIdOf`**
 
 `focusIdOf` encodes a ref. For galaxy refs it needs the cloud to read the objID/famous-id at the index, so it takes `deps`. Structure + milkyWay are durable, no deps needed but the signature carries `deps` uniformly.
 
@@ -1186,7 +1186,7 @@ describe('focusIdOf', () => {
 
 Adjust the exact expected strings to whatever `cat focusUrl.ts` showed in Step 1 (e.g. the famous arm, the `pos@` fallback when objID is 0n). Add a famous-row case and a `pos@` fallback case mirroring `selectionToFocusId`'s branches verbatim.
 
-- [ ] **Step 3: Run to verify it fails, then implement `focusIdOf`**
+- [x] **Step 3: Run to verify it fails, then implement `focusIdOf`**
 
 Run: `npm test -- tests/services/url/focusIdOf.test.ts` → FAIL.
 
@@ -1211,7 +1211,7 @@ import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
 
 Note: the Milky Way arm encoding — check `focusUrl.ts`/`useUrlSync.ts` for what `#focus=` carries for the Milky Way today (grep `milkyWay` in those files). If the MW has no URL representation today, `focusIdOf` for milkyWay can return `'milkyway'` (match whatever the existing `URL_HASH_FOR` table in `useUrlSync.ts` produces — read it). State the chosen string in a comment.
 
-- [ ] **Step 4: Write + pass the `resolveFocusId` test**
+- [x] **Step 4: Write + pass the `resolveFocusId` test**
 
 ```ts
 import { describe, it, expect } from 'vitest';
@@ -1251,7 +1251,7 @@ Returning `null` on any not-yet-loaded resolution is REQUIRED — the saga loops
 
 Run: `npm test -- tests/services/url/resolveFocusId.test.ts` → PASS.
 
-- [ ] **Step 5: Full suite + typecheck + commit**
+- [x] **Step 5: Full suite + typecheck + commit**
 
 Run: `npm test` then `npm run typecheck`
 Expected: PASS. (`focusUrl.ts`'s `selectionToFocusId`/`parseFocusHash`/`FocusTarget` are NOT deleted yet — Part 2 removes them when the call sites move. They coexist.)
@@ -1283,7 +1283,7 @@ The dedup-on-write refs slice and the reducer-less deep-link command. Read `tier
 - Consumes: `SelectionState`, `SelectionRef`, `selectionRoute`, `shallowEqual` from `react-redux` (allowed here? — see Step 2 note), `createSlice`/`createAction`/`PayloadAction`.
 - Produces: actions `updateSelectionHover`, `updateSelectionSelect`, `updateSelectionFocus`, `clearSelection`; default reducer; `requestFocus`.
 
-- [ ] **Step 1: Add `selectionRoute` to constants**
+- [x] **Step 1: Add `selectionRoute` to constants**
 
 In `src/store/constants.ts`, after `tierRoute`:
 
@@ -1291,7 +1291,7 @@ In `src/store/constants.ts`, after `tierRoute`:
 export const selectionRoute = 'selection' as const;
 ```
 
-- [ ] **Step 2: Decide the `shallowEqual` import**
+- [x] **Step 2: Decide the `shallowEqual` import**
 
 The spec's dedup uses `shallowEqual`. The exploration found no existing `shallowEqual` in the repo, and `react-redux` is forbidden in `src/state/`. So DO NOT import `react-redux`'s `shallowEqual` here. Instead write a one-function util.
 
@@ -1319,7 +1319,7 @@ export function shallowEqualRef(a: SelectionRef | null, b: SelectionRef | null):
 
 Add a focused test `tests/utils/object/shallowEqualRef.test.ts` covering equal-fresh-objects, differing-index, null/non-null.
 
-- [ ] **Step 3: Write the failing slice test**
+- [x] **Step 3: Write the failing slice test**
 
 ```ts
 import { describe, it, expect } from 'vitest';
@@ -1358,7 +1358,7 @@ describe('selectionSlice', () => {
 });
 ```
 
-- [ ] **Step 4: Run to verify it fails, then implement the slice**
+- [x] **Step 4: Run to verify it fails, then implement the slice**
 
 Run: `npm test -- tests/state/selection/selectionSlice.test.ts` → FAIL.
 
@@ -1422,7 +1422,7 @@ import { createAction } from '@reduxjs/toolkit';
 export const requestFocus = createAction<string>('selection/requestFocus');
 ```
 
-- [ ] **Step 5: Run to pass, typecheck, commit**
+- [x] **Step 5: Run to pass, typecheck, commit**
 
 Run: `npm test -- tests/state/selection/selectionSlice.test.ts tests/utils/object/shallowEqualRef.test.ts` → PASS. Then `npm run typecheck`.
 
@@ -1455,7 +1455,7 @@ The saga-owned derived cache (`setSelectionRow`) and the readiness descriptor (`
 - Consumes: `SelectionRow`, `SelectionSlot`, `SourceType`, the route constants.
 - Produces: `setSelectionRow` action; `catalogLoaded` action; `SelectionRowsState`, `DataStatusState`.
 
-- [ ] **Step 1: Add the two route constants**
+- [x] **Step 1: Add the two route constants**
 
 In `src/store/constants.ts`:
 
@@ -1465,7 +1465,7 @@ export const selectionRowsRoute = 'selectionRows' as const;
 export const dataStatusRoute = 'dataStatus' as const;
 ```
 
-- [ ] **Step 2: Write the state types**
+- [x] **Step 2: Write the state types**
 
 ```ts
 // src/@types/store/SelectionRowsState.d.ts
@@ -1501,7 +1501,7 @@ export type DataStatusState = {
 };
 ```
 
-- [ ] **Step 3: Write the failing slice tests**
+- [x] **Step 3: Write the failing slice tests**
 
 ```ts
 // tests/state/selectionRows/selectionRowsSlice.test.ts
@@ -1545,7 +1545,7 @@ describe('dataStatusSlice', () => {
 });
 ```
 
-- [ ] **Step 4: Run to fail, then implement both slices**
+- [x] **Step 4: Run to fail, then implement both slices**
 
 Run: `npm test -- tests/state/selectionRows tests/state/dataStatus` → FAIL.
 
@@ -1615,7 +1615,7 @@ export const { catalogLoaded } = dataStatusSlice.actions;
 export default dataStatusSlice.reducer;
 ```
 
-- [ ] **Step 5: Run to pass, typecheck, commit**
+- [x] **Step 5: Run to pass, typecheck, commit**
 
 Run: `npm test -- tests/state/selectionRows tests/state/dataStatus` → PASS. Then `npm run typecheck`.
 
@@ -1645,7 +1645,7 @@ Mount the slices and add the §3b reselect selectors. After this task `RootState
 - Consumes: the three reducers + route constants; `RootState`; `buildFocusable`; `SelectionRow`, `SelectionRef`, `FocusableTarget`; `createSelector` from `@reduxjs/toolkit`.
 - Produces: selectors `selectSelectRow`, `selectHoverRow`, `selectFocusRow`, `selectSelectedRef`, `selectSelectedFocusable`, `selectHoveredFocusable`, `selectFocusedFocusable`, `selectIsSelectionActive`.
 
-- [ ] **Step 1: Add the three route entries to `rootReducer.ts`**
+- [x] **Step 1: Add the three route entries to `rootReducer.ts`**
 
 ```ts
 import { combineReducers } from '@reduxjs/toolkit';
@@ -1668,7 +1668,7 @@ export const rootReducer = combineReducers({
 
 Update the file's module header docblock to mention the three new sibling routes (match the existing didactic style).
 
-- [ ] **Step 2: Write the failing selectors test**
+- [x] **Step 2: Write the failing selectors test**
 
 ```ts
 import { describe, it, expect } from 'vitest';
@@ -1712,7 +1712,7 @@ describe('selection selectors', () => {
 });
 ```
 
-- [ ] **Step 3: Run to fail, then implement the selectors**
+- [x] **Step 3: Run to fail, then implement the selectors**
 
 Run: `npm test -- tests/state/selection/selectors.test.ts` → FAIL.
 
@@ -1752,12 +1752,12 @@ export const selectIsSelectionActive = createSelector(
 );
 ```
 
-- [ ] **Step 4: Run to pass, full suite, typecheck**
+- [x] **Step 4: Run to pass, full suite, typecheck**
 
 Run: `npm test -- tests/state/selection/selectors.test.ts` → PASS. Then `npm test` (full) and `npm run typecheck`.
 Expected: PASS. Note: `src/services/engine/helpers/buildFocusable.ts` is imported by `src/state/`, which is fine — `buildFocusable` imports only pure builders + a const, no react-redux and no engine state, so the layering rule (no react-redux in `src/state/`) holds.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/store/rootReducer.ts src/state/selection/selectors.ts tests/state/selection/selectors.test.ts
@@ -1784,7 +1784,7 @@ Widen the context type and the engine's `setSagaContext` call. The reconcile-sag
 - Consumes: `ResolveDeps`, `RunTierTransition`, `ReconcileEffects` (already in `SagaContext`).
 - Produces: `SagaContext = { runTierTransition: RunTierTransition; reconcile: ReconcileEffects; resolveDeps: () => ResolveDeps }` (Part 2 Task 4b appends `runFocusTween`).
 
-- [ ] **Step 1: Extend the `SagaContext` type**
+- [x] **Step 1: Extend the `SagaContext` type**
 
 In `src/store/types.ts`, add `resolveDeps` to the existing `SagaContext` literal (do NOT touch `runTierTransition` or `reconcile`), and update the module docblock to name it. `requestRender` is NOT added here — it already arrives via `reconcile.requestRender`:
 
@@ -1804,7 +1804,7 @@ export type SetSagaContext = (ctx: Partial<SagaContext>) => void;
 
 `SetSagaContext` already takes `Partial<SagaContext>`, so the engine keeps its single injection call and just adds the `resolveDeps` key; no `SetSagaContext` change needed.
 
-- [ ] **Step 2: Extend the engine's `setSagaContext` call**
+- [x] **Step 2: Extend the engine's `setSagaContext` call**
 
 In `src/services/engine/engine.ts`, find the existing call (around line 463-466). It currently injects two capabilities:
 
@@ -1835,7 +1835,7 @@ cb.setSagaContext({
 
 Note: confirm `state.data.galaxies.get` / `state.data.structures.byId` exist (they're used in `makeRunTierTransition` and `wireInput` already). The `get(source)` param is typed `SourceType`; `ResolveDeps.catalogs.get` expects `GalaxyCatalogSourceType` (a subtype) — the arrow's param widens fine. If typecheck complains, annotate the arrow param as `GalaxyCatalogSourceType`. (Part 2 Task 4b lifts this `resolveDeps` arrow into a named const so the focus-tween runner can share it.)
 
-- [ ] **Step 3: Write a shape test for the context wiring**
+- [x] **Step 3: Write a shape test for the context wiring**
 
 If an engine-construction test harness exists (grep `createEngine` in `tests/`), assert the injected context carries `resolveDeps`. Otherwise add a minimal type-level test (the `reconcile`/`requestRender` shape is already pinned by `tests/store/effects/reconcileSagas.test.ts`):
 
@@ -1853,7 +1853,7 @@ describe('SagaContext', () => {
 });
 ```
 
-- [ ] **Step 4: Run + typecheck + commit**
+- [x] **Step 4: Run + typecheck + commit**
 
 Run: `npm test -- tests/store/sagaContext.test.ts` then `npm run typecheck` then `npm test` (full).
 Expected: PASS.
@@ -1884,7 +1884,7 @@ The keystone single-owner of `selectionRows`. On a ref change it re-extracts tha
 - Consumes: `updateSelectionHover/Select/Focus`, `catalogLoaded`, `setSelectionRow`, `selectionRoute`, `selectionRowsRoute`, `extractSelectionRow`, `SagaContext['resolveDeps']`, `SelectionSlot`, `RootState`.
 - Produces: `watchSelectionRows` generator.
 
-- [ ] **Step 1: Write the failing saga test (integration over a real store)**
+- [x] **Step 1: Write the failing saga test (integration over a real store)**
 
 Mirror `tierSaga.test.ts`: build a store wired with `redux-saga`, run `watchSelectionRows`, inject a `resolveDeps` context, dispatch, flush a macrotask, assert `selectionRows`.
 
@@ -1960,7 +1960,7 @@ describe('watchSelectionRows', () => {
 });
 ```
 
-- [ ] **Step 2: Run to fail, then implement the saga**
+- [x] **Step 2: Run to fail, then implement the saga**
 
 Run: `npm test -- tests/state/selectionRows/selectionRowsSaga.test.ts` → FAIL.
 
@@ -2018,7 +2018,7 @@ export function* watchSelectionRows() {
 
 Note: `takeEvery(action, () => reextract(slot))` — the second arg returning a generator is the typed-redux-saga form. If the linter/types prefer `takeEvery(updateSelectionHover, reextractHover)` with a named worker, wrap each in a tiny `function*` worker; match whatever typechecks against the installed `typed-redux-saga` version (the tierSaga uses an inline `function*` worker — mirror that exact form).
 
-- [ ] **Step 3: Fork from `rootSaga`**
+- [x] **Step 3: Fork from `rootSaga`**
 
 In `src/store/rootSaga.ts`, **append** `watchSelectionRows()` to the existing fork list — do NOT replace it. The reconcile-sagas fold (PR #352) already forks five watchers here (`watchTier`, `watchWake`, `watchFlowReseed`, `watchBiasBake`, `watchFades`); add the new import and one array entry:
 
@@ -2043,12 +2043,12 @@ export function* mainSaga() {
 
 Update the docblock to name the new fork. (`tests/store/rootSaga.test.ts` only asserts `mainSaga` starts without throwing when no context is registered, so appending a forked watcher keeps it green.)
 
-- [ ] **Step 4: Run to pass, full suite, typecheck**
+- [x] **Step 4: Run to pass, full suite, typecheck**
 
 Run: `npm test -- tests/state/selectionRows/selectionRowsSaga.test.ts` → PASS. Then `npm test` and `npm run typecheck`.
 Expected: PASS. The reconciler now tracks the refs, but NOTHING dispatches `updateSelection*` yet (Part 2 does the cutover), so there is no behaviour change — `selectionRows` simply stays null in production until Part 2's writes land.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/state/selectionRows/selectionRowsSaga.ts src/store/rootSaga.ts tests/state/selectionRows/selectionRowsSaga.test.ts
@@ -2075,13 +2075,13 @@ The ONE place a cloud lands projects the AssetSlot generation into the store. Th
 - Consumes: `catalogLoaded`, the engine's store (`cb.store` / `deps.cb.store` — confirm the path: `EngineCallbacks.store: AppStore`), the committed generation number.
 - Produces: a `catalogLoaded({ source, generation })` dispatch on every successful commit.
 
-- [ ] **Step 1: Determine the generation value available at commit time**
+- [x] **Step 1: Determine the generation value available at commit time**
 
 Read `src/services/loading/AssetSlot.ts` around the `commit` invocation: the `commit` callback receives `(value, signal, req)`. The `generation`/`myGen` is captured in `load()`. Check whether the generation is passed INTO `commit` (e.g. as a field on `req` or a third arg). If it is not currently threaded, the simplest correct descriptor is a monotonic counter the registry owns, OR pass `myGen` through to `commit`. Prefer threading the existing `myGen` into the `commit` signature so the store's `catalogGen` mirrors the AssetSlot's generation (the spec calls these "already the descriptor"). If threading is invasive, use a per-source incrementing counter local to the commit closure and document why.
 
 Run: `grep -n "commit(" src/services/loading/AssetSlot.ts` and read the `runLoad` body to see exactly what `commit` is called with.
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 A focused test that drives the commit path (or a thin extraction of it) and asserts a `catalogLoaded` action was dispatched with the right source + a number. If the commit path is hard to invoke in isolation, extract the dispatch into a tiny helper `dispatchCatalogLoaded(store, source, generation)` and test that helper plus assert the commit calls it. Prefer the helper extraction so the test is hermetic:
 
@@ -2103,7 +2103,7 @@ describe('dispatchCatalogLoaded', () => {
 });
 ```
 
-- [ ] **Step 3: Run to fail, then implement `dispatchCatalogLoaded` + call it from the commit path**
+- [x] **Step 3: Run to fail, then implement `dispatchCatalogLoaded` + call it from the commit path**
 
 Run: `npm test -- tests/services/engine/wiring/catalogLoadedDispatch.test.ts` → FAIL.
 
@@ -2134,12 +2134,12 @@ dispatchCatalogLoaded(deps.cb.store, source, /* the committed generation */);
 
 Confirm `deps.cb.store` is the `AppStore` (it is on `EngineCallbacks.store: AppStore`; `deps` is `WirePointSourceDeps` carrying `cb`). If the store isn't reachable from `deps` here, thread it (read `WirePointSourceDeps` and the call site).
 
-- [ ] **Step 4: Run to pass, full suite, typecheck**
+- [x] **Step 4: Run to pass, full suite, typecheck**
 
 Run: `npm test -- tests/services/engine/wiring/catalogLoadedDispatch.test.ts` → PASS. Then `npm test` and `npm run typecheck`.
 Expected: PASS. The dispatch fires on each commit now; the reconciler consumes it (proven in Task 11), but with no `updateSelection*` writes yet there is still no user-visible change.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/services/engine/wiring/dispatchCatalogLoaded.ts src/services/engine/wiring/galaxyCatalogSourceRegistry.ts tests/services/engine/wiring/catalogLoadedDispatch.test.ts
@@ -2161,3 +2161,13 @@ After Task 12, run the full suite + typecheck one more time and confirm:
 - The three slices, the reconciler, the codecs, and the builder split all exist and are independently tested.
 
 This is the merge point for Part 1. **Part 2 depends on Part 1 being merged** and consumes the Produces interfaces listed in the File Structure section by exact name.
+
+## Definition of Done
+
+Shipped on branch `worktree-selection-slice-rewrite` (PR #350), 2026-06-20.
+
+- [x] Every Part-1 task deliverable present in the tree (GalaxyRow + extractGalaxyRow, the buildGalaxyInfo split, SelectionRef/Row/Slot types, ResolveDeps + extractSelectionRow + buildFocusable, the focusIdOf/resolveFocusId codecs, the `selection` + `selectionRows` slices, rootReducer wiring, `SagaContext.resolveDeps`, `watchSelectionRows`, `catalogLoaded`).
+- [x] Full test suite green (2814) + typecheck clean.
+- [x] Smoke-tested live in the dev server (hover preview, select ring, focus tween, Esc clear).
+
+Note: post-ship hardening on the same branch collapsed the `dataStatus` slice from Task 8 to a bare `catalogLoaded` event (its per-source generation counter was write-only) and dissolved the `galaxyInfoBuilder` shell from Task 3 (`niceRound` → `src/utils/math/niceRound.ts`; the dead `maxAbsCoord` and `resolveGalaxyInfo` were deleted).
