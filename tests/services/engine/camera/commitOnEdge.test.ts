@@ -41,9 +41,15 @@ import {
   endDrag,
   setAutoRotate,
 } from '../../../../src/state/camera/cameraSlice';
-import { buildCameraDrivers, runCameraDrivers } from '../../../../src/services/engine/camera/cameraDrivers';
+import {
+  buildCameraDrivers,
+  runCameraDrivers,
+} from '../../../../src/services/engine/camera/cameraDrivers';
 import { activeDriverId } from '../../../../src/services/engine/camera/activeDriverId';
-import { createCameraClock, tweenElapsed } from '../../../../src/services/engine/camera/cameraClock';
+import {
+  createCameraClock,
+  tweenElapsed,
+} from '../../../../src/services/engine/camera/cameraClock';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -177,14 +183,17 @@ describe('commitOnEdge — tween settles', () => {
     state.cameraRuntime.prevActiveId.current = 'tween';
 
     // Arrival frame primes the clock (elapsed 0); subsequent frames advance it.
-    simulateFrame(state, store, drivers, 0);    // arrival: primes clock
-    simulateFrame(state, store, drivers, 100);  // elapsed 100, mid-tween
-    simulateFrame(state, store, drivers, 200);  // elapsed 200 >= durationMs → cancel
+    simulateFrame(state, store, drivers, 0); // arrival: primes clock
+    simulateFrame(state, store, drivers, 100); // elapsed 100, mid-tween
+    simulateFrame(state, store, drivers, 200); // elapsed 200 >= durationMs → cancel
 
     const cancelActions = dispatch.mock.calls
       .map(([a]) => a)
-      .filter((a): a is ReturnType<typeof cancelCameraTween> =>
-        typeof a === 'object' && a !== null && (a as { type: string }).type === 'camera/cancelCameraTween',
+      .filter(
+        (a): a is ReturnType<typeof cancelCameraTween> =>
+          typeof a === 'object' &&
+          a !== null &&
+          (a as { type: string }).type === 'camera/cancelCameraTween',
       );
     expect(cancelActions).toHaveLength(1);
   });
@@ -204,11 +213,11 @@ describe('commitOnEdge — tween settles', () => {
     );
     state.cameraRuntime.prevActiveId.current = 'tween';
 
-    simulateFrame(state, store, drivers, 0);                  // arrival: primes clock
+    simulateFrame(state, store, drivers, 0); // arrival: primes clock
     // Cancel frame: elapsed 200 >= durationMs, cancelCameraTween dispatched,
     // driver STILL shows as 'tween' this frame (cancel takes effect next frame).
     const frame1 = simulateFrame(state, store, drivers, 200); // cancel frame
-    expect(frame1.committed).toBe(false);  // no commit on the cancel frame
+    expect(frame1.committed).toBe(false); // no commit on the cancel frame
 
     // Frame after cancel: tween is null → driver changes from 'tween' to 'resting'
     // → commit-on-edge fires.
@@ -232,7 +241,7 @@ describe('commitOnEdge — tween settles', () => {
     );
     state.cameraRuntime.prevActiveId.current = 'tween';
 
-    simulateFrame(state, store, drivers, 0);   // arrival: primes clock
+    simulateFrame(state, store, drivers, 0); // arrival: primes clock
     simulateFrame(state, store, drivers, 200); // cancel frame: elapsed 200 >= durationMs, lastPose := saturated TO
     simulateFrame(state, store, drivers, 220); // commit frame: base := lastPose == TO
 
@@ -294,7 +303,7 @@ describe('commitOnEdge — no-jump-on-grab', () => {
     );
     state.cameraRuntime.prevActiveId.current = 'tween';
 
-    simulateFrame(state, store, drivers, 0);   // arrival: primes clock, elapsed 0, lastPose == from == base
+    simulateFrame(state, store, drivers, 0); // arrival: primes clock, elapsed 0, lastPose == from == base
     simulateFrame(state, store, drivers, 500); // elapsed 500/1000 → yaw interpolated between 0 and 1
 
     // `lastPose.current` must NOT equal the stale `base` (which is still
@@ -325,7 +334,7 @@ describe('commitOnEdge — no-jump-on-grab', () => {
     );
     state.cameraRuntime.prevActiveId.current = 'tween';
 
-    simulateFrame(state, store, drivers, 0);   // arrival: primes clock
+    simulateFrame(state, store, drivers, 0); // arrival: primes clock
     // Mid-tween frame.
     simulateFrame(state, store, drivers, 300);
 
@@ -345,11 +354,11 @@ describe('commitOnEdge — no-jump-on-grab', () => {
   });
 });
 
-describe('commitOnEdge — auto-rotate bridge', () => {
-  it('returns the camera slice active bit', () => {
-    // The bridge in runFrame mirrors settings.camera.autoRotate into
-    // camera.autoRotate.active on change. Here we exercise the camera slice
-    // directly (bridge logic lives in runFrame; we pin the slice contract).
+describe('commitOnEdge — auto-rotate slice contract', () => {
+  it('reflects the dispatched active bit', () => {
+    // The App toggle dispatches `camera/setAutoRotate` directly; the autoRotate
+    // driver reads `camera.autoRotate.active`. Pin that the slice reducer
+    // round-trips the active bit.
     const store = makeStore();
 
     // Initial: auto-rotate is off (DEFAULT_AUTO_ROTATE is false in the slice).

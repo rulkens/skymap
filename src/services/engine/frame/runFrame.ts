@@ -42,15 +42,6 @@
  * Then `deriveFrameContext` receives the already-produced `pose` and the live
  * `projection` Resource, assembles a full `OrbitCamera`, and computes vp etc.
  * The clock is advanced exactly once per frame by step 1's `runCameraDrivers`.
- *
- * ### Auto-rotate bridge (Phase-5 temporary)
- *
- * The App auto-rotate toggle dispatches `settings/setAutoRotate`, which writes
- * `settings.camera.autoRotate`. The driver reads `s.camera.autoRotate.active`
- * (the camera slice). Until Phase 5 relocates the toggle to the camera slice,
- * the engine mirrors the settings bit into the camera slice per-frame on change.
- * This bridge is clearly marked and Phase 5 deletes it when the App toggle
- * writes `camera/setAutoRotate` directly.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -71,11 +62,7 @@ import { deriveFrameContext } from './frameContext';
 import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
-import {
-  commitCameraPose,
-  cancelCameraTween,
-  setAutoRotate,
-} from '../../../state/camera/cameraSlice';
+import { commitCameraPose, cancelCameraTween } from '../../../state/camera/cameraSlice';
 import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
@@ -143,30 +130,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // and commit-on-edge steps gate on the active driver identity. The four steps
   // run before `deriveFrameContext` so a camera-only-ready frame still makes
   // motion progress before we early-return for missing GPU handles.
-  let rootState = deps.cb.store.getState();
-
-  // ── Auto-rotate bridge (Phase-5 bridge — delete when App toggle dispatches
-  // camera/setAutoRotate directly) ─────────────────────────────────────────
-  //
-  // The App auto-rotate toggle writes `settings.camera.autoRotate` (the
-  // settings slice). The `autoRotate` camera driver reads
-  // `s.camera.autoRotate.active` (the camera slice). Until Phase 5 relocates the
-  // toggle, we mirror the settings bit into the camera slice on change. This is
-  // a per-frame edge: the dispatch fires at most once per toggle and
-  // immediately re-reads the updated state. On a steady-state frame (both bits
-  // already agree) the condition is false and no dispatch occurs.
-  if (rootState.settings.camera.autoRotate !== rootState.camera.autoRotate.active) {
-    deps.cb.store.dispatch(
-      setAutoRotate({
-        active: rootState.settings.camera.autoRotate,
-        // Reuse the existing rate — do NOT re-literal it here, which would
-        // create a maintenance hazard if the default rate ever changes.
-        rate: rootState.camera.autoRotate.rate,
-      }),
-    );
-    // Re-read after dispatch so the produce step sees the updated active bit.
-    rootState = deps.cb.store.getState();
-  }
+  const rootState = deps.cb.store.getState();
 
   // ── (1) PRODUCE the pose from the driver table ────────────────────────────
   //

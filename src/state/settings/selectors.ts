@@ -79,11 +79,6 @@ export const selectExposure = (state: RootState): number => selectSettings(state
 export const selectToneMapCurve = (state: RootState): ToneMapCurve =>
   selectSettings(state).tonemap.curve;
 
-// --- camera cluster -----------------------------------------------------------
-
-export const selectAutoRotate = (state: RootState): boolean =>
-  selectSettings(state).camera.autoRotate;
-
 // --- bias cluster -------------------------------------------------------------
 
 export const selectBiasMode = (state: RootState): BiasMode => selectSettings(state).bias.mode;

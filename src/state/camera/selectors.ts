@@ -19,9 +19,9 @@
  * itself only while this is true, so adding a new driver means adding its flag
  * to this selector, not hunting through the engine loop body.
  *
- * Note: `selectAutoRotate` reuses the same name as the settings selector in
- * `src/state/settings/selectors.ts` but reads the CAMERA slice. Both coexist
- * with different import paths until Task 5.x removes the settings-side one.
+ * `selectAutoRotate` reads the camera slice exclusively — the settings-side
+ * `camera.autoRotate` field and its selector have been removed. The App toggle
+ * dispatches `setAutoRotate({ active, rate })` directly to this slice.
  */
 
 import { cameraRoute } from '../../store/constants';
@@ -35,6 +35,9 @@ export const selectCameraBase = (state: RootState): CameraPose => selectCameraIn
 
 export const selectAutoRotate = (state: RootState): boolean =>
   selectCameraIntent(state).autoRotate.active;
+
+export const selectAutoRotateRate = (state: RootState): number =>
+  selectCameraIntent(state).autoRotate.rate;
 
 // Loop-continuation predicate (spec §4): true while any non-resting driver
 // would win. The engine reschedules the next frame only while this is true.

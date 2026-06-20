@@ -87,11 +87,6 @@ const settingsSlice = createSlice({
       settings.tonemap.curve = action.payload;
     },
 
-    // ── camera ──────────────────────────────────────────────────────────────
-    setAutoRotate: (settings, action: PayloadAction<boolean>) => {
-      settings.camera.autoRotate = action.payload;
-    },
-
     // ── bias ────────────────────────────────────────────────────────────────
     setBiasMode: (settings, action: PayloadAction<BiasMode>) => {
       settings.bias.mode = action.payload;
@@ -201,7 +196,6 @@ export const {
   setGalaxyCatalogLabelEnabled,
   setExposure,
   setToneMapCurve,
-  setAutoRotate,
   setBiasMode,
   setAbsMagLimit,
   setThumbnailsEnabled,

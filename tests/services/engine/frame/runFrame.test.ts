@@ -57,7 +57,6 @@ import {
   commitCameraPose,
 } from '../../../../src/state/camera/cameraSlice';
 import { rootReducer } from '../../../../src/store/rootReducer';
-import { setAutoRotate as setSettingsAutoRotate } from '../../../../src/state/settings/settingsSlice';
 import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
@@ -99,7 +98,6 @@ function makeState(): EngineState {
         ),
       },
       tonemap: { exposure: 1, curve: 'linear' },
-      camera: { autoRotate: false },
       bias: { mode: 'off', absMagLimit: -19 },
       thumbnails: { enabled: false },
       milkyWay: { enabled: false },
@@ -231,10 +229,7 @@ function makeCamState(): EngineState {
  * and a canvas whose client/backing dims match so `resizeCanvasToDisplay`
  * returns false and doesn't poke `projection.aspect`.
  */
-function makeCamDeps(
-  state: EngineState,
-  store = makeStore(),
-): RunFrameDeps {
+function makeCamDeps(state: EngineState, store = makeStore()): RunFrameDeps {
   const deps = makeDeps(store);
   return {
     ...deps,
@@ -267,9 +262,8 @@ describe('runFrame — camera drivers (regression)', () => {
     store.dispatch(commitCameraPose(BASE));
     state.cameraRuntime.lastPose.current = BASE;
 
-    // Enable auto-rotate AND start a tween. Dispatch the settings bit via the
-    // store so the bridge sees both bits as ON and doesn't overwrite the slice.
-    store.dispatch(setSettingsAutoRotate(true));
+    // Enable auto-rotate AND start a tween — both active so the resolver must
+    // pick the higher-priority tween driver.
     store.dispatch(setAutoRotate({ active: true, rate: 0.000873 }));
     store.dispatch(
       startCameraTween({
@@ -280,8 +274,8 @@ describe('runFrame — camera drivers (regression)', () => {
       }),
     );
 
-    runFrame(state, deps, 0);    // arrival: primes the tween clock (elapsed 0 → pose == from)
-    runFrame(state, deps, 500);  // elapsed 500/1000 → tween yaw in (0, 1.5)
+    runFrame(state, deps, 0); // arrival: primes the tween clock (elapsed 0 → pose == from)
+    runFrame(state, deps, 500); // elapsed 500/1000 → tween yaw in (0, 1.5)
 
     // The tween wins: the yaw is somewhere between 0 and 1.5 (not auto-rotate's
     // yaw + 0.000873/frame). The exact value is easing-dependent; we only need
@@ -323,69 +317,15 @@ describe('runFrame — camera drivers (regression)', () => {
     store.dispatch(commitCameraPose(BASE));
     state.cameraRuntime.lastPose.current = BASE;
 
-    // Enable auto-rotate via both the camera slice and the settings store so the
-    // bridge sees agreement and does not overwrite the slice on the advance frame.
+    // Enable auto-rotate on the camera slice — the only home now.
     store.dispatch(setAutoRotate({ active: true, rate: 0.000873 }));
-    store.dispatch(setSettingsAutoRotate(true));
 
-    runFrame(state, deps, 0);     // arrival: autoRotate activates, autoRotateElapsed primes → yaw 0
-    runFrame(state, deps, 1000);  // elapsed 1000 → yaw advances
+    runFrame(state, deps, 0); // arrival: autoRotate activates, autoRotateElapsed primes → yaw 0
+    runFrame(state, deps, 1000); // elapsed 1000 → yaw advances
 
     // After 1000 ms the yaw must have advanced from the base (0).
     const yaw = state.cameraRuntime.lastPose.current.yaw;
     expect(yaw).toBeGreaterThan(0);
-  });
-
-  it('auto-rotate bridge: dispatches setAutoRotate when settings bit ≠ camera slice bit', () => {
-    // The bridge per-frame mirrors settings.camera.autoRotate → camera.autoRotate.active.
-    // When they disagree (user just toggled the checkbox), the bridge dispatches once.
-    const store = makeStore();
-    const state = makeCamState();
-    // Settings ON via the store BEFORE the spy so the spy only captures the
-    // bridge's camera/setAutoRotate action (settings/setAutoRotate is filtered
-    // out by the type check below anyway, but dispatching before the spy is cleaner).
-    store.dispatch(setSettingsAutoRotate(true));
-    const dispatch = vi.spyOn(store, 'dispatch');
-    const deps = makeCamDeps(state, store);
-
-    // Settings says auto-rotate ON; camera slice starts OFF.
-    expect(store.getState().camera.autoRotate.active).toBe(false);
-
-    runFrame(state, deps, 1000);
-
-    // The bridge must have dispatched setAutoRotate({ active: true, ... }).
-    const setAutoRotateActions = dispatch.mock.calls
-      .map(([a]) => a)
-      .filter(
-        (a): a is ReturnType<typeof setAutoRotate> =>
-          typeof a === 'object' && a !== null && (a as { type: string }).type === 'camera/setAutoRotate',
-      );
-    expect(setAutoRotateActions.length).toBeGreaterThanOrEqual(1);
-    const lastSetAction = setAutoRotateActions[setAutoRotateActions.length - 1]!;
-    expect((lastSetAction.payload as { active: boolean }).active).toBe(true);
-  });
-
-  it('auto-rotate bridge: no-op on steady-state frames (both bits agree)', () => {
-    // When settings.camera.autoRotate === camera.autoRotate.active, the bridge
-    // must not dispatch — this avoids a spurious store write every frame at rest.
-    const store = makeStore();
-    const state = makeCamState();
-    const dispatch = vi.spyOn(store, 'dispatch');
-    const deps = makeCamDeps(state, store);
-
-    // Both OFF by default.
-    expect(state.settings.camera.autoRotate).toBe(false);
-    expect(store.getState().camera.autoRotate.active).toBe(false);
-
-    runFrame(state, deps, 1000);
-
-    const setAutoRotateActions = dispatch.mock.calls
-      .map(([a]) => a)
-      .filter(
-        (a): a is ReturnType<typeof setAutoRotate> =>
-          typeof a === 'object' && a !== null && (a as { type: string }).type === 'camera/setAutoRotate',
-      );
-    expect(setAutoRotateActions).toHaveLength(0);
   });
 });
 

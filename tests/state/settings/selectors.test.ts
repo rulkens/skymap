@@ -10,7 +10,6 @@ import {
   selectGalaxyCatalogItems,
   selectExposure,
   selectToneMapCurve,
-  selectAutoRotate,
   selectBiasMode,
   selectAbsMagLimit,
   selectThumbnailsEnabled,
@@ -140,17 +139,6 @@ describe('tonemap cluster', () => {
     });
 
     expect(selectToneMapCurve(state)).toBe(ToneMapCurve.Asinh);
-  });
-});
-
-describe('camera cluster', () => {
-  it('selectAutoRotate reads camera.autoRotate', () => {
-    const base = makeRoot();
-    const state = makeRoot({
-      camera: { ...base[settingsRoute].camera, autoRotate: true },
-    });
-
-    expect(selectAutoRotate(state)).toBe(true);
   });
 });
 

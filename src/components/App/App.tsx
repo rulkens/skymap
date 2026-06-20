@@ -48,7 +48,6 @@ import {
   selectRealOnly,
   selectVisibleSourceMask,
   selectToneMapCurve,
-  selectAutoRotate,
   selectBiasMode,
   selectAbsMagLimit,
   selectShowPickBuffer,
@@ -64,6 +63,8 @@ import {
   selectMilkyWayLabelEnabled,
 } from '../../state/settings/selectors';
 import { selectHoveredFocusable, selectSelectedFocusable } from '../../state/selection/selectors';
+import { setAutoRotate } from '../../state/camera/cameraSlice';
+import { selectAutoRotate, selectAutoRotateRate } from '../../state/camera/selectors';
 import { updateSelectionFocus, clearSelection } from '../../state/selection/selectionSlice';
 import { requestFocus } from '../../state/selection/requestFocus';
 import { refOf } from '../../services/engine/helpers/refOf';
@@ -76,7 +77,6 @@ import {
   setFilamentIntensity,
   setAbsMagLimit,
   setToneMapCurve,
-  setAutoRotate,
   setShowPickBuffer,
   setShowDiskRadiusRing,
   setStructureItemEnabled,
@@ -130,10 +130,11 @@ export function App(): React.ReactElement {
   // cell; `watchWake` wakes the render loop.
   const toneMapCurve = useAppSelector(selectToneMapCurve);
 
-  // Camera auto-rotate. The toggle dispatches `setAutoRotate`, which updates the
-  // store synchronously so the play/pause icon tracks without an optimistic cell;
-  // `watchWake` wakes the render loop.
+  // Camera auto-rotate. The toggle dispatches `setAutoRotate({ active, rate })`
+  // directly to the camera slice, which updates the store synchronously so the
+  // play/pause icon tracks without an optimistic cell; `watchWake` wakes the loop.
   const autoRotate = useAppSelector(selectAutoRotate);
+  const autoRotateRate = useAppSelector(selectAutoRotateRate);
 
   // Bias mode + absolute-magnitude limit. The mode radio dispatches
   // `setBiasMode`; `watchBiasBake` re-bakes the worker and `watchWake` wakes
@@ -462,7 +463,7 @@ export function App(): React.ReactElement {
           />
           <AutoRotateToggle
             playing={autoRotate}
-            onToggle={() => dispatch(setAutoRotate(!autoRotate))}
+            onToggle={() => dispatch(setAutoRotate({ active: !autoRotate, rate: autoRotateRate }))}
             hidden={paletteOpen || splash.splashVisible}
           />
           <AboutPill onClick={splash.reopen} hidden={paletteOpen || splash.splashVisible} />

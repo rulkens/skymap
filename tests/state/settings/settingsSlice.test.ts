@@ -22,7 +22,6 @@ import reducer, {
   setGalaxyCatalogLabelEnabled,
   setExposure,
   setToneMapCurve,
-  setAutoRotate,
   setBiasMode,
   setAbsMagLimit,
   setThumbnailsEnabled,
@@ -67,9 +66,9 @@ describe('settingsSlice — galaxy-catalog knobs', () => {
   });
   it('setDepthFade updates galaxyCatalogs.depthFade', () => {
     const before = base();
-    expect(reducer(before, setDepthFade(!before.galaxyCatalogs.depthFade)).galaxyCatalogs.depthFade).toBe(
-      !before.galaxyCatalogs.depthFade,
-    );
+    expect(
+      reducer(before, setDepthFade(!before.galaxyCatalogs.depthFade)).galaxyCatalogs.depthFade,
+    ).toBe(!before.galaxyCatalogs.depthFade);
   });
   it('setHighlightFallback updates galaxyCatalogs.highlightFallback', () => {
     const before = base();
@@ -80,9 +79,9 @@ describe('settingsSlice — galaxy-catalog knobs', () => {
   });
   it('setRealOnly updates galaxyCatalogs.realOnly', () => {
     const before = base();
-    expect(reducer(before, setRealOnly(!before.galaxyCatalogs.realOnly)).galaxyCatalogs.realOnly).toBe(
-      !before.galaxyCatalogs.realOnly,
-    );
+    expect(
+      reducer(before, setRealOnly(!before.galaxyCatalogs.realOnly)).galaxyCatalogs.realOnly,
+    ).toBe(!before.galaxyCatalogs.realOnly);
   });
   it('setGalaxyCatalogVisible flips one item row', () => {
     const next = reducer(base(), setGalaxyCatalogVisible({ id: catalogId, enabled: false }));
@@ -94,18 +93,12 @@ describe('settingsSlice — galaxy-catalog knobs', () => {
   });
 });
 
-describe('settingsSlice — tonemap / camera / bias', () => {
+describe('settingsSlice — tonemap / bias', () => {
   it('setExposure updates tonemap.exposure', () => {
     expect(reducer(base(), setExposure(2.5)).tonemap.exposure).toBe(2.5);
   });
   it('setToneMapCurve updates tonemap.curve', () => {
     expect(reducer(base(), setToneMapCurve(3)).tonemap.curve).toBe(3);
-  });
-  it('setAutoRotate updates camera.autoRotate', () => {
-    const before = base();
-    expect(reducer(before, setAutoRotate(!before.camera.autoRotate)).camera.autoRotate).toBe(
-      !before.camera.autoRotate,
-    );
   });
   it('setBiasMode updates bias.mode', () => {
     expect(reducer(base(), setBiasMode(2)).bias.mode).toBe(2);
@@ -118,9 +111,9 @@ describe('settingsSlice — tonemap / camera / bias', () => {
 describe('settingsSlice — overlay layers', () => {
   it('setThumbnailsEnabled updates thumbnails.enabled', () => {
     const before = base();
-    expect(reducer(before, setThumbnailsEnabled(!before.thumbnails.enabled)).thumbnails.enabled).toBe(
-      !before.thumbnails.enabled,
-    );
+    expect(
+      reducer(before, setThumbnailsEnabled(!before.thumbnails.enabled)).thumbnails.enabled,
+    ).toBe(!before.thumbnails.enabled);
   });
   it('setMilkyWayEnabled updates milkyWay.enabled', () => {
     const before = base();
@@ -165,14 +158,15 @@ describe('settingsSlice — structures', () => {
 describe('settingsSlice — debug', () => {
   it('setShowPickBuffer updates debug.showPickBuffer', () => {
     const before = base();
-    expect(reducer(before, setShowPickBuffer(!before.debug.showPickBuffer)).debug.showPickBuffer).toBe(
-      !before.debug.showPickBuffer,
-    );
+    expect(
+      reducer(before, setShowPickBuffer(!before.debug.showPickBuffer)).debug.showPickBuffer,
+    ).toBe(!before.debug.showPickBuffer);
   });
   it('setShowDiskRadiusRing updates debug.showDiskRadiusRing', () => {
     const before = base();
     expect(
-      reducer(before, setShowDiskRadiusRing(!before.debug.showDiskRadiusRing)).debug.showDiskRadiusRing,
+      reducer(before, setShowDiskRadiusRing(!before.debug.showDiskRadiusRing)).debug
+        .showDiskRadiusRing,
     ).toBe(!before.debug.showDiskRadiusRing);
   });
   it('setPassDisabled writes a plain-object record entry', () => {
@@ -249,7 +243,7 @@ describe('settingsSlice — mergeSnapshot', () => {
         galaxyCatalogs: { ...before.galaxyCatalogs, brightness: 0.99 },
       } as Partial<SettingsSnapshot>),
     );
-    expect(next.camera).toBe(before.camera);
+    expect(next.bias).toBe(before.bias);
     expect(next.tonemap).toBe(before.tonemap);
   });
 
