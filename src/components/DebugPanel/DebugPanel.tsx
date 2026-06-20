@@ -40,9 +40,9 @@ export type DebugPanelProps = {
   /** Pass names in draw order, sourced from the engine handle's `passOverrides.allNames`. */
   passNames: readonly string[];
   /**
-   * Live disabled-pass record from the settings store (App subscribes via
-   * `selectDisabledPasses`).  Checkbox writes dispatch `setPassDisabled`;
-   * `watchWake` wakes the render loop on the store write.
+   * Live disabled-pass record from the settings store (`DebugPanelContainer`
+   * subscribes via `selectDisabledPasses`).  A toggle calls `onTogglePass`,
+   * the container dispatches `setPassDisabled`, and `watchWake` wakes the loop.
    */
   disabledPasses: Record<string, boolean>;
   highlightFallback: boolean;
@@ -72,6 +72,12 @@ export type DebugPanelProps = {
    */
   flow: FlowSettings;
   onFlowChange: (patch: Partial<FlowSettings>) => void;
+  /**
+   * Called with the pass name when a RenderTogglesSection checkbox is toggled.
+   * Container (DebugPanelContainer) dispatches `setPassDisabled`; absorbed here
+   * from the section so it is no longer a leaf-level store reach.
+   */
+  onTogglePass: (name: string) => void;
 };
 
 export function DebugPanel({
@@ -89,6 +95,7 @@ export function DebugPanel({
   onShowDiskRadiusRingChange,
   flow,
   onFlowChange,
+  onTogglePass,
 }: DebugPanelProps) {
   return (
     <div
@@ -111,7 +118,11 @@ export function DebugPanel({
       <div style={{ marginTop: 6 }} />
       <GpuTimingsSection service={timingService} />
       <div style={{ marginTop: 6 }} />
-      <RenderTogglesSection passNames={passNames} disabledPasses={disabledPasses} />
+      <RenderTogglesSection
+        passNames={passNames}
+        disabledPasses={disabledPasses}
+        onTogglePass={onTogglePass}
+      />
       <div style={{ marginTop: 6 }} />
       <FlowTuningSection flow={flow} onChange={onFlowChange} />
       <div style={{ marginTop: 6 }} />
