@@ -888,12 +888,12 @@ surviving surface.
 > Run by the MAIN thread (not the implementer subagent): the implementer can't run
 > npm.
 
-- [ ] `npm run typecheck` (both src + tools tsconfigs) → clean.
-- [ ] `npm test` (full suite) → green; count ≥ the baseline minus legitimately
+- [x] `npm run typecheck` (both src + tools tsconfigs) → clean.
+- [x] `npm test` (full suite) → green; count ≥ the baseline minus legitimately
   removed tween-manager tests plus the new slice/driver/clock/saga tests. Confirm no
   net coverage loss for the moved behaviour (tween math now in `evaluateTween`, drag
   wake now in `watchWake`).
-- [ ] Grep the tree for residual references to deleted symbols (`createTweenManager`,
+- [x] Grep the tree for residual references to deleted symbols (`createTweenManager`,
   `TweenManager`, `advanceCameraTween`, `CameraTween`, `onCameraChange`,
   `settings.camera`) → zero hits.
 - [ ] DoD checklist: (a) `camera` slice holds Intent only — no projection, no
@@ -901,5 +901,5 @@ surviving surface.
   stored/mirrored; (c) one `commitCameraPose` dispatch per deactivation edge, never
   per frame; (d) no visible motion change (the bridge guaranteed frame-identical
   output at every step); (e) the four open items are resolved as planned.
-- [ ] Run the `superpowers:finishing-a-development-branch` handoff: present
-  merge/PR/cleanup options (branch + PR, squash-merge).
+- [x] Run the `superpowers:finishing-a-development-branch` handoff: present
+  merge/PR/cleanup options (branch + PR, squash-merge). → PR #357.
