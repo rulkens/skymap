@@ -8,7 +8,7 @@
  * affecting setting is a one-line addition here.
  */
 
-import type { FocusableTarget } from '../FocusableTarget';
+import type { SelectionRef } from '../SelectionRef';
 import type { BiasMode } from '../../data/galaxyCatalog/BiasMode';
 import type { ToneMapCurve } from '../../data/ToneMapCurve';
 import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
@@ -17,14 +17,14 @@ export type RenderFrameSettings = {
   pointSizePx: number;
   brightness: number;
   /**
-   * Selected target, or `null` when nothing is selected.  Galaxy targets
-   * (`type: 'galaxyCatalog'`) are translated inside `pointSpritesPass` to
-   * the packed u32 `(source << 27) | index` (or the `0xFFFFFFFF` "no
-   * selection" sentinel) the shader's halo path expects.  Structure
-   * targets don't drive the halo and are treated as "no galaxy selected"
-   * by the pass.
+   * Selected target identity, or `null` when nothing is selected.
+   * Galaxy refs (`type: 'galaxyCatalog'`) are translated inside
+   * `pointSpritesPass` to the packed u32 `(source << 27) | index` (or
+   * the `0xFFFFFFFF` "no selection" sentinel) the shader's halo path
+   * expects.  Structure and milkyWay refs don't drive the point-sprite
+   * halo and are treated as "no galaxy selected" by that pass.
    */
-  selected: FocusableTarget | null;
+  selected: SelectionRef | null;
   visibleSourceMask: number;
   highlightFallback: boolean;
   realOnlyMode: boolean;

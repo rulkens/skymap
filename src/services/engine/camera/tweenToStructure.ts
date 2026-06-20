@@ -6,9 +6,8 @@
  *
  * No-op when `state.cam` is null — matches `tweenToGalaxy`'s
  * pre-bootstrap / post-destroy contract.  The selection-side update
- * + URL-callback fan-out happen in the caller (`commitStructureFocus`)
- * unconditionally, so a cam-null commit still lands the selection
- * even when this tween skips.
+ * happens in the caller (the focus-tween saga) before this is invoked,
+ * so a cam-null tween skip does not prevent the selection from landing.
  */
 
 import { vec3 } from 'gl-matrix';

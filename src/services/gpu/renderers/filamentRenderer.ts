@@ -22,20 +22,15 @@
  *   - clear()                       → drops the instance buffer
  *   - destroy()                     → releases all GPU resources
  *
- * ### Factory shape (Spec F.2)
+ * ### Factory shape
  *
- * Pre-Spec-F.2 this shipped as `class FilamentRenderer`; the conversion
- * follows the same pattern as F.1's stateless drawers and matches the
- * already-factory `createPickRenderer` plus every subsystem factory
- * Spec D extracted (`createSelectionSubsystem`, `createTweenManager`,
- * …).  The mechanically-distinguishing detail vs F.1 is that this
- * renderer holds *stateful* per-cloud data — the segment instance
- * buffer, the segment count, and the lazily-created fade buffer — so
- * the closure carries `let` bindings that the upload state machine
- * mutates rather than the constants of the F.1 drawers.
- *
- * Public surface is byte-identical; the only call-site change is
- * `new FilamentRenderer(...)` → `createFilamentRenderer(...)`.
+ * This module exports a factory function `createFilamentRenderer` rather than
+ * a class, matching the convention used by `createPickRenderer` and the other
+ * subsystem factories. The distinguishing detail vs stateless drawers is that
+ * this renderer holds *stateful* per-cloud data — the segment instance buffer,
+ * the segment count, and the lazily-created fade buffer — so the closure
+ * carries `let` bindings that the upload state machine mutates rather than
+ * the constants of stateless drawers.
  */
 import vsCode from '../shaders/filaments/vertex.wesl?static';
 import fsCode from '../shaders/filaments/fragment.wesl?static';

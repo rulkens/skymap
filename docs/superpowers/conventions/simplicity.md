@@ -352,6 +352,15 @@ has more. Don't model new code on them.
   small consistency strand; rename when you touch them.
 - **`unpackPickGalaxyOnly` shim** (`selectionEncoding.ts`) — a deprecated transitional duplicate
   of `unpackPick`; remove when the last caller is migrated.
+- **Selection-writer action set hand-listed in two watchers** (`selectionWakeSaga.ts`,
+  `selectionRowsSaga.ts`) — the "which actions write a selection ref" set is enumerated
+  independently by the render-wake saga and the rows-reconciler saga. Adding a writer
+  (`clearSelection`) means remembering to extend _both_ lists; both forgot it, producing two
+  separate Esc bugs (stale rows `21e5f123`, lingering ring `c178c11c`). The braid is _the writer
+  set_ × _each consumer's copy of it_. Un-braided shape: derive both off a single "selection
+  changed" signal (one saga emits a `selectionChanged({slot})` event the wake + reconcile sagas
+  take), or co-locate the writer-action list as one exported constant both `takeEvery` against —
+  so a new writer can't satisfy one consumer while starving the other.
 
 ## Entanglement-radar checklist
 

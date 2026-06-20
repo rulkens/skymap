@@ -11,9 +11,9 @@
  *     and a locally-snapshotted Milky-Way iTime epoch.  The pure `cssToTexPx` helper is imported
  *     directly in `runFrame.ts` rather than threaded through deps —
  *     it captures no per-engine state.  See `runFrame.ts`'s module
- *     header for the dep-vs-state rationale.  Hover/select callbacks
- *     fan out from `state.subsystems.selection` rather than being
- *     threaded through deps.  Scale-bar derivation lives React-side
+ *     header for the dep-vs-state rationale.  Hover/select writes go
+ *     through the Redux store via `store.dispatch`. Scale-bar derivation
+ *     lives React-side
  *     (it's a pure function of cam + viewport CSS height) —
  *     `cb.onCameraChange` emissions from `runFrame` drive it.
  *   - Replaces the no-op `frameRef.current` stub with the real frame

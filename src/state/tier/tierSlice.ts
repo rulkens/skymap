@@ -9,7 +9,7 @@
  * back to its baked-in `medium` as a side effect of touching unrelated knobs.
  * Lifting it to a sibling root slice un-braids the two concerns: a settings
  * merge can no longer reach the tier, and the only path that changes it is the
- * explicit `setTier` write (driven by the tier saga in a later task).
+ * explicit `setTier` write (driven by the tier saga).
  *
  * The slice state IS the `Tier` primitive — there is no wrapper object, because
  * there is exactly one value to hold. That makes `setTier` a RETURNING reducer

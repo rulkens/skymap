@@ -34,7 +34,7 @@ import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/R
 import type { RenderFrameSettings } from '../../../../../src/@types/engine/frame/RenderFrameSettings';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
-import type { GalaxyInfo } from '../../../../../src/@types/engine/GalaxyInfo';
+import type { SelectionRef } from '../../../../../src/@types/engine/SelectionRef';
 
 // ── Stub builders ───────────────────────────────────────────────────────────
 
@@ -425,7 +425,7 @@ describe('pointSpritesPass.draw', () => {
         type: 'galaxyCatalog',
         source: Source.SDSS,
         index: 42,
-      } as unknown as GalaxyInfo,
+      } as SelectionRef,
     });
     const deps = makeDeps();
     pointSpritesPass.draw(PASS_STUB, ctx, STATE_STUB, settings, deps);

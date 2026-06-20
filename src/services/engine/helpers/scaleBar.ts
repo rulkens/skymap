@@ -62,7 +62,7 @@
  */
 
 import { formatDistance } from '../../../utils/format/formatDistance';
-import { niceRound } from './galaxyInfoBuilder';
+import { niceRound } from '../../../utils/math/niceRound';
 import type { ScaleInfo } from '../../../@types/engine/ScaleInfo';
 import type { ScaleBarCamera } from '../../../@types/camera/ScaleBarCamera';
 

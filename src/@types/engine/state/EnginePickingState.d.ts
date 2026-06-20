@@ -20,13 +20,12 @@
  *
  * ### What used to live here but doesn't anymore
  *
- * `hovered` / `selected` (the user-facing `(source, localIdx)` pairs)
- * moved into `selectionSubsystem` (Spec D.3).  The subsystem owns the
- * truth — every read goes through `state.subsystems.selection.hovered()`
- * / `selected()` instead of poking this bag directly.  The migration
- * narrows this bag's responsibility to "the throttle for the GPU pick
- * pipeline" — a cleaner concept than the prior catch-all "anything
- * pick-adjacent".
+ * `hovered` / `selected` (the user-facing identity refs) moved into the
+ * RTK `selection` store slice.  The store is the truth — per-frame readers
+ * go through `state.selection.*` (refs) or `state.selectionRows.*` (resolved
+ * display rows) instead of this bag.  This narrows the bag's responsibility
+ * to "the throttle for the GPU pick pipeline" — a cleaner concept than the
+ * prior catch-all "anything pick-adjacent".
  *
  * ### Why a separate type
  *

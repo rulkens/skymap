@@ -13,10 +13,9 @@
  * ## Why a closure-keyed factory and not a class?
  *
  * Same convention every other freshly-extracted handle in the engine
- * follows (`selectionSubsystem`, `thumbnailSubsystem`,
- * `biasCorrectionSubsystem`, `tweenManager`, the `Pass` object literals
- * in `engine/frame/passes/`): factories return typed handles, not class
- * instances.  Internal state (CPU scratch buffers, running counts,
+ * follows (`thumbnailSubsystem`, `biasCorrectionSubsystem`, `tweenManager`,
+ * the `Pass` object literals in `engine/frame/passes/`): factories return
+ * typed handles, not class instances.  Internal state (CPU scratch buffers, running counts,
  * pipeline + bind-group references) is genuinely inaccessible from
  * outside the closure — there is no `this.glyphBuf` to reach in and
  * poke from a misbehaving caller — and the `type` aliases convention

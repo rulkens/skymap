@@ -47,6 +47,7 @@ import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
 } from '../subsystems/proceduralDiskSubsystem';
+import { updateSelectionHover } from '../../../state/selection/selectionSlice';
 
 /**
  * Run one frame of the render loop.  Called every rAF tick by the
@@ -173,11 +174,12 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // captured in `focusUniforms`; `ctx.focusBlend` and the render
   // `settings.focus` both read THAT captured value — never a fresh
   // `produceFocusUniforms` call.
-  const focused = state.subsystems.selection.focused();
-  // The focus slot already holds the resolved target, so a structure focus is
-  // the StructureInfo itself — no `byId` re-lookup. A galaxy / nothing focus
-  // resolves to null, collapsing the member-isolation fade.
-  const focusedStructure = focused !== null && focused.type === 'structure' ? focused : null;
+  const focusRow = state.selectionRows.focus;
+  // The focus row is the saga-reconciled SelectionRow for the focus slot.
+  // A structure row IS a StructureInfo, so passing it directly typechecks.
+  // A galaxy / milkyWay / nothing resolves to null, collapsing the
+  // member-isolation fade.
+  const focusedStructure = focusRow !== null && focusRow.type === 'structure' ? focusRow : null;
   state.subsystems.structureFocus.update(focusedStructure, nowMs);
   const focusUniforms = state.subsystems.structureFocus.produceFocusUniforms(nowMs);
   ctx.focusBlend = focusUniforms.blend;
@@ -263,7 +265,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     settings: {
       pointSizePx: state.settings.galaxyCatalogs.sizePx,
       brightness: state.settings.galaxyCatalogs.brightness,
-      selected: state.subsystems.selection.selected(),
+      selected: state.selection.select,
       visibleSourceMask: masks.draw,
       highlightFallback: state.settings.galaxyCatalogs.highlightFallback,
       realOnlyMode: state.settings.galaxyCatalogs.realOnly,
@@ -412,18 +414,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
           state.gpu.timingService.descriptorFor('pick'),
         )
         .then((pick) => {
-          // Decode + resolve the pick to a hover `FocusableTarget` (galaxy /
-          // structure / null) via `resolvePick` — the same boundary the click
-          // path uses, so hover and click can't drift. One slot: setHovered(null)
-          // clears, a galaxy or structure hit replaces; setHovered
-          // equality-short-circuits, so a steady hover is a no-op. The InfoCard
-          // reads the resolved target the slot now holds directly.
-          state.subsystems.selection.setHovered(
-            resolvePick(pick, {
-              getCloud: (source) => state.data.galaxies.get(source),
-              getFamousMeta: () => state.data.galaxies.famousMeta,
-              structures: state.data.structures,
-            }),
+          // Decode the pick to a SelectionRef (identity) via `resolvePick` —
+          // the same boundary the click path uses, so hover and click can't
+          // drift. Dispatch to the store; the reconciler fills `selectionRows`.
+          // The reducer dedupes on structural equality, so a steady hover is
+          // a no-op and downstream sagas don't re-fire.
+          deps.cb.store.dispatch(
+            updateSelectionHover(resolvePick(pick, { structures: state.data.structures })),
           );
           // No scheduler.requestRender() here intentionally.
           // The hover state only feeds the React InfoCard text —
