@@ -370,12 +370,6 @@ export function createWebShowcaseDriver(
         phase = 'idle';
       }
 
-      // Self-sustain the loop: `shouldKeepTicking` reads camera liveness off the
-      // store (drag / tween / autoRotate), so a spike driver — invisible there —
-      // must re-arm the next frame itself, or the take freezes after one tick.
-      // Also covers the 400 ms isolation-lift fade on the final frame.
-      requestRender();
-
       return out;
     },
   };

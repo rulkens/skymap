@@ -538,7 +538,15 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // fade-out in galaxy-catalog visibility changes and tier-swap commits would
   // hang forever.
   state.subsystems.fades.tick(nowMs);
-  if (shouldKeepTicking(state, rootState, nowMs)) {
+  // Camera-driver liveness is a keep-tick reason too, and it's resolved HERE
+  // (runFrame owns the driver table + `activeId`), not in `shouldKeepTicking`.
+  // A non-`resting` winner means some mover owns the camera this frame — for
+  // the built-in drivers that coincides with `shouldKeepTicking`'s
+  // `selectCameraActive` term, but it ALSO covers drivers that animate the
+  // camera without touching the store (the throwaway recording spikes, and the
+  // tour driver later). Without it those would tick once and freeze, which is
+  // why they'd otherwise each have to poke `requestRender` per frame.
+  if (activeId !== 'resting' || shouldKeepTicking(state, rootState, nowMs)) {
     state.subsystems.scheduler.requestRender();
   }
 }

@@ -352,12 +352,6 @@ export function createFlowShowcaseDriver(
       // on its own — the registry keeps the loop awake while it animates.
       if (tAnim >= T_END) phase = 'idle';
 
-      // Self-sustain the loop: shouldKeepTicking reads camera liveness off the
-      // store, so a spike driver — invisible there — must re-arm the next frame
-      // itself or the take freezes. (The fade registry covers the post-release
-      // fade-out, but the camera motion before it needs this.)
-      requestRender();
-
       return out;
     },
   };
