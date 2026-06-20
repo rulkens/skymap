@@ -24,18 +24,18 @@ import type { EngineSubsystemHandles } from '../../../src/@types/engine/handles/
 
 // ── Compile-time freeze guards ──────────────────────────────────────────────
 // These never run; they fail at `tsc` time if the camera surface regrows a
-// field the cutover deleted. The `@ts-expect-error` lines are load-bearing:
-// re-adding the property makes the suppressed access legal, turning the
-// directive into an "unused @ts-expect-error" compile error.
+// field it must not carry. The `@ts-expect-error` lines are load-bearing:
+// adding the property makes the suppressed access legal, turning the directive
+// into an "unused @ts-expect-error" compile error.
 
 // The animation clock is an engine Resource, never a descriptor field — so a
 // wall-clock `startMs` must not be assignable onto CameraTweenDescriptor.
 // @ts-expect-error — CameraTweenDescriptor is clock-free; `startMs` does not exist.
 type _DescriptorIsClockFree = CameraTweenDescriptor['startMs'];
 
-// The tween manager was dissolved; the engine subsystem bag no longer owns a
-// `tweens` handle (the tween lives in the store, driven per-frame).
-// @ts-expect-error — `tweens` was removed from the subsystem bag.
+// The tween lives in the store and is driven per-frame; the engine subsystem
+// bag holds no `tweens` handle.
+// @ts-expect-error — `tweens` does not exist on EngineSubsystemHandles.
 type _SubsystemsHaveNoTweens = EngineSubsystemHandles['tweens'];
 
 // Stable initial state — each test gets a fresh copy via the reducer with an
