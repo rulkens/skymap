@@ -14,7 +14,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { seedCameraFromBase } from '../../../src/services/camera/seedCameraFromBase';
-import { createOrbitCamera } from '../../../src/services/camera/orbitCamera';
+import { createOrbitCamera } from '../../../src/utils/camera/createOrbitCamera';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { OrbitCamera } from '../../../src/@types/camera/OrbitCamera';
 

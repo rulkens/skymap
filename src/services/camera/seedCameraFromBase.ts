@@ -22,7 +22,7 @@
 
 import type { OrbitCamera } from '../../@types/camera/OrbitCamera';
 import type { CameraPose } from '../../@types/camera/CameraPose';
-import { updatePosition } from './orbitCamera';
+import { updatePosition } from '../../utils/camera/updatePosition';
 
 /**
  * Copy the four orbit parameters from `pose` onto the live drag register `cam`

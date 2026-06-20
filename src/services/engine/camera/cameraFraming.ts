@@ -21,7 +21,7 @@
  *     with a near-flat pitch, framing the Local Group at first paint.
  */
 
-import { clampDistance } from '../../camera/orbitCamera';
+import { clampDistance } from '../../../utils/camera/clampDistance';
 import type { InitialCam } from '../../../@types/camera/InitialCam';
 
 /** Initial camera distance in Mpc — sits the viewer inside the Local Group. */

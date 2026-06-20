@@ -16,7 +16,7 @@ import { vec3 } from 'gl-matrix';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraProjection } from '../../../@types/camera/CameraProjection';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
-import { updatePosition } from '../../camera/orbitCamera';
+import { updatePosition } from '../../../utils/camera/updatePosition';
 
 /**
  * Lift a store CameraPose into a full live OrbitCamera by merging the engine
