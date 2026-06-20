@@ -4,8 +4,7 @@
  *
  * ### Why a factory (not a class)
  *
- * Matches the codebase's broader factory-shape pattern (renderScheduler,
- * tweenManager, …). Closure-captured state means no `this` confusion
+ * Matches the codebase's broader factory-shape pattern (renderScheduler, …). Closure-captured state means no `this` confusion
  * and consumers can destructure (`const { fadeTo } = createFadeController()`).
  *
  * ### Why smoothstep

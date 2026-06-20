@@ -3,10 +3,9 @@
  *
  * The engine has several movers that each want to author the camera pose on a
  * given frame: an in-flight focus tween, idle auto-rotate, an orbit-controls
- * gesture, and a resting floor. Previously the winner was decided by call order
- * in the per-frame body, with hand-written guards suppressing the losers.
- * Precedence was emergent from control flow, so inserting a mover or changing
- * who-beats-whom meant surgery on the frame loop.
+ * gesture, and a resting floor. They are resolved as a priority-ranked table
+ * rather than by call order in the frame body, so inserting a mover or changing
+ * who-beats-whom is a data edit, not surgery on the frame loop.
  *
  * `runCameraDrivers` collapses that into one rule: among the drivers that declare
  * themselves active this frame, the highest `priority` wins, and ONLY that
@@ -87,7 +86,8 @@ function elapsedForWinner(
   nowMs: number,
 ): number {
   if (winner.id === 'tween') return tweenElapsed(clock, s.camera.tween, nowMs);
-  if (winner.id === 'autoRotate') return autoRotateElapsed(clock, s.camera.autoRotate.active, nowMs);
+  if (winner.id === 'autoRotate')
+    return autoRotateElapsed(clock, s.camera.autoRotate.active, nowMs);
   // orbitDrag and resting are stateless; elapsed is irrelevant to their pose.
   return 0;
 }

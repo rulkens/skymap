@@ -20,8 +20,8 @@
  *
  *   `autoRotate`  — the active flag plus the per-frame yaw-delta rate. Both
  *                   live here as the single home for auto-rotate config; the
- *                   `spinAutoRotate` pure function (Task 1.4) reads the rate from the
- *                   slice rather than from a scattered engine constant.
+ *                   `spinAutoRotate` pure function reads the rate from the slice
+ *                   rather than from a scattered engine constant.
  *
  *   `dragging`    — transient gesture flag set by orbit-controls on
  *                   pointerdown/pointerup. Suppresses auto-rotate while the
@@ -50,9 +50,9 @@ const initialState: CameraState = {
   tween: null,
   autoRotate: {
     active: DEFAULT_AUTO_ROTATE,
-    // rate = the old per-frame AUTO_ROTATE_YAW_DELTA (cameraDrivers.ts).
-    // The slice is now its single home (spec §8.5); do not import from the
-    // engine — that would couple state→engine the wrong way.
+    // rate = per-frame yaw advance at an assumed 60 fps (~0.05°/frame), the
+    // unit `spinAutoRotate` expects. The slice is its single home; do not
+    // import from the engine — that would couple state→engine the wrong way.
     rate: 0.000873,
   },
   dragging: false,
