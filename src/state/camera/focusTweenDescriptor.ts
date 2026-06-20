@@ -1,0 +1,80 @@
+/**
+ * focusTweenDescriptor — the pure `SelectionRow → CameraTweenDescriptor` table.
+ *
+ * A focus gesture writes the focus ref; the camera flying to that target is the
+ * EFFECT of that Intent, and `watchFocusTween` is where that effect lives. This
+ * function is the pure core of that saga: given the resolved row, the live
+ * from-pose, and the lens FOV, it returns the `startCameraTween` payload. No
+ * engine state, no dispatch, no clock — so it is trivially unit-testable and the
+ * saga stays a thin resolve-then-dispatch shell.
+ *
+ * ### Why a table, not a branch chain in the saga
+ *
+ * The three focus targets — a catalog galaxy, a structure, the Milky Way — frame
+ * differently: a galaxy by its `diameterKpc`, a structure by its apparent radius
+ * through the projection FOV, the Milky Way at a fixed view distance on the
+ * galactic centre. That is a tagged-union dispatch on `row.type`, so it is an
+ * exhaustive `switch` returning one descriptor per arm — not an `if/else` ladder
+ * spread through the saga body (simplicity.md §7).
+ *
+ * ### What is shared across arms
+ *
+ * Every arm preserves the user's orientation — `yaw`/`pitch` carry over from the
+ * live `from` pose, only `target` and `distance` change — and every arm uses the
+ * project-wide `FOCUS_TWEEN_MS` duration and the `easeOutCubic` curve. The `to`
+ * target is always copied into a fresh array so the descriptor never aliases the
+ * row's `worldPos` (or the shared `MILKY_WAY_CENTER_WORLD` constant).
+ */
+
+import { FOCUS_TWEEN_MS } from '../../services/engine/camera/focusTweenDuration';
+import { galaxyFocusDistance } from '../../services/engine/camera/galaxyFocusDistance';
+import { structureFocusDistance } from '../../services/engine/camera/structureFocusDistance';
+import {
+  MILKY_WAY_CENTER_WORLD,
+  MILKY_WAY_VIEW_DISTANCE_MPC,
+} from '../../data/milkyWay/galacticCenter';
+import type { SelectionRow } from '../../@types/engine/SelectionRow';
+import type { CameraPose } from '../../@types/camera/CameraPose';
+import type { CameraTweenDescriptor } from '../../@types/camera/CameraTweenDescriptor';
+
+/**
+ * Build the focus tween's `from → to` descriptor.
+ *
+ * `from` is the live produced pose (the camera the user actually sees), so an
+ * in-flight tween hands off smoothly when the user re-focuses mid-animation.
+ * `fovYRad` is the projection FOV the structure arm needs to frame a cluster to
+ * screen-fill; the galaxy and Milky Way arms ignore it.
+ */
+export function focusTweenDescriptor(
+  row: SelectionRow,
+  from: CameraPose,
+  fovYRad: number,
+): CameraTweenDescriptor {
+  return {
+    from,
+    to: { yaw: from.yaw, pitch: from.pitch, ...frame(row, fovYRad) },
+    durationMs: FOCUS_TWEEN_MS,
+    easing: 'easeOutCubic',
+  };
+}
+
+/** The per-arm part: where to point and how far back to sit. */
+function frame(row: SelectionRow, fovYRad: number): Pick<CameraPose, 'target' | 'distance'> {
+  switch (row.type) {
+    case 'galaxyCatalog':
+      return { target: [row.x, row.y, row.z], distance: galaxyFocusDistance(row.diameterKpc) };
+    case 'structure':
+      return {
+        target: [row.worldPos[0], row.worldPos[1], row.worldPos[2]],
+        // Frame on the WIDER apparent extent — the radius the close-approach
+        // fade reads — so the ring + label land just past their fade-out;
+        // fall back to the physical core when there is no wider extent.
+        distance: structureFocusDistance(row.apparentRadiusMpc ?? row.physicalRadiusMpc, fovYRad),
+      };
+    case 'milkyWay':
+      return {
+        target: [MILKY_WAY_CENTER_WORLD[0], MILKY_WAY_CENTER_WORLD[1], MILKY_WAY_CENTER_WORLD[2]],
+        distance: MILKY_WAY_VIEW_DISTANCE_MPC,
+      };
+  }
+}

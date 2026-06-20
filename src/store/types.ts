@@ -23,9 +23,9 @@
  * the lazy live-resource read the selection reconciler uses to turn a `SelectionRef`
  * into a `SelectionRow` (read lazily each call so the reconciler always sees the
  * current catalog and structure state — render-wake is reused from
- * `reconcile.requestRender`, not re-added here); and `runFocusTween` is the
- * engine-owned camera-tween runner `watchFocusTween` calls when the focus ref
- * changes — symmetric with `runTierTransition`. `SagaContext` is the bag the
+ * `reconcile.requestRender`, not re-added here); and `cameraRuntime` is the
+ * live camera read `watchFocusTween` uses to build a focus tween — the visible
+ * from-pose plus the lens FOV, or null when the camera is not ready. `SagaContext` is the bag the
  * running root saga reads them back out of via `getContext`; `SetSagaContext` is
  * the setter the factory hands back so the engine can inject them
  * post-construction (a `Partial`, so each registration site supplies only what it
@@ -42,21 +42,29 @@ import type { createAppStore } from './createAppStore';
 import type { ReconcileEffects } from './effects/ReconcileEffects';
 import type { ResolveDeps } from '../@types/engine/ResolveDeps';
 import type { Tier } from '../@types/data/Tier';
-import type { SelectionRef } from '../@types/engine/SelectionRef';
+import type { CameraPose } from '../@types/camera/CameraPose';
 
 export type RootState = ReturnType<typeof rootReducer>;
 export type AppStore = ReturnType<typeof createAppStore>['store'];
 export type AppDispatch = AppStore['dispatch'];
 
 export type RunTierTransition = (prevTier: Tier, nextTier: Tier) => void;
-/** Camera-tween runner injected by the engine. `watchFocusTween` calls it when the focus ref changes. */
-export type RunFocusTween = (ref: SelectionRef | null) => void;
+/**
+ * The live camera Resources `watchFocusTween` reads to seed a tween: the visible
+ * `from` pose (what the user sees this frame, so a re-focus hands off smoothly)
+ * and the projection FOV (the structure arm frames a cluster to screen-fill).
+ */
+export type FocusCameraRuntime = { from: CameraPose; fovYRad: number };
 export type SagaContext = {
   runTierTransition: RunTierTransition; // already present — drives per-source data load on tier change
   reconcile: ReconcileEffects; // already present — provides requestRender + fade/reseed/bias
   /** Live engine resources the selection reconciler reads to turn a SelectionRef into a SelectionRow. */
   resolveDeps: () => ResolveDeps;
-  /** Engine-owned camera-tween runner — watchFocusTween calls this on a focus ref change. */
-  runFocusTween: RunFocusTween;
+  /**
+   * The live camera Resources `watchFocusTween` reads to build the tween, or
+   * null when the camera is not ready (pre-bootstrap / post-destroy) — the focus
+   * tween then no-ops.
+   */
+  cameraRuntime: () => FocusCameraRuntime | null;
 };
 export type SetSagaContext = (ctx: Partial<SagaContext>) => void;
