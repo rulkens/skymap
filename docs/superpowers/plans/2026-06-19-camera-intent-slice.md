@@ -849,9 +849,9 @@ surviving surface.
   exactly `{ base, tween, autoRotate, dragging }`; `CameraTweenDescriptor` is
   clock-free; the engine subsystems no longer carry `tweens`.
 
-- [ ] Remove the option; assert no residual `onCameraChange` (grep → zero).
-- [ ] `the camera slice surface is frozen to base/tween/autoRotate/dragging`.
-- [ ] `npm run typecheck` + `npm test` → green. Commit.
+- [x] Remove the option; assert no residual `onCameraChange` (grep → zero).
+- [x] `the camera slice surface is frozen to base/tween/autoRotate/dragging`.
+- [x] `npm run typecheck` + `npm test` → green. Commit.
 
 ---
 
