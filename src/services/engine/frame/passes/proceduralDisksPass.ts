@@ -1,10 +1,11 @@
 /**
  * proceduralDisksPass — LOD-1 procedural disk impostors.
  *
- * Issues a single draw call against `proceduralDiskRenderer` using the
- * instance array `state.subsystems.proceduralDisks.lastOutput.instances`,
- * populated by the subsystem's `runFrame` earlier in the same frame
- * (called from `runFrame.ts` before the HDR_PASSES loop opens).
+ * Reads `state.settings.thumbnails.enabled` as the master gate, then
+ * `state.subsystems.proceduralDisks.lastOutput.instances` (populated
+ * by the subsystem's `runFrame` earlier in the same frame, called from
+ * `runFrame.ts` before the HDR_PASSES loop opens), and issues one draw
+ * call against `proceduralDiskRenderer`.
  *
  * ### Why read from lastOutput instead of running the planner here
  *
@@ -21,12 +22,12 @@ import type { Pass } from '../../../../@types/engine/frame/Pass';
 
 export const proceduralDisksPass: Pass = {
   name: 'procedural-disks',
-  enabled(state, _ctx, settings) {
-    if (!settings.galaxyTexturesEnabled) return false;
+  enabled(state, _ctx) {
+    if (!state.settings.thumbnails.enabled) return false;
     if (state.subsystems.proceduralDisks === null) return false;
     return state.subsystems.proceduralDisks.lastOutput.instances.length > 0;
   },
-  draw(pass, ctx, state, _settings, deps) {
+  draw(pass, ctx, state, deps) {
     const subsys = state.subsystems.proceduralDisks;
     if (subsys === null) return;
     const instances = subsys.lastOutput.instances;

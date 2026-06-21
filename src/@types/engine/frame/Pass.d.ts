@@ -11,7 +11,7 @@
  *
  * ### Why an interface instead of free functions
  *
- * The naive shape would be `(pass, ctx, state, settings, deps) =>
+ * The naive shape would be `(pass, ctx, state, deps) =>
  * boolean | void` — return `false` to skip, otherwise draw.  That
  * works mechanically but loses two useful properties:
  *
@@ -27,7 +27,7 @@
  * ### Why a `const` object literal per file, not a class
  *
  * Passes are stateless across frames — every input is read fresh from
- * `state` / `ctx` / `settings` / `deps` per call.  A class adds the
+ * `state` / `ctx` / `deps` per call.  A class adds the
  * "where do I instantiate this?" question and the inheritance escape
  * hatch that the project's `type` aliases convention (CLAUDE.md)
  * deliberately rejects.  `export const xyzPass: Pass = { ... }` is
@@ -49,26 +49,25 @@
 
 import type { EngineState } from '../state/EngineState';
 import type { ReadyFrameContext } from './ReadyFrameContext';
-import type { RenderFrameSettings } from './RenderFrameSettings';
 import type { PassDeps } from './PassDeps';
 
 /**
  * One discrete draw operation in the per-frame HDR render flow.
  *
- * `enabled` is the gate predicate: a pure read of state + ctx +
- * settings that returns true when the pass should run this frame.
- * Tests can call it directly with stub state to assert the gate
- * logic without standing up a GPU device.
+ * `enabled` is the gate predicate: a pure read of state + ctx that
+ * returns true when the pass should run this frame.  Tests can call
+ * it directly with stub state to assert the gate logic without
+ * standing up a GPU device.
  *
  * `draw` records draw commands into the supplied HDR pass encoder.
  * Pre-condition: `enabled(...)` returned `true`.  The function MUST
  * NOT call `pass.end()` — the encoder lifetime is owned by
  * `renderFrame`, which ends the pass once the for-loop completes.
  *
- * Argument order is `(pass, ctx, state, settings, deps)` — the GPU
- * encoder first because every implementation needs it, then the
- * derived per-frame snapshot, then engine state, then settings,
- * then the catch-all renderer dep bag.
+ * Argument order is `(pass, ctx, state, deps)` — the GPU encoder
+ * first because every implementation needs it, then the derived
+ * per-frame snapshot, then engine state, then the catch-all renderer
+ * dep bag.  All settings are read directly from `state.settings.*`.
  */
 export type Pass = {
   /**
@@ -82,7 +81,7 @@ export type Pass = {
    * Whether this pass should record draw commands this frame.
    * Pure: no side effects.  Reads only from arguments.
    */
-  enabled(state: EngineState, ctx: ReadyFrameContext, settings: RenderFrameSettings): boolean;
+  enabled(state: EngineState, ctx: ReadyFrameContext): boolean;
   /**
    * Issue draw calls into the open HDR render pass.  Called only
    * when `enabled` returned `true`.  Must not call `pass.end()`.
@@ -91,7 +90,6 @@ export type Pass = {
     pass: GPURenderPassEncoder,
     ctx: ReadyFrameContext,
     state: EngineState,
-    settings: RenderFrameSettings,
     deps: PassDeps,
   ): void;
 };

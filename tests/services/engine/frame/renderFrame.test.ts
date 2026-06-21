@@ -24,7 +24,6 @@ import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
-import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { mat4 } from 'gl-matrix';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 
@@ -197,30 +196,6 @@ function makeCam(): OrbitCamera {
   } as unknown as OrbitCamera;
 }
 
-function makeCloud(count = 1): GalaxyCatalog {
-  const fill = (v: number) => {
-    const a = new Float32Array(count);
-    a.fill(v);
-    return a;
-  };
-  return {
-    count,
-    objIDs: new BigUint64Array(count),
-    positions: new Float32Array(count * 3),
-    magU: fill(20),
-    magG: fill(20),
-    magR: fill(20),
-    magI: fill(20),
-    magZ: fill(20),
-    axisRatio: fill(1),
-    positionAngleDeg: fill(0),
-    diameterKpc: fill(50),
-    classByte: new Uint8Array(count),
-    parentSurveyByte: new Uint8Array(count),
-    spectroscopicZ: new Float32Array(count),
-  };
-}
-
 /** Build a complete RenderFrameInput fixture with sensible defaults. */
 function makeInput(
   overrides: { settings?: Partial<any>; disabledPasses?: Record<string, boolean> } = {},
@@ -244,7 +219,6 @@ function makeInput(
   const texturedDiskRenderer = makeMockTexturedDiskRenderer();
   const proceduralDiskRenderer = makeMockProceduralDiskRenderer();
   const cam = makeCam();
-  const catalogs = new Map([[Source.SDSS, makeCloud(1)]]);
 
   const settings = {
     pointSizePx: 2.5,
@@ -288,6 +262,8 @@ function makeInput(
     >,
     drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
     focusBlend: 0,
+    visibleSourceMask: 0xffffffff,
+    focus: { center: [0, 0, 0] as Readonly<[number, number, number]>, apparentRadiusMpc: 1, physicalRadiusMpc: 0, blend: 0 },
     renderer: pointRenderer,
     postProcess,
     volumeOffscreen,
@@ -310,12 +286,15 @@ function makeInput(
     texturedDiskRenderer,
     proceduralDiskRenderer,
     cam,
-    catalogs,
     // Mirror these on the fixture root so tests read them directly
     // instead of reaching into `input.ctx.*` for every assertion.
     canvasWidth,
     canvasHeight,
     viewProj,
+    // Expose the local settings bag so tests can assert against it
+    // (e.g. exposure, toneMapCurve) without reaching into input.settings,
+    // which no longer exists on RenderFrameInput.
+    settings,
     input: {
       ctx,
       // Passes read engine state via `input.state`. The label +
@@ -342,9 +321,23 @@ function makeInput(
         // most tests pass no overrides so the default is an empty record (matches
         // production); the skip-on-toggle test passes `overrides.disabledPasses`.
         settings: {
+          galaxyCatalogs: {
+            sizePx: settings.pointSizePx,
+            brightness: settings.brightness,
+            highlightFallback: settings.highlightFallback,
+            realOnly: settings.realOnlyMode,
+            depthFade: settings.depthFadeEnabled,
+          },
+          tonemap: { exposure: settings.exposure, curve: settings.toneMapCurve },
+          bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
+          thumbnails: { enabled: settings.galaxyTexturesEnabled },
+          milkyWay: { enabled: settings.milkyWayEnabled },
+          filaments: { enabled: settings.filamentsEnabled, intensity: settings.filamentIntensity },
+          volumes: { enabled: settings.volumesEnabled },
           flow: { enabled: false },
           debug: { disabledPasses: overrides.disabledPasses ?? {} },
         },
+        selection: { select: settings.selected },
         assetSlots: { flow: null },
         // proceduralDisksPass / texturedDisksPass each read their slot
         // off `state.subsystems` in their `enabled()` gate; nulling both
@@ -369,9 +362,6 @@ function makeInput(
       texturedQuadRenderer,
       texturedDiskRenderer,
       proceduralDiskRenderer,
-      settings,
-      famousMeta: [],
-      catalogs,
       // Disabled stub (`service.enabled === false`) → renderFrame takes
       // the single-pass branch. Active-mode behaviour lives in
       // `renderFrame.timing.test.ts`.
@@ -437,21 +427,21 @@ describe('renderFrame', () => {
     expect(args[1]).toBe(fx.viewProj);
     expect(args[2]).toEqual([fx.canvasWidth, fx.canvasHeight]);
     const drawSettings = args[3] as Record<string, unknown>;
-    expect(drawSettings.pointSizePx).toBe(fx.input.settings.pointSizePx);
-    expect(drawSettings.brightness).toBe(fx.input.settings.brightness);
+    expect(drawSettings.pointSizePx).toBe(fx.settings.pointSizePx);
+    expect(drawSettings.brightness).toBe(fx.settings.brightness);
     // selected null → 0xffffffff packed sentinel
     expect(drawSettings.selectedPacked).toBe(0xffffffff >>> 0);
-    expect(drawSettings.visibleSourceMask).toBe(fx.input.settings.visibleSourceMask);
+    expect(drawSettings.visibleSourceMask).toBe(fx.settings.visibleSourceMask);
     // camPos is a 3-tuple snapshot from cam.position
     expect(Array.from(drawSettings.camPosWorld as ArrayLike<number>)).toEqual([0, 0, 5]);
     // pxPerRad = h / (2 · tan(fovY/2))
     const expectedPxPerRad = fx.canvasHeight / (2 * Math.tan(fx.cam.fovYRad / 2));
     expect(drawSettings.pxPerRad as number).toBeCloseTo(expectedPxPerRad, 6);
-    expect(drawSettings.highlightFallback).toBe(fx.input.settings.highlightFallback);
-    expect(drawSettings.realOnlyMode).toBe(fx.input.settings.realOnlyMode);
-    expect(drawSettings.biasMode).toBe(fx.input.settings.biasMode);
-    expect(drawSettings.absMagLimit).toBe(fx.input.settings.absMagLimit);
-    expect(drawSettings.depthFadeEnabled).toBe(fx.input.settings.depthFadeEnabled);
+    expect(drawSettings.highlightFallback).toBe(fx.settings.highlightFallback);
+    expect(drawSettings.realOnlyMode).toBe(fx.settings.realOnlyMode);
+    expect(drawSettings.biasMode).toBe(fx.settings.biasMode);
+    expect(drawSettings.absMagLimit).toBe(fx.settings.absMagLimit);
+    expect(drawSettings.depthFadeEnabled).toBe(fx.settings.depthFadeEnabled);
   });
 
   it('packs (source, index) into the selectedPacked u32 sent to pointRenderer.draw', () => {
@@ -492,8 +482,8 @@ describe('renderFrame', () => {
     const args = draw.mock.calls[0]!;
     expect(args[0]).toBe(fx.env.encoder);
     expect(args[1]).toBe(fx.swapView);
-    expect(args[2]).toBe(fx.input.settings.exposure);
-    expect(args[3]).toBe(fx.input.settings.toneMapCurve);
+    expect(args[2]).toBe(fx.settings.exposure);
+    expect(args[3]).toBe(fx.settings.toneMapCurve);
   });
 
   it('records full frame in the canonical order: createEncoder → HDR pass (begin + draws + end) → postProcess.draw → encoder.finish → submit', () => {
@@ -540,12 +530,12 @@ describe('renderFrame', () => {
   });
 
   it('opens a pre-HDR render pass against the half-res view when volumes are active', () => {
-    // When `volumesEnabled` is true AND volumeFieldRenderer has active
-    // fields, `encodeVolumes` must run BEFORE the HDR mega-pass.  The
-    // fixture's default settings has volumesEnabled=false → no pre-pass
-    // fires.  We force-enable it here and stub a renderer with an
-    // active field, then check that the FIRST beginRenderPass goes
-    // against the half-res view.
+    // When `state.settings.volumes.enabled` is true AND volumeFieldRenderer
+    // has active fields, `encodeVolumes` must run BEFORE the HDR mega-pass.
+    // The fixture's default state has volumes.enabled=false → no pre-pass
+    // fires.  We force-enable it here and stub a renderer with an active
+    // field, then check that the FIRST beginRenderPass goes against the
+    // half-res view.
     const fx2 = makeInput({ settings: { volumesEnabled: true } });
     // Wire in a volumeFieldRenderer with active fields.
     const drawSpy = vi.fn();

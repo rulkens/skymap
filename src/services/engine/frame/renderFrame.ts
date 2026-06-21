@@ -103,9 +103,6 @@ export function renderFrame(input: RenderFrameInput): void {
     flowFieldRenderer,
     texturedDiskRenderer,
     proceduralDiskRenderer,
-    settings,
-    famousMeta,
-    catalogs,
     timingService,
   } = input;
 
@@ -122,15 +119,14 @@ export function renderFrame(input: RenderFrameInput): void {
     flowFieldRenderer,
     milkyWayRenderer,
     horizonShellRenderer,
-    catalogs,
-    famousMeta,
     milkyWayITimeSec,
   };
 
   // Write the single shared cluster-focus uniform once per frame, before
   // any pass (points, impostor disks, and the later pick submit) reads it.
   // blend=0 at rest makes the per-vertex multiplier a no-op.
-  state.gpu.focusUniform?.write(settings.focus);
+  // ctx.focus is the per-frame FocusUniformsValue derived in deriveFrameContext.
+  state.gpu.focusUniform?.write(ctx.focus);
 
   // ── Encoder + HDR rendering ───────────────────────────────────────
   //
@@ -155,12 +151,12 @@ export function renderFrame(input: RenderFrameInput): void {
 
   if (timingService.enabled) {
     const timingCtx = timingService.beginFrame();
-    encodeHdrSplit(encoder, ctx, state, settings, deps, timingService);
+    encodeHdrSplit(encoder, ctx, state, deps, timingService);
     ctx.postProcess.draw(
       encoder,
       swapView,
-      settings.exposure,
-      settings.toneMapCurve,
+      state.settings.tonemap.exposure,
+      state.settings.tonemap.curve,
       timingService.descriptorFor('tone-map'),
     );
     encodeUiOverlay(
@@ -168,15 +164,14 @@ export function renderFrame(input: RenderFrameInput): void {
       swapView,
       ctx,
       state,
-      settings,
       deps,
       timingService.descriptorFor('ui-overlay'),
     );
     timingService.endFrame(timingCtx, encoder);
   } else {
-    encodeHdrSingle(encoder, ctx, state, settings, deps);
-    ctx.postProcess.draw(encoder, swapView, settings.exposure, settings.toneMapCurve, undefined);
-    encodeUiOverlay(encoder, swapView, ctx, state, settings, deps, undefined);
+    encodeHdrSingle(encoder, ctx, state, deps);
+    ctx.postProcess.draw(encoder, swapView, state.settings.tonemap.exposure, state.settings.tonemap.curve, undefined);
+    encodeUiOverlay(encoder, swapView, ctx, state, deps, undefined);
   }
 
   device.queue.submit([encoder.finish()]);

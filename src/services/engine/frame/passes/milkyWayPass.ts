@@ -14,7 +14,7 @@
  *
  * Two gates, both in `enabled`:
  *
- *   1. `settings.milkyWayEnabled` — user toggle.
+ *   1. `state.settings.milkyWay.enabled` — user toggle.
  *   2. `milkyWayFadeAlpha(camDist) > 0` — camera-distance fade band
  *      defined in `utils/math/milkyWayFadeAlpha.ts` (full strength inside
  *      10 Mpc, smoothstep out to 0 at 50 Mpc).
@@ -32,7 +32,7 @@
  * - `deps.milkyWayRenderer`
  * - `deps.milkyWayITimeSec` — animation clock for the raymarcher
  * - `ctx.vp`, `ctx.canvasSize`, `ctx.drawCamPos`
- * - `settings.milkyWayEnabled` (via the gate)
+ * - `state.settings.milkyWay.enabled` (user toggle, via the gate)
  *
  * ### Why drawn LAST inside the HDR pass
  *
@@ -51,21 +51,21 @@ import { MILKY_WAY_CENTER_WORLD } from '../../../../data/milkyWay/galacticCenter
 export const milkyWayPass: Pass = {
   name: 'milky-way',
 
-  enabled(state, ctx, settings) {
-    // Settings boolean is the user's intent; opacityOf > 0 keeps the
+  enabled(state, ctx) {
+    // State boolean is the user's intent; opacityOf > 0 keeps the
     // pass alive through the ~100 ms toggle fade-out tail. The
     // distance-based milkyWayFadeAlpha still gates separately — if
     // the camera is too far away from the Milky Way to render it,
     // skip even when the toggle is on.
     const togglePart =
-      settings.milkyWayEnabled ||
+      state.settings.milkyWay.enabled ||
       state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, performance.now()) > 0;
     if (!togglePart) return false;
     const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
     return milkyWayFadeAlpha(camDistMpc) > 0;
   },
 
-  draw(pass, ctx, state, _settings, deps) {
+  draw(pass, ctx, state, deps) {
     const { vp, canvasSize, drawCamPos } = ctx;
     const camDistMpc = Math.hypot(drawCamPos[0], drawCamPos[1], drawCamPos[2]);
     // Composite the distance-based fade with the registry-supplied

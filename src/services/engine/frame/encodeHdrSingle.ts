@@ -35,7 +35,6 @@
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { PassDeps } from '../../../@types/engine/frame/PassDeps';
-import type { RenderFrameSettings } from '../../../@types/engine/frame/RenderFrameSettings';
 import { HDR_PASSES } from './passes';
 import { encodeVolumePrepass } from './encodeVolumePrepass';
 import { encodeFlowCompute } from './encodeFlowCompute';
@@ -45,7 +44,6 @@ export function encodeHdrSingle(
   encoder: GPUCommandEncoder,
   ctx: ReadyFrameContext,
   state: EngineState,
-  settings: RenderFrameSettings,
   deps: PassDeps,
 ): void {
   // ── Half-resolution scalar-volume pre-pass ────────────────────────────
@@ -60,7 +58,7 @@ export function encodeHdrSingle(
   // passes `null` for the timing service (no per-pass GPU timing in the
   // production single-pass branch), so the prepass's lazy
   // `timingService?.descriptorFor(...)` yields `undefined`.
-  encodeVolumePrepass(encoder, ctx, state, settings, null);
+  encodeVolumePrepass(encoder, ctx, state, null);
 
   // ── Flow-field compute pre-pass ───────────────────────────────────────
   // Encodes the particle seed/integrate compute into this same encoder,
@@ -92,9 +90,9 @@ export function encodeHdrSingle(
   // empty in production, so the membership lookup is in the noise.
   const disabledPasses = state.settings.debug.disabledPasses;
   for (const pass of HDR_PASSES) {
-    if (!pass.enabled(state, ctx, settings)) continue;
+    if (!pass.enabled(state, ctx)) continue;
     if (disabledPasses[pass.name] === true) continue;
-    pass.draw(hdrPass, ctx, state, settings, deps);
+    pass.draw(hdrPass, ctx, state, deps);
   }
 
   hdrPass.end();

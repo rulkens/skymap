@@ -47,7 +47,7 @@ export const FOCUS_FADE_DURATION_MS = 400;
  * never equal — a degenerate edge0 == edge1 would risk a NaN that mix()
  * propagates even at blend 0. The values are otherwise don't-cares here.
  */
-const ZERO_FOCUS: FocusUniformsValue = {
+export const ZERO_FOCUS: FocusUniformsValue = {
   center: [0, 0, 0],
   apparentRadiusMpc: 1,
   physicalRadiusMpc: 0,

@@ -42,12 +42,12 @@ import type { Pass } from '../../../../@types/engine/frame/Pass';
 export const markerLinesPass: Pass = {
   name: 'marker-lines',
 
-  enabled(state, _ctx, _settings) {
+  enabled(state, _ctx) {
     if (state.gpu.markerLineRenderer === null) return false;
     return state.gpu.markerLineRenderer.lineCount() > 0;
   },
 
-  draw(pass, ctx, state, _settings, _deps) {
+  draw(pass, ctx, state, _deps) {
     // `enabled()` proved markerLineRenderer is non-null and has at least
     // one line.  The `!` assertion is safe: the pass framework only calls
     // `draw` when `enabled` returns true.

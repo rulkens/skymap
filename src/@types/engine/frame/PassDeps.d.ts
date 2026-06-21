@@ -22,9 +22,6 @@ import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer'
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
 import type { FlowFieldRenderer } from '../../rendering/FlowFieldRenderer';
-import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
-import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
-import type { SourceType } from '../../data/SourceType';
 
 export type PassDeps = {
   /** Atlas-bound 3D-oriented disk renderer for large galaxy thumbnails. */
@@ -62,16 +59,6 @@ export type PassDeps = {
   milkyWayRenderer: MilkyWayRenderer;
   /** Observable-universe horizon shell renderer. */
   horizonShellRenderer: HorizonShellRenderer;
-  /**
-   * Live source-catalog map.  Forwarded into `thumbnails.runFrame`
-   * which iterates it back-to-front for the painter's-algorithm
-   * sort.  Lives on `deps` (not `ctx`) because it isn't a derived
-   * snapshot — it's a long-lived reference whose contents change
-   * across frames.
-   */
-  catalogs: ReadonlyMap<SourceType, GalaxyCatalog>;
-  /** Famous-galaxy metadata — also forwarded into thumbnails. */
-  famousMeta: readonly FamousMetaEntry[];
   /**
    * Animation time in seconds for the Milky Way impostor's
    * shader-clock uniform.  Already scaled by the engine's chosen

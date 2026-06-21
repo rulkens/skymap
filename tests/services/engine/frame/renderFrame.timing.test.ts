@@ -35,14 +35,12 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import type { mat4 } from 'gl-matrix';
-import { Source } from '../../../../src/data/sources';
 import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import type { RenderFrameInput } from '../../../../src/@types/engine/frame/RenderFrameInput';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
-import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
 import type { TimingSlotName } from '../../../../src/@types/gpu/timing/TimingSlotName';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
@@ -145,30 +143,6 @@ function makeCam(): OrbitCamera {
   } as unknown as OrbitCamera;
 }
 
-function makeCloud(count: number): GalaxyCatalog {
-  const fill = (v: number): Float32Array => {
-    const a = new Float32Array(count);
-    a.fill(v);
-    return a;
-  };
-  return {
-    count,
-    objIDs: new BigUint64Array(count),
-    positions: new Float32Array(count * 3),
-    magU: fill(20),
-    magG: fill(20),
-    magR: fill(20),
-    magI: fill(20),
-    magZ: fill(20),
-    axisRatio: fill(1),
-    positionAngleDeg: fill(0),
-    diameterKpc: fill(50),
-    classByte: new Uint8Array(count),
-    parentSurveyByte: new Uint8Array(count),
-    spectroscopicZ: new Float32Array(count),
-  };
-}
-
 /**
  * Build a minimal RenderFrameInput where only point-sprites and
  * milky-way passes are enabled.  Every other optional renderer / slot
@@ -192,7 +166,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const postProcess = makePostProcess();
 
   const cam = makeCam();
-  const catalogs = new Map([[Source.SDSS, makeCloud(1)]]);
   const canvasWidth = 1280;
   const canvasHeight = 720;
   const viewProj = new Float32Array(16) as unknown as mat4;
@@ -250,7 +223,24 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       // A null slot → slotReady false → not loaded.
       // The encoders read the renderer-toggle override bag off
       // `settings.debug.disabledPasses`; empty by default so no pass is skipped.
-      settings: { flow: { enabled: false }, debug: { disabledPasses: {} } },
+      settings: {
+        galaxyCatalogs: {
+          sizePx: settings.pointSizePx,
+          brightness: settings.brightness,
+          highlightFallback: settings.highlightFallback,
+          realOnly: settings.realOnlyMode,
+          depthFade: settings.depthFadeEnabled,
+        },
+        tonemap: { exposure: settings.exposure, curve: settings.toneMapCurve },
+        bias: { mode: settings.biasMode, absMagLimit: settings.absMagLimit },
+        thumbnails: { enabled: settings.galaxyTexturesEnabled },
+        milkyWay: { enabled: settings.milkyWayEnabled },
+        filaments: { enabled: settings.filamentsEnabled, intensity: settings.filamentIntensity },
+        volumes: { enabled: settings.volumesEnabled },
+        flow: { enabled: false },
+        debug: { disabledPasses: {} },
+      },
+      selection: { select: settings.selected },
       assetSlots: { flow: null },
       subsystems: {
         proceduralDisks: null,
@@ -272,9 +262,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     flowFieldRenderer: null,
     texturedDiskRenderer: texturedDiskRenderer as never,
     proceduralDiskRenderer: proceduralDiskRenderer as never,
-    settings: settings as never,
-    famousMeta: [],
-    catalogs,
     timingService,
   };
 
@@ -375,7 +362,7 @@ describe('renderFrame — timing service hookup', () => {
     const { input, beginCalls } = makeMinimalInputWithTiming(svc);
 
     // Force volumes on with an active volumeFieldRenderer.
-    (input.settings as any).volumesEnabled = true;
+    (input.state as any).settings.volumes = { enabled: true };
     const drawSpy = vi.fn();
     (input as any).volumeFieldRenderer = {
       draw: drawSpy,

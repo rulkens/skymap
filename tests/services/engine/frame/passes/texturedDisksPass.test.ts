@@ -3,7 +3,6 @@ import type { mat4 } from 'gl-matrix';
 import { texturedDisksPass } from '../../../../../src/services/engine/frame/passes/texturedDisksPass';
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
-import type { RenderFrameSettings } from '../../../../../src/@types/engine/frame/RenderFrameSettings';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
 
@@ -31,6 +30,8 @@ function makeCtx(): ReadyFrameContext {
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     focusBlend: 0,
+    visibleSourceMask: 0xffffffff,
+    focus: { center: [0, 0, 0] as Readonly<[number, number, number]>, apparentRadiusMpc: 1, physicalRadiusMpc: 0, blend: 0 },
     renderer: { draw: vi.fn() } as any,
     postProcess: {
       view: {} as GPUTextureView,
@@ -47,10 +48,6 @@ function makeCtx(): ReadyFrameContext {
   };
 }
 
-function makeSettings(overrides: Partial<RenderFrameSettings> = {}): RenderFrameSettings {
-  return { galaxyTexturesEnabled: true, ...overrides } as RenderFrameSettings;
-}
-
 function makeDeps(): PassDeps {
   return {
     texturedDiskRenderer: { draw: vi.fn(), bindAtlas: vi.fn() } as any,
@@ -60,8 +57,6 @@ function makeDeps(): PassDeps {
     flowFieldRenderer: null,
     milkyWayRenderer: { draw: vi.fn() } as any,
     horizonShellRenderer: { draw: vi.fn() } as any,
-    catalogs: new Map(),
-    famousMeta: [],
     milkyWayITimeSec: 0,
   } as PassDeps;
 }
@@ -71,32 +66,38 @@ describe('texturedDisksPass', () => {
     expect(texturedDisksPass.name).toBe('textured-disks');
   });
 
-  it('enabled() returns false when galaxyTexturesEnabled is false', () => {
+  it('enabled() returns false when state.settings.thumbnails.enabled is false', () => {
     const state = {
       subsystems: { texturedDisks: { lastOutput: { disks: [{}], quads: [] } } },
+      settings: { thumbnails: { enabled: false } },
     } as unknown as EngineState;
     expect(
-      texturedDisksPass.enabled(state, makeCtx(), makeSettings({ galaxyTexturesEnabled: false })),
+      texturedDisksPass.enabled(state, makeCtx()),
     ).toBe(false);
   });
 
   it('enabled() returns false when subsystem is null', () => {
-    const state = { subsystems: { texturedDisks: null } } as unknown as EngineState;
-    expect(texturedDisksPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
+    const state = {
+      subsystems: { texturedDisks: null },
+      settings: { thumbnails: { enabled: true } },
+    } as unknown as EngineState;
+    expect(texturedDisksPass.enabled(state, makeCtx())).toBe(false);
   });
 
   it('enabled() returns false when disks array is empty', () => {
     const state = {
       subsystems: { texturedDisks: { lastOutput: { disks: [] } } },
+      settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
-    expect(texturedDisksPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
+    expect(texturedDisksPass.enabled(state, makeCtx())).toBe(false);
   });
 
   it('enabled() returns true when disks array is non-empty', () => {
     const state = {
       subsystems: { texturedDisks: { lastOutput: { disks: [{}] } } },
+      settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
-    expect(texturedDisksPass.enabled(state, makeCtx(), makeSettings())).toBe(true);
+    expect(texturedDisksPass.enabled(state, makeCtx())).toBe(true);
   });
 
   it('draw() invokes texturedDiskRenderer.draw', () => {
@@ -106,7 +107,7 @@ describe('texturedDisksPass', () => {
       gpu: { focusUniform: { bindGroup: {} as GPUBindGroup } },
     } as unknown as EngineState;
     const deps = makeDeps();
-    texturedDisksPass.draw({} as GPURenderPassEncoder, makeCtx(), state, makeSettings(), deps);
+    texturedDisksPass.draw({} as GPURenderPassEncoder, makeCtx(), state, deps);
     expect(deps.texturedDiskRenderer.draw).toHaveBeenCalledTimes(1);
   });
 
@@ -115,7 +116,7 @@ describe('texturedDisksPass', () => {
       subsystems: { texturedDisks: { lastOutput: { disks: [] } } },
     } as unknown as EngineState;
     const deps = makeDeps();
-    texturedDisksPass.draw({} as GPURenderPassEncoder, makeCtx(), state, makeSettings(), deps);
+    texturedDisksPass.draw({} as GPURenderPassEncoder, makeCtx(), state, deps);
     expect(deps.texturedDiskRenderer.draw).not.toHaveBeenCalled();
   });
 });

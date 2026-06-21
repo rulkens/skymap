@@ -4,8 +4,8 @@
  * A single record rather than positional args: callers fill named fields,
  * new knobs are one type-level edit, and TypeScript's structural matching
  * catches a missing field at compile time instead of a silent shifted-
- * argument bug at draw time. Mirrors `RenderFrameSettings`'s naming so the
- * engine-side pass code can pass `{ …settings, … }` without renames.
+ * argument bug at draw time. Field names match `state.settings.*` reads
+ * so the engine-side pass code can pluck them without renames.
  */
 
 import type { Vec3 } from '../math/Vec3';

@@ -45,7 +45,7 @@ export const flowFieldPass: Pass = {
     return state.subsystems.fades.opacityOf({ kind: 'flow' }, performance.now()) > 0;
   },
 
-  draw(pass, ctx, state, _settings, deps) {
+  draw(pass, ctx, state, deps) {
     // Renderer-null check here rather than in `enabled` because `enabled`
     // doesn't receive `deps` — same pattern as filamentsPass. The renderer's
     // own `draw` also early-returns until a field is set, so this is belt +

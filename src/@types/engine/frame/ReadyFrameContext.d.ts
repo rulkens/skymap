@@ -54,6 +54,7 @@ import type { PointRenderer } from '../../rendering/PointRenderer';
 import type { PostProcess } from '../../rendering/PostProcess';
 import type { VolumeOffscreen } from '../../rendering/VolumeOffscreen';
 import type { TexturedDiskSubsystem } from '../subsystems/TexturedDiskSubsystem';
+import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
 
 /** The ready case: every per-frame derived value is non-null. */
 export type ReadyFrameContext = {
@@ -70,6 +71,10 @@ export type ReadyFrameContext = {
   drawPxPerRad: number;
   /** Structure-focus recession blend 0→1, from structureFocus.produceFocusUniforms (ticked once/frame). */
   focusBlend: number;
+  /** Galaxy-catalog draw mask (deriveSourceMasks(state).draw), this frame. */
+  visibleSourceMask: number;
+  /** Full cluster-focus uniform value (produceFocusUniforms, ticked once/frame). */
+  focus: FocusUniformsValue;
   /**
    * Non-null GPU + subsystem handles, narrowed across the bootstrap
    * gate so consumers don't have to re-check `state.gpu.*` /

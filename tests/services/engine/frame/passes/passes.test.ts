@@ -19,7 +19,6 @@ import type { mat4 } from 'gl-matrix';
 
 import { Source } from '../../../../../src/data/sources';
 import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
-import { ToneMapCurve } from '../../../../../src/data/toneMapCurve';
 import {
   HDR_PASSES,
   TIMED_SLOT_NAMES,
@@ -31,7 +30,6 @@ import {
 } from '../../../../../src/services/engine/frame/passes';
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
-import type { RenderFrameSettings } from '../../../../../src/@types/engine/frame/RenderFrameSettings';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
 import type { SelectionRef } from '../../../../../src/@types/engine/SelectionRef';
@@ -81,35 +79,12 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     focusBlend: 0,
+    visibleSourceMask: 0xffffffff,
+    focus: { center: [0, 0, 0] as Readonly<[number, number, number]>, apparentRadiusMpc: 1, physicalRadiusMpc: 0, blend: 0 },
     renderer,
     postProcess,
     volumeOffscreen,
     texturedDisks,
-    ...overrides,
-  };
-}
-
-function makeSettings(overrides: Partial<RenderFrameSettings> = {}): RenderFrameSettings {
-  return {
-    pointSizePx: 2.5,
-    brightness: 1.0,
-    selected: null,
-    visibleSourceMask: 0xffffffff,
-    highlightFallback: true,
-    realOnlyMode: false,
-    biasMode: BiasMode.None,
-    absMagLimit: -19,
-    depthFadeEnabled: true,
-    pxFadeStartPoints: 8,
-    pxFadeEndPoints: 14,
-    focus: { center: [0, 0, 0], apparentRadiusMpc: 0, physicalRadiusMpc: 0, blend: 0 },
-    exposure: 1.0,
-    toneMapCurve: ToneMapCurve.Reinhard,
-    galaxyTexturesEnabled: true,
-    milkyWayEnabled: true,
-    filamentsEnabled: false,
-    filamentIntensity: 1,
-    volumesEnabled: false,
     ...overrides,
   };
 }
@@ -123,8 +98,6 @@ function makeDeps(overrides: Partial<PassDeps> = {}): PassDeps {
     flowFieldRenderer: null,
     milkyWayRenderer: { draw: vi.fn() } as any,
     horizonShellRenderer: { draw: vi.fn() } as any,
-    catalogs: new Map(),
-    famousMeta: [],
     milkyWayITimeSec: 0,
     ...overrides,
   };
@@ -205,51 +178,52 @@ describe('TIMED_SLOT_NAMES registry', () => {
 
 describe('pointSpritesPass.enabled', () => {
   it('always returns true (no user-facing toggle for point-sprites)', () => {
-    expect(pointSpritesPass.enabled(STATE_STUB, makeCtx(), makeSettings())).toBe(true);
+    expect(pointSpritesPass.enabled(STATE_STUB, makeCtx())).toBe(true);
     // Even when every other toggle is off, point-sprites still runs.
-    const off = makeSettings({
-      galaxyTexturesEnabled: false,
-      milkyWayEnabled: false,
-      filamentsEnabled: false,
-    });
-    expect(pointSpritesPass.enabled(STATE_STUB, makeCtx(), off)).toBe(true);
+    expect(pointSpritesPass.enabled(STATE_STUB, makeCtx())).toBe(true);
   });
 });
 
 describe('proceduralDisksPass.enabled', () => {
-  it('returns false when galaxyTexturesEnabled is false', () => {
+  it('returns false when state.settings.thumbnails.enabled is false', () => {
     const state = {
       subsystems: {
         proceduralDisks: { lastOutput: { instances: [{}] } },
       },
+      settings: { thumbnails: { enabled: false } },
     } as unknown as EngineState;
     expect(
-      proceduralDisksPass.enabled(state, makeCtx(), makeSettings({ galaxyTexturesEnabled: false })),
+      proceduralDisksPass.enabled(state, makeCtx()),
     ).toBe(false);
   });
 
   it('returns false when subsystem is null', () => {
-    const state = { subsystems: { proceduralDisks: null } } as unknown as EngineState;
+    const state = {
+      subsystems: { proceduralDisks: null },
+      settings: { thumbnails: { enabled: true } },
+    } as unknown as EngineState;
     expect(
-      proceduralDisksPass.enabled(state, makeCtx(), makeSettings({ galaxyTexturesEnabled: true })),
+      proceduralDisksPass.enabled(state, makeCtx()),
     ).toBe(false);
   });
 
   it('returns false when no instances are pending', () => {
     const state = {
       subsystems: { proceduralDisks: { lastOutput: { instances: [] } } },
+      settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
     expect(
-      proceduralDisksPass.enabled(state, makeCtx(), makeSettings({ galaxyTexturesEnabled: true })),
+      proceduralDisksPass.enabled(state, makeCtx()),
     ).toBe(false);
   });
 
   it('returns true when enabled, subsystem present, and instances pending', () => {
     const state = {
       subsystems: { proceduralDisks: { lastOutput: { instances: [{}] } } },
+      settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
     expect(
-      proceduralDisksPass.enabled(state, makeCtx(), makeSettings({ galaxyTexturesEnabled: true })),
+      proceduralDisksPass.enabled(state, makeCtx()),
     ).toBe(true);
   });
 });
@@ -260,29 +234,38 @@ describe('proceduralDisksPass.enabled', () => {
 // HDR_PASSES registry check above pins the name in canonical order.
 
 describe('filamentsPass.enabled', () => {
-  it('returns true when filamentsEnabled is true (renderer presence checked in draw)', () => {
+  it('returns true when filaments.enabled is true (renderer presence checked in draw)', () => {
+    const stateOn = {
+      ...STATE_STUB,
+      settings: { filaments: { enabled: true, intensity: 1 } },
+    } as unknown as EngineState;
     expect(
-      filamentsPass.enabled(STATE_STUB, makeCtx(), makeSettings({ filamentsEnabled: true })),
+      filamentsPass.enabled(stateOn, makeCtx()),
     ).toBe(true);
   });
 
-  it('returns false when filamentsEnabled is false AND fade opacity is 0', () => {
-    // STATE_STUB.fades.opacityOf returns 1 by default — override to 0
-    // so the gate doesn't keep the pass alive through a fade-out tail.
+  it('returns false when filaments.enabled is false AND fade opacity is 0', () => {
+    // fades.opacityOf returns 0 so the gate doesn't keep the pass alive
+    // through a fade-out tail; toggle is also off — both conditions false.
     const stateZeroFade = {
       subsystems: { fades: { opacityOf: () => 0, isAnyAnimating: () => false } },
+      settings: { filaments: { enabled: false, intensity: 1 } },
     } as unknown as EngineState;
     expect(
-      filamentsPass.enabled(stateZeroFade, makeCtx(), makeSettings({ filamentsEnabled: false })),
+      filamentsPass.enabled(stateZeroFade, makeCtx()),
     ).toBe(false);
   });
 
-  it('returns true when filamentsEnabled is false BUT fade opacity > 0 (fade-out tail still drawing)', () => {
+  it('returns true when filaments.enabled is false BUT fade opacity > 0 (fade-out tail still drawing)', () => {
     // STATE_STUB's opacityOf = 1 simulates a fade-out in progress; the
     // gate keeps the pass alive so the user sees the smooth ~100 ms ramp
     // instead of an instant pop.
+    const stateOffFading = {
+      ...STATE_STUB,
+      settings: { filaments: { enabled: false, intensity: 1 } },
+    } as unknown as EngineState;
     expect(
-      filamentsPass.enabled(STATE_STUB, makeCtx(), makeSettings({ filamentsEnabled: false })),
+      filamentsPass.enabled(stateOffFading, makeCtx()),
     ).toBe(true);
   });
 });
@@ -293,23 +276,30 @@ describe('filamentsPass.draw', () => {
     // receive `deps`. With a null renderer there's nothing to spy on —
     // just assert no exception escapes.
     const deps = makeDeps({ filamentRenderer: null });
+    const stateOn = {
+      ...STATE_STUB,
+      settings: { filaments: { enabled: true, intensity: 1 } },
+    } as unknown as EngineState;
     expect(() =>
       filamentsPass.draw(
         PASS_STUB,
         makeCtx(),
-        STATE_STUB,
-        makeSettings({ filamentsEnabled: true }),
+        stateOn,
         deps,
       ),
     ).not.toThrow();
   });
 
   it('forwards correct args to filamentRenderer.draw when present', () => {
-    const drawSpy = vi.fn();
+    const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const deps = makeDeps({ filamentRenderer: { draw: drawSpy } as any });
     const ctx = makeCtx();
-    const settings = makeSettings({ filamentsEnabled: true, filamentIntensity: 0.7 });
-    filamentsPass.draw(PASS_STUB, ctx, STATE_STUB, settings, deps);
+    // intensity=0.7 now comes from state.settings.filaments.intensity.
+    const stateWith07 = {
+      ...STATE_STUB,
+      settings: { filaments: { enabled: true, intensity: 0.7 } },
+    } as unknown as EngineState;
+    filamentsPass.draw(PASS_STUB, ctx, stateWith07, deps);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const args = drawSpy.mock.calls[0]!;
     expect(args[0]).toBe(PASS_STUB);
@@ -321,31 +311,40 @@ describe('filamentsPass.draw', () => {
 });
 
 describe('milkyWayPass.enabled', () => {
-  it('returns true when milkyWayEnabled is true and camera is inside the fade band', () => {
+  it('returns true when milkyWay.enabled is true and camera is inside the fade band', () => {
     // Default makeCtx() puts the camera at 5 Mpc, inside the full-alpha
     // (≤10 Mpc) regime. Both gates pass.
+    const stateOn = {
+      ...STATE_STUB,
+      settings: { milkyWay: { enabled: true } },
+    } as unknown as EngineState;
     expect(
-      milkyWayPass.enabled(STATE_STUB, makeCtx(), makeSettings({ milkyWayEnabled: true })),
+      milkyWayPass.enabled(stateOn, makeCtx()),
     ).toBe(true);
   });
 
-  it('returns false when milkyWayEnabled is false AND fade opacity is 0', () => {
-    // STATE_STUB's fades.opacityOf returns 1 by default — override to 0
-    // so the gate doesn't keep the pass alive through a fade-out tail.
-    const stateZeroFade = {
+  it('returns false when milkyWay.enabled is false AND fade opacity is 0', () => {
+    // fades.opacityOf returns 0 so the gate doesn't keep the pass alive
+    // through a fade-out tail; toggle is also off — both conditions false.
+    const stateOffZeroFade = {
       subsystems: { fades: { opacityOf: () => 0, isAnyAnimating: () => false } },
+      settings: { milkyWay: { enabled: false } },
     } as unknown as EngineState;
     expect(
-      milkyWayPass.enabled(stateZeroFade, makeCtx(), makeSettings({ milkyWayEnabled: false })),
+      milkyWayPass.enabled(stateOffZeroFade, makeCtx()),
     ).toBe(false);
   });
 
-  it('returns true when milkyWayEnabled is false BUT fade opacity > 0 (fade-out tail still drawing)', () => {
+  it('returns true when milkyWay.enabled is false BUT fade opacity > 0 (fade-out tail still drawing)', () => {
     // opacityOf = 1 simulates a toggle fade-out still in flight, and the
     // distance-based fadeAlpha also passes (camera near origin), so the
     // gate's second condition is non-zero — the pass renders.
+    const stateOffFading = {
+      ...STATE_STUB,
+      settings: { milkyWay: { enabled: false } },
+    } as unknown as EngineState;
     expect(
-      milkyWayPass.enabled(STATE_STUB, makeCtx(), makeSettings({ milkyWayEnabled: false })),
+      milkyWayPass.enabled(stateOffFading, makeCtx()),
     ).toBe(true);
   });
 
@@ -353,12 +352,14 @@ describe('milkyWayPass.enabled', () => {
     // 1000 Mpc — well past FADE_OUTER_MPC (50 Mpc). Gating in `enabled`
     // (not just `draw`) skips the empty beginRenderPass +
     // timestamp-write on the split-encoder path.
+    const stateOn = {
+      ...STATE_STUB,
+      settings: { milkyWay: { enabled: true } },
+    } as unknown as EngineState;
     const ctx = makeCtx({
       drawCamPos: [1000, 0, 0] as Readonly<[number, number, number]>,
     });
-    expect(milkyWayPass.enabled(STATE_STUB, ctx, makeSettings({ milkyWayEnabled: true }))).toBe(
-      false,
-    );
+    expect(milkyWayPass.enabled(stateOn, ctx)).toBe(false);
   });
 });
 
@@ -369,7 +370,7 @@ describe('milkyWayPass.draw', () => {
     const drawSpy = vi.fn();
     const deps = makeDeps({ milkyWayRenderer: { draw: drawSpy } as any, milkyWayITimeSec: 1.5 });
     const ctx = makeCtx();
-    milkyWayPass.draw(PASS_STUB, ctx, STATE_STUB, makeSettings(), deps);
+    milkyWayPass.draw(PASS_STUB, ctx, STATE_STUB, deps);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const args = drawSpy.mock.calls[0]!;
     expect(args[0]).toBe(PASS_STUB);
@@ -387,7 +388,7 @@ describe('horizonShellPass.enabled', () => {
     // Camera at 5 Mpc is far below the shell's fade-in band (5% of
     // 14.3 Gpc ≈ 0.7 Gpc), so the pass is skipped — no empty
     // full-screen ray-march pass at galaxy-scale zoom.
-    expect(horizonShellPass.enabled(STATE_STUB, makeCtx(), makeSettings())).toBe(false);
+    expect(horizonShellPass.enabled(STATE_STUB, makeCtx())).toBe(false);
   });
 
   it('returns true once the camera pulls back to cosmological scale', () => {
@@ -395,7 +396,7 @@ describe('horizonShellPass.enabled', () => {
     const ctx = makeCtx({
       drawCamPos: [0, 0, 8000] as Readonly<[number, number, number]>,
     });
-    expect(horizonShellPass.enabled(STATE_STUB, ctx, makeSettings())).toBe(true);
+    expect(horizonShellPass.enabled(STATE_STUB, ctx)).toBe(true);
   });
 });
 
@@ -406,7 +407,7 @@ describe('horizonShellPass.draw', () => {
     const ctx = makeCtx({
       drawCamPos: [0, 0, 8000] as Readonly<[number, number, number]>,
     });
-    horizonShellPass.draw(PASS_STUB, ctx, STATE_STUB, makeSettings(), deps);
+    horizonShellPass.draw(PASS_STUB, ctx, STATE_STUB, deps);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const args = drawSpy.mock.calls[0]!;
     expect(args[0]).toBe(PASS_STUB);
@@ -417,18 +418,41 @@ describe('horizonShellPass.draw', () => {
   });
 });
 
+// Minimal settings shape for the pointSpritesPass.draw tests — only
+// the fields the pass now reads from `state.settings`.
+const POINT_SPRITES_SETTINGS_STUB = {
+  galaxyCatalogs: {
+    sizePx: 2.5,
+    brightness: 1.0,
+    highlightFallback: true,
+    realOnly: false,
+    depthFade: true,
+  },
+  bias: {
+    mode: BiasMode.None,
+    absMagLimit: -19,
+  },
+} as unknown as EngineState['settings'];
+
 describe('pointSpritesPass.draw', () => {
   it('packs (source, index) into the selectedPacked u32', () => {
     const ctx = makeCtx();
-    const settings = makeSettings({
-      selected: {
-        type: 'galaxyCatalog',
-        source: Source.SDSS,
-        index: 42,
-      } as SelectionRef,
-    });
+    // Selection is sourced from state.selection.select, not makeSettings.
+    const stateWithSelection = {
+      ...STATE_STUB,
+      selection: {
+        select: {
+          type: 'galaxyCatalog',
+          source: Source.SDSS,
+          index: 42,
+        } as SelectionRef,
+        hover: null,
+        focus: null,
+      },
+      settings: POINT_SPRITES_SETTINGS_STUB,
+    } as unknown as EngineState;
     const deps = makeDeps();
-    pointSpritesPass.draw(PASS_STUB, ctx, STATE_STUB, settings, deps);
+    pointSpritesPass.draw(PASS_STUB, ctx, stateWithSelection, deps);
     const drawSpy = ctx.renderer.draw as ReturnType<typeof vi.fn>;
     expect(drawSpy).toHaveBeenCalledTimes(1);
     // Selection lives on arg[3].selectedPacked (the PointDrawSettings
@@ -440,7 +464,14 @@ describe('pointSpritesPass.draw', () => {
 
   it('translates null selection to the 0xFFFFFFFF sentinel', () => {
     const ctx = makeCtx();
-    pointSpritesPass.draw(PASS_STUB, ctx, STATE_STUB, makeSettings({ selected: null }), makeDeps());
+    // Null selection via state.selection.select; settings shape satisfies
+    // the pass's direct reads from state.settings.
+    const stateNullSelection = {
+      ...STATE_STUB,
+      selection: { select: null, hover: null, focus: null },
+      settings: POINT_SPRITES_SETTINGS_STUB,
+    } as unknown as EngineState;
+    pointSpritesPass.draw(PASS_STUB, ctx, stateNullSelection, makeDeps());
     const drawSpy = ctx.renderer.draw as ReturnType<typeof vi.fn>;
     const drawSettings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
     expect(drawSettings.selectedPacked).toBe(0xffffffff >>> 0);

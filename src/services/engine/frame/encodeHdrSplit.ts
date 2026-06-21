@@ -32,7 +32,6 @@
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { PassDeps } from '../../../@types/engine/frame/PassDeps';
-import type { RenderFrameSettings } from '../../../@types/engine/frame/RenderFrameSettings';
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
 import { HDR_PASSES } from './passes';
 import { encodeVolumePrepass } from './encodeVolumePrepass';
@@ -43,7 +42,6 @@ export function encodeHdrSplit(
   encoder: GPUCommandEncoder,
   ctx: ReadyFrameContext,
   state: EngineState,
-  settings: RenderFrameSettings,
   deps: PassDeps,
   timingService: GpuTimingService,
 ): void {
@@ -70,7 +68,7 @@ export function encodeHdrSplit(
   // the legacy `'scalar-volume'` slot — that's what the DebugPanel's GpuTimings row
   // reads, and keeping the slot name stable means the row's label and
   // historical samples line up.
-  encodeVolumePrepass(encoder, ctx, state, settings, timingService);
+  encodeVolumePrepass(encoder, ctx, state, timingService);
 
   // ── Flow-field compute pre-pass ───────────────────────────────────
   // Same pre-HDR compute dispatch as the single-pass branch; runs before
@@ -98,7 +96,7 @@ export function encodeHdrSplit(
   // `beginRenderPass` round-trip, no timestamp slot written).
   const disabledPasses = state.settings.debug.disabledPasses;
   for (const pass of HDR_PASSES) {
-    if (!pass.enabled(state, ctx, settings)) continue;
+    if (!pass.enabled(state, ctx)) continue;
     if (disabledPasses[pass.name] === true) continue;
 
     const timestampWrites = timingService.descriptorFor(pass.name);
@@ -114,7 +112,7 @@ export function encodeHdrSplit(
       ],
       ...(timestampWrites ? { timestampWrites } : {}),
     });
-    pass.draw(passEncoder, ctx, state, settings, deps);
+    pass.draw(passEncoder, ctx, state, deps);
     passEncoder.end();
   }
 }
