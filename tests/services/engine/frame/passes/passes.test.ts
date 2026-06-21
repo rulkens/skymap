@@ -217,39 +217,45 @@ describe('pointSpritesPass.enabled', () => {
 });
 
 describe('proceduralDisksPass.enabled', () => {
-  it('returns false when galaxyTexturesEnabled is false', () => {
+  it('returns false when state.settings.thumbnails.enabled is false', () => {
     const state = {
       subsystems: {
         proceduralDisks: { lastOutput: { instances: [{}] } },
       },
+      settings: { thumbnails: { enabled: false } },
     } as unknown as EngineState;
     expect(
-      proceduralDisksPass.enabled(state, makeCtx(), makeSettings({ galaxyTexturesEnabled: false })),
+      proceduralDisksPass.enabled(state, makeCtx(), makeSettings()),
     ).toBe(false);
   });
 
   it('returns false when subsystem is null', () => {
-    const state = { subsystems: { proceduralDisks: null } } as unknown as EngineState;
+    const state = {
+      subsystems: { proceduralDisks: null },
+      settings: { thumbnails: { enabled: true } },
+    } as unknown as EngineState;
     expect(
-      proceduralDisksPass.enabled(state, makeCtx(), makeSettings({ galaxyTexturesEnabled: true })),
+      proceduralDisksPass.enabled(state, makeCtx(), makeSettings()),
     ).toBe(false);
   });
 
   it('returns false when no instances are pending', () => {
     const state = {
       subsystems: { proceduralDisks: { lastOutput: { instances: [] } } },
+      settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
     expect(
-      proceduralDisksPass.enabled(state, makeCtx(), makeSettings({ galaxyTexturesEnabled: true })),
+      proceduralDisksPass.enabled(state, makeCtx(), makeSettings()),
     ).toBe(false);
   });
 
   it('returns true when enabled, subsystem present, and instances pending', () => {
     const state = {
       subsystems: { proceduralDisks: { lastOutput: { instances: [{}] } } },
+      settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
     expect(
-      proceduralDisksPass.enabled(state, makeCtx(), makeSettings({ galaxyTexturesEnabled: true })),
+      proceduralDisksPass.enabled(state, makeCtx(), makeSettings()),
     ).toBe(true);
   });
 });

@@ -77,22 +77,25 @@ describe('proceduralDisksPass', () => {
   });
 
   it('enabled() returns false when subsystems.proceduralDisks is null', () => {
-    const state = { subsystems: { proceduralDisks: null } } as unknown as EngineState;
+    const state = {
+      subsystems: { proceduralDisks: null },
+      settings: { thumbnails: { enabled: true } },
+    } as unknown as EngineState;
     expect(proceduralDisksPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
   });
 
-  it('enabled() returns false when galaxyTexturesEnabled is false', () => {
+  it('enabled() returns false when state.settings.thumbnails.enabled is false', () => {
     const state = {
       subsystems: { proceduralDisks: { lastOutput: { instances: [{}] } } },
+      settings: { thumbnails: { enabled: false } },
     } as unknown as EngineState;
-    const settings = makeSettings();
-    settings.galaxyTexturesEnabled = false;
-    expect(proceduralDisksPass.enabled(state, makeCtx(), settings)).toBe(false);
+    expect(proceduralDisksPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
   });
 
   it('enabled() returns false when lastOutput.instances is empty', () => {
     const state = {
       subsystems: { proceduralDisks: { lastOutput: { instances: [] } } },
+      settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
     expect(proceduralDisksPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
   });
@@ -100,6 +103,7 @@ describe('proceduralDisksPass', () => {
   it('enabled() returns true with a non-empty lastOutput', () => {
     const state = {
       subsystems: { proceduralDisks: { lastOutput: { instances: [{}] } } },
+      settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
     expect(proceduralDisksPass.enabled(state, makeCtx(), makeSettings())).toBe(true);
   });

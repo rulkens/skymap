@@ -73,23 +73,28 @@ describe('texturedDisksPass', () => {
     expect(texturedDisksPass.name).toBe('textured-disks');
   });
 
-  it('enabled() returns false when galaxyTexturesEnabled is false', () => {
+  it('enabled() returns false when state.settings.thumbnails.enabled is false', () => {
     const state = {
       subsystems: { texturedDisks: { lastOutput: { disks: [{}], quads: [] } } },
+      settings: { thumbnails: { enabled: false } },
     } as unknown as EngineState;
     expect(
-      texturedDisksPass.enabled(state, makeCtx(), makeSettings({ galaxyTexturesEnabled: false })),
+      texturedDisksPass.enabled(state, makeCtx(), makeSettings()),
     ).toBe(false);
   });
 
   it('enabled() returns false when subsystem is null', () => {
-    const state = { subsystems: { texturedDisks: null } } as unknown as EngineState;
+    const state = {
+      subsystems: { texturedDisks: null },
+      settings: { thumbnails: { enabled: true } },
+    } as unknown as EngineState;
     expect(texturedDisksPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
   });
 
   it('enabled() returns false when disks array is empty', () => {
     const state = {
       subsystems: { texturedDisks: { lastOutput: { disks: [] } } },
+      settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
     expect(texturedDisksPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
   });
@@ -97,6 +102,7 @@ describe('texturedDisksPass', () => {
   it('enabled() returns true when disks array is non-empty', () => {
     const state = {
       subsystems: { texturedDisks: { lastOutput: { disks: [{}] } } },
+      settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
     expect(texturedDisksPass.enabled(state, makeCtx(), makeSettings())).toBe(true);
   });
