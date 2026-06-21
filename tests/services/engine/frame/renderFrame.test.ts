@@ -24,7 +24,6 @@ import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
-import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { mat4 } from 'gl-matrix';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 
@@ -197,30 +196,6 @@ function makeCam(): OrbitCamera {
   } as unknown as OrbitCamera;
 }
 
-function makeCloud(count = 1): GalaxyCatalog {
-  const fill = (v: number) => {
-    const a = new Float32Array(count);
-    a.fill(v);
-    return a;
-  };
-  return {
-    count,
-    objIDs: new BigUint64Array(count),
-    positions: new Float32Array(count * 3),
-    magU: fill(20),
-    magG: fill(20),
-    magR: fill(20),
-    magI: fill(20),
-    magZ: fill(20),
-    axisRatio: fill(1),
-    positionAngleDeg: fill(0),
-    diameterKpc: fill(50),
-    classByte: new Uint8Array(count),
-    parentSurveyByte: new Uint8Array(count),
-    spectroscopicZ: new Float32Array(count),
-  };
-}
-
 /** Build a complete RenderFrameInput fixture with sensible defaults. */
 function makeInput(
   overrides: { settings?: Partial<any>; disabledPasses?: Record<string, boolean> } = {},
@@ -244,7 +219,6 @@ function makeInput(
   const texturedDiskRenderer = makeMockTexturedDiskRenderer();
   const proceduralDiskRenderer = makeMockProceduralDiskRenderer();
   const cam = makeCam();
-  const catalogs = new Map([[Source.SDSS, makeCloud(1)]]);
 
   const settings = {
     pointSizePx: 2.5,
@@ -310,7 +284,6 @@ function makeInput(
     texturedDiskRenderer,
     proceduralDiskRenderer,
     cam,
-    catalogs,
     // Mirror these on the fixture root so tests read them directly
     // instead of reaching into `input.ctx.*` for every assertion.
     canvasWidth,
@@ -370,8 +343,6 @@ function makeInput(
       texturedDiskRenderer,
       proceduralDiskRenderer,
       settings,
-      famousMeta: [],
-      catalogs,
       // Disabled stub (`service.enabled === false`) → renderFrame takes
       // the single-pass branch. Active-mode behaviour lives in
       // `renderFrame.timing.test.ts`.

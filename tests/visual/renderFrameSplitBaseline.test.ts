@@ -55,13 +55,11 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { Source } from '../../src/data/sources';
 import { BiasMode } from '../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../src/data/toneMapCurve';
 import { renderFrame } from '../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
 import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
-import type { GalaxyCatalog } from '../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { mat4 } from 'gl-matrix';
 import type { SourceType } from '../../src/@types/data/SourceType';
 
@@ -214,30 +212,6 @@ function makeCam(): OrbitCamera {
   } as unknown as OrbitCamera;
 }
 
-function makeCloud(count: number): GalaxyCatalog {
-  const fill = (v: number): Float32Array => {
-    const a = new Float32Array(count);
-    a.fill(v);
-    return a;
-  };
-  return {
-    count,
-    objIDs: new BigUint64Array(count),
-    positions: new Float32Array(count * 3),
-    magU: fill(20),
-    magG: fill(20),
-    magR: fill(20),
-    magI: fill(20),
-    magZ: fill(20),
-    axisRatio: fill(1),
-    positionAngleDeg: fill(0),
-    diameterKpc: fill(50),
-    classByte: new Uint8Array(count),
-    parentSurveyByte: new Uint8Array(count),
-    spectroscopicZ: new Float32Array(count),
-  };
-}
-
 // ── Test ───────────────────────────────────────────────────────────────────
 
 describe('renderFrame visual baseline', () => {
@@ -288,7 +262,6 @@ describe('renderFrame visual baseline', () => {
     const postProcess = makePostProcess(records);
 
     const cam = makeCam();
-    const catalogs = new Map([[Source.SDSS, makeCloud(1)]]);
     const canvasWidth = 1280;
     const canvasHeight = 720;
     const viewProj = new Float32Array(16) as unknown as mat4;
@@ -400,8 +373,6 @@ describe('renderFrame visual baseline', () => {
       texturedDiskRenderer: texturedDiskRenderer as never,
       proceduralDiskRenderer: proceduralDiskRenderer as never,
       settings: settings as never,
-      famousMeta: [],
-      catalogs,
       // Disabled stub forces the single-pass path.  The split-pass
       // (timing-on) shape is exercised in `renderFrame.timing.test.ts`.
       timingService: createDisabledGpuTimingService(),

@@ -377,8 +377,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       filamentIntensity: state.settings.filaments.intensity,
       volumesEnabled: state.settings.volumes.enabled,
     },
-    famousMeta: state.data.galaxies.famousMeta,
-    catalogs: state.data.galaxies.catalogs,
     timingService: deps.timingService,
   });
 

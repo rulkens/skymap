@@ -18,8 +18,6 @@
  */
 
 import type { EngineState } from '../state/EngineState';
-import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
-import type { SourceType } from '../../data/SourceType';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
@@ -27,7 +25,6 @@ import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer'
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
 import type { FlowFieldRenderer } from '../../rendering/FlowFieldRenderer';
-import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { ReadyFrameContext } from './ReadyFrameContext';
 import type { RenderFrameSettings } from './RenderFrameSettings';
@@ -100,10 +97,6 @@ export type RenderFrameInput = {
 
   // ── Settings ──────────────────────────────────────────────────────────
   settings: RenderFrameSettings;
-
-  // ── Forwarded to the thumbnail subsystem ──────────────────────────────
-  famousMeta: readonly FamousMetaEntry[];
-  catalogs: ReadonlyMap<SourceType, GalaxyCatalog>;
 
   /**
    * Per-pass GPU timing service (always non-null; check `.enabled`

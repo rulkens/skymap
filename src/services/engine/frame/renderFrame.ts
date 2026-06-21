@@ -104,8 +104,6 @@ export function renderFrame(input: RenderFrameInput): void {
     texturedDiskRenderer,
     proceduralDiskRenderer,
     settings,
-    famousMeta,
-    catalogs,
     timingService,
   } = input;
 
@@ -122,8 +120,6 @@ export function renderFrame(input: RenderFrameInput): void {
     flowFieldRenderer,
     milkyWayRenderer,
     horizonShellRenderer,
-    catalogs,
-    famousMeta,
     milkyWayITimeSec,
   };
 
