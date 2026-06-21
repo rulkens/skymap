@@ -260,29 +260,38 @@ describe('proceduralDisksPass.enabled', () => {
 // HDR_PASSES registry check above pins the name in canonical order.
 
 describe('filamentsPass.enabled', () => {
-  it('returns true when filamentsEnabled is true (renderer presence checked in draw)', () => {
+  it('returns true when filaments.enabled is true (renderer presence checked in draw)', () => {
+    const stateOn = {
+      ...STATE_STUB,
+      settings: { filaments: { enabled: true, intensity: 1 } },
+    } as unknown as EngineState;
     expect(
-      filamentsPass.enabled(STATE_STUB, makeCtx(), makeSettings({ filamentsEnabled: true })),
+      filamentsPass.enabled(stateOn, makeCtx(), makeSettings()),
     ).toBe(true);
   });
 
-  it('returns false when filamentsEnabled is false AND fade opacity is 0', () => {
-    // STATE_STUB.fades.opacityOf returns 1 by default — override to 0
-    // so the gate doesn't keep the pass alive through a fade-out tail.
+  it('returns false when filaments.enabled is false AND fade opacity is 0', () => {
+    // fades.opacityOf returns 0 so the gate doesn't keep the pass alive
+    // through a fade-out tail; toggle is also off — both conditions false.
     const stateZeroFade = {
       subsystems: { fades: { opacityOf: () => 0, isAnyAnimating: () => false } },
+      settings: { filaments: { enabled: false, intensity: 1 } },
     } as unknown as EngineState;
     expect(
-      filamentsPass.enabled(stateZeroFade, makeCtx(), makeSettings({ filamentsEnabled: false })),
+      filamentsPass.enabled(stateZeroFade, makeCtx(), makeSettings()),
     ).toBe(false);
   });
 
-  it('returns true when filamentsEnabled is false BUT fade opacity > 0 (fade-out tail still drawing)', () => {
+  it('returns true when filaments.enabled is false BUT fade opacity > 0 (fade-out tail still drawing)', () => {
     // STATE_STUB's opacityOf = 1 simulates a fade-out in progress; the
     // gate keeps the pass alive so the user sees the smooth ~100 ms ramp
     // instead of an instant pop.
+    const stateOffFading = {
+      ...STATE_STUB,
+      settings: { filaments: { enabled: false, intensity: 1 } },
+    } as unknown as EngineState;
     expect(
-      filamentsPass.enabled(STATE_STUB, makeCtx(), makeSettings({ filamentsEnabled: false })),
+      filamentsPass.enabled(stateOffFading, makeCtx(), makeSettings()),
     ).toBe(true);
   });
 });
@@ -293,23 +302,31 @@ describe('filamentsPass.draw', () => {
     // receive `deps`. With a null renderer there's nothing to spy on —
     // just assert no exception escapes.
     const deps = makeDeps({ filamentRenderer: null });
+    const stateOn = {
+      ...STATE_STUB,
+      settings: { filaments: { enabled: true, intensity: 1 } },
+    } as unknown as EngineState;
     expect(() =>
       filamentsPass.draw(
         PASS_STUB,
         makeCtx(),
-        STATE_STUB,
-        makeSettings({ filamentsEnabled: true }),
+        stateOn,
+        makeSettings(),
         deps,
       ),
     ).not.toThrow();
   });
 
   it('forwards correct args to filamentRenderer.draw when present', () => {
-    const drawSpy = vi.fn();
+    const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const deps = makeDeps({ filamentRenderer: { draw: drawSpy } as any });
     const ctx = makeCtx();
-    const settings = makeSettings({ filamentsEnabled: true, filamentIntensity: 0.7 });
-    filamentsPass.draw(PASS_STUB, ctx, STATE_STUB, settings, deps);
+    // intensity=0.7 now comes from state.settings.filaments.intensity.
+    const stateWith07 = {
+      ...STATE_STUB,
+      settings: { filaments: { enabled: true, intensity: 0.7 } },
+    } as unknown as EngineState;
+    filamentsPass.draw(PASS_STUB, ctx, stateWith07, makeSettings(), deps);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const args = drawSpy.mock.calls[0]!;
     expect(args[0]).toBe(PASS_STUB);

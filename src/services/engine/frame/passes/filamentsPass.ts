@@ -11,7 +11,7 @@
  * ### When it draws
  *
  * Gated on TWO conditions:
- *   1. `settings.filamentsEnabled` — user toggle (off by default).
+ *   1. `state.settings.filaments.enabled` — user toggle (off by default).
  *   2. `deps.filamentRenderer !== null` — the binary is an optional
  *      asset.  When the deployment doesn't ship `filaments.bin`,
  *      `state.gpu.filamentRenderer` is constructed but never
@@ -21,6 +21,12 @@
  *
  * Both checks live in `enabled` so the inner `draw` body can
  * dereference `filamentRenderer` without a redundant null guard.
+ *
+ * ### State reads
+ *
+ * `enabled` reads `state.settings.filaments.enabled` (user toggle) and
+ * `state.subsystems.fades.opacityOf` (fade-out tail).  `draw` reads
+ * `state.settings.filaments.intensity` (line brightness scale).
  *
  * ### Why between thumbnails and Milky Way
  *
@@ -64,18 +70,18 @@ export const filamentsPass: Pass = {
   // Update: the runtime `draw` short-circuits anyway via the
   // `filamentRenderer === null` early return; `enabled` returning
   // true with a null renderer is a self-correcting near-miss.
-  enabled(state, _ctx, settings) {
-    // Settings boolean is the user's intent; opacityOf > 0 is the visual
+  enabled(state, _ctx, _settings) {
+    // State boolean is the user's intent; opacityOf > 0 is the visual
     // state. We render whenever EITHER is true so a fade-out continues
     // drawing after the user toggles off (until opacity hits 0). The
     // toggle handler in engine.ts flips the setting AND fires fadeTo
     // synchronously; this gate is what keeps the pass alive through the
     // ~100 ms ramp.
-    if (settings.filamentsEnabled) return true;
+    if (state.settings.filaments.enabled) return true;
     return state.subsystems.fades.opacityOf({ kind: 'filament' }, performance.now()) > 0;
   },
 
-  draw(pass, ctx, state, settings, deps) {
+  draw(pass, ctx, state, _settings, deps) {
     // Renderer-null check lives here rather than in `enabled` because
     // `enabled` doesn't receive `deps`.  Keeping this as a defensive
     // early-return makes the `enabled === true → draw runs` invariant
@@ -93,7 +99,7 @@ export const filamentsPass: Pass = {
       vp,
       [canvasSize.width, canvasSize.height],
       FILAMENT_LINE_HALFWIDTH_PX,
-      settings.filamentIntensity,
+      state.settings.filaments.intensity,
       // Focus recession is applied HERE (on the drawn opacity), not on the
       // `enabled` gate above: recession ∈ [FILAMENT_RECESSION, 1] can never
       // zero the layer, so the gate keeps reading the pure toggle opacity.

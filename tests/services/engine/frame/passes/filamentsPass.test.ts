@@ -51,24 +51,32 @@ function makeCtx(focusBlend: number): ReadyFrameContext {
   };
 }
 
-function makeSettings(overrides: Partial<RenderFrameSettings> = {}): RenderFrameSettings {
-  return {
-    filamentsEnabled: true,
-    filamentIntensity: 1,
-    ...(overrides as object),
-  } as RenderFrameSettings;
-}
-
 /**
- * Build a state whose filament fade reports `opacity`.  `opacityOf` is a
+ * Build a state whose filament fade reports `opacity` and whose
+ * `settings.filaments` matches the supplied overrides.  `opacityOf` is a
  * single stub returning the same value regardless of handle/now — the
  * filaments pass only ever asks for the `{kind:'filament'}` handle, so a
  * constant stub faithfully models "the filament layer is at `opacity`".
  */
-function makeState(opacity: number): EngineState {
+function makeState(
+  opacity: number,
+  filamentsOverrides: Partial<{ enabled: boolean; intensity: number }> = {},
+): EngineState {
   return {
     subsystems: { fades: { opacityOf: () => opacity } },
+    settings: {
+      filaments: {
+        enabled: true,
+        intensity: 1,
+        ...filamentsOverrides,
+      },
+    },
   } as unknown as EngineState;
+}
+
+/** Minimal settings stub — the pass no longer reads from this bag. */
+function makeSettings(): RenderFrameSettings {
+  return {} as RenderFrameSettings;
 }
 
 function makeDeps(drawSpy = vi.fn()): PassDeps {
@@ -96,9 +104,9 @@ describe('filamentsPass.draw focus recession', () => {
 
 describe('filamentsPass.enabled is unaffected by focus recession', () => {
   it('returns false when the toggle is off and opacity is 0, regardless of blend', () => {
-    const state = makeState(0);
-    const settings = makeSettings({ filamentsEnabled: false });
-    expect(filamentsPass.enabled(state, makeCtx(0), settings)).toBe(false);
-    expect(filamentsPass.enabled(state, makeCtx(1), settings)).toBe(false);
+    // Pass enabled=false via state; settings arg is unused by the pass.
+    const state = makeState(0, { enabled: false });
+    expect(filamentsPass.enabled(state, makeCtx(0), makeSettings())).toBe(false);
+    expect(filamentsPass.enabled(state, makeCtx(1), makeSettings())).toBe(false);
   });
 });
